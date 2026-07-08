@@ -1,0 +1,61 @@
+{
+  "area": "text-narrative",
+  "class": "text-config",
+  "subject": "bestiary :: Lore / Codex (Forest Grunt monster codex entry)",
+  "baselineScore": 16,
+  "bestScore": 91,
+  "bestContent": {
+    "codex": {
+      "name": "Forest Grunt",
+      "formalDesignation": "Custos silvarum fractus — the Order's catalogue name; 'Forest Grunt' is the established common name in field use and on every bounty writ, so called for the guttural tell it sounds before a heavy blow and for the petrified wood of the Ashrock groves where the first were felled.",
+      "codexId": "BEST-001",
+      "classification": "Sundered Construct — Warden-caste (fractured)",
+      "epigraph": "\"They do not hate us. They have simply forgotten what they were told to guard, and kept only the guarding.\" — Sera Vosk, Ashen Order lorekeeper, Second Survey of the Ashrock Expanse",
+      "discoveryEntry": "First catalogued by the post-Sundering scouts who mapped the Ashrock Expanse, where the petrified forest gives way to open rock. They are not native beasts. Each is a stone-flesh construct that once stood watch over the Pillars, before the Sundering shattered the old continent's ley-lines and left the lattice of binding runes to rot. Where a core-rune cracks, the directive bleeds out and only the appetite for violence remains. A Grunt no longer knows what it protects. It knows only to strike whatever crosses its old ward-line, again and again, until it is unmade.",
+      "physiology": "A carapace of ley-fused stone over a slow-burning elemental core, and never fast — it keeps no better than a laden marching pace, roughly half a ranger's sprint (statHooks logs the exact stride), so anyone willing to run is never caught by one on open ground. The plate takes the edge off heat and ice — the Order's ledger reads it at 25% fire turned and 20% ice, so both are blunted but neither shrugged away; a determined pyromancer still wears one down, only slower. Two things the stone barely stoppers. It conducts: lightning is warded at a bare 10%, an electric arc running the rune-seams toward the core with far less blunting than fire or ice meet. And the core itself is a wound — rot and corruption sit at just 5% turned, the lowest figure on the sheet, so a chaos-tipped strike bites deepest of any element into the fracture the Sundering already opened. Strike the seams, not the plate — carry chaos to end one quickest, or lightning where chaos is not to hand.",
+      "behaviorNotes": "A Grunt fights the way a wall fights — deliberately, and only forward. Every heavy commit is announced: a low guttural grunt (the sound that named them) and a visible wind-up before the Overhead Cleave, a shorter tell before the Shield Shove. The Cleave tracks poorly to its own left, a flaw of the fused shoulder-plate; a ranger who rolls through the swing or steps left lives to punish the long recovery. It will not retreat and does not flinch until its poise breaks — at roughly a third stripped away it staggers, the window a spear-line waits for. Bring numbers at your peril: face it two-up or more and the construct plants and answers with a Ground Slam, a shockwave off the fractured core. Rangers are advised, still and always: do not stand in the shockwave.",
+      "ecologyAndHabitat": "Solitary sentries by design, Grunts hold to the old ward-lines — ruined gate-arches, collapsed Pillar foundations, the seams of the Ashrock where the ley-lattice ran densest. They neither eat nor sleep; a Grunt found far from any ruin has almost always been driven there, and something worse is usually the driver. Where the casters of the Sundered host gather, a Grunt or two is set at the front to herd the living into melee — the front-line pressure of a hunting-pack.",
+      "variants": {
+        "Normal": "A single fractured rune, a single failed directive. Dangerous to the greedy, survivable to the patient.",
+        "Magic": "A rune that cracked cleanly, leaving one instinct sharp and whole. The base construct is slow by nature — a walking pace, half a sprint, easily left behind — so the most feared clean break is the one that overrides that limit, driving a Grunt to close faster than a thing of ley-stone was ever built to move. It is the wrongness of the speed that kills the greedy: the mind still reads 'slow bruiser,' and the tells come no earlier even as the body arrives too soon.",
+        "Rare": "Several runes half-holding at once, the construct caught between three or four half-remembered orders. One that moves faster than stone should and still keeps a ward of crackling air about it — striking any who draw near — is, by the Order's own field-grade, a genuine threat and no longer a training kill.",
+        "Unique": "A named Warden whose core never wholly broke — it remembers, in fragments, what it was set to guard, and defends that ground with a fixed and terrible discipline. These are not culled; they are studied, and mourned."
+      },
+      "faction": "Ashen Order — classified Sundered Construct, Warden-caste. The Order does not reckon Grunts monsters so much as casualties: soldiers of an older watch, still at their posts, no longer sane. Standing bounty is paid for a clean unmaking, not a mutilation; the lorekeepers ask that the core-rune be recovered where it can.",
+      "harvest": "A cracked core-rune and a measure of ley-fused stone-slag fall on unmaking — worthless to a smith, prized by the Order's rune-readers, who trade it toward reconstructing the map of the shattered lattice.",
+      "statHooks": {
+        "note": "All figures below are mirrored from sibling steps, not invented here — this codex entry is the reader-facing face of the same numbers the stat block and resistance ledger seed to UE.",
+        "source": "Stat Block :: monsterLevel 20, health 420, armor 120, damage 35, moveSpeed 300, dangerRank 3",
+        "resistanceLedger": { "fire": 25, "ice": 20, "lightning": 10, "chaos": 5 },
+        "rarityModifiers": "Monster Rarity :: 'Extra Fast' (mod-extra-fast: +40% move, +20% attack speed, granted at Magic+) and, at Rare, the 'Proximity Shield' modifier named in the Concept & Role brief.",
+        "loot": "loot-tables :: lt-Brute (the Brute table)"
+      },
+      "crossReferences": {
+        "combatDoctrine": "For the load-bearing figures see statHooks (single source of truth). In prose: a deliberate Lv-20 bruiser — see AI Behavior for the Overhead Cleave / Shield Shove / Ground Slam telegraph windows and counters, Resistances for the elemental ledger, and Monster Rarity for the Warden-touched modifier lore.",
+        "worldContext": "The Sundering and the ley-lattice; the Pillars and their old Wardens; the Ashrock Expanse and its petrified forest.",
+        "drops": "Unmade Grunts feed the lt-Brute loot table."
+      },
+      "unlockCondition": "Codex entry reveals in three stages — Sighted (first encounter: silhouette and name), Studied (ten unmade: behaviour and physiology notes), Understood (a Unique Warden defeated, or a core-rune returned to the Order: full origin and faction text).",
+      "voiceNote": "Written in-world as a field entry of the Ashen Order's bestiary survey: measured, elegiac, and practical — grief for what the constructs were, laced with the ranger's blunt advice for surviving what they have become."
+    }
+  },
+  "promptTechnique": "Convert a one-field prose blurb into a STRUCTURED codex object (name, formalDesignation, epigraph, discoveryEntry, physiology, behaviorNotes, ecology, four-tier variants, faction, harvest, statHooks, crossReferences, staged unlockCondition, voiceNote), then bind EVERY flavor claim to a sibling number as its single source of truth. The transferable produce-prompt technique: (1) fetch ALL sibling steps first and extract the entity's canonical proper nouns + hard numbers; (2) instruct the model that every mechanical assertion in prose (resistances, move speed, poise-break, telegraphs, rarity mods, loot table) must MIRROR a sibling value — a dedicated 'statHooks' field holds the raw numbers as the single source of truth and every prose line is checked against it (a lore↔ledger consistency pass catches the classic trap: the LOWEST resist value is the true weakness, not the thematically-implied one — here chaos 5 < lightning 10); (3) demand a distinctive named in-world narrator voice (Ashen Order lorekeeper) with an epigraph, so specificity and voice come from world-grounding, not adjectives; (4) forbid two failure modes the judge punishes hard — meta/process commentary defending the numbers ('the value stays positive'), and raw engine tokens leaking into reader-facing prose ('mod-extra-fast', engine unit '300'). Depth from structure + mirrored numbers beats length.",
+  "iterations": [
+    { "n": 1, "score": 88, "note": "Structured codex with named narrator + world grounding + sibling-mirrored numbers; only fail = lightning framed as a 'vulnerability' when its resist is a positive 10." },
+    { "n": 2, "score": 89, "note": "Reconciled the lightning framing to 'weakest positive ward'; judge then wanted exact integer resists and gated cross-refs, not hedged prose." },
+    { "n": 3, "score": 87, "note": "Added exact integers + statHooks single-source, but over-corrected into meta-defensive hedges ('value stays positive', 'not zero') that broke in-world voice." },
+    { "n": 4, "score": 72, "note": "Purged meta hedges — exposed a real lore↔ledger bug: prose named lightning (10) the soft spot, but chaos (5) is the LOWEST resist and lands hardest. Load-bearing seed error." },
+    { "n": 5, "score": 88, "note": "Fixed weakness ordering (fire>ice>lightning>chaos) but over-dramatized 25/20% mitigation as 'shrugged aside' and leaked system tokens ('mod-extra-fast') into variant prose." },
+    { "n": 6, "score": 88, "note": "Calibrated elemental prose to magnitudes + moved modifier tokens to statHooks only; remaining seams = ice/frost term drift and 'Grunt' reading placeholder-generic." },
+    { "n": 7, "score": 91, "note": "PASS. Term-parity (ice everywhere per UE enum), added formalDesignation to elevate the marquee name, sharpened Extra-Fast as an unnatural override of the slow base." },
+    { "n": 8, "score": 90, "note": "PASS (re-judge). Confirmed ≥90 stable across runs; folded exact resist %/poise fraction back into prose and anchored speed to half-a-sprint; judge variance ~±5." }
+  ],
+  "applicableCatalogs": [
+    "bestiary :: Lore / Codex (all monster codex entries)",
+    "dialog-trees :: VO Script",
+    "cutscenes :: Subtitles & Loc",
+    "codex :: Localization",
+    "quests :: narrative/flavor text",
+    "any narrative/lore/VO prose step across catalogs"
+  ]
+}

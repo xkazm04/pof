@@ -39,7 +39,7 @@ async function main() {
   const payload = image
     ? `Use the Read tool to view the image at:\n${image}\nThen judge it.`
     : textFile
-      ? '```\n' + readFileSync(textFile, 'utf8').slice(0, 12000) + '\n```'
+      ? '```\n' + readFileSync(textFile, 'utf8').slice(0, 60000) + '\n```' // generous cap; 12k silently truncated real configs mid-field
       : (() => { console.error('need --image or --text'); process.exit(2); })() as string;
 
   const pol = getModelPolicy('judge-content');
