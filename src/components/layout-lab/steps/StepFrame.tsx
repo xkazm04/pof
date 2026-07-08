@@ -59,9 +59,12 @@ export function StepFrame({ t, acceptance, panels, onFix }: {
           position: 'relative',
           display: 'flex', flexDirection: 'column', gap: 10,
           padding: '14px 18px', marginBottom: 20,
-          borderLeft: `4px solid ${sc}`,
-          transition: 'border-color 160ms ease-out',
+          transition: 'box-shadow 160ms ease-out',
           ...panelStyle,
+          // Accent stripe via an inset box-shadow, NOT borderLeft — panelStyle sets the
+          // `border` shorthand, and mixing it with a changing `borderLeft` longhand trips
+          // React's shorthand-conflict warning (dev overlay) on every status change.
+          boxShadow: `inset 4px 0 0 ${sc}`,
         }}
       >
         <AnimatePresence initial={false}>
