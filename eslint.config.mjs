@@ -40,6 +40,10 @@ const eslintConfig = defineConfig([
     // Standalone tooling (e.g. the pof-mcp headless server) — separate package,
     // own tsconfig/lint; not part of the Next app build.
     "tools/**",
+    // Git worktrees created under .claude/worktrees are full duplicate checkouts
+    // of the app source; linting them double-counts every problem (and reports
+    // stale copies of files being refactored). They are not part of this build.
+    ".claude/**",
   ]),
 ]);
 
