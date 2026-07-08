@@ -384,12 +384,12 @@
     {
       "catalogId": "character-pipeline",
       "step": "Rig & Clips",
-      "trueEngine": "None",
+      "trueEngine": "Tripo",
       "deliverable": "3d-mesh",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "vlm",
       "checkerMeaningful": false,
-      "note": "engine:'Tripo' labeled but produce() hardcodes a fixed 'created' list of rig/clip names from a past run; minCount(4) just counts array length."
+      "note": "Rig + 4 preset clips (idle/walk/run/dive) produced by the Tripo animate chain (animate_rig biped -> animate_retarget presets, baked animated glb) via scripts/visual-gen/pof_tripo_animate.mjs; served + previewable in-lab (GlbViewer). gap-loop 2026-07-08."
     },
     {
       "catalogId": "character-pipeline",
@@ -494,12 +494,12 @@
     {
       "catalogId": "characters",
       "step": "Locomotion Anim",
-      "trueEngine": "None",
+      "trueEngine": "Tripo",
       "deliverable": "animation",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": false,
-      "note": "produce() returns a static clip-name list ['Idle','Walk','Run']; no Mixamo/animation pipeline is invoked by this step despite the project having a real Mixamo downloader elsewhere."
+      "note": "Real locomotion clips (idle/walk/run) produced by the Tripo animate chain (animate_rig biped -> animate_retarget presets) for Captain Vael; served + previewable in-lab (GlbViewer). gap-loop 2026-07-08."
     },
     {
       "catalogId": "characters",

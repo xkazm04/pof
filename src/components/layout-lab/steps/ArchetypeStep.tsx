@@ -148,8 +148,17 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
       { label: 'Produce', node: cli((ctx) => generate(ctx?.direction ?? spec.defaultDirection ?? '', ctx?.prompt ?? buildPrompt(spec.defaultDirection ?? ''))) },
     ];
   } else {
+    // Non-gallery steps (e.g. the Rig & Clips manifest) that carry a served .glb on their
+    // data get the same interactive preview — rotate the rigged/animated mesh in-place.
+    const dataGlbUrl = typeof (data as { glbUrl?: unknown })?.glbUrl === 'string' ? (data as { glbUrl: string }).glbUrl : null;
     panels = [
       { label: 'View', node: <ViewPanel t={t} view={spec.view} data={data} /> },
+      ...(dataGlbUrl ? [{ label: '3D preview (orbit / zoom)', node: (
+        <div style={{ display: 'grid', gap: 6 }}>
+          <GlbViewer url={dataGlbUrl} />
+          <span className={t.fontMono} style={{ fontSize: 12, color: t.muted }}>{dataGlbUrl}</span>
+        </div>
+      ) }] : []),
       { label: 'Produce', node: cli(() => produce(entity.id, step, spec.produce(entity))) },
     ];
   }
