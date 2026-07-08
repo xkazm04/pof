@@ -1,5 +1,18 @@
 # Prompt-hardening loop — agent protocol (2D icons)
 
+## MODEL: Leonardo Lucid Origin (this is the pipeline's real model — validated)
+`gen-image.sh` now generates with **Lucid Origin** at 1024² (NOT gpt-image-2). Know its
+character: its DEFAULT output is a clean but **flat "emoji / vector-sticker / cel-shaded"**
+look — fighting that flatness is your main job. It renders crisp edges + clean silhouettes
+WELL (better than gpt-image-2), so those are rarely the problem. The levers that move Lucid
+Origin: (1) explicit anti-vector negatives — `NOT a flat vector emoji, NOT a smooth sticker,
+NOT a cel-shaded outline, NOT a photographic render`; (2) push HAND-PAINTED / VOLUMETRIC /
+textured impasto brushwork; (3) a true CONTINUOUS value range + rich material; (4) a
+DISTINCTIVE subject identity, not a generic stock shape. Frames can add cohesion only if
+crisp (beveled, specular) — a muddy frame hurts. Validated climb on a Burning icon:
+62 (untuned) → 68 (painterly-tuned) with clear levers still open toward 90.
+
+
 You are an Opus agent hardening the IMAGE-GENERATION PROMPT for one icon family so its output
 clears the strict judge. The key is advanced prompt technique, not luck. Work only in the repo
 root cwd. **Do NOT edit shared code** — your deliverable is a JSON artifact (below).

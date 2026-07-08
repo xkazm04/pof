@@ -1,0 +1,16 @@
+{
+  "area": "ability-fx-icons",
+  "class": "2d-art",
+  "subject": "a Burning fire damage-over-time status-effect glyph for an ARPG buff bar",
+  "baselineScore": 42,
+  "bestScore": 66,
+  "bestPrompt": "A single bold stylized fire status-effect ability icon for an ARPG buff bar, in the crisp painterly game-UI language of Path of Exile 2, Diablo IV and Hades II skill glyphs. Subject: one clean flame silhouette representing a burning damage-over-time effect. The flame fills the frame edge-to-edge as ONE strong readable shape, instantly legible even at 40 pixels. Deliberate value hierarchy: a bright white-yellow hot core, blooming into saturated orange mid-tones, falling off to deep crimson-red outer tongues, with a crisp bright rim-light licking the flame edges and glowing embers flecked in the negative space. Hand-painted stylized rendering with confident brush shapes and clean hard edges — NOT photorealistic, NOT a photo of real fire. Centered composition on a simple dark desaturated slate background for maximum contrast punch. Vignette focus. Flat graphic emblem energy, high craft, AAA polish. ABSOLUTELY NO text, NO letters, NO watermark, NO signature, NO artist mark, NO border, NO frame, NO circle ring, NO compass star, NO decorative surround — just the flame on the dark field.",
+  "technique": "Two levers moved the score most. First, hard in-prompt negatives (gpt-image-2 obeys them literally): explicitly forbidding text/watermark/signature/border/ring/compass-star lifted cleanliness from 30 to 88+ and killed the disqualifying watermark and the off-brief compass frame in one pass. Second, replacing 'photoreal fire' with a directed painterly value hierarchy — a named 3-stop ramp (white-hot core -> saturated orange -> deep crimson tips) plus rim-light and embers, anchored to the PoE2/D4/Hades II icon vocabulary — raised value-hierarchy and material scores into the 70-80 band. Counter-lesson: containment frames are a net negative here — a subtle plate reads as a cheap plastic mobile bezel (styleCohesion crashed to 50) and an ornate stone/rune frame eats ~40% of the canvas and dissolves into illegible AI squiggles; the no-frame flame-alone composition scored highest.",
+  "iterations": [
+    { "n": 1, "score": 66, "note": "No-frame painterly flame + hard negatives (no text/watermark/border/ring) + named 3-stop value ramp & rim-light. Cleanliness 30->88; best of the run." },
+    { "n": 2, "score": 54, "note": "Pushed flat/vector 'bold chunky glyph' + subtle rounded sigil plate; plate read as a plastic mobile-app bezel, flat shape killed material rendering (45) and cohesion (50)." },
+    { "n": 3, "score": 62, "note": "Painterly volumetric fire + dark ornate rune-etched iron frame; frame ate 40% of canvas and runes became illegible mush, hurting silhouette (60) and edge quality (60)." },
+    { "n": 4, "score": 57, "note": "Back to no-frame painterly, forced single dominant upward tongue for a tighter silhouette; model still drifted to a wispy campfire flame with stray sparks (silhouette 58), though cleanliness hit 95." }
+  ],
+  "applicableCatalogs": ["status-effects", "spellbook", "vfx", "icon-sets"]
+}

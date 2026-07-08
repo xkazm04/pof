@@ -1,0 +1,16 @@
+{
+  "area": "environment-scene-icons",
+  "class": "2d-art",
+  "subject": "a prologue cutscene scene-thumbnail icon (a dramatic story moment) for an ARPG",
+  "baselineScore": 22,
+  "bestScore": 76,
+  "bestPrompt": "Cinematic AAA ARPG prologue cutscene key frame, a dramatic story moment: a lone hooded hero seen as a small clean dark silhouette on a windswept cliff ruin at dusk, facing a colossal coherent gothic stone fortress with clearly defined towers, buttresses and a great gate rising on the distant horizon. Painterly matte-painting concept art in the style of Path of Exile 2 and Diablo IV cinematics. Strong three-plane depth: dark simple foreground silhouette framing, small illuminated hero mid-ground focal point kept as a crisp readable silhouette, atmospheric hazy architectural background. Coherent intentional architecture, not noisy spires. Dramatic directional rim lighting, volumetric god rays breaking through storm clouds, drifting fog and glowing embers. Moody teal-and-orange cinematic color grade, deep shadows, high contrast value hierarchy, dynamic diagonal composition leading the eye to the hero. Sharp intentional silhouette edges, crisp painterly brushwork, no diffusion banding, no soft haloing. Epic somber narrative mood, film-still framing, professional game concept art. No text, no watermark, no logo, no UI, no border, no title card.",
+  "technique": "This family is a painterly CINEMATIC KEY-FRAME, not a glyph icon — the single biggest lever (+50) was reframing from 'centered flat mark' to a staged three-plane scene: a dark foreground silhouette repoussoir, a small crisp hero as the mid-ground focal point, and an atmospheric architectural background, bound together by a deliberate dark-to-glow value hierarchy. Keep the hero SMALL and read it as a clean dark silhouette rather than over-specifying armor/cloth materials — pushing hero material detail pulls it closer and exposes Leonardo's AI-mush (that dropped the score). Lean on motivated dramatic lighting (single volumetric god-ray shaft, rim light), a teal-and-orange grade, and diagonal focal composition; name the PoE2/Diablo IV concept-art anchor and a full no-text/no-UI/no-border negative tail. Ask for 'coherent intentional architecture, not noisy spires' and 'no diffusion banding / no soft haloing' to fight fractal edges.",
+  "iterations": [
+    {"n": 1, "score": 72, "note": "Reframed baseline flat-glyph -> staged painterly cutscene: 3-plane depth, hero mid-ground focal, god rays, teal/orange grade, PoE2/D4 anchor, no-text tail. +50 from baseline (22)."},
+    {"n": 2, "score": 68, "note": "Added heavy hero material-separation + close detail directives; backfired — pulled hero closer and exposed AI-mush armor/cloth. Reverted."},
+    {"n": 3, "score": 76, "note": "BEST. Reverted to i1 composition; kept hero a SMALL clean dark silhouette repoussoir, added coherent-architecture + crisp-edge/no-banding directives. Silhouette 85, value 88, material 74."},
+    {"n": 4, "score": 74, "note": "Simplified to bold monolithic architecture + hand-painted crisp-edge emphasis to fight fractal spires; edge quality improved (70) but overall slightly below i3. Confirmed the ceiling."}
+  ],
+  "applicableCatalogs": ["cutscenes", "ambient", "combat-map", "zone-map", "tutorial-beats"]
+}

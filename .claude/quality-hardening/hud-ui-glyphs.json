@@ -1,0 +1,16 @@
+{
+  "area": "hud-ui-glyphs",
+  "class": "2d-art",
+  "subject": "a gamepad face-button control-prompt glyph for a game HUD (clean UI iconography)",
+  "baselineScore": 22,
+  "bestScore": 58,
+  "bestPrompt": "A single centered game HUD face-button control-prompt glyph, premium AAA UI iconography in the style of Path of Exile 2, Diablo IV and Hades II. Shape reads instantly: a clean rounded-square gamepad button carrying one bold geometric triangle symbol at its center. Rendered as a physically-lit control with real material — a brushed dark-metal / backlit-key button face with a crisp top rim light, soft ambient occlusion in the corners, and a defined three-value light structure guiding the eye. The triangle is a polished emerald-teal beveled emblem with its own inner highlight and shadow, glowing subtly like a backlit key. Sharp intentional edges, high contrast, perfectly symmetric and centered, engineered to stay legible small. Isolated on a plain neutral dark charcoal background, studio lighting, sharp focus. NO letters, NO numbers, NO words, NO watermark, NO border frame, NO icon grid, NO extra objects, NO heavy ornamentation, NO glow halo — exactly one clean button glyph.",
+  "technique": "Three levers moved this family off the floor. (1) Collapse the subject to EXACTLY ONE centered glyph with an explicit negative-prompt tail (NO text/letters/numbers/watermark/border/grid/extra objects) — this alone cured the baseline's fatal contact-sheet + garbled-text cleanliness failure (10→90). (2) Give the glyph a legible face-button SILHOUETTE (rounded-square button + one bold geometric symbol) so it reads instantly at icon scale instead of as an abstract blob. (3) The judge rewards materialRendering + valueHierarchy even for UI, so a pure flat vector caps out (~45); pushing a *physically-lit* button — brushed-metal/backlit-key face, top rim light, corner ambient occlusion, a 3-value light structure, and a beveled colored (emerald-teal) symbol — lifts material/value together. The band is narrow: too flat loses material, too ornate loses styleCohesion ('skeuomorphic app icon'); the winner is the middle of that band.",
+  "iterations": [
+    {"n": 1, "score": 46, "note": "One centered rendered metal medallion + negative-prompt tail. Cleanliness 10→90, material 20→78, but read as an ornate rune medallion, not a face-button — silhouette/styleCohesion low (no button identifier)."},
+    {"n": 2, "score": 45, "note": "Pivoted to flat vector rounded-square button + triangle symbol. Silhouette 80, cleanliness 92, but flat gray plate → materialRendering 33, valueHierarchy 44; judge called it a generic iOS keycap."},
+    {"n": 3, "score": 58, "note": "BEST. Hybrid: legible face-button shape + physically-lit brushed-metal material, rim light, corner AO, beveled emerald-teal triangle. material 70 / value 68 / silhouette 72 all lifted together; capped by edgeQuality 54 (AI-mush on triangle corners) and styleCohesion 55 (still slightly skeuomorphic)."},
+    {"n": 4, "score": 48, "note": "Tried minimal flat disc + solid symmetric triangle to fix the 'too skeuomorphic' note. Cleaner geometry but swung back to flat app-icon look → material 52, value 55, styleCohesion 40. Reverted to i3 as winner."}
+  ],
+  "applicableCatalogs": ["input-schemes", "hud-elements", "screen-flow", "save-points"]
+}
