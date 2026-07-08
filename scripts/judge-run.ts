@@ -17,6 +17,12 @@ import { buildRubricPrompt, parseJudgeResult, RUBRIC_VERSION } from '../src/lib/
 import { deliverableClassOf, type DeliverableClass } from '../src/lib/judge/dimensions';
 import { getModelPolicy, MODEL_IDS } from '../src/lib/model-policy';
 import { getStepFact } from '../src/lib/status/statusModel';
+import stepFacts from '../src/lib/status/step-facts.json';
+
+/** All catalog ids (for --all), from the authoritative step-facts map. */
+function allCatalogs(): string[] {
+  return [...new Set((stepFacts as { steps: { catalogId: string }[] }).steps.map((s) => s.catalogId))].sort();
+}
 
 const ORIGIN = process.env.POF_JUDGE_ORIGIN ?? 'http://localhost:3007';
 const arg = (k: string) => { const i = process.argv.indexOf(`--${k}`); return i >= 0 ? (process.argv[i + 1]?.startsWith('--') ? '' : process.argv[i + 1]) : undefined; };
@@ -66,10 +72,11 @@ function runClaude(prompt: string, modelId: string, effort: string): Promise<str
   });
 }
 
-async function judgeOne(catalogId: string, art: Artifact, tmpDir: string, policy: { cliModel: string; effort: string; modelId: string }) {
+async function judgeOne(catalogId: string, art: Artifact, tmpDir: string, policy: { cliModel: string; effort: string; modelId: string }, classFilter: Set<string> | null) {
   const fact = getStepFact(catalogId, art.step);
   const cls = deliverableClassOf(fact?.deliverable ?? '');
   if (!cls) return null;
+  if (classFilter && !classFilter.has(cls)) return null;
   const payload = buildPayload(cls, art, tmpDir);
   if (!payload) return { skipped: `${catalogId}::${art.step} — no judgeable ${cls} payload` };
 
@@ -101,17 +108,18 @@ async function main() {
   const policy = { cliModel: pol.model, modelId: MODEL_IDS[pol.model], effort: pol.effort };
   const tmpDir = join(tmpdir(), 'pof-judge'); mkdirSync(tmpDir, { recursive: true });
 
-  const catalogs = arg('catalog') ? [arg('catalog') as string] : [];
+  const catalogs = has('all') ? allCatalogs() : arg('catalog') ? [arg('catalog') as string] : [];
   const stepFilter = arg('step');
+  const classFilter = arg('classes') ? new Set(arg('classes')!.split(',')) : null;
   const limit = arg('limit') ? Number(arg('limit')) : Infinity;
 
-  console.log(`judge: model=${policy.cliModel} effort=${policy.effort} rubric=v${RUBRIC_VERSION} dry=${DRY}`);
+  console.log(`judge: model=${policy.cliModel} effort=${policy.effort} rubric=v${RUBRIC_VERSION} catalogs=${catalogs.length} classes=${classFilter ? [...classFilter].join('+') : 'all'} dry=${DRY}`);
   let n = 0;
   for (const c of catalogs) {
     const arts = (await fetchArtifacts(c)).filter((a) => (stepFilter ? a.step === stepFilter : true));
     for (const a of arts) {
       if (n >= limit) break;
-      const res = await judgeOne(c, a, tmpDir, policy);
+      const res = await judgeOne(c, a, tmpDir, policy, classFilter);
       if (!res) continue;
       console.log('  ' + (res.verdict ?? res.skipped ?? res.dry ?? res.error));
       if (res.verdict || res.error) n++;
