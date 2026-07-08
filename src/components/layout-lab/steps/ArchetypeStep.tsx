@@ -17,6 +17,9 @@ import { useLabStep, useLabPipelineStore } from '../labPipelineStore';
 import { useCanonStore } from '../canonStore';
 import { canonContextFor } from '@/lib/catalog/canon/canonContext';
 import { ARCHETYPE_CANON } from '@/lib/catalog/canon/archetypeCanon';
+import { qualityPack } from '@/lib/prompts/quality';
+import { deliverableClassOf } from '@/lib/judge/dimensions';
+import { getStepFact } from '@/lib/status/statusModel';
 import { useCatalogStore } from '@/stores/catalogStore';
 import { linkTargetsExist, readLinks } from '@/lib/catalog/acceptance/linkCheckers';
 import type { LabTheme } from '../theme';
@@ -81,7 +84,11 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
 
   const buildPrompt = (dir: string) => {
     const canon = canonContextFor(canonRules, catalogId, ARCHETYPE_CANON[spec.archetype]);
-    return [canon, `Produce ${spec.label} for ${entity.name}. ${dir}`].filter(Boolean).join('\n\n');
+    // Quality Program WS1: prepend the professional-grade quality pack for this deliverable
+    // class (shares the judge's craft checklist), so production aims at the bar the judge enforces.
+    const cls = catalogId ? deliverableClassOf(getStepFact(catalogId, step)?.deliverable ?? '') : null;
+    const pack = cls && catalogId ? qualityPack(cls, catalogId) : '';
+    return [pack, canon, `Produce ${spec.label} for ${entity.name}. ${dir}`].filter(Boolean).join('\n\n');
   };
 
   // Gallery archetype: the real browse→compare→select loop (shared CandidateGallery + genHistory).

@@ -10,8 +10,8 @@ describe('strict rubric (WS2)', () => {
 
   it('prompt embeds the strictness contract, the anchors, and every dimension', () => {
     const p = buildRubricPrompt('2d-art', { subject: 'items :: Icon 2D Art', payload: 'an image' });
-    expect(p).toMatch(/LEAD REVIEWER/);
-    expect(p).toMatch(/Default to a LOWER score/);
+    expect(p).toMatch(/SHIPPING AAA/);
+    expect(p).toMatch(/Correctness is the FLOOR/);
     expect(p).toMatch(/Path of Exile 2/);
     for (const d of DIMENSIONS['2d-art']) expect(p).toContain(d.key);
     expect(p).toMatch(/verdict/); // output contract present

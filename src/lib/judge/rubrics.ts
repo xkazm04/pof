@@ -17,17 +17,25 @@ export const BANDS = {
   // < 70: FAIL
 } as const;
 
-/** The strictness contract, prepended to every rubric. */
+/** The evaluation contract, prepended to every rubric. Firm professional bar, applied
+ *  honestly — NOT a mandate to lowball (an earlier "default to a low score / fail correct
+ *  work" wording made the judge refuse; the bar is high, the scoring is fair). */
 function strictnessContract(cls: DeliverableClass): string {
   return [
-    `You are a LEAD REVIEWER at a AAA action-RPG studio. You are reviewing a produced game asset for`,
-    `shippability. Your reference bar is: ${STYLE_ANCHORS[cls]}.`,
+    `Evaluate this produced game asset against the professional quality bar for a SHIPPING AAA`,
+    `action-RPG. The reference standard is: ${STYLE_ANCHORS[cls]}.`,
     ``,
-    `Be STRICT. This studio does not ship mediocrity. Rules:`,
-    `- Default to a LOWER score when uncertain. "Technically correct but basic" is a FAIL, not a pass.`,
-    `- Score bands: 90-100 = shippable as-is in a modern videogame. 70-89 = competent placeholder that a lead would send back for polish. Below 70 = FAIL, not usable.`,
-    `- Judge CRAFT, not just correctness. A coherent-but-generic output scores in the 40s-60s.`,
-    `- Compare directly to the named reference games above — would this sit in that product without embarrassment?`,
+    `Score honestly and rigorously against that bar — base every score on specific, observable`,
+    `properties of the asset, never on a quota. The bar is high:`,
+    `- Correctness is the FLOOR, not a passing grade. An asset that is functional but generic, or`,
+    `  that a lead would hand back for polish before shipping, is competent-placeholder work — that`,
+    `  is roughly 40-70, not a pass.`,
+    `- Reserve 90-100 for work that could ship AS-IS in the reference games. 70-89 = a solid`,
+    `  placeholder that still needs a polish pass. Below 70 = not yet usable.`,
+    `- Judge CRAFT, not just whether it is technically valid. Ask: would this sit in that shipped`,
+    `  product without looking out of place? Where it would not, say specifically why.`,
+    `- When the asset does not clearly meet the professional bar, do not give it the benefit of the`,
+    `  doubt — but always ground the score in what you actually observe.`,
   ].join('\n');
 }
 
