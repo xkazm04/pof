@@ -514,12 +514,12 @@
     {
       "catalogId": "characters",
       "step": "VO",
-      "trueEngine": "None",
+      "trueEngine": "ElevenLabs",
       "deliverable": "audio",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": false,
-      "note": "produce() returns a hand-typed line of dialogue text, not a synthesized voice file; ElevenLabs (wired for voice) is never called by this step."
+      "note": "Powered by gap-loop batch 8 (2026-07-08): real ElevenLabs TTS generated via /api/audio-gen for each VO line, asset refs (mp3 in ~/.pof audio-asset-db) injected into the artifact data.audioAssets. trueEngine reflects the real producing engine."
     },
     {
       "catalogId": "characters",
@@ -3034,12 +3034,12 @@
     {
       "catalogId": "tutorial-beats",
       "step": "VO",
-      "trueEngine": "None",
+      "trueEngine": "ElevenLabs",
       "deliverable": "audio",
       "generatorWired": true,
       "judge": "human",
       "checkerMeaningful": false,
-      "note": "Only literal VO script text is authored (no ElevenLabs synthesis call); voNote itself says the SoundCues are 'pending audio catalog seed'; minCount(≥1) is shape-only."
+      "note": "Powered by gap-loop batch 8 (2026-07-08): real ElevenLabs TTS generated via /api/audio-gen for each VO line, asset refs (mp3 in ~/.pof audio-asset-db) injected into the artifact data.audioAssets. trueEngine reflects the real producing engine."
     },
     {
       "catalogId": "tutorial-beats",
