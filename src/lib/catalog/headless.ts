@@ -17,6 +17,9 @@ import { CATALOG_SECTIONS } from '@/lib/catalog/sections';
 import { seededEntities } from '@/lib/catalog/seed';
 import { listLifecycle } from '@/lib/catalog-db';
 import { listArtifacts, upsertArtifact } from '@/lib/pipeline-artifacts-db';
+import { listVerdicts } from '@/lib/status/judge-verdicts-db';
+import { getStepFact } from '@/lib/status/statusModel';
+import { bridgeJudgeVerdict } from '@/lib/catalog/acceptance/judgeBridge';
 import { canonContextFor } from '@/lib/catalog/canon/canonContext';
 import { ARCHETYPE_CANON } from '@/lib/catalog/canon/archetypeCanon';
 import type { ProjectRule } from '@/lib/catalog/canon/types';
@@ -99,6 +102,23 @@ export function safeAccept(accept: Checker, data: Record<string, unknown>, ctx?:
 }
 
 /**
+ * Overlay any CURRENT-RUBRIC judge verdict for this (catalog, entity, step) onto the
+ * checker's AcceptanceResult, so acceptance and the judge honesty-layer speak one truth
+ * (a matching-class judge FAIL down-grades a shape-pass to `fail`/attention). READ-ONLY:
+ * reads `judge_verdicts`, never re-grades. Needs a concrete entity to scope the verdict.
+ */
+function bridgeAcceptance(
+  catalogId: string,
+  entityId: string,
+  step: string,
+  result: AcceptanceResult,
+): AcceptanceResult {
+  const verdicts = listVerdicts(catalogId).filter((v) => v.entityId === entityId && v.step === step);
+  if (!verdicts.length) return result;
+  return bridgeJudgeVerdict(result, verdicts, getStepFact(catalogId, step)?.judge);
+}
+
+/**
  * The server-side CheckerContext for a (catalog, entity): sibling steps' persisted data
  * (when an entityId is known) plus a cross-catalog `has` derived from the SEEDED entities —
  * the server-importable source of entity existence. Mirrors the lab's catalog-store `has`.
@@ -140,7 +160,9 @@ export function gradeArtifact(
 ): { graded: boolean; result: AcceptanceResult | null } {
   const checker = serverCheckerFor(catalogId, step);
   if (!checker) return { graded: false, result: null };
-  return { graded: true, result: safeAccept(checker, data, serverCheckerContext(catalogId, entityId)) };
+  const result = safeAccept(checker, data, serverCheckerContext(catalogId, entityId));
+  // Bridge in any current-rubric judge verdict (scoped to a concrete entity).
+  return { graded: true, result: entityId ? bridgeAcceptance(catalogId, entityId, step, result) : result };
 }
 
 /** Map a seeded entity to the `LabEntity` shape the step `produce`/`accept` expect. */
@@ -248,13 +270,25 @@ export function buildStepRecipe(
   // Current verdict: persisted truth when present (it may carry an L3/L4 drain verdict
   // the pure Checker can't reproduce), otherwise the pending message from accept({}).
   const pendingRes = safeAccept(spec.accept, {}, ctx);
+  // Bridge the persisted verdict through the judge honesty-layer so a checker-pass that a
+  // current-rubric judge FAILED shows the downgrade + judge reason here too (Claude sees
+  // the same truth /status shows), not a stale pass.
+  const curRes = cur
+    ? bridgeAcceptance(catalogId, entityId, step, {
+        label: exampleRes?.label ?? pendingRes?.label ?? spec.label,
+        tier: (cur.tier as AcceptanceResult['tier'] | undefined) ?? exampleRes?.tier ?? pendingRes?.tier ?? 'L0',
+        status: cur.status as AcceptanceResult['status'],
+        detail: '',
+        ...(cur.reason ? { reason: cur.reason } : {}),
+      })
+    : null;
   const acceptance: StepRecipe['acceptance'] = {
     label: exampleRes?.label ?? pendingRes?.label ?? spec.label,
     tier: exampleRes?.tier ?? pendingRes?.tier ?? 'L0',
     ...(exampleRes ? { exampleStatus: exampleRes.status, exampleDetail: exampleRes.detail } : {}),
-    currentStatus: cur?.status ?? pendingRes?.status ?? 'pending',
+    currentStatus: curRes?.status ?? pendingRes?.status ?? 'pending',
     ...(!cur && pendingRes?.detail ? { currentDetail: pendingRes.detail } : {}),
-    ...(cur?.reason ? { currentReason: cur.reason } : {}),
+    ...(curRes?.reason ? { currentReason: curRes.reason } : {}),
   };
 
   return {
@@ -319,6 +353,10 @@ export function submitStepArtifact(
     tier,
     ...(reason ? { reason } : {}),
   });
+  // The persisted artifact keeps the checker's own verdict (storage separation is
+  // deliberate — judge_verdicts lives apart). The RETURNED acceptance the caller consumes
+  // is bridged, so a current-rubric judge FAIL surfaces here instead of a stale pass.
+  const bridged = res ? bridgeAcceptance(catalogId, entityId, step, res) : res;
   return {
     artifact: {
       catalogId: artifact.catalogId,
@@ -331,11 +369,11 @@ export function submitStepArtifact(
       ...(artifact.reason ? { reason: artifact.reason } : {}),
     },
     acceptance: {
-      status,
-      tier,
-      label: res?.label ?? step,
-      ...(res?.detail ? { detail: res.detail } : {}),
-      ...(reason ? { reason } : {}),
+      status: bridged?.status ?? status,
+      tier: bridged?.tier ?? tier,
+      label: bridged?.label ?? res?.label ?? step,
+      ...(bridged?.detail ? { detail: bridged.detail } : {}),
+      ...(bridged?.reason ? { reason: bridged.reason } : reason ? { reason } : {}),
     },
   };
 }
