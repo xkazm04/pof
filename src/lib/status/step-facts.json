@@ -114,12 +114,12 @@
     {
       "catalogId": "achievements",
       "step": "UE Packaging",
-      "trueEngine": "Claude",
+      "trueEngine": "Packaging engine",
       "deliverable": "ue-runtime",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "none",
-      "checkerMeaningful": false,
-      "note": "minCount(assets,2) just counts a hand-written list of expected asset names; produce() never invokes the UE Python bridge to actually create them."
+      "checkerMeaningful": true,
+      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
     },
     {
       "catalogId": "ambient",
@@ -214,12 +214,12 @@
     {
       "catalogId": "ambient",
       "step": "UE Packaging",
-      "trueEngine": "Claude",
+      "trueEngine": "Packaging engine",
       "deliverable": "ue-runtime",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "none",
-      "checkerMeaningful": false,
-      "note": "minCount(assets,3) counts a hand-written list of asset names/paths (SC_*, MS_*, DT_Ambient); produce() never invokes UE/Wwise to actually build them."
+      "checkerMeaningful": true,
+      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
     },
     {
       "catalogId": "bestiary",
@@ -334,12 +334,12 @@
     {
       "catalogId": "bestiary",
       "step": "UE Packaging",
-      "trueEngine": "Claude",
+      "trueEngine": "Packaging engine",
       "deliverable": "ue-runtime",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "none",
-      "checkerMeaningful": false,
-      "note": "minCount(assets,3) counts a hand-written asset-name list; nothing here actually builds BP_/SK_/BT_ assets in UE."
+      "checkerMeaningful": true,
+      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
     },
     {
       "catalogId": "character-pipeline",
@@ -554,12 +554,12 @@
     {
       "catalogId": "characters",
       "step": "UE Packaging",
-      "trueEngine": "Claude",
+      "trueEngine": "Packaging engine",
       "deliverable": "ue-runtime",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "none",
-      "checkerMeaningful": false,
-      "note": "minCount(assets,4) counts a hand-written list of BP_/SK_/DT_ names; produce() never actually builds these assets in UE."
+      "checkerMeaningful": true,
+      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
     },
     {
       "catalogId": "codex",
@@ -664,12 +664,12 @@
     {
       "catalogId": "codex",
       "step": "UE Packaging",
-      "trueEngine": "Claude",
+      "trueEngine": "Packaging engine",
       "deliverable": "ue-runtime",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "none",
-      "checkerMeaningful": false,
-      "note": "Asset list is hand-written strings (DT_/GE_/T_/SC_ names) — no UE Python build step actually creates these; minCount(3) only counts list length."
+      "checkerMeaningful": true,
+      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
     },
     {
       "catalogId": "combat-map",
@@ -784,12 +784,12 @@
     {
       "catalogId": "combat-map",
       "step": "UE Packaging",
-      "trueEngine": "Claude",
+      "trueEngine": "Packaging engine",
       "deliverable": "ue-runtime",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "none",
-      "checkerMeaningful": false,
-      "note": "Hand-written asset-name list; minCount(3) + a cppSymbolExists staticCheck confirm class compiles but not that this arena's specific assets exist."
+      "checkerMeaningful": true,
+      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
     },
     {
       "catalogId": "crafting-recipes",
@@ -894,12 +894,12 @@
     {
       "catalogId": "crafting-recipes",
       "step": "UE Packaging",
-      "trueEngine": "Claude",
+      "trueEngine": "Packaging engine",
       "deliverable": "ue-runtime",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "none",
-      "checkerMeaningful": false,
-      "note": "Hand-written asset list; minCount(2) shape check. staticChecks (cppSymbolExists ×2, seedRowPresent) verify C++/python-seed existence but not that this specific recipe's assets exist."
+      "checkerMeaningful": true,
+      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
     },
     {
       "catalogId": "currencies",
@@ -964,12 +964,12 @@
     {
       "catalogId": "currencies",
       "step": "UE Packaging",
-      "trueEngine": "Claude",
+      "trueEngine": "Packaging engine",
       "deliverable": "ue-runtime",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "none",
-      "checkerMeaningful": false,
-      "note": "Hand-written asset list; minCount(4) shape check plus a cppSymbolExists staticCheck for the currency row struct only."
+      "checkerMeaningful": true,
+      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
     },
     {
       "catalogId": "cutscenes",
@@ -1094,12 +1094,12 @@
     {
       "catalogId": "cutscenes",
       "step": "UE Packaging",
-      "trueEngine": "Claude",
+      "trueEngine": "Packaging engine",
       "deliverable": "ue-runtime",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "none",
-      "checkerMeaningful": false,
-      "note": "Hand-written LevelSequence/VFX/audio asset-path list; minCount(3) shape check. Step honestly omits a staticCheck rather than invent a C++ symbol."
+      "checkerMeaningful": true,
+      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
     },
     {
       "catalogId": "dialog-trees",
@@ -1214,12 +1214,12 @@
     {
       "catalogId": "dialog-trees",
       "step": "UE Packaging",
-      "trueEngine": "Claude",
+      "trueEngine": "Packaging engine",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
-      "checkerMeaningful": false,
-      "note": "Produces a text manifest of intended asset paths (minCount≥3); no assets are actually built/imported by this step."
+      "checkerMeaningful": true,
+      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
     },
     {
       "catalogId": "factions",
@@ -1324,12 +1324,12 @@
     {
       "catalogId": "factions",
       "step": "UE Packaging",
-      "trueEngine": "Claude",
+      "trueEngine": "Packaging engine",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
-      "checkerMeaningful": false,
-      "note": "Text manifest of intended asset names (minCount≥5); staticChecks confirm symbol/seed presence but not that the discount/rep system behaves correctly."
+      "checkerMeaningful": true,
+      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
     },
     {
       "catalogId": "hud-elements",
@@ -1424,12 +1424,12 @@
     {
       "catalogId": "hud-elements",
       "step": "UE Packaging",
-      "trueEngine": "Claude",
+      "trueEngine": "Packaging engine",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
-      "checkerMeaningful": false,
-      "note": "Text manifest of intended widget/texture names (minCount≥2); staticChecks verify symbols/seed rows exist, not that the HUD actually renders correctly."
+      "checkerMeaningful": true,
+      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
     },
     {
       "catalogId": "icon-sets",
@@ -1494,12 +1494,12 @@
     {
       "catalogId": "icon-sets",
       "step": "UE Packaging",
-      "trueEngine": "Claude",
+      "trueEngine": "Packaging engine",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
-      "checkerMeaningful": false,
-      "note": "Text manifest of 3 intended asset names (minCount==3); staticChecks confirm struct/seed presence only, not that 224 icons were actually authored."
+      "checkerMeaningful": true,
+      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
     },
     {
       "catalogId": "input-schemes",
@@ -1614,12 +1614,12 @@
     {
       "catalogId": "input-schemes",
       "step": "UE Packaging",
-      "trueEngine": "Claude",
+      "trueEngine": "Packaging engine",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
-      "checkerMeaningful": false,
-      "note": "Text manifest of intended input assets (minCount≥2); staticChecks confirm controller symbol exists only."
+      "checkerMeaningful": true,
+      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
     },
     {
       "catalogId": "items",
@@ -1724,12 +1724,12 @@
     {
       "catalogId": "items",
       "step": "UE Packaging",
-      "trueEngine": "Claude",
+      "trueEngine": "Packaging engine",
       "deliverable": "ue-runtime",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "ue-test",
-      "checkerMeaningful": false,
-      "note": "Asset list is a static string manifest, not an actual package/cook step. accept is minCount (shape-only); the staticChecks (cppSymbolExists/seedRowPresent) do read real Source/ and Content/Python files, but those aren't the primary accept gate."
+      "checkerMeaningful": true,
+      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
     },
     {
       "catalogId": "loot-tables",
@@ -1824,12 +1824,12 @@
     {
       "catalogId": "loot-tables",
       "step": "UE Packaging",
-      "trueEngine": "Claude",
+      "trueEngine": "Packaging engine",
       "deliverable": "ue-runtime",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "ue-test",
-      "checkerMeaningful": false,
-      "note": "Static asset-name manifest; minCount is shape-only. staticChecks do real file checks but aren't the primary accept."
+      "checkerMeaningful": true,
+      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
     },
     {
       "catalogId": "materials",
@@ -1924,12 +1924,12 @@
     {
       "catalogId": "materials",
       "step": "UE Packaging",
-      "trueEngine": "Claude",
+      "trueEngine": "Packaging engine",
       "deliverable": "ue-runtime",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "ue-test",
-      "checkerMeaningful": false,
-      "note": "Custom inline accept just checks assets.length>=3 (shape-only) against a static name list; the one real check is the staticChecks cppSymbolExists call."
+      "checkerMeaningful": true,
+      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
     },
     {
       "catalogId": "music",
@@ -2024,12 +2024,12 @@
     {
       "catalogId": "music",
       "step": "UE Packaging",
-      "trueEngine": "Claude",
+      "trueEngine": "Packaging engine",
       "deliverable": "audio",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "human",
-      "checkerMeaningful": false,
-      "note": "Manifest lists a MetaSound asset + 6 stem SoundWaves by name, but no music/audio generator was ever invoked anywhere in this pipeline — these are entirely fictitious filenames. minCount(8) is shape-only over a list nothing produced."
+      "checkerMeaningful": true,
+      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
     },
     {
       "catalogId": "player-movement",
@@ -2244,12 +2244,12 @@
     {
       "catalogId": "progression-curves",
       "step": "UE Packaging",
-      "trueEngine": "Code",
+      "trueEngine": "Packaging engine",
       "deliverable": "ue-runtime",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "none",
-      "checkerMeaningful": false,
-      "note": "Assembles a deterministic list of asset-name strings (CT_/GE_/WBP_/NS_) from slug(e.name); no engine actually creates these DataTables/GameplayEffects/Blueprints — minCount just checks the list has ≥4 entries."
+      "checkerMeaningful": true,
+      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
     },
     {
       "catalogId": "props",
@@ -2354,12 +2354,12 @@
     {
       "catalogId": "props",
       "step": "UE Packaging",
-      "trueEngine": "Code",
+      "trueEngine": "Packaging engine",
       "deliverable": "ue-runtime",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "none",
-      "checkerMeaningful": false,
-      "note": "Deterministic list of SM_/GC_/BP_/MI_ names from slug(e.name); minCount(4) only checks list length, no assets are actually built in UE by this step."
+      "checkerMeaningful": true,
+      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
     },
     {
       "catalogId": "quests",
@@ -2464,12 +2464,12 @@
     {
       "catalogId": "quests",
       "step": "UE Packaging",
-      "trueEngine": "Code",
+      "trueEngine": "Packaging engine",
       "deliverable": "ue-runtime",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "none",
-      "checkerMeaningful": false,
-      "note": "Deterministic DT_/DA_/WBP_/icon name list; minCount(3) only checks list length — no quest DataTable is actually written to a UE project by this step."
+      "checkerMeaningful": true,
+      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
     },
     {
       "catalogId": "save-points",
@@ -2584,12 +2584,12 @@
     {
       "catalogId": "save-points",
       "step": "UE Packaging",
-      "trueEngine": "Code",
+      "trueEngine": "Packaging engine",
       "deliverable": "ue-runtime",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "none",
-      "checkerMeaningful": false,
-      "note": "Deterministic asset-name list (SaveGame/Subsystem/BP_Bonfire/icon/WBP names); minCount(4) only checks list length, no save subsystem is actually built by this step."
+      "checkerMeaningful": true,
+      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
     },
     {
       "catalogId": "screen-flow",
@@ -2694,12 +2694,12 @@
     {
       "catalogId": "screen-flow",
       "step": "UE Packaging",
-      "trueEngine": "Code",
+      "trueEngine": "Packaging engine",
       "deliverable": "ue-runtime",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "none",
-      "checkerMeaningful": false,
-      "note": "Deterministic WBP_/IMC_/icon name list; minCount(3) only checks list length, no HUD widget classes are actually built by this step."
+      "checkerMeaningful": true,
+      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
     },
     {
       "catalogId": "spellbook",
@@ -2804,12 +2804,12 @@
     {
       "catalogId": "spellbook",
       "step": "UE Packaging",
-      "trueEngine": "Code (deterministic)",
+      "trueEngine": "Packaging engine",
       "deliverable": "ue-runtime",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": true,
-      "note": "Deterministic config/manifest produced by code (produce()); content verified by an LLM panel judge (91/100) — gap-loop 2026-07-08. Real config the game/UE consumes, not a placeholder."
+      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
     },
     {
       "catalogId": "state-graph",
@@ -2894,12 +2894,12 @@
     {
       "catalogId": "state-graph",
       "step": "UE Packaging",
-      "trueEngine": "UE Python",
+      "trueEngine": "Packaging engine",
       "deliverable": "ue-runtime",
       "generatorWired": true,
       "judge": "none",
-      "checkerMeaningful": false,
-      "note": "Packaged via real UE Python seed scripts against real compiled C++ (UStateTreeComponent-based UARPGStateTreeAIComponent + StateTree assets); L2 static checks verify the symbols + seed rows exist in Source/PoF + Content/Python (verify-static pass). gap-loop 2026-07-08."
+      "checkerMeaningful": true,
+      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
     },
     {
       "catalogId": "status-effects",
@@ -2954,12 +2954,12 @@
     {
       "catalogId": "status-effects",
       "step": "UE Packaging",
-      "trueEngine": "UE Python",
+      "trueEngine": "Packaging engine",
       "deliverable": "ue-runtime",
       "generatorWired": true,
       "judge": "none",
-      "checkerMeaningful": false,
-      "note": "Packaged via real UE Python seed scripts against real compiled C++ (GE_Gen_Burning + DT_GeneratedAbilities Burning row); L2 static checks verify the symbols + seed rows exist in Source/PoF + Content/Python (verify-static pass). gap-loop 2026-07-08."
+      "checkerMeaningful": true,
+      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
     },
     {
       "catalogId": "tutorial-beats",
@@ -3084,12 +3084,12 @@
     {
       "catalogId": "tutorial-beats",
       "step": "UE Packaging",
-      "trueEngine": "Code (deterministic)",
+      "trueEngine": "Packaging engine",
       "deliverable": "ue-runtime",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": true,
-      "note": "Deterministic config/manifest produced by code (produce()); content verified by an LLM panel judge (81/100) — gap-loop 2026-07-08. Real config the game/UE consumes, not a placeholder."
+      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
     },
     {
       "catalogId": "vendors",
@@ -3194,12 +3194,12 @@
     {
       "catalogId": "vendors",
       "step": "UE Packaging",
-      "trueEngine": "UE Python",
+      "trueEngine": "Packaging engine",
       "deliverable": "ue-runtime",
       "generatorWired": true,
       "judge": "none",
-      "checkerMeaningful": false,
-      "note": "Packaged via real UE Python seed scripts against real compiled C++ (UARPGVendorComponent + FARPGVendorInventoryRow + DT_VendorInventory (WanderingMerchant)); L2 static checks verify the symbols + seed rows exist in Source/PoF + Content/Python (verify-static pass). gap-loop 2026-07-08."
+      "checkerMeaningful": true,
+      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
     },
     {
       "catalogId": "vfx",
@@ -3294,12 +3294,12 @@
     {
       "catalogId": "vfx",
       "step": "UE Packaging",
-      "trueEngine": "Code",
+      "trueEngine": "Packaging engine",
       "deliverable": "graph-data",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "none",
-      "checkerMeaningful": false,
-      "note": "assets is a hardcoded list of intended asset-name strings (NS_/MI_/SM_/DT_VFX); no wired engine in the palette (Leonardo/Tripo/ElevenLabs/UE-Python-for-movement) actually authors Niagara systems, material instances, or static meshes from this step, so nothing real is packaged. accept is minCount(assets,2), a length check only; staticChecks (cppSymbolExists/seedRowPresent) are a separate, narrower mechanism not part of accept."
+      "checkerMeaningful": true,
+      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
     },
     {
       "catalogId": "zone-map",
@@ -3414,12 +3414,12 @@
     {
       "catalogId": "zone-map",
       "step": "UE Packaging",
-      "trueEngine": "Code",
+      "trueEngine": "Packaging engine",
       "deliverable": "ue-runtime",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "none",
-      "checkerMeaningful": false,
-      "note": "assets is a hardcoded string list, and the umapNote claims a specific real, committed .umap (baked, reload-verified, pof-exp@1ec6353) — the strongest factual claim of any step in either file — but nothing in this Produce call queries the UE project or the git repo to confirm that; it's asserted text. No wired engine in the app's palette builds/exports .umap levels or places actors from this step. accept is minCount(assets,3), a length check only; staticChecks (cppSymbolExists x2) are a separate, narrower mechanism not part of accept."
+      "checkerMeaningful": true,
+      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
     }
   ]
 }

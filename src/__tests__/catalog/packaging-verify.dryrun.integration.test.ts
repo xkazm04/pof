@@ -8,15 +8,19 @@ import { describe, it, expect } from 'vitest';
  * dirs are gitignored), and reports the would-be verdicts WITHOUT writing artifacts.
  *
  *   POF_PACKAGING_DRYRUN=1 npx vitest run src/__tests__/catalog/packaging-verify.dryrun.integration.test.ts
+ *
+ * POF_PACKAGING_APPLY=1 additionally WRITES the verdicts back to the artifacts
+ * (the drain's apply mode — same as POST /api/pipeline-artifacts/verify-packaging).
  */
 const enabled = process.env.POF_PACKAGING_DRYRUN === '1';
+const apply = process.env.POF_PACKAGING_APPLY === '1';
 
 describe.skipIf(!enabled)('packaging-verify dry-run (real DB + fs)', () => {
   it('rebuilds every packaging step package and reports honest verdicts', async () => {
     const { verifyPackagingAll, defaultPackagingVerifyDeps } = await import(
       '@/lib/catalog/acceptance/packagingVerify'
     );
-    const summary = verifyPackagingAll({}, defaultPackagingVerifyDeps(), { apply: false });
+    const summary = verifyPackagingAll({}, defaultPackagingVerifyDeps(), { apply });
 
     // eslint-disable-next-line no-console -- operator-facing dry-run report
     console.log(
@@ -28,7 +32,7 @@ describe.skipIf(!enabled)('packaging-verify dry-run (real DB + fs)', () => {
     }
 
     expect(summary.verified).toBeGreaterThan(0); // 30 pipelines persist a UE Packaging artifact
-    // A dry run never writes artifacts.
-    expect(summary.changed).toBe(0);
+    // A dry run never writes artifacts; apply mode reports what moved.
+    if (!apply) expect(summary.changed).toBe(0);
   });
 });

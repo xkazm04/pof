@@ -26,8 +26,11 @@
 - **Tests:** 13 unit (collect/engine/drain) + the env-gated live dry-run; guards
   (`pipeline-produce-accept`, `pipeline-e2e-coverage`) green.
 
-Remaining: run `POST /verify-packaging` (apply) as part of a gap-loop wrap; step-facts flips
-for the packaging rows (trueEngine → 'Packaging engine'); Tier 2 below.
+**Applied same day:** verdicts written to the real DB (30 pass / 2 deferred, re-drain
+idempotent) via the integration runner's `POF_PACKAGING_APPLY=1` mode, and all 30
+step-facts packaging entries flipped (`trueEngine: 'Packaging engine'`,
+`generatorWired: true`, `checkerMeaningful: true`) — the UNPOWERED packaging block on
+/status is retired. Remaining: Tier 2 below (L3 gates verify the ueDeclarations).
 
 ## Problem (from the /status fleet gap audit + judge fleet)
 
