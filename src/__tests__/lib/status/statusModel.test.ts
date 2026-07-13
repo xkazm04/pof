@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { buildSwimlane, deriveCell, engineClass, getStepFact, inferEngine, sortLanes, type StepFact } from '@/lib/status/statusModel';
+import { buildSwimlane, deriveCell, engineClass, getStepFact, inferEngine, isSyntheticEntity, sortLanes, type StepFact } from '@/lib/status/statusModel';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
+import { RUBRIC_VERSION } from '@/lib/judge/rubrics';
 
 const art = (step: string, status: PipelineArtifact['status'], extra: Partial<PipelineArtifact> = {}): PipelineArtifact => ({
   catalogId: 'c', entityId: 'e1', step, data: {}, ueAssets: [], status, ...extra,
@@ -142,14 +143,14 @@ describe('judge verdict merge — the content-quality layer', () => {
     catalogId: 'items', step: 'Brief', trueEngine: 'Claude', deliverable: 'text-config',
     generatorWired: true, judge: 'llm-panel', checkerMeaningful: false, note: 'prose brief',
   };
-  // A STRICT pass (rubric v2, >=90) is what verifies under the WS2 ladder; a lenient/old pass does not.
+  // A STRICT pass (CURRENT rubric, >=90) is what verifies under the WS2 ladder; a lenient/old pass does not.
   const jv = (verdict: 'pass' | 'fail', judge: 'llm-panel' | 'vlm' = 'llm-panel') => ({
     catalogId: 'items', entityId: 'e1', step: 'Brief', judge, verdict,
     score: verdict === 'pass' ? 92 : 31, findings: 'panel findings text', model: 'claude-opus-4-8',
-    rubricVersion: 2,
+    rubricVersion: RUBRIC_VERSION,
   });
 
-  it('a matching STRICT judge PASS (v2, >=90) elevates a checker-pass to verified', () => {
+  it('a matching STRICT judge PASS (current rubric, >=90) elevates a checker-pass to verified', () => {
     const c = deriveCell('Brief', 'Claude', [art('Brief', 'pass', { tier: 'L0' })], llmFact, [jv('pass')]);
     expect(c.grade).toBe('verified');
     expect(c.judged?.score).toBe(92);
@@ -159,6 +160,12 @@ describe('judge verdict merge — the content-quality layer', () => {
     const lenient = { catalogId: 'items', entityId: 'e1', step: 'Brief', judge: 'llm-panel' as const, verdict: 'pass' as const, score: 86, findings: 'lenient panel', model: 'sonnet-fleet-w1', rubricVersion: 1 };
     const c = deriveCell('Brief', 'Claude', [art('Brief', 'pass', { tier: 'L0' })], llmFact, [lenient]);
     expect(c.grade).toBe('trusted');
+  });
+
+  it('a SUPERSEDED-rubric pass at >=90 does NOT verify — a canon-blind v(N-1) pass is provisional until re-judged', () => {
+    const stale = { catalogId: 'items', entityId: 'e1', step: 'Brief', judge: 'llm-panel' as const, verdict: 'pass' as const, score: 93, findings: 'pre-canon pass', model: 'claude-opus-4-8', rubricVersion: RUBRIC_VERSION - 1 };
+    const c = deriveCell('Brief', 'Claude', [art('Brief', 'pass', { tier: 'L0' })], llmFact, [stale]);
+    expect(c.grade).toBe('trusted'); // demoted from verified until a current-rubric verdict lands
   });
 
   it('a judge FAIL condemns the content to attention even when the shape checker passed', () => {
@@ -175,5 +182,49 @@ describe('judge verdict merge — the content-quality layer', () => {
   it('a judge pass without any checker-pass does not fabricate verified (nothing produced)', () => {
     const c = deriveCell('Brief', 'Claude', [], llmFact, [jv('pass')]);
     expect(c.grade).toBe('unwired');
+  });
+});
+
+describe('synthetic test-fixture entities are not content', () => {
+  it('recognises the harness fixtures and nothing else', () => {
+    expect(isSyntheticEntity('test-headless-concept-brief')).toBe(true);
+    expect(isSyntheticEntity('item-mcp-smoke')).toBe(true);
+    expect(isSyntheticEntity('item-1')).toBe(false);
+    expect(isSyntheticEntity('test-dummy-real-entity')).toBe(false);
+  });
+
+  it("a fixture's failing verdict does not red out a step whose real content is shippable", () => {
+    const strict = (entityId: string, score: number) => ({
+      catalogId: 'items', entityId, step: 'Brief', judge: 'llm-panel' as const,
+      verdict: (score >= 90 ? 'pass' : 'fail') as 'pass' | 'fail',
+      score, findings: '', model: 'claude-opus-4-8', rubricVersion: RUBRIC_VERSION,
+    });
+    const artFor = (entityId: string): PipelineArtifact => ({
+      catalogId: 'items', entityId, step: 'Brief', data: {}, ueAssets: [], status: 'pass', tier: 'L0',
+    });
+    const lane = buildSwimlane(
+      'items', 'Items', [{ label: 'Brief', engine: 'Claude' }],
+      [artFor('item-1'), artFor('test-headless-concept-brief')],
+      [strict('item-1', 92), strict('test-headless-concept-brief', 3)],
+    );
+    expect(lane.cells[0].grade).toBe('verified');
+    expect(lane.cells[0].judged?.score).toBe(92);
+  });
+
+  it('a REAL sibling below 90 still reds the cell (the fixture filter is not a whitewash)', () => {
+    const strict = (entityId: string, score: number) => ({
+      catalogId: 'items', entityId, step: 'Brief', judge: 'llm-panel' as const,
+      verdict: (score >= 90 ? 'pass' : 'fail') as 'pass' | 'fail',
+      score, findings: '', model: 'claude-opus-4-8', rubricVersion: RUBRIC_VERSION,
+    });
+    const artFor = (entityId: string): PipelineArtifact => ({
+      catalogId: 'items', entityId, step: 'Brief', data: {}, ueAssets: [], status: 'pass', tier: 'L0',
+    });
+    const lane = buildSwimlane(
+      'items', 'Items', [{ label: 'Brief', engine: 'Claude' }],
+      [artFor('item-1'), artFor('item-lightsaber')],
+      [strict('item-1', 92), strict('item-lightsaber', 83)],
+    );
+    expect(lane.cells[0].grade).toBe('attention');
   });
 });

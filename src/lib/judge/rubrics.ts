@@ -7,8 +7,14 @@ import { DIMENSIONS, STYLE_ANCHORS, type DeliverableClass } from './dimensions';
  * calibration guard (src/lib/judge/calibration).
  *
  * v1 = the old lenient "is it coherent?" era (pre-program). v2 = the AAA-lead-reviewer bar.
+ * v3 = v2 + CANON AWARENESS: the judge now receives the project's binding design rules
+ * (canon-seed, global + catalog-scoped) and a projection of the entity's sibling steps, so it
+ * stops penalizing content for correctly following canon AND catches real canon violations /
+ * cross-step contradictions the isolated judge was blind to. A stricter, more accurate contract
+ * than v2 — bumping the version correctly makes every canon-blind v2 pass provisional (no longer
+ * a strict pass) until the step is re-judged under v3.
  */
-export const RUBRIC_VERSION = 2;
+export const RUBRIC_VERSION = 3;
 
 /** Score bands the whole program agrees on. */
 export const BANDS = {
@@ -59,21 +65,57 @@ function outputContract(): string {
   ].join('\n');
 }
 
+/** Frame the injected project canon so it REDIRECTS scrutiny rather than lowering the bar.
+ *  A senior reviewer on this project knows its binding design constraints; a reviewer who
+ *  dings content for correctly following them (a Unique whose power is a rule-changing mod, an
+ *  audio budget within the project's cap, the project's own rarity ladder) is failing to
+ *  understand the product, not applying a higher bar. Canon tells you what is DELIBERATE — it
+ *  does NOT excuse weak execution, and a genuine VIOLATION of canon is itself a defect to
+ *  penalize. This block is empty when no canon is supplied. */
+function canonFraming(canonBlock: string): string {
+  if (!canonBlock) return '';
+  return [
+    canonBlock,
+    ``,
+    `How to use the PROJECT CANON above:`,
+    `- These are the binding design constraints a senior reviewer ON THIS PROJECT already knows.`,
+    `  Content that CORRECTLY follows them is not a defect: do NOT dock a modest stat line whose`,
+    `  power sits in a rule-changing mod (that is the rarity law, not under-tuning), a resident`,
+    `  audio budget that fits the project's stated cap, or the project's own rarity/naming ladder,`,
+    `  and do NOT demand a bigger raw number, a larger asset scale, or a different game's taxonomy`,
+    `  than canon specifies.`,
+    `- Canon does NOT lower the quality bar. Within these constraints, judge craft, coherence,`,
+    `  specificity and completeness exactly as rigorously as before — canon explains the design's`,
+    `  boundaries, it never excuses weak execution inside them.`,
+    `- A genuine VIOLATION of canon (a value that breaks a stated law, a contradiction with the`,
+    `  sibling context below) IS a defect — call it out and score it down.`,
+  ].join('\n');
+}
+
 /**
  * Build the full judge prompt for a deliverable class. `payload` is the thing to judge:
  * for text, the config itself; for media, an instruction naming the local file to Read
- * (the CLI judge has vision via Read). `context` carries subject + sibling summary.
+ * (the CLI judge has vision via Read). `canonContext` is the project's binding design rules
+ * for this catalog (global + catalog-scoped); `siblingContext` is a compact projection of the
+ * entity's OTHER steps so the judge can verify cross-references instead of guessing.
  */
 export function buildRubricPrompt(cls: DeliverableClass, opts: {
   subject: string;
   payload: string;
   siblingContext?: string;
+  canonContext?: string;
 }): string {
   return [
     strictnessContract(cls),
     ``,
+    canonFraming(opts.canonContext ?? ''),
+    ``,
     `SUBJECT: ${opts.subject}`,
-    opts.siblingContext ? `\nSIBLING CONTEXT (cross-check for contradictions):\n${opts.siblingContext}` : '',
+    opts.siblingContext
+      ? `\nSIBLING CONTEXT — the entity's OTHER pipeline steps (real values). A number or name`
+        + ` consistent with these is CORRECT, not an invented reference; penalize only a GENUINE`
+        + ` contradiction with them or within the asset:\n${opts.siblingContext}`
+      : '',
     ``,
     `THE ASSET TO JUDGE:`,
     opts.payload,

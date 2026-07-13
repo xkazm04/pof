@@ -72,6 +72,15 @@ export const ENGINE_CLASS: Record<string, EngineClass> = {
 /** Classes whose L0–L2 pass is credible without a gate. */
 const TRUSTED_CLASSES: ReadonlySet<EngineClass> = new Set(['llm', 'code', 'human']);
 
+/** Entities created by test/smoke harnesses (`src/__tests__/catalog/headless.test.ts`, the MCP
+ *  smoke check) that POST into the same DB as real content. They are fixtures, not deliverables:
+ *  a judge scoring one is scoring a stub, and because a cell is `attention` if ANY of its
+ *  entities fails, a stub's verdict reds out a step whose real content is shippable. Excluded
+ *  from the map and never judged. */
+export function isSyntheticEntity(entityId: string): boolean {
+  return entityId.startsWith('test-headless') || entityId === 'item-mcp-smoke';
+}
+
 export interface StepMeta {
   label: string;
   archetype?: string;
@@ -220,12 +229,14 @@ export function buildSwimlane(
 ): Swimlane {
   const byStep = new Map<string, PipelineArtifact[]>();
   for (const a of artifacts) {
+    if (isSyntheticEntity(a.entityId)) continue;
     const list = byStep.get(a.step) ?? [];
     list.push(a);
     byStep.set(a.step, list);
   }
   const verdictsByStep = new Map<string, JudgeVerdict[]>();
   for (const v of verdicts) {
+    if (isSyntheticEntity(v.entityId)) continue;
     const list = verdictsByStep.get(v.step) ?? [];
     list.push(v);
     verdictsByStep.set(v.step, list);
