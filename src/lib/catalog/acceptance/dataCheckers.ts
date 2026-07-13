@@ -3,22 +3,24 @@ import type { Checker } from './types';
 export function minLength(field: string, label: string, n: number): Checker {
   return (data) => {
     const len = String(data[field] ?? '').length;
-    return { label, tier: 'L0', status: len >= n ? 'pass' : 'pending', detail: `${len} / ${n} chars` };
+    const ok = len >= n;
+    return { label, tier: 'L0', status: ok ? 'pass' : 'pending', detail: `${len} / ${n} chars`, ...(ok ? {} : { reason: `field "${field}" is ${len} characters, needs ≥ ${n}` }) };
   };
 }
 
 export function fieldsPopulated(field: string, label: string, keys: string[]): Checker {
   return (data) => {
     const obj = (data[field] ?? {}) as Record<string, unknown>;
-    const have = keys.filter((k) => obj[k] != null).length;
-    return { label, tier: 'L0', status: have === keys.length ? 'pass' : 'pending', detail: `${have} / ${keys.length} populated` };
+    const missing = keys.filter((k) => obj[k] == null);
+    const ok = missing.length === 0;
+    return { label, tier: 'L0', status: ok ? 'pass' : 'pending', detail: `${keys.length - missing.length} / ${keys.length} populated`, ...(ok ? {} : { reason: `field "${field}" missing: ${missing.join(', ')}` }) };
   };
 }
 
 export function withinPercent(field: string, label: string, target: number, pct: number): Checker {
   return (data) => {
     const v = data[field];
-    if (v == null) return { label, tier: 'L0', status: 'pending', detail: 'not set' };
+    if (v == null) return { label, tier: 'L0', status: 'pending', detail: 'not set', reason: `field "${field}" is not set (expected a value within ±${pct}% of ${target})` };
     const n = Number(v);
     const ok = n >= target * (1 - pct / 100) && n <= target * (1 + pct / 100);
     return { label, tier: 'L0', status: ok ? 'pass' : 'fail', detail: `${n} vs ${target} ±${pct}%`, ...(ok ? {} : { reason: `${n} is outside ±${pct}% of ${target}` }) };
@@ -50,7 +52,9 @@ export function dpsConsistent(
     const aps = num('attackSpeed');
     const dps = Number(data[dpsField]);
     if (![min, max, aps, dps].every((n) => Number.isFinite(n))) {
-      return { label, tier: 'L0', status: 'pending', detail: 'damageMin / damageMax / attackSpeed / baseDPS required' };
+      const missing: string[] = ['damageMin', 'damageMax', 'attackSpeed'].filter((k) => !Number.isFinite(num(k)));
+      if (!Number.isFinite(dps)) missing.push('baseDPS');
+      return { label, tier: 'L0', status: 'pending', detail: 'damageMin / damageMax / attackSpeed / baseDPS required', reason: `missing numeric field(s): ${missing.join(', ')} (in "${damageField}" / "${dpsField}")` };
     }
     const expected = ((min + max) / 2) * aps;
     const ok = expected === 0 ? dps === 0 : Math.abs(dps - expected) <= expected * (tolerancePct / 100);
@@ -68,13 +72,14 @@ export function selected(field: string, label: string): Checker {
   return (data) => {
     const v = data[field];
     const ok = typeof v === 'number' && v >= 0;
-    return { label, tier: 'L1', status: ok ? 'pass' : 'pending', detail: ok ? `candidate ${v}` : 'none selected' };
+    return { label, tier: 'L1', status: ok ? 'pass' : 'pending', detail: ok ? `candidate ${v}` : 'none selected', ...(ok ? {} : { reason: `field "${field}" has no selection (expected a non-negative candidate index, got ${JSON.stringify(v)})` }) };
   };
 }
 
 export function minCount(field: string, label: string, n: number): Checker {
   return (data) => {
     const arr = Array.isArray(data[field]) ? (data[field] as unknown[]) : [];
-    return { label, tier: 'L0', status: arr.length >= n ? 'pass' : 'pending', detail: `${arr.length} / ${n}` };
+    const ok = arr.length >= n;
+    return { label, tier: 'L0', status: ok ? 'pass' : 'pending', detail: `${arr.length} / ${n}`, ...(ok ? {} : { reason: `field "${field}" has ${arr.length} item(s), needs ≥ ${n}` }) };
   };
 }

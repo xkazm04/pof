@@ -83,12 +83,18 @@ export interface StepRecipe {
   current: { data: Record<string, unknown>; status: string; tier?: string; ueAssets: string[] } | null;
 }
 
-/** Run a Checker without letting a thrown produce/accept blow up the whole recipe. */
-function safeAccept(accept: Checker, data: Record<string, unknown>, ctx?: CheckerContext): AcceptanceResult | null {
+/**
+ * Run a Checker without letting a thrown produce/accept blow up the whole recipe. A throw
+ * degrades to `pending` (NEVER an optimistic pass) but now SURFACES the real error message
+ * (truncated) as the reason — instead of the old opaque `null` → "unverified" — so the
+ * failing checker names what actually broke.
+ */
+export function safeAccept(accept: Checker, data: Record<string, unknown>, ctx?: CheckerContext): AcceptanceResult {
   try {
     return accept(data, ctx);
-  } catch {
-    return null;
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return { label: 'Acceptance check', tier: 'L0', status: 'pending', detail: 'checker threw', reason: `acceptance check threw: ${msg.slice(0, 200)}` };
   }
 }
 

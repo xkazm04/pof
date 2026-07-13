@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { minLength, fieldsPopulated, withinPercent, dpsConsistent, selected, minCount } from '@/lib/catalog/acceptance/dataCheckers';
+import { graphValid } from '@/lib/catalog/acceptance/graphCheckers';
+import { safeAccept } from '@/lib/catalog/headless';
+import type { Checker } from '@/lib/catalog/acceptance/types';
 
 describe('L0 data checkers', () => {
   it('minLength passes at/above threshold, pending below', () => {
@@ -40,5 +43,44 @@ describe('L0 data checkers', () => {
     expect(c({ damage: { damageMin: 12, damageMax: 18, attackSpeed: 0.8333 }, baseDPS: 38 }).status).toBe('fail');
     // missing inputs → pending (actionable), not a false pass
     expect(c({ baseDPS: 38 }).status).toBe('pending');
+  });
+});
+
+describe('non-pass checkers emit a SPECIFIC reason naming the offending field', () => {
+  it('minLength pending names the field + shortfall', () => {
+    const r = minLength('brief', 'Brief', 300)({ brief: 'nope' });
+    expect(r.status).toBe('pending');
+    expect(r.reason).toContain('"brief"');
+    expect(r.reason).toContain('300');
+  });
+  it('fieldsPopulated pending lists the missing keys', () => {
+    const r = fieldsPopulated('stats', 'Stats', ['health', 'damage', 'armor'])({ stats: { health: 1 } });
+    expect(r.status).toBe('pending');
+    expect(r.reason).toContain('"stats"');
+    expect(r.reason).toContain('damage');
+    expect(r.reason).toContain('armor');
+  });
+  it('withinPercent pending names the unset field', () => {
+    expect(withinPercent('ratio', 'R', 100, 15)({}).reason).toContain('"ratio"');
+  });
+  it('selected pending names the field', () => {
+    expect(selected('selected', 'Icon')({}).reason).toContain('"selected"');
+  });
+  it('minCount pending names the field + shortfall', () => {
+    const r = minCount('assets', 'Assets', 4)({ assets: ['a'] });
+    expect(r.reason).toContain('"assets"');
+    expect(r.reason).toContain('4');
+  });
+  it('graphValid pending (no graph) names the field', () => {
+    expect(graphValid('flow', 'Flow')({}).reason).toContain('"flow"');
+  });
+});
+
+describe('safeAccept surfaces the real throw message (not opaque "unverified")', () => {
+  it('a thrown checker degrades to pending and reports the truncated message', () => {
+    const boom: Checker = () => { throw new Error('boom: economy row missing'); };
+    const r = safeAccept(boom, {});
+    expect(r.status).toBe('pending');
+    expect(r.reason).toContain('boom: economy row missing');
   });
 });

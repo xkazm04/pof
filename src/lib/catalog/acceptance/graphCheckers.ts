@@ -12,7 +12,7 @@ export function graphValid(field: string, label: string): Checker {
     const g = (data[field] ?? {}) as GraphData;
     const nodes = g.nodes ?? [];
     const edges = g.edges ?? [];
-    if (!nodes.length) return { label, tier: 'L0', status: 'pending', detail: 'no graph' };
+    if (!nodes.length) return { label, tier: 'L0', status: 'pending', detail: 'no graph', reason: `field "${field}" has no nodes — produce a node/edge graph` };
     const ids = new Set(nodes.map((n) => n.id));
     const bad = edges.find((e) => !ids.has(e.from) || !ids.has(e.to));
     if (bad) return { label, tier: 'L0', status: 'fail', detail: 'dangling edge', reason: `edge ${bad.from}→${bad.to} references a missing node` };
