@@ -27,7 +27,7 @@ describe('makeVisualExecutor', () => {
   });
 
   it('runs the Gemini check and maps the verdict when a screenshot resolves', async () => {
-    const fetchImpl = (() => resp({ success: true, data: { verdict: 'pass' } })) as unknown as typeof fetch;
+    const fetchImpl = (() => resp({ success: true, data: { verdict: 'pass', notes: 'crisp tileable texture' } })) as unknown as typeof fetch;
     const ex = makeVisualExecutor({
       appOrigin: 'http://x',
       fetchImpl,
@@ -36,6 +36,10 @@ describe('makeVisualExecutor', () => {
     const v = await ex.run(job);
     expect(v.status).toBe('pass');
     expect(v.detail).toContain('texture');
+    // Evidence carries the frame + the judge's notes so the flip keeps its proof.
+    expect(v.evidence).toMatchObject({ kind: 'visual', screenshotPath: 'C:/shots/x.png' });
+    expect(v.evidence!.judgeText).toContain('crisp tileable texture');
+    expect(typeof v.evidence!.at).toBe('string');
   });
 
   it('maps a real fail verdict (the judge actually judged and said fail)', async () => {
@@ -51,6 +55,9 @@ describe('makeVisualExecutor', () => {
     expect(v.status).toBe('deferred');
     expect(v.screenshot).toBe('p.png');
     expect(v.detail).toContain('auto-judge unavailable');
+    // Even on outage the evidence keeps the captured frame + the outage reason.
+    expect(v.evidence).toMatchObject({ kind: 'visual', screenshotPath: 'p.png' });
+    expect(v.evidence!.judgeText).toContain('auto-judge unavailable');
   });
 
   it('still THROWS when there is no screenshot source at all (nothing to review)', async () => {

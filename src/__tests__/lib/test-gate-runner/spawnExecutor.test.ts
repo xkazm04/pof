@@ -142,6 +142,18 @@ describe('parseScenarioVerdict', () => {
     expect(parseScenarioVerdict({ started: false, samples: [] }, [{ kind: 'animated' }]).status).toBe('fail');
     expect(parseScenarioVerdict({ samples: [] }, [{ kind: 'moved' }]).status).toBe('fail');
   });
+
+  it('surfaces structured stats (evidence) alongside the verdict', () => {
+    const v = parseScenarioVerdict(WALKING, [{ kind: 'animated' }, { kind: 'moved' }]);
+    expect(v.stats).toBeDefined();
+    expect(v.stats!.sampleCount).toBe(4);
+    expect(v.stats!.distance).toBeGreaterThan(50);
+    expect(v.stats!.swingDeg).toBeGreaterThan(10);
+    // Stats accompany a fail verdict too (the proof of WHY it failed).
+    expect(parseScenarioVerdict(TPOSE_STUCK, [{ kind: 'animated' }]).stats!.swingDeg).toBeCloseTo(0, 1);
+    // A cast records montage seen.
+    expect(parseScenarioVerdict(FIREBALL_CAST, [{ kind: 'montage-playing' }]).stats!.montagePlaying).toBe(1);
+  });
 });
 
 describe('makeSpawnExecutor', () => {

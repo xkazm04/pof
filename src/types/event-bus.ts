@@ -151,6 +151,10 @@ export interface GateEvents {
     to: 'pass' | 'fail' | 'deferred';
     regression: boolean;
     detail: string;
+    /** One-line summary of the structured evidence behind the verdict (markers / observed
+     *  stats / captured frame / judge text) — present when the executor returned evidence.
+     *  The full evidence object is persisted into the artifact's `data.evidence`. */
+    evidence?: string;
   };
 }
 

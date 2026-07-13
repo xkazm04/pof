@@ -2,6 +2,7 @@ import { getArtifact, listDeferredArtifacts, upsertArtifact } from '@/lib/pipeli
 import { logger } from '@/lib/logger';
 import { eventBus } from '@/lib/event-bus';
 import { classifyVerdictChange } from '@/lib/notify/verdict-change';
+import { summarizeEvidence } from '@/types/observation';
 import { parseTestName } from './parse';
 import { resolveScenario } from './scenarioRegistry';
 import type { DrainResult, DrainSummary, GateExecutor, GateJob, GateTier } from './types';
@@ -57,11 +58,16 @@ export async function drainOne(job: GateJob, executor: GateExecutor): Promise<Dr
   const verdict = await executor.run(job);
   const existing = getArtifact(job.catalogId, job.entityId, job.step);
   const from = existing?.status ?? null;
+  // Merge the structured evidence into the artifact's data, PRESERVING everything already there
+  // (genHistory, produced payloads, …). The bounded `GateEvidence` (capped samples, truncated
+  // judge text — see @/types/observation) makes the flip auditable without re-running the gate.
+  const prevData = existing?.data ?? {};
+  const data = verdict.evidence ? { ...prevData, evidence: verdict.evidence } : prevData;
   upsertArtifact({
     catalogId: job.catalogId,
     entityId: job.entityId,
     step: job.step,
-    data: existing?.data ?? {},
+    data,
     ueAssets: existing?.ueAssets ?? [],
     status: verdict.status,
     tier: job.tier,
@@ -73,6 +79,7 @@ export async function drainOne(job: GateJob, executor: GateExecutor): Promise<Dr
   // know or care who's listening.
   const change = classifyVerdictChange(from, verdict.status);
   if (change.changed) {
+    const evidenceSummary = summarizeEvidence(verdict.evidence);
     eventBus.emit('gate.verdict.changed', {
       catalogId: job.catalogId,
       entityId: job.entityId,
@@ -82,6 +89,7 @@ export async function drainOne(job: GateJob, executor: GateExecutor): Promise<Dr
       to: verdict.status,
       regression: change.regression,
       detail: verdict.detail,
+      ...(evidenceSummary ? { evidence: evidenceSummary } : {}),
     }, 'test-gate-runner');
   }
 

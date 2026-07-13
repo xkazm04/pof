@@ -5,7 +5,13 @@ import {
   buildRuntimeDeferredReason,
   parseRuntimeDeferredTestName,
   mapScenarioInputs,
+  boundSamples,
+  boundJudgeText,
+  summarizeEvidence,
+  EVIDENCE_MAX_SAMPLES,
+  EVIDENCE_MAX_TEXT,
   RUNTIME_DEFERRED_PREFIX,
+  type ObsSample,
 } from '@/types/observation';
 import { buildScenarioArgs as spawnScenarioArgs } from '@/lib/test-gate-runner/spawnExecutor';
 import { buildScenarioArgs as captureScenarioArgs, buildScenarioInbox as captureInbox } from '@/lib/ue-launch/capture';
@@ -69,5 +75,40 @@ describe('observation spine — deferred-reason contract (single source)', () =>
     expect(parseTestName(buildRuntimeDeferredReason('VSFooTest'))).toBe('VSFooTest');
     expect(parseTestName('unrelated reason')).toBeNull();
     expect(parseRuntimeDeferredTestName(undefined)).toBeNull();
+  });
+});
+
+describe('observation spine — evidence bounds', () => {
+  const mk = (t: number): ObsSample => ({ t, loc_x: t, loc_y: 0, loc_z: 0, speed: 0, droopL: 0, droopR: 0 });
+
+  it('boundSamples caps to EVIDENCE_MAX_SAMPLES, keeping the first + last row', () => {
+    const many = Array.from({ length: 200 }, (_, i) => mk(i));
+    const capped = boundSamples(many);
+    expect(capped).toHaveLength(EVIDENCE_MAX_SAMPLES);
+    expect(capped[0].t).toBe(0);
+    expect(capped[capped.length - 1].t).toBe(199); // last row always retained
+  });
+
+  it('boundSamples returns short arrays unchanged', () => {
+    const few = [mk(0), mk(1), mk(2)];
+    expect(boundSamples(few)).toEqual(few);
+  });
+
+  it('boundJudgeText truncates past EVIDENCE_MAX_TEXT with an ellipsis', () => {
+    expect(boundJudgeText('short')).toBe('short');
+    const long = 'x'.repeat(EVIDENCE_MAX_TEXT + 50);
+    const bounded = boundJudgeText(long);
+    expect(bounded.length).toBe(EVIDENCE_MAX_TEXT + 1); // +1 for the ellipsis
+    expect(bounded.endsWith('…')).toBe(true);
+  });
+
+  it('summarizeEvidence renders a compact one-liner (or undefined for none)', () => {
+    expect(summarizeEvidence(undefined)).toBeUndefined();
+    const s = summarizeEvidence({ kind: 'scenario', at: 'now', stats: { swingDeg: 12.34, sampleCount: 4 }, samples: [mk(0), mk(1)] });
+    expect(s).toContain('[scenario]');
+    expect(s).toContain('swingDeg=12.3');
+    expect(s).toContain('sampleCount=4');
+    expect(s).toContain('2 samples');
+    expect(summarizeEvidence({ kind: 'visual', at: 'now', screenshotPath: 'p.png', judgeText: 'pass: crisp' })).toContain('judge: pass: crisp');
   });
 });

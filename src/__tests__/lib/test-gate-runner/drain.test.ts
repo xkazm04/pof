@@ -77,6 +77,31 @@ describe('drainOne', () => {
   });
 });
 
+describe('drainOne — evidence', () => {
+  it('persists structured evidence into data.evidence while PRESERVING prior data + genHistory', async () => {
+    seed({ catalogId: 'items', entityId: 'i1', step: 'Test Gate', tier: 'L3', data: { foo: 1, genHistory: { batches: [{ id: 0 }] } }, ueAssets: ['/Game/X'], reason: 'live-UE runner not yet run: T' });
+    const evidence = { kind: 'scenario' as const, at: '2026-07-13T00:00:00Z', stats: { swingDeg: 12.3, distance: 970, sampleCount: 4, montagePlaying: 0 }, samples: [] };
+    const job: GateJob = { catalogId: 'items', entityId: 'i1', step: 'Test Gate', tier: 'L3', testName: 'T' };
+    await drainOne(job, fakeExec({ tier: 'L3', runFn: async () => ({ status: 'pass', detail: 'ok', evidence }) }));
+
+    const row = store.get(key('items', 'i1', 'Test Gate'))!;
+    expect(row.status).toBe('pass');
+    // Evidence merged in…
+    expect(row.data.evidence).toEqual(evidence);
+    // …without clobbering anything already in data.
+    expect(row.data.foo).toBe(1);
+    expect(row.data.genHistory).toEqual({ batches: [{ id: 0 }] });
+    expect(row.ueAssets).toEqual(['/Game/X']);
+  });
+
+  it('leaves prior data untouched when the verdict carries no evidence', async () => {
+    seed({ catalogId: 'items', entityId: 'i2', step: 'g', tier: 'L3', data: { genHistory: { batches: [] } }, reason: 'live-UE runner not yet run: T' });
+    await drainOne({ catalogId: 'items', entityId: 'i2', step: 'g', tier: 'L3', testName: 'T' }, fakeExec({ tier: 'L3', runFn: async () => ({ status: 'pass', detail: 'ok' }) }));
+    const row = store.get(key('items', 'i2', 'g'))!;
+    expect(row.data).toEqual({ genHistory: { batches: [] } }); // no `evidence` key added
+  });
+});
+
 describe('drainAll', () => {
   it('runs matched jobs and tallies pass/fail', async () => {
     seed({ catalogId: 'items', entityId: 'a', step: 'g', tier: 'L3', reason: 'live-UE runner not yet run: TPass' });

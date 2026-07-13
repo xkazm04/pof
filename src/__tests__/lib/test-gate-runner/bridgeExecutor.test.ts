@@ -60,6 +60,9 @@ describe('makeBridgeExecutor', () => {
     const v = await ex.run(job);
     expect(v.status).toBe('pass');
     expect(v.detail).toContain('VSItemsTest');
+    // Evidence carries the automation-result summary (+ the recorded testId).
+    expect(v.evidence).toMatchObject({ kind: 'bridge' });
+    expect(v.evidence!.markers![0]).toContain('FVSItemsTest');
   });
 
   it('run() polls results while the plugin reports running, then resolves', async () => {

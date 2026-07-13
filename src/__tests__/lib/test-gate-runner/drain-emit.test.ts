@@ -20,8 +20,8 @@ import type { EventMap } from '@/types/event-bus';
 function seed(a: Partial<PipelineArtifact> & { catalogId: string; entityId: string; step: string }) {
   store.set(key(a.catalogId, a.entityId, a.step), { data: {}, ueAssets: [], status: 'deferred', ...a } as PipelineArtifact);
 }
-function exec(status: GateVerdict['status'], detail = 'd'): GateExecutor {
-  return { id: 'fake', tier: 'L3', available: async () => true, run: async () => ({ status, detail }) };
+function exec(status: GateVerdict['status'], detail = 'd', evidence?: GateVerdict['evidence']): GateExecutor {
+  return { id: 'fake', tier: 'L3', available: async () => true, run: async () => ({ status, detail, ...(evidence ? { evidence } : {}) }) };
 }
 
 let received: Array<EventMap['gate.verdict.changed']>;
@@ -80,5 +80,13 @@ describe('drainOne — gate.verdict.changed emit', () => {
     seed({ catalogId: 'items', entityId: 'a', step: 'g', tier: 'L4', status: 'deferred' });
     await drainOne(job({ tier: 'L4' }), exec('deferred', 'auto-judge unavailable'));
     expect(received).toHaveLength(0);
+  });
+
+  it('includes a one-line evidence summary in the emitted payload', async () => {
+    seed({ catalogId: 'items', entityId: 'a', step: 'g', tier: 'L3', status: 'deferred' });
+    await drainOne(job(), exec('fail', 'VSTest: 1 failed', { kind: 'automation', at: 'now', markers: ['Result={Failure}'] }));
+    expect(received).toHaveLength(1);
+    expect(received[0].evidence).toContain('[automation]');
+    expect(received[0].evidence).toContain('Result={Failure}');
   });
 });

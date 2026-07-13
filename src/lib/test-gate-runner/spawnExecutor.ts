@@ -4,8 +4,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { logger } from '@/lib/logger';
 import {
+  boundSamples,
   buildScenarioInbox,
   buildScenarioLaunchArgs,
+  type GateEvidence,
   type ObsSample,
   type Observations,
 } from '@/types/observation';
@@ -125,7 +127,10 @@ function stddev(xs: number[]): number {
  * 2D displacement = movement. No symbolic "Result={Success}" — the observed effect IS the
  * verdict. All assertions must hold. Pure (tested).
  */
-export function parseScenarioVerdict(obs: Observations, assertions: GateAssertion[]): { status: 'pass' | 'fail'; detail: string } {
+export function parseScenarioVerdict(
+  obs: Observations,
+  assertions: GateAssertion[],
+): { status: 'pass' | 'fail'; detail: string; stats?: { swingDeg: number; distance: number; sampleCount: number; montagePlaying: number } } {
   const samples = obs?.samples ?? [];
   if (!obs?.started || samples.length === 0) {
     return { status: 'fail', detail: 'scenario did not start / no samples observed' };
@@ -134,6 +139,14 @@ export function parseScenarioVerdict(obs: Observations, assertions: GateAssertio
   const first = samples[0];
   const last = samples[samples.length - 1];
   const dist = Math.hypot(last.loc_x - first.loc_x, last.loc_y - first.loc_y);
+  // The observed effect IS the verdict — surface it as structured stats (evidence) so a flip
+  // keeps its proof: the walk-cycle arm-swing°, the 2D displacement, sample count, montage seen.
+  const stats = {
+    swingDeg: swing,
+    distance: dist,
+    sampleCount: samples.length,
+    montagePlaying: samples.some((s) => s.montage_playing === true) ? 1 : 0,
+  };
 
   const fails: string[] = [];
   for (const a of assertions) {
@@ -158,9 +171,9 @@ export function parseScenarioVerdict(obs: Observations, assertions: GateAssertio
       if (!montage && !resource) fails.push('ability-activated: no montage and no resource change observed');
     }
   }
-  if (fails.length) return { status: 'fail', detail: fails.join('; ') };
-  const mont = samples.some((s) => s.montage_playing === true) ? ' montage✓' : '';
-  return { status: 'pass', detail: `swing=${swing.toFixed(1)}° dist=${dist.toFixed(0)}${mont} over ${samples.length} samples` };
+  if (fails.length) return { status: 'fail', detail: fails.join('; '), stats };
+  const mont = stats.montagePlaying ? ' montage✓' : '';
+  return { status: 'pass', detail: `swing=${swing.toFixed(1)}° dist=${dist.toFixed(0)}${mont} over ${samples.length} samples`, stats };
 }
 
 /** L3 executor that runs a headless UnrealEditor-Cmd automation pass. Off by default. */
@@ -195,8 +208,16 @@ export function makeSpawnExecutor(opts: SpawnExecutorOptions = {}): GateExecutor
       return '';
     });
     if (!obsRaw) throw new Error(`no observations.json at ${outDir}${timedOut ? ' (watchdog timeout)' : ''}`);
-    const v = parseScenarioVerdict(JSON.parse(obsRaw) as Observations, scn.assert);
-    return { status: v.status, detail: `${job.step}: ${v.detail}`, raw: { outDir, timedOut } };
+    const parsedObs = JSON.parse(obsRaw) as Observations;
+    const v = parseScenarioVerdict(parsedObs, scn.assert);
+    // Evidence: the down-sampled observation rows + the derived stats the verdict was read from.
+    const evidence: GateEvidence = {
+      kind: 'scenario',
+      at: new Date().toISOString(),
+      samples: boundSamples(parsedObs.samples ?? []),
+      ...(v.stats ? { stats: v.stats } : {}),
+    };
+    return { status: v.status, detail: `${job.step}: ${v.detail}`, evidence, raw: { outDir, timedOut } };
   }
 
   /**
@@ -216,7 +237,9 @@ export function makeSpawnExecutor(opts: SpawnExecutorOptions = {}): GateExecutor
     const v = parseAbslogVerdict(log);
     // 'unregistered' maps to deferred: the gate stays an honest wait until the test exists.
     const status = v.status === 'unregistered' ? 'deferred' : v.status;
-    return { status, detail: `${job.testName}: ${v.detail}`, raw: { abslog, timedOut } };
+    // Evidence: the abslog marker line that decided the verdict.
+    const evidence: GateEvidence = { kind: 'automation', at: new Date().toISOString(), markers: [v.detail] };
+    return { status, detail: `${job.testName}: ${v.detail}`, evidence, raw: { abslog, timedOut } };
   }
 
   return {

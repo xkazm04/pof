@@ -1,4 +1,5 @@
 import { logger } from '@/lib/logger';
+import type { GateEvidence } from '@/types/observation';
 import type { GateExecutor, GateJob, GateVerdict } from './types';
 
 const DEFAULT_PORT = 30040;
@@ -137,7 +138,11 @@ export function makeBridgeExecutor(opts: BridgeExecutorOptions = {}): GateExecut
       // reason and buckets as `deferred` (ran, no pass/fail), not `skipped` (never ran). Don't
       // waste the poll budget either.
       if (posted && posted.status === 'not_found') {
-        return { status: 'deferred', detail: `${job.testName}: no automation test registered (planned, not in UE)` };
+        return {
+          status: 'deferred',
+          detail: `${job.testName}: no automation test registered (planned, not in UE)`,
+          evidence: { kind: 'bridge', at: new Date().toISOString(), markers: ['not_found: no automation test registered'] },
+        };
       }
       let interp = interpretAutomationResult(posted, job.testName);
 
@@ -164,7 +169,13 @@ export function makeBridgeExecutor(opts: BridgeExecutorOptions = {}): GateExecut
       if (!interp.terminal || !interp.status) {
         throw new Error(`bridge result not terminal for ${job.testName}: ${interp.detail}`);
       }
-      return { status: interp.status, detail: `${job.testName}: ${interp.detail}`, raw: interp };
+      // Evidence: the plugin's automation-result summary line (+ recorded testId when present).
+      const evidence: GateEvidence = {
+        kind: 'bridge',
+        at: new Date().toISOString(),
+        markers: [interp.testId ? `${interp.detail} (${interp.testId})` : interp.detail],
+      };
+      return { status: interp.status, detail: `${job.testName}: ${interp.detail}`, evidence, raw: interp };
     },
   };
 }

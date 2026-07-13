@@ -173,3 +173,67 @@ export function parseRuntimeDeferredTestName(reason?: string): string | null {
   const name = reason.slice(i + RUNTIME_DEFERRED_PREFIX.length).trim();
   return name.length ? name : null;
 }
+
+// ── Evidence-carrying verdicts ─────────────────────────────────────────────────
+//
+// A gate flip used to persist only status + a detail string; the PROOF (which abslog
+// markers matched, the observation stats, the captured frame, the judge text) evaporated.
+// `GateEvidence` is the structured, SIZE-BOUNDED proof a verdict carries and `drainOne`
+// merges into the artifact's `data.evidence`, so the judge fleet and /status can audit a
+// verdict directly instead of re-running the gate.
+//
+// SIZE BOUND (documented, enforced by the helpers below): sample arrays are down-sampled to
+// at most `EVIDENCE_MAX_SAMPLES` rows (stats, not raw streams, carry the aggregate), and any
+// free-form judge text is truncated to `EVIDENCE_MAX_TEXT` chars — the persisted evidence is
+// bounded regardless of how many samples a scenario emitted or how verbose a judge was.
+
+export const EVIDENCE_MAX_SAMPLES = 8;
+export const EVIDENCE_MAX_TEXT = 500;
+
+export type GateEvidenceKind = 'scenario' | 'automation' | 'bridge' | 'visual';
+
+export interface GateEvidence {
+  kind: GateEvidenceKind;
+  /** ISO timestamp the verdict was produced. */
+  at: string;
+  /** Marker lines that decided the verdict: abslog markers matched (automation/spawn) or the
+   *  bridge's automation-result summary. */
+  markers?: string[];
+  /** Down-sampled observation rows (scenario) — bounded to {@link EVIDENCE_MAX_SAMPLES}. */
+  samples?: ObsSample[];
+  /** Derived numeric stats (e.g. `swingDeg`, `distance`, `sampleCount`) — the aggregate that
+   *  survives even when raw samples are dropped. */
+  stats?: Record<string, number>;
+  /** The captured frame this verdict was judged from (visual). */
+  screenshotPath?: string;
+  /** The judge's verdict text (visual), truncated to {@link EVIDENCE_MAX_TEXT}. */
+  judgeText?: string;
+}
+
+/** Down-sample to at most `max` evenly-spaced rows (always keeping the first + last). Pure. */
+export function boundSamples(samples: readonly ObsSample[], max = EVIDENCE_MAX_SAMPLES): ObsSample[] {
+  if (max < 1) return [];
+  if (samples.length <= max) return [...samples];
+  if (max === 1) return [samples[samples.length - 1]];
+  const out: ObsSample[] = [];
+  const step = (samples.length - 1) / (max - 1);
+  for (let i = 0; i < max; i++) out.push(samples[Math.round(i * step)]);
+  return out;
+}
+
+/** Truncate free-form judge text to the evidence cap (adds an ellipsis when clipped). Pure. */
+export function boundJudgeText(text: string, max = EVIDENCE_MAX_TEXT): string {
+  return text.length <= max ? text : `${text.slice(0, max)}…`;
+}
+
+/** One-line human summary of evidence for the notification payload / webhook. Pure. */
+export function summarizeEvidence(e?: GateEvidence): string | undefined {
+  if (!e) return undefined;
+  const bits: string[] = [];
+  if (e.stats) bits.push(Object.entries(e.stats).map(([k, v]) => `${k}=${Number.isInteger(v) ? v : v.toFixed(1)}`).join(' '));
+  if (e.markers?.length) bits.push(e.markers.join('; '));
+  if (e.samples?.length) bits.push(`${e.samples.length} samples`);
+  if (e.screenshotPath) bits.push(`frame ${e.screenshotPath}`);
+  if (e.judgeText) bits.push(`judge: ${e.judgeText}`);
+  return `[${e.kind}] ${bits.filter(Boolean).join(' · ')}`.trim();
+}

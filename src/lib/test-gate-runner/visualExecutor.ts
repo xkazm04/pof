@@ -1,3 +1,4 @@
+import { boundJudgeText } from '@/types/observation';
 import type { GateExecutor, GateJob, GateVerdict } from './types';
 
 type FetchImpl = typeof fetch;
@@ -61,7 +62,8 @@ export function makeVisualExecutor(opts: VisualExecutorOptions): GateExecutor {
           mode,
         }),
       });
-      const env = (await res.json().catch(() => null)) as { success?: boolean; data?: { verdict?: string }; error?: string } | null;
+      const env = (await res.json().catch(() => null)) as { success?: boolean; data?: { verdict?: string; notes?: string }; error?: string } | null;
+      const at = new Date().toISOString();
       if (!res.ok || !env?.success) {
         // The frame WAS captured — the AUTOMATED judge just couldn't run (bad model, no key,
         // network). A judge OUTAGE is not an observed failure, so the gate stays DEFERRED (not a
@@ -71,12 +73,20 @@ export function makeVisualExecutor(opts: VisualExecutorOptions): GateExecutor {
           status: 'deferred',
           detail: `visual ${opts.mode ?? visualModeFor(job.catalogId)}: auto-judge unavailable (${env?.error ?? res.status}) — frame captured for review (${screenshotPath})`,
           screenshot: screenshotPath,
+          evidence: { kind: 'visual', at, screenshotPath, judgeText: boundJudgeText(`auto-judge unavailable: ${env?.error ?? res.status}`) },
         };
       }
       const verdict = env.data?.verdict === 'pass' ? 'pass' : 'fail';
       // Surface the frame the verdict was judged from so the agent can READ it — Gemini's
-      // single-frame check is the gross-error floor, not the final word on quality.
-      return { status: verdict, detail: `visual ${mode}: ${verdict} (frame: ${screenshotPath})`, screenshot: screenshotPath, raw: env.data };
+      // single-frame check is the gross-error floor, not the final word on quality. Evidence
+      // carries the frame + the judge's notes so the flip keeps its proof.
+      return {
+        status: verdict,
+        detail: `visual ${mode}: ${verdict} (frame: ${screenshotPath})`,
+        screenshot: screenshotPath,
+        evidence: { kind: 'visual', at, screenshotPath, judgeText: boundJudgeText(env.data?.notes ? `${verdict}: ${env.data.notes}` : verdict) },
+        raw: env.data,
+      };
     },
   };
 }

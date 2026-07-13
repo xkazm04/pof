@@ -3,6 +3,8 @@
  * artifacts into real pass/fail verdicts. See docs/catalog/L3-L4-RUNNER.md.
  */
 
+import type { GateEvidence } from '@/types/observation';
+
 export type GateTier = 'L3' | 'L4';
 
 /** One timed input in a behavioural scenario. `key` = real simulated key through the
@@ -76,6 +78,13 @@ export interface GateVerdict {
    * cruft. Reviewing this PNG is what catches those.
    */
   screenshot?: string;
+  /**
+   * Structured, SIZE-BOUNDED proof behind this verdict — which markers matched, the observed
+   * scenario stats/samples, the captured frame, the judge text. `drainOne` merges this into the
+   * artifact's `data.evidence` so the judge fleet + /status audit can judge the verdict directly
+   * instead of re-running the gate. Schema + caps: `GateEvidence` in `@/types/observation`.
+   */
+  evidence?: GateEvidence;
   /** Executor-specific payload (logs, assertion results) — for debugging. */
   raw?: unknown;
 }
