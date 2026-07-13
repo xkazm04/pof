@@ -32,6 +32,14 @@ import { createRNG } from '@/lib/seeded-rng';
 import { calculateDamage } from './damage';
 import { buildHistogram, type CountBucket } from './histogram';
 
+// ── Archetype Registry ───────────────────────────────────────────────────────
+// The engine resolves a scenario's `archetypeId` against a registry. It defaults
+// to the hardcoded ENEMY_ARCHETYPE_BY_ID, but every public entry point accepts an
+// override so catalog-hydrated enemies (see ./catalog-enemy-adapter) can be
+// simulated without mutating the module-level map. Absent override → identical
+// behavior to before (the stand-alone defaults).
+export type ArchetypeRegistry = ReadonlyMap<string, EnemyArchetype>;
+
 // ── Seeded RNG ──────────────────────────────────────────────────────────────
 // Re-exported from the shared helper so existing combat sims (e.g. choreography-sim)
 // keep importing `createRNG` from this module.
@@ -109,6 +117,7 @@ function simulateFight(
   tuning: TuningOverrides,
   config: CombatSimConfig,
   rng: () => number,
+  registry: ArchetypeRegistry,
 ): FightResult {
   // Build player entity
   const playerAttrs = buildPlayerAttributes(
@@ -132,7 +141,7 @@ function simulateFight(
   // Build enemy entities
   const enemies: CombatEntity[] = [];
   for (const entry of scenario.enemies) {
-    const archetype = ENEMY_ARCHETYPE_BY_ID.get(entry.archetypeId);
+    const archetype = registry.get(entry.archetypeId);
     if (!archetype) continue;
     for (let i = 0; i < entry.count; i++) {
       const attrs = buildEnemyAttributes(archetype, entry.level, tuning);
@@ -392,16 +401,17 @@ export function runCombatSimulation(
   scenario: CombatScenario,
   tuning: TuningOverrides,
   config: CombatSimConfig,
+  registry: ArchetypeRegistry = ENEMY_ARCHETYPE_BY_ID,
 ): SimulationResult {
   const startTime = Date.now();
   const rng = createRNG(config.seed);
 
   const fights: FightResult[] = [];
   for (let i = 0; i < config.iterations; i++) {
-    fights.push(simulateFight(scenario, tuning, config, rng));
+    fights.push(simulateFight(scenario, tuning, config, rng, registry));
   }
 
-  const summary = computeSummary(fights, scenario, config);
+  const summary = computeSummary(fights, scenario, config, registry);
   const alerts = detectAlerts(summary, fights, config);
 
   return {
@@ -439,23 +449,26 @@ export async function runCombatSimulationBatched(
   opts: {
     batchSize?: number;
     onProgress?: (completed: number, total: number) => void | Promise<void>;
+    /** Override archetype lookup (catalog-hydrated enemies). Default = hardcoded defaults. */
+    archetypes?: ArchetypeRegistry;
   } = {},
 ): Promise<SimulationResult> {
   const startTime = Date.now();
   const rng = createRNG(config.seed);
   const total = config.iterations;
   const batchSize = Math.max(1, opts.batchSize ?? 250);
+  const registry = opts.archetypes ?? ENEMY_ARCHETYPE_BY_ID;
 
   const fights: FightResult[] = [];
   for (let i = 0; i < total; i++) {
-    fights.push(simulateFight(scenario, tuning, config, rng));
+    fights.push(simulateFight(scenario, tuning, config, rng, registry));
     if ((i + 1) % batchSize === 0 || i + 1 === total) {
       if (opts.onProgress) await opts.onProgress(i + 1, total);
       if (i + 1 < total) await yieldToEventLoop();
     }
   }
 
-  const summary = computeSummary(fights, scenario, config);
+  const summary = computeSummary(fights, scenario, config, registry);
   const alerts = detectAlerts(summary, fights, config);
 
   return {
@@ -476,6 +489,7 @@ function computeSummary(
   fights: FightResult[],
   scenario: CombatScenario,
   config: CombatSimConfig,
+  registry: ArchetypeRegistry = ENEMY_ARCHETYPE_BY_ID,
 ): CombatSummary {
   const n = fights.length;
 
@@ -533,7 +547,7 @@ function computeSummary(
   const damageTakenBuckets = buildBuckets(dmgTaken, 8);
   const durationBuckets = buildBuckets(durations, 8, true);
 
-  const threatBreakdown = computeThreatBreakdown(fights, scenario);
+  const threatBreakdown = computeThreatBreakdown(fights, scenario, registry);
 
   return {
     survivalRate: round2(winCount / n),
@@ -563,6 +577,7 @@ function computeSummary(
 export function computeThreatBreakdown(
   fights: FightResult[],
   scenario: CombatScenario,
+  registry: ArchetypeRegistry = ENEMY_ARCHETYPE_BY_ID,
 ): ThreatBreakdown {
   const deaths = fights.filter((f) => f.killedBy);
   const totalDeaths = deaths.length;
@@ -571,7 +586,7 @@ export function computeThreatBreakdown(
   // Ability lookup across all enemy archetypes in scenario
   const abilityByKey = new Map<string, { ability: CombatAbility; enemyArchetype: EnemyArchetype }>();
   for (const entry of scenario.enemies) {
-    const archetype = ENEMY_ARCHETYPE_BY_ID.get(entry.archetypeId);
+    const archetype = registry.get(entry.archetypeId);
     if (!archetype) continue;
     for (const ability of archetype.abilities) {
       abilityByKey.set(`${archetype.name}|${ability.id}`, { ability, enemyArchetype: archetype });
