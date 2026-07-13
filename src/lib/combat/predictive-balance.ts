@@ -18,6 +18,7 @@ import {
 } from '@/lib/combat/definitions';
 import { createXorShift32RNG } from '@/lib/seeded-rng';
 import { calculateDamage } from '@/lib/combat/damage';
+import { armourEffectiveHpMultiplier } from '@/lib/combat/canon-kernel';
 
 // ── RNG ─────────────────────────────────────────────────────────────────────
 // Shared xorshift32 helper (see `@/lib/seeded-rng`); each cell/step derives its
@@ -312,7 +313,16 @@ export function runPredictiveBalance(config: PredictiveBalanceConfig): BalanceRe
       const survivalRate = wins / config.iterations;
       const avgTTK = totalTTK / config.iterations;
       const avgDPS = totalDPS / config.iterations;
-      const avgEHP = playerAttrs.maxHealth * (1 + playerAttrs.armor * config.tuning.armorEffectivenessWeight / 100);
+      // EHP is derived through the canon armour soft-cap (ARPG-LAWS §8), not the
+      // old flat `1 + armour·weight/100`. Armour is soft-capped against hit size,
+      // so EHP is measured against a representative incoming hit for this cell.
+      const refEnemy = enemyInstances[0];
+      const refHit = refEnemy
+        ? refEnemy.ability.baseDamage + refEnemy.attrs.attackPower * refEnemy.ability.attackPowerScaling
+        : 0;
+      const avgEHP = playerAttrs.maxHealth * armourEffectiveHpMultiplier(
+        playerAttrs.armor, refHit, config.tuning.armorEffectivenessWeight,
+      );
 
       heatmap.push({ playerLevel, enemyLabel: label, survivalRate, avgTTK, avgDPS, avgEHP });
       curvePoints.push({ level: playerLevel, survivalRate, avgTTK, avgDPS });

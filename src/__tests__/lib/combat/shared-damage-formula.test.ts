@@ -61,10 +61,11 @@ describe('shared canonical damage formula', () => {
       rng: 0.0, isPlayer: true, expectDmg: 150, expectCrit: true,
     },
     {
-      name: 'armor mitigation (armor 100 → 50% reduction)',
-      // 100 * (1 - 100/200) = 50
+      name: 'armor mitigation (canon soft-cap: armour 100 vs a 100 hit ≈ 16.7%)',
+      // Canon armour = armour / (armour + 5 × rawPhysHit) = 100/(100+500) = 0.1667
+      // → 100 × 0.8333 = 83.33 → round 83 (was 50 under the old flat armour/(armour+100)).
       ab: ability(), src: attrs({ critChance: 0 }), tgt: attrs({ armor: 100 }),
-      rng: 0.99, isPlayer: true, expectDmg: 50, expectCrit: false,
+      rng: 0.99, isPlayer: true, expectDmg: 83, expectCrit: false,
     },
     {
       name: 'min-damage clamp boundary (tiny base, huge armor → floored to 1)',
