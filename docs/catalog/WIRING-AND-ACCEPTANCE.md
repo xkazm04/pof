@@ -84,6 +84,11 @@ Per the research, the split is concrete:
 
 So a single UE "live check" job can **combine** L2 (always, free) with L3 (when it can get the editor): the runner first does static analysis, then — if it holds the live-UE lease — runs the Python/functional-test pass and upgrades the verdict. The gate result records the **highest tier reached** and what was deferred.
 
+**Two L2 drains re-grade persisted artifacts from disk truth** (operator-triggered, filesystem-only, no bridge):
+
+- **`/api/pipeline-artifacts/verify-static`** — runs a step's declared `staticChecks` (`cppSymbolExists` / `seedRowPresent`) against the real UE tree (`src/lib/catalog/acceptance/staticVerify.ts`).
+- **`/api/pipeline-artifacts/verify-packaging`** — the **packaging truth engine** (`src/lib/catalog/acceptance/packagingVerify.ts` + `src/lib/catalog/packaging/`): for every step matched by `isPackagingStep` (the `packaging: true` StepSpec flag, or the canonical `"UE Packaging"` label — so all pipelines are covered without per-pipeline edits), it **rebuilds the row's package from its SIBLING artifacts** — referenced files (incl. `/api/visual-gen/asset/…` URLs mapped to their `generated/triposr/` disk homes) hashed in place, embedded data-URL art materialized as real files — into `generated/packages/<catalogId>/<entityId>/` with a `manifest.json` (`files[]` bytes+sha1, honest `missing[]`, `ueDeclarations[]`). The verdict derives from the manifest: all staged → **L2 pass**; missing references → **deferred** with the paths as reason; nothing packageable → **deferred** "declarations only" (the UE-side names remain the L3 gates' job). A clean Produce can defer here, never fail. `GET` = dry-run preview, `POST` = apply; spec/history: `docs/research/packaging-truth-engine-spec.md`.
+
 ## 4. Parallel-CLI model — maximal solo work, live-UE as an accepted gap
 
 **Constraint:** the UE project is **one shared tree with one editor/PIE/`.umap`**; concurrent live runs clobber `PoF.log` + the shared map. So with **5–9 parallel CLIs, they cannot all drive the live app.** Design so none of them *needs* to.

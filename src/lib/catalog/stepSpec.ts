@@ -27,6 +27,11 @@ export interface StepSpec {
   /** Optional L2 static (UE codebase-analysis) checks, run server/CLI-side against the UE root.
    *  Entity-aware because the symbol/row names derive from the entity. */
   staticChecks?: (entity: LabEntity) => UeChecker[];
+  /** Marks a packaging step: the packaging-truth drain (/api/pipeline-artifacts/
+   *  verify-packaging) rebuilds its package from the row's SIBLING artifacts and
+   *  re-grades it from disk truth. Steps labeled "UE Packaging" are matched without
+   *  the flag (see `isPackagingStep`) — set it only for non-standard labels. */
+  packaging?: boolean;
   /** Optional CLI direction default + note for the Produce panel. */
   produceNote?: string;
   defaultDirection?: string;

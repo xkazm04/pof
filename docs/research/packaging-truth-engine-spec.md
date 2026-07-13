@@ -1,8 +1,33 @@
-# Packaging Truth Engine — spec (not built)
+# Packaging Truth Engine — Tier 1 BUILT (2026-07-13)
 
 > From `/research` 2026-07-13 (3D AI Studio Flow demo — its export node flags results into a real
-> zip + a manifest txt describing everything). Status: **spec/handoff** — rollout belongs to the
-> `/gap-loop` "UE packaging" themed batch, not a single research run.
+> zip + a manifest txt describing everything). Status: **Tier 1 SHIPPED** same day — see
+> "Built" below; Tier 2 (bridge/editor) remains the L3 gates' job as designed.
+
+## Built (Tier 1) — how to run it
+
+- **Engine:** `src/lib/catalog/packaging/collect.ts` (pure sibling-artifact collector: file
+  refs incl. `/api/visual-gen/asset/…`→`generated/triposr/` mapping, embedded data-URL art,
+  `ueAssets` declarations) + `packageArtifacts.ts` (`buildPackage` — hash referenced files in
+  place, materialize data-URLs, write `generated/packages/<cat>/<ent>/manifest.json`).
+- **Drain:** `src/lib/catalog/acceptance/packagingVerify.ts` (`aggregatePackaging` +
+  `verifyPackagingAll`, mirror of `staticVerify`) behind
+  **`GET/POST /api/pipeline-artifacts/verify-packaging`** (GET = dry-run, POST = apply).
+- **Selection needed ZERO pipeline edits:** `isPackagingStep` matches the canonical
+  `"UE Packaging"` label (all 30 pipelines) or an explicit `packaging: true` StepSpec flag
+  (items carries it as the reference).
+- **Live dry-run vs the real DB (2026-07-13):** 32 packaging artifacts graded — **30 pass with
+  real staged+hashed files** (the gap-loop's injected Leonardo/Tripo art materialized:
+  e.g. char-captain-vael = 9 files incl. a 3.3 MB rigged glb), **2 honestly deferred**
+  (items/item-lightsaber, spellbook/off-fire-01 — siblings produced no files). Optimistic
+  passes with dead references (bestiary/props) were caught, then resolved via the serve-route
+  mapping. Re-run anytime: env-gated
+  `POF_PACKAGING_DRYRUN=1 npx vitest run src/__tests__/catalog/packaging-verify.dryrun.integration.test.ts`.
+- **Tests:** 13 unit (collect/engine/drain) + the env-gated live dry-run; guards
+  (`pipeline-produce-accept`, `pipeline-e2e-coverage`) green.
+
+Remaining: run `POST /verify-packaging` (apply) as part of a gap-loop wrap; step-facts flips
+for the packaging rows (trueEngine → 'Packaging engine'); Tier 2 below.
 
 ## Problem (from the /status fleet gap audit + judge fleet)
 

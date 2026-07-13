@@ -712,6 +712,9 @@ registerCatalogPipeline({
     {
       archetype: 'manifest',
       label: 'UE Packaging',
+      // Reference usage of the packaging-truth flag (the "UE Packaging" label already
+      // matches the drain; the flag documents intent for the reference pipeline).
+      packaging: true,
       view: { kind: 'manifest', field: 'assets' },
       produce: (e: LabEntity) => {
         const s = slug(e.name);
