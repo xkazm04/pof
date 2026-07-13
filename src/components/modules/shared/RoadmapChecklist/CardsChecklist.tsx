@@ -12,6 +12,7 @@ import type { VerificationInfo } from '@/stores/moduleStore';
 import { PriorityBadge, PriorityDropdown } from './Priority';
 import { NotesSection } from './NotesSection';
 import { CopyItemButton } from './CopyItemButton';
+import { TaskPromptInspector } from '../TaskPromptInspector';
 import type { ItemMetadata, Priority } from './types';
 
 export function CardsChecklist({
@@ -214,6 +215,16 @@ export function CardsChecklist({
                       {matchingSuggestion.pattern.sessionCount > 1 && ` (${matchingSuggestion.pattern.sessionCount} sessions)`}
                     </span>
                   </div>
+                )}
+
+                {/* Pre-dispatch prompt preview — the exact composed prompt a run would send */}
+                {!checked && (
+                  <TaskPromptInspector
+                    moduleId={subModuleId as SubModuleId}
+                    itemId={item.id}
+                    prompt={item.prompt}
+                    label={item.label}
+                  />
                 )}
               </div>
 

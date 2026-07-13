@@ -78,9 +78,18 @@ surface which sections were actually populated. For prompts that don't go throug
 `PromptBuilder` (hand-rolled strings like `buildAbilityForgePrompt`), the same
 shape is recoverable via `auditPromptString(prompt)` — it detects canonical
 section markers by header keywords and returns `{section, label, present, required}[]`
-plus a one-line `summarizeAudit()` summary. The Ability Forge's **Prompt
-Inspector** panel uses both to render audit chips (green = present, amber = missing
-required, neutral zinc = missing optional) over the composed prompt's CodeBlock.
+plus a one-line `summarizeAudit()` summary. The **Prompt Inspector**
+(`components/modules/shared/PromptInspector.tsx` — the forge path re-exports it)
+uses both to render audit chips (green = present, amber = missing required,
+neutral zinc = missing optional) over the composed prompt's CodeBlock. On the
+daily checklist run path, `shared/TaskPromptInspector.tsx` mounts it as a
+collapsed "Preview prompt" disclosure on every unchecked `RoadmapChecklist`
+card: on open it composes the prompt through the exact dispatch pipeline
+`useModuleCLI.execute` uses (same project scan/ctx, same `composeTaskDispatch`
+variant resolution), and tags a summary of the injected knowledge
+(`lib/prompts/prompt-knowledge-summary.ts`: pitfalls count, known assets,
+wiring, binary tripwire, quality pack, variant vs static) derived purely from
+the composed string.
 
 The Asset Specification section (3.5) serialises a catalog entity's identity and
 typed `data` payload as a JSON block. The Wiring Requirements section (3.6) always
