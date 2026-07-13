@@ -5,7 +5,8 @@ import { useCLIPanelStore } from '@/components/cli/store/cliPanelStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { usePatternLibraryStore } from '@/stores/patternLibraryStore';
 import { recordSessionOutcome } from '@/hooks/useSessionAnalytics';
-import { buildTaskPrompt, type CLITask } from '@/lib/cli-task';
+import { type CLITask } from '@/lib/cli-task';
+import { composeTaskDispatch, STATIC_VARIANT_ID } from '@/lib/prompt-evolution/dispatch-resolve';
 import type { SkillId } from '@/components/cli/skills';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import { dispatchPromptWhenReady } from '@/lib/cli-dispatch';
@@ -19,6 +20,8 @@ import { requestPreflightConfirm } from '@/stores/preflightStore';
 interface DispatchMeta {
   taskType?: string;
   label?: string;
+  /** Prompt-evolution variant this dispatch resolved to (or 'static'). */
+  variantId?: string;
 }
 
 interface UseModuleCLIOptions {
@@ -63,6 +66,9 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
   // Track prompt and start time for analytics recording
   const lastPromptRef = useRef<string>('');
   const taskStartRef = useRef<string>('');
+  // The prompt-evolution variant the last dispatch resolved to (or 'static') —
+  // recorded with the outcome so A/B attribution can close the loop.
+  const lastVariantIdRef = useRef<string>(STATIC_VARIANT_ID);
 
   // Detect running → stopped transition and fire onComplete with success info.
   //
@@ -120,6 +126,7 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
             success,
             durationMs,
             startedAt: taskStartRef.current,
+            promptVariantId: lastVariantIdRef.current,
           });
         }
 
@@ -134,6 +141,7 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
       // Track for analytics
       lastPromptRef.current = prompt;
       taskStartRef.current = new Date().toISOString();
+      lastVariantIdRef.current = meta?.variantId ?? STATIC_VARIANT_ID;
 
       let tabId = findSessionByKey(opts.sessionKey);
       if (!tabId) {
@@ -209,8 +217,11 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
 
       const { projectName, projectPath: pp, ueVersion, dynamicContext } = useProjectStore.getState();
       const ctx = { projectName, projectPath: pp, ueVersion, dynamicContext };
-      const enriched = buildTaskPrompt(task, ctx);
-      sendPrompt(enriched, { taskType: task.type, label: task.label });
+      // Resolve the adopted prompt-evolution variant for this task (if any) and
+      // build the enriched prompt exactly as the preview shows it. Falls back to
+      // the static registry prompt on no-variant / API error — never blocks.
+      const { prompt: enriched, variantId } = await composeTaskDispatch(task, ctx);
+      sendPrompt(enriched, { taskType: task.type, label: task.label, variantId });
     },
     [sendPrompt, opts.sessionKey],
   );

@@ -109,6 +109,8 @@ export async function recordSessionOutcome(data: {
   success: boolean;
   durationMs: number;
   startedAt: string;
+  /** Prompt-evolution variant this run dispatched (or 'static'). */
+  promptVariantId?: string;
 }): Promise<void> {
   try {
     await apiFetch<unknown>('/api/session-analytics', {

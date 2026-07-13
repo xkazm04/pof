@@ -200,6 +200,7 @@ export interface PromptEvolutionRequest {
     | 'get-tests'
     | 'get-suggestions'
     | 'get-best-variant'
+    | 'get-active-variant'
     | 'get-version-history'
     | 'restore-variant'
     | 'optimize-prompt';

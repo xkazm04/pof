@@ -24,6 +24,7 @@ import {
   getVariantsForItem as getVariantsForItemDb,
   getVariantsForModule as getVariantsForModuleDb,
   getAllVariants as getAllVariantsDb,
+  getActiveVariantForItem,
   hasActiveVariant,
   setActiveVariant,
   upsertABTest,
@@ -78,6 +79,17 @@ export function getVariant(id: string): PromptVariant | null {
 
 export function getVariantsForItem(moduleId: SubModuleId, checklistItemId: string): PromptVariant[] {
   return getVariantsForItemDb(moduleId, checklistItemId);
+}
+
+/**
+ * The active/adopted variant for a checklist item — the version the dispatch
+ * path runs. Returns `null` when the item has never had a variant authored, in
+ * which case dispatch falls back to the static registry prompt. Adopting a
+ * winner or restoring a version (both flip the `active` flag) changes what this
+ * returns, and therefore what the next real run sends.
+ */
+export function getActiveVariant(moduleId: SubModuleId, checklistItemId: string): PromptVariant | null {
+  return getActiveVariantForItem(moduleId, checklistItemId);
 }
 
 export function getVariantsForModule(moduleId: SubModuleId): PromptVariant[] {

@@ -23,7 +23,7 @@ export function PromptEvolutionView() {
     isLoading, isMutating, isClustering, error, activeSubTab,
     lastOptimization, isOptimizing,
     setActiveSubTab, mutateVariant, clusterPrompts, concludeTestAction,
-    optimizePromptAction, getBestVariant,
+    optimizePromptAction, getBestVariant, restoreVariant,
     newPrompt, setNewPrompt, newChecklistItemId, setNewChecklistItemId,
     showCreateForm, setShowCreateForm, selectedMutation, setSelectedMutation,
     expandedVariantId, setExpandedVariantId, expandedTestId, setExpandedTestId,
@@ -75,8 +75,15 @@ export function PromptEvolutionView() {
               toast.error('No best variant available for this item yet.');
               return;
             }
-            await navigator.clipboard.writeText(best.prompt);
-            toast.success(`Copied “${best.label}” to clipboard`);
+            // Adopt = make the winner the active variant. The dispatch path reads
+            // this flag, so the next real run of this checklist item sends the
+            // winning prompt (not just a clipboard copy).
+            const adopted = await restoreVariant(best.id);
+            if (!adopted) {
+              toast.error('Failed to adopt the winning variant.');
+              return;
+            }
+            toast.success(`Adopted “${best.label}” — the next run will use it`);
           }}
           onNavigateVariants={(variantId) => {
             setActiveSubTab('variants');

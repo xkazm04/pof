@@ -239,6 +239,13 @@ export interface CLITask {
   label: string;
   /** Called when the task stream completes */
   onComplete?: (success: boolean) => void;
+  /**
+   * The prompt-evolution variant this dispatch resolved to (or `'static'` for
+   * the registry default). Set by the dispatch resolver so the callback payload
+   * can record which variant actually ran — closing the A/B loop. Not set by the
+   * TaskFactory; it is stamped at dispatch/preview time.
+   */
+  promptVariantId?: string;
 }
 
 /**

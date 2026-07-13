@@ -142,6 +142,7 @@ The following fields will be added automatically — do NOT include them:
 - \`moduleId\`: \`"arpg-combat"\`
 - \`itemId\`: \`"combat-hit-detect"\`
 - \`projectPath\`: \`"C:\\\\proj\\\\PoF"\`
+- \`promptVariantId\`: \`"static"\`
 
 **Rules:**
 - Output valid JSON between the markers — no comments, no trailing commas

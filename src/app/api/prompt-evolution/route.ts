@@ -13,6 +13,7 @@ import {
   getEvolutionStats,
   generateSuggestions,
   getBestVariant,
+  getActiveVariant,
   getVersionHistory,
   restoreVariant,
   optimizePrompt,
@@ -119,6 +120,17 @@ export async function POST(req: NextRequest) {
         }
         const best = getBestVariant(body.moduleId as SubModuleId, body.checklistItemId);
         return apiSuccess(best);
+      }
+
+      case 'get-active-variant': {
+        // The variant the dispatch path runs for a (module, checklist-item) key.
+        // `null` → the item has no adopted variant, so dispatch uses the static
+        // registry prompt. This is the read the CLI dispatch consults per run.
+        if (!body.moduleId || !body.checklistItemId) {
+          return apiError('moduleId and checklistItemId required', 400);
+        }
+        const active = getActiveVariant(body.moduleId as SubModuleId, body.checklistItemId);
+        return apiSuccess(active);
       }
 
       // ── Version history & rollback ──────────────────────────────

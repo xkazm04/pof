@@ -107,6 +107,10 @@ const checklist: TaskPromptHandler = (task, ctx, { isUE5, knownAssetDomains, wir
       moduleId: task.moduleId,
       itemId: ct.itemId,
       projectPath: ctx.projectPath,
+      // Which prompt-evolution variant this run dispatched ('static' = registry
+      // default). Recorded in the completion payload so an A/B conclusion can
+      // attribute the success/failure to the variant that produced it.
+      promptVariantId: ct.promptVariantId ?? 'static',
     },
     schemaHint: '  "completed": true',
   });

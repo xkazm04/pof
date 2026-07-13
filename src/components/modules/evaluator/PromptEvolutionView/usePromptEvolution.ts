@@ -39,6 +39,7 @@ export function usePromptEvolution() {
   const loadSuggestions = usePromptEvolutionStore((s) => s.loadSuggestions);
   const optimizePromptAction = usePromptEvolutionStore((s) => s.optimizePrompt);
   const getBestVariant = usePromptEvolutionStore((s) => s.getBestVariant);
+  const restoreVariant = usePromptEvolutionStore((s) => s.restoreVariant);
 
   const [newPrompt, setNewPrompt] = useState('');
   const [newChecklistItemId, setNewChecklistItemId] = useState('');
@@ -171,7 +172,7 @@ export function usePromptEvolution() {
     lastOptimization, isOptimizing,
     // store actions
     setActiveSubTab, mutateVariant, clusterPrompts, concludeTestAction,
-    optimizePromptAction, getBestVariant,
+    optimizePromptAction, getBestVariant, restoreVariant,
     // local form state
     newPrompt, setNewPrompt, newChecklistItemId, setNewChecklistItemId,
     showCreateForm, setShowCreateForm, selectedMutation, setSelectedMutation,

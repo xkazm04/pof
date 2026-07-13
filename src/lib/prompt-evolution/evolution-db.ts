@@ -211,6 +211,19 @@ export function hasActiveVariant(moduleId: SubModuleId, checklistItemId: string)
 }
 
 /**
+ * The single active/adopted version for a checklist item, or `null` when the
+ * item has no variants (dispatch then falls back to the static registry prompt).
+ * This is the read side of the adopt/restore flag the dispatch path consults.
+ */
+export function getActiveVariantForItem(moduleId: SubModuleId, checklistItemId: string): PromptVariant | null {
+  ensurePromptEvolutionTables();
+  const row = getDb()
+    .prepare('SELECT * FROM prompt_variants WHERE module_id = ? AND checklist_item_id = ? AND active = 1 LIMIT 1')
+    .get(moduleId, checklistItemId) as VariantRow | undefined;
+  return row ? rowToVariant(row) : null;
+}
+
+/**
  * Make `variantId` the single active version for its checklist item — the
  * rollback / restore primitive. Clears the flag on every sibling atomically.
  */
