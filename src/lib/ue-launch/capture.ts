@@ -18,6 +18,12 @@ import { spawn, execFileSync } from 'node:child_process';
 import { existsSync, writeFileSync, unlinkSync, mkdirSync, readdirSync, statSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import {
+  buildScenarioInbox as buildScenarioInboxSpine,
+  buildScenarioLaunchArgs,
+  type ScenarioInput,
+  type ScenarioSpec,
+} from '@/types/observation';
 import { resolveEditorBinary } from './engines';
 import { buildPythonExecFile } from './python';
 
@@ -112,64 +118,30 @@ export async function captureFrame(opts: CaptureFrameOptions, deps: CaptureDeps 
 // UScenarioController writes `shot_<NN>.png` (the on-screen viewport) into out_dir.
 // In `-game` the map IS a working command-line arg (the editor's load_map is not).
 
-/** A scenario input (structurally compatible with the gate-runner's GateScenarioInput,
- *  so a GateScenario can be passed straight in — ue-launch stays independent of it). */
-export interface CaptureScenarioInput {
-  key?: string;
-  action?: string;
-  value?: [number, number];
-  event?: string;
-  eventArg?: string;
-  start: number;
-  duration: number;
-}
+// The scenario spec + input now live in the neutral observation spine (`@/types/observation`)
+// so this L4 capture path and the L3 spawn path share ONE contract. Aliased to the historical
+// `Capture*` names (local bindings, so both internal refs and every external import keep working).
+export type CaptureScenarioInput = ScenarioInput;
+export type CaptureScenarioSpec = ScenarioSpec;
 
-/** The subset of a gate scenario this capture needs (a GateScenario is assignable). */
-export interface CaptureScenarioSpec {
-  map?: string;
-  totalSeconds?: number;
-  numSamples?: number;
-  settle?: number;
-  inputs?: CaptureScenarioInput[];
-  /** Destroy AI-possessed pawns at scenario start so combat can't interfere with the
-   *  observed behavior (e.g. isolate locomotion — enemies otherwise stagger the player). */
-  disableAI?: boolean;
-}
-
-/** Scenario inbox — capture-only (no inputs) or driving a per-gate action. Pure. */
+/** Scenario inbox — capture-only (no inputs) or driving a per-gate action. Pure.
+ *  Delegates to the shared spine writer (the single source for both launch paths). */
 export function buildScenarioInbox(
   outDir: string,
-  opts: { totalSeconds?: number; numSamples?: number; settle?: number; inputs?: CaptureScenarioInput[]; disableAI?: boolean } = {},
+  opts: { totalSeconds?: number; numSamples?: number; settle?: number; inputs?: ScenarioInput[]; disableAI?: boolean } = {},
 ): string {
-  return JSON.stringify({
-    out_dir: outDir,
-    total_seconds: opts.totalSeconds ?? 3,
-    num_samples: opts.numSamples ?? 1,
-    settle: opts.settle ?? 1.5,
-    ...(opts.disableAI ? { disable_ai: true } : {}),
-    inputs: (opts.inputs ?? []).map((i) => ({
-      ...(i.key ? { key: i.key } : {}),
-      ...(i.action ? { action: i.action } : {}),
-      ...(i.value ? { value: i.value } : {}),
-      ...(i.event ? { event: i.event } : {}),
-      ...(i.eventArg ? { event_arg: i.eventArg } : {}),
-      start: i.start,
-      duration: i.duration,
-    })),
-  }, null, 2);
+  return buildScenarioInboxSpine(outDir, opts);
 }
 
-/** Args for a `-game -PoFScenario -RenderOffScreen` capture run. Pure. Mirrors
- *  spawnExecutor.buildScenarioArgs but renders (no `-nullrhi`). */
+/** Args for a `-game -PoFScenario -RenderOffScreen` capture run. Pure. Delegates to the
+ *  shared spine builder — the L4 render mode (no `-nullrhi`, explicit resolution). */
 export function buildScenarioArgs(o: { uproject: string; map: string; inboxPath: string; resX: number; resY: number }): string[] {
-  return [
-    o.uproject, o.map, '-game', `-PoFScenario=${o.inboxPath}`,
-    '-RenderOffScreen', `-ResX=${o.resX}`, `-ResY=${o.resY}`,
-    // Fixed timestep: deterministic frames + the Motion Quality Probe's accel metric is stable
-    // (uncapped headless fps makes dt ~0.0006s and accel explodes). Proven live in P0.
-    '-benchmark', '-fps=60',
-    '-unattended', '-nopause', '-nosplash', '-NoLiveCoding',
-  ];
+  return buildScenarioLaunchArgs({
+    uproject: o.uproject,
+    map: o.map,
+    scenarioPath: o.inboxPath,
+    render: { mode: 'offscreen', resX: o.resX, resY: o.resY },
+  });
 }
 
 /** Newest `shot_<NN>.png` in `dir` by mtime (ignores `frame_*` cams / non-png). Pure(+fs). */

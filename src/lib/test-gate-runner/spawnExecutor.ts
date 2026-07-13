@@ -2,6 +2,12 @@ import { spawn } from 'node:child_process';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import {
+  buildScenarioInbox,
+  buildScenarioLaunchArgs,
+  type ObsSample,
+  type Observations,
+} from '@/types/observation';
 import type { GateAssertion, GateExecutor, GateJob, GateVerdict } from './types';
 
 export interface SpawnExecutorOptions {
@@ -95,38 +101,7 @@ function sanitize(name: string): string {
  * Pure (tested).
  */
 export function buildScenarioArgs(uproject: string, map: string, scenarioPath: string, abslog: string): string[] {
-  return [
-    uproject,
-    map,
-    '-game',
-    `-PoFScenario=${scenarioPath}`,
-    '-nullrhi',
-    // Deterministic fixed timestep (1/60s). Without it, a headless -nullrhi run ticks uncapped
-    // (~1600fps), so dt is ~0.0006s and the Motion Quality Probe's acceleration metric (Δvel/dt)
-    // explodes on numerical noise (~14.5M vs ~146k). Fixed dt also makes the run reproducible.
-    '-benchmark',
-    '-fps=60',
-    '-unattended',
-    '-nopause',
-    '-nosplash',
-    '-log',
-    `-abslog=${abslog}`,
-  ];
-}
-
-interface ObsSample {
-  t: number;
-  loc_x: number;
-  loc_y: number;
-  loc_z: number;
-  speed: number;
-  droopL: number;
-  droopR: number;
-  anim_speed?: number;
-  montage_playing?: boolean;
-  health?: number;
-  stamina?: number;
-  mana?: number;
+  return buildScenarioLaunchArgs({ uproject, map, scenarioPath, render: { mode: 'nullrhi', abslog } });
 }
 
 /** max−min of a defined numeric attribute across samples (its biggest dip/swing). */
@@ -134,10 +109,6 @@ function attrDrop(samples: ObsSample[], name: 'health' | 'stamina' | 'mana'): nu
   const vals = samples.map((s) => s[name]).filter((v): v is number => typeof v === 'number' && v >= 0);
   if (vals.length < 1) return 0;
   return Math.max(...vals) - Math.min(...vals);
-}
-interface Observations {
-  started?: boolean;
-  samples?: ObsSample[];
 }
 
 function stddev(xs: number[]): number {
@@ -206,22 +177,15 @@ export function makeSpawnExecutor(opts: SpawnExecutorOptions = {}): GateExecutor
     await mkdir(outDir, { recursive: true });
     const outDirFwd = outDir.replace(/\\/g, '/');
     const scnPath = join(outDir, 'scenario.json');
-    await writeFile(scnPath, JSON.stringify({
-      out_dir: outDirFwd,
-      total_seconds: scn.totalSeconds,
-      num_samples: scn.numSamples,
+    // The spawn path resolves its own settle default (1.0) before the shared writer, so the
+    // spine's capture-oriented default (1.5) never applies here — behaviour is preserved.
+    await writeFile(scnPath, buildScenarioInbox(outDirFwd, {
+      totalSeconds: scn.totalSeconds,
+      numSamples: scn.numSamples,
       settle: scn.settle ?? 1.0,
-      ...(scn.playAnim ? { play_anim: scn.playAnim } : {}),
-      inputs: scn.inputs.map((i) => ({
-        ...(i.key ? { key: i.key } : {}),
-        ...(i.action ? { action: i.action } : {}),
-        ...(i.value ? { value: i.value } : {}),
-        ...(i.event ? { event: i.event } : {}),
-        ...(i.eventArg ? { event_arg: i.eventArg } : {}),
-        start: i.start,
-        duration: i.duration,
-      })),
-    }, null, 2));
+      ...(scn.playAnim ? { playAnim: scn.playAnim } : {}),
+      inputs: scn.inputs,
+    }));
     const scnLog = join(outDir, 'editor.log');
     const scnArgs = buildScenarioArgs(project, scn.map, scnPath.replace(/\\/g, '/'), scnLog);
     const { timedOut } = await spawnAndWait(editor, scnArgs, opts.scenarioTimeoutMs ?? 180_000);

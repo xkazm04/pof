@@ -1,14 +1,10 @@
 /**
- * `runtimeDeferred(testName, …)` (acceptance/deferred.ts) writes the reason
- * `live-UE runner not yet run: <testName>`. The runner recovers the test name
- * from there — keep this prefix in lockstep with that factory.
+ * Recover the UE test name a deferred L3 artifact embedded in its reason. The
+ * reason contract (prefix + builder + parser) lives once in `@/types/observation`
+ * so `acceptance/deferred.ts` (the writer) and this reader can never drift.
  */
-const RUNTIME_PREFIX = 'live-UE runner not yet run:';
+import { parseRuntimeDeferredTestName } from '@/types/observation';
 
 export function parseTestName(reason?: string): string | null {
-  if (!reason) return null;
-  const i = reason.indexOf(RUNTIME_PREFIX);
-  if (i === -1) return null;
-  const name = reason.slice(i + RUNTIME_PREFIX.length).trim();
-  return name.length ? name : null;
+  return parseRuntimeDeferredTestName(reason);
 }
