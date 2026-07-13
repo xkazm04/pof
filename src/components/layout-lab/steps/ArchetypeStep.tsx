@@ -5,6 +5,8 @@ import dynamic from 'next/dynamic';
 import { StepFrame, type StepPanel } from './StepFrame';
 import { CliProduce } from './shared/CliProduce';
 import { CandidateGallery } from './shared/CandidateGallery';
+import { DataTable } from './shared/DataTable';
+import { ChartPanel, type BarsRow } from './shared/ChartPanel';
 
 // three/r3f is client + WebGL only — load the .glb viewer lazily so it never hits SSR
 // and only pulls the 3D bundle for steps that actually render a mesh.
@@ -38,16 +40,32 @@ function ViewPanel({ t, view, data }: { t: LabTheme; view: ViewDescriptor; data:
   }
   if (view.kind === 'table') {
     const obj = (data[view.field] ?? {}) as Record<string, unknown>;
-    return (
-      <div style={{ border: `1px solid ${t.line}` }}>
-        {view.columns.map((c) => (
-          <div key={c.key} style={{ display: 'grid', gridTemplateColumns: '1fr auto', padding: '8px 12px', borderTop: `1px solid ${t.line}`, fontSize: 15 }}>
-            <span style={{ color: t.text }}>{c.key}</span>
-            <span className={t.fontMono} style={{ color: obj[c.key] != null ? t.inkDeep : t.warn }}>{obj[c.key] != null ? `${obj[c.key]}${c.unit ? ' ' + c.unit : ''}` : '— missing'}</span>
-          </div>
-        ))}
-      </div>
-    );
+    return <DataTable t={t} columns={view.columns} values={obj} />;
+  }
+  if (view.kind === 'chart') {
+    const raw = data[view.field];
+    if (raw == null || typeof raw !== 'object') {
+      return <span style={{ fontSize: 15, color: t.muted }}>No data yet — run Produce.</span>;
+    }
+    const rec = raw as Record<string, unknown>;
+    const num = (v: unknown): number | null => {
+      if (typeof v === 'number' && Number.isFinite(v)) return v;
+      const n = Number(v);
+      return v != null && v !== '' && Number.isFinite(n) ? n : null;
+    };
+    if (view.variant === 'bars') {
+      const rows: BarsRow[] = view.rows.flatMap((r) => {
+        const value = num(rec[r.key]);
+        return value == null ? [] : [{ label: r.label ?? r.key, value, unit: r.unit, highlight: r.key === view.highlightKey }];
+      });
+      return rows.length
+        ? <ChartPanel t={t} variant="bars" rows={rows} max={view.max} ariaLabel={`${view.field} budget`} />
+        : <span style={{ fontSize: 15, color: t.muted }}>No numeric data yet — run Produce.</span>;
+    }
+    const bars = view.keys.map((k) => ({ value: num(rec[k]) ?? 0, highlight: k === view.highlightKey }));
+    return bars.length
+      ? <ChartPanel t={t} variant="histogram" bars={bars} max={view.max} ariaLabel={`${view.field} histogram`} />
+      : <span style={{ fontSize: 15, color: t.muted }}>No numeric data yet — run Produce.</span>;
   }
   if (view.kind === 'checklist' || view.kind === 'manifest') {
     const arr = Array.isArray(data[view.field]) ? (data[view.field] as unknown[]) : [];
@@ -70,8 +88,15 @@ function ViewPanel({ t, view, data }: { t: LabTheme; view: ViewDescriptor; data:
       </div>
     ) : <span style={{ fontSize: 15, color: t.muted }}>No graph yet — run Produce.</span>;
   }
-  // gallery: simple candidate count; bespoke selection UI lives in a registered component when richer interaction is needed.
-  return <span style={{ fontSize: 14, color: t.muted }}>{view.candidates} candidates · select via Produce.</span>;
+  if (view.kind === 'gallery') {
+    // Reached only defensively — real gallery steps build their own panels in
+    // ArchetypeStep. A simple candidate count; the browse/select UI is the CandidateGallery.
+    return <span style={{ fontSize: 14, color: t.muted }}>{view.candidates} candidates · select via Produce.</span>;
+  }
+  // Honest fallback: an unknown/unsupported view kind names itself rather than
+  // silently falling through to a gallery count (which showed nonsense for a
+  // balance step before the `chart` kind existed).
+  return <span style={{ fontSize: 14, color: t.warn }}>Unsupported view kind: {(view as { kind: string }).kind}</span>;
 }
 
 /** Hybrid generic renderer: drives any common-archetype StepSpec from persisted artifacts. */

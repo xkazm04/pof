@@ -40,7 +40,7 @@ Read alongside (don't duplicate these — they're the source of truth for their 
 { archetype, label, view, produce, accept, /* optional: */ staticChecks }
 ```
 - `archetype` ∈ `brief | schema | rules | balance | gallery | checklist | manifest | graph | custom`. It drives both the generic `ArchetypeStep` View AND which **canon** categories inject (brief→game; schema/rules/balance→project+game; gallery→art+game; checklist/manifest→project; graph→game+project).
-- `view` — a `ViewDescriptor` (`prose | table | gallery | checklist | manifest | graph` (node/edge)); see `src/lib/catalog/stepSpec.ts`.
+- `view` — a `ViewDescriptor` (`prose | table | chart | gallery | checklist | manifest | graph` (node/edge)); see `src/lib/catalog/stepSpec.ts`. `chart` routes numeric fields through the shared `ChartPanel` (`variant: 'bars' | 'histogram'`, naming the `field` + `rows`/`keys` to plot) — use it for `balance` budget/faucet-vs-sink steps instead of a `table`. `table` renders via the shared `DataTable`.
 - `produce(entity)` → `{ data, ueAssets? }` — the produced payload. Asset names use UE prefixes (`T_`/`SM_`/`MI_`/`A_`/`NS_`/`GE_`/`DT_`, see canon `proj-naming`). Use `()` not `(e)` when the entity is unused (eslint).
 - `accept` — a **derived** `Checker` from `src/lib/catalog/acceptance/`:
   - **L0 (data):** `minLength`, `fieldsPopulated`, `withinPercent`, `minCount` (`dataCheckers.ts`).

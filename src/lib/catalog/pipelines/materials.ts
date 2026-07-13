@@ -237,10 +237,18 @@ registerCatalogPipeline({
     {
       archetype: 'balance',
       label: 'LOD/Perf Budget',
+      // Budget bars via the shared ChartPanel: the authored instruction count against
+      // its target cap reads far clearer as a bar pair than a key/value table.
       view: {
-        kind: 'table',
+        kind: 'chart',
+        variant: 'bars',
         field: 'perfBudget',
-        columns: [{ key: 'instructionCount' }, { key: 'target' }, { key: 'lod' }],
+        rows: [
+          { key: 'instructionCount', label: 'Instructions', unit: 'instr' },
+          { key: 'target', label: 'Budget cap', unit: 'instr' },
+        ],
+        highlightKey: 'instructionCount',
+        max: 240,
       },
       produce: () => {
         // M_ARPG_Surface_Master typical SM5 instruction count from master shader:

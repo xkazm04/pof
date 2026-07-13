@@ -3,6 +3,7 @@
 import { Lbl } from './controls';
 import { StaticStepFrame } from './StaticStepFrame';
 import { CliProduce } from './shared/CliProduce';
+import { DataTable } from './shared/DataTable';
 import { ITEM_ATTR_SCHEMA } from './itemsSteps';
 import type { StepProps } from './stepProps';
 
@@ -10,8 +11,6 @@ const PEERS = [['Steel Saber', '31'], ['Worn Greatsword', '46'], ['Guard\'s Blad
 
 /** Items · Attributes. View: UE-synced table (persisted) | peers+schema. Produce: CLI fills the mix. */
 export function ItemAttributes({ t, entity, step }: StepProps) {
-  const cell: React.CSSProperties = { padding: '8px 12px', borderTop: `1px solid ${t.line}`, fontSize: 15 };
-
   return (
     <StaticStepFrame t={t} entity={entity} step={step} panels={({ art, runProduce }) => {
       const vals = (art?.data?.stats ?? {}) as Record<string, string | number>;
@@ -19,25 +18,13 @@ export function ItemAttributes({ t, entity, step }: StepProps) {
         {
           label: 'Attribute table',
           node: (
-            <div>
-              <div className={t.fontMono} style={{ fontSize: 14, letterSpacing: '0.06em', textTransform: 'uppercase', color: t.muted, marginBottom: 10 }}>
-                ⟳ synced from UE5 · type <span style={{ color: t.ink }}>Weapon</span>
-              </div>
-              <div style={{ border: `1px solid ${t.line}` }}>
-                <div className={t.fontMono} style={{ display: 'grid', gridTemplateColumns: '1fr auto', background: t.accentBg, fontSize: 14, letterSpacing: '0.06em', textTransform: 'uppercase', color: t.inkDeep, padding: '7px 12px' }}>
-                  <span>Attribute</span><span>Value</span>
-                </div>
-                {ITEM_ATTR_SCHEMA.map((a) => {
-                  const v = vals[a.key];
-                  return (
-                    <div key={a.key} style={{ display: 'grid', gridTemplateColumns: '1fr auto', ...cell }}>
-                      <span style={{ color: t.text }}>{a.key}</span>
-                      <span className={t.fontMono} style={{ color: v != null ? t.inkDeep : t.warn, fontWeight: 600 }}>{v != null ? `${v} ${a.unit}` : '— missing'}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            <DataTable
+              t={t}
+              columns={ITEM_ATTR_SCHEMA.map((a) => ({ key: a.key, unit: a.unit }))}
+              values={vals}
+              header={['Attribute', 'Value']}
+              caption={<>⟳ synced from UE5 · type <span style={{ color: t.ink }}>Weapon</span></>}
+            />
           ),
         },
         {

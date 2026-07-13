@@ -7,10 +7,21 @@ import type { StepOutput } from '@/components/layout-lab/labPipelineStore';
 export type ArchetypeId =
   | 'brief' | 'schema' | 'balance' | 'gallery' | 'rules' | 'checklist' | 'manifest' | 'graph' | 'custom';
 
-/** Declarative View for the generic ArchetypeStep renderer. */
+/** Declarative View for the generic ArchetypeStep renderer.
+ *
+ *  The `chart` kind routes a step's numeric artifact data through the shared
+ *  `ChartPanel` (steps/shared/ChartPanel.tsx) instead of a hand-rolled SVG. It reads
+ *  `data[field]` as an object and maps the named keys to a ChartPanel flavor:
+ *   - `variant: 'bars'`      — one horizontal budget bar per `rows[]` entry (value =
+ *     `field[row.key]`, label defaults to the key); `highlightKey` emphasises one bar.
+ *   - `variant: 'histogram'` — one vertical bar per `keys[]` entry.
+ *  `max` fixes the domain ceiling (else auto). This is what a `balance`-archetype step
+ *  declares so a "budget"/"faucet-vs-sink" step renders a real chart, not a table. */
 export type ViewDescriptor =
   | { kind: 'prose'; field: string; emptyText: string }
-  | { kind: 'table'; field: string; columns: { key: string; unit?: string }[] }
+  | { kind: 'table'; field: string; columns: { key: string; label?: string; unit?: string }[] }
+  | { kind: 'chart'; variant: 'bars'; field: string; rows: { key: string; label?: string; unit?: string }[]; max?: number; highlightKey?: string }
+  | { kind: 'chart'; variant: 'histogram'; field: string; keys: string[]; max?: number; highlightKey?: string }
   | { kind: 'gallery'; field: string; candidates: number }
   | { kind: 'checklist'; field: string }
   | { kind: 'manifest'; field: string }
