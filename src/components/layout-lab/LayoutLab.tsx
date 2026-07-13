@@ -7,6 +7,7 @@ import { useLabCatalogData, useLabDetail } from './useLabCatalogData';
 import { Baseline } from './Baseline';
 import { CanonView } from './CanonView';
 import { CatalogMatrix } from './CatalogMatrix';
+import { GlobalCoach } from './GlobalCoach';
 import { LAB_THEMES, LIGHT, themeAttr } from './theme';
 import { labFontVars } from './fonts';
 import { LabBridgeStrip } from './LabBridgeStrip';
@@ -135,6 +136,9 @@ export function LayoutLab() {
         </div>
       </header>
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        {/* Lab-level cross-catalog coach — only over the composition (Baseline) view;
+            the Matrix and Canon carry their own catalog-wide summaries. */}
+        {view === 'catalogs' && <GlobalCoach t={theme} />}
         <AnimatePresence mode="wait" initial={false}>
           <motion.div key={view}
             initial={reduce ? false : { opacity: 0, y: 6 }}

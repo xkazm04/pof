@@ -40,11 +40,19 @@ const store = new Map<string, ArtifactCacheEntry>();
 const seqByKey = new Map<string, number>(); // per-key request sequence (stale-response guard)
 const listeners = new Set<() => void>();
 
+// Monotonic version bumped on every cache mutation. It is the stable snapshot value
+// the cross-catalog coach aggregation subscribes to (via `useArtifactCacheVersion`),
+// so a whole-project derivation can key its memo on "the cache changed" without each
+// catalog needing its own `useCachedArtifacts` hook (which the rules of hooks forbid
+// in a 33-catalog loop) — and it re-runs progressively as each catalog fetch resolves.
+let version = 0;
+
 function keyFor(catalogId: string, entityId?: string): string {
   return entityId ? `${catalogId}|${entityId}` : catalogId;
 }
 
 function emit(): void {
+  version++;
   for (const l of listeners) l();
 }
 
@@ -92,6 +100,24 @@ export function invalidateArtifacts(catalogId: string, entityId?: string): void 
   if (changed) emit();
 }
 
+/**
+ * Non-hook read of a key's current cache entry. For the cross-catalog coach, which
+ * reads many catalogs' entries inside one memo rather than one hook per catalog.
+ * Pair with {@link useArtifactCacheVersion} so the memo recomputes as fetches land.
+ */
+export function getCachedArtifacts(catalogId: string, entityId?: string): ArtifactCacheEntry {
+  return store.get(keyFor(catalogId, entityId)) ?? EMPTY;
+}
+
+/**
+ * Subscribe to the cache's monotonic version — bumps on every mutation (fetch
+ * resolve, ensure, invalidate). Lets an aggregate reader recompute progressively
+ * without a per-catalog hook. Returns 0 during SSR.
+ */
+export function useArtifactCacheVersion(): number {
+  return useSyncExternalStore(subscribe, () => version, () => 0);
+}
+
 /** Subscribe a component to a key's cache entry; triggers a fetch on first read. */
 export function useCachedArtifacts(catalogId: string | undefined, entityId?: string): ArtifactCacheEntry {
   const entry = useSyncExternalStore(
@@ -115,4 +141,5 @@ export function _resetArtifactCache(): void {
   store.clear();
   seqByKey.clear();
   listeners.clear();
+  version = 0;
 }

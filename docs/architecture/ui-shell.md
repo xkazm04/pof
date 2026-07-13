@@ -20,12 +20,15 @@ rollup strip.
 | `src/components/layout-lab/CatalogTree.tsx` | Category→Catalog→Entity collapsible tree (left column) |
 | `src/components/layout-lab/steps/index.ts` | `getStepComponent(catalogId, stepName)` — looks up the `STEP_REGISTRY` |
 | `src/components/layout-lab/steps/ArchetypeStep.tsx` | Generic renderer for any registered `StepSpec`; drives View + CliProduce + Acceptance |
-| `src/components/layout-lab/NextStepCoach.tsx` | Compact single-row "what to do next" coach in the work canvas; primary CTA (jump / drain) + a disclosure that expands plain-language mode + summary |
+| `src/components/layout-lab/NextStepCoach.tsx` | Compact single-row "what to do next" coach in the work canvas; primary CTA (jump / drain) + a disclosure that expands plain-language mode + summary. Scoped to the OPEN entity |
+| `src/components/layout-lab/GlobalCoach.tsx` | Lab-level, **cross-catalog** next-step coach shown above the Baseline view — top-N highest-value moves across ALL catalogs (ranked fail > drift > pending > deferred). Clicking dispatches the one-shot `pendingNavigation` (entity-level). The passive `/status` map's active complement |
+| `src/components/layout-lab/globalCoachModel.ts` | Pure model for `GlobalCoach`: `pickEntityIssue` / `rankCoachCandidates` / `buildGlobalCoach` (reuses `deriveEntityArtifacts` — no new status logic) |
+| `src/components/layout-lab/hooks/useGlobalCoach.ts` | Aggregation hook: one deduped whole-catalog fetch per catalog via the shared cache, memoized on `useArtifactCacheVersion()` so the ranked list fills in progressively without a per-catalog hook |
 | `src/components/layout-lab/PipelineRollup.tsx` | Reusable per-step status strip + config-complete summary (`X/Y pass · …`). No longer mounted in the canvas — the left pipeline rail is the status display; kept as a standalone strip + WCAG status-encoding tests |
 | `src/components/layout-lab/LabBridgeStrip.tsx` | Compact UE bridge status dot+label; reads `usePofBridgeStore` (display-only) |
 | `src/components/layout-lab/labPipelineStore.ts` | Zustand persisted store (`pof-lab-pipeline`); `produce/fail/resetEntity/hydrateEntity`; module-level `_labSync` function pointer |
 | `src/components/layout-lab/labArtifactClient.ts` | `fetchArtifacts`, `postArtifact`, `drainGates` — thin wrappers around `/api/pipeline-artifacts` |
-| `src/components/layout-lab/labArtifactCache.ts` | Shared artifact-fetch cache (`useCachedArtifacts`, `invalidateArtifacts`) — one deduped fetch path + loading state for Baseline + Matrix |
+| `src/components/layout-lab/labArtifactCache.ts` | Shared artifact-fetch cache (`useCachedArtifacts`, `invalidateArtifacts`) — one deduped fetch path + loading state for Baseline + Matrix. Also exposes `getCachedArtifacts` (non-hook read) + `useArtifactCacheVersion` (change signal) for the cross-catalog coach aggregation |
 | `src/components/layout-lab/catalogManifest.ts` | Single per-catalog resolver over section · steps · grader · bespoke-UI (`resolveCatalogSteps`, `isBespokeCatalog`) |
 | `src/components/layout-lab/matrixRows.ts` | `buildMatrixRows` — CatalogMatrix rows via the shared `deriveEntityArtifacts` path (one status code path with the rail) |
 | `src/components/layout-lab/DriftBanner.tsx` | Server↔local drift banner + "adopt server truth" affordance (preserves `genHistory` unless confirmed) |
@@ -80,10 +83,14 @@ Renders a `100vh` flex column:
   showing Moon→Studio Dark / Sun→Blueprint; toggles `themeId`).
 - **Body**: when `view === 'canon'` renders `<CanonView t={theme} />`; when `view === 'matrix'`
   renders `<CatalogMatrix … onOpenStep={openFromMatrix} />`; otherwise renders
-  `<Baseline theme={theme} groups={groups} detail={detail} initialStepIdx={focusStepIdx} … />`.
+  `<Baseline theme={theme} groups={groups} detail={detail} initialStepIdx={focusStepIdx} … />`,
+  prefaced by `<GlobalCoach t={theme} />` (the cross-catalog next-step coach, catalogs view only).
   A matrix cell click runs `openFromMatrix(catalogId, entityId, stepIdx)`, which sets `catalogId`/
   `entityId`/`focusStepIdx` and switches `view` back to `'catalogs'`; Baseline remounts on the switch
   and reads `focusStepIdx` as its initial step (a manual **Catalogs** click clears it).
+- **Cross-view navigation**: a one-shot `pendingNavigation` store subscription (`oneShotLabStore`)
+  drives `catalogId`/`entityId` from anywhere — used by the One-shot panel and by `GlobalCoach`
+  (entity-level; the payload carries no step, so step preselection is matrix-only via `openFromMatrix`).
 
 On mount, `useEffect(() => { hydrate(); }, [hydrate])` fetches the server's project canon rules into
 `canonStore` (replaces the seed if the server responds).
