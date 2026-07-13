@@ -20,7 +20,7 @@ import { listArtifacts, upsertArtifact } from '@/lib/pipeline-artifacts-db';
 import { canonContextFor } from '@/lib/catalog/canon/canonContext';
 import { ARCHETYPE_CANON } from '@/lib/catalog/canon/archetypeCanon';
 import type { ProjectRule } from '@/lib/catalog/canon/types';
-import type { AcceptanceResult, Checker } from '@/lib/catalog/acceptance/types';
+import type { AcceptanceResult, Checker, CheckerContext } from '@/lib/catalog/acceptance/types';
 import type { ViewDescriptor, StepSpec } from '@/lib/catalog/stepSpec';
 import type { LifecycleState, TestResult, StoredCatalogEntity } from '@/lib/catalog/types';
 
@@ -84,12 +84,29 @@ export interface StepRecipe {
 }
 
 /** Run a Checker without letting a thrown produce/accept blow up the whole recipe. */
-function safeAccept(accept: Checker, data: Record<string, unknown>): AcceptanceResult | null {
+function safeAccept(accept: Checker, data: Record<string, unknown>, ctx?: CheckerContext): AcceptanceResult | null {
   try {
-    return accept(data);
+    return accept(data, ctx);
   } catch {
     return null;
   }
+}
+
+/**
+ * The server-side CheckerContext for a (catalog, entity): sibling steps' persisted data
+ * (when an entityId is known) plus a cross-catalog `has` derived from the SEEDED entities —
+ * the server-importable source of entity existence. Mirrors the lab's catalog-store `has`.
+ */
+function serverCheckerContext(catalogId: string, entityId?: string): CheckerContext {
+  const siblings: Record<string, Record<string, unknown>> = {};
+  if (entityId) {
+    for (const a of listArtifacts(catalogId, entityId)) siblings[a.step] = a.data;
+  }
+  return {
+    catalog: catalogId,
+    siblings,
+    has: (c, e) => seededEntities(c).some((x) => x.id === e),
+  };
 }
 
 /**
@@ -113,10 +130,11 @@ export function gradeArtifact(
   catalogId: string,
   step: string,
   data: Record<string, unknown>,
+  entityId?: string,
 ): { graded: boolean; result: AcceptanceResult | null } {
   const checker = serverCheckerFor(catalogId, step);
   if (!checker) return { graded: false, result: null };
-  return { graded: true, result: safeAccept(checker, data) };
+  return { graded: true, result: safeAccept(checker, data, serverCheckerContext(catalogId, entityId)) };
 }
 
 /** Map a seeded entity to the `LabEntity` shape the step `produce`/`accept` expect. */
@@ -212,7 +230,8 @@ export function buildStepRecipe(
     example = null;
   }
 
-  const exampleRes = example ? safeAccept(spec.accept, example.data) : null;
+  const ctx = serverCheckerContext(catalogId, entityId);
+  const exampleRes = example ? safeAccept(spec.accept, example.data, ctx) : null;
 
   const arts = listArtifacts(catalogId, entityId);
   const cur = arts.find((a) => a.step === step) ?? null;
@@ -222,7 +241,7 @@ export function buildStepRecipe(
 
   // Current verdict: persisted truth when present (it may carry an L3/L4 drain verdict
   // the pure Checker can't reproduce), otherwise the pending message from accept({}).
-  const pendingRes = safeAccept(spec.accept, {});
+  const pendingRes = safeAccept(spec.accept, {}, ctx);
   const acceptance: StepRecipe['acceptance'] = {
     label: exampleRes?.label ?? pendingRes?.label ?? spec.label,
     tier: exampleRes?.tier ?? pendingRes?.tier ?? 'L0',
@@ -280,7 +299,7 @@ export function submitStepArtifact(
   ueAssets: string[],
 ): SubmitResult {
   const spec = resolveStep(catalogId, step); // throws CatalogNotFoundError for unknown catalog/step
-  const res = safeAccept(spec.accept, data);
+  const res = safeAccept(spec.accept, data, serverCheckerContext(catalogId, entityId));
   const status = res?.status ?? 'pending';
   const tier = res?.tier ?? 'L0';
   const reason = res?.reason;

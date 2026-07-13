@@ -31,10 +31,11 @@ export function resolveAccept(catalogId: string, step: string): Checker | null {
   if (catalogId === 'items') {
     const spec = ITEM_STEP_SPECS[step];
     if (!spec) return null;
-    // ItemStepSpec.accept now shares the Checker signature (data); normalize its
-    // optional tier/reason to the AcceptanceResult shape the rollup expects.
-    return (data: Record<string, unknown>) => {
-      const result = spec.accept(data);
+    // ItemStepSpec.accept now shares the Checker signature (data, ctx?); normalize its
+    // optional tier/reason to the AcceptanceResult shape the rollup expects, forwarding
+    // the optional CheckerContext so a bespoke Items checker can read siblings / links too.
+    return (data, ctx) => {
+      const result = spec.accept(data, ctx);
       return {
         label: result.label,
         status: result.status,

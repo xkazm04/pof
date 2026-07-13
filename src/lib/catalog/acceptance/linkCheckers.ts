@@ -1,4 +1,4 @@
-import type { AcceptanceResult } from './types';
+import type { AcceptanceResult, Checker } from './types';
 
 export interface CatalogLinkRef { catalogId: string; entityId: string; role?: string }
 
@@ -20,4 +20,24 @@ export function linkTargetsExist(
 export function readLinks(data: Record<string, unknown>): CatalogLinkRef[] {
   const l = (data as { links?: unknown }).links;
   return Array.isArray(l) ? (l as CatalogLinkRef[]) : [];
+}
+
+/**
+ * A `Checker` that resolves a step's declared cross-catalog links IN ACCEPT — using the
+ * `has(catalog, entity)` supplied by the CheckerContext. This is the accept-time counterpart
+ * of the display-only `linkTargetsExist` call: a satisfied link set → `pass`, a broken one →
+ * `deferred` naming the unresolved targets (never a hard fail — the target may be authored later).
+ *
+ * NON-REGRESSING when context is unavailable: a rollup path that supplies no `ctx` genuinely
+ * cannot resolve links, so this returns `pass` rather than dragging a satisfied step to pending.
+ * The paths that CAN resolve (the lab step view via the catalog store, and the headless server
+ * via seeded entities) supply `ctx`, so the real verdict surfaces there. Empty link set → `pass`.
+ */
+export function linksResolve(label = 'Cross-catalog links resolve'): Checker {
+  return (data, ctx) => {
+    const links = readLinks(data);
+    if (!links.length) return { label, tier: 'L2', status: 'pass', detail: 'no links declared' };
+    if (!ctx) return { label, tier: 'L2', status: 'pass', detail: `${links.length} link(s) — resolution needs catalog context` };
+    return linkTargetsExist(links, ctx.has, label);
+  };
 }

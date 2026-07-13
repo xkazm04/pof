@@ -1,4 +1,5 @@
 import type { Acceptance } from './StepFrame';
+import type { CheckerContext } from '@/lib/catalog/acceptance/types';
 import type { LabEntity } from '../useLabCatalogData';
 import type { StepOutput } from '../labPipelineStore';
 
@@ -115,7 +116,9 @@ export interface AcceptanceCopy {
  */
 export interface ItemStepSpec {
   produce: (entity: LabEntity) => StepOutput;
-  accept: (data: Record<string, unknown>) => Acceptance;
+  /** Optional `ctx` (second arg) mirrors the shared `Checker` signature so a bespoke
+   *  Items step can read siblings / resolve links; existing single-arg bodies are unaffected. */
+  accept: (data: Record<string, unknown>, ctx?: CheckerContext) => Acceptance;
 }
 
 /* ── Plain-language reasons ─────────────────────────────────────────────── */

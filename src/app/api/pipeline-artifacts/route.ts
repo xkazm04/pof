@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     if (!parsed.success) return apiError('Invalid artifact payload', 400, parsed.error.issues);
     const p = parsed.data;
 
-    const { graded, result } = gradeArtifact(p.catalogId, p.step, p.data);
+    const { graded, result } = gradeArtifact(p.catalogId, p.step, p.data, p.entityId);
     const status = graded ? (result?.status ?? 'pending') : p.status;
     const tier = graded ? (result?.tier ?? 'L0') : p.tier;
     const reason = graded

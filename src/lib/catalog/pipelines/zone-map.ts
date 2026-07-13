@@ -1,5 +1,7 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
+import { linksResolve } from '../acceptance/linkCheckers';
+import { allOf } from '../acceptance/combinators';
 import { runtimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
@@ -274,11 +276,18 @@ registerCatalogPipeline({
           { catalogId: 'bestiary',   entityId: 'bestiary-brute',          role: 'encounter-pack' },
         ],
       }),
-      accept: fieldsPopulated('encounters', 'Hosted arena + pack placements + wiring contract declared', [
-        'hostedArena',
-        'packPlacements',
-        'wiringContract',
-      ]),
+      // Shape (fields populated) AND cross-catalog links resolve in ACCEPT: the declared
+      // combat-map / bestiary targets must exist. Satisfied → pass; a broken link → deferred
+      // with the unresolved target named (the catalog-context path supplies `has`; a ctx-free
+      // rollup degrades to pass rather than regressing this step).
+      accept: allOf(
+        fieldsPopulated('encounters', 'Hosted arena + pack placements + wiring contract declared', [
+          'hostedArena',
+          'packPlacements',
+          'wiringContract',
+        ]),
+        linksResolve('Encounter cross-catalog links resolve'),
+      ),
       staticChecks: () => [
         cppSymbolExists('ASpawnVolume', 'Spawn volume actor present in UE Source'),
       ],
