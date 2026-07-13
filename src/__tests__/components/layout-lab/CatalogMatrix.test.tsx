@@ -100,6 +100,15 @@ describe('CatalogMatrix', () => {
     expect(container.querySelector('[data-testid="matrix-blocked-count"]')?.textContent).toBe('1');
   });
 
+  it('shows the batch-drain action because the catalog has a deferred gate (e2 · StepC)', async () => {
+    const { container } = renderMatrix();
+    await waitFor(() => expect(statusOf(container, 'e2::StepC')).toBe('deferred'));
+    const start = container.querySelector('[data-testid="batch-drain-start"]');
+    expect(start).toBeTruthy();
+    // exactly one entity (e2) is deferred → singular label
+    expect(start?.textContent).toContain('1 deferred set');
+  });
+
   it('clicking a cell jumps to that entity + step index', async () => {
     const { container, onOpenStep } = renderMatrix();
     await waitFor(() => expect(statusOf(container, 'e1::StepB')).toBe('fail'));

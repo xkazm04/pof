@@ -1,8 +1,11 @@
 'use client';
 
 import { tryApiFetch } from '@/lib/api-utils';
+import type { ApiResponse } from '@/types/api';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 import type { AcceptanceStatus, AcceptanceTier } from '@/lib/catalog/acceptance/types';
+import type { DrainSummary } from '@/lib/test-gate-runner/types';
+import type { DrainOutcome } from './batchDrainModel';
 
 export interface ArtifactUpsertBody {
   catalogId: string;
@@ -42,4 +45,27 @@ export async function drainGates(catalogId: string, entityId: string): Promise<D
     body: JSON.stringify({ catalogId, entityId }),
   });
   return r.ok ? r.data : null;
+}
+
+/**
+ * Batch-drain variant that distinguishes the three outcomes the Matrix-level serial
+ * drain must react to: `ok` (with the full {@link DrainSummary} so per-step fail
+ * reasons survive), `locked` (HTTP 409 — the entity's lease is held by another drain;
+ * the caller retries once then skips), and `error`. `drainGates` above collapses all
+ * failures to `null`, which would hide a 409 from the batch loop — hence this richer fn.
+ */
+export async function drainEntityGates(catalogId: string, entityId: string): Promise<DrainOutcome> {
+  try {
+    const res = await fetch('/api/pipeline-artifacts/drain', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ catalogId, entityId }),
+    });
+    if (res.status === 409) return { kind: 'locked' };
+    const json = (await res.json()) as ApiResponse<DrainSummary>;
+    if (!json.success) return { kind: 'error', reason: json.error };
+    return { kind: 'ok', summary: json.data };
+  } catch (e) {
+    return { kind: 'error', reason: e instanceof Error ? e.message : 'Network error' };
+  }
 }

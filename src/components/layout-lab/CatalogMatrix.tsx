@@ -8,6 +8,8 @@ import { useLabPipelineStore } from './labPipelineStore';
 import { useLabDetail } from './useLabCatalogData';
 import { resolveCatalogSteps } from './catalogManifest';
 import { buildMatrixRows } from './matrixRows';
+import { MatrixBatchDrain } from './MatrixBatchDrain';
+import { useBatchDrain } from './hooks/useBatchDrain';
 import { MatrixSkeleton } from './MatrixSkeleton';
 import { STATUS_GLYPH, STATUS_WORD, statusColor } from './statusLanguage';
 import type { AcceptanceStatus } from '@/lib/catalog/acceptance/types';
@@ -69,6 +71,15 @@ export function CatalogMatrix({ t, groups, catalogId, onOpenStep }: Props) {
 
   const completeCount = rows.filter((r) => r.rollup.configComplete).length;
   const blockedCount = rows.filter((r) => r.blockers.length > 0).length;
+
+  // Batch drain: every entity with ≥1 deferred gate, drained serially (single-lease UE
+  // runner). The hook owns the loop/cancel/lease logic; the header owns the UI. As each
+  // entity's result lands the cache is invalidated → this matrix refetches and updates live.
+  const deferredEntities = useMemo(
+    () => rows.filter((r) => r.rollup.deferred > 0).map((r) => ({ id: r.id, name: r.name })),
+    [rows],
+  );
+  const { state: drainState, start: startDrain, cancel: cancelDrain } = useBatchDrain(selected);
 
   // Memoize cell styles per status (only ~5 distinct statuses) instead of
   // allocating a fresh CSSProperties object for every cell on every render — the
@@ -134,6 +145,10 @@ export function CatalogMatrix({ t, groups, catalogId, onOpenStep }: Props) {
           </span>
           <span>{steps.length} steps</span>
         </div>
+        <div style={{ marginLeft: 'auto' }}>
+          <MatrixBatchDrain t={t} deferredEntities={deferredEntities} state={drainState}
+            onStart={() => startDrain(deferredEntities)} onCancel={cancelDrain} />
+        </div>
       </div>
 
       {/* ── Numbered legend so the column numbers decode to step names ── */}
@@ -163,8 +178,8 @@ export function CatalogMatrix({ t, groups, catalogId, onOpenStep }: Props) {
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.id}>
-                  <td style={nameTd}>
+                <tr key={r.id} data-draining={drainState.currentEntityId === r.id || undefined}>
+                  <td style={drainState.currentEntityId === r.id ? { ...nameTd, borderLeft: `3px solid ${t.warn}` } : nameTd}>
                     <button onClick={() => onOpenStep(selected, r.id, 0)} className={t.fontBody}
                       style={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%', textAlign: 'left', cursor: 'pointer', background: 'transparent', border: 'none', color: t.text }}>
                       <span style={{ fontSize: 14, fontWeight: 600, color: t.inkDeep, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</span>
@@ -176,6 +191,9 @@ export function CatalogMatrix({ t, groups, catalogId, onOpenStep }: Props) {
                             title={`Blocked: ${r.blockers.map((b) => `${b.step} — ${b.reason}`).join('; ')}`}>
                             ⚠ {r.blockers.length} blocker{r.blockers.length > 1 ? 's' : ''}
                           </span>
+                        )}
+                        {drainState.currentEntityId === r.id && (
+                          <span data-testid={`matrix-draining-${r.id}`} style={{ color: t.warn, fontWeight: 600 }}>· draining…</span>
                         )}
                       </span>
                     </button>
