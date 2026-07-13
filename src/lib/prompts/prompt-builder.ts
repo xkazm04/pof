@@ -47,6 +47,7 @@ export interface PromptSections {
 
 export class PromptBuilder {
   private _projectContext: string | null = null;
+  private _qualityPack: string | null = null;
   private _domainContext: string | null = null;
   private _taskInstructions: string | null = null;
   private _assetSpec: string | null = null;
@@ -77,6 +78,18 @@ export class PromptBuilder {
    */
   withRawProjectContext(header: string): this {
     this._projectContext = header;
+    return this;
+  }
+
+  /**
+   * Set the quality-pack framing (WS1) — senior-discipline role + the judge's own
+   * craft dimensions + hard constraints. Rendered once, immediately after the
+   * project context, so production aims at the bar the judge enforces. Pass the
+   * pre-built pack string (from `qualityPack()`); an empty string is a no-op so
+   * callers can gate it per step without branching.
+   */
+  withQualityPack(pack: string): this {
+    if (pack) this._qualityPack = pack;
     return this;
   }
 
@@ -200,6 +213,10 @@ export class PromptBuilder {
     }
 
     const parts: string[] = [this._projectContext];
+
+    if (this._qualityPack) {
+      parts.push(this._qualityPack);
+    }
 
     if (this._domainContext) {
       parts.push(`## Domain Context\n${this._domainContext}`);

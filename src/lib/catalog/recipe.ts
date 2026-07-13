@@ -1,9 +1,41 @@
 import type { ProjectContext } from '@/lib/prompt-context';
 import type { AbilityEntry, CatalogEntityBase, ItemEntry, LifecycleState, LootTableEntry, BestiaryEntry, CombatInteractionEntry, ScreenEntry, ZoneEntry, AnimationEntry, MaterialCatalogEntry, CharacterEntry } from '@/lib/catalog/types';
 import { PromptBuilder } from '@/lib/prompts/prompt-builder';
+import { qualityPack, PROMPT_VERSION } from '@/lib/prompts/quality';
+import type { DeliverableClass } from '@/lib/judge/dimensions';
 import { isArenaSlice } from '@/lib/catalog/arena-slice';
 
 export type GenerationStep = 'scaffold-cpp' | 'author-python' | 'wire' | 'verify';
+
+/** Prompt-pack version stamped onto every generation dispatch (re-exported from WS1). */
+export { PROMPT_VERSION };
+
+/**
+ * Discipline (deliverable class) each catalog's generation prompt should aim at,
+ * so the WS1 quality pack (role framing + the judge's craft dimensions) is
+ * module-appropriate. These recipes author spec-derived config/data/C++, which
+ * is `text-config` work; state-graph authors a montage, judged as `animation`.
+ * Absent → the sensible default `text-config`.
+ */
+const RECIPE_DISCIPLINE: Record<string, DeliverableClass> = {
+  'state-graph': 'animation',
+};
+
+function disciplineFor(catalogId: string): DeliverableClass {
+  return RECIPE_DISCIPLINE[catalogId] ?? 'text-config';
+}
+
+/**
+ * A PromptBuilder pre-seeded with the project context and, for every PRODUCING
+ * step (not `verify`, which only runs a test), the module-appropriate WS1
+ * quality pack — composed ONCE per prompt so the token cost stays bounded and
+ * the produced asset aims at the same bar the strict judge scores.
+ */
+function recipeBuilder(ctx: ProjectContext, catalogId: string, step: GenerationStep): PromptBuilder {
+  return new PromptBuilder()
+    .withProjectContext(ctx)
+    .withQualityPack(step === 'verify' ? '' : qualityPack(disciplineFor(catalogId), catalogId));
+}
 
 /** The lifecycle a completed step advances the entity to. */
 export const STEP_TO_LIFECYCLE: Record<GenerationStep, LifecycleState> = {
@@ -53,8 +85,7 @@ export const SPELLBOOK_RECIPE: GenerationRecipe<AbilityEntry> = {
   steps: ['scaffold-cpp', 'author-python', 'wire', 'verify'],
   testPath: 'Project.Functional Tests.Maps.VS09Ability.VSAbility09Test',
   buildStepPrompt(entity, step, ctx) {
-    const builder = new PromptBuilder()
-      .withProjectContext(ctx)
+    const builder = recipeBuilder(ctx, this.catalogId, step)
       .withDomainContext('Gameplay Ability System (GAS) authoring for the PoF ARPG.')
       .withAssetSpec(entity)
       .withTask(`Spellbook · ${step}`, STEP_TASK[step](entity))
@@ -87,8 +118,7 @@ export const ITEMS_RECIPE: GenerationRecipe<ItemEntry> = {
         : step === 'wire'
           ? `Register "${entity.name}" so it is discoverable by the item registry / a loot table.`
           : `Run the item-definitions functional test; assert the asset loads with valid fields.`;
-    const b = new PromptBuilder()
-      .withProjectContext(ctx)
+    const b = recipeBuilder(ctx, this.catalogId, step)
       .withDomainContext('UARPGItemDefinition data-asset authoring for the PoF ARPG.')
       .withAssetSpec(entity)
       .withTask(`Items · ${step}`, task)
@@ -114,8 +144,7 @@ export const LOOT_RECIPE: GenerationRecipe<LootTableEntry> = {
       step === 'author-python'
         ? `Author a UARPGLootTable data asset "${entity.name}" with the spec's weighted entries.`
         : `Run the loot-distribution functional test; assert empirical drops match the configured weights within tolerance.`;
-    const b = new PromptBuilder()
-      .withProjectContext(ctx)
+    const b = recipeBuilder(ctx, this.catalogId, step)
       .withDomainContext('UARPGLootTable data-asset authoring for the PoF ARPG.')
       .withAssetSpec(entity)
       .withTask(`Loot · ${step}`, task)
@@ -147,8 +176,7 @@ export const BESTIARY_RECIPE: GenerationRecipe<BestiaryEntry> = {
         : step === 'wire'
           ? `Wire BP_${entity.data.id}Enemy: grant its abilities (cross-catalog links provide spellbook ids) + bind the loot table (lt-${entity.data.id}) on the placed instance.`
           : `Run AVSBestiary_${entity.data.id}Test: spawn → chases + attacks (player Health drops) → drops linked loot on death.`;
-    const b = new PromptBuilder()
-      .withProjectContext(ctx)
+    const b = recipeBuilder(ctx, this.catalogId, step)
       .withDomainContext('AARPGEnemyCharacter Blueprint authoring + cross-catalog wiring for the PoF ARPG.')
       .withAssetSpec(entity)
       .withTask(`Bestiary · ${step}`, task)
@@ -195,8 +223,7 @@ export const COMBAT_MAP_RECIPE: GenerationRecipe<CombatInteractionEntry> = {
         step === 'wire'
           ? `Place Arena Slice "${entity.name}" into the arena map: an AARPGEncounterArena (extent ±${a.extentCm}cm), ${a.cover.length} AARPGCoverPoint(s), an ASpawnVolume carrying ${a.waves.length} wave(s) [${a.waves.map((w) => `${w.enemyArchetype}×${w.count}`).join(', ')}], and ${a.hazards.length} AARPGEnvironmentalHazard(s). Win=${a.winCondition}, loss=${a.lossCondition}.`
           : `Run the arena functional tests against the placed slice (setup/lighting, bounds containment, floor collision).`;
-      const b = new PromptBuilder()
-        .withProjectContext(ctx)
+      const b = recipeBuilder(ctx, this.catalogId, step)
         .withDomainContext('Tactical encounter arena assembly (reuse of existing encounter actors) for the PoF ARPG.')
         .withAssetSpec(entity)
         .withTask(`Arena Slice · ${step}`, task)
@@ -209,8 +236,7 @@ export const COMBAT_MAP_RECIPE: GenerationRecipe<CombatInteractionEntry> = {
       step === 'wire'
         ? `Wire combo "${entity.name}" (${entity.data.weaponCategory}): connect each chain step to its HitReact montage + Damage tag on the placed-instance damage table.`
         : `Run VSCombat_DamageMatrixTest: assert each interaction applies the expected damage/reaction to the target.`;
-    const b = new PromptBuilder()
-      .withProjectContext(ctx)
+    const b = recipeBuilder(ctx, this.catalogId, step)
       .withDomainContext('Combat interaction wiring (no new assets) for the PoF ARPG.')
       .withAssetSpec(entity)
       .withTask(`Combat Map · ${step}`, task)
@@ -243,8 +269,7 @@ export const SCREEN_FLOW_RECIPE: GenerationRecipe<ScreenEntry> = {
           : step === 'wire'
             ? `Wire screen "${entity.name}" into the screen-flow state machine (push/pop/replace), respecting its group "${entity.data.group ?? 'Misc'}".`
             : `Run VSScreen_${entity.data.id}Test: widget mounts/binds/transitions; bar moves on attribute change.`;
-    const b = new PromptBuilder()
-      .withProjectContext(ctx)
+    const b = recipeBuilder(ctx, this.catalogId, step)
       .withDomainContext('Pure-C++ UMG widgets (UARPGCodeWidgetBase) for the PoF ARPG.')
       .withAssetSpec(entity)
       .withTask(`Screen Flow · ${step}`, task)
@@ -272,8 +297,7 @@ export const ZONE_MAP_RECIPE: GenerationRecipe<ZoneEntry> = {
       step === 'author-python'
         ? `Author /Game/Maps/${entity.data.id}.umap via a build_${entity.data.id}.py script (FULL editor): floor + lights + PlayerStart + zone-specific placement + portals from ZONE_EDGES.`
         : `Run VSZone_${entity.data.id}Test: player spawns, nav exists, encounter triggers; layout sane (Gemini-vision optional).`;
-    const b = new PromptBuilder()
-      .withProjectContext(ctx)
+    const b = recipeBuilder(ctx, this.catalogId, step)
       .withDomainContext('Zone (.umap) authoring + spawn/nav placement for the PoF ARPG.')
       .withAssetSpec(entity)
       .withTask(`Zone Map · ${step}`, task)
@@ -303,8 +327,7 @@ export const STATE_GRAPH_RECIPE: GenerationRecipe<AnimationEntry> = {
       step === 'author-python'
         ? `Author the ${entity.data.name} montage shell from Mixamo (retarget to SK_Mannequin); place under /Game/Animations/${entity.data.category}/. Do NOT touch the AnimBP graph.`
         : `Run VSAnim_LocomotionTest: AnimInstance locomotion state updates under movement (the Python-authorable verify; AnimBP graph completeness is the operator's manual responsibility).`;
-    const b = new PromptBuilder()
-      .withProjectContext(ctx)
+    const b = recipeBuilder(ctx, this.catalogId, step)
       .withDomainContext('Mixamo + montage authoring for the PoF ARPG. AnimBP graph stays manual.')
       .withAssetSpec(entity)
       .withTask(`State Graph · ${step}`, task)
@@ -338,8 +361,7 @@ export const MATERIALS_RECIPE: GenerationRecipe<MaterialCatalogEntry> = {
       step === 'author-python'
         ? `Author ${inst} — a MaterialInstanceConstant parented to ${parent} — from "${entity.name}"'s spec, via a build_<id>.py script (FULL editor).`
         : `Run the build_<id>.py self-validating gate for "${entity.name}": assert parent=${parent}, every spec texture resolves, Normal/Roughness/DetailNormal are non-sRGB, and the scalar/tint overrides match. Judge by \`[gate] RESULT=PASS\` in the -abslog.`;
-    const b = new PromptBuilder()
-      .withProjectContext(ctx)
+    const b = recipeBuilder(ctx, this.catalogId, step)
       .withDomainContext('MaterialInstanceConstant authoring over M_ARPG_Surface_Master for the PoF ARPG.')
       .withAssetSpec(entity)
       .withTask(`Materials · ${step}`, task)
@@ -372,8 +394,7 @@ export const CHARACTERS_RECIPE: GenerationRecipe<CharacterEntry> = {
         : step === 'wire'
           ? `Wire BP_${id} on the placed instance: grant its abilities (spellbook cross-catalog links) and bind its dialogue tree; for humanoids run the setup_characters_ue.py mannequin path.`
           : `Run the NPC-config gate (Project.Functional Tests.PoF.CharacterVael.NPCConfig): assert NPCID/role/indicator logic + the canonical attribute row. Judge by the Automation log, not file existence.`;
-    const b = new PromptBuilder()
-      .withProjectContext(ctx)
+    const b = recipeBuilder(ctx, this.catalogId, step)
       .withDomainContext('AARPGNPCActor Blueprint authoring + DT_AttributeDefaults + cross-catalog wiring for the PoF ARPG.')
       .withAssetSpec(entity)
       .withTask(`Characters · ${step}`, task)
@@ -408,8 +429,7 @@ export const CURRENCY_RECIPE: GenerationRecipe = {
         : step === 'wire'
           ? `Wire "${entity.name}": ensure the player carries a UARPGWalletComponent that RegisterCurrency's the row, route its sources (e.g. UARPGLootDropComponent gold) through AddCurrency and its sinks through SpendCurrency.`
           : `Run the economy gate (\`Project.Functional Tests.PoF.Currency.WalletRules\`): assert credit, cap clamp, daily decay, anti-exploit overspend/negative rejection, conversion, and the OnCurrencyChanged telemetry hook.`;
-    const b = new PromptBuilder()
-      .withProjectContext(ctx)
+    const b = recipeBuilder(ctx, this.catalogId, step)
       .withDomainContext('Currency / wallet economy (UARPGWalletComponent + FARPGCurrencyDef) for the PoF ARPG.')
       .withAssetSpec(entity)
       .withTask(`Currency · ${step}`, task)

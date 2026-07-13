@@ -22,7 +22,7 @@ import {
 import { buildEvalPrompt } from '@/lib/evaluator/module-eval-prompts';
 import { getModuleChecklist } from '@/lib/module-registry';
 import { buildVisualCheckSection } from '@/lib/prompts/visual-check';
-import { getRecipe, STEP_TO_LIFECYCLE } from '@/lib/catalog/recipe';
+import { getRecipe, STEP_TO_LIFECYCLE, PROMPT_VERSION } from '@/lib/catalog/recipe';
 import { trackLabel, trackHint } from '@/lib/pipeline/tracks';
 import { buildAbilitySpecDraftPrompt } from '@/lib/ability/logic-prompts';
 import { buildGenerateAbilityBundlePrompt } from '@/lib/ability/effect-codegen-prompt';
@@ -566,6 +566,9 @@ const generate: TaskPromptHandler = (task, ctx) => {
       catalogId: gt.entity.catalogId,
       entityId: gt.entity.id,
       nextLifecycle: STEP_TO_LIFECYCLE[gt.step],
+      // Stamp the prompt-pack version into the callback payload so the judge
+      // fleet can correlate verdicts to the prompt generation that produced them.
+      promptVersion: PROMPT_VERSION,
     },
     schemaHint:
       '  "ueAssets": ["<UE asset path(s) you created/modified>"],\n' +

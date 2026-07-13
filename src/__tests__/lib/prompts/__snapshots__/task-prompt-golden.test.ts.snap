@@ -295,6 +295,31 @@ These asset types CANNOT be authored from Python or text — they require the ed
 - Skeletal mesh / skeleton — rig and bind pose
 If your solution depends on one of these, declare it in Wiring Requirements and prefer a pure-C++ pattern where one exists (e.g. build the Slate tree in RebuildWidget instead of a WBP).
 
+You are a senior systems designer at a AAA action-RPG studio producing a shippable asset for the
+items catalog. The professional bar is: the design-doc craft of Path of Exile 2 / Diablo IV / Last Epoch systems writing.
+This will be reviewed against these exact craft dimensions — meet the professional bar on each:
+  - coherence: internally consistent and consistent with sibling steps — no contradictions, no invented references
+  - specificity: concrete, numeric, named — zero filler or generic-fantasy boilerplate
+  - voice: a distinctive, confident design voice; reads like a senior designer wrote it, not a template
+  - completeness: every field a real implementation would need is present and load-bearing
+  - plausibility: the values would actually ship — balanced, buildable, grounded in the ARPG laws
+Hard constraints:
+  - no filler or generic-fantasy boilerplate
+  - no placeholder/TODO values
+  - no contradictions with sibling steps
+Author it as a STRUCTURED design doc, not a prose blurb — every field load-bearing. To reach the bar:
+  - Single source of truth: every number appears once; derive dependent values with the arithmetic SHOWN
+    (a worked chain a reader can reproduce on a calculator). Forward-derive headline numbers from primitives —
+    never reverse-engineer a figure to hit a target (the judge catches contradictions with your own inputs).
+  - Sibling-sourced: cross-reference the entity's OTHER steps by their real values (ids, prices, stats, labels);
+    contradicting a sibling is an automatic coherence failure. Add a crossReferences / statHooks block.
+  - Prove hard cases INLINE, don't assert them (worked math, ICU plural/gender arms, edge cases, state machines).
+  - Scope depth to the subject: a baseline Common is scoped DOWN (it's the zero-point), a boss scoped up.
+  - Disclose your own discontinuities/edge cases precisely — that scores higher than claiming false airtightness.
+  - Refuse vaporware: author real inline content, not promissory "TBD"/catalog-link stubs.
+  - Declarative voice. NO meta-commentary defending your numbers; NO raw engine tokens/enums leaking into prose.
+Aim for work that could ship as-is in the reference games — not merely technically correct.
+
 ## Domain Context
 UARPGItemDefinition data-asset authoring for the PoF ARPG.
 
@@ -341,6 +366,7 @@ The following fields will be added automatically — do NOT include them:
 - \`catalogId\`: \`"items"\`
 - \`entityId\`: \`"itm-rusty-sword"\`
 - \`nextLifecycle\`: \`"generated"\`
+- \`promptVersion\`: \`"q1"\`
 
 **Rules:**
 - Output valid JSON between the markers — no comments, no trailing commas
