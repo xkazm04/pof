@@ -257,6 +257,16 @@ interface ContextHeaderOptions {
   errorMemory?: ErrorContextEntry[];
   /** The kind of prompt — drives which UE pitfalls + tripwire are injected (default: 'ue-cpp' in the UE branch) */
   promptKind?: PromptKind;
+  /** Module id, so the UE pitfalls block is scoped to this module's domains (see formatGotchas). Omitted → conservative superset. */
+  module?: string;
+  /**
+   * Whether to emit the Binary Content Wall tripwire. It is only relevant when
+   * the task can author or depend on editor-only graph/asset content
+   * (WBP/ABP/.umap/BehaviorTree/MaterialFunction/SkeletalMesh). Defaults to true
+   * for any UE kind (recipes/ability-forge author such assets); task handlers
+   * pass an explicit value from the task-type rule (see BINARY_ASSET_TASK_TYPES).
+   */
+  includeBinaryTripwire?: boolean;
   /** Known-asset domains to inject (e.g. ['character','animation']). Empty/omitted → nothing injected. */
   knownAssetDomains?: string[];
 }
@@ -395,11 +405,16 @@ export function buildProjectContextHeader(
     header += '\n\n## Rules\n' + rules.map((r) => `- ${r}`).join('\n');
   }
 
-  const gotchas = formatGotchas(promptKind);
+  const gotchas = formatGotchas(promptKind, opts.module);
   if (gotchas) header += `\n\n${gotchas}`;
 
-  const tripwire = formatBinaryContentTripwire(promptKind);
-  if (tripwire) header += `\n\n${tripwire}`;
+  // The binary tripwire only belongs on prompts whose task can touch editor-only
+  // asset content; default on for any UE kind, but task handlers gate it by type.
+  const includeBinaryTripwire = opts.includeBinaryTripwire ?? true;
+  if (includeBinaryTripwire) {
+    const tripwire = formatBinaryContentTripwire(promptKind);
+    if (tripwire) header += `\n\n${tripwire}`;
+  }
 
   const knownAssets = formatKnownAssets(opts.knownAssetDomains ?? []);
   if (knownAssets) header += `\n\n${knownAssets}`;

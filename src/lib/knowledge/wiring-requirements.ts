@@ -20,15 +20,21 @@ export interface WiringRequirementsOptions {
 }
 
 /**
- * Build the "## Wiring Requirements" markdown block. Always emits the four
- * wiring sub-prompts (granting / activation / dependencies / verification) plus
- * the `wiring` output-field instruction. When `moduleAssets` is non-empty, lists
- * the module's known editor-authored dependencies; when `reqs` is non-empty,
- * renders them as a table. Single source of truth for both the dispatch path
- * (buildTaskPrompt) and PromptBuilder.withWiringRequirements().
+ * Build the "## Wiring Requirements" markdown block. Emits the four wiring
+ * sub-prompts (granting / activation / dependencies / verification) plus the
+ * `wiring` output-field instruction, followed by the module's known
+ * editor-authored dependencies (when `moduleAssets` is non-empty) and/or a table
+ * of per-artifact hints (when `reqs` is non-empty). Single source of truth for
+ * both the dispatch path (buildTaskPrompt) and PromptBuilder.withWiringRequirements().
+ *
+ * Returns '' when there is NOTHING concrete to say (no reqs AND no moduleAssets)
+ * — the generic boilerplate on its own is noise, so an empty wiring block is
+ * skipped entirely rather than emitted on every code-gen prompt.
  */
 export function formatWiringRequirements(opts: WiringRequirementsOptions = {}): string {
   const { reqs = [], moduleAssets = [] } = opts;
+  if (reqs.length === 0 && moduleAssets.length === 0) return '';
+
   const lines: string[] = ['## Wiring Requirements'];
   lines.push('For EVERY artifact you generate, make it runnable out-of-the-box — do not stop at "it compiles":');
   lines.push('- **Granting / registration**: state how the artifact is granted or registered (ability granted to the ASC, GameMode class set, IMC added to the input subsystem, component added to the actor).');

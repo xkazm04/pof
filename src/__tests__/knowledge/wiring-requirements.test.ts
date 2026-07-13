@@ -3,8 +3,15 @@ import { formatWiringRequirements } from '@/lib/knowledge/wiring-requirements';
 import type { WiringAsset } from '@/lib/feature-definitions';
 
 describe('formatWiringRequirements', () => {
-  it('emits the heading, four sub-prompts, and the wiring output-field instruction with no args', () => {
-    const out = formatWiringRequirements();
+  it('returns "" with no args — an empty wiring block (no reqs, no assets) is skipped entirely', () => {
+    expect(formatWiringRequirements()).toBe('');
+    expect(formatWiringRequirements({ reqs: [], moduleAssets: [] })).toBe('');
+  });
+
+  it('emits the heading, four sub-prompts, and the wiring output-field instruction when there is concrete content', () => {
+    const out = formatWiringRequirements({
+      moduleAssets: [{ name: 'M_Master', kind: 'Material', note: 'Master material graph' }],
+    });
     const lower = out.toLowerCase();
     expect(out).toContain('## Wiring Requirements');
     expect(lower).toContain('grant');

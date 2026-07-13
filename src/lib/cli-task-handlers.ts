@@ -62,8 +62,10 @@ export interface TaskPromptShared {
   isUE5: boolean;
   /** Known asset domains for the task's module (empty for non-UE5). */
   knownAssetDomains: string[];
-  /** Pre-assembled Wiring Requirements block ('' when not applicable). */
+  /** Pre-assembled Wiring Requirements block ('' when not applicable or empty). */
   wiringBlock: string;
+  /** Whether this task type can touch editor-only binary content — gates the tripwire. */
+  touchesBinaryAssets: boolean;
 }
 
 /** A per-task-type prompt builder. Returns the fully assembled prompt string. */
@@ -88,9 +90,14 @@ function domainSection(isUE5: boolean, moduleId: SubModuleId): string {
 
 // ── Per-task-type handlers (verbatim from the former switch) ─────────────────
 
-const checklist: TaskPromptHandler = (task, ctx, { isUE5, knownAssetDomains, wiringBlock }) => {
+const checklist: TaskPromptHandler = (task, ctx, { isUE5, knownAssetDomains, wiringBlock, touchesBinaryAssets }) => {
   const ct = task as ChecklistTask;
-  const header = buildProjectContextHeader(ctx, { knownAssetDomains });
+  const header = buildProjectContextHeader(ctx, {
+    knownAssetDomains,
+    promptKind: 'ue-cpp',
+    module: task.moduleId,
+    includeBinaryTripwire: touchesBinaryAssets,
+  });
   const domainBlock = domainSection(isUE5, task.moduleId);
 
   const cbId = registerCallback({
@@ -143,15 +150,25 @@ const checklist: TaskPromptHandler = (task, ctx, { isUE5, knownAssetDomains, wir
   return `${header}${domainBlock}\n\n## Task\n${task.prompt}${wiringBlock}\n\n${buildCallbackSection(getCallback(cbId)!)}${visualBlock}${lightingBlock}${characterBlock}`;
 };
 
-const quickActionOrAskClaude: TaskPromptHandler = (task, ctx, { isUE5, knownAssetDomains, wiringBlock }) => {
-  const header = buildProjectContextHeader(ctx, { knownAssetDomains });
+const quickActionOrAskClaude: TaskPromptHandler = (task, ctx, { isUE5, knownAssetDomains, wiringBlock, touchesBinaryAssets }) => {
+  const header = buildProjectContextHeader(ctx, {
+    knownAssetDomains,
+    promptKind: 'ue-cpp',
+    module: task.moduleId,
+    includeBinaryTripwire: touchesBinaryAssets,
+  });
   const domainBlock = domainSection(isUE5, task.moduleId);
   return `${header}${domainBlock}\n\n## Task\n${task.prompt}${wiringBlock}`;
 };
 
-const featureFix: TaskPromptHandler = (task, ctx, { isUE5, knownAssetDomains, wiringBlock }) => {
+const featureFix: TaskPromptHandler = (task, ctx, { isUE5, knownAssetDomains, wiringBlock, touchesBinaryAssets }) => {
   const ft = task as FeatureFixTask;
-  const header = buildProjectContextHeader(ctx, { knownAssetDomains });
+  const header = buildProjectContextHeader(ctx, {
+    knownAssetDomains,
+    promptKind: 'ue-cpp',
+    module: task.moduleId,
+    includeBinaryTripwire: touchesBinaryAssets,
+  });
   const domainBlock = domainSection(isUE5, task.moduleId);
   const fileSection =
     ft.filePaths.length > 0
@@ -174,12 +191,15 @@ const featureFix: TaskPromptHandler = (task, ctx, { isUE5, knownAssetDomains, wi
   return `${header}${domainBlock}\n${fileSection}\n\n## Task: Improve "${ft.featureName}"\n\nCurrent status: **${ft.status}**${qualityNote}\n\n### What needs to be done\n${ft.nextSteps}\n\nImplement all the improvements listed above. Work through them methodically — read existing code first, then make targeted changes. The goal is to bring this feature to production quality (5/5).${wiringBlock}\n\n### Completion\n\nAfter you have completed **all** improvements and verified they compile correctly, mark the feature as improved.\n\n${buildCallbackSection(getCallback(cbId)!)}`;
 };
 
-const featureReview: TaskPromptHandler = (task, ctx, { isUE5 }) => {
+const featureReview: TaskPromptHandler = (task, ctx, { isUE5, touchesBinaryAssets }) => {
   const rt = task as FeatureReviewTask;
   const moduleName = getModuleName(ctx.projectName);
   const header = buildProjectContextHeader(ctx, {
     includeBuildCommand: false,
     includeRules: false,
+    promptKind: 'ue-cpp',
+    module: task.moduleId,
+    includeBinaryTripwire: touchesBinaryAssets,
   });
   const domainBlock = domainSection(isUE5, task.moduleId);
   const featureList = rt.features
@@ -301,9 +321,13 @@ const moduleScan: TaskPromptHandler = (task, ctx) => {
 ${buildCallbackSection(getCallback(cbId)!)}`;
 };
 
-const wbpStarter: TaskPromptHandler = (task, ctx) => {
+const wbpStarter: TaskPromptHandler = (task, ctx, { touchesBinaryAssets }) => {
   const wt = task as WBPStarterTask;
-  const header = buildProjectContextHeader(ctx);
+  const header = buildProjectContextHeader(ctx, {
+    promptKind: 'ue-cpp',
+    module: task.moduleId,
+    includeBinaryTripwire: touchesBinaryAssets,
+  });
   const cls = wt.targetClass;
   const name = cls.replace(/^U/, '');
   return `${header}
@@ -329,9 +353,13 @@ const wbpStarter: TaskPromptHandler = (task, ctx) => {
 This is a scaffold only — laying out the widget tree is the operator's manual UMG-editor step. Do not attempt the tree from Python.`;
 };
 
-const procgenDungeon: TaskPromptHandler = (task, ctx) => {
+const procgenDungeon: TaskPromptHandler = (task, ctx, { touchesBinaryAssets }) => {
   const pt = task as ProcgenDungeonTask;
-  const header = buildProjectContextHeader(ctx);
+  const header = buildProjectContextHeader(ctx, {
+    promptKind: 'ue-python',
+    module: task.moduleId,
+    includeBinaryTripwire: touchesBinaryAssets,
+  });
   const cbId = registerCallback({
     url: `${pt.appOrigin}/api/level-design/procgen-result`,
     method: 'POST',
@@ -361,9 +389,13 @@ Steps:
 ${buildCallbackSection(getCallback(cbId)!)}`;
 };
 
-const biomeScatter: TaskPromptHandler = (task, ctx) => {
+const biomeScatter: TaskPromptHandler = (task, ctx, { touchesBinaryAssets }) => {
   const st = task as BiomeScatterTask;
-  const header = buildProjectContextHeader(ctx);
+  const header = buildProjectContextHeader(ctx, {
+    promptKind: 'ue-python',
+    module: task.moduleId,
+    includeBinaryTripwire: touchesBinaryAssets,
+  });
   const cbId = registerCallback({
     url: `${st.appOrigin}/api/level-design/scatter-result`,
     method: 'POST',
@@ -392,9 +424,13 @@ Steps:
 ${buildCallbackSection(getCallback(cbId)!)}`;
 };
 
-const mixamoImport: TaskPromptHandler = (task, ctx) => {
+const mixamoImport: TaskPromptHandler = (task, ctx, { touchesBinaryAssets }) => {
   const mt = task as MixamoImportTask;
-  const header = buildProjectContextHeader(ctx);
+  const header = buildProjectContextHeader(ctx, {
+    promptKind: 'ue-python',
+    module: task.moduleId,
+    includeBinaryTripwire: touchesBinaryAssets,
+  });
   const cbId = registerCallback({
     url: `${mt.appOrigin}/api/animations/mixamo-result`,
     method: 'POST',
@@ -419,7 +455,7 @@ a watched folder. Run the project's import/retarget pipeline over them.
 1. Find the \`.uproject\` under \`${ctx.projectPath}\` and the script at
    \`${ctx.projectPath}/Content/Python/mixamo_pipeline.py\`.
 2. Run it via the FULL editor with the import dir + target skeleton as environment
-   variables — NOT \`-run=pythonscript\` (the Interchange FBX path crashes there).
+   variables — NOT \`-run=pythonscript\` (see the Interchange FBX pitfall above).
    PowerShell:
    \`$env:MIXAMO_IMPORT_DIR="${mt.importDir}"; $env:MIXAMO_TARGET_SKELETON="${mt.targetSkeleton}"; & "<UnrealEditor.exe>" "<.uproject>" -ExecutePythonScript="<the script path above>" -unattended -nopause -nosplash\`
 3. The headless editor exits non-zero on a benign shutdown crash — judge by the
@@ -430,9 +466,14 @@ a watched folder. Run the project's import/retarget pipeline over them.
 ${buildCallbackSection(getCallback(cbId)!)}`;
 };
 
-const characterSetup: TaskPromptHandler = (task, ctx, { knownAssetDomains }) => {
+const characterSetup: TaskPromptHandler = (task, ctx, { knownAssetDomains, touchesBinaryAssets }) => {
   const cst = task as CharacterSetupTask;
-  const header = buildProjectContextHeader(ctx, { knownAssetDomains });
+  const header = buildProjectContextHeader(ctx, {
+    knownAssetDomains,
+    promptKind: 'ue-python',
+    module: task.moduleId,
+    includeBinaryTripwire: touchesBinaryAssets,
+  });
   const sourceNote =
     cst.source === 'mannequin'
       ? 'Source = **UE Mannequin** (MoverTests plugin — free, no download). Enable the `MoverTests` plugin if it is not already enabled, then trigger an asset-registry rescan of `/MoverTests` before referencing its assets (newly-enabled plugin content is invisible until rescanned).'
@@ -470,9 +511,14 @@ ${sourceNote}
    humanoid/pose check) — you do NOT need to add a callback here.`;
 };
 
-const audioImport: TaskPromptHandler = (task, ctx, { knownAssetDomains }) => {
+const audioImport: TaskPromptHandler = (task, ctx, { knownAssetDomains, touchesBinaryAssets }) => {
   const at = task as AudioImportTask;
-  const header = buildProjectContextHeader(ctx, { knownAssetDomains });
+  const header = buildProjectContextHeader(ctx, {
+    knownAssetDomains,
+    promptKind: 'ue-python',
+    module: task.moduleId,
+    includeBinaryTripwire: touchesBinaryAssets,
+  });
   const cbId = registerCallback({
     url: `${at.appOrigin}/api/audio/import-result`,
     method: 'POST',
@@ -571,9 +617,14 @@ const draftAbilitySpec: TaskPromptHandler = (task, ctx) => {
   return `${base}\n\n${buildCallbackSection(getCallback(cbId)!)}`;
 };
 
-const generateGasEffects: TaskPromptHandler = (task, ctx, { knownAssetDomains }) => {
+const generateGasEffects: TaskPromptHandler = (task, ctx, { knownAssetDomains, touchesBinaryAssets }) => {
   const gt = task as GenerateGasEffectsTask;
-  const header = buildProjectContextHeader(ctx, { knownAssetDomains });
+  const header = buildProjectContextHeader(ctx, {
+    knownAssetDomains,
+    promptKind: 'ue-cpp',
+    module: task.moduleId,
+    includeBinaryTripwire: touchesBinaryAssets,
+  });
   const body = buildGenerateAbilityBundlePrompt(gt.ref, gt.effects, gt.tagRules, gt.scalars);
   return `${header}\n\n## Task\n${body}`;
 };

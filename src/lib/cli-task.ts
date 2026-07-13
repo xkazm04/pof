@@ -217,6 +217,18 @@ export type CLITaskType =
 /** Task types that generate or modify UE code and therefore get a Wiring Requirements section. */
 const WIRING_TASK_TYPES = new Set<CLITaskType>(['checklist', 'quick-action', 'feature-fix']);
 
+/**
+ * Task types whose work can author or depend on editor-only binary content
+ * (WBP/ABP/.umap/BehaviorTree/MaterialFunction/SkeletalMesh) — the only prompts
+ * the Binary Content Wall tripwire belongs on. Read-only reviews/scans,
+ * app-only assessments, audio import (SoundWaves/SoundCue are code-authorable),
+ * and pure-C++ GAS codegen are excluded.
+ */
+const BINARY_ASSET_TASK_TYPES = new Set<CLITaskType>([
+  'checklist', 'quick-action', 'ask-claude', 'feature-fix', 'wbp-starter',
+  'procgen-dungeon', 'biome-scatter', 'mixamo-import', 'character-setup', 'generate',
+]);
+
 export interface CLITask {
   type: CLITaskType;
   /** The raw user/system prompt (before context injection) */
@@ -456,14 +468,19 @@ export function buildTaskPrompt(task: CLITask, ctx: ProjectContext): string {
 
   const knownAssetDomains = isUE5 ? knownAssetDomainsForModule(task.moduleId) : [];
 
-  const wiringBlock =
+  // formatWiringRequirements now returns '' when there is nothing concrete to
+  // say (no module assets) — so guard the block instead of always wrapping it.
+  const wiringText =
     isUE5 && WIRING_TASK_TYPES.has(task.type)
-      ? `\n\n${formatWiringRequirements({ moduleAssets: getWiringAssets(task.moduleId) })}`
+      ? formatWiringRequirements({ moduleAssets: getWiringAssets(task.moduleId) })
       : '';
+  const wiringBlock = wiringText ? `\n\n${wiringText}` : '';
+
+  const touchesBinaryAssets = isUE5 && BINARY_ASSET_TASK_TYPES.has(task.type);
 
   const handler = taskPromptHandlers[task.type];
   if (!handler) return task.prompt;
-  return handler(task, ctx, { isUE5, knownAssetDomains, wiringBlock });
+  return handler(task, ctx, { isUE5, knownAssetDomains, wiringBlock, touchesBinaryAssets });
 }
 
 // ── Task factory ────────────────────────────────────────────────────────────

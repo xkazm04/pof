@@ -8,16 +8,26 @@ const ctx: ProjectContext = {
   ueVersion: '5.7.3',
 };
 
+const REQS = [
+  {
+    artifact: 'GA_MeleeAttack',
+    grantedBy: 'ASC on character',
+    activatedBy: 'IA_PrimaryAttack',
+    dependencies: ['AM_MeleeCombo'],
+    verification: 'attack plays on click',
+  },
+];
+
 function buildUEPrompt() {
   return new PromptBuilder()
     .withProjectContext(ctx)
     .withTask('Add a melee ability', 'Create GA_MeleeAttack.')
-    .withWiringRequirements([])
+    .withWiringRequirements(REQS)
     .withOutputSchema('Return JSON.');
 }
 
 describe('Wiring Requirements section', () => {
-  it('emits the heading and the four sub-prompts even with an empty reqs array', () => {
+  it('emits the heading and the four sub-prompts when there is concrete content', () => {
     const out = buildUEPrompt().build();
     const lower = out.toLowerCase();
     expect(out).toContain('## Wiring Requirements');
@@ -25,6 +35,15 @@ describe('Wiring Requirements section', () => {
     expect(lower).toContain('activat');
     expect(lower).toContain('depend');
     expect(lower).toContain('verif');
+  });
+
+  it('skips the section entirely for an empty reqs array (no boilerplate)', () => {
+    const out = new PromptBuilder()
+      .withProjectContext(ctx)
+      .withTask('t', 'b')
+      .withWiringRequirements([])
+      .build();
+    expect(out).not.toContain('## Wiring Requirements');
   });
 
   it('includes a wiring output-schema field instruction', () => {
@@ -53,7 +72,7 @@ describe('Wiring Requirements section', () => {
     const out = new PromptBuilder()
       .withProjectContext(ctx)
       .withTask('TASKTITLE', 'body')
-      .withWiringRequirements([])
+      .withWiringRequirements(REQS)
       .withBestPractices(['BPPRACTICE'])
       .build();
     const taskIdx = out.indexOf('TASKTITLE');
@@ -63,8 +82,14 @@ describe('Wiring Requirements section', () => {
     expect(wiringIdx).toBeLessThan(bpIdx);
   });
 
-  it('audit() reports the wiringRequirements section presence', () => {
-    const entry = buildUEPrompt().audit().find((a) => a.section === 'wiringRequirements');
-    expect(entry?.present).toBe(true);
+  it('audit() reports wiringRequirements present with reqs, absent when empty', () => {
+    expect(buildUEPrompt().audit().find((a) => a.section === 'wiringRequirements')?.present).toBe(true);
+    const empty = new PromptBuilder()
+      .withProjectContext(ctx)
+      .withTask('t', 'b')
+      .withWiringRequirements([])
+      .audit()
+      .find((a) => a.section === 'wiringRequirements');
+    expect(empty?.present).toBe(false);
   });
 });

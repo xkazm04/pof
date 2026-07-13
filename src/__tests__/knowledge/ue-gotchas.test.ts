@@ -144,3 +144,43 @@ describe('formatGotchas', () => {
     expect(formatGotchas('ue-cpp')).toMatchSnapshot();
   });
 });
+
+describe('formatGotchas module scoping', () => {
+  it('no module → the full superset for the kind (unchanged behavior)', () => {
+    const superset = formatGotchas('ue-cpp');
+    expect(superset).toMatch(/GameplayEffect/);
+    expect(superset).toMatch(/Niagara/);
+    expect(superset).toMatch(/Motion Matching/);
+  });
+
+  it('a materials cpp task SHRINKS — no GAS / Niagara / Motion Matching', () => {
+    const out = formatGotchas('ue-cpp', 'materials');
+    expect(out).not.toMatch(/GameplayEffect/);
+    expect(out).not.toMatch(/Niagara/);
+    expect(out).not.toMatch(/Motion Matching/);
+    // universal gotchas still ride along
+    expect(out).toMatch(/WITH_EDITOR/);
+  });
+
+  it('a GAS cpp task retains full GAS coverage', () => {
+    const out = formatGotchas('ue-cpp', 'arpg-gas');
+    expect(out).toMatch(/meta attribute|PostGameplayEffectExecute/i);
+    expect(out).toMatch(/REPNOTIFY/);
+    expect(out).toMatch(/one coupled piece|one at a time/i);
+    // but not the unrelated animation/vfx pitfalls
+    expect(out).not.toMatch(/Motion Matching/);
+    expect(out).not.toMatch(/Niagara/);
+  });
+
+  it('an UNKNOWN module falls back to the conservative superset (never silently none)', () => {
+    const unknown = formatGotchas('ue-cpp', 'totally-made-up-module');
+    expect(unknown).toBe(formatGotchas('ue-cpp'));
+  });
+
+  it('a python animation task carries the Interchange FBX + motion-matching pitfalls but not materials-only ones', () => {
+    const out = formatGotchas('ue-python', 'arpg-animation');
+    expect(out).toMatch(/Interchange FBX/);
+    expect(out).toMatch(/Motion Matching/);
+    expect(out).not.toMatch(/Constant3Vector/); // materials-only
+  });
+});
