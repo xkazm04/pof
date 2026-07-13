@@ -7,7 +7,7 @@ import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
 afterEach(cleanup);
 
 beforeEach(() => {
-  useForgeStore.setState({ jobs: [], activeProviderId: 'triposr', promptHistory: [] });
+  useForgeStore.setState({ jobs: [], activeProviderId: 'triposr', promptHistory: [], activeStyleDna: null, applyStyleDna: true });
   useBlenderMCPStore.setState({
     connection: { host: '127.0.0.1', port: 9876, connected: false },
   });
@@ -76,5 +76,48 @@ describe('GenerationPanel — chip prompt builder', () => {
 
     const raw = screen.getByPlaceholderText(/type the exact prompt/i) as HTMLTextAreaElement;
     expect(raw.value).toContain('carved stone, weathered rock surface');
+  });
+
+  it('appends the active Style DNA fragment to the submitted prompt and says so', () => {
+    useForgeStore.setState({
+      applyStyleDna: true,
+      activeStyleDna: {
+        id: 'dna-1',
+        name: 'Alice gothic',
+        dna: { palette: ['desaturated teal'], materials: ['aged brass'], mood: [], render: ['painterly'], motifs: [] },
+        sourceImageCount: 4,
+        active: true,
+        createdAt: '2026-07-13',
+      },
+    });
+    render(<GenerationPanel />);
+    fireEvent.change(screen.getByPlaceholderText(/a medieval sword/i), { target: { value: 'a battle axe' } });
+    expect(screen.getByTestId('style-dna-indicator').textContent).toContain('Alice gothic');
+
+    fireEvent.click(screen.getByRole('button', { name: /generate 3d model/i }));
+    const { jobs } = useForgeStore.getState();
+    expect(jobs[0].prompt).toContain('a battle axe');
+    expect(jobs[0].prompt).toContain('desaturated teal');
+    expect(jobs[0].prompt).toContain('painterly');
+  });
+
+  it('does not append the style fragment when the apply toggle is off', () => {
+    useForgeStore.setState({
+      applyStyleDna: false,
+      activeStyleDna: {
+        id: 'dna-1',
+        name: 'Alice gothic',
+        dna: { palette: ['desaturated teal'], materials: [], mood: [], render: [], motifs: [] },
+        sourceImageCount: 4,
+        active: true,
+        createdAt: '2026-07-13',
+      },
+    });
+    render(<GenerationPanel />);
+    fireEvent.change(screen.getByPlaceholderText(/a medieval sword/i), { target: { value: 'a battle axe' } });
+    expect(screen.queryByTestId('style-dna-indicator')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /generate 3d model/i }));
+    expect(useForgeStore.getState().jobs[0].prompt).not.toContain('desaturated teal');
   });
 });

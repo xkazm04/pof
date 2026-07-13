@@ -8,6 +8,19 @@ vi.mock('@/lib/leonardo', () => ({
   MAX_PROMPT_LENGTH: 1500,
 }));
 
+vi.mock('@/lib/db', () => ({ getDb: vi.fn(() => ({})) }));
+
+vi.mock('@/lib/visual-gen/style-dna-db', () => ({
+  getActiveStyleDna: vi.fn(() => ({
+    id: 'dna-1',
+    name: 'Alice gothic',
+    dna: { palette: ['desaturated teal'], materials: ['aged brass'], mood: [], render: ['painterly'], motifs: [] },
+    sourceImageCount: 4,
+    active: true,
+    createdAt: '2026-07-13',
+  })),
+}));
+
 vi.mock('@/lib/visual-gen/seam-check', () => ({
   detectSeamsSafe: vi.fn(async () => ({
     horizontal: { axis: 'left', delta: 0.3, seam: true },
@@ -96,5 +109,30 @@ describe('POST /api/leonardo', () => {
   it('rejects missing prompt in image mode', async () => {
     const res = await POST(req({ mode: 'image' }));
     expect(res.status).toBe(400);
+  });
+
+  it('applyStyleDna appends the active style fragment and echoes the profile name', async () => {
+    const res = await POST(req({ mode: 'image', prompt: 'a sword', applyStyleDna: true }));
+    const json = await res.json();
+    const sent = (leo.generateImage as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
+    expect(sent).toMatch(/^a sword\. In the established project art style/);
+    expect(sent).toContain('desaturated teal');
+    expect(json.data.styleDnaApplied).toBe('Alice gothic');
+  });
+
+  it('without applyStyleDna the prompt is sent untouched and styleDnaApplied is null', async () => {
+    const res = await POST(req({ mode: 'image', prompt: 'a sword' }));
+    const json = await res.json();
+    expect(leo.generateImage).toHaveBeenCalledWith('a sword', {});
+    expect(json.data.styleDnaApplied ?? null).toBeNull();
+  });
+
+  it('applyStyleDna with no active profile falls back to the untouched prompt', async () => {
+    const { getActiveStyleDna } = await import('@/lib/visual-gen/style-dna-db');
+    (getActiveStyleDna as ReturnType<typeof vi.fn>).mockReturnValueOnce(null);
+    const res = await POST(req({ mode: 'image', prompt: 'a sword', applyStyleDna: true }));
+    const json = await res.json();
+    expect(leo.generateImage).toHaveBeenCalledWith('a sword', {});
+    expect(json.data.styleDnaApplied ?? null).toBeNull();
   });
 });

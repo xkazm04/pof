@@ -1,9 +1,10 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Send, Upload, Sparkles, Lock, Monitor } from 'lucide-react';
+import { Dna, Send, Upload, Sparkles, Lock, Monitor } from 'lucide-react';
 import { GENERATION_PROVIDERS, type GenerationMode } from '@/lib/visual-gen/providers';
 import { composeVisualPrompt } from '@/lib/visual-gen/prompt-chips';
+import { styleDnaToPromptFragment } from '@/lib/visual-gen/style-dna';
 import { useForgeStore } from './useForgeStore';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
 import { BlenderConnectionBar } from '@/components/blender-mcp/BlenderConnectionBar';
@@ -25,6 +26,8 @@ export function GenerationPanel() {
   const addToHistory = useForgeStore((s) => s.addToHistory);
   const submitMcpJob = useForgeStore((s) => s.submitMcpJob);
   const submitLocalJob = useForgeStore((s) => s.submitLocalJob);
+  const activeStyleDna = useForgeStore((s) => s.activeStyleDna);
+  const applyStyleDna = useForgeStore((s) => s.applyStyleDna);
   const blenderConnected = useBlenderMCPStore((s) => s.connection.connected);
 
   const filteredProviders = GENERATION_PROVIDERS.filter((p) => p.modes.includes(mode));
@@ -36,6 +39,9 @@ export function GenerationPanel() {
     [subject, selectedChipIds, mode],
   );
   const effectivePrompt = (advanced ? rawPrompt : composedPrompt).trim();
+  // Project style: append the active Style DNA fragment to the submitted prompt.
+  const styleFragment = applyStyleDna && activeStyleDna ? styleDnaToPromptFragment(activeStyleDna.dna) : null;
+  const styledPrompt = styleFragment && effectivePrompt ? `${effectivePrompt}. ${styleFragment}` : effectivePrompt;
 
   const toggleChip = (id: string) =>
     setSelectedChipIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -61,7 +67,7 @@ export function GenerationPanel() {
     // MCP-backed providers go through the Blender MCP pipeline
     if (activeProvider.mcpBacked) {
       if (!blenderConnected) return;
-      submitMcpJob(activeProvider.id, effectivePrompt, mode);
+      submitMcpJob(activeProvider.id, styledPrompt, mode);
       resetBuilder();
       setImageFile(null);
       return;
@@ -87,7 +93,7 @@ export function GenerationPanel() {
 
     // Other local providers aren't wired to execute yet — queue a placeholder job.
     const imageUrl = imageFile ? URL.createObjectURL(imageFile) : undefined;
-    addJob({ mode, prompt: effectivePrompt, imageUrl, providerId: activeProvider.id });
+    addJob({ mode, prompt: styledPrompt, imageUrl, providerId: activeProvider.id });
     if (effectivePrompt) addToHistory(effectivePrompt);
     resetBuilder();
     setImageFile(null);
@@ -226,6 +232,14 @@ export function GenerationPanel() {
         composedPrompt={composedPrompt}
         onSubmit={handleSubmit}
       />
+
+      {/* Project-style indicator: the DNA fragment rides along invisibly, so say so. */}
+      {styleFragment && effectivePrompt && (
+        <p className="flex items-center gap-1.5 text-2xs text-text-muted" data-testid="style-dna-indicator">
+          <Dna size={11} className="text-[var(--visual-gen)]" />
+          Project style “{activeStyleDna?.name}” will be appended to the prompt
+        </p>
+      )}
 
       {/* Submit */}
       <button

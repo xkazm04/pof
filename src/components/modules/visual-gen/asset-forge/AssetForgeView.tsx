@@ -7,6 +7,7 @@ import { TabHeader } from '../../shared/TabHeader';
 import { SUB_MODULE_MAP, getCategoryForSubModule, getModuleChecklist } from '@/lib/module-registry';
 import { GenerationPanel } from './GenerationPanel';
 import { GenerationQueue } from './GenerationQueue';
+import { StyleDnaPanel } from './StyleDnaPanel';
 
 function ForgeTab() {
   return (
@@ -15,6 +16,7 @@ function ForgeTab() {
         title="AI 3D Generation"
         description="Generate 3D models from text prompts or reference images using AI"
       />
+      <StyleDnaPanel />
       <GenerationPanel />
       <GenerationQueue />
     </div>

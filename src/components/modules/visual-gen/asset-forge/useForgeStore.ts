@@ -9,6 +9,7 @@ import type {
   ImportedObject,
 } from '@/lib/blender-mcp/types';
 import type { CritiqueCard } from '@/lib/visual-gen/mesh-critique';
+import type { StyleDnaProfile } from '@/lib/visual-gen/style-dna-db';
 import { getOfficialProvider } from '@/lib/visual-gen/providers';
 
 export type JobStatus = 'pending' | 'generating' | 'completed' | 'failed' | 'importing';
@@ -38,6 +39,10 @@ interface ForgeState {
   jobs: GenerationJob[];
   activeProviderId: string;
   promptHistory: string[];
+  /** Active project Style DNA profile (loaded/saved by StyleDnaPanel). */
+  activeStyleDna: StyleDnaProfile | null;
+  /** When true (default), the active style fragment is appended to generation prompts. */
+  applyStyleDna: boolean;
 
   addJob: (job: Omit<GenerationJob, 'id' | 'status' | 'progress' | 'createdAt'>) => string;
   updateJob: (id: string, updates: Partial<GenerationJob>) => void;
@@ -45,6 +50,8 @@ interface ForgeState {
   clearCompleted: () => void;
   setActiveProvider: (id: string) => void;
   addToHistory: (prompt: string) => void;
+  setActiveStyleDnaProfile: (profile: StyleDnaProfile | null) => void;
+  setApplyStyleDna: (apply: boolean) => void;
   submitMcpJob: (providerId: string, prompt: string, mode: GenerationMode) => Promise<void>;
   /** Local-subprocess generation (e.g. TripoSR image-to-3d): POST the image to
    *  /api/visual-gen/generate, then poll /status. The runner-backed counterpart to
@@ -76,6 +83,8 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
   jobs: [],
   activeProviderId: getOfficialProvider().id,
   promptHistory: [],
+  activeStyleDna: null,
+  applyStyleDna: true,
 
   addJob: (jobData) => {
     const id = `forge-${Date.now()}-${++jobCounter}`;
@@ -123,6 +132,10 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
   },
 
   setActiveProvider: (id) => set({ activeProviderId: id }),
+
+  setActiveStyleDnaProfile: (profile) => set({ activeStyleDna: profile }),
+
+  setApplyStyleDna: (apply) => set({ applyStyleDna: apply }),
 
   addToHistory: (prompt) =>
     set((s) => ({
