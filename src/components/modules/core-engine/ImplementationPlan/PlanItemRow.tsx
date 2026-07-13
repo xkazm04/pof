@@ -138,17 +138,30 @@ export function PlanItemRow({
                 Effort: {item.effort.reason}
               </div>
 
-              {/* Execute button */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onExecute(item);
-                }}
-                className="flex items-center gap-1 text-xs font-medium text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 px-2.5 py-1 rounded transition-colors"
-              >
-                <ArrowRight className="w-3 h-3" />
-                Implement This
-              </button>
+              {/* Execute affordance — gated on readiness (all deps implemented).
+                  A blocked item cannot be dispatched; it explains why instead. */}
+              {item.isReady ? (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onExecute(item);
+                  }}
+                  className="flex items-center gap-1 text-xs font-medium text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 px-2.5 py-1 rounded transition-colors"
+                >
+                  <ArrowRight className="w-3 h-3" />
+                  Build this
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  title={`Blocked — ${item.dependsOn.length} dependenc${item.dependsOn.length === 1 ? 'y' : 'ies'} not yet implemented`}
+                  className="flex items-center gap-1 text-xs font-medium text-text-muted bg-surface-hover/40 px-2.5 py-1 rounded cursor-not-allowed"
+                >
+                  <Link2 className="w-3 h-3" />
+                  Blocked by {item.dependsOn.length} dep{item.dependsOn.length === 1 ? '' : 's'}
+                </button>
+              )}
             </div>
           </motion.div>
         )}

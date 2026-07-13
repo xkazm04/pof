@@ -8,9 +8,9 @@ import {
 import { PlanMatrixMap } from '../PlanMatrixMap';
 import { useImplementationPlan } from '@/hooks/useImplementationPlan';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
-import { useProjectStore } from '@/stores/projectStore';
-import { buildProjectContextHeader } from '@/lib/prompt-context';
 import { getModuleLabel, type PlanItem } from '@/lib/implementation-planner/plan-generator';
+import { planItemToTask } from '@/lib/implementation-planner/plan-dispatch';
+import { getAppOrigin } from '@/lib/constants';
 import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
 import { MODULE_COLORS } from '@/lib/chart-colors';
 import type { SubModuleId } from '@/types/modules';
@@ -35,12 +35,11 @@ export function ImplementationPlan({ moduleId }: ImplementationPlanProps = {}) {
   });
   const [page, setPage] = useState(0);
   const [showAllModules, setShowAllModules] = useState(!moduleId);
-  const projectName = useProjectStore((s) => s.projectName);
-  const projectPath = useProjectStore((s) => s.projectPath);
-  const ueVersion = useProjectStore((s) => s.ueVersion);
 
-  // CLI for executing fix operations
-  const { sendPrompt } = useModuleCLI({
+  // CLI for dispatching a plan item as a feature-fix task. `execute` scans the
+  // project, injects context via buildTaskPrompt, and dispatches — the standard
+  // TaskFactory path (no hand-rolled prompt).
+  const { execute } = useModuleCLI({
     moduleId: 'core-engine' as SubModuleId,
     sessionKey: 'implementation-plan',
     label: 'Implementation Plan',
@@ -50,21 +49,10 @@ export function ImplementationPlan({ moduleId }: ImplementationPlanProps = {}) {
   const moduleIds = useMemo(() => Object.keys(MODULE_FEATURE_DEFINITIONS), []);
 
   const handleExecute = useCallback((item: PlanItem) => {
-    const header = buildProjectContextHeader({ projectName, projectPath, ueVersion });
-    const depsSection = item.dependsOn.length > 0
-      ? `\n\n## Dependencies (already implemented)\n${item.dependsOn.map((d) => `- ${d.replace('::', ' / ')}`).join('\n')}`
-      : '';
-
-    const prompt = `${header}${depsSection}
-
-## Task: Implement "${item.featureName}" (${getModuleLabel(item.moduleId as SubModuleId)})
-
-${item.description}
-
-Implement this feature from scratch. Follow UE5 C++ conventions. Read any existing related files first, then create/modify files as needed. After implementation, verify the build compiles successfully.`;
-
-    sendPrompt(prompt);
-  }, [sendPrompt, projectName, projectPath, ueVersion]);
+    // PHASE-1: single-item dispatch, gated on readiness (all deps implemented).
+    if (!item.isReady) return;
+    void execute(planItemToTask(item, getAppOrigin()));
+  }, [execute]);
 
   // Pagination
   const pagedItems = useMemo(() => {
