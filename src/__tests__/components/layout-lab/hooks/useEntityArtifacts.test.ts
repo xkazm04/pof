@@ -106,6 +106,38 @@ describe('deriveEntityArtifacts — artifacts + displayStatus', () => {
   });
 });
 
+describe('deriveEntityArtifacts — server↔local drift', () => {
+  const steps = ['Economy'];
+
+  it('flags drift when a concrete local verdict contradicts a concrete server verdict', () => {
+    // Local recompute says pass; the server re-graded the same step to fail. Add-only
+    // hydration keeps the local `pass` on screen, so this MUST surface as drift.
+    const { driftByStep, artifactByStep } = deriveEntityArtifacts('items', entity, steps, seed({ Economy: { status: 'pass' } }), { Economy: srv('Economy', 'fail') });
+    expect(driftByStep.get('Economy')).toEqual({ local: 'pass', server: 'fail' });
+    expect(artifactByStep.get('Economy')?.status).toBe('pass'); // display stays local (no auto-clobber)
+  });
+
+  it('does NOT flag drift for the sanctioned deferred→server overlay (that is resolution)', () => {
+    // Local deferred + server pass is the L3/L4 gate overlay, not drift — the server
+    // verdict is adopted into the displayed status, and nothing needs operator action.
+    const { driftByStep, artifactByStep } = deriveEntityArtifacts('items', entity, steps, seed({ Economy: { status: 'deferred', tier: 'L3' } }), { Economy: srv('Economy', 'pass') });
+    expect(driftByStep.size).toBe(0);
+    expect(artifactByStep.get('Economy')?.status).toBe('pass');
+  });
+
+  it('does NOT flag drift when local and server agree', () => {
+    const { driftByStep } = deriveEntityArtifacts('items', entity, steps, seed({ Economy: { status: 'pass' } }), { Economy: srv('Economy', 'pass') });
+    expect(driftByStep.size).toBe(0);
+  });
+
+  it('does NOT flag drift against a non-concrete server verdict (pending/deferred)', () => {
+    const pendingSrv = deriveEntityArtifacts('items', entity, steps, seed({ Economy: { status: 'pass' } }), { Economy: srv('Economy', 'pending') });
+    expect(pendingSrv.driftByStep.size).toBe(0);
+    const deferredSrv = deriveEntityArtifacts('items', entity, steps, seed({ Economy: { status: 'pass' } }), { Economy: srv('Economy', 'deferred') });
+    expect(deferredSrv.driftByStep.size).toBe(0);
+  });
+});
+
 describe('deriveEntityArtifacts — stepDone / done', () => {
   it('counts Items steps by real produce state, not lifecycle', () => {
     const steps = ['A', 'B', 'C'];

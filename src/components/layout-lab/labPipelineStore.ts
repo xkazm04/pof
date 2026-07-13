@@ -4,6 +4,11 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { CatalogLinkRef } from '@/lib/catalog/acceptance/linkCheckers';
 
+/** The key under `data` holding a generative step's candidate-batch archive
+ *  (mirrors `steps/shared/genHistory.ts`'s `GEN_HISTORY_KEY`). Inlined so this store
+ *  doesn't couple to the step-UI tree; adopting server truth preserves it by default. */
+const GEN_HISTORY_KEY = 'genHistory';
+
 /**
  * Real (persisted) per-step production state for the /layout lab — the data the
  * pipeline actually writes when a Produce step runs. Kept lab-scoped on purpose:
@@ -41,6 +46,15 @@ interface LabPipelineState {
   resetEntity: (entityId: string) => void;
   /** Merge server artifacts into the cache (add-only: never overwrites/clears local steps). */
   hydrateEntity: (entityId: string, steps: { step: string; artifact: LabStepArtifact }[]) => void;
+  /**
+   * Adopt the server's artifact for ONE step, overwriting the local one so the derived
+   * status matches server truth (the operator-triggered escape from the add-only default
+   * when server and local have drifted). Preserves the local candidate history
+   * (`data.genHistory`) by default so a re-roll archive is never silently destroyed;
+   * pass `replaceHistory: true` (an explicit user confirmation) to take the server's
+   * data wholesale, history included.
+   */
+  adoptServer: (entityId: string, step: string, artifact: LabStepArtifact, opts?: { replaceHistory?: boolean }) => void;
 }
 
 export const useLabPipelineStore = create<LabPipelineState>()(
@@ -99,6 +113,17 @@ export const useLabPipelineStore = create<LabPipelineState>()(
             if (!merged[step]) { merged[step] = artifact; changed = true; }
           }
           return changed ? { byEntity: { ...s.byEntity, [entityId]: merged } } : s;
+        }),
+
+      adoptServer: (entityId, step, artifact, opts) =>
+        set((s) => {
+          const prev = s.byEntity[entityId]?.[step];
+          // Preserve the local candidate history unless the user confirmed replacement.
+          const prevHistory = (prev?.data as Record<string, unknown> | undefined)?.[GEN_HISTORY_KEY];
+          const data = !opts?.replaceHistory && prevHistory !== undefined
+            ? { ...artifact.data, [GEN_HISTORY_KEY]: prevHistory }
+            : artifact.data;
+          return { byEntity: { ...s.byEntity, [entityId]: { ...s.byEntity[entityId], [step]: { ...artifact, data } } } };
         }),
     }),
     { name: 'pof-lab-pipeline', storage: createJSONStorage(() => localStorage) },

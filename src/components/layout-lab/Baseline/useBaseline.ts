@@ -51,6 +51,7 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
   const produce = useLabPipelineStore((s) => s.produce);
   const resetEntity = useLabPipelineStore((s) => s.resetEntity);
   const hydrateEntity = useLabPipelineStore((s) => s.hydrateEntity);
+  const adoptServer = useLabPipelineStore((s) => s.adoptServer);
   const ueAssetCount = entitySteps ? Object.values(entitySteps).reduce((n, a) => n + (a.ueAssets?.length ?? 0), 0) : 0;
 
   // Server verdicts via the shared artifact cache (keyed catalog|entity, deduped, and
@@ -67,7 +68,16 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
 
   // Derived pipeline artifacts + display status (incl. the server `deferred`→pass/fail
   // overlay rule) live in a pure, unit-testable hook so this component stays layout-focused.
-  const { artifacts, artifactByStep, displayStatus, stepDone, done } = useEntityArtifacts(catalogId, entity, steps, entitySteps, serverArts);
+  const { artifacts, artifactByStep, displayStatus, stepDone, done, driftByStep } = useEntityArtifacts(catalogId, entity, steps, entitySteps, serverArts);
+
+  // Adopt the server's verdict for a drifted step (preserving the local candidate
+  // history unless the user confirms replacement) — the explicit escape from add-only.
+  const adoptServerStep = (step: string, opts?: { replaceHistory?: boolean }) => {
+    if (!entityKey) return;
+    const srv = serverArts[step];
+    if (!srv) return;
+    adoptServer(entityKey, step, { done: true, data: srv.data, ueAssets: srv.ueAssets, at: srv.updatedAt ?? new Date().toISOString() }, opts);
+  };
 
   // Write-through: register sync bound to the active catalogId so produce() fires
   // postArtifact, then invalidate the cache so the server-graded verdict is re-read.
@@ -143,6 +153,7 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
     ueAssetCount,
     artifacts, artifactByStep, displayStatus, stepDone, done,
     artsLoading,
+    driftByStep, adoptServerStep, entitySteps,
     runDrain,
     handleSelectCatalog, handleSelectEntity, selectStep,
   };

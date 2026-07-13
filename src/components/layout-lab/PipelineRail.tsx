@@ -15,6 +15,9 @@ interface PipelineRailProps {
   /** Server verdicts are still loading: steps of unknown (pending) status shimmer
    *  instead of reading as an honest "nothing done yet". Locally-known statuses stay. */
   loading?: boolean;
+  /** The step's local verdict has drifted from server truth (add-only kept local) —
+   *  flag it so the operator can adopt the server verdict from the work canvas. */
+  hasDrift?: (step: string, i: number) => boolean;
   isLive: (step: string) => boolean;
   tooltipFor: (step: string, i: number) => string;
   ariaFor: (step: string, i: number) => string;
@@ -26,6 +29,7 @@ export function PipelineRail({
   stepIdx,
   displayStatus,
   loading = false,
+  hasDrift,
   isLive,
   tooltipFor,
   ariaFor,
@@ -72,6 +76,7 @@ export function PipelineRail({
         // Loading only applies where we have NO status yet (pending) — a locally-known
         // pass/fail/deferred is real truth and must not be masked by a shimmer.
         const isLoading = loading && status === 'pending';
+        const drifted = hasDrift?.(step, i) ?? false;
         const filled = status === 'pass' || status === 'fail';
         const fill = filled
           ? `var(--lab-${status === 'pass' ? 'ok' : 'bad'})`
@@ -197,6 +202,23 @@ export function PipelineRail({
                   }}
                   title="Prototyped"
                 />
+              )}
+              {drifted && (
+                <span
+                  data-step-drift="true"
+                  aria-label="Server verdict differs"
+                  title="Server verdict differs — open this step to adopt server truth"
+                  style={{
+                    flexShrink: 0,
+                    fontFamily: 'var(--lab-font-mono)',
+                    fontSize: 'var(--lab-fs-xs)',
+                    fontWeight: 700,
+                    color: 'var(--lab-bad)',
+                    lineHeight: 1,
+                  }}
+                >
+                  ≠
+                </span>
               )}
             </span>
           </button>

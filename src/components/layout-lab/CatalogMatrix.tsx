@@ -3,11 +3,11 @@
 import '@/lib/catalog/pipelines/registry.generated';
 import { useState, useMemo } from 'react';
 import { useReducedMotion } from 'framer-motion';
-import { resolveAccept } from './labAcceptance';
 import { useCachedArtifacts } from './labArtifactCache';
-import { summarizeEntity, type EntityRollup } from '@/lib/catalog/rollup';
+import { useLabPipelineStore } from './labPipelineStore';
 import { useLabDetail } from './useLabCatalogData';
 import { resolveCatalogSteps } from './catalogManifest';
+import { buildMatrixRows } from './matrixRows';
 import { MatrixSkeleton } from './MatrixSkeleton';
 import { STATUS_GLYPH, STATUS_WORD, statusColor } from './statusLanguage';
 import type { AcceptanceStatus } from '@/lib/catalog/acceptance/types';
@@ -16,9 +16,6 @@ import type { LabTheme } from './theme';
 import type { LabGroup } from './useLabCatalogData';
 
 const pad2 = (n: number) => String(n).padStart(2, '0');
-
-interface Blocker { step: string; reason: string }
-interface MatrixRow { id: string; name: string; statusByStep: (s: string) => AcceptanceStatus; rollup: EntityRollup; blockers: Blocker[] }
 
 interface Props {
   t: LabTheme;
@@ -29,11 +26,11 @@ interface Props {
 
 /**
  * Catalog-wide pipeline status matrix: every entity in a catalog (rows) × every
- * pipeline step (columns), each cell colored by its derived Acceptance status
- * (the server-stored verdict, computed by the same accept() functions). A per-
- * entity strip shows "X of N steps complete" via summarizeEntity and flags
- * blockers (failed gates, e.g. price/power outliers). Click any cell to jump
- * straight to that entity's step. Pick a different catalog from the selector.
+ * pipeline step (columns), each cell colored by its derived Acceptance status. Status
+ * is derived through the SAME `deriveEntityArtifacts` path the rail uses (via
+ * `buildMatrixRows`), so the matrix and the rail can never disagree about a step. A
+ * per-entity strip shows "X of N steps complete" and flags blockers (failed gates).
+ * Click any cell to jump straight to that entity's step; pick a catalog from the selector.
  */
 export function CatalogMatrix({ t, groups, catalogId, onOpenStep }: Props) {
   const [selected, setSelected] = useState(catalogId);
@@ -61,21 +58,14 @@ export function CatalogMatrix({ t, groups, catalogId, onOpenStep }: Props) {
     return m;
   }, [arts]);
 
-  const rows: MatrixRow[] = useMemo(() => (detail?.entities ?? []).map((e) => {
-    const row = byEntity.get(e.id);
-    const present = steps.filter((s) => row?.has(s)).map((s) => row!.get(s)!);
-    const blockers: Blocker[] = present.filter((a) => a.status === 'fail').map((a) => {
-      const accept = resolveAccept(selected, a.step);
-      const res = accept ? accept(a.data) : null; // reuse the accept() fn for a human reason
-      return { step: a.step, reason: res?.reason ?? res?.detail ?? a.reason ?? 'failed acceptance' };
-    });
-    return {
-      id: e.id, name: e.name,
-      statusByStep: (s: string) => row?.get(s)?.status ?? 'pending',
-      rollup: summarizeEntity(present, steps.length),
-      blockers,
-    };
-  }), [detail?.entities, byEntity, steps, selected]);
+  // Local produced steps overlay server truth add-only (local wins), exactly as the
+  // rail hydrates the open entity — so the matrix reflects the same reconciled status.
+  const localByEntity = useLabPipelineStore((s) => s.byEntity);
+
+  const rows = useMemo(
+    () => buildMatrixRows(selected, detail?.entities ?? [], byEntity, localByEntity, steps),
+    [selected, detail?.entities, byEntity, localByEntity, steps],
+  );
 
   const completeCount = rows.filter((r) => r.rollup.configComplete).length;
   const blockedCount = rows.filter((r) => r.blockers.length > 0).length;

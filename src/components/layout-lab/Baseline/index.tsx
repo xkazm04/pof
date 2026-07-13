@@ -8,6 +8,7 @@ import { useLabPipelineStore } from '../labPipelineStore';
 import { CatalogTree } from '../CatalogTree';
 import { NextStepCoach } from '../NextStepCoach';
 import { PipelineRail } from '../PipelineRail';
+import { DriftBanner } from '../DriftBanner';
 import { Button } from '../ui/Button';
 import { Rail } from '../ui/Rail';
 import { Stat } from '../ui/Stat';
@@ -43,6 +44,7 @@ export function Baseline(props: Props) {
     ueAssetCount,
     artifacts, artifactByStep, displayStatus, stepDone, done,
     artsLoading,
+    driftByStep, adoptServerStep, entitySteps,
     runDrain,
     handleSelectCatalog, handleSelectEntity, selectStep,
   } = useBaseline(props);
@@ -84,6 +86,7 @@ export function Baseline(props: Props) {
         stepIdx={stepIdx}
         displayStatus={displayStatus}
         loading={artsLoading}
+        hasDrift={(step) => driftByStep.has(step)}
         isLive={(step) => !!(detail && getStepComponent(detail.catalog.catalogId, step))}
         tooltipFor={(step, i) => {
           const a = artifactByStep.get(step);
@@ -171,6 +174,15 @@ export function Baseline(props: Props) {
                 )}
                 <div className={t.fontMono} style={{ fontSize: 14, letterSpacing: '0.12em', color: t.muted, textTransform: 'uppercase' }}>Step {pad2(stepIdx + 1)} / {pad2(steps.length)}{stepDone(stepName, stepIdx) ? ' · complete' : ''}</div>
                 <h2 style={{ fontSize: 30, fontWeight: 700, color: t.inkDeep, margin: '6px 0 18px' }}>{stepName}</h2>
+                {entity && driftByStep.has(stepName) && (
+                  <DriftBanner
+                    t={t}
+                    step={stepName}
+                    drift={driftByStep.get(stepName)!}
+                    hasHistory={!!(entitySteps?.[stepName]?.data as Record<string, unknown> | undefined)?.genHistory}
+                    onAdopt={(opts) => adoptServerStep(stepName, opts)}
+                  />
+                )}
                 {Bespoke && entity ? (
                   <Bespoke key={`${entity.id}:${stepName}`} t={t} entity={entity} step={stepName} />
                 ) : spec && entity ? (

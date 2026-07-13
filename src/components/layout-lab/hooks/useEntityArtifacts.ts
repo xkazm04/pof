@@ -11,6 +11,14 @@ import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 /** Per-step display vocabulary, shared with PipelineRollup. */
 export type StepDisplayStatus = 'pass' | 'fail' | 'deferred' | 'pending';
 
+/** A step where the local-derived verdict and the server-stored verdict genuinely diverge. */
+export interface StepDrift {
+  /** What the local recompute (add-only kept data) reads as. */
+  local: StepDisplayStatus;
+  /** What the server stored (its own re-grade / runner outcome). */
+  server: PipelineArtifact['status'];
+}
+
 export interface EntityArtifacts {
   /** Server-faithful per-step artifacts (config-complete/tier derived via the same accept logic the server stored). */
   artifacts: PipelineArtifact[];
@@ -22,6 +30,13 @@ export interface EntityArtifacts {
   stepDone: (step: string, i: number) => boolean;
   /** Count of done steps. */
   done: number;
+  /**
+   * Steps whose add-only local verdict disagrees with a concrete server verdict — the
+   * silent divergence the add-only hydration would otherwise hide. Excludes the
+   * sanctioned `deferred`→server overlay (that is resolution, not drift). Empty in the
+   * happy path; a UI badge + "adopt server truth" affordance keys off it.
+   */
+  driftByStep: Map<string, StepDrift>;
 }
 
 /**
@@ -49,6 +64,7 @@ export function deriveEntityArtifacts(
   const done = steps.filter((s, i) => stepDone(s, i)).length;
 
   // Server-faithful rollup: derives config-complete/tier using the same accept logic the server stored.
+  const driftByStep = new Map<string, StepDrift>();
   const artifacts: PipelineArtifact[] = catalogId
     ? steps.filter((s) => entitySteps?.[s]).map((s) => {
         const art = entitySteps![s];
@@ -59,6 +75,12 @@ export function deriveEntityArtifacts(
         // (an unrun L3/L4 gate) but the server has a real pass/fail, the server wins.
         const srv = serverArts[s];
         const status = localStatus === 'deferred' && srv && srv.status !== 'deferred' && srv.status !== 'pending' ? srv.status : localStatus;
+        // Drift: a concrete local pass/fail that a concrete server pass/fail contradicts —
+        // the add-only default keeps `localStatus` on screen, so flag it for adoption.
+        // (The deferred case above is reconciliation, not drift, and is excluded here.)
+        if (srv && (localStatus === 'pass' || localStatus === 'fail') && (srv.status === 'pass' || srv.status === 'fail') && localStatus !== srv.status) {
+          driftByStep.set(s, { local: localStatus, server: srv.status });
+        }
         return { catalogId, entityId: entity?.id ?? '', step: s, data: art.data, ueAssets: art.ueAssets, status, ...(res?.tier ? { tier: res.tier } : {}) };
       })
     : [];
@@ -73,7 +95,7 @@ export function deriveEntityArtifacts(
     return stepDone(step, i) ? 'pass' : 'pending';
   };
 
-  return { artifacts, artifactByStep, displayStatus, stepDone, done };
+  return { artifacts, artifactByStep, displayStatus, stepDone, done, driftByStep };
 }
 
 /**

@@ -27,6 +27,8 @@ rollup strip.
 | `src/components/layout-lab/labArtifactClient.ts` | `fetchArtifacts`, `postArtifact`, `drainGates` — thin wrappers around `/api/pipeline-artifacts` |
 | `src/components/layout-lab/labArtifactCache.ts` | Shared artifact-fetch cache (`useCachedArtifacts`, `invalidateArtifacts`) — one deduped fetch path + loading state for Baseline + Matrix |
 | `src/components/layout-lab/catalogManifest.ts` | Single per-catalog resolver over section · steps · grader · bespoke-UI (`resolveCatalogSteps`, `isBespokeCatalog`) |
+| `src/components/layout-lab/matrixRows.ts` | `buildMatrixRows` — CatalogMatrix rows via the shared `deriveEntityArtifacts` path (one status code path with the rail) |
+| `src/components/layout-lab/DriftBanner.tsx` | Server↔local drift banner + "adopt server truth" affordance (preserves `genHistory` unless confirmed) |
 | `src/components/layout-lab/canonStore.ts` | Zustand store for project canon rules; seeded from `CANON_SEED`, refreshed from `/api/project-rules` |
 | `src/components/layout-lab/theme.ts` | `LIGHT` (Blueprint) and `DARK` (Studio Dark) `LabTheme` tokens; `LAB_THEMES` array |
 | `src/components/layout-lab/CanonView.tsx` | Full-screen canon rule editor (game / art / project categories) |
@@ -294,11 +296,30 @@ const ARCHETYPE_CANON: Record<string, RuleCategory[]> = {
 `canonContextFor(canonRules, catalogId, categories)` prepends the matching rules to the CliProduce
 prompt so every generic step receives relevant project/game laws without bespoke wiring.
 
-### `labPipelineStore` — add-only hydration invariant
+### `labPipelineStore` — add-only hydration invariant + drift reconciliation
 
 `hydrateEntity` checks `if (!merged[step])` before adding each step. This means server data can
 backfill steps a new browser session has not produced yet, but a locally-produced step is never
-silently overwritten by a stale server record. This is intentional.
+silently overwritten by a stale server record. This is intentional — **the add-only default protects
+offline-produced work**.
+
+Because the server **re-grades every artifact POST** (`app/api/pipeline-artifacts/route.ts`), the
+add-only rule can leave the local verdict and the server verdict genuinely diverged. That divergence
+is now made **visible** rather than silent:
+
+- `deriveEntityArtifacts` returns a `driftByStep: Map<step, {local, server}>` — a step where a
+  concrete local `pass`/`fail` contradicts a concrete server `pass`/`fail`. (The sanctioned
+  `deferred`→server overlay is *resolution*, not drift, and is excluded.)
+- The pipeline rail marks a drifted step with a `≠` badge; the work canvas shows a `DriftBanner`
+  naming both verdicts (in words + glyph, never hue-only) with an **"Adopt server truth"** affordance.
+- Adopting calls `adoptServer(entityId, step, artifact, opts)` — it overwrites the local step with the
+  server artifact so the derived status matches server truth, but **preserves the local candidate
+  history (`data.genHistory`) by default**; replacing it requires an explicit checkbox confirmation.
+  A re-roll archive is never silently destroyed.
+
+**One status code path.** `CatalogMatrix` derives its cells through the *same* `deriveEntityArtifacts`
+path as the rail (`buildMatrixRows` — the add-only merge of local store OVER server artifacts, then
+the shared recompute + overlay), so the matrix and the rail can never disagree about a step's status.
 
 ### Items pipeline is the reference implementation
 
