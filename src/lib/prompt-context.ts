@@ -70,12 +70,24 @@ export function getEnginePath(ueVersion: string): string {
 
 /**
  * Returns the minimum required MSVC toolchain version for a given UE version.
- * UE 5.7+ requires MSVC 14.44 (VS 2022 17.14+).
+ * UE 5.7+ requires MSVC 14.44 (VS 2022 17.14+); 5.4–5.6 → 14.38; 5.0–5.3 → 14.34.
+ *
+ * Throws on an out-of-range or unparseable version rather than silently
+ * bucketing it into the oldest toolchain — a 6.0 input has no known mapping and
+ * must fail loudly, not masquerade as 14.34.
  */
 export function getRequiredMSVCVersion(ueVersion: string): string {
-  const parts = ueVersion.split('.').map(Number);
-  if (parts[0] >= 5 && parts[1] >= 7) return '14.44';
-  if (parts[0] >= 5 && parts[1] >= 4) return '14.38';
+  const [major, minor = 0] = ueVersion.split('.').map(Number);
+  if (!Number.isFinite(major) || !Number.isFinite(minor)) {
+    throw new Error(`getRequiredMSVCVersion: unparseable UE version "${ueVersion}"`);
+  }
+  if (major !== 5) {
+    throw new Error(
+      `getRequiredMSVCVersion: unsupported UE major version "${ueVersion}" — only UE5 has a known MSVC mapping.`,
+    );
+  }
+  if (minor >= 7) return '14.44';
+  if (minor >= 4) return '14.38';
   return '14.34';
 }
 

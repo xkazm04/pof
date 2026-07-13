@@ -31,6 +31,8 @@ export interface PromptSections {
   domainContext: string | null;
   /** Section 3 — always required. The actual task. */
   taskInstructions: string;
+  /** Section 3.25 — the catalog entity's serialized spec (rendered by build() right after the task). */
+  assetSpec: string | null;
   /** Section 3.5 — how each generated artifact must be wired to run. */
   wiringRequirements: string | null;
   /** Section 4 — UE5 best practices, tips, gotchas. */
@@ -236,6 +238,7 @@ export class PromptBuilder {
       { section: 'projectContext', present: !!this._projectContext },
       { section: 'domainContext', present: !!this._domainContext },
       { section: 'taskInstructions', present: !!this._taskInstructions },
+      { section: 'assetSpec', present: !!this._assetSpec },
       { section: 'wiringRequirements', present: !!this._wiringRequirements },
       { section: 'bestPractices', present: !!this._bestPractices },
       { section: 'outputSchema', present: !!this._outputSchema },
@@ -259,9 +262,10 @@ export interface PromptAuditRow {
 /**
  * Detect which of the 7 canonical sections a hand-rolled prompt covers, so the
  * Prompt Inspector can render the same audit-chip strip for prompts that don't
- * go through `PromptBuilder` (e.g. ability-forge.ts). Matched by characteristic
- * markers — heading text, header keys, or content cues — not by exact section
- * names, because hand-rolled prompts use varied phrasing.
+ * go through `PromptBuilder` (e.g. the raw section strings the cli-task-handlers
+ * assemble). Matched by characteristic markers — heading text, header keys, or
+ * content cues — not by exact section names, because hand-rolled prompts use
+ * varied phrasing.
  */
 export function auditPromptString(prompt: string): PromptAuditRow[] {
   const text = prompt;

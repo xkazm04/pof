@@ -12,6 +12,7 @@
  */
 
 import type { SubModuleId } from '@/types/modules';
+import { getEnginePath } from '@/lib/prompt-context';
 
 export interface VisualCheckOptions {
   /** UE project root (CLI working directory). Screenshot dir is derived from it. */
@@ -20,6 +21,12 @@ export interface VisualCheckOptions {
   appOrigin: string;
   moduleId: SubModuleId;
   itemId: string;
+  /**
+   * Project UE version (from ProjectContext). When set, the editor exe is
+   * derived from it via {@link getEnginePath} so this section can never assert a
+   * different engine than the prompt header does. Callers should always pass it.
+   */
+  ueVersion?: string;
   editorExe?: string;
   map?: string;
   resX?: number;
@@ -35,13 +42,22 @@ export interface VisualCheckOptions {
   mode?: 'hud' | 'lighting' | 'character';
 }
 
-/** Same defaults as e2e/helpers/ue-verification.ts so the two paths agree. */
+/** Fallback editor path used only when neither `ueVersion` nor an explicit
+ *  override is supplied (kept in sync with e2e/helpers/ue-verification.ts). */
 const DEFAULT_EDITOR =
   'C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Binaries\\Win64\\UnrealEditor.exe';
 const DEFAULT_MAP = '/Game/Maps/VerticalSlice';
 
+/** UnrealEditor.exe under an engine install root. */
+function editorExeFor(enginePath: string): string {
+  return `${enginePath}\\Engine\\Binaries\\Win64\\UnrealEditor.exe`;
+}
+
 export function buildVisualCheckSection(opts: VisualCheckOptions): string {
-  const editorExe = opts.editorExe ?? process.env.POF_UE_EDITOR ?? DEFAULT_EDITOR;
+  // Derive the editor from the project's UE version so this section agrees with
+  // the prompt header's `Engine:` line; explicit `editorExe`/env still win.
+  const derivedEditor = opts.ueVersion ? editorExeFor(getEnginePath(opts.ueVersion)) : DEFAULT_EDITOR;
+  const editorExe = opts.editorExe ?? process.env.POF_UE_EDITOR ?? derivedEditor;
   const map = opts.map ?? process.env.POF_VERIFY_MAP ?? DEFAULT_MAP;
   const resX = opts.resX ?? 1280;
   const resY = opts.resY ?? 720;

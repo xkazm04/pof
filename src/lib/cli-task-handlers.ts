@@ -12,10 +12,12 @@
  */
 
 import type { ProjectContext } from '@/lib/prompt-context';
+import type { SubModuleId } from '@/types/modules';
 import {
   buildProjectContextHeader,
   getModuleDomainContext,
   getModuleName,
+  getEnginePath,
 } from '@/lib/prompt-context';
 import { buildEvalPrompt } from '@/lib/evaluator/module-eval-prompts';
 import { getModuleChecklist } from '@/lib/module-registry';
@@ -71,15 +73,25 @@ export type TaskPromptHandler = (
   shared: TaskPromptShared,
 ) => string;
 
+// ── Shared section composers (single source for the pieces every handler shares) ──
+
+/**
+ * The `## Domain Context` section — the one derivation shared by the checklist,
+ * quick-action, feature-fix, and feature-review handlers (previously copied into
+ * each). Returns `''` for non-UE5 projects or a module with no domain context,
+ * otherwise the leading-`\n\n` block those handlers concatenate inline.
+ */
+function domainSection(isUE5: boolean, moduleId: SubModuleId): string {
+  const domainContext = isUE5 ? getModuleDomainContext(moduleId) : undefined;
+  return domainContext ? `\n\n## Domain Context\n${domainContext}` : '';
+}
+
 // ── Per-task-type handlers (verbatim from the former switch) ─────────────────
 
 const checklist: TaskPromptHandler = (task, ctx, { isUE5, knownAssetDomains, wiringBlock }) => {
   const ct = task as ChecklistTask;
   const header = buildProjectContextHeader(ctx, { knownAssetDomains });
-  const domainContext = isUE5 ? getModuleDomainContext(task.moduleId) : undefined;
-  const domainSection = domainContext
-    ? `\n\n## Domain Context\n${domainContext}`
-    : '';
+  const domainBlock = domainSection(isUE5, task.moduleId);
 
   const cbId = registerCallback({
     url: `${ct.appOrigin}/api/checklist/complete`,
@@ -100,6 +112,7 @@ const checklist: TaskPromptHandler = (task, ctx, { isUE5, knownAssetDomains, wir
           appOrigin: ct.appOrigin,
           moduleId: task.moduleId,
           itemId: ct.itemId,
+          ueVersion: ctx.ueVersion,
         })}`
       : '';
 
@@ -110,6 +123,7 @@ const checklist: TaskPromptHandler = (task, ctx, { isUE5, knownAssetDomains, wir
           appOrigin: ct.appOrigin,
           moduleId: task.moduleId,
           itemId: ct.itemId,
+          ueVersion: ctx.ueVersion,
           mode: 'lighting',
         })}`
       : '';
@@ -121,29 +135,24 @@ const checklist: TaskPromptHandler = (task, ctx, { isUE5, knownAssetDomains, wir
           appOrigin: ct.appOrigin,
           moduleId: task.moduleId,
           itemId: ct.itemId,
+          ueVersion: ctx.ueVersion,
           mode: 'character',
         })}`
       : '';
 
-  return `${header}${domainSection}\n\n## Task\n${task.prompt}${wiringBlock}\n\n${buildCallbackSection(getCallback(cbId)!)}${visualBlock}${lightingBlock}${characterBlock}`;
+  return `${header}${domainBlock}\n\n## Task\n${task.prompt}${wiringBlock}\n\n${buildCallbackSection(getCallback(cbId)!)}${visualBlock}${lightingBlock}${characterBlock}`;
 };
 
 const quickActionOrAskClaude: TaskPromptHandler = (task, ctx, { isUE5, knownAssetDomains, wiringBlock }) => {
   const header = buildProjectContextHeader(ctx, { knownAssetDomains });
-  const domainContext = isUE5 ? getModuleDomainContext(task.moduleId) : undefined;
-  const domainSection = domainContext
-    ? `\n\n## Domain Context\n${domainContext}`
-    : '';
-  return `${header}${domainSection}\n\n## Task\n${task.prompt}${wiringBlock}`;
+  const domainBlock = domainSection(isUE5, task.moduleId);
+  return `${header}${domainBlock}\n\n## Task\n${task.prompt}${wiringBlock}`;
 };
 
 const featureFix: TaskPromptHandler = (task, ctx, { isUE5, knownAssetDomains, wiringBlock }) => {
   const ft = task as FeatureFixTask;
   const header = buildProjectContextHeader(ctx, { knownAssetDomains });
-  const domainContext = isUE5 ? getModuleDomainContext(task.moduleId) : undefined;
-  const domainSection = domainContext
-    ? `\n\n## Domain Context\n${domainContext}`
-    : '';
+  const domainBlock = domainSection(isUE5, task.moduleId);
   const fileSection =
     ft.filePaths.length > 0
       ? `\n\n## Relevant Files\n${ft.filePaths.map((fp) => `- ${fp}`).join('\n')}\n\nStart by reading these files to understand the current implementation.`
@@ -162,7 +171,7 @@ const featureFix: TaskPromptHandler = (task, ctx, { isUE5, knownAssetDomains, wi
     schemaHint: '  "completed": true',
   });
 
-  return `${header}${domainSection}\n${fileSection}\n\n## Task: Improve "${ft.featureName}"\n\nCurrent status: **${ft.status}**${qualityNote}\n\n### What needs to be done\n${ft.nextSteps}\n\nImplement all the improvements listed above. Work through them methodically — read existing code first, then make targeted changes. The goal is to bring this feature to production quality (5/5).${wiringBlock}\n\n### Completion\n\nAfter you have completed **all** improvements and verified they compile correctly, mark the feature as improved.\n\n${buildCallbackSection(getCallback(cbId)!)}`;
+  return `${header}${domainBlock}\n${fileSection}\n\n## Task: Improve "${ft.featureName}"\n\nCurrent status: **${ft.status}**${qualityNote}\n\n### What needs to be done\n${ft.nextSteps}\n\nImplement all the improvements listed above. Work through them methodically — read existing code first, then make targeted changes. The goal is to bring this feature to production quality (5/5).${wiringBlock}\n\n### Completion\n\nAfter you have completed **all** improvements and verified they compile correctly, mark the feature as improved.\n\n${buildCallbackSection(getCallback(cbId)!)}`;
 };
 
 const featureReview: TaskPromptHandler = (task, ctx, { isUE5 }) => {
@@ -172,10 +181,7 @@ const featureReview: TaskPromptHandler = (task, ctx, { isUE5 }) => {
     includeBuildCommand: false,
     includeRules: false,
   });
-  const domainContext = isUE5 ? getModuleDomainContext(task.moduleId) : undefined;
-  const domainSection = domainContext
-    ? `\n\n## Domain Context\n${domainContext}`
-    : '';
+  const domainBlock = domainSection(isUE5, task.moduleId);
   const featureList = rt.features
     .map((f, i) => `${i + 1}. **${f.featureName}** [${f.category}]: ${f.description}`)
     .join('\n');
@@ -218,7 +224,7 @@ const featureReview: TaskPromptHandler = (task, ctx, { isUE5 }) => {
 - Do NOT modify any project files — this is a read-only review.
 - Do NOT write any files to disk — submit results using the callback format below.`;
 
-  return `${header}${domainSection}
+  return `${header}${domainBlock}
 
 ## Task: Feature Review for "${rt.moduleLabel}"
 
@@ -479,7 +485,9 @@ const audioImport: TaskPromptHandler = (task, ctx, { knownAssetDomains }) => {
   });
 
   const assetsArg = at.assets.map((a) => a.srcAbsPath).join(';');
-  const editorExe = 'C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Binaries\\Win64\\UnrealEditor.exe';
+  // Derive from the project's UE version so the audio-import command can never
+  // name a different engine than the prompt header's `Engine:` line.
+  const editorExe = `${getEnginePath(ctx.ueVersion)}\\Engine\\Binaries\\Win64\\UnrealEditor.exe`;
 
   return `${header}
 
