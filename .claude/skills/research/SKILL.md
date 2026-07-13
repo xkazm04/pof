@@ -36,6 +36,12 @@ Tag every finding with a bucket and an effort scale.
 
 **Effort:** `S` (≤~30 LOC) · `M` (one file/feature) · `L` (multi-file) · `XL` (new subsystem / framework bet). Effort drives the action (Phase 7).
 
+## Status/pipeline impact lens (mandatory, every run)
+
+Besides the bucket, assess **every candidate** against the `/status` health map and the ~342 catalog pipeline steps. The map (`src/lib/status/statusModel.ts` + `src/lib/status/step-facts.json`) knows each step's engine, checker class, judge need, and acceptance tier — and its standing gaps: **unpowered steps** (no true engine, e.g. galleries that never call a generator), **shape-only checkers** (316/342), **unwired media claims**, and **steps stuck below L3/L4 verification**. A method that could improve even **one** of these hundreds of items is worth surfacing — the bar is "moves at least one step up the ladder / powers one engine / hardens one checker", not "reshapes a subsystem".
+
+Per candidate, record a one-line `status_impact`: which step(s)/cell class it could improve and how (`powers-engine` · `hardens-checker` · `adds-judge` · `raises-tier` · `fixes-unwired-media` · `status-ui` · `none`). `none` is honest and fine — but a candidate with a concrete status_impact should be surfaced even when it looks small, and status_impact is a tie-breaker when picking autonomously (Phase 4). Read `step-facts.json` / statusModel only as far as needed to name the step class — don't audit all 342 rows per run.
+
 ## Source classes — what a finding *is*
 
 Classify the source up front; it changes the shape of every finding.
@@ -73,15 +79,15 @@ Classify the source up front; it changes the shape of every finding.
 - If transcript is disabled / text <300 words / no substantive source found: report it's too thin and stop.
 
 ### Phase 3 — Extract candidate ideas (lightweight — NO web, NO deep reads)
-Extract 5–15 candidates. Each: `title` (imperative, <60 chars), `summary` (1-2 sentences), `source_anchor` (≤20-word quote or `[HH:MM:SS]`), `bucket`, `effort`, and a one-line **impact-map area** (which subsystem it'd touch — read straight from the already-loaded `docs/research/impact-map.md`; cheap). Apply memory filters (deprioritize patterns the user repeatedly declines; surface matching `descoped-reopenable` items as "reconsider?") + source-type yield calibration (engineering talk = dense; product/competitor demo = few + many "already-have" catches). Quick relevance: drop only candidates with **no plausible PoF attachment point**. **Do NOT web-search, grep, or read anchor files yet** — that budget is spent only on what the user picks.
+Extract 5–15 candidates. Each: `title` (imperative, <60 chars), `summary` (1-2 sentences), `source_anchor` (≤20-word quote or `[HH:MM:SS]`), `bucket`, `effort`, a one-line **impact-map area** (which subsystem it'd touch — read straight from the already-loaded `docs/research/impact-map.md`; cheap), and the mandatory **`status_impact`** (see the lens above — which /status cell class or pipeline step(s) it could improve, or `none`). Apply memory filters (deprioritize patterns the user repeatedly declines; surface matching `descoped-reopenable` items as "reconsider?") + source-type yield calibration (engineering talk = dense; product/competitor demo = few + many "already-have" catches). Quick relevance: drop only candidates with **no plausible PoF attachment point**. **Do NOT web-search, grep, or read anchor files yet** — that budget is spent only on what the user picks.
 
 ### Phase 4 — Present candidates + PICK (early gate)
 This is the cheap steering gate so a feature-rich video doesn't trigger wholesale web + codebase analysis. Show the candidate table:
 ```
-#  Bucket  Effort  Title                          Area (impact-map)          Source
-1  A       M       Wire X into the harness loop   Headless · harness/executor [04:12]
+#  Bucket  Effort  Title                          Area (impact-map)           Status impact        Source
+1  A       M       Wire X into the harness loop   Headless · harness/executor raises-tier (L2→L3)  [04:12]
 ```
-Note the source-type expected yield and flag any `descoped-reopenable` matches as "reconsider?". Then ask: **"Which should I investigate + (if real) implement? (numbers / all / none / ask)"**. Only picked candidates go deep. (If the run is autonomous or the user pre-authorized, pick the few highest-value yourself and say which.)
+Note the source-type expected yield and flag any `descoped-reopenable` matches as "reconsider?". Then ask: **"Which should I investigate + (if real) implement? (numbers / all / none / ask)"**. Only picked candidates go deep. (If the run is autonomous or the user pre-authorized, pick the few highest-value yourself and say which — using `status_impact` as the tie-breaker: prefer candidates that improve at least one concrete /status cell or pipeline step.)
 
 ### Phase 5 — Deep-verify the PICKED candidates only
 Now spend the expensive budget, on the picks only:
@@ -91,7 +97,7 @@ Now spend the expensive budget, on the picks only:
 4. **Security escalation:** PoF exposes HTTP bridges (`:8090`, `:30040`), MCP servers, and spawns `claude --dangerously-skip-permissions`. If a pick touches one of these and the area lacks auth/sandbox handling, escalate it to a finding even if the source never mentioned security.
 
 ### Phase 6 — Present verified findings
-The survivors (picked AND real), now with evidence. Cluster detection (same-file anchor → ships together; `depends-on [N]`; security pairs). Summary table + per-idea detail: source anchor, evidence (`file:line`), recommended action + effort, impact-map area, `aligns-with` an existing PoF pattern. Call out any picks that resolved to already-have catches.
+The survivors (picked AND real), now with evidence. Cluster detection (same-file anchor → ships together; `depends-on [N]`; security pairs). Summary table + per-idea detail: source anchor, evidence (`file:line`), recommended action + effort, impact-map area, **verified `status_impact`** (name the concrete step(s)/cell class on `/status` it improves, checked against `step-facts.json`/statusModel — not just the Phase-3 guess), `aligns-with` an existing PoF pattern. Call out any picks that resolved to already-have catches.
 
 ### Phase 7 — Action-by-effort
 Route each verified finding:
