@@ -1,5 +1,6 @@
 'use client';
 
+import { useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { StepFrame, type StepPanel } from './StepFrame';
 import { CliProduce } from './shared/CliProduce';
@@ -11,9 +12,10 @@ const GlbViewer = dynamic(() => import('./shared/GlbViewer').then((m) => m.GlbVi
   ssr: false,
   loading: () => <div style={{ height: 260, display: 'grid', placeItems: 'center', fontSize: 12, opacity: 0.6 }}>Loading 3D viewer…</div>,
 });
-import { readHistory, makeBatch, appendBatch, selectCandidate, selectedCandidate, historyData } from './shared/genHistory';
+import { selectedCandidate } from './shared/genHistory';
+import { useGenerativeStep } from './shared/useGenerativeStep';
 import { genericGalleryCandidates } from './shared/genericGalleryCandidates';
-import { useLabStep, useLabPipelineStore } from '../labPipelineStore';
+import { useLabPipelineStore } from '../labPipelineStore';
 import { useCanonStore } from '../canonStore';
 import { canonContextFor } from '@/lib/catalog/canon/canonContext';
 import { ARCHETYPE_CANON } from '@/lib/catalog/canon/archetypeCanon';
@@ -73,12 +75,29 @@ function ViewPanel({ t, view, data }: { t: LabTheme; view: ViewDescriptor; data:
 
 /** Hybrid generic renderer: drives any common-archetype StepSpec from persisted artifacts. */
 export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabTheme; entity: LabEntity; step: string; spec: StepSpec; catalogId?: string }) {
-  const art = useLabStep(entity.id, step);
   const produce = useLabPipelineStore((s) => s.produce);
-  const produceFrom = useLabPipelineStore((s) => s.produceFrom);
   const canonRules = useCanonStore((s) => s.rules);
   const entitiesByCatalog = useCatalogStore((s) => s.entitiesByCatalog);
+
+  // Memoized like StaticStepFrame: the step's produce output + its derived acceptance
+  // no longer re-allocate on every render — `produced` seeds the generative engine's
+  // base (ueAssets/links/static data) and drives the assetPath/glbUrl previews.
+  const produced = useMemo(() => spec.produce(entity), [spec, entity]);
+
+  // Gallery archetype: the ONE browse→compare→select loop (shared useGenerativeStep +
+  // CandidateGallery + genHistory). generate/reselect derive next-state from LIVE store
+  // data inside produceFrom, so two dispatches in one frame serialize (see 3d50330).
+  const galleryCandidates = useCallback(
+    (dir: string, seq: number) =>
+      spec.view.kind === 'gallery'
+        ? genericGalleryCandidates(spec.view.field, spec.view.candidates, dir, seq)
+        : [],
+    [spec],
+  );
+  const { art, history, generate, reselect } = useGenerativeStep(entity.id, step, galleryCandidates, produced);
+
   const data = art?.data ?? {};
+  const acceptance = useMemo(() => spec.accept(art?.data ?? {}), [spec, art?.data]);
   const links = readLinks(data);
   const linkRes = links.length ? linkTargetsExist(links, (c, e) => !!entitiesByCatalog[c]?.[e]) : null;
 
@@ -91,34 +110,6 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
     return [pack, canon, `Produce ${spec.label} for ${entity.name}. ${dir}`].filter(Boolean).join('\n\n');
   };
 
-  // Gallery archetype: the real browse→compare→select loop (shared CandidateGallery + genHistory).
-  // `history` here is a render-time view only; generate/reselect MUST derive
-  // next-state from the LIVE store data inside produceFrom — the closure copy
-  // drops a kept batch when two dispatches land in one frame (see 3d50330).
-  const history = readHistory(data);
-  const generate = (dir: string, prompt: string) => {
-    const view = spec.view;
-    if (view.kind !== 'gallery') return;
-    produceFrom(entity.id, step, (prevData) => {
-      const base = spec.produce(entity);
-      const live = readHistory(prevData);
-      const batch = makeBatch({
-        seq: live.batches.length,
-        at: new Date().toISOString(),
-        direction: dir,
-        prompt,
-        candidates: genericGalleryCandidates(view.field, view.candidates, dir, live.batches.length),
-      });
-      return { ...base, data: historyData(appendBatch(live, batch), base.data) };
-    });
-  };
-  const reselect = (id: string) => {
-    produceFrom(entity.id, step, (prevData) => {
-      const base = spec.produce(entity);
-      return { ...base, data: historyData(selectCandidate(readHistory(prevData), id), base.data) };
-    });
-  };
-
   const cli = (onComplete: (ctx?: { direction: string; prompt: string }) => void) => (
     <CliProduce t={t} label={`Produce ${spec.label}`} rows={3}
       defaultDirection={spec.defaultDirection} note={spec.produceNote}
@@ -128,7 +119,7 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
   let panels: StepPanel[];
   if (spec.view.kind === 'gallery') {
     const sel = selectedCandidate(history);
-    const assetPath = spec.produce(entity).ueAssets?.[0];
+    const assetPath = produced.ueAssets?.[0];
     // A generated 3D candidate carries a served .glb URL — render it interactively so the
     // step is visually verifiable (rotate/zoom the real mesh, not just the preview render).
     const glbUrl = typeof sel?.payload?.glbUrl === 'string' ? sel.payload.glbUrl : null;
@@ -166,7 +157,7 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
           <span className={t.fontMono} style={{ fontSize: 12, color: t.muted }}>{dataGlbUrl}</span>
         </div>
       ) }] : []),
-      { label: 'Produce', node: cli(() => produce(entity.id, step, spec.produce(entity))) },
+      { label: 'Produce', node: cli(() => produce(entity.id, step, produced)) },
     ];
   }
 
@@ -183,7 +174,7 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
           {linkRes.label}: {linkRes.detail}{linkRes.reason ? ` — ${linkRes.reason}` : ''}
         </div>
       )}
-      <StepFrame t={t} acceptance={spec.accept(data)} panels={panels} />
+      <StepFrame t={t} acceptance={acceptance} panels={panels} />
     </>
   );
 }

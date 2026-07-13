@@ -1,4 +1,5 @@
 import type { GenCandidate } from './genHistory';
+import { fnv1a as hashStr } from './hash';
 
 /**
  * Pure, deterministic candidate generators for the Items pipeline's generative steps
@@ -7,19 +8,10 @@ import type { GenCandidate } from './genHistory';
  * visibly different yet are reproducible (no Math.random — safe to call from event
  * handlers and stable under test). Each candidate carries the `payload` that selecting
  * it projects onto the step's top-level data (keeping derived Acceptance unchanged).
+ * The hash is the shared `fnv1a` (steps/shared/hash.ts) — one hash for every generator.
  */
 
 type RawCandidate = Omit<GenCandidate, 'id'>;
-
-/** FNV-1a string hash → non-negative int. Deterministic; pure. */
-function hashStr(s: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return Math.abs(h);
-}
 
 /** 4 icon candidates (256px). Payload `{ selected: i }` satisfies the icon Acceptance. */
 export function iconCandidates(direction: string, seq: number): RawCandidate[] {

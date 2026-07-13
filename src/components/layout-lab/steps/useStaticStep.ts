@@ -7,7 +7,7 @@ import type { LabStepArtifact } from '../labPipelineStore';
 
 /**
  * Shared plumbing for the non-generative ("static") Items steps — the counterpart
- * to `useGenerativeStep` in ItemArt.tsx. It subscribes to the persisted step
+ * to the shared `useGenerativeStep` (steps/shared/). It subscribes to the persisted step
  * artifact and returns a single `runProduce` callback that writes the step's spec
  * output (`ITEM_STEP_SPECS[step].produce(entity)`).
  *

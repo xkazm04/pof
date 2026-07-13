@@ -9,7 +9,10 @@ import {
   allCandidates,
   batchOf,
   historyData,
+  nextSeq,
+  pruneHistory,
   GEN_HISTORY_KEY,
+  MAX_KEPT_BATCHES,
   type GenHistory,
 } from '@/components/layout-lab/steps/shared/genHistory';
 
@@ -99,5 +102,56 @@ describe('genHistory model', () => {
     const data = historyData(emptyHistory(), { tris: 0 });
     expect(data.tris).toBe(0);
     expect((data[GEN_HISTORY_KEY] as GenHistory).batches).toEqual([]);
+  });
+
+  describe('bounded history', () => {
+    // Build a history by repeatedly appending, minting each seq the way the hook does.
+    const grow = (n: number): GenHistory => {
+      let h = emptyHistory();
+      for (let i = 0; i < n; i++) h = appendBatch(h, batch(nextSeq(h), `roll ${i}`, 2));
+      return h;
+    };
+
+    it('nextSeq is one past the highest surviving batch id, not batches.length', () => {
+      expect(nextSeq(emptyHistory())).toBe(0);
+      const h = appendBatch(appendBatch(emptyHistory(), batch(0, 'a', 2)), batch(1, 'b', 2));
+      expect(nextSeq(h)).toBe(2);
+    });
+
+    it('appendBatch caps the history at MAX_KEPT_BATCHES, keeping the most recent', () => {
+      const h = grow(MAX_KEPT_BATCHES + 5);
+      expect(h.batches).toHaveLength(MAX_KEPT_BATCHES);
+      // Oldest survivor is the 6th batch minted (b5); newest is the last (b16).
+      expect(h.batches[0].id).toBe('b5');
+      expect(h.batches[h.batches.length - 1].id).toBe(`b${MAX_KEPT_BATCHES + 4}`);
+    });
+
+    it('mints unique batch ids across pruning (no bN collision after the window slides)', () => {
+      const h = grow(MAX_KEPT_BATCHES + 8);
+      const ids = h.batches.map((b) => b.id);
+      expect(new Set(ids).size).toBe(ids.length); // all unique
+      // The next seq is monotonic past every surviving id, so a fresh batch can't collide.
+      const seq = nextSeq(h);
+      expect(ids).not.toContain(`b${seq}`);
+      const grown = appendBatch(h, batch(seq, 'fresh', 2));
+      expect(grown.batches.map((b) => b.id).filter((id) => id === `b${seq}`)).toHaveLength(1);
+    });
+
+    it('never prunes the batch owning the selected candidate, even when it ages out', () => {
+      // Raw over-cap history whose selection points at the OLDEST batch (b0-c1).
+      const raw: GenHistory = { batches: [], selectedId: 'b0-c1' };
+      for (let i = 0; i < MAX_KEPT_BATCHES + 5; i++) raw.batches.push(batch(i, `roll ${i}`, 2));
+      const pruned = pruneHistory(raw, MAX_KEPT_BATCHES);
+      // The selected (oldest) batch survives even though it is outside the recency window.
+      expect(pruned.batches.some((b) => b.id === 'b0')).toBe(true);
+      expect(selectedCandidate(pruned)?.id).toBe('b0-c1');
+      // It is kept IN ADDITION to the last `cap` batches.
+      expect(pruned.batches).toHaveLength(MAX_KEPT_BATCHES + 1);
+    });
+
+    it('pruneHistory returns the same reference when nothing is dropped', () => {
+      const h = grow(3);
+      expect(pruneHistory(h)).toBe(h);
+    });
   });
 });

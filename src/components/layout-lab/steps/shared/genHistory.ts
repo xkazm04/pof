@@ -12,6 +12,18 @@
  * Acceptance stays DERIVED from truth: selecting a candidate projects its `payload`
  * onto the artifact's top-level data (via `historyData`), so each step's existing
  * `accept()` (which reads `selected` / `tris` / `maps`) keeps working unchanged.
+ *
+ * ── History is BOUNDED ───────────────────────────────────────────────────────
+ * Re-roll-heavy steps used to grow `batches` without limit — every re-roll kept its
+ * full prompt string, so a busy generative step could bloat the artifact and blow the
+ * browser's localStorage quota. `appendBatch` now prunes to the last
+ * `MAX_KEPT_BATCHES` (12) re-rolls, with one invariant: the batch that owns the
+ * SELECTED candidate is never pruned (re-selecting it keeps working even if it aged
+ * out of the window). Older batches — and their prompt strings — are dropped, which
+ * only costs the ability to re-select a very old candidate. The persisted SHAPE is
+ * unchanged (`{ batches, selectedId }`), so existing stored histories still read
+ * back; batch ids stay unique across pruning because the next seq is derived from the
+ * max surviving `bN` id (`nextSeq`), never the (now-shrinking) `batches.length`.
  */
 
 /** A single generated candidate within a batch. */
@@ -50,6 +62,14 @@ export interface GenHistory {
 /** The key the history is stored under inside a step artifact's `data`. */
 export const GEN_HISTORY_KEY = 'genHistory';
 
+/**
+ * Cap on kept re-roll batches. Bounds the artifact so a re-roll-heavy step can't
+ * grow `genHistory` (and its stored prompt strings) without limit and hit the
+ * localStorage quota. The batch owning the selected candidate is exempt (see
+ * `pruneHistory`). 12 ≈ a generous browse window while staying small in storage.
+ */
+export const MAX_KEPT_BATCHES = 12;
+
 export function emptyHistory(): GenHistory {
   return { batches: [], selectedId: null };
 }
@@ -81,9 +101,25 @@ export function batchOf(h: GenHistory, candidateId: string): GenBatch | null {
 }
 
 /**
- * Build a stamped batch. `seq` (the count of existing batches) makes candidate ids
- * stable + unique within the step; `at` is supplied by the caller (an event handler,
- * never render — keeps this pure and keeps `Date.now()` out of render per react purity).
+ * The next batch sequence number: one past the highest surviving `bN` id, or 0 when
+ * empty. Derived from the ids (not `batches.length`) so it stays MONOTONIC across
+ * pruning — otherwise a pruned history would remint an id already in use and two
+ * batches would collide. Callers pass this to `makeBatch({ seq })`.
+ */
+export function nextSeq(h: GenHistory): number {
+  let max = -1;
+  for (const b of h.batches) {
+    const n = Number.parseInt(b.id.slice(1), 10); // 'b7' → 7
+    if (Number.isFinite(n) && n > max) max = n;
+  }
+  return max + 1;
+}
+
+/**
+ * Build a stamped batch. `seq` makes candidate ids stable + unique within the step
+ * (use `nextSeq(history)` so ids stay unique across pruning); `at` is supplied by the
+ * caller (an event handler, never render — keeps this pure and keeps `Date.now()` out
+ * of render per react purity).
  */
 export function makeBatch(opts: {
   seq: number;
@@ -102,12 +138,33 @@ export function makeBatch(opts: {
   };
 }
 
-/** Append a batch (kept, never discarding prior re-rolls) and auto-select its first candidate. */
+/**
+ * Prune to at most `cap` batches, keeping the most recent ones. The batch that owns
+ * the currently-selected candidate is always retained (even if it aged out of the
+ * window) so re-selecting it keeps working. Returns the same reference when nothing
+ * is dropped. Pure; the shape (`{ batches, selectedId }`) is unchanged.
+ */
+export function pruneHistory(h: GenHistory, cap = MAX_KEPT_BATCHES): GenHistory {
+  if (h.batches.length <= cap) return h;
+  const kept = h.batches.slice(-cap);
+  const selBatch = h.selectedId ? batchOf(h, h.selectedId) : null;
+  if (selBatch && !kept.some((b) => b.id === selBatch.id)) {
+    // Selected batch aged out of the window — keep it too (oldest slot), preserving order.
+    return { ...h, batches: [selBatch, ...kept] };
+  }
+  return { ...h, batches: kept };
+}
+
+/**
+ * Append a batch (kept, never discarding recent re-rolls) and auto-select its first
+ * candidate, then prune to `MAX_KEPT_BATCHES` so the history stays bounded.
+ */
 export function appendBatch(h: GenHistory, batch: GenBatch): GenHistory {
-  return {
+  const grown: GenHistory = {
     batches: [...h.batches, batch],
     selectedId: batch.candidates[0]?.id ?? h.selectedId,
   };
+  return pruneHistory(grown);
 }
 
 /** Re-select an existing candidate by id. No-op (same reference) for unknown/already-selected ids. */

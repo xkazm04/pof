@@ -4,50 +4,25 @@
 import { StepFrame } from './StepFrame';
 import { CliProduce } from './shared/CliProduce';
 import { CandidateGallery } from './shared/CandidateGallery';
-import { readHistory, makeBatch, appendBatch, selectCandidate, selectedCandidate, historyData } from './shared/genHistory';
+import { selectedCandidate } from './shared/genHistory';
+import { useGenerativeStep } from './shared/useGenerativeStep';
 import { iconCandidates, meshCandidates, materialCandidates } from './shared/itemGenCandidates';
-import { useLabStep, useLabPipelineStore } from '../labPipelineStore';
 import { ITEM_STEP_SPECS, slug, itemAsset } from './itemsSteps';
 import type { StepProps } from './stepProps';
-import type { GenCandidate } from './shared/genHistory';
-
-type RawCandidate = Omit<GenCandidate, 'id'>;
 
 /**
- * Shared plumbing for the three generative Items steps. Each Produce run / re-roll
- * appends a *kept* batch (never discarding prior candidates) stamped with the typed
- * direction + prompt; selecting a candidate projects its payload onto the step's
- * top-level data so the existing derived Acceptance keeps reading `selected`/`tris`/`maps`.
+ * The three generative Items steps ride the shared `useGenerativeStep` engine
+ * (steps/shared/useGenerativeStep.ts) — one browse→compare→select loop for both the
+ * bespoke Items generators and the generic ArchetypeStep gallery. Each Produce run /
+ * re-roll appends a *kept* batch stamped with the typed direction + prompt; selecting
+ * a candidate projects its payload onto the step's top-level data so the derived
+ * Acceptance keeps reading `selected`/`tris`/`maps`.
  */
-function useGenerativeStep(entityId: string, step: string, gen: (direction: string, seq: number) => RawCandidate[], ueAssets: string[]) {
-  const art = useLabStep(entityId, step);
-  const produceFrom = useLabPipelineStore((s) => s.produceFrom);
-  const history = readHistory(art?.data);
-
-  const generate = (direction: string, prompt: string) => {
-    // Build the batch from LIVE persisted state inside the store updater, not from this
-    // render's `history` closure: a double-click would otherwise have both handlers read
-    // batches.length === N, both mint batch bN, and the second overwrite the first (batch lost).
-    produceFrom(entityId, step, (prevData) => {
-      const live = readHistory(prevData);
-      const seq = live.batches.length;
-      const batch = makeBatch({ seq, at: new Date().toISOString(), direction, prompt, candidates: gen(direction, seq) });
-      return { data: historyData(appendBatch(live, batch)), ueAssets };
-    });
-  };
-  const reselect = (candidateId: string) => {
-    produceFrom(entityId, step, (prevData) => ({
-      data: historyData(selectCandidate(readHistory(prevData), candidateId)),
-      ueAssets,
-    }));
-  };
-  return { art, history, generate, reselect };
-}
 
 /** Items · Icon 2D Art. View: persistent candidate gallery + selection. Produce: Leonardo gen. */
 export function ItemIcon2D({ t, entity, step }: StepProps) {
   const asset = itemAsset(entity, 'T_', '_Icon');
-  const { art, history, generate, reselect } = useGenerativeStep(entity.id, step, iconCandidates, [asset]);
+  const { art, history, generate, reselect } = useGenerativeStep(entity.id, step, iconCandidates, { ueAssets: [asset] });
   const DEFAULT_DIR = 'weathered steel longsword, leather grip, guild sigil, 3/4 view, game icon';
   const buildPrompt = (dir: string) => `Generate 4 icon candidates for ${entity.name} (256px, rarity frame). Art direction: ${dir}`;
   const sel = selectedCandidate(history);
@@ -81,7 +56,7 @@ export function ItemIcon2D({ t, entity, step }: StepProps) {
 /** Items · 3D Generation. View: mesh preview + LOD budget (from the selected candidate) + gallery. */
 export function Item3DGen({ t, entity, step }: StepProps) {
   const asset = itemAsset(entity, 'SM_');
-  const { art, history, generate, reselect } = useGenerativeStep(entity.id, step, meshCandidates, [asset]);
+  const { art, history, generate, reselect } = useGenerativeStep(entity.id, step, meshCandidates, { ueAssets: [asset] });
   const DEFAULT_DIR = 'game-ready retopo, clean silhouette, hard-surface bevels';
   const buildPrompt = (dir: string) => `Generate a base mesh for ${entity.name} from its icon + brief via Blender/Meshy, then auto-LOD. ${dir}`;
   const tris = Number((art?.data?.tris as number) ?? 0);
@@ -125,7 +100,7 @@ export function Item3DGen({ t, entity, step }: StepProps) {
 /** Items · Material / Texture. View: PBR map set (from the selected candidate) + preview + gallery. */
 export function ItemMaterial({ t, entity, step }: StepProps) {
   const asset = itemAsset(entity, 'MI_');
-  const { art, history, generate, reselect } = useGenerativeStep(entity.id, step, materialCandidates, [asset]);
+  const { art, history, generate, reselect } = useGenerativeStep(entity.id, step, materialCandidates, { ueAssets: [asset] });
   const DEFAULT_DIR = 'PBR set from the master material; expose wear + tint params';
   const buildPrompt = (dir: string) => `Author a PBR set for ${entity.name} from the master material; expose params + wear variants. ${dir}`;
   const maps = (art?.data?.maps ?? []) as string[];
