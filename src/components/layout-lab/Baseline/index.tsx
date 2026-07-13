@@ -42,6 +42,7 @@ export function Baseline(props: Props) {
     produce, resetEntity,
     ueAssetCount,
     artifacts, artifactByStep, displayStatus, stepDone, done,
+    artsLoading,
     runDrain,
     handleSelectCatalog, handleSelectEntity, selectStep,
   } = useBaseline(props);
@@ -82,6 +83,7 @@ export function Baseline(props: Props) {
         steps={steps}
         stepIdx={stepIdx}
         displayStatus={displayStatus}
+        loading={artsLoading}
         isLive={(step) => !!(detail && getStepComponent(detail.catalog.catalogId, step))}
         tooltipFor={(step, i) => {
           const a = artifactByStep.get(step);

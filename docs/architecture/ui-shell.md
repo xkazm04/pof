@@ -25,6 +25,8 @@ rollup strip.
 | `src/components/layout-lab/LabBridgeStrip.tsx` | Compact UE bridge status dot+label; reads `usePofBridgeStore` (display-only) |
 | `src/components/layout-lab/labPipelineStore.ts` | Zustand persisted store (`pof-lab-pipeline`); `produce/fail/resetEntity/hydrateEntity`; module-level `_labSync` function pointer |
 | `src/components/layout-lab/labArtifactClient.ts` | `fetchArtifacts`, `postArtifact`, `drainGates` — thin wrappers around `/api/pipeline-artifacts` |
+| `src/components/layout-lab/labArtifactCache.ts` | Shared artifact-fetch cache (`useCachedArtifacts`, `invalidateArtifacts`) — one deduped fetch path + loading state for Baseline + Matrix |
+| `src/components/layout-lab/catalogManifest.ts` | Single per-catalog resolver over section · steps · grader · bespoke-UI (`resolveCatalogSteps`, `isBespokeCatalog`) |
 | `src/components/layout-lab/canonStore.ts` | Zustand store for project canon rules; seeded from `CANON_SEED`, refreshed from `/api/project-rules` |
 | `src/components/layout-lab/theme.ts` | `LIGHT` (Blueprint) and `DARK` (Studio Dark) `LabTheme` tokens; `LAB_THEMES` array |
 | `src/components/layout-lab/CanonView.tsx` | Full-screen canon rule editor (game / art / project categories) |
@@ -167,18 +169,32 @@ setLabSync((entityId, step, art) => {
 `store.produce()` runs (line 51), it calls `_labSync?.(entityId, step, artifact)`, which fires
 `postArtifact` → `POST /api/pipeline-artifacts`.
 
-#### Hydrate on entity-open (`Baseline.tsx` : 78–89)
+#### Hydrate on entity-open (via the shared artifact cache, `labArtifactCache.ts`)
 
-When `catalogId` or `entity.id` changes:
+Baseline and CatalogMatrix used to own independent fetch paths, so rapid tree clicks issued a fetch
+storm and each surface reset to "everything pending" mid-fetch. Both now read through **one shared,
+hand-rolled cache** (`labArtifactCache.ts`, `useCachedArtifacts`) keyed `catalogId` (whole-catalog,
+for the matrix) or `catalogId|entityId` (one entity, for Baseline):
 
 ```
-fetchArtifacts(catalogId, entity.id)  // GET /api/pipeline-artifacts?catalogId=…&entityId=…
-  → setServerArts(…)                  // store verdicts for rollup overlay
-  → hydrateEntity(entity.id, arts)    // add-only merge into labPipelineStore
+useCachedArtifacts(catalogId, entity.id) → { arts, loading, loaded }
+  loading:true (deduped fetch in flight)  → rail/matrix show an honest LOADING shimmer
+  → arts arrive                            → serverArts (rollup overlay) + hydrateEntity(add-only)
 ```
 
-`hydrateEntity` (store line 73–83) only adds steps that are not already present in the local cache;
-it never overwrites or clears existing local state.
+Key properties: **concurrent readers of a key share one fetch** (no storm); a per-key request
+sequence **discards stale in-flight responses**; and `invalidateArtifacts(catalogId[, entityId])` —
+called on **produce** (write-through) and **drain** — drops the matching keys so the next read
+refetches the server-graded verdict. `hydrateEntity` (store) only adds steps not already present in
+the local cache; it never overwrites or clears existing local state.
+
+**Honest loading ≠ pending.** `loading` is surfaced distinctly from `pending`: the pipeline rail
+shimmers only steps of *unknown* (pending) status while a fetch is in flight (a locally-known
+pass/fail/deferred is real truth and is never masked); the matrix renders a `MatrixSkeleton` grid
+instead of an all-pending flash; and `NewHome`'s pre-rehydration first paint shows a lightweight
+lab-shell skeleton instead of a bare blank div. All shimmers use the `lab-shimmer` keyframe
+(`lab-tokens.css`) and freeze under reduced motion (global `prefers-reduced-motion` + the `Skeleton`
+component's static-fill fallback).
 
 #### Rollup overlay (`Baseline.tsx` : 105–117)
 
@@ -197,7 +213,8 @@ const status = localStatus === 'deferred'
 #### Drain deferred gates (`Baseline.tsx` : 92–102, `labArtifactClient.ts` : 38–45)
 
 `runDrain` calls `drainGates(catalogId, entity.id)` → `POST /api/pipeline-artifacts/drain`, then
-re-fetches and updates `serverArts`. The drain trigger lives in `<NextStepCoach>`: it surfaces a
+`invalidateArtifacts(catalogId, entity.id)` so the refreshed verdicts are re-read through the shared
+cache. The drain trigger lives in `<NextStepCoach>`: it surfaces a
 "Run N deferred gates" button (as the primary CTA when the next actionable step is itself deferred,
 otherwise inside the disclosure) whenever `rollup.deferred > 0` and an `onDrain` callback is provided.
 

@@ -1,12 +1,14 @@
 'use client';
 
 import '@/lib/catalog/pipelines/registry.generated';
-import { useState, useEffect, useMemo } from 'react';
-import { fetchArtifacts } from './labArtifactClient';
+import { useState, useMemo } from 'react';
+import { useReducedMotion } from 'framer-motion';
 import { resolveAccept } from './labAcceptance';
+import { useCachedArtifacts } from './labArtifactCache';
 import { summarizeEntity, type EntityRollup } from '@/lib/catalog/rollup';
 import { useLabDetail } from './useLabCatalogData';
 import { resolveCatalogSteps } from './catalogManifest';
+import { MatrixSkeleton } from './MatrixSkeleton';
 import { STATUS_GLYPH, STATUS_WORD, statusColor } from './statusLanguage';
 import type { AcceptanceStatus } from '@/lib/catalog/acceptance/types';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
@@ -35,9 +37,7 @@ interface Props {
  */
 export function CatalogMatrix({ t, groups, catalogId, onOpenStep }: Props) {
   const [selected, setSelected] = useState(catalogId);
-  // Fetched artifacts stamped with their catalog, so a stale in-flight response is ignored
-  // and we never need a synchronous reset (which would trigger a cascading render).
-  const [artState, setArtState] = useState<{ catalogId: string; arts: PipelineArtifact[] }>({ catalogId: selected, arts: [] });
+  const reduce = useReducedMotion();
   const detail = useLabDetail(selected);
 
   // Same manifest step-source Baseline uses, so the matrix columns and the rail can
@@ -46,23 +46,20 @@ export function CatalogMatrix({ t, groups, catalogId, onOpenStep }: Props) {
   const steps = useMemo(() => resolveCatalogSteps(selected), [selected]);
 
   // Server is the source of truth for status — it carries the runner's L3/L4 overlay.
-  useEffect(() => {
-    let cancelled = false;
-    fetchArtifacts(selected).then((a) => { if (!cancelled) setArtState({ catalogId: selected, arts: a }); });
-    return () => { cancelled = true; };
-  }, [selected]);
+  // The shared cache (keyed by `selected`) is deduped with Baseline's fetch and
+  // exposes an honest LOADING state instead of an all-pending flash on catalog switch.
+  const { arts, loading } = useCachedArtifacts(selected);
+  const showSkeleton = loading && arts.length === 0;
 
   const byEntity = useMemo(() => {
     const m = new Map<string, Map<string, PipelineArtifact>>();
-    // Until this catalog's fetch resolves, show no artifacts (every step reads as pending).
-    const arts = artState.catalogId === selected ? artState.arts : [];
     for (const a of arts) {
       const row = m.get(a.entityId) ?? new Map<string, PipelineArtifact>();
       row.set(a.step, a);
       m.set(a.entityId, row);
     }
     return m;
-  }, [artState, selected]);
+  }, [arts]);
 
   const rows: MatrixRow[] = useMemo(() => (detail?.entities ?? []).map((e) => {
     const row = byEntity.get(e.id);
@@ -159,8 +156,10 @@ export function CatalogMatrix({ t, groups, catalogId, onOpenStep }: Props) {
       </div>
 
       {/* ── The grid ── */}
-      <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '0 28px 28px' }}>
-        {rows.length === 0 ? (
+      <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '0 28px 28px' }} aria-busy={showSkeleton || undefined}>
+        {showSkeleton ? (
+          <MatrixSkeleton t={t} rows={Math.max(1, (detail?.entities ?? []).length)} cols={steps.length} reduce={!!reduce} />
+        ) : rows.length === 0 ? (
           <p style={{ fontSize: 15, color: t.muted, padding: '24px 0' }}>No entities in this catalog yet.</p>
         ) : (
           <table className={t.fontMono} style={{ borderCollapse: 'separate', borderSpacing: 0, fontSize: 13 }}>

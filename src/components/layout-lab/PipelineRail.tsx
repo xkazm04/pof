@@ -12,6 +12,9 @@ interface PipelineRailProps {
   steps: string[];
   stepIdx: number | null;
   displayStatus: (step: string, i: number) => NodeStatus;
+  /** Server verdicts are still loading: steps of unknown (pending) status shimmer
+   *  instead of reading as an honest "nothing done yet". Locally-known statuses stay. */
+  loading?: boolean;
   isLive: (step: string) => boolean;
   tooltipFor: (step: string, i: number) => string;
   ariaFor: (step: string, i: number) => string;
@@ -22,6 +25,7 @@ export function PipelineRail({
   steps,
   stepIdx,
   displayStatus,
+  loading = false,
   isLive,
   tooltipFor,
   ariaFor,
@@ -65,6 +69,9 @@ export function PipelineRail({
         const status = displayStatus(step, i);
         const current = i === stepIdx;
         const live = isLive(step);
+        // Loading only applies where we have NO status yet (pending) — a locally-known
+        // pass/fail/deferred is real truth and must not be masked by a shimmer.
+        const isLoading = loading && status === 'pending';
         const filled = status === 'pass' || status === 'fail';
         const fill = filled
           ? `var(--lab-${status === 'pass' ? 'ok' : 'bad'})`
@@ -113,7 +120,8 @@ export function PipelineRail({
           >
             <span
               data-step-status={status}
-              className={status === 'fail' ? 'animate-pulse-glow' : undefined}
+              data-loading={isLoading ? 'true' : undefined}
+              className={isLoading && !reduce ? 'lab-shimmer' : status === 'fail' ? 'animate-pulse-glow' : undefined}
               style={{
                 width: 20,
                 height: 20,
@@ -122,8 +130,8 @@ export function PipelineRail({
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                background: fill,
-                border: `2px ${status === 'deferred' ? 'dashed' : 'solid'} ${borderColor}`,
+                background: isLoading ? (reduce ? 'var(--lab-line)' : undefined) : fill,
+                border: `2px ${isLoading ? 'solid var(--lab-line)' : `${status === 'deferred' ? 'dashed' : 'solid'} ${borderColor}`}`,
                 boxShadow: current ? `0 0 0 3px var(--lab-accent-bg)` : 'none',
                 color: glyphColor,
                 fontSize: 14,
