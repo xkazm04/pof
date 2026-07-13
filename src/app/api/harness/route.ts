@@ -102,6 +102,7 @@ export async function GET(request: NextRequest) {
       totalAreas: plan.areas.length,
       completedAreas: plan.areas.filter(a => a.status === 'completed').length,
       failedAreas: plan.areas.filter(a => a.status === 'failed').length,
+      gappedAreas: plan.areas.filter(a => a.status === 'completed-with-gaps').length,
       currentArea: plan.areas.find(a => a.status === 'in-progress')?.label ?? null,
     } : null,
     guide: guide ? {

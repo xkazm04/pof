@@ -28,7 +28,7 @@ function run(overrides: Partial<HarnessRunDetail>): HarnessRunDetail {
     startedAt: '2026-05-27T10:00:00.000Z', endedAt: '2026-05-27T10:10:00.000Z',
     durationMs: 10 * 60 * 1000,
     iteration: 1, totalFeatures: 0, passingFeatures: 0, passRate: 0,
-    totalAreas: 0, completedAreas: 0, failedAreas: 0,
+    totalAreas: 0, completedAreas: 0, failedAreas: 0, gappedAreas: 0,
     spentUsd: 0, budgetUsd: null, sessions: 0,
     themeDirective: null, errorMessage: null,
     plan: null, progress: [], guide: null, cost: null,
@@ -109,6 +109,22 @@ describe('diffRuns', () => {
     });
     const d = diffRuns(a, b);
     expect(d.newFailureAreas.sort()).toEqual(['core', 'ui']);
+  });
+
+  it('surfaces completed-with-gaps areas from the head run', () => {
+    const a = run({ runId: 'a', plan: plan([{ id: 'core', label: 'Core', status: 'completed', features: [feat('x', 'pass')] }]) });
+    const b = run({
+      runId: 'b',
+      plan: plan([
+        { id: 'core', label: 'Core', status: 'completed', features: [feat('x', 'pass')] },
+        { id: 'ai', label: 'AI', status: 'completed-with-gaps', features: [feat('z', 'unverified')] },
+      ]),
+    });
+    const d = diffRuns(a, b);
+    expect(d.completedWithGaps).toEqual(['ai']);
+    // A clean area going gapped reads as a regression.
+    const core2 = run({ runId: 'c', plan: plan([{ id: 'core', label: 'Core', status: 'completed-with-gaps', features: [feat('x', 'pass')] }]) });
+    expect(diffRuns(a, core2).areas.find((e) => e.areaId === 'core')!.kind).toBe('regressed');
   });
 
   it('durationMsDelta is null when either side lacks duration', () => {

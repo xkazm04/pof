@@ -506,8 +506,14 @@ export function buildGamePlan(config: HarnessConfig): GamePlan {
  * Update plan statistics after an iteration.
  */
 export function updatePlanStats(plan: GamePlan): void {
+  // Honest numerator: a 'completed-with-gaps' area was promoted to unblock its
+  // dependents WITHOUT honest verification, so its features are excluded from
+  // the passing count entirely. This is what stops promote-with-gaps from
+  // flipping garbage green and hitting the target pass-rate on unverified work.
   plan.passingFeatures = plan.areas.reduce(
-    (sum, a) => sum + a.features.filter(f => f.status === 'pass').length,
+    (sum, a) => a.status === 'completed-with-gaps'
+      ? sum
+      : sum + a.features.filter(f => f.status === 'pass').length,
     0,
   );
   plan.updatedAt = new Date().toISOString();

@@ -19,7 +19,9 @@ start() → runLoop()
            1. EXECUTE   — spawn a Claude Code session, parse @@HARNESS_RESULT, record cost
            2. VERIFY    — run gates (typecheck, lint, test, build, visual, custom)
            3. SELF-HEAL — on required-gate failure, spawn a fix session, re-verify
-           4. RECONCILE — match parsed features back to planned ones, update status/quality
+           4. RECONCILE — match parsed features back to planned ones by EXACT normalized
+                          name/id (no fuzzy substring, no force-pass); any feature the
+                          session never reported stays 'unverified', never a silent pass
            5. RECORD    — append progress, commit+tag if green, append to guide, update AGENTS.md
        refill the pool as areas complete; enforce the budget on every launch
   └─ save plan/guide/progress/cost, record the run in SQLite, emit 'harness:completed'
@@ -56,6 +58,7 @@ It's a **streaming pool**, not lock-step waves: an area that finishes early free
 - **Checkpoints** — each green area commits + tags on `harness/<runId>`; a failed area can `rollbackToLastGreen`. Because rollback is `git reset --hard`, checkpointing forces `maxConcurrent = 1` (concurrent siblings would be clobbered).
 - **Self-heal** — a tri-state result (`healed | unverified | failed`): it only claims "healed" when a real verify command re-ran clean, never optimistically.
 - **Pause/resume** — same `runId` row across pause/resume; the loop drains active sessions before stopping.
+- **Honest reconciliation** — the ledger cannot lie: features are matched only by exact normalized name/id (`feature-match.ts`), unmatched reports are logged and left `unverified`, and an area promoted after exhausting retries records `completed-with-gaps` (not `completed`). Gapped areas unblock dependents but are **excluded from the pass-rate numerator** (`updatePlanStats`), so promote-with-gaps can never hit the target on unverified work. Gapped areas surface in run history (`gapped_areas`) and run-diff (`completedWithGaps`).
 
 ---
 

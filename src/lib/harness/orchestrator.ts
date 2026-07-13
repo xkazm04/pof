@@ -46,6 +46,8 @@ import {
 } from './checkpoint';
 import { startRun, finalizeRun, type HarnessRunStatus } from '@/lib/harness-runs-db';
 import { readJsonFile, writeJsonFile } from './state-io';
+import { reconcileReportedFeatures, markUnreportedUnverified } from './feature-match';
+import { logger } from '@/lib/logger';
 
 // ── State I/O ───────────────────────────────────────────────────────────────
 
@@ -350,7 +352,10 @@ ${wrapHarnessResult('{"areaId":"self-heal","completed":true,"features":[],"files
 function isDependencyResolved(plan: GamePlan, progress: ProgressEntry[], depId: string, maxRetries: number): boolean {
   const dep = plan.areas.find(a => a.id === depId);
   if (!dep) return true; // Unknown dep — don't block
-  if (dep.status === 'completed') return true;
+  // A promoted-with-gaps area unblocks dependents just like a clean completion
+  // (that's the whole point of the soft-dep promotion) — but it's excluded from
+  // the pass-rate numerator so it can't inflate progress.
+  if (dep.status === 'completed' || dep.status === 'completed-with-gaps') return true;
   // Failed areas that exhausted retries are treated as resolved (soft deps)
   if (dep.status === 'failed') {
     const retries = progress.filter(p => p.areaId === depId && p.outcome !== 'success').length;
@@ -617,33 +622,27 @@ export function createHarnessOrchestrator(config: HarnessConfig): HarnessOrchest
 
     // ── Update features ────────────────────────────────────────────────────
 
+    // Reconcile reported features against the plan by EXACT normalized match
+    // (name or `moduleId::name` id). No fuzzy substring, no force-pass — an
+    // unmatched report leaves the plan feature untouched (→ unverified below).
     let matchedFeatures = 0;
-    if (parsed.features) {
-      for (const pf of parsed.features) {
-        let planFeature = area.features.find(f => f.name === pf.name);
-        if (!planFeature) {
-          planFeature = area.features.find(f =>
-            f.name.toLowerCase() === pf.name.toLowerCase() ||
-            pf.name.toLowerCase().includes(f.name.toLowerCase()) ||
-            f.name.toLowerCase().includes(pf.name.toLowerCase()),
-          );
-        }
-        if (planFeature) {
-          planFeature.status = pf.status === 'pass' ? 'pass' : 'fail';
-          planFeature.quality = pf.quality;
-          planFeature.lastSession = plan.iteration;
-          if (pf.status === 'fail') planFeature.failReason = pf.notes;
-          matchedFeatures++;
-        }
-      }
+    if (parsed.features && parsed.features.length > 0) {
+      const { matched } = reconcileReportedFeatures(area.features, parsed.features, plan.iteration);
+      matchedFeatures = matched;
 
-      const allParsedPass = parsed.features.every(f => f.status === 'pass');
-      if (allParsedPass && matchedFeatures === 0 && parsed.features.length > 0) {
-        for (const f of area.features) {
-          f.status = 'pass';
-          f.quality = 4;
-          f.lastSession = plan.iteration;
-        }
+      // The model claimed results but NONE resolved to a planned feature. This
+      // used to force-pass every feature at quality 4 — the exact "garbage is
+      // green" bug. Now we log the mismatch loudly and leave the features
+      // unverified (handled below).
+      if (matchedFeatures === 0) {
+        const reported = parsed.features.map(f => f.name).slice(0, 8).join(', ');
+        logger.warn(
+          `[harness] Area ${area.id}: executor reported ${parsed.features.length} feature(s) but NONE matched the plan by normalized name/id — leaving them unverified. Reported: ${reported}`,
+        );
+        emit({
+          type: 'harness:learning',
+          learning: `No reported features matched the plan for ${area.id} — kept unverified (reported: ${reported})`,
+        });
       }
     }
 
@@ -658,14 +657,12 @@ export function createHarnessOrchestrator(config: HarnessConfig): HarnessOrchest
     area.status = areaSuccess ? 'completed' : 'failed';
     if (areaSuccess) {
       area.completedAt = plan.iteration;
-      for (const f of area.features) {
-        if (f.status === 'pending') {
-          f.status = 'pass';
-          f.quality = 3;
-          f.lastSession = plan.iteration;
-        }
-      }
     }
+
+    // Honesty pass: a session ran over this area, so any feature it never
+    // reported on is UNVERIFIED — never a silent pass. (Previously areaSuccess
+    // force-passed every remaining 'pending' feature at quality 3.)
+    markUnreportedUnverified(area.features);
 
     const entry: ProgressEntry = {
       iteration: plan.iteration,
@@ -801,9 +798,11 @@ export function createHarnessOrchestrator(config: HarnessConfig): HarnessOrchest
         } else {
           // Exhausted retries — roll the bad session's changes back to the last
           // green checkpoint BEFORE promoting, so this area's broken work can't
-          // corrupt earlier passing areas. Then promote-with-gaps to unblock deps.
+          // corrupt earlier passing areas. Then promote-WITH-GAPS to unblock
+          // deps: the area is marked 'completed-with-gaps' (NOT 'completed') so
+          // it never counts toward the pass-rate numerator.
           await rollbackBeforePromote(result.area.id, plan.iteration);
-          result.area.status = 'completed';
+          result.area.status = 'completed-with-gaps';
           result.area.completedAt = plan.iteration;
           emit({
             type: 'harness:area-completed',
@@ -812,7 +811,7 @@ export function createHarnessOrchestrator(config: HarnessConfig): HarnessOrchest
           });
           emit({
             type: 'harness:learning',
-            learning: `Area ${result.area.id} promoted after ${retries} retries — dependents unblocked`,
+            learning: `Area ${result.area.id} promoted-with-gaps after ${retries} retries — dependents unblocked, but excluded from the pass-rate numerator (unverified)`,
           });
         }
       }
@@ -942,12 +941,14 @@ export function createHarnessOrchestrator(config: HarnessConfig): HarnessOrchest
             const retries = getRetryCount(progress, area.id);
             if (retries >= maxRetries) {
               // Discard this area's broken work back to the last green checkpoint
-              // before promoting-with-gaps (see runStreamingPool for rationale).
+              // before promoting-WITH-GAPS (see runStreamingPool for rationale):
+              // 'completed-with-gaps' unblocks dependents but is excluded from
+              // the pass-rate numerator.
               await rollbackBeforePromote(area.id, plan.iteration);
-              area.status = 'completed';
+              area.status = 'completed-with-gaps';
               area.completedAt = plan.iteration;
               emit({ type: 'harness:area-completed', areaId: area.id, iteration: plan.iteration });
-              emit({ type: 'harness:learning', learning: `Promoted ${area.id} to unblock dependents` });
+              emit({ type: 'harness:learning', learning: `Promoted-with-gaps ${area.id} to unblock dependents (excluded from pass-rate)` });
               promoted = true;
             } else {
               area.status = 'pending';
@@ -961,8 +962,10 @@ export function createHarnessOrchestrator(config: HarnessConfig): HarnessOrchest
           continue;
         }
 
-        // Check if everything is done
-        const allDone = plan.areas.every(a => a.status === 'completed');
+        // Check if everything is done (a gapped area is terminal too)
+        const allDone = plan.areas.every(
+          a => a.status === 'completed' || a.status === 'completed-with-gaps',
+        );
         if (allDone || plan.areas.filter(a => a.status === 'pending').length === 0) {
           emit({ type: 'harness:completed', plan, guide });
           persistTerminal('completed');

@@ -49,6 +49,12 @@ export interface RunDiff {
   removed: AreaDiffEntry[];
   /** Areas whose progress log shows new failures in b vs a. Derived from progress entries. */
   newFailureAreas: string[];
+  /**
+   * Areas promoted-with-gaps in the head run (`b`) — completed to unblock
+   * dependents but NOT honestly verified (excluded from its pass-rate numerator).
+   * Surfaced so a run that "passed" on the back of gapped areas is visible.
+   */
+  completedWithGaps: string[];
 }
 
 function areaRate(
@@ -130,6 +136,10 @@ export function diffRuns(a: HarnessRunDetail, b: HarnessRunDetail): RunDiff {
   const failuresB = failureAreaIds(b.progress);
   const newFailureAreas = [...failuresB].filter((id) => !failuresA.has(id));
 
+  const completedWithGaps = (b.plan?.areas ?? [])
+    .filter((x) => x.status === 'completed-with-gaps')
+    .map((x) => x.id);
+
   return {
     base: { runId: a.runId, label: safeLabel(a), startedAt: a.startedAt },
     head: { runId: b.runId, label: safeLabel(b), startedAt: b.startedAt },
@@ -149,5 +159,6 @@ export function diffRuns(a: HarnessRunDetail, b: HarnessRunDetail): RunDiff {
     added: entries.filter((e) => e.kind === 'added'),
     removed: entries.filter((e) => e.kind === 'removed'),
     newFailureAreas,
+    completedWithGaps,
   };
 }

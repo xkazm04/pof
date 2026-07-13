@@ -13,8 +13,19 @@ import type { EvalPass } from '@/lib/evaluator/module-eval-prompts';
 
 // ── Game Plan (master state) ────────────────────────────────────────────────
 
-export type FeatureStatus = 'pending' | 'in-progress' | 'pass' | 'fail' | 'skipped';
-export type AreaStatus = 'pending' | 'in-progress' | 'completed' | 'failed' | 'blocked';
+export type FeatureStatus = 'pending' | 'in-progress' | 'pass' | 'fail' | 'skipped' | 'unverified';
+export type AreaStatus =
+  | 'pending'
+  | 'in-progress'
+  | 'completed'
+  | 'failed'
+  | 'blocked'
+  /**
+   * Promoted to unblock dependents after exhausting retries, but NOT honestly
+   * verified. Excluded from the pass-rate numerator so promote-with-gaps can
+   * never flip garbage green (see `updatePlanStats`).
+   */
+  | 'completed-with-gaps';
 
 export interface PlannedFeature {
   id: string;

@@ -32,6 +32,7 @@ export interface HarnessRunRow {
   totalAreas: number;
   completedAreas: number;
   failedAreas: number;
+  gappedAreas: number;
   spentUsd: number;
   budgetUsd: number | null;
   sessions: number;
@@ -62,6 +63,7 @@ export interface HarnessRunSummary {
   totalAreas: number;
   completedAreas: number;
   failedAreas: number;
+  gappedAreas: number;
   spentUsd: number;
   budgetUsd: number | null;
   sessions: number;
@@ -93,6 +95,7 @@ function ensureTable(): void {
       total_areas INTEGER NOT NULL DEFAULT 0,
       completed_areas INTEGER NOT NULL DEFAULT 0,
       failed_areas INTEGER NOT NULL DEFAULT 0,
+      gapped_areas INTEGER NOT NULL DEFAULT 0,
       spent_usd REAL NOT NULL DEFAULT 0,
       budget_usd REAL,
       sessions INTEGER NOT NULL DEFAULT 0,
@@ -105,6 +108,7 @@ function ensureTable(): void {
     )
   `);
   migrateInterruptedStatus();
+  migrateGappedAreasColumn();
   getDb().exec(`
     CREATE INDEX IF NOT EXISTS idx_harness_runs_started
     ON harness_runs(started_at DESC)
@@ -149,6 +153,7 @@ function migrateInterruptedStatus(): void {
         total_areas INTEGER NOT NULL DEFAULT 0,
         completed_areas INTEGER NOT NULL DEFAULT 0,
         failed_areas INTEGER NOT NULL DEFAULT 0,
+        gapped_areas INTEGER NOT NULL DEFAULT 0,
         spent_usd REAL NOT NULL DEFAULT 0,
         budget_usd REAL,
         sessions INTEGER NOT NULL DEFAULT 0,
@@ -160,13 +165,42 @@ function migrateInterruptedStatus(): void {
         cost_json TEXT NOT NULL DEFAULT '{}'
       )
     `);
-    db.exec('INSERT INTO harness_runs SELECT * FROM harness_runs_old');
+    // Explicit column list (NOT SELECT *) — the old table predates gapped_areas,
+    // so a positional copy would mismatch. gapped_areas takes its DEFAULT 0.
+    db.exec(`
+      INSERT INTO harness_runs (
+        run_id, project_name, project_path, status, started_at, ended_at, duration_ms,
+        iteration, total_features, passing_features, pass_rate,
+        total_areas, completed_areas, failed_areas,
+        spent_usd, budget_usd, sessions, theme_directive, error_message,
+        plan_json, progress_json, guide_json, cost_json
+      )
+      SELECT
+        run_id, project_name, project_path, status, started_at, ended_at, duration_ms,
+        iteration, total_features, passing_features, pass_rate,
+        total_areas, completed_areas, failed_areas,
+        spent_usd, budget_usd, sessions, theme_directive, error_message,
+        plan_json, progress_json, guide_json, cost_json
+      FROM harness_runs_old
+    `);
     db.exec('DROP TABLE harness_runs_old');
     db.exec('COMMIT');
   } catch (err) {
     db.exec('ROLLBACK');
     throw err;
   }
+}
+
+/**
+ * Add the `gapped_areas` column to a table that already has the current CHECK
+ * (e.g. created before promote-with-gaps landed) but predates the column.
+ * SQLite `ADD COLUMN` is cheap + safe; guarded by a table_info probe so it runs
+ * at most once.
+ */
+function migrateGappedAreasColumn(): void {
+  const cols = getDb().prepare(`PRAGMA table_info(harness_runs)`).all() as Array<{ name: string }>;
+  if (cols.some((c) => c.name === 'gapped_areas')) return;
+  getDb().exec(`ALTER TABLE harness_runs ADD COLUMN gapped_areas INTEGER NOT NULL DEFAULT 0`);
 }
 
 // ── Stranded-run reaper ───────────────────────────────────────────────────────
@@ -224,6 +258,7 @@ function deriveStats(plan: GamePlan | null, cost: HarnessCostTotals | null) {
   const totalAreas = plan?.areas.length ?? 0;
   const completedAreas = plan?.areas.filter((a) => a.status === 'completed').length ?? 0;
   const failedAreas = plan?.areas.filter((a) => a.status === 'failed').length ?? 0;
+  const gappedAreas = plan?.areas.filter((a) => a.status === 'completed-with-gaps').length ?? 0;
   return {
     iteration: plan?.iteration ?? 0,
     totalFeatures,
@@ -232,6 +267,7 @@ function deriveStats(plan: GamePlan | null, cost: HarnessCostTotals | null) {
     totalAreas,
     completedAreas,
     failedAreas,
+    gappedAreas,
     spentUsd: cost?.spentUsd ?? 0,
     budgetUsd: cost?.budgetUsd ?? null,
     sessions: cost?.sessions ?? 0,
@@ -259,14 +295,14 @@ export function startRun(input: RunStartInput): void {
     INSERT INTO harness_runs (
       run_id, project_name, project_path, status, started_at,
       iteration, total_features, passing_features, pass_rate,
-      total_areas, completed_areas, failed_areas,
+      total_areas, completed_areas, failed_areas, gapped_areas,
       spent_usd, budget_usd, sessions,
       theme_directive,
       plan_json, progress_json, guide_json, cost_json
     ) VALUES (
       @run_id, @project_name, @project_path, 'running', @started_at,
       @iteration, @total_features, @passing_features, @pass_rate,
-      @total_areas, @completed_areas, @failed_areas,
+      @total_areas, @completed_areas, @failed_areas, @gapped_areas,
       @spent_usd, @budget_usd, @sessions,
       @theme_directive,
       @plan_json, '[]', NULL, @cost_json
@@ -283,6 +319,7 @@ export function startRun(input: RunStartInput): void {
     total_areas: s.totalAreas,
     completed_areas: s.completedAreas,
     failed_areas: s.failedAreas,
+    gapped_areas: s.gappedAreas,
     spent_usd: s.spentUsd,
     budget_usd: s.budgetUsd,
     sessions: s.sessions,
@@ -335,6 +372,7 @@ export function finalizeRun(input: RunFinalizeInput): void {
       total_areas = @total_areas,
       completed_areas = @completed_areas,
       failed_areas = @failed_areas,
+      gapped_areas = @gapped_areas,
       spent_usd = @spent_usd,
       budget_usd = @budget_usd,
       sessions = @sessions,
@@ -356,6 +394,7 @@ export function finalizeRun(input: RunFinalizeInput): void {
     total_areas: s.totalAreas,
     completed_areas: s.completedAreas,
     failed_areas: s.failedAreas,
+    gapped_areas: s.gappedAreas,
     spent_usd: s.spentUsd,
     budget_usd: s.budgetUsd,
     sessions: s.sessions,
@@ -383,6 +422,7 @@ function rowToSummary(row: Record<string, unknown>): HarnessRunSummary {
     totalAreas: (row.total_areas as number) ?? 0,
     completedAreas: (row.completed_areas as number) ?? 0,
     failedAreas: (row.failed_areas as number) ?? 0,
+    gappedAreas: (row.gapped_areas as number) ?? 0,
     spentUsd: (row.spent_usd as number) ?? 0,
     budgetUsd: (row.budget_usd as number | null) ?? null,
     sessions: (row.sessions as number) ?? 0,
@@ -414,12 +454,12 @@ export function listRuns(opts: { limit?: number; projectPath?: string } = {}): H
   const sql = opts.projectPath
     ? `SELECT run_id, project_name, project_path, status, started_at, ended_at, duration_ms,
               iteration, total_features, passing_features, pass_rate,
-              total_areas, completed_areas, failed_areas,
+              total_areas, completed_areas, failed_areas, gapped_areas,
               spent_usd, budget_usd, sessions, theme_directive, error_message
        FROM harness_runs WHERE project_path = ? ORDER BY started_at DESC LIMIT ?`
     : `SELECT run_id, project_name, project_path, status, started_at, ended_at, duration_ms,
               iteration, total_features, passing_features, pass_rate,
-              total_areas, completed_areas, failed_areas,
+              total_areas, completed_areas, failed_areas, gapped_areas,
               spent_usd, budget_usd, sessions, theme_directive, error_message
        FROM harness_runs ORDER BY started_at DESC LIMIT ?`;
   const args = opts.projectPath ? [opts.projectPath, limit] : [limit];
