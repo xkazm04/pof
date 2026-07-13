@@ -14,6 +14,7 @@ const GlbViewer = dynamic(() => import('./shared/GlbViewer').then((m) => m.GlbVi
 });
 import { selectedCandidate } from './shared/genHistory';
 import { useGenerativeStep } from './shared/useGenerativeStep';
+import { withGenericFixCopy } from './shared/genericFixCopy';
 import { genericGalleryCandidates } from './shared/genericGalleryCandidates';
 import { useLabPipelineStore } from '../labPipelineStore';
 import { useCanonStore } from '../canonStore';
@@ -97,7 +98,11 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
   const { art, history, generate, reselect } = useGenerativeStep(entity.id, step, galleryCandidates, produced);
 
   const data = art?.data ?? {};
-  const acceptance = useMemo(() => spec.accept(art?.data ?? {}), [spec, art?.data]);
+  // Derive acceptance, then merge in plain-language remediation copy (bespoke
+  // `spec.copy` or a neutral generic fallback) so the generic renderer — serving the
+  // ~330 non-Items steps — gets the same why/suggestion/Produce-fix affordance the
+  // bespoke Items steps have. Memoized on the artifact data ref, like StaticStepFrame.
+  const acceptance = useMemo(() => withGenericFixCopy(spec, spec.accept(art?.data ?? {}), art?.data ?? {}), [spec, art?.data]);
   const links = readLinks(data);
   const linkRes = links.length ? linkTargetsExist(links, (c, e) => !!entitiesByCatalog[c]?.[e]) : null;
 
@@ -108,6 +113,16 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
     const cls = catalogId ? deliverableClassOf(getStepFact(catalogId, step)?.deliverable ?? '', catalogId) : null;
     const pack = cls && catalogId ? qualityPack(cls, catalogId) : '';
     return [pack, canon, `Produce ${spec.label} for ${entity.name}. ${dir}`].filter(Boolean).join('\n\n');
+  };
+
+  // One-click "Produce fix": dispatches the corrective direction through the step's OWN
+  // prompt logic, reusing the exact state-change path the Produce panel uses (a gallery
+  // step appends a corrective batch; a static step re-produces). Deferred is a correct
+  // terminal state, so no fix is offered there (withGenericFixCopy also omits fixDirection).
+  const runFix = (fixDir?: string) => {
+    const dir = fixDir ?? spec.defaultDirection ?? '';
+    if (spec.view.kind === 'gallery') generate(dir, buildPrompt(dir));
+    else produce(entity.id, step, produced);
   };
 
   const cli = (onComplete: (ctx?: { direction: string; prompt: string }) => void) => (
@@ -174,7 +189,8 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
           {linkRes.label}: {linkRes.detail}{linkRes.reason ? ` — ${linkRes.reason}` : ''}
         </div>
       )}
-      <StepFrame t={t} acceptance={acceptance} panels={panels} />
+      <StepFrame t={t} acceptance={acceptance} panels={panels}
+        onFix={acceptance.status === 'deferred' ? undefined : runFix} />
     </>
   );
 }

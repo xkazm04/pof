@@ -16,6 +16,16 @@ export type ViewDescriptor =
   | { kind: 'manifest'; field: string }
   | { kind: 'graph'; field: string };
 
+/** Per-step remediation copy: a plain-language cause (`why`), an optional suggested
+ *  action (`suggestion`), and an optional corrective direction (`fixDirection`) that
+ *  seeds a one-click "Produce fix". Optional on a StepSpec — ArchetypeStep derives a
+ *  neutral, honest fallback from the checker result when a step supplies none. */
+export interface StepFixCopy {
+  why: string;
+  suggestion?: string;
+  fixDirection?: string;
+}
+
 export interface StepSpec {
   archetype: ArchetypeId;
   label: string;
@@ -24,6 +34,10 @@ export interface StepSpec {
   produce: (entity: LabEntity) => StepOutput;
   /** Derives the acceptance result from the persisted artifact data. */
   accept: Checker;
+  /** Optional plain-language remediation copy for a non-passing acceptance. When
+   *  absent, ArchetypeStep falls back to a generic copy derived from the checker
+   *  result (status + optional reason) — never invents catalog-specific content. */
+  copy?: (data: Record<string, unknown>) => StepFixCopy;
   /** Optional L2 static (UE codebase-analysis) checks, run server/CLI-side against the UE root.
    *  Entity-aware because the symbol/row names derive from the entity. */
   staticChecks?: (entity: LabEntity) => UeChecker[];
