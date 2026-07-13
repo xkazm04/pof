@@ -38,6 +38,20 @@ function withOverride(config: SimulationConfig, id: string, baseAmount: number):
 }
 
 /**
+ * The sweep's re-run primitive, shared: re-run the seeded engine with one flow's
+ * `baseAmount` overridden and read back the chosen output. Deterministic given a
+ * fixed seed. Reused by the tornado sweep and the goal-seek solver (economy lever).
+ */
+export function runWithFlowOverride(
+  config: SimulationConfig,
+  id: string,
+  baseAmount: number,
+  output: SweepOutput,
+): number {
+  return extractOutput(runSimulation(withOverride(config, id, baseAmount)), output);
+}
+
+/**
  * Deterministic one-at-a-time sensitivity sweep over faucet/sink `baseAmount`.
  * For each parameter, re-runs the seeded economy engine at baseValue × (1 ± range),
  * measures how far the chosen output moves, and ranks parameters by that swing —
@@ -54,8 +68,8 @@ export function runSensitivitySweep(
   const entries: TornadoEntry[] = params.map((flow) => {
     const lowValue = round2(flow.baseAmount * (1 - range));
     const highValue = round2(flow.baseAmount * (1 + range));
-    const low = extractOutput(runSimulation(withOverride(config, flow.id, lowValue)), opts.output);
-    const high = extractOutput(runSimulation(withOverride(config, flow.id, highValue)), opts.output);
+    const low = runWithFlowOverride(config, flow.id, lowValue, opts.output);
+    const high = runWithFlowOverride(config, flow.id, highValue, opts.output);
     return {
       paramId: flow.id,
       label: flow.name,

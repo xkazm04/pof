@@ -23,6 +23,7 @@ import { WealthDistributionChart } from './WealthDistributionChart';
 import { SupplyDemandSection } from './SupplyDemandSection';
 import { AlertsSection } from './AlertsSection';
 import { TornadoSection } from './TornadoSection';
+import { GoalSeekPanel } from './GoalSeekPanel';
 import { StatCard } from './StatCard';
 
 // Public re-exports (preserve every symbol the original module exported).
@@ -245,6 +246,9 @@ export function EconomySimulatorView() {
 
             {/* Parameter Sensitivity (tornado) */}
             {config && <TornadoSection config={config} />}
+
+            {/* Goal-seek: auto-balance a lever to a target */}
+            {config && <GoalSeekPanel config={config} />}
 
             {/* UE5 Code Generator */}
             <EconomyCodeGenPanel />
