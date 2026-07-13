@@ -45,6 +45,13 @@ describe('GEN_PROMPTING_PRACTICES', () => {
     expect(text).toMatch(/pose/i);
     expect(text).toMatch(/artifact|occlu|floater|fused|clean/i);
   });
+
+  it('encodes part-segmentation prep: grid-combined multi-view input + review the part list', () => {
+    const text = GEN_PROMPTING_PRACTICES.map((p) => `${p.summary} ${p.detail}`).join(' ');
+    expect(text).toMatch(/grid|combined.{0,20}multi.?view|single image.{0,30}views/i);
+    expect(text).toMatch(/segment|part/i);
+    expect(text).toMatch(/review|assembly logic|swap.?slot|modular/i);
+  });
 });
 
 describe('assembleReferenceDirective', () => {

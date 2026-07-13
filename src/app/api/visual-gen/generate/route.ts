@@ -7,6 +7,7 @@ import { parseImageDataUrl } from '@/lib/visual-gen/triposr-runner';
 import { startTriposrJob } from '@/lib/visual-gen/triposr-job-store';
 import { startHunyuanJob } from '@/lib/visual-gen/hunyuan-job-store';
 import { startTripoJob } from '@/lib/visual-gen/tripo-job-store';
+import { polycountFor } from '@/lib/visual-gen/polycount-presets';
 
 /**
  * POST /api/visual-gen/generate
@@ -28,8 +29,10 @@ export async function POST(request: NextRequest) {
       imageDataUrl?: string;
       prompt?: string;
       mcResolution?: number;
+      assetClass?: string;
     };
-    const { mode, providerId, imageDataUrl, prompt, mcResolution } = body;
+    const { mode, providerId, imageDataUrl, prompt, mcResolution, assetClass } = body;
+    const faceLimit = assetClass ? polycountFor(assetClass)?.faceLimit : undefined;
 
     if (!mode || !providerId) return apiError('Missing required fields: mode, providerId', 400);
 
@@ -64,14 +67,14 @@ export async function POST(request: NextRequest) {
       const { stamp, outputPath } = outFor('tripo3d');
       if (mode === 'text-to-3d') {
         if (!prompt?.trim()) return apiError('Missing prompt for text-to-3d', 400);
-        const jobId = startTripoJob({ mode: 'text-to-3d', prompt, outputPath, pbr: true });
+        const jobId = startTripoJob({ mode: 'text-to-3d', prompt, outputPath, pbr: true, faceLimit });
         return apiSuccess({ jobId, provider: 'tripo3d', mode }, 202);
       }
       if (mode === 'image-to-3d') {
         if (!imageDataUrl) return apiError('Missing imageDataUrl for image-to-3d', 400);
         const inPath = imageToFile('tripo3d', stamp);
         if (!inPath) return apiError('imageDataUrl must be a base64 PNG/JPG/WebP data URL', 400);
-        const jobId = startTripoJob({ mode: 'image-to-3d', imagePath: inPath, outputPath, pbr: true });
+        const jobId = startTripoJob({ mode: 'image-to-3d', imagePath: inPath, outputPath, pbr: true, faceLimit });
         return apiSuccess({ jobId, provider: 'tripo3d', mode }, 202);
       }
       return apiError('tripo3d supports text-to-3d and image-to-3d', 400);

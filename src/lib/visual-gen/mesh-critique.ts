@@ -104,6 +104,8 @@ export interface CritiqueDeps {
   fileExists?: (p: string) => boolean;
   env?: Record<string, string | undefined>;
   triposrRoot?: string;
+  /** Class-aware gate overrides (see polycount-presets `critiqueThresholdsFor`). */
+  thresholds?: Partial<CritiqueThresholds>;
 }
 
 /** Critique a generated mesh: run the trimesh script (via the TripoSR venv) + score it. */
@@ -120,7 +122,7 @@ export async function critiqueMesh(glbPath: string, deps: CritiqueDeps = {}): Pr
   const { stdout } = await run(py, [script, '--mesh', glbPath], 60_000);
   const parsed = parseCritiqueMetrics(stdout);
   if (!parsed.ok || !parsed.metrics) return { ok: false, error: parsed.error ?? 'critique produced no metrics' };
-  return { ok: true, metrics: parsed.metrics, ...scoreMesh(parsed.metrics) };
+  return { ok: true, metrics: parsed.metrics, ...scoreMesh(parsed.metrics, deps.thresholds) };
 }
 
 const defaultRun: RunFn = async (cmd, args, timeoutMs) => {
