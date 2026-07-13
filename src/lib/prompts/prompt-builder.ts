@@ -18,6 +18,7 @@ import {
   type ProjectContext,
 } from '@/lib/prompt-context';
 import type { ErrorContextEntry } from '@/types/error-memory';
+import type { PromptKind } from '@/lib/knowledge/types';
 import { formatWiringRequirements, type WiringRequirement } from '@/lib/knowledge/wiring-requirements';
 
 export type { WiringRequirement };
@@ -67,6 +68,12 @@ export class PromptBuilder {
       includeRules?: boolean;
       extraRules?: string[];
       errorMemory?: ErrorContextEntry[];
+      /** The kind of prompt — routes UE gotchas + tripwire (default 'ue-cpp' in the UE branch). */
+      promptKind?: PromptKind;
+      /** Module id, so gotchas + knowledge tips are scoped to this module's domains. */
+      module?: string;
+      /** Known-asset domains to inject (e.g. ['character','animation']). */
+      knownAssetDomains?: string[];
     },
   ): this {
     this._projectContext = buildProjectContextHeader(ctx, opts);

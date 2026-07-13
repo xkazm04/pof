@@ -4,6 +4,9 @@ import { PromptBuilder } from '@/lib/prompts/prompt-builder';
 import { qualityPack, PROMPT_VERSION } from '@/lib/prompts/quality';
 import type { DeliverableClass } from '@/lib/judge/dimensions';
 import { isArenaSlice } from '@/lib/catalog/arena-slice';
+import type { PromptKind } from '@/lib/knowledge/types';
+import { knownAssetDomainsForModule } from '@/lib/knowledge/ue-known-assets';
+import type { SubModuleId } from '@/types/modules';
 
 export type GenerationStep = 'scaffold-cpp' | 'author-python' | 'wire' | 'verify';
 
@@ -26,14 +29,63 @@ function disciplineFor(catalogId: string): DeliverableClass {
 }
 
 /**
+ * Maps each catalog to the PoF module whose knowledge domains its generation
+ * prompts should carry — so `buildProjectContextHeader` scopes UE gotchas +
+ * known-asset paths + knowledge tips to that domain (via `MODULE_GOTCHA_DOMAINS`
+ * / `knownAssetDomainsForModule`) instead of hauling the conservative superset.
+ * A catalog ABSENT here falls back to the full gotcha superset for the kind (an
+ * unknown module never silently drops a relevant pitfall). Currency has no
+ * domain-scoped module, so it is intentionally omitted.
+ */
+const RECIPE_MODULE: Record<string, SubModuleId> = {
+  spellbook: 'arpg-gas',
+  items: 'arpg-inventory',
+  'loot-tables': 'arpg-loot',
+  bestiary: 'arpg-enemy-ai',
+  'combat-map': 'arpg-combat',
+  'screen-flow': 'arpg-ui',
+  'zone-map': 'arpg-world',
+  'state-graph': 'arpg-animation',
+  materials: 'materials',
+  characters: 'arpg-character',
+};
+
+/** The module a recipe's prompts scope knowledge to, or undefined (→ superset). */
+function moduleForRecipe(catalogId: string): SubModuleId | undefined {
+  return RECIPE_MODULE[catalogId];
+}
+
+/**
+ * The prompt kind a recipe step authors with. `author-python` and `wire` drive
+ * the FULL editor via `-ExecutePythonScript` (Python authoring — they must carry
+ * the python-only pitfalls: Interchange FBX crash, unit scale, introspect-first);
+ * `scaffold-cpp` and `verify` are C++ (class scaffolds / functional tests).
+ */
+function promptKindForStep(step: GenerationStep): PromptKind {
+  return step === 'author-python' || step === 'wire' ? 'ue-python' : 'ue-cpp';
+}
+
+/**
  * A PromptBuilder pre-seeded with the project context and, for every PRODUCING
  * step (not `verify`, which only runs a test), the module-appropriate WS1
  * quality pack — composed ONCE per prompt so the token cost stays bounded and
  * the produced asset aims at the same bar the strict judge scores.
+ *
+ * The project context is now routed through the knowledge system: it forwards a
+ * per-step `promptKind` + a per-recipe `module` + that module's known-asset
+ * domains, so python-authoring recipe steps finally carry the python gotchas +
+ * exact asset paths they previously omitted (all steps hardcoded `ue-cpp` with
+ * no module → zero python pitfalls, zero known assets).
  */
 function recipeBuilder(ctx: ProjectContext, catalogId: string, step: GenerationStep): PromptBuilder {
+  const module = moduleForRecipe(catalogId);
+  const knownAssetDomains = module ? knownAssetDomainsForModule(module) : [];
   return new PromptBuilder()
-    .withProjectContext(ctx)
+    .withProjectContext(ctx, {
+      promptKind: promptKindForStep(step),
+      module,
+      knownAssetDomains,
+    })
     .withQualityPack(step === 'verify' ? '' : qualityPack(disciplineFor(catalogId), catalogId));
 }
 
