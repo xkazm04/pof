@@ -2,6 +2,7 @@ import { registerCatalogPipeline } from '../pipeline-registry';
 import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
 import { runtimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
+import { imageGalleryCandidates } from '@/components/layout-lab/steps/shared/imageGalleryCandidates';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
@@ -150,6 +151,13 @@ registerCatalogPipeline({
       archetype: 'gallery',
       label: 'Icon 2D Art',
       view: { kind: 'gallery', field: 'selected', candidates: 4 },
+      // Pluggable generator: surfaces REAL generated thumbnails when any exist on disk
+      // (served via /api/visual-gen/asset/…), and falls back to the honest deterministic
+      // swatch preview when the generated/ dir is empty. Selection/acceptance unchanged.
+      genCandidates: {
+        needsAssets: true,
+        build: (dir, seq, assets) => imageGalleryCandidates('selected', 4, assets, dir, seq),
+      },
       produce: (e: LabEntity) => ({
         data: { selected: 0 },
         ueAssets: [`/Game/UI/Icons/Sets/T_${slug(e.name)}_Atlas`],

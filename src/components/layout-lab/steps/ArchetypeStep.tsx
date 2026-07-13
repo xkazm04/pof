@@ -16,6 +16,7 @@ const GlbViewer = dynamic(() => import('./shared/GlbViewer').then((m) => m.GlbVi
 });
 import { selectedCandidate } from './shared/genHistory';
 import { useGenerativeStep } from './shared/useGenerativeStep';
+import { useGeneratedImageAssets } from './shared/useGeneratedImageAssets';
 import { withGenericFixCopy } from './shared/genericFixCopy';
 import { genericGalleryCandidates } from './shared/genericGalleryCandidates';
 import { useLabPipelineStore } from '../labPipelineStore';
@@ -113,12 +114,18 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
   // Gallery archetype: the ONE browse→compare→select loop (shared useGenerativeStep +
   // CandidateGallery + genHistory). generate/reselect derive next-state from LIVE store
   // data inside produceFrom, so two dispatches in one frame serialize (see 3d50330).
+  //
+  // A step may plug in its own candidate generator (spec.genCandidates) to surface REAL
+  // generated thumbnails; ArchetypeStep pre-fetches the asset manifest when it asks for
+  // one and passes it in. Absent → the default deterministic swatch generator (unchanged).
+  const imageAssets = useGeneratedImageAssets(spec.view.kind === 'gallery' && !!spec.genCandidates?.needsAssets);
   const galleryCandidates = useCallback(
-    (dir: string, seq: number) =>
-      spec.view.kind === 'gallery'
-        ? genericGalleryCandidates(spec.view.field, spec.view.candidates, dir, seq)
-        : [],
-    [spec],
+    (dir: string, seq: number) => {
+      if (spec.view.kind !== 'gallery') return [];
+      if (spec.genCandidates) return spec.genCandidates.build(dir, seq, imageAssets);
+      return genericGalleryCandidates(spec.view.field, spec.view.candidates, dir, seq);
+    },
+    [spec, imageAssets],
   );
   const { art, history, generate, reselect } = useGenerativeStep(entity.id, step, galleryCandidates, produced);
 
@@ -176,8 +183,15 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
       ) }] : []),
       { label: 'Selected', node: (
         <div style={{ display: 'grid', gap: 8 }}>
-          <div style={{ aspectRatio: '1', maxWidth: 160, borderRadius: t.glass ? 10 : 2, background: sel?.swatch ?? t.panel, border: `1px solid ${t.line}` }} />
-          <span style={{ fontSize: 12, color: t.muted }}>Deterministic seed preview — not the generated asset.</span>
+          <div style={{ aspectRatio: '1', maxWidth: 160, borderRadius: t.glass ? 10 : 2, background: sel?.swatch ?? t.panel, border: `1px solid ${t.line}`, overflow: 'hidden' }}>
+            {sel?.imageUrl && (
+              // eslint-disable-next-line @next/next/no-img-element -- served blob from /api/visual-gen/asset; next/image adds no value for a local API stream
+              <img src={sel.imageUrl} alt={sel.caption ?? 'selected generated asset'} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            )}
+          </div>
+          <span style={{ fontSize: 12, color: t.muted }}>
+            {sel?.imageUrl ? 'Real generated asset preview.' : 'Deterministic seed preview — not the generated asset.'}
+          </span>
           {sel && assetPath
             ? <span className={t.fontMono} style={{ fontSize: 14, color: t.ok }}>✓ asset target: {assetPath} <span style={{ color: t.muted }}>(written by the drain)</span></span>
             : <span style={{ fontSize: 14, color: t.muted }}>Pick a candidate; the choice + its prompt persist. The asset is written to that path when the gate drain runs.</span>}

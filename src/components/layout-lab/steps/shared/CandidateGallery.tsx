@@ -104,7 +104,11 @@ function BatchBlock({ t, batch, n, latest, divider, selectedId, onSelect, column
               title={batch.direction || batch.prompt}
               style={{ display: 'grid', gap: 4, cursor: 'pointer', background: 'transparent', border: 'none', padding: 0, textAlign: 'left' }}
             >
-              <span style={{ display: 'block', width: '100%', aspectRatio: '1', borderRadius: t.glass ? 10 : 2, background: c.swatch, border: sel ? `3px solid ${t.ink}` : `1px solid ${t.line}`, boxShadow: sel ? `0 0 0 3px ${t.accentBg}` : 'none', position: 'relative' }}>
+              <span style={{ display: 'block', width: '100%', aspectRatio: '1', borderRadius: t.glass ? 10 : 2, background: c.swatch, border: sel ? `3px solid ${t.ink}` : `1px solid ${t.line}`, boxShadow: sel ? `0 0 0 3px ${t.accentBg}` : 'none', position: 'relative', overflow: 'hidden' }}>
+                {c.imageUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element -- served blob from /api/visual-gen/asset; next/image adds no value for a local API stream
+                  <img src={c.imageUrl} alt={c.caption ?? `candidate ${i + 1}`} loading="lazy" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                )}
                 {sel && (
                   <span aria-hidden="true" style={{ position: 'absolute', top: 4, right: 6, width: 18, height: 18, borderRadius: 999, background: t.ink, color: t.onAccent, fontSize: 13, fontWeight: 700, lineHeight: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>✓</span>
                 )}

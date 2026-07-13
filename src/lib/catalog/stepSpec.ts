@@ -2,6 +2,32 @@ import type { Checker } from './acceptance/types';
 import type { UeChecker } from './acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import type { StepOutput } from '@/components/layout-lab/labPipelineStore';
+import type { GenCandidate } from '@/components/layout-lab/steps/shared/genHistory';
+
+/** A generated candidate before it is assigned a stable id (the batch stamps ids). */
+export type RawGenCandidate = Omit<GenCandidate, 'id'>;
+
+/** A real on-disk generated asset the gallery can surface as a thumbnail. */
+export interface GenAssetRef {
+  name: string;
+  /** Served URL under /api/visual-gen/asset/… */
+  url: string;
+}
+
+/**
+ * Pluggable candidate generator for a `gallery` step (Direction: real assets in generic
+ * galleries). Same contract as the bespoke Items generators (`itemGenCandidates`) —
+ * `RawGenCandidate[]` from `(direction, seq)` — but kept **synchronous-friendly** for
+ * real assets: ArchetypeStep pre-fetches the asset manifest once (when `needsAssets`)
+ * and passes it in, so `build` stays pure. When `assets` is empty (none on disk / not
+ * requested) `build` must fall back honestly (deterministic swatches), never fake a
+ * "real" preview. Absent → ArchetypeStep uses the default swatch generator unchanged.
+ */
+export interface GenCandidatesSpec {
+  /** Ask ArchetypeStep to fetch the generated-image manifest and pass it to `build`. */
+  needsAssets?: boolean;
+  build: (direction: string, seq: number, assets: GenAssetRef[]) => RawGenCandidate[];
+}
 
 /** The common archetypes (Hybrid: these use the generic renderer; complex rows may register a bespoke component instead). */
 export type ArchetypeId =
@@ -57,6 +83,10 @@ export interface StepSpec {
    *  re-grades it from disk truth. Steps labeled "UE Packaging" are matched without
    *  the flag (see `isPackagingStep`) — set it only for non-standard labels. */
   packaging?: boolean;
+  /** Optional pluggable candidate generator for a `gallery` step. When present,
+   *  ArchetypeStep's gallery uses it (real thumbnails from disk when available) instead
+   *  of the default deterministic swatch generator. Ignored for non-gallery steps. */
+  genCandidates?: GenCandidatesSpec;
   /** Optional CLI direction default + note for the Produce panel. */
   produceNote?: string;
   defaultDirection?: string;

@@ -30,8 +30,13 @@
 export interface GenCandidate {
   /** Stable id, unique within the step (e.g. `b0-c2`). */
   id: string;
-  /** CSS background for the gallery thumbnail (gradient / color / url(...)). */
+  /** CSS background for the gallery thumbnail (gradient / color). Always present so a
+   *  candidate has a visible surface even while an `imageUrl` loads or when none exists. */
   swatch: string;
+  /** Optional URL of a REAL generated thumbnail image (served via /api/visual-gen/asset/…).
+   *  When set the gallery renders the image over `swatch`; absent → the swatch is a
+   *  deterministic seed preview, not a real asset. */
+  imageUrl?: string;
   /** Optional sub-label under the thumbnail (e.g. "4200 tris", "Albedo·Normal·ORM"). */
   caption?: string;
   /** Step-specific fields projected onto the artifact's top-level data when selected. */
