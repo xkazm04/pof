@@ -1,5 +1,7 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
-import { minLength, fieldsPopulated, withinPercent, selected, minCount } from '../acceptance/dataCheckers';
+import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
+import { powerWithinTierTarget, monsterRarityWithinBands } from '../acceptance/invariants';
+import { allOf } from '../acceptance/combinators';
 import { runtimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
@@ -216,9 +218,14 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('rarity', 'Rarity tier + multipliers + at least one modifier declared', [
-        'rarityTier', 'lifeMultiplier', 'modifiers',
-      ]),
+      // Content invariant (arpg-monster-rarity): per-tier life multipliers must sit within
+      // the canon ×bands (Magic 1.5–2, Rare 4–6, Unique 6–10), not just be present.
+      accept: allOf(
+        fieldsPopulated('rarity', 'Rarity tier + multipliers + at least one modifier declared', [
+          'rarityTier', 'lifeMultiplier', 'modifiers',
+        ]),
+        monsterRarityWithinBands('rarity', 'Rarity life multipliers within canon bands'),
+      ),
     },
 
     // ── 6. Abilities ──────────────────────────────────────────────────────────
@@ -310,7 +317,8 @@ registerCatalogPipeline({
           threat: 103,
         },
       }),
-      accept: withinPercent('threat', 'Threat within ±10% of tier (100)', 100, 10),
+      // Content invariant (proj-balance): threat within canon ±10% of the tier target (100).
+      accept: powerWithinTierTarget('threat', 'Threat within canon ±10% of tier target (proj-balance)'),
     },
 
     // ── 9. Concept 2D Art ─────────────────────────────────────────────────────

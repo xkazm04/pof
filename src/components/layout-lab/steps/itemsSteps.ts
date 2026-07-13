@@ -1,3 +1,4 @@
+import { PRICE_RATIO, POWER_TOL_PCT } from '@/lib/catalog/acceptance/invariants';
 import type { Acceptance } from './StepFrame';
 import type { CheckerContext } from '@/lib/catalog/acceptance/types';
 import type { LabEntity } from '../useLabCatalogData';
@@ -64,10 +65,11 @@ export function priceRatio(cost: number, power: number): number {
   return cost / expectedPrice(power);
 }
 
-/** Price/power band: cost must sit within 0.8–1.2× of the expected curve. */
-export const PRICE_RATIO_BAND = { lo: 0.8, hi: 1.2 } as const;
-/** Power band: power must sit within ±10% of its tier target. */
-export const POWER_BAND = { lo: 0.9, hi: 1.1 } as const;
+/** Price/power band: cost must sit within the canon 0.8–1.2× band of the expected curve.
+ *  Sourced from `proj-balance` via invariants.ts — never hardcoded here. */
+export const PRICE_RATIO_BAND = { lo: PRICE_RATIO.min, hi: PRICE_RATIO.max } as const;
+/** Power band: power must sit within canon ±POWER_TOL_PCT% of its tier target (proj-balance). */
+export const POWER_BAND = { lo: 1 - POWER_TOL_PCT / 100, hi: 1 + POWER_TOL_PCT / 100 } as const;
 
 /** True when the item's price sits inside the price/power band. */
 export function priceInBand(cost: number, power: number): boolean {

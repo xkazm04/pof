@@ -1,5 +1,7 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { minLength, fieldsPopulated, withinPercent, selected, minCount } from '../acceptance/dataCheckers';
+import { componentsSumTo, arithmeticReconciles } from '../acceptance/invariants';
+import { allOf } from '../acceptance/combinators';
 import { runtimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
@@ -89,11 +91,20 @@ registerCatalogPipeline({
         },
         ueAssets: ['/Game/LootSystem/DT_LootTables'],
       }),
-      accept: fieldsPopulated('dropGen', 'itemClassWeights / dropCount / ilvlSource populated', [
-        'itemClassWeights',
-        'dropCount',
-        'ilvlSource',
-      ]),
+      accept: allOf(
+        // Content invariant: the item-class drop weights must actually sum to 100%.
+        componentsSumTo(
+          'dropGen.itemClassWeights',
+          ['weaponPct', 'armourPct', 'accessoryPct', 'currencyPct', 'gemPct', 'questPct', 'consumablePct'],
+          100,
+          'Item-class drop weights sum to 100%',
+        ),
+        fieldsPopulated('dropGen', 'itemClassWeights / dropCount / ilvlSource populated', [
+          'itemClassWeights',
+          'dropCount',
+          'ilvlSource',
+        ]),
+      ),
       staticChecks: () => [
         cppSymbolExists('UARPGLootDropComponent', 'Loot drop component present in UE Source'),
       ],
@@ -129,12 +140,16 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('rarityOdds', 'normal / magic / rare / unique odds populated', [
-        'normal',
-        'magic',
-        'rare',
-        'unique',
-      ]),
+      accept: allOf(
+        // Content invariant: the baseline rarity distribution must sum to 100%.
+        componentsSumTo('rarityOdds', ['normal', 'magic', 'rare', 'unique'], 100, 'Baseline rarity odds sum to 100%'),
+        fieldsPopulated('rarityOdds', 'normal / magic / rare / unique odds populated', [
+          'normal',
+          'magic',
+          'rare',
+          'unique',
+        ]),
+      ),
     },
 
     // ── 4. Magic Find & Smart Loot ────────────────────────────────────────────
@@ -403,7 +418,12 @@ registerCatalogPipeline({
           },
         };
       },
-      accept: withinPercent('raresPerHour', 'Rares/hour within ±20% of tier target (12)', 12, 20),
+      // Content invariant: the headline raresPerHour must actually equal killsPerHour ×
+      // rareItemsPerKill (no reverse-engineered figure), AND land within the ±20% tier band.
+      accept: allOf(
+        arithmeticReconciles('balance', { result: 'raresPerHour', op: 'product', operands: ['killsPerHour', 'rareItemsPerKill'] }, 'raresPerHour = killsPerHour × rareItemsPerKill'),
+        withinPercent('raresPerHour', 'Rares/hour within ±20% of tier target (12)', 12, 20),
+      ),
     },
 
     // ── 8. Icon 2D Art ────────────────────────────────────────────────────────

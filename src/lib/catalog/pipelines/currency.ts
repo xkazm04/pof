@@ -1,5 +1,6 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
-import { minLength, fieldsPopulated, withinPercent, selected, minCount } from '../acceptance/dataCheckers';
+import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
+import { faucetSinkBalanced } from '../acceptance/invariants';
 import { runtimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
@@ -195,7 +196,9 @@ registerCatalogPipeline({
           },
         };
       },
-      accept: withinPercent('ratio', 'Faucet/sink balanced within ±15% (target 100)', 100, 15),
+      // Content invariant (proj-economy): validates the RAW faucet vs sink figures, not a
+      // self-reported ratio — reads the ±15% tolerance from canon (invariants.ts).
+      accept: faucetSinkBalanced('balance', 'faucetPerHour', 'sinkPerHour', 'Faucet/sink balanced within canon ±15% (proj-economy)'),
     },
 
     // ── 4. Icon 2D Art ────────────────────────────────────────────────────────

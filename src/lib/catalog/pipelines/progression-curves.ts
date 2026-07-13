@@ -1,5 +1,7 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { minLength, fieldsPopulated, withinPercent, selected, minCount } from '../acceptance/dataCheckers';
+import { xpGrowthWithinBand, arithmeticReconciles } from '../acceptance/invariants';
+import { allOf } from '../acceptance/combinators';
 import { runtimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
@@ -149,12 +151,17 @@ registerCatalogPipeline({
           },
         };
       },
-      accept: fieldsPopulated('curveFormula', 'formula / base / exponent / softCap populated', [
-        'formula',
-        'base',
-        'exponent',
-        'softCap',
-      ]),
+      // Content invariant (arpg-leveling): the growth exponent must be the ~1.08 geometric
+      // rate from canon, not an arbitrary curve that passes a mere field-populated check.
+      accept: allOf(
+        fieldsPopulated('curveFormula', 'formula / base / exponent / softCap populated', [
+          'formula',
+          'base',
+          'exponent',
+          'softCap',
+        ]),
+        xpGrowthWithinBand('curveFormula', 'exponent', 'XP growth exponent ≈ canon geometric rate (arpg-leveling)'),
+      ),
       staticChecks: () => [
         cppSymbolExists('FARPGXPCurveRow', 'XP curve row struct present in UE Source'),
       ],
@@ -538,11 +545,16 @@ registerCatalogPipeline({
           },
         };
       },
-      accept: withinPercent(
-        'minutesToNextLevel',
-        'L50→L51 minutes-to-level within ±20% of 45-minute target',
-        45,
-        20,
+      // Content invariant: minutesToNextLevel must actually equal xpToNextL50 / xpPerMinute
+      // (no reverse-engineered headline), AND land within the ±20% pacing target.
+      accept: allOf(
+        arithmeticReconciles('balance', { result: 'minutesToNextLevel', op: 'quotient', operands: ['xpToNextL50', 'xpPerMinute'] }, 'minutesToNextLevel = xpToNextL50 / xpPerMinute'),
+        withinPercent(
+          'minutesToNextLevel',
+          'L50→L51 minutes-to-level within ±20% of 45-minute target',
+          45,
+          20,
+        ),
       ),
     },
 

@@ -1,6 +1,7 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
 import { linksResolve } from '../acceptance/linkCheckers';
+import { sumReconciles } from '../acceptance/invariants';
 import { allOf } from '../acceptance/combinators';
 import { runtimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists } from '../acceptance/ueStaticCheckers';
@@ -192,12 +193,17 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('density', 'areaLevel / monsterLevel / lootIlvl / totalEnemies populated', [
-        'areaLevel',
-        'monsterLevel',
-        'lootIlvl',
-        'totalEnemies',
-      ]),
+      // Content invariant: the stated totalEnemies must reconcile with the per-sector
+      // breakdown (no hand-set headline that disagrees with the sector packs).
+      accept: allOf(
+        fieldsPopulated('density', 'areaLevel / monsterLevel / lootIlvl / totalEnemies populated', [
+          'areaLevel',
+          'monsterLevel',
+          'lootIlvl',
+          'totalEnemies',
+        ]),
+        sumReconciles('density.totalEnemies', 'density.sectorBreakdown', ['NW', 'NE', 'Center', 'SW', 'SE'], 'totalEnemies reconciles with sector breakdown'),
+      ),
       staticChecks: () => [
         cppSymbolExists('AARPGEncounterVolume', 'Encounter volume actor present in UE Source'),
       ],
