@@ -26,6 +26,7 @@ export const ALERT_TYPE_LABELS: Record<string, string> = {
   'price-imbalance': 'Price Imbalance',
   'wealth-inequality': 'Wealth Gap',
   'dead-zone': 'Dead Zone',
+  'canon-violation': 'Canon Violation',
 };
 
 export const CATEGORY_COLORS: Record<ItemCategory, string> = {

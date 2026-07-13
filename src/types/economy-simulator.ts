@@ -97,7 +97,9 @@ export interface InflationAlert {
   level: number;
   hour: number;
   severity: 'info' | 'warning' | 'critical';
-  type: 'inflation' | 'deflation' | 'price-imbalance' | 'wealth-inequality' | 'dead-zone';
+  type: 'inflation' | 'deflation' | 'price-imbalance' | 'wealth-inequality' | 'dead-zone' | 'canon-violation';
+  /** For canon-violation alerts: the canon rule id (canon-seed) that was violated. */
+  lawId?: string;
   message: string;
   metric: string;
   value: number;

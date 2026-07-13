@@ -13,6 +13,12 @@ import type {
 } from '@/types/economy-simulator';
 import { DEFAULT_FAUCETS, DEFAULT_SINKS, DEFAULT_ITEMS, generateXPCurve } from './definitions';
 import { createRNG } from '@/lib/seeded-rng';
+import {
+  readCanonThresholds,
+  checkFaucetSinkBalance,
+  checkXpCurveShape,
+  type CanonViolation,
+} from '@/lib/balance/canon-conformance';
 
 // ── Philosophy modifiers ────────────────────────────────────────────────────
 
@@ -512,6 +518,33 @@ function detectAlerts(
     }
   }
 
+  // Canon conformance: flag where the sim (or its shipped defaults) VIOLATES an
+  // ARPG-LAWS canon threshold — faucet/sink balance ±15% (the `loot-driven`
+  // default breaks this) and a non-geometric XP curve. Thresholds are read from
+  // the canon seed, never hardcoded. Surfaced through the same alert channel.
+  const lastMetric = metrics[metrics.length - 1];
+  if (lastMetric) {
+    const thresholds = readCanonThresholds();
+    const xpCurve = generateXPCurve(config.maxLevel);
+    const canonViolations: CanonViolation[] = [
+      ...checkFaucetSinkBalance(metrics, thresholds),
+      ...checkXpCurveShape(xpCurve, thresholds),
+    ];
+    for (const v of canonViolations) {
+      alerts.push({
+        level: lastMetric.level,
+        hour: lastMetric.hour,
+        severity: v.severity,
+        type: 'canon-violation',
+        lawId: v.lawId,
+        message: `Canon (${v.law}): ${v.message}`,
+        metric: v.metric,
+        value: v.actual,
+        threshold: 0,
+      });
+    }
+  }
+
   // Deduplicate similar alerts (keep highest severity per type per level range)
   return deduplicateAlerts(alerts);
 }
@@ -521,9 +554,13 @@ function deduplicateAlerts(alerts: InflationAlert[]): InflationAlert[] {
   const severityRank = { info: 0, warning: 1, critical: 2 };
 
   for (const alert of alerts) {
-    // Group by type and level bucket (every 5 levels)
+    // Group by type and level bucket (every 5 levels). Canon violations are
+    // distinct per law, not per level bucket — key them by lawId so two different
+    // law breaches at the same level don't collapse into one.
     const bucket = Math.floor(alert.level / 5);
-    const key = `${alert.type}-${bucket}`;
+    const key = alert.type === 'canon-violation'
+      ? `${alert.type}-${alert.lawId}`
+      : `${alert.type}-${bucket}`;
     const existing = seen.get(key);
     if (!existing || severityRank[alert.severity] > severityRank[existing.severity]) {
       seen.set(key, alert);
