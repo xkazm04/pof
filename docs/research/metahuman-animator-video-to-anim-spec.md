@@ -29,11 +29,23 @@ Not found (so NOT part of the automatable surface as-probed): `MetaHumanPipeline
 
 Plugins are **installed** on our engine (`C:/Program Files/Epic Games/UE_5.8/Engine/Plugins/MetaHuman/…`): `MetaHumanAnimator`, `MetaHumanAnimationTools`, `MetaHumanCoreML`, `MetaHumanLiveLink`, plus the Fab `MetaHumanBodyTracker_5.8` (markerless BODY). They are **not enabled** in `PoF.uproject` — enable via `-EnablePlugins=MetaHuman -EnablePlugins=MetaHumanAnimationTools` (as the conform work enabled `MetaHumanCharacter`).
 
+## Live solve-prerequisite probe (2026-07-13, `-RenderOffScreen`)
+
+A second probe under a **real RHI** advanced feasibility from "the API loads" toward "the pipeline runs":
+- `unreal.MetaHumanPerformance()` **instantiates successfully** under `-RenderOffScreen` (not just symbol resolution — the object constructs with its modules loaded).
+- **`input_type` defaults to `DataInputType.MONO_FOOTAGE`** — a single ordinary camera video. This is the API-level confirmation of the "plain video, no mocap gear" premise; PoF's first use is exactly monocular footage.
+- **The input gate is exact:** `can_process()` returns **False** with empty inputs. The two required inputs are editor properties on `MetaHumanPerformance`: `identity` (a `MetaHumanIdentity`) and `footage_capture_data` (a `FootageCaptureData`). Set both → `can_process` flips True → `start_pipeline` / `set_blocking_processing(True)` → `export_animation_sequence`.
+- Ingest classes all resolve headless: `MetaHumanCaptureSource`, `MetaHumanFootageComponent`, `FootageCaptureData`, `MetaHumanIdentity` (the video→footage-asset path exists).
+- No footage/identity/performance assets currently in the project (asset-registry count=0) — we have no input to solve, as expected.
+- API note: `control_rig_class` is **deprecated** in 5.8.
+
+**So the last mile is now concrete, not a guess:** the remaining work is to (a) ingest a monocular video clip into a `FootageCaptureData` via `MetaHumanCaptureSource`, and (b) build a `MetaHumanIdentity` (tracked neutral frame) — then the documented solve→export chain runs. Producing an actual AnimSequence requires that input footage (a captured clip), which is the true blocker below, not an API gap.
+
 ## Open questions to settle before building
 
 1. **License clearance (BLOCKING, non-technical).** The video's premise is that the MetaHuman license *changed* to allow MetaHuman-derived data **outside** Unreal. Epic's 5.8 release-notes page did not restate license terms in the fetch. **Confirm the current MetaHuman EULA** covers using solved animation data (a) inside a shipped PoF-driven UE game (almost certainly yes) and (b) exported to Blender/other tools (the video's claim). This gates whether the Blender-export half of the spec is even permitted. → treat as a required check, like the Tripo non-commercial finding.
-2. **Full solve entry point.** The probe confirms the *methods* load; it did not run an end-to-end solve. Need: does `start_pipeline` run to completion headless with `set_blocking_processing(True)`, or does the ML solve require GPU/RHI that `-nullrhi` starves? (The conform work ran real ops headless, so promising, but the CoreML solve may need a real RHI → run with `-RenderOffScreen` instead of `-nullrhi`.)
-3. **Identity requirement.** Face solve needs a `MetaHumanIdentity` (a tracked neutral frame). Body solve (`MetaHumanBodyTracker`) may not. Determine the minimum asset prerequisites for a body-only clip (PoF's likely first use: locomotion/combat body motion, not facial).
+2. **Full solve entry point — PARTLY ANSWERED (see the probe above).** `MetaHumanPerformance` instantiates under `-RenderOffScreen` and `can_process()` correctly gates on inputs. What remains untested is whether `start_pipeline` + `set_blocking_processing(True)` runs the CoreML solve **to completion** headless — that needs real input footage (below), so it cannot be settled without a captured clip.
+3. **Footage ingest — THE REAL BLOCKER.** Both required inputs must be *built*: a `FootageCaptureData` (ingest a monocular clip via `MetaHumanCaptureSource`) and a `MetaHumanIdentity` (a tracked neutral frame — `start_frame_tracking_pipeline`). Determine whether the ingest is fully scriptable headless or expects the Live Link Hub / Capture Manager GUI. **This, not the solve API, is the thing to probe next** — and it needs an actual test video clip (a few seconds of a face/body on camera). Also confirm whether a BODY-only solve (via the installed `MetaHumanBodyTracker_5.8`) can skip the face `MetaHumanIdentity` — PoF's likely first use is locomotion/combat body motion, not facial.
 4. **Optional Content dependency.** The conform work found `build_meta_human` gated on Epic-Launcher "MetaHuman Optional Content." Verify the *Animator solve/export* path does NOT share that gate (it should be independent of character assembly).
 
 ## Proposed PoF integration shape (mirror the proven seams)
