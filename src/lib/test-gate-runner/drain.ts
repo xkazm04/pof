@@ -11,6 +11,13 @@ export interface DrainFilter {
   tier?: GateTier;
   catalogId?: string;
   entityId?: string;
+  /**
+   * Multi-entity batch (catalog-level drain): restrict to this set of entities within
+   * `catalogId`. Takes precedence over `entityId`. ONE catalog-scoped DB collection is
+   * filtered to the set in JS, so the whole batch shares ONE availability probe and ONE
+   * grouped boot (via {@link drainJobs}). Additive — absent means single-entity/global.
+   */
+  entityIds?: string[];
 }
 
 /** Coerce an arbitrary tier string to a runnable gate tier (deferred jobs are L3/L4 only). */
@@ -38,7 +45,17 @@ export function parseDrainFilter(
 
 /** Turn the deferred `pipeline_artifacts` rows into runnable jobs. */
 export function collectDeferred(filter?: DrainFilter): GateJob[] {
-  return listDeferredArtifacts(filter).map((a) => {
+  // A multi-entity batch collects the catalog once (ONE DB pass) then filters to the set in
+  // JS — the single-entity `entityId` is only pushed to the DB when no set is given.
+  const entitySet = filter?.entityIds?.length ? new Set(filter.entityIds) : null;
+  const listFilter: DrainFilter = {
+    ...(filter?.tier ? { tier: filter.tier } : {}),
+    ...(filter?.catalogId ? { catalogId: filter.catalogId } : {}),
+    ...(!entitySet && filter?.entityId ? { entityId: filter.entityId } : {}),
+  };
+  return listDeferredArtifacts(listFilter)
+    .filter((a) => !entitySet || entitySet.has(a.entityId))
+    .map((a) => {
     const testName = parseTestName(a.reason) ?? undefined;
     const scenario = resolveScenario({ catalogId: a.catalogId, entityId: a.entityId, step: a.step, testName });
     return {
@@ -125,6 +142,19 @@ export async function drainJobs(
     return ok;
   };
 
+  // One boot, many gates: the first time an AVAILABLE batch-capable executor is reached, let
+  // it pre-run all its tier-matched jobs in ONE shot (the spawn executor boots ONE headless
+  // editor for every automation gate) and cache the per-job verdicts `run` then returns. Runs
+  // at most once per executor per pass (mirrors the availability memo) and only after the
+  // executor proved available — so an unavailable/unmatched executor never boots.
+  const prepared = new Set<GateExecutor>();
+  const ensurePrepared = async (e: GateExecutor): Promise<void> => {
+    if (prepared.has(e)) return;
+    prepared.add(e);
+    if (!e.prepareBatch) return;
+    await e.prepareBatch(jobs.filter((j) => j.tier === e.tier));
+  };
+
   for (const job of jobs) {
     if (opts?.limit != null && runCount >= opts.limit) {
       results.push({ job, skipped: 'limit reached' });
@@ -144,6 +174,7 @@ export async function drainJobs(
       continue;
     }
     try {
+      await ensurePrepared(executor); // ONE grouped boot for this executor's batchable jobs
       runCount++;
       results.push(await drainOne(job, executor));
     } catch (e) {

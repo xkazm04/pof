@@ -11,7 +11,12 @@ import {
   type ObsSample,
   type Observations,
 } from '@/types/observation';
+import { parseAbslogVerdict, runBatchAutomation, type SpawnFn } from './batchAutomation';
 import type { GateAssertion, GateExecutor, GateJob, GateVerdict } from './types';
+
+// The abslog fallback parser lives in `batchAutomation` (shared by the single-boot and
+// grouped-boot paths); re-export it so its public API + tests stay stable.
+export { parseAbslogVerdict } from './batchAutomation';
 
 export interface SpawnExecutorOptions {
   /**
@@ -27,8 +32,15 @@ export interface SpawnExecutorOptions {
   /** Watchdog for a scenario run (the controller RequestExits on completion). Default 180s. */
   scenarioTimeoutMs?: number;
   /** Watchdog for an automation run (`Automation RunTests …;Quit`). Default 180s. A hung
-   *  headless editor that never quits is SIGKILLed so the drain worker can't stall forever. */
+   *  headless editor that never quits is SIGKILLed so the drain worker can't stall forever.
+   *  Also caps the ONE grouped-boot batch run (`prepareBatch`). */
   automationTimeoutMs?: number;
+  /**
+   * Injectable watchdog-spawn seam (tests only). Defaults to the real SIGKILL-guarded
+   * {@link spawnAndWait}. Lets a unit test assert the boot COUNT (N automation gates → one
+   * `spawn` call) without ever launching a real editor.
+   */
+  spawnImpl?: SpawnFn;
 }
 
 /** Spawn `cmd`, resolve on exit, or kill (SIGKILL) + resolve after `timeoutMs`. */
@@ -66,29 +78,6 @@ export function buildAutomationArgs(testName: string, uproject: string, abslog: 
     '-log',
     `-abslog=${abslog}`,
   ];
-}
-
-/**
- * Read the verdict from an `-abslog`. Judged by markers, not exit code —
- * headless runs exit non-zero on the benign bridge shutdown null-deref. Markers
- * confirmed against ground truth: the UE automation controller emits
- * `LogAutomationController: ... Result={Success}` / `Result={Failure}`; some
- * project Python gates emit `[gate] RESULT=PASS/FAIL`. Pure (tested).
- */
-export function parseAbslogVerdict(log: string): { status: 'pass' | 'fail' | 'unregistered'; detail: string } {
-  if (/\[gate\]\s*RESULT=PASS/i.test(log)) return { status: 'pass', detail: '[gate] RESULT=PASS' };
-  if (/\[gate\]\s*RESULT=FAIL/i.test(log)) return { status: 'fail', detail: '[gate] RESULT=FAIL' };
-  if (/Result=\{Success\}/i.test(log)) return { status: 'pass', detail: 'Result={Success}' };
-  if (/Result=\{Fail(?:ure)?\}/i.test(log)) return { status: 'fail', detail: 'Result={Failure}' };
-  // The controller listed its test set but nothing matched the requested name → the test
-  // is PLANNED, not implemented: an honest deferred wait, NOT a red failure. (Ground truth,
-  // 2026-07 sweep: UE listed 8621 tests, matched zero for 29 planned VS*Test names — the
-  // old blanket-fail branded every planned gate a failure.)
-  if (/\d+ tests available/i.test(log) && !/Test Completed/i.test(log) && !/Fatal error/i.test(log)) {
-    return { status: 'unregistered', detail: 'no test matched the requested name (planned, not registered in UE)' };
-  }
-  // No success marker found → treat as failure (a crashed/aborted run never passed).
-  return { status: 'fail', detail: 'no success marker in abslog' };
 }
 
 function sanitize(name: string): string {
@@ -176,10 +165,22 @@ export function parseScenarioVerdict(
   return { status: 'pass', detail: `swing=${swing.toFixed(1)}° dist=${dist.toFixed(0)}${mont} over ${samples.length} samples`, stats };
 }
 
+/** Is this a batchable automation job — a symbolic test name with NO behavioural scenario?
+ *  (Scenario jobs need distinct per-scenario boot args, so they never batch.) */
+function isBatchableAutomation(job: GateJob): boolean {
+  return !job.scenario && !!job.testName;
+}
+
 /** L3 executor that runs a headless UnrealEditor-Cmd automation pass. Off by default. */
 export function makeSpawnExecutor(opts: SpawnExecutorOptions = {}): GateExecutor {
   const editorCmd = opts.editorCmd ?? process.env.POF_UE_EDITOR_CMD;
   const uproject = opts.uproject ?? process.env.POF_UE_UPROJECT;
+  const spawnImpl: SpawnFn = opts.spawnImpl ?? spawnAndWait;
+  const automationTimeoutMs = opts.automationTimeoutMs ?? 180_000;
+
+  // Verdicts pre-computed by ONE grouped-boot batch (`prepareBatch`), keyed by test name.
+  // `run` returns the cached verdict for an automation job instead of booting per test.
+  const batchVerdicts = new Map<string, GateVerdict>();
 
   /**
    * Behavioural scenario path (faithful L3): write the scenario, drive inputs in a real
@@ -202,7 +203,7 @@ export function makeSpawnExecutor(opts: SpawnExecutorOptions = {}): GateExecutor
     }));
     const scnLog = join(outDir, 'editor.log');
     const scnArgs = buildScenarioArgs(project, scn.map, scnPath.replace(/\\/g, '/'), scnLog);
-    const { timedOut } = await spawnAndWait(editor, scnArgs, opts.scenarioTimeoutMs ?? 180_000);
+    const { timedOut } = await spawnImpl(editor, scnArgs, opts.scenarioTimeoutMs ?? 180_000);
     const obsRaw = await readFile(join(outDir, 'observations.json'), 'utf-8').catch((e) => {
       logger.warn(`[test-gate-runner] ${job.step}: no observations.json (${e instanceof Error ? e.message : String(e)})`);
       return '';
@@ -224,11 +225,15 @@ export function makeSpawnExecutor(opts: SpawnExecutorOptions = {}): GateExecutor
    * Automation path (symbolic L3): run one headless `Automation RunTests <name>;Quit` and
    * judge by `-abslog` markers. Shares the same watchdog as the scenario path — a headless
    * editor that never quits is SIGKILLed so the drain worker can't hang indefinitely.
+   *
+   * This single-boot path is the fallback for a direct `run` call that was NOT preceded by
+   * `prepareBatch` (the drain loop always pre-batches, so within a drain every automation
+   * job is served from the ONE grouped boot instead).
    */
   async function runAutomation(job: GateJob, editor: string, project: string): Promise<GateVerdict> {
     const abslog = join(tmpdir(), `pof-gate-${Date.now()}-${sanitize(job.testName ?? 'test')}.log`);
     const args = buildAutomationArgs(job.testName!, project, abslog);
-    const { timedOut } = await spawnAndWait(editor, args, opts.automationTimeoutMs ?? 180_000);
+    const { timedOut } = await spawnImpl(editor, args, automationTimeoutMs);
     const log = await readFile(abslog, 'utf-8').catch((e) => {
       logger.warn(`[test-gate-runner] ${job.testName}: no abslog (${e instanceof Error ? e.message : String(e)})`);
       return '';
@@ -250,10 +255,35 @@ export function makeSpawnExecutor(opts: SpawnExecutorOptions = {}): GateExecutor
       return !!(opts.allowSpawn && editorCmd && uproject);
     },
 
+    /**
+     * One boot, many gates. Group every batchable automation job in this drain pass into a
+     * SINGLE `UnrealEditor-Cmd` boot (`Automation RunTests A+B+C;Quit -ReportOutputPath=…`)
+     * and cache the per-test verdict; `run` then returns the cached verdict instead of
+     * booting per test. Scenario jobs are left untouched (they need distinct boot args).
+     */
+    async prepareBatch(jobs: GateJob[]) {
+      if (!opts.allowSpawn || !editorCmd || !uproject) return; // gated identically to run/available
+      const testNames = [...new Set(jobs.filter(isBatchableAutomation).map((j) => j.testName!))];
+      if (testNames.length === 0) return;
+      const verdicts = await runBatchAutomation({
+        editor: editorCmd,
+        uproject,
+        testNames,
+        spawn: spawnImpl,
+        timeoutMs: automationTimeoutMs,
+      });
+      for (const [name, v] of verdicts) batchVerdicts.set(name, v);
+    },
+
     async run(job: GateJob): Promise<GateVerdict> {
       if (!opts.allowSpawn) throw new Error('spawn executor disabled (pass allowSpawn:true to enable)');
       if (!editorCmd || !uproject) throw new Error('spawn executor needs POF_UE_EDITOR_CMD + POF_UE_UPROJECT');
-      return job.scenario ? runScenario(job, editorCmd, uproject) : runAutomation(job, editorCmd, uproject);
+      if (job.scenario) return runScenario(job, editorCmd, uproject);
+      // Batched automation: serve the verdict from the ONE grouped boot when available.
+      const cached = job.testName ? batchVerdicts.get(job.testName) : undefined;
+      if (cached) return cached;
+      // Not pre-batched (direct call) → single-boot fallback.
+      return runAutomation(job, editorCmd, uproject);
     },
   };
 }

@@ -100,6 +100,15 @@ export interface GateExecutor {
   /** Can this executor run right now? (e.g. bridge reachable, spawn enabled). */
   available(): Promise<boolean>;
   run(job: GateJob): Promise<GateVerdict>;
+  /**
+   * Optional grouped-execution pre-pass. Called ONCE per drain pass (after `available()`)
+   * with all of this executor's tier-matched jobs, so an executor that can amortise boot
+   * cost runs them together and caches per-job verdicts that `run` then returns. The spawn
+   * executor uses this to boot ONE headless `UnrealEditor-Cmd` for many automation gates
+   * (`Automation RunTests A+B+C;Quit`); jobs it can't group (behavioural scenarios) are left
+   * for per-job `run`. Executors that can't batch (bridge, visual) simply omit it.
+   */
+  prepareBatch?(jobs: GateJob[]): Promise<void>;
 }
 
 export interface DrainResult {

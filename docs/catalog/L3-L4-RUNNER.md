@@ -24,7 +24,8 @@ interface GateExecutor {
   readonly id: string;        // 'bridge' | 'spawn' | 'visual-bridge'
   readonly tier: 'L3' | 'L4'; // which tier it services
   available(): Promise<boolean>;
-  run(job: GateJob): Promise<GateVerdict>;  // { status:'pass'|'fail', detail, raw? }
+  run(job: GateJob): Promise<GateVerdict>;  // { status:'pass'|'fail'|'deferred', detail, evidence?, raw? }
+  prepareBatch?(jobs: GateJob[]): Promise<void>; // optional grouped-boot pre-pass (spawn: one editor, many gates)
 }
 ```
 
@@ -33,10 +34,24 @@ interface GateExecutor {
 | Executor | Tier | Mechanism | Default |
 |----------|------|-----------|---------|
 | **bridge** (`bridgeExecutor.ts`) | L3 | POSTs `filter=<testName>` to the running editor's **PoF Bridge plugin** (`127.0.0.1:30040/pof/test/run-automation`), polls results, maps `passed/failed`. Safest on the shared tree — no spawn, no `PoF.log` clobber, no lease juggling. | **yes** |
-| **spawn** (`spawnExecutor.ts`) | L3 | Assembles + runs headless `UnrealEditor-Cmd … -ExecCmds="Automation RunTests <testName>;Quit" -nullrhi … -abslog=<unique>`, judges by **`-abslog` markers (`Result={Success}` / `[gate] RESULT=PASS`), not exit code**. Both `run` branches — automation (`runAutomation`) and behavioural scenario (`runScenario`) — share one **SIGKILL watchdog** (`spawnAndWait`, default 180s via `automationTimeoutMs`/`scenarioTimeoutMs`) so a headless editor that never quits can't hang the drain worker. Real code, **gated OFF by default** (needs `POF_UE_EDITOR_CMD` + `POF_UE_UPROJECT` env + explicit `allowSpawn`) — spawning UE collides with other sessions on the shared tree. | off |
+| **spawn** (`spawnExecutor.ts`) | L3 | Assembles + runs headless `UnrealEditor-Cmd … -ExecCmds="Automation RunTests <testName>;Quit" -nullrhi … -abslog=<unique>`, judges by **`-abslog` markers (`Result={Success}` / `[gate] RESULT=PASS`), not exit code**. Both `run` branches — automation (`runAutomation`) and behavioural scenario (`runScenario`) — share one **SIGKILL watchdog** (`spawnAndWait`, default 180s via `automationTimeoutMs`/`scenarioTimeoutMs`) so a headless editor that never quits can't hang the drain worker. Real code, **gated OFF by default** (needs `POF_UE_EDITOR_CMD` + `POF_UE_UPROJECT` env + explicit `allowSpawn`) — spawning UE collides with other sessions on the shared tree. **Grouped boot** (see below): the spawn executor's `prepareBatch` runs ALL a drain pass's automation gates in ONE boot, so a full sweep is one multi-minute launch, not dozens. | off |
 | **visual-bridge** (`visualExecutor.ts`) | L4 | Requests a HighResShot via the bridge, then runs the existing `/api/verify/visual` Gemini check → records to `visual_verifications` + writes the artifact verdict. Honestly **skips** (stays deferred) when no screenshot source is reachable — this is the known "missing render gate". | yes (best-effort) |
 
 The seam means the **mode is chosen at call time**, not baked in (the contract's "configurable (both)").
+
+### One boot, many gates — grouped spawn execution (`batchAutomation.ts`)
+
+Booting a fresh `UnrealEditor-Cmd` per automation gate was the dominant drain cost (each `Automation RunTests <name>;Quit` is a multi-minute launch). UE runs many filters in ONE session (`Automation RunTests A+B+C`) and writes a machine-readable per-test report via `-ReportOutputPath=<dir>` (`index.json`). So:
+
+- `GateExecutor` gained an optional **`prepareBatch(jobs)`** pre-pass. `drainJobs` calls it **once per drain pass**, right after the executor first proves `available()`, with all that executor's tier-matched jobs (mirrors the availability memo — an unavailable/unmatched executor never boots).
+- The **spawn executor's** `prepareBatch` de-dupes every batchable automation test name (a job with a `testName` and **no** `scenario`) and runs them in ONE boot via `runBatchAutomation` (`buildBatchAutomationArgs` → `Automation RunTests A+B+C;Quit -ReportOutputPath=<dir> -abslog=<dir>/batch.log`). It parses **per-test verdicts from `index.json`** (`parseAutomationReport`: `state:"Success"`→pass, `"Fail"`/`errors>0`→fail, matched-but-`NotRun` or matched-nothing → **deferred**, an honest planned-wait). When the report is missing/unparseable it **falls back to the combined `-abslog` marker parse** (`parseAbslogVerdict`, judged by log content not exit code) applied as one whole-batch verdict. `run` then returns the cached per-test verdict; a direct `run` **not** preceded by `prepareBatch` still uses the single-boot `runAutomation` fallback.
+- **Scenario** jobs (`runScenario`) and **L4 capture** jobs are UNCHANGED — they need distinct per-scenario/per-frame boot args and never batch.
+- **Bridge executor is NOT batched**: `POST /pof/test/run-automation` takes a single `{filter}` (one `StartTestByName`), so bridge automation stays per-test (documented, not a regression).
+- Per-test verdicts still persist **per artifact** exactly as before (`drainOne`, evidence attached per gate). Boot count is unit-asserted (`batchAutomation.test.ts`, `drain.test.ts`): N automation gates in one drain → 1 spawn invocation; report-parse and abslog-fallback both covered (the exec layer is mocked — tests never spawn a real editor).
+
+### Catalog-level (multi-entity) drain
+
+`POST /api/pipeline-artifacts/drain` accepts an additive **`entityIds: string[]`** (with `catalogId`) — a whole-catalog batch that reuses ONE catalog-scoped collection (`collectDeferred` filters the set in JS), ONE availability probe, and ONE grouped boot for the entire set (`drainAll` → single `drainJobs` pass). **Lease semantics are all-or-nothing**: the handler acquires the per-entity in-flight lease for every requested entity up front; if ANY is already in flight it refuses the whole batch with **409** (naming the conflicting `catalog/entity`) — the same "never two drains on one entity" guarantee the single-entity path gives, extended to the set; all leases are freed in `finally`. Backward compatible — absent `entityIds` is the existing single-entity/global behaviour, byte-for-byte. (The client `useBatchDrain` hook still POSTs per entity for live per-entity grid feedback + per-entity 409 retry; wiring it to the multi-entity API is a follow-up, deliberately not taken to avoid losing that live UI.)
 
 ## Triggers — operator drain + always-on worker
 
@@ -63,7 +78,7 @@ The executors are aligned to what the PoF Bridge plugin actually does (`PofHttpS
 
 ## Trigger — operator-driven API
 
-`POST /api/pipeline-artifacts/drain` — body `{ tier?: 'L3'|'L4'|'all', catalogId?, entityId?, executor?: 'bridge'|'spawn', port?, allowSpawn? }` → runs `drainAll`, returns a `DrainSummary` (`ran/passed/failed/skipped` + per-job results). `GET` lists the currently-deferred jobs so the UI shows what's drainable.
+`POST /api/pipeline-artifacts/drain` — body `{ tier?: 'L3'|'L4'|'all', catalogId?, entityId?, entityIds?: string[], executor?: 'bridge'|'spawn', port?, allowSpawn? }` → runs `drainAll`, returns a `DrainSummary` (`ran/passed/failed/deferred/skipped` + per-job results). `entityIds` is the catalog-level batch (one collection + one boot for the set; all-or-nothing lease — see above). `GET` lists the currently-deferred jobs so the UI shows what's drainable.
 
 Run it **when no other UE session is busy** (the editor is single-instance; the bridge serializes through it). The `/layout` rollup carries a **"Run deferred gates"** button that POSTs the drain for the open entity and re-hydrates.
 

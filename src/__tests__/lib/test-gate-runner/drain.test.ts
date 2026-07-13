@@ -164,3 +164,62 @@ describe('drainAll', () => {
     expect(sum.results.some((r) => r.skipped === 'limit reached')).toBe(true);
   });
 });
+
+describe('drainJobs — grouped boot (prepareBatch) integration', () => {
+  it('N automation gates in one drain → prepareBatch runs ONCE with all tier-matched jobs; run() serves the cache', async () => {
+    // Three deferred automation gates. A batch-capable executor pre-runs them in ONE shot
+    // (the real spawn executor boots ONE editor); `boots` proves it happens once, not per job.
+    seed({ catalogId: 'items', entityId: 'a', step: 'g', tier: 'L3', reason: 'live-UE runner not yet run: TA' });
+    seed({ catalogId: 'loot', entityId: 'b', step: 'g', tier: 'L3', reason: 'live-UE runner not yet run: TB' });
+    seed({ catalogId: 'hud', entityId: 'c', step: 'g', tier: 'L3', reason: 'live-UE runner not yet run: TC' });
+
+    let boots = 0;
+    const cache = new Map<string, GateVerdict>();
+    let prepareCalls = 0;
+    const batchExec: GateExecutor = {
+      id: 'fake-batch',
+      tier: 'L3',
+      available: async () => true,
+      async prepareBatch(jobs) {
+        prepareCalls++;
+        boots++; // ONE boot for the whole batch
+        for (const j of jobs) cache.set(j.testName!, { status: 'pass', detail: `${j.testName}: report: 1 passed` });
+      },
+      async run(job) {
+        const cached = cache.get(job.testName!);
+        if (cached) return cached;
+        boots++; // any per-job boot would bump this — must stay 1
+        return { status: 'fail', detail: 'unexpected per-job boot' };
+      },
+    };
+
+    const sum = await drainAll([batchExec]);
+    expect(prepareCalls).toBe(1);
+    expect(boots).toBe(1); // ONE boot for three automation gates
+    expect(sum).toMatchObject({ ran: 3, passed: 3, failed: 0 });
+  });
+
+  it('does not prepare/boot an UNAVAILABLE executor', async () => {
+    seed({ catalogId: 'items', entityId: 'a', step: 'g', tier: 'L3', reason: 'live-UE runner not yet run: TA' });
+    let prepareCalls = 0;
+    const ex: GateExecutor = {
+      id: 'fake', tier: 'L3',
+      available: async () => false,
+      async prepareBatch() { prepareCalls++; },
+      run: async () => ({ status: 'pass', detail: 'ok' }),
+    };
+    const sum = await drainAll([ex]);
+    expect(prepareCalls).toBe(0);
+    expect(sum).toMatchObject({ ran: 0, skipped: 1 });
+  });
+});
+
+describe('collectDeferred — multi-entity batch (entityIds)', () => {
+  it('restricts a catalog collection to the requested entity set in ONE pass', () => {
+    seed({ catalogId: 'items', entityId: 'a', step: 'g', tier: 'L3', reason: 'live-UE runner not yet run: TA' });
+    seed({ catalogId: 'items', entityId: 'b', step: 'g', tier: 'L3', reason: 'live-UE runner not yet run: TB' });
+    seed({ catalogId: 'items', entityId: 'c', step: 'g', tier: 'L3', reason: 'live-UE runner not yet run: TC' });
+    const jobs = collectDeferred({ catalogId: 'items', entityIds: ['a', 'c'] });
+    expect(jobs.map((j) => j.entityId).sort()).toEqual(['a', 'c']);
+  });
+});

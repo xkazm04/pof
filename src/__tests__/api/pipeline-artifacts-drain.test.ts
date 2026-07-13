@@ -89,6 +89,32 @@ describe('POST /api/pipeline-artifacts/drain — in-flight lock', () => {
     expect(firstRes.status).toBe(200);
   });
 
+  it('a catalog-level batch (entityIds) refuses when ANY of its entities is already in flight (all-or-nothing lease)', async () => {
+    // Hold a single-entity drain for items/item-b.
+    const held = POST(postReq({ catalogId: 'items', entityId: 'item-b' }));
+    await new Promise((r) => setImmediate(r));
+    const heldResolve = pendingHolder.resolve;
+
+    // A batch covering [item-a, item-b] overlaps item-b → the WHOLE batch is refused.
+    const batch = await POST(postReq({ catalogId: 'items', entityIds: ['item-a', 'item-b'] }));
+    expect(batch.status).toBe(409);
+    const body = await batch.json();
+    expect(body.error).toContain('items/item-b');
+
+    heldResolve?.({ ran: 0, passed: 0, failed: 0, skipped: 0, results: [] });
+    await held;
+  });
+
+  it('a catalog-level batch runs when none of its entities are held, then frees every lease', async () => {
+    drainAllMock.mockImplementationOnce(async () => ({ ran: 0, passed: 0, failed: 0, deferred: 0, skipped: 0, screenshots: [], results: [] }));
+    const first = await POST(postReq({ catalogId: 'items', entityIds: ['item-a', 'item-b'] }));
+    expect(first.status).toBe(200);
+    // Leases freed in finally → the same batch (and each member) is immediately runnable again.
+    drainAllMock.mockImplementationOnce(async () => ({ ran: 0, passed: 0, failed: 0, deferred: 0, skipped: 0, screenshots: [], results: [] }));
+    const again = await POST(postReq({ catalogId: 'items', entityId: 'item-a' }));
+    expect(again.status).toBe(200);
+  });
+
   it('releases the lock after drainAll throws so subsequent drains can run', async () => {
     drainAllMock.mockImplementationOnce(async () => { throw new Error('executor blew up'); });
 
