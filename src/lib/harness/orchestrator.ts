@@ -306,22 +306,34 @@ export function pickHealVerifyCommand(
  * `verifyCommand` is derived from the failing gate so this works on UE5 trees
  * (no tsc), TypeScript trees (tsc), or any custom gate configured by the user.
  */
-async function attemptSelfHeal(
+export interface SelfHealResult {
+  healed: boolean;
+  reason?: string;
+}
+
+export async function attemptSelfHeal(
   projectPath: string,
   errors: string[],
   verifyCommand: string | null,
   config: { sessionTimeoutMs: number; skipPermissions: boolean },
-): Promise<boolean> {
+): Promise<SelfHealResult> {
+  if (!verifyCommand) {
+    // No reliable command to re-run means no way to CONFIRM a repair. We refuse
+    // to optimistically claim `healed` (this used to return true and silently
+    // advance) — the area's normal retry will re-attempt under full verification.
+    return { healed: false, reason: 'no verify command available to confirm the fix — not self-certifying' };
+  }
+
   const errorSummary = errors.slice(0, 20).join('\n');
-  const verifyInstruction = verifyCommand
-    ? `\n\nAfter fixing, verify by running: ${verifyCommand}\nIf there are remaining errors, fix those too. Do NOT give up — keep fixing until clean.`
-    : `\n\nAfter fixing, re-read the affected files to confirm your changes look correct. Do NOT give up — keep fixing until you believe every error in the list above is resolved.`;
   const fixPrompt = `You are a code fixer. The following errors occurred after a code generation session.
 Fix ALL errors. Do not add features, do not refactor — ONLY fix the errors.
 Read each file mentioned in the errors, understand the issue, and apply minimal fixes.
 
 ERRORS:
-${errorSummary}${verifyInstruction}
+${errorSummary}
+
+After fixing, verify by running: ${verifyCommand}
+If there are remaining errors, fix those too. Do NOT give up — keep fixing until clean.
 
 When done, output exactly:
 ${wrapHarnessResult('{"areaId":"self-heal","completed":true,"features":[],"filesCreated":[],"filesModified":[],"learnings":[],"summary":"Fixed errors"}')}`;
@@ -334,14 +346,11 @@ ${wrapHarnessResult('{"areaId":"self-heal","completed":true,"features":[],"files
     timeoutMs: Math.min(config.sessionTimeoutMs, 300_000), // Max 5 min for fix
   });
 
-  if (!verifyCommand) {
-    // No reliable command to re-run — optimistically resolve as healed; the
-    // next full verification pass will re-judge if the fix actually held.
-    return true;
-  }
-  return new Promise<boolean>((resolve) => {
+  return new Promise<SelfHealResult>((resolve) => {
     exec(verifyCommand, { cwd: projectPath, timeout: 60_000 }, (err) => {
-      resolve(err === null);
+      resolve(err === null
+        ? { healed: true }
+        : { healed: false, reason: 'verify command still failing after the fix session' });
     });
   });
 }
@@ -585,12 +594,15 @@ export function createHarnessOrchestrator(config: HarnessConfig): HarnessOrchest
     // ── SELF-HEAL: If required gates failed, try to fix inline ──────────────
 
     if (verification.requiredFailures > 0) {
-      const failingResults = verification.gates.filter(g => !g.passed);
-      const gateErrors = failingResults
+      // Only CODE failures are self-healable. An UNVERIFIABLE gate (e.g. no UE
+      // env for the compile gate) has no code error to fix — exclude it so we
+      // never burn a heal session trying to "fix" a missing environment.
+      const healableFailures = verification.gates.filter(g => !g.passed && !g.unverifiable);
+      const gateErrors = healableFailures
         .flatMap(g => g.errors?.map(e => e.message) ?? [g.output.slice(0, 500)]);
 
       // Map failing VerificationResults back to their gate configs (with .command/.type).
-      const failingGateConfigs = failingResults
+      const failingGateConfigs = healableFailures
         .map(r => gates.find(g => g.name === r.gate))
         .filter((g): g is NonNullable<typeof g> => !!g);
       const verifyCommand = pickHealVerifyCommand(failingGateConfigs, gates);
@@ -599,22 +611,32 @@ export function createHarnessOrchestrator(config: HarnessConfig): HarnessOrchest
         emit({
           type: 'harness:learning',
           learning: `Self-healing: attempting to fix ${gateErrors.length} gate errors for ${area.id}`
-            + (verifyCommand ? ` (verify: ${verifyCommand})` : ' (no verify command — optimistic)'),
+            + (verifyCommand ? ` (verify: ${verifyCommand})` : ' (no verify command — cannot confirm)'),
         });
 
-        const healed = await attemptSelfHeal(config.projectPath, gateErrors, verifyCommand, {
+        const heal = await attemptSelfHeal(config.projectPath, gateErrors, verifyCommand, {
           sessionTimeoutMs: config.executor.sessionTimeoutMs,
           skipPermissions: config.executor.skipPermissions,
         });
 
-        if (healed) {
+        if (heal.healed) {
           // Re-run verification after fix
           verification = await verify(area, plan.iteration, config.projectPath, gates, config.statePath);
           emit({
             type: 'harness:learning',
             learning: `Self-heal ${verification.requiredFailures === 0 ? 'SUCCEEDED' : 'partially helped'} for ${area.id}`,
           });
+        } else {
+          emit({
+            type: 'harness:learning',
+            learning: `Self-heal did not hold for ${area.id}: ${heal.reason ?? 'unknown'}`,
+          });
         }
+      } else if (verification.gates.some(g => g.unverifiable)) {
+        emit({
+          type: 'harness:learning',
+          learning: `Skipping self-heal for ${area.id} — only unverifiable gate(s) failed (no code error to fix; configure the UE env to verify)`,
+        });
       }
     }
 
@@ -654,6 +676,15 @@ export function createHarnessOrchestrator(config: HarnessConfig): HarnessOrchest
     const requiredGatesPassed = verification.requiredFailures === 0;
     const areaSuccess = requiredGatesPassed && featurePassRate >= areaPassThreshold;
 
+    // Verification outcome for the run history: a required gate that could not be
+    // evaluated (e.g. no UE env → compile gate) records 'unverifiable' so the
+    // area is never silently self-certified.
+    const requiredUnverifiable = verification.gates.some(
+      g => g.unverifiable && gates.find(x => x.name === g.gate)?.required,
+    );
+    const verificationOutcome: 'pass' | 'fail' | 'unverifiable' =
+      requiredUnverifiable ? 'unverifiable' : requiredGatesPassed ? 'pass' : 'fail';
+
     area.status = areaSuccess ? 'completed' : 'failed';
     if (areaSuccess) {
       area.completedAt = plan.iteration;
@@ -676,6 +707,7 @@ export function createHarnessOrchestrator(config: HarnessConfig): HarnessOrchest
       featuresChanged: parsed.features?.map(f => f.name) ?? [],
       errors: verification.gates.filter(g => !g.passed).map(g => g.output.slice(0, 200)),
       learnings: parsed.learnings,
+      verification: verificationOutcome,
     };
     appendProgressEntry(config.statePath, entry);
     progress.push(entry);
@@ -1039,6 +1071,10 @@ export function createDefaultConfig(overrides: Partial<HarnessConfig> & {
   projectPath: string;
   projectName: string;
   ueVersion: string;
+  /** Opt-in the UE automation-test gate (advisory, behind the compile gate). */
+  ueTests?: boolean;
+  /** Automation test filter for the ue-test gate (default "Project"). */
+  ueTestFilter?: string;
 }): HarnessConfig {
   return {
     projectPath: overrides.projectPath,
@@ -1052,7 +1088,10 @@ export function createDefaultConfig(overrides: Partial<HarnessConfig> & {
       skipPermissions: true,
       bareMode: false,
     },
-    gates: overrides.gates ?? detectGates(overrides.projectPath),
+    gates: overrides.gates ?? detectGates(overrides.projectPath, {
+      ...(overrides.ueTests != null ? { ueTests: overrides.ueTests } : {}),
+      ...(overrides.ueTestFilter != null ? { ueTestFilter: overrides.ueTestFilter } : {}),
+    }),
     maxIterations: overrides.maxIterations ?? 100,
     generateGuide: overrides.generateGuide ?? true,
     updateAgentsMd: overrides.updateAgentsMd ?? true,

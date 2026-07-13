@@ -147,6 +147,8 @@ export async function POST(request: NextRequest) {
     checkpoint?: boolean;
     maxConcurrent?: number;
     scenario?: string;
+    ueTests?: boolean;
+    ueTestFilter?: string;
   };
 
   if (body.action === 'start') {
@@ -194,6 +196,8 @@ export async function POST(request: NextRequest) {
       ...(body.unlimited != null ? { unlimited: body.unlimited } : {}),
       ...(body.checkpoint != null ? { checkpoint: body.checkpoint } : {}),
       ...(scenarioAreas ? { areas: scenarioAreas } : {}),
+      ...(body.ueTests != null ? { ueTests: body.ueTests } : {}),
+      ...(body.ueTestFilter != null ? { ueTestFilter: body.ueTestFilter } : {}),
       executor: executorOverride,
     });
 

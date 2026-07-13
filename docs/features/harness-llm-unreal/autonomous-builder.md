@@ -17,8 +17,11 @@ start() → runLoop()
        pick next dependency-resolved areas → STREAMING POOL (up to maxConcurrent):
          processArea():
            1. EXECUTE   — spawn a Claude Code session, parse @@HARNESS_RESULT, record cost
-           2. VERIFY    — run gates (typecheck, lint, test, build, visual, custom)
-           3. SELF-HEAL — on required-gate failure, spawn a fix session, re-verify
+           2. VERIFY    — run gates (typecheck, lint, test, build, visual, custom, ue-compile, ue-test).
+                          A UE compile gate with no UE env is UNVERIFIABLE (never a silent pass);
+                          the ue-test gate is judged by abslog content, not exit code.
+           3. SELF-HEAL — on a CODE-gate failure, spawn a fix session, re-verify; unverifiable gates
+                          are skipped (no code error to fix) and a heal with no verify command returns false
            4. RECONCILE — match parsed features back to planned ones by EXACT normalized
                           name/id (no fuzzy substring, no force-pass); any feature the
                           session never reported stays 'unverified', never a silent pass
@@ -38,7 +41,8 @@ It's a **streaming pool**, not lock-step waves: an area that finishes early free
 | `orchestrator.ts` | `HarnessOrchestrator` — `runLoop`, `runStreamingPool`, `processArea`, `attemptSelfHeal`, budget governance, dev-server lifecycle, rollback |
 | `plan-builder.ts` | `buildGamePlan` — turns the module registry + feature deps into ordered `ModuleArea`s via curated `AREA_PRESETS` + topological sort |
 | `executor.ts` | `executeArea` — assembles the 1M-context executor prompt; `parseAreaResult` reads the `@@HARNESS_RESULT` markers |
-| `verifier.ts` | `verify` — runs quality gates; `parseErrors` structures tsc/eslint/UE5 output; `detectGates` auto-discovers |
+| `verifier.ts` | `verify` — runs quality gates; `parseErrors` structures tsc/eslint/UE5 output; `detectGates` auto-discovers (webapp vs UE) |
+| `ue-gates.ts` | the harness's OWN UE command layer (no `test-gate-runner` import): `resolveUeEnv`, `deriveUeCompileCommand` (UBT, exit-code judged), `deriveUeTestCommand` + `parseAutomationLog` (abslog-content judged), `detectUeGates` |
 | `claude-session.ts` | `spawnClaudeSession` — single-sourced CLI spawner (stream-json, cost parsing, result markers) |
 | `checkpoint.ts` | `Checkpointer` — git branch/tag per green area, `rollbackToLastGreen` (reset --hard) |
 | `visual-gate.ts` | `runVisualGate` — Playwright screenshots + perceptual diff (pixelmatch) + axe-core a11y scan |
@@ -56,7 +60,8 @@ It's a **streaming pool**, not lock-step waves: an area that finishes early free
 - **Budget governor** — every session reserves an estimated cost at launch and reconciles on return; `wouldOverflowNow()` blocks new launches past the cap; on cap-hit it emits `harness:paused` and drains in-flight work instead of orphaning it. An un-budgeted run is NOT uncapped: a `DEFAULT_BUDGET_USD` ($25) ceiling applies unless the caller passes `unlimited: true` (`resolveBudgetUsd`).
 - **Stranded-run reaper** — the orchestrator's live state is in-memory, so a crash/restart would strand a `harness_runs` row in `running` forever. `reapStrandedRuns()` (lazy, once per process on the first status/history read) marks any `running` row NOT owned by a live orchestrator in this process as `interrupted` — a terminal status. Live runs are tracked in-process so an active run is never falsely reaped.
 - **Checkpoints** — each green area commits + tags on `harness/<runId>`; a failed area can `rollbackToLastGreen`. Because rollback is `git reset --hard`, checkpointing forces `maxConcurrent = 1` (concurrent siblings would be clobbered).
-- **Self-heal** — a tri-state result (`healed | unverified | failed`): it only claims "healed" when a real verify command re-ran clean, never optimistically.
+- **Self-heal** — only claims `healed` when a real verify command re-ran clean; with no verify command it returns `healed:false` with a reason (never optimistically advances), and it is skipped entirely for `unverifiable` gates (a missing UE env is not a code error to fix).
+- **Real UE gates** — the default UE gate is a genuine UBT compile derived from `POF_UE_EDITOR_CMD`/`POF_UE_UPROJECT` (judged by exit code), with an opt-in headless automation-test gate (`ueTests`, judged by abslog content). With no UE env the compile gate is `unverifiable` — the area is honestly gapped, never self-certified by a directory existing.
 - **Pause/resume** — same `runId` row across pause/resume; the loop drains active sessions before stopping.
 - **Honest reconciliation** — the ledger cannot lie: features are matched only by exact normalized name/id (`feature-match.ts`), unmatched reports are logged and left `unverified`, and an area promoted after exhausting retries records `completed-with-gaps` (not `completed`). Gapped areas unblock dependents but are **excluded from the pass-rate numerator** (`updatePlanStats`), so promote-with-gaps can never hit the target on unverified work. Gapped areas surface in run history (`gapped_areas`) and run-diff (`completedWithGaps`).
 
@@ -65,7 +70,7 @@ It's a **streaming pool**, not lock-step waves: an area that finishes early free
 ## Control surface
 
 **HTTP** (`src/app/api/harness/`):
-- `POST /api/harness` — `{ action: 'start' | 'pause' | 'resume', projectPath, projectName, ueVersion, maxIterations?, targetPassRate?, budgetUsd?, unlimited?, maxConcurrent?, scenario?, checkpoint? }`. `targetPassRate` accepts a 0–1 fraction OR a 0–100 percent (normalized server-side). `maxConcurrent` raises pool concurrency; `scenario` (`ui-overhaul` | `content-overhaul`, from the shared `scenarios.ts`) swaps in a curated area set; `unlimited: true` is the only way to run with no spend cap.
+- `POST /api/harness` — `{ action: 'start' | 'pause' | 'resume', projectPath, projectName, ueVersion, maxIterations?, targetPassRate?, budgetUsd?, unlimited?, maxConcurrent?, scenario?, checkpoint?, ueTests?, ueTestFilter? }`. `targetPassRate` accepts a 0–1 fraction OR a 0–100 percent (normalized server-side). `maxConcurrent` raises pool concurrency; `scenario` (`ui-overhaul` | `content-overhaul`, from the shared `scenarios.ts`) swaps in a curated area set; `unlimited: true` is the only way to run with no spend cap; `ueTests` opts in the automation-test gate.
 - `GET /api/harness[?action=plan|guide|progress|events]` — status snapshot or the full plan/guide/progress/events
 - `GET /api/harness/runs`, `/runs/[id]`, `/runs/diff?a=&b=` — run history & comparison
 - `GET /api/harness/screenshot`, `/screenshots` — visual-gate captures

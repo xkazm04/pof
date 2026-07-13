@@ -102,17 +102,30 @@ export interface ProgressEntry {
   errors?: string[];
   /** Lessons learned (fed into AGENTS.md) */
   learnings?: string[];
+  /**
+   * Verification outcome for this area's required gates. `unverifiable` means a
+   * required gate could not be evaluated (e.g. no UE env for the compile gate) —
+   * surfaced in run history so an area is never silently self-certified.
+   */
+  verification?: 'pass' | 'fail' | 'unverifiable';
 }
 
 // ── Verification ────────────────────────────────────────────────────────────
 
 export interface VerificationGate {
   name: string;
-  type: 'typecheck' | 'lint' | 'test' | 'build' | 'playtest' | 'visual' | 'custom';
+  type:
+    | 'typecheck' | 'lint' | 'test' | 'build' | 'playtest' | 'visual' | 'custom'
+    /** Real UE5 C++ compile via UnrealBuildTool; commandless form = unverifiable (no env). */
+    | 'ue-compile'
+    /** UE5 headless automation-test run; judged by abslog content, not exit code. */
+    | 'ue-test';
   /** Whether this gate is required (blocks progress) or advisory */
   required: boolean;
   /** Command to run or function key */
   command?: string;
+  /** Automation test filter (ue-test gates only), e.g. "Project" or "PoF.Combat". */
+  filter?: string;
 }
 
 export interface VerificationResult {
@@ -122,6 +135,13 @@ export interface VerificationResult {
   durationMs: number;
   /** Structured errors if available */
   errors?: Array<{ file?: string; line?: number; message: string }>;
+  /**
+   * The gate could not be evaluated at all (e.g. a UE compile gate with no UE
+   * env configured). NOT a pass and NOT a hard fail — it means "unknown". The
+   * orchestrator records verification=unverifiable and does NOT try to self-heal
+   * it (there is no code error to fix).
+   */
+  unverifiable?: boolean;
 }
 
 export interface VerificationReport {
