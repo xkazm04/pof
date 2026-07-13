@@ -12,6 +12,7 @@ import type { PromptKind } from '@/lib/knowledge/types';
 import { formatGotchas } from '@/lib/knowledge/ue-gotchas';
 import { formatBinaryContentTripwire } from '@/lib/knowledge/binary-content';
 import { formatKnownAssets } from '@/lib/knowledge/ue-known-assets';
+import { formatKnowledgeTips } from '@/lib/knowledge/knowledge-tips';
 
 export interface ProjectContext {
   projectName: string;
@@ -418,6 +419,12 @@ export function buildProjectContextHeader(
 
   const knownAssets = formatKnownAssets(opts.knownAssetDomains ?? []);
   if (knownAssets) header += `\n\n${knownAssets}`;
+
+  // Recover the module's authored KnowledgeTips (best-practice + feasibility) into
+  // the prompt — display-only until now, they reach a task only when a module is
+  // in context (scoped by promptKind, empty for `web`).
+  const tips = formatKnowledgeTips(opts.module, promptKind);
+  if (tips) header += `\n\n${tips}`;
 
   return header;
 }

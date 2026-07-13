@@ -42,10 +42,11 @@ The function branches on `ctx.dynamicContext?.projectType`:
      (`prompt-context.ts:85`)
   4. `## Rules` — standard UE rules + optional `extraRules` from the caller
   
-  After the rules block, three knowledge injections fire unconditionally (when non-empty):
-  - `formatGotchas(promptKind)` — UE C++ pitfall list from `src/lib/knowledge/ue-gotchas.ts`
+  After the rules block, four knowledge injections fire unconditionally (when non-empty):
+  - `formatGotchas(promptKind, module)` — UE pitfall list from `src/lib/knowledge/ue-gotchas.ts`, scoped to the module's domains
   - `formatBinaryContentTripwire(promptKind)` — binary-file guard
   - `formatKnownAssets(domains)` — domain-scoped asset inventory
+  - `formatKnowledgeTips(module, promptKind)` — the module's authored `KnowledgeTip`s (best-practice + feasibility) from `src/lib/knowledge/knowledge-tips.ts`, injected when a `module` is in context
 
 - **`nextjs` / `generic`**: Routes to `buildWebAppContextHeader()` which emits
   framework, database, and API route / MCP tool instructions instead.

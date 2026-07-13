@@ -39,7 +39,7 @@ Each `SubModuleDefinition` carries:
 - `categoryId: CategoryId` — determines which sidebar group it appears in
 - `checklist?: ChecklistItem[]` — ordered steps, each with `{ id, label, description, prompt }` plus optional `dependsOn` (other checklist item IDs in the same module), `features` (feature names from registry 2), `visualCheck`, `lightingCheck`, `characterCheck` flags
 - `quickActions: QuickAction[]` — one-shot prompts without progress tracking
-- `knowledgeTips: KnowledgeTip[]` — **UI only**; shown as banners in `ModuleShell.tsx` (line 124) and never injected into dispatch prompts (see Conventions below)
+- `knowledgeTips: KnowledgeTip[]` — shown as banners in `ModuleShell.tsx` (line 124) **and** injected into dispatch prompts via `formatKnowledgeTips()` (see Conventions below)
 - `feasibilityRating?: 'strong' | 'moderate' | 'challenging'` — controls feasibility banner display
 
 `CATEGORIES` (line 373) lists seven `CategoryDefinition` objects. The `core-engine` category's `subModules` array is intentionally left empty — its members are resolved by filtering `SUB_MODULES` against the private `CORE_ENGINE_IDS` array (line 434). All other categories enumerate their module IDs inline.
@@ -112,7 +112,7 @@ The `core-engine` `SubModuleDefinition` objects are nested further under `src/co
 
 ## Conventions / Gotchas
 
-**`knowledgeTips` are UI-only.** They are rendered as dismissable banners in `ModuleShell.tsx` for modules with `feasibilityRating === 'moderate'` (line 124). They are **never injected into dispatch prompts**. What does reach prompts is `UE_GOTCHAS` (`src/lib/knowledge/ue-gotchas.ts`) filtered by `appliesTo: PromptKind[]`, and a binary-content tripwire injected by `buildProjectContextHeader()` in `src/lib/prompt-context.ts`.
+**`knowledgeTips` reach both the UI and dispatch prompts.** They are rendered as dismissable banners in `ModuleShell.tsx` for modules with `feasibilityRating === 'moderate'` (line 124), **and** — since the knowledge-tips recovery — injected into dispatch prompts as a `## Project Knowledge Tips` block by `formatKnowledgeTips(module, promptKind)` (`src/lib/knowledge/knowledge-tips.ts`), fired from `buildProjectContextHeader()` whenever a `module` is in context. That block sits alongside the other knowledge injections: `UE_GOTCHAS` (`src/lib/knowledge/ue-gotchas.ts`) filtered by `appliesTo: PromptKind[]` + module domains, the binary-content tripwire, and `formatKnownAssets(domains)` — all injected by `buildProjectContextHeader()` in `src/lib/prompt-context.ts`.
 
 **Two separate dependency graphs coexist.** `MODULE_PREREQUISITES` is module-to-module (coarse, drives `RoadmapChecklist` and `getRecommendedNextModules`). `MODULE_FEATURE_DEFINITIONS[moduleId][].dependsOn` is feature-to-feature (fine, drives the NBA engine via `buildDependencyMap` / `computeBlockers`). They are maintained independently and can disagree.
 
