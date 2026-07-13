@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { CATALOG_SECTIONS } from '@/lib/catalog/sections';
 import { useCatalogStore } from '@/stores/catalogStore';
-import { labPipelineSteps } from './labPipelines';
+import { resolveCatalogSteps } from './catalogManifest';
 import type { LifecycleState } from '@/lib/catalog/types';
 
 export interface LabCatalog {
@@ -81,7 +81,7 @@ export function useLabDetail(catalogId: string | null): LabDetail | null {
       entities: all.map((e) => ({
         id: e.id, name: e.name, lifecycle: e.lifecycle, data: (e as { data?: unknown }).data,
       })),
-      steps: labPipelineSteps(catalogId),
+      steps: resolveCatalogSteps(catalogId),
     };
   }, [catalogId, entitiesByCatalog, draftEntitiesByCatalog]);
 }

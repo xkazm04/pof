@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { summarizeEntityData } from '@/lib/ecw/entity-summary';
 import { useLabPipelineStore, useEntitySteps, setLabSync } from '../labPipelineStore';
 import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
+import { catalogManifest } from '../catalogManifest';
 import { fetchArtifacts, postArtifact, drainGates } from '../labArtifactClient';
 import { resolveAccept } from '../labAcceptance';
 import { useEntityArtifacts } from '../hooks/useEntityArtifacts';
@@ -31,30 +32,23 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
   const entities = detail?.entities ?? [];
   const entity = entities.find((e) => e.id === entityId) ?? entities[0] ?? null;
 
-  // Hybrid step source. Items is the bespoke REFERENCE pipeline (rich
-  // ItemConceptBrief/ItemAttributes/ItemArt… components + populateItemDemo, all keyed
-  // to its curated labPipelineSteps names), so it renders that list (detail.steps).
-  // Every other catalog uses its registry StepSpec labels, which the generic
-  // ArchetypeStep renderer drives.
-  const pipeline = detail ? getCatalogPipeline(detail.catalog.catalogId) : null;
-  // Memoized so the `steps` array identity is stable across renders that don't change
-  // the pipeline/items list. A fresh `pipeline.steps.map(...)` array every render would
-  // otherwise bust useEntityArtifacts' memo (it keys on `steps`), forcing a full
-  // per-step acceptance rollup recompute on every unrelated re-render.
-  const steps = useMemo(
-    () =>
-      detail?.catalog.catalogId !== 'items' && pipeline
-        ? pipeline.steps.map((s) => s.label)
-        : (detail?.steps ?? []),
-    [detail?.catalog.catalogId, pipeline, detail?.steps],
-  );
-
   const catalogId = detail?.catalog.catalogId;
+
+  // Single step-source lookup, collapsed behind the manifest resolver: the old
+  // FINE_STEPS-vs-registry hybrid branch is gone. `detail.steps` is already the
+  // manifest's `resolveCatalogSteps(catalogId)` output (useLabCatalogData), and it is
+  // referentially stable per catalogId+entities — so it's safe to read directly
+  // (useEntityArtifacts keys its memo on this array). The manifest's `bespoke` flag
+  // replaces the `catalogId === 'items'` special-case.
+  const manifest = useMemo(() => (catalogId ? catalogManifest(catalogId) : null), [catalogId]);
+  const steps = detail?.steps ?? [];
+  // The generic ArchetypeStep still needs the raw StepSpec (for its `spec` prop).
+  const pipeline = detail ? getCatalogPipeline(detail.catalog.catalogId) : null;
 
   const fields = summarizeEntityData(entity?.data);
 
   // Real per-step production state (Items pipeline is fully data-backed; others use pseudo-progress).
-  const isItems = catalogId === 'items';
+  const isItems = manifest?.bespoke ?? false;
   const entitySteps = useEntitySteps(entity?.id ?? '');
   const produce = useLabPipelineStore((s) => s.produce);
   const resetEntity = useLabPipelineStore((s) => s.resetEntity);

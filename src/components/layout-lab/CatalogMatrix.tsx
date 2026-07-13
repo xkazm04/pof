@@ -4,10 +4,9 @@ import '@/lib/catalog/pipelines/registry.generated';
 import { useState, useEffect, useMemo } from 'react';
 import { fetchArtifacts } from './labArtifactClient';
 import { resolveAccept } from './labAcceptance';
-import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 import { summarizeEntity, type EntityRollup } from '@/lib/catalog/rollup';
 import { useLabDetail } from './useLabCatalogData';
-import { labPipelineSteps } from './labPipelines';
+import { resolveCatalogSteps } from './catalogManifest';
 import { STATUS_GLYPH, STATUS_WORD, statusColor } from './statusLanguage';
 import type { AcceptanceStatus } from '@/lib/catalog/acceptance/types';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
@@ -41,11 +40,10 @@ export function CatalogMatrix({ t, groups, catalogId, onOpenStep }: Props) {
   const [artState, setArtState] = useState<{ catalogId: string; arts: PipelineArtifact[] }>({ catalogId: selected, arts: [] });
   const detail = useLabDetail(selected);
 
-  // Same hybrid step source Baseline uses, so columns align with produced artifacts.
-  const steps = useMemo(() => {
-    const pipeline = getCatalogPipeline(selected);
-    return pipeline ? pipeline.steps.map((s) => s.label) : (detail?.steps ?? labPipelineSteps(selected));
-  }, [selected, detail?.steps]);
+  // Same manifest step-source Baseline uses, so the matrix columns and the rail can
+  // never disagree about a catalog's step list (incl. bespoke Items, which renders
+  // its curated fine steps rather than its same-id registry pipeline labels).
+  const steps = useMemo(() => resolveCatalogSteps(selected), [selected]);
 
   // Server is the source of truth for status — it carries the runner's L3/L4 overlay.
   useEffect(() => {

@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import { resolveAccept } from '../labAcceptance';
+import { isBespokeCatalog } from '../catalogManifest';
 import { labStepsDone } from '../labPipelines';
 import type { LabStepArtifact } from '../labPipelineStore';
 import type { LabEntity } from '../useLabCatalogData';
@@ -40,7 +41,7 @@ export function deriveEntityArtifacts(
   entitySteps: Record<string, LabStepArtifact> | undefined,
   serverArts: Record<string, PipelineArtifact>,
 ): EntityArtifacts {
-  const isItems = catalogId === 'items';
+  const isItems = isBespokeCatalog(catalogId);
 
   // Real per-step production state (Items is fully data-backed; others use the lifecycle pseudo-progress).
   const stepDone = (step: string, i: number) =>

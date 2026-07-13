@@ -295,6 +295,21 @@ The Items step **labels are declared once** — `ITEM_STEP_NAMES` (the keys of `
 and `STEP_REGISTRY.items` (which zips `ITEM_STEP_NAMES` to an ordered component array) derive from it,
 so a renamed step can never silently route a real step to the generic placeholder.
 
+### One catalog manifest (`catalogManifest.ts`)
+
+Making a catalog functional touches four decentralized sources — the **section**
+(`@/lib/catalog/sections`), the **step list** (bespoke fine steps vs a registered `StepSpec`
+pipeline), the acceptance **grader** (`labAcceptance.resolveAccept`), and the **bespoke step-UI**
+registry (`steps/index.ts`). `catalogManifest(catalogId)` is the single resolver over those sources.
+It returns `{ section, bespoke, stepSource, hasPipeline, steps }`, where `stepSource` is one of
+`bespoke` (curated fine steps + bespoke UIs — Items, which overrides its same-id registry pipeline),
+`registry` (a `StepSpec` pipeline drives `ArchetypeStep`), or `fallback` (generic track labels,
+ungraded). `useBaseline`, `CatalogMatrix`, and `useLabCatalogData` all resolve their step list through
+`resolveCatalogSteps` / this manifest, so the rail and the matrix can never render different columns.
+The `bespoke` flag replaces the `catalogId === 'items'` special-cases that were scattered across those
+hooks (`isBespokeCatalog`). The guard `src/__tests__/catalog/catalog-manifest-coverage.test.ts`
+(in `npm run validate`) fails when a graded catalog has steps but no section or no grader.
+
 ### Concurrency
 
 The `layout-lab` tree is edited by many parallel sessions. Re-read `labPipelineStore.ts` and
