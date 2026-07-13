@@ -10,10 +10,14 @@ const sibs: SiblingArtifact[] = [
   { step: 'Audio', data: { clip: 'generated/audio/missing-clip.wav' }, ueAssets: [] },
 ];
 
-/** In-memory fs seam: one real file (the glb), the audio clip missing. */
-function fakeFs(): { deps: PackagingFsDeps; written: Map<string, Buffer | string> } {
+/** In-memory fs seam: one real file (the glb), the audio clip missing, and a UE root
+ *  where SM_Warrior.uasset exists on disk. */
+function fakeFs(ueRoot: string | null = 'C:/UE/PoF'): { deps: PackagingFsDeps; written: Map<string, Buffer | string> } {
   const written = new Map<string, Buffer | string>();
-  const existing = new Map<string, Buffer>([['generated/tripo3d/warrior.glb', Buffer.from('glb-bytes-here')]]);
+  const existing = new Map<string, Buffer>([
+    ['generated/tripo3d/warrior.glb', Buffer.from('glb-bytes-here')],
+    ['C:/UE/PoF/Content/Items/SM_Warrior.uasset', Buffer.from('uasset')],
+  ]);
   const norm = (p: string) => p.replace(/\\/g, '/');
   const deps: PackagingFsDeps = {
     exists: (p) => existing.has(norm(p)) || written.has(norm(p)),
@@ -26,6 +30,7 @@ function fakeFs(): { deps: PackagingFsDeps; written: Map<string, Buffer | string
     mkdir: () => {},
     packagesRoot: 'generated/packages',
     now: () => '2026-07-13T12:00:00.000Z',
+    ueRoot: () => ueRoot,
   };
   return { deps, written };
 }
@@ -52,11 +57,23 @@ describe('buildPackage', () => {
       { path: 'generated/audio/missing-clip.wav', sourceStep: 'Audio', reason: 'referenced file not found on disk' },
     ]);
 
-    // declarations pass through; manifest.json is written
-    expect(manifest.ueDeclarations).toEqual(['/Game/Items/SM_Warrior']);
+    // declarations are disk-checked against the UE root (Tier 2 rung A)
+    expect(manifest.ueDeclarations).toEqual([
+      { path: '/Game/Items/SM_Warrior', realized: true, diskPath: 'C:/UE/PoF/Content/Items/SM_Warrior.uasset' },
+    ]);
     const manifestFile = [...written.keys()].find((k) => k.endsWith('manifest.json'));
     expect(manifestFile).toBe('generated/packages/items/rusted-blade/manifest.json');
     expect(JSON.parse(String(written.get(manifestFile!)))).toMatchObject({ catalogId: 'items', entityId: 'rusted-blade' });
+  });
+
+  it('marks unrealized declarations and leaves them unchecked (realized: null) without a UE root', () => {
+    const withRoot = buildPackage('items', 'x', [{ step: 'S', data: {}, ueAssets: ['/Game/Items/DA_Ghost'] }], fakeFs().deps);
+    expect(withRoot.ueDeclarations).toEqual([
+      { path: '/Game/Items/DA_Ghost', realized: false, diskPath: 'C:/UE/PoF/Content/Items/DA_Ghost.uasset' },
+    ]);
+
+    const noRoot = buildPackage('items', 'x', [{ step: 'S', data: {}, ueAssets: ['/Game/Items/DA_Ghost'] }], fakeFs(null).deps);
+    expect(noRoot.ueDeclarations).toEqual([{ path: '/Game/Items/DA_Ghost', realized: null }]);
   });
 
   it('an empty sibling set yields an empty—but still honest—manifest', () => {

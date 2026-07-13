@@ -26,11 +26,30 @@
 - **Tests:** 13 unit (collect/engine/drain) + the env-gated live dry-run; guards
   (`pipeline-produce-accept`, `pipeline-e2e-coverage`) green.
 
-**Applied same day:** verdicts written to the real DB (30 pass / 2 deferred, re-drain
-idempotent) via the integration runner's `POF_PACKAGING_APPLY=1` mode, and all 30
-step-facts packaging entries flipped (`trueEngine: 'Packaging engine'`,
-`generatorWired: true`, `checkerMeaningful: true`) — the UNPOWERED packaging block on
-/status is retired. Remaining: Tier 2 below (L3 gates verify the ueDeclarations).
+**Applied same day:** verdicts written to the real DB via the integration runner's
+`POF_PACKAGING_APPLY=1` mode, and all 30 step-facts packaging entries flipped
+(`trueEngine: 'Packaging engine'`, `generatorWired: true`, `checkerMeaningful: true`) —
+the UNPOWERED packaging block on /status is retired.
+
+## Tier 2 — BUILT + applied (same day)
+
+- **Rung A (L2 disk check, in the drain):** `buildPackage` now disk-checks every
+  `/Game/...` declaration against `<ueRoot>/Content/<path>.uasset|.umap` (shared
+  `resolveUeRoot`; same trust model as `cppSymbolExists`). Manifest `ueDeclarations`
+  carry `{path, realized, diskPath}`; the packaging artifact's OWN `ueAssets` are
+  included declarations-only via `siblingsForPackaging` (its declared list IS its claim;
+  its hand-typed data never feeds the file collector). Verdict: files + declarations all
+  realized → pass; anything missing → deferred with reasons; unchecked (no UE root) →
+  Tier 1 files-only verdict, saying so.
+- **Rung B (L3 live probe):** `scripts/ue/verify_package_declarations.py` — headless
+  `-run=pythonscript` commandlet, `does_asset_exist` per declaration from a manifest
+  (path via `POF_PKG_MANIFEST` env), `POF_PKG_DECL/SUMMARY/DONE` markers in the abslog.
+  **Proven live on UE 5.8** (spellbook/off-arc-fp): registry says 1/9 realized
+  (`DT_GeneratedAbilities`) — identical to rung A's disk check. The cheap disk check is
+  a validated proxy for the registry; loading/behavior stays with the L3 gate suite.
+- **Applied:** UE Packaging now **5 pass / 27 deferred** in the DB — the honest map.
+  The 27 deferrals name the unrealized declarations (audio/VFX/anim assets that were
+  hand-typed aspirations); each reason is the step's UE-side work list.
 
 ## Problem (from the /status fleet gap audit + judge fleet)
 

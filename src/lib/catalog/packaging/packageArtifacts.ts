@@ -12,6 +12,7 @@
  */
 import type { SiblingArtifact } from './collect';
 import { collectPackageInputs } from './collect';
+import { resolveUeRoot } from '../acceptance/ueStaticCheckers';
 
 export interface ManifestFile {
   /** Package-relative name (materialized) or the original reference (referenced). */
@@ -30,14 +31,23 @@ export interface ManifestMissing {
   reason: string;
 }
 
+export interface ManifestDeclaration {
+  /** UE object path (`/Game/...`) declared by a sibling. */
+  path: string;
+  /** Tier 2 rung A: does the `.uasset`/`.umap` exist under the UE root's Content/?
+   *  `null` = unchecked (no UE root resolved). Loading/behavior remains the L3 gates' job. */
+  realized: boolean | null;
+  diskPath?: string;
+}
+
 export interface PackageManifest {
   catalogId: string;
   entityId: string;
   packagedAt: string;
   files: ManifestFile[];
   missing: ManifestMissing[];
-  /** UE-side asset names declared by siblings — realized/verified by the L3 gates, listed for transparency. */
-  ueDeclarations: string[];
+  /** UE-side assets declared by siblings, disk-checked against the UE root. */
+  ueDeclarations: ManifestDeclaration[];
 }
 
 export interface PackagingFsDeps {
@@ -48,6 +58,8 @@ export interface PackagingFsDeps {
   /** Root for materialized packages (default `generated/packages`). */
   packagesRoot: string;
   now: () => string;
+  /** Resolved UE project root for declaration disk-checks; null = declarations unchecked. */
+  ueRoot: () => string | null;
 }
 
 function builtin<T>(id: string): T {
@@ -106,10 +118,24 @@ export function buildPackage(
     packagedAt: deps.now(),
     files,
     missing,
-    ueDeclarations: inputs.ueDeclarations,
+    ueDeclarations: inputs.ueDeclarations.map((path) => checkDeclaration(path, deps)),
   };
   deps.writeFile(`${pkgDir}/manifest.json`, JSON.stringify(manifest, null, 2));
   return manifest;
+}
+
+/** Disk-check one `/Game/...` declaration: `<ueRoot>/Content/<path>.uasset` (or `.umap`).
+ *  Same trust model as `cppSymbolExists`: exists = realized; loading is the L3 gates' job. */
+function checkDeclaration(path: string, deps: PackagingFsDeps): ManifestDeclaration {
+  const root = deps.ueRoot();
+  if (!root) return { path, realized: null };
+  const rel = path.replace(/^\/Game\//, '').replace(/\.[^/.]+$/, ''); // strip an object suffix like `.DA_Foo`
+  const base = `${root.replace(/\\/g, '/')}/Content/${rel}`;
+  const uasset = `${base}.uasset`;
+  if (deps.exists(uasset)) return { path, realized: true, diskPath: uasset };
+  const umap = `${base}.umap`;
+  if (deps.exists(umap)) return { path, realized: true, diskPath: umap };
+  return { path, realized: false, diskPath: uasset };
 }
 
 /** Real-filesystem deps rooted at the app cwd. Server-only. */
@@ -132,5 +158,7 @@ export function defaultPackagingFsDeps(): PackagingFsDeps {
     mkdir: (p) => fs.mkdirSync(abs(p), { recursive: true }),
     packagesRoot: 'generated/packages',
     now: () => new Date().toISOString(),
+    // Same resolution as the L2 static checkers (POF_UE_ROOT or the default checkout).
+    ueRoot: resolveUeRoot,
   };
 }

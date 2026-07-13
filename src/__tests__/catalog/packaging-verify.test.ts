@@ -18,12 +18,34 @@ const manifest = (over: Partial<PackageManifest>): PackageManifest => ({
 });
 
 const file = { name: 'a.glb', sourceStep: '3D Model', origin: 'referenced' as const, path: 'generated/a.glb', bytes: 10, sha1: 'x' };
+const realized = (path: string) => ({ path, realized: true as const, diskPath: `C:/UE/Content${path.replace('/Game', '')}.uasset` });
+const unrealized = (path: string) => ({ path, realized: false as const, diskPath: `C:/UE/Content${path.replace('/Game', '')}.uasset` });
+const unchecked = (path: string) => ({ path, realized: null });
 
 describe('aggregatePackaging', () => {
-  it('all references staged + hashed → L2 pass', () => {
-    const r = aggregatePackaging(manifest({ files: [file, { ...file, name: 'b.jpg' }] }), 'UE Packaging');
+  it('staged files + all checked declarations realized → L2 pass naming both', () => {
+    const r = aggregatePackaging(
+      manifest({ files: [file, { ...file, name: 'b.jpg' }], ueDeclarations: [realized('/Game/A'), realized('/Game/B')] }),
+      'UE Packaging',
+    );
     expect(r).toMatchObject({ tier: 'L2', status: 'pass' });
     expect(r.detail).toMatch(/2 real files/i);
+    expect(r.detail).toMatch(/2\/2 UE declarations realized/i);
+  });
+
+  it('unrealized declarations defer the step even when all files staged (Tier 2 truth)', () => {
+    const r = aggregatePackaging(
+      manifest({ files: [file], ueDeclarations: [realized('/Game/A'), unrealized('/Game/Items/MI_Ghost')] }),
+      'UE Packaging',
+    );
+    expect(r.status).toBe('deferred');
+    expect(r.reason).toContain('/Game/Items/MI_Ghost');
+  });
+
+  it('unchecked declarations (no UE root) keep the Tier 1 verdict and say so', () => {
+    const r = aggregatePackaging(manifest({ files: [file], ueDeclarations: [unchecked('/Game/A')] }), 'UE Packaging');
+    expect(r.status).toBe('pass');
+    expect(r.detail).toMatch(/unchecked/i);
   });
 
   it('missing references → deferred with the missing paths as the reason (never fail)', () => {
@@ -35,11 +57,34 @@ describe('aggregatePackaging', () => {
     expect(r.reason).toContain('generated/missing.wav');
   });
 
-  it('nothing collectible → deferred "declarations only", naming the UE-side count', () => {
-    const r = aggregatePackaging(manifest({ ueDeclarations: ['/Game/A', '/Game/B'] }), 'UE Packaging');
+  it('no files but every declaration realized on disk → pass (the UE-side package exists)', () => {
+    const r = aggregatePackaging(manifest({ ueDeclarations: [realized('/Game/A'), realized('/Game/B')] }), 'UE Packaging');
+    expect(r.status).toBe('pass');
+    expect(r.detail).toMatch(/2\/2 UE declarations realized/i);
+  });
+
+  it('nothing collectible + unchecked declarations → deferred "declarations only"', () => {
+    const r = aggregatePackaging(manifest({ ueDeclarations: [unchecked('/Game/A'), unchecked('/Game/B')] }), 'UE Packaging');
     expect(r.status).toBe('deferred');
     expect(r.reason).toMatch(/no packageable file outputs/i);
     expect(r.reason).toMatch(/2 UE asset declaration/);
+  });
+});
+
+describe('siblingsForPackaging', () => {
+  it('keeps sibling data, but includes the packaging artifact declarations-only (its ueAssets ARE its claim)', async () => {
+    const { siblingsForPackaging } = await import('@/lib/catalog/acceptance/packagingVerify');
+    const siblings = siblingsForPackaging(
+      [
+        { step: '3D Mesh', data: { mesh: 'generated/a.glb' }, ueAssets: ['/Game/Items/SM_A'] },
+        { step: 'UE Packaging', data: { assets: ['hand', 'typed'] }, ueAssets: ['/Game/Data/Items/DA_A'] },
+      ],
+      'UE Packaging',
+    );
+    expect(siblings).toEqual([
+      { step: '3D Mesh', data: { mesh: 'generated/a.glb' }, ueAssets: ['/Game/Items/SM_A'] },
+      { step: 'UE Packaging', data: {}, ueAssets: ['/Game/Data/Items/DA_A'] },
+    ]);
   });
 });
 

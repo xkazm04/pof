@@ -119,7 +119,7 @@
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": true,
-      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
+      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job."
     },
     {
       "catalogId": "ambient",
@@ -219,7 +219,7 @@
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": true,
-      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
+      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job."
     },
     {
       "catalogId": "bestiary",
@@ -339,7 +339,7 @@
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": true,
-      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
+      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job."
     },
     {
       "catalogId": "character-pipeline",
@@ -559,7 +559,7 @@
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": true,
-      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
+      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job."
     },
     {
       "catalogId": "codex",
@@ -669,7 +669,7 @@
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": true,
-      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
+      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job."
     },
     {
       "catalogId": "combat-map",
@@ -789,7 +789,7 @@
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": true,
-      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
+      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job."
     },
     {
       "catalogId": "crafting-recipes",
@@ -899,7 +899,7 @@
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": true,
-      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
+      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job."
     },
     {
       "catalogId": "currencies",
@@ -969,7 +969,7 @@
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": true,
-      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
+      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job."
     },
     {
       "catalogId": "cutscenes",
@@ -1099,7 +1099,7 @@
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": true,
-      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
+      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job."
     },
     {
       "catalogId": "dialog-trees",
@@ -1219,7 +1219,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": true,
-      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
+      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job."
     },
     {
       "catalogId": "factions",
@@ -1329,7 +1329,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": true,
-      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
+      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job."
     },
     {
       "catalogId": "hud-elements",
@@ -1429,7 +1429,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": true,
-      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
+      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job."
     },
     {
       "catalogId": "icon-sets",
@@ -1499,7 +1499,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": true,
-      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
+      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job."
     },
     {
       "catalogId": "input-schemes",
@@ -1619,7 +1619,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": true,
-      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
+      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job."
     },
     {
       "catalogId": "items",
@@ -1729,7 +1729,7 @@
       "generatorWired": true,
       "judge": "ue-test",
       "checkerMeaningful": true,
-      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
+      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job."
     },
     {
       "catalogId": "loot-tables",
@@ -1829,7 +1829,7 @@
       "generatorWired": true,
       "judge": "ue-test",
       "checkerMeaningful": true,
-      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
+      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job."
     },
     {
       "catalogId": "materials",
@@ -1929,7 +1929,7 @@
       "generatorWired": true,
       "judge": "ue-test",
       "checkerMeaningful": true,
-      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
+      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job."
     },
     {
       "catalogId": "music",
@@ -2029,7 +2029,7 @@
       "generatorWired": true,
       "judge": "human",
       "checkerMeaningful": true,
-      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
+      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job."
     },
     {
       "catalogId": "player-movement",
@@ -2249,7 +2249,7 @@
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": true,
-      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
+      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job."
     },
     {
       "catalogId": "props",
@@ -2359,7 +2359,7 @@
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": true,
-      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
+      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job."
     },
     {
       "catalogId": "quests",
@@ -2469,7 +2469,7 @@
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": true,
-      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
+      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job."
     },
     {
       "catalogId": "save-points",
@@ -2589,7 +2589,7 @@
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": true,
-      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
+      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job."
     },
     {
       "catalogId": "screen-flow",
@@ -2699,7 +2699,7 @@
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": true,
-      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
+      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job."
     },
     {
       "catalogId": "spellbook",
@@ -2809,7 +2809,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": true,
-      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
+      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job."
     },
     {
       "catalogId": "state-graph",
@@ -2899,7 +2899,7 @@
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": true,
-      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
+      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job."
     },
     {
       "catalogId": "status-effects",
@@ -2959,7 +2959,7 @@
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": true,
-      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
+      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job."
     },
     {
       "catalogId": "tutorial-beats",
@@ -3089,7 +3089,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": true,
-      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
+      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job."
     },
     {
       "catalogId": "vendors",
@@ -3199,7 +3199,7 @@
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": true,
-      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
+      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job."
     },
     {
       "catalogId": "vfx",
@@ -3299,7 +3299,7 @@
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": true,
-      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
+      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job."
     },
     {
       "catalogId": "zone-map",
@@ -3419,7 +3419,7 @@
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": true,
-      "note": "Graded from disk truth by the packaging drain (2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) and derives the L2 verdict from manifest.json — staged files -> pass, missing references / empty rows -> deferred with reasons. produce() still authors the wiring contract; UE-side realization of ueAssets declarations remains the L3 gates' job."
+      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job."
     }
   ]
 }
