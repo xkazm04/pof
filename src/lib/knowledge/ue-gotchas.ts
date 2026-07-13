@@ -182,6 +182,22 @@ export const UE_GOTCHAS: Gotcha[] = [
     source: 'research: AI to MetaHuman UE 5.8 workflow (Stefan 3D AI)',
   },
   {
+    id: 'metahuman-animator-headless-memory-window',
+    summary: 'MetaHuman Animator markerless solve leaks memory on long clips — window the headless solve with MetaHumanPerformance.set_processing_range, do not feed a whole long clip',
+    detail:
+      "UE 5.8 MetaHuman Animator turns plain markerless video into MetaHuman face/body animation, and its solve API is fully Python-exposed and loads HEADLESS (verified on 5.8.0 with the MetaHuman + MetaHumanAnimationTools plugins enabled): unreal.MetaHumanPerformance exposes can_process / start_pipeline / set_blocking_processing (the unattended/batch flag) / set_processing_range / is_processing / get_number_of_processed_frames / contains_animation_data / export_animation, plus MetaHumanPerformanceExportUtils.export_animation_sequence and MetaHumanIdentity.start_frame_tracking_pipeline / export_dna_data_to_files. The pitfall: the ML solve's memory usage ramps roughly LINEARLY with clip length and is not released mid-process — a 4K60 clip past ~30-40s can exhaust RAM and crash even with a large page file. The GUI Live Link Hub gives no control over this, forcing users to physically pre-cut the video into ~30s chunks. In the HEADLESS PoF path you have a better lever: call set_processing_range(start_frame, end_frame) to solve the footage in bounded windows without cutting the source video, and set_blocking_processing(True) so each window completes before the next. Check diagnostics_indicates_processing_issue() after each window. (Pairs with the root-drift stitch gotcha — independent windows still need re-anchoring.)",
+    appliesTo: ['ue-python'],
+    source: 'research: MetaHuman Animator human-animation pipeline (Curtis Holt) + live 5.8 API probe',
+  },
+  {
+    id: 'metahuman-animator-window-root-stitch',
+    summary: 'MetaHuman Animator solves each footage window in ISOLATION at world origin — stitch windows and re-anchor per-window root/pelvis offset, or the character teleports between chunks',
+    detail:
+      "When you solve markerless footage in multiple passes (separate clips, or set_processing_range windows via MetaHumanPerformance.start_pipeline), each pass is solved INDEPENDENTLY with no memory of the previous pass's world state — every window's root/pelvis is placed around world origin, so naively concatenating the exported AnimSequences makes the character snap back to origin at each window boundary. A stitch pass is required after export: append each window's frames onto the previous window's tail AND correct the per-window root (pelvis) translation + rotation by the accumulated offset carried from the end of the prior window (convert rotations to a consistent representation before summing — a MetaHuman/DNA rig authored in Euler must be handled as quaternions to compose rotations correctly). Preserve a stable clip naming convention (…_1, _2, _3) so the stitcher can auto-detect and order the windows. This is the animation analog of the mesh-critique geometry gate: a clean per-window solve can still produce a broken concatenated take.",
+    appliesTo: ['ue-python'],
+    source: 'research: MetaHuman Animator human-animation pipeline (Curtis Holt) + live 5.8 API probe',
+  },
+  {
     id: 'gas-author-abilities-incrementally',
     summary: 'GAS: build an ability one coupled piece at a time (tag → input → effect → ability → grant/bind → cue), not the whole system in one shot',
     detail:

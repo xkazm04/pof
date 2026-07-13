@@ -102,6 +102,20 @@ describe('formatGotchas', () => {
     expect(formatGotchas('ue-cpp')).not.toMatch(/UDIM/);
   });
 
+  it('carries MetaHuman Animator headless memory/windowing guidance for ue-python', () => {
+    const out = formatGotchas('ue-python');
+    expect(out).toMatch(/MetaHuman (Animator|Performance)/);
+    expect(out).toMatch(/set_processing_range/);
+    expect(out).toMatch(/memory|RAM/i);
+  });
+
+  it('carries MetaHuman Animator multi-window root-drift stitch guidance for ue-python', () => {
+    const out = formatGotchas('ue-python');
+    expect(out).toMatch(/start_pipeline|MetaHumanPerformance/);
+    expect(out).toMatch(/root|pelvis/i);
+    expect(out).toMatch(/stitch|re-?anchor|offset|independent/i);
+  });
+
   it('carries Niagara optimization pitfalls', () => {
     const out = formatGotchas('ue-python');
     expect(out).toMatch(/Niagara/);
