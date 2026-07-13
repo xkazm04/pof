@@ -78,12 +78,12 @@ function promptKindForStep(step: GenerationStep): PromptKind {
  * no module → zero python pitfalls, zero known assets).
  */
 function recipeBuilder(ctx: ProjectContext, catalogId: string, step: GenerationStep): PromptBuilder {
-  const module = moduleForRecipe(catalogId);
-  const knownAssetDomains = module ? knownAssetDomainsForModule(module) : [];
+  const recipeModule = moduleForRecipe(catalogId);
+  const knownAssetDomains = recipeModule ? knownAssetDomainsForModule(recipeModule) : [];
   return new PromptBuilder()
     .withProjectContext(ctx, {
       promptKind: promptKindForStep(step),
-      module,
+      module: recipeModule,
       knownAssetDomains,
     })
     .withQualityPack(step === 'verify' ? '' : qualityPack(disciplineFor(catalogId), catalogId));
