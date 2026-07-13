@@ -22,6 +22,8 @@ import {
   type GameBuildGuide,
 } from '@/lib/harness';
 import { renderGuideMarkdown } from '@/lib/harness/guide-generator';
+import { SCENARIOS, scenarioNames } from '@/lib/harness/scenarios';
+import { reapStrandedRuns } from '@/lib/harness-runs-db';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -45,6 +47,11 @@ export async function GET(request: NextRequest) {
   const action = request.nextUrl.searchParams.get('action');
   const config = globalForHarness.harnessConfig;
   const orchestrator = globalForHarness.harnessOrchestrator;
+
+  // First status read after a crash/restart heals any `harness_runs` row left
+  // stranded in 'running' (see reapStrandedRuns — excludes runs still live in
+  // this process). Best-effort; never blocks the status response.
+  try { reapStrandedRuns(); } catch { /* reaping is best-effort */ }
 
   if (action === 'plan' && orchestrator) {
     const plan = orchestrator.getPlan();
@@ -135,7 +142,10 @@ export async function POST(request: NextRequest) {
     targetPassRate?: number;
     sessionTimeoutMs?: number;
     budgetUsd?: number;
+    unlimited?: boolean;
     checkpoint?: boolean;
+    maxConcurrent?: number;
+    scenario?: string;
   };
 
   if (body.action === 'start') {
@@ -147,6 +157,31 @@ export async function POST(request: NextRequest) {
       return apiError('Missing required fields: projectPath, projectName, ueVersion', 400);
     }
 
+    // Scenario selection (Direction 1c) — the same curated area sets the CLI
+    // exposes are now reachable from the API. Reject an unknown name loudly.
+    let scenarioAreas;
+    if (body.scenario) {
+      const def = SCENARIOS[body.scenario];
+      if (!def) {
+        return apiError(`Unknown scenario "${body.scenario}". Available: ${scenarioNames().join(', ')}`, 400);
+      }
+      scenarioAreas = def.areas;
+    }
+
+    // Build the executor block unconditionally so maxConcurrent (Direction 1b)
+    // is reachable even when sessionTimeoutMs is omitted; previously it was only
+    // built when a timeout was passed, so the API could never raise concurrency.
+    const executorOverride = (body.sessionTimeoutMs != null || body.maxConcurrent != null)
+      ? {
+          sessionTimeoutMs: body.sessionTimeoutMs ?? 30 * 60 * 1000,
+          maxRetriesPerArea: 3,
+          allowedTools: ['Bash', 'Read', 'Edit', 'Write', 'Glob', 'Grep'],
+          skipPermissions: true,
+          bareMode: false,
+          ...(body.maxConcurrent != null ? { maxConcurrent: body.maxConcurrent } : {}),
+        }
+      : undefined;
+
     const config = createDefaultConfig({
       projectPath: body.projectPath,
       projectName: body.projectName,
@@ -155,14 +190,10 @@ export async function POST(request: NextRequest) {
       maxIterations: body.maxIterations,
       targetPassRate: body.targetPassRate,
       ...(body.budgetUsd != null ? { budgetUsd: body.budgetUsd } : {}),
+      ...(body.unlimited != null ? { unlimited: body.unlimited } : {}),
       ...(body.checkpoint != null ? { checkpoint: body.checkpoint } : {}),
-      executor: body.sessionTimeoutMs ? {
-        sessionTimeoutMs: body.sessionTimeoutMs,
-        maxRetriesPerArea: 3,
-        allowedTools: ['Bash', 'Read', 'Edit', 'Write', 'Glob', 'Grep'],
-        skipPermissions: true,
-        bareMode: false,
-      } : undefined,
+      ...(scenarioAreas ? { areas: scenarioAreas } : {}),
+      executor: executorOverride,
     });
 
     globalForHarness.harnessConfig = config;

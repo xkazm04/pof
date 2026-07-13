@@ -64,6 +64,49 @@ export function readCheckpoints(statePath: string): CheckpointState | null {
   return readJsonFile<CheckpointState | null>(checkpointsPath(statePath), null);
 }
 
+// ── Unit normalization ──────────────────────────────────────────────────────
+
+/**
+ * Normalize a pass-rate expressed as EITHER a 0–1 fraction OR a 0–100 percent
+ * into the canonical 0–100 percent the orchestrator compares against.
+ *
+ * The control surfaces historically disagreed on units: the MCP tool documented
+ * `targetPassRate` as "0–1" while the orchestrator (and CLI/API) compared a
+ * 0–100 `passRate` against it — so an MCP caller passing `0.9` terminated at
+ * ~1% pass. We accept both at every boundary: a value in `(0,1]` is treated as
+ * a fraction and scaled ×100; any value `>1` is already a percent. `1` therefore
+ * means 100%. Clamped to `[0,100]`; non-finite / ≤0 → 0.
+ */
+export function normalizePassRatePercent(value: number): number {
+  if (!Number.isFinite(value) || value <= 0) return 0;
+  const pct = value <= 1 ? value * 100 : value;
+  return Math.min(100, pct);
+}
+
+// ── Budget resolution ───────────────────────────────────────────────────────
+
+/**
+ * Default cost ceiling (USD) applied to any run that does not explicitly opt out
+ * via `unlimited: true`. Without it an un-budgeted run had NO ceiling at all —
+ * `maxIterations` (default 100) × ~30-min sessions could spend unbounded money.
+ */
+export const DEFAULT_BUDGET_USD = 25;
+
+/**
+ * Resolve the effective spend cap. Opting out of any ceiling requires an
+ * explicit `unlimited: true`; otherwise a positive `budgetUsd` wins and a
+ * missing / non-positive budget falls back to `DEFAULT_BUDGET_USD`. Returns the
+ * cap in USD, or `null` for a genuinely uncapped (unlimited) run.
+ */
+export function resolveBudgetUsd(
+  budgetUsd: number | null | undefined,
+  unlimited: boolean | undefined,
+): number | null {
+  if (unlimited === true) return null;
+  if (typeof budgetUsd === 'number' && budgetUsd > 0) return budgetUsd;
+  return DEFAULT_BUDGET_USD;
+}
+
 // ── Cost governor ───────────────────────────────────────────────────────────
 
 export function emptyCost(budgetUsd: number | null): HarnessCostTotals {
@@ -400,9 +443,13 @@ export function createHarnessOrchestrator(config: HarnessConfig): HarnessOrchest
   // >1 that would wipe sibling areas' in-flight edits. Checkpointing assumes sequential
   // execution, so force a single worker whenever it is enabled.
   const maxConcurrent = config.checkpoint === true ? 1 : (config.executor.maxConcurrent ?? 1);
-  const areaPassThreshold = (config.executor.areaPassThreshold ?? config.targetPassRate) / 100;
+  // Normalize both thresholds so a fraction (0–1) or percent (0–100) is accepted
+  // at every boundary; the canonical form is a 0–1 ratio for the feature check.
+  const targetPassRatePct = normalizePassRatePercent(config.targetPassRate);
+  const areaPassThreshold =
+    normalizePassRatePercent(config.executor.areaPassThreshold ?? targetPassRatePct) / 100;
   const maxRetries = config.executor.maxRetriesPerArea;
-  const budgetUsd = typeof config.budgetUsd === 'number' && config.budgetUsd > 0 ? config.budgetUsd : null;
+  const budgetUsd = resolveBudgetUsd(config.budgetUsd, config.unlimited);
 
   if (!fs.existsSync(config.statePath)) {
     fs.mkdirSync(config.statePath, { recursive: true });
@@ -778,7 +825,7 @@ export function createHarnessOrchestrator(config: HarnessConfig): HarnessOrchest
       // Check pass rate
       const passRate = plan.totalFeatures > 0
         ? (plan.passingFeatures / plan.totalFeatures) * 100 : 0;
-      if (passRate >= config.targetPassRate) break;
+      if (passRate >= targetPassRatePct) break;
 
       // Fill pool with newly unblocked areas
       fillPool();
@@ -875,7 +922,7 @@ export function createHarnessOrchestrator(config: HarnessConfig): HarnessOrchest
 
       const passRate = plan.totalFeatures > 0
         ? (plan.passingFeatures / plan.totalFeatures) * 100 : 0;
-      if (passRate >= config.targetPassRate) {
+      if (passRate >= targetPassRatePct) {
         emit({ type: 'harness:completed', plan, guide });
         persistTerminal('completed');
         runId = null;
@@ -1007,9 +1054,12 @@ export function createDefaultConfig(overrides: Partial<HarnessConfig> & {
     generateGuide: overrides.generateGuide ?? true,
     updateAgentsMd: overrides.updateAgentsMd ?? true,
     evalPasses: overrides.evalPasses ?? ['structure', 'quality'],
-    targetPassRate: overrides.targetPassRate ?? 90,
+    // Canonicalize to 0–100 percent so a caller passing a 0–1 fraction (e.g. the
+    // MCP tool's documented 0.9) doesn't terminate the loop at ~1% pass.
+    targetPassRate: normalizePassRatePercent(overrides.targetPassRate ?? 90),
     areas: overrides.areas,
     ...(overrides.budgetUsd != null ? { budgetUsd: overrides.budgetUsd } : {}),
+    ...(overrides.unlimited != null ? { unlimited: overrides.unlimited } : {}),
     ...(overrides.themeDirective != null ? { themeDirective: overrides.themeDirective } : {}),
     ...(overrides.checkpoint != null ? { checkpoint: overrides.checkpoint } : {}),
   };

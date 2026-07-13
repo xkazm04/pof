@@ -15,7 +15,7 @@ import type {
   ProgressEntry,
 } from '@/lib/harness/types';
 
-export type HarnessRunStatus = 'running' | 'completed' | 'paused' | 'error';
+export type HarnessRunStatus = 'running' | 'completed' | 'paused' | 'error' | 'interrupted';
 
 export interface HarnessRunRow {
   runId: string;
@@ -82,7 +82,7 @@ function ensureTable(): void {
       run_id TEXT PRIMARY KEY,
       project_name TEXT NOT NULL,
       project_path TEXT NOT NULL,
-      status TEXT NOT NULL CHECK(status IN ('running','completed','paused','error')),
+      status TEXT NOT NULL CHECK(status IN ('running','completed','paused','error','interrupted')),
       started_at TEXT NOT NULL,
       ended_at TEXT,
       duration_ms INTEGER,
@@ -104,6 +104,7 @@ function ensureTable(): void {
       cost_json TEXT NOT NULL DEFAULT '{}'
     )
   `);
+  migrateInterruptedStatus();
   getDb().exec(`
     CREATE INDEX IF NOT EXISTS idx_harness_runs_started
     ON harness_runs(started_at DESC)
@@ -112,6 +113,108 @@ function ensureTable(): void {
     CREATE INDEX IF NOT EXISTS idx_harness_runs_project
     ON harness_runs(project_path, started_at DESC)
   `);
+}
+
+/**
+ * A pre-existing `harness_runs` table baked its CHECK constraint WITHOUT
+ * 'interrupted', which would reject the reaper's terminal write. SQLite can't
+ * ALTER a CHECK in place, so rebuild the table (preserving rows) only when the
+ * stored schema is the old one. Idempotent + cheap: it inspects `sqlite_master`
+ * and no-ops once the constraint already allows 'interrupted'.
+ */
+function migrateInterruptedStatus(): void {
+  const row = getDb()
+    .prepare(`SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'harness_runs'`)
+    .get() as { sql?: string } | undefined;
+  const sql = row?.sql ?? '';
+  if (!sql || sql.includes("'interrupted'")) return; // already migrated (or fresh)
+
+  const db = getDb();
+  db.exec('BEGIN');
+  try {
+    db.exec('ALTER TABLE harness_runs RENAME TO harness_runs_old');
+    db.exec(`
+      CREATE TABLE harness_runs (
+        run_id TEXT PRIMARY KEY,
+        project_name TEXT NOT NULL,
+        project_path TEXT NOT NULL,
+        status TEXT NOT NULL CHECK(status IN ('running','completed','paused','error','interrupted')),
+        started_at TEXT NOT NULL,
+        ended_at TEXT,
+        duration_ms INTEGER,
+        iteration INTEGER NOT NULL DEFAULT 0,
+        total_features INTEGER NOT NULL DEFAULT 0,
+        passing_features INTEGER NOT NULL DEFAULT 0,
+        pass_rate REAL NOT NULL DEFAULT 0,
+        total_areas INTEGER NOT NULL DEFAULT 0,
+        completed_areas INTEGER NOT NULL DEFAULT 0,
+        failed_areas INTEGER NOT NULL DEFAULT 0,
+        spent_usd REAL NOT NULL DEFAULT 0,
+        budget_usd REAL,
+        sessions INTEGER NOT NULL DEFAULT 0,
+        theme_directive TEXT,
+        error_message TEXT,
+        plan_json TEXT NOT NULL DEFAULT '{}',
+        progress_json TEXT NOT NULL DEFAULT '[]',
+        guide_json TEXT,
+        cost_json TEXT NOT NULL DEFAULT '{}'
+      )
+    `);
+    db.exec('INSERT INTO harness_runs SELECT * FROM harness_runs_old');
+    db.exec('DROP TABLE harness_runs_old');
+    db.exec('COMMIT');
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
+}
+
+// ── Stranded-run reaper ───────────────────────────────────────────────────────
+//
+// The orchestrator's live state is purely in-memory: a crash (or a process
+// restart) strands its `harness_runs` row in 'running' forever, since only the
+// in-process `finalizeRun` ever advances it. `liveRuns` tracks the runIds that
+// ARE currently owned by an orchestrator in THIS process — `startRun` registers,
+// `finalizeRun` releases — so the reaper can mark every OTHER 'running' row as
+// 'interrupted' without touching a genuinely-active run.
+
+const liveRuns = new Set<string>();
+let reapedOnce = false;
+
+/**
+ * Mark rows stuck in 'running' that no live orchestrator owns as 'interrupted'
+ * (a terminal status) with a reason. Excludes `liveRuns` so an active run in
+ * this process is never falsely reaped. Returns the number of rows reaped.
+ */
+export function reapStrandedRuns(): number {
+  ensureTable();
+  const rows = getDb()
+    .prepare(`SELECT run_id FROM harness_runs WHERE status = 'running'`)
+    .all() as Array<{ run_id: string }>;
+  const stranded = rows.map((r) => r.run_id).filter((id) => !liveRuns.has(id));
+  if (stranded.length === 0) return 0;
+
+  const now = new Date().toISOString();
+  const stmt = getDb().prepare(`
+    UPDATE harness_runs SET
+      status = 'interrupted',
+      ended_at = COALESCE(ended_at, @ended_at),
+      error_message = COALESCE(error_message, @reason)
+    WHERE run_id = @run_id AND status = 'running'
+  `);
+  const reason = 'Run interrupted — process ended without a terminal status (reaped)';
+  const tx = getDb().transaction((ids: string[]) => {
+    for (const id of ids) stmt.run({ run_id: id, ended_at: now, reason });
+  });
+  tx(stranded);
+  return stranded.length;
+}
+
+/** Run the reaper at most once per process, on the first read/status access. */
+function maybeReapOnce(): void {
+  if (reapedOnce) return;
+  reapedOnce = true;
+  try { reapStrandedRuns(); } catch { /* reaping is best-effort */ }
 }
 
 function deriveStats(plan: GamePlan | null, cost: HarnessCostTotals | null) {
@@ -148,6 +251,9 @@ export interface RunStartInput {
 /** Insert a fresh row in `running` state at orchestrator start. */
 export function startRun(input: RunStartInput): void {
   ensureTable();
+  // Register as live BEFORE the row exists so a concurrent reaper never sees it
+  // as an unowned 'running' row and interrupts it out from under the orchestrator.
+  liveRuns.add(input.runId);
   const s = deriveStats(input.plan, input.cost);
   getDb().prepare(`
     INSERT INTO harness_runs (
@@ -204,6 +310,9 @@ export interface RunFinalizeInput {
  */
 export function finalizeRun(input: RunFinalizeInput): void {
   ensureTable();
+  // The run reached a terminal status in-process — it is no longer live, so the
+  // reaper may consider its row settled.
+  liveRuns.delete(input.runId);
   const s = deriveStats(input.plan, input.cost);
   const row = getDb()
     .prepare('SELECT started_at FROM harness_runs WHERE run_id = ?')
@@ -300,6 +409,7 @@ function rowToDetail(row: Record<string, unknown>): HarnessRunDetail {
 
 export function listRuns(opts: { limit?: number; projectPath?: string } = {}): HarnessRunSummary[] {
   ensureTable();
+  maybeReapOnce();
   const limit = Math.min(Math.max(opts.limit ?? 50, 1), 500);
   const sql = opts.projectPath
     ? `SELECT run_id, project_name, project_path, status, started_at, ended_at, duration_ms,
@@ -319,6 +429,7 @@ export function listRuns(opts: { limit?: number; projectPath?: string } = {}): H
 
 export function getRun(runId: string): HarnessRunDetail | null {
   ensureTable();
+  maybeReapOnce();
   const row = getDb()
     .prepare('SELECT * FROM harness_runs WHERE run_id = ?')
     .get(runId) as Record<string, unknown> | undefined;

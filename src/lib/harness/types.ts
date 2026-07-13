@@ -245,9 +245,18 @@ export interface HarnessConfig {
    * Optional hard ceiling on accumulated executor spend in USD. When the running
    * total reaches the cap (or projected next-session spend would cross it), the
    * orchestrator emits `harness:paused` and stops launching new pool sessions.
-   * Unset = no cap (legacy behaviour).
+   * When UNSET, a safe DEFAULT_BUDGET_USD cap is applied so an un-budgeted run
+   * can never run away (maxIterations × 30-min sessions). To opt out of any cap
+   * you must ALSO set `unlimited: true` — a missing/0/null budget alone no longer
+   * means "no ceiling".
    */
   budgetUsd?: number;
+  /**
+   * Explicit opt-out of the cost ceiling. Only when this is `true` does the
+   * orchestrator run with no budget cap; otherwise `budgetUsd` (or the default)
+   * always applies. Guards against an accidental unlimited spend.
+   */
+  unlimited?: boolean;
   /**
    * Opt-in git checkpointing. When true, the orchestrator commits the working
    * tree onto a dedicated `harness/<runId>` branch (tagged per areaId) after an

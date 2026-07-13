@@ -51,7 +51,8 @@ It's a **streaming pool**, not lock-step waves: an area that finishes early free
 
 ## Safety rails
 
-- **Budget governor** — every session reserves an estimated cost at launch and reconciles on return; `wouldOverflowNow()` blocks new launches past the cap; on cap-hit it emits `harness:paused` and drains in-flight work instead of orphaning it.
+- **Budget governor** — every session reserves an estimated cost at launch and reconciles on return; `wouldOverflowNow()` blocks new launches past the cap; on cap-hit it emits `harness:paused` and drains in-flight work instead of orphaning it. An un-budgeted run is NOT uncapped: a `DEFAULT_BUDGET_USD` ($25) ceiling applies unless the caller passes `unlimited: true` (`resolveBudgetUsd`).
+- **Stranded-run reaper** — the orchestrator's live state is in-memory, so a crash/restart would strand a `harness_runs` row in `running` forever. `reapStrandedRuns()` (lazy, once per process on the first status/history read) marks any `running` row NOT owned by a live orchestrator in this process as `interrupted` — a terminal status. Live runs are tracked in-process so an active run is never falsely reaped.
 - **Checkpoints** — each green area commits + tags on `harness/<runId>`; a failed area can `rollbackToLastGreen`. Because rollback is `git reset --hard`, checkpointing forces `maxConcurrent = 1` (concurrent siblings would be clobbered).
 - **Self-heal** — a tri-state result (`healed | unverified | failed`): it only claims "healed" when a real verify command re-ran clean, never optimistically.
 - **Pause/resume** — same `runId` row across pause/resume; the loop drains active sessions before stopping.
@@ -61,7 +62,7 @@ It's a **streaming pool**, not lock-step waves: an area that finishes early free
 ## Control surface
 
 **HTTP** (`src/app/api/harness/`):
-- `POST /api/harness` — `{ action: 'start' | 'pause' | 'resume', projectPath, projectName, ueVersion, maxIterations?, targetPassRate?, budgetUsd?, checkpoint? }`
+- `POST /api/harness` — `{ action: 'start' | 'pause' | 'resume', projectPath, projectName, ueVersion, maxIterations?, targetPassRate?, budgetUsd?, unlimited?, maxConcurrent?, scenario?, checkpoint? }`. `targetPassRate` accepts a 0–1 fraction OR a 0–100 percent (normalized server-side). `maxConcurrent` raises pool concurrency; `scenario` (`ui-overhaul` | `content-overhaul`, from the shared `scenarios.ts`) swaps in a curated area set; `unlimited: true` is the only way to run with no spend cap.
 - `GET /api/harness[?action=plan|guide|progress|events]` — status snapshot or the full plan/guide/progress/events
 - `GET /api/harness/runs`, `/runs/[id]`, `/runs/diff?a=&b=` — run history & comparison
 - `GET /api/harness/screenshot`, `/screenshots` — visual-gate captures

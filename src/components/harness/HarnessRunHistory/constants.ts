@@ -8,4 +8,7 @@ export const STATUS_TONE: Record<HarnessRunSummary['status'], string> = {
   paused: STATUS_NEUTRAL,
   completed: STATUS_SUCCESS,
   error: ACCENT_RED,
+  // A run stranded 'running' by a crash/restart, healed to a terminal state by
+  // the lazy reaper — attention, but not a hard in-loop error.
+  interrupted: STATUS_WARNING,
 };
