@@ -64,10 +64,11 @@ export function makeVisualExecutor(opts: VisualExecutorOptions): GateExecutor {
       const env = (await res.json().catch(() => null)) as { success?: boolean; data?: { verdict?: string }; error?: string } | null;
       if (!res.ok || !env?.success) {
         // The frame WAS captured — the AUTOMATED judge just couldn't run (bad model, no key,
-        // network). Surface the frame anyway (conservative status: fail, i.e. not verified-pass)
-        // so the agent can judge it by eye. Losing the frame on a judge hiccup defeats the loop.
+        // network). A judge OUTAGE is not an observed failure, so the gate stays DEFERRED (not a
+        // red `fail` that would fire a false regression). The frame is surfaced anyway so the
+        // agent can judge it by eye — losing the frame on a judge hiccup defeats the loop.
         return {
-          status: 'fail',
+          status: 'deferred',
           detail: `visual ${opts.mode ?? visualModeFor(job.catalogId)}: auto-judge unavailable (${env?.error ?? res.status}) — frame captured for review (${screenshotPath})`,
           screenshot: screenshotPath,
         };

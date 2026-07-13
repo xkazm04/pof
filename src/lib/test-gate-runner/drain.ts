@@ -149,6 +149,9 @@ export async function drainJobs(
     ran: results.filter((r) => r.verdict).length,
     passed: results.filter((r) => r.verdict?.status === 'pass').length,
     failed: results.filter((r) => r.verdict?.status === 'fail').length,
+    // Ran but produced no pass/fail (judge outage or test-not-registered) — unified across
+    // both L3 executors and the L4 visual executor into one honest bucket.
+    deferred: results.filter((r) => r.verdict?.status === 'deferred').length,
     skipped: results.filter((r) => r.skipped).length,
     // Hoist L4 frames to the top level so callers (the drain route, pof_drain_gates) can hand
     // them straight to the agent to READ — closing the "agent must look" loop.

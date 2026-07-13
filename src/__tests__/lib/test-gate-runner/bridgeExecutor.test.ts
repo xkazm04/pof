@@ -87,9 +87,13 @@ describe('makeBridgeExecutor', () => {
     expect(v.status).toBe('pass');
   });
 
-  it('run() throws fast (→ stays deferred) when the plugin reports not_found', async () => {
+  it('run() returns a DEFERRED verdict when the plugin reports not_found (unified with spawn `unregistered`)', async () => {
+    // Not a throw→skipped: the gate RAN and learned the test isn't registered. Same vocabulary
+    // as the spawn executor's `unregistered`→deferred so both L3 paths bucket identically.
     const ex = makeBridgeExecutor({ fetchImpl: (() => resp({ status: 'not_found', message: 'no test' })) as unknown as typeof fetch, pollMs: 1, maxPolls: 3 });
-    await expect(ex.run(job)).rejects.toThrow(/no automation test matches/);
+    const v = await ex.run(job);
+    expect(v.status).toBe('deferred');
+    expect(v.detail).toMatch(/no automation test registered/);
   });
 
   it('run() throws on a non-ok HTTP response', async () => {

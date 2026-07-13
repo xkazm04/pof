@@ -16,7 +16,7 @@ const passResult = (step: string) => ({
 });
 const okOutcome = (over: Partial<DrainSummary> = {}): DrainOutcome => ({
   kind: 'ok',
-  summary: { ran: 0, passed: 0, failed: 0, skipped: 0, screenshots: [], results: [], ...over },
+  summary: { ran: 0, passed: 0, failed: 0, deferred: 0, skipped: 0, screenshots: [], results: [], ...over },
 });
 
 describe('foldEntityOutcome — batch summary derivation', () => {

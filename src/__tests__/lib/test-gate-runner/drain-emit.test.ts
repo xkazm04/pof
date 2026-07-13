@@ -66,4 +66,19 @@ describe('drainOne — gate.verdict.changed emit', () => {
     expect(received).toHaveLength(1);
     expect(received[0]).toMatchObject({ from: 'deferred', to: 'pass', regression: false });
   });
+
+  it('a judge/executor OUTAGE (pass→deferred) is NEVER a regression', async () => {
+    // Direction 2: an outage keeps the gate deferred. Even from a prior pass, that must not
+    // fire a regression — nothing was observed to fail.
+    seed({ catalogId: 'items', entityId: 'a', step: 'g', tier: 'L4', status: 'pass' });
+    await drainOne(job({ tier: 'L4' }), exec('deferred', 'auto-judge unavailable — frame captured'));
+    expect(received).toHaveLength(1);
+    expect(received[0]).toMatchObject({ from: 'pass', to: 'deferred', regression: false });
+  });
+
+  it('does NOT emit when a deferred gate stays deferred (outage from deferred prior)', async () => {
+    seed({ catalogId: 'items', entityId: 'a', step: 'g', tier: 'L4', status: 'deferred' });
+    await drainOne(job({ tier: 'L4' }), exec('deferred', 'auto-judge unavailable'));
+    expect(received).toHaveLength(0);
+  });
 });

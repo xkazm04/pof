@@ -18,6 +18,7 @@ import { spawn, execFileSync } from 'node:child_process';
 import { existsSync, writeFileSync, unlinkSync, mkdirSync, readdirSync, statSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { logger } from '@/lib/logger';
 import {
   buildScenarioInbox as buildScenarioInboxSpine,
   buildScenarioLaunchArgs,
@@ -60,8 +61,10 @@ const defaultRun: CaptureRun = (binary, args, settleMs) =>
       if (settled) return;
       settled = true;
       clearTimeout(timer);
-      try { if (child.pid) execFileSync('taskkill', ['/PID', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch { /* gone */ }
-      try { execFileSync('taskkill', ['/IM', 'UnrealEditor.exe', '/F'], { stdio: 'ignore' }); } catch { /* none */ }
+      try { if (child.pid) execFileSync('taskkill', ['/PID', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); }
+      catch (e) { logger.debug(`[ue-launch] capture: PID ${child.pid} already gone (${e instanceof Error ? e.message : String(e)})`); }
+      try { execFileSync('taskkill', ['/IM', 'UnrealEditor.exe', '/F'], { stdio: 'ignore' }); }
+      catch (e) { logger.debug(`[ue-launch] capture: no stray UnrealEditor.exe to kill (${e instanceof Error ? e.message : String(e)})`); }
       resolve();
     };
     timer = setTimeout(done, settleMs);

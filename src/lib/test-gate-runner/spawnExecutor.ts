@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { logger } from '@/lib/logger';
 import {
   buildScenarioInbox,
   buildScenarioLaunchArgs,
@@ -189,7 +190,10 @@ export function makeSpawnExecutor(opts: SpawnExecutorOptions = {}): GateExecutor
     const scnLog = join(outDir, 'editor.log');
     const scnArgs = buildScenarioArgs(project, scn.map, scnPath.replace(/\\/g, '/'), scnLog);
     const { timedOut } = await spawnAndWait(editor, scnArgs, opts.scenarioTimeoutMs ?? 180_000);
-    const obsRaw = await readFile(join(outDir, 'observations.json'), 'utf-8').catch(() => '');
+    const obsRaw = await readFile(join(outDir, 'observations.json'), 'utf-8').catch((e) => {
+      logger.warn(`[test-gate-runner] ${job.step}: no observations.json (${e instanceof Error ? e.message : String(e)})`);
+      return '';
+    });
     if (!obsRaw) throw new Error(`no observations.json at ${outDir}${timedOut ? ' (watchdog timeout)' : ''}`);
     const v = parseScenarioVerdict(JSON.parse(obsRaw) as Observations, scn.assert);
     return { status: v.status, detail: `${job.step}: ${v.detail}`, raw: { outDir, timedOut } };
@@ -204,7 +208,10 @@ export function makeSpawnExecutor(opts: SpawnExecutorOptions = {}): GateExecutor
     const abslog = join(tmpdir(), `pof-gate-${Date.now()}-${sanitize(job.testName ?? 'test')}.log`);
     const args = buildAutomationArgs(job.testName!, project, abslog);
     const { timedOut } = await spawnAndWait(editor, args, opts.automationTimeoutMs ?? 180_000);
-    const log = await readFile(abslog, 'utf-8').catch(() => '');
+    const log = await readFile(abslog, 'utf-8').catch((e) => {
+      logger.warn(`[test-gate-runner] ${job.testName}: no abslog (${e instanceof Error ? e.message : String(e)})`);
+      return '';
+    });
     if (!log) throw new Error(`no abslog produced at ${abslog}${timedOut ? ' (watchdog timeout)' : ''}`);
     const v = parseAbslogVerdict(log);
     // 'unregistered' maps to deferred: the gate stays an honest wait until the test exists.

@@ -38,14 +38,17 @@ describe('makeVisualExecutor', () => {
     expect(v.detail).toContain('texture');
   });
 
-  it('maps a fail verdict, and on a judge-error envelope still surfaces the captured frame', async () => {
+  it('maps a real fail verdict (the judge actually judged and said fail)', async () => {
     const pass = makeVisualExecutor({ appOrigin: 'http://x', screenshotResolver: async () => 'p.png', fetchImpl: (() => resp({ success: true, data: { verdict: 'fail' } })) as unknown as typeof fetch });
     expect((await pass.run(job)).status).toBe('fail');
+  });
 
-    // The judge failing must NOT lose the frame — the agent still gets it to review by eye.
+  it('a judge OUTAGE stays deferred (not fail) and still surfaces the captured frame', async () => {
+    // The judge couldn't run (bad model, no key, network) — an outage is NOT an observed failure,
+    // so the gate stays deferred (no false regression). The frame is preserved for eye review.
     const err = makeVisualExecutor({ appOrigin: 'http://x', screenshotResolver: async () => 'p.png', fetchImpl: (() => resp({ success: false, error: 'no gemini key' }, false, 503)) as unknown as typeof fetch });
     const v = await err.run(job);
-    expect(v.status).toBe('fail');
+    expect(v.status).toBe('deferred');
     expect(v.screenshot).toBe('p.png');
     expect(v.detail).toContain('auto-judge unavailable');
   });

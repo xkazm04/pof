@@ -25,7 +25,7 @@ export interface WorkerStatus {
   intervalMs: number;
   ticks: number;
   lastTickAt: string | null;
-  lastSummary: Pick<DrainSummary, 'ran' | 'passed' | 'failed' | 'skipped'> | null;
+  lastSummary: Pick<DrainSummary, 'ran' | 'passed' | 'failed' | 'deferred' | 'skipped'> | null;
 }
 
 const DEFAULT_COOLDOWN_MS = 5 * 60 * 1000;
@@ -51,7 +51,7 @@ export async function runDrainTick(now: number = Date.now()): Promise<DrainSumma
   const jobs = collectDeferred(cfg.filter).filter((j) => (cooldownUntil.get(keyOf(j)) ?? 0) <= now);
   const summary = jobs.length
     ? await drainJobs(jobs, executors)
-    : { ran: 0, passed: 0, failed: 0, skipped: 0, screenshots: [], results: [] };
+    : { ran: 0, passed: 0, failed: 0, deferred: 0, skipped: 0, screenshots: [], results: [] };
 
   const cooldown = cfg.cooldownMs ?? DEFAULT_COOLDOWN_MS;
   for (const r of summary.results) {
@@ -60,7 +60,7 @@ export async function runDrainTick(now: number = Date.now()): Promise<DrainSumma
   }
   status.ticks += 1;
   status.lastTickAt = new Date(now).toISOString();
-  status.lastSummary = { ran: summary.ran, passed: summary.passed, failed: summary.failed, skipped: summary.skipped };
+  status.lastSummary = { ran: summary.ran, passed: summary.passed, failed: summary.failed, deferred: summary.deferred, skipped: summary.skipped };
   return summary;
 }
 

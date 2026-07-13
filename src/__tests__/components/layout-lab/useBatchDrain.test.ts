@@ -20,7 +20,7 @@ function deferred<T>() {
   return { promise, resolve };
 }
 const okOutcome = (over: Partial<DrainSummary> = {}): DrainOutcome => ({
-  kind: 'ok', summary: { ran: 0, passed: 0, failed: 0, skipped: 0, screenshots: [], results: [], ...over },
+  kind: 'ok', summary: { ran: 0, passed: 0, failed: 0, deferred: 0, skipped: 0, screenshots: [], results: [], ...over },
 });
 const failResult = (step: string, reason: string) => ({
   job: { catalogId: 'c', entityId: 'e', step, tier: 'L3' as const },

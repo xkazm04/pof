@@ -15,6 +15,7 @@ const summary = (results: DrainSummary['results']): DrainSummary => ({
   ran: results.filter((r) => r.verdict).length,
   passed: results.filter((r) => r.verdict?.status === 'pass').length,
   failed: results.filter((r) => r.verdict?.status === 'fail').length,
+  deferred: results.filter((r) => r.verdict?.status === 'deferred').length,
   skipped: results.filter((r) => r.skipped).length,
   screenshots: [],
   results,
@@ -51,7 +52,7 @@ describe('drain worker', () => {
     expect(drainJobs.mock.calls[0][0]).toEqual([j1, j2]);
     const st = getWorkerStatus();
     expect(st.ticks).toBe(1);
-    expect(st.lastSummary).toEqual({ ran: 1, passed: 1, failed: 0, skipped: 1 });
+    expect(st.lastSummary).toEqual({ ran: 1, passed: 1, failed: 0, deferred: 0, skipped: 1 });
     expect(st.lastTickAt).toBe(new Date(1_000).toISOString());
   });
 
@@ -89,7 +90,7 @@ describe('drain worker', () => {
     startDrainWorker({ intervalMs: 999_999 });
     collectDeferred.mockReturnValue([]);
     const res = await runDrainTick(1_000);
-    expect(res).toEqual({ ran: 0, passed: 0, failed: 0, skipped: 0, screenshots: [], results: [] });
+    expect(res).toEqual({ ran: 0, passed: 0, failed: 0, deferred: 0, skipped: 0, screenshots: [], results: [] });
     expect(drainJobs).not.toHaveBeenCalled(); // no jobs → drainJobs skipped
   });
 });

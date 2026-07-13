@@ -101,9 +101,18 @@ export interface DrainResult {
 }
 
 export interface DrainSummary {
+  /** Produced a verdict (pass / fail / deferred) — the executor actually ran the gate. */
   ran: number;
   passed: number;
   failed: number;
+  /**
+   * Ran to a `deferred` verdict — the gate executed but produced no pass/fail: a judge
+   * OUTAGE (L4) or a test-not-registered (both L3 executors report this identically). Distinct
+   * from `skipped` (the gate never ran: no executor, unavailable, thrown error, limit). Counted
+   * within `ran`, never in `passed`/`failed`.
+   */
+  deferred: number;
+  /** The gate never ran (no/unavailable executor, missing test name, thrown error, limit). */
   skipped: number;
   /** Rendered frames produced by L4 gates this drain — READ these to verify the result by eye. */
   screenshots: string[];

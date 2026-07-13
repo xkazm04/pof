@@ -31,6 +31,13 @@ describe('classifyVerdictChange', () => {
     expect(classifyVerdictChange('pass', 'pass').changed).toBe(false);
     expect(classifyVerdictChange('fail', 'fail').changed).toBe(false);
   });
+
+  it('an outage (pass→deferred) is a change but NEVER a regression or failure', () => {
+    // A judge/executor outage keeps the gate deferred; even from a prior pass it must not read
+    // as a regression — nothing was observed to fail.
+    const c = classifyVerdictChange('pass', 'deferred');
+    expect(c).toEqual({ changed: true, regression: false, failure: false, recovery: false });
+  });
 });
 
 describe('shouldNotify', () => {
@@ -52,9 +59,10 @@ describe('shouldNotify', () => {
     expect(shouldNotify('failures', classifyVerdictChange('deferred', 'pass'))).toBe(false);
   });
 
-  it("'regressions' fires only on pass→fail", () => {
+  it("'regressions' fires only on pass→fail (never on an outage pass→deferred)", () => {
     expect(shouldNotify('regressions', classifyVerdictChange('pass', 'fail'))).toBe(true);
     expect(shouldNotify('regressions', classifyVerdictChange('deferred', 'fail'))).toBe(false);
     expect(shouldNotify('regressions', classifyVerdictChange('deferred', 'pass'))).toBe(false);
+    expect(shouldNotify('regressions', classifyVerdictChange('pass', 'deferred'))).toBe(false);
   });
 });

@@ -89,6 +89,17 @@ describe('drainAll', () => {
     expect(store.get(key('items', 'b', 'g'))!.status).toBe('fail');
   });
 
+  it('buckets a deferred verdict as ran+deferred (NOT passed/failed/skipped)', async () => {
+    // A "test not registered" (or judge outage) resolves to a deferred VERDICT: the gate ran,
+    // produced no pass/fail, and stays deferred — distinct from `skipped` (never ran).
+    seed({ catalogId: 'items', entityId: 'a', step: 'g', tier: 'L3', reason: 'live-UE runner not yet run: TUnreg' });
+    const exec = fakeExec({ tier: 'L3', runFn: async () => ({ status: 'deferred', detail: 'TUnreg: no automation test registered' }) });
+    const sum = await drainAll([exec]);
+    expect(sum).toMatchObject({ ran: 1, passed: 0, failed: 0, deferred: 1, skipped: 0 });
+    expect(store.get(key('items', 'a', 'g'))!.status).toBe('deferred');
+    expect(store.get(key('items', 'a', 'g'))!.reason).toMatch(/no automation test registered/);
+  });
+
   it('skips (stays deferred) when there is no executor for the tier', async () => {
     seed({ catalogId: 'materials', entityId: 'm', step: 'v', tier: 'L4' });
     const sum = await drainAll([fakeExec({ tier: 'L3' })]);

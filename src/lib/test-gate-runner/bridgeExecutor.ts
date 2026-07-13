@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import type { GateExecutor, GateJob, GateVerdict } from './types';
 
 const DEFAULT_PORT = 30040;
@@ -72,6 +73,11 @@ function failDetail(d: Record<string, unknown>): string {
   return 'automation failed';
 }
 
+/** Compact message for a swallowed error, kept out of the hot path's inline catches. */
+function errMsg(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
+}
+
 /**
  * L3 executor that runs the test through the running editor's PoF Bridge plugin.
  * No spawn, no shared-log clobber — the safe default on the shared UE tree.
@@ -120,11 +126,18 @@ export function makeBridgeExecutor(opts: BridgeExecutorOptions = {}): GateExecut
         const text = await res.text().catch(() => '');
         throw new Error(`bridge run-automation ${res.status}: ${text.slice(0, 160)}`);
       }
-      const posted = (await res.json().catch(() => null)) as Record<string, unknown> | null;
-      // The plugin returns status:"not_found" when no automation test matches → skip
-      // (stays deferred), never a false fail, and don't waste the poll budget.
+      const posted = (await res.json().catch((e) => {
+        logger.warn(`[test-gate-runner] bridge ${job.testName}: unparseable run-automation JSON (${errMsg(e)})`);
+        return null;
+      })) as Record<string, unknown> | null;
+      // The plugin returns status:"not_found" when no automation test matches. This is the SAME
+      // condition the spawn executor reports as `unregistered` — unified vocabulary: return a
+      // DEFERRED verdict (the gate ran and learned the test is planned / not registered) rather
+      // than throwing → skipped. A deferred verdict records WHY it stays deferred in the artifact
+      // reason and buckets as `deferred` (ran, no pass/fail), not `skipped` (never ran). Don't
+      // waste the poll budget either.
       if (posted && posted.status === 'not_found') {
-        throw new Error(`no automation test matches ${job.testName}`);
+        return { status: 'deferred', detail: `${job.testName}: no automation test registered (planned, not in UE)` };
       }
       let interp = interpretAutomationResult(posted, job.testName);
 
@@ -137,9 +150,15 @@ export function makeBridgeExecutor(opts: BridgeExecutorOptions = {}): GateExecut
       for (let i = 0; !interp.terminal && i < maxPolls && Date.now() < deadline; i++) {
         await new Promise((r) => setTimeout(r, pollMs));
         const path = interp.testId ? `/test/results/${encodeURIComponent(interp.testId)}` : '/test/results';
-        const pr = await call(path, undefined, pollTimeoutMs).catch(() => null);
+        const pr = await call(path, undefined, pollTimeoutMs).catch((e) => {
+          logger.warn(`[test-gate-runner] bridge ${job.testName}: results poll failed (${errMsg(e)})`);
+          return null;
+        });
         if (!pr || !pr.ok) continue;
-        interp = interpretAutomationResult(await pr.json().catch(() => null), job.testName);
+        interp = interpretAutomationResult(await pr.json().catch((e) => {
+          logger.warn(`[test-gate-runner] bridge ${job.testName}: unparseable results JSON (${errMsg(e)})`);
+          return null;
+        }), job.testName);
       }
 
       if (!interp.terminal || !interp.status) {
