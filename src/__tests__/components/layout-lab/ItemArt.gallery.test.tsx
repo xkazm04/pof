@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, within, act } from '@testing-library/react';
 
 vi.mock('next/font/google', () => { const f = () => ({ className: 'm' }); return { IBM_Plex_Mono: f, Inter: f, JetBrains_Mono: f }; });
 
@@ -12,6 +12,10 @@ const entity: LabEntity = { id: 'item-test', name: 'Iron Longsword', lifecycle: 
 
 const status = () => screen.getByTestId('acceptance-banner').getAttribute('data-status');
 const generate = (label: RegExp) => fireEvent.click(screen.getByRole('button', { name: label }));
+// Dispatch is async by default: onComplete (the batch append) runs synchronously on the
+// click, but the in-flight guard only clears on the microtask — flush it before the next
+// re-roll so a rapid second click isn't swallowed by the double-dispatch guard.
+const settle = () => act(async () => {});
 
 describe('ItemArt persistent candidate gallery', () => {
   beforeEach(() => { useLabPipelineStore.setState({ byEntity: {} }); localStorage.clear(); });
@@ -29,9 +33,10 @@ describe('ItemArt persistent candidate gallery', () => {
     expect((screen.getByTestId('candidate-b0-c0') as HTMLButtonElement).getAttribute('aria-pressed')).toBe('true');
   });
 
-  it('Icon 2D: a re-roll keeps the prior batch (history not discarded) and re-selecting an older candidate persists', () => {
+  it('Icon 2D: a re-roll keeps the prior batch (history not discarded) and re-selecting an older candidate persists', async () => {
     render(<ItemIcon2D t={LIGHT} entity={entity} step="Icon 2D Art" />);
     generate(/Produce via Leonardo/);   // batch 0
+    await settle();
     generate(/Produce via Leonardo/);   // batch 1 (re-roll) — prior batch kept
 
     expect(screen.getByTestId('candidate-gallery').textContent).toContain('8 candidates · 2 re-rolls kept');

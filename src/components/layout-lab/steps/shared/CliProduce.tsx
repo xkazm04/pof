@@ -10,7 +10,17 @@ import type { LabTheme } from '../../theme';
  *
  * Rule 1 — every CLI/Produce component has a text area for user input + its OWN prompt logic
  * (the `buildPrompt` callback). Rule 4 — production reports a result, or the reason it failed
- * (`validate`), instead of silently doing nothing. Reuse this; do not hand-roll a Produce panel.
+ * (`validate` / a rejecting `onComplete`), instead of silently doing nothing. Reuse this; do
+ * not hand-roll a Produce panel.
+ *
+ * Dispatch is ASYNC by default: the button shows an in-flight "Dispatching…" state that guards
+ * against double-dispatch, awaits `onComplete` (which may return a promise), and surfaces a
+ * rejection/throw as the inline error reason — plus a "Retry with same prompt" affordance that
+ * re-dispatches the exact prompt that just failed. This is the real enforcement path for Rule 4;
+ * `sync` is an explicit opt-out kept only for legacy/test call sites. `onComplete` is still
+ * INVOKED synchronously inside the click (the store write happens on the event), so a stub-mode
+ * produce that writes its artifact synchronously still flips Acceptance immediately — only the
+ * success/error message resolves on the microtask.
  */
 export interface CliProduceProps {
   t: LabTheme;
@@ -35,40 +45,37 @@ export interface CliProduceProps {
   /** Return an error reason to block dispatch and report it (Rule 4). */
   validate?: (direction: string) => string | null;
   /**
-   * When set, dispatch becomes async: the button shows a disabled "Dispatching…"
-   * state that guards against double-dispatch, awaits `onComplete` (which may
-   * return a promise), surfaces a rejection as the error, and holds the in-flight
-   * state at least this many ms. When omitted, dispatch is synchronous (legacy).
+   * Explicit opt-out to the legacy SYNCHRONOUS dispatch: no in-flight state, no
+   * rejection surfacing. Async is the default (the real Rule 4 enforcement path);
+   * `sync` is reserved for legacy/test call sites.
+   */
+  sync?: boolean;
+  /**
+   * Minimum time (ms) to hold the async in-flight "Dispatching…" state, so a fast
+   * dispatch still reads as work happening. Async only; default 0 (resolve as soon
+   * as `onComplete` does).
    */
   minDispatchMs?: number;
 }
 
-export function CliProduce({ t, label, buildPrompt, onComplete, note, placeholder, defaultDirection, rows = 4, fields, validate, minDispatchMs }: CliProduceProps) {
+export function CliProduce({ t, label, buildPrompt, onComplete, note, placeholder, defaultDirection, rows = 4, fields, validate, sync, minDispatchMs }: CliProduceProps) {
   const [direction, setDirection] = useState(defaultDirection ?? '');
   const [showPrompt, setShowPrompt] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const [dispatching, setDispatching] = useState(false);
+  // The last dispatched context, so "Retry with same prompt" re-runs the EXACT prompt
+  // that failed (not a rebuild from the — possibly since-edited — direction field).
+  const [lastCtx, setLastCtx] = useState<{ direction: string; prompt: string } | null>(null);
 
-  async function dispatch() {
-    if (dispatching) return; // guard against double-dispatch while in flight
-    const err = validate?.(direction);
-    if (err) { setResult({ ok: false, msg: err }); return; }
-    const ctx = { direction, prompt: buildPrompt(direction) };
-    const successMsg = note ?? 'Recorded · step config + prompt saved to the pipeline.';
+  const successMsg = note ?? 'Recorded · step config + prompt saved to the pipeline.';
 
-    if (!minDispatchMs) {
-      // Legacy synchronous path (unchanged behavior).
-      onComplete(ctx);
-      setResult({ ok: true, msg: successMsg });
-      return;
-    }
-
+  async function runAsync(ctx: { direction: string; prompt: string }) {
     setDispatching(true);
     setResult(null);
     const started = Date.now();
     try {
       await Promise.resolve(onComplete(ctx));
-      const remaining = minDispatchMs - (Date.now() - started);
+      const remaining = (minDispatchMs ?? 0) - (Date.now() - started);
       if (remaining > 0) await new Promise((r) => setTimeout(r, remaining));
       setResult({ ok: true, msg: successMsg });
     } catch (e) {
@@ -78,7 +85,32 @@ export function CliProduce({ t, label, buildPrompt, onComplete, note, placeholde
     }
   }
 
-  const btnLabel = dispatching ? `⏳ Dispatching ${label}` : minDispatchMs ? `⚡ ${label} (dispatch)` : `⚡ ${label}`;
+  function dispatch() {
+    if (dispatching) return; // guard against double-dispatch while in flight
+    const err = validate?.(direction);
+    if (err) { setResult({ ok: false, msg: err }); return; }
+    const ctx = { direction, prompt: buildPrompt(direction) };
+    setLastCtx(ctx);
+
+    if (sync) {
+      // Legacy synchronous opt-out: still catches a throw so it never dies silently.
+      try {
+        onComplete(ctx);
+        setResult({ ok: true, msg: successMsg });
+      } catch (e) {
+        setResult({ ok: false, msg: e instanceof Error ? e.message : 'Dispatch failed' });
+      }
+      return;
+    }
+    void runAsync(ctx);
+  }
+
+  function retry() {
+    if (dispatching || !lastCtx) return;
+    void runAsync(lastCtx);
+  }
+
+  const btnLabel = dispatching ? `⏳ Dispatching ${label}` : `⚡ ${label}`;
 
   return (
     <div style={{ display: 'grid', gap: 12 }}>
@@ -109,6 +141,7 @@ export function CliProduce({ t, label, buildPrompt, onComplete, note, placeholde
           <span style={{ color: t.muted }}>CLI dispatch in flight…</span>
         </div>
       ) : (
+      <>
       <AnimatePresence mode="wait" initial={false}>
         {result ? (
           <motion.span
@@ -136,6 +169,22 @@ export function CliProduce({ t, label, buildPrompt, onComplete, note, placeholde
           </motion.span>
         ) : null}
       </AnimatePresence>
+      {/* Rule 4 — a failed dispatch can be retried with the EXACT prompt that failed. */}
+      {result && !result.ok && lastCtx && (
+        <button
+          data-testid="cli-produce-retry"
+          onClick={retry}
+          className={t.fontMono}
+          style={{
+            justifySelf: 'start', marginTop: 2,
+            background: 'none', border: `1px solid ${t.line}`, borderRadius: t.glass ? 6 : 0,
+            cursor: 'pointer', fontSize: 13, color: t.text, padding: '4px 10px',
+          }}
+        >
+          ↻ Retry with same prompt
+        </button>
+      )}
+      </>
       )}
     </div>
   );

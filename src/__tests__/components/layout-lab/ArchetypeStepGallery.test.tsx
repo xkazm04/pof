@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
 vi.mock('next/font/google', () => { const f = () => ({ className: 'm' }); return { IBM_Plex_Mono: f, Inter: f, JetBrains_Mono: f }; });
 import { ArchetypeStep } from '@/components/layout-lab/steps/ArchetypeStep';
 import { useLabPipelineStore } from '@/components/layout-lab/labPipelineStore';
@@ -24,6 +24,8 @@ const spec: StepSpec = {
 
 const status = () => screen.getByTestId('acceptance-banner').getAttribute('data-status');
 const produce = () => fireEvent.click(screen.getByRole('button', { name: /Produce Icon 2D Art/ }));
+// Async dispatch by default — flush the in-flight guard between rapid re-rolls (see ItemArt.gallery test).
+const settle = () => act(async () => {});
 
 describe('ArchetypeStep gallery archetype', () => {
   beforeEach(() => { useLabPipelineStore.setState({ byEntity: {} }); localStorage.clear(); });
@@ -49,9 +51,10 @@ describe('ArchetypeStep gallery archetype', () => {
     expect(art.data.selected).toBe(0);
   });
 
-  it('keeps prior re-rolls and persists re-selecting an older candidate', () => {
+  it('keeps prior re-rolls and persists re-selecting an older candidate', async () => {
     render(<ArchetypeStep t={t} entity={entity} step={STEP} spec={spec} />);
     produce();  // batch 0
+    await settle();
     produce();  // batch 1 (prior kept)
     expect(screen.getByTestId('candidate-gallery').textContent).toContain('8 candidates · 2 re-rolls kept');
 
