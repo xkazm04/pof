@@ -226,6 +226,16 @@ export const UE_GOTCHAS: Gotcha[] = [
     source: 'research: MetaHuman Animator human-animation pipeline (Curtis Holt) + live 5.8 API probe',
   },
   {
+    id: 'ai-motion-generator-ue-ingestion',
+    modules: ['animation', 'character'],
+    summary:
+      'AI motion generators (NVIDIA ARDY etc.) export raw joint data (.npz) on their OWN skeletons — no direct UE import; convert via a scripted Blender armature bake to FBX, then IK Retargeter to the UE5 skeleton, validating in Blender FIRST',
+    detail:
+      "Text/constraint-driven motion generators (e.g. NVIDIA ARDY — open-source SIGGRAPH 2026 autoregressive diffusion, real-time ~33ms/step, Apache-2.0 code + NVIDIA Open Model weights, headless scripts/generate.py) do NOT emit UE-ready animation: output is raw .npz joint data (world-space joints [T,J,3] + rotations + root + foot contacts) on the generator's own skeleton (ARDY: a 27-bone 'Core' or a Unitree G1 robot skeleton), with no FBX/BVH export. UE ingestion is a 2-hop chain with known pitfalls: (1) CONVERT — build an armature in scripted headless Blender from the npz joints/rotations and bake keyframes, then export FBX (disable Add Leaf Bones; watch FBX axis/scale conventions — a wrong axis convention renders the skeleton lying flat or crumpled in UE while Blender plays it perfectly, the Tripo bind-pose-scramble failure mode); (2) RETARGET — the foreign skeleton never matches the UE5 Mannequin, so retarget with the IK Retargeter (as with Mixamo); validate bone orientation + a few frames in Blender BEFORE the UE import, and judge the UE result by a rendered filmstrip, not by import success. Also note the generator's own gates: ARDY's text encoder is the HF-GATED meta-llama/Meta-Llama-3-8B-Instruct (needs an approved HF token) and real-time use wants a 24GB GPU.",
+    appliesTo: ['ue-python'],
+    source: 'research: NVIDIA ARDY real-time AI animation (Stefan 3D AI) + nv-tlabs/ardy repo verification',
+  },
+  {
     id: 'gas-author-abilities-incrementally',
     modules: ['gas', 'combat'],
     summary: 'GAS: build an ability one coupled piece at a time (tag → input → effect → ability → grant/bind → cue), not the whole system in one shot',

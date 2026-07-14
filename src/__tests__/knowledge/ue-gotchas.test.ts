@@ -116,6 +116,19 @@ describe('formatGotchas', () => {
     expect(out).toMatch(/stitch|re-?anchor|offset|independent/i);
   });
 
+  it('carries AI motion-generator (text→motion) UE-ingestion guidance for ue-python', () => {
+    const out = formatGotchas('ue-python');
+    expect(out).toMatch(/ARDY|motion generat/i);
+    expect(out).toMatch(/\.npz|joint data/i);
+    expect(out).toMatch(/IK Retargeter/);
+    expect(out).toMatch(/Blender/);
+    expect(out).toMatch(/bind.?pose|axis/i);
+  });
+
+  it('keeps the motion-generator ingestion guidance out of the ue-cpp block', () => {
+    expect(formatGotchas('ue-cpp')).not.toMatch(/\.npz/);
+  });
+
   it('carries Niagara optimization pitfalls', () => {
     const out = formatGotchas('ue-python');
     expect(out).toMatch(/Niagara/);
