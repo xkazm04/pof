@@ -89,7 +89,7 @@ export function SpellbookTabContent({ activeTab, moduleId, featureMap, defs, exp
       )}
       {activeTab === 'blueprint' && (
         <div data-section-id="blueprint">
-          <GASBlueprintEditor />
+          <GASBlueprintEditor moduleId={moduleId} />
         </div>
       )}
       {activeTab === 'balance' && (

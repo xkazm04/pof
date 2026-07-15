@@ -7,6 +7,9 @@ import { AbilityForge } from '@/components/modules/core-engine/sub_ability/forge
 // jsdom lacks these; the editor SVGs / scroll affordances call them.
 beforeAll(() => {
   Element.prototype.scrollIntoView = vi.fn();
+  // The blueprint editor hydrates its spec on mount (GET /api/ability-spec);
+  // stub an empty-DB envelope so the smoke render never hits the network.
+  vi.stubGlobal('fetch', vi.fn(async () => ({ json: async () => ({ success: true, data: null }) }) as Response));
   if (!('ResizeObserver' in globalThis)) {
     globalThis.ResizeObserver = class {
       observe() {}

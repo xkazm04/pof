@@ -24,6 +24,9 @@ import { LoadoutEditor } from './LoadoutEditor';
 import { CodePreview } from './CodePreview';
 import { TemplatePicker } from './TemplatePicker';
 import { SimulationSandbox } from './_orphan/SimulationSandbox';
+import { SpecEntityBar } from './SpecEntityBar';
+import { useAbilitySpecBinding } from './useAbilitySpecBinding';
+import type { SubModuleId } from '@/types/modules';
 
 const PANELS: { id: EditorPanel; label: string; icon: typeof Swords }[] = [
   { id: 'wiring', label: 'Wiring', icon: Cable },
@@ -35,7 +38,7 @@ const PANELS: { id: EditorPanel; label: string; icon: typeof Swords }[] = [
   { id: 'codegen', label: 'Code Gen', icon: Code },
 ];
 
-export function GASBlueprintEditor() {
+export function GASBlueprintEditor({ moduleId = 'arpg-gas' }: { moduleId?: SubModuleId } = {}) {
   const [attributes, setAttributes] = useState<EditorAttribute[]>(SEED_ATTRIBUTES);
   const [relationships, setRelationships] = useState<AttrRelationship[]>(SEED_RELATIONSHIPS);
   const [effects, setEffects] = useState<EditorEffect[]>(SEED_EFFECTS);
@@ -49,6 +52,13 @@ export function GASBlueprintEditor() {
   const [breadcrumbDetail, setBreadcrumbDetail] = useState<string | null>(null);
 
   const setActivePanel = useCallback((panel: EditorPanel) => { setActivePanelRaw(panel); setBreadcrumbDetail(null); }, []);
+
+  // Bind the editor's effects/tagRules to a per-entity EnrichedAbilitySpec:
+  // load/seed on entity open, Save to persist, Draft/Generate to dispatch CLI.
+  const hydrateSpec = useCallback((e: EditorEffect[], t: TagRule[]) => {
+    setEffects(e); setTagRules(t);
+  }, []);
+  const specBinding = useAbilitySpecBinding({ moduleId, effects, tagRules, onHydrate: hydrateSpec });
   const breadcrumbs = useMemo(() => {
     const crumbs = [...PANEL_BREADCRUMBS[activePanel]];
     if (breadcrumbDetail) crumbs.push(breadcrumbDetail);
@@ -113,6 +123,9 @@ export function GASBlueprintEditor() {
           </div>
         </div>
       </SurfaceCard>
+
+      {/* Spec binding — pick an ability, draft/generate/save its EnrichedAbilitySpec */}
+      <SpecEntityBar binding={specBinding} />
 
       {/* Breadcrumbs */}
       <div className="flex items-center gap-0.5 px-1 py-1 overflow-x-auto custom-scrollbar">
