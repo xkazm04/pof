@@ -197,19 +197,27 @@ function appendProgressEntry(sp: string, entry: ProgressEntry) {
 
 // ── Dev Server Lifecycle ────────────────────────────────────────────────────
 
-let devServerProc: ChildProcess | null = null;
+/**
+ * Per-orchestrator handle for the auto-started `next dev` process. Previously a
+ * single module-global `devServerProc` — two orchestrators in one process would
+ * clobber each other's handle (one's killDevServer could null out or SIGKILL the
+ * other's server). Each orchestrator now owns its own handle in its closure.
+ */
+interface DevServerHandle {
+  proc: ChildProcess | null;
+}
 
-async function ensureDevServer(projectPath: string): Promise<void> {
+async function ensureDevServer(projectPath: string, handle: DevServerHandle): Promise<void> {
   // Check if port 3000 is already responding
   const alive = await checkPort(3000);
   if (alive) return;
 
-  if (devServerProc) {
-    try { devServerProc.kill(); } catch { /* ignore */ }
+  if (handle.proc) {
+    try { handle.proc.kill(); } catch { /* ignore */ }
   }
 
   return new Promise((resolve) => {
-    devServerProc = spawn('npx', ['next', 'dev', '--port', '3000'], {
+    const proc = spawn('npx', ['next', 'dev', '--port', '3000'], {
       cwd: projectPath,
       stdio: ['ignore', 'pipe', 'pipe'],
       shell: true,
@@ -219,13 +227,14 @@ async function ensureDevServer(projectPath: string): Promise<void> {
       // On Windows we keep the default and tree-kill with `taskkill /T`.
       detached: process.platform !== 'win32',
     });
+    handle.proc = proc;
 
     let resolved = false;
     const timeout = setTimeout(() => {
       if (!resolved) { resolved = true; resolve(); }
     }, 30_000);
 
-    devServerProc.stdout?.on('data', (data: Buffer) => {
+    proc.stdout?.on('data', (data: Buffer) => {
       if (!resolved && data.toString().includes('Ready')) {
         resolved = true;
         clearTimeout(timeout);
@@ -233,7 +242,7 @@ async function ensureDevServer(projectPath: string): Promise<void> {
       }
     });
 
-    devServerProc.on('error', () => {
+    proc.on('error', () => {
       if (!resolved) { resolved = true; clearTimeout(timeout); resolve(); }
     });
   });
@@ -249,11 +258,11 @@ function checkPort(port: number): Promise<boolean> {
   });
 }
 
-function killDevServer() {
-  if (devServerProc) {
-    const proc = devServerProc;
+function killDevServer(handle: DevServerHandle) {
+  if (handle.proc) {
+    const proc = handle.proc;
     const pid = proc.pid;
-    devServerProc = null;
+    handle.proc = null;
     // The dev server is spawned with `shell: true`, so on Windows `proc.pid` is
     // the wrapping `cmd.exe` and `proc.kill()` would orphan the real `next dev`
     // node process holding port 3000. Kill the whole process tree so the port
@@ -390,6 +399,17 @@ function getRetryCount(progress: ProgressEntry[], areaId: string): number {
   return progress.filter(p => p.areaId === areaId && p.outcome !== 'success').length;
 }
 
+/**
+ * Feature pass-rate for an area as a 0–1 ratio. A ZERO-feature area is vacuously
+ * satisfied (ratio 1): there is nothing to fail, so it must complete on green
+ * required gates instead of being trapped below threshold and burning retries
+ * forever into completed-with-gaps. (Previously it returned 0 → could never pass
+ * even with every required gate green.)
+ */
+export function computeFeaturePassRate(passingCount: number, totalCount: number): number {
+  return totalCount > 0 ? passingCount / totalCount : 1;
+}
+
 // ── Orchestrator ────────────────────────────────────────────────────────────
 
 export type HarnessEventListener = (event: HarnessEvent) => void;
@@ -420,6 +440,9 @@ export function createHarnessOrchestrator(config: HarnessConfig): HarnessOrchest
   const listeners = new Set<HarnessEventListener>();
   let paused = false;
   let runId: string | null = null;
+  // This orchestrator's own dev-server handle (see DevServerHandle) — never
+  // shared across orchestrators, so one run's teardown can't kill another's.
+  const devServer: DevServerHandle = { proc: null };
 
   /** Persist the current run state as a terminal snapshot in `harness_runs`. */
   function persistTerminal(status: HarnessRunStatus, errorMessage?: string | null): void {
@@ -675,7 +698,7 @@ export function createHarnessOrchestrator(config: HarnessConfig): HarnessOrchest
 
     const passingCount = area.features.filter(f => f.status === 'pass').length;
     const totalCount = area.features.length;
-    const featurePassRate = totalCount > 0 ? passingCount / totalCount : 0;
+    const featurePassRate = computeFeaturePassRate(passingCount, totalCount);
     const requiredGatesPassed = verification.requiredFailures === 0;
     const areaSuccess = requiredGatesPassed && featurePassRate >= areaPassThreshold;
 
@@ -912,7 +935,7 @@ export function createHarnessOrchestrator(config: HarnessConfig): HarnessOrchest
     const hasVisualGate = gates.some(g => g.type === 'visual');
     if (hasVisualGate) {
       emit({ type: 'harness:learning', learning: 'Starting dev server for visual gate...' });
-      await ensureDevServer(config.projectPath);
+      await ensureDevServer(config.projectPath, devServer);
     }
 
     emit({ type: 'harness:started', config, plan });
@@ -1059,7 +1082,7 @@ export function createHarnessOrchestrator(config: HarnessConfig): HarnessOrchest
       // Tear down the dev server on EVERY exit path — normal completion,
       // pause/early-return breaks, and thrown/crashed errors — so we never
       // leak a `next dev` process bound to port 3000 across runs.
-      killDevServer();
+      killDevServer(devServer);
     }
   }
 
@@ -1106,7 +1129,6 @@ export function createDefaultConfig(overrides: Partial<HarnessConfig> & {
     maxIterations: overrides.maxIterations ?? 100,
     generateGuide: overrides.generateGuide ?? true,
     updateAgentsMd: overrides.updateAgentsMd ?? true,
-    evalPasses: overrides.evalPasses ?? ['structure', 'quality'],
     // Canonicalize to 0–100 percent so a caller passing a 0–1 fraction (e.g. the
     // MCP tool's documented 0.9) doesn't terminate the loop at ~1% pass.
     targetPassRate: normalizePassRatePercent(overrides.targetPassRate ?? 90),

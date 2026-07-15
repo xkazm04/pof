@@ -139,20 +139,39 @@ async function runGate(
 // ── Public API ──────────────────────────────────────────────────────────────
 
 /**
+ * True when the tree carries an unambiguous UE5 marker: a `Source/` directory or
+ * a `*.uproject` file at the root. A UE project frequently also carries JS
+ * tooling (a `package.json` for scripts/lint/hooks), so this MUST be checked
+ * before package.json — otherwise a C++ tree would be handed WEBAPP_GATES and
+ * `npx next build` would run against it (a category error).
+ */
+function isUeTree(projectPath: string): boolean {
+  if (fs.existsSync(path.join(projectPath, 'Source'))) return true;
+  try {
+    return fs.readdirSync(projectPath).some(f => f.toLowerCase().endsWith('.uproject'));
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Auto-detect project type and return appropriate gates.
- * Checks for package.json (webapp) vs Source/ (UE5).
+ * Checks UE markers (Source/ or *.uproject) FIRST, then package.json (webapp).
  *
  * The UE5 gate is REAL (`detectUeGates`): a compile gate derived from the UE env
  * (`POF_UE_EDITOR_CMD` / `POF_UE_UPROJECT`), plus an opt-in automation-test gate.
  * When no UE env is configured the compile gate is commandless and `verify()`
  * reports it `unverifiable` — never the old `ls Source/ && echo` self-pass.
+ *
+ * UE markers win over package.json so a UE tree that carries JS tooling still
+ * gets UE gates instead of `npx next build`.
  */
 export function detectGates(projectPath: string, opts: UeGateOptions = {}): VerificationGate[] {
+  if (isUeTree(projectPath)) {
+    return detectUeGates(opts);
+  }
   if (fs.existsSync(path.join(projectPath, 'package.json'))) {
     return WEBAPP_GATES;
-  }
-  if (fs.existsSync(path.join(projectPath, 'Source'))) {
-    return detectUeGates(opts);
   }
   return detectUeGates(opts); // fallback: assume UE tree
 }

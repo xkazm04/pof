@@ -41,7 +41,7 @@ It's a **streaming pool**, not lock-step waves: an area that finishes early free
 | `orchestrator.ts` | `HarnessOrchestrator` — `runLoop`, `runStreamingPool`, `processArea`, `attemptSelfHeal`, budget governance, dev-server lifecycle, rollback |
 | `plan-builder.ts` | `buildGamePlan` — turns the module registry + feature deps into ordered `ModuleArea`s via curated `AREA_PRESETS` + topological sort |
 | `executor.ts` | `executeArea` — assembles the 1M-context executor prompt; `parseAreaResult` reads the `@@HARNESS_RESULT` markers |
-| `verifier.ts` | `verify` — runs quality gates; `parseErrors` structures tsc/eslint/UE5 output; `detectGates` auto-discovers (webapp vs UE) |
+| `verifier.ts` | `verify` — runs quality gates; `parseErrors` structures tsc/eslint/UE5 output; `detectGates` auto-discovers project type — **UE markers (`Source/` or `*.uproject`) win over `package.json`**, so a C++ tree carrying JS tooling still gets UE gates instead of `npx next build` |
 | `ue-gates.ts` | the harness's OWN UE command layer (no `test-gate-runner` import): `resolveUeEnv`, `deriveUeCompileCommand` (UBT, exit-code judged), `deriveUeTestCommand` + `parseAutomationLog` (abslog-content judged), `detectUeGates` |
 | `claude-session.ts` | `spawnClaudeSession` — single-sourced CLI spawner (stream-json, cost parsing, result markers) |
 | `checkpoint.ts` | `Checkpointer` — git branch/tag per green area, `rollbackToLastGreen` (reset --hard) |

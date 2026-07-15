@@ -9,7 +9,6 @@
  */
 
 import type { SubModuleId } from '@/types/modules';
-import type { EvalPass } from '@/lib/evaluator/module-eval-prompts';
 
 /**
  * Which numerator the stop condition compares against the target pass-rate.
@@ -290,8 +289,6 @@ export interface HarnessConfig {
   generateGuide: boolean;
   /** Whether to update AGENTS.md with learnings */
   updateAgentsMd: boolean;
-  /** Eval passes to run during verification */
-  evalPasses: EvalPass[];
   /** Stop condition: minimum passing percentage to consider "done" */
   targetPassRate: number;
   /**
