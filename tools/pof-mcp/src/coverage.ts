@@ -15,6 +15,8 @@ export const EXAMPLE_SKIP: Record<string, string> = {
   pof_harness_control: 'mutates harness state — recorded by a control-plane case',
   pof_harness_plan: 'returns 404 until a harness is started — recorded when a plan exists',
   pof_harness_guide: 'returns 404 until a guide exists — recorded when one exists',
+  pof_harness_run: 'needs a concrete runId — recorded by a control-plane case once a run exists',
+  pof_harness_run_diff: 'needs two concrete runIds — recorded by a control-plane case once runs exist',
   pof_combat_simulate: 'scenario built from pof_combat_catalog — recorded by the sim-quality case',
   pof_economy_simulate: 'config built from pof_economy_catalog — recorded by the sim-quality case',
   pof_economy_sweep: 'config built dynamically — recorded by the sim-quality case',

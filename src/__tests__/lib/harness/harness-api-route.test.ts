@@ -81,3 +81,49 @@ describe('POST /api/harness — control-surface mapping', () => {
     expect((capturedConfig as Cfg).unlimited).toBe(true);
   });
 });
+
+describe('POST /api/harness — Direction 3 control-surface parity', () => {
+  it('themeDirective flows through to config', async () => {
+    await POST(startReq({ ...REQUIRED, themeDirective: 'Star Wars ARPG' }));
+    expect((capturedConfig as Cfg).themeDirective).toBe('Star Wars ARPG');
+  });
+
+  it('rejects an over-length themeDirective loudly (400)', async () => {
+    const res = await POST(startReq({ ...REQUIRED, themeDirective: 'x'.repeat(2001) }));
+    expect(res.status).toBe(400);
+    expect(capturedConfig).toBeNull();
+  });
+
+  it('areaPassThreshold reaches the executor config', async () => {
+    await POST(startReq({ ...REQUIRED, areaPassThreshold: 80 }));
+    expect((capturedConfig as Cfg).executor.areaPassThreshold).toBe(80);
+  });
+
+  it('areaPassThreshold is reachable even WITHOUT sessionTimeoutMs/maxConcurrent', async () => {
+    await POST(startReq({ ...REQUIRED, areaPassThreshold: 0.75 }));
+    const cfg = capturedConfig as Cfg;
+    expect(cfg.executor.areaPassThreshold).toBe(0.75);
+    expect(cfg.executor.sessionTimeoutMs).toBe(30 * 60 * 1000);
+  });
+
+  it('rejects an out-of-range areaPassThreshold (400)', async () => {
+    for (const bad of [0, -1, 150, Number.NaN]) {
+      capturedConfig = null;
+      (globalThis as unknown as { harnessStatus: string }).harnessStatus = 'idle';
+      const res = await POST(startReq({ ...REQUIRED, areaPassThreshold: bad }));
+      expect(res.status).toBe(400);
+      expect(capturedConfig).toBeNull();
+    }
+  });
+
+  it('passRateBasis flows through and rejects an unknown basis (400)', async () => {
+    await POST(startReq({ ...REQUIRED, passRateBasis: 'self-reported' }));
+    expect((capturedConfig as Cfg).passRateBasis).toBe('self-reported');
+
+    capturedConfig = null;
+    (globalThis as unknown as { harnessStatus: string }).harnessStatus = 'idle';
+    const res = await POST(startReq({ ...REQUIRED, passRateBasis: 'wishful' }));
+    expect(res.status).toBe(400);
+    expect(capturedConfig).toBeNull();
+  });
+});

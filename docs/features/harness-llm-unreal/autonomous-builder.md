@@ -71,17 +71,18 @@ It's a **streaming pool**, not lock-step waves: an area that finishes early free
 ## Control surface
 
 **HTTP** (`src/app/api/harness/`):
-- `POST /api/harness` — `{ action: 'start' | 'pause' | 'resume', projectPath, projectName, ueVersion, maxIterations?, targetPassRate?, budgetUsd?, unlimited?, maxConcurrent?, scenario?, checkpoint?, ueTests?, ueTestFilter? }`. `targetPassRate` accepts a 0–1 fraction OR a 0–100 percent (normalized server-side). `maxConcurrent` raises pool concurrency; `scenario` (`ui-overhaul` | `content-overhaul`, from the shared `scenarios.ts`) swaps in a curated area set; `unlimited: true` is the only way to run with no spend cap; `ueTests` opts in the automation-test gate.
+- `POST /api/harness` — `{ action: 'start' | 'pause' | 'resume', projectPath, projectName, ueVersion, maxIterations?, targetPassRate?, passRateBasis?, budgetUsd?, unlimited?, maxConcurrent?, scenario?, checkpoint?, ueTests?, ueTestFilter?, themeDirective?, areaPassThreshold? }`. `targetPassRate`/`areaPassThreshold` accept a 0–1 fraction OR a 0–100 percent (normalized server-side; `areaPassThreshold` validated to `(0,100]`); `passRateBasis` (`verified` | `self-reported`) picks the stop-condition numerator; `themeDirective` (≤2000 chars, validated) injects creative direction into every executor prompt; `maxConcurrent` raises pool concurrency; `scenario` (`ui-overhaul` | `content-overhaul`, from the shared `scenarios.ts`) swaps in a curated area set; `unlimited: true` is the only way to run with no spend cap; `ueTests` opts in the automation-test gate.
 - `GET /api/harness[?action=plan|guide|progress|events]` — status snapshot or the full plan/guide/progress/events
 - `GET /api/harness/runs`, `/runs/[id]`, `/runs/diff?a=&b=` — run history & comparison
 - `GET /api/harness/screenshot`, `/screenshots` — visual-gate captures
 
 **MCP** (`tools/pof-mcp/`, for a Claude Code CLI to drive it):
-- `pof_harness_start` — launch (returns immediately; poll status)
-- `pof_harness_status` — run state, plan progress, cost, checkpoints, recent events
+- `pof_harness_start` — launch (returns immediately; poll status). Full parity with the HTTP surface: `themeDirective`, `sessionTimeoutMs`, `areaPassThreshold`, `passRateBasis` (+ the pre-existing budget/scenario/concurrency/ue-test levers).
+- `pof_harness_status` — run state, plan progress (both `verifiedPassRate` + `selfReportedPassRate`), cost, checkpoints, recent events
 - `pof_harness_plan` — the full `GamePlan` (every area, feature, dependency)
 - `pof_harness_control` — pause (after the current iteration) / resume
 - `pof_harness_guide` — the accumulated build guide + learnings
+- `pof_harness_runs` / `pof_harness_run` / `pof_harness_run_diff` — run history, a single run's full snapshot, and a run-to-run comparison (proxy `/api/harness/runs*`)
 
 **UI** (`src/components/harness/`): `HarnessGuideViewer` (the generated playbook), `HarnessRunHistory` (pick two runs → diff), `HarnessVisualGallery` (screenshot thumbnails per iteration/area).
 

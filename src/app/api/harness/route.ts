@@ -159,7 +159,14 @@ export async function POST(request: NextRequest) {
     scenario?: string;
     ueTests?: boolean;
     ueTestFilter?: string;
+    themeDirective?: string;
+    areaPassThreshold?: number;
+    passRateBasis?: 'verified' | 'self-reported';
   };
+
+  // Shared validation cap for the free-text creative direction so an unbounded
+  // string can't be smuggled into every executor prompt.
+  const THEME_DIRECTIVE_MAX = 2000;
 
   if (body.action === 'start') {
     if (globalForHarness.harnessStatus === 'running') {
@@ -168,6 +175,24 @@ export async function POST(request: NextRequest) {
 
     if (!body.projectPath || !body.projectName || !body.ueVersion) {
       return apiError('Missing required fields: projectPath, projectName, ueVersion', 400);
+    }
+
+    // Validate the new steering levers loudly rather than silently coercing.
+    if (body.themeDirective != null) {
+      if (typeof body.themeDirective !== 'string' || body.themeDirective.length > THEME_DIRECTIVE_MAX) {
+        return apiError(`themeDirective must be a string of at most ${THEME_DIRECTIVE_MAX} characters`, 400);
+      }
+    }
+    if (body.areaPassThreshold != null) {
+      const t = body.areaPassThreshold;
+      // Accepts a 0–1 fraction OR a 0–100 percent (normalizePassRatePercent
+      // canonicalizes downstream); reject non-finite / non-positive / >100.
+      if (typeof t !== 'number' || !Number.isFinite(t) || t <= 0 || t > 100) {
+        return apiError('areaPassThreshold must be a number in (0, 100] (a 0–1 fraction or a 0–100 percent)', 400);
+      }
+    }
+    if (body.passRateBasis != null && body.passRateBasis !== 'verified' && body.passRateBasis !== 'self-reported') {
+      return apiError('passRateBasis must be "verified" or "self-reported"', 400);
     }
 
     // Scenario selection (Direction 1c) — the same curated area sets the CLI
@@ -184,7 +209,7 @@ export async function POST(request: NextRequest) {
     // Build the executor block unconditionally so maxConcurrent (Direction 1b)
     // is reachable even when sessionTimeoutMs is omitted; previously it was only
     // built when a timeout was passed, so the API could never raise concurrency.
-    const executorOverride = (body.sessionTimeoutMs != null || body.maxConcurrent != null)
+    const executorOverride = (body.sessionTimeoutMs != null || body.maxConcurrent != null || body.areaPassThreshold != null)
       ? {
           sessionTimeoutMs: body.sessionTimeoutMs ?? 30 * 60 * 1000,
           maxRetriesPerArea: 3,
@@ -192,6 +217,7 @@ export async function POST(request: NextRequest) {
           skipPermissions: true,
           bareMode: false,
           ...(body.maxConcurrent != null ? { maxConcurrent: body.maxConcurrent } : {}),
+          ...(body.areaPassThreshold != null ? { areaPassThreshold: body.areaPassThreshold } : {}),
         }
       : undefined;
 
@@ -208,6 +234,8 @@ export async function POST(request: NextRequest) {
       ...(scenarioAreas ? { areas: scenarioAreas } : {}),
       ...(body.ueTests != null ? { ueTests: body.ueTests } : {}),
       ...(body.ueTestFilter != null ? { ueTestFilter: body.ueTestFilter } : {}),
+      ...(body.themeDirective != null ? { themeDirective: body.themeDirective } : {}),
+      ...(body.passRateBasis != null ? { passRateBasis: body.passRateBasis } : {}),
       executor: executorOverride,
     });
 

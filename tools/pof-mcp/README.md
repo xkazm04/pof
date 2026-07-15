@@ -38,11 +38,14 @@ deferred verdict — Claude never self-grades.
 - `pof_drain_gates {catalogId, entityId, tier?, allowSpawn?}` — run deferred L3/L4 gates on the live editor
 
 **Harness loop**
-- `pof_harness_start {projectPath, projectName, ueVersion, …}` — start plan→execute→verify→checkpoint
-- `pof_harness_status` — run state, progress, cost, events
+- `pof_harness_start {projectPath, projectName, ueVersion, …}` — start plan→execute→verify→checkpoint. Steering levers: `targetPassRate`, `passRateBasis` (`verified` default | `self-reported`), `sessionTimeoutMs`, `areaPassThreshold`, `themeDirective` (creative direction, ≤2000 chars), `budgetUsd`/`unlimited`, `maxConcurrent`, `scenario`, `checkpoint`, `ueTests`/`ueTestFilter`
+- `pof_harness_status` — run state, progress (incl. `verifiedPassRate` + `selfReportedPassRate`), cost, events
 - `pof_harness_plan` — full game plan
 - `pof_harness_control {action: pause|resume}`
 - `pof_harness_guide` — generated build guide / learnings
+- `pof_harness_runs {limit?, project?}` — run history (newest first)
+- `pof_harness_run {runId}` — full plan/progress/guide/cost snapshot of one run
+- `pof_harness_run_diff {a, b}` — compare two runs (pass-rate/cost/duration deltas + per-area changes)
 
 ## Build & test
 
