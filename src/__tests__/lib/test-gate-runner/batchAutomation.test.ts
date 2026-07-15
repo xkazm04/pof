@@ -102,24 +102,48 @@ describe('runBatchAutomation — ONE boot, per-test verdicts from the report', (
     expect(verdicts.get('VSItemsTest')!.raw).toMatchObject({ source: 'report' });
   });
 
-  it('falls back to the combined abslog markers when the report is missing (one whole-batch verdict)', async () => {
-    // No index.json seeded → report miss; provide an abslog with a success marker instead.
-    fsState.files.set('batch.log', 'LogAutomationController: ... Test Completed. Result={Success}');
+  it('falls back to the combined abslog SCOPED PER TEST when the report is missing (no smear)', async () => {
+    // No index.json → report miss. A combined log where each test carries its OWN Name={…}
+    // marker: VSItemsTest passed, VSLootTest failed. The fallback must NOT smear one verdict.
+    fsState.files.set('batch.log', [
+      'LogAutomationController: Test Completed. Result={Success} Name={Project.Maps.Arena.VSItemsTest}',
+      'LogAutomationController: Test Completed. Result={Failure} Name={Project.Maps.Arena.VSLootTest}',
+    ].join('\n'));
     const { fn, calls } = countingSpawn();
     const verdicts = await runBatchAutomation({
-      editor: 'ue', uproject: 'p.uproject', testNames: ['A', 'B'], spawn: fn, timeoutMs: 1000,
+      editor: 'ue', uproject: 'p.uproject', testNames: ['VSItemsTest', 'VSLootTest'], spawn: fn, timeoutMs: 1000,
     });
     expect(calls).toHaveLength(1);
-    expect(verdicts.get('A')!.status).toBe('pass');
-    expect(verdicts.get('B')!.status).toBe('pass');
-    expect(verdicts.get('A')!.raw).toMatchObject({ source: 'abslog' });
+    expect(verdicts.get('VSItemsTest')!.status).toBe('pass');
+    expect(verdicts.get('VSLootTest')!.status).toBe('fail');
+    expect(verdicts.get('VSItemsTest')!.raw).toMatchObject({ source: 'abslog' });
   });
 
-  it('a zero-match abslog fallback defers every test (planned, not a red fail)', async () => {
-    fsState.files.set('batch.log', 'LogAutomationController: 8621 tests available\nLogExit: Exiting.');
+  it('A-pass + B-crashed with a broken report → A passes, B NEVER passes (stays deferred)', async () => {
+    // The exact smear this replaces: A completed with its own marker, then B started and the
+    // run crashed before B produced any result. B has no per-test observation → deferred.
+    fsState.files.set('batch.log', [
+      'LogAutomationController: Test Completed. Result={Success} Name={Project.PoF.VSAlphaTest}',
+      'LogAutomationController: Beginning test Project.PoF.VSBetaTest',
+      'Fatal error! [File:...] crash',
+    ].join('\n'));
     const { fn } = countingSpawn();
-    const verdicts = await runBatchAutomation({ editor: 'ue', uproject: 'p', testNames: ['A'], spawn: fn, timeoutMs: 1000 });
-    expect(verdicts.get('A')!.status).toBe('deferred');
+    const verdicts = await runBatchAutomation({
+      editor: 'ue', uproject: 'p', testNames: ['VSAlphaTest', 'VSBetaTest'], spawn: fn, timeoutMs: 1000,
+    });
+    expect(verdicts.get('VSAlphaTest')!.status).toBe('pass');
+    expect(verdicts.get('VSBetaTest')!.status).toBe('deferred'); // crashed → unobserved, never a smeared pass
+  });
+
+  it('a generic single marker with no per-test attribution defers every test (can\'t prove per-test)', async () => {
+    // One Result={Success} with no Name={…} and no test-name mention proves NOTHING per test.
+    fsState.files.set('batch.log', 'LogAutomationController: run finished. Result={Success}');
+    const { fn } = countingSpawn();
+    const verdicts = await runBatchAutomation({
+      editor: 'ue', uproject: 'p', testNames: ['VSItemsTest', 'VSLootTest'], spawn: fn, timeoutMs: 1000,
+    });
+    expect(verdicts.get('VSItemsTest')!.status).toBe('deferred');
+    expect(verdicts.get('VSLootTest')!.status).toBe('deferred');
   });
 
   it('no report AND no abslog → every test stays deferred (never a fabricated verdict)', async () => {
@@ -161,14 +185,18 @@ describe('makeSpawnExecutor — prepareBatch groups N automation gates into ONE 
     expect(v1.detail).toMatch(/^VSItemsTest:/);
   });
 
-  it('abslog fallback also served from the one batch boot (report absent)', async () => {
-    fsState.files.set('batch.log', 'Result={Success}');
+  it('abslog fallback also served from the one batch boot (report absent), scoped per test', async () => {
+    // Report absent → per-test scoped fallback; each test carries its own Name={…} marker.
+    fsState.files.set('batch.log', [
+      'Test Completed. Result={Success} Name={Project.VSItemsTest}',
+      'Test Completed. Result={Success} Name={Project.VSHUDTest}',
+    ].join('\n'));
     const { fn, calls } = countingSpawn();
     const ex = makeSpawnExecutor({ allowSpawn: true, editorCmd: 'ue', uproject: 'p.uproject', spawnImpl: fn });
     await ex.prepareBatch!(jobs);
     expect(calls).toHaveLength(1);
-    expect((await ex.run(jobs[0])).status).toBe('pass');
-    expect((await ex.run(jobs[2])).status).toBe('pass');
+    expect((await ex.run(jobs[0])).status).toBe('pass'); // VSItemsTest
+    expect((await ex.run(jobs[2])).status).toBe('pass'); // VSHUDTest
     expect(calls).toHaveLength(1);
   });
 

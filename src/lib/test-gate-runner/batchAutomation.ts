@@ -19,31 +19,33 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { logger } from '@/lib/logger';
 import type { GateEvidence } from '@/types/observation';
+import { readAbslogFacts, scopeAbslogPerTest, ZERO_MATCH_DETAIL } from '@/lib/ue-automation/abslog';
 import type { GateVerdict } from './types';
 
 /** The watchdog-protected spawn seam (`spawnAndWait` in the executor); injectable for tests. */
 export type SpawnFn = (cmd: string, args: string[], timeoutMs: number) => Promise<{ timedOut: boolean }>;
 
 /**
- * Read the verdict from a combined `-abslog`. Judged by markers, not exit code —
- * headless runs exit non-zero on the benign bridge shutdown null-deref. Markers
- * confirmed against ground truth: the UE automation controller emits
- * `LogAutomationController: ... Result={Success}` / `Result={Failure}`; some
- * project Python gates emit `[gate] RESULT=PASS/FAIL`. Pure (tested).
+ * Read a SINGLE whole-log verdict from an abslog — the marker vocabulary the runner uses
+ * (`unregistered` → later mapped to a `deferred` gate). Delegates the marker truth to the
+ * ONE shared parser (`@/lib/ue-automation/abslog`, also consumed by `harness/ue-gates`) —
+ * no hand-rolled regex here anymore. Judged by markers, not exit code.
  *
- * (Lives here — the shared home for the abslog fallback used by both the single-boot
- * `runAutomation` and the grouped-boot fallback below; `spawnExecutor` re-exports it.)
+ * Used by the single-boot `runAutomation` (ONE test per boot, so a whole-log verdict IS the
+ * per-test verdict). The grouped-boot fallback below does NOT use this — it scopes the
+ * combined log per test so a partial run can't smear one verdict across every test.
+ * `spawnExecutor` re-exports it for API stability. Pure (tested).
  */
 export function parseAbslogVerdict(log: string): { status: 'pass' | 'fail' | 'unregistered'; detail: string } {
-  if (/\[gate\]\s*RESULT=PASS/i.test(log)) return { status: 'pass', detail: '[gate] RESULT=PASS' };
-  if (/\[gate\]\s*RESULT=FAIL/i.test(log)) return { status: 'fail', detail: '[gate] RESULT=FAIL' };
-  if (/Result=\{Success\}/i.test(log)) return { status: 'pass', detail: 'Result={Success}' };
-  if (/Result=\{Fail(?:ure)?\}/i.test(log)) return { status: 'fail', detail: 'Result={Failure}' };
-  // The controller listed its test set but nothing matched the requested name → the test
-  // is PLANNED, not implemented: an honest deferred wait, NOT a red failure. (Ground truth,
-  // 2026-07 sweep: UE listed 8621 tests, matched zero for 29 planned VS*Test names.)
-  if (/\d+ tests available/i.test(log) && !/Test Completed/i.test(log) && !/Fatal error/i.test(log)) {
-    return { status: 'unregistered', detail: 'no test matched the requested name (planned, not registered in UE)' };
+  const f = readAbslogFacts(log);
+  if (f.gatePass) return { status: 'pass', detail: '[gate] RESULT=PASS' };
+  if (f.gateFail) return { status: 'fail', detail: '[gate] RESULT=FAIL' };
+  if (f.resultPass > 0) return { status: 'pass', detail: 'Result={Success}' };
+  if (f.resultFail > 0) return { status: 'fail', detail: 'Result={Failure}' };
+  // Controller listed its set but nothing matched (and it neither completed a test nor crashed)
+  // → PLANNED, not implemented: an honest deferred wait, NOT a red failure.
+  if (f.listedTestSet && !f.completed && !f.fatal) {
+    return { status: 'unregistered', detail: ZERO_MATCH_DETAIL };
   }
   // No success marker found → treat as failure (a crashed/aborted run never passed).
   return { status: 'fail', detail: 'no success marker in abslog' };
@@ -153,11 +155,12 @@ export interface BatchAutomationOptions {
 /**
  * Run MANY automation gates in ONE `UnrealEditor-Cmd` boot and return a per-test verdict
  * map (keyed by the requested test name). Prefers the `-ReportOutputPath` report JSON for
- * per-test verdicts; falls back to the combined `-abslog` marker parse (one whole-batch
- * verdict applied to every test) when the report is missing/unparseable — the run likely
- * crashed before writing a report, so a whole-batch verdict is the honest coarse fallback.
- * Never spawns more than once; the caller (spawn executor `prepareBatch`) invokes this once
- * per drain pass. `testNames` are de-duplicated by the caller.
+ * per-test verdicts; falls back to scoping the combined `-abslog` PER TEST when the report
+ * is missing/unparseable — so a partial run (A completed, B crashed) never smears one
+ * whole-batch verdict across every test. A test with no per-test observation in the combined
+ * log stays `deferred`, never inheriting a sibling's pass. Never spawns more than once; the
+ * caller (spawn executor `prepareBatch`) invokes this once per drain pass. `testNames` are
+ * de-duplicated by the caller.
  */
 export async function runBatchAutomation(o: BatchAutomationOptions): Promise<Map<string, GateVerdict>> {
   const out = new Map<string, GateVerdict>();
@@ -183,7 +186,9 @@ export async function runBatchAutomation(o: BatchAutomationOptions): Promise<Map
     return out;
   }
 
-  // Fallback: judge the combined abslog by markers (not exit code). One whole-batch verdict.
+  // Fallback: no structured report. Scope the combined abslog PER TEST (judged by markers, not
+  // exit code) so a partial run never smears one whole-batch verdict across every test — a test
+  // with no per-test observation stays deferred, never inheriting a sibling's pass.
   const log = await readFile(abslog, 'utf-8').catch((e) => {
     logger.warn(`[test-gate-runner] batch automation: no report and no abslog at ${reportDir} (${e instanceof Error ? e.message : String(e)})`);
     return '';
@@ -194,8 +199,14 @@ export async function runBatchAutomation(o: BatchAutomationOptions): Promise<Map
     for (const name of o.testNames) out.set(name, toVerdict(name, { status: 'unregistered', detail }, 'abslog'));
     return out;
   }
-  const v = parseAbslogVerdict(log);
-  for (const name of o.testNames) out.set(name, toVerdict(name, v, 'abslog'));
+  const perTest = scopeAbslogPerTest(log, o.testNames);
+  for (const name of o.testNames) {
+    const r = perTest.get(name)!;
+    // `none` (no per-test observation in the combined log) → unregistered → deferred (honest wait).
+    const rv: ReportVerdict =
+      r.status === 'none' ? { status: 'unregistered', detail: r.detail } : { status: r.status, detail: r.detail };
+    out.set(name, toVerdict(name, rv, 'abslog'));
+  }
   return out;
 }
 

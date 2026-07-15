@@ -18,6 +18,7 @@
  */
 
 import * as path from 'path';
+import { readAbslogFacts } from '@/lib/ue-automation/abslog';
 import type { VerificationGate } from './types';
 
 export interface UeEnv {
@@ -103,18 +104,19 @@ export interface AutomationVerdict {
 }
 
 /**
- * Parse a UE automation abslog into a verdict, judging by CONTENT not exit code.
- * Counts `Result={Passed|Success}` vs `Result={Failed|Fail}`. Zero matched tests
- * is `unverifiable` (the filter hit nothing — not a failure), per the project's
- * "zero-match → deferred, not fail" convention.
+ * Parse a UE automation abslog into a verdict, judging by CONTENT not exit code. The marker
+ * truth comes from the ONE shared parser (`@/lib/ue-automation/abslog`, also consumed by the
+ * L3/L4 test-gate runner) — no hand-rolled regex here anymore. Zero matched tests is
+ * `unverifiable` (the filter hit nothing — not a failure); this is the SAME zero-match fact
+ * the runner surfaces as `unregistered`/`deferred` — see `ZERO_MATCH_DETAIL` in the shared
+ * module for why the two contexts keep different words (UI reasons).
  */
 export function parseAutomationLog(log: string): AutomationVerdict {
-  if (!log || !log.trim()) {
+  const f = readAbslogFacts(log);
+  const { passed, failed, total } = f;
+  if (f.empty) {
     return { verdict: 'unverifiable', total: 0, passed: 0, failed: 0, reason: 'Empty automation log — nothing to verify' };
   }
-  const passed = (log.match(/Result=\{(?:Passed|Success)\}/gi) ?? []).length;
-  const failed = (log.match(/Result=\{(?:Failed|Fail)\}/gi) ?? []).length;
-  const total = passed + failed;
   if (total === 0) {
     return { verdict: 'unverifiable', total, passed, failed, reason: 'Automation filter matched 0 tests — cannot verify (not a failure)' };
   }
