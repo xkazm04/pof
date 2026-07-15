@@ -66,6 +66,10 @@ interface TaskQueueState {
   sessionId: string | null;
   /** Persists across task lifecycle — set on each task start */
   logFilePath: string | null;
+  /** Model-policy pin the last dispatch resolved to (WS0), or null when unpinned. */
+  resolvedModel: string | null;
+  /** Thinking effort the last dispatch resolved to, or null when unpinned. */
+  resolvedEffort: string | null;
 }
 
 type TaskQueueAction =
@@ -76,6 +80,7 @@ type TaskQueueAction =
   | { type: 'SSE_ERROR'; error: string }
   | { type: 'START_FAILED'; error: string }
   | { type: 'SET_LOG_FILE'; path: string }
+  | { type: 'SET_RESOLVED_MODEL'; model: string | null; effort: string | null }
   | { type: 'ABORT' }
   | { type: 'TASK_DONE' }
   | { type: 'STUCK_RESOLVED'; success: boolean }
@@ -85,6 +90,8 @@ const INITIAL_STATE: TaskQueueState = {
   current: { phase: 'idle' },
   sessionId: null,
   logFilePath: null,
+  resolvedModel: null,
+  resolvedEffort: null,
 };
 
 function taskQueueReducer(state: TaskQueueState, action: TaskQueueAction): TaskQueueState {
@@ -131,6 +138,9 @@ function taskQueueReducer(state: TaskQueueState, action: TaskQueueAction): TaskQ
 
     case 'SET_LOG_FILE':
       return { ...state, logFilePath: action.path };
+
+    case 'SET_RESOLVED_MODEL':
+      return { ...state, resolvedModel: action.model, resolvedEffort: action.effort };
 
     case 'ABORT':
     case 'TASK_DONE':
@@ -458,18 +468,20 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
 
   // --- Manual submit (user input) ---
 
-  const submitPrompt = useCallback(async (prompt: string, resumeSession: boolean) => {
+  const submitPrompt = useCallback(async (prompt: string, resumeSession: boolean, opts?: { taskType?: string }) => {
     assistantOutputRef.current = '';
     dispatch({ type: 'SUBMIT_START' });
     addLog({ id: `user-${Date.now()}`, type: 'user', content: prompt, timestamp: Date.now() });
 
     try {
-      const data = await apiFetch<{ executionId: string; streamUrl: string; logFilePath: string | null }>('/api/claude-terminal/query', {
+      const data = await apiFetch<{ executionId: string; streamUrl: string; logFilePath: string | null; model: string | null; effort: string | null }>('/api/claude-terminal/query', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectPath, prompt, resumeSessionId: resumeSession ? state.sessionId : undefined }),
+        // taskType lets the route resolve the model-policy pin (WS0) for this run.
+        body: JSON.stringify({ projectPath, prompt, resumeSessionId: resumeSession ? state.sessionId : undefined, taskType: opts?.taskType }),
       });
       executionIdRef.current = data.executionId;
+      dispatch({ type: 'SET_RESOLVED_MODEL', model: data.model ?? null, effort: data.effort ?? null });
       if (data.logFilePath) dispatch({ type: 'SET_LOG_FILE', path: data.logFilePath });
       connectToStream(data.streamUrl);
     } catch (e) {
@@ -601,6 +613,8 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     error,
     currentTaskId: taskId,
     logFilePath: state.logFilePath,
+    resolvedModel: state.resolvedModel,
+    resolvedEffort: state.resolvedEffort,
     buildParseCache,
     submitPrompt,
     handleAbort,

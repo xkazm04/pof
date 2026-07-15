@@ -15,8 +15,8 @@ calls in strings.
 | `src/lib/prompts/animation-checklist.ts` | Per-module builder (animation); illustrates `.withProjectContext()` + `.withRawTask()` + `.withRawBestPractices()` |
 | `src/lib/prompts/material-configurator.ts` | Per-module builder (materials); illustrates `.withBestPractices()` |
 | `src/lib/cli-task.ts` | `CLITask` type hierarchy, `TaskFactory`, `buildTaskPrompt()`, callback registry (`registerCallback` / `extractCallbackPayload` / `resolveCallback`) |
-| `src/lib/claude-terminal/cli-service.ts` | `startExecution()` — spawns Claude Code CLI, stream-json parsing, `CLIExecution` lifecycle |
-| `src/lib/claude-terminal/session-manager.ts` | In-memory session store (`createSession`, `updateSession`, `deleteSession`) |
+| `src/lib/claude-terminal/cli-service.ts` | `startExecution()` — spawns Claude Code CLI, stream-json parsing, `CLIExecution` lifecycle, `buildCliArgs()` (model/effort pinning) |
+| `src/lib/model-policy.ts` | Model-policy registry (WS0): `getModelPolicy(taskClass)`, `taskClassForDispatchType()`, `resolveDispatchModelChoice()` — the single source of truth for which model + effort powers each task class |
 | `src/components/cli/skills.ts` | 12 `SkillPack` records; `buildSkillsPrompt()` / `resolveSkillsFromPatterns()` |
 | `src/hooks/useModuleCLI.ts` | `useModuleCLI` hook — primary entry point from module components |
 | `src/components/layout-lab/steps/ArchetypeStep.tsx` | Catalog pipeline: `CliProduce.buildPrompt` prepends Project Canon before dispatching |
@@ -197,6 +197,21 @@ from the one-shot routes — so the prefix is intentionally unconstrained.
    stream-json --verbose --dangerously-skip-permissions`, writes the prompt to stdin,
    and emits `CLIExecutionEvent` objects for every parsed stream-json line.
    (`cli-service.ts:139`)
+
+   The `POST /api/claude-terminal/query` route resolves the **model policy** for the run
+   before spawning: `resolveDispatchModelChoice({ taskType, taskClass?, model?, effort? })`
+   maps the dispatch task type (threaded from `useModuleCLI` → `dispatchPromptWhenReady`
+   → the `pof-cli-prompt` event → `useTaskQueue.submitPrompt`) to a policy class via
+   `taskClassForDispatchType`, reads `getModelPolicy(class)`, and passes the resulting
+   `{model, effort}` to `startExecution` so `buildCliArgs` appends `--model`/`--effort`.
+   Only content-aligned task types map (`feature-fix → fix-content`, `module-scan` /
+   `feature-review` / `evaluate-track → judge-content`, `generate` / `draft-ability-spec`
+   / `detect-stimuli → produce-text`, `generate-gas-effects` / `run-ai-tests →
+   author-ue-test`); every other type (`checklist`, `quick-action`, `ask-claude`,
+   free-typed `interactive`, …) is unmapped → no args appended → identical to the
+   pre-wiring default. The route echoes the resolved pin back so `TerminalHeader` can
+   show a small honest `policy: <model>·<effort>` label. Scripts / autonomous spawns can
+   pass an explicit `model`/`effort` (validated; unknown values dropped) which wins.
 
    The final `result` line is normalized through the pure `result-metrics.ts`
    (`extractResultMetrics`) so the run's token usage + dollar cost surface as clean

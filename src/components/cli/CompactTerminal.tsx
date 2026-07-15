@@ -104,7 +104,7 @@ export function CompactTerminal({
   // sendPrompt can target this terminal (replaces the old fixed mount-delay).
   useEffect(() => {
     const handler = (e: Event) => {
-      const { tabId, prompt } = (e as CustomEvent).detail;
+      const { tabId, prompt, taskType } = (e as CustomEvent).detail;
       if (tabId !== instanceId) return;
       // Submit the dispatched prompt DIRECTLY. The previous design set `input`
       // state and relied on a separate effect to auto-submit it — but that
@@ -113,7 +113,7 @@ export function CompactTerminal({
       // unsent. Submitting straight through removes the race entirely.
       const queue = tqRef.current;
       if (typeof prompt !== 'string' || !prompt.trim() || queue.isStreaming) return;
-      void queue.submitPrompt(prompt, queue.sessionId !== null);
+      void queue.submitPrompt(prompt, queue.sessionId !== null, { taskType: typeof taskType === 'string' ? taskType : undefined });
     };
     window.addEventListener('pof-cli-prompt', handler);
 
@@ -170,6 +170,8 @@ export function CompactTerminal({
         editCount={editCount}
         writeCount={writeCount}
         queuePendingCount={queuePendingCount}
+        resolvedModel={tq.resolvedModel}
+        resolvedEffort={tq.resolvedEffort}
         onClear={tq.handleClear}
         onResume={handleResume}
         onCopyOutput={handleCopyOutput}

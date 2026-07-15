@@ -10,11 +10,20 @@ import {
   getExecution,
 } from '@/lib/claude-terminal/cli-service';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { resolveDispatchModelChoice } from '@/lib/model-policy';
 
 interface QueryRequestBody {
   projectPath: string;
   prompt: string;
   resumeSessionId?: string;
+  /** Model-policy wiring: the dispatch task type (a CLITaskType or 'interactive') — the
+   *  route maps it to a policy class and resolves the pinned model + effort server-side. */
+  taskType?: string;
+  /** Explicit policy class (bypasses the taskType map) — used by tooling that knows it. */
+  taskClass?: string;
+  /** Explicit model/effort override (scripts / autonomous spawns). Validated; unknown → ignored. */
+  model?: string;
+  effort?: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -29,13 +38,26 @@ export async function POST(request: NextRequest) {
       return apiError('Prompt is required', 400);
     }
 
-    const executionId = startExecution(projectPath, prompt, resumeSessionId);
+    // Resolve the model + effort this run should pin from the model policy (Quality
+    // Program WS0). Only known values pass through; an unmapped task type / unknown
+    // override yields {} so no `--model`/`--effort` args are appended (unchanged behaviour).
+    const { model, effort } = resolveDispatchModelChoice({
+      model: body.model,
+      effort: body.effort,
+      taskClass: body.taskClass,
+      taskType: body.taskType,
+    });
+
+    const executionId = startExecution(projectPath, prompt, resumeSessionId, undefined, { model, effort });
     const execution = getExecution(executionId);
 
     return apiSuccess({
       executionId,
       streamUrl: `/api/claude-terminal/stream?executionId=${executionId}`,
       logFilePath: execution?.logFilePath ?? null,
+      // Surface the resolved pin so the terminal can honestly label the run's model.
+      model: model ?? null,
+      effort: effort ?? null,
     });
   } catch (error) {
     console.error('Claude Terminal query error:', error);

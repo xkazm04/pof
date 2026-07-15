@@ -18,10 +18,12 @@ declare global {
  * `pof-cli-terminal-ready`. A safety-fallback timer dispatches anyway if the
  * terminal never announces — a loud-failure backstop, not the normal path.
  */
-export function dispatchPromptWhenReady(tabId: string, prompt: string): void {
+export function dispatchPromptWhenReady(tabId: string, prompt: string, taskType?: string): void {
   const dispatch = () => {
     window.dispatchEvent(
-      new CustomEvent('pof-cli-prompt', { detail: { tabId, prompt } }),
+      // taskType rides along so the terminal can pin the model-policy model + effort
+      // for this run (Quality Program WS0). Omitted for free-typed prompts → no pin.
+      new CustomEvent('pof-cli-prompt', { detail: { tabId, prompt, taskType } }),
     );
   };
 

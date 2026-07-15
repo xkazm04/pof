@@ -82,11 +82,78 @@ function ensureTable() {
   ensured = true;
 }
 
-function isModel(v: unknown): v is ClaudeModel {
+export function isModel(v: unknown): v is ClaudeModel {
   return v === 'haiku' || v === 'sonnet' || v === 'opus' || v === 'fable';
 }
-function isEffort(v: unknown): v is Effort {
+export function isEffort(v: unknown): v is Effort {
   return v === 'low' || v === 'medium' || v === 'high' || v === 'xhigh' || v === 'max';
+}
+export function isTaskClass(v: unknown): v is TaskClass {
+  return typeof v === 'string' && (TASK_CLASSES as string[]).includes(v);
+}
+
+/**
+ * Map a live-dispatch task type (a `CLITaskType`, or the `'interactive'` sentinel
+ * for a free-typed terminal prompt) to the model-policy {@link TaskClass} that should
+ * govern which model + effort powers it. Only task types that clearly correspond to a
+ * policy class are mapped; everything else returns `null` so the caller pins nothing and
+ * behaviour is identical to the pre-wiring default (session model, no `--model`/`--effort`).
+ *
+ * This is the ONLY bridge between the interactive/module dispatch vocabulary and the
+ * Quality-Program policy classes — kept conservative on purpose (an unmapped type is a
+ * no-op, never a surprise model swap).
+ */
+export function taskClassForDispatchType(taskType: string | undefined | null): TaskClass | null {
+  switch (taskType) {
+    case 'feature-fix':
+      return 'fix-content';
+    case 'module-scan':
+    case 'feature-review':
+    case 'evaluate-track':
+      return 'judge-content';
+    case 'generate':
+    case 'draft-ability-spec':
+    case 'detect-stimuli':
+      return 'produce-text';
+    case 'generate-gas-effects':
+    case 'run-ai-tests':
+      return 'author-ue-test';
+    default:
+      // checklist, quick-action, ask-claude, interactive, wbp-starter, procgen-dungeon,
+      // biome-scatter, mixamo-import, character-setup, audio-import, unknown → no pin.
+      return null;
+  }
+}
+
+/**
+ * Resolve the `{model, effort}` a live dispatch should pin, from an optional explicit
+ * override plus an optional dispatch task type. Pure except for the DB read inside
+ * {@link getModelPolicy}; server-only. Returns `{}` (pin nothing) when neither an explicit
+ * valid override nor a mappable task type is present — the off-state that keeps the CLI
+ * args byte-identical to before this wiring.
+ *
+ * Precedence: a valid explicit `model`/`effort` wins (used by scripts / autonomous
+ * spawns); otherwise a valid explicit `taskClass`, otherwise the task type is mapped
+ * through {@link taskClassForDispatchType}. Each explicit field is validated
+ * independently — an unknown value is dropped, never forwarded.
+ */
+export function resolveDispatchModelChoice(input: {
+  model?: unknown;
+  effort?: unknown;
+  taskClass?: unknown;
+  taskType?: unknown;
+}): { model?: ClaudeModel; effort?: Effort } {
+  const explicitModel = isModel(input.model) ? input.model : undefined;
+  const explicitEffort = isEffort(input.effort) ? input.effort : undefined;
+  if (explicitModel || explicitEffort) {
+    return { ...(explicitModel ? { model: explicitModel } : {}), ...(explicitEffort ? { effort: explicitEffort } : {}) };
+  }
+  const taskClass = isTaskClass(input.taskClass)
+    ? input.taskClass
+    : taskClassForDispatchType(typeof input.taskType === 'string' ? input.taskType : null);
+  if (!taskClass) return {};
+  const choice = getModelPolicy(taskClass);
+  return { model: choice.model, effort: choice.effort };
 }
 
 /** Resolve the effective choice for a task class: DB override, else the seed default. */

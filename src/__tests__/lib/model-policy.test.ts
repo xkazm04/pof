@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { buildCliArgs } from '@/lib/claude-terminal/cli-service';
-import { DEFAULT_POLICY, MODEL_IDS, TASK_CLASSES } from '@/lib/model-policy';
+import {
+  DEFAULT_POLICY, MODEL_IDS, TASK_CLASSES,
+  isModel, isEffort, isTaskClass, taskClassForDispatchType, resolveDispatchModelChoice,
+} from '@/lib/model-policy';
 
 describe('buildCliArgs — model/effort wiring (WS0)', () => {
   it('off-state is byte-for-byte the long-standing base args', () => {
@@ -41,5 +44,60 @@ describe('model policy registry (WS0)', () => {
     for (const m of ['haiku', 'sonnet', 'opus', 'fable'] as const) {
       expect(MODEL_IDS[m]).toMatch(/^claude-/);
     }
+  });
+});
+
+describe('live-dispatch model wiring (WS0)', () => {
+  it('validators only accept known values', () => {
+    expect(isModel('opus')).toBe(true);
+    expect(isModel('gpt-4')).toBe(false);
+    expect(isEffort('high')).toBe(true);
+    expect(isEffort('turbo')).toBe(false);
+    expect(isTaskClass('judge-content')).toBe(true);
+    expect(isTaskClass('nonsense')).toBe(false);
+  });
+
+  it('maps content-aligned dispatch task types to a policy class', () => {
+    expect(taskClassForDispatchType('feature-fix')).toBe('fix-content');
+    expect(taskClassForDispatchType('module-scan')).toBe('judge-content');
+    expect(taskClassForDispatchType('feature-review')).toBe('judge-content');
+    expect(taskClassForDispatchType('generate')).toBe('produce-text');
+    expect(taskClassForDispatchType('generate-gas-effects')).toBe('author-ue-test');
+    expect(taskClassForDispatchType('run-ai-tests')).toBe('author-ue-test');
+  });
+
+  it('leaves interactive / unknown / unmapped task types unpinned (default behaviour)', () => {
+    expect(taskClassForDispatchType('interactive')).toBeNull();
+    expect(taskClassForDispatchType('ask-claude')).toBeNull();
+    expect(taskClassForDispatchType('checklist')).toBeNull();
+    expect(taskClassForDispatchType(undefined)).toBeNull();
+    expect(taskClassForDispatchType('totally-made-up')).toBeNull();
+  });
+
+  it('resolves an explicit valid model/effort override (scripts / autonomous)', () => {
+    expect(resolveDispatchModelChoice({ model: 'opus', effort: 'high' })).toEqual({ model: 'opus', effort: 'high' });
+  });
+
+  it('drops unknown explicit values and pins nothing when no task type resolves', () => {
+    expect(resolveDispatchModelChoice({ model: 'bogus', effort: 'turbo' })).toEqual({});
+    expect(resolveDispatchModelChoice({})).toEqual({});
+    expect(resolveDispatchModelChoice({ taskType: 'ask-claude' })).toEqual({});
+  });
+
+  it('forwards a resolved policy choice into the CLI args', () => {
+    // Chain: dispatch type → policy class → default choice → CLI args.
+    const cls = taskClassForDispatchType('feature-fix');
+    expect(cls).toBe('fix-content');
+    const choice = DEFAULT_POLICY[cls!];
+    const args = buildCliArgs(choice);
+    expect(args[args.indexOf('--model') + 1]).toBe(choice.model);
+    expect(args[args.indexOf('--effort') + 1]).toBe(choice.effort);
+  });
+
+  it('unpinned resolution appends no model/effort args', () => {
+    const choice = resolveDispatchModelChoice({ taskType: 'checklist' });
+    const args = buildCliArgs(choice);
+    expect(args).not.toContain('--model');
+    expect(args).not.toContain('--effort');
   });
 });

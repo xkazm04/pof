@@ -184,8 +184,9 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
 
       // Dispatch when the target terminal announces readiness (handshake) —
       // replaces a fixed mount-delay timer that could lose the event.
-      // See src/lib/cli-dispatch.ts.
-      dispatchPromptWhenReady(tabId, prompt);
+      // The dispatch task type rides along so the terminal pins the model-policy
+      // model + effort for this run (Quality Program WS0). See src/lib/cli-dispatch.ts.
+      dispatchPromptWhenReady(tabId, prompt, meta?.taskType);
     },
     [findSessionByKey, createSession, setActiveTab, setSessionTaskMeta, projectPath, opts.sessionKey, opts.moduleId, opts.label, opts.accentColor]
   );

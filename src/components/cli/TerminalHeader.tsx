@@ -19,6 +19,9 @@ interface TerminalHeaderProps {
   editCount: number;
   writeCount: number;
   queuePendingCount: number;
+  /** Model-policy pin the run resolved to (WS0), or null when unpinned (session default). */
+  resolvedModel?: string | null;
+  resolvedEffort?: string | null;
   onClear: () => void;
   onResume: () => void;
   onCopyOutput?: () => string | null;
@@ -27,6 +30,7 @@ interface TerminalHeaderProps {
 export function TerminalHeader({
   title, sessionId, isStreaming, executionInfo, lastResult,
   logFilePath, editCount, writeCount, queuePendingCount,
+  resolvedModel, resolvedEffort,
   onClear, onResume, onCopyOutput,
 }: TerminalHeaderProps) {
   const [logCopied, setLogCopied] = useState(false);
@@ -112,6 +116,17 @@ export function TerminalHeader({
             )}
           </span>
           {executionInfo?.model && <span className="text-text-muted">{String(executionInfo.model).split('-').slice(-2).join('-')}</span>}
+          {/* Model-policy pin (WS0): the model + effort resolved for this run. Absent
+              when unpinned — the run then uses the session default (no label). */}
+          {resolvedModel && (
+            <span
+              className="text-text-muted"
+              data-testid="pof-cli-model-pin"
+              title={`Model policy pinned this run to ${resolvedModel}${resolvedEffort ? ` (${resolvedEffort} effort)` : ''}`}
+            >
+              policy: {resolvedModel}{resolvedEffort ? `·${resolvedEffort}` : ''}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {onCopyOutput && !isStreaming && lastResult && (
