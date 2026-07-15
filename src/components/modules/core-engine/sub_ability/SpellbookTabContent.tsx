@@ -17,6 +17,9 @@ import { TagAuditSection } from './tags/TagAuditSection';
 import { LoadoutSection } from './abilities/LoadoutSection';
 import FeatureMapTab from '../unique-tabs/FeatureMapTab';
 import { VisibleSection } from '../unique-tabs/VisibleSection';
+import { GASBlueprintEditor } from './blueprint';
+import { GASBalanceSimulator } from './gas-balance';
+import { AbilityForge } from './forge';
 import type { SpellbookSubtab } from './_shared/types';
 
 interface Props {
@@ -83,6 +86,21 @@ export function SpellbookTabContent({ activeTab, moduleId, featureMap, defs, exp
           <ComboChainBuilder />
         </div>
         </VisibleSection>
+      )}
+      {activeTab === 'blueprint' && (
+        <div data-section-id="blueprint">
+          <GASBlueprintEditor />
+        </div>
+      )}
+      {activeTab === 'balance' && (
+        <div data-section-id="balance">
+          <GASBalanceSimulator />
+        </div>
+      )}
+      {activeTab === 'forge' && (
+        <div data-section-id="forge">
+          <AbilityForge />
+        </div>
       )}
     </>
   );

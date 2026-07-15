@@ -2,7 +2,9 @@ import type { Cpu } from 'lucide-react';
 import type { FeatureRow } from '@/types/feature-matrix';
 import type { TagNode, TagDepNode, TagDepEdge, AuditCategory, TagDetail } from './data';
 
-export type SpellbookSubtab = 'features' | 'core' | 'abilities' | 'effects' | 'tags' | 'combos';
+export type SpellbookSubtab =
+  | 'features' | 'core' | 'abilities' | 'effects' | 'tags' | 'combos'
+  | 'blueprint' | 'balance' | 'forge';
 
 export interface SpellbookSubtabDef {
   key: SpellbookSubtab;

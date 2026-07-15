@@ -15,7 +15,7 @@ import {
   BASE_VITALS, BASE_RELATIONSHIPS,
   DEAD_BLOCKS_ALL, STUN_BLOCKS_ALL,
   MELEE_COMBO, PROJECTILE_SPELL, CHANNELED_ABILITY,
-} from './templates';
+} from './template-base';
 
 /* ── 4. Aura Buff ─────────────────────────────────────────────────────── */
 
