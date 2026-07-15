@@ -1,6 +1,7 @@
 import type { Cpu } from 'lucide-react';
 import type { FeatureRow } from '@/types/feature-matrix';
 import type { TagNode, TagDepNode, TagDepEdge, AuditCategory, TagDetail } from './data';
+import type { TagAuditBreakdown } from '@/lib/ability/tag-audit';
 
 export type SpellbookSubtab =
   | 'features' | 'core' | 'abilities' | 'effects' | 'tags' | 'combos'
@@ -46,6 +47,7 @@ export interface SpellbookLiveData {
   COOLDOWN_ABILITIES: { name: string; cd: number; remaining: number; color: string }[];
   TAG_AUDIT_CATEGORIES: AuditCategory[];
   TAG_USAGE_FREQUENCY: { tag: string; count: number }[];
-  TAG_AUDIT_SCORE: number;
+  /** Derived tag-hygiene audit; `null` when no live source has been parsed. */
+  TAG_AUDIT: TagAuditBreakdown | null;
   TAG_DETAIL_MAP: Record<string, TagDetail>;
 }

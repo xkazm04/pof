@@ -20,11 +20,10 @@ import {
   COOLDOWN_ABILITIES as STATIC_COOLDOWN_ABILITIES,
   TAG_AUDIT_CATEGORIES as STATIC_TAG_AUDIT_CATEGORIES,
   TAG_USAGE_FREQUENCY as STATIC_TAG_USAGE_FREQUENCY,
-  TAG_AUDIT_SCORE as STATIC_TAG_AUDIT_SCORE,
   TAG_DETAIL_MAP as STATIC_TAG_DETAIL_MAP,
   buildLiveTagTree, buildLiveCooldownAbilities, buildLiveAbilityRadar,
   buildLiveTagDeps, buildLiveTagDetailMap, buildLiveTagUsageFrequency,
-  buildLiveAttributes,
+  buildLiveTagAudit, buildLiveAttributes,
 } from './_shared/data';
 
 import { SpellbookDataCtx } from './_shared/context';
@@ -88,7 +87,7 @@ export function AbilitySpellbook({ moduleId }: AbilitySpellbookProps) {
         COOLDOWN_ABILITIES: STATIC_COOLDOWN_ABILITIES,
         TAG_AUDIT_CATEGORIES: STATIC_TAG_AUDIT_CATEGORIES,
         TAG_USAGE_FREQUENCY: STATIC_TAG_USAGE_FREQUENCY,
-        TAG_AUDIT_SCORE: STATIC_TAG_AUDIT_SCORE,
+        TAG_AUDIT: null,
         TAG_DETAIL_MAP: STATIC_TAG_DETAIL_MAP,
       };
     }
@@ -108,7 +107,7 @@ export function AbilitySpellbook({ moduleId }: AbilitySpellbookProps) {
       COOLDOWN_ABILITIES: buildLiveCooldownAbilities(liveData.abilities),
       TAG_AUDIT_CATEGORIES: STATIC_TAG_AUDIT_CATEGORIES,
       TAG_USAGE_FREQUENCY: usageFreq,
-      TAG_AUDIT_SCORE: STATIC_TAG_AUDIT_SCORE,
+      TAG_AUDIT: buildLiveTagAudit(liveData.abilities, liveData.tags),
       TAG_DETAIL_MAP: buildLiveTagDetailMap(liveData.abilities, liveData.tags),
     };
   }, [liveData, refresh]);

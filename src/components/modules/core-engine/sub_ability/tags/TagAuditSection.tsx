@@ -1,20 +1,111 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { ClipboardCheck } from 'lucide-react';
+import { ClipboardCheck, PlugZap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  MODULE_COLORS, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR,
-  OVERLAY_WHITE, withOpacity, OPACITY_5, OPACITY_6, OPACITY_8, OPACITY_12, OPACITY_20,
+  MODULE_COLORS, STATUS_WARNING, withOpacity, OPACITY_5, OPACITY_8,
 } from '@/lib/chart-colors';
+import { STATUS_TOKENS, type StatusLevel } from '@/lib/status-token';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { ScoreRing } from '@/components/ui/ScoreRing';
+import { StatusTag } from '@/components/ui/StatusTag';
 import { SectionLabel } from '../../unique-tabs/_shared';
-import type { AuditCategory } from '../_shared/data';
+import type { TagAuditBreakdown } from '@/lib/ability/tag-audit';
 import { useSpellbookData } from '../_shared/context';
 import { TagQuickViewPopover } from './TagQuickViewPopover';
 
+interface BreakdownCard {
+  key: keyof Pick<TagAuditBreakdown, 'matched' | 'undeclared' | 'orphaned'>;
+  label: string;
+  level: StatusLevel;
+  detail: string;
+}
+
+const BREAKDOWN_CARDS: BreakdownCard[] = [
+  { key: 'matched', label: 'Matched', level: 'ok', detail: 'Declared in C++ and referenced by a rule' },
+  { key: 'undeclared', label: 'Undeclared', level: 'bad', detail: 'Referenced by a rule but never declared' },
+  { key: 'orphaned', label: 'Orphaned', level: 'warn', detail: 'Declared in C++ but referenced by no rule' },
+];
+
+/** Derived score + explainable breakdown (live sync active). */
+function AuditResult({ audit }: { audit: TagAuditBreakdown }) {
+  return (
+    <>
+      <div className="flex items-center gap-4 mb-3">
+        <ScoreRing value={audit.score} size={48} />
+        <div>
+          <div className="text-sm font-bold text-text">Tag Hygiene Score</div>
+          <div className="text-sm text-text-muted">
+            {audit.score}/100 — {audit.matched.length} matched,{' '}
+            {audit.undeclared.length} undeclared, {audit.orphaned.length} orphaned across{' '}
+            {audit.declaredCount} declared / {audit.referencedCount} referenced tags
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+        {BREAKDOWN_CARDS.map((card, i) => {
+          const token = STATUS_TOKENS[card.level];
+          const tags = audit[card.key];
+          return (
+            <motion.div
+              key={card.key}
+              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}
+              className="bg-surface-deep border rounded-lg p-3"
+              style={{ borderColor: token.border }}
+            >
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-sm font-mono font-bold text-text">{card.label}</span>
+                <StatusTag level={card.level} />
+              </div>
+              <div className="text-lg font-mono font-bold mb-1" style={{ color: token.color }}>{tags.length}</div>
+              <div className="text-sm text-text-muted leading-tight mb-1">{card.detail}</div>
+              {tags.length > 0 && (
+                <details className="mt-1.5">
+                  <summary className="text-xs font-mono text-text-muted cursor-pointer select-none hover:text-text">
+                    {tags.length === 1 ? 'View tag' : `View ${tags.length} tags`}
+                  </summary>
+                  <ul className="mt-1.5 space-y-0.5">
+                    {tags.map((t) => (
+                      <li key={t} className="text-xs font-mono text-text-muted truncate" title={t}>{t}</li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+            </motion.div>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
+/** Honest not-synced state — never the old hardcoded 85. */
+function NotSyncedState() {
+  return (
+    <div
+      className="flex items-start gap-3 rounded-lg border p-3 mb-3"
+      style={{ borderColor: STATUS_TOKENS.warn.border, backgroundColor: STATUS_TOKENS.warn.bg }}
+    >
+      <PlugZap className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: STATUS_WARNING }} aria-hidden />
+      <div>
+        <div className="flex items-center gap-2 mb-1">
+          <StatusTag level="warn" word="NOT SYNCED" />
+        </div>
+        <div className="text-sm text-text-muted leading-tight">
+          The audit is derived from live UE5 source — declared gameplay tags vs. tags
+          referenced by ability rules. Connect the UE5 source (the{' '}
+          <span className="font-mono text-text">Live from UE5</span> sync above) to compute it.
+          No score is shown until a real delta is available.
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function TagAuditSection() {
-  const { TAG_AUDIT_CATEGORIES, TAG_USAGE_FREQUENCY, TAG_AUDIT_SCORE, TAG_DETAIL_MAP } = useSpellbookData();
+  const { isLive, TAG_AUDIT, TAG_USAGE_FREQUENCY, TAG_DETAIL_MAP } = useSpellbookData();
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
   const handleTagClick = useCallback((tag: string) => {
@@ -25,23 +116,7 @@ export function TagAuditSection() {
     setSelectedTag(null);
   }, []);
 
-  const statusColor = (status: AuditCategory['status']) => {
-    switch (status) {
-      case 'pass': return STATUS_SUCCESS;
-      case 'warning': return STATUS_WARNING;
-      case 'error': return STATUS_ERROR;
-    }
-  };
-
-  const statusIcon = (status: AuditCategory['status']) => {
-    switch (status) {
-      case 'pass': return 'PASS';
-      case 'warning': return 'WARN';
-      case 'error': return 'FAIL';
-    }
-  };
-
-  const maxUsage = Math.max(...TAG_USAGE_FREQUENCY.map(t => t.count));
+  const maxUsage = Math.max(1, ...TAG_USAGE_FREQUENCY.map(t => t.count));
 
   return (
     <div className="space-y-4">
@@ -49,62 +124,20 @@ export function TagAuditSection() {
         <div className="absolute right-0 top-0 w-40 h-40 blur-3xl rounded-full pointer-events-none" style={{ backgroundColor: withOpacity(STATUS_WARNING, OPACITY_5) }} />
         <SectionLabel icon={ClipboardCheck} label="Tag Audit Dashboard" color={STATUS_WARNING} />
         <p className="text-sm text-text-muted mt-1 mb-4">
-          Automated analysis of tag health across the Gameplay Tag hierarchy.
+          Reconciles gameplay tags declared in C++ source against the tags referenced by ability rules.
         </p>
 
-        {/* Audit score */}
-        <div className="flex items-center gap-4 mb-3">
-          <div className="relative w-12 h-12">
-            <svg width={48} height={48} viewBox="0 0 48 48">
-              <circle cx={24} cy={24} r={20} fill="none" stroke={withOpacity(OVERLAY_WHITE, OPACITY_6)} strokeWidth={4} />
-              <circle
-                cx={24} cy={24} r={20} fill="none"
-                stroke={TAG_AUDIT_SCORE >= 80 ? STATUS_SUCCESS : TAG_AUDIT_SCORE >= 60 ? STATUS_WARNING : STATUS_ERROR}
-                strokeWidth={4}
-                strokeDasharray={2 * Math.PI * 20}
-                strokeDashoffset={2 * Math.PI * 20 * (1 - TAG_AUDIT_SCORE / 100)}
-                strokeLinecap="round"
-                transform="rotate(-90 24 24)"
-                style={{ filter: `drop-shadow(0 0 6px ${STATUS_SUCCESS})` }}
-              />
-            </svg>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-sm font-mono font-bold" style={{ color: STATUS_SUCCESS }}>{TAG_AUDIT_SCORE}</span>
-            </div>
-          </div>
-          <div>
-            <div className="text-sm font-bold text-text">Overall Audit Score</div>
-            <div className="text-sm text-text-muted">{TAG_AUDIT_SCORE}/100 - Good health, minor issues detected</div>
-          </div>
-        </div>
-
-        {/* Audit categories */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
-          {TAG_AUDIT_CATEGORIES.map((cat, i) => (
-            <motion.div
-              key={cat.name}
-              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}
-              className="bg-surface-deep border rounded-lg p-3"
-              style={{ borderColor: withOpacity(statusColor(cat.status), OPACITY_20) }}
-            >
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-sm font-mono font-bold text-text">{cat.name}</span>
-                <span className="text-xs font-mono font-bold px-1.5 py-0.5 rounded"
-                  style={{ backgroundColor: withOpacity(statusColor(cat.status), OPACITY_12), color: statusColor(cat.status) }}
-                >
-                  {statusIcon(cat.status)}
-                </span>
-              </div>
-              <div className="text-lg font-mono font-bold mb-1" style={{ color: statusColor(cat.status) }}>{cat.count}</div>
-              <div className="text-sm text-text-muted leading-tight">{cat.detail}</div>
-            </motion.div>
-          ))}
-        </div>
+        {isLive && TAG_AUDIT ? <AuditResult audit={TAG_AUDIT} /> : <NotSyncedState />}
 
         {/* Tag usage frequency */}
-        <div className="text-sm font-bold uppercase tracking-widest text-text-muted mb-3">Tag Usage Frequency (Top 10)</div>
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-sm font-bold uppercase tracking-widest text-text-muted">Tag Usage Frequency (Top 10)</span>
+          {!isLive && (
+            <span className="text-xs font-mono text-text-muted/80 normal-case tracking-normal">· illustrative (static)</span>
+          )}
+        </div>
         <div className="space-y-1.5">
-          {TAG_USAGE_FREQUENCY.map((item, i) => {
+          {TAG_USAGE_FREQUENCY.slice(0, 10).map((item, i) => {
             const detail = TAG_DETAIL_MAP[item.tag];
             const barColor = detail?.color ?? MODULE_COLORS.content;
             return (

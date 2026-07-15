@@ -6,6 +6,7 @@ import {
 } from '@/lib/chart-colors';
 import type { ParsedUE5Data, ParsedTag, ParsedAbility } from '@/lib/ue5-source-parser';
 import type { EntityMetadata } from '@/types/game-metadata';
+import { computeTagAudit, type TagAuditBreakdown } from '@/lib/ability/tag-audit';
 
 /* ── Attribute radar data ──────────────────────────────────────────────── */
 
@@ -225,8 +226,6 @@ export const TAG_USAGE_FREQUENCY = [
   { tag: 'Input.Dodge', count: 4 },
   { tag: 'State.Invulnerable', count: 2 },
 ];
-
-export const TAG_AUDIT_SCORE = 85;
 
 /* ── Tag quick-view popover data ───────────────────────────────────────── */
 
@@ -685,6 +684,26 @@ export function buildLiveTagUsageFrequency(abilities: ParsedAbility[], tags: Par
   return Array.from(counts.entries())
     .map(([tag, count]) => ({ tag, count }))
     .sort((a, b) => b.count - a.count);
+}
+
+/**
+ * Build the derived Tag Audit from the real delta between gameplay tags
+ * DECLARED in the parsed C++ source and the tags REFERENCED by the parsed
+ * ability rules (ability / cooldown / activation-owned / activation-blocked).
+ * Pure scoring lives in `@/lib/ability/tag-audit`.
+ */
+export function buildLiveTagAudit(
+  abilities: ParsedAbility[],
+  tags: ParsedTag[],
+): TagAuditBreakdown {
+  const declared = tags.map((t) => t.tagString);
+  const referenced: string[] = [];
+  for (const ab of abilities) {
+    if (ab.abilityTag) referenced.push(ab.abilityTag);
+    if (ab.cooldownTag) referenced.push(ab.cooldownTag);
+    referenced.push(...ab.activationOwnedTags, ...ab.activationBlockedTags);
+  }
+  return computeTagAudit(declared, referenced);
 }
 
 /** Build CORE_ATTRIBUTES and DERIVED_ATTRIBUTES from Data.Init.* tags */
