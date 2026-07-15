@@ -25,11 +25,11 @@ describe('Color-independent status language', () => {
 
   it('Baseline timeline nodes share the same status language (status in the accessible name)', () => {
     render(<LayoutLab />);
-    // The real Items pipeline opens with pending steps; the node button announces the status
-    // word so a screen-reader / grayscale user can tell steps apart without relying on color.
-    const concept = screen.getByRole('button', { name: /Concept Brief: pending/ });
+    // The real Items pipeline opens with nothing produced yet; the node button announces the
+    // honest status word so a screen-reader / grayscale user can tell steps apart without color.
+    const concept = screen.getByRole('button', { name: /Concept Brief: not produced/ });
     expect(concept).toBeTruthy();
-    // the ✓ checkmark glyph is reserved for passed nodes — a pending node must not show it
+    // the ✓ checkmark glyph is reserved for passed nodes — an unproduced node must not show it
     expect(within(concept).queryByText('✓')).toBeNull();
   });
 });

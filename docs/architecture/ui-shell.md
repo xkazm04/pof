@@ -23,9 +23,9 @@ rollup strip.
 | `src/components/layout-lab/CatalogTree.tsx` | Category→Catalog→Entity collapsible tree (left column) |
 | `src/components/layout-lab/steps/index.ts` | `getStepComponent(catalogId, stepName)` — looks up the `STEP_REGISTRY` |
 | `src/components/layout-lab/steps/ArchetypeStep.tsx` | Generic renderer for any registered `StepSpec`; drives View + CliProduce + Acceptance |
-| `src/components/layout-lab/NextStepCoach.tsx` | Compact single-row "what to do next" coach in the work canvas; primary CTA (jump / drain) + a disclosure that expands plain-language mode + summary. Scoped to the OPEN entity |
-| `src/components/layout-lab/GlobalCoach.tsx` | Lab-level, **cross-catalog** next-step coach shown above the Baseline view — top-N highest-value moves across ALL catalogs (ranked fail > drift > pending > deferred). Clicking dispatches the one-shot `pendingNavigation` (entity-level). The passive `/status` map's active complement |
-| `src/components/layout-lab/globalCoachModel.ts` | Pure model for `GlobalCoach`: `pickEntityIssue` / `rankCoachCandidates` / `buildGlobalCoach` (reuses `deriveEntityArtifacts` — no new status logic) |
+| `src/components/layout-lab/NextStepCoach.tsx` | Compact single-row "what to do next" coach in the work canvas; primary CTA (jump / drain) + a disclosure that expands plain-language mode + summary. Scoped to the OPEN entity. For a fail/deferred next step it shows the concrete checker `reason` (via `reasonForStep`) instead of a generic hint; no reason available → the generic hint stays (never invented) |
+| `src/components/layout-lab/GlobalCoach.tsx` | Lab-level, **cross-catalog** next-step coach shown above the Baseline view — top-N highest-value moves across ALL catalogs (ranked fail > drift > pending > deferred > unproduced). Each row shows the concrete checker `reason` when one is carried (fail/deferred: artifact reason; drift: local-vs-server), else the generic hint. Clicking dispatches the one-shot `pendingNavigation` carrying the flagged **`stepIndex`** so Baseline opens ON that step. The passive `/status` map's active complement |
+| `src/components/layout-lab/globalCoachModel.ts` | Pure model for `GlobalCoach`: `pickEntityIssue` / `rankCoachCandidates` / `buildGlobalCoach` (reuses `deriveEntityArtifacts` — no new status logic). Candidates carry `stepIndex` + optional `reason`; `unproduced` (never-produced) ranks LAST, labelled honestly, so real in-flight work always outranks "start something new" |
 | `src/components/layout-lab/hooks/useGlobalCoach.ts` | Aggregation hook: one deduped whole-catalog fetch per catalog via the shared cache, memoized on `useArtifactCacheVersion()` so the ranked list fills in progressively without a per-catalog hook |
 | `src/components/layout-lab/PipelineRollup.tsx` | Reusable per-step status strip + config-complete summary (`X/Y pass · …`). No longer mounted in the canvas — the left pipeline rail is the status display; kept as a standalone strip + WCAG status-encoding tests |
 | `src/components/layout-lab/LabBridgeStrip.tsx` | Compact UE bridge status dot+label; reads `usePofBridgeStore` (display-only) |
@@ -33,7 +33,7 @@ rollup strip.
 | `src/components/layout-lab/labArtifactClient.ts` | `fetchArtifacts`, `postArtifact`, `drainGates`, and `drainEntityGates` (a 409-aware variant returning ok/locked/error for the batch drain) — thin wrappers around `/api/pipeline-artifacts` |
 | `src/components/layout-lab/labArtifactCache.ts` | Shared artifact-fetch cache (`useCachedArtifacts`, `invalidateArtifacts`) — one deduped fetch path + loading state for Baseline + Matrix. Also exposes `getCachedArtifacts` (non-hook read) + `useArtifactCacheVersion` (change signal) for the cross-catalog coach aggregation |
 | `src/components/layout-lab/catalogManifest.ts` | Single per-catalog resolver over section · steps · grader · bespoke-UI (`resolveCatalogSteps`, `isBespokeCatalog`) |
-| `src/components/layout-lab/matrixRows.ts` | `buildMatrixRows` — CatalogMatrix rows via the shared `deriveEntityArtifacts` path (one status code path with the rail) |
+| `src/components/layout-lab/matrixRows.ts` | `buildMatrixRows` — CatalogMatrix rows via the shared `deriveEntityArtifacts` path (one status code path with the rail). Blockers read the checker `reason` carried on each derived artifact (no second `resolveAccept` pass) |
 | `src/components/layout-lab/DriftBanner.tsx` | Server↔local drift banner + "adopt server truth" affordance (preserves `genHistory` unless confirmed) |
 | `src/components/layout-lab/canonStore.ts` | Zustand store for project canon rules; seeded from `CANON_SEED`, refreshed from `/api/project-rules` |
 | `src/components/layout-lab/theme.ts` | `LIGHT` (Blueprint) and `DARK` (Studio Dark) `LabTheme` tokens; `LAB_THEMES` array |
@@ -92,8 +92,11 @@ Renders a `100vh` flex column:
   `entityId`/`focusStepIdx` and switches `view` back to `'catalogs'`; Baseline remounts on the switch
   and reads `focusStepIdx` as its initial step (a manual **Catalogs** click clears it).
 - **Cross-view navigation**: a one-shot `pendingNavigation` store subscription (`oneShotLabStore`)
-  drives `catalogId`/`entityId` from anywhere — used by the One-shot panel and by `GlobalCoach`
-  (entity-level; the payload carries no step, so step preselection is matrix-only via `openFromMatrix`).
+  drives `catalogId`/`entityId` from anywhere — used by the One-shot panel and by `GlobalCoach`.
+  The payload carries an optional `stepIndex`; LayoutLab feeds it into the same `focusStepIdx`
+  channel `openFromMatrix` uses, so a GlobalCoach jump opens Baseline on the flagged step
+  (`useBaseline` adopts a changed `initialStepIdx` while already mounted, since the catalogs view
+  does not remount on a same-view navigation).
 
 On mount, `useEffect(() => { hydrate(); }, [hydrate])` fetches the server's project canon rules into
 `canonStore` (replaces the seed if the server responds).
@@ -200,13 +203,23 @@ called on **produce** (write-through) and **drain** — drops the matching keys 
 refetches the server-graded verdict. `hydrateEntity` (store) only adds steps not already present in
 the local cache; it never overwrites or clears existing local state.
 
-**Honest loading ≠ pending.** `loading` is surfaced distinctly from `pending`: the pipeline rail
-shimmers only steps of *unknown* (pending) status while a fetch is in flight (a locally-known
-pass/fail/deferred is real truth and is never masked); the matrix renders a `MatrixSkeleton` grid
-instead of an all-pending flash; and `NewHome`'s pre-rehydration first paint shows a lightweight
-lab-shell skeleton instead of a bare blank div. All shimmers use the `lab-shimmer` keyframe
-(`lab-tokens.css`) and freeze under reduced motion (global `prefers-reduced-motion` + the `Skeleton`
-component's static-fill fallback).
+**Honest loading ≠ pending ≠ unproduced.** Three distinct display states, never conflated:
+- `loading` — a fetch is in flight: the pipeline rail shimmers steps of not-yet-known status
+  (`pending`/`unproduced`); a locally-known pass/fail/deferred is real truth and is never masked;
+  the matrix renders a `MatrixSkeleton` grid instead of an all-pending flash; `NewHome`'s
+  pre-rehydration first paint shows a lightweight lab-shell skeleton.
+- `pending` — an artifact EXISTS but its acceptance is still resolving.
+- `unproduced` — NO artifact exists for the step (nothing has been produced here).
+
+`unproduced` is the honest replacement for the old **lifecycle-fraction pseudo-progress** — a step
+with no artifact used to be mapped to a fabricated `pass`/`pending` from `labStepsDone(lifecycle)`,
+so the rail, matrix, and both coaches showed progress that never happened (and the global coach
+ranked those fake pendings). That heuristic is gone: `deriveEntityArtifacts` now reads real produce
+state for EVERY catalog (`stepDone = has an artifact`) and a no-artifact step displays as
+`unproduced` — a distinct, colorblind-safe cue (dotted dimmed dot / `·` glyph / "not produced" word,
+via `UNPRODUCED_GLYPH`/`UNPRODUCED_WORD` in `statusLanguage.ts`; kept OUT of the exact 4-status
+`STATUS_GLYPH`/`STATUS_WORD` maps). All shimmers use the `lab-shimmer` keyframe (`lab-tokens.css`)
+and freeze under reduced motion.
 
 #### Rollup overlay (`Baseline.tsx` : 105–117)
 
@@ -221,6 +234,10 @@ const status = localStatus === 'deferred'
   ? srv.status
   : localStatus;
 ```
+
+Each derived artifact also carries the concrete checker `reason` (`res.reason`, or the server
+record's reason when the overlay above won), so coaches, tooltips, and matrix blockers can explain
+WHY a step failed/deferred without a second `resolveAccept` pass.
 
 #### Drain deferred gates (`Baseline.tsx` : 92–102, `labArtifactClient.ts` : 38–45)
 

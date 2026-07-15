@@ -200,7 +200,7 @@ describe('<NextStepCoach />', () => {
       <NextStepCoach
         t={LIGHT}
         steps={steps}
-        statusByStep={(_, i) => (i < 2 ? 'pass' : 'pending') as StepStatus}
+        statusByStep={(_, i) => (i < 2 ? 'pass' : 'unproduced') as StepStatus}
         rollup={rollup({ done: 2, pending: 3 })}
         onJump={() => {}}
         plainMode={false}
@@ -208,7 +208,7 @@ describe('<NextStepCoach />', () => {
         reasonForStep={() => undefined}
       />,
     );
-    // pending step, no reason → the plain-language hint stays.
+    // unproduced step, no reason → the plain-language hint stays.
     expect(screen.getByTestId('next-step-reason').textContent).toMatch(/not been produced yet/i);
   });
 

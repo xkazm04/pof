@@ -26,6 +26,24 @@ describe('PipelineRail loading state', () => {
     expect(d.className).toContain('lab-shimmer');
   });
 
+  it('shimmers unproduced steps too while server verdicts load (no real verdict yet)', () => {
+    const { container } = render(
+      <PipelineRail {...baseProps} loading displayStatus={() => 'unproduced'} />,
+    );
+    const d = dot(container, 0);
+    expect(d.getAttribute('data-loading')).toBe('true');
+    expect(d.className).toContain('lab-shimmer');
+  });
+
+  it('once loaded, an unproduced step reads as its honest status, not loading', () => {
+    const { container } = render(
+      <PipelineRail {...baseProps} loading={false} displayStatus={() => 'unproduced'} />,
+    );
+    const d = dot(container, 0);
+    expect(d.getAttribute('data-loading')).toBeNull();
+    expect(d.getAttribute('data-step-status')).toBe('unproduced');
+  });
+
   it('does NOT mask a locally-known status — a real pass/fail is truth, not loading', () => {
     const { container } = render(
       <PipelineRail {...baseProps} loading displayStatus={(_s, i) => (i === 0 ? 'pass' : 'pending')} />,

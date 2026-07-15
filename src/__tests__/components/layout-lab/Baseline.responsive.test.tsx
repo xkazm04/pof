@@ -50,7 +50,7 @@ describe('Baseline responsive shell', () => {
     expect(screen.queryByRole('button', { name: 'Catalogs' })).toBeNull();
     // The pipeline timeline renders inline inside an <aside> column.
     expect(container.querySelector('aside [data-step-status]')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Alpha: pending' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Alpha: not produced' })).toBeTruthy();
   });
 
   it('narrow: collapses both columns to persistent header toggles', () => {
@@ -60,7 +60,7 @@ describe('Baseline responsive shell', () => {
     expect(screen.getByRole('button', { name: /^Pipeline/ })).toBeTruthy();
     // No inline columns, and the timeline isn't mounted until its drawer opens.
     expect(container.querySelector('aside [data-step-status]')).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Step 01: Alpha — pending' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Step 01: Alpha — not produced' })).toBeNull();
     // The work canvas (main) still renders the selected step.
     expect(screen.getByRole('heading', { name: 'Alpha' })).toBeTruthy();
   });
@@ -70,7 +70,7 @@ describe('Baseline responsive shell', () => {
     renderBaseline();
     fireEvent.click(screen.getByRole('button', { name: /^Pipeline/ }));
     expect(screen.getByRole('dialog', { name: /Pipeline/ })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Alpha: pending' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Alpha: not produced' })).toBeTruthy();
   });
 
   it('narrow: opening the Catalogs toggle reveals the catalog tree in a dialog', () => {
@@ -84,7 +84,7 @@ describe('Baseline responsive shell', () => {
     widthRef.current = 800;
     renderBaseline();
     fireEvent.click(screen.getByRole('button', { name: /^Pipeline/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Beta: pending' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Beta: not produced' }));
     expect(screen.getByRole('heading', { name: 'Beta' })).toBeTruthy();
   });
 });

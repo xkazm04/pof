@@ -1,5 +1,4 @@
 import { pipelineForCatalog, trackLabel } from '@/lib/pipeline/tracks';
-import type { LifecycleState } from '@/lib/catalog/types';
 import { ITEM_STEP_NAMES } from './steps/itemsSteps';
 
 /**
@@ -34,13 +33,4 @@ const FINE_STEPS: Record<string, string[]> = {
 
 export function labPipelineSteps(catalogId: string): string[] {
   return FINE_STEPS[catalogId] ?? pipelineForCatalog(catalogId).map(trackLabel);
-}
-
-/** Pseudo-progress for the prototype: how many steps read as "done" for a lifecycle. */
-const LIFECYCLE_FRAC: Record<LifecycleState, number> = {
-  planned: 0.12, scaffolded: 0.35, generated: 0.6, wired: 0.8, verified: 1, failed: 0.45,
-};
-
-export function labStepsDone(lifecycle: LifecycleState, total: number): number {
-  return Math.max(0, Math.min(total, Math.round((LIFECYCLE_FRAC[lifecycle] ?? 0.1) * total)));
 }

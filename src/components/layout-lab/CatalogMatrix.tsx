@@ -11,8 +11,7 @@ import { buildMatrixRows } from './matrixRows';
 import { MatrixBatchDrain } from './MatrixBatchDrain';
 import { useBatchDrain } from './hooks/useBatchDrain';
 import { MatrixSkeleton } from './MatrixSkeleton';
-import { STATUS_GLYPH, STATUS_WORD, statusColor } from './statusLanguage';
-import type { AcceptanceStatus } from '@/lib/catalog/acceptance/types';
+import { STATUS_GLYPH, STATUS_WORD, statusColor, UNPRODUCED_GLYPH, UNPRODUCED_WORD, type LabDisplayStatus } from './statusLanguage';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 import type { LabTheme } from './theme';
 import type { LabGroup } from './useLabCatalogData';
@@ -85,17 +84,22 @@ export function CatalogMatrix({ t, groups, catalogId, onOpenStep }: Props) {
   // allocating a fresh CSSProperties object for every cell on every render — the
   // grid is entities × steps cells, so this was O(rows·cols) object churn.
   const cellStyleFor = useMemo(() => {
-    const cache = new Map<AcceptanceStatus, React.CSSProperties>();
-    return (status: AcceptanceStatus): React.CSSProperties => {
+    const cache = new Map<LabDisplayStatus, React.CSSProperties>();
+    return (status: LabDisplayStatus): React.CSSProperties => {
       const hit = cache.get(status);
       if (hit) return hit;
       const filled = status === 'pass' || status === 'fail';
+      // `unproduced` is the faintest cell: a dotted line border, dimmed — a distinct,
+      // colorblind-safe "nothing produced here yet" cue vs pending's solid hollow ring.
+      const unproduced = status === 'unproduced';
+      const borderWidthStyle = status === 'deferred' ? '2px dashed' : unproduced ? '1px dotted' : '1px solid';
       const style: React.CSSProperties = {
         width: 30, height: 30, padding: 0, cursor: 'pointer',
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
         background: filled ? statusColor(status, t) : 'transparent',
-        border: `${status === 'deferred' ? '2px dashed' : '1px solid'} ${filled ? statusColor(status, t) : status === 'pending' ? t.line : statusColor(status, t)}`,
-        color: filled ? t.onAccent : status === 'pending' ? t.muted : statusColor(status, t),
+        border: `${borderWidthStyle} ${filled ? statusColor(status, t) : status === 'pending' || unproduced ? t.line : statusColor(status, t)}`,
+        color: filled ? t.onAccent : status === 'pending' || unproduced ? t.muted : statusColor(status, t),
+        opacity: unproduced ? 0.55 : 1,
         fontSize: 14, fontWeight: 700, lineHeight: 1, borderRadius: t.glass ? 5 : 0,
         transition: 'background-color 160ms ease-out, border-color 160ms ease-out',
       };
@@ -103,6 +107,10 @@ export function CatalogMatrix({ t, groups, catalogId, onOpenStep }: Props) {
       return style;
     };
   }, [t]);
+
+  // Glyph + spoken word for a display status (STATUS_* only knows the 4 server statuses).
+  const glyphOf = (s: LabDisplayStatus) => (s === 'unproduced' ? UNPRODUCED_GLYPH : STATUS_GLYPH[s]);
+  const wordOf = (s: LabDisplayStatus) => (s === 'unproduced' ? UNPRODUCED_WORD : STATUS_WORD[s]);
 
   const th = useMemo<React.CSSProperties>(() => ({
     position: 'sticky', top: 0, zIndex: 2, background: t.bg,
@@ -204,10 +212,10 @@ export function CatalogMatrix({ t, groups, catalogId, onOpenStep }: Props) {
                       <td key={s} style={stepTd}>
                         <button onClick={() => onOpenStep(selected, r.id, i)}
                           data-cell={`${r.id}::${s}`} data-status={status}
-                          aria-label={`${r.name} · ${s}: ${STATUS_WORD[status]}`}
-                          title={`${r.name} · ${s}: ${STATUS_WORD[status]}`}
+                          aria-label={`${r.name} · ${s}: ${wordOf(status)}`}
+                          title={`${r.name} · ${s}: ${wordOf(status)}`}
                           style={cellStyleFor(status)}>
-                          {STATUS_GLYPH[status]}
+                          {glyphOf(status)}
                         </button>
                       </td>
                     );

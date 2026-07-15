@@ -83,10 +83,12 @@ describe('deriveEntityArtifacts — artifacts + displayStatus', () => {
     expect(artifactByStep.get('A')?.tier).toBe('L2');
   });
 
-  it('returns empty artifacts when there is no catalogId', () => {
+  it('returns empty artifacts when there is no catalogId (but still counts real produce state)', () => {
+    // No catalogId → no acceptance can be resolved, so no derived artifacts; `done` still
+    // reflects the real produce state (the step was produced into the local store).
     const { artifacts, done } = deriveEntityArtifacts(undefined, entity, ['A'], seed({ A: {} }), {});
     expect(artifacts).toEqual([]);
-    expect(done).toBe(0);
+    expect(done).toBe(1);
   });
 
   it('displayStatus reflects the artifact status, mapping pending for produced-but-pending', () => {
@@ -96,13 +98,23 @@ describe('deriveEntityArtifacts — artifacts + displayStatus', () => {
     expect(displayStatus('B', 1)).toBe('pending'); // produced but pending acceptance
   });
 
-  it('displayStatus falls back to the stepDone heuristic for steps without an artifact', () => {
-    // Non-Items catalog with a `verified` entity → labStepsDone marks every step done → pass.
+  it('a step with NO artifact reads as unproduced — never a heuristic pass (lifecycle is ignored)', () => {
+    // A `verified` non-Items entity with no produced artifacts used to fabricate all-pass
+    // via the lifecycle fraction; now every unproduced step is honestly `unproduced`.
     const verified: LabEntity = { ...entity, lifecycle: 'verified' };
     const steps = ['A', 'B'];
     const { displayStatus, done } = deriveEntityArtifacts('bestiary', verified, steps, undefined, {});
-    expect(displayStatus('A', 0)).toBe('pass');
-    expect(done).toBe(2);
+    expect(displayStatus('A', 0)).toBe('unproduced');
+    expect(displayStatus('B', 1)).toBe('unproduced');
+    expect(done).toBe(0); // nothing was actually produced
+  });
+
+  it('distinguishes unproduced (no artifact) from pending (produced, acceptance resolving)', () => {
+    const steps = ['A', 'B'];
+    // A produced but acceptance-pending; B never produced.
+    const { displayStatus } = deriveEntityArtifacts('bestiary', entity, steps, seed({ A: { status: 'pending' } }), {});
+    expect(displayStatus('A', 0)).toBe('pending');
+    expect(displayStatus('B', 1)).toBe('unproduced');
   });
 });
 
@@ -138,19 +150,21 @@ describe('deriveEntityArtifacts — server↔local drift', () => {
   });
 });
 
-describe('deriveEntityArtifacts — stepDone / done', () => {
-  it('counts Items steps by real produce state, not lifecycle', () => {
+describe('deriveEntityArtifacts — stepDone / done (real produce state, no lifecycle heuristic)', () => {
+  it('counts produced steps for Items, not lifecycle', () => {
     const steps = ['A', 'B', 'C'];
     const { stepDone, done } = deriveEntityArtifacts('items', entity, steps, seed({ A: {}, B: {} }), {});
     expect(stepDone('A', 0)).toBe(true);
     expect(stepDone('C', 2)).toBe(false);
-    expect(done).toBe(2); // planned lifecycle is ignored for Items
+    expect(done).toBe(2); // planned lifecycle is ignored
   });
 
-  it('counts non-Items steps by the lifecycle heuristic', () => {
-    const planned: LabEntity = { ...entity, lifecycle: 'planned' }; // 12% of 5 → ~1 step
+  it('counts NON-Items steps by real produce state too (no lifecycle fabrication)', () => {
+    const verified: LabEntity = { ...entity, lifecycle: 'verified' }; // used to fake 100%
     const steps = ['A', 'B', 'C', 'D', 'E'];
-    const { done } = deriveEntityArtifacts('bestiary', planned, steps, undefined, {});
-    expect(done).toBe(1);
+    // No produced artifacts → nothing done, regardless of the `verified` lifecycle.
+    expect(deriveEntityArtifacts('bestiary', verified, steps, undefined, {}).done).toBe(0);
+    // One produced step → exactly one done.
+    expect(deriveEntityArtifacts('bestiary', verified, steps, seed({ B: {} }), {}).done).toBe(1);
   });
 });

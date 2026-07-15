@@ -33,6 +33,7 @@ vi.mock('@/lib/catalog/pipeline-registry', async (importOriginal) => {
         { archetype: 'brief', label: 'StepFail', view: { kind: 'prose', field: 'x', emptyText: '' }, produce: () => ({ data: {}, ueAssets: [] }), accept: () => ({ label: 'f', status: 'fail', tier: 'L0', detail: 'boom' }) },
         { archetype: 'gate', label: 'StepDeferred', view: { kind: 'prose', field: 'x', emptyText: '' }, produce: () => ({ data: {}, ueAssets: [] }), accept: () => ({ label: 'd', status: 'deferred', tier: 'L3', detail: 'live-UE runner not yet run: T' }) },
         { archetype: 'brief', label: 'StepPending', view: { kind: 'prose', field: 'x', emptyText: '' }, produce: () => ({ data: {}, ueAssets: [] }), accept: () => ({ label: 'q', status: 'pending', tier: 'L0', detail: '' }) },
+        { archetype: 'brief', label: 'StepUnproduced', view: { kind: 'prose', field: 'x', emptyText: '' }, produce: () => ({ data: {}, ueAssets: [] }), accept: () => ({ label: 'u', status: 'pass', tier: 'L0', detail: '' }) },
       ],
     }),
   };
@@ -46,18 +47,20 @@ const groups = [{ category: 'Test', catalogs: [{ catalogId: 'fixtures', label: '
 const detail = {
   catalog: { catalogId: 'fixtures', label: 'Fixtures', description: '', total: 1, verified: 0 },
   entities: [{ id: 'fix-1', name: 'Fixture One', lifecycle: 'planned' as const, data: {} }],
-  steps: ['StepPass', 'StepFail', 'StepDeferred', 'StepPending'],
+  steps: ['StepPass', 'StepFail', 'StepDeferred', 'StepPending', 'StepUnproduced'],
 };
 
 beforeEach(() => {
-  // Seed produce artifacts so resolveAccept can compute pass/fail/deferred for the first three steps.
-  // StepPending has no artifact → falls into the legacy `pending` branch.
+  // Seed produce artifacts so resolveAccept can compute a verdict for the produced steps.
+  // StepPending is produced but its acceptance resolves to `pending`; StepUnproduced has
+  // NO artifact → the honest `unproduced` state (never a heuristic pass).
   useLabPipelineStore.setState({
     byEntity: {
       'fix-1': {
         StepPass: { done: true, data: {}, ueAssets: [], at: '2026-05-27T00:00:00Z' },
         StepFail: { done: true, data: {}, ueAssets: [], at: '2026-05-27T00:00:00Z' },
         StepDeferred: { done: true, data: {}, ueAssets: [], at: '2026-05-27T00:00:00Z' },
+        StepPending: { done: true, data: {}, ueAssets: [], at: '2026-05-27T00:00:00Z' },
       },
     },
   });
@@ -71,7 +74,7 @@ describe('Baseline timeline status indicators', () => {
       <Baseline theme={LIGHT} groups={groups} detail={detail} onSelectCatalog={() => {}} entityId="fix-1" onSelectEntity={() => {}} />,
     );
     const statuses = Array.from(container.querySelectorAll('[data-step-status]')).map((el) => el.getAttribute('data-step-status'));
-    expect(statuses).toEqual(['pass', 'fail', 'deferred', 'pending']);
+    expect(statuses).toEqual(['pass', 'fail', 'deferred', 'pending', 'unproduced']);
   });
 
   it('failing node carries the pulse class so it pulls the eye', () => {
@@ -95,7 +98,8 @@ describe('Baseline timeline status indicators', () => {
     expect(labels).toContain('StepPass: passed, tier L0');
     expect(labels).toContain('StepFail: failed, tier L0');
     expect(labels).toContain('StepDeferred: deferred, tier L3');
-    expect(labels).toContain('StepPending: pending');
+    expect(labels).toContain('StepPending: pending, tier L0'); // produced, acceptance still resolving
+    expect(labels).toContain('StepUnproduced: not produced'); // no artifact → no tier
   });
 
   it('tints deferred nodes with a dashed muted border (not the failed/passing fill)', () => {

@@ -3,10 +3,10 @@ import { useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useRovingFocus } from './hooks/useRovingFocus';
 
-type NodeStatus = 'pass' | 'fail' | 'deferred' | 'pending';
+type NodeStatus = 'pass' | 'fail' | 'deferred' | 'pending' | 'unproduced';
 const pad2 = (n: number) => String(n).padStart(2, '0');
 const STATUS_GLYPH = (s: NodeStatus): string =>
-  s === 'pass' ? '✓' : s === 'fail' ? '!' : s === 'deferred' ? '⋯' : '';
+  s === 'pass' ? '✓' : s === 'fail' ? '!' : s === 'deferred' ? '⋯' : s === 'unproduced' ? '·' : '';
 
 interface PipelineRailProps {
   steps: string[];
@@ -73,9 +73,9 @@ export function PipelineRail({
         const status = displayStatus(step, i);
         const current = i === stepIdx;
         const live = isLive(step);
-        // Loading only applies where we have NO status yet (pending) — a locally-known
-        // pass/fail/deferred is real truth and must not be masked by a shimmer.
-        const isLoading = loading && status === 'pending';
+        // Loading only applies where we have NO real verdict yet (pending / unproduced) —
+        // a locally-known pass/fail/deferred is real truth and must not be masked by a shimmer.
+        const isLoading = loading && (status === 'pending' || status === 'unproduced');
         const drifted = hasDrift?.(step, i) ?? false;
         const filled = status === 'pass' || status === 'fail';
         const fill = filled
@@ -90,10 +90,13 @@ export function PipelineRail({
           : status === 'deferred'
           ? 'var(--lab-deferred)'
           : 'var(--lab-line)';
+        // `unproduced` is the faintest node: a dotted hollow dot, dimmer than pending's
+        // solid hollow ring — a distinct, colorblind-safe "nothing produced here yet" cue.
+        const borderStyle = status === 'deferred' ? 'dashed' : status === 'unproduced' ? 'dotted' : 'solid';
         const glyph = STATUS_GLYPH(status);
         const glyphColor = filled
           ? 'var(--lab-on-accent)'
-          : status === 'deferred'
+          : status === 'deferred' || status === 'unproduced'
           ? 'var(--lab-muted)'
           : 'var(--lab-ink)';
 
@@ -136,7 +139,8 @@ export function PipelineRail({
                 alignItems: 'center',
                 justifyContent: 'center',
                 background: isLoading ? (reduce ? 'var(--lab-line)' : undefined) : fill,
-                border: `2px ${isLoading ? 'solid var(--lab-line)' : `${status === 'deferred' ? 'dashed' : 'solid'} ${borderColor}`}`,
+                border: `2px ${isLoading ? 'solid var(--lab-line)' : `${borderStyle} ${borderColor}`}`,
+                opacity: !isLoading && status === 'unproduced' && !current ? 0.55 : 1,
                 boxShadow: current ? `0 0 0 3px var(--lab-accent-bg)` : 'none',
                 color: glyphColor,
                 fontSize: 14,

@@ -31,10 +31,10 @@ function serverMap(arts: PipelineArtifact[]): Map<string, Map<string, PipelineAr
 const steps = ['A', 'B'];
 
 describe('buildMatrixRows — shared derivation with the rail', () => {
-  it('derives server-only cells (no local produce) from server truth; absent → pending', () => {
+  it('derives server-only cells (no local produce) from server truth; absent → unproduced', () => {
     const rows = buildMatrixRows('c', [entity('e1')], serverMap([srvArt('e1', 'A', 'pass')]), {}, steps);
     expect(rows[0].statusByStep('A')).toBe('pass');
-    expect(rows[0].statusByStep('B')).toBe('pending'); // no artifact
+    expect(rows[0].statusByStep('B')).toBe('unproduced'); // no artifact → honest unproduced
   });
 
   it('applies the add-only overlay — a local produce wins over the server record (matches the rail)', () => {

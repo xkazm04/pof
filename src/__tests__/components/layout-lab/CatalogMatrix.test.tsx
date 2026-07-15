@@ -66,13 +66,13 @@ const statusOf = (c: HTMLElement, cell: string) =>
   c.querySelector(`[data-cell="${cell}"]`)?.getAttribute('data-status');
 
 describe('CatalogMatrix', () => {
-  it('colors each cell by its server-derived acceptance status (and pending where no artifact)', async () => {
+  it('colors each cell by its server-derived acceptance status (and unproduced where no artifact)', async () => {
     const { container } = renderMatrix();
     await waitFor(() => expect(statusOf(container, 'e1::StepA')).toBe('pass'));
     expect(statusOf(container, 'e1::StepB')).toBe('fail');
-    expect(statusOf(container, 'e1::StepC')).toBe('pending'); // no artifact → pending
+    expect(statusOf(container, 'e1::StepC')).toBe('unproduced'); // no artifact → honest unproduced (never a heuristic pass)
     expect(statusOf(container, 'e2::StepA')).toBe('pass');
-    expect(statusOf(container, 'e2::StepB')).toBe('pending');
+    expect(statusOf(container, 'e2::StepB')).toBe('unproduced');
     expect(statusOf(container, 'e2::StepC')).toBe('deferred');
   });
 

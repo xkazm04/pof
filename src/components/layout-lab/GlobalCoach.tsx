@@ -12,7 +12,7 @@ interface Props {
 
 /** Priority tint — reinforces the glyph (never the only signal; WCAG 1.4.1). */
 function priorityColor(p: CoachPriority, t: LabTheme): string {
-  return p === 'fail' ? t.bad : p === 'deferred' ? t.muted : t.warn;
+  return p === 'fail' ? t.bad : p === 'deferred' || p === 'unproduced' ? t.muted : t.warn;
 }
 
 /**

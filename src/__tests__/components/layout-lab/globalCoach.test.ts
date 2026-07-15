@@ -47,6 +47,16 @@ describe('pickEntityIssue — ladder fail > drift > pending > deferred', () => {
     expect(issue).toEqual({ step: 'C', index: 2, priority: 'deferred' });
   });
 
+  it('ranks unproduced LAST — a deferred step outranks a never-produced one', () => {
+    const issue = pickEntityIssue(steps, statuses(['pass', 'unproduced', 'deferred', 'unproduced']), noDrift);
+    expect(issue).toEqual({ step: 'C', index: 2, priority: 'deferred' });
+  });
+
+  it('surfaces the first unproduced step when nothing more urgent exists', () => {
+    const issue = pickEntityIssue(steps, statuses(['pass', 'unproduced', 'unproduced', 'pass']), noDrift);
+    expect(issue).toEqual({ step: 'B', index: 1, priority: 'unproduced' });
+  });
+
   it('returns null for a config-complete entity (all pass, no drift)', () => {
     expect(pickEntityIssue(steps, statuses(['pass', 'pass', 'pass', 'pass']), noDrift)).toBeNull();
   });
@@ -89,16 +99,16 @@ describe('buildGlobalCoach — cross-catalog aggregation via deriveEntityArtifac
   });
 
   it('surfaces the most-urgent step per entity and ranks them across catalogs', () => {
-    // catalog X: e-x has a failed gate. catalog Y: e-y is all pending (nothing produced).
+    // catalog X: e-x has a failed gate. catalog Y: e-y is all unproduced (nothing produced).
     const inputs = [
       catalogInput('x', 'Catalog X', [entity('e-x')], { 'e-x': { A: localArt('pass'), B: localArt('fail') } }),
-      catalogInput('y', 'Catalog Y', [entity('e-y')], {}), // no artifacts → pending
+      catalogInput('y', 'Catalog Y', [entity('e-y')], {}), // no artifacts → unproduced
     ];
     const ranked = buildGlobalCoach(inputs, 5);
     expect(ranked).toHaveLength(2);
-    // fail (catalog X) outranks pending (catalog Y).
+    // fail (catalog X) outranks a never-produced entity (catalog Y).
     expect(ranked[0]).toMatchObject({ catalogId: 'x', entityId: 'e-x', priority: 'fail', step: 'B', stepIndex: 1 });
-    expect(ranked[1]).toMatchObject({ catalogId: 'y', entityId: 'e-y', priority: 'pending', step: 'A', stepIndex: 0 });
+    expect(ranked[1]).toMatchObject({ catalogId: 'y', entityId: 'e-y', priority: 'unproduced', step: 'A', stepIndex: 0 });
   });
 
   it('carries the concrete checker reason on a fail candidate (from the derived artifact)', () => {
@@ -108,10 +118,10 @@ describe('buildGlobalCoach — cross-catalog aggregation via deriveEntityArtifac
     expect(ranked[0]).toMatchObject({ priority: 'fail', step: 'B', reason: 'price/power 1.43x out of band' });
   });
 
-  it('leaves reason undefined when the checker provides none (pending step)', () => {
-    const inputs = [catalogInput('y', 'Catalog Y', [entity('e-y')], {})]; // no artifacts → pending
+  it('leaves reason undefined for an unproduced step (nothing has run)', () => {
+    const inputs = [catalogInput('y', 'Catalog Y', [entity('e-y')], {})]; // no artifacts → unproduced
     const ranked = buildGlobalCoach(inputs, 5);
-    expect(ranked[0].priority).toBe('pending');
+    expect(ranked[0].priority).toBe('unproduced');
     expect(ranked[0].reason).toBeUndefined();
   });
 

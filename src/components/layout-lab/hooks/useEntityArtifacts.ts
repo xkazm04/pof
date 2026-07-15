@@ -2,19 +2,24 @@
 
 import { useMemo } from 'react';
 import { resolveAccept } from '../labAcceptance';
-import { isBespokeCatalog } from '../catalogManifest';
-import { labStepsDone } from '../labPipelines';
 import type { LabStepArtifact } from '../labPipelineStore';
 import type { LabEntity } from '../useLabCatalogData';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 
-/** Per-step display vocabulary, shared with PipelineRollup. */
-export type StepDisplayStatus = 'pass' | 'fail' | 'deferred' | 'pending';
+/**
+ * Per-step display vocabulary, shared with PipelineRollup.
+ * `unproduced` = no artifact exists for the step (never produced) — the honest
+ * state that replaced the old lifecycle-fraction pseudo-progress. Distinct from
+ * `pending` (an artifact EXISTS but its acceptance is still resolving).
+ */
+export type StepDisplayStatus = 'pass' | 'fail' | 'deferred' | 'pending' | 'unproduced';
 
-/** A step where the local-derived verdict and the server-stored verdict genuinely diverge. */
+/** A step where the local-derived verdict and the server-stored verdict genuinely diverge.
+ *  Drift is only ever flagged for a CONCRETE local pass/fail contradicting a concrete
+ *  server pass/fail (never `unproduced`/`pending`/`deferred`), so `local` narrows to pass|fail. */
 export interface StepDrift {
   /** What the local recompute (add-only kept data) reads as. */
-  local: StepDisplayStatus;
+  local: 'pass' | 'fail';
   /** What the server stored (its own re-grade / runner outcome). */
   server: PipelineArtifact['status'];
 }
@@ -24,9 +29,9 @@ export interface EntityArtifacts {
   artifacts: PipelineArtifact[];
   /** Per-step artifact lookup for the timeline (so failed/deferred gates aren't invisible). */
   artifactByStep: Map<string, PipelineArtifact>;
-  /** Display status mirroring PipelineRollup's vocabulary; legacy `stepDone` maps to `pass` when no artifact exists. */
+  /** Display status mirroring PipelineRollup's vocabulary; a step with no artifact reads as `unproduced` (never a heuristic pass). */
   displayStatus: (step: string, i: number) => StepDisplayStatus;
-  /** Whether a step reads as done (Items: real produce state; others: the lifecycle heuristic). */
+  /** Whether a step was actually produced (has an artifact) — real state for every catalog, no lifecycle heuristic. */
   stepDone: (step: string, i: number) => boolean;
   /** Count of done steps. */
   done: number;
@@ -56,12 +61,13 @@ export function deriveEntityArtifacts(
   entitySteps: Record<string, LabStepArtifact> | undefined,
   serverArts: Record<string, PipelineArtifact>,
 ): EntityArtifacts {
-  const isItems = isBespokeCatalog(catalogId);
-
-  // Real per-step production state (Items is fully data-backed; others use the lifecycle pseudo-progress).
-  const stepDone = (step: string, i: number) =>
-    isItems ? !!entitySteps?.[step]?.done : i < (entity ? labStepsDone(entity.lifecycle, steps.length) : 0);
-  const done = steps.filter((s, i) => stepDone(s, i)).length;
+  // Real per-step production state for EVERY catalog: a step is "done" iff it was
+  // actually produced (has an artifact in the local store, hydrated add-only from
+  // the server). The old lifecycle-fraction heuristic — which fabricated pass/pending
+  // for non-Items entities that had never produced anything — is gone; entities with
+  // no artifact now read as honestly `unproduced` rather than fake progress.
+  const stepDone = (step: string) => !!entitySteps?.[step]?.done;
+  const done = steps.filter((s) => stepDone(s)).length;
 
   // Server-faithful rollup: derives config-complete/tier using the same accept logic the server stored.
   const driftByStep = new Map<string, StepDrift>();
@@ -92,12 +98,13 @@ export function deriveEntityArtifacts(
 
   const artifactByStep = new Map(artifacts.map((a) => [a.step, a]));
 
-  // Display status mirrors PipelineRollup's vocabulary: pass/fail/deferred/pending.
-  // For non-Items catalogs without artifacts, the legacy `stepDone` heuristic maps to `pass`.
-  const displayStatus = (step: string, i: number): StepDisplayStatus => {
+  // Display status mirrors PipelineRollup's vocabulary. A produced step reports its
+  // real artifact status (pass/fail/deferred, else `pending` while acceptance resolves);
+  // a step with NO artifact is honestly `unproduced` — never a heuristic pass.
+  const displayStatus = (step: string): StepDisplayStatus => {
     const a = artifactByStep.get(step);
     if (a) return a.status === 'pass' || a.status === 'fail' || a.status === 'deferred' ? a.status : 'pending';
-    return stepDone(step, i) ? 'pass' : 'pending';
+    return 'unproduced';
   };
 
   return { artifacts, artifactByStep, displayStatus, stepDone, done, driftByStep };

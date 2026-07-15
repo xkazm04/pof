@@ -76,17 +76,17 @@ describe('<GlobalCoach />', () => {
   it('shows the concrete checker reason on a candidate that carries one (and falls back to the generic hint otherwise)', () => {
     coachMock.mockReturnValue([
       cand({ entityId: 'e1', priority: 'fail', reason: 'price/power 1.43x out of band' }),
-      cand({ entityId: 'e2', catalogId: 'armor', catalogLabel: 'Armor', priority: 'pending' }), // no reason
+      cand({ entityId: 'e2', catalogId: 'armor', catalogLabel: 'Armor', priority: 'unproduced' }), // no reason
     ]);
     const { container } = render(<GlobalCoach t={LIGHT} />);
 
     // top item (fail) surfaces the verbatim reason.
     expect(container.querySelector('[data-testid="global-coach-item-0-reason"]')?.textContent).toContain('price/power 1.43x out of band');
 
-    // the pending item (no reason) renders no reason node — the generic hint stays in aria-label.
+    // the unproduced item (no reason) renders no reason node — the generic honest hint stays in aria-label.
     fireEvent.click(container.querySelector('[data-testid="global-coach-toggle"]') as HTMLElement);
     expect(container.querySelector('[data-testid="global-coach-item-1-reason"]')).toBeNull();
     const item1 = container.querySelector('[data-testid="global-coach-item-1"]') as HTMLElement;
-    expect(item1.getAttribute('aria-label')).toContain('not been produced');
+    expect(item1.getAttribute('aria-label')).toContain('not produced yet');
   });
 });

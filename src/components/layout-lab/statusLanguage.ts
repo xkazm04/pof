@@ -15,6 +15,16 @@ import type { LabTheme } from './theme';
  */
 export type StatusKind = AcceptanceStatus; // 'pass' | 'pending' | 'fail' | 'deferred'
 
+/**
+ * Lab display axis: the four server-truth statuses PLUS `unproduced` — the honest
+ * "no artifact exists here yet" state. `unproduced` is a DISPLAY-only distinction
+ * (never a server AcceptanceStatus): it separates "never produced" from `pending`
+ * ("produced, acceptance still resolving"). Kept out of {@link STATUS_GLYPH} /
+ * {@link STATUS_WORD} (which stay the exact 4-status server vocabulary) so those
+ * maps never leak a non-server status; the two rendering *functions* below accept it.
+ */
+export type LabDisplayStatus = StatusKind | 'unproduced';
+
 /** check = pass · x = fail · pause = deferred · ring = pending */
 export const STATUS_GLYPH: Record<StatusKind, string> = {
   pass: '✓',
@@ -31,18 +41,29 @@ export const STATUS_WORD: Record<StatusKind, string> = {
   pending: 'pending',
 };
 
+/** Distinct, colorblind-safe cue for the display-only `unproduced` state (dim dot,
+ *  distinct from pending's hollow ring '○'), plus its spoken word. */
+export const UNPRODUCED_GLYPH = '·';
+export const UNPRODUCED_WORD = 'not produced';
+
 /**
  * Theme color for a status. This *reinforces* the glyph + word — it is never the
  * only signal (WCAG 1.4.1). Single-sourced here so the step banner, rollup chips,
- * catalog matrix, and next-step coach can't drift. `pending` maps to the warn tone.
+ * catalog matrix, and next-step coach can't drift. `pending` maps to the warn tone;
+ * `unproduced` to the neutral muted tone (dimmer than any in-flight status).
  */
-export function statusColor(status: StatusKind, t: LabTheme): string {
-  return status === 'pass' ? t.ok : status === 'fail' ? t.bad : status === 'deferred' ? t.muted : t.warn;
+export function statusColor(status: LabDisplayStatus, t: LabTheme): string {
+  return status === 'pass' ? t.ok
+    : status === 'fail' ? t.bad
+    : status === 'deferred' ? t.muted
+    : status === 'unproduced' ? t.muted
+    : t.warn;
 }
 
 /** e.g. statusAriaLabel('Economy', 'fail', 'L2') → "Economy: failed, tier L2" */
-export function statusAriaLabel(name: string, status: StatusKind, tier?: string | null): string {
-  return `${name}: ${STATUS_WORD[status]}${tier ? `, tier ${tier}` : ''}`;
+export function statusAriaLabel(name: string, status: LabDisplayStatus, tier?: string | null): string {
+  const word = status === 'unproduced' ? UNPRODUCED_WORD : STATUS_WORD[status];
+  return `${name}: ${word}${tier ? `, tier ${tier}` : ''}`;
 }
 
 /**
