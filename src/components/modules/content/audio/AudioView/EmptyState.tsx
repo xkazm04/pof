@@ -3,6 +3,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import { Plus } from 'lucide-react';
 import { useChecklistCLI } from '@/hooks/useChecklistCLI';
 import { AudioPipelineDiagram } from '@/components/modules/content/audio/AudioPipelineDiagram';
+import { ChecklistUnconfirmedBanner } from '@/components/modules/shared/ChecklistUnconfirmedBanner';
 import { MODULE_COLORS } from '@/lib/constants';
 
 interface EmptyStateProps {
@@ -25,6 +26,7 @@ export function EmptyState({
     <div className="flex-1 flex flex-col items-center justify-center px-6 py-8 overflow-y-auto">
       <div className="w-full max-w-md space-y-8">
         {/* Pipeline Diagram */}
+        <ChecklistUnconfirmedBanner cli={pipelineCli} />
         <AudioPipelineDiagram
           onRunPrompt={pipelineCli.sendPrompt}
           isRunning={pipelineCli.isRunning}

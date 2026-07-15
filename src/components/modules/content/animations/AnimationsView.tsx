@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { Send, ListChecks, Workflow, Sparkles, Download } from 'lucide-react';
 import { ReviewableModuleView } from '../../shared/ReviewableModuleView';
 import type { ExtraTab } from '../../shared/ReviewableModuleView';
+import { ChecklistUnconfirmedBanner } from '../../shared/ChecklistUnconfirmedBanner';
 import { SUB_MODULE_MAP, getCategoryForSubModule, getModuleChecklist } from '@/lib/module-registry';
 
 import { useModuleCLI } from '@/hooks/useModuleCLI';
@@ -120,6 +121,7 @@ export function AnimationsView() {
       icon: Workflow,
       render: () => (
         <div data-testid="pof-module-arpg-animation-tab-states">
+          <ChecklistUnconfirmedBanner cli={smCli} />
           <AnimationStateMachine
             onSelectState={handleSelectState}
             isRunning={smCli.isRunning}

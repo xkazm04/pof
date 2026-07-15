@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { Send, BookOpen, Layers, SlidersHorizontal, CircleDot, ImagePlus } from 'lucide-react';
 import { ReviewableModuleView } from '../../shared/ReviewableModuleView';
 import type { ExtraTab } from '../../shared/ReviewableModuleView';
+import { ChecklistUnconfirmedBanner } from '../../shared/ChecklistUnconfirmedBanner';
 import { SUB_MODULE_MAP, getCategoryForSubModule , getModuleChecklist } from '@/lib/module-registry';
 
 import { useModuleCLI } from '@/hooks/useModuleCLI';
@@ -170,11 +171,14 @@ export function MaterialsView() {
       label: 'Hierarchy',
       icon: Layers,
       render: () => (
-        <MaterialLayerGraph
-          onRunPrompt={graphCli.sendPrompt}
-          isRunning={graphCli.isRunning}
-          activeItemId={graphCli.activeItemId}
-        />
+        <div>
+          <ChecklistUnconfirmedBanner cli={graphCli} />
+          <MaterialLayerGraph
+            onRunPrompt={graphCli.sendPrompt}
+            isRunning={graphCli.isRunning}
+            activeItemId={graphCli.activeItemId}
+          />
+        </div>
       ),
     },
     {
