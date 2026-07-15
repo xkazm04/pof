@@ -1,4 +1,4 @@
-import { type ToolDef, reqStr, optNum, obj, STR } from './shared.js';
+import { type ToolDef, reqStr, optStr, optNum, obj, STR } from './shared.js';
 
 /** Harness loop: autonomous plan → execute → verify → checkpoint. */
 export const HARNESS_TOOLS: ToolDef[] = [
@@ -12,9 +12,37 @@ export const HARNESS_TOOLS: ToolDef[] = [
         projectName: STR,
         ueVersion: { type: 'string', description: 'e.g. "5.7".' },
         maxIterations: { type: 'number' },
-        targetPassRate: { type: 'number', description: '0–1; stop when this feature pass-rate is reached.' },
-        budgetUsd: { type: 'number', description: 'Spend cap; the loop auto-pauses on overflow.' },
-        checkpoint: { type: 'boolean', description: 'Git-checkpoint each completed area.' },
+        targetPassRate: {
+          type: 'number',
+          description:
+            'Feature pass-rate to stop at. Accepts BOTH forms: a 0–1 fraction (0.9) or a 0–100 percent (90) — normalized server-side. Default 90%.',
+        },
+        budgetUsd: {
+          type: 'number',
+          description:
+            'Spend cap in USD; the loop auto-pauses on overflow. Omitted → a default $25 cap applies (set unlimited:true to run uncapped).',
+        },
+        unlimited: {
+          type: 'boolean',
+          description: 'Opt out of any spend cap. Required to run with NO budget ceiling; without it a default cap applies.',
+        },
+        maxConcurrent: {
+          type: 'number',
+          description: 'Max concurrent executor sessions (default 1). Ignored when checkpoint:true (forces sequential).',
+        },
+        scenario: {
+          type: 'string',
+          description: 'Named curated area set instead of the auto-generated plan: "ui-overhaul" | "content-overhaul".',
+        },
+        checkpoint: { type: 'boolean', description: 'Git-checkpoint each completed area (forces maxConcurrent=1).' },
+        ueTests: {
+          type: 'boolean',
+          description: 'Opt-in the UE5 automation-test gate (advisory, behind the required compile gate). Requires POF_UE_EDITOR_CMD/POF_UE_UPROJECT.',
+        },
+        ueTestFilter: {
+          type: 'string',
+          description: 'Automation test filter for the ue-test gate (default "Project"), e.g. "PoF.Combat".',
+        },
       },
       ['projectPath', 'projectName', 'ueVersion'],
     ),
@@ -27,7 +55,12 @@ export const HARNESS_TOOLS: ToolDef[] = [
         ...(optNum(args, 'maxIterations') != null ? { maxIterations: optNum(args, 'maxIterations') } : {}),
         ...(optNum(args, 'targetPassRate') != null ? { targetPassRate: optNum(args, 'targetPassRate') } : {}),
         ...(optNum(args, 'budgetUsd') != null ? { budgetUsd: optNum(args, 'budgetUsd') } : {}),
+        ...(args.unlimited === true ? { unlimited: true } : {}),
+        ...(optNum(args, 'maxConcurrent') != null ? { maxConcurrent: optNum(args, 'maxConcurrent') } : {}),
+        ...(optStr(args, 'scenario') != null ? { scenario: optStr(args, 'scenario') } : {}),
         ...(args.checkpoint === true ? { checkpoint: true } : {}),
+        ...(args.ueTests === true ? { ueTests: true } : {}),
+        ...(optStr(args, 'ueTestFilter') != null ? { ueTestFilter: optStr(args, 'ueTestFilter') } : {}),
       }),
   },
   {
