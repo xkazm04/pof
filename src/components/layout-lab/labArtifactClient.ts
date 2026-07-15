@@ -35,6 +35,24 @@ export async function postArtifact(body: ArtifactUpsertBody): Promise<void> {
   });
 }
 
+/** Runner lease state read from the drain status route (mirrors `LeaseState` server-side). */
+export interface DrainLeaseState {
+  held: boolean;
+  /** Scope of the oldest held lease (`catalog/entity` or `global`) — null when idle. */
+  scope: string | null;
+  since: string | null;
+  scopes: string[];
+}
+
+/**
+ * Read the current drain lease state (is the non-reentrant UE editor busy, and with what).
+ * Non-throwing → null on failure so the runner chip degrades to "unknown/idle" rather than error.
+ */
+export async function fetchDrainLease(): Promise<DrainLeaseState | null> {
+  const r = await tryApiFetch<DrainLeaseState>('/api/pipeline-artifacts/drain/status');
+  return r.ok ? r.data : null;
+}
+
 export interface DrainSummaryLite { ran: number; passed: number; failed: number; skipped: number }
 
 /** Operator-triggered: run this entity's deferred L3/L4 gates through the live-UE runner. */

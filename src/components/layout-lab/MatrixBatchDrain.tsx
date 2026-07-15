@@ -65,6 +65,11 @@ export function MatrixBatchDrain({ t, deferredEntities, state, onStart, onCancel
           <span style={{ color: summary.failed ? t.bad : t.muted }}>{summary.failed} failed</span>
           {summary.skipped > 0 && <span title="Gates the runner left deferred (not yet runnable)">{summary.skipped} still deferred</span>}
           {summary.entitiesLocked > 0 && <span style={{ color: t.warn }} title="Skipped — another drain held the lease after a retry">{summary.entitiesLocked} locked</span>}
+          {summary.entitiesLocked > 0 && (
+            <span data-testid="batch-drain-locked-hint" style={{ color: t.muted, flexBasis: '100%', fontSize: 12 }}>
+              Lease held by another session — see the runner chip in the header.
+            </span>
+          )}
           {summary.entitiesErrored > 0 && <span style={{ color: t.bad }} title="Drain request errored">{summary.entitiesErrored} errored</span>}
         </span>
       )}

@@ -83,6 +83,8 @@ export const UI_TIMEOUTS = {
   batchWatchdog: 3000,
   /** Polling interval for CLI-driven checklist completions. */
   pollInterval: 3000,
+  /** Interval the lab runner chip polls the drain lease status (suspend-gated). */
+  runnerLeasePoll: 5000,
   /** Short settle time for DB writes before UI refresh. */
   dbSettle: 300,
   /** Debounce before persisting an edited ability spec to /api/ability-spec. */

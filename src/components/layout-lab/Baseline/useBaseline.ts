@@ -8,6 +8,7 @@ import { useCachedArtifacts, invalidateArtifacts } from '../labArtifactCache';
 import { resolveAccept } from '../labAcceptance';
 import { useEntityArtifacts } from '../hooks/useEntityArtifacts';
 import { useViewportAtLeast } from '@/hooks/useViewportWidth';
+import { useLabRunnerStore } from '../labRunnerStore';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 import { COLLAPSE_BREAKPOINT } from './constants';
 import type { Props } from './types';
@@ -121,11 +122,15 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
   const runDrain = async () => {
     if (!catalogId || !entity || draining) return;
     setDraining(true);
+    // Publish this session's drain scope so the header runner chip shows "draining …"
+    // (and never mistakes our own lease for another session's).
+    useLabRunnerStore.getState().setLocalDrain(`${catalogId}/${entity.id}`);
     try {
       await drainGates(catalogId, entity.id);
       invalidateArtifacts(catalogId, entity.id);
     } finally {
       setDraining(false);
+      useLabRunnerStore.getState().setLocalDrain(null);
     }
   };
 

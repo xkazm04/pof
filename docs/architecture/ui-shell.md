@@ -82,8 +82,9 @@ Renders a `100vh` flex column:
   right-aligned status) so the action group stays centered. Left zone: the `PoF·LAB sheet · <catalog>`
   brand label. Center zone: **Catalogs** / **Matrix** / **Canon** view toggle (local `view` state),
   **+ One-shot**, and the **Legacy shell** switch. Right zone (corner): `<LabJobsChip>`,
-  `<LabBridgeStrip t={theme} />`, and the single-icon **theme toggle** (`ThemeToggle`, an `IconButton`
-  showing Moon→Studio Dark / Sun→Blueprint; toggles `themeId`).
+  `<RunnerChip t={theme} />` (drain-runner state, below), `<LabBridgeStrip t={theme} />`, and the
+  single-icon **theme toggle** (`ThemeToggle`, an `IconButton` showing Moon→Studio Dark /
+  Sun→Blueprint; toggles `themeId`).
 - **Navigation is single-source (the lab never forgets)**: `LayoutLab` OWNS `catalogId`,
   `entityId`, and the pipeline `stepIdx`. Because `AnimatePresence key={view}` remounts `Baseline`
   on every catalogs↔matrix↔canon toggle, holding the step position in the parent is what makes it
@@ -113,6 +114,25 @@ On mount, `useEffect(() => { hydrate(); }, [hydrate])` fetches the server's proj
 
 Default `catalogId` is `'items'`; `useLabCatalogData()` and `useLabDetail(catalogId)` supply the
 `LabGroup[]` and `LabDetail | null` props.
+
+#### Runner truth chip — `RunnerChip` (`src/components/layout-lab/RunnerChip.tsx`)
+
+The L3/L4 drain runner talks to a single, non-reentrant UE editor guarded by a **lease**. The
+lease registry lives in `src/lib/test-gate-runner/drain-lease.ts` (`acquireLeases` — all-or-nothing,
+`releaseLeases`, `getLeaseState`; keyed `catalog|entity`, `*|*` = global). `POST /api/pipeline-artifacts/drain`
+acquires it (409 on overlap) and `GET /api/pipeline-artifacts/drain/status` READS it (`{ held, scope,
+since, scopes }`, envelope via `apiSuccess`) — so a held lease is visible instead of only surfacing
+as a 409. The header chip shows three states:
+
+- **`draining <scope>`** — THIS session is draining. Read from `labRunnerStore.localDrain`, which the
+  coach drain (`useBaseline.runDrain`) and the batch drain (`useBatchDrain`) publish while running.
+  Authoritative for our own runner, so the chip does **not** poll while `localDrain` is set.
+- **`lease held · <scope>`** — the status API reports a lease we didn't take → another session holds
+  the editor (a batch drain here would 409). `MatrixBatchDrain`'s `locked` outcome points at this chip.
+- **`idle`** — no local drain and the API reports no lease.
+
+Polling is suspend-safe (`useSuspendableEffect`) on `UI_TIMEOUTS.runnerLeasePoll` (5 s) and does zero
+work while draining locally or hidden.
 
 ### 4. Category→Catalog→Entity tree — `CatalogTree` (`src/components/layout-lab/CatalogTree.tsx`)
 

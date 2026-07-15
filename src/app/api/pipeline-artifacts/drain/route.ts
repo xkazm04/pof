@@ -2,21 +2,16 @@ import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { getOriginFromRequest } from '@/lib/constants';
 import { buildExecutors, collectDeferred, drainAll, parseDrainFilter, type DrainFilter } from '@/lib/test-gate-runner';
+import { acquireLeases, releaseLeases, scopeFromKey, __resetLeases } from '@/lib/test-gate-runner/drain-lease';
 import { resolveUprojectPath } from '@/lib/ue5-bridge/build-pipeline';
 
-// Module-level in-flight set, scoped per catalogId|entityId (global key when both omitted).
 // The drain talks to a shared, non-reentrant UE editor — overlapping requests would clobber
-// each other and produce garbage verdicts. Mirrors the worker's tickInFlight guard.
-const drainInFlight = new Set<string>();
+// each other and produce garbage verdicts. The lease (scoped per catalogId|entityId, global
+// key when both omitted) lives in `drain-lease.ts` so a GET status route can READ it (the lab
+// runner chip), turning a 409 surprise into visible truth. Mirrors the worker's tickInFlight guard.
 const drainKey = (f: DrainFilter) => `${f.catalogId ?? '*'}|${f.entityId ?? '*'}`;
-/** Test-only: clear the in-flight set between cases. */
-export function __resetDrainInFlight() { drainInFlight.clear(); }
-
-/** Human scope from a `catalog|entity` in-flight key (`*|*` → 'global'). */
-function scopeFromKey(k: string): string {
-  const [c, e] = k.split('|');
-  return c === '*' && e === '*' ? 'global' : `${c}/${e}`;
-}
+/** Test-only: clear the lease registry between cases. */
+export function __resetDrainInFlight() { __resetLeases(); }
 
 /** GET /api/pipeline-artifacts/drain?tier=L3[&catalogId=&entityId=] → the deferred jobs queue. */
 export async function GET(req: NextRequest) {
@@ -62,11 +57,10 @@ export async function POST(req: NextRequest) {
     const keys = entityIds?.length
       ? entityIds.map((id) => `${filter.catalogId ?? '*'}|${id}`)
       : [drainKey(filter)];
-    const conflict = keys.find((k) => drainInFlight.has(k));
-    if (conflict) {
-      return apiError(`drain already in flight for ${scopeFromKey(conflict)} — refusing to overlap (UE editor is non-reentrant)`, 409);
+    const acquired = acquireLeases(keys);
+    if (!acquired.ok) {
+      return apiError(`drain already in flight for ${scopeFromKey(acquired.conflict)} — refusing to overlap (UE editor is non-reentrant)`, 409);
     }
-    keys.forEach((k) => drainInFlight.add(k));
     try {
       const executors = buildExecutors({
         executor: body.executor === 'spawn' ? 'spawn' : 'bridge',
@@ -82,7 +76,7 @@ export async function POST(req: NextRequest) {
       const summary = await drainAll(executors, filter, body.limit != null ? { limit: body.limit } : undefined);
       return apiSuccess(summary);
     } finally {
-      keys.forEach((k) => drainInFlight.delete(k));
+      releaseLeases(keys);
     }
   } catch (e) {
     return apiError(e instanceof Error ? e.message : 'drain POST failed', 500);
