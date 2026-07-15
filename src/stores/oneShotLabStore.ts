@@ -5,6 +5,8 @@ import { create } from 'zustand';
 export interface OneShotPendingNav {
   catalogId: string;
   entityId: string;
+  /** Optional: open Baseline directly on this pipeline step (from the GlobalCoach jump). */
+  stepIndex?: number;
 }
 
 export interface OneShotLabState {

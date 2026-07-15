@@ -35,7 +35,8 @@ export function GlobalCoach({ t }: Props) {
 
   if (candidates.length === 0) return null; // nothing actionable project-wide — stay out of the way
 
-  const jump = (c: CoachCandidate) => setPendingNavigation({ catalogId: c.catalogId, entityId: c.entityId });
+  // Carry the flagged step index so Baseline opens ON that step, not step 0.
+  const jump = (c: CoachCandidate) => setPendingNavigation({ catalogId: c.catalogId, entityId: c.entityId, stepIndex: c.stepIndex });
   const [top, ...rest] = candidates;
   const moreCount = rest.length;
 
@@ -106,6 +107,8 @@ function CoachRow({
 }: { t: LabTheme; c: CoachCandidate; onJump: (c: CoachCandidate) => void; testid: string; compact?: boolean }) {
   const tint = priorityColor(c.priority, t);
   const hint = COACH_HINT[c.priority];
+  // Prefer the concrete checker reason over the generic hint when one is available.
+  const shownHint = c.reason ?? hint.hint;
   return (
     <button
       type="button"
@@ -113,8 +116,9 @@ function CoachRow({
       data-catalog={c.catalogId}
       data-entity={c.entityId}
       data-priority={c.priority}
+      data-step-index={c.stepIndex}
       onClick={() => onJump(c)}
-      aria-label={`${hint.actionWord}: ${c.entityName} in ${c.catalogLabel} — ${c.step}. ${hint.hint}`}
+      aria-label={`${hint.actionWord}: ${c.entityName} in ${c.catalogLabel} — ${c.step}. ${shownHint}`}
       className={`focus-ring ${t.fontBody}`}
       style={{
         flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 'var(--lab-s2)',
@@ -129,6 +133,9 @@ function CoachRow({
         <span style={{ color: 'var(--lab-muted)' }}>{c.catalogLabel} · </span>
         <span data-testid={`${testid}-entity`}>{c.entityName}</span>
         <span style={{ color: 'var(--lab-muted)' }}> — {c.step}</span>
+        {c.reason && (
+          <span data-testid={`${testid}-reason`} style={{ color: 'var(--lab-muted)', fontStyle: 'italic' }}> · {c.reason}</span>
+        )}
       </span>
     </button>
   );

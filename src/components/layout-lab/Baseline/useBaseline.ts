@@ -14,6 +14,16 @@ import type { Props } from './types';
 
 export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity, initialStepIdx }: Props) {
   const [stepIdx, setStepIdx] = useState<number | null>(initialStepIdx ?? 0);
+
+  // Adopt a NEW focus step when it changes while Baseline is already mounted — e.g. a
+  // GlobalCoach jump changes catalog+entity+focus without remounting the view (the
+  // matrix path remounts and reads it as the initial value instead). React-sanctioned
+  // adjust-state-during-render bail-out (StrictMode-safe; no effect/ref mutation).
+  const [prevInitialStepIdx, setPrevInitialStepIdx] = useState(initialStepIdx);
+  if (initialStepIdx !== prevInitialStepIdx) {
+    setPrevInitialStepIdx(initialStepIdx);
+    if (initialStepIdx != null) setStepIdx(initialStepIdx);
+  }
   const [draining, setDraining] = useState(false);
   const [plainMode, setPlainMode] = useState(false);
 

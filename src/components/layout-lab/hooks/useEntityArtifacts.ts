@@ -74,14 +74,19 @@ export function deriveEntityArtifacts(
         // Overlay the runner's verdict: when the local recompute is still `deferred`
         // (an unrun L3/L4 gate) but the server has a real pass/fail, the server wins.
         const srv = serverArts[s];
-        const status = localStatus === 'deferred' && srv && srv.status !== 'deferred' && srv.status !== 'pending' ? srv.status : localStatus;
+        const usedServerOverlay = localStatus === 'deferred' && !!srv && srv.status !== 'deferred' && srv.status !== 'pending';
+        const status = usedServerOverlay ? srv!.status : localStatus;
+        // Carry the concrete checker reason through so coaches/tooltips can show WHY a
+        // step failed/deferred without a second `resolveAccept` pass. When the server
+        // overlay won, its reason is the authoritative one; otherwise the local recompute's.
+        const reason = usedServerOverlay ? srv!.reason : res?.reason;
         // Drift: a concrete local pass/fail that a concrete server pass/fail contradicts —
         // the add-only default keeps `localStatus` on screen, so flag it for adoption.
         // (The deferred case above is reconciliation, not drift, and is excluded here.)
         if (srv && (localStatus === 'pass' || localStatus === 'fail') && (srv.status === 'pass' || srv.status === 'fail') && localStatus !== srv.status) {
           driftByStep.set(s, { local: localStatus, server: srv.status });
         }
-        return { catalogId, entityId: entity?.id ?? '', step: s, data: art.data, ueAssets: art.ueAssets, status, ...(res?.tier ? { tier: res.tier } : {}) };
+        return { catalogId, entityId: entity?.id ?? '', step: s, data: art.data, ueAssets: art.ueAssets, status, ...(res?.tier ? { tier: res.tier } : {}), ...(reason ? { reason } : {}) };
       })
     : [];
 

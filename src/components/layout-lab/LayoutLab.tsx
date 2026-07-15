@@ -63,6 +63,9 @@ export function LayoutLab() {
       if (state.pendingNavigation && state.pendingNavigation !== prev.pendingNavigation) {
         setCatalogId(state.pendingNavigation.catalogId);
         setEntityId(state.pendingNavigation.entityId);
+        // Reuse the existing openFromMatrix focus-step channel so a GlobalCoach jump
+        // opens Baseline on the flagged step (undefined clears it → default step 0).
+        setFocusStepIdx(state.pendingNavigation.stepIndex);
         useOneShotLabStore.getState().setPendingNavigation(null);
       }
     });

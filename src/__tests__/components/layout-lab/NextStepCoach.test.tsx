@@ -179,6 +179,39 @@ describe('<NextStepCoach />', () => {
     expect(screen.getByTestId('plain-summary').textContent).toMatch(/0 of 5 done|not started/i);
   });
 
+  it('surfaces the concrete checker reason for a failed next step (verbatim, over the generic hint)', () => {
+    render(
+      <NextStepCoach
+        t={LIGHT}
+        steps={steps}
+        statusByStep={(_, i) => (i === 2 ? 'fail' : 'pass') as StepStatus}
+        rollup={rollup({ done: 4, failed: 1, pending: 0, total: 5 })}
+        onJump={() => {}}
+        plainMode={false}
+        onTogglePlainMode={() => {}}
+        reasonForStep={(s) => (s === 'Attributes' ? 'price/power 1.43x out of band' : undefined)}
+      />,
+    );
+    expect(screen.getByTestId('next-step-reason').textContent).toContain('price/power 1.43x out of band');
+  });
+
+  it('keeps the generic hint when no reason is available for the next step (never invents text)', () => {
+    render(
+      <NextStepCoach
+        t={LIGHT}
+        steps={steps}
+        statusByStep={(_, i) => (i < 2 ? 'pass' : 'pending') as StepStatus}
+        rollup={rollup({ done: 2, pending: 3 })}
+        onJump={() => {}}
+        plainMode={false}
+        onTogglePlainMode={() => {}}
+        reasonForStep={() => undefined}
+      />,
+    );
+    // pending step, no reason → the plain-language hint stays.
+    expect(screen.getByTestId('next-step-reason').textContent).toMatch(/not been produced yet/i);
+  });
+
   it('makes the deferred-gate drainer the primary CTA when the next step is deferred', () => {
     const onDrain = vi.fn();
     render(

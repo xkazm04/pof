@@ -16,6 +16,13 @@ interface NextStepCoachProps {
   rollup: EntityRollup;
   /** Jump to the recommended step. */
   onJump: (index: number) => void;
+  /**
+   * The concrete checker reason for a step, if one is known (from the derived
+   * artifacts). Surfaced verbatim for a fail/deferred next step so the coach says
+   * WHY, not a generic hint. Returns undefined when no reason is available → the
+   * generic plain-language hint is kept (we never invent text).
+   */
+  reasonForStep?: (step: string, index: number) => string | undefined;
   /** When true, the coach also renders a one-sentence plain-language rollup summary. */
   plainMode: boolean;
   /** Toggle plain-language mode (also rendered by the coach). */
@@ -33,13 +40,21 @@ interface NextStepCoachProps {
  * statuses PipelineRollup derives — no new truth source.
  */
 export function NextStepCoach({
-  t, steps, statusByStep, rollup, onJump, plainMode, onTogglePlainMode, onDrain, draining,
+  t, steps, statusByStep, rollup, onJump, plainMode, onTogglePlainMode, onDrain, draining, reasonForStep,
 }: NextStepCoachProps) {
   const [expanded, setExpanded] = useState(false);
   const next = useMemo(
     () => pickNextActionableStep(steps, statusByStep),
     [steps, statusByStep],
   );
+
+  // Prefer the concrete checker reason for a fail/deferred step over the generic
+  // hint — but only when one is actually available (never invent text).
+  const concreteReason =
+    next && (next.status === 'fail' || next.status === 'deferred')
+      ? reasonForStep?.(next.step, next.index)
+      : undefined;
+  const shownHint = concreteReason ?? next?.plainHint;
 
   const tint = next ? statusColor(next.status, t) : t.ok;
   const nextIsDeferred = next?.status === 'deferred';
@@ -80,12 +95,12 @@ export function NextStepCoach({
 
         {next ? (
           <span
-            title={`${next.actionWord}: ${next.step} — ${next.plainHint}`}
+            title={`${next.actionWord}: ${next.step} — ${shownHint}`}
             style={{ flex: 1, minWidth: 0, fontSize: 'var(--lab-fs-sm)', color: 'var(--lab-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
           >
             <strong style={{ color: 'var(--lab-ink-deep)', fontWeight: 600 }}>{next.actionWord}:</strong>{' '}
             <span data-testid="next-step-name">{next.step}</span>
-            <span style={{ color: 'var(--lab-muted)' }}> &mdash; {next.plainHint}</span>
+            <span data-testid="next-step-reason" style={{ color: 'var(--lab-muted)' }}> &mdash; {shownHint}</span>
           </span>
         ) : (
           <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--lab-fs-sm)', color: 'var(--lab-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>

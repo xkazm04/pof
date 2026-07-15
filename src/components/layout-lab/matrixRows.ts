@@ -1,6 +1,5 @@
 import { summarizeEntity, type EntityRollup } from '@/lib/catalog/rollup';
 import { deriveEntityArtifacts, type StepDisplayStatus } from './hooks/useEntityArtifacts';
-import { resolveAccept } from './labAcceptance';
 import type { LabEntity } from './useLabCatalogData';
 import type { LabStepArtifact } from './labPipelineStore';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
@@ -46,11 +45,12 @@ export function buildMatrixRows(
     // Precompute per-step status once (O(steps)) instead of re-deriving per cell (O(steps²)).
     const statusMap = new Map<string, StepDisplayStatus>(steps.map((s, i) => [s, displayStatus(s, i)]));
 
-    const blockers: MatrixBlocker[] = artifacts.filter((a) => a.status === 'fail').map((a) => {
-      const accept = resolveAccept(catalogId, a.step);
-      const res = accept ? accept(a.data) : null; // reuse the accept() fn for a human reason
-      return { step: a.step, reason: res?.reason ?? res?.detail ?? a.reason ?? 'failed acceptance' };
-    });
+    // The concrete checker reason is already carried on each derived artifact
+    // (deriveEntityArtifacts records `res.reason`), so blockers read it directly —
+    // no second `resolveAccept` pass over the same data.
+    const blockers: MatrixBlocker[] = artifacts
+      .filter((a) => a.status === 'fail')
+      .map((a) => ({ step: a.step, reason: a.reason ?? 'failed acceptance' }));
 
     return {
       id: e.id,

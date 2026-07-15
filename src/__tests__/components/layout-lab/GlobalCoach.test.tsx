@@ -56,20 +56,37 @@ describe('<GlobalCoach />', () => {
     expect(Array.from(items).map((n) => n.getAttribute('data-priority'))).toEqual(['drift', 'pending']);
   });
 
-  it('clicking an entry dispatches pendingNavigation to the exact catalog + entity', () => {
+  it('clicking an entry dispatches pendingNavigation to the exact catalog + entity + flagged step', () => {
     coachMock.mockReturnValue([
-      cand({ entityId: 'e1', catalogId: 'items' }),
-      cand({ entityId: 'e2', catalogId: 'armor', catalogLabel: 'Armor', priority: 'pending' }),
+      cand({ entityId: 'e1', catalogId: 'items', stepIndex: 3 }),
+      cand({ entityId: 'e2', catalogId: 'armor', catalogLabel: 'Armor', priority: 'pending', stepIndex: 1 }),
     ]);
     const { container } = render(<GlobalCoach t={LIGHT} />);
 
-    // top item
+    // top item — the payload carries the flagged step so Baseline opens ON it (not step 0).
     fireEvent.click(container.querySelector('[data-testid="global-coach-item-0"]') as HTMLElement);
-    expect(useOneShotLabStore.getState().pendingNavigation).toEqual({ catalogId: 'items', entityId: 'e1' });
+    expect(useOneShotLabStore.getState().pendingNavigation).toEqual({ catalogId: 'items', entityId: 'e1', stepIndex: 3 });
 
     // expand + click the second
     fireEvent.click(container.querySelector('[data-testid="global-coach-toggle"]') as HTMLElement);
     fireEvent.click(container.querySelector('[data-testid="global-coach-item-1"]') as HTMLElement);
-    expect(useOneShotLabStore.getState().pendingNavigation).toEqual({ catalogId: 'armor', entityId: 'e2' });
+    expect(useOneShotLabStore.getState().pendingNavigation).toEqual({ catalogId: 'armor', entityId: 'e2', stepIndex: 1 });
+  });
+
+  it('shows the concrete checker reason on a candidate that carries one (and falls back to the generic hint otherwise)', () => {
+    coachMock.mockReturnValue([
+      cand({ entityId: 'e1', priority: 'fail', reason: 'price/power 1.43x out of band' }),
+      cand({ entityId: 'e2', catalogId: 'armor', catalogLabel: 'Armor', priority: 'pending' }), // no reason
+    ]);
+    const { container } = render(<GlobalCoach t={LIGHT} />);
+
+    // top item (fail) surfaces the verbatim reason.
+    expect(container.querySelector('[data-testid="global-coach-item-0-reason"]')?.textContent).toContain('price/power 1.43x out of band');
+
+    // the pending item (no reason) renders no reason node — the generic hint stays in aria-label.
+    fireEvent.click(container.querySelector('[data-testid="global-coach-toggle"]') as HTMLElement);
+    expect(container.querySelector('[data-testid="global-coach-item-1-reason"]')).toBeNull();
+    const item1 = container.querySelector('[data-testid="global-coach-item-1"]') as HTMLElement;
+    expect(item1.getAttribute('aria-label')).toContain('not been produced');
   });
 });

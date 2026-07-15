@@ -54,6 +54,13 @@ export interface CoachCandidate {
   step: string;
   stepIndex: number;
   priority: CoachPriority;
+  /**
+   * The concrete checker reason behind this candidate (fail/deferred: the derived
+   * artifact's reason; drift: the local-vs-server verdict). Undefined when none is
+   * available — the row falls back to the generic {@link COACH_HINT} text (we never
+   * invent a reason).
+   */
+  reason?: string;
 }
 
 /**
@@ -127,9 +134,16 @@ export function buildGlobalCoach(inputs: CoachCatalogInput[], topN: number): Coa
         for (const [step, art] of serverRow) { serverArts[step] = art; serverAsLocal[step] = asLocal(art); }
       }
       const effective = { ...serverAsLocal, ...(cin.localByEntity[e.id] ?? {}) }; // add-only: local wins
-      const { displayStatus, driftByStep } = deriveEntityArtifacts(cin.catalogId, e, cin.steps, effective, serverArts);
+      const { displayStatus, driftByStep, artifactByStep } = deriveEntityArtifacts(cin.catalogId, e, cin.steps, effective, serverArts);
       const issue = pickEntityIssue(cin.steps, displayStatus, driftByStep);
       if (!issue) continue;
+      // The concrete reason: for drift, the local-vs-server disagreement; otherwise the
+      // reason carried on the derived artifact (fail/deferred checker output). Undefined
+      // for a pending step (nothing has run yet) → the row shows the generic hint.
+      const drift = driftByStep.get(issue.step);
+      const reason = issue.priority === 'drift'
+        ? (drift ? `local reads ${drift.local}, server says ${drift.server}` : undefined)
+        : artifactByStep.get(issue.step)?.reason;
       candidates.push({
         catalogId: cin.catalogId,
         catalogLabel: cin.catalogLabel,
@@ -138,6 +152,7 @@ export function buildGlobalCoach(inputs: CoachCatalogInput[], topN: number): Coa
         step: issue.step,
         stepIndex: issue.index,
         priority: issue.priority,
+        ...(reason ? { reason } : {}),
       });
     }
   }

@@ -10,6 +10,7 @@ import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 vi.mock('@/components/layout-lab/labAcceptance', () => ({
   resolveAccept: (_c: string, step: string) => (data: Record<string, unknown>) => ({
     label: step, status: (data.__status as string) ?? 'pass', tier: 'L0', detail: '',
+    ...(data.__reason ? { reason: data.__reason as string } : {}),
   }),
 }));
 
@@ -98,6 +99,20 @@ describe('buildGlobalCoach — cross-catalog aggregation via deriveEntityArtifac
     // fail (catalog X) outranks pending (catalog Y).
     expect(ranked[0]).toMatchObject({ catalogId: 'x', entityId: 'e-x', priority: 'fail', step: 'B', stepIndex: 1 });
     expect(ranked[1]).toMatchObject({ catalogId: 'y', entityId: 'e-y', priority: 'pending', step: 'A', stepIndex: 0 });
+  });
+
+  it('carries the concrete checker reason on a fail candidate (from the derived artifact)', () => {
+    const withReason: LabStepArtifact = { done: true, data: { __status: 'fail', __reason: 'price/power 1.43x out of band' }, ueAssets: [], at: '' };
+    const inputs = [catalogInput('x', 'Catalog X', [entity('e-x')], { 'e-x': { A: localArt('pass'), B: withReason } })];
+    const ranked = buildGlobalCoach(inputs, 5);
+    expect(ranked[0]).toMatchObject({ priority: 'fail', step: 'B', reason: 'price/power 1.43x out of band' });
+  });
+
+  it('leaves reason undefined when the checker provides none (pending step)', () => {
+    const inputs = [catalogInput('y', 'Catalog Y', [entity('e-y')], {})]; // no artifacts → pending
+    const ranked = buildGlobalCoach(inputs, 5);
+    expect(ranked[0].priority).toBe('pending');
+    expect(ranked[0].reason).toBeUndefined();
   });
 
   it('omits config-complete entities and respects topN', () => {
