@@ -123,9 +123,27 @@ export interface RunIdentity {
  * resumable; fork when the prior run is terminal-done; fresh when no run-meta.
  * `forceFork` always forks from an existing run-meta (records the parent).
  */
-export function resolveRunIdentity(statePath: string, opts: { forceFork?: boolean } = {}): RunIdentity {
+export function resolveRunIdentity(
+  statePath: string,
+  opts: { forceFork?: boolean; projectPath?: string } = {},
+): RunIdentity {
   const meta = readRunMeta(statePath);
   if (!meta) return { mode: 'fresh' };
+  // A start that supplies a DIFFERENT projectPath than the one this statePath's
+  // run belongs to must never silently continue the prior run — the plan/progress
+  // on disk describe another tree. Refusal (thrown, surfaced as a 400) beats both
+  // guessing and a mismatched resume; the caller picks a new statePath or passes
+  // fork:true to descend from the prior run explicitly.
+  if (
+    opts.projectPath &&
+    path.resolve(opts.projectPath) !== path.resolve(meta.projectPath) &&
+    !opts.forceFork
+  ) {
+    throw new Error(
+      `statePath ${statePath} belongs to project ${meta.projectPath}, not ${opts.projectPath} — ` +
+      `use a different statePath, or pass fork:true to descend from run ${meta.runId} explicitly`,
+    );
+  }
   if (opts.forceFork) return { mode: 'fork', parentRunId: meta.runId };
   const prior = getRun(meta.runId);
   // A run-meta whose DB row vanished but whose plan is still on disk is treated
