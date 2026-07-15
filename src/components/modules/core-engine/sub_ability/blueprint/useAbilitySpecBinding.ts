@@ -115,7 +115,14 @@ export function useAbilitySpecBinding({ moduleId, effects, tagRules, onHydrate }
   }, [entityId, loadSpec]);
 
   const save = useCallback(async () => {
-    const record: EnrichedAbilitySpec = { catalogId: SPEC_CATALOG_ID, entityId, effects, tagRules };
+    // Carry forward any adoption provenance the entity already holds — a manual
+    // effects/tagRules tweak must not silently wipe the forged-C++ audit trail.
+    // (Provenance is only ever replaced by a new Adopt, never by Save.)
+    const existing = useAbilitySpecStore.getState().getSpec(SPEC_CATALOG_ID, entityId);
+    const record: EnrichedAbilitySpec = {
+      catalogId: SPEC_CATALOG_ID, entityId, effects, tagRules,
+      ...(existing?.provenance ? { provenance: existing.provenance } : {}),
+    };
     setSaveState('saving');
     setError(null);
     const res = await tryApiFetch<EnrichedAbilitySpec>('/api/ability-spec', {
