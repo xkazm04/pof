@@ -43,10 +43,28 @@ recovery, 2.3 m forward — the clip the old Mixamo pipeline could never carry. 
 anim-FBX export with `export_preview_mesh=True` asserts under both `-nullrhi` and `-RenderOffScreen`
 (anim-only export works); judge retargets by the AnimPose probe + Persona, not Blender box-proxy renders.
 
+## In-game — DONE 2026-07-15 (session 3, pof-exp `70be0e8`): the FULL loop is closed
+
+`ardy_montage.py`: `AM_Dodge_Forward` turned out to be an **EMPTY placeholder** (0.00 s, no
+skeleton/deps — the roll never had a real animation); replaced with a montage built from
+`roll_Anim_Manny` (root motion on, DefaultSlot; original backed up `_PreArdy`). BP_VSPlayer's
+skeleton (`/MoverTests` SK_Mannequin) = the retarget target, so the swap is direct.
+**Proven live through the scenario harness** (experiment API, walk + `activate_ability
+Ability.Dodge`): behavioralVerdict **PASS** — montage played, 766 u displacement, the speed
+profile shows root motion driving the roll (600 walk → 61–264 during the montage → rest); the
+peak-action frame shows the player mid-tumble in the VerticalSlice arena.
+
+**text prompt → ARDY → BVH → FBX → UE import → IK retarget to Manny → GAS dodge montage →
+observed + rendered in live gameplay.** Headless, $0, one session per hop.
+
+Scenario-harness notes: injected input ACTIONS need an explicit `value` (`[1,0]` for buttons —
+a value-less action injects (0,0) and never triggers); the `activate_ability` event verb
+(gameplay tag) is the reliable path for firing abilities.
+
 ## Remaining build (the productization, not the proof)
 
-- **Play on the VerticalSlice player:** montage wiring for slash/roll + locomotion blend for run/idle
-  (the `-game` scenario harness can then capture them in-game — the full L4 loop).
+- Slash/idle/run wiring: `AM_MeleeCombo` is also an empty placeholder but GA_MeleeAttack expects
+  combo SECTIONS — author a sectioned montage (or generate 3 slash variants) before swapping.
 - **`ardy-runner.ts`** seam + job store (mirror hunyuan-runner) + provider registration so the app can
   dispatch prompts; Tier-1 motion-sanity gate from the npz (foot contacts + root continuity — the
   numeric gate above, productized); Qwen filmstrip critique via `anim-critique/`.
