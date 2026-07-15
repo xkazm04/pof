@@ -64,6 +64,6 @@ describe('POST /api/one-shot/propose', () => {
     const lastCall = vi.mocked(startExecution).mock.calls.at(-1)!;
     expect(lastCall[4]).toMatchObject({ enableMcp: true });
     // Spend-ledger attribution rides along with every autonomous spawn.
-    expect(lastCall[4].attribution?.taskType).toBe('one-shot-propose');
+    expect(lastCall[4]?.attribution?.taskType).toBe('one-shot-propose');
   });
 });
