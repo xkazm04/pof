@@ -31,12 +31,22 @@ Four game verbs generated and imported end-to-end:
    see the updated `interchange-fbx-commandlet-crash` gotcha). Result: SkeletalMesh + Skeleton +
    AnimSequence per clip under `/Game/Generated/Ardy/<name>/` (verified 3.95 s each).
 
+## Retarget to Manny — DONE 2026-07-15 (session 2, pof-exp `efd64c9`)
+
+`Content/Python/ardy_retarget.py`: shared-skeleton re-import (anim-only onto slash's skeleton) →
+`IK_ArdyCore` (the 5.8 **auto-template matched** the Mixamo-convention Core-27 — zero manual chains) →
+`RTG_ArdyToManny` (existing `IK_Manny` target, `add_default_ops` + FUZZY auto-map) →
+`duplicate_and_retarget` → `/Game/Generated/Ardy/Manny/*_Anim_Manny`. **Numerically verified**
+(`ardy_anim_probe.py`, `AnimPoseExtensions.get_anim_pose_at_time(seq, t, AnimPoseEvaluationOptions())`):
+the **dodge roll retargets clean** — full inversion (head 6 cm off ground, feet airborne at t≈1.1 s) →
+recovery, 2.3 m forward — the clip the old Mixamo pipeline could never carry. Headless pitfalls learned:
+anim-FBX export with `export_preview_mesh=True` asserts under both `-nullrhi` and `-RenderOffScreen`
+(anim-only export works); judge retargets by the AnimPose probe + Persona, not Blender box-proxy renders.
+
 ## Remaining build (the productization, not the proof)
 
-- **Retarget to the game skeleton:** ARDY Core-27 bone names are Mixamo-convention (Hips/Spine1-3/
-  RightForeArm/LeftUpLeg…) — `Content/Python/mixamo_retarget.py`'s fuzzy chain mapping applies nearly
-  verbatim (Spine→Spine2, arms, legs, neck chains all present). IK Retargeter → UE5 Manny → play on
-  the VerticalSlice player.
+- **Play on the VerticalSlice player:** montage wiring for slash/roll + locomotion blend for run/idle
+  (the `-game` scenario harness can then capture them in-game — the full L4 loop).
 - **`ardy-runner.ts`** seam + job store (mirror hunyuan-runner) + provider registration so the app can
   dispatch prompts; Tier-1 motion-sanity gate from the npz (foot contacts + root continuity — the
   numeric gate above, productized); Qwen filmstrip critique via `anim-critique/`.
