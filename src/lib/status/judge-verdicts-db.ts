@@ -20,6 +20,10 @@ export interface JudgeVerdict {
   score: number;
   /** The judge's concrete findings (why it passed/failed). */
   findings: string;
+  /** Per-dimension 0-100 craft scores keyed by the rubric dimension (Quality Program WS2;
+   *  see src/lib/judge/dimensions.ts). Absent on verdicts scored before this column existed —
+   *  the flat `score` remains the source of truth; these enrich the detail views when present. */
+  dimensions?: Record<string, number>;
   /** Model/panel identity for auditability (e.g. 'sonnet-fleet-w1', 'qwen3-vl-4b'). */
   model: string;
   /** Thinking effort the judge ran at (Quality Program WS0: 'low'..'max'). */
@@ -51,11 +55,31 @@ function ensureTable() {
   const cols = new Set((getDb().prepare('PRAGMA table_info(judge_verdicts)').all() as { name: string }[]).map((c) => c.name));
   if (!cols.has('effort')) getDb().exec("ALTER TABLE judge_verdicts ADD COLUMN effort TEXT NOT NULL DEFAULT ''");
   if (!cols.has('rubric_version')) getDb().exec('ALTER TABLE judge_verdicts ADD COLUMN rubric_version INTEGER NOT NULL DEFAULT 1');
+  // Nullable JSON (no default) — old rows stay NULL and render exactly as before (WS2).
+  if (!cols.has('dimensions')) getDb().exec('ALTER TABLE judge_verdicts ADD COLUMN dimensions TEXT');
   tableEnsured = true;
+}
+
+/** Parse the stored dimensions JSON into a `{ key: number }` map, tolerating legacy NULL /
+ *  malformed rows (they simply yield no dimensions — never throw). */
+function parseDimensions(raw: unknown): Record<string, number> | undefined {
+  if (typeof raw !== 'string' || raw === '') return undefined;
+  try {
+    const o = JSON.parse(raw) as unknown;
+    if (!o || typeof o !== 'object' || Array.isArray(o)) return undefined;
+    const out: Record<string, number> = {};
+    for (const [k, v] of Object.entries(o as Record<string, unknown>)) {
+      if (typeof v === 'number' && Number.isFinite(v)) out[k] = v;
+    }
+    return Object.keys(out).length ? out : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /** Row → JudgeVerdict. Pure (exported for unit test). */
 export function rowToVerdict(row: Record<string, unknown>): JudgeVerdict {
+  const dimensions = parseDimensions(row.dimensions);
   return {
     catalogId: row.catalog_id as string,
     entityId: row.entity_id as string,
@@ -67,6 +91,7 @@ export function rowToVerdict(row: Record<string, unknown>): JudgeVerdict {
     model: (row.model as string) ?? '',
     ...(row.effort ? { effort: row.effort as string } : {}),
     ...(row.rubric_version != null ? { rubricVersion: Number(row.rubric_version) } : {}),
+    ...(dimensions ? { dimensions } : {}),
     ...(row.judged_at ? { judgedAt: row.judged_at as string } : {}),
   };
 }
@@ -81,13 +106,14 @@ export function listVerdicts(catalogId?: string): JudgeVerdict[] {
 
 export function upsertVerdict(v: JudgeVerdict): JudgeVerdict {
   ensureTable();
+  const dimensionsJson = v.dimensions && Object.keys(v.dimensions).length ? JSON.stringify(v.dimensions) : null;
   getDb().prepare(`
-    INSERT INTO judge_verdicts (catalog_id, entity_id, step, judge, verdict, score, findings, model, effort, rubric_version, judged_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    INSERT INTO judge_verdicts (catalog_id, entity_id, step, judge, verdict, score, findings, model, effort, rubric_version, dimensions, judged_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
     ON CONFLICT (catalog_id, entity_id, step, judge) DO UPDATE SET
       verdict = excluded.verdict, score = excluded.score, findings = excluded.findings,
       model = excluded.model, effort = excluded.effort, rubric_version = excluded.rubric_version,
-      judged_at = excluded.judged_at
-  `).run(v.catalogId, v.entityId, v.step, v.judge, v.verdict, Math.round(v.score), v.findings, v.model, v.effort ?? '', v.rubricVersion ?? 1);
+      dimensions = excluded.dimensions, judged_at = excluded.judged_at
+  `).run(v.catalogId, v.entityId, v.step, v.judge, v.verdict, Math.round(v.score), v.findings, v.model, v.effort ?? '', v.rubricVersion ?? 1, dimensionsJson);
   return v;
 }

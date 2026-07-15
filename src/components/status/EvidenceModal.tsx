@@ -13,7 +13,10 @@ import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Modal } from '@/components/ui/Modal';
 import { fetchArtifacts } from '@/components/layout-lab/labArtifactClient';
+import { DimensionScoreBars } from '@/components/ui/DimensionScoreBars';
+import { tryApiFetch } from '@/lib/api-utils';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
+import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
 import type { StepCell } from '@/lib/status/statusModel';
 import { readProvenance } from '@/lib/provenance';
 
@@ -112,6 +115,7 @@ function ProofPanel({ data }: { data: Data }) {
 
 export function EvidenceModal({ catalogId, step, cell, onClose }: { catalogId: string; step: string; cell: StepCell; onClose: () => void }) {
   const [arts, setArts] = useState<PipelineArtifact[] | null>(null);
+  const [verdicts, setVerdicts] = useState<JudgeVerdict[]>([]);
   const [idx, setIdx] = useState(0);
 
   // The modal is remounted per cell (keyed in PipelinesView), so state starts fresh —
@@ -119,11 +123,26 @@ export function EvidenceModal({ catalogId, step, cell, onClose }: { catalogId: s
   useEffect(() => {
     let live = true;
     fetchArtifacts(catalogId).then((all) => { if (live) setArts(all.filter((a) => a.step === step)); });
+    // The judged projection on the cell carries the verdict summary but not the per-dimension
+    // scores; fetch the raw verdicts for this catalog so the detail view can show them (WS2).
+    tryApiFetch<JudgeVerdict[]>(`/api/judge-verdicts?catalogId=${encodeURIComponent(catalogId)}`)
+      .then((r) => { if (live && r.ok) setVerdicts(r.data.filter((v) => v.step === step)); });
     return () => { live = false; };
   }, [catalogId, step]);
 
   const art = arts?.[idx];
   const j = cell.judged;
+
+  // Per-dimension scores for the currently shown entity: match verdicts on entity, prefer the
+  // newest rubric, and among those the one that actually carries dimensions.
+  const dimensions = useMemo(() => {
+    if (!art) return undefined;
+    const matching = verdicts.filter((v) => v.entityId === art.entityId);
+    if (!matching.length) return undefined;
+    const newestRubric = matching.reduce((mx, v) => Math.max(mx, v.rubricVersion ?? 1), 0);
+    const withDims = matching.filter((v) => (v.rubricVersion ?? 1) === newestRubric && v.dimensions);
+    return withDims[0]?.dimensions;
+  }, [art, verdicts]);
   const proofKind = useMemo(() => {
     if (!art) return '';
     const d = art.data as Data;
@@ -168,7 +187,16 @@ export function EvidenceModal({ catalogId, step, cell, onClose }: { catalogId: s
             <span style={{ color: 'var(--lab-muted)', fontFamily: mono, fontSize: 12 }}> · {j.model}{j.effort ? `/${j.effort}` : ''}{j.rubricVersion != null ? ` · rubric v${j.rubricVersion}` : ''}</span>
             <div style={{ marginTop: 5, color: 'var(--lab-text)', lineHeight: 1.5 }}>{j.findings}</div>
           </div>
-        ) : (
+        ) : null}
+
+        {/* Per-dimension craft scores for this entity, when the verdict recorded them (WS2). */}
+        {dimensions && (
+          <div style={{ marginBottom: 14 }}>
+            <DimensionScoreBars dimensions={dimensions} variant="lab" />
+          </div>
+        )}
+
+        {!j && (
           <div style={{ fontSize: 13, color: 'var(--lab-muted)', padding: '8px 12px', marginBottom: 14, borderLeft: '3px solid var(--lab-line)', ...surface }}>
             No content-quality judgment{cell.judge ? ` — would need a ${cell.judge} judge` : ''}{cell.checkerMeaningful === false ? ' · checker is shape-only' : ''}.
             {cell.reason ? ` (${cell.reason})` : ''}

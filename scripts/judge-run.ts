@@ -131,11 +131,15 @@ async function judgeOne(catalogId: string, art: Artifact, entityArtifacts: Artif
 
   const judge = cls === 'text-config' ? 'llm-panel' : 'vlm';
   const canonTag = NO_CANON ? '' : '+canon';
+  // Persist the median draw's per-dimension scores (WS2) so the detail views can show WHERE
+  // the asset is weak, not just the aggregate. Absent/empty → omitted (column stays NULL).
+  const dimensions = res.dimensions && Object.keys(res.dimensions).length ? res.dimensions : undefined;
   const body = {
     catalogId, entityId: art.entityId, step: art.step, judge,
     verdict, score: res.score,
     findings: `[rubric v${RUBRIC_VERSION}${canonTag}]${spread} ${res.findings} FIX: ${res.fix}`.slice(0, 1500),
     model: policy.modelId, effort: policy.effort, rubricVersion: RUBRIC_VERSION,
+    ...(dimensions ? { dimensions } : {}),
   };
   const r = await fetch(`${ORIGIN}/api/judge-verdicts`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
   const ok = (await r.json()).success !== false;

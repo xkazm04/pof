@@ -4,6 +4,7 @@ import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
 import { Modal } from '@/components/ui/Modal';
 import { MeterBar } from '@/components/ui/MeterBar';
 import { StatusTag } from '@/components/ui/StatusTag';
+import { DimensionScoreBars } from '@/components/ui/DimensionScoreBars';
 import { qualityColor } from '@/lib/chart-colors';
 
 const JUDGE_LABEL: Record<JudgeVerdict['judge'], string> = {
@@ -41,6 +42,8 @@ export function VerdictDetailModal({ verdict, onClose }: { verdict: JudgeVerdict
           {verdict.model}{verdict.effort ? ` · effort ${verdict.effort}` : ''}{verdict.rubricVersion != null ? ` · rubric v${verdict.rubricVersion}` : ''}
           {verdict.judgedAt ? ` · ${verdict.judgedAt}` : ''}
         </p>
+
+        {verdict.dimensions && <DimensionScoreBars dimensions={verdict.dimensions} />}
 
         <section className="space-y-1">
           <h3 className="text-2xs uppercase tracking-wider text-text-muted font-medium">Findings</h3>

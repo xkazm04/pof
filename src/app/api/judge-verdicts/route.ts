@@ -24,6 +24,8 @@ const verdictSchema = z.object({
   model: z.string().min(1),
   effort: z.string().optional(),
   rubricVersion: z.number().int().optional(),
+  /** Per-dimension 0-100 craft scores (WS2). Additive — old clients omit it. */
+  dimensions: z.record(z.string(), z.number().min(0).max(100)).optional(),
 });
 
 /** POST /api/judge-verdicts — upsert one judgment. Unlike pipeline-artifacts there is
