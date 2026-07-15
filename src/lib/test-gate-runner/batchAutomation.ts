@@ -20,6 +20,7 @@ import { join } from 'node:path';
 import { logger } from '@/lib/logger';
 import type { GateEvidence } from '@/types/observation';
 import { readAbslogFacts, scopeAbslogPerTest, ZERO_MATCH_DETAIL } from '@/lib/ue-automation/abslog';
+import { annotateZeroMatchDetail } from '@/lib/ue-test-scaffold/generate';
 import type { GateVerdict } from './types';
 
 /** The watchdog-protected spawn seam (`spawnAndWait` in the executor); injectable for tests. */
@@ -140,7 +141,12 @@ function entryFailed(t: ReportEntry): boolean {
 function toVerdict(testName: string, r: ReportVerdict, source: 'report' | 'abslog'): GateVerdict {
   const status = r.status === 'unregistered' ? 'deferred' : r.status;
   const evidence: GateEvidence = { kind: 'automation', at: new Date().toISOString(), markers: [r.detail] };
-  return { status, detail: `${testName}: ${r.detail}`, evidence, raw: { source } };
+  // A zero-match deferred is a PLANNED test — annotate that a scaffold can be generated for it, so
+  // /status + the drain distinguish "planned, scaffold available" from an opaque deferred wait.
+  const detail = r.status === 'unregistered'
+    ? annotateZeroMatchDetail(`${testName}: ${r.detail}`)
+    : `${testName}: ${r.detail}`;
+  return { status, detail, evidence, raw: { source } };
 }
 
 export interface BatchAutomationOptions {

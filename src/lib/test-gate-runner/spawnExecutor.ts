@@ -12,6 +12,7 @@ import {
   type Observations,
   type ScenarioInboxOptions,
 } from '@/types/observation';
+import { annotateZeroMatchDetail } from '@/lib/ue-test-scaffold/generate';
 import { parseAbslogVerdict, runBatchAutomation, type SpawnFn } from './batchAutomation';
 import type { GateAssertion, GateExecutor, GateJob, GateScenario, GateVerdict } from './types';
 
@@ -313,7 +314,11 @@ export function makeSpawnExecutor(opts: SpawnExecutorOptions = {}): GateExecutor
     const status = v.status === 'unregistered' ? 'deferred' : v.status;
     // Evidence: the abslog marker line that decided the verdict.
     const evidence: GateEvidence = { kind: 'automation', at: new Date().toISOString(), markers: [v.detail] };
-    return { status, detail: `${job.testName}: ${v.detail}`, evidence, raw: { abslog, timedOut } };
+    // A zero-match deferred is PLANNED — note a scaffold can be generated (planned vs opaque wait).
+    const detail = v.status === 'unregistered'
+      ? annotateZeroMatchDetail(`${job.testName}: ${v.detail}`)
+      : `${job.testName}: ${v.detail}`;
+    return { status, detail, evidence, raw: { abslog, timedOut } };
   }
 
   return {
