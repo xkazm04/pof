@@ -14,6 +14,7 @@ import { HeatmapGrid } from './HeatmapGrid';
 import { ModuleDetailPanel } from './ModuleDetailPanel';
 import { WorstModulesPanel } from './WorstModulesPanel';
 import { StaleReviewsPanel } from './StaleReviewsPanel';
+import { QualityDiscrepancyBanner } from './QualityDiscrepancyBanner';
 
 // ─── Component ──────────────────────────────────────────────────────────────────
 
@@ -158,6 +159,8 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
 
   return (
     <div className="space-y-5">
+      <QualityDiscrepancyBanner cells={cells} />
+
       <SummaryPanels
         overallPct={overallPct}
         totals={totals}
