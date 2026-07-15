@@ -59,9 +59,9 @@ export const UE_GOTCHAS: Gotcha[] = [
   {
     id: 'interchange-fbx-commandlet-crash',
     modules: ['character', 'animation'],
-    summary: 'UE 5.7 FBX import via Interchange crashes under -run=pythonscript',
+    summary: 'FBX import via Interchange breaks under -run=pythonscript (5.7 crash; 5.8 silent "nothing to import") — disable the Interchange FBX flag and use the legacy path',
     detail:
-      'The Interchange FBX path crashes in the pythonscript commandlet. Import FBX with the full editor via UnrealEditor.exe -ExecutePythonScript= instead of -run=pythonscript.',
+      'The Interchange FBX path does not work in the pythonscript commandlet: UE 5.7 crashes; UE 5.8 intercepts AssetImportTask even when task.options is a legacy FbxImportUI and fails with LogInterchangeEngine "There was nothing to import from the provided source data using the chosen pipeline options" (imported_object_paths comes back empty). Fix (proven on 5.8.0): run unreal.SystemLibrary.execute_console_command(None, "Interchange.FeatureFlags.Import.FBX 0") at the top of the script — the import then routes through the legacy FBXImport honoring FbxImportUI, and skeletal FBX (mesh + skeleton + AnimSequence) imports fine headless. Also ensure the FBX actually CONTAINS a skinned mesh: a Blender export with use_selection that selects only the armature yields a mesh-less FBX and the legacy path fails with a bare "Import failed".',
     appliesTo: ['ue-python'],
     source: 'vertical-slice: characters',
   },

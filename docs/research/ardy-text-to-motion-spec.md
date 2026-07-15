@@ -1,8 +1,48 @@
-# ARDY text→motion engine for PoF (spec — not built)
+# ARDY text→motion engine for PoF (PROTOTYPE PROVEN 2026-07-15)
 
 > Source: /research run 2026-07-14 (Stefan 3D AI, "NVIDIA ARDY: The Real-Time Leap in AI Animation").
 > Verified: [nv-tlabs/ardy](https://github.com/nv-tlabs/ardy) — SIGGRAPH 2026, NVIDIA Toronto AI Lab.
-> Status: **spec + descoped-reopenable** — blocked on the local ARDY install (user-gated), see Gates.
+> Status: **END-TO-END PROVEN LIVE 2026-07-15** — text prompt → UE 5.8 AnimSequence, fully headless, $0.
+
+## Proven pipeline (2026-07-15)
+
+Install at `C:/Users/kazda/kiro/ardy` (`.venv`, torch 2.13+cu126, transformers 5.8.1; `pip install -e .
+--no-cache-dir` — the C++ motion-correction extension builds cleanly with pip-provided CMake + VS2022).
+Four game verbs generated and imported end-to-end:
+
+1. **Generate** — `TEXT_ENCODERS_DIR=<root>/text_encoders TEXT_ENCODER_MODE=local .venv/Scripts/python
+   scripts/generate.py "<prompt>" --model core --duration 4 --seed 0 --output <name>` (~1 s of GPU compute
+   per 4 s clip after load). Gated-Llama workaround: the LLM2Vec base is assembled locally under
+   `text_encoders/McGill-NLP/...-mntp/` = McGill config/tokenizer/adapter + Llama-3-8B-Instruct weights
+   from the public NousResearch mirror (byte-identical, same Llama 3 Community License) — no code edits,
+   `TEXT_ENCODERS_DIR` handles the rest. VRAM ~15 GB total on the 4090.
+2. **Verify** — `scripts/visual-gen/ardy/pof_filmstrip.py` (stick-figure strip from `posed_joints`; Y-up,
+   root-centered) + numeric gates (slash in place, run 8.3 m @ 5.1 m/s peak w/ flight phases, roll 2.4 m
+   w/ full tuck, idle static — all coherent on first try, seed 0).
+3. **Convert** — `scripts/visual-gen/ardy/pof_npz_to_bvh.py`: ARDY's FK is exactly BVH semantics
+   (`global = parent ∘ [R_local | rest-offset]`), so BVH is a faithful re-parameterization; the script
+   FK-round-trips against `posed_joints` and refuses to write on mismatch (**0.000 mm** on all 4 clips —
+   the anti-scramble gate).
+4. **FBX** — `scripts/visual-gen/ardy/pof_bvh_blender.py` (Blender 4.2 headless): BVH import → render
+   verification tiles → **skinned proxy mesh** (box per bone, 100% weight) → FBX (no leaf bones). The
+   skinned mesh is REQUIRED — armature-only FBX fails UE skeletal import.
+5. **UE import** — `Content/Python/ardy_import.py` via the proven `-run=pythonscript` commandlet, with
+   `Interchange.FeatureFlags.Import.FBX 0` forced (5.8 Interchange otherwise ignores FbxImportUI —
+   see the updated `interchange-fbx-commandlet-crash` gotcha). Result: SkeletalMesh + Skeleton +
+   AnimSequence per clip under `/Game/Generated/Ardy/<name>/` (verified 3.95 s each).
+
+## Remaining build (the productization, not the proof)
+
+- **Retarget to the game skeleton:** ARDY Core-27 bone names are Mixamo-convention (Hips/Spine1-3/
+  RightForeArm/LeftUpLeg…) — `Content/Python/mixamo_retarget.py`'s fuzzy chain mapping applies nearly
+  verbatim (Spine→Spine2, arms, legs, neck chains all present). IK Retargeter → UE5 Manny → play on
+  the VerticalSlice player.
+- **`ardy-runner.ts`** seam + job store (mirror hunyuan-runner) + provider registration so the app can
+  dispatch prompts; Tier-1 motion-sanity gate from the npz (foot contacts + root continuity — the
+  numeric gate above, productized); Qwen filmstrip critique via `anim-critique/`.
+- **License check** before shipping generated motion: ARDY weights = NVIDIA Open Model license; the
+  encoder base = Llama 3 Community License (also: request official meta-llama HF access to retire the
+  mirror workaround).
 
 ## What ARDY is (verified against the repo, not just the video)
 
