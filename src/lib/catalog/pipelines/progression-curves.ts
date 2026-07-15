@@ -480,14 +480,17 @@ registerCatalogPipeline({
     {
       archetype: 'balance',
       label: 'Balance',
+      // Pacing budget bars: minutes-to-next-level against the target pace.
       view: {
-        kind: 'table',
+        kind: 'chart',
+        variant: 'bars',
         field: 'balance',
-        columns: [
-          { key: 'minutesToNextLevel' },
-          { key: 'targetMinutes' },
-          { key: 'derivation' },
+        rows: [
+          { key: 'minutesToNextLevel', label: 'L50→L51', unit: ' min' },
+          { key: 'targetMinutes', label: 'Target', unit: ' min' },
         ],
+        highlightKey: 'minutesToNextLevel',
+        max: 56,
       },
       produce: () => {
         // Balance metric: minutes to reach L51 from L50 (the mid-game baseline check).

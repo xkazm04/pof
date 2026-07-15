@@ -240,10 +240,17 @@ registerCatalogPipeline({
     {
       archetype: 'balance',
       label: 'Balance',
+      // DPS budget bars: sustained DPS (the checked metric) against the tier target,
+      // with the raw hit-DPS component for context. (The old table listed a `burstDPS`
+      // column the produce never wrote — a permanently-null cell; the chart uses the
+      // fields that actually exist.)
       view: {
-        kind: 'table',
+        kind: 'chart',
+        variant: 'bars',
         field: 'balance',
-        columns: [{ key: 'burstDPS' }, { key: 'sustainedDPS' }, { key: 'tierTarget' }],
+        rows: [{ key: 'sustainedDPS', label: 'Sustained' }, { key: 'tierTarget', label: 'Tier target' }, { key: 'hitDPS', label: 'Hit DPS' }],
+        highlightKey: 'sustainedDPS',
+        max: 24,
       },
       produce: () => {
         // Burst DPS model:

@@ -153,10 +153,14 @@ registerCatalogPipeline({
     {
       archetype: 'balance',
       label: 'Balance',
+      // Faucet-vs-sink budget bars: the two flows side by side make the imbalance visible.
       view: {
-        kind: 'table',
+        kind: 'chart',
+        variant: 'bars',
         field: 'balance',
-        columns: [{ key: 'faucetPerHour' }, { key: 'sinkPerHour' }, { key: 'imbalancePct' }, { key: 'derivation' }],
+        rows: [{ key: 'faucetPerHour', label: 'Faucet/hr' }, { key: 'sinkPerHour', label: 'Sink/hr' }],
+        highlightKey: 'faucetPerHour',
+        max: 130,
       },
       produce: () => {
         // Gold faucet derivation (areaLevel 50 session, 600 kills/hour moderate density):

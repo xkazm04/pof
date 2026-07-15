@@ -141,9 +141,13 @@ registerCatalogPipeline({
     // gpuPct is a real derived value in ms: 0.48 ms = 60% of 0.8 ms budget.
     {
       archetype: 'balance', label: 'GPU / LOD Budget',
+      // GPU cost budget bars: peak emission ms against the per-class budget ceiling
+      // (same unit) is the real story — a table buried it next to unrelated counts.
       view: {
-        kind: 'table', field: 'gpuBudget',
-        columns: [{ key: 'gpuMs', unit: 'ms' }, { key: 'lodCount' }, { key: 'particlesCap' }],
+        kind: 'chart', variant: 'bars', field: 'gpuBudget',
+        rows: [{ key: 'gpuMs', label: 'Peak', unit: 'ms' }, { key: 'classBudgetMs', label: 'Budget', unit: 'ms' }],
+        highlightKey: 'gpuMs',
+        max: 1.0,
       },
       produce: (e: LabEntity) => {
         const s = slug(e.name);

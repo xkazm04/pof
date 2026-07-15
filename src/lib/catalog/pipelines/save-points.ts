@@ -509,10 +509,14 @@ registerCatalogPipeline({
     {
       archetype: 'balance',
       label: 'Load-Time Budget',
+      // Load-time budget bars: measured synchronous load against the target ceiling.
       view: {
-        kind: 'table',
+        kind: 'chart',
+        variant: 'bars',
         field: 'loadBudget',
-        columns: [{ key: 'targetMs' }, { key: 'measuredMs' }, { key: 'derivation' }],
+        rows: [{ key: 'measuredMs', label: 'Measured', unit: 'ms' }, { key: 'targetMs', label: 'Target', unit: 'ms' }],
+        highlightKey: 'measuredMs',
+        max: 33,
       },
       produce: () => {
         // Load-time budget derivation:

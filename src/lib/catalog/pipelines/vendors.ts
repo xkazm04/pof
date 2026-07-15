@@ -269,10 +269,15 @@ registerCatalogPipeline({
     {
       archetype: 'balance',
       label: 'Economy Sim',
+      // Economy percentages as budget bars: margin (the checked metric) against markup
+      // and buyback reads clearer than a key/value table.
       view: {
-        kind: 'table',
+        kind: 'chart',
+        variant: 'bars',
         field: 'economySim',
-        columns: [{ key: 'marginPct' }, { key: 'markupPct' }, { key: 'buybackPct' }],
+        rows: [{ key: 'marginPct', label: 'Margin', unit: '%' }, { key: 'markupPct', label: 'Markup', unit: '%' }, { key: 'buybackPct', label: 'Buyback', unit: '%' }],
+        highlightKey: 'marginPct',
+        max: 60,
       },
       produce: () => {
         // Self-consistent derivation (ARPG-LAWS §10d + canon vendor-laws). Judge-fleet fix

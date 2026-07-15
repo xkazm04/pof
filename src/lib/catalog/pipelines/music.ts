@@ -390,10 +390,21 @@ registerCatalogPipeline({
     {
       archetype: 'balance',
       label: 'Mix & Loudness',
+      // Loudness band bars: measured |LUFS| against the acceptable window edges. The raw
+      // `integratedLUFS` is negative (dBLUFS), which a bar chart can't render honestly, so
+      // the chart reads the positive magnitude/band fields the produce also writes. The
+      // acceptance still derives from top-level `integratedLUFS` (16.0), unchanged.
       view: {
-        kind: 'table',
+        kind: 'chart',
+        variant: 'bars',
         field: 'loudness',
-        columns: [{ key: 'integratedLUFS' }, { key: 'truePeak' }, { key: 'stemBalance' }],
+        rows: [
+          { key: 'lufsBandFloor', label: 'Band floor', unit: ' LU' },
+          { key: 'lufsMagnitude', label: 'Measured', unit: ' LU' },
+          { key: 'lufsBandCeil', label: 'Band ceil', unit: ' LU' },
+        ],
+        highlightKey: 'lufsMagnitude',
+        max: 20,
       },
       produce: () => {
         // Loudness target: −16 LUFS integrated (game music delivery standard, headroom for SFX mix)
@@ -404,6 +415,12 @@ registerCatalogPipeline({
           data: {
             loudness: {
               integratedLUFS: -16.0,
+              // Positive magnitude + band edges for the Mix & Loudness budget-bar view
+              // (a bar chart can't render the negative dBLUFS value honestly). Display-only:
+              // acceptance derives from the top-level `integratedLUFS` magnitude below.
+              lufsMagnitude: 16.0,
+              lufsBandFloor: 14.0, // −14 LUFS (loudest acceptable)
+              lufsBandCeil: 18.0,  // −18 LUFS (quietest acceptable)
               integratedLUFSTarget: '−16 LUFS ±2 LUFS (range −14 to −18 LUFS integrated)',
               truePeakMax: '−1.0 dBTP (all stems individually and combined)',
               dynamicRange:

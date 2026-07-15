@@ -478,15 +478,18 @@ registerCatalogPipeline({
     {
       archetype: 'balance',
       label: 'Economy',
+      // Price-vs-power budget bars: vendor anchor value against the derived power score
+      // (the pair the ±20% band checks) reads clearer than a table.
       view: {
-        kind: 'table',
+        kind: 'chart',
+        variant: 'bars',
         field: 'economy',
-        columns: [
-          { key: 'baseValue' },
-          { key: 'powerScore' },
-          { key: 'pricePowerRatio' },
-          { key: 'rarityMultipliers' },
+        rows: [
+          { key: 'baseValue', label: 'Base value' },
+          { key: 'powerScore', label: 'Power score' },
         ],
+        highlightKey: 'baseValue',
+        max: 16,
       },
       produce: () => {
         // Judge-refleet fix 2026-07-07: the old version hardcoded baseValue = powerScore = 12

@@ -447,10 +447,17 @@ registerCatalogPipeline({
     {
       archetype: 'balance',
       label: 'Balance',
+      // Threat distribution histogram: the encounter's raw threat is composed of two
+      // enemy waves + the hazard zone — a distribution reads better as a histogram than a
+      // table (which also carried a `threatBudget` column the produce never wrote). The
+      // acceptance still derives from top-level `derivedThreatScore`, unchanged.
       view: {
-        kind: 'table',
+        kind: 'chart',
+        variant: 'histogram',
         field: 'balance',
-        columns: [{ key: 'threatBudget' }, { key: 'areaLevel' }, { key: 'derivedThreatScore' }],
+        keys: ['wave1Threat', 'wave2Threat', 'hazardPressure'],
+        highlightKey: 'hazardPressure',
+        max: 35,
       },
       produce: () => {
         // Threat budget derivation (per ARPG-LAWS §6c, §11, canon proj-balance ≈100 ±10%):

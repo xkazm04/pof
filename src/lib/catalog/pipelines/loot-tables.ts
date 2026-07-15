@@ -374,10 +374,14 @@ registerCatalogPipeline({
     {
       archetype: 'balance',
       label: 'Balance / Drop Sim',
+      // Drop-rate budget bars: simulated rares/hour against the tier target.
       view: {
-        kind: 'table',
+        kind: 'chart',
+        variant: 'bars',
         field: 'balance',
-        columns: [{ key: 'raresPerHour' }, { key: 'tierTarget' }, { key: 'simNotes' }],
+        rows: [{ key: 'raresPerHour', label: 'Rares/hr' }, { key: 'tierTarget', label: 'Tier target' }],
+        highlightKey: 'raresPerHour',
+        max: 16,
       },
       produce: () => {
         // Self-consistent derivation:

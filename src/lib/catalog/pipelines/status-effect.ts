@@ -191,10 +191,15 @@ registerCatalogPipeline({
     {
       archetype: 'balance',
       label: 'Balance',
+      // Damage-profile bars: sustained DPS (the checked metric) next to total ignite
+      // damage and the reference hit that drives it.
       view: {
-        kind: 'table',
+        kind: 'chart',
+        variant: 'bars',
         field: 'balance',
-        columns: [{ key: 'dps' }, { key: 'totalDamage' }, { key: 'referenceHit' }],
+        rows: [{ key: 'dps', label: 'DPS' }, { key: 'totalDamage', label: 'Total dmg' }, { key: 'referenceHit', label: 'Ref hit' }],
+        highlightKey: 'dps',
+        max: 40,
       },
       produce: () => {
         // Ignite DPS derivation:

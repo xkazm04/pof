@@ -235,10 +235,15 @@ registerCatalogPipeline({
     {
       archetype: 'balance',
       label: 'Cost & Yield',
+      // Cost-vs-yield budget bars: gold cost against output value (the ratio the checker
+      // derives) is a clearer bar pair than a table.
       view: {
-        kind: 'table',
+        kind: 'chart',
+        variant: 'bars',
         field: 'costYield',
-        columns: [{ key: 'goldCost' }, { key: 'outputValue' }, { key: 'ratio' }],
+        rows: [{ key: 'goldCost', label: 'Gold cost' }, { key: 'outputValue', label: 'Output value' }],
+        highlightKey: 'goldCost',
+        max: 28,
       },
       produce: () => {
         // Self-consistent derivation (ARPG-LAWS §10d + canon proj-balance + proj-economy):

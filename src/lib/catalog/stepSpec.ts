@@ -42,21 +42,38 @@ export type ArchetypeId =
  *
  *  The `chart` kind routes a step's numeric artifact data through the shared
  *  `ChartPanel` (steps/shared/ChartPanel.tsx) instead of a hand-rolled SVG. It reads
- *  `data[field]` as an object and maps the named keys to a ChartPanel flavor:
+ *  `data[field]` as an object and maps the named keys to a ChartPanel flavor. All FOUR
+ *  ChartPanel variants are reachable from the generic renderer:
  *   - `variant: 'bars'`      — one horizontal budget bar per `rows[]` entry (value =
  *     `field[row.key]`, label defaults to the key); `highlightKey` emphasises one bar.
- *   - `variant: 'histogram'` — one vertical bar per `keys[]` entry.
- *  `max` fixes the domain ceiling (else auto). This is what a `balance`-archetype step
- *  declares so a "budget"/"faucet-vs-sink" step renders a real chart, not a table. */
+ *   - `variant: 'histogram'` — one vertical bar per `keys[]` entry (a distribution).
+ *   - `variant: 'scatter'`   — a dashed reference curve (`field[referenceKey]`, an array
+ *     of `{x,y}`) plus optional peer/accent points (`field[pointsKey]`); `xDomain`/
+ *     `yDomain` fix the axes. Use for a curve-fit / value-vs-power scatter.
+ *   - `variant: 'waveform'`  — an oscilloscope strip from `field[samplesKey]` (a number
+ *     array); `activeKey` (a boolean field, default active) dims it when idle.
+ *  `max` fixes the bars/histogram domain ceiling (else auto). This is what a
+ *  `balance`-archetype step declares so a "budget"/"faucet-vs-sink" step renders a real
+ *  chart, not a table. `SUPPORTED_CHART_VARIANTS` is the single source of truth the fleet
+ *  spec linter (src/__tests__/catalog/pipeline-spec-linter.test.ts) checks against. */
+export const SUPPORTED_CHART_VARIANTS = ['bars', 'histogram', 'scatter', 'waveform'] as const;
+export type ChartVariant = (typeof SUPPORTED_CHART_VARIANTS)[number];
+
 export type ViewDescriptor =
   | { kind: 'prose'; field: string; emptyText: string }
   | { kind: 'table'; field: string; columns: { key: string; label?: string; unit?: string }[] }
   | { kind: 'chart'; variant: 'bars'; field: string; rows: { key: string; label?: string; unit?: string }[]; max?: number; highlightKey?: string }
   | { kind: 'chart'; variant: 'histogram'; field: string; keys: string[]; max?: number; highlightKey?: string }
+  | { kind: 'chart'; variant: 'scatter'; field: string; referenceKey: string; pointsKey?: string; xDomain: readonly [number, number]; yDomain: readonly [number, number]; xLabel?: string; yLabel?: string }
+  | { kind: 'chart'; variant: 'waveform'; field: string; samplesKey: string; activeKey?: string }
   | { kind: 'gallery'; field: string; candidates: number }
   | { kind: 'checklist'; field: string }
   | { kind: 'manifest'; field: string }
   | { kind: 'graph'; field: string };
+
+/** The View kinds the generic ViewPanel renderer supports (linter source of truth). */
+export const SUPPORTED_VIEW_KINDS = ['prose', 'table', 'chart', 'gallery', 'checklist', 'manifest', 'graph'] as const;
+export type ViewKind = (typeof SUPPORTED_VIEW_KINDS)[number];
 
 /** Per-step remediation copy: a plain-language cause (`why`), an optional suggested
  *  action (`suggestion`), and an optional corrective direction (`fixDirection`) that

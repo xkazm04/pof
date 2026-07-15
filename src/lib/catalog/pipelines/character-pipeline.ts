@@ -179,7 +179,9 @@ registerCatalogPipeline({
       archetype: 'balance',
       label: 'Game-Tier Convert',
       engine: 'Tripo',
-      view: { kind: 'table', field: 'gameTier', columns: [{ key: 'faceLimit' }, { key: 'textureSize' }, { key: 'sizeMB', unit: 'MB' }, { key: 'hqSizeMB', unit: 'MB' }] },
+      // Size budget bars: the game-tier footprint vs the HQ archive master (same unit,
+      // the ~14x sustainability story) reads clearer as a bar pair than a table.
+      view: { kind: 'chart', variant: 'bars', field: 'gameTier', rows: [{ key: 'sizeMB', label: 'Game tier', unit: 'MB' }, { key: 'hqSizeMB', label: 'HQ master', unit: 'MB' }], highlightKey: 'sizeMB', max: 66 },
       produce: () => ({
         data: {
           gameTier: {

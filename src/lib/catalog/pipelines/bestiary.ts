@@ -310,7 +310,9 @@ registerCatalogPipeline({
     // ── 8. Encounter Balance ──────────────────────────────────────────────────
     {
       archetype: 'balance', label: 'Encounter Balance',
-      view: { kind: 'table', field: 'balance', columns: [{ key: 'threat' }] },
+      // Threat budget bar: the encounter's threat against the canon tier ceiling (max 130
+      // gives headroom around the ~100 ±10% target).
+      view: { kind: 'chart', variant: 'bars', field: 'balance', rows: [{ key: 'threat', label: 'Threat' }], highlightKey: 'threat', max: 130 },
       produce: () => ({
         data: {
           balance: { threat: 103 },

@@ -526,14 +526,19 @@ registerCatalogPipeline({
     {
       archetype: 'balance',
       label: 'Memory Budget',
+      // Budget bars (shared ChartPanel): decoded footprint against target + hard cap
+      // reads far clearer as a bar trio than a key/value table.
       view: {
-        kind: 'table',
+        kind: 'chart',
+        variant: 'bars',
         field: 'memoryBudget',
-        columns: [
-          { key: 'totalDecodedMb' },
-          { key: 'budgetCapMb' },
-          { key: 'assetBreakdown' },
+        rows: [
+          { key: 'totalDecodedMb', label: 'Decoded', unit: 'MB' },
+          { key: 'budgetTargetMb', label: 'Target', unit: 'MB' },
+          { key: 'budgetCapMb', label: 'Hard cap', unit: 'MB' },
         ],
+        highlightKey: 'totalDecodedMb',
+        max: 8.5,
       },
       produce: () => {
         // Asset-by-asset decoded size estimate:

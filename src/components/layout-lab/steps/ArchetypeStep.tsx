@@ -5,7 +5,7 @@ import { StepFrame, type StepPanel } from './StepFrame';
 import { CliProduce } from './shared/CliProduce';
 import { CandidateGallery } from './shared/CandidateGallery';
 import { DataTable } from './shared/DataTable';
-import { ChartPanel, type BarsRow } from './shared/ChartPanel';
+import { ChartPanel, type BarsRow, type ScatterPoint } from './shared/ChartPanel';
 import { GlbPreviewPanel, GLB_PREVIEW_LABEL } from './shared/GlbPreviewPanel';
 import { selectedCandidate } from './shared/genHistory';
 import { useGenerativeStep } from './shared/useGenerativeStep';
@@ -79,6 +79,7 @@ export function ViewPanel({ t, view, data }: { t: LabTheme; view: ViewDescriptor
       const n = Number(v);
       return v != null && v !== '' && Number.isFinite(n) ? n : null;
     };
+    const noData = <span style={{ fontSize: 15, color: t.muted }}>No numeric data yet — run Produce.</span>;
     if (view.variant === 'bars') {
       const rows: BarsRow[] = view.rows.flatMap((r) => {
         const value = num(rec[r.key]);
@@ -86,12 +87,43 @@ export function ViewPanel({ t, view, data }: { t: LabTheme; view: ViewDescriptor
       });
       return rows.length
         ? <ChartPanel t={t} variant="bars" rows={rows} max={view.max} ariaLabel={`${view.field} budget`} />
-        : <span style={{ fontSize: 15, color: t.muted }}>No numeric data yet — run Produce.</span>;
+        : noData;
     }
-    const bars = view.keys.map((k) => ({ value: num(rec[k]) ?? 0, highlight: k === view.highlightKey }));
-    return bars.length
-      ? <ChartPanel t={t} variant="histogram" bars={bars} max={view.max} ariaLabel={`${view.field} histogram`} />
-      : <span style={{ fontSize: 15, color: t.muted }}>No numeric data yet — run Produce.</span>;
+    if (view.variant === 'histogram') {
+      const bars = view.keys.map((k) => ({ value: num(rec[k]) ?? 0, highlight: k === view.highlightKey }));
+      return bars.length
+        ? <ChartPanel t={t} variant="histogram" bars={bars} max={view.max} ariaLabel={`${view.field} histogram`} />
+        : noData;
+    }
+    if (view.variant === 'scatter') {
+      // Read `field[referenceKey]` / `field[pointsKey]` as arrays of {x,y[,label]}; coerce
+      // to numbers and drop any non-numeric point so the axes never NaN out.
+      const toPoints = (key: string | undefined): ScatterPoint[] => {
+        const arr = key ? rec[key] : undefined;
+        if (!Array.isArray(arr)) return [];
+        return arr.flatMap((p) => {
+          const o = (p ?? {}) as Record<string, unknown>;
+          const x = num(o.x), y = num(o.y);
+          return x == null || y == null ? [] : [{ x, y, label: typeof o.label === 'string' ? o.label : undefined }];
+        });
+      };
+      const reference = toPoints(view.referenceKey);
+      const points = toPoints(view.pointsKey);
+      return reference.length || points.length
+        ? <ChartPanel t={t} variant="scatter" reference={reference} points={points}
+            xDomain={view.xDomain} yDomain={view.yDomain} xLabel={view.xLabel} yLabel={view.yLabel}
+            ariaLabel={`${view.field} scatter`} />
+        : noData;
+    }
+    // waveform
+    const samplesRaw = rec[view.samplesKey];
+    const samples = Array.isArray(samplesRaw)
+      ? samplesRaw.flatMap((v) => { const n = num(v); return n == null ? [] : [n]; })
+      : [];
+    const active = view.activeKey != null ? Boolean(rec[view.activeKey]) : true;
+    return samples.length
+      ? <ChartPanel t={t} variant="waveform" samples={samples} active={active} ariaLabel={`${view.field} waveform`} />
+      : noData;
   }
   if (view.kind === 'checklist') {
     const raw = data[view.field];
