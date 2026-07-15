@@ -11,6 +11,14 @@
 import type { SubModuleId } from '@/types/modules';
 import type { EvalPass } from '@/lib/evaluator/module-eval-prompts';
 
+/**
+ * Which numerator the stop condition compares against the target pass-rate.
+ * - `verified` (default): only features whose pass is backed by a passing required
+ *   gate count — the honest, tiers-of-truth-respecting basis.
+ * - `self-reported`: legacy behavior — every executor-reported pass counts.
+ */
+export type PassRateBasis = 'verified' | 'self-reported';
+
 // ── Game Plan (master state) ────────────────────────────────────────────────
 
 export type FeatureStatus = 'pending' | 'in-progress' | 'pass' | 'fail' | 'skipped' | 'unverified';
@@ -36,6 +44,16 @@ export interface PlannedFeature {
   lastSession: number | null;
   /** Failure reason if status === 'fail' */
   failReason?: string;
+  /**
+   * Whether this feature's `pass` is backed by GROUND-TRUTH evidence rather than
+   * the executor's own self-report. Set true only when the feature is `pass` AND
+   * the area's required gates (the real UBT compile / abslog test — not the model's
+   * word) passed for the session that reported it; false otherwise. A self-reported
+   * pass on a tree whose required gate was unverifiable (e.g. no UE env) stays
+   * `verified: false`. This is honest bookkeeping over EXISTING gate evidence — no
+   * new verification mechanism. Optional so legacy plans loaded from disk still parse.
+   */
+  verified?: boolean;
 }
 
 /**
@@ -76,8 +94,18 @@ export interface GamePlan {
   iteration: number;
   /** Total features across all areas */
   totalFeatures: number;
-  /** Features currently passing */
+  /**
+   * Features currently passing per the executor's own self-report (T0). Excludes
+   * `completed-with-gaps` areas. This is the SELF-REPORTED numerator.
+   */
   passingFeatures: number;
+  /**
+   * Features currently passing AND backed by a passing required gate (`verified`).
+   * The VERIFIED numerator — the honest, ground-truth-backed subset of
+   * `passingFeatures`. Optional so legacy plans without it still parse
+   * (recomputed by `updatePlanStats` on the next iteration).
+   */
+  verifiedFeatures?: number;
   /** Timestamp of plan creation */
   createdAt: string;
   /** Timestamp of last update */
@@ -266,6 +294,12 @@ export interface HarnessConfig {
   evalPasses: EvalPass[];
   /** Stop condition: minimum passing percentage to consider "done" */
   targetPassRate: number;
+  /**
+   * Which numerator the stop condition uses (`verified` by default). See
+   * `PassRateBasis`. Set `self-reported` to preserve the legacy behavior where
+   * an executor's own pass counts toward the target without gate backing.
+   */
+  passRateBasis?: PassRateBasis;
   /**
    * Creative direction injected into every executor prompt.
    * E.g. "Star Wars ARPG: lightsabers, Force abilities, Stormtroopers"

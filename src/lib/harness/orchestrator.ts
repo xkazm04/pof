@@ -23,7 +23,7 @@ import type {
   ProgressEntry,
 } from './types';
 import type { GameBuildGuide } from './types';
-import { buildGamePlan, updatePlanStats } from './plan-builder';
+import { buildGamePlan, updatePlanStats, planRatePct } from './plan-builder';
 import {
   executeArea,
   parseAreaResult,
@@ -462,6 +462,9 @@ export function createHarnessOrchestrator(config: HarnessConfig): HarnessOrchest
   const targetPassRatePct = normalizePassRatePercent(config.targetPassRate);
   const areaPassThreshold =
     normalizePassRatePercent(config.executor.areaPassThreshold ?? targetPassRatePct) / 100;
+  // Which numerator the stop condition uses. Default 'verified' — a feature's
+  // pass must be backed by a passing required gate to count toward the target.
+  const passRateBasis = config.passRateBasis ?? 'verified';
   const maxRetries = config.executor.maxRetriesPerArea;
   const budgetUsd = resolveBudgetUsd(config.budgetUsd, config.unlimited);
 
@@ -676,6 +679,16 @@ export function createHarnessOrchestrator(config: HarnessConfig): HarnessOrchest
     const requiredGatesPassed = verification.requiredFailures === 0;
     const areaSuccess = requiredGatesPassed && featurePassRate >= areaPassThreshold;
 
+    // ── Verified-truth bookkeeping ───────────────────────────────────────────
+    // A feature's `pass` is VERIFIED only when the area's required gates passed
+    // (the real UBT compile / abslog test — an unverifiable gate makes
+    // `requiredFailures > 0`, so `requiredGatesPassed` is already false without a
+    // UE env). Non-pass features are never verified. This is honest bookkeeping
+    // over the gate evidence the loop already produced — no new mechanism.
+    for (const f of area.features) {
+      f.verified = f.status === 'pass' ? requiredGatesPassed : false;
+    }
+
     // Verification outcome for the run history: a required gate that could not be
     // evaluated (e.g. no UE env → compile gate) records 'unverifiable' so the
     // area is never silently self-certified.
@@ -853,9 +866,8 @@ export function createHarnessOrchestrator(config: HarnessConfig): HarnessOrchest
       savePlan(config.statePath, plan);
       emit({ type: 'harness:progress', plan });
 
-      // Check pass rate
-      const passRate = plan.totalFeatures > 0
-        ? (plan.passingFeatures / plan.totalFeatures) * 100 : 0;
+      // Check pass rate (verified by default; see passRateBasis)
+      const passRate = planRatePct(plan, passRateBasis);
       if (passRate >= targetPassRatePct) break;
 
       // Fill pool with newly unblocked areas
@@ -951,8 +963,7 @@ export function createHarnessOrchestrator(config: HarnessConfig): HarnessOrchest
         break;
       }
 
-      const passRate = plan.totalFeatures > 0
-        ? (plan.passingFeatures / plan.totalFeatures) * 100 : 0;
+      const passRate = planRatePct(plan, passRateBasis);
       if (passRate >= targetPassRatePct) {
         emit({ type: 'harness:completed', plan, guide });
         persistTerminal('completed');
@@ -1099,6 +1110,9 @@ export function createDefaultConfig(overrides: Partial<HarnessConfig> & {
     // Canonicalize to 0–100 percent so a caller passing a 0–1 fraction (e.g. the
     // MCP tool's documented 0.9) doesn't terminate the loop at ~1% pass.
     targetPassRate: normalizePassRatePercent(overrides.targetPassRate ?? 90),
+    // Stop condition uses the VERIFIED (gate-backed) numerator by default; a
+    // caller can opt into legacy self-reported counting explicitly.
+    passRateBasis: overrides.passRateBasis ?? 'verified',
     areas: overrides.areas,
     ...(overrides.budgetUsd != null ? { budgetUsd: overrides.budgetUsd } : {}),
     ...(overrides.unlimited != null ? { unlimited: overrides.unlimited } : {}),

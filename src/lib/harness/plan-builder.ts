@@ -18,6 +18,7 @@ import type {
   ModuleArea,
   PlannedFeature,
   HarnessConfig,
+  PassRateBasis,
 } from './types';
 
 // ── Area Definition Presets ─────────────────────────────────────────────────
@@ -497,6 +498,7 @@ export function buildGamePlan(config: HarnessConfig): GamePlan {
     iteration: 0,
     totalFeatures,
     passingFeatures: 0,
+    verifiedFeatures: 0,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -504,17 +506,49 @@ export function buildGamePlan(config: HarnessConfig): GamePlan {
 
 /**
  * Update plan statistics after an iteration.
+ *
+ * Computes BOTH numerators over the same denominator:
+ * - `passingFeatures` — every executor-reported `pass` (self-report, T0).
+ * - `verifiedFeatures` — the subset whose pass is backed by a passing required
+ *   gate (`f.verified === true`) — ground-truth evidence, not self-report.
+ *
+ * Both exclude `completed-with-gaps` areas: those were promoted to unblock
+ * dependents WITHOUT honest verification, so they can never flip garbage green
+ * or hit the target pass-rate on unverified work.
  */
 export function updatePlanStats(plan: GamePlan): void {
-  // Honest numerator: a 'completed-with-gaps' area was promoted to unblock its
-  // dependents WITHOUT honest verification, so its features are excluded from
-  // the passing count entirely. This is what stops promote-with-gaps from
-  // flipping garbage green and hitting the target pass-rate on unverified work.
-  plan.passingFeatures = plan.areas.reduce(
-    (sum, a) => a.status === 'completed-with-gaps'
-      ? sum
-      : sum + a.features.filter(f => f.status === 'pass').length,
-    0,
-  );
+  let passing = 0;
+  let verified = 0;
+  for (const a of plan.areas) {
+    if (a.status === 'completed-with-gaps') continue;
+    for (const f of a.features) {
+      if (f.status !== 'pass') continue;
+      passing++;
+      if (f.verified === true) verified++;
+    }
+  }
+  plan.passingFeatures = passing;
+  plan.verifiedFeatures = verified;
   plan.updatedAt = new Date().toISOString();
+}
+
+// ── Pass-rate math (pure, testable) ─────────────────────────────────────────
+
+/** Self-reported pass-rate as a 0–100 percent (executor's own verdicts). */
+export function selfReportedRatePct(plan: GamePlan): number {
+  return plan.totalFeatures > 0 ? (plan.passingFeatures / plan.totalFeatures) * 100 : 0;
+}
+
+/** Verified pass-rate as a 0–100 percent (gate-backed passes only). */
+export function verifiedRatePct(plan: GamePlan): number {
+  return plan.totalFeatures > 0 ? ((plan.verifiedFeatures ?? 0) / plan.totalFeatures) * 100 : 0;
+}
+
+/**
+ * The stop-condition pass-rate for a given basis, as a 0–100 percent. `verified`
+ * (default everywhere) uses the gate-backed numerator; `self-reported` uses the
+ * legacy executor-report numerator.
+ */
+export function planRatePct(plan: GamePlan, basis: PassRateBasis): number {
+  return basis === 'self-reported' ? selfReportedRatePct(plan) : verifiedRatePct(plan);
 }

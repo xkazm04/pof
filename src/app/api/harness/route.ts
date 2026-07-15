@@ -96,8 +96,18 @@ export async function GET(request: NextRequest) {
       iteration: plan.iteration,
       totalFeatures: plan.totalFeatures,
       passingFeatures: plan.passingFeatures,
+      verifiedFeatures: plan.verifiedFeatures ?? 0,
+      // `passRate` kept for backward compat = self-reported. Both bases are also
+      // reported explicitly and clearly labeled so a consumer (UI / MCP) can show
+      // the honest verified number vs the executor's self-report.
       passRate: plan.totalFeatures > 0
         ? Math.round((plan.passingFeatures / plan.totalFeatures) * 100)
+        : 0,
+      selfReportedPassRate: plan.totalFeatures > 0
+        ? Math.round((plan.passingFeatures / plan.totalFeatures) * 100)
+        : 0,
+      verifiedPassRate: plan.totalFeatures > 0
+        ? Math.round(((plan.verifiedFeatures ?? 0) / plan.totalFeatures) * 100)
         : 0,
       totalAreas: plan.areas.length,
       completedAreas: plan.areas.filter(a => a.status === 'completed').length,
