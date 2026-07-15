@@ -215,10 +215,19 @@ from the one-shot routes — so the prefix is intentionally unconstrained.
 
    The final `result` line is normalized through the pure `result-metrics.ts`
    (`extractResultMetrics`) so the run's token usage + dollar cost surface as clean
-   camelCase regardless of CLI result shape. `useTaskQueue` forwards each result to its
-   `onResult` callback; `CompactTerminal` persists it to `/api/cli-spend` (attributed to the
-   session's module + `lastTaskType`) for the Evaluator → **Spend** dashboard and budget
-   guard. See *state-and-persistence → `cli_spend`*.
+   camelCase regardless of CLI result shape. **Spend is recorded SERVER-SIDE** in
+   `cli-service` (`recordExecutionSpend`, fired from the `emitEvent` choke point on the
+   run's terminal `result`/`error` event, guarded to record exactly once per execution),
+   so the `cli_spend` ledger counts EVERY spawn — interactive, queued, autonomous
+   (one-shot propose/refine/step, batch-review), and failed/aborted/synthetic runs — not
+   just clean client results. Each row carries a `status` (`completed`|`failed`|`aborted`)
+   and best-known attribution: the query route threads `{ moduleId, taskType, taskLabel,
+   sessionKey }` from the dispatching session (`CompactTerminal.resolveAttribution`), and
+   the autonomous routes pass their own `taskType`. The old client-side `recordCliSpend`
+   path is removed (no double-counting). Pre-flight estimates read only `status='completed'
+   AND cost_usd>0` rows so failed/aborted zero-cost rows never drag the average down. Feeds
+   the Evaluator → **Spend** dashboard + budget guard. See *state-and-persistence →
+   `cli_spend`*.
 
 6. **Terminal component** subscribes to `CLIExecutionEvent`s. When the run's `result`
    event arrives, it scans the accumulated output for **every** marker via

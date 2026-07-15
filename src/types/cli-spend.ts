@@ -24,6 +24,8 @@ export interface SpendRecord {
   cacheCreationTokens: number;
   durationMs: number;
   success: boolean;
+  /** Terminal outcome of the run (recorded server-side for every spawn). */
+  status: 'completed' | 'failed' | 'aborted';
   /** ISO timestamp the run completed. */
   recordedAt: string;
 }

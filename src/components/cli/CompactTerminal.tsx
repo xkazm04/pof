@@ -12,8 +12,6 @@ import { TerminalInput } from './TerminalInput';
 import { AntiPatternWarning } from './AntiPatternWarning';
 import { useCLIPanelStore } from './store/cliPanelStore';
 import { MODULE_COLORS } from '@/lib/chart-colors';
-import { recordCliSpend } from '@/lib/cli-spend-client';
-import type { ExecutionResult } from './types';
 
 export function CompactTerminal({
   instanceId, projectPath, title = 'Terminal', className = '',
@@ -33,30 +31,23 @@ export function CompactTerminal({
     addUnseenCountRef.current(count);
   }, []);
 
-  // Persist this run's token/cost spend, attributed to the session's module +
-  // most-recently-dispatched task type. Read from the store imperatively so the
-  // attribution is current even if the session metadata changed mid-run.
-  const onResult = useCallback((result: ExecutionResult) => {
+  // Best-known spend attribution for this session, threaded into the query POST so
+  // the run's spend is recorded SERVER-SIDE (covers failed/aborted/synthetic runs
+  // the old client-only path missed). Read imperatively so it is current at dispatch.
+  const resolveAttribution = useCallback(() => {
     const sess = useCLIPanelStore.getState().sessions[instanceId];
-    recordCliSpend({
+    return {
       moduleId: sess?.moduleId ?? 'unknown',
       taskType: sess?.lastTaskType ?? 'interactive',
       taskLabel: sess?.lastTaskLabel ?? null,
       sessionKey: sess?.sessionKey ?? null,
-      costUsd: result.totalCostUsd ?? 0,
-      tokensIn: result.usage?.inputTokens ?? 0,
-      tokensOut: result.usage?.outputTokens ?? 0,
-      cacheReadTokens: result.usage?.cacheReadTokens ?? 0,
-      cacheCreationTokens: result.usage?.cacheCreationTokens ?? 0,
-      durationMs: result.durationMs ?? 0,
-      success: !result.isError,
-    });
+    };
   }, [instanceId]);
 
   const tq = useTaskQueue({
     instanceId, projectPath, taskQueue, autoStart, enabledSkills, visible,
     onTaskStart, onTaskComplete, onQueueEmpty, onStreamingChange,
-    onBatchFlushed, onResult,
+    onBatchFlushed, resolveAttribution,
   });
   // tqRef always points at the latest task queue. The pof-cli-prompt handler
   // is registered in an [instanceId]-keyed effect, so it must reach the

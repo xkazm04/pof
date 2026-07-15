@@ -85,6 +85,29 @@ describe('cli-spend-db', () => {
     expect(est?.avgCostUsd).toBeCloseTo(0.5, 5);
   });
 
+  it('estimate EXCLUDES failed / aborted / zero-cost rows (no downward drag)', () => {
+    // Two real completed runs → true average 0.5.
+    recordSpend({ moduleId: 'm', taskType: 'feature-fix', costUsd: 0.4, tokensIn: 1, tokensOut: 1, status: 'completed' });
+    recordSpend({ moduleId: 'm', taskType: 'feature-fix', costUsd: 0.6, tokensIn: 1, tokensOut: 1, status: 'completed' });
+    // Noise the server ledger now also records: a failed run, an aborted run, and a
+    // zero-cost completed synthetic. None must move the estimate.
+    recordSpend({ moduleId: 'm', taskType: 'feature-fix', costUsd: 0, tokensIn: 0, tokensOut: 0, status: 'failed', success: false });
+    recordSpend({ moduleId: 'm', taskType: 'feature-fix', costUsd: 0.9, tokensIn: 0, tokensOut: 0, status: 'aborted', success: false });
+    recordSpend({ moduleId: 'm', taskType: 'feature-fix', costUsd: 0, tokensIn: 0, tokensOut: 0, status: 'completed' });
+
+    const est = getTaskTypeEstimate('feature-fix');
+    expect(est?.runs).toBe(2);
+    expect(est?.avgCostUsd).toBeCloseTo(0.5, 5);
+  });
+
+  it('persists and returns the run status (default completed)', () => {
+    recordSpend({ moduleId: 'm', taskType: 'checklist', costUsd: 0.1, tokensIn: 1, tokensOut: 1 });
+    recordSpend({ moduleId: 'm', taskType: 'checklist', costUsd: 0, tokensIn: 0, tokensOut: 0, status: 'aborted', success: false });
+    const recent = getRecentSpend(2);
+    expect(recent[0].status).toBe('aborted');
+    expect(recent[1].status).toBe('completed');
+  });
+
   it('returns recent runs newest-first', () => {
     recordSpend({ moduleId: 'a', taskType: 'checklist', costUsd: 0.1, tokensIn: 1, tokensOut: 1 });
     recordSpend({ moduleId: 'b', taskType: 'checklist', costUsd: 0.1, tokensIn: 1, tokensOut: 1 });

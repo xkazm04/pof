@@ -8,9 +8,23 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import { parseCallbackMarker } from '@/lib/cli-task';
-import { extractResultMetrics } from '@/lib/claude-terminal/result-metrics';
+import { extractResultMetrics, type NormalizedUsage } from '@/lib/claude-terminal/result-metrics';
 import { killProcessTree } from '@/lib/process-tree-kill';
 import { resolveAutonomousMcpArgs } from '@/lib/claude-terminal/mcp-config';
+import { recordSpend } from '@/lib/cli-spend-db';
+import { logger } from '@/lib/logger';
+
+/**
+ * Best-known attribution for a spawn's spend row. Threaded from the query route
+ * (interactive/queued dispatches) or the autonomous one-shot / batch-review
+ * routes; falls back to 'unknown'/'interactive' when a caller supplies none.
+ */
+export interface SpawnAttribution {
+  moduleId?: string;
+  taskType?: string;
+  taskLabel?: string | null;
+  sessionKey?: string | null;
+}
 
 export interface CLISystemMessage {
   type: 'system';
@@ -94,6 +108,12 @@ export interface CLIExecution {
   logFilePath?: string;
   /** Listeners notified immediately when new events arrive */
   listeners: Set<CLIEventListener>;
+  /** Best-known spend attribution for this spawn (see {@link SpawnAttribution}). */
+  attribution?: SpawnAttribution;
+  /** Set once the terminal spend row has been persisted — guards single-record. */
+  spendRecorded?: boolean;
+  /** Set by {@link abortExecution} so the spend row is stamped 'aborted'. */
+  aborted?: boolean;
 }
 
 const globalForExecutions = globalThis as unknown as {
@@ -141,6 +161,45 @@ export function extractToolUses(msg: CLIAssistantMessage): Array<{ id: string; n
   return msg.message.content.filter(c => c.type === 'tool_use').map(c => ({ id: c.id || '', name: c.name || '', input: c.input || {} }));
 }
 
+/**
+ * Persist one execution's spend from its terminal event. Records for EVERY spawn
+ * — completed, failed, aborted, or synthetic — with best-known attribution and
+ * status. Failed/aborted rows carry whatever cost is known (usually 0) and are
+ * excluded from pre-flight estimates. Never throws (spend recording must not break
+ * a run's completion path).
+ */
+function recordExecutionSpend(execution: CLIExecution, event: CLIExecutionEvent): void {
+  try {
+    const attr = execution.attribution ?? {};
+    const isResult = event.type === 'result';
+    const isError = isResult ? event.data.isError === true : true;
+    const status: 'completed' | 'failed' | 'aborted' =
+      execution.aborted ? 'aborted' : isResult && !isError ? 'completed' : 'failed';
+
+    const usage = (isResult ? (event.data.usage as NormalizedUsage | undefined) : undefined);
+    const costUsd = isResult && typeof event.data.costUsd === 'number' ? event.data.costUsd : 0;
+    const evDuration = isResult && typeof event.data.durationMs === 'number' ? event.data.durationMs : 0;
+    const durationMs = evDuration > 0 ? evDuration : Date.now() - execution.startTime;
+
+    recordSpend({
+      moduleId: attr.moduleId,
+      taskType: attr.taskType,
+      taskLabel: attr.taskLabel ?? null,
+      sessionKey: attr.sessionKey ?? null,
+      costUsd,
+      tokensIn: usage?.inputTokens ?? 0,
+      tokensOut: usage?.outputTokens ?? 0,
+      cacheReadTokens: usage?.cacheReadTokens ?? 0,
+      cacheCreationTokens: usage?.cacheCreationTokens ?? 0,
+      durationMs,
+      success: status === 'completed',
+      status,
+    });
+  } catch (e) {
+    logger.warn('Failed to record CLI spend (server-side):', e);
+  }
+}
+
 export interface StartExecutionOptions {
   /**
    * AUTONOMOUS spawns (one-shot orchestrator, batch-review) opt in to load MCP
@@ -152,6 +211,8 @@ export interface StartExecutionOptions {
   /** Model-policy override (Quality Program WS0): pin the model + effort for this spawn. */
   model?: string;
   effort?: string;
+  /** Best-known spend attribution — recorded with the run's terminal outcome. */
+  attribution?: SpawnAttribution;
 }
 
 /**
@@ -205,6 +266,7 @@ export function startExecution(
     events: [],
     logFilePath,
     listeners: new Set(),
+    attribution: options?.attribution,
   };
 
   activeExecutions.set(executionId, execution);
@@ -228,6 +290,13 @@ export function startExecution(
     if (onEvent) onEvent(event);
     for (const listener of execution.listeners) {
       try { listener(event); } catch { /* ignore listener errors */ }
+    }
+    // Persist the run's spend the moment it terminates — result OR error — so the
+    // ledger counts EVERY spawn (interactive, autonomous, failed, aborted, synthetic),
+    // not just clean client results. Guarded to record exactly once per execution.
+    if (!execution.spendRecorded && (event.type === 'result' || event.type === 'error')) {
+      execution.spendRecorded = true;
+      recordExecutionSpend(execution, event);
     }
   };
 
@@ -385,6 +454,9 @@ export function abortExecution(executionId: string): boolean {
   // shell:true on win32 means execution.process is the cmd.exe wrapper; a
   // plain kill() leaves claude's node.exe editing files and billing tokens.
   killProcessTree(execution.process);
+  // Mark aborted so the spend row stamps 'aborted'. The 'close' handler that
+  // fires from the kill overwrites `status`, so a dedicated flag is needed.
+  execution.aborted = true;
   execution.status = 'aborted';
   execution.endTime = Date.now();
   return true;

@@ -61,7 +61,7 @@ function makeDashboard(): SpendDashboardData {
       { day: '2026-06-08', costUsd: 0.75, tokensIn: 7000, tokensOut: 2400, runs: 3 },
     ],
     recent: [
-      { id: 2, moduleId: 'arpg-combat', taskType: 'module-scan', taskLabel: 'Scan', sessionKey: 'k', costUsd: 0.4, tokensIn: 3000, tokensOut: 800, cacheReadTokens: 0, cacheCreationTokens: 0, durationMs: 45000, success: true, recordedAt: '2026-06-08T00:00:00Z' },
+      { id: 2, moduleId: 'arpg-combat', taskType: 'module-scan', taskLabel: 'Scan', sessionKey: 'k', costUsd: 0.4, tokensIn: 3000, tokensOut: 800, cacheReadTokens: 0, cacheCreationTokens: 0, durationMs: 45000, success: true, status: 'completed', recordedAt: '2026-06-08T00:00:00Z' },
     ],
     budget: NO_BUDGET,
   };

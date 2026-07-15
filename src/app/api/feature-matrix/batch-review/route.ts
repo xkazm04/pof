@@ -83,7 +83,10 @@ async function runBatchReview(projectPath: string, projectName: string, ueVersio
       const ctx = { projectName, projectPath, ueVersion };
       const prompt = buildTaskPrompt(task, ctx);
 
-      const executionId = startExecution(projectPath, prompt, undefined, undefined, { enableMcp: true });
+      const executionId = startExecution(projectPath, prompt, undefined, undefined, {
+        enableMcp: true,
+        attribution: { moduleId: mod.moduleId, taskType: 'batch-review', taskLabel: `${mod.label} Review` },
+      });
       mod.executionId = executionId;
 
       const { result, assistantOutput } = await waitForExecution(executionId);

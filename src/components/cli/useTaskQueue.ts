@@ -39,8 +39,12 @@ interface UseTaskQueueOpts {
   onQueueEmpty?: () => void;
   onStreamingChange?: (streaming: boolean) => void;
   onBatchFlushed?: (count: number) => void;
-  /** Fired with the run's token/cost result when a `result` event arrives. */
-  onResult?: (result: ExecutionResult) => void;
+  /**
+   * Best-known spend attribution for the current session, threaded into the query
+   * POST so the run's spend is recorded server-side (covers failed/aborted runs the
+   * old client-only path missed). Read imperatively at dispatch time.
+   */
+  resolveAttribution?: () => { moduleId?: string; taskType?: string; taskLabel?: string | null; sessionKey?: string | null };
 }
 
 // ── State machine ───────────────────────────────────────────────────────────
@@ -203,7 +207,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     instanceId, projectPath, taskQueue, autoStart, enabledSkills,
     visible = true,
     onTaskStart, onTaskComplete, onQueueEmpty, onStreamingChange, onBatchFlushed,
-    onResult,
+    resolveAttribution,
   } = opts;
 
   const [state, dispatch] = useReducer(taskQueueReducer, INITIAL_STATE);
@@ -259,10 +263,10 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
   const onBatchFlushedRef = useRef(onBatchFlushed);
   useEffect(() => { onBatchFlushedRef.current = onBatchFlushed; }, [onBatchFlushed]);
 
-  // Stable ref so the result handler can report token/cost spend without
-  // re-subscribing the SSE stream when the callback identity changes.
-  const onResultRef = useRef(onResult);
-  useEffect(() => { onResultRef.current = onResult; }, [onResult]);
+  // Stable ref so dispatch can read the current attribution without re-creating
+  // the dispatch callbacks when the resolver identity changes.
+  const resolveAttributionRef = useRef(resolveAttribution);
+  useEffect(() => { resolveAttributionRef.current = resolveAttribution; }, [resolveAttribution]);
 
   const flushLogBuffer = useCallback(() => {
     rafIdRef.current = null;
@@ -371,9 +375,9 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
         completedRef.current = true;
         dispatch({ type: 'SSE_RESULT', result: data, sessionId: data.sessionId });
         clearHeartbeat();
-
-        // Report token/cost spend for this run (e.g. persisted to the spend dashboard).
-        onResultRef.current?.(data);
+        // Spend is now recorded SERVER-SIDE for every spawn (see cli-service
+        // recordExecutionSpend) — the old client-only result path is gone, so
+        // failed/aborted/autonomous runs are no longer missed or double-counted.
 
         // Resolve EVERY structured callback present in assistant output (a run may
         // emit more than one). `callbackStatus` is ADDITIVE truth carried into the
@@ -497,10 +501,12 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     addLog({ id: `task-${Date.now()}`, type: 'system', content: `Starting: ${task.label}`, timestamp: Date.now() });
 
     try {
+      const attribution = resolveAttributionRef.current?.() ?? {};
       const data = await apiFetch<{ executionId: string; streamUrl: string; logFilePath: string | null }>('/api/claude-terminal/query', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectPath, prompt: taskPrompt, resumeSessionId: resumeSession ? state.sessionId : undefined }),
+        // taskLabel from the queued task; module/type/sessionKey from the session.
+        body: JSON.stringify({ projectPath, prompt: taskPrompt, resumeSessionId: resumeSession ? state.sessionId : undefined, ...attribution, taskLabel: task.label }),
       });
       executionIdRef.current = data.executionId;
       if (data.logFilePath) dispatch({ type: 'SET_LOG_FILE', path: data.logFilePath });
@@ -536,11 +542,13 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     });
 
     try {
+      const attribution = resolveAttributionRef.current?.() ?? {};
       const data = await apiFetch<{ executionId: string; streamUrl: string; logFilePath: string | null; model: string | null; effort: string | null }>('/api/claude-terminal/query', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // taskType lets the route resolve the model-policy pin (WS0) for this run.
-        body: JSON.stringify({ projectPath, prompt: dispatchPrompt, resumeSessionId: resumeSession ? state.sessionId : undefined, taskType: opts?.taskType }),
+        // taskType lets the route resolve the model-policy pin (WS0) AND attribute spend;
+        // this dispatch's explicit taskType wins over the session's last-known one.
+        body: JSON.stringify({ projectPath, prompt: dispatchPrompt, resumeSessionId: resumeSession ? state.sessionId : undefined, ...attribution, taskType: opts?.taskType ?? attribution.taskType }),
       });
       executionIdRef.current = data.executionId;
       dispatch({ type: 'SET_RESOLVED_MODEL', model: data.model ?? null, effort: data.effort ?? null });

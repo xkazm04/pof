@@ -24,6 +24,10 @@ interface QueryRequestBody {
   /** Explicit model/effort override (scripts / autonomous spawns). Validated; unknown → ignored. */
   model?: string;
   effort?: string;
+  /** Spend attribution — recorded server-side with the run's terminal outcome. */
+  moduleId?: string;
+  taskLabel?: string | null;
+  sessionKey?: string | null;
 }
 
 export async function POST(request: NextRequest) {
@@ -48,7 +52,18 @@ export async function POST(request: NextRequest) {
       taskType: body.taskType,
     });
 
-    const executionId = startExecution(projectPath, prompt, resumeSessionId, undefined, { model, effort });
+    const executionId = startExecution(projectPath, prompt, resumeSessionId, undefined, {
+      model,
+      effort,
+      // Attribute this run's spend to the dispatching session. Recorded server-side
+      // for every outcome (completed/failed/aborted) — see cli-service recordExecutionSpend.
+      attribution: {
+        moduleId: body.moduleId,
+        taskType: body.taskType,
+        taskLabel: body.taskLabel ?? null,
+        sessionKey: body.sessionKey ?? null,
+      },
+    });
     const execution = getExecution(executionId);
 
     return apiSuccess({

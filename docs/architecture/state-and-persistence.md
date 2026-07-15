@@ -196,15 +196,22 @@ fingerprints, and rolling-baseline regression alerts.
 
 **`cli_spend` + `cli_spend_budget`** (`src/lib/cli-spend-db.ts`, same guard pattern) capture the
 token/cost `result` event every Claude Code CLI run emits — previously parsed but thrown away.
-`cli_service.ts` now normalizes the result usage/cost via the pure `result-metrics.ts` (tolerant of
-both the top-level `total_cost_usd`/`usage` and legacy nested `cost_usd`/`result.usage` shapes); the
-terminal's `useTaskQueue` reports each run through a new `onResult` callback, and `CompactTerminal`
-attributes it to the session's module + most-recently-dispatched task type (stored on `cliPanelStore`
-as `lastTaskType`/`lastTaskLabel`, set by `useModuleCLI`) before POSTing to `/api/cli-spend`. The
-**Spend** tab (Evaluator) reads `getSpendDashboard()`: per-run / per-module / per-task-type rollups, a
-daily trend, a daily/monthly **budget guard** (editable limits in `cli_spend_budget`), and per-module
-ROI (spend ÷ checklist items completed). The pre-flight guardrail (`src/lib/cli-spend/preflight.ts`,
-pure) classifies expensive task types (live-editor runs + broad scans) and — only under genuine budget
+`cli_service.ts` normalizes the result usage/cost via the pure `result-metrics.ts` (tolerant of both
+the top-level `total_cost_usd`/`usage` and legacy nested `cost_usd`/`result.usage` shapes) and records
+the row **server-side** (`recordExecutionSpend`, from the `emitEvent` choke point, once per execution)
+so EVERY spawn is counted — interactive, queued, autonomous (one-shot propose/refine/step,
+batch-review), and failed/aborted/synthetic runs — not just clean client results. Each row carries an
+additive `status` column (`completed`|`failed`|`aborted`; idempotent ALTER-if-missing, legacy rows
+default `completed`). Attribution `{ moduleId, taskType, taskLabel, sessionKey }` is threaded into the
+spawn: the query route reads it from the dispatching session (`CompactTerminal.resolveAttribution`,
+sourced from `cliPanelStore` `lastTaskType`/`lastTaskLabel` set by `useModuleCLI`), and the autonomous
+routes pass their own `taskType`. The old client-side `recordCliSpend` path is removed — no
+double-counting. The **Spend** tab (Evaluator) reads `getSpendDashboard()`: per-run / per-module /
+per-task-type rollups, a daily trend, a daily/monthly **budget guard** (editable limits in
+`cli_spend_budget`), and per-module ROI (spend ÷ checklist items completed). The pre-flight guardrail
+(`src/lib/cli-spend/preflight.ts`, pure) reads `getTaskTypeEstimate`, which averages only
+`status='completed' AND cost_usd>0` rows so failed/aborted zero-cost rows never bias the estimate; it
+classifies expensive task types (live-editor runs + broad scans) and — only under genuine budget
 pressure — interrupts `useModuleCLI.execute` with the global `PreflightGuardDialog` (queued via
 `preflightStore`).
 

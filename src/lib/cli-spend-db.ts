@@ -40,6 +40,14 @@ export function ensureCliSpendTables(): void {
       recorded_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `);
+  // Additive column (idempotent ALTER-if-missing) — the run's terminal outcome,
+  // recorded server-side for EVERY spawn. Legacy rows default to 'completed'
+  // (they were recorded only from clean client results). 'failed' / 'aborted'
+  // rows may carry 0 cost and are excluded from the pre-flight estimate.
+  const cols = db.prepare(`PRAGMA table_info(cli_spend)`).all() as { name: string }[];
+  if (!cols.some((c) => c.name === 'status')) {
+    db.exec(`ALTER TABLE cli_spend ADD COLUMN status TEXT NOT NULL DEFAULT 'completed'`);
+  }
   db.exec(`CREATE INDEX IF NOT EXISTS idx_cli_spend_module ON cli_spend(module_id)`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_cli_spend_task_type ON cli_spend(task_type)`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_cli_spend_recorded ON cli_spend(recorded_at)`);
@@ -69,6 +77,7 @@ function rowToRecord(row: Record<string, unknown>): SpendRecord {
     cacheCreationTokens: row.cache_creation_tokens as number,
     durationMs: row.duration_ms as number,
     success: (row.success as number) === 1,
+    status: ((row.status as string | null) ?? 'completed') as SpendRecord['status'],
     recordedAt: row.recorded_at as string,
   };
 }
@@ -87,6 +96,8 @@ export interface RecordSpendInput {
   cacheCreationTokens?: number;
   durationMs?: number;
   success?: boolean;
+  /** Terminal outcome of the run. Defaults from `success` when omitted. */
+  status?: 'completed' | 'failed' | 'aborted';
   /** ISO timestamp; defaults to now. */
   recordedAt?: string;
 }
@@ -95,12 +106,15 @@ export function recordSpend(input: RecordSpendInput): SpendRecord {
   ensureCliSpendTables();
   const db = getDb();
   const recordedAt = input.recordedAt ?? new Date().toISOString();
+  // Derive status from success when the caller doesn't specify one (keeps the
+  // legacy client shape working) — a failed run defaults to 'failed'.
+  const status = input.status ?? (input.success === false ? 'failed' : 'completed');
   const info = db
     .prepare(
       `INSERT INTO cli_spend
         (module_id, task_type, task_label, session_key, cost_usd, tokens_in, tokens_out,
-         cache_read_tokens, cache_creation_tokens, duration_ms, success, recorded_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         cache_read_tokens, cache_creation_tokens, duration_ms, success, status, recorded_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       input.moduleId ?? 'unknown',
@@ -114,6 +128,7 @@ export function recordSpend(input: RecordSpendInput): SpendRecord {
       input.cacheCreationTokens ?? 0,
       input.durationMs ?? 0,
       input.success === false ? 0 : 1,
+      status,
       recordedAt,
     );
   const row = db.prepare('SELECT * FROM cli_spend WHERE id = ?').get(info.lastInsertRowid) as Record<string, unknown>;
@@ -248,10 +263,12 @@ function getDailySpend(days = 30): DailySpend[] {
 /** Historical average cost for one task type — feeds the pre-flight guardrail. */
 export function getTaskTypeEstimate(taskType: string): TaskTypeEstimate | null {
   ensureCliSpendTables();
+  // Only COMPLETED, non-zero-cost runs estimate future cost — failed/aborted
+  // (and any 0-cost) rows must not drag the average toward zero.
   const row = getDb()
     .prepare(
       `SELECT COALESCE(AVG(cost_usd),0) AS avg, COUNT(*) AS runs
-       FROM cli_spend WHERE task_type = ? AND cost_usd > 0`,
+       FROM cli_spend WHERE task_type = ? AND cost_usd > 0 AND status = 'completed'`,
     )
     .get(taskType) as { avg: number; runs: number };
   if (!row || row.runs === 0) return null;

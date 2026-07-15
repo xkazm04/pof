@@ -26,7 +26,10 @@ export async function POST(req: NextRequest) {
     const userHint = typeof body.userHint === 'string' ? body.userHint : undefined;
     const prompt = buildProposalPrompt(catalogId, distribution, userHint);
 
-    const executionId = startExecution(PROJECT_PATH, prompt, undefined, undefined, { enableMcp: true });
+    const executionId = startExecution(PROJECT_PATH, prompt, undefined, undefined, {
+      enableMcp: true,
+      attribution: { moduleId: catalogId, taskType: 'one-shot-propose', taskLabel: `Propose ${catalogId}` },
+    });
     const parsed = await awaitCallback(executionId, { timeoutMs: UI_TIMEOUTS.callbackAwaitTimeout }) as Record<string, unknown>;
 
     const seededIds = new Set(seededEntities(catalogId).map((e) => e.id));
