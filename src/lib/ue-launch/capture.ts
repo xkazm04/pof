@@ -211,8 +211,10 @@ export async function captureScenarioFrame(opts: CaptureScenarioFrameOptions, de
   // under -RenderOffScreen. The windowed UnrealEditor.exe produced no frame in the drain path.
   const binary = resolveEditorBinary({ ...(opts.engine ? { engine: opts.engine } : {}), windowed: false });
   const scn = opts.scenario;
-  // Caller-supplied map wins over the scenario's: L4 renders on a LIT map, while the
-  // scenario's own map is L3-oriented (often dark/headless, e.g. TestHarness).
+  // Caller-supplied map wins, else the scenario's declared map, else the lit VerticalSlice.
+  // Repo law: L4 capture needs a LIT map — a dark/headless map renders a black frame the VLM
+  // can't judge. The caller (the gate-runner captureResolver) is responsible for choosing a lit
+  // map: it honors a scenario's DECLARED map for entity context, which therefore must be lit.
   const map = opts.map ?? scn?.map ?? '/Game/Maps/VerticalSlice';
   const resX = opts.resX ?? 1280;
   const resY = opts.resY ?? 720;

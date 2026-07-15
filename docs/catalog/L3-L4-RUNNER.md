@@ -35,7 +35,7 @@ interface GateExecutor {
 |----------|------|-----------|---------|
 | **bridge** (`bridgeExecutor.ts`) | L3 | POSTs `filter=<testName>` to the running editor's **PoF Bridge plugin** (`127.0.0.1:30040/pof/test/run-automation`), polls results, maps `passed/failed`. Safest on the shared tree — no spawn, no `PoF.log` clobber, no lease juggling. | **yes** |
 | **spawn** (`spawnExecutor.ts`) | L3 | Assembles + runs headless `UnrealEditor-Cmd … -ExecCmds="Automation RunTests <testName>;Quit" -nullrhi … -abslog=<unique>`, judges by **`-abslog` markers (`Result={Success}` / `[gate] RESULT=PASS`), not exit code**. Both `run` branches — automation (`runAutomation`) and behavioural scenario (`runScenario`) — share one **SIGKILL watchdog** (`spawnAndWait`, default 180s via `automationTimeoutMs`/`scenarioTimeoutMs`) so a headless editor that never quits can't hang the drain worker. Real code, **gated OFF by default** (needs `POF_UE_EDITOR_CMD` + `POF_UE_UPROJECT` env + explicit `allowSpawn`) — spawning UE collides with other sessions on the shared tree. **Grouped boot** (see below): the spawn executor's `prepareBatch` runs ALL a drain pass's automation gates in ONE boot, so a full sweep is one multi-minute launch, not dozens. | off |
-| **visual-bridge** (`visualExecutor.ts`) | L4 | Requests a HighResShot via the bridge, then runs the existing `/api/verify/visual` Gemini check → records to `visual_verifications` + writes the artifact verdict. Honestly **skips** (stays deferred) when no screenshot source is reachable — this is the known "missing render gate". | yes (best-effort) |
+| **visual-bridge** (`visualExecutor.ts`) | L4 | Requests a HighResShot via the bridge, then runs the existing `/api/verify/visual` Gemini check → records to `visual_verifications` + writes the artifact verdict. Honestly **skips** (stays deferred) when no screenshot source is reachable — this is the known "missing render gate". **Entity-context frames** (see below): the autonomous resolver honors a scenario's DECLARED map so the VLM judges the entity's own scene, stamps `entity`/`map`/`scenario` into the verdict's evidence, and DEFERS (never a silent VerticalSlice fallback) when a declared map can't render. | yes (best-effort) |
 
 The seam means the **mode is chosen at call time**, not baked in (the contract's "configurable (both)").
 
@@ -50,6 +50,15 @@ Booting a fresh `UnrealEditor-Cmd` per automation gate was the dominant drain co
 - **Scenario** jobs (`runScenario`) and **L4 capture** jobs are UNCHANGED — they need distinct per-scenario/per-frame boot args and never batch.
 - **Bridge executor is NOT batched**: `POST /pof/test/run-automation` takes a single `{filter}` (one `StartTestByName`), so bridge automation stays per-test (documented, not a regression).
 - Per-test verdicts still persist **per artifact** exactly as before (`drainOne`, evidence attached per gate). Boot count is unit-asserted (`batchAutomation.test.ts`, `drain.test.ts`): N automation gates in one drain → 1 spawn invocation; report-parse and abslog-fallback both covered (the exec layer is mocked — tests never spawn a real editor).
+
+### Entity-context frames (L4 autonomous capture)
+
+The autonomous L4 resolver (`captureResolver.ts` → `ue-launch/capture.captureScenarioFrame`) used to force EVERY frame onto `/Game/Maps/VerticalSlice`, so the VLM judged a generic lit slice regardless of the entity being verified. Now:
+
+- **Map precedence:** an explicit operator `mapFor` wins → else the scenario's **declared** map (entity context) → else the lit `VerticalSlice` fallback (unchanged default).
+- **Repo law — capture needs a LIT map.** A dark/headless map renders a black frame the VLM can't judge, so a scenario that declares its own L4 map must declare a **lit** one (documented on `makeUeCaptureResolver` + `captureScenarioFrame`).
+- **Honest deferral:** a **declared** map that produces no frame (missing / unlit) → the gate stays `deferred` with a reason naming the map — it is **not** silently re-rendered on VerticalSlice (which would judge the wrong scene). The default-slice-produces-nothing case keeps the legacy "no screenshot source" path.
+- **Frame evidence** carries `entity`/`map`/`scenario` markers (via the bounded `GateEvidence.markers`), so the /status audit reading a flipped verdict sees exactly which scene was photographed.
 
 ### Catalog-level (multi-entity) drain
 

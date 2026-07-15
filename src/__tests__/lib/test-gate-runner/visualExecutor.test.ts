@@ -64,4 +64,39 @@ describe('makeVisualExecutor', () => {
     const none = makeVisualExecutor({ appOrigin: 'http://x', screenshotResolver: async () => null });
     await expect(none.run(job)).rejects.toThrow(/no screenshot source/);
   });
+
+  it('stamps entity/map/scenario frame context into the evidence markers', async () => {
+    const fetchImpl = (() => resp({ success: true, data: { verdict: 'pass', notes: 'crisp' } })) as unknown as typeof fetch;
+    const ex = makeVisualExecutor({
+      appOrigin: 'http://x',
+      fetchImpl,
+      // The richer resolution carries WHAT was photographed.
+      screenshotResolver: async () => ({ screenshot: 'C:/shots/x.png', map: '/Game/Maps/AshenForest', scenarioDriven: true }),
+    });
+    const v = await ex.run(job);
+    expect(v.status).toBe('pass');
+    const markers = v.evidence!.markers!;
+    expect(markers).toContain('entity=materials/mat-weathered-stone');
+    expect(markers).toContain('map=/Game/Maps/AshenForest');
+    expect(markers).toContain('scenario=driven');
+  });
+
+  it('a declared map that fails to load → deferred with a named reason (no VerticalSlice fallback)', async () => {
+    let fetched = false;
+    const fetchImpl = (() => { fetched = true; return resp({ success: true, data: { verdict: 'pass' } }); }) as unknown as typeof fetch;
+    const ex = makeVisualExecutor({
+      appOrigin: 'http://x',
+      fetchImpl,
+      screenshotResolver: async () => ({ screenshot: null, map: '/Game/Maps/AshenForest', scenarioDriven: true,
+        deferredReason: 'declared map /Game/Maps/AshenForest produced no frame — it may not exist or may be unlit (L4 capture needs a LIT map)' }),
+    });
+    const v = await ex.run(job);
+    expect(v.status).toBe('deferred');
+    expect(v.detail).toMatch(/AshenForest/);
+    expect(v.detail).toMatch(/LIT map/);
+    expect(v.screenshot).toBeUndefined(); // there is no frame
+    expect(fetched).toBe(false); // never called the judge on a non-existent frame
+    // The attempted map is still stamped for the audit.
+    expect(v.evidence!.markers).toContain('map=/Game/Maps/AshenForest');
+  });
 });

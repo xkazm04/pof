@@ -2,7 +2,7 @@ import { makeBridgeExecutor } from './bridgeExecutor';
 import { makeSpawnExecutor } from './spawnExecutor';
 import { makeVisualExecutor } from './visualExecutor';
 import { makeUeCaptureResolver } from './captureResolver';
-import type { GateExecutor, GateJob } from './types';
+import type { GateExecutor, GateJob, ScreenshotResolution } from './types';
 
 export interface ExecutorConfig {
   /** L3 mechanism — bridge (default, running editor) or spawn (headless, gated). */
@@ -15,7 +15,7 @@ export interface ExecutorConfig {
   /** L4: an operator-supplied screenshot path. */
   screenshotPath?: string;
   visualMode?: 'hud' | 'texture' | 'lighting' | 'character';
-  screenshotResolver?: (job: GateJob) => Promise<string | null>;
+  screenshotResolver?: (job: GateJob) => Promise<ScreenshotResolution>;
   /**
    * L4 AUTONOMOUS capture — when set (and no explicit resolver/path), the visual
    * gate captures its own frame via a headless UE launch (`ue-launch` captureFrame),
@@ -30,7 +30,7 @@ export interface ExecutorConfig {
  * (the L4 job stays deferred). Pure — building the autoCapture resolver does not
  * launch anything.
  */
-export function selectScreenshotResolver(cfg: ExecutorConfig): ((job: GateJob) => Promise<string | null>) | undefined {
+export function selectScreenshotResolver(cfg: ExecutorConfig): ((job: GateJob) => Promise<ScreenshotResolution>) | undefined {
   if (cfg.screenshotResolver) return cfg.screenshotResolver;
   if (cfg.screenshotPath) return async () => cfg.screenshotPath!;
   if (cfg.autoCapture) return makeUeCaptureResolver(cfg.autoCapture);

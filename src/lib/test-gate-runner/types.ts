@@ -90,6 +90,33 @@ export interface GateVerdict {
 }
 
 /**
+ * The outcome of resolving an L4 frame for a job — richer than a bare path so the executor
+ * can stamp WHAT was actually photographed into evidence, and honestly DEFER (never a silent
+ * VerticalSlice fallback) when a scenario's declared map can't be rendered.
+ */
+export interface CaptureResolution {
+  /** The rendered frame path, or null if none was produced. */
+  screenshot: string | null;
+  /** The map actually photographed — stamped into evidence. */
+  map?: string;
+  /** True when a per-gate scenario drove the frame (vs a generic settle). */
+  scenarioDriven?: boolean;
+  /**
+   * Set when the resolver DECLINED honestly — e.g. a scenario-declared map produced no frame
+   * (missing/unlit). The L4 gate stays `deferred` with this reason; it is NOT silently retried
+   * on the default lit slice (that would judge the wrong scene).
+   */
+  deferredReason?: string;
+}
+
+/**
+ * A screenshot resolver's return. Legacy `string | null` stays valid (an operator-supplied
+ * path / the default null resolver); the autonomous capture resolver returns the richer
+ * {@link CaptureResolution} so map/entity/scenario metadata reaches the evidence.
+ */
+export type ScreenshotResolution = string | null | CaptureResolution;
+
+/**
  * Runs gates of a single tier. The seam: the bridge (running editor), spawn
  * (headless UnrealEditor-Cmd), and visual-bridge (RHI + Gemini) executors all
  * satisfy this, so the run mode is chosen at call time, not baked in.
