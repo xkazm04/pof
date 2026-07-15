@@ -11,18 +11,32 @@ import {
 import type { DodgeParams } from '../_shared/dodge-types';
 import { SectionHeader } from '../../unique-tabs/_design';
 import { FOCUS_RING_CLASS, focusRingStyle } from '@/lib/ui/focus-ring';
-import type { CLILogEntry } from '@/stores/cliOptimizationStore';
+import type { HeuristicLogEntry } from '@/stores/heuristicTuningStore';
 
-type CliStore = {
-  log: CLILogEntry[]; isOptimizing: boolean; sidebarOpen: boolean;
+type HeuristicStore = {
+  log: HeuristicLogEntry[]; isOptimizing: boolean; sidebarOpen: boolean;
   pendingResult: DodgeParams | null;
-  addLogEntry: (entry: Omit<CLILogEntry, 'id' | 'timestamp'>) => void;
+  addLogEntry: (entry: Omit<HeuristicLogEntry, 'id' | 'timestamp'>) => void;
   startOptimization: () => void; finishOptimization: (result?: DodgeParams) => void;
   toggleSidebar: () => void; applyPendingResult: () => DodgeParams | null;
 };
 
+/**
+ * The local dodge-tuning heuristic — a pure, deterministic nudge (NO AI / NO CLI):
+ * widen the i-frame window by 15% (capped at 80% of the dodge duration so i-frames
+ * never outlast the roll) and trim the cooldown by 10%. Exported so it is testable
+ * in isolation and so the mechanism is transparent rather than buried in a click handler.
+ */
+export function computeDodgeHeuristic(params: DodgeParams): DodgeParams {
+  return {
+    ...params,
+    iFrameDuration: Math.min(params.iFrameDuration * 1.15, params.dodgeDuration * 0.8),
+    cooldown: params.cooldown * 0.9,
+  };
+}
+
 export function HeaderToolbar({ cliStore, params, showFrameData, setShowFrameData, showParams, setShowParams, showHitEditor, setShowHitEditor }: {
-  cliStore: CliStore;
+  cliStore: HeuristicStore;
   params: DodgeParams;
   showFrameData: boolean; setShowFrameData: (v: boolean) => void;
   showParams: boolean; setShowParams: (v: boolean) => void;
@@ -53,25 +67,29 @@ function ToggleBtn({ active, onToggle, color, icon: Icon, title }: {
   );
 }
 
-function OptimizeButton({ cliStore, params }: { cliStore: CliStore; params: DodgeParams }) {
+function OptimizeButton({ cliStore, params }: { cliStore: HeuristicStore; params: DodgeParams }) {
   return (
     <button
       onClick={() => {
+        // Honest local heuristic: compute the deterministic nudge synchronously —
+        // no AI, no CLI, no artificial "analyzing…" delay pretending an engine ran.
+        const result = computeDodgeHeuristic(params);
         cliStore.startOptimization();
-        cliStore.addLogEntry({ type: 'info', message: 'Starting dodge parameter optimization...', detail: `Current params: distance=${params.dodgeDistance}, duration=${params.dodgeDuration}, iFrameStart=${params.iFrameStart}` });
-        setTimeout(() => { cliStore.addLogEntry({ type: 'change', message: 'Analyzing i-frame window coverage...' }); }, 800);
-        setTimeout(() => {
-          cliStore.addLogEntry({ type: 'result', message: 'Optimization complete -- suggested adjustments ready', detail: 'Increased i-frame window by 15%, reduced cooldown by 10%' });
-          cliStore.finishOptimization({ ...params, iFrameDuration: Math.min(params.iFrameDuration * 1.15, params.dodgeDuration * 0.8), cooldown: params.cooldown * 0.9 });
-        }, 2000);
+        cliStore.addLogEntry({
+          type: 'result',
+          message: 'Local heuristic applied (no AI/CLI run)',
+          detail: 'i-frame window +15% (capped at 80% of dodge duration), cooldown −10%',
+        });
+        cliStore.finishOptimization(result);
       }}
       disabled={cliStore.isOptimizing}
+      title="Local heuristic — no AI/CLI run. Instantly widens the i-frame window +15% (capped) and trims cooldown −10%."
       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed ${FOCUS_RING_CLASS}`}
       style={{ borderColor: `${withOpacity(ACCENT_EMERALD, OPACITY_25)}`, backgroundColor: `${withOpacity(ACCENT_EMERALD, OPACITY_8)}`, color: ACCENT_EMERALD, ...focusRingStyle(ACCENT_EMERALD) }}
     >
-      {cliStore.isOptimizing ? 'Optimizing...' : 'Simulate & Optimize'}
+      {cliStore.isOptimizing ? 'Tuning…' : 'Optimize (local)'}
     </button>
   );
 }
 
-export type { CliStore };
+export type { HeuristicStore };

@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ACCENT_CYAN } from '@/lib/chart-colors';
-import { useCharacterCliStore } from '@/stores/cliOptimizationStore';
+import { useCharacterHeuristicStore } from '@/stores/heuristicTuningStore';
 import type { DodgeParams, HitMarker, DodgeChainEntry } from '../_shared/dodge-types';
 import { DEFAULT_PARAMS } from '../_shared/dodge-types';
 import { computePhases } from '../_shared/dodge-math';
@@ -16,7 +16,7 @@ import { PlaybackControls } from './PlaybackControls';
 import { ParameterEditor } from './ParameterEditor';
 import { HitMarkerEditor } from './HitMarkerEditor';
 import { ChainControls } from './ChainControls';
-import { HeaderToolbar, type CliStore } from './HeaderToolbar';
+import { HeaderToolbar, type HeuristicStore } from './HeaderToolbar';
 import { PhaseLegend, FrameDataPanel } from './PhaseLegend';
 import { useHapticDetection, usePlayheadStats } from './useDodgeTimelineState';
 
@@ -47,7 +47,7 @@ export function DodgeTimelineEditor({ initialParams }: { initialParams?: Partial
   const triggeredHitsRef = useRef<Set<string>>(new Set());
   const hapticTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  const cliStore = useCharacterCliStore() as CliStore;
+  const cliStore = useCharacterHeuristicStore() as HeuristicStore;
 
   useEffect(() => {
     const pending = cliStore.pendingResult;
