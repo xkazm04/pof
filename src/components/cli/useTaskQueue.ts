@@ -3,7 +3,7 @@
 import { useEffect, useCallback, useRef, useState, useReducer } from 'react';
 import { apiFetch } from '@/lib/api-utils';
 import { UI_TIMEOUTS, BUILD_PARSE_CACHE_MAX } from '@/lib/constants';
-import { extractCallbackPayload, resolveCallback } from '@/lib/cli-task';
+import { extractAllCallbackPayloads, resolveCallback, type CallbackStatus } from '@/lib/cli-task';
 import type {
   QueuedTask, FileChange, LogEntry,
   ExecutionInfo, ExecutionResult, CLISSEEvent,
@@ -29,7 +29,13 @@ interface UseTaskQueueOpts {
   enabledSkills: SkillId[];
   visible?: boolean;
   onTaskStart?: (taskId: string) => void;
-  onTaskComplete?: (taskId: string, success: boolean) => void;
+  /**
+   * Fired exactly once per run when it terminates. `meta.callbackStatus` is
+   * ADDITIVE truth about the run's structured callback (confirmed/failed/missing)
+   * — present only for runs that emit a callback marker; it never gates or delays
+   * this signal (isRunning is always released within the existing bounds).
+   */
+  onTaskComplete?: (taskId: string, success: boolean, meta?: { callbackStatus?: CallbackStatus }) => void;
   onQueueEmpty?: () => void;
   onStreamingChange?: (streaming: boolean) => void;
   onBatchFlushed?: (count: number) => void;
@@ -228,6 +234,15 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
   const savedStreamUrlRef = useRef<string | null>(null);
   /** Server-side execution id for the in-flight run, so abort can kill the process. */
   const executionIdRef = useRef<string | null>(null);
+  /**
+   * Single completion latch for the CURRENT run, shared by every path that can end
+   * it — the SSE result/error handlers, the stream `onerror`, abort, and the stuck
+   * poller. It replaces the old connection-local `completed` boolean so the poller
+   * (a separate effect that could never see that closure) can no longer fire a
+   * second completion in the window between the result SSE and the callback-settle
+   * delayed completion. Reset to false when a fresh run connects.
+   */
+  const completedRef = useRef(false);
 
   // Notify parent when streaming state changes
   const prevStreamingRef = useRef(false);
@@ -280,6 +295,21 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
       heartbeatIntervalRef.current = null;
     }
   }, []);
+
+  /**
+   * Fire the one-shot completion for any NON-result terminal path (error, stream
+   * onerror, abort, stuck poller). Latched by `completedRef` so it runs at most
+   * once per run. The clean SSE `result` path does NOT go through here — it latches
+   * synchronously on result arrival and fires its own completion after the bounded
+   * callback-settle race, so it can carry the resolved `callbackStatus`.
+   */
+  const completeOnce = useCallback((success: boolean, callbackStatus?: CallbackStatus) => {
+    if (completedRef.current) return;
+    completedRef.current = true;
+    const tid = currentTaskIdRef.current;
+    if (tid) registerTaskComplete(tid, instanceId, success);
+    onTaskComplete?.(tid ?? INTERACTIVE_TASK_ID, success, callbackStatus ? { callbackStatus } : undefined);
+  }, [instanceId, onTaskComplete]);
 
   // --- SSE event handling ---
 
@@ -334,24 +364,42 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
       }
       case 'result': {
         const data = event.data as ExecutionResult;
+        // Latch the run as complete SYNCHRONOUSLY on result arrival, before the
+        // async callback-settle race below. This closes the window in which the
+        // stuck poller (or a late stream onerror) could fire a second completion
+        // while this path is still awaiting the callback POST.
+        completedRef.current = true;
         dispatch({ type: 'SSE_RESULT', result: data, sessionId: data.sessionId });
         clearHeartbeat();
 
         // Report token/cost spend for this run (e.g. persisted to the spend dashboard).
         onResultRef.current?.(data);
 
-        // Process structured callback if present in assistant output.
-        // Await the callback POST so data is in the DB before onTaskComplete fires.
-        const cbMatch = extractCallbackPayload(assistantOutputRef.current);
-        const cbPromise = cbMatch
-          ? resolveCallback(cbMatch.callbackId, cbMatch.payload).then((cbResult) => {
-              if (cbResult.success) {
-                addLog({ id: `cb-ok-${Date.now()}`, type: 'system', content: `Callback submitted successfully`, timestamp: Date.now() });
-              } else {
-                addLog({ id: `cb-err-${Date.now()}`, type: 'error', content: `Callback failed: ${cbResult.error}`, timestamp: Date.now() });
-              }
-            })
-          : Promise.resolve();
+        // Resolve EVERY structured callback present in assistant output (a run may
+        // emit more than one). `callbackStatus` is ADDITIVE truth carried into the
+        // completion signal: 'missing' when no marker was emitted, 'confirmed' when
+        // all POSTs succeeded, 'failed' if any was rejected. It is computed inside
+        // the settle race — if the race times out first it stays undefined, i.e.
+        // the callback simply did not confirm in time (treated as unconfirmed).
+        const cbMarkers = extractAllCallbackPayloads(assistantOutputRef.current);
+        let callbackStatus: CallbackStatus | undefined = cbMarkers.length === 0 ? 'missing' : undefined;
+        const cbPromise =
+          cbMarkers.length === 0
+            ? Promise.resolve()
+            : Promise.all(
+                cbMarkers.map((m) =>
+                  resolveCallback(m.callbackId, m.payload).then((cbResult) => {
+                    if (cbResult.success) {
+                      addLog({ id: `cb-ok-${Date.now()}-${m.callbackId}`, type: 'system', content: `Callback submitted successfully`, timestamp: Date.now() });
+                    } else {
+                      addLog({ id: `cb-err-${Date.now()}-${m.callbackId}`, type: 'error', content: `Callback failed: ${cbResult.error}`, timestamp: Date.now() });
+                    }
+                    return cbResult.success;
+                  }),
+                ),
+              ).then((results) => {
+                callbackStatus = results.every(Boolean) ? 'confirmed' : 'failed';
+              });
 
         assistantOutputRef.current = '';
 
@@ -364,11 +412,13 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
           cbPromise,
           new Promise<void>((resolve) => setTimeout(resolve, UI_TIMEOUTS.callbackSettleMax)),
         ]).finally(() => {
-          // Interactive runs (submitPrompt) have no queued task id, but the
-          // completion signal must still fire — it releases session.isRunning.
+          // completedRef is already latched (set synchronously above), so this is
+          // the single completion firing for the clean-result path. Interactive
+          // runs (submitPrompt) have no queued task id, but the completion signal
+          // must still fire — it releases session.isRunning.
           const tid = currentTaskIdRef.current;
           if (tid) registerTaskComplete(tid, instanceId, !data.isError);
-          onTaskComplete?.(tid ?? INTERACTIVE_TASK_ID, !data.isError);
+          onTaskComplete?.(tid ?? INTERACTIVE_TASK_ID, !data.isError, callbackStatus ? { callbackStatus } : undefined);
         });
 
         break;
@@ -379,29 +429,27 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
         clearHeartbeat();
         addLog({ id: `error-${Date.now()}`, type: 'error', content: data.error, timestamp: event.timestamp });
         assistantOutputRef.current = '';
-        const tid = currentTaskIdRef.current;
-        if (tid) registerTaskComplete(tid, instanceId, false);
-        onTaskComplete?.(tid ?? INTERACTIVE_TASK_ID, false);
+        completeOnce(false);
         break;
       }
     }
-  }, [addLog, addFileChange, instanceId, onTaskComplete, clearHeartbeat]);
+  }, [addLog, addFileChange, instanceId, onTaskComplete, clearHeartbeat, completeOnce]);
 
   const connectToStream = useCallback((streamUrl: string) => {
     if (eventSourceRef.current) eventSourceRef.current.close();
     savedStreamUrlRef.current = streamUrl;
+    // Fresh live connection for this run — arm the shared completion latch. The
+    // clean-result path re-latches synchronously on result arrival; every other
+    // terminal path (onerror, abort, stuck poller) reads this same ref so the run
+    // completes exactly once regardless of which observes the stream end.
+    completedRef.current = false;
     const eventSource = new EventSource(streamUrl);
     eventSourceRef.current = eventSource;
-    // Tracks whether this connection has already completed its task — set by a
-    // terminal result/error SSE event, checked by onerror, so the task is
-    // completed exactly once regardless of which path observes the stream end.
-    let completed = false;
     eventSource.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data) as CLISSEEvent;
         handleSSEEvent(data);
         if (data.type === 'result' || data.type === 'error') {
-          completed = true;
           eventSource.close();
           eventSourceRef.current = null;
           savedStreamUrlRef.current = null;
@@ -415,14 +463,11 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
       // without emitting a clean result/error SSE event. Complete the in-flight
       // task as failed so onTaskComplete fires and session.isRunning is
       // released; otherwise every same-module dispatch stays blocked behind a
-      // disabled "Claude" button (the SP-B chunk-1 37-minute hang).
-      if (completed) return;
-      completed = true;
-      const tid = currentTaskIdRef.current;
-      if (tid) registerTaskComplete(tid, instanceId, false);
-      onTaskComplete?.(tid ?? INTERACTIVE_TASK_ID, false);
+      // disabled "Claude" button (the SP-B chunk-1 37-minute hang). completeOnce
+      // no-ops if a result/error already latched completion.
+      completeOnce(false);
     };
-  }, [handleSSEEvent, instanceId, onTaskComplete]);
+  }, [handleSSEEvent, completeOnce]);
 
   // --- Task execution ---
 
@@ -438,6 +483,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     }
 
     assistantOutputRef.current = '';
+    completedRef.current = false;
     dispatch({ type: 'TASK_START', taskId: task.id });
     onTaskStart?.(task.id);
 
@@ -461,8 +507,13 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
       connectToStream(data.streamUrl);
     } catch (e) {
       dispatch({ type: 'START_FAILED', error: e instanceof Error ? e.message : 'Failed to start task' });
-      registerTaskComplete(task.id, instanceId, false);
-      onTaskComplete?.(task.id, false);
+      // Latch completion so a later stray path can't double-fire. Uses task.id
+      // directly (currentTaskIdRef may not have caught up to the TASK_START yet).
+      if (!completedRef.current) {
+        completedRef.current = true;
+        registerTaskComplete(task.id, instanceId, false);
+        onTaskComplete?.(task.id, false);
+      }
       clearHeartbeat();
     }
   }, [state.sessionId, instanceId, projectPath, addLog, connectToStream, onTaskStart, onTaskComplete, enabledSkills, clearHeartbeat]);
@@ -471,6 +522,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
 
   const submitPrompt = useCallback(async (prompt: string, resumeSession: boolean, opts?: { taskType?: string }) => {
     assistantOutputRef.current = '';
+    completedRef.current = false;
     dispatch({ type: 'SUBMIT_START' });
     // Echo the RAW user prompt to the log (no skills clutter); only the dispatched
     // prompt sent to the CLI carries the injected packs.
@@ -497,9 +549,9 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     } catch (e) {
       dispatch({ type: 'START_FAILED', error: e instanceof Error ? e.message : 'Failed to start' });
       // Release session.isRunning for hosts that latched on SUBMIT_START.
-      onTaskComplete?.(currentTaskIdRef.current ?? INTERACTIVE_TASK_ID, false);
+      completeOnce(false);
     }
-  }, [projectPath, state.sessionId, addLog, connectToStream, onTaskComplete, enabledSkills]);
+  }, [projectPath, state.sessionId, addLog, connectToStream, completeOnce, enabledSkills]);
 
   // --- Abort ---
 
@@ -515,11 +567,9 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
         await apiFetch(`/api/claude-terminal/query?executionId=${encodeURIComponent(execId)}`, { method: 'DELETE' });
       } catch { /* best-effort: the process may have already exited */ }
     }
-    const tid = currentTaskIdRef.current;
-    if (tid) registerTaskComplete(tid, instanceId, false);
-    onTaskComplete?.(tid ?? INTERACTIVE_TASK_ID, false);
+    completeOnce(false);
     dispatch({ type: 'ABORT' });
-  }, [instanceId, onTaskComplete, clearHeartbeat]);
+  }, [completeOnce, clearHeartbeat]);
 
   // --- Clear ---
 
@@ -544,16 +594,24 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
       return;
     }
     stuckCheckIntervalRef.current = setInterval(async () => {
+      // Respect the shared completion latch — the SSE result/error paths set it
+      // synchronously, so a poll that races the callback-settle window must not
+      // fire a second completion. (Re-checked after the await below too.)
+      if (completedRef.current) return;
       const tid = currentTaskIdRef.current;
       if (!tid) return;
       const status = await getTaskStatus(tid);
+      if (completedRef.current) return;
       if (status.found && status.status !== 'running') {
+        completedRef.current = true;
         if (eventSourceRef.current) { eventSourceRef.current.close(); eventSourceRef.current = null; }
         clearHeartbeat();
         onTaskComplete?.(tid, status.status === 'completed');
         dispatch({ type: 'STUCK_RESOLVED', success: status.status === 'completed' });
+        return;
       }
       if (status.isStale) {
+        completedRef.current = true;
         if (eventSourceRef.current) { eventSourceRef.current.close(); eventSourceRef.current = null; }
         clearHeartbeat();
         registerTaskComplete(tid, instanceId, false);

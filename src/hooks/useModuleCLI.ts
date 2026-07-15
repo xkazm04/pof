@@ -5,7 +5,7 @@ import { useCLIPanelStore } from '@/components/cli/store/cliPanelStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { usePatternLibraryStore } from '@/stores/patternLibraryStore';
 import { recordSessionOutcome } from '@/hooks/useSessionAnalytics';
-import { type CLITask } from '@/lib/cli-task';
+import { type CLITask, type CallbackStatus } from '@/lib/cli-task';
 import { composeTaskDispatch, STATIC_VARIANT_ID } from '@/lib/prompt-evolution/dispatch-resolve';
 import type { SkillId } from '@/components/cli/skills';
 import { UI_TIMEOUTS } from '@/lib/constants';
@@ -33,8 +33,14 @@ interface UseModuleCLIOptions {
   label: string;
   /** Accent color for the terminal tab */
   accentColor: string;
-  /** Called when the CLI transitions from running → stopped. Receives true if the task succeeded. */
-  onComplete?: (success: boolean) => void;
+  /**
+   * Called when the CLI transitions from running → stopped. Receives true if the
+   * task succeeded, plus the run's additive callback confirmation status when known
+   * ('confirmed' | 'failed' | 'missing') — checklist hosts flip UI to done only on
+   * 'confirmed'. The second arg is optional so callers that only need success are
+   * unaffected.
+   */
+  onComplete?: (success: boolean, callbackStatus?: CallbackStatus) => void;
 }
 
 export interface UseModuleCLIResult {
@@ -110,6 +116,9 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
           (sess) => sess.sessionKey === sessionKeyRef.current
         );
         const success = entry?.lastTaskSuccess === true;
+        // Additive callback truth for this run (undefined when the host never
+        // reported one — e.g. a non-callback interactive run).
+        const callbackStatus = entry?.lastCallbackStatus ?? undefined;
 
         // Record session analytics (fire and forget)
         if (lastPromptRef.current && taskStartRef.current) {
@@ -130,7 +139,7 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
           });
         }
 
-        onCompleteRef.current?.(success);
+        onCompleteRef.current?.(success, callbackStatus ?? undefined);
       }, UI_TIMEOUTS.raceConditionBuffer);
     }
     prevRunningRef.current = isRunning;

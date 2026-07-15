@@ -154,7 +154,7 @@ export function InlineTerminal({
           className="h-full"
           enabledSkills={session.enabledSkills}
           onStreamingChange={(streaming) => setSessionRunning(sessionId, streaming)}
-          onTaskComplete={(_taskId, success) => setSessionRunning(sessionId, false, success)}
+          onTaskComplete={(_taskId, success, meta) => setSessionRunning(sessionId, false, success, meta?.callbackStatus)}
           visible={visible}
         />
       </div>

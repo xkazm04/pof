@@ -4,7 +4,9 @@
  */
 
 import type { SkillId } from './skills';
+import type { CallbackStatus } from '@/lib/cli-task';
 export type { SkillId };
+export type { CallbackStatus };
 
 export interface QueuedTask {
   id: string;
@@ -70,7 +72,7 @@ export interface CompactTerminalProps {
   className?: string;
   taskQueue?: QueuedTask[];
   onTaskStart?: (taskId: string) => void;
-  onTaskComplete?: (taskId: string, success: boolean) => void;
+  onTaskComplete?: (taskId: string, success: boolean, meta?: { callbackStatus?: CallbackStatus }) => void;
   onQueueEmpty?: () => void;
   autoStart?: boolean;
   enabledSkills?: SkillId[];

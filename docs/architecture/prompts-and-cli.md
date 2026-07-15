@@ -220,9 +220,12 @@ from the one-shot routes — so the prefix is intentionally unconstrained.
    session's module + `lastTaskType`) for the Evaluator → **Spend** dashboard and budget
    guard. See *state-and-persistence → `cli_spend`*.
 
-6. **Terminal component** subscribes to `CLIExecutionEvent`s. When a `text` event
-   arrives, it scans the accumulated output for the regex match. On a hit it calls
-   `extractCallbackPayload(text)` → `{ callbackId, payload }`. (`cli-task.ts:108`)
+6. **Terminal component** subscribes to `CLIExecutionEvent`s. When the run's `result`
+   event arrives, it scans the accumulated output for **every** marker via
+   `extractAllCallbackPayloads(text)` → `{ callbackId, payload }[]` (a run may emit more
+   than one; the single-match `extractCallbackPayload` / `parseCallbackMarker` are still
+   used server-side by `awaitCallback`, which wants only the first). All markers share the
+   one regex source, so the global and single variants can never drift.
 
 7. **`resolveCallback(callbackId, rawPayload)`** (`cli-task.ts:118`):
    - Looks up the callback in `_callbackRegistry` by ID.
@@ -237,6 +240,25 @@ from the one-shot routes — so the prefix is intentionally unconstrained.
 8. The terminal displays a confirmation message. The store or API handler on the
    receiving end updates its state (checklist progress, feature-matrix entry, scan
    findings, pipeline artifact, etc.).
+
+**Callback truth (additive completion status).** The run's completion signal carries a
+`callbackStatus` — `confirmed` (every marker's POST succeeded), `failed` (a marker was
+emitted but its POST was rejected), or `missing` (no marker at all). It is resolved inside
+the existing `callbackSettleMax` race, so it **never blocks or delays** the `isRunning`
+release — it is purely additive truth. It flows `useTaskQueue.onTaskComplete(id, success,
+{ callbackStatus })` → `cliPanelStore.setSessionRunning(…, callbackStatus)` (stored as
+`lastCallbackStatus`) → `useModuleCLI.onComplete(success, callbackStatus)`. `useChecklistCLI`
+flips a checklist item to done **only on `confirmed`**; a completed-but-unconfirmed run
+(missing/failed callback → the `/api/checklist/complete` POST never landed) leaves the item
+un-done and surfaces `unconfirmedItemId` + `retryUnconfirmed()` — closing the old silent
+UI/DB divergence where the item was marked done regardless of the callback.
+
+**Single completion latch.** All terminal paths — the `result`/`error` SSE handlers, the
+stream `onerror`, abort, and the stuck-task poller — share one `completedRef` latch, so a
+run completes exactly once. The `result` path latches synchronously on arrival (before its
+bounded callback-settle race), and the poller re-checks the latch after its async
+`getTaskStatus`, closing the narrow window in which it could otherwise double-fire
+`onTaskComplete`.
 
 ---
 

@@ -109,8 +109,23 @@ ${staticNote}
  *   `step-…` from the one-shot routes — so the prefix is intentionally unconstrained.
  * - The body is everything up to the closing marker; surrounding whitespace and the
  *   trailing newline are tolerated and trimmed off.
+ *
+ * The pattern lives in ONE source string so the single-match and global variants
+ * can never drift: {@link parseCallbackMarker} reads the first marker (server-side
+ * `awaitCallback` only wants one), while {@link parseAllCallbackMarkers} iterates
+ * every marker in a run (the client resolves them all — no marker is silently lost).
  */
-const CALLBACK_MARKER_RE = /@@CALLBACK:(\S+)\s*\n([\s\S]*?)\s*@@END_CALLBACK/;
+const CALLBACK_MARKER_SRC = String.raw`@@CALLBACK:(\S+)\s*\n([\s\S]*?)\s*@@END_CALLBACK`;
+const CALLBACK_MARKER_RE = new RegExp(CALLBACK_MARKER_SRC);
+
+/**
+ * The confirmation status of a run's structured callback(s), threaded into the
+ * task-completion signal as ADDITIVE truth (it never blocks or delays completion):
+ * - `confirmed` — every emitted marker resolved (its API POST succeeded);
+ * - `failed`    — at least one marker was emitted but its POST failed / was rejected;
+ * - `missing`   — no marker was emitted at all (Claude never reported its result).
+ */
+export type CallbackStatus = 'confirmed' | 'failed' | 'missing';
 
 /** A parsed `@@CALLBACK…@@END_CALLBACK` marker. */
 export interface ParsedCallbackMarker {
@@ -152,6 +167,39 @@ export function extractCallbackPayload(text: string): { callbackId: string; payl
   const marker = parseCallbackMarker(text);
   if (!marker) return null;
   return { callbackId: marker.callbackId, payload: marker.payload };
+}
+
+/**
+ * Parse EVERY `@@CALLBACK…@@END_CALLBACK` marker out of assistant output.
+ *
+ * A single run can legitimately emit more than one marker; the single-match
+ * {@link parseCallbackMarker} sees only the first, so a client that resolves just
+ * that one silently drops the rest. This iterates all of them (global regex), in
+ * document order. Returns `[]` when none are present.
+ */
+export function parseAllCallbackMarkers(text: string): ParsedCallbackMarker[] {
+  const re = new RegExp(CALLBACK_MARKER_SRC, 'g');
+  const out: ParsedCallbackMarker[] = [];
+  for (const match of text.matchAll(re)) {
+    const payload = match[2].trim();
+    let data: unknown = null;
+    try {
+      data = JSON.parse(payload);
+    } catch {
+      data = null;
+    }
+    out.push({ callbackId: match[1], payload, data });
+  }
+  return out;
+}
+
+/**
+ * Extract every callback payload from assistant output text. Thin projection over
+ * {@link parseAllCallbackMarkers} for callers (e.g. the terminal) that re-parse the
+ * raw payload themselves via {@link resolveCallback}. Returns `[]` when none found.
+ */
+export function extractAllCallbackPayloads(text: string): { callbackId: string; payload: string }[] {
+  return parseAllCallbackMarkers(text).map((m) => ({ callbackId: m.callbackId, payload: m.payload }));
 }
 
 /**

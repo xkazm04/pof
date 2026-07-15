@@ -15,6 +15,12 @@ export interface CLISessionState {
   isRunning: boolean;
   /** Whether the last completed task succeeded (null if no task completed yet) */
   lastTaskSuccess: boolean | null;
+  /**
+   * Callback confirmation status of the last completed task (additive truth):
+   * 'confirmed' | 'failed' | 'missing', or null for runs with no callback / none yet.
+   * Consumers (e.g. useChecklistCLI) flip checklist UI to done only on 'confirmed'.
+   */
+  lastCallbackStatus?: 'confirmed' | 'failed' | 'missing' | null;
   accentColor: string;
   /** Module this session is displayed within (used by ModuleRenderer for inline visibility) */
   moduleId?: string;
@@ -45,7 +51,7 @@ interface CLIPanelStoreState {
   maximizeTab: (tabId: string) => void;
   /** Hide the currently maximized terminal back to bottom bar only */
   minimizeTab: () => void;
-  setSessionRunning: (id: string, running: boolean, success?: boolean) => void;
+  setSessionRunning: (id: string, running: boolean, success?: boolean, callbackStatus?: 'confirmed' | 'failed' | 'missing') => void;
   setClaudeSessionId: (id: string, claudeSessionId: string) => void;
   setCurrentExecution: (id: string, executionId: string | null, taskId: string | null) => void;
   /** Record the task type + label of the prompt being dispatched (for spend attribution). */
@@ -104,6 +110,7 @@ export const useCLIPanelStore = create<CLIPanelStoreState>()(
           currentTaskId: null,
           isRunning: false,
           lastTaskSuccess: null,
+          lastCallbackStatus: null,
           accentColor: opts?.accentColor || MODULE_COLORS.core,
           moduleId: opts?.moduleId,
           sessionKey: opts?.sessionKey,
@@ -147,7 +154,7 @@ export const useCLIPanelStore = create<CLIPanelStoreState>()(
 
       minimizeTab: () => set({ maximizedTabId: null }),
 
-      setSessionRunning: (id, running, success) => {
+      setSessionRunning: (id, running, success, callbackStatus) => {
         set((state) => {
           const session = state.sessions[id];
           if (!session) return state;
@@ -160,6 +167,8 @@ export const useCLIPanelStore = create<CLIPanelStoreState>()(
                 lastActivityAt: Date.now(),
                 // Record success only when transitioning to stopped
                 ...(running === false && success !== undefined ? { lastTaskSuccess: success } : {}),
+                // Additive callback truth, recorded on the same stopped transition.
+                ...(running === false && callbackStatus !== undefined ? { lastCallbackStatus: callbackStatus } : {}),
               },
             },
           };
