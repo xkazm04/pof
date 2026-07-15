@@ -21,6 +21,7 @@ export type EvaluatorTabId =
   | 'features'
   | 'conflicts'
   | 'quality'
+  | 'verdicts'
   | 'dependencies'
   | 'analytics'
   | 'spend'
@@ -103,6 +104,11 @@ export const EVALUATOR_TAB_INFO: Record<EvaluatorTabId, EvaluatorTabInfo> = {
     label: 'Quality',
     plain: 'Quality scoreboard',
     description: 'Aggregated code-quality scores for every module.',
+  },
+  verdicts: {
+    label: 'Verdicts',
+    plain: 'Content judge verdicts',
+    description: 'What the AI content judges thought of your produced game content — pass/fail scores and the specific reasons they gave.',
   },
   scanner: {
     label: 'Scanner',

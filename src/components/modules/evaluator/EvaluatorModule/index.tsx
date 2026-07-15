@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { MODULE_COLORS } from '@/lib/chart-colors';
 import { useScrollRestoration } from '@/hooks/useScrollRestoration';
-import { Radar, BarChart3, Activity, Link2, LayoutDashboard, ScanSearch, Grid3x3, FileText, ShoppingBag, BookOpen, Coins, Gauge, Swords, Globe, Bug, HeartPulse, Palette, Dna, ShieldCheck, Network, Layers, Calendar, CalendarDays, GitBranch, Pickaxe, SearchCode, Stars, Hammer, Sparkles, Wallet } from 'lucide-react';
+import { Radar, BarChart3, Activity, Link2, LayoutDashboard, ScanSearch, Grid3x3, FileText, ShoppingBag, BookOpen, Coins, Gauge, Swords, Globe, Bug, HeartPulse, Palette, Dna, ShieldCheck, Network, Layers, Calendar, CalendarDays, GitBranch, Pickaxe, SearchCode, Stars, Hammer, Sparkles, Wallet, Gavel } from 'lucide-react';
 import { SessionAnalyticsDashboard } from '../SessionAnalyticsDashboard';
 import { SpendDashboard } from '../SpendDashboard';
 import { AggregateQualityDashboard } from '../AggregateQualityDashboard';
@@ -36,6 +36,7 @@ import { CodebaseArcheologistView } from '../CodebaseArcheologistView';
 import { AssetCodeOracleView } from '../AssetCodeOracleView';
 import { ErrorMemoryPanel } from '../ErrorMemoryPanel';
 import { BuildHealthDashboard } from '../BuildHealthDashboard';
+import { JudgeVerdictsView } from '../JudgeVerdictsView';
 import { EvaluatorCoachmark } from '../EvaluatorCoachmark';
 import { EVALUATOR_TAB_INFO } from '@/lib/evaluator/tab-glossary';
 import { type TabId } from './types';
@@ -88,6 +89,7 @@ export function EvaluatorModule() {
 
           <TabDivider label="Quality" />
           <TabButton tabId="quality" icon={Activity} active={activeTab === 'quality'} onClick={() => switchTab('quality')} onArrowNav={handleTabArrowNav} />
+          <TabButton tabId="verdicts" icon={Gavel} active={activeTab === 'verdicts'} onClick={() => switchTab('verdicts')} onArrowNav={handleTabArrowNav} />
           <TabButton tabId="scanner" icon={Radar} active={activeTab === 'scanner'} onClick={() => switchTab('scanner')} onArrowNav={handleTabArrowNav} />
           <TabButton tabId="compliance" icon={ShieldCheck} active={activeTab === 'compliance'} onClick={() => switchTab('compliance')} onArrowNav={handleTabArrowNav} />
           <TabButton tabId="health" icon={HeartPulse} active={activeTab === 'health'} onClick={() => switchTab('health')} onArrowNav={handleTabArrowNav} />
@@ -155,6 +157,10 @@ export function EvaluatorModule() {
 
         {activeTab === 'quality' && (
           <AggregateQualityDashboard />
+        )}
+
+        {activeTab === 'verdicts' && (
+          <JudgeVerdictsView />
         )}
 
         {activeTab === 'dependencies' && (

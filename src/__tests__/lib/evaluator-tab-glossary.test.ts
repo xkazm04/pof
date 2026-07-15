@@ -11,7 +11,7 @@ import {
 // plain-language entry — the very gap this feature closes.
 const ALL_TAB_IDS: EvaluatorTabId[] = [
   'overview', 'nexus', 'constellation', 'features', 'conflicts', 'quality',
-  'dependencies', 'analytics', 'spend', 'scanner', 'deep-eval', 'gdd', 'compliance',
+  'verdicts', 'dependencies', 'analytics', 'spend', 'scanner', 'deep-eval', 'gdd', 'compliance',
   'asset-scout', 'patterns', 'economy', 'perf', 'combat', 'i18n', 'crashes',
   'health', 'build-health', 'pp-studio', 'evolution', 'digest', 'wrapped',
   'roadmap', 'workflows', 'archeologist', 'oracle',
