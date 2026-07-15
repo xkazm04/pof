@@ -52,11 +52,14 @@ vi.mock('@/lib/catalog/pipeline-registry', async (importOriginal) => {
 import { CatalogMatrix } from '@/components/layout-lab/CatalogMatrix';
 import { LIGHT } from '@/components/layout-lab/theme';
 
-const groups = [{ category: 'Test', catalogs: [{ catalogId: 'fixtures', label: 'Fixtures', description: '', total: 2, verified: 0 }] }];
+const groups = [{ category: 'Test', catalogs: [
+  { catalogId: 'fixtures', label: 'Fixtures', description: '', total: 2, verified: 0 },
+  { catalogId: 'other-catalog', label: 'Other', description: '', total: 0, verified: 0 },
+] }];
 
-function renderMatrix(onOpenStep = vi.fn()) {
-  const utils = render(<CatalogMatrix t={LIGHT} groups={groups} catalogId="fixtures" onOpenStep={onOpenStep} />);
-  return { ...utils, onOpenStep };
+function renderMatrix(onOpenStep = vi.fn(), onSelectCatalog = vi.fn()) {
+  const utils = render(<CatalogMatrix t={LIGHT} groups={groups} catalogId="fixtures" onSelectCatalog={onSelectCatalog} onOpenStep={onOpenStep} />);
+  return { ...utils, onOpenStep, onSelectCatalog };
 }
 
 afterEach(cleanup);
@@ -107,6 +110,16 @@ describe('CatalogMatrix', () => {
     expect(start).toBeTruthy();
     // exactly one entity (e2) is deferred → singular label
     expect(start?.textContent).toContain('1 deferred set');
+  });
+
+  it('the catalog dropdown writes through onSelectCatalog (no private fork)', async () => {
+    const { container, onSelectCatalog } = renderMatrix();
+    await waitFor(() => expect(statusOf(container, 'e1::StepA')).toBe('pass'));
+    // The select is controlled by the catalogId prop; changing it must call the parent.
+    const select = container.querySelector('#matrix-catalog') as HTMLSelectElement;
+    expect(select.value).toBe('fixtures');
+    fireEvent.change(select, { target: { value: 'other-catalog' } });
+    expect(onSelectCatalog).toHaveBeenCalledWith('other-catalog');
   });
 
   it('clicking a cell jumps to that entity + step index', async () => {

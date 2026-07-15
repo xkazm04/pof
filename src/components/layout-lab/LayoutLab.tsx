@@ -34,9 +34,14 @@ export function LayoutLab() {
   const themeId = prefs.themeId;
   const [catalogId, setCatalogId] = useState('items');
   const [entityId, setEntityId] = useState<string | null>(null);
+  // The pipeline step position is OWNED here (single source of truth) so it survives
+  // the view toggles that remount Baseline via AnimatePresence — the old per-Baseline
+  // `stepIdx` reset to 0 on every catalogs↔matrix↔canon switch (navigation amnesia).
+  // Keeping it in the parent also makes a matrix/coach jump a plain state write instead
+  // of a fragile "remount reads the initial focus" channel — so there is no lingering
+  // focus value to replay stale (it is consumed exactly once, when set).
+  const [stepIdx, setStepIdx] = useState(0);
   const [view, setView] = useState<'catalogs' | 'canon' | 'matrix'>('catalogs');
-  // Step to open when jumping in from the catalog-wide matrix; cleared on a manual Catalogs click.
-  const [focusStepIdx, setFocusStepIdx] = useState<number | undefined>(undefined);
   // Adopt persisted last-location once after hydration (React-sanctioned
   // adjust-state-during-render bail-out; StrictMode-safe, no ref mutation).
   const [navAdopted, setNavAdopted] = useState(false);
@@ -50,6 +55,30 @@ export function LayoutLab() {
   const hydrate = useCanonStore((s) => s.hydrate);
   const setPanelOpen = useOneShotLabStore((s) => s.setPanelOpen);
 
+  // ── Single source of truth for navigation ──────────────────────────────────
+  // Every catalog/entity/step mutation flows through these so persistence (last
+  // location) and step-reset behaviour are identical on ALL paths — tree click,
+  // matrix dropdown, matrix cell, and GlobalCoach jump (no more path-dependent amnesia).
+  const selectCatalog = useCallback((id: string) => {
+    setCatalogId(id);
+    setEntityId(null);
+    setStepIdx(0);
+    setPrefs({ lastCatalogId: id, lastEntityId: null });
+  }, [setPrefs]);
+  const selectEntity = useCallback((id: string) => {
+    setEntityId(id);
+    setStepIdx(0);
+    setPrefs({ lastEntityId: id });
+  }, [setPrefs]);
+  // Jump to a specific entity+step (matrix cell / coach), persisting the location the
+  // same way a tree click does — so the daily driver reopens where you left off.
+  const navigateTo = useCallback((cid: string, eid: string, step: number) => {
+    setCatalogId(cid);
+    setEntityId(eid);
+    setStepIdx(step);
+    setPrefs({ lastCatalogId: cid, lastEntityId: eid });
+  }, [setPrefs]);
+
   useEffect(() => { hydrate(); }, [hydrate]);
 
   useEffect(() => {
@@ -61,25 +90,20 @@ export function LayoutLab() {
   useEffect(() => {
     const unsub = useOneShotLabStore.subscribe((state, prev) => {
       if (state.pendingNavigation && state.pendingNavigation !== prev.pendingNavigation) {
-        setCatalogId(state.pendingNavigation.catalogId);
-        setEntityId(state.pendingNavigation.entityId);
-        // Reuse the existing openFromMatrix focus-step channel so a GlobalCoach jump
-        // opens Baseline on the flagged step (undefined clears it → default step 0).
-        setFocusStepIdx(state.pendingNavigation.stepIndex);
+        // A GlobalCoach jump writes catalog+entity+step straight into the lifted nav
+        // state (consumed once here) — no separate focus channel that could replay stale.
+        navigateTo(state.pendingNavigation.catalogId, state.pendingNavigation.entityId, state.pendingNavigation.stepIndex ?? 0);
         useOneShotLabStore.getState().setPendingNavigation(null);
       }
     });
     return unsub;
-  }, []);
+  }, [navigateTo]);
 
-  // Jump straight from a matrix cell to that entity's step: Baseline remounts on the
-  // view switch, so it reads focusStepIdx as its initial step.
-  const openFromMatrix = useCallback((cid: string, eid: string, stepIdx: number) => {
-    setCatalogId(cid);
-    setEntityId(eid);
-    setFocusStepIdx(stepIdx);
+  // Jump straight from a matrix cell to that entity's step, then surface the composition view.
+  const openFromMatrix = useCallback((cid: string, eid: string, step: number) => {
+    navigateTo(cid, eid, step);
     setView('catalogs');
-  }, []);
+  }, [navigateTo]);
 
   const switchToLegacy = useCallback(() => {
     writeShellPref('legacy');
@@ -123,7 +147,7 @@ export function LayoutLab() {
         </div>
         {/* Center zone: primary actions */}
         <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 'var(--lab-s2)' }}>
-          <Button active={view === 'catalogs'} onClick={() => { setView('catalogs'); setFocusStepIdx(undefined); }}>Catalogs</Button>
+          <Button active={view === 'catalogs'} onClick={() => setView('catalogs')}>Catalogs</Button>
           <Button active={view === 'matrix'} onClick={() => setView('matrix')}>Matrix</Button>
           <Button active={view === 'canon'} onClick={() => setView('canon')}>Canon</Button>
           <Button onClick={() => setPanelOpen(true)}>+ One-shot</Button>
@@ -150,12 +174,13 @@ export function LayoutLab() {
             transition={{ duration: reduce ? 0 : 0.18, ease: 'easeOut' }}
             style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
             {view === 'canon' ? <CanonView t={theme} />
-              : view === 'matrix' ? <CatalogMatrix t={theme} groups={groups} catalogId={catalogId} onOpenStep={openFromMatrix} />
+              : view === 'matrix' ? <CatalogMatrix t={theme} groups={groups} catalogId={catalogId} onSelectCatalog={selectCatalog} onOpenStep={openFromMatrix} />
               : <Baseline theme={theme} groups={groups} detail={detail}
-                  onSelectCatalog={(id) => { setCatalogId(id); setEntityId(null); setPrefs({ lastCatalogId: id, lastEntityId: null }); }}
+                  onSelectCatalog={selectCatalog}
                   entityId={entityId}
-                  onSelectEntity={(id) => { setEntityId(id); setPrefs({ lastEntityId: id }); }}
-                  initialStepIdx={focusStepIdx}
+                  onSelectEntity={selectEntity}
+                  stepIdx={stepIdx}
+                  onSelectStep={setStepIdx}
                 />}
           </motion.div>
         </AnimatePresence>

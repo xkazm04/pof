@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { summarizeEntityData } from '@/lib/ecw/entity-summary';
 import { useLabPipelineStore, useEntitySteps, setLabSync } from '../labPipelineStore';
 import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
@@ -12,18 +12,17 @@ import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 import { COLLAPSE_BREAKPOINT } from './constants';
 import type { Props } from './types';
 
-export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity, initialStepIdx }: Props) {
-  const [stepIdx, setStepIdx] = useState<number | null>(initialStepIdx ?? 0);
-
-  // Adopt a NEW focus step when it changes while Baseline is already mounted — e.g. a
-  // GlobalCoach jump changes catalog+entity+focus without remounting the view (the
-  // matrix path remounts and reads it as the initial value instead). React-sanctioned
-  // adjust-state-during-render bail-out (StrictMode-safe; no effect/ref mutation).
-  const [prevInitialStepIdx, setPrevInitialStepIdx] = useState(initialStepIdx);
-  if (initialStepIdx !== prevInitialStepIdx) {
-    setPrevInitialStepIdx(initialStepIdx);
-    if (initialStepIdx != null) setStepIdx(initialStepIdx);
-  }
+export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity, stepIdx: controlledStepIdx, onSelectStep }: Props) {
+  // Controlled step position when the parent owns it (LayoutLab, so it survives the
+  // AnimatePresence view-toggle remount); otherwise fall back to local state so a
+  // direct-render (test/legacy) still works uncontrolled.
+  const isControlled = onSelectStep !== undefined;
+  const [localStepIdx, setLocalStepIdx] = useState(0);
+  const stepIdx = isControlled ? controlledStepIdx ?? 0 : localStepIdx;
+  const setStepIdx = useCallback(
+    (i: number) => { if (onSelectStep) onSelectStep(i); else setLocalStepIdx(i); },
+    [onSelectStep],
+  );
   const [draining, setDraining] = useState(false);
   const [plainMode, setPlainMode] = useState(false);
 

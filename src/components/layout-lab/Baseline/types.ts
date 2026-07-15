@@ -8,6 +8,11 @@ export interface Props {
   onSelectCatalog: (id: string) => void;
   entityId: string | null;
   onSelectEntity: (id: string) => void;
-  /** Step to open on mount (e.g. jumped to from the catalog-wide matrix). Defaults to 0. */
-  initialStepIdx?: number;
+  /**
+   * Controlled step position: when `onSelectStep` is supplied the step index lives in
+   * the parent (LayoutLab), so it survives the view toggles that remount this component.
+   * Omit both to run uncontrolled with an internal `stepIdx` (direct-render tests).
+   */
+  stepIdx?: number;
+  onSelectStep?: (i: number) => void;
 }

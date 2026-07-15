@@ -1,7 +1,7 @@
 'use client';
 
 import '@/lib/catalog/pipelines/registry.generated';
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useReducedMotion } from 'framer-motion';
 import { useCachedArtifacts } from './labArtifactCache';
 import { useLabPipelineStore } from './labPipelineStore';
@@ -22,6 +22,8 @@ interface Props {
   t: LabTheme;
   groups: LabGroup[];
   catalogId: string;
+  /** Write-through: the dropdown selects a catalog by updating LayoutLab's single-source catalogId. */
+  onSelectCatalog: (id: string) => void;
   onOpenStep: (catalogId: string, entityId: string, stepIdx: number) => void;
 }
 
@@ -33,20 +35,22 @@ interface Props {
  * per-entity strip shows "X of N steps complete" and flags blockers (failed gates).
  * Click any cell to jump straight to that entity's step; pick a catalog from the selector.
  */
-export function CatalogMatrix({ t, groups, catalogId, onOpenStep }: Props) {
-  const [selected, setSelected] = useState(catalogId);
+export function CatalogMatrix({ t, groups, catalogId, onSelectCatalog, onOpenStep }: Props) {
+  // Controlled by LayoutLab's single-source catalogId — the dropdown writes through
+  // `onSelectCatalog` instead of forking a private `selected`, so switching catalog here
+  // and then opening the Catalogs tab lands on the SAME catalog (no stale fork).
   const reduce = useReducedMotion();
-  const detail = useLabDetail(selected);
+  const detail = useLabDetail(catalogId);
 
   // Same manifest step-source Baseline uses, so the matrix columns and the rail can
   // never disagree about a catalog's step list (incl. bespoke Items, which renders
   // its curated fine steps rather than its same-id registry pipeline labels).
-  const steps = useMemo(() => resolveCatalogSteps(selected), [selected]);
+  const steps = useMemo(() => resolveCatalogSteps(catalogId), [catalogId]);
 
   // Server is the source of truth for status — it carries the runner's L3/L4 overlay.
-  // The shared cache (keyed by `selected`) is deduped with Baseline's fetch and
+  // The shared cache (keyed by `catalogId`) is deduped with Baseline's fetch and
   // exposes an honest LOADING state instead of an all-pending flash on catalog switch.
-  const { arts, loading } = useCachedArtifacts(selected);
+  const { arts, loading } = useCachedArtifacts(catalogId);
   const showSkeleton = loading && arts.length === 0;
 
   const byEntity = useMemo(() => {
@@ -64,8 +68,8 @@ export function CatalogMatrix({ t, groups, catalogId, onOpenStep }: Props) {
   const localByEntity = useLabPipelineStore((s) => s.byEntity);
 
   const rows = useMemo(
-    () => buildMatrixRows(selected, detail?.entities ?? [], byEntity, localByEntity, steps),
-    [selected, detail?.entities, byEntity, localByEntity, steps],
+    () => buildMatrixRows(catalogId, detail?.entities ?? [], byEntity, localByEntity, steps),
+    [catalogId, detail?.entities, byEntity, localByEntity, steps],
   );
 
   const completeCount = rows.filter((r) => r.rollup.configComplete).length;
@@ -78,7 +82,7 @@ export function CatalogMatrix({ t, groups, catalogId, onOpenStep }: Props) {
     () => rows.filter((r) => r.rollup.deferred > 0).map((r) => ({ id: r.id, name: r.name })),
     [rows],
   );
-  const { state: drainState, start: startDrain, cancel: cancelDrain } = useBatchDrain(selected);
+  const { state: drainState, start: startDrain, cancel: cancelDrain } = useBatchDrain(catalogId);
 
   // Memoize cell styles per status (only ~5 distinct statuses) instead of
   // allocating a fresh CSSProperties object for every cell on every render — the
@@ -137,7 +141,7 @@ export function CatalogMatrix({ t, groups, catalogId, onOpenStep }: Props) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', padding: '16px 28px', borderBottom: `1px solid ${t.line}` }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <label htmlFor="matrix-catalog" className={t.fontMono} style={{ fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase', color: t.muted }}>Catalog</label>
-          <select id="matrix-catalog" value={selected} onChange={(e) => setSelected(e.target.value)} className={t.fontMono}
+          <select id="matrix-catalog" value={catalogId} onChange={(e) => onSelectCatalog(e.target.value)} className={t.fontMono}
             style={{ fontSize: 15, padding: '6px 10px', background: t.panel, color: t.text, border: `1px solid ${t.line}`, borderRadius: t.glass ? 6 : 0, cursor: 'pointer' }}>
             {groups.map((g) => (
               <optgroup key={g.category} label={g.category}>
@@ -188,7 +192,7 @@ export function CatalogMatrix({ t, groups, catalogId, onOpenStep }: Props) {
               {rows.map((r) => (
                 <tr key={r.id} data-draining={drainState.activeEntityIds.has(r.id) || undefined}>
                   <td style={drainState.activeEntityIds.has(r.id) ? { ...nameTd, borderLeft: `3px solid ${t.warn}` } : nameTd}>
-                    <button onClick={() => onOpenStep(selected, r.id, 0)} className={t.fontBody}
+                    <button onClick={() => onOpenStep(catalogId, r.id, 0)} className={t.fontBody}
                       style={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%', textAlign: 'left', cursor: 'pointer', background: 'transparent', border: 'none', color: t.text }}>
                       <span style={{ fontSize: 14, fontWeight: 600, color: t.inkDeep, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</span>
                       <span data-testid={`matrix-progress-${r.id}`} style={{ fontSize: 12, color: t.muted, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -210,7 +214,7 @@ export function CatalogMatrix({ t, groups, catalogId, onOpenStep }: Props) {
                     const status = r.statusByStep(s);
                     return (
                       <td key={s} style={stepTd}>
-                        <button onClick={() => onOpenStep(selected, r.id, i)}
+                        <button onClick={() => onOpenStep(catalogId, r.id, i)}
                           data-cell={`${r.id}::${s}`} data-status={status}
                           aria-label={`${r.name} · ${s}: ${wordOf(status)}`}
                           title={`${r.name} · ${s}: ${wordOf(status)}`}

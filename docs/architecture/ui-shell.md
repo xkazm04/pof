@@ -15,8 +15,8 @@ rollup strip.
 | `src/lib/ecw/shell-pref.ts` | `readShellPref()` / `writeShellPref()` — `?legacy=1` URL flag or `localStorage['pof.shell']` |
 | `src/components/layout-lab/NewHome.tsx` | Calls `usePofBridge()`, then gates: Blueprint `<SetupWizard />` when no project is loaded, else `<LayoutLab />` |
 | `src/components/layout-lab/LayoutLab.tsx` | Top-level shell: 3-zone header bar (brand · centered Catalogs/Matrix/Canon/One-shot/Legacy actions · right-corner status + icon theme toggle), `<LabBridgeStrip>` |
-| `src/components/layout-lab/Baseline.tsx` | 3-column composition screen: tree / pipeline timeline / work canvas; all produce→persist→render logic. Optional `initialStepIdx` opens a specific step on mount (used by the matrix jump) |
-| `src/components/layout-lab/CatalogMatrix.tsx` | Catalog-wide status matrix: entities (rows) × steps (columns) colored by derived Acceptance; per-entity `summarizeEntity` rollup + blocker flags; cells jump to that entity's step. Header hosts the batch-drain action; every entity in the in-flight batch shows a left-accent + "draining…" badge (`drainState.activeEntityIds`) |
+| `src/components/layout-lab/Baseline.tsx` | 3-column composition screen: tree / pipeline timeline / work canvas; all produce→persist→render logic. **Controlled** step position via `stepIdx` + `onSelectStep` (parent-owned so it survives view-toggle remounts); falls back to internal state when `onSelectStep` is omitted |
+| `src/components/layout-lab/CatalogMatrix.tsx` | Catalog-wide status matrix: entities (rows) × steps (columns) colored by derived Acceptance; per-entity `summarizeEntity` rollup + blocker flags; cells jump to that entity's step. **Controlled** catalog dropdown (`catalogId` + `onSelectCatalog` write-through — no private `selected` fork). Header hosts the batch-drain action; every entity in the in-flight batch shows a left-accent + "draining…" badge (`drainState.activeEntityIds`) |
 | `src/components/layout-lab/MatrixBatchDrain.tsx` | Matrix header action — "drain all deferred gates in this catalog" (shown only when ≥1 entity is deferred). One-boot progress, a flips summary (passed/failed/still-deferred/locked) with per-step fail reasons, and an honest Cancel (skips the retry only — the in-flight boot can't be interrupted) |
 | `src/components/layout-lab/hooks/useBatchDrain.ts` | Batch-drain engine: sends the WHOLE deferred set in ONE request (`drainCatalogGates(catalogId, entityIds)`) — one server-side collection + one grouped editor boot for every gate, not one boot per entity. All-or-nothing lease: a 409 refuses the whole batch → retry once, then record every entity locked. Invalidates the whole-catalog cache on completion; cancel only skips the retry |
 | `src/components/layout-lab/batchDrainModel.ts` | Pure batch-drain model: `DrainOutcome` (ok/locked/error) + `summarizeBatchDrain(entities, outcome)` — derives the catalog-wide flips summary from the single aggregate `DrainSummary` (groups per-step results back to their `job.entityId`; locked/error mark the whole set) |
@@ -84,19 +84,29 @@ Renders a `100vh` flex column:
   **+ One-shot**, and the **Legacy shell** switch. Right zone (corner): `<LabJobsChip>`,
   `<LabBridgeStrip t={theme} />`, and the single-icon **theme toggle** (`ThemeToggle`, an `IconButton`
   showing Moon→Studio Dark / Sun→Blueprint; toggles `themeId`).
+- **Navigation is single-source (the lab never forgets)**: `LayoutLab` OWNS `catalogId`,
+  `entityId`, and the pipeline `stepIdx`. Because `AnimatePresence key={view}` remounts `Baseline`
+  on every catalogs↔matrix↔canon toggle, holding the step position in the parent is what makes it
+  survive the swap (a per-Baseline `stepIdx` used to reset to 0 on every toggle — navigation
+  amnesia). Every mutation flows through three memoized callbacks so persistence + step-reset are
+  identical on ALL paths: `selectCatalog(id)` (reset entity+step, persist `lastCatalogId`),
+  `selectEntity(id)` (reset step, persist `lastEntityId`), and `navigateTo(cid, eid, step)` (jump +
+  persist both). This also removes the old `focusStepIdx` "remount reads the initial focus" channel —
+  a jump is now a plain state write consumed exactly once, so nothing replays stale.
 - **Body**: when `view === 'canon'` renders `<CanonView t={theme} />`; when `view === 'matrix'`
-  renders `<CatalogMatrix … onOpenStep={openFromMatrix} />`; otherwise renders
-  `<Baseline theme={theme} groups={groups} detail={detail} initialStepIdx={focusStepIdx} … />`,
+  renders `<CatalogMatrix … catalogId={catalogId} onSelectCatalog={selectCatalog} onOpenStep={openFromMatrix} />`
+  (the matrix dropdown is **controlled** — it writes through `onSelectCatalog` to the single-source
+  `catalogId` instead of forking a private `selected`, so switching catalog in the matrix and then
+  opening the Catalogs tab lands on the SAME catalog); otherwise renders
+  `<Baseline … stepIdx={stepIdx} onSelectStep={setStepIdx} … />` (controlled step position; `Baseline`
+  falls back to internal `stepIdx` only when `onSelectStep` is omitted, for direct-render tests),
   prefaced by `<GlobalCoach t={theme} />` (the cross-catalog next-step coach, catalogs view only).
-  A matrix cell click runs `openFromMatrix(catalogId, entityId, stepIdx)`, which sets `catalogId`/
-  `entityId`/`focusStepIdx` and switches `view` back to `'catalogs'`; Baseline remounts on the switch
-  and reads `focusStepIdx` as its initial step (a manual **Catalogs** click clears it).
+  A matrix cell click runs `openFromMatrix(catalogId, entityId, step)` → `navigateTo(...)` + switch
+  `view` back to `'catalogs'`.
 - **Cross-view navigation**: a one-shot `pendingNavigation` store subscription (`oneShotLabStore`)
-  drives `catalogId`/`entityId` from anywhere — used by the One-shot panel and by `GlobalCoach`.
-  The payload carries an optional `stepIndex`; LayoutLab feeds it into the same `focusStepIdx`
-  channel `openFromMatrix` uses, so a GlobalCoach jump opens Baseline on the flagged step
-  (`useBaseline` adopts a changed `initialStepIdx` while already mounted, since the catalogs view
-  does not remount on a same-view navigation).
+  drives navigation from anywhere — used by the One-shot panel and by `GlobalCoach`. The payload
+  carries an optional `stepIndex`; LayoutLab feeds `catalogId`/`entityId`/`stepIndex ?? 0` straight
+  into `navigateTo` (consumed once, persisted the same way a tree click is).
 
 On mount, `useEffect(() => { hydrate(); }, [hydrate])` fetches the server's project canon rules into
 `canonStore` (replaces the seed if the server responds).
