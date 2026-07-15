@@ -1109,6 +1109,8 @@ export function createDefaultConfig(overrides: Partial<HarnessConfig> & {
   ueTests?: boolean;
   /** Automation test filter for the ue-test gate (default "Project"). */
   ueTestFilter?: string;
+  /** Opt-in the advisory `ue-visual` game-runs gate (boots the game, judges a frame). */
+  ueVisual?: boolean;
 }): HarnessConfig {
   return {
     projectPath: overrides.projectPath,
@@ -1125,6 +1127,7 @@ export function createDefaultConfig(overrides: Partial<HarnessConfig> & {
     gates: overrides.gates ?? detectGates(overrides.projectPath, {
       ...(overrides.ueTests != null ? { ueTests: overrides.ueTests } : {}),
       ...(overrides.ueTestFilter != null ? { ueTestFilter: overrides.ueTestFilter } : {}),
+      ...(overrides.ueVisual != null ? { ueVisual: overrides.ueVisual } : {}),
     }),
     maxIterations: overrides.maxIterations ?? 100,
     generateGuide: overrides.generateGuide ?? true,

@@ -42,7 +42,23 @@ export {
   HARNESS_RESULT_REGEX,
 } from './claude-session';
 export type { ClaudeSessionOptions, ClaudeSessionResult } from './claude-session';
-export { verify, formatVerificationSummary } from './verifier';
+export { verify, formatVerificationSummary, detectGates } from './verifier';
+export type { DetectGateOptions } from './verifier';
+export {
+  createUeVisualGate,
+  runUeVisualGate,
+  executeUeVisualGate,
+  inspectFrame,
+  resolveVlmFromEnv,
+} from './ue-visual-gate';
+export type {
+  UeVisualGateOptions,
+  UeVisualGateResult,
+  UeVisualVlmOptions,
+  FrameInspection,
+  FrameInspectOptions,
+  FrameCapture,
+} from './ue-visual-gate';
 export {
   createEmptyGuide,
   appendGuideStep,

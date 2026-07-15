@@ -22,6 +22,7 @@ import type {
 } from './types';
 import { runVisualGate, createVisualGate } from './visual-gate';
 import { detectUeGates, deriveUeTestCommand, parseAutomationLog, resolveUeEnv, type UeGateOptions } from './ue-gates';
+import { runUeVisualGate, createUeVisualGate } from './ue-visual-gate';
 
 // ── Gate Execution ──────────────────────────────────────────────────────────
 
@@ -166,14 +167,29 @@ function isUeTree(projectPath: string): boolean {
  * UE markers win over package.json so a UE tree that carries JS tooling still
  * gets UE gates instead of `npx next build`.
  */
-export function detectGates(projectPath: string, opts: UeGateOptions = {}): VerificationGate[] {
+/**
+ * Options for {@link detectGates}. Extends the sibling `UeGateOptions` (owned by
+ * ue-gates.ts) with the opt-in `ueVisual` game-runs gate, wired HERE rather than
+ * inside `detectUeGates` so this context never edits ue-gates.ts.
+ */
+export interface DetectGateOptions extends UeGateOptions {
+  /** Opt-in the advisory `ue-visual` game-runs gate (boots the game, judges a frame). */
+  ueVisual?: boolean;
+}
+
+export function detectGates(projectPath: string, opts: DetectGateOptions = {}): VerificationGate[] {
+  const { ueVisual, ...ueOpts } = opts;
+  const withUeVisual = (gates: VerificationGate[]): VerificationGate[] =>
+    ueVisual ? [...gates, createUeVisualGate()] : gates;
+
   if (isUeTree(projectPath)) {
-    return detectUeGates(opts);
+    return withUeVisual(detectUeGates(ueOpts));
   }
   if (fs.existsSync(path.join(projectPath, 'package.json'))) {
+    // The game-runs gate is UE-only; a webapp tree never gets it.
     return WEBAPP_GATES;
   }
-  return detectUeGates(opts); // fallback: assume UE tree
+  return withUeVisual(detectUeGates(ueOpts)); // fallback: assume UE tree
 }
 
 /** Verification gates for PoF webapp (TypeScript/Next.js) */
@@ -310,6 +326,27 @@ export async function verify(
       results.push(await runUeCompileGate(gate, projectPath));
     } else if (gate.type === 'ue-test') {
       results.push(await runUeTestGate(gate, projectPath, statePath, iteration));
+    } else if (gate.type === 'ue-visual') {
+      if (!statePath) {
+        // No statePath → nowhere to store the frame; report unverifiable, never a pass.
+        results.push({
+          gate: gate.name,
+          passed: false,
+          unverifiable: true,
+          output: 'UE visual gate UNVERIFIABLE — no statePath to store the captured frame.',
+          durationMs: 0,
+        });
+      } else {
+        const gv = await runUeVisualGate(projectPath, statePath, iteration);
+        results.push({
+          gate: gate.name,
+          passed: gv.passed,
+          ...(gv.unverifiable ? { unverifiable: true } : {}),
+          output: gv.output,
+          durationMs: gv.durationMs,
+          errors: gv.errors,
+        });
+      }
     } else {
       const result = await runGate(gate, projectPath);
       results.push(result);

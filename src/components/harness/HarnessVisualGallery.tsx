@@ -121,6 +121,13 @@ export function HarnessVisualGallery() {
                 >
                   {m.status}
                 </span>
+                {/* Provenance badge — a headless UE render vs a webapp page shot. */}
+                <span
+                  className="absolute top-1.5 right-1.5 text-2xs font-mono uppercase tracking-wider px-1.5 py-0.5 rounded border border-border/60 bg-black/60 text-text"
+                  title={m.capture === 'game' ? 'Headless UE game render' : 'Webapp page screenshot'}
+                >
+                  {m.capture === 'game' ? 'GAME' : 'WEB'}
+                </span>
                 {m.errors.length > 0 && (
                   <div className="absolute bottom-1.5 left-1.5 right-1.5 flex flex-wrap gap-1">
                     {m.errors.slice(0, 3).map((e) => (

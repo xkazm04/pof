@@ -159,6 +159,7 @@ export async function POST(request: NextRequest) {
     scenario?: string;
     ueTests?: boolean;
     ueTestFilter?: string;
+    ueVisual?: boolean;
     themeDirective?: string;
     areaPassThreshold?: number;
     passRateBasis?: 'verified' | 'self-reported';
@@ -234,6 +235,7 @@ export async function POST(request: NextRequest) {
       ...(scenarioAreas ? { areas: scenarioAreas } : {}),
       ...(body.ueTests != null ? { ueTests: body.ueTests } : {}),
       ...(body.ueTestFilter != null ? { ueTestFilter: body.ueTestFilter } : {}),
+      ...(body.ueVisual != null ? { ueVisual: body.ueVisual } : {}),
       ...(body.themeDirective != null ? { themeDirective: body.themeDirective } : {}),
       ...(body.passRateBasis != null ? { passRateBasis: body.passRateBasis } : {}),
       executor: executorOverride,

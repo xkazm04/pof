@@ -38,6 +38,12 @@ export interface VisualModuleResult {
   a11yViolations: number;
   /** Free-form error markers (e.g. ERROR_BOUNDARY, BLANK_SCREEN). */
   errors: string[];
+  /**
+   * Provenance of the shot: `'webapp'` (a Playwright page screenshot, the
+   * default when absent) vs `'game'` (a headless UE render from the `ue-visual`
+   * gate). Lets the gallery label a GAME capture distinctly from a webapp shot.
+   */
+  capture?: 'webapp' | 'game';
 }
 
 export interface VisualGateConfig {

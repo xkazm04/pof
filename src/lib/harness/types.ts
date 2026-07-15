@@ -146,7 +146,13 @@ export interface VerificationGate {
     /** Real UE5 C++ compile via UnrealBuildTool; commandless form = unverifiable (no env). */
     | 'ue-compile'
     /** UE5 headless automation-test run; judged by abslog content, not exit code. */
-    | 'ue-test';
+    | 'ue-test'
+    /**
+     * The "game-runs" gate: boot the game headlessly, capture a rendered frame,
+     * judge it (frame exists + not black; optional VLM). Advisory + opt-in
+     * (`ueVisual`); `unverifiable` when no UE env. See `ue-visual-gate.ts`.
+     */
+    | 'ue-visual';
   /** Whether this gate is required (blocks progress) or advisory */
   required: boolean;
   /** Command to run or function key */
