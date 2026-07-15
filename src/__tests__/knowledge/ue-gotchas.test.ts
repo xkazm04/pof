@@ -129,6 +129,14 @@ describe('formatGotchas', () => {
     expect(formatGotchas('ue-cpp')).not.toMatch(/\.npz/);
   });
 
+  it('warns that the automated FBX reimport path silently skips AnimSequence creation', () => {
+    const out = formatGotchas('ue-python');
+    expect(out).toMatch(/reimport/i);
+    expect(out).toMatch(/AnimSequence/);
+    expect(out).toMatch(/fresh (destination )?folder|rm -rf|filesystem/i);
+    expect(out).toMatch(/replace_existing|task\.save/);
+  });
+
   it('carries Niagara optimization pitfalls', () => {
     const out = formatGotchas('ue-python');
     expect(out).toMatch(/Niagara/);

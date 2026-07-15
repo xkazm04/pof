@@ -236,6 +236,16 @@ export const UE_GOTCHAS: Gotcha[] = [
     source: 'research: NVIDIA ARDY real-time AI animation (Stefan 3D AI) + nv-tlabs/ardy repo verification',
   },
   {
+    id: 'fbx-animsequence-import-fresh-folder',
+    modules: ['animation', 'character'],
+    summary:
+      'Automated FBX import: any REIMPORT path silently skips AnimSequence creation — import into a genuinely FRESH folder (filesystem rm, not delete_directory), replace_existing=False, save=False + explicit save_asset',
+    detail:
+      "In a headless AssetImportTask FBX import (legacy path, Interchange disabled), the ANIMATION phase only runs on a truly fresh import: if the importer takes ANY reimport route ('Performing atomic reimport' in the log — triggered by an existing same-name asset at the destination, or replace_existing=True matching a prior import) it imports the SkeletalMesh/Skeleton but silently creates NO AnimSequence, with zero warnings (the log lacks the 'SortedLinks' bone-sorting lines that mark the anim phase). Three rules (proven on 5.8.0): (1) import into a FRESH destination folder and clear it on the FILESYSTEM (rm -rf) before launching UE — stale .uasset files can survive EditorAssetLibrary.delete_directory and still trigger the reimport path; (2) set replace_existing=False and task.save=False; (3) save explicitly AFTER import — task.save covers only the primary asset (the mesh), so the Skeleton and the AnimSequence are memory-only and VANISH when the commandlet exits unless you save_asset each (a later session then finds a mesh whose skeleton reference is broken). The created anim is named <file>_Anim; resolve assets in-session with an ARFilter(include_only_on_disk_assets=False) registry query, not a disk scan. Related 5.8 scripting walls: CompositeSection.start_time and AnimMontage.notifies are NOT settable from Python — compose multi-part montages by CONCATENATING the source animation upstream (one segment) and add sections/notify-states in the editor or via C++.",
+    appliesTo: ['ue-python'],
+    source: 'research: ARDY melee-combo pipeline (live 5.8 A/B debugging)',
+  },
+  {
     id: 'gas-author-abilities-incrementally',
     modules: ['gas', 'combat'],
     summary: 'GAS: build an ability one coupled piece at a time (tag → input → effect → ability → grant/bind → cue), not the whole system in one shot',

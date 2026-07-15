@@ -61,10 +61,29 @@ Scenario-harness notes: injected input ACTIONS need an explicit `value` (`[1,0]`
 a value-less action injects (0,0) and never triggers); the `activate_ability` event verb
 (gameplay tag) is the reliable path for firing abilities.
 
+## Melee combo — DONE 2026-07-15 (session 4, pof-exp `2658fee`)
+
+Three generated slash variants (overhead / horizontal sweep / rising diagonal, 2.5 s each, all
+coherent at seed 3) → **concatenated at the npz level** (`pof_npz_concat.py` — root re-anchored
+per clip, section starts 0/2.5/5.0) → one 7.45 s clip through BVH→FBX→import→retarget
+(`ardy_combo2.py`) → montage installed at `AM_MeleeCombo` (also an empty placeholder; backup
+`_PreArdy`). **Live scenario PASS** (`activate_ability Ability.Melee.LightAttack`): montage
+played, 26° body swing, standing (dist=0) — one attack press plays the full 3-hit chain.
+
+Hard-won import knowledge (now the `fbx-animsequence-import-fresh-folder` gotcha): the automated
+FBX importer's REIMPORT path silently skips AnimSequence creation — fresh folder (filesystem rm;
+stale .uasset survives `delete_directory`), `replace_existing=False`, `save=False` + explicit
+`save_asset` (task.save covers the mesh only; unsaved skeletons/anims vanish with the session —
+which is how the first shared-skeleton import broke). 5.8 Python walls: `CompositeSection.start_time`
++ `AnimMontage.notifies` are not scriptable — hence upstream concatenation; input-gated combo
+branching (sections + ComboWindow/HitDetection notify states) needs a short editor pass or a C++
+helper.
+
 ## Remaining build (the productization, not the proof)
 
-- Slash/idle/run wiring: `AM_MeleeCombo` is also an empty placeholder but GA_MeleeAttack expects
-  combo SECTIONS — author a sectioned montage (or generate 3 slash variants) before swapping.
+- **Input-gated combo branching:** add Combo1/2/3 sections + `AnimNotifyState_ComboWindow` /
+  `AnimNotifyState_HitDetection` to `AM_MeleeCombo` in the editor (30-second manual pass), or ship
+  a tiny PoFEditor C++ helper exposing section/notify authoring to Python.
 - **`ardy-runner.ts`** seam + job store (mirror hunyuan-runner) + provider registration so the app can
   dispatch prompts; Tier-1 motion-sanity gate from the npz (foot contacts + root continuity — the
   numeric gate above, productized); Qwen filmstrip critique via `anim-critique/`.
