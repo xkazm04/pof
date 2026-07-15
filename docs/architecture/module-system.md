@@ -93,6 +93,14 @@ The breakdown is no longer opaque to users: `RoadmapChecklist`'s NBA banner rend
 - **`src/lib/evaluator/git-attribution.ts`** + **`/api/evaluator/git-attribution`** reuse the codebase-archeologist `git log` approach to attribute each NEW finding to the commit(s) that touched its file since the previous scan (`--since` = prior scan time). The pure `parseAttributionLog` is unit-tested; the git-spawning `attributeFilesSince` is server-only.
 - **`RegressionBanner.tsx`** renders the compact `+N critical / −M resolved / persisting` summary above the tree plus a **New / All** view toggle; the view defaults to *New issues* whenever a baseline exists and something new appeared.
 
+### Judge-verdict layer in the evaluator
+
+The AI content-judge fleet's verdicts (`judge_verdicts` table, `src/lib/status/judge-verdicts-db.ts`) surface inside the evaluator, not only on the /status map:
+
+- **Verdicts tab** (`src/components/modules/evaluator/JudgeVerdictsView/`) — read-only rollup of all verdicts grouped by catalog worst-first (pure `verdictRollup.ts`), each opening an EvidenceModal-grade findings detail. Data via `GET /api/judge-verdicts`; never re-grades.
+- **Per-dimension scores** — `judge_verdicts` carries an additive nullable `dimensions` JSON column (the judge's per-dimension 0-100 rubric scores; `scripts/judge-run.ts` persists them). The shared **`ui/DimensionScoreBars.tsx`** (MeterBar-backed) renders them in BOTH the /status `EvidenceModal` and the evaluator's verdict detail — one renderer, no drift. Legacy rows without dimensions render unchanged.
+- **Judged-content health term** — `src/lib/evaluator/combined-health.ts`: when a module has verdicts, the composite becomes 30% quality + **25% judged content** + 20% dep + 15% coverage + 10% activity; without verdicts the historical 40/30/20/10 output is byte-identical (test-asserted). Catalog→module attribution goes through the explicit `CATALOG_MODULE` map; unmapped catalogs are excluded, never guessed. The shared `judgeDiscrepancy` rule flags "matrix reads healthy but judges failed the content" and drives the `QualityDiscrepancyBanner` on the Quality tab (renders nothing when signals agree).
+
 ---
 
 ## Module Categories
