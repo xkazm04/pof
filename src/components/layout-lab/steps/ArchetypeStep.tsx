@@ -33,7 +33,37 @@ import type { LabTheme } from '../theme';
 import type { LabEntity } from '../useLabCatalogData';
 import type { StepSpec, ViewDescriptor } from '@/lib/catalog/stepSpec';
 
-function ViewPanel({ t, view, data }: { t: LabTheme; view: ViewDescriptor; data: Record<string, unknown> }) {
+/** Plain-language name of a value's runtime shape, for honest mismatch copy. */
+function describeShape(v: unknown): string {
+  if (v == null) return 'nothing';
+  if (Array.isArray(v)) return 'a list';
+  if (typeof v === 'object') return 'a key·value object';
+  return `a ${typeof v}`;
+}
+
+/** The shared checklist/manifest list rendering (array of primitives/tuples). */
+function renderChecklist(t: LabTheme, arr: unknown[]) {
+  return arr.length ? (
+    <div>{arr.map((x, i) => <div key={i} className={t.fontMono} style={{ fontSize: 14, padding: '6px 0', borderTop: `1px solid ${t.line}`, color: t.text }}>✓ {String(Array.isArray(x) ? x.join(' · ') : x)}</div>)}</div>
+  ) : (
+    <span style={{ fontSize: 15, color: t.muted }}>Nothing yet — run Produce.</span>
+  );
+}
+
+/** Loud, honest state for a kind/shape mismatch — data IS present but the wrong shape
+ *  for the view kind, so it names expected vs actual instead of the empty-state lie. */
+function ShapeMismatch({ t, field, expected, actual }: { t: LabTheme; field: string; expected: string; actual: string }) {
+  return (
+    <div data-testid="view-shape-mismatch" style={{ display: 'grid', gap: 4, fontSize: 14, color: t.warn }}>
+      <span className={t.fontMono} style={{ fontWeight: 700 }}>⚠ Unexpected shape for “{field}”</span>
+      <span style={{ color: t.text, lineHeight: 1.5 }}>
+        This view expects {expected}, but the produced data holds {actual}. The step ran — the data just can’t render here. Check the Produce output for this step.
+      </span>
+    </div>
+  );
+}
+
+export function ViewPanel({ t, view, data }: { t: LabTheme; view: ViewDescriptor; data: Record<string, unknown> }) {
   if (view.kind === 'prose') {
     const txt = String(data[view.field] ?? '');
     return txt
@@ -69,11 +99,34 @@ function ViewPanel({ t, view, data }: { t: LabTheme; view: ViewDescriptor; data:
       ? <ChartPanel t={t} variant="histogram" bars={bars} max={view.max} ariaLabel={`${view.field} histogram`} />
       : <span style={{ fontSize: 15, color: t.muted }}>No numeric data yet — run Produce.</span>;
   }
-  if (view.kind === 'checklist' || view.kind === 'manifest') {
-    const arr = Array.isArray(data[view.field]) ? (data[view.field] as unknown[]) : [];
-    return arr.length
-      ? <div>{arr.map((x, i) => <div key={i} className={t.fontMono} style={{ fontSize: 14, padding: '6px 0', borderTop: `1px solid ${t.line}`, color: t.text }}>✓ {String(Array.isArray(x) ? x.join(' · ') : x)}</div>)}</div>
-      : <span style={{ fontSize: 15, color: t.muted }}>Nothing yet — run Produce.</span>;
+  if (view.kind === 'checklist') {
+    const raw = data[view.field];
+    if (raw == null) return <span style={{ fontSize: 15, color: t.muted }}>Nothing yet — run Produce.</span>;
+    // Data is present. An array renders as the checklist; anything else is a real
+    // kind/shape mismatch — name it loudly instead of the empty-state lie (a produced,
+    // passing step that LOOKS unproduced). See silent-lie class in the manifest.
+    if (Array.isArray(raw)) return renderChecklist(t, raw);
+    return <ShapeMismatch t={t} field={view.field} expected="a list" actual={describeShape(raw)} />;
+  }
+  if (view.kind === 'manifest') {
+    const raw = data[view.field];
+    if (raw == null) return <span style={{ fontSize: 15, color: t.muted }}>Nothing yet — run Produce.</span>;
+    // Arrays keep the checklist-style list; a keyed object renders as key·value rows
+    // via the shared DataTable (manifest no longer renders identically to checklist).
+    if (Array.isArray(raw)) return renderChecklist(t, raw);
+    if (typeof raw === 'object') {
+      const obj = raw as Record<string, unknown>;
+      const keys = Object.keys(obj);
+      if (keys.length === 0) return <span style={{ fontSize: 15, color: t.muted }}>Nothing yet — run Produce.</span>;
+      const values: Record<string, unknown> = {};
+      for (const k of keys) {
+        const v = obj[k];
+        values[k] = Array.isArray(v) ? v.join(' · ') : v != null && typeof v === 'object' ? JSON.stringify(v) : v;
+      }
+      return <DataTable t={t} columns={keys.map((k) => ({ key: k }))} values={values} />;
+    }
+    // A bare string/number/boolean can't be a manifest — honest mismatch, not empty state.
+    return <ShapeMismatch t={t} field={view.field} expected="a list or key·value object" actual={describeShape(raw)} />;
   }
   if (view.kind === 'graph') {
     const g = (data[view.field] ?? {}) as { nodes?: { id: string; label?: string; terminal?: boolean }[]; edges?: { from: string; to: string; label?: string }[] };
