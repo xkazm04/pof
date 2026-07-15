@@ -14,6 +14,7 @@ vitest unit tests, which don't see the UI → store → persistence seams.
 | `e2e/helpers/lab-mode.ts` | Shared helpers: `gotoLab`, `openCatalog`, `selectStep`, `produceStep`, `acceptanceStatus`, `expectPersisted`. |
 | `e2e/helpers/pipeline-coverage.ts` | `WALKER_SKIP` — the single, documented list of pipelines the generic walker skips (and why). |
 | `src/__tests__/catalog/pipeline-e2e-coverage.test.ts` | **Gap guard** (vitest, runs in `npm run validate`). |
+| `src/__tests__/catalog/pipeline-spec-linter.test.ts` | **Fleet spec linter** (vitest, runs in `npm run validate`). Guards spec↔renderer contracts (below). |
 
 ## The assertions (per step)
 
@@ -35,6 +36,36 @@ vitest unit tests, which don't see the UI → store → persistence seams.
 the walker enumerates the registry, a new pipeline is auto-covered the moment it self-registers; the
 guard turns "added a pipeline with no e2e path" into a red `validate` instead of a silent gap. See
 **CLAUDE.md → Rule 5 — Every pipeline is e2e-walked**.
+
+## The fleet spec linter (enforced in `npm run validate`)
+
+`pipeline-spec-linter.test.ts` is a pure vitest walker (no dev server) that asserts the
+**spec↔renderer contracts** every registered step must honour — the fast complement to the e2e
+walk. It exists because this project keeps discovering *capability-vs-adoption drift* by hand: the
+shared `ChartPanel` shipped four variants but the fleet declared exactly one chart; the
+keyed-manifest table silently soft-failed; the histogram variant was never used. Each such gap was a
+dead capability nothing guarded — so the linter turns the next one into a red `validate`.
+
+Per step of every `allCatalogPipelines()` pipeline it checks:
+
+1. **Supported view kind** — `view.kind ∈ SUPPORTED_VIEW_KINDS` (the kinds `ViewPanel` actually
+   renders), and a `chart` view's `variant ∈ SUPPORTED_CHART_VARIANTS` (the flavors `ChartPanel`
+   renders). Both lists live in `src/lib/catalog/stepSpec.ts` as the single source of truth.
+2. **Charts point at real data** — a chart step's `produce()` stub output is statically reachable
+   (produce is a pure `(entity) => StepOutput`), so the linter runs it with a synthetic entity and
+   asserts every declared `bars`/`histogram` key resolves to a **finite number** in `data[field]`
+   (using the same coercion `ViewPanel` uses), and that a `highlightKey` is one of the declared
+   keys. `scatter`/`waveform` fields must hold the array shape `ChartPanel` consumes. This is exactly
+   the check that catches a column/row naming a field the produce never writes — a
+   permanently-empty cell (the historical `spellbook` `burstDPS` bug class).
+3. **Balance ⇒ chart** — every `archetype: 'balance'` step declares a `chart` view (a balance step
+   must not regress to a number-grid table).
+4. **Gallery generator contract** — a `genCandidates` (when present) has a `build` function and, when
+   `needsAssets`, a valid `assetKind` (`'2d' | '3d'`, default `'2d'`), and is only set on a
+   `gallery` step.
+
+Every failure names catalog / step / field precisely. Fix surfaced violations by correcting the
+descriptor (mechanical), or — only with a written reason — add an allowlist branch in the test file.
 
 ## Running
 
