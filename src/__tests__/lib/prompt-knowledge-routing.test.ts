@@ -33,7 +33,7 @@ describe('prompt knowledge routing (Direction 2)', () => {
       'Mixamo',
     );
     const prompt = buildTaskPrompt(task, CTX);
-    const occurrences = prompt.match(/Interchange FBX path crashes/g) ?? [];
+    const occurrences = prompt.match(/The Interchange FBX path does not work in the pythonscript commandlet/g) ?? [];
     expect(occurrences.length).toBe(1);
   });
 

@@ -62,6 +62,8 @@ describe('POST /api/one-shot/propose', () => {
   it('opts the autonomous spawn into MCP (passes enableMcp: true)', async () => {
     await POST(makePost({ catalogId: 'items', distribution: MOCK_DISTRIBUTION }));
     const lastCall = vi.mocked(startExecution).mock.calls.at(-1)!;
-    expect(lastCall[4]).toEqual({ enableMcp: true });
+    expect(lastCall[4]).toMatchObject({ enableMcp: true });
+    // Spend-ledger attribution rides along with every autonomous spawn.
+    expect(lastCall[4].attribution?.taskType).toBe('one-shot-propose');
   });
 });
