@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { runDeepEval, runSingleModuleEval, cancelDeepEval } from '@/lib/evaluator/deep-eval-engine';
 import { generateFixPlan, generateBatchFixPlan } from '@/lib/evaluator/fix-plan-generator';
 import { getEvaluableModuleIds } from '@/lib/evaluator/module-eval-prompts';
@@ -12,7 +12,9 @@ import type { SubModuleId } from '@/types/modules';
 import { useProjectStore } from '@/stores/projectStore';
 import { useDeepEvalStore } from '@/stores/deepEvalStore';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
-import { apiFetch } from '@/lib/api-utils';
+import { apiFetch, tryApiFetch } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
+import type { PersistedScan } from '@/lib/evaluator/evaluator-results-db';
 import { EVAL_ACCENT } from './constants';
 
 export function useDeepEvalResults() {
@@ -38,6 +40,35 @@ export function useDeepEvalResults() {
   });
 
   const isRunning = progress?.status === 'running';
+
+  // ── Baseline hydration ──────────────────────────────────────────────────────
+
+  // localStorage is the fast baseline cache; when it's empty (fresh browser /
+  // cleared storage) fall back to the durable server history so regression
+  // diffing still has a baseline. One-shot: never overwrites a present cache.
+  const hydratedRef = useRef(false);
+  useEffect(() => {
+    if (hydratedRef.current) return;
+    hydratedRef.current = true;
+    if (useDeepEvalStore.getState().lastScan) return; // cache already warm
+
+    let cancelled = false;
+    void (async () => {
+      const res = await tryApiFetch<{ scan: PersistedScan | null }>('/api/evaluator/results?latest=1');
+      if (cancelled || !res.ok || !res.data.scan) return;
+      // Re-check under the async gap — a scan may have completed meanwhile.
+      if (useDeepEvalStore.getState().lastScan) return;
+      const s = res.data.scan;
+      useDeepEvalStore.getState().recordScan({
+        scanId: s.scanId,
+        timestamp: s.timestamp,
+        findings: s.findings,
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // ── Result processing ───────────────────────────────────────────────────────
 
@@ -68,10 +99,31 @@ export function useDeepEvalResults() {
       setAttribution({});
 
       // Persist the merged baseline (untouched modules keep their prior findings).
+      const mergedBaseline = mergeBaseline(previous?.findings ?? null, currentFlat, scope);
+      const completedAt = Date.now();
       useDeepEvalStore.getState().recordScan({
         scanId: evalResult.scanId,
-        timestamp: Date.now(),
-        findings: mergeBaseline(previous?.findings ?? null, currentFlat, scope),
+        timestamp: completedAt,
+        findings: mergedBaseline,
+      });
+
+      // Durably persist the completed scan server-side (findings + module set +
+      // timings), so history survives re-scans/reloads and the Game Director can
+      // read it. localStorage stays the fast baseline cache; this is best-effort.
+      void apiFetch('/api/evaluator/results', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scanId: evalResult.scanId,
+          projectId: projectPath ?? '',
+          scannedAt: new Date(completedAt).toISOString(),
+          durationMs: evalResult.duration,
+          modulesEvaluated: scope,
+          failedModules: evalResult.failedModules,
+          findings: mergedBaseline,
+        }),
+      }).catch((err) => {
+        logger.error('Failed to persist deep-eval scan result:', err);
       });
 
       // Auto-expand modules with critical/high findings (plus any forced one).
