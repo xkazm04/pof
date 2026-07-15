@@ -43,6 +43,6 @@ export function StaticStepFrame({ t, entity, step, panels }: {
     [art?.data, step],
   );
   return (
-    <StepFrame t={t} acceptance={acceptance} onFix={runProduce} panels={panels({ art, runProduce })} />
+    <StepFrame t={t} acceptance={acceptance} onFix={runProduce} catalogId="items" step={step} panels={panels({ art, runProduce })} />
   );
 }

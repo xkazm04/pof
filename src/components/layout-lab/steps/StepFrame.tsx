@@ -4,6 +4,8 @@ import { AnimatePresence, motion } from 'framer-motion';
 import type { ReactNode } from 'react';
 import { labPanelStyle, type LabTheme } from '../theme';
 import { STATUS_GLYPH, STATUS_WORD, statusColor, type StatusKind } from '../statusLanguage';
+import { ProvenanceStrip } from './shared/ProvenanceStrip';
+import { getStepFact } from '@/lib/status/statusModel';
 
 export interface Acceptance {
   /** The criterion this gate measures. */
@@ -38,14 +40,24 @@ export interface StepPanel { label: string; node: ReactNode }
  * plus a `suggestion` imperative — translation-ready (strings authored per-step).
  * If `onFix` is provided and the status is not `pass`, a "Produce fix" button
  * appears that re-runs the step's Produce (optionally seeded by `fixDirection`).
+ *
+ * Provenance: when `catalogId` + `step` resolve an audited {@link StepFact}
+ * (step-facts.json), a compact colorblind-safe PROVENANCE strip renders beneath the
+ * acceptance header (engine · judge · checker-meaningfulness), so a shape-only "pass"
+ * can't read as verified. Steps with no fact render exactly as before. Display only —
+ * it never alters acceptance grading.
  */
-export function StepFrame({ t, acceptance, panels, onFix }: {
+export function StepFrame({ t, acceptance, panels, onFix, catalogId, step }: {
   t: LabTheme;
   acceptance: Acceptance;
   panels: StepPanel[];
   onFix?: (fixDirection?: string) => void;
+  /** Catalog + step name — resolve the audited StepFact for the provenance strip. */
+  catalogId?: string;
+  step?: string;
 }) {
   const sc = statusColor(acceptance.status, t);
+  const fact = catalogId && step ? getStepFact(catalogId, step) : undefined;
   // Studio (glass) panels round to 12; Blueprint keeps sharp corners (borderRadius 0).
   const panelStyle = labPanelStyle(t, { borderRadius: t.glass ? 12 : 0 });
   const showFix = onFix != null && acceptance.status !== 'pass';
@@ -105,6 +117,8 @@ export function StepFrame({ t, acceptance, panels, onFix }: {
             </span>
           </span>
         </div>
+
+        {fact && <ProvenanceStrip t={t} fact={fact} />}
 
         {acceptance.why && (
           <div

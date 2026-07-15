@@ -29,6 +29,7 @@ export function ItemIcon2D({ t, entity, step }: StepProps) {
 
   return (
     <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art?.data ?? {})}
+      catalogId="items" step={step}
       onFix={(fixDir) => generate(fixDir ?? DEFAULT_DIR, buildPrompt(fixDir ?? DEFAULT_DIR))}
       panels={[
         { label: 'Candidate gallery (kept across re-rolls)', node: (
@@ -64,6 +65,7 @@ export function Item3DGen({ t, entity, step }: StepProps) {
 
   return (
     <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art?.data ?? {})}
+      catalogId="items" step={step}
       onFix={(fixDir) => generate(fixDir ?? DEFAULT_DIR, buildPrompt(fixDir ?? DEFAULT_DIR))}
       panels={[
         { label: 'Mesh preview', node: (
@@ -109,6 +111,7 @@ export function ItemMaterial({ t, entity, step }: StepProps) {
 
   return (
     <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art?.data ?? {})}
+      catalogId="items" step={step}
       onFix={(fixDir) => generate(fixDir ?? DEFAULT_DIR, buildPrompt(fixDir ?? DEFAULT_DIR))}
       panels={[
         { label: 'Texture maps', node: (

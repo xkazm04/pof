@@ -239,6 +239,7 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
         </div>
       )}
       <StepFrame t={t} acceptance={acceptance} panels={panels}
+        catalogId={catalogId} step={step}
         onFix={acceptance.status === 'deferred' ? undefined : runFix} />
     </>
   );
