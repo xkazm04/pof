@@ -293,10 +293,17 @@ e.g. a session stuck `isRunning: true` after a crash blocks all future dispatche
 from the database on mount. Do not add it back to `partialize` — it can be large and is always
 authoritative in the DB.
 
-**`deepEvalStore` persists exactly one scan as a diff baseline.** `src/stores/deepEvalStore.ts`
-(localStorage `pof-deep-eval`) keeps only the *most recent* deep-eval scan's findings so the next
-scan can be tagged new/resolved/persisting against it (see `regression-diff.ts`). Only the single
-latest scan is retained to bound localStorage size — do not accumulate scan history here.
+**`deepEvalStore` is the fast baseline cache; durable history lives in SQLite.**
+`src/stores/deepEvalStore.ts` (localStorage `pof-deep-eval`) keeps only the *most recent* deep-eval
+scan's findings so the next scan can be tagged new/resolved/persisting against it (see
+`regression-diff.ts`) — do not accumulate scan history here. The **authoritative** history is the
+`evaluator_results` table (`src/lib/evaluator/evaluator-results-db.ts`, one row per completed scan:
+findings + module set + failed modules + timings + derived severity counts), written and read via
+`/api/evaluator/results` (POST a completed scan; GET `?limit=N` history / `?latest=1` baseline).
+`useDeepEvalResults` persists every completed scan there and **hydrates its baseline from the DB when
+localStorage is empty** (fresh browser / cleared storage), so regression diffing survives re-scans,
+reloads, and browser switches. This durable history is also what the Game Director's regression
+tracker reads as a source (see below / `module-system.md`).
 
 **No-op set returns unchanged state.** `setChecklistItem` (`:112`) and several mutations in
 `cliPanelStore` return the existing `state` object when no change is needed. This prevents Zustand

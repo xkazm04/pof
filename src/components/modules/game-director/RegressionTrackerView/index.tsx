@@ -6,8 +6,9 @@ import {
 } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { TabBar, type TabItem } from '@/components/ui/TabBar';
-import { apiFetch } from '@/lib/api-utils';
+import { apiFetch, tryApiFetch } from '@/lib/api-utils';
 import { useIsMounted } from '@/hooks/useIsMounted';
+import type { ScanDelta } from '@/lib/evaluator/scan-delta';
 import type { PlaytestSession } from '@/types/game-director';
 import type {
   FindingFingerprint,
@@ -32,6 +33,7 @@ export function RegressionTrackerView() {
   const [fingerprints, setFingerprints] = useState<FindingFingerprint[]>([]);
   const [alerts, setAlerts] = useState<RegressionAlert[]>([]);
   const [stats, setStats] = useState<RegressionStats | null>(null);
+  const [scanDeltas, setScanDeltas] = useState<ScanDelta[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
@@ -44,17 +46,22 @@ export function RegressionTrackerView() {
     setLoading(true);
     setError(null);
     try {
-      const [fpData, alertData, statData, sessData] = await Promise.all([
+      // The evaluator scan-delta feed is an ADDITIONAL, best-effort source: a
+      // failure there must never blank the playtest-driven regression view, so it
+      // uses the non-throwing tryApiFetch and degrades to an empty feed.
+      const [fpData, alertData, statData, sessData, deltaRes] = await Promise.all([
         apiFetch<FindingFingerprint[]>('/api/regression-tracker?action=fingerprints'),
         apiFetch<RegressionAlert[]>('/api/regression-tracker?action=alerts'),
         apiFetch<RegressionStats>('/api/regression-tracker?action=stats'),
         apiFetch<PlaytestSession[]>('/api/regression-tracker?action=sessions'),
+        tryApiFetch<{ deltas: ScanDelta[] }>('/api/evaluator/deltas'),
       ]);
       if (!isMounted()) return;
       setFingerprints(fpData);
       setAlerts(alertData);
       setStats(statData);
       setSessions(sessData);
+      setScanDeltas(deltaRes.ok ? deltaRes.data.deltas : []);
     } catch (err) {
       if (!isMounted()) return;
       setError(err instanceof Error ? err.message : 'Failed to load regression data');
@@ -219,7 +226,7 @@ export function RegressionTrackerView() {
 
       {/* Tab content */}
       {subTab === 'dashboard' && (
-        <DashboardTab stats={stats} lastReport={lastReport} fingerprints={fingerprints} />
+        <DashboardTab stats={stats} lastReport={lastReport} fingerprints={fingerprints} scanDeltas={scanDeltas} />
       )}
       {subTab === 'fingerprints' && (
         <FingerprintsTab fingerprints={fingerprints} onResolve={handleResolve} />

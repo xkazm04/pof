@@ -19,6 +19,8 @@ import {
 } from '@/lib/chart-colors';
 import { SEVERITY_TOKENS, REGRESSION_STATUS_TOKENS } from '@/lib/game-director-styles';
 import { StatusChip } from '@/components/ui/StatusChip';
+import type { ScanDelta } from '@/lib/evaluator/scan-delta';
+import { EvaluatorScanDeltas } from './EvaluatorScanDeltas';
 import { ACCENT } from './constants';
 
 // ─── Dashboard Tab ────────────────────────────────────────────────────────────
@@ -27,10 +29,12 @@ export function DashboardTab({
   stats,
   lastReport,
   fingerprints,
+  scanDeltas,
 }: {
   stats: RegressionStats | null;
   lastReport: RegressionReport | null;
   fingerprints: FindingFingerprint[];
+  scanDeltas: ScanDelta[];
 }) {
   // Top offenders: fingerprints with most regressions
   const topOffenders = useMemo(
@@ -120,6 +124,9 @@ export function DashboardTab({
 
       {/* Last report summary */}
       {lastReport && <ReportSummary report={lastReport} />}
+
+      {/* Additional source: code-quality deep-eval scan regressions (empty → nothing renders) */}
+      <EvaluatorScanDeltas deltas={scanDeltas} />
     </div>
   );
 }
