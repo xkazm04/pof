@@ -244,6 +244,33 @@ export function reapStrandedRuns(): number {
   return stranded.length;
 }
 
+/**
+ * Re-adopt an existing run for a resume after a process restart (or a reaped
+ * stranded run). Flips the row back to 'running', clears its terminal
+ * `ended_at`/`error_message`, and RE-REGISTERS it as live in this process so a
+ * concurrent reaper cannot interrupt the freshly-resumed run out from under the
+ * orchestrator. Returns false when no such row exists (the caller should mint a
+ * fresh run instead). Idempotent.
+ *
+ * This is the hand-off target for the reaper: a run marked 'interrupted' is not
+ * dead — `reopenRun` makes it resumable again.
+ */
+export function reopenRun(runId: string): boolean {
+  ensureTable();
+  const row = getDb()
+    .prepare('SELECT run_id FROM harness_runs WHERE run_id = ?')
+    .get(runId) as { run_id?: string } | undefined;
+  if (!row?.run_id) return false;
+  // Register live BEFORE flipping status so a racing reaper never sees it as an
+  // unowned 'running' row.
+  liveRuns.add(runId);
+  getDb().prepare(`
+    UPDATE harness_runs SET status = 'running', ended_at = NULL, error_message = NULL
+    WHERE run_id = @run_id
+  `).run({ run_id: runId });
+  return true;
+}
+
 /** Run the reaper at most once per process, on the first read/status access. */
 function maybeReapOnce(): void {
   if (reapedOnce) return;

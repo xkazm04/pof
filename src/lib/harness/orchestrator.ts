@@ -44,7 +44,7 @@ import {
   type Checkpointer,
   type CheckpointState,
 } from './checkpoint';
-import { startRun, finalizeRun, type HarnessRunStatus } from '@/lib/harness-runs-db';
+import { startRun, finalizeRun, reopenRun, getRun, type HarnessRunStatus } from '@/lib/harness-runs-db';
 import { readJsonFile, writeJsonFile } from './state-io';
 import { reconcileReportedFeatures, markUnreportedUnverified } from './feature-match';
 import { logger } from '@/lib/logger';
@@ -55,6 +55,84 @@ function planPath(sp: string) { return path.join(sp, 'game-plan.json'); }
 function progressPath(sp: string) { return path.join(sp, 'progress.json'); }
 function costPath(sp: string) { return path.join(sp, 'cost.json'); }
 function checkpointsPath(sp: string) { return path.join(sp, 'checkpoints.json'); }
+function runMetaPath(sp: string) { return path.join(sp, 'run-meta.json'); }
+function configPath(sp: string) { return path.join(sp, 'harness-config.json'); }
+
+// ── Durable run identity (statePath ⇄ runId binding) ─────────────────────────
+
+/**
+ * The durable link between a `statePath` and the `runId` its on-disk plan /
+ * progress / cost belong to. Written on start; read on rehydrate after a process
+ * restart so a resume continues the SAME run instead of minting a new id and
+ * fragmenting history. `parentRunId` records provenance when a fresh start over a
+ * completed statePath explicitly FORKS rather than resumes.
+ */
+export interface RunMeta {
+  runId: string;
+  projectPath: string;
+  statePath: string;
+  startedAt: string;
+  /** Set when this run forked from a prior (completed) run at the same statePath. */
+  parentRunId?: string;
+}
+
+/** Read the persisted run-meta for a statePath, or null when none exists. */
+export function readRunMeta(statePath: string): RunMeta | null {
+  return readJsonFile<RunMeta | null>(runMetaPath(statePath), null);
+}
+
+function saveRunMeta(sp: string, meta: RunMeta): void {
+  try { writeJsonFile(runMetaPath(sp), meta); } catch { /* best-effort */ }
+}
+
+/** Persist the full config so a post-restart rehydrate can rebuild the orchestrator. */
+function saveConfigSnapshot(sp: string, config: HarnessConfig): void {
+  try { writeJsonFile(configPath(sp), config); } catch { /* best-effort */ }
+}
+
+/** Read the persisted config snapshot for a statePath, or null. */
+export function readConfigSnapshot(statePath: string): HarnessConfig | null {
+  return readJsonFile<HarnessConfig | null>(configPath(statePath), null);
+}
+
+/**
+ * A `harness_runs` status is RESUMABLE when it is non-terminal-done: `paused` (a
+ * clean pause), `interrupted` (reaped after a crash/restart), or `running` (a
+ * stranded row whose owning process is gone). `completed`/`error` are terminal —
+ * a fresh start over them FORKS with provenance instead.
+ */
+export function isResumableStatus(status: HarnessRunStatus | undefined): boolean {
+  return status === 'paused' || status === 'interrupted' || status === 'running';
+}
+
+export type RunIdentityMode = 'fresh' | 'resume' | 'fork';
+
+export interface RunIdentity {
+  mode: RunIdentityMode;
+  /** For 'resume' the adopted runId; for 'fresh'/'fork' the runId is minted in runLoop. */
+  resumeRunId?: string;
+  /** For 'fork', the prior run this one descends from. */
+  parentRunId?: string;
+}
+
+/**
+ * Decide whether a start pointed at `statePath` should RESUME the prior run
+ * (same runId), FORK it with provenance (new runId → parent), or start FRESH.
+ *
+ * Default (no `forceFork`): resume when a run-meta exists and the prior run is
+ * resumable; fork when the prior run is terminal-done; fresh when no run-meta.
+ * `forceFork` always forks from an existing run-meta (records the parent).
+ */
+export function resolveRunIdentity(statePath: string, opts: { forceFork?: boolean } = {}): RunIdentity {
+  const meta = readRunMeta(statePath);
+  if (!meta) return { mode: 'fresh' };
+  if (opts.forceFork) return { mode: 'fork', parentRunId: meta.runId };
+  const prior = getRun(meta.runId);
+  // A run-meta whose DB row vanished but whose plan is still on disk is treated
+  // as resumable (adopt the id) rather than silently minting a new one.
+  if (!prior || isResumableStatus(prior.status)) return { mode: 'resume', resumeRunId: meta.runId };
+  return { mode: 'fork', parentRunId: meta.runId };
+}
 
 /** Persist the checkpoint ledger for auditability (best-effort, never throws). */
 function saveCheckpoints(sp: string, state: CheckpointState): void {
@@ -366,6 +444,21 @@ ${wrapHarnessResult('{"areaId":"self-heal","completed":true,"features":[],"files
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
+/**
+ * Heal areas stranded mid-flight by a crash or a previous abandoning build:
+ * `pickNextAreas` only ever picks `pending`, so a persisted `in-progress` area
+ * would never run again and the target pass rate becomes unreachable. Flips every
+ * `in-progress` area back to `pending`. Returns the number healed. Runs on every
+ * (re)entry into the loop — the resume/rehydrate path relies on it. Pure.
+ */
+export function healStrandedAreas(plan: GamePlan): number {
+  let healed = 0;
+  for (const area of plan.areas) {
+    if (area.status === 'in-progress') { area.status = 'pending'; healed += 1; }
+  }
+  return healed;
+}
+
 /** Soft dep resolution: both 'completed' and 'failed' (after max retries) count as resolved. */
 function isDependencyResolved(plan: GamePlan, progress: ProgressEntry[], depId: string, maxRetries: number): boolean {
   const dep = plan.areas.find(a => a.id === depId);
@@ -436,10 +529,28 @@ export function newRunId(): string {
   return `run_${ts}_${rand}`;
 }
 
-export function createHarnessOrchestrator(config: HarnessConfig): HarnessOrchestrator {
+/**
+ * Options controlling a run's DURABLE IDENTITY.
+ * - `resumeRunId`: adopt an existing runId (a rehydrate/resume) — runLoop
+ *   reopens the row instead of inserting a new one, so history is one continuous
+ *   run across a pause / process restart.
+ * - `parentRunId`: provenance for a FORK — a fresh runId is minted, but run-meta
+ *   records the parent so a fork is auditable, never a silent fragment.
+ */
+export interface OrchestratorOptions {
+  resumeRunId?: string;
+  parentRunId?: string;
+}
+
+export function createHarnessOrchestrator(
+  config: HarnessConfig,
+  opts: OrchestratorOptions = {},
+): HarnessOrchestrator {
   const listeners = new Set<HarnessEventListener>();
   let paused = false;
-  let runId: string | null = null;
+  // Adopt an existing runId on a resume/rehydrate; otherwise runLoop mints one.
+  let runId: string | null = opts.resumeRunId ?? null;
+  const parentRunId = opts.parentRunId ?? null;
   // This orchestrator's own dev-server handle (see DevServerHandle) — never
   // shared across orchestrators, so one run's teardown can't kill another's.
   const devServer: DevServerHandle = { proc: null };
@@ -494,6 +605,9 @@ export function createHarnessOrchestrator(config: HarnessConfig): HarnessOrchest
   if (!fs.existsSync(config.statePath)) {
     fs.mkdirSync(config.statePath, { recursive: true });
   }
+  // Snapshot the config so a post-restart rehydrate can rebuild this orchestrator
+  // (the in-memory singleton is gone after a restart; disk is the source of truth).
+  saveConfigSnapshot(config.statePath, config);
 
   // Persist + reload running totals so budget enforcement is restart-safe.
   let cost = loadCost(config.statePath, budgetUsd);
@@ -919,12 +1033,9 @@ export function createHarnessOrchestrator(config: HarnessConfig): HarnessOrchest
 
   async function runLoop(): Promise<GameBuildGuide> {
     const plan = loadPlan(config.statePath) ?? buildGamePlan(config);
-    // Heal areas stranded mid-flight by a crash or an old abandoning build:
-    // pickNextAreas only picks 'pending', so a persisted 'in-progress' area
-    // would never run again and the target pass rate becomes unreachable.
-    for (const area of plan.areas) {
-      if (area.status === 'in-progress') area.status = 'pending';
-    }
+    // Heal areas stranded mid-flight by a crash or an old abandoning build (also
+    // the resume/rehydrate path: a run interrupted mid-area resumes cleanly).
+    healStrandedAreas(plan);
     savePlan(config.statePath, plan);
     const guide = loadGuide(config.statePath) ?? createEmptyGuide(plan);
     saveGuide(config.statePath, guide);
@@ -940,11 +1051,37 @@ export function createHarnessOrchestrator(config: HarnessConfig): HarnessOrchest
 
     emit({ type: 'harness:started', config, plan });
 
-    // Record a new row in `harness_runs` only on the initial start; resume()
-    // reuses the same `runId` so its terminal snapshot overwrites the paused one.
-    if (!runId) {
+    // Establish the run's durable identity.
+    // - Adopted runId (resume/rehydrate): REOPEN the existing row (status→running,
+    //   re-register live) so a paused/interrupted/stranded run continues as ONE
+    //   run — no new id, no fragmented history. This is the hand-off from the
+    //   stranded-run reaper: a reaped 'interrupted' row is resumable here.
+    // - No runId (fresh or fork): mint one, INSERT a new row, and bind it to this
+    //   statePath in run-meta (recording parentRunId for a fork's provenance).
+    const startedAt = new Date().toISOString();
+    if (runId) {
+      let reopened = false;
+      try { reopened = reopenRun(runId); } catch { /* history is best-effort */ }
+      if (!reopened) {
+        // The adopted row vanished — insert a fresh row under the SAME id so the
+        // resume still records history rather than silently losing it.
+        try {
+          startRun({
+            runId,
+            projectName: config.projectName,
+            projectPath: config.projectPath,
+            startedAt,
+            themeDirective: config.themeDirective ?? null,
+            plan,
+            cost: { ...cost, byArea: { ...cost.byArea } },
+          });
+        } catch { /* best-effort */ }
+      }
+      saveRunMeta(config.statePath, {
+        runId, projectPath: config.projectPath, statePath: config.statePath, startedAt,
+      });
+    } else {
       runId = newRunId();
-      const startedAt = new Date().toISOString();
       try {
         startRun({
           runId,
@@ -958,6 +1095,10 @@ export function createHarnessOrchestrator(config: HarnessConfig): HarnessOrchest
       } catch {
         // History is best-effort.
       }
+      saveRunMeta(config.statePath, {
+        runId, projectPath: config.projectPath, statePath: config.statePath, startedAt,
+        ...(parentRunId ? { parentRunId } : {}),
+      });
     }
 
     // Set up git checkpointing once, on the run's own `harness/<runId>` branch.
@@ -1097,6 +1238,34 @@ export function createHarnessOrchestrator(config: HarnessConfig): HarnessOrchest
     getCheckpoints() { return checkpointer?.getState() ?? readCheckpoints(config.statePath); },
     on(listener) { listeners.add(listener); return () => listeners.delete(listener); },
   };
+}
+
+// ── Rehydration (resume after a process restart) ─────────────────────────────
+
+export interface RehydratedRun {
+  orchestrator: HarnessOrchestrator;
+  runId: string;
+  config: HarnessConfig;
+}
+
+/**
+ * Rebuild an orchestrator for a run whose in-memory singleton was lost to a
+ * process restart. Reads the durable `run-meta.json` (statePath ⇄ runId) and the
+ * `harness-config.json` snapshot from disk and reconstructs the orchestrator
+ * ADOPTING the same runId — so `resume()` continues the SAME run (its plan,
+ * progress, cost, and history are all on disk). Returns null when no resumable
+ * run is bound to this statePath.
+ *
+ * The stranded-run reaper marks a crashed run 'interrupted'; this is the path
+ * that makes such a run resumable again (via `reopenRun` inside runLoop).
+ */
+export function rehydrateHarnessOrchestrator(statePath: string): RehydratedRun | null {
+  const meta = readRunMeta(statePath);
+  if (!meta) return null;
+  const config = readConfigSnapshot(statePath);
+  if (!config) return null;
+  const orchestrator = createHarnessOrchestrator(config, { resumeRunId: meta.runId });
+  return { orchestrator, runId: meta.runId, config };
 }
 
 // ── Default Config Factory ──────────────────────────────────────────────────

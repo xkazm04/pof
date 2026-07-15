@@ -15,6 +15,8 @@ import { apiSuccess, apiError } from '@/lib/api-utils';
 import {
   createHarnessOrchestrator,
   createDefaultConfig,
+  rehydrateHarnessOrchestrator,
+  resolveRunIdentity,
   type HarnessOrchestrator,
   type HarnessConfig,
   type HarnessEvent,
@@ -39,6 +41,34 @@ const globalForHarness = globalThis as unknown as {
 if (!globalForHarness.harnessStatus) {
   globalForHarness.harnessStatus = 'idle';
   globalForHarness.harnessEvents = [];
+}
+
+/**
+ * Subscribe the global event buffer + status tracker to an orchestrator. Shared
+ * by `start` and the post-restart `resume` rehydrate path so a rehydrated run's
+ * events + status transitions are tracked identically to a freshly-started one.
+ */
+function wireOrchestratorEvents(orchestrator: HarnessOrchestrator): void {
+  orchestrator.on((event) => {
+    globalForHarness.harnessEvents.push(event);
+    if (globalForHarness.harnessEvents.length > 200) {
+      globalForHarness.harnessEvents = globalForHarness.harnessEvents.slice(-100);
+    }
+    switch (event.type) {
+      case 'harness:started':
+        globalForHarness.harnessStatus = 'running';
+        break;
+      case 'harness:paused':
+        globalForHarness.harnessStatus = 'paused';
+        break;
+      case 'harness:completed':
+        globalForHarness.harnessStatus = 'completed';
+        break;
+      case 'harness:error':
+        if (event.fatal) globalForHarness.harnessStatus = 'error';
+        break;
+    }
+  });
 }
 
 // ── GET ─────────────────────────────────────────────────────────────────────
@@ -163,6 +193,8 @@ export async function POST(request: NextRequest) {
     themeDirective?: string;
     areaPassThreshold?: number;
     passRateBasis?: 'verified' | 'self-reported';
+    /** Force a fresh forked run (new runId → parent) even over a resumable statePath. */
+    fork?: boolean;
   };
 
   // Shared validation cap for the free-text creative direction so an unbounded
@@ -244,33 +276,18 @@ export async function POST(request: NextRequest) {
     globalForHarness.harnessConfig = config;
     globalForHarness.harnessEvents = [];
 
-    const orchestrator = createHarnessOrchestrator(config);
+    // Durable identity: a start pointed at an existing statePath RESUMES the same
+    // run (same runId) rather than silently minting a new one and fragmenting
+    // history. A prior TERMINAL run at the statePath forks with recorded
+    // provenance; `fork: true` forces a fork even from a resumable run.
+    const identity = resolveRunIdentity(config.statePath, { forceFork: body.fork === true });
+    const orchestrator = createHarnessOrchestrator(config, {
+      ...(identity.resumeRunId ? { resumeRunId: identity.resumeRunId } : {}),
+      ...(identity.parentRunId ? { parentRunId: identity.parentRunId } : {}),
+    });
     globalForHarness.harnessOrchestrator = orchestrator;
 
-    // Subscribe to events
-    orchestrator.on((event) => {
-      globalForHarness.harnessEvents.push(event);
-      // Keep event buffer bounded
-      if (globalForHarness.harnessEvents.length > 200) {
-        globalForHarness.harnessEvents = globalForHarness.harnessEvents.slice(-100);
-      }
-
-      // Track status changes
-      switch (event.type) {
-        case 'harness:started':
-          globalForHarness.harnessStatus = 'running';
-          break;
-        case 'harness:paused':
-          globalForHarness.harnessStatus = 'paused';
-          break;
-        case 'harness:completed':
-          globalForHarness.harnessStatus = 'completed';
-          break;
-        case 'harness:error':
-          if (event.fatal) globalForHarness.harnessStatus = 'error';
-          break;
-      }
-    });
+    wireOrchestratorEvents(orchestrator);
 
     globalForHarness.harnessStatus = 'running';
 
@@ -286,7 +303,14 @@ export async function POST(request: NextRequest) {
 
     return apiSuccess({
       status: 'started',
-      message: 'Harness loop started — poll GET /api/harness for progress',
+      mode: identity.mode,
+      ...(identity.resumeRunId ? { resumedRunId: identity.resumeRunId } : {}),
+      ...(identity.parentRunId ? { parentRunId: identity.parentRunId } : {}),
+      message: identity.mode === 'resume'
+        ? 'Resumed the existing run at this statePath (same runId) — poll GET /api/harness for progress'
+        : identity.mode === 'fork'
+          ? 'Forked a new run from the prior run at this statePath (provenance recorded) — poll GET /api/harness'
+          : 'Harness loop started — poll GET /api/harness for progress',
     });
   }
 
@@ -300,8 +324,29 @@ export async function POST(request: NextRequest) {
   }
 
   if (body.action === 'resume') {
-    const orchestrator = globalForHarness.harnessOrchestrator;
-    if (!orchestrator || globalForHarness.harnessStatus !== 'paused') {
+    let orchestrator = globalForHarness.harnessOrchestrator;
+    let rehydrated = false;
+
+    // DURABLE RESUME: after a process restart the in-memory orchestrator is gone.
+    // Rehydrate it from disk (run-meta + config snapshot) so the SAME run
+    // continues — this also picks up a reaped 'interrupted' row and makes it live
+    // again. The stranded in-progress→pending healing runs inside runLoop.
+    if (!orchestrator) {
+      const statePath = body.statePath ?? globalForHarness.harnessConfig?.statePath;
+      if (!statePath) {
+        return apiError('Harness is not running and no statePath was provided to rehydrate a resumable run', 409);
+      }
+      const rh = rehydrateHarnessOrchestrator(statePath);
+      if (!rh) {
+        return apiError('No resumable run found at the given statePath (missing run-meta or config snapshot)', 404);
+      }
+      orchestrator = rh.orchestrator;
+      globalForHarness.harnessOrchestrator = orchestrator;
+      globalForHarness.harnessConfig = rh.config;
+      globalForHarness.harnessEvents = [];
+      wireOrchestratorEvents(orchestrator);
+      rehydrated = true;
+    } else if (globalForHarness.harnessStatus !== 'paused') {
       return apiError('Harness is not paused', 409);
     }
 
@@ -316,7 +361,12 @@ export async function POST(request: NextRequest) {
       });
     });
 
-    return apiSuccess({ status: 'resumed', message: 'Harness resumed' });
+    return apiSuccess({
+      status: 'resumed',
+      rehydrated,
+      runId: orchestrator.getRunId(),
+      message: rehydrated ? 'Rehydrated + resumed the run from disk (same runId)' : 'Harness resumed',
+    });
   }
 
   return apiError(`Unknown action: ${body.action}`, 400);

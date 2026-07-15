@@ -17,8 +17,27 @@
  *   const guide = await harness.start();
  */
 
-export { createHarnessOrchestrator, createDefaultConfig, newRunId, readCheckpoints } from './orchestrator';
-export type { HarnessOrchestrator, HarnessEventListener } from './orchestrator';
+export {
+  createHarnessOrchestrator,
+  createDefaultConfig,
+  newRunId,
+  readCheckpoints,
+  rehydrateHarnessOrchestrator,
+  resolveRunIdentity,
+  readRunMeta,
+  readConfigSnapshot,
+  isResumableStatus,
+  healStrandedAreas,
+} from './orchestrator';
+export type {
+  HarnessOrchestrator,
+  HarnessEventListener,
+  OrchestratorOptions,
+  RehydratedRun,
+  RunMeta,
+  RunIdentity,
+  RunIdentityMode,
+} from './orchestrator';
 export {
   createCheckpointer,
   checkpointBranch,
