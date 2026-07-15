@@ -99,7 +99,7 @@ export function SpellbookTabContent({ activeTab, moduleId, featureMap, defs, exp
       )}
       {activeTab === 'forge' && (
         <div data-section-id="forge">
-          <AbilityForge />
+          <AbilityForge moduleId={moduleId} />
         </div>
       )}
     </>

@@ -31,10 +31,13 @@ import { AbilityDiff } from './AbilityDiff';
 import { ForgeHistoryPanel } from './ForgeHistoryPanel';
 import { PromptInspector } from './PromptInspector';
 import { ForgeErrorCard } from './ForgeErrorCard';
+import { ForgeAdoptBar } from './ForgeAdoptBar';
+import { useForgeAdopt } from './useForgeAdopt';
+import type { SubModuleId } from '@/types/modules';
 
 /* ── Main component ──────────────────────────────────────────────────── */
 
-export function AbilityForge() {
+export function AbilityForge({ moduleId = 'arpg-gas' }: { moduleId?: SubModuleId } = {}) {
   const [description, setDescription] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [result, setResult] = useState<ForgedAbility | null>(null);
@@ -55,6 +58,10 @@ export function AbilityForge() {
   const projectName = useProjectStore((s) => s.projectName);
   const projectPath = useProjectStore((s) => s.projectPath);
   const ueVersion = useProjectStore((s) => s.ueVersion);
+
+  // Adopt bridge — persist the current forged ability into an entity spec and/or
+  // dispatch UE generation. Bound to the live `result` + the prompt that made it.
+  const adoptBinding = useForgeAdopt(moduleId, result, lastPrompt);
 
   const handleGenerate = useCallback(async () => {
     const desc = description.trim();
@@ -171,6 +178,9 @@ export function AbilityForge() {
           <ForgeResult ability={result} existingRadar={radarData} />
         </BlueprintPanel>
       )}
+
+      {/* Adopt bridge — forge output → persisted entity spec + optional UE gen */}
+      {result && <ForgeAdoptBar binding={adoptBinding} />}
 
       {/* Prompt Inspector — exposes the audit + composed prompt that produced the result. */}
       <PromptInspector prompt={lastPrompt} />

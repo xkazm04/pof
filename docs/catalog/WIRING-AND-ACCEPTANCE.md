@@ -7,7 +7,7 @@ Research feeding the multi-pipeline plan. Answers four operator questions: (1) w
 **SQLite (`~/.pof/pof.db`, `src/lib/*-db.ts`):**
 - `catalog_lifecycle` — `(catalog_id, entity_id)` → `lifecycle`, `ue_assets[]` (JSON), `last_test_result`, `last_verified_at`. Written by the `@@CALLBACK` system → `POST /api/catalog` → `upsertLifecycle` (`catalog-db.ts`), gated by `resolveTransition` (only `verified` needs a passing test).
 - `pipeline_tracks` — per-entity production-track state (`not-started|in-progress|done|blocked`).
-- `ability_specs` — GAS authoring state (`effects[]`, `tag_rules[]`) → `POST /api/ability-spec`. The B3 codegen input.
+- `ability_specs` — GAS authoring state (`effects[]`, `tag_rules[]`, optional `provenance` JSON: adopted-forge C++ + prompt) → `POST /api/ability-spec`. The B3 codegen input; surfaced in the UI by the GAS Blueprint Editor's spec bar (load/save) and the Ability Forge's adopt bridge.
 - `headless_builds` — **a UE build queue/results table** (`/api/ue5-bridge/build`). Already a single-resource serialization point.
 - `visual_verifications` — **agentic screenshot + Gemini HUD verdicts** (`/api/verify/visual`). The visual-gate infra already exists.
 - `balance_baselines`, `session_analytics`, `error_memory`, plus run-history (`procgen/scatter/mixamo/audio_import`).

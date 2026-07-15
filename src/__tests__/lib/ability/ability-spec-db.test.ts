@@ -21,4 +21,14 @@ describe('rowToSpec', () => {
     expect(s.tagRules).toEqual([]);
     expect(s.updatedAt).toBeUndefined();
   });
+  it('parses provenance JSON when present, undefined when null/absent', () => {
+    const prov = { source: 'forge', className: 'GA_Fireball', displayName: 'Fireball', damageType: 'Fire', headerCode: '// h', cppCode: '// c' };
+    const s = rowToSpec({
+      catalog_id: 'spellbook', entity_id: 'off-fire-01', effects: '[]', tag_rules: '[]', updated_at: null,
+      provenance: JSON.stringify(prov),
+    });
+    expect(s.provenance).toEqual(prov);
+    const none = rowToSpec({ catalog_id: 'spellbook', entity_id: 'x', effects: '[]', tag_rules: '[]', updated_at: null, provenance: null });
+    expect(none.provenance).toBeUndefined();
+  });
 });

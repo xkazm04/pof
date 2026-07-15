@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { getSpec, upsertSpec } from '@/lib/ability/ability-spec-db';
-import type { EnrichedAbilitySpec } from '@/lib/ability/spec';
+import type { EnrichedAbilitySpec, SpecProvenance } from '@/lib/ability/spec';
 import type { EditorEffect, TagRule } from '@/lib/gas-codegen';
 
 /** GET /api/ability-spec?catalogId=spellbook&entityId=off-fire-01 → EnrichedAbilitySpec | null */
@@ -31,6 +31,10 @@ export async function POST(req: NextRequest) {
       entityId,
       effects: body.effects as EditorEffect[],
       tagRules: body.tagRules as TagRule[],
+      // Optional adoption provenance (raw forged C++ + prompt). Additive.
+      provenance: body.provenance && typeof body.provenance === 'object'
+        ? (body.provenance as SpecProvenance)
+        : undefined,
     };
     return apiSuccess(upsertSpec(record));
   } catch (e) {

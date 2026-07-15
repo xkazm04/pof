@@ -3,6 +3,26 @@ import { STATUS_NEUTRAL } from '@/lib/chart-colors';
 
 export type { EditorEffect, TagRule };
 
+/**
+ * Provenance of an adopted forge output. Additive + optional — records where a
+ * spec's effects/tagRules came from (the AbilityForge) and preserves the raw
+ * generated C++ + the exact prompt so the design is auditable. The app never
+ * writes these C++ strings to disk; UE materialization stays the agent task's
+ * job (generateGasEffects). Pure data.
+ */
+export interface SpecProvenance {
+  source: 'forge';
+  className: string;
+  displayName: string;
+  damageType: string;
+  /** The natural-language prompt that produced the forge output. */
+  prompt?: string;
+  /** Raw generated .h — stored for audit, not written to the project. */
+  headerCode: string;
+  /** Raw generated .cpp — stored for audit, not written to the project. */
+  cppCode: string;
+}
+
 /** Per-entity enriched GAS authoring spec — drives the rich editors (B2) + C++ codegen (B3). */
 export interface EnrichedAbilitySpec {
   catalogId: string;
@@ -10,6 +30,8 @@ export interface EnrichedAbilitySpec {
   effects: EditorEffect[];
   tagRules: TagRule[];
   updatedAt?: string;
+  /** Optional adoption provenance (present when adopted from the forge). */
+  provenance?: SpecProvenance;
 }
 
 /** The thin fields `deriveDefaultSpec` needs from a SpellbookAbility. */

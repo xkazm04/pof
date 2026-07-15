@@ -1,5 +1,5 @@
 import { getDb } from '@/lib/db';
-import type { EnrichedAbilitySpec } from '@/lib/ability/spec';
+import type { EnrichedAbilitySpec, SpecProvenance } from '@/lib/ability/spec';
 import type { EditorEffect, TagRule } from '@/lib/gas-codegen';
 
 // DDL is idempotent (IF NOT EXISTS) but parsing/planning it on every read is
@@ -11,7 +11,8 @@ let abilitySpecBootstrapped = false;
 function ensureTable() {
   if (abilitySpecBootstrapped) return;
 
-  getDb().exec(`
+  const db = getDb();
+  db.exec(`
     CREATE TABLE IF NOT EXISTS ability_specs (
       catalog_id TEXT NOT NULL,
       entity_id TEXT NOT NULL,
@@ -22,17 +23,26 @@ function ensureTable() {
     )
   `);
 
+  // Additive migration: adoption provenance (raw forged C++ + prompt). Optional
+  // column so existing rows/consumers are unaffected.
+  const cols = db.prepare('PRAGMA table_info(ability_specs)').all() as { name: string }[];
+  if (!cols.some((c) => c.name === 'provenance')) {
+    db.exec('ALTER TABLE ability_specs ADD COLUMN provenance TEXT');
+  }
+
   abilitySpecBootstrapped = true;
 }
 
 /** Column row → EnrichedAbilitySpec. Pure (exported for unit test). */
 export function rowToSpec(row: Record<string, unknown>): EnrichedAbilitySpec {
+  const provRaw = row.provenance as string | null | undefined;
   return {
     catalogId: row.catalog_id as string,
     entityId: row.entity_id as string,
     effects: JSON.parse((row.effects as string) || '[]') as EditorEffect[],
     tagRules: JSON.parse((row.tag_rules as string) || '[]') as TagRule[],
     updatedAt: (row.updated_at as string | null) ?? undefined,
+    provenance: provRaw ? (JSON.parse(provRaw) as SpecProvenance) : undefined,
   };
 }
 
@@ -47,15 +57,16 @@ export function getSpec(catalogId: string, entityId: string): EnrichedAbilitySpe
 export function upsertSpec(rec: EnrichedAbilitySpec): EnrichedAbilitySpec {
   ensureTable();
   getDb().prepare(`
-    INSERT INTO ability_specs (catalog_id, entity_id, effects, tag_rules, updated_at)
-    VALUES (@catalog_id, @entity_id, @effects, @tag_rules, datetime('now'))
+    INSERT INTO ability_specs (catalog_id, entity_id, effects, tag_rules, provenance, updated_at)
+    VALUES (@catalog_id, @entity_id, @effects, @tag_rules, @provenance, datetime('now'))
     ON CONFLICT(catalog_id, entity_id) DO UPDATE SET
-      effects=@effects, tag_rules=@tag_rules, updated_at=datetime('now')
+      effects=@effects, tag_rules=@tag_rules, provenance=@provenance, updated_at=datetime('now')
   `).run({
     catalog_id: rec.catalogId,
     entity_id: rec.entityId,
     effects: JSON.stringify(rec.effects),
     tag_rules: JSON.stringify(rec.tagRules),
+    provenance: rec.provenance ? JSON.stringify(rec.provenance) : null,
   });
   return getSpec(rec.catalogId, rec.entityId)!;
 }
