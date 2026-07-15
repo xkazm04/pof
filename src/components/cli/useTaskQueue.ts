@@ -9,7 +9,7 @@ import type {
   ExecutionInfo, ExecutionResult, CLISSEEvent,
 } from './types';
 import type { SkillId } from './skills';
-import { buildSkillsPrompt } from './skills';
+import { injectSkillsIntoPrompt } from './skills';
 import {
   registerTaskStart, registerTaskComplete, sendTaskHeartbeat,
   getTaskStatus, clearSessionTasks,
@@ -444,8 +444,9 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     clearHeartbeat();
     heartbeatIntervalRef.current = setInterval(() => sendTaskHeartbeat(task.id), UI_TIMEOUTS.heartbeatInterval);
 
-    const skillsPrefix = !resumeSession && enabledSkills.length > 0 ? buildSkillsPrompt(enabledSkills) : '';
-    const taskPrompt = `${skillsPrefix}${task.prompt}`;
+    const { prompt: taskPrompt } = injectSkillsIntoPrompt({
+      basePrompt: task.prompt, enabledSkills, resumeSession, runLabel: task.label,
+    });
 
     addLog({ id: `task-${Date.now()}`, type: 'system', content: `Starting: ${task.label}`, timestamp: Date.now() });
 
@@ -471,14 +472,23 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
   const submitPrompt = useCallback(async (prompt: string, resumeSession: boolean, opts?: { taskType?: string }) => {
     assistantOutputRef.current = '';
     dispatch({ type: 'SUBMIT_START' });
+    // Echo the RAW user prompt to the log (no skills clutter); only the dispatched
+    // prompt sent to the CLI carries the injected packs.
     addLog({ id: `user-${Date.now()}`, type: 'user', content: prompt, timestamp: Date.now() });
+
+    // Same skill-injection path as the queued executeTask — this is what makes the
+    // normal module-button flow (which runs through submitPrompt) actually receive
+    // the session's resolved skill packs. First-run only (resume never re-injects).
+    const { prompt: dispatchPrompt } = injectSkillsIntoPrompt({
+      basePrompt: prompt, enabledSkills, resumeSession, runLabel: opts?.taskType ?? 'interactive',
+    });
 
     try {
       const data = await apiFetch<{ executionId: string; streamUrl: string; logFilePath: string | null; model: string | null; effort: string | null }>('/api/claude-terminal/query', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         // taskType lets the route resolve the model-policy pin (WS0) for this run.
-        body: JSON.stringify({ projectPath, prompt, resumeSessionId: resumeSession ? state.sessionId : undefined, taskType: opts?.taskType }),
+        body: JSON.stringify({ projectPath, prompt: dispatchPrompt, resumeSessionId: resumeSession ? state.sessionId : undefined, taskType: opts?.taskType }),
       });
       executionIdRef.current = data.executionId;
       dispatch({ type: 'SET_RESOLVED_MODEL', model: data.model ?? null, effort: data.effort ?? null });
@@ -489,7 +499,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
       // Release session.isRunning for hosts that latched on SUBMIT_START.
       onTaskComplete?.(currentTaskIdRef.current ?? INTERACTIVE_TASK_ID, false);
     }
-  }, [projectPath, state.sessionId, addLog, connectToStream, onTaskComplete]);
+  }, [projectPath, state.sessionId, addLog, connectToStream, onTaskComplete, enabledSkills]);
 
   // --- Abort ---
 

@@ -288,8 +288,17 @@ with `\n\n` and appends a trailing `\n\n` for inclusion as a prompt prefix.
 (`skills.ts:203`)
 
 `resolveAndApplySkills` in `useModuleCLI` hits `/api/telemetry` at execution time and
-stores the resolved `SkillId[]` on the session. The terminal prepends
-`buildSkillsPrompt(session.skills)` before dispatching.
+stores the resolved `SkillId[]` on the session (`cliPanelStore.setSessionSkills`);
+`InlineTerminal` feeds them to `CompactTerminal` as `enabledSkills`.
+
+`injectSkillsIntoPrompt({ basePrompt, enabledSkills, resumeSession, runLabel })`
+(`skills.ts`) is the **single injection path** shared by both CLI dispatch entry points
+in `useTaskQueue` — the queued `executeTask` **and** the interactive `submitPrompt`
+(the normal module-button flow). It prepends the enabled packs on first run only
+(`resumeSession === false`), never on a `--resume` continuation, and logs which packs
+were injected. Before this, only the queued path prepended skills, so module-button
+prompts silently dropped every resolved pack. Injection now cannot drift between the
+two paths, and a resume can never double-inject.
 
 ---
 

@@ -8,6 +8,7 @@
  */
 
 import type { SubGenreId, GameplayPattern } from '@/types/telemetry';
+import { logger } from '@/lib/logger';
 
 // ── Skill definitions ──────────────────────────────────────────────────────
 
@@ -211,6 +212,38 @@ export function buildSkillsPrompt(skillIds: SkillId[]): string {
   if (sections.length === 0) return '';
 
   return sections.join('\n\n') + '\n\n';
+}
+
+/**
+ * The single skill-injection path shared by BOTH CLI dispatch entry points —
+ * the queued `executeTask` and the interactive `submitPrompt`. Prepends the
+ * enabled packs' context to a dispatch prompt, honoring the first-run rule
+ * (skills only seed a NEW session, never a `--resume` continuation), and logs
+ * exactly which packs were injected for the run. Returns the (possibly unchanged)
+ * prompt plus the packs actually injected so callers can assert / attribute.
+ *
+ * Keeping this as one helper is deliberate: before this, only the queued path
+ * prepended skills, so the normal module-button flow (which runs through
+ * `submitPrompt`) silently dropped every resolved pack. Both paths now call here,
+ * so injection can never drift between them (and a resume never double-injects).
+ */
+export function injectSkillsIntoPrompt(opts: {
+  basePrompt: string;
+  enabledSkills: SkillId[];
+  resumeSession: boolean;
+  runLabel?: string;
+}): { prompt: string; injected: SkillId[] } {
+  const { basePrompt, enabledSkills, resumeSession, runLabel } = opts;
+  if (resumeSession || enabledSkills.length === 0) return { prompt: basePrompt, injected: [] };
+
+  const injected = enabledSkills.filter((id) => SKILL_PACKS[id]);
+  const prefix = buildSkillsPrompt(injected);
+  if (!prefix) return { prompt: basePrompt, injected: [] };
+
+  logger.info(
+    `[skills] injected ${injected.length} pack${injected.length === 1 ? '' : 's'} into ${runLabel ?? 'run'}: ${injected.join(', ')}`,
+  );
+  return { prompt: `${prefix}${basePrompt}`, injected };
 }
 
 /**
