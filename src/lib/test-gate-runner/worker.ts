@@ -1,5 +1,6 @@
 import { logger } from '@/lib/logger';
 import { collectDeferred, drainJobs, type DrainFilter } from './drain';
+import { acquireLeases, releaseLeases, leaseKeysForFilter, scopeFromKey } from './drain-lease';
 import { buildExecutors, type ExecutorConfig } from './executors';
 import type { DrainSummary, GateJob } from './types';
 
@@ -38,30 +39,50 @@ const status: WorkerStatus = { running: false, intervalMs: 0, ticks: 0, lastTick
 
 const keyOf = (j: GateJob) => `${j.catalogId}|${j.entityId}|${j.step}`;
 
-/** One drain pass: collect deferred jobs not in cooldown, drain them, refresh cooldowns. Exported for tests. */
+/**
+ * One drain pass: collect deferred jobs not in cooldown, drain them, refresh cooldowns.
+ * Exported for tests.
+ *
+ * Acquires the SAME drain lease the POST route uses (keyed from `cfg.filter` — global by
+ * default) so the always-on worker and a manual/route drain can never hit the non-reentrant
+ * UE editor at once — the exact clobber the lease exists to prevent. If the lease is already
+ * held the tick is SKIPPED gracefully (logged at debug, not an error) and returns `null`.
+ */
 export async function runDrainTick(now: number = Date.now()): Promise<DrainSummary | null> {
   if (!cfg) return null;
-  // Sweep expired cooldowns up front: an entry whose cooldown has elapsed (value <= now)
-  // is already non-gating (line below treats missing/expired identically), so dropping it
-  // changes no behavior for live jobs while reclaiming keys for jobs that have vanished.
-  for (const [k, until] of cooldownUntil) {
-    if (until <= now) cooldownUntil.delete(k);
-  }
-  const executors = buildExecutors(cfg.executor ?? { executor: 'bridge' });
-  const jobs = collectDeferred(cfg.filter).filter((j) => (cooldownUntil.get(keyOf(j)) ?? 0) <= now);
-  const summary = jobs.length
-    ? await drainJobs(jobs, executors)
-    : { ran: 0, passed: 0, failed: 0, deferred: 0, skipped: 0, screenshots: [], results: [] };
 
-  const cooldown = cfg.cooldownMs ?? DEFAULT_COOLDOWN_MS;
-  for (const r of summary.results) {
-    if (r.skipped) cooldownUntil.set(keyOf(r.job), now + cooldown);
-    else cooldownUntil.delete(keyOf(r.job));
+  // The lease covers the worker, not just the route. A held lease → skip this tick quietly.
+  const leaseKeys = leaseKeysForFilter(cfg.filter ?? {});
+  const acquired = acquireLeases(leaseKeys);
+  if (!acquired.ok) {
+    logger.debug(`[drain-worker] tick skipped — drain lease held by ${scopeFromKey(acquired.conflict)}`);
+    return null;
   }
-  status.ticks += 1;
-  status.lastTickAt = new Date(now).toISOString();
-  status.lastSummary = { ran: summary.ran, passed: summary.passed, failed: summary.failed, deferred: summary.deferred, skipped: summary.skipped };
-  return summary;
+  try {
+    // Sweep expired cooldowns up front: an entry whose cooldown has elapsed (value <= now)
+    // is already non-gating (line below treats missing/expired identically), so dropping it
+    // changes no behavior for live jobs while reclaiming keys for jobs that have vanished.
+    for (const [k, until] of cooldownUntil) {
+      if (until <= now) cooldownUntil.delete(k);
+    }
+    const executors = buildExecutors(cfg.executor ?? { executor: 'bridge' });
+    const jobs = collectDeferred(cfg.filter).filter((j) => (cooldownUntil.get(keyOf(j)) ?? 0) <= now);
+    const summary = jobs.length
+      ? await drainJobs(jobs, executors)
+      : { ran: 0, passed: 0, failed: 0, deferred: 0, skipped: 0, screenshots: [], results: [] };
+
+    const cooldown = cfg.cooldownMs ?? DEFAULT_COOLDOWN_MS;
+    for (const r of summary.results) {
+      if (r.skipped) cooldownUntil.set(keyOf(r.job), now + cooldown);
+      else cooldownUntil.delete(keyOf(r.job));
+    }
+    status.ticks += 1;
+    status.lastTickAt = new Date(now).toISOString();
+    status.lastSummary = { ran: summary.ran, passed: summary.passed, failed: summary.failed, deferred: summary.deferred, skipped: summary.skipped };
+    return summary;
+  } finally {
+    releaseLeases(leaseKeys);
+  }
 }
 
 export function startDrainWorker(config: WorkerConfig): WorkerStatus {

@@ -2,14 +2,14 @@ import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { getOriginFromRequest } from '@/lib/constants';
 import { buildExecutors, collectDeferred, drainAll, parseDrainFilter, type DrainFilter } from '@/lib/test-gate-runner';
-import { acquireLeases, releaseLeases, scopeFromKey, __resetLeases } from '@/lib/test-gate-runner/drain-lease';
+import { acquireLeases, releaseLeases, scopeFromKey, leaseKeysForFilter, __resetLeases } from '@/lib/test-gate-runner/drain-lease';
 import { resolveUprojectPath } from '@/lib/ue5-bridge/build-pipeline';
 
 // The drain talks to a shared, non-reentrant UE editor — overlapping requests would clobber
 // each other and produce garbage verdicts. The lease (scoped per catalogId|entityId, global
 // key when both omitted) lives in `drain-lease.ts` so a GET status route can READ it (the lab
-// runner chip), turning a 409 surprise into visible truth. Mirrors the worker's tickInFlight guard.
-const drainKey = (f: DrainFilter) => `${f.catalogId ?? '*'}|${f.entityId ?? '*'}`;
+// runner chip), turning a 409 surprise into visible truth. The SAME lease now also covers the
+// always-on worker (`worker.runDrainTick`), so route + worker are mutually exclusive.
 /** Test-only: clear the lease registry between cases. */
 export function __resetDrainInFlight() { __resetLeases(); }
 
@@ -53,10 +53,9 @@ export async function POST(req: NextRequest) {
       : undefined;
     const filter: DrainFilter = { ...scalar, ...(entityIds?.length ? { entityIds } : {}) };
 
-    // Lease keys: one per requested entity for a batch, else the single (or global) key.
-    const keys = entityIds?.length
-      ? entityIds.map((id) => `${filter.catalogId ?? '*'}|${id}`)
-      : [drainKey(filter)];
+    // Lease keys: one per requested entity for a batch, else the single (or global) key —
+    // the same helper the worker uses, so both contend on one registry.
+    const keys = leaseKeysForFilter(filter);
     const acquired = acquireLeases(keys);
     if (!acquired.ok) {
       return apiError(`drain already in flight for ${scopeFromKey(acquired.conflict)} — refusing to overlap (UE editor is non-reentrant)`, 409);

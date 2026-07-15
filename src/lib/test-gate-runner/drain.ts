@@ -73,6 +73,13 @@ export function collectDeferred(filter?: DrainFilter): GateJob[] {
 /** Run one gate and write the verdict back, preserving the artifact's data/assets/tier. */
 export async function drainOne(job: GateJob, executor: GateExecutor): Promise<DrainResult> {
   const verdict = await executor.run(job);
+  // Read-merge-write, kept overlap-safe two ways: (1) the drain LEASE (held by both the route
+  // AND the worker — see drain-lease.ts) serializes drain passes so two of them never touch the
+  // same artifact at once; (2) this read→merge→write runs with NO `await` between `getArtifact`
+  // and `upsertArtifact`, so on the single-threaded event loop it is atomic w.r.t. any other JS
+  // task (incl. a concurrent Produce POST) — and because the read happens immediately before the
+  // write, we always merge evidence onto the FRESHEST snapshot (a Produce landing during `run()`
+  // above is picked up). No lost evidence, no torn write.
   const existing = getArtifact(job.catalogId, job.entityId, job.step);
   const from = existing?.status ?? null;
   // Merge the structured evidence into the artifact's data, PRESERVING everything already there
@@ -147,12 +154,33 @@ export async function drainJobs(
   // editor for every automation gate) and cache the per-job verdicts `run` then returns. Runs
   // at most once per executor per pass (mirrors the availability memo) and only after the
   // executor proved available — so an unavailable/unmatched executor never boots.
-  const prepared = new Set<GateExecutor>();
+  //
+  // `prepared` is marked ONLY after `prepareBatch` SUCCEEDS — marking it before the await meant
+  // a failed grouped boot silently degraded every LATER job to a per-job single boot AND wrongly
+  // parked the triggering job with no batch retry. Now: one retry, then HONEST degradation
+  // (logged loudly) to per-job boots — and `ensurePrepared` never throws, so the triggering job
+  // still runs its own per-job boot via `drainOne` instead of being parked.
+  const preparedOk = new Set<GateExecutor>(); // batch pre-ran → `run` serves the cache
+  const degraded = new Set<GateExecutor>();   // batch failed twice → fall back to per-job boots
   const ensurePrepared = async (e: GateExecutor): Promise<void> => {
-    if (prepared.has(e)) return;
-    prepared.add(e);
-    if (!e.prepareBatch) return;
-    await e.prepareBatch(jobs.filter((j) => j.tier === e.tier));
+    if (preparedOk.has(e) || degraded.has(e)) return;
+    if (!e.prepareBatch) { preparedOk.add(e); return; }
+    const batchJobs = jobs.filter((j) => j.tier === e.tier);
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        await e.prepareBatch(batchJobs);
+        preparedOk.add(e);
+        return;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'prepareBatch error';
+        if (attempt < 2) {
+          logger.warn(`[test-gate-runner] ${e.id} grouped boot failed (attempt ${attempt}/2), retrying: ${msg}`);
+        } else {
+          logger.warn(`[test-gate-runner] ${e.id} grouped boot failed twice — DEGRADING to per-job boots: ${msg}`);
+          degraded.add(e);
+        }
+      }
+    }
   };
 
   for (const job of jobs) {

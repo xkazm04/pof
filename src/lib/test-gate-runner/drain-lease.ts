@@ -21,6 +21,9 @@ export interface DrainLease {
 
 const held = new Map<string, DrainLease>();
 
+/** The global lease key — a global drain (or the always-on worker) touches EVERY entity. */
+const GLOBAL_KEY = '*|*';
+
 /** Human scope from a `catalog|entity` key (`*|*` → 'global'). */
 export function scopeFromKey(k: string): string {
   const [c, e] = k.split('|');
@@ -28,11 +31,34 @@ export function scopeFromKey(k: string): string {
 }
 
 /**
+ * Lease keys for a drain filter — the SINGLE source both the POST route AND the always-on
+ * worker use to key their lease, so they contend on the same registry (a batch → one key per
+ * entity; else the single scoped, or global, key). Kept here (not in the route) so the worker
+ * can reuse it without importing the app route.
+ */
+export function leaseKeysForFilter(f: { catalogId?: string; entityId?: string; entityIds?: string[] }): string[] {
+  if (f.entityIds?.length) return f.entityIds.map((id) => `${f.catalogId ?? '*'}|${id}`);
+  return [`${f.catalogId ?? '*'}|${f.entityId ?? '*'}`];
+}
+
+/**
  * Acquire ALL keys atomically: if ANY is already held, acquire none and report the conflict
  * (mirrors the route's all-or-nothing batch lease). On success every key is recorded with a
  * shared acquisition timestamp.
+ *
+ * The GLOBAL lease (`*|*`) is exclusive with EVERYTHING: a global drain (or the always-on
+ * worker, which drains globally) sweeps every entity, so it must not run alongside ANY scoped
+ * drain and vice versa. A held global blocks every acquire; acquiring global requires an empty
+ * registry. Scoped-vs-scoped contention is unchanged (different entities may still drain
+ * concurrently — they touch disjoint rows).
  */
 export function acquireLeases(keys: string[]): { ok: true } | { ok: false; conflict: string } {
+  // A held global lease excludes everything.
+  if (held.has(GLOBAL_KEY)) return { ok: false, conflict: GLOBAL_KEY };
+  // Acquiring the global lease requires that nothing scoped is in flight.
+  if (keys.includes(GLOBAL_KEY) && held.size > 0) {
+    return { ok: false, conflict: [...held.keys()][0] };
+  }
   const conflict = keys.find((k) => held.has(k));
   if (conflict) return { ok: false, conflict };
   const since = new Date().toISOString();

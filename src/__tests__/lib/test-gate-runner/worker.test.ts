@@ -6,9 +6,10 @@ const { collectDeferred, drainJobs } = vi.hoisted(() => ({ collectDeferred: vi.f
 
 vi.mock('@/lib/test-gate-runner/drain', () => ({ collectDeferred, drainJobs }));
 vi.mock('@/lib/test-gate-runner/executors', () => ({ buildExecutors: () => [] }));
-vi.mock('@/lib/logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
+vi.mock('@/lib/logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } }));
 
 import { startDrainWorker, stopDrainWorker, getWorkerStatus, runDrainTick } from '@/lib/test-gate-runner/worker';
+import { acquireLeases, releaseLeases, __resetLeases } from '@/lib/test-gate-runner/drain-lease';
 
 const job = (id: string): GateJob => ({ catalogId: 'items', entityId: id, step: 'Test Gate', tier: 'L3', testName: 'T' });
 const summary = (results: DrainSummary['results']): DrainSummary => ({
@@ -26,8 +27,9 @@ beforeEach(() => {
   drainJobs.mockReset();
   collectDeferred.mockReturnValue([]);
   drainJobs.mockResolvedValue(summary([]));
+  __resetLeases();
 });
-afterEach(() => stopDrainWorker());
+afterEach(() => { stopDrainWorker(); __resetLeases(); });
 
 describe('drain worker', () => {
   it('start/stop/status reflects running state', () => {
@@ -82,6 +84,26 @@ describe('drain worker', () => {
     await runDrainTick(12_000);      // cooldown expired → re-attempted
     expect(drainJobs).toHaveBeenCalledTimes(2);
     expect(drainJobs.mock.calls[1][0]).toEqual([j1]);
+  });
+
+  it('skips the tick when a drain lease is already held (worker ⇄ route mutual exclusion)', async () => {
+    // Simulate a route drain in flight: a scoped lease is held. The worker drains globally, and
+    // the global lease is exclusive with everything → the tick must skip (drainJobs NOT called).
+    acquireLeases(['items|item-1']);
+    startDrainWorker({ intervalMs: 999_999 });
+    collectDeferred.mockReturnValue([job('a')]);
+    const res = await runDrainTick(1_000);
+    expect(res).toBeNull();
+    expect(drainJobs).not.toHaveBeenCalled();
+    // …and it left no lease of its own behind (only the route's remains).
+    releaseLeases(['items|item-1']);
+  });
+
+  it('releases its lease after a tick so the next tick / a route drain can acquire', async () => {
+    startDrainWorker({ intervalMs: 999_999 });
+    await runDrainTick(1_000);
+    // The worker released → a route-style global acquire now succeeds.
+    expect(acquireLeases(['*|*']).ok).toBe(true);
   });
 
   it('runDrainTick is a no-op before the worker is started', async () => {

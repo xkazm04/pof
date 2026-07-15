@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { acquireLeases, releaseLeases, getLeaseState, scopeFromKey, __resetLeases } from '@/lib/test-gate-runner/drain-lease';
+import { acquireLeases, releaseLeases, getLeaseState, scopeFromKey, leaseKeysForFilter, __resetLeases } from '@/lib/test-gate-runner/drain-lease';
 
 describe('drain-lease registry', () => {
   beforeEach(() => __resetLeases());
@@ -45,5 +45,28 @@ describe('drain-lease registry', () => {
   it('scopeFromKey maps the global key to "global"', () => {
     expect(scopeFromKey('*|*')).toBe('global');
     expect(scopeFromKey('items|item-1')).toBe('items/item-1');
+  });
+
+  it('the global lease is exclusive with EVERYTHING (worker vs a scoped route drain)', () => {
+    // A held scoped lease blocks a global acquire (the worker can't sweep while an entity drains).
+    acquireLeases(['items|item-1']);
+    expect(acquireLeases(['*|*'])).toEqual({ ok: false, conflict: 'items|item-1' });
+    releaseLeases(['items|item-1']);
+    // A held global lease blocks every scoped acquire (a route drain can't start under the worker).
+    expect(acquireLeases(['*|*']).ok).toBe(true);
+    expect(acquireLeases(['items|item-1'])).toEqual({ ok: false, conflict: '*|*' });
+  });
+
+  it('scoped-vs-scoped is unchanged: disjoint entities may drain concurrently', () => {
+    expect(acquireLeases(['items|a']).ok).toBe(true);
+    expect(acquireLeases(['items|b']).ok).toBe(true); // different entity → no conflict
+    expect(acquireLeases(['items|a'])).toEqual({ ok: false, conflict: 'items|a' });
+  });
+
+  it('leaseKeysForFilter mirrors the route: batch → per-entity keys, else single/global', () => {
+    expect(leaseKeysForFilter({})).toEqual(['*|*']);
+    expect(leaseKeysForFilter({ catalogId: 'items' })).toEqual(['items|*']);
+    expect(leaseKeysForFilter({ catalogId: 'items', entityId: 'a' })).toEqual(['items|a']);
+    expect(leaseKeysForFilter({ catalogId: 'items', entityIds: ['a', 'b'] })).toEqual(['items|a', 'items|b']);
   });
 });

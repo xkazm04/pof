@@ -100,6 +100,25 @@ describe('drainOne — evidence', () => {
     const row = store.get(key('items', 'i2', 'g'))!;
     expect(row.data).toEqual({ genHistory: { batches: [] } }); // no `evidence` key added
   });
+
+  it('overlapping drainOne calls on the same row lose no evidence and preserve prior data', async () => {
+    // Two drains resolve their executor.run on the microtask queue, then race to write. Because
+    // drainOne's read→merge→write has NO await between getArtifact and upsertArtifact, each write
+    // is atomic on the event loop: prior data (foo) survives and the row ends with a well-formed
+    // evidence object (no torn/undefined write). The lease additionally serializes real passes.
+    seed({ catalogId: 'items', entityId: 'race', step: 'g', tier: 'L3', data: { foo: 1 }, reason: 'live-UE runner not yet run: T' });
+    const job: GateJob = { catalogId: 'items', entityId: 'race', step: 'g', tier: 'L3', testName: 'T' };
+    const ev = (n: number) => ({ kind: 'automation' as const, at: `2026-07-15T00:00:0${n}Z`, markers: [`run-${n}`] });
+    const mkExec = (n: number) => fakeExec({ tier: 'L3', runFn: async () => { await Promise.resolve(); return { status: 'pass' as const, detail: `ok-${n}`, evidence: ev(n) }; } });
+
+    await Promise.all([drainOne(job, mkExec(1)), drainOne(job, mkExec(2))]);
+
+    const row = store.get(key('items', 'race', 'g'))!;
+    expect(row.status).toBe('pass');
+    expect(row.data.foo).toBe(1); // prior data never lost
+    expect(row.data.evidence).toBeDefined();
+    expect((row.data.evidence as { markers: string[] }).markers[0]).toMatch(/^run-[12]$/); // a real evidence, not torn
+  });
 });
 
 describe('drainAll', () => {
@@ -197,6 +216,50 @@ describe('drainJobs — grouped boot (prepareBatch) integration', () => {
     expect(prepareCalls).toBe(1);
     expect(boots).toBe(1); // ONE boot for three automation gates
     expect(sum).toMatchObject({ ran: 3, passed: 3, failed: 0 });
+  });
+
+  it('retries a failed grouped boot ONCE, then degrades to per-job boots WITHOUT parking the jobs', async () => {
+    seed({ catalogId: 'items', entityId: 'a', step: 'g', tier: 'L3', reason: 'live-UE runner not yet run: TA' });
+    seed({ catalogId: 'loot', entityId: 'b', step: 'g', tier: 'L3', reason: 'live-UE runner not yet run: TB' });
+    let prepareCalls = 0;
+    const perJobRuns: string[] = [];
+    const ex: GateExecutor = {
+      id: 'flaky-batch',
+      tier: 'L3',
+      available: async () => true,
+      async prepareBatch() { prepareCalls++; throw new Error('grouped boot exploded'); },
+      async run(job) { perJobRuns.push(job.entityId); return { status: 'pass', detail: job.testName! }; },
+    };
+    const sum = await drainAll([ex]);
+    expect(prepareCalls).toBe(2); // one attempt + one retry (both threw), then degraded
+    expect(sum).toMatchObject({ ran: 2, passed: 2, skipped: 0 }); // both jobs still ran per-job
+    expect(perJobRuns.sort()).toEqual(['a', 'b']);
+    expect(store.get(key('items', 'a', 'g'))!.status).toBe('pass');
+  });
+
+  it('a grouped boot that succeeds on RETRY still serves the cache (no per-job boots)', async () => {
+    seed({ catalogId: 'items', entityId: 'a', step: 'g', tier: 'L3', reason: 'live-UE runner not yet run: TA' });
+    let prepareCalls = 0;
+    const cache = new Map<string, GateVerdict>();
+    const ex: GateExecutor = {
+      id: 'retry-batch',
+      tier: 'L3',
+      available: async () => true,
+      async prepareBatch(jobs) {
+        prepareCalls++;
+        if (prepareCalls === 1) throw new Error('transient boot failure');
+        for (const j of jobs) cache.set(j.testName!, { status: 'pass', detail: `${j.testName}: cached` });
+      },
+      async run(job) {
+        const cached = cache.get(job.testName!);
+        if (cached) return cached;
+        return { status: 'fail', detail: 'unexpected per-job boot' };
+      },
+    };
+    const sum = await drainAll([ex]);
+    expect(prepareCalls).toBe(2);
+    expect(sum).toMatchObject({ ran: 1, passed: 1 });
+    expect(store.get(key('items', 'a', 'g'))!.reason).toMatch(/cached/);
   });
 
   it('does not prepare/boot an UNAVAILABLE executor', async () => {
