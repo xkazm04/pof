@@ -60,6 +60,27 @@ The autonomous L4 resolver (`captureResolver.ts` → `ue-launch/capture.captureS
 - **Honest deferral:** a **declared** map that produces no frame (missing / unlit) → the gate stays `deferred` with a reason naming the map — it is **not** silently re-rendered on VerticalSlice (which would judge the wrong scene). The default-slice-produces-nothing case keeps the legacy "no screenshot source" path.
 - **Frame evidence** carries `entity`/`map`/`scenario` markers (via the bounded `GateEvidence.markers`), so the /status audit reading a flipped verdict sees exactly which scene was photographed.
 
+### Observed-reality assertions (L3 behavioural scenarios)
+
+A behavioural gate (`runScenario`) drives timed inputs in a real game loop and judges the **observed effect** — `parseScenarioVerdict` reads the `observations.json` sample stream, never a symbolic "Result={Success}". The assertion vocabulary (`GateAssertion` in `types.ts`) covers the full observation spine (`ObsSample`), not just the 2D pose:
+
+| Assertion | Reads | Passes when |
+|-----------|-------|-------------|
+| `animated` / `static` | `droopL`/`droopR` variance | arm-swing° ≥ / ≤ threshold (walk cycle vs T-pose) |
+| `moved` (`in3D?`) | `loc_x`/`loc_y` (+ `loc_z` when `in3D`) | net displacement ≥ `minDist`; **hypot3** when `in3D` and loc_z is carried, else 2D **with a note** in the detail |
+| `min-speed` | `speed` | peak observed speed ≥ `minSpeed` (real locomotion velocity) |
+| `vertical-displacement` | `loc_z` | max \|loc_z − startZ\| ≥ `minRise` — a jump / knockback **lift** (previously unobservable; net 2D `moved` can't see a body that rises and returns) |
+| `montage-playing` / `attribute-drop` | `montage_playing` / `health`\|`stamina`\|`mana` | a montage fired / a resource dipped ≥ `minDelta` |
+| `ability-activated` (`tag?`) | montage OR resource, plus `ability_found` | the ability committed; a tag that resolved to **nothing** (`ability_found:false`) fails **LOUDLY** naming the tag — distinct from the generic "no montage and no resource" a genuinely-broken-but-present ability produces |
+
+The verdict surfaces `ScenarioStats` (`distance` 2D, `distance3d`, `peakSpeed`, `verticalRise`, `sampleCount`, `montagePlaying`) as bounded evidence, so a flip keeps its numeric proof.
+
+> **UE-side emission — honest split.** `loc_x/loc_y/loc_z` and `speed` are already carried by the `UScenarioController` sample stream (they are non-optional on `ObsSample` and appear in the calibration fixtures) — this round simply started **using** loc_z and speed in the verdict (they were grep-zero before). `ability_found` is a **new** additive field: the loud ability-tag-mismatch verdict only fires once the UE-side `activate_ability` path sets it (until then `ability-activated` degrades to the effect-only check). That UE emission is the deferred half of Direction 1.
+
+**Scenario archetypes** (`scenarioRegistry.ts`, resolved most→least specific by `${catalogId}:${step}` → `${catalogId}` → `${testName}`):
+- **abilities** — activate the entity's ability tag on the pawn's ASC; `abilityTagFor(entityId, override?)` derives `Ability.<Pascal>` but an explicit `abilityTag` on the job WINS (a dotted tag verbatim, a bare name PascalCased) — the escape hatch for an entityId whose blind PascalCase does not match the registered tag. The resolved tag is stamped onto the `ability-activated` assertion.
+- **movement** (`character-pipeline`) — drive `W` for ~1.8 s with `disableAI:true` (so enemies can't stagger the pawn), then gate on `moved` (real horizontal displacement) + `min-speed` (real velocity). `disableAI` is now forwarded onto the L3 spawn inbox via the pure `scenarioInboxFor` (it was previously honored only on the L4 capture path).
+
 ### Catalog-level (multi-entity) drain
 
 `POST /api/pipeline-artifacts/drain` accepts an additive **`entityIds: string[]`** (with `catalogId`) — a whole-catalog batch that reuses ONE catalog-scoped collection (`collectDeferred` filters the set in JS), ONE availability probe, and ONE grouped boot for the entire set (`drainAll` → single `drainJobs` pass). **Lease semantics are all-or-nothing**: the handler acquires the per-entity in-flight lease for every requested entity up front; if ANY is already in flight it refuses the whole batch with **409** (naming the conflicting `catalog/entity`) — the same "never two drains on one entity" guarantee the single-entity path gives, extended to the set; all leases are freed in `finally`. Backward compatible — absent `entityIds` is the existing single-entity/global behaviour, byte-for-byte. (The client `useBatchDrain` hook still POSTs per entity for live per-entity grid feedback + per-entity 409 retry; wiring it to the multi-entity API is a follow-up, deliberately not taken to avoid losing that live UI.)

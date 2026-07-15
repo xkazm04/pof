@@ -38,6 +38,16 @@ export interface ObsSample {
   health?: number;
   stamina?: number;
   mana?: number;
+  /**
+   * True when the requested gameplay-ability tag was actually FOUND on the pawn's ASC before
+   * activation, false when the tag resolved to nothing (a wrong/blind-PascalCased tag). Lets the
+   * `ability-activated` verdict tell "the ability tag doesn't exist" apart from "the ability ran
+   * but produced no observable effect" — two very different failures that otherwise both read as
+   * "no montage and no resource". Additive to the spine; absent in older UE emissions (the verdict
+   * degrades to the effect-only check). The UE-side `UScenarioController` must set this on the
+   * `activate_ability` path for the loud-mismatch verdict to fire — see L3-L4-RUNNER.md.
+   */
+  ability_found?: boolean;
 }
 
 export interface Observations {

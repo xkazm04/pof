@@ -4,8 +4,10 @@ import {
   parseAbslogVerdict,
   buildScenarioArgs,
   parseScenarioVerdict,
+  scenarioInboxFor,
   makeSpawnExecutor,
 } from '@/lib/test-gate-runner/spawnExecutor';
+import type { GateScenario } from '@/lib/test-gate-runner/types';
 
 describe('buildAutomationArgs', () => {
   it('runs one automation test headlessly with a unique abslog (matches the project invocation)', () => {
@@ -153,6 +155,95 @@ describe('parseScenarioVerdict', () => {
     expect(parseScenarioVerdict(TPOSE_STUCK, [{ kind: 'animated' }]).stats!.swingDeg).toBeCloseTo(0, 1);
     // A cast records montage seen.
     expect(parseScenarioVerdict(FIREBALL_CAST, [{ kind: 'montage-playing' }]).stats!.montagePlaying).toBe(1);
+  });
+});
+
+// A knockback-onto-a-ledge: the pawn lifts off the ground plane (loc_z rises 90→300→300) and
+// ends elevated while barely moving horizontally — the exact net displacement 2D hypot can't see.
+const JUMP = {
+  started: true,
+  samples: [
+    { t: 0.2, loc_x: 0, loc_y: 0, loc_z: 90, speed: 0, droopL: 55, droopR: 55 },
+    { t: 0.5, loc_x: 0, loc_y: 10, loc_z: 300, speed: 420, droopL: 55, droopR: 55 },
+    { t: 0.8, loc_x: 0, loc_y: 20, loc_z: 300, speed: 60, droopL: 55, droopR: 55 },
+  ],
+};
+// A cast whose ability tag was blind-PascalCased WRONG: the ASC reports ability_found:false.
+const WRONG_TAG_CAST = {
+  started: true,
+  samples: [
+    { t: 0.3, loc_x: 0, loc_y: 0, loc_z: 90, speed: 0, droopL: 55, droopR: 55, montage_playing: false, mana: 50, ability_found: false },
+    { t: 0.7, loc_x: 0, loc_y: 0, loc_z: 90, speed: 0, droopL: 55, droopR: 55, montage_playing: false, mana: 50, ability_found: false },
+  ],
+};
+
+describe('parseScenarioVerdict — 3D displacement / speed / vertical (Direction 1)', () => {
+  it('surfaces 2D + 3D distance, peak speed, and vertical rise as stats', () => {
+    const v = parseScenarioVerdict(WALKING, [{ kind: 'moved' }]);
+    expect(v.stats!.distance).toBeGreaterThan(50);
+    expect(v.stats!.distance3d).toBeCloseTo(v.stats!.distance, 1); // flat walk → 3D≈2D
+    expect(v.stats!.peakSpeed).toBe(600);
+    expect(v.stats!.verticalRise).toBeCloseTo(0, 1);
+  });
+
+  it('3D displacement sees a jump that 2D misses', () => {
+    const v = parseScenarioVerdict(JUMP, [{ kind: 'moved', in3D: true, minDist: 100 }]);
+    // 2D barely moved (~20), so a 2D `moved` would FAIL; 3D includes the 210u lift → passes.
+    expect(v.stats!.distance).toBeLessThan(50);
+    expect(v.stats!.distance3d).toBeGreaterThan(100);
+    expect(v.status).toBe('pass');
+    expect(parseScenarioVerdict(JUMP, [{ kind: 'moved', minDist: 100 }]).status).toBe('fail'); // 2D default
+  });
+
+  it('moved in3D falls back to 2D with a note when loc_z is absent', () => {
+    const flat2d = { started: true, samples: [
+      { t: 0, loc_x: 0, loc_y: 0, droopL: 55, droopR: 55 },
+      { t: 1, loc_x: 0, loc_y: 20, droopL: 55, droopR: 55 },
+    ] } as unknown as Parameters<typeof parseScenarioVerdict>[0];
+    const v = parseScenarioVerdict(flat2d, [{ kind: 'moved', in3D: true, minDist: 100 }]);
+    expect(v.status).toBe('fail');
+    expect(v.detail).toMatch(/2D — loc_z absent/);
+  });
+
+  it('min-speed gates on peak observed speed', () => {
+    expect(parseScenarioVerdict(WALKING, [{ kind: 'min-speed', minSpeed: 300 }]).status).toBe('pass');
+    // NO_CAST has speed:0 throughout → peak 0 < 300 → fails (a stalled pawn never reached speed).
+    expect(parseScenarioVerdict(NO_CAST, [{ kind: 'min-speed', minSpeed: 300 }]).status).toBe('fail');
+  });
+
+  it('vertical-displacement sees the lift of a jump, and reports honestly when loc_z is missing', () => {
+    expect(parseScenarioVerdict(JUMP, [{ kind: 'vertical-displacement', minRise: 100 }]).status).toBe('pass');
+    expect(parseScenarioVerdict(WALKING, [{ kind: 'vertical-displacement', minRise: 100 }]).status).toBe('fail');
+    const noZ = { started: true, samples: [{ t: 0, loc_x: 0, loc_y: 0, droopL: 1, droopR: 1 }] } as unknown as Parameters<typeof parseScenarioVerdict>[0];
+    const v = parseScenarioVerdict(noZ, [{ kind: 'vertical-displacement' }]);
+    expect(v.status).toBe('fail');
+    expect(v.detail).toMatch(/loc_z not observed/);
+  });
+});
+
+describe('parseScenarioVerdict — loud ability-tag mismatch (Direction 1)', () => {
+  it('reports an unresolvable tag LOUDLY (distinct from the generic no-effect message)', () => {
+    const v = parseScenarioVerdict(WRONG_TAG_CAST, [{ kind: 'ability-activated', tag: 'Ability.Frbal' }]);
+    expect(v.status).toBe('fail');
+    expect(v.detail).toMatch(/NOT FOUND on pawn ASC/);
+    expect(v.detail).toContain('Ability.Frbal');
+    expect(v.detail).not.toMatch(/no montage and no resource/);
+  });
+
+  it('still reports the generic no-effect message when the tag IS present but nothing fired', () => {
+    const v = parseScenarioVerdict(NO_CAST, [{ kind: 'ability-activated', tag: 'Ability.Fireball' }]);
+    expect(v.status).toBe('fail');
+    expect(v.detail).toMatch(/no montage and no resource/);
+  });
+});
+
+describe('scenarioInboxFor (Direction 1 — disableAI pass-through)', () => {
+  const base: GateScenario = { map: '/Game/Maps/TestHarness', totalSeconds: 3, numSamples: 12, inputs: [], assert: [] };
+  it('forwards disableAI onto the inbox options when the spec sets it', () => {
+    expect(scenarioInboxFor({ ...base, disableAI: true })).toMatchObject({ disableAI: true, settle: 1.0 });
+  });
+  it('omits disableAI when the spec does not set it', () => {
+    expect(scenarioInboxFor(base).disableAI).toBeUndefined();
   });
 });
 

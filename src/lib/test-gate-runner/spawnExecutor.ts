@@ -10,9 +10,10 @@ import {
   type GateEvidence,
   type ObsSample,
   type Observations,
+  type ScenarioInboxOptions,
 } from '@/types/observation';
 import { parseAbslogVerdict, runBatchAutomation, type SpawnFn } from './batchAutomation';
-import type { GateAssertion, GateExecutor, GateJob, GateVerdict } from './types';
+import type { GateAssertion, GateExecutor, GateJob, GateScenario, GateVerdict } from './types';
 
 // The abslog fallback parser lives in `batchAutomation` (shared by the single-boot and
 // grouped-boot paths); re-export it so its public API + tests stay stable.
@@ -109,17 +110,41 @@ function stddev(xs: number[]): number {
   return Math.sqrt(xs.reduce((a, b) => a + (b - mean) ** 2, 0) / xs.length);
 }
 
+/** A finite numeric reading, else undefined (defends against older UE emissions omitting a field). */
+function num(v: unknown): number | undefined {
+  return typeof v === 'number' && Number.isFinite(v) ? v : undefined;
+}
+
+/** Stats a scenario verdict surfaces — the structured proof the flip is judged from. */
+export interface ScenarioStats {
+  swingDeg: number;
+  /** 2D horizontal displacement (loc_x/loc_y) — the historical `distance`, kept stable. */
+  distance: number;
+  /** 3D displacement (includes loc_z) — equals `distance` when loc_z is flat/absent. */
+  distance3d: number;
+  /** Peak observed speed across samples (0 when speed is never emitted). */
+  peakSpeed: number;
+  /** Max |loc_z − startZ| across samples — the vertical lift of a jump/knockback. */
+  verticalRise: number;
+  sampleCount: number;
+  montagePlaying: number;
+  /** All fields are numeric — assignable straight into `GateEvidence.stats` (Record<string,number>). */
+  [k: string]: number;
+}
+
 /**
  * Judge a scenario's `observations.json` against its assertions — the FAITHFUL verdict:
  * arm-droop variance across samples = the walk-cycle / animation signature (the exact
  * discriminator that separated the walking Manny from the T-posing player in calibration);
- * 2D displacement = movement. No symbolic "Result={Success}" — the observed effect IS the
- * verdict. All assertions must hold. Pure (tested).
+ * displacement = movement (2D by default, full 3D via hypot3 when a `moved` assertion asks for
+ * `in3D` and loc_z is carried); peak `speed` = real locomotion velocity; vertical loc_z rise =
+ * a jump/knockback (previously unobservable). No symbolic "Result={Success}" — the observed
+ * effect IS the verdict. All assertions must hold. Pure (tested).
  */
 export function parseScenarioVerdict(
   obs: Observations,
   assertions: GateAssertion[],
-): { status: 'pass' | 'fail'; detail: string; stats?: { swingDeg: number; distance: number; sampleCount: number; montagePlaying: number } } {
+): { status: 'pass' | 'fail'; detail: string; stats?: ScenarioStats } {
   const samples = obs?.samples ?? [];
   if (!obs?.started || samples.length === 0) {
     return { status: 'fail', detail: 'scenario did not start / no samples observed' };
@@ -127,12 +152,26 @@ export function parseScenarioVerdict(
   const swing = Math.max(stddev(samples.map((s) => s.droopL)), stddev(samples.map((s) => s.droopR)));
   const first = samples[0];
   const last = samples[samples.length - 1];
-  const dist = Math.hypot(last.loc_x - first.loc_x, last.loc_y - first.loc_y);
-  // The observed effect IS the verdict — surface it as structured stats (evidence) so a flip
-  // keeps its proof: the walk-cycle arm-swing°, the 2D displacement, sample count, montage seen.
-  const stats = {
+  const dx = last.loc_x - first.loc_x;
+  const dy = last.loc_y - first.loc_y;
+  const dist = Math.hypot(dx, dy);
+  // 3D displacement uses loc_z only when BOTH endpoints carry a finite z (else it degrades to 2D).
+  const z0 = num(first.loc_z);
+  const z1 = num(last.loc_z);
+  const has3d = z0 !== undefined && z1 !== undefined;
+  const dist3d = has3d ? Math.hypot(dx, dy, z1 - z0) : dist;
+  const peakSpeed = samples.reduce((m, s) => Math.max(m, num(s.speed) ?? 0), 0);
+  const verticalRise = z0 === undefined
+    ? 0
+    : samples.reduce((m, s) => { const z = num(s.loc_z); return z === undefined ? m : Math.max(m, Math.abs(z - z0)); }, 0);
+  // The observed effect IS the verdict — surface it as structured stats (evidence) so a flip keeps
+  // its proof: arm-swing°, 2D + 3D displacement, peak speed, vertical rise, sample count, montage.
+  const stats: ScenarioStats = {
     swingDeg: swing,
     distance: dist,
+    distance3d: dist3d,
+    peakSpeed,
+    verticalRise,
     sampleCount: samples.length,
     montagePlaying: samples.some((s) => s.montage_playing === true) ? 1 : 0,
   };
@@ -144,7 +183,11 @@ export function parseScenarioVerdict(
       if (swing < min) fails.push(`animated: arm-swing ${swing.toFixed(1)}° < ${min}°`);
     } else if (a.kind === 'moved') {
       const min = a.minDist ?? 50;
-      if (dist < min) fails.push(`moved: displaced ${dist.toFixed(0)} < ${min}`);
+      // 3D only when asked AND loc_z is actually carried; otherwise honestly fall back to 2D + note.
+      const use3d = a.in3D === true && has3d;
+      const d = use3d ? dist3d : dist;
+      const note = a.in3D === true && !has3d ? ' (2D — loc_z absent)' : use3d ? ' (3D)' : '';
+      if (d < min) fails.push(`moved: displaced ${d.toFixed(0)}${note} < ${min}`);
     } else if (a.kind === 'static') {
       const max = a.maxSwingDeg ?? 5;
       if (swing > max) fails.push(`static: arm-swing ${swing.toFixed(1)}° > ${max}°`);
@@ -154,15 +197,46 @@ export function parseScenarioVerdict(
       const min = a.minDelta ?? 1;
       const drop = attrDrop(samples, a.name);
       if (drop < min) fails.push(`attribute-drop ${a.name}: Δ${drop.toFixed(1)} < ${min}`);
+    } else if (a.kind === 'min-speed') {
+      const min = a.minSpeed ?? 50;
+      if (peakSpeed < min) fails.push(`min-speed: peak ${peakSpeed.toFixed(0)} < ${min}`);
+    } else if (a.kind === 'vertical-displacement') {
+      const min = a.minRise ?? 50;
+      if (z0 === undefined) fails.push('vertical-displacement: loc_z not observed (cannot measure lift)');
+      else if (verticalRise < min) fails.push(`vertical-displacement: rise ${verticalRise.toFixed(0)} < ${min}`);
     } else if (a.kind === 'ability-activated') {
+      // A wrong/blind-PascalCased tag that resolved to NOTHING is a distinct, LOUD failure — never
+      // the generic "no effect" (which reads identically for a genuinely broken-but-present ability).
+      const someFound = samples.some((s) => s.ability_found === true);
+      const explicitlyNotFound = !someFound && samples.some((s) => s.ability_found === false);
       const montage = samples.some((s) => s.montage_playing === true);
       const resource = attrDrop(samples, 'health') >= 1 || attrDrop(samples, 'stamina') >= 1 || attrDrop(samples, 'mana') >= 1;
-      if (!montage && !resource) fails.push('ability-activated: no montage and no resource change observed');
+      if (explicitlyNotFound) {
+        fails.push(`ability-activated: tag ${a.tag ?? '(derived)'} NOT FOUND on pawn ASC — unresolvable tag (fix the ability tag), not a broken ability`);
+      } else if (!montage && !resource) {
+        fails.push('ability-activated: no montage and no resource change observed');
+      }
     }
   }
   if (fails.length) return { status: 'fail', detail: fails.join('; '), stats };
   const mont = stats.montagePlaying ? ' montage✓' : '';
-  return { status: 'pass', detail: `swing=${swing.toFixed(1)}° dist=${dist.toFixed(0)}${mont} over ${samples.length} samples`, stats };
+  return { status: 'pass', detail: `swing=${swing.toFixed(1)}° dist=${dist.toFixed(0)} spd=${peakSpeed.toFixed(0)}${mont} over ${samples.length} samples`, stats };
+}
+
+/**
+ * Build the scenario-inbox options for a gate scenario — the ONE place the L3 spawn path maps a
+ * `GateScenario` onto the shared inbox writer. Forwards `disableAI` (previously dropped on the L3
+ * path even when the spec set it) and resolves the spawn-path settle default (1.0). Pure (tested).
+ */
+export function scenarioInboxFor(scn: GateScenario): ScenarioInboxOptions {
+  return {
+    totalSeconds: scn.totalSeconds,
+    numSamples: scn.numSamples,
+    settle: scn.settle ?? 1.0,
+    ...(scn.playAnim ? { playAnim: scn.playAnim } : {}),
+    ...(scn.disableAI ? { disableAI: true } : {}),
+    inputs: scn.inputs,
+  };
 }
 
 /** Is this a batchable automation job — a symbolic test name with NO behavioural scenario?
@@ -193,14 +267,9 @@ export function makeSpawnExecutor(opts: SpawnExecutorOptions = {}): GateExecutor
     const outDirFwd = outDir.replace(/\\/g, '/');
     const scnPath = join(outDir, 'scenario.json');
     // The spawn path resolves its own settle default (1.0) before the shared writer, so the
-    // spine's capture-oriented default (1.5) never applies here — behaviour is preserved.
-    await writeFile(scnPath, buildScenarioInbox(outDirFwd, {
-      totalSeconds: scn.totalSeconds,
-      numSamples: scn.numSamples,
-      settle: scn.settle ?? 1.0,
-      ...(scn.playAnim ? { playAnim: scn.playAnim } : {}),
-      inputs: scn.inputs,
-    }));
+    // spine's capture-oriented default (1.5) never applies here — behaviour is preserved. The
+    // mapping (incl. `disableAI` forwarding) lives in the pure `scenarioInboxFor` for unit testing.
+    await writeFile(scnPath, buildScenarioInbox(outDirFwd, scenarioInboxFor(scn)));
     const scnLog = join(outDir, 'editor.log');
     const scnArgs = buildScenarioArgs(project, scn.map, scnPath.replace(/\\/g, '/'), scnLog);
     const { timedOut } = await spawnImpl(editor, scnArgs, opts.scenarioTimeoutMs ?? 180_000);

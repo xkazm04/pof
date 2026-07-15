@@ -30,11 +30,13 @@ export type AttrName = 'health' | 'stamina' | 'mana';
 
 export type GateAssertion =
   | { kind: 'animated'; minSwingDeg?: number } // arm-droop varies across samples (walk cycle); default ≥10°
-  | { kind: 'moved'; minDist?: number }        // pawn displaced ≥ minDist (2D); default ≥50
+  | { kind: 'moved'; minDist?: number; in3D?: boolean } // pawn displaced ≥ minDist; 2D by default, hypot3 when `in3D` and loc_z present; default ≥50
   | { kind: 'static'; maxSwingDeg?: number }   // arm-droop ~constant (T-pose / not animating); default ≤5°
   | { kind: 'montage-playing' }                // a montage played in ≥1 sample (attack/cast/dodge fired)
   | { kind: 'attribute-drop'; name: AttrName; minDelta?: number } // resource consumed (max−min ≥ minDelta; default 1)
-  | { kind: 'ability-activated' };             // montage played OR any resource dropped (the ability committed)
+  | { kind: 'min-speed'; minSpeed?: number }   // peak observed speed ≥ minSpeed (real locomotion velocity); default ≥50
+  | { kind: 'vertical-displacement'; minRise?: number } // max |loc_z − startZ| ≥ minRise — a jump/knockback lifts the pawn (previously unobservable); default ≥50
+  | { kind: 'ability-activated'; tag?: string }; // montage played OR any resource dropped (the ability committed); `tag` names the requested ability so an unresolvable tag reports LOUDLY (not the generic "no effect")
 
 /** A behavioural L3 scenario: drive timed inputs in a real game loop, then assert on
  *  the *observed* effect (the harness `observation.run_scenario` contract). */
@@ -45,6 +47,10 @@ export interface GateScenario {
   settle?: number;
   /** Optional: force-play an anim asset at Begin (single-node) — isolates mesh vs ABP. */
   playAnim?: string;
+  /** Destroy AI-possessed pawns at scenario start so combat can't interfere with the observed
+   *  behaviour (e.g. isolate locomotion — enemies otherwise stagger the player). Honored by the
+   *  L4 capture path already; the L3 spawn writer now forwards it too. */
+  disableAI?: boolean;
   inputs: GateScenarioInput[];
   assert: GateAssertion[];
 }
