@@ -24,8 +24,13 @@ export interface GenAssetRef {
  * "real" preview. Absent → ArchetypeStep uses the default swatch generator unchanged.
  */
 export interface GenCandidatesSpec {
-  /** Ask ArchetypeStep to fetch the generated-image manifest and pass it to `build`. */
+  /** Ask ArchetypeStep to fetch the generated-asset manifest and pass it to `build`. */
   needsAssets?: boolean;
+  /** Which manifest to pre-fetch when `needsAssets`: `'2d'` served preview images
+   *  (default — via `useGeneratedImageAssets`) or `'3d'` `.glb` meshes (via
+   *  `useGeneratedMeshAssets`). A 3D gallery's candidates carry `payload.glbUrl` so
+   *  the selected mesh renders in the interactive GlbViewer. */
+  assetKind?: '2d' | '3d';
   build: (direction: string, seq: number, assets: GenAssetRef[]) => RawGenCandidate[];
 }
 

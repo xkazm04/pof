@@ -1,22 +1,16 @@
 'use client';
 
 import { useCallback, useMemo } from 'react';
-import dynamic from 'next/dynamic';
 import { StepFrame, type StepPanel } from './StepFrame';
 import { CliProduce } from './shared/CliProduce';
 import { CandidateGallery } from './shared/CandidateGallery';
 import { DataTable } from './shared/DataTable';
 import { ChartPanel, type BarsRow } from './shared/ChartPanel';
-
-// three/r3f is client + WebGL only — load the .glb viewer lazily so it never hits SSR
-// and only pulls the 3D bundle for steps that actually render a mesh.
-const GlbViewer = dynamic(() => import('./shared/GlbViewer').then((m) => m.GlbViewer), {
-  ssr: false,
-  loading: () => <div style={{ height: 260, display: 'grid', placeItems: 'center', fontSize: 12, opacity: 0.6 }}>Loading 3D viewer…</div>,
-});
+import { GlbPreviewPanel, GLB_PREVIEW_LABEL } from './shared/GlbPreviewPanel';
 import { selectedCandidate } from './shared/genHistory';
 import { useGenerativeStep } from './shared/useGenerativeStep';
 import { useGeneratedImageAssets } from './shared/useGeneratedImageAssets';
+import { useGeneratedMeshAssets } from './shared/useGeneratedMeshAssets';
 import { withGenericFixCopy } from './shared/genericFixCopy';
 import { genericGalleryCandidates } from './shared/genericGalleryCandidates';
 import { useLabPipelineStore } from '../labPipelineStore';
@@ -172,14 +166,21 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
   // A step may plug in its own candidate generator (spec.genCandidates) to surface REAL
   // generated thumbnails; ArchetypeStep pre-fetches the asset manifest when it asks for
   // one and passes it in. Absent → the default deterministic swatch generator (unchanged).
-  const imageAssets = useGeneratedImageAssets(spec.view.kind === 'gallery' && !!spec.genCandidates?.needsAssets);
+  const wantsAssets = spec.view.kind === 'gallery' && !!spec.genCandidates?.needsAssets;
+  const assetKind = spec.genCandidates?.assetKind ?? '2d';
+  // Both hooks are called unconditionally (hooks discipline); each no-ops unless its
+  // branch is the one requested. A '3d' gallery gets the .glb manifest so its candidates
+  // carry payload.glbUrl (→ interactive GlbViewer); '2d' gets served preview images.
+  const imageAssets = useGeneratedImageAssets(wantsAssets && assetKind === '2d');
+  const meshAssets = useGeneratedMeshAssets(wantsAssets && assetKind === '3d');
+  const galleryAssets = assetKind === '3d' ? meshAssets : imageAssets;
   const galleryCandidates = useCallback(
     (dir: string, seq: number) => {
       if (spec.view.kind !== 'gallery') return [];
-      if (spec.genCandidates) return spec.genCandidates.build(dir, seq, imageAssets);
+      if (spec.genCandidates) return spec.genCandidates.build(dir, seq, galleryAssets);
       return genericGalleryCandidates(spec.view.field, spec.view.candidates, dir, seq);
     },
-    [spec, imageAssets],
+    [spec, galleryAssets],
   );
   const { art, history, generate, reselect } = useGenerativeStep(entity.id, step, galleryCandidates, produced);
 
@@ -238,12 +239,7 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
         <CandidateGallery t={t} history={history} onSelect={reselect}
           emptyHint="No candidates yet — run Produce to generate the first batch." />
       ) },
-      ...(glbUrl ? [{ label: '3D preview (orbit / zoom)', node: (
-        <div style={{ display: 'grid', gap: 6 }}>
-          <GlbViewer url={glbUrl} />
-          <span className={t.fontMono} style={{ fontSize: 12, color: t.muted }}>{glbUrl}</span>
-        </div>
-      ) }] : []),
+      ...(glbUrl ? [{ label: GLB_PREVIEW_LABEL, node: <GlbPreviewPanel t={t} url={glbUrl} /> }] : []),
       { label: 'Selected', node: (
         <div style={{ display: 'grid', gap: 8 }}>
           <div style={{ aspectRatio: '1', maxWidth: 160, borderRadius: t.glass ? 10 : 2, background: sel?.swatch ?? t.panel, border: `1px solid ${t.line}`, overflow: 'hidden' }}>
@@ -268,12 +264,7 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
     const dataGlbUrl = typeof (data as { glbUrl?: unknown })?.glbUrl === 'string' ? (data as { glbUrl: string }).glbUrl : null;
     panels = [
       { label: 'View', node: <ViewPanel t={t} view={spec.view} data={data} /> },
-      ...(dataGlbUrl ? [{ label: '3D preview (orbit / zoom)', node: (
-        <div style={{ display: 'grid', gap: 6 }}>
-          <GlbViewer url={dataGlbUrl} />
-          <span className={t.fontMono} style={{ fontSize: 12, color: t.muted }}>{dataGlbUrl}</span>
-        </div>
-      ) }] : []),
+      ...(dataGlbUrl ? [{ label: GLB_PREVIEW_LABEL, node: <GlbPreviewPanel t={t} url={dataGlbUrl} /> }] : []),
       { label: 'Produce', node: cli(() => produce(entity.id, step, produced)) },
     ];
   }

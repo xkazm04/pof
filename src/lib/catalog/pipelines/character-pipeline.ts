@@ -1,6 +1,7 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { fieldsPopulated, minCount, selected } from '../acceptance/dataCheckers';
 import { runtimeDeferred, visualDeferred } from '../acceptance/deferred';
+import { meshGalleryCandidates } from '@/components/layout-lab/steps/shared/meshGalleryCandidates';
 
 /**
  * Character Pipeline (catalogId: 'character-pipeline').
@@ -68,6 +69,15 @@ registerCatalogPipeline({
       label: '3D Generation',
       engine: 'Tripo',
       view: { kind: 'gallery', field: 'candidates', candidates: 3 },
+      // Surface REAL generated .glb meshes when any exist on disk: each candidate carries
+      // payload.glbUrl so the selected mesh renders in the interactive GlbViewer (orbit/
+      // zoom) instead of a colored swatch. Empty manifest → honest deterministic swatch
+      // fallback (never a fake 3D preview); acceptance (`selected`) is unchanged either way.
+      genCandidates: {
+        needsAssets: true,
+        assetKind: '3d',
+        build: (dir, seq, assets) => meshGalleryCandidates('candidates', 3, assets, dir, seq),
+      },
       produce: () => ({
         data: {
           candidates: [
