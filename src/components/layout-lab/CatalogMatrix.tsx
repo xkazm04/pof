@@ -186,8 +186,8 @@ export function CatalogMatrix({ t, groups, catalogId, onOpenStep }: Props) {
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.id} data-draining={drainState.currentEntityId === r.id || undefined}>
-                  <td style={drainState.currentEntityId === r.id ? { ...nameTd, borderLeft: `3px solid ${t.warn}` } : nameTd}>
+                <tr key={r.id} data-draining={drainState.activeEntityIds.has(r.id) || undefined}>
+                  <td style={drainState.activeEntityIds.has(r.id) ? { ...nameTd, borderLeft: `3px solid ${t.warn}` } : nameTd}>
                     <button onClick={() => onOpenStep(selected, r.id, 0)} className={t.fontBody}
                       style={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%', textAlign: 'left', cursor: 'pointer', background: 'transparent', border: 'none', color: t.text }}>
                       <span style={{ fontSize: 14, fontWeight: 600, color: t.inkDeep, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</span>
@@ -200,7 +200,7 @@ export function CatalogMatrix({ t, groups, catalogId, onOpenStep }: Props) {
                             ⚠ {r.blockers.length} blocker{r.blockers.length > 1 ? 's' : ''}
                           </span>
                         )}
-                        {drainState.currentEntityId === r.id && (
+                        {drainState.activeEntityIds.has(r.id) && (
                           <span data-testid={`matrix-draining-${r.id}`} style={{ color: t.warn, fontWeight: 600 }}>· draining…</span>
                         )}
                       </span>

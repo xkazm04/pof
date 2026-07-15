@@ -6,7 +6,7 @@ import type { DrainSummary } from '@/lib/test-gate-runner/types';
 const drainMock = vi.fn();
 const invalidateMock = vi.fn();
 vi.mock('@/components/layout-lab/labArtifactClient', () => ({
-  drainEntityGates: (...a: unknown[]) => drainMock(...a),
+  drainCatalogGates: (...a: unknown[]) => drainMock(...a),
 }));
 vi.mock('@/components/layout-lab/labArtifactCache', () => ({
   invalidateArtifacts: (...a: unknown[]) => invalidateMock(...a),
@@ -22,8 +22,8 @@ function deferred<T>() {
 const okOutcome = (over: Partial<DrainSummary> = {}): DrainOutcome => ({
   kind: 'ok', summary: { ran: 0, passed: 0, failed: 0, deferred: 0, skipped: 0, screenshots: [], results: [], ...over },
 });
-const failResult = (step: string, reason: string) => ({
-  job: { catalogId: 'c', entityId: 'e', step, tier: 'L3' as const },
+const failResult = (entityId: string, step: string, reason: string) => ({
+  job: { catalogId: 'c', entityId, step, tier: 'L3' as const },
   verdict: { status: 'fail' as const, detail: reason },
 });
 const ents: BatchEntity[] = [{ id: 'e1', name: 'One' }, { id: 'e2', name: 'Two' }, { id: 'e3', name: 'Three' }];
@@ -31,66 +31,87 @@ const ents: BatchEntity[] = [{ id: 'e1', name: 'One' }, { id: 'e2', name: 'Two' 
 beforeEach(() => { drainMock.mockReset(); invalidateMock.mockReset(); });
 afterEach(cleanup);
 
-describe('useBatchDrain', () => {
-  it('drains entities SERIALLY — e2 is not started until e1 resolves; invalidates per entity', async () => {
-    const d1 = deferred<DrainOutcome>();
-    const d2 = deferred<DrainOutcome>();
-    drainMock.mockReturnValueOnce(d1.promise).mockReturnValueOnce(d2.promise);
+describe('useBatchDrain — one-boot batch', () => {
+  it('sends the WHOLE set in a SINGLE request (catalogId + entityIds), never one per entity', async () => {
+    const d = deferred<DrainOutcome>();
+    drainMock.mockReturnValueOnce(d.promise);
 
     const { result } = renderHook(() => useBatchDrain('c', 0));
     let run!: Promise<void>;
-    act(() => { run = result.current.start([{ id: 'e1', name: 'One' }, { id: 'e2', name: 'Two' }]); });
+    act(() => { run = result.current.start(ents); });
 
-    // Only e1 is in flight — the loop awaits it before touching e2.
     await waitFor(() => expect(drainMock).toHaveBeenCalledTimes(1));
-    expect(drainMock).toHaveBeenNthCalledWith(1, 'c', 'e1');
-    expect(result.current.state.currentEntityId).toBe('e1');
+    // ONE POST with the full id list — not three per-entity calls.
+    expect(drainMock).toHaveBeenCalledWith('c', ['e1', 'e2', 'e3']);
+    // While in flight, all requested entities are marked active (for the grid highlight).
+    expect([...result.current.state.activeEntityIds]).toEqual(['e1', 'e2', 'e3']);
+    expect(result.current.state.running).toBe(true);
+    expect(result.current.state.total).toBe(3);
 
-    await act(async () => { d1.resolve(okOutcome({ ran: 1, passed: 1 })); });
-    await waitFor(() => expect(drainMock).toHaveBeenCalledTimes(2));
-    expect(drainMock).toHaveBeenNthCalledWith(2, 'c', 'e2');
-    expect(invalidateMock).toHaveBeenNthCalledWith(1, 'c', 'e1'); // e1's result landed → grid refetch
+    await act(async () => {
+      d.resolve(okOutcome({ ran: 3, passed: 2, failed: 1, results: [failResult('e2', 'Gate', 'bad')] }));
+      await run;
+    });
 
-    await act(async () => { d2.resolve(okOutcome({ ran: 1, failed: 1, results: [failResult('Gate', 'bad')] })); await run; });
-
+    // Still a single request after completion.
+    expect(drainMock).toHaveBeenCalledTimes(1);
     expect(result.current.state.running).toBe(false);
-    expect(result.current.state.summary).toMatchObject({ entitiesRun: 2, passed: 1, failed: 1 });
+    expect(result.current.state.activeEntityIds.size).toBe(0);
+    expect([...result.current.state.doneEntityIds]).toEqual(['e1', 'e2', 'e3']);
+    // Result mapping from the aggregate batch summary.
+    expect(result.current.state.summary).toMatchObject({ entitiesRun: 1, passed: 2, failed: 1 });
     expect(result.current.state.summary?.fails).toEqual([{ entityId: 'e2', entityName: 'Two', step: 'Gate', reason: 'bad' }]);
-    expect(invalidateMock).toHaveBeenCalledTimes(2);
+    // One whole-catalog cache invalidation (grid refetches every entity).
+    expect(invalidateMock).toHaveBeenCalledTimes(1);
+    expect(invalidateMock).toHaveBeenCalledWith('c');
   });
 
-  it('on a 409 lease it retries once, then counts the entity as locked if still held', async () => {
-    // e1: locked then ok (retry succeeds). e2: locked then locked (skipped as locked).
+  it('on a 409 batch lease it retries the whole batch once, then records ALL entities locked', async () => {
     drainMock
-      .mockResolvedValueOnce({ kind: 'locked' }).mockResolvedValueOnce(okOutcome({ ran: 1, passed: 1 })) // e1
-      .mockResolvedValueOnce({ kind: 'locked' }).mockResolvedValueOnce({ kind: 'locked' });               // e2
+      .mockResolvedValueOnce({ kind: 'locked' })  // initial attempt refused
+      .mockResolvedValueOnce({ kind: 'locked' }); // retry still refused
 
     const { result } = renderHook(() => useBatchDrain('c', 0));
-    await act(async () => { await result.current.start([{ id: 'e1', name: 'One' }, { id: 'e2', name: 'Two' }]); });
+    await act(async () => { await result.current.start(ents); });
 
-    expect(drainMock).toHaveBeenCalledTimes(4); // each entity attempted twice (initial + one retry)
-    expect(result.current.state.summary).toMatchObject({ entitiesRun: 1, passed: 1, entitiesLocked: 1 });
+    expect(drainMock).toHaveBeenCalledTimes(2); // batch attempted twice (initial + one retry)
+    expect(drainMock).toHaveBeenNthCalledWith(1, 'c', ['e1', 'e2', 'e3']);
+    expect(drainMock).toHaveBeenNthCalledWith(2, 'c', ['e1', 'e2', 'e3']);
+    // All-or-nothing: every requested entity is locked, none run.
+    expect(result.current.state.summary).toMatchObject({ entitiesLocked: 3, entitiesRun: 0 });
   });
 
-  it('cancel stops the loop AFTER the in-flight entity completes (its result is kept)', async () => {
+  it('a 409 that clears on retry drains the whole set in the second attempt', async () => {
+    drainMock
+      .mockResolvedValueOnce({ kind: 'locked' })
+      .mockResolvedValueOnce(okOutcome({ ran: 2, passed: 2 }));
+
+    const { result } = renderHook(() => useBatchDrain('c', 0));
+    await act(async () => { await result.current.start(ents); });
+
+    expect(drainMock).toHaveBeenCalledTimes(2);
+    expect(result.current.state.summary).toMatchObject({ passed: 2, entitiesLocked: 0 });
+  });
+
+  it('cancel() only skips the retry (the in-flight boot is not interruptible)', async () => {
     const d1 = deferred<DrainOutcome>();
-    drainMock.mockReturnValueOnce(d1.promise); // e1 in flight; e2/e3 should never be requested
+    drainMock.mockReturnValueOnce(d1.promise); // initial attempt; a retry must NOT happen after cancel
 
     const { result } = renderHook(() => useBatchDrain('c', 0));
     let run!: Promise<void>;
     act(() => { run = result.current.start(ents); });
     await waitFor(() => expect(drainMock).toHaveBeenCalledTimes(1));
 
-    act(() => { result.current.cancel(); });               // cancel while e1 is still running
-    await act(async () => { d1.resolve(okOutcome({ ran: 1, passed: 1 })); await run; });
+    act(() => { result.current.cancel(); }); // cancel while the batch is in flight
+    await act(async () => { d1.resolve({ kind: 'locked' }); await run; }); // it comes back locked
 
-    expect(drainMock).toHaveBeenCalledTimes(1);             // e2, e3 never started
+    // The retry is skipped because cancel was requested → still exactly one call.
+    expect(drainMock).toHaveBeenCalledTimes(1);
     expect(result.current.state.running).toBe(false);
-    expect(result.current.state.doneEntityIds.has('e1')).toBe(true); // in-flight entity was folded
-    expect(result.current.state.summary).toMatchObject({ entitiesRun: 1, passed: 1 });
+    expect(result.current.state.summary).toMatchObject({ entitiesLocked: 3 });
   });
 
-  it('ignores a second start() while a run is already in flight (no parallel drains)', async () => {
+  it('ignores a second start() while a batch is already in flight (no overlapping drains)', async () => {
     const d1 = deferred<DrainOutcome>();
     drainMock.mockReturnValueOnce(d1.promise).mockResolvedValue(okOutcome());
 

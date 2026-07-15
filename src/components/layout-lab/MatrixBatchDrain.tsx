@@ -15,17 +15,17 @@ interface Props {
 
 /**
  * Matrix header action: drain every deferred gate across a whole catalog in one click.
- * The button only appears when the catalog has ≥1 deferred artifact. While running it
- * shows serial progress + a Cancel; when done it reports the flips (deferred → pass/fail)
- * with per-step fail reasons and any locked/errored entities — no silent skips.
- * The actual serial loop + lease handling lives in `useBatchDrain`.
+ * The button only appears when the catalog has ≥1 deferred artifact. The whole set is
+ * drained in ONE request (one editor boot for every gate), so while running it shows a
+ * single-boot progress note; when done it reports the flips (deferred → pass/fail) with
+ * per-step fail reasons and any locked/errored entities — no silent skips. Cancel is honest:
+ * the in-flight boot can't be interrupted, so it only skips the retry after a lease conflict.
+ * The batch request + lease handling lives in `useBatchDrain`.
  */
 export function MatrixBatchDrain({ t, deferredEntities, state, onStart, onCancel }: Props) {
-  const { running, summary, doneEntityIds, total } = state;
+  const { running, summary, total } = state;
   // Hide entirely when there's nothing to drain and no run to report.
   if (deferredEntities.length === 0 && !running && !summary) return null;
-
-  const doneCount = doneEntityIds.size;
 
   return (
     <div
@@ -36,9 +36,11 @@ export function MatrixBatchDrain({ t, deferredEntities, state, onStart, onCancel
       {running ? (
         <>
           <span data-testid="batch-drain-progress" aria-live="polite" style={{ color: t.text }}>
-            Draining {doneCount}/{total}…
+            Draining {total} set{total > 1 ? 's' : ''} in one editor boot…
           </span>
-          <Button mono onClick={onCancel} data-testid="batch-drain-cancel" ariaLabel="Cancel batch drain">
+          <Button mono onClick={onCancel} data-testid="batch-drain-cancel"
+            ariaLabel="Cancel batch drain (skips the retry only — the running boot can't be interrupted)"
+            title="The batch runs in one editor boot and can't be interrupted mid-run; this only skips the retry after a lease conflict.">
             Cancel
           </Button>
         </>

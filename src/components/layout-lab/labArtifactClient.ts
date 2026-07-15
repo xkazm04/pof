@@ -48,18 +48,25 @@ export async function drainGates(catalogId: string, entityId: string): Promise<D
 }
 
 /**
- * Batch-drain variant that distinguishes the three outcomes the Matrix-level serial
- * drain must react to: `ok` (with the full {@link DrainSummary} so per-step fail
- * reasons survive), `locked` (HTTP 409 — the entity's lease is held by another drain;
- * the caller retries once then skips), and `error`. `drainGates` above collapses all
- * failures to `null`, which would hide a 409 from the batch loop — hence this richer fn.
+ * CATALOG-LEVEL batch drain: sends the WHOLE set of deferred entities in ONE request
+ * (`{ catalogId, entityIds }`), so the server does one artifact collection + one grouped
+ * editor boot for every gate across all the entities — not one boot per entity. Returns
+ * one of the three outcomes the Matrix drain reacts to:
+ * - `ok` — the aggregate {@link DrainSummary} for the whole set (per-step results, tagged
+ *   with their `job.entityId`, so per-entity fail reasons survive the fold).
+ * - `locked` — HTTP 409: the batch lease is ALL-OR-NOTHING, so if ANY requested entity is
+ *   already in flight the server refuses the whole batch (the caller retries once, then
+ *   records every requested entity as locked).
+ * - `error` — network/server failure.
+ * The route documents no batch-size limit (one collection + one grouped boot cover the set),
+ * so the caller sends the full list in a single POST.
  */
-export async function drainEntityGates(catalogId: string, entityId: string): Promise<DrainOutcome> {
+export async function drainCatalogGates(catalogId: string, entityIds: string[]): Promise<DrainOutcome> {
   try {
     const res = await fetch('/api/pipeline-artifacts/drain', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ catalogId, entityId }),
+      body: JSON.stringify({ catalogId, entityIds }),
     });
     if (res.status === 409) return { kind: 'locked' };
     const json = (await res.json()) as ApiResponse<DrainSummary>;
