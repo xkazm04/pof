@@ -37,38 +37,62 @@ export function ItemInventoryUI({ t, entity, step }: StepProps) {
   );
 }
 
-/** Items · Tooltip / Compare. View: tooltip card + compare (persisted). Produce: layout. */
-export function ItemTooltip({ t, entity, step }: StepProps) {
-  const stats = [['Damage', '34', '+3'], ['Attack Speed', '1.1/s', '-0.1'], ['Weight', '3.4kg', '+0.4'], ['Value', '120g', '+20']];
+/** The tooltip artifact Produce writes (itemsSteps.ts 'Tooltip / Compare'). */
+interface ProducedTooltip {
+  displayName?: string;
+  typeLine?: string;
+  statBlock?: string[];
+  affixLines?: string[];
+  flavor?: string;
+  compareRule?: string;
+}
 
+/** Items · Tooltip / Compare. View: tooltip card + compare — both read the REAL
+ *  produced `data.tooltip` artifact (name · type · stats · affixes · flavor), with
+ *  an honest empty state until Produce has run. */
+export function ItemTooltip({ t, entity, step }: StepProps) {
   return (
     <StaticStepFrame t={t} entity={entity} step={step} panels={({ art, runProduce }) => {
-      const done = !!art?.data?.compare;
+      const tooltip = (art?.data?.tooltip ?? null) as ProducedTooltip | null;
+      const statBlock = tooltip?.statBlock ?? [];
+      const affixLines = tooltip?.affixLines ?? [];
+      const compareOn = !!art?.data?.compare;
+      const emptyHint = (label: string) => (
+        <span style={{ fontSize: 15, color: t.muted, lineHeight: 1.55 }}>{label}</span>
+      );
       return [
-        { label: 'Tooltip card', node: (
+        { label: 'Tooltip card', node: tooltip ? (
           <div style={{ border: `1px solid ${t.line}`, borderRadius: t.glass ? 10 : 0, padding: 14, background: t.panel }}>
-            <div style={{ fontSize: 16, fontWeight: 700, color: t.inkDeep }}>{entity.name}</div>
-            <div style={{ fontSize: 14, color: t.muted, marginBottom: 10 }}>Uncommon · Weapon</div>
-            {stats.map(([k, v]) => (
-              <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15, padding: '3px 0' }}>
-                <span style={{ color: t.muted }}>{k}</span><span className={t.fontMono} style={{ color: t.text }}>{v}</span>
-              </div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: t.inkDeep }}>{tooltip.displayName ?? entity.name}</div>
+            {tooltip.typeLine && <div style={{ fontSize: 14, color: t.muted, marginBottom: 10 }}>{tooltip.typeLine}</div>}
+            {statBlock.map((line, i) => (
+              <div key={i} className={t.fontMono} style={{ fontSize: 15, color: t.text, padding: '3px 0' }}>{line}</div>
             ))}
+            {affixLines.length > 0 && (
+              <div style={{ marginTop: 8, borderTop: `1px solid ${t.line}`, paddingTop: 8, display: 'grid', gap: 4 }}>
+                {affixLines.map((line, i) => (
+                  <div key={i} style={{ fontSize: 14, color: t.ok, lineHeight: 1.5 }}>{line}</div>
+                ))}
+              </div>
+            )}
+            {tooltip.flavor && <div style={{ marginTop: 10, fontSize: 14, fontStyle: 'italic', color: t.muted, lineHeight: 1.55 }}>{tooltip.flavor}</div>}
           </div>
-        ) },
-        { label: 'Compare vs equipped', node: (
-          <div style={{ display: 'grid', gap: 6 }}>
-            {stats.map(([k, , delta]) => {
-              const up = delta.startsWith('+');
-              return (
-                <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15, padding: '3px 0', borderTop: `1px solid ${t.line}` }}>
-                  <span style={{ color: t.muted }}>{k}</span>
-                  <span className={t.fontMono} style={{ color: done ? (up ? t.ok : t.bad) : t.muted }}>{done ? `${up ? '▲' : '▼'} ${delta}` : '—'}</span>
+        ) : emptyHint('No tooltip produced yet — run Produce to lay out the stat tooltip.') },
+        { label: 'Compare vs equipped', node: compareOn && tooltip ? (
+          <div style={{ display: 'grid', gap: 8 }}>
+            {tooltip.compareRule && (
+              <span style={{ fontSize: 14, color: t.text, lineHeight: 1.55 }}>{tooltip.compareRule}</span>
+            )}
+            <div style={{ display: 'grid', gap: 6 }}>
+              {(statBlock.length ? statBlock : ['—']).map((line, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15, padding: '3px 0', borderTop: `1px solid ${t.line}` }}>
+                  <span className={t.fontMono} style={{ color: t.text }}>{line}</span>
+                  <span className={t.fontMono} style={{ color: t.ok }}>Δ vs equipped</span>
                 </div>
-              );
-            })}
+              ))}
+            </div>
           </div>
-        ) },
+        ) : emptyHint('Compare-vs-equipped is off until Produce writes the tooltip with compare enabled.') },
         { label: 'Produce', node: (
           <CliProduce t={t} label="Produce tooltip" rows={3}
             note="Writes the tooltip layout + compare-vs-equipped delta view."

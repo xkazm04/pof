@@ -7,7 +7,7 @@ import { CandidateGallery } from './shared/CandidateGallery';
 import { selectedCandidate } from './shared/genHistory';
 import { useGenerativeStep } from './shared/useGenerativeStep';
 import { iconCandidates, meshCandidates, materialCandidates } from './shared/itemGenCandidates';
-import { ITEM_STEP_SPECS, slug, itemAsset } from './itemsSteps';
+import { ITEM_STEP_SPECS, entitySlug, itemAsset } from './itemsSteps';
 import type { StepProps } from './stepProps';
 
 /**
@@ -90,7 +90,7 @@ export function Item3DGen({ t, entity, step }: StepProps) {
         { label: 'Produce', node: (
           <CliProduce t={t} label="Produce mesh" rows={3}
             defaultDirection={DEFAULT_DIR}
-            note={`Each batch is kept; the selected variant writes SM_${slug(entity.name)} + auto-LODs.`}
+            note={`Each batch is kept; the selected variant writes SM_${entitySlug(entity)} + auto-LODs.`}
             buildPrompt={buildPrompt}
             onComplete={(ctx) => generate(ctx?.direction ?? DEFAULT_DIR, ctx?.prompt ?? buildPrompt(DEFAULT_DIR))} />
         ) },
@@ -137,7 +137,7 @@ export function ItemMaterial({ t, entity, step }: StepProps) {
         { label: 'Produce', node: (
           <CliProduce t={t} label="Produce PBR maps" rows={3}
             defaultDirection={DEFAULT_DIR}
-            note={`Each look is kept; the selected one writes MI_${slug(entity.name)} (Albedo/Normal/ORM).`}
+            note={`Each look is kept; the selected one writes MI_${entitySlug(entity)} (Albedo/Normal/ORM).`}
             buildPrompt={buildPrompt}
             onComplete={(ctx) => generate(ctx?.direction ?? DEFAULT_DIR, ctx?.prompt ?? buildPrompt(DEFAULT_DIR))} />
         ) },

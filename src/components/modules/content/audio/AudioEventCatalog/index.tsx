@@ -27,26 +27,31 @@ export type {
 // -- Props --
 
 interface AudioEventCatalogProps {
+  /** Active audio scene id — the catalog is scoped per scene. */
+  sceneId: string;
   onGenerate: (config: AudioEventCatalogConfig) => void;
   isGenerating: boolean;
 }
 
 // -- Component --
 
-export function AudioEventCatalog({ onGenerate, isGenerating }: AudioEventCatalogProps) {
-  // Seed from the persisted store: AudioView mounts tab panels conditionally,
-  // so local-only state was wiped on every Painter ↔ Catalog tab switch.
+export function AudioEventCatalog({ sceneId, onGenerate, isGenerating }: AudioEventCatalogProps) {
+  // Seed from the persisted, per-scene store. AudioView mounts tab panels
+  // conditionally (local-only state was wiped on every Painter ↔ Catalog tab
+  // switch) and remounts this component per scene (keyed on sceneId), so each
+  // scene owns an independent catalog that also survives reloads.
   const [events, setEvents] = useState<AudioEvent[]>(
-    () => useAudioEventCatalogStore.getState().events ?? structuredClone(DEFAULT_EVENTS),
+    () => useAudioEventCatalogStore.getState().getEvents(sceneId) ?? structuredClone(DEFAULT_EVENTS),
   );
   const [filterCategory, setFilterCategory] = useState<EventCategory | 'all'>('all');
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
 
-  // Write-through: every edit lands in the persisted store immediately, so
-  // unmount (tab switch) and reload both keep the curated catalog.
+  // Write-through: every edit lands in this scene's slot in the persisted store
+  // immediately, so unmount (tab switch) and reload both keep the curated
+  // catalog — without leaking into any other scene's catalog.
   useEffect(() => {
-    useAudioEventCatalogStore.getState().setEvents(events);
-  }, [events]);
+    useAudioEventCatalogStore.getState().setEvents(sceneId, events);
+  }, [sceneId, events]);
 
   // -- Derived --
 

@@ -24,7 +24,11 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
     (i: number) => { if (onSelectStep) onSelectStep(i); else setLocalStepIdx(i); },
     [onSelectStep],
   );
-  const [draining, setDraining] = useState(false);
+  // Drain state is keyed by `${catalogId}/${entityId}` — NOT a single instance-scoped
+  // boolean — so switching entities mid-drain neither blocks the new entity's drain nor
+  // attaches the "draining…" affordance to the wrong entity (each entity is tracked
+  // independently, and the `draining` flag below reflects only the SELECTED entity).
+  const [drainingKeys, setDrainingKeys] = useState<ReadonlySet<string>>(() => new Set());
   const [plainMode, setPlainMode] = useState(false);
 
   // Responsive shell: below COLLAPSE_BREAKPOINT the 580px of catalog+pipeline chrome
@@ -41,6 +45,12 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
   const entity = entities.find((e) => e.id === entityId) ?? entities[0] ?? null;
 
   const catalogId = detail?.catalog.catalogId;
+
+  // The per-entity drain key for the CURRENTLY selected entity, and whether it is the
+  // one in flight — the value surfaced to the drain button + NextStepCoach, so the
+  // "draining…" affordance only ever attaches to the entity actually draining.
+  const drainKey = catalogId && entity ? `${catalogId}/${entity.id}` : null;
+  const draining = drainKey ? drainingKeys.has(drainKey) : false;
 
   // Single step-source lookup, collapsed behind the manifest resolver: the old
   // FINE_STEPS-vs-registry hybrid branch is gone. `detail.steps` is already the
@@ -138,17 +148,24 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
   // Operator-triggered drain of this entity's deferred L3/L4 gates, then invalidate
   // the cache so the refreshed verdicts are re-read through the shared fetch path.
   const runDrain = async () => {
-    if (!catalogId || !entity || draining) return;
-    setDraining(true);
+    if (!catalogId || !entity) return;
+    // Guard + track per entity: a drain already in flight for THIS entity is ignored,
+    // but a different entity can drain concurrently without being silently swallowed.
+    const key = `${catalogId}/${entity.id}`;
+    if (drainingKeys.has(key)) return;
+    setDrainingKeys((prev) => { const next = new Set(prev); next.add(key); return next; });
     // Publish this session's drain scope so the header runner chip shows "draining …"
     // (and never mistakes our own lease for another session's).
-    useLabRunnerStore.getState().setLocalDrain(`${catalogId}/${entity.id}`);
+    useLabRunnerStore.getState().setLocalDrain(key);
     try {
       await drainGates(catalogId, entity.id);
       invalidateArtifacts(catalogId, entity.id);
     } finally {
-      setDraining(false);
-      useLabRunnerStore.getState().setLocalDrain(null);
+      setDrainingKeys((prev) => { const next = new Set(prev); next.delete(key); return next; });
+      // Only clear the header lease if it's still OURS (a later drain for another entity
+      // may have taken it over while this one was in flight).
+      const runner = useLabRunnerStore.getState();
+      if (runner.localDrain === key) runner.setLocalDrain(null);
     }
   };
 

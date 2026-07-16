@@ -1,12 +1,47 @@
 import { PRICE_RATIO, POWER_TOL_PCT } from '@/lib/catalog/acceptance/invariants';
+import { useCatalogStore } from '@/stores/catalogStore';
 import type { Acceptance } from './StepFrame';
 import type { CheckerContext } from '@/lib/catalog/acceptance/types';
 import type { LabEntity } from '../useLabCatalogData';
 import type { StepOutput } from '../labPipelineStore';
 
-/** PascalCase, space-free asset slug for UE paths (Iron Longsword → IronLongsword). */
+/** PascalCase, space-free asset slug for UE paths (Iron Longsword → IronLongsword).
+ *  Readable but LOSSY — every non-alnum char is dropped, so "Iron Sword",
+ *  "Iron-Sword" and "Iron_Sword" all collapse to "IronSword". Use {@link entitySlug}
+ *  for any real asset PATH so distinct entities can't collide onto one folder. */
 export function slug(name: string): string {
   return name.replace(/[^a-z0-9]+/gi, '');
+}
+
+/** Short, stable, path-safe token derived from an entity id — the disambiguator
+ *  appended to a slug when a DISTINCT sibling entity would otherwise share the same
+ *  (lossy) readable slug, and hence the same UE asset path. */
+function idToken(id: string): string {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (Math.imul(31, h) + id.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
+}
+
+/** Entities registered in the same catalog as `entity` (empty when the entity
+ *  isn't in the store — e.g. ad-hoc test entities), read non-reactively so the
+ *  pure path helpers can detect a slug collision. */
+function catalogSiblings(entityId: string): { id: string; name: string }[] {
+  const byCatalog = useCatalogStore.getState().entitiesByCatalog;
+  for (const entities of Object.values(byCatalog)) {
+    if (entities[entityId]) return Object.values(entities).map((e) => ({ id: e.id, name: e.name }));
+  }
+  return [];
+}
+
+/** The asset-path slug for one entity. Readable in the common case
+ *  (`Iron Sword → IronSword`); when a DISTINCT sibling entity in the same catalog
+ *  sanitizes to the same readable slug (`"Iron-Sword"` vs `"Iron Sword"`), a stable
+ *  id-derived token is appended (`IronSword-<token>`) so the two entities never
+ *  share a `/Game/Items/<slug>/` asset path and overwrite each other's UE assets. */
+export function entitySlug(entity: LabEntity): string {
+  const readable = slug(entity.name);
+  const collides = catalogSiblings(entity.id).some((s) => s.id !== entity.id && slug(s.name) === readable);
+  return collides ? `${readable}-${idToken(entity.id)}` : readable;
 }
 
 /** Root UE content path for all catalog item assets. */
@@ -15,14 +50,14 @@ const ITEMS_ROOT = '/Game/Items';
 /** UE asset folder for one item: `/Game/Items/<slug>/`. The single source of
  *  truth for the Items asset-path layout — reused by the step specs and ItemArt. */
 export function base(entity: LabEntity): string {
-  return `${ITEMS_ROOT}/${slug(entity.name)}/`;
+  return `${ITEMS_ROOT}/${entitySlug(entity)}/`;
 }
 
 /** Full path for one item asset named `<prefix><slug><suffix>` — the convention
  *  every Items asset follows (e.g. `itemAsset(e, 'T_', '_Icon')` →
- *  `/Game/Items/<slug>/T_<slug>_Icon`). Computes the slug once. */
+ *  `/Game/Items/<slug>/T_<slug>_Icon`). Computes the (collision-safe) slug once. */
 export function itemAsset(entity: LabEntity, prefix: string, suffix = ''): string {
-  const s = slug(entity.name);
+  const s = entitySlug(entity);
   return `${ITEMS_ROOT}/${s}/${prefix}${s}${suffix}`;
 }
 
@@ -476,7 +511,7 @@ export const ITEM_STEP_SPECS: Record<string, ItemStepSpec> = {
   },
   'UE Packaging': {
     produce: (e) => {
-      const s = slug(e.name);
+      const s = entitySlug(e);
       const assets = [`DT_Items :: ${s}`, `T_${s}_Icon`, `SM_${s}`, `MI_${s}`, `A_${s}_Equip`, `NS_${s}_Use`];
       return { data: { assets }, ueAssets: assets.slice(1).map((x) => `${base(e)}${x}`) };
     },

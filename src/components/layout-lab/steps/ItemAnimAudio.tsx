@@ -3,7 +3,7 @@
 import { StaticStepFrame } from './StaticStepFrame';
 import { CliProduce } from './shared/CliProduce';
 import { ChartPanel } from './shared/ChartPanel';
-import { slug, DEFAULT_ANIM_CLIPS, DEFAULT_VFX_VARIANTS, DEFAULT_SFX_CUES } from './itemsSteps';
+import { entitySlug, DEFAULT_ANIM_CLIPS, DEFAULT_VFX_VARIANTS, DEFAULT_SFX_CUES } from './itemsSteps';
 import type { LabTheme } from '../theme';
 import type { StepProps } from './stepProps';
 
@@ -39,7 +39,7 @@ export function ItemAnimations({ t, entity, step }: StepProps) {
         ) },
         { label: 'Produce', node: (
           <CliProduce t={t} label="Produce anim / retarget" rows={3}
-            note={`Writes A_${slug(entity.name)}_Equip + pickup/idle montages to the UE project.`}
+            note={`Writes A_${entitySlug(entity)}_Equip + pickup/idle montages to the UE project.`}
             buildPrompt={(dir) => `Generate/retarget pickup + equip + idle clips for ${entity.name} from SK_Mannequin. ${dir}`}
             onComplete={runProduce} />
         ) },
@@ -66,7 +66,7 @@ export function ItemVFX({ t, entity, step }: StepProps) {
         ) },
         { label: 'Produce', node: (
           <CliProduce t={t} label="Produce Niagara" rows={3}
-            note={`Writes NS_${slug(entity.name)}_Use bound to anim notifies.`}
+            note={`Writes NS_${entitySlug(entity)}_Use bound to anim notifies.`}
             buildPrompt={(dir) => `Author Niagara variants (idle/equip/use) for ${entity.name} keyed to anim notifies, under ${CAP}ms GPU. ${dir}`}
             onComplete={runProduce} />
         ) },
@@ -90,7 +90,7 @@ export function ItemSFX({ t, entity, step }: StepProps) {
         ) },
         { label: 'Produce', node: (
           <CliProduce t={t} label="Import set (CLI)" rows={3}
-            note={`Imports SC_${slug(entity.name)} (randomizing SoundCue set) wired to anim notifies.`}
+            note={`Imports SC_${entitySlug(entity)} (randomizing SoundCue set) wired to anim notifies.`}
             buildPrompt={(dir) => `Import a randomizing SoundCue set for ${entity.name} (pickup/equip/swing), normalized loudness. ${dir}`}
             onComplete={runProduce} />
         ) },
