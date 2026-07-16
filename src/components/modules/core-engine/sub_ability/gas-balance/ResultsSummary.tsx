@@ -79,7 +79,7 @@ export function ResultsSummary({ results, scenario }: { results: SimResults; sce
           {results.iterations.length.toLocaleString()} iterations — Median: {results.ttkStats.median.toFixed(2)}s, P10: {results.ttkStats.p10.toFixed(2)}s, P90: {results.ttkStats.p90.toFixed(2)}s
         </p>
         <HistogramChart bins={ttkHist.bins} maxCount={maxBin} color={ACCENT_CYAN}
-          formatRange={b => `${b.low.toFixed(1)}\u2013${b.high.toFixed(1)}s`} barHeight={80} />
+          formatRange={b => b.low === b.high ? `= ${b.low.toFixed(1)}s` : `${b.low.toFixed(1)}\u2013${b.high.toFixed(1)}s`} barHeight={80} />
         <div className="flex justify-between mt-1">
           <span className="text-2xs text-text-muted">{ttkHist.min.toFixed(1)}s</span>
           <span className="text-2xs text-text-muted">{ttkHist.max.toFixed(1)}s</span>
@@ -109,7 +109,7 @@ export function ResultsSummary({ results, scenario }: { results: SimResults; sce
           Mean: {results.dpsStats.mean.toFixed(0)}, Median: {results.dpsStats.median.toFixed(0)}, Range: {results.dpsStats.min.toFixed(0)}\u2013{results.dpsStats.max.toFixed(0)}
         </p>
         <HistogramChart bins={dpsHist.bins} maxCount={maxDpsBin} color={ACCENT_ORANGE}
-          formatRange={b => `${b.low.toFixed(0)}\u2013${b.high.toFixed(0)} DPS`} barHeight={64} />
+          formatRange={b => b.low === b.high ? `= ${b.low.toFixed(0)} DPS` : `${b.low.toFixed(0)}\u2013${b.high.toFixed(0)} DPS`} barHeight={64} />
         <div className="flex justify-between mt-1">
           <span className="text-2xs text-text-muted">{dpsHist.min.toFixed(0)}</span>
           <span className="text-2xs text-text-muted">{dpsHist.max.toFixed(0)}</span>

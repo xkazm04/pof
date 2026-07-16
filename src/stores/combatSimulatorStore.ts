@@ -166,6 +166,25 @@ export const useCombatSimulatorStore = create<CombatSimulatorState>((set, get) =
       let finalResult: SimulationResult | null = null;
       let streamError: string | null = null;
 
+      const handleFrame = (frame: string) => {
+        const dataLine = frame.split('\n').find((l) => l.startsWith('data:'));
+        if (!dataLine) return;
+        const payload = JSON.parse(dataLine.slice(5).trim()) as
+          | { type: 'progress'; completed: number; total: number }
+          | { type: 'result'; result: SimulationResult }
+          | { type: 'error'; error: string };
+        if (payload.type === 'progress') {
+          // Only the current run may drive the shared progress bar.
+          if (runToken === simRunCounter) {
+            set({ simProgress: payload.total > 0 ? payload.completed / payload.total : 0 });
+          }
+        } else if (payload.type === 'result') {
+          finalResult = payload.result;
+        } else if (payload.type === 'error') {
+          streamError = payload.error;
+        }
+      };
+
       // Parse the SSE stream: blank-line-delimited `data: {json}` frames.
       for (;;) {
         const { done, value } = await reader.read();
@@ -173,25 +192,14 @@ export const useCombatSimulatorStore = create<CombatSimulatorState>((set, get) =
         buffer += decoder.decode(value, { stream: true });
         const frames = buffer.split('\n\n');
         buffer = frames.pop() ?? '';
-        for (const frame of frames) {
-          const dataLine = frame.split('\n').find((l) => l.startsWith('data:'));
-          if (!dataLine) continue;
-          const payload = JSON.parse(dataLine.slice(5).trim()) as
-            | { type: 'progress'; completed: number; total: number }
-            | { type: 'result'; result: SimulationResult }
-            | { type: 'error'; error: string };
-          if (payload.type === 'progress') {
-            // Only the current run may drive the shared progress bar.
-            if (runToken === simRunCounter) {
-              set({ simProgress: payload.total > 0 ? payload.completed / payload.total : 0 });
-            }
-          } else if (payload.type === 'result') {
-            finalResult = payload.result;
-          } else if (payload.type === 'error') {
-            streamError = payload.error;
-          }
-        }
+        for (const frame of frames) handleFrame(frame);
       }
+
+      // Flush any bytes held back by the streaming decoder, then parse a trailing
+      // frame the server may have sent without a terminating blank line — otherwise
+      // a completed run whose final `result` frame lacks `\n\n` looks like a failure.
+      buffer += decoder.decode();
+      if (buffer.trim()) handleFrame(buffer);
 
       if (streamError) throw new Error(streamError);
       if (!finalResult) throw new Error('Simulation stream ended without a result');

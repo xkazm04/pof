@@ -14,7 +14,7 @@ export function ScenarioBuilder({
   playerLevel, setPlayerLevel, gearId, setGearId, gearLoadouts,
   selectedAbilities, setSelectedAbilities, abilities,
   enemySetup, setEnemySetup, enemyArchetypes,
-  iterations, setIterations,
+  iterations, setIterations, simulating = false,
 }: {
   playerLevel: number;
   setPlayerLevel: (v: number) => void;
@@ -29,6 +29,8 @@ export function ScenarioBuilder({
   enemyArchetypes: EnemyArchetype[];
   iterations: number;
   setIterations: (v: number) => void;
+  /** While a run is in flight the iteration count is locked so the progress readout can't diverge from the submitted job. */
+  simulating?: boolean;
 }) {
   const toggleAbility = (id: string) =>
     setSelectedAbilities(
@@ -80,8 +82,9 @@ export function ScenarioBuilder({
               fallback={1000}
               step={100}
               onChange={setIterations}
+              disabled={simulating}
               ariaLabel="Simulation iterations"
-              className="w-full px-2 py-1 bg-surface border border-border rounded-lg text-xs text-text focus:outline-none focus:border-status-red-strong"
+              className="w-full px-2 py-1 bg-surface border border-border rounded-lg text-xs text-text focus:outline-none focus:border-status-red-strong disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
         </div>

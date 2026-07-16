@@ -15,17 +15,24 @@ import { TEXT_SCALE } from '@/lib/typography-scale';
  * `initial` applies only on mount, and the memo keeps hovers from re-rendering
  * the bar, so the entrance animation runs once without any ref gate.
  */
-const Bar = memo(function Bar({ pct, color, hasCount, barHeight, onEnter }: {
+const Bar = memo(function Bar({ pct, color, hasCount, barHeight, onEnter, onLeave, label }: {
   pct: number;
   color: string;
   hasCount: boolean;
   barHeight: number;
   onEnter: () => void;
+  onLeave: () => void;
+  label: string;
 }) {
   return (
     <div
-      className="bar group/bar flex-1 min-w-[3px] h-full flex items-end relative cursor-crosshair group-hover:opacity-50 hover:!opacity-100 transition-opacity duration-100"
+      className="bar group/bar flex-1 min-w-[3px] h-full flex items-end relative cursor-crosshair group-hover:opacity-50 hover:!opacity-100 focus-visible:!opacity-100 transition-opacity duration-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-white/40 rounded-t-sm"
       onMouseEnter={onEnter}
+      onFocus={onEnter}
+      onBlur={onLeave}
+      tabIndex={0}
+      role="img"
+      aria-label={label}
     >
       <motion.div
         className="w-full rounded-t-sm"
@@ -70,7 +77,9 @@ export function HistogramChart({ bins, maxCount, color, formatRange, barHeight =
             color={color}
             hasCount={bin.count > 0}
             barHeight={barHeight}
+            label={`${formatRange(bin)}, n=${bin.count}`}
             onEnter={() => setHoveredIdx(i)}
+            onLeave={() => setHoveredIdx((cur) => (cur === i ? null : cur))}
           />
         ))}
       </div>
@@ -78,7 +87,9 @@ export function HistogramChart({ bins, maxCount, color, formatRange, barHeight =
         <div
           className="absolute z-20 pointer-events-none"
           style={{
-            left: `${((hoveredIdx + 0.5) / bins.length) * 100}%`,
+            // Clamp the horizontal center so edge-bin tooltips stay inside the
+            // panel instead of bleeding past its rounded bounds.
+            left: `${Math.max(8, Math.min(92, ((hoveredIdx + 0.5) / bins.length) * 100))}%`,
             bottom: barHeight + 6,
             transform: 'translateX(-50%)',
           }}

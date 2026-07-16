@@ -27,6 +27,18 @@ import { FightReportCardPanel } from './FightReportCardPanel';
 import { AdvancedResults } from './AdvancedResults';
 import { StatCard } from './StatCards';
 
+// Structural fingerprint of a scenario's tuning-relevant inputs. Used to detect
+// when a pinned baseline and the latest candidate describe different encounters,
+// so an A/B diff can't silently compare apples to oranges.
+function scenarioSignature(s: CombatScenario): string {
+  return JSON.stringify({
+    lvl: s.playerLevel,
+    gear: s.playerGear?.id,
+    abils: [...s.playerAbilities.map((a) => a.id)].sort(),
+    enemies: s.enemies.map((e) => `${e.archetypeId}:${e.count}:${e.level}`),
+  });
+}
+
 // ── Main Component ──────────────────────────────────────────────────────────
 
 export function CombatSimulatorView() {
@@ -62,6 +74,10 @@ export function CombatSimulatorView() {
     { archetypeId: 'melee-grunt', count: 3, level: 5 },
   ]);
   const [iterations, setIterations] = useState(1000);
+  // Iteration count actually submitted with the in-flight run. The live
+  // `iterations` state can change mid-run (input isn't the source of truth for a
+  // running job), so the progress label must read the captured value, not it.
+  const [activeIterations, setActiveIterations] = useState(1000);
 
   // Story Mode renders the narrated Fight Report Card and hides the jargon-heavy
   // panels; Advanced reveals the full numeric breakdown. Default ON so the most
@@ -98,6 +114,7 @@ export function CombatSimulatorView() {
       enemies: enemySetup,
     };
     const config: CombatSimConfig = { ...defaultConfig, iterations, seed: Math.floor(Math.random() * 999999) };
+    setActiveIterations(iterations);
     await runSimulation(scenario, tuning, config);
   }, [tuning, defaultConfig, gear, playerLevel, playerAbils, enemySetup, iterations, runSimulation]);
 
@@ -105,6 +122,14 @@ export function CombatSimulatorView() {
     if (!tuning) return;
     setTuning({ ...tuning, [key]: value });
   }, [tuning, setTuning]);
+
+  // A/B diff is only apples-to-apples when the candidate ran the same encounter
+  // as the pinned baseline; flag a divergence so the delta isn't read as a
+  // controlled tuning comparison when it actually mixes scenarios.
+  const scenarioMismatch = useMemo(() => {
+    if (!baselineResult || !comparison || !result) return false;
+    return scenarioSignature(baselineResult.scenario) !== scenarioSignature(result.scenario);
+  }, [baselineResult, comparison, result]);
 
   const survivalColor = summary
     ? summary.survivalRate > 0.7 ? ACCENT_EMERALD_DARK : summary.survivalRate > 0.4 ? MODULE_COLORS.content : MODULE_COLORS.evaluator
@@ -147,7 +172,7 @@ export function CombatSimulatorView() {
               >
                 {isSimulating ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
                 {isSimulating
-                  ? `Simulating ${iterations}… ${Math.round(simProgress * 100)}%`
+                  ? `Simulating ${activeIterations}… ${Math.round(simProgress * 100)}%`
                   : baselineResult ? `Run Candidate (${iterations})` : `Run ${iterations} Fights`}
               </button>
             </div>
@@ -226,6 +251,7 @@ export function CombatSimulatorView() {
                 enemyArchetypes={enemies}
                 iterations={iterations}
                 setIterations={setIterations}
+                simulating={isSimulating}
               />
 
               {/* Tuning Sliders */}
@@ -240,7 +266,20 @@ export function CombatSimulatorView() {
             </div>
 
             {/* A/B Comparison — front-and-center when a baseline is pinned */}
-            {comparison && <ABComparisonPanel comparison={comparison} />}
+            {comparison && (
+              <div className="space-y-2">
+                {scenarioMismatch && (
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-400/10 border border-amber-400/20">
+                    <span className="text-2xs text-amber-400">
+                      Scenario changed since the baseline was pinned — this comparison diffs different
+                      encounters, so the deltas below are not a controlled tuning comparison. Re-pin the
+                      baseline on the current scenario for an apples-to-apples result.
+                    </span>
+                  </div>
+                )}
+                <ABComparisonPanel comparison={comparison} />
+              </div>
+            )}
 
             {/* Results */}
             {summary && (
