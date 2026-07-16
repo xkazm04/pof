@@ -231,7 +231,7 @@ export function AudioView() {
               {activeTab === 'events' && (
                 <AudioEventCatalog
                   key={activeDoc.id}
-                  sceneId={activeDoc.id}
+                  sceneId={String(activeDoc.id)}
                   onGenerate={handleGenerateEvents}
                   isGenerating={eventCli.isRunning}
                 />
