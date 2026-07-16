@@ -26,13 +26,19 @@ export async function fetchArtifacts(catalogId: string, entityId?: string): Prom
   return r.ok ? r.data : [];
 }
 
-/** POST one produced step's artifact. Fire-and-forget; errors are swallowed (server may be offline). */
-export async function postArtifact(body: ArtifactUpsertBody): Promise<void> {
-  await tryApiFetch('/api/pipeline-artifacts', {
+/**
+ * POST one produced step's artifact. Returns whether the write actually reached the
+ * server (mirrors {@link fetchArtifacts}'s `r.ok` pattern) — `false` when the server is
+ * offline / 500 — so the write-through can surface an honest "not synced" state instead
+ * of leaving the optimistic local store looking as if the server accepted it.
+ */
+export async function postArtifact(body: ArtifactUpsertBody): Promise<boolean> {
+  const r = await tryApiFetch('/api/pipeline-artifacts', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
+  return r.ok;
 }
 
 /** Runner lease state read from the drain status route (mirrors `LeaseState` server-side). */

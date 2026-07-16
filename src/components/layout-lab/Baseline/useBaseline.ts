@@ -102,7 +102,20 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
       for (const [s, a] of Object.entries(entitySteps)) siblings[s] = a.data;
       const res = accept ? accept(art.data, { catalog: catalogId, siblings, has: () => false }) : null;
       void postArtifact({ catalogId, entityId, step, data: art.data, ueAssets: art.ueAssets, status: res?.status ?? 'pass', tier: res?.tier ?? 'L0', reason: res?.reason })
-        .then(() => invalidateArtifacts(catalogId, entityId));
+        .then((synced) => {
+          const { setSyncError } = useLabPipelineStore.getState();
+          if (synced) {
+            // Server accepted the write — clear any stale not-synced flag and re-read the
+            // server-graded verdict through the shared fetch path.
+            setSyncError(entityId, step, null);
+            invalidateArtifacts(catalogId, entityId);
+          } else {
+            // The POST never reached the server (offline/500). The optimistic local
+            // artifact stays (add-only UX preserved), but flag it so the rail shows an
+            // honest "not synced to server" indicator instead of a clean success.
+            setSyncError(entityId, step, 'Not synced to server');
+          }
+        });
     });
     return () => setLabSync(null);
   }, [catalogId]);
