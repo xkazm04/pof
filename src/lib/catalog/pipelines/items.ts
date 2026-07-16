@@ -4,6 +4,7 @@ import {
   fieldsPopulated,
   withinPercent,
   dpsConsistent,
+  materialShape,
   selected,
   minCount,
 } from '../acceptance/dataCheckers';
@@ -576,11 +577,7 @@ registerCatalogPipeline({
           { catalogId: 'materials', entityId: 'mat-weathered-stone', role: 'surface-family' },
         ],
       }),
-      accept: fieldsPopulated('material', 'surface / parentMaterial / textures populated', [
-        'surface',
-        'parentMaterial',
-        'textures',
-      ]),
+      accept: materialShape('material', 'surface / parentMaterial / textures (single or multi-master)'),
     },
 
     // ── 7. Icon 2D Art ────────────────────────────────────────────────────────

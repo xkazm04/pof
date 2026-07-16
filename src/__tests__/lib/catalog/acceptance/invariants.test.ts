@@ -1,11 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import {
   POWER_TARGET, POWER_TOL_PCT, PRICE_RATIO, FAUCET_SINK_TOL_PCT, REQ_BELOW, AFFIX_BUDGET,
-  XP_GROWTH, MONSTER_LIFE_BAND,
+  XP_GROWTH, MONSTER_LIFE_BAND, CONTROL_CC_CAP_SEC,
   powerWithinTierTarget, priceRatioWithinBand, faucetSinkBalanced, requiredLevelBand,
-  rarityAffixBudget, monsterRarityWithinBands, xpGrowthWithinBand,
+  rarityAffixBudget, monsterRarityWithinBands, xpGrowthWithinBand, statusBalanceEnvelope,
   componentsSumTo, sumReconciles, arithmeticReconciles,
 } from '@/lib/catalog/acceptance/invariants';
+
+const controlBudget = (over: Record<string, unknown> = {}) => ({
+  balance: { controlBudget: { magnitude: 8, durationSec: 0.9, immunityWindowSec: 2, immunityTag: 'State.Immune.Knockback', clearsOnLanding: true, ...over } },
+});
 
 describe('canon threshold parsing (from CANON_SEED, not hardcoded)', () => {
   it('reads proj-balance power target + price/power band', () => {
@@ -24,6 +28,56 @@ describe('canon threshold parsing (from CANON_SEED, not hardcoded)', () => {
     expect(MONSTER_LIFE_BAND.Magic).toEqual({ min: 1.5, max: 2 });
     expect(MONSTER_LIFE_BAND.Rare).toEqual({ min: 4, max: 6 });
     expect(MONSTER_LIFE_BAND.Unique).toEqual({ min: 6, max: 10 });
+  });
+  it('reads arpg-ailments control-CC duration cap', () => { expect(CONTROL_CC_CAP_SEC).toBe(3); });
+});
+
+describe('statusBalanceEnvelope — DoT path unchanged, control path validates a budget', () => {
+  const chk = statusBalanceEnvelope(7.875, 20, 'balance');
+
+  // ── DoT path: byte-for-byte the old withinPercent('dps', 7.875, 20) law ──
+  it('passes an ignite DoT whose dps is within ±20% of 7.875', () => {
+    expect(chk({ dps: 7.875 }).status).toBe('pass');
+    expect(chk({ dps: 9.4 }).status).toBe('pass');
+  });
+  it('fails a DoT whose dps is outside the band, with a specific reason', () => {
+    const bad = chk({ dps: 19.5 });
+    expect(bad.status).toBe('fail');
+    expect(bad.reason).toContain('7.875');
+    expect(bad.reason).toContain('19.5');
+  });
+  it('pends a DoT with no dps and points at controlBudget for CC statuses', () => {
+    const r = chk({});
+    expect(r.status).toBe('pending');
+    expect(r.reason).toContain('controlBudget');
+  });
+
+  // ── Control path: a knockback validates its budget, never the DPS line ──
+  it('passes a well-formed kinetic control budget', () => {
+    const r = chk(controlBudget());
+    expect(r.status).toBe('pass');
+    expect(r.detail).toContain('control CC');
+  });
+  it('fails a CC whose duration exceeds the canon control cap', () => {
+    const r = chk(controlBudget({ durationSec: 4 }));
+    expect(r.status).toBe('fail');
+    expect(r.reason).toContain('control cap');
+    expect(r.reason).toContain('3s');
+  });
+  it('fails a CC with a non-positive displacement magnitude', () => {
+    expect(chk(controlBudget({ magnitude: 0 })).status).toBe('fail');
+  });
+  it('fails a CC with no immunity window (anti-chain-lock)', () => {
+    const r = chk(controlBudget({ immunityWindowSec: 0 }));
+    expect(r.status).toBe('fail');
+    expect(r.reason).toContain('anti-chain-lock');
+  });
+  it('fails a CC that does not clear on landing', () => {
+    expect(chk(controlBudget({ clearsOnLanding: false })).status).toBe('fail');
+  });
+  it('pends an incomplete control budget', () => {
+    const r = chk({ balance: { controlBudget: { magnitude: 8 } } });
+    expect(r.status).toBe('pending');
   });
 });
 

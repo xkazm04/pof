@@ -1,5 +1,6 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
-import { minLength, fieldsPopulated, withinPercent, selected, minCount } from '../acceptance/dataCheckers';
+import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
+import { statusBalanceEnvelope } from '../acceptance/invariants';
 import { runtimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
@@ -233,8 +234,11 @@ registerCatalogPipeline({
           },
         };
       },
-      // tier target 7.875, ±20% band = 6.3–9.45 — comfortably inside
-      accept: withinPercent('dps', 'Ignite DPS within ±20% of tier target (7.875)', 7.875, 20),
+      // DoT ailments (ignite/bleed/poison) still gate `dps` within ±20% of the tier target
+      // (Burning: 7.875, band 6.3–9.45). A CONTROL/CC status (knockback) has no damage line, so
+      // it instead validates a control budget (magnitude / duration ≤ canon cap / immunity window /
+      // landing-clear) declared under balance.controlBudget — see statusBalanceEnvelope.
+      accept: statusBalanceEnvelope(7.875, 20, 'DoT ignite DPS within ±20% of tier target (7.875), or a valid control budget for a CC status'),
     },
 
     // ── 4. Icon 2D Art ────────────────────────────────────────────────────────

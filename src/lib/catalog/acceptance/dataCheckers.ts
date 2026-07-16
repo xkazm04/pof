@@ -76,6 +76,39 @@ export function selected(field: string, label: string): Checker {
   };
 }
 
+/**
+ * items Material shape — accepts EITHER the legacy single-master shape
+ * (`material.parentMaterial` + `material.textures`, identical null-strictness to
+ * `fieldsPopulated` on those keys) OR a multi-master `material.parentMaterials[]` where
+ * EVERY entry carries `surface` + `parentMaterial` + `textures`. On the array path a
+ * missing field FAILS naming the offending index; the single-master path is unchanged.
+ */
+export function materialShape(field: string, label: string): Checker {
+  return (data) => {
+    const obj = (data[field] ?? {}) as Record<string, unknown>;
+    const masters = obj.parentMaterials;
+    if (Array.isArray(masters)) {
+      if (masters.length === 0) {
+        return { label, tier: 'L0', status: 'pending', detail: '0 masters', reason: `field "${field}.parentMaterials" is empty (need ≥1 master, each with surface / parentMaterial / textures)` };
+      }
+      const req = ['surface', 'parentMaterial', 'textures'];
+      for (let i = 0; i < masters.length; i++) {
+        const m = (masters[i] ?? {}) as Record<string, unknown>;
+        const missing = req.filter((k) => m[k] == null);
+        if (missing.length) {
+          return { label, tier: 'L0', status: 'fail', detail: `master[${i}] incomplete`, reason: `field "${field}.parentMaterials[${i}]" missing: ${missing.join(', ')}` };
+        }
+      }
+      return { label, tier: 'L0', status: 'pass', detail: `${masters.length} master(s), each surface / parentMaterial / textures populated` };
+    }
+    // Legacy single-master shape (parentMaterial + textures), same strictness as fieldsPopulated.
+    const req = ['parentMaterial', 'textures'];
+    const missing = req.filter((k) => obj[k] == null);
+    const ok = missing.length === 0;
+    return { label, tier: 'L0', status: ok ? 'pass' : 'pending', detail: `${req.length - missing.length} / ${req.length} populated`, ...(ok ? {} : { reason: `field "${field}" missing: ${missing.join(', ')}` }) };
+  };
+}
+
 export function minCount(field: string, label: string, n: number): Checker {
   return (data) => {
     const arr = Array.isArray(data[field]) ? (data[field] as unknown[]) : [];

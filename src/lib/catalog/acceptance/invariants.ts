@@ -57,6 +57,10 @@ export const AFFIX_BUDGET: Record<string, { prefix: number; suffix: number }> = 
 const _xp = parseCanon('arpg-leveling', /base\D+([\d.]+)\^level/);
 export const XP_GROWTH = Number(_xp[1]); // 1.08
 
+// arpg-ailments: "freeze is a threshold-gated stun ≤3s" — the canon cap on any control-CC duration.
+const _cc = parseCanon('arpg-ailments', /stun\D+(\d+)s/);
+export const CONTROL_CC_CAP_SEC = Number(_cc[1]); // 3
+
 // arpg-monster-rarity: "Magic ~×1.5–2 life ... Rare ~×4–6 life ... Unique ~×6–10 life"
 function rarityLifeBand(tier: string): { min: number; max: number } {
   const m = parseCanon('arpg-monster-rarity', new RegExp(`${tier}\\D*([\\d.]+)\\D+?([\\d.]+) life`));
@@ -189,6 +193,66 @@ export function xpGrowthWithinBand(objField: string, exponentKey: string, label:
       ? pass(label, `growth ${e} ≈ ${XP_GROWTH} (±${tolPct}%)`)
       : fail(label, `growth ${e} vs ${XP_GROWTH}`,
           `arpg-leveling: XP growth exponent ${e} is outside ±${tolPct}% of the canon geometric rate ${XP_GROWTH} (${lo.toFixed(3)}–${hi.toFixed(3)})`);
+  };
+}
+
+/**
+ * status-effects Balance — an archetype-aware envelope that KNOWS a status can be either a
+ * DAMAGING ailment or a CONTROL/CC status, dispatching on the artifact's own declaration:
+ *
+ *  - DoT ailment (ignite/bleed/poison): no `balance.controlBudget`, so `dps` is still gated
+ *    within ±tolPct of the fixed per-tier target `dotTarget` (status-burning still gates on
+ *    7.875 — the DoT path is byte-for-byte the old `withinPercent('dps', 7.875, 20)` law).
+ *
+ *  - CONTROL / CC status (knockback, stun-shape): a fixed DPS line is nonsensical, so instead
+ *    it validates a CONTROL BUDGET declared under `balance.controlBudget`:
+ *      · `magnitude`        > 0            — a real displacement (launch distance / impulse)
+ *      · `durationSec`      0 < d ≤ cap    — CC time within the canon control cap (CONTROL_CC_CAP_SEC,
+ *                                            parsed from arpg-ailments "stun ≤3s")
+ *      · `immunityTag` + `immunityWindowSec` > 0 — an immunity tag and a positive DR/immunity
+ *                                            window so the CC cannot be chain-locked
+ *      · `clearsOnLanding`  === true       — kinetic knockback ends when the target lands
+ *
+ * Dispatch is by declaration, so a control status can never satisfy the DoT line by accident,
+ * and a DoT can never pass on an empty control budget. Every non-pass carries a specific reason.
+ */
+export function statusBalanceEnvelope(dotTarget: number, tolPct: number, label: string): Checker {
+  return (data) => {
+    const balance = pick(data, 'balance');
+    const cb = balance && typeof balance === 'object' ? (balance as Record<string, unknown>).controlBudget : undefined;
+
+    // ── Control / CC path ──────────────────────────────────────────────────
+    if (cb && typeof cb === 'object') {
+      const c = cb as Record<string, unknown>;
+      const magnitude = numOf(c.magnitude);              // launch distance (m) or impulse
+      const duration = numOf(c.durationSec);             // airborne / CC time
+      const immunityWindow = numOf(c.immunityWindowSec); // DR / immunity window
+      const immunityTag = String(c.immunityTag ?? '');
+      const clearsOnLanding = c.clearsOnLanding === true;
+      if (magnitude == null || duration == null || immunityWindow == null)
+        return { label, tier: 'L0', status: 'pending', detail: 'control budget incomplete',
+          reason: `balance.controlBudget.magnitude/durationSec/immunityWindowSec not all set` };
+      if (magnitude <= 0)
+        return fail(label, `magnitude ${magnitude}`, `control budget: displacement magnitude must be > 0, got ${magnitude}`);
+      if (duration <= 0 || duration > CONTROL_CC_CAP_SEC)
+        return fail(label, `duration ${duration}s`, `arpg-ailments control cap: CC duration ${duration}s must be in (0, ${CONTROL_CC_CAP_SEC}s] (canon: control CC ≤${CONTROL_CC_CAP_SEC}s)`);
+      if (!immunityTag || immunityWindow <= 0)
+        return fail(label, 'no immunity window', `control budget: an immunity tag + positive immunityWindowSec are required (anti-chain-lock), got tag="${immunityTag}" window=${immunityWindow}`);
+      if (!clearsOnLanding)
+        return fail(label, 'not landing-clear', `control budget: kinetic knockback must clear on landing (clearsOnLanding=true)`);
+      return pass(label, `control CC: ${magnitude} launch · ${duration}s ≤ ${CONTROL_CC_CAP_SEC}s · immune ${immunityWindow}s (${immunityTag})`);
+    }
+
+    // ── Damaging DoT path (unchanged: dps within ±tolPct of the fixed tier target) ──
+    const dps = numOf(pick(data, 'dps'));
+    if (dps == null)
+      return { label, tier: 'L0', status: 'pending', detail: 'not set',
+        reason: `DoT status: field "dps" not set (expected within ±${tolPct}% of ${dotTarget}); a control status must instead declare balance.controlBudget` };
+    const lo = dotTarget * (1 - tolPct / 100), hi = dotTarget * (1 + tolPct / 100);
+    return dps >= lo && dps <= hi
+      ? pass(label, `${dps} within ±${tolPct}% of ${dotTarget}`)
+      : fail(label, `${dps} vs ${dotTarget} ±${tolPct}%`,
+          `DoT status: ignite/bleed/poison DPS ${dps} is outside ±${tolPct}% of the tier target ${dotTarget} (allowed ${lo.toFixed(2)}–${hi.toFixed(2)})`);
   };
 }
 

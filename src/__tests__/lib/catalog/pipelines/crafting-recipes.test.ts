@@ -68,14 +68,19 @@ describe('crafting-recipes pipeline', () => {
     expect(ss.skillLevel).toBe(1);
     expect(ss.station).toBe('BP_AlchemistBench');
 
-    // ── Cost & Yield: goldCost/outputValue ratio within ±20% of target 0.8 ────
+    // ── Cost & Yield: goldCost/outputValue ratio within the canon 0.8–1.2× band ────
     const cost = p!.steps.find((s) => s.label === 'Cost & Yield')!;
     const costOut = cost.produce(entity);
     expect(cost.accept(costOut.data ?? {}).status).toBe('pass');
-    // costRatio = 20/24 = 0.833 → within ±20% of 0.8 (band: 0.64–0.96)
+    // costRatio = 20/24 = 0.833 → inside the canon 0.8–1.2× band (proj-balance)
     const costRatio = costOut.data!.costRatio as number;
-    expect(costRatio).toBeGreaterThanOrEqual(0.64);
-    expect(costRatio).toBeLessThanOrEqual(0.96);
+    expect(costRatio).toBeGreaterThanOrEqual(0.8);
+    expect(costRatio).toBeLessThanOrEqual(1.2);
+    // The canon-band checker: 0.833 passes; a below-band 0.71 fails with the actionable reason.
+    expect(cost.accept({ costRatio: 0.833 }).status).toBe('pass');
+    const badCost = cost.accept({ costRatio: 0.71 });
+    expect(badCost.status).toBe('fail');
+    expect(badCost.reason).toBe('proj-balance price/power: costRatio=0.71× is outside the 0.8–1.2× band');
     // Top-level link to currencies::currency-gold declared
     expect(costOut.links).toBeDefined();
     const costLinks = costOut.links as Array<{ catalogId: string; entityId: string; role: string }>;
