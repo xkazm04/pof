@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useCallback, useRef } from 'react';
+import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
 import { useViewportAtLeast } from '@/hooks/useViewportWidth';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -68,6 +68,14 @@ export function CatalogGearTab({ moduleId, featureMap }: CatalogGearTabProps) {
   // filtering/sorting/paging operate directly on entries — no runtime id-join Map.
   const entries = useItemEntries();
   const addEntity = useCatalogStore((s) => s.addEntity);
+
+  // Invalidate the open detail drawer if its backing entry disappears from the
+  // store (reset/delete/re-seed elsewhere), so it can't keep showing a ghost item.
+  useEffect(() => {
+    if (selectedItem && !entries.some(e => e.data.id === selectedItem.id)) {
+      setSelectedItem(null);
+    }
+  }, [entries, selectedItem]);
 
   const availableSubtypes = useMemo(() => {
     const pool = categoryFilter !== 'all' ? entries.filter(e => e.data.type === categoryFilter) : entries;

@@ -38,19 +38,31 @@ export function EconomyCodeGenPanel() {
 
   const handleGenerate = useCallback(async () => {
     const res = await generateCode();
-    if (res) setExpanded(true);
+    if (res) {
+      // Reset the active tab so a shorter new result can't leave `selectedFile`
+      // pointing past the end of the new files array (blank viewer, no tab lit).
+      setSelectedFile(0);
+      setExpanded(true);
+    }
   }, [generateCode]);
 
-  const handleDownloadAll = useCallback(() => {
+  const handleDownloadAll = useCallback(async () => {
     if (!codeGenResult) return;
-    for (const file of codeGenResult.files) {
+    // Browsers throttle/drop automatic multi-file downloads fired in a single tick,
+    // so space the clicks out and revoke each blob URL only after the download has
+    // had a chance to start.
+    for (let i = 0; i < codeGenResult.files.length; i++) {
+      const file = codeGenResult.files[i];
       const blob = new Blob([file.content], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = file.filename;
       a.click();
-      URL.revokeObjectURL(url);
+      if (i < codeGenResult.files.length - 1) {
+        await new Promise((r) => setTimeout(r, 300));
+      }
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
   }, [codeGenResult]);
 
@@ -73,7 +85,7 @@ export function EconomyCodeGenPanel() {
       <div className="flex items-center gap-2 px-4 py-3">
         <button
           onClick={() => codeGenResult ? setExpanded(!expanded) : handleGenerate()}
-          className="flex items-center gap-2 flex-1 text-left"
+          className="flex items-center gap-2 flex-1 text-left rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
         >
           {codeGenResult && (
             expanded
@@ -90,7 +102,7 @@ export function EconomyCodeGenPanel() {
         <button
           onClick={handleGenerate}
           disabled={isGenerating}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-cyan-500/10 border border-cyan-500/25 rounded-lg text-cyan-400 text-xs font-medium hover:bg-cyan-500/20 transition-colors disabled:opacity-50"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-cyan-500/10 border border-cyan-500/25 rounded-lg text-cyan-400 text-xs font-medium hover:bg-cyan-500/20 transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
         >
           {isGenerating ? (
             <RefreshCw className="w-3 h-3 animate-spin" />
@@ -103,7 +115,7 @@ export function EconomyCodeGenPanel() {
         {codeGenResult && (
           <button
             onClick={handleDownloadAll}
-            className="flex items-center gap-1 px-2.5 py-1.5 border border-border rounded-lg text-text-muted text-xs font-medium hover:text-text hover:border-border-bright transition-colors"
+            className="flex items-center gap-1 px-2.5 py-1.5 border border-border rounded-lg text-text-muted text-xs font-medium hover:text-text hover:border-border-bright transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
           >
             <Download className="w-3 h-3" />
             All
@@ -128,7 +140,7 @@ export function EconomyCodeGenPanel() {
                   <button
                     key={file.filename}
                     onClick={() => setSelectedFile(i)}
-                    className={`flex items-center gap-1.5 px-3 py-2 text-2xs font-medium whitespace-nowrap border-b-2 transition-colors ${
+                    className={`flex items-center gap-1.5 px-3 py-2 text-2xs font-medium whitespace-nowrap border-b-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-400/50 ${
                       selectedFile === i
                         ? 'border-cyan-400 text-cyan-400 bg-cyan-500/5'
                         : 'border-transparent text-text-muted hover:text-text hover:bg-surface-hover/50'
@@ -151,7 +163,7 @@ export function EconomyCodeGenPanel() {
               {activeFile && (
                 <div className="relative">
                   {activeFile.description && (
-                    <p className="px-4 py-2 bg-surface-deep border-b border-border text-2xs text-text-muted truncate">
+                    <p className="px-4 py-2 bg-surface-deep border-b border-border text-2xs text-text-muted truncate" title={activeFile.description}>
                       {activeFile.description}
                     </p>
                   )}

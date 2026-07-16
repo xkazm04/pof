@@ -58,6 +58,11 @@ function StatContributions({ loadout }: { loadout: LoadoutSlot[] }) {
     return Object.entries(totals).map(([stat, d]) => ({ stat, ...d, maxVal }));
   }, [loadout]);
 
+  const hiddenEffects = useMemo(
+    () => loadout.reduce((n, slot) => n + (slot.item?.hiddenStatCount ?? 0), 0),
+    [loadout],
+  );
+
   return (
     <div className="flex-1 min-w-[200px] space-y-3">
       <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Stat Contributions</p>
@@ -71,6 +76,11 @@ function StatContributions({ loadout }: { loadout: LoadoutSlot[] }) {
           <p className="text-xs text-text-muted opacity-60">{sources.join(', ')}</p>
         </div>
       ))}
+      {hiddenEffects > 0 && (
+        <p className="text-xs font-mono text-text-muted opacity-70 italic">
+          +{hiddenEffects} non-numeric effect{hiddenEffects === 1 ? '' : 's'} not shown
+        </p>
+      )}
     </div>
   );
 }
@@ -91,12 +101,14 @@ export function EquipmentLoadoutSection() {
     if (selected.length === 0 || !pickerSlot) return;
     const item = selected[0];
     const stats: Record<string, number> = {};
+    let hiddenStatCount = 0;
     for (const s of item.stats) {
       if (s.numericValue != null) stats[s.label] = s.numericValue;
+      else hiddenStatCount++;
     }
     setLoadout(prev => prev.map(s =>
       s.slotId === pickerSlot
-        ? { ...s, item: { name: item.name, rarity: item.rarity, stats }, isEmpty: false }
+        ? { ...s, item: { name: item.name, rarity: item.rarity, stats, hiddenStatCount }, isEmpty: false }
         : s
     ));
     setPickerSlot(null);

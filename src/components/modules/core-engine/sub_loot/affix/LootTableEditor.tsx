@@ -53,14 +53,26 @@ export function LootTableEditor() {
   // pagination, source filter, JSON toggle, import flags). Stays unpaginated by design: the bar
   // visualizes the entire table's drop-rate split, independent of the paged editable list above.
   const previewSegments = useMemo(() => {
-    if (editorTotalWeight <= 0) return [];
-    return editorEntries.map((entry) => ({
+    const denom = editorTotalWeight + nothingWeight;
+    if (denom <= 0) return [];
+    const segs = editorEntries.map((entry) => ({
       id: entry.id,
-      pct: (entry.weight / editorTotalWeight) * 100,
+      pct: (entry.weight / denom) * 100,
       name: entry.name,
       color: rarityColor(entry.rarity),
     }));
-  }, [editorEntries, editorTotalWeight]);
+    // Include the no-drop chance as its own neutral segment so the preview bar
+    // reflects the true odds instead of always filling to 100% items.
+    if (nothingWeight > 0) {
+      segs.push({
+        id: '__nothing__',
+        pct: (nothingWeight / denom) * 100,
+        name: 'No drop',
+        color: STATUS_MUTED,
+      });
+    }
+    return segs;
+  }, [editorEntries, editorTotalWeight, nothingWeight]);
 
   const filteredEntries = useMemo(() => {
     let entries = editorEntries;
@@ -90,20 +102,22 @@ export function LootTableEditor() {
     return Array.from(groups.entries()).map(([source, entries]) => ({ source, entries }));
   }, [pagedEntries, sourceFilter]);
 
+  // History pushes are done from the outer callback body (never nested inside a
+  // setState updater, which must be a pure function of prev state) so a
+  // double-invoked updater in Strict Mode / concurrent rendering can't double-fire
+  // the coalesced undo-history logic.
   const updateEditorWeight = useCallback((id: string, weight: number) => {
-    setEditorEntries((prev) => {
-      const next = prev.map((e) => e.id === id ? { ...e, weight } : e);
-      // Coalesce a continuous drag on the same slider: replace the last snapshot rather
-      // than pushing one per tick (and keep history capped).
-      const coalesce = lastWeightEditIdRef.current === id;
-      lastWeightEditIdRef.current = id;
-      setEditorHistory((h) => {
-        const base = coalesce && h.length > 1 ? h.slice(0, -1) : h;
-        return capHistory([...base, next]);
-      });
-      return next;
+    // Coalesce a continuous drag on the same slider: replace the last snapshot rather
+    // than pushing one per tick (and keep history capped).
+    const coalesce = lastWeightEditIdRef.current === id;
+    lastWeightEditIdRef.current = id;
+    const next = editorEntries.map((e) => e.id === id ? { ...e, weight } : e);
+    setEditorEntries(next);
+    setEditorHistory((h) => {
+      const base = coalesce && h.length > 1 ? h.slice(0, -1) : h;
+      return capHistory([...base, next]);
     });
-  }, []);
+  }, [editorEntries]);
 
   const addEditorEntry = useCallback(() => {
     // crypto.randomUUID() is collision-free even for two "+ Add" clicks within
@@ -112,21 +126,17 @@ export function LootTableEditor() {
     // because those match rows by id.
     const id = `e${crypto.randomUUID()}`;
     lastWeightEditIdRef.current = null; // a distinct edit boundary
-    setEditorEntries((prev) => {
-      const next: LootEditorEntryExpanded[] = [...prev, { id, name: 'New Item', weight: 0, rarity: 'Common', color: STATUS_MUTED, source: 'enemy' }];
-      setEditorHistory((h) => capHistory([...h, next]));
-      return next;
-    });
-  }, []);
+    const next: LootEditorEntryExpanded[] = [...editorEntries, { id, name: 'New Item', weight: 0, rarity: 'Common', color: STATUS_MUTED, source: 'enemy' }];
+    setEditorEntries(next);
+    setEditorHistory((h) => capHistory([...h, next]));
+  }, [editorEntries]);
 
   const removeEditorEntry = useCallback((id: string) => {
     lastWeightEditIdRef.current = null; // a distinct edit boundary
-    setEditorEntries((prev) => {
-      const next = prev.filter((e) => e.id !== id);
-      setEditorHistory((h) => capHistory([...h, next]));
-      return next;
-    });
-  }, []);
+    const next = editorEntries.filter((e) => e.id !== id);
+    setEditorEntries(next);
+    setEditorHistory((h) => capHistory([...h, next]));
+  }, [editorEntries]);
 
   const undoEditor = useCallback(() => {
     lastWeightEditIdRef.current = null; // a post-undo edit must not coalesce into the undone snapshot
@@ -202,7 +212,7 @@ export function LootTableEditor() {
       />
 
       {/* Live preview bar */}
-      {editorTotalWeight > 0 && (
+      {previewSegments.length > 0 && (
         <div className="flex h-4 rounded overflow-hidden w-full mb-2">
           {previewSegments.map((seg) => (
             <div key={seg.id} title={`${seg.name}: ${seg.pct.toFixed(1)}%`} style={{ width: `${seg.pct}%`, backgroundColor: seg.color }} />
