@@ -68,4 +68,48 @@ describe('useDragAngle', () => {
     act(() => result.current.onPointerMove(pointerAt(200, 100)));
     expect(onAngleChange).not.toHaveBeenCalled();
   });
+
+  it('captures the pointer on the handle so the drag survives leaving the svg', () => {
+    const onAngleChange = vi.fn();
+    const ref = makeSvgRef();
+    const { result } = renderHook(() => useDragAngle(ref, 100, onAngleChange));
+
+    const setPointerCapture = vi.fn();
+    const downEvent = {
+      pointerId: 7,
+      currentTarget: { setPointerCapture },
+    } as unknown as PointerEvent<Element>;
+
+    act(() => result.current.onPointerDown(downEvent));
+    expect(setPointerCapture).toHaveBeenCalledWith(7);
+    expect(result.current.isDragging).toBe(true);
+
+    // Far outside any plausible svg bounds — the drag still reports angles.
+    act(() => result.current.onPointerMove(pointerAt(9999, 100)));
+    expect(onAngleChange).toHaveBeenLastCalledWith(0);
+  });
+
+  it('ends the drag on a window-level pointerup (release outside the svg)', () => {
+    const onAngleChange = vi.fn();
+    const ref = makeSvgRef();
+    const { result } = renderHook(() => useDragAngle(ref, 100, onAngleChange));
+
+    act(() => result.current.onPointerDown());
+    expect(result.current.isDragging).toBe(true);
+
+    act(() => { window.dispatchEvent(new Event('pointerup')); });
+    expect(result.current.isDragging).toBe(false);
+
+    act(() => result.current.onPointerMove(pointerAt(200, 100)));
+    expect(onAngleChange).not.toHaveBeenCalled();
+  });
+
+  it('ends the drag on pointercancel', () => {
+    const ref = makeSvgRef();
+    const { result } = renderHook(() => useDragAngle(ref, 100, vi.fn()));
+
+    act(() => result.current.onPointerDown());
+    act(() => { window.dispatchEvent(new Event('pointercancel')); });
+    expect(result.current.isDragging).toBe(false);
+  });
 });

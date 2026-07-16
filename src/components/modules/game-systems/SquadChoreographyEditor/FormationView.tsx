@@ -52,7 +52,7 @@ export function FormationView({
           style={{ cursor: isDragging ? 'grabbing' : 'default' }}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
-          onPointerLeave={onPointerUp}
+          onPointerCancel={onPointerUp}
           data-testid="squad-formation-svg"
         >
           {/* Grid rings */}

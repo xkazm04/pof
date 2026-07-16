@@ -14,6 +14,29 @@ import {
 
 const ACCENT = ACCENT_CYAN;
 
+/* ViewBox computed from the actual node coordinates so no node (or its hover
+   ring / glow) is ever clipped, whatever the layout data contains. Static
+   data → computed once at module load. */
+const VIEW_PADDING = 24;
+const VIEW_BOX = (() => {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const n of TOPOLOGY_NODES) {
+    if (n.x === undefined || n.y === undefined) continue;
+    const r = (n.size ?? 22) / 2 + 4; // +4 = hover-ring overshoot
+    minX = Math.min(minX, n.x - r);
+    maxX = Math.max(maxX, n.x + r);
+    minY = Math.min(minY, n.y - r);
+    maxY = Math.max(maxY, n.y + r);
+  }
+  if (!Number.isFinite(minX)) return { x: 0, y: 0, w: 460, h: 300 };
+  return {
+    x: minX - VIEW_PADDING,
+    y: minY - VIEW_PADDING,
+    w: (maxX - minX) + VIEW_PADDING * 2,
+    h: (maxY - minY) + VIEW_PADDING * 2,
+  };
+})();
+
 interface TopologyGraphProps {
   matchingIds?: Set<string>;
 }
@@ -28,7 +51,10 @@ function TopologyGraphImpl({ matchingIds }: TopologyGraphProps = {}) {
     <BlueprintPanel color={ACCENT} className="p-3">
       <SectionHeader icon={Network} label="Zone Topology Graph" color={ACCENT} />
       <div className="flex justify-center min-h-[200px] bg-surface-deep/30 rounded-lg p-2">
-        <svg width={460} height={300} viewBox="0 0 460 300" className="overflow-visible">
+        <svg
+          viewBox={`${VIEW_BOX.x} ${VIEW_BOX.y} ${VIEW_BOX.w} ${VIEW_BOX.h}`}
+          className="w-full max-w-[640px] h-auto overflow-visible"
+        >
           {/* Edges */}
           {TOPOLOGY_EDGES.map((edge) => {
             const src = TOPOLOGY_NODES.find(n => n.id === edge.from);
@@ -100,8 +126,8 @@ function TopologyGraphImpl({ matchingIds }: TopologyGraphProps = {}) {
             const tooltipH = 68;
             const rawX = node.x! - tooltipW / 2;
             const rawY = node.y! - (node.size ?? 22) / 2 - tooltipH - 8;
-            const tx = Math.max(4, Math.min(rawX, 460 - tooltipW - 4));
-            const ty = rawY < 4 ? node.y! + (node.size ?? 22) / 2 + 8 : rawY;
+            const tx = Math.max(VIEW_BOX.x + 4, Math.min(rawX, VIEW_BOX.x + VIEW_BOX.w - tooltipW - 4));
+            const ty = rawY < VIEW_BOX.y + 4 ? node.y! + (node.size ?? 22) / 2 + 8 : rawY;
             return (
               <foreignObject key={`tip-${node.id}`} x={tx} y={ty} width={tooltipW} height={tooltipH}
                 className="pointer-events-none overflow-visible">
