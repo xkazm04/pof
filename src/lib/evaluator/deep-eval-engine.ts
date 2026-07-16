@@ -308,7 +308,13 @@ ${prompt}`;
       scanId,
       findings: aggregated,
       duration: Date.now() - startTime,
-      modulesEvaluated: moduleIds,
+      // Honest contract on the abort/error path: only modules whose every pass
+      // actually finished count as evaluated. Modules cut short by the abort
+      // (pending/running passes) are ALSO in failedModules — the baseline-merge
+      // scope in applyScanResult subtracts failedModules, so this keeps a
+      // cancelled run from ever reading as "evaluated clean, zero findings"
+      // even for a consumer that forgets to subtract.
+      modulesEvaluated: modulesFullyCompleted(moduleIds, passStatuses),
       passesRun,
       failedModules: modulesWithErroredPasses(moduleIds, passStatuses),
     };
@@ -324,6 +330,17 @@ function modulesWithErroredPasses(
 ): string[] {
   return moduleIds.filter((m) =>
     Object.values(passStatuses[m] ?? {}).some((s) => s === 'error' || s === 'pending' || s === 'running'),
+  );
+}
+
+/** Modules whose every pass fully completed (done/skipped) — the only ones an
+ *  aborted run may honestly claim as evaluated. */
+function modulesFullyCompleted(
+  moduleIds: string[],
+  passStatuses: Record<string, Record<EvalPass, 'pending' | 'running' | 'done' | 'error' | 'skipped'>>,
+): string[] {
+  return moduleIds.filter((m) =>
+    Object.values(passStatuses[m] ?? {}).every((s) => s === 'done' || s === 'skipped'),
   );
 }
 
