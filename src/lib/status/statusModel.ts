@@ -18,6 +18,7 @@
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 import type { JudgeVerdict } from './judge-verdicts-db';
 import stepFactsJson from './step-facts.json';
+import headlessCoverageJson from './headless-coverage.json';
 import { BANDS, RUBRIC_VERSION } from '@/lib/judge/rubrics';
 
 export type CellGrade = 'verified' | 'trusted' | 'ungated' | 'unpowered' | 'deferred' | 'attention' | 'pending' | 'unwired';
@@ -42,6 +43,48 @@ const FACTS = new Map<string, StepFact>(
 
 export function getStepFact(catalogId: string, step: string): StepFact | undefined {
   return FACTS.get(`${catalogId}|${step}`);
+}
+
+/** One row of the headless-operability coverage walk (`scripts/headless-coverage.mjs`,
+ *  regen: `node scripts/headless-coverage.mjs` with the dev server running). A step is
+ *  `operable` when it can actually be produced/verified headlessly via pof-mcp. A cell
+ *  cannot grade `verified` unless its step is proven headless-operable — a gate that only
+ *  a human can drive is not professional-grade PROOF the machine can reproduce. */
+export interface HeadlessFact {
+  catalogId: string;
+  step: string;
+  operable: boolean;
+  reason?: string;
+}
+
+const HEADLESS = new Map<string, HeadlessFact>(
+  (headlessCoverageJson.steps as HeadlessFact[]).map((s) => [`${s.catalogId}|${s.step}`, s]),
+);
+
+export function getHeadlessFact(catalogId: string, step: string): HeadlessFact | undefined {
+  return HEADLESS.get(`${catalogId}|${step}`);
+}
+
+export type HeadlessLookup = (catalogId: string, step: string) => HeadlessFact | undefined;
+
+/** Gate a derived cell on headless-operability: a `verified` grade demands the step be
+ *  PROVEN headless-operable via pof-mcp (a machine-reproducible gate), so a would-be
+ *  `verified` cell whose step has no coverage entry OR is `operable:false` is demoted to
+ *  `trusted` — the honest ceiling for a claim the machine can't reproduce — with the
+ *  reason prefixed `not headless-operable via pof-mcp`. All other grades pass through
+ *  unchanged. Pure; the coverage lookup is injectable for tests. */
+export function gateHeadless(
+  cell: StepCell,
+  catalogId: string,
+  step: string,
+  lookup: HeadlessLookup = getHeadlessFact,
+): StepCell {
+  if (cell.grade !== 'verified') return cell;
+  const fact = lookup(catalogId, step);
+  if (fact && fact.operable) return cell;
+  const prefix = 'not headless-operable via pof-mcp';
+  const reason = cell.reason ? `${prefix}: ${cell.reason}` : prefix;
+  return { ...cell, grade: 'trusted', reason };
 }
 
 /** Deliverable classes that require a real media generator (a passing checker on
@@ -226,6 +269,7 @@ export function buildSwimlane(
   steps: StepMeta[],
   artifacts: PipelineArtifact[],
   verdicts: JudgeVerdict[] = [],
+  headless: HeadlessLookup = getHeadlessFact,
 ): Swimlane {
   const byStep = new Map<string, PipelineArtifact[]>();
   for (const a of artifacts) {
@@ -246,7 +290,8 @@ export function buildSwimlane(
     const engine = fact?.trueEngine && fact.trueEngine !== 'None'
       ? fact.trueEngine.replace(' (deterministic)', '')
       : inferEngine(catalogId, s);
-    return deriveCell(s.label, engine, byStep.get(s.label) ?? [], fact, verdictsByStep.get(s.label) ?? []);
+    const cell = deriveCell(s.label, engine, byStep.get(s.label) ?? [], fact, verdictsByStep.get(s.label) ?? []);
+    return gateHeadless(cell, catalogId, s.label, headless);
   });
   const n = Math.max(cells.length, 1);
   const verified = cells.filter((c) => c.grade === 'verified').length;

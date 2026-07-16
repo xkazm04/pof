@@ -1,11 +1,16 @@
 import { describe, it, expect } from 'vitest';
-import { buildSwimlane, deriveCell, engineClass, getStepFact, inferEngine, isSyntheticEntity, sortLanes, type StepFact } from '@/lib/status/statusModel';
+import { buildSwimlane, deriveCell, engineClass, gateHeadless, getHeadlessFact, getStepFact, inferEngine, isSyntheticEntity, sortLanes, type HeadlessLookup, type StepCell, type StepFact } from '@/lib/status/statusModel';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 import { RUBRIC_VERSION } from '@/lib/judge/rubrics';
 
 const art = (step: string, status: PipelineArtifact['status'], extra: Partial<PipelineArtifact> = {}): PipelineArtifact => ({
   catalogId: 'c', entityId: 'e1', step, data: {}, ueAssets: [], status, ...extra,
 });
+
+// Synthetic catalog ids in these fixtures have no coverage entry, so the real headless gate
+// would demote their would-be `verified` cells to trusted. Inject an all-operable lookup so
+// the ladder assertions still test the ladder, not the (separately-tested) headless gate.
+const allOperable: HeadlessLookup = (catalogId, step) => ({ catalogId, step, operable: true });
 
 describe('inferEngine', () => {
   it('explicit StepSpec.engine wins', () => {
@@ -80,7 +85,7 @@ describe('buildSwimlane', () => {
       art('B', 'pass', { tier: 'L1' }),   // ungated
       art('C', 'pass', { tier: 'L3' }),   // verified
       // D unwired
-    ]);
+    ], [], allOperable);
     expect(lane.cells.map((c) => c.grade)).toEqual(['trusted', 'ungated', 'verified', 'unwired']);
     expect(lane.verifiedPct).toBe(25);
     expect(lane.credibleGePct).toBe(50);
@@ -91,7 +96,7 @@ describe('buildSwimlane', () => {
 describe('sortLanes', () => {
   it('gate-verified first, credible tiebreak, then alpha', () => {
     const mk = (id: string, tier?: 'L0' | 'L3') =>
-      buildSwimlane(id, id, [{ label: 'S', engine: 'Claude' }], tier ? [art('S', 'pass', { tier })] : []);
+      buildSwimlane(id, id, [{ label: 'S', engine: 'Claude' }], tier ? [art('S', 'pass', { tier })] : [], [], allOperable);
     const verified = mk('v', 'L3');
     const trusted = mk('t', 'L0');
     const empty = mk('e');
@@ -206,6 +211,7 @@ describe('synthetic test-fixture entities are not content', () => {
       'items', 'Items', [{ label: 'Brief', engine: 'Claude' }],
       [artFor('item-1'), artFor('test-headless-concept-brief')],
       [strict('item-1', 92), strict('test-headless-concept-brief', 3)],
+      allOperable,
     );
     expect(lane.cells[0].grade).toBe('verified');
     expect(lane.cells[0].judged?.score).toBe(92);
@@ -224,7 +230,63 @@ describe('synthetic test-fixture entities are not content', () => {
       'items', 'Items', [{ label: 'Brief', engine: 'Claude' }],
       [artFor('item-1'), artFor('item-lightsaber')],
       [strict('item-1', 92), strict('item-lightsaber', 83)],
+      allOperable,
     );
     expect(lane.cells[0].grade).toBe('attention');
+  });
+});
+
+describe('headless-operability gate — verified demands a machine-reproducible gate', () => {
+  const cell = (grade: StepCell['grade'], reason?: string): StepCell => ({
+    label: 'S', engine: 'UE Python', grade,
+    counts: { pass: 1, deferred: 0, fail: 0, pending: 0 }, ...(reason ? { reason } : {}),
+  });
+  const operable: HeadlessLookup = (catalogId, step) => ({ catalogId, step, operable: true });
+  const inoperable: HeadlessLookup = (catalogId, step) => ({ catalogId, step, operable: false });
+  const missing: HeadlessLookup = () => undefined;
+
+  it('verified + operable stays verified', () => {
+    expect(gateHeadless(cell('verified'), 'c', 'S', operable).grade).toBe('verified');
+  });
+
+  it('would-be verified + operable:false demotes to trusted with the prefixed reason', () => {
+    const g = gateHeadless(cell('verified'), 'c', 'S', inoperable);
+    expect(g.grade).toBe('trusted');
+    expect(g.reason).toBe('not headless-operable via pof-mcp');
+  });
+
+  it('would-be verified + MISSING coverage entry also demotes to trusted', () => {
+    const g = gateHeadless(cell('verified'), 'c', 'S', missing);
+    expect(g.grade).toBe('trusted');
+    expect(g.reason).toBe('not headless-operable via pof-mcp');
+  });
+
+  it('prepends the prefix to an existing reason', () => {
+    const g = gateHeadless(cell('verified', 'gate passed in PIE'), 'c', 'S', inoperable);
+    expect(g.grade).toBe('trusted');
+    expect(g.reason).toBe('not headless-operable via pof-mcp: gate passed in PIE');
+  });
+
+  it('non-verified grades pass through unchanged regardless of coverage', () => {
+    for (const grade of ['trusted', 'ungated', 'unpowered', 'deferred', 'attention', 'pending', 'unwired'] as const) {
+      const c = cell(grade, 'r');
+      expect(gateHeadless(c, 'c', 'S', missing)).toBe(c); // same reference — untouched
+      expect(gateHeadless(c, 'c', 'S', inoperable)).toBe(c);
+    }
+  });
+
+  it('buildSwimlane with the REAL json demotes a would-be-verified cell whose step is not covered', () => {
+    // A phantom catalog id absent from the coverage json → its verified cell is demoted.
+    const lane = buildSwimlane('phantom-catalog-xyz', 'Phantom', [
+      { label: 'Gate', engine: 'UE Python' },
+    ], [art('Gate', 'pass', { tier: 'L3' })]); // real getHeadlessFact default lookup
+    expect(lane.cells[0].grade).toBe('trusted');
+    expect(lane.cells[0].reason).toContain('not headless-operable via pof-mcp');
+    expect(lane.verifiedPct).toBe(0);
+  });
+
+  it('the coverage dataset is loaded (real headless fact lookup)', () => {
+    const f = getHeadlessFact('achievements', 'Concept Brief');
+    expect(f?.operable).toBe(true);
   });
 });

@@ -1,0 +1,1717 @@
+{
+  "generatedAt": "2026-07-16T09:47:08.688Z",
+  "origin": "http://localhost:3001",
+  "via": "pof-mcp",
+  "steps": [
+    {
+      "catalogId": "achievements",
+      "step": "Anti-Cheat / Validation",
+      "operable": true
+    },
+    {
+      "catalogId": "achievements",
+      "step": "Concept Brief",
+      "operable": true
+    },
+    {
+      "catalogId": "achievements",
+      "step": "Hidden / Visible",
+      "operable": true
+    },
+    {
+      "catalogId": "achievements",
+      "step": "Icon 2D Art",
+      "operable": true
+    },
+    {
+      "catalogId": "achievements",
+      "step": "Localization",
+      "operable": true
+    },
+    {
+      "catalogId": "achievements",
+      "step": "Platform Spec",
+      "operable": true
+    },
+    {
+      "catalogId": "achievements",
+      "step": "Reward Binding",
+      "operable": true
+    },
+    {
+      "catalogId": "achievements",
+      "step": "Telemetry",
+      "operable": true
+    },
+    {
+      "catalogId": "achievements",
+      "step": "Test Gate",
+      "operable": true
+    },
+    {
+      "catalogId": "achievements",
+      "step": "Trigger & Progress",
+      "operable": true
+    },
+    {
+      "catalogId": "achievements",
+      "step": "UE Packaging",
+      "operable": true
+    },
+    {
+      "catalogId": "achievements",
+      "step": "Unlock Toast",
+      "operable": true
+    },
+    {
+      "catalogId": "ambient",
+      "step": "Concept Brief",
+      "operable": true
+    },
+    {
+      "catalogId": "ambient",
+      "step": "Icon 2D Art",
+      "operable": true
+    },
+    {
+      "catalogId": "ambient",
+      "step": "Layers",
+      "operable": true
+    },
+    {
+      "catalogId": "ambient",
+      "step": "Memory Budget",
+      "operable": true
+    },
+    {
+      "catalogId": "ambient",
+      "step": "Occlusion",
+      "operable": true
+    },
+    {
+      "catalogId": "ambient",
+      "step": "Spatialization",
+      "operable": true
+    },
+    {
+      "catalogId": "ambient",
+      "step": "Test Gate",
+      "operable": true
+    },
+    {
+      "catalogId": "ambient",
+      "step": "UE Packaging",
+      "operable": true
+    },
+    {
+      "catalogId": "ambient",
+      "step": "Variants & Randomization",
+      "operable": true
+    },
+    {
+      "catalogId": "ambient",
+      "step": "Zone Binding",
+      "operable": true
+    },
+    {
+      "catalogId": "bestiary",
+      "step": "3D & Rig",
+      "operable": true
+    },
+    {
+      "catalogId": "bestiary",
+      "step": "Abilities",
+      "operable": true
+    },
+    {
+      "catalogId": "bestiary",
+      "step": "AI Behavior",
+      "operable": true
+    },
+    {
+      "catalogId": "bestiary",
+      "step": "Concept & Role",
+      "operable": true
+    },
+    {
+      "catalogId": "bestiary",
+      "step": "Concept 2D Art",
+      "operable": true
+    },
+    {
+      "catalogId": "bestiary",
+      "step": "Encounter Balance",
+      "operable": true
+    },
+    {
+      "catalogId": "bestiary",
+      "step": "Lore / Codex",
+      "operable": true
+    },
+    {
+      "catalogId": "bestiary",
+      "step": "Monster Rarity",
+      "operable": true
+    },
+    {
+      "catalogId": "bestiary",
+      "step": "Resistances",
+      "operable": true
+    },
+    {
+      "catalogId": "bestiary",
+      "step": "Stat Block",
+      "operable": true
+    },
+    {
+      "catalogId": "bestiary",
+      "step": "Test Gate",
+      "operable": true
+    },
+    {
+      "catalogId": "bestiary",
+      "step": "UE Packaging",
+      "operable": true
+    },
+    {
+      "catalogId": "character-pipeline",
+      "step": "3D Generation",
+      "operable": true
+    },
+    {
+      "catalogId": "character-pipeline",
+      "step": "Concept 2D",
+      "operable": true
+    },
+    {
+      "catalogId": "character-pipeline",
+      "step": "Face Gate 2D",
+      "operable": true
+    },
+    {
+      "catalogId": "character-pipeline",
+      "step": "Face Gate 3D",
+      "operable": true
+    },
+    {
+      "catalogId": "character-pipeline",
+      "step": "Game-Tier Convert",
+      "operable": true
+    },
+    {
+      "catalogId": "character-pipeline",
+      "step": "Icon 2D Art",
+      "operable": true
+    },
+    {
+      "catalogId": "character-pipeline",
+      "step": "Playable Wire",
+      "operable": true
+    },
+    {
+      "catalogId": "character-pipeline",
+      "step": "Rig & Clips",
+      "operable": true
+    },
+    {
+      "catalogId": "character-pipeline",
+      "step": "UE Import",
+      "operable": true
+    },
+    {
+      "catalogId": "character-pipeline",
+      "step": "Visual Gate",
+      "operable": true
+    },
+    {
+      "catalogId": "characters",
+      "step": "3D & Rig",
+      "operable": true
+    },
+    {
+      "catalogId": "characters",
+      "step": "Behavior (NPC)",
+      "operable": true
+    },
+    {
+      "catalogId": "characters",
+      "step": "Combat Anim",
+      "operable": true
+    },
+    {
+      "catalogId": "characters",
+      "step": "Concept & Role",
+      "operable": true
+    },
+    {
+      "catalogId": "characters",
+      "step": "Concept 2D Art",
+      "operable": true
+    },
+    {
+      "catalogId": "characters",
+      "step": "Icon 2D Art (portrait)",
+      "operable": true
+    },
+    {
+      "catalogId": "characters",
+      "step": "Locomotion Anim",
+      "operable": true
+    },
+    {
+      "catalogId": "characters",
+      "step": "Material / Outfit",
+      "operable": true
+    },
+    {
+      "catalogId": "characters",
+      "step": "Stat Block",
+      "operable": true
+    },
+    {
+      "catalogId": "characters",
+      "step": "Test Gate",
+      "operable": true
+    },
+    {
+      "catalogId": "characters",
+      "step": "UE Packaging",
+      "operable": true
+    },
+    {
+      "catalogId": "characters",
+      "step": "VO",
+      "operable": true
+    },
+    {
+      "catalogId": "codex",
+      "step": "Accessibility",
+      "operable": true
+    },
+    {
+      "catalogId": "codex",
+      "step": "Audio Sting",
+      "operable": true
+    },
+    {
+      "catalogId": "codex",
+      "step": "Concept Brief",
+      "operable": true
+    },
+    {
+      "catalogId": "codex",
+      "step": "Cross-References",
+      "operable": true
+    },
+    {
+      "catalogId": "codex",
+      "step": "Illustration",
+      "operable": true
+    },
+    {
+      "catalogId": "codex",
+      "step": "Localization",
+      "operable": true
+    },
+    {
+      "catalogId": "codex",
+      "step": "Lore Body",
+      "operable": true
+    },
+    {
+      "catalogId": "codex",
+      "step": "Spoiler Tagging",
+      "operable": true
+    },
+    {
+      "catalogId": "codex",
+      "step": "Test Gate",
+      "operable": true
+    },
+    {
+      "catalogId": "codex",
+      "step": "UE Packaging",
+      "operable": true
+    },
+    {
+      "catalogId": "codex",
+      "step": "Unlock Rules",
+      "operable": true
+    },
+    {
+      "catalogId": "combat-map",
+      "step": "3D / Terrain",
+      "operable": true
+    },
+    {
+      "catalogId": "combat-map",
+      "step": "Ambient / Audio",
+      "operable": true
+    },
+    {
+      "catalogId": "combat-map",
+      "step": "Balance",
+      "operable": true
+    },
+    {
+      "catalogId": "combat-map",
+      "step": "Concept Brief",
+      "operable": true
+    },
+    {
+      "catalogId": "combat-map",
+      "step": "Encounter Layout",
+      "operable": true
+    },
+    {
+      "catalogId": "combat-map",
+      "step": "Hazards",
+      "operable": true
+    },
+    {
+      "catalogId": "combat-map",
+      "step": "Icon 2D Art",
+      "operable": true
+    },
+    {
+      "catalogId": "combat-map",
+      "step": "Material",
+      "operable": true
+    },
+    {
+      "catalogId": "combat-map",
+      "step": "Test Gate",
+      "operable": true
+    },
+    {
+      "catalogId": "combat-map",
+      "step": "UE Packaging",
+      "operable": true
+    },
+    {
+      "catalogId": "combat-map",
+      "step": "Waves & Spawns",
+      "operable": true
+    },
+    {
+      "catalogId": "combat-map",
+      "step": "Win/Loss Rules",
+      "operable": true
+    },
+    {
+      "catalogId": "crafting-recipes",
+      "step": "Concept Brief",
+      "operable": true
+    },
+    {
+      "catalogId": "crafting-recipes",
+      "step": "Cost & Yield",
+      "operable": true
+    },
+    {
+      "catalogId": "crafting-recipes",
+      "step": "Craft FX / Audio",
+      "operable": true
+    },
+    {
+      "catalogId": "crafting-recipes",
+      "step": "Discovery / Unlock",
+      "operable": true
+    },
+    {
+      "catalogId": "crafting-recipes",
+      "step": "Icon 2D Art",
+      "operable": true
+    },
+    {
+      "catalogId": "crafting-recipes",
+      "step": "Inputs & Output",
+      "operable": true
+    },
+    {
+      "catalogId": "crafting-recipes",
+      "step": "Localization",
+      "operable": true
+    },
+    {
+      "catalogId": "crafting-recipes",
+      "step": "Recipe UI",
+      "operable": true
+    },
+    {
+      "catalogId": "crafting-recipes",
+      "step": "Station & Skill",
+      "operable": true
+    },
+    {
+      "catalogId": "crafting-recipes",
+      "step": "Test Gate",
+      "operable": true
+    },
+    {
+      "catalogId": "crafting-recipes",
+      "step": "UE Packaging",
+      "operable": true
+    },
+    {
+      "catalogId": "currencies",
+      "step": "Balance",
+      "operable": true
+    },
+    {
+      "catalogId": "currencies",
+      "step": "Concept Brief",
+      "operable": true
+    },
+    {
+      "catalogId": "currencies",
+      "step": "Economy Rules",
+      "operable": true
+    },
+    {
+      "catalogId": "currencies",
+      "step": "Icon 2D Art",
+      "operable": true
+    },
+    {
+      "catalogId": "currencies",
+      "step": "Test Gate",
+      "operable": true
+    },
+    {
+      "catalogId": "currencies",
+      "step": "UE Packaging",
+      "operable": true
+    },
+    {
+      "catalogId": "currencies",
+      "step": "Wallet UI Integration",
+      "operable": true
+    },
+    {
+      "catalogId": "cutscenes",
+      "step": "Beat Sheet & Shot List",
+      "operable": true
+    },
+    {
+      "catalogId": "cutscenes",
+      "step": "Blocking / Body Anim",
+      "operable": true
+    },
+    {
+      "catalogId": "cutscenes",
+      "step": "Concept Brief",
+      "operable": true
+    },
+    {
+      "catalogId": "cutscenes",
+      "step": "Facial / Lipsync",
+      "operable": true
+    },
+    {
+      "catalogId": "cutscenes",
+      "step": "Icon 2D Art",
+      "operable": true
+    },
+    {
+      "catalogId": "cutscenes",
+      "step": "Lighting",
+      "operable": true
+    },
+    {
+      "catalogId": "cutscenes",
+      "step": "Music & SFX",
+      "operable": true
+    },
+    {
+      "catalogId": "cutscenes",
+      "step": "Skip / Replay Rules",
+      "operable": true
+    },
+    {
+      "catalogId": "cutscenes",
+      "step": "Subtitles & Loc",
+      "operable": true
+    },
+    {
+      "catalogId": "cutscenes",
+      "step": "Test Gate",
+      "operable": true
+    },
+    {
+      "catalogId": "cutscenes",
+      "step": "UE Packaging",
+      "operable": true
+    },
+    {
+      "catalogId": "cutscenes",
+      "step": "VFX",
+      "operable": true
+    },
+    {
+      "catalogId": "cutscenes",
+      "step": "VO",
+      "operable": true
+    },
+    {
+      "catalogId": "dialog-trees",
+      "step": "Accessibility",
+      "operable": true
+    },
+    {
+      "catalogId": "dialog-trees",
+      "step": "Branch Graph",
+      "operable": true
+    },
+    {
+      "catalogId": "dialog-trees",
+      "step": "Camera",
+      "operable": true
+    },
+    {
+      "catalogId": "dialog-trees",
+      "step": "Concept Brief",
+      "operable": true
+    },
+    {
+      "catalogId": "dialog-trees",
+      "step": "Conditions & Effects",
+      "operable": true
+    },
+    {
+      "catalogId": "dialog-trees",
+      "step": "Icon 2D Art",
+      "operable": true
+    },
+    {
+      "catalogId": "dialog-trees",
+      "step": "Localization",
+      "operable": true
+    },
+    {
+      "catalogId": "dialog-trees",
+      "step": "Skill Checks",
+      "operable": true
+    },
+    {
+      "catalogId": "dialog-trees",
+      "step": "Subtitles & Choices UI",
+      "operable": true
+    },
+    {
+      "catalogId": "dialog-trees",
+      "step": "Test Gate",
+      "operable": true
+    },
+    {
+      "catalogId": "dialog-trees",
+      "step": "UE Packaging",
+      "operable": true
+    },
+    {
+      "catalogId": "dialog-trees",
+      "step": "VO Script",
+      "operable": true
+    },
+    {
+      "catalogId": "factions",
+      "step": "Action → Reputation",
+      "operable": true
+    },
+    {
+      "catalogId": "factions",
+      "step": "Concept Brief",
+      "operable": true
+    },
+    {
+      "catalogId": "factions",
+      "step": "Greeting & Disposition Hooks",
+      "operable": true
+    },
+    {
+      "catalogId": "factions",
+      "step": "Heraldry Icon",
+      "operable": true
+    },
+    {
+      "catalogId": "factions",
+      "step": "Localization",
+      "operable": true
+    },
+    {
+      "catalogId": "factions",
+      "step": "NPC Members",
+      "operable": true
+    },
+    {
+      "catalogId": "factions",
+      "step": "Standing & Rep Tiers",
+      "operable": true
+    },
+    {
+      "catalogId": "factions",
+      "step": "Standing UI",
+      "operable": true
+    },
+    {
+      "catalogId": "factions",
+      "step": "Test Gate",
+      "operable": true
+    },
+    {
+      "catalogId": "factions",
+      "step": "Tier Rewards",
+      "operable": true
+    },
+    {
+      "catalogId": "factions",
+      "step": "UE Packaging",
+      "operable": true
+    },
+    {
+      "catalogId": "hud-elements",
+      "step": "Accessibility",
+      "operable": true
+    },
+    {
+      "catalogId": "hud-elements",
+      "step": "Animation",
+      "operable": true
+    },
+    {
+      "catalogId": "hud-elements",
+      "step": "Concept Brief",
+      "operable": true
+    },
+    {
+      "catalogId": "hud-elements",
+      "step": "Data Binding",
+      "operable": true
+    },
+    {
+      "catalogId": "hud-elements",
+      "step": "Icon 2D Art",
+      "operable": true
+    },
+    {
+      "catalogId": "hud-elements",
+      "step": "Localization",
+      "operable": true
+    },
+    {
+      "catalogId": "hud-elements",
+      "step": "State Logic",
+      "operable": true
+    },
+    {
+      "catalogId": "hud-elements",
+      "step": "Test Gate",
+      "operable": true
+    },
+    {
+      "catalogId": "hud-elements",
+      "step": "UE Packaging",
+      "operable": true
+    },
+    {
+      "catalogId": "hud-elements",
+      "step": "Wireframe",
+      "operable": true
+    },
+    {
+      "catalogId": "icon-sets",
+      "step": "Accessibility",
+      "operable": true
+    },
+    {
+      "catalogId": "icon-sets",
+      "step": "Atlas",
+      "operable": true
+    },
+    {
+      "catalogId": "icon-sets",
+      "step": "Family Brief",
+      "operable": true
+    },
+    {
+      "catalogId": "icon-sets",
+      "step": "Icon 2D Art",
+      "operable": true
+    },
+    {
+      "catalogId": "icon-sets",
+      "step": "Taxonomy",
+      "operable": true
+    },
+    {
+      "catalogId": "icon-sets",
+      "step": "Test Gate",
+      "operable": true
+    },
+    {
+      "catalogId": "icon-sets",
+      "step": "UE Packaging",
+      "operable": true
+    },
+    {
+      "catalogId": "input-schemes",
+      "step": "Accessibility",
+      "operable": true
+    },
+    {
+      "catalogId": "input-schemes",
+      "step": "Action Mapping",
+      "operable": true
+    },
+    {
+      "catalogId": "input-schemes",
+      "step": "Concept Brief",
+      "operable": true
+    },
+    {
+      "catalogId": "input-schemes",
+      "step": "Context Stack",
+      "operable": true
+    },
+    {
+      "catalogId": "input-schemes",
+      "step": "Deadzone & Haptics",
+      "operable": true
+    },
+    {
+      "catalogId": "input-schemes",
+      "step": "Input Glyphs",
+      "operable": true
+    },
+    {
+      "catalogId": "input-schemes",
+      "step": "Localization",
+      "operable": true
+    },
+    {
+      "catalogId": "input-schemes",
+      "step": "Platform Cert",
+      "operable": true
+    },
+    {
+      "catalogId": "input-schemes",
+      "step": "Rebinding UI",
+      "operable": true
+    },
+    {
+      "catalogId": "input-schemes",
+      "step": "Test Gate",
+      "operable": true
+    },
+    {
+      "catalogId": "input-schemes",
+      "step": "Tutorial Prompts",
+      "operable": true
+    },
+    {
+      "catalogId": "input-schemes",
+      "step": "UE Packaging",
+      "operable": true
+    },
+    {
+      "catalogId": "items",
+      "step": "3D Mesh",
+      "operable": true
+    },
+    {
+      "catalogId": "items",
+      "step": "Affixes",
+      "operable": true
+    },
+    {
+      "catalogId": "items",
+      "step": "Base Type & Rarity",
+      "operable": true
+    },
+    {
+      "catalogId": "items",
+      "step": "Concept Brief",
+      "operable": true
+    },
+    {
+      "catalogId": "items",
+      "step": "Damage / Implicit",
+      "operable": true
+    },
+    {
+      "catalogId": "items",
+      "step": "Economy",
+      "operable": true
+    },
+    {
+      "catalogId": "items",
+      "step": "Icon 2D Art",
+      "operable": true
+    },
+    {
+      "catalogId": "items",
+      "step": "Material",
+      "operable": true
+    },
+    {
+      "catalogId": "items",
+      "step": "Test Gate",
+      "operable": true
+    },
+    {
+      "catalogId": "items",
+      "step": "Tooltip / Compare",
+      "operable": true
+    },
+    {
+      "catalogId": "items",
+      "step": "UE Packaging",
+      "operable": true
+    },
+    {
+      "catalogId": "loot-tables",
+      "step": "Balance / Drop Sim",
+      "operable": true
+    },
+    {
+      "catalogId": "loot-tables",
+      "step": "Concept Brief",
+      "operable": true
+    },
+    {
+      "catalogId": "loot-tables",
+      "step": "Currency & Unique Pools",
+      "operable": true
+    },
+    {
+      "catalogId": "loot-tables",
+      "step": "Drop Generation",
+      "operable": true
+    },
+    {
+      "catalogId": "loot-tables",
+      "step": "Icon 2D Art",
+      "operable": true
+    },
+    {
+      "catalogId": "loot-tables",
+      "step": "Item Base Links",
+      "operable": true
+    },
+    {
+      "catalogId": "loot-tables",
+      "step": "Magic Find & Smart Loot",
+      "operable": true
+    },
+    {
+      "catalogId": "loot-tables",
+      "step": "Rarity Odds",
+      "operable": true
+    },
+    {
+      "catalogId": "loot-tables",
+      "step": "Test Gate",
+      "operable": true
+    },
+    {
+      "catalogId": "loot-tables",
+      "step": "UE Packaging",
+      "operable": true
+    },
+    {
+      "catalogId": "materials",
+      "step": "Concept Brief",
+      "operable": true
+    },
+    {
+      "catalogId": "materials",
+      "step": "Icon 2D Art",
+      "operable": true
+    },
+    {
+      "catalogId": "materials",
+      "step": "Instance Library",
+      "operable": true
+    },
+    {
+      "catalogId": "materials",
+      "step": "LOD/Perf Budget",
+      "operable": true
+    },
+    {
+      "catalogId": "materials",
+      "step": "Maps",
+      "operable": true
+    },
+    {
+      "catalogId": "materials",
+      "step": "Parameters",
+      "operable": true
+    },
+    {
+      "catalogId": "materials",
+      "step": "Shader Graph",
+      "operable": true
+    },
+    {
+      "catalogId": "materials",
+      "step": "Surface Type",
+      "operable": true
+    },
+    {
+      "catalogId": "materials",
+      "step": "Test Gate",
+      "operable": true
+    },
+    {
+      "catalogId": "materials",
+      "step": "UE Packaging",
+      "operable": true
+    },
+    {
+      "catalogId": "music",
+      "step": "Concept Brief",
+      "operable": true
+    },
+    {
+      "catalogId": "music",
+      "step": "Icon 2D Art",
+      "operable": true
+    },
+    {
+      "catalogId": "music",
+      "step": "Loop & Markers",
+      "operable": true
+    },
+    {
+      "catalogId": "music",
+      "step": "Mix & Loudness",
+      "operable": true
+    },
+    {
+      "catalogId": "music",
+      "step": "Stems & Layers",
+      "operable": true
+    },
+    {
+      "catalogId": "music",
+      "step": "Streaming Budget",
+      "operable": true
+    },
+    {
+      "catalogId": "music",
+      "step": "Test Gate",
+      "operable": true
+    },
+    {
+      "catalogId": "music",
+      "step": "Transitions",
+      "operable": true
+    },
+    {
+      "catalogId": "music",
+      "step": "Trigger Binding",
+      "operable": true
+    },
+    {
+      "catalogId": "music",
+      "step": "UE Packaging",
+      "operable": true
+    },
+    {
+      "catalogId": "player-movement",
+      "step": "ABP_VSPlayer",
+      "operable": true
+    },
+    {
+      "catalogId": "player-movement",
+      "step": "AM_Roll Montage",
+      "operable": true
+    },
+    {
+      "catalogId": "player-movement",
+      "step": "Blend Space Grid",
+      "operable": true
+    },
+    {
+      "catalogId": "player-movement",
+      "step": "IK Rigs",
+      "operable": true
+    },
+    {
+      "catalogId": "player-movement",
+      "step": "Import Mixamo Clips",
+      "operable": true
+    },
+    {
+      "catalogId": "player-movement",
+      "step": "Mesh + Skeleton",
+      "operable": true
+    },
+    {
+      "catalogId": "player-movement",
+      "step": "Mixamo Source",
+      "operable": true
+    },
+    {
+      "catalogId": "player-movement",
+      "step": "Playable Gate",
+      "operable": true
+    },
+    {
+      "catalogId": "player-movement",
+      "step": "PoFEditor Build",
+      "operable": true
+    },
+    {
+      "catalogId": "player-movement",
+      "step": "Retarget Clips",
+      "operable": true
+    },
+    {
+      "catalogId": "progression-curves",
+      "step": "Balance",
+      "operable": true
+    },
+    {
+      "catalogId": "progression-curves",
+      "step": "Caps & Catch-up",
+      "operable": true
+    },
+    {
+      "catalogId": "progression-curves",
+      "step": "Concept Brief",
+      "operable": true
+    },
+    {
+      "catalogId": "progression-curves",
+      "step": "Curve Formula",
+      "operable": true
+    },
+    {
+      "catalogId": "progression-curves",
+      "step": "Death Penalty",
+      "operable": true
+    },
+    {
+      "catalogId": "progression-curves",
+      "step": "Icon 2D Art",
+      "operable": true
+    },
+    {
+      "catalogId": "progression-curves",
+      "step": "Reward Schedule",
+      "operable": true
+    },
+    {
+      "catalogId": "progression-curves",
+      "step": "Telemetry",
+      "operable": true
+    },
+    {
+      "catalogId": "progression-curves",
+      "step": "Test Gate",
+      "operable": true
+    },
+    {
+      "catalogId": "progression-curves",
+      "step": "UE Packaging",
+      "operable": true
+    },
+    {
+      "catalogId": "progression-curves",
+      "step": "XP Bar UI",
+      "operable": true
+    },
+    {
+      "catalogId": "progression-curves",
+      "step": "XP Sources",
+      "operable": true
+    },
+    {
+      "catalogId": "props",
+      "step": "3D & LODs",
+      "operable": true
+    },
+    {
+      "catalogId": "props",
+      "step": "Collision & Physics",
+      "operable": true
+    },
+    {
+      "catalogId": "props",
+      "step": "Concept Brief",
+      "operable": true
+    },
+    {
+      "catalogId": "props",
+      "step": "Destruction States",
+      "operable": true
+    },
+    {
+      "catalogId": "props",
+      "step": "Icon 2D Art",
+      "operable": true
+    },
+    {
+      "catalogId": "props",
+      "step": "Interaction",
+      "operable": true
+    },
+    {
+      "catalogId": "props",
+      "step": "Loot on Destroy",
+      "operable": true
+    },
+    {
+      "catalogId": "props",
+      "step": "Material",
+      "operable": true
+    },
+    {
+      "catalogId": "props",
+      "step": "Test Gate",
+      "operable": true
+    },
+    {
+      "catalogId": "props",
+      "step": "UE Packaging",
+      "operable": true
+    },
+    {
+      "catalogId": "props",
+      "step": "VFX / Audio",
+      "operable": true
+    },
+    {
+      "catalogId": "quests",
+      "step": "Concept Brief",
+      "operable": true
+    },
+    {
+      "catalogId": "quests",
+      "step": "Icon 2D Art",
+      "operable": true
+    },
+    {
+      "catalogId": "quests",
+      "step": "Journal / Lore",
+      "operable": true
+    },
+    {
+      "catalogId": "quests",
+      "step": "Localization",
+      "operable": true
+    },
+    {
+      "catalogId": "quests",
+      "step": "Marker / Tracker UI",
+      "operable": true
+    },
+    {
+      "catalogId": "quests",
+      "step": "NPC & Dialog Binding",
+      "operable": true
+    },
+    {
+      "catalogId": "quests",
+      "step": "Objective Graph",
+      "operable": true
+    },
+    {
+      "catalogId": "quests",
+      "step": "Rewards",
+      "operable": true
+    },
+    {
+      "catalogId": "quests",
+      "step": "Test Gate",
+      "operable": true
+    },
+    {
+      "catalogId": "quests",
+      "step": "Triggers & World-State",
+      "operable": true
+    },
+    {
+      "catalogId": "quests",
+      "step": "UE Packaging",
+      "operable": true
+    },
+    {
+      "catalogId": "save-points",
+      "step": "Cloud / Local Storage",
+      "operable": true
+    },
+    {
+      "catalogId": "save-points",
+      "step": "Concept Brief",
+      "operable": true
+    },
+    {
+      "catalogId": "save-points",
+      "step": "Conflict Resolution",
+      "operable": true
+    },
+    {
+      "catalogId": "save-points",
+      "step": "Corruption Recovery",
+      "operable": true
+    },
+    {
+      "catalogId": "save-points",
+      "step": "Icon 2D Art",
+      "operable": true
+    },
+    {
+      "catalogId": "save-points",
+      "step": "Load-Time Budget",
+      "operable": true
+    },
+    {
+      "catalogId": "save-points",
+      "step": "Save Triggers",
+      "operable": true
+    },
+    {
+      "catalogId": "save-points",
+      "step": "Slots UI",
+      "operable": true
+    },
+    {
+      "catalogId": "save-points",
+      "step": "State Schema",
+      "operable": true
+    },
+    {
+      "catalogId": "save-points",
+      "step": "Test Gate",
+      "operable": true
+    },
+    {
+      "catalogId": "save-points",
+      "step": "UE Packaging",
+      "operable": true
+    },
+    {
+      "catalogId": "save-points",
+      "step": "Versioning & Migration",
+      "operable": true
+    },
+    {
+      "catalogId": "screen-flow",
+      "step": "Accessibility",
+      "operable": true
+    },
+    {
+      "catalogId": "screen-flow",
+      "step": "Component Inventory",
+      "operable": true
+    },
+    {
+      "catalogId": "screen-flow",
+      "step": "Concept Brief",
+      "operable": true
+    },
+    {
+      "catalogId": "screen-flow",
+      "step": "Icon 2D Art",
+      "operable": true
+    },
+    {
+      "catalogId": "screen-flow",
+      "step": "Input Mapping",
+      "operable": true
+    },
+    {
+      "catalogId": "screen-flow",
+      "step": "Localization",
+      "operable": true
+    },
+    {
+      "catalogId": "screen-flow",
+      "step": "Navigation Graph",
+      "operable": true
+    },
+    {
+      "catalogId": "screen-flow",
+      "step": "Test Gate",
+      "operable": true
+    },
+    {
+      "catalogId": "screen-flow",
+      "step": "Transitions / Animation",
+      "operable": true
+    },
+    {
+      "catalogId": "screen-flow",
+      "step": "UE Packaging",
+      "operable": true
+    },
+    {
+      "catalogId": "screen-flow",
+      "step": "VFX / SFX Juice",
+      "operable": true
+    },
+    {
+      "catalogId": "spellbook",
+      "step": "Animation",
+      "operable": true
+    },
+    {
+      "catalogId": "spellbook",
+      "step": "Applies Status",
+      "operable": true
+    },
+    {
+      "catalogId": "spellbook",
+      "step": "Balance",
+      "operable": true
+    },
+    {
+      "catalogId": "spellbook",
+      "step": "Combo / Synergy",
+      "operable": true
+    },
+    {
+      "catalogId": "spellbook",
+      "step": "Concept Brief",
+      "operable": true
+    },
+    {
+      "catalogId": "spellbook",
+      "step": "Effect Logic",
+      "operable": true
+    },
+    {
+      "catalogId": "spellbook",
+      "step": "Icon 2D Art",
+      "operable": true
+    },
+    {
+      "catalogId": "spellbook",
+      "step": "Targeting",
+      "operable": true
+    },
+    {
+      "catalogId": "spellbook",
+      "step": "Test Gate",
+      "operable": true
+    },
+    {
+      "catalogId": "spellbook",
+      "step": "UE Packaging",
+      "operable": true
+    },
+    {
+      "catalogId": "spellbook",
+      "step": "VFX",
+      "operable": true
+    },
+    {
+      "catalogId": "state-graph",
+      "step": "Blackboard Schema",
+      "operable": true
+    },
+    {
+      "catalogId": "state-graph",
+      "step": "Concept Brief",
+      "operable": true
+    },
+    {
+      "catalogId": "state-graph",
+      "step": "Hook Points",
+      "operable": true
+    },
+    {
+      "catalogId": "state-graph",
+      "step": "Icon 2D Art",
+      "operable": true
+    },
+    {
+      "catalogId": "state-graph",
+      "step": "Persistence",
+      "operable": true
+    },
+    {
+      "catalogId": "state-graph",
+      "step": "State Graph",
+      "operable": true
+    },
+    {
+      "catalogId": "state-graph",
+      "step": "Test Gate",
+      "operable": true
+    },
+    {
+      "catalogId": "state-graph",
+      "step": "Transition Rules",
+      "operable": true
+    },
+    {
+      "catalogId": "state-graph",
+      "step": "UE Packaging",
+      "operable": true
+    },
+    {
+      "catalogId": "status-effects",
+      "step": "Balance",
+      "operable": true
+    },
+    {
+      "catalogId": "status-effects",
+      "step": "Concept Brief",
+      "operable": true
+    },
+    {
+      "catalogId": "status-effects",
+      "step": "Effect Logic",
+      "operable": true
+    },
+    {
+      "catalogId": "status-effects",
+      "step": "Icon 2D Art",
+      "operable": true
+    },
+    {
+      "catalogId": "status-effects",
+      "step": "Test Gate",
+      "operable": true
+    },
+    {
+      "catalogId": "status-effects",
+      "step": "UE Packaging",
+      "operable": true
+    },
+    {
+      "catalogId": "tutorial-beats",
+      "step": "Concept Brief",
+      "operable": true
+    },
+    {
+      "catalogId": "tutorial-beats",
+      "step": "Icon 2D Art",
+      "operable": true
+    },
+    {
+      "catalogId": "tutorial-beats",
+      "step": "Localization",
+      "operable": true
+    },
+    {
+      "catalogId": "tutorial-beats",
+      "step": "Lock / Sandbox",
+      "operable": true
+    },
+    {
+      "catalogId": "tutorial-beats",
+      "step": "Pointer / Highlight 2D",
+      "operable": true
+    },
+    {
+      "catalogId": "tutorial-beats",
+      "step": "Step Sequence",
+      "operable": true
+    },
+    {
+      "catalogId": "tutorial-beats",
+      "step": "Success / Skip / Fail",
+      "operable": true
+    },
+    {
+      "catalogId": "tutorial-beats",
+      "step": "Telemetry",
+      "operable": true
+    },
+    {
+      "catalogId": "tutorial-beats",
+      "step": "Test Gate",
+      "operable": true
+    },
+    {
+      "catalogId": "tutorial-beats",
+      "step": "Trigger",
+      "operable": true
+    },
+    {
+      "catalogId": "tutorial-beats",
+      "step": "UE Packaging",
+      "operable": true
+    },
+    {
+      "catalogId": "tutorial-beats",
+      "step": "VFX / Audio Cue",
+      "operable": true
+    },
+    {
+      "catalogId": "tutorial-beats",
+      "step": "VO",
+      "operable": true
+    },
+    {
+      "catalogId": "vendors",
+      "step": "Buy/Sell/Repair",
+      "operable": true
+    },
+    {
+      "catalogId": "vendors",
+      "step": "Concept Brief",
+      "operable": true
+    },
+    {
+      "catalogId": "vendors",
+      "step": "Economy Sim",
+      "operable": true
+    },
+    {
+      "catalogId": "vendors",
+      "step": "Icon 2D Art",
+      "operable": true
+    },
+    {
+      "catalogId": "vendors",
+      "step": "Inventory Pool",
+      "operable": true
+    },
+    {
+      "catalogId": "vendors",
+      "step": "Localization",
+      "operable": true
+    },
+    {
+      "catalogId": "vendors",
+      "step": "Pricing & Restock",
+      "operable": true
+    },
+    {
+      "catalogId": "vendors",
+      "step": "Reputation Modifiers",
+      "operable": true
+    },
+    {
+      "catalogId": "vendors",
+      "step": "Shop UI",
+      "operable": true
+    },
+    {
+      "catalogId": "vendors",
+      "step": "Test Gate",
+      "operable": true
+    },
+    {
+      "catalogId": "vendors",
+      "step": "UE Packaging",
+      "operable": true
+    },
+    {
+      "catalogId": "vfx",
+      "step": "Behavior",
+      "operable": true
+    },
+    {
+      "catalogId": "vfx",
+      "step": "Concept Brief",
+      "operable": true
+    },
+    {
+      "catalogId": "vfx",
+      "step": "GPU / LOD Budget",
+      "operable": true
+    },
+    {
+      "catalogId": "vfx",
+      "step": "Icon 2D Art",
+      "operable": true
+    },
+    {
+      "catalogId": "vfx",
+      "step": "Material",
+      "operable": true
+    },
+    {
+      "catalogId": "vfx",
+      "step": "Mesh / Sprite",
+      "operable": true
+    },
+    {
+      "catalogId": "vfx",
+      "step": "Sound Hook",
+      "operable": true
+    },
+    {
+      "catalogId": "vfx",
+      "step": "Test Gate",
+      "operable": true
+    },
+    {
+      "catalogId": "vfx",
+      "step": "UE Packaging",
+      "operable": true
+    },
+    {
+      "catalogId": "vfx",
+      "step": "Variants",
+      "operable": true
+    },
+    {
+      "catalogId": "zone-map",
+      "step": "3D / Biome",
+      "operable": true
+    },
+    {
+      "catalogId": "zone-map",
+      "step": "Ambient & Music",
+      "operable": true
+    },
+    {
+      "catalogId": "zone-map",
+      "step": "Area Level & Density",
+      "operable": true
+    },
+    {
+      "catalogId": "zone-map",
+      "step": "Concept Brief",
+      "operable": true
+    },
+    {
+      "catalogId": "zone-map",
+      "step": "Encounter Placement",
+      "operable": true
+    },
+    {
+      "catalogId": "zone-map",
+      "step": "Icon 2D Art",
+      "operable": true
+    },
+    {
+      "catalogId": "zone-map",
+      "step": "Macro Layout & POIs",
+      "operable": true
+    },
+    {
+      "catalogId": "zone-map",
+      "step": "Material",
+      "operable": true
+    },
+    {
+      "catalogId": "zone-map",
+      "step": "Minimap UI",
+      "operable": true
+    },
+    {
+      "catalogId": "zone-map",
+      "step": "Streaming / LOD",
+      "operable": true
+    },
+    {
+      "catalogId": "zone-map",
+      "step": "Test Gate",
+      "operable": true
+    },
+    {
+      "catalogId": "zone-map",
+      "step": "UE Packaging",
+      "operable": true
+    }
+  ]
+}
