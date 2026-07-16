@@ -322,6 +322,13 @@ export interface CharacterStat {
   stat: string;
   unit: string;
   maxVal: number;
+  /**
+   * Direction of "better" for this stat. Defaults to true. When false (e.g. a
+   * cooldown or weight stat), comparison surfaces must invert their bar fill
+   * and award the crown/highlight to the SMALLEST value, so "longer bar" and
+   * "best" never contradict each other.
+   */
+  higherIsBetter?: boolean;
 }
 
 export interface ComparisonCharacter {
