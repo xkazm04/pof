@@ -12,7 +12,7 @@ import type { SkillId } from './skills';
 import { injectSkillsIntoPrompt } from './skills';
 import {
   registerTaskStart, registerTaskComplete, sendTaskHeartbeat,
-  getTaskStatus, clearSessionTasks,
+  getTaskStatus, clearSessionTasks, attachTaskExecution,
 } from './taskRegistry';
 import { parseBuildOutput, type BuildParseResult } from './UE5BuildParser';
 
@@ -482,6 +482,17 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
 
     let startResult = await registerTaskStart(task.id, instanceId, task.label);
     if (!startResult.success && startResult.runningTask) {
+      // Conflict recovery: before force-completing the stale registry row, kill
+      // the orphaned server-side CLI process if we know which execution backs
+      // it. Only marking the row failed would leave the old process alive and
+      // editing the same project files concurrently with the new dispatch —
+      // with no client-side handle left to ever abort it.
+      const orphanExecId = startResult.runningTask.executionId;
+      if (orphanExecId) {
+        try {
+          await apiFetch(`/api/claude-terminal/query?executionId=${encodeURIComponent(orphanExecId)}`, { method: 'DELETE' });
+        } catch { /* best-effort: the process may have already exited */ }
+      }
       await registerTaskComplete(startResult.runningTask.taskId, instanceId, false);
       startResult = await registerTaskStart(task.id, instanceId, task.label);
     }
@@ -509,6 +520,9 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
         body: JSON.stringify({ projectPath, prompt: taskPrompt, resumeSessionId: resumeSession ? state.sessionId : undefined, ...attribution, taskLabel: task.label }),
       });
       executionIdRef.current = data.executionId;
+      // Record which execution backs this task so a future 409-conflict
+      // recovery (above) can kill the real process. Fire-and-forget.
+      void attachTaskExecution(task.id, data.executionId);
       if (data.logFilePath) dispatch({ type: 'SET_LOG_FILE', path: data.logFilePath });
       connectToStream(data.streamUrl);
     } catch (e) {

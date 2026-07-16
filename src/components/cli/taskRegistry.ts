@@ -42,19 +42,48 @@ export async function registerTaskStart(
   requirementName?: string
 ): Promise<StartTaskResponse> {
   try {
-    const data = await apiFetch<{ record: TaskRecord }>(`${API_BASE}`, {
+    // Raw fetch (not apiFetch): the 409 conflict response carries the running
+    // task in `details.runningTask`, which apiFetch's throw-on-error discards —
+    // conflict recovery needs that record (esp. its executionId) to kill the
+    // orphaned process.
+    const res = await fetch(API_BASE, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'start', taskId, sessionId, requirementName }),
     });
-    return { success: true, record: data.record };
+    const json = (await res.json()) as {
+      success: boolean;
+      data?: { record: TaskRecord };
+      error?: string;
+      details?: { runningTask?: TaskRecord };
+    };
+    if (json.success && json.data) return { success: true, record: json.data.record };
+    return {
+      success: false,
+      error: json.error ?? `Request failed (${res.status})`,
+      runningTask: json.details?.runningTask,
+    };
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Network error';
-    // 409 conflict: session already has a running task
-    if (msg.includes('already has a running task')) {
-      return { success: false, error: msg, runningTask: undefined };
-    }
     return { success: false, error: msg };
+  }
+}
+
+/**
+ * Attach the claude-terminal executionId to an already-running task record.
+ * Fire-and-forget: failure only degrades a future conflict recovery from
+ * "kill the orphan process" back to "mark the row failed".
+ */
+export async function attachTaskExecution(taskId: string, executionId: string): Promise<boolean> {
+  try {
+    await apiFetch<{ record: TaskRecord }>(`${API_BASE}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'attach-execution', taskId, executionId }),
+    });
+    return true;
+  } catch {
+    return false;
   }
 }
 
