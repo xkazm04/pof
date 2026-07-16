@@ -246,6 +246,16 @@ export const UE_GOTCHAS: Gotcha[] = [
     source: 'research: ARDY melee-combo pipeline (live 5.8 A/B debugging)',
   },
   {
+    id: 'asset-swap-at-path-does-not-repoint-referencers',
+    modules: ['animation', 'character'],
+    summary:
+      'rename_asset UPDATES serialized referencers — swapping an asset at its old path does NOT re-point Blueprints to the new asset; set the BP CDO property instead, and VERIFY by observing the runtime (montage_name), not the asset',
+    detail:
+      "The 'swap an asset at its original path' trick (rename old→backup, rename new→old path) silently does nothing for existing consumers: unreal.EditorAssetLibrary.rename_asset UPDATES all serialized referencers to follow the renamed asset, so every Blueprint that pointed at the old path now points at the BACKUP, and the new asset at the old path has zero consumers. Three-layer verification lesson (each layer hid the next): (1) re-point references explicitly — load the BP, unreal.get_default_object(bp.generated_class()).set_editor_property('attack_montage', new_asset), save the BP; check ALL related slots (a dodge has forward/backward/left/right/default); (2) C++ may bypass config entirely — grep for LoadObject<UAnimMontage>(TEXT(\"/Game/...\")) hard-coded fallbacks/overrides that discard the configured asset (a leftover 'always show something in PIE' self-heal overrode every configured melee montage); (3) verify at RUNTIME by observing which montage actually plays (the scenario observer's montage_name per sample), never by loading the asset path in a commandlet. Also for headless captures: a skeletal mesh only advances its pose when rendered — under -RenderOffScreen force VisibilityBasedAnimTickOption=AlwaysTickPoseAndRefreshBones + bEnableUpdateRateOptimizations=false on the observed mesh, or every sampled frame shows a stale pose and any montage looks frozen.",
+    appliesTo: ['ue-python'],
+    source: 'research: ARDY animation pipeline — three-layer blindness debugging (live 5.8)',
+  },
+  {
     id: 'gas-author-abilities-incrementally',
     modules: ['gas', 'combat'],
     summary: 'GAS: build an ability one coupled piece at a time (tag → input → effect → ability → grant/bind → cue), not the whole system in one shot',

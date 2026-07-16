@@ -137,6 +137,15 @@ describe('formatGotchas', () => {
     expect(out).toMatch(/replace_existing|task\.save/);
   });
 
+  it('warns that asset-swap-at-path does not re-point referencers (rename follows)', () => {
+    const out = formatGotchas('ue-python');
+    expect(out).toMatch(/rename_asset/);
+    expect(out).toMatch(/referencer/i);
+    expect(out).toMatch(/set_editor_property|CDO/);
+    expect(out).toMatch(/montage_name|runtime/i);
+    expect(out).toMatch(/AlwaysTickPoseAndRefreshBones/);
+  });
+
   it('carries Niagara optimization pitfalls', () => {
     const out = formatGotchas('ue-python');
     expect(out).toMatch(/Niagara/);
