@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useReducedMotion } from 'framer-motion';
 import { useNavigationStore } from '@/stores/navigationStore';
+import { useProjectStore } from '@/stores/projectStore';
 import { apiFetch } from '@/lib/api-utils';
 import type { SearchResult } from '@/lib/search-index';
 
@@ -11,9 +12,14 @@ import type { SearchResult } from '@/lib/search-index';
 // checklist items, quick actions, feature definitions) plus a few rarely-changing
 // DB tables. The index persists in SQLite across opens, so rebuilding it on every
 // panel open is wasted work (a full DELETE + hundreds of synchronous inserts).
-// Rebuild lazily once per client session instead; the manual "Reindex" button
+// Rebuild lazily once per project instead; the manual "Reindex" button
 // remains the force path for the rare cases where the DB-backed rows change.
-let indexEnsuredThisSession = false;
+//
+// The search index is per-project SQLite data, so this guard is keyed by the
+// active project path. When the user switches/deletes/creates a project the path
+// changes and the next panel open lazily rebuilds against the new project rather
+// than serving the previous project's stale index.
+let indexEnsuredForPath: string | null = null;
 
 export function useGlobalSearchPanel() {
   const [open, setOpen] = useState(false);
@@ -28,8 +34,12 @@ export function useGlobalSearchPanel() {
   const inputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Monotonic request token: only the latest dispatched search may apply its
+  // response, so a slower older keystroke's result can't overwrite a newer one.
+  const searchSeqRef = useRef(0);
 
   const navigateToModule = useNavigationStore((s) => s.navigateToModule);
+  const projectPath = useProjectStore((s) => s.projectPath);
   const prefersReduced = useReducedMotion();
 
   // ── Keyboard shortcut: Ctrl+K ──
@@ -53,9 +63,10 @@ export function useGlobalSearchPanel() {
     if (open) {
       // Small delay to let animation start
       requestAnimationFrame(() => inputRef.current?.focus());
-      // Build the index once per session; reuse the persisted index thereafter.
-      // handleRebuild sets indexEnsuredThisSession on success.
-      if (!indexEnsuredThisSession) {
+      // Build the index once per project; reuse the persisted index thereafter.
+      // handleRebuild records the ensured path on success. Keying by projectPath
+      // means a project switch (path change) re-triggers a lazy rebuild.
+      if (indexEnsuredForPath !== projectPath) {
         handleRebuild(true);
       }
     } else {
@@ -78,18 +89,24 @@ export function useGlobalSearchPanel() {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     debounceRef.current = setTimeout(async () => {
+      // Claim the latest request token for this dispatch. Any response whose
+      // token is no longer current is dropped so an out-of-order (slower, older)
+      // response can't clobber the results of a newer query.
+      const seq = ++searchSeqRef.current;
       setLoading(true);
       try {
         const params = new URLSearchParams({ q: query });
         if (activeFilter) params.set('types', activeFilter);
         const data = await apiFetch<{ results: SearchResult[]; count: number; lastRebuilt: string | null }>(`/api/search?${params.toString()}`);
+        if (seq !== searchSeqRef.current) return; // superseded by a newer search
         setResults(data.results ?? []);
         setLastRebuilt(data.lastRebuilt ?? null);
         setActiveIndex(0);
       } catch {
+        if (seq !== searchSeqRef.current) return; // superseded by a newer search
         setResults([]);
       } finally {
-        setLoading(false);
+        if (seq === searchSeqRef.current) setLoading(false);
       }
     }, 180);
 
@@ -104,12 +121,13 @@ export function useGlobalSearchPanel() {
     try {
       await apiFetch('/api/search?rebuild=1');
       setLastRebuilt(new Date().toISOString());
-      // Mark the session index as built only on success, so a failed first
-      // rebuild is retried on the next open rather than left permanently stale.
-      indexEnsuredThisSession = true;
+      // Mark the index as built for the current project only on success, so a
+      // failed first rebuild is retried on the next open rather than left
+      // permanently stale, and a later project switch forces a fresh rebuild.
+      indexEnsuredForPath = projectPath;
     } catch { /* ignore */ }
     if (!silent) setRebuilding(false);
-  }, []);
+  }, [projectPath]);
 
   // ── Navigate to result ──
   const handleSelect = useCallback((result: SearchResult) => {
