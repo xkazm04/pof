@@ -202,20 +202,24 @@ export const useCombatSimulatorStore = create<CombatSimulatorState>((set, get) =
       if (buffer.trim()) handleFrame(buffer);
 
       if (streamError) throw new Error(streamError);
-      if (!finalResult) throw new Error('Simulation stream ended without a result');
+      // Read through an asserted snapshot: finalResult is assigned only inside the
+      // handleFrame closure, which tsgo's flow analysis can't see — without the
+      // assertion it narrows the value to `null` and the null-guard leaves `never`.
+      const settledResult = finalResult as SimulationResult | null;
+      if (!settledResult) throw new Error('Simulation stream ended without a result');
 
       // A newer run started while this stream was in flight — discard silently.
       if (runToken !== simRunCounter) return null;
 
       const baseline = get().baselineResult;
       const comparison = baseline
-        ? compareRuns(baseline, finalResult, { baseline: 'Baseline', candidate: 'Candidate' })
+        ? compareRuns(baseline, settledResult, { baseline: 'Baseline', candidate: 'Candidate' })
         : null;
 
       set({
-        result: finalResult,
-        summary: finalResult.summary,
-        alerts: finalResult.alerts,
+        result: settledResult,
+        summary: settledResult.summary,
+        alerts: settledResult.alerts,
         comparison,
         isSimulating: false,
         simProgress: 1,
