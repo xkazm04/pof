@@ -58,6 +58,19 @@ export function PreflightPanel({ projectPath, projectName, ueVersion, mapName, o
   const onStatusChangeRef = useRef(onStatusChange);
   useEffect(() => { onStatusChangeRef.current = onStatusChange; }, [onStatusChange]);
 
+  // Project-scoped generation token. Bumped whenever the active project
+  // changes so an in-flight check dispatched for the previous project cannot
+  // apply its (now stale) result to the new project's gate.
+  const projectGenRef = useRef(0);
+  useEffect(() => {
+    projectGenRef.current += 1;
+    // Reset the gate to idle for the new project — results/spinners from the
+    // previous project must not leak across the switch.
+    setResults([]);
+    setRunning(new Set());
+    setError(null);
+  }, [projectPath, projectName]);
+
   // Notify the parent gate whenever the result set changes.
   useEffect(() => {
     const overall = worstStatus(results);
@@ -65,6 +78,10 @@ export function PreflightPanel({ projectPath, projectName, ueVersion, mapName, o
   }, [results]);
 
   const runCheck = useCallback(async (kind: CheckKind) => {
+    // Capture the project generation at dispatch. Concurrent checks of
+    // different kinds share the same generation, so this scopes by project
+    // (not per-call) — legitimately parallel checks are never cancelled.
+    const gen = projectGenRef.current;
     setRunning((prev) => new Set(prev).add(kind));
     setError(null);
     const res = await tryApiFetch<PreflightResponse>('/api/packaging/preflight', {
@@ -72,6 +89,9 @@ export function PreflightPanel({ projectPath, projectName, ueVersion, mapName, o
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ projectPath, projectName, ueVersion, mapName, check: kind }),
     });
+    // Drop the response if the active project changed while it was in flight —
+    // a stale project's result must not touch this project's ready-to-cook gate.
+    if (gen !== projectGenRef.current) return;
     setRunning((prev) => {
       const next = new Set(prev);
       next.delete(kind);

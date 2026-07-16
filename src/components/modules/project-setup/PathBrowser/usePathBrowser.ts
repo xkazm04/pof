@@ -30,8 +30,13 @@ export function usePathBrowser({
   const [detectLoading, setDetectLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const initialLoadDone = useRef(false);
+  // Monotonic sequence so only the newest browse() applies its listing. Fast
+  // navigation can resolve responses out of order; a stale response landing
+  // after a newer one must not overwrite currentPath / the directory listing.
+  const browseSeqRef = useRef(0);
 
   const browse = useCallback(async (targetPath: string) => {
+    const seq = ++browseSeqRef.current;
     setLoading(true);
     setError(null);
     try {
@@ -40,6 +45,8 @@ export function usePathBrowser({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'list', path: targetPath }),
       });
+      // Superseded by a newer navigation — discard this stale listing.
+      if (seq !== browseSeqRef.current) return;
       setCurrentPath(data.path);
       setPathInput(data.path);
       setDirectories(data.directories);
@@ -47,9 +54,10 @@ export function usePathBrowser({
       setIsUEProject(data.isUEProject);
       setParentPath(data.parent);
     } catch {
+      if (seq !== browseSeqRef.current) return;
       setError('Failed to browse directory');
     }
-    setLoading(false);
+    if (seq === browseSeqRef.current) setLoading(false);
   }, []);
 
   // Detect engines or projects depending on mode
