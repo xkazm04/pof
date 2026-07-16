@@ -1,0 +1,56 @@
+﻿[
+    {
+        "context":  "Animation \u0026 Rigging â€” Bug + UI Scan",
+        "title":  "Deleting all states in the Visual State Machine Editor crashes code generation",
+        "file":  "src/components/modules/content/animations/StateMachineEditor/codegen.ts:19-24",
+        "scenario":  "Open the Combo/State Machine tab\u0027s \"Visual State Machine Editor\", select each of the 5 default states in turn and click the trash icon in `StatePropertyEditor` until `states` is empty (`removeState` in `useStateMachineEditor.ts:68-75` happily filters down to `[]`, there is no minimum-state guard anywhere in the editor). Then either click \"Export\" in the toolbar, or toggle \"View Code\" (defaults to the \"Full Output\" tab)."
+    },
+    {
+        "context":  "Blueprint Transpiler \u0026 C++ Codegen â€” Bug + UI Scan",
+        "title":  "Confirmed write can silently persist content that was never shown in the reviewed diff",
+        "file":  "src/components/modules/game-systems/blueprint-transpiler/BlueprintTranspilerView/WriteToProjectButton.tsx:36-68",
+        "scenario":  "User clicks \"Write to Project\" â†’ dry-run modal renders a diff computed from the *current* `header`/`source` props. While the modal is open, the user (or an auto-refresh flow) re-runs Transpile with edited Blueprint JSON in the other pane â€” `result.headerCode`/`sourceCode` change, so the `header`/`source` props flowing into the still-mounted `WriteToProjectButton` change too. The modal\u0027s `plan` state (the diff actually rendered) is untouched, so the user keeps looking at the old diff. Clicking \"Confirm write\" calls `confirmWrite`, whose `body(true)` closes over the *current* (new) `header`/`source` props, not the ones the diff was computed from."
+    },
+    {
+        "context":  "CLI Terminal \u0026 Task System â€” Bug + UI Scan",
+        "title":  "Force-completing a \"running\" task on 409 conflict doesn\u0027t kill the underlying CLI process, enabling concurrent double-edits",
+        "file":  "src/components/cli/useTaskQueue.ts:483-487",
+        "scenario":  "A session already has a task registered as `running` (e.g. the stuck-checker hasn\u0027t caught up yet, or a previous tab reload left a stale registry row) and `executeTask` is called again for the same `instanceId`. `registerTaskStart` returns `success:false` with `runningTask` set."
+    },
+    {
+        "context":  "Combat \u0026 Damage Tuning â€” Bug + UI Scan",
+        "title":  "Concurrent simulation runs corrupt state via last-write-wins",
+        "file":  "src/stores/combatSimulatorStore.ts:142-203 (also src/components/modules/evaluator/CombatSimulatorView/index.tsx:91-102, 143-152)",
+        "scenario":  "User clicks \"Run 1000 Fights\", then â€” before React re-renders the `disabled={isSimulating || !tuning}` button â€” clicks it again (double-click, or clicks then quickly edits a scenario field that re-triggers `handleRun` through some other path). Two independent `runSimulationStreaming` calls now execute concurrently, each with its own `reader`/`buffer`/`finalResult` local state, but both write into the *same* shared zustand fields (`result`, `summary`, `alerts`, `comparison`, `isSimulating`, `simProgress`) via `set()`."
+    },
+    {
+        "context":  "Item Pipeline Steps â€” Bug + UI Scan",
+        "title":  "Test Gate always reports PASS regardless of upstream quality",
+        "file":  "src/components/layout-lab/steps/itemsSteps.ts:411",
+        "scenario":  "Click \"Produce\" on the Test Gate step for any item, even one whose Economy is wildly off-curve, whose Attributes are incomplete, or whose Animations/VFX never produced. `produce: () =\u003e ({ data: { checks: DEFAULT_GATE_CHECKS, pass: true } })` unconditionally hard-codes `pass: true` â€” there is no read of any sibling artifact or actual check evaluation."
+    },
+    {
+        "context":  "Project Setup \u0026 Onboarding â€” Bug + UI Scan",
+        "title":  "`useProjectScan.scan()` has no re-entrancy guard â€” concurrent scans race and can leave the checklist stuck on stale data",
+        "file":  "src/components/modules/project-setup/useProjectScan.ts:53-197",
+        "scenario":  "`scan` is invoked from four independent triggers that can overlap: the path-change effect (`useProjectScan.ts:199-210`), the manual \"re-scan\" button (`onScan` in `StatusChecklist.tsx:125`), and three separate CLI `onComplete` callbacks in `ProjectSetupModule.tsx:30-52` (setup/build/bootstrap sessions) all calling `scanRef.current()`. If a user clicks \"re-scan\" while a bootstrap-triggered scan from a just-finished CLI session is still in flight (a realistic first-run sequence: install tools, then immediately hit re-scan), two `scan()` calls run concurrently."
+    },
+    {
+        "context":  "Quality Evaluation Engine â€” Bug + UI Scan",
+        "title":  "Cancelling a deep eval silently corrupts the regression baseline",
+        "file":  "src/components/modules/evaluator/DeepEvalResults/useDeepEvalResults.ts:80-108 (root cause: src/lib/evaluator/deep-eval-engine.ts:280-310)",
+        "scenario":  "User selects all 17 evaluable modules, clicks \"Run Deep Eval\", then clicks Cancel partway through (e.g. after 3 of 17 modules finished). `handleCancel` calls `cancelDeepEval()`, which aborts the internal `AbortController`."
+    },
+    {
+        "context":  "World, Quests \u0026 Procgen â€” Bug + UI Scan",
+        "title":  "Regenerate action can silently target the wrong zone",
+        "file":  "src/components/modules/core-engine/sub_world/index.tsx:83-87",
+        "scenario":  "User drags the Player Level Filter to a level whose matching zone (e.g. `z-kashyyyk`, level 15-25) has no corresponding row yet in `zoneEntries` (catalog not seeded/loaded for that zone, or it lags behind the static `ZONES` list). `entryByZoneId.get(primaryZoneId)` returns `undefined`, so the code falls back to `zoneEntries[0]` â€” an arbitrary, unrelated catalog entry (could be Sanctuary or any other zone)."
+    },
+    {
+        "context":  "World, Quests \u0026 Procgen â€” Bug + UI Scan",
+        "title":  "Non-null assertion on primaryEntry crashes useGeneration when catalog is empty",
+        "file":  "src/components/modules/core-engine/sub_world/index.tsx:87",
+        "scenario":  "On first load / before `useCatalogEntities(\u0027zone-map\u0027)` has populated any rows (empty catalog, fresh project, or API hiccup), `zoneEntries` is `[]`, so `primaryEntry` is `undefined`. The code calls `useGeneration(primaryEntry!)` anyway."
+    }
+]
