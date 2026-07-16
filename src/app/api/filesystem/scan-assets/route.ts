@@ -25,9 +25,9 @@ export interface ScannedAsset {
 }
 
 export interface AssetDependencyEdge {
-  /** Source asset name (e.g. a mesh) */
+  /** Source asset relativePath (unique; NOT the basename, which can collide) */
   from: string;
-  /** Target asset name (e.g. a material or texture) */
+  /** Target asset relativePath (unique; NOT the basename, which can collide) */
   to: string;
   /** Relationship type */
   relation: 'uses-material' | 'uses-texture' | 'references';
@@ -138,7 +138,7 @@ function inferDependencies(assets: ScannedAsset[]): AssetDependencyEdge[] {
     const mats = materialByBase.get(bn);
     if (mats) {
       for (const mat of mats) {
-        edges.push({ from: mesh.name, to: mat.name, relation: 'uses-material' });
+        edges.push({ from: mesh.relativePath, to: mat.relativePath, relation: 'uses-material' });
       }
     }
   }
@@ -149,7 +149,7 @@ function inferDependencies(assets: ScannedAsset[]): AssetDependencyEdge[] {
     const texs = textureByBase.get(bn);
     if (texs) {
       for (const tex of texs) {
-        edges.push({ from: mat.name, to: tex.name, relation: 'uses-texture' });
+        edges.push({ from: mat.relativePath, to: tex.relativePath, relation: 'uses-texture' });
       }
     }
   }

@@ -1,8 +1,25 @@
-import type { LootEditorEntry, UE5LootEntry, UE5LootTableJson, EnemyLootBinding } from './data';
+import type { LootEditorEntry, LootSource, UE5LootEntry, UE5LootTableJson, EnemyLootBinding } from './data';
 import { RARITY_COLOR_MAP, RARITY_ENUM_VALUES } from './data';
 import { STATUS_MUTED } from '@/lib/chart-colors';
 
 /* -- UE5 Import helpers --------------------------------------------------- */
+
+const VALID_LOOT_SOURCES: LootSource[] = ['enemy', 'chest', 'quest', 'crafting'];
+
+/**
+ * Resolve a UE5 `Source` field (which may be an enum-qualified string like
+ * `ELootSource::Chest`, a bare word, or absent) to a valid LootSource. Falls
+ * back to 'enemy' when missing/unrecognized so an external export without source
+ * data still imports, but a real source is never silently dropped.
+ */
+export function resolveLootSource(value: unknown): LootSource {
+  if (typeof value === 'string') {
+    const stripped = value.replace(/^.*::/, '').toLowerCase();
+    const found = VALID_LOOT_SOURCES.find((s) => s === stripped);
+    if (found) return found;
+  }
+  return 'enemy';
+}
 
 export function resolveRarityName(value: string | number | undefined): string {
   if (value === undefined) return 'Common';
@@ -31,12 +48,14 @@ function finiteNonNeg(raw: unknown, fallback: number): number {
   return Number.isFinite(n) && n >= 0 ? n : fallback;
 }
 
-export function parseUE5LootTable(json: UE5LootTableJson): { entries: LootEditorEntry[]; nothingWeight: number } {
+export function parseUE5LootTable(
+  json: UE5LootTableJson,
+): { entries: (LootEditorEntry & { source: LootSource })[]; nothingWeight: number } {
   const props = json.Properties ?? json;
   const rawEntries = props.Entries ?? [];
   const nothingWeight = finiteNonNeg(props.NothingWeight, 0);
 
-  const entries: LootEditorEntry[] = rawEntries.map((entry, i) => {
+  const entries = rawEntries.map((entry, i) => {
     const minRarity = resolveRarityName(entry.MinRarity);
     const maxRarity = resolveRarityName(entry.MaxRarity);
     return {
@@ -49,6 +68,8 @@ export function parseUE5LootTable(json: UE5LootTableJson): { entries: LootEditor
       maxQuantity: finiteNonNeg(entry.MaxQuantity, 1),
       minRarity,
       maxRarity,
+      // Carry the real loot source through import instead of hardcoding 'enemy'.
+      source: resolveLootSource(entry.Source),
     };
   });
 
@@ -57,7 +78,7 @@ export function parseUE5LootTable(json: UE5LootTableJson): { entries: LootEditor
 
 /* -- UE5 Export helpers --------------------------------------------------- */
 
-export function generateUE5LootTableJson(entries: LootEditorEntry[], nothingWeight: number): string {
+export function generateUE5LootTableJson(entries: (LootEditorEntry & { source?: LootSource })[], nothingWeight: number): string {
   const ue5Entries = entries.map(e => ({
     Item: e.name,
     DropWeight: e.weight,
@@ -65,6 +86,8 @@ export function generateUE5LootTableJson(entries: LootEditorEntry[], nothingWeig
     MaxQuantity: e.maxQuantity ?? 1,
     MinRarity: `EARPGItemRarity::${e.minRarity ?? e.rarity}`,
     MaxRarity: `EARPGItemRarity::${e.maxRarity ?? e.rarity}`,
+    // Emit source so an export → re-import round-trip preserves it.
+    ...(e.source ? { Source: e.source } : {}),
   }));
   return JSON.stringify({ Entries: ue5Entries, NothingWeight: nothingWeight }, null, 2);
 }

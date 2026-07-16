@@ -106,7 +106,11 @@ export function LootTableEditor() {
   }, []);
 
   const addEditorEntry = useCallback(() => {
-    const id = `e${Date.now()}`;
+    // crypto.randomUUID() is collision-free even for two "+ Add" clicks within
+    // the same millisecond. Raw Date.now() (1ms resolution) produced duplicate
+    // ids on a rapid double-click, which cross-contaminated weight edits/deletes
+    // because those match rows by id.
+    const id = `e${crypto.randomUUID()}`;
     lastWeightEditIdRef.current = null; // a distinct edit boundary
     setEditorEntries((prev) => {
       const next: LootEditorEntryExpanded[] = [...prev, { id, name: 'New Item', weight: 0, rarity: 'Common', color: STATUS_MUTED, source: 'enemy' }];

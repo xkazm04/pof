@@ -3,9 +3,9 @@ import type { DependencyGraphProps } from './types';
 import type { ScannedAsset } from '@/app/api/filesystem/scan-assets/route';
 
 export function DependencyGraph({ asset, allAssets, dependencies }: DependencyGraphProps) {
-  // Find edges where this asset is from or to
-  const outEdges = dependencies.filter(e => e.from === asset.name);
-  const inEdges = dependencies.filter(e => e.to === asset.name);
+  // Edges are keyed by relativePath (unique), not basename (can collide).
+  const outEdges = dependencies.filter(e => e.from === asset.relativePath);
+  const inEdges = dependencies.filter(e => e.to === asset.relativePath);
 
   if (outEdges.length === 0 && inEdges.length === 0) {
     return (
@@ -16,11 +16,12 @@ export function DependencyGraph({ asset, allAssets, dependencies }: DependencyGr
   }
 
   const assetMap: Record<string, ScannedAsset> = {};
-  for (const a of allAssets) assetMap[a.name] = a;
+  for (const a of allAssets) assetMap[a.relativePath] = a;
 
-  // Build node list: center = this asset, left = sources (things that reference this), right = targets (things this references)
-  const sources = inEdges.map(e => ({ name: e.from, relation: e.relation, asset: assetMap[e.from] as ScannedAsset | undefined }));
-  const targets = outEdges.map(e => ({ name: e.to, relation: e.relation, asset: assetMap[e.to] as ScannedAsset | undefined }));
+  // Build node list: center = this asset, left = sources (things that reference this), right = targets (things this references).
+  // `key` is the unique relativePath; `name` is the display basename (falls back to the path if the asset isn't in the current list).
+  const sources = inEdges.map(e => ({ key: e.from, name: assetMap[e.from]?.name ?? e.from, relation: e.relation, asset: assetMap[e.from] as ScannedAsset | undefined }));
+  const targets = outEdges.map(e => ({ key: e.to, name: assetMap[e.to]?.name ?? e.to, relation: e.relation, asset: assetMap[e.to] as ScannedAsset | undefined }));
 
   const nodeH = 28;
   const maxNodes = Math.max(sources.length, targets.length, 1);
@@ -51,7 +52,7 @@ export function DependencyGraph({ asset, allAssets, dependencies }: DependencyGr
         const y = nodeY(i, sources.length);
         const conf = s.asset ? TYPE_CONFIG[s.asset.type] : TYPE_CONFIG.other;
         return (
-          <g key={`src-${s.name}`}>
+          <g key={`src-${s.key}`}>
             <line x1={160} y1={y} x2={centerX - 60} y2={centerY}
               stroke="var(--border)" strokeWidth={1} markerEnd="url(#arrowhead)" />
             <rect x={10} y={y - 12} width={150} height={24} rx={4} fill="var(--surface-deep)" stroke={conf.color + '40'} strokeWidth={1} />
@@ -74,7 +75,7 @@ export function DependencyGraph({ asset, allAssets, dependencies }: DependencyGr
         const y = nodeY(i, targets.length);
         const conf = t.asset ? TYPE_CONFIG[t.asset.type] : TYPE_CONFIG.other;
         return (
-          <g key={`tgt-${t.name}`}>
+          <g key={`tgt-${t.key}`}>
             <line x1={centerX + 55} y1={centerY} x2={svgW - 160} y2={y}
               stroke="var(--border)" strokeWidth={1} markerEnd="url(#arrowhead)" />
             <rect x={svgW - 160} y={y - 12} width={150} height={24} rx={4} fill="var(--surface-deep)" stroke={conf.color + '40'} strokeWidth={1} />
