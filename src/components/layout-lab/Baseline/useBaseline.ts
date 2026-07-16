@@ -95,7 +95,12 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
     if (!catalogId) { setLabSync(null); return; }
     setLabSync((entityId, step, art) => {
       const accept = resolveAccept(catalogId, step);
-      const res = accept ? accept(art.data) : null;
+      // Feed sibling artifacts so derived checkers (Items Test Gate) grade the
+      // posted status from upstream acceptance, matching the on-screen badge.
+      const entitySteps = useLabPipelineStore.getState().byEntity[entityId] ?? {};
+      const siblings: Record<string, Record<string, unknown>> = {};
+      for (const [s, a] of Object.entries(entitySteps)) siblings[s] = a.data;
+      const res = accept ? accept(art.data, { catalog: catalogId, siblings, has: () => false }) : null;
       void postArtifact({ catalogId, entityId, step, data: art.data, ueAssets: art.ueAssets, status: res?.status ?? 'pass', tier: res?.tier ?? 'L0', reason: res?.reason })
         .then(() => invalidateArtifacts(catalogId, entityId));
     });

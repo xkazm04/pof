@@ -93,6 +93,39 @@ export const DEFAULT_VFX_VARIANTS: [string, string][] = [['Idle glow', 'small'],
 export const DEFAULT_SFX_CUES: [string, string][] = [['Pickup', '-14 LUFS'], ['Equip', '-13 LUFS'], ['Swing', '-12 LUFS']];
 export const DEFAULT_GATE_CHECKS: string[] = ['Stat/rules unit test', 'Equip + use in PIE', 'Visual QA (icon + mesh)', 'Performance budget'];
 
+/* ── Test Gate derivation ───────────────────────────────────────────────────
+ * The gate's verdict is DERIVED from upstream sibling acceptance, never
+ * fabricated (scan 2026-07-16 finding: produce() hard-coded `pass: true`, so
+ * the gate could never fail — success theater). Each named check maps to the
+ * upstream steps whose acceptance it actually verifies. */
+export const GATE_CHECK_DEPS: Record<string, string[]> = {
+  'Stat/rules unit test': ['Attributes', 'Economy'],
+  'Equip + use in PIE': ['Animations', 'Inventory UI Integration'],
+  'Visual QA (icon + mesh)': ['Icon 2D Art', '3D Generation', 'Material / Texture'],
+  'Performance budget': ['3D Generation', 'VFX'],
+};
+
+export interface GateCheckResult { name: string; ok: boolean; blockedBy: string[] }
+
+/**
+ * Evaluate every gate check against the entity's sibling step artifacts
+ * (step label → persisted data). A check passes only when ALL of its upstream
+ * steps have an artifact whose own acceptance is `pass`. Shared by the Test
+ * Gate accept(), the ItemTestGate view, and the log rendering so the badge,
+ * checklist rows, and log can never disagree.
+ */
+export function deriveGateChecks(siblings: Record<string, Record<string, unknown>>): GateCheckResult[] {
+  return DEFAULT_GATE_CHECKS.map((name) => {
+    const deps = GATE_CHECK_DEPS[name] ?? [];
+    const blockedBy = deps.filter((step) => {
+      const data = siblings[step];
+      if (!data) return true; // never produced
+      return ITEM_STEP_SPECS[step]?.accept(data).status !== 'pass';
+    });
+    return { name, ok: blockedBy.length === 0, blockedBy };
+  });
+}
+
 function brief(entity: LabEntity): string {
   return `${entity.name} is a mid-tier martial weapon forged for frontline duelists. It favors disciplined, rhythmic strikes over raw burst — rewarding players who weave light and heavy attacks rather than mashing a single button. Visually it reads as weathered steel with a leather-wrapped grip and a faint guild sigil etched near the crossguard. Intended player feeling: dependable and earned — a soldier's tool, not a hero's relic.`;
 }
@@ -247,10 +280,13 @@ function tooltipCopy(data: Record<string, unknown>): AcceptanceCopy {
 }
 
 function gateCopy(data: Record<string, unknown>): AcceptanceCopy {
-  return data.pass === true
-    ? { why: 'All gate checks pass in the UE project.', suggestion: '' }
-    : { why: 'The functional test has not been run, or the last run did not pass.',
-        suggestion: 'Run Produce to dispatch the UE functional test.' };
+  const ran = data.ran === true || data.pass === true;
+  if (!ran) {
+    return { why: 'The functional test has not been run yet.',
+      suggestion: 'Run Produce to dispatch the UE functional test.' };
+  }
+  return { why: 'One or more upstream steps have not passed their own acceptance — the gate derives its verdict from them and cannot pass while they fail.',
+    suggestion: 'Fix the failing upstream steps (see the Checks panel), then the gate re-derives automatically.' };
 }
 
 function packagingCopy(data: Record<string, unknown>): AcceptanceCopy {
@@ -408,11 +444,34 @@ export const ITEM_STEP_SPECS: Record<string, ItemStepSpec> = {
     },
   },
   'Test Gate': {
-    produce: () => ({ data: { checks: DEFAULT_GATE_CHECKS, pass: true } }),
-    accept: (data) => {
-      const checks = (data.checks ?? []) as unknown[];
-      const ok = data.pass === true;
-      return withCopy('Test Gate', data, { label: 'All gate checks pass in the UE project', status: ok ? 'pass' : 'pending', detail: ok ? `${checks.length}/${checks.length} pass` : `0/${checks.length || 4}` });
+    // Produce records THAT the test ran — never the verdict. The verdict is
+    // derived at accept time from sibling-step acceptance, so a badly-tuned or
+    // incomplete item can actually fail the gate (previously `pass: true` was
+    // hard-coded and the gate was pure success theater).
+    produce: () => ({ data: { checks: DEFAULT_GATE_CHECKS, ran: true } }),
+    accept: (data, ctx) => {
+      const ran = data.ran === true || data.pass === true; // `pass` = legacy artifacts
+      if (!ran) {
+        return withCopy('Test Gate', data, { label: 'All gate checks pass in the UE project', status: 'pending', detail: `0/${DEFAULT_GATE_CHECKS.length}` });
+      }
+      // Derive the verdict from sibling acceptance when context is available.
+      // Without ctx (or with an empty siblings map) fall back to the legacy
+      // data-only reading — per CheckerContext's contract, a satisfied step is
+      // never regressed purely because context wasn't provided.
+      if (ctx && Object.keys(ctx.siblings).length > 0) {
+        const results = deriveGateChecks(ctx.siblings);
+        const passing = results.filter((r) => r.ok).length;
+        const blocked = [...new Set(results.flatMap((r) => r.blockedBy))];
+        const ok = passing === results.length;
+        return withCopy('Test Gate', data, {
+          label: 'All gate checks pass in the UE project',
+          status: ok ? 'pass' : 'fail',
+          detail: ok ? `${passing}/${results.length} pass` : `${passing}/${results.length} pass · blocked by ${blocked.slice(0, 3).join(', ')}${blocked.length > 3 ? '…' : ''}`,
+        });
+      }
+      const legacyOk = data.pass === true;
+      const checks = (data.checks ?? DEFAULT_GATE_CHECKS) as unknown[];
+      return withCopy('Test Gate', data, { label: 'All gate checks pass in the UE project', status: legacyOk ? 'pass' : 'pending', detail: legacyOk ? `${checks.length}/${checks.length} pass` : `0/${checks.length}` });
     },
   },
   'UE Packaging': {
