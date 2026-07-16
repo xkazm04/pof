@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { Dna, Scan, Loader2 } from 'lucide-react';
+import { Dna, Scan, Loader2, AlertCircle } from 'lucide-react';
 import { motionSafe } from '@/lib/motion';
 import { useGenreEvolution } from '@/hooks/useGenreEvolution';
 import { useProjectStore } from '@/stores/projectStore';
@@ -15,14 +15,15 @@ import { AcceptedGenres } from './AcceptedGenres';
 import { ScanHistory } from './ScanHistory';
 
 export function TelemetryEvolution() {
-  const { stats, history, loading, scanning, scanProject, resolveSuggestion } = useGenreEvolution();
+  const { stats, history, loading, scanning, scanError, scanProject, resolveSuggestion } = useGenreEvolution();
   const { projectPath, dynamicContext } = useProjectStore();
   const [expandedSuggestion, setExpandedSuggestion] = useState<string | null>(null);
   const prefersReduced = useReducedMotion();
 
   const handleScan = async () => {
     if (!projectPath) return;
-    await scanProject(projectPath, dynamicContext);
+    const result = await scanProject(projectPath, dynamicContext);
+    if (!result) return; // Failure — surfaced to the user via the scanError banner below.
   };
 
   if (loading) {
@@ -82,6 +83,25 @@ export function TelemetryEvolution() {
           {scanning ? 'Scanning...' : 'Scan Project'}
         </button>
       </motion.div>
+
+      {/* Scan failure — inline alert matching the shared red banner pattern */}
+      {scanError && (
+        <div
+          role="alert"
+          data-testid="genre-scan-error"
+          className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg border border-red-500/30 bg-red-500/10 text-red-400"
+        >
+          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+          <span className="min-w-0 flex-1">Scan failed: {scanError}</span>
+          <button
+            onClick={handleScan}
+            disabled={scanning || !projectPath}
+            className="shrink-0 font-medium underline underline-offset-2 hover:text-red-300 transition-colors disabled:opacity-50"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* Empty state */}
       {patterns.length === 0 && suggestions.length === 0 && accepted.length === 0 && (

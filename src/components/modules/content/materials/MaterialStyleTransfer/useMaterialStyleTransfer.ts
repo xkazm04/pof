@@ -7,6 +7,7 @@ export function useMaterialStyleTransfer(onGenerate: (config: StyleTransferConfi
   const [referenceDescription, setReferenceDescription] = useState('');
   const [analysis, setAnalysis] = useState<AnalyzedProperties | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analyzeError, setAnalyzeError] = useState<string | null>(null);
   const [adjustmentsOpen, setAdjustmentsOpen] = useState(false);
   const [compareMode, setCompareMode] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -38,6 +39,7 @@ export function useMaterialStyleTransfer(onGenerate: (config: StyleTransferConfi
     reader.onload = () => {
       setImageDataUrl(reader.result as string);
       setAnalysis(null);
+      setAnalyzeError(null);
       setOverrideRoughness(null);
       setOverrideMetallic(null);
       setOverrideEmissive(null);
@@ -55,6 +57,7 @@ export function useMaterialStyleTransfer(onGenerate: (config: StyleTransferConfi
     reader.onload = () => {
       setImageDataUrl(reader.result as string);
       setAnalysis(null);
+      setAnalyzeError(null);
     };
     reader.readAsDataURL(file);
   }, []);
@@ -62,6 +65,7 @@ export function useMaterialStyleTransfer(onGenerate: (config: StyleTransferConfi
   const handleClearImage = useCallback(() => {
     setImageDataUrl(null);
     setAnalysis(null);
+    setAnalyzeError(null);
     setOverrideRoughness(null);
     setOverrideMetallic(null);
     setOverrideEmissive(null);
@@ -72,6 +76,7 @@ export function useMaterialStyleTransfer(onGenerate: (config: StyleTransferConfi
   const handleAnalyze = useCallback(async () => {
     if (!imageDataUrl && !referenceDescription.trim()) return;
     setIsAnalyzing(true);
+    setAnalyzeError(null);
 
     try {
       const res = await fetch('/api/style-transfer', {
@@ -87,9 +92,20 @@ export function useMaterialStyleTransfer(onGenerate: (config: StyleTransferConfi
       if (json.success) {
         setAnalysis(json.data.analysis);
         setAdjustmentsOpen(true);
+      } else {
+        setAnalyzeError(
+          typeof json.error === 'string' && json.error
+            ? json.error
+            : 'The reference could not be analyzed — try a different image or description.',
+        );
       }
-    } catch {
-      // Silently fail — user can retry
+    } catch (error) {
+      console.error('[MaterialStyleTransfer] analysis request failed:', error);
+      setAnalyzeError(
+        error instanceof Error && error.message
+          ? error.message
+          : 'The analysis request failed — check your connection and retry.',
+      );
     } finally {
       setIsAnalyzing(false);
     }
@@ -119,6 +135,7 @@ export function useMaterialStyleTransfer(onGenerate: (config: StyleTransferConfi
     setReferenceDescription,
     analysis,
     isAnalyzing,
+    analyzeError,
     adjustmentsOpen,
     setAdjustmentsOpen,
     compareMode,

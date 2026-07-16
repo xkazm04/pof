@@ -1,7 +1,7 @@
 'use client';
 
 import {
-  ImagePlus, Wand2, Upload, X, RefreshCw, SplitSquareHorizontal,
+  ImagePlus, Wand2, Upload, X, RefreshCw, SplitSquareHorizontal, AlertCircle,
 } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import { MODULE_COLORS } from '@/lib/constants';
@@ -27,6 +27,7 @@ export function MaterialStyleTransfer({ onGenerate, isGenerating }: MaterialStyl
     setReferenceDescription,
     analysis,
     isAnalyzing,
+    analyzeError,
     adjustmentsOpen,
     setAdjustmentsOpen,
     compareMode,
@@ -193,6 +194,25 @@ export function MaterialStyleTransfer({ onGenerate, isGenerating }: MaterialStyl
             </>
           )}
         </button>
+      )}
+
+      {/* Analysis failure — inline alert matching the shared red banner pattern */}
+      {analyzeError && (
+        <div
+          role="alert"
+          data-testid="style-analyze-error"
+          className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg border border-red-500/30 bg-red-500/10 text-red-400"
+        >
+          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+          <span className="min-w-0 flex-1">Analysis failed: {analyzeError}</span>
+          <button
+            onClick={handleAnalyze}
+            disabled={isAnalyzing}
+            className="shrink-0 font-medium underline underline-offset-2 hover:text-red-300 transition-colors disabled:opacity-50"
+          >
+            Retry
+          </button>
+        </div>
       )}
 
       {/* Analysis Results */}
