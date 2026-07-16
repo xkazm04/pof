@@ -27,6 +27,7 @@ export function ResultsSection({
   onBatchFix,
   onRunSingle,
   isFixRunning,
+  fixTargetId,
 }: {
   result: DeepEvalResult;
   diff: RegressionDiff | null;
@@ -43,6 +44,8 @@ export function ResultsSection({
   onBatchFix: (moduleFindings: ModuleFindings) => void;
   onRunSingle: (moduleId: SubModuleId) => void;
   isFixRunning: boolean;
+  /** The finding id or `module:<id>` currently being fixed, or null. */
+  fixTargetId: string | null;
 }) {
   return (
     <div data-testid="pof-module-evaluator-result-summary" className="space-y-4">
@@ -118,6 +121,7 @@ export function ResultsSection({
             onBatchFix={() => onBatchFix(mod)}
             onRunSingle={() => onRunSingle(mod.moduleId)}
             isFixRunning={isFixRunning}
+            fixTargetId={fixTargetId}
           />
         ))}
       </div>

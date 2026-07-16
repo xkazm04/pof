@@ -7,7 +7,7 @@ import {
 import { useGDDComplianceStore } from '@/stores/gddComplianceStore';
 import { useModuleStore } from '@/stores/moduleStore';
 import { useProjectStore } from '@/stores/projectStore';
-import { SEVERITY_TOKENS, STATUS_ERROR } from '@/lib/chart-colors';
+import { SEVERITY_TOKENS, STATUS_ERROR, ACCENT_VIOLET } from '@/lib/chart-colors';
 import { ScoreRing } from './ScoreRing';
 import { ModuleCard } from './ModuleCard';
 import { ModuleDetail } from './ModuleDetail';
@@ -40,7 +40,7 @@ export function GDDComplianceView() {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-6 h-6 animate-spin" style={{ color: STATUS_ERROR }} />
+          <Loader2 className="w-6 h-6 animate-spin" style={{ color: ACCENT_VIOLET }} />
           <span className="text-xs text-text-muted">Running compliance audit...</span>
         </div>
       </div>
@@ -88,8 +88,8 @@ export function GDDComplianceView() {
         <button
           onClick={handleAudit}
           disabled={isAuditing}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-status-red-subtle border border-status-red-strong hover:bg-status-red-medium transition-colors disabled:opacity-50"
-          style={{ color: STATUS_ERROR }}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+          style={{ backgroundColor: `${ACCENT_VIOLET}15`, border: `1px solid ${ACCENT_VIOLET}30`, color: ACCENT_VIOLET }}
         >
           {isAuditing ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
           Re-audit

@@ -10,7 +10,8 @@ export function ModuleLeaderboard({ moduleActivity }: { moduleActivity: WeeklyDi
       <p className="text-2xs text-text-muted mb-2">Module activity</p>
       <div className="space-y-1.5">
         {moduleActivity.slice(0, 8).map((m, i) => {
-          const maxSessions = moduleActivity[0].sessions;
+          // Don't assume index 0 is the max — input isn't guaranteed sorted.
+          const maxSessions = Math.max(...moduleActivity.map((a) => a.sessions), 1);
           const barWidth = maxSessions > 0 ? (m.sessions / maxSessions) * 100 : 0;
           return (
             <div key={m.moduleId} className="flex items-center gap-2">

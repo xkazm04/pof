@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, ChevronRight, Play, Zap } from 'lucide-react';
+import { ChevronDown, ChevronRight, Play, Zap, Loader2 } from 'lucide-react';
 import { MODULE_LABELS } from '@/lib/module-registry';
 import type { EvalFinding, FindingSeverity, ModuleFindings } from '@/lib/evaluator/finding-collector';
 import type { AttributionMap } from '@/lib/evaluator/git-attribution';
@@ -22,6 +22,7 @@ export function ModuleSection({
   onBatchFix,
   onRunSingle,
   isFixRunning,
+  fixTargetId,
 }: {
   module: ModuleFindings;
   isExpanded: boolean;
@@ -35,10 +36,13 @@ export function ModuleSection({
   onBatchFix: () => void;
   onRunSingle: () => void;
   isFixRunning: boolean;
+  /** The finding id or `module:<id>` currently being fixed, or null. */
+  fixTargetId: string | null;
 }) {
   const totalFindings = mod.findings.length;
   const hasCritical = mod.bySeverity.critical > 0;
   const hasHigh = mod.bySeverity.high > 0;
+  const isBatchTarget = fixTargetId === `module:${mod.moduleId}`;
 
   return (
     <div className="rounded-lg border border-border overflow-hidden">
@@ -102,7 +106,7 @@ export function ModuleSection({
                       border: `1px solid ${EVAL_ACCENT}25`,
                     }}
                   >
-                    <Zap className="w-3 h-3" />
+                    {isBatchTarget ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
                     Fix Critical/High ({mod.bySeverity.critical + mod.bySeverity.high})
                   </button>
                 )}
@@ -153,6 +157,7 @@ export function ModuleSection({
                                 commits={finding.file ? attribution[finding.file] : undefined}
                                 onFix={() => onFix(finding)}
                                 isFixRunning={isFixRunning}
+                                isFixTarget={fixTargetId === finding.id}
                               />
                             ))}
                           </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type {
   LevelDesignDocument,
   LevelDesignSummary,
@@ -44,20 +44,24 @@ export function useDesignDocument(): UseDesignDocumentResult {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const isMounted = useIsMounted();
+  // Monotonic fetch token: rapid create/update/remove each trigger fetchAll,
+  // and their responses can land out of order. Only the newest fetch may commit.
+  const fetchTokenRef = useRef(0);
 
   const fetchAll = useCallback(async () => {
+    const token = ++fetchTokenRef.current;
     setIsLoading(true);
     setError(null);
     try {
       const data = await apiFetch<{ docs: LevelDesignDocument[]; summary: LevelDesignSummary }>('/api/level-design');
-      if (!isMounted()) return;
+      if (!isMounted() || token !== fetchTokenRef.current) return;
       setDocs(data.docs ?? []);
       setSummary(data.summary ?? EMPTY_SUMMARY);
     } catch (err) {
       console.error('useDesignDocument fetch error:', err);
-      if (isMounted()) setError(err instanceof Error ? err.message : 'Failed to load level designs');
+      if (isMounted() && token === fetchTokenRef.current) setError(err instanceof Error ? err.message : 'Failed to load level designs');
     } finally {
-      if (isMounted()) setIsLoading(false);
+      if (isMounted() && token === fetchTokenRef.current) setIsLoading(false);
     }
   }, [isMounted]);
 

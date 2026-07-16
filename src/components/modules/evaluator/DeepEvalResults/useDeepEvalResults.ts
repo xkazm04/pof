@@ -39,6 +39,15 @@ export function useDeepEvalResults() {
     accentColor: EVAL_ACCENT,
   });
 
+  // Which finding/module the in-flight fix targets, so only THAT row/button
+  // shows the running spinner (not every Fix button on the page). Module batch
+  // fixes are keyed `module:<id>`; single findings by their finding id.
+  const [fixTargetId, setFixTargetId] = useState<string | null>(null);
+  // Clear the target once the shared CLI finishes.
+  useEffect(() => {
+    if (!fixCli.isRunning) setFixTargetId(null);
+  }, [fixCli.isRunning]);
+
   const isRunning = progress?.status === 'running';
 
   // ── Baseline hydration ──────────────────────────────────────────────────────
@@ -206,6 +215,7 @@ export function useDeepEvalResults() {
 
   const handleFix = useCallback((finding: EvalFinding) => {
     const plan = generateFixPlan(finding, { projectName, projectPath, ueVersion });
+    setFixTargetId(finding.id);
     fixCli.sendPrompt(plan.prompt);
   }, [fixCli, projectName, projectPath, ueVersion]);
 
@@ -215,7 +225,10 @@ export function useDeepEvalResults() {
     );
     const targets = criticalAndHigh.length > 0 ? criticalAndHigh : moduleFindings.findings.slice(0, 5);
     const plan = generateBatchFixPlan(targets, moduleFindings.moduleId, { projectName, projectPath, ueVersion });
-    if (plan) fixCli.sendPrompt(plan.prompt);
+    if (plan) {
+      setFixTargetId(`module:${moduleFindings.moduleId}`);
+      fixCli.sendPrompt(plan.prompt);
+    }
   }, [fixCli, projectName, projectPath, ueVersion]);
 
   // ── Toggle helpers ─────────────────────────────────────────────────────────
@@ -272,6 +285,7 @@ export function useDeepEvalResults() {
     showModuleSelector,
     setShowModuleSelector,
     fixCli,
+    fixTargetId,
     isRunning,
     handleRunEval,
     handleRunSingle,

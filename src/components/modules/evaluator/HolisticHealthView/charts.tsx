@@ -76,6 +76,7 @@ export function AreaChartSimple({ data, total }: { data: { label: string; comple
   if (data.length === 0) return null;
   const h = 120;
   const w = data.length * 60;
+  const safeTotal = total || 1;
 
   return (
     <div className="relative" style={{ height: h + 24 }}>
@@ -86,7 +87,7 @@ export function AreaChartSimple({ data, total }: { data: { label: string; comple
           stroke={STATUS_NEUTRAL}
           strokeWidth="1.5"
           strokeDasharray="4,3"
-          points={data.map((d, i) => `${i * 60 + 30},${h - (d.ideal / total) * (h - 16) - 8}`).join(' ')}
+          points={data.map((d, i) => `${i * 60 + 30},${h - (d.ideal / safeTotal) * (h - 16) - 8}`).join(' ')}
         />
         {/* Completed area */}
         <polygon
@@ -95,7 +96,7 @@ export function AreaChartSimple({ data, total }: { data: { label: string; comple
           strokeWidth="2"
           points={[
             `${30},${h - 8}`,
-            ...data.map((d, i) => `${i * 60 + 30},${h - (d.completed / total) * (h - 16) - 8}`),
+            ...data.map((d, i) => `${i * 60 + 30},${h - (d.completed / safeTotal) * (h - 16) - 8}`),
             `${(data.length - 1) * 60 + 30},${h - 8}`,
           ].join(' ')}
         />
@@ -113,6 +114,7 @@ export function BurndownChart({ data, total }: { data: BurnChartPoint[]; total: 
   if (data.length === 0) return null;
   const h = 120;
   const w = data.length * 60;
+  const safeTotal = total || 1;
 
   return (
     <div className="relative" style={{ height: h + 24 }}>
@@ -123,21 +125,21 @@ export function BurndownChart({ data, total }: { data: BurnChartPoint[]; total: 
           stroke={STATUS_NEUTRAL}
           strokeWidth="1.5"
           strokeDasharray="4,3"
-          points={data.map((d, i) => `${i * 60 + 30},${(d.idealRemaining / total) * (h - 16) + 8}`).join(' ')}
+          points={data.map((d, i) => `${i * 60 + 30},${(d.idealRemaining / safeTotal) * (h - 16) + 8}`).join(' ')}
         />
         {/* Actual remaining */}
         <polyline
           fill="none"
           stroke={STATUS_INFO}
           strokeWidth="2"
-          points={data.map((d, i) => `${i * 60 + 30},${(d.remaining / total) * (h - 16) + 8}`).join(' ')}
+          points={data.map((d, i) => `${i * 60 + 30},${(d.remaining / safeTotal) * (h - 16) + 8}`).join(' ')}
         />
         {/* Dots */}
         {data.map((d, i) => (
           <circle
             key={i}
             cx={i * 60 + 30}
-            cy={(d.remaining / total) * (h - 16) + 8}
+            cy={(d.remaining / safeTotal) * (h - 16) + 8}
             r="3"
             fill={STATUS_INFO}
           />

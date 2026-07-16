@@ -27,6 +27,7 @@ export function DeepEvalResults() {
     showModuleSelector,
     setShowModuleSelector,
     fixCli,
+    fixTargetId,
     isRunning,
     handleRunEval,
     handleRunSingle,
@@ -130,6 +131,7 @@ export function DeepEvalResults() {
           onBatchFix={handleBatchFix}
           onRunSingle={handleRunSingle}
           isFixRunning={fixCli.isRunning}
+          fixTargetId={fixTargetId}
         />
       )}
 

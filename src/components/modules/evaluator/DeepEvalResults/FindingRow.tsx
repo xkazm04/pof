@@ -20,6 +20,7 @@ export function FindingRow({
   commits,
   onFix,
   isFixRunning,
+  isFixTarget = false,
 }: {
   finding: EvalFinding;
   /** Regression tag relative to the previous scan (undefined = no baseline yet). */
@@ -28,6 +29,8 @@ export function FindingRow({
   commits?: CommitAttribution[];
   onFix: () => void;
   isFixRunning: boolean;
+  /** True only when THIS finding is the one currently being fixed. */
+  isFixTarget?: boolean;
 }) {
   const cfg = SEVERITY_CONFIG[finding.severity];
   const SeverityIcon = cfg.icon;
@@ -123,7 +126,7 @@ export function FindingRow({
                 border: `1px solid ${EVAL_ACCENT}25`,
               }}
             >
-              {isFixRunning ? (
+              {isFixTarget ? (
                 <Loader2 className="w-2.5 h-2.5 animate-spin" />
               ) : (
                 <Zap className="w-2.5 h-2.5" />

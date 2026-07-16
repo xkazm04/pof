@@ -10,14 +10,27 @@ export function ImportPanel() {
   const [rawLog, setRawLog] = useState('');
   const importCrashLog = useCrashAnalyzerStore((s) => s.importCrashLog);
   const isLoading = useCrashAnalyzerStore((s) => s.isLoading);
+  const storeError = useCrashAnalyzerStore((s) => s.error);
   const [importResult, setImportResult] = useState<string | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
 
   const handleImport = useCallback(async () => {
     if (!rawLog.trim()) return;
-    const report = await importCrashLog(rawLog);
-    if (report) {
-      setImportResult(`Imported crash ${report.id} — ${CRASH_TYPE_LABELS[report.crashType]} (${report.severity})`);
-      setRawLog('');
+    setImportError(null);
+    try {
+      const report = await importCrashLog(rawLog);
+      if (report) {
+        setImportResult(`Imported crash ${report.id} — ${CRASH_TYPE_LABELS[report.crashType]} (${report.severity})`);
+        setImportError(null);
+        setRawLog(''); // only clear the paste on success
+      } else {
+        // importCrashLog returned null → parse/API failure captured in store.error
+        setImportResult(null);
+        setImportError('Could not analyze that log — check the format and try again.');
+      }
+    } catch (err) {
+      setImportResult(null);
+      setImportError(err instanceof Error ? err.message : 'Import failed — please try again.');
     }
   }, [rawLog, importCrashLog]);
 
@@ -48,6 +61,9 @@ export function ImportPanel() {
           </button>
           {importResult && (
             <span className="text-2xs text-emerald-400">{importResult}</span>
+          )}
+          {(importError || storeError) && !importResult && (
+            <span className="text-2xs text-red-400">{importError ?? storeError}</span>
           )}
         </div>
       </SurfaceCard>

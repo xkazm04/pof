@@ -80,10 +80,10 @@ export function ProjectHealthDashboard({ onNavigateTab }: ProjectHealthDashboard
       }
     }
 
-    if (alerts.length > 0) {
-      const raf = requestAnimationFrame(() => setRegressionAlerts(alerts));
-      return () => cancelAnimationFrame(raf);
-    }
+    // Always replace the alert set — including with an empty array — so stale
+    // alerts clear once the underlying regression has recovered on a new scan.
+    const raf = requestAnimationFrame(() => setRegressionAlerts(alerts));
+    return () => cancelAnimationFrame(raf);
   }, [scanHistory]);
 
   const dismissAlert = useCallback((id: string) => {
