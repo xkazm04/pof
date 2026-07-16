@@ -37,6 +37,9 @@ export function PropertyPanel({ editor }: { editor: StateMachineEditorApi }) {
         <p className="text-2xs text-text-muted mb-2">
           ComputeAnimState() checks from top (highest) to bottom.
         </p>
+        {sortedByPriority.length === 0 && (
+          <div className="text-2xs text-text-muted italic">No states — the cascade is empty</div>
+        )}
         <div className="space-y-1">
           {sortedByPriority.map((s) => {
             const color = STATE_TYPE_COLORS[s.stateType];
