@@ -564,6 +564,19 @@ function rowToSession(row: SessionRow): PlaytestSession {
 }
 
 function rowToFinding(row: FindingRow): PlaytestFinding {
+  // A snooze is time-bounded: once `snoozedUntil` lapses, the finding must
+  // reappear as open. Derive the un-snoozed state at read time so every
+  // consumer (filters, stats, regression tracker) sees it without a cron job.
+  let triageStatus = (row.triage_status as PlaytestFinding['triageStatus']) || 'active';
+  let snoozedUntil = row.snoozed_until;
+  if (
+    triageStatus === 'snooze' &&
+    snoozedUntil &&
+    new Date(snoozedUntil).getTime() <= Date.now()
+  ) {
+    triageStatus = 'active';
+    snoozedUntil = null;
+  }
   return {
     id: row.id,
     sessionId: row.session_id,
@@ -577,9 +590,9 @@ function rowToFinding(row: FindingRow): PlaytestFinding {
     suggestedFix: row.suggested_fix || '',
     confidence: row.confidence || 80,
     createdAt: row.created_at,
-    triageStatus: (row.triage_status as PlaytestFinding['triageStatus']) || 'active',
+    triageStatus,
     triageNote: row.triage_note || '',
-    snoozedUntil: row.snoozed_until,
+    snoozedUntil,
     fixDispatchedAt: row.fix_dispatched_at,
   };
 }

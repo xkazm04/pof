@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
   BookOpen, Search, Filter, ChevronDown,
   Sparkles, TrendingUp, Users,
@@ -64,13 +64,23 @@ export function PatternLibraryView() {
     fetchDashboard();
   }, [fetchDashboard]);
 
-  // Debounced search
+  // Debounced search — also restores the full list when every filter is cleared
+  const filtersWereActiveRef = useRef(false);
   useEffect(() => {
-    if (searchQuery || moduleFilter || categoryFilter) {
+    const hasFilters = Boolean(searchQuery || moduleFilter || categoryFilter);
+    if (hasFilters) {
+      filtersWereActiveRef.current = true;
       const timer = setTimeout(() => searchPatterns(), 300);
       return () => clearTimeout(timer);
     }
-  }, [searchQuery, moduleFilter, categoryFilter, sortBy, searchPatterns]);
+    // Filters just transitioned back to empty: re-fetch the unfiltered
+    // dashboard list instead of leaving the last filtered results on screen.
+    if (filtersWereActiveRef.current) {
+      filtersWereActiveRef.current = false;
+      const timer = setTimeout(() => fetchDashboard(), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [searchQuery, moduleFilter, categoryFilter, sortBy, searchPatterns, fetchDashboard]);
 
   const handleExtract = useCallback(async () => {
     const result = await extractPatterns();

@@ -35,7 +35,9 @@ function isPointBehindObstacle(
     const perpY = toObsY - proj * ndy;
     const perpDist = Math.sqrt(perpX * perpX + perpY * perpY);
 
-    const blockRadius = obs.type === 'pillar' ? obs.w : Math.max(obs.w, obs.h) * 0.5;
+    // `w` is a diameter for pillars (rendered as r = w / 2 in CoverObstacles),
+    // so the blocking radius is half of it — same convention as walls/elevation.
+    const blockRadius = obs.type === 'pillar' ? obs.w * 0.5 : Math.max(obs.w, obs.h) * 0.5;
 
     if (perpDist < blockRadius + 30) {
       // This obstacle provides cover
