@@ -154,14 +154,18 @@ export function AIBehaviorView() {
     [activeSuite, testGenCli]
   );
 
-  const handleRunTests = useCallback(() => {
+  const handleRunTests = useCallback(async () => {
     if (!activeSuite) return;
     // The existing 'running' status pill becomes real: mark every scenario
     // running now; the @@CALLBACK writes the final per-scenario results.
     // One bulk PUT + one refetch for the whole transition (was N PUTs + N refetches).
     const ids = activeSuite.scenarios.map((s) => s.id);
     runningIdsRef.current = ids;
-    bulkUpdateScenarioStatus(ids, 'running');
+    // Await the 'running' PUT + its trailing refetch BEFORE kicking off the CLI
+    // run. Otherwise this fire-and-forget refetch can resolve after the CLI's
+    // onComplete → retry(), clobbering freshly-written pass/fail results back to
+    // a stale 'running' state for a frame.
+    await bulkUpdateScenarioStatus(ids, 'running');
     testRunCli.execute(
       TaskFactory.runAITests('ai-behavior', activeSuite, window.location.origin, 'AI Test Run')
     );

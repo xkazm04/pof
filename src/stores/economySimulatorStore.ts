@@ -36,6 +36,13 @@ function computeDrift(
   return economyDrift(extractRunMetrics(result), baseline);
 }
 
+// Monotonic tokens guarding concurrent runs: each invocation captures the
+// counter at start and only the run whose token is still current may commit
+// its result/error to the store (older overlapping runs become silent no-ops,
+// so a stale response can never overwrite a newer one).
+let simRunCounter = 0;
+let codeGenCounter = 0;
+
 // ── Store ───────────────────────────────────────────────────────────────────
 
 interface EconomySimulatorState {
@@ -129,6 +136,7 @@ export const useEconomySimulatorStore = create<EconomySimulatorState>((set, get)
   },
 
   runSimulation: async (config: SimulationConfig) => {
+    const runToken = ++simRunCounter;
     set({ isSimulating: true, error: null, config });
     try {
       const data = await apiFetch<{ result: SimulationResult }>(
@@ -139,6 +147,8 @@ export const useEconomySimulatorStore = create<EconomySimulatorState>((set, get)
           body: JSON.stringify({ action: 'simulate', config }),
         },
       );
+      // A newer run started while we were in flight — discard this result.
+      if (runToken !== simRunCounter) return null;
 
       set({
         result: data.result,
@@ -151,6 +161,7 @@ export const useEconomySimulatorStore = create<EconomySimulatorState>((set, get)
 
       return data.result;
     } catch (err) {
+      if (runToken !== simRunCounter) return null;
       set({ error: err instanceof Error ? err.message : String(err), isSimulating: false });
       return null;
     }
@@ -160,6 +171,7 @@ export const useEconomySimulatorStore = create<EconomySimulatorState>((set, get)
     const { result, config } = get();
     if (!result && !config) return null;
 
+    const runToken = ++codeGenCounter;
     set({ isGenerating: true, error: null });
     try {
       const data = await apiFetch<CodeGenResult>(
@@ -173,9 +185,12 @@ export const useEconomySimulatorStore = create<EconomySimulatorState>((set, get)
           }),
         },
       );
+      // A newer generate started while we were in flight — discard this result.
+      if (runToken !== codeGenCounter) return null;
       set({ codeGenResult: data, isGenerating: false });
       return data;
     } catch (err) {
+      if (runToken !== codeGenCounter) return null;
       set({ error: err instanceof Error ? err.message : String(err), isGenerating: false });
       return null;
     }

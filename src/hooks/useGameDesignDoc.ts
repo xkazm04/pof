@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { apiFetch } from '@/lib/api-utils';
 import { useIsMounted } from '@/hooks/useIsMounted';
 import { useModuleStore } from '@/stores/moduleStore';
@@ -20,6 +20,9 @@ export function useGameDesignDoc(projectName: string): UseGameDesignDocResult {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isMounted = useIsMounted();
+  // Monotonic request token: only the newest generate() may commit its result,
+  // so an earlier, slower response can't overwrite a newer one out of order.
+  const generateTokenRef = useRef(0);
 
   const getChecklistJson = useCallback((): string => {
     try {
@@ -31,6 +34,7 @@ export function useGameDesignDoc(projectName: string): UseGameDesignDocResult {
 
   const generate = useCallback(async () => {
     if (!projectName) return;
+    const token = ++generateTokenRef.current;
     setIsLoading(true);
     setError(null);
     try {
@@ -38,11 +42,14 @@ export function useGameDesignDoc(projectName: string): UseGameDesignDocResult {
       const data = await apiFetch<GDDDocument>(
         `/api/game-design-doc?projectName=${encodeURIComponent(projectName)}&checklist=${checklist}`
       );
+      // A newer generate() started while this was in flight — discard.
+      if (token !== generateTokenRef.current) return;
       if (isMounted()) setGdd(data);
     } catch (err) {
+      if (token !== generateTokenRef.current) return;
       if (isMounted()) setError(err instanceof Error ? err.message : 'Failed to generate GDD');
     } finally {
-      if (isMounted()) setIsLoading(false);
+      if (token === generateTokenRef.current && isMounted()) setIsLoading(false);
     }
   }, [projectName, getChecklistJson, isMounted]);
 
