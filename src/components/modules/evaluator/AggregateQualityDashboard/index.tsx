@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertTriangle, RotateCcw } from 'lucide-react';
+import { STATUS_ERROR, statusBg, statusBorder } from '@/lib/chart-colors';
 import type { ModuleAggregate, ReviewSnapshot } from '@/lib/feature-matrix-db';
 import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
 import { MODULE_LABELS } from '@/lib/module-registry';
@@ -22,6 +23,7 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
   const [aggregates, setAggregates] = useState<ModuleAggregate[]>([]);
   const [historyMap, setHistoryMap] = useState<Record<string, ReviewSnapshot[]>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [hoveredModule, setHoveredModule] = useState<string | null>(null);
   const [selectedModule, setSelectedModule] = useState<string | null>(null);
   const [customStaleDays, setCustomStaleDays] = useState(staleDays);
@@ -32,6 +34,7 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
+    setError(null);
     try {
       const [aggData, histData] = await Promise.all([
         apiFetch<{ modules: ModuleAggregate[] }>('/api/feature-matrix/aggregate'),
@@ -41,6 +44,7 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
       setHistoryMap(histData.history ?? {});
     } catch (err) {
       console.error('AggregateQualityDashboard fetch error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load quality data');
     } finally {
       setIsLoading(false);
     }
@@ -150,6 +154,39 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
     );
   }
 
+  // First load failed and there's nothing cached to show: render an explicit
+  // error state instead of an all-"unknown" heatmap that reads as a genuinely
+  // unreviewed (but healthy) project.
+  if (error && aggregates.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <div
+          className="w-12 h-12 rounded-xl flex items-center justify-center mb-4"
+          style={{
+            backgroundColor: statusBg(STATUS_ERROR),
+            border: `1px solid ${statusBorder(STATUS_ERROR)}`,
+          }}
+        >
+          <AlertTriangle className="w-6 h-6" style={{ color: STATUS_ERROR }} />
+        </div>
+        <h3 className="text-sm font-semibold text-text mb-1">Couldn&apos;t load quality data</h3>
+        <p className="text-xs text-text-muted max-w-xs leading-relaxed">{error}</p>
+        <button
+          onClick={fetchData}
+          className="flex items-center gap-1.5 mt-4 px-3 py-1.5 rounded-md text-xs font-medium transition-all hover:brightness-110"
+          style={{
+            color: STATUS_ERROR,
+            backgroundColor: statusBg(STATUS_ERROR),
+            border: `1px solid ${statusBorder(STATUS_ERROR)}`,
+          }}
+        >
+          <RotateCcw className="w-3 h-3" />
+          Retry
+        </button>
+      </div>
+    );
+  }
+
   const selected = selectedModule ? cells.find((c) => c.moduleId === selectedModule) : null;
 
   // Play the cell entrance stagger only on the first render with data; mark the
@@ -159,6 +196,39 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
 
   return (
     <div className="space-y-5">
+      {/* Refresh failed but earlier data is still mounted — flag it as stale
+          instead of silently presenting it as current. */}
+      {error && (
+        <div
+          className="flex items-center justify-between gap-3 text-xs rounded-md px-3 py-2"
+          style={{
+            color: STATUS_ERROR,
+            backgroundColor: statusBg(STATUS_ERROR),
+            border: `1px solid ${statusBorder(STATUS_ERROR)}`,
+          }}
+        >
+          <span className="flex items-center gap-1.5 min-w-0">
+            <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+            <span className="truncate">
+              Refresh failed — showing previously loaded data. {error}
+            </span>
+          </span>
+          <button
+            onClick={fetchData}
+            disabled={isLoading}
+            className="flex items-center gap-1 font-medium flex-shrink-0 transition-all hover:brightness-110 disabled:opacity-50"
+            style={{ color: STATUS_ERROR }}
+          >
+            {isLoading ? (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            ) : (
+              <RotateCcw className="w-3 h-3" />
+            )}
+            Retry
+          </button>
+        </div>
+      )}
+
       <QualityDiscrepancyBanner cells={cells} />
 
       <SummaryPanels
