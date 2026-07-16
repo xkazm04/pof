@@ -21,6 +21,11 @@ const EMPTY_ENEMIES: EnemyArchetype[] = [];
 const EMPTY_ABILITIES: CombatAbility[] = [];
 const EMPTY_GEAR: GearLoadout[] = [];
 
+// Monotonic token guarding concurrent simulation runs: each run captures the
+// counter at start and only the run whose token is still current may commit
+// results/progress to the store (older overlapping runs become silent no-ops).
+let simRunCounter = 0;
+
 // ── Store ───────────────────────────────────────────────────────────────────
 
 interface CombatSimulatorState {
@@ -109,6 +114,7 @@ export const useCombatSimulatorStore = create<CombatSimulatorState>((set, get) =
   },
 
   runSimulation: async (scenario, tuning, config) => {
+    const runToken = ++simRunCounter;
     set({ isSimulating: true, error: null });
     try {
       const data = await apiFetch<{ result: SimulationResult }>(
@@ -119,6 +125,9 @@ export const useCombatSimulatorStore = create<CombatSimulatorState>((set, get) =
           body: JSON.stringify({ action: 'simulate', scenario, tuning, config }),
         },
       );
+      // A newer run started while we were in flight — discard this result.
+      if (runToken !== simRunCounter) return null;
+
       // If a baseline is pinned, diff this candidate run against it.
       const baseline = get().baselineResult;
       const comparison = baseline
@@ -134,12 +143,14 @@ export const useCombatSimulatorStore = create<CombatSimulatorState>((set, get) =
       });
       return data.result;
     } catch (err) {
+      if (runToken !== simRunCounter) return null;
       set({ error: err instanceof Error ? err.message : String(err), isSimulating: false });
       return null;
     }
   },
 
   runSimulationStreaming: async (scenario, tuning, config) => {
+    const runToken = ++simRunCounter;
     set({ isSimulating: true, error: null, simProgress: 0 });
     try {
       const res = await fetch('/api/combat-simulator', {
@@ -170,7 +181,10 @@ export const useCombatSimulatorStore = create<CombatSimulatorState>((set, get) =
             | { type: 'result'; result: SimulationResult }
             | { type: 'error'; error: string };
           if (payload.type === 'progress') {
-            set({ simProgress: payload.total > 0 ? payload.completed / payload.total : 0 });
+            // Only the current run may drive the shared progress bar.
+            if (runToken === simRunCounter) {
+              set({ simProgress: payload.total > 0 ? payload.completed / payload.total : 0 });
+            }
           } else if (payload.type === 'result') {
             finalResult = payload.result;
           } else if (payload.type === 'error') {
@@ -181,6 +195,9 @@ export const useCombatSimulatorStore = create<CombatSimulatorState>((set, get) =
 
       if (streamError) throw new Error(streamError);
       if (!finalResult) throw new Error('Simulation stream ended without a result');
+
+      // A newer run started while this stream was in flight — discard silently.
+      if (runToken !== simRunCounter) return null;
 
       const baseline = get().baselineResult;
       const comparison = baseline
@@ -197,6 +214,7 @@ export const useCombatSimulatorStore = create<CombatSimulatorState>((set, get) =
       });
       return finalResult;
     } catch (err) {
+      if (runToken !== simRunCounter) return null;
       set({ error: err instanceof Error ? err.message : String(err), isSimulating: false, simProgress: 0 });
       return null;
     }
