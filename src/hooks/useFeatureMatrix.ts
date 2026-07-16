@@ -32,12 +32,20 @@ export function useFeatureMatrix(moduleId: SubModuleId): UseFeatureMatrixResult 
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationResults, setVerificationResults] = useState<VerificationResult[]>([]);
   const seededRef = useRef<Set<string>>(new Set());
+  // Monotonic request id: switching modules fast can let an older, slower
+  // /api/feature-matrix response resolve after a newer one. We capture the id
+  // at dispatch and ignore any response that is no longer the latest, so a
+  // stale request can never overwrite the current module's state.
+  const requestIdRef = useRef(0);
 
   const fetchData = useCallback(async () => {
     if (!moduleId) return;
+    const requestId = ++requestIdRef.current;
     setIsLoading(true);
     setError(null);
     const result = await tryApiFetch<{ features: FeatureRow[]; summary: FeatureSummary }>(`/api/feature-matrix?moduleId=${encodeURIComponent(moduleId)}`);
+    // A newer request has since been issued — discard this stale response.
+    if (requestId !== requestIdRef.current) return;
     if (result.ok) {
       setFeatures(result.data.features ?? []);
       setSummary(result.data.summary ?? EMPTY_SUMMARY);
