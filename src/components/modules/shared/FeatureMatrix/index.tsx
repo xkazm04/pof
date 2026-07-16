@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import { Boxes, ChevronDown, ChevronRight, Loader2, Download, ShieldCheck, RefreshCw, Search, LayoutList, LayoutGrid } from 'lucide-react';
 import { AccentButton } from '@/components/ui/AccentButton';
 import { FetchError } from '@/components/modules/shared/FetchError';
@@ -58,6 +59,26 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
     neverReviewed,
   } = state;
 
+  // Sticky offset for category headers: measure the filter toolbar so headers
+  // stick flush below it even when the filter row wraps to multiple lines.
+  const rootRef = useRef<HTMLDivElement>(null);
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const showToolbar = !isLoading && !error && !neverReviewed;
+
+  useEffect(() => {
+    const root = rootRef.current;
+    const toolbar = toolbarRef.current;
+    if (!root || !toolbar) return;
+    const update = () => {
+      root.style.setProperty('--fm-sticky-offset', `${toolbar.offsetHeight}px`);
+    };
+    update();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(update);
+    observer.observe(toolbar);
+    return () => observer.disconnect();
+  }, [showToolbar]);
+
   if (isLoading) {
     return <FeatureMatrixSkeleton />;
   }
@@ -79,7 +100,7 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
   }
 
   return (
-    <div className="space-y-4">
+    <div ref={rootRef} className="space-y-4">
       {/* Summary bar + Sparkline + Review button */}
       <div className="flex items-center gap-4">
         <SummaryBar summary={summary} />
@@ -201,7 +222,7 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
       <StatusFilterChips summary={summary} activeFilters={activeFilters} onToggle={toggleFilter} />
 
       {/* Search + Quality filter + Sort controls — sticky header */}
-      <div className="flex items-center gap-3 flex-wrap sticky top-0 z-10 bg-background py-2 -mt-2">
+      <div ref={toolbarRef} className="flex items-center gap-3 flex-wrap sticky top-0 z-10 bg-background py-2 -mt-2">
         {/* Text search */}
         <div className="relative flex-1 min-w-[180px]">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" />

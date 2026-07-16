@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, type CSSProperties } from 'react';
 import { Shield } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { BlueprintPanel, SectionHeader, NeonBar } from '../../unique-tabs/_design';
@@ -107,7 +107,7 @@ export function EquipmentLoadoutSection() {
     <BlueprintPanel color={ACCENT} className="p-4">
       <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: `linear-gradient(90deg, ${withOpacity(ACCENT, OPACITY_37)}, transparent)` }} />
       <SectionHeader icon={Shield} label="Equipment Loadout Visualizer" color={ACCENT} />
-      <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-3">Click any slot to equip items via ScalableSelector.</p>
+      <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-3">Click or focus a slot and press Enter to equip items via ScalableSelector.</p>
       <div className="flex flex-wrap gap-4 items-start justify-center">
         {/* Paper doll SVG */}
         <div className="relative" style={{ width: 180, height: 160 }}>
@@ -124,17 +124,22 @@ export function EquipmentLoadoutSection() {
             if (!pos) return null;
             const color = slot.item ? RARITY_COLORS[slot.item.rarity] ?? STATUS_SUBDUED : STATUS_LOCKED_STROKE;
             return (
-              <motion.div key={slot.slotId} className="absolute flex flex-col items-center cursor-pointer"
-                style={{ left: pos.x, top: pos.y }}
-                initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} whileHover={{ scale: 1.1 }}
-                onClick={() => setPickerSlot(slot.slotId)}>
+              <motion.button key={slot.slotId} type="button"
+                className="absolute flex flex-col items-center cursor-pointer rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                style={{ left: pos.x, top: pos.y, '--tw-ring-color': color } as CSSProperties}
+                initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} whileHover={{ scale: 1.1 }} whileFocus={{ scale: 1.1 }}
+                onClick={() => setPickerSlot(slot.slotId)}
+                aria-haspopup="dialog"
+                aria-label={slot.item
+                  ? `${slot.slotName} slot: ${slot.item.name} (${slot.item.rarity}). Activate to change equipment.`
+                  : `${slot.slotName} slot: empty. Activate to equip an item.`}>
                 <div className="w-10 h-10 rounded-lg border-2 flex items-center justify-center text-xs font-bold font-mono shadow-lg"
                   style={{ borderColor: `${withOpacity(color, OPACITY_50)}`, backgroundColor: `${withOpacity(color, OPACITY_12)}`, color, boxShadow: slot.item ? `${GLOW_MD} ${withOpacity(color, OPACITY_25)}` : 'none' }}
-                  title={slot.item ? `${slot.item.name} (${slot.item.rarity})` : `Empty: ${slot.slotName} — click to equip`}>
+                  title={slot.item ? `${slot.item.name} (${slot.item.rarity})` : `Empty: ${slot.slotName} — select to equip`}>
                   {slot.item ? slot.item.name.charAt(0) : '?'}
                 </div>
                 <span className="text-xs font-mono text-text-muted mt-0.5">{slot.slotName}</span>
-              </motion.div>
+              </motion.button>
             );
           })}
         </div>
