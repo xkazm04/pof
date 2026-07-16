@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { Map as MapIcon, SlidersHorizontal, LayoutGrid } from 'lucide-react';
+import { Map as MapIcon, SlidersHorizontal, LayoutGrid, Database, Info } from 'lucide-react';
 import {
   STATUS_ERROR,
   ACCENT_CYAN, ACCENT_ORANGE, ACCENT_VIOLET, ACCENT_EMERALD,
@@ -80,15 +80,12 @@ export function ZoneMap({ moduleId }: ZoneMapProps) {
     () => new Map(zoneEntries.map((e) => [e.data.id, e])),
     [zoneEntries],
   );
-  const primaryZoneId = matchingZones[0]?.id ?? ZONES[0]?.id;
-  const primaryEntry =
-    (primaryZoneId != null ? entryByZoneId.get(primaryZoneId) : undefined)
-    ?? zoneEntries[0];
-  const gen = useGeneration(primaryEntry!);
-  const nextStep: GenerationStep =
-    primaryEntry?.lifecycle === 'generated' ? 'wire'
-      : primaryEntry?.lifecycle === 'wired' ? 'verify'
-        : 'author-python';
+  /* Resolve the catalog entry for the level-filtered primary zone ONLY.
+     Never substitute an arbitrary entry (`zoneEntries[0]`) when the lookup
+     misses — a Regenerate fired against the wrong zone is destructive. A miss
+     renders an explicit "not in catalog" notice instead (below). */
+  const primaryZone = matchingZones[0] ?? ZONES[0];
+  const primaryEntry = primaryZone ? entryByZoneId.get(primaryZone.id) : undefined;
   const toggleGroup = useCallback((idx: number) => {
     setOpenGroups(prev => {
       const next = new Set(prev);
@@ -106,20 +103,35 @@ export function ZoneMap({ moduleId }: ZoneMapProps) {
 
       <SubTabNavigation tabs={tabs} activeTabId={activeTab} onChange={setActiveTab} accent={ACCENT} />
 
-      {/* folder-09 R3: catalog lifecycle cell for the primary zone */}
-      {primaryEntry && (
-        <div className="flex items-center justify-between gap-2 px-1">
+      {/* folder-09 R3: catalog lifecycle cell for the primary zone.
+          Three explicit states — resolved entry, zone missing from catalog
+          (generation disabled, never retargeted), and empty catalog. */}
+      {primaryEntry ? (
+        <ZoneLifecycleBar entry={primaryEntry} />
+      ) : zoneEntries.length === 0 ? (
+        <div
+          role="status"
+          className="rounded-lg border border-border/40 bg-surface-deep/30 px-4 py-6 flex flex-col items-center justify-center gap-2 text-center"
+        >
+          <Database className="w-5 h-5 text-text-muted opacity-40" />
           <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
-            {primaryEntry.data.displayName ?? primaryEntry.data.id}
+            Zone catalog is empty
           </span>
-          <CatalogLifecycleCell
-            lifecycle={primaryEntry.lifecycle}
-            ueAssetCount={primaryEntry.ueAssets?.length ?? 0}
-            busy={gen.isRunning}
-            onRegenerate={() => gen.generate(nextStep)}
-          />
+          <span className="text-2xs text-text-muted/80 max-w-sm leading-relaxed">
+            No zones are registered in the catalog yet — seed or reload the catalog to enable lifecycle tracking and generation.
+          </span>
         </div>
-      )}
+      ) : primaryZone ? (
+        <div role="status" className="flex items-center justify-between gap-2 px-1">
+          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
+            {primaryZone.displayName}
+          </span>
+          <span className="flex items-center gap-1.5 text-2xs font-mono text-text-muted border border-border/50 rounded px-1.5 py-0.5">
+            <Info className="w-3 h-3 opacity-60 shrink-0" />
+            Not in catalog yet — generation unavailable for this zone
+          </span>
+        </div>
+      ) : null}
 
       {/* Player level filter */}
       <div className="rounded-lg border p-3" style={{ borderColor: `${withOpacity(ACCENT, OPACITY_10)}`, backgroundColor: `${withOpacity(ACCENT, OPACITY_5)}` }}>
@@ -214,6 +226,32 @@ export function ZoneMap({ moduleId }: ZoneMapProps) {
         </VisibleSection>
       )}
       </RipplePulse>
+    </div>
+  );
+}
+
+/* folder-09 R3: lifecycle + (Re)generate for one resolved catalog entry.
+   Split into its own component so `useGeneration` — which dereferences the
+   entity immediately — is only ever mounted with a real entry: no non-null
+   assertions, no conditional hook calls in the parent. */
+function ZoneLifecycleBar({ entry }: { entry: ZoneEntry }) {
+  const gen = useGeneration(entry);
+  const nextStep: GenerationStep =
+    entry.lifecycle === 'generated' ? 'wire'
+      : entry.lifecycle === 'wired' ? 'verify'
+        : 'author-python';
+
+  return (
+    <div className="flex items-center justify-between gap-2 px-1">
+      <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
+        {entry.data.displayName ?? entry.data.id}
+      </span>
+      <CatalogLifecycleCell
+        lifecycle={entry.lifecycle}
+        ueAssetCount={entry.ueAssets?.length ?? 0}
+        busy={gen.isRunning}
+        onRegenerate={() => gen.generate(nextStep)}
+      />
     </div>
   );
 }
