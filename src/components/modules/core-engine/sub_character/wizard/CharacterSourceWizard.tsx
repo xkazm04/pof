@@ -70,7 +70,18 @@ export function CharacterSourceWizard({ moduleId }: { moduleId: SubModuleId }) {
   const appOrigin = useMemo(() => getAppOrigin(), []);
 
   const pickSource = useCallback((s: CharacterSource) => {
-    setSource(s);
+    setSource((prev) => {
+      // Switching to a different source invalidates any prepared/wired work: the
+      // step-1 "Prepare Source" dispatch ran for the *old* source, so leaving the
+      // completed markers in place would let the user wire mesh/skeleton/AnimBP
+      // for a source that was never actually prepared. Reset the whole step
+      // lifecycle (and drop any in-flight attribution) whenever the source changes.
+      if (prev !== s) {
+        setSteps(['idle', 'idle', 'idle']);
+        activeStepRef.current = null;
+      }
+      return s;
+    });
     setAssets(SOURCE_DEFAULTS[s]);
   }, []);
 

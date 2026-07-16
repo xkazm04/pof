@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronRight, X } from 'lucide-react';
 import { ACCENT_GREEN, ACCENT_RED, OVERLAY_WHITE, OPACITY_25, OPACITY_30, OPACITY_50, GLOW_MD, withOpacity,
-  OPACITY_8,
+  OPACITY_8, STATUS_WARNING,
 } from '@/lib/chart-colors';
 import type { ComboAbility } from '@/components/modules/core-engine/sub_ability/_shared/AbilitySpellbook.data';
 import { TIMELINE_PX_PER_SEC } from './helpers';
@@ -76,7 +76,22 @@ export function TimelineBlock({
           </span>
           {ability.damage > 0 && (
             <span className="text-[9px] font-mono text-text-muted">
-              {effectiveDmg} dmg{comboMult > 1 && <span style={{ color: ACCENT_GREEN }}> x{comboMult}</span>}
+              {effectiveDmg} dmg
+              {index === 0
+                // The opener never gets a combo bonus. When this ability's own
+                // multiplier isn't 1, index-0 forces it to 1.0 — so surface an
+                // "opener" tag explaining the drop, otherwise removing the first
+                // block would silently shift the new opener's damage number.
+                ? ability.comboMultiplier !== 1 && (
+                    <span
+                      title={`Opener: the first hit gets no combo bonus, so its base ×${ability.comboMultiplier} multiplier is not applied.`}
+                      className="uppercase tracking-[0.1em] cursor-help"
+                      style={{ color: STATUS_WARNING }}
+                    > opener</span>
+                  )
+                : comboMult !== 1 && (
+                    <span style={{ color: comboMult > 1 ? ACCENT_GREEN : ACCENT_RED }}> ×{comboMult}</span>
+                  )}
             </span>
           )}
         </div>
