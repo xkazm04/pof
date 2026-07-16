@@ -4,7 +4,7 @@ import { useCallback } from 'react';
 import { useCLIPanelStore } from '@/components/cli/store/cliPanelStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { getCategoryForSubModule, SUB_MODULE_MAP } from '@/lib/module-registry';
-import { UI_TIMEOUTS } from '@/lib/constants';
+import { dispatchPromptWhenReady } from '@/lib/cli-dispatch';
 import type { SubModuleId } from '@/types/modules';
 
 export interface UseModuleActionsResult {
@@ -33,12 +33,12 @@ export function useModuleActions(): UseModuleActionsResult {
     }
     setActiveTab(tabId);
 
-    // Small delay to allow the terminal component to mount and attach its event listener
-    setTimeout(() => {
-      window.dispatchEvent(new CustomEvent('pof-cli-prompt', {
-        detail: { tabId, prompt },
-      }));
-    }, UI_TIMEOUTS.mountDelay);
+    // Dispatch when the target terminal announces readiness (handshake) instead
+    // of a blind fixed mount-delay that can fire before the terminal's listener
+    // attaches and silently drop the prompt (window.dispatchEvent with no
+    // listener is a no-op). A safety-fallback timer still fires if it never
+    // announces. See src/lib/cli-dispatch.ts.
+    dispatchPromptWhenReady(tabId, prompt);
   }, [projectPath, createSession, findSessionByModule, setActiveTab]);
 
   return { sendPromptToModule };

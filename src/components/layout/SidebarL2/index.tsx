@@ -171,8 +171,14 @@ export function SidebarL2() {
                   }
                   className="fixed z-[100] pointer-events-none select-none rounded-md border px-2 py-1 text-2xs font-mono font-semibold tabular-nums shadow-lg"
                   style={{
-                    left: cursor.x + 16,
-                    top: cursor.y - 14,
+                    // Clamp against the viewport so the readout never renders
+                    // off-screen near the right/bottom edge (wide-sidebar drag).
+                    // ~64px pill width / ~26px height covers "{NNN}px" + padding;
+                    // flip to the left of the cursor when it would overflow right.
+                    left: cursor.x + 16 + 64 > window.innerWidth
+                      ? Math.max(4, cursor.x - 16 - 64)
+                      : cursor.x + 16,
+                    top: Math.min(Math.max(4, cursor.y - 14), window.innerHeight - 30),
                     backgroundColor: 'var(--surface)',
                     borderColor: SNAP_POINTS.includes(width) ? category.accentColor : 'var(--border)',
                     color: SNAP_POINTS.includes(width) ? category.accentColor : 'var(--text)',

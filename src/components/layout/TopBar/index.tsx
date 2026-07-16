@@ -93,14 +93,18 @@ export function TopBar() {
           </>
         )}
       </div>
-      <div className="flex items-center gap-3">
+      {/* Right cluster grows to up to 7+ controls; overflow-x-auto lets it scroll
+          rather than crowd/clip on laptop/tablet widths (same pattern as
+          CLIBottomPanel / GlobalSearchPanel chip rows). min-w-0 lets the flex
+          child actually shrink; shrink-0 keeps each control at its natural size. */}
+      <div className="flex items-center gap-3 min-w-0 overflow-x-auto [&>*]:flex-shrink-0">
         <Studio3DLink />
         <ExperimentLabLink />
         <NewShellButton />
         {isSetupComplete && <SearchTrigger />}
         {isSetupComplete && <ProjectStats />}
         {isSetupComplete && <PofBridgeIndicator />}
-        <span className="text-xs text-text-muted">UE5 + C++</span>
+        <span className="text-xs text-text-muted whitespace-nowrap">UE5 + C++</span>
         <NotificationBadge />
       </div>
     </header>

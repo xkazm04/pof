@@ -24,6 +24,13 @@ interface UseFeatureMatrixResult {
 
 const EMPTY_SUMMARY: FeatureSummary = { total: 0, implemented: 0, improved: 0, partial: 0, missing: 0, unknown: 0 };
 
+// Module-scoped (not hook-instance-scoped) seed guard. LRU-cached module views
+// can mount two independent hook instances for the same moduleId at once (e.g. a
+// background prefetch + a foreground tab); a per-instance ref lets both fire the
+// insert-if-missing POST and race a duplicate seed. Keying the guard on moduleId
+// across all instances means at most one seed is ever dispatched per module.
+const seededModules = new Set<string>();
+
 export function useFeatureMatrix(moduleId: SubModuleId): UseFeatureMatrixResult {
   const [features, setFeatures] = useState<FeatureRow[]>([]);
   const [summary, setSummary] = useState<FeatureSummary>(EMPTY_SUMMARY);
@@ -31,7 +38,6 @@ export function useFeatureMatrix(moduleId: SubModuleId): UseFeatureMatrixResult 
   const [error, setError] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationResults, setVerificationResults] = useState<VerificationResult[]>([]);
-  const seededRef = useRef<Set<string>>(new Set());
   // Monotonic request id: switching modules fast can let an older, slower
   // /api/feature-matrix response resolve after a newer one. We capture the id
   // at dispatch and ignore any response that is no longer the latest, so a
@@ -117,8 +123,8 @@ export function useFeatureMatrix(moduleId: SubModuleId): UseFeatureMatrixResult 
   // Only after a SUCCESSFUL empty fetch — a failed GET also leaves features at []
   // and seeding then would write over review data the DB still holds.
   useEffect(() => {
-    if (!isLoading && !error && features.length === 0 && !seededRef.current.has(moduleId)) {
-      seededRef.current.add(moduleId);
+    if (!isLoading && !error && features.length === 0 && !seededModules.has(moduleId)) {
+      seededModules.add(moduleId);
       seed();
     }
   }, [isLoading, error, features.length, moduleId, seed]);

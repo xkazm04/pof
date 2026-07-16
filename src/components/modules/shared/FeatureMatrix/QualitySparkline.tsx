@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import type { ReviewSnapshot } from '@/lib/feature-matrix-db';
 import { STATUS_ERROR, STATUS_SUCCESS } from '@/lib/chart-colors';
@@ -9,6 +10,13 @@ export function QualitySparkline({
   snapshots: ReviewSnapshot[];
   accentColor: string;
 }) {
+  // Per-instance unique gradient id. Deriving it from the accent color alone
+  // collided across concurrently-mounted modules that share a category color,
+  // producing duplicate SVG <linearGradient> ids (invalid; WebKit blanks/misrenders
+  // the fill when a same-id defs node mounts/unmounts elsewhere).
+  const gradientRaw = useId();
+  const gradientId = `spark-grad-${gradientRaw.replace(/:/g, '')}`;
+
   const qualityPoints = snapshots
     .map((s) => s.avgQuality)
     .filter((q): q is number => q !== null);
@@ -42,7 +50,7 @@ export function QualitySparkline({
       <svg width={w} height={h} className="flex-shrink-0">
         {/* Gradient fill under the line */}
         <defs>
-          <linearGradient id={`spark-grad-${accentColor.replace('#', '')}`} x1="0" y1="0" x2="0" y2="1">
+          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={accentColor} stopOpacity="0.3" />
             <stop offset="100%" stopColor={accentColor} stopOpacity="0" />
           </linearGradient>
@@ -50,7 +58,7 @@ export function QualitySparkline({
         {/* Area fill */}
         <path
           d={`${pathD} L${points[points.length - 1].x},${h} L${points[0].x},${h} Z`}
-          fill={`url(#spark-grad-${accentColor.replace('#', '')})`}
+          fill={`url(#${gradientId})`}
         />
         {/* Line */}
         <path d={pathD} fill="none" stroke={accentColor} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />

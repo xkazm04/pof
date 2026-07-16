@@ -109,8 +109,10 @@ export function FeatureRowItem({
         </span>
 
         {/* Hover action buttons — opacity reveal is the primary cue; the scale-up is
-            gated behind motion-safe: so reduced-motion users just get the fade. */}
-        <span className="flex items-center gap-0.5 flex-shrink-0 opacity-30 motion-safe:scale-95 group-hover/row:opacity-100 motion-safe:group-hover/row:scale-100 transition-all">
+            gated behind motion-safe: so reduced-motion users just get the fade.
+            Also revealed on keyboard focus-within, and made persistently visible on
+            coarse/no-hover pointers (touch) where :hover never fires. */}
+        <span className="flex items-center gap-0.5 flex-shrink-0 opacity-30 motion-safe:scale-95 group-hover/row:opacity-100 group-focus-within/row:opacity-100 motion-safe:group-hover/row:scale-100 motion-safe:group-focus-within/row:scale-100 [@media(hover:none)]:opacity-100 [@media(hover:none)]:scale-100 transition-all">
           {onReviewFeature && (
             <span
               role="button"
