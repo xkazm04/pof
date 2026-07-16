@@ -313,7 +313,11 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
     get().updateJob(localId, { status: 'generating', mcpJobId: jobId });
 
     // Self-scheduling poll loop (same discipline as submitMcpJob: no overlapping
-    // ticks, `stopped` guards every post-await branch).
+    // ticks, `stopped` guards every post-await branch). A poll miss is a TRANSPORT
+    // failure — keep retrying — but cap consecutive misses so a persistent status
+    // endpoint outage fails the job cleanly instead of retrying forever.
+    const MAX_CONSECUTIVE_POLL_FAILURES = 3;
+    let pollFailures = 0;
     let stopped = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
     const stop = () => { stopped = true; if (timer !== null) { clearTimeout(timer); timer = null; } };
@@ -326,7 +330,22 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
         `/api/visual-gen/generate/status?jobId=${encodeURIComponent(jobId)}`,
       );
       if (stopped) return;
-      if (!res.ok) { scheduleNext(); return; } // transient transport miss — keep polling
+      if (!res.ok) {
+        pollFailures++;
+        if (pollFailures < MAX_CONSECUTIVE_POLL_FAILURES) {
+          scheduleNext(); // transient transport miss — keep polling
+          return;
+        }
+        stop();
+        pollingIntervals.delete(localId);
+        get().updateJob(localId, {
+          status: 'failed',
+          error: `Status polling failed ${pollFailures} times in a row: ${res.error}`,
+          completedAt: Date.now(),
+        });
+        return;
+      }
+      pollFailures = 0;
       const { status, meshPath, error, critique, fidelity } = res.data;
       if (status === 'done') {
         stop();

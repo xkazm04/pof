@@ -24,6 +24,10 @@ function useDebouncedField(value: string, onCommit: (v: string) => void) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onCommitRef = useRef(onCommit);
   useEffect(() => { onCommitRef.current = onCommit; }, [onCommit]);
+  // Holds the latest pending (typed-but-not-yet-committed) value so the unmount
+  // cleanup — which runs after this render's `local` closure may be stale — can
+  // flush the correct value.
+  const pendingRef = useRef<string | null>(null);
 
   // Re-sync from server only when not actively editing (avoids mid-edit clobber).
   // Adjust state during render (React's recommended pattern) rather than in an effect:
@@ -35,14 +39,29 @@ function useDebouncedField(value: string, onCommit: (v: string) => void) {
     if (!focused) setLocal(value);
   }
 
-  // Flush any pending debounced commit on unmount.
-  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+  // Flush any pending debounced commit on unmount. If the debounce timer is still
+  // armed when the field unmounts (e.g. the scenario card is collapsed via
+  // AnimatePresence before the ~400ms window elapses and no blur fires), commit
+  // the pending value instead of silently discarding it. `pendingRef` is nulled
+  // both here and when the timer fires normally, so a commit happens at most once.
+  useEffect(() => () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+      if (pendingRef.current !== null) {
+        onCommitRef.current(pendingRef.current);
+        pendingRef.current = null;
+      }
+    }
+  }, []);
 
   const onChange = useCallback((next: string) => {
     setLocal(next);
+    pendingRef.current = next;
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
       timerRef.current = null;
+      pendingRef.current = null;
       onCommitRef.current(next);
     }, COMMIT_DEBOUNCE_MS);
   }, []);
@@ -52,6 +71,7 @@ function useDebouncedField(value: string, onCommit: (v: string) => void) {
   const onBlur = useCallback((next: string) => {
     setFocused(false);
     if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+    pendingRef.current = null;
     // Commit only if the value actually diverged from the last server value.
     if (next !== value) onCommitRef.current(next);
   }, [value]);
