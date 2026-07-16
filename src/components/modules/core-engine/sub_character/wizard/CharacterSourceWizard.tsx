@@ -32,6 +32,13 @@ export function CharacterSourceWizard({ moduleId }: { moduleId: SubModuleId }) {
   // shared onComplete can attribute success/failure to the right step.
   const [steps, setSteps] = useState<WizardStepStatus[]>(['idle', 'idle', 'idle']);
   const activeStepRef = useRef<1 | 2 | 3 | null>(null);
+  // Synchronous re-entrancy latch. `isRunning` is reducer-derived and lags one
+  // render behind, so two rapid clicks on different reachable steps can both slip
+  // past `if (isRunning) return;` before the first dispatch's state commits — both
+  // then share the one CLI session and clobber `activeStepRef`. This ref flips the
+  // instant a dispatch begins (closing the click-to-rerender gap) and clears once
+  // the async execute() settles, by which point `isRunning`/`disabled` have caught up.
+  const dispatchLockRef = useRef(false);
 
   const markStep = useCallback((step: 1 | 2 | 3, status: WizardStepStatus) => {
     setSteps((prev) => prev.map((s, i) => (i === step - 1 ? status : s)));
@@ -72,24 +79,30 @@ export function CharacterSourceWizard({ moduleId }: { moduleId: SubModuleId }) {
   }, []);
 
   const dispatchEnable = useCallback(() => {
-    if (isRunning) return;
+    if (dispatchLockRef.current || isRunning) return;
+    dispatchLockRef.current = true;
     activeStepRef.current = 1;
     markStep(1, 'running');
-    execute(TaskFactory.quickAction(moduleId, ENABLE_PROMPT[source], 'Prepare Source'));
+    void execute(TaskFactory.quickAction(moduleId, ENABLE_PROMPT[source], 'Prepare Source'))
+      .finally(() => { dispatchLockRef.current = false; });
   }, [isRunning, execute, moduleId, source, markStep]);
 
   const dispatchWire = useCallback(() => {
-    if (isRunning) return;
+    if (dispatchLockRef.current || isRunning) return;
+    dispatchLockRef.current = true;
     activeStepRef.current = 2;
     markStep(2, 'running');
-    execute(TaskFactory.characterSetup(moduleId, { source, ...assets }, appOrigin, 'Wire Character'));
+    void execute(TaskFactory.characterSetup(moduleId, { source, ...assets }, appOrigin, 'Wire Character'))
+      .finally(() => { dispatchLockRef.current = false; });
   }, [isRunning, execute, moduleId, source, assets, appOrigin, markStep]);
 
   const dispatchVerify = useCallback(() => {
-    if (isRunning) return;
+    if (dispatchLockRef.current || isRunning) return;
+    dispatchLockRef.current = true;
     activeStepRef.current = 3;
     markStep(3, 'running');
-    execute(TaskFactory.checklist(moduleId, 'ac-6', '', 'Verify Locomotes', appOrigin));
+    void execute(TaskFactory.checklist(moduleId, 'ac-6', '', 'Verify Locomotes', appOrigin))
+      .finally(() => { dispatchLockRef.current = false; });
   }, [isRunning, execute, moduleId, appOrigin, markStep]);
 
   return (
