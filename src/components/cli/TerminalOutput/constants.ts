@@ -28,9 +28,9 @@ export const TOOL_ICONS: Record<string, { icon: typeof FileEdit; colorClass: str
   Read: { icon: Eye, colorClass: CLI_COLORS.prompt },
 };
 
+/** Intrinsic-size hint (px) for offscreen rows skipped via content-visibility. */
 export const LOG_ITEM_HEIGHT = 24;
 export const TOOL_BATCH_THRESHOLD = 5;
-export const OVERSCAN_COUNT = 20;
 
 export const TOOLBAR_PADDING = 6;
 export const TOOLBAR_GAP = 8;
@@ -67,13 +67,6 @@ export const ENTITY_STYLES: Record<InlineEntity['type'], { color: string; icon: 
   warning: { color: MODULE_COLORS.content, icon: AlertTriangle },
   step:    { color: MODULE_COLORS.setup, icon: Footprints },
 };
-
-/**
- * The number of recent logs to render as grouped/rich entries outside the
- * virtualizer.  These get the CSS slide-in animation and support expandable
- * tool-pair / batch rows.  All older logs are flat-rendered inside react-window.
- */
-export const TAIL_COUNT = 8;
 
 export const STARTER_PROMPTS = [
   { label: 'Implement next checklist item', prompt: 'Look at the checklist and implement the next uncompleted item.' },

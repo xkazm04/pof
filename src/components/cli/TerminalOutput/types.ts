@@ -1,6 +1,5 @@
 import type { LogEntry } from '../types';
 import type { BuildParseResult } from '../UE5BuildParser';
-import type { ListImperativeAPI } from 'react-window';
 
 // --- Grouped log types ---
 
@@ -9,10 +8,6 @@ export type GroupedLogEntry =
   | { kind: 'tool_pair'; toolUse: LogEntry; toolResult: LogEntry; id: string }
   | { kind: 'tool_batch'; pairs: { toolUse: LogEntry; toolResult: LogEntry }[]; id: string };
 
-// --- Virtualized row for react-window ---
-
-export interface LogRowData { logs: LogEntry[]; }
-
 // --- Main TerminalOutput component ---
 
 export interface TerminalOutputProps {
@@ -20,7 +15,6 @@ export interface TerminalOutputProps {
   isStreaming: boolean;
   queuePendingCount: number;
   scrollRef: React.RefObject<HTMLDivElement | null>;
-  listRef: React.RefObject<ListImperativeAPI | null>;
   onScroll: () => void;
   buildParseCache: Map<string, BuildParseResult>;
   onBuildFix: (prompt: string) => void;
