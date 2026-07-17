@@ -128,15 +128,31 @@ export function scopeAbslogPerTest(
     };
   });
 
+  // UE marker lines often carry only the LEAF test name (`Name={NPCConfig}`) while artifacts
+  // declare the full dotted spec (`PoF.CharacterVael.NPCConfig`). A leaf may attribute to its
+  // dotted owner ONLY when that leaf is unique within the requested batch — two tests sharing
+  // a leaf stay unobserved (deferred) rather than risk mis-crediting either.
+  const leafOf = (n: string) => n.slice(n.lastIndexOf('.') + 1);
+  const leafCounts = new Map<string, number>();
+  for (const n of testNames) {
+    const leaf = leafOf(n.toLowerCase());
+    leafCounts.set(leaf, (leafCounts.get(leaf) ?? 0) + 1);
+  }
+
   const out = new Map<string, PerTestAbslog>();
   for (const name of testNames) {
     const lc = name.toLowerCase();
+    const leaf = leafOf(lc);
+    const leafUnique = leafCounts.get(leaf) === 1;
     let sawPass = false;
     let sawFail = false;
     let mentioned = false;
     for (const s of scored) {
       // A line that names a test owns ONLY that test; an unnamed line falls back to a mention.
-      const belongs = s.name !== null ? s.name.includes(lc) : s.lower.includes(lc);
+      const belongs =
+        s.name !== null
+          ? s.name.includes(lc) || (leafUnique && (s.name === leaf || s.name.endsWith(`.${leaf}`)))
+          : s.lower.includes(lc);
       if (!belongs) continue;
       mentioned = true;
       if (s.fail) sawFail = true;
