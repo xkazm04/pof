@@ -23,18 +23,55 @@ import ceilingFactsJson from './ceiling-facts.json';
 import { deliverableClassOf } from '@/lib/judge/dimensions';
 import { getStepFact, isSyntheticEntity, type StepFact } from './statusModel';
 import type { JudgeVerdict } from './judge-verdicts-db';
+import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 
 /** Minimum rubric version an llm-panel verdict must carry to count as capability
- *  evidence — v3 is the canon-aware strict bar (see judge/rubrics.ts). */
+ *  evidence — v3 is the canon-aware strict bar (see judge/rubrics.ts). VLM verdicts
+ *  predate the rubric column (Qwen vision tier) and human verdicts carry no rubric,
+ *  so neither is rubric-gated — see `latestVerdictsByJudge`. */
 const MIN_PANEL_RUBRIC = 3;
-/** Median >= this (with n>=MIN_PROVEN_N) earns `proven`. */
+/** Median >= this (with n>=MIN_PROVEN_N) earns `proven` (score-judged classes). */
 const PROVEN_MEDIAN = 90;
 const PROVEN_N = 3;
 /** Median in [STRONG_MEDIAN, PROVEN_MEDIAN) earns `strong`. */
 const STRONG_MEDIAN = 85;
 
+/** Gate-judged (ue-test) ladder — conservative, empirical proof from the L3/L4 runner.
+ *  `proven` demands a high pass rate AND real volume (a single passing gate isn't a
+ *  proven runtime capability); `strong` a majority with moderate volume; anything below
+ *  that with declared gates is `capped` (the gap names the deferred/failing count). */
+const GATE_PROVEN_RATE = 0.9;
+const GATE_PROVEN_N = 10;
+const GATE_STRONG_RATE = 0.7;
+const GATE_STRONG_N = 5;
+
+const SCORE_JUDGES = new Set<StepFact['judge']>(['llm-panel', 'vlm']);
+const GATE_TIERS = new Set(['L3', 'L4']);
+
 export type CapabilityProvenance = 'derived-from-project-instances' | 'neutral-benchmark';
 export type CapabilityGradeLevel = 'proven' | 'strong' | 'capped' | 'unproven';
+/** Which evidence stream fed the row's grade — the honest sub-label under provenance.
+ *  `mixed` = a class whose cells split across llm-panel and vlm steps (each cell scored
+ *  by its own step's judge). `none` = a class with no judgeable evidence stream at all. */
+export type CapabilityStream = 'llm-panel' | 'vlm' | 'gates' | 'human' | 'none' | 'mixed';
+/** Per-class evidence mode, resolved from the class's dominant audited judge (excluding
+ *  `none`): score-judged (median ladder), gate-judged (L3/L4 pass-rate), or human/none. */
+type EvidenceMode = 'score' | 'gate' | 'human-none';
+
+function modeOfJudge(judge: string): EvidenceMode {
+  if (judge === 'ue-test') return 'gate';
+  if (judge === 'llm-panel' || judge === 'vlm') return 'score';
+  return 'human-none'; // human | none
+}
+
+/** Historical Qwen-VL verdicts recorded 2D/3D/icon craft on the raw 0-10 scale before the
+ *  scores were moved onto the 0-100 axis the llm-panel ladder uses. Current stored rows are
+ *  already 0-100 (their values are not all multiples of 10), so this only rescues a genuinely
+ *  legacy 0-10 row; the `<=10` boundary is the conservative cut (a true 10/100 vlm pass — a
+ *  near-worst image — is implausible, so treating <=10 as the 0-10 scale is safe). */
+function normalizeVlmScore(score: number): number {
+  return score <= 10 ? score * 10 : score;
+}
 
 export interface CeilingFact {
   catalogId: string;
@@ -169,23 +206,29 @@ export interface CapabilityRow {
   klass: string;
   label: string;
   grade: CapabilityGradeLevel;
-  /** Median of INCLUDED (non-excluded) strict-panel scores; null when no evidence. */
+  /** Median of INCLUDED (non-excluded) judged scores; null for gate-judged rows (they
+   *  report gatesPassed/gatesDeclared instead) and for classes with no score evidence. */
   median: number | null;
-  /** Evidence count — included cells feeding the median. */
+  /** Evidence count — included cells feeding the median (0 for gate rows). */
   n: number;
   /** Cells excluded as project-data / checker-structural. */
   excluded: number;
+  /** Gate-judged rows only: L3/L4 gates that passed vs declared (pass + deferred + fail). */
+  gatesPassed?: number;
+  gatesDeclared?: number;
+  /** Which evidence stream fed the grade (llm-panel / vlm / gates / human / mixed / none). */
+  stream: CapabilityStream;
   /** Dominant true engine(s) powering the class (technique stack). */
   techniqueStack: string[];
-  /** Dominant judge class for the class's steps. */
+  /** Dominant judge class for the class's steps (excluding `none`). */
   judgeClass: string;
-  /** A documented technique wall exists for this class. */
+  /** A documented technique wall exists for this class (score/human rows only). */
   cappedByTechnique: boolean;
   gapStatement: string;
   provenance: CapabilityProvenance;
 }
 
-function gradeOf(med: number | null, n: number, cappedByTechnique: boolean): CapabilityGradeLevel {
+function gradeScore(med: number | null, n: number, cappedByTechnique: boolean): CapabilityGradeLevel {
   // No strict-panel evidence → unproven (also covers classes whose steps are
   // predominantly generatorWired:false / trueEngine None — they never accrue verdicts).
   if (n === 0) return 'unproven';
@@ -198,79 +241,163 @@ function gradeOf(med: number | null, n: number, cappedByTechnique: boolean): Cap
   return 'capped';
 }
 
+function gradeGate(passed: number, declared: number): CapabilityGradeLevel {
+  if (declared === 0) return 'unproven';
+  const rate = passed / declared;
+  if (rate >= GATE_PROVEN_RATE && passed >= GATE_PROVEN_N) return 'proven';
+  if (rate >= GATE_STRONG_RATE && passed >= GATE_STRONG_N) return 'strong';
+  return 'capped';
+}
+
 const GRADE_RANK: Record<CapabilityGradeLevel, number> = { proven: 0, strong: 1, capped: 2, unproven: 3 };
 
-/**
- * Build one capability row per class from the strict-panel verdicts the dashboard
- * fetched. Pure — no I/O. Steps:
- *  1. Keep the latest rubric>=3 llm-panel verdict per (catalog|entity|step), skipping
- *     synthetic fixtures.
- *  2. Map each surviving cell to its capability class; EXCLUDE project-data /
- *     checker-structural cells (count them, don't score them).
- *  3. Per class: median + n of the included scores, excluded count, and a grade from
- *     the ladder (proven / strong / capped / unproven), with technique stack + gap.
- */
-export function buildCapabilityRows(verdicts: JudgeVerdict[]): CapabilityRow[] {
+/** Dominant judge for a class EXCLUDING `none` (an absent judge isn't an evidence stream).
+ *  Resolves the class's evidence mode. Falls back to `none` when every step is un-judged. */
+function dominantJudge(judges: Map<string, number>): string {
+  let best = 'none';
+  let bestN = -1;
+  for (const [j, c] of judges) {
+    if (j === 'none') continue;
+    if (c > bestN) {
+      best = j;
+      bestN = c;
+    }
+  }
+  return best;
+}
+
+/** Latest verdict per (judge, catalog|entity|step), skipping synthetic fixtures. llm-panel
+ *  verdicts must carry rubric>=3 (the strict canon-aware bar); vlm/human verdicts are NOT
+ *  rubric-gated (both predate the rubric column). Each judge stream is kept independently so
+ *  a cell can be scored by its OWN step's audited judge class. */
+function latestVerdictsByJudge(verdicts: JudgeVerdict[]): Map<string, JudgeVerdict> {
   const latest = new Map<string, JudgeVerdict>();
   for (const v of verdicts) {
-    if (v.judge !== 'llm-panel') continue;
-    if ((v.rubricVersion ?? 1) < MIN_PANEL_RUBRIC) continue;
     if (isSyntheticEntity(v.entityId)) continue;
-    const key = `${v.catalogId}|${v.entityId}|${v.step}`;
+    if (v.judge === 'llm-panel' && (v.rubricVersion ?? 1) < MIN_PANEL_RUBRIC) continue;
+    const key = `${v.judge}|${v.catalogId}|${v.entityId}|${v.step}`;
     const prev = latest.get(key);
     if (!prev || (v.judgedAt ?? '') > (prev.judgedAt ?? '')) latest.set(key, v);
   }
+  return latest;
+}
 
-  const scores = new Map<string, number[]>();
-  const excluded = new Map<string, number>();
-  for (const v of latest.values()) {
+interface ClassEvidence {
+  score: number[];
+  scoreStreams: Set<'llm-panel' | 'vlm'>;
+  human: number[];
+  excluded: number;
+  gatePassed: number;
+  gateDeclared: number;
+}
+
+function emptyEvidence(): ClassEvidence {
+  return { score: [], scoreStreams: new Set(), human: [], excluded: 0, gatePassed: 0, gateDeclared: 0 };
+}
+
+/**
+ * Build one capability row per class. Each class draws from the evidence stream its steps'
+ * AUDITED `judge` class demands (step-facts), never a new judgment. Pure — no I/O.
+ *
+ *  - score-judged (llm-panel / vlm): median of the latest matching-judge verdict per cell
+ *    (each cell scored by its OWN step's judge, so a mixed class aggregates both streams),
+ *    minus project-data / checker-structural cells; graded on the median ladder.
+ *  - gate-judged (ue-test → ue-runtime / animation): declared L3/L4 gate artifacts —
+ *    passRate = gatesPassed/gatesDeclared (declared = pass + deferred + fail; deferred =
+ *    declared-not-run) — graded on the conservative gate ladder, shown as "N/M gates pass".
+ *  - human/none (audio, vfx): unproven unless human verdicts exist for the human-judged cells.
+ */
+export function buildCapabilityRows(verdicts: JudgeVerdict[], artifacts: PipelineArtifact[] = []): CapabilityRow[] {
+  const ev = new Map<string, ClassEvidence>();
+  const get = (k: string): ClassEvidence => {
+    let e = ev.get(k);
+    if (!e) {
+      e = emptyEvidence();
+      ev.set(k, e);
+    }
+    return e;
+  };
+
+  for (const v of latestVerdictsByJudge(verdicts).values()) {
     const fact = getStepFact(v.catalogId, v.step);
-    if (!fact) continue;
+    if (!fact || v.judge !== fact.judge) continue; // score a cell only by its OWN step's judge
     const klass = capabilityClassOf(fact.deliverable, v.catalogId);
-    if (ceilingFor(v.catalogId, v.step, v.entityId, EXCLUDE_KINDS)) {
-      excluded.set(klass, (excluded.get(klass) ?? 0) + 1);
+    if (v.judge === 'human') {
+      get(klass).human.push(v.score);
       continue;
     }
-    const list = scores.get(klass) ?? [];
-    list.push(v.score);
-    scores.set(klass, list);
+    if (!SCORE_JUDGES.has(v.judge)) continue;
+    if (ceilingFor(v.catalogId, v.step, v.entityId, EXCLUDE_KINDS)) {
+      get(klass).excluded += 1;
+      continue;
+    }
+    const e = get(klass);
+    e.score.push(v.judge === 'vlm' ? normalizeVlmScore(v.score) : v.score);
+    e.scoreStreams.add(v.judge);
+  }
+
+  for (const a of artifacts) {
+    if (isSyntheticEntity(a.entityId) || !a.tier || !GATE_TIERS.has(a.tier)) continue;
+    const fact = getStepFact(a.catalogId, a.step);
+    if (!fact) continue;
+    const e = get(capabilityClassOf(fact.deliverable, a.catalogId));
+    if (a.status === 'pass') {
+      e.gatePassed += 1;
+      e.gateDeclared += 1;
+    } else if (a.status === 'deferred' || a.status === 'fail') {
+      e.gateDeclared += 1; // declared but unproven (deferred = not-run, fail = failing)
+    }
   }
 
   const stats = computeClassStats();
   const capped = cappedClasses();
-  const classes = new Set<string>([...stats.keys(), ...scores.keys(), ...excluded.keys()]);
+  const classes = new Set<string>([...stats.keys(), ...ev.keys()]);
 
-  const rows: CapabilityRow[] = [];
-  for (const klass of classes) {
-    const list = scores.get(klass) ?? [];
-    const n = list.length;
-    const med = median(list);
-    const cappedByTechnique = capped.has(klass);
-    const grade = gradeOf(med, n, cappedByTechnique);
-    const s = stats.get(klass);
-    const techniqueStack = s ? topKeys(s.engines, 2) : [];
-    const judgeClass = s ? topKeys(s.judges, 1)[0] ?? 'none' : 'none';
-    const gapStatement =
-      GAP[klass] ??
-      (n === 0
-        ? 'No strict-panel evidence recorded for this class yet.'
-        : `Graded ${grade} from ${n} judged cells (median ${med ?? '—'}); no documented technique wall.`);
-    rows.push({
-      klass,
-      label: CLASS_LABEL[klass] ?? klass,
-      grade,
-      median: med,
-      n,
-      excluded: excluded.get(klass) ?? 0,
-      techniqueStack: techniqueStack.length ? techniqueStack : ['—'],
-      judgeClass,
-      cappedByTechnique,
-      gapStatement,
-      provenance: 'derived-from-project-instances',
-    });
-  }
-
+  const rows = [...classes].map((klass) => buildRow(klass, ev.get(klass) ?? emptyEvidence(), stats.get(klass), capped.has(klass)));
   return rows.sort(
     (a, b) => GRADE_RANK[a.grade] - GRADE_RANK[b.grade] || (b.median ?? -1) - (a.median ?? -1) || a.label.localeCompare(b.label),
   );
+}
+
+/** Assemble one row from its class's pooled evidence + static stats. Pure. */
+function buildRow(klass: string, e: ClassEvidence, s: ClassStats | undefined, hasTechniqueCap: boolean): CapabilityRow {
+  const judgeClass = s ? dominantJudge(s.judges) : 'none';
+  const mode = modeOfJudge(judgeClass);
+  const techniqueStack = s ? topKeys(s.engines, 2) : [];
+  const base = {
+    klass,
+    label: CLASS_LABEL[klass] ?? klass,
+    excluded: e.excluded,
+    techniqueStack: techniqueStack.length ? techniqueStack : ['—'],
+    judgeClass,
+    provenance: 'derived-from-project-instances' as const,
+  };
+
+  if (mode === 'gate') {
+    const grade = gradeGate(e.gatePassed, e.gateDeclared);
+    const unproven = e.gateDeclared - e.gatePassed;
+    const gapStatement =
+      e.gateDeclared === 0
+        ? GAP[klass] ?? 'No declared L3/L4 gates recorded for this class yet.'
+        : `${e.gatePassed}/${e.gateDeclared} declared L3/L4 gates pass — ${unproven} still deferred or failing. Runtime capability is provable only by these gates, not the panel.`;
+    return { ...base, grade, median: null, n: 0, gatesPassed: e.gatePassed, gatesDeclared: e.gateDeclared, stream: 'gates', cappedByTechnique: false, gapStatement };
+  }
+
+  if (mode === 'human-none') {
+    const n = e.human.length;
+    const med = median(e.human);
+    const grade = n === 0 ? 'unproven' : gradeScore(med, n, hasTechniqueCap);
+    const gapStatement = GAP[klass] ?? (n === 0 ? 'No human review recorded for this class yet.' : `Graded ${grade} from ${n} human verdicts (median ${med ?? '—'}).`);
+    return { ...base, grade, median: med, n, stream: n === 0 ? 'none' : 'human', cappedByTechnique: hasTechniqueCap && n > 0, gapStatement };
+  }
+
+  // score mode
+  const n = e.score.length;
+  const med = median(e.score);
+  const grade = gradeScore(med, n, hasTechniqueCap);
+  const stream: CapabilityStream = e.scoreStreams.size > 1 ? 'mixed' : (e.scoreStreams.values().next().value ?? (judgeClass === 'vlm' ? 'vlm' : 'llm-panel'));
+  const gapStatement =
+    GAP[klass] ??
+    (n === 0 ? 'No strict-judge evidence recorded for this class yet.' : `Graded ${grade} from ${n} judged cells (median ${med ?? '—'}); no documented technique wall.`);
+  return { ...base, grade, median: med, n, stream, cappedByTechnique: hasTechniqueCap, gapStatement };
 }
