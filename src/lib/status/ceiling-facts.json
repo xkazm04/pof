@@ -1,0 +1,88 @@
+{
+  "_note": "Recorded quality ceilings mined from the green-loop campaign ledger (.claude/green-loop/state.md). Each entry pins a (catalogId, step[, entityId]) cell to the KIND of wall that caps its judge score, so the capability lens can tell 'our technique can't do better' apart from 'this project's data is locked/unseeded' and 'a checker forces the number the judge then flags'. project-data + checker-structural cells are EXCLUDED from a capability class's median (they don't measure technique); technique cells stay IN and CAP the class. When a cause is ambiguous it is classified 'technique' (conservative — counts against our capability, never inflates it). This is a READ-ONLY lens; it never touches statusModel grading or any gate.",
+  "auditedFrom": "green-loop/state.md (2026-07-16/17 waves W1-W4)",
+  "ceilings": [
+    {
+      "catalogId": "loot-tables",
+      "step": "Balance / Drop Sim",
+      "ceilingClass": "checker-structural",
+      "note": "arithmeticReconciles + withinPercent forces the drop numbers into the exact band the judge then calls target-fitting (~62) — the checker, not the technique, sets the wall."
+    },
+    {
+      "catalogId": "items",
+      "step": "Economy",
+      "ceilingClass": "checker-structural",
+      "note": "pricePowerRatio checker forces the price↔power reconciliation the adversarial judge re-flags as fitted-to-target rather than designed."
+    },
+    {
+      "catalogId": "items",
+      "step": "Economy",
+      "entityId": "item-lightsaber",
+      "ceilingClass": "project-data",
+      "note": "Sunderlight locked baseValue 15 at ilvl70/req57 reads as a low-tier-vs-high-ilvl contradiction; the number is a locked seed, not a content defect."
+    },
+    {
+      "catalogId": "items",
+      "step": "Tooltip / Compare",
+      "entityId": "item-lightsaber",
+      "ceilingClass": "project-data",
+      "note": "Compare target 'Duelist's Edge' exists only in-brief — no seeded sibling row for the judge to weigh against (unseeded upstream)."
+    },
+    {
+      "catalogId": "vendors",
+      "step": "Economy Sim",
+      "ceilingClass": "project-data",
+      "note": "Vendor-laws margin band vs faction-rep discount is a canon-vs-canon collision; the cap is an unresolved owner-canon decision, not writing quality."
+    },
+    {
+      "catalogId": "loot-tables",
+      "step": "Item Base Links",
+      "ceilingClass": "project-data",
+      "note": "item-3/4/5 + dangling item-7 upstream base rows are seed-scarce; the link step can only cite the roster that exists (unseeded upstream)."
+    },
+    {
+      "catalogId": "items",
+      "step": "Concept Brief",
+      "ceilingClass": "technique",
+      "note": "Systems-spec adversarial-escalation ceiling ~72-82: the strict judge escalates polish demands each round; leaner-airtight beats ever-deeper but a wall remains."
+    },
+    {
+      "catalogId": "items",
+      "step": "Damage / Implicit",
+      "entityId": "item-lightsaber",
+      "ceilingClass": "technique",
+      "note": "Deliberately-low 38-DPS spine makes the Unique read 'thin / strictly worse outside boss armour' to an adversarial judge — a craft/framing wall, not the locked number itself."
+    },
+    {
+      "catalogId": "items",
+      "step": "Affixes",
+      "entityId": "item-lightsaber",
+      "ceilingClass": "technique",
+      "note": "Searing Cut 100% armour-negation vs canon soft-cap is a plausibility coin-flip the judge re-flags even with an explicit max-penetration value-zero law."
+    },
+    {
+      "catalogId": "tutorial-beats",
+      "step": "Concept Brief",
+      "ceilingClass": "technique",
+      "note": "Config-artifact craft-depth ceiling ~88-89: the judge's polish bar for competent-but-not-quite-shippable systems prose; settle med-3 twice and stop."
+    },
+    {
+      "catalogId": "dialog-trees",
+      "step": "Subtitles & Choices UI",
+      "ceilingClass": "technique",
+      "note": "Craft-depth 86-89 wall on config artifacts — breadth dilutes, and the adversarial judge caps otherwise-correct UI/config specs short of shippable."
+    },
+    {
+      "catalogId": "hud-elements",
+      "step": "Accessibility",
+      "ceilingClass": "technique",
+      "note": "Judge mis-computes WCAG luminance (an arithmetic coin-flip) and caps otherwise-correct a11y specs — a judge-arithmetic technique wall."
+    },
+    {
+      "catalogId": "spellbook",
+      "step": "Applies Status",
+      "ceilingClass": "technique",
+      "note": "Ignite rate-continuity is an arithmetic coin-flip: the judge re-flags a correct DoT rate as discontinuous — judge-arithmetic technique ceiling."
+    }
+  ]
+}
