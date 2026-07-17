@@ -1,0 +1,54 @@
+{
+  "_note": "Neutral capability-benchmark brief bank (Phase 2). Each brief describes a deliverable for 'Emberfall' — an INVENTED generic grim-fantasy ARPG that shares NO canon, siblings, or locked numbers with PoF. Its whole purpose is to measure the generation TECHNIQUE STACK (quality prompt pack + engine + policy model) on project-portable work: 'can this stack produce a shippable X for ANY game project.' Produced by scripts/capability-benchmark.ts and judged by the CANON-FREE strict rubric (buildRubricPrompt without canonContext/siblingContext), median-of-3, sequential. Results land in src/lib/status/capability-benchmarks.json. Editing a brief here does NOT re-run it — pass --force to re-benchmark.",
+  "world": "Emberfall — a dying kingdom scorched by a fallen ember-star. Ash-blighted wilds, guttering beacon-towers, and the Ashwardens who hold the last lit ground. Currency: cinders. Factions: the Emberguard (militant order), the Cinderkin (scavenger clans), the Hollow Court (the ash-corrupted dead).",
+  "briefs": [
+    {
+      "id": "text-save-schema",
+      "class": "text-config",
+      "title": "Checkpoint save-state schema",
+      "brief": "Design the single-player checkpoint save-state schema for Emberfall (the USaveGame-equivalent serialized at each lit beacon). Specify every persisted field: schema version + migration note, player identity/progression (level, cinders, allocated attributes, unlocked Ashwarden abilities), world state (last beacon id, discovered beacons, one-time boss/event flags), inventory + equipped loadout with stable item ids and stack counts, and quest journal stage ids. Give each field a concrete type, an example value, and whether it is authoritative or derived-on-load. Include the versioning/migration rule for adding a field without breaking old saves, and one worked round-trip example (save -> load) proving no data loss."
+    },
+    {
+      "id": "text-ability-tuning",
+      "class": "text-config",
+      "title": "Active ability tuning doc",
+      "brief": "Author the numeric tuning doc for the Ashwarden active ability 'Cinderbrand' — a melee sabre strike that ignites the target. Define base damage, the ability-power scaling coefficient, cooldown, cinder/resource cost, the ignite damage-over-time (tick damage, tick interval, duration, stacking rule), and how it scales across ability ranks 1-5. Show the full arithmetic derivation of the rank-5 total damage from the rank-1 primitives (a chain a reader can reproduce on a calculator), state the DPS at a stated target armour value, and disclose the intended power budget vs a baseline attack so a designer can see it is balanced, not overtuned."
+    },
+    {
+      "id": "text-codex-lore",
+      "class": "text-config",
+      "title": "Codex lore entry",
+      "brief": "Write a codex lore entry for 'The Sundered Beacon' — the shattered central watchtower whose fall let the ash-blight spread. Deliver it as a structured codex record: title, one-line subtitle, a 120-180 word body in a confident in-world voice, a short 'known facts' bullet list the UI can render separately, and a metadata block (region, era, discovery condition, cross-referenced codex entry ids). The prose must have a distinctive voice, imply gameplay hooks (a reason to go there) without breaking fiction, and avoid generic-fantasy boilerplate."
+    },
+    {
+      "id": "graph-ai-fsm",
+      "class": "graph-data",
+      "title": "Enemy AI state machine",
+      "brief": "Specify the AI state machine for a 'Hollow Revenant' melee enemy in Emberfall as structured JSON: a states array (each with id, a behavior description, and enter/exit actions) and a transitions array (from-state, to-state, a precise trigger condition, and priority). Cover at minimum Idle, Patrol, Investigate, Chase, MeleeAttack, Stagger, and Death, plus an enrage/desperation behavior below a health threshold. Conditions must reference concrete blackboard values (aggro range in metres, attack range, health percentage, last-known-target-location timeout in seconds). The graph must be deterministic (no ambiguous dual transitions) and every non-terminal state must be escapable."
+    },
+    {
+      "id": "graph-quest-dag",
+      "class": "graph-data",
+      "title": "Quest-stage DAG",
+      "brief": "Specify the quest-stage dependency DAG for the Emberfall side quest 'Embers of the Fallen' as structured JSON: a nodes array (stage id, title, objective text, completion condition) and an edges array (from-stage, to-stage, and the branch condition where a stage has multiple outcomes). The quest must include at least one branch (a player choice that leads to two distinct resolutions) that later re-converges, one optional side objective, and a terminal success node plus a distinct terminal failure/abandon node. It must be a valid DAG (no cycles), every node must be reachable from the start node, and both terminal nodes must be reachable."
+    },
+    {
+      "id": "art-item-icon",
+      "class": "2d-art",
+      "title": "Painterly item concept icon",
+      "brief": "A painterly inventory item concept icon for 'Cinderbrand', a legendary curved ashsteel sabre of Emberfall: a single centred blade on a clean neutral ground, hero three-quarter angle, warm ember light catching a fuller etched with cooling-crack runes, a wrapped-leather grip and a small ember-crystal pommel. Believable forged-metal and leather surface, deliberate value hierarchy, crisp intentional edges, reads instantly at inventory-icon scale. No text, watermark, border, or extra objects."
+    },
+    {
+      "id": "art-environment",
+      "class": "2d-art",
+      "title": "Environment concept painting",
+      "brief": "An environment concept painting of 'the Ashen Reach' in Emberfall: a wide desolate basin of grey ash dunes under a bruised ember-lit sky, a broken beacon-tower silhouetted on a ridge with dull embers still guttering at its crown, drifts of ash catching low warm light against cold shadow. Cinematic depth (foreground ridge, midground ruins, atmospheric far haze), a clear focal read, painterly rendering with a deliberate warm/cool value structure. No text, watermark, characters, or UI."
+    },
+    {
+      "id": "glyph-ability-hud",
+      "class": "ui-glyph",
+      "title": "Flat HUD ability glyph",
+      "brief": "A flat HUD ability glyph for 'Emberdash', a short dash ability in Emberfall: one unambiguous stylized motif — a forward-swept flame-arrow / motion-streak reading clearly as fast forward movement — as a clean flat single-colour-family icon with consistent stroke weight, strong figure/ground contrast, centred in a square. It must stay legible at 32-40px, belong to a cohesive HUD ability-icon set, and contain exactly one glyph. No text, letters, numbers, watermark, grid, or extra objects."
+    }
+  ]
+}

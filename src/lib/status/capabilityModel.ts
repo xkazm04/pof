@@ -15,11 +15,17 @@
  *                        project-data or checker-structural cell is EXCLUDED from the
  *                        median (it doesn't measure our technique); a technique cell
  *                        stays in and caps the class.
+ *   - capability-benchmarks.json (Phase 2) — neutral-brief benchmark of the TECHNIQUE
+ *                        STACK, canon-FREE strict-judged. When a class has scored
+ *                        benchmark briefs the neutral median DRIVES its grade (provenance
+ *                        'neutral-benchmark', project-portable) and the instance median is
+ *                        kept visible as a secondary field; deferred rows only surface a note.
  *
  * Pure: JSON imports + function args only (mirrors statusModel).
  */
 import stepFactsJson from './step-facts.json';
 import ceilingFactsJson from './ceiling-facts.json';
+import capabilityBenchmarksJson from './capability-benchmarks.json';
 import { deliverableClassOf } from '@/lib/judge/dimensions';
 import { getStepFact, isSyntheticEntity, type StepFact } from './statusModel';
 import type { JudgeVerdict } from './judge-verdicts-db';
@@ -84,6 +90,46 @@ export interface CeilingFact {
 const CEILINGS: CeilingFact[] = (ceilingFactsJson.ceilings as CeilingFact[]) ?? [];
 const FACTS: StepFact[] = stepFactsJson.steps as StepFact[];
 const EXCLUDE_KINDS = new Set<CeilingFact['ceilingClass']>(['project-data', 'checker-structural']);
+
+/** One neutral-benchmark result row (Phase 2) — the TECHNIQUE STACK run on a canon-FREE brief,
+ *  strict-judged WITHOUT canon/sibling context, median-of-3. A scored row (numeric `score`) makes
+ *  its class project-portable — graded from the benchmark median instead of project instances. A
+ *  `deferred` row carries an honest note and NO score (its class stays instance-graded; the note is
+ *  surfaced in the gap statement). Written by scripts/capability-benchmark.ts. */
+export interface CapabilityBenchmarkRow {
+  class: string;
+  briefId: string | null;
+  score: number | null;
+  draws?: number[];
+  model?: string;
+  effort?: string;
+  engine?: string;
+  styleDna?: boolean;
+  deferred?: boolean;
+  note?: string;
+}
+
+export const CAPABILITY_BENCHMARKS: CapabilityBenchmarkRow[] =
+  (capabilityBenchmarksJson.rows as CapabilityBenchmarkRow[]) ?? [];
+
+interface BenchEvidence {
+  /** Numeric benchmark medians, one per scored brief. */
+  scores: number[];
+  /** Honest notes (deferred rationale, or a scored row's benchmark-unavailable reason). */
+  notes: string[];
+}
+
+/** Pool benchmark rows by capability class into scored medians + notes. Pure. */
+function benchmarkByClass(rows: CapabilityBenchmarkRow[]): Map<string, BenchEvidence> {
+  const out = new Map<string, BenchEvidence>();
+  for (const r of rows) {
+    let e = out.get(r.class);
+    if (!e) { e = { scores: [], notes: [] }; out.set(r.class, e); }
+    if (typeof r.score === 'number') e.scores.push(r.score);
+    if (r.note) e.notes.push(r.note);
+  }
+  return out;
+}
 
 /** Map a step's audited `deliverable` to its capability class. Reuses the judge's
  *  finer text/2D split (`deliverableClassOf` promotes flat-HUD 2D to `ui-glyph`);
@@ -226,6 +272,10 @@ export interface CapabilityRow {
   cappedByTechnique: boolean;
   gapStatement: string;
   provenance: CapabilityProvenance;
+  /** Secondary project-instance median, kept visible when a NEUTRAL benchmark drives the grade
+   *  (provenance 'neutral-benchmark') so the view can show "benchmark 84 · project 82". Null when
+   *  the instance stream has no included score, undefined when the row is instance-graded. */
+  projectMedian?: number | null;
 }
 
 function gradeScore(med: number | null, n: number, cappedByTechnique: boolean): CapabilityGradeLevel {
@@ -307,7 +357,11 @@ function emptyEvidence(): ClassEvidence {
  *    declared-not-run) — graded on the conservative gate ladder, shown as "N/M gates pass".
  *  - human/none (audio, vfx): unproven unless human verdicts exist for the human-judged cells.
  */
-export function buildCapabilityRows(verdicts: JudgeVerdict[], artifacts: PipelineArtifact[] = []): CapabilityRow[] {
+export function buildCapabilityRows(
+  verdicts: JudgeVerdict[],
+  artifacts: PipelineArtifact[] = [],
+  benchmarks: CapabilityBenchmarkRow[] = CAPABILITY_BENCHMARKS,
+): CapabilityRow[] {
   const ev = new Map<string, ClassEvidence>();
   const get = (k: string): ClassEvidence => {
     let e = ev.get(k);
@@ -351,9 +405,11 @@ export function buildCapabilityRows(verdicts: JudgeVerdict[], artifacts: Pipelin
 
   const stats = computeClassStats();
   const capped = cappedClasses();
-  const classes = new Set<string>([...stats.keys(), ...ev.keys()]);
+  const bench = benchmarkByClass(benchmarks);
+  const classes = new Set<string>([...stats.keys(), ...ev.keys(), ...bench.keys()]);
 
-  const rows = [...classes].map((klass) => buildRow(klass, ev.get(klass) ?? emptyEvidence(), stats.get(klass), capped.has(klass)));
+  const rows = [...classes].map((klass) =>
+    applyBenchmark(buildRow(klass, ev.get(klass) ?? emptyEvidence(), stats.get(klass), capped.has(klass)), bench.get(klass)));
   return rows.sort(
     (a, b) => GRADE_RANK[a.grade] - GRADE_RANK[b.grade] || (b.median ?? -1) - (a.median ?? -1) || a.label.localeCompare(b.label),
   );
@@ -400,4 +456,40 @@ function buildRow(klass: string, e: ClassEvidence, s: ClassStats | undefined, ha
     GAP[klass] ??
     (n === 0 ? 'No strict-judge evidence recorded for this class yet.' : `Graded ${grade} from ${n} judged cells (median ${med ?? '—'}); no documented technique wall.`);
   return { ...base, grade, median: med, n, stream, cappedByTechnique: hasTechniqueCap, gapStatement };
+}
+
+/**
+ * Overlay the neutral benchmark (Phase 2) onto an instance-derived row. When the class has SCORED
+ * benchmark briefs the neutral median DRIVES the grade (project-portable — provenance flips to
+ * 'neutral-benchmark') and the instance median is kept visible as `projectMedian`. The documented
+ * project technique cap is NOT re-applied: the neutral canon-free score IS the direct technique
+ * measurement, so double-penalizing with a recorded project ceiling would understate portable
+ * capability (the flag stays visible for context). A benchmark row with only NOTES (deferred /
+ * unavailable, no score) leaves the grade untouched and just surfaces the note in the gap
+ * statement. Pure. */
+function applyBenchmark(instance: CapabilityRow, b: BenchEvidence | undefined): CapabilityRow {
+  if (!b) return instance;
+  const noteSuffix = b.notes.length ? ` Neutral benchmark: ${b.notes.join(' ')}` : '';
+
+  if (b.scores.length > 0) {
+    const benchMed = median(b.scores);
+    const grade = gradeScore(benchMed, b.scores.length, false);
+    const gapStatement =
+      `Graded from the canon-free neutral benchmark: median ${benchMed} across ${b.scores.length} `
+      + `brief${b.scores.length === 1 ? '' : 's'} (project-instance median ${instance.median ?? '—'}). `
+      + `Answers whether the stack can ship this class for ANY project, not just PoF.${noteSuffix} `
+      + instance.gapStatement;
+    return {
+      ...instance,
+      grade,
+      median: benchMed,
+      n: b.scores.length,
+      projectMedian: instance.median,
+      provenance: 'neutral-benchmark',
+      gapStatement: gapStatement.trim(),
+    };
+  }
+
+  // Notes-only (deferred / unavailable): keep the instance grade, surface the honest note.
+  return noteSuffix ? { ...instance, gapStatement: `${instance.gapStatement}${noteSuffix}` } : instance;
 }

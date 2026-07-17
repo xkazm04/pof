@@ -36,10 +36,11 @@ describe('CapabilityView', () => {
       expect(getByText('Text & Systems Design')).toBeTruthy();
     });
 
-    // The grade word is rendered (colorblind-safe: word, not hue alone).
-    expect(container.textContent).toContain('capped');
-    // Provenance micro-label present.
-    expect(container.textContent).toContain('derived from project instances');
+    // A grade word is rendered (colorblind-safe: word, not hue alone).
+    expect(container.textContent).toMatch(/proven|strong|capped|unproven/);
+    // A provenance micro-label is present (instance rows always exist for the gate/deferred
+    // classes; benchmarked classes read 'neutral benchmark').
+    expect(container.textContent).toMatch(/derived from project instances|neutral benchmark/);
 
     // Clicking a class row triggers the filter callback with the class id.
     fireEvent.click(getByText('Text & Systems Design').closest('button')!);

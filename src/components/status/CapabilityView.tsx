@@ -42,6 +42,14 @@ const STREAM_LABEL: Record<CapabilityRow['stream'], string> = {
 };
 
 function EvidenceLabel({ row }: { row: CapabilityRow }) {
+  // Neutral-benchmark rows lead with the portable benchmark median, project median secondary.
+  if (row.provenance === 'neutral-benchmark') {
+    return (
+      <MicroLabel mono>
+        benchmark {row.median ?? '—'} · project {row.projectMedian ?? '—'} · {row.n} brief{row.n === 1 ? '' : 's'}
+      </MicroLabel>
+    );
+  }
   // Gate-judged rows report N/M gates pass instead of a score median.
   if (row.stream === 'gates') {
     return (
