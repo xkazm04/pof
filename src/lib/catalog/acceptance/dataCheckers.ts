@@ -28,6 +28,22 @@ export function withinPercent(field: string, label: string, target: number, pct:
 }
 
 /**
+ * Absolute-tolerance numeric band: passes when `|value − target| ≤ tol`. Unlike
+ * `withinPercent` (whose ±% band flips its ordering for a negative target, making a
+ * signed value like −16 LUFS unrepresentable), this gates directly on the signed value,
+ * so a true negative target (dBLUFS, temperature, offset) is checked honestly.
+ */
+export function withinAbsolute(field: string, label: string, target: number, tol: number): Checker {
+  return (data) => {
+    const v = data[field];
+    if (v == null) return { label, tier: 'L0', status: 'pending', detail: 'not set', reason: `field "${field}" is not set (expected a value within ±${tol} of ${target})` };
+    const n = Number(v);
+    const ok = Math.abs(n - target) <= tol;
+    return { label, tier: 'L0', status: ok ? 'pass' : 'fail', detail: `${n} vs ${target} ±${tol}`, ...(ok ? {} : { reason: `${n} is outside ±${tol} of ${target}` }) };
+  };
+}
+
+/**
  * Validate that a weapon's recorded base DPS is internally CONSISTENT with its own
  * declared damage range and attack speed — `baseDPS ≈ ((damageMin + damageMax) / 2) × attackSpeed`
  * — rather than against a fixed global power target. Tier-agnostic: a tier-1 sword (≈12.5)

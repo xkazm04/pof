@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { minLength, fieldsPopulated, withinPercent, dpsConsistent, materialShape, selected, minCount } from '@/lib/catalog/acceptance/dataCheckers';
+import { minLength, fieldsPopulated, withinPercent, withinAbsolute, dpsConsistent, materialShape, selected, minCount } from '@/lib/catalog/acceptance/dataCheckers';
 import { graphValid } from '@/lib/catalog/acceptance/graphCheckers';
 import { safeAccept } from '@/lib/catalog/headless';
 import type { Checker } from '@/lib/catalog/acceptance/types';
@@ -21,6 +21,18 @@ describe('L0 data checkers', () => {
     expect(c({ power: 105 }).status).toBe('pass');
     expect(c({ power: 130 }).status).toBe('fail');
     expect(c({}).status).toBe('pending');
+  });
+  it('withinAbsolute gates on the SIGNED value (handles a negative target)', () => {
+    const c = withinAbsolute('lufs', 'LUFS −16 ±2', -16, 2);
+    expect(c({ lufs: -16 }).status).toBe('pass');   // on target
+    expect(c({ lufs: -14 }).status).toBe('pass');   // band edge (loudest)
+    expect(c({ lufs: -18 }).status).toBe('pass');   // band edge (quietest)
+    expect(c({ lufs: -12 }).status).toBe('fail');   // too loud
+    expect(c({ lufs: -20 }).status).toBe('fail');   // too quiet
+    expect(c({}).status).toBe('pending');           // unset → actionable pending
+    expect(c({}).reason).toContain('"lufs"');
+    // withinPercent's ±% band would flip its ordering for a negative target and never pass:
+    expect(withinPercent('lufs', 'x', -16, 12.5)({ lufs: -16 }).status).toBe('fail');
   });
   it('selected passes when an index ≥ 0 is chosen', () => {
     const c = selected('selected', 'Icon selected');
