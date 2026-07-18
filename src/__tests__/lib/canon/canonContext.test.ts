@@ -79,6 +79,22 @@ describe('canonContextFor', () => {
     expect(result).toContain('## PROJECT CANON');
   });
 
+  it('seeds a single value-scaled repair canon rule (global scope, unique id)', () => {
+    const repair = CANON_SEED.filter((r) => r.id === 'repair-value-scaled');
+    expect(repair).toHaveLength(1);
+    expect(repair[0].scope).toBe('global');
+    expect(repair[0].body).toContain('0.2%');
+    expect(repair[0].body).toContain('value × 0.002');
+    // never flat, never rep-discounted — the two properties the items+vendors cells mirror
+    expect(repair[0].body).toContain('never a flat');
+    expect(repair[0].body).toContain('never rep-discounted');
+  });
+
+  it('has no duplicate canon rule ids', () => {
+    const ids = CANON_SEED.map((r) => r.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
   it('includes refs when present', () => {
     const rulesWithRefs: ProjectRule[] = [
       { id: 'r1', category: 'game', scope: 'global', title: 'With ref', body: 'Body text', refs: ['doc-1', 'doc-2'] },
