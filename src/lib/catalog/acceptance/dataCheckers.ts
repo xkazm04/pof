@@ -28,6 +28,22 @@ export function withinPercent(field: string, label: string, target: number, pct:
 }
 
 /**
+ * Absolute-tolerance numeric band: passes when `|value − target| ≤ tol`. Unlike
+ * `withinPercent` (whose ±% band flips its ordering for a negative target, making a
+ * signed value like −16 LUFS unrepresentable), this gates directly on the signed value,
+ * so a true negative target (dBLUFS, temperature, offset) is checked honestly.
+ */
+export function withinAbsolute(field: string, label: string, target: number, tol: number): Checker {
+  return (data) => {
+    const v = data[field];
+    if (v == null) return { label, tier: 'L0', status: 'pending', detail: 'not set', reason: `field "${field}" is not set (expected a value within ±${tol} of ${target})` };
+    const n = Number(v);
+    const ok = Math.abs(n - target) <= tol;
+    return { label, tier: 'L0', status: ok ? 'pass' : 'fail', detail: `${n} vs ${target} ±${tol}`, ...(ok ? {} : { reason: `${n} is outside ±${tol} of ${target}` }) };
+  };
+}
+
+/**
  * Validate that a weapon's recorded base DPS is internally CONSISTENT with its own
  * declared damage range and attack speed — `baseDPS ≈ ((damageMin + damageMax) / 2) × attackSpeed`
  * — rather than against a fixed global power target. Tier-agnostic: a tier-1 sword (≈12.5)
@@ -73,6 +89,39 @@ export function selected(field: string, label: string): Checker {
     const v = data[field];
     const ok = typeof v === 'number' && v >= 0;
     return { label, tier: 'L1', status: ok ? 'pass' : 'pending', detail: ok ? `candidate ${v}` : 'none selected', ...(ok ? {} : { reason: `field "${field}" has no selection (expected a non-negative candidate index, got ${JSON.stringify(v)})` }) };
+  };
+}
+
+/**
+ * items Material shape — accepts EITHER the legacy single-master shape
+ * (`material.parentMaterial` + `material.textures`, identical null-strictness to
+ * `fieldsPopulated` on those keys) OR a multi-master `material.parentMaterials[]` where
+ * EVERY entry carries `surface` + `parentMaterial` + `textures`. On the array path a
+ * missing field FAILS naming the offending index; the single-master path is unchanged.
+ */
+export function materialShape(field: string, label: string): Checker {
+  return (data) => {
+    const obj = (data[field] ?? {}) as Record<string, unknown>;
+    const masters = obj.parentMaterials;
+    if (Array.isArray(masters)) {
+      if (masters.length === 0) {
+        return { label, tier: 'L0', status: 'pending', detail: '0 masters', reason: `field "${field}.parentMaterials" is empty (need ≥1 master, each with surface / parentMaterial / textures)` };
+      }
+      const req = ['surface', 'parentMaterial', 'textures'];
+      for (let i = 0; i < masters.length; i++) {
+        const m = (masters[i] ?? {}) as Record<string, unknown>;
+        const missing = req.filter((k) => m[k] == null);
+        if (missing.length) {
+          return { label, tier: 'L0', status: 'fail', detail: `master[${i}] incomplete`, reason: `field "${field}.parentMaterials[${i}]" missing: ${missing.join(', ')}` };
+        }
+      }
+      return { label, tier: 'L0', status: 'pass', detail: `${masters.length} master(s), each surface / parentMaterial / textures populated` };
+    }
+    // Legacy single-master shape (parentMaterial + textures), same strictness as fieldsPopulated.
+    const req = ['parentMaterial', 'textures'];
+    const missing = req.filter((k) => obj[k] == null);
+    const ok = missing.length === 0;
+    return { label, tier: 'L0', status: ok ? 'pass' : 'pending', detail: `${req.length - missing.length} / ${req.length} populated`, ...(ok ? {} : { reason: `field "${field}" missing: ${missing.join(', ')}` }) };
   };
 }
 

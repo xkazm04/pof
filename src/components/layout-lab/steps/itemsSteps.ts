@@ -1,12 +1,47 @@
 import { PRICE_RATIO, POWER_TOL_PCT } from '@/lib/catalog/acceptance/invariants';
+import { useCatalogStore } from '@/stores/catalogStore';
 import type { Acceptance } from './StepFrame';
 import type { CheckerContext } from '@/lib/catalog/acceptance/types';
 import type { LabEntity } from '../useLabCatalogData';
 import type { StepOutput } from '../labPipelineStore';
 
-/** PascalCase, space-free asset slug for UE paths (Iron Longsword → IronLongsword). */
+/** PascalCase, space-free asset slug for UE paths (Iron Longsword → IronLongsword).
+ *  Readable but LOSSY — every non-alnum char is dropped, so "Iron Sword",
+ *  "Iron-Sword" and "Iron_Sword" all collapse to "IronSword". Use {@link entitySlug}
+ *  for any real asset PATH so distinct entities can't collide onto one folder. */
 export function slug(name: string): string {
   return name.replace(/[^a-z0-9]+/gi, '');
+}
+
+/** Short, stable, path-safe token derived from an entity id — the disambiguator
+ *  appended to a slug when a DISTINCT sibling entity would otherwise share the same
+ *  (lossy) readable slug, and hence the same UE asset path. */
+function idToken(id: string): string {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (Math.imul(31, h) + id.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
+}
+
+/** Entities registered in the same catalog as `entity` (empty when the entity
+ *  isn't in the store — e.g. ad-hoc test entities), read non-reactively so the
+ *  pure path helpers can detect a slug collision. */
+function catalogSiblings(entityId: string): { id: string; name: string }[] {
+  const byCatalog = useCatalogStore.getState().entitiesByCatalog;
+  for (const entities of Object.values(byCatalog)) {
+    if (entities[entityId]) return Object.values(entities).map((e) => ({ id: e.id, name: e.name }));
+  }
+  return [];
+}
+
+/** The asset-path slug for one entity. Readable in the common case
+ *  (`Iron Sword → IronSword`); when a DISTINCT sibling entity in the same catalog
+ *  sanitizes to the same readable slug (`"Iron-Sword"` vs `"Iron Sword"`), a stable
+ *  id-derived token is appended (`IronSword-<token>`) so the two entities never
+ *  share a `/Game/Items/<slug>/` asset path and overwrite each other's UE assets. */
+export function entitySlug(entity: LabEntity): string {
+  const readable = slug(entity.name);
+  const collides = catalogSiblings(entity.id).some((s) => s.id !== entity.id && slug(s.name) === readable);
+  return collides ? `${readable}-${idToken(entity.id)}` : readable;
 }
 
 /** Root UE content path for all catalog item assets. */
@@ -15,14 +50,14 @@ const ITEMS_ROOT = '/Game/Items';
 /** UE asset folder for one item: `/Game/Items/<slug>/`. The single source of
  *  truth for the Items asset-path layout — reused by the step specs and ItemArt. */
 export function base(entity: LabEntity): string {
-  return `${ITEMS_ROOT}/${slug(entity.name)}/`;
+  return `${ITEMS_ROOT}/${entitySlug(entity)}/`;
 }
 
 /** Full path for one item asset named `<prefix><slug><suffix>` — the convention
  *  every Items asset follows (e.g. `itemAsset(e, 'T_', '_Icon')` →
- *  `/Game/Items/<slug>/T_<slug>_Icon`). Computes the slug once. */
+ *  `/Game/Items/<slug>/T_<slug>_Icon`). Computes the (collision-safe) slug once. */
 export function itemAsset(entity: LabEntity, prefix: string, suffix = ''): string {
-  const s = slug(entity.name);
+  const s = entitySlug(entity);
   return `${ITEMS_ROOT}/${s}/${prefix}${s}${suffix}`;
 }
 
@@ -92,6 +127,39 @@ export const DEFAULT_ANIM_CLIPS: [string, string][] = [['Pickup', '0.6s'], ['Equ
 export const DEFAULT_VFX_VARIANTS: [string, string][] = [['Idle glow', 'small'], ['Equip flash', 'med'], ['Use trail', 'med']];
 export const DEFAULT_SFX_CUES: [string, string][] = [['Pickup', '-14 LUFS'], ['Equip', '-13 LUFS'], ['Swing', '-12 LUFS']];
 export const DEFAULT_GATE_CHECKS: string[] = ['Stat/rules unit test', 'Equip + use in PIE', 'Visual QA (icon + mesh)', 'Performance budget'];
+
+/* ── Test Gate derivation ───────────────────────────────────────────────────
+ * The gate's verdict is DERIVED from upstream sibling acceptance, never
+ * fabricated (scan 2026-07-16 finding: produce() hard-coded `pass: true`, so
+ * the gate could never fail — success theater). Each named check maps to the
+ * upstream steps whose acceptance it actually verifies. */
+export const GATE_CHECK_DEPS: Record<string, string[]> = {
+  'Stat/rules unit test': ['Attributes', 'Economy'],
+  'Equip + use in PIE': ['Animations', 'Inventory UI Integration'],
+  'Visual QA (icon + mesh)': ['Icon 2D Art', '3D Generation', 'Material / Texture'],
+  'Performance budget': ['3D Generation', 'VFX'],
+};
+
+export interface GateCheckResult { name: string; ok: boolean; blockedBy: string[] }
+
+/**
+ * Evaluate every gate check against the entity's sibling step artifacts
+ * (step label → persisted data). A check passes only when ALL of its upstream
+ * steps have an artifact whose own acceptance is `pass`. Shared by the Test
+ * Gate accept(), the ItemTestGate view, and the log rendering so the badge,
+ * checklist rows, and log can never disagree.
+ */
+export function deriveGateChecks(siblings: Record<string, Record<string, unknown>>): GateCheckResult[] {
+  return DEFAULT_GATE_CHECKS.map((name) => {
+    const deps = GATE_CHECK_DEPS[name] ?? [];
+    const blockedBy = deps.filter((step) => {
+      const data = siblings[step];
+      if (!data) return true; // never produced
+      return ITEM_STEP_SPECS[step]?.accept(data).status !== 'pass';
+    });
+    return { name, ok: blockedBy.length === 0, blockedBy };
+  });
+}
 
 function brief(entity: LabEntity): string {
   return `${entity.name} is a mid-tier martial weapon forged for frontline duelists. It favors disciplined, rhythmic strikes over raw burst — rewarding players who weave light and heavy attacks rather than mashing a single button. Visually it reads as weathered steel with a leather-wrapped grip and a faint guild sigil etched near the crossguard. Intended player feeling: dependable and earned — a soldier's tool, not a hero's relic.`;
@@ -247,10 +315,13 @@ function tooltipCopy(data: Record<string, unknown>): AcceptanceCopy {
 }
 
 function gateCopy(data: Record<string, unknown>): AcceptanceCopy {
-  return data.pass === true
-    ? { why: 'All gate checks pass in the UE project.', suggestion: '' }
-    : { why: 'The functional test has not been run, or the last run did not pass.',
-        suggestion: 'Run Produce to dispatch the UE functional test.' };
+  const ran = data.ran === true || data.pass === true;
+  if (!ran) {
+    return { why: 'The functional test has not been run yet.',
+      suggestion: 'Run Produce to dispatch the UE functional test.' };
+  }
+  return { why: 'One or more upstream steps have not passed their own acceptance — the gate derives its verdict from them and cannot pass while they fail.',
+    suggestion: 'Fix the failing upstream steps (see the Checks panel), then the gate re-derives automatically.' };
 }
 
 function packagingCopy(data: Record<string, unknown>): AcceptanceCopy {
@@ -408,16 +479,39 @@ export const ITEM_STEP_SPECS: Record<string, ItemStepSpec> = {
     },
   },
   'Test Gate': {
-    produce: () => ({ data: { checks: DEFAULT_GATE_CHECKS, pass: true } }),
-    accept: (data) => {
-      const checks = (data.checks ?? []) as unknown[];
-      const ok = data.pass === true;
-      return withCopy('Test Gate', data, { label: 'All gate checks pass in the UE project', status: ok ? 'pass' : 'pending', detail: ok ? `${checks.length}/${checks.length} pass` : `0/${checks.length || 4}` });
+    // Produce records THAT the test ran — never the verdict. The verdict is
+    // derived at accept time from sibling-step acceptance, so a badly-tuned or
+    // incomplete item can actually fail the gate (previously `pass: true` was
+    // hard-coded and the gate was pure success theater).
+    produce: () => ({ data: { checks: DEFAULT_GATE_CHECKS, ran: true } }),
+    accept: (data, ctx) => {
+      const ran = data.ran === true || data.pass === true; // `pass` = legacy artifacts
+      if (!ran) {
+        return withCopy('Test Gate', data, { label: 'All gate checks pass in the UE project', status: 'pending', detail: `0/${DEFAULT_GATE_CHECKS.length}` });
+      }
+      // Derive the verdict from sibling acceptance when context is available.
+      // Without ctx (or with an empty siblings map) fall back to the legacy
+      // data-only reading — per CheckerContext's contract, a satisfied step is
+      // never regressed purely because context wasn't provided.
+      if (ctx && Object.keys(ctx.siblings).length > 0) {
+        const results = deriveGateChecks(ctx.siblings);
+        const passing = results.filter((r) => r.ok).length;
+        const blocked = [...new Set(results.flatMap((r) => r.blockedBy))];
+        const ok = passing === results.length;
+        return withCopy('Test Gate', data, {
+          label: 'All gate checks pass in the UE project',
+          status: ok ? 'pass' : 'fail',
+          detail: ok ? `${passing}/${results.length} pass` : `${passing}/${results.length} pass · blocked by ${blocked.slice(0, 3).join(', ')}${blocked.length > 3 ? '…' : ''}`,
+        });
+      }
+      const legacyOk = data.pass === true;
+      const checks = (data.checks ?? DEFAULT_GATE_CHECKS) as unknown[];
+      return withCopy('Test Gate', data, { label: 'All gate checks pass in the UE project', status: legacyOk ? 'pass' : 'pending', detail: legacyOk ? `${checks.length}/${checks.length} pass` : `0/${checks.length}` });
     },
   },
   'UE Packaging': {
     produce: (e) => {
-      const s = slug(e.name);
+      const s = entitySlug(e);
       const assets = [`DT_Items :: ${s}`, `T_${s}_Icon`, `SM_${s}`, `MI_${s}`, `A_${s}_Equip`, `NS_${s}_Use`];
       return { data: { assets }, ueAssets: assets.slice(1).map((x) => `${base(e)}${x}`) };
     },

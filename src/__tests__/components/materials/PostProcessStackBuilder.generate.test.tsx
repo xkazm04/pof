@@ -1,8 +1,12 @@
-import { describe, it, expect, afterEach, vi } from 'vitest';
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import { render, cleanup, fireEvent } from '@testing-library/react';
 import { PostProcessStackBuilder } from '@/components/modules/content/materials/PostProcessStackBuilder';
+import { usePostProcessStudioStore } from '@/stores/postProcessStudioStore';
 
 afterEach(cleanup);
+// The builder now shares the studio store — reset it so each test starts from
+// the canonical default stack rather than a previous test's mutations.
+beforeEach(() => usePostProcessStudioStore.getState().resetToDefaults());
 
 describe('PostProcessStackBuilder — generate path feedback', () => {
   it('dispatches without an inline error when generation succeeds', () => {

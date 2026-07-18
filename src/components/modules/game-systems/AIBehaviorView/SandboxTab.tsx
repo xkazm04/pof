@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import {
   Bot, Plus, Trash2, Loader2,
   FlaskConical,
@@ -62,6 +63,15 @@ export function SandboxTab({
   handleRunTests,
   isAnyRunning,
 }: SandboxTabProps) {
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const activeSuiteId = activeSuite?.id;
+
+  // Reset a pending confirmation whenever the active suite changes, or when a
+  // run starts — deleting mid-run would orphan the bulk status update.
+  useEffect(() => {
+    setConfirmingDelete(false);
+  }, [activeSuiteId, isAnyRunning]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -178,13 +188,37 @@ export function SandboxTab({
                   {activeSuite.targetClass} &middot; {activeSuite.scenarios.length} scenarios
                 </p>
               </div>
-              <button
-                onClick={() => deleteSuite(activeSuite.id)}
-                className="px-2 py-1.5 rounded-md text-text-muted hover:text-red-400 hover:bg-red-400/10 transition-colors"
-                title="Delete suite"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
+              {confirmingDelete ? (
+                <div className="flex items-center gap-2 pl-3 pr-1.5 py-1 rounded-md bg-status-red-subtle border border-status-red-medium">
+                  <span className="text-xs text-red-400 whitespace-nowrap">
+                    Delete suite? This can&apos;t be undone.
+                  </span>
+                  <button
+                    onClick={() => setConfirmingDelete(false)}
+                    className="px-2 py-1 rounded text-xs text-text-muted border border-border hover:bg-border hover:text-text transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      setConfirmingDelete(false);
+                      deleteSuite(activeSuite.id);
+                    }}
+                    className="px-2 py-1 rounded text-xs font-medium text-red-400 bg-status-red-subtle border border-status-red-medium hover:bg-status-red-medium transition-colors"
+                  >
+                    Delete
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmingDelete(true)}
+                  disabled={isAnyRunning}
+                  className="px-2 py-1.5 rounded-md text-text-muted hover:text-red-400 hover:bg-red-400/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-text-muted disabled:hover:bg-transparent"
+                  title={isAnyRunning ? 'Tests are running — deletion is disabled until the run finishes' : 'Delete suite'}
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
 
             <div className="flex-1 overflow-hidden">

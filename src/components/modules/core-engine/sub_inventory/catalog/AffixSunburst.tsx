@@ -44,9 +44,13 @@ export function AffixSunburst({ tree, size }: { tree: ProbabilityEntry; size: nu
   const arcs: { d: string; fill: string; label: string; midAngle: number; midR: number }[] = [];
 
   if (tree.children) {
+    // Normalize each sibling group to sum to 1 before mapping to angles, so an
+    // authoring mistake (probabilities summing to >1 or <1) can't make arcs
+    // overlap/overshoot a full circle — they always partition their allotted sweep.
+    const childSum = tree.children.reduce((s, c) => s + (c.probability || 0), 0) || 1;
     let cumAngle = -Math.PI / 2;
     for (const child of tree.children) {
-      const angle = child.probability * 2 * Math.PI;
+      const angle = (child.probability / childSum) * 2 * Math.PI;
       const midAngle = cumAngle + angle / 2;
       const midR = (ring1Inner + ring1Outer) / 2;
       arcs.push({
@@ -56,9 +60,10 @@ export function AffixSunburst({ tree, size }: { tree: ProbabilityEntry; size: nu
         midAngle, midR,
       });
       if (child.children && child.children.length > 0) {
+        const gcSum = child.children.reduce((s, g) => s + (g.probability || 0), 0) || 1;
         let childCum = cumAngle;
         for (const grandchild of child.children) {
-          const childAngle = grandchild.probability * angle;
+          const childAngle = (grandchild.probability / gcSum) * angle;
           const gcMidAngle = childCum + childAngle / 2;
           const gcMidR = (ring2Inner + ring2Outer) / 2;
           arcs.push({
@@ -85,9 +90,14 @@ export function AffixSunburst({ tree, size }: { tree: ProbabilityEntry; size: nu
         const isHovered = hovered === i;
         return (
           <g key={i}
+            tabIndex={0}
+            role="img"
+            aria-label={arc.label}
             onMouseEnter={() => setHovered(i)}
             onMouseLeave={() => setHovered(null)}
-            className="cursor-default"
+            onFocus={() => setHovered(i)}
+            onBlur={() => setHovered(null)}
+            className="cursor-default focus-visible:outline-none"
           >
             <path d={arc.d}
               fill={withOpacity(arc.fill, isHovered ? OPACITY_37 : OPACITY_25)}
@@ -103,12 +113,18 @@ export function AffixSunburst({ tree, size }: { tree: ProbabilityEntry; size: nu
         const arc = arcs[hovered];
         const tx = cx + arc.midR * Math.cos(arc.midAngle);
         const ty = cy + arc.midR * Math.sin(arc.midAngle);
+        // Clamp the tooltip rect inside the SVG's viewBox so edge arcs don't spill
+        // outside the component and get clipped by ancestor containers.
+        const rectW = 100;
+        const rectH = 22;
+        const rectX = Math.min(Math.max(tx - rectW / 2, 2), size - rectW - 2);
+        const rectY = Math.min(Math.max(ty - 18, 2), size - rectH - 2);
         return (
           <g className="pointer-events-none">
-            <rect x={tx - 50} y={ty - 18} width={100} height={22} rx={4}
+            <rect x={rectX} y={rectY} width={rectW} height={rectH} rx={4}
               fill="var(--surface-deep)" stroke={arc.fill} strokeWidth={1}
               style={{ filter: `drop-shadow(0 0 6px ${withOpacity(arc.fill, OPACITY_25)})` }} />
-            <text x={tx} y={ty - 4} textAnchor="middle" dominantBaseline="central"
+            <text x={rectX + rectW / 2} y={rectY + rectH / 2} textAnchor="middle" dominantBaseline="central"
               className="text-xs font-mono font-bold" fill={arc.fill}>
               {arc.label}
             </text>

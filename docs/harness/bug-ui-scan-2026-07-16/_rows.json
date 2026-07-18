@@ -1,0 +1,290 @@
+﻿[
+    {
+        "context":  "World, Quests \u0026 Procgen â€” Bug + UI Scan",
+        "Critical":  2,
+        "High":  1,
+        "Medium":  2,
+        "Low":  4,
+        "Total":  9,
+        "report":  "world-quests-procgen.md"
+    },
+    {
+        "context":  "CLI Terminal \u0026 Task System â€” Bug + UI Scan",
+        "Critical":  1,
+        "High":  3,
+        "Medium":  3,
+        "Low":  2,
+        "Total":  9,
+        "report":  "cli-terminal-task-system.md"
+    },
+    {
+        "context":  "Project Setup \u0026 Onboarding â€” Bug + UI Scan",
+        "Critical":  1,
+        "High":  3,
+        "Medium":  4,
+        "Low":  2,
+        "Total":  10,
+        "report":  "project-setup-onboarding.md"
+    },
+    {
+        "context":  "Item Pipeline Steps â€” Bug + UI Scan",
+        "Critical":  1,
+        "High":  2,
+        "Medium":  4,
+        "Low":  2,
+        "Total":  9,
+        "report":  "item-pipeline-steps.md"
+    },
+    {
+        "context":  "Blueprint Transpiler \u0026 C++ Codegen â€” Bug + UI Scan",
+        "Critical":  1,
+        "High":  1,
+        "Medium":  3,
+        "Low":  5,
+        "Total":  10,
+        "report":  "blueprint-transpiler-c-codegen.md"
+    },
+    {
+        "context":  "Quality Evaluation Engine â€” Bug + UI Scan",
+        "Critical":  1,
+        "High":  1,
+        "Medium":  5,
+        "Low":  2,
+        "Total":  9,
+        "report":  "quality-evaluation-engine.md"
+    },
+    {
+        "context":  "Combat \u0026 Damage Tuning â€” Bug + UI Scan",
+        "Critical":  1,
+        "High":  1,
+        "Medium":  6,
+        "Low":  1,
+        "Total":  9,
+        "report":  "combat-damage-tuning.md"
+    },
+    {
+        "context":  "Animation \u0026 Rigging â€” Bug + UI Scan",
+        "Critical":  1,
+        "High":  0,
+        "Medium":  4,
+        "Low":  4,
+        "Total":  9,
+        "report":  "animation-rigging.md"
+    },
+    {
+        "context":  "Character \u0026 Genome Designer â€” Bug + UI Scan",
+        "Critical":  0,
+        "High":  4,
+        "Medium":  3,
+        "Low":  2,
+        "Total":  9,
+        "report":  "character-genome-designer.md"
+    },
+    {
+        "context":  "Layout Lab \u0026 Pipeline Steps â€” Bug + UI Scan",
+        "Critical":  0,
+        "High":  3,
+        "Medium":  3,
+        "Low":  3,
+        "Total":  9,
+        "report":  "layout-lab-pipeline-steps.md"
+    },
+    {
+        "context":  "AI Behavior \u0026 Squad Tactics â€” Bug + UI Scan",
+        "Critical":  0,
+        "High":  3,
+        "Medium":  5,
+        "Low":  2,
+        "Total":  10,
+        "report":  "ai-behavior-squad-tactics.md"
+    },
+    {
+        "context":  "Inventory System â€” Bug + UI Scan",
+        "Critical":  0,
+        "High":  2,
+        "Medium":  5,
+        "Low":  3,
+        "Total":  10,
+        "report":  "inventory-system.md"
+    },
+    {
+        "context":  "App Shell \u0026 Navigation â€” Bug + UI Scan",
+        "Critical":  0,
+        "High":  2,
+        "Medium":  4,
+        "Low":  4,
+        "Total":  10,
+        "report":  "app-shell-navigation.md"
+    },
+    {
+        "context":  "Level \u0026 Materials Authoring â€” Bug + UI Scan",
+        "Critical":  0,
+        "High":  2,
+        "Medium":  5,
+        "Low":  2,
+        "Total":  9,
+        "report":  "level-materials-authoring.md"
+    },
+    {
+        "context":  "Module Registry \u0026 Feature Matrix â€” Bug + UI Scan",
+        "Critical":  0,
+        "High":  2,
+        "Medium":  5,
+        "Low":  2,
+        "Total":  9,
+        "report":  "module-registry-feature-matrix.md"
+    },
+    {
+        "context":  "Loot \u0026 Affix System â€” Bug + UI Scan",
+        "Critical":  0,
+        "High":  2,
+        "Medium":  4,
+        "Low":  4,
+        "Total":  10,
+        "report":  "loot-affix-system.md"
+    },
+    {
+        "context":  "Progression \u0026 Save Systems â€” Bug + UI Scan",
+        "Critical":  0,
+        "High":  2,
+        "Medium":  4,
+        "Low":  3,
+        "Total":  9,
+        "report":  "progression-save-systems.md"
+    },
+    {
+        "context":  "Blender MCP Integration â€” Bug + UI Scan",
+        "Critical":  0,
+        "High":  2,
+        "Medium":  4,
+        "Low":  4,
+        "Total":  10,
+        "report":  "blender-mcp-integration.md"
+    },
+    {
+        "context":  "AI Testing \u0026 Localization â€” Bug + UI Scan",
+        "Critical":  0,
+        "High":  2,
+        "Medium":  5,
+        "Low":  2,
+        "Total":  9,
+        "report":  "ai-testing-localization.md"
+    },
+    {
+        "context":  "GDD Compliance \u0026 Design Doc â€” Bug + UI Scan",
+        "Critical":  0,
+        "High":  2,
+        "Medium":  5,
+        "Low":  3,
+        "Total":  10,
+        "report":  "gdd-compliance-design-doc.md"
+    },
+    {
+        "context":  "Session Analytics \u0026 Telemetry â€” Bug + UI Scan",
+        "Critical":  0,
+        "High":  1,
+        "Medium":  4,
+        "Low":  3,
+        "Total":  8,
+        "report":  "session-analytics-telemetry.md"
+    },
+    {
+        "context":  "UE5 Bridge \u0026 Live Sync â€” Bug + UI Scan",
+        "Critical":  0,
+        "High":  1,
+        "Medium":  3,
+        "Low":  3,
+        "Total":  7,
+        "report":  "ue5-bridge-live-sync.md"
+    },
+    {
+        "context":  "Prompt Evolution \u0026 A/B Testing â€” Bug + UI Scan",
+        "Critical":  0,
+        "High":  1,
+        "Medium":  3,
+        "Low":  4,
+        "Total":  8,
+        "report":  "prompt-evolution-a-b-testing.md"
+    },
+    {
+        "context":  "Abilities \u0026 GAS System â€” Bug + UI Scan",
+        "Critical":  0,
+        "High":  1,
+        "Medium":  3,
+        "Low":  5,
+        "Total":  9,
+        "report":  "abilities-gas-system.md"
+    },
+    {
+        "context":  "Visual Asset Generation â€” Bug + UI Scan",
+        "Critical":  0,
+        "High":  1,
+        "Medium":  5,
+        "Low":  3,
+        "Total":  9,
+        "report":  "visual-asset-generation.md"
+    },
+    {
+        "context":  "Crash Analysis \u0026 Pattern Library â€” Bug + UI Scan",
+        "Critical":  0,
+        "High":  1,
+        "Medium":  5,
+        "Low":  3,
+        "Total":  9,
+        "report":  "crash-analysis-pattern-library.md"
+    },
+    {
+        "context":  "Build, Cook \u0026 Packaging â€” Bug + UI Scan",
+        "Critical":  0,
+        "High":  1,
+        "Medium":  5,
+        "Low":  3,
+        "Total":  9,
+        "report":  "build-cook-packaging.md"
+    },
+    {
+        "context":  "Audio Generation \u0026 Scenes â€” Bug + UI Scan",
+        "Critical":  0,
+        "High":  1,
+        "Medium":  3,
+        "Low":  5,
+        "Total":  9,
+        "report":  "audio-generation-scenes.md"
+    },
+    {
+        "context":  "Project Health \u0026 Insights â€” Bug + UI Scan",
+        "Critical":  0,
+        "High":  1,
+        "Medium":  5,
+        "Low":  4,
+        "Total":  10,
+        "report":  "project-health-insights.md"
+    },
+    {
+        "context":  "Game Director \u0026 Regression â€” Bug + UI Scan",
+        "Critical":  0,
+        "High":  1,
+        "Medium":  3,
+        "Low":  6,
+        "Total":  10,
+        "report":  "game-director-regression.md"
+    },
+    {
+        "context":  "Economy \u0026 Balance Simulation â€” Bug + UI Scan",
+        "Critical":  0,
+        "High":  1,
+        "Medium":  3,
+        "Low":  5,
+        "Total":  9,
+        "report":  "economy-balance-simulation.md"
+    },
+    {
+        "context":  "Bestiary \u0026 Enemy Design â€” Bug + UI Scan",
+        "Critical":  0,
+        "High":  0,
+        "Medium":  5,
+        "Low":  3,
+        "Total":  8,
+        "report":  "bestiary-enemy-design.md"
+    }
+]

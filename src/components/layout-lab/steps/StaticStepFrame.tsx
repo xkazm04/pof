@@ -4,9 +4,11 @@ import { useMemo } from 'react';
 import { StepFrame, type StepPanel } from './StepFrame';
 import { useStaticStep } from './useStaticStep';
 import { ITEM_STEP_SPECS } from './itemsSteps';
+import { useEntitySteps } from '../labPipelineStore';
 import type { LabTheme } from '../theme';
 import type { LabEntity } from '../useLabCatalogData';
 import type { LabStepArtifact } from '../labPipelineStore';
+import type { CheckerContext } from '@/lib/catalog/acceptance/types';
 
 /** What a static step needs to build its panels: the persisted artifact and the
  *  shared produce dispatch (used as both `onComplete` and the banner `onFix`). */
@@ -38,10 +40,15 @@ export function StaticStepFrame({ t, entity, step, panels }: {
   panels: (ctx: StaticStepContext) => StepPanel[];
 }) {
   const { art, runProduce } = useStaticStep(entity, step);
-  const acceptance = useMemo(
-    () => ITEM_STEP_SPECS[step].accept(art?.data ?? {}),
-    [art?.data, step],
-  );
+  // Sibling-step artifacts feed the CheckerContext so derived gates (e.g. Test
+  // Gate) can read upstream acceptance instead of trusting fabricated data.
+  const entitySteps = useEntitySteps(entity.id);
+  const acceptance = useMemo(() => {
+    const siblings: Record<string, Record<string, unknown>> = {};
+    for (const [s, a] of Object.entries(entitySteps ?? {})) siblings[s] = a.data;
+    const ctx: CheckerContext = { catalog: 'items', siblings, has: () => false };
+    return ITEM_STEP_SPECS[step].accept(art?.data ?? {}, ctx);
+  }, [art?.data, step, entitySteps]);
   return (
     <StepFrame t={t} acceptance={acceptance} onFix={runProduce} catalogId="items" step={step} panels={panels({ art, runProduce })} />
   );

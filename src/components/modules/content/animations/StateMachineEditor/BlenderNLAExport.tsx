@@ -25,9 +25,9 @@ export function BlenderNLAExport({ states }: { states: EditorState[] }) {
   return (
     <button
       onClick={handleExport}
-      disabled={isExporting}
-      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border border-border/40 text-text-muted hover:text-text disabled:opacity-50"
-      title="Export state machine as Blender NLA tracks"
+      disabled={isExporting || states.length === 0}
+      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border border-border/40 text-text-muted hover:text-text disabled:opacity-50 disabled:cursor-not-allowed"
+      title={states.length === 0 ? 'Add at least one state to export NLA tracks' : 'Export state machine as Blender NLA tracks'}
     >
       <Layers className="w-3 h-3" />
       {isExporting ? 'Exporting...' : 'NLA Export'}

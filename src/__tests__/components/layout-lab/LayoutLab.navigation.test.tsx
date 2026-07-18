@@ -32,6 +32,8 @@ vi.mock('@/components/layout-lab/labArtifactClient', () => ({
   postArtifact: vi.fn().mockResolvedValue(undefined),
   drainGates: vi.fn().mockResolvedValue(null),
   drainCatalogGates: vi.fn().mockResolvedValue({ kind: 'ok', summary: { ran: 0, passed: 0, failed: 0, skipped: 0, results: [] } }),
+  // RunnerChip in the lab shell polls the drain lease on mount → null = idle/unknown (no network in tests).
+  fetchDrainLease: vi.fn().mockResolvedValue(null),
 }));
 
 import { LayoutLab } from '@/components/layout-lab/LayoutLab';

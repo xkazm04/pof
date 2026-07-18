@@ -26,10 +26,11 @@ export function ArchetypeBalanceRadar({ balanceResults, scoreMean }: ArchetypeBa
   const needsTruncation = balanceResults.length >= 10;
 
   const displayResults = useMemo(() => {
-    if (!needsTruncation || showAll) return balanceResults;
-    return [...balanceResults]
-      .sort((a, b) => b.compositeScore - a.compositeScore)
-      .slice(0, TOP_N);
+    // Always sort by composite score descending; the only difference between the
+    // collapsed and expanded states is the slice, so expanding appends rather
+    // than reshuffling the badges/heatmap/radar the user was already reading.
+    const sorted = [...balanceResults].sort((a, b) => b.compositeScore - a.compositeScore);
+    return !needsTruncation || showAll ? sorted : sorted.slice(0, TOP_N);
   }, [balanceResults, showAll, needsTruncation]);
   return (
     <BlueprintPanel className="p-3" color={ACCENT_CYAN}>

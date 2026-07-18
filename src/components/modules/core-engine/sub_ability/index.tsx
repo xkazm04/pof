@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useCallback, useRef } from 'react';
+import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { BookOpen, LayoutGrid } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTabFeatures } from '@/hooks/useTabFeatures';
@@ -60,15 +60,46 @@ export function AbilitySpellbook({ moduleId }: AbilitySpellbookProps) {
     setExpandedFeature((prev) => (prev === name ? null : name));
   }, []);
 
+  /* Search navigation: the target section lives on another tab whose mount is
+     gated by the AnimatePresence mode="wait" exit transition, so its element
+     may not exist yet when we navigate. Instead of racing a magic timeout
+     against the animation, poll each animation frame (bounded) until the
+     target element actually exists, then scroll to it. */
+  const pendingScrollRafRef = useRef<number | null>(null);
+
+  const cancelPendingScroll = useCallback(() => {
+    if (pendingScrollRafRef.current !== null) {
+      cancelAnimationFrame(pendingScrollRafRef.current);
+      pendingScrollRafRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => cancelPendingScroll, [cancelPendingScroll]);
+
   const handleSearchNavigate = useCallback((tab: string, sectionId: string) => {
     setActiveTab(tab as SpellbookSubtab);
-    requestAnimationFrame(() => {
-      setTimeout(() => {
-        const el = contentRef.current?.querySelector(`[data-section-id="${sectionId}"]`);
-        el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 250);
-    });
-  }, [setActiveTab]);
+    cancelPendingScroll();
+
+    // Bounded retry: generous headroom over the 300ms exit + enter transitions,
+    // then give up silently (e.g. section removed from the target tab).
+    const deadline = performance.now() + 2000;
+    const tryScroll = () => {
+      pendingScrollRafRef.current = null;
+      // Scope to the target tab's panel so we never scroll to a same-id
+      // section in the still-exiting previous tab.
+      const el = contentRef.current?.querySelector(
+        `[data-spellbook-tab="${tab}"] [data-section-id="${sectionId}"]`,
+      );
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+      if (performance.now() < deadline) {
+        pendingScrollRafRef.current = requestAnimationFrame(tryScroll);
+      }
+    };
+    pendingScrollRafRef.current = requestAnimationFrame(tryScroll);
+  }, [setActiveTab, cancelPendingScroll]);
 
   /* ── Compute live-synced data (falls back to static when unavailable) ──
      Heavy transforms depend only on [liveData, refresh]; the presentational
@@ -147,6 +178,7 @@ export function AbilitySpellbook({ moduleId }: AbilitySpellbookProps) {
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
+            data-spellbook-tab={activeTab}
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}

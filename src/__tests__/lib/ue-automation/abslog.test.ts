@@ -68,6 +68,41 @@ describe('scopeAbslogPerTest — per-test verdicts, no batch smear', () => {
     const m = scopeAbslogPerTest('[gate] RESULT=PASS for VSPythonGate', ['VSPythonGate']);
     expect(m.get('VSPythonGate')!.status).toBe('pass');
   });
+
+  it('attributes a LEAF marker (Name={NPCConfig}) to its dotted declared name when the leaf is unique', () => {
+    // UE marker lines often carry only the leaf test name while the artifact declares the
+    // full dotted spec — the exact Vael drain gap.
+    const m = scopeAbslogPerTest(
+      'Test Completed. Result={Success} Name={NPCConfig}',
+      ['PoF.CharacterVael.NPCConfig'],
+    );
+    expect(m.get('PoF.CharacterVael.NPCConfig')!.status).toBe('pass');
+  });
+
+  it('attributes a dotted marker ending in the leaf to the dotted declared name', () => {
+    const m = scopeAbslogPerTest(
+      'Test Completed. Result={Failure} Name={Tests.NPCConfig}',
+      ['PoF.CharacterVael.NPCConfig'],
+    );
+    expect(m.get('PoF.CharacterVael.NPCConfig')!.status).toBe('fail');
+  });
+
+  it('NEVER leaf-attributes when two requested tests share the leaf — both stay unobserved', () => {
+    const m = scopeAbslogPerTest(
+      'Test Completed. Result={Success} Name={NPCConfig}',
+      ['PoF.CharacterVael.NPCConfig', 'PoF.CharacterBoss.NPCConfig'],
+    );
+    expect(m.get('PoF.CharacterVael.NPCConfig')!.status).toBe('none');
+    expect(m.get('PoF.CharacterBoss.NPCConfig')!.status).toBe('none');
+  });
+
+  it('leaf matching never fires on a mere substring (Name={MyNPCConfig} ≠ leaf NPCConfig)', () => {
+    const m = scopeAbslogPerTest(
+      'Test Completed. Result={Success} Name={MyNPCConfig}',
+      ['PoF.CharacterVael.NPCConfig'],
+    );
+    expect(m.get('PoF.CharacterVael.NPCConfig')!.status).toBe('none');
+  });
 });
 
 describe('ZERO_MATCH_DETAIL', () => {

@@ -40,7 +40,7 @@ describe('music pipeline', () => {
     expect(stemsResult.status).toBe('pass');
     expect(stemsResult.tier).toBe('L0');
 
-    // Mix & Loudness: integratedLUFS = 16.0 within ±12.5% of target 16.0 — should pass
+    // Mix & Loudness: integratedLUFS = −16 (signed) within ±2 of target −16 — should pass
     const mixStep = p!.steps.find((s) => s.label === 'Mix & Loudness')!;
     const mixResult = mixStep.accept(mixStep.produce(entity).data ?? {});
     expect(mixResult.status).toBe('pass');

@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect, useMemo, type CSSProperties } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Rocket, Plus, FolderOpen, Loader2 } from 'lucide-react';
 import { useProjectStore } from '@/stores/projectStore';
 import { apiFetch } from '@/lib/api-utils';
 import { slugifyForTestId } from '@/lib/test-ids';
 import { StatusDot } from '@/components/ui/StatusDot';
-import { labFontVars } from '@/components/layout-lab/fonts';
-import { Button, Panel, Input, Chip } from '@/components/layout-lab/ui';
+import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { Button } from '@/components/ui/Button';
 
 const UE_VERSIONS = [
   { value: '5.5.4', label: '5.5', note: 'best AI coverage' },
@@ -29,15 +29,12 @@ interface DetectedProject {
   validated: boolean;
 }
 
-/** Mono accent text-link used in the empty-state row. */
-const linkStyle: CSSProperties = {
-  fontFamily: 'var(--lab-font-mono)', fontSize: 'var(--lab-fs-xs)', color: 'var(--lab-accent)',
-  background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline',
-  textUnderlineOffset: 2,
-};
+/** Accent text-link used in the empty-state row (matches the checklist's install links). */
+const LINK_CLASSES =
+  'focus-ring text-xs font-medium text-accent-core hover:text-accent-core/80 underline underline-offset-2 transition-colors';
 
-/** First-run landing, in the lab's Blueprint identity (data-theme + --lab-* tokens).
- *  Pick a UE version, then open a detected project or start fresh. */
+/** First-run landing in the app's design system (surface cards, accent-setup,
+ *  underline tabs). Pick a UE version, then open a detected project or start fresh. */
 export function SetupWizard() {
   const [mode, setMode] = useState<'existing' | 'fresh'>('existing');
   const [newName, setNewName] = useState('');
@@ -119,81 +116,78 @@ export function SetupWizard() {
     return null;
   }, [newName]);
 
-  const tabStyle = (active: boolean): CSSProperties => ({
-    flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--lab-s2)',
-    padding: 'var(--lab-s3)', fontSize: 'var(--lab-fs-sm)', fontFamily: 'var(--lab-font-body)',
-    background: 'transparent', border: 'none', cursor: 'pointer',
-    borderBottom: active ? '2px solid var(--lab-accent)' : '2px solid transparent',
-    color: active ? 'var(--lab-ink)' : 'var(--lab-muted)',
-    transition: 'color var(--lab-dur-fast) var(--lab-ease)',
-  });
+  const tabClasses = (active: boolean) =>
+    `focus-ring relative flex-1 flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-medium transition-colors ${
+      active ? 'text-text' : 'text-text-muted hover:text-text'
+    }`;
 
   return (
-    <div
-      data-theme="blueprint"
-      data-lab-root
-      className={labFontVars}
-      style={{
-        height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: 'var(--lab-s6)', background: 'var(--lab-bg)', color: 'var(--lab-text)',
-        fontFamily: 'var(--lab-font-body)',
-        backgroundImage: 'var(--lab-grid-image)', backgroundSize: 'var(--lab-grid-size)',
-      }}
-    >
-      <Panel style={{ width: '100%', maxWidth: 560, padding: 'var(--lab-s7)' }}>
+    <div className="h-screen flex items-center justify-center p-6 bg-background">
+      <SurfaceCard level={3} className="w-full max-w-lg p-8">
         {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--lab-s3)', marginBottom: 'var(--lab-s6)' }}>
-          <Rocket style={{ width: 28, height: 28, color: 'var(--lab-accent)' }} />
+        <div className="flex items-center justify-center gap-3 mb-6">
+          <Rocket className="w-7 h-7 text-accent-setup" />
           <div>
-            <h1 style={{ fontFamily: 'var(--lab-font-mono)', fontSize: 'var(--lab-fs-xl)', fontWeight: 600, letterSpacing: '0.12em', color: 'var(--lab-ink)', lineHeight: 1 }}>POF</h1>
-            <p style={{ fontFamily: 'var(--lab-font-mono)', fontSize: 'var(--lab-fs-xs)', textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--lab-muted)', marginTop: 4 }}>Power of Fun</p>
+            <h1 className="text-xl font-semibold text-text tracking-wide leading-none">POF</h1>
+            <p className="text-2xs font-medium text-text-muted uppercase tracking-wider mt-1">
+              Power of Fun
+            </p>
           </div>
         </div>
 
         {/* UE Version pills */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--lab-s2)', marginBottom: 'var(--lab-s2)', flexWrap: 'wrap' }}>
+        <div className="flex items-center justify-center gap-2 mb-2 flex-wrap">
           {UE_VERSIONS.map((v) => (
-            <Button
+            <button
               key={v.value}
+              type="button"
               data-testid={`pof-setup-wizard-version-pill-${v.value}`}
-              mono
-              active={ueVersion === v.value}
+              aria-pressed={ueVersion === v.value}
               onClick={() => setProject({ ueVersion: v.value })}
               title={v.note}
+              className={`focus-ring px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                ueVersion === v.value
+                  ? 'bg-accent-medium text-accent-setup border-accent-strong'
+                  : 'bg-surface-deep text-text-muted border-border hover:text-text hover:border-border-bright'
+              }`}
             >
               UE {v.label}
-            </Button>
+            </button>
           ))}
         </div>
 
         {/* Version hint */}
-        <p style={{ textAlign: 'center', fontSize: 'var(--lab-fs-xs)', color: 'var(--lab-muted)', marginBottom: 'var(--lab-s5)' }}>
+        <p className="text-center text-xs text-text-subtle mb-5">
           {ueVersion.startsWith('5.5')
             ? 'Full AI training data'
             : `Web search for UE ${selectedMajorMinor} API changes`}
         </p>
 
         {/* Mode tabs */}
-        <div style={{ display: 'flex', borderBottom: '1px solid var(--lab-line)', marginBottom: 'var(--lab-s4)' }}>
+        <div className="flex border-b border-border mb-4">
           <button
             type="button"
             data-testid="pof-setup-wizard-tab-existing"
             onClick={() => setMode('existing')}
-            className="focus-ring"
-            style={tabStyle(mode === 'existing')}
+            className={tabClasses(mode === 'existing')}
           >
-            <FolderOpen style={{ width: 14, height: 14 }} />
+            <FolderOpen className="w-3.5 h-3.5" />
             Open Existing
+            {mode === 'existing' && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t bg-accent-setup" />
+            )}
           </button>
           <button
             type="button"
             data-testid="pof-setup-wizard-tab-fresh"
             onClick={() => setMode('fresh')}
-            className="focus-ring"
-            style={tabStyle(mode === 'fresh')}
+            className={tabClasses(mode === 'fresh')}
           >
-            <Plus style={{ width: 14, height: 14 }} />
+            <Plus className="w-3.5 h-3.5" />
             Start Fresh
+            {mode === 'fresh' && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t bg-accent-setup" />
+            )}
           </button>
         </div>
 
@@ -201,31 +195,30 @@ export function SetupWizard() {
         {mode === 'existing' && (
           <div>
             {loading ? (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--lab-s2)', padding: 'var(--lab-s7) 0', color: 'var(--lab-muted)' }}>
-                <Loader2 className="animate-spin" style={{ width: 16, height: 16 }} />
-                <span style={{ fontSize: 'var(--lab-fs-sm)' }}>Scanning for UE projects…</span>
+              <div className="flex items-center justify-center gap-2 py-8 text-text-muted">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="text-sm">Scanning for UE projects…</span>
               </div>
             ) : filteredProjects.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--lab-s2)', maxHeight: 320, overflowY: 'auto' }}>
+              <div className="flex flex-col gap-2 max-h-80 overflow-y-auto">
                 {filteredProjects.map((project) => (
                   <button
                     key={project.path}
                     type="button"
                     data-testid={`pof-setup-wizard-project-item-${slugifyForTestId(project.name)}`}
                     onClick={() => handleOpenExisting(project)}
-                    className="focus-ring"
-                    style={{
-                      width: '100%', display: 'flex', alignItems: 'center', gap: 'var(--lab-s3)',
-                      padding: 'var(--lab-s3)', textAlign: 'left', cursor: 'pointer',
-                      background: 'var(--lab-panel)', border: '1px solid var(--lab-line)', borderRadius: 'var(--lab-r-sm)',
-                    }}
+                    className="focus-ring w-full flex items-center gap-3 p-3 text-left bg-surface-deep border border-border rounded-lg hover:bg-surface-hover hover:border-border-bright transition-all"
                   >
-                    <FolderOpen style={{ width: 16, height: 16, color: 'var(--lab-muted)', flexShrink: 0 }} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: 'var(--lab-fs-sm)', fontWeight: 500, color: 'var(--lab-text)' }}>{project.name}</p>
-                      <p style={{ fontSize: 'var(--lab-fs-xs)', color: 'var(--lab-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{project.path}</p>
+                    <FolderOpen className="w-4 h-4 text-text-muted shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-text truncate">{project.name}</p>
+                      <p className="text-xs text-text-muted font-mono truncate">{project.path}</p>
                     </div>
-                    {project.engineVersion && <Chip tone="accent">{project.engineVersion}</Chip>}
+                    {project.engineVersion && (
+                      <span className="shrink-0 px-1.5 py-0.5 rounded text-2xs font-medium bg-accent-medium text-accent-setup border border-accent-strong">
+                        {project.engineVersion}
+                      </span>
+                    )}
                     {!project.validated && (
                       <StatusDot state="warn" size="md" title="Missing Config — may be incomplete" label="Unverified project" />
                     )}
@@ -233,17 +226,22 @@ export function SetupWizard() {
                 ))}
               </div>
             ) : (
-              <div style={{ textAlign: 'center', padding: 'var(--lab-s7) 0' }}>
-                <FolderOpen style={{ width: 32, height: 32, color: 'var(--lab-line)', margin: '0 auto var(--lab-s3)' }} />
-                <p style={{ fontSize: 'var(--lab-fs-sm)', color: 'var(--lab-muted)' }}>No UE {selectedMajorMinor} projects found</p>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--lab-s3)', marginTop: 'var(--lab-s3)' }}>
+              <div className="text-center py-8">
+                <FolderOpen className="w-8 h-8 text-text-subtle mx-auto mb-3" />
+                <p className="text-sm text-text-muted">No UE {selectedMajorMinor} projects found</p>
+                <div className="flex items-center justify-center gap-3 mt-3 flex-wrap">
                   {UE_VERSIONS.filter((v) => v.value !== ueVersion).map((v) => (
-                    <button key={v.value} type="button" className="focus-ring" onClick={() => setProject({ ueVersion: v.value })} style={linkStyle}>
+                    <button
+                      key={v.value}
+                      type="button"
+                      onClick={() => setProject({ ueVersion: v.value })}
+                      className={LINK_CLASSES}
+                    >
                       Switch to {v.label}
                     </button>
                   ))}
-                  <span style={{ color: 'var(--lab-line)' }}>|</span>
-                  <button type="button" className="focus-ring" onClick={() => setMode('fresh')} style={linkStyle}>
+                  <span className="text-text-subtle">|</span>
+                  <button type="button" onClick={() => setMode('fresh')} className={LINK_CLASSES}>
                     Start fresh project
                   </button>
                 </div>
@@ -251,7 +249,7 @@ export function SetupWizard() {
             )}
 
             {!loading && projects.length > 0 && (
-              <p style={{ fontSize: 'var(--lab-fs-xs)', color: 'var(--lab-muted)', textAlign: 'center', marginTop: 'var(--lab-s3)' }}>
+              <p className="text-xs text-text-muted text-center mt-3">
                 {filteredProjects.length} of {projects.length} projects match UE {selectedMajorMinor}
               </p>
             )}
@@ -260,8 +258,8 @@ export function SetupWizard() {
 
         {/* === Start Fresh === */}
         {mode === 'fresh' && (
-          <div style={{ paddingTop: 'var(--lab-s4)' }}>
-            <Input
+          <div className="pt-4">
+            <input
               type="text"
               data-testid="pof-setup-wizard-project-name-input"
               value={newName}
@@ -269,28 +267,32 @@ export function SetupWizard() {
               onKeyDown={(e) => e.key === 'Enter' && nameValid && handleStartFresh()}
               placeholder="Project name"
               autoFocus
-              style={{ fontSize: 'var(--lab-fs-sm)', padding: 'var(--lab-s3)', ...(nameError ? { borderColor: 'var(--lab-bad)' } : {}) }}
+              className={`w-full px-3 py-2 bg-surface-deep border rounded-lg text-sm text-text placeholder-text-muted outline-none transition-colors ${
+                nameError
+                  ? 'border-red-400/60 focus:border-red-400'
+                  : 'border-border focus:border-border-bright'
+              }`}
             />
             {nameError ? (
-              <p style={{ fontSize: 'var(--lab-fs-xs)', color: 'var(--lab-bad)', marginTop: 'var(--lab-s2)' }}>{nameError}</p>
+              <p className="text-xs text-red-400 mt-2">{nameError}</p>
             ) : (
-              <p style={{ fontSize: 'var(--lab-fs-xs)', color: 'var(--lab-muted)', marginTop: 'var(--lab-s2)' }}>
+              <p className="text-xs text-text-muted font-mono mt-2 truncate">
                 {newName.trim() ? `${DEFAULT_PROJECTS_DIR}\\${newName.trim()}` : DEFAULT_PROJECTS_DIR}
               </p>
             )}
             <Button
               data-testid="pof-setup-wizard-create-btn"
-              variant="accent"
+              intent="primary"
               onClick={handleStartFresh}
               disabled={!nameValid}
-              style={{ width: '100%', justifyContent: 'center', marginTop: 'var(--lab-s4)', padding: 'var(--lab-s3)', opacity: nameValid ? 1 : 0.4, cursor: nameValid ? 'pointer' : 'not-allowed' }}
+              leftIcon={<Rocket className="w-4 h-4" />}
+              className="w-full justify-center mt-4"
             >
-              <Rocket style={{ width: 16, height: 16 }} />
               Create &amp; Launch
             </Button>
           </div>
         )}
-      </Panel>
+      </SurfaceCard>
     </div>
   );
 }

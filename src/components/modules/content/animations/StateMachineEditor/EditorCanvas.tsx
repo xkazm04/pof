@@ -1,10 +1,11 @@
 'use client';
 
-import { AlertTriangle, AlertCircle, Info } from 'lucide-react';
+import { AlertTriangle, AlertCircle, Info, Layers, Plus } from 'lucide-react';
 import {
   ACCENT_ORANGE, ACCENT_CYAN,
-  STATUS_ERROR, STATUS_WARNING,
+  STATUS_ERROR, STATUS_SUCCESS, STATUS_WARNING,
   MODULE_COLORS,
+  OPACITY_15, OPACITY_30,
 } from '@/lib/chart-colors';
 import { computeEdgeGeometry } from '@/components/ui/svg/graph-edges';
 import { SchematicPanel } from '@/components/ui/SchematicPanel';
@@ -32,6 +33,7 @@ export function EditorCanvas({ editor }: { editor: StateMachineEditorApi }) {
     selectedStateId,
     warningsByState,
     handleStateClick,
+    addState,
   } = editor;
 
   return (
@@ -237,6 +239,39 @@ export function EditorCanvas({ editor }: { editor: StateMachineEditorApi }) {
         );
       })}
 
+      {/* Empty state — all states deleted */}
+      {states.length === 0 && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3" style={{ zIndex: 2 }}>
+          <div
+            className="p-3 rounded-xl border"
+            style={{
+              backgroundColor: `${EDITOR_ACCENT}${OPACITY_15}`,
+              borderColor: `${EDITOR_ACCENT}${OPACITY_30}`,
+            }}
+          >
+            <Layers className="w-5 h-5" style={{ color: EDITOR_ACCENT }} />
+          </div>
+          <div className="flex flex-col items-center gap-1 text-center">
+            <span className="text-xs font-bold text-text">No states defined</span>
+            <span className="text-2xs text-text-muted max-w-[260px]">
+              Add a state to begin building the machine. Code generation and export are paused until at least one state exists.
+            </span>
+          </div>
+          <button
+            onClick={(e) => { e.stopPropagation(); addState(); }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+            style={{
+              backgroundColor: `${STATUS_SUCCESS}${OPACITY_15}`,
+              color: STATUS_SUCCESS,
+              border: `1px solid ${STATUS_SUCCESS}${OPACITY_30}`,
+            }}
+          >
+            <Plus className="w-3 h-3" />
+            Add State
+          </button>
+        </div>
+      )}
+
       {/* Entry indicator */}
       {states.length > 0 && (() => {
         const defaultState = states.find((s) => s.isDefault) ?? states[0];
@@ -262,10 +297,12 @@ export function EditorCanvas({ editor }: { editor: StateMachineEditorApi }) {
         <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm" style={{ backgroundColor: EDITOR_ACCENT }} />other</span>
       </div>
 
-      {/* Instruction hint */}
-      <div className="absolute top-2 left-2 text-[11px] text-text-muted/50 font-mono" style={{ zIndex: 2 }}>
-        Drag to move · Click to select · Use toolbar for transitions
-      </div>
+      {/* Instruction hint (only meaningful when there are states to interact with) */}
+      {states.length > 0 && (
+        <div className="absolute top-2 left-2 text-[11px] text-text-muted/50 font-mono" style={{ zIndex: 2 }}>
+          Drag to move · Click to select · Use toolbar for transitions
+        </div>
+      )}
     </SchematicPanel>
   );
 }

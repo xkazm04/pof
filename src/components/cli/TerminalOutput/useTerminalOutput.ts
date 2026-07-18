@@ -1,7 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import type { LogEntry } from '../types';
 import { groupLogs } from './helpers';
-import { TAIL_COUNT } from './constants';
 import type { SelectionToolbarState } from './types';
 
 export function useTerminalOutput({
@@ -112,16 +111,12 @@ export function useTerminalOutput({
     });
   }, []);
 
-  // Split logs: older logs go to the virtualizer, recent tail gets grouped rendering
-  const { virtualizedLogs, tailLogs } = useMemo(() => {
-    const splitIndex = Math.max(0, logs.length - TAIL_COUNT);
-    return {
-      virtualizedLogs: logs.slice(0, splitIndex),
-      tailLogs: logs.slice(splitIndex),
-    };
-  }, [logs]);
-
-  const groupedTailLogs = useMemo(() => groupLogs(tailLogs), [tailLogs]);
+  /* Group the FULL log list — every entry the user can scroll to keeps rich
+     rendering (Fix buttons, code highlighting, entity tags, expandable tool
+     pairs). Long-log performance is handled at render time: each grouped row
+     is memoized (log entry objects are append-stable) and painted with CSS
+     `content-visibility: auto`, so offscreen rows skip layout/paint. */
+  const groupedLogs = useMemo(() => groupLogs(logs), [logs]);
 
   // Track which log IDs have been seen so we only animate new arrivals
   const [seenIds, setSeenIds] = useState<Set<string>>(new Set());
@@ -170,8 +165,7 @@ export function useTerminalOutput({
     handleSelectionFix,
     toggleGroup,
     togglePair,
-    virtualizedLogs,
-    groupedTailLogs,
+    groupedLogs,
     isNewEntry,
     showScrollBtn,
     scrollBtnMounted,

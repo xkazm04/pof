@@ -182,6 +182,9 @@ export function useStateMachineEditor() {
   }, []);
 
   const handleExport = useCallback(() => {
+    // Nothing meaningful to export without states — the toolbar disables the
+    // button in this case; this guard covers any other callers.
+    if (states.length === 0) return;
     const code = generateFullCppOutput(states, transitions);
     const blob = new Blob([code], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);

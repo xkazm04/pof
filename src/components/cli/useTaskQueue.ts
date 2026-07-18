@@ -12,7 +12,7 @@ import type { SkillId } from './skills';
 import { injectSkillsIntoPrompt } from './skills';
 import {
   registerTaskStart, registerTaskComplete, sendTaskHeartbeat,
-  getTaskStatus, clearSessionTasks,
+  getTaskStatus, clearSessionTasks, attachTaskExecution,
 } from './taskRegistry';
 import { parseBuildOutput, type BuildParseResult } from './UE5BuildParser';
 
@@ -248,6 +248,16 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
    */
   const completedRef = useRef(false);
 
+  // Synchronous re-entrancy latch for run dispatch. The reducer's `streaming`
+  // flag (and any `isStreaming` derived from it) doesn't flip to true until
+  // React commits the next render, so two dispatches in the same tick — e.g.
+  // two `pof-cli-prompt` events, or a double-click — both read the stale
+  // pre-update value and both start a run, the second clobbering the first's
+  // eventSource/executionId with no handle left to abort the orphan. This ref
+  // flips the instant a dispatch begins and is checked before it, closing the
+  // click-to-rerender gap. Cleared when the run completes or fails to start.
+  const dispatchingRef = useRef(false);
+
   // Notify parent when streaming state changes
   const prevStreamingRef = useRef(false);
   useEffect(() => {
@@ -310,6 +320,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
   const completeOnce = useCallback((success: boolean, callbackStatus?: CallbackStatus) => {
     if (completedRef.current) return;
     completedRef.current = true;
+    dispatchingRef.current = false; // run terminated — allow the next dispatch
     const tid = currentTaskIdRef.current;
     if (tid) registerTaskComplete(tid, instanceId, success);
     onTaskComplete?.(tid ?? INTERACTIVE_TASK_ID, success, callbackStatus ? { callbackStatus } : undefined);
@@ -420,6 +431,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
           // the single completion firing for the clean-result path. Interactive
           // runs (submitPrompt) have no queued task id, but the completion signal
           // must still fire — it releases session.isRunning.
+          dispatchingRef.current = false; // run terminated — allow the next dispatch
           const tid = currentTaskIdRef.current;
           if (tid) registerTaskComplete(tid, instanceId, !data.isError);
           onTaskComplete?.(tid ?? INTERACTIVE_TASK_ID, !data.isError, callbackStatus ? { callbackStatus } : undefined);
@@ -478,10 +490,26 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
   const executeTask = useCallback(async (task: QueuedTask, resumeSession: boolean) => {
     // Idempotency guard: skip if this task was already dispatched
     if (dispatchedTaskIds.current.has(task.id)) return;
+    // Synchronous re-entrancy guard: a run is already dispatching/streaming.
+    // Checked before the reducer's streaming flag has committed, so a second
+    // dispatch in the same tick can't slip through and clobber the first.
+    if (dispatchingRef.current) return;
+    dispatchingRef.current = true;
     dispatchedTaskIds.current.add(task.id);
 
     let startResult = await registerTaskStart(task.id, instanceId, task.label);
     if (!startResult.success && startResult.runningTask) {
+      // Conflict recovery: before force-completing the stale registry row, kill
+      // the orphaned server-side CLI process if we know which execution backs
+      // it. Only marking the row failed would leave the old process alive and
+      // editing the same project files concurrently with the new dispatch —
+      // with no client-side handle left to ever abort it.
+      const orphanExecId = startResult.runningTask.executionId;
+      if (orphanExecId) {
+        try {
+          await apiFetch(`/api/claude-terminal/query?executionId=${encodeURIComponent(orphanExecId)}`, { method: 'DELETE' });
+        } catch { /* best-effort: the process may have already exited */ }
+      }
       await registerTaskComplete(startResult.runningTask.taskId, instanceId, false);
       startResult = await registerTaskStart(task.id, instanceId, task.label);
     }
@@ -509,6 +537,9 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
         body: JSON.stringify({ projectPath, prompt: taskPrompt, resumeSessionId: resumeSession ? state.sessionId : undefined, ...attribution, taskLabel: task.label }),
       });
       executionIdRef.current = data.executionId;
+      // Record which execution backs this task so a future 409-conflict
+      // recovery (above) can kill the real process. Fire-and-forget.
+      void attachTaskExecution(task.id, data.executionId);
       if (data.logFilePath) dispatch({ type: 'SET_LOG_FILE', path: data.logFilePath });
       connectToStream(data.streamUrl);
     } catch (e) {
@@ -517,6 +548,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
       // directly (currentTaskIdRef may not have caught up to the TASK_START yet).
       if (!completedRef.current) {
         completedRef.current = true;
+        dispatchingRef.current = false; // failed to start — allow the next dispatch
         registerTaskComplete(task.id, instanceId, false);
         onTaskComplete?.(task.id, false);
       }
@@ -527,6 +559,13 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
   // --- Manual submit (user input) ---
 
   const submitPrompt = useCallback(async (prompt: string, resumeSession: boolean, opts?: { taskType?: string }) => {
+    // Synchronous re-entrancy guard: two prompts dispatched in the same tick
+    // (two pof-cli-prompt events, or click + Enter) would both pass a
+    // streaming-flag check that hasn't committed yet, and the second would
+    // overwrite eventSourceRef/executionIdRef — orphaning the first run's
+    // server process with no handle to abort it. Bail if a run is dispatching.
+    if (dispatchingRef.current) return;
+    dispatchingRef.current = true;
     assistantOutputRef.current = '';
     completedRef.current = false;
     dispatch({ type: 'SUBMIT_START' });
@@ -654,6 +693,16 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
       if (streaming && savedStreamUrlRef.current && !eventSourceRef.current) {
         connectToStream(savedStreamUrlRef.current);
       }
+      // Restart heartbeats too. They're started only once in executeTask and
+      // cleared on hide (below); without this, a run hidden longer than the
+      // heartbeat interval never sends another heartbeat, so the next
+      // stuck-check sees a stale last-heartbeat and force-fails a HEALTHY run
+      // purely because the tab was backgrounded. Re-arm for the current task.
+      if (streaming && currentTaskIdRef.current && !heartbeatIntervalRef.current) {
+        const tid = currentTaskIdRef.current;
+        void sendTaskHeartbeat(tid); // immediate beat so staleness resets on re-show
+        heartbeatIntervalRef.current = setInterval(() => sendTaskHeartbeat(tid), UI_TIMEOUTS.heartbeatInterval);
+      }
       return;
     }
 
@@ -667,6 +716,9 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     if (pendingNextTaskRef.current) { clearTimeout(pendingNextTaskRef.current); pendingNextTaskRef.current = null; }
     if (rafIdRef.current !== null) { cancelAnimationFrame(rafIdRef.current); rafIdRef.current = null; }
   }, [visible, streaming, connectToStream, clearHeartbeat]);
+  // `currentTaskIdRef`/`heartbeatIntervalRef` are refs (stable) — intentionally
+  // not in deps; the effect re-runs on visible/streaming change, which is when
+  // the heartbeat must be re-armed or torn down.
 
   // --- Cleanup on unmount ---
 

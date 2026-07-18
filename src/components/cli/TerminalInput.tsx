@@ -44,6 +44,8 @@ export function TerminalInput({
         ref={inputRef}
         data-testid="pof-cli-panel-input"
         value={input}
+        readOnly={isStreaming}
+        aria-busy={isStreaming}
         onChange={(e) => {
           setInput(e.target.value);
           const el = e.target;
@@ -52,8 +54,8 @@ export function TerminalInput({
         }}
         onKeyDown={handleKeyDown}
         rows={1}
-        placeholder="Prompt... (Shift+Enter for newline, Ctrl+Enter to resume)"
-        className="flex-1 bg-transparent text-xs text-text placeholder-text-muted outline-none font-mono resize-none overflow-y-auto leading-[20px]"
+        placeholder={isStreaming ? 'Working — press Esc to stop…' : 'Prompt... (Shift+Enter for newline, Ctrl+Enter to resume)'}
+        className={`flex-1 bg-transparent text-xs text-text placeholder-text-muted outline-none font-mono resize-none overflow-y-auto leading-[20px] transition-opacity ${isStreaming ? 'opacity-50 cursor-not-allowed' : ''}`}
         style={{ height: '20px', maxHeight: '88px' }}
       />
       {isStreaming ? (

@@ -14,6 +14,7 @@ vi.mock('@/components/cli/taskRegistry', () => ({
   sendTaskHeartbeat: vi.fn(() => Promise.resolve(true)),
   getTaskStatus: (...a: unknown[]) => getTaskStatus(...a),
   clearSessionTasks: vi.fn(() => Promise.resolve(0)),
+  attachTaskExecution: vi.fn(() => Promise.resolve(true)),
 }));
 
 vi.mock('@/components/cli/skills', () => ({

@@ -111,7 +111,8 @@ export function ComparisonMatrix({
             {stats.map((stat, si) => {
               const values = selectedEntities.map((e) => e.values[si]);
               const maxV = Math.max(...values);
-              const bestVal = (stat.higherIsBetter ?? true) ? maxV : Math.min(...values);
+              const higherIsBetter = stat.higherIsBetter ?? true;
+              const bestVal = higherIsBetter ? maxV : Math.min(...values);
 
               return (
                 <tr key={stat.stat} className="hover:bg-surface/30 transition-colors">
@@ -120,10 +121,22 @@ export function ComparisonMatrix({
                     {stat.unit && (
                       <span className="text-xs opacity-60">({stat.unit})</span>
                     )}
+                    {!higherIsBetter && (
+                      <span
+                        className="ml-1 text-[9px] font-mono uppercase tracking-[0.1em] opacity-50 align-middle"
+                        title="Lower is better — bars grow as the value improves"
+                      >
+                        ▼ low
+                      </span>
+                    )}
                   </td>
                   {selectedEntities.map((entity) => {
                     const val = entity.values[si];
-                    const barPct = stat.maxVal > 0 ? (val / stat.maxVal) * 100 : 0;
+                    // Bar length always encodes "better = longer": for
+                    // lower-is-better stats the fill is inverted so the
+                    // at-a-glance read never contradicts the best-value glow.
+                    const rawPct = stat.maxVal > 0 ? (val / stat.maxVal) * 100 : 0;
+                    const barPct = higherIsBetter ? rawPct : 100 - Math.min(rawPct, 100);
                     const isBest = val === bestVal;
                     return (
                       <td key={entity.id} className="py-2 px-1">

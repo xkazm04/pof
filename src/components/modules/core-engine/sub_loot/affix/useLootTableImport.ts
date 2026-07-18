@@ -2,7 +2,7 @@
 
 import { useCallback, type Dispatch, type SetStateAction } from 'react';
 import { parseUE5LootTable } from '../_shared/codegen';
-import type { LootEditorEntryExpanded, LootSource, UE5LootTableJson } from '../_shared/data';
+import type { LootEditorEntryExpanded, UE5LootTableJson } from '../_shared/data';
 
 interface UseLootTableImportArgs {
   setEditorEntries: Dispatch<SetStateAction<LootEditorEntryExpanded[]>>;
@@ -33,7 +33,10 @@ export function useLootTableImport({
           setImportError('No loot entries found in file. Expected { Entries: [...] } format.');
           return;
         }
-        const expanded: LootEditorEntryExpanded[] = entries.map(ent => ({ ...ent, source: 'enemy' as LootSource }));
+        // Carry each entry's real source through the import (parseUE5LootTable
+        // resolves it from the UE5 `Source` field, defaulting to 'enemy' only
+        // when genuinely absent) instead of hardcoding every row to 'enemy'.
+        const expanded: LootEditorEntryExpanded[] = entries.map(ent => ({ ...ent }));
         setEditorEntries(expanded);
         setEditorHistory([expanded]);
         setNothingWeight(nw);

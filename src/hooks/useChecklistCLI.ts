@@ -90,6 +90,16 @@ export function useChecklistCLI(opts: UseChecklistCLIOptions): UseChecklistCLIRe
 
   const sendPrompt = useCallback(
     (itemId: string, prompt: string) => {
+      // Guard against clobbering the in-flight run's item. handleComplete reads
+      // activeItemRef imperatively to decide which checklist item to mark done;
+      // if a second sendPrompt overwrote the ref mid-run, the first run's
+      // completion would be misattributed to the wrong item (and the terminal
+      // would drop the second dispatch while streaming anyway). Only the run
+      // that actually started may own the active item — ignore a competing
+      // dispatch for a different item while one is running.
+      if (cli.isRunning && activeItemRef.current && activeItemRef.current !== itemId) {
+        return;
+      }
       lastPromptRef.current[itemId] = prompt;
       // A fresh run for this item clears any stale unconfirmed flag on it.
       setUnconfirmedItemId((cur) => (cur === itemId ? null : cur));

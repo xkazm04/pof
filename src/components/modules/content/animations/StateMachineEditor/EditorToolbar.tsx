@@ -28,6 +28,8 @@ export function EditorToolbar({ editor }: { editor: StateMachineEditorApi }) {
     handleReset,
   } = editor;
 
+  const isEmpty = states.length === 0;
+
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-3">
@@ -109,30 +111,34 @@ export function EditorToolbar({ editor }: { editor: StateMachineEditorApi }) {
           {drawingTransition ? 'Drawing...' : 'Draw Arrow'}
         </button>
 
-        {/* Code */}
+        {/* Code — disabled while empty (nothing to generate); stays enabled
+            when already open so the user can always hide the panel */}
         <button
           onClick={() => setShowCode(!showCode)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+          disabled={isEmpty && !showCode}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           style={{
             backgroundColor: showCode ? `${EDITOR_ACCENT}${OPACITY_20}` : `${EDITOR_ACCENT}${OPACITY_10}`,
             color: EDITOR_ACCENT,
             border: `1px solid ${EDITOR_ACCENT}${showCode ? OPACITY_30 : OPACITY_20}`,
           }}
+          title={isEmpty && !showCode ? 'Add at least one state to generate code' : undefined}
         >
           <Code2 className="w-3 h-3" />
           {showCode ? 'Hide Code' : 'View Code'}
         </button>
 
-        {/* Export */}
+        {/* Export — disabled while empty (nothing to export) */}
         <button
           onClick={handleExport}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+          disabled={isEmpty}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           style={{
             backgroundColor: `${STATUS_SUCCESS}${OPACITY_10}`,
             color: STATUS_SUCCESS,
             border: `1px solid ${STATUS_SUCCESS}${OPACITY_20}`,
           }}
-          title="Export full C++ code"
+          title={isEmpty ? 'Add at least one state to export C++ code' : 'Export full C++ code'}
         >
           <Download className="w-3 h-3" />
           Export

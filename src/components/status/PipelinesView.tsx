@@ -16,11 +16,20 @@ import { fetchArtifacts } from '@/components/layout-lab/labArtifactClient';
 import { tryApiFetch } from '@/lib/api-utils';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
-import { buildSwimlane, sortLanes, type Swimlane, type StepCell } from '@/lib/status/statusModel';
+import { buildSwimlane, sortLanes, getStepFact, type Swimlane, type StepCell } from '@/lib/status/statusModel';
+import { capabilityClassOf } from '@/lib/status/capabilityModel';
 import { StatusCell, TIER_VAR } from './StatusCell';
 import { EvidenceModal } from './EvidenceModal';
 
 const TIERS = ['L0', 'L1', 'L2', 'L3', 'L4'] as const;
+
+/** True when a step belongs to the given capability class (via its audited deliverable). */
+function cellInClass(catalogId: string, cell: StepCell, klass: string | null): boolean {
+  if (!klass) return true;
+  const fact = getStepFact(catalogId, cell.label);
+  if (!fact) return false;
+  return capabilityClassOf(fact.deliverable, catalogId) === klass;
+}
 
 type Highlight = { kind: 'tier' | 'engine'; value: string } | null;
 
@@ -57,7 +66,17 @@ function Chip({ label, color, active, onClick }: { label: string; color?: string
   );
 }
 
-export function PipelinesView({ onFocusCatalog }: { onFocusCatalog: (catalogId: string) => void }) {
+export function PipelinesView({
+  onFocusCatalog,
+  filterClass = null,
+  onClearFilter,
+}: {
+  onFocusCatalog: (catalogId: string) => void;
+  /** Optional capability-class filter (from the Capability tab): only steps whose
+   *  deliverable maps to this class render, and lanes with zero matching steps hide. */
+  filterClass?: string | null;
+  onClearFilter?: () => void;
+}) {
   const [lanes, setLanes] = useState<Swimlane[] | null>(null);
   const [highlight, setHighlight] = useState<Highlight>(null);
   // Clicking a cell opens the evidence modal (the stored output the gate evaluated),
@@ -104,6 +123,15 @@ export function PipelinesView({ onFocusCatalog }: { onFocusCatalog: (catalogId: 
   const toggle = (kind: 'tier' | 'engine', value: string) =>
     setHighlight((h) => (h && h.kind === kind && h.value === value ? null : { kind, value }));
 
+  /** Lanes with cells restricted to the active capability-class filter (empty lanes hidden). */
+  const visibleLanes = useMemo(() => {
+    if (!lanes) return null;
+    if (!filterClass) return lanes;
+    return lanes
+      .map((lane) => ({ ...lane, cells: lane.cells.filter((c) => cellInClass(lane.catalogId, c, filterClass)) }))
+      .filter((lane) => lane.cells.length > 0);
+  }, [lanes, filterClass]);
+
   return (
     <>
       <div role="toolbar" aria-label="highlight by tier" style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--lab-s2)', marginBottom: 'var(--lab-s2)' }}>
@@ -119,10 +147,40 @@ export function PipelinesView({ onFocusCatalog }: { onFocusCatalog: (catalogId: 
         ))}
       </div>
 
+      {filterClass && (
+        <div style={{ marginBottom: 'var(--lab-s3)' }}>
+          <button
+            type="button"
+            className="focus-ring"
+            onClick={() => onClearFilter?.()}
+            aria-label={`Clear ${filterClass} filter`}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 'var(--lab-s1)',
+              padding: 'var(--lab-s1) var(--lab-s2)',
+              fontSize: 'var(--lab-fs-xs)',
+              fontFamily: 'var(--lab-font-mono)',
+              color: 'var(--lab-text)',
+              background: 'color-mix(in srgb, var(--lab-ink) 16%, transparent)',
+              border: '1px solid var(--lab-ink)',
+              borderRadius: 'var(--lab-r-sm)',
+              cursor: 'pointer',
+            }}
+          >
+            capability: {filterClass}
+            <span aria-hidden="true">✕</span>
+          </button>
+        </div>
+      )}
+
       {!lanes && <div style={{ fontSize: 'var(--lab-fs-sm)', color: 'var(--lab-muted)' }}>Loading pipeline truth…</div>}
+      {lanes && filterClass && visibleLanes && visibleLanes.length === 0 && (
+        <div style={{ fontSize: 'var(--lab-fs-sm)', color: 'var(--lab-muted)' }}>No steps match this capability class.</div>
+      )}
 
       <div style={{ overflowX: 'auto' }}>
-        {lanes?.map((lane) => (
+        {visibleLanes?.map((lane) => (
           <div key={lane.catalogId} style={{ display: 'flex', alignItems: 'center', gap: 'var(--lab-s2)', marginBottom: 'var(--lab-s2)', minWidth: 'max-content' }}>
             <button
               type="button"

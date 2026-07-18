@@ -1,5 +1,5 @@
 import { Loader2 } from 'lucide-react';
-import { MODULE_COLORS, STATUS_WARNING, STATUS_SUCCESS } from '@/lib/chart-colors';
+import { scoreColor } from './helpers';
 
 export function RadialScoreGauge({ score, isScanning }: { score: number | null; isScanning: boolean }) {
   const size = 120;
@@ -32,10 +32,9 @@ export function RadialScoreGauge({ score, isScanning }: { score: number | null; 
   const scoreEndAngle = startAngle + (clampedScore / 100) * sweepAngle;
   const scorePath = clampedScore > 0 ? arcPath(startAngle, scoreEndAngle, radius) : '';
 
-  // Color grading: red (0-30), amber (31-60), green (61-100)
-  const gaugeColor = score !== null
-    ? score <= 30 ? MODULE_COLORS.evaluator : score <= 60 ? STATUS_WARNING : STATUS_SUCCESS
-    : 'var(--text-muted)';
+  // Use the shared 4-band score→color scale so the gauge stays consistent with
+  // every other score-colored widget in the dashboard.
+  const gaugeColor = score !== null ? scoreColor(score) : 'var(--text-muted)';
 
   return (
     <div className="relative" style={{ width: size, height: size }}>

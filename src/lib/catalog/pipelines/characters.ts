@@ -77,7 +77,7 @@ registerCatalogPipeline({
               damageMax: 32,
               attackSpeed: 1.3,
               critChance: 5.5, // sword class base 5–6.5% (§1c)
-              critMulti: 150,  // global base +150% (×2.5 on crit, §1c)
+              critMulti: 250,  // ×2.5 crit multiplier = 250% of base (canon arpg-damage-model; seed criticalDamage 2.5)
               damageType: 'Physical', // §3a — explicit damage type (schema-down: matches UE Physical enum)
 
               // ── Defensive stats (ARPG-LAWS §8) ──
@@ -102,7 +102,9 @@ registerCatalogPipeline({
               note:
                 'Str-primary officer at L5. Canonical seeded stats (seed-characters.ts). ' +
                 'Per §9c: every 10 Str +5 life (Str 16 → floor(16/10)×5 = +5 bonus; 215 base + 5 = 220); ' +
-                'Dex 12 grants accuracy/evasion rating. DamageType=Physical routes through ' +
+                'Dex 12 grants accuracy/evasion rating. Crit uses the canon base multiplier ' +
+                '×2.5 (critMulti 250 = 250% of base; seed criticalDamage 2.5, canon arpg-damage-model). ' +
+                'DamageType=Physical routes through ' +
                 'ARPGDamageExecution added→increased→more pipeline (§3). Resistance profile: ' +
                 'NPC has no 75% cap (§4c); fire/cold moderate, chaos 0 (human baseline). ' +
                 'Stats live in DT_AttributeDefaults (FARPGAttributeInitRow, canon char-stat-source).',

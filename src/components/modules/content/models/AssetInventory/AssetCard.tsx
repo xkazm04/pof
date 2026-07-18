@@ -84,7 +84,7 @@ export function AssetCard({ asset, isExpanded, edgeCount, allAssets, dependencie
           <div className="px-4 py-2.5 bg-surface/40 flex justify-between items-center relative z-10">
             <span className="text-xs text-text-muted opacity-80">{formatDate(asset.modifiedAt)}</span>
             <div className="text-xs text-text-muted font-mono bg-surface-deep px-1.5 py-0.5 rounded border border-border/40">
-              {edgeCount[asset.name] ?? 0} edges
+              {edgeCount[asset.relativePath] ?? 0} edges
             </div>
           </div>
         )}

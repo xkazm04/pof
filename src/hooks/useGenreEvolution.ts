@@ -13,6 +13,8 @@ export interface UseGenreEvolutionResult {
   history: TelemetrySnapshot[];
   loading: boolean;
   scanning: boolean;
+  /** Human-readable reason the last scan failed; null when the last scan succeeded or none ran. */
+  scanError: string | null;
   refresh: () => Promise<void>;
   scanProject: (projectPath: string, dynamicContext: DynamicProjectContext | null) => Promise<{ snapshot: TelemetrySnapshot; newSuggestions: GenreEvolutionSuggestion[] } | null>;
   resolveSuggestion: (suggestionId: string, resolveAction: 'accept' | 'dismiss') => Promise<void>;
@@ -41,12 +43,14 @@ export function useGenreEvolution(): UseGenreEvolutionResult {
   );
 
   const [scanning, setScanning] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
 
   const scanProject = useCallback(async (
     projectPath: string,
     dynamicContext: DynamicProjectContext | null,
   ) => {
     setScanning(true);
+    setScanError(null);
     try {
       const result = await apiFetch<{
         snapshot: TelemetrySnapshot;
@@ -58,7 +62,12 @@ export function useGenreEvolution(): UseGenreEvolutionResult {
       });
       await refresh();
       return result;
-    } catch {
+    } catch (error) {
+      const message = error instanceof Error && error.message
+        ? error.message
+        : 'The scan request failed — check your connection and try again.';
+      console.error('[useGenreEvolution] scanProject failed:', error);
+      setScanError(message);
       return null;
     } finally {
       setScanning(false);
@@ -82,6 +91,7 @@ export function useGenreEvolution(): UseGenreEvolutionResult {
     history: data.history,
     loading,
     scanning,
+    scanError,
     refresh,
     scanProject,
     resolveSuggestion,

@@ -1,5 +1,4 @@
 import { Wrench, ChevronDown, ChevronRight } from 'lucide-react';
-import type { RowComponentProps } from 'react-window';
 import type { LogEntry } from '../types';
 import { aggregateWarnings, type BuildParseResult } from '../UE5BuildParser';
 import { ErrorCard } from '../ErrorCard';
@@ -7,7 +6,6 @@ import { WarningAggregator } from '../WarningAggregator';
 import { BuildSummaryCard } from '../BuildSummaryCard';
 import { CLI_COLORS } from '@/lib/chart-colors';
 import { getLogIcon, formatLogContent, getLogTextClass } from './helpers';
-import type { LogRowData } from './types';
 
 // --- Sub-row components ---
 
@@ -97,16 +95,6 @@ export function ToolBatchRow({ pairs, isExpanded, onToggle, expandedPairs, onTog
           ))}
         </div>
       )}
-    </div>
-  );
-}
-
-export function LogRow({ index, style, logs }: RowComponentProps<LogRowData>) {
-  const log = logs[index];
-  return (
-    <div style={style} className="flex items-start gap-2 px-3 py-0.5 hover:bg-surface-hover/40 transition-colors duration-150">
-      <span className="flex-shrink-0 mt-0.5">{getLogIcon(log.type, log.toolName)}</span>
-      <span className={`text-xs leading-relaxed break-all truncate ${getLogTextClass(log.type)}`}>{formatLogContent(log)}</span>
     </div>
   );
 }

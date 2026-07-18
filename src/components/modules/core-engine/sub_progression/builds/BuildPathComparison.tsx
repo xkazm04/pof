@@ -8,18 +8,23 @@ import { RadarChart } from '../../unique-tabs/_shared';
 import { ACCENT, BUILD_PRESETS, BUILD_STATS } from '../_shared/data';
 
 export function BuildPathComparison() {
-  const [buildVisibility, setBuildVisibility] = useState<Record<string, boolean>>({
-    Warrior: true, Mage: false, Rogue: false,
-  });
+  const [buildVisibility, setBuildVisibility] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(BUILD_PRESETS.map((b, i) => [b.name, i === 0])),
+  );
 
   const activeBuilds = BUILD_PRESETS.filter(b => buildVisibility[b.name]);
   const primaryBuild = activeBuilds[0];
+
+  // One value column per preset — derived, so the table never clips presets
+  // added to BUILD_PRESETS. minmax() lets the columns compress gracefully
+  // instead of overflowing the split-pane at higher preset counts.
+  const tableColumns = `minmax(0, 1fr) repeat(${BUILD_PRESETS.length}, minmax(2.25rem, 3.75rem))`;
 
   return (
     <BlueprintPanel color={ACCENT} className="p-5">
       <SectionHeader icon={Crosshair} label="Build Path Comparison" color={ACCENT} />
 
-      <div className="flex items-center gap-3 mt-2.5 mb-2.5">
+      <div className="flex items-center flex-wrap gap-2 mt-2.5 mb-2.5">
         {BUILD_PRESETS.map(b => {
           const Icon = b.icon;
           const active = buildVisibility[b.name];
@@ -57,7 +62,7 @@ export function BuildPathComparison() {
         </div>
 
         <div className="space-y-1">
-          <div className="grid grid-cols-[1fr_repeat(3,60px)] gap-1 text-xs font-mono uppercase tracking-[0.15em] font-bold text-text-muted mb-2">
+          <div className="grid gap-1 text-xs font-mono uppercase tracking-[0.15em] font-bold text-text-muted mb-2" style={{ gridTemplateColumns: tableColumns }}>
             <span>Stat</span>
             {BUILD_PRESETS.map(b => (
               <span key={b.name} className="text-center" style={{ color: buildVisibility[b.name] ? b.color : 'var(--text-muted)', opacity: buildVisibility[b.name] ? 1 : 0.4 }}>
@@ -66,8 +71,8 @@ export function BuildPathComparison() {
             ))}
           </div>
           {BUILD_STATS.map(stat => (
-            <div key={stat} className="grid grid-cols-[1fr_repeat(3,60px)] gap-1 text-xs font-mono py-1 border-t border-border/20">
-              <span className="text-text-muted">{stat}</span>
+            <div key={stat} className="grid gap-1 text-xs font-mono py-1 border-t border-border/20" style={{ gridTemplateColumns: tableColumns }}>
+              <span className="text-text-muted truncate">{stat}</span>
               {BUILD_PRESETS.map(b => (
                 <span
                   key={b.name}

@@ -87,6 +87,7 @@ export function Baseline(props: Props) {
         displayStatus={displayStatus}
         loading={artsLoading}
         hasDrift={(step) => driftByStep.has(step)}
+        syncFailed={(step) => !!entitySteps?.[step]?.syncError}
         isLive={(step) => !!(detail && getStepComponent(detail.catalog.catalogId, step))}
         tooltipFor={(step, i) => {
           const a = artifactByStep.get(step);

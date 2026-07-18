@@ -2,6 +2,7 @@
 
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Copy, ChevronDown, ChevronUp } from 'lucide-react';
+import { toast } from 'sonner';
 import { useErrorDiagnosticsStore } from '@/stores/errorDiagnosticsStore';
 
 interface Props {
@@ -31,11 +32,18 @@ export class ModuleErrorBoundary extends Component<Props, State> {
     this.setState({ hasError: false, error: null, showDetails: false });
   };
 
-  handleCopyError = () => {
+  handleCopyError = async () => {
     const { error } = this.state;
     if (!error) return;
     const text = `Module: ${this.props.moduleName}\nError: ${error.message}\n\nStack:\n${error.stack ?? 'N/A'}`;
-    navigator.clipboard.writeText(text);
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success('Error details copied to clipboard');
+    } catch {
+      // Clipboard writes can reject in insecure contexts / sandboxed webviews —
+      // surface the failure instead of silently doing nothing.
+      toast.error('Could not copy — clipboard access was blocked');
+    }
   };
 
   render() {

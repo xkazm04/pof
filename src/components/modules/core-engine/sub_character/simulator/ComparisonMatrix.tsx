@@ -96,7 +96,8 @@ export function ComparisonMatrix({ selected, onSelectionChange }: ComparisonMatr
           <tbody>
             {COMPARISON_STATS.map((stat, si) => {
               const values = visibleCharacters.map(ch => ch.values[si]);
-              const maxV = Math.max(...values);
+              const higherIsBetter = stat.higherIsBetter ?? true;
+              const bestVal = higherIsBetter ? Math.max(...values) : Math.min(...values);
               return (
                 <motion.tr
                   key={stat.stat}
@@ -109,11 +110,23 @@ export function ComparisonMatrix({ selected, onSelectionChange }: ComparisonMatr
                   <td className="py-2 pr-3 font-bold text-text-muted text-[11px]">
                     {stat.stat}
                     {stat.unit && <span className="text-[9px] opacity-50 ml-0.5">({stat.unit})</span>}
+                    {!higherIsBetter && (
+                      <span
+                        className="ml-1 text-[8px] uppercase tracking-[0.1em] opacity-50 align-middle"
+                        title="Lower is better — bars grow as the value improves"
+                      >
+                        ▼ low
+                      </span>
+                    )}
                   </td>
                   {visibleCharacters.map(ch => {
                     const val = ch.values[si];
-                    const barPct = (val / stat.maxVal) * 100;
-                    const isBest = val === maxV && visibleCharacters.length > 1;
+                    // "Longer bar = better" holds for both stat directions:
+                    // lower-is-better rows invert the fill so the visual never
+                    // contradicts the crown/best highlight.
+                    const rawPct = stat.maxVal > 0 ? Math.min((val / stat.maxVal) * 100, 100) : 0;
+                    const barPct = higherIsBetter ? rawPct : 100 - rawPct;
+                    const isBest = val === bestVal && visibleCharacters.length > 1;
                     return (
                       <td key={ch.id} className="py-2 px-2">
                         <div className="flex flex-col items-center gap-1">
@@ -139,7 +152,7 @@ export function ComparisonMatrix({ selected, onSelectionChange }: ComparisonMatr
       {/* Footer */}
       <div className="flex items-center gap-2 mt-3 pt-2 border-t border-border/10 text-xs font-mono text-text-muted">
         <Crown className="w-3 h-3" style={{ color: STATUS_SUCCESS }} />
-        <span className="font-bold" style={{ color: STATUS_SUCCESS }}>Crown</span> = highest in stat
+        <span className="font-bold" style={{ color: STATUS_SUCCESS }}>Crown</span> = best in stat
         <span className="ml-auto">{visibleCharacters.length} of {COMPARISON_CHARACTERS.length} visible</span>
       </div>
     </BlueprintPanel>

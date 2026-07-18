@@ -21,6 +21,11 @@ const EMPTY_ENEMIES: EnemyArchetype[] = [];
 const EMPTY_ABILITIES: CombatAbility[] = [];
 const EMPTY_GEAR: GearLoadout[] = [];
 
+// Monotonic token guarding concurrent simulation runs: each run captures the
+// counter at start and only the run whose token is still current may commit
+// results/progress to the store (older overlapping runs become silent no-ops).
+let simRunCounter = 0;
+
 // ── Store ───────────────────────────────────────────────────────────────────
 
 interface CombatSimulatorState {
@@ -109,6 +114,7 @@ export const useCombatSimulatorStore = create<CombatSimulatorState>((set, get) =
   },
 
   runSimulation: async (scenario, tuning, config) => {
+    const runToken = ++simRunCounter;
     set({ isSimulating: true, error: null });
     try {
       const data = await apiFetch<{ result: SimulationResult }>(
@@ -119,6 +125,9 @@ export const useCombatSimulatorStore = create<CombatSimulatorState>((set, get) =
           body: JSON.stringify({ action: 'simulate', scenario, tuning, config }),
         },
       );
+      // A newer run started while we were in flight — discard this result.
+      if (runToken !== simRunCounter) return null;
+
       // If a baseline is pinned, diff this candidate run against it.
       const baseline = get().baselineResult;
       const comparison = baseline
@@ -134,12 +143,14 @@ export const useCombatSimulatorStore = create<CombatSimulatorState>((set, get) =
       });
       return data.result;
     } catch (err) {
+      if (runToken !== simRunCounter) return null;
       set({ error: err instanceof Error ? err.message : String(err), isSimulating: false });
       return null;
     }
   },
 
   runSimulationStreaming: async (scenario, tuning, config) => {
+    const runToken = ++simRunCounter;
     set({ isSimulating: true, error: null, simProgress: 0 });
     try {
       const res = await fetch('/api/combat-simulator', {
@@ -155,6 +166,25 @@ export const useCombatSimulatorStore = create<CombatSimulatorState>((set, get) =
       let finalResult: SimulationResult | null = null;
       let streamError: string | null = null;
 
+      const handleFrame = (frame: string) => {
+        const dataLine = frame.split('\n').find((l) => l.startsWith('data:'));
+        if (!dataLine) return;
+        const payload = JSON.parse(dataLine.slice(5).trim()) as
+          | { type: 'progress'; completed: number; total: number }
+          | { type: 'result'; result: SimulationResult }
+          | { type: 'error'; error: string };
+        if (payload.type === 'progress') {
+          // Only the current run may drive the shared progress bar.
+          if (runToken === simRunCounter) {
+            set({ simProgress: payload.total > 0 ? payload.completed / payload.total : 0 });
+          }
+        } else if (payload.type === 'result') {
+          finalResult = payload.result;
+        } else if (payload.type === 'error') {
+          streamError = payload.error;
+        }
+      };
+
       // Parse the SSE stream: blank-line-delimited `data: {json}` frames.
       for (;;) {
         const { done, value } = await reader.read();
@@ -162,41 +192,41 @@ export const useCombatSimulatorStore = create<CombatSimulatorState>((set, get) =
         buffer += decoder.decode(value, { stream: true });
         const frames = buffer.split('\n\n');
         buffer = frames.pop() ?? '';
-        for (const frame of frames) {
-          const dataLine = frame.split('\n').find((l) => l.startsWith('data:'));
-          if (!dataLine) continue;
-          const payload = JSON.parse(dataLine.slice(5).trim()) as
-            | { type: 'progress'; completed: number; total: number }
-            | { type: 'result'; result: SimulationResult }
-            | { type: 'error'; error: string };
-          if (payload.type === 'progress') {
-            set({ simProgress: payload.total > 0 ? payload.completed / payload.total : 0 });
-          } else if (payload.type === 'result') {
-            finalResult = payload.result;
-          } else if (payload.type === 'error') {
-            streamError = payload.error;
-          }
-        }
+        for (const frame of frames) handleFrame(frame);
       }
 
+      // Flush any bytes held back by the streaming decoder, then parse a trailing
+      // frame the server may have sent without a terminating blank line — otherwise
+      // a completed run whose final `result` frame lacks `\n\n` looks like a failure.
+      buffer += decoder.decode();
+      if (buffer.trim()) handleFrame(buffer);
+
       if (streamError) throw new Error(streamError);
-      if (!finalResult) throw new Error('Simulation stream ended without a result');
+      // Read through an asserted snapshot: finalResult is assigned only inside the
+      // handleFrame closure, which tsgo's flow analysis can't see — without the
+      // assertion it narrows the value to `null` and the null-guard leaves `never`.
+      const settledResult = finalResult as SimulationResult | null;
+      if (!settledResult) throw new Error('Simulation stream ended without a result');
+
+      // A newer run started while this stream was in flight — discard silently.
+      if (runToken !== simRunCounter) return null;
 
       const baseline = get().baselineResult;
       const comparison = baseline
-        ? compareRuns(baseline, finalResult, { baseline: 'Baseline', candidate: 'Candidate' })
+        ? compareRuns(baseline, settledResult, { baseline: 'Baseline', candidate: 'Candidate' })
         : null;
 
       set({
-        result: finalResult,
-        summary: finalResult.summary,
-        alerts: finalResult.alerts,
+        result: settledResult,
+        summary: settledResult.summary,
+        alerts: settledResult.alerts,
         comparison,
         isSimulating: false,
         simProgress: 1,
       });
       return finalResult;
     } catch (err) {
+      if (runToken !== simRunCounter) return null;
       set({ error: err instanceof Error ? err.message : String(err), isSimulating: false, simProgress: 0 });
       return null;
     }

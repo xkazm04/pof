@@ -27,6 +27,14 @@ const EMPTY_STATS: EvolutionStats = {
   moduleBreakdown: [],
 };
 
+// ── Request sequencing ──────────────────────────────────────────────────────
+// Rapid module-picker switching puts two loadVariants/loadSuggestions fetches
+// in flight at once; an out-of-order response must not overwrite the store with
+// a stale module's data. Each dispatch captures a monotonic token and only
+// commits its result if it is still the latest request for that loader.
+let variantsRequestSeq = 0;
+let suggestionsRequestSeq = 0;
+
 // ── Store ───────────────────────────────────────────────────────────────────
 
 interface PromptEvolutionState {
@@ -141,6 +149,7 @@ export const usePromptEvolutionStore = create<PromptEvolutionState>((set, get) =
   setActiveSubTab: (tab) => set({ activeSubTab: tab }),
 
   loadVariants: async (moduleId, checklistItemId) => {
+    const requestSeq = ++variantsRequestSeq;
     set({ isLoading: true, error: null });
     try {
       const variants = await apiFetch<PromptVariant[]>('/api/prompt-evolution', {
@@ -148,8 +157,12 @@ export const usePromptEvolutionStore = create<PromptEvolutionState>((set, get) =
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'get-variants', moduleId, checklistItemId }),
       });
+      // A newer loadVariants (e.g. the user switched modules) has superseded
+      // this request — drop the stale response so it can't overwrite the store.
+      if (requestSeq !== variantsRequestSeq) return;
       set({ variants, isLoading: false });
     } catch (err) {
+      if (requestSeq !== variantsRequestSeq) return;
       set({ error: err instanceof Error ? err.message : 'Failed to load variants', isLoading: false });
     }
   },
@@ -270,14 +283,18 @@ export const usePromptEvolutionStore = create<PromptEvolutionState>((set, get) =
   },
 
   loadSuggestions: async (moduleId) => {
+    const requestSeq = ++suggestionsRequestSeq;
     try {
       const suggestions = await apiFetch<EvolutionSuggestion[]>('/api/prompt-evolution', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'get-suggestions', moduleId }),
       });
+      // Ignore an out-of-order response from a superseded module selection.
+      if (requestSeq !== suggestionsRequestSeq) return;
       set({ suggestions });
     } catch (err) {
+      if (requestSeq !== suggestionsRequestSeq) return;
       set({ error: err instanceof Error ? err.message : 'Failed to load suggestions' });
     }
   },

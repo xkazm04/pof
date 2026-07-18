@@ -23,13 +23,14 @@ export function NarrativeBreadcrumb({ activeTab, onNavigate }: { activeTab: Comb
             {i > 0 && <span className="text-text-muted/40 mx-0.5">{'>'}</span>}
             <button
               onClick={() => onNavigate(step.key)}
-              className="px-1.5 py-0.5 rounded transition-all cursor-pointer"
               style={{
+                ...focusRingStyle(ACCENT),
                 color: isActive ? ACCENT : isPast ? withOpacity(ACCENT, '99') : 'var(--text-muted)',
                 backgroundColor: isActive ? withOpacity(ACCENT, OPACITY_10) : 'transparent',
                 fontWeight: isActive ? 700 : isPast ? 600 : 400,
                 opacity: !isActive && !isPast ? 0.5 : 1,
               }}
+              className={`px-1.5 py-0.5 rounded transition-all cursor-pointer focus:outline-none ${FOCUS_RING_CLASS}`}
             >
               {step.narrative}
             </button>

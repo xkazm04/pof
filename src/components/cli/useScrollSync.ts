@@ -1,24 +1,20 @@
 'use client';
 
 import { useEffect, useCallback, useRef, useState } from 'react';
-import type { ListImperativeAPI } from 'react-window';
 
 interface UseScrollSyncOpts {
   logCount: number;
   visible: boolean;
-  virtualizedLogCount: number;
-  listRef: React.RefObject<ListImperativeAPI | null>;
 }
 
 /**
  * Manages auto-scroll, unseen count, and scroll-to-bottom button visibility.
- * Always assumes virtualization is active (progressive from line 1).
+ * The output is a single native scroll container (offscreen rows are skipped
+ * via CSS content-visibility, not a nested virtualized list).
  */
 export function useScrollSync({
   logCount,
   visible,
-  virtualizedLogCount,
-  listRef,
 }: UseScrollSyncOpts) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const isAutoScrollRef = useRef(true);
@@ -32,21 +28,19 @@ export function useScrollSync({
   // Scroll to bottom when logs change and auto-scroll is on
   useEffect(() => {
     if (isAutoScroll) {
-      if (virtualizedLogCount > 0 && listRef.current) listRef.current.scrollToRow({ index: virtualizedLogCount - 1, align: 'end' });
       if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [logCount, isAutoScroll, virtualizedLogCount, listRef]);
+  }, [logCount, isAutoScroll]);
 
   // Restore scroll position when becoming visible after being hidden
   useEffect(() => {
     if (visible && !prevVisibleRef.current && isAutoScroll) {
       requestAnimationFrame(() => {
-        if (virtualizedLogCount > 0 && listRef.current) listRef.current.scrollToRow({ index: virtualizedLogCount - 1, align: 'end' });
         if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
       });
     }
     prevVisibleRef.current = visible;
-  }, [visible, isAutoScroll, virtualizedLogCount, listRef]);
+  }, [visible, isAutoScroll]);
 
   const handleScroll = useCallback(() => {
     if (!scrollRef.current) return;
@@ -86,9 +80,8 @@ export function useScrollSync({
     setUnseenCount(0);
     setScrollBtnVisible(false);
     if (autoHideTimerRef.current) { clearTimeout(autoHideTimerRef.current); autoHideTimerRef.current = null; }
-    if (virtualizedLogCount > 0 && listRef.current) listRef.current.scrollToRow({ index: virtualizedLogCount - 1, align: 'end' });
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
-  }, [virtualizedLogCount, listRef]);
+  }, []);
 
   // Cleanup timer on unmount
   useEffect(() => {

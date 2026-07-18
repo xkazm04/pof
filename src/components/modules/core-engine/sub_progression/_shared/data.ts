@@ -30,16 +30,17 @@ export const generateChartData = (base: number, exp: number) => {
   // stray (or NaN) value can't yield non-finite XP and a silently broken chart.
   const safeBase = clamp(base, BASE_XP_RANGE.min, BASE_XP_RANGE.max);
   const safeExp = clamp(exp, CURVE_EXP_RANGE.min, CURVE_EXP_RANGE.max);
-  const data = [];
-  for (let lvl = 1; lvl <= MAX_LEVEL; lvl += 5) {
-    const levelToUse = lvl > MAX_LEVEL ? MAX_LEVEL : lvl;
-    data.push({
-      level: levelToUse,
-      xp: calculateXpForLevel(levelToUse, safeBase, safeExp),
-      totalParams: Math.floor(levelToUse * 1.5),
-    });
-  }
-  return data;
+  // Sample level 1, then every 5th level up to and INCLUDING MAX_LEVEL, so the
+  // plotted curve always ends at the true level-cap cost. (The old `lvl += 5`
+  // walk from 1 topped out at level 46, silently under-reporting the max XP the
+  // header pill advertises as "Max Level: 50".)
+  const levels = [1];
+  for (let lvl = 5; lvl <= MAX_LEVEL; lvl += 5) levels.push(lvl);
+  return levels.map((level) => ({
+    level,
+    xp: calculateXpForLevel(level, safeBase, safeExp),
+    totalParams: Math.floor(level * 1.5),
+  }));
 };
 
 export const PROGRESSION_FEATURES = [

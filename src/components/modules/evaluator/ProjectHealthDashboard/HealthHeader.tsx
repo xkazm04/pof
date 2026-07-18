@@ -1,4 +1,4 @@
-import { Loader2, Play } from 'lucide-react';
+import { Play } from 'lucide-react';
 import type { EvaluatorReport } from '@/types/evaluator';
 import { STATUS_STALE, statusBg, statusBorder } from '@/lib/chart-colors';
 import { EVAL_ACCENT } from './constants';
@@ -44,29 +44,31 @@ export function HealthHeader({
         )}
       </div>
 
-      <div className="flex flex-col gap-2 flex-shrink-0">
+      <div className="flex flex-col items-end gap-2 flex-shrink-0">
+        {/* In-app project scanning has no backing trigger yet (no store action
+            or API produces an EvaluatorReport). Render an honest disabled
+            affordance instead of a live-looking button that swallows clicks. */}
         <button
-          disabled={isScanning}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium transition-all disabled:opacity-50"
+          disabled
+          aria-disabled="true"
+          className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium cursor-not-allowed opacity-70"
           style={{
-            backgroundColor: `${EVAL_ACCENT}12`,
+            backgroundColor: `${EVAL_ACCENT}0a`,
             color: EVAL_ACCENT,
-            border: `1px solid ${EVAL_ACCENT}25`,
+            border: `1px dashed ${EVAL_ACCENT}30`,
           }}
-          title="Scan functionality requires CLI integration"
+          title="Project scanning is not available yet — it requires CLI integration"
         >
-          {isScanning ? (
-            <>
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              Scanning...
-            </>
-          ) : (
-            <>
-              <Play className="w-3.5 h-3.5" />
-              Scan Project
-            </>
-          )}
+          <Play className="w-3.5 h-3.5" />
+          Scan Project
+          <span
+            className="ml-1 px-1.5 py-0.5 rounded text-2xs font-semibold uppercase tracking-wide"
+            style={{ backgroundColor: `${EVAL_ACCENT}18`, color: EVAL_ACCENT }}
+          >
+            Soon
+          </span>
         </button>
+        <p className="text-2xs text-text-muted text-right">Requires CLI integration</p>
         {scanHistory.length >= 2 && (
           <button
             onClick={() => setShowHistoryOverlay(!showHistoryOverlay)}

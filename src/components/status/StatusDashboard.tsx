@@ -15,6 +15,7 @@
  */
 import { useSyncExternalStore } from 'react';
 import { StatusTabs, type StatusTab } from './StatusTabs';
+import { CapabilityView } from './CapabilityView';
 import { PipelinesView } from './PipelinesView';
 import { CategoryView } from './CategoryView';
 import { ItemFocusView } from './ItemFocusView';
@@ -42,6 +43,8 @@ interface ViewState {
   focus: { catalogId: string; entityId: string } | null;
   /** Selected catalog for the Category tab (null = show the catalog picker). */
   catalog: string | null;
+  /** Active capability-class filter on the Pipelines tab (null = unfiltered). */
+  filterClass: string | null;
 }
 
 function parse(search: string): ViewState {
@@ -54,24 +57,31 @@ function parse(search: string): ViewState {
   }
   const catalogParam = p.get('catalog');
   const tabParam = p.get('tab');
+  const classParam = p.get('class');
   let tab: StatusTab;
   if (focus || tabParam === 'item') tab = 'item';
   else if (catalogParam || tabParam === 'category') tab = 'category';
   else if (tabParam === 'models') tab = 'models';
-  else tab = 'pipelines';
-  return { tab, focus, catalog: catalogParam || null };
+  else if (tabParam === 'pipelines' || classParam) tab = 'pipelines';
+  else tab = 'capability';
+  return { tab, focus, catalog: catalogParam || null, filterClass: classParam || null };
 }
 
 export function StatusDashboard() {
   const search = useSyncExternalStore(subscribe, () => window.location.search, () => '');
-  const { tab, focus, catalog } = parse(search);
+  const { tab, focus, catalog, filterClass } = parse(search);
 
   const setTab = (t: StatusTab) => {
     if (t === 'item') navigate(focus ? `entity=${focus.catalogId}:${focus.entityId}` : 'tab=item');
     else if (t === 'category') navigate(focus ? `catalog=${focus.catalogId}` : catalog ? `catalog=${catalog}` : 'tab=category');
     else if (t === 'models') navigate('tab=models');
+    else if (t === 'pipelines') navigate('tab=pipelines');
     else navigate('');
   };
+
+  /** Capability row → Pipelines map filtered to that class. */
+  const filterByClass = (klass: string) => navigate(`tab=pipelines&class=${encodeURIComponent(klass)}`);
+  const clearFilter = () => navigate('tab=pipelines');
 
   const focusEntity = (catalogId: string, entityId: string) =>
     navigate(`entity=${encodeURIComponent(catalogId)}:${encodeURIComponent(entityId)}`);
@@ -101,6 +111,10 @@ export function StatusDashboard() {
         <a href="/layout" className="focus-ring" style={{ fontSize: 'var(--lab-fs-xs)', color: 'var(--lab-ink)', textDecoration: 'none' }}>← Blueprint</a>
       </div>
 
+      {tab === 'capability' && (
+        <CapabilityView onFilterClass={filterByClass} />
+      )}
+
       {tab === 'pipelines' && (
         <>
           <p style={{ fontSize: 'var(--lab-fs-xs)', color: 'var(--lab-muted)', maxWidth: 880, marginBottom: 'var(--lab-s3)' }}>
@@ -108,7 +122,7 @@ export function StatusDashboard() {
             (green = gate/judge-proven), the left stripe is the acceptance tier. Click a tier or engine chip to highlight,
             or a pipeline to open its category overview.
           </p>
-          <PipelinesView onFocusCatalog={focusCatalog} />
+          <PipelinesView onFocusCatalog={focusCatalog} filterClass={filterClass} onClearFilter={clearFilter} />
         </>
       )}
 

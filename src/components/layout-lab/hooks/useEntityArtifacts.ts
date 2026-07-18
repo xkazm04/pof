@@ -71,11 +71,16 @@ export function deriveEntityArtifacts(
 
   // Server-faithful rollup: derives config-complete/tier using the same accept logic the server stored.
   const driftByStep = new Map<string, StepDrift>();
+  // Sibling artifacts (step → data) let derived checkers (e.g. the Items Test
+  // Gate) read upstream acceptance instead of trusting fabricated step data.
+  const siblings: Record<string, Record<string, unknown>> = {};
+  for (const [s, a] of Object.entries(entitySteps ?? {})) siblings[s] = a.data;
+  const checkerCtx = catalogId ? { catalog: catalogId, siblings, has: () => false } : undefined;
   const artifacts: PipelineArtifact[] = catalogId
     ? steps.filter((s) => entitySteps?.[s]).map((s) => {
         const art = entitySteps![s];
         const accept = resolveAccept(catalogId, s);
-        const res = accept ? accept(art.data) : null;
+        const res = accept ? accept(art.data, checkerCtx) : null;
         const localStatus = res?.status ?? 'pass';
         // Overlay the runner's verdict: when the local recompute is still `deferred`
         // (an unrun L3/L4 gate) but the server has a real pass/fail, the server wins.

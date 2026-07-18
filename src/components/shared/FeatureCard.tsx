@@ -33,9 +33,12 @@ export function FeatureCard({ name, active, onToggle, accent, children, summary 
       aria-pressed={active}
       className="relative text-left rounded-lg border p-3 cursor-pointer transition-all duration-150 hover:brightness-110 motion-safe:hover:scale-[1.02] motion-safe:active:scale-[0.98] focus:outline-none focus-visible:ring-1 focus-visible:ring-offset-0"
       style={{
+        // Reduced emphasis for the inactive state lives on the card *chrome*
+        // (translucent bg + border + dimmed children below), NOT a whole-button
+        // opacity — a full-card 0.65 alpha compounded with the muted text color
+        // and dropped the label below a legible contrast ratio.
         backgroundColor: active ? withOpacity(accent, OPACITY_8) : 'transparent',
         borderColor: active ? withOpacity(accent, OPACITY_30) : withOpacity(STATUS_NEUTRAL, OPACITY_20),
-        opacity: active ? 1 : 0.65,
         '--tw-ring-color': withOpacity(accent, OPACITY_50),
       } as CSSProperties}
     >

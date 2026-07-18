@@ -1,0 +1,131 @@
+{
+  "_note": "Neutral capability-benchmark results (Phase 2). Each scored row is the TECHNIQUE STACK (quality prompt pack + engine + policy model) run on a canon-FREE neutral brief (scripts/capability-bench/briefs.json, world 'Emberfall'), judged by the strict rubric WITHOUT canonContext/siblingContext, median-of-3, sequential. capabilityModel.ts grades a class from its BENCHMARK median when scored rows exist (provenance 'neutral-benchmark'), keeping the project-instance median visible as a secondary field. Deferred rows carry an honest note and NO score (their class stays project-instance-graded, note surfaced in the gap statement). Regenerate with: npx tsx scripts/capability-benchmark.ts [--class <c>] [--force].",
+  "generatedAt": "2026-07-17T13:04:12.131Z",
+  "rubricVersion": 3,
+  "rows": [
+    {
+      "class": "text-config",
+      "briefId": "text-ability-tuning",
+      "score": 79,
+      "draws": [
+        79,
+        79,
+        84
+      ],
+      "model": "sonnet",
+      "effort": "medium",
+      "engine": "Claude"
+    },
+    {
+      "class": "text-config",
+      "briefId": "text-codex-lore",
+      "score": 87,
+      "draws": [
+        86,
+        88,
+        87
+      ],
+      "model": "sonnet",
+      "effort": "medium",
+      "engine": "Claude"
+    },
+    {
+      "class": "text-config",
+      "briefId": "text-save-schema",
+      "score": 80,
+      "draws": [
+        73,
+        80,
+        81
+      ],
+      "model": "sonnet",
+      "effort": "medium",
+      "engine": "Claude"
+    },
+    {
+      "class": "graph-data",
+      "briefId": "graph-ai-fsm",
+      "score": 70,
+      "draws": [
+        70,
+        73,
+        70
+      ],
+      "model": "sonnet",
+      "effort": "medium",
+      "engine": "Claude"
+    },
+    {
+      "class": "graph-data",
+      "briefId": "graph-quest-dag",
+      "score": 84,
+      "draws": [
+        84,
+        82,
+        86
+      ],
+      "model": "sonnet",
+      "effort": "medium",
+      "engine": "Claude"
+    },
+    {
+      "class": "2d-art",
+      "briefId": "art-environment",
+      "score": null,
+      "engine": "Leonardo",
+      "styleDna": false,
+      "note": "benchmark-unavailable: credits."
+    },
+    {
+      "class": "2d-art",
+      "briefId": "art-item-icon",
+      "score": null,
+      "engine": "Leonardo",
+      "styleDna": false,
+      "note": "benchmark-unavailable: credits."
+    },
+    {
+      "class": "ui-glyph",
+      "briefId": "glyph-ability-hud",
+      "score": null,
+      "engine": "Leonardo",
+      "styleDna": false,
+      "note": "benchmark-unavailable: credits."
+    },
+    {
+      "class": "3d-mesh",
+      "briefId": null,
+      "score": null,
+      "deferred": true,
+      "note": "deferred: Tripo credit spend not authorized this phase."
+    },
+    {
+      "class": "animation",
+      "briefId": null,
+      "score": null,
+      "deferred": true,
+      "note": "gate-proven class — neutral benchmark n/a, graded by live L3/L4 gates."
+    },
+    {
+      "class": "audio",
+      "briefId": null,
+      "score": null,
+      "deferred": true,
+      "note": "no automated judge class — human review required."
+    },
+    {
+      "class": "vfx-particles",
+      "briefId": null,
+      "score": null,
+      "deferred": true,
+      "note": "no generation engine wired."
+    },
+    {
+      "class": "ue-runtime",
+      "briefId": null,
+      "score": null,
+      "deferred": true,
+      "note": "gate-proven class — neutral benchmark n/a, graded by live L3/L4 gates."
+    }
+  ]
+}

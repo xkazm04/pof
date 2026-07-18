@@ -42,11 +42,14 @@ const CAPTAIN_VAEL: CharacterEntry = {
     archetype: 'human-officer',
     facePlayerInDialogue: true,
     attributeRowName: 'CaptainVael',
-    // Canonical stats — kept identical to VSCharacterVaelTest's asserted values.
+    // Canonical stats. criticalDamage follows canon arpg-damage-model (crit base ×2.5);
+    // the UE DT_AttributeDefaults row + VSCharacterVaelTest still assert the legacy ×1.6
+    // and are flagged for the next UE session (see .claude/green-loop/UE-FOLLOWUP.md) —
+    // app-side leads the correction, UE follows.
     attributes: {
       health: 220, maxHealth: 220, mana: 60, maxMana: 60,
       strength: 16, dexterity: 12, intelligence: 11,
-      armor: 30, attackPower: 24, criticalChance: 0.08, criticalDamage: 1.6,
+      armor: 30, attackPower: 24, criticalChance: 0.08, criticalDamage: 2.5,
       characterLevel: 5,
     },
     abilities: ['Melee Attack', 'Heavy Attack'],

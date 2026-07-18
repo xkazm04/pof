@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { MOTION } from '@/lib/constants';
 import { useSuspendableEffect } from '@/hooks/useSuspend';
@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { useProjectStore } from '@/stores/projectStore';
 import { apiFetch } from '@/lib/api-utils';
-import { STATUS_SUCCESS, STATUS_ERROR, statusBg, statusBorder, OPACITY_10, OPACITY_30 } from '@/lib/chart-colors';
+import { STATUS_SUCCESS, STATUS_ERROR, STATUS_NEUTRAL, statusBg, statusBorder, OPACITY_10, OPACITY_30 } from '@/lib/chart-colors';
 import { formatDurationBetween } from '@/lib/format';
 import type { BatchReviewState } from '@/types/batch-review';
 import { ACCENT } from './constants';
@@ -23,11 +23,16 @@ export function BatchReviewPanel() {
   const [isStarting, setIsStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(true);
+  // Monotonic poll token: under a slow server an earlier poll can resolve after
+  // a later one — only the newest issued poll may commit its snapshot.
+  const pollTokenRef = useRef(0);
 
   // Poll batch status
   const pollStatus = useCallback(async () => {
+    const token = ++pollTokenRef.current;
     try {
       const data = await apiFetch<{ batch: BatchReviewState | null }>('/api/feature-matrix/batch-review');
+      if (token !== pollTokenRef.current) return; // a newer poll already resolved
       setBatch(data.batch);
     } catch { /* silent */ }
   }, []);
@@ -94,8 +99,11 @@ export function BatchReviewPanel() {
   // Compute progress
   const completed = batch?.modules.filter(m => m.status === 'completed').length ?? 0;
   const errored = batch?.modules.filter(m => m.status === 'error').length ?? 0;
+  // Skipped modules are terminal too — count them toward "resolved" so the bar
+  // can reach 100% instead of stalling short while the status reads "Complete".
+  const skipped = batch?.modules.filter(m => m.status === 'skipped').length ?? 0;
   const total = batch?.modules.length ?? 0;
-  const pct = total > 0 ? Math.round(((completed + errored) / total) * 100) : 0;
+  const pct = total > 0 ? Math.round(((completed + errored + skipped) / total) * 100) : 0;
 
   return (
     <div className="space-y-3">
@@ -201,6 +209,12 @@ export function BatchReviewPanel() {
                 <div
                   className="h-full transition-all duration-slow"
                   style={{ width: `${(errored / total) * 100}%`, backgroundColor: STATUS_ERROR, opacity: 0.8 }}
+                />
+              )}
+              {skipped > 0 && (
+                <div
+                  className="h-full transition-all duration-slow"
+                  style={{ width: `${(skipped / total) * 100}%`, backgroundColor: STATUS_NEUTRAL, opacity: 0.6 }}
                 />
               )}
             </div>

@@ -1,17 +1,28 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { CheckCircle2, XCircle, Loader2, Save } from 'lucide-react';
+import { CheckCircle2, XCircle, Loader2, Save, AlertTriangle, RefreshCw } from 'lucide-react';
 import { apiFetch } from '@/lib/api-utils';
 import { PromptDiffView } from '@/components/modules/evaluator/PromptDiffView';
 import type { WritePlan } from '@/lib/blueprint-transpiler-write';
 import {
   STATUS_SUCCESS, STATUS_WARNING,
-  OPACITY_15, OPACITY_20, OPACITY_30,
+  OPACITY_10, OPACITY_15, OPACITY_20, OPACITY_30,
 } from '@/lib/chart-colors';
 import { ACCENT } from './constants';
 
 // ─── Write to Project (dry-run diff → confirm) ──────────────────────────────
+
+// Everything the open plan was diffed against, frozen at dry-run time. Confirm
+// sends THIS snapshot — never the live props — so what is written to disk is
+// exactly what the user reviewed, even if a re-transpile changed the props
+// while the modal was open.
+type PlanSnapshot = {
+  header: string;
+  source: string;
+  className: string;
+  moduleName: string;
+};
 
 export function WriteToProjectButton({ className, header, source, projectPath, defaultModule }: {
   className: string;
@@ -22,50 +33,62 @@ export function WriteToProjectButton({ className, header, source, projectPath, d
 }) {
   const [moduleName, setModuleName] = useState(defaultModule);
   const [plan, setPlan] = useState<WritePlan | null>(null);
-  // The module the open plan was diffed for. Editing the Module input lives
-  // INSIDE the dry-run modal — a changed module makes the displayed diff
-  // stale (it covers paths that will no longer be written), so Confirm must
-  // be gated until a fresh dry-run exists.
-  const [planModule, setPlanModule] = useState<string | null>(null);
+  const [snapshot, setSnapshot] = useState<PlanSnapshot | null>(null);
   const [busy, setBusy] = useState(false);
   const [written, setWritten] = useState<string[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
-  const planStale = plan !== null && moduleName !== planModule;
-
-  const body = (confirm?: boolean) => JSON.stringify({
-    projectPath, moduleName, className, header, source, confirm,
-    // The reviewed plan rides along on confirm — the server rejects the write
-    // if the resolved paths or on-disk content no longer match it.
-    ...(confirm && plan
-      ? { approved: plan.files.map((f) => ({ relPath: f.relPath, before: f.before })) }
-      : {}),
-  });
+  // The Module input lives INSIDE the dry-run modal — a changed module makes
+  // the displayed diff stale (it covers paths that will no longer be written).
+  const moduleStale = plan !== null && snapshot !== null && moduleName !== snapshot.moduleName;
+  // A re-transpile while the modal is open changes the header/source props
+  // under the still-mounted component — the rendered diff no longer matches
+  // what a fresh dry-run (and the user's mental model) would produce.
+  const codeStale = plan !== null && snapshot !== null && (
+    header !== snapshot.header || source !== snapshot.source || className !== snapshot.className
+  );
+  const planStale = moduleStale || codeStale;
 
   const dryRun = useCallback(async () => {
+    // Freeze what this plan is computed against at request time.
+    const snap: PlanSnapshot = { header, source, className, moduleName };
     setBusy(true); setErr(null); setWritten(null);
     try {
       const data = await apiFetch<WritePlan>('/api/blueprint-transpiler/write', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body(false),
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectPath, ...snap, confirm: false }),
       });
       setPlan(data);
-      setPlanModule(moduleName);
+      setSnapshot(snap);
     } catch (e) { setErr(e instanceof Error ? e.message : 'Dry-run failed'); }
     finally { setBusy(false); }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectPath, moduleName, className, header, source]);
 
   const confirmWrite = useCallback(async () => {
+    if (!plan || !snapshot) return;
     setBusy(true); setErr(null);
     try {
       const data = await apiFetch<{ written: string[] }>('/api/blueprint-transpiler/write', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body(true),
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectPath,
+          // Send the reviewed snapshot, NOT the live props — the diff the user
+          // approved is exactly what lands on disk.
+          ...snapshot,
+          confirm: true,
+          // The reviewed plan rides along — the server rejects the write if
+          // the resolved paths or on-disk content no longer match it.
+          approved: plan.files.map((f) => ({ relPath: f.relPath, before: f.before })),
+        }),
       });
-      setWritten(data.written); setPlan(null); setPlanModule(null);
+      setWritten(data.written); setPlan(null); setSnapshot(null);
     } catch (e) { setErr(e instanceof Error ? e.message : 'Write failed'); }
     finally { setBusy(false); }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectPath, moduleName, className, header, source, plan]);
+  }, [projectPath, plan, snapshot]);
+
+  const closeModal = () => { setPlan(null); setSnapshot(null); };
 
   if (!projectPath) {
     return <span className="text-2xs text-text-muted" title="Set a project path in Project Setup first">No project path</span>;
@@ -95,15 +118,15 @@ export function WriteToProjectButton({ className, header, source, projectPath, d
         </span>
       )}
 
-      {plan && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6" onClick={() => setPlan(null)}>
+      {plan && snapshot && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6" onClick={closeModal}>
           <div
             className="w-full max-w-3xl max-h-[85vh] overflow-y-auto rounded-xl border border-border bg-surface p-4 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-text flex items-center gap-2">
-                <Save className="w-4 h-4" style={{ color: ACCENT }} /> Write {className} to project — dry run
+                <Save className="w-4 h-4" style={{ color: ACCENT }} /> Write {snapshot.className} to project — dry run
               </h3>
               <label className="text-2xs text-text-muted flex items-center gap-1.5">
                 Module
@@ -114,6 +137,31 @@ export function WriteToProjectButton({ className, header, source, projectPath, d
                 />
               </label>
             </div>
+
+            {codeStale && (
+              <div
+                className="flex items-center gap-2 rounded-lg px-3 py-2 mb-3 text-2xs"
+                style={{
+                  backgroundColor: `${STATUS_WARNING}${OPACITY_10}`,
+                  border: `1px solid ${STATUS_WARNING}${OPACITY_30}`,
+                  color: STATUS_WARNING,
+                }}
+              >
+                <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="flex-1">
+                  The transpiled code changed since this diff was computed — what&apos;s shown below is no longer what would be written.
+                </span>
+                <button
+                  onClick={dryRun}
+                  disabled={busy}
+                  className="flex items-center gap-1 px-2 py-1 rounded font-medium transition-colors disabled:opacity-40 flex-shrink-0"
+                  style={{ backgroundColor: `${STATUS_WARNING}${OPACITY_15}`, color: STATUS_WARNING, border: `1px solid ${STATUS_WARNING}${OPACITY_30}` }}
+                >
+                  {busy ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                  Refresh diff
+                </button>
+              </div>
+            )}
 
             <div className="space-y-3">
               {plan.files.map((f) => (
@@ -134,24 +182,36 @@ export function WriteToProjectButton({ className, header, source, projectPath, d
             </div>
 
             <div className="flex items-center justify-end gap-2 mt-4">
-              {planStale && (
+              {moduleStale && !codeStale && (
                 <span className="text-2xs mr-auto" style={{ color: STATUS_WARNING }}>
-                  Module changed — this diff covers Source/{planModule}/, not Source/{moduleName}/. Re-run the dry run.
+                  Module changed — this diff covers Source/{snapshot.moduleName}/, not Source/{moduleName}/. Re-run the dry run.
                 </span>
               )}
-              <button onClick={() => { setPlan(null); setPlanModule(null); }} className="px-3 py-1.5 rounded-md text-xs text-text-muted hover:text-text hover:bg-surface-hover transition-colors">
+              <button onClick={closeModal} className="px-3 py-1.5 rounded-md text-xs text-text-muted hover:text-text hover:bg-surface-hover transition-colors">
                 Cancel
               </button>
               {planStale ? (
-                <button
-                  onClick={dryRun}
-                  disabled={busy}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-40"
-                  style={{ backgroundColor: `${ACCENT}${OPACITY_20}`, color: ACCENT, border: `1px solid ${ACCENT}${OPACITY_30}` }}
-                >
-                  {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                  Re-run dry run
-                </button>
+                codeStale ? (
+                  <button
+                    disabled
+                    title="The transpiled code changed — refresh the diff before confirming"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium opacity-40 cursor-not-allowed"
+                    style={{ backgroundColor: `${ACCENT}${OPACITY_20}`, color: ACCENT, border: `1px solid ${ACCENT}${OPACITY_30}` }}
+                  >
+                    <Save className="w-3.5 h-3.5" />
+                    Confirm write
+                  </button>
+                ) : (
+                  <button
+                    onClick={dryRun}
+                    disabled={busy}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-40"
+                    style={{ backgroundColor: `${ACCENT}${OPACITY_20}`, color: ACCENT, border: `1px solid ${ACCENT}${OPACITY_30}` }}
+                  >
+                    {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                    Re-run dry run
+                  </button>
+                )
               ) : (
                 <button
                   onClick={confirmWrite}

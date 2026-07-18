@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useCallback, useRef, useState, useMemo } from 'react';
-import { useListRef } from 'react-window';
+import { useEffect, useCallback, useRef, useState } from 'react';
 import type { CompactTerminalProps } from './types';
 import { useTaskQueue } from './useTaskQueue';
 import { useScrollSync } from './useScrollSync';
@@ -21,7 +20,6 @@ export function CompactTerminal({
   const sessionModuleId = useCLIPanelStore((s) => s.sessions[instanceId]?.moduleId);
   const accentColor = useCLIPanelStore((s) => s.sessions[instanceId]?.accentColor ?? MODULE_COLORS.core);
   const [input, setInput] = useState('');
-  const listRef = useListRef(null);
   const history = useInputHistory();
 
   // Create useTaskQueue first (it owns logs state)
@@ -55,14 +53,9 @@ export function CompactTerminal({
   const tqRef = useRef(tq);
   tqRef.current = tq;
 
-  // Always virtualize — older logs go to react-window, recent tail (8) stays outside
-  const virtualizedLogCount = useMemo(() => Math.max(0, tq.logs.length - 8), [tq.logs.length]);
-
   const scroll = useScrollSync({
     logCount: tq.logs.length,
     visible,
-    virtualizedLogCount,
-    listRef,
   });
 
   // Keep the indirection ref pointing to the real callback
@@ -173,7 +166,6 @@ export function CompactTerminal({
         isStreaming={tq.isStreaming}
         queuePendingCount={queuePendingCount}
         scrollRef={scroll.scrollRef}
-        listRef={listRef}
         onScroll={scroll.handleScroll}
         buildParseCache={tq.buildParseCache}
         onBuildFix={handleBuildFix}

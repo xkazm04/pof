@@ -221,7 +221,8 @@ async function readReport(reportDir: string): Promise<unknown | null> {
   const raw = await readFile(join(reportDir, 'index.json'), 'utf-8').catch(() => '');
   if (!raw) return null;
   try {
-    return JSON.parse(raw);
+    // UE writes index.json with a UTF-8 BOM, which JSON.parse rejects — strip it.
+    return JSON.parse(raw.replace(/^﻿/, ''));
   } catch (e) {
     logger.warn(`[test-gate-runner] batch automation: unparseable report index.json (${e instanceof Error ? e.message : String(e)})`);
     return null;

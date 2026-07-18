@@ -27,6 +27,14 @@ export interface LabStepArtifact {
   at: string;
   /** Rule 4 — the reason the last produce failed, if it did. */
   error?: string;
+  /**
+   * Set when the write-through POST to the server FAILED (offline/500) for this step's
+   * last produce. The local store still holds the optimistic artifact (add-only UX is
+   * preserved), but this flag makes the gap honest — the rail renders a persistent
+   * "not synced to server" indicator instead of a clean pass. Cleared once a later
+   * write-through for the same step succeeds.
+   */
+  syncError?: string;
 }
 
 export type StepOutput = { data?: Record<string, unknown>; ueAssets?: string[]; links?: CatalogLinkRef[] };
@@ -42,6 +50,12 @@ interface LabPipelineState {
   produceFrom: (entityId: string, step: string, build: (prevData: Record<string, unknown>) => StepOutput) => void;
   /** Record a failed produce with its reason (Rule 4). */
   fail: (entityId: string, step: string, error: string) => void;
+  /**
+   * Mark (or clear, with `null`) a produced step's server write-through failure. The
+   * write-through calls this after `postArtifact` resolves so a POST that never reached
+   * the server surfaces as a persistent "not synced" state instead of a silent success.
+   */
+  setSyncError: (entityId: string, step: string, error: string | null) => void;
   /** Clear every step for one entity. */
   resetEntity: (entityId: string) => void;
   /** Merge server artifacts into the cache (add-only: never overwrites/clears local steps). */
@@ -94,6 +108,18 @@ export const useLabPipelineStore = create<LabPipelineState>()(
             },
           },
         })),
+
+      setSyncError: (entityId, step, error) =>
+        set((s) => {
+          const art = s.byEntity[entityId]?.[step];
+          if (!art) return s; // only a produced step can be out of sync
+          const next = error ?? undefined;
+          if (art.syncError === next) return s; // no-op guard (avoids needless re-render)
+          const nextArt = { ...art };
+          if (next === undefined) delete nextArt.syncError;
+          else nextArt.syncError = next;
+          return { byEntity: { ...s.byEntity, [entityId]: { ...s.byEntity[entityId], [step]: nextArt } } };
+        }),
 
       resetEntity: (entityId) =>
         set((s) => {

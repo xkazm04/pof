@@ -102,6 +102,19 @@ describe('runBatchAutomation — ONE boot, per-test verdicts from the report', (
     expect(verdicts.get('VSItemsTest')!.raw).toMatchObject({ source: 'report' });
   });
 
+  it('parses a UTF-8 BOM-prefixed index.json (UE writes the BOM; the report path must not silently fall back)', async () => {
+    fsState.files.set('index.json', '﻿' + JSON.stringify({
+      tests: [{ fullTestPath: 'PoF.CharacterVael.NPCConfig', testDisplayName: 'NPCConfig', state: 'Success' }],
+    }));
+    const { fn } = countingSpawn();
+    const verdicts = await runBatchAutomation({
+      editor: 'ue', uproject: 'p.uproject', testNames: ['PoF.CharacterVael.NPCConfig'],
+      spawn: fn, timeoutMs: 1000,
+    });
+    expect(verdicts.get('PoF.CharacterVael.NPCConfig')!.status).toBe('pass');
+    expect(verdicts.get('PoF.CharacterVael.NPCConfig')!.raw).toMatchObject({ source: 'report' });
+  });
+
   it('falls back to the combined abslog SCOPED PER TEST when the report is missing (no smear)', async () => {
     // No index.json → report miss. A combined log where each test carries its OWN Name={…}
     // marker: VSItemsTest passed, VSLootTest failed. The fallback must NOT smear one verdict.

@@ -49,8 +49,17 @@ export function useProjectScan(projectPath: string) {
   // NextStepBanner's "Create project" CTA, which would scaffold over an
   // existing project (SP-A Finding A + scan finding project-setup #1).
   const scannedPath = useRef<string | null>(null);
+  // Generation counter guarding overlapping scan() invocations. scan() is
+  // reachable from four independent triggers (path-change effect, manual
+  // re-scan button, and the setup/build/bootstrap CLI onComplete callbacks);
+  // without this, whichever overlapping scan resolved LAST would win and
+  // could overwrite the checklist with stale data — misdirecting the
+  // NextStepBanner CTA derived from it. Only the newest scan may commit.
+  const scanGeneration = useRef(0);
 
   const scan = useCallback(async () => {
+    const gen = ++scanGeneration.current;
+    const isCurrent = () => gen === scanGeneration.current;
     setScanning(true);
     setScanState('scanning');
     const items: ChecklistItem[] = [];
@@ -68,6 +77,7 @@ export function useProjectScan(projectPath: string) {
     } catch {
       // Non-critical
     }
+    if (!isCurrent()) return; // superseded by a newer scan
     setEngines(detectedEngines);
 
     if (detectedEngines.length > 0) {
@@ -171,6 +181,7 @@ export function useProjectScan(projectPath: string) {
       detail: hasBuildFiles ? 'Build files found' : 'No build files',
     });
 
+    if (!isCurrent()) return; // superseded by a newer scan
     setChecklist(items);
 
     // Build project files list if project exists
@@ -191,6 +202,7 @@ export function useProjectScan(projectPath: string) {
         }
       }
     }
+    if (!isCurrent()) return; // superseded by a newer scan
     setProjectFiles(files);
     setScanning(false);
     setScanState('settled');

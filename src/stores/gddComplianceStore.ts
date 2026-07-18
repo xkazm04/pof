@@ -40,6 +40,30 @@ function applyResolveGap(report: ComplianceReport, gapId: string): ComplianceRep
   };
 }
 
+/**
+ * Re-apply the user's manually-resolved gap markers onto a freshly audited
+ * report and recompute the gap counters. Gap ids are deterministic across
+ * audits (see `@/lib/gdd-compliance`), so a re-audit no longer silently
+ * discards resolutions — the markers are merged back by id.
+ */
+function applyResolvedMarkers(
+  report: ComplianceReport,
+  resolvedIds: Record<string, true>,
+): ComplianceReport {
+  if (Object.keys(resolvedIds).length === 0) return report;
+  const modules = report.modules.map((mod) => ({
+    ...mod,
+    gaps: mod.gaps.map((g) => (resolvedIds[g.id] ? { ...g, resolved: true } : g)),
+  }));
+  const allGaps = modules.flatMap((m) => m.gaps);
+  return {
+    ...report,
+    modules,
+    totalGaps: allGaps.filter((g) => !g.resolved).length,
+    criticalGaps: allGaps.filter((g) => g.severity === 'critical' && !g.resolved).length,
+  };
+}
+
 interface GDDComplianceState {
   report: ComplianceReport | null;
   modules: ComplianceReport['modules'];
@@ -50,6 +74,11 @@ interface GDDComplianceState {
   /** Which project + checklist snapshot the current report was computed from. */
   reportProjectPath: string | null;
   reportChecklistHash: string | null;
+  /**
+   * Ids of gaps the user has manually marked resolved. Kept separately so a
+   * re-audit (fresh server report) can re-apply them instead of wiping them.
+   */
+  resolvedGapIds: Record<string, true>;
 
   runAudit: (checklistProgress?: ChecklistProgress, projectPath?: string) => Promise<void>;
   /** Audit only if the report is missing or stale vs. the given project/checklist. */
@@ -68,21 +97,29 @@ export const useGDDComplianceStore = create<GDDComplianceState>((set, get) => ({
   selectedModuleId: null,
   reportProjectPath: null,
   reportChecklistHash: null,
+  resolvedGapIds: {},
 
   runAudit: async (checklistProgress?: ChecklistProgress, projectPath?: string) => {
     const cp = checklistProgress ?? {};
     set({ isAuditing: true, error: null });
     try {
-      const report = await apiFetch<ComplianceReport>('/api/gdd-compliance', {
+      const fresh = await apiFetch<ComplianceReport>('/api/gdd-compliance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'audit', checklistProgress: cp }),
       });
+      // A project switch starts with a clean slate (gap ids are only unique
+      // within a project); a re-audit of the same project preserves the user's
+      // manual resolutions by merging them back onto the fresh report.
+      const projectChanged = !!projectPath && projectPath !== get().reportProjectPath;
+      const resolvedGapIds = projectChanged ? {} : get().resolvedGapIds;
+      const report = applyResolvedMarkers(fresh, resolvedGapIds);
       set({
         report,
         modules: report.modules,
         suggestions: report.suggestions,
         isAuditing: false,
+        resolvedGapIds,
         reportProjectPath: projectPath ?? get().reportProjectPath,
         reportChecklistHash: hashChecklist(cp),
       });
@@ -112,6 +149,7 @@ export const useGDDComplianceStore = create<GDDComplianceState>((set, get) => ({
       suggestions: EMPTY_SUGGESTIONS,
       reportProjectPath: null,
       reportChecklistHash: null,
+      resolvedGapIds: {},
     }),
 
   resolveGap: async (gapId: string) => {
@@ -122,7 +160,13 @@ export const useGDDComplianceStore = create<GDDComplianceState>((set, get) => ({
     const current = get().report;
     if (!current) return;
     const report = applyResolveGap(current, gapId);
-    set({ report, modules: report.modules, suggestions: report.suggestions });
+    // Record the resolution so a subsequent re-audit re-applies it.
+    set({
+      report,
+      modules: report.modules,
+      suggestions: report.suggestions,
+      resolvedGapIds: { ...get().resolvedGapIds, [gapId]: true },
+    });
   },
 
   selectModule: (moduleId) => set({ selectedModuleId: moduleId }),

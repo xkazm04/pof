@@ -124,6 +124,9 @@ export interface UE5LootEntry {
   MaxQuantity?: number;
   MinRarity?: string | number;
   MaxRarity?: string | number;
+  /** Loot source (enemy/chest/quest/crafting). Emitted on export so a round-trip
+   *  preserves it; read on import so entries keep their real source. */
+  Source?: string;
 }
 
 /** Shape of a full UARPGLootTable JSON export */

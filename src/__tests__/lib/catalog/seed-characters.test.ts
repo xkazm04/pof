@@ -15,13 +15,15 @@ describe('seedCharacterEntries — Captain Vael target asset', () => {
   });
 
   it('matches the UE VSCharacterVaelTest canonical attribute contract', () => {
-    // Single source of truth: these MUST equal the values asserted in
-    // Source/PoF/Test/Character/VSCharacterVaelTest.cpp.
+    // Single source of truth: the UE DT_AttributeDefaults row + VSCharacterVaelTest.cpp
+    // mirror these values. criticalDamage was corrected to the canon ×2.5 base multiplier
+    // (arpg-damage-model) app-side first; the UE row + test expectation (250) are flagged
+    // for the next UE session in .claude/green-loop/UE-FOLLOWUP.md.
     expect(vael!.data.attributes).toMatchObject({
       maxHealth: 220, health: 220,
       maxMana: 60, mana: 60,
       strength: 16, dexterity: 12, intelligence: 11,
-      armor: 30, attackPower: 24, criticalChance: 0.08, criticalDamage: 1.6,
+      armor: 30, attackPower: 24, criticalChance: 0.08, criticalDamage: 2.5,
       characterLevel: 5,
     });
     // Spawns at full vitals; crit values are well-formed.

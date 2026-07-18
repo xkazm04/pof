@@ -12,11 +12,22 @@ import type { CrashDiagnosis } from '@/types/crash-analyzer';
 
 export function AiDiagnosisCard({ diagnosis }: { diagnosis: CrashDiagnosis }) {
   const [copied, setCopied] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false);
 
-  const handleCopyPrompt = useCallback(() => {
-    navigator.clipboard.writeText(diagnosis.fixPrompt);
-    setCopied(true);
-    setTimeout(() => setCopied(false), UI_TIMEOUTS.copyFeedback);
+  const handleCopyPrompt = useCallback(async () => {
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('Clipboard API unavailable');
+      await navigator.clipboard.writeText(diagnosis.fixPrompt);
+      setCopyFailed(false);
+      setCopied(true);
+      setTimeout(() => setCopied(false), UI_TIMEOUTS.copyFeedback);
+    } catch {
+      // Insecure origin, denied permission, or unsupported API — surface it
+      // instead of showing a false "Copied!" success.
+      setCopied(false);
+      setCopyFailed(true);
+      setTimeout(() => setCopyFailed(false), UI_TIMEOUTS.copyFeedback);
+    }
   }, [diagnosis]);
 
   return (
@@ -58,8 +69,8 @@ export function AiDiagnosisCard({ diagnosis }: { diagnosis: CrashDiagnosis }) {
               onClick={handleCopyPrompt}
               className="flex items-center gap-1 px-2 py-0.5 rounded text-2xs bg-surface hover:bg-surface-2 text-text-muted transition-colors"
             >
-              {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-              {copied ? 'Copied!' : 'Copy'}
+              {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className={`w-3 h-3 ${copyFailed ? 'text-red-400' : ''}`} />}
+              {copied ? 'Copied!' : copyFailed ? 'Copy failed' : 'Copy'}
             </button>
           </div>
           <pre className="text-xs leading-relaxed text-emerald-300/80 whitespace-pre-wrap overflow-x-auto max-h-32 overflow-y-auto">

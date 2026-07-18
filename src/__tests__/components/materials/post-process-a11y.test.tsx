@@ -1,11 +1,15 @@
-import { describe, it, expect, afterEach, vi } from 'vitest';
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import { render, cleanup, fireEvent } from '@testing-library/react';
 import { PostProcessStackBuilder } from '@/components/modules/content/materials/PostProcessStackBuilder';
 import { EffectCard, ParamSlider } from '@/components/modules/evaluator/PostProcessStudioView';
 import type { PPStudioEffect, PPStudioParam } from '@/types/post-process-studio';
 import { ACCENT_VIOLET } from '@/lib/chart-colors';
+import { usePostProcessStudioStore } from '@/stores/postProcessStudioStore';
 
 afterEach(cleanup);
+// The builder now shares the studio store — reset it so a toggle in one test
+// doesn't leak into the next (which renders a fresh builder).
+beforeEach(() => usePostProcessStudioStore.getState().resetToDefaults());
 
 // ── Fixtures for the Studio's internal sub-components ────────────────────────
 

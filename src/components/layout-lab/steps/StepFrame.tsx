@@ -1,7 +1,7 @@
 'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
-import type { ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { labPanelStyle, type LabTheme } from '../theme';
 import { STATUS_GLYPH, STATUS_WORD, statusColor, type StatusKind } from '../statusLanguage';
 import { ProvenanceStrip } from './shared/ProvenanceStrip';
@@ -61,6 +61,24 @@ export function StepFrame({ t, acceptance, panels, onFix, catalogId, step }: {
   // Studio (glass) panels round to 12; Blueprint keeps sharp corners (borderRadius 0).
   const panelStyle = labPanelStyle(t, { borderRadius: t.glass ? 12 : 0 });
   const showFix = onFix != null && acceptance.status !== 'pass';
+
+  // Re-entrancy guard for the one-click "Produce fix": a synchronous ref latch (the
+  // CliProduce dispatch-guard pattern) drops any second click that lands while a
+  // fix dispatch is in flight, so a double-click can't fire two generate()/produce()
+  // dispatches for one intended action. `fixing` drives the disabled + label swap.
+  const fixLatch = useRef(false);
+  const [fixing, setFixing] = useState(false);
+  const handleFix = async () => {
+    if (fixLatch.current) return;
+    fixLatch.current = true;
+    setFixing(true);
+    try {
+      await Promise.resolve(onFix?.(acceptance.fixDirection));
+    } finally {
+      fixLatch.current = false;
+      setFixing(false);
+    }
+  };
 
   return (
     <div>
@@ -137,19 +155,21 @@ export function StepFrame({ t, acceptance, panels, onFix, catalogId, step }: {
             {showFix && (
               <button
                 data-testid="acceptance-produce-fix"
-                onClick={() => onFix?.(acceptance.fixDirection)}
+                onClick={handleFix}
+                disabled={fixing}
                 className={t.fontMono}
                 style={{
                   marginLeft: 'auto',
                   padding: '6px 12px', fontSize: 14, fontWeight: 600,
-                  cursor: 'pointer',
+                  cursor: fixing ? 'default' : 'pointer',
+                  opacity: fixing ? 0.6 : 1,
                   background: t.glass ? t.accentBg : t.ink,
                   color: t.glass ? t.ink : t.onAccent,
                   border: `1px solid ${t.ink}`,
                   borderRadius: t.glass ? 6 : 0,
                 }}
               >
-                ⚡ Produce fix
+                {fixing ? '⏳ Dispatching…' : '⚡ Produce fix'}
               </button>
             )}
           </div>

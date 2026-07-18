@@ -47,21 +47,25 @@ export function CatalogFiltersBar({
             className="w-full text-sm font-mono pl-9 pr-3 py-2 rounded-lg bg-surface-deep border border-border/40 text-text placeholder:text-text-muted/50 focus-ring-inset" />
         </div>
         <select value={categoryFilter} onChange={e => { setCategoryFilter(e.target.value); setSubtypeFilter('all'); resetPage(); }}
+          aria-label="Item type filter"
           className="text-sm font-mono px-3 py-2 rounded-lg bg-surface-deep border border-border/40 text-text cursor-pointer focus-ring-inset">
           <option value="all">All Types</option>
           {ALL_ITEM_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
         </select>
         <select value={subtypeFilter} onChange={e => { setSubtypeFilter(e.target.value); resetPage(); }}
+          aria-label="Slot filter"
           className="text-sm font-mono px-3 py-2 rounded-lg bg-surface-deep border border-border/40 text-text cursor-pointer focus-ring-inset">
           <option value="all">All Slots</option>
           {availableSubtypes.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
         <select value={rarityFilter} onChange={e => { setRarityFilter(e.target.value); resetPage(); }}
+          aria-label="Rarity filter"
           className="text-sm font-mono px-3 py-2 rounded-lg bg-surface-deep border border-border/40 text-text cursor-pointer focus-ring-inset">
           <option value="all">All Rarities</option>
           {['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'].map(r => <option key={r} value={r}>{r}</option>)}
         </select>
-        <select value={sortBy} onChange={e => setSortBy(e.target.value as SortBy)}
+        <select value={sortBy} onChange={e => { setSortBy(e.target.value as SortBy); resetPage(); }}
+          aria-label="Sort order"
           className="text-sm font-mono px-3 py-2 rounded-lg bg-surface-deep border border-border/40 text-text cursor-pointer focus-ring-inset">
           <option value="name">Sort: Name</option>
           <option value="power">Sort: Power</option>

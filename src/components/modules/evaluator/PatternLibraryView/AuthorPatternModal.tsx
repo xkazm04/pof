@@ -38,14 +38,21 @@ export function AuthorPatternModal({
   const [pitfallsText, setPitfallsText] = useState('');
   const [classesText, setClassesText] = useState('');
   const titleInputRef = useRef<HTMLInputElement>(null);
+  const prevOpenRef = useRef(open);
+  // Snapshot the default module without making it a reset trigger — a background
+  // refresh of `moduleIds` must not wipe an in-progress form (only the open→ edge does).
+  const moduleIdsRef = useRef(moduleIds);
+  moduleIdsRef.current = moduleIds;
 
-  // Reset form when the modal re-opens
+  // Reset form only on the closed→open transition, not on every moduleIds change.
   useEffect(() => {
-    if (!open) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- pre-existing
+    const justOpened = open && !prevOpenRef.current;
+    prevOpenRef.current = open;
+    if (!justOpened) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset on open edge
     setForm({
       title: '',
-      moduleId: (moduleIds[0] ?? 'arpg-character') as SubModuleId,
+      moduleId: (moduleIdsRef.current[0] ?? 'arpg-character') as SubModuleId,
       category: 'general',
       description: '',
       approach: '',
@@ -56,7 +63,7 @@ export function AuthorPatternModal({
     setTagsText('');
     setPitfallsText('');
     setClassesText('');
-  }, [open, moduleIds]);
+  }, [open]);
 
   const handleSubmit = useCallback(async () => {
     if (!form.title.trim() || !form.description.trim()) return;

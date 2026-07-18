@@ -71,7 +71,8 @@ export function FeatureList({
                 {/* Category header — sticky within scroll */}
                 <button
                   onClick={() => toggleCategory(cat)}
-                  className="w-full flex items-center gap-2 px-3 py-2 rounded-md hover:bg-surface-hover transition-colors sticky top-[40px] z-[5] bg-background"
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded-md hover:bg-surface-hover transition-colors sticky z-[5] bg-background"
+                  style={{ top: 'var(--fm-sticky-offset, 40px)' }}
                 >
                   {isCollapsed ? (
                     <ChevronRight className="w-3 h-3 text-text-muted-hover" />

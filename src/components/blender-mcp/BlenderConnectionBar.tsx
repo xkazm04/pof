@@ -45,6 +45,18 @@ export function BlenderConnectionBar() {
   const [editHost, setEditHost] = useState(host);
   const [editPort, setEditPort] = useState(String(port));
 
+  // The edit fields are seeded from the store's default host/port on first
+  // render — which happens BEFORE zustand's persist middleware rehydrates the
+  // user's saved settings from localStorage. Re-sync them whenever the store's
+  // persisted host/port change (i.e. on rehydration, or after a Save) so Connect
+  // uses the saved value, not the stale default. host/port only change via
+  // hydration or setSettings, never from user typing (that mutates editHost), so
+  // this can't clobber an in-progress edit.
+  useEffect(() => {
+    setEditHost(host);
+    setEditPort(String(port));
+  }, [host, port]);
+
   // Honor the persisted autoConnect flag once on mount (idempotent in store).
   useEffect(() => {
     maybeAutoConnect();

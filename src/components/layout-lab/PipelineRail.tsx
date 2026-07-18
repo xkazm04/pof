@@ -18,6 +18,9 @@ interface PipelineRailProps {
   /** The step's local verdict has drifted from server truth (add-only kept local) —
    *  flag it so the operator can adopt the server verdict from the work canvas. */
   hasDrift?: (step: string, i: number) => boolean;
+  /** The step's last produce failed to write through to the server (offline/500) — the
+   *  local artifact is optimistic-only, so flag it as "not synced to server". */
+  syncFailed?: (step: string, i: number) => boolean;
   isLive: (step: string) => boolean;
   tooltipFor: (step: string, i: number) => string;
   ariaFor: (step: string, i: number) => string;
@@ -30,6 +33,7 @@ export function PipelineRail({
   displayStatus,
   loading = false,
   hasDrift,
+  syncFailed,
   isLive,
   tooltipFor,
   ariaFor,
@@ -77,6 +81,7 @@ export function PipelineRail({
         // a locally-known pass/fail/deferred is real truth and must not be masked by a shimmer.
         const isLoading = loading && (status === 'pending' || status === 'unproduced');
         const drifted = hasDrift?.(step, i) ?? false;
+        const notSynced = syncFailed?.(step, i) ?? false;
         const filled = status === 'pass' || status === 'fail';
         const fill = filled
           ? `var(--lab-${status === 'pass' ? 'ok' : 'bad'})`
@@ -222,6 +227,21 @@ export function PipelineRail({
                   }}
                 >
                   ≠
+                </span>
+              )}
+              {notSynced && (
+                <span
+                  data-step-sync-failed="true"
+                  aria-label="Not synced to server"
+                  title="Not synced to server — this step's produce failed to save; it may be missing on other devices/sessions"
+                  style={{
+                    flexShrink: 0,
+                    fontSize: 'var(--lab-fs-xs)',
+                    lineHeight: 1,
+                    color: 'var(--lab-bad)',
+                  }}
+                >
+                  ⚠
                 </span>
               )}
             </span>

@@ -18,7 +18,14 @@ export interface TaskRecord {
   startedAt: number;
   completedAt?: number;
   requirementName?: string;
+  /**
+   * The claude-terminal execution backing this task, attached once the query
+   * POST returns. Lets conflict recovery kill the orphaned server-side process
+   * (DELETE /api/claude-terminal/query?executionId=...) instead of only
+   * flipping the registry row to failed while the process keeps running.
+   */
+  executionId?: string;
 }
 
 /** Discriminator for the task registry POST body. */
-export type TaskRegistryAction = 'start' | 'complete' | 'heartbeat' | 'clear';
+export type TaskRegistryAction = 'start' | 'complete' | 'heartbeat' | 'clear' | 'attach-execution';

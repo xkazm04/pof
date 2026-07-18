@@ -1,5 +1,6 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
-import { minLength, fieldsPopulated, withinPercent, selected, minCount } from '../acceptance/dataCheckers';
+import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
+import { priceRatioWithinBand } from '../acceptance/invariants';
 import { runtimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
@@ -255,8 +256,8 @@ registerCatalogPipeline({
         //   Total crafting cost: 20g (gold) + ingredient opportunity cost (≈4g for 2 Common/Uncommon items).
         //   Effective total cost: ~24g.
         //   Price/power ratio = costTotal / outputValue = 24 / 24 = 1.0 — squarely in the 0.8–1.2× band.
-        //   Gold-cost-to-output-value ratio = 20 / 24 = 0.833 — within ±20% of the 0.8–1.2 target midpoint.
-        //   costRatio is the withinPercent field: goldCost / outputValue ≈ 0.83 → check ±20% of 0.8 = 0.64–0.96.
+        //   costRatio = goldCost / outputValue = 20 / 24 = 0.833 — inside the canon 0.8–1.2× band
+        //   (proj-balance 'Price/power ratio 0.8–1.2×'), the single source of truth the checker parses.
         const goldCost = 20;
         const outputValue = 24;
         const costRatio = +(goldCost / outputValue).toFixed(3); // 0.833
@@ -274,7 +275,7 @@ registerCatalogPipeline({
                 'Output value = 24g (reference: Minor Potion 12g at 50 HP heal → 120 HP = 2.4× → 28.8g; ' +
                 'discounted to 24g = vendor sell price at 50% buyback floor per vendor-laws). ' +
                 'Price/power ratio = 24/24 = 1.0× — within the canon 0.8–1.2× band (proj-balance). ' +
-                'goldCost/outputValue = 20/24 = 0.833 — within ±20% of target 0.8 (band: 0.64–0.96). ' +
+                'goldCost/outputValue = 20/24 = 0.833× — inside the canon 0.8–1.2× band (proj-balance). ' +
                 'Gold cost is the sole documented sink per proj-economy; ingredient consumption is a ' +
                 'separate item sink. Faucet (potion drops at ~3g drop value per kill session) vs ' +
                 'sink (20g craft fee) net-negative on gold per potion — a healthy drain on the soft currency.',
@@ -296,7 +297,7 @@ registerCatalogPipeline({
                 { catalogId: 'currencies', entityId: 'currency-gold', role: 'craft-cost-sink' },
               ],
             },
-            // top-level field for withinPercent checker
+            // top-level field for the priceRatioWithinBand checker
             costRatio,
             links: [
               { catalogId: 'currencies', entityId: 'currency-gold', role: 'craft-cost-sink' },
@@ -308,11 +309,9 @@ registerCatalogPipeline({
           ueAssets: ['/Game/Economy/DT_Currencies'],
         };
       },
-      accept: withinPercent(
+      accept: priceRatioWithinBand(
         'costRatio',
-        'Gold-cost / output-value ratio within ±20% of target 0.8',
-        0.8,
-        20,
+        'Gold-cost / output-value ratio within the canon 0.8–1.2× band',
       ),
       staticChecks: () => [
         cppSymbolExists('UARPGCurrencySubsystem', 'Currency subsystem in UE Source'),

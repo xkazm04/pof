@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { useBlueprintTranspiler } from '@/hooks/useBlueprintTranspiler';
 import { useProjectStore } from '@/stores/projectStore';
@@ -27,16 +27,33 @@ export function BlueprintTranspilerView() {
     parse, transpile, diff, reset,
   } = useBlueprintTranspiler();
 
+  // Synchronous in-flight latch. `isLoading` briefly flips back to false in the
+  // gap between the two awaited steps (parse → transpile/diff), momentarily
+  // re-enabling the disabled buttons; a double-click in that window would fire a
+  // second overlapping run. This ref guards the whole composite action the
+  // instant it starts, independent of any render.
+  const inFlightRef = useRef(false);
+
   const handleTranspile = useCallback(async () => {
-    if (!blueprintJson.trim()) return;
-    await parse(blueprintJson);
-    await transpile(blueprintJson, projectName || undefined);
+    if (!blueprintJson.trim() || inFlightRef.current) return;
+    inFlightRef.current = true;
+    try {
+      await parse(blueprintJson);
+      await transpile(blueprintJson, projectName || undefined);
+    } finally {
+      inFlightRef.current = false;
+    }
   }, [blueprintJson, projectName, parse, transpile]);
 
   const handleDiff = useCallback(async () => {
-    if (!blueprintJson.trim() || !existingCpp.trim()) return;
-    await parse(blueprintJson);
-    await diff(blueprintJson, existingCpp, projectName || undefined);
+    if (!blueprintJson.trim() || !existingCpp.trim() || inFlightRef.current) return;
+    inFlightRef.current = true;
+    try {
+      await parse(blueprintJson);
+      await diff(blueprintJson, existingCpp, projectName || undefined);
+    } finally {
+      inFlightRef.current = false;
+    }
   }, [blueprintJson, existingCpp, projectName, parse, diff]);
 
   const handleLoadSample = useCallback(() => {

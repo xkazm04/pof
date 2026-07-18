@@ -9,6 +9,8 @@ import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import { EFFECT_TIMELINE_EVENTS } from '../_shared/data';
 import type { TimelineEvent } from '@/types/unique-tab-improvements';
 
+const clampPct = (n: number) => Math.max(0, Math.min(100, n));
+
 export function EffectsTimelineSection() {
   const lanes = useMemo(() => {
     const laneMap: Record<string, TimelineEvent[]> = {};
@@ -19,12 +21,23 @@ export function EffectsTimelineSection() {
     return Object.entries(laneMap);
   }, []);
 
+  // Derive the axis span from the data instead of assuming a fixed 10s window,
+  // so any event with timestamp/duration beyond 10s stays in-scale (floor 10).
+  const axisMax = useMemo(
+    () => Math.max(10, ...EFFECT_TIMELINE_EVENTS.map(e => e.timestamp + (e.duration ?? 0))),
+    [],
+  );
+  const ticks = useMemo(
+    () => Array.from({ length: 6 }, (_, i) => Math.round((axisMax / 5) * i * 10) / 10),
+    [axisMax],
+  );
+
   return (
     <div className="space-y-4">
       <BlueprintPanel color={ACCENT_RED} className="p-3">
         <SectionHeader icon={Clock} label="Effect Stack Timeline" color={ACCENT_RED} />
         <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mt-1 mb-4">
-          Swim-lane view of 8 effect events over a 10-second combat sequence.
+          Swim-lane view of {EFFECT_TIMELINE_EVENTS.length} effect events over a {axisMax}-second combat sequence.
         </p>
 
         {/* Full timeline strip */}
@@ -39,10 +52,10 @@ export function EffectsTimelineSection() {
               <div className="w-16 text-xs font-mono uppercase tracking-[0.15em] font-bold text-text-muted flex-shrink-0 text-right">
                 {category}
               </div>
-              <div className="flex-1 h-8 rounded relative border" style={{ borderColor: withOpacity(ACCENT_RED, OPACITY_15), backgroundColor: withOpacity(ACCENT_RED, OPACITY_5) }}>
+              <div className="flex-1 h-8 rounded relative border overflow-hidden" style={{ borderColor: withOpacity(ACCENT_RED, OPACITY_15), backgroundColor: withOpacity(ACCENT_RED, OPACITY_5) }}>
                 {events.map((evt) => {
-                  const left = (evt.timestamp / 10) * 100;
-                  const width = evt.duration ? (evt.duration / 10) * 100 : undefined;
+                  const left = clampPct((evt.timestamp / axisMax) * 100);
+                  const width = evt.duration ? Math.min(clampPct((evt.duration / axisMax) * 100), 100 - left) : undefined;
                   return (
                     <motion.div
                       key={evt.id}
@@ -61,8 +74,8 @@ export function EffectsTimelineSection() {
                     </motion.div>
                   );
                 })}
-                {[0, 2, 4, 6, 8, 10].map(t => (
-                  <div key={t} className="absolute bottom-0 w-px h-1.5" style={{ left: `${(t / 10) * 100}%`, backgroundColor: withOpacity(ACCENT_RED, OPACITY_15) }} />
+                {ticks.map(t => (
+                  <div key={t} className="absolute bottom-0 w-px h-1.5" style={{ left: `${clampPct((t / axisMax) * 100)}%`, backgroundColor: withOpacity(ACCENT_RED, OPACITY_15) }} />
                 ))}
               </div>
             </div>
@@ -73,7 +86,7 @@ export function EffectsTimelineSection() {
         <div className="flex items-center gap-3 mt-1">
           <div className="w-16 flex-shrink-0" />
           <div className="flex-1 flex justify-between text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
-            {[0, 2, 4, 6, 8, 10].map(t => <span key={t}>{t}s</span>)}
+            {ticks.map(t => <span key={t}>{t}s</span>)}
           </div>
         </div>
       </BlueprintPanel>

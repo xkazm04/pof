@@ -6,8 +6,18 @@
  * Items specs, the synthetic loot-filter catalog) keep the caller status, since the
  * server genuinely can't re-derive them.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { NextRequest } from 'next/server';
+
+// Isolate from the user's real ~/.pof/pof.db: live judge_verdicts rows are overlaid onto
+// every grade by the judge-acceptance bridge, so a fresh submit that SHOULD pass gets
+// re-graded against whatever verdicts a judging campaign left behind (this test failed
+// deterministically after the green-loop campaign for exactly that reason). vi.hoisted
+// runs before the import graph, so src/lib/db.ts picks the throwaway path up at init.
+vi.hoisted(() => {
+  const dir = process.env.TEMP || process.env.TMPDIR || '/tmp';
+  process.env.POF_DB_PATH = `${dir}/pof-test-artifacts-post-${process.pid}.db`;
+});
 import '@/lib/catalog/pipelines/registry.generated'; // side-effect: register all pipelines
 import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 import { seededEntities } from '@/lib/catalog/seed';

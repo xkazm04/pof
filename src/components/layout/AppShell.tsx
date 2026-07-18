@@ -52,10 +52,14 @@ export function AppShell() {
     return () => window.removeEventListener('beforeunload', handler);
   }, []);
 
-  // Wait for Zustand persist to rehydrate from localStorage
+  // Wait for Zustand persist to actually finish rehydrating from localStorage.
+  // Subscribing to the persist middleware's onFinishHydration (and reading the
+  // real hasHydrated() flag) means we don't reveal the shell — and decide
+  // SetupWizard vs. main shell off isSetupComplete — until the persisted values
+  // have genuinely loaded, avoiding a flash of default/pre-hydration state.
   const hydrated = useSyncExternalStore(
-    () => () => {},
-    () => true,
+    (onStoreChange) => useProjectStore.persist.onFinishHydration(onStoreChange),
+    () => useProjectStore.persist.hasHydrated(),
     () => false,
   );
 

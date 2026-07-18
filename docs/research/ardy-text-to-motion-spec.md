@@ -79,8 +79,36 @@ which is how the first shared-skeleton import broke). 5.8 Python walls: `Composi
 branching (sections + ComboWindow/HitDetection notify states) needs a short editor pass or a C++
 helper.
 
+## Qwen-VLM validation loop — OPERATIONAL 2026-07-16 (session 5, pof-exp `f430c2a`)
+
+The pipeline was "half blind" — numeric gates (montage✓, swing°, displacement) passed while PIE
+showed a destroyed mesh. The fix: **the existing `/api/verify/animation` route with
+`provider:"qwen"` judges the scenario harness's saved frames** (`frameDir` = the run's
+`pof_exp_scn_*` temp dir, `cam:"side"`, name+intent). Proven discriminating on first contact:
+
+- **Combo (concat clip): fail 15/100** — named the static freezes (montage died early) and the
+  collapsed rigging pose. Root cause chased with AnimPose probes: the CONCATENATED clip's
+  retarget explodes (bones at 78 m!) while its source anim AND the three individually
+  retargeted clips are clean (feet ~6 cm) — `duplicate_and_retarget` breaks specifically on the
+  concatenated clip (open question: not root travel alone — run_Anim retargets fine at 8.3 m).
+  → `AM_MeleeCombo` rebuilt from the clean single `combo1_Anim_Manny`; post-fix **Qwen 45 warn**
+  (silhouette 30→70), scenario PASS.
+- **Roll: fail 35/100** with generation-level feedback numeric gates can't produce: entry reads
+  as a hand-plant vault (not shoulder-led), stiff angular tuck, recovery snaps without momentum.
+  → these become the next generation prompt ("shoulder-led tuck", shorter duration, momentum
+  carry-out), not a retarget fix.
+
+Loop recipe: scenario run (frames auto-saved) → POST `/api/verify/animation`
+`{provider:"qwen", frameDir, cam:"side", maxFrames:10, name, intent}` → structured card
+(6 dims + reasons + topFix). Refinement noted: match the capture window to the montage span,
+else Qwen dings pre/post-montage idle frames as "static holds".
+
 ## Remaining build (the productization, not the proof)
 
+- **Roll v2:** regenerate with Qwen's feedback in the prompt (shoulder-led, ~1.5 s, momentum
+  recovery) + dodge play-rate tuning; re-validate through the loop.
+- **Concat-retarget explosion:** diagnose why `duplicate_and_retarget` breaks on concatenated
+  clips (compare FBX bind/anim stacks vs single clips); until then, retarget clips individually.
 - **Input-gated combo branching:** add Combo1/2/3 sections + `AnimNotifyState_ComboWindow` /
   `AnimNotifyState_HitDetection` to `AM_MeleeCombo` in the editor (30-second manual pass), or ship
   a tiny PoFEditor C++ helper exposing section/notify authoring to Python.

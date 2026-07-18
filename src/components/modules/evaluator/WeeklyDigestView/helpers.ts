@@ -177,7 +177,7 @@ export function renderDigestToCanvas(canvas: HTMLCanvasElement, d: WeeklyDigest)
     ctx.fillText('Module activity', 40, y);
     y += 16;
 
-    const maxSessions = d.moduleActivity[0].sessions;
+    const maxSessions = Math.max(...d.moduleActivity.map((m) => m.sessions), 1);
     for (const m of d.moduleActivity.slice(0, 5)) {
       const barW2 = maxSessions > 0 ? (m.sessions / maxSessions) * (W - 280) : 0;
       const color = m.successRate >= 0.75 ? MODULE_COLORS.setup : m.successRate >= 0.5 ? MODULE_COLORS.content : ACCENT_RED;

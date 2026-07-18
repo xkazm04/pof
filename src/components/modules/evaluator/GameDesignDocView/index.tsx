@@ -18,10 +18,11 @@ import { StatRow } from './StatRow';
 
 export function GameDesignDocView() {
   const projectName = useProjectStore((s) => s.projectName);
-  const { gdd, isLoading, error, generate, exportMarkdown, exportPitch } = useGameDesignDoc(projectName);
+  const { gdd, isLoading, error, exportError, clearExportError, generate, exportMarkdown, exportPitch } = useGameDesignDoc(projectName);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [exportingPitch, setExportingPitch] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
@@ -41,6 +42,7 @@ export function GameDesignDocView() {
   }, []);
 
   const handleExport = useCallback(async () => {
+    clearExportError();
     setExporting(true);
     const markdown = await exportMarkdown();
     setExporting(false);
@@ -57,6 +59,7 @@ export function GameDesignDocView() {
   }, [exportMarkdown, projectName]);
 
   const handleExportPitch = useCallback(async () => {
+    clearExportError();
     setExportingPitch(true);
     const html = await exportPitch();
     setExportingPitch(false);
@@ -72,12 +75,21 @@ export function GameDesignDocView() {
   }, [exportPitch, projectName]);
 
   const handleCopyMarkdown = useCallback(async () => {
+    clearExportError();
+    setCopyError(null);
     const markdown = await exportMarkdown();
     if (!markdown) return;
-    await navigator.clipboard.writeText(markdown);
-    setCopied(true);
-    setTimeout(() => setCopied(false), UI_TIMEOUTS.copyFeedback);
-  }, [exportMarkdown]);
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('Clipboard API unavailable');
+      await navigator.clipboard.writeText(markdown);
+      setCopied(true);
+      setTimeout(() => setCopied(false), UI_TIMEOUTS.copyFeedback);
+    } catch (err) {
+      logger.error('GDD copy-to-clipboard failed', err);
+      setCopyError('Copy failed — clipboard unavailable.');
+      setTimeout(() => setCopyError(null), UI_TIMEOUTS.copyFeedback);
+    }
+  }, [exportMarkdown, clearExportError]);
 
   // Print-to-PDF: render the live GDD (cover scorecard + diagrams) into a new
   // window and let the browser "Save as PDF". Falls back to downloading the
@@ -204,6 +216,9 @@ export function GameDesignDocView() {
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-text">{gdd.title}</span>
             {isLoading && <Loader2 className="w-3 h-3 animate-spin text-text-muted" />}
+            {(exportError || copyError) && (
+              <span className="text-2xs" style={{ color: STATUS_ERROR }}>{exportError ?? copyError}</span>
+            )}
           </div>
           <div className="flex items-center gap-1.5">
             <button

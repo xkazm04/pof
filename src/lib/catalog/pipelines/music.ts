@@ -1,5 +1,5 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
-import { minLength, fieldsPopulated, withinPercent, selected, minCount } from '../acceptance/dataCheckers';
+import { minLength, fieldsPopulated, withinAbsolute, selected, minCount } from '../acceptance/dataCheckers';
 import { runtimeDeferred } from '../acceptance/deferred';
 import { seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
@@ -390,35 +390,36 @@ registerCatalogPipeline({
     {
       archetype: 'balance',
       label: 'Mix & Loudness',
-      // Loudness band bars: measured |LUFS| against the acceptable window edges. The raw
-      // `integratedLUFS` is negative (dBLUFS), which a bar chart can't render honestly, so
-      // the chart reads the positive magnitude/band fields the produce also writes. The
-      // acceptance still derives from top-level `integratedLUFS` (16.0), unchanged.
+      // Loudness band bars: the true `integratedLUFS` is a SIGNED negative dBLUFS value
+      // (−16), which the checker now gates on directly. A bar chart can't render a negative
+      // value honestly, so the bars read the positive `displayMagnitude` (16) + band edges —
+      // display-only. Acceptance derives from the signed top-level `integratedLUFS` (−16).
       view: {
         kind: 'chart',
         variant: 'bars',
         field: 'loudness',
         rows: [
           { key: 'lufsBandFloor', label: 'Band floor', unit: ' LU' },
-          { key: 'lufsMagnitude', label: 'Measured', unit: ' LU' },
+          { key: 'displayMagnitude', label: 'Measured', unit: ' LU' },
           { key: 'lufsBandCeil', label: 'Band ceil', unit: ' LU' },
         ],
-        highlightKey: 'lufsMagnitude',
+        highlightKey: 'displayMagnitude',
         max: 20,
       },
       produce: () => {
-        // Loudness target: −16 LUFS integrated (game music delivery standard, headroom for SFX mix)
-        // withinPercent uses a numeric field; encode as a positive value offset from 0:
-        // integratedLUFS is the absolute value: 16.0 → checked within ±12.5% of 16 = 14–18 LUFS range
-        const integratedLUFS = 16.0; // absolute value of the negative dBLUFS target
+        // Loudness target: −16 LUFS integrated (game music delivery standard, headroom for SFX mix).
+        // The contract stores the TRUE SIGNED value in `integratedLUFS` (−16); the checker gates on
+        // it directly via withinAbsolute (−16 ±2 LUFS). `displayMagnitude` (16) is the positive
+        // twin the bars view renders — the negative dBLUFS can't be drawn as a bar honestly.
+        const integratedLUFS = -16.0; // true signed dBLUFS target (checker gates on this)
         return {
           data: {
             loudness: {
               integratedLUFS: -16.0,
               // Positive magnitude + band edges for the Mix & Loudness budget-bar view
               // (a bar chart can't render the negative dBLUFS value honestly). Display-only:
-              // acceptance derives from the top-level `integratedLUFS` magnitude below.
-              lufsMagnitude: 16.0,
+              // acceptance derives from the signed top-level `integratedLUFS` below.
+              displayMagnitude: 16.0,
               lufsBandFloor: 14.0, // −14 LUFS (loudest acceptable)
               lufsBandCeil: 18.0,  // −18 LUFS (quietest acceptable)
               integratedLUFSTarget: '−16 LUFS ±2 LUFS (range −14 to −18 LUFS integrated)',
@@ -447,12 +448,13 @@ registerCatalogPipeline({
                 'In-engine the music bus sits below the master bus. SFX and voice buses are separate. ' +
                 'The −16 LUFS target reserves ≥8 LU of headroom for combat SFX peaks, per game-audio practice.',
             },
-            integratedLUFS, // numeric field for withinPercent (absolute value of target)
+            integratedLUFS,       // true signed value −16; the checker gates on this
+            displayMagnitude: 16.0, // positive twin for the bars view (mirrors loudness.displayMagnitude)
           },
         };
       },
-      // −16 LUFS target expressed as absolute value 16.0; ±12.5% covers 14–18 LUFS acceptable range
-      accept: withinPercent('integratedLUFS', 'Integrated LUFS within ±12.5% of −16 LUFS target (14–18 LUFS range)', 16.0, 12.5),
+      // Gate on the SIGNED −16 LUFS target with a ±2 LUFS absolute tolerance (band −14..−18).
+      accept: withinAbsolute('integratedLUFS', 'Integrated LUFS within ±2 of −16 LUFS target (−14 to −18 LUFS range)', -16.0, 2.0),
     },
 
     // ── 6. Trigger Binding ───────────────────────────────────────────────────

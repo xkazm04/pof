@@ -9,6 +9,7 @@ import { ACCENT_ORANGE, OVERLAY_WHITE, OPACITY_20,
 import { motionSafe } from '@/lib/motion';
 import type { ComboAbility } from '@/components/modules/core-engine/sub_ability/_shared/AbilitySpellbook.data';
 import { BlueprintPanel, SectionHeader } from './design';
+import { ResponsiveSvgContainer } from '../damage-pipeline/ResponsiveSvgContainer';
 
 export function CooldownOverlapChart({ chain, totalDuration }: { chain: ComboAbility[]; totalDuration: number }) {
   const prefersReduced = useReducedMotion();
@@ -38,8 +39,9 @@ export function CooldownOverlapChart({ chain, totalDuration }: { chain: ComboAbi
       <div className="absolute left-0 top-0 w-32 h-32 blur-3xl rounded-full pointer-events-none"
         style={{ backgroundColor: `${withOpacity(ACCENT_ORANGE, OPACITY_5)}` }} />
       <SectionHeader icon={RotateCcw} label="Cooldown Windows" color={ACCENT_ORANGE} />
-      <div className="mt-3 overflow-x-auto custom-scrollbar">
-        <svg width={w} height={totalH} viewBox={`0 0 ${w} ${totalH}`}>
+      <div className="mt-3">
+        <ResponsiveSvgContainer intrinsicWidth={w}>
+        <svg width="100%" height={totalH} viewBox={`0 0 ${w} ${totalH}`}>
           {/* Combo duration indicator */}
           <rect
             x={labelW} y={0}
@@ -93,6 +95,7 @@ export function CooldownOverlapChart({ chain, totalDuration }: { chain: ComboAbi
             );
           })}
         </svg>
+        </ResponsiveSvgContainer>
       </div>
     </BlueprintPanel>
   );

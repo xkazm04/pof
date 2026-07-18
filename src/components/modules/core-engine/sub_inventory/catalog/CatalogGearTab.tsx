@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useCallback, useRef } from 'react';
+import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
 import { useViewportAtLeast } from '@/hooks/useViewportWidth';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -53,6 +53,12 @@ export function CatalogGearTab({ moduleId, featureMap }: CatalogGearTabProps) {
   const [selectedItem, setSelectedItem] = useState<ItemData | null>(null);
 
   const { execute: executeCli, isRunning: isCliRunning } = useModuleCLI({ moduleId, sessionKey: 'item-gen', label: 'Item Generator', accentColor: ACCENT });
+  // Synchronous re-entrancy latch. `isCliRunning` is zustand-derived and lags one
+  // render behind, so a fast double-click can fork two catalog entries racing the
+  // same `item-gen` session + slug before the button's `disabled` prop catches up.
+  // This ref flips the instant handleCreateItem begins and clears when the async
+  // dispatch settles, closing the click-to-rerender gap the disabled prop can't.
+  const submittingRef = useRef(false);
 
   // zen-perf R3: the catalog store is the SINGLE source of truth. It is seeded
   // 1:1 from DUMMY_ITEMS at first run (seedAllCatalogs → seedItemEntries) and the
@@ -62,6 +68,14 @@ export function CatalogGearTab({ moduleId, featureMap }: CatalogGearTabProps) {
   // filtering/sorting/paging operate directly on entries — no runtime id-join Map.
   const entries = useItemEntries();
   const addEntity = useCatalogStore((s) => s.addEntity);
+
+  // Invalidate the open detail drawer if its backing entry disappears from the
+  // store (reset/delete/re-seed elsewhere), so it can't keep showing a ghost item.
+  useEffect(() => {
+    if (selectedItem && !entries.some(e => e.data.id === selectedItem.id)) {
+      setSelectedItem(null);
+    }
+  }, [entries, selectedItem]);
 
   const availableSubtypes = useMemo(() => {
     const pool = categoryFilter !== 'all' ? entries.filter(e => e.data.type === categoryFilter) : entries;
@@ -151,7 +165,9 @@ export function CatalogGearTab({ moduleId, featureMap }: CatalogGearTabProps) {
   }, [focusedIndex, pageEntries.length, columnCount]);
 
   const handleCreateItem = useCallback(() => {
+    if (submittingRef.current || isCliRunning) return;
     if (!newItem.name.trim()) return;
+    submittingRef.current = true;
     const slug = newItem.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
     // zen-perf R3: the new item enters the rendered grid immediately because the
@@ -178,10 +194,11 @@ export function CatalogGearTab({ moduleId, featureMap }: CatalogGearTabProps) {
 
     const imagePrompt = `Game item icon, ${newItem.rarity} ${newItem.type}, ${newItem.name}, ${newItem.description}, dark fantasy ARPG style, centered on black background, high detail`.slice(0, 1500);
     const prompt = `Create a new item for the ARPG loot system:\nName: ${newItem.name}\nType: ${newItem.type}\nRarity: ${newItem.rarity}\nDescription: ${newItem.description}\n\nSteps:\n1. Call POST /api/leonardo with prompt: "${imagePrompt}"\n2. The API will return { imageUrl, generationId }\n3. Download the image from imageUrl and save to public/items/${slug}.webp\n4. Confirm the item was created with its image path\n\nItem slug: ${slug}`;
-    executeCli({ type: 'checklist', moduleId, prompt, label: `Create item: ${newItem.name}` });
+    void executeCli({ type: 'checklist', moduleId, prompt, label: `Create item: ${newItem.name}` })
+      .finally(() => { submittingRef.current = false; });
     setShowAddForm(false);
     setNewItem({ name: '', type: 'Weapon', rarity: 'Common', description: '' });
-  }, [newItem, moduleId, executeCli, addEntity]);
+  }, [newItem, moduleId, executeCli, addEntity, isCliRunning]);
 
   return (
     <motion.div key="catalog-gear" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} className="space-y-4">

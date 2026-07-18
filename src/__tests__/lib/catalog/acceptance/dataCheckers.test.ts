@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { minLength, fieldsPopulated, withinPercent, dpsConsistent, selected, minCount } from '@/lib/catalog/acceptance/dataCheckers';
+import { minLength, fieldsPopulated, withinPercent, withinAbsolute, dpsConsistent, materialShape, selected, minCount } from '@/lib/catalog/acceptance/dataCheckers';
 import { graphValid } from '@/lib/catalog/acceptance/graphCheckers';
 import { safeAccept } from '@/lib/catalog/headless';
 import type { Checker } from '@/lib/catalog/acceptance/types';
@@ -22,6 +22,18 @@ describe('L0 data checkers', () => {
     expect(c({ power: 130 }).status).toBe('fail');
     expect(c({}).status).toBe('pending');
   });
+  it('withinAbsolute gates on the SIGNED value (handles a negative target)', () => {
+    const c = withinAbsolute('lufs', 'LUFS −16 ±2', -16, 2);
+    expect(c({ lufs: -16 }).status).toBe('pass');   // on target
+    expect(c({ lufs: -14 }).status).toBe('pass');   // band edge (loudest)
+    expect(c({ lufs: -18 }).status).toBe('pass');   // band edge (quietest)
+    expect(c({ lufs: -12 }).status).toBe('fail');   // too loud
+    expect(c({ lufs: -20 }).status).toBe('fail');   // too quiet
+    expect(c({}).status).toBe('pending');           // unset → actionable pending
+    expect(c({}).reason).toContain('"lufs"');
+    // withinPercent's ±% band would flip its ordering for a negative target and never pass:
+    expect(withinPercent('lufs', 'x', -16, 12.5)({ lufs: -16 }).status).toBe('fail');
+  });
   it('selected passes when an index ≥ 0 is chosen', () => {
     const c = selected('selected', 'Icon selected');
     expect(c({ selected: 0 }).status).toBe('pass');
@@ -43,6 +55,43 @@ describe('L0 data checkers', () => {
     expect(c({ damage: { damageMin: 12, damageMax: 18, attackSpeed: 0.8333 }, baseDPS: 38 }).status).toBe('fail');
     // missing inputs → pending (actionable), not a false pass
     expect(c({ baseDPS: 38 }).status).toBe('pending');
+  });
+});
+
+describe('materialShape — single-master OR multi-master, either accepted', () => {
+  const c = materialShape('material', 'material shape');
+  const tex = { albedo: 'a', normal: 'n', orm: 'o' };
+
+  it('legacy single-master shape still passes', () => {
+    expect(c({ material: { surface: 'iron', parentMaterial: '/Game/M_Master', textures: tex } }).status).toBe('pass');
+    // strictly parentMaterial + textures — surface omitted still passes on the legacy path
+    expect(c({ material: { parentMaterial: '/Game/M_Master', textures: tex } }).status).toBe('pass');
+  });
+
+  it('a two-master parentMaterials[] array passes when every entry is complete', () => {
+    const r = c({ material: { parentMaterials: [
+      { surface: 'blade', parentMaterial: '/Game/M_Metal', textures: tex },
+      { surface: 'grip', parentMaterial: '/Game/M_Leather', textures: tex },
+    ] } });
+    expect(r.status).toBe('pass');
+    expect(r.detail).toContain('2 master');
+  });
+
+  it('a malformed array entry FAILS naming the offending index', () => {
+    const r = c({ material: { parentMaterials: [
+      { surface: 'blade', parentMaterial: '/Game/M_Metal', textures: tex },
+      { surface: 'grip', parentMaterial: '/Game/M_Leather' }, // missing textures
+    ] } });
+    expect(r.status).toBe('fail');
+    expect(r.reason).toContain('parentMaterials[1]');
+    expect(r.reason).toContain('textures');
+  });
+
+  it('legacy shape missing a required key is pending, naming it', () => {
+    const r = c({ material: { surface: 'iron' } });
+    expect(r.status).toBe('pending');
+    expect(r.reason).toContain('parentMaterial');
+    expect(r.reason).toContain('textures');
   });
 });
 

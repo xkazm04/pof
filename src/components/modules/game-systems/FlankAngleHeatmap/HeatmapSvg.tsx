@@ -46,7 +46,7 @@ export function HeatmapSvg({
       style={{ cursor: drag.isDragging ? 'grabbing' : 'default' }}
       onPointerMove={drag.onPointerMove}
       onPointerUp={drag.onPointerUp}
-      onPointerLeave={drag.onPointerUp}
+      onPointerCancel={drag.onPointerUp}
     >
       {/* Heatmap annular zone */}
       {heatmapArcs.map((arc, i) => (

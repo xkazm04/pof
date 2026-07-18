@@ -50,12 +50,13 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { action, taskId, sessionId, status, requirementName } = body as {
+    const { action, taskId, sessionId, status, requirementName, executionId } = body as {
       action?: TaskRegistryAction;
       taskId?: string;
       sessionId?: string;
       status?: TaskStatus;
       requirementName?: string;
+      executionId?: string;
     };
 
     if (!taskId) return apiError('taskId is required', 400);
@@ -86,6 +87,15 @@ export async function POST(request: NextRequest) {
         }
         record.status = status === 'failed' ? 'failed' : 'completed';
         record.completedAt = Date.now();
+        return apiSuccess({ record });
+      }
+      case 'attach-execution': {
+        // Record which claude-terminal execution backs this task so a later
+        // 409-conflict recovery can kill the real process, not just the row.
+        if (!executionId) return apiError('executionId is required for attach-execution', 400);
+        const record = taskRegistry.get(taskId);
+        if (!record) return apiError('Task not found', 404);
+        record.executionId = executionId;
         return apiSuccess({ record });
       }
       case 'heartbeat': {

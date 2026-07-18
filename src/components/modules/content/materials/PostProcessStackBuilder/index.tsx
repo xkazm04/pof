@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   Layers as LayersIcon, Zap, Monitor, Cpu, AlertTriangle,
 } from 'lucide-react';
@@ -13,10 +13,8 @@ import { compositorStackScript } from '@/lib/blender-mcp/scripts/compositor-stac
 import type { ExecuteOutput } from '@/lib/blender-mcp/types';
 import { logger } from '@/lib/logger';
 import { estimateGPUBudget } from '@/lib/post-process-studio/gpu-estimator';
-import { reorderByPriority } from '@/stores/postProcessStudioStore';
-import type { PPStudioEffect } from '@/types/post-process-studio';
+import { usePostProcessStudioStore } from '@/stores/postProcessStudioStore';
 import { TARGET_RESOLUTION } from './constants';
-import { cloneDefaultEffects } from './helpers';
 import { EffectRow } from './EffectRow';
 
 // The canonical stack config — single source of truth lives in the prompt builder.
@@ -30,12 +28,24 @@ interface PostProcessStackBuilderProps {
 }
 
 export function PostProcessStackBuilder({ onGenerate, isGenerating }: PostProcessStackBuilderProps) {
-  const [effects, setEffects] = useState<PPStudioEffect[]>(cloneDefaultEffects);
+  // Single source of truth: the Materials tab and the Evaluator's studio view
+  // both read/write the same store, so the effect set, enable state, ordering
+  // and GPU budget can never silently diverge between the two screens.
+  const effects = usePostProcessStudioStore((s) => s.effects);
+  const initStore = usePostProcessStudioStore((s) => s.init);
+  const setEffectEnabled = usePostProcessStudioStore((s) => s.setEffectEnabled);
+  const moveEffectInStore = usePostProcessStudioStore((s) => s.moveEffect);
+
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [blenderPreviewing, setBlenderPreviewing] = useState(false);
   const [blenderResult, setBlenderResult] = useState<{ message: string; isError: boolean } | null>(null);
   const [generateError, setGenerateError] = useState<string | null>(null);
   const blenderConnected = useBlenderMCPStore((s) => s.connection.connected);
+
+  // Seed the shared store on first mount (mirrors PostProcessStudioView).
+  useEffect(() => {
+    if (effects.length === 0) initStore();
+  }, [effects.length, initStore]);
 
   const sortedEffects = useMemo(
     () => [...effects].sort((a, b) => a.priority - b.priority),
@@ -57,14 +67,14 @@ export function PostProcessStackBuilder({ onGenerate, isGenerating }: PostProces
   const budgetPct = budget.budgetMs > 0 ? Math.min((budget.totalCostMs / budget.budgetMs) * 100, 100) : 0;
 
   const toggleEffect = useCallback((effectId: string) => {
-    setEffects((prev) => prev.map((e) =>
-      e.id === effectId ? { ...e, enabled: !e.enabled } : e,
-    ));
-  }, []);
+    const current = usePostProcessStudioStore.getState().effects.find((e) => e.id === effectId);
+    if (!current) return;
+    setEffectEnabled(effectId, !current.enabled);
+  }, [setEffectEnabled]);
 
   const moveEffect = useCallback((effectId: string, direction: 'up' | 'down') => {
-    setEffects((prev) => reorderByPriority(prev, effectId, direction));
-  }, []);
+    moveEffectInStore(effectId, direction);
+  }, [moveEffectInStore]);
 
   const toggleExpand = useCallback((id: string) => {
     setExpandedId((prev) => (prev === id ? null : id));
