@@ -40,7 +40,8 @@ export const NEW_CATALOGS: NewCatalogDef[] = [
     starters: [
       { id: 'status-burning', name: 'Burning', categoryPath: ['Debuff'], tags: ['fire', 'dot'], description: 'Fire damage-over-time; pairs with Fireball (State.Burning).' },
       { id: 'status-chilled', name: 'Chilled', categoryPath: ['Debuff'], tags: ['ice', 'slow'], description: 'Movement-speed slow from ice damage.' },
-      { id: 'status-knockback', name: 'Knockback', categoryPath: ['Control'], tags: ['kinetic', 'cc', 'displacement'], description: 'Kinetic displacement CC: a physics launch (LaunchCharacter) that clears on landing — State.Knockback, immunity State.Immune.Knockback. Consumed by Force Push (spellbook::off-arc-fp).' }] },
+      { id: 'status-knockback', name: 'Knockback', categoryPath: ['Control'], tags: ['kinetic', 'cc', 'displacement'], description: 'Kinetic displacement CC: a physics launch (LaunchCharacter) that clears on landing — State.Knockback, immunity State.Immune.Knockback. Consumed by Force Push (spellbook::off-arc-fp).' },
+      { id: 'status-dazed', name: 'Dazed', categoryPath: ['Control'], tags: ['cc', 'disorient'], description: 'Post-impact disorientation: heavy move-speed slow + no attacks for a short window — State.Dazed, immunity State.Immune.Daze. Applied by Force Push (spellbook::off-arc-fp) as its landing follow-up.' }] },
   // ── Systems ──
   { catalogId: 'crafting-recipes', label: 'Crafting Recipes', category: 'Systems', description: 'Combine inputs into output items with conditions.', module: 'arpg-inventory', tracks: ['logic', 'art-2d', 'vfx', 'audio', 'test'],
     starters: [{ id: 'recipe-health-potion', name: 'Health Potion', categoryPath: ['Alchemy'], tags: ['consumable'], description: 'Combine herb + vial into a healing potion.' }] },

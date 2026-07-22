@@ -67,6 +67,7 @@ export const MECHANICS_STEPS = [
   'Stat Block',
   'Curve Formula',
   'Concept Brief',
+  'Applies Status',
 ] as const;
 
 export function isPreviewHydratable(catalogId: string): boolean {
