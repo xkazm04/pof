@@ -20,6 +20,7 @@ import type { JudgeVerdict } from './judge-verdicts-db';
 import stepFactsJson from './step-facts.json';
 import headlessCoverageJson from './headless-coverage.json';
 import { BANDS, RUBRIC_VERSION } from '@/lib/judge/rubrics';
+import { mirrorSupport, type MirrorSupport } from '@/lib/preview/browser-mirror';
 
 export type CellGrade = 'verified' | 'trusted' | 'ungated' | 'unpowered' | 'deferred' | 'attention' | 'pending' | 'unwired';
 
@@ -168,6 +169,9 @@ export interface StepCell {
   checkerMeaningful?: boolean;
   /** Content-quality judgment (LLM panel / VLM), when one has run. */
   judged?: { verdict: 'pass' | 'fail'; score: number; model: string; findings: string; effort?: string; rubricVersion?: number };
+  /** Dual execution: the step class also runs in the browser preview ('direct'/'partial').
+   *  Absent when there is no browser path (incl. the ue-runtime moat). */
+  browserMirror?: MirrorSupport;
 }
 
 const GATE_TIERS = new Set(['L3', 'L4']);
@@ -246,6 +250,9 @@ export function deriveCell(
     judge: fact?.judge,
     auditNote: fact?.note,
     checkerMeaningful: fact?.checkerMeaningful,
+    ...(fact && mirrorSupport(fact.deliverable, fact.step) !== 'none'
+      ? { browserMirror: mirrorSupport(fact.deliverable, fact.step) }
+      : {}),
     ...(judged ? { judged: { verdict: judged.verdict, score: judged.score, model: judged.model, findings: judged.findings, ...(judged.effort ? { effort: judged.effort } : {}), ...(judged.rubricVersion != null ? { rubricVersion: judged.rubricVersion } : {}) } } : {}),
   };
 }

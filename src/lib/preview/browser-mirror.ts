@@ -31,13 +31,21 @@ export const MIRROR_BY_DELIVERABLE: Record<DeliverableClass, MirrorSupport> = {
   'ue-runtime': 'none', // the UE verification moat — never mirrored
 };
 
-export function mirrorSupport(deliverable: string): MirrorSupport {
+/**
+ * UE-realization steps stay moat-side regardless of their data shape — some are
+ * audited as text-config (a packaging manifest IS data) but their meaning is
+ * "realized in UE", so a browser path claim would be dishonest.
+ */
+export const UE_REALIZATION_STEPS = new Set(['UE Packaging', 'Test Gate', 'UE Import']);
+
+export function mirrorSupport(deliverable: string, step?: string): MirrorSupport {
+  if (step && UE_REALIZATION_STEPS.has(step)) return 'none';
   return MIRROR_BY_DELIVERABLE[deliverable as DeliverableClass] ?? 'none';
 }
 
 /** True when the step class has any browser execution path (drives the /status icon + UI badge). */
-export function isBrowserMirrorable(deliverable: string): boolean {
-  return mirrorSupport(deliverable) !== 'none';
+export function isBrowserMirrorable(deliverable: string, step?: string): boolean {
+  return mirrorSupport(deliverable, step) !== 'none';
 }
 
 /**

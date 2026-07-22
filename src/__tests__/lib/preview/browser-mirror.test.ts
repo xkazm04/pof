@@ -30,6 +30,13 @@ describe('browser-mirror capability map', () => {
     expect(mirrorSupport('quantum-hologram')).toBe('none');
   });
 
+  it('UE-realization steps stay moat-side even when audited as data deliverables', () => {
+    expect(mirrorSupport('text-config', 'UE Packaging')).toBe('none');
+    expect(mirrorSupport('text-config', 'Test Gate')).toBe('none');
+    expect(mirrorSupport('audio', 'Test Gate')).toBe('none');
+    expect(mirrorSupport('text-config', 'Effect Logic')).toBe('direct');
+  });
+
   it('covers every deliverable class present in step-facts.json', () => {
     const seen = new Set(
       (stepFacts as { steps: Array<{ deliverable: string }> }).steps.map(s => s.deliverable),

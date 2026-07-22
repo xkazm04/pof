@@ -35,6 +35,23 @@ describe('ProvenanceStrip', () => {
     expect(screen.queryByText('CHECKER: SHAPE-ONLY')).toBeNull();
   });
 
+  it('shows BROWSER MIRROR: LIVE for a mirrorable step in a hydratable catalog', () => {
+    render(<ProvenanceStrip t={t} fact={{ ...shapeOnly, catalogId: 'spellbook' }} />);
+    expect(screen.getByText('BROWSER MIRROR: LIVE')).toBeTruthy();
+  });
+
+  it('shows the mirror class as a chip when the catalog has no preview scene yet', () => {
+    render(<ProvenanceStrip t={t} fact={shapeOnly} />); // catalogId 'demo' not hydratable
+    expect(screen.queryByText('BROWSER MIRROR: LIVE')).toBeNull();
+    expect(screen.getByTestId('provenance-browser').textContent).toContain('direct');
+  });
+
+  it('never claims a browser path for the ue-runtime moat', () => {
+    render(<ProvenanceStrip t={t} fact={{ ...shapeOnly, deliverable: 'ue-runtime' }} />);
+    expect(screen.queryByText('BROWSER MIRROR: LIVE')).toBeNull();
+    expect(screen.queryByTestId('provenance-browser')).toBeNull();
+  });
+
   it('loudly flags a missing judge and an unwired generator', () => {
     render(<ProvenanceStrip t={t} fact={noJudge} />);
     expect(screen.getByText('JUDGE: NONE')).toBeTruthy();

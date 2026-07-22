@@ -20,7 +20,8 @@ export const PIPELINE_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_get_pipeline',
-    description: "One catalog's ordered steps plus its entities — the 'what is left to build' map.",
+    description:
+      "One catalog's ordered steps plus its entities — the 'what is left to build' map. Steps are annotated with dual-execution info (`browserMirror`: 'direct'/'partial' when the step class also runs in the browser preview runtime; `browserHydratable` on the catalog when the preview can hydrate it today), so generation can plan a browser path alongside UE.",
     inputSchema: obj({ catalogId: STR }, ['catalogId']),
     example: { args: { catalogId: 'items' } },
     handler: async (args, pof) => {
@@ -29,8 +30,36 @@ export const PIPELINE_TOOLS: ToolDef[] = [
       const cat = cats.find((c) => c.catalogId === catalogId);
       if (!cat) throw new Error(`Unknown catalog: ${catalogId}. Known: ${cats.map((c) => c.catalogId).join(', ')}`);
       const entities = await pof.get(`/api/catalog/entities${qs({ catalogId })}`);
-      return { ...cat, entities };
+      // Dual-execution annotation — tolerate an app build without the preview routes.
+      let browserHydratable: boolean | undefined;
+      let mirrorBySteps: Record<string, string> | undefined;
+      try {
+        const map = await pof.get<{
+          hydratable?: boolean;
+          steps: Array<{ step: string; browserMirror: string }>;
+        }>(`/api/preview/mirror-map${qs({ catalogId })}`);
+        browserHydratable = map.hydratable;
+        mirrorBySteps = Object.fromEntries(
+          map.steps.filter((s) => s.browserMirror !== 'none').map((s) => [s.step, s.browserMirror]),
+        );
+      } catch {
+        /* preview layer absent — return the plain pipeline */
+      }
+      return {
+        ...cat,
+        entities,
+        ...(browserHydratable !== undefined ? { browserHydratable } : {}),
+        ...(mirrorBySteps ? { browserMirror: mirrorBySteps } : {}),
+      };
     },
+  },
+  {
+    name: 'pof_preview_hydrate',
+    description:
+      "Dual-execution browser path: fetch a catalog's aggregated mechanics artifacts exactly as the browser preview runtime hydrates them (read-only; tuning goes through the graded artifact write paths). Use when a PoF project also targets a browser realization of the same SOR.",
+    inputSchema: obj({ catalogId: STR }, ['catalogId']),
+    example: { args: { catalogId: 'spellbook' } },
+    handler: (args, pof) => pof.get(`/api/preview/hydrate${qs({ catalogId: reqStr(args, 'catalogId') })}`),
   },
   {
     name: 'pof_get_step',

@@ -39,6 +39,7 @@ export function StatusCell({ cell, dimmed = false }: { cell: StepCell; dimmed?: 
       ? `JUDGED ${cell.judged.verdict.toUpperCase()} ${cell.judged.score}/100 by ${cell.judged.model}: ${cell.judged.findings}`
       : cell.judge ? `judge needed: ${cell.judge}${cell.checkerMeaningful === false ? ' · checker is shape-only' : ''}` : '',
     `pass ${counts.pass} · deferred ${counts.deferred} · pending ${counts.pending} · fail ${counts.fail}`,
+    cell.browserMirror ? `browser mirror: ${cell.browserMirror} (step class also runs in the browser preview)` : '',
     cell.auditNote ? `audit: ${cell.auditNote}` : '',
     cell.reason ? `reason: ${cell.reason}` : '',
   ].filter(Boolean).join('\n');
@@ -73,6 +74,13 @@ export function StatusCell({ cell, dimmed = false }: { cell: StepCell; dimmed?: 
       }}
     >
       <span style={{ display: 'block', fontFamily: 'var(--lab-font-mono)', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {cell.browserMirror && (
+          // Dual-execution marker: this step class also runs in the browser preview.
+          // Glyph (not hue) so it survives colorblind rendering; hollow = partial.
+          <span data-testid="browser-mirror-glyph" aria-hidden style={{ marginRight: 3, opacity: 0.85 }}>
+            {cell.browserMirror === 'direct' ? '⧉' : '⧠'}
+          </span>
+        )}
         {cell.label}
       </span>
       <span style={{ display: 'block', fontWeight: 400, opacity: 0.75, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
