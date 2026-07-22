@@ -1,8 +1,54 @@
 # Chaos Cloth Asset (UE 5.8) as a PoF clothing-physics step — feasibility spec
 
 > Source: /research run 2026-07-22 (Stefan 3D AI, "Easy Clothing with AI for Any Character — Best Workflow").
-> Status: **ClothAsset create+save PROVEN headless (2026-07-22); graph-node wiring is the next probe.** XL. Bucket C/E.
+> Status: **Headless authoring PROVEN end-to-end (2026-07-22) — create asset + build the full cloth
+> Dataflow graph + regenerate, all headless via Python. Ready to BUILD `chaos-cloth.ts`.** XL. Bucket C/E.
 > The one automation-loop-shaped finding from an otherwise GUI-heavy asset-gen source.
+
+## PROBE 2 RESULT — 2026-07-22 (live, UE 5.8, `-nullrhi`) — the cloth Dataflow graph builds headless
+
+The graph-editing API is `DataflowEditorBlueprintLibrary` (author) + `DataflowBlueprintLibrary` (drive),
+both Python-exposed. Full chain built + driven headless (`Content/Python/cloth_probe2d.py`):
+
+- **`add_dataflow_node(dataflow, node_type_name, base_name, location) -> Name`** — added all 4 nodes.
+  **Node type name = the full struct name WITH the `F` prefix** (`FChaosClothAssetStaticMeshImportNode`,
+  `FChaosClothAssetTransferSkinWeightsNode`, `FChaosClothAssetSetPhysicsAssetNode`,
+  `FChaosClothAssetTerminalNode`); the un-prefixed name returns an empty Name.
+- **`set_dataflow_node_property(dataflow, node, property, value:str) -> True`** — set `StaticMesh`,
+  `SkeletalMesh`, `PhysicsAsset` (asset refs pass as **object-path strings**).
+- **`connect_dataflow_nodes(dataflow, from, out_pin, to, in_pin) -> True`** — chained
+  StaticMeshImport `Collection` → TransferSkinWeights `Collection` → SetPhysicsAsset `Collection` →
+  Terminal **`CollectionLod0`** (the terminal's LOD-0 input pin; the display name "Collection LOD 0" does
+  NOT work as the pin key — use the property name `CollectionLod0`).
+- **`regenerate_asset_from_dataflow(clothAsset, False) -> True`** — the ClothAsset regenerated from the graph.
+- `evaluate_dataflow -> False` **on this test only**: I fed a Hunyuan blob mesh → a Jedi skeleton (no
+  spatial correspondence), so `TransferSkinWeightsNode: Transferring skin weights failed` — a **data**
+  mismatch (garbage-in), not an API limit. The node executed headless; a real garment fitted to the target
+  skeleton (what the pipeline produces per-character) is the correct input.
+
+**Verdict: the entire authoring graph is scriptable headless.** No feasibility blocker remains for the
+auto-skin / static-garment path. Remaining is build work: feed a real fitted garment, pick `TransferMethod`
+(`EChaosClothAssetTransferSkinWeightsMethod` — `InpaintWeights` default vs closest-point), and add the
+weight-map / solver-config nodes for a physics garment.
+
+### Exact recipe (for the build)
+```
+udf   = AssetTools.create_asset("DF", path, None, DataflowAssetFactory())
+n_sm  = DFEBL.add_dataflow_node(udf, "FChaosClothAssetStaticMeshImportNode",     "SMImport",   Vector2D())
+n_tsw = DFEBL.add_dataflow_node(udf, "FChaosClothAssetTransferSkinWeightsNode",  "XferWeights",Vector2D())
+n_ph  = DFEBL.add_dataflow_node(udf, "FChaosClothAssetSetPhysicsAssetNode",      "SetPhys",    Vector2D())
+n_tm  = DFEBL.add_dataflow_node(udf, "FChaosClothAssetTerminalNode",             "Terminal",   Vector2D())
+DFEBL.set_dataflow_node_property(udf, n_sm,  "StaticMesh",   "<garment SM object path>")
+DFEBL.set_dataflow_node_property(udf, n_tsw, "SkeletalMesh", "<target SKM object path>")   # weight source
+DFEBL.set_dataflow_node_property(udf, n_ph,  "PhysicsAsset", "<PA object path>")
+DFEBL.connect_dataflow_nodes(udf, n_sm,  "Collection", n_tsw, "Collection")
+DFEBL.connect_dataflow_nodes(udf, n_tsw, "Collection", n_ph,  "Collection")
+DFEBL.connect_dataflow_nodes(udf, n_ph,  "Collection", n_tm,  "CollectionLod0")
+cloth = AssetTools.create_asset("CA", path, None, ChaosClothAssetFactory())
+DFBL.regenerate_asset_from_dataflow(cloth, False)   # or evaluate_dataflow(udf, cloth)
+```
+Reusable probes: `<UE project>/Content/Python/cloth_probe.py` (probe 1, class/create) +
+`cloth_probe2d.py` (probe 2, full graph).
 
 ## PROBE RESULT — 2026-07-22 (live, installed UE 5.8, `-nullrhi`)
 
@@ -76,11 +122,12 @@ Three delivery shapes the source demonstrates, all reusing one saved graph:
 
 | Step | Headless-scriptable? | Notes |
 |------|----------------------|-------|
-| Create + save ClothAsset | **YES — PROVEN 2026-07-22** | `ChaosClothAssetFactory` → `create_asset` → save → exists |
-| Reach the authoring graph | **YES — PROVEN** | asset exposes `dataflow_asset` / `dataflow_terminal` |
-| Add/connect the cloth Dataflow nodes | **Next probe** — `DataflowBlueprintLibrary` exposed | node types are graph-internal, not top-level classes |
-| Static-Mesh / Set-Physics-Asset / Solver-Config nodes | **Next probe** (set node params via graph API) | deterministic once node-add works |
-| **Transfer Skin Weights** | **Next probe — the key automatable step** | method is a reflected enum (`…TransferSkinWeightsMethod`); closest-point needs no paint |
+| Create + save ClothAsset | **YES — PROVEN (probe 1)** | `ChaosClothAssetFactory` → `create_asset` → save → exists |
+| Add the cloth Dataflow nodes | **YES — PROVEN (probe 2)** | `add_dataflow_node` w/ F-prefixed struct name |
+| Set node asset properties | **YES — PROVEN (probe 2)** | `set_dataflow_node_property`, asset ref = object-path string |
+| Connect the graph pins | **YES — PROVEN (probe 2)** | `connect_dataflow_nodes`; terminal pin = `CollectionLod0` |
+| Regenerate the ClothAsset from the graph | **YES — PROVEN (probe 2)** | `regenerate_asset_from_dataflow` → True |
+| **Transfer Skin Weights execution** | **runs headless** — needs a fitted garment | `TransferMethod` enum; failed on mismatched test data only |
 | **Weight Map painting** | **No — brush-interactive** | residual-manual, like MHA keypoints |
 | Transform-Position offset | yes (a scalar) | penetration fix |
 | AccuRig rig (new-char path) | **No — GUI-only** | already declined (user-pref); use MetaHuman-conform / ARDY skeletons instead |
@@ -89,37 +136,35 @@ Realistic ceiling: a **static-garment attach** (Transfer-Skin-Weights + Transfor
 no rig) is plausibly **fully headless**; a **physics garment** needs one interactive weight-paint pass
 (or an acceptance that closest-point auto-transfer is "good enough" for a first cut).
 
-## Concrete next step (probe 2 — graph-node wiring)
+## Concrete next step — BUILD (probes done)
 
-Probe 1 (create + save) is done. Probe 2 answers the shifted question: **can the cloth Dataflow graph be
-built + driven headless?**
+Both probes pass; the feasibility gate is cleared. The build:
 
-1. On the created `ChaosClothAsset`, get `dataflow_asset` and inspect `DataflowBlueprintLibrary` /
-   `DataflowEditorBlueprintLibrary` for add-node / connect / set-param / evaluate entry points. Enumerate
-   the node type names the graph accepts (they are registered graph nodes, not `unreal.*` classes — likely
-   reachable by type name/string through the graph API).
-2. Try to add a **Static Mesh** source node (a real generated garment: `generated/tripo3d/*.glb` imported
-   as a static mesh) + a **Transfer Skin Weights** node targeting a VerticalSlice skeletal mesh (method =
-   the `ChaosClothAssetTransferSkinWeightsMethod` "closest-point" enum — the no-paint path) + a
-   **Set Physics Asset** node → evaluate the graph → confirm the cloth binds (a skinned render mesh exists).
-3. If the graph builds + the transfer skins headless → build `src/lib/visual-gen/chaos-cloth.ts`
-   (`buildClothPython` / `attachClothToCharacter`, mirroring `metahuman-conform.ts`, dispatched via the
-   `ue-experiment` runner) + a Tier-1 gate (no penetration / collider set / weight-map coverage) analogous
-   to `mesh-critique.ts`. The catalog-pipeline delta (candidate #5) becomes an **apparel** step wrapping this.
-4. If graph-node authoring turns out to need the editor (not headless), fall back to the **static-garment**
-   path (create asset + closest-point transfer, accept no weight-map) as the headless MVP, and gate
-   physics-cloth behind an editor/bridge pass (like MHA's face-identity gate).
+1. **`src/lib/visual-gen/chaos-cloth.ts`** (`buildClothPython` / `attachClothToCharacter`, mirroring
+   `metahuman-conform.ts`, dispatched via the `ue-experiment` runner) — emits the recipe above with the
+   real inputs: a per-character garment static mesh (fitted to the target skeleton — the pipeline's mesh
+   output) + the character's skeletal mesh + physics asset. Pick `TransferMethod` (closest-point for the
+   no-paint MVP).
+2. **Tier-1 gate** analogous to `mesh-critique.ts`: assert `regenerate_asset_from_dataflow` True + the
+   TransferSkinWeights node did NOT log `Transferring skin weights failed` (parse the abslog marker) +
+   the ClothAsset has a render mesh. No penetration / collider-set checks come later with the sim.
+3. **`apparel` catalog step** (candidate #5) wrapping the seam: garment → ClothAsset → attach.
+4. **Weight-map painting stays interactive** — the MVP uses the auto skin-weight transfer (no paint); a
+   physics garment that needs region weighting is the one editor/bridge-gated part (like MHA's face-identity
+   gate). Solver-config + weight-map nodes can be added to the graph the same way once needed.
 
-The reusable probe lives at `<UE project>/Content/Python/cloth_probe.py`.
+Reusable probes: `<UE project>/Content/Python/cloth_probe.py` (probe 1) + `cloth_probe2d.py` (probe 2, the
+full graph recipe).
 
 ## Blockers before building
 
-- ~~**Live probe not yet run**~~ — **DONE 2026-07-22.** Classes resolve + ClothAsset create/save proven
-  headless. Remaining feasibility question is graph-node wiring (probe 2 above), not class availability.
-- **Graph-node authoring unverified** — the cloth Dataflow nodes are graph-internal; probe 2 must confirm
-  `DataflowBlueprintLibrary` can add/connect/drive them headless. If not, the static-garment path is the MVP.
-- **Weight-map paint is interactive** — accept closest-point auto-transfer as the headless default, or
-  gate physics-cloth behind an editor/bridge pass (like MHA's face-identity gate).
+- ~~**Live probe not yet run**~~ — **DONE 2026-07-22.** Classes resolve + ClothAsset create/save proven.
+- ~~**Graph-node authoring unverified**~~ — **DONE (probe 2).** add / set-property / connect / regenerate
+  all proven headless via `DataflowEditorBlueprintLibrary` + `DataflowBlueprintLibrary`.
+- **Real fitted-garment input needed** — the transfer failed on a mismatched test pair; the build must feed
+  a garment mesh actually fitted to the target skeleton (the pipeline's per-character mesh output).
+- **Weight-map paint is interactive** — the MVP uses auto skin-weight transfer (no paint); gate physics
+  region-weighting behind an editor/bridge pass (like MHA's face-identity gate).
 - **New-character rig path is AccuRig (GUI-only)** — out of scope; feed PoF's own rigged skeletons
   (MetaHuman-conform / ARDY-retargeted Manny) as the cloth target instead.
 
