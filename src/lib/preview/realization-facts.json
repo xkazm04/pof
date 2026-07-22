@@ -226,6 +226,71 @@
           "note": "UE moat. Packaging engine Tier-1."
         }
       }
+    },
+    "bestiary": {
+      "reviewedAt": "2026-07-22",
+      "steps": {
+        "Stat Block": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: sith-lord/sith-acolyte/dark-marauder Stat Blocks authored (duel scale) and hydrated onto the roster — health, moveSpeed (570/600/630 cm/s -> 5.7/6.0/6.3 m/s live), damage as a melee multiplier vs the combo reference (9/12 -> 0.75 verified). UE: grunt Stat Block data exists; duel archetypes have no UE consumer yet."
+        },
+        "Concept & Role": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Archetype roles informed the roster design; text not consumed programmatically."
+        },
+        "AI Behavior": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The duel's SithBrain is code-authored, not hydrated from the AI Behavior artifacts — a natural next increment (aggression/range params from the SOR)."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "UE moat. Bestiary gate exists for the grunt archetype; duel archetypes ungated."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
+        }
+      }
+    },
+    "dialog-trees": {
+      "reviewedAt": "2026-07-22",
+      "steps": {
+        "Branch Graph": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: dialog-duel-intro authored (meaningful checker: edge integrity + terminal marking enforced) and executed live as the pre-combat overlay — both branches walked (defiant + silent action beat), world frozen while open, combat starts on the terminal END (2026-07-22). UE: dialog runtime exists (ARPGNPCActor path); this tree has no UE consumer yet."
+        },
+        "Subtitles & Choices UI": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the choices UI IS the realization (speaker header, line, clickable choices, action-beat rendering). UE: widget spec only."
+        },
+        "Conditions & Effects": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The duel tree is unconditional by design; the gatekeeper tree's skill checks are unexecuted in both targets."
+        },
+        "VO Script": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "ElevenLabs VO path exists in the program; not wired to this tree."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "UE moat. Dialog gate not yet authored for the duel tree."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
+        }
+      }
     }
   }
 }

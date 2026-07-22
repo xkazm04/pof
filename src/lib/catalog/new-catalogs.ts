@@ -24,7 +24,9 @@ export const NEW_CATALOGS: NewCatalogDef[] = [
   { catalogId: 'quests', label: 'Quests', category: 'Quests & Narrative', description: 'Structured player objectives with stages, rewards, and narrative beats.', module: 'dialogue-quests', tracks: ['logic', 'audio', 'test'],
     starters: [{ id: 'quest-ember-pact', name: 'The Ember Pact', categoryPath: ['Main'], tags: ['intro'], description: 'A 3-stage introductory fetch-and-choice quest.' }] },
   { catalogId: 'dialog-trees', label: 'Dialog Trees', category: 'Quests & Narrative', description: 'Branching conversations with conditions, effects, and voice.', module: 'dialogue-quests', tracks: ['logic', 'art-2d', 'audio', 'test'],
-    starters: [{ id: 'dialog-gatekeeper', name: 'Gatekeeper Greeting', categoryPath: ['NPC'], tags: ['intro'], description: 'A simple gate-NPC conversation with a skill check.' }] },
+    starters: [
+      { id: 'dialog-gatekeeper', name: 'Gatekeeper Greeting', categoryPath: ['NPC'], tags: ['intro'], description: 'A simple gate-NPC conversation with a skill check.' },
+      { id: 'dialog-duel-intro', name: 'Duel Challenge', categoryPath: ['Encounter'], tags: ['pre-combat'], description: 'Darth Malgrave challenges the Jedi before the arena duel — a short defiance exchange that gates combat start (browser preview scene + UE PIE).' }] },
   { catalogId: 'cutscenes', label: 'Cutscenes', category: 'Quests & Narrative', description: 'Scripted in-engine sequences for story moments.', module: 'dialogue-quests', tracks: ['animation', 'audio', 'vfx', 'test'],
     starters: [{ id: 'cutscene-prologue', name: 'Prologue: The Fall', categoryPath: ['Story'], tags: ['intro'], description: 'The opening in-engine cinematic.' }] },
   { catalogId: 'codex', label: 'Codex', category: 'Quests & Narrative', description: 'In-game encyclopedia entries unlocked by play.', module: 'dialogue-quests', tracks: ['logic', 'art-2d', 'test'],
