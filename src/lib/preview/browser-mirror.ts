@@ -57,6 +57,7 @@ export const PREVIEW_HYDRATABLE_CATALOGS = [
   'items',
   'status-effects',
   'progression-curves',
+  'loot-tables',
 ] as const;
 
 /** Steps whose data carries playable mechanics for the combat-sandbox preview. */
@@ -71,6 +72,7 @@ export const MECHANICS_STEPS = [
   'XP Sources',
   'Reward Schedule',
   'Attributes',
+  'Item Base Links',
 ] as const;
 
 export function isPreviewHydratable(catalogId: string): boolean {

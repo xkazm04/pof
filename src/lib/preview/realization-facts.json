@@ -196,6 +196,36 @@
           "note": "UE moat. Packaging engine Tier-1."
         }
       }
+    },
+    "loot-tables": {
+      "reviewedAt": "2026-07-22",
+      "steps": {
+        "Item Base Links": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: lt-SithAssassin + lt-DarkAcolyte authored with weighted entries (incl. an authored no-drop slot) and rolled live on each Sith kill — 2000-roll distribution matches the weights (80/15/5, 40/30/30). Cross-links resolve to real items entities. UE: table data seeded for the grunt only; no runtime roll verified."
+        },
+        "Rarity Odds": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The grunt's full rarity-uplift model exists; the duel's tables roll base links directly (rarity rides the linked item). Not executed as a separate stage anywhere."
+        },
+        "Balance / Drop Sim": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Drop-rate KPI math exists as data; the browser could measure real drops/hour in long sessions — a natural telemetry increment."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "UE moat. Loot map-functional tests exist; not re-run this review."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
+        }
+      }
     }
   }
 }
