@@ -136,6 +136,15 @@ export const UE_GOTCHAS: Gotcha[] = [
     source: 'research: Modular 3D Character (Stefan 3D AI)',
   },
   {
+    id: 'chaos-cloth-asset-5-8-workflow',
+    modules: ['character', '3d', 'animation'],
+    summary: 'UE 5.8 Chaos Cloth Asset: build the Dataflow graph from a preset, drive it with Transfer Skin Weights + a physics-asset collider — save it as a REUSABLE asset',
+    detail:
+      'To add clothing physics to a skeletal character in UE 5.8 (the node-based Chaos Cloth Asset editor is now the default/production cloth path, replacing the old per-mesh clothing-data tabs): (1) ALWAYS create the Cloth Asset FROM A PRESET (e.g. "Static Mesh Cloth") — starting empty wires nothing. (2) Static Mesh node: point both the SIMULATION and RENDER mesh at the garment (reuse the same optimized mesh if it is already low-poly). (3) In the editor Preview Scene set the target Skeletal Mesh so what you see matches the character. (4) Transfer Skin Weights node — this auto-skins the garment to the target character and REPLACES most manual weight painting; it has two transfer methods (skinning vs closest-point-on-surface) — closest-point often beats paint on complex garments, so try both. (5) Weight Map node paints WHERE and HOW STRONGLY physics applies (fast recipe: vertex-select half → assign, then Relax-brush the boundary; brush mirroring exists). (6) Set Physics Asset node = the collider the cloth interacts with (reuse the character\'s physics asset; a simpler collider is cheaper). (7) Simulation Solver Config tunes iteration count. (8) Fix cloth clipping INTO the body with a Transform Position node at the END of the chain (nudge the offset) — do not re-author. Reuse: SAVE the asset and it carries every node/param/material preset — duplicate it and only re-point Transfer Skin Weights at a new character to reclothe. For STATIC (no-physics) garments you need only the Transfer Skin Weights (+ optional Transform Position) node — no rig/AccuRig step. Quality checks before calling it done: no body/garment penetration, weight-map coverage matches the intended-flexible region, a physics-asset collider IS set (else the cloth passes through the body), and solver iterations are sane for the material. Headless note: 5.8 Dataflow added Python scripting + the ChaosClothComponent is Python-exposed, so the graph is scriptable — but weight-map painting is brush-interactive (a residual-manual step, like MetaHuman conform\'s keypoint align); the Transfer-Skin-Weights auto-skin is the automatable core.',
+    appliesTo: ['ue-python'],
+    source: 'research: Easy Clothing with AI (Stefan 3D AI) + UE 5.8 Chaos Cloth docs',
+  },
+  {
     id: 'niagara-effect-types-significance',
     modules: ['vfx'],
     summary: 'Cap active Niagara systems with Effect Types (significance + max-instance + visibility cull) — hidden systems still TICK',
