@@ -136,22 +136,29 @@ Realistic ceiling: a **static-garment attach** (Transfer-Skin-Weights + Transfor
 no rig) is plausibly **fully headless**; a **physics garment** needs one interactive weight-paint pass
 (or an acceptance that closest-point auto-transfer is "good enough" for a first cut).
 
-## Concrete next step — BUILD (probes done)
+## Build status — seam SCAFFOLDED 2026-07-22
 
-Both probes pass; the feasibility gate is cleared. The build:
+**`src/lib/visual-gen/chaos-cloth.ts` is built + unit-tested** (mirrors `metahuman-conform.ts`):
+- `buildClothGraphPython(opts)` — pure; emits the proven recipe (4 F-prefixed nodes → set
+  StaticMesh/SkeletalMesh/PhysicsAsset → connect with the terminal `CollectionLod0` pin → save →
+  `regenerate_asset_from_dataflow` + `evaluate_dataflow`). Optional garment-glb import (like conform) or an
+  existing /Game static mesh; optional `transferMethod` (closest-point for the no-paint MVP).
+- `attachClothToCharacter(opts)` — dispatches via the `ue-experiment` runner, **declares
+  `CHAOS_CLOTH_PLUGINS` via the new `enablePlugins` runner option** (no global `.uproject` edit), parses the
+  `POF_CLOTH_*` markers, and returns a layered `ClothResult`. **`bound` (from `evaluate_dataflow`) is the
+  Tier-1 gate** — false ⇒ the garment isn't fitted to the target skeleton (the honest failure reason).
+- Runner change: `ExperimentSpec.enablePlugins` + `buildExperimentArgs` merge extra plugins into the
+  `-EnablePlugins` flag. TDD: 13 cloth tests + 2 runner tests; full ue-experiment + visual-gen suites green
+  (157); tsc/eslint clean.
 
-1. **`src/lib/visual-gen/chaos-cloth.ts`** (`buildClothPython` / `attachClothToCharacter`, mirroring
-   `metahuman-conform.ts`, dispatched via the `ue-experiment` runner) — emits the recipe above with the
-   real inputs: a per-character garment static mesh (fitted to the target skeleton — the pipeline's mesh
-   output) + the character's skeletal mesh + physics asset. Pick `TransferMethod` (closest-point for the
-   no-paint MVP).
-2. **Tier-1 gate** analogous to `mesh-critique.ts`: assert `regenerate_asset_from_dataflow` True + the
-   TransferSkinWeights node did NOT log `Transferring skin weights failed` (parse the abslog marker) +
-   the ClothAsset has a render mesh. No penetration / collider-set checks come later with the sim.
-3. **`apparel` catalog step** (candidate #5) wrapping the seam: garment → ClothAsset → attach.
-4. **Weight-map painting stays interactive** — the MVP uses the auto skin-weight transfer (no paint); a
-   physics garment that needs region weighting is the one editor/bridge-gated part (like MHA's face-identity
-   gate). Solver-config + weight-map nodes can be added to the graph the same way once needed.
+**Remaining (not yet done):**
+1. **Live run** — `attachClothToCharacter` has NOT been run end-to-end on the editor yet; needs a real
+   garment mesh **fitted to the target skeleton** (the probe's mismatched pair only proved the mechanism).
+   The pipeline's per-character mesh output is the intended garment source.
+2. **`apparel` catalog step** (candidate #5) wrapping the seam: garment → ClothAsset → attach.
+3. **Weight-map painting stays interactive** — the MVP is auto skin-weight transfer only; a physics garment
+   that needs region weighting is the one editor/bridge-gated part (add WeightMap / SolverConfig nodes to
+   the graph the same way once needed).
 
 Reusable probes: `<UE project>/Content/Python/cloth_probe.py` (probe 1) + `cloth_probe2d.py` (probe 2, the
 full graph recipe).
