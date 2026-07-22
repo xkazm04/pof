@@ -40,6 +40,9 @@ export function StatusCell({ cell, dimmed = false }: { cell: StepCell; dimmed?: 
       : cell.judge ? `judge needed: ${cell.judge}${cell.checkerMeaningful === false ? ' · checker is shape-only' : ''}` : '',
     `pass ${counts.pass} · deferred ${counts.deferred} · pending ${counts.pending} · fail ${counts.fail}`,
     cell.browserMirror ? `browser mirror: ${cell.browserMirror} (step class also runs in the browser preview)` : '',
+    cell.realization
+      ? `realized: Browser ${cell.realization.browser} · UE ${cell.realization.ue} — ${cell.realization.note}`
+      : '',
     cell.auditNote ? `audit: ${cell.auditNote}` : '',
     cell.reason ? `reason: ${cell.reason}` : '',
   ].filter(Boolean).join('\n');
@@ -84,6 +87,40 @@ export function StatusCell({ cell, dimmed = false }: { cell: StepCell; dimmed?: 
         {cell.label}
       </span>
       <span style={{ display: 'block', fontWeight: 400, opacity: 0.75, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {cell.realization && (
+          // Realization evidence markers (per-pipeline dual-execution review):
+          // B = ran in the Browser preview, U = ran in UE. Solid = proven live,
+          // outlined = path exists but never walked, absent = no path.
+          // Letter + border style (not hue) so a red judged-fail cell still
+          // visibly reads "output RUNS in these targets, quality below bar".
+          <span data-testid="realization-markers" style={{ marginRight: 4, display: 'inline-flex', gap: 2, verticalAlign: 'middle' }}>
+            {(['browser', 'ue'] as const).map((target) => {
+              const level = cell.realization![target];
+              if (level === 'no') return null;
+              const letter = target === 'browser' ? 'B' : 'U';
+              return (
+                <span
+                  key={target}
+                  data-testid={`realization-${target}-${level}`}
+                  style={{
+                    fontSize: 8,
+                    lineHeight: '10px',
+                    width: 11,
+                    textAlign: 'center',
+                    fontWeight: 700,
+                    fontFamily: 'var(--lab-font-mono)',
+                    borderRadius: 2,
+                    ...(level === 'proven'
+                      ? { background: 'var(--lab-ink)', color: 'var(--lab-bg, #fff)' }
+                      : { border: '1px dashed var(--lab-ink)', color: 'var(--lab-ink)', opacity: 0.8 }),
+                  }}
+                >
+                  {letter}
+                </span>
+              );
+            })}
+          </span>
+        )}
         {unwired ? '—' : unpowered ? 'no engine' : cell.engine}
       </span>
     </div>

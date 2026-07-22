@@ -167,6 +167,15 @@ describe('browserMirror — dual-execution annotation', () => {
     const c = deriveCell('Brief', 'Claude', [art('Brief', 'pass')]);
     expect(c.browserMirror).toBeUndefined();
   });
+
+  it('buildSwimlane attaches realization evidence for reviewed pipelines only', () => {
+    const lane = buildSwimlane('spellbook', 'Spellbook',
+      [{ label: 'Effect Logic' }], [art('Effect Logic', 'pass', { catalogId: 'spellbook' })]);
+    expect(lane.cells[0].realization?.browser).toBe('proven');
+    const other = buildSwimlane('items', 'Items',
+      [{ label: 'Concept Brief' }], [art('Concept Brief', 'pass', { catalogId: 'items' })]);
+    expect(other.cells[0].realization).toBeUndefined();
+  });
 });
 
 describe('judge verdict merge — the content-quality layer', () => {
