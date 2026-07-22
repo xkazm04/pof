@@ -151,12 +151,18 @@ no rig) is plausibly **fully headless**; a **physics garment** needs one interac
   `-EnablePlugins` flag. TDD: 13 cloth tests + 2 runner tests; full ue-experiment + visual-gen suites green
   (157); tsc/eslint clean.
 
+**`apparel` catalog step — BUILT 2026-07-22** (candidate #5): step 07 `Apparel` in
+`src/lib/catalog/pipelines/character-pipeline.ts` (after `UE Import`, where the skeletal mesh + physics
+asset exist). `archetype: 'custom'`, manifest View of the cloth setup, `runtimeDeferred('VSCharacterApparelTest')`
+(L3 — the bind is runtime truth). Names the proven graph chain + the `chaos-cloth.ts` seam. The e2e walker
+auto-covers it (existing seeded Jinx entity); character-pipeline test updated to 11 steps + an Apparel
+assertion; catalog guards (produce-accept / e2e-coverage / spec-linter) green.
+
 **Remaining (not yet done):**
 1. **Live run** — `attachClothToCharacter` has NOT been run end-to-end on the editor yet; needs a real
    garment mesh **fitted to the target skeleton** (the probe's mismatched pair only proved the mechanism).
    The pipeline's per-character mesh output is the intended garment source.
-2. **`apparel` catalog step** (candidate #5) wrapping the seam: garment → ClothAsset → attach.
-3. **Weight-map painting stays interactive** — the MVP is auto skin-weight transfer only; a physics garment
+2. **Weight-map painting stays interactive** — the MVP is auto skin-weight transfer only; a physics garment
    that needs region weighting is the one editor/bridge-gated part (add WeightMap / SolverConfig nodes to
    the graph the same way once needed).
 

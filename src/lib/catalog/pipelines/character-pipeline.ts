@@ -154,7 +154,36 @@ registerCatalogPipeline({
       produceNote: 'Commandlet (-run=pythonscript) with a PRE-QUOTED arg string (space-in-path silently boots the fallback project). Verify saves by re-reading the asset (save_asset only_if_is_dirty gotcha).',
     },
 
-    // ── 07. Playable wire (Test Gate) ─────────────────────────────────────────
+    // ── 07. Apparel — Chaos Cloth attach (UE 5.8, headless-proven) ────────────
+    // Once the shared-skeleton character exists (UE Import), attach a simulated
+    // garment. Authored headless via `src/lib/visual-gen/chaos-cloth.ts`
+    // (buildClothGraphPython/attachClothToCharacter over the ue-experiment runner);
+    // the Chaos Cloth Dataflow graph — StaticMeshImport → TransferSkinWeights →
+    // SetPhysicsAsset → Terminal — was ground-truthed headless on UE 5.8.0
+    // (2026-07-22, docs/research/chaos-cloth-headless-spec.md). L3: whether the
+    // cloth actually binds + simulates is runtime truth, deferred to the live runner.
+    {
+      archetype: 'custom',
+      label: 'Apparel',
+      engine: 'UE Python',
+      view: { kind: 'manifest', field: 'cloth' },
+      produce: () => ({
+        data: {
+          cloth: [
+            'garment: jinx_cloak.glb → static mesh, FITTED to the imported Jinx skeleton (a mismatched garment fails the skin-weight transfer)',
+            'target: the shared-skeleton SkeletalMesh + PA collider from UE Import',
+            'method: ClosestPointOnSurface — auto skin-weight transfer, NO weight-map painting (the headless MVP)',
+            'ClothAsset: /Game/JinxHD/Cloth/CA_JinxCloak (regenerated from the Dataflow graph)',
+            'graph: StaticMeshImport → TransferSkinWeights → SetPhysicsAsset → Terminal (F-prefixed node types; terminal input pin CollectionLod0)',
+          ],
+          law: 'Authored headless via chaos-cloth.ts (buildClothGraphPython/attachClothToCharacter) over the ue-experiment runner; the Chaos Cloth Asset plugins enable per-run via ExperimentSpec.enablePlugins (no .uproject edit). evaluate_dataflow is the bind gate — false ⇒ the garment is not fitted to the target skeleton. Region weight-map painting is the one editor/bridge-gated step; the MVP uses the auto closest-point transfer.',
+        },
+      }),
+      accept: runtimeDeferred('VSCharacterApparelTest', 'cloth binds + simulates on the clothed character in a live PIE session'),
+      produceNote: 'Chaos Cloth Asset (UE 5.8) — headless authoring proven 2026-07-22 (create asset + build the Dataflow graph + regenerate, all via Python). Auto skin-weight transfer = the no-paint MVP; add WeightMap/SolverConfig nodes to the same graph for painted physics. Seam: src/lib/visual-gen/chaos-cloth.ts.',
+    },
+
+    // ── 08. Playable wire (Test Gate) ─────────────────────────────────────────
     {
       archetype: 'custom',
       label: 'Playable Wire',
@@ -174,7 +203,7 @@ registerCatalogPipeline({
       produceNote: 'L3: proven live in the standalone jinx project (PIE, 2026-07-07); deferred here until the pipeline targets the PoF UE project.',
     },
 
-    // ── 08. Game-tier convert ─────────────────────────────────────────────────
+    // ── 09. Game-tier convert ─────────────────────────────────────────────────
     {
       archetype: 'balance',
       label: 'Game-Tier Convert',
@@ -199,7 +228,7 @@ registerCatalogPipeline({
       produceNote: '~14x smaller per character at near-zero credit cost — the sustainability step for batch character production.',
     },
 
-    // ── 09. Icon 2D Art (universal step) ──────────────────────────────────────
+    // ── 10. Icon 2D Art (universal step) ──────────────────────────────────────
     {
       archetype: 'gallery',
       label: 'Icon 2D Art',
@@ -215,7 +244,7 @@ registerCatalogPipeline({
       produceNote: 'Bind to the shared icon-sets presentation family (silhouette weight, rarity frame, light direction).',
     },
 
-    // ── 10. Visual quality gate (L4) ──────────────────────────────────────────
+    // ── 11. Visual quality gate (L4) ──────────────────────────────────────────
     {
       archetype: 'custom',
       label: 'Visual Gate',
