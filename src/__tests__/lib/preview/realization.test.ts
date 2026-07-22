@@ -17,7 +17,7 @@ describe('realization audit registry', () => {
   });
 
   it('unreviewed pipelines return nothing (no fabricated evidence)', () => {
-    expect(getRealization('items', 'Concept Brief')).toBeUndefined();
+    expect(getRealization('vendors', 'Concept Brief')).toBeUndefined();
     expect(getRealization('spellbook', 'Nonexistent Step')).toBeUndefined();
   });
 

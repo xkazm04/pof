@@ -70,6 +70,7 @@ export const MECHANICS_STEPS = [
   'Applies Status',
   'XP Sources',
   'Reward Schedule',
+  'Attributes',
 ] as const;
 
 export function isPreviewHydratable(catalogId: string): boolean {

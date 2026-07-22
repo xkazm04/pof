@@ -161,6 +161,41 @@
           "note": "UE moat. Packaging engine Tier-1."
         }
       }
+    },
+    "items": {
+      "reviewedAt": "2026-07-22",
+      "steps": {
+        "Attributes": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: three saber variants (item-saber-crimson/amethyst/ember) authored in the SOR and hydrated — stats, bladeColor, meleeDamageMultiplier; loot-drop -> E-equip applies the multiplier exactly (10 base melee dealt 13 with the crimson x1.3, live 2026-07-22). UE: attribute data seeded; no runtime consumer verified for these variants."
+        },
+        "Icon 2D Art": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Real Leonardo icons served + rendered in the /layout lab. UE import unverified."
+        },
+        "Concept Brief": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Briefs exist; the browser realization consumed Attributes, not the brief text. Honest partial."
+        },
+        "3D Generation": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "glb pipeline exists (GlbViewer / TripoSR-Hunyuan-Tripo chain proven elsewhere); item meshes not loaded into the duel."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "UE moat. Items map-functional tests exist (…Maps.<Map>.<TestClass>); not re-run this review."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
+        }
+      }
     }
   }
 }
