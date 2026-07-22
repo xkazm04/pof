@@ -96,6 +96,71 @@
           "note": "UE moat. Packaging engine stages + hashes real files (Tier-1); declarations partially unrealized (Tier-2)."
         }
       }
+    },
+    "progression-curves": {
+      "reviewedAt": "2026-07-22",
+      "steps": {
+        "Concept Brief": {
+          "browser": "proven",
+          "ue": "proven",
+          "note": "Target-agnostic text consumed by both realizations."
+        },
+        "Curve Formula": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: xpToNext(L)=100×1.08^(L-1) executed live in the duel meta-loop; independent cross-check xpToNext(50)=4343 equals the Balance artifact's value. UE: VSProgressionCurveTest registered + gate pass; its assertions not audited line-by-line."
+        },
+        "XP Sources": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: kill XP = combatShare×xpToNext(min(L,85))/300 × boss 30 executed per duel win (7 XP at L1, exact). UE: data seeded, no runtime consumer verified."
+        },
+        "Reward Schedule": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: passivePoints accrue per level-up and display (+N pts); spending them is out of preview scope. UE: rewards data only."
+        },
+        "Caps & Catch-up": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The monster-XP freeze (min(L,85)) executes in the browser's kill-XP path — the soft-cap grind mechanism is live; hard cap 100 enforced. Catch-up mechanics unexecuted anywhere."
+        },
+        "Death Penalty": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Not executed in either target; a duel LOSS applying pct(band)×xpToNext(L) is a natural next browser increment."
+        },
+        "Balance": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: balance numbers cross-checked live (L50=4343 matches). UE: not asserted."
+        },
+        "Telemetry": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Envelope spec exists; neither target emits it."
+        },
+        "XP Bar UI": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the HUD XP strip (LV badge, fill ratio, xp/need tooltip, points) renders live from the hydrated curve. UE: widget spec only."
+        },
+        "Icon 2D Art": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Real icon served + rendered in the lab; UE import unverified."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. VSProgressionCurveTest registered; gate pass."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
+        }
+      }
     }
   }
 }
