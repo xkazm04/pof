@@ -61,6 +61,41 @@
           "note": "UE moat. Packaging engine stages + hashes real files (Tier-1 proven); most ueDeclarations still unrealized (Tier-2)."
         }
       }
+    },
+    "status-effects": {
+      "reviewedAt": "2026-07-22",
+      "steps": {
+        "Concept Brief": {
+          "browser": "proven",
+          "ue": "proven",
+          "note": "Target-agnostic text consumed by both realizations (dazed brief authored 2026-07-22 drives both)."
+        },
+        "Effect Logic": {
+          "browser": "proven",
+          "ue": "proven",
+          "note": "Browser: burning DoT (0.5 s ticks x 3.9375 over 4 s = the authored 31.5) + dazed (0.25x move, action block) executed live in the duel, all numbers hydrated. UE: GE_Gen_Burning + GE_Dazed built; both config-gated (StatusBurning/DazeConfig, headless 5.8, drained to L3 pass)."
+        },
+        "Balance": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the balance numbers (period/duration/tick magnitude) are exactly what the duel executed. UE: gates assert GE config; the tick-accounting assertions of VSStatusBurningEffectTest not audited line-by-line."
+        },
+        "Icon 2D Art": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Real Leonardo icons served + rendered in the /layout lab. UE-side texture import unverified (packaging Tier-2)."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Burning + Dazed gates run headless and drained to L3 pass with PER-ENTITY test names (2026-07-22 fix: status-effect.ts accept resolves data.automationName - a Knockback gate can no longer be proven by the Burning test). Knockback honestly deferred: its map-placed functional test does not enumerate headless."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine stages + hashes real files (Tier-1); declarations partially unrealized (Tier-2)."
+        }
+      }
     }
   }
 }

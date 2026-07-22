@@ -271,8 +271,16 @@ registerCatalogPipeline({
           ],
         },
       }),
-      // FVSStatusBurningEffectTest — registered automation name (not the C++ class) so the runner resolves it.
-      accept: runtimeDeferred('PoF.StatusBurning.EffectConfig', 'Functional test passes in UE'),
+      // Registered automation name (not the C++ class) so the runner resolves it. PER-ENTITY:
+      // the artifact's own `automationName` wins (a Knockback gate must never be "proven" by
+      // the Burning test); the Burning gate name stays the fallback for undeclared rows.
+      accept: (data: Record<string, unknown>) =>
+        runtimeDeferred(
+          typeof data.automationName === 'string' && data.automationName
+            ? data.automationName
+            : 'PoF.StatusBurning.EffectConfig',
+          'Status functional/config gate passes in UE (per-entity automationName)',
+        )(),
     },
 
     // ── 6. UE Packaging ───────────────────────────────────────────────────────
