@@ -1,6 +1,6 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
-import { runtimeDeferred } from '../acceptance/deferred';
+import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 
@@ -242,7 +242,7 @@ registerCatalogPipeline({
       }),
       // FVSCharacterVaelTest — defer with the REGISTERED automation name (dotted path /
       // substring), not the C++ class name, so the L3 runner resolves it.
-      accept: runtimeDeferred('PoF.CharacterVael.NPCConfig', 'NPC spawns + talks + gives quest in PIE'),
+      accept: entityRuntimeDeferred('PoF.CharacterVael.NPCConfig', 'NPC spawns + talks + gives quest in PIE'),
     },
 
     // ── 12. UE Packaging ─────────────────────────────────────────────────────

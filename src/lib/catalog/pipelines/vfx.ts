@@ -1,6 +1,6 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { minLength, fieldsPopulated, selected, minCount, withinPercent } from '../acceptance/dataCheckers';
-import { runtimeDeferred } from '../acceptance/deferred';
+import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 
@@ -237,7 +237,7 @@ registerCatalogPipeline({
           },
         };
       },
-      accept: runtimeDeferred('VSVFXPerfTest', 'Niagara system under GPU budget + AnimNotify fires correctly (RHI+Gemini)'),
+      accept: entityRuntimeDeferred('VSVFXPerfTest', 'Niagara system under GPU budget + AnimNotify fires correctly (RHI+Gemini)'),
     },
 
     // ── 10. UE Packaging ──────────────────────────────────────────────────────

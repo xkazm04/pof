@@ -1,6 +1,6 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
-import { runtimeDeferred } from '../acceptance/deferred';
+import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 
@@ -515,7 +515,7 @@ registerCatalogPipeline({
           ],
         },
       }),
-      accept: runtimeDeferred('VSFactionRepTest', 'Faction rep tier transitions verified in PIE'),
+      accept: entityRuntimeDeferred('VSFactionRepTest', 'Faction rep tier transitions verified in PIE'),
     },
 
     // ── 11. UE Packaging ──────────────────────────────────────────────────────

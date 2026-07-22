@@ -1,6 +1,6 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { fieldsPopulated, minCount, selected } from '../acceptance/dataCheckers';
-import { runtimeDeferred, visualDeferred } from '../acceptance/deferred';
+import { entityRuntimeDeferred, visualDeferred } from '../acceptance/deferred';
 import { meshGalleryCandidates } from '@/components/layout-lab/steps/shared/meshGalleryCandidates';
 
 /**
@@ -179,7 +179,7 @@ registerCatalogPipeline({
           law: 'Authored headless via chaos-cloth.ts (buildClothGraphPython/attachClothToCharacter) over the ue-experiment runner; the Chaos Cloth Asset plugins enable per-run via ExperimentSpec.enablePlugins (no .uproject edit). evaluate_dataflow is the bind gate — false ⇒ the garment is not fitted to the target skeleton. Region weight-map painting is the one editor/bridge-gated step; the MVP uses the auto closest-point transfer.',
         },
       }),
-      accept: runtimeDeferred('VSCharacterApparelTest', 'cloth binds + simulates on the clothed character in a live PIE session'),
+      accept: entityRuntimeDeferred('VSCharacterApparelTest', 'cloth binds + simulates on the clothed character in a live PIE session'),
       produceNote: 'Chaos Cloth Asset (UE 5.8) — headless authoring proven 2026-07-22 (create asset + build the Dataflow graph + regenerate, all via Python). Auto skin-weight transfer = the no-paint MVP; add WeightMap/SolverConfig nodes to the same graph for painted physics. Seam: src/lib/visual-gen/chaos-cloth.ts.',
     },
 
@@ -199,7 +199,7 @@ registerCatalogPipeline({
           ],
         },
       }),
-      accept: runtimeDeferred('VSCharacterPipelineTest', 'WASD run + SPACE roll verified in a live PIE session'),
+      accept: entityRuntimeDeferred('VSCharacterPipelineTest', 'WASD run + SPACE roll verified in a live PIE session'),
       produceNote: 'L3: proven live in the standalone jinx project (PIE, 2026-07-07); deferred here until the pipeline targets the PoF UE project.',
     },
 

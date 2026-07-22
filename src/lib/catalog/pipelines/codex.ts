@@ -1,7 +1,7 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
 import { graphValid } from '../acceptance/graphCheckers';
-import { runtimeDeferred } from '../acceptance/deferred';
+import { entityRuntimeDeferred } from '../acceptance/deferred';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
@@ -510,7 +510,7 @@ registerCatalogPipeline({
           ],
         },
       }),
-      accept: runtimeDeferred(
+      accept: entityRuntimeDeferred(
         'VSCodexUnlockTest',
         'Entry unlocks at its trigger + no spoiler leak in PIE',
       ),

@@ -1,6 +1,6 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
-import { runtimeDeferred } from '../acceptance/deferred';
+import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
 import { imageGalleryCandidates } from '@/components/layout-lab/steps/shared/imageGalleryCandidates';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
@@ -260,7 +260,7 @@ registerCatalogPipeline({
           ],
         },
       }),
-      accept: runtimeDeferred('VSIconSetAtlasTest', 'Atlas import + accessibility checks pass in UE editor'),
+      accept: entityRuntimeDeferred('VSIconSetAtlasTest', 'Atlas import + accessibility checks pass in UE editor'),
     },
 
     // ── 7. UE Packaging ───────────────────────────────────────────────────────

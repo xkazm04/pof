@@ -1,6 +1,6 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { minLength, fieldsPopulated, withinPercent, selected, minCount } from '../acceptance/dataCheckers';
-import { runtimeDeferred } from '../acceptance/deferred';
+import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 
@@ -521,13 +521,10 @@ registerCatalogPipeline({
       // artifact's own `automationName` wins (e.g. off-arc-fp → PoF.GenForcePush.DazeConfig)
       // so a Force Push gate can never be "proven" by the Fireball test; the Fireball gate
       // name stays the fallback for rows that haven't declared one.
-      accept: (data: Record<string, unknown>) =>
-        runtimeDeferred(
-          typeof data.automationName === 'string' && data.automationName
-            ? data.automationName
-            : 'PoF.GenFireball.EffectConfig',
-          'Spell functional/config gate passes in UE (per-entity automationName)',
-        )(),
+      accept: entityRuntimeDeferred(
+        'PoF.GenFireball.EffectConfig',
+        'Spell functional/config gate passes in UE (per-entity automationName)',
+      ),
     },
 
     // ── 11. UE Packaging ──────────────────────────────────────────────────────

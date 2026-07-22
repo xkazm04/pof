@@ -1,6 +1,6 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { minLength, fieldsPopulated, withinPercent, selected, minCount } from '../acceptance/dataCheckers';
-import { runtimeDeferred } from '../acceptance/deferred';
+import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 
@@ -398,7 +398,7 @@ registerCatalogPipeline({
           ],
         },
       }),
-      accept: runtimeDeferred('VSVendorTransactionTest', 'Buy/sell adjusts wallet + stock in PIE'),
+      accept: entityRuntimeDeferred('VSVendorTransactionTest', 'Buy/sell adjusts wallet + stock in PIE'),
     },
 
     // ── 11. UE Packaging ──────────────────────────────────────────────────────

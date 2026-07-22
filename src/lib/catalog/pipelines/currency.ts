@@ -1,7 +1,7 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
 import { faucetSinkBalanced } from '../acceptance/invariants';
-import { runtimeDeferred } from '../acceptance/deferred';
+import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 
@@ -276,7 +276,7 @@ registerCatalogPipeline({
         },
       }),
       // FVSCurrencyWalletTest — registered automation name (not the C++ class) so the runner resolves it.
-      accept: runtimeDeferred('PoF.Currency.WalletRules', 'Wallet functional test passes in UE'),
+      accept: entityRuntimeDeferred('PoF.Currency.WalletRules', 'Wallet functional test passes in UE'),
     },
 
     // ── 7. UE Packaging ───────────────────────────────────────────────────────

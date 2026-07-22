@@ -3,7 +3,7 @@ import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/da
 import { linksResolve } from '../acceptance/linkCheckers';
 import { sumReconciles } from '../acceptance/invariants';
 import { allOf } from '../acceptance/combinators';
-import { runtimeDeferred } from '../acceptance/deferred';
+import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 
@@ -624,7 +624,7 @@ registerCatalogPipeline({
         },
       }),
       // Registered automation name (enumerated from UE): the AshenForest zone-setup gate.
-      accept: runtimeDeferred('AshenForestSetupTest', 'AshenForest zone setup test passes in UE'),
+      accept: entityRuntimeDeferred('AshenForestSetupTest', 'AshenForest zone setup test passes in UE'),
     },
 
     // ── 12. UE Packaging ──────────────────────────────────────────────────────
