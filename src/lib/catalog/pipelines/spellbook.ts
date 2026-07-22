@@ -516,12 +516,18 @@ registerCatalogPipeline({
           ],
         },
       }),
-      // FVSGenFireballEffectTest — defer with the REGISTERED automation name (dotted path /
-      // substring), not the C++ class name, so the L3 runner resolves it (verified live on 5.8).
-      accept: runtimeDeferred(
-        'PoF.GenFireball.EffectConfig',
-        'Fireball functional test passes in UE (FVSGenFireballEffectTest)',
-      ),
+      // Defer with the REGISTERED automation name (dotted path / substring), not the C++
+      // class name, so the L3 runner resolves it (verified live on 5.8). PER-ENTITY: the
+      // artifact's own `automationName` wins (e.g. off-arc-fp → PoF.GenForcePush.DazeConfig)
+      // so a Force Push gate can never be "proven" by the Fireball test; the Fireball gate
+      // name stays the fallback for rows that haven't declared one.
+      accept: (data: Record<string, unknown>) =>
+        runtimeDeferred(
+          typeof data.automationName === 'string' && data.automationName
+            ? data.automationName
+            : 'PoF.GenFireball.EffectConfig',
+          'Spell functional/config gate passes in UE (per-entity automationName)',
+        )(),
     },
 
     // ── 11. UE Packaging ──────────────────────────────────────────────────────

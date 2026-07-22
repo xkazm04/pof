@@ -5,17 +5,61 @@
     "spellbook": {
       "reviewedAt": "2026-07-22",
       "steps": {
-        "Concept Brief": { "browser": "proven", "ue": "proven", "note": "Target-agnostic text; consumed by both realizations (browser duel mechanics derive from it; UE GA authoring cites it)." },
-        "Effect Logic": { "browser": "proven", "ue": "proven", "note": "Browser: Force Push + Fireball hydrated and cast live in the duel (damage/cost/cooldown/cast-window executed, 2026-07-22). UE: GA_ForcePush/GA_Fireball exist in the GAS program." },
-        "Targeting": { "browser": "proven", "ue": "proven", "note": "Browser: cone resolution + projectile flight executed from artifact geometry (55° cone, 20 m/s bolt). UE: cone target-find in GA_ForcePush." },
-        "Balance": { "browser": "proven", "ue": "proven", "note": "Browser: balance numbers (damage/mana/cooldown) played live and tunable with graded round-trip. The DPS-tier model itself is executed nowhere — numbers only." },
-        "Combo / Synergy": { "browser": "probable", "ue": "probable", "note": "Neither target has executed the combo links; browser duel has combo chaining infrastructure, UE has montage sections. Not walked for spellbook entities." },
-        "Applies Status": { "browser": "proven", "ue": "probable", "note": "Browser: Force Push's secondaryStatus link (status-effects::status-dazed) executed live in the duel — hit → 0.35 s landing → 1.6 s daze (0.25× move, actions blocked), all numbers hydrated from the two catalogs (2026-07-22). UE: GAS apply-GE path exists, this link ungated." },
-        "Animation": { "browser": "proven", "ue": "probable", "note": "Browser: procedural cast clips (castPush/castThrow) play per skill — code-authored, no assets. UE: the ARDY text→motion chain is proven for movement/melee but spellbook cast anims were never generated (audited engine: None)." },
-        "VFX": { "browser": "proven", "ue": "probable", "note": "Browser: push ring / projectile / sparks execute per cast. UE: VFX rows are text specs; declared Niagara assets unrealized (packaging Tier-2 audit)." },
-        "Icon 2D Art": { "browser": "proven", "ue": "probable", "note": "Real Leonardo icons served + rendered in the /layout lab (a browser surface). UE-side texture import not verified (packaging declarations unrealized)." },
-        "Test Gate": { "browser": "no", "ue": "probable", "note": "UE moat — no browser meaning. Gates declared L3, deferred: never run for spellbook." },
-        "UE Packaging": { "browser": "no", "ue": "proven", "note": "UE moat. Packaging engine stages + hashes real files (Tier-1 proven); most ueDeclarations still unrealized (Tier-2)." }
+        "Concept Brief": {
+          "browser": "proven",
+          "ue": "proven",
+          "note": "Target-agnostic text; consumed by both realizations (browser duel mechanics derive from it; UE GA authoring cites it)."
+        },
+        "Effect Logic": {
+          "browser": "proven",
+          "ue": "proven",
+          "note": "Browser: Force Push + Fireball hydrated and cast live in the duel (damage/cost/cooldown/cast-window executed, 2026-07-22). UE: GA_ForcePush/GA_Fireball exist in the GAS program."
+        },
+        "Targeting": {
+          "browser": "proven",
+          "ue": "proven",
+          "note": "Browser: cone resolution + projectile flight executed from artifact geometry (55° cone, 20 m/s bolt). UE: cone target-find in GA_ForcePush."
+        },
+        "Balance": {
+          "browser": "proven",
+          "ue": "proven",
+          "note": "Browser: balance numbers (damage/mana/cooldown) played live and tunable with graded round-trip. The DPS-tier model itself is executed nowhere — numbers only."
+        },
+        "Combo / Synergy": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Neither target has executed the combo links; browser duel has combo chaining infrastructure, UE has montage sections. Not walked for spellbook entities."
+        },
+        "Applies Status": {
+          "browser": "proven",
+          "ue": "proven",
+          "note": "Browser: Force Push's secondaryStatus link executed live in the duel (2026-07-22). UE: GE_Dazed + Landed() apply + ActivationBlockedTags + 0.25x shamble BUILT and config-gated (Project.Functional Tests.PoF.GenForcePush.DazeConfig, Result=Success headless 5.8; drained to L3 pass). PIE arena observation of the live launch->landing->daze chain remains planned."
+        },
+        "Animation": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: procedural cast clips (castPush/castThrow) play per skill — code-authored, no assets. UE: the ARDY text→motion chain is proven for movement/melee but spellbook cast anims were never generated (audited engine: None)."
+        },
+        "VFX": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: push ring / projectile / sparks execute per cast. UE: VFX rows are text specs; declared Niagara assets unrealized (packaging Tier-2 audit)."
+        },
+        "Icon 2D Art": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Real Leonardo icons served + rendered in the /layout lab (a browser surface). UE-side texture import not verified (packaging declarations unrealized)."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat - no browser meaning. DazeConfig gate registered, run headless and drained to L3 pass via the spawn executor (2026-07-22); the fuller PIE arena checks stay planned. Spec fix: spellbook Test Gate accept now resolves the automation name PER ENTITY (data.automationName) so a Force Push gate can never be proven by the Fireball test."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine stages + hashes real files (Tier-1 proven); most ueDeclarations still unrealized (Tier-2)."
+        }
       }
     }
   }
