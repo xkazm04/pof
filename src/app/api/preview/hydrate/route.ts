@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { listArtifacts } from '@/lib/pipeline-artifacts-db';
+import { listEntitySummaries } from '@/lib/catalog/headless';
 import {
   isPreviewHydratable,
   MECHANICS_STEPS,
@@ -49,7 +50,14 @@ export async function GET(req: NextRequest) {
       if (!mechanicsSteps.has(a.step)) continue;
       (entities[a.entityId] ??= {})[a.step] = a.data;
     }
-    return withCors(apiSuccess({ catalogId, steps: [...mechanicsSteps], entities }));
+    // Display names from the seeded entity summaries (artifacts don't carry them).
+    let names: Record<string, string> = {};
+    try {
+      names = Object.fromEntries(listEntitySummaries(catalogId).map((e) => [e.id, e.name]));
+    } catch {
+      /* unseeded catalog — ids stand in for names */
+    }
+    return withCors(apiSuccess({ catalogId, steps: [...mechanicsSteps], entities, names }));
   } catch (e) {
     return withCors(apiError(e instanceof Error ? e.message : 'Preview hydrate failed', 500));
   }
