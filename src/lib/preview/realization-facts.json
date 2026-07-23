@@ -856,6 +856,31 @@
           "note": "UE moat. Packaging engine Tier-1."
         }
       }
+    },
+    "input-schemes": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Action Mapping": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "input-kbm (new entity, authored to match the duel's REAL scheme): the SOR owns the code→action table; hydration rebinds the live Input handlers (Input.applyBindings) — the SOR alt bind KeyF fired interact in Playwright (8/8), proving data drives the handlers, not a mirror. UE: AARPGPlayerController builds the same scheme (F→IA_Interact) in C++; hardware press unconfirmed (see Test Gate note)."
+        },
+        "Context Stack": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: additive priority stack (gameplay 0 < dialogue 5 < menu 10) gates edge-triggered one-shots via Input.contextGate; pressed state clears on switch (held-across never fires) — menu/dialogue suppression Playwright-proven. UE: PushInputContext/PopInputContext + input modes exist in AARPGPlayerController; not runtime-observed per-context."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. VSInputRebindTest pass with abslog evidence (2026-07-17). F-key incident root-cause hunt (2026-07-23): BP_VSPlayerController IS a child of AARPGPlayerController and no rebind save exists; fix shipped = EnsureDefaultMappingContext() from C++ OnPossess (BP BeginPlay-override-proof) + runtime QueryKeysMappedToAction diagnostic — hardware F still needs the user's PIE confirmation (unverifiable headless)."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "no",
+          "note": "input-gamepad UE Packaging currently fail (judge-owned); not exercised this review."
+        }
+      }
     }
   }
 }
