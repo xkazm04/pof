@@ -164,7 +164,13 @@ author the mapping into the IMC asset itself.
 
 ## 7. Open threads (not blocking, tracked)
 
-- **Test_Inventory HUD placement red** (pre-existing, bisect-proven) — repair the placement.
+- **Test_Inventory placements — REPAIRED 2026-07-23**: the shared-PIE-world root cause
+  (map enemies dead by run time) is fixed by own-fixture spawns + CleanUp in
+  VSHUDFunctionalTest / VSCombatGrayBoxPathTest / VSFunctionalTest (pof-exp `03b3baa`);
+  HUD + GrayBoxPath now PASS there. Remaining: the Test_Inventory placement of the
+  full-slice VSFunctionalTest fails that map's LAYOUT (movement path blocked, no loot
+  spawner) — home VerticalSlice placement is green; decide whether that duplicate
+  placement should exist at all.
 - **UE polish**: blade glow material (flat stand-in today), duel-theme combat-state playback,
   PIE arena behavioral tests (launch→landing→daze observation), Fireball real icon (one
   Leonardo gen), UE quest tracking/rewards mirror.
@@ -177,35 +183,22 @@ author the mapping into the IMC asset itself.
   deltas, `DT_Codex` + the unlock/spoiler GEs are unseeded, `BP_TutorialBeat_LearntoDodge`
   does not exist, and `LS_PrologueTheFall` / `UARPGCinematicComponent` are unbuilt. The
   browser leg proved every mechanic; these are the UE-side halves.
-- **Dodge i-frame window — partly resolved, one conflict left (Group B).** The duel's
-  hand-tuned 400 ms is gone: `player.js` now runs the `AM_Roll` DodgeWindow notify window
-  from the `player-movement` SOR — 2/30 s in, ~4 frames long = **133 ms** — verified live
-  (a hit at 0.033 s lands, 0.133 s is ignored, 0.300 s lands again). But that exposes a real
-  disagreement rather than closing it: UE authors **two** dodge-invulnerability mechanisms —
-  the montage notify (133 ms, authoritative when `bUseNotifyDrivenInvulnerability`) and
-  `AARPGCharacterBase::DodgeInvulnerabilityDuration` (**300 ms**, the fallback cap) — and
-  `tutorial-beats` teaches the 300 ms one. The duel can only execute one, and it now
-  executes the notify. So the dodge lesson currently trains a window 2.25× longer than the
-  duel grants. Someone owning both rows has to pick which mechanism is canon and make the
-  other cite it; until then the lesson resolves its training strike against its own number
-  and never calls the combat damage path, so nothing is silently wrong in play.
-- **Generated-asset route is down (blocks any served-file claim).** Every request to
-  `/api/visual-gen/asset/*` returns a 500 HTML error page — including an invalid name that
-  should 400, so the route module itself fails to load. The route and `safeAssetName` are
-  both clean and unmodified in git, and `/api/visual-gen/assets` (the manifest) still works,
-  so this looks like dev-server state rather than code. It blocked the `character-pipeline`
-  browser leg (row 32): the real `bestof_fg095.glb` exists but could not be observed
-  rendering, so it is recorded `probable`, not `proven`. Re-check after a dev-server
-  restart — and note it would also silence served icons/meshes in the `/layout` lab.
+- **Dodge i-frame canon — RESOLVED 2026-07-23**: player-movement's AM_Roll DodgeWindow
+  notify (66.7 ms onset, 133 ms) is canon (its artifact says "authoritative"); 300 ms is
+  the fallback cap only. tutorial-dodge artifacts now cite it (Success/Skip/Fail flipped
+  fail→pass on coherence; gate re-drained to pass) and the browser lesson trains the
+  same [66.7, 200] ms window the duel executes.
+- **Generated-asset route is down (dev-server state, diagnosis CONFIRMED)**: the 500 body
+  shows `Jest worker encountered 2 child process exceptions` — Next's compiler worker pool
+  crashed (likely under the 4-parallel-session load). Fix = restart the :3001 dev server,
+  then re-verify `/api/visual-gen/asset/*` and finish the character-pipeline browser proof.
 - **Group B UE consumers**: `UARPGStateTreeAIComponent` now walks the authored graph and is
   gate-covered, but no in-map enemy runs it yet (the duel's FSM proof is browser-side);
   Malgrave has no gate of his own; and `player-movement`'s Playable Gate (L4) still needs a
   live editor + PIE to run.
-- **Group C persistence is still scattered**: `factions` / `codex` / `tutorial` / `cutscene`
-  each own a `saber-arpg.<domain>.v1` localStorage key rather than a `save.js` section — a
-  deliberate choice while Group D's envelope was uncommitted. Folding them in is a clean
-  follow-up (add the four keys to `LEGACY_KEYS` + register sections), exactly the migration
-  path `save.js` already runs for achievements/wallet/progression.
+- **Group C persistence — FOLDED 2026-07-23**: factions/codex/tutorial/cutscene are
+  envelope sections now (schema v2, additive no-op migration + straggler sweep for v1
+  envelopes coexisting with later legacy keys; Playwright 13/13).
 - **Cutscene gallery replay unbuilt**: the Skip / Replay Rules step authors a Main Menu →
   Gallery replay in a dedicated preview map with all world-state mutations suppressed; the
   browser realizes the skip half only.
