@@ -50,6 +50,13 @@ describe('browser-mirror capability map', () => {
     expect(PREVIEW_HYDRATABLE_CATALOGS).toContain('spellbook');
     expect(isPreviewHydratable('spellbook')).toBe(true);
     expect(isPreviewHydratable('combat-map')).toBe(true);
-    expect(isPreviewHydratable('characters')).toBe(false);
+    // Group B — Characters & Motion (reviewed 2026-07-23)
+    expect(isPreviewHydratable('characters')).toBe(true);
+    expect(isPreviewHydratable('state-graph')).toBe(true);
+    expect(isPreviewHydratable('vfx')).toBe(true);
+    expect(isPreviewHydratable('player-movement')).toBe(true);
+    // Still no browser path: character-pipeline's deliverables are generated meshes the
+    // duel has no loader for — deliberately NOT claimed (see realization-facts.json).
+    expect(isPreviewHydratable('character-pipeline')).toBe(false);
   });
 });
