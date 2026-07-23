@@ -291,6 +291,36 @@
           "note": "UE moat. Packaging engine Tier-1."
         }
       }
+    },
+    "currencies": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Economy Rules": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the kill-drop faucet executes live in the duel — structured killDrop block (35% chance, 2.8 G x victim monsterLevel) authored additively (graded pass) and rolled per kill; 10k-roll distribution matched 35.44%/8.42 vs 35%/8.40 (2026-07-23). UE: wallet rules gated (below) but the faucet roll has no UE runtime consumer."
+        },
+        "Wallet UI Integration": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: wallet renders per the SOR display rule — thousands separators + the mandatory 'g' mark (1,284g exactly as the artifact's example); persists across duels. UE: WBP_Wallet spec only."
+        },
+        "Balance": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Faucet/sink per-hour model is data; the duel exercises only the kill faucet. A long-session drops/hour measurement is the natural telemetry increment."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. VSCurrencyWalletTest (PoF.Currency.WalletRules) run + drained to L3 pass (2026-07-23)."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
+        }
+      }
     }
   }
 }

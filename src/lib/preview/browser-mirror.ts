@@ -58,6 +58,7 @@ export const PREVIEW_HYDRATABLE_CATALOGS = [
   'status-effects',
   'progression-curves',
   'loot-tables',
+  'currencies',
   'bestiary',
   'dialog-trees',
 ] as const;
@@ -76,6 +77,7 @@ export const MECHANICS_STEPS = [
   'Attributes',
   'Item Base Links',
   'Branch Graph',
+  'Economy Rules',
 ] as const;
 
 export function isPreviewHydratable(catalogId: string): boolean {
