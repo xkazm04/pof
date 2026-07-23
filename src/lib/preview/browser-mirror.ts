@@ -73,6 +73,11 @@ export const PREVIEW_HYDRATABLE_CATALOGS = [
   'codex',
   'tutorial-beats',
   'cutscenes',
+  // Group A — World & Arena
+  'combat-map',
+  'props',
+  'materials',
+  'zone-map',
 ] as const;
 
 /** Steps whose data carries playable mechanics for the combat-sandbox preview. */
@@ -116,6 +121,24 @@ export const MECHANICS_STEPS = [
   'Success / Skip / Fail',
   'Beat Sheet & Shot List',
   'Skip / Replay Rules',
+  // Group A — World & Arena
+  'Encounter Layout',
+  'Hazards',
+  'Waves & Spawns',
+  'Win/Loss Rules',
+  'Material',
+  'Parameters',
+  'Surface Type',
+  'Instance Library',
+  'Interaction',
+  'Destruction States',
+  'Loot on Destroy',
+  'Collision & Physics',
+  'VFX / Audio',
+  'Macro Layout & POIs',
+  'Minimap UI',
+  'Encounter Placement',
+  'Area Level & Density',
 ] as const;
 
 export function isPreviewHydratable(catalogId: string): boolean {

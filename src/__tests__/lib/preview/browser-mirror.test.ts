@@ -49,6 +49,7 @@ describe('browser-mirror capability map', () => {
   it('hydratable catalogs are a known subset', () => {
     expect(PREVIEW_HYDRATABLE_CATALOGS).toContain('spellbook');
     expect(isPreviewHydratable('spellbook')).toBe(true);
-    expect(isPreviewHydratable('materials')).toBe(false);
+    expect(isPreviewHydratable('combat-map')).toBe(true);
+    expect(isPreviewHydratable('characters')).toBe(false);
   });
 });
