@@ -1186,6 +1186,61 @@
           "note": "UE moat. Packaging engine Tier-1."
         }
       }
+    },
+    "vfx": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Behavior": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the authored emitter table IS the duel's pooled impact burst — 12 CoreFlash + 48 Embers + 20 Smoke = the artifact's 80 spawn total, each emitter carrying its own lifetime (0.18 / 0.6 / 0.9 s) so the burst decays in the authored stages instead of all at once; embers fly at the authored 300-600 cm/s under -980 cm/s^2 and the colour ramp runs hot->soot. 34/34 Playwright checks (2026-07-23). Shape gap closed this review: the checker's behavior.lifetime/spawnRate keys had been renamed by an earlier content pass. UE: NS_FireImpactBurst + its AnimNotify are declared, not observed firing."
+        },
+        "GPU / LOD Budget": {
+          "browser": "proven",
+          "ue": "proven",
+          "note": "Browser: the artifact's distance table is the executed LOD policy — LOD1 halves the spawn to 40, LOD2 skips the burst entirely (the artifact's own budget mechanism, not a cosmetic fade). Bands agree with UARPGVFXLodRules EDGE FOR EDGE: 15 m reads LOD1 (band start), 35 m still LOD1, 36 m culls. UE: PoF.VFX.VSVFXPerfTest asserts exactly those six boundary cases and passes headless on 5.8 (Result={Success}, re-run 2026-07-23). The ms figures themselves are measured-and-authored, executed nowhere — the browser cannot measure UE GPU time and does not pretend to; gpuPct now carries the worst-case preset peak (0.46 of the 0.48 ceiling)."
+        },
+        "Sound Hook": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Shape gap closed (cue/activation renamed to the checker's cues/animNotifyBinding). The cue itself is unbuilt in both targets — no SW_FireImpact_* waves exist, and the duel's hit sound is its own synth. Not claimed."
+        },
+        "Concept Brief": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Target-agnostic text; the browser realization consumed Behavior + the LOD table, not the brief."
+        },
+        "Mesh / Sprite": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "A sprite candidate is selected; the browser burst renders additive points, not the authored sprite asset — honest divergence for a procedural runtime."
+        },
+        "Material": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "MI_FireImpactBurst is declared; the browser uses one additive PointsMaterial, so the per-emitter blend modes are approximated, not executed."
+        },
+        "Variants": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Small/Med/Large presets are authored (and their ms spread derived); the duel fires one size."
+        },
+        "Icon 2D Art": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "A candidate is selected; no duel surface shows a VFX icon."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. PoF.VFX.VSVFXPerfTest re-run headless on 5.8 this review (Result={Success})."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "UE moat. NS_/MI_/SM_ declarations exist; assets not verified this review."
+        }
+      }
     }
   }
 }
