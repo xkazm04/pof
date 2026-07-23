@@ -591,6 +591,26 @@
           "note": "UE moat. Packaging manifest pass."
         }
       }
+    },
+    "screen-flow": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Navigation Graph": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "screen-HUD: the SOR graph (13 nodes / 22 edges) hydrates into the duel's flow tracker; every executed shell transition is validated against the edge set (violations recorded, zero observed). Playwright 7/7: main_menu→new_game→ingame_hud→in_game, Continue edge taken when a save-points envelope exists, death_screen⇄respawn cycle legal, BFS reachability clean. UE: PreGameMenu/HUD/death exist in FeatureLab but no graph-driven navigation controller."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. VSScreenFlowTest pass with abslog evidence (2026-07-17) — asserts the z-ordering contract (HUD z1 < overlay z3 < pause z4, 50% dim), not graph traversal."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging manifest pass."
+        }
+      }
     }
   }
 }

@@ -80,6 +80,7 @@ export const PREVIEW_HYDRATABLE_CATALOGS = [
   'zone-map',
   // Group D — Systems & Shell
   'save-points',
+  'screen-flow',
 ] as const;
 
 /** Steps whose data carries playable mechanics for the combat-sandbox preview. */
@@ -147,6 +148,7 @@ export const MECHANICS_STEPS = [
   'Versioning & Migration',
   'Corruption Recovery',
   'Slots UI',
+  'Navigation Graph',
 ] as const;
 
 export function isPreviewHydratable(catalogId: string): boolean {
