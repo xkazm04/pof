@@ -63,6 +63,7 @@ export const PREVIEW_HYDRATABLE_CATALOGS = [
   'quests',
   'hud-elements',
   'achievements',
+  'crafting-recipes',
   'bestiary',
   'dialog-trees',
 ] as const;
@@ -91,6 +92,7 @@ export const MECHANICS_STEPS = [
   'Trigger & Progress',
   'Reward Binding',
   'Unlock Toast',
+  'Inputs & Output',
 ] as const;
 
 export function isPreviewHydratable(catalogId: string): boolean {

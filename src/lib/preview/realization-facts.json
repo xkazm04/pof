@@ -456,6 +456,36 @@
           "note": "UE moat. Packaging engine Tier-1."
         }
       }
+    },
+    "crafting-recipes": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Inputs & Output": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: recipe-custom-saber EXECUTES in the pre-game menu — crystal (blade color) + lens (flat damage bonus) + goldFee compose a Custom Lightsaber; craft cost exact (154+121+60=335 from vendor pricing + recipe fee); the composed item's stats execute in the duel (silver blade #e8ecf2, melee 10x1.2+5=17 exact, 2026-07-23). Components are real items entities sold by the vendor. UE: crafting runtime exists (VSCraftingTest); this recipe unseeded there."
+        },
+        "Cost & Yield": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: total cost = component list prices (vendor 1.1 x Value rule) + recipe goldFee, deducted exactly (500 -> 165)."
+        },
+        "Recipe UI": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the menu craft row IS the recipe UI — component pickers with prices in tooltips, live-priced Craft button, equip-on-success. UE: WBP_CraftingStation spec only."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. VSCraftingTest run + drained to L3 pass (2026-07-23) — covers the health-potion recipe runtime; the saber recipe is browser-only so far."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
+        }
+      }
     }
   }
 }

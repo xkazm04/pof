@@ -49,7 +49,9 @@ export const NEW_CATALOGS: NewCatalogDef[] = [
       { id: 'status-dazed', name: 'Dazed', categoryPath: ['Control'], tags: ['cc', 'disorient'], description: 'Post-impact disorientation: heavy move-speed slow + no attacks for a short window — State.Dazed, immunity State.Immune.Daze. Applied by Force Push (spellbook::off-arc-fp) as its landing follow-up.' }] },
   // ── Systems ──
   { catalogId: 'crafting-recipes', label: 'Crafting Recipes', category: 'Systems', description: 'Combine inputs into output items with conditions.', module: 'arpg-inventory', tracks: ['logic', 'art-2d', 'vfx', 'audio', 'test'],
-    starters: [{ id: 'recipe-health-potion', name: 'Health Potion', categoryPath: ['Alchemy'], tags: ['consumable'], description: 'Combine herb + vial into a healing potion.' }] },
+    starters: [
+      { id: 'recipe-health-potion', name: 'Health Potion', categoryPath: ['Alchemy'], tags: ['consumable'], description: 'Combine herb + vial into a healing potion.' },
+      { id: 'recipe-custom-saber', name: 'Custom Lightsaber', categoryPath: ['Artifice'], tags: ['duel'], description: 'Compose a lightsaber from a kyber crystal (blade color) + a focusing lens (damage bonus). Browser preview: craftable in the pre-game menu, applied stats visible in the duel.' }] },
   { catalogId: 'vendors', label: 'Vendors', category: 'Systems', description: 'NPC merchants with inventory, pricing, and restock rules.', module: 'arpg-inventory', tracks: ['logic', 'art-2d', 'audio', 'test'],
     starters: [{ id: 'vendor-wandering-merchant', name: 'Wandering Merchant', categoryPath: ['Shop'], tags: [], description: 'A roaming general-goods vendor.' }] },
   { catalogId: 'progression-curves', label: 'Progression Curves', category: 'Systems', description: 'XP, level, or mastery curves driving advancement.', module: 'arpg-progression', tracks: ['logic', 'art-2d', 'vfx', 'audio', 'test'],

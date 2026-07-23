@@ -157,6 +157,27 @@ const _ORIGINAL_ITEMS: ItemData[] = [
     description: 'A marauder\'s blade burning furnace-orange, forged for reckless swings.',
     effect: '+20% melee damage.',
   },
+  /* ── Saber-crafting components (crystal = color, lens = damage bonus) ── */
+  {
+    id: 'crystal-amethyst', name: 'Amethyst Kyber Crystal', type: 'Material', subtype: 'Crystal', rarity: 'Rare',
+    stats: [{ label: 'Attunement', value: 'Violet', numericValue: 50, maxValue: 100 }],
+    description: 'A kyber crystal singing in deep violet. Defines the blade color of a crafted lightsaber.',
+  },
+  {
+    id: 'crystal-argent', name: 'Argent Kyber Crystal', type: 'Material', subtype: 'Crystal', rarity: 'Rare',
+    stats: [{ label: 'Attunement', value: 'Silver', numericValue: 50, maxValue: 100 }],
+    description: 'A rare colorless kyber crystal burning silver-white. Defines the blade color of a crafted lightsaber.',
+  },
+  {
+    id: 'lens-basic', name: 'Basic Focusing Lens', type: 'Material', subtype: 'Lens', rarity: 'Common',
+    stats: [{ label: 'Focus', value: '+0 dmg', numericValue: 10, maxValue: 100 }],
+    description: 'A standard focusing lens. No damage bonus - it merely makes the blade coherent.',
+  },
+  {
+    id: 'lens-advanced', name: 'Advanced Focusing Lens', type: 'Material', subtype: 'Lens', rarity: 'Uncommon',
+    stats: [{ label: 'Focus', value: '+5 dmg', numericValue: 45, maxValue: 100 }],
+    description: 'A precision-ground lens that tightens the blade to a killing edge. +5 damage per strike.',
+  },
   /* ── KOTOR Melee Weapons ──────────────────────────────────────────────── */
   {
     id: 'kotor-vibroblade', name: 'Vibroblade', type: 'Weapon', subtype: 'Sword', rarity: 'Common',
