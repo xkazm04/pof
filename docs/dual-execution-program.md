@@ -1,8 +1,7 @@
 # Dual-Execution Program — progress handbook
 
-> **Status 2026-07-23: 27 of ~31 pipelines summarized below** (Groups A + C + D landed; B in
-> flight — its `state-graph` and `vfx` entries are already in the registry, which holds 29;
-> their table rows land with that session). This is the working handbook for the
+> **Status 2026-07-23: 32 of ~31 pipelines summarized below** (Groups A + B + C + D all
+> landed — the registry holds 32). This is the working handbook for the
 > browser⇄UE dual-execution program: what exists, how a domain review runs, and how the
 > remaining domains are grouped for PARALLEL sessions. Companion spec (the why + contract
 > rules): `docs/research/dual-execution-preview-spec.md`. Live registry (the machine truth
@@ -63,6 +62,11 @@ the realization registry. **Nothing is claimed without runtime evidence** (see �
 | 25 | codex | The Sundering entry is HIDDEN until discovered, then its sealed span renders the authored redaction stamp — lock glyph + SOR amber #E0A867 (computed rgb(224,168,103)) — until the reveal swaps in the authored Order-facility conclusion; the SOR's own grammarCheck sentence holds in the page. Both grants keep the two-caller/one-guard shape, so the second caller is a genuine no-op and each sting plays once (Playwright 21/21) | VSCodexUnlockTest drained → L3 pass; DT_Codex + unlock/spoiler GEs unrealized |
 | 26 | tutorial-beats | The dodge lesson RUNS on its authored numbers: 500 ms prompt, 700 ms wind-up, contact resolved against the roll's 300 ms i-frame window, 3500 ms window lapsing to retry, concede at attempt 3 (never a 4th, never a trap), 800 ms hold-to-skip (a 300 ms tap does not). All three terminals grant Introduced + persist, so the beat never re-arms; beat_started/attempt/completed/failed/skipped all emitted (Playwright 27/27) | VSTutorialComprehensionTest drained → L3 pass; BP_TutorialBeat unrealized |
 | 27 | cutscenes | The prologue beat sheet PLAYS: 7 contiguous beats over the authored 90 s, markers fired at 20.4/38.0/58.4/72.2/82.3/90.0 s vs authored 20/38/58/72/82/90, camera staged per each shot note (incl. the authored HALF orbit, not a full one). A hold inside the 3 s grace is IGNORED not queued; a completed 0.5 s hold runs the SAME End path with unreached markers suppressed; skip and full watch converge; a watched prologue is bypassed (Playwright 27/27) | VSCutsceneTimingTest drained → L3 pass; LS_PrologueTheFall + UARPGCinematicComponent unrealized |
+| 28 | state-graph | The authored 6-state FSM IS the Sith's spine — every band/timer parsed from the artifact, none duplicated in code: alert radius 800 cm latches the target and NoLOS 4 s clears it, IdleDwell 4 s → PATROL with real waypoint traversal, ATTACK enters ≤175 cm and leaves only past >250 cm (hysteresis holds in the gap), FLEE under 25% latched once per engagement for 6 s with BOTH authored exits walked, DEAD terminal; `State.AI.*` tags on the HUD (Playwright 30/30) | UARPGStateGraphRules + the runtime component had DRIFTED (flee .20, one 150 cm range, 5 s cooldown) → rewritten to the artifact's numbers; VSStateGraphTest now asserts every constant + a full component walk, headless pass |
+| 29 | vfx | The authored Niagara system IS the pooled impact burst: 12+48+20 = 80 particles at LOD0, per-emitter lifetimes 0.18/0.6/0.9 s so it decays in stages, embers at 300–600 cm/s under −980 cm/s², and the LOD table band-for-band with UE **including the edges** (15 m → LOD1, 35 m still LOD1, 36 m culls); LOD1 halves the spawn, LOD2 skips the burst entirely (Playwright 34/34) | VSVFXPerfTest re-run headless — it asserts the same six boundary cases the browser now mirrors |
+| 30 | player-movement | The asset steps stay editor-Python, but the FEEL they tune is now dual-executed: walk 6.0 / sprint 9.0 m/s over SprintSpeedInterpTime, AccelerationFromIdle 40.96, Braking 24, RotationRate 720→360 deg/s, stamina drain 20/s (32 over 1.6 s) + regen 15/s + empty bar cannot sustain a sprint, and the roll's i-frames are the **AM_Roll notify window** (hit at 0.033 s lands, 0.133 s ignored, 0.300 s lands) — closing a real 0.40 s vs 0.133 s divergence (Playwright 26/26) | Values mirror AARPGCharacterBase CDO + the player_movement constants (cited in the artifact); Playable Gate is L4 and still needs a live editor |
+| 31 | characters | A named row is an INDIVIDUAL, not a second balance surface: `char-darth-malgrave` seeded thin on numbers and single-sourcing bestiary-sith-lord. His identity/outfit execute on the live boss — robe #1a1016 (hood follows), trim #7a1020, blade #ff2a2a — while hp/damage/speed stay the archetype's (50 / 12 / 600 cm/s, cross-checked); an unauthored roster member is left untouched (Playwright 24/24) | PoF.CharacterVael.NPCConfig re-run headless (Result=Success); Malgrave himself is honestly ungated |
+| 32 | character-pipeline | ⚠ Config-complete only — NOT browser-proven. Both shape gaps closed (Game-Tier Convert's faceLimit/textureSize/sizeMB, UE Import's three Interchange `created` paths), so the Jinx row is fully graded. The real mesh exists (`bestof_fg095.glb`) but was NOT observed rendering: the duel vendors no glTF loader, and the `/layout` GlbViewer path was blocked by the asset-route outage in §7 — recorded `probable`, never claimed | UE imports were performed on the standalone jinx project, not re-verified here; Visual Gate correctly deferred |
 
 ## 4. The domain-review loop (the recipe every session follows)
 
@@ -105,11 +109,29 @@ Landed (rows 17–20 above): SOR courtyard layout + fire-floor + waves/shield + 
 params (`materialspec.js`), zone frame + minimap (`zonemap.js`/`minimap.js`). Loot hydration
 now parses the full base-selection model (bases + ilvl bands). UE follow-ups in §7.
 
-### Group B — Characters & Motion (characters, character-pipeline, player-movement, state-graph, vfx)
-Touches: `rig.js`, `clips.js`, `animation/`, `fx/vfx.js`, UE anim/BP systems (ARDY chain).
-Shape: named-character presentation (Vael/Malgrave visuals), movement-feel params from
-player-movement, anim state graphs driving clip transitions, VFX specs into the pooled fx.
-⚠ Heaviest UE overlap (anim quality program) — the known-weak domain; scope browser-first.
+### Group B — Characters & Motion — ✅ COMPLETE 2026-07-23 (rows 28–32 above)
+Landed: state-graph (`data/stategraph.js` — the authored FSM became the Sith's decision
+spine in `ai/brain.js`, with `State.AI.*` tags surfaced on the HUD), vfx (`data/vfxspec.js`
+driving the pooled burst in `fx/vfx.js`), player-movement (`data/movement.js` feeding the
+shared `CharacterBase` — sprint/stamina added, i-frames corrected), characters
+(`data/characters.js` + additive material handles on `rig.js`). character-pipeline is
+config-complete but honestly NOT browser-proven (row 32).
+
+**Lesson — the code-as-data mirror rots silently.** Two UE rule libraries existed precisely
+so the runtime and the gate would share one truth (`UARPGStateGraphRules`,
+`UARPGVFXLodRules`), and one of them had drifted from its artifact: flee 0.20 vs the
+authored 0.25, a single 150 cm attack range where the artifact authors a 175/250 hysteresis
+band, a 5 s alert cooldown vs a 4 s idle dwell. Nothing was red — the gate asserted the
+stale constants, so it passed. Mirroring a number into code is not the same as *binding* to
+it: when a review finds a rule library, diff its constants against the artifact before
+trusting either side, and make the gate assert the authored values by name so the next
+drift fails loudly.
+
+**Lesson — offline defaults can fake a green suite.** Every hydration module mirrors its
+artifact offline (the contract requires it), which means a value-for-value check passes
+*identically* whether hydration ran or silently 404'd. Two of these suites "passed" their
+whole number block while `live` was false. Gate every browser suite on the live flag (and
+the entity id) before asserting any value.
 
 ### Group C — Narrative & Meta — ✅ COMPLETE 2026-07-23 (rows 24–27 above)
 Landed: factions (`data/factions.js` — standing ladder + rep deltas, and the tier discount
@@ -155,12 +177,30 @@ PIE confirmation; the diagnostic log now names the dead link instantly if it per
   deltas, `DT_Codex` + the unlock/spoiler GEs are unseeded, `BP_TutorialBeat_LearntoDodge`
   does not exist, and `LS_PrologueTheFall` / `UARPGCinematicComponent` are unbuilt. The
   browser leg proved every mechanic; these are the UE-side halves.
-- **Dodge i-frame window has two owners**: `tutorial-beats` authors a 300 ms window
-  (`iFrameWindowMs`) and the duel's own combat i-frames run 400 ms (`player.js`
-  `ROLL_IFRAME_START/END`). The lesson resolves its training strike against the SOR's 300 ms
-  so the authored number is what executes, and never calls the combat damage path — but the
-  two numbers should be reconciled when Group B reviews `player-movement`, which is where
-  the roll's real window belongs.
+- **Dodge i-frame window — partly resolved, one conflict left (Group B).** The duel's
+  hand-tuned 400 ms is gone: `player.js` now runs the `AM_Roll` DodgeWindow notify window
+  from the `player-movement` SOR — 2/30 s in, ~4 frames long = **133 ms** — verified live
+  (a hit at 0.033 s lands, 0.133 s is ignored, 0.300 s lands again). But that exposes a real
+  disagreement rather than closing it: UE authors **two** dodge-invulnerability mechanisms —
+  the montage notify (133 ms, authoritative when `bUseNotifyDrivenInvulnerability`) and
+  `AARPGCharacterBase::DodgeInvulnerabilityDuration` (**300 ms**, the fallback cap) — and
+  `tutorial-beats` teaches the 300 ms one. The duel can only execute one, and it now
+  executes the notify. So the dodge lesson currently trains a window 2.25× longer than the
+  duel grants. Someone owning both rows has to pick which mechanism is canon and make the
+  other cite it; until then the lesson resolves its training strike against its own number
+  and never calls the combat damage path, so nothing is silently wrong in play.
+- **Generated-asset route is down (blocks any served-file claim).** Every request to
+  `/api/visual-gen/asset/*` returns a 500 HTML error page — including an invalid name that
+  should 400, so the route module itself fails to load. The route and `safeAssetName` are
+  both clean and unmodified in git, and `/api/visual-gen/assets` (the manifest) still works,
+  so this looks like dev-server state rather than code. It blocked the `character-pipeline`
+  browser leg (row 32): the real `bestof_fg095.glb` exists but could not be observed
+  rendering, so it is recorded `probable`, not `proven`. Re-check after a dev-server
+  restart — and note it would also silence served icons/meshes in the `/layout` lab.
+- **Group B UE consumers**: `UARPGStateTreeAIComponent` now walks the authored graph and is
+  gate-covered, but no in-map enemy runs it yet (the duel's FSM proof is browser-side);
+  Malgrave has no gate of his own; and `player-movement`'s Playable Gate (L4) still needs a
+  live editor + PIE to run.
 - **Group C persistence is still scattered**: `factions` / `codex` / `tutorial` / `cutscene`
   each own a `saber-arpg.<domain>.v1` localStorage key rather than a `save.js` section — a
   deliberate choice while Group D's envelope was uncommitted. Folding them in is a clean

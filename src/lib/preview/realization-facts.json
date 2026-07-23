@@ -1361,6 +1361,66 @@
           "note": "UE moat. BP_/SK_/DT_ declarations exist for Vael; Malgrave's are declared, not built."
         }
       }
+    },
+    "character-pipeline": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Game-Tier Convert": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Shape gap closed this review: the checker's gameTier.faceLimit/textureSize/sizeMB had been nested under convertParams/sizes by a content pass — surfaced without restating content, row now passes. The convert itself (Tripo convert_model on the rigged task, 60 MB -> 4.3 MB) is real work already performed on the standalone jinx project, but nothing in this program re-ran or measured it, so it is not claimed as executed here."
+        },
+        "UE Import": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "UE-realization step — no browser meaning. Shape gap closed (the three Interchange imports the row describes are now listed flat as `created`: one master carrying mesh+skeleton+idle, two anim-only takes bound to it). The one-skeleton binding law is the row's real content; the imports were performed on the standalone jinx project, not verified here."
+        },
+        "3D Generation": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "A REAL generated mesh exists and is selected (bestof_fg095.glb, Tripo v3.1-20260211 HD, in generated/triposr/). It is NOT claimed as browser-executed: the duel renders a procedural rig and has no glTF loader vendored, and the /layout lab's GlbViewer path — the browser surface that would have shown it — could not be exercised because /api/visual-gen/asset/* is returning 500 for every request (route module fails to load; unrelated to this review, see the program handbook's open threads). Claiming 'proven' off a file's existence is exactly what this registry exists to prevent."
+        },
+        "Concept 2D": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Real generated concepts exist with a selection; the same asset-serving outage blocked observing them render this review."
+        },
+        "Face Gate 2D": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The gate decision is authored (close-up crop, sclera/pupils/brows criteria per canon charpipe-face-gate); the judging itself is human/VLM, executed in neither runtime."
+        },
+        "Face Gate 3D": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Headless close-up head renders are the authored gate; not re-run this review."
+        },
+        "Rig & Clips": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The Tripo auto-rig + preset takes are real (task id recorded); the browser plays code-authored clips instead, which is a divergence rather than a mirror."
+        },
+        "Apparel": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Authored spec; unexecuted in both targets."
+        },
+        "Playable Wire": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The standalone jinx project wired a WASD pawn on this mesh (see project_jinx_standalone); not re-verified here and never wired in the duel."
+        },
+        "Icon 2D Art": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "A candidate is selected; no duel surface consumes it."
+        },
+        "Visual Gate": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "L4 visual gate — needs a rendered frame judged by eye; correctly deferred, not run this review."
+        }
+      }
     }
   }
 }
