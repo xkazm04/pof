@@ -1,6 +1,8 @@
 # Dual-Execution Program — progress handbook
 
-> **Status 2026-07-23: 23 of ~31 pipelines reviewed** (Groups A + D landed; B/C sessions in flight). This is the working handbook for the
+> **Status 2026-07-23: 27 of ~31 pipelines summarized below** (Groups A + C + D landed; B in
+> flight — its `state-graph` and `vfx` entries are already in the registry, which holds 29;
+> their table rows land with that session). This is the working handbook for the
 > browser⇄UE dual-execution program: what exists, how a domain review runs, and how the
 > remaining domains are grouped for PARALLEL sessions. Companion spec (the why + contract
 > rules): `docs/research/dual-execution-preview-spec.md`. Live registry (the machine truth
@@ -30,7 +32,7 @@ the realization registry. **Nothing is claimed without runtime evidence** (see �
 | UE gates | `Source/PoF/Test/**` + `entityRuntimeDeferred` accepts | per-entity automation names (`data.automationName`), drained via spawn executor |
 | Audio pipeline | `POST /api/audio-gen` (elevenlabs) → `/api/audio-asset` | real generation + serving; UE import via `Content/Python/import_duel_audio.py` |
 
-## 3. Reviewed pipelines (23) — the evidence in one line each
+## 3. Reviewed pipelines (27) — the evidence in one line each
 
 | # | Pipeline | Browser proof | UE proof |
 |---|---|---|---|
@@ -57,6 +59,10 @@ the realization registry. **Nothing is claimed without runtime evidence** (see �
 | 21 | save-points | Versioned autosave envelope replaces the scattered localStorage keys: v0→v1 legacy migration EXECUTES, newer-schema saves refused + write-locked (never clobbered — a real bug the suite caught), corruption→fresh, SOR-hydrated 10 s throttle, menu Slots-UI line (Playwright 11/11) | PoF.SavePoints.RoundTrip drained via spawn executor → L3 pass (field-for-field UARPGSaveGame round-trip) |
 | 22 | screen-flow | screen-HUD's Navigation Graph (13 nodes/22 edges) is the shell-transition LAW: every executed transition validated against SOR edges (zero violations), save-conditioned Continue branch, death⇄respawn cycle, BFS reachability (Playwright 7/7) | VSScreenFlowTest already runtime-verified (z-order contract; graph traversal not covered — honest note) |
 | 23 | input-schemes | NEW input-kbm entity authored from the duel's REAL scheme; SOR rebinds the live handlers (KeyF alt FIRED — data-driven, not a mirror); context stack (menu/dialogue) gates one-shots, pressed state cleared on switch (Playwright 8/8) | VSInputRebindTest pass; F-key root cause narrowed (BP controller IS the C++ child, no stale rebind save) → EnsureDefaultMappingContext from OnPossess + runtime key-map diagnostic; hardware F needs user PIE confirmation |
+| 24 | factions | Ashen Order standing EARNS and PRICES: authored deltas execute per duel event (+25 kill / +50 rare-elite / +75 sparring win = exactly 175 a run), ladder derived from SOR thresholds with the inclusive seam proven (2999 Neutral vs 3000 Friendly), and the tier discount is the price charged — 352g list → 282g at Exalted (−20% exact); Hated closes the shop (Playwright 24/24) | VSFactionRepTest drained → L3 pass; AddRepPoints has no runtime consumer for these deltas |
+| 25 | codex | The Sundering entry is HIDDEN until discovered, then its sealed span renders the authored redaction stamp — lock glyph + SOR amber #E0A867 (computed rgb(224,168,103)) — until the reveal swaps in the authored Order-facility conclusion; the SOR's own grammarCheck sentence holds in the page. Both grants keep the two-caller/one-guard shape, so the second caller is a genuine no-op and each sting plays once (Playwright 21/21) | VSCodexUnlockTest drained → L3 pass; DT_Codex + unlock/spoiler GEs unrealized |
+| 26 | tutorial-beats | The dodge lesson RUNS on its authored numbers: 500 ms prompt, 700 ms wind-up, contact resolved against the roll's 300 ms i-frame window, 3500 ms window lapsing to retry, concede at attempt 3 (never a 4th, never a trap), 800 ms hold-to-skip (a 300 ms tap does not). All three terminals grant Introduced + persist, so the beat never re-arms; beat_started/attempt/completed/failed/skipped all emitted (Playwright 27/27) | VSTutorialComprehensionTest drained → L3 pass; BP_TutorialBeat unrealized |
+| 27 | cutscenes | The prologue beat sheet PLAYS: 7 contiguous beats over the authored 90 s, markers fired at 20.4/38.0/58.4/72.2/82.3/90.0 s vs authored 20/38/58/72/82/90, camera staged per each shot note (incl. the authored HALF orbit, not a full one). A hold inside the 3 s grace is IGNORED not queued; a completed 0.5 s hold runs the SAME End path with unreached markers suppressed; skip and full watch converge; a watched prologue is bypassed (Playwright 27/27) | VSCutsceneTimingTest drained → L3 pass; LS_PrologueTheFall + UARPGCinematicComponent unrealized |
 
 ## 4. The domain-review loop (the recipe every session follows)
 
@@ -105,11 +111,20 @@ Shape: named-character presentation (Vael/Malgrave visuals), movement-feel param
 player-movement, anim state graphs driving clip transitions, VFX specs into the pooled fx.
 ⚠ Heaviest UE overlap (anim quality program) — the known-weak domain; scope browser-first.
 
-### Group C — Narrative & Meta (codex, factions, cutscenes, tutorial-beats)
-Touches: `dialogUI.js`, `menu.js` (new sections), toasts, quest-like data modules.
-Shape: codex entries unlocked by achievements/kills (menu subtree), faction reputation from
-duel outcomes, a scripted intro cutscene (camera moves + dialog), tutorial beat prompts on
-first actions. Mostly browser + config gates.
+### Group C — Narrative & Meta — ✅ COMPLETE 2026-07-23 (rows 24–27 above)
+Landed: factions (`data/factions.js` — standing ladder + rep deltas, and the tier discount
+wired into `data/vendor.js` so it is the price actually charged), codex (`data/codex.js` +
+`ui/codexUI.js` reader with the redaction/reveal span swap, plus two synthesized stings in
+`audio/sound.js`), tutorial-beats (`data/tutorial.js` — the dodge lesson state machine driven
+from the main loop's sandbox), cutscenes (`data/cutscene.js` + `ui/cutsceneUI.js` — the
+prologue sequence, letterbox and hold-to-skip, with `hud.setCinematic()` suppressing the HUD).
+All four UE gates were already registered and drained; the browser leg was the missing half.
+
+**Lesson for later groups — clock domains.** Anything the SOR states in milliseconds as a
+*UX* timing (a wind-up, an attempt window, a hold-to-skip, a cutscene timecode) must run on
+REAL elapsed time, not the sim `dt`. The loop clamps `dt` to 50 ms, so on a frame-starved
+renderer sim time drifts to ~half wall-clock and every authored millisecond silently
+stretches — which is how the first tutorial run "failed" a correct 800 ms hold.
 
 ### Group D — Systems & Shell — ✅ COMPLETE 2026-07-23 (rows 21–23 above)
 save-points (`data/save.js` envelope + sections), screen-flow (`data/screenflow.js`
@@ -135,5 +150,24 @@ PIE confirmation; the diagnostic log now names the dead link instantly if it per
   `PoF.Materials.ArenaMasters` (MI parameter assertions) are named but never registered/run;
   `VSArenaSliceRulesTest` (waves + hazard ticks + shield at runtime) is scaffold-only.
   The browser leg proved the mechanics; these gates are the UE-side completion.
+- **Group C UE consumers**: all four gates pass, but the runtime consumers behind them are
+  unrealized — `UARPGFactionSubsystem::AddRepPoints` has no caller for the authored duel
+  deltas, `DT_Codex` + the unlock/spoiler GEs are unseeded, `BP_TutorialBeat_LearntoDodge`
+  does not exist, and `LS_PrologueTheFall` / `UARPGCinematicComponent` are unbuilt. The
+  browser leg proved every mechanic; these are the UE-side halves.
+- **Dodge i-frame window has two owners**: `tutorial-beats` authors a 300 ms window
+  (`iFrameWindowMs`) and the duel's own combat i-frames run 400 ms (`player.js`
+  `ROLL_IFRAME_START/END`). The lesson resolves its training strike against the SOR's 300 ms
+  so the authored number is what executes, and never calls the combat damage path — but the
+  two numbers should be reconciled when Group B reviews `player-movement`, which is where
+  the roll's real window belongs.
+- **Group C persistence is still scattered**: `factions` / `codex` / `tutorial` / `cutscene`
+  each own a `saber-arpg.<domain>.v1` localStorage key rather than a `save.js` section — a
+  deliberate choice while Group D's envelope was uncommitted. Folding them in is a clean
+  follow-up (add the four keys to `LEGACY_KEYS` + register sections), exactly the migration
+  path `save.js` already runs for achievements/wallet/progression.
+- **Cutscene gallery replay unbuilt**: the Skip / Replay Rules step authors a Main Menu →
+  Gallery replay in a dedicated preview map with all world-state mutations suppressed; the
+  browser realizes the skip half only.
 - **Judge-owned fails**: many artifact rows carry strict-judge sub-90 verdicts; content-quality
   raising is a separate campaign (see `project_green_loop_campaign`).
