@@ -81,7 +81,8 @@ export const NEW_CATALOGS: NewCatalogDef[] = [
     starters: [{ id: 'iconset-abilities', name: 'Ability Icons', categoryPath: ['Abilities'], tags: [], description: 'A coherent ability-icon family.' }] },
   // ── Input & Platform ──
   { catalogId: 'input-schemes', label: 'Input Schemes', category: 'Input & Platform', description: 'Bindings and feel for one input device family.', module: 'input-handling', tracks: ['logic', 'art-2d', 'test'],
-    starters: [{ id: 'input-gamepad', name: 'Gamepad Default', categoryPath: ['Gamepad'], tags: [], description: 'The default gamepad binding scheme.' }] },
+    starters: [{ id: 'input-gamepad', name: 'Gamepad Default', categoryPath: ['Gamepad'], tags: [], description: 'The default gamepad binding scheme.' },
+      { id: 'input-kbm', name: 'Keyboard & Mouse Default', categoryPath: ['Keyboard & Mouse'], tags: [], description: 'The default keyboard+mouse binding scheme (mouse-aim ARPG).' }] },
   // ── Onboarding ──
   { catalogId: 'tutorial-beats', label: 'Tutorial Beats', category: 'Onboarding', description: 'Single scripted teaching moments.', module: 'arpg-ui', tracks: ['logic', 'art-2d', 'vfx', 'audio', 'test'],
     starters: [{ id: 'tutorial-dodge', name: 'Learn to Dodge', categoryPath: ['Combat'], tags: [], description: 'Teach the dodge input in a sandbox.' }] },
