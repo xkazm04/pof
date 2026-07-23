@@ -881,6 +881,51 @@
           "note": "input-gamepad UE Packaging currently fail (judge-owned); not exercised this review."
         }
       }
+    },
+    "state-graph": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "State Graph": {
+          "browser": "proven",
+          "ue": "proven",
+          "note": "The authored 6-state FSM IS the Sith's decision spine in the duel. Browser: every band/threshold/timer is PARSED out of this artifact (nothing duplicated in code) and executed live — perception latches TargetActor inside the 800 cm alert radius and clears it after NoLOSDuration 4 s; IdleDwellTimer 4 s -> PATROL with real waypoint traversal; CHASE->ATTACK at <=175 cm and back only past >250 cm (the authored hysteresis holds in the gap); FLEE under HealthPct 0.25 latched once per engagement for 6 s with BOTH authored exits walked (escaped -> IDLE, cornered -> re-engage); DEAD terminal. 30/30 Playwright checks (2026-07-23). UE: UARPGStateGraphRules + UARPGStateTreeAIComponent were DRIFTED from this artifact (flee .20, single 150 cm range, 5 s cooldown) and were rewritten to the authored numbers; PoF.StateGraph.VSStateGraphTest now asserts every constant plus a full component walk and passes headless on 5.8 (Result={Success})."
+        },
+        "Transition Rules": {
+          "browser": "proven",
+          "ue": "proven",
+          "note": "Guards are read from this step's transition list (chase->attack enter band, attack->chase exit band, ->flee threshold + bFleeUsed latch, idle->patrol dwell, chase->idle NoLOS). Same guards are the C++ predicates the gate asserts. The leash term is authored but unexecuted in either target (the duel arena has no post to leash to) — honest partial."
+        },
+        "Hook Points": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: each state exposes its State.AI.<Name> tag and the HUD foe rows render it live — hooks key off the tag, never off an imperative call, which is the step's whole contract. UE: the component exposes CurrentState for the same tag, but no AnimBP/Niagara/SFX binding was observed firing off it."
+        },
+        "Blackboard Schema": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "The keys the guards read (TargetActor, TargetInAlertRadius, HealthPct, IdleDwellTimer, NoLOSDuration, FleeTimerExpired, bFleeUsed) are all live values in the browser spine. The wider authored key set (waypoint queue, stagger, montage-in-progress) is only partly realized; UE holds the same subset on the component."
+        },
+        "Persistence": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Shape gap closed this review (the checker's defeatedTag key had been renamed to defeatMutation by an earlier content pass; renamed back, no content restated). The GUID-scoped defeat/LootDropped save model itself is executed in neither target — the duel has no spawner GUIDs."
+        },
+        "Icon 2D Art": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "A selected candidate exists; no duel surface consumes an FSM icon."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. PoF.StateGraph.VSStateGraphTest rebuilt against the authored constants and re-run headless on 5.8 (Result={Success}, 2026-07-23); artifact already sat at L3 pass and the evidence is now current AND far stronger (constants + hysteresis gap + flee latch + full component walk)."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "UE moat. ST_/BB_/ABP_EnemyAI_AMCombo1 are declared; the C++ component + rules are real and compiled, the .uassets were not verified this review."
+        }
+      }
     }
   }
 }
