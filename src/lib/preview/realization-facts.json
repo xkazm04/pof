@@ -1241,6 +1241,126 @@
           "note": "UE moat. NS_/MI_/SM_ declarations exist; assets not verified this review."
         }
       }
+    },
+    "player-movement": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Blend Space Grid": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "The step's ASSET build (11-sample strafe grid) is editor-Python and stays deferred — a browser cannot author a BlendSpace. What this review made dual-executable is the FEEL the grid is tuning, authored onto the artifact from AARPGCharacterBase + the player_movement constants (cited in the data, not invented): the duel now runs WalkSpeed 6.0 m/s, SprintSpeed 9.0 m/s over SprintSpeedInterpTime, AccelerationFromIdle 40.96 m/s^2, BrakingDeceleration 24 m/s^2, RotationRateIdle 720 deg/s easing to 360 at pace, and the stamina pool (drain 20/s measured at 32 over 1.6 s, regen 15/s, empty bar cannot sustain a sprint). UE: those properties are the live CDO values on AARPGCharacterBase, but no PIE run was observed this review."
+        },
+        "AM_Roll Montage": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the roll's i-frames are now the AM_Roll DodgeWindow notify window (start 2/30 s, ~4 frames) rather than a hand-tuned guess — a hit at 0.033 s lands, at 0.133 s is ignored, at 0.300 s lands again, verified live. This closed a real divergence: the browser had been granting 0.40 s of invulnerability where the montage authors 0.133 s. DodgeCooldown 1 s and DodgeStaminaCost 25 also execute. UE: the montage build itself is editor-Python (deferred)."
+        },
+        "Mesh + Skeleton": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "Editor-Python verify of BP_VSPlayer/IMC/IA assets — no browser meaning."
+        },
+        "Mixamo Source": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "Human-confirmed FBX drop — no browser meaning."
+        },
+        "Import Mixamo Clips": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "Editor-Python FBX import; deferred awaiting the editor."
+        },
+        "IK Rigs": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "Editor-Python IK rig + retargeter build; deferred."
+        },
+        "Retarget Clips": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "Editor-Python batch retarget; deferred."
+        },
+        "PoFEditor Build": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "Library-symbol probe; deferred."
+        },
+        "ABP_VSPlayer": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "AnimBP authoring via UPoFAnimBPAuthoringLibrary; deferred. The browser's locomotion is code-authored clips, which is a divergence, not a mirror."
+        },
+        "Playable Gate": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "L4 visual gate: PIE + injected WASD/Sprint/Roll + 4-frame variance. Needs a live editor; not run this review."
+        }
+      }
+    },
+    "characters": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Concept & Role": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "char-darth-malgrave seeded + authored this review as the duel's named boss. Browser: role/identity execute (Boss encounter role, npcId DarthMalgrave, dialogue dialog-duel-intro). Vael's own brief carries a judge-owned sub-90 verdict (content campaign, not this review)."
+        },
+        "Stat Block": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Deliberately NOT a second balance surface: Malgrave's row single-sources bestiary-sith-lord and names it. Verified live that the row's 50 hp / 12 damage / 600 cm/s equal the archetype's and that the boss in the arena runs those archetype numbers after his presentation is applied. UE: DT_AttributeDefaults row is declared (attributeRowName DarthMalgrave), not seeded/verified this review."
+        },
+        "Material / Outfit": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the authored outfit retints the live rig — robe #1a1016 (hood follows), trim #7a1020, blade #ff2a2a — verified on the boss in the arena. rig.js additively exposes material handles so this can apply after hydration. UE: MI_ declared only."
+        },
+        "Behavior (NPC)": {
+          "browser": "proven",
+          "ue": "proven",
+          "note": "Browser: role + npcId + dialogue binding hydrate and scope correctly (an unauthored roster member is left untouched). Shape gap closed on BOTH rows this review — the checker's dialogueBinding key had been moved under behavior.dialogue.host by a content pass. UE: PoF.CharacterVael.NPCConfig re-run headless on 5.8 (Result={Success}) — it asserts the AARPGNPCActor identity/role/indicator contract this step describes. Malgrave's NPCRole is honestly None (a hostile boss offers no interaction); 'Boss' is the encounter role."
+        },
+        "VO": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Three lines authored and hydrated (the duel-open line is parsed and exposed), but nothing speaks them yet — no VO audio and no trigger consumes the line. Not claimed as executed."
+        },
+        "Concept 2D Art": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Selected candidate exists; no duel surface renders a character concept."
+        },
+        "3D & Rig": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The duel rig is procedural code, not the authored skeletal mesh — an honest divergence, not a mirror."
+        },
+        "Locomotion Anim": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Clip names are authored; the browser plays code-authored clips of its own."
+        },
+        "Combat Anim": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Montage names are authored; the browser's combo is code-authored."
+        },
+        "Icon 2D Art (portrait)": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "A deterministic seed preview is selected — no real generation exists, and no duel surface shows a portrait yet."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. PoF.CharacterVael.NPCConfig re-run headless on 5.8 this review (Result={Success}). It covers VAEL; Malgrave has no gate of his own — honestly ungated."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "UE moat. BP_/SK_/DT_ declarations exist for Vael; Malgrave's are declared, not built."
+        }
+      }
     }
   }
 }

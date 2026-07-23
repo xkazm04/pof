@@ -85,6 +85,8 @@ export const PREVIEW_HYDRATABLE_CATALOGS = [
   // Group B — Characters & Motion
   'state-graph',
   'vfx',
+  'player-movement',
+  'characters',
 ] as const;
 
 /** Steps whose data carries playable mechanics for the combat-sandbox preview. */
@@ -162,6 +164,12 @@ export const MECHANICS_STEPS = [
   'Behavior',
   'GPU / LOD Budget',
   'Sound Hook',
+  'Blend Space Grid',
+  'AM_Roll Montage',
+  'Behavior (NPC)',
+  'Material / Outfit',
+  'VO',
+  'Concept & Role',
 ] as const;
 
 export function isPreviewHydratable(catalogId: string): boolean {
