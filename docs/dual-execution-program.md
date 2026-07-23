@@ -1,6 +1,6 @@
 # Dual-Execution Program — progress handbook
 
-> **Status 2026-07-23: 20 of ~31 pipelines reviewed** (Group A landed; B/C/D sessions in flight). This is the working handbook for the
+> **Status 2026-07-23: 23 of ~31 pipelines reviewed** (Groups A + D landed; B/C sessions in flight). This is the working handbook for the
 > browser⇄UE dual-execution program: what exists, how a domain review runs, and how the
 > remaining domains are grouped for PARALLEL sessions. Companion spec (the why + contract
 > rules): `docs/research/dual-execution-preview-spec.md`. Live registry (the machine truth
