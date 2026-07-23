@@ -551,6 +551,46 @@
           "note": "UE moat. Packaging engine Tier-1."
         }
       }
+    },
+    "save-points": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "State Schema": {
+          "browser": "proven",
+          "ue": "proven",
+          "note": "save-bonfire: browser realizes the discrete-only versioned envelope ('saber-arpg.autosave', SchemaVersion 1) over registered sections (progression/wallet/achievements); Playwright round-trip proven (Lv3+777g reload). UE: UARPGSaveGame field-for-field round-trip in the SavePoints gate."
+        },
+        "Save Triggers": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: autosaves on settled discrete mutations share the SOR 10 s AutoSaveThrottleCooldown (hydrated live from globalThrottle.seconds); throttle suppression + forced end-of-duel flush + pagehide flush Playwright-proven. UE: subsystem contract authored; bonfire interact trigger not runtime-observed."
+        },
+        "Versioning & Migration": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: v0 (legacy scattered keys) → v1 envelope migration executes for real (legacy keys removed, state carried); newer-schema (v2) save REFUSED and write-locked so it is never clobbered — a real bug the Playwright suite caught. UE: CurrentSaveVersion asserted in the gate; no cross-version migration exercised."
+        },
+        "Corruption Recovery": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: unparseable envelope discarded to fresh (logged, game keeps running) — Playwright-proven. UE: empty-buffer→nullptr anti-corruption seam asserted in the gate; CRC ladder not exercised."
+        },
+        "Slots UI": {
+          "browser": "proven",
+          "ue": "no",
+          "note": "Browser: pre-game menu shows the autosave slot line (Lv/gold/unlocks/time) from autosaveSummary(); rendered text Playwright-verified. UE: WBP_SaveSlots not built."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. PoF.SavePoints.RoundTrip drained via spawn executor to L3 pass (1 passed, 2026-07-23)."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging manifest pass."
+        }
+      }
     }
   }
 }
