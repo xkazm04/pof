@@ -386,6 +386,41 @@
           "note": "UE moat. Packaging engine Tier-1."
         }
       }
+    },
+    "hud-elements": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "State Logic": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the health-bar state ladder EXECUTES per the SOR — thresholds, flat state colors (#8F9E5C/#CA5636/#E89A46), pulse periods (1.2s/0.6s) and chevron counts all parsed from the artifact and verified live at 100%/20%/8% (2026-07-23). Ladder keyed off TARGET hp per spec. UE: the C++ HUD widget exists; ladder spec not asserted there."
+        },
+        "Animation": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: display fill lerps at the SOR interpRate 6 (cosmetic) with death snapping to 0; luminance pulse (brightness, not hue — the colorblind cue) per spec."
+        },
+        "Data Binding": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The browser bar binds directly to the character model (no GAS); the delegate contract is UE-specific."
+        },
+        "Wireframe": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Real Lucid Origin wireframe renders in the lab gallery."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "UE moat. VSHUDFunctionalTest is REGISTERED in two maps: the VerticalSlice placement PASSES; the Test_Inventory placement FAILS ('enemy health bar did not update within 3s') — bisect-proven PRE-EXISTING (reproduces without the 2026-07-23 dialogue-widget fallback). Gate honestly red until that placement is repaired; likely the shared-PIE-world functional-test state gotcha."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
+        }
+      }
     }
   }
 }
