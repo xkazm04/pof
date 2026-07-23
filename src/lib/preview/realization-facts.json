@@ -321,6 +321,41 @@
           "note": "UE moat. Packaging engine Tier-1."
         }
       }
+    },
+    "vendors": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Inventory Pool": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the merchant's stock hydrates into the pre-game menu — two duel sabers added additively (listGold = 1.1 x items Value per the Pricing rule: 352/374), cards resolve against hydrated items (color/rarity/multiplier), purchase executed live 2026-07-23. Grade is judge-owned (78, pre-existing). UE: stock data only."
+        },
+        "Pricing & Restock": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the list-price rule (1.1 x V) is the executed price; the buy deducts exactly listGold (500 -> 126 after the 374g azure). Restock/repair rules unexecuted."
+        },
+        "Buy/Sell/Repair": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Buy proven via the menu; sell-back (30%) and repair are natural menu increments."
+        },
+        "Shop UI": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the pre-game menu IS the shop UI realization (stock cards, prices, afford-gating, EQUIPPED state, wallet readout). UE: WBP spec only."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. VSVendorTransactionTest run + drained to L3 pass (2026-07-23)."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
+        }
+      }
     }
   }
 }

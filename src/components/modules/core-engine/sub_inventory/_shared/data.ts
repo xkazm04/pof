@@ -140,6 +140,15 @@ const _ORIGINAL_ITEMS: ItemData[] = [
     effect: '+15% melee damage.',
   },
   {
+    id: 'saber-azure', name: 'Azure Lightsaber', type: 'Weapon', subtype: 'Sword', rarity: 'Rare',
+    stats: [
+      { label: 'Energy Damage', value: '35-52', numericValue: 44, maxValue: 50 },
+      { label: 'Attack Speed', value: '1.0', numericValue: 20, maxValue: 20 },
+    ],
+    description: 'A guardian\'s blade, its crystal attuned cool blue. Precise, balanced strikes.',
+    effect: '+25% melee damage.',
+  },
+  {
     id: 'saber-ember', name: 'Ember Lightsaber', type: 'Weapon', subtype: 'Sword', rarity: 'Uncommon',
     stats: [
       { label: 'Energy Damage', value: '34-51', numericValue: 43, maxValue: 50 },
