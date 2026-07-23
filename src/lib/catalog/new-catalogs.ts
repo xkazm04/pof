@@ -65,9 +65,13 @@ export const NEW_CATALOGS: NewCatalogDef[] = [
     starters: [{ id: 'save-bonfire', name: 'Bonfire Checkpoint', categoryPath: ['Checkpoint'], tags: [], description: 'An interact-to-save world checkpoint.' }] },
   // ── Audio & FX ──
   { catalogId: 'music', label: 'Music', category: 'Audio & FX', description: 'Adaptive or linear music assets.', module: 'audio', tracks: ['audio', 'test'],
-    starters: [{ id: 'music-combat-a', name: 'Combat Theme A', categoryPath: ['Combat'], tags: ['adaptive'], description: 'An adaptive combat music track with stems.' }] },
+    starters: [
+      { id: 'music-combat-a', name: 'Combat Theme A', categoryPath: ['Combat'], tags: ['adaptive'], description: 'An adaptive combat music track with stems.' },
+      { id: 'music-galactic-duel', name: 'Galactic Duel Theme', categoryPath: ['Combat'], tags: ['duel', 'generated'], description: 'Dark epic space-opera battle loop (real ElevenLabs generation) - the arena duel combat bed in the browser preview + UE FeatureLab.' }] },
   { catalogId: 'ambient', label: 'Ambient', category: 'Audio & FX', description: 'Layered environmental audio for a zone or scene.', module: 'audio', tracks: ['audio', 'test'],
-    starters: [{ id: 'ambient-forest-day', name: 'Forest Day', categoryPath: ['Outdoor'], tags: [], description: 'A daytime forest soundscape (bed + one-shots).' }] },
+    starters: [
+      { id: 'ambient-forest-day', name: 'Forest Day', categoryPath: ['Outdoor'], tags: [], description: 'A daytime forest soundscape (bed + one-shots).' },
+      { id: 'ambient-galactic-arena', name: 'Galactic Arena', categoryPath: ['Arena'], tags: ['duel', 'generated'], description: 'Vast cosmic colosseum ambience (real ElevenLabs generation) - deep hum, nebula winds, crystalline shimmer. The duel arena bed in the browser preview + UE FeatureLab.' }] },
   { catalogId: 'vfx', label: 'VFX Assets', category: 'Audio & FX', description: 'Reusable particle/Niagara effects.', module: 'arpg-polish', tracks: ['vfx', 'art-3d', 'audio', 'test'],
     starters: [{ id: 'vfx-fire-impact', name: 'Fire Impact Burst', categoryPath: ['Impact'], tags: ['fire'], description: 'An impact burst; pairs with Fireball.' }] },
   // ── UI ──

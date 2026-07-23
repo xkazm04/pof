@@ -511,6 +511,46 @@
           "note": "UE moat. Packaging engine Tier-1."
         }
       }
+    },
+    "ambient": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Layers": {
+          "browser": "proven",
+          "ue": "proven",
+          "note": "ambient-galactic-arena: REAL ElevenLabs generation (20s cosmic bed, 2026-07-23) registered as the Layers bed. Browser: streams from /api/audio-asset into a looping <audio> (playing, t>11s verified). UE: imported as a SoundWave and PLAYING at FeatureLab begin-play ('[FeatureLab] galactic ambience playing' runtime marker)."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. VSAmbientTest run + drained to L3 pass (2026-07-23)."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
+        }
+      }
+    },
+    "music": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Loop & Markers": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "music-galactic-duel: REAL ElevenLabs generation (20s dark duel loop, 2026-07-23) registered as Loop & Markers. Browser: starts at DUEL!, loops, stops on the end screen (playing verified). UE: imported as a SoundWave (GalacticDuelTheme); combat-state playback wiring is the next increment."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. VSMusicTransitionTest run + drained to L3 pass (2026-07-23)."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
+        }
+      }
     }
   }
 }
