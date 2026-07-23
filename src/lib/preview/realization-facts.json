@@ -863,7 +863,7 @@
         "Action Mapping": {
           "browser": "proven",
           "ue": "probable",
-          "note": "input-kbm (new entity, authored to match the duel's REAL scheme): the SOR owns the code→action table; hydration rebinds the live Input handlers (Input.applyBindings) — the SOR alt bind KeyF fired interact in Playwright (8/8), proving data drives the handlers, not a mirror. UE: AARPGPlayerController builds the same scheme (F→IA_Interact) in C++; hardware press unconfirmed (see Test Gate note)."
+          "note": "input-kbm (new entity, authored to match the duel's REAL scheme): the SOR owns the code→action table; hydration rebinds the live Input handlers (Input.applyBindings) — the SOR alt bind KeyF fired interact in Playwright (8/8), proving data drives the handlers, not a mirror. UE: AARPGPlayerController builds the same scheme (F→IA_Interact) in C++; F now runtime-mapped via the self-heal (see Test Gate note)."
         },
         "Context Stack": {
           "browser": "proven",
@@ -873,7 +873,7 @@
         "Test Gate": {
           "browser": "no",
           "ue": "proven",
-          "note": "UE moat. VSInputRebindTest pass with abslog evidence (2026-07-17). F-key incident root-cause hunt (2026-07-23): BP_VSPlayerController IS a child of AARPGPlayerController and no rebind save exists; fix shipped = EnsureDefaultMappingContext() from C++ OnPossess (BP BeginPlay-override-proof) + runtime QueryKeysMappedToAction diagnostic — hardware F still needs the user's PIE confirmation (unverifiable headless)."
+          "note": "UE moat. VSInputRebindTest pass with abslog evidence (2026-07-17). F-key incident SOLVED 2026-07-23: runtime diagnostic proved BP_VSPlayerController overrides DefaultMappingContext to IMC_VerticalSlice which has NO Interact mapping (WASD/attack are in the asset; F never was). Self-heal shipped: EnsureDefaultMappingContext (BeginPlay + C++ OnPossess) synthesizes IMC_InteractFixup (F→the bound IA_Interact instance); post-tick truth log confirms 'IA_Interact mapped to: F'. Hardware press = user formality; durable follow-up = add Interact to the IMC_VerticalSlice asset."
         },
         "UE Packaging": {
           "browser": "no",
@@ -924,6 +924,266 @@
           "browser": "no",
           "ue": "probable",
           "note": "UE moat. ST_/BB_/ABP_EnemyAI_AMCombo1 are declared; the C++ component + rules are real and compiled, the .uassets were not verified this review."
+        }
+      }
+    },
+    "factions": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Concept Brief": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Faction identity text informed the duel framing (the Sith are the Corruption-aligned targets the rep deltas name) but is not consumed programmatically by either target."
+        },
+        "Standing & Rep Tiers": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the seven authored tiers hydrate and the ladder is DERIVED from their thresholds — inclusive bounds verified live at the seam (rep 2999 renders Neutral, exactly 3000 renders Friendly, 12000 Exalted, -5000 Hated), rep persisting across duels (2026-07-23). UE: VSFactionRepTest is registered and passes (Result=Success, drained to L3 pass); its per-threshold assertions were not audited line-by-line this review."
+        },
+        "Action → Reputation": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the authored deltas EXECUTE per duel event — +25 per Corruption-aligned Sith kill, +50 for the rare/elite (Darth Malgrave), +75 for the arena sparring win on a full clear; a clean run totalled exactly 175 (2026-07-23). The loss deltas (theft, betrayal, killing Order NPCs) hydrate but have no duel analog and never fire — stated, not hidden. UE: AddRepPoints exists in the subsystem; no runtime consumer verified for these deltas."
+        },
+        "Tier Rewards": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the tier discount is the price the merchant CHARGES, not a label — the vendor buy price is standing-adjusted (list 352g -> 282g at Exalted, exactly -20%) and the purchase deducts that exact amount; Hated returns a null discount and closes the shop entirely (buy disabled), per \"all services closed\". Restock/repair/buyback are untouched, per the SOR rule that the discount applies to the buy price only. UE: GE_FactionTierUp_* unrealized."
+        },
+        "NPC Members": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "No Order NPC stands in the duel arena, so the member roster (and the Vael HOSTILE_FLAG escalation) is unexecuted in both targets."
+        },
+        "Greeting & Disposition Hooks": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The duel has no faction NPC to greet; the disposition hooks are unexecuted in both targets."
+        },
+        "Standing UI": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Browser: a standing readout DOES render (menu line + HUD strip with tier, points and points-to-next), but it is driven by the Standing & Rep Tiers + Tier Rewards artifacts — this step's own widget spec is not the thing being executed. Honest partial. UE: WBP spec only."
+        },
+        "Heraldry Icon": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The heraldry gallery renders in the /layout lab; the duel surfaces no faction crest."
+        },
+        "Localization": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Keys authored; no loc pipeline runs in either target."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat — no browser meaning. VSFactionRepTest run headless and drained to L3 pass (abslog scoped: Result={Success})."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
+        }
+      }
+    },
+    "codex": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Concept Brief": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Brief informed the entry; the browser realization consumes Lore Body / Unlock Rules / Spoiler Tagging, not the brief text."
+        },
+        "Lore Body": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the authored body is the text the player READS in the codex reader, rendered verbatim with its gated span swapped at render time (2026-07-23). The SOR's own grammarCheck holds in the running page: the revealed string slots after \"their bearing on the cause is\" with no duplicated verb. UE: DT_Codex row unseeded."
+        },
+        "Cross-References": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the three authored crossRefs (The Ashen Order / Ashen Forest / Captain Vael) render as the Related Entries strip on the open entry. The knowledge-graph step also grades L0 by graphValid. UE: the Related Entries panel is a widget spec only."
+        },
+        "Unlock Rules": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: BOTH authored callers execute against ONE idempotent guard, exactly as the SOR specifies — quest completion (primary) and arena entry (the trigger-volume fallback) each grant the entry, and whichever fires second is a genuine no-op that raises no second toast and replays no sting. Before any grant the entry is HIDDEN from the menu, not greyed, per entryVisibility. Unlock persists across reloads. UE: GE_Codex_Unlock_* unrealized."
+        },
+        "Spoiler Tagging": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the sealed span renders the authored redaction stamp — lock glyph + the SOR amber #E0A867 (computed rgb(224,168,103) in the running page), so redaction reads without relying on hue — and the reveal swaps in the authored conclusion (the Order-facility claim), with the stamp gone. One tag gates both linked claims, as authored. UE: spoiler GE unrealized."
+        },
+        "Illustration": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The illustration gallery renders in the /layout lab; the duel's codex reader shows text only."
+        },
+        "Audio Sting": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the two stings fire on their respective grants and only on the FIRST grant. They are WebAudio syntheses following the authored briefs (struck low brass + ash crackle; short muted tremolo stab) — the duel has no asset pipeline, so these are honest code stand-ins for SC_Codex_Unlock_* / SC_Codex_SpoilerReveal_*, not generated audio. UE: SoundCues unrealized."
+        },
+        "Accessibility": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Only the redaction-not-colour-alone check is executed (glyph + hue in the running reader). The scalable-font, alt-text, keyboard-navigable-crossrefs and SFX-toggle checks are unexecuted."
+        },
+        "Localization": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Keys authored; the reader renders the authored English prose directly — no string table."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. VSCodexUnlockTest run headless and drained to L3 pass (abslog scoped: Result={Success})."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
+        }
+      }
+    },
+    "tutorial-beats": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Concept Brief": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Brief informed the lesson; not consumed programmatically."
+        },
+        "Trigger": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: arena entry IS the OnEnterZone trigger and the gate is the authored GameplayTag_Missing:Tutorial.Dodge.Introduced — the beat fires on a fresh save, and after any terminal it never re-arms, verified across a reload (2026-07-23). UE: AARPGTriggerBox unrealized."
+        },
+        "Lock / Sandbox": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Browser: a sandbox DOES lock the player — the four lockedInputs carried on the Step Sequence steps (IA_Attack/Skill_1/Skill_2/Interact) are eaten each frame, and an attack press during the lesson produces no swing. But it is the Step Sequence artifact being executed; this step's own scope definition was not hydrated. Honest partial."
+        },
+        "Step Sequence": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the authored machine RUNS on its exact numbers — 500 ms prompt hold, 700 ms wind-up, contact resolved against the roll's 300 ms i-frame window, 3500 ms attempt window lapsing into a retry, max 3 attempts. A roll whose window closed before contact is rejected; one covering the contact frame passes (2026-07-23). Runs on REAL elapsed time — these are UX timings, so they must not stretch with hitstop or a clamped sim dt. UE: BP_TutorialBeat unrealized."
+        },
+        "Success / Skip / Fail": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: all three terminals execute with their authored tag pairs — success grants Introduced+Completed, the third miss CONCEDES (Introduced+Failed, never a 4th attempt, never a trap), and a held skip grants Introduced+Skipped. Every terminal unlocks the sandbox in the same frame and persists, so the beat never re-arms. A 300 ms tap does not skip; an 1100 ms hold does, per the authored 800 ms. UE: tag grants unrealized."
+        },
+        "Pointer / Highlight 2D": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The coaching widget renders (with the authored locKey), but no pointer/highlight overlay on the dodge binding is drawn in either target."
+        },
+        "VFX / Audio Cue": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The wind-up telegraph, contact flash/ring and clash are the duel's existing effects standing in for the authored NS_/SC_ cues — readable, but not the authored assets."
+        },
+        "VO": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Coach VO lines are unrecorded in both targets."
+        },
+        "Telemetry": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Browser: the beat_started / beat_attempt / beat_completed / beat_failed / beat_skipped events ARE emitted and collected in order, so drop-off per beat is measurable. But the event names come from the Step Sequence steps; this step's own envelope (and the dodge_success_rate metric) is not hydrated and nothing is transmitted. Honest partial."
+        },
+        "Icon 2D Art": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Icon gallery renders in the lab; the duel shows no beat icon."
+        },
+        "Localization": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The widget shows the authored locKey and a plain browser stand-in line — the artifact carries keys, not strings, so no copy was invented to fill them."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. VSTutorialComprehensionTest run headless and drained to L3 pass (abslog scoped: Result={Success})."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
+        }
+      }
+    },
+    "cutscenes": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Concept Brief": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Brief informed the sequence; not consumed programmatically."
+        },
+        "Beat Sheet & Shot List": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the sheet PLAYS. Seven contiguous beats run the authored 90 s and every Sequencer marker fires exactly once as its timecode is crossed — measured 20.4 / 38.0 / 58.4 / 72.2 / 82.3 / 90.0 s against the authored 20 / 38 / 58 / 72 / 82 / 90 (2026-07-23). Each beat stages the camera per its shot note (aerial push-in, ECU rack-focus, a 180-degree OTS arc — half an orbit as authored, frame-left long shot, Dutch +3 bust push-in, crane-up match). Timing runs on REAL elapsed seconds, as a timecode demands. UE: LS_PrologueTheFall unrealized."
+        },
+        "Blocking / Body Anim": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The authored performance has no browser counterpart — there is no Vael cinematic actor and no blocking was faked; the beat description carries the content instead. Unrealized in UE too."
+        },
+        "Facial / Lipsync": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "No facial rig in either target."
+        },
+        "Lighting": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The arena's own lighting stands; the authored per-beat lighting states are unexecuted."
+        },
+        "VFX": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The beat-6 ember burst (NS_FireImpactBurst) is not spawned in the browser — the beat fires its marker, the effect is honestly absent."
+        },
+        "Music & SFX": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The authored stem fade to silence at EmberCrescendo is unexecuted; the prologue plays without underscore in the browser."
+        },
+        "VO": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "No prologue VO in either target."
+        },
+        "Subtitles & Loc": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "A subtitle line DOES render per beat, but it is the beat's own description — this step's authored subtitle strings are not hydrated. Honest partial."
+        },
+        "Skip / Replay Rules": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the rules execute exactly. A hold inside the 3 s grace window is IGNORED, not queued (skipHeldSec stayed 0 through a 1.5 s hold); after the window the prompt appears with a 0.5 s hold meter and auto-hides after 4 s idle; a completed hold runs the SAME completion path — only End fires, markers not yet reached stay suppressed (EmberCrescendo/HardCut absent), the no-retrigger tag applies, and skip and full watch converge on the identical post-cutscene state. A watched prologue is bypassed on the next entry. The gallery REPLAY path is not built. UE: UARPGCinematicComponent unrealized."
+        },
+        "Icon 2D Art": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Icon gallery renders in the lab; unused by the sequence."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. VSCutsceneTimingTest run headless and drained to L3 pass (abslog scoped: Result={Success})."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
         }
       }
     }
