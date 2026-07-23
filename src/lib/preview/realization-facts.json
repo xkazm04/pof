@@ -611,6 +611,251 @@
           "note": "UE moat. Packaging manifest pass."
         }
       }
+    },
+    "combat-map": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Concept Brief": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Brief informed both realizations; text not consumed programmatically."
+        },
+        "Encounter Layout": {
+          "browser": "proven",
+          "ue": "proven",
+          "note": "Browser: the SOR courtyard EXECUTES in the duel — 4 corner cover pillars at ±8.5 m / 1.2 m are real obstacles, movement clamps to the 10 m half-extent square walls (2026-07-23, live probes). UE: build_arena.py geometry + VSArenaSetupTest Result=Success headless (gate pass, prior campaign)."
+        },
+        "Hazards": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: fire-floor executed exactly — 15 Fire per 1 s tick (probe lost exactly 45 over 3 intervals), telegraph-before-first-tick on edge crossing, ring GROWS 4→5.6 m over the 2 s inter-wave lerp when wave 2 arrives. Honest divergence: browser brains have no navmesh avoidance. UE: AARPGEnvironmentalHazard exists; the slice-rules runtime test (VSArenaSliceRulesTest) is scaffold-only."
+        },
+        "Waves & Spawns": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the wave STRUCTURE executes — kill-gated advance (waitForKillsBeforeNextWave), 2 s inter-wave delay, 0.7 s spawn stagger, and the wave-2 leader's Proximity Shield with exact SOR gating (400 one-time pool; absorbs only while an ally is within 5 m; suspends when isolated; the SAME pool re-engages; inert after the battery dies — all probed live 2026-07-23). Disclosed mapping: wave sizes ride the duel's 3-Sith roster (1 | 2), the courtyard's 4 | 3 Grunt counts are NOT claimed. UE: ASpawnVolume wave config data; runtime test not run."
+        },
+        "Win/Loss Rules": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: win = clear-all-WAVES (a pending wave blocks the win path — probed), loss on player death, and the SOR resetGranularity executes: restart respawns BOTH waves, restores crates, and resets the fire-floor to its wave-1 radius (verified live). Death-penalty XP band unexecuted (progression domain)."
+        },
+        "Balance": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The threat-model numbers are design-time budget data; executed nowhere."
+        },
+        "Material": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: MI_WeatheredStone_Floor / _Pillar instances EXECUTE — floor #8a8378 / roughness 0.82 and pillar #7d766c / 0.74 verified against the live materials (2026-07-23); offline defaults mirror the SOR. UE: MI_Arena_* / MI_WeatheredStone assets exist; per-instance parameter assertions unobserved."
+        },
+        "3D / Terrain": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The step's real Lucid Origin 2D design map is not consumed by either runtime; browser geometry is code-built, UE geometry via build_arena.py (asserted by the setup gate, not from this artifact)."
+        },
+        "Ambient / Audio": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The duel's generated audio rides the ambient/music catalogs; this step's arena-specific audio spec is unexecuted."
+        },
+        "Icon 2D Art": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Real generated icon renders in the /layout lab gallery; UE texture import unverified."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. VSArenaSetupTest run headless (abslog Result=Success) and drained; the fuller VSArenaSliceRulesTest (waves + hazard ticks + shield at runtime) remains a scaffold."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
+        }
+      }
+    },
+    "props": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Concept Brief": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The noise-vs-speed tactical choice drove the browser design; text not consumed programmatically. Dangling lt-Brute loot ref repaired to lt-MeleeGrunt across all sibling steps (graded POST, judge re-scored)."
+        },
+        "Interaction": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the dual path EXECUTES — interact prompt inside the 250 cm radius, HOLD-E 0.8 s quiet swing-lid open (interrupt resets progress), strike-destroy as the loud alternative; both paths funnel the one-shot bLooted guard (open-then-smash yields nothing — probed 2026-07-23). UE: interactable runtime exists (inventory chest), the crate actor is unbuilt."
+        },
+        "Destruction States": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: 80 fixed HP drains by dealt damage (13 per crimson-saber hit — the items multiplier rides through); damaged-mesh swap EXACTLY at ≤40 (41 stayed intact, 28 swapped); 0 HP → break with debris + obstacle removal. UE: Chaos GC path exists generically; GC_ReinforcedCrate not authored."
+        },
+        "Collision & Physics": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Browser executes the blocking semantic only (intact crate blocks characters, removed on destroy); mass/Chaos chunk physics have no browser meaning. UE: preset data only."
+        },
+        "Loot on Destroy": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: 1–2 rolls per event with the 0.08 s stagger, on the repaired lt-MeleeGrunt table with ilvl-band base selection at ilvl = the hosting zone's areaLevel 5 — 2000-roll check: 100% Iron Longsword at ilvl 5 (Steel Chestplate's 12–55 band correctly excluded), ~50/50 at ilvl 20; real in-game drop equips (2026-07-23). UE: loot-drop runtime exists; crate unwired."
+        },
+        "Material": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: M_Prop_Hardwood parameters execute on the crate meshes — wood tint #6b5236 / roughness 0.95, iron bands 0.55 metallic; damaged state darkens per the wear lerp."
+        },
+        "VFX / Audio": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: readable procedural approximations fire on the right events — wood-chip sparks per hit, splinter burst + heavy cue on break (which is also the AI noise stimulus: every living enemy flips to an engage burst — probed brain state melee→engage), creak on quiet open (no alert). UE: NS/SC assets unrealized."
+        },
+        "3D & LODs": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Browser renders a procedural 80×60×60 crate stand-in, not the authored mesh pipeline; UE mesh assets unbuilt."
+        },
+        "Icon 2D Art": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Real generated icon renders in the /layout lab; UE import unverified."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "UE moat. VSPropInteractTest is named but never registered/run (honest deferred; scaffold endpoint available) — the Group A UE follow-up."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
+        }
+      }
+    },
+    "materials": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Concept Brief": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Target-agnostic surface identity text."
+        },
+        "Parameters": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the master parameters EXECUTE on the arena's stone surfaces — BaseColorTint [0.43,0.41,0.36] linear on the SOR pillars and roughness = ORM-band × RoughnessMultiplier 1.08 (mapping disclosed in materialspec.js); the combat-map instances override per the master interface (floor #8a8378/0.82 verified exact). UE: MI_WeatheredStone.uasset exists (built by build_weathered_stone.py); per-parameter gate unobserved."
+        },
+        "Instance Library": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The instance model (master + parameterOverrides) is what the browser consumes via combat-map's instances; the library structure itself executes in neither runtime. UE: /Game/Materials/MI_WeatheredStone + M_ARPG_Surface_Master assets exist on disk."
+        },
+        "Shader Graph": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "Channel math (cavity mask, detail-normal blend) is UE master-graph logic with no browser path; the master asset exists, graph assertions unobserved."
+        },
+        "Surface Type": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "PM_Stone / footstep cue table is UE physical-surface machinery — no browser meaning."
+        },
+        "Maps": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "BC7/BC5 texture set spec — no browser meaning; UE texture assets not verified this review."
+        },
+        "LOD/Perf Budget": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "Shader instruction / texture memory budget has no browser meaning."
+        },
+        "Icon 2D Art": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Real generated icon renders in the /layout lab; UE import unverified."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "UE moat. PoF.Materials.ArenaMasters mentioned but no per-test result marker (honest unobserved; scaffold available) — Group A UE follow-up."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
+        }
+      }
+    },
+    "zone-map": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Concept Brief": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Ashen Forest identity text; the browser derives the zone display name from it (seed name lags the artifacts)."
+        },
+        "Area Level & Density": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: areaLevel 5 EXECUTES as the master scalar — crate drops roll at ilvl = areaLevel (the props ilvlSource binding, gating the loot table's ilvl bands: 100% Iron Longsword at 5). The 38-Grunt pack density is NOT claimed (the duel fields its own roster). UE: AshenForestSetupTest Result=Success asserts the zone build."
+        },
+        "Macro Layout & POIs": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the 5 authored POIs render at their SOR world positions on the zone minimap in their bound colors; sector data hydrated. UE: POI actor placement not verified this review."
+        },
+        "Encounter Placement": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the hostedArena cross-link EXECUTES — zone-map must resolve 'combat-map::arena-ravaged-courtyard' to the hydrated arena entity before the areaLevel→ilvl binding engages (verified live: arenaBound=true drives crate loot ilvl). UE: the zone hosts the arena in the built map (setup gate)."
+        },
+        "Minimap UI": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the minimap contract EXECUTES — north-up fixed square fitting the 44 m extents 1:1, fog-of-war revealing in the SOR 12 m radius (session-persistent), rotating player arrow, POI color bindings, zoom at the SOR default, hosted-arena square at Centre (2026-07-23, live + screenshots). UE: widget spec only."
+        },
+        "Material": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The zone's MI_AshenForest_* instances (dark char tints over the same weathered-stone master) are not consumed by the duel — its floor executes the arena's own instance; a zone re-skin is a natural next increment."
+        },
+        "Ambient & Music": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The duel plays the ambient/music catalog beds; this zone's 3-tier soundscape spec is unexecuted."
+        },
+        "3D / Biome": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Biome design map not consumed by the browser build; UE zone geometry via the zone recipe (setup gate)."
+        },
+        "Streaming / LOD": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "World-partition/streaming budgets have no browser meaning."
+        },
+        "Icon 2D Art": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Real generated icon renders in the /layout lab; UE import unverified."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. AshenForestSetupTest run headless (abslog Result=Success), drained."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
+        }
+      }
     }
   }
 }

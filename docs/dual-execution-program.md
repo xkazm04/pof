@@ -1,6 +1,6 @@
 # Dual-Execution Program — progress handbook
 
-> **Status 2026-07-23: 16 of ~31 pipelines reviewed.** This is the working handbook for the
+> **Status 2026-07-23: 20 of ~31 pipelines reviewed** (Group A landed; B/C/D sessions in flight). This is the working handbook for the
 > browser⇄UE dual-execution program: what exists, how a domain review runs, and how the
 > remaining domains are grouped for PARALLEL sessions. Companion spec (the why + contract
 > rules): `docs/research/dual-execution-preview-spec.md`. Live registry (the machine truth
@@ -50,6 +50,10 @@ the realization registry. **Nothing is claimed without runtime evidence** (see �
 | 14 | icon-sets | Selected Icon 2D Art candidates render (real image or honest gradient) | VSIconSetAtlasTest pass |
 | 15 | ambient | REAL ElevenLabs bed playing in `<audio>` | SoundWave imported + PLAYING at FeatureLab begin-play |
 | 16 | music | Duel theme starts at DUEL!, stops at end | SoundWave imported; combat-state wiring pending |
+| 17 | combat-map | SOR courtyard executes: ±8.5 m pillars as obstacles + square wall clamp; fire-floor 15/1 s exact (probe lost exactly 45), grows 4→5.6 m on wave 2; kill-gated waves + Proximity Shield gating exact (400 pool, 5 m ally, suspend/re-engage/never-refill); loss resets both waves+hazard | VSArenaSetupTest headless pass; VSArenaSliceRulesTest scaffold pending |
+| 18 | props | Reinforced Crate dual path: HOLD-E 0.8 s quiet open vs loud smash (noise pull → engage burst); 80 HP, damaged swap ≤40 exact; 1–2 staggered rolls, one-shot guard (open-then-smash = nothing); dangling lt-Brute repaired → lt-MeleeGrunt | VSPropInteractTest never registered (honest deferred) — UE follow-up |
+| 19 | materials | Weathered-stone params execute on floor/pillars — #8a8378/0.82 and #7d766c/0.74 verified exact; master tint + RoughnessMultiplier mapping disclosed | MI_WeatheredStone + master .uassets exist; ArenaMasters gate unobserved |
+| 20 | zone-map | Ashen Forest frame: areaLevel 5 → crate ilvl binding via the hostedArena cross-link (ilvl bands gate: 100% Iron Longsword at 5); fog-of-war minimap (44 m 1:1, 12 m reveal, POIs at SOR positions) | AshenForestSetupTest headless pass |
 
 ## 4. The domain-review loop (the recipe every session follows)
 
@@ -86,11 +90,11 @@ coordination rules below**: `browser-mirror.ts` (append one line), `realization-
 (add one JSON key), `saber-arpg/src/main.js` (one hydrate call + wiring), `new-catalogs.ts`
 (seeds). Keep those edits minimal/append-only and commit early; everything else is disjoint.
 
-### Group A — World & Arena (zone-map, combat-map, props, materials)
-Touches: `saber-arpg/src/world/arena.js`, FeatureLab environment, UE maps/materials.
-Shape: hydrate arena layout/encounter rules/prop placements/material params into the arena
-build + FeatureLab roster entries. Natural outputs: SOR-driven pillar/obstacle layout
-(combat-map), destructible crate prop, floor material params.
+### Group A — World & Arena (zone-map, combat-map, props, materials) — ✅ DONE 2026-07-23
+Landed (rows 17–20 above): SOR courtyard layout + fire-floor + waves/shield + win-loss
+(`combatmap.js`/`hazard.js`), destructible crate (`propspec.js`/`crates.js`), stone material
+params (`materialspec.js`), zone frame + minimap (`zonemap.js`/`minimap.js`). Loot hydration
+now parses the full base-selection model (bases + ilvl bands). UE follow-ups in §7.
 
 ### Group B — Characters & Motion (characters, character-pipeline, player-movement, state-graph, vfx)
 Touches: `rig.js`, `clips.js`, `animation/`, `fx/vfx.js`, UE anim/BP systems (ARDY chain).
@@ -124,5 +128,9 @@ input-schemes as the SOR for bindings — **pairs with resolving the F-binding s
 - **UE polish**: blade glow material (flat stand-in today), duel-theme combat-state playback,
   PIE arena behavioral tests (launch→landing→daze observation), Fireball real icon (one
   Leonardo gen), UE quest tracking/rewards mirror.
+- **Group A UE gates**: `VSPropInteractTest` (crate actor + dual-path runtime) and
+  `PoF.Materials.ArenaMasters` (MI parameter assertions) are named but never registered/run;
+  `VSArenaSliceRulesTest` (waves + hazard ticks + shield at runtime) is scaffold-only.
+  The browser leg proved the mechanics; these gates are the UE-side completion.
 - **Judge-owned fails**: many artifact rows carry strict-judge sub-90 verdicts; content-quality
   raising is a separate campaign (see `project_green_loop_campaign`).
