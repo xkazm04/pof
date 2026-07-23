@@ -421,6 +421,41 @@
           "note": "UE moat. Packaging engine Tier-1."
         }
       }
+    },
+    "achievements": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Trigger & Progress": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: three achievements EXECUTE in the duel — First Blood (first kill), Arena Victor (full-clear victory, +300g exact), Trophy Taker (equip a looted saber) — with the SOR anti-cheat guard honored: one-time per save (Unlocked flag), persisted across reloads, verified live 2026-07-23. Synthetic test-* fixtures filtered. UE: UARPGAchievementSubsystem exists; the two new duel achievements unseeded there."
+        },
+        "Reward Binding": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: unlocks pay the authored gold into the currencies wallet exactly (100/300/150); one-time capped so it never becomes a repeatable faucet, per the SOR note."
+        },
+        "Unlock Toast": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: slide-in toast per the SOR format — 'Achievement Unlocked: {name}' + reward line rendered only when a reward exists; queued for multiple unlocks. UE: WBP spec only."
+        },
+        "Anti-Cheat / Validation": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "The Unlocked-flag guard IS executed browser-side (second kill grants nothing, reload keeps unlocks)."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. VSAchievementTest run + drained to L3 pass (2026-07-23)."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
+        }
+      }
     }
   }
 }

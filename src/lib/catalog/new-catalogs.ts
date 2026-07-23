@@ -55,7 +55,10 @@ export const NEW_CATALOGS: NewCatalogDef[] = [
   { catalogId: 'progression-curves', label: 'Progression Curves', category: 'Systems', description: 'XP, level, or mastery curves driving advancement.', module: 'arpg-progression', tracks: ['logic', 'art-2d', 'vfx', 'audio', 'test'],
     starters: [{ id: 'curve-hero-level', name: 'Hero Level Curve', categoryPath: ['XP'], tags: [], description: 'The main character XP-to-level curve.' }] },
   { catalogId: 'achievements', label: 'Achievements', category: 'Systems', description: 'Player accomplishments tracked across sessions.', module: 'arpg-progression', tracks: ['logic', 'art-2d', 'vfx', 'audio', 'test'],
-    starters: [{ id: 'achievement-first-blood', name: 'First Blood', categoryPath: ['Combat'], tags: [], description: 'Defeat your first enemy.' }] },
+    starters: [
+      { id: 'achievement-first-blood', name: 'First Blood', categoryPath: ['Combat'], tags: [], description: 'Defeat your first enemy.' },
+      { id: 'achievement-arena-victor', name: 'Arena Victor', categoryPath: ['Combat'], tags: ['duel'], description: 'Win the arena duel - all three Sith defeated in one bout.' },
+      { id: 'achievement-trophy-taker', name: 'Trophy Taker', categoryPath: ['Collection'], tags: ['duel'], description: 'Equip a lightsaber looted from a fallen Sith.' }] },
   { catalogId: 'save-points', label: 'Save / Checkpoint', category: 'Systems', description: 'Persistence points capturing player and world state.', module: 'arpg-save', tracks: ['logic', 'art-2d', 'vfx', 'audio', 'test'],
     starters: [{ id: 'save-bonfire', name: 'Bonfire Checkpoint', categoryPath: ['Checkpoint'], tags: [], description: 'An interact-to-save world checkpoint.' }] },
   // ── Audio & FX ──
