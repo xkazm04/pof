@@ -486,6 +486,31 @@
           "note": "UE moat. Packaging engine Tier-1."
         }
       }
+    },
+    "icon-sets": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Icon 2D Art": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the skill bar and achievement toasts render each entity's SELECTED Icon 2D Art candidate — Force Push shows its real Leonardo image (embedded data-URL), Fireball its selected gradient candidate (no real gen exists for it — honest fallback, never invented), achievements' icons ride the unlock toasts (2026-07-23). UE: icon texture import unverified."
+        },
+        "Atlas": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The iconset-abilities atlas (real served bestof previews) exists; the duel consumes per-entity icons directly rather than the packed atlas."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. VSIconSetAtlasTest run + drained to L3 pass (2026-07-23)."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
+        }
+      }
     }
   }
 }
