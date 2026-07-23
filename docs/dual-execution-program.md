@@ -151,9 +151,10 @@ stretches — which is how the first tutorial run "failed" a correct 800 ms hold
 ### Group D — Systems & Shell — ✅ COMPLETE 2026-07-23 (rows 21–23 above)
 save-points (`data/save.js` envelope + sections), screen-flow (`data/screenflow.js`
 tracker), input-schemes (`data/inputscheme.js` + SOR-rebindable `core/input.js`).
-F-binding: root cause narrowed + BP-override-proof fix shipped (`EnsureDefaultMappingContext`
-from `OnPossess` + `QueryKeysMappedToAction` diagnostic) — awaiting the user's hardware
-PIE confirmation; the diagnostic log now names the dead link instantly if it persists.
+F-binding: SOLVED + hardware-CONFIRMED (user pressed F in PIE, 2026-07-23). Root cause:
+`IMC_VerticalSlice` (the BP's DefaultMappingContext override) had no Interact mapping at all;
+`EnsureDefaultMappingContext` self-heals it (F → the bound IA_Interact). Durable follow-up:
+author the mapping into the IMC asset itself.
 
 ### Coordination rules for parallel runs
 1. Claim a group; do not touch another group's browser modules or UE files.
@@ -163,7 +164,6 @@ PIE confirmation; the diagnostic log now names the dead link instantly if it per
 
 ## 7. Open threads (not blocking, tracked)
 
-- **F-key/interaction in UE**: hardware F → EI link unresolved; diagnostics in place (Group D).
 - **Test_Inventory HUD placement red** (pre-existing, bisect-proven) — repair the placement.
 - **UE polish**: blade glow material (flat stand-in today), duel-theme combat-state playback,
   PIE arena behavioral tests (launch→landing→daze observation), Fireball real icon (one

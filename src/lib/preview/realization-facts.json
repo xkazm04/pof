@@ -873,7 +873,7 @@
         "Test Gate": {
           "browser": "no",
           "ue": "proven",
-          "note": "UE moat. VSInputRebindTest pass with abslog evidence (2026-07-17). F-key incident SOLVED 2026-07-23: runtime diagnostic proved BP_VSPlayerController overrides DefaultMappingContext to IMC_VerticalSlice which has NO Interact mapping (WASD/attack are in the asset; F never was). Self-heal shipped: EnsureDefaultMappingContext (BeginPlay + C++ OnPossess) synthesizes IMC_InteractFixup (F→the bound IA_Interact instance); post-tick truth log confirms 'IA_Interact mapped to: F'. Hardware press = user formality; durable follow-up = add Interact to the IMC_VerticalSlice asset."
+          "note": "UE moat. VSInputRebindTest pass with abslog evidence (2026-07-17). F-key incident SOLVED 2026-07-23: runtime diagnostic proved BP_VSPlayerController overrides DefaultMappingContext to IMC_VerticalSlice which has NO Interact mapping (WASD/attack are in the asset; F never was). Self-heal shipped: EnsureDefaultMappingContext (BeginPlay + C++ OnPossess) synthesizes IMC_InteractFixup (F→the bound IA_Interact instance); post-tick truth log confirms 'IA_Interact mapped to: F'. Hardware F press CONFIRMED by the user in PIE (2026-07-23); durable follow-up = add Interact to the IMC_VerticalSlice asset."
         },
         "UE Packaging": {
           "browser": "no",
