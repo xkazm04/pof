@@ -69,6 +69,10 @@ export const PREVIEW_HYDRATABLE_CATALOGS = [
   'ambient',
   'bestiary',
   'dialog-trees',
+  'factions',
+  'codex',
+  'tutorial-beats',
+  'cutscenes',
 ] as const;
 
 /** Steps whose data carries playable mechanics for the combat-sandbox preview. */
@@ -99,6 +103,19 @@ export const MECHANICS_STEPS = [
   'Icon 2D Art',
   'Layers',
   'Loop & Markers',
+  // Group C — Narrative & Meta
+  'Standing & Rep Tiers',
+  'Action → Reputation',
+  'Tier Rewards',
+  'Lore Body',
+  'Cross-References',
+  'Unlock Rules',
+  'Spoiler Tagging',
+  'Trigger',
+  'Step Sequence',
+  'Success / Skip / Fail',
+  'Beat Sheet & Shot List',
+  'Skip / Replay Rules',
 ] as const;
 
 export function isPreviewHydratable(catalogId: string): boolean {
