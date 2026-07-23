@@ -356,6 +356,36 @@
           "note": "UE moat. Packaging engine Tier-1."
         }
       }
+    },
+    "quests": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Objective Graph": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: quest-lords-challenge + quest-echoes-order authored (graphs graded pass — edge integrity + terminal enforced) and EXECUTED: menu-selected quest tracked live, Lord's Challenge completed on Malgrave-first kill with acolytes alive (2026-07-23). UE: UARPGQuestSubsystem runtime exists (TalkTo events wired); these quests unseeded there."
+        },
+        "Triggers & World-State": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the environment staging block IS the world-state trigger — quest acceptance retints the arena (fog hit the SOR's exact #2a0c08; rims/magma/floor emissive follow). Shape checker wants more fields (pending) — data honest. UE: maps to post-process/light tints, not wired."
+        },
+        "Rewards": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: completion granted exactly the authored 250g into the currencies wallet. UE: quest reward path exists in the subsystem, these rows unwired."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "UE moat. PoF.Quests.StageFlow gate exists for ember-pact; duel quests ungated."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
+        }
+      }
     }
   }
 }

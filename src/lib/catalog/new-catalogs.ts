@@ -22,7 +22,10 @@ export interface NewCatalogDef {
 export const NEW_CATALOGS: NewCatalogDef[] = [
   // ── Quests & Narrative ──
   { catalogId: 'quests', label: 'Quests', category: 'Quests & Narrative', description: 'Structured player objectives with stages, rewards, and narrative beats.', module: 'dialogue-quests', tracks: ['logic', 'audio', 'test'],
-    starters: [{ id: 'quest-ember-pact', name: 'The Ember Pact', categoryPath: ['Main'], tags: ['intro'], description: 'A 3-stage introductory fetch-and-choice quest.' }] },
+    starters: [
+      { id: 'quest-ember-pact', name: 'The Ember Pact', categoryPath: ['Main'], tags: ['intro'], description: 'A 3-stage introductory fetch-and-choice quest.' },
+      { id: 'quest-lords-challenge', name: "The Lord's Challenge", categoryPath: ['Duel'], tags: ['arena'], description: 'Slay Darth Malgrave before his acolytes fall — the arena burns ember-red while the pact holds. Browser preview: menu-selectable, retints the arena, tracked live.' },
+      { id: 'quest-echoes-order', name: 'Echoes of the Order', categoryPath: ['Duel'], tags: ['arena'], description: 'Cleanse the arena — defeat all three Sith. Cool vigil-blue staging honors the fallen Order. Browser preview: menu-selectable, retints the arena, tracked live.' }] },
   { catalogId: 'dialog-trees', label: 'Dialog Trees', category: 'Quests & Narrative', description: 'Branching conversations with conditions, effects, and voice.', module: 'dialogue-quests', tracks: ['logic', 'art-2d', 'audio', 'test'],
     starters: [
       { id: 'dialog-gatekeeper', name: 'Gatekeeper Greeting', categoryPath: ['NPC'], tags: ['intro'], description: 'A simple gate-NPC conversation with a skill check.' },

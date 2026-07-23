@@ -60,6 +60,7 @@ export const PREVIEW_HYDRATABLE_CATALOGS = [
   'loot-tables',
   'currencies',
   'vendors',
+  'quests',
   'bestiary',
   'dialog-trees',
 ] as const;
@@ -81,6 +82,9 @@ export const MECHANICS_STEPS = [
   'Economy Rules',
   'Inventory Pool',
   'Pricing & Restock',
+  'Objective Graph',
+  'Triggers & World-State',
+  'Rewards',
 ] as const;
 
 export function isPreviewHydratable(catalogId: string): boolean {
