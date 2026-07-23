@@ -30,7 +30,7 @@ the realization registry. **Nothing is claimed without runtime evidence** (see �
 | UE gates | `Source/PoF/Test/**` + `entityRuntimeDeferred` accepts | per-entity automation names (`data.automationName`), drained via spawn executor |
 | Audio pipeline | `POST /api/audio-gen` (elevenlabs) → `/api/audio-asset` | real generation + serving; UE import via `Content/Python/import_duel_audio.py` |
 
-## 3. Reviewed pipelines (16) — the evidence in one line each
+## 3. Reviewed pipelines (23) — the evidence in one line each
 
 | # | Pipeline | Browser proof | UE proof |
 |---|---|---|---|
@@ -54,6 +54,9 @@ the realization registry. **Nothing is claimed without runtime evidence** (see �
 | 18 | props | Reinforced Crate dual path: HOLD-E 0.8 s quiet open vs loud smash (noise pull → engage burst); 80 HP, damaged swap ≤40 exact; 1–2 staggered rolls, one-shot guard (open-then-smash = nothing); dangling lt-Brute repaired → lt-MeleeGrunt | VSPropInteractTest never registered (honest deferred) — UE follow-up |
 | 19 | materials | Weathered-stone params execute on floor/pillars — #8a8378/0.82 and #7d766c/0.74 verified exact; master tint + RoughnessMultiplier mapping disclosed | MI_WeatheredStone + master .uassets exist; ArenaMasters gate unobserved |
 | 20 | zone-map | Ashen Forest frame: areaLevel 5 → crate ilvl binding via the hostedArena cross-link (ilvl bands gate: 100% Iron Longsword at 5); fog-of-war minimap (44 m 1:1, 12 m reveal, POIs at SOR positions) | AshenForestSetupTest headless pass |
+| 21 | save-points | Versioned autosave envelope replaces the scattered localStorage keys: v0→v1 legacy migration EXECUTES, newer-schema saves refused + write-locked (never clobbered — a real bug the suite caught), corruption→fresh, SOR-hydrated 10 s throttle, menu Slots-UI line (Playwright 11/11) | PoF.SavePoints.RoundTrip drained via spawn executor → L3 pass (field-for-field UARPGSaveGame round-trip) |
+| 22 | screen-flow | screen-HUD's Navigation Graph (13 nodes/22 edges) is the shell-transition LAW: every executed transition validated against SOR edges (zero violations), save-conditioned Continue branch, death⇄respawn cycle, BFS reachability (Playwright 7/7) | VSScreenFlowTest already runtime-verified (z-order contract; graph traversal not covered — honest note) |
+| 23 | input-schemes | NEW input-kbm entity authored from the duel's REAL scheme; SOR rebinds the live handlers (KeyF alt FIRED — data-driven, not a mirror); context stack (menu/dialogue) gates one-shots, pressed state cleared on switch (Playwright 8/8) | VSInputRebindTest pass; F-key root cause narrowed (BP controller IS the C++ child, no stale rebind save) → EnsureDefaultMappingContext from OnPossess + runtime key-map diagnostic; hardware F needs user PIE confirmation |
 
 ## 4. The domain-review loop (the recipe every session follows)
 
@@ -108,12 +111,12 @@ Shape: codex entries unlocked by achievements/kills (menu subtree), faction repu
 duel outcomes, a scripted intro cutscene (camera moves + dialog), tutorial beat prompts on
 first actions. Mostly browser + config gates.
 
-### Group D — Systems & Shell (save-points, screen-flow, input-schemes)
-Touches: `main.js`/`input.js` persistence + flow, menu navigation.
-Shape: formalize the localStorage persistence as the save-point contract (slots/checkpoint
-semantics), screen-flow graph driving menu↔dialog↔duel↔end transitions (assert reachability),
-input-schemes as the SOR for bindings — **pairs with resolving the F-binding struggle**
-(memory: `project_featurelab_interact_binding`).
+### Group D — Systems & Shell — ✅ COMPLETE 2026-07-23 (rows 21–23 above)
+save-points (`data/save.js` envelope + sections), screen-flow (`data/screenflow.js`
+tracker), input-schemes (`data/inputscheme.js` + SOR-rebindable `core/input.js`).
+F-binding: root cause narrowed + BP-override-proof fix shipped (`EnsureDefaultMappingContext`
+from `OnPossess` + `QueryKeysMappedToAction` diagnostic) — awaiting the user's hardware
+PIE confirmation; the diagnostic log now names the dead link instantly if it persists.
 
 ### Coordination rules for parallel runs
 1. Claim a group; do not touch another group's browser modules or UE files.
