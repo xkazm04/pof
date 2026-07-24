@@ -39,3 +39,23 @@ Rules for every session:
    the file exceeds ~200 lines).
 4. Appending is the only edit mode — if your tooling can't append safely,
    skip the write rather than risk clobbering parallel writers.
+
+## Fleet Machine Protocol (mechanical orchestration cues)
+
+When this repo is driven by Personas Fleet, an orchestrator machine-reads your
+terminal. Two markers let it act WITHOUT waking a human or an AI judge — emit
+them as the **final line** of your end-of-turn recap, at line start, exactly:
+
+- `FLEET:DONE — <one-line summary>` — your ASSIGNED task is fully complete
+  (implementation verified, fleet-memory lines appended). The orchestrator
+  parks the terminal as *Finished* for the operator to close. Never emit this
+  mid-task or for partial work.
+- `FLEET:NEXT — <one concrete next step>` — you are pausing but there is an
+  obvious, safe continuation you would take next (e.g. "apply the same fix to
+  the remaining two panels"). The orchestrator may reply "Proceed with your
+  recommended next step." — so only emit it when you are genuinely ready to
+  execute that step unattended.
+
+Plain-language recaps stay welcome ABOVE the marker; the marker line itself
+must carry no markdown decoration. If neither applies (you need a real
+decision), ask via your question tool instead — never fake a marker.
