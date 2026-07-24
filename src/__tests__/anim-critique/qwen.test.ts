@@ -4,7 +4,7 @@
  * a real (non-quota) error throws immediately without burning the fallbacks.
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { makeQwenVision } from '@/lib/anim-critique/qwen';
+import { makeQwenVision, parseFallbackModels } from '@/lib/anim-critique/qwen';
 
 const imgs = [{ base64: 'AAAA', mime: 'image/png' }];
 const ok = (content: string) =>
@@ -56,5 +56,48 @@ describe('makeQwenVision quota fallback', () => {
     const call = makeQwenVision({ apiKey: 'k', model: 'qwen3.7-plus', fallbackModels: ['qwen3.6-flash'] });
     await expect(call(imgs, 'p')).rejects.toThrow(/HTTP 400/);
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('parseFallbackModels', () => {
+  it('splits a comma-separated list and trims blanks', () => {
+    expect(parseFallbackModels(' a , b ,, c ')).toEqual(['a', 'b', 'c']);
+  });
+
+  it('returns undefined for unset/blank so the caller keeps its default', () => {
+    expect(parseFallbackModels(undefined)).toBeUndefined();
+    expect(parseFallbackModels('   ')).toBeUndefined();
+  });
+
+  it('supports an explicit empty chain via "none" (primary only, no fallbacks)', () => {
+    expect(parseFallbackModels('none')).toEqual([]);
+  });
+});
+
+describe('QWEN_CRITIQUE_FALLBACKS env override', () => {
+  it('re-tiers the chain without a code change', async () => {
+    vi.stubEnv('QWEN_CRITIQUE_FALLBACKS', 'qwen3.7-flash, qwen3.6-plus');
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(err(429, 'quota exceeded'))
+      .mockResolvedValueOnce(ok('{"env":1}'));
+    vi.stubGlobal('fetch', fetchMock);
+    const call = makeQwenVision({ apiKey: 'k', model: 'qwen3.7-plus' });
+    expect(await call(imgs, 'p')).toBe('{"env":1}');
+    expect(bodyModel(fetchMock.mock.calls[1])).toBe('qwen3.7-flash');
+    vi.unstubAllEnvs();
+  });
+
+  it('explicit fallbackModels beats the env override', async () => {
+    vi.stubEnv('QWEN_CRITIQUE_FALLBACKS', 'qwen3.7-flash');
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(err(429, 'quota exceeded'))
+      .mockResolvedValueOnce(ok('{"opt":1}'));
+    vi.stubGlobal('fetch', fetchMock);
+    const call = makeQwenVision({ apiKey: 'k', model: 'qwen3.7-plus', fallbackModels: ['qwen3.6-plus'] });
+    expect(await call(imgs, 'p')).toBe('{"opt":1}');
+    expect(bodyModel(fetchMock.mock.calls[1])).toBe('qwen3.6-plus');
+    vi.unstubAllEnvs();
   });
 });

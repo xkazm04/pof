@@ -17,7 +17,10 @@ export interface QwenVisionOptions {
   apiKey?: string;
   /** Primary model; default qwen3.7-plus, or $QWEN_CRITIQUE_MODEL. */
   model?: string;
-  /** Quota-exceeded fallback chain, tried in order when the primary hits its quota. */
+  /**
+   * Quota-exceeded fallback chain, tried in order when the primary hits its quota.
+   * Unset → $QWEN_CRITIQUE_FALLBACKS, else DEFAULT_FALLBACKS.
+   */
   fallbackModels?: string[];
   /** Override the base URL; default the intl DashScope endpoint, or $QWEN_BASE_URL. */
   baseUrl?: string;
@@ -28,10 +31,34 @@ const DEFAULT_FALLBACKS = ['qwen3.6-flash', 'qwen3.6-plus'];
 // DashScope signals quota/throttle via HTTP 429 or these markers in the error body.
 const QUOTA_MARKERS = /quota|arrearage|exceed|insufficient|throttl|rate.?limit|too many requests|allocated|free.?tier/i;
 
+/**
+ * Is this DashScope failure a quota/throttle (→ retry the next model, which has its
+ * own quota) rather than a real error (→ fail fast)? Pure; shared with the
+ * Qwen-Image generation runner so both sides classify failures identically.
+ */
+export function isQuotaError(status: number, body: string): boolean {
+  return status === 429 || QUOTA_MARKERS.test(body);
+}
+
+/**
+ * Parse a `QWEN_CRITIQUE_FALLBACKS` value into a chain. Pure.
+ * Unset/blank → undefined (caller keeps its default); `none` → [] (primary only).
+ */
+export function parseFallbackModels(raw: string | undefined): string[] | undefined {
+  const trimmed = raw?.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.toLowerCase() === 'none') return [];
+  const models = trimmed.split(',').map((m) => m.trim()).filter(Boolean);
+  return models.length > 0 ? models : undefined;
+}
+
 export function makeQwenVision(opts: QwenVisionOptions = {}) {
   const apiKey = opts.apiKey ?? process.env.QWEN_API_KEY ?? process.env.DASHSCOPE_API_KEY;
   const primary = opts.model ?? process.env.QWEN_CRITIQUE_MODEL ?? 'qwen3.7-plus';
-  const fallbacks = opts.fallbackModels ?? DEFAULT_FALLBACKS;
+  // Explicit opt wins, then the env override, then the hardcoded lineage — so a new
+  // Qwen VL tier can be promoted/re-tiered by config, without touching this file.
+  const fallbacks =
+    opts.fallbackModels ?? parseFallbackModels(process.env.QWEN_CRITIQUE_FALLBACKS) ?? DEFAULT_FALLBACKS;
   // primary first, then any fallbacks not already the primary (dedup).
   const models = [primary, ...fallbacks.filter((m) => m !== primary)];
   const baseUrl = (opts.baseUrl ?? process.env.QWEN_BASE_URL ?? DEFAULT_BASE).replace(/\/+$/, '');
@@ -63,8 +90,7 @@ export function makeQwenVision(opts: QwenVisionOptions = {}) {
       }
       const body = await res.text().catch(() => '');
       lastErr = `Qwen ${model} HTTP ${res.status}: ${body.slice(0, 200)}`;
-      const isQuota = res.status === 429 || QUOTA_MARKERS.test(body);
-      if (!isQuota) throw new Error(lastErr); // a real error -> don't burn the fallbacks
+      if (!isQuotaError(res.status, body)) throw new Error(lastErr); // real error -> don't burn the fallbacks
       // quota/throttle -> fall through to the next model (separate quota)
     }
     throw new Error(`all Qwen models exhausted. last: ${lastErr}`);
