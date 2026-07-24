@@ -10,7 +10,7 @@ import type {
 } from '@/lib/blender-mcp/types';
 import type { CritiqueCard } from '@/lib/visual-gen/mesh-critique';
 import type { StyleDnaProfile } from '@/lib/visual-gen/style-dna-db';
-import { getOfficialProvider } from '@/lib/visual-gen/providers';
+import { getOfficialProvider, getProviderById } from '@/lib/visual-gen/providers';
 
 export type JobStatus = 'pending' | 'generating' | 'completed' | 'failed' | 'importing';
 export type GenerationMode = 'text-to-3d' | 'image-to-3d';
@@ -47,6 +47,10 @@ interface ForgeState {
   addJob: (job: Omit<GenerationJob, 'id' | 'status' | 'progress' | 'createdAt'>) => string;
   updateJob: (id: string, updates: Partial<GenerationJob>) => void;
   removeJob: (id: string) => void;
+  /** Re-run a terminally-failed job through its original path (MCP / local-runner /
+   *  placeholder), reusing the inputs already stored on the job. The old failed
+   *  entry is dropped so the queue shows the fresh attempt, not a stale twin. */
+  retryJob: (id: string) => void;
   clearCompleted: () => void;
   setActiveProvider: (id: string) => void;
   addToHistory: (prompt: string) => void;
@@ -112,6 +116,42 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       pollingIntervals.delete(id);
     }
     set((s) => ({ jobs: s.jobs.filter((j) => j.id !== id) }));
+  },
+
+  retryJob: (id) => {
+    const job = get().jobs.find((j) => j.id === id);
+    if (!job || job.status !== 'failed') return;
+
+    const provider = getProviderById(job.providerId);
+
+    // Drop the stale failed entry; each path below enqueues a fresh job.
+    get().removeJob(id);
+
+    // MCP-backed (Blender) providers. A disconnected bridge simply re-fails the
+    // fresh job with the transport error — honest, not silently swallowed.
+    if (provider?.mcpBacked) {
+      void get().submitMcpJob(job.providerId, job.prompt, job.mode);
+      return;
+    }
+
+    // Runner-backed local image-to-3D (TripoSR/Hunyuan): the reference image was
+    // stored as a data URL on the job, so the retry can reuse it verbatim.
+    if (
+      provider?.runnerBacked &&
+      job.mode === 'image-to-3d' &&
+      job.imageUrl?.startsWith('data:')
+    ) {
+      void get().submitLocalJob(job.providerId, job.mode, job.imageUrl);
+      return;
+    }
+
+    // Everything else (unwired placeholder jobs): re-queue with the same inputs.
+    get().addJob({
+      mode: job.mode,
+      prompt: job.prompt,
+      imageUrl: job.imageUrl,
+      providerId: job.providerId,
+    });
   },
 
   clearCompleted: () => {

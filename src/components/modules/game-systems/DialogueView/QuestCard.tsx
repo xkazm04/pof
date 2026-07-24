@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Scroll, MapPin, MessageSquare,
   ChevronDown, ChevronRight, Target, Zap,
 } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { CopyButton } from '@/components/ui/CopyButton';
 import type {
   GeneratedQuest,
   QuestObjective,
@@ -43,33 +44,50 @@ function DifficultyPips({ level }: { level: number }) {
 export function QuestCard({ quest }: { quest: GeneratedQuest }) {
   const [expanded, setExpanded] = useState(false);
   const catCfg = CATEGORY_LABELS[quest.category];
+  const panelId = useId();
+
+  // Full quest object (objectives + dialogue tree + rewards) as portable JSON.
+  const questJson = useMemo(() => JSON.stringify(quest, null, 2), [quest]);
 
   return (
     <SurfaceCard level={2} className="overflow-hidden">
-      {/* Header */}
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center gap-2 px-3 py-2.5 text-left hover:bg-surface-hover/30 transition-colors"
-      >
-        {expanded
-          ? <ChevronDown className="w-3 h-3 text-text-muted flex-shrink-0" />
-          : <ChevronRight className="w-3 h-3 text-text-muted flex-shrink-0" />
-        }
-        <Scroll className="w-3.5 h-3.5 flex-shrink-0" style={{ color: catCfg.color }} />
-        <span className="text-xs font-semibold text-text truncate flex-1">{quest.name}</span>
+      {/* Header — the toggle and the copy control are SIBLINGS, never nested
+          (a <button> inside a <button> is invalid and breaks SR/keyboard). */}
+      <div className="w-full flex items-center gap-2 px-3 py-2.5">
+        <button
+          type="button"
+          onClick={() => setExpanded(!expanded)}
+          aria-expanded={expanded}
+          aria-controls={panelId}
+          className="flex items-center gap-2 flex-1 min-w-0 text-left rounded hover:bg-surface-hover/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-bright"
+        >
+          {expanded
+            ? <ChevronDown className="w-3 h-3 text-text-muted flex-shrink-0" aria-hidden />
+            : <ChevronRight className="w-3 h-3 text-text-muted flex-shrink-0" aria-hidden />
+          }
+          <Scroll className="w-3.5 h-3.5 flex-shrink-0" style={{ color: catCfg.color }} aria-hidden />
+          <span className="text-xs font-semibold text-text truncate flex-1">{quest.name}</span>
+        </button>
         <span
-          className="text-2xs font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
+          className="text-2xs font-bold uppercase tracking-wider px-1.5 py-0.5 rounded flex-shrink-0"
           style={{ color: catCfg.color, backgroundColor: `${catCfg.color}15` }}
         >
           {catCfg.label}
         </span>
         <DifficultyPips level={quest.difficulty} />
-      </button>
+        <CopyButton
+          text={questJson}
+          tooltip={`Copy "${quest.name}" as JSON`}
+          copiedTooltip={`Copied "${quest.name}" JSON`}
+          className="flex-shrink-0"
+        />
+      </div>
 
       {/* Expanded detail */}
       <AnimatePresence>
         {expanded && (
           <motion.div
+            id={panelId}
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}

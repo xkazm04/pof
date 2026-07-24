@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Trash2, ChevronRight, Zap,
+  Trash2, ChevronRight, Zap, AlertTriangle,
 } from 'lucide-react';
 import type {
   TestScenario,
@@ -10,11 +10,13 @@ import type {
   ExpectedAction,
 } from '@/types/ai-testing';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
-import { OPACITY_15, OPACITY_30 } from '@/lib/chart-colors';
+import { OPACITY_15, OPACITY_30, STATUS_WARNING } from '@/lib/chart-colors';
 import { DURATION, EASE_OUT } from '@/lib/motion';
+import { formatTimeAgo } from '@/lib/format-time';
 import { STATUS_META, SYSTEMS_ACCENT } from './constants';
 import { DebouncedTextarea } from './DebouncedFields';
 import { StimuliEditor, ExpectedActionsEditor } from './ScenarioEditors';
+import { getRunFreshness, describeRunFreshness } from './runFreshness';
 
 // ── Scenario Card ──
 
@@ -39,6 +41,10 @@ export function ScenarioCard({
 }) {
   const status = STATUS_META[scenario.status];
   const StatusIcon = status.icon;
+  // Display-only verdict on how much the status pill is worth: a result that
+  // predates the scenario's last edit is stale, not green. Never rewrites status.
+  const freshness = getRunFreshness(scenario);
+  const freshnessNote = describeRunFreshness(freshness.state);
 
   const handleAddStimulus = () => {
     const newStimulus: MockStimulus = {
@@ -99,6 +105,29 @@ export function ScenarioCard({
           {scenario.stimuli.length} stimuli &middot; {scenario.expectedActions.length} expected
         </span>
 
+        {/* When the last run happened — without it a status pill reads as if it
+            were live truth. `null` means the pill is authored state, not a result. */}
+        <span className="text-2xs text-text-muted flex-shrink-0 hidden sm:inline">
+          {freshness.ranAtMs === null ? 'never run' : `ran ${formatTimeAgo(freshness.ranAtMs, { extended: true })}`}
+        </span>
+
+        {/* Stale marker — the scenario was edited after the run that produced the
+            status, so the pill describes an older definition. Glyph + word, not hue. */}
+        {freshness.state === 'stale' && (
+          <span
+            className="flex items-center gap-1 text-2xs px-1.5 py-0.5 rounded flex-shrink-0"
+            style={{
+              backgroundColor: `${STATUS_WARNING}${OPACITY_15}`,
+              color: STATUS_WARNING,
+              border: `1px solid ${STATUS_WARNING}${OPACITY_30}`,
+            }}
+          >
+            <AlertTriangle className="w-3 h-3" aria-hidden="true" />
+            Stale
+            <span className="sr-only"> — {freshnessNote}</span>
+          </span>
+        )}
+
         {/* Status pill — icon + color + label so status survives grayscale / colorblindness */}
         <span
           className="flex items-center gap-1 text-2xs px-1.5 py-0.5 rounded flex-shrink-0"
@@ -155,6 +184,18 @@ export function ScenarioCard({
                 onUpdate={handleUpdateExpected}
                 onRemove={handleRemoveExpected}
               />
+
+              {/* What the stored result is actually worth. Shown for every state
+                  (not only stale) so "Passed" is never read as unqualified truth. */}
+              <p
+                className={`text-2xs leading-relaxed ${freshness.state === 'stale' ? '' : 'text-text-muted'}`}
+                style={freshness.state === 'stale' ? { color: STATUS_WARNING } : undefined}
+              >
+                {freshnessNote}
+                {freshness.ranAtMs !== null && (
+                  <> Last run {formatTimeAgo(freshness.ranAtMs, { extended: true })}.</>
+                )}
+              </p>
 
               {/* Last run output */}
               {scenario.lastRunOutput && (

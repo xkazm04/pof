@@ -231,7 +231,13 @@ export function CrashAnalyzerView() {
               />
             </div>
 
-            <div className="space-y-2 max-h-[65vh] overflow-y-auto">
+            {/* Real listbox: each CrashListItem is a focusable role=option that
+                reports aria-selected, so the triage list is keyboard/SR operable. */}
+            <div
+              role="listbox"
+              aria-label="Crash reports"
+              className="space-y-2 max-h-[65vh] overflow-y-auto"
+            >
               {filteredReports.map((r) => (
                 <CrashListItem
                   key={r.id}

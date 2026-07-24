@@ -8,7 +8,10 @@ import { NeonBar } from '../../unique-tabs/_design';
 export function ValueRow({ label, value, unit, color, min, max }: {
   label: string; value: number; unit: string; color: string; min: number; max: number;
 }) {
-  const pct = ((value - min) / (max - min)) * 100;
+  // Clamped: NeonBar caps the top end but a negative width is invalid CSS, so a
+  // value below `min` (or a degenerate min===max range) would break the bar.
+  const span = max - min;
+  const pct = span === 0 ? 0 : Math.max(0, Math.min(100, ((value - min) / span) * 100));
   return (
     <motion.div
       initial={{ opacity: 0, x: -6 }}

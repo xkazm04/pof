@@ -8,6 +8,10 @@ interface SceneComposerState {
   sceneInfo: SceneInfo | null;
   selectedObject: string | null;
   isRefreshing: boolean;
+  /** Reason the last scene refresh failed, or null when it succeeded. */
+  lastError: string | null;
+  /** True once at least one refresh has completed (success or failure). */
+  hasRefreshed: boolean;
   transformMode: 'translate' | 'rotate' | 'scale';
 
   refreshScene: () => Promise<void>;
@@ -22,15 +26,19 @@ export const useSceneComposerStore = create<SceneComposerState>()(
     sceneInfo: null,
     selectedObject: null,
     isRefreshing: false,
+    lastError: null,
+    hasRefreshed: false,
     transformMode: 'translate',
 
     refreshScene: async () => {
       set({ isRefreshing: true });
       const result = await tryApiFetch<SceneInfo>('/api/blender-mcp/scene');
       if (result.ok) {
-        set({ sceneInfo: result.data, isRefreshing: false });
+        set({ sceneInfo: result.data, isRefreshing: false, lastError: null, hasRefreshed: true });
       } else {
-        set({ isRefreshing: false });
+        // Never swallow the failure into a fake "no scene" empty state — keep the
+        // last known scene and surface why the refresh failed (fleet a11y convention).
+        set({ isRefreshing: false, lastError: result.error, hasRefreshed: true });
       }
     },
 

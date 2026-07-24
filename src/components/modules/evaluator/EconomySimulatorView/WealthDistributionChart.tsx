@@ -54,14 +54,24 @@ export function WealthDistributionChart({ metrics, snapshots }: {
         {/* Gini over time */}
         <div>
           <div className="text-2xs text-text-muted font-medium mb-1">Gini Coefficient Over Time</div>
-          <div className="flex items-end gap-px h-20">
+          <p className="sr-only">
+            Gini coefficient across {giniSampled.length} sampled hours; final value {lastGini.toFixed(3)}.
+            Each bar is focusable for its hour and value.
+          </p>
+          <div className="flex items-end gap-px h-20" role="group" aria-label="Gini coefficient per sampled hour">
             {giniSampled.map((m, i) => {
               const h = m.giniCoefficient * 100;
               const color = m.giniCoefficient > 0.6 ? 'bg-red-400/50' : m.giniCoefficient > 0.4 ? 'bg-amber-400/50' : 'bg-violet-400/50';
               return (
-                <div key={i} className="flex-1 group relative">
+                <div
+                  key={i}
+                  tabIndex={0}
+                  role="img"
+                  aria-label={`Hour ${m.hour}: Gini ${m.giniCoefficient.toFixed(3)}`}
+                  className="flex-1 group relative focus-ring rounded-sm"
+                >
                   <div className={`${color} rounded-t-sm w-full`} style={{ height: `${h}%` }} />
-                  <div className="absolute bottom-full mb-1 hidden group-hover:block z-10 left-1/2 -translate-x-1/2">
+                  <div className="absolute bottom-full mb-1 hidden group-hover:block group-focus-within:block z-10 left-1/2 -translate-x-1/2">
                     <div className="bg-surface-deep border border-border rounded px-1.5 py-0.5 text-2xs text-text-muted whitespace-nowrap">
                       H{m.hour}: {m.giniCoefficient.toFixed(3)}
                     </div>
@@ -79,13 +89,23 @@ export function WealthDistributionChart({ metrics, snapshots }: {
         {/* Wealth histogram */}
         <div>
           <div className="text-2xs text-text-muted font-medium mb-1">Endgame Gold Distribution</div>
-          <div className="flex items-end gap-1 h-20">
+          <p className="sr-only">
+            Endgame gold spread across {snapshots.length} players in {bucketCount} buckets from 0 to{' '}
+            {formatGold(maxG)} gold. Each bar is focusable for its range and player count.
+          </p>
+          <div className="flex items-end gap-1 h-20" role="group" aria-label="Endgame gold distribution by bucket">
             {buckets.map((count, i) => {
               const h = (count / maxBucket) * 100;
               return (
-                <div key={i} className="flex-1 group relative">
+                <div
+                  key={i}
+                  tabIndex={0}
+                  role="img"
+                  aria-label={`${formatGold(Math.round(i * bucketSize))} to ${formatGold(Math.round((i + 1) * bucketSize))} gold: ${count} players`}
+                  className="flex-1 group relative focus-ring rounded-sm"
+                >
                   <div className="bg-amber-400/40 rounded-t-sm w-full" style={{ height: `${h}%` }} />
-                  <div className="absolute bottom-full mb-1 hidden group-hover:block z-10 left-1/2 -translate-x-1/2">
+                  <div className="absolute bottom-full mb-1 hidden group-hover:block group-focus-within:block z-10 left-1/2 -translate-x-1/2">
                     <div className="bg-surface-deep border border-border rounded px-1.5 py-0.5 text-2xs text-text-muted whitespace-nowrap">
                       {formatGold(Math.round(i * bucketSize))}-{formatGold(Math.round((i + 1) * bucketSize))}: {count} players
                     </div>

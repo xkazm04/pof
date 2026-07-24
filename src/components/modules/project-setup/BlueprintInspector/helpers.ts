@@ -9,6 +9,7 @@ export function sectionCount(bp: BlueprintEntry, id: string): number | null {
     case 'variables': return bp.variables.length;
     case 'eventGraphEntryPoints': return bp.eventGraphEntryPoints.length;
     case 'interfaces': return bp.interfaces.length;
+    case 'crossReferences': return bp.crossReferences?.length ?? 0;
     default: return null;
   }
 }

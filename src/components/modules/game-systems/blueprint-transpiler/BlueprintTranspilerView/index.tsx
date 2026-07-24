@@ -5,15 +5,12 @@ import { RotateCcw } from 'lucide-react';
 import { useBlueprintTranspiler } from '@/hooks/useBlueprintTranspiler';
 import { useProjectStore } from '@/stores/projectStore';
 import type { TranspilerTab } from '@/types/blueprint';
-import { UI_TIMEOUTS } from '@/lib/constants';
 import { TAB_CONFIG, SAMPLE_BLUEPRINT } from './constants';
 import { TranspilePane } from './TranspilePane';
 import { DiffPane } from './DiffPane';
 
 export function BlueprintTranspilerView() {
   const [activeTab, setActiveTab] = useState<TranspilerTab>('transpile');
-  const [copiedHeader, setCopiedHeader] = useState(false);
-  const [copiedSource, setCopiedSource] = useState(false);
   const [showCode, setShowCode] = useState<'header' | 'source'>('header');
 
   const projectName = useProjectStore((s) => s.projectName);
@@ -59,12 +56,6 @@ export function BlueprintTranspilerView() {
   const handleLoadSample = useCallback(() => {
     setBlueprintJson(SAMPLE_BLUEPRINT);
   }, [setBlueprintJson]);
-
-  const copyToClipboard = useCallback(async (text: string, which: 'header' | 'source') => {
-    await navigator.clipboard.writeText(text);
-    if (which === 'header') { setCopiedHeader(true); setTimeout(() => setCopiedHeader(false), UI_TIMEOUTS.copyFeedback); }
-    else { setCopiedSource(true); setTimeout(() => setCopiedSource(false), UI_TIMEOUTS.copyFeedback); }
-  }, []);
 
   return (
     <div className="flex flex-col h-full">
@@ -116,9 +107,6 @@ export function BlueprintTranspilerView() {
             result={transpileResult}
             showCode={showCode}
             setShowCode={setShowCode}
-            copiedHeader={copiedHeader}
-            copiedSource={copiedSource}
-            onCopy={copyToClipboard}
             projectName={projectName}
             projectPath={projectPath}
           />

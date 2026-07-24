@@ -2,9 +2,10 @@
 
 import {
   Code, FileCode, ArrowRight, AlertTriangle,
-  XCircle, Loader2, Clipboard, ClipboardCheck, Upload,
+  XCircle, Loader2, Upload,
 } from 'lucide-react';
 import { useBlueprintTranspiler } from '@/hooks/useBlueprintTranspiler';
+import { CodeViewer } from '@/components/ui/CodeViewer';
 import { StaggerContainer, StaggerItem } from '@/components/ui/Stagger';
 import { TermChip, DecoratedJargon } from '@/components/ui/TermChip';
 import { OPACITY_20, OPACITY_30 } from '@/lib/chart-colors';
@@ -19,7 +20,6 @@ export function TranspilePane({
   onTranspile, onLoadSample,
   isLoading, error, asset, summary, result,
   showCode, setShowCode,
-  copiedHeader, copiedSource, onCopy,
   projectName, projectPath,
 }: {
   blueprintJson: string;
@@ -33,9 +33,6 @@ export function TranspilePane({
   result: ReturnType<typeof useBlueprintTranspiler>['transpileResult'];
   showCode: 'header' | 'source';
   setShowCode: (v: 'header' | 'source') => void;
-  copiedHeader: boolean;
-  copiedSource: boolean;
-  onCopy: (text: string, which: 'header' | 'source') => void;
   projectName: string;
   projectPath: string;
 }) {
@@ -147,26 +144,18 @@ export function TranspilePane({
                   projectPath={projectPath}
                   defaultModule={sanitizeModule(projectName)}
                 />
-                <button
-                  onClick={() => onCopy(
-                    showCode === 'header' ? result.headerCode : result.sourceCode,
-                    showCode,
-                  )}
-                  className="flex items-center gap-1 px-2 py-1 rounded text-2xs text-text-muted hover:text-text transition-colors"
-                >
-                  {(showCode === 'header' ? copiedHeader : copiedSource) ? (
-                    <><ClipboardCheck className="w-3 h-3 text-green-400" /> Copied</>
-                  ) : (
-                    <><Clipboard className="w-3 h-3" /> Copy</>
-                  )}
-                </button>
               </div>
             </div>
 
-            {/* Code display */}
-            <pre className="flex-1 overflow-auto p-3 text-xs font-mono text-text leading-relaxed whitespace-pre">
-              {showCode === 'header' ? result.headerCode : result.sourceCode}
-            </pre>
+            {/* Code display — Shiki-highlighted with copy + download (shared CodeViewer) */}
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <CodeViewer
+                code={showCode === 'header' ? result.headerCode : result.sourceCode}
+                fileName={`${result.className}.${showCode === 'header' ? 'h' : 'cpp'}`}
+                lang="cpp"
+                maxHeightClass="max-h-full"
+              />
+            </div>
 
             {/* Warnings */}
             {result.warnings.length > 0 && (

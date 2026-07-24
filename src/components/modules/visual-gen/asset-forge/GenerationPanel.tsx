@@ -28,6 +28,7 @@ export function GenerationPanel() {
   const submitLocalJob = useForgeStore((s) => s.submitLocalJob);
   const activeStyleDna = useForgeStore((s) => s.activeStyleDna);
   const applyStyleDna = useForgeStore((s) => s.applyStyleDna);
+  const promptHistory = useForgeStore((s) => s.promptHistory);
   const blenderConnected = useBlenderMCPStore((s) => s.connection.connected);
 
   const filteredProviders = GENERATION_PROVIDERS.filter((p) => p.modes.includes(mode));
@@ -50,6 +51,14 @@ export function GenerationPanel() {
     // Seed the raw editor from the composed prompt the first time it's opened.
     if (!advanced && !rawPrompt) setRawPrompt(composedPrompt);
     setAdvanced((a) => !a);
+  };
+
+  // Recall a past prompt: drop it into the raw editor (a stored prompt is a full
+  // technical string, so the advanced raw field — not the chip builder — is where
+  // it round-trips faithfully).
+  const applyHistoryPrompt = (prompt: string) => {
+    setRawPrompt(prompt);
+    setAdvanced(true);
   };
 
   const resetBuilder = () => {
@@ -231,6 +240,8 @@ export function GenerationPanel() {
         onRawPromptChange={setRawPrompt}
         composedPrompt={composedPrompt}
         onSubmit={handleSubmit}
+        promptHistory={promptHistory}
+        onApplyHistory={applyHistoryPrompt}
       />
 
       {/* Project-style indicator: the DNA fragment rides along invisibly, so say so. */}

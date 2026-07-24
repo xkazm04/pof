@@ -13,9 +13,14 @@ import type { CrashPattern } from '@/types/crash-analyzer';
 export function PatternCard({ pattern, plainMode }: { pattern: CrashPattern; plainMode: boolean }) {
   const [expanded, setExpanded] = useState(false);
   const plain = plainCrashType(pattern.crashType);
+  const detailId = `pattern-detail-${pattern.id}`;
 
   return (
     <SurfaceCard>
+      {/* The row stays mouse-clickable, but the chevron is a REAL button carrying
+          the disclosure semantics (focusable, Enter/Space, aria-expanded). The
+          header can't itself be a <button>: DecoratedCrashText renders tooltip
+          <button>s inside it, and nesting buttons is invalid HTML. */}
       <div className="flex items-start gap-2 cursor-pointer" onClick={() => setExpanded(!expanded)}>
         {pattern.isSystemic ? (
           <ShieldAlert className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
@@ -36,7 +41,16 @@ export function PatternCard({ pattern, plainMode }: { pattern: CrashPattern; pla
             <p className="text-2xs text-text-muted/80 mt-0.5 italic">{plain.fix}</p>
           )}
         </div>
-        {expanded ? <ChevronDown className="w-3.5 h-3.5 text-text-muted" /> : <ChevronRight className="w-3.5 h-3.5 text-text-muted" />}
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
+          aria-expanded={expanded}
+          aria-controls={detailId}
+          aria-label={`${expanded ? 'Collapse' : 'Expand'} details for pattern ${pattern.name}`}
+          className="focus-ring shrink-0 rounded p-0.5 text-text-muted hover:text-text transition-colors"
+        >
+          {expanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+        </button>
       </div>
       <AnimatePresence>
         {expanded && (
@@ -46,7 +60,7 @@ export function PatternCard({ pattern, plainMode }: { pattern: CrashPattern; pla
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-            <div className="mt-2 pt-2 border-t border-border space-y-2">
+            <div id={detailId} className="mt-2 pt-2 border-t border-border space-y-2">
               <div>
                 <p className="text-2xs font-medium text-text">Root Cause</p>
                 <p className="text-2xs text-text-muted"><DecoratedCrashText text={pattern.rootCause} /></p>

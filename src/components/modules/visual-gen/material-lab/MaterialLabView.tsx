@@ -22,6 +22,9 @@ function EditorTab() {
   const params = useMaterialStore((s) => s.params);
   const previewMesh = useMaterialStore((s) => s.previewMesh);
   const albedoTexture = useMaterialStore((s) => s.albedoTexture);
+  const normalTexture = useMaterialStore((s) => s.normalTexture);
+  const metallicTexture = useMaterialStore((s) => s.metallicTexture);
+  const roughnessTexture = useMaterialStore((s) => s.roughnessTexture);
   const sendToBlender = useMaterialStore((s) => s.sendToBlender);
   const connected = useBlenderMCPStore((s) => s.connection.connected);
 
@@ -91,6 +94,9 @@ function EditorTab() {
               params={params}
               previewMesh={previewMesh}
               albedoTexture={albedoTexture}
+              normalTexture={normalTexture}
+              metallicTexture={metallicTexture}
+              roughnessTexture={roughnessTexture}
             />
           </div>
 

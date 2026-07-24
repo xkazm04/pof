@@ -11,7 +11,7 @@ import {
 } from '@/lib/chart-colors';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { SectionLabel } from '../../../unique-tabs/_shared';
-import { BUILD_PRESETS } from '../progression-data';
+import { BUILD_PRESETS } from '../../_shared/data';
 import { ENEMY_TYPES, DEFAULT_HEALTHY_RANGE, VERDICT_STYLES } from './constants';
 import { computeEncounter } from './helpers';
 

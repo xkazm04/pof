@@ -48,13 +48,23 @@ export function SupplyDemandSection({ data, maxLevel }: { data: SupplyDemandPoin
       </div>
 
       {/* Chart */}
-      <div className="flex items-end gap-1 h-28">
+      <p className="sr-only">
+        Supply versus demand for {selectedCat} across {filtered.length} levels. Each bar pair is
+        focusable for that level&apos;s supply rate, demand rate, average price and affordability.
+      </p>
+      <div className="flex items-end gap-1 h-28" role="group" aria-label={`Supply and demand per level for ${selectedCat}`}>
         {filtered.map((d, i) => {
           const supH = (d.supplyRate / maxRate) * 100;
           const demH = (d.demandRate / maxRate) * 100;
           return (
-            <div key={i} className="flex-1 flex gap-px items-end group relative">
-              <div className="absolute bottom-full mb-1 hidden group-hover:block z-10 left-1/2 -translate-x-1/2">
+            <div
+              key={i}
+              tabIndex={0}
+              role="img"
+              aria-label={`Level ${d.level}: supply ${d.supplyRate} per hour, demand ${d.demandRate} per hour, average price ${formatGold(d.avgPrice)}, affordability ${d.affordabilityIndex.toFixed(2)}`}
+              className="flex-1 flex gap-px items-end group relative focus-ring rounded-sm"
+            >
+              <div className="absolute bottom-full mb-1 hidden group-hover:block group-focus-within:block z-10 left-1/2 -translate-x-1/2">
                 <div className="bg-surface-deep border border-border rounded px-2 py-1 text-2xs whitespace-nowrap shadow-lg">
                   <div className="text-text-muted">Level {d.level}</div>
                   <div className="text-emerald-400">Supply: {d.supplyRate}/hr</div>

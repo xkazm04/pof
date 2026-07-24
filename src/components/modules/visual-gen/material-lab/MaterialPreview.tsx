@@ -1,10 +1,40 @@
 'use client';
 
-import { Suspense, useMemo } from 'react';
+import { Suspense, useEffect, useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Environment } from '@react-three/drei';
 import * as THREE from 'three';
 import type { PBRParams, PreviewMesh } from './useMaterialStore';
+
+/**
+ * Load a texture from a URL and dispose the previous one whenever the URL (or
+ * color space) changes or the component unmounts. `colorSpace` must be
+ * `SRGBColorSpace` for color maps (albedo) and `NoColorSpace` for data maps
+ * (normal / metallic / roughness) — feeding a data map through sRGB decode
+ * skews its values and renders the material subtly wrong.
+ */
+function useDisposableTexture(
+  url: string | null,
+  colorSpace: THREE.ColorSpace,
+): THREE.Texture | null {
+  const texture = useMemo(() => {
+    if (!url) return null;
+    const tex = new THREE.TextureLoader().load(url);
+    tex.colorSpace = colorSpace;
+    return tex;
+  }, [url, colorSpace]);
+
+  // Dispose the texture from the *previous* render once a new one supersedes it,
+  // and dispose the final one on unmount — TextureLoader allocates a GPU texture
+  // per load, so without this every re-upload leaks one.
+  useEffect(() => {
+    return () => {
+      texture?.dispose();
+    };
+  }, [texture]);
+
+  return texture;
+}
 
 function PreviewGeometry({ mesh }: { mesh: PreviewMesh }) {
   switch (mesh) {
@@ -24,20 +54,32 @@ function MaterialMesh({
   params,
   previewMesh,
   albedoTexture,
+  normalTexture,
+  metallicTexture,
+  roughnessTexture,
 }: {
   params: PBRParams;
   previewMesh: PreviewMesh;
   albedoTexture: string | null;
+  normalTexture: string | null;
+  metallicTexture: string | null;
+  roughnessTexture: string | null;
 }) {
   const color = useMemo(() => new THREE.Color(params.baseColor), [params.baseColor]);
 
-  const albedoMap = useMemo(() => {
-    if (!albedoTexture) return null;
-    const loader = new THREE.TextureLoader();
-    const tex = loader.load(albedoTexture);
-    tex.colorSpace = THREE.SRGBColorSpace;
-    return tex;
-  }, [albedoTexture]);
+  // Albedo is a color map (sRGB); normal/metallic/roughness are data maps and
+  // must stay in linear space (NoColorSpace) or their values get gamma-skewed.
+  const albedoMap = useDisposableTexture(albedoTexture, THREE.SRGBColorSpace);
+  const normalMap = useDisposableTexture(normalTexture, THREE.NoColorSpace);
+  const metallicMap = useDisposableTexture(metallicTexture, THREE.NoColorSpace);
+  const roughnessMap = useDisposableTexture(roughnessTexture, THREE.NoColorSpace);
+
+  // normalStrength drives the normal map's perturbation intensity. Recreate the
+  // Vector2 by value so the material updates when the slider moves.
+  const normalScale = useMemo(
+    () => new THREE.Vector2(params.normalStrength, params.normalStrength),
+    [params.normalStrength],
+  );
 
   return (
     <mesh castShadow receiveShadow>
@@ -45,9 +87,12 @@ function MaterialMesh({
       <meshStandardMaterial
         color={albedoMap ? undefined : color}
         map={albedoMap}
+        normalMap={normalMap}
+        normalScale={normalMap ? normalScale : undefined}
+        metalnessMap={metallicMap}
+        roughnessMap={roughnessMap}
         metalness={params.metallic}
         roughness={params.roughness}
-        aoMapIntensity={params.aoStrength}
       />
     </mesh>
   );
@@ -57,9 +102,19 @@ interface MaterialPreviewProps {
   params: PBRParams;
   previewMesh: PreviewMesh;
   albedoTexture: string | null;
+  normalTexture: string | null;
+  metallicTexture: string | null;
+  roughnessTexture: string | null;
 }
 
-export function MaterialPreview({ params, previewMesh, albedoTexture }: MaterialPreviewProps) {
+export function MaterialPreview({
+  params,
+  previewMesh,
+  albedoTexture,
+  normalTexture,
+  metallicTexture,
+  roughnessTexture,
+}: MaterialPreviewProps) {
   return (
     <div className="w-full h-full rounded-lg overflow-hidden bg-[var(--surface-deep)]">
       <Canvas
@@ -78,6 +133,9 @@ export function MaterialPreview({ params, previewMesh, albedoTexture }: Material
             params={params}
             previewMesh={previewMesh}
             albedoTexture={albedoTexture}
+            normalTexture={normalTexture}
+            metallicTexture={metallicTexture}
+            roughnessTexture={roughnessTexture}
           />
 
           <OrbitControls

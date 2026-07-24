@@ -1,5 +1,5 @@
 import {
-  Box, Variable, Zap, Puzzle, GitBranch, Hash, FileCode,
+  Box, Variable, Zap, Puzzle, GitBranch, Hash, FileCode, Link2,
 } from 'lucide-react';
 import {
   ACCENT_CYAN, ACCENT_VIOLET, ACCENT_EMERALD, ACCENT_ORANGE, ACCENT_PINK,
@@ -22,5 +22,6 @@ export const SECTIONS: SectionDef[] = [
   { id: 'variables', label: 'Variables', icon: Variable, color: ACCENT_ORANGE },
   { id: 'eventGraphEntryPoints', label: 'Event Graph Entry Points', icon: Zap, color: ACCENT_PINK },
   { id: 'interfaces', label: 'Interfaces', icon: Puzzle, color: ACCENT_CYAN },
+  { id: 'crossReferences', label: 'Cross References', icon: Link2, color: ACCENT_VIOLET },
   { id: 'contentHash', label: 'Content Hash', icon: Hash, color: STATUS_NEUTRAL },
 ];

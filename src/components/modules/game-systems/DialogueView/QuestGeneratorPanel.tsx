@@ -1,11 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Scroll, RefreshCw, Sparkles, AlertTriangle,
+  Scroll, RefreshCw, Sparkles, AlertTriangle, Download,
 } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { CopyButton } from '@/components/ui/CopyButton';
 import { apiFetch } from '@/lib/api-utils';
 import { useProjectStore } from '@/stores/projectStore';
 import type {
@@ -66,6 +67,44 @@ export function QuestGeneratorPanel() {
   const quests = result?.quests ?? EMPTY_QUESTS;
   const notes = result?.coherenceNotes ?? EMPTY_NOTES;
 
+  // ── Export ──
+  //
+  // The generated quests used to dead-end on screen: no way to get the
+  // objectives/dialogue trees out of the panel. Batch payload keeps the
+  // provenance (when it was generated, which level doc it read) alongside the
+  // quests so an exported file is identifiable out of context.
+  const batchJson = useMemo(() => {
+    if (!result) return '';
+    return JSON.stringify(
+      {
+        generatedAt: result.generatedAt,
+        levelDocId: result.levelDocId,
+        levelDocName: result.levelDocName,
+        questCount: result.quests.length,
+        quests: result.quests,
+      },
+      null,
+      2,
+    );
+  }, [result]);
+
+  // Filename is derived from `generatedAt` (never Date.now() — that would be a
+  // render-purity violation and would drift from the payload's own stamp).
+  const downloadJson = useCallback(() => {
+    if (!batchJson || !result) return;
+    const stamp = result.generatedAt.replace(/[:.]/g, '-');
+    // Same transient-anchor shape as CodeViewer's triggerDownload — the anchor
+    // must be in the document before click() for Firefox to honour it.
+    const url = URL.createObjectURL(new Blob([batchJson], { type: 'application/json' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `quests-${stamp}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }, [batchJson, result]);
+
   return (
     <div className="space-y-4">
       {/* Controls */}
@@ -125,6 +164,35 @@ export function QuestGeneratorPanel() {
         <>
           {/* World scan summary */}
           <WorldScanSummary scan={result.worldScan} levelDocName={result.levelDocName} />
+
+          {/* Export — honest: this hands the quests off as a file, it does not
+              write anything into the UE5 project. */}
+          {quests.length > 0 && (
+            <SurfaceCard level={2} className="px-3 py-2 flex items-center gap-2 flex-wrap">
+              <span className="text-2xs uppercase tracking-wider text-text-muted font-medium">
+                Export {quests.length} quest{quests.length === 1 ? '' : 's'}
+              </span>
+              <span className="text-2xs text-text-muted">
+                — JSON hand-off (objectives, dialogue trees, rewards). Not written to your UE5 project.
+              </span>
+              <div className="ml-auto flex items-center gap-1">
+                <CopyButton
+                  text={batchJson}
+                  size="sm"
+                  tooltip={`Copy all ${quests.length} quests as JSON`}
+                  copiedTooltip="All quests copied"
+                />
+                <button
+                  type="button"
+                  onClick={downloadJson}
+                  className="flex items-center gap-1 px-2 py-1 rounded text-2xs font-medium text-text-muted hover:text-text hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-bright"
+                >
+                  <Download className="w-3 h-3" aria-hidden />
+                  Download .json
+                </button>
+              </div>
+            </SurfaceCard>
+          )}
 
           {/* Quest metrics — animate as a group first */}
           <motion.div

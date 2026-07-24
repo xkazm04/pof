@@ -11,7 +11,7 @@ import {
 import { motionSafe } from '@/lib/motion';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { SectionLabel, CopyButton } from '../../../unique-tabs/_shared';
-import { ACCENT, MAX_LEVEL, LEVEL_REWARDS } from '../progression-data';
+import { ACCENT, MAX_LEVEL, LEVEL_REWARDS } from '../../_shared/data';
 import {
   generateProgressionTable,
   progressionToCSV,

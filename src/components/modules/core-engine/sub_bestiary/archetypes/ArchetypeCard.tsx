@@ -10,8 +10,30 @@ import type { FeatureRow, FeatureStatus } from '@/types/feature-matrix';
 import { NeonBar } from '../../unique-tabs/_design';
 import { STATUS_COLORS } from '../../unique-tabs/_shared';
 import type { ArchetypeConfig, EliteModifier } from '../_shared/data';
-import { ELITE_MODIFIERS, applyModifiers, TIER_GLOW_COLORS, STAT_AVERAGES } from '../_shared/data';
+import { ARCHETYPES, ELITE_MODIFIERS, applyModifiers, TIER_GLOW_COLORS, STAT_AVERAGES } from '../_shared/data';
 import { ExpandedDetails } from './ExpandedDetails';
+
+/**
+ * The roster merges archetypes authored on different stat scales (combat-derived
+ * enemies store HP/Damage/Speed/Range as % of the roster max; hand-authored ones
+ * store raw HP/ATK/DEF/SPD/INT). A stat label carried by more than one of those
+ * vocabularies has a STAT_AVERAGES entry pooled across incompatible units, so its
+ * average tick would be a meaningless mark — those labels are listed here and the
+ * tick is suppressed rather than drawn as if it were a real baseline.
+ */
+const MIXED_SCALE_STATS: ReadonlySet<string> = (() => {
+  const vocabsByStat = new Map<string, Set<string>>();
+  for (const arch of ARCHETYPES) {
+    const vocab = arch.stats.map(s => s.label).sort().join('|');
+    for (const stat of arch.stats) {
+      if (!vocabsByStat.has(stat.label)) vocabsByStat.set(stat.label, new Set());
+      vocabsByStat.get(stat.label)!.add(vocab);
+    }
+  }
+  return new Set(
+    [...vocabsByStat.entries()].filter(([, vocabs]) => vocabs.size > 1).map(([label]) => label),
+  );
+})();
 
 interface ArchetypeCardProps {
   archetype: ArchetypeConfig;
@@ -108,7 +130,7 @@ export function ArchetypeCard({
                 ? applyModifiers(stat.value, stat.label, appliedMods)
                 : stat.value;
               const diff = effective - stat.value;
-              const avg = STAT_AVERAGES[stat.label];
+              const avg = MIXED_SCALE_STATS.has(stat.label) ? undefined : STAT_AVERAGES[stat.label];
               return (
                 <div key={stat.label} className="flex items-center gap-2 group/stat relative">
                   <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted w-10 flex-shrink-0 text-right">
@@ -124,7 +146,7 @@ export function ArchetypeCard({
                       <div
                         className="absolute top-0 h-full w-px pointer-events-none"
                         style={{ left: `${Math.min(100, avg)}%`, backgroundColor: withOpacity(OVERLAY_WHITE, OPACITY_25) }}
-                        title={`Avg: ${avg}`}
+                        title={`Roster average ${stat.label}: ${avg}`}
                       />
                     )}
                   </div>

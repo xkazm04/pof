@@ -20,6 +20,7 @@ import type { TestScenario } from '@/types/ai-testing';
 import type { ExtraTab } from '@/components/modules/shared/ReviewableModuleView';
 import { SYSTEMS_ACCENT } from './constants';
 import { SandboxTab } from './SandboxTab';
+import type { ActionError } from './SandboxTab';
 
 export function AIBehaviorView() {
   const mod = SUB_MODULE_MAP['ai-behavior'];
@@ -48,6 +49,11 @@ export function AIBehaviorView() {
   const [isCreating, setIsCreating] = useState(false);
   const [newSuiteName, setNewSuiteName] = useState('');
   const [newTargetClass, setNewTargetClass] = useState('');
+
+  // A mutation that failed says so, with a way to try the SAME action again.
+  // Without this a rejected create/delete looks exactly like a successful one.
+  const [actionError, setActionError] = useState<ActionError | null>(null);
+  const dismissActionError = useCallback(() => setActionError(null), []);
 
   const ctx = { projectName, projectPath, ueVersion };
 
@@ -91,19 +97,52 @@ export function AIBehaviorView() {
 
   // ── Handlers ──
 
+  const submitSuite = useCallback(
+    async (name: string, targetClass: string) => {
+      // `attempt` is self-contained so the error banner's Retry re-runs the very
+      // same create — the inputs are only cleared once the save actually landed.
+      const attempt = async (): Promise<void> => {
+        setActionError(null);
+        setIsCreating(true);
+        const suite = await createSuite({ name, description: '', targetClass });
+        setIsCreating(false);
+        if (!suite) {
+          setActionError({
+            message: `Couldn't create test suite "${name}" — the save failed. Your input was kept.`,
+            retry: () => { void attempt(); },
+          });
+          return;
+        }
+        setNewSuiteName('');
+        setNewTargetClass('');
+      };
+      await attempt();
+    },
+    [createSuite]
+  );
+
   const handleCreateSuite = useCallback(async () => {
     const name = newSuiteName.trim();
-    if (!name) return;
-    setIsCreating(true);
-    await createSuite({
-      name,
-      description: '',
-      targetClass: newTargetClass.trim() || 'AMyAIController',
-    });
-    setNewSuiteName('');
-    setNewTargetClass('');
-    setIsCreating(false);
-  }, [newSuiteName, newTargetClass, createSuite]);
+    if (!name || isCreating) return;
+    await submitSuite(name, newTargetClass.trim() || 'AMyAIController');
+  }, [newSuiteName, newTargetClass, isCreating, submitSuite]);
+
+  const handleDeleteSuite = useCallback(
+    async (id: number, name: string) => {
+      const attempt = async (): Promise<void> => {
+        setActionError(null);
+        const ok = await deleteSuite(id);
+        if (!ok) {
+          setActionError({
+            message: `Couldn't delete test suite "${name}" — it is still there.`,
+            retry: () => { void attempt(); },
+          });
+        }
+      };
+      await attempt();
+    },
+    [deleteSuite]
+  );
 
   const handleUpdateScenario = useCallback(
     (id: number, updates: Partial<TestScenario>) => {
@@ -161,15 +200,24 @@ export function AIBehaviorView() {
     // One bulk PUT + one refetch for the whole transition (was N PUTs + N refetches).
     const ids = activeSuite.scenarios.map((s) => s.id);
     runningIdsRef.current = ids;
+    setActionError(null);
     // Await the 'running' PUT + its trailing refetch BEFORE kicking off the CLI
     // run. Otherwise this fire-and-forget refetch can resolve after the CLI's
     // onComplete → retry(), clobbering freshly-written pass/fail results back to
     // a stale 'running' state for a frame.
-    await bulkUpdateScenarioStatus(ids, 'running');
+    const marked = await bulkUpdateScenarioStatus(ids, 'running');
+    if (!marked) {
+      // The run itself is still valid — but the rows won't show it, so say so
+      // rather than letting the sandbox look idle while the CLI works.
+      setActionError({
+        message: 'Couldn’t mark scenarios as running — the run started anyway, so statuses may be stale until it reports back.',
+        retry: () => { void retry(); },
+      });
+    }
     testRunCli.execute(
       TaskFactory.runAITests('ai-behavior', activeSuite, window.location.origin, 'AI Test Run')
     );
-  }, [activeSuite, testRunCli, bulkUpdateScenarioStatus]);
+  }, [activeSuite, testRunCli, bulkUpdateScenarioStatus, retry]);
 
   const isAnyRunning = testGenCli.isRunning || testRunCli.isRunning;
 
@@ -190,8 +238,10 @@ export function AIBehaviorView() {
         suites={suites}
         activeSuite={activeSuite}
         setActiveSuiteId={setActiveSuiteId}
-        deleteSuite={deleteSuite}
+        onDeleteSuite={handleDeleteSuite}
         deleteScenario={deleteScenario}
+        actionError={actionError}
+        onDismissActionError={dismissActionError}
         newSuiteName={newSuiteName}
         setNewSuiteName={setNewSuiteName}
         newTargetClass={newTargetClass}

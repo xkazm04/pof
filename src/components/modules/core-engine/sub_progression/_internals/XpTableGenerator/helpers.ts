@@ -1,4 +1,4 @@
-import { LEVEL_REWARDS } from '../progression-data';
+import { LEVEL_REWARDS } from '../../_shared/data';
 import type { ProgressionRow } from './types';
 
 /* ── Data Table Generation ─────────────────────────────────────────────────── */

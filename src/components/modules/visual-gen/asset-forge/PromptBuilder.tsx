@@ -1,6 +1,6 @@
 'use client';
 
-import { Pencil, Wand2 } from 'lucide-react';
+import { History, Pencil, Wand2 } from 'lucide-react';
 import { PROMPT_CHIP_GROUPS } from '@/lib/visual-gen/prompt-chips';
 import type { GenerationMode } from '@/lib/visual-gen/providers';
 
@@ -16,7 +16,14 @@ interface PromptBuilderProps {
   onRawPromptChange: (value: string) => void;
   composedPrompt: string;
   onSubmit: () => void;
+  /** Most-recent-first list of previously-submitted prompts (from the forge store). */
+  promptHistory: string[];
+  /** Recall a past prompt into the editor. */
+  onApplyHistory: (prompt: string) => void;
 }
+
+/** How many recent prompts the recall row surfaces. */
+const RECALL_LIMIT = 6;
 
 /**
  * No-jargon prompt builder: a subject line plus clickable Material / Mood /
@@ -35,8 +42,11 @@ export function PromptBuilder({
   onRawPromptChange,
   composedPrompt,
   onSubmit,
+  promptHistory,
+  onApplyHistory,
 }: PromptBuilderProps) {
   const selected = new Set(selectedChipIds);
+  const recentPrompts = promptHistory.slice(0, RECALL_LIMIT);
   const submitOnCtrlEnter = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) onSubmit();
   };
@@ -60,6 +70,31 @@ export function PromptBuilder({
           className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-text placeholder:text-text-muted focus:outline-none focus:border-[var(--visual-gen)]"
         />
       </div>
+
+      {/* Recall recent prompts — the forge remembers the last submissions, so make
+          them reusable instead of stranding them in the store. */}
+      {recentPrompts.length > 0 && (
+        <div>
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <History size={12} className="text-text-muted" />
+            <span className="text-2xs uppercase tracking-wide text-text-muted">Recent prompts</span>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {recentPrompts.map((prompt, i) => (
+              <button
+                key={`${i}-${prompt.slice(0, 24)}`}
+                type="button"
+                onClick={() => onApplyHistory(prompt)}
+                title={prompt}
+                className="max-w-[16rem] truncate px-2.5 py-1 rounded-full text-xs border border-border
+                           text-text-muted hover:text-text hover:border-text-muted transition-colors"
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Chip groups */}
       {!advanced &&

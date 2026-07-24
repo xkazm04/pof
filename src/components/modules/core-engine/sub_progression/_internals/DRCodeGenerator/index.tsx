@@ -8,7 +8,7 @@ import {
 } from '@/lib/chart-colors';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { SectionLabel, CopyButton, NormalizedLineChart } from '../../../unique-tabs/_shared';
-import { ACCENT, DR_ATTRIBUTES } from '../progression-data';
+import { ACCENT, DR_ATTRIBUTES } from '../../_shared/data';
 import { DRConfig, DR_CONFIGS } from './constants';
 import { generateCurveTableCSV, generateGEHeader, generateGESource, generateDataTableJSON } from './helpers';
 

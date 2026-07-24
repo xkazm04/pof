@@ -23,7 +23,7 @@ import { TagRulesEditor } from './TagRulesEditor';
 import { LoadoutEditor } from './LoadoutEditor';
 import { CodePreview } from './CodePreview';
 import { TemplatePicker } from './TemplatePicker';
-import { SimulationSandbox } from './_orphan/SimulationSandbox';
+import { SimulationSandbox } from './SimulationSandbox';
 import { SpecEntityBar } from './SpecEntityBar';
 import { useAbilitySpecBinding } from './useAbilitySpecBinding';
 import type { SubModuleId } from '@/types/modules';

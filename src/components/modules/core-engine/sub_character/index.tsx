@@ -94,7 +94,7 @@ export function CharacterBlueprint({ moduleId }: CharacterBlueprintProps) {
           )}
           {activeTab === 'input' && <InputTab moduleId={moduleId} featureMap={featureMap} />}
           {activeTab === 'movement' && <MovementTab moduleId={moduleId} />}
-          {activeTab === 'playground' && <CharacterFeelPlayground />}
+          {activeTab === 'playground' && <CharacterFeelPlayground moduleId={moduleId} />}
           {activeTab === 'ai-feel' && <CharacterFeelOptimizer moduleId={moduleId} />}
           {activeTab === 'simulator' && <SimulatorTab />}
         </motion.div>

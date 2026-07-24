@@ -1,4 +1,4 @@
-import { BUILD_PRESETS, PLAYER_POWER, ENEMY_DIFFICULTY } from '../progression-data';
+import { BUILD_PRESETS, PLAYER_POWER, ENEMY_DIFFICULTY } from '../../_shared/data';
 import type { EnemyType, EncounterResult } from './types';
 
 export function computeEncounter(

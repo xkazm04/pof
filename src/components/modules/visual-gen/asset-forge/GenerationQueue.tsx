@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Clock, CheckCircle, AlertCircle, Loader2, Trash2, X, Download } from 'lucide-react';
+import { Clock, CheckCircle, AlertCircle, Loader2, Trash2, X, Download, RotateCcw } from 'lucide-react';
 import { useForgeStore, type GenerationJob, type JobStatus } from './useForgeStore';
 import { CritiqueBadge } from './CritiqueBadge';
 
@@ -15,6 +15,7 @@ const STATUS_CONFIG: Record<JobStatus, { icon: typeof Clock; color: string; labe
 
 function JobCard({ job, now }: { job: GenerationJob; now: number }) {
   const removeJob = useForgeStore((s) => s.removeJob);
+  const retryJob = useForgeStore((s) => s.retryJob);
   const config = STATUS_CONFIG[job.status];
   const StatusIcon = config.icon;
 
@@ -72,6 +73,16 @@ function JobCard({ job, now }: { job: GenerationJob; now: number }) {
         {job.critique && <CritiqueBadge critique={job.critique} fidelity={job.fidelity} />}
         {job.error && (
           <p className="mt-1 text-xs text-red-400">{job.error}</p>
+        )}
+        {job.status === 'failed' && (
+          <button
+            onClick={() => retryJob(job.id)}
+            className="mt-2 inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium
+                       border border-border text-text-muted hover:text-text hover:border-text-muted transition-colors"
+          >
+            <RotateCcw size={12} />
+            Retry
+          </button>
         )}
       </div>
       <button

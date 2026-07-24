@@ -10,6 +10,7 @@ import type { ModuleNode, Edge } from './types';
 export function useDependencyGraph() {
   const [statusMap, setStatusMap] = useState<Map<string, string>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedModule, setSelectedModule] = useState<string | null>(null);
   const [hoveredModule, setHoveredModule] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
@@ -36,6 +37,7 @@ export function useDependencyGraph() {
 
   const fetchStatuses = useCallback(async () => {
     setIsLoading(true);
+    setError(null);
     try {
       // Route returns apiSuccess({ statuses }); tryApiFetch unwraps the envelope so
       // the status map isn't silently empty (which hid all cross-module blockers).
@@ -46,6 +48,11 @@ export function useDependencyGraph() {
           map.set(`${row.moduleId}::${row.featureName}`, row.status);
         }
         setStatusMap(map);
+      } else {
+        // A failed fetch must not masquerade as "no feature data yet" — that empty
+        // state claims the project has no reviewed features, which is a different
+        // (and actionable) fact. Surface the reason and let the user retry.
+        setError(result.error);
       }
     } finally {
       setIsLoading(false);
@@ -171,6 +178,8 @@ export function useDependencyGraph() {
   return {
     statusMap,
     isLoading,
+    error,
+    refetch: fetchStatuses,
     selectedModule,
     setSelectedModule,
     setHoveredModule,

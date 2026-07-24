@@ -23,9 +23,21 @@ export function CrashListItem({
   const timeAgo = formatTimeAgo(report.timestamp);
 
   return (
+    // A crash row is a real listbox option, not a bare click-div: it takes focus,
+    // announces its selected state, and toggles on Enter/Space so the whole triage
+    // list is operable by keyboard and screen reader.
     <div
+      role="option"
+      tabIndex={0}
+      aria-selected={isSelected}
       onClick={onClick}
-      className={`rounded-lg border p-3 cursor-pointer transition-all ${
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      className={`focus-ring rounded-lg border p-3 cursor-pointer transition-all ${
         isSelected ? '' : 'border-border hover:border-border/80 hover:bg-surface-2/50'
       }`}
       style={isSelected ? { borderColor: token.color, backgroundColor: token.bg } : undefined}

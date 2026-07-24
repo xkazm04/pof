@@ -2,6 +2,11 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render, screen, cleanup, fireEvent, within } from '@testing-library/react';
 import { AITestingSandbox } from '@/components/modules/game-systems/AITestingSandbox';
 import type { TestSuite, TestScenario, ScenarioStatus } from '@/types/ai-testing';
+import {
+  getRunFreshness,
+  parseDbTimestamp,
+  RUN_STALENESS_TOLERANCE_MS,
+} from '@/components/modules/game-systems/AITestingSandbox/runFreshness';
 import { ACCENT_EMERALD, ACCENT_INDIGO } from '@/lib/chart-colors';
 
 // setup.ts has no afterEach(cleanup) — see reference_test_no_autocleanup.
@@ -132,5 +137,91 @@ describe('AITestingSandbox — expand/collapse motion parity (Phase 1)', () => {
     expect(screen.getByText('Alpha')).toBeTruthy();
     expect(screen.getByText('Bravo')).toBeTruthy();
     expect(screen.getByText('Charlie')).toBeTruthy();
+  });
+});
+
+// ── Run-result freshness ──
+//
+// The status pill is the outcome of the LAST RUN; the scenario keeps being
+// edited afterwards. These cover the derivation (pure) and its surfacing.
+
+const MINUTE = 60 * 1000;
+
+/** Render an epoch-ms instant the way SQLite's `datetime('now')` writes it: UTC, no zone suffix. */
+function sqliteStamp(ms: number): string {
+  return new Date(ms).toISOString().slice(0, 19).replace('T', ' ');
+}
+
+/** A scenario whose last run happened `ranAgoMs` ago and was last edited `editedAgoMs` ago. */
+function makeRunScenario(
+  status: ScenarioStatus,
+  name: string,
+  ranAgoMs: number | null,
+  editedAgoMs: number,
+): TestScenario {
+  const now = Date.now();
+  return {
+    ...makeScenario(status, name),
+    lastRunAt: ranAgoMs === null ? null : new Date(now - ranAgoMs).toISOString(),
+    updatedAt: sqliteStamp(now - editedAgoMs),
+  };
+}
+
+describe('AITestingSandbox — run freshness derivation', () => {
+  it('reads SQLite naive stamps as UTC, not local time', () => {
+    // Without normalisation `new Date('2026-06-01 12:00:00')` is LOCAL noon —
+    // off by the machine's UTC offset, which would fake (or mask) staleness.
+    expect(parseDbTimestamp('2026-06-01 12:00:00'))
+      .toBe(Date.parse('2026-06-01T12:00:00.000Z'));
+    expect(parseDbTimestamp('2026-06-01T12:00:00.000Z'))
+      .toBe(Date.parse('2026-06-01T12:00:00.000Z'));
+    expect(parseDbTimestamp(null)).toBeNull();
+    expect(parseDbTimestamp('not-a-date')).toBeNull();
+  });
+
+  it('reports never-run when no run has been recorded', () => {
+    const f = getRunFreshness(makeRunScenario('ready', 'Fresh draft', null, 0));
+    expect(f.state).toBe('never-run');
+    expect(f.ranAtMs).toBeNull();
+  });
+
+  it('reports running while a run is in flight, whatever the timestamps say', () => {
+    expect(getRunFreshness(makeRunScenario('running', 'In flight', 10 * MINUTE, 0)).state)
+      .toBe('running');
+  });
+
+  it('reports stale when the scenario was edited after its last run', () => {
+    const f = getRunFreshness(makeRunScenario('passed', 'Edited since', 30 * MINUTE, 5 * MINUTE));
+    expect(f.state).toBe('stale');
+    expect(f.driftMs).toBeGreaterThan(RUN_STALENESS_TOLERANCE_MS);
+  });
+
+  it('does not report stale for the run write-back itself (two clocks, same moment)', () => {
+    // `last_run_at` (JS ISO) and `updated_at` (SQLite, whole seconds) are written
+    // by one statement — a couple of seconds apart at most. That must read current.
+    const f = getRunFreshness(makeRunScenario('passed', 'Just ran', 2000, 0));
+    expect(f.state).toBe('current');
+    expect(f.driftMs).toBe(0);
+  });
+});
+
+describe('AITestingSandbox — run freshness in the card', () => {
+  it('marks a passed-but-edited scenario Stale next to its green pill', () => {
+    renderSandbox(makeSuite([makeRunScenario('passed', 'Drifted', 30 * MINUTE, 5 * MINUTE)]));
+    // Both are shown: the outcome, and the fact it no longer describes the scenario.
+    expect(screen.getByText('Passed')).toBeTruthy();
+    expect(screen.getByText('Stale')).toBeTruthy();
+  });
+
+  it('says "never run" instead of implying the pill is a result', () => {
+    renderSandbox(makeSuite([makeRunScenario('ready', 'Unrun', null, 0)]));
+    expect(screen.getByText('never run')).toBeTruthy();
+    expect(screen.queryByText('Stale')).toBeNull();
+  });
+
+  it('leaves a current result unmarked', () => {
+    renderSandbox(makeSuite([makeRunScenario('passed', 'Verified', 2000, 0)]));
+    expect(screen.queryByText('Stale')).toBeNull();
+    expect(screen.getByText(/^ran /)).toBeTruthy();
   });
 });

@@ -100,6 +100,8 @@ export function SectionContent({ bp, sectionId }: { bp: BlueprintEntry; sectionI
       return <StringListSection items={bp.eventGraphEntryPoints} emptyText="No event graph entries" emptyHint="BeginPlay, Tick, and custom events show up here" />;
     case 'interfaces':
       return <StringListSection items={bp.interfaces} emptyText="No interfaces implemented" emptyHint="Implement UE interfaces (Class Settings > Interfaces) to see them" />;
+    case 'crossReferences':
+      return <StringListSection items={bp.crossReferences ?? []} emptyText="No cross references" emptyHint="Assets this blueprint references (meshes, materials, other blueprints) appear here" />;
     case 'contentHash':
       return <Row label="SHA-256" value={bp.contentHash} mono />;
     default: return null;

@@ -42,7 +42,11 @@ export function CrashDetailPanel({
             <span className="text-xs font-semibold text-text">{report.id}</span>
             <SeverityBadge severity={report.severity} />
           </div>
-          <button onClick={onClose} className="text-text-muted hover:text-text">
+          <button
+            onClick={onClose}
+            aria-label={`Close details for crash ${report.id}`}
+            className="focus-ring rounded text-text-muted hover:text-text"
+          >
             <XCircle className="w-4 h-4" />
           </button>
         </div>
@@ -66,7 +70,7 @@ export function CrashDetailPanel({
             onClick={() => setShowTech((v) => !v)}
             data-testid="show-tech-toggle"
             aria-expanded={showTech}
-            className="flex items-center gap-1.5 text-2xs text-text-muted hover:text-text transition-colors"
+            className="focus-ring rounded flex items-center gap-1.5 text-2xs text-text-muted hover:text-text transition-colors"
           >
             <Terminal className="w-3 h-3" />
             {showTech ? 'Hide' : 'Show'} technical details

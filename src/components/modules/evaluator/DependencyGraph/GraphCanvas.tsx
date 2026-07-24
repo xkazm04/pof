@@ -32,13 +32,22 @@ export function GraphCanvas({
   bridgeConnected,
   moduleCrossRefCounts,
 }: GraphCanvasProps) {
+  // Zoom by narrowing the viewBox around the graph centre, not by CSS-scaling the
+  // <svg>: a scaled element keeps its layout box, so inside this `overflow-hidden`
+  // container zooming in used to crop the graph (with no way to pan to what it hid)
+  // instead of magnifying it. Shrinking the viewBox keeps the same on-screen box and
+  // aspect ratio, so every zoom level stays fully visible.
+  const viewW = svgWidth / zoom;
+  const viewH = svgHeight / zoom;
+  const viewX = (svgWidth - viewW) / 2;
+  const viewY = (svgHeight - viewH) / 2;
+
   return (
     <div className="bg-background border border-border rounded-lg overflow-hidden">
       <svg
         ref={svgRef}
         width="100%"
-        viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-        style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}
+        viewBox={`${viewX} ${viewY} ${viewW} ${viewH}`}
       >
         <defs>
           <marker id="arrow" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto-start-reverse">

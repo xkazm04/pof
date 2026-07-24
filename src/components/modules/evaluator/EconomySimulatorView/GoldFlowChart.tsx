@@ -16,6 +16,8 @@ export function GoldFlowChart({ metrics }: { metrics: EconomyMetrics[] }) {
   // Sample ~20 data points for the chart
   const step = Math.max(1, Math.floor(metrics.length / 20));
   const sampled = metrics.filter((_, i) => i % step === 0);
+  const first = sampled[0];
+  const last = sampled[sampled.length - 1];
 
   return (
     <SurfaceCard className="p-4">
@@ -30,15 +32,31 @@ export function GoldFlowChart({ metrics }: { metrics: EconomyMetrics[] }) {
         </div>
       </div>
 
-      <div className="flex items-end gap-1 h-32">
+      {/* Screen-reader summary of the whole series — the focusable bars below
+          expose each sampled point, this gives the shape at a glance. */}
+      <p className="sr-only">
+        Gold flow across {sampled.length} sampled hours, from hour {first?.hour ?? 0} to hour{' '}
+        {last?.hour ?? 0}. Final inflow {formatGold(last?.inflowPerHour ?? 0)} per hour, outflow{' '}
+        {formatGold(last?.outflowPerHour ?? 0)} per hour, net{' '}
+        {(last?.netFlowPerHour ?? 0) >= 0 ? '+' : ''}{formatGold(last?.netFlowPerHour ?? 0)} per hour.
+        Each bar below is focusable for its exact figures.
+      </p>
+
+      <div className="flex items-end gap-1 h-32" role="group" aria-label="Gold flow per sampled hour">
         {sampled.map((m, i) => {
           const inflowH = (m.inflowPerHour / maxFlow) * 100;
           const outflowH = (m.outflowPerHour / maxFlow) * 100;
           const net = m.netFlowPerHour;
           return (
-            <div key={i} className="flex-1 flex flex-col items-center gap-0.5 group relative">
-              {/* Tooltip */}
-              <div className="absolute bottom-full mb-2 hidden group-hover:block z-10">
+            <div
+              key={i}
+              tabIndex={0}
+              role="img"
+              aria-label={`Hour ${m.hour}, level ${m.level}: inflow ${formatGold(m.inflowPerHour)} per hour, outflow ${formatGold(m.outflowPerHour)} per hour, net ${net >= 0 ? '+' : ''}${formatGold(net)} per hour, average gold ${formatGold(m.avgGold)}`}
+              className="flex-1 flex flex-col items-center gap-0.5 group relative focus-ring rounded-sm"
+            >
+              {/* Tooltip — shown on hover and keyboard focus */}
+              <div className="absolute bottom-full mb-2 hidden group-hover:block group-focus-within:block z-10">
                 <div className="bg-surface-deep border border-border rounded-lg px-2.5 py-1.5 text-2xs whitespace-nowrap shadow-lg">
                   <div className="text-text-muted">Hour {m.hour} · Lvl {m.level}</div>
                   <div className="text-emerald-400">In: {formatGold(m.inflowPerHour)}/hr</div>

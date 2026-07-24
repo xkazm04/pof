@@ -23,8 +23,10 @@ export function RawLogDisclosure({ rawLog }: { rawLog: string }) {
   return (
     <>
       <button
+        type="button"
         onClick={() => setShowRawLog(!showRawLog)}
-        className="flex items-center gap-1.5 text-2xs text-text-muted hover:text-text transition-colors"
+        aria-expanded={showRawLog}
+        className="focus-ring rounded flex items-center gap-1.5 text-2xs text-text-muted hover:text-text transition-colors"
       >
         <FileText className="w-3 h-3" />
         {showRawLog ? 'Hide' : 'Show'} Raw Log

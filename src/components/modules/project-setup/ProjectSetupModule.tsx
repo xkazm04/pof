@@ -13,6 +13,7 @@ import { ProjectFilesPanel } from './ProjectFilesPanel';
 import { BuildVerifyPanel } from './BuildVerifyPanel';
 import { ToolingBootstrapPanel } from './ToolingBootstrapPanel';
 import { ManifestPreview } from './ManifestPreview';
+import { BlueprintInspector } from './BlueprintInspector';
 import { deriveNextStep, type NextStepId } from './nextStep';
 import { buildCreateProjectPrompt, buildBuildVerifyPrompt } from './prompts';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
@@ -200,6 +201,14 @@ export function ProjectSetupModule() {
               scanning={scanning}
               onFixAllMissing={handleFixAllMissing}
             />
+          </div>
+        )}
+
+        {/* Blueprint Inspector — on-demand bridge introspection, reference info
+            like Project Files, so it dims the same way while a step is pending */}
+        {hasProject && (
+          <div className={`mb-6 ${nextStep ? 'opacity-50 transition-opacity duration-base' : ''}`}>
+            <BlueprintInspector />
           </div>
         )}
 
