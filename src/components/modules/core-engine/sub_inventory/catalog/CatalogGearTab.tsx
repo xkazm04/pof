@@ -108,6 +108,18 @@ export function CatalogGearTab({ moduleId, featureMap }: CatalogGearTabProps) {
   const totalPages = Math.ceil(filteredEntries.length / ITEMS_PER_PAGE);
   const pageEntries = filteredEntries.slice(currentPage * ITEMS_PER_PAGE, (currentPage + 1) * ITEMS_PER_PAGE);
 
+  // Lets the empty state tell "nothing matches your filters" apart from "the catalog
+  // is empty", and offers the way out of the former.
+  const hasActiveFilters =
+    categoryFilter !== 'all' || rarityFilter !== 'all' || subtypeFilter !== 'all' || searchQuery.trim() !== '';
+  const clearFilters = useCallback(() => {
+    setCategoryFilter('all');
+    setRarityFilter('all');
+    setSubtypeFilter('all');
+    setSearchQuery('');
+    setCurrentPage(0);
+  }, []);
+
   // zen-perf R3: dispatch generation for the primary (selected or first visible) entry.
   // `entries` is legitimately empty before the catalog is seeded / after a store
   // reset, so `primaryEntry` must be nullable — never assert it non-null here.
@@ -186,11 +198,7 @@ export function CatalogGearTab({ moduleId, featureMap }: CatalogGearTabProps) {
     };
     addEntity('items', itemToEntry(newData));
     // Surface the freshly-added item: clear filters/search and jump to the first page.
-    setCategoryFilter('all');
-    setRarityFilter('all');
-    setSubtypeFilter('all');
-    setSearchQuery('');
-    setCurrentPage(0);
+    clearFilters();
 
     const imagePrompt = `Game item icon, ${newItem.rarity} ${newItem.type}, ${newItem.name}, ${newItem.description}, dark fantasy ARPG style, centered on black background, high detail`.slice(0, 1500);
     const prompt = `Create a new item for the ARPG loot system:\nName: ${newItem.name}\nType: ${newItem.type}\nRarity: ${newItem.rarity}\nDescription: ${newItem.description}\n\nSteps:\n1. Call POST /api/leonardo with prompt: "${imagePrompt}"\n2. The API will return { imageUrl, generationId }\n3. Download the image from imageUrl and save to public/items/${slug}.webp\n4. Confirm the item was created with its image path\n\nItem slug: ${slug}`;
@@ -198,7 +206,7 @@ export function CatalogGearTab({ moduleId, featureMap }: CatalogGearTabProps) {
       .finally(() => { submittingRef.current = false; });
     setShowAddForm(false);
     setNewItem({ name: '', type: 'Weapon', rarity: 'Common', description: '' });
-  }, [newItem, moduleId, executeCli, addEntity, isCliRunning]);
+  }, [newItem, moduleId, executeCli, addEntity, isCliRunning, clearFilters]);
 
   return (
     <motion.div key="catalog-gear" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} className="space-y-4">
@@ -241,6 +249,8 @@ export function CatalogGearTab({ moduleId, featureMap }: CatalogGearTabProps) {
           isGenRunning={gen.isRunning}
           onRegenerate={primaryEntry ? () => gen.generate(nextStep) : undefined}
           onGridKeyDown={handleGridKeyDown}
+          hasActiveFilters={hasActiveFilters}
+          onClearFilters={clearFilters}
         />
 
         {/* Pagination */}

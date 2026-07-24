@@ -20,6 +20,12 @@ export function ParametersSection({ applicableParams, paramValues, explainMode, 
         {applicableParams.map((p) => {
           const val = paramValues[p.name] ?? p.defaultValue;
           const normalized = (val - p.min) / (p.max - p.min || 1);
+          const display = val.toFixed(p.step < 1 ? 2 : 0);
+          // Screen readers otherwise hear a bare number with no scale or unit —
+          // mirror what the visible min/max captions say under the track.
+          const valueText = explainMode
+            ? `${display} — ${p.plain.lowLabel} (${p.min}) to ${p.plain.highLabel} (${p.max})`
+            : `${display} of ${p.min} to ${p.max}`;
           return (
             <div
               key={p.name}
@@ -39,7 +45,7 @@ export function ParametersSection({ applicableParams, paramValues, explainMode, 
                     {explainMode ? p.plain.label : p.label}
                   </span>
                 </div>
-                <span className="text-2xs font-mono text-[#9b9ec0]">{val.toFixed(p.step < 1 ? 2 : 0)}</span>
+                <span className="text-2xs font-mono text-[#9b9ec0]">{display}</span>
               </div>
               {explainMode && (
                 <p className="text-2xs text-text-muted/70 mb-1.5">{p.plain.explanation}</p>
@@ -51,7 +57,9 @@ export function ParametersSection({ applicableParams, paramValues, explainMode, 
                 step={p.step}
                 value={val}
                 onChange={(e) => setParam(p.name, parseFloat(e.target.value))}
-                className="w-full h-1 rounded-full appearance-none cursor-pointer"
+                aria-label={`${explainMode ? p.plain.label : p.label} (UE parameter ${p.name})`}
+                aria-valuetext={valueText}
+                className="focus-ring w-full h-1 rounded-full appearance-none cursor-pointer"
                 style={{
                   background: `linear-gradient(to right, ${surfaceDef.color} 0%, ${surfaceDef.color} ${normalized * 100}%, var(--border) ${normalized * 100}%, var(--border) 100%)`,
                 }}

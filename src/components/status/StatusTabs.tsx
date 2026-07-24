@@ -29,6 +29,10 @@ export function StatusTabs({ tab, onChange }: { tab: StatusTab; onChange: (t: St
   // Which tab currently holds the roving tabindex. `null` = follow the selected tab, which
   // is also what we return to once focus leaves the tablist.
   const [focusIdx, setFocusIdx] = useState<number | null>(null);
+  // Hover is tracked in state because these tabs are styled inline (lab tokens, no class),
+  // and an inline style sheet has no :hover — without it an unselected tab gives no feedback
+  // at all under the pointer and reads as inert text.
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
 
   const selectedIdx = Math.max(0, TABS.findIndex((t) => t.id === tab));
   const rovingIdx = focusIdx ?? selectedIdx;
@@ -55,10 +59,13 @@ export function StatusTabs({ tab, onChange }: { tab: StatusTab; onChange: (t: St
       onKeyDown={onKeyDown}
       // Focus left the tablist entirely → hand the tab stop back to the selected tab.
       onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setFocusIdx(null); }}
-      style={{ display: 'inline-flex', gap: 'var(--lab-s1)', border: '1px solid var(--lab-line)', borderRadius: 'var(--lab-r-sm)', padding: 2 }}
+      onMouseLeave={() => setHoverIdx(null)}
+      // flexWrap keeps all five tabs reachable at narrow widths instead of overflowing the header.
+      style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 'var(--lab-s1)', border: '1px solid var(--lab-line)', borderRadius: 'var(--lab-r-sm)', padding: 2, maxWidth: '100%' }}
     >
       {TABS.map((t, i) => {
         const active = tab === t.id;
+        const hovered = !active && hoverIdx === i;
         return (
           <button
             key={t.id}
@@ -72,17 +79,20 @@ export function StatusTabs({ tab, onChange }: { tab: StatusTab; onChange: (t: St
             tabIndex={i === rovingIdx ? 0 : -1}
             className="focus-ring"
             onClick={() => { setFocusIdx(i); onChange(t.id); }}
+            onMouseEnter={() => setHoverIdx(i)}
             style={{
               padding: 'var(--lab-s1) var(--lab-s3)',
               fontSize: 'var(--lab-fs-xs)',
               fontFamily: 'var(--lab-font-mono)',
               textTransform: 'uppercase',
               letterSpacing: '0.04em',
+              whiteSpace: 'nowrap',
               color: active ? 'var(--lab-bg)' : 'var(--lab-ink)',
-              background: active ? 'var(--lab-ink)' : 'transparent',
+              background: active ? 'var(--lab-ink)' : hovered ? 'var(--lab-accent-bg)' : 'transparent',
               border: 'none',
               borderRadius: 'calc(var(--lab-r-sm) - 2px)',
               cursor: 'pointer',
+              transition: 'background var(--lab-dur-fast) var(--lab-ease)',
             }}
           >
             {t.label}

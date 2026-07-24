@@ -154,7 +154,8 @@ function AffixRow({ affix, itemLevel, onRemove, onUpdateMagnitude, onTogglePlace
         </button>
       </div>
 
-      {/* Magnitude slider */}
+      {/* Magnitude slider. Focus/blur mirror the pointer handlers so keyboard
+          arrow-key tuning gets the same live preview as dragging. */}
       <div className="flex items-center gap-2">
         <span className="text-xs font-mono text-text-muted w-8 text-right">{poolEntry.minValue}</span>
         <input type="range" min={poolEntry.minValue} max={poolEntry.maxValue} step={0.1}
@@ -164,7 +165,11 @@ function AffixRow({ affix, itemLevel, onRemove, onUpdateMagnitude, onTogglePlace
           onMouseUp={() => onSetPreviewTag(null)}
           onTouchStart={() => onSetPreviewTag(affix.tag)}
           onTouchEnd={() => onSetPreviewTag(null)}
-          className="flex-1 h-1 rounded-full appearance-none cursor-pointer"
+          onFocus={() => onSetPreviewTag(affix.tag)}
+          onBlur={() => onSetPreviewTag(null)}
+          aria-label={`Magnitude for ${affix.displayName}`}
+          aria-valuetext={`${affix.magnitude.toFixed(1)} ${affix.stat}`}
+          className="flex-1 h-1 rounded-full appearance-none cursor-pointer focus-ring"
           style={{ accentColor: catColor }} />
         <span className="text-xs font-mono text-text-muted w-8">{poolEntry.maxValue}</span>
         <span className="text-xs font-mono font-bold w-10 text-right"

@@ -16,6 +16,8 @@ interface StateNode {
   id: FadeState;
   label: string;
   detail: string;
+  /** Short formula shown under the node label in the diagram. */
+  subLabel: string;
   color: string;
   x: number;
   y: number;
@@ -30,10 +32,10 @@ interface Transition {
 }
 
 const STATES: StateNode[] = [
-  { id: 'Hidden',   label: 'Hidden',    detail: 'FadeAlpha = 0, invisible',                     color: STATUS_ERROR,   x: 60,  y: 40 },
-  { id: 'FadingIn', label: 'FadingIn',  detail: 'FadeInDuration = 0.2s, alpha 0→1',             color: STATUS_WARNING, x: 280, y: 40 },
-  { id: 'Visible',  label: 'Visible',   detail: 'Fully visible, TimeSinceLastDamage counting',  color: STATUS_SUCCESS, x: 280, y: 160 },
-  { id: 'FadingOut', label: 'FadingOut', detail: 'FadeOutDuration = 0.5s, alpha 1→0',            color: ACCENT_VIOLET,  x: 60,  y: 160 },
+  { id: 'Hidden',   label: 'Hidden',    detail: 'FadeAlpha = 0, invisible',                     subLabel: 'α = 0',              color: STATUS_ERROR,   x: 60,  y: 40 },
+  { id: 'FadingIn', label: 'FadingIn',  detail: 'FadeInDuration = 0.2s, alpha 0→1',             subLabel: '0.2s → α = 1',       color: STATUS_WARNING, x: 280, y: 40 },
+  { id: 'Visible',  label: 'Visible',   detail: 'Fully visible, TimeSinceLastDamage counting',  subLabel: 'α = 1, idle timer',  color: STATUS_SUCCESS, x: 280, y: 160 },
+  { id: 'FadingOut', label: 'FadingOut', detail: 'FadeOutDuration = 0.5s, alpha 1→0',            subLabel: '0.5s → α = 0',       color: ACCENT_VIOLET,  x: 60,  y: 160 },
 ];
 
 const TRANSITIONS: Transition[] = [
@@ -63,6 +65,14 @@ const CONFIG_PARAMS = [
 const NODE_W = 100;
 const NODE_H = 44;
 
+const STATE_MAP = new Map(STATES.map(s => [s.id, s]));
+
+// Primary transitions (the main loop: Hidden→FadingIn→Visible→FadingOut→Hidden)
+const PRIMARY_IDS = new Set(['Hidden→FadingIn', 'FadingIn→Visible', 'Visible→FadingOut', 'FadingOut→Hidden']);
+
+const SVG_TITLE_ID = 'fsm-diagram-title';
+const SVG_DESC_ID = 'fsm-diagram-desc';
+
 function stateCenter(s: StateNode): { cx: number; cy: number } {
   return { cx: s.x + NODE_W / 2, cy: s.y + NODE_H / 2 };
 }
@@ -71,16 +81,15 @@ function stateCenter(s: StateNode): { cx: number; cy: number } {
 
 export function EnemyHealthBarFSM() {
   const [activeState, setActiveState] = useState<FadeState | null>(null);
-
-  const stateMap = new Map(STATES.map(s => [s.id, s]));
+  const [focusedState, setFocusedState] = useState<FadeState | null>(null);
 
   // Get transitions relevant to selected state
   const activeTransitions = activeState
     ? TRANSITIONS.filter(t => t.from === activeState || t.to === activeState)
     : TRANSITIONS;
 
-  // Primary transitions (the main loop: Hidden→FadingIn→Visible→FadingOut→Hidden)
-  const primaryIds = new Set(['Hidden→FadingIn', 'FadingIn→Visible', 'Visible→FadingOut', 'FadingOut→Hidden']);
+  const toggleState = (id: FadeState) =>
+    setActiveState(prev => (prev === id ? null : id));
 
   return (
     <div className="space-y-4 p-1" data-testid="enemy-healthbar-fsm">
@@ -88,21 +97,27 @@ export function EnemyHealthBarFSM() {
       <SurfaceCard level={1} className="p-4">
         <div className="flex items-center gap-2 mb-3">
           <div className="w-2 h-2 rounded-full" style={{ backgroundColor: ACCENT_CYAN }} />
-          <span className="text-xs font-bold text-text uppercase tracking-wider">
+          <h4 className="text-xs font-bold text-text uppercase tracking-wider">
             UEnemyHealthBarWidget — EFadeState Machine
-          </span>
+          </h4>
         </div>
-        <p className="text-[11px] text-text-muted mb-3">
+        <p className="text-xs text-text-muted mb-3">
           4-state fade FSM from <code className="font-mono text-text">EnemyHealthBarWidget.h</code>.
-          Click a state to highlight its transitions.
+          Select a state — click, or Tab to it and press Enter — to filter the transition list below.
         </p>
 
         <div className="max-w-md mx-auto">
           <svg
             viewBox="0 0 400 230"
             className="w-full overflow-visible"
+            aria-labelledby={`${SVG_TITLE_ID} ${SVG_DESC_ID}`}
             data-testid="fsm-diagram-svg"
           >
+            <title id={SVG_TITLE_ID}>Enemy health bar fade state machine</title>
+            <desc id={SVG_DESC_ID}>
+              Four states — Hidden, FadingIn, Visible and FadingOut — connected by {TRANSITIONS.length} transitions.
+              Each state is selectable to filter the transition list that follows this diagram.
+            </desc>
             <defs>
               {TRANSITIONS.map((t, i) => (
                 <marker
@@ -121,13 +136,13 @@ export function EnemyHealthBarFSM() {
 
             {/* Transition arrows */}
             {TRANSITIONS.map((t, i) => {
-              const fromNode = stateMap.get(t.from)!;
-              const toNode = stateMap.get(t.to)!;
+              const fromNode = STATE_MAP.get(t.from)!;
+              const toNode = STATE_MAP.get(t.to)!;
               const fc = stateCenter(fromNode);
               const tc = stateCenter(toNode);
 
               const key = `${t.from}→${t.to}`;
-              const isPrimary = primaryIds.has(key);
+              const isPrimary = PRIMARY_IDS.has(key);
               const isActive = !activeState || t.from === activeState || t.to === activeState;
               const opacity = isActive ? (isPrimary ? 0.9 : 0.65) : 0.15;
 
@@ -169,7 +184,7 @@ export function EnemyHealthBarFSM() {
                       x={mx + (t.label === 'death' ? -4 : 4)}
                       y={my + (offset > 0 ? -6 : offset < 0 ? 10 : -6)}
                       textAnchor="middle"
-                      className="text-[11px] font-mono font-bold"
+                      className="text-xs font-mono font-bold"
                       fill={t.color}
                     >
                       {t.label}
@@ -179,17 +194,45 @@ export function EnemyHealthBarFSM() {
               );
             })}
 
-            {/* State nodes */}
+            {/* State nodes — selectable by pointer and by keyboard */}
             {STATES.map(s => {
-              const isActive = !activeState || activeState === s.id;
+              const isSelected = activeState === s.id;
+              const isActive = !activeState || isSelected;
               return (
                 <g
                   key={s.id}
                   opacity={isActive ? 1 : 0.3}
-                  className="cursor-pointer"
-                  onClick={() => setActiveState(prev => prev === s.id ? null : s.id)}
+                  className="cursor-pointer focus:outline-none"
+                  role="button"
+                  tabIndex={0}
+                  aria-pressed={isSelected}
+                  aria-label={`${s.label} state — ${s.detail}`}
+                  onClick={() => toggleState(s.id)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      toggleState(s.id);
+                    }
+                  }}
+                  onFocus={() => setFocusedState(s.id)}
+                  onBlur={() => setFocusedState(null)}
                   data-testid={`fsm-state-${s.id.toLowerCase()}`}
                 >
+                  {/* Focus halo — SVG cannot use the box-shadow .focus-ring token */}
+                  {focusedState === s.id && (
+                    <rect
+                      x={s.x - 4}
+                      y={s.y - 4}
+                      width={NODE_W + 8}
+                      height={NODE_H + 8}
+                      rx={9}
+                      fill="none"
+                      stroke="var(--focus-accent, currentColor)"
+                      strokeWidth={2}
+                      strokeDasharray="4 3"
+                      pointerEvents="none"
+                    />
+                  )}
                   <rect
                     x={s.x}
                     y={s.y}
@@ -198,7 +241,7 @@ export function EnemyHealthBarFSM() {
                     rx={6}
                     fill={`${s.color}${OPACITY_20}`}
                     stroke={s.color}
-                    strokeWidth={activeState === s.id ? 2.5 : 1.5}
+                    strokeWidth={isSelected ? 2.5 : 1.5}
                   />
                   <text
                     x={s.x + NODE_W / 2}
@@ -216,7 +259,7 @@ export function EnemyHealthBarFSM() {
                     className="text-[11px] font-mono"
                     fill="var(--text-muted)"
                   >
-                    {s.id === 'Hidden' ? 'α = 0' : s.id === 'FadingIn' ? '0.2s → α = 1' : s.id === 'Visible' ? 'α = 1, idle timer' : '0.5s → α = 0'}
+                    {s.subLabel}
                   </text>
                 </g>
               );
@@ -224,35 +267,50 @@ export function EnemyHealthBarFSM() {
           </svg>
         </div>
 
-        {/* Transition legend for selected state */}
-        {activeState && (
-          <div className="mt-3 space-y-1" data-testid="fsm-transition-list">
+        {/* Transition legend — all transitions, or just those touching the selected state */}
+        <div className="mt-3 space-y-1" aria-live="polite" data-testid="fsm-transition-list">
+          <div className="flex items-center gap-2">
             <p className="text-xs font-bold text-text-muted uppercase tracking-wider">
-              Transitions for <span style={{ color: stateMap.get(activeState)!.color }}>{activeState}</span>
+              {activeState ? (
+                <>Transitions for <span style={{ color: STATE_MAP.get(activeState)!.color }}>{activeState}</span></>
+              ) : (
+                <>All transitions</>
+              )}
+              <span className="ml-1.5 font-mono normal-case">({activeTransitions.length})</span>
             </p>
-            {activeTransitions.map((t, i) => (
-              <div
-                key={i}
-                className="flex items-center gap-2 text-xs font-mono px-2 py-1 rounded border"
-                style={{ borderColor: `${t.color}30`, backgroundColor: `${t.color}${OPACITY_10}` }}
-                data-testid={`fsm-transition-${i}`}
+            {activeState && (
+              <button
+                type="button"
+                onClick={() => setActiveState(null)}
+                className="focus-ring ml-auto text-xs px-2 py-0.5 rounded border border-border/60 text-text-muted hover:text-text hover:border-border-bright transition-colors"
+                data-testid="fsm-clear-selection"
               >
-                <span style={{ color: t.color }} className="font-bold shrink-0">{t.from} → {t.to}</span>
-                <span className="text-text-muted truncate">{t.trigger}</span>
-                {t.label && <span className="ml-auto shrink-0 px-1.5 py-0.5 rounded text-[11px]" style={{ color: t.color, backgroundColor: `${t.color}${OPACITY_10}` }}>{t.label}</span>}
-              </div>
-            ))}
+                Show all
+              </button>
+            )}
           </div>
-        )}
+          {activeTransitions.map((t, i) => (
+            <div
+              key={`${t.from}-${t.to}-${t.label}`}
+              className="flex items-center gap-2 text-xs font-mono px-2 py-1 rounded border"
+              style={{ borderColor: `${t.color}30`, backgroundColor: `${t.color}${OPACITY_10}` }}
+              data-testid={`fsm-transition-${i}`}
+            >
+              <span style={{ color: t.color }} className="font-bold shrink-0">{t.from} → {t.to}</span>
+              <span className="text-text-muted truncate">{t.trigger}</span>
+              {t.label && <span className="ml-auto shrink-0 px-1.5 py-0.5 rounded text-xs" style={{ color: t.color, backgroundColor: `${t.color}${OPACITY_10}` }}>{t.label}</span>}
+            </div>
+          ))}
+        </div>
       </SurfaceCard>
 
       {/* Config parameters */}
       <SurfaceCard level={1} className="p-4">
         <div className="flex items-center gap-2 mb-2">
           <div className="w-2 h-2 rounded-full" style={{ backgroundColor: ACCENT_CYAN }} />
-          <span className="text-xs font-bold text-text uppercase tracking-wider">
+          <h4 className="text-xs font-bold text-text uppercase tracking-wider">
             Tuning Parameters
-          </span>
+          </h4>
         </div>
         <div className="space-y-1" data-testid="fsm-config-params">
           {CONFIG_PARAMS.map(p => (

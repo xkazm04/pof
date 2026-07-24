@@ -13,6 +13,9 @@ export interface PipelineStep {
   color: string;
   detail: string;
   cost?: 'Low' | 'High';
+  /** True for engine-provided components (e.g. UEnvQueryContext_Querier). Keeps
+   *  the "N custom components" copy honest — see CUSTOM_COMPONENT_COUNT. */
+  builtIn?: boolean;
   params?: { label: string; value: string }[];
 }
 

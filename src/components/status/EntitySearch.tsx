@@ -11,6 +11,9 @@
  * operable: ↓/↑ walk the hits (wrapping), Home/End jump to the ends, Enter focuses the
  * highlighted entity, Escape clears. A query with no hits says so instead of silently
  * rendering nothing, and the hit count is announced via a live region.
+ *
+ * The MAX_HITS cap is never silent: the popup footer states "Showing N of M" whenever the
+ * list is truncated, so a broad query can't read as "these are all the matches".
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useCatalogStore } from '@/stores/catalogStore';
@@ -24,6 +27,20 @@ interface Hit {
 const MAX_HITS = 12;
 const LISTBOX_ID = 'status-entity-search-listbox';
 const optionId = (i: number) => `status-entity-search-option-${i}`;
+
+// Popup chrome shared by the listbox and the no-match message so both hang off the input
+// identically (one source of truth for the overlay's box).
+const POPUP_SHELL: React.CSSProperties = {
+  position: 'absolute',
+  zIndex: 10,
+  top: 'calc(100% + 4px)',
+  left: 0,
+  right: 0,
+  background: 'var(--lab-bg)',
+  border: '1px solid var(--lab-line)',
+  borderRadius: 'var(--lab-r-sm)',
+  boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
+};
 
 export function EntitySearch({ onFocus }: { onFocus: (catalogId: string, entityId: string) => void }) {
   const [q, setQ] = useState('');
@@ -44,16 +61,27 @@ export function EntitySearch({ onFocus }: { onFocus: (catalogId: string, entityI
   }, [entitiesByCatalog]);
 
   const needle = q.trim().toLowerCase();
-  const hits = useMemo(() => {
+  // Full match set first, capped list second — so the cap can be reported rather than hidden.
+  const matches = useMemo(() => {
     if (!needle) return [];
-    return all
-      .filter((h) => h.name.toLowerCase().includes(needle) || h.entityId.toLowerCase().includes(needle))
-      .slice(0, MAX_HITS);
+    return all.filter((h) => h.name.toLowerCase().includes(needle) || h.entityId.toLowerCase().includes(needle));
   }, [needle, all]);
+  const hits = useMemo(() => matches.slice(0, MAX_HITS), [matches]);
 
   const open = needle.length > 0;
   const hasHits = hits.length > 0;
+  const hidden = matches.length - hits.length;
   const active = hasHits ? Math.min(activeRaw, hits.length - 1) : 0;
+
+  // An unseeded store is a different situation from a bad query — say which one it is.
+  const nothingLoaded = all.length === 0;
+  const liveText = !open
+    ? ''
+    : hasHits
+      ? `${matches.length} entit${matches.length === 1 ? 'y' : 'ies'} match${hidden > 0 ? `, showing first ${hits.length}` : ''}`
+      : nothingLoaded
+        ? 'No entities loaded yet'
+        : 'No entity matches';
 
   // Keep the highlighted row visible when arrowing past the popup's scroll edge.
   // (Guarded call — jsdom provides no scrollIntoView.)
@@ -123,7 +151,7 @@ export function EntitySearch({ onFocus }: { onFocus: (catalogId: string, entityI
 
       {/* Result count for screen readers — the visual popup is the sighted equivalent. */}
       <span role="status" aria-live="polite" className="sr-only">
-        {open ? (hits.length ? `${hits.length} entit${hits.length === 1 ? 'y' : 'ies'} match` : 'No entity matches') : ''}
+        {liveText}
       </span>
 
       {/* A query with no hits says so, rather than silently rendering nothing. Kept OUT of
@@ -131,74 +159,88 @@ export function EntitySearch({ onFocus }: { onFocus: (catalogId: string, entityI
       {open && !hasHits && (
         <div
           style={{
-            position: 'absolute',
-            zIndex: 10,
-            top: 'calc(100% + 4px)',
-            left: 0,
-            right: 0,
+            ...POPUP_SHELL,
             padding: 'var(--lab-s2)',
             fontSize: 'var(--lab-fs-xs)',
-            color: 'var(--lab-muted)',
-            background: 'var(--lab-bg)',
-            border: '1px solid var(--lab-line)',
-            borderRadius: 'var(--lab-r-sm)',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
+            color: 'var(--text-subtle)',
           }}
         >
-          No entity matches “{q.trim()}” — try a shorter name, or search by id.
+          {nothingLoaded
+            ? 'No entities are loaded yet — nothing to search.'
+            : `No entity matches “${q.trim()}” — try a shorter name, or search by id.`}
         </div>
       )}
 
       {hasHits && (
-        <ul
-          ref={listRef}
-          id={LISTBOX_ID}
-          role="listbox"
-          aria-label="Matching entities"
-          style={{
-            position: 'absolute',
-            zIndex: 10,
-            top: 'calc(100% + 4px)',
-            left: 0,
-            right: 0,
-            margin: 0,
-            padding: 'var(--lab-s1)',
-            listStyle: 'none',
-            background: 'var(--lab-bg)',
-            border: '1px solid var(--lab-line)',
-            borderRadius: 'var(--lab-r-sm)',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
-            maxHeight: 320,
-            overflowY: 'auto',
-          }}
-        >
-          {hits.map((h, i) => (
-            <li
-              key={`${h.catalogId}:${h.entityId}`}
-              id={optionId(i)}
-              role="option"
-              aria-selected={i === active}
-              // Keep focus in the input so aria-activedescendant stays authoritative.
-              onMouseDown={(e) => e.preventDefault()}
-              onMouseEnter={() => setActiveRaw(i)}
-              onClick={() => select(h)}
-              style={{
-                display: 'flex',
-                alignItems: 'baseline',
-                justifyContent: 'space-between',
-                gap: 'var(--lab-s2)',
-                padding: 'var(--lab-s1) var(--lab-s2)',
-                borderRadius: 'var(--lab-r-sm)',
-                cursor: 'pointer',
-                color: 'var(--lab-text)',
-                background: i === active ? 'color-mix(in srgb, var(--lab-ink) 14%, transparent)' : 'transparent',
-              }}
-            >
-              <span style={{ fontSize: 'var(--lab-fs-sm)', fontWeight: 600 }}>{h.name}</span>
-              <span style={{ fontSize: 'var(--lab-fs-xs)', fontFamily: 'var(--lab-font-mono)', color: 'var(--lab-muted)' }}>{h.catalogId}</span>
-            </li>
-          ))}
-        </ul>
+        <div style={POPUP_SHELL}>
+          <ul
+            ref={listRef}
+            id={LISTBOX_ID}
+            role="listbox"
+            aria-label="Matching entities"
+            style={{
+              margin: 0,
+              padding: 'var(--lab-s1)',
+              listStyle: 'none',
+              maxHeight: 320,
+              overflowY: 'auto',
+            }}
+          >
+            {hits.map((h, i) => (
+              <li
+                key={`${h.catalogId}:${h.entityId}`}
+                id={optionId(i)}
+                role="option"
+                aria-selected={i === active}
+                // Keep focus in the input so aria-activedescendant stays authoritative.
+                onMouseDown={(e) => e.preventDefault()}
+                onMouseEnter={() => setActiveRaw(i)}
+                onClick={() => select(h)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'baseline',
+                  justifyContent: 'space-between',
+                  gap: 'var(--lab-s2)',
+                  padding: 'var(--lab-s1) var(--lab-s2)',
+                  borderRadius: 'var(--lab-r-sm)',
+                  cursor: 'pointer',
+                  color: 'var(--lab-text)',
+                  background: i === active ? 'color-mix(in srgb, var(--lab-ink) 14%, transparent)' : 'transparent',
+                }}
+              >
+                <span style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--lab-s2)', minWidth: 0 }}>
+                  <span style={{ fontSize: 'var(--lab-fs-sm)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.name}</span>
+                  {/* A row matched on id alone would otherwise look unrelated to the query —
+                      show the id that actually matched. */}
+                  {!h.name.toLowerCase().includes(needle) && (
+                    <span style={{ fontSize: 'var(--lab-fs-xs)', fontFamily: 'var(--lab-font-mono)', color: 'var(--text-subtle)', whiteSpace: 'nowrap' }}>{h.entityId}</span>
+                  )}
+                </span>
+                <span style={{ fontSize: 'var(--lab-fs-xs)', fontFamily: 'var(--lab-font-mono)', color: 'var(--text-subtle)', flexShrink: 0 }}>{h.catalogId}</span>
+              </li>
+            ))}
+          </ul>
+
+          {/* Footer: the cap is stated (never a silent truncation) and the keys that drive
+              this combobox are discoverable without a screen reader. */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'baseline',
+              justifyContent: 'space-between',
+              gap: 'var(--lab-s2)',
+              padding: 'var(--lab-s1) var(--lab-s2)',
+              borderTop: '1px solid var(--lab-line)',
+              fontSize: 'var(--lab-fs-xs)',
+              color: 'var(--text-subtle)',
+            }}
+          >
+            <span>↑↓ browse · ↵ focus · esc clear</span>
+            {hidden > 0 && (
+              <span style={{ flexShrink: 0 }}>Showing {hits.length} of {matches.length} — keep typing to narrow</span>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

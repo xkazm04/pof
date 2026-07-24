@@ -1,8 +1,12 @@
+import { useState } from 'react';
 import type { RoomNode } from '@/types/level-design';
 import type { PacingFinding } from '@/lib/level-design/pacing-linter';
 import { STATUS_ERROR, STATUS_WARNING, ACCENT_VIOLET, OVERLAY_WHITE } from '@/lib/chart-colors';
 import { ROOM_W, ROOM_H, ROOM_TYPE_CONFIG, DIFFICULTY_COLORS, SEVERITY_COLORS } from './constants';
 import { highestSeverity } from './helpers';
+
+/** Distance (px) a node moves per Shift+Arrow press — the keyboard equivalent of a drag. */
+const NUDGE_STEP = 16;
 
 interface RoomNodeGraphicProps {
   room: RoomNode;
@@ -12,10 +16,27 @@ interface RoomNodeGraphicProps {
   dragState: { roomId: string; offsetX: number; offsetY: number } | null;
   findingsByRoom?: Record<string, PacingFinding[]>;
   readOnly: boolean;
+  /** True for the single node that is in the tab order (roving tabindex). */
+  isTabStop: boolean;
   handleMouseDown: (e: React.MouseEvent, roomId: string) => void;
   completeConnection: (toId: string) => void;
   startConnection: (roomId: string) => void;
-  deleteRoom: (roomId: string) => void;
+  requestDeleteRoom: (roomId: string) => void;
+  selectRoom: (roomId: string | null) => void;
+  nudgeRoom: (roomId: string, dx: number, dy: number) => void;
+  cancelConnecting: () => void;
+}
+
+/** Move DOM focus to the previous/next room node within the same canvas. */
+function focusSibling(current: SVGGElement, dir: 1 | -1) {
+  const root = current.ownerSVGElement;
+  if (!root) return;
+  const nodes = Array.from(root.querySelectorAll<SVGGElement>('[data-room-node]'));
+  if (nodes.length < 2) return;
+  const i = nodes.indexOf(current);
+  if (i === -1) return;
+  const next = nodes[(i + dir + nodes.length) % nodes.length];
+  if (typeof next?.focus === 'function') next.focus();
 }
 
 export function RoomNodeGraphic({
@@ -26,11 +47,16 @@ export function RoomNodeGraphic({
   dragState,
   findingsByRoom,
   readOnly,
+  isTabStop,
   handleMouseDown,
   completeConnection,
   startConnection,
-  deleteRoom,
+  requestDeleteRoom,
+  selectRoom,
+  nudgeRoom,
+  cancelConnecting,
 }: RoomNodeGraphicProps) {
+  const [focusVisible, setFocusVisible] = useState(false);
   const cfg = ROOM_TYPE_CONFIG[room.type];
   const isSelected = selectedRoomId === room.id;
   const isConnectTarget = connectingFrom && connectingFrom !== room.id;
@@ -43,14 +69,96 @@ export function RoomNodeGraphic({
     .map((f) => `[${f.severity}] ${f.title}: ${f.suggestion}`)
     .join('\n');
 
+  const spawnTotal = room.spawnEntries.reduce((s, e) => s + e.count, 0);
+  const ariaLabel = [
+    room.name,
+    cfg.label,
+    `difficulty ${room.difficulty} of 5`,
+    `pacing ${room.pacing}`,
+    spawnTotal > 0 ? `${spawnTotal} spawns` : null,
+    findings.length > 0 ? `${findings.length} pacing ${findings.length === 1 ? 'finding' : 'findings'}, highest ${topSeverity}` : null,
+    isConnectTarget ? 'link target' : null,
+  ].filter(Boolean).join(', ');
+
+  const handleKeyDown = (e: React.KeyboardEvent<SVGGElement>) => {
+    const arrows: Record<string, [number, number]> = {
+      ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1],
+    };
+    const arrow = arrows[e.key];
+
+    if (arrow) {
+      e.preventDefault();
+      if (e.shiftKey) {
+        nudgeRoom(room.id, arrow[0] * NUDGE_STEP, arrow[1] * NUDGE_STEP);
+      } else {
+        focusSibling(e.currentTarget, arrow[0] + arrow[1] >= 0 ? 1 : -1);
+      }
+      return;
+    }
+
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      if (isConnectTarget) completeConnection(room.id);
+      else if (!readOnly) selectRoom(room.id);
+      return;
+    }
+
+    if (e.key === 'Escape' && connectingFrom) {
+      e.preventDefault();
+      cancelConnecting();
+      return;
+    }
+
+    if (readOnly) return;
+
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      e.preventDefault();
+      requestDeleteRoom(room.id);
+      return;
+    }
+
+    if (e.key === 'l' || e.key === 'L') {
+      e.preventDefault();
+      startConnection(room.id);
+    }
+  };
+
   return (
     <g
       transform={`translate(${room.x},${room.y})`}
       onMouseDown={(e) => handleMouseDown(e, room.id)}
       onClick={() => isConnectTarget && completeConnection(room.id)}
-      style={{ cursor: dragState?.roomId === room.id ? 'grabbing' : isConnectTarget ? 'crosshair' : 'pointer' }}
+      onKeyDown={handleKeyDown}
+      onFocus={(e) => {
+        let visible = true;
+        try { visible = e.currentTarget.matches(':focus-visible'); } catch { visible = true; }
+        setFocusVisible(visible);
+      }}
+      onBlur={() => setFocusVisible(false)}
+      data-room-node={room.id}
+      tabIndex={isTabStop ? 0 : -1}
+      role="option"
+      aria-selected={isSelected}
+      aria-label={ariaLabel}
+      style={{
+        cursor: dragState?.roomId === room.id ? 'grabbing' : isConnectTarget ? 'crosshair' : 'pointer',
+        outline: 'none',
+      }}
       className="transition-transform duration-200"
     >
+      {/* Keyboard focus ring — box-shadow utilities don't apply to SVG, so it's drawn. */}
+      {focusVisible && (
+        <rect
+          x={-10} y={-10}
+          width={ROOM_W + 20} height={ROOM_H + 20}
+          rx={16} ry={16}
+          fill="none"
+          stroke="var(--focus-accent, #60a5fa)"
+          strokeWidth={2}
+          strokeDasharray="5 3"
+          pointerEvents="none"
+        />
+      )}
       {/* Selection / Hover Glow Frame */}
       <rect
         x={-6} y={-6}
@@ -125,9 +233,11 @@ export function RoomNodeGraphic({
         opacity={0.3}
       />
 
-      {/* Action buttons (visible on hover or selection) */}
+      {/* Action buttons (visible on hover or selection). Pointer affordances only —
+          keyboard users get the same actions from the node itself (L / Delete), so
+          these stay out of the a11y tree rather than nesting buttons inside an option. */}
       {!readOnly && isSelected && (
-        <g className="opacity-0 hover:opacity-100 transition-opacity duration-300" style={{ opacity: 1 }}>
+        <g className="opacity-0 hover:opacity-100 transition-opacity duration-300" style={{ opacity: 1 }} aria-hidden="true">
           {/* Link button */}
           <g
             transform={`translate(${ROOM_W - 38}, 4)`}
@@ -141,7 +251,7 @@ export function RoomNodeGraphic({
           {/* Delete button */}
           <g
             transform={`translate(${ROOM_W - 20}, 4)`}
-            onClick={(e) => { e.stopPropagation(); deleteRoom(room.id); }}
+            onClick={(e) => { e.stopPropagation(); requestDeleteRoom(room.id); }}
             style={{ cursor: 'pointer' }}
             className="group/btn"
           >

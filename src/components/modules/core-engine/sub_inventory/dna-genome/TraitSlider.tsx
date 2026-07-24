@@ -38,6 +38,10 @@ export function TraitSlider({
           </div>
           <input
             type="range" min={0} max={100} step={1} value={pct}
+            // The axis caption is visual-only (a styled span next to the track),
+            // so the slider carries its own name + a spoken value.
+            aria-label={`${config.label} trait weight`}
+            aria-valuetext={`${Math.round(pct)} percent`}
             onChange={(e) => onChange(parseInt(e.target.value) / 100)}
             onFocus={(e) => { if (e.target.matches(':focus-visible')) setFocused(true); }}
             onBlur={() => setFocused(false)}
@@ -63,6 +67,7 @@ export function TraitSlider({
         </div>
         <input
           type="number" min={0} max={100} step={1} value={Math.round(pct)}
+          aria-label={`${config.label} trait weight, percent`}
           onChange={(e) => {
             const v = parseInt(e.target.value);
             if (!isNaN(v)) onChange(Math.max(0, Math.min(100, v)) / 100);

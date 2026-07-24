@@ -21,12 +21,13 @@ export function FindingCard({
   finding: PlaytestFinding;
   index: number;
   busy: boolean;
+  /** Resolves `false` when the write failed — the note editor then stays open. */
   onApply: (
     finding: PlaytestFinding,
     triageStatus: TriageStatus,
     note?: string,
     snoozedUntil?: string | null,
-  ) => Promise<void>;
+  ) => Promise<boolean>;
   onFixDispatched: (finding: PlaytestFinding) => void;
 }) {
   const [showNote, setShowNote] = useState(false);
@@ -49,7 +50,10 @@ export function FindingCard({
     } else {
       snoozedUntil = null;
     }
-    await onApply(finding, pendingStatus, draftNote, snoozedUntil);
+    const saved = await onApply(finding, pendingStatus, draftNote, snoozedUntil);
+    // Keep the editor (and the typed note) in place if the save failed — the
+    // explorer's error banner offers the retry.
+    if (!saved) return;
     setShowNote(false);
     setPendingStatus(null);
   };

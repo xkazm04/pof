@@ -1,11 +1,34 @@
 import { FOCUS_RING_CLASS } from '@/lib/ui/focus-ring';
 
-export function SubTab({ label, active, onClick, count }: { label: string; active: boolean; onClick: () => void; count?: number }) {
+/**
+ * One tab in the localization sub-tab nav. Follows the APG tabs pattern: the
+ * parent owns arrow-key navigation, so only the selected tab stays in the page
+ * tab order (`tabIndex 0` / `-1` roving) and each tab points at its panel via
+ * `aria-controls`.
+ */
+export function SubTab({
+  id,
+  controls,
+  label,
+  active,
+  onClick,
+  count,
+}: {
+  id?: string;
+  controls?: string;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+  count?: number;
+}) {
   return (
     <button
       type="button"
       role="tab"
+      id={id}
       aria-selected={active}
+      aria-controls={controls}
+      tabIndex={active ? 0 : -1}
       onClick={onClick}
       className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors relative rounded-t ${FOCUS_RING_CLASS} ${
         active ? 'text-text' : 'text-text-muted hover:text-text'

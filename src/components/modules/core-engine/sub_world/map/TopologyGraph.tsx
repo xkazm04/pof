@@ -43,6 +43,9 @@ interface TopologyGraphProps {
 
 function TopologyGraphImpl({ matchingIds }: TopologyGraphProps = {}) {
   const [hoveredTopoNode, setHoveredTopoNode] = useState<string | null>(null);
+  /* Tracked apart from hover so the focus ring only appears for keyboard focus,
+     while both hover and focus reveal the same detail bubble. */
+  const [focusedTopoNode, setFocusedTopoNode] = useState<string | null>(null);
   const prefersReduced = useReducedMotion();
   const hasFilter = matchingIds !== undefined && matchingIds.size > 0;
   const isInRange = (id: string) => !hasFilter || matchingIds!.has(id);
@@ -54,8 +57,11 @@ function TopologyGraphImpl({ matchingIds }: TopologyGraphProps = {}) {
         <svg
           viewBox={`${VIEW_BOX.x} ${VIEW_BOX.y} ${VIEW_BOX.w} ${VIEW_BOX.h}`}
           className="w-full max-w-[640px] h-auto overflow-visible"
+          role="group"
+          aria-label="Zone topology graph — each zone node is focusable"
         >
           {/* Edges */}
+          <g aria-hidden="true">
           {TOPOLOGY_EDGES.map((edge) => {
             const src = TOPOLOGY_NODES.find(n => n.id === edge.from);
             const tgt = TOPOLOGY_NODES.find(n => n.id === edge.to);
@@ -85,7 +91,8 @@ function TopologyGraphImpl({ matchingIds }: TopologyGraphProps = {}) {
               </g>
             );
           })}
-          {/* Nodes */}
+          </g>
+          {/* Nodes — focusable so the detail bubble is reachable without a mouse. */}
           {TOPOLOGY_NODES.map((node) => {
             const sz = node.size ?? 22;
             const isHovered = hoveredTopoNode === node.id;
@@ -94,9 +101,18 @@ function TopologyGraphImpl({ matchingIds }: TopologyGraphProps = {}) {
             return (
               <g
                 key={node.id}
+                tabIndex={0}
+                role="button"
+                aria-label={`${node.label}, ${node.group} zone, level ${TOPO_LEVEL_RANGES[node.id] ?? 'unknown'}${inRange ? '' : ', outside the current level filter'}`}
                 onMouseEnter={() => setHoveredTopoNode(node.id)}
                 onMouseLeave={() => setHoveredTopoNode(null)}
-                className="cursor-pointer"
+                onFocus={() => { setFocusedTopoNode(node.id); setHoveredTopoNode(node.id); }}
+                onBlur={() => {
+                  setFocusedTopoNode((prev) => (prev === node.id ? null : prev));
+                  setHoveredTopoNode((prev) => (prev === node.id ? null : prev));
+                }}
+                onKeyDown={(e) => { if (e.key === 'Escape') setHoveredTopoNode(null); }}
+                className="cursor-pointer focus:outline-none"
                 opacity={inRange ? 1 : 0.3}
                 style={{ transition: 'opacity 200ms ease-out' }}
               >
@@ -104,6 +120,17 @@ function TopologyGraphImpl({ matchingIds }: TopologyGraphProps = {}) {
                   <circle
                     cx={node.x!} cy={node.y!} r={sz / 2 + 4}
                     fill="none" stroke={node.color} strokeWidth="1" opacity={0.4}
+                  />
+                )}
+                {/* Keyboard focus ring — drawn, since box-shadow can't reach SVG. */}
+                {focusedTopoNode === node.id && (
+                  <circle
+                    cx={node.x!} cy={node.y!} r={sz / 2 + 7}
+                    fill="none"
+                    stroke="var(--focus-accent, #60a5fa)"
+                    strokeWidth={2}
+                    strokeDasharray="4 3"
+                    className="pointer-events-none"
                   />
                 )}
                 <circle
@@ -160,12 +187,12 @@ function TopologyGraphImpl({ matchingIds }: TopologyGraphProps = {}) {
       <div className="flex flex-wrap items-center gap-4 mt-3 pt-2 border-t border-border/40">
         {Object.entries(EDGE_STYLE_MAP).map(([type, s]) => (
           <span key={type} className="text-xs font-mono uppercase tracking-wider text-text-muted flex items-center gap-1.5">
-            <svg width="24" height="4"><line x1="0" y1="2" x2="24" y2="2" stroke={s.color} strokeWidth="2" strokeDasharray={s.dash === '0' ? 'none' : s.dash} /></svg>
+            <svg width="24" height="4" aria-hidden="true"><line x1="0" y1="2" x2="24" y2="2" stroke={s.color} strokeWidth="2" strokeDasharray={s.dash === '0' ? 'none' : s.dash} /></svg>
             {s.label}
           </span>
         ))}
         <span className="text-xs font-mono uppercase tracking-wider text-text-muted flex items-center gap-1.5">
-          <svg width="24" height="4"><line x1="0" y1="2" x2="24" y2="2" stroke={STATUS_WARNING} strokeWidth="3" /></svg>
+          <svg width="24" height="4" aria-hidden="true"><line x1="0" y1="2" x2="24" y2="2" stroke={STATUS_WARNING} strokeWidth="3" /></svg>
           Critical Path
         </span>
       </div>

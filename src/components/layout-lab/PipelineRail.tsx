@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useRovingFocus } from './hooks/useRovingFocus';
 
@@ -50,18 +50,58 @@ export function PipelineRail({
     roving.setActive(want);
   }
 
+  // Roving tabindex moves the ACTIVE index (which item is the tab-stop); DOM focus has to
+  // follow it or an Arrow/j/k press moves nothing a keyboard user can see, and the visible
+  // focus ring is left on an item that is no longer the tab-stop. Only move focus when the
+  // rail already owns it — never steal it on mount or on an external step selection.
+  const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const activeIdx = roving.active;
+  useEffect(() => {
+    const el = itemRefs.current[activeIdx];
+    if (!el || el === document.activeElement) return;
+    if (itemRefs.current.some((n) => n !== null && n === document.activeElement)) el.focus();
+  }, [activeIdx]);
+
+  const railStyle: CSSProperties = {
+    flex: 1,
+    minHeight: 0,
+    overflow: 'auto',
+    padding: '4px 18px 18px',
+    position: 'relative',
+  };
+
+  // Honest empty state — without it an entity with no pipeline renders as a bare
+  // connector line with nothing on it, which reads as a broken panel rather than "none".
+  if (steps.length === 0) {
+    return (
+      <div
+        role="list"
+        aria-label="Pipeline steps"
+        style={{ ...railStyle, display: 'grid', placeItems: 'center', padding: '24px 18px' }}
+      >
+        <p
+          style={{
+            margin: 0,
+            maxWidth: 240,
+            textAlign: 'center',
+            fontSize: 'var(--lab-fs-sm)',
+            lineHeight: 1.4,
+            color: 'var(--lab-muted)',
+          }}
+        >
+          No pipeline steps here yet — pick a catalog entity in the tree to load its pipeline.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div
       role="list"
       aria-label="Pipeline steps"
+      aria-busy={loading || undefined}
       {...roving.containerProps}
-      style={{
-        flex: 1,
-        minHeight: 0,
-        overflow: 'auto',
-        padding: '4px 18px 18px',
-        position: 'relative',
-      }}
+      style={railStyle}
     >
       <div
         style={{
@@ -104,17 +144,30 @@ export function PipelineRail({
           : status === 'deferred' || status === 'unproduced'
           ? 'var(--lab-muted)'
           : 'var(--lab-ink)';
+        // An explicit aria-label REPLACES the button's descendant text for assistive tech,
+        // so every badge rendered inside it (live dot, drift, sync failure, shimmer) is
+        // silent unless folded in here. Keep the order: name+status first, then flags.
+        const label = [
+          ariaFor(step, i),
+          isLoading ? 'status loading' : null,
+          live ? 'prototyped' : null,
+          drifted ? 'server verdict differs' : null,
+          notSynced ? 'not synced to server' : null,
+        ]
+          .filter(Boolean)
+          .join(', ');
 
         return (
-          <motion.div key={step}
+          <motion.div key={step} role="listitem"
             initial={reduce ? false : { opacity: 0, x: -6 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: reduce ? 0 : i * 0.02, duration: reduce ? 0 : 0.16 }}>
           <button
             {...roving.itemProps(i)}
+            ref={(el) => { itemRefs.current[i] = el; }}
             onClick={() => onSelectStep(i)}
             title={tooltipFor(step, i)}
-            aria-label={ariaFor(step, i)}
+            aria-label={label}
             aria-current={current ? 'step' : undefined}
             className="focus-ring-inset"
             style={{
@@ -202,6 +255,7 @@ export function PipelineRail({
               {step}
               {live && (
                 <span
+                  aria-hidden="true"
                   style={{
                     width: 6,
                     height: 6,
@@ -215,7 +269,7 @@ export function PipelineRail({
               {drifted && (
                 <span
                   data-step-drift="true"
-                  aria-label="Server verdict differs"
+                  aria-hidden="true"
                   title="Server verdict differs — open this step to adopt server truth"
                   style={{
                     flexShrink: 0,
@@ -232,7 +286,7 @@ export function PipelineRail({
               {notSynced && (
                 <span
                   data-step-sync-failed="true"
-                  aria-label="Not synced to server"
+                  aria-hidden="true"
                   title="Not synced to server — this step's produce failed to save; it may be missing on other devices/sessions"
                   style={{
                     flexShrink: 0,

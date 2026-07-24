@@ -16,11 +16,26 @@ const SYNC_CONFIG: Record<SyncStatus, { icon: typeof CheckCircle; color: string;
   unlinked:   { icon: Info,           color: STATUS_NEUTRAL, bg: `${STATUS_NEUTRAL}15`, label: 'Unlinked',   desc: 'No code generated yet' },
 };
 
-const SEVERITY_CONFIG: Record<string, { color: string; icon: typeof Info }> = {
-  info:     { color: STATUS_INFO, icon: Info },
-  warning:  { color: STATUS_WARNING, icon: AlertTriangle },
-  critical: { color: STATUS_ERROR, icon: AlertOctagon },
+const SEVERITY_CONFIG: Record<string, { color: string; icon: typeof Info; label: string }> = {
+  info:     { color: STATUS_INFO, icon: Info, label: 'Info' },
+  warning:  { color: STATUS_WARNING, icon: AlertTriangle, label: 'Warning' },
+  critical: { color: STATUS_ERROR, icon: AlertOctagon, label: 'Critical' },
 };
+
+/** Never index blind — an unrecognised severity must degrade, not crash the panel. */
+function severityOf(severity: string) {
+  return SEVERITY_CONFIG[severity] ?? { color: STATUS_NEUTRAL, icon: Info, label: severity || 'Unknown' };
+}
+
+/**
+ * Copy for the "nothing to show" case, per status — so a zero-divergence
+ * report never reads as a clean bill of health when nothing was compared.
+ */
+function emptyCopy(status: SyncStatus): string {
+  if (status === 'synced') return 'No divergences detected. Design and code are in sync.';
+  if (status === 'unlinked') return 'Nothing to compare yet — generate code from the design doc, then run Check Sync.';
+  return 'No field-level divergences listed. Run Check Sync to refresh the report.';
+}
 
 interface SyncStatusPanelProps {
   syncStatus: SyncStatus;
@@ -46,12 +61,15 @@ export function SyncStatusPanel({
 
   return (
     <div className="space-y-4">
-      {/* Sync status badge */}
+      {/* Sync status badge — role=status so a re-check announces the new verdict */}
       <div
+        role="status"
+        aria-live="polite"
+        data-testid="sync-status-badge"
         className="flex items-center gap-3 px-4 py-3 rounded-lg border"
         style={{ backgroundColor: cfg.bg, borderColor: cfg.color + '30' }}
       >
-        <StatusIcon className="w-4 h-4 flex-shrink-0" style={{ color: cfg.color }} />
+        <StatusIcon className="w-4 h-4 flex-shrink-0" style={{ color: cfg.color }} aria-hidden="true" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold" style={{ color: cfg.color }}>
@@ -62,9 +80,11 @@ export function SyncStatusPanel({
         </div>
 
         <button
+          type="button"
           onClick={onCheckSync}
           disabled={isChecking}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-50"
+          aria-busy={isChecking}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-50 focus-ring"
           style={{
             backgroundColor: `${accentColor}24`,
             color: accentColor,
@@ -72,11 +92,11 @@ export function SyncStatusPanel({
           }}
         >
           {isChecking ? (
-            <Loader2 className="w-3 h-3 animate-spin" />
+            <Loader2 className="w-3 h-3 animate-spin" aria-hidden="true" />
           ) : (
-            <GitCompare className="w-3 h-3" />
+            <GitCompare className="w-3 h-3" aria-hidden="true" />
           )}
-          {isChecking ? 'Checking...' : 'Check Sync'}
+          {isChecking ? 'Checking…' : 'Check Sync'}
         </button>
       </div>
 
@@ -84,10 +104,15 @@ export function SyncStatusPanel({
       {divergences.length > 0 && (
         <div>
           <button
+            type="button"
             onClick={() => setExpanded(!expanded)}
-            className="flex items-center gap-1.5 w-full text-left mb-2"
+            aria-expanded={expanded}
+            aria-controls="sync-divergence-list"
+            className="flex items-center gap-1.5 w-full text-left mb-2 focus-ring rounded"
           >
-            {expanded ? <ChevronDown className="w-3 h-3 text-text-muted-hover" /> : <ChevronRight className="w-3 h-3 text-text-muted-hover" />}
+            {expanded
+              ? <ChevronDown className="w-3 h-3 text-text-muted-hover" aria-hidden="true" />
+              : <ChevronRight className="w-3 h-3 text-text-muted-hover" aria-hidden="true" />}
             <span className="text-xs uppercase tracking-wider text-text-muted font-semibold">
               Divergences
             </span>
@@ -100,9 +125,9 @@ export function SyncStatusPanel({
           </button>
 
           {expanded && (
-            <div className="space-y-1.5">
+            <div className="space-y-1.5" id="sync-divergence-list">
               {divergences.map((div, i) => {
-                const sev = SEVERITY_CONFIG[div.severity];
+                const sev = severityOf(div.severity);
                 const SevIcon = sev.icon;
 
                 return (
@@ -111,7 +136,12 @@ export function SyncStatusPanel({
                     className="px-3 py-2.5 rounded-md bg-surface-deep border border-border"
                   >
                     <div className="flex items-start gap-2">
-                      <SevIcon className="w-3 h-3 flex-shrink-0 mt-0.5" style={{ color: sev.color }} />
+                      <SevIcon
+                        className="w-3 h-3 flex-shrink-0 mt-0.5"
+                        style={{ color: sev.color }}
+                        role="img"
+                        aria-label={`${sev.label} severity`}
+                      />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-xs font-medium text-text">{div.roomName}</span>
@@ -144,15 +174,20 @@ export function SyncStatusPanel({
                       </div>
 
                       <button
+                        type="button"
                         onClick={() => onReconcile(div)}
-                        className="flex items-center gap-1 px-2 py-1 rounded text-2xs font-medium flex-shrink-0 transition-all"
+                        // Every row's button reads "Fix" — name it so screen-reader
+                        // users can tell N identical buttons apart.
+                        aria-label={`Reconcile ${div.field} on ${div.roomName}`}
+                        title={`Reconcile ${div.field} on ${div.roomName}`}
+                        className="flex items-center gap-1 px-2 py-1 rounded text-2xs font-medium flex-shrink-0 transition-all focus-ring"
                         style={{
                           backgroundColor: `${accentColor}24`,
                           color: accentColor,
                           border: `1px solid ${accentColor}38`,
                         }}
                       >
-                        <RefreshCw className="w-2.5 h-2.5" />
+                        <RefreshCw className="w-2.5 h-2.5" aria-hidden="true" />
                         Fix
                       </button>
                     </div>
@@ -164,9 +199,9 @@ export function SyncStatusPanel({
         </div>
       )}
 
-      {divergences.length === 0 && syncStatus === 'synced' && (
-        <p className="text-xs text-text-muted text-center py-2">
-          No divergences detected. Design and code are in sync.
+      {divergences.length === 0 && (
+        <p className="text-xs text-text-muted text-center py-2" data-testid="sync-empty-copy">
+          {emptyCopy(syncStatus)}
         </p>
       )}
     </div>

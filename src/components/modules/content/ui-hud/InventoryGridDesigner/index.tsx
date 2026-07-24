@@ -8,7 +8,7 @@ import type {
 import {
   DEFAULT_CONFIG,
 } from '@/lib/prompts/inventory';
-import { DesignerHeader } from './DesignerHeader';
+import { DesignerHeader, tabId, panelId } from './DesignerHeader';
 import { GridSection } from './GridSection';
 import { SlotTypesSection } from './SlotTypesSection';
 import { EquipSection } from './EquipSection';
@@ -85,30 +85,38 @@ export function InventoryGridDesigner({ onGenerate, isGenerating }: InventoryGri
       {/* ─── Grid Configuration ─── */}
       <div className="relative z-10 space-y-6 pt-4">
         {activeSection === 'grid' && (
-          <GridSection
-            config={config}
-            setConfig={setConfig}
-            setCols={setCols}
-            setRows={setRows}
-            enabledSlots={enabledSlots}
-            enabledEquip={enabledEquip}
-            totalSlots={totalSlots}
-          />
+          <div role="tabpanel" id={panelId('grid')} aria-labelledby={tabId('grid')}>
+            <GridSection
+              config={config}
+              setConfig={setConfig}
+              setCols={setCols}
+              setRows={setRows}
+              enabledSlots={enabledSlots}
+              enabledEquip={enabledEquip}
+              totalSlots={totalSlots}
+            />
+          </div>
         )}
 
         {/* ─── Item Slot Types ─── */}
         {activeSection === 'slots' && (
-          <SlotTypesSection config={config} toggleSlotType={toggleSlotType} />
+          <div role="tabpanel" id={panelId('slots')} aria-labelledby={tabId('slots')}>
+            <SlotTypesSection config={config} toggleSlotType={toggleSlotType} />
+          </div>
         )}
 
         {/* ─── Equipment Layout ─── */}
         {activeSection === 'equip' && (
-          <EquipSection config={config} toggleEquipSlot={toggleEquipSlot} enabledEquip={enabledEquip} />
+          <div role="tabpanel" id={panelId('equip')} aria-labelledby={tabId('equip')}>
+            <EquipSection config={config} toggleEquipSlot={toggleEquipSlot} enabledEquip={enabledEquip} />
+          </div>
         )}
 
         {/* ─── Interaction Modes ─── */}
         {activeSection === 'interact' && (
-          <InteractSection config={config} toggleInteraction={toggleInteraction} />
+          <div role="tabpanel" id={panelId('interact')} aria-labelledby={tabId('interact')}>
+            <InteractSection config={config} toggleInteraction={toggleInteraction} />
+          </div>
         )}
 
         {/* ─── Summary & Generate ─── */}

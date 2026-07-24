@@ -15,12 +15,33 @@ import { AudioLibraryPanel } from '@/components/modules/content/audio/AudioLibra
 import { MODULE_COLORS } from '@/lib/constants';
 import { STATUS_SUCCESS, STATUS_ERROR } from '@/lib/chart-colors';
 import { useAudioView } from './useAudioView';
-import { TabButton } from './TabButton';
+import { TabButton, tabDomId, AUDIO_TABPANEL_ID } from './TabButton';
 import { SceneSidebar } from './SceneSidebar';
 import { PainterTab } from './PainterTab';
 import { SoundscapesTab } from './SoundscapesTab';
 import { SettingsTab } from './SettingsTab';
 import { EmptyState } from './EmptyState';
+
+/**
+ * Roving-tabindex keyboard navigation for the tab strip (WAI-ARIA tabs pattern):
+ * Left/Right wrap around the strip, Home/End jump to the ends. Focusing a tab
+ * also activates it (automatic activation) by clicking it, which reuses each
+ * TabButton's own onClick — no duplicate tab-id list to keep in sync.
+ */
+function handleTabListKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
+  const tabs = Array.from(e.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
+  const current = tabs.indexOf(document.activeElement as HTMLButtonElement);
+  if (current === -1 || tabs.length === 0) return;
+  e.preventDefault();
+  const next =
+    e.key === 'Home' ? 0
+      : e.key === 'End' ? tabs.length - 1
+        : e.key === 'ArrowLeft' ? (current - 1 + tabs.length) % tabs.length
+          : (current + 1) % tabs.length;
+  tabs[next].focus();
+  tabs[next].click();
+}
 
 export function AudioView() {
   const {
@@ -161,21 +182,31 @@ export function AudioView() {
             </div>
 
             {/* Tab bar */}
-            <div className="flex items-center gap-1 px-5 border-b border-border">
-              <TabButton label="Overview" icon={Eye} active={activeTab === 'overview'} onClick={() => setActiveTab('overview')} accent={MODULE_COLORS.content} />
-              <TabButton label="Roadmap" icon={ListChecks} active={activeTab === 'roadmap'} onClick={() => setActiveTab('roadmap')} accent={MODULE_COLORS.content} />
-              <TabButton label="Scene Painter" icon={Volume2} active={activeTab === 'painter'} onClick={() => setActiveTab('painter')} accent={MODULE_COLORS.content} />
-              <TabButton label="Event Catalog" icon={List} active={activeTab === 'events'} onClick={() => setActiveTab('events')} accent={MODULE_COLORS.content} />
-              <TabButton label="Soundscapes" icon={Radio} active={activeTab === 'soundscapes'} onClick={() => setActiveTab('soundscapes')} accent={MODULE_COLORS.content} />
-              <TabButton label="Settings" icon={Settings} active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} accent={MODULE_COLORS.content} />
-              <TabButton label="Code Gen" icon={Code2} active={activeTab === 'codegen'} onClick={() => setActiveTab('codegen')} accent={MODULE_COLORS.content} />
-              <TabButton label="Auto Gen" icon={Wand2} active={activeTab === 'autogen'} onClick={() => setActiveTab('autogen')} accent={MODULE_COLORS.content} />
-              <TabButton label="Sound Forge" icon={Sparkles} active={activeTab === 'forge'} onClick={() => setActiveTab('forge')} accent={MODULE_COLORS.content} />
-              <TabButton label="Library" icon={Library} active={activeTab === 'library'} onClick={() => setActiveTab('library')} accent={MODULE_COLORS.content} />
+            <div
+              role="tablist"
+              aria-label="Audio scene views"
+              onKeyDown={handleTabListKeyDown}
+              className="flex items-center gap-1 px-5 border-b border-border"
+            >
+              <TabButton id="overview" label="Overview" icon={Eye} active={activeTab === 'overview'} onClick={() => setActiveTab('overview')} accent={MODULE_COLORS.content} />
+              <TabButton id="roadmap" label="Roadmap" icon={ListChecks} active={activeTab === 'roadmap'} onClick={() => setActiveTab('roadmap')} accent={MODULE_COLORS.content} />
+              <TabButton id="painter" label="Scene Painter" icon={Volume2} active={activeTab === 'painter'} onClick={() => setActiveTab('painter')} accent={MODULE_COLORS.content} />
+              <TabButton id="events" label="Event Catalog" icon={List} active={activeTab === 'events'} onClick={() => setActiveTab('events')} accent={MODULE_COLORS.content} />
+              <TabButton id="soundscapes" label="Soundscapes" icon={Radio} active={activeTab === 'soundscapes'} onClick={() => setActiveTab('soundscapes')} accent={MODULE_COLORS.content} />
+              <TabButton id="settings" label="Settings" icon={Settings} active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} accent={MODULE_COLORS.content} />
+              <TabButton id="codegen" label="Code Gen" icon={Code2} active={activeTab === 'codegen'} onClick={() => setActiveTab('codegen')} accent={MODULE_COLORS.content} />
+              <TabButton id="autogen" label="Auto Gen" icon={Wand2} active={activeTab === 'autogen'} onClick={() => setActiveTab('autogen')} accent={MODULE_COLORS.content} />
+              <TabButton id="forge" label="Sound Forge" icon={Sparkles} active={activeTab === 'forge'} onClick={() => setActiveTab('forge')} accent={MODULE_COLORS.content} />
+              <TabButton id="library" label="Library" icon={Library} active={activeTab === 'library'} onClick={() => setActiveTab('library')} accent={MODULE_COLORS.content} />
             </div>
 
             {/* Tab content */}
-            <div className="flex-1 overflow-hidden">
+            <div
+              id={AUDIO_TABPANEL_ID}
+              role="tabpanel"
+              aria-labelledby={tabDomId(activeTab)}
+              className="flex-1 overflow-hidden"
+            >
               {activeTab === 'overview' && (
                 <div className="overflow-y-auto p-5">
                   <FeatureMatrix

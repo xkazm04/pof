@@ -28,6 +28,7 @@ export function MaterialStyleTransfer({ onGenerate, isGenerating }: MaterialStyl
     analysis,
     isAnalyzing,
     analyzeError,
+    uploadError,
     adjustmentsOpen,
     setAdjustmentsOpen,
     compareMode,
@@ -99,10 +100,12 @@ export function MaterialStyleTransfer({ onGenerate, isGenerating }: MaterialStyl
                 className="w-full max-h-48 object-contain bg-black/20"
               />
               <button
+                type="button"
                 onClick={handleClearImage}
-                className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/60 flex items-center justify-center hover:bg-black/80 transition-colors"
+                aria-label="Remove reference image"
+                className="focus-ring absolute top-2 right-2 w-6 h-6 rounded-full bg-black/60 flex items-center justify-center hover:bg-black/80 transition-colors"
               >
-                <X className="w-3 h-3 text-white" />
+                <X className="w-3 h-3 text-white" aria-hidden="true" />
               </button>
               {compareMode && (
                 <div className="absolute bottom-2 left-2 px-1.5 py-0.5 rounded bg-black/60 text-2xs text-white font-medium">
@@ -121,10 +124,11 @@ export function MaterialStyleTransfer({ onGenerate, isGenerating }: MaterialStyl
           </div>
         ) : (
           <button
+            type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="w-full py-10 flex flex-col items-center gap-2 text-text-muted hover:text-text transition-colors"
+            className="focus-ring w-full py-10 flex flex-col items-center gap-2 text-text-muted hover:text-text transition-colors"
           >
-            <Upload className="w-8 h-8 opacity-40" />
+            <Upload className="w-8 h-8 opacity-40" aria-hidden="true" />
             <span className="text-xs font-medium">Drop a screenshot or click to upload</span>
             <span className="text-2xs text-text-muted/60">PNG, JPG up to 10MB</span>
           </button>
@@ -137,6 +141,25 @@ export function MaterialStyleTransfer({ onGenerate, isGenerating }: MaterialStyl
           onChange={handleFileSelect}
         />
       </div>
+
+      {/* Rejected upload — say why instead of dropping the file in silence */}
+      {uploadError && (
+        <div
+          role="alert"
+          data-testid="style-upload-error"
+          className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-400"
+        >
+          <AlertCircle className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+          <span className="min-w-0 flex-1">{uploadError}</span>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="focus-ring shrink-0 font-medium underline underline-offset-2 hover:text-amber-300 transition-colors"
+          >
+            Choose another
+          </button>
+        </div>
+      )}
 
       {/* Reference Description */}
       <div>

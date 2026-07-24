@@ -22,7 +22,9 @@ export function DropsPerHour() {
         <input
           type="range" min={1} max={50} value={playerLevel}
           onChange={(e) => setPlayerLevel(Number(e.target.value))}
-          className="flex-1 h-1 accent-cyan-500"
+          aria-label="Player level"
+          aria-valuetext={`Level ${playerLevel} — ${levelMultiplier.toFixed(2)}x drop rate`}
+          className="flex-1 h-1 accent-cyan-500 focus-ring"
         />
         <span className="text-xs font-mono font-semibold" style={{ color: ACCENT_CYAN }}>{playerLevel}</span>
       </div>

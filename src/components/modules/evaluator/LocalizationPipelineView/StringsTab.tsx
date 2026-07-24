@@ -1,9 +1,12 @@
 import type { Dispatch, SetStateAction } from 'react';
-import { Search } from 'lucide-react';
+import { Search, SearchX } from 'lucide-react';
+import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import type { LocalizableString, StringContext } from '@/types/localization-pipeline';
 import { CONTEXT_LABELS } from '@/lib/localization/definitions';
+import { TEXT_SCALE } from '@/lib/typography-scale';
+import { FOCUS_RING_CLASS } from '@/lib/ui/focus-ring';
 import type { StringPreset } from './types';
-import { STRING_PRESET_LABELS } from './constants';
+import { STRING_PRESET_LABELS, SCALE } from './constants';
 import { PresetChip } from './PresetChip';
 import { StringCard } from './StringCard';
 
@@ -26,6 +29,13 @@ export function StringsTab({
   filteredStrings: LocalizableString[];
   strings: LocalizableString[];
 }) {
+  const hasFilters = searchQuery.trim().length > 0 || contextFilter !== 'all' || stringPresets.size > 0;
+  const clearFilters = () => {
+    setSearchQuery('');
+    setContextFilter('all');
+    setStringPresets(new Set());
+  };
+
   return (
     <div className="space-y-4">
       {/* Filters */}
@@ -99,13 +109,41 @@ export function StringsTab({
         ))}
       </div>
 
-      <p className="text-2xs text-text-muted">{filteredStrings.length} strings</p>
+      {/* role=status so the count is announced when a filter changes it. */}
+      <p className={SCALE.meta} role="status">
+        {filteredStrings.length} strings shown
+      </p>
 
-      <div className="space-y-2 max-h-[60vh] overflow-y-auto">
-        {filteredStrings.map((s) => (
-          <StringCard key={s.id} str={s} />
-        ))}
-      </div>
+      {filteredStrings.length === 0 ? (
+        <SurfaceCard>
+          <div className="text-center py-10">
+            <SearchX aria-hidden="true" className="w-8 h-8 text-text-muted mx-auto mb-2 opacity-40" />
+            <p className="text-sm text-text-muted mb-1">
+              {hasFilters ? 'No strings match these filters' : 'No strings found in this scan'}
+            </p>
+            <p className={`${TEXT_SCALE.body} text-text-muted`}>
+              {hasFilters
+                ? `All ${strings.length} scanned strings were filtered out — widen the search, context, or preset filters.`
+                : 'The scan found no user-facing strings in the configured modules.'}
+            </p>
+            {hasFilters && (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className={`mt-3 px-3 py-1.5 rounded-md text-xs font-medium bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 transition-colors ${FOCUS_RING_CLASS}`}
+              >
+                Clear filters
+              </button>
+            )}
+          </div>
+        </SurfaceCard>
+      ) : (
+        <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+          {filteredStrings.map((s) => (
+            <StringCard key={s.id} str={s} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

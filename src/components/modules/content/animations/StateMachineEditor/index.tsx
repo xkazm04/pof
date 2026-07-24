@@ -27,7 +27,7 @@ export function StateMachineEditor() {
     warnings, errorCount, warnCount, infoCount,
     showWarnings, setShowWarnings, focusWarning,
     showCode, generatedCode, codeTab, setCodeTab,
-    handleCopy, copiedSection, handleExport,
+    handleExport,
   } = editor;
 
   return (
@@ -103,8 +103,6 @@ export function StateMachineEditor() {
           code={generatedCode}
           codeTab={codeTab}
           onTabChange={setCodeTab}
-          onCopy={handleCopy}
-          copiedSection={copiedSection}
           onExport={handleExport}
         />
       )}

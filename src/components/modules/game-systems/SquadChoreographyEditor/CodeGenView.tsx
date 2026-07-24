@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Users } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { CodeViewer } from '@/components/ui/CodeViewer';
 import { OPACITY_10 } from '@/lib/chart-colors';
 import type { DirectorConfig } from '@/types/squad-tactics';
 import { ACCENT } from './constants';
@@ -153,11 +154,9 @@ private:
         </span>
       </div>
 
-      <div className="overflow-x-auto">
-        <pre className="p-4 text-2xs font-mono text-text leading-relaxed whitespace-pre">
-          {code}
-        </pre>
-      </div>
+      {/* Shared syntax-highlighted viewer: Shiki C++ highlight + copy/download,
+          replacing the former raw <pre> so the generated header is copyable. */}
+      <CodeViewer code={code} fileName="UARPGSquadDirector.h" lang="cpp" maxHeightClass="max-h-[32rem]" />
     </SurfaceCard>
   );
 }

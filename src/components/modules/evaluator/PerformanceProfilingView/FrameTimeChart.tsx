@@ -12,6 +12,7 @@ export function FrameTimeChart({ samples, budgetMs }: { samples: FrameTimingSamp
   const step = Math.max(1, Math.floor(samples.length / 60));
   const sampled = samples.filter((_, i) => i % step === 0);
   const maxMs = Math.max(...sampled.map((s) => s.totalFrameMs), budgetMs * 1.5);
+  const overBudgetCount = sampled.filter((s) => s.totalFrameMs > budgetMs).length;
 
   return (
     <SurfaceCard className="p-4">
@@ -37,16 +38,29 @@ export function FrameTimeChart({ samples, budgetMs }: { samples: FrameTimingSamp
           </span>
         </div>
 
-        <div className="flex items-end gap-px h-36">
+        {/* Text equivalent — the bars alone convey nothing to a screen reader. */}
+        <p className="sr-only">
+          {sampled.length} of {samples.length} frames sampled. Budget {budgetMs.toFixed(1)}ms;{' '}
+          {overBudgetCount} sampled {overBudgetCount === 1 ? 'frame is' : 'frames are'} over budget.
+          Each bar is focusable for its per-thread breakdown.
+        </p>
+
+        <div className="flex items-end gap-px h-36" role="group" aria-label="Frame time samples">
           {sampled.map((s, i) => {
             const gtH = (s.gameThreadMs / maxMs) * 100;
             const rtH = (s.renderThreadMs / maxMs) * 100;
             const gpuH = (s.gpuMs / maxMs) * 100;
             const overBudget = s.totalFrameMs > budgetMs;
             return (
-              <div key={i} className="flex-1 flex flex-col items-center group relative">
-                <div className="absolute bottom-full mb-2 hidden group-hover:block z-20">
-                  <div className="bg-surface-deep border border-border rounded-lg px-2.5 py-1.5 text-2xs whitespace-nowrap shadow-lg">
+              <button
+                key={i}
+                type="button"
+                aria-label={`Frame ${s.frameIndex}: total ${s.totalFrameMs.toFixed(2)}ms (${Math.round(1000 / s.totalFrameMs)}fps), ${overBudget ? 'over' : 'within'} budget. Game thread ${s.gameThreadMs.toFixed(2)}ms, render thread ${s.renderThreadMs.toFixed(2)}ms, GPU ${s.gpuMs.toFixed(2)}ms, ${s.drawCalls} draw calls.`}
+                className="focus-ring flex-1 flex flex-col items-center group relative cursor-default"
+              >
+                {/* Shown on hover AND keyboard focus (focus-within covers the button itself). */}
+                <div className="absolute bottom-full mb-2 hidden group-hover:block group-focus-within:block z-20">
+                  <div className="bg-surface-deep border border-border rounded-lg px-2.5 py-1.5 text-2xs whitespace-nowrap shadow-lg text-left">
                     <div className="text-text-muted">Frame {s.frameIndex}</div>
                     <div className="text-blue-400">Game: {s.gameThreadMs.toFixed(2)}ms</div>
                     <div className="text-violet-400">Render: {s.renderThreadMs.toFixed(2)}ms</div>
@@ -57,12 +71,12 @@ export function FrameTimeChart({ samples, budgetMs }: { samples: FrameTimingSamp
                     <div className="text-text-muted">Draw calls: {s.drawCalls}</div>
                   </div>
                 </div>
-                <div className="w-full flex flex-col gap-px h-full justify-end">
+                <div className="w-full flex flex-col gap-px h-full justify-end" aria-hidden>
                   <div className={`w-full rounded-t-sm ${overBudget ? 'bg-blue-400/60' : 'bg-blue-400/40'}`} style={{ height: `${gtH}%` }} />
                   <div className="w-full bg-violet-400/40" style={{ height: `${rtH}%` }} />
                   <div className="w-full bg-orange-400/40" style={{ height: `${gpuH}%` }} />
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>

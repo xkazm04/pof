@@ -16,6 +16,17 @@ import { EDITOR_ACCENT, NODE_W, NODE_H } from './constants';
 import { severityColor } from './helpers';
 import type { StateMachineEditorApi } from './useStateMachineEditor';
 
+// Arrow-key → percent delta applied to the focused node. Keyboard nudging is
+// the accessible equivalent of dragging with the pointer; holding Shift moves
+// in the coarse step so a node can cross the canvas without dozens of presses.
+const NUDGE_DELTAS: Record<string, readonly [number, number]> = {
+  ArrowLeft: [-1, 0],
+  ArrowRight: [1, 0],
+  ArrowUp: [0, -1],
+  ArrowDown: [0, 1],
+};
+const NUDGE_COARSE_STEP = 5;
+
 export function EditorCanvas({ editor }: { editor: StateMachineEditorApi }) {
   const {
     canvasRef,
@@ -34,6 +45,8 @@ export function EditorCanvas({ editor }: { editor: StateMachineEditorApi }) {
     selectedStateId,
     warningsByState,
     handleStateClick,
+    nudgeState,
+    removeState,
     addState,
   } = editor;
 
@@ -162,7 +175,8 @@ export function EditorCanvas({ editor }: { editor: StateMachineEditorApi }) {
             role="button"
             tabIndex={0}
             aria-pressed={isSelected}
-            aria-label={`State ${state.name}, priority ${state.priority}${nodeSeverity ? `, ${nodeSeverity}` : ''}${isSelected ? ', selected' : ''}`}
+            aria-label={`State ${state.name}, priority ${state.priority}, at ${Math.round(state.x)}% ${Math.round(state.y)}%${nodeSeverity ? `, ${nodeSeverity}` : ''}${isSelected ? ', selected' : ''}`}
+            aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight Delete"
             className="absolute rounded-xl border transition-all duration-150 group focus-ring"
             style={{
               left: `${state.x}%`,
@@ -184,7 +198,27 @@ export function EditorCanvas({ editor }: { editor: StateMachineEditorApi }) {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
                 handleStateClick(state.id);
+                return;
               }
+              // Escape backs out of an in-progress transition draw.
+              if (e.key === 'Escape') {
+                if (drawingTransition) {
+                  e.preventDefault();
+                  setDrawingTransition(null);
+                }
+                return;
+              }
+              if (e.key === 'Delete') {
+                e.preventDefault();
+                removeState(state.id);
+                return;
+              }
+              const delta = NUDGE_DELTAS[e.key];
+              if (!delta) return;
+              // Arrows move the node rather than scrolling the surrounding page.
+              e.preventDefault();
+              const step = e.shiftKey ? NUDGE_COARSE_STEP : 1;
+              nudgeState(state.id, delta[0] * step, delta[1] * step);
             }}
             onMouseDown={(e) => {
               // Only start drag on left button and not drawing
@@ -303,7 +337,7 @@ export function EditorCanvas({ editor }: { editor: StateMachineEditorApi }) {
       {/* Instruction hint (only meaningful when there are states to interact with) */}
       {states.length > 0 && (
         <div className="absolute top-2 left-2 text-[11px] text-text-muted/50 font-mono" style={{ zIndex: 2 }}>
-          Drag to move · Click to select · Use toolbar for transitions
+          Drag or arrow-keys to move (Shift = bigger step) · Click / Enter to select · Delete to remove
         </div>
       )}
     </SchematicPanel>

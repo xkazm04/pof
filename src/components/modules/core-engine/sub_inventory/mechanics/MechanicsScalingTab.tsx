@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useId } from 'react';
 import { Layers, Target, TreePine, TrendingUp } from 'lucide-react';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
 import { motion } from 'framer-motion';
@@ -42,6 +42,7 @@ export function MechanicsScalingTab({ moduleId, featureMap }: MechanicsScalingTa
   });
 
   const items = DUMMY_ITEMS;
+  const inspectId = useId();
   const [selectedItemId, setSelectedItemId] = useState<string>('');
   const selectedItem = useMemo(
     () => DUMMY_ITEMS.find(i => i.id === selectedItemId) ?? null,
@@ -58,8 +59,8 @@ export function MechanicsScalingTab({ moduleId, featureMap }: MechanicsScalingTa
       {/* Item selector */}
       <BlueprintPanel color={ACCENT} className="p-3">
         <div className="flex items-center gap-3 flex-wrap">
-          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Inspect Item</span>
-          <select value={selectedItemId} onChange={e => setSelectedItemId(e.target.value)}
+          <label htmlFor={inspectId} className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Inspect Item</label>
+          <select id={inspectId} value={selectedItemId} onChange={e => setSelectedItemId(e.target.value)}
             className="text-sm font-mono px-3 py-2 rounded-lg bg-surface-deep border border-border/40 text-text cursor-pointer min-w-[200px]">
             <option value="">-- Select an item --</option>
             {Object.entries(ITEMS_BY_TYPE).map(([type, items]) => (

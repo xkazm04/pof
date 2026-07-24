@@ -1,6 +1,7 @@
 'use client';
 
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, AlertOctagon, ShieldCheck, ShieldAlert, Flame } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import {
   STATUS_WARNING, STATUS_ERROR, STATUS_SUCCESS,
   ACCENT_ORANGE,
@@ -13,6 +14,22 @@ import {
   ZONE_DANGER_SCORES,
 } from '../_shared/data';
 
+/* Severity glyphs — the warning level and the danger score both used to be
+   carried by hue alone; each now leads with a distinct shape. */
+const WARNING_ICONS: Record<string, LucideIcon> = {
+  Low: ShieldCheck,
+  Medium: ShieldAlert,
+  High: AlertTriangle,
+  Critical: AlertOctagon,
+};
+
+function dangerGlyph(score: number): { Icon: LucideIcon; color: string } {
+  if (score >= 80) return { Icon: Flame, color: STATUS_ERROR };
+  if (score >= 50) return { Icon: AlertOctagon, color: ACCENT_ORANGE };
+  if (score >= 20) return { Icon: AlertTriangle, color: STATUS_WARNING };
+  return { Icon: ShieldCheck, color: STATUS_SUCCESS };
+}
+
 export function HazardMap() {
   return (
     <BlueprintPanel color={ACCENT_ORANGE} className="p-3">
@@ -21,11 +38,12 @@ export function HazardMap() {
       {/* Danger Score Summary */}
       <div className="flex flex-wrap gap-2 mb-2.5 pb-3 border-b border-border/40">
         {ZONE_DANGER_SCORES.map((zds) => {
-          const dangerColor = zds.score >= 80 ? STATUS_ERROR : zds.score >= 50 ? ACCENT_ORANGE : zds.score >= 20 ? STATUS_WARNING : STATUS_SUCCESS;
+          const { Icon: DangerIcon, color: dangerColor } = dangerGlyph(zds.score);
           return (
             <div key={zds.zone} className="flex items-center gap-1.5 text-xs font-mono uppercase tracking-[0.15em]">
               <span className="text-text-muted">{zds.zone}:</span>
-              <span className="font-bold px-1 py-0.5 rounded" style={{ color: dangerColor, backgroundColor: withOpacity(dangerColor, OPACITY_8) }}>
+              <span className="font-bold px-1 py-0.5 rounded flex items-center gap-1" style={{ color: dangerColor, backgroundColor: withOpacity(dangerColor, OPACITY_8) }}>
+                <DangerIcon aria-hidden className="w-3 h-3 flex-shrink-0" strokeWidth={2.5} />
                 {zds.score}
               </span>
             </div>
@@ -49,6 +67,7 @@ export function HazardMap() {
             {ENV_HAZARDS.map((hazard, i) => {
               const typeColor = HAZARD_TYPE_COLORS[hazard.type];
               const warnColor = HAZARD_WARNING_COLORS[hazard.warningLevel];
+              const WarnIcon = WARNING_ICONS[hazard.warningLevel] ?? AlertTriangle;
               return (
                 <tr key={i} className="border-b border-border/20 hover:bg-surface-hover/20 transition-colors">
                   <td className="py-2 px-2 text-text">{hazard.zone}</td>
@@ -63,8 +82,9 @@ export function HazardMap() {
                   </td>
                   <td className="py-2 px-2 text-right text-text-muted">{hazard.affectedArea}</td>
                   <td className="py-2 px-2 text-center">
-                    <span className="px-1.5 py-0.5 rounded text-xs font-bold"
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-bold"
                       style={{ backgroundColor: withOpacity(warnColor, OPACITY_8), color: warnColor, border: `1px solid ${withOpacity(warnColor, OPACITY_20)}` }}>
+                      <WarnIcon aria-hidden className="w-3 h-3 flex-shrink-0" strokeWidth={2.5} />
                       {hazard.warningLevel}
                     </span>
                   </td>

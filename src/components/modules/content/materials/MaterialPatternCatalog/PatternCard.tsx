@@ -1,6 +1,7 @@
 'use client';
 
-import { Zap, Monitor } from 'lucide-react';
+import { useId } from 'react';
+import { Zap, Monitor, ChevronDown } from 'lucide-react';
 import { CATEGORY_META } from './constants';
 import type { MaterialPattern } from './types';
 
@@ -22,6 +23,9 @@ interface PatternCardProps {
 export function PatternCard({ pattern, isExpanded, onToggle, onGenerate, isGenerating, blenderConnected, hasBlenderScript, isBlenderPreviewing, onBlenderPreview, blenderResult }: PatternCardProps) {
   const Icon = pattern.icon;
   const catMeta = CATEGORY_META[pattern.category];
+  const uid = useId();
+  const headerId = `pattern-header-${uid}`;
+  const panelId = `pattern-panel-${uid}`;
 
   return (
     <div
@@ -36,8 +40,12 @@ export function PatternCard({ pattern, isExpanded, onToggle, onGenerate, isGener
 
       {/* Collapsed header — always visible */}
       <button
+        type="button"
+        id={headerId}
         onClick={onToggle}
-        className="w-full flex items-center gap-4 px-4 py-3 text-left relative z-10"
+        aria-expanded={isExpanded}
+        aria-controls={panelId}
+        className="focus-ring-inset w-full flex items-center gap-4 px-4 py-3 text-left relative z-10 rounded-xl"
       >
         <div
           className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center transition-transform group-hover:scale-105"
@@ -64,18 +72,22 @@ export function PatternCard({ pattern, isExpanded, onToggle, onGenerate, isGener
         </div>
 
         <div className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full border border-violet-900/40 bg-black/60 group-hover:border-violet-500/50 transition-colors">
-          <span
-            className="text-xs font-mono transition-transform duration-300"
+          <ChevronDown
+            aria-hidden="true"
+            className="w-4 h-4 transition-transform duration-300"
             style={{ color: catMeta.color, transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
-          >
-            ▼
-          </span>
+          />
         </div>
       </button>
 
       {/* Expanded content */}
       {isExpanded && (
-        <div className="px-4 pb-4 pt-2 space-y-5 relative z-10 border-t border-violet-900/30 w-full overflow-hidden">
+        <div
+          id={panelId}
+          role="region"
+          aria-labelledby={headerId}
+          className="px-4 pb-4 pt-2 space-y-5 relative z-10 border-t border-violet-900/30 w-full overflow-hidden"
+        >
           <div className="absolute left-4 top-4 bottom-4 w-px bg-violet-900/40" />
 
           <div className="pl-6 space-y-4">
@@ -118,9 +130,10 @@ export function PatternCard({ pattern, isExpanded, onToggle, onGenerate, isGener
 
             {/* Generate button */}
             <button
+              type="button"
               onClick={(e) => { e.stopPropagation(); onGenerate(); }}
               disabled={isGenerating}
-              className="relative w-full overflow-hidden flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-xs font-bold uppercase transition-all disabled:opacity-50 mt-2 group outline-none focus-visible:ring-1 focus-visible:ring-text/40"
+              className="focus-ring-outline relative w-full overflow-hidden flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-xs font-bold uppercase transition-all disabled:opacity-50 mt-2 group"
               style={{
                 backgroundColor: `${catMeta.color}15`,
                 color: catMeta.color,
@@ -132,43 +145,54 @@ export function PatternCard({ pattern, isExpanded, onToggle, onGenerate, isGener
               <div className="absolute top-0 -left-[100%] w-1/2 h-full bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-12 group-hover:left-[200%] transition-transform duration-1000 ease-out pointer-events-none" />
 
               {isGenerating ? (
-                <div className="flex items-center gap-2 animate-pulse">
-                  <span className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
-                  COMPILING_SHADER...
-                </div>
+                <span className="flex items-center gap-2 animate-pulse">
+                  <span aria-hidden="true" className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                  Generating shader…
+                </span>
               ) : (
                 <>
-                  <Zap className="w-4 h-4 group-hover:scale-110 group-hover:drop-shadow-[0_0_8px_rgba(currentColor,0.8)] transition-all" />
-                  EXECUTE {pattern.name} SYNTHESIS
+                  <Zap aria-hidden="true" className="w-4 h-4 group-hover:scale-110 transition-all" />
+                  Generate {pattern.name} material
                 </>
               )}
             </button>
 
             {/* Preview in Blender button */}
             {hasBlenderScript && (
-              <button
-                onClick={(e) => { e.stopPropagation(); onBlenderPreview(); }}
-                disabled={!blenderConnected || isBlenderPreviewing}
-                className="relative w-full overflow-hidden flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-xs font-bold uppercase transition-all disabled:opacity-40 group outline-none border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 focus-visible:ring-1 focus-visible:ring-text/40"
-                title={!blenderConnected ? 'Connect to Blender first' : `Preview ${pattern.name} shader in Blender`}
-              >
-                {isBlenderPreviewing ? (
-                  <div className="flex items-center gap-2 animate-pulse">
-                    <span className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
-                    SENDING_TO_BLENDER...
-                  </div>
-                ) : (
-                  <>
-                    <Monitor className="w-4 h-4" />
-                    PREVIEW IN BLENDER
-                  </>
+              <div className="space-y-1.5">
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onBlenderPreview(); }}
+                  disabled={!blenderConnected || isBlenderPreviewing}
+                  className="focus-ring relative w-full overflow-hidden flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-xs font-bold uppercase transition-all disabled:opacity-40 group border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
+                >
+                  {isBlenderPreviewing ? (
+                    <span className="flex items-center gap-2 animate-pulse">
+                      <span aria-hidden="true" className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                      Sending to Blender…
+                    </span>
+                  ) : (
+                    <>
+                      <Monitor aria-hidden="true" className="w-4 h-4" />
+                      Preview in Blender
+                    </>
+                  )}
+                </button>
+                {!blenderConnected && (
+                  <p className="text-[11px] text-violet-300/80 text-center">
+                    Connect to Blender (top of this panel) to preview this shader live.
+                  </p>
                 )}
-              </button>
+              </div>
             )}
 
             {/* Blender result inline */}
             {blenderResult && (
-              <div className={`text-xs font-mono px-3 py-2 rounded-lg border ${blenderResult.isError ? 'border-red-500/30 bg-red-500/10 text-red-400' : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'}`}>
+              <div
+                role={blenderResult.isError ? 'alert' : 'status'}
+                className={`text-xs font-mono px-3 py-2 rounded-lg border ${blenderResult.isError ? 'border-red-500/30 bg-red-500/10 text-red-400' : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'}`}
+              >
+                <span className="font-bold uppercase mr-1.5">{blenderResult.isError ? 'Preview failed:' : 'Preview ready:'}</span>
                 {blenderResult.message}
               </div>
             )}

@@ -46,24 +46,29 @@ export function LowHealthPulse() {
         </div>
         <div className="flex items-center gap-1">
           <button
+            type="button"
             onClick={() => setPlaying(!playing)}
-            className="p-1.5 rounded-md bg-surface-deep border border-border hover:border-border-bright transition-colors"
+            className="focus-ring p-1.5 rounded-md bg-surface-deep border border-border hover:border-border-bright transition-colors"
             data-testid="pulse-play-pause-btn"
-            title={playing ? 'Pause' : 'Play'}
+            aria-label={playing ? 'Pause pulse animation' : 'Play pulse animation'}
+            aria-pressed={playing}
+            title={playing ? 'Pause pulse animation' : 'Play pulse animation'}
           >
             {playing ? (
-              <Pause className="w-3.5 h-3.5 text-text-muted" />
+              <Pause className="w-3.5 h-3.5 text-text-muted" aria-hidden="true" />
             ) : (
-              <Play className="w-3.5 h-3.5 text-text-muted" />
+              <Play className="w-3.5 h-3.5 text-text-muted" aria-hidden="true" />
             )}
           </button>
           <button
+            type="button"
             onClick={handleReset}
-            className="p-1.5 rounded-md bg-surface-deep border border-border hover:border-border-bright transition-colors"
+            className="focus-ring p-1.5 rounded-md bg-surface-deep border border-border hover:border-border-bright transition-colors"
             data-testid="pulse-reset-btn"
+            aria-label="Reset threshold, speed and health to C++ defaults"
             title="Reset to C++ defaults"
           >
-            <RotateCcw className="w-3.5 h-3.5 text-text-muted" />
+            <RotateCcw className="w-3.5 h-3.5 text-text-muted" aria-hidden="true" />
           </button>
         </div>
       </div>
@@ -73,10 +78,18 @@ export function LowHealthPulse() {
         <SurfaceCard level={2} className="p-4 space-y-4">
           {/* Live health bar preview */}
           <div className="space-y-2">
-            <div className="text-xs font-bold text-text-muted uppercase">Live Preview</div>
+            <h4 className="text-xs font-bold text-text-muted uppercase">Live Preview</h4>
 
             {/* Simulated health bar */}
-            <div className="relative h-7 rounded-md overflow-hidden bg-black/60 border border-border/60">
+            <div
+              className="relative h-7 rounded-md overflow-hidden bg-black/60 border border-border/60"
+              role="progressbar"
+              aria-label="Simulated player health"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(healthPct * 100)}
+              aria-valuetext={`${Math.round(healthPct * 100)} percent — ${isLow ? 'below low-health threshold, pulsing' : 'above low-health threshold'}`}
+            >
               <div
                 className="h-full rounded-md transition-[width] duration-200"
                 style={{
@@ -92,7 +105,7 @@ export function LowHealthPulse() {
             </div>
 
             {/* Threshold marker */}
-            <div className="relative h-2">
+            <div className="relative h-2" aria-hidden="true">
               <div
                 className="absolute top-0 h-2 w-px"
                 style={{
@@ -146,34 +159,55 @@ export function LowHealthPulse() {
             </div>
           </div>
 
-          {/* Current interpolated color */}
-          {isLow && (
-            <div className="flex items-center gap-2 p-2 rounded-md border border-border/40" style={{ backgroundColor: `${currentCSS}10` }}>
-              <div
-                className="w-5 h-5 rounded"
-                style={{ backgroundColor: currentCSS, boxShadow: `0 0 8px ${currentCSS}` }}
-              />
-              <div>
-                <div className="text-2xs font-bold text-text">Current Color</div>
-                <div className="text-2xs font-mono text-text-muted">
-                  Alpha: {alpha.toFixed(2)} &middot; Lerp(Danger, Healthy, {alpha.toFixed(2)})
+          {/* Current interpolated color — or why the pulse is inactive */}
+          <div aria-live="polite" data-testid="pulse-current-color">
+            {isLow ? (
+              <div className="flex items-center gap-2 p-2 rounded-md border border-border/40" style={{ backgroundColor: `${currentCSS}10` }}>
+                <div
+                  className="w-5 h-5 rounded"
+                  style={{ backgroundColor: currentCSS, boxShadow: `0 0 8px ${currentCSS}` }}
+                  aria-hidden="true"
+                />
+                <div>
+                  <div className="text-2xs font-bold text-text">Current Color</div>
+                  <div className="text-2xs font-mono text-text-muted">
+                    Alpha: {alpha.toFixed(2)} &middot; Lerp(Danger, Healthy, {alpha.toFixed(2)})
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="flex items-center gap-2 p-2 rounded-md border border-dashed border-border/40">
+                <div className="w-5 h-5 rounded border border-border/60" aria-hidden="true" />
+                <div>
+                  <div className="text-2xs font-bold text-text-muted">Pulse inactive</div>
+                  <div className="text-2xs font-mono text-text-muted">
+                    {healthPct <= 0
+                      ? 'Health is 0% — the widget hides instead of pulsing.'
+                      : `Health ${Math.round(healthPct * 100)}% is at or above the ${Math.round(threshold * 100)}% threshold.`}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </SurfaceCard>
 
         {/* ── Right column: Timing diagram + Parameters ── */}
         <SurfaceCard level={2} className="p-4 space-y-4">
           {/* Timing diagram */}
           <div className="space-y-2">
-            <div className="text-xs font-bold text-text-muted uppercase">Pulse Timing Diagram</div>
+            <h4 className="text-xs font-bold text-text-muted uppercase">Pulse Timing Diagram</h4>
             <div className="text-2xs text-text-muted">
               1 cycle = {(1 / pulseSpeed).toFixed(2)}s &middot; sin(t &times; {pulseSpeed.toFixed(1)} &times; 2&pi;)
             </div>
 
             <div className="relative bg-black/40 rounded-lg border border-border/40 p-3">
-              <svg viewBox="-8 -8 116 116" className="w-full h-32" preserveAspectRatio="none">
+              <svg
+                viewBox="-8 -8 116 116"
+                className="w-full h-32"
+                preserveAspectRatio="none"
+                role="img"
+                aria-label={`Sine wave over one ${(1 / pulseSpeed).toFixed(2)} second pulse cycle, oscillating the bar colour between danger red and healthy green.${isLow && playing ? ` Playhead at ${Math.round(cyclePhase * 100)} percent of the cycle.` : ' Playback is stopped.'}`}
+              >
                 {/* Grid lines */}
                 <line x1="0" y1="50" x2="100" y2="50" stroke="var(--border)" strokeWidth="0.5" strokeDasharray="2,2" />
                 <line x1="0" y1="0" x2="100" y2="0" stroke="var(--border)" strokeWidth="0.3" strokeDasharray="1,3" />
@@ -237,7 +271,7 @@ export function LowHealthPulse() {
 
           {/* Parameters */}
           <div className="space-y-3">
-            <div className="text-xs font-bold text-text-muted uppercase">Parameters</div>
+            <h4 className="text-xs font-bold text-text-muted uppercase">Parameters</h4>
 
             {/* Threshold */}
             <div className="space-y-1">

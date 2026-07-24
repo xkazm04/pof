@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
-import { Sparkles, Search } from 'lucide-react';
+import { useState, useMemo, useCallback, useId } from 'react';
+import { Sparkles, Search, X } from 'lucide-react';
 import { MODULE_COLORS } from '@/lib/constants';
+import { ACCENT_VIOLET } from '@/lib/chart-colors';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
 import { BlenderConnectionBar } from '@/components/blender-mcp/BlenderConnectionBar';
 import { tryApiFetch } from '@/lib/api-utils';
@@ -29,6 +30,7 @@ export function MaterialPatternCatalog({ onGenerate, isGenerating }: MaterialPat
   const [blenderPreviewing, setBlenderPreviewing] = useState<string | null>(null);
   const [blenderResult, setBlenderResult] = useState<{ patternId: string; message: string; isError: boolean } | null>(null);
   const blenderConnected = useBlenderMCPStore((s) => s.connection.connected);
+  const searchId = useId();
 
   const handleBlenderPreview = useCallback(async (pattern: MaterialPattern) => {
     const scriptFn = SHADER_SCRIPT_MAP[pattern.id];
@@ -74,8 +76,18 @@ export function MaterialPatternCatalog({ onGenerate, isGenerating }: MaterialPat
     setExpandedId((prev) => (prev === id ? null : id));
   }, []);
 
+  const clearFilters = useCallback(() => {
+    setSearch('');
+    setSelectedCategory('all');
+  }, []);
+
+  const isFiltered = search.trim().length > 0 || selectedCategory !== 'all';
+
   return (
-    <div className="w-full h-full bg-[#03030a] rounded-2xl border border-violet-900/30 shadow-[inset_0_0_80px_rgba(167,139,250,0.05)] p-6 relative overflow-y-auto">
+    <div
+      className="w-full h-full bg-[#03030a] rounded-2xl border border-violet-900/30 shadow-[inset_0_0_80px_rgba(167,139,250,0.05)] p-6 relative overflow-y-auto"
+      style={{ ['--focus-accent' as string]: ACCENT_VIOLET }}
+    >
       {/* Background Ambience */}
       <div className="absolute inset-0 pointer-events-none z-0">
         <div className="absolute top-0 right-0 w-64 h-64 bg-violet-600/10 blur-[100px] rounded-full pointer-events-none" />
@@ -92,8 +104,10 @@ export function MaterialPatternCatalog({ onGenerate, isGenerating }: MaterialPat
           </div>
           <div>
             <h3 className="text-sm font-bold tracking-widest uppercase text-violet-100">Material Pattern Library</h3>
-            <p className="text-xs text-violet-400/60 uppercase tracking-wider mt-0.5">
-              DATABASE_ENTRIES: {MATERIAL_PATTERNS.length} — PROCEDURAL_SHADER_ARCHIVES
+            <p className="text-xs text-violet-300/80 mt-0.5" aria-live="polite">
+              {isFiltered
+                ? `Showing ${filtered.length} of ${MATERIAL_PATTERNS.length} procedural shader patterns`
+                : `${MATERIAL_PATTERNS.length} procedural shader patterns — HLSL recipes for UE5 materials`}
             </p>
           </div>
         </div>
@@ -101,17 +115,31 @@ export function MaterialPatternCatalog({ onGenerate, isGenerating }: MaterialPat
         {/* Search + Filter */}
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-black/40 border border-violet-900/30 p-3 rounded-xl">
           <div className="flex-1 relative w-full xl:max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-violet-500/50" />
+            <label htmlFor={searchId} className="sr-only">
+              Search material patterns by name, description, or tag
+            </label>
+            <Search aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-violet-500/50" />
             <input
-              type="text"
+              id={searchId}
+              type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="QUERY PATTERNS..."
-              className="w-full pl-9 pr-4 py-2 bg-black/60 border border-violet-900/40 rounded-lg text-xs font-mono text-violet-100 placeholder-violet-500/40 outline-none focus:border-violet-500 transition-colors shadow-inner uppercase tracking-wider"
+              placeholder="Search name, description or tag…"
+              className="focus-ring-inset w-full pl-9 pr-9 py-2 bg-black/60 border border-violet-900/40 rounded-lg text-xs font-mono text-violet-100 placeholder-violet-500/40 outline-none transition-colors shadow-inner tracking-wider"
               spellCheck={false}
             />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                aria-label="Clear search"
+                className="focus-ring absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-violet-400/70 hover:text-violet-200 transition-colors"
+              >
+                <X aria-hidden="true" className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
-          <div className="flex gap-2 overflow-x-auto pb-1 xl:pb-0">
+          <div className="flex gap-2 overflow-x-auto pb-1 xl:pb-0" role="group" aria-label="Filter patterns by category">
             {(['all', 'elemental', 'stylized', 'utility'] as const).map((cat) => {
               const isActive = selectedCategory === cat;
               const color = cat === 'all' ? MODULE_COLORS.content : CATEGORY_META[cat].color;
@@ -119,8 +147,10 @@ export function MaterialPatternCatalog({ onGenerate, isGenerating }: MaterialPat
               return (
                 <button
                   key={cat}
+                  type="button"
                   onClick={() => setSelectedCategory(cat)}
-                  className="px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition-all relative overflow-hidden flex-shrink-0"
+                  aria-pressed={isActive}
+                  className="focus-ring-outline px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition-all relative overflow-hidden flex-shrink-0"
                   style={{
                     backgroundColor: isActive ? `${color}20` : 'rgba(0,0,0,0.4)',
                     color: isActive ? color : 'var(--text-muted)',
@@ -154,8 +184,21 @@ export function MaterialPatternCatalog({ onGenerate, isGenerating }: MaterialPat
             />
           ))}
           {filtered.length === 0 && (
-            <div className="text-center py-12 bg-black/40 border border-violet-900/30 rounded-xl">
-              <p className="text-xs font-mono text-violet-500/60">No Patterns Found</p>
+            <div className="text-center py-12 px-6 bg-black/40 border border-violet-900/30 rounded-xl" role="status">
+              <Search aria-hidden="true" className="w-6 h-6 mx-auto mb-3 text-violet-500/40" />
+              <p className="text-xs font-bold uppercase tracking-wider text-violet-200">
+                {search.trim() ? `No patterns match “${search.trim()}”` : 'No patterns in this category'}
+              </p>
+              <p className="text-xs text-violet-300/80 mt-1.5">
+                Try a different keyword, or clear the filters to see all {MATERIAL_PATTERNS.length} patterns.
+              </p>
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="focus-ring mt-4 px-3 py-1.5 rounded-lg text-xs font-bold uppercase text-violet-200 bg-violet-500/10 border border-violet-500/40 hover:bg-violet-500/20 transition-colors"
+              >
+                Clear filters
+              </button>
             </div>
           )}
         </div>

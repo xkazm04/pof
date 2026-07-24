@@ -1,6 +1,6 @@
 'use client';
 
-import { Zap, ArrowRight, Timer } from 'lucide-react';
+import { Zap, ArrowRight, Timer, CheckCircle2, CircleDashed, Lock } from 'lucide-react';
 import {
   STATUS_WARNING, STATUS_SUCCESS, STATUS_LOCKED,
   ACCENT_CYAN,
@@ -17,16 +17,23 @@ export function FastTravelNetwork() {
     <BlueprintPanel color={ACCENT} className="p-3">
       <SectionHeader icon={Zap} label="Fast Travel Network" color={ACCENT} />
 
-      {/* Coverage Summary */}
+      {/* Coverage Summary — glyph + percentage, so coverage never reads by hue alone. */}
       <div className="flex flex-wrap gap-2 mb-2.5 pb-3 border-b border-border/40">
-        {FAST_TRAVEL_COVERAGE.map((ftc) => (
-          <div key={ftc.zone} className="flex items-center gap-1.5 text-xs font-mono uppercase tracking-[0.15em]">
-            <span className="text-text-muted">{ftc.zone}:</span>
-            <span className="font-bold" style={{ color: ftc.pct === 100 ? STATUS_SUCCESS : ftc.pct > 0 ? STATUS_WARNING : STATUS_LOCKED }}>
-              {ftc.pct}%
-            </span>
-          </div>
-        ))}
+        {FAST_TRAVEL_COVERAGE.map((ftc) => {
+          const full = ftc.pct === 100;
+          const partial = ftc.pct > 0 && ftc.pct < 100;
+          const CoverageIcon = full ? CheckCircle2 : partial ? CircleDashed : Lock;
+          const coverageColor = full ? STATUS_SUCCESS : partial ? STATUS_WARNING : STATUS_LOCKED;
+          return (
+            <div key={ftc.zone} className="flex items-center gap-1.5 text-xs font-mono uppercase tracking-[0.15em]">
+              <span className="text-text-muted">{ftc.zone}:</span>
+              <span className="font-bold flex items-center gap-1" style={{ color: coverageColor }}>
+                <CoverageIcon aria-hidden className="w-3 h-3 flex-shrink-0" strokeWidth={2.5} />
+                {ftc.pct}%
+              </span>
+            </div>
+          );
+        })}
       </div>
 
       {/* Travel Nodes */}
@@ -39,12 +46,15 @@ export function FastTravelNetwork() {
                 <span className="text-xs font-bold text-text">{node.name}</span>
                 <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">({node.zone})</span>
               </div>
-              <span className="text-xs font-mono uppercase tracking-[0.15em] font-bold px-1.5 py-0.5 rounded"
+              <span className="flex items-center gap-1 text-xs font-mono uppercase tracking-[0.15em] font-bold px-1.5 py-0.5 rounded"
                 style={{
                   color: node.discovered ? STATUS_SUCCESS : STATUS_LOCKED,
                   backgroundColor: node.discovered ? withOpacity(STATUS_SUCCESS, OPACITY_8) : 'transparent',
-                  border: `1px solid ${withOpacity(node.discovered ? STATUS_SUCCESS : STATUS_LOCKED, OPACITY_20)}`,
+                  border: `1px ${node.discovered ? 'solid' : 'dashed'} ${withOpacity(node.discovered ? STATUS_SUCCESS : STATUS_LOCKED, OPACITY_20)}`,
                 }}>
+                {node.discovered
+                  ? <CheckCircle2 aria-hidden className="w-3 h-3 flex-shrink-0" strokeWidth={2.5} />
+                  : <Lock aria-hidden className="w-3 h-3 flex-shrink-0" strokeWidth={2.5} />}
                 {node.discovered ? 'Discovered' : 'Undiscovered'}
               </span>
             </div>

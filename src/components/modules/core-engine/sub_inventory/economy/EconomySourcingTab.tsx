@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useId } from 'react';
 import { PieChart } from 'lucide-react';
 import { STATUS_WARNING, STATUS_ERROR, STATUS_SUCCESS, STATUS_INFO, STATUS_SUBDUED,
   OVERLAY_WHITE,
@@ -180,6 +180,7 @@ const ITEMS_BY_TYPE = ALL_ITEM_TYPES.reduce<Record<string, ItemData[]>>((acc, ty
 }, {});
 
 export function EconomySourcingTab() {
+  const inspectId = useId();
   const [selectedItemId, setSelectedItemId] = useState<string>('');
   const selectedItem = useMemo(
     () => DUMMY_ITEMS.find(i => i.id === selectedItemId) ?? null,
@@ -191,8 +192,8 @@ export function EconomySourcingTab() {
       {/* Item selector */}
       <BlueprintPanel color={ACCENT} className="p-3">
         <div className="flex items-center gap-3 flex-wrap">
-          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Inspect Item</span>
-          <select value={selectedItemId} onChange={e => setSelectedItemId(e.target.value)}
+          <label htmlFor={inspectId} className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Inspect Item</label>
+          <select id={inspectId} value={selectedItemId} onChange={e => setSelectedItemId(e.target.value)}
             className="text-sm font-mono px-3 py-2 rounded-lg bg-surface-deep border border-border/40 text-text cursor-pointer min-w-[200px]">
             <option value="">-- Select an item --</option>
             {Object.entries(ITEMS_BY_TYPE).map(([type, items]) => (

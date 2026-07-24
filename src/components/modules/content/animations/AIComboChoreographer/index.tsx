@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { SchematicPanel } from '@/components/ui/SchematicPanel';
+import { Modal } from '@/components/ui/Modal';
 import { SectionLabel } from '@/components/modules/core-engine/unique-tabs/_shared';
 import {
   STATUS_SUCCESS, STATUS_ERROR, STATUS_INFO,
@@ -65,38 +66,44 @@ export function AIComboChoreographer() {
         <div className="flex gap-2 mt-2.5">
           <input
             type="text"
+            aria-label="Combo description"
             value={prompt}
             onChange={e => setPrompt(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') handleGenerate(); }}
             placeholder="e.g. 3-hit combo with wide sweeping first hit, quick follow-up, and heavy overhead finisher with ground slam"
-            className="flex-1 px-3 py-2 bg-surface-deep border border-border/40 rounded-lg text-xs text-text placeholder:text-text-muted/40 focus:outline-none focus:border-violet-500/50 transition-colors"
+            className="flex-1 px-3 py-2 bg-surface-deep border border-border/40 rounded-lg text-xs text-text placeholder:text-text-muted/60 transition-colors focus-ring-inset"
           />
           <button
+            type="button"
             onClick={handleGenerate}
             disabled={!prompt.trim() || isGenerating}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all disabled:opacity-50"
+            aria-busy={isGenerating}
+            title={!prompt.trim() ? 'Describe the combo first' : undefined}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed focus-ring"
             style={{ backgroundColor: `${ACCENT}${OPACITY_20}`, color: ACCENT, border: `1px solid ${ACCENT}40` }}
           >
             {isGenerating ? (
-              <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
+              <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} aria-hidden="true">
                 <RotateCcw className="w-3.5 h-3.5" />
               </motion.div>
             ) : (
-              <Sparkles className="w-3.5 h-3.5" />
+              <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
             )}
-            {isGenerating ? 'Generating...' : 'Generate'}
+            {isGenerating ? 'Generating…' : 'Generate'}
           </button>
         </div>
 
-        {/* Presets */}
-        <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-          <span className="text-2xs text-text-muted">Presets:</span>
+        {/* Presets — a labelled group so the buttons aren't orphaned from "Presets:" */}
+        <div className="flex items-center gap-1.5 mt-2 flex-wrap" role="group" aria-labelledby="combo-presets-label">
+          <span id="combo-presets-label" className="text-2xs text-text-muted">Presets:</span>
           {COMBO_PRESETS.map(p => (
             <button
               key={p.label}
+              type="button"
               onClick={() => handlePreset(p.prompt)}
               disabled={isGenerating}
-              className="text-2xs px-2 py-0.5 rounded-md border border-border/40 hover:border-border text-text-muted hover:text-text transition-colors disabled:opacity-50"
+              title={p.prompt}
+              className="text-2xs px-2 py-0.5 rounded-md border border-border/40 hover:border-border text-text-muted hover:text-text transition-colors disabled:opacity-50 focus-ring"
             >
               {p.label}
             </button>
@@ -202,86 +209,82 @@ export function AIComboChoreographer() {
               <SectionLabel icon={Download} label="Export" color={ACCENT_EMERALD} />
               <div className="flex gap-2 mt-2">
                 <button
+                  type="button"
                   onClick={() => setCodePreview({ code: generateMontageCode(generatedCombo), title: 'UE5 Combo Struct (.h)' })}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors hover:brightness-110"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors hover:brightness-110 focus-ring"
                   style={{ borderColor: `${ACCENT}30`, backgroundColor: `${ACCENT}08`, color: ACCENT }}
                 >
-                  <Swords className="w-3 h-3" /> UE5 Header
+                  <Swords className="w-3 h-3" aria-hidden="true" /> UE5 Header
                 </button>
                 <button
+                  type="button"
                   onClick={() => setCodePreview({ code: generateJSON(generatedCombo), title: 'Combo Definition (JSON)' })}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors hover:brightness-110"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors hover:brightness-110 focus-ring"
                   style={{ borderColor: `${ACCENT_EMERALD}30`, backgroundColor: `${ACCENT_EMERALD}08`, color: ACCENT_EMERALD }}
                 >
-                  <Download className="w-3 h-3" /> Export JSON
+                  <Download className="w-3 h-3" aria-hidden="true" /> Export JSON
                 </button>
                 <button
+                  type="button"
                   onClick={handleBlenderPreview}
                   disabled={!blenderConnected || blenderPreviewing}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors hover:brightness-110 disabled:opacity-40"
+                  aria-busy={blenderPreviewing}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed focus-ring"
                   style={{ borderColor: 'rgba(16,185,129,0.3)', backgroundColor: 'rgba(16,185,129,0.08)', color: 'rgb(52,211,153)' }}
                   title={!blenderConnected ? 'Connect to Blender first' : 'Preview combo animation in Blender'}
                 >
                   {blenderPreviewing ? (
-                    <span className="w-3 h-3 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                    <span className="w-3 h-3 rounded-full border-2 border-current border-t-transparent animate-spin" aria-hidden="true" />
                   ) : (
-                    <Monitor className="w-3 h-3" />
+                    <Monitor className="w-3 h-3" aria-hidden="true" />
                   )}
-                  {blenderPreviewing ? 'Sending...' : 'Preview in Blender'}
+                  {blenderPreviewing ? 'Sending…' : 'Preview in Blender'}
                 </button>
               </div>
-              {blenderResult && (
-                <div className={`text-xs font-mono px-3 py-2 rounded-lg border mt-2 ${blenderResult.isError ? 'border-red-500/30 bg-red-500/10 text-red-400' : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'}`}>
-                  {blenderResult.message}
-                </div>
-              )}
+              {/* Announced on change, and labelled with a word — not hue alone. */}
+              <div role="status" aria-live="polite">
+                {blenderResult && (
+                  <div className={`text-xs font-mono px-3 py-2 rounded-lg border mt-2 ${blenderResult.isError ? 'border-red-500/30 bg-red-500/10 text-red-400' : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'}`}>
+                    <span className="font-bold">{blenderResult.isError ? 'Failed: ' : 'Sent: '}</span>
+                    {blenderResult.message}
+                  </div>
+                )}
+              </div>
             </SurfaceCard>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Code Preview Modal */}
-      <AnimatePresence>
-        {codePreview && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-            onClick={() => setCodePreview(null)}
+      {/* Code Preview Modal — shared accessible shell (Escape, focus trap,
+          focus restore, role="dialog", reduced-motion) instead of a hand-rolled one. */}
+      <Modal
+        open={codePreview != null}
+        onClose={() => setCodePreview(null)}
+        title={codePreview?.title ?? 'Generated code'}
+        icon={<Sparkles className="w-4 h-4" style={{ color: ACCENT }} aria-hidden="true" />}
+        className="max-w-3xl"
+      >
+        <div className="flex flex-col gap-2 max-h-[70vh]">
+          <button
+            type="button"
+            onClick={() => codePreview && handleCopy(codePreview.code)}
+            className="flex items-center gap-1.5 self-start px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors focus-ring"
+            style={{
+              borderColor: copied ? `${STATUS_SUCCESS}50` : `${ACCENT}40`,
+              backgroundColor: copied ? `${STATUS_SUCCESS}15` : `${ACCENT}10`,
+              color: copied ? STATUS_SUCCESS : ACCENT,
+            }}
           >
-            <motion.div
-              initial={{ scale: 0.95, y: 10 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95, y: 10 }}
-              className="bg-surface-deep border border-border/60 rounded-xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col overflow-hidden"
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between px-4 py-3 border-b border-border/40">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4" style={{ color: ACCENT }} />
-                  <span className="text-sm font-bold text-text">{codePreview.title}</span>
-                </div>
-                <button
-                  onClick={() => handleCopy(codePreview.code)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors"
-                  style={{
-                    borderColor: copied ? `${STATUS_SUCCESS}50` : `${ACCENT}40`,
-                    backgroundColor: copied ? `${STATUS_SUCCESS}15` : `${ACCENT}10`,
-                    color: copied ? STATUS_SUCCESS : ACCENT,
-                  }}
-                >
-                  {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                  {copied ? 'Copied!' : 'Copy'}
-                </button>
-              </div>
-              <pre className="flex-1 overflow-auto p-4 text-xs font-mono text-text-muted leading-relaxed custom-scrollbar whitespace-pre">
-                {codePreview.code}
-              </pre>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            {copied
+              ? <Check className="w-3 h-3" aria-hidden="true" />
+              : <Copy className="w-3 h-3" aria-hidden="true" />}
+            {copied ? 'Copied!' : 'Copy'}
+          </button>
+          <pre className="flex-1 overflow-auto text-xs font-mono text-text-muted leading-relaxed custom-scrollbar whitespace-pre">
+            {codePreview?.code}
+          </pre>
+        </div>
+      </Modal>
     </div>
   );
 }

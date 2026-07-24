@@ -57,16 +57,22 @@ export function PathBrowser(props: PathBrowserProps) {
     <div className="border border-border rounded-lg overflow-hidden bg-[#0d0d24]">
       {/* Path bar */}
       <div className="flex items-center gap-2 px-3 py-2 bg-surface border-b border-border">
-        <FolderOpen className="w-4 h-4 text-accent-setup shrink-0" />
+        <FolderOpen className="w-4 h-4 text-accent-setup shrink-0" aria-hidden="true" />
         <input
           type="text"
           value={pathInput}
           onChange={(e) => setPathInput(e.target.value)}
           onKeyDown={handlePathSubmit}
           placeholder="Type a path and press Enter..."
+          aria-label="Folder path — type a path and press Enter to open it"
           className="flex-1 bg-transparent text-xs text-text placeholder-text-muted outline-none font-mono"
         />
-        {loading && <Loader2 className="w-3.5 h-3.5 text-text-muted animate-spin shrink-0" />}
+        {loading && (
+          <Loader2
+            className="w-3.5 h-3.5 text-text-muted animate-spin shrink-0"
+            aria-hidden="true"
+          />
+        )}
       </div>
 
       {/* Nav buttons */}
@@ -167,7 +173,7 @@ export function PathBrowser(props: PathBrowserProps) {
                 {!project.validated && (
                   <span
                     className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-amber-400/10 text-amber-400/70 shrink-0"
-                    title="Missing Config/DefaultEngine.ini â€” may be incomplete"
+                    title="No Config/DefaultEngine.ini found — this project may be incomplete"
                   >
                     <StatusDot state="warn" size="md" label="Unverified project" />
                     unverified
@@ -181,9 +187,12 @@ export function PathBrowser(props: PathBrowserProps) {
       )}
 
       {detectLoading && (
-        <div className="flex items-center gap-2 px-3 py-2 border-b border-border text-xs text-text-muted">
-          <Loader2 className="w-3 h-3 animate-spin" />
-          {startFresh ? 'Scanning for UE engines...' : 'Scanning for existing UE projects...'}
+        <div
+          role="status"
+          className="flex items-center gap-2 px-3 py-2 border-b border-border text-xs text-text-muted"
+        >
+          <Loader2 className="w-3 h-3 animate-spin" aria-hidden="true" />
+          {startFresh ? 'Scanning for UE engines…' : 'Scanning for existing UE projects…'}
         </div>
       )}
 
@@ -191,7 +200,21 @@ export function PathBrowser(props: PathBrowserProps) {
       {error && <ErrorBanner message={error} className="mx-3 my-2" />}
 
       {/* Directory listing */}
-      <div className="max-h-[200px] overflow-y-auto">
+      <div
+        role="group"
+        aria-label="Folder contents"
+        aria-busy={loading}
+        className="max-h-[200px] overflow-y-auto"
+      >
+        {loading && directories.length === 0 && (
+          <div
+            role="status"
+            className="flex items-center justify-center gap-2 px-3 py-6 text-xs text-text-muted"
+          >
+            <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
+            Loading folder…
+          </div>
+        )}
         {directories.length === 0 && !loading && currentPath && (
           <div className="px-3 py-6 text-center">
             <Folder className="w-6 h-6 text-text-muted/20 mx-auto mb-2" />
@@ -259,6 +282,7 @@ export function PathBrowser(props: PathBrowserProps) {
         <button
           onClick={selectDirectory}
           disabled={!currentPath}
+          title={currentPath ? currentPath : 'Open a folder first — a drive list has no folder to select'}
           className="w-full py-1.5 text-xs font-medium rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-accent-medium text-accent-setup border border-accent-strong hover:bg-accent-strong"
         >
           {isUEProject

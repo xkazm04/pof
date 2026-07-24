@@ -34,7 +34,7 @@ export function CategoryGroup({
       {/* Category header */}
       <div className="flex items-center gap-3 mb-4 pb-3" style={{ borderBottom: `1px solid ${withOpacity(cfg.color, OPACITY_30)}` }}>
         <div className="w-8 h-8 rounded-lg flex items-center justify-center shadow-lg" style={{ backgroundColor: `${cfg.color}15`, border: `1px solid ${cfg.color}30` }}>
-          <Icon className="w-4 h-4" style={{ color: cfg.color }} />
+          <Icon className="w-4 h-4" style={{ color: cfg.color }} aria-hidden="true" />
         </div>
         <div>
           <h4 className="text-sm font-semibold" style={{ color: cfg.color }}>
@@ -43,18 +43,23 @@ export function CategoryGroup({
           <p className="text-sm text-text-muted mt-0.5">{cfg.description}</p>
         </div>
         <button
+          type="button"
           onClick={onAdd}
-          className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all hover:bg-white/5 border border-transparent hover:border-white/10"
+          aria-label={`Add ${cfg.label} event`}
+          className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all hover:bg-white/5 border border-transparent hover:border-white/10 focus-ring"
           style={{ color: cfg.color }}
         >
-          <Plus className="w-3.5 h-3.5" />
+          <Plus className="w-3.5 h-3.5" aria-hidden="true" />
           Add event
         </button>
       </div>
 
       {events.length === 0 ? (
-        <div className="text-center py-8 text-sm text-text-muted bg-surface-deep rounded-xl border border-dashed border-border">
-          No events yet
+        <div className="text-center py-8 px-4 bg-surface-deep rounded-xl border border-dashed border-border">
+          <p className="text-sm text-text-muted">No {cfg.label} events yet</p>
+          <p className="text-xs text-text-muted/80 mt-1">
+            Use “Add event” to define a trigger the audio manager will listen for.
+          </p>
         </div>
       ) : (
         <div className="grid gap-2">
@@ -64,22 +69,34 @@ export function CategoryGroup({
             return (
               <div
                 key={evt.id}
+                role="button"
+                tabIndex={0}
+                aria-pressed={isEditing}
+                aria-label={`Edit ${evt.name} — ${priCfg.label} priority, ${evt.spatial === '3d' ? '3D' : '2D'} sound`}
                 onClick={() => onSelect(evt.id)}
-                className="flex items-center gap-4 px-4 py-3 rounded-xl border transition-all cursor-pointer group relative overflow-hidden"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onSelect(evt.id);
+                  }
+                }}
+                className="flex items-center gap-4 px-4 py-3 rounded-xl border transition-all cursor-pointer group relative overflow-hidden focus-ring text-left"
                 style={{
                   borderColor: isEditing ? withOpacity(cfg.color, OPACITY_50) : withOpacity(cfg.color, OPACITY_20),
                   backgroundColor: isEditing ? withOpacity(cfg.color, OPACITY_10) : 'var(--surface-deep)',
                 }}
               >
                 {isEditing && (
-                  <div className="absolute left-0 top-0 bottom-0 w-1 shadow-[0_0_10px_currentColor]" style={{ backgroundColor: cfg.color, color: cfg.color }} />
+                  <div className="absolute left-0 top-0 bottom-0 w-1 shadow-[0_0_10px_currentColor]" style={{ backgroundColor: cfg.color, color: cfg.color }} aria-hidden="true" />
                 )}
 
-                {/* Priority dot */}
+                {/* Priority dot — colour alone can't carry the level, so the row's
+                    aria-label names it and this stays decorative. */}
                 <span
                   className="w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-[0_0_8px_currentColor]"
                   style={{ backgroundColor: priCfg.color, color: priCfg.color }}
                   title={`Priority: ${priCfg.label}`}
+                  aria-hidden="true"
                 />
 
                 {/* Name */}
@@ -105,7 +122,10 @@ export function CategoryGroup({
                 </span>
 
                 {/* Concurrency */}
-                <span className="text-sm text-text-muted w-16 text-right border-r border-border pr-4">
+                <span
+                  className="text-sm text-text-muted w-16 text-right border-r border-border pr-4"
+                  title={`Max ${evt.concurrency} simultaneous instances`}
+                >
                   Max {evt.concurrency}
                 </span>
 
@@ -129,12 +149,16 @@ export function CategoryGroup({
                   )}
                 </div>
 
-                {/* Delete */}
+                {/* Delete — revealed on hover, and on keyboard focus so it is
+                    reachable without a pointer. */}
                 <button
+                  type="button"
                   onClick={(e) => { e.stopPropagation(); onDelete(evt.id); }}
-                  className="opacity-0 translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 w-8 h-8 rounded-lg flex items-center justify-center text-red-500/60 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/30 transition-all flex-shrink-0"
+                  aria-label={`Delete event ${evt.name}`}
+                  title={`Delete event ${evt.name}`}
+                  className="opacity-0 translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 focus-visible:opacity-100 focus-visible:translate-x-0 w-8 h-8 rounded-lg flex items-center justify-center text-red-500/60 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/30 transition-all flex-shrink-0 focus-ring"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-4 h-4" aria-hidden="true" />
                 </button>
               </div>
             );

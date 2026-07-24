@@ -22,6 +22,7 @@ export function ChipToggle({ label, active, color, onClick, title }: {
       type="button"
       onClick={onClick}
       title={title}
+      aria-pressed={active}
       className={`px-2 py-0.5 rounded-md text-xs font-mono border transition-colors cursor-pointer capitalize ${
         active ? '' : 'text-text-muted border-border/50 hover:text-text hover:border-border/80'
       }`}

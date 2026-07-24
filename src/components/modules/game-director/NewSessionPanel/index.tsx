@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Loader2, Sparkles, Timer, Camera,
@@ -9,6 +9,8 @@ import {
 import type { CreateSessionPayload, TestCategory, PlaytestConfig } from '@/types/game-director';
 import type { PlaytestSession } from '@/types/game-director';
 import { OPACITY_8, OPACITY_15, OPACITY_20 } from '@/lib/chart-colors';
+import { RangeSlider } from '@/components/ui/RangeSlider';
+import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { SettingTooltip } from './SettingTooltip';
 import {
   ACCENT,
@@ -33,6 +35,25 @@ export function NewSessionPanel({ onCreated, createSession }: NewSessionPanelPro
   const [screenshotInterval, setScreenshotInterval] = useState(15);
   const [aggressiveMode, setAggressiveMode] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+
+  // Ids tie every visible label to the control it names (click-to-focus + a
+  // screen-reader accessible name), and the submit button to its blocking reason.
+  const uid = useId();
+  const nameId = `${uid}-name`;
+  const buildPathId = `${uid}-build-path`;
+  const categoriesLabelId = `${uid}-categories`;
+  const playtimeId = `${uid}-playtime`;
+  const screenshotId = `${uid}-screenshot`;
+  const aggressiveLabelId = `${uid}-aggressive`;
+  const blockedHintId = `${uid}-blocked`;
+
+  // Why the Create button is disabled, stated instead of left for the user to guess.
+  const blockedReason = !name.trim()
+    ? 'Name the session before creating it.'
+    : selectedCategories.size === 0
+      ? 'Select at least one test category before creating the session.'
+      : null;
 
   const toggleCategory = (cat: TestCategory) => {
     setSelectedCategories(prev => {
@@ -46,6 +67,7 @@ export function NewSessionPanel({ onCreated, createSession }: NewSessionPanelPro
   const handleCreate = async () => {
     if (!name.trim() || selectedCategories.size === 0) return;
     setCreating(true);
+    setCreateError(null);
     try {
       const config: PlaytestConfig = {
         testCategories: Array.from(selectedCategories),
@@ -56,6 +78,10 @@ export function NewSessionPanel({ onCreated, createSession }: NewSessionPanelPro
       };
       await createSession({ name: name.trim(), buildPath, config });
       onCreated();
+    } catch (err) {
+      // A failed create used to leave the form silently unchanged — surface the
+      // reason with a Retry instead (the form still holds everything it needs).
+      setCreateError(err instanceof Error ? err.message : 'Failed to create the playtest session.');
     } finally {
       setCreating(false);
     }
@@ -69,10 +95,11 @@ export function NewSessionPanel({ onCreated, createSession }: NewSessionPanelPro
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.22 }}
       >
-        <label className="text-xs uppercase tracking-wider text-text-muted mb-1.5 block font-semibold">
+        <label htmlFor={nameId} className="text-xs uppercase tracking-wider text-text-muted mb-1.5 block font-semibold">
           Session Name
         </label>
         <input
+          id={nameId}
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -87,22 +114,27 @@ export function NewSessionPanel({ onCreated, createSession }: NewSessionPanelPro
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.22, delay: 0.05 }}
       >
-        <label className="text-xs uppercase tracking-wider text-text-muted mb-1.5 block font-semibold">
+        <label htmlFor={buildPathId} className="text-xs uppercase tracking-wider text-text-muted mb-1.5 block font-semibold">
           Build Path
           <span className="text-text-muted ml-1 normal-case tracking-normal">(optional — uses project default)</span>
         </label>
         <div className="flex gap-2">
           <input
+            id={buildPathId}
             type="text"
             value={buildPath}
             onChange={(e) => setBuildPath(e.target.value)}
             placeholder="C:\MyGame\Saved\StagedBuilds\Windows"
             className="focus-ring-inset flex-1 px-3 py-2.5 bg-surface border border-border rounded-lg text-sm text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors font-mono"
           />
+          {/* Browsing is not wired yet — the control reads as unavailable rather
+              than looking clickable and doing nothing. */}
           <button
             type="button"
-            aria-label="Browse for build folder"
-            className="focus-ring px-3 py-2.5 bg-surface border border-border rounded-lg text-text-muted hover:text-text transition-colors"
+            disabled
+            aria-label="Browse for build folder (unavailable — paste the folder path instead)"
+            title="Folder browsing isn't available here — paste the build folder path instead."
+            className="focus-ring px-3 py-2.5 bg-surface border border-border rounded-lg text-text-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <FolderOpen className="w-4 h-4" />
           </button>
@@ -115,13 +147,13 @@ export function NewSessionPanel({ onCreated, createSession }: NewSessionPanelPro
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.22, delay: 0.1 }}
       >
-        <label className="text-xs uppercase tracking-wider text-text-muted mb-2 block font-semibold">
+        <span id={categoriesLabelId} className="text-xs uppercase tracking-wider text-text-muted mb-2 block font-semibold">
           Test Categories
           <span className="text-text-muted ml-1 normal-case tracking-normal">
             ({selectedCategories.size} selected)
           </span>
-        </label>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        </span>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2" role="group" aria-labelledby={categoriesLabelId}>
           {TEST_CATEGORIES.map((cat) => {
             const Icon = cat.icon;
             const isSelected = selectedCategories.has(cat.id);
@@ -158,23 +190,26 @@ export function NewSessionPanel({ onCreated, createSession }: NewSessionPanelPro
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.22, delay: 0.15 }}
-        className="grid grid-cols-3 gap-4"
+        className="grid grid-cols-1 sm:grid-cols-3 gap-4"
       >
         {/* Max playtime */}
         <div>
-          <label className="text-xs uppercase tracking-wider text-text-muted mb-1.5 flex items-center gap-1 font-semibold">
+          <div className="text-xs uppercase tracking-wider text-text-muted mb-1.5 flex items-center gap-1 font-semibold">
             <Timer className="w-3 h-3" />
-            Playtime
+            <label htmlFor={playtimeId}>Playtime</label>
             <SettingTooltip lines={PLAYTIME_TIPS} />
-          </label>
+          </div>
           <div className="flex items-center gap-2">
-            <input
-              type="range"
+            <RangeSlider
+              id={playtimeId}
+              value={maxPlaytime}
               min={2}
               max={30}
-              value={maxPlaytime}
-              onChange={(e) => setMaxPlaytime(Number(e.target.value))}
-              className="flex-1" style={{ accentColor: ACCENT }}
+              accent={ACCENT}
+              onChange={setMaxPlaytime}
+              ariaLabel="Maximum playtime in minutes"
+              formatValue={(v) => `${v}m`}
+              className="flex-1"
             />
             <span className="text-xs text-text-muted-hover w-8 text-right">{maxPlaytime}m</span>
           </div>
@@ -182,20 +217,23 @@ export function NewSessionPanel({ onCreated, createSession }: NewSessionPanelPro
 
         {/* Screenshot interval */}
         <div>
-          <label className="text-xs uppercase tracking-wider text-text-muted mb-1.5 flex items-center gap-1 font-semibold">
+          <div className="text-xs uppercase tracking-wider text-text-muted mb-1.5 flex items-center gap-1 font-semibold">
             <Camera className="w-3 h-3" />
-            Screenshots
+            <label htmlFor={screenshotId}>Screenshots</label>
             <SettingTooltip lines={SCREENSHOT_TIPS} />
-          </label>
+          </div>
           <div className="flex items-center gap-2">
-            <input
-              type="range"
+            <RangeSlider
+              id={screenshotId}
+              value={screenshotInterval}
               min={5}
               max={60}
               step={5}
-              value={screenshotInterval}
-              onChange={(e) => setScreenshotInterval(Number(e.target.value))}
-              className="flex-1" style={{ accentColor: ACCENT }}
+              accent={ACCENT}
+              onChange={setScreenshotInterval}
+              ariaLabel="Seconds between screenshots"
+              formatValue={(v) => `${v}s`}
+              className="flex-1"
             />
             <span className="text-xs text-text-muted-hover w-8 text-right">{screenshotInterval}s</span>
           </div>
@@ -203,14 +241,17 @@ export function NewSessionPanel({ onCreated, createSession }: NewSessionPanelPro
 
         {/* Aggressive mode */}
         <div>
-          <label className="text-xs uppercase tracking-wider text-text-muted mb-1.5 flex items-center gap-1 font-semibold">
+          <div className="text-xs uppercase tracking-wider text-text-muted mb-1.5 flex items-center gap-1 font-semibold">
             <Sparkles className="w-3 h-3" />
-            Aggressive
+            <span id={aggressiveLabelId}>Aggressive</span>
             <SettingTooltip lines={AGGRESSIVE_TIPS} />
-          </label>
+          </div>
           <button
+            type="button"
             onClick={() => setAggressiveMode(!aggressiveMode)}
             aria-pressed={aggressiveMode}
+            aria-label="Aggressive mode"
+            aria-describedby={aggressiveLabelId}
             className={`
               focus-ring w-full px-3 py-2 rounded-lg text-sm font-medium transition-all border
               ${aggressiveMode
@@ -230,12 +271,21 @@ export function NewSessionPanel({ onCreated, createSession }: NewSessionPanelPro
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.22, delay: 0.2 }}
-        className="pt-2"
+        className="pt-2 space-y-2"
       >
+        {createError && (
+          <InlineErrorRetry
+            message={createError}
+            onRetry={() => { void handleCreate(); }}
+            onDismiss={() => setCreateError(null)}
+          />
+        )}
         <button
+          type="button"
           onClick={handleCreate}
-          disabled={creating || !name.trim() || selectedCategories.size === 0}
-          className="focus-ring flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl text-sm font-semibold transition-all disabled:opacity-50"
+          disabled={creating || blockedReason !== null}
+          aria-describedby={blockedReason ? blockedHintId : undefined}
+          className="focus-ring flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           style={{
             backgroundColor: `${ACCENT}18`,
             color: ACCENT,
@@ -243,12 +293,17 @@ export function NewSessionPanel({ onCreated, createSession }: NewSessionPanelPro
           }}
         >
           {creating ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
+            <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
           ) : (
-            <Sparkles className="w-4 h-4" />
+            <Sparkles className="w-4 h-4" aria-hidden="true" />
           )}
-          {creating ? 'Creating Session...' : 'Create Playtest Session'}
+          {creating ? 'Creating session…' : 'Create Playtest Session'}
         </button>
+        {blockedReason && (
+          <p id={blockedHintId} className="text-2xs text-text-muted text-center">
+            {blockedReason}
+          </p>
+        )}
       </motion.div>
     </div>
   );

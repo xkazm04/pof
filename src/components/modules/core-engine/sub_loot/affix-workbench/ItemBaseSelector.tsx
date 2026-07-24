@@ -60,7 +60,9 @@ export function ItemBaseSelector({
         </div>
         <input type="range" min={1} max={100} value={itemLevel}
           onChange={(e) => onSetItemLevel(Number(e.target.value))}
-          className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
+          aria-label="Item level"
+          aria-valuetext={`Level ${itemLevel} — ${getItemLevelScaling(itemLevel).toFixed(1)}x scaling`}
+          className="w-full h-1.5 rounded-full appearance-none cursor-pointer focus-ring"
           style={{ accentColor: ACCENT }} />
         <div className="flex justify-between text-xs text-text-muted font-mono mt-0.5">
           <span>1</span>

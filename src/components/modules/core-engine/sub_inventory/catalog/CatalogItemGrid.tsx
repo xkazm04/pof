@@ -1,6 +1,6 @@
 'use client';
 
-import { Search } from 'lucide-react';
+import { Package, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TradingCard } from './TradingCard';
 import { CatalogLifecycleCell } from '@/components/catalog/CatalogLifecycleCell';
@@ -22,13 +22,16 @@ interface Props {
   /** Undefined disables the (Re)generate affordance (no primary entry). */
   onRegenerate: (() => void) | undefined;
   onGridKeyDown: (e: React.KeyboardEvent) => void;
+  /** True when any search/type/slot/rarity filter is narrowing the catalog. */
+  hasActiveFilters: boolean;
+  onClearFilters: () => void;
 }
 
 export function CatalogItemGrid({
   gridRef, cardRefs, pageEntries, filteredCount,
   focusedIndex, setFocusedIndex, setSelectedItem,
   primaryEntry, isGenRunning, onRegenerate,
-  onGridKeyDown,
+  onGridKeyDown, hasActiveFilters, onClearFilters,
 }: Props) {
   return (
     <div className="relative min-h-[300px]">
@@ -39,11 +42,15 @@ export function CatalogItemGrid({
             const item = entry.data;
             const isPrimary = entry.id === primaryEntry?.id;
             return (
-              <div key={item.id} onClick={() => setSelectedItem(prev => prev?.id === item.id ? null : item)} className="cursor-pointer">
+              // `role="row"` keeps the grid/gridcell nesting valid — a `gridcell` may not sit
+              // directly under `role="grid"`. `onActivate` gives the detail drawer a keyboard
+              // route: the card swallows Enter/Space for its tooltip, so it was mouse-only.
+              <div key={item.id} role="row" onClick={() => setSelectedItem(prev => prev?.id === item.id ? null : item)} className="cursor-pointer">
                 <TradingCard ref={(el: HTMLDivElement | null) => { cardRefs.current[index] = el; }}
-                  item={item} tabIndex={index === focusedIndex ? 0 : -1} onFocus={() => setFocusedIndex(index)} />
+                  item={item} tabIndex={index === focusedIndex ? 0 : -1} onFocus={() => setFocusedIndex(index)}
+                  onActivate={() => setSelectedItem(prev => prev?.id === item.id ? null : item)} />
                 {/* folder-09 R3: lifecycle cell + (Re)generate for the primary item. */}
-                <div className="mt-1 px-1" onClick={(e) => e.stopPropagation()}>
+                <div role="gridcell" className="mt-1 px-1" onClick={(e) => e.stopPropagation()}>
                   <CatalogLifecycleCell
                     lifecycle={entry.lifecycle}
                     ueAssetCount={entry.ueAssets?.length ?? 0}
@@ -57,8 +64,23 @@ export function CatalogItemGrid({
         </AnimatePresence>
       </motion.div>
       {filteredCount === 0 && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-text-muted opacity-50">
-          <Search className="w-12 h-12 mb-2.5" /><p className="text-sm">No items found matching the current filters.</p>
+        // Announced (role="status") and honest: an empty catalog is not the same as a
+        // filtered-out one, and the filtered case offers the way out instead of a dead end.
+        <div role="status" className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-4 text-center text-text-muted">
+          {hasActiveFilters
+            ? <Search className="w-12 h-12 opacity-40" aria-hidden="true" />
+            : <Package className="w-12 h-12 opacity-40" aria-hidden="true" />}
+          <p className="text-sm">
+            {hasActiveFilters ? 'No items match the current filters.' : 'No items in this catalog yet.'}
+          </p>
+          {hasActiveFilters ? (
+            <button type="button" onClick={onClearFilters}
+              className="px-3 py-1.5 rounded-lg text-sm font-medium border border-border/40 text-text hover:bg-surface-hover transition-colors cursor-pointer">
+              Clear filters
+            </button>
+          ) : (
+            <p className="text-xs">Use &ldquo;Add Item&rdquo; above to create the first one.</p>
+          )}
         </div>
       )}
     </div>

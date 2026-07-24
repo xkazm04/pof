@@ -118,7 +118,7 @@ export function AudioEventCatalog({ sceneId, onGenerate, isGenerating }: AudioEv
         <div className="flex items-start justify-between border-b border-border pb-4">
           <div>
             <h3 className="text-base font-semibold text-text flex items-center gap-2">
-              <Zap className="w-4 h-4" style={{ color: ACCENT }} />
+              <Zap className="w-4 h-4" style={{ color: ACCENT }} aria-hidden="true" />
               Audio Events
             </h3>
             <p className="text-sm text-text-muted mt-1">
@@ -133,7 +133,7 @@ export function AudioEventCatalog({ sceneId, onGenerate, isGenerating }: AudioEv
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border"
               style={{ color: ACCENT_EMERALD, backgroundColor: withOpacity(ACCENT_EMERALD, OPACITY_10), borderColor: withOpacity(ACCENT_EMERALD, OPACITY_20) }}
             >
-              <Volume2 className="w-3.5 h-3.5" />
+              <Volume2 className="w-3.5 h-3.5" aria-hidden="true" />
               3D sound <span className="font-semibold">{stats.spatial3d}</span>
             </span>
             <span
@@ -146,17 +146,23 @@ export function AudioEventCatalog({ sceneId, onGenerate, isGenerating }: AudioEv
         </div>
 
         {/* Filter bar */}
-        <div className="flex items-center gap-2 flex-wrap bg-surface p-1.5 rounded-xl border border-border backdrop-blur-md">
+        <div
+          role="group"
+          aria-label="Filter events by category"
+          className="flex items-center gap-2 flex-wrap bg-surface p-1.5 rounded-xl border border-border backdrop-blur-md"
+        >
           <button
+            type="button"
             onClick={() => setFilterCategory('all')}
-            className="px-4 py-2 rounded-lg text-sm font-semibold transition-all border"
+            aria-pressed={filterCategory === 'all'}
+            className="px-4 py-2 rounded-lg text-sm font-semibold transition-all border focus-ring"
             style={filterCategory === 'all'
               ? { color: ACCENT, backgroundColor: withOpacity(ACCENT, OPACITY_20), borderColor: withOpacity(ACCENT, OPACITY_50) }
               : { borderColor: 'transparent' }}
           >
             <span className={filterCategory === 'all' ? '' : 'text-text-muted'}>All ({stats.total})</span>
           </button>
-          <div className="w-px h-6 bg-border mx-2" />
+          <div className="w-px h-6 bg-border mx-2" aria-hidden="true" />
           {CATEGORIES.map((cat) => {
             const cfg = CATEGORY_CONFIG[cat];
             const Icon = cfg.icon;
@@ -164,8 +170,11 @@ export function AudioEventCatalog({ sceneId, onGenerate, isGenerating }: AudioEv
             return (
               <button
                 key={cat}
+                type="button"
                 onClick={() => setFilterCategory(cat)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all border ${active ? '' : 'border-transparent text-text-muted hover:bg-surface-hover hover:text-text'
+                aria-pressed={active}
+                aria-label={`${cfg.label} — ${stats.byCat[cat]} events`}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all border focus-ring ${active ? '' : 'border-transparent text-text-muted hover:bg-surface-hover hover:text-text'
                   }`}
                 style={
                   active ? {
@@ -175,7 +184,7 @@ export function AudioEventCatalog({ sceneId, onGenerate, isGenerating }: AudioEv
                   } : {}
                 }
               >
-                <Icon className="w-3.5 h-3.5" style={active ? {} : { color: 'currentColor' }} />
+                <Icon className="w-3.5 h-3.5" style={active ? {} : { color: 'currentColor' }} aria-hidden="true" />
                 {cfg.label} ({stats.byCat[cat]})
               </button>
             );
@@ -237,33 +246,48 @@ export function AudioEventCatalog({ sceneId, onGenerate, isGenerating }: AudioEv
         </AnimatePresence>
 
         {/* Generate */}
-        <div className="pt-6">
+        <div className="pt-6 space-y-2">
           <button
+            type="button"
             onClick={() => onGenerate(config)}
             disabled={isGenerating || events.length === 0}
-            className="relative w-full overflow-hidden flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-semibold transition-all disabled:opacity-50 group outline-none"
+            aria-busy={isGenerating}
+            aria-describedby={events.length === 0 ? 'audio-events-generate-hint' : undefined}
+            className="relative w-full overflow-hidden flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-semibold transition-all disabled:opacity-50 group focus-ring"
             style={{
               backgroundColor: withOpacity(ACCENT, OPACITY_10),
               color: ACCENT,
               border: `1px solid ${withOpacity(ACCENT, OPACITY_50)}`,
             }}
           >
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-50" />
-            <div className="absolute top-0 -left-[100%] w-1/2 h-full bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-12 group-hover:left-[200%] transition-transform duration-1000 ease-out pointer-events-none" />
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-50" aria-hidden="true" />
+            <div className="absolute top-0 -left-[100%] w-1/2 h-full bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-12 group-hover:left-[200%] transition-transform duration-1000 ease-out pointer-events-none" aria-hidden="true" />
 
             {isGenerating ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Generating Audio Manager...
+                <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+                Generating Audio Manager…
               </>
             ) : (
               <>
-                <Send className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                <Send className="w-4 h-4 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
                 Generate Audio Manager
               </>
             )}
           </button>
+          {/* A disabled button with no explanation reads as a broken control. */}
+          {events.length === 0 && (
+            <p id="audio-events-generate-hint" className="text-xs text-text-muted text-center">
+              Add at least one event before generating the audio manager.
+            </p>
+          )}
         </div>
+
+        {/* Status for assistive tech — counts change as events are added/removed. */}
+        <p aria-live="polite" className="sr-only">
+          {stats.total} audio {stats.total === 1 ? 'event' : 'events'} defined
+          {filterCategory === 'all' ? '' : `, showing ${CATEGORY_CONFIG[filterCategory].label} only`}.
+        </p>
       </div>
     </div>
   );

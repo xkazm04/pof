@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import { logger } from '@/lib/logger';
 import {
   validateStateMachine,
   groupWarningsByState,
@@ -16,6 +15,12 @@ import {
   generateAnimBPSetup,
   generateFullCppOutput,
 } from './codegen';
+
+/**
+ * Canvas bounds for a node's percent position. Shared by pointer drag and
+ * keyboard nudge so neither input path can push a node off-canvas.
+ */
+const clampPct = (v: number) => Math.max(5, Math.min(95, v));
 
 export function useStateMachineEditor() {
   const [states, setStates] = useState<EditorState[]>(DEFAULT_STATES);
@@ -32,7 +37,6 @@ export function useStateMachineEditor() {
   const [draggingStateId, setDraggingStateId] = useState<string | null>(null);
   const [showCode, setShowCode] = useState(false);
   const [codeTab, setCodeTab] = useState<'full' | 'enum' | 'compute' | 'setup'>('full');
-  const [copiedSection, setCopiedSection] = useState<string | null>(null);
   const [showDiff, setShowDiff] = useState(false);
   const [editingPanel, setEditingPanel] = useState<'state' | 'transition' | null>(null);
 
@@ -115,14 +119,21 @@ export function useStateMachineEditor() {
     const rect = canvasRef.current.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
-    updateState(draggingStateId, {
-      x: Math.max(5, Math.min(95, x)),
-      y: Math.max(5, Math.min(95, y)),
-    });
+    updateState(draggingStateId, { x: clampPct(x), y: clampPct(y) });
   }, [draggingStateId, updateState]);
 
   const handleCanvasMouseUp = useCallback(() => {
     setDraggingStateId(null);
+  }, []);
+
+  /**
+   * Move a state by a percent delta — the keyboard equivalent of dragging,
+   * so a node can be repositioned without a pointer.
+   */
+  const nudgeState = useCallback((id: string, dx: number, dy: number) => {
+    setStates((prev) => prev.map((s) => (
+      s.id === id ? { ...s, x: clampPct(s.x + dx), y: clampPct(s.y + dy) } : s
+    )));
   }, []);
 
   // ── Drawing transition arrows ──
@@ -171,15 +182,9 @@ export function useStateMachineEditor() {
     }
   }, [showCode, states, transitions, codeTab]);
 
-  const handleCopy = useCallback(async (section: string, text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopiedSection(section);
-      setTimeout(() => setCopiedSection(null), 2000);
-    } catch {
-      logger.warn('Clipboard copy failed');
-    }
-  }, []);
+  // Copying the visible section is owned by the shared CodeViewer inside
+  // CodeOutputPanel (clipboard + toast feedback); the editor only keeps the
+  // whole-machine .cpp export below, which the toolbar also drives.
 
   const handleExport = useCallback(() => {
     // Nothing meaningful to export without states — the toolbar disables the
@@ -257,7 +262,6 @@ export function useStateMachineEditor() {
     draggingStateId, setDraggingStateId,
     showCode, setShowCode,
     codeTab, setCodeTab,
-    copiedSection,
     showDiff, setShowDiff,
     editingPanel, setEditingPanel,
     canvasRef,
@@ -271,11 +275,11 @@ export function useStateMachineEditor() {
     updateTransition,
     handleCanvasMouseMove,
     handleCanvasMouseUp,
+    nudgeState,
     handleStateClick,
     takeSnapshot,
     showDiffResult,
     generatedCode,
-    handleCopy,
     handleExport,
     handleReset,
     selectedState,

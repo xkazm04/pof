@@ -9,6 +9,8 @@ import { ProgressRing } from '@/components/ui/ProgressRing';
 import { DashboardHeader } from '@/components/ui/DashboardHeader';
 import { MetricLabel } from '@/components/ui/MetricLabel';
 import { ABComparisonPanel } from '@/components/modules/evaluator/ABComparisonPanel';
+import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
+import { Tooltip } from '@/components/ui/Tooltip';
 import { useCombatSimulatorStore } from '@/stores/combatSimulatorStore';
 import {
   MODULE_COLORS, ACCENT_EMERALD_DARK, STATUS_NEUTRAL, STATUS_ERROR,
@@ -124,6 +126,29 @@ export function CombatSimulatorView() {
     setTuning({ ...tuning, [key]: value });
   }, [tuning, setTuning]);
 
+  // A failure is either the initial defaults load (no tuning/config yet) or the
+  // run itself; retry whichever one actually failed rather than a generic reload.
+  const handleRetry = useCallback(() => {
+    if (!tuning || !defaultConfig) {
+      void fetchDefaults();
+      return;
+    }
+    void handleRun();
+  }, [tuning, defaultConfig, fetchDefaults, handleRun]);
+
+  // Run lifecycle is otherwise conveyed only by the button's changing label, which
+  // screen readers don't announce. Progress is quantised to quarters so the live
+  // region speaks ~4 times per run instead of once per streamed batch.
+  const runStatus = useMemo(() => {
+    if (isSimulating) {
+      return `Simulating ${activeIterations} fights — ${Math.floor(simProgress * 4) * 25}% complete`;
+    }
+    if (summary) {
+      return `Simulation complete: ${(summary.survivalRate * 100).toFixed(0)}% survival across ${(result?.config.iterations ?? activeIterations).toLocaleString()} fights`;
+    }
+    return '';
+  }, [isSimulating, activeIterations, simProgress, summary, result]);
+
   // A/B diff is only apples-to-apples when the candidate ran the same encounter
   // as the pinned baseline; flag a divergence so the delta isn't read as a
   // controlled tuning comparison when it actually mixes scenarios.
@@ -157,14 +182,15 @@ export function CombatSimulatorView() {
             <div className="flex items-center gap-2">
               <ModeToggle mode={mode} onChange={setMode} />
               {result && (
-                <button
-                  onClick={pinBaseline}
-                  title="Pin this run as the A/B baseline; the next run is diffed against it"
-                  className="flex items-center gap-1.5 px-3 py-2 bg-violet-400/10 border border-violet-400/30 rounded-lg text-violet-400 text-xs font-medium hover:bg-violet-400/20 transition-colors"
-                >
-                  <Pin className="w-3.5 h-3.5" />
-                  {baselineResult ? 'Re-pin Baseline' : 'Pin as Baseline'}
-                </button>
+                <Tooltip content="Pin this run as the A/B baseline; the next run is diffed against it" multiline>
+                  <button
+                    onClick={pinBaseline}
+                    className="focus-ring flex items-center gap-1.5 px-3 py-2 bg-violet-400/10 border border-violet-400/30 rounded-lg text-violet-400 text-xs font-medium hover:bg-violet-400/20 transition-colors"
+                  >
+                    <Pin className="w-3.5 h-3.5" />
+                    {baselineResult ? 'Re-pin Baseline' : 'Pin as Baseline'}
+                  </button>
+                </Tooltip>
               )}
               <button
                 onClick={handleRun}
@@ -189,15 +215,22 @@ export function CombatSimulatorView() {
               {' '}· {(baselineResult.summary.survivalRate * 100).toFixed(0)}% survival, {baselineResult.summary.avgDPS.toFixed(0)} DPS
               {comparison ? ' — comparing against latest run below' : ' — run a candidate to compare'}
             </span>
-            <button
-              onClick={clearBaseline}
-              title="Clear baseline"
-              className="ml-auto flex items-center gap-1 text-2xs text-text-muted hover:text-red-400 transition-colors"
-            >
-              <X className="w-3 h-3" /> Clear
-            </button>
+            <div className="ml-auto">
+              <Tooltip content="Clear the pinned baseline and stop diffing runs" multiline>
+                <button
+                  onClick={clearBaseline}
+                  className="focus-ring flex items-center gap-1 text-2xs text-text-muted hover:text-red-400 transition-colors"
+                >
+                  <X className="w-3 h-3" /> Clear
+                </button>
+              </Tooltip>
+            </div>
           </div>
         )}
+
+        {/* Run lifecycle announcement — the visible cue is the button label, which
+            AT never reads; this speaks start, quarter progress, and the result. */}
+        <div className="sr-only" role="status" aria-live="polite">{runStatus}</div>
 
         {/* Summary stats */}
         {summary && (
@@ -223,9 +256,11 @@ export function CombatSimulatorView() {
         {isLoading && <LoadingRow label="Loading combat data…" color={STATUS_ERROR} />}
 
         {error && (
-          <SurfaceCard className="p-4 mb-4 border-status-red-strong">
-            <p className="text-sm text-red-400">{error}</p>
-          </SurfaceCard>
+          <InlineErrorRetry
+            className="mb-4"
+            message={tuning && defaultConfig ? `Simulation failed: ${error}` : `Could not load combat data: ${error}`}
+            onRetry={handleRetry}
+          />
         )}
 
         {!isLoading && (
@@ -265,7 +300,11 @@ export function CombatSimulatorView() {
             {comparison && (
               <div className="space-y-2">
                 {scenarioMismatch && (
-                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-400/10 border border-amber-400/20">
+                  <div
+                    role="status"
+                    aria-live="polite"
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-400/10 border border-amber-400/20"
+                  >
                     <span className="text-2xs text-amber-400">
                       Scenario changed since the baseline was pinned — this comparison diffs different
                       encounters, so the deltas below are not a controlled tuning comparison. Re-pin the

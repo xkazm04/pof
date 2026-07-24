@@ -41,10 +41,17 @@ export function CatalogFiltersBar({
     <BlueprintPanel color={ACCENT} className="p-3 sticky top-4 z-20 shadow-md space-y-3">
       <div className="flex flex-wrap items-center gap-3" role="toolbar" aria-label="Item filters" style={focusRingStyle(ACCENT)}>
         <div className="relative flex-1 min-w-[200px]">
-          <Search className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
-          <input type="text" placeholder="Search items..." value={searchQuery}
+          <Search className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" aria-hidden="true" />
+          <input type="text" placeholder="Search items..." aria-label="Search items by name or description" value={searchQuery}
             onChange={e => { setSearchQuery(e.target.value); resetPage(); }}
-            className="w-full text-sm font-mono pl-9 pr-3 py-2 rounded-lg bg-surface-deep border border-border/40 text-text placeholder:text-text-muted/50 focus-ring-inset" />
+            className="w-full text-sm font-mono pl-9 pr-9 py-2 rounded-lg bg-surface-deep border border-border/40 text-text placeholder:text-text-muted/50 focus-ring-inset" />
+          {searchQuery && (
+            <button type="button" aria-label="Clear search"
+              onClick={() => { setSearchQuery(''); resetPage(); }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-text-muted hover:text-text hover:bg-surface-hover transition-colors cursor-pointer">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
         <select value={categoryFilter} onChange={e => { setCategoryFilter(e.target.value); setSubtypeFilter('all'); resetPage(); }}
           aria-label="Item type filter"
@@ -72,7 +79,10 @@ export function CatalogFiltersBar({
           <option value="rarity">Sort: Tier</option>
           <option value="type">Sort: Type</option>
         </select>
-        <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">{filteredCount} items</span>
+        {/* Announced on filter/search changes so non-visual users hear the new result count. */}
+        <span role="status" aria-live="polite" className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
+          {filteredCount} {filteredCount === 1 ? 'item' : 'items'}
+        </span>
         <button onClick={() => setShowAddForm(v => !v)}
           className="flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
           style={{ backgroundColor: showAddForm ? `${withOpacity(ACCENT, OPACITY_12)}` : 'var(--surface)', color: showAddForm ? ACCENT : 'var(--text-muted)', border: `1px solid ${showAddForm ? withOpacity(ACCENT, OPACITY_30) : 'var(--border)'}` }}>

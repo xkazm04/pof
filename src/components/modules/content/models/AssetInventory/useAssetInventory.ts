@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useCallback } from 'react';
-import { ArrowUpDown, ArrowDown, ArrowUp, ChevronRight } from 'lucide-react';
+import { ArrowDown, ArrowUp } from 'lucide-react';
 import { useProjectStore } from '@/stores/projectStore';
 import { useManifest } from '@/hooks/useManifest';
 import type { AssetScanResult, AssetType } from '@/app/api/filesystem/scan-assets/route';

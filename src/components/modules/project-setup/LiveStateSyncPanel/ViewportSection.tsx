@@ -13,10 +13,11 @@ export function ViewportSection({ snapshot, showViewport, setShowViewport }: Vie
   return (
     <div>
       <button
+        type="button"
         onClick={() => setShowViewport(!showViewport)}
         aria-expanded={showViewport}
         aria-controls="lss-viewport-panel"
-        className="w-full flex items-center gap-2 px-4 py-2 text-left hover:bg-white/3 transition-colors"
+        className="w-full flex items-center gap-2 px-4 py-2 text-left hover:bg-white/3 transition-colors focus-ring-inset"
       >
         {showViewport ? <ChevronDown className="w-3 h-3 text-text-muted" /> : <ChevronRight className="w-3 h-3 text-text-muted" />}
         <Camera className="w-3.5 h-3.5" style={{ color: ACCENT_CYAN }} />

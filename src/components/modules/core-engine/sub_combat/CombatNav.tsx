@@ -1,5 +1,6 @@
 'use client';
 
+import { useCallback, useRef, type KeyboardEvent } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { withOpacity, OPACITY_10 } from '@/lib/chart-colors';
 import type { SubTab } from '../unique-tabs/_shared';
@@ -14,15 +15,20 @@ const NARRATIVE_STEPS = [FEATURES_STEP, ...COMBAT_SUBTABS.map(t => ({ key: t.key
 export function NarrativeBreadcrumb({ activeTab, onNavigate }: { activeTab: CombatSubtab; onNavigate: (tab: CombatSubtab) => void }) {
   const activeIdx = NARRATIVE_STEPS.findIndex(s => s.key === activeTab);
   return (
-    <div className="flex items-center gap-0.5 text-[10px] font-mono tracking-wide overflow-x-auto custom-scrollbar pb-0.5">
+    <nav
+      aria-label="Combat pipeline stages"
+      className="flex items-center gap-0.5 text-[10px] font-mono tracking-wide overflow-x-auto custom-scrollbar pb-0.5"
+    >
       {NARRATIVE_STEPS.map((step, i) => {
         const isPast = i < activeIdx;
         const isActive = i === activeIdx;
         return (
           <div key={step.key} className="flex items-center gap-0.5 flex-shrink-0">
-            {i > 0 && <span className="text-text-muted/40 mx-0.5">{'>'}</span>}
+            {i > 0 && <span aria-hidden className="text-text-muted/40 mx-0.5">{'>'}</span>}
             <button
+              type="button"
               onClick={() => onNavigate(step.key)}
+              aria-current={isActive ? 'step' : undefined}
               style={{
                 ...focusRingStyle(ACCENT),
                 color: isActive ? ACCENT : isPast ? withOpacity(ACCENT, '99') : 'var(--text-muted)',
@@ -37,7 +43,7 @@ export function NarrativeBreadcrumb({ activeTab, onNavigate }: { activeTab: Comb
           </div>
         );
       })}
-    </div>
+    </nav>
   );
 }
 
@@ -53,16 +59,46 @@ export function CombatSubTabNav({
   onChange: (id: string) => void;
 }) {
   const prefersReduced = useReducedMotion();
+  const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  /* Roving-tabindex keyboard nav (ARIA APG tabs pattern): the tablist is one
+     tab stop; Left/Right wrap, Home/End jump to the ends. */
+  const handleKeyDown = useCallback((e: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    const last = tabs.length - 1;
+    let next = -1;
+    if (e.key === 'ArrowRight') next = index === last ? 0 : index + 1;
+    else if (e.key === 'ArrowLeft') next = index === 0 ? last : index - 1;
+    else if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = last;
+    if (next < 0) return;
+    e.preventDefault();
+    const nextId = tabs[next].id;
+    onChange(nextId);
+    tabRefs.current[nextId]?.focus();
+  }, [tabs, onChange]);
+
   return (
-    <div className="flex gap-1 mb-2 border-b border-border/40 pb-1.5 overflow-x-auto custom-scrollbar">
-      {tabs.map(tab => {
+    <div
+      role="tablist"
+      aria-label="Combat views"
+      className="flex gap-1 mb-2 border-b border-border/40 pb-1.5 overflow-x-auto custom-scrollbar"
+    >
+      {tabs.map((tab, index) => {
         const isActive = activeTabId === tab.id;
         const Icon = tab.icon;
         return (
           <button
             key={tab.id}
+            ref={(el) => { tabRefs.current[tab.id] = el; }}
+            type="button"
+            role="tab"
+            id={`combat-tab-${tab.id}`}
+            aria-selected={isActive}
+            aria-controls={isActive ? `combat-panel-${tab.id}` : undefined}
+            tabIndex={isActive ? 0 : -1}
             data-testid={`pof-module-arpg-combat-tab-${tab.id}`}
             onClick={() => onChange(tab.id)}
+            onKeyDown={(e) => handleKeyDown(e, index)}
             style={focusRingStyle(ACCENT)}
             className={`
               relative flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm font-semibold
@@ -80,6 +116,7 @@ export function CombatSubTabNav({
             )}
             {Icon && (
               <Icon
+                aria-hidden
                 className="w-3.5 h-3.5 relative z-10 transition-colors duration-300"
                 style={{ color: isActive ? ACCENT : 'currentColor' }}
               />

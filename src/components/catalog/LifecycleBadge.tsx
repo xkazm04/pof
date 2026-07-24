@@ -39,11 +39,19 @@ export function LifecycleBadge({ state }: { state: LifecycleState }) {
   const Icon = LIFECYCLE_ICON[state];
   const inFlight = IN_FLIGHT.has(state);
   // The six state names are pipeline jargon ("wired", "scaffolded"). Decode them
-  // on hover from the shared glossary rather than restating the copy here.
+  // from the shared glossary — on hover and in the accessible name below —
+  // rather than restating the copy here.
   const meaning = lookupGlossary(state);
 
   return (
     <span
+      // The chip is one atomic status token (glyph + word), so it gets one
+      // accessible name instead of a glyph and a bare "wired" read separately.
+      // The name carries the decoder too — it used to live only in `title`,
+      // i.e. mouse-hover only, leaving a screen-reader user with jargon and no
+      // way to resolve it.
+      role="img"
+      aria-label={`Lifecycle: ${state}${meaning ? ` — ${meaning}` : ''}`}
       title={meaning ? `${state} — ${meaning}` : undefined}
       className={[
         'inline-flex items-center gap-1 h-5 px-1.5 rounded',
@@ -56,10 +64,10 @@ export function LifecycleBadge({ state }: { state: LifecycleState }) {
         .join(' ')}
       style={{ backgroundColor: withOpacity(color, OPACITY_15), color }}
     >
+      {/* Both children are presentational under role="img" — the aria-label above
+          is the single spoken name, so the old sr-only "Lifecycle: " prefix is
+          folded into it rather than being read as a separate fragment. */}
       <Icon className="size-3 shrink-0" aria-hidden />
-      {/* Out of flow (sr-only is absolute), so the flex gap is unchanged — it only
-          gives screen readers the context a lone "planned" in a grid lacks. */}
-      <span className="sr-only">Lifecycle: </span>
       {state}
     </span>
   );

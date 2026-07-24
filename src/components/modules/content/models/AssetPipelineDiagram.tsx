@@ -1,12 +1,11 @@
 'use client';
 
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useId, useState } from 'react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   FileUp,
   Import,
   Bone,
-  Box,
   Paintbrush,
   Layers,
   ShieldCheck,
@@ -14,9 +13,13 @@ import {
   ChevronDown,
   Play,
   ArrowRight,
+  Loader2,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { ACCENT_VIOLET, ACCENT_CYAN, MODULE_COLORS, OPACITY_10, OPACITY_30 } from '@/lib/chart-colors';
+import { ACCENT_VIOLET, ACCENT_CYAN } from '@/lib/chart-colors';
+import { DURATION, EASE_OUT, motionSafe } from '@/lib/motion';
+import { MeterBar } from '@/components/ui/MeterBar';
+import { MicroLabel } from '@/components/ui/MicroLabel';
 
 interface PipelineStage {
   id: string;
@@ -85,10 +88,14 @@ export function AssetPipelineDiagram({
   isRunning,
 }: AssetPipelineDiagramProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const prefersReduced = useReducedMotion();
+  const panelIdBase = useId();
 
   const toggleExpand = (id: string) => {
     setExpandedId((prev) => (prev === id ? null : id));
   };
+
+  const doneCount = PIPELINE_STAGES.filter((s) => completedStages.has(s.id)).length;
 
   return (
     <div className="w-full max-w-2xl mx-auto p-6 bg-[#03030a] rounded-2xl border border-violet-900/30 relative overflow-hidden shadow-[inset_0_0_100px_rgba(167,139,250,0.03)]">
@@ -98,20 +105,29 @@ export function AssetPipelineDiagram({
       <div className="absolute top-0 right-0 w-96 h-96 bg-violet-600/10 blur-[120px] rounded-full pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-64 h-64 bg-cyan-600/10 blur-[100px] rounded-full pointer-events-none" />
 
-      <div className="flex items-center justify-between mb-8 relative z-10 border-b border-violet-900/40 pb-4">
+      <div className="mb-8 relative z-10 border-b border-violet-900/40 pb-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded grid place-items-center bg-violet-950/50 border border-violet-800/50 shadow-[0_0_15px_rgba(167,139,250,0.15)] relative overflow-hidden">
+          <div aria-hidden="true" className="p-2 rounded grid place-items-center bg-violet-950/50 border border-violet-800/50 shadow-[0_0_15px_rgba(167,139,250,0.15)] relative overflow-hidden">
             <Layers className="w-5 h-5 text-violet-400" />
           </div>
           <div className="flex flex-col">
-            <span className="text-sm font-bold text-violet-100 font-mono tracking-widest uppercase" style={{ textShadow: '0 0 8px rgba(167,139,250,0.4)' }}>
+            <h3 className="text-sm font-bold text-violet-100 font-mono tracking-widest uppercase" style={{ textShadow: '0 0 8px rgba(167,139,250,0.4)' }}>
               ASSET_PIPELINE.graph
-            </span>
-            <span className="text-xs text-violet-400/80 font-mono uppercase mt-0.5">
-              Automated Import Sequence // {completedStages.size} OF {PIPELINE_STAGES.length}
-            </span>
+            </h3>
+            <p className="text-xs text-violet-300 font-mono uppercase mt-0.5">
+              Automated Import Sequence // {doneCount} of {PIPELINE_STAGES.length} stages complete
+            </p>
           </div>
         </div>
+        <MeterBar
+          value={doneCount}
+          max={PIPELINE_STAGES.length}
+          color={ACCENT_CYAN}
+          height={4}
+          className="mt-3"
+          ariaLabel="Asset pipeline progress"
+          valueText={`${doneCount} of ${PIPELINE_STAGES.length} stages complete`}
+        />
       </div>
 
       <div className="relative pl-4 z-10">
@@ -120,6 +136,7 @@ export function AssetPipelineDiagram({
           const isExpanded = expandedId === stage.id;
           const isLast = index === PIPELINE_STAGES.length - 1;
           const Icon = stage.icon;
+          const panelId = `${panelIdBase}-${stage.id}-panel`;
 
           // Next node is completed
           const nextCompleted = !isLast ? completedStages.has(PIPELINE_STAGES[index + 1].id) : false;
@@ -140,8 +157,10 @@ export function AssetPipelineDiagram({
                     <div className="absolute inset-0 w-full" style={{ background: `linear-gradient(to bottom, ${ACCENT_CYAN} 0%, transparent 100%)`, opacity: 0.6 }} />
                   )}
 
-                  {/* Flow Particles */}
-                  {(pathPending || pathActive) && (
+                  {/* Flow Particles — an infinite loop, so it is suppressed entirely
+                      under prefers-reduced-motion (the static gradient above still
+                      conveys the same "flow" state). */}
+                  {(pathPending || pathActive) && !prefersReduced && (
                     <motion.div
                       className="absolute w-full h-8 bg-gradient-to-b from-transparent via-cyan-400 to-transparent top-0"
                       style={{ filter: 'drop-shadow(0 0 8px rgba(6, 182, 212, 0.8))' }}
@@ -155,8 +174,9 @@ export function AssetPipelineDiagram({
               {/* Stage node */}
               <div className="relative flex items-start group mb-6">
 
-                {/* Node Icon/Status */}
-                <div className="flex-shrink-0 relative z-10 mt-1 cursor-pointer" onClick={() => toggleExpand(stage.id)}>
+                {/* Node Icon/Status — decorative; the status it encodes is also
+                    carried by the "Complete" badge inside the accessible trigger. */}
+                <div aria-hidden="true" className="flex-shrink-0 relative z-10 mt-1">
                   <div className="absolute inset-0 bg-violet-500/20 blur-md rounded-full scale-150 transition-opacity" style={{ opacity: isCompleted ? 1 : 0 }} />
                   <div
                     className="w-9 h-9 rounded-xl flex items-center justify-center border-2 border-surface-deep shadow-lg relative transition-all duration-300"
@@ -174,72 +194,102 @@ export function AssetPipelineDiagram({
                   </div>
                 </div>
 
-                {/* Node Content Card */}
+                {/* Node Content Card — a disclosure: the header row is the trigger,
+                    the panel (with its own Run button) is a sibling, so no button
+                    is ever nested inside another. */}
                 <div className="ml-6 flex-1">
-                  <motion.button
-                    onClick={() => toggleExpand(stage.id)}
-                    className="w-full text-left bg-surface/40 hover:bg-surface/80 border border-violet-900/30 rounded-xl p-4 transition-all duration-300 shadow-lg relative overflow-hidden"
+                  <motion.div
+                    className="bg-surface/40 border border-violet-900/30 rounded-xl transition-colors duration-300 shadow-lg relative overflow-hidden"
                     style={{ borderColor: isExpanded ? `${ACCENT}60` : undefined, boxShadow: isExpanded ? `0 0 20px ${ACCENT}20` : undefined }}
-                    whileHover={{ x: 2 }}
-                    whileTap={{ scale: 0.99 }}
+                    whileHover={prefersReduced ? undefined : { x: 2 }}
                   >
-                    <div className="absolute top-0 right-0 p-3 opacity-20 group-hover:opacity-40 transition-opacity">
+                    <div aria-hidden="true" className="absolute top-0 right-0 p-3 opacity-20 group-hover:opacity-40 transition-opacity">
                       <Icon className="w-16 h-16 rotate-12" style={{ color: ACCENT }} />
                     </div>
 
-                    <div className="flex items-center justify-between relative z-10">
-                      <div>
-                        <div className="flex items-center gap-3 mb-1">
-                          <span className="text-sm font-bold tracking-wide font-mono" style={{ color: isCompleted ? ACCENT_CYAN : 'var(--text)' }}>
-                            {stage.label}
-                          </span>
-                          {isCompleted && (
-                            <span className="text-[11px] px-1.5 py-[2px] rounded font-mono uppercase border border-cyan-500/30 text-cyan-400 bg-cyan-500/10">OK</span>
-                          )}
+                    <button
+                      type="button"
+                      onClick={() => toggleExpand(stage.id)}
+                      aria-expanded={isExpanded}
+                      aria-controls={panelId}
+                      className="w-full text-left p-4 rounded-xl hover:bg-surface/60 transition-colors duration-300 focus-ring-inset"
+                    >
+                      <div className="flex items-center justify-between gap-3 relative z-10">
+                        <div>
+                          <div className="flex items-center gap-3 mb-1">
+                            <span className="text-sm font-bold tracking-wide font-mono" style={{ color: isCompleted ? ACCENT_CYAN : 'var(--text)' }}>
+                              {stage.label}
+                            </span>
+                            {isCompleted && (
+                              <span className="text-xs px-1.5 py-[2px] rounded font-mono uppercase border border-cyan-500/40 text-cyan-300 bg-cyan-500/10">
+                                Complete
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-text-muted font-mono max-w-[85%]">{stage.description}</p>
                         </div>
-                        <p className="text-xs text-text-muted font-mono opacity-80 max-w-[85%]">{stage.description}</p>
+                        <motion.div
+                          aria-hidden="true"
+                          className="flex-shrink-0"
+                          animate={{ rotate: isExpanded ? 180 : 0 }}
+                          transition={motionSafe({ duration: DURATION.fast }, prefersReduced)}
+                        >
+                          <ChevronDown className="w-5 h-5 text-violet-400" />
+                        </motion.div>
                       </div>
-                      <motion.div animate={{ rotate: isExpanded ? 180 : 0 }} transition={{ duration: 0.2 }}>
-                        <ChevronDown className="w-5 h-5 text-violet-500/50" />
-                      </motion.div>
-                    </div>
+                    </button>
 
-                    {/* Expanded Prompts */}
-                    <AnimatePresence>
+                    {/* Expanded Prompt */}
+                    <AnimatePresence initial={false}>
                       {isExpanded && (
                         <motion.div
-                          initial={{ height: 0, opacity: 0, marginTop: 0 }}
-                          animate={{ height: 'auto', opacity: 1, marginTop: 16 }}
-                          exit={{ height: 0, opacity: 0, marginTop: 0 }}
-                          transition={{ duration: 0.25, ease: "easeOut" }}
+                          id={panelId}
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={motionSafe({ duration: DURATION.base, ease: EASE_OUT }, prefersReduced)}
                           className="relative z-10 overflow-hidden"
                         >
-                          <div className="pt-4 border-t border-violet-900/40">
+                          <div className="mx-4 mb-4 pt-4 border-t border-violet-900/40">
+                            <MicroLabel mono uppercase as="div" className="mb-2">
+                              Prompt sent to Claude
+                            </MicroLabel>
                             <div className="flex items-start gap-3 bg-black/40 p-3 rounded-lg border border-violet-900/30 shadow-inner">
-                              <div className="mt-0.5"><Play className="w-3.5 h-3.5 text-orange-400" /></div>
-                              <p className="text-[11px] font-mono text-violet-200/70 leading-relaxed italic border-l border-violet-900/50 pl-3">
+                              <Play aria-hidden="true" className="w-3.5 h-3.5 text-orange-400 mt-0.5 flex-shrink-0" />
+                              <p className="text-xs font-mono text-violet-100/90 leading-relaxed border-l border-violet-900/50 pl-3">
                                 {stage.prompt}
                               </p>
                             </div>
 
                             <div className="mt-4 flex justify-end">
                               <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
+                                type="button"
+                                onClick={() => {
                                   onRunPrompt(stage.prompt);
                                   setExpandedId(null);
                                 }}
                                 disabled={isRunning}
-                                className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-all shadow-[0_0_15px_rgba(139,92,246,0.5)] disabled:opacity-50 disabled:shadow-none"
+                                aria-busy={isRunning}
+                                title={isRunning ? 'A task is already running — wait for it to finish' : undefined}
+                                className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-all shadow-[0_0_15px_rgba(139,92,246,0.5)] focus-ring disabled:opacity-50 disabled:shadow-none disabled:cursor-not-allowed"
                               >
-                                {isCompleted ? 'Re-Execute' : 'Execute AI Task'} <ArrowRight className="w-3.5 h-3.5" />
+                                {isRunning ? (
+                                  <>
+                                    Task running… <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
+                                  </>
+                                ) : (
+                                  <>
+                                    {isCompleted ? `Re-run ${stage.label}` : `Run ${stage.label}`}
+                                    <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
+                                  </>
+                                )}
                               </button>
                             </div>
                           </div>
                         </motion.div>
                       )}
                     </AnimatePresence>
-                  </motion.button>
+                  </motion.div>
                 </div>
               </div>
             </div>

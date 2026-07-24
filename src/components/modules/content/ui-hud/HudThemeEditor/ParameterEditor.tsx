@@ -18,6 +18,26 @@ interface Section {
   color: string;
 }
 
+const tabId = (s: SectionId) => `hud-theme-tab-${s}`;
+const panelId = (s: SectionId) => `hud-theme-panel-${s}`;
+
+// Arrow/Home/End roving focus over the tab strip (WAI-ARIA tabs pattern,
+// automatic activation).
+function handleTabKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+  if (!['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(e.key)) return;
+  const tabs = Array.from(e.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
+  const current = tabs.findIndex(t => t === document.activeElement);
+  if (current === -1) return;
+  e.preventDefault();
+  const next =
+    e.key === 'Home' ? 0
+      : e.key === 'End' ? tabs.length - 1
+        : e.key === 'ArrowRight' ? (current + 1) % tabs.length
+          : (current - 1 + tabs.length) % tabs.length;
+  tabs[next].focus();
+  tabs[next].click();
+}
+
 export function ParameterEditor({
   theme,
   update,
@@ -36,12 +56,24 @@ export function ParameterEditor({
   return (
     <SurfaceCard level={2} className="p-3 space-y-3">
       {/* Section tabs */}
-      <div className="flex gap-1">
+      <div
+        role="tablist"
+        aria-label="HUD theme parameter sections"
+        onKeyDown={handleTabKeyDown}
+        className="flex gap-1"
+      >
         {sections.map(s => (
           <button
             key={s.id}
+            type="button"
+            role="tab"
+            id={tabId(s.id)}
+            aria-selected={activeSection === s.id}
+            aria-controls={panelId(s.id)}
+            // Roving tabindex — Arrow/Home/End move between tabs.
+            tabIndex={activeSection === s.id ? 0 : -1}
             onClick={() => setActiveSection(s.id)}
-            className="flex-1 px-2 py-1.5 text-2xs font-bold rounded-md border transition-colors"
+            className="focus-ring flex-1 px-2 py-1.5 text-2xs font-bold rounded-md border transition-colors"
             style={{
               borderColor: activeSection === s.id ? s.color : 'var(--border)',
               backgroundColor: activeSection === s.id ? `${s.color}${OPACITY_10}` : 'transparent',
@@ -55,7 +87,7 @@ export function ParameterEditor({
 
       {/* Health & Mana section */}
       {activeSection === 'health' && (
-        <div className="space-y-3">
+        <div className="space-y-3" role="tabpanel" id={panelId('health')} aria-labelledby={tabId('health')}>
           <div className="text-xs font-bold text-text-muted uppercase">
             ARPGHUDWidget Colors
           </div>
@@ -104,7 +136,7 @@ export function ParameterEditor({
 
       {/* Damage Numbers section */}
       {activeSection === 'damage' && (
-        <div className="space-y-3">
+        <div className="space-y-3" role="tabpanel" id={panelId('damage')} aria-labelledby={tabId('damage')}>
           <div className="text-xs font-bold text-text-muted uppercase">
             Element Colors
           </div>
@@ -158,7 +190,7 @@ export function ParameterEditor({
 
       {/* Enemy HP Bar section */}
       {activeSection === 'enemy' && (
-        <div className="space-y-3">
+        <div className="space-y-3" role="tabpanel" id={panelId('enemy')} aria-labelledby={tabId('enemy')}>
           <div className="text-xs font-bold text-text-muted uppercase">
             EnemyHealthBarWidget
           </div>

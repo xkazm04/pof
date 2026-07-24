@@ -31,6 +31,11 @@ const GRADE_LEVEL: Record<CapabilityGradeLevel, StatusLevel> = {
 
 const mono = 'var(--lab-font-mono)';
 
+/** Shared track list for the column legend AND every row, so the three columns line up
+ *  down the whole list. The gap column is a capped track (not `auto` + an inner maxWidth)
+ *  — an `auto` track resolves per-row, which let short/long gap statements drift apart. */
+const GRID_COLUMNS = 'minmax(150px, 1.2fr) minmax(120px, 1fr) minmax(0, 420px)';
+
 /** Provenance sub-label: which project-derived evidence stream fed the grade. */
 const STREAM_LABEL: Record<CapabilityRow['stream'], string> = {
   'llm-panel': 'llm-panel',
@@ -71,54 +76,58 @@ function EvidenceLabel({ row }: { row: CapabilityRow }) {
 
 function Row({ row, onFilter }: { row: CapabilityRow; onFilter: (klass: string) => void }) {
   return (
-    <button
-      type="button"
-      className="focus-ring"
-      onClick={() => onFilter(row.klass)}
-      title={`Open the Pipelines map filtered to ${row.label} steps`}
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'minmax(150px, 1.2fr) minmax(120px, 1fr) auto',
-        gap: 'var(--lab-s3)',
-        alignItems: 'start',
-        width: '100%',
-        textAlign: 'left',
-        padding: 'var(--lab-s3)',
-        marginBottom: 'var(--lab-s2)',
-        background: 'var(--lab-panel)',
-        border: '1px solid var(--lab-line)',
-        borderRadius: 'var(--lab-r-sm)',
-        cursor: 'pointer',
-        color: 'var(--lab-text)',
-      }}
-    >
-      <div style={{ minWidth: 0 }}>
-        <div style={{ fontFamily: mono, fontWeight: 700, fontSize: 'calc(var(--lab-fs-xs) + 2px)', color: 'var(--lab-ink-deep)' }}>
-          {row.label}
+    <li>
+      <button
+        type="button"
+        className="focus-ring"
+        onClick={() => onFilter(row.klass)}
+        title={`Open the Pipelines map filtered to ${row.label} steps`}
+        style={{
+          display: 'grid',
+          gridTemplateColumns: GRID_COLUMNS,
+          gap: 'var(--lab-s3)',
+          alignItems: 'start',
+          width: '100%',
+          textAlign: 'left',
+          padding: 'var(--lab-s3)',
+          background: 'var(--lab-panel)',
+          border: '1px solid var(--lab-line)',
+          borderRadius: 'var(--lab-r-sm)',
+          cursor: 'pointer',
+          color: 'var(--lab-text)',
+        }}
+      >
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontFamily: mono, fontWeight: 700, fontSize: 'calc(var(--lab-fs-xs) + 2px)', color: 'var(--lab-ink-deep)' }}>
+            {row.label}
+          </div>
+          <MicroLabel mono uppercase style={{ display: 'block', marginTop: 2 }}>
+            {row.techniqueStack.join(' · ')} · judge: {row.judgeClass}
+          </MicroLabel>
+          <MicroLabel style={{ display: 'block', marginTop: 4 }}>
+            {row.provenance === 'derived-from-project-instances' ? 'derived from project instances' : 'neutral benchmark'} ({STREAM_LABEL[row.stream]})
+          </MicroLabel>
         </div>
-        <MicroLabel mono uppercase style={{ display: 'block', marginTop: 2 }}>
-          {row.techniqueStack.join(' · ')} · judge: {row.judgeClass}
-        </MicroLabel>
-        <MicroLabel style={{ display: 'block', marginTop: 4 }}>
-          {row.provenance === 'derived-from-project-instances' ? 'derived from project instances' : 'neutral benchmark'} ({STREAM_LABEL[row.stream]})
-        </MicroLabel>
-      </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
-        <StatusTag level={GRADE_LEVEL[row.grade]} word={row.grade} />
-        <EvidenceLabel row={row} />
-        {row.cappedByTechnique && <MicroLabel mono tone="muted">⚑ documented technique wall</MicroLabel>}
-      </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
+          <StatusTag level={GRADE_LEVEL[row.grade]} word={row.grade} />
+          <EvidenceLabel row={row} />
+          {row.cappedByTechnique && <MicroLabel mono tone="muted">⚑ documented technique wall</MicroLabel>}
+        </div>
 
-      <div style={{ maxWidth: 420, fontSize: 'var(--lab-fs-xs)', color: 'var(--lab-muted)', lineHeight: 1.4 }}>
-        {row.gapStatement}
-      </div>
-    </button>
+        <div style={{ fontSize: 'var(--lab-fs-xs)', color: 'var(--lab-muted)', lineHeight: 1.4 }}>
+          {row.gapStatement}
+        </div>
+      </button>
+    </li>
   );
 }
 
 export function CapabilityView({ onFilterClass }: { onFilterClass: (klass: string) => void }) {
   const [rows, setRows] = useState<CapabilityRow[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  /** Bumped by Retry to re-run the load effect. */
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -127,15 +136,30 @@ export function CapabilityView({ onFilterClass }: { onFilterClass: (klass: strin
       // L3/L4 gate artifacts (fetched per catalog, same source the Pipelines map uses) feed
       // the gate-judged classes. buildCapabilityRows routes each class to its own stream.
       const res = await tryApiFetch<JudgeVerdict[]>('/api/judge-verdicts');
-      const verdicts = res.ok ? res.data : [];
+      if (!alive) return;
+      if (!res.ok) {
+        // Grading an EMPTY verdict set would render every score-judged class as
+        // "unproven / no evidence" — a fabricated verdict manufactured by a dead
+        // endpoint, in the one view whose whole job is honest capability truth.
+        // Report the failure instead. (fetchArtifacts below is non-throwing by
+        // contract and degrades to [], so only this stream can be surfaced here.)
+        setError(res.error);
+        return;
+      }
       const perCatalog = await Promise.all(allCatalogPipelines().map((p) => fetchArtifacts(p.catalogId)));
       const artifacts: PipelineArtifact[] = perCatalog.flat();
-      if (alive) setRows(buildCapabilityRows(verdicts, artifacts));
+      if (alive) setRows(buildCapabilityRows(res.data, artifacts));
     })();
     return () => {
       alive = false;
     };
-  }, []);
+  }, [attempt]);
+
+  const retry = () => {
+    setError(null);
+    setRows(null);
+    setAttempt((a) => a + 1);
+  };
 
   return (
     <div>
@@ -147,9 +171,50 @@ export function CapabilityView({ onFilterClass }: { onFilterClass: (klass: strin
         alone. project-data (locked seeds, canon collisions) and checker-forced numbers are excluded so the median measures
         TECHNIQUE, not this project&apos;s data. Click a class to drill into the pipeline steps that build it.
       </p>
+      {/* Failed load is reported, never graded around — see the effect. */}
+      {error && (
+        <div
+          role="alert"
+          style={{
+            display: 'flex',
+            alignItems: 'baseline',
+            flexWrap: 'wrap',
+            gap: 'var(--lab-s3)',
+            maxWidth: 620,
+            padding: 'var(--lab-s3)',
+            border: '1px solid var(--lab-bad)',
+            borderRadius: 'var(--lab-r-sm)',
+            color: 'var(--lab-bad)',
+            fontSize: 'var(--lab-fs-sm)',
+            lineHeight: 1.5,
+          }}
+        >
+          <span style={{ minWidth: 0 }}>
+            Could not read the judge verdicts, so no class can be graded — an empty verdict set would read as
+            unproven everywhere, which would be false. ({error})
+          </span>
+          <button
+            type="button"
+            onClick={retry}
+            className="focus-ring"
+            style={{
+              font: 'inherit',
+              color: 'var(--lab-ink)',
+              background: 'transparent',
+              border: '1px solid var(--lab-line)',
+              borderRadius: 'var(--lab-r-sm)',
+              padding: 'var(--lab-s1) var(--lab-s3)',
+              cursor: 'pointer',
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* Live region so the load/empty transition is announced, not just drawn. */}
-      <div role="status" aria-live="polite">
-        {!rows && (
+      <div role="status" aria-live="polite" aria-busy={!rows && !error}>
+        {!rows && !error && (
           <div style={{ fontSize: 'var(--lab-fs-sm)', color: 'var(--lab-muted)' }}>Loading capability truth…</div>
         )}
         {rows?.length === 0 && (
@@ -158,9 +223,37 @@ export function CapabilityView({ onFilterClass }: { onFilterClass: (klass: strin
           </div>
         )}
       </div>
-      {rows?.map((row) => (
-        <Row key={row.klass} row={row} onFilter={onFilterClass} />
-      ))}
+
+      {!!rows?.length && (
+        <>
+          {/* Column legend — the third column is an unlabeled prose block otherwise. */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: GRID_COLUMNS,
+              gap: 'var(--lab-s3)',
+              // +1px absorbs the rows' border so the legend's tracks land on the rows'.
+              padding: '0 calc(var(--lab-s3) + 1px) var(--lab-s1)',
+              marginBottom: 'var(--lab-s2)',
+              borderBottom: '1px solid var(--lab-line)',
+            }}
+          >
+            <MicroLabel mono uppercase>capability class</MicroLabel>
+            <MicroLabel mono uppercase>grade · evidence</MicroLabel>
+            <MicroLabel mono uppercase>where the wall is</MicroLabel>
+          </div>
+          {/* A real list, so assistive tech announces the class count and position. */}
+          <ul
+            role="list"
+            aria-label="Capability classes, strongest first"
+            style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 'var(--lab-s2)' }}
+          >
+            {rows.map((row) => (
+              <Row key={row.klass} row={row} onFilter={onFilterClass} />
+            ))}
+          </ul>
+        </>
+      )}
     </div>
   );
 }

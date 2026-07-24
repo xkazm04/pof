@@ -8,8 +8,15 @@ import { STATUS_SUCCESS, STATUS_WARNING } from '@/lib/chart-colors';
 import { KIND_LABELS, KIND_ICONS } from './constants';
 import type { PipelineStep } from './types';
 
-export function StepCard({ step, expanded, onToggle }: { step: PipelineStep; expanded: boolean; onToggle: () => void }) {
+export function StepCard({ step, expanded, onToggle, buttonRef }: {
+  step: PipelineStep;
+  expanded: boolean;
+  onToggle: () => void;
+  /** Lets the flow bar above move focus to this stage's disclosure button. */
+  buttonRef?: React.Ref<HTMLButtonElement>;
+}) {
   const KindIcon = KIND_ICONS[step.kind];
+  const detailId = `eqs-step-${step.id}-detail`;
 
   return (
     <div
@@ -18,15 +25,19 @@ export function StepCard({ step, expanded, onToggle }: { step: PipelineStep; exp
       data-testid={`eqs-step-${step.id}`}
     >
       <button
+        ref={buttonRef}
+        type="button"
         onClick={onToggle}
-        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-white/3 transition-colors"
+        aria-expanded={expanded}
+        aria-controls={detailId}
+        className="focus-ring-inset w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-white/3 transition-colors"
         data-testid={`eqs-step-${step.id}-toggle`}
       >
         {expanded
-          ? <ChevronDown className="w-3 h-3 text-text-muted shrink-0" />
-          : <ChevronRight className="w-3 h-3 text-text-muted shrink-0" />
+          ? <ChevronDown aria-hidden="true" className="w-3 h-3 text-text-muted shrink-0" />
+          : <ChevronRight aria-hidden="true" className="w-3 h-3 text-text-muted shrink-0" />
         }
-        <span style={{ color: step.color }}><KindIcon className="w-3.5 h-3.5" /></span>
+        <span aria-hidden="true" style={{ color: step.color }}><KindIcon className="w-3.5 h-3.5" /></span>
         <span className="text-xs font-bold text-text">{step.label}</span>
         <ChipButton as="span" color={step.color} className="ml-auto shrink-0">
           {KIND_LABELS[step.kind]}
@@ -43,33 +54,36 @@ export function StepCard({ step, expanded, onToggle }: { step: PipelineStep; exp
         )}
       </button>
 
-      {expanded && (
-        <div className="px-3 pb-2.5 pt-0.5 border-t border-border/20 space-y-1.5">
-          <p className="text-2xs text-text-muted">{step.detail}</p>
-          {step.cppClass && (
-            <p className="text-2xs font-mono text-text-muted" style={{ color: step.color }}>
-              {step.cppClass}
-            </p>
-          )}
-          {step.params && step.params.length > 0 && (
-            <div className="space-y-0.5 mt-1">
-              {step.params.map((p) => (
-                <div key={p.label} className="flex items-center gap-2">
-                  <span className="text-2xs text-text-muted w-28 shrink-0">{p.label}</span>
-                  <span className="text-2xs font-mono text-text">{p.value}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      {/* Always mounted so `aria-controls` always resolves; `hidden` handles visibility. */}
+      <div
+        id={detailId}
+        hidden={!expanded}
+        className="px-3 pb-2.5 pt-0.5 border-t border-border/20 space-y-1.5"
+      >
+        <p className="text-xs text-text-muted leading-relaxed">{step.detail}</p>
+        {step.cppClass && (
+          <p className="text-2xs font-mono break-all" style={{ color: step.color }}>
+            {step.cppClass}
+          </p>
+        )}
+        {step.params && step.params.length > 0 && (
+          <dl className="space-y-0.5 mt-1">
+            {step.params.map((p) => (
+              <div key={p.label} className="flex items-start gap-2">
+                <dt className="text-xs text-text-muted w-32 shrink-0">{p.label}</dt>
+                <dd className="text-xs font-mono text-text min-w-0 break-words">{p.value}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+      </div>
     </div>
   );
 }
 
 export function PipelineArrow({ color }: { color: string }) {
   return (
-    <div className="flex items-center justify-center py-0.5">
+    <div className="flex items-center justify-center py-0.5" aria-hidden="true">
       <ArrowRight className="w-3.5 h-3.5" style={{ color }} />
     </div>
   );

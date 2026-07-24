@@ -4,17 +4,18 @@ import { ROLE_COLORS, SVG_CENTER } from './constants';
 import { flankColor } from './helpers';
 
 /* ── Memoized member leaves ───────────────────────────────────────────────────
-   Hover is a purely visual O(1) change. By memoizing each glyph/row and feeding
-   it an `isHovered` boolean, only the previously- and newly-hovered member
-   re-render on a hover change; every other member, the static SVG subtree and
-   the side panels are skipped. Identical markup to the former inline maps. */
+   Highlighting a member is a purely visual O(1) change. By memoizing each
+   glyph/row and feeding it an `isActive` boolean, only the previously- and
+   newly-active member re-render; every other member, the static SVG subtree and
+   the side panels are skipped. "Active" is hover OR keyboard focus of the
+   matching row, so the same detail callout is reachable without a pointer. */
 
 export const SquadMemberGlyph = memo(function SquadMemberGlyph({
-  member, scale, isHovered, onEnter, onLeave,
+  member, scale, isActive, onEnter, onLeave,
 }: {
   member: SquadMember;
   scale: number;
-  isHovered: boolean;
+  isActive: boolean;
   onEnter: (id: string) => void;
   onLeave: () => void;
 }) {
@@ -22,7 +23,7 @@ export const SquadMemberGlyph = memo(function SquadMemberGlyph({
   const sy = SVG_CENTER + member.position.y * scale;
   const color = ROLE_COLORS[member.role];
   const baseR = 7;
-  const r = isHovered ? baseR + 3 : baseR;
+  const r = isActive ? baseR + 3 : baseR;
 
   return (
     <g
@@ -35,13 +36,13 @@ export const SquadMemberGlyph = memo(function SquadMemberGlyph({
         x1={SVG_CENTER} y1={SVG_CENTER}
         x2={sx} y2={sy}
         stroke={color}
-        strokeWidth={isHovered ? 1.5 : 0.8}
-        opacity={isHovered ? 0.5 : 0.2}
+        strokeWidth={isActive ? 1.5 : 0.8}
+        opacity={isActive ? 0.5 : 0.2}
         strokeDasharray="3 3"
       />
 
       {/* Flank angle indicator arc */}
-      {isHovered && (
+      {isActive && (
         <circle
           cx={sx} cy={sy} r={14}
           fill="none" stroke={flankColor(member.flankAngle)}
@@ -70,8 +71,9 @@ export const SquadMemberGlyph = memo(function SquadMemberGlyph({
         {member.role[0].toUpperCase()}
       </text>
 
-      {/* Label on hover */}
-      {isHovered && (
+      {/* Detail callout — shown while hovered or while the matching row has focus.
+          Decorative for AT: the row itself carries the same values in its label. */}
+      {isActive && (
         <g>
           <rect
             x={sx + 12} y={sy - 20}

@@ -14,6 +14,7 @@
  * and written with history.pushState + a 'status-nav' event to re-read.
  */
 import { useSyncExternalStore } from 'react';
+import { labFontVars } from '@/components/layout-lab/fonts';
 import { StatusTabs, statusTabId, statusPanelId, type StatusTab } from './StatusTabs';
 import { CapabilityView } from './CapabilityView';
 import { PipelinesView } from './PipelinesView';
@@ -67,6 +68,17 @@ function parse(search: string): ViewState {
   return { tab, focus, catalog: catalogParam || null, filterClass: classParam || null };
 }
 
+/** The one-paragraph orientation line above a tab's view. Single source for the intro's
+ *  measure/colour/spacing so every tab's lede sits on the same rhythm (CapabilityView and
+ *  ModelsView render their own lede in this same shape). */
+function TabIntro({ children }: { children: React.ReactNode }) {
+  return (
+    <p style={{ fontSize: 'var(--lab-fs-xs)', color: 'var(--lab-muted)', maxWidth: 880, marginBottom: 'var(--lab-s3)' }}>
+      {children}
+    </p>
+  );
+}
+
 export function StatusDashboard() {
   const search = useSyncExternalStore(subscribe, () => window.location.search, () => '');
   const { tab, focus, catalog, filterClass } = parse(search);
@@ -91,8 +103,15 @@ export function StatusDashboard() {
     navigate(catalogId ? `catalog=${encodeURIComponent(catalogId)}` : 'tab=category');
 
   return (
-    <div
+    // `labFontVars` defines --font-inter/--font-ibm-plex, which --lab-font-body/-mono resolve
+    // to; without it every lab font-family here is invalid-at-computed-value-time and silently
+    // falls back to the app shell's face. `data-lab-root` points --focus-accent at --lab-accent
+    // so .focus-ring rings read against the light Blueprint floor (the generic #60a5fa fallback
+    // is ~2:1 on --lab-bg, under the 3:1 WCAG 1.4.11 floor for focus indicators).
+    <main
       data-theme="blueprint"
+      data-lab-root=""
+      className={labFontVars}
       style={{
         minHeight: '100vh',
         background: 'var(--lab-bg)',
@@ -103,12 +122,21 @@ export function StatusDashboard() {
         padding: 'var(--lab-s6)',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 'var(--lab-s2)', gap: 'var(--lab-s3)', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', marginBottom: 'var(--lab-s2)', gap: 'var(--lab-s4)', flexWrap: 'wrap' }}>
         <h1 style={{ fontFamily: 'var(--lab-font-mono)', fontSize: 'var(--lab-fs-xl)', color: 'var(--lab-ink-deep)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
           Pipeline Status
         </h1>
         <StatusTabs tab={tab} onChange={setTab} />
-        <a href="/layout" className="focus-ring" style={{ fontSize: 'var(--lab-fs-xs)', color: 'var(--lab-ink)', textDecoration: 'none' }}>← Blueprint</a>
+        {/* Pushed right by auto margin rather than space-between, so when the header wraps the
+            title and the tablist stay adjacent instead of being flung to opposite edges. */}
+        <a
+          href="/layout"
+          className="focus-ring"
+          aria-label="Back to the Blueprint layout lab"
+          style={{ marginLeft: 'auto', fontSize: 'var(--lab-fs-xs)', fontFamily: 'var(--lab-font-mono)', color: 'var(--lab-ink)', textDecoration: 'underline', textUnderlineOffset: 3, whiteSpace: 'nowrap' }}
+        >
+          ← Blueprint lab
+        </a>
       </div>
 
       {/* One panel per tab view, named by its tab (WAI-ARIA tabs pattern). */}
@@ -119,37 +147,37 @@ export function StatusDashboard() {
 
         {tab === 'pipelines' && (
           <>
-            <p style={{ fontSize: 'var(--lab-fs-xs)', color: 'var(--lab-muted)', maxWidth: 880, marginBottom: 'var(--lab-s3)' }}>
+            <TabIntro>
               One row per pipeline, one cell per step — the cell names its engine, the background is the honest grade
               (green = gate/judge-proven), the left stripe is the acceptance tier. Click a tier or engine chip to highlight,
               or a pipeline to open its category overview.
-            </p>
+            </TabIntro>
             <PipelinesView onFocusCatalog={focusCatalog} filterClass={filterClass} onClearFilter={clearFilter} />
           </>
         )}
 
         {tab === 'category' && (
           <>
-            <p style={{ fontSize: 'var(--lab-fs-xs)', color: 'var(--lab-muted)', maxWidth: 880, marginBottom: 'var(--lab-s3)' }}>
+            <TabIntro>
               Every entity in one catalog, ranked <strong>weakest first</strong> (least gate-verified coverage on top, ties
               broken by name). The overview for spotting where to focus — click a row to inspect that entity.
-            </p>
+            </TabIntro>
             <CategoryView key={catalog ?? '__picker__'} catalogId={catalog} onFocusEntity={focusEntity} onPickCatalog={focusCatalog} />
           </>
         )}
 
         {tab === 'item' && (
           <>
-            <p style={{ fontSize: 'var(--lab-fs-xs)', color: 'var(--lab-muted)', maxWidth: 880, marginBottom: 'var(--lab-s3)' }}>
+            <TabIntro>
               One entity at a time — its origin pipeline coloured by <strong>realization</strong> (hollow = this entity never
               produced that step), plus the pipelines it connects to. Click any connected node to walk the graph.
-            </p>
+            </TabIntro>
             <ItemFocusView focus={focus} onFocus={focusEntity} />
           </>
         )}
 
         {tab === 'models' && <ModelsView />}
       </div>
-    </div>
+    </main>
   );
 }

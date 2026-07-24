@@ -1,6 +1,22 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
+import { formatBytes } from '@/lib/format';
+import { logger } from '@/lib/logger';
 import type { SurfaceType } from '../MaterialParameterConfigurator';
 import type { AnalyzedProperties, StyleTransferConfig } from './types';
+
+/** Upload ceiling advertised on the drop zone — rejections must say so, not fail mute. */
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+
+/** Returns the reason a file can't be used as a reference, or null when it's fine. */
+function rejectionReason(file: File): string | null {
+  if (!file.type.startsWith('image/')) {
+    return `"${file.name}" is not an image (${file.type || 'unknown type'}) — use a PNG or JPG screenshot.`;
+  }
+  if (file.size > MAX_UPLOAD_BYTES) {
+    return `"${file.name}" is ${formatBytes(file.size)} — over the ${formatBytes(MAX_UPLOAD_BYTES)} upload limit.`;
+  }
+  return null;
+}
 
 export function useMaterialStyleTransfer(onGenerate: (config: StyleTransferConfig) => void) {
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
@@ -8,6 +24,7 @@ export function useMaterialStyleTransfer(onGenerate: (config: StyleTransferConfi
   const [analysis, setAnalysis] = useState<AnalyzedProperties | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [adjustmentsOpen, setAdjustmentsOpen] = useState(false);
   const [compareMode, setCompareMode] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -29,14 +46,16 @@ export function useMaterialStyleTransfer(onGenerate: (config: StyleTransferConfi
     };
   }, [analysis, overrideRoughness, overrideMetallic, overrideEmissive, overrideSurface]);
 
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) return;
-    if (file.size > 10 * 1024 * 1024) return; // 10MB limit
-
+  /** One accept path for both the picker and the drop zone — every rejection reports why. */
+  const acceptFile = useCallback((file: File) => {
+    const reason = rejectionReason(file);
+    if (reason) {
+      setUploadError(reason);
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => {
+      setUploadError(null);
       setImageDataUrl(reader.result as string);
       setAnalysis(null);
       setAnalyzeError(null);
@@ -45,27 +64,36 @@ export function useMaterialStyleTransfer(onGenerate: (config: StyleTransferConfi
       setOverrideEmissive(null);
       setOverrideSurface(null);
     };
+    reader.onerror = () => {
+      logger.warn('[MaterialStyleTransfer] reference file could not be read', reader.error);
+      setUploadError(`"${file.name}" could not be read — the file may be corrupt or still downloading.`);
+    };
     reader.readAsDataURL(file);
   }, []);
+
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    // No file means the picker was dismissed — that is not a failure to report.
+    const file = e.target.files?.[0];
+    // Clear the input so re-picking the *same* file after a rejection still fires `change`.
+    e.target.value = '';
+    if (file) acceptFile(file);
+  }, [acceptFile]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
-    if (!file || !file.type.startsWith('image/')) return;
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      setImageDataUrl(reader.result as string);
-      setAnalysis(null);
-      setAnalyzeError(null);
-    };
-    reader.readAsDataURL(file);
-  }, []);
+    if (!file) {
+      setUploadError('That drop carried no file — drag a PNG or JPG screenshot onto this panel.');
+      return;
+    }
+    acceptFile(file);
+  }, [acceptFile]);
 
   const handleClearImage = useCallback(() => {
     setImageDataUrl(null);
     setAnalysis(null);
     setAnalyzeError(null);
+    setUploadError(null);
     setOverrideRoughness(null);
     setOverrideMetallic(null);
     setOverrideEmissive(null);
@@ -136,6 +164,7 @@ export function useMaterialStyleTransfer(onGenerate: (config: StyleTransferConfi
     analysis,
     isAnalyzing,
     analyzeError,
+    uploadError,
     adjustmentsOpen,
     setAdjustmentsOpen,
     compareMode,

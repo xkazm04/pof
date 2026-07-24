@@ -8,6 +8,7 @@ import {
   STATUS_ERROR, ACCENT_CYAN, ACCENT_EMERALD, ACCENT_ORANGE,
   withOpacity, OPACITY_25, OPACITY_8, OPACITY_50, GLOW_MD,
 } from '@/lib/chart-colors';
+import { FOCUS_RING_CLASS, focusRingStyle } from '@/lib/ui/focus-ring';
 import { TimelineStrip } from '../../unique-tabs/_shared';
 import { BlueprintPanel, SectionHeader, NeonBar } from '../../unique-tabs/_design';
 import {
@@ -24,6 +25,25 @@ const CATEGORY_ICONS: Record<FeedbackCategory, typeof Gauge> = {
   Sound: Volume2,
 };
 
+/** Displayed value string for a param — also used as the slider's aria-valuetext. */
+function formatParamValue(value: number, step: number, unit: string): string {
+  return `${value.toFixed(step < 0.01 ? 3 : 2)}${unit}`;
+}
+
+/** Spoken value: expand the terse unit suffixes so a slider doesn't announce "0.05 s". */
+function paramValueText(value: number, step: number, unit: string): string {
+  const num = value.toFixed(step < 0.01 ? 3 : 2);
+  if (unit === 's') return `${num} seconds`;
+  if (unit === 'x') return `${num} times`;
+  return num;
+}
+
+/** The preset whose values exactly match the current tuner state, if any. */
+function matchingPreset(values: Record<string, number>): string | null {
+  const hit = FEEDBACK_PRESETS.find(p => FEEDBACK_PARAMS.every(param => values[param.id] === p.values[param.id]));
+  return hit?.name ?? null;
+}
+
 interface FeedbackTabProps {
   feedbackValues: Record<string, number>;
   juiceLevel: number;
@@ -35,6 +55,10 @@ export function FeedbackTab({ feedbackValues, juiceLevel, onPreset, onParam }: F
   const juiceColor = juiceLevel < 0.33 ? ACCENT_CYAN : juiceLevel < 0.66 ? ACCENT_EMERALD : ACCENT_ORANGE;
 
   const [copied, setCopied] = useState(false);
+  /* The range inputs are transparent overlays on the NeonBar, so their own
+     focus ring is invisible — track focus and draw it on the bar wrapper. */
+  const [focusedParam, setFocusedParam] = useState<string | null>(null);
+  const activePreset = useMemo(() => matchingPreset(feedbackValues), [feedbackValues]);
   const feelScript = useMemo(() => buildCombatFeelPython(feedbackValues), [feedbackValues]);
   const copyFeel = useCallback(() => {
     void navigator.clipboard?.writeText(feelScript);
@@ -49,17 +73,27 @@ export function FeedbackTab({ feedbackValues, juiceLevel, onPreset, onParam }: F
         <BlueprintPanel color={ACCENT} className="p-3">
           <div className="flex items-center justify-between mb-3">
             <SectionHeader label="Feedback Intensity Tuner" color={ACCENT} icon={Gauge} />
-            <div className="flex gap-1.5">
-              {FEEDBACK_PRESETS.map((preset) => (
-                <button
-                  key={preset.name}
-                  onClick={() => onPreset(preset)}
-                  className="text-xs font-mono uppercase tracking-[0.15em] font-bold px-2 py-0.5 rounded border transition-colors hover:brightness-125 cursor-pointer"
-                  style={{ color: preset.color, borderColor: withOpacity(preset.color, OPACITY_25), backgroundColor: withOpacity(preset.color, OPACITY_8) }}
-                >
-                  {preset.name}
-                </button>
-              ))}
+            <div className="flex gap-1.5" role="group" aria-label="Feedback presets">
+              {FEEDBACK_PRESETS.map((preset) => {
+                const isActive = activePreset === preset.name;
+                return (
+                  <button
+                    key={preset.name}
+                    type="button"
+                    onClick={() => onPreset(preset)}
+                    aria-pressed={isActive}
+                    className={`text-xs font-mono uppercase tracking-[0.15em] font-bold px-2 py-0.5 rounded border transition-colors hover:brightness-125 cursor-pointer ${FOCUS_RING_CLASS} ${isActive ? '' : 'opacity-60'}`}
+                    style={{
+                      ...focusRingStyle(preset.color),
+                      color: preset.color,
+                      borderColor: withOpacity(preset.color, isActive ? OPACITY_50 : OPACITY_25),
+                      backgroundColor: withOpacity(preset.color, isActive ? OPACITY_25 : OPACITY_8),
+                    }}
+                  >
+                    {preset.name}
+                  </button>
+                );
+              })}
             </div>
           </div>
           <div className="space-y-5">
@@ -67,9 +101,9 @@ export function FeedbackTab({ feedbackValues, juiceLevel, onPreset, onParam }: F
               const catParams = FEEDBACK_PARAMS.filter(p => p.category === cat);
               const CatIcon = CATEGORY_ICONS[cat];
               return (
-                <div key={cat}>
+                <div key={cat} role="group" aria-label={`${cat} feedback parameters`}>
                   <div className="flex items-center gap-1.5 mb-2 pb-1 border-b border-border/20">
-                    <CatIcon className="w-3 h-3" style={{ color: ACCENT, opacity: 0.6 }} />
+                    <CatIcon aria-hidden className="w-3 h-3" style={{ color: ACCENT, opacity: 0.6 }} />
                     <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted font-bold">{cat}</span>
                   </div>
                   <div className="space-y-3 ml-4">
@@ -79,12 +113,27 @@ export function FeedbackTab({ feedbackValues, juiceLevel, onPreset, onParam }: F
                       return (
                         <div key={param.id} className="flex items-center gap-3">
                           <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted w-[100px] flex-shrink-0 truncate">{param.label}</span>
-                          <div className="flex-1 relative">
+                          <div
+                            className="flex-1 relative rounded"
+                            style={focusedParam === param.id ? { outline: `2px solid ${ACCENT}`, outlineOffset: 2 } : undefined}
+                          >
                             <NeonBar pct={pct} color={ACCENT} />
-                            <input type="range" min={param.min} max={param.max} step={param.step} value={val} onChange={(e) => onParam(param.id, parseFloat(e.target.value))} className="absolute inset-0 w-full opacity-0 cursor-pointer" />
+                            <input
+                              type="range"
+                              min={param.min}
+                              max={param.max}
+                              step={param.step}
+                              value={val}
+                              aria-label={`${cat} ${param.label}`}
+                              aria-valuetext={paramValueText(val, param.step, param.unit)}
+                              onChange={(e) => onParam(param.id, parseFloat(e.target.value))}
+                              onFocus={() => setFocusedParam(param.id)}
+                              onBlur={() => setFocusedParam(prev => (prev === param.id ? null : prev))}
+                              className="absolute inset-0 w-full opacity-0 cursor-pointer"
+                            />
                           </div>
                           <span className="text-2xs font-mono font-bold w-[50px] text-right" style={{ color: ACCENT }}>
-                            {val.toFixed(param.step < 0.01 ? 3 : 2)}{param.unit}
+                            {formatParamValue(val, param.step, param.unit)}
                           </span>
                         </div>
                       );

@@ -41,7 +41,11 @@ export function FBXConversionTab() {
       />
 
       <MCPFormCard>
-        <MCPField label="Input FBX Path" htmlFor="fbx-input">
+        <MCPField
+          label="Input FBX Path"
+          htmlFor="fbx-input"
+          hint="Absolute path on the machine running Blender, with forward slashes."
+        >
           <MCPTextInput
             id="fbx-input"
             value={inputPath}
@@ -51,7 +55,11 @@ export function FBXConversionTab() {
           />
         </MCPField>
 
-        <MCPField label="Output GLB Path" htmlFor="fbx-output">
+        <MCPField
+          label="Output GLB Path"
+          htmlFor="fbx-output"
+          hint="An existing file at this path is overwritten."
+        >
           <MCPTextInput
             id="fbx-output"
             value={outputPath}
@@ -61,15 +69,23 @@ export function FBXConversionTab() {
           />
         </MCPField>
 
-        <label className="flex items-center gap-1.5 text-xs text-text">
-          <input
-            type="checkbox"
-            checked={dracoCompression}
-            onChange={(e) => setDracoCompression(e.target.checked)}
-            className="rounded border-border"
-          />
-          Enable Draco Compression
-        </label>
+        <fieldset>
+          <legend className="block text-xs font-medium text-text mb-1">
+            Compression
+          </legend>
+          <label className="flex items-center gap-1.5 text-xs text-text">
+            <input
+              type="checkbox"
+              checked={dracoCompression}
+              onChange={(e) => setDracoCompression(e.target.checked)}
+              className="focus-ring rounded border-border accent-[var(--visual-gen)]"
+            />
+            Enable Draco Compression
+          </label>
+          <p className="text-xs text-text-muted mt-1">
+            Shrinks the GLB substantially; the importer must support Draco.
+          </p>
+        </fieldset>
 
         <MCPSubmitButton
           onClick={handleConvert}

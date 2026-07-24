@@ -13,10 +13,43 @@ interface ProcGenDungeonPanelProps {
   isGenerating: boolean;
 }
 
+export const ROOMS_MIN = 2;
+export const ROOMS_MAX = 20;
+
+/**
+ * Pure validator for the room-count field. Returns an error string when the raw
+ * input is empty, non-numeric (NaN), non-integer, or outside
+ * [ROOMS_MIN, ROOMS_MAX]; null when acceptable. Pure so it can be unit-tested.
+ */
+export function validateRoomCount(raw: string): string | null {
+  if (raw.trim() === '') return 'Enter a room count';
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return 'Room count must be a number';
+  if (!Number.isInteger(n)) return 'Room count must be a whole number';
+  if (n < ROOMS_MIN || n > ROOMS_MAX) return `Room count must be between ${ROOMS_MIN} and ${ROOMS_MAX}`;
+  return null;
+}
+
+/**
+ * Pure validator for the seed field. Returns an error string when the raw input
+ * is empty, non-numeric (NaN), non-integer, or negative; null when acceptable.
+ */
+export function validateSeed(raw: string): string | null {
+  if (raw.trim() === '') return 'Enter a seed';
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return 'Seed must be a number';
+  if (!Number.isInteger(n)) return 'Seed must be a whole number';
+  if (n < 0) return 'Seed must be 0 or greater';
+  return null;
+}
+
 export function ProcGenDungeonPanel({ onGenerate, isGenerating }: ProcGenDungeonPanelProps) {
-  const [roomCount, setRoomCount] = useState(6);
-  const [seed, setSeed] = useState(1337);
+  // Inputs are kept as raw strings so cleared (NaN) / out-of-range values can be
+  // validated and surfaced inline, rather than silently clamped at generate time.
+  const [roomsInput, setRoomsInput] = useState('6');
+  const [seedInput, setSeedInput] = useState('1337');
   const [lastRun, setLastRun] = useState<ProcgenRun | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   // Refetch the latest run on mount + whenever a generation finishes
   // (isGenerating true -> false). The fetch is async, so the setState lands
@@ -26,14 +59,28 @@ export function ProcGenDungeonPanel({ onGenerate, isGenerating }: ProcGenDungeon
     let cancelled = false;
     void (async () => {
       const r = await tryApiFetch<ProcgenRun | null>('/api/level-design/procgen-result');
-      if (!cancelled && r.ok) setLastRun(r.data);
+      if (cancelled) return;
+      if (r.ok) {
+        setLastRun(r.data);
+        setFetchError(null);
+      } else {
+        // Surface the failure instead of swallowing it silently.
+        setFetchError(r.error);
+      }
     })();
     return () => {
       cancelled = true;
     };
   }, [isGenerating]);
 
-  const clampedRooms = Math.max(2, Math.min(20, roomCount));
+  const roomsErr = validateRoomCount(roomsInput);
+  const seedErr = validateSeed(seedInput);
+  const inputsValid = !roomsErr && !seedErr;
+
+  const handleGenerate = () => {
+    if (!inputsValid) return; // button is disabled too — guard for safety
+    onGenerate(Number(roomsInput), Number(seedInput));
+  };
 
   return (
     <div className="w-full h-full overflow-y-auto p-6 space-y-6 bg-[#03030a] text-violet-100 font-mono">
@@ -51,35 +98,61 @@ export function ProcGenDungeonPanel({ onGenerate, isGenerating }: ProcGenDungeon
         <label className="space-y-1.5">
           <span className="block text-xs font-bold text-violet-400 uppercase tracking-widest">Room count</span>
           <input
-            type="number" min={2} max={20} value={roomCount}
-            onChange={(e) => setRoomCount(Number(e.target.value))}
-            className="w-full px-3 py-2 rounded-lg text-xs bg-[#0a0a19] border border-violet-900/50 text-violet-100 outline-none focus:border-violet-500/70"
+            type="number" min={ROOMS_MIN} max={ROOMS_MAX} step={1} value={roomsInput}
+            onChange={(e) => setRoomsInput(e.target.value)}
+            data-testid="dungeon-rooms-input"
+            aria-label="Room count"
+            aria-invalid={!!roomsErr}
+            aria-describedby="dungeon-rooms-help"
+            className={`w-full px-3 py-2 rounded-lg text-xs bg-[#0a0a19] border text-violet-100 outline-none focus:border-violet-500/70 ${roomsErr ? 'border-red-500/60' : 'border-violet-900/50'}`}
           />
+          <span
+            id="dungeon-rooms-help"
+            data-testid="dungeon-rooms-help"
+            role={roomsErr ? 'alert' : undefined}
+            className={`block text-[11px] ${roomsErr ? 'text-red-400' : 'text-violet-500/70'}`}
+          >
+            {roomsErr ?? `Range ${ROOMS_MIN}–${ROOMS_MAX}`}
+          </span>
         </label>
         <label className="space-y-1.5">
           <span className="block text-xs font-bold text-violet-400 uppercase tracking-widest">Seed</span>
           <div className="flex gap-2">
             <input
-              type="number" value={seed}
-              onChange={(e) => setSeed(Number(e.target.value))}
-              className="w-full px-3 py-2 rounded-lg text-xs bg-[#0a0a19] border border-violet-900/50 text-violet-100 outline-none focus:border-violet-500/70"
+              type="number" min={0} step={1} value={seedInput}
+              onChange={(e) => setSeedInput(e.target.value)}
+              data-testid="dungeon-seed-input"
+              aria-label="Seed"
+              aria-invalid={!!seedErr}
+              aria-describedby="dungeon-seed-help"
+              className={`w-full px-3 py-2 rounded-lg text-xs bg-[#0a0a19] border text-violet-100 outline-none focus:border-violet-500/70 ${seedErr ? 'border-red-500/60' : 'border-violet-900/50'}`}
             />
             <button
               type="button"
-              onClick={() => setSeed(Math.floor(Math.random() * 100000))}
+              onClick={() => setSeedInput(String(Math.floor(Math.random() * 100000)))}
               title="Randomize seed"
-              className="px-3 rounded-lg border border-violet-900/50 text-violet-400 hover:text-violet-200"
+              aria-label="Randomize seed"
+              className="px-3 rounded-lg border border-violet-900/50 text-violet-400 hover:text-violet-200 focus-ring"
             >
-              <Dice5 className="w-4 h-4" />
+              <Dice5 className="w-4 h-4" aria-hidden="true" />
             </button>
           </div>
+          <span
+            id="dungeon-seed-help"
+            data-testid="dungeon-seed-help"
+            role={seedErr ? 'alert' : undefined}
+            className={`block text-[11px] ${seedErr ? 'text-red-400' : 'text-violet-500/70'}`}
+          >
+            {seedErr ?? 'Whole number ≥ 0'}
+          </span>
         </label>
       </div>
 
       <button
-        onClick={() => onGenerate(clampedRooms, seed)}
-        disabled={isGenerating}
-        className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-all disabled:opacity-40"
+        type="button"
+        onClick={handleGenerate}
+        disabled={isGenerating || !inputsValid}
+        className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-all disabled:opacity-40 focus-ring"
         style={{
           backgroundColor: `${MODULE_COLORS.content}20`,
           color: MODULE_COLORS.content,
@@ -87,17 +160,27 @@ export function ProcGenDungeonPanel({ onGenerate, isGenerating }: ProcGenDungeon
         }}
       >
         {isGenerating ? (
-          <><Loader2 className="w-5 h-5 animate-spin" /> Generating…</>
+          <><Loader2 className="w-5 h-5 animate-spin" aria-hidden="true" /> Generating…</>
         ) : (
-          <><Boxes className="w-5 h-5" /> Generate Dungeon (UE)</>
+          <><Boxes className="w-5 h-5" aria-hidden="true" /> Generate Dungeon (UE)</>
         )}
       </button>
 
-      <div className="text-xs px-3 py-2 rounded-lg border border-violet-900/40 bg-violet-950/20">
-        {lastRun
-          ? `Last run: ${lastRun.roomCount} rooms (seed ${lastRun.seed}) at ${lastRun.createdAt}`
-          : 'No runs yet. Set params and generate — the dungeon is baked into /Game/Maps/ProcGenDungeon.'}
-      </div>
+      {fetchError ? (
+        <div
+          role="alert"
+          data-testid="dungeon-fetch-error"
+          className="text-xs px-3 py-2 rounded-lg border border-red-500/30 bg-red-500/10 text-red-400"
+        >
+          Could not load last run: {fetchError}
+        </div>
+      ) : (
+        <div className="text-xs px-3 py-2 rounded-lg border border-violet-900/40 bg-violet-950/20">
+          {lastRun
+            ? `Last run: ${lastRun.roomCount} rooms (seed ${lastRun.seed}) at ${lastRun.createdAt}`
+            : 'No runs yet. Set params and generate — the dungeon is baked into /Game/Maps/ProcGenDungeon.'}
+        </div>
+      )}
     </div>
   );
 }

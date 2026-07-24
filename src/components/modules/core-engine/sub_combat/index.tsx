@@ -89,6 +89,9 @@ export function CombatActionMap({ moduleId }: CombatActionMapProps) {
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
+            role="tabpanel"
+            id={`combat-panel-${activeTab}`}
+            aria-labelledby={`combat-tab-${activeTab}`}
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}

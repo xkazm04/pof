@@ -2,10 +2,11 @@
 
 /** One swimlane cell, Blueprint-styled: names the ENGINE powering the step (the step
  *  label moves to the second line + tooltip); background encodes the strict grade.
- *  A left edge stripe encodes the acceptance TIER (L0–L4) — see TIER_VAR — so the
- *  tier needs no text inside the card. Unwired cells render hollow with a dashed
- *  border so bottlenecks pop. `dimmed` supports the highlight bars (tier / engine
- *  click-filters): non-matching cells drop to low opacity. */
+ *  A left edge stripe encodes the acceptance TIER (L0–L4) — see TIER_VAR — echoed by
+ *  a small tier code on the engine line so the tier never rests on hue alone
+ *  (WCAG 1.4.1). Unwired cells render hollow with a dashed border so bottlenecks pop.
+ *  `dimmed` supports the highlight bars (tier / engine click-filters): non-matching
+ *  cells drop to low opacity. */
 import type { StepCell, CellGrade } from '@/lib/status/statusModel';
 
 /** Grade → lab token. Green (ok) is reserved for gate-proven; ungated generative
@@ -86,14 +87,14 @@ export function StatusCell({ cell, dimmed = false }: { cell: StepCell; dimmed?: 
         )}
         {cell.label}
       </span>
-      <span style={{ display: 'block', fontWeight: 400, opacity: 0.75, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 400, minWidth: 0 }}>
         {cell.realization && (
           // Realization evidence markers (per-pipeline dual-execution review):
           // B = ran in the Browser preview, U = ran in UE. Solid = proven live,
           // outlined = path exists but never walked, absent = no path.
           // Letter + border style (not hue) so a red judged-fail cell still
           // visibly reads "output RUNS in these targets, quality below bar".
-          <span data-testid="realization-markers" style={{ marginRight: 4, display: 'inline-flex', gap: 2, verticalAlign: 'middle' }}>
+          <span data-testid="realization-markers" style={{ flexShrink: 0, display: 'inline-flex', gap: 2 }}>
             {(['browser', 'ue'] as const).map((target) => {
               const level = cell.realization![target];
               if (level === 'no') return null;
@@ -121,7 +122,28 @@ export function StatusCell({ cell, dimmed = false }: { cell: StepCell; dimmed?: 
             })}
           </span>
         )}
-        {unwired ? '—' : unpowered ? 'no engine' : cell.engine}
+        <span style={{ flex: 1, minWidth: 0, opacity: 0.75, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {unwired ? '—' : unpowered ? 'no engine' : cell.engine}
+        </span>
+        {cell.tier && (
+          // The tier ALSO as text, not just as the left stripe's hue: L0–L4 differ only
+          // by color there, which is unreadable to a colorblind eye (WCAG 1.4.1). The
+          // stripe stays as the fast scan cue; this is the ground truth.
+          <span
+            data-testid="tier-code"
+            style={{
+              flexShrink: 0,
+              fontFamily: 'var(--lab-font-mono)',
+              fontSize: 11,
+              lineHeight: '11px',
+              fontWeight: 700,
+              letterSpacing: '0.02em',
+              color: unwired ? 'var(--text-subtle)' : 'var(--lab-text)',
+            }}
+          >
+            {cell.tier}
+          </span>
+        )}
       </span>
     </div>
   );

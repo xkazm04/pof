@@ -11,7 +11,7 @@ import {
   EQS_LINE_OF_SIGHT, EQS_ELEVATION_ADVANTAGE,
   eqsFloat,
 } from '@/lib/ai-director/eqs-defaults';
-import type { StepKind, QueryPipeline } from './types';
+import type { StepKind, PipelineStep, QueryPipeline } from './types';
 
 export const PIPELINES: QueryPipeline[] = [
   {
@@ -183,6 +183,7 @@ export const PIPELINES: QueryPipeline[] = [
         cppClass: 'UEnvQueryContext_Querier',
         kind: 'context',
         color: ACCENT_CYAN,
+        builtIn: true,
         detail: 'Built-in context: the AI pawn running the query',
       },
       {
@@ -225,6 +226,19 @@ export const PIPELINES: QueryPipeline[] = [
   },
 ];
 
+/**
+ * Number of distinct project-authored EQS components across every pipeline —
+ * derived rather than written into the intro copy, so adding or removing a
+ * pipeline can never leave the headline count quietly wrong. Engine-provided
+ * components (`builtIn`) and terminal Result steps (no `cppClass`) don't count.
+ */
+export const CUSTOM_COMPONENT_COUNT = new Set(
+  PIPELINES
+    .flatMap((pipeline) => pipeline.steps)
+    .filter((step) => step.cppClass && !step.builtIn)
+    .map((step) => step.cppClass),
+).size;
+
 // ── Kind styling ───────────────────────────────────────────────────────────
 
 export const KIND_LABELS: Record<StepKind, string> = {
@@ -242,3 +256,48 @@ export const KIND_ICONS: Record<StepKind, React.ComponentType<{ className?: stri
   'test-filter': AlertTriangle,
   'result': Crosshair,
 };
+
+/**
+ * Legend entries for the stage-kind colors, **derived from the steps actually
+ * rendered** rather than a second hand-maintained color table — so the key can
+ * never claim a hue the cards don't use. Kinds absent from every pipeline are
+ * omitted instead of shown as a dead entry.
+ */
+export const KIND_LEGEND: { kind: StepKind; label: string; color: string }[] =
+  (Object.keys(KIND_LABELS) as StepKind[]).flatMap((kind) => {
+    const step = PIPELINES.flatMap((p) => p.steps).find((s) => s.kind === kind);
+    return step ? [{ kind, label: KIND_LABELS[kind], color: step.color }] : [];
+  });
+
+// ── Runtime (cost-sorted) test order ───────────────────────────────────────
+
+const TEST_KINDS: StepKind[] = ['test-score', 'test-filter'];
+
+export const isTestStep = (step: PipelineStep): boolean => TEST_KINDS.includes(step.kind);
+
+const COST_RANK: Record<NonNullable<PipelineStep['cost']>, number> = { Low: 0, High: 1 };
+
+/**
+ * The order UE5 *actually* runs a pipeline's tests in. The engine sorts EQS
+ * tests by declared `EEnvTestCost` before execution, so cheap tests get to
+ * eliminate candidates before expensive ones run — independent of the order the
+ * tests are authored in. Sorting is stable: equal-cost tests keep authored order.
+ */
+export function runtimeTestOrder(steps: PipelineStep[]): PipelineStep[] {
+  return steps
+    .filter(isTestStep)
+    .map((step, index) => ({ step, index }))
+    .sort((a, b) =>
+      (COST_RANK[a.step.cost ?? 'Low'] - COST_RANK[b.step.cost ?? 'Low']) || (a.index - b.index))
+    .map(({ step }) => step);
+}
+
+/**
+ * True when a pipeline lists its tests in an order the engine will not follow —
+ * the cue for surfacing the real execution order instead of letting the diagram
+ * imply top-to-bottom is what runs.
+ */
+export function testOrderDiffers(steps: PipelineStep[]): boolean {
+  const runtime = runtimeTestOrder(steps);
+  return steps.filter(isTestStep).some((step, i) => step.id !== runtime[i]?.id);
+}

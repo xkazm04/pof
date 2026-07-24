@@ -40,10 +40,15 @@ interface TradingCardProps {
   item: ItemData;
   tabIndex?: number;
   onFocus?: () => void;
+  /**
+   * Keyboard equivalent of clicking the card (opens the item detail drawer).
+   * When omitted, Enter falls back to toggling the hover tooltip as before.
+   */
+  onActivate?: () => void;
 }
 
 export const TradingCard = forwardRef<HTMLDivElement, TradingCardProps>(
-function TradingCard({ item, tabIndex, onFocus: onFocusProp }, ref) {
+function TradingCard({ item, tabIndex, onFocus: onFocusProp, onActivate }, ref) {
   const color = RARITY_COLORS[item.rarity];
   const [showTooltip, setShowTooltip] = useState(false);
   const [isFocusVisible, setIsFocusVisible] = useState(false);
@@ -57,9 +62,14 @@ function TradingCard({ item, tabIndex, onFocus: onFocusProp }, ref) {
     setShowTooltip(false);
   }, []);
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); setShowTooltip(prev => !prev); }
+    // Enter mirrors the mouse click (open details); Space keeps the quick stat tooltip.
+    if (e.key === 'Enter') {
+      e.preventDefault(); e.stopPropagation();
+      if (onActivate) onActivate(); else setShowTooltip(prev => !prev);
+    }
+    else if (e.key === ' ') { e.preventDefault(); e.stopPropagation(); setShowTooltip(prev => !prev); }
     else if (e.key === 'Escape' && showTooltip) { e.preventDefault(); setShowTooltip(false); }
-  }, [showTooltip]);
+  }, [showTooltip, onActivate]);
   const handleFocus = useCallback((e: React.FocusEvent<HTMLDivElement>) => {
     if (e.target.matches(':focus-visible')) setIsFocusVisible(true);
     onFocusProp?.();

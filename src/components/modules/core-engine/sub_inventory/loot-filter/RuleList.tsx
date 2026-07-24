@@ -50,6 +50,8 @@ export function RuleList({ rulesetId, rules, accent }: { rulesetId: string; rule
             style={{ borderLeft: `3px solid ${rule.enabled ? color : withOpacity(color, OPACITY_25)}` }}>
             <div className="flex items-center gap-2 px-2 py-1.5">
               <button type="button" data-testid="lf-rule-toggle" title={rule.enabled ? 'Enabled' : 'Disabled'}
+                aria-label={`${rule.enabled ? 'Disable' : 'Enable'} rule: ${rule.name}`}
+                aria-pressed={rule.enabled}
                 onClick={() => updateRule(rulesetId, rule.id, { enabled: !rule.enabled })}
                 className="text-text-muted hover:text-text cursor-pointer">
                 {rule.enabled ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4 opacity-50" />}
@@ -57,6 +59,7 @@ export function RuleList({ rulesetId, rules, accent }: { rulesetId: string; rule
               <span className="text-[10px] font-mono font-bold uppercase px-1.5 py-0.5 rounded capitalize"
                 style={{ color, backgroundColor: withOpacity(color, OPACITY_15) }}>{rule.action}</span>
               <button type="button" onClick={() => setExpanded(open ? null : rule.id)}
+                aria-expanded={open}
                 className="flex-1 flex items-center gap-1 text-left min-w-0 cursor-pointer">
                 <ChevronRight className={`w-3.5 h-3.5 text-text-muted transition-transform ${open ? 'rotate-90' : ''}`} />
                 <span className="text-sm font-medium text-text truncate">{rule.name}</span>
@@ -64,22 +67,28 @@ export function RuleList({ rulesetId, rules, accent }: { rulesetId: string; rule
               </button>
               <div className="flex items-center gap-0.5">
                 <button type="button" onClick={() => moveRule(rulesetId, rule.id, -1)} disabled={i === 0} title="Move up"
+                  aria-label={`Move rule up: ${rule.name}`}
                   className="p-0.5 text-text-muted hover:text-text disabled:opacity-30 cursor-pointer disabled:cursor-default"><ChevronUp className="w-3.5 h-3.5" /></button>
                 <button type="button" onClick={() => moveRule(rulesetId, rule.id, 1)} disabled={i === rules.length - 1} title="Move down"
+                  aria-label={`Move rule down: ${rule.name}`}
                   className="p-0.5 text-text-muted hover:text-text disabled:opacity-30 cursor-pointer disabled:cursor-default"><ChevronDown className="w-3.5 h-3.5" /></button>
                 <button type="button" onClick={() => duplicateRule(rulesetId, rule.id)} title="Duplicate"
+                  aria-label={`Duplicate rule: ${rule.name}`}
                   className="p-0.5 text-text-muted hover:text-text cursor-pointer"><Copy className="w-3.5 h-3.5" /></button>
                 <button type="button" onClick={() => removeRule(rulesetId, rule.id)} title="Delete"
+                  aria-label={`Delete rule: ${rule.name}`}
                   className="p-0.5 cursor-pointer opacity-70 hover:opacity-100" style={{ color: STATUS_ERROR }}><Trash2 className="w-3.5 h-3.5" /></button>
               </div>
             </div>
             {open && (
               <div className="px-3 pb-3">
                 <input value={rule.name} onChange={(e) => updateRule(rulesetId, rule.id, { name: e.target.value })}
+                  aria-label="Rule name"
                   className="w-full text-sm px-2 py-1 mb-2 rounded-md bg-surface-deep border border-border/40 text-text" placeholder="Rule name" />
-                <div className="flex gap-1 mb-1">
+                <div className="flex gap-1 mb-1" role="group" aria-label="Rule action">
                   {ACTIONS.map((a) => (
                     <button key={a} type="button" onClick={() => updateRule(rulesetId, rule.id, { action: a })}
+                      aria-pressed={rule.action === a}
                       className="text-xs font-mono px-2 py-0.5 rounded-md border cursor-pointer capitalize text-text-muted"
                       style={rule.action === a
                         ? { color: ACTION_COLOR[a], backgroundColor: withOpacity(ACTION_COLOR[a], OPACITY_15), borderColor: withOpacity(ACTION_COLOR[a], OPACITY_25) }

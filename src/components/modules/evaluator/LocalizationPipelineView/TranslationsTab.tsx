@@ -1,10 +1,13 @@
 import type { Dispatch, SetStateAction } from 'react';
-import { Search } from 'lucide-react';
+import { Search, SearchX } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
+import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import type { LocalizableString, TranslationEntry, LocalizationConfig } from '@/types/localization-pipeline';
 import { SUPPORTED_LOCALES } from '@/lib/localization/definitions';
+import { TEXT_SCALE } from '@/lib/typography-scale';
+import { FOCUS_RING_CLASS } from '@/lib/ui/focus-ring';
 import type { TranslationPreset } from './types';
-import { TRANSLATION_PRESET_LABELS } from './constants';
+import { TRANSLATION_PRESET_LABELS, SCALE } from './constants';
 import { PresetChip } from './PresetChip';
 import { TranslationCard } from './TranslationCard';
 
@@ -33,6 +36,13 @@ export function TranslationsTab({
   reviewRequired: TranslationEntry[];
   stringsById: Map<string, LocalizableString>;
 }) {
+  const hasFilters = searchQuery.trim().length > 0 || localeFilter !== 'all' || translationPresets.size > 0;
+  const clearFilters = () => {
+    setSearchQuery('');
+    setLocaleFilter('all');
+    setTranslationPresets(new Set());
+  };
+
   return (
     <div className="space-y-4">
       {/* Filters */}
@@ -94,18 +104,46 @@ export function TranslationsTab({
           <Badge variant={reviewRequired.length === 0 ? 'success' : 'warning'}>
             {reviewRequired.length} need review
           </Badge>
-          <span className="text-2xs text-text-muted">{filteredEntries.length} translations shown</span>
+          {/* role=status so the count is announced when a filter changes it. */}
+          <span className={SCALE.meta} role="status">
+            {filteredEntries.length} translations shown
+          </span>
         </div>
       )}
 
-      <div className="space-y-2 max-h-[60vh] overflow-y-auto">
-        {filteredEntries.map((e, i) => {
-          const source = stringsById.get(e.stringId);
-          return (
-            <TranslationCard key={`${e.stringId}-${e.locale}-${i}`} entry={e} sourceText={source?.sourceText ?? '?'} />
-          );
-        })}
-      </div>
+      {filteredEntries.length === 0 ? (
+        <SurfaceCard>
+          <div className="text-center py-10">
+            <SearchX aria-hidden="true" className="w-8 h-8 text-text-muted mx-auto mb-2 opacity-40" />
+            <p className="text-sm text-text-muted mb-1">
+              {hasFilters ? 'No translations match these filters' : 'No translations yet'}
+            </p>
+            <p className={`${TEXT_SCALE.body} text-text-muted`}>
+              {hasFilters
+                ? `All ${entries.length} translations were filtered out — widen the search, locale, or preset filters.`
+                : 'Run the full pipeline to translate the scanned strings into your target locales.'}
+            </p>
+            {hasFilters && (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className={`mt-3 px-3 py-1.5 rounded-md text-xs font-medium bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 transition-colors ${FOCUS_RING_CLASS}`}
+              >
+                Clear filters
+              </button>
+            )}
+          </div>
+        </SurfaceCard>
+      ) : (
+        <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+          {filteredEntries.map((e, i) => {
+            const source = stringsById.get(e.stringId);
+            return (
+              <TranslationCard key={`${e.stringId}-${e.locale}-${i}`} entry={e} sourceText={source?.sourceText ?? '?'} />
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

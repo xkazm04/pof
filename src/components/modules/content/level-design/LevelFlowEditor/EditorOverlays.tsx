@@ -1,5 +1,6 @@
-import { Plus, Unlink, Monitor } from 'lucide-react';
+import { Plus, Unlink, Monitor, RotateCw, X } from 'lucide-react';
 import { STATUS_ERROR } from '@/lib/chart-colors';
+import { Tooltip } from '@/components/ui/Tooltip';
 
 interface EditorOverlaysProps {
   readOnly: boolean;
@@ -13,6 +14,7 @@ interface EditorOverlaysProps {
   roomsLength: number;
   connectionsLength: number;
   blenderResult: { message: string; isError: boolean } | null;
+  dismissBlenderResult: () => void;
 }
 
 export function EditorOverlays({
@@ -27,7 +29,14 @@ export function EditorOverlays({
   roomsLength,
   connectionsLength,
   blenderResult,
+  dismissBlenderResult,
 }: EditorOverlaysProps) {
+  const blenderReason = !blenderConnected
+    ? 'Blender is not connected — connect it first'
+    : roomsLength === 0
+      ? 'Add at least one room to blockout'
+      : 'Create a 3D blockout of these rooms in Blender';
+
   return (
     <>
       {/* Toolbar */}
@@ -35,7 +44,7 @@ export function EditorOverlays({
         <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
           <button
             onClick={addRoom}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-lg"
+            className="focus-ring-outline flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-lg"
             style={{
               backgroundColor: `${accentColor}20`,
               color: accentColor,
@@ -46,29 +55,30 @@ export function EditorOverlays({
             <Plus className="w-4 h-4" />
             Add Room
           </button>
-          <button
-            onClick={handleBlockoutInBlender}
-            disabled={!blenderConnected || blenderExporting || roomsLength === 0}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-lg disabled:opacity-40"
-            style={{
-              backgroundColor: 'rgba(16,185,129,0.12)',
-              color: 'rgb(52,211,153)',
-              border: '1px solid rgba(16,185,129,0.4)',
-              boxShadow: '0 0 15px rgba(16,185,129,0.2), inset 0 0 10px rgba(16,185,129,0.1)',
-            }}
-            title={!blenderConnected ? 'Connect to Blender first' : 'Create 3D blockout in Blender'}
-          >
-            {blenderExporting ? (
-              <span className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
-            ) : (
-              <Monitor className="w-4 h-4" />
-            )}
-            {blenderExporting ? 'Exporting...' : 'Blockout in Blender'}
-          </button>
+          <Tooltip content={blenderReason} placement="bottom" multiline>
+            <button
+              onClick={handleBlockoutInBlender}
+              disabled={!blenderConnected || blenderExporting || roomsLength === 0}
+              className="focus-ring-outline flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-lg disabled:opacity-40"
+              style={{
+                backgroundColor: 'rgba(16,185,129,0.12)',
+                color: 'rgb(52,211,153)',
+                border: '1px solid rgba(16,185,129,0.4)',
+                boxShadow: '0 0 15px rgba(16,185,129,0.2), inset 0 0 10px rgba(16,185,129,0.1)',
+              }}
+            >
+              {blenderExporting ? (
+                <span className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" aria-hidden="true" />
+              ) : (
+                <Monitor className="w-4 h-4" aria-hidden="true" />
+              )}
+              {blenderExporting ? 'Exporting...' : 'Blockout in Blender'}
+            </button>
+          </Tooltip>
           {connectingFrom && (
             <button
               onClick={() => setConnectingFrom(null)}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all animate-pulse"
+              className="focus-ring-outline flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all animate-pulse"
               style={{
                 backgroundColor: `${STATUS_ERROR}20`,
                 color: STATUS_ERROR,
@@ -76,7 +86,7 @@ export function EditorOverlays({
                 boxShadow: `0 0 15px ${STATUS_ERROR}40, inset 0 0 10px ${STATUS_ERROR}20`,
               }}
             >
-              <Unlink className="w-4 h-4" />
+              <Unlink className="w-4 h-4" aria-hidden="true" />
               Cancel Link
             </button>
           )}
@@ -88,12 +98,46 @@ export function EditorOverlays({
         {roomsLength} NODES <span className="mx-1 text-violet-500/50">|</span> {connectionsLength} LINKS
       </div>
 
-      {/* Blender blockout result */}
-      {blenderResult && (
-        <div className={`absolute bottom-4 left-4 right-4 z-10 text-xs font-mono px-3 py-2 rounded-lg border backdrop-blur-sm ${blenderResult.isError ? 'border-red-500/30 bg-red-500/10 text-red-400' : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'}`}>
-          {blenderResult.message}
-        </div>
-      )}
+      {/* Blender blockout status — a persistent live region so progress, success and
+          failure are all announced, never a silent spinner or a banner that lingers. */}
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="absolute bottom-4 left-4 right-4 z-10 pointer-events-none"
+      >
+        {blenderExporting && (
+          <div className="pointer-events-auto text-xs font-mono px-3 py-2 rounded-lg border backdrop-blur-sm border-emerald-500/30 bg-emerald-500/10 text-emerald-400">
+            Exporting {roomsLength} {roomsLength === 1 ? 'room' : 'rooms'} to Blender…
+          </div>
+        )}
+        {!blenderExporting && blenderResult && (
+          <div
+            className={`pointer-events-auto flex items-start gap-2 text-xs font-mono px-3 py-2 rounded-lg border backdrop-blur-sm ${blenderResult.isError ? 'border-red-500/30 bg-red-500/10 text-red-400' : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'}`}
+          >
+            <span className="flex-1 whitespace-pre-wrap break-words">
+              {blenderResult.isError ? `Blockout failed: ${blenderResult.message}` : blenderResult.message}
+            </span>
+            {blenderResult.isError && (
+              <button
+                onClick={handleBlockoutInBlender}
+                disabled={!blenderConnected || roomsLength === 0}
+                className="focus-ring shrink-0 flex items-center gap-1 px-2 py-0.5 rounded border border-current uppercase tracking-wider disabled:opacity-40"
+              >
+                <RotateCw className="w-3 h-3" aria-hidden="true" />
+                Retry
+              </button>
+            )}
+            <button
+              onClick={dismissBlenderResult}
+              aria-label="Dismiss Blender blockout status"
+              className="focus-ring shrink-0 p-0.5 rounded hover:opacity-100 opacity-70"
+            >
+              <X className="w-3.5 h-3.5" aria-hidden="true" />
+            </button>
+          </div>
+        )}
+      </div>
     </>
   );
 }

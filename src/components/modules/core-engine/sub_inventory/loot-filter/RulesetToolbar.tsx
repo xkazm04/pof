@@ -13,11 +13,12 @@ export function RulesetToolbar({ active, accent }: { active: LootFilterRuleset; 
   return (
     <div className="flex flex-wrap items-center gap-2">
       {list.length > 1 && (
-        <div className="flex flex-wrap gap-1">
+        <div className="flex flex-wrap gap-1" role="group" aria-label="Rulesets">
           {list.map((rs) => {
             const isActive = rs.id === active.id;
             return (
               <button key={rs.id} type="button" onClick={() => setActiveRuleset(rs.id)}
+                aria-pressed={isActive}
                 className={`text-xs font-mono px-2 py-1 rounded-md border cursor-pointer transition-colors ${isActive ? '' : 'text-text-muted border-border/50 hover:text-text'}`}
                 style={isActive ? { color: accent, backgroundColor: withOpacity(accent, OPACITY_15), borderColor: withOpacity(accent, OPACITY_25) } : undefined}>
                 {rs.name}
@@ -36,11 +37,13 @@ export function RulesetToolbar({ active, accent }: { active: LootFilterRuleset; 
       />
 
       <button type="button" onClick={() => createRuleset()} title="New ruleset"
+        aria-label="New ruleset"
         className="flex items-center gap-1 text-xs font-mono px-2 py-1.5 rounded-md cursor-pointer"
         style={{ backgroundColor: withOpacity(accent, OPACITY_15), color: accent }}>
         <Plus className="w-3.5 h-3.5" /> New
       </button>
       <button type="button" onClick={() => deleteRuleset(active.id)} title="Delete this ruleset"
+        aria-label={`Delete ruleset: ${active.name}`}
         className="flex items-center gap-1 text-xs font-mono px-2 py-1.5 rounded-md text-text-muted border border-border/40 hover:text-text cursor-pointer">
         <Trash2 className="w-3.5 h-3.5" /> Delete
       </button>

@@ -31,7 +31,8 @@ export function SquadChoreographyEditor() {
   const [activeTab, setActiveTab] = useState('formation');
   const svgRef = useRef<SVGSVGElement>(null);
 
-  // Drag the cyan arrow to rotate the target's forward vector — shared pointer math.
+  // Rotate the target's forward vector: shared pointer math for the drag, and the
+  // same setter backs FormationView's arrow-key path on the handle.
   const setForwardAngle = useCallback(
     (angle: number) => setConfig(prev => ({ ...prev, targetForwardAngle: angle })),
     [],
@@ -141,6 +142,7 @@ export function SquadChoreographyEditor() {
               <button
                 key={f.id}
                 onClick={() => handleFormationChange(f.id)}
+                aria-pressed={config.formation.id === f.id}
                 className="w-full text-left px-2.5 py-1.5 rounded-md text-xs transition-colors"
                 style={{
                   backgroundColor: config.formation.id === f.id ? `${ACCENT}${OPACITY_15}` : 'transparent',
@@ -174,6 +176,8 @@ export function SquadChoreographyEditor() {
                 min={0} max={1} step={0.05}
                 value={w.value}
                 onChange={e => handleWeightChange(w.key, parseFloat(e.target.value))}
+                aria-label={w.label}
+                aria-valuetext={w.value.toFixed(2)}
                 className="w-full h-1 accent-current rounded-full"
                 style={{ accentColor: ACCENT }}
               />
@@ -189,6 +193,8 @@ export function SquadChoreographyEditor() {
               min={100} max={600} step={25}
               value={config.attackDistance}
               onChange={e => handleDistanceChange(parseInt(e.target.value))}
+              aria-label="Attack Distance"
+              aria-valuetext={`${config.attackDistance} UU`}
               className="w-full h-1 accent-current rounded-full"
               style={{ accentColor: ACCENT }}
             />
@@ -264,6 +270,7 @@ export function SquadChoreographyEditor() {
               onPointerDown={drag.onPointerDown}
               onPointerUp={drag.onPointerUp}
               onPointerMove={drag.onPointerMove}
+              onAngleChange={setForwardAngle}
             />
           )}
           {activeTab === 'pipeline' && (

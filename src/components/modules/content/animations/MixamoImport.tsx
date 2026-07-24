@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import { Download, FolderInput, ExternalLink, Loader2, PersonStanding } from 'lucide-react';
 import {
-  ACCENT_VIOLET, OPACITY_8, OPACITY_12, OPACITY_20, OPACITY_30, withOpacity,
+  ACCENT_VIOLET, OPACITY_8, OPACITY_12, OPACITY_20, OPACITY_30, OPACITY_80, withOpacity,
 } from '@/lib/chart-colors';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
 import { useProjectStore } from '@/stores/projectStore';
@@ -75,7 +75,7 @@ export function MixamoImport() {
       }}
     >
       <div className="flex items-center gap-2">
-        <Download className="w-4 h-4" style={{ color: ACCENT }} />
+        <Download className="w-4 h-4" style={{ color: ACCENT }} aria-hidden="true" />
         <h3 className="text-sm font-bold text-text">Import Mixamo Animations</h3>
       </div>
       <p className="text-xs text-text-muted leading-relaxed">
@@ -86,8 +86,13 @@ export function MixamoImport() {
       {/* Manual download contract */}
       <ol className="space-y-1.5 list-none">
         {DOWNLOAD_STEPS.map((step, i) => (
-          <li key={i} className="text-[11px] text-text-muted leading-relaxed flex gap-2">
-            <span className="font-mono font-bold" style={{ color: withOpacity(ACCENT, OPACITY_30) }}>
+          <li key={i} className="text-xs text-text-muted leading-relaxed flex gap-2">
+            {/* Decorative marker — the <ol> already conveys order to assistive tech. */}
+            <span
+              aria-hidden="true"
+              className="font-mono font-bold"
+              style={{ color: withOpacity(ACCENT, OPACITY_80) }}
+            >
               {String(i + 1).padStart(2, '0')}.
             </span>
             <span>{step}</span>
@@ -99,32 +104,35 @@ export function MixamoImport() {
         href="https://www.mixamo.com/"
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-1.5 text-xs font-medium w-fit"
+        className="inline-flex items-center gap-1.5 text-xs font-medium w-fit rounded focus-ring"
         style={{ color: ACCENT }}
       >
-        <ExternalLink className="w-3 h-3" /> Open Mixamo
+        <ExternalLink className="w-3 h-3" aria-hidden="true" /> Open Mixamo
+        <span className="sr-only"> (opens in a new tab)</span>
       </a>
 
       <label className="flex flex-col gap-1 text-xs text-text-muted">
-        <span className="flex items-center gap-1.5"><FolderInput className="w-3 h-3" /> Watched folder (drop FBX here)</span>
+        <span className="flex items-center gap-1.5">
+          <FolderInput className="w-3 h-3" aria-hidden="true" /> Watched folder (drop FBX here)
+        </span>
         <input
-          aria-label="Mixamo import folder"
           value={importDir}
           onChange={(e) => setImportDir(e.target.value)}
           spellCheck={false}
-          className="px-2 py-1.5 rounded-lg font-mono text-sm bg-surface-deep/50 text-text outline-none"
+          className="px-2 py-1.5 rounded-lg font-mono text-sm bg-surface-deep/50 text-text focus-ring-inset"
           style={{ border: `1px solid ${withOpacity(ACCENT, OPACITY_20)}` }}
         />
       </label>
 
       <label className="flex flex-col gap-1 text-xs text-text-muted">
-        <span className="flex items-center gap-1.5"><PersonStanding className="w-3 h-3" /> Target skeleton</span>
+        <span className="flex items-center gap-1.5">
+          <PersonStanding className="w-3 h-3" aria-hidden="true" /> Target skeleton
+        </span>
         <input
-          aria-label="Target skeleton"
           value={targetSkeleton}
           onChange={(e) => setTargetSkeleton(e.target.value)}
           spellCheck={false}
-          className="px-2 py-1.5 rounded-lg font-mono text-sm bg-surface-deep/50 text-text outline-none"
+          className="px-2 py-1.5 rounded-lg font-mono text-sm bg-surface-deep/50 text-text focus-ring-inset"
           style={{ border: `1px solid ${withOpacity(ACCENT, OPACITY_20)}` }}
         />
       </label>
@@ -133,16 +141,29 @@ export function MixamoImport() {
         type="button"
         onClick={handleImport}
         disabled={isRunning || !importDir.trim() || !targetSkeleton.trim()}
-        className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-mono cursor-pointer transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
+        aria-busy={isRunning}
+        title={
+          !importDir.trim() || !targetSkeleton.trim()
+            ? 'Fill in both the watched folder and the target skeleton first'
+            : undefined
+        }
+        className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-mono cursor-pointer transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed focus-ring"
         style={{
           backgroundColor: withOpacity(ACCENT, OPACITY_12),
           border: `1px solid ${withOpacity(ACCENT, OPACITY_30)}`,
           color: ACCENT,
         }}
       >
-        {isRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-        <span>Run Import Pipeline</span>
+        {isRunning
+          ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+          : <Download className="w-4 h-4" aria-hidden="true" />}
+        <span>{isRunning ? 'Importing…' : 'Run Import Pipeline'}</span>
       </button>
+      {isRunning && (
+        <p role="status" className="text-xs text-text-muted">
+          Importing + retargeting every .fbx in the watched folder — progress streams in the CLI panel.
+        </p>
+      )}
     </div>
   );
 }

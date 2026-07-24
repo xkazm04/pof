@@ -1,6 +1,6 @@
 'use client';
 
-import { MapPin } from 'lucide-react';
+import { MapPin, CheckCircle2, CircleDashed, Lock } from 'lucide-react';
 import {
   STATUS_WARNING, STATUS_SUCCESS, STATUS_LOCKED,
   ACCENT_EMERALD,
@@ -29,14 +29,7 @@ export function PoiEncountersGroup() {
                   <span className="text-xs font-bold text-text">{zp.zone}</span>
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">{totalPois} POIs</span>
-                    <span className="text-xs font-mono uppercase tracking-[0.15em] font-bold px-1.5 py-0.5 rounded"
-                      style={{
-                        color: zp.discoveryPct === 100 ? STATUS_SUCCESS : zp.discoveryPct > 0 ? STATUS_WARNING : STATUS_LOCKED,
-                        backgroundColor: zp.discoveryPct === 100 ? withOpacity(STATUS_SUCCESS, OPACITY_8) : zp.discoveryPct > 0 ? withOpacity(STATUS_WARNING, OPACITY_8) : 'transparent',
-                        border: `1px solid ${withOpacity(zp.discoveryPct === 100 ? STATUS_SUCCESS : zp.discoveryPct > 0 ? STATUS_WARNING : STATUS_LOCKED, OPACITY_20)}`,
-                      }}>
-                      {zp.discoveryPct}% discovered
-                    </span>
+                    <DiscoveryPill pct={zp.discoveryPct} />
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -66,6 +59,31 @@ export function PoiEncountersGroup() {
       {/* Environmental Hazard Map */}
       <HazardMap />
     </>
+  );
+}
+
+/* ── Discovery Pill ────────────────────────────────────────────────────── */
+
+/* Discovery used to read as a bare tinted percentage. It now leads with a glyph
+   (and a dashed border when nothing is discovered) so the state survives a
+   colorblind read — same vocabulary as the Fast Travel network pills. */
+function DiscoveryPill({ pct }: { pct: number }) {
+  const full = pct === 100;
+  const partial = pct > 0 && pct < 100;
+  const Icon = full ? CheckCircle2 : partial ? CircleDashed : Lock;
+  const color = full ? STATUS_SUCCESS : partial ? STATUS_WARNING : STATUS_LOCKED;
+  return (
+    <span
+      className="flex items-center gap-1 text-xs font-mono uppercase tracking-[0.15em] font-bold px-1.5 py-0.5 rounded"
+      style={{
+        color,
+        backgroundColor: full || partial ? withOpacity(color, OPACITY_8) : 'transparent',
+        border: `1px ${full ? 'solid' : 'dashed'} ${withOpacity(color, OPACITY_20)}`,
+      }}
+    >
+      <Icon aria-hidden className="w-3 h-3 flex-shrink-0" strokeWidth={2.5} />
+      {pct}% discovered
+    </span>
   );
 }
 

@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Zap } from 'lucide-react';
 import { optimizeMeshScript } from '@/lib/blender-mcp/scripts/optimize-mesh';
 import { TabHeader } from '@/components/modules/shared/TabHeader';
+import { WARNING_TEXT } from '@/lib/blender-mcp/status-tokens';
 import {
   MCPFormCard,
   MCPField,
@@ -16,6 +17,10 @@ import { useScriptExecution } from './useScriptExecution';
 
 /* ─── Mesh Optimization Tab ─────────────────────────────────────────────── */
 
+/** Checkbox styling shared by the operation toggles — keyboard focus included. */
+const CHECKBOX_CLASS =
+  'focus-ring rounded border-border accent-[var(--visual-gen)]';
+
 export function MeshOptimizationTab() {
   const { isRunning, result, error, connected, execute } = useScriptExecution();
   const [objectName, setObjectName] = useState('');
@@ -23,17 +28,32 @@ export function MeshOptimizationTab() {
   const [recalcNormals, setRecalcNormals] = useState(true);
   const [mergeDistance, setMergeDistance] = useState('0.0001');
 
+  /**
+   * `null` when the field is not a usable positive number. The script only reads
+   * it for the remove-doubles threshold, so it is only a blocker when that
+   * operation is on — previously a typo here was silently swallowed by a
+   * `|| 0.0001` fallback and the run used a threshold the user never chose.
+   */
+  const parsedMergeDistance = useMemo(() => {
+    const n = parseFloat(mergeDistance.trim());
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }, [mergeDistance]);
+
+  const noOperations = !removeDoubles && !recalcNormals;
+  const mergeDistanceInvalid = removeDoubles && parsedMergeDistance === null;
+
   const handleOptimize = useCallback(() => {
-    if (!objectName.trim()) return;
+    if (!objectName.trim() || noOperations) return;
+    if (removeDoubles && parsedMergeDistance === null) return;
 
     const code = optimizeMeshScript({
       objectName: objectName.trim(),
       removeDoubles,
       recalcNormals,
-      mergeDistance: parseFloat(mergeDistance) || 0.0001,
+      mergeDistance: parsedMergeDistance ?? 0.0001,
     });
     execute('Mesh Optimization', code);
-  }, [objectName, removeDoubles, recalcNormals, mergeDistance, execute]);
+  }, [objectName, removeDoubles, recalcNormals, parsedMergeDistance, noOperations, execute]);
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -52,28 +72,51 @@ export function MeshOptimizationTab() {
           />
         </MCPField>
 
-        <div className="flex items-center gap-4">
-          <label className="flex items-center gap-1.5 text-xs text-text">
-            <input
-              type="checkbox"
-              checked={removeDoubles}
-              onChange={(e) => setRemoveDoubles(e.target.checked)}
-              className="rounded border-border"
-            />
-            Remove Doubles
-          </label>
-          <label className="flex items-center gap-1.5 text-xs text-text">
-            <input
-              type="checkbox"
-              checked={recalcNormals}
-              onChange={(e) => setRecalcNormals(e.target.checked)}
-              className="rounded border-border"
-            />
-            Recalculate Normals
-          </label>
-        </div>
+        <fieldset>
+          <legend className="block text-xs font-medium text-text mb-1">
+            Operations
+          </legend>
+          <div className="flex items-center gap-4">
+            <label className="flex items-center gap-1.5 text-xs text-text">
+              <input
+                type="checkbox"
+                checked={removeDoubles}
+                onChange={(e) => setRemoveDoubles(e.target.checked)}
+                className={CHECKBOX_CLASS}
+              />
+              Remove Doubles
+            </label>
+            <label className="flex items-center gap-1.5 text-xs text-text">
+              <input
+                type="checkbox"
+                checked={recalcNormals}
+                onChange={(e) => setRecalcNormals(e.target.checked)}
+                className={CHECKBOX_CLASS}
+              />
+              Recalculate Normals
+            </label>
+          </div>
+          {noOperations && (
+            <p className={`text-xs mt-1 ${WARNING_TEXT}`}>
+              Pick at least one operation — with both off the run would change
+              nothing.
+            </p>
+          )}
+        </fieldset>
 
-        <MCPField label="Merge Distance" htmlFor="mesh-merge">
+        <MCPField
+          label="Merge Distance"
+          htmlFor="mesh-merge"
+          hint={
+            mergeDistanceInvalid ? (
+              <span className={WARNING_TEXT}>
+                Enter a positive number, e.g. 0.0001.
+              </span>
+            ) : (
+              'Vertices closer together than this (in Blender units) are merged into one. Used by Remove Doubles.'
+            )
+          }
+        >
           <MCPTextInput
             id="mesh-merge"
             value={mergeDistance}
@@ -85,7 +128,9 @@ export function MeshOptimizationTab() {
 
         <MCPSubmitButton
           onClick={handleOptimize}
-          disabled={!connected || !objectName.trim()}
+          disabled={
+            !connected || !objectName.trim() || noOperations || mergeDistanceInvalid
+          }
           loading={isRunning}
           loadingLabel="Optimizing..."
           icon={Zap}

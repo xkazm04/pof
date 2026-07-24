@@ -7,6 +7,7 @@ import {
   Loader2, Layers, Volume2, Radio, Zap, Music,
 } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { CodeViewer } from '@/components/ui/CodeViewer';
 import { apiFetch } from '@/lib/api-utils';
 import type { AudioSceneDocument } from '@/types/audio-scene';
 import type { GeneratedFile, CodeGenResult } from '@/lib/audio-codegen';
@@ -158,9 +159,11 @@ export function AudioCodeGenPanel({ doc, accentColor }: AudioCodeGenPanelProps) 
           <div className="flex justify-end">
             <button
               onClick={handleCopyAll}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-2xs font-medium text-text-muted hover:text-text bg-surface-hover/50 hover:bg-surface-hover transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-2xs font-medium text-text-muted hover:text-text bg-surface-hover/50 hover:bg-surface-hover transition-colors focus-ring"
             >
-              {copiedFile === '__all__' ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+              {copiedFile === '__all__'
+                ? <Check className="w-3 h-3" style={{ color: STATUS_SUCCESS }} aria-hidden />
+                : <Copy className="w-3 h-3" aria-hidden />}
               {copiedFile === '__all__' ? 'Copied!' : 'Copy All Files'}
             </button>
           </div>
@@ -183,41 +186,57 @@ export function AudioCodeGenPanel({ doc, accentColor }: AudioCodeGenPanelProps) 
                     {files.map(file => {
                       const isExpanded = expandedFile === file.filename;
                       const isCopied = copiedFile === file.filename;
+                      const panelId = `audio-codegen-${slugify(file.filename)}`;
 
                       return (
                         <div key={file.filename} className="rounded-md border border-border/50 overflow-hidden">
-                          <button
-                            onClick={() => setExpandedFile(isExpanded ? null : file.filename)}
-                            className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left hover:bg-surface-hover/30 transition-colors"
-                          >
-                            {isExpanded
-                              ? <ChevronDown className="w-3 h-3 text-text-muted flex-shrink-0" />
-                              : <ChevronRight className="w-3 h-3 text-text-muted flex-shrink-0" />
-                            }
-                            <FileCode className="w-3 h-3 flex-shrink-0" style={{ color: file.language === 'h' ? STATUS_INFO : STATUS_SUCCESS }} />
-                            <span className="text-2xs font-mono text-text flex-1">{file.filename}</span>
-                            <span className="text-2xs text-text-muted">{file.lineCount} lines</span>
+                          {/* Toggle and copy are siblings — a button may never nest a button. */}
+                          <div className="flex items-center gap-2 px-2.5 py-1.5 hover:bg-surface-hover/30 transition-colors">
                             <button
-                              onClick={(e) => { e.stopPropagation(); handleCopy(file); }}
-                              className="p-0.5 rounded text-text-muted hover:text-text transition-colors"
-                              title="Copy file contents"
+                              type="button"
+                              onClick={() => setExpandedFile(isExpanded ? null : file.filename)}
+                              aria-expanded={isExpanded}
+                              // The panel is unmounted when collapsed, so only point at it when it exists.
+                              aria-controls={isExpanded ? panelId : undefined}
+                              className="flex-1 min-w-0 flex items-center gap-2 text-left focus-ring rounded"
                             >
-                              {isCopied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+                              {isExpanded
+                                ? <ChevronDown className="w-3 h-3 text-text-muted flex-shrink-0" aria-hidden />
+                                : <ChevronRight className="w-3 h-3 text-text-muted flex-shrink-0" aria-hidden />
+                              }
+                              <FileCode className="w-3 h-3 flex-shrink-0" style={{ color: file.language === 'h' ? STATUS_INFO : STATUS_SUCCESS }} aria-hidden />
+                              <span className="text-2xs font-mono text-text flex-1 truncate">{file.filename}</span>
+                              <span className="text-2xs text-text-muted flex-shrink-0">{file.lineCount} lines</span>
                             </button>
-                          </button>
+                            <button
+                              type="button"
+                              onClick={() => handleCopy(file)}
+                              className="p-0.5 rounded text-text-muted hover:text-text transition-colors focus-ring flex-shrink-0"
+                              aria-label={isCopied ? `Copied ${file.filename}` : `Copy ${file.filename}`}
+                            >
+                              {isCopied
+                                ? <Check className="w-3 h-3" style={{ color: STATUS_SUCCESS }} aria-hidden />
+                                : <Copy className="w-3 h-3" aria-hidden />}
+                            </button>
+                          </div>
 
                           <AnimatePresence>
                             {isExpanded && (
                               <motion.div
+                                id={panelId}
                                 initial={{ height: 0, opacity: 0 }}
                                 animate={{ height: 'auto', opacity: 1 }}
                                 exit={{ height: 0, opacity: 0 }}
                                 transition={{ duration: 0.15 }}
-                                className="overflow-hidden"
+                                className="overflow-hidden border-t border-border/30"
                               >
-                                <pre className="px-3 py-2 bg-background text-2xs font-mono text-text-muted-hover overflow-x-auto max-h-[400px] overflow-y-auto leading-relaxed border-t border-border/30">
-                                  {file.content}
-                                </pre>
+                                <CodeViewer
+                                  code={file.content}
+                                  fileName={file.filename}
+                                  lang="cpp"
+                                  languageLabel={file.language === 'h' ? 'C++ Header' : 'C++'}
+                                  maxHeightClass="max-h-[400px]"
+                                />
                               </motion.div>
                             )}
                           </AnimatePresence>
@@ -240,6 +259,11 @@ export function AudioCodeGenPanel({ doc, accentColor }: AudioCodeGenPanelProps) 
       )}
     </div>
   );
+}
+
+/** Filename → id-safe slug, so a disclosure can point `aria-controls` at its panel. */
+function slugify(filename: string): string {
+  return filename.replace(/[^a-zA-Z0-9]+/g, '-').toLowerCase();
 }
 
 function MiniStat({ label, value, color }: { label: string; value: number; color: string }) {

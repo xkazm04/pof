@@ -59,6 +59,17 @@ export function HealthTrendChart({ data, height = 200 }: HealthTrendChartProps) 
     regressionMarkers, findingsTop, delta, regressionRate,
   } = computed;
 
+  // The chart's meaning was carried entirely by hover titles + line colour. The
+  // svg now states its trend in one sentence, and the full series is readable as
+  // a visually-hidden table (WCAG 1.1.1 / 1.4.1).
+  const first = data[0];
+  const last = data[data.length - 1];
+  const direction = delta > 0 ? `up ${delta}` : delta < 0 ? `down ${Math.abs(delta)}` : 'unchanged';
+  const chartSummary =
+    `Game health trend across ${data.length} sessions. Score ${first.overallScore} to ${last.overallScore} out of 100 (${direction}). ` +
+    `Findings ${first.findingsCount} to ${last.findingsCount}. ` +
+    `${regressionMarkers.length} session${regressionMarkers.length !== 1 ? 's' : ''} with regressions.`;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -86,6 +97,8 @@ export function HealthTrendChart({ data, height = 200 }: HealthTrendChartProps) 
         viewBox={`0 0 ${VIEW_W} ${height}`}
         className="w-full"
         preserveAspectRatio="xMidYMid meet"
+        role="img"
+        aria-label={chartSummary}
       >
         <defs>
           <linearGradient id="healthScoreGrad" x1="0" y1="0" x2="0" y2="1">
@@ -158,10 +171,13 @@ export function HealthTrendChart({ data, height = 200 }: HealthTrendChartProps) 
           </g>
         ))}
 
-        {/* Findings dots */}
+        {/* Findings dots — hoverable like the score dots, not a silent series */}
         {findingsPts.map((p) => (
           <g key={`f-${p.d.sessionId}`}>
             <circle cx={p.x} cy={p.y} r="2" fill={STATUS_INFO} opacity="0.75" />
+            <title>
+              {`${p.d.sessionName}\nFindings: ${p.d.findingsCount} (${p.d.criticalCount} critical)\n${formatDate(p.d.createdAt)}`}
+            </title>
           </g>
         ))}
 
@@ -219,6 +235,34 @@ export function HealthTrendChart({ data, height = 200 }: HealthTrendChartProps) 
           </text>
         ))}
       </svg>
+
+      {/* Text alternative: every plotted value, in reading order. The caption stays
+          short — the svg's aria-label already spoke the summary. */}
+      <table className="sr-only">
+        <caption>Game health by session</caption>
+        <thead>
+          <tr>
+            <th scope="col">Session</th>
+            <th scope="col">Date</th>
+            <th scope="col">Score</th>
+            <th scope="col">Findings</th>
+            <th scope="col">Critical</th>
+            <th scope="col">Regressions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((d) => (
+            <tr key={`row-${d.sessionId}`}>
+              <th scope="row">{d.sessionName}</th>
+              <td>{formatDate(d.createdAt)}</td>
+              <td>{d.overallScore}</td>
+              <td>{d.findingsCount}</td>
+              <td>{d.criticalCount}</td>
+              <td>{d.regressionCount}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
 
       <Legend regressionCount={regressionMarkers.length} />
     </motion.div>

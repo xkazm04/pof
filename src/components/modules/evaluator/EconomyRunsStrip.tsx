@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { Bookmark, BookmarkCheck, Trash2, Save, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { Badge } from '@/components/ui/Badge';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useEconomySimulatorStore } from '@/stores/economySimulatorStore';
 import { driftDirection } from '@/lib/balance/baseline';
 import { MOTION } from '@/lib/constants';
@@ -29,6 +30,9 @@ export function EconomyRunsStrip() {
 
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
+  // Deleting a saved run is irreversible and there is no undo — confirm first.
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
+  const nameInputId = useId();
 
   useEffect(() => {
     listRuns();
@@ -59,7 +63,9 @@ export function EconomyRunsStrip() {
         )}
         <div className="flex-1" />
         <div className="flex items-center gap-1.5">
+          <label htmlFor={nameInputId} className="sr-only">Name for the current run</label>
           <input
+            id={nameInputId}
             type="text"
             placeholder={result ? 'Name this run…' : 'Run a simulation to save…'}
             value={name}
@@ -71,10 +77,11 @@ export function EconomyRunsStrip() {
           <button
             onClick={handleSave}
             disabled={!canSave}
-            className="flex items-center gap-1 px-2 py-1 bg-amber-500/10 border border-amber-500/25 rounded text-amber-400 text-2xs font-medium hover:bg-amber-500/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            title={!result ? 'Run a simulation first' : name.trim() ? 'Save this run' : 'Name the run first'}
+            className="flex items-center gap-1 px-2 py-1 bg-amber-500/10 border border-amber-500/25 rounded text-amber-400 text-2xs font-medium hover:bg-amber-500/20 transition-colors focus-ring disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
-            Save
+            {saving ? <Loader2 className="w-3 h-3 animate-spin" aria-hidden /> : <Save className="w-3 h-3" aria-hidden />}
+            {saving ? 'Saving…' : 'Save'}
           </button>
         </div>
       </div>
@@ -100,26 +107,30 @@ export function EconomyRunsStrip() {
               <button
                 onClick={() => loadRun(run.id)}
                 title="Load this run (re-simulates with stored config)"
-                className="font-medium hover:underline"
+                aria-label={`Load run ${run.name}`}
+                className="font-medium hover:underline focus-ring rounded"
               >
                 {run.name}
               </button>
-              <span className="text-text-muted/60">·</span>
-              <span className="text-text-muted/80">{formatNumber(run.metrics.avgGold)}g</span>
-              <span className="text-text-muted/80">G{run.metrics.gini.toFixed(2)}</span>
+              <span className="text-text-muted/60" aria-hidden>·</span>
+              <span className="text-text-muted/80" title="Average gold">{formatNumber(run.metrics.avgGold)}g</span>
+              <span className="text-text-muted/80" title="Gini coefficient (wealth inequality)">G{run.metrics.gini.toFixed(2)}</span>
               <button
                 onClick={() => setBaselineRun(isBaseline ? null : run.id)}
                 title={isBaseline ? 'Clear baseline' : 'Mark as baseline'}
-                className={`p-0.5 rounded hover:bg-surface-hover/60 transition-colors ${isBaseline ? 'text-emerald-400' : 'text-text-muted hover:text-amber-400'}`}
+                aria-label={isBaseline ? `Clear ${run.name} as baseline` : `Mark ${run.name} as baseline`}
+                aria-pressed={isBaseline}
+                className={`p-0.5 rounded hover:bg-surface-hover/60 transition-colors focus-ring ${isBaseline ? 'text-emerald-400' : 'text-text-muted hover:text-amber-400'}`}
               >
-                {isBaseline ? <BookmarkCheck className="w-3 h-3" /> : <Bookmark className="w-3 h-3" />}
+                {isBaseline ? <BookmarkCheck className="w-3 h-3" aria-hidden /> : <Bookmark className="w-3 h-3" aria-hidden />}
               </button>
               <button
-                onClick={() => deleteRun(run.id)}
+                onClick={() => setPendingDelete({ id: run.id, name: run.name })}
                 title="Delete this run"
-                className="p-0.5 rounded text-text-muted hover:text-red-400 hover:bg-surface-hover/60 transition-colors"
+                aria-label={`Delete run ${run.name}`}
+                className="p-0.5 rounded text-text-muted hover:text-red-400 hover:bg-surface-hover/60 transition-colors focus-ring"
               >
-                <Trash2 className="w-3 h-3" />
+                <Trash2 className="w-3 h-3" aria-hidden />
               </button>
             </div>
           );
@@ -128,9 +139,23 @@ export function EconomyRunsStrip() {
 
       <AnimatePresence>
         {baselineRun && result && (
-          <DriftRow />
+          <DriftRow key="drift" />
         )}
       </AnimatePresence>
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        onClose={() => setPendingDelete(null)}
+        onConfirm={() => { if (pendingDelete) deleteRun(pendingDelete.id); }}
+        title="Delete this saved run?"
+        description={
+          <>
+            <span className="text-text">{pendingDelete?.name}</span> and its stored config will be
+            removed for good. If it is the current baseline, drift comparison stops until you pick a new one.
+          </>
+        }
+        confirmLabel="Delete run"
+      />
     </SurfaceCard>
   );
 }

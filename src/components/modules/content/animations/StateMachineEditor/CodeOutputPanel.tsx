@@ -1,38 +1,43 @@
 'use client';
 
-import { Code2, Copy, Check, Download } from 'lucide-react';
+import { Code2, Download } from 'lucide-react';
 import { STATUS_SUCCESS } from '@/lib/chart-colors';
+import { CodeViewer } from '@/components/ui/CodeViewer';
 import { EDITOR_ACCENT } from './constants';
+
+export type CodeTabId = 'full' | 'enum' | 'compute' | 'setup';
+
+// Each tab downloads/copies under the name it would carry in the UE project,
+// so a copied snippet is identifiable once it leaves the editor.
+const TABS: { id: CodeTabId; label: string; fileName: string; languageLabel?: string }[] = [
+  { id: 'full', label: 'Full Output', fileName: 'ARPGAnimInstance_StateMachine.cpp' },
+  { id: 'enum', label: 'Enum', fileName: 'EARPGAnimState.h' },
+  { id: 'compute', label: 'ComputeAnimState()', fileName: 'ARPGAnimInstance_ComputeAnimState.cpp' },
+  // Comment-only build instructions rather than compilable source — named and
+  // labelled as notes so the download isn't mistaken for a translation unit.
+  { id: 'setup', label: 'AnimBP Setup', fileName: 'AnimBP_Setup.txt', languageLabel: 'Setup Notes' },
+];
 
 export function CodeOutputPanel({
   code,
   codeTab,
   onTabChange,
-  onCopy,
-  copiedSection,
   onExport,
 }: {
   code: string;
-  codeTab: 'full' | 'enum' | 'compute' | 'setup';
-  onTabChange: (tab: 'full' | 'enum' | 'compute' | 'setup') => void;
-  onCopy: (section: string, text: string) => void;
-  copiedSection: string | null;
+  codeTab: CodeTabId;
+  onTabChange: (tab: CodeTabId) => void;
   onExport: () => void;
 }) {
-  const tabs = [
-    { id: 'full' as const, label: 'Full Output' },
-    { id: 'enum' as const, label: 'Enum' },
-    { id: 'compute' as const, label: 'ComputeAnimState()' },
-    { id: 'setup' as const, label: 'AnimBP Setup' },
-  ];
+  const activeTab = TABS.find((t) => t.id === codeTab) ?? TABS[0];
 
   return (
-    <div className="rounded-xl border border-border bg-[#0a0a1a] overflow-hidden">
+    <div className="rounded-xl border border-border bg-surface-deep overflow-hidden">
       {/* Tab bar */}
       <div className="flex items-center justify-between border-b border-border/40 px-3 py-2">
         <div className="flex items-center gap-1">
           <Code2 className="w-3.5 h-3.5 mr-2" style={{ color: EDITOR_ACCENT }} />
-          {tabs.map((t) => (
+          {TABS.map((t) => (
             <button
               key={t.id}
               onClick={() => onTabChange(t.id)}
@@ -47,33 +52,27 @@ export function CodeOutputPanel({
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => onCopy(codeTab, code)}
-            className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors"
-            style={{
-              backgroundColor: copiedSection === codeTab ? `${STATUS_SUCCESS}20` : `${EDITOR_ACCENT}10`,
-              color: copiedSection === codeTab ? STATUS_SUCCESS : EDITOR_ACCENT,
-            }}
-          >
-            {copiedSection === codeTab ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-            {copiedSection === codeTab ? 'Copied!' : 'Copy'}
-          </button>
-          <button
-            onClick={onExport}
-            className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors"
-            style={{ backgroundColor: `${STATUS_SUCCESS}10`, color: STATUS_SUCCESS }}
-          >
-            <Download className="w-3 h-3" />
-            Export .cpp
-          </button>
-        </div>
+        {/* Whole-machine export — distinct from CodeViewer's download of the
+            section currently on screen. */}
+        <button
+          onClick={onExport}
+          className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors"
+          style={{ backgroundColor: `${STATUS_SUCCESS}10`, color: STATUS_SUCCESS }}
+          title="Export the full generated C++ output as a dated .cpp file"
+        >
+          <Download className="w-3 h-3" />
+          Export .cpp
+        </button>
       </div>
 
-      {/* Code content */}
-      <pre className="p-4 text-[11px] font-mono text-text-muted leading-relaxed overflow-x-auto max-h-[500px] overflow-y-auto whitespace-pre">
-        {code}
-      </pre>
+      {/* Code content — shared Shiki viewer (highlighting, copy, download) */}
+      <CodeViewer
+        code={code}
+        fileName={activeTab.fileName}
+        lang="cpp"
+        languageLabel={activeTab.languageLabel}
+        maxHeightClass="max-h-[500px]"
+      />
     </div>
   );
 }

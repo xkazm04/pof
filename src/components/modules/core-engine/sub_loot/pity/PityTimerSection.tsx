@@ -114,7 +114,13 @@ export function PityTimerSection({ pityThreshold, setPityThreshold }: PityTimerS
           </button>
           <div className="flex items-center gap-2">
             <span className="text-2xs font-mono text-text-muted">Threshold:</span>
-            <input type="range" min={10} max={50} value={pityThreshold} onChange={(e) => setPityThreshold(Number(e.target.value))} className="flex-1 h-1 accent-blue-500" />
+            <input
+              type="range" min={10} max={50} value={pityThreshold}
+              onChange={(e) => setPityThreshold(Number(e.target.value))}
+              aria-label="Pity threshold — drops before a Rare+ is guaranteed"
+              aria-valuetext={`${pityThreshold} drops`}
+              className="flex-1 h-1 accent-blue-500 focus-ring"
+            />
             <span className="text-2xs font-mono" style={{ color: STATUS_INFO }}>{pityThreshold}</span>
           </div>
           <div className="text-2xs font-mono" style={{ color: fillColor }}>

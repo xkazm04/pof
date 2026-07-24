@@ -1,6 +1,7 @@
 'use client';
 
-import { memo } from 'react';
+import { memo, useRef, useState } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { motion } from 'framer-motion';
 import { STATUS_SUCCESS, STATUS_WARNING, STATUS_LOCKED, STATUS_LOCKED_STROKE, ACCENT_CYAN, OVERLAY_WHITE,
   withOpacity, OPACITY_50,
@@ -25,9 +26,39 @@ interface MapCanvasProps<Z extends MapZone> {
   matchingIds?: Set<string>;
 }
 
+/** Spoken status wording — the map's node colors are otherwise the only cue. */
+const STATUS_WORD: Record<MapZone['status'], string> = {
+  completed: 'completed',
+  active: 'active',
+  locked: 'locked',
+};
+
 function ZoneMapCanvasImpl<Z extends MapZone>({ zones, selectedZone, onSelectZone, matchingIds }: MapCanvasProps<Z>) {
   const hasFilter = matchingIds !== undefined && matchingIds.size > 0;
   const isInRange = (id: string) => !hasFilter || matchingIds!.has(id);
+  /* Keyboard operability: the node list is a roving-tabindex listbox — Tab
+     reaches the selected node, arrows move (and select) along the zone order,
+     Enter/Space re-selects. Focus is moved imperatively so the roving tabindex
+     and the DOM focus stay in sync. */
+  const [focusedId, setFocusedId] = useState<string | null>(null);
+  const nodeRefs = useRef(new Map<string, SVGGElement | null>());
+
+  const handleNodeKeyDown = (e: ReactKeyboardEvent<SVGGElement>, idx: number) => {
+    if (zones.length === 0) return;
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onSelectZone(zones[idx]);
+      return;
+    }
+    const step = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1
+      : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1
+        : 0;
+    if (step === 0) return;
+    e.preventDefault();
+    const next = zones[(idx + step + zones.length) % zones.length];
+    onSelectZone(next);
+    nodeRefs.current.get(next.id)?.focus();
+  };
   const getZoneColor = (z: MapZone) => {
     switch (z.status) {
       case 'completed': return STATUS_SUCCESS;
@@ -57,7 +88,9 @@ function ZoneMapCanvasImpl<Z extends MapZone>({ zones, selectedZone, onSelectZon
         </linearGradient>
       </defs>
 
-      {/* Draw connections first so they are behind nodes */}
+      {/* Draw connections first so they are behind nodes. Decorative: every
+          connection is also spoken in the selected zone's Region Details. */}
+      <g aria-hidden="true">
       {zones.map((zone) =>
         zone.connections.map((connId) => {
           const target = zones.find((z) => z.id === connId);
@@ -82,8 +115,10 @@ function ZoneMapCanvasImpl<Z extends MapZone>({ zones, selectedZone, onSelectZon
           );
         }),
       )}
+      </g>
 
       {/* Draw nodes */}
+      <g role="listbox" aria-label="World map zones">
       {zones.map((zone, i) => {
         const isSelected = zone.id === selectedZone.id;
         const color = getZoneColor(zone);
@@ -92,14 +127,38 @@ function ZoneMapCanvasImpl<Z extends MapZone>({ zones, selectedZone, onSelectZon
         const isHub = zone.type === 'hub';
         const inRange = isInRange(zone.id);
         const glowFilter = `drop-shadow(0 0 6px ${withOpacity(color, OPACITY_50)})`;
+        /* Locked nodes also read as a dashed outline, so status never rests on
+           hue alone (the legend names the same cue). */
+        const statusDash = zone.status === 'locked' ? '3 3' : undefined;
 
         return (
           <g
             key={zone.id}
+            ref={(el) => { nodeRefs.current.set(zone.id, el); }}
+            role="option"
+            aria-selected={isSelected}
+            aria-label={`${zone.displayName}, ${zone.type} zone, ${STATUS_WORD[zone.status]}${inRange ? '' : ', outside the current level filter'}`}
+            tabIndex={isSelected ? 0 : -1}
             onClick={() => onSelectZone(zone)}
-            className={`cursor-pointer group ${inRange ? '' : 'opacity-30'}`}
+            onKeyDown={(e) => handleNodeKeyDown(e, i)}
+            onFocus={() => setFocusedId(zone.id)}
+            onBlur={() => setFocusedId((prev) => (prev === zone.id ? null : prev))}
+            className={`cursor-pointer group focus:outline-none ${inRange ? '' : 'opacity-30'}`}
             style={{ transition: 'opacity 200ms ease-out' }}
           >
+            {/* Keyboard focus ring — inline box-shadow can't reach SVG, so the
+                indicator is drawn as its own dashed circle. */}
+            {focusedId === zone.id && (
+              <circle
+                cx={`${zone.cx}%`} cy={`${zone.cy}%`} r={isSelected ? 28 : 24}
+                fill="none"
+                stroke="var(--focus-accent, #60a5fa)"
+                strokeWidth={2}
+                strokeDasharray="4 3"
+                className="pointer-events-none"
+              />
+            )}
+
             {/* Hover ring */}
             <motion.circle
               initial={{ r: 0 }}
@@ -140,6 +199,7 @@ function ZoneMapCanvasImpl<Z extends MapZone>({ zones, selectedZone, onSelectZon
                 fill={color}
                 stroke={isSelected ? OVERLAY_WHITE : strokeColor}
                 strokeWidth="2"
+                strokeDasharray={statusDash}
                 style={{ transformBox: 'fill-box', transformOrigin: 'center', filter: hasFilter && inRange ? glowFilter : undefined }}
               />
             ) : isHub ? (
@@ -152,6 +212,7 @@ function ZoneMapCanvasImpl<Z extends MapZone>({ zones, selectedZone, onSelectZon
                 fill={color}
                 stroke={isSelected ? OVERLAY_WHITE : strokeColor}
                 strokeWidth="2"
+                strokeDasharray={statusDash}
                 rx="4"
                 style={{ filter: hasFilter && inRange ? glowFilter : undefined }}
               />
@@ -165,6 +226,7 @@ function ZoneMapCanvasImpl<Z extends MapZone>({ zones, selectedZone, onSelectZon
                 fill={color}
                 stroke={isSelected ? OVERLAY_WHITE : strokeColor}
                 strokeWidth="2"
+                strokeDasharray={statusDash}
                 style={{ filter: hasFilter && inRange ? glowFilter : (zone.status !== 'locked' ? 'url(#glow)' : 'none') }}
               />
             )}
@@ -205,6 +267,7 @@ function ZoneMapCanvasImpl<Z extends MapZone>({ zones, selectedZone, onSelectZon
           </g>
         );
       })}
+      </g>
     </svg>
   );
 }

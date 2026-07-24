@@ -137,7 +137,13 @@ function SimulationParams({
         <div className="space-y-0.5">
           <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Level</span>
           <div className="flex items-center gap-1">
-            <input type="range" min={1} max={50} value={itemLevel} onChange={(e) => onItemLevelChange(Number(e.target.value))} className="flex-1 h-1 accent-blue-500" />
+            <input
+              type="range" min={1} max={50} value={itemLevel}
+              onChange={(e) => onItemLevelChange(Number(e.target.value))}
+              aria-label="Item level"
+              aria-valuetext={`Level ${itemLevel}`}
+              className="flex-1 h-1 accent-blue-500 focus-ring"
+            />
             <span className="text-xs font-mono w-6 text-right" style={{ color: ACCENT }}>{itemLevel}</span>
           </div>
         </div>

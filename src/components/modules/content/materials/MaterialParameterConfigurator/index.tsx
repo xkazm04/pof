@@ -1,6 +1,6 @@
 'use client';
 
-import { Zap, CircleDot, Plug, BookOpen, Info } from 'lucide-react';
+import { Zap, CircleDot, Plug, BookOpen, Info, Check } from 'lucide-react';
 import { MODULE_COLORS } from '@/lib/constants';
 import type { MaterialConfiguratorConfig } from './types';
 import { SURFACES, FEATURES, GLOSSARY } from './constants';
@@ -55,11 +55,12 @@ export function MaterialParameterConfigurator({ onGenerate, isGenerating }: Mate
         </div>
         <div className="ml-auto flex items-center gap-1.5">
           <button
+            type="button"
             onClick={() => setExplainMode((v) => !v)}
             aria-pressed={explainMode}
             data-testid="material-explain-toggle"
             title="Decode the technical jargon into plain English"
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-2xs font-medium border transition-colors ${
+            className={`focus-ring flex items-center gap-1 px-2.5 py-1 rounded-md text-2xs font-medium border transition-colors ${
               explainMode
                 ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-400'
                 : 'bg-surface border-border text-text-muted hover:text-text'
@@ -69,11 +70,12 @@ export function MaterialParameterConfigurator({ onGenerate, isGenerating }: Mate
             Explain
           </button>
           <button
+            type="button"
             onClick={() => setShowGlossary((v) => !v)}
             aria-expanded={showGlossary}
             data-testid="material-glossary-toggle"
             title="What do these terms mean?"
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-2xs font-medium border transition-colors ${
+            className={`focus-ring flex items-center gap-1 px-2.5 py-1 rounded-md text-2xs font-medium border transition-colors ${
               showGlossary
                 ? 'bg-cyan-500/10 border-cyan-500/25 text-cyan-400'
                 : 'bg-surface border-border text-text-muted hover:text-text'
@@ -106,13 +108,19 @@ export function MaterialParameterConfigurator({ onGenerate, isGenerating }: Mate
             return (
               <button
                 key={s.id}
+                type="button"
                 onClick={() => selectSurface(s.id)}
-                className="flex flex-col items-center gap-1 px-2 py-2 rounded-lg transition-all text-center"
+                aria-pressed={isActive}
+                className="focus-ring relative flex flex-col items-center gap-1 px-2 py-2 rounded-lg transition-all text-center"
                 style={{
                   backgroundColor: isActive ? `${s.color}15` : 'var(--surface-deep)',
                   border: `1px solid ${isActive ? `${s.color}50` : 'var(--border)'}`,
                 }}
               >
+                {/* Glyph cue so the selected surface is not signalled by hue alone */}
+                {isActive && (
+                  <Check className="absolute top-1 right-1 w-2.5 h-2.5" style={{ color: s.color }} aria-hidden="true" />
+                )}
                 <Icon className="w-3.5 h-3.5" style={{ color: isActive ? s.color : 'var(--text-muted)' }} />
                 <span className="text-2xs font-medium" style={{ color: isActive ? s.color : 'var(--text-muted)' }}>
                   {s.label}
@@ -136,17 +144,21 @@ export function MaterialParameterConfigurator({ onGenerate, isGenerating }: Mate
           ]).map((opt) => (
             <button
               key={opt.id}
+              type="button"
               onClick={() => setOutputType(opt.id)}
-              className="flex-1 px-3 py-2 rounded-lg text-left transition-all"
+              aria-pressed={outputType === opt.id}
+              className="focus-ring flex-1 px-3 py-2 rounded-lg text-left transition-all"
               style={{
                 backgroundColor: outputType === opt.id ? `${MODULE_COLORS.content}12` : 'var(--surface-deep)',
                 border: `1px solid ${outputType === opt.id ? `${MODULE_COLORS.content}40` : 'var(--border)'}`,
               }}
             >
               <span
-                className="text-xs font-semibold block"
+                className="text-xs font-semibold flex items-center gap-1"
                 style={{ color: outputType === opt.id ? MODULE_COLORS.content : 'var(--text-muted)' }}
               >
+                {/* Glyph cue so the selected output is not signalled by hue alone */}
+                {outputType === opt.id && <Check className="w-3 h-3 flex-shrink-0" aria-hidden="true" />}
                 {opt.label}
               </span>
               <span className="text-2xs text-text-muted">{opt.desc}</span>
@@ -169,8 +181,10 @@ export function MaterialParameterConfigurator({ onGenerate, isGenerating }: Mate
             return (
               <button
                 key={f.id}
+                type="button"
                 onClick={() => toggleFeature(f.id)}
-                className="flex items-center gap-2 px-2.5 py-2 rounded-lg text-left transition-all"
+                aria-pressed={isActive}
+                className="focus-ring flex items-center gap-2 px-2.5 py-2 rounded-lg text-left transition-all"
                 style={{
                   backgroundColor: isActive ? `${f.color}10` : 'var(--surface-deep)',
                   border: `1px solid ${isActive ? `${f.color}40` : 'var(--border)'}`,
@@ -244,9 +258,10 @@ export function MaterialParameterConfigurator({ onGenerate, isGenerating }: Mate
 
       {/* ─── Generate Button ─── */}
       <button
+        type="button"
         onClick={handleGenerate}
         disabled={isGenerating}
-        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs font-medium transition-all disabled:opacity-50"
+        className="focus-ring w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs font-medium transition-all disabled:opacity-50"
         style={{
           backgroundColor: `${MODULE_COLORS.content}15`,
           color: MODULE_COLORS.content,

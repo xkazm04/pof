@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Compass, Navigation, Info, Map as MapIcon, Anchor, Lock, Unlock, ChevronRight } from 'lucide-react';
+import { Compass, Navigation, Info, Map as MapIcon, Anchor, Lock, Unlock, ChevronRight, CheckCircle2, Radio } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   STATUS_WARNING, STATUS_SUCCESS, STATUS_ERROR,
@@ -41,15 +41,19 @@ export function MapTopologyGroup({ featureMap, defs, matchingIds }: MapTopologyG
           <BlueprintPanel color={ACCENT} className="p-3">
             <div className="flex justify-between items-center mb-2.5 relative z-10">
               <SectionHeader icon={Compass} label="World Map Preview" color={ACCENT} />
+              {/* Status legend: each state carries a glyph (and, for locked, the
+                  dashed outline the canvas draws) so it never reads by hue alone. */}
               <div className="flex gap-4 text-xs font-mono uppercase tracking-[0.15em] text-text-muted bg-surface-deep px-3 py-1.5 rounded-full border border-border/40">
-                <span className="flex items-center gap-1.5 hover:text-cyan-400 transition-colors cursor-help">
-                  <span className="w-2 h-2 rounded-full shadow-[0_0_5px_currentColor]" style={{ backgroundColor: STATUS_SUCCESS, color: STATUS_SUCCESS }} /> Completed
+                <span className="flex items-center gap-1.5" style={{ color: STATUS_SUCCESS }}>
+                  <CheckCircle2 aria-hidden className="w-3 h-3" strokeWidth={2.5} /> Completed
                 </span>
-                <span className="flex items-center gap-1.5 hover:text-amber-400 transition-colors cursor-help">
-                  <span className="w-2 h-2 rounded-full shadow-[0_0_5px_currentColor]" style={{ backgroundColor: STATUS_WARNING, color: STATUS_WARNING }} /> Active
+                <span className="flex items-center gap-1.5" style={{ color: STATUS_WARNING }}>
+                  <Radio aria-hidden className="w-3 h-3" strokeWidth={2.5} /> Active
                 </span>
-                <span className="flex items-center gap-1.5 hover:text-red-400 transition-colors cursor-help">
-                  <span className="w-2 h-2 rounded bg-border text-border" /> Locked
+                <span className="flex items-center gap-1.5 text-text-muted">
+                  <Lock aria-hidden className="w-3 h-3" strokeWidth={2.5} />
+                  <span className="inline-block w-3 h-2 rounded-sm border border-dashed border-border-bright" aria-hidden />
+                  Locked
                 </span>
               </div>
             </div>

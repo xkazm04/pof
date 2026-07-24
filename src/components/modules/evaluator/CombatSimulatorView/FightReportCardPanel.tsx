@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { Sparkles, Skull, AlertTriangle, Copy, Check } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { Tooltip } from '@/components/ui/Tooltip';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import { formatReportCardText, type FightReportCard } from '@/lib/combat/fight-report';
 import { BAND_STYLE } from './constants';
@@ -40,14 +41,17 @@ export function FightReportCardPanel({
         <span className={`px-2 py-0.5 rounded-full text-2xs font-semibold ${style.bg} ${style.text}`}>
           {style.label}
         </span>
-        <button
-          onClick={handleCopy}
-          title="Copy this report as shareable text"
-          className="focus-ring ml-auto flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-border text-2xs text-text-muted hover:text-text transition-colors"
-        >
-          {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-          {copied ? 'Copied' : 'Copy'}
-        </button>
+        <div className="ml-auto">
+          <Tooltip content="Copy this report as shareable text" multiline>
+            <button
+              onClick={handleCopy}
+              className="focus-ring flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-border text-2xs text-text-muted hover:text-text transition-colors"
+            >
+              {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+              {copied ? 'Copied' : 'Copy'}
+            </button>
+          </Tooltip>
+        </div>
       </div>
 
       {/* Headline (win rate) */}

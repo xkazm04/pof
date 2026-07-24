@@ -1,14 +1,14 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useId } from 'react';
 import {
   Gauge, Upload, Play, Cpu, MonitorDot,
   Zap, Activity, RefreshCw, Target, ShieldAlert,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { DashboardHeader } from '@/components/ui/DashboardHeader';
+import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { usePerformanceProfilingStore } from '@/stores/performanceProfilingStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { MODULE_COLORS, ACCENT_EMERALD_DARK, ACCENT_RED, OPACITY_8 } from '@/lib/chart-colors';
@@ -43,8 +43,16 @@ export function PerformanceProfilingView() {
   const [scenario, setScenario] = useState<string>('combat-heavy');
   const [enemyCount, setEnemyCount] = useState(50);
   const [targetFPS, setTargetFPS] = useState(60);
+  // Which action produced the current store error, so Retry re-runs *that* action.
+  const [lastAction, setLastAction] = useState<'generate' | 'triage' | 'import'>('generate');
+  // Locally dismissed error text — compared by value so a *new* error resurfaces.
+  const [dismissedError, setDismissedError] = useState<string | null>(null);
+
+  const enemyId = useId();
+  const fpsId = useId();
 
   const handleGenerate = useCallback(async () => {
+    setLastAction('generate');
     const session = await generateSample(scenario, enemyCount, targetFPS, projectPath);
     if (session) {
       await runTriage(session.id);
@@ -52,8 +60,15 @@ export function PerformanceProfilingView() {
   }, [generateSample, runTriage, scenario, enemyCount, targetFPS, projectPath]);
 
   const handleTriage = useCallback(async () => {
+    setLastAction('triage');
     if (activeSession) await runTriage(activeSession.id);
   }, [runTriage, activeSession]);
+
+  const handleRetry = useCallback(() => {
+    if (lastAction === 'triage') void handleTriage();
+    else if (lastAction === 'import') setShowImport(true);
+    else void handleGenerate();
+  }, [lastAction, handleTriage, handleGenerate]);
 
   const summary = activeSession?.summary;
   const critCount = findings.filter((f) => f.priority === 'critical').length;
@@ -104,6 +119,7 @@ export function PerformanceProfilingView() {
             >
               <CSVImportPanel
                 onImport={async (csv, name) => {
+                  setLastAction('import');
                   const session = await importCSV(csv, name, projectPath);
                   if (session) {
                     await runTriage(session.id);
@@ -118,17 +134,21 @@ export function PerformanceProfilingView() {
 
         {/* Scenario config */}
         <div className="flex items-center gap-3 mb-4">
-          <div className="flex gap-1">
+          <div className="flex gap-1" role="group" aria-label="Profiling scenario">
             {SCENARIO_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
+                type="button"
+                // Visible text is truncated at " (" — expose the full label to AT.
+                aria-label={opt.label}
+                aria-pressed={scenario === opt.value}
                 onClick={() => {
                   setScenario(opt.value);
                   if (opt.value === 'combat-heavy') setEnemyCount(50);
                   else if (opt.value === 'exploration') setEnemyCount(10);
                   else setEnemyCount(0);
                 }}
-                className={`px-2.5 py-1 rounded-lg text-2xs font-medium border transition-colors ${
+                className={`focus-ring px-2.5 py-1 rounded-lg text-2xs font-medium border transition-colors ${
                   scenario === opt.value
                     ? 'bg-rose-500/15 border-rose-500/30 text-rose-400'
                     : 'bg-surface border-border text-text-muted hover:text-text'
@@ -139,18 +159,24 @@ export function PerformanceProfilingView() {
             ))}
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-2xs text-text-muted">Enemies:</label>
+            <label htmlFor={enemyId} className="text-2xs text-text-muted">Enemies:</label>
             <input
+              id={enemyId}
               type="number"
+              min={0}
+              max={200}
               value={enemyCount}
               onChange={(e) => setEnemyCount(Math.max(0, Math.min(200, Number(e.target.value) || 0)))}
               className="w-16 px-2 py-1 bg-surface border border-border rounded-lg text-xs text-text focus:outline-none focus:border-rose-500/40"
             />
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-2xs text-text-muted">Target FPS:</label>
+            <label htmlFor={fpsId} className="text-2xs text-text-muted">Target FPS:</label>
             <input
+              id={fpsId}
               type="number"
+              min={30}
+              max={144}
               value={targetFPS}
               onChange={(e) => setTargetFPS(Math.max(30, Math.min(144, Number(e.target.value) || 60)))}
               className="w-16 px-2 py-1 bg-surface border border-border rounded-lg text-xs text-text focus:outline-none focus:border-rose-500/40"
@@ -193,10 +219,22 @@ export function PerformanceProfilingView() {
       <div className="flex-1 overflow-y-auto px-6 pb-6">
         {isLoading && <LoadingRow label="Loading profiling data…" color={ACCENT_RED} />}
 
-        {error && (
-          <SurfaceCard className="p-4 mb-4 border-status-red-strong">
-            <p className="text-sm text-red-400">{error}</p>
-          </SurfaceCard>
+        {/* Button spinners alone are silent to AT — announce the in-flight action. */}
+        <div className="sr-only" role="status" aria-live="polite">
+          {isImporting
+            ? (lastAction === 'import' ? 'Importing CSV and analysing…' : 'Generating sample session…')
+            : isTriaging
+              ? 'Running AI triage…'
+              : ''}
+        </div>
+
+        {error && error !== dismissedError && (
+          <InlineErrorRetry
+            className="mb-4"
+            message={error}
+            onRetry={handleRetry}
+            onDismiss={() => setDismissedError(error)}
+          />
         )}
 
         {!isLoading && !activeSession && (
@@ -228,7 +266,7 @@ export function PerformanceProfilingView() {
               {triage && (
                 <>
                   <span className="text-text-muted/50">|</span>
-                  Score: <ProgressRing value={triage.overallScore} size={20} strokeWidth={2} color={triage.overallScore > 70 ? ACCENT_EMERALD_DARK : triage.overallScore > 40 ? MODULE_COLORS.content : MODULE_COLORS.evaluator} />
+                  Score: <ProgressRing value={triage.overallScore} size={20} strokeWidth={2} label={`Triage score ${triage.overallScore} out of 100`} color={triage.overallScore > 70 ? ACCENT_EMERALD_DARK : triage.overallScore > 40 ? MODULE_COLORS.content : MODULE_COLORS.evaluator} />
                   <span className="text-text-muted/50">|</span>
                   {BOTTLENECK_LABELS[triage.bottleneck]}
                 </>

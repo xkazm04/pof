@@ -102,7 +102,15 @@ export function WeightTuning({
               <div key={affix.id} className={`flex items-center gap-1.5 ${eligible ? '' : 'opacity-30'}`}>
                 <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: AXIS_COLORS[affix.axis] }} />
                 <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted truncate w-20">{affix.name}</span>
-                <input type="range" min={0} max={50} step={1} value={Math.round(w * 10)} onChange={(e) => onUpdateWeight(affix.id, Number(e.target.value) / 10)} className="flex-1 h-1 accent-blue-500" disabled={!eligible} />
+                {/* Slider units are tenths of a weight, so aria-valuetext spells out the real weight. */}
+                <input
+                  type="range" min={0} max={50} step={1} value={Math.round(w * 10)}
+                  onChange={(e) => onUpdateWeight(affix.id, Number(e.target.value) / 10)}
+                  aria-label={`Weight for ${affix.name}`}
+                  aria-valuetext={w.toFixed(1)}
+                  className="flex-1 h-1 accent-blue-500 focus-ring"
+                  disabled={!eligible}
+                />
                 <span className="text-xs font-mono w-8 text-right" style={{ color: isCustom ? STATUS_WARNING : 'var(--text-muted)' }}>
                   {w.toFixed(1)}
                 </span>

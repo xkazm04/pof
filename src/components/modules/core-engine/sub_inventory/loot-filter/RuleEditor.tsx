@@ -53,9 +53,12 @@ export function RuleEditor({ rulesetId, rule, accent }: { rulesetId: string; rul
                 <button key={c} type="button" onClick={() => patchStyle({ color: c })}
                   className="w-5 h-5 rounded-full border-2 cursor-pointer transition-transform hover:scale-110"
                   style={{ backgroundColor: c, borderColor: rule.style.color === c ? c : 'transparent', boxShadow: rule.style.color === c ? `0 0 0 2px ${withOpacity(c, OPACITY_25)}` : 'none' }}
+                  aria-label={`Beam / text color ${c}`}
+                  aria-pressed={rule.style.color === c}
                   title={c} />
               ))}
               <button type="button" onClick={() => patchStyle({ color: undefined })}
+                aria-label="Clear beam / text color"
                 className="text-[10px] font-mono text-text-muted hover:text-text px-1 cursor-pointer">clear</button>
             </div>
           </Field>

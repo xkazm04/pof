@@ -33,7 +33,7 @@ export function AssetCard({ asset, isExpanded, edgeCount, allAssets, dependencie
       style={{ perspective: 1000 }}
     >
       <div
-        className={`h-full flex flex-col relative transition-all duration-300 ${isExpanded ? 'border-2 shadow-2xl' : 'border shadow-lg cursor-pointer'}`}
+        className={`h-full flex flex-col relative transition-all duration-300 focus-ring-outline ${isExpanded ? 'border-2 shadow-2xl' : 'border shadow-lg cursor-pointer'}`}
         style={{
           backgroundColor: 'var(--surface-card)',
           borderRadius: '16px',
@@ -41,7 +41,31 @@ export function AssetCard({ asset, isExpanded, edgeCount, allAssets, dependencie
           borderColor: isExpanded ? `${conf.color}80` : `${conf.color}30`,
           boxShadow: isExpanded ? `0 0 30px -5px ${conf.color}40, inset 0 0 20px -10px ${conf.color}20` : `0 10px 20px -10px rgba(0,0,0,0.5), inset 0 0 10px -5px ${conf.color}20`,
         }}
+        // Collapsed the card IS the expand control, so it carries button
+        // semantics (aria-expanded is only valid alongside that role); expanded
+        // it becomes a labelled region holding the graph, collapsed by its own
+        // CLOSE button or Escape.
+        role={isExpanded ? 'region' : 'button'}
+        // -1 (not undefined) when expanded: the element stays focusable, so the
+        // keyboard focus that triggered the expand is kept — which is what lets
+        // Escape (handled below, and bubbled from the CLOSE button) collapse it.
+        tabIndex={isExpanded ? -1 : 0}
+        aria-expanded={isExpanded ? undefined : false}
+        aria-label={
+          isExpanded
+            ? `Dependency graph for ${asset.name}`
+            : `${asset.name} — ${conf.label}, ${edgeCount[asset.relativePath] ?? 0} dependency edges. Show dependency graph`
+        }
         onClick={() => !isExpanded && setExpandedAsset(asset.relativePath)}
+        onKeyDown={(e) => {
+          if (!isExpanded && (e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault();
+            setExpandedAsset(asset.relativePath);
+          } else if (isExpanded && e.key === 'Escape') {
+            e.stopPropagation();
+            setExpandedAsset(null);
+          }
+        }}
       >
         {/* Glow Effects */}
         <div className="absolute inset-0 bg-gradient-to-br from-[rgba(255,255,255,0.05)] to-transparent pointer-events-none" />
@@ -105,7 +129,8 @@ export function AssetCard({ asset, isExpanded, edgeCount, allAssets, dependencie
                   </div>
                   <button
                     onClick={(e) => { e.stopPropagation(); setExpandedAsset(null); }}
-                    className="text-xs text-text-muted hover:text-text px-2 py-1 rounded bg-surface border border-border shadow-sm cursor-pointer hover:bg-surface-hover transition-colors font-mono"
+                    aria-label={`Close dependency graph for ${asset.name}`}
+                    className="text-xs text-text-muted hover:text-text px-2 py-1 rounded bg-surface border border-border shadow-sm cursor-pointer hover:bg-surface-hover transition-colors font-mono focus-ring"
                   >
                     CLOSE
                   </button>

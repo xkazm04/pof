@@ -1,5 +1,6 @@
 'use client';
 
+import { useId } from 'react';
 import { Shuffle } from 'lucide-react';
 import {
   ACCENT_PINK, STATUS_SUCCESS, STATUS_WARNING,
@@ -29,6 +30,9 @@ interface RollerTabProps {
 export function RollerTab({
   selected, rollRarity, setRollRarity, rollLevel, setRollLevel, rollResult, doRoll,
 }: RollerTabProps) {
+  // Visible captions become the controls' programmatic labels.
+  const rarityId = useId();
+  const levelId = useId();
   return (
     <div className="space-y-3">
       {/* Controls */}
@@ -36,8 +40,9 @@ export function RollerTab({
         <SectionHeader icon={Shuffle} label="DNA-Biased Roller" color={ACCENT} />
         <div className="flex items-center gap-3">
           <div>
-            <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted block mb-0.5">Rarity</span>
+            <label htmlFor={rarityId} className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted block mb-0.5">Rarity</label>
             <select
+              id={rarityId}
               value={rollRarity}
               onChange={(e) => setRollRarity(e.target.value)}
               className="text-xs font-mono px-2 py-1 rounded bg-surface-deep border border-border/40 text-text"
@@ -48,8 +53,9 @@ export function RollerTab({
             </select>
           </div>
           <div>
-            <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted block mb-0.5">Item Level</span>
+            <label htmlFor={levelId} className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted block mb-0.5">Item Level</label>
             <input
+              id={levelId}
               type="number" min={1} max={100} value={rollLevel}
               onChange={(e) => setRollLevel(parseInt(e.target.value) || 1)}
               className="w-16 text-xs font-mono font-bold px-1.5 py-1 rounded bg-surface-deep border border-border/40 text-text focus:outline-none"

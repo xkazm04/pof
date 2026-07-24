@@ -43,11 +43,14 @@ export function MonteCarloSimulator({ genome, rarity, level }: Props) {
       <div className="flex flex-wrap items-end gap-3">
         <div>
           <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted block mb-0.5">Iterations</span>
-          <div className="flex gap-1">
+          <div className="flex gap-1" role="group" aria-label="Simulation iterations">
             {ITERATION_PRESETS.map((n) => (
               <button
                 key={n}
+                type="button"
                 onClick={() => setIterations(n)}
+                aria-pressed={iterations === n}
+                aria-label={`${n.toLocaleString()} iterations`}
                 className="text-xs font-mono font-bold px-2 py-1 rounded transition-all"
                 style={{
                   backgroundColor: iterations === n ? withOpacity(ACCENT, OPACITY_25) : withOpacity(ACCENT, OPACITY_10),

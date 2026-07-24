@@ -38,6 +38,14 @@ export function CatalogLifecycleCell({
   lifecycle, ueAssetCount, busy, onRegenerate,
 }: CatalogLifecycleCellProps) {
   const label = actionLabel(lifecycle);
+  // One string for the tooltip and the accessible name, and it always leads with
+  // the visible word ("Running…" / "Generate") so the accessible name contains
+  // the visible label (WCAG 2.5.3). The button can drive any recipe step
+  // (author / wire / verify), so the in-flight copy stays step-neutral instead
+  // of claiming "Generating".
+  const hint = busy
+    ? 'Running… a generation step is in progress'
+    : `${label} this entry's UE assets`;
 
   return (
     <div className="flex items-center gap-2">
@@ -48,13 +56,30 @@ export function CatalogLifecycleCell({
       {onRegenerate && (
         <button
           type="button"
-          onClick={onRegenerate}
-          disabled={busy}
+          // Guarded rather than `disabled`: the run it starts is what disables it,
+          // and a disabled button leaves the tab order — so the very click that
+          // launched the step throws focus to <body> and a keyboard user loses
+          // their place in a catalog of hundreds. aria-disabled keeps the button
+          // focusable while still announcing (and behaving as) unavailable.
+          onClick={() => { if (!busy) onRegenerate(); }}
+          aria-disabled={busy}
           aria-busy={busy}
-          // The button can drive any recipe step (author / wire / verify), so the
-          // in-flight copy stays step-neutral instead of claiming "Generating".
-          title={busy ? 'A generation step is running…' : `${label} this entry's UE assets`}
-          className="focus-ring shrink-0 text-2xs font-mono font-bold px-1.5 py-0.5 rounded border border-border/50 text-text-muted hover:text-text disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          // The visible word repeats on every row; the accessible name carries
+          // the context the mouse-only `title` gives.
+          aria-label={hint}
+          title={hint}
+          className={[
+            'focus-ring shrink-0 inline-flex items-center h-5 px-2 rounded',
+            // h-5 matches the badge's height so the two sit on one line, not a
+            // 4px-off stagger repeated down the column.
+            'border border-border/50 text-text-muted',
+            // 12px — the readable floor. 10px (`text-2xs`) is the metadata size,
+            // used for the count beside it, not for an action label.
+            'text-xs font-mono font-bold',
+            busy
+              ? 'opacity-50 cursor-not-allowed'
+              : 'cursor-pointer hover:text-text hover:border-border',
+          ].join(' ')}
         >
           {busy ? 'Running…' : label}
         </button>

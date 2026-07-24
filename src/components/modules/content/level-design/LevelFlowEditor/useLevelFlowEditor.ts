@@ -29,6 +29,11 @@ export function useLevelFlowEditor({
   const [isPanning, setIsPanning] = useState(false);
   const panStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
 
+  /** Link queued for deletion — a first click/Enter arms, a second confirms. */
+  const [armedConnectionId, setArmedConnectionId] = useState<string | null>(null);
+  /** Room queued for deletion — drives the confirm dialog (deleting drops its links too). */
+  const [pendingDeleteRoomId, setPendingDeleteRoomId] = useState<string | null>(null);
+
   // Blender blockout
   const [blenderExporting, setBlenderExporting] = useState(false);
   const [blenderResult, setBlenderResult] = useState<{ message: string; isError: boolean } | null>(null);
@@ -62,6 +67,25 @@ export function useLevelFlowEditor({
     if (selectedRoomId === roomId) onSelectRoom(null);
   }, [rooms, connections, onUpdateRooms, onUpdateConnections, selectedRoomId, onSelectRoom]);
 
+  /** Deleting a room also drops its links, so it goes through a confirm step. */
+  const requestDeleteRoom = useCallback((roomId: string) => {
+    if (readOnly) return;
+    setPendingDeleteRoomId(roomId);
+  }, [readOnly]);
+
+  const cancelDeleteRoom = useCallback(() => setPendingDeleteRoomId(null), []);
+
+  const confirmDeleteRoom = useCallback(() => {
+    if (pendingDeleteRoomId) deleteRoom(pendingDeleteRoomId);
+    setPendingDeleteRoomId(null);
+  }, [pendingDeleteRoomId, deleteRoom]);
+
+  /** Keyboard alternative to dragging a node with the mouse. */
+  const nudgeRoom = useCallback((roomId: string, dx: number, dy: number) => {
+    if (readOnly) return;
+    onUpdateRooms(rooms.map((r) => (r.id === roomId ? { ...r, x: r.x + dx, y: r.y + dy } : r)));
+  }, [readOnly, rooms, onUpdateRooms]);
+
   // ── Connection handling ──
 
   const startConnection = useCallback((roomId: string) => {
@@ -91,7 +115,19 @@ export function useLevelFlowEditor({
 
   const deleteConnection = useCallback((connId: string) => {
     onUpdateConnections(connections.filter((c) => c.id !== connId));
+    setArmedConnectionId((cur) => (cur === connId ? null : cur));
   }, [connections, onUpdateConnections]);
+
+  /**
+   * Link deletion is two-step: the hit area is a wide invisible line, so a single
+   * stray click must never destroy a connection. First activation arms, second deletes.
+   */
+  const toggleArmConnection = useCallback((connId: string) => {
+    if (readOnly) return;
+    setArmedConnectionId((cur) => (cur === connId ? null : connId));
+  }, [readOnly]);
+
+  const disarmConnection = useCallback(() => setArmedConnectionId(null), []);
 
   // ── Drag handling ──
 
@@ -149,6 +185,7 @@ export function useLevelFlowEditor({
 
   const handleSvgMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.target === svgRef.current || (e.target as SVGElement).tagName === 'rect') {
+      setArmedConnectionId(null);
       if (connectingFrom) {
         setConnectingFrom(null);
         return;
@@ -211,6 +248,8 @@ export function useLevelFlowEditor({
     }
   }, [rooms]);
 
+  const dismissBlenderResult = useCallback(() => setBlenderResult(null), []);
+
   return {
     svgRef,
     dragState,
@@ -221,6 +260,15 @@ export function useLevelFlowEditor({
     blenderExporting,
     blenderResult,
     blenderConnected,
+    dismissBlenderResult,
+    armedConnectionId,
+    toggleArmConnection,
+    disarmConnection,
+    pendingDeleteRoomId,
+    requestDeleteRoom,
+    cancelDeleteRoom,
+    confirmDeleteRoom,
+    nudgeRoom,
     addRoom,
     deleteRoom,
     startConnection,

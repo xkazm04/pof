@@ -1,6 +1,7 @@
 import { Target } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { NumberField } from '@/components/ui/NumberField';
+import { Tooltip } from '@/components/ui/Tooltip';
 import type {
   GearLoadout,
   CombatAbility,
@@ -124,20 +125,21 @@ export function ScenarioBuilder({
               return (
                 <div key={type}>
                   <div className="flex items-center gap-1.5 mb-0.5">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setSelectedAbilities(
-                          allSelected
-                            ? selectedAbilities.filter((id) => !groupIds.includes(id))
-                            : [...new Set([...selectedAbilities, ...groupIds])],
-                        )
-                      }
-                      className="text-[10px] uppercase tracking-wide font-semibold text-text-muted/70 hover:text-text transition-colors"
-                      title={allSelected ? `Clear all ${label}` : `Select all ${label}`}
-                    >
-                      {label}
-                    </button>
+                    <Tooltip content={allSelected ? `Clear all ${label}` : `Select all ${label}`}>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSelectedAbilities(
+                            allSelected
+                              ? selectedAbilities.filter((id) => !groupIds.includes(id))
+                              : [...new Set([...selectedAbilities, ...groupIds])],
+                          )
+                        }
+                        className="focus-ring text-[10px] uppercase tracking-wide font-semibold text-text-muted/70 hover:text-text transition-colors"
+                      >
+                        {label}
+                      </button>
+                    </Tooltip>
                     <span className="text-[10px] text-text-muted/50">{selectedInGroup}/{group.length}</span>
                   </div>
                   <div className="flex flex-wrap gap-1">

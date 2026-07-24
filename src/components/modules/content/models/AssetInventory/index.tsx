@@ -2,7 +2,7 @@
 
 import { AnimatePresence } from 'framer-motion';
 import {
-  Search, ScanLine, Loader2, AlertCircle, FolderOpen,
+  Search, ScanLine, Loader2, AlertCircle, FolderOpen, ArrowUpDown,
 } from 'lucide-react';
 import type { AssetType } from '@/app/api/filesystem/scan-assets/route';
 import { ACCENT, TYPE_CONFIG } from './constants';
@@ -11,6 +11,14 @@ import { AssetCard } from './AssetCard';
 import { BridgeManifestCard } from './BridgeManifestCard';
 import { FilterChip } from './FilterChip';
 import { useAssetInventory } from './useAssetInventory';
+import type { SortKey } from './types';
+
+const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: 'name', label: 'Name' },
+  { key: 'type', label: 'Type' },
+  { key: 'size', label: 'Size' },
+  { key: 'modified', label: 'Modified' },
+];
 
 // ── Main Component ──
 
@@ -26,6 +34,10 @@ export function AssetInventory() {
     setSearch,
     typeFilter,
     setTypeFilter,
+    sortKey,
+    sortDir,
+    toggleSort,
+    SortIcon,
     expandedAsset,
     setExpandedAsset,
     handleScan,
@@ -161,14 +173,47 @@ export function AssetInventory() {
 
       {/* Search bar */}
       <div className="relative">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" />
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" aria-hidden="true" />
         <input
           type="text"
           placeholder="Search by name or path..."
+          aria-label="Search assets by name or path"
           value={search}
           onChange={e => setSearch(e.target.value)}
           className="w-full pl-8 pr-3 py-1.5 rounded-md bg-surface-deep border border-border text-xs text-text placeholder-text-muted focus-ring-inset"
         />
+      </div>
+
+      {/* Sort controls */}
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <span id="asset-sort-label" className="text-xs text-text-muted mr-0.5">Sort</span>
+        <div className="flex items-center gap-1.5 flex-wrap" role="group" aria-labelledby="asset-sort-label">
+          {SORT_OPTIONS.map(({ key, label }) => {
+            const active = sortKey === key;
+            const Icon = active ? SortIcon : ArrowUpDown;
+            return (
+              <button
+                key={key}
+                onClick={() => toggleSort(key)}
+                aria-pressed={active}
+                aria-label={
+                  active
+                    ? `Sort by ${label}, currently ${sortDir === 'asc' ? 'ascending' : 'descending'}. Activate to reverse`
+                    : `Sort by ${label}`
+                }
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-all focus-ring"
+                style={{
+                  backgroundColor: active ? `${ACCENT}18` : 'transparent',
+                  color: active ? ACCENT : 'var(--text-muted)',
+                  border: `1px solid ${active ? `${ACCENT}35` : 'var(--border)'}`,
+                }}
+              >
+                {label}
+                <Icon className="w-3 h-3" aria-hidden="true" style={{ opacity: active ? 1 : 0.5 }} />
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Asset Grid */}

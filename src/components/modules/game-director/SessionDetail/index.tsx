@@ -10,10 +10,12 @@ import {
 import type { PlaytestFinding, DirectorEvent } from '@/types/game-director';
 import { ScoreRing } from '@/components/ui/ScoreRing';
 import { TabBar, type TabItem } from '@/components/ui/TabBar';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import {
   ACCENT_PURPLE, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO,
   OPACITY_10,
 } from '@/lib/chart-colors';
+import { formatDuration } from '@/lib/format';
 import { ACCENT } from './constants';
 import type { DetailTab, SessionDetailProps } from './types';
 import { SummaryStat } from './SummaryStat';
@@ -36,6 +38,9 @@ export function SessionDetail({
   const [activeTab, setActiveTab] = useState<DetailTab>('findings');
   const [expandedFindingId, setExpandedFindingId] = useState<string | null>(null);
   const [loadingData, setLoadingData] = useState(true);
+  // Deleting a session also drops its findings/events, and nothing restores it —
+  // so the trash button opens a confirmation instead of firing immediately.
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -98,7 +103,9 @@ export function SessionDetail({
             <h1 className="text-base font-semibold text-text truncate">{session.name}</h1>
             <p className="text-xs text-text-muted">
               {new Date(session.createdAt).toLocaleString()}
-              {session.durationMs && ` · ${Math.round(session.durationMs / 1000)}s`}
+              {/* `durationMs && …` leaked a bare "0" for a zero-length run, and a
+                  raw seconds count read poorly past a minute — formatDuration owns both. */}
+              {session.durationMs != null && session.durationMs > 0 && ` · ran for ${formatDuration(session.durationMs)}`}
             </p>
           </div>
 
@@ -122,12 +129,12 @@ export function SessionDetail({
                   border: `1px solid ${ACCENT}30`,
                 }}
               >
-                {simulating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
-                {simulating ? 'Running...' : isComplete ? 'Re-run' : 'Run Playtest'}
+                {simulating ? <Loader2 className="w-3 h-3 animate-spin" aria-hidden="true" /> : <Play className="w-3 h-3" aria-hidden="true" />}
+                {simulating ? 'Running…' : isComplete ? 'Re-run' : 'Run Playtest'}
               </button>
             )}
             <button
-              onClick={onDelete}
+              onClick={() => setConfirmDelete(true)}
               aria-label="Delete session"
               className="focus-ring p-1.5 rounded-md text-text-muted transition-colors group/del"
               style={{ ['--del-color' as string]: STATUS_ERROR }}
@@ -175,8 +182,9 @@ export function SessionDetail({
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-6 py-4">
         {loadingData ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-5 h-5 text-text-muted animate-spin" />
+          <div role="status" className="flex items-center justify-center gap-2 py-12 text-xs text-text-muted">
+            <Loader2 className="w-5 h-5 animate-spin" aria-hidden="true" />
+            Loading findings and timeline…
           </div>
         ) : (
           <>
@@ -193,6 +201,15 @@ export function SessionDetail({
           </>
         )}
       </div>
+
+      <ConfirmDialog
+        open={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        onConfirm={() => { void onDelete(); }}
+        title="Delete this playtest session?"
+        description={`This permanently deletes "${session.name}" along with its ${session.findingsCount} finding${session.findingsCount !== 1 ? 's' : ''} and timeline events. This cannot be undone.`}
+        confirmLabel="Delete session"
+      />
     </div>
   );
 }
