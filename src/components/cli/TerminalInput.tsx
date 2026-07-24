@@ -54,16 +54,17 @@ export function TerminalInput({
         }}
         onKeyDown={handleKeyDown}
         rows={1}
+        aria-label="Prompt for Claude"
         placeholder={isStreaming ? 'Working — press Esc to stop…' : 'Prompt... (Shift+Enter for newline, Ctrl+Enter to resume)'}
         className={`flex-1 bg-transparent text-xs text-text placeholder-text-muted outline-none font-mono resize-none overflow-y-auto leading-[20px] transition-opacity ${isStreaming ? 'opacity-50 cursor-not-allowed' : ''}`}
         style={{ height: '20px', maxHeight: '88px' }}
       />
       {isStreaming ? (
-        <button onClick={onAbort} className={`p-1.5 mt-[3px] ${CLI_COLORS.error} hover:bg-status-red-medium rounded transition-colors`} title="Abort running task (Esc)" aria-label="Abort running task">
+        <button onClick={onAbort} className={`p-1.5 mt-[3px] ${CLI_COLORS.error} hover:bg-status-red-medium rounded transition-colors focus-ring`} title="Abort running task (Esc)" aria-label="Abort running task">
           <Square className="w-3 h-3" aria-hidden="true" />
         </button>
       ) : (
-        <button data-testid="pof-cli-panel-send-btn" onClick={() => onSubmit(false)} disabled={!input.trim()} className="p-1.5 mt-[3px] hover:bg-blue-500/20 rounded transition-colors" style={{ color: MODULE_COLORS.core }} title="Send prompt (Enter)" aria-label="Send prompt">
+        <button data-testid="pof-cli-panel-send-btn" onClick={() => onSubmit(false)} disabled={!input.trim()} className="p-1.5 mt-[3px] hover:bg-blue-500/20 rounded transition-colors focus-ring" style={{ color: MODULE_COLORS.core }} title={input.trim() ? 'Send prompt (Enter)' : 'Type a prompt to send'} aria-label="Send prompt">
           <Send className="w-3 h-3" aria-hidden="true" />
         </button>
       )}

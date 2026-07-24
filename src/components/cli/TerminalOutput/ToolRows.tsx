@@ -18,12 +18,12 @@ export function ToolPairRow({ toolUse, toolResult, isExpanded, onToggle, buildPa
   const warningGroups = hasBuild ? aggregateWarnings(buildParsed!.diagnostics) : [];
   return (
     <div>
-      <button onClick={onToggle} className="w-full flex items-start gap-2 px-3 py-0.5 hover:bg-surface-hover/40 transition-colors duration-150 text-left">
+      <button onClick={onToggle} aria-expanded={isExpanded} className="w-full flex items-start gap-2 px-3 py-0.5 hover:bg-surface-hover/40 transition-colors duration-150 text-left focus-ring-inset">
         {isExpanded
-          ? <ChevronDown className="w-3 h-3 text-text-muted flex-shrink-0 mt-0.5" />
-          : <ChevronRight className="w-3 h-3 text-text-muted flex-shrink-0 mt-0.5" />
+          ? <ChevronDown className="w-3 h-3 text-text-muted flex-shrink-0 mt-0.5" aria-hidden="true" />
+          : <ChevronRight className="w-3 h-3 text-text-muted flex-shrink-0 mt-0.5" aria-hidden="true" />
         }
-        <span className="flex-shrink-0 mt-0.5">{getLogIcon(toolUse.type, toolUse.toolName)}</span>
+        <span className="flex-shrink-0 mt-0.5" aria-hidden="true">{getLogIcon(toolUse.type, toolUse.toolName)}</span>
         <span className="text-xs leading-relaxed break-all truncate text-text">{formatLogContent(toolUse)}</span>
         {hasBuild && !isExpanded && (
           <span className={`ml-auto text-2xs px-1.5 py-px rounded flex-shrink-0 ${
@@ -71,12 +71,12 @@ export function ToolBatchRow({ pairs, isExpanded, onToggle, expandedPairs, onTog
 }) {
   return (
     <div>
-      <button onClick={onToggle} className="w-full flex items-start gap-2 px-3 py-0.5 hover:bg-surface-hover/40 transition-colors duration-150 text-left">
+      <button onClick={onToggle} aria-expanded={isExpanded} className="w-full flex items-start gap-2 px-3 py-0.5 hover:bg-surface-hover/40 transition-colors duration-150 text-left focus-ring-inset">
         {isExpanded
-          ? <ChevronDown className="w-3 h-3 text-text-muted flex-shrink-0 mt-0.5" />
-          : <ChevronRight className="w-3 h-3 text-text-muted flex-shrink-0 mt-0.5" />
+          ? <ChevronDown className="w-3 h-3 text-text-muted flex-shrink-0 mt-0.5" aria-hidden="true" />
+          : <ChevronRight className="w-3 h-3 text-text-muted flex-shrink-0 mt-0.5" aria-hidden="true" />
         }
-        <Wrench className={`w-3 h-3 ${CLI_COLORS.warning} flex-shrink-0 mt-0.5`} />
+        <Wrench className={`w-3 h-3 ${CLI_COLORS.warning} flex-shrink-0 mt-0.5`} aria-hidden="true" />
         <span className="text-xs leading-relaxed text-text-muted">{pairs.length} file operations</span>
       </button>
       {isExpanded && (

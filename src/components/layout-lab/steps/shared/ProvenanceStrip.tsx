@@ -3,6 +3,7 @@
 import { StatusTag } from '@/components/ui/StatusTag';
 import { MicroLabel } from '@/components/ui/MicroLabel';
 import type { StepFact } from '@/lib/status/statusModel';
+import { mirrorSupport, isPreviewHydratable } from '@/lib/preview/browser-mirror';
 import type { LabTheme } from '../../theme';
 
 /**
@@ -58,6 +59,18 @@ export function ProvenanceStrip({ t, fact }: { t: LabTheme; fact: StepFact }) {
           <StatusTag level="warn" word="CHECKER: SHAPE-ONLY" />
         )}
         {!fact.generatorWired && <StatusTag level="warn" word="GENERATOR: NOT WIRED" />}
+        {/* Dual execution: this generated item's step class also runs in the browser
+            preview. LIVE = its catalog hydrates the preview runtime today; READY =
+            mirrorable class, preview scene not yet built for the catalog. */}
+        {mirrorSupport(fact.deliverable, fact.step) !== 'none' && (
+          isPreviewHydratable(fact.catalogId) ? (
+            <StatusTag level="ok" word="BROWSER MIRROR: LIVE" />
+          ) : (
+            <span data-testid="provenance-browser" className={t.fontMono} style={chipStyle}>
+              browser mirror: {mirrorSupport(fact.deliverable, fact.step)}
+            </span>
+          )
+        )}
       </div>
       <details data-testid="provenance-note">
         <summary className={t.fontMono} style={{ cursor: 'pointer', color: t.muted, fontSize: 13 }}>

@@ -1,6 +1,6 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
-import { runtimeDeferred } from '../acceptance/deferred';
+import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 
@@ -330,7 +330,7 @@ registerCatalogPipeline({
         },
       }),
       // Registered automation name (enumerated from UE): the HUD functional test.
-      accept: runtimeDeferred(
+      accept: entityRuntimeDeferred(
         'VSHUDFunctionalTest',
         'HUD renders + binds in PIE',
       ),

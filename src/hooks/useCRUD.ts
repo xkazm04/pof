@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { apiFetch } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
 import { useIsMounted } from '@/hooks/useIsMounted';
 
 export interface UseCRUDOptions<T> {
@@ -23,8 +24,16 @@ export interface UseCRUDResult<T> {
   refetch: () => Promise<void>;
   /** Alias for refetch. */
   retry: () => void;
-  /** Perform a mutation (POST/PUT/DELETE) then auto-refetch. Returns the parsed response. */
+  /**
+   * Perform a mutation (POST/PUT/DELETE) then auto-refetch. Returns the parsed
+   * response, or `null` if the mutation failed (the reason is exposed on
+   * `mutationError` so callers can surface it instead of failing silently).
+   */
   mutate: <R = unknown>(url: string, init?: RequestInit) => Promise<R | null>;
+  /** Reason the last `mutate` call failed (`null` when the last one succeeded). */
+  mutationError: string | null;
+  /** Clear a surfaced `mutationError` (e.g. when the user dismisses the banner). */
+  clearMutationError: () => void;
 }
 
 /**
@@ -44,6 +53,7 @@ export function useCRUD<T>(
   const [data, setData] = useState<T>(initial);
   const [isLoading, setIsLoading] = useState(!skipInitialFetch);
   const [error, setError] = useState<string | null>(null);
+  const [mutationError, setMutationError] = useState<string | null>(null);
   const isMounted = useIsMounted();
 
   const refetch = useCallback(async () => {
@@ -72,16 +82,21 @@ export function useCRUD<T>(
     if (!skipInitialFetch) refetch();
   }, [refetch, skipInitialFetch]);
 
+  const clearMutationError = useCallback(() => setMutationError(null), []);
+
   const mutate = useCallback(async <R = unknown>(url: string, init?: RequestInit): Promise<R | null> => {
+    if (isMounted()) setMutationError(null);
     try {
       const result = await apiFetch<R>(url, init);
       await refetch();
       return result;
     } catch (err) {
-      console.error('useCRUD mutate error:', err);
+      const reason = err instanceof Error ? err.message : 'Action failed. Please try again.';
+      logger.error('useCRUD mutate error', { url, err: reason });
+      if (isMounted()) setMutationError(reason);
       return null;
     }
-  }, [refetch]);
+  }, [refetch, isMounted]);
 
-  return { data, isLoading, error, refetch, retry: refetch, mutate };
+  return { data, isLoading, error, refetch, retry: refetch, mutate, mutationError, clearMutationError };
 }

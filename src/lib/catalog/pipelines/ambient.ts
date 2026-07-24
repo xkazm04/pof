@@ -1,6 +1,6 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { minLength, fieldsPopulated, withinPercent, selected, minCount } from '../acceptance/dataCheckers';
-import { runtimeDeferred } from '../acceptance/deferred';
+import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 
@@ -711,7 +711,7 @@ registerCatalogPipeline({
           ],
         },
       }),
-      accept: runtimeDeferred('VSAmbientTest', 'Soundscape layers + spatial emitters load in PIE'),
+      accept: entityRuntimeDeferred('VSAmbientTest', 'Soundscape layers + spatial emitters load in PIE'),
     },
 
     // ── 10. UE Packaging ──────────────────────────────────────────────────────

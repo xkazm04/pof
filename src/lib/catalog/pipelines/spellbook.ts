@@ -1,6 +1,6 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { minLength, fieldsPopulated, withinPercent, selected, minCount } from '../acceptance/dataCheckers';
-import { runtimeDeferred } from '../acceptance/deferred';
+import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 
@@ -516,11 +516,14 @@ registerCatalogPipeline({
           ],
         },
       }),
-      // FVSGenFireballEffectTest — defer with the REGISTERED automation name (dotted path /
-      // substring), not the C++ class name, so the L3 runner resolves it (verified live on 5.8).
-      accept: runtimeDeferred(
+      // Defer with the REGISTERED automation name (dotted path / substring), not the C++
+      // class name, so the L3 runner resolves it (verified live on 5.8). PER-ENTITY: the
+      // artifact's own `automationName` wins (e.g. off-arc-fp → PoF.GenForcePush.DazeConfig)
+      // so a Force Push gate can never be "proven" by the Fireball test; the Fireball gate
+      // name stays the fallback for rows that haven't declared one.
+      accept: entityRuntimeDeferred(
         'PoF.GenFireball.EffectConfig',
-        'Fireball functional test passes in UE (FVSGenFireballEffectTest)',
+        'Spell functional/config gate passes in UE (per-entity automationName)',
       ),
     },
 

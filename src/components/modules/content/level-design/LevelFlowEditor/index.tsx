@@ -4,6 +4,7 @@ import { useLevelFlowEditor } from './useLevelFlowEditor';
 import { EditorOverlays } from './EditorOverlays';
 import { ConnectionLines } from './ConnectionLines';
 import { RoomNodeGraphic } from './RoomNodeGraphic';
+import { DesktopCanvasNotice } from '@/components/ui/DesktopCanvasNotice';
 import type { LevelFlowEditorProps } from './types';
 
 export type { LevelFlowEditorProps } from './types';
@@ -43,6 +44,7 @@ export function LevelFlowEditor(props: LevelFlowEditorProps) {
 
   return (
     <div className="relative w-full h-full bg-[#03030a] rounded-2xl border border-violet-900/30 overflow-hidden shadow-[inset_0_0_80px_rgba(167,139,250,0.05)]">
+      <DesktopCanvasNotice className="absolute top-2 left-1/2 -translate-x-1/2 z-30 max-w-[90%]" />
       {/* Background Gradients */}
       <div className="absolute inset-0 pointer-events-none z-0">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-violet-600/10 blur-[120px] rounded-full pointer-events-none" />

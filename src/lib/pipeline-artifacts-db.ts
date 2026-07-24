@@ -112,5 +112,8 @@ export function upsertArtifact(a: PipelineArtifact): PipelineArtifact {
     data: JSON.stringify(a.data), ue_assets: JSON.stringify(a.ueAssets),
     status: a.status, tier: a.tier ?? null, reason: a.reason ?? null,
   });
-  return a;
+  // Return the PERSISTED row (not the input) so DB-defaulted columns round-trip — most
+  // importantly `updated_at`, which callers surface as "last written". Falling back to the
+  // input keeps the contract total even in the (unreachable) case the read misses.
+  return getArtifact(a.catalogId, a.entityId, a.step) ?? a;
 }

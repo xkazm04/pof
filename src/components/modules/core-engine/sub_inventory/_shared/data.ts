@@ -120,6 +120,64 @@ const _ORIGINAL_ITEMS: ItemData[] = [
     description: 'An elegant weapon for a more civilized age — a blade of pure plasma held in a magnetic field. The signature weapon of Jedi and Sith alike; carried by both duelists in the arena. One-handed energy sword (uses the melee combat path).',
     effect: 'Cuts through most armor (60% penetration).',
   },
+  /* ── Arena duel saber variants: lootable from fallen Sith (browser preview) ── */
+  {
+    id: 'saber-crimson', name: 'Crimson Lightsaber', type: 'Weapon', subtype: 'Sword', rarity: 'Rare',
+    stats: [
+      { label: 'Energy Damage', value: '36-54', numericValue: 45, maxValue: 50 },
+      { label: 'Attack Speed', value: '1.0', numericValue: 20, maxValue: 20 },
+    ],
+    description: 'A Sith lord\'s blade, its kyber crystal bled crimson. Heavier strikes than a standard saber.',
+    effect: '+30% melee damage.',
+  },
+  {
+    id: 'saber-amethyst', name: 'Amethyst Lightsaber', type: 'Weapon', subtype: 'Sword', rarity: 'Uncommon',
+    stats: [
+      { label: 'Energy Damage', value: '33-49', numericValue: 41, maxValue: 50 },
+      { label: 'Attack Speed', value: '1.0', numericValue: 20, maxValue: 20 },
+    ],
+    description: 'An acolyte\'s violet blade — balanced, quick, eager.',
+    effect: '+15% melee damage.',
+  },
+  {
+    id: 'saber-azure', name: 'Azure Lightsaber', type: 'Weapon', subtype: 'Sword', rarity: 'Rare',
+    stats: [
+      { label: 'Energy Damage', value: '35-52', numericValue: 44, maxValue: 50 },
+      { label: 'Attack Speed', value: '1.0', numericValue: 20, maxValue: 20 },
+    ],
+    description: 'A guardian\'s blade, its crystal attuned cool blue. Precise, balanced strikes.',
+    effect: '+25% melee damage.',
+  },
+  {
+    id: 'saber-ember', name: 'Ember Lightsaber', type: 'Weapon', subtype: 'Sword', rarity: 'Uncommon',
+    stats: [
+      { label: 'Energy Damage', value: '34-51', numericValue: 43, maxValue: 50 },
+      { label: 'Attack Speed', value: '1.0', numericValue: 20, maxValue: 20 },
+    ],
+    description: 'A marauder\'s blade burning furnace-orange, forged for reckless swings.',
+    effect: '+20% melee damage.',
+  },
+  /* ── Saber-crafting components (crystal = color, lens = damage bonus) ── */
+  {
+    id: 'crystal-amethyst', name: 'Amethyst Kyber Crystal', type: 'Material', subtype: 'Crystal', rarity: 'Rare',
+    stats: [{ label: 'Attunement', value: 'Violet', numericValue: 50, maxValue: 100 }],
+    description: 'A kyber crystal singing in deep violet. Defines the blade color of a crafted lightsaber.',
+  },
+  {
+    id: 'crystal-argent', name: 'Argent Kyber Crystal', type: 'Material', subtype: 'Crystal', rarity: 'Rare',
+    stats: [{ label: 'Attunement', value: 'Silver', numericValue: 50, maxValue: 100 }],
+    description: 'A rare colorless kyber crystal burning silver-white. Defines the blade color of a crafted lightsaber.',
+  },
+  {
+    id: 'lens-basic', name: 'Basic Focusing Lens', type: 'Material', subtype: 'Lens', rarity: 'Common',
+    stats: [{ label: 'Focus', value: '+0 dmg', numericValue: 10, maxValue: 100 }],
+    description: 'A standard focusing lens. No damage bonus - it merely makes the blade coherent.',
+  },
+  {
+    id: 'lens-advanced', name: 'Advanced Focusing Lens', type: 'Material', subtype: 'Lens', rarity: 'Uncommon',
+    stats: [{ label: 'Focus', value: '+5 dmg', numericValue: 45, maxValue: 100 }],
+    description: 'A precision-ground lens that tightens the blade to a killing edge. +5 damage per strike.',
+  },
   /* ── KOTOR Melee Weapons ──────────────────────────────────────────────── */
   {
     id: 'kotor-vibroblade', name: 'Vibroblade', type: 'Weapon', subtype: 'Sword', rarity: 'Common',

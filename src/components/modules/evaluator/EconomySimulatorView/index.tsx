@@ -10,6 +10,8 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { DashboardHeader } from '@/components/ui/DashboardHeader';
+import { LoadingRow } from '@/components/ui/LoadingRow';
+import { STATUS_WARNING } from '@/lib/chart-colors';
 import { EconomyCodeGenPanel } from '../EconomyCodeGenPanel';
 import { EconomyRunsStrip } from '../EconomyRunsStrip';
 import { useEconomySimulatorStore } from '@/stores/economySimulatorStore';
@@ -196,12 +198,7 @@ export function EconomySimulatorView() {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-6 pb-6">
-        {isLoading && (
-          <div className="flex items-center justify-center py-16">
-            <div className="w-6 h-6 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin" />
-            <span className="ml-3 text-sm text-text-muted">Loading economy parameters...</span>
-          </div>
-        )}
+        {isLoading && <LoadingRow label="Loading economy parameters…" color={STATUS_WARNING} />}
 
         {error && (
           <SurfaceCard className="p-4 mb-4 border-status-red-strong">

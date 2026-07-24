@@ -24,7 +24,7 @@ const RAIL_WIDTH = 56;
 export function ShellSkeleton() {
   return (
     <div
-      className="h-screen flex flex-col overflow-hidden bg-background animate-pulse"
+      className="h-dvh flex flex-col overflow-hidden bg-background animate-pulse"
       data-testid="pof-shell-skeleton"
       role="status"
       aria-busy="true"
@@ -61,9 +61,11 @@ export function ShellSkeleton() {
           <div className="mt-auto w-10 h-10 rounded-lg bg-surface-2/40" />
         </div>
 
-        {/* Content area — reuse the shared module tile grid. */}
+        {/* Content area — reuse the shared module tile grid. The wrapper above is
+            already the busy status region, so the tile grid stays silent rather
+            than nesting a second live region inside it. */}
         <div className="flex-1 min-w-0">
-          <ModuleSkeleton />
+          <ModuleSkeleton announce={false} />
         </div>
       </div>
     </div>

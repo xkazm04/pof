@@ -1,6 +1,6 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
-import { runtimeDeferred } from '../acceptance/deferred';
+import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 
@@ -420,7 +420,7 @@ registerCatalogPipeline({
           ],
         },
       }),
-      accept: runtimeDeferred('VSInputRebindTest', 'Rebind persists + conflicts rejected + a11y options functional in PIE'),
+      accept: entityRuntimeDeferred('VSInputRebindTest', 'Rebind persists + conflicts rejected + a11y options functional in PIE'),
     },
 
     // ── 12. UE Packaging ──────────────────────────────────────────────────────

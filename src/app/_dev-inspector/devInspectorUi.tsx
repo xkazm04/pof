@@ -9,7 +9,7 @@
  * (and so each file stays small). Dev-only; never ships to production.
  */
 
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 
 import { isLibraryPath, type LocEntry } from "./devLocate";
 
@@ -94,17 +94,29 @@ function CrumbRow({
 }) {
   const { dir, file } = splitLoc(entry.loc);
   const lib = isLibraryPath(entry.path);
+  // Hover affordance (inline styles can't carry a :hover): brighten the default row and give the
+  // resting rows a faint fill on hover, so a crumb reads as clickable before you click it.
+  const [hovered, setHovered] = useState(false);
+  const background = isDefault
+    ? `${ACCENT}${hovered ? "33" : "22"}`
+    : hovered
+      ? "rgba(255,255,255,0.06)"
+      : "transparent";
   return (
     <button
       type="button"
       onClick={() => onCopy(entry.loc)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      aria-label={`Copy ${entry.loc}`}
+      className="focus-ring"
       style={{
         display: "flex",
         gap: 2,
         width: "100%",
         textAlign: "left",
         cursor: "pointer",
-        background: isDefault ? `${ACCENT}22` : "transparent",
+        background,
         border: "none",
         borderRadius: 4,
         padding: "2px 4px",
@@ -151,7 +163,9 @@ export function InspectorHud({
   onCopy: (loc: string) => void;
 }) {
   return (
-    <div data-devinspector style={PANEL}>
+    // No data-devinspector here: the armed-mode portal wrapper (DevInspector.tsx) already carries it
+    // and is an ancestor of this panel, so the insideHud closest() hit-test resolves through it.
+    <div style={PANEL}>
       <div
         style={{
           color: copied ? (copyOk ? OK : "#fca5a5") : ACCENT,

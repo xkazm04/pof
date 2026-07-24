@@ -1,0 +1,1426 @@
+{
+  "reviewedAt": "2026-07-22",
+  "note": "Dual-execution realization audit — per pipeline step: has this step's output been PROVEN to run in the Browser preview and/or in UE, independent of its quality grade? proven = demonstrated live; probable = the path exists but this step was never walked; no = no path (or the UE moat / no browser meaning). One pipeline reviewed at a time with human sign-off (dual-execution-preview-spec.md trio process).",
+  "pipelines": {
+    "spellbook": {
+      "reviewedAt": "2026-07-22",
+      "steps": {
+        "Concept Brief": {
+          "browser": "proven",
+          "ue": "proven",
+          "note": "Target-agnostic text; consumed by both realizations (browser duel mechanics derive from it; UE GA authoring cites it)."
+        },
+        "Effect Logic": {
+          "browser": "proven",
+          "ue": "proven",
+          "note": "Browser: Force Push + Fireball hydrated and cast live in the duel (damage/cost/cooldown/cast-window executed, 2026-07-22). UE: GA_ForcePush/GA_Fireball exist in the GAS program."
+        },
+        "Targeting": {
+          "browser": "proven",
+          "ue": "proven",
+          "note": "Browser: cone resolution + projectile flight executed from artifact geometry (55° cone, 20 m/s bolt). UE: cone target-find in GA_ForcePush."
+        },
+        "Balance": {
+          "browser": "proven",
+          "ue": "proven",
+          "note": "Browser: balance numbers (damage/mana/cooldown) played live and tunable with graded round-trip. The DPS-tier model itself is executed nowhere — numbers only."
+        },
+        "Combo / Synergy": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Neither target has executed the combo links; browser duel has combo chaining infrastructure, UE has montage sections. Not walked for spellbook entities."
+        },
+        "Applies Status": {
+          "browser": "proven",
+          "ue": "proven",
+          "note": "Browser: Force Push's secondaryStatus link executed live in the duel (2026-07-22). UE: GE_Dazed + Landed() apply + ActivationBlockedTags + 0.25x shamble BUILT and config-gated (Project.Functional Tests.PoF.GenForcePush.DazeConfig, Result=Success headless 5.8; drained to L3 pass). PIE arena observation of the live launch->landing->daze chain remains planned."
+        },
+        "Animation": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: procedural cast clips (castPush/castThrow) play per skill — code-authored, no assets. UE: the ARDY text→motion chain is proven for movement/melee but spellbook cast anims were never generated (audited engine: None)."
+        },
+        "VFX": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: push ring / projectile / sparks execute per cast. UE: VFX rows are text specs; declared Niagara assets unrealized (packaging Tier-2 audit)."
+        },
+        "Icon 2D Art": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Real Leonardo icons served + rendered in the /layout lab (a browser surface). UE-side texture import not verified (packaging declarations unrealized)."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat - no browser meaning. DazeConfig gate registered, run headless and drained to L3 pass via the spawn executor (2026-07-22); the fuller PIE arena checks stay planned. Spec fix: spellbook Test Gate accept now resolves the automation name PER ENTITY (data.automationName) so a Force Push gate can never be proven by the Fireball test."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine stages + hashes real files (Tier-1 proven); most ueDeclarations still unrealized (Tier-2)."
+        }
+      }
+    },
+    "status-effects": {
+      "reviewedAt": "2026-07-22",
+      "steps": {
+        "Concept Brief": {
+          "browser": "proven",
+          "ue": "proven",
+          "note": "Target-agnostic text consumed by both realizations (dazed brief authored 2026-07-22 drives both)."
+        },
+        "Effect Logic": {
+          "browser": "proven",
+          "ue": "proven",
+          "note": "Browser: burning DoT (0.5 s ticks x 3.9375 over 4 s = the authored 31.5) + dazed (0.25x move, action block) executed live in the duel, all numbers hydrated. UE: GE_Gen_Burning + GE_Dazed built; both config-gated (StatusBurning/DazeConfig, headless 5.8, drained to L3 pass)."
+        },
+        "Balance": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the balance numbers (period/duration/tick magnitude) are exactly what the duel executed. UE: gates assert GE config; the tick-accounting assertions of VSStatusBurningEffectTest not audited line-by-line."
+        },
+        "Icon 2D Art": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Real Leonardo icons served + rendered in the /layout lab. UE-side texture import unverified (packaging Tier-2)."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Burning + Dazed gates run headless and drained to L3 pass with PER-ENTITY test names (2026-07-22 fix: status-effect.ts accept resolves data.automationName - a Knockback gate can no longer be proven by the Burning test). Knockback honestly deferred: its map-placed functional test does not enumerate headless."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine stages + hashes real files (Tier-1); declarations partially unrealized (Tier-2)."
+        }
+      }
+    },
+    "progression-curves": {
+      "reviewedAt": "2026-07-22",
+      "steps": {
+        "Concept Brief": {
+          "browser": "proven",
+          "ue": "proven",
+          "note": "Target-agnostic text consumed by both realizations."
+        },
+        "Curve Formula": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: xpToNext(L)=100×1.08^(L-1) executed live in the duel meta-loop; independent cross-check xpToNext(50)=4343 equals the Balance artifact's value. UE: VSProgressionCurveTest registered + gate pass; its assertions not audited line-by-line."
+        },
+        "XP Sources": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: kill XP = combatShare×xpToNext(min(L,85))/300 × boss 30 executed per duel win (7 XP at L1, exact). UE: data seeded, no runtime consumer verified."
+        },
+        "Reward Schedule": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: passivePoints accrue per level-up and display (+N pts); spending them is out of preview scope. UE: rewards data only."
+        },
+        "Caps & Catch-up": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The monster-XP freeze (min(L,85)) executes in the browser's kill-XP path — the soft-cap grind mechanism is live; hard cap 100 enforced. Catch-up mechanics unexecuted anywhere."
+        },
+        "Death Penalty": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Not executed in either target; a duel LOSS applying pct(band)×xpToNext(L) is a natural next browser increment."
+        },
+        "Balance": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: balance numbers cross-checked live (L50=4343 matches). UE: not asserted."
+        },
+        "Telemetry": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Envelope spec exists; neither target emits it."
+        },
+        "XP Bar UI": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the HUD XP strip (LV badge, fill ratio, xp/need tooltip, points) renders live from the hydrated curve. UE: widget spec only."
+        },
+        "Icon 2D Art": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Real icon served + rendered in the lab; UE import unverified."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. VSProgressionCurveTest registered; gate pass."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
+        }
+      }
+    },
+    "items": {
+      "reviewedAt": "2026-07-22",
+      "steps": {
+        "Attributes": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: three saber variants (item-saber-crimson/amethyst/ember) authored in the SOR and hydrated — stats, bladeColor, meleeDamageMultiplier; loot-drop -> E-equip applies the multiplier exactly (10 base melee dealt 13 with the crimson x1.3, live 2026-07-22). UE: attribute data seeded; no runtime consumer verified for these variants."
+        },
+        "Icon 2D Art": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Real Leonardo icons served + rendered in the /layout lab. UE import unverified."
+        },
+        "Concept Brief": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Briefs exist; the browser realization consumed Attributes, not the brief text. Honest partial."
+        },
+        "3D Generation": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "glb pipeline exists (GlbViewer / TripoSR-Hunyuan-Tripo chain proven elsewhere); item meshes not loaded into the duel."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "UE moat. Items map-functional tests exist (…Maps.<Map>.<TestClass>); not re-run this review."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
+        }
+      }
+    },
+    "loot-tables": {
+      "reviewedAt": "2026-07-22",
+      "steps": {
+        "Item Base Links": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: lt-SithAssassin + lt-DarkAcolyte authored with weighted entries (incl. an authored no-drop slot) and rolled live on each Sith kill — 2000-roll distribution matches the weights (80/15/5, 40/30/30). Cross-links resolve to real items entities. UE: table data seeded for the grunt only; no runtime roll verified."
+        },
+        "Rarity Odds": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The grunt's full rarity-uplift model exists; the duel's tables roll base links directly (rarity rides the linked item). Not executed as a separate stage anywhere."
+        },
+        "Balance / Drop Sim": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Drop-rate KPI math exists as data; the browser could measure real drops/hour in long sessions — a natural telemetry increment."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "UE moat. Loot map-functional tests exist; not re-run this review."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
+        }
+      }
+    },
+    "bestiary": {
+      "reviewedAt": "2026-07-22",
+      "steps": {
+        "Stat Block": {
+          "browser": "proven",
+          "ue": "proven",
+          "note": "Browser: hydrated onto the roster live (5.7/6.0/6.3 m/s, damage 0.75x verified). UE: SithLord/SithAcolyte/DarkMarauder added to EEnemyArchetype with code-as-data defaults mirroring these Stat Blocks; MoveSpeed WIRED into ApplyArchetypeDefaults (WalkSpeed + MaxWalkSpeed); gated by PoF.Bestiary.DuelArchetypesConfig (Result=Success headless 5.8, drained to L3 pass, 2026-07-22). Health stays with attribute-init - not claimed."
+        },
+        "Concept & Role": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Archetype roles informed the roster design; text not consumed programmatically."
+        },
+        "AI Behavior": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The duel's SithBrain is code-authored, not hydrated from the AI Behavior artifacts — a natural next increment (aggression/range params from the SOR)."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. DuelArchetypesConfig gate run + drained for all three duel archetypes (shared code-as-data source); Brute regression asserted."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
+        }
+      }
+    },
+    "dialog-trees": {
+      "reviewedAt": "2026-07-22",
+      "steps": {
+        "Branch Graph": {
+          "browser": "proven",
+          "ue": "proven",
+          "note": "Browser: executed live as the pre-combat overlay, both branches walked. UE: ARPGDuelIntroDialogue::Populate builds the SAME tree on the production UARPGDialogueTree (player-line nodes fold to choices, END -> -1); IsValid + both-branches-terminal gated by PoF.DialogTrees.DuelIntroConfig (Result=Success headless 5.8, drained to L3 pass, 2026-07-22). In-map NPC wiring + .uasset authoring remain the PIE follow-up."
+        },
+        "Subtitles & Choices UI": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the choices UI IS the realization (speaker header, line, clickable choices, action-beat rendering). UE: widget spec only."
+        },
+        "Conditions & Effects": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The duel tree is unconditional by design; the gatekeeper tree's skill checks are unexecuted in both targets."
+        },
+        "VO Script": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "ElevenLabs VO path exists in the program; not wired to this tree."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. DuelIntroConfig gate run + drained; asserts structure on the transient production tree."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
+        }
+      }
+    },
+    "currencies": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Economy Rules": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the kill-drop faucet executes live in the duel — structured killDrop block (35% chance, 2.8 G x victim monsterLevel) authored additively (graded pass) and rolled per kill; 10k-roll distribution matched 35.44%/8.42 vs 35%/8.40 (2026-07-23). UE: wallet rules gated (below) but the faucet roll has no UE runtime consumer."
+        },
+        "Wallet UI Integration": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: wallet renders per the SOR display rule — thousands separators + the mandatory 'g' mark (1,284g exactly as the artifact's example); persists across duels. UE: WBP_Wallet spec only."
+        },
+        "Balance": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Faucet/sink per-hour model is data; the duel exercises only the kill faucet. A long-session drops/hour measurement is the natural telemetry increment."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. VSCurrencyWalletTest (PoF.Currency.WalletRules) run + drained to L3 pass (2026-07-23)."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
+        }
+      }
+    },
+    "vendors": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Inventory Pool": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the merchant's stock hydrates into the pre-game menu — two duel sabers added additively (listGold = 1.1 x items Value per the Pricing rule: 352/374), cards resolve against hydrated items (color/rarity/multiplier), purchase executed live 2026-07-23. Grade is judge-owned (78, pre-existing). UE: stock data only."
+        },
+        "Pricing & Restock": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the list-price rule (1.1 x V) is the executed price; the buy deducts exactly listGold (500 -> 126 after the 374g azure). Restock/repair rules unexecuted."
+        },
+        "Buy/Sell/Repair": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Buy proven via the menu; sell-back (30%) and repair are natural menu increments."
+        },
+        "Shop UI": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the pre-game menu IS the shop UI realization (stock cards, prices, afford-gating, EQUIPPED state, wallet readout). UE: WBP spec only."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. VSVendorTransactionTest run + drained to L3 pass (2026-07-23)."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
+        }
+      }
+    },
+    "quests": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Objective Graph": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: quest-lords-challenge + quest-echoes-order authored (graphs graded pass — edge integrity + terminal enforced) and EXECUTED: menu-selected quest tracked live, Lord's Challenge completed on Malgrave-first kill with acolytes alive (2026-07-23). UE: UARPGQuestSubsystem runtime exists (TalkTo events wired); these quests unseeded there."
+        },
+        "Triggers & World-State": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the environment staging block IS the world-state trigger — quest acceptance retints the arena (fog hit the SOR's exact #2a0c08; rims/magma/floor emissive follow). Shape checker wants more fields (pending) — data honest. UE: maps to post-process/light tints, not wired."
+        },
+        "Rewards": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: completion granted exactly the authored 250g into the currencies wallet. UE: quest reward path exists in the subsystem, these rows unwired."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "UE moat. PoF.Quests.StageFlow gate exists for ember-pact; duel quests ungated."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
+        }
+      }
+    },
+    "hud-elements": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "State Logic": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the health-bar state ladder EXECUTES per the SOR — thresholds, flat state colors (#8F9E5C/#CA5636/#E89A46), pulse periods (1.2s/0.6s) and chevron counts all parsed from the artifact and verified live at 100%/20%/8% (2026-07-23). Ladder keyed off TARGET hp per spec. UE: the C++ HUD widget exists; ladder spec not asserted there."
+        },
+        "Animation": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: display fill lerps at the SOR interpRate 6 (cosmetic) with death snapping to 0; luminance pulse (brightness, not hue — the colorblind cue) per spec."
+        },
+        "Data Binding": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The browser bar binds directly to the character model (no GAS); the delegate contract is UE-specific."
+        },
+        "Wireframe": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Real Lucid Origin wireframe renders in the lab gallery."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "UE moat. VSHUDFunctionalTest is REGISTERED in two maps: the VerticalSlice placement PASSES; the Test_Inventory placement FAILS ('enemy health bar did not update within 3s') — bisect-proven PRE-EXISTING (reproduces without the 2026-07-23 dialogue-widget fallback). Gate honestly red until that placement is repaired; likely the shared-PIE-world functional-test state gotcha."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
+        }
+      }
+    },
+    "achievements": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Trigger & Progress": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: three achievements EXECUTE in the duel — First Blood (first kill), Arena Victor (full-clear victory, +300g exact), Trophy Taker (equip a looted saber) — with the SOR anti-cheat guard honored: one-time per save (Unlocked flag), persisted across reloads, verified live 2026-07-23. Synthetic test-* fixtures filtered. UE: UARPGAchievementSubsystem exists; the two new duel achievements unseeded there."
+        },
+        "Reward Binding": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: unlocks pay the authored gold into the currencies wallet exactly (100/300/150); one-time capped so it never becomes a repeatable faucet, per the SOR note."
+        },
+        "Unlock Toast": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: slide-in toast per the SOR format — 'Achievement Unlocked: {name}' + reward line rendered only when a reward exists; queued for multiple unlocks. UE: WBP spec only."
+        },
+        "Anti-Cheat / Validation": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "The Unlocked-flag guard IS executed browser-side (second kill grants nothing, reload keeps unlocks)."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. VSAchievementTest run + drained to L3 pass (2026-07-23)."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
+        }
+      }
+    },
+    "crafting-recipes": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Inputs & Output": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: recipe-custom-saber EXECUTES in the pre-game menu — crystal (blade color) + lens (flat damage bonus) + goldFee compose a Custom Lightsaber; craft cost exact (154+121+60=335 from vendor pricing + recipe fee); the composed item's stats execute in the duel (silver blade #e8ecf2, melee 10x1.2+5=17 exact, 2026-07-23). Components are real items entities sold by the vendor. UE: crafting runtime exists (VSCraftingTest); this recipe unseeded there."
+        },
+        "Cost & Yield": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: total cost = component list prices (vendor 1.1 x Value rule) + recipe goldFee, deducted exactly (500 -> 165)."
+        },
+        "Recipe UI": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the menu craft row IS the recipe UI — component pickers with prices in tooltips, live-priced Craft button, equip-on-success. UE: WBP_CraftingStation spec only."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. VSCraftingTest run + drained to L3 pass (2026-07-23) — covers the health-potion recipe runtime; the saber recipe is browser-only so far."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
+        }
+      }
+    },
+    "icon-sets": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Icon 2D Art": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the skill bar and achievement toasts render each entity's SELECTED Icon 2D Art candidate — Force Push shows its real Leonardo image (embedded data-URL), Fireball its selected gradient candidate (no real gen exists for it — honest fallback, never invented), achievements' icons ride the unlock toasts (2026-07-23). UE: icon texture import unverified."
+        },
+        "Atlas": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The iconset-abilities atlas (real served bestof previews) exists; the duel consumes per-entity icons directly rather than the packed atlas."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. VSIconSetAtlasTest run + drained to L3 pass (2026-07-23)."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
+        }
+      }
+    },
+    "ambient": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Layers": {
+          "browser": "proven",
+          "ue": "proven",
+          "note": "ambient-galactic-arena: REAL ElevenLabs generation (20s cosmic bed, 2026-07-23) registered as the Layers bed. Browser: streams from /api/audio-asset into a looping <audio> (playing, t>11s verified). UE: imported as a SoundWave and PLAYING at FeatureLab begin-play ('[FeatureLab] galactic ambience playing' runtime marker)."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. VSAmbientTest run + drained to L3 pass (2026-07-23)."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
+        }
+      }
+    },
+    "music": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Loop & Markers": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "music-galactic-duel: REAL ElevenLabs generation (20s dark duel loop, 2026-07-23) registered as Loop & Markers. Browser: starts at DUEL!, loops, stops on the end screen (playing verified). UE: imported as a SoundWave (GalacticDuelTheme); combat-state playback wiring is the next increment."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. VSMusicTransitionTest run + drained to L3 pass (2026-07-23)."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
+        }
+      }
+    },
+    "save-points": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "State Schema": {
+          "browser": "proven",
+          "ue": "proven",
+          "note": "save-bonfire: browser realizes the discrete-only versioned envelope ('saber-arpg.autosave', SchemaVersion 1) over registered sections (progression/wallet/achievements); Playwright round-trip proven (Lv3+777g reload). UE: UARPGSaveGame field-for-field round-trip in the SavePoints gate."
+        },
+        "Save Triggers": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: autosaves on settled discrete mutations share the SOR 10 s AutoSaveThrottleCooldown (hydrated live from globalThrottle.seconds); throttle suppression + forced end-of-duel flush + pagehide flush Playwright-proven. UE: subsystem contract authored; bonfire interact trigger not runtime-observed."
+        },
+        "Versioning & Migration": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: v0 (legacy scattered keys) → v1 envelope migration executes for real (legacy keys removed, state carried); newer-schema (v2) save REFUSED and write-locked so it is never clobbered — a real bug the Playwright suite caught. UE: CurrentSaveVersion asserted in the gate; no cross-version migration exercised."
+        },
+        "Corruption Recovery": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: unparseable envelope discarded to fresh (logged, game keeps running) — Playwright-proven. UE: empty-buffer→nullptr anti-corruption seam asserted in the gate; CRC ladder not exercised."
+        },
+        "Slots UI": {
+          "browser": "proven",
+          "ue": "no",
+          "note": "Browser: pre-game menu shows the autosave slot line (Lv/gold/unlocks/time) from autosaveSummary(); rendered text Playwright-verified. UE: WBP_SaveSlots not built."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. PoF.SavePoints.RoundTrip drained via spawn executor to L3 pass (1 passed, 2026-07-23)."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging manifest pass."
+        }
+      }
+    },
+    "screen-flow": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Navigation Graph": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "screen-HUD: the SOR graph (13 nodes / 22 edges) hydrates into the duel's flow tracker; every executed shell transition is validated against the edge set (violations recorded, zero observed). Playwright 7/7: main_menu→new_game→ingame_hud→in_game, Continue edge taken when a save-points envelope exists, death_screen⇄respawn cycle legal, BFS reachability clean. UE: PreGameMenu/HUD/death exist in FeatureLab but no graph-driven navigation controller."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. VSScreenFlowTest pass with abslog evidence (2026-07-17) — asserts the z-ordering contract (HUD z1 < overlay z3 < pause z4, 50% dim), not graph traversal."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging manifest pass."
+        }
+      }
+    },
+    "combat-map": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Concept Brief": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Brief informed both realizations; text not consumed programmatically."
+        },
+        "Encounter Layout": {
+          "browser": "proven",
+          "ue": "proven",
+          "note": "Browser: the SOR courtyard EXECUTES in the duel — 4 corner cover pillars at ±8.5 m / 1.2 m are real obstacles, movement clamps to the 10 m half-extent square walls (2026-07-23, live probes). UE: build_arena.py geometry + VSArenaSetupTest Result=Success headless (gate pass, prior campaign)."
+        },
+        "Hazards": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: fire-floor executed exactly — 15 Fire per 1 s tick (probe lost exactly 45 over 3 intervals), telegraph-before-first-tick on edge crossing, ring GROWS 4→5.6 m over the 2 s inter-wave lerp when wave 2 arrives. Honest divergence: browser brains have no navmesh avoidance. UE: AARPGEnvironmentalHazard exists; the slice-rules runtime test (VSArenaSliceRulesTest) is scaffold-only."
+        },
+        "Waves & Spawns": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the wave STRUCTURE executes — kill-gated advance (waitForKillsBeforeNextWave), 2 s inter-wave delay, 0.7 s spawn stagger, and the wave-2 leader's Proximity Shield with exact SOR gating (400 one-time pool; absorbs only while an ally is within 5 m; suspends when isolated; the SAME pool re-engages; inert after the battery dies — all probed live 2026-07-23). Disclosed mapping: wave sizes ride the duel's 3-Sith roster (1 | 2), the courtyard's 4 | 3 Grunt counts are NOT claimed. UE: ASpawnVolume wave config data; runtime test not run."
+        },
+        "Win/Loss Rules": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: win = clear-all-WAVES (a pending wave blocks the win path — probed), loss on player death, and the SOR resetGranularity executes: restart respawns BOTH waves, restores crates, and resets the fire-floor to its wave-1 radius (verified live). Death-penalty XP band unexecuted (progression domain)."
+        },
+        "Balance": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The threat-model numbers are design-time budget data; executed nowhere."
+        },
+        "Material": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: MI_WeatheredStone_Floor / _Pillar instances EXECUTE — floor #8a8378 / roughness 0.82 and pillar #7d766c / 0.74 verified against the live materials (2026-07-23); offline defaults mirror the SOR. UE: MI_Arena_* / MI_WeatheredStone assets exist; per-instance parameter assertions unobserved."
+        },
+        "3D / Terrain": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The step's real Lucid Origin 2D design map is not consumed by either runtime; browser geometry is code-built, UE geometry via build_arena.py (asserted by the setup gate, not from this artifact)."
+        },
+        "Ambient / Audio": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The duel's generated audio rides the ambient/music catalogs; this step's arena-specific audio spec is unexecuted."
+        },
+        "Icon 2D Art": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Real generated icon renders in the /layout lab gallery; UE texture import unverified."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. VSArenaSetupTest run headless (abslog Result=Success) and drained; the fuller VSArenaSliceRulesTest (waves + hazard ticks + shield at runtime) remains a scaffold."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
+        }
+      }
+    },
+    "props": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Concept Brief": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The noise-vs-speed tactical choice drove the browser design; text not consumed programmatically. Dangling lt-Brute loot ref repaired to lt-MeleeGrunt across all sibling steps (graded POST, judge re-scored)."
+        },
+        "Interaction": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the dual path EXECUTES — interact prompt inside the 250 cm radius, HOLD-E 0.8 s quiet swing-lid open (interrupt resets progress), strike-destroy as the loud alternative; both paths funnel the one-shot bLooted guard (open-then-smash yields nothing — probed 2026-07-23). UE: interactable runtime exists (inventory chest), the crate actor is unbuilt."
+        },
+        "Destruction States": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: 80 fixed HP drains by dealt damage (13 per crimson-saber hit — the items multiplier rides through); damaged-mesh swap EXACTLY at ≤40 (41 stayed intact, 28 swapped); 0 HP → break with debris + obstacle removal. UE: Chaos GC path exists generically; GC_ReinforcedCrate not authored."
+        },
+        "Collision & Physics": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Browser executes the blocking semantic only (intact crate blocks characters, removed on destroy); mass/Chaos chunk physics have no browser meaning. UE: preset data only."
+        },
+        "Loot on Destroy": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: 1–2 rolls per event with the 0.08 s stagger, on the repaired lt-MeleeGrunt table with ilvl-band base selection at ilvl = the hosting zone's areaLevel 5 — 2000-roll check: 100% Iron Longsword at ilvl 5 (Steel Chestplate's 12–55 band correctly excluded), ~50/50 at ilvl 20; real in-game drop equips (2026-07-23). UE: loot-drop runtime exists; crate unwired."
+        },
+        "Material": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: M_Prop_Hardwood parameters execute on the crate meshes — wood tint #6b5236 / roughness 0.95, iron bands 0.55 metallic; damaged state darkens per the wear lerp."
+        },
+        "VFX / Audio": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: readable procedural approximations fire on the right events — wood-chip sparks per hit, splinter burst + heavy cue on break (which is also the AI noise stimulus: every living enemy flips to an engage burst — probed brain state melee→engage), creak on quiet open (no alert). UE: NS/SC assets unrealized."
+        },
+        "3D & LODs": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Browser renders a procedural 80×60×60 crate stand-in, not the authored mesh pipeline; UE mesh assets unbuilt."
+        },
+        "Icon 2D Art": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Real generated icon renders in the /layout lab; UE import unverified."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "UE moat. VSPropInteractTest is named but never registered/run (honest deferred; scaffold endpoint available) — the Group A UE follow-up."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
+        }
+      }
+    },
+    "materials": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Concept Brief": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Target-agnostic surface identity text."
+        },
+        "Parameters": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the master parameters EXECUTE on the arena's stone surfaces — BaseColorTint [0.43,0.41,0.36] linear on the SOR pillars and roughness = ORM-band × RoughnessMultiplier 1.08 (mapping disclosed in materialspec.js); the combat-map instances override per the master interface (floor #8a8378/0.82 verified exact). UE: MI_WeatheredStone.uasset exists (built by build_weathered_stone.py); per-parameter gate unobserved."
+        },
+        "Instance Library": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The instance model (master + parameterOverrides) is what the browser consumes via combat-map's instances; the library structure itself executes in neither runtime. UE: /Game/Materials/MI_WeatheredStone + M_ARPG_Surface_Master assets exist on disk."
+        },
+        "Shader Graph": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "Channel math (cavity mask, detail-normal blend) is UE master-graph logic with no browser path; the master asset exists, graph assertions unobserved."
+        },
+        "Surface Type": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "PM_Stone / footstep cue table is UE physical-surface machinery — no browser meaning."
+        },
+        "Maps": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "BC7/BC5 texture set spec — no browser meaning; UE texture assets not verified this review."
+        },
+        "LOD/Perf Budget": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "Shader instruction / texture memory budget has no browser meaning."
+        },
+        "Icon 2D Art": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Real generated icon renders in the /layout lab; UE import unverified."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "UE moat. PoF.Materials.ArenaMasters mentioned but no per-test result marker (honest unobserved; scaffold available) — Group A UE follow-up."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
+        }
+      }
+    },
+    "zone-map": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Concept Brief": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Ashen Forest identity text; the browser derives the zone display name from it (seed name lags the artifacts)."
+        },
+        "Area Level & Density": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: areaLevel 5 EXECUTES as the master scalar — crate drops roll at ilvl = areaLevel (the props ilvlSource binding, gating the loot table's ilvl bands: 100% Iron Longsword at 5). The 38-Grunt pack density is NOT claimed (the duel fields its own roster). UE: AshenForestSetupTest Result=Success asserts the zone build."
+        },
+        "Macro Layout & POIs": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the 5 authored POIs render at their SOR world positions on the zone minimap in their bound colors; sector data hydrated. UE: POI actor placement not verified this review."
+        },
+        "Encounter Placement": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the hostedArena cross-link EXECUTES — zone-map must resolve 'combat-map::arena-ravaged-courtyard' to the hydrated arena entity before the areaLevel→ilvl binding engages (verified live: arenaBound=true drives crate loot ilvl). UE: the zone hosts the arena in the built map (setup gate)."
+        },
+        "Minimap UI": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the minimap contract EXECUTES — north-up fixed square fitting the 44 m extents 1:1, fog-of-war revealing in the SOR 12 m radius (session-persistent), rotating player arrow, POI color bindings, zoom at the SOR default, hosted-arena square at Centre (2026-07-23, live + screenshots). UE: widget spec only."
+        },
+        "Material": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The zone's MI_AshenForest_* instances (dark char tints over the same weathered-stone master) are not consumed by the duel — its floor executes the arena's own instance; a zone re-skin is a natural next increment."
+        },
+        "Ambient & Music": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The duel plays the ambient/music catalog beds; this zone's 3-tier soundscape spec is unexecuted."
+        },
+        "3D / Biome": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Biome design map not consumed by the browser build; UE zone geometry via the zone recipe (setup gate)."
+        },
+        "Streaming / LOD": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "World-partition/streaming budgets have no browser meaning."
+        },
+        "Icon 2D Art": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Real generated icon renders in the /layout lab; UE import unverified."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. AshenForestSetupTest run headless (abslog Result=Success), drained."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
+        }
+      }
+    },
+    "input-schemes": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Action Mapping": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "input-kbm (new entity, authored to match the duel's REAL scheme): the SOR owns the code→action table; hydration rebinds the live Input handlers (Input.applyBindings) — the SOR alt bind KeyF fired interact in Playwright (8/8), proving data drives the handlers, not a mirror. UE: AARPGPlayerController builds the same scheme (F→IA_Interact) in C++; F now runtime-mapped via the self-heal (see Test Gate note)."
+        },
+        "Context Stack": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: additive priority stack (gameplay 0 < dialogue 5 < menu 10) gates edge-triggered one-shots via Input.contextGate; pressed state clears on switch (held-across never fires) — menu/dialogue suppression Playwright-proven. UE: PushInputContext/PopInputContext + input modes exist in AARPGPlayerController; not runtime-observed per-context."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. VSInputRebindTest pass with abslog evidence (2026-07-17). F-key incident SOLVED 2026-07-23: runtime diagnostic proved BP_VSPlayerController overrides DefaultMappingContext to IMC_VerticalSlice which has NO Interact mapping (WASD/attack are in the asset; F never was). Self-heal shipped: EnsureDefaultMappingContext (BeginPlay + C++ OnPossess) synthesizes IMC_InteractFixup (F→the bound IA_Interact instance); post-tick truth log confirms 'IA_Interact mapped to: F'. Hardware F press CONFIRMED by the user in PIE (2026-07-23); durable follow-up = add Interact to the IMC_VerticalSlice asset."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "no",
+          "note": "input-gamepad UE Packaging currently fail (judge-owned); not exercised this review."
+        }
+      }
+    },
+    "state-graph": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "State Graph": {
+          "browser": "proven",
+          "ue": "proven",
+          "note": "The authored 6-state FSM IS the Sith's decision spine in the duel. Browser: every band/threshold/timer is PARSED out of this artifact (nothing duplicated in code) and executed live — perception latches TargetActor inside the 800 cm alert radius and clears it after NoLOSDuration 4 s; IdleDwellTimer 4 s -> PATROL with real waypoint traversal; CHASE->ATTACK at <=175 cm and back only past >250 cm (the authored hysteresis holds in the gap); FLEE under HealthPct 0.25 latched once per engagement for 6 s with BOTH authored exits walked (escaped -> IDLE, cornered -> re-engage); DEAD terminal. 30/30 Playwright checks (2026-07-23). UE: UARPGStateGraphRules + UARPGStateTreeAIComponent were DRIFTED from this artifact (flee .20, single 150 cm range, 5 s cooldown) and were rewritten to the authored numbers; PoF.StateGraph.VSStateGraphTest now asserts every constant plus a full component walk and passes headless on 5.8 (Result={Success})."
+        },
+        "Transition Rules": {
+          "browser": "proven",
+          "ue": "proven",
+          "note": "Guards are read from this step's transition list (chase->attack enter band, attack->chase exit band, ->flee threshold + bFleeUsed latch, idle->patrol dwell, chase->idle NoLOS). Same guards are the C++ predicates the gate asserts. The leash term is authored but unexecuted in either target (the duel arena has no post to leash to) — honest partial."
+        },
+        "Hook Points": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: each state exposes its State.AI.<Name> tag and the HUD foe rows render it live — hooks key off the tag, never off an imperative call, which is the step's whole contract. UE: the component exposes CurrentState for the same tag, but no AnimBP/Niagara/SFX binding was observed firing off it."
+        },
+        "Blackboard Schema": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "The keys the guards read (TargetActor, TargetInAlertRadius, HealthPct, IdleDwellTimer, NoLOSDuration, FleeTimerExpired, bFleeUsed) are all live values in the browser spine. The wider authored key set (waypoint queue, stagger, montage-in-progress) is only partly realized; UE holds the same subset on the component."
+        },
+        "Persistence": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Shape gap closed this review (the checker's defeatedTag key had been renamed to defeatMutation by an earlier content pass; renamed back, no content restated). The GUID-scoped defeat/LootDropped save model itself is executed in neither target — the duel has no spawner GUIDs."
+        },
+        "Icon 2D Art": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "A selected candidate exists; no duel surface consumes an FSM icon."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. PoF.StateGraph.VSStateGraphTest rebuilt against the authored constants and re-run headless on 5.8 (Result={Success}, 2026-07-23); artifact already sat at L3 pass and the evidence is now current AND far stronger (constants + hysteresis gap + flee latch + full component walk)."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "UE moat. ST_/BB_/ABP_EnemyAI_AMCombo1 are declared; the C++ component + rules are real and compiled, the .uassets were not verified this review."
+        }
+      }
+    },
+    "factions": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Concept Brief": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Faction identity text informed the duel framing (the Sith are the Corruption-aligned targets the rep deltas name) but is not consumed programmatically by either target."
+        },
+        "Standing & Rep Tiers": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the seven authored tiers hydrate and the ladder is DERIVED from their thresholds — inclusive bounds verified live at the seam (rep 2999 renders Neutral, exactly 3000 renders Friendly, 12000 Exalted, -5000 Hated), rep persisting across duels (2026-07-23). UE: VSFactionRepTest is registered and passes (Result=Success, drained to L3 pass); its per-threshold assertions were not audited line-by-line this review."
+        },
+        "Action → Reputation": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the authored deltas EXECUTE per duel event — +25 per Corruption-aligned Sith kill, +50 for the rare/elite (Darth Malgrave), +75 for the arena sparring win on a full clear; a clean run totalled exactly 175 (2026-07-23). The loss deltas (theft, betrayal, killing Order NPCs) hydrate but have no duel analog and never fire — stated, not hidden. UE: AddRepPoints exists in the subsystem; no runtime consumer verified for these deltas."
+        },
+        "Tier Rewards": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the tier discount is the price the merchant CHARGES, not a label — the vendor buy price is standing-adjusted (list 352g -> 282g at Exalted, exactly -20%) and the purchase deducts that exact amount; Hated returns a null discount and closes the shop entirely (buy disabled), per \"all services closed\". Restock/repair/buyback are untouched, per the SOR rule that the discount applies to the buy price only. UE: GE_FactionTierUp_* unrealized."
+        },
+        "NPC Members": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "No Order NPC stands in the duel arena, so the member roster (and the Vael HOSTILE_FLAG escalation) is unexecuted in both targets."
+        },
+        "Greeting & Disposition Hooks": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The duel has no faction NPC to greet; the disposition hooks are unexecuted in both targets."
+        },
+        "Standing UI": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Browser: a standing readout DOES render (menu line + HUD strip with tier, points and points-to-next), but it is driven by the Standing & Rep Tiers + Tier Rewards artifacts — this step's own widget spec is not the thing being executed. Honest partial. UE: WBP spec only."
+        },
+        "Heraldry Icon": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The heraldry gallery renders in the /layout lab; the duel surfaces no faction crest."
+        },
+        "Localization": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Keys authored; no loc pipeline runs in either target."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat — no browser meaning. VSFactionRepTest run headless and drained to L3 pass (abslog scoped: Result={Success})."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
+        }
+      }
+    },
+    "codex": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Concept Brief": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Brief informed the entry; the browser realization consumes Lore Body / Unlock Rules / Spoiler Tagging, not the brief text."
+        },
+        "Lore Body": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the authored body is the text the player READS in the codex reader, rendered verbatim with its gated span swapped at render time (2026-07-23). The SOR's own grammarCheck holds in the running page: the revealed string slots after \"their bearing on the cause is\" with no duplicated verb. UE: DT_Codex row unseeded."
+        },
+        "Cross-References": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the three authored crossRefs (The Ashen Order / Ashen Forest / Captain Vael) render as the Related Entries strip on the open entry. The knowledge-graph step also grades L0 by graphValid. UE: the Related Entries panel is a widget spec only."
+        },
+        "Unlock Rules": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: BOTH authored callers execute against ONE idempotent guard, exactly as the SOR specifies — quest completion (primary) and arena entry (the trigger-volume fallback) each grant the entry, and whichever fires second is a genuine no-op that raises no second toast and replays no sting. Before any grant the entry is HIDDEN from the menu, not greyed, per entryVisibility. Unlock persists across reloads. UE: GE_Codex_Unlock_* unrealized."
+        },
+        "Spoiler Tagging": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the sealed span renders the authored redaction stamp — lock glyph + the SOR amber #E0A867 (computed rgb(224,168,103) in the running page), so redaction reads without relying on hue — and the reveal swaps in the authored conclusion (the Order-facility claim), with the stamp gone. One tag gates both linked claims, as authored. UE: spoiler GE unrealized."
+        },
+        "Illustration": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The illustration gallery renders in the /layout lab; the duel's codex reader shows text only."
+        },
+        "Audio Sting": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the two stings fire on their respective grants and only on the FIRST grant. They are WebAudio syntheses following the authored briefs (struck low brass + ash crackle; short muted tremolo stab) — the duel has no asset pipeline, so these are honest code stand-ins for SC_Codex_Unlock_* / SC_Codex_SpoilerReveal_*, not generated audio. UE: SoundCues unrealized."
+        },
+        "Accessibility": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Only the redaction-not-colour-alone check is executed (glyph + hue in the running reader). The scalable-font, alt-text, keyboard-navigable-crossrefs and SFX-toggle checks are unexecuted."
+        },
+        "Localization": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Keys authored; the reader renders the authored English prose directly — no string table."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. VSCodexUnlockTest run headless and drained to L3 pass (abslog scoped: Result={Success})."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
+        }
+      }
+    },
+    "tutorial-beats": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Concept Brief": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Brief informed the lesson; not consumed programmatically."
+        },
+        "Trigger": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: arena entry IS the OnEnterZone trigger and the gate is the authored GameplayTag_Missing:Tutorial.Dodge.Introduced — the beat fires on a fresh save, and after any terminal it never re-arms, verified across a reload (2026-07-23). UE: AARPGTriggerBox unrealized."
+        },
+        "Lock / Sandbox": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Browser: a sandbox DOES lock the player — the four lockedInputs carried on the Step Sequence steps (IA_Attack/Skill_1/Skill_2/Interact) are eaten each frame, and an attack press during the lesson produces no swing. But it is the Step Sequence artifact being executed; this step's own scope definition was not hydrated. Honest partial."
+        },
+        "Step Sequence": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the authored machine RUNS on its exact numbers — 500 ms prompt hold, 700 ms wind-up, contact resolved against the roll's 300 ms i-frame window, 3500 ms attempt window lapsing into a retry, max 3 attempts. A roll whose window closed before contact is rejected; one covering the contact frame passes (2026-07-23). Runs on REAL elapsed time — these are UX timings, so they must not stretch with hitstop or a clamped sim dt. UE: BP_TutorialBeat unrealized."
+        },
+        "Success / Skip / Fail": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: all three terminals execute with their authored tag pairs — success grants Introduced+Completed, the third miss CONCEDES (Introduced+Failed, never a 4th attempt, never a trap), and a held skip grants Introduced+Skipped. Every terminal unlocks the sandbox in the same frame and persists, so the beat never re-arms. A 300 ms tap does not skip; an 1100 ms hold does, per the authored 800 ms. UE: tag grants unrealized."
+        },
+        "Pointer / Highlight 2D": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The coaching widget renders (with the authored locKey), but no pointer/highlight overlay on the dodge binding is drawn in either target."
+        },
+        "VFX / Audio Cue": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The wind-up telegraph, contact flash/ring and clash are the duel's existing effects standing in for the authored NS_/SC_ cues — readable, but not the authored assets."
+        },
+        "VO": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Coach VO lines are unrecorded in both targets."
+        },
+        "Telemetry": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Browser: the beat_started / beat_attempt / beat_completed / beat_failed / beat_skipped events ARE emitted and collected in order, so drop-off per beat is measurable. But the event names come from the Step Sequence steps; this step's own envelope (and the dodge_success_rate metric) is not hydrated and nothing is transmitted. Honest partial."
+        },
+        "Icon 2D Art": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Icon gallery renders in the lab; the duel shows no beat icon."
+        },
+        "Localization": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The widget shows the authored locKey and a plain browser stand-in line — the artifact carries keys, not strings, so no copy was invented to fill them."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. VSTutorialComprehensionTest run headless and drained to L3 pass (abslog scoped: Result={Success})."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
+        }
+      }
+    },
+    "cutscenes": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Concept Brief": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Brief informed the sequence; not consumed programmatically."
+        },
+        "Beat Sheet & Shot List": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the sheet PLAYS. Seven contiguous beats run the authored 90 s and every Sequencer marker fires exactly once as its timecode is crossed — measured 20.4 / 38.0 / 58.4 / 72.2 / 82.3 / 90.0 s against the authored 20 / 38 / 58 / 72 / 82 / 90 (2026-07-23). Each beat stages the camera per its shot note (aerial push-in, ECU rack-focus, a 180-degree OTS arc — half an orbit as authored, frame-left long shot, Dutch +3 bust push-in, crane-up match). Timing runs on REAL elapsed seconds, as a timecode demands. UE: LS_PrologueTheFall unrealized."
+        },
+        "Blocking / Body Anim": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The authored performance has no browser counterpart — there is no Vael cinematic actor and no blocking was faked; the beat description carries the content instead. Unrealized in UE too."
+        },
+        "Facial / Lipsync": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "No facial rig in either target."
+        },
+        "Lighting": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The arena's own lighting stands; the authored per-beat lighting states are unexecuted."
+        },
+        "VFX": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The beat-6 ember burst (NS_FireImpactBurst) is not spawned in the browser — the beat fires its marker, the effect is honestly absent."
+        },
+        "Music & SFX": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The authored stem fade to silence at EmberCrescendo is unexecuted; the prologue plays without underscore in the browser."
+        },
+        "VO": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "No prologue VO in either target."
+        },
+        "Subtitles & Loc": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "A subtitle line DOES render per beat, but it is the beat's own description — this step's authored subtitle strings are not hydrated. Honest partial."
+        },
+        "Skip / Replay Rules": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the rules execute exactly. A hold inside the 3 s grace window is IGNORED, not queued (skipHeldSec stayed 0 through a 1.5 s hold); after the window the prompt appears with a 0.5 s hold meter and auto-hides after 4 s idle; a completed hold runs the SAME completion path — only End fires, markers not yet reached stay suppressed (EmberCrescendo/HardCut absent), the no-retrigger tag applies, and skip and full watch converge on the identical post-cutscene state. A watched prologue is bypassed on the next entry. The gallery REPLAY path is not built. UE: UARPGCinematicComponent unrealized."
+        },
+        "Icon 2D Art": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Icon gallery renders in the lab; unused by the sequence."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. VSCutsceneTimingTest run headless and drained to L3 pass (abslog scoped: Result={Success})."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. Packaging engine Tier-1."
+        }
+      }
+    },
+    "vfx": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Behavior": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the authored emitter table IS the duel's pooled impact burst — 12 CoreFlash + 48 Embers + 20 Smoke = the artifact's 80 spawn total, each emitter carrying its own lifetime (0.18 / 0.6 / 0.9 s) so the burst decays in the authored stages instead of all at once; embers fly at the authored 300-600 cm/s under -980 cm/s^2 and the colour ramp runs hot->soot. 34/34 Playwright checks (2026-07-23). Shape gap closed this review: the checker's behavior.lifetime/spawnRate keys had been renamed by an earlier content pass. UE: NS_FireImpactBurst + its AnimNotify are declared, not observed firing."
+        },
+        "GPU / LOD Budget": {
+          "browser": "proven",
+          "ue": "proven",
+          "note": "Browser: the artifact's distance table is the executed LOD policy — LOD1 halves the spawn to 40, LOD2 skips the burst entirely (the artifact's own budget mechanism, not a cosmetic fade). Bands agree with UARPGVFXLodRules EDGE FOR EDGE: 15 m reads LOD1 (band start), 35 m still LOD1, 36 m culls. UE: PoF.VFX.VSVFXPerfTest asserts exactly those six boundary cases and passes headless on 5.8 (Result={Success}, re-run 2026-07-23). The ms figures themselves are measured-and-authored, executed nowhere — the browser cannot measure UE GPU time and does not pretend to; gpuPct now carries the worst-case preset peak (0.46 of the 0.48 ceiling)."
+        },
+        "Sound Hook": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Shape gap closed (cue/activation renamed to the checker's cues/animNotifyBinding). The cue itself is unbuilt in both targets — no SW_FireImpact_* waves exist, and the duel's hit sound is its own synth. Not claimed."
+        },
+        "Concept Brief": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Target-agnostic text; the browser realization consumed Behavior + the LOD table, not the brief."
+        },
+        "Mesh / Sprite": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "A sprite candidate is selected; the browser burst renders additive points, not the authored sprite asset — honest divergence for a procedural runtime."
+        },
+        "Material": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "MI_FireImpactBurst is declared; the browser uses one additive PointsMaterial, so the per-emitter blend modes are approximated, not executed."
+        },
+        "Variants": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Small/Med/Large presets are authored (and their ms spread derived); the duel fires one size."
+        },
+        "Icon 2D Art": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "A candidate is selected; no duel surface shows a VFX icon."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. PoF.VFX.VSVFXPerfTest re-run headless on 5.8 this review (Result={Success})."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "UE moat. NS_/MI_/SM_ declarations exist; assets not verified this review."
+        }
+      }
+    },
+    "player-movement": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Blend Space Grid": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "The step's ASSET build (11-sample strafe grid) is editor-Python and stays deferred — a browser cannot author a BlendSpace. What this review made dual-executable is the FEEL the grid is tuning, authored onto the artifact from AARPGCharacterBase + the player_movement constants (cited in the data, not invented): the duel now runs WalkSpeed 6.0 m/s, SprintSpeed 9.0 m/s over SprintSpeedInterpTime, AccelerationFromIdle 40.96 m/s^2, BrakingDeceleration 24 m/s^2, RotationRateIdle 720 deg/s easing to 360 at pace, and the stamina pool (drain 20/s measured at 32 over 1.6 s, regen 15/s, empty bar cannot sustain a sprint). UE: those properties are the live CDO values on AARPGCharacterBase, but no PIE run was observed this review."
+        },
+        "AM_Roll Montage": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the roll's i-frames are now the AM_Roll DodgeWindow notify window (start 2/30 s, ~4 frames) rather than a hand-tuned guess — a hit at 0.033 s lands, at 0.133 s is ignored, at 0.300 s lands again, verified live. This closed a real divergence: the browser had been granting 0.40 s of invulnerability where the montage authors 0.133 s. DodgeCooldown 1 s and DodgeStaminaCost 25 also execute. UE: the montage build itself is editor-Python (deferred)."
+        },
+        "Mesh + Skeleton": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "Editor-Python verify of BP_VSPlayer/IMC/IA assets — no browser meaning."
+        },
+        "Mixamo Source": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "Human-confirmed FBX drop — no browser meaning."
+        },
+        "Import Mixamo Clips": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "Editor-Python FBX import; deferred awaiting the editor."
+        },
+        "IK Rigs": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "Editor-Python IK rig + retargeter build; deferred."
+        },
+        "Retarget Clips": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "Editor-Python batch retarget; deferred."
+        },
+        "PoFEditor Build": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "Library-symbol probe; deferred."
+        },
+        "ABP_VSPlayer": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "AnimBP authoring via UPoFAnimBPAuthoringLibrary; deferred. The browser's locomotion is code-authored clips, which is a divergence, not a mirror."
+        },
+        "Playable Gate": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "L4 visual gate: PIE + injected WASD/Sprint/Roll + 4-frame variance. Needs a live editor; not run this review."
+        }
+      }
+    },
+    "characters": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Concept & Role": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "char-darth-malgrave seeded + authored this review as the duel's named boss. Browser: role/identity execute (Boss encounter role, npcId DarthMalgrave, dialogue dialog-duel-intro). Vael's own brief carries a judge-owned sub-90 verdict (content campaign, not this review)."
+        },
+        "Stat Block": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Deliberately NOT a second balance surface: Malgrave's row single-sources bestiary-sith-lord and names it. Verified live that the row's 50 hp / 12 damage / 600 cm/s equal the archetype's and that the boss in the arena runs those archetype numbers after his presentation is applied. UE: DT_AttributeDefaults row is declared (attributeRowName DarthMalgrave), not seeded/verified this review."
+        },
+        "Material / Outfit": {
+          "browser": "proven",
+          "ue": "probable",
+          "note": "Browser: the authored outfit retints the live rig — robe #1a1016 (hood follows), trim #7a1020, blade #ff2a2a — verified on the boss in the arena. rig.js additively exposes material handles so this can apply after hydration. UE: MI_ declared only."
+        },
+        "Behavior (NPC)": {
+          "browser": "proven",
+          "ue": "proven",
+          "note": "Browser: role + npcId + dialogue binding hydrate and scope correctly (an unauthored roster member is left untouched). Shape gap closed on BOTH rows this review — the checker's dialogueBinding key had been moved under behavior.dialogue.host by a content pass. UE: PoF.CharacterVael.NPCConfig re-run headless on 5.8 (Result={Success}) — it asserts the AARPGNPCActor identity/role/indicator contract this step describes. Malgrave's NPCRole is honestly None (a hostile boss offers no interaction); 'Boss' is the encounter role."
+        },
+        "VO": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Three lines authored and hydrated (the duel-open line is parsed and exposed), but nothing speaks them yet — no VO audio and no trigger consumes the line. Not claimed as executed."
+        },
+        "Concept 2D Art": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Selected candidate exists; no duel surface renders a character concept."
+        },
+        "3D & Rig": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The duel rig is procedural code, not the authored skeletal mesh — an honest divergence, not a mirror."
+        },
+        "Locomotion Anim": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Clip names are authored; the browser plays code-authored clips of its own."
+        },
+        "Combat Anim": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Montage names are authored; the browser's combo is code-authored."
+        },
+        "Icon 2D Art (portrait)": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "A deterministic seed preview is selected — no real generation exists, and no duel surface shows a portrait yet."
+        },
+        "Test Gate": {
+          "browser": "no",
+          "ue": "proven",
+          "note": "UE moat. PoF.CharacterVael.NPCConfig re-run headless on 5.8 this review (Result={Success}). It covers VAEL; Malgrave has no gate of his own — honestly ungated."
+        },
+        "UE Packaging": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "UE moat. BP_/SK_/DT_ declarations exist for Vael; Malgrave's are declared, not built."
+        }
+      }
+    },
+    "character-pipeline": {
+      "reviewedAt": "2026-07-23",
+      "steps": {
+        "Game-Tier Convert": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Shape gap closed this review: the checker's gameTier.faceLimit/textureSize/sizeMB had been nested under convertParams/sizes by a content pass — surfaced without restating content, row now passes. The convert itself (Tripo convert_model on the rigged task, 60 MB -> 4.3 MB) is real work already performed on the standalone jinx project, but nothing in this program re-ran or measured it, so it is not claimed as executed here."
+        },
+        "UE Import": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "UE-realization step — no browser meaning. Shape gap closed (the three Interchange imports the row describes are now listed flat as `created`: one master carrying mesh+skeleton+idle, two anim-only takes bound to it). The one-skeleton binding law is the row's real content; the imports were performed on the standalone jinx project, not verified here."
+        },
+        "3D Generation": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "A REAL generated mesh exists and is selected (bestof_fg095.glb, Tripo v3.1-20260211 HD, in generated/triposr/). It is NOT claimed as browser-executed: the duel renders a procedural rig and has no glTF loader vendored, and the /layout lab's GlbViewer path — the browser surface that would have shown it — could not be exercised because /api/visual-gen/asset/* is returning 500 for every request (route module fails to load; unrelated to this review, see the program handbook's open threads). Claiming 'proven' off a file's existence is exactly what this registry exists to prevent."
+        },
+        "Concept 2D": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Real generated concepts exist with a selection; the same asset-serving outage blocked observing them render this review."
+        },
+        "Face Gate 2D": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The gate decision is authored (close-up crop, sclera/pupils/brows criteria per canon charpipe-face-gate); the judging itself is human/VLM, executed in neither runtime."
+        },
+        "Face Gate 3D": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Headless close-up head renders are the authored gate; not re-run this review."
+        },
+        "Rig & Clips": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The Tripo auto-rig + preset takes are real (task id recorded); the browser plays code-authored clips instead, which is a divergence rather than a mirror."
+        },
+        "Apparel": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "Authored spec; unexecuted in both targets."
+        },
+        "Playable Wire": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "The standalone jinx project wired a WASD pawn on this mesh (see project_jinx_standalone); not re-verified here and never wired in the duel."
+        },
+        "Icon 2D Art": {
+          "browser": "probable",
+          "ue": "probable",
+          "note": "A candidate is selected; no duel surface consumes it."
+        },
+        "Visual Gate": {
+          "browser": "no",
+          "ue": "probable",
+          "note": "L4 visual gate — needs a rendered frame judged by eye; correctly deferred, not run this review."
+        }
+      }
+    }
+  }
+}

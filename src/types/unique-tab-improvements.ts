@@ -160,6 +160,6 @@ export interface ProbabilityEntry {
 export interface LoadoutSlot {
   slotId: string;
   slotName: string;
-  item?: { name: string; rarity: string; stats: Record<string, number> };
+  item?: { name: string; rarity: string; stats: Record<string, number>; hiddenStatCount?: number };
   isEmpty: boolean;
 }

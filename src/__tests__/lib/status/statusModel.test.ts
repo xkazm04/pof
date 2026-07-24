@@ -143,6 +143,41 @@ describe('unpowered — the audited no-engine gap', () => {
   });
 });
 
+describe('browserMirror — dual-execution annotation', () => {
+  const fact = (over: Partial<StepFact> = {}): StepFact => ({
+    catalogId: 'spellbook', step: 'Effect Logic', trueEngine: 'Claude', deliverable: 'text-config',
+    generatorWired: true, judge: 'llm-panel', checkerMeaningful: false, note: '', ...over,
+  });
+
+  it('text-config steps carry browserMirror: direct', () => {
+    const c = deriveCell('Effect Logic', 'Claude', [art('Effect Logic', 'pass')], fact());
+    expect(c.browserMirror).toBe('direct');
+  });
+
+  it('media deliverables carry partial; the ue-runtime moat carries nothing', () => {
+    const mesh = deriveCell('3D & Rig', 'Tripo', [art('3D & Rig', 'pass')],
+      fact({ deliverable: '3d-mesh', trueEngine: 'Tripo' }));
+    expect(mesh.browserMirror).toBe('partial');
+    const gate = deriveCell('Test Gate', 'UE', [art('Test Gate', 'deferred')],
+      fact({ deliverable: 'ue-runtime', trueEngine: 'UE gates' }));
+    expect(gate.browserMirror).toBeUndefined();
+  });
+
+  it('no fact → no browserMirror claim', () => {
+    const c = deriveCell('Brief', 'Claude', [art('Brief', 'pass')]);
+    expect(c.browserMirror).toBeUndefined();
+  });
+
+  it('buildSwimlane attaches realization evidence for reviewed pipelines only', () => {
+    const lane = buildSwimlane('spellbook', 'Spellbook',
+      [{ label: 'Effect Logic' }], [art('Effect Logic', 'pass', { catalogId: 'spellbook' })]);
+    expect(lane.cells[0].realization?.browser).toBe('proven');
+    const other = buildSwimlane('items', 'Items',
+      [{ label: 'Concept Brief' }], [art('Concept Brief', 'pass', { catalogId: 'items' })]);
+    expect(other.cells[0].realization).toBeUndefined();
+  });
+});
+
 describe('judge verdict merge — the content-quality layer', () => {
   const llmFact: StepFact = {
     catalogId: 'items', step: 'Brief', trueEngine: 'Claude', deliverable: 'text-config',

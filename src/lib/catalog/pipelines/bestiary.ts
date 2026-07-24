@@ -2,7 +2,7 @@ import { registerCatalogPipeline } from '../pipeline-registry';
 import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
 import { powerWithinTierTarget, monsterRarityWithinBands } from '../acceptance/invariants';
 import { allOf } from '../acceptance/combinators';
-import { runtimeDeferred } from '../acceptance/deferred';
+import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 
@@ -361,7 +361,7 @@ registerCatalogPipeline({
         },
       }),
       // Registered automation name (enumerated from UE): the bestiary archetype gate.
-      accept: runtimeDeferred('PoF.Bestiary.BruteArchetypeConfig', 'Brute archetype config validated in UE'),
+      accept: entityRuntimeDeferred('PoF.Bestiary.BruteArchetypeConfig', 'Brute archetype config validated in UE'),
     },
 
     // ── 12. UE Packaging ──────────────────────────────────────────────────────

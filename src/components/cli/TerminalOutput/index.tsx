@@ -185,7 +185,19 @@ export function TerminalOutput({
   } = useTerminalOutput({ logs, scrollRef, onBuildFix, scrollBtnVisible, isAutoScroll });
 
   return (
-    <div ref={scrollRef} data-testid="pof-cli-panel-output" onScroll={onScroll} onMouseUp={handleMouseUp} className="flex-1 overflow-y-auto relative">
+    /* The log is a scrollable region with no guaranteed focusable content, so it
+       carries tabIndex + a name of its own — otherwise keyboard-only users can
+       never scroll back through the output (WCAG 2.1.1). */
+    <div
+      ref={scrollRef}
+      data-testid="pof-cli-panel-output"
+      onScroll={onScroll}
+      onMouseUp={handleMouseUp}
+      role="region"
+      aria-label="Terminal output"
+      tabIndex={0}
+      className="flex-1 overflow-y-auto relative focus-ring-inset"
+    >
       {/* Selection floating toolbar */}
       {selectionToolbar && (
         <SelectionToolbar
@@ -200,8 +212,12 @@ export function TerminalOutput({
 
       {logs.length === 0 ? (
         queuePendingCount > 0 ? (
-          <div className="flex items-center justify-center h-full text-text-muted text-xs">
-            Waiting to start...
+          <div role="status" className="flex flex-col items-center justify-center h-full gap-2 px-6 text-center">
+            <Loader2 className="w-4 h-4 animate-spin" style={{ color: accentColor }} aria-hidden="true" />
+            <p className="text-xs text-text">
+              {queuePendingCount} task{queuePendingCount === 1 ? '' : 's'} queued
+            </p>
+            <p className="text-2xs text-text-muted">Starting the first one — output appears here as it runs.</p>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center h-full px-6 gap-4 select-none">
@@ -231,7 +247,8 @@ export function TerminalOutput({
                   <button
                     key={sp.label}
                     onClick={() => onPromptFill(sp.prompt)}
-                    className="px-2.5 py-1 rounded-full text-2xs font-medium transition-all hover:brightness-125 cursor-pointer"
+                    title={sp.prompt}
+                    className="px-2.5 py-1 rounded-full text-2xs font-medium transition-all hover:brightness-125 cursor-pointer focus-ring"
                     style={{
                       color: accentColor,
                       backgroundColor: withOpacity(accentColor, OPACITY_5),
@@ -307,9 +324,11 @@ export function TerminalOutput({
         >
           <button
             onClick={onScrollToBottom}
-            className="pointer-events-auto flex items-center gap-1 h-6 px-2 bg-surface/90 backdrop-blur-sm border border-border-bright rounded-full text-text-muted-hover hover:text-text hover:bg-surface-hover/90 transition-all shadow-lg"
+            title={unseenCount > 0 ? `Jump to ${unseenCount} new line${unseenCount === 1 ? '' : 's'}` : 'Jump to latest output'}
+            aria-label={unseenCount > 0 ? `Jump to latest output, ${unseenCount} new line${unseenCount === 1 ? '' : 's'}` : 'Jump to latest output'}
+            className="pointer-events-auto flex items-center gap-1 h-6 px-2 bg-surface/90 backdrop-blur-sm border border-border-bright rounded-full text-text-muted-hover hover:text-text hover:bg-surface-hover/90 transition-all shadow-lg focus-ring"
           >
-            <ChevronDown className="w-3 h-3" />
+            <ChevronDown className="w-3 h-3" aria-hidden="true" />
             {unseenCount > 0 && (
               <span className="text-xs font-medium" style={{ color: MODULE_COLORS.core }}>{unseenCount} new</span>
             )}

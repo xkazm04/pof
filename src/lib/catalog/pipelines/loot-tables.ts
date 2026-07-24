@@ -2,7 +2,7 @@ import { registerCatalogPipeline } from '../pipeline-registry';
 import { minLength, fieldsPopulated, withinPercent, selected, minCount } from '../acceptance/dataCheckers';
 import { componentsSumTo, arithmeticReconciles } from '../acceptance/invariants';
 import { allOf } from '../acceptance/combinators';
-import { runtimeDeferred } from '../acceptance/deferred';
+import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 
@@ -465,7 +465,7 @@ registerCatalogPipeline({
           ],
         },
       }),
-      accept: runtimeDeferred(
+      accept: entityRuntimeDeferred(
         'VSLootDistributionTest',
         'Drop distribution matches odds over N rolls in PIE',
       ),

@@ -1,6 +1,6 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { minLength, fieldsPopulated, withinPercent, selected } from '../acceptance/dataCheckers';
-import { runtimeDeferred } from '../acceptance/deferred';
+import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 
@@ -379,7 +379,7 @@ registerCatalogPipeline({
           ],
         },
       }),
-      accept: runtimeDeferred(
+      accept: entityRuntimeDeferred(
         'PoF.Materials.ArenaMasters',
         'Instance compiles + samples maps in editor',
       ),

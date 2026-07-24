@@ -1,7 +1,7 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
 import { graphValid } from '../acceptance/graphCheckers';
-import { runtimeDeferred } from '../acceptance/deferred';
+import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 
@@ -675,7 +675,7 @@ registerCatalogPipeline({
           ],
         },
       }),
-      accept: runtimeDeferred('VSStateGraphTest', 'No deadlock + all states reachable in PIE'),
+      accept: entityRuntimeDeferred('VSStateGraphTest', 'No deadlock + all states reachable in PIE'),
     },
 
     // ── 9. UE Packaging ───────────────────────────────────────────────────────

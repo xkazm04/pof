@@ -9,6 +9,7 @@ import {
 } from '@/lib/chart-colors';
 import { computeEdgeGeometry } from '@/components/ui/svg/graph-edges';
 import { SchematicPanel } from '@/components/ui/SchematicPanel';
+import { DesktopCanvasNotice } from '@/components/ui/DesktopCanvasNotice';
 import { highestSeverity } from '@/lib/state-machine-validator';
 import { STATE_TYPE_COLORS } from '../shared/state-machine-shared';
 import { EDITOR_ACCENT, NODE_W, NODE_H } from './constants';
@@ -37,11 +38,13 @@ export function EditorCanvas({ editor }: { editor: StateMachineEditorApi }) {
   } = editor;
 
   return (
-    <SchematicPanel
+    <>
+      <DesktopCanvasNotice className="mb-2" />
+      <SchematicPanel
       ref={canvasRef}
       tone="well"
       accent={EDITOR_ACCENT}
-      className="select-none"
+      className="select-none touch-none-canvas"
       style={{ height: 400, cursor: draggingStateId ? 'grabbing' : drawingTransition ? 'crosshair' : 'default' }}
       onMouseMove={handleCanvasMouseMove}
       onMouseUp={handleCanvasMouseUp}
@@ -304,5 +307,6 @@ export function EditorCanvas({ editor }: { editor: StateMachineEditorApi }) {
         </div>
       )}
     </SchematicPanel>
+    </>
   );
 }

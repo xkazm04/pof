@@ -1,7 +1,7 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
 import { priceRatioWithinBand } from '../acceptance/invariants';
-import { runtimeDeferred } from '../acceptance/deferred';
+import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 
@@ -563,7 +563,7 @@ registerCatalogPipeline({
           ],
         },
       }),
-      accept: runtimeDeferred(
+      accept: entityRuntimeDeferred(
         'VSCraftingTest',
         'Inputs consumed → output produced in PIE',
       ),

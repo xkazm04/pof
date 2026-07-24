@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
     if (action === 'occurrences') {
       const fpId = req.nextUrl.searchParams.get('fpId');
       if (!fpId) return apiError('fpId required', 400);
-      return apiSuccess(getOccurrences(fpId));
+      return apiSuccess(getOccurrences(fpId, 200));
     }
     if (action === 'stats') {
       return apiSuccess(getRegressionStats());

@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Zap } from 'lucide-react';
 import { TaskFactory } from '@/lib/cli-task';
 import { Z_INDEX } from '@/lib/constants';
@@ -44,6 +45,27 @@ export function ReviewableModuleView({
     handleReviewFeature,
     isAnyRunning,
   } = useReviewableModuleView({ moduleId, moduleLabel, accentColor, checklist, extraTabs });
+
+  // Focus handoff for the Quick Actions slide-over. The opener button is
+  // `display:none` while the panel is open, so without this the browser drops
+  // focus to <body> on open and there is nothing to return to on close.
+  // `null` seeds the ref so the initial render (the panel may be persisted open)
+  // never steals focus — only genuine open/close transitions move it.
+  const closePanelRef = useRef<HTMLButtonElement>(null);
+  const openPanelRef = useRef<HTMLButtonElement>(null);
+  const wasPanelOpenRef = useRef<boolean | null>(null);
+
+  useEffect(() => {
+    const isOpen = !panelCollapsed;
+    if (wasPanelOpenRef.current === null) {
+      wasPanelOpenRef.current = isOpen;
+      return;
+    }
+    if (wasPanelOpenRef.current === isOpen) return;
+    wasPanelOpenRef.current = isOpen;
+    if (isOpen) closePanelRef.current?.focus();
+    else openPanelRef.current?.focus();
+  }, [panelCollapsed]);
 
   return (
     <div data-testid={`pof-module-${moduleId}`} className="flex h-full relative">
@@ -119,25 +141,37 @@ export function ReviewableModuleView({
 
       {/* Quick Actions toggle — fixed on right edge */}
       <button
+        ref={openPanelRef}
+        type="button"
         onClick={() => setPanelCollapsed(false)}
         className="absolute right-0 top-3 w-7 h-14 rounded-l-lg bg-surface border border-r-0 border-border flex items-center justify-center text-text-muted hover:text-text hover:bg-surface-hover transition-colors shadow-md"
         style={{ zIndex: Z_INDEX.overlay, display: panelCollapsed ? undefined : 'none' }}
         title="Open Quick Actions"
+        aria-label="Open Quick Actions"
+        aria-expanded={!panelCollapsed}
       >
-        <ChevronLeft className="w-3.5 h-3.5" />
+        <ChevronLeft className="w-3.5 h-3.5" aria-hidden="true" />
       </button>
 
-      {/* Backdrop overlay */}
+      {/* Backdrop overlay — decorative click-catcher; Escape closes for keyboard users */}
       {!panelCollapsed && (
         <div
           className="fixed inset-0 bg-black/40 animate-in fade-in duration-200"
           style={{ zIndex: Z_INDEX.backdrop }}
           onClick={() => setPanelCollapsed(true)}
+          aria-hidden="true"
         />
       )}
 
-      {/* Quick Actions slide-over panel */}
+      {/* Quick Actions slide-over panel.
+          Stays mounted for the slide transition, so while collapsed it must be
+          `inert` — otherwise its buttons and prompt input stay in the tab order
+          and the accessibility tree despite being translated off-screen. */}
       <div
+        role="dialog"
+        aria-modal={!panelCollapsed}
+        aria-label={`Quick Actions — ${moduleLabel}`}
+        inert={panelCollapsed}
         className={`fixed top-0 right-0 h-full w-1/2 max-w-[600px] min-w-[320px] bg-surface-deep border-l border-border shadow-2xl transition-transform duration-300 ease-out ${
           panelCollapsed ? 'translate-x-full' : 'translate-x-0'
         }`}
@@ -146,16 +180,19 @@ export function ReviewableModuleView({
         {/* Panel header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <div className="flex items-center gap-2">
-            <Zap className="w-4 h-4" style={{ color: accentColor }} />
+            <Zap className="w-4 h-4" style={{ color: accentColor }} aria-hidden="true" />
             <h2 className="text-sm font-semibold text-text">Quick Actions</h2>
             <span className="text-xs text-text-muted">— {moduleLabel}</span>
           </div>
           <button
+            ref={closePanelRef}
+            type="button"
             onClick={() => setPanelCollapsed(true)}
             className="w-7 h-7 rounded-md flex items-center justify-center text-text-muted hover:text-text hover:bg-surface-hover transition-colors"
             title="Close panel (Esc)"
+            aria-label="Close Quick Actions panel"
           >
-            <ChevronRight className="w-4 h-4" />
+            <ChevronRight className="w-4 h-4" aria-hidden="true" />
           </button>
         </div>
 

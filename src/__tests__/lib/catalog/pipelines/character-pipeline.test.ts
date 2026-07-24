@@ -7,9 +7,9 @@ const entity = { id: 'char-pipeline-jinx', name: 'Jinx' } as never;
 describe('character-pipeline pipeline', () => {
   const pipeline = getCatalogPipeline('character-pipeline');
 
-  it('is registered with 10 steps', () => {
+  it('is registered with 11 steps', () => {
     expect(pipeline).not.toBeNull();
-    expect(pipeline?.steps).toHaveLength(10);
+    expect(pipeline?.steps).toHaveLength(11);
   });
 
   it('has the gated-workflow step labels in order', () => {
@@ -21,6 +21,7 @@ describe('character-pipeline pipeline', () => {
       'Face Gate 3D',
       'Rig & Clips',
       'UE Import',
+      'Apparel',
       'Playable Wire',
       'Game-Tier Convert',
       'Icon 2D Art',
@@ -60,14 +61,27 @@ describe('character-pipeline pipeline', () => {
     expect(r.tier).toBe('L0');
   });
 
-  it('Playable Wire is the L3 Test Gate (honestly deferred)', () => {
+  it('Apparel manifests the Chaos Cloth setup and is the L3 runtime gate (honestly deferred)', () => {
     const s = pipeline!.steps[6];
+    expect(s.label).toBe('Apparel');
+    const data = s.produce(entity).data as { cloth: string[] };
+    // manifest View renders an array field; the setup names the proven graph chain
+    expect(Array.isArray(data.cloth)).toBe(true);
+    expect(data.cloth.length).toBeGreaterThanOrEqual(4);
+    expect(data.cloth.join('\n')).toMatch(/TransferSkinWeights/);
+    const r = s.accept(data as never);
+    expect(r).toMatchObject({ tier: 'L3', status: 'deferred' });
+    expect(r.reason).toBeTruthy(); // deferred must carry a reason (Rule 4)
+  });
+
+  it('Playable Wire is the L3 Test Gate (honestly deferred)', () => {
+    const s = pipeline!.steps[7];
     const r = s.accept(s.produce(entity).data ?? {});
     expect(r).toMatchObject({ tier: 'L3', status: 'deferred' });
   });
 
   it('Game-Tier Convert records the sustainability budget (L0 pass)', () => {
-    const s = pipeline!.steps[7];
+    const s = pipeline!.steps[8];
     const data = s.produce(entity).data as { gameTier: { sizeMB: number; rigPreserved: boolean } };
     expect(data.gameTier.sizeMB).toBeLessThan(10);
     expect(data.gameTier.rigPreserved).toBe(true);
@@ -75,7 +89,7 @@ describe('character-pipeline pipeline', () => {
   });
 
   it('Visual Gate is the L4 gate (honestly deferred)', () => {
-    const s = pipeline!.steps[9];
+    const s = pipeline!.steps[10];
     const r = s.accept(s.produce(entity).data ?? {});
     expect(r).toMatchObject({ tier: 'L4', status: 'deferred' });
   });

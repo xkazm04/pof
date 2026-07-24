@@ -37,7 +37,7 @@ export async function GET(req: Request) {
         return apiSuccess(getLatestSnapshot());
 
       case 'suggestions':
-        return apiSuccess(getAllSuggestions());
+        return apiSuccess(getAllSuggestions(200));
 
       case 'pending':
         return apiSuccess(getPendingSuggestions());

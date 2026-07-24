@@ -26,6 +26,11 @@ export async function GET(req: NextRequest) {
  * `pending`, never `pass`. Only catalogs with no server checker (bespoke Items specs, the
  * synthetic loot-filter catalog) keep the caller-supplied status. This matches the headless
  * MCP path (`submitStepArtifact`), so both write paths grade identically.
+ *
+ * The PERSISTED status is the PURE checker verdict (`graded.raw`), NOT the judge-bridged one —
+ * the artifact row holds the checker's own truth and judge state lives apart in
+ * `judge_verdicts` (bridged only on read). Persisting the bridge here would diverge from the
+ * MCP path and skew `summarizeEntity`/rollups, which count straight off `art.status`.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -33,11 +38,11 @@ export async function POST(req: NextRequest) {
     if (!parsed.success) return apiError('Invalid artifact payload', 400, parsed.error.issues);
     const p = parsed.data;
 
-    const { graded, result } = gradeArtifact(p.catalogId, p.step, p.data, p.entityId);
-    const status = graded ? (result?.status ?? 'pending') : p.status;
-    const tier = graded ? (result?.tier ?? 'L0') : p.tier;
+    const { graded, raw } = gradeArtifact(p.catalogId, p.step, p.data, p.entityId);
+    const status = graded ? (raw?.status ?? 'pending') : p.status;
+    const tier = graded ? (raw?.tier ?? 'L0') : p.tier;
     const reason = graded
-      ? (result?.reason ?? (result ? undefined : 'unverified: acceptance check did not resolve'))
+      ? (raw?.reason ?? (raw ? undefined : 'unverified: acceptance check did not resolve'))
       : p.reason;
 
     return apiSuccess(upsertArtifact({

@@ -11,8 +11,9 @@ import { MetricLabel } from '@/components/ui/MetricLabel';
 import { ABComparisonPanel } from '@/components/modules/evaluator/ABComparisonPanel';
 import { useCombatSimulatorStore } from '@/stores/combatSimulatorStore';
 import {
-  MODULE_COLORS, ACCENT_EMERALD_DARK, STATUS_NEUTRAL,
+  MODULE_COLORS, ACCENT_EMERALD_DARK, STATUS_NEUTRAL, STATUS_ERROR,
 } from '@/lib/chart-colors';
+import { LoadingRow } from '@/components/ui/LoadingRow';
 import { narrateSummary } from '@/lib/combat/fight-report';
 import type {
   CombatScenario,
@@ -219,12 +220,7 @@ export function CombatSimulatorView() {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-6 pb-6">
-        {isLoading && (
-          <div className="flex items-center justify-center py-16">
-            <div className="w-6 h-6 border-2 border-status-red-strong border-t-red-500 rounded-full animate-spin" />
-            <span className="ml-3 text-sm text-text-muted">Loading combat data...</span>
-          </div>
-        )}
+        {isLoading && <LoadingRow label="Loading combat data…" color={STATUS_ERROR} />}
 
         {error && (
           <SurfaceCard className="p-4 mb-4 border-status-red-strong">

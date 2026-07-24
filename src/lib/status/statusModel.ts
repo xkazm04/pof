@@ -20,6 +20,8 @@ import type { JudgeVerdict } from './judge-verdicts-db';
 import stepFactsJson from './step-facts.json';
 import headlessCoverageJson from './headless-coverage.json';
 import { BANDS, RUBRIC_VERSION } from '@/lib/judge/rubrics';
+import { mirrorSupport, type MirrorSupport } from '@/lib/preview/browser-mirror';
+import { getRealization, type StepRealization } from '@/lib/preview/realization';
 
 export type CellGrade = 'verified' | 'trusted' | 'ungated' | 'unpowered' | 'deferred' | 'attention' | 'pending' | 'unwired';
 
@@ -168,6 +170,12 @@ export interface StepCell {
   checkerMeaningful?: boolean;
   /** Content-quality judgment (LLM panel / VLM), when one has run. */
   judged?: { verdict: 'pass' | 'fail'; score: number; model: string; findings: string; effort?: string; rubricVersion?: number };
+  /** Dual execution: the step class also runs in the browser preview ('direct'/'partial').
+   *  Absent when there is no browser path (incl. the ue-runtime moat). */
+  browserMirror?: MirrorSupport;
+  /** Dual-execution EVIDENCE from the per-pipeline review: did this step's output
+   *  actually run in the Browser / UE? Absent until the pipeline is reviewed. */
+  realization?: StepRealization;
 }
 
 const GATE_TIERS = new Set(['L3', 'L4']);
@@ -246,6 +254,9 @@ export function deriveCell(
     judge: fact?.judge,
     auditNote: fact?.note,
     checkerMeaningful: fact?.checkerMeaningful,
+    ...(fact && mirrorSupport(fact.deliverable, fact.step) !== 'none'
+      ? { browserMirror: mirrorSupport(fact.deliverable, fact.step) }
+      : {}),
     ...(judged ? { judged: { verdict: judged.verdict, score: judged.score, model: judged.model, findings: judged.findings, ...(judged.effort ? { effort: judged.effort } : {}), ...(judged.rubricVersion != null ? { rubricVersion: judged.rubricVersion } : {}) } } : {}),
   };
 }
@@ -291,6 +302,8 @@ export function buildSwimlane(
       ? fact.trueEngine.replace(' (deterministic)', '')
       : inferEngine(catalogId, s);
     const cell = deriveCell(s.label, engine, byStep.get(s.label) ?? [], fact, verdictsByStep.get(s.label) ?? []);
+    const realization = getRealization(catalogId, s.label);
+    if (realization) cell.realization = realization;
     return gateHeadless(cell, catalogId, s.label, headless);
   });
   const n = Math.max(cells.length, 1);

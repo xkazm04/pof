@@ -104,12 +104,12 @@ export function resolveSuggestion(id: string, action: 'accept' | 'dismiss'): voi
   `).run(action === 'accept' ? 'accepted' : 'dismissed', id);
 }
 
-export function getAllSuggestions(): GenreEvolutionSuggestion[] {
+export function getAllSuggestions(limit?: number): GenreEvolutionSuggestion[] {
   ensureTables();
   const db = getDb();
-  const rows = db.prepare(
-    'SELECT * FROM genre_suggestions ORDER BY created_at DESC'
-  ).all() as Record<string, unknown>[];
+  const rows = (limit != null
+    ? db.prepare('SELECT * FROM genre_suggestions ORDER BY created_at DESC LIMIT ?').all(limit)
+    : db.prepare('SELECT * FROM genre_suggestions ORDER BY created_at DESC').all()) as Record<string, unknown>[];
   return rows.map(rowToSuggestion);
 }
 

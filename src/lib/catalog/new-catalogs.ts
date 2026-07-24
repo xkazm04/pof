@@ -22,9 +22,14 @@ export interface NewCatalogDef {
 export const NEW_CATALOGS: NewCatalogDef[] = [
   // ── Quests & Narrative ──
   { catalogId: 'quests', label: 'Quests', category: 'Quests & Narrative', description: 'Structured player objectives with stages, rewards, and narrative beats.', module: 'dialogue-quests', tracks: ['logic', 'audio', 'test'],
-    starters: [{ id: 'quest-ember-pact', name: 'The Ember Pact', categoryPath: ['Main'], tags: ['intro'], description: 'A 3-stage introductory fetch-and-choice quest.' }] },
+    starters: [
+      { id: 'quest-ember-pact', name: 'The Ember Pact', categoryPath: ['Main'], tags: ['intro'], description: 'A 3-stage introductory fetch-and-choice quest.' },
+      { id: 'quest-lords-challenge', name: "The Lord's Challenge", categoryPath: ['Duel'], tags: ['arena'], description: 'Slay Darth Malgrave before his acolytes fall — the arena burns ember-red while the pact holds. Browser preview: menu-selectable, retints the arena, tracked live.' },
+      { id: 'quest-echoes-order', name: 'Echoes of the Order', categoryPath: ['Duel'], tags: ['arena'], description: 'Cleanse the arena — defeat all three Sith. Cool vigil-blue staging honors the fallen Order. Browser preview: menu-selectable, retints the arena, tracked live.' }] },
   { catalogId: 'dialog-trees', label: 'Dialog Trees', category: 'Quests & Narrative', description: 'Branching conversations with conditions, effects, and voice.', module: 'dialogue-quests', tracks: ['logic', 'art-2d', 'audio', 'test'],
-    starters: [{ id: 'dialog-gatekeeper', name: 'Gatekeeper Greeting', categoryPath: ['NPC'], tags: ['intro'], description: 'A simple gate-NPC conversation with a skill check.' }] },
+    starters: [
+      { id: 'dialog-gatekeeper', name: 'Gatekeeper Greeting', categoryPath: ['NPC'], tags: ['intro'], description: 'A simple gate-NPC conversation with a skill check.' },
+      { id: 'dialog-duel-intro', name: 'Duel Challenge', categoryPath: ['Encounter'], tags: ['pre-combat'], description: 'Darth Malgrave challenges the Jedi before the arena duel — a short defiance exchange that gates combat start (browser preview scene + UE PIE).' }] },
   { catalogId: 'cutscenes', label: 'Cutscenes', category: 'Quests & Narrative', description: 'Scripted in-engine sequences for story moments.', module: 'dialogue-quests', tracks: ['animation', 'audio', 'vfx', 'test'],
     starters: [{ id: 'cutscene-prologue', name: 'Prologue: The Fall', categoryPath: ['Story'], tags: ['intro'], description: 'The opening in-engine cinematic.' }] },
   { catalogId: 'codex', label: 'Codex', category: 'Quests & Narrative', description: 'In-game encyclopedia entries unlocked by play.', module: 'dialogue-quests', tracks: ['logic', 'art-2d', 'test'],
@@ -40,23 +45,33 @@ export const NEW_CATALOGS: NewCatalogDef[] = [
     starters: [
       { id: 'status-burning', name: 'Burning', categoryPath: ['Debuff'], tags: ['fire', 'dot'], description: 'Fire damage-over-time; pairs with Fireball (State.Burning).' },
       { id: 'status-chilled', name: 'Chilled', categoryPath: ['Debuff'], tags: ['ice', 'slow'], description: 'Movement-speed slow from ice damage.' },
-      { id: 'status-knockback', name: 'Knockback', categoryPath: ['Control'], tags: ['kinetic', 'cc', 'displacement'], description: 'Kinetic displacement CC: a physics launch (LaunchCharacter) that clears on landing — State.Knockback, immunity State.Immune.Knockback. Consumed by Force Push (spellbook::off-arc-fp).' }] },
+      { id: 'status-knockback', name: 'Knockback', categoryPath: ['Control'], tags: ['kinetic', 'cc', 'displacement'], description: 'Kinetic displacement CC: a physics launch (LaunchCharacter) that clears on landing — State.Knockback, immunity State.Immune.Knockback. Consumed by Force Push (spellbook::off-arc-fp).' },
+      { id: 'status-dazed', name: 'Dazed', categoryPath: ['Control'], tags: ['cc', 'disorient'], description: 'Post-impact disorientation: heavy move-speed slow + no attacks for a short window — State.Dazed, immunity State.Immune.Daze. Applied by Force Push (spellbook::off-arc-fp) as its landing follow-up.' }] },
   // ── Systems ──
   { catalogId: 'crafting-recipes', label: 'Crafting Recipes', category: 'Systems', description: 'Combine inputs into output items with conditions.', module: 'arpg-inventory', tracks: ['logic', 'art-2d', 'vfx', 'audio', 'test'],
-    starters: [{ id: 'recipe-health-potion', name: 'Health Potion', categoryPath: ['Alchemy'], tags: ['consumable'], description: 'Combine herb + vial into a healing potion.' }] },
+    starters: [
+      { id: 'recipe-health-potion', name: 'Health Potion', categoryPath: ['Alchemy'], tags: ['consumable'], description: 'Combine herb + vial into a healing potion.' },
+      { id: 'recipe-custom-saber', name: 'Custom Lightsaber', categoryPath: ['Artifice'], tags: ['duel'], description: 'Compose a lightsaber from a kyber crystal (blade color) + a focusing lens (damage bonus). Browser preview: craftable in the pre-game menu, applied stats visible in the duel.' }] },
   { catalogId: 'vendors', label: 'Vendors', category: 'Systems', description: 'NPC merchants with inventory, pricing, and restock rules.', module: 'arpg-inventory', tracks: ['logic', 'art-2d', 'audio', 'test'],
     starters: [{ id: 'vendor-wandering-merchant', name: 'Wandering Merchant', categoryPath: ['Shop'], tags: [], description: 'A roaming general-goods vendor.' }] },
   { catalogId: 'progression-curves', label: 'Progression Curves', category: 'Systems', description: 'XP, level, or mastery curves driving advancement.', module: 'arpg-progression', tracks: ['logic', 'art-2d', 'vfx', 'audio', 'test'],
     starters: [{ id: 'curve-hero-level', name: 'Hero Level Curve', categoryPath: ['XP'], tags: [], description: 'The main character XP-to-level curve.' }] },
   { catalogId: 'achievements', label: 'Achievements', category: 'Systems', description: 'Player accomplishments tracked across sessions.', module: 'arpg-progression', tracks: ['logic', 'art-2d', 'vfx', 'audio', 'test'],
-    starters: [{ id: 'achievement-first-blood', name: 'First Blood', categoryPath: ['Combat'], tags: [], description: 'Defeat your first enemy.' }] },
+    starters: [
+      { id: 'achievement-first-blood', name: 'First Blood', categoryPath: ['Combat'], tags: [], description: 'Defeat your first enemy.' },
+      { id: 'achievement-arena-victor', name: 'Arena Victor', categoryPath: ['Combat'], tags: ['duel'], description: 'Win the arena duel - all three Sith defeated in one bout.' },
+      { id: 'achievement-trophy-taker', name: 'Trophy Taker', categoryPath: ['Collection'], tags: ['duel'], description: 'Equip a lightsaber looted from a fallen Sith.' }] },
   { catalogId: 'save-points', label: 'Save / Checkpoint', category: 'Systems', description: 'Persistence points capturing player and world state.', module: 'arpg-save', tracks: ['logic', 'art-2d', 'vfx', 'audio', 'test'],
     starters: [{ id: 'save-bonfire', name: 'Bonfire Checkpoint', categoryPath: ['Checkpoint'], tags: [], description: 'An interact-to-save world checkpoint.' }] },
   // ── Audio & FX ──
   { catalogId: 'music', label: 'Music', category: 'Audio & FX', description: 'Adaptive or linear music assets.', module: 'audio', tracks: ['audio', 'test'],
-    starters: [{ id: 'music-combat-a', name: 'Combat Theme A', categoryPath: ['Combat'], tags: ['adaptive'], description: 'An adaptive combat music track with stems.' }] },
+    starters: [
+      { id: 'music-combat-a', name: 'Combat Theme A', categoryPath: ['Combat'], tags: ['adaptive'], description: 'An adaptive combat music track with stems.' },
+      { id: 'music-galactic-duel', name: 'Galactic Duel Theme', categoryPath: ['Combat'], tags: ['duel', 'generated'], description: 'Dark epic space-opera battle loop (real ElevenLabs generation) - the arena duel combat bed in the browser preview + UE FeatureLab.' }] },
   { catalogId: 'ambient', label: 'Ambient', category: 'Audio & FX', description: 'Layered environmental audio for a zone or scene.', module: 'audio', tracks: ['audio', 'test'],
-    starters: [{ id: 'ambient-forest-day', name: 'Forest Day', categoryPath: ['Outdoor'], tags: [], description: 'A daytime forest soundscape (bed + one-shots).' }] },
+    starters: [
+      { id: 'ambient-forest-day', name: 'Forest Day', categoryPath: ['Outdoor'], tags: [], description: 'A daytime forest soundscape (bed + one-shots).' },
+      { id: 'ambient-galactic-arena', name: 'Galactic Arena', categoryPath: ['Arena'], tags: ['duel', 'generated'], description: 'Vast cosmic colosseum ambience (real ElevenLabs generation) - deep hum, nebula winds, crystalline shimmer. The duel arena bed in the browser preview + UE FeatureLab.' }] },
   { catalogId: 'vfx', label: 'VFX Assets', category: 'Audio & FX', description: 'Reusable particle/Niagara effects.', module: 'arpg-polish', tracks: ['vfx', 'art-3d', 'audio', 'test'],
     starters: [{ id: 'vfx-fire-impact', name: 'Fire Impact Burst', categoryPath: ['Impact'], tags: ['fire'], description: 'An impact burst; pairs with Fireball.' }] },
   // ── UI ──
@@ -66,7 +81,8 @@ export const NEW_CATALOGS: NewCatalogDef[] = [
     starters: [{ id: 'iconset-abilities', name: 'Ability Icons', categoryPath: ['Abilities'], tags: [], description: 'A coherent ability-icon family.' }] },
   // ── Input & Platform ──
   { catalogId: 'input-schemes', label: 'Input Schemes', category: 'Input & Platform', description: 'Bindings and feel for one input device family.', module: 'input-handling', tracks: ['logic', 'art-2d', 'test'],
-    starters: [{ id: 'input-gamepad', name: 'Gamepad Default', categoryPath: ['Gamepad'], tags: [], description: 'The default gamepad binding scheme.' }] },
+    starters: [{ id: 'input-gamepad', name: 'Gamepad Default', categoryPath: ['Gamepad'], tags: [], description: 'The default gamepad binding scheme.' },
+      { id: 'input-kbm', name: 'Keyboard & Mouse Default', categoryPath: ['Keyboard & Mouse'], tags: [], description: 'The default keyboard+mouse binding scheme (mouse-aim ARPG).' }] },
   // ── Onboarding ──
   { catalogId: 'tutorial-beats', label: 'Tutorial Beats', category: 'Onboarding', description: 'Single scripted teaching moments.', module: 'arpg-ui', tracks: ['logic', 'art-2d', 'vfx', 'audio', 'test'],
     starters: [{ id: 'tutorial-dodge', name: 'Learn to Dodge', categoryPath: ['Combat'], tags: [], description: 'Teach the dodge input in a sandbox.' }] },

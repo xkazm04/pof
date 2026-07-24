@@ -1,7 +1,7 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
 import { statusBalanceEnvelope } from '../acceptance/invariants';
-import { runtimeDeferred } from '../acceptance/deferred';
+import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 
@@ -271,8 +271,13 @@ registerCatalogPipeline({
           ],
         },
       }),
-      // FVSStatusBurningEffectTest — registered automation name (not the C++ class) so the runner resolves it.
-      accept: runtimeDeferred('PoF.StatusBurning.EffectConfig', 'Functional test passes in UE'),
+      // Registered automation name (not the C++ class) so the runner resolves it. PER-ENTITY:
+      // the artifact's own `automationName` wins (a Knockback gate must never be "proven" by
+      // the Burning test); the Burning gate name stays the fallback for undeclared rows.
+      accept: entityRuntimeDeferred(
+        'PoF.StatusBurning.EffectConfig',
+        'Status functional/config gate passes in UE (per-entity automationName)',
+      ),
     },
 
     // ── 6. UE Packaging ───────────────────────────────────────────────────────

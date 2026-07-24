@@ -146,6 +146,19 @@ describe('formatGotchas', () => {
     expect(out).toMatch(/AlwaysTickPoseAndRefreshBones/);
   });
 
+  it('carries the UE 5.8 Chaos Cloth Asset (Dataflow) authoring workflow for ue-python', () => {
+    const out = formatGotchas('ue-python');
+    expect(out).toMatch(/Chaos Cloth|Cloth Asset/i);
+    expect(out).toMatch(/preset/i);
+    expect(out).toMatch(/transfer skin weights|skin.?weight/i);
+    expect(out).toMatch(/physics asset|collider/i);
+    expect(out).toMatch(/penetrat|Transform Position/i);
+  });
+
+  it('keeps the Chaos Cloth Asset guidance out of the ue-cpp block', () => {
+    expect(formatGotchas('ue-cpp')).not.toMatch(/Transfer Skin Weights node/);
+  });
+
   it('carries Niagara optimization pitfalls', () => {
     const out = formatGotchas('ue-python');
     expect(out).toMatch(/Niagara/);

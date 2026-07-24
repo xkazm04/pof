@@ -24,6 +24,8 @@ import {
   CATEGORY_LABELS,
   SORT_LABELS,
 } from './constants';
+import { FetchError } from '@/components/modules/shared/FetchError';
+import { LoadingRow } from '@/components/ui/LoadingRow';
 import { StatCard } from './StatCard';
 import { PatternCard } from './PatternCard';
 import { AuthorPatternModal } from './AuthorPatternModal';
@@ -254,16 +256,11 @@ export function PatternLibraryView() {
         {activeTab === 'anti-patterns' && <AntiPatternList moduleId={moduleFilter} />}
 
         {activeTab === 'patterns' && isLoading && (
-          <div className="flex items-center justify-center py-16">
-            <div className="w-6 h-6 border-2 border-violet-500/30 border-t-violet-500 rounded-full animate-spin" />
-            <span className="ml-3 text-sm text-text-muted">Loading patterns...</span>
-          </div>
+          <LoadingRow label="Loading patterns…" color={MODULE_COLORS.systems} />
         )}
 
-        {activeTab === 'patterns' && error && (
-          <SurfaceCard className="p-4 mb-4 border-status-red-strong">
-            <p className="text-sm text-red-400">{error}</p>
-          </SurfaceCard>
+        {activeTab === 'patterns' && error && !isLoading && (
+          <FetchError message={error} onRetry={fetchDashboard} />
         )}
 
         {activeTab === 'patterns' && !isLoading && patterns.length === 0 && (

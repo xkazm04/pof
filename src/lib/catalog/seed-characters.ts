@@ -63,7 +63,59 @@ const CAPTAIN_VAEL: CharacterEntry = {
   links: abilityLinks(['Melee Attack', 'Heavy Attack']),
 };
 
+/**
+ * The duel's named Sith Lord — the browser realization's boss and the target of
+ * quests::quest-lords-challenge. Deliberately thin on combat numbers: those belong to
+ * the bestiary ARCHETYPE he wears (bestiary-sith-lord), single-sourced so the two rows
+ * cannot drift. What lives here is the individual: identity, role, outfit, VO.
+ */
+const DARTH_MALGRAVE: CharacterEntry = {
+  id: 'char-darth-malgrave',
+  catalogId: 'characters',
+  name: 'Darth Malgrave',
+  categoryPath: ['NPC'],
+  tags: ['named', 'boss', 'duel'],
+  lifecycle: 'planned',
+  data: {
+    description:
+      "The named Sith Lord of the arena duel — the individual who wears the " +
+      'bestiary-sith-lord archetype. Crimson blade, near-black robe, rare loot class.',
+    npcId: 'DarthMalgrave',
+    // NPCRole is the AARPGNPCActor INTERACTION role (quest-giver / merchant / …) and it
+    // drives the world indicator. A hostile duel boss offers no interaction, so 'None'
+    // is the truthful value — his boss-ness lives in the tags and the encounter, not in
+    // an indicator he must never display.
+    role: 'None',
+    archetype: 'sith-lord',
+    facePlayerInDialogue: true,
+    attributeRowName: 'DarthMalgrave',
+    // Every character owns a DT_AttributeDefaults row (canon char-stat-source), so this
+    // block has to exist. It MIRRORS bestiary-sith-lord's Stat Block rather than setting
+    // its own balance: health/attackPower/characterLevel are that archetype's arena-duel
+    // numbers (50 hp against the player's 100, 12 per mid swing, monster level 3). If the
+    // archetype moves, this row is what has to move with it.
+    attributes: {
+      health: 50, maxHealth: 50, mana: 100, maxMana: 100,
+      strength: 14, dexterity: 12, intelligence: 16,
+      armor: 0, attackPower: 12, criticalChance: 0.05, criticalDamage: 2.5,
+      characterLevel: 3,
+    },
+    abilities: ['Melee Attack', 'Heavy Attack'],
+    bodyMesh: {
+      skeletalMesh: '/MoverTests/Characters/Mannequins/Meshes/SKM_Manny',
+      animClass: '/MoverTests/Characters/Mannequins/Animations/ABP_Manny.ABP_Manny_C',
+    },
+  },
+  links: [
+    ...abilityLinks(['Melee Attack', 'Heavy Attack']),
+    { catalogId: 'bestiary', entityId: 'bestiary-sith-lord', role: 'archetype' },
+    { catalogId: 'dialog-trees', entityId: 'dialog-duel-intro', role: 'host' },
+    { catalogId: 'quests', entityId: 'quest-lords-challenge', role: 'target' },
+  ],
+};
+
 /** Seed the characters catalog (currently the single designed target asset). */
 export function seedCharacterEntries(): CharacterEntry[] {
-  return [CAPTAIN_VAEL];
+  // Vael stays first: the e2e walker opens entities[0].
+  return [CAPTAIN_VAEL, DARTH_MALGRAVE];
 }

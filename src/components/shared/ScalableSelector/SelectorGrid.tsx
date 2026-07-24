@@ -8,6 +8,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { Inbox, SearchX } from 'lucide-react';
 import type { SelectorItem, SelectorGroup as GroupT } from './types';
 
 /** Height of one row in pixels — used for virtual scroll calculations. */
@@ -31,6 +32,10 @@ interface SelectorGridProps<T extends SelectorItem> {
   multiselectable?: boolean;
   /** True when items were provided but all filtered out (vs zero items total). */
   hasItems?: boolean;
+  /** Active search query — echoed in the no-results state so the user sees what was filtered. */
+  query?: string;
+  /** Clears the search query; renders the recovery action on the no-results state. */
+  onClearSearch?: () => void;
 }
 
 /**
@@ -74,6 +79,8 @@ export function SelectorGrid<T extends SelectorItem>({
   onFocusChange,
   multiselectable = false,
   hasItems = true,
+  query = '',
+  onClearSearch,
 }: SelectorGridProps<T>) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
@@ -168,10 +175,42 @@ export function SelectorGrid<T extends SelectorItem>({
     }
   }, [focusedId, rows, offsets, itemRowIndex]);
 
+  // Two distinct dead ends: a search that filtered everything out (recoverable —
+  // show the query back and offer a one-click reset) vs a genuinely empty source
+  // list (nothing the user can do here, so say so rather than blaming the search).
   if (rows.length === 0) {
+    const searchedOut = hasItems;
+    const Icon = searchedOut ? SearchX : Inbox;
     return (
-      <div className="flex-1 flex items-center justify-center py-12 text-sm text-text-muted">
-        {hasItems ? 'No items match your search' : 'No items available'}
+      <div className="flex-1 flex flex-col items-center justify-center gap-2 px-6 py-12 text-center">
+        <Icon className="w-6 h-6 text-border-bright" aria-hidden="true" />
+        <p className="text-sm font-medium text-text">
+          {searchedOut ? 'No matches' : 'Nothing to select yet'}
+        </p>
+        <p className="text-xs text-text-muted max-w-xs leading-relaxed">
+          {!searchedOut ? (
+            'This list is empty. Create or load items first, then reopen this picker.'
+          ) : query ? (
+            <>
+              Nothing matches{' '}
+              <span className="font-mono text-text break-all">&ldquo;{query}&rdquo;</span>. Try a
+              shorter or differently spelled term.
+            </>
+          ) : (
+            // `query` is the raw input while the list filters on the debounced value,
+            // so it can be momentarily empty here — don't render empty quote marks.
+            'Nothing matches the current search. Try a shorter or differently spelled term.'
+          )}
+        </p>
+        {searchedOut && onClearSearch && (
+          <button
+            type="button"
+            onClick={onClearSearch}
+            className="mt-1 px-2.5 py-1 rounded-md border border-border text-xs text-text-muted hover:text-text hover:bg-surface-hover transition-colors focus-ring"
+          >
+            Clear search
+          </button>
+        )}
       </div>
     );
   }
@@ -180,7 +219,9 @@ export function SelectorGrid<T extends SelectorItem>({
     <div
       ref={containerRef}
       onScroll={onScroll}
-      className="flex-1 overflow-y-auto"
+      // focus-ring-inset (not focus-ring): the modal shell is overflow-hidden, so an
+      // outer ring on this scroll pane would be clipped at the panel edge.
+      className="flex-1 overflow-y-auto focus-ring-inset"
       role="listbox"
       aria-label="Items"
       aria-multiselectable={multiselectable || undefined}
@@ -202,11 +243,14 @@ export function SelectorGrid<T extends SelectorItem>({
                 <div
                   key={`group-${row.group.key}`}
                   style={{ height: row.height }}
-                  className="flex items-center"
+                  // This row is tabbable (tabIndex 0) but had no visible focus
+                  // indicator, so keyboard users lost their place on it. Inset variant:
+                  // an outer ring would be clipped by the virtualized scroll container.
+                  className="flex items-center rounded-md focus-ring-inset"
                   role="button"
                   tabIndex={0}
                   aria-expanded={!collapsedGroups.has(row.group.key)}
-                  aria-label={`${row.group.label} — ${row.group.items.length} items`}
+                  aria-label={`${row.group.label}, ${row.group.items.length} items`}
                   onClick={() => onToggleGroup(row.group.key)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {

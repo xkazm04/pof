@@ -12,6 +12,7 @@ import { DashboardHeader } from '@/components/ui/DashboardHeader';
 import { usePerformanceProfilingStore } from '@/stores/performanceProfilingStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { MODULE_COLORS, ACCENT_EMERALD_DARK, ACCENT_RED, OPACITY_8 } from '@/lib/chart-colors';
+import { LoadingRow } from '@/components/ui/LoadingRow';
 import { MOTION } from '@/lib/constants';
 import { EMPTY_FINDINGS, BOTTLENECK_LABELS, SCENARIO_OPTIONS } from './constants';
 import { CSVImportPanel } from './CSVImportPanel';
@@ -190,12 +191,7 @@ export function PerformanceProfilingView() {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-6 pb-6">
-        {isLoading && (
-          <div className="flex items-center justify-center py-16">
-            <div className="w-6 h-6 border-2 border-rose-500/30 border-t-rose-500 rounded-full animate-spin" />
-            <span className="ml-3 text-sm text-text-muted">Loading profiling data...</span>
-          </div>
-        )}
+        {isLoading && <LoadingRow label="Loading profiling data…" color={ACCENT_RED} />}
 
         {error && (
           <SurfaceCard className="p-4 mb-4 border-status-red-strong">

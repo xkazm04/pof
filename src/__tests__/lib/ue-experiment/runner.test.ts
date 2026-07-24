@@ -46,6 +46,18 @@ describe('buildExperimentArgs', () => {
     expect(args).toContain('-RenderOffScreen');
     expect(args).not.toContain('-nullrhi');
   });
+
+  it('appends declared extra plugins to the PythonScriptPlugin enable list', () => {
+    const args = buildExperimentArgs({ ...base, capture: false, enablePlugins: ['ChaosClothAsset', 'ChaosClothAssetDataflowNodes'] });
+    expect(args).toContain('-EnablePlugins=PythonScriptPlugin,ChaosClothAsset,ChaosClothAssetDataflowNodes');
+    // and NOT the bare PythonScriptPlugin-only flag
+    expect(args).not.toContain('-EnablePlugins=PythonScriptPlugin');
+  });
+
+  it('with no extra plugins keeps the bare PythonScriptPlugin flag', () => {
+    const args = buildExperimentArgs({ ...base, capture: false });
+    expect(args).toContain('-EnablePlugins=PythonScriptPlugin');
+  });
 });
 
 describe('parseExperimentLog', () => {

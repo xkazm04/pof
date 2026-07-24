@@ -62,14 +62,14 @@ export function DispatchHealthPanel() {
           >
             <Icon className="h-3 w-3" style={{ color }} />
             <span className="text-sm font-semibold tabular-nums" style={{ color }}>{value}</span>
-            <span className="text-[10px] text-text-muted">{label}</span>
+            <span className="text-2xs text-text-muted">{label}</span>
           </div>
         ))}
       </div>
 
       {health.recent.length > 0 && (
         <div className="mt-3">
-          <div className="mb-1 text-[10px] uppercase tracking-wide text-text-muted">Recent</div>
+          <div className="mb-1 text-2xs uppercase tracking-wide text-text-muted">Recent</div>
           <ul className="space-y-0.5">
             {health.recent.slice(0, 6).map((e) => {
               const pending = e.completedAt === undefined;
@@ -79,7 +79,7 @@ export function DispatchHealthPanel() {
                 <li key={`${e.tabId}-${e.startedAt}`} className="flex items-center gap-2">
                   <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full" style={{ backgroundColor: color }} />
                   <span className="truncate text-text-muted">{e.sessionLabel}</span>
-                  <span className="ml-auto text-[10px]" style={{ color }}>{status}</span>
+                  <span className="ml-auto text-2xs" style={{ color }}>{status}</span>
                 </li>
               );
             })}

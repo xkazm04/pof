@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Loader2, AlertTriangle, Copy, Download, ScrollText, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { tryApiFetch } from '@/lib/api-utils';
@@ -27,7 +27,6 @@ export function HarnessGuideViewer() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -78,18 +77,21 @@ export function HarnessGuideViewer() {
   if (error) {
     return (
       <div role="alert" className="flex items-center gap-2 text-xs text-amber-400 py-4">
-        <AlertTriangle size={14} /> {error}
+        <AlertTriangle size={14} aria-hidden /> Couldn&apos;t load the build guide: {error}
       </div>
     );
   }
   if (!data) return null;
 
   return (
-    <div ref={containerRef} className="grid grid-cols-[220px_1fr] gap-6">
-      <aside className="sticky top-4 self-start h-fit max-h-[80vh] overflow-y-auto" aria-label="Phases">
+    <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-6">
+      <aside className="md:sticky md:top-4 self-start h-fit md:max-h-[80vh] md:overflow-y-auto" aria-label="Phases">
         <div className="text-2xs font-mono uppercase tracking-[0.15em] text-text-muted mb-2 flex items-center gap-1.5">
           <ScrollText size={12} /> Phases
         </div>
+        {phases.length === 0 && (
+          <p className="text-xs text-text-muted italic">No phases in this guide yet.</p>
+        )}
         <ol className="space-y-1 list-none p-0 m-0">
           {phases.map((p) => (
             <li key={p.phase}>
@@ -105,12 +107,16 @@ export function HarnessGuideViewer() {
         </ol>
         <div className="flex gap-1.5 mt-3">
           <button type="button" onClick={copyAll}
+            title="Copy the whole guide as Markdown"
             className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded border border-border/40 text-text-muted hover:text-text hover:border-border focus-ring">
-            {copied ? <Check size={12} /> : <Copy size={12} />}{copied ? 'Copied' : 'Copy'}
+            {copied ? <Check size={12} aria-hidden /> : <Copy size={12} aria-hidden />}
+            <span aria-live="polite">{copied ? 'Copied' : 'Copy'}</span>
           </button>
           <button type="button" onClick={downloadMd}
+            aria-label="Download guide as a Markdown file"
+            title="Download guide as a Markdown file"
             className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded border border-border/40 text-text-muted hover:text-text hover:border-border focus-ring">
-            <Download size={12} />.md
+            <Download size={12} aria-hidden />.md
           </button>
         </div>
       </aside>

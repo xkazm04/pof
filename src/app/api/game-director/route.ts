@@ -35,7 +35,9 @@ export async function GET(req: Request) {
 
     switch (action) {
       case 'list':
-        return apiSuccess(listSessions());
+        // Bound the UI list — the sessions table grows unbounded over the project's
+        // life; the switcher only ever shows the most recent handful.
+        return apiSuccess(listSessions(200));
 
       case 'get':
         if (!sessionId) return apiError('sessionId required', 400);

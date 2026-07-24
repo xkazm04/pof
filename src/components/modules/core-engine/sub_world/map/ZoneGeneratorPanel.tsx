@@ -10,6 +10,7 @@ import {
   type ZoneGraphParams, type ZoneTopology, type DifficultyCurve, type GeneratedZone,
 } from '@/lib/world/zone-graph-generator';
 import { useCRUD } from '@/hooks/useCRUD';
+import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import type { ZoneGraphPin } from '@/types/procgen';
 
 const ACCENT = ACCENT_VIOLET;
@@ -27,18 +28,27 @@ export function ZoneGeneratorPanel() {
   const validation = useMemo(() => validateZoneGraph(zones), [zones]);
   const selected: GeneratedZone = zones.find((z) => z.id === selectedId) ?? zones[0];
 
-  const { data: pins, mutate } = useCRUD<ZoneGraphPin[]>('/api/procgen/zone-pins', []);
+  const { data: pins, mutate, mutationError, clearMutationError } = useCRUD<ZoneGraphPin[]>('/api/procgen/zone-pins', []);
+  const [lastAction, setLastAction] = useState<(() => void) | null>(null);
 
   const set = <K extends keyof ZoneGraphParams>(k: K, v: ZoneGraphParams[K]) => setParams((p) => ({ ...p, [k]: v }));
   const reroll = () => setParams((p) => ({ ...p, seed: randomSeed() }));
-  const pinCurrent = () =>
-    mutate('/api/procgen/zone-pins', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ seed: params.seed, params, label: `${params.topology} ×${params.zoneCount}`, zoneCount: params.zoneCount, topology: params.topology }),
-    });
+  const pinCurrent = () => {
+    const action = () =>
+      mutate('/api/procgen/zone-pins', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ seed: params.seed, params, label: `${params.topology} ×${params.zoneCount}`, zoneCount: params.zoneCount, topology: params.topology }),
+      });
+    setLastAction(() => action);
+    action();
+  };
   const restorePin = (pin: ZoneGraphPin) => setParams(pin.params);
-  const removePin = (id: number) => mutate(`/api/procgen/zone-pins?id=${id}`, { method: 'DELETE' });
+  const removePin = (id: number) => {
+    const action = () => mutate(`/api/procgen/zone-pins?id=${id}`, { method: 'DELETE' });
+    setLastAction(() => action);
+    action();
+  };
 
   const statusColor = validation.errors > 0 ? STATUS_ERROR : validation.warnings > 0 ? STATUS_WARNING : STATUS_SUCCESS;
 
@@ -78,6 +88,14 @@ export function ZoneGeneratorPanel() {
             </button>
             <span className="text-text-muted font-mono">seed {params.seed}</span>
           </div>
+          {mutationError && (
+            <InlineErrorRetry
+              message={mutationError}
+              onRetry={() => { clearMutationError(); lastAction?.(); }}
+              onDismiss={clearMutationError}
+              dense
+            />
+          )}
         </div>
 
         {/* Preview */}

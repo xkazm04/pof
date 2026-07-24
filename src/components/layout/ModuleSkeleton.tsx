@@ -1,3 +1,14 @@
+interface ModuleSkeletonProps {
+  /**
+   * Whether this skeleton announces itself as a busy status region. Defaults to
+   * true because as a Suspense fallback it is the *only* thing on screen — an
+   * `aria-hidden` skeleton would leave a screen-reader user with silence during
+   * the load. Pass `false` when an ancestor already exposes a busy status region
+   * (see {@link ShellSkeleton}) so the two don't nest and double-announce.
+   */
+  announce?: boolean;
+}
+
 /**
  * Shared loading skeleton shown while a module suspends (e.g. while a child
  * `use()` resolves or a lazy import hydrates). Mirrors typical module chrome
@@ -8,13 +19,14 @@
  * {@link ShellSkeleton} content area so the first-paint shell and an in-app
  * module load share the same tile language.
  */
-export function ModuleSkeleton() {
+export function ModuleSkeleton({ announce = true }: ModuleSkeletonProps) {
   return (
     <div
       className="h-full p-6 animate-pulse"
-      aria-hidden
-      role="status"
-      aria-label="Loading module"
+      role={announce ? 'status' : undefined}
+      aria-busy={announce || undefined}
+      aria-label={announce ? 'Loading module' : undefined}
+      aria-hidden={announce ? undefined : true}
       data-testid="pof-module-skeleton"
     >
       <div className="flex items-center gap-3 mb-5">

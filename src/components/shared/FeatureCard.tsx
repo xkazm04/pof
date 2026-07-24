@@ -42,18 +42,23 @@ export function FeatureCard({ name, active, onToggle, accent, children, summary 
         '--tw-ring-color': withOpacity(accent, OPACITY_50),
       } as CSSProperties}
     >
-      {/* Feature name */}
+      {/* Feature name — `title` so the truncated text is still readable on hover.
+          Cards sit in a 160px-min grid, so longer labels are routinely clipped. */}
       <span
+        title={name}
         className="block text-xs font-mono font-bold truncate"
         style={{ color: active ? withOpacity(OVERLAY_WHITE, OPACITY_90) : STATUS_NEUTRAL }}
       >
         {name}
       </span>
 
-      {/* Summary */}
+      {/* Summary — descriptive copy, so it sits at the 12px legibility floor
+          (TEXT_SCALE.body) rather than a sub-floor 10px literal. Hierarchy against
+          the name is carried by weight + color, not by dropping below the floor. */}
       {summary && (
         <span
-          className="block text-[10px] font-mono truncate leading-tight mt-0.5"
+          title={summary}
+          className="block text-xs font-mono truncate leading-tight mt-0.5"
           style={{ color: active ? withOpacity(OVERLAY_WHITE, OPACITY_50) : STATUS_NEUTRAL }}
         >
           {summary}

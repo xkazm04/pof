@@ -1,6 +1,6 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
-import { runtimeDeferred } from '../acceptance/deferred';
+import { entityRuntimeDeferred } from '../acceptance/deferred';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
@@ -565,7 +565,7 @@ registerCatalogPipeline({
           ],
         },
       }),
-      accept: runtimeDeferred(
+      accept: entityRuntimeDeferred(
         'VSCutsceneTimingTest',
         'Sequence plays + skip/replay work in PIE',
       ),

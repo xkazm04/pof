@@ -13,30 +13,36 @@ export function RunTable(props: {
   return (
     <div className="overflow-x-auto rounded border border-border/40">
       <table className="w-full text-xs">
+        <caption className="sr-only">
+          Harness runs, newest first. Use the A and B buttons in the Compare column to pick two runs to diff.
+        </caption>
         <thead className="bg-surface-deep/40 text-text-muted">
           <tr>
-            <th className="px-2 py-1.5 text-left font-medium">Compare</th>
-            <th className="px-2 py-1.5 text-left font-medium">Run</th>
-            <th className="px-2 py-1.5 text-left font-medium">Started</th>
-            <th className="px-2 py-1.5 text-left font-medium">Status</th>
-            <th className="px-2 py-1.5 text-right font-medium">Pass</th>
-            <th className="px-2 py-1.5 text-right font-medium">Areas</th>
-            <th className="px-2 py-1.5 text-right font-medium">Duration</th>
-            <th className="px-2 py-1.5 text-right font-medium">Cost</th>
-            <th className="px-2 py-1.5 text-right font-medium">Sess.</th>
+            <th scope="col" className="px-2 py-1.5 text-left font-medium">Compare</th>
+            <th scope="col" className="px-2 py-1.5 text-left font-medium">Run</th>
+            <th scope="col" className="px-2 py-1.5 text-left font-medium">Started</th>
+            <th scope="col" className="px-2 py-1.5 text-left font-medium">Status</th>
+            <th scope="col" className="px-2 py-1.5 text-right font-medium" title="Passing features as a percentage of total">Pass</th>
+            <th scope="col" className="px-2 py-1.5 text-right font-medium" title="Completed · failed / total build areas">Areas</th>
+            <th scope="col" className="px-2 py-1.5 text-right font-medium">Duration</th>
+            <th scope="col" className="px-2 py-1.5 text-right font-medium">Cost</th>
+            <th scope="col" className="px-2 py-1.5 text-right font-medium" title="CLI sessions spawned by this run">Sessions</th>
           </tr>
         </thead>
         <tbody>
           {runs.map((r) => {
             const isA = r.runId === baseId;
             const isB = r.runId === headId;
+            const short = r.runId.slice(-8);
             return (
               <tr key={r.runId} className="border-t border-border/20 hover:bg-surface-deep/20">
-                <td className="px-2 py-1.5 flex gap-1">
-                  <SlotButton label="A" active={isA} onClick={() => onPick('A', r.runId)} />
-                  <SlotButton label="B" active={isB} onClick={() => onPick('B', r.runId)} />
+                <td className="px-2 py-1.5">
+                  <div className="flex gap-1">
+                    <SlotButton label="A" runLabel={short} slotName="base" active={isA} onClick={() => onPick('A', r.runId)} />
+                    <SlotButton label="B" runLabel={short} slotName="head" active={isB} onClick={() => onPick('B', r.runId)} />
+                  </div>
                 </td>
-                <td className="px-2 py-1.5 font-mono text-text">{r.runId.slice(-8)}</td>
+                <td className="px-2 py-1.5 font-mono text-text">{short}</td>
                 <td className="px-2 py-1.5 text-text-muted">{new Date(r.startedAt).toLocaleString()}</td>
                 <td className="px-2 py-1.5"><StatusPill status={r.status} /></td>
                 <td className="px-2 py-1.5 text-right text-text tabular-nums">
@@ -60,12 +66,21 @@ export function RunTable(props: {
   );
 }
 
-function SlotButton({ label, active, onClick }: { label: 'A' | 'B'; active: boolean; onClick: () => void }) {
+function SlotButton(props: {
+  label: 'A' | 'B';
+  runLabel: string;
+  slotName: 'base' | 'head';
+  active: boolean;
+  onClick: () => void;
+}) {
+  const { label, runLabel, slotName, active, onClick } = props;
   return (
     <button
       type="button"
       onClick={onClick}
       aria-pressed={active}
+      aria-label={`Run ${runLabel} as compare ${slotName} (${label})`}
+      title={`Use run ${runLabel} as compare ${slotName} (${label})`}
       className="w-5 h-5 inline-flex items-center justify-center rounded-full border text-[10px] focus-ring"
       style={{
         borderColor: active ? STATUS_SUCCESS : undefined,

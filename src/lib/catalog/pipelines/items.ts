@@ -8,7 +8,7 @@ import {
   selected,
   minCount,
 } from '../acceptance/dataCheckers';
-import { runtimeDeferred } from '../acceptance/deferred';
+import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 
@@ -698,7 +698,7 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: runtimeDeferred(
+      accept: entityRuntimeDeferred(
         'VSItemsDefinitionsTest',
         'Item equip GEs apply and attributes delta correctly in PIE',
       ),

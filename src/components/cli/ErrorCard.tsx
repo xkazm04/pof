@@ -84,55 +84,58 @@ export function ErrorCard({ diagnostic, onFix, isRunning = false }: ErrorCardPro
       className={`mx-2 my-1 rounded border ${style.border} ${style.bg} overflow-hidden`}
       style={{ borderLeftWidth: 3, borderLeftColor: categoryBorderColor }}
     >
-      {/* Header row */}
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-start gap-2 px-2.5 py-1.5 text-left hover:bg-white/[0.02] transition-colors"
-      >
-        {expanded
-          ? <ChevronDown className="w-3 h-3 text-text-muted flex-shrink-0 mt-0.5" />
-          : <ChevronRight className="w-3 h-3 text-text-muted flex-shrink-0 mt-0.5" />
-        }
-        <Icon className={`w-3.5 h-3.5 ${style.iconColor} flex-shrink-0 mt-px`} />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className={`text-2xs font-bold px-1 py-px rounded ${style.badge}`}>
-              {style.label}
-            </span>
-            {diagnostic.code && (
-              <span className="text-2xs font-mono text-text-muted-hover bg-surface-hover px-1 py-px rounded">
-                {diagnostic.code}
+      {/* Header row — the disclosure and the copy action are SIBLINGS. A nested
+          interactive control inside a <button> is invalid and unreachable for
+          keyboard/AT users, so copy is its own <button> here. */}
+      <div className="flex items-start">
+        <button
+          onClick={() => setExpanded(!expanded)}
+          aria-expanded={expanded}
+          className="flex-1 min-w-0 flex items-start gap-2 px-2.5 py-1.5 text-left hover:bg-white/[0.02] transition-colors focus-ring-inset"
+        >
+          {expanded
+            ? <ChevronDown className="w-3 h-3 text-text-muted flex-shrink-0 mt-0.5" aria-hidden="true" />
+            : <ChevronRight className="w-3 h-3 text-text-muted flex-shrink-0 mt-0.5" aria-hidden="true" />
+          }
+          <Icon className={`w-3.5 h-3.5 ${style.iconColor} flex-shrink-0 mt-px`} aria-hidden="true" />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className={`text-2xs font-bold px-1 py-px rounded ${style.badge}`}>
+                {style.label}
               </span>
+              {diagnostic.code && (
+                <span className="text-2xs font-mono text-text-muted-hover bg-surface-hover px-1 py-px rounded">
+                  {diagnostic.code}
+                </span>
+              )}
+              <span className="text-2xs text-text-muted">
+                {CATEGORY_LABELS[diagnostic.category]}
+              </span>
+            </div>
+            {expanded ? (
+              <p className="text-xs text-text-muted-hover mt-0.5 leading-tight break-all">
+                {diagnostic.message}
+              </p>
+            ) : (
+              <TruncateWithTooltip as="p" className="text-xs text-text-muted-hover mt-0.5 leading-tight break-all line-clamp-2" side="bottom" maxTooltipWidth={400}>
+                {diagnostic.message}
+              </TruncateWithTooltip>
             )}
-            <span className="text-2xs text-text-muted">
-              {CATEGORY_LABELS[diagnostic.category]}
-            </span>
-            {/* Copy button */}
-            <span
-              role="button"
-              tabIndex={0}
-              onClick={handleCopy}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleCopy(e as unknown as React.MouseEvent); }}
-              className="ml-auto p-0.5 rounded text-text-muted hover:text-text hover:bg-surface-hover transition-colors"
-              title={copied ? 'Copied!' : 'Copy error details'}
-            >
-              {copied
-                ? <Check className="w-3 h-3" style={{ color: STATUS_SUCCESS }} />
-                : <Copy className="w-3 h-3" />
-              }
-            </span>
           </div>
-          {expanded ? (
-            <p className="text-xs text-text-muted-hover mt-0.5 leading-tight break-all">
-              {diagnostic.message}
-            </p>
-          ) : (
-            <TruncateWithTooltip as="p" className="text-xs text-text-muted-hover mt-0.5 leading-tight break-all line-clamp-2" side="bottom" maxTooltipWidth={400}>
-              {diagnostic.message}
-            </TruncateWithTooltip>
-          )}
-        </div>
-      </button>
+        </button>
+        <button
+          type="button"
+          onClick={handleCopy}
+          className="flex-shrink-0 mt-1.5 mr-1.5 p-1 rounded text-text-muted hover:text-text hover:bg-surface-hover transition-colors focus-ring"
+          title={copied ? 'Copied!' : 'Copy error details'}
+          aria-label={copied ? 'Error details copied' : 'Copy error details'}
+        >
+          {copied
+            ? <Check className="w-3 h-3" style={{ color: STATUS_SUCCESS }} aria-hidden="true" />
+            : <Copy className="w-3 h-3" aria-hidden="true" />
+          }
+        </button>
+      </div>
 
       {/* Expanded details */}
       {expanded && (
@@ -141,7 +144,8 @@ export function ErrorCard({ diagnostic, onFix, isRunning = false }: ErrorCardPro
           {diagnostic.file && shortFile && (
             <button
               onClick={() => setPathExpanded(!pathExpanded)}
-              className="flex items-center gap-1.5 mt-1.5 group/path hover:bg-white/[0.02] rounded px-1 -mx-1 transition-colors"
+              aria-expanded={pathExpanded}
+              className="flex items-center gap-1.5 mt-1.5 group/path hover:bg-white/[0.02] rounded px-1 -mx-1 transition-colors focus-ring"
               title={pathExpanded ? 'Collapse path' : 'Show full path'}
             >
               <FileCode className="w-3 h-3 text-text-muted flex-shrink-0" />
@@ -181,9 +185,10 @@ export function ErrorCard({ diagnostic, onFix, isRunning = false }: ErrorCardPro
                 if (!isRunning) onFix(buildQuickFixPrompt(diagnostic));
               }}
               disabled={isRunning}
-              className={`mt-1.5 flex items-center gap-1 text-xs font-medium ${CLI_COLORS.prompt} hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 px-2 py-1 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-blue-400 disabled:hover:bg-blue-500/10`}
+              title={isRunning ? 'Wait for the current task to finish' : 'Ask Claude to fix this diagnostic'}
+              className={`mt-1.5 flex items-center gap-1 text-xs font-medium ${CLI_COLORS.prompt} hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 px-2 py-1 rounded transition-colors focus-ring disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-blue-400 disabled:hover:bg-blue-500/10`}
             >
-              <Zap className="w-3 h-3" />
+              <Zap className="w-3 h-3" aria-hidden="true" />
               Fix This
             </button>
           )}
@@ -205,7 +210,9 @@ export function ErrorCard({ diagnostic, onFix, isRunning = false }: ErrorCardPro
                 if (!isRunning) onFix(buildQuickFixPrompt(diagnostic));
               }}
               disabled={isRunning}
-              className={`ml-auto text-2xs font-medium ${CLI_COLORS.prompt} hover:text-blue-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-blue-400`}
+              title={isRunning ? 'Wait for the current task to finish' : 'Ask Claude to fix this diagnostic'}
+              aria-label={`Fix ${diagnostic.severity} in ${shortFile}`}
+              className={`ml-auto px-1 rounded text-2xs font-medium ${CLI_COLORS.prompt} hover:text-blue-300 transition-colors focus-ring disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-blue-400`}
             >
               Fix
             </button>

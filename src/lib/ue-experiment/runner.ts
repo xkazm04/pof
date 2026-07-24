@@ -46,19 +46,22 @@ export interface ExperimentArgsInput {
   probePath: string;
   abslog: string;
   capture?: boolean;
+  /** Extra engine plugins to enable for this run (beyond PythonScriptPlugin), for
+   *  experiments that touch a plugin not enabled in the .uproject (e.g. the Chaos
+   *  Cloth Asset plugins). Merged into a single comma-list `-EnablePlugins` flag. */
+  enablePlugins?: string[];
 }
 
 /** Editor argv for an experiment run. Reuses `buildLaunchArgs`: capture → render
  * (`-RenderOffScreen`, no `-nullrhi`); else headless. Pure. */
 export function buildExperimentArgs(i: ExperimentArgsInput): string[] {
+  const pluginFlag = `-EnablePlugins=${['PythonScriptPlugin', ...(i.enablePlugins ?? [])].join(',')}`;
   return buildLaunchArgs({
     uproject: i.uproject,
     execCmds: buildPythonExecFile(i.probePath),
     headless: !i.capture,
     abslog: i.abslog,
-    extraArgs: i.capture
-      ? ['-RenderOffScreen', '-EnablePlugins=PythonScriptPlugin']
-      : ['-EnablePlugins=PythonScriptPlugin'],
+    extraArgs: i.capture ? ['-RenderOffScreen', pluginFlag] : [pluginFlag],
   });
 }
 
@@ -156,6 +159,9 @@ export interface ExperimentSpec {
   settleMs?: number;
   uproject?: string;
   engine?: string;
+  /** Extra engine plugins to enable (beyond PythonScriptPlugin) for a probe that
+   *  touches a plugin not enabled in the .uproject (e.g. Chaos Cloth Asset). */
+  enablePlugins?: string[];
 }
 
 export interface ExperimentResult {
@@ -214,7 +220,7 @@ export async function runExperiment(spec: ExperimentSpec, deps: RunnerDeps = {})
   const probePath = join(tmpdir(), `pof_exp_probe_${stamp}.py`).replace(/\\/g, '/');
   const abslog = join(tmpdir(), `pof_exp_${stamp}.log`).replace(/\\/g, '/');
   writeFileSync(probePath, buildExperimentProbe(spec.python, spec.capture ? { capturePath: outPath, resX: spec.resX, resY: spec.resY } : {}));
-  const args = buildExperimentArgs({ uproject, probePath, abslog, capture: spec.capture });
+  const args = buildExperimentArgs({ uproject, probePath, abslog, capture: spec.capture, enablePlugins: spec.enablePlugins });
 
   const start = now();
   try {

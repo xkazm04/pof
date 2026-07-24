@@ -161,7 +161,8 @@ function UndoSnackbar({ onUndo, onExpire, accentColor, reducedMotion }: { onUndo
         <span className="text-xs text-text-muted">Suggestions dismissed</span>
         <button
           onClick={onUndo}
-          className="flex items-center gap-1 px-2 py-0.5 rounded text-2xs font-medium transition-all hover:brightness-110"
+          className="flex items-center gap-1 px-2 py-0.5 rounded text-2xs font-medium transition-all hover:brightness-110 focus-ring"
+          aria-label="Undo dismissing suggestions"
           style={{
             color: accentColor,
             backgroundColor: withOpacity(accentColor, OPACITY_8),
@@ -238,7 +239,7 @@ export function SuggestedActions({ session, onAction, accentColor = MODULE_COLOR
                   <button
                     key={s.id}
                     onClick={() => onAction(s.action)}
-                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-2xs font-medium transition-all hover:brightness-110 whitespace-nowrap flex-shrink-0"
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-2xs font-medium transition-all hover:brightness-110 whitespace-nowrap flex-shrink-0 focus-ring"
                     style={{
                       backgroundColor: withOpacity(accentColor, OPACITY_8),
                       color: accentColor,
@@ -255,10 +256,11 @@ export function SuggestedActions({ session, onAction, accentColor = MODULE_COLOR
 
             <button
               onClick={handleDismiss}
-              className="p-0.5 rounded text-text-muted hover:text-text transition-colors flex-shrink-0"
+              className="p-1 rounded text-text-muted hover:text-text transition-colors flex-shrink-0 focus-ring"
               title="Dismiss suggestions"
+              aria-label="Dismiss suggestions"
             >
-              <X className="w-3 h-3" />
+              <X className="w-3 h-3" aria-hidden="true" />
             </button>
           </div>
         </motion.div>

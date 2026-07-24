@@ -6,7 +6,7 @@ import {
   selected,
   minCount,
 } from '../acceptance/dataCheckers';
-import { runtimeDeferred } from '../acceptance/deferred';
+import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 
@@ -657,7 +657,7 @@ registerCatalogPipeline({
       // Registered automation name (enumerated from UE): the arena gate this row reuses
       // (geometry/lighting/collision). The fuller wave/win-loss/hazard slice-rules test is
       // still planned; until it registers, the setup gate is the runnable L3 coverage.
-      accept: runtimeDeferred(
+      accept: entityRuntimeDeferred(
         'VSArenaSetupTest',
         'Arena setup test passes in UE (geometry/lighting/collision)',
       ),

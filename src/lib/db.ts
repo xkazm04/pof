@@ -9,6 +9,14 @@ import fs from 'fs';
 const DB_PATH = process.env.POF_DB_PATH || path.join(os.homedir(), '.pof', 'pof.db');
 const DB_DIR = path.dirname(DB_PATH);
 
+// Bump when adding a NEW one-off migration probe below. `CREATE TABLE/INDEX IF NOT
+// EXISTS` stays unconditional (self-healing for fresh DBs); only the expensive
+// introspection/rebuild probes (PRAGMA table_info, sqlite_master SELECTs, table
+// rebuilds) are gated behind this so they run once per DB instead of on every
+// cold start. A fresh DB (user_version 0) runs them once against freshly-created
+// tables (all guards no-op) then stamps the version.
+const SCHEMA_VERSION = 1;
+
 let db: Database.Database | null = null;
 
 export function getDb(): Database.Database {
@@ -26,6 +34,13 @@ export function getDb(): Database.Database {
   // parents — and whether they fire becomes non-deterministic based on which feature's
   // init happened to toggle the pragma first.
   db.pragma('foreign_keys = ON');
+
+  // Skip the one-off introspection/rebuild probes once a DB has been stamped at the
+  // current schema version — they are idempotent guards whose only job is the initial
+  // upgrade, so re-running the PRAGMA table_info / sqlite_master scans on every cold
+  // start is pure waste.
+  const schemaVersion = db.pragma('user_version', { simple: true }) as number;
+  const needsMigrations = schemaVersion < SCHEMA_VERSION;
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS settings (
@@ -55,6 +70,7 @@ export function getDb(): Database.Database {
   `);
 
   // Migrate: add columns if missing (table may already exist from earlier schema)
+  if (needsMigrations) {
   const cols = db.prepare("PRAGMA table_info(feature_matrix)").all() as { name: string }[];
   const colNames = new Set(cols.map((c) => c.name));
   if (!colNames.has('quality_score')) {
@@ -91,6 +107,7 @@ export function getDb(): Database.Database {
       DROP TABLE feature_matrix;
       ALTER TABLE feature_matrix_new RENAME TO feature_matrix;
     `);
+  }
   }
 
   // Review snapshots — captures module state at each review for trend tracking
@@ -189,6 +206,7 @@ export function getDb(): Database.Database {
   `);
 
   // Migrate: add project_id column to scoped tables
+  if (needsMigrations) {
   const fmCols = db.prepare("PRAGMA table_info(feature_matrix)").all() as { name: string }[];
   if (!new Set(fmCols.map((c) => c.name)).has('project_id')) {
     db.exec("ALTER TABLE feature_matrix ADD COLUMN project_id TEXT NOT NULL DEFAULT ''");
@@ -206,6 +224,7 @@ export function getDb(): Database.Database {
   const bhCols = db.prepare("PRAGMA table_info(build_history)").all() as { name: string }[];
   if (!new Set(bhCols.map((c) => c.name)).has('project_id')) {
     db.exec("ALTER TABLE build_history ADD COLUMN project_id TEXT NOT NULL DEFAULT ''");
+  }
   }
 
   // Checklist metadata — stores priority and notes per checklist item
@@ -315,6 +334,7 @@ export function getDb(): Database.Database {
   // sorts below 'T' and falls out of the lexicographic week-range filters).
   // SQLite can't alter a column default in place: rebuild via the
   // feature_matrix pattern and normalize any legacy space-format rows.
+  if (needsMigrations) {
   const saSql = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='session_analytics'").get() as { sql: string } | undefined;
   if (saSql?.sql && saSql.sql.includes("datetime('now')")) {
     db.exec(`
@@ -337,6 +357,7 @@ export function getDb(): Database.Database {
       UPDATE session_analytics SET started_at = replace(started_at, ' ', 'T') || 'Z' WHERE started_at LIKE '% %';
       UPDATE session_analytics SET completed_at = replace(completed_at, ' ', 'T') || 'Z' WHERE completed_at LIKE '% %';
     `);
+  }
   }
 
   db.exec(`
@@ -389,15 +410,44 @@ export function getDb(): Database.Database {
   // silently broke build persistence; it has been removed to keep one source of
   // truth.
 
+  // Stamp the schema version so the one-off probes above are skipped on the next
+  // cold start. Only advances after a clean bootstrap; a throw earlier leaves the
+  // version untouched so migrations retry next time.
+  if (needsMigrations) db.pragma(`user_version = ${SCHEMA_VERSION}`);
+
   return db;
 }
 
+// ─── Prepared-statement cache ────────────────────────────────────────────────
+// better-sqlite3 recompiles the SQL on EVERY prepare() call — it has no internal
+// statement cache. Hot paths that re-prepare the same static SQL per invocation
+// (settings, single-row lookups) pay that compile cost each time on the shared
+// synchronous connection. Memoize the compiled statement per connection; keyed on
+// the live Database instance so a swapped connection (e.g. a test DB) invalidates
+// the cache instead of handing back a statement bound to a stale handle.
+let stmtCacheDb: Database.Database | null = null;
+let stmtCache = new Map<string, Database.Statement>();
+
+export function prepareCached(sql: string): Database.Statement {
+  const database = getDb();
+  if (stmtCacheDb !== database) {
+    stmtCacheDb = database;
+    stmtCache = new Map();
+  }
+  let stmt = stmtCache.get(sql);
+  if (!stmt) {
+    stmt = database.prepare(sql);
+    stmtCache.set(sql, stmt);
+  }
+  return stmt;
+}
+
 export function getSetting(key: string): string | null {
-  const row = getDb().prepare('SELECT value FROM settings WHERE key = ?').get(key) as { value: string } | undefined;
+  const row = prepareCached('SELECT value FROM settings WHERE key = ?').get(key) as { value: string } | undefined;
   return row?.value ?? null;
 }
 
 export function setSetting(key: string, value: string): void {
-  getDb().prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run(key, value);
+  prepareCached('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run(key, value);
 }
 
