@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
+import { DevInspector } from "./_dev-inspector/DevInspector";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -29,6 +30,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[#0a0a1a] text-[#e0e4f0]`}
       >
         {children}
+        {process.env.NODE_ENV === "development" && <DevInspector />}
         <Toaster
           theme="dark"
           position="bottom-right"

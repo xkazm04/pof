@@ -422,12 +422,12 @@ export function getAllFingerprints(): FindingFingerprint[] {
   return rows.map(rowToFingerprint);
 }
 
-export function getOccurrences(fingerprintId: string): FingerprintOccurrence[] {
+export function getOccurrences(fingerprintId: string, limit?: number): FingerprintOccurrence[] {
   ensureTables();
   const db = getDb();
-  const rows = db.prepare(
-    'SELECT * FROM regression_occurrences WHERE fingerprint_id = ? ORDER BY created_at DESC'
-  ).all(fingerprintId) as Record<string, unknown>[];
+  const rows = (limit != null
+    ? db.prepare('SELECT * FROM regression_occurrences WHERE fingerprint_id = ? ORDER BY created_at DESC LIMIT ?').all(fingerprintId, limit)
+    : db.prepare('SELECT * FROM regression_occurrences WHERE fingerprint_id = ? ORDER BY created_at DESC').all(fingerprintId)) as Record<string, unknown>[];
   return rows.map(rowToOccurrence);
 }
 

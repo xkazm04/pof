@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Trash2, Upload, RefreshCw, Loader2, Star, Search, X } from 'lucide-react';
-import { apiFetch, tryApiFetch } from '@/lib/api-utils';
+import { tryApiFetch } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
 import { TaskFactory } from '@/lib/cli-task';
@@ -18,8 +18,15 @@ import {
   joinAssets,
   type LibraryFilter,
 } from '@/lib/audio-library/filter';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { WaveformThumbnail } from './WaveformThumbnail';
 import { AudioUsageMeter } from './AudioUsageMeter';
+
+/** A pending destructive delete awaiting user confirmation. */
+type PendingDelete =
+  | { kind: 'asset'; id: string; label: string }
+  | { kind: 'set'; id: string; label: string };
 
 interface LibraryData { sets: AudioSet[]; assets: AudioAsset[]; usage: AudioUsageSummary | null }
 
@@ -33,6 +40,9 @@ export function AudioLibraryPanel() {
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState<string | null>(null);
   const [filter, setFilter] = useState<LibraryFilter>(DEFAULT_FILTER);
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
+  const [failedDelete, setFailedDelete] = useState<PendingDelete | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -88,14 +98,21 @@ export function AudioLibraryPanel() {
     importCli.execute(task);
   }
 
-  async function handleDeleteAsset(id: string) {
-    await apiFetch<{ deleted: 'asset' }>(`/api/audio-gen?assetId=${id}`, { method: 'DELETE' });
-    refresh();
-  }
-  async function handleDeleteSet(id: string) {
-    if (!confirm('Delete this set and all its variations?')) return;
-    await apiFetch<{ deleted: 'set' }>(`/api/audio-gen?setId=${id}`, { method: 'DELETE' });
-    refresh();
+  // Both deletes are irreversible, so they route through a styled confirm dialog
+  // (never the blocking native `confirm`) and surface any failure inline instead
+  // of throwing an unhandled rejection.
+  async function runDelete(pending: PendingDelete) {
+    setDeleteError(null);
+    const query = pending.kind === 'asset' ? `assetId=${pending.id}` : `setId=${pending.id}`;
+    const res = await tryApiFetch<{ deleted: string }>(`/api/audio-gen?${query}`, { method: 'DELETE' });
+    if (res.ok) {
+      setFailedDelete(null);
+      refresh();
+    } else {
+      logger.warn('audio delete failed', { pending, err: res.error });
+      setFailedDelete(pending);
+      setDeleteError(`Could not delete ${pending.label}: ${res.error}`);
+    }
   }
 
   async function handleToggleFavorite(asset: AudioAsset) {
@@ -225,7 +242,7 @@ export function AudioLibraryPanel() {
                   {importing === s.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
                   Import to UE
                 </button>
-                <button onClick={() => handleDeleteSet(s.id)} className="text-text-muted hover:text-red-400 focus-ring rounded" title="Delete set" aria-label={`Delete set ${s.name}`}>
+                <button onClick={() => setPendingDelete({ kind: 'set', id: s.id, label: `set "${s.name}"` })} className="text-text-muted hover:text-red-400 focus-ring rounded" title="Delete set" aria-label={`Delete set ${s.name}`}>
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -248,7 +265,7 @@ export function AudioLibraryPanel() {
                       <div className="text-2xs text-text-muted tabular-nums">{fmtDuration(a.durationMs)}</div>
                     </div>
                     <audio controls src={`/api/audio-asset?relPath=${encodeURIComponent(a.relPath)}`} className="flex-1 h-7 min-w-0" />
-                    <button onClick={() => handleDeleteAsset(a.id)} className="text-text-muted hover:text-red-400 focus-ring rounded flex-shrink-0" title="Delete variation" aria-label="Delete variation">
+                    <button onClick={() => setPendingDelete({ kind: 'asset', id: a.id, label: `variation "${a.filename}"` })} className="text-text-muted hover:text-red-400 focus-ring rounded flex-shrink-0" title="Delete variation" aria-label="Delete variation">
                       <Trash2 className="w-3 h-3" />
                     </button>
                   </div>
@@ -258,6 +275,30 @@ export function AudioLibraryPanel() {
           ))}
         </div>
       </div>
+
+      {deleteError && (
+        <div className="px-3 pb-3">
+          <InlineErrorRetry
+            message={deleteError}
+            onRetry={() => { setDeleteError(null); if (failedDelete) runDelete(failedDelete); }}
+            onDismiss={() => setDeleteError(null)}
+            dense
+          />
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        onClose={() => setPendingDelete(null)}
+        onConfirm={() => { if (pendingDelete) runDelete(pendingDelete); }}
+        title={pendingDelete?.kind === 'set' ? 'Delete this set?' : 'Delete this variation?'}
+        description={
+          pendingDelete?.kind === 'set'
+            ? `This permanently deletes ${pendingDelete?.label} and all its variations. This cannot be undone.`
+            : `This permanently deletes ${pendingDelete?.label}. This cannot be undone.`
+        }
+        confirmLabel="Delete"
+      />
     </div>
   );
 }

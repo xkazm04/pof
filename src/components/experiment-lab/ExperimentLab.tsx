@@ -11,6 +11,10 @@ import type { ExperimentResult, ExperimentSpec } from '@/lib/ue-experiment/runne
 
 type Status = 'idle' | 'running' | 'done' | 'error';
 type Mode = 'python' | 'scenario';
+const MODES: { key: Mode; label: string }[] = [
+  { key: 'python', label: 'Editor Python' },
+  { key: 'scenario', label: 'Gameplay Scenario' },
+];
 const ASSERT_KINDS: { key: keyof AssertionToggles; label: string }[] = [
   { key: 'moved', label: 'moved' },
   { key: 'animated', label: 'animated' },
@@ -91,23 +95,35 @@ export function ExperimentLab() {
         <p className="text-text-muted">Run a concept on the connected UE 5.8 project and see theory → output.</p>
       </header>
 
+      {/* Real tab semantics: each tab owns its panel (aria-controls/labelledby) and the
+          group is one tab stop with ←/→ moving between modes, per the WAI-ARIA pattern. */}
       <div className="flex gap-2" role="tablist" aria-label="Experiment mode">
-        {(['python', 'scenario'] as const).map((m) => (
+        {MODES.map(({ key, label }, i) => (
           <button
-            key={m}
+            key={key}
             type="button"
             role="tab"
-            aria-selected={mode === m}
-            onClick={() => setMode(m)}
-            className={`rounded px-3 py-1 ${mode === m ? 'bg-emerald-600 text-white' : 'bg-surface text-text-muted'}`}
+            id={`experiment-tab-${key}`}
+            aria-selected={mode === key}
+            aria-controls={`experiment-panel-${key}`}
+            tabIndex={mode === key ? 0 : -1}
+            onClick={() => setMode(key)}
+            onKeyDown={(e) => {
+              if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+              e.preventDefault();
+              const next = MODES[(i + (e.key === 'ArrowRight' ? 1 : MODES.length - 1)) % MODES.length];
+              setMode(next.key);
+              document.getElementById(`experiment-tab-${next.key}`)?.focus();
+            }}
+            className={`focus-ring rounded px-3 py-1 ${mode === key ? 'bg-emerald-600 text-white' : 'bg-surface text-text-muted'}`}
           >
-            {m === 'python' ? 'Editor Python' : 'Gameplay Scenario'}
+            {label}
           </button>
         ))}
       </div>
 
       {mode === 'python' ? (
-        <>
+        <div className="space-y-4" role="tabpanel" id="experiment-panel-python" aria-labelledby="experiment-tab-python">
           <label className="block">
             <span className="text-xs text-text-muted">Seed from a research finding</span>
             <select className="mt-1 w-full rounded border border-border bg-surface p-2" defaultValue="" onChange={(e) => onSeed(e.target.value)} aria-label="Seed from a research finding">
@@ -123,9 +139,9 @@ export function ExperimentLab() {
             <input type="checkbox" checked={capture} onChange={(e) => setCapture(e.target.checked)} />
             <span>Capture viewport</span>
           </label>
-        </>
+        </div>
       ) : (
-        <>
+        <div className="space-y-4" role="tabpanel" id="experiment-panel-scenario" aria-labelledby="experiment-tab-scenario">
           <label className="block">
             <span className="text-xs text-text-muted">Map (a lit level the player spawns into)</span>
             <input className="mt-1 w-full rounded border border-border bg-surface p-2 font-mono text-xs" value={scenarioMap} onChange={(e) => setScenarioMap(e.target.value)} aria-label="Scenario map" />
@@ -147,18 +163,33 @@ export function ExperimentLab() {
               </label>
             ))}
           </div>
-        </>
+        </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-4">
-        <input className="flex-1 rounded border border-border bg-surface p-2" placeholder="Optional: Gemini verify prompt on the captured frame" value={verifyPrompt} onChange={(e) => setVerifyPrompt(e.target.value)} aria-label="Verify prompt" />
-        <button type="button" onClick={onRun} disabled={status === 'running'} className="rounded bg-emerald-600 px-4 py-2 font-medium text-white disabled:opacity-50">
+      <div className="flex flex-wrap items-end gap-4">
+        <div className="min-w-64 flex-1">
+          <label htmlFor="experiment-verify-prompt" className="block text-xs text-text-muted">Visual check (optional)</label>
+          <input
+            id="experiment-verify-prompt"
+            aria-describedby="experiment-verify-hint"
+            className="focus-ring mt-1 w-full rounded border border-border bg-surface p-2"
+            placeholder="e.g. the character is standing upright, not in a T-pose"
+            value={verifyPrompt}
+            onChange={(e) => setVerifyPrompt(e.target.value)}
+          />
+          <p id="experiment-verify-hint" className="mt-1 text-2xs text-text-muted">What a vision model should look for in the captured frame. Leave blank to skip.</p>
+        </div>
+        <button type="button" onClick={onRun} disabled={status === 'running'} aria-busy={status === 'running'} className="focus-ring rounded bg-emerald-600 px-4 py-2 font-medium text-white disabled:opacity-50">
           {status === 'running' ? 'Running on UE 5.8…' : 'Run on UE 5.8'}
         </button>
       </div>
 
-      {status === 'running' && <p className="text-text-muted">Launching UE 5.8 — this takes a minute or two…</p>}
-      {status === 'error' && <p className="text-red-500">Error: {errMsg}</p>}
+      {/* Run outcome is announced, not just coloured — the run takes minutes, so a
+          screen-reader user must hear it start, and an error must interrupt. */}
+      <p role="status" aria-live="polite" className="text-text-muted empty:hidden">
+        {status === 'running' ? 'Launching UE 5.8 — this takes a minute or two…' : ''}
+      </p>
+      {status === 'error' && <p role="alert" className="text-red-500">Error: {errMsg}</p>}
 
       {result && (
         <section className="space-y-3 rounded border border-border p-4">

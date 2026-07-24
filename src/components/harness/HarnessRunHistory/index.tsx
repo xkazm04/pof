@@ -69,9 +69,12 @@ export function HarnessRunHistory() {
         <button
           type="button"
           onClick={() => setRefreshTick((t) => t + 1)}
-          className="inline-flex items-center gap-1.5 px-2 py-1 text-xs rounded border border-border/40 text-text-muted hover:text-text focus-ring"
+          disabled={loading}
+          aria-busy={loading}
+          aria-label="Refresh run history"
+          className="inline-flex items-center gap-1.5 px-2 py-1 text-xs rounded border border-border/40 text-text-muted hover:text-text focus-ring disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          <RefreshCw className="w-3 h-3" /> Refresh
+          <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} /> Refresh
         </button>
       </header>
 
@@ -85,13 +88,13 @@ export function HarnessRunHistory() {
       />
 
       {loading && (
-        <div className="flex items-center gap-2 text-text-muted text-xs">
+        <div role="status" className="flex items-center gap-2 text-text-muted text-xs">
           <Loader2 className="w-3 h-3 animate-spin" /> Loading runs…
         </div>
       )}
       {error && (
-        <div className="flex items-center gap-2 text-xs" style={{ color: ACCENT_RED }}>
-          <AlertTriangle className="w-3 h-3" /> {error}
+        <div role="alert" className="flex items-center gap-2 text-xs" style={{ color: ACCENT_RED }}>
+          <AlertTriangle className="w-3 h-3" /> Couldn&apos;t load run history: {error}
         </div>
       )}
       {empty && (
@@ -110,8 +113,8 @@ export function HarnessRunHistory() {
       )}
 
       {diffError && (
-        <div className="flex items-center gap-2 text-xs" style={{ color: ACCENT_RED }}>
-          <AlertTriangle className="w-3 h-3" /> {diffError}
+        <div role="alert" className="flex items-center gap-2 text-xs" style={{ color: ACCENT_RED }}>
+          <AlertTriangle className="w-3 h-3" /> Compare failed: {diffError}
         </div>
       )}
       {diff && <DiffPanel diff={diff} />}

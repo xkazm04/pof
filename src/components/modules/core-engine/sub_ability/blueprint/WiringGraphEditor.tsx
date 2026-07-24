@@ -13,6 +13,7 @@ import {
 import type { AttrCategory, EditorAttribute, EditorEffect, TagRule } from '@/lib/gas-codegen';
 import type { AttrRelationship, PinKind, GASGraphNode, GraphWire } from './types';
 import { CAT_COLORS, NODE_W_GRAPH, NODE_H_GRAPH, PIN_R } from './data';
+import { DesktopCanvasNotice } from '@/components/ui/DesktopCanvasNotice';
 
 export function WiringGraphEditor({
   attributes, effects, tagRules, relationships, onSelectItem,
@@ -106,6 +107,7 @@ export function WiringGraphEditor({
 
   return (
     <div className="space-y-2">
+      <DesktopCanvasNotice />
       <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Visual wiring graph of the GAS data pipeline. Drag nodes to reposition. Click to inspect connections.</div>
       <div className="flex items-center justify-between px-2 text-xs font-mono uppercase tracking-[0.2em] text-text-muted">
         <span style={{ width: NODE_W_GRAPH, color: ACCENT_VIOLET, textShadow: `0 0 12px ${withOpacity(ACCENT_VIOLET, OPACITY_25)}` }}>Attributes</span>

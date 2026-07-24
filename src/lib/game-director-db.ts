@@ -1,4 +1,4 @@
-import { getDb } from './db';
+import { getDb, prepareCached } from './db';
 import type {
   PlaytestSession,
   PlaytestFinding,
@@ -147,16 +147,25 @@ export function createSession(
 
 export function getSession(id: string): PlaytestSession | null {
   ensureTables();
-  const db = getDb();
-  const row = db.prepare('SELECT * FROM game_director_sessions WHERE id = ?').get(id) as SessionRow | undefined;
+  const row = prepareCached('SELECT * FROM game_director_sessions WHERE id = ?').get(id) as SessionRow | undefined;
   if (!row) return null;
   return rowToSession(row);
 }
 
-export function listSessions(): PlaytestSession[] {
+/**
+ * List sessions, newest first. Pass `limit` to bound the result — the sessions
+ * table grows one row per playtest forever, so UI-facing callers should cap it
+ * (the regression tracker, which fingerprints across all history, calls it
+ * unbounded on purpose).
+ */
+export function listSessions(limit?: number): PlaytestSession[] {
   ensureTables();
-  const db = getDb();
-  const rows = db.prepare('SELECT * FROM game_director_sessions ORDER BY created_at DESC').all() as SessionRow[];
+  const sql = limit != null
+    ? 'SELECT * FROM game_director_sessions ORDER BY created_at DESC LIMIT ?'
+    : 'SELECT * FROM game_director_sessions ORDER BY created_at DESC';
+  const rows = (limit != null
+    ? prepareCached(sql).all(limit)
+    : prepareCached(sql).all()) as SessionRow[];
   return rows.map(rowToSession);
 }
 
@@ -272,7 +281,7 @@ export function updateFindingTriage(
   });
   updateAndRecount();
 
-  const row = db.prepare('SELECT * FROM game_director_findings WHERE id = ?')
+  const row = prepareCached('SELECT * FROM game_director_findings WHERE id = ?')
     .get(findingId) as FindingRow | undefined;
   return row ? rowToFinding(row) : null;
 }
@@ -291,15 +300,14 @@ export function markFindingFixDispatched(findingId: string): PlaytestFinding | n
   ).run(findingId);
   if (result.changes === 0) return null;
 
-  const row = db.prepare('SELECT * FROM game_director_findings WHERE id = ?')
+  const row = prepareCached('SELECT * FROM game_director_findings WHERE id = ?')
     .get(findingId) as FindingRow | undefined;
   return row ? rowToFinding(row) : null;
 }
 
 export function getFindings(sessionId: string): PlaytestFinding[] {
   ensureTables();
-  const db = getDb();
-  const rows = db.prepare(
+  const rows = prepareCached(
     'SELECT * FROM game_director_findings WHERE session_id = ? ORDER BY severity, created_at'
   ).all(sessionId) as FindingRow[];
   return rows.map(rowToFinding);

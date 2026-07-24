@@ -80,7 +80,7 @@ export function PropertyEditorRow({
       {!editing && (
         <button
           onClick={handleStartEdit}
-          className="p-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+          className="p-0.5 rounded opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 transition-opacity flex items-center justify-center touch-target"
           title="Edit & push to UE5"
           style={{ color: ACCENT_ORANGE }}
         >

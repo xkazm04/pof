@@ -138,10 +138,11 @@ export function AntiPatternWarning({ prompt, moduleId, onSwitchApproach }: AntiP
                 {antiPattern.alternative && onSwitchApproach && (
                   <button
                     onClick={() => handleSwitch(warning)}
-                    className="flex items-center gap-1 mt-1 px-2 py-0.5 rounded text-2xs font-medium transition-colors hover:bg-accent-subtle"
+                    className="flex items-center gap-1 mt-1 px-2 py-0.5 rounded text-2xs font-medium transition-colors hover:bg-accent-subtle focus-ring"
                     style={{ color: STATUS_SUCCESS }}
+                    title={`Replace your prompt with the ${antiPattern.alternative.approach} approach`}
                   >
-                    <ArrowRight className="w-2.5 h-2.5" />
+                    <ArrowRight className="w-2.5 h-2.5" aria-hidden="true" />
                     Switch to {antiPattern.alternative.approach} ({Math.round(antiPattern.alternative.successRate * 100)}% success)
                   </button>
                 )}
@@ -150,9 +151,11 @@ export function AntiPatternWarning({ prompt, moduleId, onSwitchApproach }: AntiP
               {/* Dismiss */}
               <button
                 onClick={() => handleDismiss(antiPattern.id)}
-                className="flex-shrink-0 p-0.5 rounded text-text-muted hover:text-text hover:bg-border transition-colors"
+                className="flex-shrink-0 p-1 rounded text-text-muted hover:text-text hover:bg-border transition-colors focus-ring"
+                title={`Dismiss "${antiPattern.title}" warning`}
+                aria-label={`Dismiss "${antiPattern.title}" warning`}
               >
-                <X className="w-3 h-3" />
+                <X className="w-3 h-3" aria-hidden="true" />
               </button>
             </motion.div>
           );

@@ -122,7 +122,7 @@ export function SetupWizard() {
     }`;
 
   return (
-    <div className="h-screen flex items-center justify-center p-6 bg-background">
+    <div className="min-h-dvh flex items-center justify-center p-6 bg-background">
       <SurfaceCard level={3} className="w-full max-w-lg p-8">
         {/* Logo */}
         <div className="flex items-center justify-center gap-3 mb-6">

@@ -1,8 +1,20 @@
 import { type ProbeConfig } from '@/lib/bridge-doctor/probes';
 
-export function parseIntOr(v: string, fallback: number): number {
-  const n = Number.parseInt(v, 10);
-  return Number.isFinite(n) && n > 0 ? n : fallback;
+/** Highest port a TCP listener can bind to — the upper bound for the port fields. */
+export const PORT_MAX = 65535;
+
+/**
+ * True when the raw field text is a bindable TCP port.
+ *
+ * The port inputs let the user type freely (including transiently-empty or
+ * out-of-range text) and only commit a valid value — this predicate is what
+ * tells the UI when to flag the field instead of silently dropping keystrokes.
+ */
+export function isValidPort(raw: string): boolean {
+  const trimmed = raw.trim();
+  if (!/^\d+$/.test(trimmed)) return false;
+  const n = Number.parseInt(trimmed, 10);
+  return Number.isFinite(n) && n > 0 && n <= PORT_MAX;
 }
 
 export function configMatches(cfg: ProbeConfig, good: { host: string; pofPort: number; rcPort: number; wsPort: number; authToken: string }): boolean {

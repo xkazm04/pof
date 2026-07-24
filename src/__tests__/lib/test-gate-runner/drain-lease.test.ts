@@ -63,6 +63,21 @@ describe('drain-lease registry', () => {
     expect(acquireLeases(['items|a'])).toEqual({ ok: false, conflict: 'items|a' });
   });
 
+  it('a catalog-wide lease is exclusive with its member-entity leases (containment, both ways)', () => {
+    // Held catalog-wide (`items|*`) blocks acquiring a member entity of the same catalog…
+    expect(acquireLeases(['items|*']).ok).toBe(true);
+    expect(acquireLeases(['items|item-1'])).toEqual({ ok: false, conflict: 'items|*' });
+    // …but a DIFFERENT catalog's entity is unaffected (disjoint rows/editor scope).
+    expect(acquireLeases(['spells|item-1']).ok).toBe(true);
+    releaseLeases(['items|*', 'spells|item-1']);
+    // …and the reverse: a held member entity blocks acquiring the catalog-wide lease.
+    expect(acquireLeases(['items|item-1']).ok).toBe(true);
+    expect(acquireLeases(['items|*'])).toEqual({ ok: false, conflict: 'items|item-1' });
+    // A catalog-wide batch that overlaps a held member is refused whole (all-or-nothing).
+    expect(acquireLeases(['spells|*', 'items|*']).ok).toBe(false);
+    expect(getLeaseState().scopes).toEqual(['items/item-1']); // nothing new acquired
+  });
+
   it('leaseKeysForFilter mirrors the route: batch → per-entity keys, else single/global', () => {
     expect(leaseKeysForFilter({})).toEqual(['*|*']);
     expect(leaseKeysForFilter({ catalogId: 'items' })).toEqual(['items|*']);

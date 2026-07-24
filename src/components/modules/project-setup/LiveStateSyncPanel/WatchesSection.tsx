@@ -52,7 +52,7 @@ export function WatchesSection({
                   </div>
                   <button
                     onClick={() => unwatchProperty(watchId)}
-                    className="p-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="p-0.5 rounded opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 transition-opacity flex items-center justify-center touch-target"
                     style={{ color: STATUS_ERROR }}
                     aria-label={`Remove watch for ${update.propertyName}`}
                   >

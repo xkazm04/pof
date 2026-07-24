@@ -35,9 +35,9 @@ export function StudioInspector({ modelName }: { modelName: string | null }) {
                 Bounding Box (m)
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 'var(--lab-s2)' }}>
-                <Stat label="W" value={formatMeters(stats.boundingBox.width)} />
-                <Stat label="H" value={formatMeters(stats.boundingBox.height)} />
-                <Stat label="D" value={formatMeters(stats.boundingBox.depth)} />
+                <Stat label="Width" value={formatMeters(stats.boundingBox.width)} />
+                <Stat label="Height" value={formatMeters(stats.boundingBox.height)} />
+                <Stat label="Depth" value={formatMeters(stats.boundingBox.depth)} />
               </div>
             </div>
           </>

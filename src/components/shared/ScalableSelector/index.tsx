@@ -8,6 +8,7 @@ import {
   OPACITY_20,
   withOpacity,
 } from '@/lib/chart-colors';
+import { Tooltip } from '@/components/ui/Tooltip';
 import type { ScalableSelectorProps, SelectorItem } from './types';
 import { SelectorSearch } from './SelectorSearch';
 import { SelectorGroupHeader } from './SelectorGroup';
@@ -87,8 +88,9 @@ export function ScalableSelector<T extends SelectorItem>({
             {title ?? 'Select'}
           </h2>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1 rounded-md hover:bg-surface-hover transition-colors"
+            className="p-1 rounded-md hover:bg-surface-hover transition-colors focus-ring"
             aria-label="Close"
           >
             <X size={16} className="text-text-muted" />
@@ -123,8 +125,9 @@ export function ScalableSelector<T extends SelectorItem>({
               >
                 {String(item[searchKey])}
                 <button
+                  type="button"
                   onClick={() => handleRemovePill(item.id)}
-                  className="ml-0.5 hover:opacity-70 transition-opacity"
+                  className="ml-0.5 rounded hover:opacity-70 transition-opacity focus-ring"
                   aria-label={`Remove ${String(item[searchKey])}`}
                 >
                   <X size={12} />
@@ -132,14 +135,26 @@ export function ScalableSelector<T extends SelectorItem>({
               </span>
             ))}
             {selectedItems.length > MAX_VISIBLE_PILLS && (
-              <span className="text-2xs text-text-muted font-mono">
-                +{selectedItems.length - MAX_VISIBLE_PILLS} more
-              </span>
+              <Tooltip
+                multiline
+                content={selectedItems
+                  .slice(MAX_VISIBLE_PILLS)
+                  .map((item) => String(item[searchKey]))
+                  .join(', ')}
+              >
+                <span
+                  tabIndex={0}
+                  className="text-2xs text-text-muted font-mono rounded px-0.5 cursor-help focus-ring"
+                >
+                  +{selectedItems.length - MAX_VISIBLE_PILLS} more
+                </span>
+              </Tooltip>
             )}
             {selectedItems.length > 2 && (
               <button
+                type="button"
                 onClick={() => onSelect([])}
-                className="text-2xs text-text-muted hover:text-text transition-colors ml-1"
+                className="text-2xs text-text-muted hover:text-text transition-colors ml-1 rounded px-1 focus-ring"
               >
                 Clear all
               </button>
@@ -167,6 +182,8 @@ export function ScalableSelector<T extends SelectorItem>({
           onFocusChange={setFocusedId}
           multiselectable={mode === 'multi'}
           hasItems={items.length > 0}
+          query={rawQuery}
+          onClearSearch={() => setRawQuery('')}
         />
 
         {/* Footer */}

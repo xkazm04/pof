@@ -89,11 +89,11 @@ export function TerminalHeader({
             </div>
           )}
           {sessionId && !isStreaming && (
-            <button onClick={onResume} className="p-1.5 hover:bg-surface-hover rounded transition-colors" style={{ color: MODULE_COLORS.core }} title="Resume session" aria-label="Resume session">
+            <button onClick={onResume} className="p-1.5 hover:bg-surface-hover rounded transition-colors focus-ring" style={{ color: MODULE_COLORS.core }} title="Resume this session where it left off" aria-label="Resume session">
               <RotateCcw className="w-3 h-3" aria-hidden="true" />
             </button>
           )}
-          <button onClick={onClear} disabled={isStreaming} className="p-1.5 hover:bg-surface-hover rounded text-text-muted hover:text-red-400 disabled:opacity-50 transition-colors" title="Clear terminal" aria-label="Clear terminal">
+          <button onClick={onClear} disabled={isStreaming} className="p-1.5 hover:bg-surface-hover rounded text-text-muted hover:text-red-400 disabled:opacity-50 transition-colors focus-ring" title={isStreaming ? 'Stop the run before clearing' : 'Clear terminal output'} aria-label="Clear terminal">
             <Trash2 className="w-3 h-3" aria-hidden="true" />
           </button>
         </div>
@@ -140,20 +140,22 @@ export function TerminalHeader({
                   }).catch(() => {});
                 }
               }}
-              className="flex items-center gap-1 text-text-muted hover:text-text transition-colors"
+              className="flex items-center gap-1 px-1 rounded text-text-muted hover:text-text transition-colors focus-ring"
               title="Copy last Claude response"
+              aria-label={outputCopied ? 'Last response copied' : 'Copy last Claude response'}
             >
-              {outputCopied ? <CheckCircle className={`w-2.5 h-2.5 ${CLI_COLORS.success}`} /> : <Copy className="w-2.5 h-2.5" />}
+              {outputCopied ? <CheckCircle className={`w-2.5 h-2.5 ${CLI_COLORS.success}`} aria-hidden="true" /> : <Copy className="w-2.5 h-2.5" aria-hidden="true" />}
               <span>{outputCopied ? 'Copied' : 'Output'}</span>
             </button>
           )}
           {logFilePath && (
             <button
               onClick={copyLogPath}
-              className="flex items-center gap-1 text-text-muted hover:text-text transition-colors"
-              title={logFilePath}
+              className="flex items-center gap-1 px-1 rounded text-text-muted hover:text-text transition-colors focus-ring"
+              title={`Copy log file path — ${logFilePath}`}
+              aria-label={logCopied ? 'Log file path copied' : 'Copy log file path'}
             >
-              {logCopied ? <CheckCircle className={`w-2.5 h-2.5 ${CLI_COLORS.success}`} /> : <FileText className="w-2.5 h-2.5" />}
+              {logCopied ? <CheckCircle className={`w-2.5 h-2.5 ${CLI_COLORS.success}`} aria-hidden="true" /> : <FileText className="w-2.5 h-2.5" aria-hidden="true" />}
               <span>{logCopied ? 'Copied' : 'Log'}</span>
             </button>
           )}

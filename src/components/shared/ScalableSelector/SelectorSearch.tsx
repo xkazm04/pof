@@ -51,23 +51,31 @@ export const SelectorSearch = forwardRef<SelectorSearchHandle, SelectorSearchPro
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           aria-label={placeholder}
-          className="w-full pl-9 pr-20 py-2.5 bg-surface-deep border border-border rounded-lg text-sm text-text placeholder:text-text-muted focus:outline-none focus:border-border-bright transition-colors"
+          className="w-full pl-9 pr-20 py-2.5 bg-surface-deep border border-border rounded-lg text-sm text-text placeholder:text-text-muted focus:outline-none focus:border-border-bright transition-colors focus-ring-inset"
           style={value ? { borderColor: withOpacity(accent, OPACITY_20) } : undefined}
         />
         <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
           {value && (
             <button
+              type="button"
               onClick={handleClear}
-              className="p-0.5 rounded hover:bg-surface-hover transition-colors"
+              className="p-0.5 rounded hover:bg-surface-hover transition-colors focus-ring"
               aria-label="Clear search"
             >
               <X size={14} className="text-text-muted" />
             </button>
           )}
-          <span className="text-2xs text-text-muted font-mono tabular-nums" aria-live="polite">
+          {/* Visual readout stays terse; the live region below speaks a full sentence.
+              Announcing the raw "12/40" glyph was unintelligible to a screen reader. */}
+          <span className="text-2xs text-text-muted font-mono tabular-nums" aria-hidden="true">
             {resultCount}/{totalCount}
           </span>
         </div>
+        <span className="sr-only" role="status" aria-live="polite">
+          {resultCount === 0
+            ? `No items match${value ? ` "${value}"` : ''}`
+            : `${resultCount} of ${totalCount} items match`}
+        </span>
       </div>
     );
   },

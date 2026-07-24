@@ -174,10 +174,16 @@ export function PipelinesView({
         </div>
       )}
 
-      {!lanes && <div style={{ fontSize: 'var(--lab-fs-sm)', color: 'var(--lab-muted)' }}>Loading pipeline truth…</div>}
-      {lanes && filterClass && visibleLanes && visibleLanes.length === 0 && (
-        <div style={{ fontSize: 'var(--lab-fs-sm)', color: 'var(--lab-muted)' }}>No steps match this capability class.</div>
-      )}
+      {/* Live region so the load/empty transition is announced, not just drawn. */}
+      <div role="status" aria-live="polite" style={{ fontSize: 'var(--lab-fs-sm)', color: 'var(--lab-muted)' }}>
+        {!lanes && 'Loading pipeline truth…'}
+        {lanes && lanes.length === 0 && 'No catalog pipelines are registered yet — nothing to map.'}
+        {lanes && lanes.length > 0 && filterClass && visibleLanes?.length === 0 && (
+          <>
+            No steps match the <strong>{filterClass}</strong> capability class. Clear the filter above to see the whole map.
+          </>
+        )}
+      </div>
 
       <div style={{ overflowX: 'auto' }}>
         {visibleLanes?.map((lane) => (

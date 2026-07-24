@@ -1,7 +1,13 @@
 'use client';
 
 import { type ReactNode } from 'react';
-import { Loader2, CheckCircle, AlertCircle, type LucideIcon } from 'lucide-react';
+import {
+  Loader2,
+  CheckCircle,
+  AlertCircle,
+  AlertTriangle,
+  type LucideIcon,
+} from 'lucide-react';
 import {
   SUCCESS_RESULT,
   ERROR_RESULT,
@@ -103,7 +109,7 @@ export function MCPTextInput({
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
       data-testid={dataTestid}
-      className={`${className} bg-surface-tertiary border border-border ${MCP_FORM_RADIUS} px-3 py-1.5 text-xs text-text placeholder:text-text-muted${
+      className={`focus-ring ${className} bg-surface-tertiary border border-border ${MCP_FORM_RADIUS} px-3 py-1.5 text-xs text-text placeholder:text-text-muted${
         mono ? ' font-mono' : ''
       }`}
     />
@@ -140,12 +146,17 @@ export function MCPSubmitButton({
       type="button"
       onClick={onClick}
       disabled={disabled || loading}
+      aria-busy={loading}
       data-testid={dataTestid}
-      className={`flex items-center gap-1.5 px-3 py-1.5 ${MCP_FORM_RADIUS} text-xs font-medium
+      className={`focus-ring flex items-center gap-1.5 px-3 py-1.5 ${MCP_FORM_RADIUS} text-xs font-medium
                  bg-[var(--visual-gen)] text-white hover:brightness-110 transition-all
                  disabled:opacity-50`}
     >
-      {loading ? <Loader2 size={14} className="animate-spin" /> : <Icon size={14} />}
+      {loading ? (
+        <Loader2 size={14} className="animate-spin" aria-hidden="true" />
+      ) : (
+        <Icon size={14} aria-hidden="true" />
+      )}
       {loading ? loadingLabel : children}
     </button>
   );
@@ -153,18 +164,35 @@ export function MCPSubmitButton({
 
 /* ─── Disconnected notice ───────────────────────────────────────────────── */
 
-/** Inline warning shown when the Blender MCP bridge is not connected. */
+/**
+ * Inline warning shown when the Blender MCP bridge is not connected.
+ *
+ * Carries a glyph as well as the amber hue so the state is not conveyed by
+ * color alone (WCAG 1.4.1), matching the StatusToken convention used elsewhere.
+ */
 export function DisconnectedNotice({
   message = 'Connect to Blender MCP first.',
 }: {
   message?: string;
 }) {
-  return <p className={`text-xs ${WARNING_TEXT}`}>{message}</p>;
+  return (
+    <p className={`flex items-start gap-1.5 text-xs ${WARNING_TEXT}`}>
+      <AlertTriangle size={14} className="mt-px shrink-0" aria-hidden="true" />
+      <span>{message}</span>
+    </p>
+  );
 }
 
 /* ─── Result block ──────────────────────────────────────────────────────── */
 
-/** Success / error output rendered beneath a pipeline form after a run. */
+/**
+ * Success / error output rendered beneath a pipeline form after a run.
+ *
+ * Both blocks are live regions so a run that finishes while focus is still on
+ * the form is announced rather than landing silently below the fold, and each
+ * carries a short outcome heading so the raw script output is never the only
+ * signal of whether the run passed.
+ */
 export function ResultBlock({
   result,
   error,
@@ -174,17 +202,40 @@ export function ResultBlock({
 }) {
   if (!result && !error) return null;
   return (
-    <div className="mt-3">
+    <div className="mt-3 space-y-2">
       {result && (
-        <div className={`flex items-start gap-2 p-3 ${MCP_FORM_RADIUS} ${SUCCESS_RESULT}`}>
-          <CheckCircle size={14} className="text-green-400 mt-0.5 shrink-0" />
-          <pre className="text-xs font-mono text-text-muted whitespace-pre-wrap">{result}</pre>
+        <div
+          role="status"
+          aria-live="polite"
+          className={`flex items-start gap-2 p-3 ${MCP_FORM_RADIUS} ${SUCCESS_RESULT}`}
+        >
+          <CheckCircle
+            size={14}
+            className="text-green-400 mt-0.5 shrink-0"
+            aria-hidden="true"
+          />
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-green-400">Run succeeded</p>
+            <pre className="mt-1 text-xs font-mono text-text whitespace-pre-wrap break-words">
+              {result}
+            </pre>
+          </div>
         </div>
       )}
       {error && (
-        <div className={`flex items-start gap-2 p-3 ${MCP_FORM_RADIUS} ${ERROR_RESULT}`}>
-          <AlertCircle size={14} className="text-red-400 mt-0.5 shrink-0" />
-          <span className="text-xs text-red-400">{error}</span>
+        <div
+          role="alert"
+          className={`flex items-start gap-2 p-3 ${MCP_FORM_RADIUS} ${ERROR_RESULT}`}
+        >
+          <AlertCircle
+            size={14}
+            className="text-red-400 mt-0.5 shrink-0"
+            aria-hidden="true"
+          />
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-red-400">Run failed</p>
+            <p className="mt-1 text-xs text-red-400 break-words">{error}</p>
+          </div>
         </div>
       )}
     </div>

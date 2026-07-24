@@ -131,3 +131,46 @@ describe('AudioLibraryPanel — faceted search', () => {
     expect(within(row).getByLabelText('Audio waveform')).toBeTruthy();
   });
 });
+
+describe('AudioLibraryPanel — destructive deletes', () => {
+  const wasDelete = (init?: RequestInit) => (init?.method ?? '').toUpperCase() === 'DELETE';
+
+  it('deleting a set confirms first, then issues the DELETE only on confirm', async () => {
+    const mock = mockLibraryFetch();
+    render(<AudioLibraryPanel />);
+    await waitFor(() => expect(screen.getByTestId('set-footstep-stone')).toBeTruthy());
+
+    // Clicking the trash icon must NOT delete immediately — it opens a confirm.
+    fireEvent.click(screen.getByLabelText('Delete set footstep-stone'));
+    expect(mock.mock.calls.some(([, init]) => wasDelete(init))).toBe(false);
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    expect(screen.getByText('Delete this set?')).toBeTruthy();
+
+    // Confirming issues the DELETE.
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    await waitFor(() => expect(mock.mock.calls.some(([, init]) => wasDelete(init))).toBe(true));
+  });
+
+  it('cancelling the confirm leaves the set untouched (no DELETE)', async () => {
+    const mock = mockLibraryFetch();
+    render(<AudioLibraryPanel />);
+    await waitFor(() => expect(screen.getByTestId('set-footstep-stone')).toBeTruthy());
+
+    fireEvent.click(screen.getByLabelText('Delete set footstep-stone'));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(mock.mock.calls.some(([, init]) => wasDelete(init))).toBe(false);
+  });
+
+  it('deleting a variation is also guarded by a confirm', async () => {
+    const mock = mockLibraryFetch();
+    render(<AudioLibraryPanel />);
+    await waitFor(() => expect(screen.getByTestId('asset-a1')).toBeTruthy());
+
+    const row = screen.getByTestId('asset-a1');
+    fireEvent.click(within(row).getByLabelText('Delete variation'));
+    expect(mock.mock.calls.some(([, init]) => wasDelete(init))).toBe(false);
+    expect(screen.getByText('Delete this variation?')).toBeTruthy();
+  });
+});

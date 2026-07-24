@@ -10,6 +10,7 @@ import { ZoneLayer } from './ZoneLayer';
 import { EmitterLayer } from './EmitterLayer';
 import { DrawPreview } from './DrawPreview';
 import { ZoomCluster } from './ZoomCluster';
+import { DesktopCanvasNotice } from '@/components/ui/DesktopCanvasNotice';
 
 export function AudioScenePainter(props: AudioScenePainterProps) {
   const {
@@ -61,6 +62,8 @@ export function AudioScenePainter(props: AudioScenePainterProps) {
       aria-label="Audio scene painter canvas. Keyboard: + and − zoom, 0 resets to 100%, F fits to content."
       className="relative w-full h-full bg-surface-deep overflow-hidden rounded-2xl border border-border outline-none focus-ring"
     >
+      <DesktopCanvasNotice className="absolute top-2 left-1/2 -translate-x-1/2 z-30 max-w-[90%]" />
+
       {/* Toolbar */}
       <Toolbar paintMode={paintMode} setPaintMode={setPaintMode} />
 
@@ -79,7 +82,7 @@ export function AudioScenePainter(props: AudioScenePainterProps) {
       {/* SVG Canvas */}
       <svg
         ref={svgRef}
-        className="w-full h-full relative z-0"
+        className="w-full h-full relative z-0 touch-none-canvas"
         style={{ cursor: getCursor() }}
         onMouseDown={handleCanvasMouseDown}
         onMouseMove={handleMouseMove}

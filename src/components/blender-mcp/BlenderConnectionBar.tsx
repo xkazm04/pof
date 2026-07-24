@@ -134,6 +134,7 @@ export function BlenderConnectionBar() {
         title="Connection settings"
         aria-label="Connection settings"
         aria-expanded={showSettings}
+        aria-controls="blender-mcp-settings"
       >
         <Settings className="w-4 h-4" aria-hidden="true" />
       </button>
@@ -211,8 +212,11 @@ export function BlenderConnectionBar() {
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.22, ease: 'easeOut' }}
             style={{ overflow: 'hidden' }}
+            id="blender-mcp-settings"
+            role="group"
+            aria-label="Blender MCP connection settings"
           >
-            <div className="flex flex-col gap-2.5 px-3 py-2.5">
+            <div className="flex flex-col gap-2.5 px-3 py-2.5 border-t border-border">
               <div className="flex items-center gap-2">
                 <label htmlFor="blender-mcp-host" className="sr-only">
                   Blender MCP host
@@ -222,8 +226,9 @@ export function BlenderConnectionBar() {
                   type="text"
                   value={editHost}
                   onChange={(e) => setEditHost(e.target.value)}
-                  placeholder="Host"
+                  placeholder="127.0.0.1"
                   aria-label="Blender MCP host"
+                  aria-describedby="blender-mcp-settings-hint"
                   className="focus-ring flex-1 bg-surface-tertiary border border-border rounded-md px-2.5 h-8 text-[13px] text-text"
                 />
                 <label htmlFor="blender-mcp-port" className="sr-only">
@@ -232,21 +237,33 @@ export function BlenderConnectionBar() {
                 <input
                   id="blender-mcp-port"
                   type="number"
+                  min={1}
+                  max={65535}
+                  inputMode="numeric"
                   value={editPort}
                   onChange={(e) => setEditPort(e.target.value)}
-                  placeholder="Port"
+                  placeholder="9876"
                   aria-label="Blender MCP port"
+                  aria-describedby="blender-mcp-settings-hint"
                   className="focus-ring w-24 bg-surface-tertiary border border-border rounded-md px-2.5 h-8 text-[13px] text-text tabular-nums"
                 />
                 <button
                   type="button"
                   onClick={handleSaveSettings}
+                  title="Remember this host and port as the default"
                   aria-label="Save Blender MCP connection settings"
                   className="focus-ring h-8 px-3 rounded-md bg-accent/10 text-accent text-[13px] font-semibold hover:bg-accent/20"
                 >
                   Save
                 </button>
               </div>
+              <p
+                id="blender-mcp-settings-hint"
+                className="text-2xs text-text-muted leading-snug"
+              >
+                The Blender MCP addon listens on 127.0.0.1:9876 by default. Save
+                to remember these values; Connect uses whatever is typed here.
+              </p>
               <div className="flex items-center justify-between gap-2">
                 <label className="flex items-center gap-2 text-[13px] text-text cursor-pointer select-none">
                   <input

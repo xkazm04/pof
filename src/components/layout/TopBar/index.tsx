@@ -1,6 +1,6 @@
 'use client';
 
-import { Gamepad2, ChevronDown } from 'lucide-react';
+import { Gamepad2, ChevronDown, Menu } from 'lucide-react';
 import { MODULE_COLORS } from '@/lib/chart-colors';
 import { useTopBar } from './useTopBar';
 import { ProjectDropdown } from './ProjectDropdown';
@@ -14,7 +14,16 @@ import {
   SearchTrigger,
 } from './HeaderButtons';
 
-export function TopBar() {
+interface TopBarProps {
+  /**
+   * When provided (narrow viewports only), renders a leading hamburger button
+   * that opens the navigation rails as an overlay drawer. Omitted on wide
+   * viewports where the rails render inline.
+   */
+  onMenuClick?: () => void;
+}
+
+export function TopBar({ onMenuClick }: TopBarProps = {}) {
   const {
     projectName,
     projectPath,
@@ -45,6 +54,16 @@ export function TopBar() {
   return (
     <header role="banner" className="h-11 flex items-center justify-between px-4 border-b border-border bg-surface-deep" style={{ ['--focus-accent' as string]: 'var(--setup)' }}>
       <div className="flex items-center gap-3">
+        {onMenuClick && (
+          <button
+            onClick={onMenuClick}
+            aria-label="Open navigation"
+            aria-haspopup="dialog"
+            className="flex items-center justify-center rounded text-text-muted hover:text-text hover:bg-surface transition-colors focus-ring touch-target -ml-1"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+        )}
         <Gamepad2 className="w-5 h-5" style={{ color: MODULE_COLORS.setup }} aria-hidden="true" />
         <span className="text-sm font-semibold tracking-wide text-text">POF</span>
         {isSetupComplete && projectName && (
@@ -61,7 +80,7 @@ export function TopBar() {
                 aria-label={`Project: ${projectName}`}
                 aria-expanded={dropdownOpen}
                 aria-haspopup="menu"
-                className="flex items-center gap-1 text-sm text-text-muted hover:text-text transition-colors rounded px-1.5 py-0.5 hover:bg-surface focus-ring"
+                className="flex items-center gap-1 text-sm text-text-muted hover:text-text transition-colors rounded px-1.5 py-0.5 hover:bg-surface focus-ring touch-target"
               >
                 {projectName}
                 <ChevronDown className={`w-3 h-3 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />

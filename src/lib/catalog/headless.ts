@@ -149,20 +149,31 @@ export function serverCheckerFor(catalogId: string, step: string): Checker | nul
 /**
  * Grade a submitted artifact with the server's own checker — the caller never self-grades.
  * `graded` is false when no server checker exists (the caller's status must then stand).
- * A registered step whose checker throws yields `{ graded: true, result: null }`, so a
- * caller can never turn "checker didn't resolve" into an optimistic pass.
+ * A registered step's checker always resolves (a throw degrades to `pending` via `safeAccept`),
+ * so a caller can never turn "checker didn't resolve" into an optimistic pass.
+ *
+ * Two verdicts come back for one grade:
+ *  - `raw`    — the PURE checker verdict. This is what write paths PERSIST: the artifact row
+ *               holds the checker's own truth, and judge state lives apart in `judge_verdicts`
+ *               (matching the headless `submitStepArtifact` path, which also persists raw). A
+ *               judge overlay must never be baked into the stored status, or the same logical
+ *               write would persist different rows depending on the client (browser vs MCP) and
+ *               skew `summarizeEntity`, which counts straight off `art.status`.
+ *  - `result` — `raw` with any current-rubric judge verdict bridged in (scoped to a concrete
+ *               entity), for READ/response/display. Read paths (`buildStepRecipe`, `/status`)
+ *               apply the same overlay, so the bridged truth is reconstructed on read.
  */
 export function gradeArtifact(
   catalogId: string,
   step: string,
   data: Record<string, unknown>,
   entityId?: string,
-): { graded: boolean; result: AcceptanceResult | null } {
+): { graded: boolean; result: AcceptanceResult | null; raw: AcceptanceResult | null } {
   const checker = serverCheckerFor(catalogId, step);
-  if (!checker) return { graded: false, result: null };
-  const result = safeAccept(checker, data, serverCheckerContext(catalogId, entityId));
-  // Bridge in any current-rubric judge verdict (scoped to a concrete entity).
-  return { graded: true, result: entityId ? bridgeAcceptance(catalogId, entityId, step, result) : result };
+  if (!checker) return { graded: false, result: null, raw: null };
+  const raw = safeAccept(checker, data, serverCheckerContext(catalogId, entityId));
+  const result = entityId ? bridgeAcceptance(catalogId, entityId, step, raw) : raw;
+  return { graded: true, result, raw };
 }
 
 /** Map a seeded entity to the `LabEntity` shape the step `produce`/`accept` expect. */

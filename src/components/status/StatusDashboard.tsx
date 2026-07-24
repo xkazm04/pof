@@ -14,7 +14,7 @@
  * and written with history.pushState + a 'status-nav' event to re-read.
  */
 import { useSyncExternalStore } from 'react';
-import { StatusTabs, type StatusTab } from './StatusTabs';
+import { StatusTabs, statusTabId, statusPanelId, type StatusTab } from './StatusTabs';
 import { CapabilityView } from './CapabilityView';
 import { PipelinesView } from './PipelinesView';
 import { CategoryView } from './CategoryView';
@@ -111,42 +111,45 @@ export function StatusDashboard() {
         <a href="/layout" className="focus-ring" style={{ fontSize: 'var(--lab-fs-xs)', color: 'var(--lab-ink)', textDecoration: 'none' }}>← Blueprint</a>
       </div>
 
-      {tab === 'capability' && (
-        <CapabilityView onFilterClass={filterByClass} />
-      )}
+      {/* One panel per tab view, named by its tab (WAI-ARIA tabs pattern). */}
+      <div role="tabpanel" id={statusPanelId(tab)} aria-labelledby={statusTabId(tab)}>
+        {tab === 'capability' && (
+          <CapabilityView onFilterClass={filterByClass} />
+        )}
 
-      {tab === 'pipelines' && (
-        <>
-          <p style={{ fontSize: 'var(--lab-fs-xs)', color: 'var(--lab-muted)', maxWidth: 880, marginBottom: 'var(--lab-s3)' }}>
-            One row per pipeline, one cell per step — the cell names its engine, the background is the honest grade
-            (green = gate/judge-proven), the left stripe is the acceptance tier. Click a tier or engine chip to highlight,
-            or a pipeline to open its category overview.
-          </p>
-          <PipelinesView onFocusCatalog={focusCatalog} filterClass={filterClass} onClearFilter={clearFilter} />
-        </>
-      )}
+        {tab === 'pipelines' && (
+          <>
+            <p style={{ fontSize: 'var(--lab-fs-xs)', color: 'var(--lab-muted)', maxWidth: 880, marginBottom: 'var(--lab-s3)' }}>
+              One row per pipeline, one cell per step — the cell names its engine, the background is the honest grade
+              (green = gate/judge-proven), the left stripe is the acceptance tier. Click a tier or engine chip to highlight,
+              or a pipeline to open its category overview.
+            </p>
+            <PipelinesView onFocusCatalog={focusCatalog} filterClass={filterClass} onClearFilter={clearFilter} />
+          </>
+        )}
 
-      {tab === 'category' && (
-        <>
-          <p style={{ fontSize: 'var(--lab-fs-xs)', color: 'var(--lab-muted)', maxWidth: 880, marginBottom: 'var(--lab-s3)' }}>
-            Every entity in one catalog, ranked <strong>weakest first</strong> (least gate-verified coverage on top, ties
-            broken by name). The overview for spotting where to focus — click a row to inspect that entity.
-          </p>
-          <CategoryView key={catalog ?? '__picker__'} catalogId={catalog} onFocusEntity={focusEntity} onPickCatalog={focusCatalog} />
-        </>
-      )}
+        {tab === 'category' && (
+          <>
+            <p style={{ fontSize: 'var(--lab-fs-xs)', color: 'var(--lab-muted)', maxWidth: 880, marginBottom: 'var(--lab-s3)' }}>
+              Every entity in one catalog, ranked <strong>weakest first</strong> (least gate-verified coverage on top, ties
+              broken by name). The overview for spotting where to focus — click a row to inspect that entity.
+            </p>
+            <CategoryView key={catalog ?? '__picker__'} catalogId={catalog} onFocusEntity={focusEntity} onPickCatalog={focusCatalog} />
+          </>
+        )}
 
-      {tab === 'item' && (
-        <>
-          <p style={{ fontSize: 'var(--lab-fs-xs)', color: 'var(--lab-muted)', maxWidth: 880, marginBottom: 'var(--lab-s3)' }}>
-            One entity at a time — its origin pipeline coloured by <strong>realization</strong> (hollow = this entity never
-            produced that step), plus the pipelines it connects to. Click any connected node to walk the graph.
-          </p>
-          <ItemFocusView focus={focus} onFocus={focusEntity} />
-        </>
-      )}
+        {tab === 'item' && (
+          <>
+            <p style={{ fontSize: 'var(--lab-fs-xs)', color: 'var(--lab-muted)', maxWidth: 880, marginBottom: 'var(--lab-s3)' }}>
+              One entity at a time — its origin pipeline coloured by <strong>realization</strong> (hollow = this entity never
+              produced that step), plus the pipelines it connects to. Click any connected node to walk the graph.
+            </p>
+            <ItemFocusView focus={focus} onFocus={focusEntity} />
+          </>
+        )}
 
-      {tab === 'models' && <ModelsView />}
+        {tab === 'models' && <ModelsView />}
+      </div>
     </div>
   );
 }

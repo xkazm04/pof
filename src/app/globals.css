@@ -232,6 +232,35 @@ a:active {
   color: var(--background);
 }
 
+/* ── Coarse-pointer (touch) accommodations ───────────────────────────────────
+   On devices without hover (phones / most tablets), UI that is normally
+   revealed on hover is otherwise permanently invisible, and hover-gated action
+   buttons are unreachable. These rules only apply to no-hover coarse pointers;
+   desktop (fine pointer + hover) is completely unaffected. */
+@media (hover: none) and (pointer: coarse) {
+  /* Reveal anything gated purely behind `group-hover:opacity-100` (interactive
+     row actions, asset-card overlays, etc.) so touch users can reach it. The
+     attribute selector matches the literal Tailwind class token (colon and all);
+     `!important` beats the co-located `opacity-0` base utility. */
+  [class~="group-hover:opacity-100"] {
+    opacity: 1 !important;
+  }
+
+  /* Opt-in minimum 44×44px hit area for compact icon/text controls (WCAG 2.5.5).
+     Applied to controls that are deliberately dense on desktop but need a larger
+     tap area on touch. */
+  .touch-target {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/* Disable the browser's touch gesture (scroll/pinch) hijack on draggable canvas
+   surfaces so pointer-drag editors receive the full gesture on touch devices. */
+.touch-none-canvas {
+  touch-action: none;
+}
+
 /* Hide scrollbar utility */
 .scrollbar-hide {
   -ms-overflow-style: none;

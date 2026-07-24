@@ -147,7 +147,17 @@ export function CapabilityView({ onFilterClass }: { onFilterClass: (klass: strin
         alone. project-data (locked seeds, canon collisions) and checker-forced numbers are excluded so the median measures
         TECHNIQUE, not this project&apos;s data. Click a class to drill into the pipeline steps that build it.
       </p>
-      {!rows && <div style={{ fontSize: 'var(--lab-fs-sm)', color: 'var(--lab-muted)' }}>Loading capability truth…</div>}
+      {/* Live region so the load/empty transition is announced, not just drawn. */}
+      <div role="status" aria-live="polite">
+        {!rows && (
+          <div style={{ fontSize: 'var(--lab-fs-sm)', color: 'var(--lab-muted)' }}>Loading capability truth…</div>
+        )}
+        {rows?.length === 0 && (
+          <div style={{ fontSize: 'var(--lab-fs-sm)', color: 'var(--lab-muted)', maxWidth: 620 }}>
+            No capability classes to grade — no pipeline registered a step with an audited deliverable yet.
+          </div>
+        )}
+      </div>
       {rows?.map((row) => (
         <Row key={row.klass} row={row} onFilter={onFilterClass} />
       ))}

@@ -13,6 +13,7 @@ import { Sidebar } from './Sidebar';
 import { Canvas } from './Canvas';
 import { MiniMap } from './MiniMap';
 import { DetailPanel } from './DetailPanel';
+import { DesktopCanvasNotice } from '@/components/ui/DesktopCanvasNotice';
 
 // ---------- Main Component ----------
 
@@ -56,6 +57,7 @@ export function PlanMatrixMap({ moduleId: initialModuleId }: PlanMatrixMapProps 
 
   return (
     <div ref={rootRef} className="relative h-full bg-background flex overflow-hidden" style={{ height: canvasHeight }}>
+      <DesktopCanvasNotice className="absolute top-2 left-1/2 -translate-x-1/2 z-30 max-w-[90%]" />
       {/* ── Left Sidebar Navigator ── */}
       <Sidebar pm={pm} />
 

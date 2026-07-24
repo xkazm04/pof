@@ -27,13 +27,14 @@ export function WarningAggregator({ groups, onFix, isRunning = false }: WarningA
       {/* Summary header */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left hover:bg-white/[0.02] transition-colors"
+        aria-expanded={expanded}
+        className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left hover:bg-white/[0.02] transition-colors focus-ring-inset"
       >
         {expanded
-          ? <ChevronDown className="w-3 h-3 text-text-muted flex-shrink-0" />
-          : <ChevronRight className="w-3 h-3 text-text-muted flex-shrink-0" />
+          ? <ChevronDown className="w-3 h-3 text-text-muted flex-shrink-0" aria-hidden="true" />
+          : <ChevronRight className="w-3 h-3 text-text-muted flex-shrink-0" aria-hidden="true" />
         }
-        <AlertTriangle className={`w-3.5 h-3.5 ${CLI_COLORS.warning} flex-shrink-0`} />
+        <AlertTriangle className={`w-3.5 h-3.5 ${CLI_COLORS.warning} flex-shrink-0`} aria-hidden="true" />
         <span className="text-xs text-yellow-300 font-medium">
           {totalCount} warning{totalCount !== 1 ? 's' : ''}
         </span>
@@ -60,11 +61,12 @@ export function WarningAggregator({ groups, onFix, isRunning = false }: WarningA
                 <div key={groupKey} className="border-b border-border/30 last:border-b-0">
                   <button
                     onClick={() => setExpandedGroup(isGroupExpanded ? null : groupKey)}
-                    className="w-full flex items-start gap-2 px-3 py-1 text-left hover:bg-white/[0.02] transition-colors"
+                    aria-expanded={isGroupExpanded}
+                    className="w-full flex items-start gap-2 px-3 py-1 text-left hover:bg-white/[0.02] transition-colors focus-ring-inset"
                   >
                     {isGroupExpanded
-                      ? <ChevronDown className="w-2.5 h-2.5 text-text-muted flex-shrink-0 mt-0.5" />
-                      : <ChevronRight className="w-2.5 h-2.5 text-text-muted flex-shrink-0 mt-0.5" />
+                      ? <ChevronDown className="w-2.5 h-2.5 text-text-muted flex-shrink-0 mt-0.5" aria-hidden="true" />
+                      : <ChevronRight className="w-2.5 h-2.5 text-text-muted flex-shrink-0 mt-0.5" aria-hidden="true" />
                     }
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
@@ -118,7 +120,8 @@ export function WarningAggregator({ groups, onFix, isRunning = false }: WarningA
                                 onFix(prompt);
                               }}
                               disabled={isRunning}
-                              className={`text-2xs font-medium ${CLI_COLORS.prompt} hover:text-blue-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-blue-400`}
+                              title={isRunning ? 'Wait for the current task to finish' : 'Ask Claude to fix every warning in this group'}
+                              className={`px-1 rounded text-2xs font-medium ${CLI_COLORS.prompt} hover:text-blue-300 transition-colors focus-ring disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-blue-400`}
                             >
                               Fix all {group.count}
                             </button>

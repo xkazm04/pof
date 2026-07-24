@@ -42,15 +42,36 @@ export function leaseKeysForFilter(f: { catalogId?: string; entityId?: string; e
 }
 
 /**
- * Acquire ALL keys atomically: if ANY is already held, acquire none and report the conflict
- * (mirrors the route's all-or-nothing batch lease). On success every key is recorded with a
- * shared acquisition timestamp.
+ * A held key that conflicts with acquiring `k`, or null. Conflict is CONTAINMENT, not just
+ * exact-key equality: a catalog-wide lease (`c|*`) covers every member-entity lease (`c|<e>`)
+ * in that catalog and vice-versa, because the wide drain sweeps the member entity's rows and
+ * boots the SAME non-reentrant editor — so `c|*` and `c|e1` must be mutually exclusive even
+ * though the keys differ (the global `*|*` case is handled by the caller). Scoped-vs-scoped
+ * across DIFFERENT entities stays concurrent (they touch disjoint rows).
+ */
+function conflictingHeldKey(k: string): string | null {
+  if (held.has(k)) return k;
+  const [c, e] = k.split('|');
+  if (c === '*') return null; // wildcard-catalog keys: only exact + global (caller) apply
+  if (e === '*') {
+    // Catalog-wide: conflicts with ANY held lease in the same catalog (wide covers member).
+    for (const h of held.keys()) if (h.split('|')[0] === c) return h;
+    return null;
+  }
+  // Entity-scoped: conflicts with a held catalog-wide lease for the same catalog (member ⊂ wide).
+  return held.has(`${c}|*`) ? `${c}|*` : null;
+}
+
+/**
+ * Acquire ALL keys atomically: if ANY is already held (by exact key OR scope containment),
+ * acquire none and report the conflict (mirrors the route's all-or-nothing batch lease). On
+ * success every key is recorded with a shared acquisition timestamp.
  *
  * The GLOBAL lease (`*|*`) is exclusive with EVERYTHING: a global drain (or the always-on
  * worker, which drains globally) sweeps every entity, so it must not run alongside ANY scoped
  * drain and vice versa. A held global blocks every acquire; acquiring global requires an empty
- * registry. Scoped-vs-scoped contention is unchanged (different entities may still drain
- * concurrently — they touch disjoint rows).
+ * registry. A catalog-wide lease (`c|*`) is likewise exclusive with every member-entity lease
+ * (`c|<e>`) — see `conflictingHeldKey`.
  */
 export function acquireLeases(keys: string[]): { ok: true } | { ok: false; conflict: string } {
   // A held global lease excludes everything.
@@ -59,8 +80,10 @@ export function acquireLeases(keys: string[]): { ok: true } | { ok: false; confl
   if (keys.includes(GLOBAL_KEY) && held.size > 0) {
     return { ok: false, conflict: [...held.keys()][0] };
   }
-  const conflict = keys.find((k) => held.has(k));
-  if (conflict) return { ok: false, conflict };
+  for (const k of keys) {
+    const conflict = conflictingHeldKey(k);
+    if (conflict) return { ok: false, conflict };
+  }
   const since = new Date().toISOString();
   for (const k of keys) held.set(k, { key: k, scope: scopeFromKey(k), since });
   return { ok: true };

@@ -1,8 +1,21 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import {
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Camera, RefreshCw, X, Image as ImageIcon } from 'lucide-react';
+import {
+  Camera,
+  RefreshCw,
+  RotateCw,
+  X,
+  Image as ImageIcon,
+  PlugZap,
+} from 'lucide-react';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
 import { captureViewportSnapshot } from '@/lib/blender-mcp/snapshot';
 import { McpPanelFrame } from './McpPanelFrame';
@@ -14,6 +27,7 @@ export function ViewportPreview() {
   const [captureError, setCaptureError] = useState<string | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const thumbRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   const captureScreenshot = useCallback(async () => {
     if (!connection.connected || isCapturing) return;
@@ -47,10 +61,45 @@ export function ViewportPreview() {
     return () => window.removeEventListener('keydown', handler);
   }, [lightboxOpen]);
 
+  // Roving-tabindex navigation across the filmstrip: the strip is one tab stop
+  // and arrow / Home / End move the selection, per the listbox pattern.
+  const focusThumb = useCallback((idx: number) => {
+    setActiveIndex(idx);
+    thumbRefs.current[idx]?.focus();
+  }, []);
+
+  const handleStripKeyDown = useCallback(
+    (e: ReactKeyboardEvent<HTMLDivElement>) => {
+      const last = recentScreenshots.length - 1;
+      if (last < 0) return;
+      let next: number | null = null;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        next = safeActiveIndex >= last ? 0 : safeActiveIndex + 1;
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        next = safeActiveIndex <= 0 ? last : safeActiveIndex - 1;
+      } else if (e.key === 'Home') {
+        next = 0;
+      } else if (e.key === 'End') {
+        next = last;
+      }
+      if (next === null) return;
+      e.preventDefault();
+      focusThumb(next);
+    },
+    [recentScreenshots.length, safeActiveIndex, focusThumb],
+  );
+
   const captureButton = (
     <button
+      type="button"
       onClick={captureScreenshot}
       disabled={!connection.connected || isCapturing}
+      aria-busy={isCapturing}
+      title={
+        connection.connected
+          ? 'Take a snapshot of the current Blender viewport'
+          : 'Connect to Blender to capture the viewport'
+      }
       aria-label="Capture viewport screenshot"
       className="focus-ring inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-[13px] font-semibold text-text-muted hover:text-text hover:bg-surface-tertiary disabled:opacity-40 transition-colors"
     >
@@ -71,14 +120,29 @@ export function ViewportPreview() {
         actions={captureButton}
         bodyPadding="none"
       >
-        {/* Inline error chip (silent failure surfaced) */}
-        <McpErrorBanner show={!!captureError} motionKey="capture-error">
-          <span className="tabular-nums">{captureError}</span>
+        {/* Inline error chip (silent failure surfaced), with a one-click retry */}
+        <McpErrorBanner
+          show={!!captureError}
+          motionKey="capture-error"
+          action={
+            <button
+              type="button"
+              onClick={captureScreenshot}
+              disabled={!connection.connected || isCapturing}
+              className="focus-ring shrink-0 self-start inline-flex items-center gap-1 rounded px-2 h-6 text-2xs font-semibold bg-accent/10 text-accent hover:bg-accent/20"
+            >
+              <RotateCw className="w-3 h-3" aria-hidden="true" />
+              Retry
+            </button>
+          }
+        >
+          <p className="font-semibold">Capture failed</p>
+          <p className="mt-0.5 break-words">{captureError}</p>
         </McpErrorBanner>
 
         {/* Main stage */}
         <div
-          className={`aspect-video bg-black/50 flex items-center justify-center relative ${
+          className={`focus-ring aspect-video bg-black/50 flex items-center justify-center relative ${
             activeScreenshot ? 'cursor-zoom-in' : ''
           }`}
           onClick={() => activeScreenshot && setLightboxOpen(true)}
@@ -103,11 +167,29 @@ export function ViewportPreview() {
               className="w-full h-full object-contain"
             />
           ) : (
-            <span className="text-[13px] text-text-muted px-3 text-center">
-              {connection.connected
-                ? 'Click Capture to preview the viewport'
-                : 'Connect to Blender first'}
-            </span>
+            <div className="flex flex-col items-center gap-1.5 px-4 text-center">
+              {connection.connected ? (
+                <Camera
+                  className="w-6 h-6 text-text-muted/60"
+                  aria-hidden="true"
+                />
+              ) : (
+                <PlugZap
+                  className="w-6 h-6 text-text-muted/60"
+                  aria-hidden="true"
+                />
+              )}
+              <span className="text-[13px] text-text">
+                {connection.connected
+                  ? 'Click Capture to preview the viewport'
+                  : 'Connect to Blender first'}
+              </span>
+              <span className="text-2xs text-text-muted max-w-[32ch] leading-snug">
+                {connection.connected
+                  ? 'Snapshots render whatever the active Blender camera sees. The last 3 are kept below.'
+                  : 'Use the Blender MCP panel above to start the bridge, then capture a snapshot.'}
+              </span>
+            </div>
           )}
           {/* Subtle shimmer overlay while a fresh capture is in flight */}
           {isCapturing && activeScreenshot && (
@@ -123,27 +205,40 @@ export function ViewportPreview() {
             className="flex gap-2 p-2 border-t border-border bg-surface-deep/30"
             role="listbox"
             aria-label="Recent viewport screenshots"
+            aria-orientation="horizontal"
+            onKeyDown={handleStripKeyDown}
           >
             {recentScreenshots.map((shot, idx) => {
               const isActive = idx === safeActiveIndex;
+              const label =
+                idx === 0
+                  ? 'Latest capture'
+                  : `Capture ${idx + 1} of ${recentScreenshots.length}`;
               return (
                 <button
                   key={shot}
+                  ref={(el) => {
+                    thumbRefs.current[idx] = el;
+                  }}
                   type="button"
                   role="option"
                   aria-selected={isActive}
+                  aria-label={label}
+                  // Roving tabindex — the strip is a single tab stop; arrows move within it.
+                  tabIndex={isActive ? 0 : -1}
                   onClick={() => setActiveIndex(idx)}
-                  className={`relative w-16 h-10 rounded-md overflow-hidden bg-black/40 transition-all ${
+                  className={`focus-ring relative w-16 h-10 rounded-md overflow-hidden bg-black/40 transition-all ${
                     isActive
                       ? 'ring-1 ring-accent'
                       : 'opacity-70 hover:opacity-100 ring-1 ring-transparent'
                   }`}
-                  title={idx === 0 ? 'Latest' : `Earlier (${idx + 1})`}
+                  title={label}
                 >
                   <motion.img
                     layoutId={`viewport-shot-thumb-${shot}`}
                     src={shot}
-                    alt={`Thumbnail ${idx + 1}`}
+                    alt=""
+                    aria-hidden="true"
                     className="w-full h-full object-cover"
                   />
                 </button>
@@ -178,9 +273,9 @@ export function ViewportPreview() {
               type="button"
               onClick={() => setLightboxOpen(false)}
               aria-label="Close lightbox"
-              className="absolute top-4 right-4 inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white"
+              className="focus-ring absolute top-4 right-4 inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white"
             >
-              <X className="w-5 h-5" />
+              <X className="w-5 h-5" aria-hidden="true" />
             </button>
           </motion.div>
         )}

@@ -51,16 +51,17 @@ export function Studio3D() {
   return (
     <div
       data-theme="blueprint"
+      data-lab-root=""
       className={labFontVars}
       style={{ display: 'flex', height: '100vh', flexDirection: 'column', background: 'var(--lab-bg)', color: 'var(--lab-ink)', fontFamily: 'var(--lab-font-body)' }}
     >
       <header style={{ display: 'flex', alignItems: 'center', gap: 'var(--lab-s3)', height: 44, flexShrink: 0, padding: '0 var(--lab-s4)', borderBottom: '1px solid var(--lab-line)', background: 'var(--lab-panel)' }}>
-        <span style={{ fontFamily: 'var(--lab-font-mono)', fontSize: 'var(--lab-fs-xs)', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--lab-ink)' }}>PoF · 3D Studio</span>
+        <h1 style={{ margin: 0, fontFamily: 'var(--lab-font-mono)', fontSize: 'var(--lab-fs-xs)', fontWeight: 400, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--lab-ink)' }}>PoF · 3D Studio</h1>
         <span style={{ fontFamily: 'var(--lab-font-mono)', fontSize: 'var(--lab-fs-xs)', color: 'var(--lab-muted)' }}>preview generated assets before Unreal</span>
       </header>
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
         <AssetGallery activeUrl={modelUrl} onPick={onPick} />
-        <div style={{ display: 'flex', flex: 1, minWidth: 0, flexDirection: 'column' }}>
+        <main aria-label="3D viewport" style={{ display: 'flex', flex: 1, minWidth: 0, flexDirection: 'column' }}>
           <StudioToolbar
             renderMode={renderMode} showGrid={showGrid} showAxes={showAxes} autoRotate={autoRotate}
             modelName={modelName} onFileLoad={onFileLoad} onRenderModeChange={setRenderMode}
@@ -73,7 +74,7 @@ export function Studio3D() {
               canvasRef={canvasRef} gridColor={BLUEPRINT_GRID} backgroundColor="var(--lab-bg)"
             />
           </div>
-        </div>
+        </main>
         <StudioInspector modelName={modelName} />
       </div>
     </div>

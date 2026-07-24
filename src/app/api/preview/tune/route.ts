@@ -37,11 +37,14 @@ export async function POST(req: NextRequest) {
       return withCors(apiError(`catalog "${p.catalogId}" is not preview-tunable`, 403));
     }
 
-    const { graded, result } = gradeArtifact(p.catalogId, p.step, p.data, p.entityId);
-    const status = graded ? (result?.status ?? 'pending') : p.status;
-    const tier = graded ? (result?.tier ?? 'L0') : p.tier;
+    // Persist the PURE checker verdict (`raw`), never the judge-bridged one — same invariant
+    // as POST /api/pipeline-artifacts: the artifact row holds the checker's own truth, judge
+    // state lives apart in judge_verdicts (bridged only on read).
+    const { graded, raw } = gradeArtifact(p.catalogId, p.step, p.data, p.entityId);
+    const status = graded ? (raw?.status ?? 'pending') : p.status;
+    const tier = graded ? (raw?.tier ?? 'L0') : p.tier;
     const reason = graded
-      ? (result?.reason ?? (result ? undefined : 'unverified: acceptance check did not resolve'))
+      ? (raw?.reason ?? (raw ? undefined : 'unverified: acceptance check did not resolve'))
       : p.reason;
 
     const saved = upsertArtifact({

@@ -93,6 +93,11 @@ export function CategoryView({
   const [artifacts, setArtifacts] = useState<PipelineArtifact[]>([]);
   const [verdicts, setVerdicts] = useState<JudgeVerdict[]>([]);
   const [page, setPage] = useState(0);
+  // Until the artifacts + verdicts land, every swimlane would grade as unwired/0% — which
+  // is a lie, not a blank. Hold the rows behind a loading state instead of showing it.
+  // (StatusDashboard keys this component by catalog, so a catalog switch remounts and this
+  // starts true again — no synchronous set-state-in-effect reset needed.)
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let alive = true;
@@ -105,6 +110,7 @@ export function CategoryView({
       if (!alive) return;
       setArtifacts(art);
       setVerdicts((verdictRes.ok ? verdictRes.data : []).filter((v) => v.catalogId === catalogId));
+      setLoading(false);
     })();
     return () => { alive = false; };
   }, [catalogId]);
@@ -144,11 +150,18 @@ export function CategoryView({
         </span>
       </div>
 
-      {nodes.length === 0 && (
-        <div style={{ fontSize: 'var(--lab-fs-sm)', color: 'var(--lab-muted)' }}>No entities seeded in this catalog.</div>
-      )}
+      {/* Live region so the load/empty transition is announced, not just drawn. */}
+      <div role="status" aria-live="polite" style={{ fontSize: 'var(--lab-fs-sm)', color: 'var(--lab-muted)' }}>
+        {loading && 'Loading gate evidence — the grades below are not final yet…'}
+        {!loading && nodes.length === 0 && 'No entities seeded in this catalog — nothing to rank yet.'}
+      </div>
 
-      <div style={{ overflowX: 'auto' }}>
+      {/* Entity names are store-local and correct immediately; only the cells/percentages
+          wait on the fetch, so the list stays up but reads as provisional until it lands. */}
+      <div
+        aria-busy={loading}
+        style={{ overflowX: 'auto', opacity: loading ? 0.5 : 1, transition: 'opacity var(--lab-dur-fast) var(--lab-ease)' }}
+      >
         {rows.map((n) => (
           <MiniSwimlane key={n.entityId} node={n} onFocus={onFocusEntity} />
         ))}

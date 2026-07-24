@@ -102,15 +102,25 @@ export function HarnessVisualGallery() {
         <span className="text-2xs text-text-muted ml-2">{data.baselineSlugs.length} baselines</span>
       </header>
 
-      {currentIter && (
-        <div role="list" className="grid grid-cols-2 md:grid-cols-3 gap-3">
+      {currentIter && currentIter.modules.length === 0 && (
+        <p className="text-xs text-text-muted py-2">
+          Iteration #{currentIter.iteration} captured no modules — the visual gate had nothing to shoot.
+        </p>
+      )}
+
+      {currentIter && currentIter.modules.length > 0 && (
+        <ul className="grid grid-cols-2 md:grid-cols-3 gap-3 list-none p-0 m-0">
           {currentIter.modules.map((m) => (
+            <li key={m.slug}>
             <button
-              key={m.slug}
-              role="listitem"
+              type="button"
               onClick={() => setActive(m)}
+              aria-pressed={active?.slug === m.slug}
+              aria-label={`${m.label} — ${m.status}${m.changePct != null ? `, ${(m.changePct * 100).toFixed(1)}% changed` : ', no diff data'}. Open before/after comparison.`}
               data-status={m.status}
-              className="text-left rounded-lg border border-border/40 bg-surface-deep/40 overflow-hidden hover:border-border transition-colors focus-ring"
+              className={`w-full text-left rounded-lg border bg-surface-deep/40 overflow-hidden transition-colors focus-ring ${
+                active?.slug === m.slug ? 'border-text' : 'border-border/40 hover:border-border'
+              }`}
             >
               <div className="relative aspect-video bg-black/30">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -140,13 +150,14 @@ export function HarnessVisualGallery() {
               </div>
               <div className="px-2 py-1.5 flex items-center justify-between text-xs">
                 <span className="text-text truncate">{m.label}</span>
-                <span className="font-mono text-text-muted">
+                <span className="font-mono text-text-muted" title={m.changePct != null ? 'Pixels changed vs baseline' : 'No baseline to diff against'}>
                   {m.changePct != null ? `${(m.changePct * 100).toFixed(1)}%` : '—'}
                 </span>
               </div>
             </button>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
 
       {active && currentIter && <BeforeAfter iteration={currentIter.iteration} mod={active} hasBaseline={data.baselineSlugs.includes(active.slug)} />}
@@ -176,7 +187,7 @@ function BeforeAfter({ iteration, mod, hasBaseline }: { iteration: number; mod: 
       </div>
       <div
         ref={containerRef}
-        className="relative aspect-video bg-black"
+        className="relative aspect-video bg-black cursor-col-resize"
         onMouseMove={(e) => {
           if (!containerRef.current) return;
           const r = containerRef.current.getBoundingClientRect();
@@ -184,16 +195,17 @@ function BeforeAfter({ iteration, mod, hasBaseline }: { iteration: number; mod: 
         }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={imgUrl('baseline', mod.slug)} alt="baseline" className="absolute inset-0 w-full h-full object-cover object-top" />
+        <img src={imgUrl('baseline', mod.slug)} alt={`${mod.label} — baseline capture`} className="absolute inset-0 w-full h-full object-cover object-top" />
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={imgUrl(iteration, mod.slug)} alt="current" className="absolute inset-0 w-full h-full object-cover object-top" style={{ clipPath: `inset(0 0 0 ${split}%)` }} />
+        <img src={imgUrl(iteration, mod.slug)} alt={`${mod.label} — iteration #${iteration} capture`} className="absolute inset-0 w-full h-full object-cover object-top" style={{ clipPath: `inset(0 0 0 ${split}%)` }} />
         <div className="absolute top-0 bottom-0 border-l-2 border-white/70 pointer-events-none" style={{ left: `${split}%` }} />
       </div>
       <input
         type="range" min={0} max={100} value={split}
         onChange={(e) => setSplit(Number(e.target.value))}
-        aria-label="Before/after slider"
-        className="w-full"
+        aria-label={`Before/after wipe for ${mod.label} — drag right to reveal iteration #${iteration} over the baseline`}
+        aria-valuetext={`${Math.round(split)}% baseline shown`}
+        className="w-full focus-ring"
       />
     </div>
   );

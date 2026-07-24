@@ -97,11 +97,19 @@ function JargonChip({ matched, entry }: { matched: string; entry: AnimationJargo
     : entry.plain;
 
   return (
-    <Tooltip content={tooltip}>
+    // `multiline` — glossary definitions are full sentences; the default
+    // single-line bubble renders them as one `nowrap` run that overflows the
+    // viewport instead of wrapping.
+    <Tooltip content={tooltip} multiline>
       <button
         type="button"
-        className="underline decoration-dotted decoration-violet-400/70 underline-offset-2 hover:decoration-violet-300 focus:outline-none focus-visible:ring-1 focus-visible:ring-violet-400/60 rounded-sm bg-transparent text-current"
-        aria-label={`${entry.term}: ${entry.plain}`}
+        // Chips are routinely rendered inside a larger clickable row (e.g. the
+        // checklist StepCard's expand toggle). Swallow the event so reading a
+        // definition never collapses the card behind it. Focus alone opens the
+        // tooltip, which also makes the term tappable where there is no hover.
+        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+        className="focus-ring rounded-sm underline decoration-dotted decoration-violet-400/70 underline-offset-2 hover:decoration-violet-300 bg-transparent text-current"
         data-testid="pof-animation-jargon-term"
         data-jargon-term={entry.term}
       >

@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useProjectStore } from '@/stores/projectStore';
+import { useViewportAtLeast } from '@/hooks/useViewportWidth';
 import { useCLIPanelStore } from '@/components/cli/store/cliPanelStore';
 import { TopBar } from './TopBar';
 import { Sidebar } from './Sidebar';
@@ -21,9 +22,25 @@ import { EventBusDevTools } from './EventBusDevTools';
 import { PreflightGuardDialog } from '@/components/cli/PreflightGuardDialog';
 import { DURATION, EASE_OUT } from '@/lib/motion';
 
+/**
+ * Below this width the L1/L2 navigation rails collapse from inline columns into
+ * a hamburger-triggered overlay drawer, so narrow screens hand the full width to
+ * the module workspace instead of being crushed by ~200px of fixed chrome.
+ */
+const SHELL_COLLAPSE_BREAKPOINT = 900;
+
 export function AppShell() {
   const isSetupComplete = useProjectStore((s) => s.isSetupComplete);
   const prefersReduced = useReducedMotion();
+
+  // Wide → rails render inline; narrow → rails collapse into an overlay drawer.
+  const wideShell = useViewportAtLeast(SHELL_COLLAPSE_BREAKPOINT);
+  const [navOpen, setNavOpen] = useState(false);
+  // The drawer only exists on narrow viewports; deriving its visibility (rather
+  // than resetting navOpen in an effect) means a wide viewport always renders the
+  // inline rails, and a resize back to wide dissolves the drawer with no stale
+  // open state — no setState-in-effect needed.
+  const drawerOpen = navOpen && !wideShell;
   // Bridge CLI/evaluator events into activity feed
   useActivityFeedBridge();
 
@@ -76,13 +93,13 @@ export function AppShell() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: fadeDuration, ease: EASE_OUT }}
-          className="h-screen"
+          className="h-dvh"
         >
           {isSetupComplete ? (
-            <div className="h-screen flex flex-col overflow-hidden bg-background">
-              <TopBar />
+            <div className="h-dvh flex flex-col overflow-hidden bg-background">
+              <TopBar onMenuClick={wideShell ? undefined : () => setNavOpen(true)} />
               <div className="flex-1 flex overflow-hidden">
-                <Sidebar />
+                <Sidebar overlay={!wideShell} open={drawerOpen} onClose={() => setNavOpen(false)} />
                 <ModuleRenderer />
                 <ActivityFeedPanel />
               </div>

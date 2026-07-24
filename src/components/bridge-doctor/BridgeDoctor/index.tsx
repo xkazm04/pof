@@ -20,7 +20,6 @@ import {
 import {
   ACCENT_CYAN,
 } from '@/lib/chart-colors';
-import { UI_TIMEOUTS } from '@/lib/constants';
 import { usePofBridgeStore } from '@/stores/pofBridgeStore';
 import { useUE5BridgeStore } from '@/stores/ue5BridgeStore';
 import { useBridgeDoctorStore } from '@/stores/bridgeDoctorStore';
@@ -29,8 +28,8 @@ import {
   type ProbeConfig,
 } from '@/lib/bridge-doctor/probes';
 import { CHANNEL_ORDER } from './constants';
-import { parseIntOr, configMatches, formatRelative } from './helpers';
-import { OverallPill, SettingInput } from './parts';
+import { configMatches, formatRelative } from './helpers';
+import { OverallPill, PortInput, SettingInput } from './parts';
 import { ChannelRow } from './ChannelRow';
 
 interface BridgeDoctorProps {
@@ -122,7 +121,17 @@ export function BridgeDoctor({ className = '', autoRun = false }: BridgeDoctorPr
         <div className="flex items-center gap-2 min-w-0">
           <Stethoscope className="w-4 h-4 text-text-muted" aria-hidden="true" />
           <h3 className="text-sm font-semibold text-text leading-tight">Bridge Doctor</h3>
-          {latest && <OverallPill report={latest} />}
+          {/* One stable live region for the whole probe lifecycle — mounted
+              before the first run so screen readers announce both the
+              in-flight state and the resulting verdict. The in-flight text is
+              sr-only because the button already shows "Probing…" visually. */}
+          <span role="status" aria-live="polite" className="min-w-0">
+            {running ? (
+              <span className="sr-only">Probing all three bridge channels…</span>
+            ) : latest ? (
+              <OverallPill report={latest} />
+            ) : null}
+          </span>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           {canRestore && (
@@ -140,7 +149,7 @@ export function BridgeDoctor({ className = '', autoRun = false }: BridgeDoctorPr
             type="button"
             onClick={handleRun}
             disabled={running}
-            aria-label="Run bridge diagnostics"
+            aria-label={running ? 'Running bridge diagnostics' : 'Run bridge diagnostics'}
             className="focus-ring inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-[13px] font-semibold transition-colors bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {running ? (
@@ -159,26 +168,23 @@ export function BridgeDoctor({ className = '', autoRun = false }: BridgeDoctorPr
       {/* Settings strip */}
       <div className="relative z-10 grid grid-cols-2 sm:grid-cols-5 gap-2 px-3 py-2 text-[12px]" style={{ borderBottom: `1px solid ${ACCENT_CYAN}1a` }}>
         <SettingInput label="Host" value={host} onChange={setHost} ariaLabel="UE host" />
-        <SettingInput
+        <PortInput
           label="PoF Bridge port"
-          value={String(pofPort)}
-          onChange={(v) => setPofPort(parseIntOr(v, pofPort))}
+          value={pofPort}
+          onChange={setPofPort}
           ariaLabel="PoF Bridge port"
-          inputMode="numeric"
         />
-        <SettingInput
+        <PortInput
           label="Remote Control port"
-          value={String(rcPort)}
-          onChange={(v) => setRcPort(parseIntOr(v, rcPort))}
+          value={rcPort}
+          onChange={setRcPort}
           ariaLabel="Remote Control port"
-          inputMode="numeric"
         />
-        <SettingInput
+        <PortInput
           label="WebSocket port"
-          value={String(wsPort)}
-          onChange={(v) => setWsPort(parseIntOr(v, wsPort))}
+          value={wsPort}
+          onChange={setWsPort}
           ariaLabel="WebSocket port"
-          inputMode="numeric"
         />
         <SettingInput
           label="PoF auth token"
@@ -205,11 +211,13 @@ export function BridgeDoctor({ className = '', autoRun = false }: BridgeDoctorPr
       {/* Last run timestamp / no-run hint */}
       <div className="relative z-10 flex items-center justify-between gap-3 px-3 py-2 text-[11px] text-text-muted">
         <span>
-          {latest
-            ? `Last run ${formatRelative(latest.finishedAt)}`
-            : 'No diagnostics yet — press "Run diagnostics" to probe each channel.'}
+          {running
+            ? 'Probing all three channels…'
+            : latest
+              ? `Last run ${formatRelative(latest.finishedAt)}`
+              : 'No diagnostics yet — press "Run diagnostics" to probe each channel.'}
         </span>
-        <span title={`Per-probe timeout ${UI_TIMEOUTS.pofHttpTimeout > 0 ? '' : ''}`}>
+        <span title="Ports the probes will use — edit them in the fields above">
           PoF Bridge {pofPort} · Remote Control {rcPort} · WS {wsPort}
         </span>
       </div>

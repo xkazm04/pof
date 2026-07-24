@@ -7,6 +7,7 @@ import {
   STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO, STATUS_NEUTRAL,
   withOpacity, OPACITY_15,
 } from '@/lib/chart-colors';
+import { lookupGlossary } from '@/lib/ecw/glossary';
 import type { LifecycleState } from '@/lib/catalog/types';
 
 const LIFECYCLE_COLOR: Record<LifecycleState, string> = {
@@ -37,9 +38,13 @@ export function LifecycleBadge({ state }: { state: LifecycleState }) {
   const color = LIFECYCLE_COLOR[state];
   const Icon = LIFECYCLE_ICON[state];
   const inFlight = IN_FLIGHT.has(state);
+  // The six state names are pipeline jargon ("wired", "scaffolded"). Decode them
+  // on hover from the shared glossary rather than restating the copy here.
+  const meaning = lookupGlossary(state);
 
   return (
     <span
+      title={meaning ? `${state} — ${meaning}` : undefined}
       className={[
         'inline-flex items-center gap-1 h-5 px-1.5 rounded',
         'text-2xs font-mono font-bold capitalize',
@@ -52,6 +57,9 @@ export function LifecycleBadge({ state }: { state: LifecycleState }) {
       style={{ backgroundColor: withOpacity(color, OPACITY_15), color }}
     >
       <Icon className="size-3 shrink-0" aria-hidden />
+      {/* Out of flow (sr-only is absolute), so the flex gap is unchanged — it only
+          gives screen readers the context a lone "planned" in a grid lacks. */}
+      <span className="sr-only">Lifecycle: </span>
       {state}
     </span>
   );
