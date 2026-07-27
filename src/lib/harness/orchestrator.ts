@@ -1138,10 +1138,26 @@ export function createHarnessOrchestrator(
       }
     }
 
+    // Set when the loop exits because the run was PAUSED (user request OR budget
+    // cap) rather than finishing. Without it the paused branch fell THROUGH to
+    // the unconditional completion tail below: the run row flipped
+    // paused → completed (terminal), `resolveRunIdentity` then FORKED instead of
+    // resuming, and the API's event wiring set the in-memory status to
+    // 'completed' so `action:'resume'` 409'd with "Harness is not paused".
+    let stoppedForPause = false;
+
     while (plan.iteration < config.maxIterations) {
       if (paused) {
-        emit({ type: 'harness:paused', reason: 'User requested pause' });
+        // `cost.paused` is set only by the budget governor in fillPool, so it
+        // distinguishes a cap-hit from a user pause — the reason must not lie.
+        emit({
+          type: 'harness:paused',
+          reason: cost.paused
+            ? `Cost cap reached: spent $${cost.spentUsd.toFixed(2)} of $${budgetUsd?.toFixed(2)} cap (${cost.sessions} sessions)`
+            : 'User requested pause',
+        });
         persistTerminal('paused');
+        stoppedForPause = true;
         break;
       }
 
@@ -1217,6 +1233,14 @@ export function createHarnessOrchestrator(
     // `finally` so it also covers every error/crash/early-return path).
     savePlan(config.statePath, plan);
     saveGuide(config.statePath, guide);
+
+    // A PAUSED run is not a finished run. Leave the `harness_runs` row on
+    // 'paused' and keep `runId` intact so resume continues the SAME run —
+    // in-process (the API's status stays 'paused', so `action:'resume'` is
+    // accepted) and across a server restart (`resolveRunIdentity` sees a
+    // resumable status and resumes instead of forking a new id).
+    if (stoppedForPause) return guide;
+
     emit({ type: 'harness:completed', plan, guide });
     // Falling out of the loop (maxIterations or all areas resolved) — also a
     // terminal completion. Idempotent if persistTerminal already fired above.
