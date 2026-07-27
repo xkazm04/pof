@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { getOriginFromRequest } from '@/lib/constants';
 import { buildExecutors, collectDeferred, drainAll, parseDrainFilter, type DrainFilter } from '@/lib/test-gate-runner';
+import { parseDrainRequest } from '@/lib/test-gate-runner/drainRequest';
 import { acquireLeases, releaseLeases, scopeFromKey, leaseKeysForFilter, __resetLeases } from '@/lib/test-gate-runner/drain-lease';
 import { resolveUprojectPath } from '@/lib/ue5-bridge/build-pipeline';
 
@@ -38,20 +39,14 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json().catch(() => ({}))) as {
-      tier?: string; catalogId?: string; entityId?: string; entityIds?: unknown;
-      executor?: 'bridge' | 'spawn'; port?: number; allowSpawn?: boolean; limit?: number;
-      screenshotPath?: string; visualMode?: 'hud' | 'texture' | 'lighting' | 'character';
-      // L4 autonomous capture: with a projectPath + autoCapture, the visual gate renders its
-      // OWN frame (headless -game -RenderOffScreen) instead of staying deferred. Opt-in (it
-      // launches an editor — pair with executor:'spawn' so it doesn't collide with a live one).
-      projectPath?: string; autoCapture?: boolean;
-    };
-    const scalar = parseDrainFilter((k) => body[k]);
-    const entityIds = Array.isArray(body.entityIds)
-      ? [...new Set(body.entityIds.filter((x): x is string => typeof x === 'string' && x.length > 0))]
-      : undefined;
-    const filter: DrainFilter = { ...scalar, ...(entityIds?.length ? { entityIds } : {}) };
+    // The accepted body surface is declared ONCE in `drainRequest.ts` (DRAIN_REQUEST_KEYS) and
+    // shared with the headless caller (`pof_drain_gates`), so an agent can reach every scope
+    // this route supports — global, catalog-wide, a multi-entity batch, or one entity.
+    // `autoCapture` (+ projectPath) is the L4 opt-in: the visual gate renders its OWN frame
+    // (headless -game -RenderOffScreen) instead of staying deferred — pair with executor:'spawn'
+    // so it doesn't collide with a live editor.
+    const request = parseDrainRequest(await req.json().catch(() => ({})));
+    const filter: DrainFilter = request.filter;
 
     // Lease keys: one per requested entity for a batch, else the single (or global) key —
     // the same helper the worker uses, so both contend on one registry.
@@ -62,17 +57,17 @@ export async function POST(req: NextRequest) {
     }
     try {
       const executors = buildExecutors({
-        executor: body.executor === 'spawn' ? 'spawn' : 'bridge',
-        ...(body.port ? { port: body.port } : {}),
-        ...(body.allowSpawn ? { allowSpawn: true } : {}),
-        ...(body.screenshotPath ? { screenshotPath: body.screenshotPath } : {}),
-        ...(body.visualMode ? { visualMode: body.visualMode } : {}),
-        ...(body.autoCapture && body.projectPath
-          ? { autoCapture: { uproject: resolveUprojectPath(body.projectPath, 'PoF') } }
+        executor: request.executor,
+        ...(request.port ? { port: request.port } : {}),
+        ...(request.allowSpawn ? { allowSpawn: true } : {}),
+        ...(request.screenshotPath ? { screenshotPath: request.screenshotPath } : {}),
+        ...(request.visualMode ? { visualMode: request.visualMode } : {}),
+        ...(request.autoCapture && request.projectPath
+          ? { autoCapture: { uproject: resolveUprojectPath(request.projectPath, 'PoF') } }
           : {}),
         appOrigin: getOriginFromRequest(req),
       });
-      const summary = await drainAll(executors, filter, body.limit != null ? { limit: body.limit } : undefined);
+      const summary = await drainAll(executors, filter, request.limit != null ? { limit: request.limit } : undefined);
       return apiSuccess(summary);
     } finally {
       releaseLeases(keys);

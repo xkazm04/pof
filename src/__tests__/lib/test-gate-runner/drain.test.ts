@@ -277,6 +277,24 @@ describe('drainJobs — grouped boot (prepareBatch) integration', () => {
   });
 });
 
+describe('collectDeferred — synthetic fixtures are not production truth', () => {
+  it('excludes a test-headless fixture row from a broad sweep, keeping the REAL entity', () => {
+    seed({ catalogId: 'items', entityId: 'test-headless-mcp', step: 'Test Gate', tier: 'L3', reason: 'live-UE runner not yet run: VSItemsTest' });
+    seed({ catalogId: 'items', entityId: 'item-1', step: 'Test Gate', tier: 'L3', reason: 'live-UE runner not yet run: VSItemsTest' });
+    expect(collectDeferred().map((j) => j.entityId)).toEqual(['item-1']);
+    expect(collectDeferred({ catalogId: 'items' }).map((j) => j.entityId)).toEqual(['item-1']);
+    expect(collectDeferred({ tier: 'L3' }).map((j) => j.entityId)).toEqual(['item-1']);
+  });
+
+  it('still collects a fixture when the operator NAMES it explicitly', () => {
+    seed({ catalogId: 'items', entityId: 'test-headless-mcp', step: 'Test Gate', tier: 'L3', reason: 'live-UE runner not yet run: VSItemsTest' });
+    expect(collectDeferred({ catalogId: 'items', entityId: 'test-headless-mcp' }).map((j) => j.entityId))
+      .toEqual(['test-headless-mcp']);
+    expect(collectDeferred({ catalogId: 'items', entityIds: ['test-headless-mcp'] }).map((j) => j.entityId))
+      .toEqual(['test-headless-mcp']);
+  });
+});
+
 describe('collectDeferred — multi-entity batch (entityIds)', () => {
   it('restricts a catalog collection to the requested entity set in ONE pass', () => {
     seed({ catalogId: 'items', entityId: 'a', step: 'g', tier: 'L3', reason: 'live-UE runner not yet run: TA' });

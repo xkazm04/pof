@@ -2,6 +2,7 @@ import { getArtifact, listDeferredArtifacts, upsertArtifact } from '@/lib/pipeli
 import { logger } from '@/lib/logger';
 import { eventBus } from '@/lib/event-bus';
 import { classifyVerdictChange } from '@/lib/notify/verdict-change';
+import { isSyntheticEntity } from '@/lib/status/statusModel';
 import { summarizeEvidence } from '@/types/observation';
 import { parseTestName } from './parse';
 import { resolveScenario } from './scenarioRegistry';
@@ -25,29 +26,56 @@ export function parseTier(v: string | null | undefined): GateTier | undefined {
   return v === 'L3' || v === 'L4' ? v : undefined;
 }
 
+/** Filter keys parsed by {@link parseDrainFilter} — the scope surface, shared by GET/POST/worker. */
+export type DrainFilterKey = 'tier' | 'catalogId' | 'entityId' | 'entityIds';
+
+/** Normalize an entity set from either a JSON array (POST body) or a comma-separated
+ *  string (GET query), de-duped and empties dropped. Absent/empty → undefined. */
+function parseEntityIds(v: unknown): string[] | undefined {
+  const raw = Array.isArray(v)
+    ? v
+    : typeof v === 'string'
+      ? v.split(',')
+      : [];
+  const ids = [...new Set(raw.filter((x): x is string => typeof x === 'string').map((x) => x.trim()).filter(Boolean))];
+  return ids.length ? ids : undefined;
+}
+
 /**
  * Build a {@link DrainFilter} from a generic key getter, so the GET (searchParams),
- * POST (JSON body), and worker handlers all parse tier/catalogId/entityId identically —
- * a single place to extend when the filter grows a field.
+ * POST (JSON body), and worker handlers all parse tier/catalogId/entityId/entityIds
+ * identically — a single place to extend when the filter grows a field. The getter may
+ * return any JSON value: `entityIds` accepts an array (POST) or `a,b,c` (GET), so the
+ * SAME batch the POST runs can be previewed through the GET queue.
  */
-export function parseDrainFilter(
-  get: (k: 'tier' | 'catalogId' | 'entityId') => string | null | undefined,
-): DrainFilter {
-  const tier = parseTier(get('tier'));
+export function parseDrainFilter(get: (k: DrainFilterKey) => unknown): DrainFilter {
+  const tier = parseTier(typeof get('tier') === 'string' ? (get('tier') as string) : undefined);
   const catalogId = get('catalogId');
   const entityId = get('entityId');
+  const entityIds = parseEntityIds(get('entityIds'));
   return {
     ...(tier ? { tier } : {}),
-    ...(catalogId ? { catalogId } : {}),
-    ...(entityId ? { entityId } : {}),
+    ...(typeof catalogId === 'string' && catalogId ? { catalogId } : {}),
+    ...(typeof entityId === 'string' && entityId ? { entityId } : {}),
+    ...(entityIds ? { entityIds } : {}),
   };
 }
 
-/** Turn the deferred `pipeline_artifacts` rows into runnable jobs. */
+/**
+ * Turn the deferred `pipeline_artifacts` rows into runnable jobs.
+ *
+ * **Fixtures are not production truth.** Rows belonging to a synthetic harness entity
+ * (`test-headless-*`, `item-mcp-smoke` — see `isSyntheticEntity`) sit in the same table as real
+ * content and would otherwise consume a UE boot and receive a REAL verdict, making a stub read as
+ * a shipped gate (the /status map + judge fleet already skip them). They are excluded from any
+ * broad (global / catalog / tier) sweep and only collected when the operator names them EXPLICITLY
+ * via `entityId`/`entityIds` — so a fixture can still be exercised on purpose, never by accident.
+ */
 export function collectDeferred(filter?: DrainFilter): GateJob[] {
   // A multi-entity batch collects the catalog once (ONE DB pass) then filters to the set in
   // JS — the single-entity `entityId` is only pushed to the DB when no set is given.
   const entitySet = filter?.entityIds?.length ? new Set(filter.entityIds) : null;
+  const named = new Set<string>([...(entitySet ?? []), ...(filter?.entityId ? [filter.entityId] : [])]);
   const listFilter: DrainFilter = {
     ...(filter?.tier ? { tier: filter.tier } : {}),
     ...(filter?.catalogId ? { catalogId: filter.catalogId } : {}),
@@ -55,6 +83,7 @@ export function collectDeferred(filter?: DrainFilter): GateJob[] {
   };
   return listDeferredArtifacts(listFilter)
     .filter((a) => !entitySet || entitySet.has(a.entityId))
+    .filter((a) => !isSyntheticEntity(a.entityId) || named.has(a.entityId))
     .map((a) => {
     const testName = parseTestName(a.reason) ?? undefined;
     const scenario = resolveScenario({ catalogId: a.catalogId, entityId: a.entityId, step: a.step, testName });

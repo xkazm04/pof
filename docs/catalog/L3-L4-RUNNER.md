@@ -4,7 +4,7 @@ The chassis reaches **config-complete (L0–L2)** entirely in parallel; **L3 run
 
 ## What it does
 
-1. **Collect** — query `pipeline_artifacts WHERE status='deferred'` (optionally filtered by tier/catalog/entity). Each row becomes a `GateJob`. For **L3** the UE automation test name is recovered from the deferred `reason` (`runtimeDeferred(testName,…)` writes `live-UE runner not yet run: <testName>`).
+1. **Collect** — query `pipeline_artifacts WHERE status='deferred'` (optionally filtered by tier/catalog/entity/entity-set). Each row becomes a `GateJob`. **Synthetic harness entities** (`test-headless-*`, `item-mcp-smoke` — `isSyntheticEntity`) are **excluded from every broad sweep**: they are fixtures written by the headless-coverage probe into the same table as real content, and giving one a REAL verdict makes a stub read as a shipped gate (the /status map and the judge fleet already skip them). They are still collected when the operator names them **explicitly** via `entityId`/`entityIds`. For **L3** the UE automation test name is recovered from the deferred `reason` (`runtimeDeferred(testName,…)` writes `live-UE runner not yet run: <testName>`).
 2. **Run** — one job at a time (the implicit lease), via a tier-matched **executor**.
 3. **Write back** — the verdict (`pass`/`fail`) upserts the same artifact, preserving its `data`/`ueAssets`/`tier`, setting `status` + `reason` to the verdict detail. The Test Gate flips `deferred → pass/fail`; the rollup updates.
 4. **Announce** — when the verdict actually *moves*, `drainOne` emits `gate.verdict.changed` on the event bus (carrying `from`/`to`/`regression`). A skip leaves the row deferred and emits nothing.
@@ -119,7 +119,9 @@ The executors are aligned to what the PoF Bridge plugin actually does (`PofHttpS
 
 ## Trigger — operator-driven API
 
-`POST /api/pipeline-artifacts/drain` — body `{ tier?: 'L3'|'L4'|'all', catalogId?, entityId?, entityIds?: string[], executor?: 'bridge'|'spawn', port?, allowSpawn? }` → runs `drainAll`, returns a `DrainSummary` (`ran/passed/failed/deferred/skipped` + per-job results). `entityIds` is the catalog-level batch (one collection + one boot for the set; all-or-nothing lease — see above). `GET` lists the currently-deferred jobs so the UI shows what's drainable.
+`POST /api/pipeline-artifacts/drain` — body `{ tier?, catalogId?, entityId?, entityIds?, executor?, port?, allowSpawn?, limit?, screenshotPath?, visualMode?, projectPath?, autoCapture? }` → runs `drainAll`, returns a `DrainSummary` (`ran/passed/failed/deferred/skipped` + per-job results). `entityIds` is the catalog-level batch (one collection + one boot for the set; all-or-nothing lease — see above). `GET` lists the currently-deferred jobs so the UI shows what's drainable — it parses the **same** filter (including `entityIds=a,b,c`), so a batch can be previewed exactly as it will run.
+
+**One declared request surface (`drainRequest.ts`).** `DRAIN_REQUEST_KEYS` + `parseDrainRequest` are the single declaration of what the POST accepts; the route normalizes its body through them, and the headless `pof_drain_gates` MCP tool advertises **exactly** those keys (parity is unit-asserted in `src/__tests__/lib/test-gate-runner/drainRequest.test.ts`). Previously the tool **required** `catalogId` + `entityId`, so the catalog-wide / global / multi-entity / limited drains the route supports were unreachable from an agent — and the real entities whose rows say `live-UE runner not yet run: VS*Test` could never be swept in one pass (the spawn executor's per-drain verdict cache is keyed by test name, so ONE global drain gives every row sharing a test name its verdict from a single boot).
 
 Run it **when no other UE session is busy** (the editor is single-instance; the bridge serializes through it). The `/layout` rollup carries a **"Run deferred gates"** button that POSTs the drain for the open entity and re-hydrates.
 

@@ -239,13 +239,21 @@ Persisted acceptance for a catalog (or one entity): every step's status/tier/rea
 
 ### `pof_drain_gates`
 
-Run the deferred L3/L4 Test Gates for an entity against the LIVE UE editor (via the PoF bridge), turning "deferred" gates into pass/fail. The editor is non-reentrant — one drain at a time (concurrent → 409). Set allowSpawn to use a headless editor.
+Run deferred L3/L4 Test Gates, turning "deferred" into pass/fail. SCOPE is yours to choose: no catalogId/entityId drains EVERYTHING (the global sweep), catalogId alone drains one catalog, entityIds is a multi-entity batch, entityId is one entity. `limit` caps cost before any editor boots. The editor is non-reentrant — one drain at a time per scope (concurrent → 409; a global drain is exclusive with everything). Set allowSpawn to use a headless editor (it must be CLOSED). For L4, projectPath + autoCapture render a real frame you must Read.
 
-**Arguments:**
-- `catalogId` **(required)**: string
-- `entityId` **(required)**: string
-- `tier`: string
-- `allowSpawn`: boolean
+**Arguments (all optional — mirrors the drain route body exactly):**
+- `catalogId`: string — restrict to one catalog; omit with entityId for a GLOBAL drain
+- `entityId`: string — restrict to one entity
+- `entityIds`: array of string — multi-entity batch (one collection, one grouped boot; all-or-nothing lease)
+- `tier`: string (`L3` | `L4`)
+- `limit`: number — cap gates run this pass (bounds the batch before any UE boot)
+- `executor`: string (`bridge` | `spawn`)
+- `allowSpawn`: boolean — implies executor `spawn`
+- `port`: number — bridge port override
+- `screenshotPath`: string — L4: judge an operator-supplied PNG
+- `visualMode`: string (`hud` | `texture` | `lighting` | `character`)
+- `projectPath`: string — required with autoCapture
+- `autoCapture`: boolean — L4: render the frame autonomously
 
 > No static example — needs a live UE editor — recorded by the live growth suite
 

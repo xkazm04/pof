@@ -18,7 +18,9 @@ export async function POST(req: NextRequest) {
     const body = (await req.json().catch(() => ({}))) as {
       action?: 'start' | 'stop'; intervalMs?: number; cooldownMs?: number;
       executor?: 'bridge' | 'spawn'; port?: number;
-      tier?: string; catalogId?: string; entityId?: string;
+      // Scope keys are read through `parseDrainFilter` (tier/catalogId/entityId/entityIds),
+      // so the worker accepts the same entity-set batch the drain route does.
+      tier?: string; catalogId?: string; entityId?: string; entityIds?: string[];
     };
     if (body.action === 'stop') return apiSuccess(stopDrainWorker());
     if (body.action !== 'start') return apiError("action must be 'start' or 'stop'", 400);

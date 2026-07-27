@@ -37,7 +37,8 @@ export async function POST(req: NextRequest) {
     const body = (await req.json().catch(() => ({}))) as {
       action?: 'scaffold' | 'dispatch';
       testName?: string; claim?: string;
-      tier?: string; catalogId?: string; entityId?: string;
+      // Same scope surface as the drain (parsed by `parseDrainFilter`), incl. the entity set.
+      tier?: string; catalogId?: string; entityId?: string; entityIds?: string[];
     };
     const filter: DrainFilter = parseDrainFilter((k) => body[k]);
     const action = body.action === 'dispatch' ? 'dispatch' : 'scaffold';
