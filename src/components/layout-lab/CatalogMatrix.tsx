@@ -82,7 +82,7 @@ export function CatalogMatrix({ t, groups, catalogId, onSelectCatalog, onOpenSte
     () => rows.filter((r) => r.rollup.deferred > 0).map((r) => ({ id: r.id, name: r.name })),
     [rows],
   );
-  const { state: drainState, start: startDrain, cancel: cancelDrain } = useBatchDrain(catalogId);
+  const { state: drainState, start: startDrain, cancel: cancelDrain, reset: dismissDrain } = useBatchDrain(catalogId);
 
   // Memoize cell styles per status (only ~5 distinct statuses) instead of
   // allocating a fresh CSSProperties object for every cell on every render — the
@@ -159,7 +159,7 @@ export function CatalogMatrix({ t, groups, catalogId, onSelectCatalog, onOpenSte
         </div>
         <div style={{ marginLeft: 'auto' }}>
           <MatrixBatchDrain t={t} deferredEntities={deferredEntities} state={drainState}
-            onStart={() => startDrain(deferredEntities)} onCancel={cancelDrain} />
+            onStart={() => startDrain(deferredEntities)} onCancel={cancelDrain} onDismiss={dismissDrain} />
         </div>
       </div>
 

@@ -55,7 +55,8 @@ export function useBatchDrain(catalogId: string, retryDelayMs: number = UI_TIMEO
     const ids = entities.map((e) => e.id);
     setState({ running: true, activeEntityIds: new Set(ids), doneEntityIds: new Set(), summary: emptyBatchSummary(), total: entities.length });
     // Publish this session's batch-drain scope so the header runner chip shows "draining …".
-    useLabRunnerStore.getState().setLocalDrain(`${catalogId} · ${entities.length} set${entities.length > 1 ? 's' : ''}`);
+    const scope = `${catalogId} · ${entities.length} set${entities.length > 1 ? 's' : ''}`;
+    useLabRunnerStore.getState().setLocalDrain(scope);
 
     try {
       // ONE request for the whole set (one collection + one grouped editor boot).
@@ -72,10 +73,17 @@ export function useBatchDrain(catalogId: string, retryDelayMs: number = UI_TIMEO
       setState({ running: false, activeEntityIds: new Set(), doneEntityIds: new Set(ids), summary, total: entities.length });
     } finally {
       runningRef.current = false;
-      useLabRunnerStore.getState().setLocalDrain(null);
+      // Only clear the header lease if it is still OURS. A per-entity coach drain (or a
+      // later batch) may have taken the chip over while this batch was in flight — clearing
+      // unconditionally blanked "draining …" while that drain was still live, which is a lie.
+      // Mirrors the per-entity ownership guard in Baseline/useBaseline.ts.
+      const runner = useLabRunnerStore.getState();
+      if (runner.localDrain === scope) runner.setLocalDrain(null);
     }
   }, [catalogId, retryDelayMs]);
 
+  /** Dismiss the finished run's summary (the matrix header pins it until told otherwise).
+   *  Ignored while a batch is in flight — you can't dismiss a live run's counters. */
   const reset = useCallback(() => { if (!runningRef.current) setState(IDLE); }, []);
 
   return { state, start, cancel, reset };

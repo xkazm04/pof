@@ -11,6 +11,8 @@ interface Props {
   state: BatchDrainState;
   onStart: () => void;
   onCancel: () => void;
+  /** Dismiss the finished run's summary — without it the last run pins in the header forever. */
+  onDismiss: () => void;
 }
 
 /**
@@ -18,11 +20,13 @@ interface Props {
  * The button only appears when the catalog has ≥1 deferred artifact. The whole set is
  * drained in ONE request (one editor boot for every gate), so while running it shows a
  * single-boot progress note; when done it reports the flips (deferred → pass/fail) with
- * per-step fail reasons and any locked/errored entities — no silent skips. Cancel is honest:
+ * per-step fail reasons and any locked/errored entities — no silent skips. The finished summary
+ * is DISMISSIBLE (and the next run replaces it), so a stale run can't masquerade as current
+ * state. Cancel is honest:
  * the in-flight boot can't be interrupted, so it only skips the retry after a lease conflict.
  * The batch request + lease handling lives in `useBatchDrain`.
  */
-export function MatrixBatchDrain({ t, deferredEntities, state, onStart, onCancel }: Props) {
+export function MatrixBatchDrain({ t, deferredEntities, state, onStart, onCancel, onDismiss }: Props) {
   const { running, summary, total } = state;
   // Hide entirely when there's nothing to drain and no run to report.
   if (deferredEntities.length === 0 && !running && !summary) return null;
@@ -71,6 +75,16 @@ export function MatrixBatchDrain({ t, deferredEntities, state, onStart, onCancel
             </span>
           )}
           {summary.entitiesErrored > 0 && <span style={{ color: t.bad }} title="Drain request errored">{summary.entitiesErrored} errored</span>}
+          {/* Dismiss — a finished run's counters used to pin in the header forever, so a stale
+              summary read as the CURRENT state of the catalog. The next run clears it too. */}
+          {!running && (
+            <Button mono onClick={onDismiss} data-testid="batch-drain-dismiss"
+              ariaLabel="Dismiss this drain summary"
+              title="Dismiss this drain summary (the next run clears it too)."
+              style={{ padding: '2px 6px', fontSize: 12 }}>
+              ✕ Dismiss
+            </Button>
+          )}
         </span>
       )}
 

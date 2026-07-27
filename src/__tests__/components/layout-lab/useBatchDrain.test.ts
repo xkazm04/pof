@@ -13,6 +13,7 @@ vi.mock('@/components/layout-lab/labArtifactCache', () => ({
 }));
 
 import { useBatchDrain, type BatchEntity } from '@/components/layout-lab/hooks/useBatchDrain';
+import { useLabRunnerStore } from '@/components/layout-lab/labRunnerStore';
 
 function deferred<T>() {
   let resolve!: (v: T) => void;
@@ -28,7 +29,7 @@ const failResult = (entityId: string, step: string, reason: string) => ({
 });
 const ents: BatchEntity[] = [{ id: 'e1', name: 'One' }, { id: 'e2', name: 'Two' }, { id: 'e3', name: 'Three' }];
 
-beforeEach(() => { drainMock.mockReset(); invalidateMock.mockReset(); });
+beforeEach(() => { drainMock.mockReset(); invalidateMock.mockReset(); useLabRunnerStore.setState({ localDrain: null }); });
 afterEach(cleanup);
 
 describe('useBatchDrain — one-boot batch', () => {
@@ -123,5 +124,76 @@ describe('useBatchDrain — one-boot batch', () => {
     await act(async () => { d1.resolve(okOutcome()); await run; });
 
     expect(drainMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('useBatchDrain — summary lifecycle + runner-chip ownership', () => {
+  it('reset() dismisses a finished summary, and the next run replaces it', async () => {
+    drainMock.mockResolvedValue(okOutcome({ ran: 1, passed: 1 }));
+    const { result } = renderHook(() => useBatchDrain('c', 0));
+
+    await act(async () => { await result.current.start(ents); });
+    expect(result.current.state.summary).toMatchObject({ passed: 1 });
+
+    act(() => { result.current.reset(); });
+    expect(result.current.state.summary).toBeNull();
+    expect(result.current.state.total).toBe(0);
+    expect(result.current.state.doneEntityIds.size).toBe(0);
+
+    // A fresh run re-populates it from scratch (no stale carry-over).
+    drainMock.mockResolvedValue(okOutcome({ ran: 2, failed: 2 }));
+    await act(async () => { await result.current.start(ents); });
+    expect(result.current.state.summary).toMatchObject({ passed: 0, failed: 2 });
+  });
+
+  it('reset() is ignored while a batch is still in flight (a live run cannot be dismissed)', async () => {
+    const d = deferred<DrainOutcome>();
+    drainMock.mockReturnValueOnce(d.promise);
+    const { result } = renderHook(() => useBatchDrain('c', 0));
+
+    let run!: Promise<void>;
+    act(() => { run = result.current.start(ents); });
+    await waitFor(() => expect(drainMock).toHaveBeenCalledTimes(1));
+
+    act(() => { result.current.reset(); });
+    expect(result.current.state.running).toBe(true);
+    expect(result.current.state.summary).not.toBeNull();
+
+    await act(async () => { d.resolve(okOutcome({ ran: 1, passed: 1 })); await run; });
+  });
+
+  it('publishes its scope to the runner chip and clears it when it owns the chip', async () => {
+    drainMock.mockResolvedValue(okOutcome());
+    const { result } = renderHook(() => useBatchDrain('c', 0));
+
+    const d = deferred<DrainOutcome>();
+    drainMock.mockReturnValueOnce(d.promise);
+    let run!: Promise<void>;
+    act(() => { run = result.current.start(ents); });
+    await waitFor(() => expect(drainMock).toHaveBeenCalledTimes(1));
+    expect(useLabRunnerStore.getState().localDrain).toBe('c · 3 sets');
+
+    await act(async () => { d.resolve(okOutcome()); await run; });
+    expect(useLabRunnerStore.getState().localDrain).toBeNull();
+  });
+
+  it('does NOT blank the runner chip when a concurrent drain took it over mid-batch', async () => {
+    const d = deferred<DrainOutcome>();
+    drainMock.mockReturnValueOnce(d.promise);
+    const { result } = renderHook(() => useBatchDrain('c', 0));
+
+    let run!: Promise<void>;
+    act(() => { run = result.current.start(ents); });
+    await waitFor(() => expect(drainMock).toHaveBeenCalledTimes(1));
+    expect(useLabRunnerStore.getState().localDrain).toBe('c · 3 sets');
+
+    // A per-entity coach drain starts while the batch is in flight and takes the chip over.
+    act(() => { useLabRunnerStore.getState().setLocalDrain('c/e9'); });
+
+    await act(async () => { d.resolve(okOutcome({ ran: 3, passed: 3 })); await run; });
+
+    // The batch finishing must NOT clear a chip it no longer owns — that per-entity
+    // drain is still live, and blanking it would report an idle runner while UE is busy.
+    expect(useLabRunnerStore.getState().localDrain).toBe('c/e9');
   });
 });
