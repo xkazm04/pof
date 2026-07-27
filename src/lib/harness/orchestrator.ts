@@ -31,7 +31,7 @@ import {
   appendAgentsMd,
 } from './executor';
 import { spawnClaudeSession, wrapHarnessResult } from './claude-session';
-import { verify, formatVerificationSummary, detectGates } from './verifier';
+import { verify, formatVerificationSummary, detectGates, checkSuccessReachable } from './verifier';
 import {
   createEmptyGuide,
   appendGuideStep,
@@ -1068,6 +1068,19 @@ export function createHarnessOrchestrator(
     }
 
     emit({ type: 'harness:started', config, plan });
+
+    // Launch preflight: warn LOUDLY (never block) when the stop condition can
+    // never be satisfied — a required gate that cannot verify under the default
+    // 'verified' basis pins the verified rate at 0, so the loop would otherwise
+    // grind all maxIterations sessions to the budget cap in silence.
+    const reachability = checkSuccessReachable(gates, passRateBasis);
+    if (!reachability.reachable && reachability.reason) {
+      const detail = `${reachability.reason} (maxIterations ${config.maxIterations}, cap ${budgetUsd != null ? `$${budgetUsd.toFixed(2)}` : 'unlimited'})`;
+      logger.warn(`[harness] ${detail}`);
+      // `fatal: false` — the API's wiring only flips status on a fatal error,
+      // so this surfaces in the event feed without killing the run.
+      emit({ type: 'harness:error', error: detail, fatal: false });
+    }
 
     // Establish the run's durable identity.
     // - Adopted runId (resume/rehydrate): REOPEN the existing row (status→running,

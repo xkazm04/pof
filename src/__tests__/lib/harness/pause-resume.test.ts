@@ -47,6 +47,7 @@ vi.mock('@/lib/harness/verifier', () => ({
   }),
   formatVerificationSummary: () => 'Verification PASSED — all 0 gates green',
   detectGates: () => [],
+  checkSuccessReachable: () => ({ reachable: true, blockingGates: [] }),
 }));
 
 import { getRun, listRuns } from '@/lib/harness-runs-db';

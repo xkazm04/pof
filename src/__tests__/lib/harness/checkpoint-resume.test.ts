@@ -34,6 +34,7 @@ vi.mock('@/lib/harness/verifier', () => ({
   }),
   formatVerificationSummary: () => 'Verification PASSED',
   detectGates: () => [],
+  checkSuccessReachable: () => ({ reachable: true, blockingGates: [] }),
 }));
 
 import { createHarnessOrchestrator, readCheckpoints } from '@/lib/harness/orchestrator';

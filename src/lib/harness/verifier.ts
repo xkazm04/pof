@@ -115,12 +115,23 @@ async function runGate(
 ): Promise<VerificationResult> {
   const start = Date.now();
 
+  // A commandless gate SELF-CERTIFIED here ("No command specified — skipped",
+  // passed:true) — any custom/build/test/lint/typecheck gate configured without
+  // a command silently green-lit the area. Only `ue-compile` had ever been given
+  // the honest treatment; it is now uniform: no command → nothing was run →
+  // `unverifiable`, with exactly the same requiredGates consequences (counts
+  // toward requiredFailures, excluded from self-heal, records
+  // verification:'unverifiable').
   if (!gate.command) {
     return {
       gate: gate.name,
-      passed: true,
-      output: 'No command specified — skipped',
+      passed: false,
+      unverifiable: true,
+      output:
+        `Gate "${gate.name}" (${gate.type}) UNVERIFIABLE — no command configured, so nothing was run. `
+        + 'The area is NOT self-certified; configure a command for this gate to verify it.',
       durationMs: 0,
+      errors: [{ message: `no command configured for gate "${gate.name}"` }],
     };
   }
 
@@ -286,6 +297,66 @@ async function runUeTestGate(
     output: `${verdict.reason} (${verdict.passed} passed / ${verdict.failed} failed)`,
     durationMs: Date.now() - start,
     errors: verdict.verdict === 'fail' ? [{ message: verdict.reason }] : undefined,
+  };
+}
+
+// ── Launch preflight: is success even reachable? ─────────────────────────────
+
+/**
+ * Can this gate be evaluated AT ALL, given only its static configuration?
+ *
+ * `visual` / `ue-visual` are excluded: they carry no command by design and
+ * their verifiability depends on runtime inputs (statePath, a captured frame),
+ * so a static answer would be a guess. Everything else needs a command; a
+ * required `ue-test` additionally needs the UE env to derive one.
+ */
+function gateCannotVerify(gate: VerificationGate, hasUeEnv: boolean): boolean {
+  if (gate.type === 'visual' || gate.type === 'ue-visual') return false;
+  if (gate.type === 'ue-test') return !hasUeEnv;
+  return !gate.command;
+}
+
+export interface SuccessReachability {
+  /** False when the stop condition can never be satisfied as configured. */
+  reachable: boolean;
+  /** Names of the required gates that cannot verify (empty when reachable). */
+  blockingGates: string[];
+  /** Operator-facing explanation naming the specific cause + the fixes. */
+  reason?: string;
+}
+
+/**
+ * Detect the UNREACHABLE-SUCCESS combination BEFORE a run burns money on it.
+ *
+ * With `passRateBasis: 'verified'` (the default) a feature only counts toward
+ * the target when the area's REQUIRED gates all passed. So a required gate that
+ * can never pass — a commandless gate, or a UE gate with no UE env — pins the
+ * verified rate at 0 forever: the loop grinds every one of `maxIterations`
+ * sessions and stops only at the budget cap, with nothing ever warning the
+ * operator why. This is a WARNING, never a block: an operator may legitimately
+ * want the run's side effects (code + guide) without a reachable stop condition.
+ */
+export function checkSuccessReachable(
+  gates: VerificationGate[],
+  passRateBasis: 'verified' | 'self-reported',
+  opts: { hasUeEnv?: boolean } = {},
+): SuccessReachability {
+  if (passRateBasis !== 'verified') return { reachable: true, blockingGates: [] };
+  const hasUeEnv = opts.hasUeEnv ?? resolveUeEnv() !== null;
+  const blockingGates = gates
+    .filter(g => g.required && gateCannotVerify(g, hasUeEnv))
+    .map(g => g.name);
+  if (blockingGates.length === 0) return { reachable: true, blockingGates: [] };
+  return {
+    reachable: false,
+    blockingGates,
+    reason:
+      `Success is UNREACHABLE as configured: passRateBasis 'verified' only counts a feature when every `
+      + `required gate passes, but required gate(s) [${blockingGates.join(', ')}] cannot verify `
+      + '(no command configured, or no UE env for a UE gate). The verified pass-rate will stay at 0%, so the loop '
+      + 'will run every iteration and stop only at the budget cap. Fix: configure the gate command '
+      + '(POF_UE_EDITOR_CMD + POF_UE_UPROJECT for UE gates), drop the gate\'s `required` flag, '
+      + "or set passRateBasis:'self-reported' to score on the executor's own reports.",
   };
 }
 
