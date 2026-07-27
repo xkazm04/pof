@@ -291,6 +291,39 @@ export const UE_GOTCHAS: Gotcha[] = [
     appliesTo: ['ue-cpp', 'ue-python'],
     source: 'research: Aura the Unreal AI Agent (tryoura.dev)',
   },
+  {
+    id: 'dataflow-rig-transfer-5-8',
+    modules: ['character', '3d', 'animation'],
+    summary:
+      'UE 5.8 Dataflow can TRANSFER a rig (skin weights, morph targets, polygroups) from an existing skeletal mesh onto a new mesh headless — the Zebra→Monster reuse path, scriptable via DataflowEditorBlueprintLibrary',
+    detail:
+      "5.8 Dataflow gained skeletal-mesh authoring + Python scripting, which makes rig REUSE scriptable: Epic's own Zebra→Monster workflow transfers an entire rig (skin weights, morph targets, DMC polygroups, skeleton) to a different mesh and low-res→high-res via the TransferMeshAttributes node. The chain (all verified headless on 5.8.0 with -EnablePlugins=Dataflow,GeometryCollectionPlugin -nullrhi): create a Dataflow asset via DataflowAssetFactory + AssetTools.create_asset, then author with DataflowEditorBlueprintLibrary — add_dataflow_node(dataflow, node_type_name, base_name, location) requires ALL FOUR args (location is an unreal.Vector2D; omitting it throws) and node_type_name is the full struct name WITH the F prefix: FGetSkeletalMeshDataflowNode → FSkeletalMeshToCollectionDataflowNode → FCollectionToMeshDataflowNode_v2 gives the SOURCE DataflowMesh; FGetStaticMeshDataflowNode → FStaticMeshToMeshDataflowNode_v2 gives the generated TARGET mesh; wire both into FTransferMeshAttributesDataflowNode (pins: SourceMesh = rig donor, Mesh = destination, modified in-place; select what transfers via its AttributeProxies instanced-struct array — SkinWeights/MorphTarget/Polygroup/Skeleton proxies); terminate with FMeshToSkeletalMeshTerminalNode_v2 (set SkeletalMeshAssetPath + SkeletonAssetPath string properties) which WRITES a rigged USkeletalMesh asset. FBindSkeletonToMeshDataflowNode_v2 also exists for binding a skeleton to an unrigged mesh. add_dataflow_node returns the node NAME (a Name, not an object) — pass names to connect_dataflow_nodes/set_dataflow_node_property. Node structs are Experimental; verify transfer QUALITY by evaluating and inspecting the output mesh, not by graph-authoring success.",
+    appliesTo: ['ue-python'],
+    source:
+      'research: State of Rigging & Animation Tools in UE 5.8 (Unreal Fest Chicago 2026) + live 5.8 headless probe',
+  },
+  {
+    id: 'control-rig-dynamics-secondary-motion',
+    modules: ['character', 'animation'],
+    summary:
+      'Control Rig Dynamics (5.8) is the cheap runtime secondary-motion path — one SpawnDynamicsChains node drives multiple jiggle chains (ponytails, pouches, muscle), 5× faster than Control Rig Physics — but chains still need BONES to drive',
+    detail:
+      "UE 5.8 ships Control Rig Dynamics (Experimental ControlRigDynamics plugin), a particle-based simulation built specifically for character secondary motion — ponytails, hair, pouches, costume bits, muscle jiggle. It runs ~5× faster than Control Rig physics (the full Chaos-solver-in-rig path) and works at RUNTIME through a control-rig node in the Animation Blueprint, so generated characters can get living secondary motion in-game, not just in sequencer. One RigUnit_SpawnDynamicsChains node builds MULTIPLE jiggly chains, with stiffness/damping and per-length curves on the node; colliders/cone-limits/confiners are separate spawn units (RigUnit_SpawnDynamicsCollider etc.), and the whole surface is Python-exposed (verified headless on 5.8.0: RigUnit_SpawnDynamicsChains/SpawnDynamicsSolver/StepDynamicsSolver + RigDynamics* components all resolve). Use Dynamics for cosmetic chains and keep Control Rig PHYSICS for full-body/ragdoll interaction; the two mix in one rig. The catch for AI-generated characters: a dynamics chain drives BONES — a Tripo/Hunyuan character whose auto-rig has no hair/braid/accessory bones gives the solver nothing to move, so insert bone chains along those mesh regions first (Blender chain + weight transfer, or the segment-into-named-parts path). Debug with the dynamics debug window (launchable from the control-rig viewport; works during PIE).",
+    appliesTo: ['ue-python'],
+    source:
+      'research: State of Rigging & Animation Tools in UE 5.8 (Unreal Fest Chicago 2026) + live 5.8 API probe',
+  },
+  {
+    id: 'layered-physics-anim-transition-smoothing',
+    modules: ['animation', 'character'],
+    summary:
+      'Hard pops between animation clips (retargeted/generated mocap): run a physics + full-body IK rig on a LAYERED control rig (5.8) to interpolate through transitions, then bake — sims need warm-up frames',
+    detail:
+      "Concatenated or swapped animation clips (Mixamo/Tripo/ARDY retargets, mocap takes) meet at HARD POPS — an instant pose discontinuity at the boundary. UE 5.8 Control Rig physics now works on LAYERED control rigs (long-requested), which enables a non-destructive smoothing pass: layer a physics rig + full-body IK (Epic ships a 'biped physics' rig module that sets this up for any biped in a few clicks) over the animation in sequencer, and the physics carries momentum THROUGH the boundary so the character smoothly interpolates between clips instead of popping — Epic calls out motion capture as the target use case. Physics can also be layered over plain animation sequences for natural ragdoll/impact moments and timed per-limb. Then BAKE: simulations re-run on every scrub (unpredictable), so bake to an AnimSequence — via auto bake or a manual bake — and for a simulation add WARM-UP FRAMES in the bake options so the sim settles before frame 0, giving deterministic, scrubbable results. Convex-hull physics bodies (new in 5.8, a shrink-wrapped collision mesh) make those collisions match the actual mesh instead of capsules. This is the in-UE alternative to fixing pops upstream at npz-concat time — prefer upstream re-anchoring when you control the generator, layered physics when you only have the clips.",
+    appliesTo: ['ue-python'],
+    source:
+      'research: State of Rigging & Animation Tools in UE 5.8 (Unreal Fest Chicago 2026)',
+  },
 ];
 
 /**

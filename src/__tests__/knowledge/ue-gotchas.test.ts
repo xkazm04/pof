@@ -181,6 +181,30 @@ describe('formatGotchas', () => {
     expect(out).toMatch(/80.?90\s?%|dice|never final|not final/i);
   });
 
+  it('teaches the 5.8 Dataflow rig-transfer chain for reusing a rig on a new mesh', () => {
+    const out = formatGotchas('ue-python');
+    expect(out).toMatch(/TransferMeshAttributes/);
+    expect(out).toMatch(/MeshToSkeletalMeshTerminal/);
+    expect(out).toMatch(/skin weights/i);
+    expect(out).toMatch(/location|Vector2D/);
+  });
+
+  it('describes Control Rig Dynamics as the runtime secondary-motion path for generated characters', () => {
+    const out = formatGotchas('ue-python');
+    expect(out).toMatch(/Control Rig Dynamics/i);
+    expect(out).toMatch(/jiggle|ponytail|secondary motion/i);
+    expect(out).toMatch(/SpawnDynamicsChains/);
+    expect(out).toMatch(/bone/i);
+  });
+
+  it('recommends layered control-rig physics to smooth hard pops between animation clips', () => {
+    const out = formatGotchas('ue-python');
+    expect(out).toMatch(/layered control rig/i);
+    expect(out).toMatch(/hard pop/i);
+    expect(out).toMatch(/full.?body IK/i);
+    expect(out).toMatch(/warm.?up frames/i);
+  });
+
   it('carries Niagara optimization pitfalls', () => {
     const out = formatGotchas('ue-python');
     expect(out).toMatch(/Niagara/);
