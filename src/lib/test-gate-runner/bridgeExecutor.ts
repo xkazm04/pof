@@ -69,6 +69,47 @@ export function interpretAutomationResult(
   return { terminal: false, detail: 'unrecognised result shape', testId };
 }
 
+/**
+ * What ONE PoF-Bridge automation payload means for a gate: a terminal {@link GateVerdict},
+ * or `pending` (the run is accepted/running/not yet recorded — keep polling, settle nothing).
+ *
+ * This is the runner's per-test truth for the bridge shape, extracted so the executor's poll
+ * loop AND the agent-facing settle path (`settleGatesFromTestRun` — an agent that ran the exact
+ * test a gate waits on) map a payload identically: the plugin's `not_found` is the SAME
+ * "planned, not registered in UE" DEFERRED verdict both paths already agree on, never a fail,
+ * and a non-terminal payload never fabricates one. Pure.
+ */
+export type AutomationOutcome =
+  | { kind: 'verdict'; verdict: GateVerdict }
+  | { kind: 'pending'; detail: string; testId?: string };
+
+export function automationOutcome(testName: string, payload: unknown): AutomationOutcome {
+  const at = new Date().toISOString();
+  const d = payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : null;
+  // The plugin returns status:"not_found" when no automation test matches. Same condition the
+  // spawn executor reports as `unregistered` — an honest DEFERRED wait, never a red fail.
+  if (d && d.status === 'not_found') {
+    return {
+      kind: 'verdict',
+      verdict: {
+        status: 'deferred',
+        detail: `${testName}: no automation test registered (planned, not in UE)`,
+        evidence: { kind: 'bridge', at, markers: ['not_found: no automation test registered'] },
+      },
+    };
+  }
+  const interp = interpretAutomationResult(payload, testName);
+  if (!interp.terminal || !interp.status) {
+    return { kind: 'pending', detail: interp.detail, ...(interp.testId ? { testId: interp.testId } : {}) };
+  }
+  const evidence: GateEvidence = {
+    kind: 'bridge',
+    at,
+    markers: [interp.testId ? `${interp.detail} (${interp.testId})` : interp.detail],
+  };
+  return { kind: 'verdict', verdict: { status: interp.status, detail: `${testName}: ${interp.detail}`, evidence, raw: interp } };
+}
+
 function failDetail(d: Record<string, unknown>): string {
   if (Array.isArray(d.errors) && d.errors.length) return String(d.errors[0]).slice(0, 200);
   return 'automation failed';
@@ -131,20 +172,12 @@ export function makeBridgeExecutor(opts: BridgeExecutorOptions = {}): GateExecut
         logger.warn(`[test-gate-runner] bridge ${job.testName}: unparseable run-automation JSON (${errMsg(e)})`);
         return null;
       })) as Record<string, unknown> | null;
-      // The plugin returns status:"not_found" when no automation test matches. This is the SAME
-      // condition the spawn executor reports as `unregistered` — unified vocabulary: return a
-      // DEFERRED verdict (the gate ran and learned the test is planned / not registered) rather
-      // than throwing → skipped. A deferred verdict records WHY it stays deferred in the artifact
-      // reason and buckets as `deferred` (ran, no pass/fail), not `skipped` (never ran). Don't
-      // waste the poll budget either.
-      if (posted && posted.status === 'not_found') {
-        return {
-          status: 'deferred',
-          detail: `${job.testName}: no automation test registered (planned, not in UE)`,
-          evidence: { kind: 'bridge', at: new Date().toISOString(), markers: ['not_found: no automation test registered'] },
-        };
-      }
-      let interp = interpretAutomationResult(posted, job.testName);
+      // `automationOutcome` owns the payload→verdict truth (incl. the plugin's `not_found`
+      // → DEFERRED "planned, not registered in UE", which must not burn the poll budget).
+      // The settle path shares it, so an agent-run test and a drain read a payload identically.
+      const name = job.testName ?? '';
+      let outcome = automationOutcome(name, posted);
+      if (outcome.kind === 'verdict') return outcome.verdict;
 
       // run-automation is async (returns {status:"accepted"}) — poll the results
       // endpoint until our test's verdict is recorded or we exhaust the budget.
@@ -152,30 +185,24 @@ export function makeBridgeExecutor(opts: BridgeExecutorOptions = {}): GateExecut
       // short per-GET timeout (not the 120s POST timeout) so one slow poll can't stall
       // the whole budget. Worst case is now ~maxPolls × (pollMs + pollTimeoutMs).
       const deadline = Date.now() + maxPolls * (pollMs + pollTimeoutMs);
-      for (let i = 0; !interp.terminal && i < maxPolls && Date.now() < deadline; i++) {
+      for (let i = 0; outcome.kind === 'pending' && i < maxPolls && Date.now() < deadline; i++) {
         await new Promise((r) => setTimeout(r, pollMs));
-        const path = interp.testId ? `/test/results/${encodeURIComponent(interp.testId)}` : '/test/results';
+        const path = outcome.testId ? `/test/results/${encodeURIComponent(outcome.testId)}` : '/test/results';
         const pr = await call(path, undefined, pollTimeoutMs).catch((e) => {
           logger.warn(`[test-gate-runner] bridge ${job.testName}: results poll failed (${errMsg(e)})`);
           return null;
         });
         if (!pr || !pr.ok) continue;
-        interp = interpretAutomationResult(await pr.json().catch((e) => {
+        outcome = automationOutcome(name, await pr.json().catch((e) => {
           logger.warn(`[test-gate-runner] bridge ${job.testName}: unparseable results JSON (${errMsg(e)})`);
           return null;
-        }), job.testName);
+        }));
       }
 
-      if (!interp.terminal || !interp.status) {
-        throw new Error(`bridge result not terminal for ${job.testName}: ${interp.detail}`);
+      if (outcome.kind === 'pending') {
+        throw new Error(`bridge result not terminal for ${job.testName}: ${outcome.detail}`);
       }
-      // Evidence: the plugin's automation-result summary line (+ recorded testId when present).
-      const evidence: GateEvidence = {
-        kind: 'bridge',
-        at: new Date().toISOString(),
-        markers: [interp.testId ? `${interp.detail} (${interp.testId})` : interp.detail],
-      };
-      return { status: interp.status, detail: `${job.testName}: ${interp.detail}`, evidence, raw: interp };
+      return outcome.verdict;
     },
   };
 }

@@ -570,22 +570,28 @@ Trigger a live-coding compile of the UE C++ and wait for the result (status + di
 
 ### `pof_ue_run_tests`
 
-Run UE automation tests matching a filter (async). Poll pof_ue_test_results for verdicts. Needs a live editor with PIE.
+Run UE automation tests matching a filter and SETTLE the deferred L3 gates waiting on that test — running the test a gate waits on now closes the loop instead of leaving it deferred for a drain. Set settle:false for a raw run. Settling reuses the drain's own truth (same verdict semantics, same "planned, not registered in UE" deferral) and respects the drain lease: if a drain holds the scope the settle is refused rather than clobbering it. Results matching no gate change nothing and say so. Needs a live editor with PIE.
 
 **Arguments:**
 - `filter` **(required)**: string
 - `flags`: array
 - `port`: number
+- `settle`: boolean — Write the result back to matching deferred gates (default true).
+- `catalogId`: string — Narrow the settle to one catalog (default: every gate waiting on this test).
+- `entityId`: string — Narrow the settle to one entity.
 
 > No static example — needs a live UE editor — recorded by the growth suite
 
 ### `pof_ue_test_results`
 
-Fetch UE automation test results (status, assertions, logs). Omit testId for all recent results.
+Fetch UE automation test results (status, assertions, logs) and, when `testName` is given, SETTLE the deferred L3 gates waiting on that test from the fetched payload — the poll-then-close-the-loop half of pof_ue_run_tests (use it when a run came back non-terminal). Without `testName` it is a plain read that changes nothing. Omit testId for all recent results.
 
 **Arguments:**
 - `testId`: string
 - `port`: number
+- `testName`: string — The automation test name to settle gates for. Omit to only read results.
+- `catalogId`: string — Narrow the settle to one catalog.
+- `entityId`: string — Narrow the settle to one entity.
 
 > No static example — needs a live UE test run — recorded by the growth suite
 

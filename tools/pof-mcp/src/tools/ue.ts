@@ -1,6 +1,34 @@
+import type { PofClient } from '../pofClient.js';
 import { type ToolDef, reqStr, optStr, optNum, reqObj, qs, obj, STR, NUM, BOOL } from './shared.js';
 
 const PORTQ = (args: Record<string, unknown>) => (optNum(args, 'port') != null ? { port: optNum(args, 'port') } : {});
+
+/**
+ * Write a UE automation payload back to the deferred L3 gates waiting on that test.
+ *
+ * The app route owns ALL the truth (which gates want the test, what the payload means, how a
+ * verdict is persisted, and the drain lease) — this is only the proxy. A settle that cannot
+ * happen is REPORTED, never swallowed: a 409 (a drain holds the scope) or any other failure
+ * comes back as `{ error }` alongside the test result, so the agent is never told a gate moved
+ * when it did not.
+ */
+async function settleGates(
+  pof: PofClient,
+  testName: string,
+  result: unknown,
+  args: Record<string, unknown>,
+): Promise<unknown> {
+  try {
+    return await pof.post('/api/pipeline-artifacts/drain/settle-test', {
+      testName,
+      result,
+      ...(optStr(args, 'catalogId') ? { catalogId: optStr(args, 'catalogId') } : {}),
+      ...(optStr(args, 'entityId') ? { entityId: optStr(args, 'entityId') } : {}),
+    });
+  } catch (e) {
+    return { settled: 0, error: e instanceof Error ? e.message : String(e) };
+  }
+}
 
 /**
  * UE truth & growth. The pof-bridge/* tools need a live editor (degrade gracefully when
@@ -34,20 +62,44 @@ export const UE_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_ue_run_tests',
-    description: 'Run UE automation tests matching a filter (async). Poll pof_ue_test_results for verdicts. Needs a live editor with PIE.',
-    inputSchema: obj({ filter: STR, flags: { type: 'array', items: STR }, port: NUM }, ['filter']),
-    handler: (args, pof) =>
-      pof.post(`/api/pof-bridge/test${qs(PORTQ(args))}`, {
+    description:
+      'Run UE automation tests matching a filter and SETTLE the deferred L3 gates waiting on that test — running the test a gate waits on now closes the loop instead of leaving it deferred for a drain. Set settle:false for a raw run. Settling reuses the drain\'s own truth (same verdict semantics, same "planned, not registered in UE" deferral) and respects the drain lease: if a drain holds the scope the settle is refused rather than clobbering it. Results matching no gate change nothing and say so. Needs a live editor with PIE.',
+    inputSchema: obj({
+      filter: STR,
+      flags: { type: 'array', items: STR },
+      port: NUM,
+      settle: { type: 'boolean', description: 'Write the result back to matching deferred gates (default true).' },
+      catalogId: { type: 'string', description: 'Narrow the settle to one catalog (default: every gate waiting on this test).' },
+      entityId: { type: 'string', description: 'Narrow the settle to one entity.' },
+    }, ['filter']),
+    handler: async (args, pof) => {
+      const filter = reqStr(args, 'filter');
+      const result = await pof.post(`/api/pof-bridge/test${qs(PORTQ(args))}`, {
         action: 'run-automation',
-        filter: reqStr(args, 'filter'),
+        filter,
         ...(Array.isArray(args.flags) ? { flags: args.flags } : {}),
-      }),
+      });
+      if (args.settle === false) return { result, settle: { skipped: 'settle:false — no gate was updated' } };
+      return { result, settle: await settleGates(pof, filter, result, args) };
+    },
   },
   {
     name: 'pof_ue_test_results',
-    description: 'Fetch UE automation test results (status, assertions, logs). Omit testId for all recent results.',
-    inputSchema: obj({ testId: STR, port: NUM }),
-    handler: (args, pof) => pof.get(`/api/pof-bridge/test${qs({ ...PORTQ(args), ...(optStr(args, 'testId') ? { testId: optStr(args, 'testId') } : {}) })}`),
+    description:
+      'Fetch UE automation test results (status, assertions, logs) and, when `testName` is given, SETTLE the deferred L3 gates waiting on that test from the fetched payload — the poll-then-close-the-loop half of pof_ue_run_tests (use it when a run came back non-terminal). Without `testName` it is a plain read that changes nothing. Omit testId for all recent results.',
+    inputSchema: obj({
+      testId: STR,
+      port: NUM,
+      testName: { type: 'string', description: 'The automation test name to settle gates for. Omit to only read results.' },
+      catalogId: { type: 'string', description: 'Narrow the settle to one catalog.' },
+      entityId: { type: 'string', description: 'Narrow the settle to one entity.' },
+    }),
+    handler: async (args, pof) => {
+      const result = await pof.get(`/api/pof-bridge/test${qs({ ...PORTQ(args), ...(optStr(args, 'testId') ? { testId: optStr(args, 'testId') } : {}) })}`);
+      const testName = optStr(args, 'testName');
+      if (!testName) return result;
+      return { result, settle: await settleGates(pof, testName, result, args) };
+    },
   },
   {
     name: 'pof_ue_scan_project',

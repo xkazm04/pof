@@ -6,7 +6,7 @@ import { isSyntheticEntity } from '@/lib/status/statusModel';
 import { summarizeEvidence } from '@/types/observation';
 import { parseTestName } from './parse';
 import { resolveScenario } from './scenarioRegistry';
-import type { DrainResult, DrainSummary, GateExecutor, GateJob, GateTier } from './types';
+import type { DrainResult, DrainSummary, GateExecutor, GateJob, GateTier, GateVerdict } from './types';
 
 export interface DrainFilter {
   tier?: GateTier;
@@ -115,7 +115,19 @@ export function collectDeferred(filter?: DrainFilter): GateJob[] {
 
 /** Run one gate and write the verdict back, preserving the artifact's data/assets/tier. */
 export async function drainOne(job: GateJob, executor: GateExecutor): Promise<DrainResult> {
-  const verdict = await executor.run(job);
+  return applyVerdict(job, await executor.run(job));
+}
+
+/**
+ * Persist ONE gate verdict — the single write-back path for the whole runner.
+ *
+ * Split out of {@link drainOne} so any producer of a `GateVerdict` settles a gate through
+ * EXACTLY this code: the read-merge-write, the evidence merge, and the `gate.verdict.changed`
+ * announcement. `drainOne` is "run then apply"; the agent-facing settle path
+ * (`settleGatesFromTestRun`) is "interpret a test run the agent already made, then apply" —
+ * same honesty rules, same deferred semantics, one implementation.
+ */
+export function applyVerdict(job: GateJob, verdict: GateVerdict): DrainResult {
   // Read-merge-write, kept overlap-safe two ways: (1) the drain LEASE (held by both the route
   // AND the worker — see drain-lease.ts) serializes drain passes so two of them never touch the
   // same artifact at once; (2) this read→merge→write runs with NO `await` between `getArtifact`
