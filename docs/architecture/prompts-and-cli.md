@@ -17,6 +17,8 @@ calls in strings.
 | `src/lib/cli-task.ts` | `CLITask` type hierarchy, `TaskFactory`, `buildTaskPrompt()`, callback registry (`registerCallback` / `extractCallbackPayload` / `resolveCallback`) |
 | `src/lib/claude-terminal/cli-service.ts` | `startExecution()` — spawns Claude Code CLI, stream-json parsing, `CLIExecution` lifecycle, `buildCliArgs()` (model/effort pinning) |
 | `src/lib/model-policy.ts` | Model-policy registry (WS0): `getModelPolicy(taskClass)`, `taskClassForDispatchType()`, `resolveDispatchModelChoice()` — the single source of truth for which model + effort powers each task class |
+| `src/lib/prompt-evolution/dispatch-resolve.ts` | `composeTaskDispatch()` / `resolveActivePrompt()` — swaps the served prompt-evolution variant in before the prompt is built; `STATIC_VARIANT_ID` sentinel |
+| `src/lib/prompt-evolution/engine.ts` | `resolveDispatchVariant()` (serve) / `recordTrialForServedVariant()` (record) / `concludeTest()` (decide) — the A/B loop |
 | `src/components/cli/skills.ts` | 12 `SkillPack` records; `buildSkillsPrompt()` / `resolveSkillsFromPatterns()` |
 | `src/hooks/useModuleCLI.ts` | `useModuleCLI` hook — primary entry point from module components |
 | `src/components/layout-lab/steps/ArchetypeStep.tsx` | Catalog pipeline: `CliProduce.buildPrompt` prepends Project Canon before dispatching |
@@ -300,6 +302,40 @@ Running-state transitions are detected via `prevRunningRef` + `isRunning` diff.
 On `running → stopped`, a `setTimeout` with `UI_TIMEOUTS.raceConditionBuffer` reads
 `lastTaskSuccess` from the settled store, records analytics via `recordSessionOutcome`,
 and fires `onComplete(success)`. (`useModuleCLI.ts:70`)
+
+---
+
+### 4.5 Prompt-evolution A/B loop (serve → record → conclude)
+
+A checklist dispatch does not blindly send the registry prompt. `composeTaskDispatch`
+(`prompt-evolution/dispatch-resolve.ts`) resolves the variant first, and the resolved id
+is stamped onto the task as `promptVariantId` — which `cli-task-handlers`'s checklist
+handler puts into the callback's `staticFields`. The loop has three legs:
+
+1. **Serve** — `resolveActivePrompt` POSTs `{ action: 'resolve-dispatch-variant' }`.
+   Server-side `resolveDispatchVariant(moduleId, checklistItemId)`:
+   - **A running A/B test on the item** → picks an arm with the epsilon-greedy
+     `pickVariant` (`ab-testing.ts`: A and B each get 2 forced explore trials, then
+     ε=0.2 exploration / exploit-by-success-rate with a faster-average tie-break).
+     Returns `{ variant, testId, slot }` — the SERVED variant's id is what gets stamped.
+   - **No running test** → the adopted/active variant (unchanged pre-existing path), or
+     `null` so dispatch falls back to the task's static prompt and stamps `'static'`.
+2. **Record** — the run's `@@CALLBACK` POST lands on `/api/checklist/complete`, which
+   carries `promptVariantId` through the static fields. Any id other than `'static'` is
+   handed to `recordTrialForServedVariant`, which finds the running test the variant is an
+   arm of and books a success/fail trial against that slot (`recordTrialAndEvaluate` — an
+   atomic SQL increment + `evaluateTest` inside one transaction). Booking is best-effort:
+   a failure is logged and never blocks marking the item complete. The response reports
+   `trialRecorded` so the loop is observable.
+3. **Conclude** — `evaluateTest` may auto-conclude once the z-test/volume gate opens.
+   The manual "decide now" path (`concludeTest` → `forceConclude`) returns
+   `Result<ABTest, string>` and **refuses below `MIN_TRIALS_PER_VARIANT` (3) trials per
+   arm**, naming the shortfall; the API surfaces that as a 409 so the UI can say why
+   nothing was decided. Previously it crowned slot A at zero trials (`rateA >= rateB`
+   with both rates 0) — a coin flip dressed as evidence.
+
+Adopting a winner / restoring a version flips the `active` flag, which changes what leg 1
+serves once no test is running.
 
 ---
 

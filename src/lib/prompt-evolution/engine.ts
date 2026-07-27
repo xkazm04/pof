@@ -13,11 +13,13 @@ import type {
   VariantVersionEntry,
   VariantLineageNode,
   VariantVersionHistory,
+  ServedVariant,
 } from '@/types/prompt-evolution';
 import type { SessionRecord, ModuleStats } from '@/types/session-analytics';
 import { applyMutation, classifyStyle } from './mutations';
 import { clusterPrompts, getBestCluster } from './clustering';
-import { createABTest, evaluateTest } from './ab-testing';
+import { createABTest, evaluateTest, forceConclude, pickVariant } from './ab-testing';
+import { type Result, err } from '@/types/result';
 import {
   insertVariant,
   getVariantById,
@@ -250,25 +252,70 @@ export function recordTestTrial(
   return recordTrialAndEvaluate(testId, variantSlot, success, durationMs, evaluateTest);
 }
 
-export function concludeTest(testId: string): ABTest | null {
+/**
+ * Conclude a test on demand. Refuses — with a reason — while either variant is
+ * still below `MIN_TRIALS_PER_VARIANT`, so a test that was never actually served
+ * cannot crown a winner (see {@link forceConclude}).
+ */
+export function concludeTest(testId: string): Result<ABTest, string> {
   const test = getABTestById(testId);
-  if (!test) return null;
-  if (test.status === 'concluded') return test;
+  if (!test) return err('Test not found');
 
-  const concluded: ABTest = {
-    ...test,
-    status: 'concluded',
-    concludedAt: new Date().toISOString(),
-  };
+  const result = forceConclude(test);
+  if (!result.ok) return result;
 
-  // Determine winner even without statistical significance
-  const rateA = test.variantATrials > 0 ? test.variantASuccesses / test.variantATrials : 0;
-  const rateB = test.variantBTrials > 0 ? test.variantBSuccesses / test.variantBTrials : 0;
-  concluded.winnerId = rateA >= rateB ? test.variantAId : test.variantBId;
-  concluded.confidence = Math.min(0.7, (test.variantATrials + test.variantBTrials) / 20);
+  upsertABTest(result.data);
+  return result;
+}
 
-  upsertABTest(concluded);
-  return concluded;
+// ── Dispatch-time variant service ───────────────────────────────────────────
+
+/**
+ * Resolve the variant a dispatch should actually run for a checklist item.
+ *
+ * With a **running A/B test** on the item, the arm is chosen by the
+ * epsilon-greedy {@link pickVariant} — this is the point where a variant earns
+ * a trial, and the returned variant's id is what the callback stamps.
+ * With **no running test** the behaviour is exactly the pre-existing one: the
+ * adopted/active variant, or `null` so dispatch falls back to the static
+ * registry prompt.
+ */
+export function resolveDispatchVariant(
+  moduleId: SubModuleId,
+  checklistItemId: string,
+): ServedVariant | null {
+  const running = getABTestsForItem(moduleId, checklistItemId).filter((t) => t.status === 'running');
+  const test = running[running.length - 1];
+  if (test) {
+    const slot = pickVariant(test);
+    const served = getVariantById(slot === 'A' ? test.variantAId : test.variantBId);
+    // A dangling arm (variant row deleted) must not block the run — fall through
+    // to the adopted version rather than serving a prompt that no longer exists.
+    if (served) return { variant: served, testId: test.id, slot };
+  }
+  const active = getActiveVariantForItem(moduleId, checklistItemId);
+  return active ? { variant: active, testId: null, slot: null } : null;
+}
+
+/**
+ * Record the outcome of a run that was served `variantId` for this checklist
+ * item. Finds the running test the variant is an arm of and books the trial
+ * against the right slot; returns `null` when the variant is not under test
+ * (the adopted-version path — nothing to measure).
+ */
+export function recordTrialForServedVariant(
+  moduleId: SubModuleId,
+  checklistItemId: string,
+  variantId: string,
+  success: boolean,
+  durationMs = 0,
+): ABTest | null {
+  for (const test of getABTestsForItem(moduleId, checklistItemId)) {
+    if (test.status !== 'running') continue;
+    const slot = test.variantAId === variantId ? 'A' : test.variantBId === variantId ? 'B' : null;
+    if (slot) return recordTestTrial(test.id, slot, success, durationMs);
+  }
+  return null;
 }
 
 // ── Clustering ──────────────────────────────────────────────────────────────

@@ -17,7 +17,7 @@
 import { buildTaskPrompt, type CLITask, type ChecklistTask } from '@/lib/cli-task';
 import type { ProjectContext } from '@/lib/prompt-context';
 import { tryApiFetch } from '@/lib/api-utils';
-import type { PromptVariant } from '@/types/prompt-evolution';
+import type { ServedVariant } from '@/types/prompt-evolution';
 
 /** The sentinel recorded when a run used the static registry prompt. */
 export const STATIC_VARIANT_ID = 'static';
@@ -38,9 +38,15 @@ export function variantKeyForTask(
 }
 
 /**
- * Resolve the adopted variant's prompt for a task. Returns the variant text +
- * its id, or the task's static prompt + {@link STATIC_VARIANT_ID} when there is
- * no adopted variant or the lookup fails.
+ * Resolve the prompt this task should dispatch with. Returns the served
+ * variant's text + its id, or the task's static prompt +
+ * {@link STATIC_VARIANT_ID} when there is nothing adopted or the lookup fails.
+ *
+ * When a **running A/B test** covers the (module, item) key, the server picks an
+ * arm epsilon-greedily and that arm's id is what comes back — so the id stamped
+ * onto the callback is the variant that actually ran, and the completion POST
+ * can book the trial against it. With no running test this is the unchanged
+ * adopted-variant lookup.
  */
 export async function resolveActivePrompt(
   task: CLITask,
@@ -48,14 +54,14 @@ export async function resolveActivePrompt(
   const key = variantKeyForTask(task);
   if (!key) return { prompt: task.prompt, variantId: STATIC_VARIANT_ID };
 
-  const res = await tryApiFetch<PromptVariant | null>('/api/prompt-evolution', {
+  const res = await tryApiFetch<ServedVariant | null>('/api/prompt-evolution', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'get-active-variant', ...key }),
+    body: JSON.stringify({ action: 'resolve-dispatch-variant', ...key }),
   });
 
   if (!res.ok || !res.data) return { prompt: task.prompt, variantId: STATIC_VARIANT_ID };
-  return { prompt: res.data.prompt, variantId: res.data.id };
+  return { prompt: res.data.variant.prompt, variantId: res.data.variant.id };
 }
 
 /**

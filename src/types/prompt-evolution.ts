@@ -112,6 +112,17 @@ export interface ABTest {
   concludedAt: string | null;
 }
 
+/**
+ * What the dispatch path was served for a checklist item: the variant whose text
+ * runs, plus the running A/B test arm it counts as a trial for (both `null` when
+ * the variant came from the adopted version rather than a live test).
+ */
+export interface ServedVariant {
+  variant: PromptVariant;
+  testId: string | null;
+  slot: 'A' | 'B' | null;
+}
+
 // ── Prompt cluster result (from similarity analysis) ──
 
 export interface PromptCluster {
@@ -201,6 +212,8 @@ export interface PromptEvolutionRequest {
     | 'get-suggestions'
     | 'get-best-variant'
     | 'get-active-variant'
+    | 'resolve-dispatch-variant'
+    | 'record-variant-trial'
     | 'get-version-history'
     | 'restore-variant'
     | 'optimize-prompt';

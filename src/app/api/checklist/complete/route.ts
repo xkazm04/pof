@@ -2,6 +2,10 @@ import { NextRequest } from 'next/server';
 import crypto from 'crypto';
 import { getDb } from '@/lib/db';
 import { apiSuccess, apiError, withRoute } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
+import { recordTrialForServedVariant } from '@/lib/prompt-evolution/engine';
+import { STATIC_VARIANT_ID } from '@/lib/prompt-evolution/dispatch-resolve';
+import type { SubModuleId } from '@/types/modules';
 
 function projectId(projectPath: string): string {
   return crypto
@@ -16,9 +20,16 @@ function projectId(projectPath: string): string {
  *
  * Called by the CLI via curl after finishing a checklist task.
  * Writes directly to the project_progress DB so the UI can pick it up.
+ *
+ * This is also where the prompt-evolution A/B loop closes: the dispatch path
+ * stamps `promptVariantId` (the variant it was actually served) into the
+ * callback's static fields, so a completion reports the outcome of a real run
+ * back to the running test that served it. Booking the trial is best-effort —
+ * marking the item complete is the primary job and must never fail because the
+ * experiment layer did.
  */
 export const POST = withRoute(async (req: NextRequest) => {
-  const { moduleId, itemId, projectPath } = await req.json();
+  const { moduleId, itemId, projectPath, promptVariantId, completed, durationMs } = await req.json();
 
   if (!moduleId || !itemId || !projectPath) {
     return apiError('moduleId, itemId, and projectPath are required', 400);
@@ -49,5 +60,24 @@ export const POST = withRoute(async (req: NextRequest) => {
       updated_at = datetime('now')
   `).run(id, JSON.stringify(progress));
 
-  return apiSuccess({ moduleId, itemId, completed: true });
+  // ── Close the A/B loop ────────────────────────────────────────────────────
+  // A run served the static registry prompt (or no variant at all) is not a
+  // trial of anything, so only a real variant id books one.
+  let trialRecorded = false;
+  if (typeof promptVariantId === 'string' && promptVariantId && promptVariantId !== STATIC_VARIANT_ID) {
+    try {
+      const trial = recordTrialForServedVariant(
+        moduleId as SubModuleId,
+        itemId,
+        promptVariantId,
+        completed !== false,
+        typeof durationMs === 'number' ? durationMs : 0,
+      );
+      trialRecorded = trial !== null;
+    } catch (e) {
+      logger.warn('checklist/complete: could not record A/B trial', e);
+    }
+  }
+
+  return apiSuccess({ moduleId, itemId, completed: true, trialRecorded });
 }, 'Failed to mark checklist item');

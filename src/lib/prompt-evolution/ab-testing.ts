@@ -1,7 +1,18 @@
 import type { ABTest, ABTestStatus } from '@/types/prompt-evolution';
 import type { SubModuleId } from '@/types/modules';
+import { type Result, ok, err } from '@/types/result';
 
 // ── A/B test logic ──────────────────────────────────────────────────────────
+
+/**
+ * The floor a manual "conclude now" must clear before a winner may be crowned.
+ *
+ * Concluding at zero trials used to hand the crown to whichever variant sat in
+ * slot A (`rateA >= rateB` with both rates 0), which is not a measurement — it
+ * is a coin flip dressed as evidence. Both variants must have actually been
+ * served this many times before the engine will name a winner.
+ */
+export const MIN_TRIALS_PER_VARIANT = 3;
 
 /** Create a new A/B test between two variants. */
 export function createABTest(
@@ -124,6 +135,45 @@ export function evaluateTest(test: ABTest): ABTest {
     confidence,
     concludedAt: new Date().toISOString(),
   };
+}
+
+/**
+ * Conclude a test on demand (the user's "decide now" button), refusing while
+ * either variant is still below {@link MIN_TRIALS_PER_VARIANT}.
+ *
+ * Unlike {@link evaluateTest} — which only concludes once the automatic
+ * significance/volume gate opens — this is the manual override, so the floor is
+ * the ONLY thing standing between an unmeasured variant and a crown. The error
+ * side carries the shortfall so the caller can say exactly why nothing was
+ * decided rather than silently doing nothing.
+ */
+export function forceConclude(test: ABTest): Result<ABTest, string> {
+  if (test.status === 'concluded') return ok(test);
+
+  const shortfall: string[] = [];
+  if (test.variantATrials < MIN_TRIALS_PER_VARIANT) {
+    shortfall.push(`A has ${test.variantATrials}`);
+  }
+  if (test.variantBTrials < MIN_TRIALS_PER_VARIANT) {
+    shortfall.push(`B has ${test.variantBTrials}`);
+  }
+  if (shortfall.length > 0) {
+    return err(
+      `Not enough trials to pick a winner — each variant needs ${MIN_TRIALS_PER_VARIANT} ` +
+        `(${shortfall.join(', ')}). Dispatch this checklist item a few more times.`,
+    );
+  }
+
+  const rateA = test.variantASuccesses / test.variantATrials;
+  const rateB = test.variantBSuccesses / test.variantBTrials;
+
+  return ok({
+    ...test,
+    status: 'concluded' as ABTestStatus,
+    winnerId: rateA >= rateB ? test.variantAId : test.variantBId,
+    confidence: Math.min(0.7, (test.variantATrials + test.variantBTrials) / 20),
+    concludedAt: new Date().toISOString(),
+  });
 }
 
 /** Format a human-readable summary of the test. */

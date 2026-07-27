@@ -97,9 +97,10 @@ describe('engine — A/B success rate annotation', () => {
     const a = createVariant(MOD, ITEM, 'Implement a melee attack for the character.');
     const b = mutateVariant(a.id, 'shorten')!;
     const test = startABTest(MOD, ITEM, a.id, b.id);
-    recordTestTrial(test.id, 'A', true, 50);
-    recordTestTrial(test.id, 'B', false, 50);
-    concludeTest(test.id);
+    // Both arms must clear MIN_TRIALS_PER_VARIANT before a winner may be crowned.
+    for (let i = 0; i < 3; i++) recordTestTrial(test.id, 'A', true, 50);
+    for (let i = 0; i < 3; i++) recordTestTrial(test.id, 'B', false, 50);
+    expect(concludeTest(test.id).ok).toBe(true);
 
     const history = getVersionHistory(MOD, ITEM);
     const statsA = history.versions.find((v) => v.variant.id === a.id)!.stats;

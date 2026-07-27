@@ -14,6 +14,8 @@ import {
   generateSuggestions,
   getBestVariant,
   getActiveVariant,
+  resolveDispatchVariant,
+  recordTrialForServedVariant,
   getVersionHistory,
   restoreVariant,
   optimizePrompt,
@@ -81,8 +83,12 @@ export async function POST(req: NextRequest) {
       case 'conclude-test': {
         if (!body.testId) return apiError('testId required', 400);
         const concluded = concludeTest(body.testId);
-        if (!concluded) return apiError('Test not found', 404);
-        return apiSuccess(concluded);
+        // 409: the test exists but has not earned a verdict yet — the reason
+        // names the shortfall so the UI can say why nothing was decided.
+        if (!concluded.ok) {
+          return apiError(concluded.error, concluded.error === 'Test not found' ? 404 : 409);
+        }
+        return apiSuccess(concluded.data);
       }
 
       // ── Clustering ────────────────────────────────────────────
@@ -131,6 +137,35 @@ export async function POST(req: NextRequest) {
         }
         const active = getActiveVariant(body.moduleId as SubModuleId, body.checklistItemId);
         return apiSuccess(active);
+      }
+
+      case 'resolve-dispatch-variant': {
+        // What the NEXT run of this checklist item should be served. With a
+        // running A/B test this picks an arm (epsilon-greedy) and the caller
+        // stamps the served id onto its callback so the trial can be booked;
+        // with no test it is exactly `get-active-variant`.
+        if (!body.moduleId || !body.checklistItemId) {
+          return apiError('moduleId and checklistItemId required', 400);
+        }
+        const served = resolveDispatchVariant(body.moduleId as SubModuleId, body.checklistItemId);
+        return apiSuccess(served);
+      }
+
+      case 'record-variant-trial': {
+        // The callback side of the loop: a finished run reports its outcome for
+        // the variant it was served. No running test on that variant → no trial
+        // (`null`), which is a normal, non-error outcome.
+        if (!body.moduleId || !body.checklistItemId || !body.variantId || body.success === undefined) {
+          return apiError('moduleId, checklistItemId, variantId, and success required', 400);
+        }
+        const trial = recordTrialForServedVariant(
+          body.moduleId as SubModuleId,
+          body.checklistItemId,
+          body.variantId,
+          body.success,
+          body.durationMs ?? 0,
+        );
+        return apiSuccess(trial);
       }
 
       // ── Version history & rollback ──────────────────────────────
