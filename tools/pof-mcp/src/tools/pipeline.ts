@@ -123,6 +123,30 @@ export const PIPELINE_TOOLS: ToolDef[] = [
     },
   },
   {
+    name: 'pof_gate_evidence',
+    description:
+      'The PROOF behind drained L3/L4 gate verdicts: which abslog markers matched, the observed scenario stats + sampled observations, and the frame a visual verdict was judged from. Audit a pass/fail (or a whole catalog) WITHOUT re-running the gate — and see which gate rows carry no proof at all (`missing`), since an un-auditable verdict is itself a finding.',
+    inputSchema: obj(
+      {
+        catalogId: STR,
+        entityId: { type: 'string', description: 'Restrict to one entity.' },
+        step: { type: 'string', description: 'Restrict to one step label.' },
+        tier: { type: 'string', enum: ['L3', 'L4'], description: 'Restrict to one gate tier.' },
+      },
+      ['catalogId'],
+    ),
+    example: { args: { catalogId: 'items' } },
+    handler: (args, pof) =>
+      pof.get(
+        `/api/pipeline-artifacts/drain/evidence${qs({
+          catalogId: reqStr(args, 'catalogId'),
+          entityId: optStr(args, 'entityId'),
+          step: optStr(args, 'step'),
+          tier: optStr(args, 'tier'),
+        })}`,
+      ),
+  },
+  {
     name: 'pof_drain_gates',
     description:
       'Run deferred L3/L4 Test Gates, turning "deferred" into pass/fail. SCOPE is yours to choose: no catalogId/entityId drains EVERYTHING (the global sweep — the only way a real entity\'s gate gets a verdict when its test name was only ever proven on a fixture), catalogId alone drains one catalog, entityIds is a multi-entity batch within a catalog, entityId is one entity. Use `limit` to cap cost (it bounds the batch BEFORE any editor boots). L3 runs on the live editor (bridge) or headless (allowSpawn — the UE editor must be CLOSED). For L4 VISUAL gates, pass projectPath + autoCapture:true to RENDER a real frame headlessly — the result\'s `screenshots` array holds PNG paths you MUST Read and judge with your own eyes: the automated visual judge catches only gross errors (T-pose, black scene, missing humanoid), not "the attack has no swing" or debug cruft. One drain at a time per scope (concurrent → 409; a global drain is exclusive with everything).',

@@ -237,6 +237,16 @@ Persisted acceptance for a catalog (or one entity): every step's status/tier/rea
 }
 ```
 
+### `pof_gate_evidence`
+
+The PROOF behind drained L3/L4 gate verdicts: which abslog markers matched, the observed scenario stats + sampled observations, and the frame a visual verdict was judged from. Audit a pass/fail (or a whole catalog) WITHOUT re-running the gate — and see which gate rows carry no proof at all (`missing`).
+
+**Arguments:**
+- `catalogId` **(required)**: string
+- `entityId`: string — restrict to one entity
+- `step`: string — restrict to one step label
+- `tier`: string (`L3` | `L4`)
+
 ### `pof_drain_gates`
 
 Run deferred L3/L4 Test Gates, turning "deferred" into pass/fail. SCOPE is yours to choose: no catalogId/entityId drains EVERYTHING (the global sweep), catalogId alone drains one catalog, entityIds is a multi-entity batch, entityId is one entity. `limit` caps cost before any editor boots. The editor is non-reentrant — one drain at a time per scope (concurrent → 409; a global drain is exclusive with everything). Set allowSpawn to use a headless editor (it must be CLOSED). For L4, projectPath + autoCapture render a real frame you must Read.

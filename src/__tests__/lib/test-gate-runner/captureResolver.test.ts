@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { makeUeCaptureResolver, DEFAULT_LIT_MAP } from '@/lib/test-gate-runner/captureResolver';
 import { clearScenarioRegistry, registerScenario, registerBuiltinScenarios } from '@/lib/test-gate-runner/scenarioRegistry';
-import type { GateJob } from '@/lib/test-gate-runner/types';
+import type { GateJob, GateScenario } from '@/lib/test-gate-runner/types';
 import type { CaptureScenarioFrameOptions } from '@/lib/ue-launch/capture';
 
 const job = (over: Partial<GateJob> = {}): GateJob =>
@@ -78,5 +78,31 @@ describe('makeUeCaptureResolver — entity-context frames', () => {
     const out = await resolve(job({ catalogId: 'zone-map' })); // no declared map
     expect(out.screenshot).toBeNull();
     expect(out.deferredReason).toBeUndefined(); // → visualExecutor's generic "no source" path
+  });
+});
+
+describe('makeUeCaptureResolver — abilityTag override', () => {
+  it('forwards the job`s abilityTag so L4 photographs the SAME ability the L3 gate ran', async () => {
+    let seen: CaptureScenarioFrameOptions | null = null;
+    const resolve = makeUeCaptureResolver(
+      { uproject: 'C:/p/PoF.uproject' },
+      { capture: async (o) => { seen = o; return 'C:/out/shot_01.png'; } },
+    );
+    // entityId 'fire-ball' would blind-PascalCase to Ability.FireBall (wrong); the override wins.
+    const out = await resolve(job({ catalogId: 'abilities', entityId: 'fire-ball', abilityTag: 'Ability.Fireball' }));
+    expect(out.screenshot).toBe('C:/out/shot_01.png');
+    const scn = seen!.scenario as GateScenario;
+    expect(scn.inputs[0].eventArg).toBe('Ability.Fireball');
+    expect(scn.assert[0]).toMatchObject({ kind: 'ability-activated', tag: 'Ability.Fireball' });
+  });
+
+  it('without an override it still derives the tag from the entityId (unchanged)', async () => {
+    let seen: CaptureScenarioFrameOptions | null = null;
+    const resolve = makeUeCaptureResolver(
+      { uproject: 'C:/p/PoF.uproject' },
+      { capture: async (o) => { seen = o; return 'C:/out/shot_01.png'; } },
+    );
+    await resolve(job({ catalogId: 'abilities', entityId: 'ground-slam' }));
+    expect((seen!.scenario as GateScenario).inputs[0].eventArg).toBe('Ability.GroundSlam');
   });
 });

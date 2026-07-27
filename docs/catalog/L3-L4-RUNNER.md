@@ -11,6 +11,13 @@ The chassis reaches **config-complete (L0–L2)** entirely in parallel; **L3 run
 
 `deferred` stays a first-class state: an unavailable executor or a job missing its test name is **skipped** (stays deferred), never failed.
 
+### Evidence — and its reader
+
+A verdict carries bounded `GateEvidence` (`@/types/observation`: matched abslog markers, down-sampled observations + derived stats, the captured frame, truncated judge text) and `drainOne` merges it into the artifact's `data.evidence`. That write was **read by nothing** — the proof was persisted and then unreachable. It now has a reader:
+
+- **`evidenceAudit.ts`** (pure) — `readEvidence(artifact)` validates the stored shape (unknown kind / missing timestamp / wrong type reads as *no evidence*, never a half-parsed proof); `buildEvidenceAudit(artifacts, filter)` splits every L3/L4 row into `rows` (verdict **+** proof + a one-line `summary`) and `missing` (gate rows whose verdict carries no proof — an un-auditable flip is itself a finding). Synthetic fixture entities are excluded unless asked for.
+- **`GET /api/pipeline-artifacts/drain/evidence?catalogId=[&entityId=&step=&tier=]`** serves it, and **`pof_gate_evidence`** exposes it headlessly — so the judge fleet audits *why* a gate passed without re-running it.
+
 ## Notifications (opt-in webhook)
 
 A long unattended drain shouldn't be a black box. The `gate.verdict.changed` event feeds a server-side notifier (`src/lib/notify/gate-notifier.ts`, registered once in `src/instrumentation.ts` next to the nightly-build cron) that POSTs to an outbound webhook — Slack (`{text}`), Discord (`{content}`), or a generic JSON envelope.
@@ -80,7 +87,7 @@ The verdict surfaces `ScenarioStats` (`distance` 2D, `distance3d`, `peakSpeed`, 
 > **UE-side emission — honest split.** `loc_x/loc_y/loc_z` and `speed` are already carried by the `UScenarioController` sample stream (they are non-optional on `ObsSample` and appear in the calibration fixtures) — this round simply started **using** loc_z and speed in the verdict (they were grep-zero before). `ability_found` is a **new** additive field: the loud ability-tag-mismatch verdict only fires once the UE-side `activate_ability` path sets it (until then `ability-activated` degrades to the effect-only check). That UE emission is the deferred half of Direction 1.
 
 **Scenario archetypes** (`scenarioRegistry.ts`, resolved most→least specific by `${catalogId}:${step}` → `${catalogId}` → `${testName}`):
-- **abilities** — activate the entity's ability tag on the pawn's ASC; `abilityTagFor(entityId, override?)` derives `Ability.<Pascal>` but an explicit `abilityTag` on the job WINS (a dotted tag verbatim, a bare name PascalCased) — the escape hatch for an entityId whose blind PascalCase does not match the registered tag. The resolved tag is stamped onto the `ability-activated` assertion.
+- **abilities** — activate the entity's ability tag on the pawn's ASC; `abilityTagFor(entityId, override?)` derives `Ability.<Pascal>` but an explicit `abilityTag` WINS (a dotted tag verbatim, a bare name PascalCased) — the escape hatch for an entityId whose blind PascalCase does not match the registered tag. The resolved tag is stamped onto the `ability-activated` assertion. **The override is sourced from the artifact's `data.abilityTag`** and honored at BOTH key-building sites: `collectDeferred` (L3 — it also carries the tag on the `GateJob`) and `captureResolver` (L4 — otherwise the frame would photograph a *different*, blind-PascalCased scenario than the gate ran). Previously only tests passed it, so the documented hatch did nothing in production.
 - **movement** (`character-pipeline`) — drive `W` for ~1.8 s with `disableAI:true` (so enemies can't stagger the pawn), then gate on `moved` (real horizontal displacement) + `min-speed` (real velocity). `disableAI` is now forwarded onto the L3 spawn inbox via the pure `scenarioInboxFor` (it was previously honored only on the L4 capture path).
 
 ### VS-test scaffolder — planned test name → authorable C++ (`src/lib/ue-test-scaffold/`)
@@ -94,7 +101,7 @@ The 29 planned `VS*Test` / `PoF.*.Config` gates are the named NEXT of two campai
 
 ### Catalog-level (multi-entity) drain
 
-`POST /api/pipeline-artifacts/drain` accepts an additive **`entityIds: string[]`** (with `catalogId`) — a whole-catalog batch that reuses ONE catalog-scoped collection (`collectDeferred` filters the set in JS), ONE availability probe, and ONE grouped boot for the entire set (`drainAll` → single `drainJobs` pass). **Lease semantics are all-or-nothing**: the handler acquires the per-entity in-flight lease for every requested entity up front; if ANY is already in flight it refuses the whole batch with **409** (naming the conflicting `catalog/entity`) — the same "never two drains on one entity" guarantee the single-entity path gives, extended to the set; all leases are freed in `finally`. Backward compatible — absent `entityIds` is the existing single-entity/global behaviour, byte-for-byte. (The client `useBatchDrain` hook still POSTs per entity for live per-entity grid feedback + per-entity 409 retry; wiring it to the multi-entity API is a follow-up, deliberately not taken to avoid losing that live UI.)
+`POST /api/pipeline-artifacts/drain` accepts an additive **`entityIds: string[]`** (with `catalogId`) — a whole-catalog batch that reuses ONE catalog-scoped collection (`collectDeferred` filters the set in JS), ONE availability probe, and ONE grouped boot for the entire set (`drainAll` → single `drainJobs` pass). **Lease semantics are all-or-nothing**: the handler acquires the per-entity in-flight lease for every requested entity up front; if ANY is already in flight it refuses the whole batch with **409** (naming the conflicting `catalog/entity`) — the same "never two drains on one entity" guarantee the single-entity path gives, extended to the set; all leases are freed in `finally`. Backward compatible — absent `entityIds` is the existing single-entity/global behaviour, byte-for-byte. The client `useBatchDrain` hook **is wired to this multi-entity API** (`drainCatalogGates(catalogId, ids)` — ONE request for the whole set), publishing the in-flight entity set for the live grid highlight and retrying once on a 409.
 
 ## Triggers — operator drain + always-on worker
 

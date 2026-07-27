@@ -1,5 +1,6 @@
 export type { GateExecutor, GateJob, GateTier, GateVerdict, DrainResult, DrainSummary } from './types';
 export { collectDeferred, drainOne, drainJobs, drainAll, parseTier, parseDrainFilter, type DrainFilter } from './drain';
+export { readEvidence, buildEvidenceAudit, type EvidenceAudit, type EvidenceAuditFilter, type GateEvidenceRow } from './evidenceAudit';
 export { DRAIN_REQUEST_KEYS, parseDrainRequest, type DrainRequest, type DrainRequestKey } from './drainRequest';
 export { startDrainWorker, stopDrainWorker, getWorkerStatus, runDrainTick, type WorkerConfig, type WorkerStatus } from './worker';
 export { parseTestName } from './parse';

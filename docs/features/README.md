@@ -117,7 +117,7 @@ L0–L2 are the **config-complete** bar a single CLI reaches solo, so many autho
 | Pipeline engine, acceptance, canon | `src/lib/catalog/` |
 | `/layout` design studio | `src/components/layout-lab/` |
 | Autonomous builder | `src/lib/harness/` |
-| LLM↔UE observation contract | `src/lib/observation/` |
+| LLM↔UE observation contract | `src/types/observation.ts` |
 | UE bridge client | `src/lib/bridge/` |
 | L3/L4 gate runner | `src/lib/test-gate-runner/` |
 | Agent-facing MCP tools | `tools/pof-mcp/` |

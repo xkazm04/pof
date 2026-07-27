@@ -46,11 +46,15 @@ export function makeUeCaptureResolver(
     // If a per-gate scenario is registered (e.g. the `abilities` archetype activates the
     // entity's ability), drive it so the frame shows the ACTION; else a generic settle.
     // A GateScenario is structurally assignable to ue-launch's CaptureScenarioSpec.
+    // The job's `abilityTag` override must travel with the key — otherwise the L4 frame is
+    // captured from a DIFFERENT (blind-PascalCased) scenario than the L3 gate ran, photographing
+    // an ability that never activated.
     const scenario = resolveScenario({
       catalogId: job.catalogId,
       entityId: job.entityId,
       step: job.step,
       ...(job.testName ? { testName: job.testName } : {}),
+      ...(job.abilityTag ? { abilityTag: job.abilityTag } : {}),
     });
     // Precedence: explicit operator override → scenario-declared map → lit fallback.
     const explicit = cfg.mapFor?.(job);

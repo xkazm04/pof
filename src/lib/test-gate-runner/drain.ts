@@ -61,6 +61,12 @@ export function parseDrainFilter(get: (k: DrainFilterKey) => unknown): DrainFilt
   };
 }
 
+/** The artifact-declared gameplay-ability tag override, when it is a usable string. Pure. */
+function readAbilityTag(data: unknown): string | undefined {
+  const v = (data as Record<string, unknown> | undefined)?.abilityTag;
+  return typeof v === 'string' && v.trim() ? v.trim() : undefined;
+}
+
 /**
  * Turn the deferred `pipeline_artifacts` rows into runnable jobs.
  *
@@ -86,13 +92,21 @@ export function collectDeferred(filter?: DrainFilter): GateJob[] {
     .filter((a) => !isSyntheticEntity(a.entityId) || named.has(a.entityId))
     .map((a) => {
     const testName = parseTestName(a.reason) ?? undefined;
-    const scenario = resolveScenario({ catalogId: a.catalogId, entityId: a.entityId, step: a.step, testName });
+    // The artifact's own `data.abilityTag` is the escape hatch for an entityId whose blind
+    // PascalCase is not the registered gameplay tag — honored here AND carried on the job so
+    // the L4 captureResolver resolves the SAME scenario (it re-builds the key from the job).
+    const abilityTag = readAbilityTag(a.data);
+    const scenario = resolveScenario({
+      catalogId: a.catalogId, entityId: a.entityId, step: a.step, testName,
+      ...(abilityTag ? { abilityTag } : {}),
+    });
     return {
       catalogId: a.catalogId,
       entityId: a.entityId,
       step: a.step,
       tier: (a.tier === 'L4' ? 'L4' : 'L3') as GateTier,
       ...(testName ? { testName } : {}),
+      ...(abilityTag ? { abilityTag } : {}),
       ...(scenario ? { scenario } : {}),
       ...(a.reason ? { reason: a.reason } : {}),
     };

@@ -346,3 +346,25 @@ describe('collectDeferred — multi-entity batch (entityIds)', () => {
     expect(jobs.map((j) => j.entityId).sort()).toEqual(['a', 'c']);
   });
 });
+
+describe('collectDeferred — abilityTag override (the documented escape hatch)', () => {
+  it('reads data.abilityTag onto the job AND into scenario resolution', () => {
+    seed({
+      catalogId: 'abilities', entityId: 'fire-ball', step: 'Test Gate', tier: 'L3',
+      reason: 'live-UE runner not yet run: VSFireballTest',
+      data: { abilityTag: 'Ability.Fireball' },
+    });
+    const [job] = collectDeferred();
+    expect(job.abilityTag).toBe('Ability.Fireball');
+    // The registered `abilities` scenario activates the OVERRIDE tag, not Ability.FireBall.
+    expect(job.scenario?.inputs[0].eventArg).toBe('Ability.Fireball');
+    expect(job.scenario?.assert[0]).toMatchObject({ kind: 'ability-activated', tag: 'Ability.Fireball' });
+  });
+
+  it('without an override the tag is still derived from the entityId (unchanged)', () => {
+    seed({ catalogId: 'abilities', entityId: 'ground-slam', step: 'Test Gate', tier: 'L3', reason: 'live-UE runner not yet run: T' });
+    const [job] = collectDeferred();
+    expect(job.abilityTag).toBeUndefined();
+    expect(job.scenario?.inputs[0].eventArg).toBe('Ability.GroundSlam');
+  });
+});

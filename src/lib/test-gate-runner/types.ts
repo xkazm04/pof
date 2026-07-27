@@ -66,6 +66,14 @@ export interface GateJob {
   /** L3 behavioural — a scenario to drive + observe (faithful gate). Takes precedence
    *  over `testName` in the spawn executor. */
   scenario?: GateScenario;
+  /**
+   * Explicit gameplay-ability tag for scenario resolution, read from the artifact's
+   * `data.abilityTag`. The documented escape hatch for an entityId whose blind PascalCase does
+   * NOT match the registered tag (which otherwise reads as "no montage and no resource" —
+   * indistinguishable from a broken ability). Honored by BOTH key-building sites: the L3
+   * `collectDeferred` and the L4 `captureResolver`.
+   */
+  abilityTag?: string;
   /** The original deferred reason (for context / skip messages). */
   reason?: string;
 }

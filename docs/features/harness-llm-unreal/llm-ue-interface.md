@@ -43,7 +43,9 @@ Intent (declares required Tier)
        inconclusive → escalate
 ```
 
-App-side contract: `src/lib/observation/{types,client,record}.ts` (`Observation`, `Verdict`, `Scenario` types; `observe()` over the bridge; persist to `pipeline_artifacts`). UE-side: `Content/Python/observation/*.py` + the C++ PIE harness `PoFScenarioRunner`.
+App-side contract: **`src/types/observation.ts`** — the scenario inbox + launch-arg writers (`buildScenarioInbox`, `buildScenarioLaunchArgs`, `ScenarioSpec`/`ScenarioInput`) shared by the L3 spawn path and the L4 capture path, the `Observations`/`ObsSample` reading contract, and `GateEvidence` (the bounded proof a verdict persists into `pipeline_artifacts.data.evidence`, read back by `test-gate-runner/evidenceAudit.ts`). UE-side: `Content/Python/observation/*.py` + the C++ PIE harness `PoFScenarioRunner`.
+
+> A parallel `src/lib/observation/{types,client,record}.ts` module (`observe()`, `Verdict`, `recordObservation`) once described this spine in the abstract but never acquired a production caller — the runner has always used the contract above. It was **deleted** rather than left as a second, aspirational definition of the same thing.
 
 ---
 
