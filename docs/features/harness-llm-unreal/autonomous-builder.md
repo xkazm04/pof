@@ -50,7 +50,7 @@ It's a **streaming pool**, not lock-step waves: an area that finishes early free
 | `visual-gate.ts` | `runVisualGate` — Playwright screenshots + perceptual diff (pixelmatch) + axe-core a11y scan |
 | `guide-generator.ts` | accumulates a `GameBuildGuide` (phases, decisions, gotchas) as a side effect |
 | `run-diff.ts` | `diffRuns` — pure run-to-run comparison (pass-rate / cost / per-area deltas) |
-| `run-harness.ts` | standalone CLI entry point (`--project`, `--scenario`, `--theme`, `--checkpoint`, `--dry-run`) |
+| `run-harness.ts` | standalone CLI entry point — full HTTP parity (`--project`, `--budget`/`--unlimited`, `--pass-rate-basis`, `--ue-tests`/`--ue-visual`, `--scenario`, `--theme`, `--checkpoint`, `--fork`, `--dry-run`); pure, exported helpers (`parseCliOptions`, `configFromCliOptions`, `cliOrchestratorOptions`, `formatRateLine`) so the surface is testable without spawning a loop |
 | `types.ts` | `GamePlan`, `ModuleArea`, `PlannedFeature`, `VerificationGate`/`Report`, `HarnessEvent`, `HarnessCostTotals`, `GameBuildGuide` |
 
 **External-memory design** (from Anthropic's harness research): state files are JSON not Markdown (models corrupt JSON less); one module-area per executor session (large scope fills the 1M window); artifacts bridge context windows; gates enforce verification before advancing. Run artifacts land in `.harness/` (`game-plan.json`, `progress.json`, `guide.json` + `.md`, `cost.json`, `checkpoints.json`, plus `run-meta.json` + `harness-config.json` for durable resume).
@@ -77,7 +77,7 @@ It's a **streaming pool**, not lock-step waves: an area that finishes early free
 ## Control surface
 
 **HTTP** (`src/app/api/harness/`):
-- `POST /api/harness` — `{ action: 'start' | 'pause' | 'resume', projectPath, projectName, ueVersion, maxIterations?, targetPassRate?, passRateBasis?, budgetUsd?, unlimited?, maxConcurrent?, scenario?, checkpoint?, ueTests?, ueTestFilter?, themeDirective?, areaPassThreshold? }`. `targetPassRate`/`areaPassThreshold` accept a 0–1 fraction OR a 0–100 percent (normalized server-side; `areaPassThreshold` validated to `(0,100]`); `passRateBasis` (`verified` | `self-reported`) picks the stop-condition numerator; `themeDirective` (≤2000 chars, validated) injects creative direction into every executor prompt; `maxConcurrent` raises pool concurrency; `scenario` (`ui-overhaul` | `content-overhaul`, from the shared `scenarios.ts`) swaps in a curated area set; `unlimited: true` is the only way to run with no spend cap; `ueTests` opts in the automation-test gate; `ueVisual` opts in the game-runs gate.
+- `POST /api/harness` — `{ action: 'start' | 'pause' | 'resume', projectPath, projectName, ueVersion, statePath?, fork?, maxIterations?, targetPassRate?, passRateBasis?, sessionTimeoutMs?, budgetUsd?, unlimited?, maxConcurrent?, scenario?, checkpoint?, ueTests?, ueTestFilter?, ueVisual?, themeDirective?, areaPassThreshold? }`. `targetPassRate`/`areaPassThreshold` accept a 0–1 fraction OR a 0–100 percent (normalized server-side; `areaPassThreshold` validated to `(0,100]`); `passRateBasis` (`verified` | `self-reported`) picks the stop-condition numerator; `themeDirective` (≤2000 chars, validated) injects creative direction into every executor prompt; `maxConcurrent` raises pool concurrency; `scenario` (`ui-overhaul` | `content-overhaul`, from the shared `scenarios.ts`) swaps in a curated area set; `unlimited: true` is the only way to run with no spend cap; `ueTests` opts in the automation-test gate; `ueVisual` opts in the game-runs gate.
   - `start` resolves DURABLE IDENTITY from the `statePath`: it RESUMES the prior run (same runId) rather than fragmenting history, FORKS with provenance from a terminal run, or starts fresh (`fork:true` forces a fork; the response carries `mode` + `resumedRunId`/`parentRunId`).
   - `resume` after a server restart REHYDRATES the orchestrator from disk (`run-meta.json` + `harness-config.json`) so the same run continues — pass `statePath` when the in-memory singleton is gone; the response carries `rehydrated` + `runId`.
 - `GET /api/harness[?action=plan|guide|progress|events]` — status snapshot or the full plan/guide/progress/events
@@ -85,12 +85,34 @@ It's a **streaming pool**, not lock-step waves: an area that finishes early free
 - `GET /api/harness/screenshot`, `/screenshots` — visual-gate captures
 
 **MCP** (`tools/pof-mcp/`, for a Claude Code CLI to drive it):
-- `pof_harness_start` — launch (returns immediately; poll status). Full parity with the HTTP surface: `themeDirective`, `sessionTimeoutMs`, `areaPassThreshold`, `passRateBasis` (+ the pre-existing budget/scenario/concurrency/ue-test levers).
-- `pof_harness_status` — run state, plan progress (both `verifiedPassRate` + `selfReportedPassRate`), cost, checkpoints, recent events
+- `pof_harness_start` — launch (returns immediately; poll status). Every HTTP start lever, including `statePath`, `fork` and `ueVisual` (the game-runs gate — previously UNREACHABLE from MCP)
+- `pof_harness_status` — run state, plan progress (both `verifiedPassRate` + `selfReportedPassRate`), cost, checkpoints, recent events; `feed: 'events' | 'progress'` swaps in the raw event ring / the full progress log (`GET ?action=events|progress`)
 - `pof_harness_plan` — the full `GamePlan` (every area, feature, dependency)
-- `pof_harness_control` — pause (after the current iteration) / resume
+- `pof_harness_control` — pause (after the current iteration) / resume; pass `statePath` so a resume AFTER A SERVER RESTART rehydrates the same run from disk instead of 409ing
 - `pof_harness_guide` — the accumulated build guide + learnings
 - `pof_harness_runs` / `pof_harness_run` / `pof_harness_run_diff` — run history, a single run's full snapshot, and a run-to-run comparison (proxy `/api/harness/runs*`)
+
+**CLI** (`npx tsx src/lib/harness/run-harness.ts`, no dev server needed): every HTTP lever has a flag — `--budget`/`--unlimited`, `--pass-rate-basis`, `--ue-tests`/`--ue-test-filter`/`--ue-visual`, `--fork`, alongside the pre-existing `--project`/`--name`/`--ue-version`/`--max-iterations`/`--target-pass-rate`/`--timeout`/`--concurrency`/`--area-threshold`/`--state-path`/`--theme`/`--scenario`/`--checkpoint`/`--dry-run` (run with `--help` for the full text). It resolves the same **durable identity** as the HTTP route (`cliOrchestratorOptions` → `resolveRunIdentity`): a start over an existing `.harness` RESUMES that runId instead of minting a new one — before this the CLI fragmented one build's history across a row per invocation. Its console **headlines the VERIFIED rate** (the numerator the stop condition actually compares) with the executor's self-report shown second and explicitly labeled, and it prints the launch preflight's unreachable-success advisory as `⚠ WARNING` (non-fatal `harness:error`) rather than swallowing it or dressing it as a crash.
+
+### Parity table (audited — no surface silently lags)
+
+| Lever | HTTP `POST /api/harness` | MCP | CLI |
+|---|---|---|---|
+| `projectPath` / `projectName` / `ueVersion` | ✅ | ✅ | `--project` / `--name` / `--ue-version` |
+| `statePath` | ✅ | ✅ (`start` + `control`) | `--state-path` |
+| `fork` | ✅ | ✅ | `--fork` |
+| `maxIterations` / `targetPassRate` / `passRateBasis` | ✅ | ✅ | `--max-iterations` / `--target-pass-rate` / `--pass-rate-basis` |
+| `budgetUsd` / `unlimited` | ✅ | ✅ | `--budget` / `--unlimited` |
+| `sessionTimeoutMs` / `maxConcurrent` / `areaPassThreshold` | ✅ | ✅ | `--timeout` / `--concurrency` (default 4, vs 1 over HTTP) / `--area-threshold` |
+| `scenario` / `themeDirective` / `checkpoint` | ✅ | ✅ | `--scenario` / `--theme` / `--checkpoint` |
+| `ueTests` / `ueTestFilter` / `ueVisual` | ✅ | ✅ | `--ue-tests` / `--ue-test-filter` / `--ue-visual` |
+| status / plan / guide / progress / events reads | ✅ | ✅ (`pof_harness_status` `feed`, `pof_harness_plan`, `pof_harness_guide`) | streamed as console events; artifacts land in `<statePath>/` |
+| `pause` / `resume` | ✅ | ✅ | **CLI-shaped, not absent:** SIGINT/SIGTERM pause the loop after the current iteration; resume = re-run the same `--state-path` (durable identity adopts the runId). A *live* pause/resume RPC needs a long-lived server — that is HTTP/MCP-only by design |
+| Run history (`/api/harness/runs*`) | ✅ | ✅ | **HTTP/MCP-only** — history is a DB read, not a build lever; use `pof_harness_runs` / the UI |
+| Screenshots (`/api/harness/screenshot[s]`) | ✅ | ❌ **HTTP/MCP-gap, intentional** — images are served bytes, not tool JSON; the UI's `HarnessVisualGallery` is the consumer | files under `<statePath>/screenshots/` |
+| `--dry-run` (print the plan, build nothing) | ❌ **CLI-only** — HTTP has no side-effect-free plan preview | — | ✅ |
+
+The MCP half of this table is **mechanically enforced**: `tools/pof-mcp/src/harness-tools.test.ts` parses the POST body type out of `src/app/api/harness/route.ts` and fails if any field is unreachable from `pof_harness_start`/`pof_harness_control` (only `action` is allowlisted, with its reason). A new HTTP lever therefore breaks the build until MCP exposes it — the parity claim can't rot. The CLI half is covered by `src/__tests__/lib/harness/cli-parity.test.ts` (flags, identity resolution, headline).
 
 **UI** (`src/components/harness/`): `HarnessGuideViewer` (the generated playbook), `HarnessRunHistory` (pick two runs → diff), `HarnessVisualGallery` (screenshot thumbnails per iteration/area, each badged **GAME** for a headless UE render vs **WEB** for a webapp Playwright shot).
 

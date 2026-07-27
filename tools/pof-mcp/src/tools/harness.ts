@@ -11,6 +11,16 @@ export const HARNESS_TOOLS: ToolDef[] = [
         projectPath: { type: 'string', description: 'Absolute path to the UE project root.' },
         projectName: STR,
         ueVersion: { type: 'string', description: 'e.g. "5.7".' },
+        statePath: {
+          type: 'string',
+          description:
+            'Where the run\'s durable state lives (default <projectPath>/.harness). A start pointed at an EXISTING statePath RESUMES that run (same runId) instead of fragmenting history; pass the same path to pof_harness_control resume after a server restart.',
+        },
+        fork: {
+          type: 'boolean',
+          description:
+            'Force a NEW forked run (new runId, parentRunId recorded) even when the statePath holds a resumable run. Default is resume-not-fork.',
+        },
         maxIterations: { type: 'number' },
         targetPassRate: {
           type: 'number',
@@ -63,6 +73,11 @@ export const HARNESS_TOOLS: ToolDef[] = [
           type: 'string',
           description: 'Automation test filter for the ue-test gate (default "Project"), e.g. "PoF.Combat".',
         },
+        ueVisual: {
+          type: 'boolean',
+          description:
+            'Opt-in the ue-visual GAME-RUNS gate: boots the game headlessly once per iteration, captures a rendered frame and judges it (advisory, never blocks). Requires POF_UE_EDITOR_CMD/POF_UE_UPROJECT; a headless boot costs minutes.',
+        },
       },
       ['projectPath', 'projectName', 'ueVersion'],
     ),
@@ -72,6 +87,8 @@ export const HARNESS_TOOLS: ToolDef[] = [
         projectPath: reqStr(args, 'projectPath'),
         projectName: reqStr(args, 'projectName'),
         ueVersion: reqStr(args, 'ueVersion'),
+        ...(optStr(args, 'statePath') != null ? { statePath: optStr(args, 'statePath') } : {}),
+        ...(args.fork === true ? { fork: true } : {}),
         ...(optNum(args, 'maxIterations') != null ? { maxIterations: optNum(args, 'maxIterations') } : {}),
         ...(optNum(args, 'targetPassRate') != null ? { targetPassRate: optNum(args, 'targetPassRate') } : {}),
         ...(optStr(args, 'passRateBasis') != null ? { passRateBasis: optStr(args, 'passRateBasis') } : {}),
@@ -85,15 +102,29 @@ export const HARNESS_TOOLS: ToolDef[] = [
         ...(args.checkpoint === true ? { checkpoint: true } : {}),
         ...(args.ueTests === true ? { ueTests: true } : {}),
         ...(optStr(args, 'ueTestFilter') != null ? { ueTestFilter: optStr(args, 'ueTestFilter') } : {}),
+        ...(args.ueVisual === true ? { ueVisual: true } : {}),
       }),
   },
   {
     name: 'pof_harness_status',
     description:
-      'Current harness status: run state, plan progress (areas/features/pass-rate), cost tally, checkpoints, and recent events. Poll after pof_harness_start.',
-    inputSchema: obj({}),
+      'Current harness status: run state, plan progress (areas/features, verifiedPassRate + selfReportedPassRate), cost tally, checkpoints, and recent events. Poll after pof_harness_start. `feed` swaps the summary for the raw event ring or the full progress log.',
+    inputSchema: obj({
+      feed: {
+        type: 'string',
+        enum: ['status', 'events', 'progress'],
+        description:
+          '"status" (default) = the summary snapshot; "events" = the last 50 harness events; "progress" = the full per-area progress log from disk.',
+      },
+    }),
     example: { args: {} },
-    handler: (_args, pof) => pof.get('/api/harness'),
+    handler: (args, pof) => {
+      const feed = optStr(args, 'feed') ?? 'status';
+      if (feed !== 'status' && feed !== 'events' && feed !== 'progress') {
+        throw new Error('feed must be "status", "events" or "progress"');
+      }
+      return pof.get(feed === 'status' ? '/api/harness' : `/api/harness?action=${feed}`);
+    },
   },
   {
     name: 'pof_harness_plan',
@@ -103,12 +134,24 @@ export const HARNESS_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_harness_control',
-    description: 'Steer the running harness: pause (after the current iteration) or resume.',
-    inputSchema: obj({ action: { type: 'string', enum: ['pause', 'resume'] } }, ['action']),
+    description:
+      'Steer the running harness: pause (after the current iteration) or resume. After a SERVER RESTART the in-memory orchestrator is gone — pass `statePath` so resume rehydrates the same run from disk (run-meta.json + harness-config.json) instead of 409ing.',
+    inputSchema: obj(
+      {
+        action: { type: 'string', enum: ['pause', 'resume'] },
+        statePath: {
+          type: 'string',
+          description:
+            'The run\'s state dir (default <projectPath>/.harness). Required for a resume after a server restart; ignored for pause.',
+        },
+      },
+      ['action'],
+    ),
     handler: (args, pof) => {
       const action = reqStr(args, 'action');
       if (action !== 'pause' && action !== 'resume') throw new Error('action must be "pause" or "resume"');
-      return pof.post('/api/harness', { action });
+      const statePath = optStr(args, 'statePath');
+      return pof.post('/api/harness', { action, ...(statePath != null ? { statePath } : {}) });
     },
   },
   {
