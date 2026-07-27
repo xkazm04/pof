@@ -1,4 +1,5 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
+import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
 import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
@@ -136,6 +137,7 @@ registerCatalogPipeline({
         'anchor',
       ]),
         linksResolve(),
+        wiringContractSound('dataBinding'),
       ),
       staticChecks: () => [
         cppSymbolExists('UARPGAttributeSet', 'Attribute set declared in UE Source'),
@@ -403,6 +405,7 @@ registerCatalogPipeline({
       accept: allOf(
         minCount('assets', '≥2 UE assets packaged', 2),
         linksResolve(),
+        wiringContractSound(),
       ),
       staticChecks: (e) => [
         cppSymbolExists('UARPGAttributeSet', 'Attribute set declared in Source/'),

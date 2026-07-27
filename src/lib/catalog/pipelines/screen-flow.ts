@@ -1,4 +1,5 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
+import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
 import { minLength, fieldsPopulated, selected, minCount, entriesHaveFields } from '../acceptance/dataCheckers';
 import { graphValid } from '../acceptance/graphCheckers';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
@@ -218,6 +219,7 @@ registerCatalogPipeline({
       accept: allOf(
         graphValid('graph', 'Screens reachable + has a terminal/exit'),
         linksResolve(),
+        wiringContractSound(),
       ),
     },
 
@@ -305,6 +307,7 @@ registerCatalogPipeline({
       accept: allOf(
         minCount('inputMapping', '≥1 input mapping rule defined', 1),
         entriesHaveFields('inputMapping', 'every mapping carries action + binding + mode + transition', ['action', 'defaultBinding', 'inputMode', 'transition']),
+        wiringContractSound(),
       ),
     },
 
@@ -439,6 +442,7 @@ registerCatalogPipeline({
       accept: allOf(
         minCount('componentInventory', '≥1 screen widget component entry defined', 1),
         entriesHaveFields('componentInventory', 'every component carries screen + widget + zDepth + anchor', ['screen', 'widget', 'zDepth', 'anchor']),
+        wiringContractSound(),
       ),
     },
 
@@ -696,7 +700,10 @@ registerCatalogPipeline({
           ueAssets: assets.map((a) => `/Game/UI/${a}`),
         };
       },
-      accept: minCount('assets', '≥3 UE screen flow assets packaged', 3),
+      accept: allOf(
+        minCount('assets', '≥3 UE screen flow assets packaged', 3),
+        wiringContractSound(),
+      ),
     },
   ],
 });

@@ -1,4 +1,5 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
+import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
 import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
@@ -111,10 +112,13 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated(
-        'triggerProgress',
-        'gameplayEvent + progressMetric + threshold + guard defined',
-        ['gameplayEvent', 'progressMetric', 'threshold', 'guard'],
+      accept: allOf(
+        fieldsPopulated(
+          'triggerProgress',
+          'gameplayEvent + progressMetric + threshold + guard defined',
+          ['gameplayEvent', 'progressMetric', 'threshold', 'guard'],
+        ),
+        wiringContractSound('triggerProgress'),
       ),
       staticChecks: () => [
         cppSymbolExists('UARPGAchievementSubsystem', 'Achievement subsystem present in Source/PoF/'),
@@ -227,6 +231,7 @@ registerCatalogPipeline({
       accept: allOf(
         minCount('links', '≥1 reward link (gold or item) declared', 1),
         linksResolve(),
+        wiringContractSound('reward'),
       ),
       staticChecks: (e) => [
         cppSymbolExists('UARPGAchievementSubsystem', 'Achievement subsystem grants reward via ASC'),
@@ -292,11 +297,14 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('platform', 'steam + psn + xbox platform entries defined', [
-        'steam',
-        'psn',
-        'xbox',
-      ]),
+      accept: allOf(
+        fieldsPopulated('platform', 'steam + psn + xbox platform entries defined', [
+          'steam',
+          'psn',
+          'xbox',
+        ]),
+        wiringContractSound('platform'),
+      ),
     },
 
     // ── 6. Icon / Badge ──────────────────────────────────────────────────────
@@ -378,12 +386,15 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('toast', 'widget + format + anchor + duration defined', [
-        'widget',
-        'format',
-        'anchor',
-        'duration',
-      ]),
+      accept: allOf(
+        fieldsPopulated('toast', 'widget + format + anchor + duration defined', [
+          'widget',
+          'format',
+          'anchor',
+          'duration',
+        ]),
+        wiringContractSound('toast'),
+      ),
     },
 
     // ── 8. Anti-Cheat / Validation ───────────────────────────────────────────
@@ -433,11 +444,14 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('antiCheat', 'authorityModel + idempotencyGuard + auditLog defined', [
-        'authorityModel',
-        'idempotencyGuard',
-        'auditLog',
-      ]),
+      accept: allOf(
+        fieldsPopulated('antiCheat', 'authorityModel + idempotencyGuard + auditLog defined', [
+          'authorityModel',
+          'idempotencyGuard',
+          'auditLog',
+        ]),
+        wiringContractSound('antiCheat'),
+      ),
       staticChecks: () => [
         cppSymbolExists('UARPGAchievementSubsystem', 'Achievement subsystem is server-authoritative'),
       ],
@@ -499,7 +513,10 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('telemetry', 'events + metric defined', ['events', 'metric']),
+      accept: allOf(
+        fieldsPopulated('telemetry', 'events + metric defined', ['events', 'metric']),
+        wiringContractSound('telemetry'),
+      ),
       staticChecks: () => [
         cppSymbolExists('UARPGTelemetrySubsystem', 'Telemetry subsystem used for achievement events'),
       ],
@@ -606,7 +623,10 @@ registerCatalogPipeline({
           ],
         };
       },
-      accept: minCount('assets', '≥2 UE assets packaged', 2),
+      accept: allOf(
+        minCount('assets', '≥2 UE assets packaged', 2),
+        wiringContractSound(),
+      ),
       staticChecks: (e) => [
         cppSymbolExists('UARPGAchievementSubsystem', 'Achievement subsystem present in Source/PoF/'),
         cppSymbolExists('FARPGAchievementRow', 'Achievement row struct present in Source/PoF/'),

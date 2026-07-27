@@ -1,4 +1,6 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
+import { allOf } from '@/lib/catalog/acceptance/combinators';
+import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
 import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists } from '../acceptance/ueStaticCheckers';
@@ -99,16 +101,19 @@ registerCatalogPipeline({
         },
         ueAssets: ['/Game/Input/DA_InputSchemes', '/Game/Input/IMC_Gameplay'],
       }),
-      accept: fieldsPopulated('mapping', 'Move/attack/dodge/interact + ability1–4 bindings defined', [
-        'move',
-        'attack',
-        'dodge',
-        'interact',
-        'ability1',
-        'ability2',
-        'ability3',
-        'ability4',
-      ]),
+      accept: allOf(
+        fieldsPopulated('mapping', 'Move/attack/dodge/interact + ability1–4 bindings defined', [
+          'move',
+          'attack',
+          'dodge',
+          'interact',
+          'ability1',
+          'ability2',
+          'ability3',
+          'ability4',
+        ]),
+        wiringContractSound('mapping'),
+      ),
       staticChecks: () => [
         cppSymbolExists('AARPGPlayerController', 'Player controller (Enhanced Input owner) present in Source/'),
       ],
@@ -211,12 +216,15 @@ registerCatalogPipeline({
         },
         ueAssets: ['/Game/UI/WBP_InputRebind', '/Game/Input/DA_InputSchemes'],
       }),
-      accept: fieldsPopulated('rebinding', 'Widget / conflictCheck / reservedButtons / reset defined', [
-        'widget',
-        'conflictCheck',
-        'reservedButtons',
-        'reset',
-      ]),
+      accept: allOf(
+        fieldsPopulated('rebinding', 'Widget / conflictCheck / reservedButtons / reset defined', [
+          'widget',
+          'conflictCheck',
+          'reservedButtons',
+          'reset',
+        ]),
+        wiringContractSound('rebinding'),
+      ),
       staticChecks: () => [
         cppSymbolExists('AARPGPlayerController', 'Player controller (rebind host) present in Source/'),
       ],
@@ -290,7 +298,10 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: minCount('checks', '≥3 accessibility checks per input-a11y canon', 3),
+      accept: allOf(
+        minCount('checks', '≥3 accessibility checks per input-a11y canon', 3),
+        wiringContractSound(),
+      ),
     },
 
     // ── 7. Input Glyphs ───────────────────────────────────────────────────────
@@ -470,7 +481,10 @@ registerCatalogPipeline({
           ueAssets: assets.map((a) => `/Game/Input/${a}`),
         };
       },
-      accept: minCount('assets', 'All input assets packaged', 2),
+      accept: allOf(
+        minCount('assets', 'All input assets packaged', 2),
+        wiringContractSound(),
+      ),
       staticChecks: () => [
         cppSymbolExists('AARPGPlayerController', 'Player controller present in Source/'),
       ],

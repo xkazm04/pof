@@ -1,4 +1,6 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
+import { allOf } from '@/lib/catalog/acceptance/combinators';
+import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
 import { minLength, fieldsPopulated, selected, minCount, withinPercent } from '../acceptance/dataCheckers';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
@@ -81,7 +83,10 @@ registerCatalogPipeline({
           },
         };
       },
-      accept: fieldsPopulated('behavior', 'Emitters + lifetime + spawn rate + AnimNotify defined', ['emitters', 'lifetime', 'spawnRate']),
+      accept: allOf(
+        fieldsPopulated('behavior', 'Emitters + lifetime + spawn rate + AnimNotify defined', ['emitters', 'lifetime', 'spawnRate']),
+        wiringContractSound(),
+      ),
     },
 
     // ── 3. Mesh / Sprite ──────────────────────────────────────────────────────
@@ -194,7 +199,10 @@ registerCatalogPipeline({
       },
       // Grade the CHARTED bar (gpuBudget.gpuMs), not the duplicated top-level scalar — the
       // chart and the checker now read one and the same datum.
-      accept: withinPercent('gpuBudget.gpuMs', 'GPU cost within ±15% of class budget target (0.48 ms)', 0.48, 15),
+      accept: allOf(
+        withinPercent('gpuBudget.gpuMs', 'GPU cost within ±15% of class budget target (0.48 ms)', 0.48, 15),
+        wiringContractSound(),
+      ),
     },
 
     // ── 7. Variants ───────────────────────────────────────────────────────────
@@ -282,7 +290,10 @@ registerCatalogPipeline({
           ueAssets: assets.map((a) => `/Game/VFX/${s}/${a}`),
         };
       },
-      accept: minCount('assets', 'All VFX assets packaged', 2),
+      accept: allOf(
+        minCount('assets', 'All VFX assets packaged', 2),
+        wiringContractSound(),
+      ),
       staticChecks: (e) => [
         cppSymbolExists('UNiagaraComponent', 'Niagara component present in UE Source'),
         seedRowPresent('seed_vfx.py', slug(e.name), 'VFX row seeded in Content/Python'),

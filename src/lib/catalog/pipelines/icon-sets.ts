@@ -1,4 +1,6 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
+import { allOf } from '@/lib/catalog/acceptance/combinators';
+import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
 import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
@@ -241,7 +243,10 @@ registerCatalogPipeline({
         },
         ueAssets: [`/Game/UI/Icons/Sets/T_${slug(e.name)}_Atlas`],
       }),
-      accept: fieldsPopulated('atlas', 'Texture + packing + slots', ['texture', 'packing', 'slots']),
+      accept: allOf(
+        fieldsPopulated('atlas', 'Texture + packing + slots', ['texture', 'packing', 'slots']),
+        wiringContractSound('atlas'),
+      ),
     },
 
     // ── 6. Test Gate (runtime-deferred L3) ────────────────────────────────────
@@ -303,7 +308,10 @@ registerCatalogPipeline({
           ueAssets: assets.map((a) => `/Game/UI/Icons/Sets/${a}`),
         };
       },
-      accept: minCount('assets', 'All 3 assets packaged', 3),
+      accept: allOf(
+        minCount('assets', 'All 3 assets packaged', 3),
+        wiringContractSound(),
+      ),
       staticChecks: (e) => [
         cppSymbolExists('FIconSetRow', 'Icon set row struct present in UE Source'),
         seedRowPresent('seed_icon_sets.py', slug(e.name), 'Icon set row seeded in Content/Python'),

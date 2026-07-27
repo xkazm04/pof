@@ -124,6 +124,24 @@ const isPythonBridge = (data: Record<string, unknown>) => data.python != null;
 
 const viewField = (spec: StepSpec) => (spec.view as { field?: string }).field;
 
+/** Every path (as key segments) at which the produced artifact declares a `wiringContract`. */
+function findWiringContracts(v: unknown, path: string[] = [], depth = 0): string[][] {
+  if (depth > 6 || v == null || typeof v !== 'object') return [];
+  if (Array.isArray(v)) return v.flatMap((x, i) => findWiringContracts(x, [...path, String(i)], depth + 1));
+  return Object.entries(v as Record<string, unknown>).flatMap(([k, val]) =>
+    k === 'wiringContract' ? [[...path, k]] : findWiringContracts(val, [...path, k], depth + 1),
+  );
+}
+
+/** A deep copy of `data` with the wiring contract at `path` stubbed out ("TBD" gray-box). */
+function hollowWiring(data: Record<string, unknown>, path: string[]): Record<string, unknown> {
+  const copy = structuredClone(data);
+  let cur: Record<string, unknown> = copy;
+  for (const k of path.slice(0, -1)) cur = cur[k] as Record<string, unknown>;
+  cur[path[path.length - 1]] = { grantedBy: 'TBD', activatedBy: 'TBD', verification: 'TBD', dependencies: [] };
+  return copy;
+}
+
 const pipelines = allCatalogPipelines();
 const steps: Step[] = pipelines.flatMap((p) =>
   p.steps.map((spec) => ({ catalogId: p.catalogId, label: spec.label, spec })),
@@ -315,6 +333,36 @@ describe('fleet spec linter', () => {
       // linksResolve defers on an unresolved target; for an L0–L2 step that would break Rule 5.
       if (r.status === 'deferred' && r.tier !== 'L3' && r.tier !== 'L4' && readLinks(data).length > 0) {
         violations.push(`${at(s)}: links do not resolve against the seed — ${r.reason ?? r.detail}`);
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+
+  // ── (j) a declared wiring contract is GRADED, not just written ─────────────
+  it('every step whose produce writes a wiringContract grades it (a hollow contract must not pass)', () => {
+    const violations: string[] = [];
+    for (const s of steps) {
+      const data = produceData(s);
+      if (data instanceof Error) continue; // reported by (e)
+      const paths = findWiringContracts(data);
+      if (!paths.length) continue;
+      let clean;
+      try {
+        clean = s.spec.accept(data);
+      } catch { continue; } // reported by (e)
+      if (clean.status !== 'pass') continue; // can't distinguish — some other check already holds it back
+      // Hollow the contract out (the "gray-box" an artifact must never ship with) and
+      // re-grade: a step that composes `wiringContractSound` catches it.
+      const hollowed = hollowWiring(data, paths[0]);
+      let after;
+      try {
+        after = s.spec.accept(hollowed);
+      } catch (e) {
+        violations.push(`${at(s)}: accept() threw on a hollowed wiring contract — ${(e as Error).message}`);
+        continue;
+      }
+      if (after.status === 'pass') {
+        violations.push(`${at(s)}: declares a wiringContract at "${paths[0].join('.')}" but acceptance still passes when grantedBy/activatedBy/verification are stubbed — compose wiringContractSound(...) via allOf`);
       }
     }
     expect(violations).toEqual([]);

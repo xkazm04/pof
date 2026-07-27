@@ -7,6 +7,7 @@ import { CandidateGallery } from './shared/CandidateGallery';
 import { DataTable } from './shared/DataTable';
 import { ChartPanel, type BarsRow, type ScatterPoint } from './shared/ChartPanel';
 import { GlbPreviewPanel, GLB_PREVIEW_LABEL } from './shared/GlbPreviewPanel';
+import { RawArtifactDisclosure } from './shared/RawArtifactDisclosure';
 import { selectedCandidate } from './shared/genHistory';
 import { useGenerativeStep } from './shared/useGenerativeStep';
 import { useGeneratedImageAssets } from './shared/useGeneratedImageAssets';
@@ -313,6 +314,13 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
       { label: 'Produce', node: cli(() => produce(entity.id, step, produced)) },
     ];
   }
+
+  // Every generic step exposes its stored payload verbatim — produce bodies write far more
+  // than any View renders or Checker grades (wiringContract, notes, breakdowns), and none of
+  // it was reachable from the UI. Collapsed by default; serialized only when expanded.
+  panels = [...panels, { label: 'Raw artifact', node: (
+    <RawArtifactDisclosure t={t} data={data} ueAssets={art?.ueAssets} verdict={art} />
+  ) }];
 
   return (
     <>

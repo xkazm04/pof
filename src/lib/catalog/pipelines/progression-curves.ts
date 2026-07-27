@@ -1,4 +1,5 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
+import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
 import { minLength, fieldsPopulated, withinPercent, selected, minCount } from '../acceptance/dataCheckers';
 import { xpGrowthWithinBand, arithmeticReconciles } from '../acceptance/invariants';
 import { allOf } from '../acceptance/combinators';
@@ -162,6 +163,7 @@ registerCatalogPipeline({
           'softCap',
         ]),
         xpGrowthWithinBand('curveFormula', 'exponent', 'XP growth exponent ≈ canon geometric rate (arpg-leveling)'),
+        wiringContractSound('curveFormula'),
       ),
       staticChecks: () => [
         cppSymbolExists('FARPGXPCurveRow', 'XP curve row struct present in UE Source'),
@@ -246,12 +248,15 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('xpSources', 'kills / quests / exploration / scalingNote populated', [
-        'kills',
-        'quests',
-        'exploration',
-        'scalingNote',
-      ]),
+      accept: allOf(
+        fieldsPopulated('xpSources', 'kills / quests / exploration / scalingNote populated', [
+          'kills',
+          'quests',
+          'exploration',
+          'scalingNote',
+        ]),
+        wiringContractSound('xpSources'),
+      ),
     },
 
     // ── 4. Reward Schedule ────────────────────────────────────────────────────
@@ -320,11 +325,14 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('rewards', 'passivePoints / milestoneUnlocks / ascendancyGates populated', [
-        'passivePoints',
-        'milestoneUnlocks',
-        'ascendancyGates',
-      ]),
+      accept: allOf(
+        fieldsPopulated('rewards', 'passivePoints / milestoneUnlocks / ascendancyGates populated', [
+          'passivePoints',
+          'milestoneUnlocks',
+          'ascendancyGates',
+        ]),
+        wiringContractSound('rewards.ascendancyGates'),
+      ),
     },
 
     // ── 5. Caps & Catch-up ────────────────────────────────────────────────────
@@ -466,12 +474,15 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('deathPenalty', 'levelBand / xpLoss / floorsAndCaps / sinkRationale populated', [
-        'levelBand',
-        'xpLoss',
-        'floorsAndCaps',
-        'sinkRationale',
-      ]),
+      accept: allOf(
+        fieldsPopulated('deathPenalty', 'levelBand / xpLoss / floorsAndCaps / sinkRationale populated', [
+          'levelBand',
+          'xpLoss',
+          'floorsAndCaps',
+          'sinkRationale',
+        ]),
+        wiringContractSound('deathPenalty'),
+      ),
       staticChecks: () => [
         cppSymbolExists('GE_DeathPenaltyXP', 'Death penalty GE present in UE Source'),
       ],
@@ -667,12 +678,15 @@ registerCatalogPipeline({
         },
         ueAssets: ['/Game/UI/HUD/WBP_XPBar', '/Game/UI/HUD/WBP_LevelUpNotification'],
       }),
-      accept: fieldsPopulated('xpBarUI', 'widget / format / position / hudBinding populated', [
-        'widget',
-        'format',
-        'position',
-        'hudBinding',
-      ]),
+      accept: allOf(
+        fieldsPopulated('xpBarUI', 'widget / format / position / hudBinding populated', [
+          'widget',
+          'format',
+          'position',
+          'hudBinding',
+        ]),
+        wiringContractSound('xpBarUI'),
+      ),
     },
 
     // ── 10. Icon 2D Art (universal step) ──────────────────────────────────────
@@ -779,6 +793,7 @@ registerCatalogPipeline({
       accept: allOf(
         minCount('assets', '≥4 UE assets packaged', 4),
         linksResolve(),
+        wiringContractSound(),
       ),
       staticChecks: (e) => [
         cppSymbolExists('FARPGXPCurveRow', 'XP curve row struct present in Source/'),

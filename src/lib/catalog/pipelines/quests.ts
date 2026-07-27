@@ -1,4 +1,5 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
+import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
 import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
 import { graphValid } from '../acceptance/graphCheckers';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
@@ -225,6 +226,7 @@ registerCatalogPipeline({
       accept: allOf(
         minCount('rewards', '≥1 reward path defined', 1),
         linksResolve(),
+        wiringContractSound('rewardDetail'),
       ),
     },
 
@@ -292,6 +294,7 @@ registerCatalogPipeline({
       accept: allOf(
         minCount('npcs', '≥1 NPC or dialog tree bound', 1),
         linksResolve(),
+        wiringContractSound(),
       ),
     },
 
@@ -445,7 +448,10 @@ registerCatalogPipeline({
           ueAssets: assets.map((a) => `/Game/Quests/${s}/${a}`),
         };
       },
-      accept: minCount('assets', 'All quest assets packaged', 3),
+      accept: allOf(
+        minCount('assets', 'All quest assets packaged', 3),
+        wiringContractSound(),
+      ),
     },
   ],
 });

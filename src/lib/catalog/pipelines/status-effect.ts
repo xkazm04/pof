@@ -1,4 +1,5 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
+import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
 import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
 import { statusBalanceEnvelope } from '../acceptance/invariants';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
@@ -187,6 +188,7 @@ registerCatalogPipeline({
         ['tag', 'magnitude', 'period', 'duration', 'stacking', 'sourceDamageType', 'dispellable'],
       ),
         linksResolve(),
+        wiringContractSound('effect'),
       ),
       staticChecks: (e) => [
         cppSymbolExists(`UGE_Gen_${slug(e.name)}`, 'Ignite GameplayEffect C++ class compiled'),
@@ -327,7 +329,10 @@ registerCatalogPipeline({
           ueAssets: assets.map((a) => `/Game/Abilities/Generated/${a}`),
         };
       },
-      accept: minCount('assets', 'All produced assets packaged', 3),
+      accept: allOf(
+        minCount('assets', 'All produced assets packaged', 3),
+        wiringContractSound(),
+      ),
       staticChecks: (e) => [
         seedRowPresent('seed_generated_abilities.py', slug(e.name), 'Row present in the generated-abilities seed'),
       ],

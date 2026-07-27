@@ -1,4 +1,5 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
+import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
 import { minLength, fieldsPopulated, withinPercent, selected, minCount } from '../acceptance/dataCheckers';
 import { componentsSumTo, arithmeticReconciles } from '../acceptance/invariants';
 import { allOf } from '../acceptance/combinators';
@@ -204,12 +205,15 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('magicFind', 'IIQ / IIR / pity / smartWeight populated', [
-        'iiq',
-        'iir',
-        'pity',
-        'smartWeight',
-      ]),
+      accept: allOf(
+        fieldsPopulated('magicFind', 'IIQ / IIR / pity / smartWeight populated', [
+          'iiq',
+          'iir',
+          'pity',
+          'smartWeight',
+        ]),
+        wiringContractSound('magicFind'),
+      ),
     },
 
     // ── 5. Currency & Unique Pools ────────────────────────────────────────────
@@ -313,6 +317,7 @@ registerCatalogPipeline({
         fieldsPopulated('pools', 'Currency pool + unique pool authored', ['currencyPool', 'uniquePool']),
         minCount('links', '≥1 currency or item pool link declared', 1),
         linksResolve(),
+        wiringContractSound('pools'),
       ),
       staticChecks: (e) => [
         cppSymbolExists('FARPGLootTableRow', 'Loot table row struct in UE Source'),
@@ -377,6 +382,7 @@ registerCatalogPipeline({
       accept: allOf(
         minCount('bases', '≥1 item base linked from the items catalog', 1),
         linksResolve(),
+        wiringContractSound(),
       ),
     },
 
@@ -520,7 +526,10 @@ registerCatalogPipeline({
           ueAssets: assets.map((a) => `/Game/LootSystem/${a}`),
         };
       },
-      accept: minCount('assets', '≥2 UE assets packaged', 2),
+      accept: allOf(
+        minCount('assets', '≥2 UE assets packaged', 2),
+        wiringContractSound(),
+      ),
       staticChecks: (e) => [
         cppSymbolExists('UARPGLootDropComponent', 'Loot drop component present in Source/'),
         cppSymbolExists('FARPGLootTableRow', 'Loot table row struct present in Source/'),

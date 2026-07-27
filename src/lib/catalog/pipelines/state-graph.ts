@@ -1,4 +1,5 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
+import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
 import { minLength, fieldsPopulated, selected, minCount, entriesHaveFields } from '../acceptance/dataCheckers';
 import { graphValid } from '../acceptance/graphCheckers';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
@@ -228,7 +229,10 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: graphValid('graph', 'States reachable + ≥1 terminal'),
+      accept: allOf(
+        graphValid('graph', 'States reachable + ≥1 terminal'),
+        wiringContractSound(),
+      ),
     },
 
     // ── 3. Blackboard Schema ──────────────────────────────────────────────────
@@ -317,6 +321,7 @@ registerCatalogPipeline({
       accept: allOf(
         minCount('blackboard', '≥7 blackboard keys declared', 7),
         entriesHaveFields('blackboard', 'every key carries type + writer + reader', ['key', 'type', 'updatedBy', 'usedBy']),
+        wiringContractSound(),
       ),
     },
 
@@ -449,6 +454,7 @@ registerCatalogPipeline({
       accept: allOf(
         minCount('transitions', '≥6 transition rules declared', 6),
         entriesHaveFields('transitions', 'every transition carries from + to + guard + priority', ['from', 'to', 'guard', 'priority']),
+        wiringContractSound(),
       ),
     },
 
@@ -563,6 +569,7 @@ registerCatalogPipeline({
       accept: allOf(
         minCount('hooks', '≥5 hook points declared', 5),
         entriesHaveFields('hooks', 'every hook carries state + event + type + binding', ['state', 'event', 'type', 'binding']),
+        wiringContractSound(),
       ),
     },
 
@@ -636,11 +643,14 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('persistence', 'currentState / patrolIndex / defeatedTag fields present', [
-        'currentState',
-        'patrolIndex',
-        'defeatedTag',
-      ]),
+      accept: allOf(
+        fieldsPopulated('persistence', 'currentState / patrolIndex / defeatedTag fields present', [
+          'currentState',
+          'patrolIndex',
+          'defeatedTag',
+        ]),
+        wiringContractSound(),
+      ),
     },
 
     // ── 7. Icon 2D Art ────────────────────────────────────────────────────────
@@ -737,7 +747,10 @@ registerCatalogPipeline({
           ueAssets: assets.map((a) => `/Game/AI/StateGraph/${s}/${a}`),
         };
       },
-      accept: minCount('assets', '≥4 UE state-graph assets packaged', 4),
+      accept: allOf(
+        minCount('assets', '≥4 UE state-graph assets packaged', 4),
+        wiringContractSound(),
+      ),
       staticChecks: () => [
         cppSymbolExists('UStateTreeComponent', 'StateTree component present in UE Source (engine or project)'),
       ],

@@ -1,4 +1,5 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
+import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
 import {
   minLength,
   fieldsPopulated,
@@ -140,13 +141,16 @@ registerCatalogPipeline({
         ueAssets: [`/Game/Data/Items/DA_${slug(e.name)}`],
       });
       },
-      accept: fieldsPopulated('baseType', 'slot / rarity / ilvl / requiredLevel / implicit populated', [
-        'slot',
-        'rarity',
-        'ilvl',
-        'requiredLevel',
-        'implicit',
-      ]),
+      accept: allOf(
+        fieldsPopulated('baseType', 'slot / rarity / ilvl / requiredLevel / implicit populated', [
+          'slot',
+          'rarity',
+          'ilvl',
+          'requiredLevel',
+          'implicit',
+        ]),
+        wiringContractSound('baseType'),
+      ),
       staticChecks: () => [
         cppSymbolExists('UARPGItemDefinition', 'UARPGItemDefinition declared in Source/'),
       ],
@@ -389,11 +393,14 @@ registerCatalogPipeline({
         },
       });
       },
-      accept: fieldsPopulated('affixes', 'budget / tierTable / illustrativeRareRoll populated', [
-        'budget',
-        'tierTable',
-        'illustrativeRareRoll',
-      ]),
+      accept: allOf(
+        fieldsPopulated('affixes', 'budget / tierTable / illustrativeRareRoll populated', [
+          'budget',
+          'tierTable',
+          'illustrativeRareRoll',
+        ]),
+        wiringContractSound('affixes'),
+      ),
     },
 
     // ── 4. Damage / Implicit ──────────────────────────────────────────────────
@@ -706,9 +713,12 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: entityRuntimeDeferred(
-        'VSItemsDefinitionsTest',
-        'Item equip GEs apply and attributes delta correctly in PIE',
+      accept: allOf(
+        entityRuntimeDeferred(
+          'VSItemsDefinitionsTest',
+          'Item equip GEs apply and attributes delta correctly in PIE',
+        ),
+        wiringContractSound(),
       ),
       staticChecks: (e) => [
         cppSymbolExists('UARPGItemDefinition', 'UARPGItemDefinition declared in Source/'),
@@ -779,7 +789,10 @@ registerCatalogPipeline({
           }),
         };
       },
-      accept: minCount('assets', '≥3 UE assets packaged', 3),
+      accept: allOf(
+        minCount('assets', '≥3 UE assets packaged', 3),
+        wiringContractSound(),
+      ),
       staticChecks: (e) => [
         cppSymbolExists('UARPGItemDefinition', 'UARPGItemDefinition present in Source/'),
         seedRowPresent('author_items.py', slug(e.name), 'Item DA row seeded in Content/Python'),

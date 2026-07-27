@@ -1,4 +1,5 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
+import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
 import { minLength, fieldsPopulated, selected, minCount, entriesHaveFields } from '../acceptance/dataCheckers';
 import { graphValid } from '../acceptance/graphCheckers';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
@@ -183,6 +184,7 @@ registerCatalogPipeline({
       accept: allOf(
         graphValid('graph', 'Dialog branches reachable + have terminals'),
         linksResolve(),
+        wiringContractSound(),
       ),
     },
 
@@ -253,12 +255,15 @@ registerCatalogPipeline({
         },
         ueAssets: ['/Game/Dialog/DA_GatekeeperGreeting_Effects'],
       }),
-      accept: fieldsPopulated('conditionsEffects', 'skill-check, ember-pact, hostile, dismissed nodes defined', [
-        'skillCheck',
-        'emberPactUnlocked',
-        'hostile',
-        'dismissed',
-      ]),
+      accept: allOf(
+        fieldsPopulated('conditionsEffects', 'skill-check, ember-pact, hostile, dismissed nodes defined', [
+          'skillCheck',
+          'emberPactUnlocked',
+          'hostile',
+          'dismissed',
+        ]),
+        wiringContractSound(),
+      ),
     },
 
     // ── 4. Skill Checks ───────────────────────────────────────────────────────
@@ -314,6 +319,7 @@ registerCatalogPipeline({
       accept: allOf(
         minCount('skillChecks', '≥1 skill-check rule defined', 1),
         entriesHaveFields('skillChecks', 'every skill check carries node + attribute + threshold + both edges', ['node', 'attribute', 'threshold', 'passEdge', 'failEdge']),
+        wiringContractSound(),
       ),
     },
 
@@ -457,12 +463,15 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('subtitleUI', 'subtitle widget / choice widget / anchors defined', [
-        'subtitleWidget',
-        'choiceWidget',
-        'subtitleAnchor',
-        'choiceAnchor',
-      ]),
+      accept: allOf(
+        fieldsPopulated('subtitleUI', 'subtitle widget / choice widget / anchors defined', [
+          'subtitleWidget',
+          'choiceWidget',
+          'subtitleAnchor',
+          'choiceAnchor',
+        ]),
+        wiringContractSound(),
+      ),
     },
 
     // ── 8. Localization ───────────────────────────────────────────────────────
@@ -606,7 +615,10 @@ registerCatalogPipeline({
           ueAssets: assets.map((a) => `/Game/Dialog/${s}/${a}`),
         };
       },
-      accept: minCount('assets', '≥3 UE dialog assets packaged', 3),
+      accept: allOf(
+        minCount('assets', '≥3 UE dialog assets packaged', 3),
+        wiringContractSound(),
+      ),
     },
   ],
 });

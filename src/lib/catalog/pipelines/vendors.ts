@@ -1,4 +1,5 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
+import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
 import { minLength, fieldsPopulated, withinPercent, selected, minCount } from '../acceptance/dataCheckers';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
@@ -113,6 +114,7 @@ registerCatalogPipeline({
       accept: allOf(
         minCount('stock', '≥1 item linked from the items catalog', 1),
         linksResolve(),
+        wiringContractSound(),
       ),
       staticChecks: (e) => [
         cppSymbolExists('FARPGVendorInventoryRow', 'Vendor inventory row struct in UE Source'),
@@ -210,6 +212,7 @@ registerCatalogPipeline({
       accept: allOf(
         fieldsPopulated('repMods', 'repTier + discountCurve defined', ['repTier', 'discountCurve']),
         linksResolve(),
+        wiringContractSound('repMods'),
       ),
     },
 
@@ -269,6 +272,7 @@ registerCatalogPipeline({
       accept: allOf(
         fieldsPopulated('services', 'buy + sell + repair flags set', ['buy', 'sell', 'repair']),
         linksResolve(),
+        wiringContractSound('services'),
       ),
       staticChecks: () => [
         cppSymbolExists('UARPGVendorComponent', 'Vendor component in UE Source'),
@@ -451,7 +455,10 @@ registerCatalogPipeline({
           ueAssets: assets.map((a) => `/Game/Economy/Vendors/${a}`),
         };
       },
-      accept: minCount('assets', 'All assets packaged', 3),
+      accept: allOf(
+        minCount('assets', 'All assets packaged', 3),
+        wiringContractSound(),
+      ),
       staticChecks: (e) => [
         cppSymbolExists('UARPGVendorComponent', 'Vendor component in Source/'),
         cppSymbolExists('FARPGVendorInventoryRow', 'Vendor inventory row struct in Source/'),

@@ -1,4 +1,5 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
+import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
 import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
 import { powerWithinTierTarget, monsterRarityWithinBands } from '../acceptance/invariants';
 import { allOf } from '../acceptance/combinators';
@@ -115,7 +116,10 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('stats', 'Stat block populated', ['health', 'damage', 'armor', 'moveSpeed']),
+      accept: allOf(
+        fieldsPopulated('stats', 'Stat block populated', ['health', 'damage', 'armor', 'moveSpeed']),
+        wiringContractSound('stats'),
+      ),
       staticChecks: () => [cppSymbolExists('AARPGEnemyCharacter', 'Enemy actor class present in UE Source')],
     },
 
@@ -160,9 +164,12 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('resists', 'Per-type resistance profile populated', [
-        'fireRes', 'iceRes', 'lightningRes', 'chaosRes',
-      ]),
+      accept: allOf(
+        fieldsPopulated('resists', 'Per-type resistance profile populated', [
+          'fireRes', 'iceRes', 'lightningRes', 'chaosRes',
+        ]),
+        wiringContractSound('resists'),
+      ),
     },
 
     // ── 5. Monster Rarity & Modifiers ─────────────────────────────────────────
@@ -226,6 +233,7 @@ registerCatalogPipeline({
           'rarityTier', 'lifeMultiplier', 'modifiers',
         ]),
         monsterRarityWithinBands('rarity', 'Rarity life multipliers within canon bands'),
+        wiringContractSound('rarity'),
       ),
     },
 
@@ -281,6 +289,7 @@ registerCatalogPipeline({
       accept: allOf(
         minCount('abilities', '≥1 ability linked from the abilities catalog', 1),
         linksResolve(),
+        wiringContractSound(),
       ),
     },
 
@@ -416,6 +425,7 @@ registerCatalogPipeline({
       accept: allOf(
         minCount('assets', 'All assets packaged', 3),
         linksResolve(),
+        wiringContractSound(),
       ),
       staticChecks: () => [cppSymbolExists('AARPGEnemyCharacter', 'Enemy actor present')],
     },

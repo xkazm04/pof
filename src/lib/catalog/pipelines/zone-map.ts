@@ -1,4 +1,5 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
+import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
 import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
 import { linksResolve } from '../acceptance/linkCheckers';
 import { sumReconciles } from '../acceptance/invariants';
@@ -126,11 +127,14 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('layout', 'Sectors / POIs / navigation contract populated', [
-        'sectors',
-        'pois',
-        'navigationContract',
-      ]),
+      accept: allOf(
+        fieldsPopulated('layout', 'Sectors / POIs / navigation contract populated', [
+          'sectors',
+          'pois',
+          'navigationContract',
+        ]),
+        wiringContractSound('layout'),
+      ),
     },
 
     // ── 3. Area Level & Density ────────────────────────────────────────────────
@@ -203,6 +207,7 @@ registerCatalogPipeline({
           'totalEnemies',
         ]),
         sumReconciles('density.totalEnemies', 'density.sectorBreakdown', ['NW', 'NE', 'Center', 'SW', 'SE'], 'totalEnemies reconciles with sector breakdown'),
+        wiringContractSound('density'),
       ),
       staticChecks: () => [
         cppSymbolExists('AARPGEncounterVolume', 'Encounter volume actor present in UE Source'),
@@ -293,6 +298,7 @@ registerCatalogPipeline({
           'wiringContract',
         ]),
         linksResolve('Encounter cross-catalog links resolve'),
+        wiringContractSound('encounters'),
       ),
       staticChecks: () => [
         cppSymbolExists('ASpawnVolume', 'Spawn volume actor present in UE Source'),
@@ -442,6 +448,7 @@ registerCatalogPipeline({
         'wiringContract',
       ]),
         linksResolve(),
+        wiringContractSound('materials'),
       ),
     },
 
@@ -521,6 +528,7 @@ registerCatalogPipeline({
         'wiringContract',
       ]),
         linksResolve(),
+        wiringContractSound('audio'),
       ),
     },
 
@@ -584,11 +592,14 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('minimap', 'Discovery / fast-travel / HUD binding declared', [
-        'discoveryPct',
-        'fastTravelNode',
-        'hudBinding',
-      ]),
+      accept: allOf(
+        fieldsPopulated('minimap', 'Discovery / fast-travel / HUD binding declared', [
+          'discoveryPct',
+          'fastTravelNode',
+          'hudBinding',
+        ]),
+        wiringContractSound('minimap'),
+      ),
     },
 
     // ── 10. Icon 2D Art (universal) ───────────────────────────────────────────
@@ -703,6 +714,7 @@ registerCatalogPipeline({
       accept: allOf(
         minCount('assets', '≥3 UE assets packaged', 3),
         linksResolve(),
+        wiringContractSound(),
       ),
       staticChecks: () => [
         cppSymbolExists('AARPGEncounterVolume', 'Encounter volume actor compiled in UE Source'),

@@ -1,4 +1,5 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
+import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
 import { minLength, fieldsPopulated, withinPercent, selected, minCount } from '../acceptance/dataCheckers';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { seedRowPresent } from '../acceptance/ueStaticCheckers';
@@ -243,6 +244,7 @@ registerCatalogPipeline({
         'oneShots',
       ]),
         linksResolve(),
+        wiringContractSound('layers.bed'),
       ),
     },
 
@@ -325,11 +327,14 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('spatialization', 'Bed strategy + emitter contract + attenuation preset declared', [
-        'bedStrategy',
-        'emitterContract',
-        'attenuationPreset',
-      ]),
+      accept: allOf(
+        fieldsPopulated('spatialization', 'Bed strategy + emitter contract + attenuation preset declared', [
+          'bedStrategy',
+          'emitterContract',
+          'attenuationPreset',
+        ]),
+        wiringContractSound('spatialization'),
+      ),
     },
 
     // ── 4. Variants & Randomization ───────────────────────────────────────────
@@ -424,11 +429,14 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('variants', 'Day/night + randomization + anti-repetition rules declared', [
-        'dayNight',
-        'randomization',
-        'antiRepetition',
-      ]),
+      accept: allOf(
+        fieldsPopulated('variants', 'Day/night + randomization + anti-repetition rules declared', [
+          'dayNight',
+          'randomization',
+          'antiRepetition',
+        ]),
+        wiringContractSound('variants'),
+      ),
     },
 
     // ── 5. Occlusion ──────────────────────────────────────────────────────────
@@ -520,11 +528,14 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('occlusion', 'Outdoor + indoor presets + transition rules declared', [
-        'outdoorPreset',
-        'indoorPreset',
-        'transitionRules',
-      ]),
+      accept: allOf(
+        fieldsPopulated('occlusion', 'Outdoor + indoor presets + transition rules declared', [
+          'outdoorPreset',
+          'indoorPreset',
+          'transitionRules',
+        ]),
+        wiringContractSound('occlusion'),
+      ),
     },
 
     // ── 6. Memory Budget ──────────────────────────────────────────────────────
@@ -672,6 +683,7 @@ registerCatalogPipeline({
         'wiringContract',
       ]),
         linksResolve(),
+        wiringContractSound('zoneBinding'),
       ),
     },
 
@@ -802,6 +814,7 @@ registerCatalogPipeline({
       accept: allOf(
         minCount('assets', '≥3 UE assets packaged', 3),
         linksResolve(),
+        wiringContractSound(),
       ),
       staticChecks: (e) => [
         seedRowPresent('seed_audio.py', slug(e.name), 'DT_Ambient row seeded in Content/Python'),

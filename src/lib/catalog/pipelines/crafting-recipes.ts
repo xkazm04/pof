@@ -1,4 +1,5 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
+import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
 import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
 import { priceRatioWithinBand } from '../acceptance/invariants';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
@@ -165,6 +166,7 @@ registerCatalogPipeline({
         'deterministic',
       ]),
         linksResolve(),
+        wiringContractSound('io'),
       ),
       staticChecks: (e) => [
         cppSymbolExists('FARPGRecipeRow', 'Recipe row struct in UE Source'),
@@ -227,11 +229,14 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('stationSkill', 'station + skillLevel + gating defined', [
-        'station',
-        'skillLevel',
-        'gating',
-      ]),
+      accept: allOf(
+        fieldsPopulated('stationSkill', 'station + skillLevel + gating defined', [
+          'station',
+          'skillLevel',
+          'gating',
+        ]),
+        wiringContractSound('stationSkill'),
+      ),
       staticChecks: () => [
         cppSymbolExists('UARPGCraftingComponent', 'Crafting component in UE Source'),
       ],
@@ -320,6 +325,7 @@ registerCatalogPipeline({
         'Gold-cost / output-value ratio within the canon 0.8–1.2× band',
       ),
         linksResolve(),
+        wiringContractSound('costYield'),
       ),
       staticChecks: () => [
         cppSymbolExists('UARPGCurrencySubsystem', 'Currency subsystem in UE Source'),
@@ -373,11 +379,14 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('discovery', 'method + trigger + persistenceTag defined', [
-        'method',
-        'trigger',
-        'persistenceTag',
-      ]),
+      accept: allOf(
+        fieldsPopulated('discovery', 'method + trigger + persistenceTag defined', [
+          'method',
+          'trigger',
+          'persistenceTag',
+        ]),
+        wiringContractSound('discovery'),
+      ),
     },
 
     // ── 6. Craft FX / Audio ───────────────────────────────────────────────────
@@ -445,11 +454,14 @@ registerCatalogPipeline({
           `/Game/Audio/Crafting/SC_Craft_${slug(e.name)}_Success`,
         ],
       }),
-      accept: fieldsPopulated('craftFx', 'vfx + sfxLoop + sfxSuccess defined', [
-        'vfx',
-        'sfxLoop',
-        'sfxSuccess',
-      ]),
+      accept: allOf(
+        fieldsPopulated('craftFx', 'vfx + sfxLoop + sfxSuccess defined', [
+          'vfx',
+          'sfxLoop',
+          'sfxSuccess',
+        ]),
+        wiringContractSound('craftFx'),
+      ),
     },
 
     // ── 7. Recipe UI ──────────────────────────────────────────────────────────
@@ -499,11 +511,14 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('recipeUi', 'widget + displayFormat + hudAnchor defined', [
-        'widget',
-        'displayFormat',
-        'hudAnchor',
-      ]),
+      accept: allOf(
+        fieldsPopulated('recipeUi', 'widget + displayFormat + hudAnchor defined', [
+          'widget',
+          'displayFormat',
+          'hudAnchor',
+        ]),
+        wiringContractSound('recipeUi'),
+      ),
     },
 
     // ── 8. Icon 2D Art ────────────────────────────────────────────────────────
@@ -635,6 +650,7 @@ registerCatalogPipeline({
       accept: allOf(
         minCount('assets', '≥2 UE assets packaged', 2),
         linksResolve(),
+        wiringContractSound(),
       ),
       staticChecks: (e) => [
         cppSymbolExists('UARPGCraftingComponent', 'Crafting component in Source/'),

@@ -1,4 +1,5 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
+import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
 import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
 import { allOf } from '../acceptance/combinators';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
@@ -119,12 +120,15 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('interaction', 'interactType / triggerCondition / prompt / healthThreshold populated', [
-        'interactType',
-        'triggerCondition',
-        'prompt',
-        'healthThreshold',
-      ]),
+      accept: allOf(
+        fieldsPopulated('interaction', 'interactType / triggerCondition / prompt / healthThreshold populated', [
+          'interactType',
+          'triggerCondition',
+          'prompt',
+          'healthThreshold',
+        ]),
+        wiringContractSound('interaction'),
+      ),
     },
 
     // ── 3. 3D & LODs ──────────────────────────────────────────────────────────
@@ -221,11 +225,14 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('physics', 'collisionPreset / massKg / chaosEnabled populated', [
-        'collisionPreset',
-        'massKg',
-        'chaosEnabled',
-      ]),
+      accept: allOf(
+        fieldsPopulated('physics', 'collisionPreset / massKg / chaosEnabled populated', [
+          'collisionPreset',
+          'massKg',
+          'chaosEnabled',
+        ]),
+        wiringContractSound('physics'),
+      ),
     },
 
     // ── 5. Material ───────────────────────────────────────────────────────────
@@ -290,6 +297,7 @@ registerCatalogPipeline({
         'parameters',
       ]),
         linksResolve(),
+        wiringContractSound('material'),
       ),
     },
 
@@ -362,11 +370,14 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('destructionStates', 'intact / damaged / destroyed states defined', [
-        'intact',
-        'damaged',
-        'destroyed',
-      ]),
+      accept: allOf(
+        fieldsPopulated('destructionStates', 'intact / damaged / destroyed states defined', [
+          'intact',
+          'damaged',
+          'destroyed',
+        ]),
+        wiringContractSound('destructionStates'),
+      ),
     },
 
     // ── 7. Loot on Destroy ────────────────────────────────────────────────────
@@ -435,6 +446,7 @@ registerCatalogPipeline({
         fieldsPopulated('lootOnDestroy', 'Loot table + ilvl source + drop counts authored', ['lootTable', 'ilvlSource', 'dropCount']),
         minCount('links', '≥1 loot-table link declared', 1),
         linksResolve(),
+        wiringContractSound('lootOnDestroy'),
       ),
       staticChecks: () => [
         cppSymbolExists('UARPGLootDropComponent', 'Loot drop component present in Source/PoF/Loot/'),
@@ -511,6 +523,7 @@ registerCatalogPipeline({
         'impactAudio',
       ]),
         linksResolve(),
+        wiringContractSound('vfxAudio'),
       ),
     },
 
@@ -606,6 +619,7 @@ registerCatalogPipeline({
       accept: allOf(
         minCount('assets', '≥4 UE assets packaged', 4),
         linksResolve(),
+        wiringContractSound(),
       ),
       staticChecks: () => [
         cppSymbolExists('AARPGDestructibleActor', 'Destructible actor base class in Source/PoF/Physics/'),

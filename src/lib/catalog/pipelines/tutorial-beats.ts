@@ -1,4 +1,5 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
+import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
 import { minLength, fieldsPopulated, selected, minCount, entriesHaveFields } from '../acceptance/dataCheckers';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
@@ -82,7 +83,10 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('trigger', 'Trigger event + condition + resetOn defined', ['event', 'condition', 'resetOn']),
+      accept: allOf(
+        fieldsPopulated('trigger', 'Trigger event + condition + resetOn defined', ['event', 'condition', 'resetOn']),
+        wiringContractSound('trigger'),
+      ),
     },
 
     // ── 3. Player State Lock / Sandbox ──────────────────────────────────────
@@ -119,11 +123,14 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('sandbox', 'Locked inputs + sandbox scope + branching flag defined', [
-        'lockedInputs',
-        'sandboxScope',
-        'branchingEnabled',
-      ]),
+      accept: allOf(
+        fieldsPopulated('sandbox', 'Locked inputs + sandbox scope + branching flag defined', [
+          'lockedInputs',
+          'sandboxScope',
+          'branchingEnabled',
+        ]),
+        wiringContractSound('sandbox'),
+      ),
     },
 
     // ── 4. Step Sequence Authoring ──────────────────────────────────────────
@@ -168,11 +175,14 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('sequence', 'Steps + advanceOn + timeoutPerStep defined', [
-        'steps',
-        'advanceOn',
-        'timeoutPerStep',
-      ]),
+      accept: allOf(
+        fieldsPopulated('sequence', 'Steps + advanceOn + timeoutPerStep defined', [
+          'steps',
+          'advanceOn',
+          'timeoutPerStep',
+        ]),
+        wiringContractSound('sequence'),
+      ),
     },
 
     // ── 5. Success / Skip / Fail Rules ─────────────────────────────────────
@@ -216,7 +226,10 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('outcomes', 'Success + skip + fail paths defined', ['success', 'skip', 'fail']),
+      accept: allOf(
+        fieldsPopulated('outcomes', 'Success + skip + fail paths defined', ['success', 'skip', 'fail']),
+        wiringContractSound('outcomes'),
+      ),
     },
 
     // ── 6. Pointer / Highlight 2D ──────────────────────────────────────────
@@ -260,6 +273,7 @@ registerCatalogPipeline({
       accept: allOf(
         selected('pointer', 'A pointer / highlight candidate is selected'),
         linksResolve(),
+        wiringContractSound(),
       ),
     },
 
@@ -324,6 +338,7 @@ registerCatalogPipeline({
         minCount('cues', '≥1 VFX or audio cue bound', 1),
         entriesHaveFields('cues', 'every cue carries id + type + catalog target', ['id', 'type', 'catalog', 'catalogEntityId']),
         linksResolve(),
+        wiringContractSound(),
       ),
     },
 
@@ -400,10 +415,13 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('telemetry', 'Telemetry events + comprehension metric defined', [
-        'events',
-        'comprehensionMetric',
-      ]),
+      accept: allOf(
+        fieldsPopulated('telemetry', 'Telemetry events + comprehension metric defined', [
+          'events',
+          'comprehensionMetric',
+        ]),
+        wiringContractSound('telemetry'),
+      ),
     },
 
     // ── 10. Icon 2D Art ──────────────────────────────────────────────────────
@@ -504,7 +522,10 @@ registerCatalogPipeline({
           ueAssets: assets.map((a) => `/Game/Tutorial/${a}`),
         };
       },
-      accept: minCount('assets', 'All tutorial beat assets packaged', 2),
+      accept: allOf(
+        minCount('assets', 'All tutorial beat assets packaged', 2),
+        wiringContractSound(),
+      ),
     },
   ],
 });

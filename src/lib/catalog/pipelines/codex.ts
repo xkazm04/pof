@@ -1,4 +1,5 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
+import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
 import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
 import { graphValid } from '../acceptance/graphCheckers';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
@@ -226,6 +227,7 @@ registerCatalogPipeline({
       accept: allOf(
         graphValid('graph', 'Cross-refs reachable + terminal'),
         linksResolve(),
+        wiringContractSound(),
       ),
     },
 
@@ -292,10 +294,13 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('unlockRules', 'primary + fallback unlock rules defined', [
-        'primary',
-        'fallback',
-      ]),
+      accept: allOf(
+        fieldsPopulated('unlockRules', 'primary + fallback unlock rules defined', [
+          'primary',
+          'fallback',
+        ]),
+        wiringContractSound('unlockRules'),
+      ),
     },
 
     // ── 5. Spoiler Tagging ────────────────────────────────────────────────────
@@ -358,10 +363,13 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('spoilerRules', 'spoiler fields + gate conditions defined', [
-        'classifiedTestimonyField',
-        'orderFacilityOriginField',
-      ]),
+      accept: allOf(
+        fieldsPopulated('spoilerRules', 'spoiler fields + gate conditions defined', [
+          'classifiedTestimonyField',
+          'orderFacilityOriginField',
+        ]),
+        wiringContractSound('spoilerRules'),
+      ),
     },
 
     // ── 6. Illustration ───────────────────────────────────────────────────────
@@ -439,10 +447,13 @@ registerCatalogPipeline({
           `/Game/Audio/Codex/SC_Codex_SpoilerReveal_${slug(e.name)}`,
         ],
       }),
-      accept: fieldsPopulated('audioSting', 'unlock sting + spoiler sting defined', [
-        'unlockSting',
-        'spoilerRevealSting',
-      ]),
+      accept: allOf(
+        fieldsPopulated('audioSting', 'unlock sting + spoiler sting defined', [
+          'unlockSting',
+          'spoilerRevealSting',
+        ]),
+        wiringContractSound('audioSting'),
+      ),
     },
 
     // ── 8. Accessibility ──────────────────────────────────────────────────────
@@ -585,7 +596,10 @@ registerCatalogPipeline({
           ],
         };
       },
-      accept: minCount('assets', '≥3 UE codex assets packaged', 3),
+      accept: allOf(
+        minCount('assets', '≥3 UE codex assets packaged', 3),
+        wiringContractSound(),
+      ),
     },
   ],
 });

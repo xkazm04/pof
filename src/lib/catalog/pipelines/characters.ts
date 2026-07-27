@@ -1,4 +1,5 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
+import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
 import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
@@ -123,7 +124,10 @@ registerCatalogPipeline({
           ueAssets: [`/Game/Characters/${s}/DT_AttributeDefaults_${s}`],
         };
       },
-      accept: fieldsPopulated('stats', 'Stat block populated', ['health', 'damage', 'armor', 'moveSpeed']),
+      accept: allOf(
+        fieldsPopulated('stats', 'Stat block populated', ['health', 'damage', 'armor', 'moveSpeed']),
+        wiringContractSound(),
+      ),
       staticChecks: (e) => [
         cppSymbolExists('FARPGAttributeInitRow', 'Attribute init row struct present'),
         seedRowPresent('seed_attribute_defaults.py', slug(e.name), 'CaptainVael stat row seeded in DT_AttributeDefaults'),
@@ -218,6 +222,7 @@ registerCatalogPipeline({
       accept: allOf(
         fieldsPopulated('behavior', 'Role + npcId + dialogueBinding', ['role', 'npcId', 'dialogueBinding']),
         linksResolve(),
+        wiringContractSound(),
       ),
     },
 
@@ -287,7 +292,10 @@ registerCatalogPipeline({
           ueAssets: assets.map((a) => `/Game/Characters/${s}/${a}`),
         };
       },
-      accept: minCount('assets', 'All assets packaged', 4),
+      accept: allOf(
+        minCount('assets', 'All assets packaged', 4),
+        wiringContractSound(),
+      ),
       staticChecks: (e) => [
         cppSymbolExists('AARPGNPCActor', 'NPC actor class present'),
         seedRowPresent('seed_characters.ts', slug(e.name), 'Character catalog row seeded for this entity'),

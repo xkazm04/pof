@@ -1,4 +1,5 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
+import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
 import { minLength, fieldsPopulated, withinPercent, selected } from '../acceptance/dataCheckers';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists } from '../acceptance/ueStaticCheckers';
@@ -142,11 +143,14 @@ registerCatalogPipeline({
         },
         ueAssets: ['/Game/Materials/M_ARPG_Surface_Master'],
       }),
-      accept: fieldsPopulated('shaderGraph', 'masterPath / exposedPins / restrictions present', [
-        'masterPath',
-        'exposedPins',
-        'restrictions',
-      ]),
+      accept: allOf(
+        fieldsPopulated('shaderGraph', 'masterPath / exposedPins / restrictions present', [
+          'masterPath',
+          'exposedPins',
+          'restrictions',
+        ]),
+        wiringContractSound('shaderGraph'),
+      ),
     },
 
     // ── 4. Parameters ─────────────────────────────────────────────────────────
@@ -232,7 +236,10 @@ registerCatalogPipeline({
           `/Game/ArenaBuild/Textures/T_${slug(e.name)}_orm`,
         ],
       }),
-      accept: selected('selected', 'A texture map candidate is selected (L1)'),
+      accept: allOf(
+        selected('selected', 'A texture map candidate is selected (L1)'),
+        wiringContractSound(),
+      ),
     },
 
     // ── 6. LOD / Perf Budget ──────────────────────────────────────────────────
@@ -342,11 +349,14 @@ registerCatalogPipeline({
         },
         ueAssets: [`/Game/Materials/MI_${slug(e.name)}`],
       }),
-      accept: fieldsPopulated('instanceLibrary', 'instancePath / parentMaterial / recipe populated', [
-        'instancePath',
-        'parentMaterial',
-        'recipe',
-      ]),
+      accept: allOf(
+        fieldsPopulated('instanceLibrary', 'instancePath / parentMaterial / recipe populated', [
+          'instancePath',
+          'parentMaterial',
+          'recipe',
+        ]),
+        wiringContractSound('instanceLibrary'),
+      ),
     },
 
     // ── 8. Icon 2D Art (universal; L1 selection) ──────────────────────────────
@@ -433,15 +443,18 @@ registerCatalogPipeline({
           ],
         };
       },
-      accept: (data) => {
-        const assets = Array.isArray(data.assets) ? (data.assets as string[]) : [];
-        return {
-          label: '≥3 UE assets packaged (MI + 3 texture maps)',
-          tier: 'L0',
-          status: assets.length >= 3 ? 'pass' : 'pending',
-          detail: `${assets.length} / 3`,
-        };
-      },
+      accept: allOf(
+        (data) => {
+          const assets = Array.isArray(data.assets) ? (data.assets as string[]) : [];
+          return {
+            label: '≥3 UE assets packaged (MI + 3 texture maps)',
+            tier: 'L0',
+            status: assets.length >= 3 ? 'pass' : 'pending',
+            detail: `${assets.length} / 3`,
+          };
+        },
+        wiringContractSound(),
+      ),
       staticChecks: () => [
         cppSymbolExists(
           'FARPGSurfaceMaterialDef',

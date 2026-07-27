@@ -1,4 +1,6 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
+import { allOf } from '@/lib/catalog/acceptance/combinators';
+import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
 import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
 import { faucetSinkBalanced } from '../acceptance/invariants';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
@@ -139,13 +141,16 @@ registerCatalogPipeline({
         },
         ueAssets: ['/Game/Economy/DT_Currencies'],
       }),
-      accept: fieldsPopulated('rules', 'kind / faucets / sinks / cap / conversionNote populated', [
-        'kind',
-        'faucets',
-        'sinks',
-        'cap',
-        'conversionNote',
-      ]),
+      accept: allOf(
+        fieldsPopulated('rules', 'kind / faucets / sinks / cap / conversionNote populated', [
+          'kind',
+          'faucets',
+          'sinks',
+          'cap',
+          'conversionNote',
+        ]),
+        wiringContractSound('rules'),
+      ),
       staticChecks: () => [cppSymbolExists('FARPGCurrencyDef', 'Currency row struct present in UE Source')],
     },
 
@@ -250,12 +255,15 @@ registerCatalogPipeline({
         },
         ueAssets: ['/Game/UI/HUD/WBP_Wallet'],
       }),
-      accept: fieldsPopulated('ui', 'Wallet widget + format + position + hudBinding populated', [
-        'widget',
-        'format',
-        'position',
-        'hudBinding',
-      ]),
+      accept: allOf(
+        fieldsPopulated('ui', 'Wallet widget + format + position + hudBinding populated', [
+          'widget',
+          'format',
+          'position',
+          'hudBinding',
+        ]),
+        wiringContractSound('ui'),
+      ),
     },
 
     // ── 6. Test Gate ──────────────────────────────────────────────────────────
@@ -319,7 +327,10 @@ registerCatalogPipeline({
           ueAssets: assets.map((a) => `/Game/Economy/${a}`),
         };
       },
-      accept: minCount('assets', 'All UE assets packaged (≥4)', 4),
+      accept: allOf(
+        minCount('assets', 'All UE assets packaged (≥4)', 4),
+        wiringContractSound(),
+      ),
       staticChecks: () => [cppSymbolExists('FARPGCurrencyDef', 'Currency row struct present')],
     },
   ],

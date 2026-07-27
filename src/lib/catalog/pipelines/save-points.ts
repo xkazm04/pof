@@ -1,4 +1,5 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
+import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
 import { minLength, fieldsPopulated, withinPercent, selected, minCount } from '../acceptance/dataCheckers';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists } from '../acceptance/ueStaticCheckers';
@@ -155,12 +156,15 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('stateSchema', 'persisted / ephemeral / schemaVersion / fieldsNote populated', [
-        'persisted',
-        'ephemeral',
-        'schemaVersion',
-        'fieldsNote',
-      ]),
+      accept: allOf(
+        fieldsPopulated('stateSchema', 'persisted / ephemeral / schemaVersion / fieldsNote populated', [
+          'persisted',
+          'ephemeral',
+          'schemaVersion',
+          'fieldsNote',
+        ]),
+        wiringContractSound('stateSchema'),
+      ),
       staticChecks: () => [
         cppSymbolExists('UARPGSaveGame', 'SaveGame subclass present in UE Source'),
       ],
@@ -296,12 +300,15 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('triggers', 'manualTrigger / autosaveTriggers / triggerDebounce / cooldownMs populated', [
-        'manualTrigger',
-        'autosaveTriggers',
-        'triggerDebounce',
-        'cooldownMs',
-      ]),
+      accept: allOf(
+        fieldsPopulated('triggers', 'manualTrigger / autosaveTriggers / triggerDebounce / cooldownMs populated', [
+          'manualTrigger',
+          'autosaveTriggers',
+          'triggerDebounce',
+          'cooldownMs',
+        ]),
+        wiringContractSound('triggers'),
+      ),
     },
 
     // ── 5. Cloud / Local Storage Strategy ────────────────────────────────────
@@ -499,12 +506,15 @@ registerCatalogPipeline({
         },
         ueAssets: ['/Game/UI/HUD/WBP_SaveSlots', '/Game/UI/HUD/WBP_SaveIndicator'],
       }),
-      accept: fieldsPopulated('slotsUI', 'widget / format / position / hudBinding populated', [
-        'widget',
-        'format',
-        'position',
-        'hudBinding',
-      ]),
+      accept: allOf(
+        fieldsPopulated('slotsUI', 'widget / format / position / hudBinding populated', [
+          'widget',
+          'format',
+          'position',
+          'hudBinding',
+        ]),
+        wiringContractSound('slotsUI'),
+      ),
     },
 
     // ── 9. Load-Time Budget ───────────────────────────────────────────────────
@@ -658,7 +668,10 @@ registerCatalogPipeline({
           ],
         };
       },
-      accept: minCount('assets', '≥4 UE assets packaged', 4),
+      accept: allOf(
+        minCount('assets', '≥4 UE assets packaged', 4),
+        wiringContractSound(),
+      ),
       staticChecks: () => [
         cppSymbolExists('UARPGSaveGame', 'SaveGame subclass present in Source/'),
         cppSymbolExists('UARPGSaveSubsystem', 'Save subsystem present in Source/'),

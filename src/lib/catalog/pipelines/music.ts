@@ -1,4 +1,5 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
+import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
 import { minLength, fieldsPopulated, withinAbsolute, selected, minCount } from '../acceptance/dataCheckers';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { seedRowPresent } from '../acceptance/ueStaticCheckers';
@@ -187,12 +188,15 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('stemsLayers', 'stems / layers / mixRules / wiringContract populated', [
-        'stems',
-        'layers',
-        'mixRules',
-        'wiringContract',
-      ]),
+      accept: allOf(
+        fieldsPopulated('stemsLayers', 'stems / layers / mixRules / wiringContract populated', [
+          'stems',
+          'layers',
+          'mixRules',
+          'wiringContract',
+        ]),
+        wiringContractSound('stemsLayers'),
+      ),
     },
 
     // ── 3. Transitions ───────────────────────────────────────────────────────
@@ -273,12 +277,15 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('transitions', 'combatEnter / combatExit / beatSyncImplementation / wiringContract', [
-        'combatEnter',
-        'combatExit',
-        'beatSyncImplementation',
-        'wiringContract',
-      ]),
+      accept: allOf(
+        fieldsPopulated('transitions', 'combatEnter / combatExit / beatSyncImplementation / wiringContract', [
+          'combatEnter',
+          'combatExit',
+          'beatSyncImplementation',
+          'wiringContract',
+        ]),
+        wiringContractSound('transitions'),
+      ),
     },
 
     // ── 4. Loop & Markers ────────────────────────────────────────────────────
@@ -530,6 +537,7 @@ registerCatalogPipeline({
         'wiringContract',
       ]),
         linksResolve(),
+        wiringContractSound('triggerBinding'),
       ),
     },
 
@@ -690,6 +698,7 @@ registerCatalogPipeline({
       accept: allOf(
         minCount('assets', '≥8 UE assets packaged (MetaSound + DT row + 6 stems)', 8),
         linksResolve(),
+        wiringContractSound(),
       ),
       staticChecks: (e) => [
         seedRowPresent('seed_music.py', slug(e.name), 'Music row seeded in Content/Python'),

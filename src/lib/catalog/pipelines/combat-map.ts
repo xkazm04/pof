@@ -1,4 +1,5 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
+import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
 import {
   minLength,
   fieldsPopulated,
@@ -147,13 +148,16 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('layout', 'Layout dimensions + tactical + cover points populated', [
-        'extentCm',
-        'elevatedThresholdCm',
-        'highGroundThresholdCm',
-        'tacticalPoints',
-        'coverPoints',
-      ]),
+      accept: allOf(
+        fieldsPopulated('layout', 'Layout dimensions + tactical + cover points populated', [
+          'extentCm',
+          'elevatedThresholdCm',
+          'highGroundThresholdCm',
+          'tacticalPoints',
+          'coverPoints',
+        ]),
+        wiringContractSound('layout'),
+      ),
       staticChecks: () => [
         cppSymbolExists('AARPGEncounterArena', 'Encounter arena actor present in UE Source'),
       ],
@@ -300,6 +304,7 @@ registerCatalogPipeline({
         'waveDetails',
       ]),
         linksResolve(),
+        wiringContractSound('waves'),
       ),
     },
 
@@ -356,11 +361,14 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('winLoss', 'winCondition / lossCondition / failSafe populated', [
-        'winCondition',
-        'lossCondition',
-        'failSafe',
-      ]),
+      accept: allOf(
+        fieldsPopulated('winLoss', 'winCondition / lossCondition / failSafe populated', [
+          'winCondition',
+          'lossCondition',
+          'failSafe',
+        ]),
+        wiringContractSound('winLoss'),
+      ),
     },
 
     // ── 5. Hazards ────────────────────────────────────────────────────────────
@@ -442,10 +450,13 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('hazards', 'hazardList populated with kind/damagePerTick/ge/wiringContract', [
-        'hazardList',
-        'wiringContract',
-      ]),
+      accept: allOf(
+        fieldsPopulated('hazards', 'hazardList populated with kind/damagePerTick/ge/wiringContract', [
+          'hazardList',
+          'wiringContract',
+        ]),
+        wiringContractSound('hazards'),
+      ),
     },
 
     // ── 6. Balance ────────────────────────────────────────────────────────────
@@ -750,6 +761,7 @@ registerCatalogPipeline({
       accept: allOf(
         minCount('assets', '≥3 UE assets packaged', 3),
         linksResolve(),
+        wiringContractSound(),
       ),
       staticChecks: () => [
         cppSymbolExists('AARPGEncounterArena', 'Encounter arena actor present in UE Source'),

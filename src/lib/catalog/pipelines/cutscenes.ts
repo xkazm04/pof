@@ -1,4 +1,5 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
+import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
 import { minLength, fieldsPopulated, selected, minCount, entriesHaveFields } from '../acceptance/dataCheckers';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
@@ -184,6 +185,7 @@ registerCatalogPipeline({
         minCount('beats', '≥1 beat with tc/shot/event defined', 1),
         entriesHaveFields('beats', 'every beat carries tc in/out + shot + event', ['index', 'tcIn', 'tcOut', 'shot', 'event']),
         linksResolve(),
+        wiringContractSound(),
       ),
     },
 
@@ -359,6 +361,7 @@ registerCatalogPipeline({
         'wiringContract',
       ]),
         linksResolve(),
+        wiringContractSound('vfx'),
       ),
     },
 
@@ -432,6 +435,7 @@ registerCatalogPipeline({
         'wiringContract',
       ]),
         linksResolve(),
+        wiringContractSound('musicSfx'),
       ),
     },
 
@@ -530,13 +534,16 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('skipReplay', 'skip/replay rules defined', [
-        'skipGraceWindowSecs',
-        'skipInput',
-        'skipBehavior',
-        'replayAvailability',
-        'noRetrigger',
-      ]),
+      accept: allOf(
+        fieldsPopulated('skipReplay', 'skip/replay rules defined', [
+          'skipGraceWindowSecs',
+          'skipInput',
+          'skipBehavior',
+          'replayAvailability',
+          'noRetrigger',
+        ]),
+        wiringContractSound('skipReplay'),
+      ),
     },
 
     // ── 11. Icon 2D Art (universal) ───────────────────────────────────────────
@@ -649,7 +656,10 @@ registerCatalogPipeline({
           ],
         };
       },
-      accept: minCount('assets', '≥3 UE cinematic assets packaged', 3),
+      accept: allOf(
+        minCount('assets', '≥3 UE cinematic assets packaged', 3),
+        wiringContractSound(),
+      ),
     },
   ],
 });

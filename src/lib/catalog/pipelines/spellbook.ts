@@ -1,4 +1,5 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
+import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
 import { minLength, fieldsPopulated, withinPercent, selected, minCount, entriesHaveFields } from '../acceptance/dataCheckers';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
@@ -196,6 +197,7 @@ registerCatalogPipeline({
         ['damageType', 'baseDamage', 'manaCost', 'cooldown', 'critChancePct', 'critMulti', 'onHitIgnite'],
       ),
         linksResolve(),
+        wiringContractSound('effect'),
       ),
       staticChecks: () => [
         cppSymbolExists('FARPGAbilityCatalogRow', 'Ability catalog row struct present in UE Source'),
@@ -590,7 +592,10 @@ registerCatalogPipeline({
           ueAssets: assets.map((a) => `/Game/Abilities/Generated/${a}`),
         };
       },
-      accept: minCount('assets', '≥4 UE assets packaged (GA + GEs + icon + DT row)', 4),
+      accept: allOf(
+        minCount('assets', '≥4 UE assets packaged (GA + GEs + icon + DT row)', 4),
+        wiringContractSound(),
+      ),
       staticChecks: () => [
         cppSymbolExists('UARPGGameplayAbility', 'Base gameplay ability class present in Source/PoF/'),
         cppSymbolExists('FARPGAbilityCatalogRow', 'Ability catalog row struct present in Source/PoF/'),
