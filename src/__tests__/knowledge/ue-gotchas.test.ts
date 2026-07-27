@@ -159,6 +159,28 @@ describe('formatGotchas', () => {
     expect(formatGotchas('ue-cpp')).not.toMatch(/Transfer Skin Weights node/);
   });
 
+  it('tells sessions to rig garments by transferring skin weights from the conformed MetaHuman body', () => {
+    const out = formatGotchas('ue-python');
+    expect(out).toMatch(/transfer(ring)?\s+(skin\s+)?weights|weight transfer/i);
+    expect(out).toMatch(/MetaHuman body|conform(ed)? body/i);
+    expect(out).toMatch(/AccuRig|Mixamo/);
+    expect(out).toMatch(/garment/i);
+  });
+
+  it('carries neutral-facial-expression conform input prep for ue-python', () => {
+    const out = formatGotchas('ue-python');
+    expect(out).toMatch(/neutral (facial )?expression|neutral face/i);
+    expect(out).toMatch(/after the conform|head.?sculpt|post.?conform/i);
+  });
+
+  it('warns that AI low-poly/UV generation is not final — high-poly → retopo → bake is the quality path', () => {
+    const out = formatGotchas('ue-python');
+    expect(out).toMatch(/high.?poly/i);
+    expect(out).toMatch(/retopo/i);
+    expect(out).toMatch(/bake|baking/i);
+    expect(out).toMatch(/80.?90\s?%|dice|never final|not final/i);
+  });
+
   it('carries Niagara optimization pitfalls', () => {
     const out = formatGotchas('ue-python');
     expect(out).toMatch(/Niagara/);
