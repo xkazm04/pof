@@ -1121,14 +1121,24 @@ export function createHarnessOrchestrator(
 
     // Set up git checkpointing once, on the run's own `harness/<runId>` branch.
     if (checkpointEnabled && !checkpointer && runId) {
-      const cp = createCheckpointer(runId, config.projectPath);
+      // REHYDRATE the ledger from disk. `start()`/`resume()` null the in-memory
+      // checkpointer, and a post-restart rehydrate has none at all — without
+      // this the checkpointer began empty, re-baselined at the resume-time tree
+      // and `rollbackToLastGreen` reset to the WRONG commit while the UI kept
+      // rendering the stale on-disk ledger. Only adopt a ledger belonging to
+      // THIS run's branch (a fork owns a different one).
+      const persisted = readCheckpoints(config.statePath);
+      const prior = persisted && persisted.branch === checkpointBranch(runId) ? persisted : null;
+      const cp = createCheckpointer(runId, config.projectPath, undefined, prior);
       const ok = await cp.init();
       if (ok) {
         checkpointer = cp;
         saveCheckpoints(config.statePath, cp.getState());
         emit({
           type: 'harness:learning',
-          learning: `Git checkpointing enabled on branch ${checkpointBranch(runId)} — areas snapshot on pass, roll back to last green on promote-with-gaps`,
+          learning: cp.isResumed()
+            ? `Git checkpointing RESUMED on branch ${checkpointBranch(runId)} — rehydrated ${cp.getState().checkpoints.length} checkpoint(s); rollback targets the real last green ${cp.lastGreen()?.slice(0, 8)}`
+            : `Git checkpointing enabled on branch ${checkpointBranch(runId)} — areas snapshot on pass, roll back to last green on promote-with-gaps`,
         });
       } else {
         emit({
