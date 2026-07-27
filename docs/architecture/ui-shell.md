@@ -21,6 +21,8 @@ rollup strip.
 | `src/components/layout-lab/hooks/useBatchDrain.ts` | Batch-drain engine: sends the WHOLE deferred set in ONE request (`drainCatalogGates(catalogId, entityIds)`) — one server-side collection + one grouped editor boot for every gate, not one boot per entity. All-or-nothing lease: a 409 refuses the whole batch → retry once, then record every entity locked. Invalidates the whole-catalog cache on completion; cancel only skips the retry |
 | `src/components/layout-lab/batchDrainModel.ts` | Pure batch-drain model: `DrainOutcome` (ok/locked/error) + `summarizeBatchDrain(entities, outcome)` — derives the catalog-wide flips summary from the single aggregate `DrainSummary` (groups per-step results back to their `job.entityId`; locked/error mark the whole set) |
 | `src/components/layout-lab/CatalogTree.tsx` | Category→Catalog→Entity collapsible tree (left column) |
+| `src/components/layout-lab/LabSearch.tsx` | Lab-wide search overlay (shared `ui/Modal`): finds any catalog, entity, or pipeline step by name/id and jumps via the EXISTING lifted nav callbacks (`selectCatalog` / `navigateTo`) — no parallel nav state. `useLabSearchShortcut()` binds ⌘/Ctrl+K and `/` (ignored while typing) |
+| `src/components/layout-lab/ui/SearchCombobox.tsx` | The shared type-ahead combobox behind BOTH lab search and `status/EntitySearch` (extracted from the latter): ARIA combobox + `aria-activedescendant`, ↓/↑ (wrapping) · Home/End · Enter · Escape, live-region hit count, stated `maxHits` cap, and "no match" vs "nothing loaded" empty states |
 | `src/components/layout-lab/steps/index.ts` | `getStepComponent(catalogId, stepName)` — looks up the `STEP_REGISTRY` |
 | `src/components/layout-lab/steps/ArchetypeStep.tsx` | Generic renderer for any registered `StepSpec`; drives View + CliProduce + Acceptance |
 | `src/components/layout-lab/NextStepCoach.tsx` | Compact single-row "what to do next" coach in the work canvas; primary CTA (jump / drain) + a disclosure that expands plain-language mode + summary. Scoped to the OPEN entity, ranked by the SHARED `coachLadder.ts` (fed `driftByStep` so it has a drift rung). For a fail/deferred next step it shows the concrete checker `reason` (via `reasonForStep`) instead of a generic hint; no reason available → the generic hint stays (never invented) |
@@ -148,6 +150,25 @@ Left column of `Baseline`. Renders three levels:
    selection. Clicking calls `onSelectCatalog`.
 3. **Entity** rows — only shown when the catalog is selected; a 7 px lifecycle dot (ok/bad/muted)
    precedes the entity name. Clicking calls `onSelectEntity`.
+
+### 4b. Lab-wide search (`LabSearch.tsx`)
+
+The tree opens exactly ONE chapter and lists entities only under the selected catalog, so
+reaching a known entity was expand→click→scan, and a step could not be reached at all without
+first opening its entity. `LabSearch` indexes all `CATALOG_SECTIONS` catalogs, every seeded
+entity in `catalogStore`, and every step of every catalog (`resolveCatalogSteps`) into one flat
+list, rebuilt only when the entity universe changes.
+
+- **Open**: header "Search ⌘K" button, `⌘/Ctrl+K`, or `/` when focus is not in a text field.
+- **Jump**: catalog hit → `onSelectCatalog`; entity hit → `navigateTo(catalog, entity, 0)`;
+  step hit → `navigateTo(catalog, entity, stepIndex)` on the CURRENTLY open entity when it
+  belongs to that catalog, else the catalog's first seeded entity (no entity at all → the hit
+  degrades to selecting the catalog, since there is nothing to open the step on). Every path
+  runs the lifted callbacks, so last-location persistence is unchanged.
+- **Keyboard**: ↓/↑ (wrapping) · Home/End · Enter opens · Escape clears the query, then closes
+  the overlay (the first Escape is `stopPropagation`'d so clearing never also closes the Modal).
+
+Search+jump only — deliberately not a command palette with actions.
 
 ### 5. Composition screen — `Baseline` (`src/components/layout-lab/Baseline/index.tsx` + `Baseline/useBaseline.ts`)
 

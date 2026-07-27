@@ -103,6 +103,23 @@ describe('LayoutLab navigation state truth', { timeout: 20000 }, () => {
     expect(screen.getByRole('heading', { level: 2, name: 'Concept Brief' })).toBeTruthy();
   });
 
+  it('lab search opens on Ctrl+K and jumps through the SAME lifted nav (persistence intact)', () => {
+    const { result } = renderHook(() => useLabDetail('items'));
+    const target = result.current!.entities[1] ?? result.current!.entities[0];
+    render(<LayoutLab />);
+
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true });
+    const input = screen.getByTestId('lab-search-input');
+    fireEvent.change(input, { target: { value: target.name.toLowerCase() } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    // It went through `navigateTo`, so the composition view moved AND last-location persisted.
+    expect(screen.getByRole('heading', { level: 1, name: target.name })).toBeTruthy();
+    const prefs = readPrefs();
+    expect(prefs.lastCatalogId).toBe('items');
+    expect(prefs.lastEntityId).toBe(target.id);
+  });
+
   it('persists last-location on a matrix open the same way a tree click does', () => {
     const { result } = renderHook(() => useLabDetail('items'));
     const firstEntity = result.current!.entities[0];

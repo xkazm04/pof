@@ -8,6 +8,7 @@ import { Baseline } from './Baseline';
 import { CanonView } from './CanonView';
 import { CatalogMatrix } from './CatalogMatrix';
 import { GlobalCoach } from './GlobalCoach';
+import { LabSearch, useLabSearchShortcut } from './LabSearch';
 import { LAB_THEMES, LIGHT, themeAttr } from './theme';
 import { labFontVars } from './fonts';
 import { LabBridgeStrip } from './LabBridgeStrip';
@@ -52,6 +53,8 @@ export function LayoutLab() {
     if (prefs.lastEntityId) setEntityId(prefs.lastEntityId);
   }
   const detail = useLabDetail(catalogId);
+  // Lab-wide search (⌘/Ctrl+K or "/"), driving the SAME lifted nav callbacks below.
+  const [searchOpen, setSearchOpen] = useLabSearchShortcut();
   const theme = LAB_THEMES.find((t) => t.id === themeId) ?? LIGHT;
   const hydrate = useCanonStore((s) => s.hydrate);
   const setPanelOpen = useOneShotLabStore((s) => s.setPanelOpen);
@@ -148,6 +151,14 @@ export function LayoutLab() {
         </div>
         {/* Center zone: primary actions */}
         <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 'var(--lab-s2)' }}>
+          <Button
+            onClick={() => setSearchOpen(true)}
+            data-testid="lab-search-open"
+            ariaLabel="Search catalogs, entities and pipeline steps"
+            title="Search (Ctrl+K)"
+          >
+            Search <span aria-hidden="true" style={{ color: 'var(--lab-muted)' }}>⌘K</span>
+          </Button>
           <Button active={view === 'catalogs'} onClick={() => setView('catalogs')}>Catalogs</Button>
           <Button active={view === 'matrix'} onClick={() => setView('matrix')}>Matrix</Button>
           <Button active={view === 'canon'} onClick={() => setView('canon')}>Canon</Button>
@@ -187,6 +198,13 @@ export function LayoutLab() {
           </motion.div>
         </AnimatePresence>
       </div>
+      <LabSearch
+        open={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        currentEntityId={entityId}
+        onSelectCatalog={selectCatalog}
+        onNavigate={(cid, eid, step) => { navigateTo(cid, eid, step); setView('catalogs'); }}
+      />
       <OneShotPanel t={theme} />
     </div>
   );
