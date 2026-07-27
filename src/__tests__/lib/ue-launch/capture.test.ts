@@ -1,8 +1,10 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { mkdtempSync, writeFileSync, rmSync, utimesSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, rmSync, utimesSync, readFileSync } from 'node:fs';
+import { EventEmitter } from 'node:events';
+import type { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { buildCaptureProbe, buildCaptureArgs, captureFrame, buildScenarioInbox, buildScenarioArgs, newestShot, pickActionShot, captureScenarioFrame } from '@/lib/ue-launch/capture';
+import { buildCaptureProbe, buildCaptureArgs, captureFrame, buildScenarioInbox, buildScenarioArgs, newestShot, pickActionShot, captureScenarioFrame, buildPidKillArgs, createCaptureRun } from '@/lib/ue-launch/capture';
 import type { GateScenario } from '@/lib/test-gate-runner/types';
 
 const tmps: string[] = [];
@@ -165,5 +167,41 @@ describe('captureScenarioFrame', () => {
     await captureScenarioFrame({ uproject: 'C:/p/PoF.uproject', scenario, map: '/Game/Maps/VerticalSlice', outDir, settleMs: 0 }, { run });
     expect(seenArgs).toContain('/Game/Maps/VerticalSlice'); // caller's lit map wins
     expect(seenArgs).not.toContain('/Game/Maps/TestHarness'); // not the scenario's dark map
+  });
+});
+
+describe('capture teardown — PID-scoped kill (repo law: never by image name)', () => {
+  it('builds a kill that targets ONLY the spawned PID tree', () => {
+    const args = buildPidKillArgs(4242);
+    expect(args).toEqual(['/PID', '4242', '/T', '/F']);
+    expect(args).not.toContain('/IM');
+    expect(args.join(' ')).not.toMatch(/UnrealEditor/i);
+  });
+
+  it('kills only our own child on the self-exit path — never a machine-wide sweep', async () => {
+    const killed: number[] = [];
+    const child = new EventEmitter() as EventEmitter & { pid: number };
+    child.pid = 777;
+    const spawnFn = (() => child) as unknown as typeof spawn;
+    const run = createCaptureRun({ spawnFn, kill: (pid) => killed.push(pid) });
+    const p = run('editor.exe', ['-x'], 50_000);
+    child.emit('exit');
+    await p;
+    expect(killed).toEqual([777]);
+  });
+
+  it('the watchdog (settle timeout) path kills the SAME single PID, nothing else', async () => {
+    const killed: number[] = [];
+    const child = new EventEmitter() as EventEmitter & { pid: number };
+    child.pid = 99;
+    const spawnFn = (() => child) as unknown as typeof spawn;
+    const run = createCaptureRun({ spawnFn, kill: (pid) => killed.push(pid) });
+    await run('editor.exe', ['-x'], 0); // watchdog fires immediately (no exit event)
+    expect(killed).toEqual([99]);
+  });
+
+  it('the capture module contains no image-name taskkill', () => {
+    const src = readFileSync(join(process.cwd(), 'src/lib/ue-launch/capture.ts'), 'utf-8');
+    expect(src).not.toMatch(/['"]\/IM['"]/);
   });
 });

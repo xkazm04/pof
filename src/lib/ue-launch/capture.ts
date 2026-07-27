@@ -50,30 +50,57 @@ export function buildCaptureArgs(o: { uproject: string; probePath: string }): st
 
 type CaptureRun = (binary: string, args: string[], settleMs: number) => Promise<void>;
 
+/**
+ * Arguments that kill OUR OWN spawned editor and its descendants, by PID. Pure.
+ *
+ * **Repo law — never kill by image name.** This path used to follow the PID kill with
+ * `taskkill /IM UnrealEditor.exe /F`, which is machine-wide: it killed the operator's live
+ * editor and any concurrent session's editor (the shared UE tree is worked by several sessions
+ * at once). `/T` already walks the spawned process TREE, so the image-name sweep bought nothing
+ * a PID kill doesn't — it only destroyed other people's work.
+ */
+export function buildPidKillArgs(pid: number): string[] {
+  return ['/PID', String(pid), '/T', '/F'];
+}
+
+/** Kill one spawned process tree by PID. Injectable for tests (never spawns in a test). */
+export type KillTree = (pid: number) => void;
+
+const defaultKillTree: KillTree = (pid) => {
+  try { execFileSync('taskkill', buildPidKillArgs(pid), { stdio: 'ignore' }); }
+  catch (e) { logger.debug(`[ue-launch] capture: PID ${pid} already gone (${e instanceof Error ? e.message : String(e)})`); }
+};
+
+/** Build the capture runner. Spawn + kill are seams so a test can assert WHAT gets killed
+ *  (PID-scoped, never by image name) without launching a real editor. */
+export function createCaptureRun(deps: { spawnFn?: typeof spawn; kill?: KillTree } = {}): CaptureRun {
+  const spawnFn = deps.spawnFn ?? spawn;
+  const kill = deps.kill ?? defaultKillTree;
+  return (binary, args, settleMs) =>
+    new Promise((resolve) => {
+      const child = spawnFn(binary, args, { windowsHide: true, stdio: 'ignore' });
+      let settled = false;
+      const done = () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        // Only what WE spawned — the watchdog path lands here too, so neither route ever
+        // reaches for another process (see buildPidKillArgs).
+        if (child.pid) kill(child.pid);
+        resolve();
+      };
+      const timer = setTimeout(done, settleMs);
+      // A `-game` scenario self-exits when it finishes — resolve early (with a small grace for the
+      // final async screenshot to flush) instead of blocking the whole watchdog. The editor
+      // screenshot probe does NOT self-exit, so it still falls through to settleMs.
+      child.on('exit', () => setTimeout(done, 800));
+      child.on('error', () => done());
+    });
+}
+
 /** Spawn the editor; resolve when it self-exits (a `-game` scenario RequestExits when done)
- *  or after `settleMs` (the watchdog, for the non-exiting editor-probe case), then SIGKILL. */
-const defaultRun: CaptureRun = (binary, args, settleMs) =>
-  new Promise((resolve) => {
-    const child = spawn(binary, args, { windowsHide: true, stdio: 'ignore' });
-    let settled = false;
-    let timer: ReturnType<typeof setTimeout>;
-    const done = () => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      try { if (child.pid) execFileSync('taskkill', ['/PID', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); }
-      catch (e) { logger.debug(`[ue-launch] capture: PID ${child.pid} already gone (${e instanceof Error ? e.message : String(e)})`); }
-      try { execFileSync('taskkill', ['/IM', 'UnrealEditor.exe', '/F'], { stdio: 'ignore' }); }
-      catch (e) { logger.debug(`[ue-launch] capture: no stray UnrealEditor.exe to kill (${e instanceof Error ? e.message : String(e)})`); }
-      resolve();
-    };
-    timer = setTimeout(done, settleMs);
-    // A `-game` scenario self-exits when it finishes — resolve early (with a small grace for the
-    // final async screenshot to flush) instead of blocking the whole watchdog. The editor
-    // screenshot probe does NOT self-exit, so it still falls through to settleMs.
-    child.on('exit', () => setTimeout(done, 800));
-    child.on('error', () => done());
-  });
+ *  or after `settleMs` (the watchdog, for the non-exiting editor-probe case), then kill our PID tree. */
+const defaultRun: CaptureRun = createCaptureRun();
 
 export interface CaptureFrameOptions {
   uproject: string;

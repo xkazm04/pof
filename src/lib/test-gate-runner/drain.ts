@@ -191,10 +191,18 @@ export async function drainJobs(
   // still runs its own per-job boot via `drainOne` instead of being parked.
   const preparedOk = new Set<GateExecutor>(); // batch pre-ran → `run` serves the cache
   const degraded = new Set<GateExecutor>();   // batch failed twice → fall back to per-job boots
-  const ensurePrepared = async (e: GateExecutor): Promise<void> => {
+  //
+  // `limit` BOUNDS THE BATCH, not just the loop. The grouped boot used to receive every
+  // tier-matched job regardless of `limit`, so `limit:1` still ran (and booted UE for) every
+  // planned test — the cost cap capped nothing. The batch now takes only the jobs that can
+  // still run: from the triggering job onward, capped by the remaining budget.
+  const ensurePrepared = async (e: GateExecutor, fromIndex: number): Promise<void> => {
     if (preparedOk.has(e) || degraded.has(e)) return;
     if (!e.prepareBatch) { preparedOk.add(e); return; }
-    const batchJobs = jobs.filter((j) => j.tier === e.tier);
+    const limit = opts?.limit;
+    const tierJobs = (limit == null ? jobs : jobs.slice(fromIndex)).filter((j) => j.tier === e.tier);
+    // `runCount` has not yet counted the triggering job, so the remaining budget includes it.
+    const batchJobs = limit == null ? tierJobs : tierJobs.slice(0, Math.max(0, limit - runCount));
     for (let attempt = 1; attempt <= 2; attempt++) {
       try {
         await e.prepareBatch(batchJobs);
@@ -212,7 +220,8 @@ export async function drainJobs(
     }
   };
 
-  for (const job of jobs) {
+  for (let i = 0; i < jobs.length; i++) {
+    const job = jobs[i];
     if (opts?.limit != null && runCount >= opts.limit) {
       results.push({ job, skipped: 'limit reached' });
       continue;
@@ -231,7 +240,7 @@ export async function drainJobs(
       continue;
     }
     try {
-      await ensurePrepared(executor); // ONE grouped boot for this executor's batchable jobs
+      await ensurePrepared(executor, i); // ONE grouped boot for this executor's still-runnable jobs
       runCount++;
       results.push(await drainOne(job, executor));
     } catch (e) {

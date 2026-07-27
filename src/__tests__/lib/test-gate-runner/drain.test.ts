@@ -218,6 +218,48 @@ describe('drainJobs — grouped boot (prepareBatch) integration', () => {
     expect(sum).toMatchObject({ ran: 3, passed: 3, failed: 0 });
   });
 
+  it('limit BOUNDS the batch: only the still-runnable jobs enter the grouped boot', async () => {
+    // Regression: prepareBatch used to receive EVERY tier-matched job regardless of `limit`,
+    // so limit:1 still booted UE for all of them — the cost cap capped nothing.
+    seed({ catalogId: 'items', entityId: 'a', step: 'g', tier: 'L3', reason: 'live-UE runner not yet run: TA' });
+    seed({ catalogId: 'loot', entityId: 'b', step: 'g', tier: 'L3', reason: 'live-UE runner not yet run: TB' });
+    seed({ catalogId: 'hud', entityId: 'c', step: 'g', tier: 'L3', reason: 'live-UE runner not yet run: TC' });
+
+    let batched: string[] = [];
+    const cache = new Map<string, GateVerdict>();
+    const batchExec: GateExecutor = {
+      id: 'fake-batch',
+      tier: 'L3',
+      available: async () => true,
+      async prepareBatch(jobs) {
+        batched = jobs.map((j) => j.testName!);
+        for (const j of jobs) cache.set(j.testName!, { status: 'pass', detail: 'ok' });
+      },
+      async run(job) {
+        return cache.get(job.testName!) ?? { status: 'fail', detail: 'not batched' };
+      },
+    };
+
+    const sum = await drainAll([batchExec], undefined, { limit: 1 });
+    expect(batched).toHaveLength(1);
+    expect(sum).toMatchObject({ ran: 1, passed: 1 });
+    expect(sum.results.filter((r) => r.skipped === 'limit reached')).toHaveLength(2);
+  });
+
+  it('with NO limit the batch still receives every tier-matched job (unchanged)', async () => {
+    seed({ catalogId: 'items', entityId: 'a', step: 'g', tier: 'L3', reason: 'live-UE runner not yet run: TA' });
+    seed({ catalogId: 'loot', entityId: 'b', step: 'g', tier: 'L3', reason: 'live-UE runner not yet run: TB' });
+    let batched = 0;
+    const exec: GateExecutor = {
+      id: 'fake-batch', tier: 'L3',
+      available: async () => true,
+      async prepareBatch(jobs) { batched = jobs.length; },
+      async run() { return { status: 'pass', detail: 'ok' }; },
+    };
+    await drainAll([exec]);
+    expect(batched).toBe(2);
+  });
+
   it('retries a failed grouped boot ONCE, then degrades to per-job boots WITHOUT parking the jobs', async () => {
     seed({ catalogId: 'items', entityId: 'a', step: 'g', tier: 'L3', reason: 'live-UE runner not yet run: TA' });
     seed({ catalogId: 'loot', entityId: 'b', step: 'g', tier: 'L3', reason: 'live-UE runner not yet run: TB' });
