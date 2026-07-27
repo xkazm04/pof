@@ -10,6 +10,7 @@ import {
   batchOf,
   historyData,
   nextSeq,
+  selectionSource,
   pruneHistory,
   GEN_HISTORY_KEY,
   MAX_KEPT_BATCHES,
@@ -69,7 +70,14 @@ describe('genHistory model', () => {
   it('selectCandidate ignores unknown ids (returns the same reference)', () => {
     const h = appendBatch(emptyHistory(), batch(0, 'first', 2));
     expect(selectCandidate(h, 'nope')).toBe(h);
-    expect(selectCandidate(h, h.selectedId!)).toBe(h); // no-op when already selected
+    // Re-selecting the SAME candidate is a no-op once the choice is already human…
+    const human = selectCandidate(h, h.selectedId!);
+    expect(human.selectedId).toBe(h.selectedId);
+    expect(selectCandidate(human, human.selectedId!)).toBe(human);
+    // …but clicking the machine's auto-pick is an explicit human confirmation, so it
+    // clears the auto flag (see the selection-provenance tests below).
+    expect(h.autoSelected).toBe(true);
+    expect(human.autoSelected).toBe(false);
   });
 
   it('selectedCandidate / batchOf resolve the selected candidate and its batch', () => {
@@ -102,6 +110,51 @@ describe('genHistory model', () => {
     const data = historyData(emptyHistory(), { tris: 0 });
     expect(data.tris).toBe(0);
     expect((data[GEN_HISTORY_KEY] as GenHistory).batches).toEqual([]);
+  });
+
+  describe('selection provenance (auto-picked vs human-chosen)', () => {
+    it('appendBatch records the auto-pick as MACHINE selection', () => {
+      const h = appendBatch(emptyHistory(), batch(0, 'first', 3));
+      expect(h.autoSelected).toBe(true);
+      expect(selectionSource(h)).toBe('auto');
+    });
+
+    it('a human reselect clears the flag, and a re-roll re-arms it', () => {
+      let h = appendBatch(emptyHistory(), batch(0, 'first', 3));
+      h = selectCandidate(h, 'b0-c2');
+      expect(selectionSource(h)).toBe('human');
+      // A fresh Produce auto-picks again — the claim reverts to `auto`, honestly.
+      h = appendBatch(h, batch(1, 'reroll', 3));
+      expect(selectionSource(h)).toBe('auto');
+      expect(h.selectedId).toBe('b1-c0');
+    });
+
+    it('nothing selected reads as `none`', () => {
+      expect(selectionSource(emptyHistory())).toBe('none');
+    });
+
+    it('a legacy history (no flag) reads as `unrecorded`, never as human', () => {
+      const legacy: GenHistory = { batches: [batch(0, 'first', 2)], selectedId: 'b0-c0' };
+      // Round-trips through readHistory without back-filling a claim nobody made.
+      const read = readHistory({ [GEN_HISTORY_KEY]: legacy });
+      expect(read.autoSelected).toBeUndefined();
+      expect(selectionSource(read)).toBe('unrecorded');
+    });
+
+    it('the flag persists through historyData + readHistory (backward compatible shape)', () => {
+      let h = appendBatch(emptyHistory(), batch(0, 'first', 2));
+      h = selectCandidate(h, 'b0-c1');
+      const round = readHistory(historyData(h));
+      expect(selectionSource(round)).toBe('human');
+      expect(round.selectedId).toBe('b0-c1');
+    });
+
+    it('provenance survives pruning (the flag is carried, not reset)', () => {
+      let h = emptyHistory();
+      for (let i = 0; i < MAX_KEPT_BATCHES + 3; i++) h = appendBatch(h, batch(nextSeq(h), `roll ${i}`, 2));
+      h = selectCandidate(h, h.batches[h.batches.length - 1].candidates[1].id);
+      expect(selectionSource(h)).toBe('human');
+    });
   });
 
   describe('bounded history', () => {

@@ -5,6 +5,7 @@ import { useRef, useState, type ReactNode } from 'react';
 import { labPanelStyle, type LabTheme } from '../theme';
 import { STATUS_GLYPH, STATUS_WORD, statusColor, type StatusKind } from '../statusLanguage';
 import { ProvenanceStrip } from './shared/ProvenanceStrip';
+import type { SelectionSource } from './shared/genHistory';
 import { getStepFact } from '@/lib/status/statusModel';
 
 export interface Acceptance {
@@ -46,8 +47,13 @@ export interface StepPanel { label: string; node: ReactNode }
  * acceptance header (engine · judge · checker-meaningfulness), so a shape-only "pass"
  * can't read as verified. Steps with no fact render exactly as before. Display only —
  * it never alters acceptance grading.
+ *
+ * Selection provenance: an L1 gallery step passes `selection` (auto-picked vs
+ * human-chosen, from the step's `genHistory`), which the strip renders as
+ * `SELECTION: AUTO` / `SELECTION: HUMAN`. Passing it renders the strip even when the
+ * step has no audited fact — also display only.
  */
-export function StepFrame({ t, acceptance, panels, onFix, catalogId, step }: {
+export function StepFrame({ t, acceptance, panels, onFix, catalogId, step, selection }: {
   t: LabTheme;
   acceptance: Acceptance;
   panels: StepPanel[];
@@ -55,6 +61,9 @@ export function StepFrame({ t, acceptance, panels, onFix, catalogId, step }: {
   /** Catalog + step name — resolve the audited StepFact for the provenance strip. */
   catalogId?: string;
   step?: string;
+  /** Selection provenance for an L1 gallery step (auto-picked vs human-chosen). Passing it
+   *  renders the provenance strip even for a step with no audited fact. */
+  selection?: SelectionSource;
 }) {
   const sc = statusColor(acceptance.status, t);
   const fact = catalogId && step ? getStepFact(catalogId, step) : undefined;
@@ -136,7 +145,9 @@ export function StepFrame({ t, acceptance, panels, onFix, catalogId, step }: {
           </span>
         </div>
 
-        {fact && <ProvenanceStrip t={t} fact={fact} />}
+        {(fact || (selection && selection !== 'none')) && (
+          <ProvenanceStrip t={t} fact={fact} selection={selection} />
+        )}
 
         {acceptance.why && (
           <div

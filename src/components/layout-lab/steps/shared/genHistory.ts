@@ -62,6 +62,31 @@ export interface GenHistory {
   batches: GenBatch[];
   /** Currently-selected candidate id across all batches, or null. */
   selectedId: string | null;
+  /**
+   * Was the current selection made by the MACHINE (`appendBatch` auto-selects the new
+   * batch's first candidate) rather than by a human clicking a candidate?
+   *
+   * The `selected` checker is an **L1 human-selection** gate (~47 gallery steps), but
+   * auto-selection satisfies it the instant Produce is clicked once — so "a human chose
+   * this" was being claimed on the machine's behalf. Recording the provenance doesn't
+   * change acceptance (requiring a click would break the e2e walker); it makes the claim
+   * HONEST: the step's provenance strip reads `SELECTION: AUTO` until someone actually picks.
+   *
+   * Additive + tri-state on read: `undefined` on a history persisted before this existed
+   * means "unrecorded", never a fabricated "human".
+   */
+  autoSelected?: boolean;
+}
+
+/** What the current selection can honestly claim. */
+export type SelectionSource = 'none' | 'auto' | 'human' | 'unrecorded';
+
+/** Classify the current selection's provenance (pure; `unrecorded` = legacy history). */
+export function selectionSource(h: GenHistory): SelectionSource {
+  if (h.selectedId == null) return 'none';
+  if (h.autoSelected === true) return 'auto';
+  if (h.autoSelected === false) return 'human';
+  return 'unrecorded';
 }
 
 /** The key the history is stored under inside a step artifact's `data`. */
@@ -84,7 +109,13 @@ export function readHistory(data: Record<string, unknown> | undefined): GenHisto
   const raw = data?.[GEN_HISTORY_KEY];
   if (raw && typeof raw === 'object' && Array.isArray((raw as GenHistory).batches)) {
     const h = raw as GenHistory;
-    return { batches: h.batches, selectedId: h.selectedId ?? null };
+    return {
+      batches: h.batches,
+      selectedId: h.selectedId ?? null,
+      // Carried through only when it was RECORDED — a legacy history stays `unrecorded`
+      // rather than being back-filled with a claim nobody made.
+      ...(typeof h.autoSelected === 'boolean' ? { autoSelected: h.autoSelected } : {}),
+    };
   }
   return emptyHistory();
 }
@@ -165,18 +196,29 @@ export function pruneHistory(h: GenHistory, cap = MAX_KEPT_BATCHES): GenHistory 
  * candidate, then prune to `MAX_KEPT_BATCHES` so the history stays bounded.
  */
 export function appendBatch(h: GenHistory, batch: GenBatch): GenHistory {
+  const auto = batch.candidates[0]?.id;
   const grown: GenHistory = {
+    ...h,
     batches: [...h.batches, batch],
-    selectedId: batch.candidates[0]?.id ?? h.selectedId,
+    selectedId: auto ?? h.selectedId,
+    // The MACHINE picked this one (see `GenHistory.autoSelected`). An empty batch changes
+    // no selection, so the previous provenance stands.
+    ...(auto ? { autoSelected: true } : {}),
   };
   return pruneHistory(grown);
 }
 
-/** Re-select an existing candidate by id. No-op (same reference) for unknown/already-selected ids. */
+/**
+ * Re-select an existing candidate by id — a HUMAN choice, so it clears the auto flag.
+ * Clicking the candidate the machine auto-picked still counts (it is an explicit
+ * confirmation). No-op (same reference) for an unknown id or an already-human selection.
+ */
 export function selectCandidate(h: GenHistory, candidateId: string): GenHistory {
-  if (h.selectedId === candidateId) return h;
+  if (h.selectedId === candidateId) {
+    return h.autoSelected === false ? h : { ...h, autoSelected: false };
+  }
   if (!allCandidates(h).some((c) => c.id === candidateId)) return h;
-  return { ...h, selectedId: candidateId };
+  return { ...h, selectedId: candidateId, autoSelected: false };
 }
 
 /**

@@ -8,7 +8,7 @@ import { DataTable } from './shared/DataTable';
 import { ChartPanel, type BarsRow, type ScatterPoint } from './shared/ChartPanel';
 import { GlbPreviewPanel, GLB_PREVIEW_LABEL } from './shared/GlbPreviewPanel';
 import { RawArtifactDisclosure } from './shared/RawArtifactDisclosure';
-import { selectedCandidate } from './shared/genHistory';
+import { selectedCandidate, selectionSource } from './shared/genHistory';
 import { useGenerativeStep } from './shared/useGenerativeStep';
 import { useGeneratedImageAssets } from './shared/useGeneratedImageAssets';
 import { useGeneratedMeshAssets } from './shared/useGeneratedMeshAssets';
@@ -337,6 +337,9 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
       )}
       <StepFrame t={t} acceptance={acceptance} panels={panels}
         catalogId={catalogId} step={step}
+        // A gallery step's `selected(...)` gate is an L1 HUMAN-selection claim, but
+        // `appendBatch` auto-picks the first candidate — so the strip says which it was.
+        selection={spec.view.kind === 'gallery' ? selectionSource(history) : undefined}
         onFix={acceptance.status === 'deferred' ? undefined : runFix} />
     </>
   );
