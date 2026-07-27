@@ -1,4 +1,5 @@
 import { deriveEntityArtifacts, type StepDisplayStatus, type StepDrift } from './hooks/useEntityArtifacts';
+import { COACH_PRIORITY_RANK, pickLadderIssue, type CoachPriority } from './coachLadder';
 import type { LabEntity } from './useLabCatalogData';
 import type { LabStepArtifact } from './labPipelineStore';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
@@ -15,42 +16,12 @@ import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
  * the matrix use) — no new status logic. The add-only server→local merge mirrors
  * `buildMatrixRows`, so a coach candidate can never disagree with the matrix cell.
  *
- * Ladder (highest urgency first): fail > drift > pending > deferred > unproduced. A
- * failed gate blocks downstream work; drift means the local and server verdicts
- * disagree and need reconciling; pending is produced-but-still-grading; deferred waits
- * on a live Unreal run; `unproduced` (never produced — the honest replacement for the
- * old lifecycle-fraction pseudo-progress) sits LAST so real in-flight work always
- * outranks "start something new", and it is labelled honestly so it never reads as
- * progress that didn't happen.
+ * The urgency ladder itself is NOT defined here — it lives in `coachLadder.ts` and is
+ * shared with the per-entity `NextStepCoach`, so both coaches always name the same step
+ * for the same entity. Read that module for the order and its justification.
  */
 
-export type CoachPriority = 'fail' | 'drift' | 'pending' | 'deferred' | 'unproduced';
-
-/** Lower rank = more urgent. Single source for both the sort and any UI ordering. */
-export const COACH_PRIORITY_RANK: Record<CoachPriority, number> = {
-  fail: 0,
-  drift: 1,
-  pending: 2,
-  deferred: 3,
-  unproduced: 4,
-};
-
-export interface CoachHint {
-  /** Color+glyph status token (glyph is the primary, colorblind-safe signal). */
-  glyph: string;
-  /** Imperative verb for the row ("Fix" / "Review" / "Produce" / "Run live test"). */
-  actionWord: string;
-  /** One plain-language sentence explaining why this step surfaced. */
-  hint: string;
-}
-
-export const COACH_HINT: Record<CoachPriority, CoachHint> = {
-  fail: { glyph: '✕', actionWord: 'Fix', hint: 'a gate failed here — open it to see what to change' },
-  drift: { glyph: '≠', actionWord: 'Review', hint: 'the local and server verdicts disagree — reconcile them' },
-  pending: { glyph: '○', actionWord: 'Produce', hint: 'this step is produced — its acceptance is still resolving' },
-  deferred: { glyph: '⏸', actionWord: 'Run live test', hint: 'waiting on a live Unreal run — drain its gate' },
-  unproduced: { glyph: '·', actionWord: 'Start', hint: 'not produced yet — nothing has run here' },
-};
+export { COACH_HINT, COACH_PRIORITY_RANK, type CoachHint, type CoachPriority } from './coachLadder';
 
 export interface CoachCandidate {
   catalogId: string;
@@ -71,33 +42,18 @@ export interface CoachCandidate {
 
 /**
  * The single most-urgent actionable step for one entity, or `null` when the entity
- * is config-complete (every step pass, or an L3/L4-only deferred with no earlier gap
- * — same "nothing actionable" bar the per-entity coach uses). Ladder order:
- * fail > drift > pending > deferred > unproduced.
+ * is config-complete (every step pass — the same "nothing actionable" bar the
+ * per-entity coach uses, because it is now literally the same function).
+ *
+ * Thin alias over the shared {@link pickLadderIssue}; kept as a named export because
+ * it is the vocabulary this model (and its tests) speak.
  */
 export function pickEntityIssue(
   steps: string[],
   statusByStep: (step: string, i: number) => StepDisplayStatus,
   driftByStep: Map<string, StepDrift>,
 ): { step: string; index: number; priority: CoachPriority } | null {
-  for (let i = 0; i < steps.length; i++) {
-    if (statusByStep(steps[i], i) === 'fail') return { step: steps[i], index: i, priority: 'fail' };
-  }
-  for (let i = 0; i < steps.length; i++) {
-    if (driftByStep.has(steps[i])) return { step: steps[i], index: i, priority: 'drift' };
-  }
-  for (let i = 0; i < steps.length; i++) {
-    if (statusByStep(steps[i], i) === 'pending') return { step: steps[i], index: i, priority: 'pending' };
-  }
-  for (let i = 0; i < steps.length; i++) {
-    if (statusByStep(steps[i], i) === 'deferred') return { step: steps[i], index: i, priority: 'deferred' };
-  }
-  // Lowest priority: a never-produced step. Surfaced (labelled honestly) only when the
-  // entity has nothing more urgent — real work always outranks "start something new".
-  for (let i = 0; i < steps.length; i++) {
-    if (statusByStep(steps[i], i) === 'unproduced') return { step: steps[i], index: i, priority: 'unproduced' };
-  }
-  return null;
+  return pickLadderIssue(steps, statusByStep, driftByStep);
 }
 
 /** Per-catalog input to the aggregation — the same four sources `buildMatrixRows` reads. */

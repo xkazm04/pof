@@ -56,6 +56,35 @@ describe('<GlobalCoach />', () => {
     expect(Array.from(items).map((n) => n.getAttribute('data-priority'))).toEqual(['drift', 'pending']);
   });
 
+  it('caps the expanded list at the top-N and offers a show-all-blockers expansion', () => {
+    // 9 candidates → top row + 4 in the disclosure (TOP_N = 5) + 4 behind "show all".
+    coachMock.mockReturnValue(
+      Array.from({ length: 9 }, (_, i) => cand({ entityId: `e${i}`, entityName: `E${i}`, priority: 'pending' })),
+    );
+    const { container } = render(<GlobalCoach t={LIGHT} />);
+    fireEvent.click(container.querySelector('[data-testid="global-coach-toggle"]') as HTMLElement);
+
+    const shown = () => Array.from(container.querySelectorAll('[data-testid="global-coach-list"] [data-entity]'));
+    expect(shown()).toHaveLength(4); // rows 1..4 — the rest are behind the expansion
+
+    const showAll = container.querySelector('[data-testid="global-coach-show-all"]') as HTMLElement;
+    expect(showAll.textContent).toContain('Show all 9 blockers');
+    expect(showAll.textContent).toContain('4 more');
+
+    fireEvent.click(showAll);
+    expect(shown()).toHaveLength(8); // every candidate except the top row
+    // and it collapses back
+    fireEvent.click(container.querySelector('[data-testid="global-coach-show-all"]') as HTMLElement);
+    expect(shown()).toHaveLength(4);
+  });
+
+  it('offers no show-all control when every candidate already fits in the top-N', () => {
+    coachMock.mockReturnValue([cand({ entityId: 'e1' }), cand({ entityId: 'e2', priority: 'pending' })]);
+    const { container } = render(<GlobalCoach t={LIGHT} />);
+    fireEvent.click(container.querySelector('[data-testid="global-coach-toggle"]') as HTMLElement);
+    expect(container.querySelector('[data-testid="global-coach-show-all"]')).toBeNull();
+  });
+
   it('clicking an entry dispatches pendingNavigation to the exact catalog + entity + flagged step', () => {
     coachMock.mockReturnValue([
       cand({ entityId: 'e1', catalogId: 'items', stepIndex: 3 }),

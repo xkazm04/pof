@@ -166,6 +166,7 @@ export function Baseline(props: Props) {
                     steps={steps}
                     statusByStep={(s, i) => displayStatus(s, i)}
                     reasonForStep={(s) => artifactByStep.get(s)?.reason}
+                    driftByStep={driftByStep}
                     rollup={rollupSummary}
                     onJump={(i) => setStepIdx(i)}
                     plainMode={plainMode}

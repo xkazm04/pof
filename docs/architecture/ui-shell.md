@@ -15,7 +15,7 @@ rollup strip.
 | `src/lib/ecw/shell-pref.ts` | `readShellPref()` / `writeShellPref()` — `?legacy=1` URL flag or `localStorage['pof.shell']` |
 | `src/components/layout-lab/NewHome.tsx` | Calls `usePofBridge()`, then gates: Blueprint `<SetupWizard />` when no project is loaded, else `<LayoutLab />` |
 | `src/components/layout-lab/LayoutLab.tsx` | Top-level shell: 3-zone header bar (brand · centered Catalogs/Matrix/Canon/One-shot/Legacy actions · right-corner status + icon theme toggle), `<LabBridgeStrip>` |
-| `src/components/layout-lab/Baseline.tsx` | 3-column composition screen: tree / pipeline timeline / work canvas; all produce→persist→render logic. **Controlled** step position via `stepIdx` + `onSelectStep` (parent-owned so it survives view-toggle remounts); falls back to internal state when `onSelectStep` is omitted |
+| `src/components/layout-lab/Baseline/index.tsx` (+ `Baseline/useBaseline.ts`, `constants.ts`, `types.ts`) | 3-column composition screen: tree / pipeline timeline / work canvas. `index.tsx` is layout only; every produce→persist→render hook lives in `useBaseline.ts`. **Controlled** step position via `stepIdx` + `onSelectStep` (parent-owned so it survives view-toggle remounts); falls back to internal state when `onSelectStep` is omitted |
 | `src/components/layout-lab/CatalogMatrix.tsx` | Catalog-wide status matrix: entities (rows) × steps (columns) colored by derived Acceptance; per-entity `summarizeEntity` rollup + blocker flags; cells jump to that entity's step. **Controlled** catalog dropdown (`catalogId` + `onSelectCatalog` write-through — no private `selected` fork). Header hosts the batch-drain action; every entity in the in-flight batch shows a left-accent + "draining…" badge (`drainState.activeEntityIds`) |
 | `src/components/layout-lab/MatrixBatchDrain.tsx` | Matrix header action — "drain all deferred gates in this catalog" (shown only when ≥1 entity is deferred). One-boot progress, a flips summary (passed/failed/still-deferred/locked) with per-step fail reasons, and an honest Cancel (skips the retry only — the in-flight boot can't be interrupted) |
 | `src/components/layout-lab/hooks/useBatchDrain.ts` | Batch-drain engine: sends the WHOLE deferred set in ONE request (`drainCatalogGates(catalogId, entityIds)`) — one server-side collection + one grouped editor boot for every gate, not one boot per entity. All-or-nothing lease: a 409 refuses the whole batch → retry once, then record every entity locked. Invalidates the whole-catalog cache on completion; cancel only skips the retry |
@@ -23,11 +23,11 @@ rollup strip.
 | `src/components/layout-lab/CatalogTree.tsx` | Category→Catalog→Entity collapsible tree (left column) |
 | `src/components/layout-lab/steps/index.ts` | `getStepComponent(catalogId, stepName)` — looks up the `STEP_REGISTRY` |
 | `src/components/layout-lab/steps/ArchetypeStep.tsx` | Generic renderer for any registered `StepSpec`; drives View + CliProduce + Acceptance |
-| `src/components/layout-lab/NextStepCoach.tsx` | Compact single-row "what to do next" coach in the work canvas; primary CTA (jump / drain) + a disclosure that expands plain-language mode + summary. Scoped to the OPEN entity. For a fail/deferred next step it shows the concrete checker `reason` (via `reasonForStep`) instead of a generic hint; no reason available → the generic hint stays (never invented) |
-| `src/components/layout-lab/GlobalCoach.tsx` | Lab-level, **cross-catalog** next-step coach shown above the Baseline view — top-N highest-value moves across ALL catalogs (ranked fail > drift > pending > deferred > unproduced). Each row shows the concrete checker `reason` when one is carried (fail/deferred: artifact reason; drift: local-vs-server), else the generic hint. Clicking dispatches the one-shot `pendingNavigation` carrying the flagged **`stepIndex`** so Baseline opens ON that step. The passive `/status` map's active complement |
-| `src/components/layout-lab/globalCoachModel.ts` | Pure model for `GlobalCoach`: `pickEntityIssue` / `rankCoachCandidates` / `buildGlobalCoach` (reuses `deriveEntityArtifacts` — no new status logic). Candidates carry `stepIndex` + optional `reason`; `unproduced` (never-produced) ranks LAST, labelled honestly, so real in-flight work always outranks "start something new" |
-| `src/components/layout-lab/hooks/useGlobalCoach.ts` | Aggregation hook: one deduped whole-catalog fetch per catalog via the shared cache, memoized on `useArtifactCacheVersion()` so the ranked list fills in progressively without a per-catalog hook |
-| `src/components/layout-lab/PipelineRollup.tsx` | Reusable per-step status strip + config-complete summary (`X/Y pass · …`). No longer mounted in the canvas — the left pipeline rail is the status display; kept as a standalone strip + WCAG status-encoding tests |
+| `src/components/layout-lab/NextStepCoach.tsx` | Compact single-row "what to do next" coach in the work canvas; primary CTA (jump / drain) + a disclosure that expands plain-language mode + summary. Scoped to the OPEN entity, ranked by the SHARED `coachLadder.ts` (fed `driftByStep` so it has a drift rung). For a fail/deferred next step it shows the concrete checker `reason` (via `reasonForStep`) instead of a generic hint; no reason available → the generic hint stays (never invented) |
+| `src/components/layout-lab/GlobalCoach.tsx` | Lab-level, **cross-catalog** next-step coach shown above the Baseline view — highest-value moves across ALL catalogs (ranked by the SHARED `coachLadder.ts`). Collapsed to one row; the disclosure shows the top-`GLOBAL_COACH_TOP_N`, and a **"show all N blockers"** control reveals every remaining candidate (the cap is stated, never a silent truncation). Each row shows the concrete checker `reason` when one is carried (fail/deferred: artifact reason; drift: local-vs-server), else the generic hint. Clicking dispatches the one-shot `pendingNavigation` carrying the flagged **`stepIndex`** so Baseline opens ON that step. The passive `/status` map's active complement |
+| `src/components/layout-lab/coachLadder.ts` | **The ONE priority ladder** both coaches rank through: `COACH_LADDER` (`fail > drift > pending > deferred > unproduced`, with the justification for that order), `COACH_PRIORITY_RANK`, `COACH_HINT`, `pickLadderIssue`. Changing the order here changes both coaches at once — they cannot drift apart |
+| `src/components/layout-lab/globalCoachModel.ts` | Pure model for `GlobalCoach`: `pickEntityIssue` (alias of `pickLadderIssue`) / `rankCoachCandidates` / `buildGlobalCoach` (reuses `deriveEntityArtifacts` — no new status logic). Candidates carry `stepIndex` + optional `reason`; `unproduced` (never-produced) ranks LAST, labelled honestly, so real in-flight work always outranks "start something new" |
+| `src/components/layout-lab/hooks/useGlobalCoach.ts` | Aggregation hook: one deduped whole-catalog fetch per catalog via the shared cache, memoized on `useArtifactCacheVersion()` so the ranked list fills in progressively without a per-catalog hook. Returns the FULL ranked list; the top-N cut is `GlobalCoach`'s presentation decision |
 | `src/components/layout-lab/LabBridgeStrip.tsx` | Compact UE bridge status dot+label; reads `usePofBridgeStore` (display-only) |
 | `src/components/layout-lab/labPipelineStore.ts` | Zustand persisted store (`pof-lab-pipeline`); `produce/fail/resetEntity/hydrateEntity`; module-level `_labSync` function pointer |
 | `src/components/layout-lab/labArtifactClient.ts` | `fetchArtifacts`, `postArtifact`, `drainGates` (single entity, for the per-entity coach drain), and `drainCatalogGates(catalogId, entityIds)` (409-aware whole-catalog BATCH drain returning ok/locked/error) — thin wrappers around `/api/pipeline-artifacts` |
@@ -148,7 +148,7 @@ Left column of `Baseline`. Renders three levels:
 3. **Entity** rows — only shown when the catalog is selected; a 7 px lifecycle dot (ok/bad/muted)
    precedes the entity name. Clicking calls `onSelectEntity`.
 
-### 5. Composition screen — `Baseline` (`src/components/layout-lab/Baseline.tsx`)
+### 5. Composition screen — `Baseline` (`src/components/layout-lab/Baseline/index.tsx` + `Baseline/useBaseline.ts`)
 
 Three-column CSS grid `260px 320px 1fr`:
 
@@ -172,7 +172,7 @@ the drawer.
 otherwise falls back to `detail.steps` (line 47–48). The `live` flag on each step button is set when
 `getStepComponent(catalogId, step)` returns non-null, and is shown as a green dot.
 
-### 6. Step-render precedence (work canvas, `Baseline.tsx` : 209–229)
+### 6. Step-render precedence (work canvas, `Baseline/index.tsx`)
 
 ```
 const Bespoke = detail && entity ? getStepComponent(detail.catalog.catalogId, stepName) : null;
@@ -195,7 +195,7 @@ else
 
 ### 7. Server-backed produce→persist→render→rollup loop
 
-#### Write-through (`Baseline.tsx` : 66–74)
+#### Write-through (`Baseline/useBaseline.ts`)
 
 On every `catalogId` change an effect calls `setLabSync(fn)`, binding a closure over `catalogId`:
 
@@ -251,7 +251,7 @@ via `UNPRODUCED_GLYPH`/`UNPRODUCED_WORD` in `statusLanguage.ts`; kept OUT of the
 `STATUS_GLYPH`/`STATUS_WORD` maps). All shimmers use the `lab-shimmer` keyframe (`lab-tokens.css`)
 and freeze under reduced motion.
 
-#### Rollup overlay (`Baseline.tsx` : 105–117)
+#### Rollup overlay (`hooks/useEntityArtifacts.ts` — `deriveEntityArtifacts`)
 
 After hydration, `artifacts: PipelineArtifact[]` is derived client-side: for each step that has a
 local artifact, `resolveAccept` recomputes status/tier from the current data. If the local
@@ -269,7 +269,7 @@ Each derived artifact also carries the concrete checker `reason` (`res.reason`, 
 record's reason when the overlay above won), so coaches, tooltips, and matrix blockers can explain
 WHY a step failed/deferred without a second `resolveAccept` pass.
 
-#### Drain deferred gates (`Baseline.tsx` : 92–102, `labArtifactClient.ts` : 38–45)
+#### Drain deferred gates (`Baseline/useBaseline.ts` — `runDrain`, `labArtifactClient.ts`)
 
 `runDrain` calls `drainGates(catalogId, entity.id)` → `POST /api/pipeline-artifacts/drain`, then
 `invalidateArtifacts(catalogId, entity.id)` so the refreshed verdicts are re-read through the shared
@@ -281,17 +281,18 @@ otherwise inside the disclosure) whenever `rollup.deferred > 0` and an `onDrain`
 
 Mounted above the step heading in the work canvas as a **single compact row** (the middle pipeline
 rail already carries the full per-step status, so the old in-canvas `PipelineRollup` strip was
-removed). The row shows the next actionable step (`pickNextActionableStep`) + one primary button
+removed). The row shows the next actionable step (`pickNextActionableStep`, ranked through the
+shared `coachLadder.ts`) + one primary button
 (jump to it, or drain when it's deferred). A `▾ more` disclosure expands a second region with the
 plain-language toggle, an optional `plainEntitySummary(rollup)` line, and the drainer when it isn't
 already the compact CTA.
 
-#### `PipelineRollup` (`src/components/layout-lab/PipelineRollup.tsx`) — standalone
+#### Entity rollup — `summarizeEntity`
 
-No longer mounted in the canvas. Still exported (and unit-tested for colorblind-safe status
-encoding). Calls `summarizeEntity(artifacts, steps.length)` for
-`{ done, total, deferred, pending, highestTier, configComplete }` and renders the
-`X/Y pass · N deferred · N pending · highest <tier>` summary + per-step colored chips.
+There is no rollup COMPONENT any more (the old in-canvas `PipelineRollup.tsx` strip was deleted —
+the left pipeline rail is the status display). `summarizeEntity(artifacts, steps.length)` in
+`@/lib/catalog/rollup` still produces `{ done, total, deferred, pending, failed, highestTier,
+configComplete }`, and `NextStepCoach` consumes it for the plain-language summary + the drain count.
 
 ---
 
@@ -408,7 +409,7 @@ hooks (`isBespokeCatalog`). The guard `src/__tests__/catalog/catalog-manifest-co
 ### Concurrency
 
 The `layout-lab` tree is edited by many parallel sessions. Re-read `labPipelineStore.ts` and
-`Baseline.tsx` before editing them and use targeted `git add` — the store is module-level
+`Baseline/` before editing them and use targeted `git add` — the store is module-level
 singleton state (`setLabSync`), so a careless overwrite breaks the produce→persist loop for
 every open entity.
 

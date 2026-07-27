@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import type { LabTheme } from './theme';
 import type { EntityRollup } from '@/lib/catalog/rollup';
 import { pickNextActionableStep, type StepStatus } from './nextActionableStep';
+import type { StepDrift } from './hooks/useEntityArtifacts';
 import { plainEntitySummary, STATUS_GLOSSARY } from './labGlossary';
 import { statusColor } from './statusLanguage';
 import { Panel } from './ui/Panel';
@@ -23,6 +24,12 @@ interface NextStepCoachProps {
    * generic plain-language hint is kept (we never invent text).
    */
   reasonForStep?: (step: string, index: number) => string | undefined;
+  /**
+   * Steps whose local verdict contradicts the server's (`deriveEntityArtifacts`'s
+   * `driftByStep`). Feeds the shared ladder's `drift` rung so this coach and the
+   * cross-catalog GlobalCoach can never name different next steps for one entity.
+   */
+  driftByStep?: ReadonlyMap<string, StepDrift>;
   /** When true, the coach also renders a one-sentence plain-language rollup summary. */
   plainMode: boolean;
   /** Toggle plain-language mode (also rendered by the coach). */
@@ -36,16 +43,19 @@ interface NextStepCoachProps {
  * Per-entity coach. Default state is ONE compact row — the next action + its
  * primary button — because the left pipeline sidebar already carries the full
  * per-step status. A disclosure toggle expands a "more" region with the
- * plain-language switch (+ summary) and the deferred-gate drainer. Reads the same
- * statuses PipelineRollup derives — no new truth source.
+ * plain-language switch (+ summary) and the deferred-gate drainer.
+ *
+ * Reads the same derived statuses the rail and matrix do, ranked through the ONE
+ * shared ladder in `coachLadder.ts` — so it can never contradict the cross-catalog
+ * `GlobalCoach` rendered above it. No new truth source.
  */
 export function NextStepCoach({
-  t, steps, statusByStep, rollup, onJump, plainMode, onTogglePlainMode, onDrain, draining, reasonForStep,
+  t, steps, statusByStep, rollup, onJump, plainMode, onTogglePlainMode, onDrain, draining, reasonForStep, driftByStep,
 }: NextStepCoachProps) {
   const [expanded, setExpanded] = useState(false);
   const next = useMemo(
-    () => pickNextActionableStep(steps, statusByStep),
-    [steps, statusByStep],
+    () => pickNextActionableStep(steps, statusByStep, driftByStep),
+    [steps, statusByStep, driftByStep],
   );
 
   // Prefer the concrete checker reason for a fail/deferred step over the generic
@@ -56,8 +66,10 @@ export function NextStepCoach({
       : undefined;
   const shownHint = concreteReason ?? next?.plainHint;
 
-  const tint = next ? statusColor(next.status, t) : t.ok;
-  const nextIsDeferred = next?.status === 'deferred';
+  // A drift pick's own status is a (contradicted) pass/fail, so tint it by the
+  // ladder rung instead — "needs review" is the honest signal, not "passed".
+  const tint = !next ? t.ok : next.priority === 'drift' ? t.warn : statusColor(next.status, t);
+  const nextIsDeferred = next?.priority === 'deferred';
   const canDrain = !!onDrain && rollup.deferred > 0;
   const drainLabel = draining
     ? 'Running…'

@@ -9,11 +9,16 @@ import { buildGlobalCoach, type CoachCandidate, type CoachCatalogInput } from '.
 import { useLabPipelineStore } from '../labPipelineStore';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 
-/** How many next-step candidates the coach surfaces at once. */
+/** How many next-step candidates the coach surfaces before "show all blockers". */
 export const GLOBAL_COACH_TOP_N = 5;
 
 /**
  * Cross-catalog next-step aggregation for the lab-level coach.
+ *
+ * Returns the FULL ranked candidate list (one candidate per entity with something
+ * actionable). The top-N cut is a presentation decision made by `GlobalCoach`, so its
+ * "show all blockers" expansion needs no second pass and no extra fetch — ranking a
+ * few hundred already-derived candidates is free next to the derivation itself.
  *
  * It fetches every registered catalog's artifacts ONCE through the shared cache
  * (deduped, one whole-catalog GET per catalog — never per entity), and re-derives
@@ -22,7 +27,7 @@ export const GLOBAL_COACH_TOP_N = 5;
  * render. First paint is never blocked: the effect fires post-paint and the list
  * fills in as the fetches resolve.
  */
-export function useGlobalCoach(topN = GLOBAL_COACH_TOP_N): CoachCandidate[] {
+export function useGlobalCoach(topN = Number.POSITIVE_INFINITY): CoachCandidate[] {
   const entitiesByCatalog = useCatalogStore((s) => s.entitiesByCatalog);
   const localByEntity = useLabPipelineStore((s) => s.byEntity);
   const version = useArtifactCacheVersion();

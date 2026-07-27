@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { LabTheme } from './theme';
-import { useGlobalCoach } from './hooks/useGlobalCoach';
+import { useGlobalCoach, GLOBAL_COACH_TOP_N } from './hooks/useGlobalCoach';
 import { COACH_HINT, type CoachCandidate, type CoachPriority } from './globalCoachModel';
 import { useOneShotLabStore } from '@/stores/oneShotLabStore';
 
@@ -18,19 +18,24 @@ function priorityColor(p: CoachPriority, t: LabTheme): string {
 /**
  * Lab-level, cross-catalog next-step coach. Its per-entity sibling (`NextStepCoach`)
  * only coaches inside the open entity; this one answers "what should I do next
- * across the whole project?" — the top-N highest-value moves ranked fail > drift >
- * pending > deferred (see `globalCoach.ts` / `useGlobalCoach`).
+ * across the whole project?" — the highest-value moves across every catalog, ranked
+ * by the ONE shared ladder in `coachLadder.ts` (fail > drift > pending > deferred >
+ * unproduced), aggregated by `useGlobalCoach`/`globalCoachModel.ts`. Because both
+ * coaches rank through that same module, they can never name different steps.
  *
  * Unobtrusive by default: one slim row showing the single most-urgent move, with a
- * disclosure that expands the full top-N list. Clicking any entry navigates through
- * the existing one-shot `pendingNavigation` mechanism (LayoutLab's store subscription
- * drives catalog + entity) — entity-level, since that payload does not carry a step.
+ * disclosure that expands the next few (up to `GLOBAL_COACH_TOP_N`) and, when more
+ * blockers exist beyond that cut, a "show all N blockers" expansion — the list is
+ * never silently truncated. Clicking any entry navigates through the existing
+ * one-shot `pendingNavigation` mechanism (LayoutLab's store subscription drives
+ * catalog + entity + the flagged `stepIndex`).
  *
  * Distinct from the passive `/status` map: this is *guidance with a jump action*.
  */
 export function GlobalCoach({ t }: Props) {
   const candidates = useGlobalCoach();
   const [expanded, setExpanded] = useState(false);
+  const [showAll, setShowAll] = useState(false);
   const setPendingNavigation = useOneShotLabStore((s) => s.setPendingNavigation);
 
   if (candidates.length === 0) return null; // nothing actionable project-wide — stay out of the way
@@ -38,7 +43,11 @@ export function GlobalCoach({ t }: Props) {
   // Carry the flagged step index so Baseline opens ON that step, not step 0.
   const jump = (c: CoachCandidate) => setPendingNavigation({ catalogId: c.catalogId, entityId: c.entityId, stepIndex: c.stepIndex });
   const [top, ...rest] = candidates;
-  const moreCount = rest.length;
+  // Collapsed disclosure shows the rest of the top-N; everything past it is reachable
+  // through the explicit "show all blockers" control (so the cap is stated, not hidden).
+  const shown = showAll ? rest : rest.slice(0, GLOBAL_COACH_TOP_N - 1);
+  const beyond = rest.length - shown.length;
+  const moreCount = Math.min(rest.length, GLOBAL_COACH_TOP_N - 1);
 
   return (
     <section
@@ -90,11 +99,32 @@ export function GlobalCoach({ t }: Props) {
           data-testid="global-coach-list"
           style={{ listStyle: 'none', margin: 0, padding: '0 var(--lab-s4) var(--lab-s2)', display: 'flex', flexDirection: 'column', gap: 'var(--lab-s1)' }}
         >
-          {rest.map((c, i) => (
+          {shown.map((c, i) => (
             <li key={`${c.catalogId}:${c.entityId}`} style={{ display: 'flex', paddingLeft: 'var(--lab-s5, 40px)' }}>
               <CoachRow t={t} c={c} onJump={jump} testid={`global-coach-item-${i + 1}`} />
             </li>
           ))}
+          {/* The top-N cut is stated, never silent: everything else is one click away. */}
+          {(beyond > 0 || showAll) && (
+            <li style={{ display: 'flex', paddingLeft: 'var(--lab-s5, 40px)' }}>
+              <button
+                type="button"
+                onClick={() => setShowAll((v) => !v)}
+                aria-expanded={showAll}
+                data-testid="global-coach-show-all"
+                className={`focus-ring ${t.fontMono}`}
+                style={{
+                  fontSize: 'var(--lab-fs-xs)', padding: 'var(--lab-s1) var(--lab-s2)',
+                  border: '1px dashed var(--lab-line)', borderRadius: 'var(--lab-r-sm)',
+                  background: 'transparent', color: 'var(--lab-muted)', cursor: 'pointer',
+                }}
+              >
+                {showAll
+                  ? `Show top ${Math.min(candidates.length, GLOBAL_COACH_TOP_N)} only`
+                  : `Show all ${candidates.length} blockers (${beyond} more)`}
+              </button>
+            </li>
+          )}
         </ul>
       )}
     </section>
