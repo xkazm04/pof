@@ -2,6 +2,8 @@
 
 import { useMemo } from 'react';
 import { resolveAccept } from '../labAcceptance';
+import { buildLabCheckerContext, serverVerdictOverlay } from '../labCheckerContext';
+import type { AcceptanceResult } from '@/lib/catalog/acceptance/types';
 import type { LabStepArtifact } from '../labPipelineStore';
 import type { LabEntity } from '../useLabCatalogData';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
@@ -60,6 +62,9 @@ export function deriveEntityArtifacts(
   steps: string[],
   entitySteps: Record<string, LabStepArtifact> | undefined,
   serverArts: Record<string, PipelineArtifact>,
+  /** Live entity index for the shared CheckerContext's `has` (cross-catalog links).
+   *  Optional so ctx-free callers keep working; absent → nothing resolves, exactly as before. */
+  entitiesByCatalog: Record<string, Record<string, unknown>> = {},
 ): EntityArtifacts {
   // Real per-step production state for EVERY catalog: a step is "done" iff it was
   // actually produced (has an artifact in the local store, hydrated add-only from
@@ -71,33 +76,33 @@ export function deriveEntityArtifacts(
 
   // Server-faithful rollup: derives config-complete/tier using the same accept logic the server stored.
   const driftByStep = new Map<string, StepDrift>();
-  // Sibling artifacts (step → data) let derived checkers (e.g. the Items Test
-  // Gate) read upstream acceptance instead of trusting fabricated step data.
-  const siblings: Record<string, Record<string, unknown>> = {};
-  for (const [s, a] of Object.entries(entitySteps ?? {})) siblings[s] = a.data;
-  const checkerCtx = catalogId ? { catalog: catalogId, siblings, has: () => false } : undefined;
+  // ONE CheckerContext construction, shared with the step banner and the write-through
+  // (labCheckerContext.ts): sibling artifacts (step → data) let derived checkers (e.g. the
+  // Items Test Gate) read upstream acceptance, and `has` resolves cross-catalog links
+  // against the live entity index instead of the old pessimistic `() => false`.
+  const checkerCtx = catalogId ? buildLabCheckerContext(catalogId, entitySteps, entitiesByCatalog) : undefined;
   const artifacts: PipelineArtifact[] = catalogId
     ? steps.filter((s) => entitySteps?.[s]).map((s) => {
         const art = entitySteps![s];
         const accept = resolveAccept(catalogId, s);
         const res = accept ? accept(art.data, checkerCtx) : null;
         const localStatus = res?.status ?? 'pass';
-        // Overlay the runner's verdict: when the local recompute is still `deferred`
-        // (an unrun L3/L4 gate) but the server has a real pass/fail, the server wins.
+        // Overlay the runner's verdict through the SHARED rule (`serverVerdictOverlay`):
+        // when the local recompute is still `deferred` (an unrun L3/L4 gate) but the server
+        // has a real pass/fail, the server wins — carrying its own reason. Anything else
+        // keeps the local recompute's verdict + reason.
         const srv = serverArts[s];
-        const usedServerOverlay = localStatus === 'deferred' && !!srv && srv.status !== 'deferred' && srv.status !== 'pending';
-        const status = usedServerOverlay ? srv!.status : localStatus;
-        // Carry the concrete checker reason through so coaches/tooltips can show WHY a
-        // step failed/deferred without a second `resolveAccept` pass. When the server
-        // overlay won, its reason is the authoritative one; otherwise the local recompute's.
-        const reason = usedServerOverlay ? srv!.reason : res?.reason;
+        const local: AcceptanceResult = res ?? { label: s, status: 'pass', tier: 'L0', detail: '' };
+        const merged = serverVerdictOverlay(local, srv);
+        const status = merged.status;
+        const reason = merged.reason;
         // Drift: a concrete local pass/fail that a concrete server pass/fail contradicts —
         // the add-only default keeps `localStatus` on screen, so flag it for adoption.
         // (The deferred case above is reconciliation, not drift, and is excluded here.)
         if (srv && (localStatus === 'pass' || localStatus === 'fail') && (srv.status === 'pass' || srv.status === 'fail') && localStatus !== srv.status) {
           driftByStep.set(s, { local: localStatus, server: srv.status });
         }
-        return { catalogId, entityId: entity?.id ?? '', step: s, data: art.data, ueAssets: art.ueAssets, status, ...(res?.tier ? { tier: res.tier } : {}), ...(reason ? { reason } : {}) };
+        return { catalogId, entityId: entity?.id ?? '', step: s, data: art.data, ueAssets: art.ueAssets, status, ...(merged.tier ? { tier: merged.tier } : {}), ...(reason ? { reason } : {}) };
       })
     : [];
 
@@ -126,9 +131,10 @@ export function useEntityArtifacts(
   steps: string[],
   entitySteps: Record<string, LabStepArtifact> | undefined,
   serverArts: Record<string, PipelineArtifact>,
+  entitiesByCatalog: Record<string, Record<string, unknown>> = {},
 ): EntityArtifacts {
   return useMemo(
-    () => deriveEntityArtifacts(catalogId, entity, steps, entitySteps, serverArts),
-    [catalogId, entity, steps, entitySteps, serverArts],
+    () => deriveEntityArtifacts(catalogId, entity, steps, entitySteps, serverArts, entitiesByCatalog),
+    [catalogId, entity, steps, entitySteps, serverArts, entitiesByCatalog],
   );
 }

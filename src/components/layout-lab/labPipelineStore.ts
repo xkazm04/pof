@@ -35,6 +35,19 @@ export interface LabStepArtifact {
    * write-through for the same step succeeds.
    */
   syncError?: string;
+  /**
+   * The SERVER's persisted verdict for this step, carried back by `hydrateEntity` (the
+   * artifact-cache read). Additive + optional: a freshly produced local artifact has none,
+   * and every existing persisted store rehydrates unchanged.
+   *
+   * It exists because an L3/L4 gate DRAIN resolves server-side: the runner flips the row to
+   * `pass`/`fail` with a tier + reason that the pure local Checker can only ever call
+   * `deferred`. Without these fields a drain changed nothing on screen. `serverVerdictOverlay`
+   * (labCheckerContext.ts) is the ONE place that decides when they win.
+   */
+  status?: string;
+  tier?: string;
+  reason?: string;
 }
 
 export type StepOutput = { data?: Record<string, unknown>; ueAssets?: string[]; links?: CatalogLinkRef[] };
@@ -136,7 +149,21 @@ export const useLabPipelineStore = create<LabPipelineState>()(
           let changed = false;
           const merged = { ...existing };
           for (const { step, artifact } of steps) {
-            if (!merged[step]) { merged[step] = artifact; changed = true; }
+            const cur = merged[step];
+            if (!cur) { merged[step] = artifact; changed = true; continue; }
+            // ADD-ONLY still holds for CONTENT (data/ueAssets are never overwritten here —
+            // that stays an explicit `adoptServer`). The server's VERDICT is a different
+            // thing: a gate drain resolves L3/L4 server-side, so its status/tier/reason are
+            // merged onto the existing local artifact — otherwise a drain would leave the
+            // step's banner frozen at `deferred` forever.
+            if (cur.status !== artifact.status || cur.tier !== artifact.tier || cur.reason !== artifact.reason) {
+              const next: LabStepArtifact = { ...cur };
+              if (artifact.status === undefined) delete next.status; else next.status = artifact.status;
+              if (artifact.tier === undefined) delete next.tier; else next.tier = artifact.tier;
+              if (artifact.reason === undefined) delete next.reason; else next.reason = artifact.reason;
+              merged[step] = next;
+              changed = true;
+            }
           }
           return changed ? { byEntity: { ...s.byEntity, [entityId]: merged } } : s;
         }),

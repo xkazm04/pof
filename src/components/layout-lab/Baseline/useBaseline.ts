@@ -5,8 +5,9 @@ import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 import { catalogManifest } from '../catalogManifest';
 import { postArtifact, drainGates } from '../labArtifactClient';
 import { useCachedArtifacts, invalidateArtifacts } from '../labArtifactCache';
-import { resolveAccept } from '../labAcceptance';
+import { labGrade } from '../labCheckerContext';
 import { useEntityArtifacts } from '../hooks/useEntityArtifacts';
+import { useCatalogStore } from '@/stores/catalogStore';
 import { useViewportAtLeast } from '@/hooks/useViewportWidth';
 import { useLabRunnerStore } from '../labRunnerStore';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
@@ -88,7 +89,11 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
 
   // Derived pipeline artifacts + display status (incl. the server `deferred`→pass/fail
   // overlay rule) live in a pure, unit-testable hook so this component stays layout-focused.
-  const { artifacts, artifactByStep, displayStatus, stepDone, done, driftByStep } = useEntityArtifacts(catalogId, entity, steps, entitySteps, serverArts);
+  // The live entity index feeds the shared CheckerContext's `has` (cross-catalog link
+  // resolution) — the same source the step banner uses, so the rail can't grade links
+  // against a pessimistic `() => false`.
+  const entitiesByCatalog = useCatalogStore((s) => s.entitiesByCatalog);
+  const { artifacts, artifactByStep, displayStatus, stepDone, done, driftByStep } = useEntityArtifacts(catalogId, entity, steps, entitySteps, serverArts, entitiesByCatalog);
 
   // Adopt the server's verdict for a drifted step (preserving the local candidate
   // history unless the user confirms replacement) — the explicit escape from add-only.
@@ -96,7 +101,12 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
     if (!entityKey) return;
     const srv = serverArts[step];
     if (!srv) return;
-    adoptServer(entityKey, step, { done: true, data: srv.data, ueAssets: srv.ueAssets, at: srv.updatedAt ?? new Date().toISOString() }, opts);
+    adoptServer(entityKey, step, {
+      done: true, data: srv.data, ueAssets: srv.ueAssets, at: srv.updatedAt ?? new Date().toISOString(),
+      status: srv.status,
+      ...(srv.tier ? { tier: srv.tier } : {}),
+      ...(srv.reason ? { reason: srv.reason } : {}),
+    }, opts);
   };
 
   // Write-through: register sync bound to the active catalogId so produce() fires
@@ -104,13 +114,10 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
   useEffect(() => {
     if (!catalogId) { setLabSync(null); return; }
     setLabSync((entityId, step, art) => {
-      const accept = resolveAccept(catalogId, step);
-      // Feed sibling artifacts so derived checkers (Items Test Gate) grade the
-      // posted status from upstream acceptance, matching the on-screen badge.
-      const entitySteps = useLabPipelineStore.getState().byEntity[entityId] ?? {};
-      const siblings: Record<string, Record<string, unknown>> = {};
-      for (const [s, a] of Object.entries(entitySteps)) siblings[s] = a.data;
-      const res = accept ? accept(art.data, { catalog: catalogId, siblings, has: () => false }) : null;
+      // ONE grading path: `labGrade` runs the step's checker under the SAME CheckerContext
+      // the on-screen banner uses (real siblings + a live `has`), so the status we persist
+      // is by construction the status the user is looking at.
+      const res = labGrade(catalogId, entityId, step, art.data);
       void postArtifact({ catalogId, entityId, step, data: art.data, ueAssets: art.ueAssets, status: res?.status ?? 'pass', tier: res?.tier ?? 'L0', reason: res?.reason })
         .then((synced) => {
           const { setSyncError } = useLabPipelineStore.getState();
@@ -134,7 +141,18 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
   // local state). Runs when a fetch resolves; entityKey is the stable identity key.
   useEffect(() => {
     if (!entityKey || !entityArts.length) return;
-    hydrateEntity(entityKey, entityArts.map((a) => ({ step: a.step, artifact: { done: true, data: a.data, ueAssets: a.ueAssets, at: a.updatedAt ?? new Date().toISOString() } })));
+    // The server's VERDICT (status/tier/reason) rides along: a gate drain resolves L3/L4
+    // server-side, and `serverVerdictOverlay` lets that outcome reach the step banner
+    // (content stays add-only — see `hydrateEntity`).
+    hydrateEntity(entityKey, entityArts.map((a) => ({
+      step: a.step,
+      artifact: {
+        done: true, data: a.data, ueAssets: a.ueAssets, at: a.updatedAt ?? new Date().toISOString(),
+        status: a.status,
+        ...(a.tier ? { tier: a.tier } : {}),
+        ...(a.reason ? { reason: a.reason } : {}),
+      },
+    })));
   }, [entityKey, entityArts, hydrateEntity]);
 
   // Close an open drawer on Escape (narrow shell only).
