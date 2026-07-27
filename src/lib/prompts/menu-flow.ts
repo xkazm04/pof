@@ -1,6 +1,7 @@
 import { buildProjectContextHeader, getModuleName, type ProjectContext } from '@/lib/prompt-context';
 import { GENERATE_ALL_DIRECTLY } from '@/lib/prompts/_shared';
 import type { MenuFlowConfig, ScreenNode, ScreenTransition, ScreenType } from '@/components/modules/content/ui-hud/MenuFlowDiagram';
+import { moduleKnowledge } from '@/lib/prompts/module-knowledge';
 
 const SCREEN_TYPE_OWNERSHIP: Record<ScreenType, string> = {
   'main-menu':  'GameInstance',
@@ -27,6 +28,7 @@ const SCREEN_TYPE_LABELS: Record<ScreenType, string> = {
 export function buildMenuFlowPrompt(config: MenuFlowConfig, ctx: ProjectContext): string {
   const moduleName = getModuleName(ctx.projectName);
   const header = buildProjectContextHeader(ctx, {
+    ...moduleKnowledge('ui-hud'),
     extraRules: [
       GENERATE_ALL_DIRECTLY,
       'Each screen must be a separate UUserWidget subclass with a corresponding C++ class.',

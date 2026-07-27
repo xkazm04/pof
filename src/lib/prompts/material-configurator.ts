@@ -2,6 +2,7 @@ import { getModuleName, type ProjectContext } from '@/lib/prompt-context';
 import { PromptBuilder } from '@/lib/prompts/prompt-builder';
 import { GENERATE_ALL_DIRECTLY, USE_MATERIAL_BEST_PRACTICES, MATERIAL_UPROPERTY_TUNING } from '@/lib/prompts/_shared';
 import type { MaterialConfiguratorConfig, SurfaceType, RenderFeature } from '@/components/modules/content/materials/MaterialParameterConfigurator';
+import { moduleKnowledge } from '@/lib/prompts/module-knowledge';
 
 const SURFACE_LABELS: Record<SurfaceType, string> = {
   metal: 'Metallic (PBR metal workflow)',
@@ -81,6 +82,7 @@ export function buildMaterialConfiguratorPrompt(config: MaterialConfiguratorConf
 
   return new PromptBuilder()
     .withProjectContext(ctx, {
+      ...moduleKnowledge('materials'),
       extraRules: [
         GENERATE_ALL_DIRECTLY,
         USE_MATERIAL_BEST_PRACTICES,

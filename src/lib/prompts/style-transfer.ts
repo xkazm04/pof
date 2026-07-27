@@ -1,6 +1,7 @@
 import { buildProjectContextHeader, getModuleName, type ProjectContext } from '@/lib/prompt-context';
 import { GENERATE_ALL_DIRECTLY, USE_MATERIAL_BEST_PRACTICES, MATERIAL_UPROPERTY_TUNING } from '@/lib/prompts/_shared';
 import type { StyleTransferConfig, AnalyzedProperties } from '@/components/modules/content/materials/MaterialStyleTransfer';
+import { moduleKnowledge } from '@/lib/prompts/module-knowledge';
 
 const SURFACE_SHADING: Record<string, string> = {
   metal: 'Default Lit (PBR metal workflow)',
@@ -42,6 +43,7 @@ function formatAnalysis(a: AnalyzedProperties): string {
 export function buildStyleTransferPrompt(config: StyleTransferConfig, ctx: ProjectContext): string {
   const moduleName = getModuleName(ctx.projectName);
   const header = buildProjectContextHeader(ctx, {
+    ...moduleKnowledge('materials'),
     extraRules: [
       GENERATE_ALL_DIRECTLY,
       USE_MATERIAL_BEST_PRACTICES,

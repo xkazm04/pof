@@ -209,8 +209,14 @@ export function formatKnownAssets(domains: string[]): string {
 
 /**
  * Map a PoF module id to the known-asset domains its generation prompts should
- * carry. Returns [] for modules that don't deal with characters/animation, so
+ * carry. Returns [] for modules that own no catalogued assets, so
  * `formatKnownAssets([])` injects nothing.
+ *
+ * Covers BOTH prompt paths: the aRPG core-engine sub-modules reached through the
+ * `CLITask` path, and the CONTENT modules reached through the standalone builders
+ * in `src/lib/prompts/` (see `prompts/module-knowledge.ts`) — a content module that
+ * authors against the same real assets (the mannequin rig, the pure-C++ widget
+ * base, the zone map root) must name the same exact paths, not invent its own.
  */
 export function knownAssetDomainsForModule(moduleId: string): string[] {
   switch (moduleId) {
@@ -228,6 +234,13 @@ export function knownAssetDomainsForModule(moduleId: string): string[] {
     case 'arpg-ui':
       return ['ui'];
     case 'arpg-world':
+      return ['world'];
+    // Content modules (standalone-builder surface).
+    case 'animations':
+      return ['character', 'animation', 'state-graph'];
+    case 'ui-hud':
+      return ['ui'];
+    case 'level-design':
       return ['world'];
     default:
       return [];

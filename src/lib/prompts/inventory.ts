@@ -1,5 +1,6 @@
 import { buildProjectContextHeader, getModuleName, type ProjectContext } from '@/lib/prompt-context';
 import { GENERATE_ALL_DIRECTLY } from '@/lib/prompts/_shared';
+import { moduleKnowledge } from '@/lib/prompts/module-knowledge';
 
 export interface InventoryConfig {
   gridCols: number;
@@ -74,6 +75,7 @@ export const DEFAULT_CONFIG: InventoryConfig = {
 export function buildInventoryPrompt(config: InventoryConfig, ctx: ProjectContext): string {
   const moduleName = getModuleName(ctx.projectName);
   const header = buildProjectContextHeader(ctx, {
+    ...moduleKnowledge('ui-hud'),
     extraRules: [
       GENERATE_ALL_DIRECTLY,
       'This system must integrate with UARPGInventoryComponent and UARPGItemInstance from the existing inventory module.',

@@ -1,5 +1,6 @@
 import { buildProjectContextHeader, getModuleName, type ProjectContext } from '@/lib/prompt-context';
 import { GENERATE_ALL_DIRECTLY } from '@/lib/prompts/_shared';
+import { moduleKnowledge } from '@/lib/prompts/module-knowledge';
 import type {
   AudioEventCatalogConfig,
   AudioEvent,
@@ -16,6 +17,7 @@ const CATEGORY_LABELS: Record<EventCategory, string> = {
 export function buildAudioEventPrompt(config: AudioEventCatalogConfig, ctx: ProjectContext): string {
   const moduleName = getModuleName(ctx.projectName);
   const header = buildProjectContextHeader(ctx, {
+    ...moduleKnowledge('audio'),
     extraRules: [
       GENERATE_ALL_DIRECTLY,
       'Use MetaSounds for DSP where applicable (UE5 best practice).',

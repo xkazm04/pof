@@ -1,5 +1,6 @@
 import { buildProjectContextHeader, type ProjectContext } from '@/lib/prompt-context';
 import type { TestScenario, TestSuite } from '@/types/ai-testing';
+import { moduleKnowledge } from '@/lib/prompts/module-knowledge';
 
 /**
  * Prompt to generate a full UE5 Automation Framework test spec
@@ -10,6 +11,7 @@ export function buildGenerateTestsPrompt(
   ctx: ProjectContext
 ): string {
   const header = buildProjectContextHeader(ctx, {
+    ...moduleKnowledge('ai-behavior'),
     includeBuildCommand: true,
     includeRules: true,
   });
@@ -63,6 +65,7 @@ export function buildSingleScenarioTestPrompt(
   ctx: ProjectContext
 ): string {
   const header = buildProjectContextHeader(ctx, {
+    ...moduleKnowledge('ai-behavior'),
     includeBuildCommand: true,
     includeRules: true,
   });
@@ -110,6 +113,7 @@ export function buildMockStimuliPrompt(
   ctx: ProjectContext
 ): string {
   const header = buildProjectContextHeader(ctx, {
+    ...moduleKnowledge('ai-behavior'),
     includeBuildCommand: false,
     includeRules: true,
   });
@@ -157,6 +161,7 @@ export function buildRunTestsPrompt(
   ctx: ProjectContext
 ): string {
   const header = buildProjectContextHeader(ctx, {
+    ...moduleKnowledge('ai-behavior'),
     includeBuildCommand: true,
     includeRules: true,
   });

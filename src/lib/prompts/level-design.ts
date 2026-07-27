@@ -3,6 +3,7 @@ import { buildProjectContextHeader, getModuleName, type ProjectContext } from '@
 import { GENERATE_ALL_DIRECTLY, GENERATE_THE_DIRECTLY } from '@/lib/prompts/_shared';
 import type { StreamingZonePlannerConfig, StreamingZone, ZoneTransition } from '@/components/modules/content/level-design/StreamingZonePlanner';
 import type { ProceduralLevelConfig } from '@/components/modules/content/level-design/ProceduralLevelWizard';
+import { moduleKnowledge } from '@/lib/prompts/module-knowledge';
 
 export function buildRoomCodegenPrompt(room: RoomNode, doc: LevelDesignDocument, ctx: ProjectContext): string {
   const moduleName = getModuleName(ctx.projectName);
@@ -11,6 +12,7 @@ export function buildRoomCodegenPrompt(room: RoomNode, doc: LevelDesignDocument,
   ).join('\n');
 
   const header = buildProjectContextHeader(ctx, {
+    ...moduleKnowledge('level-design'),
     extraRules: [
       GENERATE_THE_DIRECTLY,
     ],
@@ -51,6 +53,7 @@ export function buildSyncCheckPrompt(doc: LevelDesignDocument, ctx: ProjectConte
   ).join('\n');
 
   const header = buildProjectContextHeader(ctx, {
+    ...moduleKnowledge('level-design'),
     includeBuildCommand: false,
     extraRules: [
       'Do NOT modify any project files — this is a read-only sync check.',
@@ -88,6 +91,7 @@ INSTRUCTIONS:
 
 export function buildReconcilePrompt(divergence: SyncDivergence, doc: LevelDesignDocument, ctx: ProjectContext): string {
   const header = buildProjectContextHeader(ctx, {
+    ...moduleKnowledge('level-design'),
     extraRules: [
       'Make the minimal change needed to reconcile this divergence.',
     ],
@@ -116,6 +120,7 @@ export function buildNarrativeCodegenPrompt(doc: LevelDesignDocument, ctx: Proje
   const moduleName = getModuleName(ctx.projectName);
 
   const header = buildProjectContextHeader(ctx, {
+    ...moduleKnowledge('level-design'),
     extraRules: [
       GENERATE_ALL_DIRECTLY,
       'Include a data-driven approach for easy iteration.',
@@ -180,6 +185,7 @@ const TRANSITION_LABELS: Record<string, string> = {
 export function buildStreamingZonePrompt(config: StreamingZonePlannerConfig, ctx: ProjectContext): string {
   const moduleName = getModuleName(ctx.projectName);
   const header = buildProjectContextHeader(ctx, {
+    ...moduleKnowledge('level-design'),
     extraRules: [
       GENERATE_ALL_DIRECTLY,
       'Each zone must be a separate UE5 streaming level.',
@@ -352,6 +358,7 @@ const LEVEL_TYPE_DETAILS: Record<string, { name: string; structures: string }> =
 export function buildProceduralLevelPrompt(config: ProceduralLevelConfig, ctx: ProjectContext): string {
   const moduleName = getModuleName(ctx.projectName);
   const header = buildProjectContextHeader(ctx, {
+    ...moduleKnowledge('level-design'),
     extraRules: [
       GENERATE_ALL_DIRECTLY,
       'Use UE5 C++ best practices for procedural generation.',

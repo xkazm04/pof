@@ -1,6 +1,7 @@
 import type { AudioSceneDocument, AudioZone, SoundEmitter } from '@/types/audio-scene';
 import { buildProjectContextHeader, getModuleName, type ProjectContext } from '@/lib/prompt-context';
 import { GENERATE_ALL_DIRECTLY, GENERATE_THE_DIRECTLY } from '@/lib/prompts/_shared';
+import { moduleKnowledge } from '@/lib/prompts/module-knowledge';
 
 /**
  * Generates the full C++ audio system from a complete audio scene document.
@@ -9,6 +10,7 @@ export function buildAudioSystemPrompt(doc: AudioSceneDocument, ctx: ProjectCont
   const moduleName = getModuleName(ctx.projectName);
 
   const header = buildProjectContextHeader(ctx, {
+    ...moduleKnowledge('audio'),
     extraRules: [
       GENERATE_ALL_DIRECTLY,
       'Use MetaSounds where applicable for UE5 DSP.',
@@ -79,6 +81,7 @@ export function buildZoneCodegenPrompt(zone: AudioZone, doc: AudioSceneDocument,
   const zoneEmitters = doc.emitters.filter((e) => e.zoneId === zone.id);
 
   const header = buildProjectContextHeader(ctx, {
+    ...moduleKnowledge('audio'),
     extraRules: [
       GENERATE_THE_DIRECTLY,
     ],
@@ -121,6 +124,7 @@ export function buildSoundscapeNarrativePrompt(zone: AudioZone, ctx: ProjectCont
   const moduleName = getModuleName(ctx.projectName);
 
   const header = buildProjectContextHeader(ctx, {
+    ...moduleKnowledge('audio'),
     extraRules: [
       GENERATE_THE_DIRECTLY,
       'Parse the natural language description to determine concrete sound assets and parameters.',

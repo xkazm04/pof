@@ -1,6 +1,7 @@
 import { buildProjectContextHeader, getModuleName, type ProjectContext } from '@/lib/prompt-context';
 import { GENERATE_ALL_DIRECTLY } from '@/lib/prompts/_shared';
 import type { PPStudioEffect, PPStudioParam } from '@/types/post-process-studio';
+import { moduleKnowledge } from '@/lib/prompts/module-knowledge';
 
 /**
  * Canonical post-process stack config consumed by the prompt builder.
@@ -30,6 +31,7 @@ ${paramLines}`;
 export function buildPostProcessPrompt(config: PostProcessStackConfig, ctx: ProjectContext): string {
   const moduleName = getModuleName(ctx.projectName);
   const header = buildProjectContextHeader(ctx, {
+    ...moduleKnowledge('materials'),
     extraRules: [
       GENERATE_ALL_DIRECTLY,
       'Use UE5 Post Process Volume best practices.',

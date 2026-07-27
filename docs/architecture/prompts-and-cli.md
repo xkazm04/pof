@@ -12,6 +12,7 @@ calls in strings.
 |---|---|
 | `src/lib/prompt-context.ts` | `buildProjectContextHeader()` — single source of truth for project metadata, engine paths, build commands, dynamic scan, and error memory |
 | `src/lib/prompts/prompt-builder.ts` | `PromptBuilder` — fluent builder enforcing a fixed 6-section order |
+| `src/lib/prompts/module-knowledge.ts` | `moduleKnowledge(moduleId)` — the ONE seam that routes `promptKind` + `module` + `knownAssetDomains` into a **standalone** builder's context header |
 | `src/lib/prompts/animation-checklist.ts` | Per-module builder (animation); illustrates `.withProjectContext()` + `.withRawTask()` + `.withRawBestPractices()` |
 | `src/lib/prompts/material-configurator.ts` | Per-module builder (materials); illustrates `.withBestPractices()` |
 | `src/lib/cli-task.ts` | `CLITask` type hierarchy, `TaskFactory`, `buildTaskPrompt()`, callback registry (`registerCallback` / `extractCallbackPayload` / `resolveCallback`) |
@@ -102,6 +103,33 @@ output-field instruction; known hints render as a table when `reqs` is non-empty
 #### Per-module builders (`src/lib/prompts/`)
 
 Each builder is a single function that wires a domain-specific config into `PromptBuilder`:
+
+**Knowledge routing (`module-knowledge.ts`).** The standalone builders are the
+module-UI codegen surface — the highest-volume prompt path in the app — and they
+call `buildProjectContextHeader` directly rather than going through
+`buildTaskPrompt`. Every one of them spreads `moduleKnowledge(moduleId)` into its
+header options:
+
+```ts
+buildProjectContextHeader(ctx, { ...moduleKnowledge('materials'), extraRules: [...] })
+```
+
+`moduleKnowledge` derives the same three routing fields the `CLITask` handlers
+pass — `promptKind` (`'ue-cpp'`; every standalone builder emits C++), `module`
+(scopes `formatGotchas` to the module's domains **and** recovers its authored
+`KnowledgeTip`s), and `knownAssetDomains` (`knownAssetDomainsForModule`, which
+also maps the content modules `animations` / `ui-hud` / `level-design`). Because
+the routing is kind- and module-scoped, joining it typically makes a builder's
+prompt *shorter*: a materials prompt no longer hauls the GAS / Niagara /
+motion-matching pitfalls it can never hit. Builder→module mapping: `level-design`
+→ `level-design`; `inventory`, `menu-flow` → `ui-hud`; `material-configurator`,
+`material-patterns`, `post-process`, `style-transfer` → `materials`;
+`animation-checklist` → `animations`; `audio-scene`, `audio-events` → `audio`;
+`ai-testing` → `ai-behavior`. The rail
+`src/__tests__/lib/prompts/standalone-builder-knowledge.test.ts` iterates one
+shared fixture table (`builder-fixtures.ts`) and fails if a builder file is added
+without joining the routing.
+
 
 - `buildAnimationChecklistPrompt(step, ctx)` — injects animation-specific `extraRules`,
   builds the task from `ChecklistStep.{number, title, description, details, prompt}`,

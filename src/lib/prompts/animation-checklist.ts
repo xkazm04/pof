@@ -2,12 +2,14 @@ import { getModuleName, type ProjectContext } from '@/lib/prompt-context';
 import { PromptBuilder } from '@/lib/prompts/prompt-builder';
 import { GENERATE_ALL_DIRECTLY } from '@/lib/prompts/_shared';
 import type { ChecklistStep } from '@/components/modules/content/animations/AnimationChecklist';
+import { moduleKnowledge } from '@/lib/prompts/module-knowledge';
 
 export function buildAnimationChecklistPrompt(step: ChecklistStep, ctx: ProjectContext): string {
   const moduleName = getModuleName(ctx.projectName);
 
   return new PromptBuilder()
     .withProjectContext(ctx, {
+      ...moduleKnowledge('animations'),
       extraRules: [
         GENERATE_ALL_DIRECTLY,
         'Use UE5 C++ best practices for animation systems.',

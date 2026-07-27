@@ -1,10 +1,12 @@
 import { buildProjectContextHeader, getModuleName, type ProjectContext } from '@/lib/prompt-context';
 import { GENERATE_ALL_DIRECTLY } from '@/lib/prompts/_shared';
 import type { MaterialPattern } from '@/components/modules/content/materials/MaterialPatternCatalog';
+import { moduleKnowledge } from '@/lib/prompts/module-knowledge';
 
 export function buildMaterialPatternPrompt(pattern: MaterialPattern, ctx: ProjectContext): string {
   const moduleName = getModuleName(ctx.projectName);
   const header = buildProjectContextHeader(ctx, {
+    ...moduleKnowledge('materials'),
     extraRules: [
       GENERATE_ALL_DIRECTLY,
       'Use UE5 Material system best practices with UPROPERTY-exposed parameters.',
