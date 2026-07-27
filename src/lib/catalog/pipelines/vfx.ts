@@ -173,7 +173,9 @@ registerCatalogPipeline({
               animNotify: `AN_${s}`,
               activationNote: `Fires ONLY from AnimNotify AN_${s} — never from BeginPlay or a timer (canon vfx-budget)`,
             },
-            // Top-level field for withinPercent checker: real derived ms value
+            // Top-level MIRROR of gpuBudget.gpuMs (same const — referenced by name in
+            // step-facts / realization-facts notes). Acceptance grades the CHARTED value
+            // (`gpuBudget.gpuMs`), so the number on screen is the number being graded.
             gpuPct,
             wiringContract: {
               grantedBy: `Ability montage in spellbook grants AnimNotify AN_${s} which spawns NS_${s}`,
@@ -190,7 +192,9 @@ registerCatalogPipeline({
           },
         };
       },
-      accept: withinPercent('gpuPct', 'GPU cost within ±15% of class budget target (0.48 ms)', 0.48, 15),
+      // Grade the CHARTED bar (gpuBudget.gpuMs), not the duplicated top-level scalar — the
+      // chart and the checker now read one and the same datum.
+      accept: withinPercent('gpuBudget.gpuMs', 'GPU cost within ±15% of class budget target (0.48 ms)', 0.48, 15),
     },
 
     // ── 7. Variants ───────────────────────────────────────────────────────────

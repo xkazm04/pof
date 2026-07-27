@@ -6,6 +6,7 @@ import {
   selected,
   minCount,
 } from '../acceptance/dataCheckers';
+import { allOf } from '../acceptance/combinators';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
@@ -586,7 +587,14 @@ registerCatalogPipeline({
           '/Game/ArenaBuild/MI_WeatheredStone_Pillar',
         ],
       }),
-      accept: minCount('links', '≥1 material surface link declared', 1),
+      // The View renders `materials`, so acceptance grades `materials` — the surface family,
+      // its MI_ mapping and the physical-surface binding must all be authored — IN ADDITION
+      // to the link count (which was the only thing graded before, leaving every displayed
+      // field ungraded).
+      accept: allOf(
+        fieldsPopulated('materials', 'Surface family + MI mapping + physical surface authored', ['surfaceFamily', 'mapping', 'physicalSurface']),
+        minCount('links', '≥1 material surface link declared', 1),
+      ),
     },
 
     // ── 9. Ambient / Audio ────────────────────────────────────────────────────

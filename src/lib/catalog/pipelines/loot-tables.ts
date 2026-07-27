@@ -218,7 +218,7 @@ registerCatalogPipeline({
       view: {
         kind: 'table',
         field: 'pools',
-        columns: [{ key: 'currencyDrops' }, { key: 'uniquePool' }],
+        columns: [{ key: 'currencyPool' }, { key: 'uniquePool' }],
       },
       produce: (e: LabEntity) => ({
         data: {
@@ -306,7 +306,12 @@ registerCatalogPipeline({
           `/Game/LootSystem/DA_${slug(e.name)}_UniquPool`,
         ],
       }),
-      accept: minCount('links', '≥1 currency or item pool link declared', 1),
+      // Grade the displayed manifest (`pools`) as well as the link count — the View shows the
+      // currency + unique pools, so both must be authored, not just a resolvable link.
+      accept: allOf(
+        fieldsPopulated('pools', 'Currency pool + unique pool authored', ['currencyPool', 'uniquePool']),
+        minCount('links', '≥1 currency or item pool link declared', 1),
+      ),
       staticChecks: (e) => [
         cppSymbolExists('FARPGLootTableRow', 'Loot table row struct in UE Source'),
         seedRowPresent('seed_loot_tables.py', slug(e.name), 'Loot table row seeded for this entity'),

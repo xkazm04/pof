@@ -15,7 +15,7 @@
 | 3 | Mesh / Sprite | gallery | SM_\<name\>_Sprite | L1 `selected` (mesh/sprite candidate) |
 | 4 | Material | gallery | MI_\<name\> | L1 `selected` (material instance) |
 | 5 | Sound Hook | rules | — | L0 `fieldsPopulated` (cues/animNotifyBinding) |
-| 6 | GPU / LOD Budget | balance | — | L0 `withinPercent` gpuPct within ±15% of 0.48 ms |
+| 6 | GPU / LOD Budget | balance | — | L0 `withinPercent` `gpuBudget.gpuMs` (the charted bar) within ±15% of 0.48 ms |
 | 7 | Variants | gallery | NS_\<name\>_Small/Med/Large | L1 `selected` (variant candidate) |
 | 8 | Icon 2D Art | gallery | T_\<name\>_Icon | L1 `selected` (icon candidate) |
 | 9 | Test Gate | checklist | — | L3 `runtimeDeferred` VSVFXPerfTest (RHI+Gemini) |

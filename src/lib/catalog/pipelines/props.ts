@@ -1,5 +1,6 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
+import { allOf } from '../acceptance/combinators';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
@@ -424,7 +425,12 @@ registerCatalogPipeline({
           { catalogId: 'loot-tables', entityId: 'lt-Brute', role: 'loot-on-destroy' },
         ],
       }),
-      accept: minCount('links', '≥1 loot-table link declared', 1),
+      // Grade the displayed drop spec (`lootOnDestroy`) as well as the link count — the View
+      // shows the loot table, ilvl source and drop counts, so all three must be authored.
+      accept: allOf(
+        fieldsPopulated('lootOnDestroy', 'Loot table + ilvl source + drop counts authored', ['lootTable', 'ilvlSource', 'dropCount']),
+        minCount('links', '≥1 loot-table link declared', 1),
+      ),
       staticChecks: () => [
         cppSymbolExists('UARPGLootDropComponent', 'Loot drop component present in Source/PoF/Loot/'),
       ],

@@ -1,5 +1,22 @@
 import type { Checker } from './types';
 
+/**
+ * Resolve a field reference against a step's artifact data. A plain name (`gpuPct`) reads a
+ * top-level key exactly as before; a DOT-PATH (`gpuBudget.gpuMs`) walks into the nested object.
+ *
+ * Why: several `balance` steps chart an object (`view.field = 'gpuBudget'`) while grading a
+ * DUPLICATED top-level scalar — so the number on screen was not the number being graded and the
+ * two could drift apart silently. A dot-path lets the checker grade the exact datum the View
+ * renders. Backward compatible: a name with no `.` behaves identically to `data[field]`.
+ */
+export function pickField(data: Record<string, unknown>, field: string): unknown {
+  if (!field.includes('.')) return data[field];
+  return field.split('.').reduce<unknown>(
+    (acc, k) => (acc != null && typeof acc === 'object' ? (acc as Record<string, unknown>)[k] : undefined),
+    data,
+  );
+}
+
 export function minLength(field: string, label: string, n: number): Checker {
   return (data) => {
     const len = String(data[field] ?? '').length;
@@ -17,9 +34,11 @@ export function fieldsPopulated(field: string, label: string, keys: string[]): C
   };
 }
 
+/** Numeric ±% band. `field` may be a dot-path (see `pickField`) so a step can grade the very
+ *  value its chart renders instead of a duplicated top-level mirror. */
 export function withinPercent(field: string, label: string, target: number, pct: number): Checker {
   return (data) => {
-    const v = data[field];
+    const v = pickField(data, field);
     if (v == null) return { label, tier: 'L0', status: 'pending', detail: 'not set', reason: `field "${field}" is not set (expected a value within ±${pct}% of ${target})` };
     const n = Number(v);
     const ok = n >= target * (1 - pct / 100) && n <= target * (1 + pct / 100);

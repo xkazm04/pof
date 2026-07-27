@@ -31,6 +31,30 @@ import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
  *  (d) a gallery step's `genCandidates` (when present) has a `build` function and, when
  *      `needsAssets`, a valid `assetKind` ('2d' | '3d' | unset→'2d').
  *
+ * ── Field coherence (e)–(g) ────────────────────────────────────────────────────
+ * A step is three faces of ONE artifact — what Produce writes, what the View renders, what
+ * Acceptance grades. When those three name different fields the step lies: it can chart one
+ * number while grading another, or grade a field no Produce or selection ever writes (so the
+ * verdict is pinned to a hardcoded stub value forever). The fields a checker reads are
+ * discovered by running `accept()` over a recording Proxy of the produce stub, so an opaque
+ * checker closure still reports its inputs.
+ *
+ *  (e) every top-level field the `accept` checker READS is written by `produce()`. Exempt:
+ *      steps whose accept verdict on the stub is `deferred` — an L3/L4 gate legitimately reads
+ *      fields a live runner (UE automation, the /pof/python/run bridge) writes later.
+ *  (f) the View's `field` is written by `produce()` — a View pointed at a field nothing
+ *      produces renders an empty state forever. Exempt: python-bridge steps (`data.python`),
+ *      whose manifest fields are filled by the module's return envelope.
+ *  (g) the DISPLAYED data is the GRADED data: `accept` must read the View's `field` itself, or
+ *      the field it grades must live INSIDE `data[view.field]` (a mirror of the displayed
+ *      datum). Otherwise the user reads numbers no check ever touches.
+ *      For `gallery` steps this is strict and doubly-checked: the View field IS the selection
+ *      field — the key a chosen candidate's payload projects onto the artifact — so it must be
+ *      the accept field AND the payload key produced by `genCandidates.build`. Pointing a
+ *      gallery at its candidate ARRAY instead makes selection overwrite that array with an
+ *      index while acceptance grades a field selection never touches (the character-pipeline
+ *      bug this rule was written for).
+ *
  * Every failure names catalog / step / field precisely.
  */
 
@@ -44,6 +68,46 @@ function num(v: unknown): number | null {
 }
 
 type Step = { catalogId: string; label: string; spec: StepSpec };
+
+/** The stub artifact a step's Produce writes for the linter's synthetic entity. */
+function produceData(s: Step): Record<string, unknown> | Error {
+  try {
+    return (s.spec.produce(SYNTH_ENTITY).data ?? {}) as Record<string, unknown>;
+  } catch (e) {
+    return e as Error;
+  }
+}
+
+/**
+ * Run a step's `accept` over a Proxy of its produce data, recording every TOP-LEVEL key the
+ * checker touches. Checkers are opaque closures (`selected('mesh')`, `allOf(...)`), so reading
+ * their field names statically is impossible — but every one of them indexes the data object,
+ * and dot-path checkers (`pickField`, invariants' `pick`) split the path first, so the top-level
+ * key is always the first thing read.
+ */
+function acceptFields(s: Step, data: Record<string, unknown>): { read: Set<string>; status: string } | Error {
+  const read = new Set<string>();
+  const proxy = new Proxy({ ...data }, {
+    get(t, k) { if (typeof k === 'string') read.add(k); return Reflect.get(t, k); },
+    has(t, k) { if (typeof k === 'string') read.add(k); return Reflect.has(t, k); },
+  });
+  try {
+    return { read, status: s.spec.accept(proxy as Record<string, unknown>).status };
+  } catch (e) {
+    return e as Error;
+  }
+}
+
+/** Is `field` present INSIDE the object the View renders (a mirror of the displayed datum)? */
+function insideViewField(data: Record<string, unknown>, viewField: string, field: string): boolean {
+  const obj = data[viewField];
+  return obj != null && typeof obj === 'object' && field in (obj as Record<string, unknown>);
+}
+
+/** A python-bridge step: Produce dispatches a module and the RUNNER writes the result fields. */
+const isPythonBridge = (data: Record<string, unknown>) => data.python != null;
+
+const viewField = (spec: StepSpec) => (spec.view as { field?: string }).field;
 
 const pipelines = allCatalogPipelines();
 const steps: Step[] = pipelines.flatMap((p) =>
@@ -140,6 +204,84 @@ describe('fleet spec linter', () => {
       }
       if (s.spec.view.kind !== 'gallery') {
         violations.push(`${at(s)}: genCandidates is set on a non-gallery step (view kind "${s.spec.view.kind}") — it will be ignored`);
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+
+  // ── (e) every accept-field is written by produce ───────────────────────────
+  it('every field the accept checker reads is written by produce() (except runtime-deferred gates)', () => {
+    const violations: string[] = [];
+    for (const s of steps) {
+      const data = produceData(s);
+      if (data instanceof Error) { violations.push(`${at(s)}: produce() threw — ${data.message}`); continue; }
+      const probe = acceptFields(s, data);
+      if (probe instanceof Error) { violations.push(`${at(s)}: accept() threw — ${probe.message}`); continue; }
+      // An L3/L4 gate reads fields a live runner writes later — that is the design, not drift.
+      if (probe.status === 'deferred') continue;
+      for (const f of probe.read) {
+        if (!(f in data)) violations.push(`${at(s)}: accept grades field "${f}", which produce() never writes`);
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+
+  // ── (f) every view.field exists in produce output ──────────────────────────
+  it("every View's field is written by produce() (no permanently-empty panels)", () => {
+    const violations: string[] = [];
+    for (const s of steps) {
+      const data = produceData(s);
+      if (data instanceof Error) { violations.push(`${at(s)}: produce() threw — ${data.message}`); continue; }
+      if (isPythonBridge(data)) continue; // the python module's return envelope fills these
+      const f = viewField(s.spec);
+      if (f != null && !(f in data)) violations.push(`${at(s)}: view field "${f}" is never written by produce()`);
+    }
+    expect(violations).toEqual([]);
+  });
+
+  // ── (g) the displayed data is the graded data ──────────────────────────────
+  it('acceptance grades the field the View displays (or a datum inside it)', () => {
+    const violations: string[] = [];
+    for (const s of steps) {
+      const data = produceData(s);
+      if (data instanceof Error) continue; // reported by (e)
+      const probe = acceptFields(s, data);
+      if (probe instanceof Error) continue; // reported by (e)
+      if (probe.status === 'deferred') continue; // runtime gate: the runner supplies the truth
+      const f = viewField(s.spec);
+      if (f == null) continue;
+      if (probe.read.has(f)) continue;
+      const mirrored = [...probe.read].filter((k) => insideViewField(data, f, k));
+      if (mirrored.length === 0) {
+        violations.push(`${at(s)}: view field "${f}" is displayed but never graded — accept reads [${[...probe.read].join(', ')}], none of which is "${f}" or lives inside it`);
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+
+  // ── (g′) gallery: view field = selection field = candidate payload key ─────
+  it('every gallery step grades its selection field, and genCandidates project onto that same field', () => {
+    const violations: string[] = [];
+    for (const s of steps) {
+      if (s.spec.view.kind !== 'gallery') continue;
+      const field = s.spec.view.field;
+      const data = produceData(s);
+      if (data instanceof Error) continue; // reported by (e)
+      const probe = acceptFields(s, data);
+      if (probe instanceof Error) continue;
+      if (!probe.read.has(field)) {
+        violations.push(`${at(s)}: gallery view field "${field}" is not the accepted selection field (accept reads [${[...probe.read].join(', ')}]) — selecting a candidate would write "${field}" while acceptance graded something else`);
+      }
+      if (typeof data[field] !== 'number') {
+        violations.push(`${at(s)}: gallery selection field "${field}" must be a numeric candidate index in produce() data (got ${JSON.stringify(data[field])})`);
+      }
+      const gc = s.spec.genCandidates;
+      if (gc && typeof gc.build === 'function') {
+        const built = gc.build('lint direction', 0, [{ name: 'lint.glb', url: '/api/visual-gen/asset/lint.glb' }]);
+        const bad = built.filter((c) => !(field in c.payload));
+        if (bad.length) {
+          violations.push(`${at(s)}: genCandidates payloads project onto [${Object.keys(built[0]?.payload ?? {}).join(', ')}], not the graded selection field "${field}" — selecting would overwrite produced data and never satisfy acceptance`);
+        }
       }
     }
     expect(violations).toEqual([]);

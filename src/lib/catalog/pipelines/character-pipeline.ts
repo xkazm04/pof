@@ -27,7 +27,11 @@ registerCatalogPipeline({
       archetype: 'gallery',
       label: 'Concept 2D',
       engine: 'Leonardo',
-      view: { kind: 'gallery', field: 'candidates', candidates: 3 },
+      // Gallery contract: `view.field` is the SELECTION field — the key a chosen candidate's
+      // payload projects onto the artifact data, and the key `accept` grades. It must NOT be
+      // the produced candidate array (`candidates`), or selecting a candidate would overwrite
+      // that array with a numeric index while acceptance graded an untouched field.
+      view: { kind: 'gallery', field: 'selected', candidates: 3 },
       produce: () => ({
         data: {
           candidates: [
@@ -68,15 +72,18 @@ registerCatalogPipeline({
       archetype: 'gallery',
       label: '3D Generation',
       engine: 'Tripo',
-      view: { kind: 'gallery', field: 'candidates', candidates: 3 },
+      view: { kind: 'gallery', field: 'selected', candidates: 3 },
       // Surface REAL generated .glb meshes when any exist on disk: each candidate carries
       // payload.glbUrl so the selected mesh renders in the interactive GlbViewer (orbit/
       // zoom) instead of a colored swatch. Empty manifest → honest deterministic swatch
       // fallback (never a fake 3D preview); acceptance (`selected`) is unchanged either way.
+      // The projection key MUST be the selection field ('selected') — projecting onto
+      // 'candidates' would clobber the produced verdict array with a numeric index and leave
+      // acceptance grading a field no selection ever writes.
       genCandidates: {
         needsAssets: true,
         assetKind: '3d',
-        build: (dir, seq, assets) => meshGalleryCandidates('candidates', 3, assets, dir, seq),
+        build: (dir, seq, assets) => meshGalleryCandidates('selected', 3, assets, dir, seq),
       },
       produce: () => ({
         data: {
@@ -233,7 +240,7 @@ registerCatalogPipeline({
       archetype: 'gallery',
       label: 'Icon 2D Art',
       engine: 'Leonardo',
-      view: { kind: 'gallery', field: 'candidates', candidates: 3 },
+      view: { kind: 'gallery', field: 'selected', candidates: 3 },
       produce: () => ({
         data: {
           candidates: [{ name: 'portrait crop of the gated HD concept (256px, upper-left light)', path: 'generated/tripo3d/face_hd3_pair.png' }],
