@@ -46,6 +46,13 @@ describe('GEN_PROMPTING_PRACTICES', () => {
     expect(text).toMatch(/artifact|occlu|floater|fused|clean/i);
   });
 
+  it('encodes texturing prep: split the AI color map from the layered PBR material set', () => {
+    const text = GEN_PROMPTING_PRACTICES.map((p) => `${p.summary} ${p.detail}`).join(' ');
+    expect(text).toMatch(/color (map|texture|base)|albedo/i);
+    expect(text).toMatch(/PBR|roughness|material propert/i);
+    expect(text).toMatch(/model as (an )?input|3D model as/i);
+  });
+
   it('encodes part-segmentation prep: grid-combined multi-view input + review the part list', () => {
     const text = GEN_PROMPTING_PRACTICES.map((p) => `${p.summary} ${p.detail}`).join(' ');
     expect(text).toMatch(/grid|combined.{0,20}multi.?view|single image.{0,30}views/i);

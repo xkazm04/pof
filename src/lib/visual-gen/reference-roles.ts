@@ -102,6 +102,11 @@ export const GEN_PROMPTING_PRACTICES: GenPromptingPractice[] = [
       'Give the mesher a straightforward, near-canonical pose (roughly A-pose, limbs uncrossed, no heavy self-occlusion) and a not-overly-stylized silhouette. Complex poses, crossed/overlapping limbs, and flowing accessories self-occlude and produce fused limbs, missing faces, and warped geometry in single-image→3D — characters are already the hard case. If the desired concept is complex, simplify the reference (canonical pose, isolated subject) for the mesh, then re-pose/retarget in-engine afterward.',
   },
   {
+    summary: 'Split the color map from the PBR material set — AI for color, layered materials for properties',
+    detail:
+      'AI-generated COLOR (albedo/base-color) textures are production-usable — pro teams ship them with at most light post-processing fine-tunes. Material PROPERTIES (roughness/metalness/height) are not: layer them on top of the AI color base procedurally or from material presets (Substance-class tooling), where the achievable quality stays far above AI output. When an AI PBR-on-top tool derives property maps from an existing texture, feed it the 3D model as an input alongside the texture — texture-only input mis-derives the maps.',
+  },
+  {
     summary: 'For part segmentation, feed a grid-combined multi-view and review the part list',
     detail:
       'When splitting a concept into parts (for modular assembly or per-part meshing), first combine the generated multi-view into a single grid image and segment THAT — part extraction works one object per image, so a grid of views gives it context on occluded and rear parts it would otherwise hallucinate. And never accept the auto-analyzed part list blind: review or hand-supply it against your assembly logic (which garments/accessories must be separate swap-slot parts), because the splitter cannot know how you intend to assemble or modularize the result.',
