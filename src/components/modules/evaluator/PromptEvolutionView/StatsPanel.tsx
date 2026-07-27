@@ -2,16 +2,27 @@ import { BarChart3, GitBranch, FlaskConical, Trophy, TrendingUp } from 'lucide-r
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { KPICard } from '@/components/ui/KPICard';
 import { Badge } from '@/components/ui/Badge';
-import type { EvolutionStats } from '@/types/prompt-evolution';
+import type { EvolutionStats, PromptVersionFitness } from '@/types/prompt-evolution';
 import { STATUS_NEUTRAL } from '@/lib/chart-colors';
-import { ACCENT, STATUS_COLORS } from './constants';
+import { ACCENT, STATUS_COLORS, type ViewMode } from './constants';
 import { EmptyState } from './EmptyState';
+import { JudgeFitnessStrip } from './JudgeFitnessStrip';
 
 // ── Stats Panel ─────────────────────────────────────────────────────────────
 
-export function StatsPanel({ stats }: { stats: EvolutionStats }) {
+export function StatsPanel({
+  stats,
+  promptFitness = [],
+  mode = 'advanced',
+}: {
+  stats: EvolutionStats;
+  /** Judge-scored quality per quality-pack prompt version; empty → the strip hides. */
+  promptFitness?: PromptVersionFitness[];
+  mode?: ViewMode;
+}) {
   return (
     <div className="space-y-4">
+      <JudgeFitnessStrip fitness={promptFitness} mode={mode} />
       {/* Global stats grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard label="Total Variants" value={stats.totalVariants} icon={GitBranch} />

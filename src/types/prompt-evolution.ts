@@ -123,6 +123,30 @@ export interface ServedVariant {
   slot: 'A' | 'B' | null;
 }
 
+// ── Judge-scored fitness per quality-pack prompt version ──
+
+/**
+ * How well the artifacts produced under one quality-pack version scored with the judge
+ * fleet. `avgScore`/`passRate` are **null when nothing under this version has been judged** —
+ * unjudged is unknown, never zero (see `lib/prompt-evolution/judge-fitness.ts`).
+ */
+export interface PromptVersionFitness {
+  /** The `PROMPT_VERSION` stamped into the artifacts' `_provenance`. */
+  promptVersion: string;
+  /** Artifacts stamped with this version. */
+  producedArtifacts: number;
+  /** How many of those artifacts carry at least one judge verdict. */
+  judgedArtifacts: number;
+  /** Total verdicts counted (an artifact may be judged by several judges). */
+  verdicts: number;
+  /** Mean 0-100 judge score, or null when unjudged. */
+  avgScore: number | null;
+  /** Share of verdicts that passed (0-1), or null when unjudged. */
+  passRate: number | null;
+  /** Whether this is the pack version production runs under right now. */
+  isCurrent: boolean;
+}
+
 // ── Prompt cluster result (from similarity analysis) ──
 
 export interface PromptCluster {
@@ -214,6 +238,7 @@ export interface PromptEvolutionRequest {
     | 'get-active-variant'
     | 'resolve-dispatch-variant'
     | 'record-variant-trial'
+    | 'get-prompt-fitness'
     | 'get-version-history'
     | 'restore-variant'
     | 'optimize-prompt';

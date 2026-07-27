@@ -21,6 +21,8 @@ calls in strings.
 | `src/lib/model-policy.ts` | Model-policy registry (WS0): `getModelPolicy(taskClass)`, `taskClassForDispatchType()`, `resolveDispatchModelChoice()` — the single source of truth for which model + effort powers each task class |
 | `src/lib/prompt-evolution/dispatch-resolve.ts` | `composeTaskDispatch()` / `resolveActivePrompt()` — swaps the served prompt-evolution variant in before the prompt is built; `STATIC_VARIANT_ID` sentinel |
 | `src/lib/prompt-evolution/engine.ts` | `resolveDispatchVariant()` (serve) / `recordTrialForServedVariant()` (record) / `concludeTest()` (decide) — the A/B loop |
+| `src/lib/prompt-evolution/judge-fitness.ts` | `stampPromptVersion()` / `computeVersionFitness()` — joins judge verdicts to the quality-pack version that produced the artifact |
+| `src/lib/prompts/quality/index.ts` | Quality pack + `PROMPT_VERSION` (hand-bumped) + `packFingerprint()` drift detector |
 | `src/components/cli/skills.ts` | 12 `SkillPack` records; `buildSkillsPrompt()` / `resolveSkillsFromPatterns()` |
 | `src/hooks/useModuleCLI.ts` | `useModuleCLI` hook — primary entry point from module components |
 | `src/components/layout-lab/steps/ArchetypeStep.tsx` | Catalog pipeline: `CliProduce.buildPrompt` prepends Project Canon before dispatching |
@@ -441,6 +443,49 @@ handler puts into the callback's `staticFields`. The loop has three legs:
 
 Adopting a winner / restoring a version flips the `active` flag, which changes what leg 1
 serves once no test is running.
+
+---
+
+### 4.6 Judge verdicts → prompt fitness (the WS1 improvement loop)
+
+The quality pack (`lib/prompts/quality/index.ts`) is prepended to every generative Produce
+prompt, and the judge fleet scores what it produces — but the two were never read back
+together, so a pack revision could not be shown to have helped. `lib/prompt-evolution/judge-fitness.ts`
+is that join:
+
+```
+judge_verdicts (catalogId, entityId, step)
+  ⋈ pipeline_artifacts (same primary key)
+    → data._provenance.promptVersion     ← the fitness axis
+```
+
+- **Making the axis real.** `/api/pipeline-artifacts` POST — the produce `@@CALLBACK` target —
+  now stamps `data._provenance.promptVersion` via `stampPromptVersion(data, promptVersion?)`.
+  An explicit `promptVersion` in the payload (a replay/drain reporting the pack its artifact
+  really ran under) wins; otherwise the pack version in effect at write time is recorded. An
+  existing `_provenance` stamp is merged, never clobbered. **Grading is unaffected**: the
+  server grades the *submitted* `data` and the stamp is added only to what is persisted, so
+  acceptance can never move because of it (the additive-key pattern).
+- **`PROMPT_VERSION` is a real, hand-bumped pack version.** Change any pack content and you
+  must bump it to the next `q<n>`; `src/__tests__/lib/prompts/quality-pack-version.test.ts`
+  pins the pair `{PROMPT_VERSION, packFingerprint()}` and fails loudly if content moved
+  without a bump. (`packFingerprint()` is a pure FNV-1a over the whole pack — a *drift
+  detector*, not the version. A hash-as-version was rejected: it would mint a new bucket on
+  every typo fix and shatter the score history into single-artifact fragments, and `q1`/`q2`
+  is what a human reads in the UI.)
+- **Aggregation.** `computeVersionFitness(artifacts, verdicts)` (pure) returns
+  `PromptVersionFitness[]`: produced/judged artifact counts, verdict count, mean score, pass
+  rate, and `isCurrent`. Artifacts with no stamp are **excluded** rather than guessed into a
+  bucket. `getPromptVersionFitness()` is the DB-backed entry point behind the
+  `get-prompt-fitness` action.
+- **Honest unknown.** A version whose artifacts nobody has judged reports `avgScore: null`,
+  and `JudgeFitnessStrip` renders an explicit "unjudged — N artifacts produced, none reviewed
+  yet" with **no meter at all**. A genuine score of 0 still draws a bar — 0 is a measurement,
+  `null` is not. Adoption stays manual: the strip informs, it never picks a winner.
+
+Until artifacts are produced under a second pack version this shows a single bucket. That is
+the expected steady state — the loop exists so the comparison is available the moment
+`PROMPT_VERSION` bumps.
 
 ---
 

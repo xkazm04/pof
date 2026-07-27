@@ -3,6 +3,7 @@ import { apiSuccess, apiError } from '@/lib/api-utils';
 import { listArtifacts, upsertArtifact } from '@/lib/pipeline-artifacts-db';
 import { artifactUpsertSchema } from '@/lib/catalog/artifact-validation';
 import { gradeArtifact } from '@/lib/catalog/headless';
+import { stampPromptVersion } from '@/lib/prompt-evolution/judge-fitness';
 
 /** GET /api/pipeline-artifacts?catalogId=items[&entityId=item-1] → PipelineArtifact[] */
 export async function GET(req: NextRequest) {
@@ -38,6 +39,8 @@ export async function POST(req: NextRequest) {
     if (!parsed.success) return apiError('Invalid artifact payload', 400, parsed.error.issues);
     const p = parsed.data;
 
+    // Grade the SUBMITTED data, untouched — the provenance stamp is added only to what we
+    // persist, so acceptance can never shift because of it (the additive-key pattern).
     const { graded, raw } = gradeArtifact(p.catalogId, p.step, p.data, p.entityId);
     const status = graded ? (raw?.status ?? 'pending') : p.status;
     const tier = graded ? (raw?.tier ?? 'L0') : p.tier;
@@ -49,7 +52,7 @@ export async function POST(req: NextRequest) {
       catalogId: p.catalogId,
       entityId: p.entityId,
       step: p.step,
-      data: p.data,
+      data: stampPromptVersion(p.data, p.promptVersion),
       ueAssets: p.ueAssets,
       status,
       tier,

@@ -19,7 +19,7 @@ import { StatsPanel } from './StatsPanel';
 
 export function PromptEvolutionView() {
   const {
-    variants, abTests, clusters, suggestions, stats, selectedModuleId,
+    variants, abTests, clusters, suggestions, stats, promptFitness, selectedModuleId,
     isLoading, isMutating, isClustering, error, activeSubTab,
     lastOptimization, isOptimizing,
     setActiveSubTab, mutateVariant, clusterPrompts, concludeTestAction,
@@ -187,7 +187,7 @@ export function PromptEvolutionView() {
           )}
 
           {activeSubTab === 'stats' && (
-            <StatsPanel stats={stats} />
+            <StatsPanel stats={stats} promptFitness={promptFitness} mode={mode} />
           )}
         </>
       )}

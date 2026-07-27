@@ -20,6 +20,7 @@ import {
   restoreVariant,
   optimizePrompt,
 } from '@/lib/prompt-evolution/engine';
+import { getPromptVersionFitness } from '@/lib/prompt-evolution/judge-fitness';
 import { getModuleSessions, getModuleStats } from '@/lib/session-analytics-db';
 import type { PromptEvolutionRequest } from '@/types/prompt-evolution';
 import type { SubModuleId } from '@/types/modules';
@@ -103,6 +104,12 @@ export async function POST(req: NextRequest) {
       case 'get-stats': {
         const stats = getEvolutionStats();
         return apiSuccess(stats);
+      }
+
+      case 'get-prompt-fitness': {
+        // Judge-scored quality per quality-pack prompt version (the WS1 improvement loop):
+        // judge_verdicts ⋈ pipeline_artifacts ⋈ _provenance.promptVersion.
+        return apiSuccess(getPromptVersionFitness());
       }
 
       case 'get-tests': {

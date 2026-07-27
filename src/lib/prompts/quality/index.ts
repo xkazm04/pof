@@ -10,7 +10,43 @@ import { DIMENSIONS, STYLE_ANCHORS, type DeliverableClass } from '@/lib/judge/di
  * PROMPT_VERSION is stamped into artifact provenance so /status can show score-by-prompt-
  * version and the WS1 improvement loop can prove a pack revision actually helped.
  */
+
+/**
+ * The quality pack's version — the axis judge-fitness aggregates on
+ * (`prompt-evolution/judge-fitness.ts`).
+ *
+ * **Bump contract:** change any pack content (a discipline, a negative constraint, the
+ * technique block, the composition in `qualityPack`, or the imported dimensions/anchors)
+ * and you MUST bump this to the next `q<n>`. `quality-pack-version.test.ts` pins
+ * {@link packFingerprint} against this value and fails loudly if content moved without a
+ * bump — otherwise two materially different packs share one fitness bucket and the
+ * before/after comparison the whole loop exists for becomes a lie.
+ *
+ * Deliberately a hand-bumped label rather than a content hash: a hash would mint a new
+ * bucket on every typo fix, shattering the score history into single-artifact fragments,
+ * and 'q1'/'q2' is what a human reads in the UI strip.
+ */
 export const PROMPT_VERSION = 'q1';
+
+/**
+ * A stable fingerprint of the ENTIRE pack content across every deliverable class.
+ *
+ * Pure and dependency-free (FNV-1a — no `crypto`, so this stays client-safe like the rest
+ * of the module). Not a version: it exists only so the guard test can detect content drift
+ * that forgot to bump {@link PROMPT_VERSION}.
+ */
+export function packFingerprint(): string {
+  const canonical = (Object.keys(DISCIPLINE) as DeliverableClass[])
+    .sort()
+    .map((cls) => `${cls}\u0000${DISCIPLINE[cls]}\u0000${NEGATIVES[cls].join('\u0001')}\u0000${qualityPack(cls, '<catalog>')}`)
+    .join('\u0002');
+  let h = 0x811c9dc5;
+  for (let i = 0; i < canonical.length; i++) {
+    h ^= canonical.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h.toString(36).padStart(7, '0');
+}
 
 const DISCIPLINE: Record<DeliverableClass, string> = {
   'text-config': 'senior systems designer',

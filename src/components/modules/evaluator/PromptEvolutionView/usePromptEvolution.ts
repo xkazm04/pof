@@ -23,6 +23,7 @@ export function usePromptEvolution() {
   const isClustering = usePromptEvolutionStore((s) => s.isClustering);
   const error = usePromptEvolutionStore((s) => s.error);
   const activeSubTab = usePromptEvolutionStore((s) => s.activeSubTab);
+  const promptFitness = usePromptEvolutionStore((s) => s.promptFitness);
 
   const lastOptimization = usePromptEvolutionStore((s) => s.lastOptimization);
   const isOptimizing = usePromptEvolutionStore((s) => s.isOptimizing);
@@ -167,7 +168,7 @@ export function usePromptEvolution() {
 
   return {
     // store state
-    variants, abTests, clusters, suggestions, stats, selectedModuleId,
+    variants, abTests, clusters, suggestions, stats, promptFitness, selectedModuleId,
     isLoading, isMutating, isClustering, error, activeSubTab,
     lastOptimization, isOptimizing,
     // store actions

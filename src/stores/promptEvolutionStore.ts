@@ -10,6 +10,7 @@ import type {
   MutationType,
   PromptOptimizationResult,
   VariantVersionHistory,
+  PromptVersionFitness,
 } from '@/types/prompt-evolution';
 
 // ── Stable empty constants ──────────────────────────────────────────────────
@@ -18,6 +19,7 @@ const EMPTY_VARIANTS: PromptVariant[] = [];
 const EMPTY_TESTS: ABTest[] = [];
 const EMPTY_CLUSTERS: PromptCluster[] = [];
 const EMPTY_SUGGESTIONS: EvolutionSuggestion[] = [];
+const EMPTY_FITNESS: PromptVersionFitness[] = [];
 const EMPTY_STATS: EvolutionStats = {
   totalVariants: 0,
   activeABTests: 0,
@@ -44,6 +46,8 @@ interface PromptEvolutionState {
   clusters: PromptCluster[];
   suggestions: EvolutionSuggestion[];
   stats: EvolutionStats;
+  /** Judge-scored quality per quality-pack prompt version (null score = unjudged). */
+  promptFitness: PromptVersionFitness[];
   selectedModuleId: SubModuleId | null;
   selectedChecklistItemId: string | null;
   selectedVariantId: string | null;
@@ -81,6 +85,7 @@ interface PromptEvolutionState {
   concludeTest: (testId: string) => Promise<ABTest | null>;
   clusterPrompts: (moduleId: SubModuleId) => Promise<void>;
   loadStats: () => Promise<void>;
+  loadPromptFitness: () => Promise<void>;
   loadSuggestions: (moduleId: SubModuleId) => Promise<void>;
   getBestVariant: (moduleId: SubModuleId, checklistItemId: string) => Promise<PromptVariant | null>;
   loadVersionHistory: (moduleId: SubModuleId, checklistItemId: string) => Promise<void>;
@@ -95,6 +100,7 @@ export const usePromptEvolutionStore = create<PromptEvolutionState>((set, get) =
   clusters: EMPTY_CLUSTERS,
   suggestions: EMPTY_SUGGESTIONS,
   stats: EMPTY_STATS,
+  promptFitness: EMPTY_FITNESS,
   selectedModuleId: null,
   selectedChecklistItemId: null,
   selectedVariantId: null,
@@ -124,6 +130,7 @@ export const usePromptEvolutionStore = create<PromptEvolutionState>((set, get) =
       // conclude responses, so a reload orphaned every running test while
       // Stats still counted it as Active.
       await get().loadTests();
+      await get().loadPromptFitness();
     } catch (err) {
       set({ error: err instanceof Error ? err.message : 'Failed to initialize', isLoading: false });
     }
@@ -279,6 +286,19 @@ export const usePromptEvolutionStore = create<PromptEvolutionState>((set, get) =
       set({ stats });
     } catch (err) {
       set({ error: err instanceof Error ? err.message : 'Failed to load stats' });
+    }
+  },
+
+  loadPromptFitness: async () => {
+    try {
+      const promptFitness = await apiFetch<PromptVersionFitness[]>('/api/prompt-evolution', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'get-prompt-fitness' }),
+      });
+      set({ promptFitness });
+    } catch (err) {
+      set({ error: err instanceof Error ? err.message : 'Failed to load prompt fitness' });
     }
   },
 
