@@ -28,6 +28,7 @@ import { buildAbilitySpecDraftPrompt } from '@/lib/ability/logic-prompts';
 import { buildGenerateAbilityBundlePrompt } from '@/lib/ability/effect-codegen-prompt';
 import { buildRunTestsPrompt, buildMockStimuliPrompt } from '@/lib/prompts/ai-testing';
 import { MIXAMO_DOWNLOAD_CONTRACT, MIXAMO_DOWNLOAD_CONTRACT_HEADING } from '@/lib/prompts/_shared';
+import { logger } from '@/lib/logger';
 
 import {
   registerCallback,
@@ -557,7 +558,18 @@ ${buildCallbackSection(getCallback(cbId)!)}`;
 const generate: TaskPromptHandler = (task, ctx) => {
   const gt = task as GenerateTask;
   const recipe = getRecipe(gt.entity.catalogId);
-  if (!recipe) return gt.entity.name; // no recipe registered — nothing to dispatch
+  if (!recipe) {
+    // No recipe is registered for this catalog, so there is no step prompt to
+    // build. The historical fallback returns the bare entity NAME — a one-word
+    // "prompt" that reads as a normal dispatch. Say so out loud; the return
+    // value is unchanged so no caller behaviour shifts.
+    logger.warn(
+      `[buildTaskPrompt:generate] no recipe registered for catalog "${gt.entity.catalogId}" — ` +
+        `dispatching the bare entity name ("${gt.entity.name}") with no step prompt or callback. ` +
+        'Register the catalog recipe in src/lib/catalog/recipe.ts.',
+    );
+    return gt.entity.name;
+  }
   const base = recipe.buildStepPrompt(gt.entity, gt.step, ctx);
   const cbId = registerCallback({
     url: `${gt.appOrigin}/api/catalog`,

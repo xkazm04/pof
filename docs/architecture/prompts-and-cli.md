@@ -230,6 +230,42 @@ The single code path for all prompt assembly — a switch on `task.type`:
    then calls `buildCallbackSection(cb)` to produce the `## Submission` block.
 5. Returns the assembled string. No caller builds prompts manually.
 
+**Loud fallbacks.** Two degraded paths used to be indistinguishable from a normal
+dispatch:
+
+- A task type with **no registered handler** fell back silently to the raw
+  `task.prompt` (no context, no knowledge, no callback). It now `logger.warn`s and
+  stamps the prompt with `UNKNOWN_TASK_TYPE_MARKER` (`@@UNKNOWN_TASK_TYPE:<type>`)
+  plus `UNKNOWN_TASK_TYPE_NOTE`, so the degradation is visible in the transcript.
+- A `generate` task for a **catalog with no registered recipe** returns the bare
+  `entity.name` — a one-word "prompt". The return value is unchanged (callers are
+  unaffected) but it now warns and names the missing catalog.
+
+Both are covered by the golden rail's `loud fallbacks` suite.
+
+---
+
+### 2b. The golden rail (`src/__tests__/lib/prompts/`)
+
+Byte-level regression armour for every composed prompt, because concurrent fleet
+sessions edit prompt text constantly and drift is otherwise invisible.
+
+| File | Role |
+|---|---|
+| `golden.ts` | `expectGolden(name, actual)` — file-backed pin; on mismatch names the drifted markdown **section** before showing the line diff (via `lib/text-diff.ts`) |
+| `__golden__/*.md` | The recorded prompts — reviewable in a normal diff, not an opaque `.snap` |
+| `task-prompt-golden.test.ts` | One pin per `CLITaskType` (**all 18**, with a coverage guard against `taskPromptHandlers`) + one per standalone builder, + the loud-fallback suite |
+| `builder-fixtures.ts` | The shared standalone-builder fixture table (also drives the knowledge rail) |
+
+Re-record an intentional change with:
+
+```
+POF_UPDATE_GOLDEN=1 npx vitest run src/__tests__/lib/prompts
+```
+
+Every golden must be re-recorded **deliberately** and the diff explained in the
+commit — an unexplained golden update is a silent prompt regression.
+
 ---
 
 ### 3. `@@CALLBACK` flow (numbered sequence)

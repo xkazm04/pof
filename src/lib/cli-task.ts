@@ -19,6 +19,7 @@ import type { AbilityRef } from '@/lib/ability/logic-prompts';
 import type { EditorEffect, TagRule } from '@/lib/ability/spec';
 import type { TestSuite } from '@/types/ai-testing';
 import { taskPromptHandlers } from '@/lib/cli-task-handlers';
+import { logger } from '@/lib/logger';
 
 // ── Task callback system ────────────────────────────────────────────────────
 
@@ -512,6 +513,17 @@ export interface AudioImportTask extends CLITask {
 // ── Prompt assembly ─────────────────────────────────────────────────────────
 
 /**
+ * Stamped at the head of a prompt whose task type has NO registered handler.
+ * Grep-able in a terminal transcript and assertable in tests — a degraded
+ * dispatch must never be mistaken for a normal one.
+ */
+export const UNKNOWN_TASK_TYPE_MARKER = '@@UNKNOWN_TASK_TYPE';
+
+/** The human explanation rendered under {@link UNKNOWN_TASK_TYPE_MARKER}. */
+export const UNKNOWN_TASK_TYPE_NOTE =
+  'No prompt handler is registered for this task type, so the raw prompt below was dispatched WITHOUT project context, UE knowledge, wiring requirements, or a result callback. Treat any result as unverified.';
+
+/**
  * Assembles the final enriched prompt for a CLITask.
  *
  * This is the single code path for all prompt building. Every task type
@@ -534,7 +546,19 @@ export function buildTaskPrompt(task: CLITask, ctx: ProjectContext): string {
   const touchesBinaryAssets = isUE5 && BINARY_ASSET_TASK_TYPES.has(task.type);
 
   const handler = taskPromptHandlers[task.type];
-  if (!handler) return task.prompt;
+  if (!handler) {
+    // A task type with no registered handler used to fall back SILENTLY to the
+    // raw `task.prompt` — dispatching with no project context, no knowledge
+    // injection, and no callback, indistinguishable from a normal run. Fail
+    // loudly instead: warn on the server/console AND stamp the prompt so the
+    // degraded dispatch is visible in the terminal transcript.
+    logger.warn(
+      `[buildTaskPrompt] no prompt handler registered for task type "${task.type}" — ` +
+        'dispatching the RAW task.prompt with NO project context, knowledge, wiring, or callback. ' +
+        'Register a handler in src/lib/cli-task-handlers.ts.',
+    );
+    return `${UNKNOWN_TASK_TYPE_MARKER}:${task.type}\n${UNKNOWN_TASK_TYPE_NOTE}\n\n${task.prompt}`;
+  }
   return handler(task, ctx, { isUE5, knownAssetDomains, wiringBlock, touchesBinaryAssets });
 }
 
