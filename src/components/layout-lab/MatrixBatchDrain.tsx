@@ -1,7 +1,9 @@
 'use client';
 
+import { drainFrameLabel, drainFrameUrl } from '@/lib/test-gate-runner/frameUrl';
 import type { LabTheme } from './theme';
 import { Button } from './ui/Button';
+import type { BatchGateNote } from './batchDrainModel';
 import type { BatchDrainState, BatchEntity } from './hooks/useBatchDrain';
 
 interface Props {
@@ -20,7 +22,9 @@ interface Props {
  * The button only appears when the catalog has ≥1 deferred artifact. The whole set is
  * drained in ONE request (one editor boot for every gate), so while running it shows a
  * single-boot progress note; when done it reports the flips (deferred → pass/fail) with
- * per-step fail reasons and any locked/errored entities — no silent skips. The finished summary
+ * per-step fail AND deferral reasons, any locked/errored entities, and links to every
+ * rendered L4 frame the run captured (so a human can judge the render, which is the whole
+ * reason the runner hoists them) — no silent skips. The finished summary
  * is DISMISSIBLE (and the next run replaces it), so a stale run can't masquerade as current
  * state. Cancel is honest:
  * the in-flight boot can't be interrupted, so it only skips the retry after a lease conflict.
@@ -67,7 +71,19 @@ export function MatrixBatchDrain({ t, deferredEntities, state, onStart, onCancel
         <span data-testid="batch-drain-summary" role="status" aria-live="polite" style={{ display: 'inline-flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
           <span style={{ color: summary.passed ? t.ok : t.muted }}>{summary.passed} passed</span>
           <span style={{ color: summary.failed ? t.bad : t.muted }}>{summary.failed} failed</span>
-          {summary.skipped > 0 && <span title="Gates the runner left deferred (not yet runnable)">{summary.skipped} still deferred</span>}
+          {/* deferred ≠ skipped. A DEFERRED gate ran and could not decide (judge outage, test
+              planned but not registered); a SKIPPED gate never ran at all. Labelling skipped
+              gates "still deferred" hid both facts behind one wrong word. */}
+          {summary.deferred > 0 && (
+            <span style={{ color: t.warn }} title="Ran but could not decide — judge outage, or the test is planned but not registered in UE">
+              {summary.deferred} deferred
+            </span>
+          )}
+          {summary.skipped > 0 && (
+            <span title="Never ran — no available executor, no test name, or the run limit was reached">
+              {summary.skipped} skipped
+            </span>
+          )}
           {summary.entitiesLocked > 0 && <span style={{ color: t.warn }} title="Skipped — another drain held the lease after a retry">{summary.entitiesLocked} locked</span>}
           {summary.entitiesLocked > 0 && (
             <span data-testid="batch-drain-locked-hint" style={{ color: t.muted, flexBasis: '100%', fontSize: 12 }}>
@@ -90,16 +106,57 @@ export function MatrixBatchDrain({ t, deferredEntities, state, onStart, onCancel
 
       {/* Per-step fail reasons — the checker's own words, never hidden. */}
       {!running && summary && summary.fails.length > 0 && (
-        <ul data-testid="batch-drain-fails" style={{ listStyle: 'none', margin: 0, padding: 0, flexBasis: '100%', display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {summary.fails.map((f) => (
-            <li key={`${f.entityId}:${f.step}`} style={{ fontSize: 12, color: t.bad }}>
-              <span style={{ color: t.inkDeep, fontWeight: 600 }}>{f.entityName}</span>
-              <span style={{ color: t.muted }}> · {f.step} — </span>
-              {f.reason}
-            </li>
-          ))}
-        </ul>
+        <ReasonList t={t} testId="batch-drain-fails" tone={t.bad} notes={summary.fails} />
+      )}
+
+      {/* Per-step DEFERRAL reasons — a gate that ran and couldn't decide owes an explanation
+          just as much as a fail does; these used to be dropped entirely. */}
+      {!running && summary && summary.deferrals.length > 0 && (
+        <ReasonList t={t} testId="batch-drain-deferrals" tone={t.warn} notes={summary.deferrals} />
+      )}
+
+      {/* Captured L4 frames — the runner hoists these so a human LOOKS; make them openable. */}
+      {!running && summary && summary.screenshots.length > 0 && (
+        <div data-testid="batch-drain-frames" style={{ flexBasis: '100%', display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <span style={{ fontSize: 12, color: t.muted }}>
+            {summary.screenshots.length} captured frame{summary.screenshots.length > 1 ? 's' : ''} — open one and judge the render yourself:
+          </span>
+          <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            {summary.screenshots.map((shot) => {
+              const label = drainFrameLabel(shot);
+              return (
+                <li key={shot}>
+                  <a href={drainFrameUrl(shot)} target="_blank" rel="noreferrer"
+                    data-testid="batch-drain-frame-link" title={shot}
+                    className="focus-ring"
+                    style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, color: t.ink, textDecoration: 'none' }}>
+                    <img src={drainFrameUrl(shot)} alt={`Captured gate frame ${label}`}
+                      loading="lazy" width={128} height={72}
+                      style={{ width: 128, height: 72, objectFit: 'cover', border: `1px solid ${t.line}`, borderRadius: t.glass ? 4 : 0, background: t.panel }} />
+                    <span style={{ maxWidth: 128, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       )}
     </div>
+  );
+}
+
+/** One reason row per gate — entity · step — the runner's own words. Shared by the fail
+ *  and deferral lists so both are surfaced identically (only the tone differs). */
+function ReasonList({ t, testId, tone, notes }: { t: LabTheme; testId: string; tone: string; notes: BatchGateNote[] }) {
+  return (
+    <ul data-testid={testId} style={{ listStyle: 'none', margin: 0, padding: 0, flexBasis: '100%', display: 'flex', flexDirection: 'column', gap: 2 }}>
+      {notes.map((n) => (
+        <li key={`${n.entityId}:${n.step}`} style={{ fontSize: 12, color: tone }}>
+          <span style={{ color: t.inkDeep, fontWeight: 600 }}>{n.entityName}</span>
+          <span style={{ color: t.muted }}> · {n.step} — </span>
+          {n.reason}
+        </li>
+      ))}
+    </ul>
   );
 }
