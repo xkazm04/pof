@@ -25,7 +25,15 @@ export interface LabStepArtifact {
   ueAssets: string[];
   /** ISO timestamp of the last successful produce. */
   at: string;
-  /** Rule 4 — the reason the last produce failed, if it did. */
+  /**
+   * Rule 4 — the reason the LAST produce attempt failed, if it did. Written by
+   * {@link LabPipelineState.fail}, which `produce`/`produceFrom` call automatically when
+   * a dispatch throws, so a failed produce always leaves an artifact-level trace (the
+   * step banner + the rail badge read it). Recording it is NON-destructive: previously
+   * produced `data`/`ueAssets`/`done` survive, because a re-produce that blew up must not
+   * erase the content that DID land. Cleared by the next successful produce (or by the
+   * operator dismissing it via `clearError`).
+   */
   error?: string;
   /**
    * Set when the write-through POST to the server FAILED (offline/500) for this step's
@@ -61,8 +69,16 @@ interface LabPipelineState {
    *  state updater, so concurrent dispatches (a double-click) serialize instead of both building
    *  from the same stale render-closure snapshot and overwriting each other (dropping a batch). */
   produceFrom: (entityId: string, step: string, build: (prevData: Record<string, unknown>) => StepOutput) => void;
-  /** Record a failed produce with its reason (Rule 4). */
+  /**
+   * Record a failed produce with its reason (Rule 4). Called automatically by
+   * `produce`/`produceFrom` when the dispatch throws — a caller only needs it for a
+   * failure it detects itself. Non-destructive (see {@link LabStepArtifact.error}).
+   */
   fail: (entityId: string, step: string, error: string) => void;
+  /** Clear a recorded produce error. A step that has ONLY the failure marker (nothing
+   *  was ever produced) is removed entirely, so it goes back to honest `unproduced`
+   *  and stays open to server hydration. */
+  clearError: (entityId: string, step: string) => void;
   /**
    * Mark (or clear, with `null`) a produced step's server write-through failure. The
    * write-through calls this after `postArtifact` resolves so a POST that never reached
@@ -84,6 +100,32 @@ interface LabPipelineState {
   adoptServer: (entityId: string, step: string, artifact: LabStepArtifact, opts?: { replaceHistory?: boolean }) => void;
 }
 
+/** Normalize whatever was thrown into a reason string (never an empty message). */
+function reasonOf(e: unknown): string {
+  const msg = e instanceof Error ? e.message : typeof e === 'string' ? e : '';
+  return msg.trim() || 'Produce failed';
+}
+
+/**
+ * Attach a produce failure to a step WITHOUT destroying what it had produced before:
+ * an existing artifact keeps its `data`/`ueAssets`/`done`/`at` and only gains `error`,
+ * so a re-produce that throws can never erase content that did land. When the step has
+ * no artifact at all, a not-done failure marker is created so the failure is still
+ * visible (and `clearError` removes it again).
+ */
+function markFailure(
+  s: { byEntity: Record<string, Record<string, LabStepArtifact>> },
+  entityId: string,
+  step: string,
+  error: string,
+): { byEntity: Record<string, Record<string, LabStepArtifact>> } {
+  const prev = s.byEntity[entityId]?.[step];
+  const next: LabStepArtifact = prev
+    ? { ...prev, error }
+    : { done: false, data: {}, ueAssets: [], at: new Date().toISOString(), error };
+  return { byEntity: { ...s.byEntity, [entityId]: { ...s.byEntity[entityId], [step]: next } } };
+}
+
 export const useLabPipelineStore = create<LabPipelineState>()(
   persist(
     (set) => ({
@@ -92,35 +134,59 @@ export const useLabPipelineStore = create<LabPipelineState>()(
       produce: (entityId, step, out) => {
         const data = { ...(out?.data ?? {}), ...(out?.links ? { links: out.links } : {}) };
         const artifact: LabStepArtifact = { done: true, data, ueAssets: out?.ueAssets ?? [], at: new Date().toISOString() };
-        set((s) => ({ byEntity: { ...s.byEntity, [entityId]: { ...s.byEntity[entityId], [step]: artifact } } }));
-        _labSync?.(entityId, step, artifact);
+        // Rule 4: a produce that blows up (a throwing write-through sink, a bad payload)
+        // must leave a trace on the artifact, not only an inline message in the panel it
+        // was dispatched from. The throw is re-raised so `CliProduce` still reports the
+        // reason inline and offers "Retry with same prompt".
+        try {
+          set((s) => ({ byEntity: { ...s.byEntity, [entityId]: { ...s.byEntity[entityId], [step]: artifact } } }));
+          _labSync?.(entityId, step, artifact);
+        } catch (e) {
+          set((s) => markFailure(s, entityId, step, reasonOf(e)));
+          throw e;
+        }
       },
 
       produceFrom: (entityId, step, build) => {
         let written: LabStepArtifact | null = null;
-        set((s) => {
-          // Read the step's LIVE persisted data so two dispatches in the same render frame
-          // serialize: the second sees the first's appended batch and mints the next seq,
-          // instead of both reading the stale closure and clobbering one batch.
-          const prev = s.byEntity[entityId]?.[step];
-          const out = build(prev?.data ?? {}) ?? {};
-          const data = { ...(out.data ?? {}), ...(out.links ? { links: out.links } : {}) };
-          written = { done: true, data, ueAssets: out.ueAssets ?? [], at: new Date().toISOString() };
-          return { byEntity: { ...s.byEntity, [entityId]: { ...s.byEntity[entityId], [step]: written } } };
-        });
-        if (written) _labSync?.(entityId, step, written);
+        try {
+          set((s) => {
+            // Read the step's LIVE persisted data so two dispatches in the same render frame
+            // serialize: the second sees the first's appended batch and mints the next seq,
+            // instead of both reading the stale closure and clobbering one batch.
+            const prev = s.byEntity[entityId]?.[step];
+            const out = build(prev?.data ?? {}) ?? {};
+            const data = { ...(out.data ?? {}), ...(out.links ? { links: out.links } : {}) };
+            written = { done: true, data, ueAssets: out.ueAssets ?? [], at: new Date().toISOString() };
+            return { byEntity: { ...s.byEntity, [entityId]: { ...s.byEntity[entityId], [step]: written } } };
+          });
+          if (written) _labSync?.(entityId, step, written);
+        } catch (e) {
+          // The step's OWN build logic threw (candidate generation, payload assembly) —
+          // the most common real produce failure. Record it, then re-raise (see `produce`).
+          set((s) => markFailure(s, entityId, step, reasonOf(e)));
+          throw e;
+        }
       },
 
-      fail: (entityId, step, error) =>
-        set((s) => ({
-          byEntity: {
-            ...s.byEntity,
-            [entityId]: {
-              ...s.byEntity[entityId],
-              [step]: { done: false, data: {}, ueAssets: [], at: new Date().toISOString(), error },
-            },
-          },
-        })),
+      fail: (entityId, step, error) => set((s) => markFailure(s, entityId, step, error)),
+
+      clearError: (entityId, step) =>
+        set((s) => {
+          const art = s.byEntity[entityId]?.[step];
+          if (!art?.error) return s; // no-op guard
+          const row = { ...s.byEntity[entityId] };
+          if (art.done) {
+            const next = { ...art };
+            delete next.error;
+            row[step] = next;
+          } else {
+            // Failure-marker only: drop it so the step reads as honestly `unproduced`
+            // again (and add-only hydration can adopt the server's artifact for it).
+            delete row[step];
+          }
+          return { byEntity: { ...s.byEntity, [entityId]: row } };
+        }),
 
       setSyncError: (entityId, step, error) =>
         set((s) => {

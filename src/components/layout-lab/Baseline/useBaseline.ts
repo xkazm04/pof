@@ -3,7 +3,7 @@ import { summarizeEntityData } from '@/lib/ecw/entity-summary';
 import { useLabPipelineStore, useEntitySteps, setLabSync } from '../labPipelineStore';
 import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 import { catalogManifest } from '../catalogManifest';
-import { postArtifact, drainGates } from '../labArtifactClient';
+import { postArtifact, drainGates, deleteEntityArtifacts } from '../labArtifactClient';
 import { useCachedArtifacts, invalidateArtifacts } from '../labArtifactCache';
 import { labGrade } from '../labCheckerContext';
 import { useEntityArtifacts } from '../hooks/useEntityArtifacts';
@@ -31,6 +31,9 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
   // independently, and the `draining` flag below reflects only the SELECTED entity).
   const [drainingKeys, setDrainingKeys] = useState<ReadonlySet<string>>(() => new Set());
   const [plainMode, setPlainMode] = useState(false);
+  // Reset (local + server) state — a failed server delete must be reported, never swallowed.
+  const [resetting, setResetting] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
 
   // Responsive shell: below COLLAPSE_BREAKPOINT the 580px of catalog+pipeline chrome
   // is hidden and surfaced as left slide-over drawers, leaving the canvas full-width.
@@ -70,7 +73,7 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
   const isItems = manifest?.bespoke ?? false;
   const entitySteps = useEntitySteps(entity?.id ?? '');
   const produce = useLabPipelineStore((s) => s.produce);
-  const resetEntity = useLabPipelineStore((s) => s.resetEntity);
+  const clearError = useLabPipelineStore((s) => s.clearError);
   const hydrateEntity = useLabPipelineStore((s) => s.hydrateEntity);
   const adoptServer = useLabPipelineStore((s) => s.adoptServer);
   const ueAssetCount = entitySteps ? Object.values(entitySteps).reduce((n, a) => n + (a.ueAssets?.length ?? 0), 0) : 0;
@@ -187,6 +190,31 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
     }
   };
 
+  /** Dismiss a recorded produce failure for one step (see `labPipelineStore.clearError`). */
+  const clearStepError = useCallback(
+    (step: string) => { if (entityKey) clearError(entityKey, step); },
+    [entityKey, clearError],
+  );
+
+  // ── Reset: local AND server ────────────────────────────────────────────────
+  // The old Reset cleared the local store only. Because hydration is add-only, the
+  // surviving server artifacts were re-adopted on the next load and the reset silently
+  // un-did itself. Reset now deletes the server rows FIRST and only clears local state
+  // when that succeeded — a reset that reports "done" is a reset that stuck.
+  const resetEntityEverywhere = useCallback(async () => {
+    if (!catalogId || !entityKey) return;
+    setResetError(null);
+    setResetting(true);
+    try {
+      const res = await deleteEntityArtifacts(catalogId, entityKey);
+      if (!res.ok) { setResetError(res.error); return; }
+      useLabPipelineStore.getState().resetEntity(entityKey);
+      invalidateArtifacts(catalogId, entityKey);
+    } finally {
+      setResetting(false);
+    }
+  }, [catalogId, entityKey]);
+
   const handleSelectCatalog = (id: string) => {
     onSelectCatalog(id);
     setStepIdx(0);
@@ -216,8 +244,10 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
     steps,
     fields,
     isItems,
-    produce, resetEntity,
+    produce,
+    resetEntityEverywhere, resetting, resetError, dismissResetError: () => setResetError(null),
     ueAssetCount,
+    clearStepError,
     artifacts, artifactByStep, displayStatus, stepDone, done,
     artsLoading,
     driftByStep, adoptServerStep, entitySteps,

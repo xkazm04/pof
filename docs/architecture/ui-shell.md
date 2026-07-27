@@ -29,7 +29,8 @@ rollup strip.
 | `src/components/layout-lab/globalCoachModel.ts` | Pure model for `GlobalCoach`: `pickEntityIssue` (alias of `pickLadderIssue`) / `rankCoachCandidates` / `buildGlobalCoach` (reuses `deriveEntityArtifacts` — no new status logic). Candidates carry `stepIndex` + optional `reason`; `unproduced` (never-produced) ranks LAST, labelled honestly, so real in-flight work always outranks "start something new" |
 | `src/components/layout-lab/hooks/useGlobalCoach.ts` | Aggregation hook: one deduped whole-catalog fetch per catalog via the shared cache, memoized on `useArtifactCacheVersion()` so the ranked list fills in progressively without a per-catalog hook. Returns the FULL ranked list; the top-N cut is `GlobalCoach`'s presentation decision |
 | `src/components/layout-lab/LabBridgeStrip.tsx` | Compact UE bridge status dot+label; reads `usePofBridgeStore` (display-only) |
-| `src/components/layout-lab/labPipelineStore.ts` | Zustand persisted store (`pof-lab-pipeline`); `produce/fail/resetEntity/hydrateEntity`; module-level `_labSync` function pointer |
+| `src/components/layout-lab/labPipelineStore.ts` | Zustand persisted store (`pof-lab-pipeline`); `produce/produceFrom/fail/clearError/setSyncError/resetEntity/hydrateEntity/adoptServer`; module-level `_labSync` function pointer. `produce`/`produceFrom` call `fail` themselves when a dispatch throws (then re-raise), so a failed produce always leaves an artifact-level `error` — recorded NON-destructively (previously produced content survives) |
+| `src/components/layout-lab/ProduceErrorBanner.tsx` | Work-canvas banner for a step's recorded produce failure (`artifact.error`) + Dismiss (`clearError`). No retry button — the Produce panel below owns the prompt and already offers "Retry with same prompt" |
 | `src/components/layout-lab/labArtifactClient.ts` | `fetchArtifacts`, `postArtifact`, `drainGates` (single entity, for the per-entity coach drain), and `drainCatalogGates(catalogId, entityIds)` (409-aware whole-catalog BATCH drain returning ok/locked/error) — thin wrappers around `/api/pipeline-artifacts` |
 | `src/components/layout-lab/labArtifactCache.ts` | Shared artifact-fetch cache (`useCachedArtifacts`, `invalidateArtifacts`) — one deduped fetch path + loading state for Baseline + Matrix. Also exposes `getCachedArtifacts` (non-hook read) + `useArtifactCacheVersion` (change signal) for the cross-catalog coach aggregation |
 | `src/components/layout-lab/catalogManifest.ts` | Single per-catalog resolver over section · steps · grader · bespoke-UI (`resolveCatalogSteps`, `isBespokeCatalog`) |
@@ -155,7 +156,7 @@ Three-column CSS grid `260px 320px 1fr`:
 | Column | Content |
 |--------|---------|
 | Left 260 px | `<CatalogTree>` |
-| Middle 320 px | Pipeline timeline: vertical connector line + step buttons; "Populate demo" / "Reset" buttons for the Items catalog |
+| Middle 320 px | Pipeline timeline: vertical connector line + step buttons; "Populate demo" / "Reset" buttons for the Items catalog. Step buttons carry badges for drift (`≠`), a failed server write-through (`⚠`), and a recorded produce failure (`✕`), each folded into the button's aria-label |
 | Right 1fr | Work canvas: compact `<NextStepCoach>` row + step heading + step component (the full per-step status lives in the middle pipeline rail, not repeated here) |
 
 **Responsive collapse**: the grid is `wide ? '260px 320px 1fr' : '1fr'`. Width comes from
@@ -276,6 +277,26 @@ WHY a step failed/deferred without a second `resolveAccept` pass.
 cache. The drain trigger lives in `<NextStepCoach>`: it surfaces a
 "Run N deferred gates" button (as the primary CTA when the next actionable step is itself deferred,
 otherwise inside the disclosure) whenever `rollup.deferred > 0` and an `onDrain` callback is provided.
+
+#### Produce failure + Reset (`labPipelineStore.ts`, `Baseline/useBaseline.ts`)
+
+Two truth paths that used to dead-end:
+
+- **A failed produce now leaves a trace.** `CliProduce` reports a rejected dispatch inline,
+  but that message dies with the panel. `produce`/`produceFrom` wrap the dispatch: on a throw
+  they record `fail(entityId, step, reason)` and re-raise (so the inline report + "Retry with
+  same prompt" are unchanged). Recording is non-destructive — an existing artifact keeps its
+  `data`/`ueAssets`/`done` and only gains `error`, because a re-produce that blew up must not
+  erase content that did land. The rail badges the step (`✕`) and the canvas renders
+  `<ProduceErrorBanner>`; `clearError` dismisses it, dropping a failure-marker-only step
+  entirely so it reads as honest `unproduced` again (and stays open to server hydration).
+- **Reset now means reset.** `resetEntity` clears LOCAL state only; because hydration is
+  add-only, the surviving server rows were re-adopted on the next load and the reset silently
+  un-did itself. `resetEntityEverywhere` (behind the shared `ConfirmDialog`, whose copy states
+  the full scope) calls `deleteEntityArtifacts(catalogId, entityId)` →
+  `DELETE /api/pipeline-artifacts?catalogId&entityId[&step]` FIRST and only clears local state
+  when the server delete succeeded. A failure surfaces through the shared `InlineErrorRetry`
+  (retry re-runs the delete) and local state is left intact — a reset never falsely reports done.
 
 #### `NextStepCoach` (`src/components/layout-lab/NextStepCoach.tsx`)
 

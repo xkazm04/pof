@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
-import { listArtifacts, upsertArtifact } from '@/lib/pipeline-artifacts-db';
+import { listArtifacts, upsertArtifact, deleteArtifact } from '@/lib/pipeline-artifacts-db';
 import { artifactUpsertSchema } from '@/lib/catalog/artifact-validation';
 import { gradeArtifact } from '@/lib/catalog/headless';
 import { stampPromptVersion } from '@/lib/prompt-evolution/judge-fitness';
@@ -60,5 +60,31 @@ export async function POST(req: NextRequest) {
     }));
   } catch (e) {
     return apiError(e instanceof Error ? e.message : 'Artifacts POST failed', 500);
+  }
+}
+
+/**
+ * DELETE /api/pipeline-artifacts?catalogId=items&entityId=item-1[&step=Economy]
+ *
+ * Destructive, operator-triggered: removes an entity's persisted artifacts (one step
+ * when `step` is given, otherwise every step of that entity). It exists because the
+ * lab's "Reset" used to clear LOCAL state only — and add-only hydration then re-hydrated
+ * the server rows on the next load, silently un-doing the reset. `entityId` is required,
+ * so there is no whole-catalog wipe surface here.
+ *
+ * Returns `{ deleted: n }` — the number of rows actually removed.
+ */
+export async function DELETE(req: NextRequest) {
+  try {
+    const catalogId = req.nextUrl.searchParams.get('catalogId');
+    const entityId = req.nextUrl.searchParams.get('entityId');
+    const step = req.nextUrl.searchParams.get('step');
+    if (!catalogId || !entityId) return apiError('catalogId and entityId are required', 400);
+
+    const targets = step ? [step] : listArtifacts(catalogId, entityId).map((a) => a.step);
+    for (const s of targets) deleteArtifact(catalogId, entityId, s);
+    return apiSuccess({ deleted: targets.length });
+  } catch (e) {
+    return apiError(e instanceof Error ? e.message : 'Artifacts DELETE failed', 500);
   }
 }

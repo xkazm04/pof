@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import '@/lib/catalog/pipelines/registry.generated';
 import { getStepComponent } from '../steps';
 import { ArchetypeStep } from '../steps/ArchetypeStep';
@@ -9,6 +10,9 @@ import { CatalogTree } from '../CatalogTree';
 import { NextStepCoach } from '../NextStepCoach';
 import { PipelineRail } from '../PipelineRail';
 import { DriftBanner } from '../DriftBanner';
+import { ProduceErrorBanner } from '../ProduceErrorBanner';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { Button } from '../ui/Button';
 import { Rail } from '../ui/Rail';
 import { Stat } from '../ui/Stat';
@@ -40,14 +44,18 @@ export function Baseline(props: Props) {
     steps,
     fields,
     isItems,
-    produce, resetEntity,
-    ueAssetCount,
+    produce,
+    resetEntityEverywhere, resetting, resetError, dismissResetError,
+    ueAssetCount, clearStepError,
     artifacts, artifactByStep, displayStatus, stepDone, done,
     artsLoading,
     driftByStep, adoptServerStep, entitySteps,
     runDrain,
     handleSelectCatalog, handleSelectEntity, selectStep,
   } = useBaseline(props);
+  // Reset is destructive on BOTH sides (local store + persisted server artifacts), so it
+  // goes through the shared ConfirmDialog rather than firing on the click.
+  const [confirmReset, setConfirmReset] = useState(false);
 
   // Column bodies, factored so they render either inline (wide) or inside a
   // slide-over drawer (narrow) without duplicating the tree/timeline markup.
@@ -76,9 +84,19 @@ export function Baseline(props: Props) {
           >
             Populate demo
           </Button>
-          <Button mono onClick={() => resetEntity(entity.id)}>
-            Reset
+          <Button mono onClick={() => setConfirmReset(true)} disabled={resetting} data-testid="entity-reset">
+            {resetting ? 'Resetting…' : 'Reset'}
           </Button>
+        </div>
+      )}
+      {resetError && (
+        <div style={{ padding: '0 18px 8px' }}>
+          <InlineErrorRetry
+            dense
+            message={`Reset failed — server artifacts were NOT deleted: ${resetError}`}
+            onRetry={() => { void resetEntityEverywhere(); }}
+            onDismiss={dismissResetError}
+          />
         </div>
       )}
       <PipelineRail
@@ -88,6 +106,7 @@ export function Baseline(props: Props) {
         loading={artsLoading}
         hasDrift={(step) => driftByStep.has(step)}
         syncFailed={(step) => !!entitySteps?.[step]?.syncError}
+        produceFailed={(step) => !!entitySteps?.[step]?.error}
         isLive={(step) => !!(detail && getStepComponent(detail.catalog.catalogId, step))}
         tooltipFor={(step, i) => {
           const a = artifactByStep.get(step);
@@ -177,6 +196,15 @@ export function Baseline(props: Props) {
                 )}
                 <div className={t.fontMono} style={{ fontSize: 14, letterSpacing: '0.12em', color: t.muted, textTransform: 'uppercase' }}>Step {pad2(stepIdx + 1)} / {pad2(steps.length)}{stepDone(stepName, stepIdx) ? ' · complete' : ''}</div>
                 <h2 style={{ fontSize: 30, fontWeight: 700, color: t.inkDeep, margin: '6px 0 18px' }}>{stepName}</h2>
+                {entity && entitySteps?.[stepName]?.error && (
+                  <ProduceErrorBanner
+                    t={t}
+                    step={stepName}
+                    error={entitySteps[stepName].error!}
+                    hasContent={!!entitySteps[stepName].done}
+                    onDismiss={() => clearStepError(stepName)}
+                  />
+                )}
                 {entity && driftByStep.has(stepName) && (
                   <DriftBanner
                     t={t}
@@ -211,6 +239,17 @@ export function Baseline(props: Props) {
           )}
         </main>
       </div>
+
+      {/* Reset confirmation — the copy states the FULL scope (local + server), because a
+          local-only reset used to silently un-do itself on the next add-only hydration. */}
+      <ConfirmDialog
+        open={confirmReset}
+        onClose={() => setConfirmReset(false)}
+        onConfirm={() => { void resetEntityEverywhere(); }}
+        title={`Reset ${entity?.name ?? 'this entity'}?`}
+        description={`This deletes every produced step for this entity — in this browser AND the persisted artifacts on the server (${done} of ${steps.length} steps produced). It cannot be undone.`}
+        confirmLabel="Reset everywhere"
+      />
 
       {/* collapsed-shell slide-over drawers (narrow only) */}
       {!wide && (

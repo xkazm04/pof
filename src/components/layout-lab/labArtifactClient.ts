@@ -2,6 +2,7 @@
 
 import { tryApiFetch } from '@/lib/api-utils';
 import type { ApiResponse } from '@/types/api';
+import type { Result } from '@/types/result';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 import type { AcceptanceStatus, AcceptanceTier } from '@/lib/catalog/acceptance/types';
 import type { DrainSummary } from '@/lib/test-gate-runner/types';
@@ -39,6 +40,18 @@ export async function postArtifact(body: ArtifactUpsertBody): Promise<boolean> {
     body: JSON.stringify(body),
   });
   return r.ok;
+}
+
+/**
+ * DELETE every persisted artifact for one entity (the server half of "Reset"). Returns a
+ * `Result` rather than a boolean because the caller must SHOW the reason: a reset whose
+ * server delete silently failed would be re-hydrated on the next load, so it may never be
+ * reported as "done".
+ */
+export async function deleteEntityArtifacts(catalogId: string, entityId: string): Promise<Result<number, string>> {
+  const q = new URLSearchParams({ catalogId, entityId });
+  const r = await tryApiFetch<{ deleted: number }>(`/api/pipeline-artifacts?${q.toString()}`, { method: 'DELETE' });
+  return r.ok ? { ok: true, data: r.data.deleted } : { ok: false, error: r.error };
 }
 
 /** Runner lease state read from the drain status route (mirrors `LeaseState` server-side). */

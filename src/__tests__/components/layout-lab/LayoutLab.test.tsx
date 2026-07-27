@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup, renderHook, within } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, renderHook, within, waitFor } from '@testing-library/react';
 
 // next/font is a Next compiler transform; stub it for the vitest environment.
 vi.mock('next/font/google', () => {
@@ -80,7 +80,15 @@ describe('UI identity lab (Blueprint baseline · Items example)', () => {
     expect(screen.getAllByText('PASS').length).toBeGreaterThan(0);
   });
 
-  it('"Populate demo" drives one item through all 13 steps with real persisted data', () => {
+  it('"Populate demo" drives one item through all 13 steps with real persisted data', async () => {
+    // Reset now deletes the SERVER artifacts too (add-only hydration would otherwise
+    // re-adopt them), so the round-trip has to resolve for the reset to land.
+    vi.stubGlobal('fetch', vi.fn().mockImplementation((_url: string, init?: RequestInit) => Promise.resolve({
+      ok: true,
+      status: 200,
+      // DELETE → the reset envelope; anything else (the artifact GET/POST) → an empty list.
+      json: async () => ({ success: true, data: init?.method === 'DELETE' ? { deleted: 13 } : [] }),
+    })));
     render(<LayoutLab />);
     fireEvent.click(screen.getByText('Populate demo')); // runs every Items step for Iron Longsword (item-1)
     // pipeline progress is derived from the store, not faked.
@@ -92,8 +100,11 @@ describe('UI identity lab (Blueprint baseline · Items example)', () => {
     // persisted UE asset paths render in the Packaging manifest (slug = IronLongsword).
     fireEvent.click(within(pipeline).getByRole('button', { name: /UE Packaging/ }));
     expect(screen.getByText('T_IronLongsword_Icon')).toBeTruthy();
-    // resetting clears the persisted state back to pending.
-    fireEvent.click(screen.getByText('Reset'));
-    expect(screen.getAllByText('0/13').length).toBeGreaterThan(0);
+    // resetting clears the persisted state back to pending — after confirming, because
+    // it is destructive on both sides (local store + persisted server artifacts).
+    fireEvent.click(screen.getByTestId('entity-reset'));
+    fireEvent.click(screen.getByRole('button', { name: 'Reset everywhere' }));
+    await waitFor(() => expect(screen.getAllByText('0/13').length).toBeGreaterThan(0));
+    vi.unstubAllGlobals();
   });
 });

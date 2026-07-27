@@ -21,6 +21,10 @@ interface PipelineRailProps {
   /** The step's last produce failed to write through to the server (offline/500) — the
    *  local artifact is optimistic-only, so flag it as "not synced to server". */
   syncFailed?: (step: string, i: number) => boolean;
+  /** The step's last produce attempt FAILED and the store recorded the reason
+   *  (`LabStepArtifact.error`) — flag it so the failure survives leaving the step,
+   *  instead of living only in the Produce panel's inline message. */
+  produceFailed?: (step: string, i: number) => boolean;
   isLive: (step: string) => boolean;
   tooltipFor: (step: string, i: number) => string;
   ariaFor: (step: string, i: number) => string;
@@ -34,6 +38,7 @@ export function PipelineRail({
   loading = false,
   hasDrift,
   syncFailed,
+  produceFailed,
   isLive,
   tooltipFor,
   ariaFor,
@@ -122,6 +127,7 @@ export function PipelineRail({
         const isLoading = loading && (status === 'pending' || status === 'unproduced');
         const drifted = hasDrift?.(step, i) ?? false;
         const notSynced = syncFailed?.(step, i) ?? false;
+        const produceBroke = produceFailed?.(step, i) ?? false;
         const filled = status === 'pass' || status === 'fail';
         const fill = filled
           ? `var(--lab-${status === 'pass' ? 'ok' : 'bad'})`
@@ -153,6 +159,7 @@ export function PipelineRail({
           live ? 'prototyped' : null,
           drifted ? 'server verdict differs' : null,
           notSynced ? 'not synced to server' : null,
+          produceBroke ? 'last produce failed' : null,
         ]
           .filter(Boolean)
           .join(', ');
@@ -281,6 +288,23 @@ export function PipelineRail({
                   }}
                 >
                   ≠
+                </span>
+              )}
+              {produceBroke && (
+                <span
+                  data-step-produce-failed="true"
+                  aria-hidden="true"
+                  title="Last produce failed — open this step to read the recorded reason"
+                  style={{
+                    flexShrink: 0,
+                    fontFamily: 'var(--lab-font-mono)',
+                    fontSize: 'var(--lab-fs-xs)',
+                    fontWeight: 700,
+                    lineHeight: 1,
+                    color: 'var(--lab-bad)',
+                  }}
+                >
+                  ✕
                 </span>
               )}
               {notSynced && (
