@@ -11,6 +11,7 @@ calls in strings.
 | File | Purpose |
 |---|---|
 | `src/lib/prompt-context.ts` | `buildProjectContextHeader()` — single source of truth for project metadata, engine paths, build commands, dynamic scan, and error memory |
+| `src/lib/engine-facts.ts` | `getEngineFacts(ueVersion)` — version-keyed engine truths (MSVC toolchain, Substrate, MegaLights, PCG, State Tree, Iris, Nanite displacement). The ONE place a prompt's UE claims live |
 | `src/lib/prompts/prompt-builder.ts` | `PromptBuilder` — fluent builder enforcing a fixed 6-section order |
 | `src/lib/prompts/module-knowledge.ts` | `moduleKnowledge(moduleId)` — the ONE seam that routes `promptKind` + `module` + `knownAssetDomains` into a **standalone** builder's context header |
 | `src/lib/prompts/animation-checklist.ts` | Per-module builder (animation); illustrates `.withProjectContext()` + `.withRawTask()` + `.withRawBestPractices()` |
@@ -55,9 +56,48 @@ The function branches on `ctx.dynamicContext?.projectType`:
   framework, database, and API route / MCP tool instructions instead.
 
 The function also exports helpers consumed by `buildTaskPrompt`:
-- `getModuleDomainContext(moduleId)` — looks up a 19-entry `DOMAIN_CONTEXT` map
+- `getModuleDomainContext(moduleId, ueVersion?)` — resolves a `DOMAIN_CONTEXT` map
   keyed by `SubModuleId` (content, game-systems, and core-engine aRPG sub-modules).
-  (`prompt-context.ts:153`)
+  The map is **built from the engine facts for `ueVersion`** (memoized per engine
+  version); the task handlers pass `ctx.ueVersion`, other callers get
+  `DEFAULT_UE_VERSION`.
+- `getRequiredMSVCVersion(ueVersion)` — a thin projection over `getEngineFacts().msvc`.
+
+#### Engine facts (`engine-facts.ts`)
+
+Every claim a prompt makes about Unreal Engine lives in ONE version-keyed record,
+selected by the project's actual `ProjectContext.ueVersion`. Before this, 5.7-era
+framing was hard-coded in three files while the live project ran UE 5.8, so daily
+prompts taught the model stale truths (most loudly "MegaLights (beta)", which 5.8
+promoted to production-ready).
+
+| Fact | Consumed by |
+|---|---|
+| `msvc` | `getRequiredMSVCVersion` → the header's `Required MSVC toolchain` line |
+| `substrate`, `substrateSlabHint` | `DOMAIN_CONTEXT.materials`, `material-configurator.ts` (per-surface shading model + best practices) |
+| `megaLights`, `pcg` | `DOMAIN_CONTEXT['level-design']` |
+| `stateTree` | `DOMAIN_CONTEXT['ai-behavior']` |
+| `iris` | `DOMAIN_CONTEXT.multiplayer` |
+| `naniteDisplacement` | `material-configurator.ts` tessellation feature text |
+
+Rules for changing it:
+
+- **It is not a capability database.** Add a field only when a prompt already
+  asserts that fact. Everything else stays out.
+- **Conservative when unknown.** Where this repo records nothing about a feature's
+  status on a newer engine, the older claim is carried forward and the text SAYS
+  it is unverified (see `iris`) — never an invented promotion.
+- **Sourcing.** Feature maturity comes from
+  `docs/ue5-capability-integration-candidates.md`; the MSVC ranges come from the
+  installed engine's `Engine/Config/Windows/Windows_SDK.json`
+  (`MinimumVisualCppVersion` / `BannedVisualCppVersions` /
+  `PreferredVisualCppVersions`). 5.8 has an **explicit** branch: minimum is
+  14.38.33130, but 14.39–14.43 are banned outright, so `14.44` is the lowest
+  family that is both allowed and preferred.
+- Substrate and the Mixamo download contract each exist as exactly ONE literal
+  (`engine-facts.ts` / `prompts/_shared.ts` `MIXAMO_DOWNLOAD_CONTRACT`);
+  `src/__tests__/lib/prompts/mixamo-contract-single-source.test.ts` fails if any
+  other file re-states them.
 
 #### `PromptBuilder` (`prompt-builder.ts:46`)
 
@@ -134,7 +174,8 @@ without joining the routing.
 - `buildAnimationChecklistPrompt(step, ctx)` — injects animation-specific `extraRules`,
   builds the task from `ChecklistStep.{number, title, description, details, prompt}`,
   then appends a raw best-practices block covering `NativeUpdateAnimation`, montage
-  delegates, Mixamo import, and UE 5.8 commandlet automation gotchas.
+  delegates, the single-sourced Mixamo download contract, and commandlet automation
+  gotchas (stamped with the project's engine version from `engine-facts.ts`).
   (`animation-checklist.ts:5`)
 
 - `buildMaterialConfiguratorPrompt(config, ctx)` — maps surface type to shading model

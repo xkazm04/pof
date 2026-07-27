@@ -1,11 +1,13 @@
 import { getModuleName, type ProjectContext } from '@/lib/prompt-context';
+import { getEngineFacts } from '@/lib/engine-facts';
 import { PromptBuilder } from '@/lib/prompts/prompt-builder';
-import { GENERATE_ALL_DIRECTLY } from '@/lib/prompts/_shared';
+import { GENERATE_ALL_DIRECTLY, MIXAMO_DOWNLOAD_CONTRACT } from '@/lib/prompts/_shared';
 import type { ChecklistStep } from '@/components/modules/content/animations/AnimationChecklist';
 import { moduleKnowledge } from '@/lib/prompts/module-knowledge';
 
 export function buildAnimationChecklistPrompt(step: ChecklistStep, ctx: ProjectContext): string {
   const moduleName = getModuleName(ctx.projectName);
+  const facts = getEngineFacts(ctx.ueVersion);
 
   return new PromptBuilder()
     .withProjectContext(ctx, {
@@ -35,16 +37,19 @@ export function buildAnimationChecklistPrompt(step: ChecklistStep, ctx: ProjectC
       `- TSoftObjectPtr for all animation asset references to support async loading\n` +
       `- Root motion: enable per-montage, disable for locomotion blend spaces\n\n` +
       `### Mixamo Import & Retargeting Best Practices\n` +
-      `- Strip "mixamorig:" bone prefix on FBX import — UE5 auto-strips when importing Mixamo FBX, verify bone names show "Hips" not "mixamorig:Hips"\n` +
-      `- Download character mesh "With Skin" once, then all subsequent animations "Without Skin" to reuse the skeleton\n` +
-      `- Check "In Place" for all locomotion anims (idle/walk/run) — root motion is driven by CharacterMovementComponent\n` +
+      // The download contract is single-sourced with the `mixamo-import` task
+      // handler (`_shared.ts`) — the two used to state it in different words.
+      `${MIXAMO_DOWNLOAD_CONTRACT}\n` +
+      `- After import, verify the strip took: bone names must show "Hips", not "mixamorig:Hips"\n` +
       `- For attacks/dodges that need root motion: use RootMotionGeneratorOp post-process to extract from hip translation\n` +
       `- IK Retargeter Python API (UE5.7+): use IKRetargeterController for scriptable batch retargeting\n` +
       `  - auto_map_chains(AutoMapChainType.FUZZY) handles Mixamo→UE5 bone chain mapping automatically\n` +
       `  - IKRetargetBatchOperation.duplicate_and_retarget() processes hundreds of animations in one call\n` +
       `- Align retarget pose for T-pose (Mixamo) vs A-pose (UE5 Mannequin) differences\n` +
       `- UE5.7+: enable spatially aware retargeting, crotch height constraints, and stretch chain operators for better results\n\n` +
-      `### UE 5.7 Automation Notes (Verified)\n` +
+      // Provenance, not a capability claim: these were verified on 5.7. State the
+      // project's actual engine alongside it rather than implying re-verification.
+      `### Commandlet Automation Notes (verified on UE 5.7; this project builds on UE ${facts.version})\n` +
       `- **Automatable via commandlet**: BlendSpace1D, AnimMontage shells (with sections + linking) — runs headless in ~0.06s\n` +
       `- **NOT automatable**: AnimBP state machine graph, Anim Notify placement on montage timeline — requires editor\n` +
       `- **BlendSpace gotcha**: GetBlendParameter() returns const. Use FProperty reflection on "BlendParameters" UPROPERTY instead\n` +

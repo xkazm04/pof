@@ -27,6 +27,7 @@ import { trackLabel, trackHint } from '@/lib/pipeline/tracks';
 import { buildAbilitySpecDraftPrompt } from '@/lib/ability/logic-prompts';
 import { buildGenerateAbilityBundlePrompt } from '@/lib/ability/effect-codegen-prompt';
 import { buildRunTestsPrompt, buildMockStimuliPrompt } from '@/lib/prompts/ai-testing';
+import { MIXAMO_DOWNLOAD_CONTRACT, MIXAMO_DOWNLOAD_CONTRACT_HEADING } from '@/lib/prompts/_shared';
 
 import {
   registerCallback,
@@ -83,8 +84,8 @@ export type TaskPromptHandler = (
  * each). Returns `''` for non-UE5 projects or a module with no domain context,
  * otherwise the leading-`\n\n` block those handlers concatenate inline.
  */
-function domainSection(isUE5: boolean, moduleId: SubModuleId): string {
-  const domainContext = isUE5 ? getModuleDomainContext(moduleId) : undefined;
+function domainSection(isUE5: boolean, moduleId: SubModuleId, ueVersion: string): string {
+  const domainContext = isUE5 ? getModuleDomainContext(moduleId, ueVersion) : undefined;
   return domainContext ? `\n\n## Domain Context\n${domainContext}` : '';
 }
 
@@ -98,7 +99,7 @@ const checklist: TaskPromptHandler = (task, ctx, { isUE5, knownAssetDomains, wir
     module: task.moduleId,
     includeBinaryTripwire: touchesBinaryAssets,
   });
-  const domainBlock = domainSection(isUE5, task.moduleId);
+  const domainBlock = domainSection(isUE5, task.moduleId, ctx.ueVersion);
 
   const cbId = registerCallback({
     url: `${ct.appOrigin}/api/checklist/complete`,
@@ -161,7 +162,7 @@ const quickActionOrAskClaude: TaskPromptHandler = (task, ctx, { isUE5, knownAsse
     module: task.moduleId,
     includeBinaryTripwire: touchesBinaryAssets,
   });
-  const domainBlock = domainSection(isUE5, task.moduleId);
+  const domainBlock = domainSection(isUE5, task.moduleId, ctx.ueVersion);
   return `${header}${domainBlock}\n\n## Task\n${task.prompt}${wiringBlock}`;
 };
 
@@ -173,7 +174,7 @@ const featureFix: TaskPromptHandler = (task, ctx, { isUE5, knownAssetDomains, wi
     module: task.moduleId,
     includeBinaryTripwire: touchesBinaryAssets,
   });
-  const domainBlock = domainSection(isUE5, task.moduleId);
+  const domainBlock = domainSection(isUE5, task.moduleId, ctx.ueVersion);
   const fileSection =
     ft.filePaths.length > 0
       ? `\n\n## Relevant Files\n${ft.filePaths.map((fp) => `- ${fp}`).join('\n')}\n\nStart by reading these files to understand the current implementation.`
@@ -205,7 +206,7 @@ const featureReview: TaskPromptHandler = (task, ctx, { isUE5, touchesBinaryAsset
     module: task.moduleId,
     includeBinaryTripwire: touchesBinaryAssets,
   });
-  const domainBlock = domainSection(isUE5, task.moduleId);
+  const domainBlock = domainSection(isUE5, task.moduleId, ctx.ueVersion);
   const featureList = rt.features
     .map((f, i) => `${i + 1}. **${f.featureName}** [${f.category}]: ${f.description}`)
     .join('\n');
@@ -448,12 +449,8 @@ const mixamoImport: TaskPromptHandler = (task, ctx, { touchesBinaryAssets }) => 
 The operator has downloaded animations from Mixamo and dropped the FBX files into
 a watched folder. Run the project's import/retarget pipeline over them.
 
-**Manual-download contract (verify the FBX, do not re-download):**
-- Files come from mixamo.com as **FBX Binary**, 30 FPS, one animation per file.
-- The first/character download is "**With Skin**" (creates the mesh+skeleton);
-  every animation is "**Without Skin**" to reuse one skeleton.
-- Locomotion (idle/walk/run) is "**In Place**"; attacks/dodges keep root motion.
-- Mixamo bones use the \`mixamorig:\` prefix — the pipeline strips/handles it on import.
+${MIXAMO_DOWNLOAD_CONTRACT_HEADING}
+${MIXAMO_DOWNLOAD_CONTRACT}
 
 **Run the pipeline:**
 1. Find the \`.uproject\` under \`${ctx.projectPath}\` and the script at

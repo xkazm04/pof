@@ -27,3 +27,22 @@ export const USE_MATERIAL_BEST_PRACTICES =
 /** Shared by material-configurator + style-transfer (exact match only). */
 export const MATERIAL_UPROPERTY_TUNING =
   'All parameters must be UPROPERTY(EditAnywhere, BlueprintReadWrite) for designer tuning.';
+
+/**
+ * The ONE Mixamo manual-download contract literal.
+ *
+ * It was stated twice in different words — once in the `mixamo-import` task
+ * handler (`cli-task-handlers.ts`) and once, paraphrased, in the Animation
+ * checklist builder's best-practices block — so the two could (and did) drift.
+ * Both now render THIS text; only the surrounding heading differs, which is why
+ * the heading is a separate constant.
+ */
+export const MIXAMO_DOWNLOAD_CONTRACT_HEADING =
+  '**Manual-download contract (verify the FBX, do not re-download):**';
+
+/** The contract bullets themselves (no heading — see the heading constant). */
+export const MIXAMO_DOWNLOAD_CONTRACT = `- Files come from mixamo.com as **FBX Binary**, 30 FPS, one animation per file.
+- The first/character download is "**With Skin**" (creates the mesh+skeleton);
+  every animation is "**Without Skin**" to reuse one skeleton.
+- Locomotion (idle/walk/run) is "**In Place**"; attacks/dodges keep root motion.
+- Mixamo bones use the \`mixamorig:\` prefix — the pipeline strips/handles it on import.`;

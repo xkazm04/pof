@@ -13,6 +13,7 @@ import { formatGotchas } from '@/lib/knowledge/ue-gotchas';
 import { formatBinaryContentTripwire } from '@/lib/knowledge/binary-content';
 import { formatKnownAssets } from '@/lib/knowledge/ue-known-assets';
 import { formatKnowledgeTips } from '@/lib/knowledge/knowledge-tips';
+import { getEngineFacts, DEFAULT_UE_VERSION, type EngineFacts } from '@/lib/engine-facts';
 
 export interface ProjectContext {
   projectName: string;
@@ -71,25 +72,19 @@ export function getEnginePath(ueVersion: string): string {
 
 /**
  * Returns the minimum required MSVC toolchain version for a given UE version.
- * UE 5.7+ requires MSVC 14.44 (VS 2022 17.14+); 5.4–5.6 → 14.38; 5.0–5.3 → 14.34.
+ *
+ * A thin projection over the version-keyed {@link getEngineFacts} — the engine
+ * facts module is the single source of truth, including the explicit 5.8 branch
+ * (`14.44`, the lowest family that is both above 5.8's banned 14.39–14.43 range
+ * and in its `PreferredVisualCppVersions`). 5.7 → 14.44; 5.4–5.6 → 14.38;
+ * 5.0–5.3 → 14.34.
  *
  * Throws on an out-of-range or unparseable version rather than silently
  * bucketing it into the oldest toolchain — a 6.0 input has no known mapping and
  * must fail loudly, not masquerade as 14.34.
  */
 export function getRequiredMSVCVersion(ueVersion: string): string {
-  const [major, minor = 0] = ueVersion.split('.').map(Number);
-  if (!Number.isFinite(major) || !Number.isFinite(minor)) {
-    throw new Error(`getRequiredMSVCVersion: unparseable UE version "${ueVersion}"`);
-  }
-  if (major !== 5) {
-    throw new Error(
-      `getRequiredMSVCVersion: unsupported UE major version "${ueVersion}" — only UE5 has a known MSVC mapping.`,
-    );
-  }
-  if (minor >= 7) return '14.44';
-  if (minor >= 4) return '14.38';
-  return '14.34';
+  return getEngineFacts(ueVersion).msvc;
 }
 
 /**
@@ -162,46 +157,69 @@ function formatDynamicContext(dc: DynamicProjectContext, moduleName: string): st
 // ── Module-specific domain context ──────────────────────────────────────────
 // Merges the 19 prompt constants from core-engine, content, and game-systems
 // into a single lookup keyed by moduleId (including genre sub-modules).
+//
+// Engine-version claims are NOT literals here — every one of them is read from
+// the version-keyed `engine-facts` module and selected by the PROJECT's actual
+// UE version, so a project upgrade upgrades the framing (see `engine-facts.ts`).
 
-const DOMAIN_CONTEXT: Record<string, string> = {
-  // Content modules (6) — from CONTENT_PROMPTS
-  'models': 'You are helping with 3D model import pipelines, procedural mesh generation, and data table setup in UE5.',
-  'animations': 'You are helping create animation systems including AnimBP, locomotion states, montages, and notifies in UE5.',
-  'materials': 'You are helping create material systems including dynamic materials, post-process effects, and shaders in UE5. For 5.7+: Substrate is production-ready — prefer Substrate Slab over legacy shading models (Default Lit, Subsurface, Cloth) for new materials.',
-  'level-design': 'You are helping with level design systems including living design documents, room/encounter flow, spawn systems, difficulty arcs, and bidirectional design-to-code synchronization in UE5. For 5.7+: PCG framework is production-ready for procedural content generation, MegaLights (beta) for dynamic lighting without lightmaps.',
-  'ui-hud': 'You are helping create UI/HUD systems using UMG in UE5 C++ including menus, HUD elements, and inventory UI.',
-  'audio': 'You are helping create spatial audio systems including audio volumes with reverb/attenuation/occlusion, sound emitter placement, Sound Cue randomization, sound pooling managers, and natural-language soundscape-to-code generation in UE5.',
+function buildDomainContext(f: EngineFacts): Record<string, string> {
+  return {
+    // Content modules (6) — from CONTENT_PROMPTS
+    'models': 'You are helping with 3D model import pipelines, procedural mesh generation, and data table setup in UE5.',
+    'animations': 'You are helping create animation systems including AnimBP, locomotion states, montages, and notifies in UE5.',
+    'materials': `You are helping create material systems including dynamic materials, post-process effects, and shaders in UE5. On UE ${f.version}: ${f.substrate}`,
+    'level-design': `You are helping with level design systems including living design documents, room/encounter flow, spawn systems, difficulty arcs, and bidirectional design-to-code synchronization in UE5. On UE ${f.version}: ${f.pcg} ${f.megaLights}`,
+    'ui-hud': 'You are helping create UI/HUD systems using UMG in UE5 C++ including menus, HUD elements, and inventory UI.',
+    'audio': 'You are helping create spatial audio systems including audio volumes with reverb/attenuation/occlusion, sound emitter placement, Sound Cue randomization, sound pooling managers, and natural-language soundscape-to-code generation in UE5.',
 
-  // Game Systems modules (7) — from GAME_SYSTEMS_PROMPTS
-  'ai-behavior': 'You are helping create AI/NPC behavior systems including behavior trees, State Trees (5.7+ enhanced alternative to BTs), EQS, perception, combat AI, and scenario-based unit testing using UE5 Automation Framework with mock stimuli in UE5.',
-  'physics': 'You are helping set up physics and collision systems including profiles, materials, projectiles, and destruction in UE5.',
-  'multiplayer': 'You are helping implement multiplayer systems including replication, RPCs, and session management in UE5. For 5.7+: Iris replication system (beta) replaces UReplicationBridge with StartActorReplication API. Note: this is one of the most challenging areas.',
-  'save-load': 'You are helping create save/load systems using USaveGame with auto-save and slot management in UE5.',
-  'input-handling': 'You are helping set up input handling with Enhanced Input System including rebinding and gamepad support in UE5.',
-  'dialogue-quests': 'You are helping create dialogue and quest systems with data-driven content and quest tracking in UE5.',
-  'packaging': 'You are helping with build configuration, automation, and versioning for shipping UE5 games.',
+    // Game Systems modules (7) — from GAME_SYSTEMS_PROMPTS
+    'ai-behavior': `You are helping create AI/NPC behavior systems including behavior trees, ${f.stateTree}, EQS, perception, combat AI, and scenario-based unit testing using UE5 Automation Framework with mock stimuli in UE5.`,
+    'physics': 'You are helping set up physics and collision systems including profiles, materials, projectiles, and destruction in UE5.',
+    'multiplayer': `You are helping implement multiplayer systems including replication, RPCs, and session management in UE5. On UE ${f.version}: ${f.iris} Note: this is one of the most challenging areas.`,
+    'save-load': 'You are helping create save/load systems using USaveGame with auto-save and slot management in UE5.',
+    'input-handling': 'You are helping set up input handling with Enhanced Input System including rebinding and gamepad support in UE5.',
+    'dialogue-quests': 'You are helping create dialogue and quest systems with data-driven content and quest tracking in UE5.',
+    'packaging': 'You are helping with build configuration, automation, and versioning for shipping UE5 games.',
 
-  // Core Engine — aRPG genre sub-modules (12)
-  // Mapped to the most relevant CORE_ENGINE_PROMPTS + cross-domain context
-  'arpg-character': 'You are helping create UE5 C++ gameplay classes (GameMode, Character, Controller, GameInstance, etc.) for an action RPG. Focus on ACharacter subclasses, movement components, camera setup, and Enhanced Input integration.',
-  'arpg-animation': 'You are helping create animation systems including AnimBP, locomotion states, montages, and notifies in UE5 for an action RPG. Focus on combat animation state machines, hit-react montages, and blend spaces.',
-  'arpg-gas': 'You are helping integrate UE5 APIs including Gameplay Ability System, Enhanced Input, Navigation System, and other engine subsystems. Focus on GAS: AbilitySystemComponent, AttributeSets, GameplayEffects, GameplayTags, and ability activation.',
-  'arpg-combat': 'You are helping implement game logic systems including state machines, scoring, and win/lose conditions in UE5 C++ for an action RPG. Focus on melee attack combos, hit detection, damage calculation, and combat state management.',
-  'arpg-enemy-ai': 'You are helping create AI/NPC behavior systems including behavior trees, EQS, perception, combat AI, and scenario-based unit testing using UE5 Automation Framework with mock stimuli in UE5. Focus on enemy AI controllers, aggro, patrol, and attack patterns.',
-  'arpg-inventory': 'You are helping implement game logic systems including state machines, scoring, and win/lose conditions in UE5 C++ for an action RPG. Focus on inventory data structures, item data assets, equipment slots, and stack management.',
-  'arpg-loot': 'You are helping implement game logic systems including state machines, scoring, and win/lose conditions in UE5 C++ for an action RPG. Focus on loot tables, weighted random drops, rarity tiers, and world item spawning.',
-  'arpg-ui': 'You are helping create UI/HUD systems using UMG in UE5 C++ including menus, HUD elements, and inventory UI for an action RPG. Focus on health/mana bars, ability hotbar, inventory grid, and floating damage numbers.',
-  'arpg-progression': 'You are helping implement game logic systems including state machines, scoring, and win/lose conditions in UE5 C++ for an action RPG. Focus on XP gain, level-up systems, skill point allocation, and ability unlock trees.',
-  'arpg-world': 'You are helping with level design systems including living design documents, room/encounter flow, spawn systems, difficulty arcs, and bidirectional design-to-code synchronization in UE5 for an action RPG. Focus on zone layouts, enemy placement, boss arenas, and level streaming.',
-  'arpg-save': 'You are helping create save/load systems using USaveGame with auto-save and slot management in UE5 for an action RPG. Focus on serializing character progression, inventory state, world state, and quest progress.',
-  'arpg-polish': 'You are helping set up debugging tools including custom log categories, debug draw helpers, and console commands for UE5. Also helping optimize UE5 game performance including object pooling, tick optimization, and async loading.',
-};
+    // Core Engine — aRPG genre sub-modules (12)
+    // Mapped to the most relevant CORE_ENGINE_PROMPTS + cross-domain context
+    'arpg-character': 'You are helping create UE5 C++ gameplay classes (GameMode, Character, Controller, GameInstance, etc.) for an action RPG. Focus on ACharacter subclasses, movement components, camera setup, and Enhanced Input integration.',
+    'arpg-animation': 'You are helping create animation systems including AnimBP, locomotion states, montages, and notifies in UE5 for an action RPG. Focus on combat animation state machines, hit-react montages, and blend spaces.',
+    'arpg-gas': 'You are helping integrate UE5 APIs including Gameplay Ability System, Enhanced Input, Navigation System, and other engine subsystems. Focus on GAS: AbilitySystemComponent, AttributeSets, GameplayEffects, GameplayTags, and ability activation.',
+    'arpg-combat': 'You are helping implement game logic systems including state machines, scoring, and win/lose conditions in UE5 C++ for an action RPG. Focus on melee attack combos, hit detection, damage calculation, and combat state management.',
+    'arpg-enemy-ai': 'You are helping create AI/NPC behavior systems including behavior trees, EQS, perception, combat AI, and scenario-based unit testing using UE5 Automation Framework with mock stimuli in UE5. Focus on enemy AI controllers, aggro, patrol, and attack patterns.',
+    'arpg-inventory': 'You are helping implement game logic systems including state machines, scoring, and win/lose conditions in UE5 C++ for an action RPG. Focus on inventory data structures, item data assets, equipment slots, and stack management.',
+    'arpg-loot': 'You are helping implement game logic systems including state machines, scoring, and win/lose conditions in UE5 C++ for an action RPG. Focus on loot tables, weighted random drops, rarity tiers, and world item spawning.',
+    'arpg-ui': 'You are helping create UI/HUD systems using UMG in UE5 C++ including menus, HUD elements, and inventory UI for an action RPG. Focus on health/mana bars, ability hotbar, inventory grid, and floating damage numbers.',
+    'arpg-progression': 'You are helping implement game logic systems including state machines, scoring, and win/lose conditions in UE5 C++ for an action RPG. Focus on XP gain, level-up systems, skill point allocation, and ability unlock trees.',
+    'arpg-world': 'You are helping with level design systems including living design documents, room/encounter flow, spawn systems, difficulty arcs, and bidirectional design-to-code synchronization in UE5 for an action RPG. Focus on zone layouts, enemy placement, boss arenas, and level streaming.',
+    'arpg-save': 'You are helping create save/load systems using USaveGame with auto-save and slot management in UE5 for an action RPG. Focus on serializing character progression, inventory state, world state, and quest progress.',
+    'arpg-polish': 'You are helping set up debugging tools including custom log categories, debug draw helpers, and console commands for UE5. Also helping optimize UE5 game performance including object pooling, tick optimization, and async loading.',
+  };
+}
+
+/** One resolved DOMAIN_CONTEXT map per engine version (the map is pure in `facts`). */
+const _domainContextByVersion = new Map<string, Record<string, string>>();
 
 /**
  * Get the domain-specific context string for a module, or undefined if none exists.
+ *
+ * `ueVersion` selects the engine framing (see `engine-facts.ts`). Callers on the
+ * prompt path pass `ctx.ueVersion` so the module's role description states the
+ * truth for the project's ACTUAL engine; callers with no project in hand fall
+ * back to {@link DEFAULT_UE_VERSION}.
  */
-export function getModuleDomainContext(moduleId: SubModuleId): string | undefined {
-  return DOMAIN_CONTEXT[moduleId];
+export function getModuleDomainContext(
+  moduleId: SubModuleId,
+  ueVersion: string = DEFAULT_UE_VERSION,
+): string | undefined {
+  const facts = getEngineFacts(ueVersion);
+  let map = _domainContextByVersion.get(facts.version);
+  if (!map) {
+    map = buildDomainContext(facts);
+    _domainContextByVersion.set(facts.version, map);
+  }
+  return map[moduleId];
 }
 
 // ── Error memory formatting ─────────────────────────────────────────────────

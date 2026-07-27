@@ -1,4 +1,5 @@
 import { getModuleName, type ProjectContext } from '@/lib/prompt-context';
+import { getEngineFacts, type EngineFacts } from '@/lib/engine-facts';
 import { PromptBuilder } from '@/lib/prompts/prompt-builder';
 import { GENERATE_ALL_DIRECTLY, USE_MATERIAL_BEST_PRACTICES, MATERIAL_UPROPERTY_TUNING } from '@/lib/prompts/_shared';
 import type { MaterialConfiguratorConfig, SurfaceType, RenderFeature } from '@/components/modules/content/materials/MaterialParameterConfigurator';
@@ -15,36 +16,48 @@ const SURFACE_LABELS: Record<SurfaceType, string> = {
   stone: 'Stone / Rock (parallax detail)',
 };
 
-const SURFACE_SHADING_MODEL: Record<SurfaceType, string> = {
-  metal: 'Default Lit (or Substrate Slab for 5.7+)',
-  cloth: 'Cloth (if available) or Subsurface (or Substrate Slab with fuzz for 5.7+)',
-  skin: 'Subsurface Profile (or Substrate Slab with subsurface for 5.7+)',
-  glass: 'Default Lit Translucent (or Substrate Slab Translucent for 5.7+)',
-  water: 'Default Lit Translucent (or Substrate Slab Translucent for 5.7+)',
-  emissive: 'Unlit or Default Lit with Emissive-only (or Substrate Slab emissive for 5.7+)',
-  foliage: 'Two Sided Foliage or Subsurface (or Substrate Slab two-sided for 5.7+)',
-  stone: 'Default Lit (or Substrate Slab for 5.7+)',
-};
+/**
+ * Shading-model guidance per surface. The Substrate half of each line comes from
+ * the project's engine facts (`engine-facts.ts`) — never a hard-coded "5.7+".
+ */
+function surfaceShadingModel(f: EngineFacts): Record<SurfaceType, string> {
+  const slab = f.substrateSlabHint;
+  return {
+    metal: `Default Lit (${slab})`,
+    cloth: `Cloth (if available) or Subsurface (${slab}, with fuzz)`,
+    skin: `Subsurface Profile (${slab}, with subsurface)`,
+    glass: `Default Lit Translucent (${slab}, translucent)`,
+    water: `Default Lit Translucent (${slab}, translucent)`,
+    emissive: `Unlit or Default Lit with Emissive-only (${slab}, emissive)`,
+    foliage: `Two Sided Foliage or Subsurface (${slab}, two-sided)`,
+    stone: `Default Lit (${slab})`,
+  };
+}
 
-const FEATURE_DETAILS: Record<RenderFeature, string> = {
-  subsurface: 'Enable Subsurface Scattering: use a Subsurface Profile asset, set subsurface color and radius. Use Subsurface Profile shading model.',
-  parallax: 'Enable Parallax Occlusion Mapping: use a heightmap texture, implement POM via Custom node or BumpOffset. Set min/max samples for quality vs performance.',
-  emissive: 'Enable Emissive output: connect emissive color with intensity multiplier. Consider using a mask texture to control which regions glow.',
-  refraction: 'Enable Refraction: set Blend Mode to Translucent, use Refraction input with IOR value. Consider using SceneColor for behind-surface sampling.',
-  tessellation: 'Enable Tessellation/Displacement: For UE5.4+ use Nanite displacement (production-ready in 5.7+). Legacy tessellation (World Displacement + tessellation multiplier) is removed in 5.4+.',
-  worldPositionOffset: 'Enable World Position Offset: add vertex animation for wind, waves, or breathing effects. Use Time + sine/cosine for organic motion.',
-};
+function featureDetails(f: EngineFacts): Record<RenderFeature, string> {
+  return {
+    subsurface: 'Enable Subsurface Scattering: use a Subsurface Profile asset, set subsurface color and radius. Use Subsurface Profile shading model.',
+    parallax: 'Enable Parallax Occlusion Mapping: use a heightmap texture, implement POM via Custom node or BumpOffset. Set min/max samples for quality vs performance.',
+    emissive: 'Enable Emissive output: connect emissive color with intensity multiplier. Consider using a mask texture to control which regions glow.',
+    refraction: 'Enable Refraction: set Blend Mode to Translucent, use Refraction input with IOR value. Consider using SceneColor for behind-surface sampling.',
+    tessellation: f.naniteDisplacement,
+    worldPositionOffset: 'Enable World Position Offset: add vertex animation for wind, waves, or breathing effects. Use Time + sine/cosine for organic motion.',
+  };
+}
 
 export function buildMaterialConfiguratorPrompt(config: MaterialConfiguratorConfig, ctx: ProjectContext): string {
   const moduleName = getModuleName(ctx.projectName);
   const isMaster = config.outputType === 'master';
+  const facts = getEngineFacts(ctx.ueVersion);
+  const shadingModels = surfaceShadingModel(facts);
+  const featureText = featureDetails(facts);
 
   const paramLines = Object.values(config.params)
     .map((p) => `  - ${p.name}: default=${p.defaultValue}, range=[${p.min} – ${p.max}], step=${p.step}`)
     .join('\n');
 
   const featureLines = config.features.length > 0
-    ? config.features.map((f) => `- ${FEATURE_DETAILS[f]}`).join('\n')
+    ? config.features.map((f) => `- ${featureText[f]}`).join('\n')
     : '- No additional rendering features selected (standard PBR only).';
 
   const filesSection = isMaster
@@ -96,7 +109,7 @@ export function buildMaterialConfiguratorPrompt(config: MaterialConfiguratorConf
       `## Task: Create ${isMaster ? 'Master Material' : 'Material Instance'} — ${SURFACE_LABELS[config.surfaceType]}\n\n` +
       `### Surface Configuration\n` +
       `- Surface type: **${SURFACE_LABELS[config.surfaceType]}**\n` +
-      `- Shading model: **${SURFACE_SHADING_MODEL[config.surfaceType]}**\n` +
+      `- Shading model: **${shadingModels[config.surfaceType]}**\n` +
       `- Output type: **${isMaster ? 'Master Material (full shader)' : 'Material Instance (parameter-driven)'}**\n\n` +
       `### Parameter Defaults\n${paramLines}\n\n` +
       `### Rendering Features\n${featureLines}\n\n` +
@@ -111,7 +124,7 @@ export function buildMaterialConfiguratorPrompt(config: MaterialConfiguratorConf
         : 'Material Instances are preferred for per-object variation — they share the compiled shader',
       'Group UPROPERTYs by category: "Material|Surface", "Material|Features"',
       'Include UPROPERTY metadata: ClampMin, ClampMax, UIMin, UIMax matching the parameter ranges above',
-      'For UE 5.7+: Substrate is production-ready. Prefer Substrate Slab over legacy shading models for new materials. Substrate unifies PBR, subsurface, cloth, eye, thin-film, and clearcoat into a single flexible material graph',
+      facts.substrate,
       'CRITICAL UE5 authoring gotcha: a Constant3Vector expression\'s color output pin is "" (the empty string), NOT "RGB". connect_material_property(node, "RGB", ...) silently returns false and the material renders black. Use a VectorParameter for tunable colors (its output IS "RGB"), or pass "" when wiring a Constant3Vector.',
       'Prefer emitting a MaterialInstanceConstant of the shared master M_ARPG_Surface_Master over authoring a new one-off Material. Instances share the compiled shader, keep the project consolidated, and expose Albedo/Normal/Roughness texture params + BaseColorTint + TilingScale + EmissiveStrength.',
     ])
