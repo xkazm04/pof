@@ -4,6 +4,7 @@ import { allOf } from '../acceptance/combinators';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
+import { linksResolve } from '../acceptance/linkCheckers';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -282,11 +283,14 @@ registerCatalogPipeline({
         ],
         ueAssets: [`/Game/Materials/MI_${slug(e.name)}`],
       }),
-      accept: fieldsPopulated('material', 'instance / parentMaterial / parameters populated', [
+      accept: allOf(
+        fieldsPopulated('material', 'instance / parentMaterial / parameters populated', [
         'instance',
         'parentMaterial',
         'parameters',
       ]),
+        linksResolve(),
+      ),
     },
 
     // ── 6. Destruction States ─────────────────────────────────────────────────
@@ -430,6 +434,7 @@ registerCatalogPipeline({
       accept: allOf(
         fieldsPopulated('lootOnDestroy', 'Loot table + ilvl source + drop counts authored', ['lootTable', 'ilvlSource', 'dropCount']),
         minCount('links', '≥1 loot-table link declared', 1),
+        linksResolve(),
       ),
       staticChecks: () => [
         cppSymbolExists('UARPGLootDropComponent', 'Loot drop component present in Source/PoF/Loot/'),
@@ -499,11 +504,14 @@ registerCatalogPipeline({
           { catalogId: 'vfx', entityId: 'vfx-fire-impact', role: 'destruction-vfx' },
         ],
       }),
-      accept: fieldsPopulated('vfxAudio', 'destructionVfx / openAudio / impactAudio defined', [
+      accept: allOf(
+        fieldsPopulated('vfxAudio', 'destructionVfx / openAudio / impactAudio defined', [
         'destructionVfx',
         'openAudio',
         'impactAudio',
       ]),
+        linksResolve(),
+      ),
     },
 
     // ── 9. Icon 2D Art (universal; L1 selection) ──────────────────────────────
@@ -516,7 +524,10 @@ registerCatalogPipeline({
         links: [{ catalogId: 'icon-sets', entityId: 'iconset-abilities', role: 'icon-family' }],
         ueAssets: [`/Game/UI/Icons/T_${slug(e.name)}_Icon`],
       }),
-      accept: selected('selected', 'A prop icon candidate is selected (L1)'),
+      accept: allOf(
+        selected('selected', 'A prop icon candidate is selected (L1)'),
+        linksResolve(),
+      ),
     },
 
     // ── 10. Test Gate (L3 runtime-deferred) ───────────────────────────────────
@@ -592,7 +603,10 @@ registerCatalogPipeline({
           ueAssets: assets.map((a) => `/Game/Props/${a}`),
         };
       },
-      accept: minCount('assets', '≥4 UE assets packaged', 4),
+      accept: allOf(
+        minCount('assets', '≥4 UE assets packaged', 4),
+        linksResolve(),
+      ),
       staticChecks: () => [
         cppSymbolExists('AARPGDestructibleActor', 'Destructible actor base class in Source/PoF/Physics/'),
         cppSymbolExists('UARPGLootDropComponent', 'Loot drop component in Source/PoF/Loot/'),

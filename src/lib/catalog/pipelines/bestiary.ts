@@ -5,6 +5,7 @@ import { allOf } from '../acceptance/combinators';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
+import { linksResolve } from '../acceptance/linkCheckers';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -277,7 +278,10 @@ registerCatalogPipeline({
           { catalogId: 'spellbook', entityId: 'off-phy-04', role: 'situational-aoe' },
         ],
       }),
-      accept: minCount('abilities', '≥1 ability linked from the abilities catalog', 1),
+      accept: allOf(
+        minCount('abilities', '≥1 ability linked from the abilities catalog', 1),
+        linksResolve(),
+      ),
     },
 
     // ── 7. AI Behavior ────────────────────────────────────────────────────────
@@ -409,7 +413,10 @@ registerCatalogPipeline({
           ueAssets: assets.map((a) => `/Game/Bestiary/${s}/${a}`),
         };
       },
-      accept: minCount('assets', 'All assets packaged', 3),
+      accept: allOf(
+        minCount('assets', 'All assets packaged', 3),
+        linksResolve(),
+      ),
       staticChecks: () => [cppSymbolExists('AARPGEnemyCharacter', 'Enemy actor present')],
     },
   ],

@@ -3,6 +3,8 @@ import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/da
 import { graphValid } from '../acceptance/graphCheckers';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
+import { allOf } from '../acceptance/combinators';
+import { linksResolve } from '../acceptance/linkCheckers';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -220,7 +222,10 @@ registerCatalogPipeline({
         ],
         ueAssets: [`/Game/Quests/EmberPact/DA_EmberPact_Rewards`],
       }),
-      accept: minCount('rewards', '≥1 reward path defined', 1),
+      accept: allOf(
+        minCount('rewards', '≥1 reward path defined', 1),
+        linksResolve(),
+      ),
     },
 
     // ── 5. NPC & Dialog Binding ────────────────────────────────────────────────
@@ -284,7 +289,10 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: minCount('npcs', '≥1 NPC or dialog tree bound', 1),
+      accept: allOf(
+        minCount('npcs', '≥1 NPC or dialog tree bound', 1),
+        linksResolve(),
+      ),
     },
 
     // ── 6. Marker / Tracker UI ─────────────────────────────────────────────────

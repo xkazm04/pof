@@ -1,8 +1,10 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
-import { minLength, fieldsPopulated, withinPercent, selected, minCount } from '../acceptance/dataCheckers';
+import { minLength, fieldsPopulated, withinPercent, selected, minCount, entriesHaveFields } from '../acceptance/dataCheckers';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
+import { allOf } from '../acceptance/combinators';
+import { linksResolve } from '../acceptance/linkCheckers';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -187,10 +189,13 @@ registerCatalogPipeline({
           ],
         };
       },
-      accept: fieldsPopulated(
+      accept: allOf(
+        fieldsPopulated(
         'effect',
         'Effect rules complete (damageType / baseDamage / manaCost / cooldown / critChancePct / critMulti / onHitIgnite)',
         ['damageType', 'baseDamage', 'manaCost', 'cooldown', 'critChancePct', 'critMulti', 'onHitIgnite'],
+      ),
+        linksResolve(),
       ),
       staticChecks: () => [
         cppSymbolExists('FARPGAbilityCatalogRow', 'Ability catalog row struct present in UE Source'),
@@ -344,7 +349,10 @@ registerCatalogPipeline({
           ],
         },
       }),
-      accept: minCount('combos', '≥2 combo / synergy entries declared', 2),
+      accept: allOf(
+        minCount('combos', '≥2 combo / synergy entries declared', 2),
+        entriesHaveFields('combos', 'every combo carries its condition + effect', ['condition', 'effect']),
+      ),
     },
 
     // ── 6. Animation ─────────────────────────────────────────────────────────
@@ -426,9 +434,12 @@ registerCatalogPipeline({
           ],
         };
       },
-      accept: fieldsPopulated('vfx', 'VFX entries populated (castGlow / projectile / impact)', [
+      accept: allOf(
+        fieldsPopulated('vfx', 'VFX entries populated (castGlow / projectile / impact)', [
         'castGlow', 'projectile', 'impact',
       ]),
+        linksResolve(),
+      ),
     },
 
     // ── 8. Icon 2D Art ────────────────────────────────────────────────────────
@@ -451,7 +462,10 @@ registerCatalogPipeline({
           ],
         };
       },
-      accept: selected('selected', 'An ability icon is selected'),
+      accept: allOf(
+        selected('selected', 'An ability icon is selected'),
+        linksResolve(),
+      ),
     },
 
     // ── 9. Applies Status ─────────────────────────────────────────────────────
@@ -492,9 +506,12 @@ registerCatalogPipeline({
           { catalogId: 'status-effects', entityId: 'status-burning', role: 'applies' },
         ],
       }),
-      accept: fieldsPopulated('appliedStatus', 'Applied status populated (statusId / role / trigger)', [
+      accept: allOf(
+        fieldsPopulated('appliedStatus', 'Applied status populated (statusId / role / trigger)', [
         'statusId', 'role', 'trigger',
       ]),
+        linksResolve(),
+      ),
     },
 
     // ── 10. Test Gate ─────────────────────────────────────────────────────────

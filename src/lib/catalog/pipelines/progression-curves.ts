@@ -5,6 +5,7 @@ import { allOf } from '../acceptance/combinators';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
+import { linksResolve } from '../acceptance/linkCheckers';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -692,7 +693,10 @@ registerCatalogPipeline({
         ],
         ueAssets: [`/Game/UI/Icons/T_${slug(e.name)}_LevelUpIcon`],
       }),
-      accept: selected('selected', 'A progression icon is selected'),
+      accept: allOf(
+        selected('selected', 'A progression icon is selected'),
+        linksResolve(),
+      ),
     },
 
     // ── 11. Test Gate ─────────────────────────────────────────────────────────
@@ -772,7 +776,10 @@ registerCatalogPipeline({
           ueAssets: assets.map((a) => `/Game/Progression/${a}`),
         };
       },
-      accept: minCount('assets', '≥4 UE assets packaged', 4),
+      accept: allOf(
+        minCount('assets', '≥4 UE assets packaged', 4),
+        linksResolve(),
+      ),
       staticChecks: (e) => [
         cppSymbolExists('FARPGXPCurveRow', 'XP curve row struct present in Source/'),
         seedRowPresent('seed_progression_curves.py', slug(e.name), 'XP curve row seeded in Content/Python'),

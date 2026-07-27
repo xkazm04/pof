@@ -3,6 +3,8 @@ import { minLength, fieldsPopulated, withinPercent, selected, minCount } from '.
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
+import { allOf } from '../acceptance/combinators';
+import { linksResolve } from '../acceptance/linkCheckers';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -108,7 +110,10 @@ registerCatalogPipeline({
         ],
         ueAssets: ['/Game/Economy/Vendors/DT_VendorInventory'],
       }),
-      accept: minCount('stock', '≥1 item linked from the items catalog', 1),
+      accept: allOf(
+        minCount('stock', '≥1 item linked from the items catalog', 1),
+        linksResolve(),
+      ),
       staticChecks: (e) => [
         cppSymbolExists('FARPGVendorInventoryRow', 'Vendor inventory row struct in UE Source'),
         seedRowPresent('seed_vendor_inventory.py', slug(e.name), 'Vendor inventory row seeded for this entity'),
@@ -202,7 +207,10 @@ registerCatalogPipeline({
           { catalogId: 'factions', entityId: 'faction-ashen-order', role: 'rep-source' },
         ],
       }),
-      accept: fieldsPopulated('repMods', 'repTier + discountCurve defined', ['repTier', 'discountCurve']),
+      accept: allOf(
+        fieldsPopulated('repMods', 'repTier + discountCurve defined', ['repTier', 'discountCurve']),
+        linksResolve(),
+      ),
     },
 
     // ── 5. Buy / Sell / Repair ────────────────────────────────────────────────
@@ -258,7 +266,10 @@ registerCatalogPipeline({
         ],
         ueAssets: ['/Game/Economy/DT_Currencies'],
       }),
-      accept: fieldsPopulated('services', 'buy + sell + repair flags set', ['buy', 'sell', 'repair']),
+      accept: allOf(
+        fieldsPopulated('services', 'buy + sell + repair flags set', ['buy', 'sell', 'repair']),
+        linksResolve(),
+      ),
       staticChecks: () => [
         cppSymbolExists('UARPGVendorComponent', 'Vendor component in UE Source'),
         cppSymbolExists('UARPGCurrencySubsystem', 'Currency subsystem in UE Source'),

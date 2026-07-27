@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { minLength, fieldsPopulated, withinPercent, withinAbsolute, dpsConsistent, materialShape, selected, minCount } from '@/lib/catalog/acceptance/dataCheckers';
+import { minLength, fieldsPopulated, withinPercent, withinAbsolute, dpsConsistent, materialShape, selected, minCount, entriesHaveFields } from '@/lib/catalog/acceptance/dataCheckers';
 import { graphValid } from '@/lib/catalog/acceptance/graphCheckers';
 import { safeAccept } from '@/lib/catalog/headless';
 import type { Checker } from '@/lib/catalog/acceptance/types';
@@ -131,5 +131,42 @@ describe('safeAccept surfaces the real throw message (not opaque "unverified")',
     const r = safeAccept(boom, {});
     expect(r.status).toBe('pending');
     expect(r.reason).toContain('boom: economy row missing');
+  });
+});
+
+describe('withinPercent grades a dot-path (the charted datum, not a duplicated mirror)', () => {
+  it('resolves a nested field', () => {
+    expect(withinPercent('gpuBudget.gpuMs', 'GPU', 0.48, 15)({ gpuBudget: { gpuMs: 0.48 } }).status).toBe('pass');
+    expect(withinPercent('gpuBudget.gpuMs', 'GPU', 0.48, 15)({ gpuBudget: { gpuMs: 0.9 } }).status).toBe('fail');
+  });
+  it('an unreachable path is pending and names the path', () => {
+    const r = withinPercent('gpuBudget.gpuMs', 'GPU', 0.48, 15)({ gpuBudget: {} });
+    expect(r.status).toBe('pending');
+    expect(r.reason).toContain('gpuBudget.gpuMs');
+  });
+  it('a plain field name behaves exactly as before', () => {
+    expect(withinPercent('ratio', 'R', 100, 10)({ ratio: 95 }).status).toBe('pass');
+  });
+});
+
+describe('entriesHaveFields — content floor above a length-only count', () => {
+  const check = entriesHaveFields('rows', 'every row carries a + b', ['a', 'b']);
+  it('passes when every entry carries every key', () => {
+    const r = check({ rows: [{ a: 1, b: 2 }, { a: 3, b: 4 }] });
+    expect(r.status).toBe('pass');
+    expect(r.detail).toContain('2 entries');
+  });
+  it('fails naming the offending index and the missing keys', () => {
+    const r = check({ rows: [{ a: 1, b: 2 }, { a: 3 }] });
+    expect(r.status).toBe('fail');
+    expect(r.reason).toContain('[1]');
+    expect(r.reason).toContain('b');
+  });
+  it('fails when an entry is not an object', () => {
+    expect(check({ rows: ['nope'] }).status).toBe('fail');
+  });
+  it('is pending (never a false pass) for an absent or empty array', () => {
+    expect(check({}).status).toBe('pending');
+    expect(check({ rows: [] }).status).toBe('pending');
   });
 });

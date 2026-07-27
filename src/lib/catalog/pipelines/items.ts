@@ -11,6 +11,8 @@ import {
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
+import { allOf } from '../acceptance/combinators';
+import { linksResolve } from '../acceptance/linkCheckers';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -577,7 +579,10 @@ registerCatalogPipeline({
           { catalogId: 'materials', entityId: 'mat-weathered-stone', role: 'surface-family' },
         ],
       }),
-      accept: materialShape('material', 'surface / parentMaterial / textures (single or multi-master)'),
+      accept: allOf(
+        materialShape('material', 'surface / parentMaterial / textures (single or multi-master)'),
+        linksResolve(),
+      ),
     },
 
     // ── 7. Icon 2D Art ────────────────────────────────────────────────────────
@@ -597,7 +602,10 @@ registerCatalogPipeline({
           `/Game/UI/Icons/T_${slug(e.name)}_Icon_Unique`,
         ],
       }),
-      accept: selected('selected', 'An item icon candidate is selected'),
+      accept: allOf(
+        selected('selected', 'An item icon candidate is selected'),
+        linksResolve(),
+      ),
     },
 
     // ── 8. 3D Mesh ────────────────────────────────────────────────────────────

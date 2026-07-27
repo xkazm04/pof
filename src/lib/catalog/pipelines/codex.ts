@@ -3,6 +3,8 @@ import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/da
 import { graphValid } from '../acceptance/graphCheckers';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
+import { allOf } from '../acceptance/combinators';
+import { linksResolve } from '../acceptance/linkCheckers';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -221,7 +223,10 @@ registerCatalogPipeline({
           { catalogId: 'characters',  entityId: 'char-captain-vael',   role: 'cross-reference' },
         ],
       }),
-      accept: graphValid('graph', 'Cross-refs reachable + terminal'),
+      accept: allOf(
+        graphValid('graph', 'Cross-refs reachable + terminal'),
+        linksResolve(),
+      ),
     },
 
     // ── 4. Unlock Rules ───────────────────────────────────────────────────────
@@ -375,7 +380,10 @@ registerCatalogPipeline({
           `/Game/UI/Icons/T_${slug(e.name)}_CodexIcon`,
         ],
       }),
-      accept: selected('selected', 'A codex illustration is selected'),
+      accept: allOf(
+        selected('selected', 'A codex illustration is selected'),
+        linksResolve(),
+      ),
     },
 
     // ── 7. Audio Sting ────────────────────────────────────────────────────────

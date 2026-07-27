@@ -3,6 +3,8 @@ import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/da
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
+import { allOf } from '../acceptance/combinators';
+import { linksResolve } from '../acceptance/linkCheckers';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -127,11 +129,14 @@ registerCatalogPipeline({
           '/Game/UI/HUD/DT_HUDElements',
         ],
       }),
-      accept: fieldsPopulated('dataBinding', 'source / format / anchor populated', [
+      accept: allOf(
+        fieldsPopulated('dataBinding', 'source / format / anchor populated', [
         'source',
         'format',
         'anchor',
       ]),
+        linksResolve(),
+      ),
       staticChecks: () => [
         cppSymbolExists('UARPGAttributeSet', 'Attribute set declared in UE Source'),
         cppSymbolExists('AARPGHUD', 'HUD class declared in UE Source'),
@@ -246,7 +251,10 @@ registerCatalogPipeline({
           `/Game/UI/Icons/T_${slug(e.name)}_Icon_Regen`,
         ],
       }),
-      accept: selected('selected', 'A health-bar icon is selected from the icon-sets family'),
+      accept: allOf(
+        selected('selected', 'A health-bar icon is selected from the icon-sets family'),
+        linksResolve(),
+      ),
     },
 
     // ── 6. Animation ──────────────────────────────────────────────────────────
@@ -392,7 +400,10 @@ registerCatalogPipeline({
           ueAssets: assets.map((a) => `/Game/UI/HUD/${a}`),
         };
       },
-      accept: minCount('assets', '≥2 UE assets packaged', 2),
+      accept: allOf(
+        minCount('assets', '≥2 UE assets packaged', 2),
+        linksResolve(),
+      ),
       staticChecks: (e) => [
         cppSymbolExists('UARPGAttributeSet', 'Attribute set declared in Source/'),
         cppSymbolExists('AARPGHUD', 'HUD class declared in Source/'),

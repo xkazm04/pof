@@ -4,6 +4,8 @@ import { priceRatioWithinBand } from '../acceptance/invariants';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
+import { allOf } from '../acceptance/combinators';
+import { linksResolve } from '../acceptance/linkCheckers';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -156,11 +158,14 @@ registerCatalogPipeline({
         ],
         ueAssets: ['/Game/Crafting/DT_Recipes'],
       }),
-      accept: fieldsPopulated('io', 'inputs / output / deterministic populated', [
+      accept: allOf(
+        fieldsPopulated('io', 'inputs / output / deterministic populated', [
         'inputs',
         'output',
         'deterministic',
       ]),
+        linksResolve(),
+      ),
       staticChecks: (e) => [
         cppSymbolExists('FARPGRecipeRow', 'Recipe row struct in UE Source'),
         seedRowPresent('seed_recipes.py', slug(e.name), 'Recipe row seeded for this entity'),
@@ -309,9 +314,12 @@ registerCatalogPipeline({
           ueAssets: ['/Game/Economy/DT_Currencies'],
         };
       },
-      accept: priceRatioWithinBand(
+      accept: allOf(
+        priceRatioWithinBand(
         'costRatio',
         'Gold-cost / output-value ratio within the canon 0.8–1.2× band',
+      ),
+        linksResolve(),
       ),
       staticChecks: () => [
         cppSymbolExists('UARPGCurrencySubsystem', 'Currency subsystem in UE Source'),
@@ -510,7 +518,10 @@ registerCatalogPipeline({
         ],
         ueAssets: [`/Game/UI/Icons/T_${slug(e.name)}_Icon`],
       }),
-      accept: selected('selected', 'A recipe icon is selected'),
+      accept: allOf(
+        selected('selected', 'A recipe icon is selected'),
+        linksResolve(),
+      ),
     },
 
     // ── 9. Localization ───────────────────────────────────────────────────────
@@ -621,7 +632,10 @@ registerCatalogPipeline({
           ueAssets: assets.map((a) => `/Game/Crafting/${a}`),
         };
       },
-      accept: minCount('assets', '≥2 UE assets packaged', 2),
+      accept: allOf(
+        minCount('assets', '≥2 UE assets packaged', 2),
+        linksResolve(),
+      ),
       staticChecks: (e) => [
         cppSymbolExists('UARPGCraftingComponent', 'Crafting component in Source/'),
         cppSymbolExists('FARPGRecipeRow', 'Recipe row struct in Source/'),

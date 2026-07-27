@@ -144,6 +144,34 @@ export function materialShape(field: string, label: string): Checker {
   };
 }
 
+/**
+ * CONTENT check for an array of structured entries: every entry must carry `keys`, non-null.
+ *
+ * `minCount` only proves an array is long enough — a row of seven empty objects passes it. This
+ * asserts the SHAPE of what's inside, and names the offending index + missing keys when it
+ * doesn't. Compose it over the existing count check with `allOf(minCount(...), entriesHaveFields(...))`
+ * so a step keeps its length floor AND gains a content assertion. An absent/empty array is
+ * `pending` (nothing produced yet), never a false pass.
+ */
+export function entriesHaveFields(field: string, label: string, keys: string[]): Checker {
+  return (data) => {
+    const arr = Array.isArray(data[field]) ? (data[field] as unknown[]) : null;
+    if (arr == null) return { label, tier: 'L0', status: 'pending', detail: 'not an array', reason: `field "${field}" is not an array of entries` };
+    if (arr.length === 0) return { label, tier: 'L0', status: 'pending', detail: '0 entries', reason: `field "${field}" is empty — nothing to check` };
+    for (let i = 0; i < arr.length; i++) {
+      const e = arr[i];
+      if (e == null || typeof e !== 'object' || Array.isArray(e)) {
+        return { label, tier: 'L0', status: 'fail', detail: `entry ${i} is not an object`, reason: `field "${field}"[${i}] must be an object carrying ${keys.join(' / ')}` };
+      }
+      const missing = keys.filter((k) => (e as Record<string, unknown>)[k] == null);
+      if (missing.length) {
+        return { label, tier: 'L0', status: 'fail', detail: `entry ${i} incomplete`, reason: `field "${field}"[${i}] missing: ${missing.join(', ')}` };
+      }
+    }
+    return { label, tier: 'L0', status: 'pass', detail: `${arr.length} entr${arr.length === 1 ? 'y' : 'ies'} × ${keys.length} field(s)` };
+  };
+}
+
 export function minCount(field: string, label: string, n: number): Checker {
   return (data) => {
     const arr = Array.isArray(data[field]) ? (data[field] as unknown[]) : [];

@@ -3,6 +3,8 @@ import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/da
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
+import { allOf } from '../acceptance/combinators';
+import { linksResolve } from '../acceptance/linkCheckers';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -213,7 +215,10 @@ registerCatalogPipeline({
           },
         };
       },
-      accept: fieldsPopulated('behavior', 'Role + npcId + dialogueBinding', ['role', 'npcId', 'dialogueBinding']),
+      accept: allOf(
+        fieldsPopulated('behavior', 'Role + npcId + dialogueBinding', ['role', 'npcId', 'dialogueBinding']),
+        linksResolve(),
+      ),
     },
 
     // ── 10. Icon 2D Art (portrait) ───────────────────────────────────────────

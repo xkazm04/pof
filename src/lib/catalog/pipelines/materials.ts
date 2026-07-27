@@ -3,6 +3,8 @@ import { minLength, fieldsPopulated, withinPercent, selected } from '../acceptan
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
+import { allOf } from '../acceptance/combinators';
+import { linksResolve } from '../acceptance/linkCheckers';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -357,7 +359,10 @@ registerCatalogPipeline({
         links: [{ catalogId: 'icon-sets', entityId: 'iconset-abilities', role: 'icon-family' }],
         ueAssets: [`/Game/UI/Icons/T_${slug(e.name)}_Icon`],
       }),
-      accept: selected('selected', 'A material swatch icon is selected (L1)'),
+      accept: allOf(
+        selected('selected', 'A material swatch icon is selected (L1)'),
+        linksResolve(),
+      ),
     },
 
     // ── 9. Test Gate (L3 runtime-deferred) ───────────────────────────────────

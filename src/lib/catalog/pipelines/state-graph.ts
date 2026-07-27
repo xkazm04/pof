@@ -1,9 +1,11 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
-import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
+import { minLength, fieldsPopulated, selected, minCount, entriesHaveFields } from '../acceptance/dataCheckers';
 import { graphValid } from '../acceptance/graphCheckers';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
+import { allOf } from '../acceptance/combinators';
+import { linksResolve } from '../acceptance/linkCheckers';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -312,7 +314,10 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: minCount('blackboard', '≥7 blackboard keys declared', 7),
+      accept: allOf(
+        minCount('blackboard', '≥7 blackboard keys declared', 7),
+        entriesHaveFields('blackboard', 'every key carries type + writer + reader', ['key', 'type', 'updatedBy', 'usedBy']),
+      ),
     },
 
     // ── 4. Transition Rules ────────────────────────────────────────────────────
@@ -441,7 +446,10 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: minCount('transitions', '≥6 transition rules declared', 6),
+      accept: allOf(
+        minCount('transitions', '≥6 transition rules declared', 6),
+        entriesHaveFields('transitions', 'every transition carries from + to + guard + priority', ['from', 'to', 'guard', 'priority']),
+      ),
     },
 
     // ── 5. Hook Points ─────────────────────────────────────────────────────────
@@ -552,7 +560,10 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: minCount('hooks', '≥5 hook points declared', 5),
+      accept: allOf(
+        minCount('hooks', '≥5 hook points declared', 5),
+        entriesHaveFields('hooks', 'every hook carries state + event + type + binding', ['state', 'event', 'type', 'binding']),
+      ),
     },
 
     // ── 6. Persistence ─────────────────────────────────────────────────────────
@@ -646,7 +657,10 @@ registerCatalogPipeline({
         ],
         ueAssets: [`/Game/UI/Icons/T_${slug(e.name)}_StateGraphIcon`],
       }),
-      accept: selected('selected', 'A state graph icon is selected'),
+      accept: allOf(
+        selected('selected', 'A state graph icon is selected'),
+        linksResolve(),
+      ),
     },
 
     // ── 8. Test Gate ──────────────────────────────────────────────────────────

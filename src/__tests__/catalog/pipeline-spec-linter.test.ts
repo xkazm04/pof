@@ -3,6 +3,8 @@ import '@/lib/catalog/pipelines/registry.generated'; // side-effect: register al
 import { allCatalogPipelines } from '@/lib/catalog/pipeline-registry';
 import { SUPPORTED_VIEW_KINDS, SUPPORTED_CHART_VARIANTS } from '@/lib/catalog/stepSpec';
 import type { ViewDescriptor, StepSpec } from '@/lib/catalog/stepSpec';
+import { readLinks } from '@/lib/catalog/acceptance/linkCheckers';
+import { seedAllCatalogs } from '@/lib/catalog/sections';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 
 /**
@@ -55,6 +57,12 @@ import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
  *      index while acceptance grades a field selection never touches (the character-pipeline
  *      bug this rule was written for).
  *
+ * ── Link integrity (h)–(i) ─────────────────────────────────────────────────────
+ *  (h) every step that declares cross-catalog `links` composes `linksResolve()` — a link
+ *      pointing at an entity that does not exist must be CAUGHT, not merely counted.
+ *  (i) Rule 5 under a real, seed-backed `CheckerContext`: a cleanly-produced step never
+ *      grades `fail`, and an L0–L2 step never defers on unresolved links.
+ *
  * Every failure names catalog / step / field precisely.
  */
 
@@ -69,10 +77,17 @@ function num(v: unknown): number | null {
 
 type Step = { catalogId: string; label: string; spec: StepSpec };
 
-/** The stub artifact a step's Produce writes for the linter's synthetic entity. */
+/**
+ * The stub artifact a step's Produce writes for the linter's synthetic entity — with the
+ * typed top-level `links` folded into `data.links`, exactly as `labPipelineStore` does when
+ * it persists the artifact (so `linksResolve` / `readLinks` see what they see at runtime).
+ */
 function produceData(s: Step): Record<string, unknown> | Error {
   try {
-    return (s.spec.produce(SYNTH_ENTITY).data ?? {}) as Record<string, unknown>;
+    const out = s.spec.produce(SYNTH_ENTITY);
+    const data = (out.data ?? {}) as Record<string, unknown>;
+    const topLinks = (out as { links?: unknown }).links;
+    return topLinks != null ? { ...data, links: data.links ?? topLinks } : data;
   } catch (e) {
     return e as Error;
   }
@@ -254,6 +269,52 @@ describe('fleet spec linter', () => {
       const mirrored = [...probe.read].filter((k) => insideViewField(data, f, k));
       if (mirrored.length === 0) {
         violations.push(`${at(s)}: view field "${f}" is displayed but never graded — accept reads [${[...probe.read].join(', ')}], none of which is "${f}" or lives inside it`);
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+
+  // ── (h) every links-writing step actually RESOLVES its links ───────────────
+  it('every step that declares cross-catalog links composes linksResolve()', () => {
+    const violations: string[] = [];
+    for (const s of steps) {
+      const data = produceData(s);
+      if (data instanceof Error) continue; // reported by (e)
+      if (!readLinks(data).length) continue;
+      const probe = acceptFields(s, data);
+      if (probe instanceof Error) continue;
+      if (!probe.read.has('links')) {
+        violations.push(`${at(s)}: declares ${readLinks(data).length} cross-catalog link(s) but acceptance never reads them — compose linksResolve() via allOf so a link pointing at a non-existent entity is caught`);
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+
+  // ── (i) Rule 5 under a REAL catalog context ────────────────────────────────
+  it('with a seed-backed CheckerContext, a cleanly-produced step still reaches a terminal status', () => {
+    const seeded = seedAllCatalogs();
+    const ctx = {
+      catalog: '',
+      siblings: {} as Record<string, Record<string, unknown>>,
+      has: (c: string, e: string) => !!seeded[c]?.[e],
+    };
+    const violations: string[] = [];
+    for (const s of steps) {
+      const data = produceData(s);
+      if (data instanceof Error) continue; // reported by (e)
+      let r;
+      try {
+        r = s.spec.accept(data, { ...ctx, catalog: s.catalogId });
+      } catch (e) {
+        violations.push(`${at(s)}: accept() threw with a catalog context — ${(e as Error).message}`);
+        continue;
+      }
+      if (r.status === 'fail') {
+        violations.push(`${at(s)}: a clean Produce grades as FAIL under link resolution — ${r.reason ?? r.detail}`);
+      }
+      // linksResolve defers on an unresolved target; for an L0–L2 step that would break Rule 5.
+      if (r.status === 'deferred' && r.tier !== 'L3' && r.tier !== 'L4' && readLinks(data).length > 0) {
+        violations.push(`${at(s)}: links do not resolve against the seed — ${r.reason ?? r.detail}`);
       }
     }
     expect(violations).toEqual([]);

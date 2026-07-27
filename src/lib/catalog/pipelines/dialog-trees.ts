@@ -1,8 +1,10 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
-import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
+import { minLength, fieldsPopulated, selected, minCount, entriesHaveFields } from '../acceptance/dataCheckers';
 import { graphValid } from '../acceptance/graphCheckers';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
+import { allOf } from '../acceptance/combinators';
+import { linksResolve } from '../acceptance/linkCheckers';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -178,7 +180,10 @@ registerCatalogPipeline({
           { catalogId: 'quests',     entityId: 'quest-ember-pact',  role: 'advances' },
         ],
       }),
-      accept: graphValid('graph', 'Dialog branches reachable + have terminals'),
+      accept: allOf(
+        graphValid('graph', 'Dialog branches reachable + have terminals'),
+        linksResolve(),
+      ),
     },
 
     // ── 3. Conditions & Effects ────────────────────────────────────────────────
@@ -306,7 +311,10 @@ registerCatalogPipeline({
         },
         ueAssets: ['/Game/Dialog/DA_GatekeeperGreeting_Effects'],
       }),
-      accept: minCount('skillChecks', '≥1 skill-check rule defined', 1),
+      accept: allOf(
+        minCount('skillChecks', '≥1 skill-check rule defined', 1),
+        entriesHaveFields('skillChecks', 'every skill check carries node + attribute + threshold + both edges', ['node', 'attribute', 'threshold', 'passEdge', 'failEdge']),
+      ),
     },
 
     // ── 5. VO Script ──────────────────────────────────────────────────────────
@@ -521,7 +529,10 @@ registerCatalogPipeline({
         ],
         ueAssets: [`/Game/UI/Icons/T_${slug(e.name)}_DialogIcon`],
       }),
-      accept: selected('selected', 'A dialog icon is selected'),
+      accept: allOf(
+        selected('selected', 'A dialog icon is selected'),
+        linksResolve(),
+      ),
     },
 
     // ── 11. Test Gate ─────────────────────────────────────────────────────────

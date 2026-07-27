@@ -3,6 +3,8 @@ import { minLength, fieldsPopulated, withinPercent, selected, minCount } from '.
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
+import { allOf } from '../acceptance/combinators';
+import { linksResolve } from '../acceptance/linkCheckers';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -234,11 +236,14 @@ registerCatalogPipeline({
           { catalogId: 'zone-map', entityId: 'zone-z-ashen', role: 'zone-binding' },
         ],
       }),
-      accept: fieldsPopulated('layers', 'Bed + detail loops + one-shots + wiring contract declared', [
+      accept: allOf(
+        fieldsPopulated('layers', 'Bed + detail loops + one-shots + wiring contract declared', [
         'bed',
         'detailLoops',
         'oneShots',
       ]),
+        linksResolve(),
+      ),
     },
 
     // ── 3. Spatialization ─────────────────────────────────────────────────────
@@ -660,11 +665,14 @@ registerCatalogPipeline({
           { catalogId: 'zone-map', entityId: 'zone-z-ashen', role: 'primary-zone' },
         ],
       }),
-      accept: fieldsPopulated('zoneBinding', 'Primary zone + activation events + wiring contract declared', [
+      accept: allOf(
+        fieldsPopulated('zoneBinding', 'Primary zone + activation events + wiring contract declared', [
         'primaryZone',
         'activationEvents',
         'wiringContract',
       ]),
+        linksResolve(),
+      ),
     },
 
     // ── 8. Icon 2D Art (universal) ────────────────────────────────────────────
@@ -686,7 +694,10 @@ registerCatalogPipeline({
           { catalogId: 'icon-sets', entityId: 'iconset-abilities', role: 'icon-family' },
         ],
       }),
-      accept: selected('selected', 'A soundscape icon candidate is selected'),
+      accept: allOf(
+        selected('selected', 'A soundscape icon candidate is selected'),
+        linksResolve(),
+      ),
     },
 
     // ── 9. Test Gate (runtime-deferred L3) ────────────────────────────────────
@@ -788,7 +799,10 @@ registerCatalogPipeline({
           ),
         };
       },
-      accept: minCount('assets', '≥3 UE assets packaged', 3),
+      accept: allOf(
+        minCount('assets', '≥3 UE assets packaged', 3),
+        linksResolve(),
+      ),
       staticChecks: (e) => [
         seedRowPresent('seed_audio.py', slug(e.name), 'DT_Ambient row seeded in Content/Python'),
       ],

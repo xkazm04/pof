@@ -1,7 +1,9 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
-import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
+import { minLength, fieldsPopulated, selected, minCount, entriesHaveFields } from '../acceptance/dataCheckers';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
+import { allOf } from '../acceptance/combinators';
+import { linksResolve } from '../acceptance/linkCheckers';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -255,7 +257,10 @@ registerCatalogPipeline({
         ],
         ueAssets: [`/Game/UI/Tutorial/T_${slug(e.name)}_Pointer`],
       }),
-      accept: selected('pointer', 'A pointer / highlight candidate is selected'),
+      accept: allOf(
+        selected('pointer', 'A pointer / highlight candidate is selected'),
+        linksResolve(),
+      ),
     },
 
     // ── 7. VFX / Audio Cue ─────────────────────────────────────────────────
@@ -315,7 +320,11 @@ registerCatalogPipeline({
           { catalogId: 'vfx', entityId: 'vfx-fire-impact', role: 'success-highlight' },
         ],
       }),
-      accept: minCount('cues', '≥1 VFX or audio cue bound', 1),
+      accept: allOf(
+        minCount('cues', '≥1 VFX or audio cue bound', 1),
+        entriesHaveFields('cues', 'every cue carries id + type + catalog target', ['id', 'type', 'catalog', 'catalogEntityId']),
+        linksResolve(),
+      ),
     },
 
     // ── 8. VO ────────────────────────────────────────────────────────────────

@@ -3,6 +3,8 @@ import { minLength, fieldsPopulated, withinPercent, selected, minCount } from '.
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
+import { allOf } from '../acceptance/combinators';
+import { linksResolve } from '../acceptance/linkCheckers';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -568,7 +570,10 @@ registerCatalogPipeline({
         ueAssets: [`/Game/UI/Icons/T_${slug(e.name)}_Icon`],
         links: [{ catalogId: 'icon-sets', entityId: 'iconset-abilities', role: 'icon-family' }],
       }),
-      accept: selected('selected', 'A save-point / bonfire icon is selected'),
+      accept: allOf(
+        selected('selected', 'A save-point / bonfire icon is selected'),
+        linksResolve(),
+      ),
     },
 
     // ── 11. Test Gate ─────────────────────────────────────────────────────────

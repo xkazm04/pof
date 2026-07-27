@@ -1,7 +1,9 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
-import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
+import { minLength, fieldsPopulated, selected, minCount, entriesHaveFields } from '../acceptance/dataCheckers';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
+import { allOf } from '../acceptance/combinators';
+import { linksResolve } from '../acceptance/linkCheckers';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -178,7 +180,11 @@ registerCatalogPipeline({
           { catalogId: 'vfx',        entityId: 'vfx-fire-impact',   role: 'ember-burst-vfx' },
         ],
       }),
-      accept: minCount('beats', '≥1 beat with tc/shot/event defined', 1),
+      accept: allOf(
+        minCount('beats', '≥1 beat with tc/shot/event defined', 1),
+        entriesHaveFields('beats', 'every beat carries tc in/out + shot + event', ['index', 'tcIn', 'tcOut', 'shot', 'event']),
+        linksResolve(),
+      ),
     },
 
     // ── 3. Blocking / Body Animation ──────────────────────────────────────────
@@ -347,10 +353,13 @@ registerCatalogPipeline({
           { catalogId: 'vfx', entityId: 'vfx-fire-impact', role: 'ember-burst-vfx' },
         ],
       }),
-      accept: fieldsPopulated('vfx', 'VFX systems and wiring contract defined', [
+      accept: allOf(
+        fieldsPopulated('vfx', 'VFX systems and wiring contract defined', [
         'systems',
         'wiringContract',
       ]),
+        linksResolve(),
+      ),
     },
 
     // ── 7. Music & SFX ────────────────────────────────────────────────────────
@@ -415,12 +424,15 @@ registerCatalogPipeline({
           { catalogId: 'music', entityId: 'music-combat-a', role: 'underscoring-music' },
         ],
       }),
-      accept: fieldsPopulated('musicSfx', 'music / ambience / sfxCues / wiring contract defined', [
+      accept: allOf(
+        fieldsPopulated('musicSfx', 'music / ambience / sfxCues / wiring contract defined', [
         'music',
         'ambience',
         'sfxCues',
         'wiringContract',
       ]),
+        linksResolve(),
+      ),
     },
 
     // ── 8. VO ─────────────────────────────────────────────────────────────────
@@ -541,7 +553,10 @@ registerCatalogPipeline({
         ],
         ueAssets: [`/Game/UI/Icons/T_${slug(e.name)}_CinematicIcon`],
       }),
-      accept: selected('selected', 'A cinematic thumbnail/icon is selected'),
+      accept: allOf(
+        selected('selected', 'A cinematic thumbnail/icon is selected'),
+        linksResolve(),
+      ),
     },
 
     // ── 12. Test Gate ─────────────────────────────────────────────────────────

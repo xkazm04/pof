@@ -38,8 +38,8 @@
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
-      "checkerMeaningful": false,
-      "note": "minCount(links,1) just counts array length; doesn't verify reward economy balance."
+      "checkerMeaningful": true,
+      "note": "minCount(links,1) just counts array length; doesn't verify reward economy balance. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "achievements",
@@ -59,7 +59,7 @@
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": false,
-      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders."
+      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "achievements",
@@ -139,7 +139,7 @@
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": false,
-      "note": "Powered by gap-loop batch 9 (2026-07-08): real ElevenLabs ambient soundscape generated via /api/audio-gen (kind ambient), mp3 asset ref injected into artifact data.audioAssets. trueEngine reflects the real producing engine."
+      "note": "Powered by gap-loop batch 9 (2026-07-08): real ElevenLabs ambient soundscape generated via /api/audio-gen (kind ambient), mp3 asset ref injected into artifact data.audioAssets. trueEngine reflects the real producing engine. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "ambient",
@@ -189,7 +189,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "fieldsPopulated shape check on zone-activation prose/config."
+      "note": "fieldsPopulated shape check on zone-activation prose/config. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "ambient",
@@ -199,7 +199,7 @@
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": false,
-      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders."
+      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "ambient",
@@ -219,7 +219,7 @@
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": true,
-      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job."
+      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "bestiary",
@@ -279,7 +279,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "minCount(abilities,1) only counts array length; links reference real spellbook ids but the checker doesn't verify them."
+      "note": "minCount(abilities,1) only counts array length; links reference real spellbook ids but the checker doesn't verify them. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "bestiary",
@@ -339,7 +339,7 @@
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": true,
-      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job."
+      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "character-pipeline",
@@ -529,7 +529,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "fieldsPopulated shape check on role/npcId/dialogueBinding; text itself flags two pending cross-catalog dependencies."
+      "note": "fieldsPopulated shape check on role/npcId/dialogueBinding; text itself flags two pending cross-catalog dependencies. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "characters",
@@ -589,7 +589,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": true,
-      "note": "graphValid checks real graph structure (reachability, terminal nodes, no dangling edges) — genuinely content-verifying, though it can't confirm the lore facts themselves are correct."
+      "note": "graphValid checks real graph structure (reachability, terminal nodes, no dangling edges) — genuinely content-verifying, though it can't confirm the lore facts themselves are correct. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "codex",
@@ -619,7 +619,7 @@
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": false,
-      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders."
+      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "codex",
@@ -699,7 +699,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "fieldsPopulated shape check; wave/rarity numbers are hand-authored narrative math, not from a live simulator."
+      "note": "fieldsPopulated shape check; wave/rarity numbers are hand-authored narrative math, not from a live simulator. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "combat-map",
@@ -748,8 +748,8 @@
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
-      "checkerMeaningful": false,
-      "note": "minCount(1) only checks a links array is non-empty; material assignment text is hand-authored."
+      "checkerMeaningful": true,
+      "note": "minCount(1) only checks a links array is non-empty; material assignment text is hand-authored. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "combat-map",
@@ -769,7 +769,7 @@
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": false,
-      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders."
+      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "combat-map",
@@ -789,7 +789,7 @@
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": true,
-      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job."
+      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "crafting-recipes",
@@ -809,7 +809,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "fieldsPopulated shape check; step is honest that reagent items (Thornleaf Extract, Ashroot Dust) aren't seeded yet."
+      "note": "fieldsPopulated shape check; step is honest that reagent items (Thornleaf Extract, Ashroot Dust) aren't seeded yet. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "crafting-recipes",
@@ -829,7 +829,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": true,
-      "note": "withinPercent checks costRatio against a target, but goldCost/outputValue/ingredientOpportunityCost are all hand-picked so the ratio lands in-band by construction, not derived from a real economy sim."
+      "note": "withinPercent checks costRatio against a target, but goldCost/outputValue/ingredientOpportunityCost are all hand-picked so the ratio lands in-band by construction, not derived from a real economy sim. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "crafting-recipes",
@@ -869,7 +869,7 @@
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": false,
-      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders."
+      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "crafting-recipes",
@@ -899,7 +899,7 @@
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": true,
-      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job."
+      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "currencies",
@@ -989,7 +989,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "minCount(1) on the beats array — trivially satisfied; the rich shot/camera/timing detail is unverified prose."
+      "note": "minCount(1) on the beats array — trivially satisfied; the rich shot/camera/timing detail is unverified prose. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified. Acceptance now also asserts every entry of the graded array carries its required fields (entriesHaveFields) — a per-entry shape floor above the old length-only count, still not semantic verification."
     },
     {
       "catalogId": "cutscenes",
@@ -1029,7 +1029,7 @@
       "generatorWired": false,
       "judge": "none",
       "checkerMeaningful": false,
-      "note": "Describes reusing the seeded vfx-fire-impact system with a palette override — no new Niagara system is generated (VFX gen unwired app-wide) and no render exists to inspect. fieldsPopulated shape check."
+      "note": "Describes reusing the seeded vfx-fire-impact system with a palette override — no new Niagara system is generated (VFX gen unwired app-wide) and no render exists to inspect. fieldsPopulated shape check. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "cutscenes",
@@ -1039,7 +1039,7 @@
       "generatorWired": false,
       "judge": "human",
       "checkerMeaningful": false,
-      "note": "Bundles a music stem-switch (music generation is unwired) and SFX cues (ElevenLabs SFX is wired but never actually called here) — purely descriptive text, no audio synthesized. fieldsPopulated shape check."
+      "note": "Bundles a music stem-switch (music generation is unwired) and SFX cues (ElevenLabs SFX is wired but never actually called here) — purely descriptive text, no audio synthesized. fieldsPopulated shape check. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "cutscenes",
@@ -1079,7 +1079,7 @@
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": false,
-      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders."
+      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "cutscenes",
@@ -1119,7 +1119,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": true,
-      "note": "Claude-authored node/edge graph; graphValid genuinely checks dangling edges/reachability/terminal presence, so this is real content verification (structural, not gameplay-numeric)."
+      "note": "Claude-authored node/edge graph; graphValid genuinely checks dangling edges/reachability/terminal presence, so this is real content verification (structural, not gameplay-numeric). Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "dialog-trees",
@@ -1139,7 +1139,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "minCount≥1 shape check on an array; threshold value (Intelligence≥14) is never cross-verified against any balance baseline."
+      "note": "minCount≥1 shape check on an array; threshold value (Intelligence≥14) is never cross-verified against any balance baseline. Acceptance now also asserts every entry of the graded array carries its required fields (entriesHaveFields) — a per-entry shape floor above the old length-only count, still not semantic verification."
     },
     {
       "catalogId": "dialog-trees",
@@ -1199,7 +1199,7 @@
       "generatorWired": true,
       "judge": "vlm",
       "checkerMeaningful": false,
-      "note": "Powered by gap-loop batch 3 (2026-07-07): a real Leonardo Lucid Origin image is generated via /api/leonardo (Lucid Origin, download-then-delete), Qwen3-VL-4B gated (>=7), injected into the artifact data.genHistory as a data-URL swatch; VLM verdict recorded. trueEngine reflects the real producing engine. Durability follow-up: the UI gallery/produce still emits placeholder swatches, so an e2e stub re-walk overwrites the injected asset until the Produce path is wired to /api/leonardo."
+      "note": "Powered by gap-loop batch 3 (2026-07-07): a real Leonardo Lucid Origin image is generated via /api/leonardo (Lucid Origin, download-then-delete), Qwen3-VL-4B gated (>=7), injected into the artifact data.genHistory as a data-URL swatch; VLM verdict recorded. trueEngine reflects the real producing engine. Durability follow-up: the UI gallery/produce still emits placeholder swatches, so an e2e stub re-walk overwrites the injected asset until the Produce path is wired to /api/leonardo. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "dialog-trees",
@@ -1239,7 +1239,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "accept is minCount≥6 tiers; separate staticChecks confirm C++ symbols exist but don't validate the tier thresholds/decay numbers themselves."
+      "note": "accept is minCount≥6 tiers; separate staticChecks confirm C++ symbols exist but don't validate the tier thresholds/decay numbers themselves. Acceptance now also asserts every entry of the graded array carries its required fields (entriesHaveFields) — a per-entry shape floor above the old length-only count, still not semantic verification."
     },
     {
       "catalogId": "factions",
@@ -1249,7 +1249,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "minCount≥8 shape check; delta/cooldown balance numbers are asserted prose, never simulated or cross-checked against an economy baseline."
+      "note": "minCount≥8 shape check; delta/cooldown balance numbers are asserted prose, never simulated or cross-checked against an economy baseline. Acceptance now also asserts every entry of the graded array carries its required fields (entriesHaveFields) — a per-entry shape floor above the old length-only count, still not semantic verification."
     },
     {
       "catalogId": "factions",
@@ -1259,7 +1259,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "minCount≥4 shape check; discount formula is stated, not computed/verified."
+      "note": "minCount≥4 shape check; discount formula is stated, not computed/verified. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified. Acceptance now also asserts every entry of the graded array carries its required fields (entriesHaveFields) — a per-entry shape floor above the old length-only count, still not semantic verification."
     },
     {
       "catalogId": "factions",
@@ -1269,7 +1269,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "minCount≥1 shape check on member list."
+      "note": "minCount≥1 shape check on member list. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified. Acceptance now also asserts every entry of the graded array carries its required fields (entriesHaveFields) — a per-entry shape floor above the old length-only count, still not semantic verification."
     },
     {
       "catalogId": "factions",
@@ -1279,7 +1279,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "minCount≥5 shape check on hook rows."
+      "note": "minCount≥5 shape check on hook rows. Acceptance now also asserts every entry of the graded array carries its required fields (entriesHaveFields) — a per-entry shape floor above the old length-only count, still not semantic verification."
     },
     {
       "catalogId": "factions",
@@ -1329,7 +1329,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": true,
-      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job."
+      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "hud-elements",
@@ -1349,7 +1349,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "fieldsPopulated on source/format/anchor; staticChecks confirm class names exist in Source but not that binding actually fires."
+      "note": "fieldsPopulated on source/format/anchor; staticChecks confirm class names exist in Source but not that binding actually fires. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "hud-elements",
@@ -1379,7 +1379,7 @@
       "generatorWired": true,
       "judge": "vlm",
       "checkerMeaningful": false,
-      "note": "Powered by gap-loop batch 3 (2026-07-07): a real Leonardo Lucid Origin image is generated via /api/leonardo (Lucid Origin, download-then-delete), Qwen3-VL-4B gated (>=7), injected into the artifact data.genHistory as a data-URL swatch; VLM verdict recorded. trueEngine reflects the real producing engine. Durability follow-up: the UI gallery/produce still emits placeholder swatches, so an e2e stub re-walk overwrites the injected asset until the Produce path is wired to /api/leonardo."
+      "note": "Powered by gap-loop batch 3 (2026-07-07): a real Leonardo Lucid Origin image is generated via /api/leonardo (Lucid Origin, download-then-delete), Qwen3-VL-4B gated (>=7), injected into the artifact data.genHistory as a data-URL swatch; VLM verdict recorded. trueEngine reflects the real producing engine. Durability follow-up: the UI gallery/produce still emits placeholder swatches, so an e2e stub re-walk overwrites the injected asset until the Produce path is wired to /api/leonardo. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "hud-elements",
@@ -1429,7 +1429,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": true,
-      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job."
+      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "icon-sets",
@@ -1679,7 +1679,7 @@
       "generatorWired": false,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Just asserts a material instance path/params referencing the single seeded materials entity — no material or texture is actually generated here; fieldsPopulated is shape-only."
+      "note": "Just asserts a material instance path/params referencing the single seeded materials entity — no material or texture is actually generated here; fieldsPopulated is shape-only. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "items",
@@ -1689,7 +1689,7 @@
       "generatorWired": true,
       "judge": "vlm",
       "checkerMeaningful": false,
-      "note": "Powered by gap-loop batch 3 (2026-07-07): a real Leonardo Lucid Origin image is generated via /api/leonardo (Lucid Origin, download-then-delete), Qwen3-VL-4B gated (>=7), and injected into the artifact's data.genHistory as a data-URL swatch; VLM verdict recorded. trueEngine now reflects the real producing engine. Durability follow-up: the UI gallery producer (itemGenCandidates/genericGalleryCandidates) still emits placeholder swatches, so an e2e stub re-walk would overwrite the injected asset — wire the gallery Produce to /api/leonardo to make it regenerate in-app."
+      "note": "Powered by gap-loop batch 3 (2026-07-07): a real Leonardo Lucid Origin image is generated via /api/leonardo (Lucid Origin, download-then-delete), Qwen3-VL-4B gated (>=7), and injected into the artifact's data.genHistory as a data-URL swatch; VLM verdict recorded. trueEngine now reflects the real producing engine. Durability follow-up: the UI gallery producer (itemGenCandidates/genericGalleryCandidates) still emits placeholder swatches, so an e2e stub re-walk would overwrite the injected asset — wire the gallery Produce to /api/leonardo to make it regenerate in-app. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "items",
@@ -1778,8 +1778,8 @@
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
-      "checkerMeaningful": false,
-      "note": "Mostly design-flavor entries for items/currencies that are 'pending seed' (not real); minCount just checks ≥1 link exists, not that referenced entities are real/complete."
+      "checkerMeaningful": true,
+      "note": "Mostly design-flavor entries for items/currencies that are 'pending seed' (not real); minCount just checks ≥1 link exists, not that referenced entities are real/complete. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "loot-tables",
@@ -1788,8 +1788,8 @@
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
-      "checkerMeaningful": false,
-      "note": "Links to real seeded items (item-1/3/4/5), which is good, but minCount only checks list length ≥1."
+      "checkerMeaningful": true,
+      "note": "Links to real seeded items (item-1/3/4/5), which is good, but minCount only checks list length ≥1. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "loot-tables",
@@ -1909,7 +1909,7 @@
       "generatorWired": true,
       "judge": "vlm",
       "checkerMeaningful": false,
-      "note": "Powered by gap-loop batch 3 (2026-07-07): a real Leonardo Lucid Origin image is generated via /api/leonardo (Lucid Origin, download-then-delete), Qwen3-VL-4B gated (>=7), injected into the artifact data.genHistory as a data-URL swatch; VLM verdict recorded. trueEngine reflects the real producing engine. Durability follow-up: the UI gallery/produce still emits placeholder swatches, so an e2e stub re-walk overwrites the injected asset until the Produce path is wired to /api/leonardo."
+      "note": "Powered by gap-loop batch 3 (2026-07-07): a real Leonardo Lucid Origin image is generated via /api/leonardo (Lucid Origin, download-then-delete), Qwen3-VL-4B gated (>=7), injected into the artifact data.genHistory as a data-URL swatch; VLM verdict recorded. trueEngine reflects the real producing engine. Durability follow-up: the UI gallery/produce still emits placeholder swatches, so an e2e stub re-walk overwrites the injected asset until the Produce path is wired to /api/leonardo. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "materials",
@@ -1989,7 +1989,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Real cross-catalog links to zone-map/combat-map entities (good), but fieldsPopulated is shape-only."
+      "note": "Real cross-catalog links to zone-map/combat-map entities (good), but fieldsPopulated is shape-only. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "music",
@@ -2009,7 +2009,7 @@
       "generatorWired": true,
       "judge": "vlm",
       "checkerMeaningful": false,
-      "note": "Powered by gap-loop batch 3 (2026-07-07): a real Leonardo Lucid Origin image is generated via /api/leonardo (Lucid Origin, download-then-delete), Qwen3-VL-4B gated (>=7), injected into the artifact data.genHistory as a data-URL swatch; VLM verdict recorded. trueEngine reflects the real producing engine. Durability follow-up: the UI gallery/produce still emits placeholder swatches, so an e2e stub re-walk overwrites the injected asset until the Produce path is wired to /api/leonardo."
+      "note": "Powered by gap-loop batch 3 (2026-07-07): a real Leonardo Lucid Origin image is generated via /api/leonardo (Lucid Origin, download-then-delete), Qwen3-VL-4B gated (>=7), injected into the artifact data.genHistory as a data-URL swatch; VLM verdict recorded. trueEngine reflects the real producing engine. Durability follow-up: the UI gallery/produce still emits placeholder swatches, so an e2e stub re-walk overwrites the injected asset until the Produce path is wired to /api/leonardo. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "music",
@@ -2029,7 +2029,7 @@
       "generatorWired": true,
       "judge": "human",
       "checkerMeaningful": true,
-      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job."
+      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "player-movement",
@@ -2229,7 +2229,7 @@
       "generatorWired": true,
       "judge": "vlm",
       "checkerMeaningful": false,
-      "note": "Powered by gap-loop batch 3 (2026-07-07): a real Leonardo Lucid Origin image is generated via /api/leonardo (Lucid Origin, download-then-delete), Qwen3-VL-4B gated (>=7), injected into the artifact data.genHistory as a data-URL swatch; VLM verdict recorded. trueEngine reflects the real producing engine. Durability follow-up: the UI gallery/produce still emits placeholder swatches, so an e2e stub re-walk overwrites the injected asset until the Produce path is wired to /api/leonardo."
+      "note": "Powered by gap-loop batch 3 (2026-07-07): a real Leonardo Lucid Origin image is generated via /api/leonardo (Lucid Origin, download-then-delete), Qwen3-VL-4B gated (>=7), injected into the artifact data.genHistory as a data-URL swatch; VLM verdict recorded. trueEngine reflects the real producing engine. Durability follow-up: the UI gallery/produce still emits placeholder swatches, so an e2e stub re-walk overwrites the injected asset until the Produce path is wired to /api/leonardo. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "progression-curves",
@@ -2249,7 +2249,7 @@
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": true,
-      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job."
+      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "props",
@@ -2299,7 +2299,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Static material-instance parameter block; fieldsPopulated shape check only, no material actually compiled."
+      "note": "Static material-instance parameter block; fieldsPopulated shape check only, no material actually compiled. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "props",
@@ -2318,8 +2318,8 @@
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
-      "checkerMeaningful": false,
-      "note": "Static loot-table link description; accept=minCount('links',1) only checks a link array is non-empty, not that lt-Brute actually resolves or the ilvl math is sound."
+      "checkerMeaningful": true,
+      "note": "Static loot-table link description; accept=minCount('links',1) only checks a link array is non-empty, not that lt-Brute actually resolves or the ilvl math is sound. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "props",
@@ -2329,7 +2329,7 @@
       "generatorWired": false,
       "judge": "none",
       "checkerMeaningful": false,
-      "note": "Claims NS_FireImpactBurst Niagara VFX + SoundCue audio, but only text descriptions are produced; Niagara particle generation is not wired at all in this app, and no audio file is generated here (ElevenLabs is SFX/voice-only and isn't invoked by this step)."
+      "note": "Claims NS_FireImpactBurst Niagara VFX + SoundCue audio, but only text descriptions are produced; Niagara particle generation is not wired at all in this app, and no audio file is generated here (ElevenLabs is SFX/voice-only and isn't invoked by this step). Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "props",
@@ -2339,7 +2339,7 @@
       "generatorWired": true,
       "judge": "vlm",
       "checkerMeaningful": false,
-      "note": "Powered by gap-loop batch 3 (2026-07-07): a real Leonardo Lucid Origin image is generated via /api/leonardo (Lucid Origin, download-then-delete), Qwen3-VL-4B gated (>=7), injected into the artifact data.genHistory as a data-URL swatch; VLM verdict recorded. trueEngine reflects the real producing engine. Durability follow-up: the UI gallery/produce still emits placeholder swatches, so an e2e stub re-walk overwrites the injected asset until the Produce path is wired to /api/leonardo."
+      "note": "Powered by gap-loop batch 3 (2026-07-07): a real Leonardo Lucid Origin image is generated via /api/leonardo (Lucid Origin, download-then-delete), Qwen3-VL-4B gated (>=7), injected into the artifact data.genHistory as a data-URL swatch; VLM verdict recorded. trueEngine reflects the real producing engine. Durability follow-up: the UI gallery/produce still emits placeholder swatches, so an e2e stub re-walk overwrites the injected asset until the Produce path is wired to /api/leonardo. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "props",
@@ -2359,7 +2359,7 @@
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": true,
-      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job."
+      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "quests",
@@ -2399,7 +2399,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Static reward-path detail object; accept=minCount('rewards',1) only checks the 2-element path array length, not that gold/rep amounts are balanced or that lt-EliteKnight substitution note is resolved."
+      "note": "Static reward-path detail object; accept=minCount('rewards',1) only checks the 2-element path array length, not that gold/rep amounts are balanced or that lt-EliteKnight substitution note is resolved. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "quests",
@@ -2409,7 +2409,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Static NPC/dialog-link list; minCount(1) shape check only — note explicitly documents a pending dialog-tree stand-in (dialog-gatekeeper) never actually authored."
+      "note": "Static NPC/dialog-link list; minCount(1) shape check only — note explicitly documents a pending dialog-tree stand-in (dialog-gatekeeper) never actually authored. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "quests",
@@ -2569,7 +2569,7 @@
       "generatorWired": true,
       "judge": "vlm",
       "checkerMeaningful": false,
-      "note": "Powered by gap-loop batch 3 (2026-07-07): a real Leonardo Lucid Origin image is generated via /api/leonardo (Lucid Origin, download-then-delete), Qwen3-VL-4B gated (>=7), injected into the artifact data.genHistory as a data-URL swatch; VLM verdict recorded. trueEngine reflects the real producing engine. Durability follow-up: the UI gallery/produce still emits placeholder swatches, so an e2e stub re-walk overwrites the injected asset until the Produce path is wired to /api/leonardo."
+      "note": "Powered by gap-loop batch 3 (2026-07-07): a real Leonardo Lucid Origin image is generated via /api/leonardo (Lucid Origin, download-then-delete), Qwen3-VL-4B gated (>=7), injected into the artifact data.genHistory as a data-URL swatch; VLM verdict recorded. trueEngine reflects the real producing engine. Durability follow-up: the UI gallery/produce still emits placeholder swatches, so an e2e stub re-walk overwrites the injected asset until the Produce path is wired to /api/leonardo. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "save-points",
@@ -2609,7 +2609,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": true,
-      "note": "graphValid() genuinely validates the hardcoded 13-node/22-edge screen graph for dangling edges, reachability, and a terminal — real structural check, but the graph is fixed hand-authored content, not generated."
+      "note": "graphValid() genuinely validates the hardcoded 13-node/22-edge screen graph for dangling edges, reachability, and a terminal — real structural check, but the graph is fixed hand-authored content, not generated. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "screen-flow",
@@ -2619,7 +2619,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Static Enhanced Input binding table; minCount(1) shape check only, no IMC_Navigation asset is actually created."
+      "note": "Static Enhanced Input binding table; minCount(1) shape check only, no IMC_Navigation asset is actually created. Acceptance now also asserts every entry of the graded array carries its required fields (entriesHaveFields) — a per-entry shape floor above the old length-only count, still not semantic verification."
     },
     {
       "catalogId": "screen-flow",
@@ -2629,7 +2629,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Static widget/z-depth table; minCount(1) shape check only, no WBP_ widgets are actually created."
+      "note": "Static widget/z-depth table; minCount(1) shape check only, no WBP_ widgets are actually created. Acceptance now also asserts every entry of the graded array carries its required fields (entriesHaveFields) — a per-entry shape floor above the old length-only count, still not semantic verification."
     },
     {
       "catalogId": "screen-flow",
@@ -2649,7 +2649,7 @@
       "generatorWired": false,
       "judge": "none",
       "checkerMeaningful": false,
-      "note": "Static UI-juice description referencing SoundCues and PostProcess params; no VFX/audio generation is wired (Niagara gen unwired, ElevenLabs not invoked here); minCount(1) shape check only."
+      "note": "Static UI-juice description referencing SoundCues and PostProcess params; no VFX/audio generation is wired (Niagara gen unwired, ElevenLabs not invoked here); minCount(1) shape check only. Acceptance now also asserts every entry of the graded array carries its required fields (entriesHaveFields) — a per-entry shape floor above the old length-only count, still not semantic verification."
     },
     {
       "catalogId": "screen-flow",
@@ -2679,7 +2679,7 @@
       "generatorWired": true,
       "judge": "vlm",
       "checkerMeaningful": false,
-      "note": "Powered by gap-loop batch 3 (2026-07-07): a real Leonardo Lucid Origin image is generated via /api/leonardo (Lucid Origin, download-then-delete), Qwen3-VL-4B gated (>=7), injected into the artifact data.genHistory as a data-URL swatch; VLM verdict recorded. trueEngine reflects the real producing engine. Durability follow-up: the UI gallery/produce still emits placeholder swatches, so an e2e stub re-walk overwrites the injected asset until the Produce path is wired to /api/leonardo."
+      "note": "Powered by gap-loop batch 3 (2026-07-07): a real Leonardo Lucid Origin image is generated via /api/leonardo (Lucid Origin, download-then-delete), Qwen3-VL-4B gated (>=7), injected into the artifact data.genHistory as a data-URL swatch; VLM verdict recorded. trueEngine reflects the real producing engine. Durability follow-up: the UI gallery/produce still emits placeholder swatches, so an e2e stub re-walk overwrites the injected asset until the Produce path is wired to /api/leonardo. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "screen-flow",
@@ -2719,7 +2719,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Numbers are pre-computed in the hardcoded produce() function; fieldsPopulated only checks the 7 keys exist, not that the ignite/crit formulas are internally consistent."
+      "note": "Numbers are pre-computed in the hardcoded produce() function; fieldsPopulated only checks the 7 keys exist, not that the ignite/crit formulas are internally consistent. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "spellbook",
@@ -2749,7 +2749,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "minCount(≥2) only counts array entries, doesn't validate multiplier math or tag-rule consistency."
+      "note": "minCount(≥2) only counts array entries, doesn't validate multiplier math or tag-rule consistency. Acceptance now also asserts every entry of the graded array carries its required fields (entriesHaveFields) — a per-entry shape floor above the old length-only count, still not semantic verification."
     },
     {
       "catalogId": "spellbook",
@@ -2769,7 +2769,7 @@
       "generatorWired": false,
       "judge": "none",
       "checkerMeaningful": false,
-      "note": "Declares Niagara asset name strings (NS_*) and triggers as text; no Niagara/VFX generator is wired in the app to actually author these systems; fieldsPopulated is existence-only."
+      "note": "Declares Niagara asset name strings (NS_*) and triggers as text; no Niagara/VFX generator is wired in the app to actually author these systems; fieldsPopulated is existence-only. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "spellbook",
@@ -2779,7 +2779,7 @@
       "generatorWired": true,
       "judge": "vlm",
       "checkerMeaningful": false,
-      "note": "Powered by gap-loop batch 3 (2026-07-07): a real Leonardo Lucid Origin image is generated via /api/leonardo (Lucid Origin, download-then-delete), Qwen3-VL-4B gated (>=7), injected into the artifact data.genHistory as a data-URL swatch; VLM verdict recorded. trueEngine reflects the real producing engine. Durability follow-up: the UI gallery/produce still emits placeholder swatches, so an e2e stub re-walk overwrites the injected asset until the Produce path is wired to /api/leonardo."
+      "note": "Powered by gap-loop batch 3 (2026-07-07): a real Leonardo Lucid Origin image is generated via /api/leonardo (Lucid Origin, download-then-delete), Qwen3-VL-4B gated (>=7), injected into the artifact data.genHistory as a data-URL swatch; VLM verdict recorded. trueEngine reflects the real producing engine. Durability follow-up: the UI gallery/produce still emits placeholder swatches, so an e2e stub re-walk overwrites the injected asset until the Produce path is wired to /api/leonardo. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "spellbook",
@@ -2789,7 +2789,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Cross-catalog link declaration only; fieldsPopulated checks 3 keys exist."
+      "note": "Cross-catalog link declaration only; fieldsPopulated checks 3 keys exist. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "spellbook",
@@ -2839,7 +2839,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "minCount(≥7) just counts declared keys; doesn't confirm the keys are actually read anywhere in engine code."
+      "note": "minCount(≥7) just counts declared keys; doesn't confirm the keys are actually read anywhere in engine code. Acceptance now also asserts every entry of the graded array carries its required fields (entriesHaveFields) — a per-entry shape floor above the old length-only count, still not semantic verification."
     },
     {
       "catalogId": "state-graph",
@@ -2849,7 +2849,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "minCount(≥6) counts table rows; guard/condition text is hand-authored, unverified against actual UE condition classes."
+      "note": "minCount(≥6) counts table rows; guard/condition text is hand-authored, unverified against actual UE condition classes. Acceptance now also asserts every entry of the graded array carries its required fields (entriesHaveFields) — a per-entry shape floor above the old length-only count, still not semantic verification."
     },
     {
       "catalogId": "state-graph",
@@ -2859,7 +2859,7 @@
       "generatorWired": false,
       "judge": "none",
       "checkerMeaningful": false,
-      "note": "Declares VFX/SFX/AnimNotify bindings as descriptive strings only; no VFX/audio generator is wired to actually author NS_/SC_ assets; minCount(≥5) is shape-only."
+      "note": "Declares VFX/SFX/AnimNotify bindings as descriptive strings only; no VFX/audio generator is wired to actually author NS_/SC_ assets; minCount(≥5) is shape-only. Acceptance now also asserts every entry of the graded array carries its required fields (entriesHaveFields) — a per-entry shape floor above the old length-only count, still not semantic verification."
     },
     {
       "catalogId": "state-graph",
@@ -2879,7 +2879,7 @@
       "generatorWired": true,
       "judge": "vlm",
       "checkerMeaningful": false,
-      "note": "Powered by gap-loop batch 3 (2026-07-07): a real Leonardo Lucid Origin image is generated via /api/leonardo (Lucid Origin, download-then-delete), Qwen3-VL-4B gated (>=7), injected into the artifact data.genHistory as a data-URL swatch; VLM verdict recorded. trueEngine reflects the real producing engine. Durability follow-up: the UI gallery/produce still emits placeholder swatches, so an e2e stub re-walk overwrites the injected asset until the Produce path is wired to /api/leonardo."
+      "note": "Powered by gap-loop batch 3 (2026-07-07): a real Leonardo Lucid Origin image is generated via /api/leonardo (Lucid Origin, download-then-delete), Qwen3-VL-4B gated (>=7), injected into the artifact data.genHistory as a data-URL swatch; VLM verdict recorded. trueEngine reflects the real producing engine. Durability follow-up: the UI gallery/produce still emits placeholder swatches, so an e2e stub re-walk overwrites the injected asset until the Produce path is wired to /api/leonardo. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "state-graph",
@@ -2919,7 +2919,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "fieldsPopulated checks 7 keys exist; doesn't cross-check magnitude/period/duration math against the DPS claimed in Balance."
+      "note": "fieldsPopulated checks 7 keys exist; doesn't cross-check magnitude/period/duration math against the DPS claimed in Balance. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "status-effects",
@@ -3019,7 +3019,7 @@
       "generatorWired": true,
       "judge": "vlm",
       "checkerMeaningful": false,
-      "note": "Powered by gap-loop batch 3 (2026-07-07): a real Leonardo Lucid Origin image is generated via /api/leonardo (Lucid Origin, download-then-delete), Qwen3-VL-4B gated (>=7), injected into the artifact data.genHistory as a data-URL swatch; VLM verdict recorded. trueEngine reflects the real producing engine. Durability follow-up: the UI gallery/produce still emits placeholder swatches, so an e2e stub re-walk overwrites the injected asset until the Produce path is wired to /api/leonardo."
+      "note": "Powered by gap-loop batch 3 (2026-07-07): a real Leonardo Lucid Origin image is generated via /api/leonardo (Lucid Origin, download-then-delete), Qwen3-VL-4B gated (>=7), injected into the artifact data.genHistory as a data-URL swatch; VLM verdict recorded. trueEngine reflects the real producing engine. Durability follow-up: the UI gallery/produce still emits placeholder swatches, so an e2e stub re-walk overwrites the injected asset until the Produce path is wired to /api/leonardo. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "tutorial-beats",
@@ -3029,7 +3029,7 @@
       "generatorWired": false,
       "judge": "none",
       "checkerMeaningful": false,
-      "note": "Step's own note admits the audio entity 'audio-tutorial-prompt' is not seeded ('pending audio catalog seed') — only descriptive cue text is produced, no VFX/audio generator wired; minCount(≥1) is shape-only."
+      "note": "Step's own note admits the audio entity 'audio-tutorial-prompt' is not seeded ('pending audio catalog seed') — only descriptive cue text is produced, no VFX/audio generator wired; minCount(≥1) is shape-only. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified. Acceptance now also asserts every entry of the graded array carries its required fields (entriesHaveFields) — a per-entry shape floor above the old length-only count, still not semantic verification."
     },
     {
       "catalogId": "tutorial-beats",
@@ -3108,8 +3108,8 @@
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
-      "checkerMeaningful": false,
-      "note": "minCount(≥1) just checks at least one linked item string exists; real item ids are hand-picked, not queried from the live items catalog at Produce time."
+      "checkerMeaningful": true,
+      "note": "minCount(≥1) just checks at least one linked item string exists; real item ids are hand-picked, not queried from the live items catalog at Produce time. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "vendors",
@@ -3129,7 +3129,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "fieldsPopulated checks 2 keys exist; doesn't verify the linear discount is actually wired to a live faction rep value."
+      "note": "fieldsPopulated checks 2 keys exist; doesn't verify the linear discount is actually wired to a live faction rep value. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "vendors",
@@ -3139,7 +3139,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "fieldsPopulated checks 3 boolean flags exist only."
+      "note": "fieldsPopulated checks 3 boolean flags exist only. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "vendors",
@@ -3339,7 +3339,7 @@
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": false,
-      "note": "Hosted-arena and pack-placement data are hardcoded literals naming a specific arena and bestiary archetype. accept is fieldsPopulated across 3 keys — does not verify pack counts sum to the zone's totalEnemies (38) or that the linked catalog entities actually resolve (that's a separate linkTargetsExist mechanism in the UI shell, not this step's accept)."
+      "note": "Hosted-arena and pack-placement data are hardcoded literals naming a specific arena and bestiary archetype. accept is fieldsPopulated across 3 keys — does not verify pack counts sum to the zone's totalEnemies (38) or that the linked catalog entities actually resolve (that's a separate linkTargetsExist mechanism in the UI shell, not this step's accept). Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "zone-map",
@@ -3369,7 +3369,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Material instance params (tint/wear/soot) are hardcoded literals referencing an already-seeded master material (mat-weathered-stone); no texture is generated, this is descriptive config. accept is fieldsPopulated across 3 keys, shape-only."
+      "note": "Material instance params (tint/wear/soot) are hardcoded literals referencing an already-seeded master material (mat-weathered-stone); no texture is generated, this is descriptive config. accept is fieldsPopulated across 3 keys, shape-only. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "zone-map",
@@ -3379,7 +3379,7 @@
       "generatorWired": false,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Ambient/music descriptions are hardcoded literals referencing pre-seeded ambient/music catalog rows; no audio is generated here, and even if it were, ElevenLabs is wired for SFX/voice only — not ambient beds or adaptive music stems, so no wired engine covers this deliverable class at all. accept is fieldsPopulated across 3 keys, shape-only."
+      "note": "Ambient/music descriptions are hardcoded literals referencing pre-seeded ambient/music catalog rows; no audio is generated here, and even if it were, ElevenLabs is wired for SFX/voice only — not ambient beds or adaptive music stems, so no wired engine covers this deliverable class at all. accept is fieldsPopulated across 3 keys, shape-only. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
       "catalogId": "zone-map",
@@ -3419,7 +3419,7 @@
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": true,
-      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job."
+      "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     }
   ]
 }

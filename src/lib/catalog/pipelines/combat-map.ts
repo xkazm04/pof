@@ -10,6 +10,7 @@ import { allOf } from '../acceptance/combinators';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
+import { linksResolve } from '../acceptance/linkCheckers';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -292,11 +293,14 @@ registerCatalogPipeline({
           { catalogId: 'loot-tables', entityId: 'lt-Brute',                  role: 'encounter-loot' },
         ],
       }),
-      accept: fieldsPopulated('waves', 'areaLevel / waveCount / waveDetails populated', [
+      accept: allOf(
+        fieldsPopulated('waves', 'areaLevel / waveCount / waveDetails populated', [
         'areaLevel',
         'waveCount',
         'waveDetails',
       ]),
+        linksResolve(),
+      ),
     },
 
     // ── 4. Win / Loss Rules ───────────────────────────────────────────────────
@@ -594,6 +598,7 @@ registerCatalogPipeline({
       accept: allOf(
         fieldsPopulated('materials', 'Surface family + MI mapping + physical surface authored', ['surfaceFamily', 'mapping', 'physicalSurface']),
         minCount('links', '≥1 material surface link declared', 1),
+        linksResolve(),
       ),
     },
 
@@ -639,7 +644,10 @@ registerCatalogPipeline({
           `/Game/UI/Icons/T_${slug(e.name)}_Icon_D`,
         ],
       }),
-      accept: selected('selected', 'An arena icon is selected'),
+      accept: allOf(
+        selected('selected', 'An arena icon is selected'),
+        linksResolve(),
+      ),
     },
 
     // ── 11. Test Gate ─────────────────────────────────────────────────────────
@@ -739,7 +747,10 @@ registerCatalogPipeline({
           ueAssets: assets.map((a) => `/Game/ArenaEncounters/${s}/${a}`),
         };
       },
-      accept: minCount('assets', '≥3 UE assets packaged', 3),
+      accept: allOf(
+        minCount('assets', '≥3 UE assets packaged', 3),
+        linksResolve(),
+      ),
       staticChecks: () => [
         cppSymbolExists('AARPGEncounterArena', 'Encounter arena actor present in UE Source'),
       ],

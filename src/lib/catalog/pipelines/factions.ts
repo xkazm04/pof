@@ -1,8 +1,10 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
-import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
+import { minLength, fieldsPopulated, selected, minCount, entriesHaveFields } from '../acceptance/dataCheckers';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
+import { allOf } from '../acceptance/combinators';
+import { linksResolve } from '../acceptance/linkCheckers';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -149,7 +151,10 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: minCount('tiers', '≥6 standing tiers declared', 6),
+      accept: allOf(
+        minCount('tiers', '≥6 standing tiers declared', 6),
+        entriesHaveFields('tiers', 'every tier carries its point band + label', ['tier', 'minPoints', 'maxPoints', 'label']),
+      ),
       staticChecks: () => [
         cppSymbolExists('UARPGFactionSubsystem', 'Faction subsystem present in UE Source'),
         cppSymbolExists('FARPGFactionRow', 'Faction row struct present in UE Source'),
@@ -210,7 +215,10 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: minCount('actionDeltas', '≥8 action→rep deltas declared', 8),
+      accept: allOf(
+        minCount('actionDeltas', '≥8 action→rep deltas declared', 8),
+        entriesHaveFields('actionDeltas', 'every action delta carries action + delta + category', ['action', 'delta', 'category']),
+      ),
     },
 
     // ── 4. Tier Rewards ───────────────────────────────────────────────────────
@@ -294,7 +302,11 @@ registerCatalogPipeline({
           { catalogId: 'vendors', entityId: 'vendor-wandering-merchant', role: 'discount-consumer' },
         ],
       }),
-      accept: minCount('tierRewards', '≥4 tier reward rows defined', 4),
+      accept: allOf(
+        minCount('tierRewards', '≥4 tier reward rows defined', 4),
+        entriesHaveFields('tierRewards', 'every reward row carries tier + discount + reward', ['tier', 'discount', 'reward']),
+        linksResolve(),
+      ),
     },
 
     // ── 5. NPC Members ────────────────────────────────────────────────────────
@@ -360,7 +372,11 @@ registerCatalogPipeline({
         },
         links: [{ catalogId: 'characters', entityId: 'char-captain-vael', role: 'faction-leader' }],
       }),
-      accept: minCount('members', '≥1 NPC member declared', 1),
+      accept: allOf(
+        minCount('members', '≥1 NPC member declared', 1),
+        entriesHaveFields('members', 'every member carries role + npcId + name', ['role', 'npcId', 'name']),
+        linksResolve(),
+      ),
       staticChecks: (e) => [
         seedRowPresent('seed_factions.py', slug(e.name), 'Faction row seeded for this entity'),
       ],
@@ -406,7 +422,10 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: minCount('greetingHooks', '≥5 greeting hooks declared', 5),
+      accept: allOf(
+        minCount('greetingHooks', '≥5 greeting hooks declared', 5),
+        entriesHaveFields('greetingHooks', 'every hook carries tier + dialogKey + disposition', ['tier', 'dialogKey', 'disposition']),
+      ),
     },
 
     // ── 7. Standing UI ────────────────────────────────────────────────────────
@@ -571,7 +590,10 @@ registerCatalogPipeline({
           ],
         };
       },
-      accept: minCount('assets', '≥5 UE assets packaged', 5),
+      accept: allOf(
+        minCount('assets', '≥5 UE assets packaged', 5),
+        linksResolve(),
+      ),
       staticChecks: (e) => [
         cppSymbolExists('UARPGFactionSubsystem', 'Faction subsystem in Source/'),
         cppSymbolExists('FARPGFactionRow', 'Faction row struct in Source/'),

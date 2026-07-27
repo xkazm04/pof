@@ -1,8 +1,10 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
-import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
+import { minLength, fieldsPopulated, selected, minCount, entriesHaveFields } from '../acceptance/dataCheckers';
 import { graphValid } from '../acceptance/graphCheckers';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
+import { allOf } from '../acceptance/combinators';
+import { linksResolve } from '../acceptance/linkCheckers';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -213,7 +215,10 @@ registerCatalogPipeline({
           { catalogId: 'icon-sets',    entityId: 'iconset-abilities', role: 'screen-icon-family' },
         ],
       }),
-      accept: graphValid('graph', 'Screens reachable + has a terminal/exit'),
+      accept: allOf(
+        graphValid('graph', 'Screens reachable + has a terminal/exit'),
+        linksResolve(),
+      ),
     },
 
     // ── 3. Input Mapping ──────────────────────────────────────────────────────
@@ -297,7 +302,10 @@ registerCatalogPipeline({
         },
         ueAssets: ['/Game/Input/IMC_Navigation'],
       }),
-      accept: minCount('inputMapping', '≥1 input mapping rule defined', 1),
+      accept: allOf(
+        minCount('inputMapping', '≥1 input mapping rule defined', 1),
+        entriesHaveFields('inputMapping', 'every mapping carries action + binding + mode + transition', ['action', 'defaultBinding', 'inputMode', 'transition']),
+      ),
     },
 
     // ── 4. Component Inventory ─────────────────────────────────────────────────
@@ -428,7 +436,10 @@ registerCatalogPipeline({
           '/Game/UI/WBP_SettingsPanel',
         ],
       }),
-      accept: minCount('componentInventory', '≥1 screen widget component entry defined', 1),
+      accept: allOf(
+        minCount('componentInventory', '≥1 screen widget component entry defined', 1),
+        entriesHaveFields('componentInventory', 'every component carries screen + widget + zDepth + anchor', ['screen', 'widget', 'zDepth', 'anchor']),
+      ),
     },
 
     // ── 5. Transitions / Animation ────────────────────────────────────────────
@@ -526,7 +537,10 @@ registerCatalogPipeline({
           '/Game/Audio/Respawn/SC_Respawn_Ambient',
         ],
       }),
-      accept: minCount('juiceRules', '≥1 VFX/SFX juice rule defined', 1),
+      accept: allOf(
+        minCount('juiceRules', '≥1 VFX/SFX juice rule defined', 1),
+        entriesHaveFields('juiceRules', 'every juice rule carries trigger + vfx + sfx', ['trigger', 'vfx', 'sfx']),
+      ),
     },
 
     // ── 7. Accessibility ─────────────────────────────────────────────────────
@@ -600,7 +614,10 @@ registerCatalogPipeline({
         ],
         ueAssets: [`/Game/UI/Icons/T_${slug(e.name)}_ScreenFlowIcon`],
       }),
-      accept: selected('selected', 'A screen flow icon is selected'),
+      accept: allOf(
+        selected('selected', 'A screen flow icon is selected'),
+        linksResolve(),
+      ),
     },
 
     // ── 10. Test Gate ────────────────────────────────────────────────────────

@@ -3,6 +3,8 @@ import { minLength, fieldsPopulated, withinAbsolute, selected, minCount } from '
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
+import { allOf } from '../acceptance/combinators';
+import { linksResolve } from '../acceptance/linkCheckers';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -521,11 +523,14 @@ registerCatalogPipeline({
           { catalogId: 'combat-map', entityId: 'arena-ravaged-courtyard', role: 'combat-music-trigger' },
         ],
       }),
-      accept: fieldsPopulated('triggerBinding', 'zoneTrigger / arenaTrigger / wiringContract populated', [
+      accept: allOf(
+        fieldsPopulated('triggerBinding', 'zoneTrigger / arenaTrigger / wiringContract populated', [
         'zoneTrigger',
         'arenaTrigger',
         'wiringContract',
       ]),
+        linksResolve(),
+      ),
     },
 
     // ── 7. Streaming Budget ──────────────────────────────────────────────────
@@ -589,7 +594,10 @@ registerCatalogPipeline({
           { catalogId: 'icon-sets', entityId: 'iconset-abilities', role: 'icon-family' },
         ],
       }),
-      accept: selected('selected', 'A track icon candidate is selected'),
+      accept: allOf(
+        selected('selected', 'A track icon candidate is selected'),
+        linksResolve(),
+      ),
     },
 
     // ── 9. Test Gate (runtime-deferred L3) ───────────────────────────────────
@@ -679,7 +687,10 @@ registerCatalogPipeline({
           ],
         };
       },
-      accept: minCount('assets', '≥8 UE assets packaged (MetaSound + DT row + 6 stems)', 8),
+      accept: allOf(
+        minCount('assets', '≥8 UE assets packaged (MetaSound + DT row + 6 stems)', 8),
+        linksResolve(),
+      ),
       staticChecks: (e) => [
         seedRowPresent('seed_music.py', slug(e.name), 'Music row seeded in Content/Python'),
       ],

@@ -435,11 +435,14 @@ registerCatalogPipeline({
           { catalogId: 'materials', entityId: 'mat-weathered-stone', role: 'surface-family' },
         ],
       }),
-      accept: fieldsPopulated('materials', 'Surface family + instances + wiring contract populated', [
+      accept: allOf(
+        fieldsPopulated('materials', 'Surface family + instances + wiring contract populated', [
         'surfaceFamily',
         'instances',
         'wiringContract',
       ]),
+        linksResolve(),
+      ),
     },
 
     // ── 8. Ambient & Music ────────────────────────────────────────────────────
@@ -511,11 +514,14 @@ registerCatalogPipeline({
           { catalogId: 'music',   entityId: 'music-combat-a',     role: 'combat-music' },
         ],
       }),
-      accept: fieldsPopulated('audio', 'Ambient + music + wiring contract populated', [
+      accept: allOf(
+        fieldsPopulated('audio', 'Ambient + music + wiring contract populated', [
         'ambient',
         'music',
         'wiringContract',
       ]),
+        linksResolve(),
+      ),
     },
 
     // ── 9. Minimap UI ─────────────────────────────────────────────────────────
@@ -694,7 +700,10 @@ registerCatalogPipeline({
           ueAssets: assets,
         };
       },
-      accept: minCount('assets', '≥3 UE assets packaged', 3),
+      accept: allOf(
+        minCount('assets', '≥3 UE assets packaged', 3),
+        linksResolve(),
+      ),
       staticChecks: () => [
         cppSymbolExists('AARPGEncounterVolume', 'Encounter volume actor compiled in UE Source'),
         cppSymbolExists('ASpawnVolume', 'Spawn volume actor compiled in UE Source'),

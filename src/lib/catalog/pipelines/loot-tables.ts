@@ -5,6 +5,7 @@ import { allOf } from '../acceptance/combinators';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
+import { linksResolve } from '../acceptance/linkCheckers';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -311,6 +312,7 @@ registerCatalogPipeline({
       accept: allOf(
         fieldsPopulated('pools', 'Currency pool + unique pool authored', ['currencyPool', 'uniquePool']),
         minCount('links', '≥1 currency or item pool link declared', 1),
+        linksResolve(),
       ),
       staticChecks: (e) => [
         cppSymbolExists('FARPGLootTableRow', 'Loot table row struct in UE Source'),
@@ -372,7 +374,10 @@ registerCatalogPipeline({
         ],
         ueAssets: ['/Game/Items/DT_Items'],
       }),
-      accept: minCount('bases', '≥1 item base linked from the items catalog', 1),
+      accept: allOf(
+        minCount('bases', '≥1 item base linked from the items catalog', 1),
+        linksResolve(),
+      ),
     },
 
     // ── 7. Balance / Drop Sim ─────────────────────────────────────────────────

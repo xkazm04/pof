@@ -3,6 +3,8 @@ import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/da
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
+import { allOf } from '../acceptance/combinators';
+import { linksResolve } from '../acceptance/linkCheckers';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -222,7 +224,10 @@ registerCatalogPipeline({
         ],
         ueAssets: [`/Game/Abilities/Achievements/GE_Achievement_${slug(e.name)}`],
       }),
-      accept: minCount('links', '≥1 reward link (gold or item) declared', 1),
+      accept: allOf(
+        minCount('links', '≥1 reward link (gold or item) declared', 1),
+        linksResolve(),
+      ),
       staticChecks: (e) => [
         cppSymbolExists('UARPGAchievementSubsystem', 'Achievement subsystem grants reward via ASC'),
         seedRowPresent('seed_achievements.py', slug(e.name), 'Achievement row seeded in DT_Achievements'),
@@ -317,7 +322,10 @@ registerCatalogPipeline({
         ],
         ueAssets: [`/Game/UI/Icons/T_${slug(e.name)}_AchievementIcon`],
       }),
-      accept: selected('selected', 'An achievement badge icon is selected'),
+      accept: allOf(
+        selected('selected', 'An achievement badge icon is selected'),
+        linksResolve(),
+      ),
     },
 
     // ── 7. Unlock Toast ──────────────────────────────────────────────────────

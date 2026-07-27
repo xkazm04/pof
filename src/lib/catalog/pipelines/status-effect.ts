@@ -4,6 +4,8 @@ import { statusBalanceEnvelope } from '../acceptance/invariants';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
+import { allOf } from '../acceptance/combinators';
+import { linksResolve } from '../acceptance/linkCheckers';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -178,10 +180,13 @@ registerCatalogPipeline({
         };
       },
       // fieldsPopulated checks that all named keys exist (non-null) on data.effect
-      accept: fieldsPopulated(
+      accept: allOf(
+        fieldsPopulated(
         'effect',
         'Effect rules complete (tag/magnitude/period/duration/stacking/sourceDamageType/dispellable)',
         ['tag', 'magnitude', 'period', 'duration', 'stacking', 'sourceDamageType', 'dispellable'],
+      ),
+        linksResolve(),
       ),
       staticChecks: (e) => [
         cppSymbolExists(`UGE_Gen_${slug(e.name)}`, 'Ignite GameplayEffect C++ class compiled'),
