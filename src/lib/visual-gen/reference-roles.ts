@@ -107,6 +107,21 @@ export const GEN_PROMPTING_PRACTICES: GenPromptingPractice[] = [
       'AI-generated COLOR (albedo/base-color) textures are production-usable — pro teams ship them with at most light post-processing fine-tunes. Material PROPERTIES (roughness/metalness/height) are not: layer them on top of the AI color base procedurally or from material presets (Substance-class tooling), where the achievable quality stays far above AI output. When an AI PBR-on-top tool derives property maps from an existing texture, feed it the 3D model as an input alongside the texture — texture-only input mis-derives the maps.',
   },
   {
+    summary: 'Rebuild eyes as UV-unwrapped sphere primitives — never ship the generated ones',
+    detail:
+      'Image-to-3D reconstructs eyes as part of the face surface: sunken, asymmetric, and impossible to texture or animate. Delete them and drop in a sphere per eye (halved if the socket is shallow), unwrap it, and apply a generated square eye texture (iris centred, one texture mirrored across both eyes). It is a one-minute finishing step that fixes the single most read-on-sight character defect, and it is what makes an eye-look/blink rig possible later.',
+  },
+  {
+    summary: 'For a symmetric subject, finish one half and mirror it',
+    detail:
+      'Mirror at the mesh-finish stage (Blender mirror modifier, clipped + seam-welded) rather than generating, retopologising, unwrapping and texturing both sides. One half carries the work and the other is free: half the retopo cleanup, half the UV islands, and a mirrored pair only needs texturing once. Skip it for deliberately asymmetric designs (one-sided armour, a single pauldron, an over-one-shoulder braid) — mirroring those destroys the design.',
+  },
+  {
+    summary: 'Texture by reference-view projection, then inpaint the seams — it is never one pass',
+    detail:
+      'Project a reference image onto the model from the matching camera view, add it as a LAYER (so passes stack instead of overwriting), then generate the missing views (back, sides) from the same reference set and project those too. Projection alone always leaves seams, stretched grazing-angle areas and unreachable pockets: repair those by masking the bad region and inpainting it in place rather than re-projecting the whole object. Requires a real UV unwrap on the low-poly first.',
+  },
+  {
     summary: 'For part segmentation, feed a grid-combined multi-view and review the part list',
     detail:
       'When splitting a concept into parts (for modular assembly or per-part meshing), first combine the generated multi-view into a single grid image and segment THAT — part extraction works one object per image, so a grid of views gives it context on occluded and rear parts it would otherwise hallucinate. And never accept the auto-analyzed part list blind: review or hand-supply it against your assembly logic (which garments/accessories must be separate swap-slot parts), because the splitter cannot know how you intend to assemble or modularize the result.',

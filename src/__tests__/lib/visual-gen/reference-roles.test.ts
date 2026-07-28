@@ -53,6 +53,27 @@ describe('GEN_PROMPTING_PRACTICES', () => {
     expect(text).toMatch(/model as (an )?input|3D model as/i);
   });
 
+  it('encodes eye replacement: swap AI-generated eyes for UV’d sphere primitives', () => {
+    const text = GEN_PROMPTING_PRACTICES.map((p) => `${p.summary} ${p.detail}`).join(' ');
+    expect(text).toMatch(/eye/i);
+    expect(text).toMatch(/sphere/i);
+    expect(text).toMatch(/unwrap|UV/);
+  });
+
+  it('encodes mirroring: author one symmetric half and mirror it', () => {
+    const text = GEN_PROMPTING_PRACTICES.map((p) => `${p.summary} ${p.detail}`).join(' ');
+    expect(text).toMatch(/mirror/i);
+    expect(text).toMatch(/symmetric/i);
+    expect(text).toMatch(/textur|unwrap|UV|once/i);
+  });
+
+  it('encodes texturing as projection + inpaint repair, not a one-shot', () => {
+    const text = GEN_PROMPTING_PRACTICES.map((p) => `${p.summary} ${p.detail}`).join(' ');
+    expect(text).toMatch(/project/i);
+    expect(text).toMatch(/inpaint/i);
+    expect(text).toMatch(/seam|artifact/i);
+  });
+
   it('encodes part-segmentation prep: grid-combined multi-view input + review the part list', () => {
     const text = GEN_PROMPTING_PRACTICES.map((p) => `${p.summary} ${p.detail}`).join(' ');
     expect(text).toMatch(/grid|combined.{0,20}multi.?view|single image.{0,30}views/i);
