@@ -261,7 +261,9 @@ Output the numbered call graph first, then the JSON findings array.`,
 - Zone transitions should preserve player state
 - Boss phases should use behavior tree states, not hardcoded sequences
 - Hazard damage should respect invulnerability (dodge, etc.)
-- Spawn density should scale with zone difficulty`,
+- Spawn density should scale with zone difficulty
+- Set dressing should be believable, not just non-intersecting: props must rest ON a surface large enough to hold them (no large prop balanced on a small or thin one), nothing balanced on a prop with no flat top (cans, cables, handled containers), stack runs bounded (~3 unless the prop is a pallet/crate designed to tower), and props should carry small rotation variation — perfectly axis-aligned clutter reads as machine-placed
+- Placed props should sit flush on their support (no floating gap, no interpenetration); piles and container fills should be physics-settled and baked rather than analytically positioned`,
     performanceChecks: `- Level streaming should pre-load before player reaches transition
 - Distant actors should be dormant
 - Environmental VFX should use pooling

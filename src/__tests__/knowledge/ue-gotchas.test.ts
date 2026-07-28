@@ -205,6 +205,16 @@ describe('formatGotchas', () => {
     expect(out).toMatch(/warm.?up frames/i);
   });
 
+  it('routes video footage ingest through CaptureManager, not the deprecated MetaHumanCaptureSource', () => {
+    const out = formatGotchas('ue-python');
+    expect(out).toMatch(/MetaHumanCaptureSource/);
+    expect(out).toMatch(/deprecat/i);
+    expect(out).toMatch(/ingest_mono_video_sync/);
+    expect(out).toMatch(/CaptureManagerIngestBlueprintLibrary/);
+    expect(out).toMatch(/FootageCaptureData/);
+    expect(out).toMatch(/MONO_FOOTAGE|mono footage/i);
+  });
+
   it('carries Niagara optimization pitfalls', () => {
     const out = formatGotchas('ue-python');
     expect(out).toMatch(/Niagara/);

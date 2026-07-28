@@ -324,6 +324,27 @@ export const UE_GOTCHAS: Gotcha[] = [
     source:
       'research: State of Rigging & Animation Tools in UE 5.8 (Unreal Fest Chicago 2026)',
   },
+  {
+    id: 'prop-placement-affordances-not-bounds',
+    modules: ['world'],
+    summary:
+      'Procedural set dressing driven by bounding boxes alone places tables on paint cans — give each prop declared placement affordances (place_floor/surface/any, stack_true/false, copy_N, max_stack_N), fill largest-first, then settle',
+    detail:
+      "A prop-placement pass that knows only each mesh's bounding box has no idea what an object IS, so it puts large props on thin surfaces and stacks heavy furniture on small clutter — the composition reads mechanically assembled even when nothing intersects. Encode the rules ONCE per asset as UE actor tags and let the generator read them: place_floor (ground only — furniture, big crates), place_surface (only on top of something else — cans, bottles, documents), place_any (either); stack_true / stack_false (may anything rest on this — false for cans, cables, handled canisters, and anything whose top is not flat); copy_N (instances to spawn — clusters read better than singles); max_stack_N (run height, default around 3 — raise it for pallets/crate towers). Author the tags large → medium → small, asking what could realistically sit on what. Then three solver rules do the rest: (1) place LARGEST FIRST so big pieces establish the surfaces smaller props land on; (2) a support's footprint must be >= the prop's footprint, which is what actually prevents the thin-surface failure; (3) apply small random yaw jitter, because perfectly axis-aligned props are the strongest tell of automated placement. Untagged props should default to 'placeable anywhere, load-bearing for nothing' — the safe reading. Finally, prefer a PHYSICS SETTLE over more solver rules for piles, clutter, and filling containers: enable simulate physics on the spawned actors, let them fall, then BAKE the resulting transforms back and disable physics — settling is both cheaper to implement and more believable than analytic rules, and it removes the need for most tags when the arrangement is a pile rather than a deliberate arrangement. PoF ships the solver as src/lib/visual-gen/generators/composition.ts (tags in placement-tags.ts, round-trippable to real actor tags); the settle-and-bake half is UE-side.",
+    appliesTo: ['ue-python'],
+    source: 'research: Composition Maker for Unreal Engine 5 (Andrew Averkin)',
+  },
+  {
+    id: 'headless-physics-needs-ticking-world',
+    modules: ['world'],
+    summary:
+      'A physics settle cannot run in -run=pythonscript: set_simulate_physics(True) reports is_simulating_physics() False (no physics scene) and LevelEditorSubsystem.editor_play_simulate() FATALLY crashes the commandlet — settle in a -game session, bake transforms from python',
+    detail:
+      "Live-probed on UE 5.8.0. The whole API surface resolves in the pythonscript commandlet — PrimitiveComponent.set_simulate_physics / is_simulating_physics / put_rigid_body_to_sleep / set_enable_gravity, LevelEditorSubsystem.editor_play_simulate / editor_request_end_play / is_in_play_in_editor, EditorActorSubsystem.spawn_actor_from_class, SystemLibrary.begin_transaction / end_transaction, PhysicsAsset / BodyInstance / ChaosSolverActor — so introspection alone suggests a headless 'simulate then bake' pass is scriptable. It is NOT. Two hard walls: (1) the commandlet's world is a transient /Temp/Untitled_0 with NO physics scene, so set_simulate_physics(True) silently leaves is_simulating_physics() == False and a spawned actor never falls; (2) calling LevelEditorSubsystem.editor_play_simulate() is a FATAL crash (callstack through UnrealEditor-PythonScriptPlugin.dll, process exit code 3), not an exception you can catch — there is no editor loop to enter. There is also no scriptable time-advance: SystemLibrary only offers delay_until_next_tick / set_timer_for_next_tick, which need a tick that never comes. Split the work accordingly: the BAKE half (read/write actor transforms, actor tags, transactions, saving the map) is fully headless; the SETTLE half needs a world that actually ticks — run it in a -game session (the scenario-controller path) or the interactive editor, and have python only stamp the resulting transforms back. Same shape as the headless-render finding: the commandlet is an asset-authoring tool, not a simulation host.",
+    appliesTo: ['ue-python'],
+    source:
+      'research: Composition Maker (Andrew Averkin) + live 5.8 headless physics-settle probe',
+  },
 ];
 
 /**
