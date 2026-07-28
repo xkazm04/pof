@@ -39,6 +39,7 @@ def parse_args():
     p.add_argument("--output", required=True)
     p.add_argument("--target-faces", type=int, default=None)
     p.add_argument("--mirror", choices=["x", "y", "z"], default=None)
+    p.add_argument("--cull-interior", action="store_true")
     p.add_argument("--unwrap", action="store_true")
     p.add_argument("--bake", default="")
     p.add_argument("--bake-size", type=int, default=1024)
@@ -93,6 +94,27 @@ def apply_mirror(obj, axis):
     mod.use_clip = True
     mod.use_mirror_merge = True
     bpy.ops.object.modifier_apply(modifier=mod.name)
+
+
+def cull_interior(obj):
+    """Delete faces enclosed on all sides — invisible geometry that still costs.
+
+    An assembled multi-part character buries whole surfaces (the body under the
+    chest plate, the scalp under the helmet). They never reach a pixel but they
+    do consume the face budget and take UV islands off the atlas.
+    Returns how many faces were removed.
+    """
+    before = face_count(obj)
+    bpy.context.view_layer.objects.active = obj
+    bpy.ops.object.select_all(action="DESELECT")
+    obj.select_set(True)
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_all(action="DESELECT")
+    bpy.ops.mesh.select_mode(type="FACE")
+    bpy.ops.mesh.select_interior_faces()
+    bpy.ops.mesh.delete(type="FACE")
+    bpy.ops.object.mode_set(mode="OBJECT")
+    return before - face_count(obj)
 
 
 def decimate(obj, target_faces):
@@ -189,7 +211,12 @@ def main():
     low.name = "%s_low" % stem
     bpy.context.collection.objects.link(low)
 
-    faces_out = decimate(low, args.target_faces) if args.target_faces else faces_in
+    # Cull before decimating so the face budget is spent on visible surfaces only.
+    # The high-poly keeps its interior faces — it is only ever the bake source.
+    if args.cull_interior:
+        marker("FACES_CULLED", cull_interior(low))
+
+    faces_out = decimate(low, args.target_faces) if args.target_faces else face_count(low)
     marker("FACES_OUT", faces_out)
 
     if args.unwrap:

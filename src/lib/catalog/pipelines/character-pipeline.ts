@@ -235,7 +235,33 @@ registerCatalogPipeline({
       produceNote: '~14x smaller per character at near-zero credit cost — the sustainability step for batch character production.',
     },
 
-    // ── 10. Icon 2D Art (universal step) ──────────────────────────────────────
+    // ── 10. Skins (one geometry, N texture sets) ──────────────────────────────
+    {
+      archetype: 'custom',
+      label: 'Skins',
+      engine: 'Tripo',
+      view: { kind: 'manifest', field: 'skinSet' },
+      produce: () => ({
+        data: {
+          skinSet: {
+            geometryTaskId: 'tripo-jinx-image-to-model',
+            variants: [
+              'base — the gated concept colourway (texture_seed unset, standard quality)',
+              'gold — high metallic; the noise mask carries the roughness break-up',
+              'crimson — low metallic, matte cloth read',
+            ],
+            swap: 'material-instance swap in UE — a skin is a texture set plus its material settings (gold is more metallic than base), never new geometry',
+            parityGate: 'every skin .glb must report identical face/vertex counts; a re-meshed variant is not a skin',
+          },
+          law: 'texture_model re-textures ONE prior Tripo task id — that shared geometry is what makes the variants skins; it cannot texture an external or Blender-finished mesh',
+        },
+      }),
+      accept: fieldsPopulated('skinSet', 'skin set declared over one shared geometry task', ['geometryTaskId', 'variants', 'swap']),
+      produceNote:
+        'Seam: src/lib/visual-gen/tripo-skins.ts (runTripoSkinSet — fan-out over texture_model, per-skin .glb, geometry-parity verdict). Skins cost one texture task each and no new geometry.',
+    },
+
+    // ── 11. Icon 2D Art (universal step) ──────────────────────────────────────
     {
       archetype: 'gallery',
       label: 'Icon 2D Art',
@@ -251,7 +277,7 @@ registerCatalogPipeline({
       produceNote: 'Bind to the shared icon-sets presentation family (silhouette weight, rarity frame, light direction).',
     },
 
-    // ── 11. Visual quality gate (L4) ──────────────────────────────────────────
+    // ── 12. Visual quality gate (L4) ──────────────────────────────────────────
     {
       archetype: 'custom',
       label: 'Visual Gate',

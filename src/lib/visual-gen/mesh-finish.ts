@@ -43,6 +43,12 @@ export interface MeshFinishSpec {
   targetFaces?: number;
   /** Author one half and mirror it across this axis (symmetric characters). */
   mirror?: MirrorAxis;
+  /**
+   * Delete faces enclosed on all sides before decimating. An assembled multi-part
+   * character (armour over a body, a helmet over a head) hides whole surfaces that
+   * still cost budget and still get UV islands; nothing on screen changes.
+   */
+  cullInterior?: boolean;
   /** Request a UV unwrap — honoured only when the mesh is decimated first. */
   unwrap?: boolean;
   /** High→low bakes to render (needs `unwrap`). */
@@ -62,6 +68,8 @@ export interface MeshFinishResult {
   meshPath?: string;
   facesIn?: number;
   facesOut?: number;
+  /** Faces removed by the interior cull (absent when no cull ran). */
+  facesCulled?: number;
   sizeMB?: number;
   uvUnwrapped?: boolean;
   normalMapPath?: string;
@@ -119,6 +127,7 @@ export function buildMeshFinishArgs(scriptPath: string, spec: MeshFinishSpec): s
   ];
   if (spec.targetFaces !== undefined) args.push('--target-faces', String(spec.targetFaces));
   if (spec.mirror) args.push('--mirror', spec.mirror);
+  if (spec.cullInterior) args.push('--cull-interior');
   if (plan.unwrap) args.push('--unwrap');
   if (plan.unwrap && spec.bake?.length) {
     args.push('--bake', spec.bake.join(','));
@@ -132,6 +141,7 @@ export interface ParsedMeshFinish {
   meshPath?: string;
   facesIn?: number;
   facesOut?: number;
+  facesCulled?: number;
   sizeMB?: number;
   uvUnwrapped?: boolean;
   normalMapPath?: string;
@@ -157,6 +167,7 @@ export function parseMeshFinishOutput(stdout: string): ParsedMeshFinish {
     error,
     facesIn: num('FACES_IN'),
     facesOut: num('FACES_OUT'),
+    facesCulled: num('FACES_CULLED'),
     sizeMB: num('SIZE_MB'),
     uvUnwrapped: get('UV') === undefined ? undefined : get('UV') === '1',
     normalMapPath: get('BAKE_NORMAL'),
@@ -203,6 +214,7 @@ export async function runMeshFinish(spec: MeshFinishSpec, deps: MeshFinishDeps =
     meshPath,
     facesIn: parsed.facesIn,
     facesOut: parsed.facesOut,
+    facesCulled: parsed.facesCulled,
     sizeMB: parsed.sizeMB,
     uvUnwrapped: parsed.uvUnwrapped,
     normalMapPath: parsed.normalMapPath,

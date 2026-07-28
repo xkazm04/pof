@@ -126,6 +126,16 @@ export const GEN_PROMPTING_PRACTICES: GenPromptingPractice[] = [
     detail:
       'When splitting a concept into parts (for modular assembly or per-part meshing), first combine the generated multi-view into a single grid image and segment THAT — part extraction works one object per image, so a grid of views gives it context on occluded and rear parts it would otherwise hallucinate. And never accept the auto-analyzed part list blind: review or hand-supply it against your assembly logic (which garments/accessories must be separate swap-slot parts), because the splitter cannot know how you intend to assemble or modularize the result.',
   },
+  {
+    summary: 'Break up a flat AI material with a noise mask driving roughness AND metallic',
+    detail:
+      'A generated texture set reads flat in engine because its roughness and metallic values are near-uniform, so the whole surface reflects light identically and the silhouette loses its read. Generate a black-and-white noise texture and plug it into BOTH roughness and metallic (not into base colour — the colour is already fine): roughness tells the renderer which areas reflect and which are matte, so varying it gives back the heterogeneous, slightly iridescent look references have. Scale the noise pattern to the asset — one tuning pass, no new textures. This is the cheapest single upgrade to a generated material and it costs nothing per asset.',
+  },
+  {
+    summary: 'Author glow as its own emission mask — never bake it into the colour map',
+    detail:
+      'For glowing details (helmet slits, runes, energy trims) paint or generate a separate greyscale emission mask over the UVs rather than brightening the albedo, and wire it to the engine’s emissive input where bloom and intensity are tunable per skin. The mask can be imprecise — emission plus bloom hides small edge errors — and keeping it separate is what lets one geometry carry several skins whose glow differs (or is off entirely). An emissive baked into base colour is stuck bright in every lighting condition and cannot be previewed properly outside the engine anyway.',
+  },
 ];
 
 /**

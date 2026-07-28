@@ -7,9 +7,9 @@ const entity = { id: 'char-pipeline-jinx', name: 'Jinx' } as never;
 describe('character-pipeline pipeline', () => {
   const pipeline = getCatalogPipeline('character-pipeline');
 
-  it('is registered with 11 steps', () => {
+  it('is registered with 12 steps', () => {
     expect(pipeline).not.toBeNull();
-    expect(pipeline?.steps).toHaveLength(11);
+    expect(pipeline?.steps).toHaveLength(12);
   });
 
   it('has the gated-workflow step labels in order', () => {
@@ -24,9 +24,22 @@ describe('character-pipeline pipeline', () => {
       'Apparel',
       'Playable Wire',
       'Game-Tier Convert',
+      'Skins',
       'Icon 2D Art',
       'Visual Gate',
     ]);
+  });
+
+  it('Skins records a texture-set family over ONE geometry task (L0 pass)', () => {
+    const s = pipeline!.steps[9];
+    expect(s.label).toBe('Skins');
+    const data = s.produce(entity).data as { skinSet: Record<string, unknown> };
+    // The whole point of a skin: every variant re-textures the same geometry task.
+    expect(data.skinSet.geometryTaskId).toBeTruthy();
+    expect((data.skinSet.variants as unknown[]).length).toBeGreaterThanOrEqual(2);
+    const r = s.accept(data);
+    expect(r.status).toBe('pass');
+    expect(r.tier).toBe('L0');
   });
 
   it('Concept 2D produces a face-gated selection (L1 pass)', () => {
@@ -89,7 +102,7 @@ describe('character-pipeline pipeline', () => {
   });
 
   it('Visual Gate is the L4 gate (honestly deferred)', () => {
-    const s = pipeline!.steps[10];
+    const s = pipeline!.steps[11];
     const r = s.accept(s.produce(entity).data ?? {});
     expect(r).toMatchObject({ tier: 'L4', status: 'deferred' });
   });

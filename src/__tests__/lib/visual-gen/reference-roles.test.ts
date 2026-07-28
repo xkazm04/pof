@@ -80,6 +80,21 @@ describe('GEN_PROMPTING_PRACTICES', () => {
     expect(text).toMatch(/segment|part/i);
     expect(text).toMatch(/review|assembly logic|swap.?slot|modular/i);
   });
+
+  it('encodes breaking up flat AI materials with a noise mask on roughness + metallic', () => {
+    const text = GEN_PROMPTING_PRACTICES.map((p) => `${p.summary} ${p.detail}`).join(' ');
+    expect(text).toMatch(/noise/i);
+    expect(text).toMatch(/roughness/i);
+    expect(text).toMatch(/metallic|metalness/i);
+    expect(text).toMatch(/flat|uniform|even/i);
+  });
+
+  it('encodes authoring glow as its own emission mask rather than baking it into the colour map', () => {
+    const text = GEN_PROMPTING_PRACTICES.map((p) => `${p.summary} ${p.detail}`).join(' ');
+    expect(text).toMatch(/emissi/i);
+    expect(text).toMatch(/mask/i);
+    expect(text).toMatch(/albedo|colou?r map|base.?colou?r/i);
+  });
 });
 
 describe('assembleReferenceDirective', () => {

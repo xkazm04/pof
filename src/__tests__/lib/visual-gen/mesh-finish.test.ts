@@ -87,6 +87,11 @@ describe('buildMeshFinishArgs', () => {
     const args = buildMeshFinishArgs('s.py', { ...SPEC, targetFaces: undefined, unwrap: true, bake: ['normal'] });
     expect(args).not.toContain('--bake');
   });
+
+  it('asks for the interior cull only when requested', () => {
+    expect(buildMeshFinishArgs('s.py', { ...SPEC, cullInterior: true })).toContain('--cull-interior');
+    expect(buildMeshFinishArgs('s.py', SPEC)).not.toContain('--cull-interior');
+  });
 });
 
 describe('parseMeshFinishOutput', () => {
@@ -111,6 +116,15 @@ describe('parseMeshFinishOutput', () => {
     expect(p.uvUnwrapped).toBe(true);
     expect(p.normalMapPath).toBe('C:/gen/jinx_normal.png');
     expect(p.aoMapPath).toBe('C:/gen/jinx_ao.png');
+  });
+
+  it('reads how many interior faces the cull removed', () => {
+    const p = parseMeshFinishOutput(`${OK}\nPOF_MESHFINISH_FACES_CULLED=4120`);
+    expect(p.facesCulled).toBe(4120);
+  });
+
+  it('leaves facesCulled undefined when no cull ran — never reports a 0 it did not measure', () => {
+    expect(parseMeshFinishOutput(OK).facesCulled).toBeUndefined();
   });
 
   it('reports an error marker instead of a silent pass', () => {
