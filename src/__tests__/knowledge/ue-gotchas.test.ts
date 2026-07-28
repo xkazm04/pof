@@ -276,6 +276,23 @@ describe('formatGotchas module scoping', () => {
     expect(unknown).toBe(formatGotchas('ue-cpp'));
   });
 
+  it('a python world task carries the prop-placement + headless-physics pitfalls', () => {
+    const out = formatGotchas('ue-python', 'arpg-world');
+    expect(out).toMatch(/place_floor/);
+    expect(out).toMatch(/max_stack/);
+    expect(out).toMatch(/largest[- ]first/i);
+    expect(out).toMatch(/editor_play_simulate/);
+    expect(out).toMatch(/is_simulating_physics/);
+    // scoped away from unrelated domains
+    expect(out).not.toMatch(/Motion Matching/);
+  });
+
+  it('does not haul the world-dressing pitfalls into an animation task', () => {
+    const out = formatGotchas('ue-python', 'arpg-animation');
+    expect(out).not.toMatch(/place_surface/);
+    expect(out).not.toMatch(/editor_play_simulate/);
+  });
+
   it('a python animation task carries the Interchange FBX + motion-matching pitfalls but not materials-only ones', () => {
     const out = formatGotchas('ue-python', 'arpg-animation');
     expect(out).toMatch(/Interchange FBX/);
