@@ -53,6 +53,17 @@ describe('PipelineRail loading state', () => {
     expect(dot(container, 1).getAttribute('data-loading')).toBe('true');
   });
 
+  it('the tooltip agrees with the shimmer: a loading dot never claims "not produced"', () => {
+    // The caller's `tooltipFor` can only see the pre-fetch status, so the rail — which
+    // owns the loading knowledge — must not let it contradict the visual.
+    const { container } = render(
+      <PipelineRail {...baseProps} loading displayStatus={() => 'unproduced'} tooltipFor={() => 'status: unproduced'} />,
+    );
+    const btn = container.querySelectorAll('[role="listitem"] button')[0] as HTMLElement;
+    expect(btn.getAttribute('title')).toBe('Loading server status…');
+    expect(btn.getAttribute('aria-label')).toContain('status loading');
+  });
+
   it('loading → real transition: once loaded, no step reads as loading', () => {
     const { container } = render(
       <PipelineRail {...baseProps} loading={false} displayStatus={() => 'pending'} />,

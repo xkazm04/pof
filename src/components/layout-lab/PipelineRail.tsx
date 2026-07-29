@@ -7,6 +7,9 @@ import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 type NodeStatus = 'pass' | 'fail' | 'deferred' | 'pending' | 'unproduced';
 /** What a dot reads as when the server fetch FAILED and nothing local covers the step. */
 const UNKNOWN_TOOLTIP = 'Server status unknown — the artifact fetch failed, so this step is not necessarily unproduced';
+/** What a shimmering dot reads as: the caller's `tooltipFor` can only see the pre-fetch
+ *  status (`unproduced`/`pending`) and would contradict the rail's own loading treatment. */
+const LOADING_TOOLTIP = 'Loading server status…';
 const pad2 = (n: number) => String(n).padStart(2, '0');
 const STATUS_GLYPH = (s: NodeStatus): string =>
   s === 'pass' ? '✓' : s === 'fail' ? '!' : s === 'deferred' ? '⋯' : s === 'unproduced' ? '·' : '';
@@ -209,7 +212,7 @@ export function PipelineRail({
             {...roving.itemProps(i)}
             ref={(el) => { itemRefs.current[i] = el; }}
             onClick={() => onSelectStep(i)}
-            title={unknown ? UNKNOWN_TOOLTIP : tooltipFor(step, i)}
+            title={unknown ? UNKNOWN_TOOLTIP : isLoading ? LOADING_TOOLTIP : tooltipFor(step, i)}
             aria-label={label}
             aria-current={current ? 'step' : undefined}
             className="focus-ring-inset"

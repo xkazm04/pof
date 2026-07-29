@@ -10,8 +10,9 @@ vi.mock('next/font/google', () => {
 // component test drives a fixed, ranked candidate list deterministically.
 const coachMock = vi.fn();
 const failedMock = vi.fn<() => { catalogId: string; label: string; error: string }[]>();
+const loadingMock = vi.fn<() => boolean>();
 vi.mock('@/components/layout-lab/hooks/useGlobalCoach', () => ({
-  useGlobalCoach: () => ({ candidates: coachMock(), failedCatalogs: failedMock() }),
+  useGlobalCoach: () => ({ candidates: coachMock(), loading: loadingMock(), failedCatalogs: failedMock() }),
   GLOBAL_COACH_TOP_N: 5,
 }));
 
@@ -28,6 +29,8 @@ beforeEach(() => {
   coachMock.mockReset();
   failedMock.mockReset();
   failedMock.mockReturnValue([]);
+  loadingMock.mockReset();
+  loadingMock.mockReturnValue(false);
   useOneShotLabStore.setState({ pendingNavigation: null });
 });
 afterEach(cleanup);
@@ -106,6 +109,28 @@ describe('<GlobalCoach />', () => {
     fireEvent.click(container.querySelector('[data-testid="global-coach-toggle"]') as HTMLElement);
     fireEvent.click(container.querySelector('[data-testid="global-coach-item-1"]') as HTMLElement);
     expect(useOneShotLabStore.getState().pendingNavigation).toEqual({ catalogId: 'armor', entityId: 'e2', stepIndex: 1 });
+  });
+
+  it('reserves its row with a loading state on first paint (an empty list is ALSO the pre-fetch state)', () => {
+    coachMock.mockReturnValue([]);
+    loadingMock.mockReturnValue(true);
+    const { container } = render(<GlobalCoach t={LIGHT} />);
+
+    // The bar exists from the first paint — it does not pop in later and shove the canvas.
+    const bar = container.querySelector('[data-testid="global-coach"]') as HTMLElement;
+    expect(bar).not.toBeNull();
+    expect(bar.getAttribute('aria-busy')).toBe('true');
+    expect(container.querySelector('[data-testid="global-coach-loading"]')).not.toBeNull();
+    // …and it recommends nothing while it still knows nothing.
+    expect(container.querySelector('[data-testid="global-coach-item-0"]')).toBeNull();
+  });
+
+  it('drops the loading placeholder once the real recommendation lands', () => {
+    coachMock.mockReturnValue([cand({ entityId: 'e1', entityName: 'Sword' })]);
+    loadingMock.mockReturnValue(false);
+    const { container } = render(<GlobalCoach t={LIGHT} />);
+    expect(container.querySelector('[data-testid="global-coach-loading"]')).toBeNull();
+    expect(container.querySelector('[data-testid="global-coach-item-0-entity"]')?.textContent).toBe('Sword');
   });
 
   it('names catalogs whose status could not be read instead of staying silent (failed fetch ≠ all clear)', () => {

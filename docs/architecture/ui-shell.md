@@ -97,6 +97,16 @@ Renders a `100vh` flex column:
   `selectEntity(id)` (reset step, persist `lastEntityId`), and `navigateTo(cid, eid, step)` (jump +
   persist both). This also removes the old `focusStepIdx` "remount reads the initial focus" channel —
   a jump is now a plain state write consumed exactly once, so nothing replays stale.
+  A restored `lastEntityId` that no longer exists (or a just-cleared selection) is **reconciled in
+  STATE**, not only at render: `Baseline` falls back to `entities[0]` for display, so without this
+  the app RENDERED one entity while every state consumer (`LabSearch`'s `currentEntityId`, and
+  therefore step-hit resolution) pointed at a phantom. The reconcile is a render-phase state
+  adjustment (React-sanctioned bail-out, StrictMode-safe), and the resolved id is published as
+  `data-lab-entity` on the lab root so render-truth and state-truth stay checkable.
+- **First paint tells the truth**: `GlobalCoach` renders from the FIRST paint. An empty candidate
+  list is also the pre-fetch state, so returning `null` used to pop the bar in once data landed and
+  shove the canvas down; `useGlobalCoach` now reports `loading` (any catalog neither loaded nor
+  errored) and the bar reserves its row with the shared `ui/Skeleton` placeholder (`aria-busy`).
 - **Body**: when `view === 'canon'` renders `<CanonView t={theme} />`; when `view === 'matrix'`
   renders `<CatalogMatrix … catalogId={catalogId} onSelectCatalog={selectCatalog} onOpenStep={openFromMatrix} />`
   (the matrix dropdown is **controlled** — it writes through `onSelectCatalog` to the single-source

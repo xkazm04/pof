@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { useReducedMotion } from 'framer-motion';
 import type { LabTheme } from './theme';
+import { Skeleton } from './ui/Skeleton';
 import { useGlobalCoach, GLOBAL_COACH_TOP_N } from './hooks/useGlobalCoach';
 import { COACH_HINT, type CoachCandidate, type CoachPriority } from './globalCoachModel';
 import { useOneShotLabStore } from '@/stores/oneShotLabStore';
@@ -35,14 +37,18 @@ function priorityColor(p: CoachPriority, t: LabTheme): string {
  * Distinct from the passive `/status` map: this is *guidance with a jump action*.
  */
 export function GlobalCoach({ t }: Props) {
-  const { candidates, failedCatalogs } = useGlobalCoach();
+  const { candidates, loading, failedCatalogs } = useGlobalCoach();
+  const reduce = useReducedMotion();
   const [expanded, setExpanded] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const setPendingNavigation = useOneShotLabStore((s) => s.setPendingNavigation);
 
-  // Nothing actionable AND nothing broken → stay out of the way. A failed fetch alone is
-  // still worth the row: silence would read as "the project is clear", which it is not.
-  if (candidates.length === 0 && failedCatalogs.length === 0) return null;
+  // Nothing actionable AND nothing broken AND nothing left to read → stay out of the way.
+  // A failed fetch alone is still worth the row: silence would read as "the project is
+  // clear", which it is not. And while artifacts are still loading the row STAYS (below,
+  // as a placeholder) — an empty candidate list is also the pre-fetch state, so returning
+  // null here would pop the bar in later and shove the whole canvas down.
+  if (candidates.length === 0 && failedCatalogs.length === 0 && !loading) return null;
 
   // Carry the flagged step index so Baseline opens ON that step, not step 0.
   const jump = (c: CoachCandidate) => setPendingNavigation({ catalogId: c.catalogId, entityId: c.entityId, stepIndex: c.stepIndex });
@@ -58,6 +64,7 @@ export function GlobalCoach({ t }: Props) {
     <section
       data-testid="global-coach"
       aria-label="Project next steps"
+      aria-busy={loading || undefined}
       className={t.fontBody}
       style={{
         flex: '0 0 auto',
@@ -78,6 +85,13 @@ export function GlobalCoach({ t }: Props) {
         </span>
         {top ? (
           <CoachRow t={t} c={top} onJump={jump} testid="global-coach-item-0" compact />
+        ) : loading ? (
+          // Same row, same height — the bar is reserved from first paint, so nothing
+          // shifts when the real recommendation arrives.
+          <span data-testid="global-coach-loading" style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 'var(--lab-s2)' }}>
+            <Skeleton reduce={!!reduce} width={220} height={14} />
+            <span className="sr-only">Reading project status…</span>
+          </span>
         ) : (
           <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--lab-fs-sm)', color: 'var(--lab-muted)' }}>
             Nothing to advise — no catalog status could be read.

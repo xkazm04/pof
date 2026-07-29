@@ -53,6 +53,16 @@ export function LayoutLab() {
     if (prefs.lastEntityId) setEntityId(prefs.lastEntityId);
   }
   const detail = useLabDetail(catalogId);
+  // Reconcile the selected entity in STATE, not just at render. Baseline falls back to
+  // `entities[0]` when `entityId` is missing or names an entity that no longer exists —
+  // but the state stayed wrong, so the app RENDERED one entity while every state consumer
+  // (LabSearch's `currentEntityId`, step-hit resolution) pointed at a phantom. Adjusting
+  // state during render is the React-sanctioned bail-out (no effect, StrictMode-safe);
+  // the next render finds the id and the branch is skipped.
+  const labEntities = detail?.entities;
+  if (navAdopted && labEntities && labEntities.length > 0 && !labEntities.some((e) => e.id === entityId)) {
+    setEntityId(labEntities[0].id);
+  }
   // Lab-wide search (⌘/Ctrl+K or "/"), driving the SAME lifted nav callbacks below.
   const [searchOpen, setSearchOpen] = useLabSearchShortcut();
   const theme = LAB_THEMES.find((t) => t.id === themeId) ?? LIGHT;
@@ -117,10 +127,14 @@ export function LayoutLab() {
     window.dispatchEvent(new PopStateEvent('popstate'));
   }, []);
 
+  // `data-lab-entity` publishes the entity the lab's STATE points at (the same id
+  // LabSearch resolves step hits against), so "what is rendered" and "what state says"
+  // stay checkable rather than silently diverging.
   return (
     <div
       data-testid="harness-lab-ready"
       data-lab-root=""
+      data-lab-entity={entityId ?? ''}
       data-theme={themeAttr(themeId)}
       className={labFontVars}
       style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--lab-bg)' }}

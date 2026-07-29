@@ -121,6 +121,30 @@ describe('LayoutLab navigation state truth', { timeout: 20000 }, () => {
     expect(prefs.lastEntityId).toBe(target.id);
   });
 
+  it('reconciles a restored entity id that no longer exists — no consumer sees a phantom', () => {
+    const { result } = renderHook(() => useLabDetail('items'));
+    const real = result.current!.entities[0];
+    // A persisted last-location pointing at an entity that has since been removed.
+    localStorage.setItem(PREFS_KEY, JSON.stringify({ themeId: 'light', lastCatalogId: 'items', lastEntityId: 'ghost-entity-gone' }));
+
+    const { container } = render(<LayoutLab />);
+    // Render falls back to the first real entity…
+    expect(screen.getByRole('heading', { level: 1, name: real.name })).toBeTruthy();
+    // …and so does STATE — the phantom id must not survive anywhere.
+    expect(container.querySelector('[data-lab-root]')?.getAttribute('data-lab-entity')).toBe(real.id);
+
+    // …and STATE converged to it too: a step search resolves its hit against the entity
+    // that is actually on screen (the phantom id would have resolved elsewhere).
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true });
+    const input = screen.getByTestId('lab-search-input');
+    fireEvent.change(input, { target: { value: 'economy' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(readPrefs().lastEntityId).toBe(real.id);
+    expect(screen.getByRole('heading', { level: 1, name: real.name })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 2, name: 'Economy' })).toBeTruthy();
+  });
+
   it('persists last-location on a matrix open the same way a tree click does', () => {
     const { result } = renderHook(() => useLabDetail('items'));
     const firstEntity = result.current!.entities[0];

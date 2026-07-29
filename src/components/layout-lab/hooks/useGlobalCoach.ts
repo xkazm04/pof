@@ -32,6 +32,12 @@ export interface GlobalCoachResult {
   /** The full ranked candidate list (the top-N cut is the component's decision). */
   candidates: CoachCandidate[];
   /**
+   * At least one catalog's artifacts are still unread (never fetched, or in flight).
+   * TRUE on first paint — so the coach can reserve its row and show a loading state
+   * instead of popping in later and shoving the canvas down.
+   */
+  loading: boolean;
+  /**
    * Catalogs whose artifact fetch FAILED. They contribute NO candidates: with no server
    * truth every step reads `unproduced`, so coaching "start this" could send the operator
    * to re-produce over work that exists. The coach names the gap instead of hiding it.
@@ -59,6 +65,13 @@ export function useGlobalCoach(topN = Number.POSITIVE_INFINITY): GlobalCoachResu
     void version; // the "cache changed" signal — reading it here makes the dep honest (getCachedArtifacts reads external state keyed on it)
     const inputs: CoachCatalogInput[] = [];
     const failedCatalogs: GlobalCoachResult['failedCatalogs'] = [];
+    // Unsettled = neither loaded nor errored: the pre-fetch state on first paint AND
+    // every in-flight fetch. Counted over ALL sections (not just those with entities)
+    // so an unhydrated catalog store still reads as "still loading", never as "clear".
+    const loading = CATALOG_SECTIONS.some((s) => {
+      const e = getCachedArtifacts(s.catalogId);
+      return !e.loaded && !e.error;
+    });
     for (const section of CATALOG_SECTIONS) {
       const entMap = entitiesByCatalog[section.catalogId];
       const entities = entMap
@@ -89,10 +102,11 @@ export function useGlobalCoach(topN = Number.POSITIVE_INFINITY): GlobalCoachResu
         localByEntity,
       });
     }
-    // Union of two round-10 directions: the coach reads judge verdicts through the ONE
-    // acceptance derivation (`verdicts`), AND reports catalogs whose fetch FAILED so a
-    // dead server is never coached as "nothing has run here".
-    return { candidates: buildGlobalCoach(inputs, topN, verdicts), failedCatalogs };
+    // Union of three round-10 directions: the coach reads judge verdicts through the ONE
+    // acceptance derivation (`verdicts`); reports catalogs whose fetch FAILED so a dead
+    // server is never coached as "nothing has run here"; and reports `loading` so the bar
+    // reserves its row instead of popping in and shoving the canvas down.
+    return { candidates: buildGlobalCoach(inputs, topN, verdicts), loading, failedCatalogs };
     // `version` is the "cache changed" signal — recompute as each catalog's fetch resolves.
   }, [entitiesByCatalog, localByEntity, version, topN, verdicts]);
 }
