@@ -100,8 +100,18 @@ export function unverifiedReason(v: JudgeVerdict): string {
     : 'it records no content binding';
 }
 
+/**
+ * The provenances at which the acceptance layer still lets a verdict SPEAK for the content on
+ * record — a confirmed binding, or one nobody can confirm OR refute (which still condemns,
+ * because a recorded fail is evidence). Exported because any surface that reports "current
+ * quality" must count exactly the verdicts acceptance believes: the Evaluator's Verdicts tab
+ * used to average every stored row, including superseded-rubric and stale-bound ones, and so
+ * reported a fail count the acceptance layer itself did not hold.
+ */
+export const CONDEMNING_PROVENANCE: ReadonlySet<VerdictProvenance> = new Set<VerdictProvenance>(['current', 'unknown']);
+
 /** Does a verdict at this provenance condemn a shape-pass? */
-const CONDEMNS: ReadonlySet<VerdictProvenance> = new Set<VerdictProvenance>(['current', 'unknown']);
+const CONDEMNS = CONDEMNING_PROVENANCE;
 
 function attribute(v: JudgeVerdict, provenance: VerdictProvenance, note: string): JudgeAttribution {
   return {

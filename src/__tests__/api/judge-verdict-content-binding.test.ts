@@ -29,7 +29,8 @@ vi.hoisted(() => {
 });
 import '@/lib/catalog/pipelines/registry.generated'; // side-effect: register all pipelines
 import { POST as postArtifact } from '@/app/api/pipeline-artifacts/route';
-import { POST as postVerdict } from '@/app/api/judge-verdicts/route';
+import { POST as postVerdict, GET as getVerdicts } from '@/app/api/judge-verdicts/route';
+import type { StandingVerdict } from '@/lib/judge/verdictStanding';
 import { listArtifacts } from '@/lib/pipeline-artifacts-db';
 import { listVerdicts } from '@/lib/status/judge-verdicts-db';
 import { submitStepArtifact, listCatalogSummaries } from '@/lib/catalog/headless';
@@ -77,6 +78,14 @@ async function judgeFail(entityId: string) {
     model: 'opus-judge', rubricVersion: RUBRIC_VERSION,
   })));
   return listVerdicts(CATALOG).filter((v) => v.entityId === entityId && v.step === STEP);
+}
+
+/** Read the catalog's verdicts through the REAL GET route (which attaches server standing). */
+async function postVerdictsGet(): Promise<StandingVerdict[]> {
+  const res = await getVerdicts(new NextRequest(`http://localhost/api/judge-verdicts?catalogId=${CATALOG}`));
+  const json = (await res.json()) as { success: boolean; data: StandingVerdict[] };
+  expect(json.success).toBe(true);
+  return json.data;
 }
 
 /** The lab read path, given exactly what the browser holds locally. */
@@ -144,6 +153,16 @@ describe('judge verdict content binding — real write path vs real lab read pat
     });
     expect(shown.judge?.provenance).toBe('current');
     expect(shown.status).toBe('fail');
+  });
+
+  it('GET enriches each row with the standing the server computed', async () => {
+    // Only the server holds the artifacts the hash is compared against, so a reporting surface
+    // (the Evaluator Verdicts tab) cannot derive this — and guessing would restate a quality
+    // number acceptance does not hold.
+    const res = await postVerdictsGet();
+    const rows = res.filter((r) => r.entityId === 'probe-browser' && r.step === STEP);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].provenance).toBe('current');
   });
 
   it('browsing gallery candidates is still not a content change', async () => {
