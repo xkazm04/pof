@@ -6,8 +6,8 @@ import { MicroLabel } from '@/components/ui/MicroLabel';
 import { StatusTag } from '@/components/ui/StatusTag';
 import { ChartPanel } from '@/components/layout-lab/steps/shared/ChartPanel';
 import { qualityColor, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR } from '@/lib/chart-colors';
-import { buildVerdictTrend, trendPointLabel, trendSummary } from '@/lib/judge/verdictTrend';
-import { VERDICT_HISTORY_LIMIT, type JudgeVerdict } from '@/lib/status/judge-verdicts-db';
+import { buildVerdictTrend, trendPointLabel, trendSummary, VERDICT_HISTORY_LIMIT } from '@/lib/judge/verdictTrend';
+import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
 import type { LabTheme } from '@/components/layout-lab/theme';
 
 /**

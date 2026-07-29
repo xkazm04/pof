@@ -12,6 +12,18 @@ import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
  * `src/lib/catalog/acceptance/` imports this, so it provably cannot move a verdict.
  */
 
+/**
+ * How many judgments are kept per (catalog, entity, step, judge class) before the oldest are
+ * pruned.
+ *
+ * It lives HERE, not in `judge-verdicts-db`, because the trend UI displays the bound and that
+ * file opens better-sqlite3 at import time — a client component importing it as a VALUE drags a
+ * native Node module into the browser bundle (`Can't resolve 'fs'`), which neither `tsc` nor
+ * vitest catches. This module is pure and client-safe; the DB module imports the constant from
+ * here for its prune, so there is still exactly one definition.
+ */
+export const VERDICT_HISTORY_LIMIT = 20;
+
 /** One judgment on the trend line. */
 export interface VerdictTrendPoint {
   score: number;

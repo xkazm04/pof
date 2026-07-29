@@ -1,3 +1,4 @@
+import { VERDICT_HISTORY_LIMIT } from '@/lib/judge/verdictTrend';
 import { getDb } from '@/lib/db';
 
 /**
@@ -54,7 +55,9 @@ export interface JudgeVerdict {
  * same transaction as the write, so the table can never exceed it. The CURRENT verdict is never
  * pruned — it lives in `judge_verdicts`, which this cap does not touch.
  */
-export const VERDICT_HISTORY_LIMIT = 20;
+// Defined in the PURE trend module so a client component can display the bound without
+// importing this file (which opens better-sqlite3 at import time). Re-exported for callers.
+export { VERDICT_HISTORY_LIMIT };
 
 let tableEnsured = false;
 function ensureTable() {
