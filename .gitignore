@@ -85,3 +85,8 @@ tools/pof-mcp/growth-baseline.json
 
 # Bleve docs search index (regenerated, not source)
 docs/index.bleve/
+
+# Transient skill → Personas Memory Ledger handoff. Context-tracked skills
+# append progress nodes here; the app ingests the file and deletes it. The
+# .personas/ dir itself IS committed (it marks the repo as Personas-managed).
+.personas/memory-outbox.jsonl

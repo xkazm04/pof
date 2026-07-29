@@ -1,5 +1,8 @@
 ---
 name: perfect
+contexts: tracked
+memory: vault
+category: Development
 description: Session-after-session product perfection loop for PoF. The strongest available model (Fable) directs — it walks context-map.json context-by-context, proposes 5 challenged, high-value directions per context (features, design elevations, significant optimizations), gates them with the user until 10 are accepted, then orchestrates one Opus builder subagent per context in isolated worktrees while making every review/merge decision itself. All state lives in the Obsidian pof vault so any future session resumes the loop exactly where the last one stopped. Invoke with `/perfect [init|propose|build|status|reflect] [context-name]`.
 ---
 
@@ -78,7 +81,8 @@ Every invocation starts the same way; the vault decides which phase runs.
 1. Read `Perfect.md` (+ last session's `next:` pointer). If missing → run **init** (below).
 2. Read `context-map.json`; diff against `contexts/*` — new contexts get notes + a queue slot, removed ones get archived (`status: retired` in frontmatter).
 3. Repo rituals: `git status` — this repo hosts **parallel sessions**; note foreign WIP files and never sweep them into your commits. Scan MEMORY.md signals that veto directions (e.g. shipped programs, "honest ceiling" verdicts, retired subsystems — don't re-suggest what a prior campaign settled).
-4. Announce the resumption point in one sentence, then go where the state machine points: pool < 10 → **Propose**; pool ≥ 10 (or user said `build`) → **Build**.
+4. **Coverage check**: if `.personas/` exists, note which contexts have gone stale in the ledger (no fresh node in 30d — see *App context coverage*). Stale-and-high-opportunity outranks stale-and-low; a context with fresh coverage is a weaker cursor candidate than one the loop has never anchored. This is a queue *tiebreaker*, never an override of the user's steer.
+5. Announce the resumption point in one sentence, then go where the state machine points: pool < 10 → **Propose**; pool ≥ 10 (or user said `build`) → **Build**.
 
 ### Init (first run only)
 1. Scaffold the vault tree + `config.md` (record: gates = `npm run validate` [typecheck + lint + vitest], plus `npm run test:e2e` only when catalog-pipeline step components/registries are touched; wave size = 3; cooldown = 2 rounds).
@@ -122,6 +126,7 @@ Loop while `pool < 10` and the user hasn't said stop:
 ### Phase W — Wrap (every session, even interrupted ones)
 1. Update every touched vault note; write the session note with the **`next:` pointer** (e.g. `next: propose — cursor at catalog-browser-ui, pool 7/10` or `next: build wave 2 — harness-autonomy + simulation-tools remain`).
 2. `Perfect.md` headline refreshed: pool count, queue cursor, shipped-total, last-session link.
+2b. **Flush the memory outbox** — see *App context coverage* below. Do this for every context this session touched, including in a session that only proposed.
 3. **Reflect on the skill itself**: 2-4 bullets in `config.md → ## Skill improvement log` — what dragged, what the user overrode, what the next round should change. This log is the input for the between-rounds skill revision.
 
 ## Direction quality bar (what earns a slot in the 5)
@@ -189,6 +194,32 @@ per direction → status (done|blocked|decision-needed), commits, files, verific
 - **`/perfect build`** — build now with the current pool even if < 10.
 - **`/perfect status`** — read-only: queue, cursor, pool, in-flight builds, shipped ledger, last session. No agents.
 - **`/perfect reflect`** — read `config.md → Skill improvement log` + last sessions and propose concrete edits to THIS skill file.
+
+## App context coverage (the Personas ledger — the second memory)
+
+The Obsidian vault is this loop's *working* memory; the **Personas Memory Ledger** is its *measured* memory. This skill declares `contexts: tracked`, so the Personas app renders a per-context coverage bar for `/perfect` in Skills Management — but that bar reads ONLY from skill-attributed ledger nodes. A vault note the app never sees counts for nothing. **Writing the vault and not the outbox is the one failure mode that makes a productive session look like a dead one.**
+
+Fleet/CLI sessions have no DB access, so the ledger is fed by an append-only JSONL outbox at the repo root. Before finishing, append one line per context you meaningfully worked on (create `.personas/` if absent; **append, never rewrite** — parallel sessions share this file):
+
+```
+<repo>/.personas/memory-outbox.jsonl
+```
+
+```json
+{"type":"node","kind":"progress","title":"<=200 chars: what you did in this context","body":"optional detail","context":"<exact context-map.json name>","skill":"perfect"}
+```
+
+- **Always set both `"skill":"perfect"` and `"context":"<name>"`** — together they drive the coverage %. A node missing `context` is *unanchored*: it lands in the ledger but counts toward no context, so the bar does not move. A node missing `skill` is attributed to anonymous `skill:outbox` and is excluded from per-skill coverage entirely.
+- `context` must match a `dev_contexts.name` **exactly** (they mirror `context-map.json` names — lowercase kebab, e.g. `pipeline-acceptance-engine`). An unmatched name silently degrades to unanchored.
+- `kind`: `progress` for work done, `decision` for a direction accepted/rejected and why, `gotcha` for a trap the next session must not re-hit, `map` for observed structure drift (the app reacts to `map` nodes with a delta context scan). Unknown kinds degrade to `fact`.
+- Coverage is a **30-day rolling window** — a context goes stale and the bar drops if the loop never returns. That decay is the instrument working, not a bug: it is the loop's own "which contexts am I neglecting" signal, and it should feed the Phase-P queue score.
+- Re-emitting an identical node refreshes its freshness instead of duplicating (content-hash dedupe), so a re-touched context is safe to re-emit.
+- The app ingests and deletes the file; a session that is never app-dispatched simply leaves it for the next ingest. **Skip silently when not Personas-managed** (no `.personas/` and no app dispatch).
+
+**When to emit** (not just at wrap — write incrementally, same reason the vault is written incrementally):
+- **Phase P**, after each context's gate resolves → one `progress` node (what the scout found + what was proposed), plus a `decision` node per accepted or rejected direction carrying the user's reason.
+- **Phase B**, after each merge → one `progress` node naming the direction and commit SHA; a `gotcha` node for any trap the build hit (a builder death, a registry clobber, a convention the diff violated).
+- **Phase W** → backfill anything the phases missed, then verify the file parses (one JSON object per line, no trailing commas, no pretty-printing — a malformed line is counted as `skipped` and silently lost).
 
 ## Guardrails
 
