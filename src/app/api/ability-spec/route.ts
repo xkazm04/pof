@@ -1,8 +1,13 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { getSpec, upsertSpec } from '@/lib/ability/ability-spec-db';
-import type { EnrichedAbilitySpec, SpecProvenance } from '@/lib/ability/spec';
-import type { EditorEffect, TagRule } from '@/lib/gas-codegen';
+import type { AttrRelationship, EnrichedAbilitySpec, SpecProvenance } from '@/lib/ability/spec';
+import type { EditorAttribute, EditorEffect, TagRule, GASLoadoutSlot } from '@/lib/gas-codegen';
+
+/** Optional editor slice: accept an array, drop anything else (additive). */
+function optionalSlice<T>(value: unknown): T[] | undefined {
+  return Array.isArray(value) ? (value as T[]) : undefined;
+}
 
 /** GET /api/ability-spec?catalogId=spellbook&entityId=off-fire-01 → EnrichedAbilitySpec | null */
 export async function GET(req: NextRequest) {
@@ -16,7 +21,10 @@ export async function GET(req: NextRequest) {
   }
 }
 
-/** POST /api/ability-spec { catalogId, entityId, effects, tagRules } → upsert */
+/**
+ * POST /api/ability-spec → upsert
+ * { catalogId, entityId, effects, tagRules, attributes?, relationships?, loadout?, provenance? }
+ */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -31,6 +39,10 @@ export async function POST(req: NextRequest) {
       entityId,
       effects: body.effects as EditorEffect[],
       tagRules: body.tagRules as TagRule[],
+      // The three additive editor slices (AttributeSet.h / GameplayTags.h inputs).
+      attributes: optionalSlice<EditorAttribute>(body.attributes),
+      relationships: optionalSlice<AttrRelationship>(body.relationships),
+      loadout: optionalSlice<GASLoadoutSlot>(body.loadout),
       // Optional adoption provenance (raw forged C++ + prompt). Additive.
       provenance: body.provenance && typeof body.provenance === 'object'
         ? (body.provenance as SpecProvenance)

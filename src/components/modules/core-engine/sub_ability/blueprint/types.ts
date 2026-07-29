@@ -6,13 +6,10 @@
  * re-exported from @/lib/gas-codegen via ./data.ts.
  */
 
-export interface AttrRelationship {
-  id: string;
-  sourceId: string;
-  targetId: string;
-  type: 'scale' | 'clamp' | 'regen';
-  formula: string;
-}
+// AttrRelationship is a PERSISTED spec slice — its one definition lives with the
+// spec (`@/lib/ability/spec`) and is re-exported here for the editor components.
+export type { AttrRelationship } from '@/lib/ability/spec';
+import type { AttrRelationship } from '@/lib/ability/spec';
 
 export interface EditorState {
   attributes: import('@/lib/gas-codegen').EditorAttribute[];

@@ -1,6 +1,8 @@
 import { getDb } from '@/lib/db';
-import type { CodegenReport, EnrichedAbilitySpec, SpecProvenance } from '@/lib/ability/spec';
-import type { EditorEffect, TagRule } from '@/lib/gas-codegen';
+import type {
+  AttrRelationship, CodegenReport, EnrichedAbilitySpec, SpecProvenance,
+} from '@/lib/ability/spec';
+import type { EditorAttribute, EditorEffect, TagRule, GASLoadoutSlot } from '@/lib/gas-codegen';
 
 // DDL is idempotent (IF NOT EXISTS) but parsing/planning it on every read is
 // pure overhead. Bootstrap runs at most once per process; subsequent calls are
@@ -37,7 +39,23 @@ function ensureTable() {
     db.exec('ALTER TABLE ability_specs ADD COLUMN codegen TEXT');
   }
 
+  // Additive migration: the remaining three editor slices (attributes /
+  // relationship web / loadout). They are the AttributeSet.h + GameplayTags.h
+  // codegen inputs and used to vanish on entity switch or reload. Nullable so
+  // legacy rows keep reading back as "not authored".
+  for (const col of ['attributes', 'relationships', 'loadout']) {
+    if (!cols.some((c) => c.name === col)) {
+      db.exec(`ALTER TABLE ability_specs ADD COLUMN ${col} TEXT`);
+    }
+  }
+
   abilitySpecBootstrapped = true;
+}
+
+/** JSON column → array, or undefined when the column was never written. */
+function parseSlice<T>(raw: unknown): T[] | undefined {
+  if (typeof raw !== 'string' || raw === '') return undefined;
+  return JSON.parse(raw) as T[];
 }
 
 /** Column row → EnrichedAbilitySpec. Pure (exported for unit test). */
@@ -49,6 +67,9 @@ export function rowToSpec(row: Record<string, unknown>): EnrichedAbilitySpec {
     entityId: row.entity_id as string,
     effects: JSON.parse((row.effects as string) || '[]') as EditorEffect[],
     tagRules: JSON.parse((row.tag_rules as string) || '[]') as TagRule[],
+    attributes: parseSlice<EditorAttribute>(row.attributes),
+    relationships: parseSlice<AttrRelationship>(row.relationships),
+    loadout: parseSlice<GASLoadoutSlot>(row.loadout),
     updatedAt: (row.updated_at as string | null) ?? undefined,
     provenance: provRaw ? (JSON.parse(provRaw) as SpecProvenance) : undefined,
     codegen: codegenRaw ? (JSON.parse(codegenRaw) as CodegenReport) : undefined,
@@ -63,18 +84,32 @@ export function getSpec(catalogId: string, entityId: string): EnrichedAbilitySpe
   return row ? rowToSpec(row) : null;
 }
 
+/**
+ * Write all five editor slices + adoption provenance.
+ *
+ * Deliberately does NOT touch the `codegen` column: that audit trail is owned
+ * solely by the generate-gas-effects callback, so a Save/Adopt can never clobber
+ * it. Keep that property when extending this statement.
+ */
 export function upsertSpec(rec: EnrichedAbilitySpec): EnrichedAbilitySpec {
   ensureTable();
   getDb().prepare(`
-    INSERT INTO ability_specs (catalog_id, entity_id, effects, tag_rules, provenance, updated_at)
-    VALUES (@catalog_id, @entity_id, @effects, @tag_rules, @provenance, datetime('now'))
+    INSERT INTO ability_specs
+      (catalog_id, entity_id, effects, tag_rules, attributes, relationships, loadout, provenance, updated_at)
+    VALUES
+      (@catalog_id, @entity_id, @effects, @tag_rules, @attributes, @relationships, @loadout, @provenance, datetime('now'))
     ON CONFLICT(catalog_id, entity_id) DO UPDATE SET
-      effects=@effects, tag_rules=@tag_rules, provenance=@provenance, updated_at=datetime('now')
+      effects=@effects, tag_rules=@tag_rules,
+      attributes=@attributes, relationships=@relationships, loadout=@loadout,
+      provenance=@provenance, updated_at=datetime('now')
   `).run({
     catalog_id: rec.catalogId,
     entity_id: rec.entityId,
     effects: JSON.stringify(rec.effects),
     tag_rules: JSON.stringify(rec.tagRules),
+    attributes: rec.attributes ? JSON.stringify(rec.attributes) : null,
+    relationships: rec.relationships ? JSON.stringify(rec.relationships) : null,
+    loadout: rec.loadout ? JSON.stringify(rec.loadout) : null,
     provenance: rec.provenance ? JSON.stringify(rec.provenance) : null,
   });
   return getSpec(rec.catalogId, rec.entityId)!;

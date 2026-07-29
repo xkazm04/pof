@@ -224,6 +224,15 @@ The report persists as the spec's `codegen` provenance (`ability_specs.codegen`)
 and drives the `dispatched → confirmed/failed` line in the Forge adopt bar and
 the GAS Blueprint editor's spec bar.
 
+An `ability_specs` row carries **all five** GAS Blueprint editor slices —
+`effects` / `tag_rules` (required) plus the additive, nullable `attributes` /
+`relationships` / `loadout` columns that feed `AttributeSet.h` and
+`GameplayTags.h` codegen — so an entity switch or reload restores the whole
+editor, not two of its five panels. Legacy rows read those three back as
+`undefined` and the editor keeps its own seed. `upsertSpec` writes every slice
+plus `provenance` but deliberately **never** the `codegen` column: that audit
+trail is owned solely by the codegen callback, so a Save/Adopt cannot clobber it.
+
 Tasks whose `prompt` is empty (e.g. `featureReview`, `moduleScan`) rely entirely on
 `buildTaskPrompt` to assemble all content from the extended fields.
 

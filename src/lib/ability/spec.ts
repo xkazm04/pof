@@ -1,7 +1,21 @@
-import type { EditorEffect, TagRule } from '@/lib/gas-codegen';
+import type { EditorAttribute, EditorEffect, TagRule, GASLoadoutSlot } from '@/lib/gas-codegen';
 import { STATUS_NEUTRAL } from '@/lib/chart-colors';
 
-export type { EditorEffect, TagRule };
+export type { EditorAttribute, EditorEffect, TagRule, GASLoadoutSlot };
+
+/**
+ * Directed dependency between two attributes (scaling / clamping / regen) as
+ * authored in the blueprint editor's Attribute Relationship Web. Declared here
+ * (not in the component tree) because it is a persisted spec slice — the
+ * editor's `blueprint/types.ts` re-exports this one definition.
+ */
+export interface AttrRelationship {
+  id: string;
+  sourceId: string;
+  targetId: string;
+  type: 'scale' | 'clamp' | 'regen';
+  formula: string;
+}
 
 /**
  * Provenance of an adopted forge output. Additive + optional — records where a
@@ -48,12 +62,27 @@ export interface CodegenReport {
   reportedAt: string;
 }
 
-/** Per-entity enriched GAS authoring spec — drives the rich editors (B2) + C++ codegen (B3). */
+/**
+ * Per-entity enriched GAS authoring spec — drives the rich editors (B2) + C++
+ * codegen (B3).
+ *
+ * The spec carries ALL FIVE editor slices: `effects`/`tagRules` (required, the
+ * original two) plus `attributes`/`relationships`/`loadout` (optional, additive
+ * — the AttributeSet.h + GameplayTags.h codegen inputs). The three optional
+ * slices are `undefined` on legacy rows written before they were persisted;
+ * consumers fall back to their own seed in that case.
+ */
 export interface EnrichedAbilitySpec {
   catalogId: string;
   entityId: string;
   effects: EditorEffect[];
   tagRules: TagRule[];
+  /** Attribute definitions feeding AttributeSet.h codegen (additive, optional). */
+  attributes?: EditorAttribute[];
+  /** Attribute dependency web — scale/clamp/regen edges (additive, optional). */
+  relationships?: AttrRelationship[];
+  /** Hotbar loadout slots feeding GameplayTags.h codegen (additive, optional). */
+  loadout?: GASLoadoutSlot[];
   updatedAt?: string;
   /** Optional adoption provenance (present when adopted from the forge). */
   provenance?: SpecProvenance;

@@ -11,7 +11,7 @@ import { ACCENT_CYAN, ACCENT_VIOLET, ACCENT_EMERALD, STATUS_SUCCESS, STATUS_WARN
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import type { EditorAttribute, EditorEffect, TagRule, GASLoadoutSlot } from '@/lib/gas-codegen';
-import type { AttrRelationship } from './types';
+import type { AttrRelationship, EditorState } from './types';
 import type { EditorPanel } from './data';
 import { ACCENT, SEED_ATTRIBUTES, SEED_RELATIONSHIPS, SEED_EFFECTS, SEED_TAG_RULES, SEED_LOADOUT, PANEL_BREADCRUMBS } from './data';
 import { generateAttributeSetHeader, generateTagsHeader, generateEffectsCode } from './codegen';
@@ -53,12 +53,21 @@ export function GASBlueprintEditor({ moduleId = 'arpg-gas' }: { moduleId?: SubMo
 
   const setActivePanel = useCallback((panel: EditorPanel) => { setActivePanelRaw(panel); setBreadcrumbDetail(null); }, []);
 
-  // Bind the editor's effects/tagRules to a per-entity EnrichedAbilitySpec:
-  // load/seed on entity open, Save to persist, Draft/Generate to dispatch CLI.
-  const hydrateSpec = useCallback((e: EditorEffect[], t: TagRule[]) => {
-    setEffects(e); setTagRules(t);
+  // Bind ALL FIVE editor slices to a per-entity EnrichedAbilitySpec: load/seed
+  // on entity open, Save to persist, Draft/Generate to dispatch CLI. Slices the
+  // persisted spec does not carry (legacy rows) keep their current value.
+  const hydrateSpec = useCallback((slices: Partial<EditorState>) => {
+    if (slices.attributes) setAttributes(slices.attributes);
+    if (slices.relationships) setRelationships(slices.relationships);
+    if (slices.effects) setEffects(slices.effects);
+    if (slices.tagRules) setTagRules(slices.tagRules);
+    if (slices.loadout) setLoadout(slices.loadout);
   }, []);
-  const specBinding = useAbilitySpecBinding({ moduleId, effects, tagRules, onHydrate: hydrateSpec });
+  const editorState = useMemo<EditorState>(
+    () => ({ attributes, relationships, effects, tagRules, loadout }),
+    [attributes, relationships, effects, tagRules, loadout],
+  );
+  const specBinding = useAbilitySpecBinding({ moduleId, state: editorState, onHydrate: hydrateSpec });
   const breadcrumbs = useMemo(() => {
     const crumbs = [...PANEL_BREADCRUMBS[activePanel]];
     if (breadcrumbDetail) crumbs.push(breadcrumbDetail);

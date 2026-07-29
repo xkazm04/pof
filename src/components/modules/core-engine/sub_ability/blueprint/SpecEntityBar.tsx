@@ -65,7 +65,9 @@ export function SpecEntityBar({ binding }: Props) {
           </button>
           <button
             onClick={() => void save()}
-            disabled={saveState === 'saving'}
+            // Guarded during hydration: the editor still holds the previous
+            // entity's slices until the fetch lands.
+            disabled={saveState === 'saving' || hydrating}
             className={btnBase}
             style={{ backgroundColor: withOpacity(ACCENT, OPACITY_10), color: ACCENT, border: `1px solid ${withOpacity(ACCENT, OPACITY_20)}` }}
             title="Persist the current effects + tag rules to this ability's spec"
