@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { StepFrame, type StepPanel } from './StepFrame';
 import { CliProduce } from './shared/CliProduce';
 import { CandidateGallery } from './shared/CandidateGallery';
@@ -31,6 +31,9 @@ import { useCatalogStore } from '@/stores/catalogStore';
 import { linkTargetsExist, readLinks } from '@/lib/catalog/acceptance/linkCheckers';
 import { resolveTableView } from '@/lib/catalog/tableView';
 import { collectStepEvidence, evidenceBlock } from './shared/stepEvidence';
+import { StepLibraryPicker } from './shared/StepLibraryPicker';
+import { libraryBlock, libraryAttachmentLines, addReference, removeReference } from './shared/libraryReference';
+import type { LibraryAsset } from '@/types/asset-library';
 import type { AcceptanceResult, CheckerContext } from '@/lib/catalog/acceptance/types';
 import type { LabTheme } from '../theme';
 import type { LabEntity } from '../useLabCatalogData';
@@ -266,6 +269,11 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
   const links = readLinks(data);
   const linkRes = links.length ? linkTargetsExist(links, (c, e) => !!entitiesByCatalog[c]?.[e]) : null;
 
+  // Library assets the operator has referenced for the NEXT produce. Deliberately session
+  // state, not artifact data: a reference is a produce INPUT, and persisting it would make
+  // it look like something the step produced (and could drift into acceptance).
+  const [referenced, setReferenced] = useState<LibraryAsset[]>([]);
+
   const buildPrompt = (dir: string) => {
     // Canon scope: a content-invariant step (a wrong NUMBER fails it) gets the FULL in-scope
     // canon so the threshold it will be graded by is visible; shape-only steps keep their
@@ -284,7 +292,10 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
     // Empty (and absent from the prompt) whenever nothing real exists to point at — a
     // deterministic swatch is never cited as if it were a produced asset.
     const evidence = evidenceBlock(collectStepEvidence(data));
-    return [pack, canon, contract, evidence, `Produce ${spec.label} for ${entity.name}. ${dir}`]
+    // Assets the project ALREADY holds, picked from its own library — so the step reuses
+    // what exists (with its license carried through) instead of describing assets in prose.
+    const library = libraryBlock(referenced);
+    return [pack, canon, contract, evidence, library, `Produce ${spec.label} for ${entity.name}. ${dir}`]
       .filter(Boolean).join('\n\n');
   };
 
@@ -347,7 +358,15 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
     <CliProduce t={t} label={`Produce ${spec.label}`} rows={3}
       defaultDirection={spec.defaultDirection} note={spec.produceNote}
       liveEligible={liveEligible}
-      attachments={evidence.map((e) => `${e.kind} · ${e.url}`)}
+      attachments={[...evidence.map((e) => `${e.kind} · ${e.url}`), ...libraryAttachmentLines(referenced)]}
+      fields={
+        <StepLibraryPicker
+          t={t}
+          referencedIds={referenced.map((a) => a.id)}
+          onPick={(a) => setReferenced((prev) => addReference(prev, a))}
+          onUnpick={(id) => setReferenced((prev) => removeReference(prev, id))}
+        />
+      }
       buildPrompt={buildPrompt} onComplete={onComplete} />
   );
 

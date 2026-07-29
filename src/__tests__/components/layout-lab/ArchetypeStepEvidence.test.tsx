@@ -102,4 +102,30 @@ describe('ArchetypeStep — evidence attached to the produce prompt', () => {
     render(<ArchetypeStep t={t} entity={entity} step={STEP} spec={spec} catalogId="character-pipeline" />);
     expect(viewPrompt()).toMatch(/feedback ON these/i);
   });
+
+  it('carries a referenced library asset — and its licence — into the prompt', async () => {
+    seed({ brief: 'x'.repeat(400) });
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ success: true, data: [{
+        id: 'a1', assetId: 'rocky', name: 'Rocky Terrain', source: 'polyhaven', category: 'textures',
+        license: 'CC0', thumbnailUrl: '', downloadUrl: 'https://x/d.zip', tags: [], favorite: false,
+        collectionIds: [], createdAt: 0,
+      }] }),
+    })) as unknown as typeof fetch);
+
+    render(<ArchetypeStep t={t} entity={entity} step={STEP} spec={spec} catalogId="character-pipeline" />);
+    expect(viewPrompt()).not.toContain('Rocky Terrain');
+
+    fireEvent.click(screen.getByTestId('step-library-toggle'));
+    fireEvent.click(await screen.findByTestId('step-library-pick'));
+
+    // It reaches BOTH surfaces: the visible attachment list and the built prompt.
+    expect(screen.getByTestId('cli-produce-attachments').textContent).toContain('Rocky Terrain');
+    const prompt = screen.getByText(/Produce Game-Tier Convert for Jinx/).textContent ?? '';
+    expect(prompt).toContain('Rocky Terrain');
+    expect(prompt).toContain('CC0');
+    expect(prompt).toContain('https://x/d.zip');
+    vi.unstubAllGlobals();
+  });
 });
