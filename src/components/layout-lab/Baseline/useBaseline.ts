@@ -4,7 +4,7 @@ import { useLabPipelineStore, useEntitySteps, setLabSync } from '../labPipelineS
 import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 import { catalogManifest } from '../catalogManifest';
 import { postArtifact, drainGates, deleteEntityArtifacts } from '../labArtifactClient';
-import { useCachedArtifacts, invalidateArtifacts } from '../labArtifactCache';
+import { useCachedArtifacts, invalidateArtifacts, retryArtifacts } from '../labArtifactCache';
 import { labGrade } from '../labCheckerContext';
 import { useEntityArtifacts } from '../hooks/useEntityArtifacts';
 import { useCatalogStore } from '@/stores/catalogStore';
@@ -84,7 +84,14 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
   // rendering every step "pending". `artsLoading` is true only while a fetch is in
   // flight for this entity with nothing cached yet.
   const entityKey = entity?.id;
-  const { arts: entityArts, loading: artsLoading } = useCachedArtifacts(catalogId, entityKey);
+  // `artsError` is the third state: the GET failed, so an absent artifact means UNKNOWN,
+  // not "never produced" — the rail and the coach must say so rather than invite a
+  // re-produce over server truth.
+  const { arts: entityArts, loading: artsLoading, error: artsError } = useCachedArtifacts(catalogId, entityKey);
+  const retryArts = useCallback(
+    () => { if (catalogId) retryArtifacts(catalogId, entityKey); },
+    [catalogId, entityKey],
+  );
   const serverArts = useMemo(
     () => Object.fromEntries(entityArts.map((a) => [a.step, a])) as Record<string, PipelineArtifact>,
     [entityArts],
@@ -249,7 +256,7 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
     ueAssetCount,
     clearStepError,
     artifacts, artifactByStep, displayStatus, stepDone, done,
-    artsLoading,
+    artsLoading, artsError, retryArts,
     driftByStep, adoptServerStep, entitySteps,
     runDrain,
     handleSelectCatalog, handleSelectEntity, selectStep,

@@ -1,7 +1,7 @@
 'use client';
 
 import { useSyncExternalStore, useEffect } from 'react';
-import { fetchArtifacts } from './labArtifactClient';
+import { fetchArtifactsResult } from './labArtifactClient';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 
 /**
@@ -11,8 +11,12 @@ import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
  * rapid tree clicks issued a fetch storm and each surface reset to "everything
  * pending" mid-fetch. This module gives them ONE cache + ONE invalidation path:
  *
- * - `useCachedArtifacts` returns `{ arts, loading, loaded }` and triggers a fetch on
- *   first read of a key (dedup: concurrent readers of the same key share one fetch).
+ * - `useCachedArtifacts` returns `{ arts, loading, loaded, error }` and triggers a fetch
+ *   on first read of a key (dedup: concurrent readers of the same key share one fetch).
+ *   A FAILED fetch is stored as an explicit error entry — never as a successful empty
+ *   load — so a dead server can't render as "nothing has been produced here".
+ * - `retryArtifacts(catalogId[, entityId])` clears a stored error and refetches (an
+ *   errored key never auto-retries, or a 500 would spin a fetch loop).
  * - `invalidateArtifacts(catalogId[, entityId])` drops the matching keys — called on
  *   produce (write-through) and drain — so the next read refetches server truth.
  * - Stale responses are discarded via a per-key request sequence, so an invalidation
@@ -27,14 +31,20 @@ export interface ArtifactCacheEntry {
   loading: boolean;
   /** The server artifacts for the key ([] until the first fetch resolves). */
   arts: PipelineArtifact[];
-  /** True once at least one fetch has resolved — distinguishes "never loaded" from "empty". */
+  /** True once at least one fetch has SUCCEEDED — distinguishes "never loaded" from "empty". */
   loaded: boolean;
+  /**
+   * The reason the last fetch for this key failed, else `null`. The third state that
+   * makes LOADING / EMPTY / ERROR distinguishable: an errored entry has `loaded:false`
+   * and `arts:[]`, but its `[]` means "unknown", not "nothing produced".
+   */
+  error: string | null;
 }
 
 // Frozen shared snapshots for the two zero-data states, so `useSyncExternalStore`'s
 // getSnapshot returns a STABLE reference (a fresh object each call would infinite-loop).
-const EMPTY: ArtifactCacheEntry = Object.freeze({ loading: false, arts: [], loaded: false });
-const LOADING: ArtifactCacheEntry = Object.freeze({ loading: true, arts: [], loaded: false });
+const EMPTY: ArtifactCacheEntry = Object.freeze({ loading: false, arts: [], loaded: false, error: null });
+const LOADING: ArtifactCacheEntry = Object.freeze({ loading: true, arts: [], loaded: false, error: null });
 
 const store = new Map<string, ArtifactCacheEntry>();
 const seqByKey = new Map<string, number>(); // per-key request sequence (stale-response guard)
@@ -62,22 +72,42 @@ function subscribe(l: () => void): () => void {
 }
 
 /**
- * Kick off (or reuse) a fetch for a key. No-op when the key is already loading or
- * loaded — that dedup is what collapses the fetch storm on rapid navigation.
+ * Kick off (or reuse) a fetch for a key. No-op when the key is already loading, loaded
+ * or ERRORED — the first two are the dedup that collapses the fetch storm on rapid
+ * navigation; the error bail-out is what stops a failing server from spinning an
+ * endless retry loop (every subscriber's effect re-fires on the new entry reference).
+ * Use {@link retryArtifacts} for the explicit, operator-driven retry.
  */
 export function ensureArtifacts(catalogId: string, entityId?: string): void {
   const key = keyFor(catalogId, entityId);
   const cur = store.get(key);
-  if (cur && (cur.loading || cur.loaded)) return;
+  if (cur && (cur.loading || cur.loaded || cur.error)) return;
   const seq = (seqByKey.get(key) ?? 0) + 1;
   seqByKey.set(key, seq);
   store.set(key, LOADING);
   emit();
-  fetchArtifacts(catalogId, entityId).then((arts) => {
+  fetchArtifactsResult(catalogId, entityId).then((res) => {
     if (seqByKey.get(key) !== seq) return; // superseded by an invalidation or a newer fetch
-    store.set(key, { loading: false, arts, loaded: true });
+    // A failure is stored AS a failure. Storing `{ arts: [], loaded: true }` here (the old
+    // behaviour) was indistinguishable from a genuinely empty catalog, so every reader
+    // rendered a dead server as "nothing has been produced here".
+    store.set(key, res.ok
+      ? { loading: false, arts: res.data, loaded: true, error: null }
+      : { loading: false, arts: [], loaded: false, error: res.error });
     emit();
   });
+}
+
+/**
+ * Explicit retry after a failed fetch: drop the stored error (and any cached data for
+ * the key) and re-issue. Backs the "Retry" affordance every errored surface offers.
+ */
+export function retryArtifacts(catalogId: string, entityId?: string): void {
+  const key = keyFor(catalogId, entityId);
+  seqByKey.set(key, (seqByKey.get(key) ?? 0) + 1);
+  store.delete(key);
+  emit();
+  ensureArtifacts(catalogId, entityId);
 }
 
 /**

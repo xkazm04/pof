@@ -9,6 +9,7 @@ import { plainEntitySummary, STATUS_GLOSSARY } from './labGlossary';
 import { statusColor } from './statusLanguage';
 import { Panel } from './ui/Panel';
 import { Button } from './ui/Button';
+import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 
 interface NextStepCoachProps {
   t: LabTheme;
@@ -37,6 +38,14 @@ interface NextStepCoachProps {
   /** Drain this entity's deferred L3/L4 gates (relocated here from the old in-canvas PipelineRollup). */
   onDrain?: () => void;
   draining?: boolean;
+  /**
+   * The server artifact fetch FAILED (verbatim reason). While it is set the coach must
+   * NOT recommend work: an absent artifact means UNKNOWN, not "never produced", and
+   * coaching "start this" could send the operator to re-produce over server truth.
+   */
+  serverError?: string | null;
+  /** Retry the failed artifact fetch (paired with {@link NextStepCoachProps.serverError}). */
+  onRetryLoad?: () => void;
 }
 
 /**
@@ -51,6 +60,7 @@ interface NextStepCoachProps {
  */
 export function NextStepCoach({
   t, steps, statusByStep, rollup, onJump, plainMode, onTogglePlainMode, onDrain, draining, reasonForStep, driftByStep,
+  serverError = null, onRetryLoad,
 }: NextStepCoachProps) {
   const [expanded, setExpanded] = useState(false);
   const next = useMemo(
@@ -74,6 +84,30 @@ export function NextStepCoach({
   const drainLabel = draining
     ? 'Running…'
     : `Run ${rollup.deferred} deferred gate${rollup.deferred > 1 ? 's' : ''}`;
+
+  // Fetch failed → say so and offer a retry. Recommending a step here would be a guess
+  // built on statuses we could not read (every unfetched step looks `unproduced`).
+  if (serverError) {
+    return (
+      <Panel
+        role="status"
+        aria-live="polite"
+        data-testid="next-step-coach"
+        data-coach-state="error"
+        glass={t.glass}
+        style={{
+          display: 'flex', flexDirection: 'column', gap: 'var(--lab-s2)',
+          padding: 'var(--lab-s2) var(--lab-s4)', marginBottom: 'var(--lab-s4)',
+          borderLeft: `4px solid ${t.bad}`,
+        }}
+      >
+        <InlineErrorRetry
+          message={`Can't advise — server status didn't load: ${serverError}`}
+          onRetry={() => onRetryLoad?.()}
+        />
+      </Panel>
+    );
+  }
 
   const ctaStyle = {
     flexShrink: 0, fontWeight: 600,

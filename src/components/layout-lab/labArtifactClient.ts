@@ -19,11 +19,29 @@ export interface ArtifactUpsertBody {
   reason?: string;
 }
 
-/** GET persisted artifacts for a catalog (optionally one entity). Non-throwing → [] on failure. */
-export async function fetchArtifacts(catalogId: string, entityId?: string): Promise<PipelineArtifact[]> {
+/**
+ * GET persisted artifacts for a catalog (optionally one entity), keeping the failure.
+ *
+ * A failed GET is NOT an empty catalog: a dead server, a 500 or an offline moment used
+ * to be folded into `[]`, which every surface then rendered as "nothing has been
+ * produced here" — the operator could re-produce over server truth. Callers that must
+ * distinguish the two (the lab's shared artifact cache) read this `Result`.
+ */
+export async function fetchArtifactsResult(catalogId: string, entityId?: string): Promise<Result<PipelineArtifact[], string>> {
   const q = new URLSearchParams({ catalogId });
   if (entityId) q.set('entityId', entityId);
   const r = await tryApiFetch<PipelineArtifact[]>(`/api/pipeline-artifacts?${q.toString()}`);
+  return r.ok ? { ok: true, data: r.data } : { ok: false, error: r.error };
+}
+
+/**
+ * Lossy convenience wrapper over {@link fetchArtifactsResult} → `[]` on failure. Kept
+ * for read-only consumers (the /status views) that aggregate many catalogs and have no
+ * per-catalog error surface. Anything that RENDERS "not produced" must use the `Result`
+ * form instead, or it will report a failed fetch as an empty pipeline.
+ */
+export async function fetchArtifacts(catalogId: string, entityId?: string): Promise<PipelineArtifact[]> {
+  const r = await fetchArtifactsResult(catalogId, entityId);
   return r.ok ? r.data : [];
 }
 

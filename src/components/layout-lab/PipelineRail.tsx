@@ -2,8 +2,11 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useRovingFocus } from './hooks/useRovingFocus';
+import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 
 type NodeStatus = 'pass' | 'fail' | 'deferred' | 'pending' | 'unproduced';
+/** What a dot reads as when the server fetch FAILED and nothing local covers the step. */
+const UNKNOWN_TOOLTIP = 'Server status unknown — the artifact fetch failed, so this step is not necessarily unproduced';
 const pad2 = (n: number) => String(n).padStart(2, '0');
 const STATUS_GLYPH = (s: NodeStatus): string =>
   s === 'pass' ? '✓' : s === 'fail' ? '!' : s === 'deferred' ? '⋯' : s === 'unproduced' ? '·' : '';
@@ -15,6 +18,14 @@ interface PipelineRailProps {
   /** Server verdicts are still loading: steps of unknown (pending) status shimmer
    *  instead of reading as an honest "nothing done yet". Locally-known statuses stay. */
   loading?: boolean;
+  /**
+   * The server artifact fetch FAILED — the reason, verbatim. Steps with no local verdict
+   * read as `unknown` (not `unproduced`), and the rail offers a retry: a dead server must
+   * never render as an honest "nothing has run here".
+   */
+  error?: string | null;
+  /** Retry the failed artifact fetch (paired with {@link PipelineRailProps.error}). */
+  onRetryLoad?: () => void;
   /** The step's local verdict has drifted from server truth (add-only kept local) —
    *  flag it so the operator can adopt the server verdict from the work canvas. */
   hasDrift?: (step: string, i: number) => boolean;
@@ -36,6 +47,8 @@ export function PipelineRail({
   stepIdx,
   displayStatus,
   loading = false,
+  error = null,
+  onRetryLoad,
   hasDrift,
   syncFailed,
   produceFailed,
@@ -75,10 +88,24 @@ export function PipelineRail({
     position: 'relative',
   };
 
+  // A failed fetch names itself and offers a retry (shared InlineErrorRetry), so the
+  // dots below are read as "unknown", not as an honest empty pipeline.
+  const errorBanner = error ? (
+    <div data-testid="rail-load-error" style={{ padding: '0 18px 8px' }}>
+      <InlineErrorRetry
+        dense
+        message={`Couldn't load server status: ${error}`}
+        onRetry={() => onRetryLoad?.()}
+      />
+    </div>
+  ) : null;
+
   // Honest empty state — without it an entity with no pipeline renders as a bare
   // connector line with nothing on it, which reads as a broken panel rather than "none".
   if (steps.length === 0) {
     return (
+      <>
+      {errorBanner}
       <div
         role="list"
         aria-label="Pipeline steps"
@@ -97,14 +124,18 @@ export function PipelineRail({
           No pipeline steps here yet — pick a catalog entity in the tree to load its pipeline.
         </p>
       </div>
+      </>
     );
   }
 
   return (
+    <>
+    {errorBanner}
     <div
       role="list"
       aria-label="Pipeline steps"
       aria-busy={loading || undefined}
+      data-arts-error={error ? 'true' : undefined}
       {...roving.containerProps}
       style={railStyle}
     >
@@ -125,6 +156,9 @@ export function PipelineRail({
         // Loading only applies where we have NO real verdict yet (pending / unproduced) —
         // a locally-known pass/fail/deferred is real truth and must not be masked by a shimmer.
         const isLoading = loading && (status === 'pending' || status === 'unproduced');
+        // No server truth AND no local verdict → the honest reading is "unknown", never
+        // "unproduced" (which would invite re-producing over work that exists server-side).
+        const unknown = !!error && !isLoading && (status === 'pending' || status === 'unproduced');
         const drifted = hasDrift?.(step, i) ?? false;
         const notSynced = syncFailed?.(step, i) ?? false;
         const produceBroke = produceFailed?.(step, i) ?? false;
@@ -144,8 +178,10 @@ export function PipelineRail({
         // `unproduced` is the faintest node: a dotted hollow dot, dimmer than pending's
         // solid hollow ring — a distinct, colorblind-safe "nothing produced here yet" cue.
         const borderStyle = status === 'deferred' ? 'dashed' : status === 'unproduced' ? 'dotted' : 'solid';
-        const glyph = STATUS_GLYPH(status);
-        const glyphColor = filled
+        const glyph = unknown ? '?' : STATUS_GLYPH(status);
+        const glyphColor = unknown
+          ? 'var(--lab-warn)'
+          : filled
           ? 'var(--lab-on-accent)'
           : status === 'deferred' || status === 'unproduced'
           ? 'var(--lab-muted)'
@@ -154,7 +190,7 @@ export function PipelineRail({
         // so every badge rendered inside it (live dot, drift, sync failure, shimmer) is
         // silent unless folded in here. Keep the order: name+status first, then flags.
         const label = [
-          ariaFor(step, i),
+          unknown ? `${step}: server status unknown` : ariaFor(step, i),
           isLoading ? 'status loading' : null,
           live ? 'prototyped' : null,
           drifted ? 'server verdict differs' : null,
@@ -173,7 +209,7 @@ export function PipelineRail({
             {...roving.itemProps(i)}
             ref={(el) => { itemRefs.current[i] = el; }}
             onClick={() => onSelectStep(i)}
-            title={tooltipFor(step, i)}
+            title={unknown ? UNKNOWN_TOOLTIP : tooltipFor(step, i)}
             aria-label={label}
             aria-current={current ? 'step' : undefined}
             className="focus-ring-inset"
@@ -192,7 +228,7 @@ export function PipelineRail({
             }}
           >
             <span
-              data-step-status={status}
+              data-step-status={unknown ? 'unknown' : status}
               data-loading={isLoading ? 'true' : undefined}
               className={isLoading && !reduce ? 'lab-shimmer' : status === 'fail' ? 'animate-pulse-glow' : undefined}
               style={{
@@ -205,7 +241,7 @@ export function PipelineRail({
                 justifyContent: 'center',
                 background: isLoading ? (reduce ? 'var(--lab-line)' : undefined) : fill,
                 border: `2px ${isLoading ? 'solid var(--lab-line)' : `${borderStyle} ${borderColor}`}`,
-                opacity: !isLoading && status === 'unproduced' && !current ? 0.55 : 1,
+                opacity: !isLoading && !unknown && status === 'unproduced' && !current ? 0.55 : 1,
                 boxShadow: current ? `0 0 0 3px var(--lab-accent-bg)` : 'none',
                 color: glyphColor,
                 fontSize: 14,
@@ -328,5 +364,6 @@ export function PipelineRail({
         );
       })}
     </div>
+    </>
   );
 }

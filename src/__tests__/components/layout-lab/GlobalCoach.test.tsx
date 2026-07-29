@@ -9,8 +9,9 @@ vi.mock('next/font/google', () => {
 // The aggregation hook is unit-tested via globalCoach.test.ts; here we mock it so the
 // component test drives a fixed, ranked candidate list deterministically.
 const coachMock = vi.fn();
+const failedMock = vi.fn<() => { catalogId: string; label: string; error: string }[]>();
 vi.mock('@/components/layout-lab/hooks/useGlobalCoach', () => ({
-  useGlobalCoach: () => coachMock(),
+  useGlobalCoach: () => ({ candidates: coachMock(), failedCatalogs: failedMock() }),
   GLOBAL_COACH_TOP_N: 5,
 }));
 
@@ -23,7 +24,12 @@ const cand = (over: Partial<CoachCandidate>): CoachCandidate => ({
   catalogId: 'items', catalogLabel: 'Items', entityId: 'e1', entityName: 'Sword', step: 'Economy', stepIndex: 3, priority: 'fail', ...over,
 });
 
-beforeEach(() => { coachMock.mockReset(); useOneShotLabStore.setState({ pendingNavigation: null }); });
+beforeEach(() => {
+  coachMock.mockReset();
+  failedMock.mockReset();
+  failedMock.mockReturnValue([]);
+  useOneShotLabStore.setState({ pendingNavigation: null });
+});
 afterEach(cleanup);
 
 describe('<GlobalCoach />', () => {
@@ -100,6 +106,20 @@ describe('<GlobalCoach />', () => {
     fireEvent.click(container.querySelector('[data-testid="global-coach-toggle"]') as HTMLElement);
     fireEvent.click(container.querySelector('[data-testid="global-coach-item-1"]') as HTMLElement);
     expect(useOneShotLabStore.getState().pendingNavigation).toEqual({ catalogId: 'armor', entityId: 'e2', stepIndex: 1 });
+  });
+
+  it('names catalogs whose status could not be read instead of staying silent (failed fetch ≠ all clear)', () => {
+    coachMock.mockReturnValue([]);
+    failedMock.mockReturnValue([{ catalogId: 'items', label: 'Items', error: 'HTTP 500' }]);
+    const { container } = render(<GlobalCoach t={LIGHT} />);
+
+    // The bar renders (it would have been `null` before) and states the blind spot.
+    expect(container.querySelector('[data-testid="global-coach"]')).not.toBeNull();
+    const failed = container.querySelector('[data-testid="global-coach-failed"]') as HTMLElement;
+    expect(failed.textContent).toContain('Items');
+    expect(failed.textContent).toContain('HTTP 500');
+    // And it does NOT invent a "start something" recommendation for the unreadable catalog.
+    expect(container.querySelector('[data-testid="global-coach-item-0"]')).toBeNull();
   });
 
   it('shows the concrete checker reason on a candidate that carries one (and falls back to the generic hint otherwise)', () => {

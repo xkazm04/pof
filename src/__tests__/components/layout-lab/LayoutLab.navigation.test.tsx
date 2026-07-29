@@ -29,6 +29,7 @@ vi.mock('framer-motion', async () => {
 // so a view swap never awaits the network (which can hang under a leaked timer/env).
 vi.mock('@/components/layout-lab/labArtifactClient', () => ({
   fetchArtifacts: vi.fn().mockResolvedValue([]),
+  fetchArtifactsResult: vi.fn().mockResolvedValue({ ok: true, data: [] }),
   postArtifact: vi.fn().mockResolvedValue(undefined),
   drainGates: vi.fn().mockResolvedValue(null),
   drainCatalogGates: vi.fn().mockResolvedValue({ kind: 'ok', summary: { ran: 0, passed: 0, failed: 0, skipped: 0, results: [] } }),

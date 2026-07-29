@@ -48,7 +48,7 @@ export function Baseline(props: Props) {
     resetEntityEverywhere, resetting, resetError, dismissResetError,
     ueAssetCount, clearStepError,
     artifacts, artifactByStep, displayStatus, stepDone, done,
-    artsLoading,
+    artsLoading, artsError, retryArts,
     driftByStep, adoptServerStep, entitySteps,
     runDrain,
     handleSelectCatalog, handleSelectEntity, selectStep,
@@ -104,6 +104,8 @@ export function Baseline(props: Props) {
         stepIdx={stepIdx}
         displayStatus={displayStatus}
         loading={artsLoading}
+        error={artsError}
+        onRetryLoad={retryArts}
         hasDrift={(step) => driftByStep.has(step)}
         syncFailed={(step) => !!entitySteps?.[step]?.syncError}
         produceFailed={(step) => !!entitySteps?.[step]?.error}
@@ -192,6 +194,8 @@ export function Baseline(props: Props) {
                     onTogglePlainMode={() => setPlainMode((v) => !v)}
                     onDrain={runDrain}
                     draining={draining}
+                    serverError={artsError}
+                    onRetryLoad={retryArts}
                   />
                 )}
                 <div className={t.fontMono} style={{ fontSize: 14, letterSpacing: '0.12em', color: t.muted, textTransform: 'uppercase' }}>Step {pad2(stepIdx + 1)} / {pad2(steps.length)}{stepDone(stepName, stepIdx) ? ' · complete' : ''}</div>

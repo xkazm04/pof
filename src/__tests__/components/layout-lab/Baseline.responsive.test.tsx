@@ -10,6 +10,7 @@ vi.mock('next/font/google', () => {
 // No server round-trips in this test.
 vi.mock('@/components/layout-lab/labArtifactClient', () => ({
   fetchArtifacts: vi.fn().mockResolvedValue([]),
+  fetchArtifactsResult: vi.fn().mockResolvedValue({ ok: true, data: [] }),
   postArtifact: vi.fn().mockResolvedValue(undefined),
   drainGates: vi.fn().mockResolvedValue(null),
 }));

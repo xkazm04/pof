@@ -3,7 +3,8 @@
 import '@/lib/catalog/pipelines/registry.generated';
 import { useMemo } from 'react';
 import { useReducedMotion } from 'framer-motion';
-import { useCachedArtifacts } from './labArtifactCache';
+import { useCachedArtifacts, retryArtifacts } from './labArtifactCache';
+import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { useLabPipelineStore } from './labPipelineStore';
 import { useLabDetail } from './useLabCatalogData';
 import { resolveCatalogSteps } from './catalogManifest';
@@ -51,7 +52,10 @@ export function CatalogMatrix({ t, groups, catalogId, onSelectCatalog, onOpenSte
   // Server is the source of truth for status — it carries the runner's L3/L4 overlay.
   // The shared cache (keyed by `catalogId`) is deduped with Baseline's fetch and
   // exposes an honest LOADING state instead of an all-pending flash on catalog switch.
-  const { arts, loading } = useCachedArtifacts(catalogId);
+  // Three states, not one: LOADING (skeleton) · EMPTY (grid of unproduced cells) ·
+  // ERROR (the GET failed — the grid would show every cell as "never produced", which
+  // is a lie, so the error takes the surface and names its reason).
+  const { arts, loading, error } = useCachedArtifacts(catalogId);
   const showSkeleton = loading && arts.length === 0;
 
   const byEntity = useMemo(() => {
@@ -178,7 +182,17 @@ export function CatalogMatrix({ t, groups, catalogId, onSelectCatalog, onOpenSte
 
       {/* ── The grid ── */}
       <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '0 28px 28px' }} aria-busy={showSkeleton || undefined}>
-        {showSkeleton ? (
+        {error ? (
+          <div data-testid="matrix-load-error" style={{ padding: '24px 0', maxWidth: 640 }}>
+            <InlineErrorRetry
+              message={`Couldn't load this catalog's status: ${error}`}
+              onRetry={() => retryArtifacts(catalogId)}
+            />
+            <p style={{ fontSize: 13, color: t.muted, margin: '10px 0 0' }}>
+              Statuses are unknown until this loads — steps may already be produced on the server.
+            </p>
+          </div>
+        ) : showSkeleton ? (
           <MatrixSkeleton t={t} rows={Math.max(1, (detail?.entities ?? []).length)} cols={steps.length} reduce={!!reduce} />
         ) : rows.length === 0 ? (
           <p style={{ fontSize: 15, color: t.muted, padding: '24px 0' }}>No entities in this catalog yet.</p>

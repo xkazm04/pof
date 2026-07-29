@@ -28,7 +28,18 @@ export const GLOBAL_COACH_TOP_N = 5;
  * render. First paint is never blocked: the effect fires post-paint and the list
  * fills in as the fetches resolve.
  */
-export function useGlobalCoach(topN = Number.POSITIVE_INFINITY): CoachCandidate[] {
+export interface GlobalCoachResult {
+  /** The full ranked candidate list (the top-N cut is the component's decision). */
+  candidates: CoachCandidate[];
+  /**
+   * Catalogs whose artifact fetch FAILED. They contribute NO candidates: with no server
+   * truth every step reads `unproduced`, so coaching "start this" could send the operator
+   * to re-produce over work that exists. The coach names the gap instead of hiding it.
+   */
+  failedCatalogs: { catalogId: string; label: string; error: string }[];
+}
+
+export function useGlobalCoach(topN = Number.POSITIVE_INFINITY): GlobalCoachResult {
   const entitiesByCatalog = useCatalogStore((s) => s.entitiesByCatalog);
   const localByEntity = useLabPipelineStore((s) => s.byEntity);
   const version = useArtifactCacheVersion();
@@ -47,6 +58,7 @@ export function useGlobalCoach(topN = Number.POSITIVE_INFINITY): CoachCandidate[
   return useMemo(() => {
     void version; // the "cache changed" signal — reading it here makes the dep honest (getCachedArtifacts reads external state keyed on it)
     const inputs: CoachCatalogInput[] = [];
+    const failedCatalogs: GlobalCoachResult['failedCatalogs'] = [];
     for (const section of CATALOG_SECTIONS) {
       const entMap = entitiesByCatalog[section.catalogId];
       const entities = entMap
@@ -54,7 +66,13 @@ export function useGlobalCoach(topN = Number.POSITIVE_INFINITY): CoachCandidate[
         : [];
       if (!entities.length) continue;
 
-      const { arts } = getCachedArtifacts(section.catalogId);
+      const { arts, error } = getCachedArtifacts(section.catalogId);
+      if (error) {
+        // A failed fetch is NOT an empty catalog — skip it rather than emit a bogus
+        // "nothing has run here" candidate for every one of its entities.
+        failedCatalogs.push({ catalogId: section.catalogId, label: section.label, error });
+        continue;
+      }
       const serverByEntity = new Map<string, Map<string, PipelineArtifact>>();
       for (const a of arts) {
         const row = serverByEntity.get(a.entityId) ?? new Map<string, PipelineArtifact>();
@@ -71,7 +89,10 @@ export function useGlobalCoach(topN = Number.POSITIVE_INFINITY): CoachCandidate[
         localByEntity,
       });
     }
-    return buildGlobalCoach(inputs, topN, verdicts);
+    // Union of two round-10 directions: the coach reads judge verdicts through the ONE
+    // acceptance derivation (`verdicts`), AND reports catalogs whose fetch FAILED so a
+    // dead server is never coached as "nothing has run here".
+    return { candidates: buildGlobalCoach(inputs, topN, verdicts), failedCatalogs };
     // `version` is the "cache changed" signal — recompute as each catalog's fetch resolves.
   }, [entitiesByCatalog, localByEntity, version, topN, verdicts]);
 }

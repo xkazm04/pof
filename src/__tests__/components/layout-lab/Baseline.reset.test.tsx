@@ -10,6 +10,7 @@ vi.mock('next/font/google', () => {
 const deleteEntityArtifacts = vi.fn();
 vi.mock('@/components/layout-lab/labArtifactClient', () => ({
   fetchArtifacts: vi.fn().mockResolvedValue([]),
+  fetchArtifactsResult: vi.fn().mockResolvedValue({ ok: true, data: [] }),
   postArtifact: vi.fn().mockResolvedValue(true),
   drainGates: vi.fn().mockResolvedValue(null),
   deleteEntityArtifacts: (...a: unknown[]) => deleteEntityArtifacts(...a),

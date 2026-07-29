@@ -9,14 +9,19 @@ vi.mock('next/font/google', () => {
 
 // Server artifacts for our synthetic catalog: varied statuses across 2 entities × 3 steps.
 // Defined inside the factory because vi.mock is hoisted above top-level consts.
-vi.mock('@/components/layout-lab/labArtifactClient', () => ({
-  fetchArtifacts: vi.fn().mockResolvedValue([
+vi.mock('@/components/layout-lab/labArtifactClient', () => {
+  const arts = [
     { catalogId: 'fixtures', entityId: 'e1', step: 'StepA', data: {}, ueAssets: [], status: 'pass', tier: 'L0' },
     { catalogId: 'fixtures', entityId: 'e1', step: 'StepB', data: {}, ueAssets: [], status: 'fail', tier: 'L0', reason: 'price/power 1.43x' },
     { catalogId: 'fixtures', entityId: 'e2', step: 'StepA', data: {}, ueAssets: [], status: 'pass', tier: 'L0' },
     { catalogId: 'fixtures', entityId: 'e2', step: 'StepC', data: {}, ueAssets: [], status: 'deferred', tier: 'L3' },
-  ]),
-}));
+  ];
+  return {
+    fetchArtifacts: vi.fn().mockResolvedValue(arts),
+    // The cache reads the Result form, so a failed GET can be told apart from an empty one.
+    fetchArtifactsResult: vi.fn().mockResolvedValue({ ok: true, data: arts }),
+  };
+});
 
 // Synthetic catalog detail (2 entities). Steps come from the registered pipeline below.
 vi.mock('@/components/layout-lab/useLabCatalogData', () => ({
@@ -51,6 +56,8 @@ vi.mock('@/lib/catalog/pipeline-registry', async (importOriginal) => {
 
 import { CatalogMatrix } from '@/components/layout-lab/CatalogMatrix';
 import { LIGHT } from '@/components/layout-lab/theme';
+import { fetchArtifactsResult } from '@/components/layout-lab/labArtifactClient';
+import { _resetArtifactCache } from '@/components/layout-lab/labArtifactCache';
 
 const groups = [{ category: 'Test', catalogs: [
   { catalogId: 'fixtures', label: 'Fixtures', description: '', total: 2, verified: 0 },
@@ -63,7 +70,7 @@ function renderMatrix(onOpenStep = vi.fn(), onSelectCatalog = vi.fn()) {
 }
 
 afterEach(cleanup);
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => { vi.clearAllMocks(); _resetArtifactCache(); });
 
 const statusOf = (c: HTMLElement, cell: string) =>
   c.querySelector(`[data-cell="${cell}"]`)?.getAttribute('data-status');
@@ -129,5 +136,23 @@ describe('CatalogMatrix', () => {
     expect(onOpenStep).toHaveBeenCalledWith('fixtures', 'e1', 1);
     fireEvent.click(container.querySelector('[data-cell="e2::StepC"]') as HTMLElement);
     expect(onOpenStep).toHaveBeenCalledWith('fixtures', 'e2', 2);
+  });
+
+  it('a failed GET renders a named error + retry, NOT a grid of unproduced cells', async () => {
+    vi.mocked(fetchArtifactsResult).mockResolvedValueOnce({ ok: false, error: 'HTTP 500' });
+    const { container } = renderMatrix();
+
+    const banner = await waitFor(() => {
+      const el = container.querySelector('[data-testid="matrix-load-error"]');
+      expect(el).not.toBeNull();
+      return el as HTMLElement;
+    });
+    expect(banner.textContent).toContain('HTTP 500');
+    // No cells at all — a full grid of "unproduced" would be the lie we're removing.
+    expect(container.querySelector('[data-cell]')).toBeNull();
+
+    // Retry re-reads and the real statuses appear.
+    fireEvent.click(banner.querySelector('button') as HTMLElement);
+    await waitFor(() => expect(statusOf(container, 'e1::StepA')).toBe('pass'));
   });
 });

@@ -5,6 +5,8 @@ import type { LabTheme } from './theme';
 import { useGlobalCoach, GLOBAL_COACH_TOP_N } from './hooks/useGlobalCoach';
 import { COACH_HINT, type CoachCandidate, type CoachPriority } from './globalCoachModel';
 import { useOneShotLabStore } from '@/stores/oneShotLabStore';
+import { retryArtifacts } from './labArtifactCache';
+import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 
 interface Props {
   t: LabTheme;
@@ -33,16 +35,19 @@ function priorityColor(p: CoachPriority, t: LabTheme): string {
  * Distinct from the passive `/status` map: this is *guidance with a jump action*.
  */
 export function GlobalCoach({ t }: Props) {
-  const candidates = useGlobalCoach();
+  const { candidates, failedCatalogs } = useGlobalCoach();
   const [expanded, setExpanded] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const setPendingNavigation = useOneShotLabStore((s) => s.setPendingNavigation);
 
-  if (candidates.length === 0) return null; // nothing actionable project-wide — stay out of the way
+  // Nothing actionable AND nothing broken → stay out of the way. A failed fetch alone is
+  // still worth the row: silence would read as "the project is clear", which it is not.
+  if (candidates.length === 0 && failedCatalogs.length === 0) return null;
 
   // Carry the flagged step index so Baseline opens ON that step, not step 0.
   const jump = (c: CoachCandidate) => setPendingNavigation({ catalogId: c.catalogId, entityId: c.entityId, stepIndex: c.stepIndex });
   const [top, ...rest] = candidates;
+  const failedNames = failedCatalogs.map((f) => f.label).join(', ');
   // Collapsed disclosure shows the rest of the top-N; everything past it is reachable
   // through the explicit "show all blockers" control (so the cap is stated, not hidden).
   const shown = showAll ? rest : rest.slice(0, GLOBAL_COACH_TOP_N - 1);
@@ -59,7 +64,7 @@ export function GlobalCoach({ t }: Props) {
         display: 'flex', flexDirection: 'column',
         background: 'var(--lab-panel)',
         borderBottom: '1px solid var(--lab-line)',
-        borderLeft: `4px solid ${priorityColor(top.priority, t)}`,
+        borderLeft: `4px solid ${top ? priorityColor(top.priority, t) : t.bad}`,
         ...(t.glass ? { backdropFilter: 'blur(var(--lab-glass-blur))' } : {}),
       }}
     >
@@ -71,7 +76,13 @@ export function GlobalCoach({ t }: Props) {
         >
           Do next
         </span>
-        <CoachRow t={t} c={top} onJump={jump} testid="global-coach-item-0" compact />
+        {top ? (
+          <CoachRow t={t} c={top} onJump={jump} testid="global-coach-item-0" compact />
+        ) : (
+          <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--lab-fs-sm)', color: 'var(--lab-muted)' }}>
+            Nothing to advise — no catalog status could be read.
+          </span>
+        )}
         {moreCount > 0 && (
           <button
             type="button"
@@ -91,6 +102,18 @@ export function GlobalCoach({ t }: Props) {
           </button>
         )}
       </div>
+
+      {/* Failed fetches are STATED, never folded into the advice: those catalogs' steps
+          are unknown, not unproduced, so the coach declares the blind spot + a retry. */}
+      {failedCatalogs.length > 0 && (
+        <div data-testid="global-coach-failed" style={{ padding: '0 var(--lab-s4) var(--lab-s2)' }}>
+          <InlineErrorRetry
+            dense
+            message={`Status unknown for ${failedCatalogs.length} catalog${failedCatalogs.length > 1 ? 's' : ''} (${failedNames}) — excluded from this advice: ${failedCatalogs[0].error}`}
+            onRetry={() => { for (const f of failedCatalogs) retryArtifacts(f.catalogId); }}
+          />
+        </div>
+      )}
 
       {/* Expanded list — the remaining ranked candidates. */}
       {expanded && moreCount > 0 && (

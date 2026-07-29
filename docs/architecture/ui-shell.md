@@ -33,8 +33,8 @@ rollup strip.
 | `src/components/layout-lab/LabBridgeStrip.tsx` | Compact UE bridge status dot+label; reads `usePofBridgeStore` (display-only) |
 | `src/components/layout-lab/labPipelineStore.ts` | Zustand persisted store (`pof-lab-pipeline`); `produce/produceFrom/fail/clearError/setSyncError/resetEntity/hydrateEntity/adoptServer`; module-level `_labSync` function pointer. `produce`/`produceFrom` call `fail` themselves when a dispatch throws (then re-raise), so a failed produce always leaves an artifact-level `error` — recorded NON-destructively (previously produced content survives) |
 | `src/components/layout-lab/ProduceErrorBanner.tsx` | Work-canvas banner for a step's recorded produce failure (`artifact.error`) + Dismiss (`clearError`). No retry button — the Produce panel below owns the prompt and already offers "Retry with same prompt" |
-| `src/components/layout-lab/labArtifactClient.ts` | `fetchArtifacts`, `postArtifact`, `drainGates` (single entity, for the per-entity coach drain), and `drainCatalogGates(catalogId, entityIds)` (409-aware whole-catalog BATCH drain returning ok/locked/error) — thin wrappers around `/api/pipeline-artifacts` |
-| `src/components/layout-lab/labArtifactCache.ts` | Shared artifact-fetch cache (`useCachedArtifacts`, `invalidateArtifacts`) — one deduped fetch path + loading state for Baseline + Matrix. Also exposes `getCachedArtifacts` (non-hook read) + `useArtifactCacheVersion` (change signal) for the cross-catalog coach aggregation |
+| `src/components/layout-lab/labArtifactClient.ts` | `fetchArtifactsResult` (`Result` — keeps the failure; what the cache reads), its lossy `fetchArtifacts` wrapper (`[]` on failure, for the read-only /status aggregations), `postArtifact`, `drainGates` (single entity, for the per-entity coach drain), and `drainCatalogGates(catalogId, entityIds)` (409-aware whole-catalog BATCH drain returning ok/locked/error) — thin wrappers around `/api/pipeline-artifacts` |
+| `src/components/layout-lab/labArtifactCache.ts` | Shared artifact-fetch cache (`useCachedArtifacts`, `invalidateArtifacts`, `retryArtifacts`) — one deduped fetch path + LOADING / EMPTY / **ERROR** states for Baseline + Matrix. A failed GET is stored as an explicit `error` (never as a successful empty load) and never auto-retries. Also exposes `getCachedArtifacts` (non-hook read) + `useArtifactCacheVersion` (change signal) for the cross-catalog coach aggregation |
 | `src/components/layout-lab/catalogManifest.ts` | Single per-catalog resolver over section · steps · grader · bespoke-UI (`resolveCatalogSteps`, `isBespokeCatalog`) |
 | `src/components/layout-lab/matrixRows.ts` | `buildMatrixRows` — CatalogMatrix rows via the shared `deriveEntityArtifacts` path (one status code path with the rail). Blockers read the checker `reason` carried on each derived artifact (no second `resolveAccept` pass) |
 | `src/components/layout-lab/DriftBanner.tsx` | Server↔local drift banner + "adopt server truth" affordance (preserves `genHistory` unless confirmed) |
@@ -244,9 +244,10 @@ hand-rolled cache** (`labArtifactCache.ts`, `useCachedArtifacts`) keyed `catalog
 for the matrix) or `catalogId|entityId` (one entity, for Baseline):
 
 ```
-useCachedArtifacts(catalogId, entity.id) → { arts, loading, loaded }
+useCachedArtifacts(catalogId, entity.id) → { arts, loading, loaded, error }
   loading:true (deduped fetch in flight)  → rail/matrix show an honest LOADING shimmer
   → arts arrive                            → serverArts (rollup overlay) + hydrateEntity(add-only)
+  → fetch FAILS                            → error:'<reason>', loaded:false — the third state
 ```
 
 Key properties: **concurrent readers of a key share one fetch** (no storm); a per-key request
@@ -254,6 +255,23 @@ sequence **discards stale in-flight responses**; and `invalidateArtifacts(catalo
 called on **produce** (write-through) and **drain** — drops the matching keys so the next read
 refetches the server-graded verdict. `hydrateEntity` (store) only adds steps not already present in
 the local cache; it never overwrites or clears existing local state.
+
+**A failed fetch is not an empty catalog.** Every GET failure used to be folded into `[]` and cached
+as a SUCCESSFUL empty load, so a dead server / 500 / offline moment rendered as "nothing has been
+produced here" — and the coaches advised starting work that was already green on the server. The
+cache now stores `error` explicitly, and the surfaces distinguish all three states:
+
+- **PipelineRail** — an `error` renders the shared `InlineErrorRetry` above the rail, and every step
+  with no LOCAL verdict reads `data-step-status="unknown"` (glyph `?`), not `unproduced`.
+- **CatalogMatrix** — the error + retry replaces the grid (a full grid of `unproduced` cells is the
+  lie being removed).
+- **NextStepCoach** — declines to advise while the fetch is failed (it would be guessing from
+  statuses it could not read) and offers the retry.
+- **GlobalCoach** — `useGlobalCoach` returns `{ candidates, failedCatalogs }`; an errored catalog
+  contributes NO candidates and is named in a retry banner instead.
+
+The retry is always explicit (`retryArtifacts`): an errored key never auto-refetches, or a failing
+server would spin a fetch loop through every subscriber's effect.
 
 **Honest loading ≠ pending ≠ unproduced.** Three distinct display states, never conflated:
 - `loading` — a fetch is in flight: the pipeline rail shimmers steps of not-yet-known status
