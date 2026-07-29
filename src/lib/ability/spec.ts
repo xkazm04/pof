@@ -23,6 +23,31 @@ export interface SpecProvenance {
   cppCode: string;
 }
 
+/**
+ * Codegen provenance: what the `generate-gas-effects` agent actually did in the
+ * UE project, reported back through the task's `@@CALLBACK` and re-derived
+ * server-side. This is the ONE record that makes the "exports C++" claim
+ * checkable — a dispatch alone proves nothing. Pure data.
+ */
+export interface CodegenReport {
+  /** Server-derived, never taken from the model's word. */
+  status: 'confirmed' | 'failed';
+  /** Project-relative paths the agent wrote (GE/GA .h/.cpp, manifest, README). */
+  filesWritten: string[];
+  /** Did the PoF module build after the write? */
+  buildOk: boolean;
+  /** Did `seed_generated_abilities.py` run headless? */
+  seedRan: boolean;
+  /** Rows the seeder saved into DT_GeneratedAbilities (null = not reported). */
+  dataTableRows: number | null;
+  /** Tags referenced but not declared in ARPGGameplayTags.h. */
+  missingTags: string[];
+  /** Why it is `failed` (Rule 4 — a failure always reports its reason). */
+  reason?: string;
+  /** ISO timestamp the report was accepted. */
+  reportedAt: string;
+}
+
 /** Per-entity enriched GAS authoring spec — drives the rich editors (B2) + C++ codegen (B3). */
 export interface EnrichedAbilitySpec {
   catalogId: string;
@@ -32,6 +57,8 @@ export interface EnrichedAbilitySpec {
   updatedAt?: string;
   /** Optional adoption provenance (present when adopted from the forge). */
   provenance?: SpecProvenance;
+  /** Optional codegen provenance (present once a generate-gas-effects run reported back). */
+  codegen?: CodegenReport;
 }
 
 /** The thin fields `deriveDefaultSpec` needs from a SpellbookAbility. */

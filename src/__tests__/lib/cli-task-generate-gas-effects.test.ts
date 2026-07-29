@@ -21,16 +21,18 @@ const tagRules: TagRule[] = [{ id: 'r1', sourceTag: 'Ability.Fire.Fireball', tar
 
 describe('generate-gas-effects task (ECW B3a + B3b bundle)', () => {
   it('TaskFactory.generateGasEffects builds a typed task and carries scalars', () => {
-    const t = TaskFactory.generateGasEffects('arpg-gas', { ref, effects, tagRules, scalars: { manaCost: 20, cooldown: 6 } }, 'http://localhost:3000', 'Gen C++ Fireball');
+    const t = TaskFactory.generateGasEffects('arpg-gas', { ref, effects, tagRules, scalars: { manaCost: 20, cooldown: 6 }, catalogId: 'spellbook', entityId: 'off-fire-01' }, 'http://localhost:3000', 'Gen C++ Fireball');
     expect(t.type).toBe('generate-gas-effects');
     expect(t.ref.name).toBe('Fireball');
     expect(t.effects).toHaveLength(1);
     expect(t.scalars?.manaCost).toBe(20);
     expect(t.appOrigin).toBe('http://localhost:3000');
+    expect(t.catalogId).toBe('spellbook');
+    expect(t.entityId).toBe('off-fire-01');
   });
 
-  it('buildTaskPrompt embeds the GE + ability bundle contract and is callback-free', () => {
-    const t = TaskFactory.generateGasEffects('arpg-gas', { ref, effects, tagRules, scalars: { manaCost: 20 } }, 'http://localhost:3000', 'Gen');
+  it('buildTaskPrompt embeds the GE + ability bundle contract and a result callback', () => {
+    const t = TaskFactory.generateGasEffects('arpg-gas', { ref, effects, tagRules, scalars: { manaCost: 20 }, catalogId: 'spellbook', entityId: 'off-fire-01' }, 'http://localhost:3000', 'Gen');
     const prompt = buildTaskPrompt(t, ctx);
     expect(prompt).toContain('Fireball');
     expect(prompt).toContain('Fire Strike');
@@ -38,17 +40,20 @@ describe('generate-gas-effects task (ECW B3a + B3b bundle)', () => {
     expect(prompt).toContain('Abilities/Generated/');  // Part B
     expect(prompt).toContain('UGA_Gen_');
     expect(prompt).toContain('AbilityManaCost = 20');  // scalar threaded
-    expect(prompt).not.toContain('@@CALLBACK');        // callback-free
+    // The loop closes: the run reports files/build/seed back to the app.
+    expect(prompt).toContain('@@CALLBACK');
+    expect(prompt).toContain('dataTableRows');
+    expect(prompt).toContain('seedRan');
   });
 
   it('omits the mana cost when no scalars are supplied', () => {
-    const t = TaskFactory.generateGasEffects('arpg-gas', { ref, effects, tagRules }, 'http://localhost:3000', 'Gen');
+    const t = TaskFactory.generateGasEffects('arpg-gas', { ref, effects, tagRules, catalogId: 'spellbook', entityId: 'off-fire-01' }, 'http://localhost:3000', 'Gen');
     const prompt = buildTaskPrompt(t, ctx);
     expect(prompt).toMatch(/TODO: mana cost/);
   });
 
   it('the assembled prompt includes the B3c manifest + seeder registration step', () => {
-    const t = TaskFactory.generateGasEffects('arpg-gas', { ref, effects, tagRules }, 'http://localhost:3000', 'Gen');
+    const t = TaskFactory.generateGasEffects('arpg-gas', { ref, effects, tagRules, catalogId: 'spellbook', entityId: 'off-fire-01' }, 'http://localhost:3000', 'Gen');
     const prompt = buildTaskPrompt(t, ctx);
     expect(prompt).toContain('manifest.json');
     expect(prompt).toContain('seed_generated_abilities.py');

@@ -642,7 +642,22 @@ const generateGasEffects: TaskPromptHandler = (task, ctx, { knownAssetDomains, t
     includeBinaryTripwire: touchesBinaryAssets,
   });
   const body = buildGenerateAbilityBundlePrompt(gt.ref, gt.effects, gt.tagRules, gt.scalars);
-  return `${header}\n\n## Task\n${body}`;
+  // Close the loop: steps 11/14 of the contract already ask for files written,
+  // the manifest entry and the seeded row count — this reports them back so the
+  // UI can show confirmed/failed instead of "dispatched…" forever.
+  const cbId = registerCallback({
+    url: `${gt.appOrigin}/api/ability-spec/codegen`,
+    method: 'POST',
+    staticFields: { catalogId: gt.catalogId, entityId: gt.entityId },
+    schemaHint:
+      '  "filesWritten": ["Source/PoF/AbilitySystem/Effects/Generated/GE_Gen_<...>.h", "..."],  // every file you created or merged\n' +
+      '  "buildOk": true,          // did the PoF module build (judged from the newest Saved/Logs/PoF*.log, NOT the exit code)\n' +
+      '  "seedRan": true,          // did seed_generated_abilities.py run headless\n' +
+      '  "dataTableRows": 0,       // the N from the log line "[seed_generated_abilities] Saved … N rows"\n' +
+      '  "missingTags": [],        // tags referenced but NOT declared in ARPGGameplayTags.h\n' +
+      '  "reason": ""              // REQUIRED if anything above is false/0 — say exactly what failed',
+  });
+  return `${header}\n\n## Task\n${body}\n\n${buildCallbackSection(getCallback(cbId)!)}`;
 };
 
 const runAITests: TaskPromptHandler = (task, ctx) => {

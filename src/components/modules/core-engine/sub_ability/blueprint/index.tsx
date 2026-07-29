@@ -107,7 +107,7 @@ export function GASBlueprintEditor({ moduleId = 'arpg-gas' }: { moduleId?: SubMo
               <span className="text-2xs font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: `${withOpacity(ACCENT_CYAN, OPACITY_10)}`, color: ACCENT_CYAN, border: `1px solid ${withOpacity(ACCENT_CYAN, OPACITY_20)}` }}>INTERACTIVE</span>
               {activeTemplateName && <span className="text-2xs font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: `${withOpacity(ACCENT_EMERALD, OPACITY_10)}`, color: ACCENT_EMERALD, border: `1px solid ${withOpacity(ACCENT_EMERALD, OPACITY_20)}` }}>{activeTemplateName}</span>}
             </div>
-            <div className="text-2xs text-text-muted mt-0.5">Visual editor for Gameplay Ability System — exports C++ code</div>
+            <div className="text-2xs text-text-muted mt-0.5">Visual editor for Gameplay Ability System — generates GAS C++ into the UE project (agent-confirmed)</div>
           </div>
           <div className="flex items-center gap-3">
             <button onClick={() => setShowTemplatePicker(true)} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all"

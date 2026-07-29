@@ -425,6 +425,9 @@ export interface GenerateGasEffectsTask extends CLITask {
   tagRules: TagRule[];
   /** Optional entity scalars (catalog data) — AbilityManaCost + the canonical-damage guard. */
   scalars?: { manaCost?: number; cooldown?: number; damage?: number };
+  /** Spec the codegen result is reported back onto (callback staticFields). */
+  catalogId: string;
+  entityId: string;
   appOrigin: string;
 }
 
@@ -828,7 +831,15 @@ export const TaskFactory = {
    *  UGameplayEffect C++ + a UGA_Gen_* wiring ability into the additive Generated/ folders. */
   generateGasEffects(
     moduleId: SubModuleId,
-    params: { ref: AbilityRef; effects: EditorEffect[]; tagRules: TagRule[]; scalars?: { manaCost?: number; cooldown?: number; damage?: number } },
+    params: {
+      ref: AbilityRef;
+      effects: EditorEffect[];
+      tagRules: TagRule[];
+      scalars?: { manaCost?: number; cooldown?: number; damage?: number };
+      /** Required — the codegen callback reports its result onto this spec. */
+      catalogId: string;
+      entityId: string;
+    },
     appOrigin: string,
     label: string,
   ): GenerateGasEffectsTask {
@@ -841,6 +852,8 @@ export const TaskFactory = {
       effects: params.effects,
       tagRules: params.tagRules,
       scalars: params.scalars,
+      catalogId: params.catalogId,
+      entityId: params.entityId,
       appOrigin,
     };
   },

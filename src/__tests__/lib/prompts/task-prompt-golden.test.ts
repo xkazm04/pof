@@ -189,7 +189,7 @@ const TASK_CASES: Record<CLITaskType, () => CLITask> = {
   'generate-gas-effects': () =>
     TaskFactory.generateGasEffects(
       'arpg-gas',
-      { ref: ABILITY_REF, effects: EFFECTS, tagRules: TAG_RULES, scalars: { manaCost: 20, cooldown: 6, damage: 35 } },
+      { ref: ABILITY_REF, effects: EFFECTS, tagRules: TAG_RULES, scalars: { manaCost: 20, cooldown: 6, damage: 35 }, catalogId: 'spellbook', entityId: 'off-fire-01' },
       ORIGIN,
       'GAS Effects',
     ),

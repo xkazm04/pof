@@ -13,6 +13,7 @@ import type { AbilityRef } from '@/lib/ability/logic-prompts';
 import { useAbilitySpecStore, useEntityAbilitySpec } from '@/stores/abilitySpecStore';
 import type { ForgedAbility } from '@/lib/prompts/ability-forge';
 import { SPELLBOOK_ABILITIES, type SpellbookAbility } from '../_shared/data';
+import { useCodegenStatus, type CodegenStatus } from '../_shared/useCodegenStatus';
 import { ACCENT } from './constants';
 
 const SPEC_CATALOG_ID = 'spellbook';
@@ -35,6 +36,8 @@ export interface ForgeAdoptBinding {
   adopt: () => Promise<void>;
   generateInUE: () => void;
   isRunning: boolean;
+  /** Reported outcome of the last "Generate in UE" run (dispatched → confirmed/failed). */
+  codegen: CodegenStatus;
 }
 
 /**
@@ -57,11 +60,14 @@ export function useForgeAdopt(
   const persisted = useEntityAbilitySpec(SPEC_CATALOG_ID, entityId);
   const ability = SPELLBOOK_ABILITIES.find((a) => a.id === entityId);
 
+  const codegen = useCodegenStatus(SPEC_CATALOG_ID, entityId);
+
   const cli = useModuleCLI({
     moduleId,
     sessionKey: 'forge-adopt-gas',
     label: 'Forge → UE',
     accentColor: ACCENT,
+    onComplete: codegen.onCliComplete,
   });
 
   // Honest adopted state: the store's persisted spec carries THIS forge's C++.
@@ -106,15 +112,18 @@ export function useForgeAdopt(
           cooldown: forged.stats.cooldownSec,
           damage: forged.stats.baseDamage,
         },
+        catalogId: SPEC_CATALOG_ID,
+        entityId,
       },
       getAppOrigin(),
       `Generate in UE — ${forged.displayName}`,
     );
+    codegen.markDispatched();
     void cli.execute(task);
-  }, [forged, ability, moduleId, entityId, prompt, cli]);
+  }, [forged, ability, moduleId, entityId, prompt, cli, codegen]);
 
   return {
     entityId, setEntityId, ability, adoptState, error, isAdopted,
-    adopt, generateInUE, isRunning: cli.isRunning,
+    adopt, generateInUE, isRunning: cli.isRunning, codegen,
   };
 }

@@ -7,6 +7,7 @@ import {
   withOpacity, OPACITY_10, OPACITY_20, OPACITY_25,
 } from '@/lib/chart-colors';
 import { SPELLBOOK_ABILITIES } from '../_shared/data';
+import { CodegenStatusLine } from '../_shared/CodegenStatusLine';
 import { ACCENT } from './data';
 import type { SpecBinding } from './useAbilitySpecBinding';
 
@@ -20,7 +21,7 @@ interface Props {
  * effects in UE (CLI), or Save the current effects/tagRules to the DB.
  */
 export function SpecEntityBar({ binding }: Props) {
-  const { entityId, setEntityId, hydrating, saveState, error, save, draftSpec, generateEffects, isRunning } = binding;
+  const { entityId, setEntityId, hydrating, saveState, error, save, draftSpec, generateEffects, isRunning, codegen } = binding;
 
   const btnBase = 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed';
 
@@ -78,7 +79,8 @@ export function SpecEntityBar({ binding }: Props) {
       <div className="mt-1.5 flex items-center gap-2 text-2xs font-mono min-h-[16px]">
         {hydrating && <span className="text-text-muted flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Loading spec…</span>}
         {!hydrating && saveState === 'saved' && <span className="flex items-center gap-1" style={{ color: STATUS_SUCCESS }}><Check className="w-3 h-3" /> Spec saved</span>}
-        {isRunning && <span className="flex items-center gap-1" style={{ color: ACCENT_CYAN }}><Loader2 className="w-3 h-3 animate-spin" /> CLI task dispatched…</span>}
+        {isRunning && codegen.state !== 'dispatched' && <span className="flex items-center gap-1" style={{ color: ACCENT_CYAN }}><Loader2 className="w-3 h-3 animate-spin" /> CLI task dispatched…</span>}
+        <CodegenStatusLine status={codegen} />
         {error && <span className="flex items-center gap-1" style={{ color: STATUS_ERROR }}><AlertTriangle className="w-3 h-3" /> {error}</span>}
       </div>
     </SurfaceCard>

@@ -212,7 +212,17 @@ Extended subtypes carry type-specific fields:
 | `TaskFactory.generate()` | `generate` | `entity`, `step`, `appOrigin` |
 | `TaskFactory.evaluateTrack()` | `evaluate-track` | `entity`, `trackId`, `appOrigin` |
 | `TaskFactory.draftAbilitySpec()` | `draft-ability-spec` | `catalogId`, `entityId`, `ref`, `instruction`, `appOrigin` |
-| `TaskFactory.generateGasEffects()` | `generate-gas-effects` | `ref`, `effects[]`, `tagRules[]`, `scalars`, `appOrigin` |
+| `TaskFactory.generateGasEffects()` | `generate-gas-effects` | `ref`, `effects[]`, `tagRules[]`, `scalars`, `catalogId`, `entityId`, `appOrigin` |
+
+The `generate-gas-effects` task closes its loop with a callback to
+`POST /api/ability-spec/codegen` (staticFields `catalogId`/`entityId`): the agent
+reports `filesWritten` / `buildOk` / `seedRan` / `dataTableRows` / `missingTags`,
+the route validates the raw JSON through `parseCodegenReport`
+(`@/lib/ability/codegen-report`) and DERIVES the terminal status — a run that
+skipped the seeder or saved 0 rows is `failed` with a reason, whatever it claims.
+The report persists as the spec's `codegen` provenance (`ability_specs.codegen`)
+and drives the `dispatched → confirmed/failed` line in the Forge adopt bar and
+the GAS Blueprint editor's spec bar.
 
 Tasks whose `prompt` is empty (e.g. `featureReview`, `moduleScan`) rely entirely on
 `buildTaskPrompt` to assemble all content from the extended fields.

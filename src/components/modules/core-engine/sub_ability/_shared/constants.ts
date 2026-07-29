@@ -19,7 +19,7 @@ export const SUBTABS: SpellbookSubtabDef[] = [
   { key: 'effects', label: 'Effects', icon: Flame, narrative: 'Apply Effects', subtitle: 'Gameplay effects, duration timelines & execution flow' },
   { key: 'tags', label: 'Tags & Attributes', icon: Tags, narrative: 'Organize Tags', subtitle: 'Tag hierarchy, dependencies, audit & attribute growth' },
   { key: 'combos', label: 'Combos', icon: Swords, narrative: 'Chain Combos', subtitle: 'Combo chain builder, timing windows & cancel routes' },
-  { key: 'blueprint', label: 'Blueprint Editor', icon: Code2, narrative: 'Wire GAS', subtitle: 'Visual node editor for attributes, effects & tag rules — exports C++' },
+  { key: 'blueprint', label: 'Blueprint Editor', icon: Code2, narrative: 'Wire GAS', subtitle: 'Visual node editor for attributes, effects & tag rules — generates GAS C++ into the UE project' },
   { key: 'balance', label: 'Balance Lab', icon: FlaskConical, narrative: 'Simulate Balance', subtitle: 'Monte-Carlo TTK / DPS simulation, armor breakpoints & sensitivity analysis' },
   { key: 'forge', label: 'Ability Forge', icon: Wand2, narrative: 'Forge Abilities', subtitle: 'Describe an ability in plain English — AI writes the GAS C++' },
 ];

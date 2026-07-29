@@ -7,6 +7,7 @@ import {
   withOpacity, OPACITY_10, OPACITY_20,
 } from '@/lib/chart-colors';
 import { SPELLBOOK_ABILITIES } from '../_shared/data';
+import { CodegenStatusLine } from '../_shared/CodegenStatusLine';
 import { ACCENT } from './constants';
 import type { ForgeAdoptBinding } from './useForgeAdopt';
 
@@ -21,7 +22,7 @@ interface Props {
  * "Adopted" badge reflects the persisted store spec — no fake success.
  */
 export function ForgeAdoptBar({ binding }: Props) {
-  const { entityId, setEntityId, adoptState, error, isAdopted, adopt, generateInUE, isRunning } = binding;
+  const { entityId, setEntityId, adoptState, error, isAdopted, adopt, generateInUE, isRunning, codegen } = binding;
   const btn = 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed';
 
   return (
@@ -77,11 +78,7 @@ export function ForgeAdoptBar({ binding }: Props) {
             <Check className="w-3 h-3" /> Persisted to the entity spec — C++ kept as provenance (not written to disk)
           </span>
         )}
-        {isRunning && (
-          <span className="flex items-center gap-1" style={{ color: ACCENT_CYAN }}>
-            <Loader2 className="w-3 h-3 animate-spin" /> UE generation task dispatched…
-          </span>
-        )}
+        <CodegenStatusLine status={codegen} />
         {error && (
           <span className="flex items-center gap-1" style={{ color: STATUS_ERROR }}>
             <AlertTriangle className="w-3 h-3" /> {error}

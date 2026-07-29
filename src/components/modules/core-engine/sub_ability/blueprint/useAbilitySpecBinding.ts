@@ -13,6 +13,7 @@ import { deriveDefaultSpec } from '@/lib/ability/spec';
 import type { AbilityRef } from '@/lib/ability/logic-prompts';
 import { useAbilitySpecStore } from '@/stores/abilitySpecStore';
 import { SPELLBOOK_ABILITIES, type SpellbookAbility } from '../_shared/data';
+import { useCodegenStatus, type CodegenStatus } from '../_shared/useCodegenStatus';
 import { ACCENT } from './data';
 
 /** The blueprint editor authors specs against the spellbook catalog. */
@@ -46,6 +47,8 @@ export interface SpecBinding {
   draftSpec: () => void;
   generateEffects: () => void;
   isRunning: boolean;
+  /** Reported outcome of the last "Generate GAS effects" run (dispatched → confirmed/failed). */
+  codegen: CodegenStatus;
 }
 
 /**
@@ -69,11 +72,14 @@ export function useAbilitySpecBinding({ moduleId, effects, tagRules, onHydrate }
 
   const ability = SPELLBOOK_ABILITIES.find((a) => a.id === entityId);
 
+  const codegen = useCodegenStatus(SPEC_CATALOG_ID, entityId);
+
   const cli = useModuleCLI({
     moduleId,
     sessionKey: 'gas-blueprint-spec',
     label: 'GAS Spec',
     accentColor: ACCENT,
+    onComplete: codegen.onCliComplete,
   });
 
   // onHydrate identity must not re-trigger the fetch — hold it in a ref.
@@ -160,15 +166,18 @@ export function useAbilitySpecBinding({ moduleId, effects, tagRules, onHydrate }
         effects,
         tagRules,
         scalars: { manaCost: ability.manaCost, cooldown: ability.cooldown, damage: ability.damage },
+        catalogId: SPEC_CATALOG_ID,
+        entityId,
       },
       getAppOrigin(),
       `Generate GAS effects — ${ability.name}`,
     );
+    codegen.markDispatched();
     void cli.execute(task);
-  }, [ability, moduleId, effects, tagRules, cli]);
+  }, [ability, moduleId, entityId, effects, tagRules, cli, codegen]);
 
   return {
     entityId, setEntityId, ability, hydrating, saveState, error,
-    save, draftSpec, generateEffects, isRunning: cli.isRunning,
+    save, draftSpec, generateEffects, isRunning: cli.isRunning, codegen,
   };
 }

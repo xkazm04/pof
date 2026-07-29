@@ -60,3 +60,31 @@ Activation tag rules to wire onto the ability:
 12. Merge `Source/PoF/AbilitySystem/Effects/Generated/manifest.json` (create with `{ "abilities": [] }` if absent): upsert THIS ability keyed by `name` — `{ "name": "<AbilityName>", "gameplayTag": "<ability tag>", "abilityClass": "/Script/PoF.GA_Gen_<AbilityName>", "effectClasses": ["/Script/PoF.GE_Gen_<AbilityName>_<EffectName>", …] }`. Preserve any other abilities already in the file.
 13. After the build succeeds, run `Content/Python/seed_generated_abilities.py` via the FULL editor headless — `& "<UnrealEditor-Cmd.exe>" "<the .uproject>" -run=pythonscript -script="<abs path to the script>" -unattended -nopause -abslog="<a log path>"`. It reads the manifest and writes `/Game/Abilities/Generated/DT_GeneratedAbilities`. Judge success by the log line `[seed_generated_abilities] Saved … N rows` (ignore a non-zero exit from the benign shutdown crash).
 14. Report the manifest entry written and the row count the seeder saved.
+
+## Submission
+
+After completing your work, submit the results by outputting a JSON block wrapped in callback markers.
+
+**Format:**
+```
+@@CALLBACK:cb-TEST
+{
+  "filesWritten": ["Source/PoF/AbilitySystem/Effects/Generated/GE_Gen_<...>.h", "..."],  // every file you created or merged
+  "buildOk": true,          // did the PoF module build (judged from the newest Saved/Logs/PoF*.log, NOT the exit code)
+  "seedRan": true,          // did seed_generated_abilities.py run headless
+  "dataTableRows": 0,       // the N from the log line "[seed_generated_abilities] Saved … N rows"
+  "missingTags": [],        // tags referenced but NOT declared in ARPGGameplayTags.h
+  "reason": ""              // REQUIRED if anything above is false/0 — say exactly what failed
+}
+@@END_CALLBACK
+```
+
+The following fields will be added automatically — do NOT include them:
+- `catalogId`: `"spellbook"`
+- `entityId`: `"off-fire-01"`
+
+**Rules:**
+- Output valid JSON between the markers — no comments, no trailing commas
+- The markers MUST appear on their own lines, exactly as shown
+- The system will automatically submit this to the API — do NOT use curl
+- You will see a confirmation message once the submission succeeds

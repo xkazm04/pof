@@ -1,5 +1,5 @@
 import { getDb } from '@/lib/db';
-import type { EnrichedAbilitySpec, SpecProvenance } from '@/lib/ability/spec';
+import type { CodegenReport, EnrichedAbilitySpec, SpecProvenance } from '@/lib/ability/spec';
 import type { EditorEffect, TagRule } from '@/lib/gas-codegen';
 
 // DDL is idempotent (IF NOT EXISTS) but parsing/planning it on every read is
@@ -30,12 +30,20 @@ function ensureTable() {
     db.exec('ALTER TABLE ability_specs ADD COLUMN provenance TEXT');
   }
 
+  // Additive migration: codegen provenance (what the generate-gas-effects agent
+  // actually wrote/built/seeded in UE). Owned solely by the codegen callback —
+  // `upsertSpec` never writes this column, so a Save/Adopt cannot clobber it.
+  if (!cols.some((c) => c.name === 'codegen')) {
+    db.exec('ALTER TABLE ability_specs ADD COLUMN codegen TEXT');
+  }
+
   abilitySpecBootstrapped = true;
 }
 
 /** Column row → EnrichedAbilitySpec. Pure (exported for unit test). */
 export function rowToSpec(row: Record<string, unknown>): EnrichedAbilitySpec {
   const provRaw = row.provenance as string | null | undefined;
+  const codegenRaw = row.codegen as string | null | undefined;
   return {
     catalogId: row.catalog_id as string,
     entityId: row.entity_id as string,
@@ -43,6 +51,7 @@ export function rowToSpec(row: Record<string, unknown>): EnrichedAbilitySpec {
     tagRules: JSON.parse((row.tag_rules as string) || '[]') as TagRule[],
     updatedAt: (row.updated_at as string | null) ?? undefined,
     provenance: provRaw ? (JSON.parse(provRaw) as SpecProvenance) : undefined,
+    codegen: codegenRaw ? (JSON.parse(codegenRaw) as CodegenReport) : undefined,
   };
 }
 
@@ -69,4 +78,28 @@ export function upsertSpec(rec: EnrichedAbilitySpec): EnrichedAbilitySpec {
     provenance: rec.provenance ? JSON.stringify(rec.provenance) : null,
   });
   return getSpec(rec.catalogId, rec.entityId)!;
+}
+
+/**
+ * Attach a {@link CodegenReport} to an entity's spec (the generate-gas-effects
+ * callback's only write). Creates an empty spec row if the entity has none yet
+ * so a codegen result is never dropped on the floor.
+ */
+export function setCodegenReport(
+  catalogId: string,
+  entityId: string,
+  report: CodegenReport,
+): EnrichedAbilitySpec {
+  ensureTable();
+  getDb().prepare(`
+    INSERT INTO ability_specs (catalog_id, entity_id, effects, tag_rules, codegen, updated_at)
+    VALUES (@catalog_id, @entity_id, '[]', '[]', @codegen, datetime('now'))
+    ON CONFLICT(catalog_id, entity_id) DO UPDATE SET
+      codegen=@codegen, updated_at=datetime('now')
+  `).run({
+    catalog_id: catalogId,
+    entity_id: entityId,
+    codegen: JSON.stringify(report),
+  });
+  return getSpec(catalogId, entityId)!;
 }
