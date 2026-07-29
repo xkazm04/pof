@@ -230,7 +230,10 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
       // Resolve the adopted prompt-evolution variant for this task (if any) and
       // build the enriched prompt exactly as the preview shows it. Falls back to
       // the static registry prompt on no-variant / API error — never blocks.
-      const { prompt: enriched, variantId } = await composeTaskDispatch(task, ctx);
+      // `seed: true` — a REAL dispatch with no adopted variant captures the
+      // prompt it served as the item's baseline (v1), fire-and-forget, so the
+      // A/B rail has an incumbent to challenge. Previews pass no options.
+      const { prompt: enriched, variantId } = await composeTaskDispatch(task, ctx, { seed: true });
       sendPrompt(enriched, { taskType: task.type, label: task.label, variantId });
     },
     [sendPrompt, opts.sessionKey],

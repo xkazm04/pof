@@ -444,6 +444,25 @@ handler puts into the callback's `staticFields`. The loop has three legs:
 Adopting a winner / restoring a version flips the `active` flag, which changes what leg 1
 serves once no test is running.
 
+**Leg 0 — fuel (baseline auto-seeding).** On a fresh DB there are no variants at all, so
+leg 1 returned `null` forever and the rail never fired. The REAL dispatch path
+(`useModuleCLI.execute` → `composeTaskDispatch(task, ctx, { seed: true })`) therefore
+captures the prompt it just served as the item's **v1**: `resolveActivePrompt` fires
+`{ action: 'seed-baseline-variant' }` **fire-and-forget** (never awaited — dispatch latency
+must not pay for the write, and a failed seed never blocks a run). Server-side
+`seedBaselineVariant` is **idempotent**: an item that already has ANY version is a no-op
+read (`{ variant, seeded: false }`), so repeated dispatches cannot fork a second baseline
+or disturb an adopted version. The seeded variant's text is byte-identical to the static
+prompt (`origin: 'seeded'`), so the static golden rail is unchanged — only the stamped
+`promptVariantId` moves from `'static'` to the baseline id on later runs. Previews
+(`TaskPromptInspector`) pass no options and therefore never seed.
+
+**Challenger in one click.** The Optimizer tab's rewrite used to be display-only.
+`OptimizerPanel` now offers "save as challenger variant": pick the checklist item, and
+`usePromptEvolution.handleSaveChallenger` seeds the baseline from the registry prompt
+(idempotent), saves the optimized text via `createVariant`, and starts the A/B test between
+them — so leg 1 begins serving both arms on the next dispatches.
+
 ---
 
 ### 4.6 Judge verdicts → prompt fitness (the WS1 improvement loop)

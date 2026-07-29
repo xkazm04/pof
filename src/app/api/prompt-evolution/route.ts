@@ -2,6 +2,7 @@ import { type NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import {
   createVariant,
+  seedBaselineVariant,
   mutateVariant,
   getVariantsForItem,
   getVariantsForModule,
@@ -51,6 +52,22 @@ export async function POST(req: NextRequest) {
           'user-edit',
         );
         return apiSuccess(variant);
+      }
+
+      case 'seed-baseline-variant': {
+        // Auto-capture v1 for a checklist item from the prompt being served, so
+        // the A/B rail has an incumbent on a fresh DB. Idempotent: an item that
+        // already has versions comes back with `seeded: false` and its active
+        // version untouched.
+        if (!body.moduleId || !body.checklistItemId || !body.prompt) {
+          return apiError('moduleId, checklistItemId, and prompt required', 400);
+        }
+        const seeded = seedBaselineVariant(
+          body.moduleId as SubModuleId,
+          body.checklistItemId,
+          body.prompt,
+        );
+        return apiSuccess(seeded);
       }
 
       case 'mutate-variant': {

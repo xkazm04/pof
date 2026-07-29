@@ -28,7 +28,7 @@ export function PromptEvolutionView() {
     showCreateForm, setShowCreateForm, selectedMutation, setSelectedMutation,
     expandedVariantId, setExpandedVariantId, expandedTestId, setExpandedTestId,
     formErrors, setFormErrors, mode,
-    handleSelectModule, moduleChecklistItems, handleCreateVariant, handleMutate,
+    handleSelectModule, moduleChecklistItems, handleCreateVariant, handleMutate, handleSaveChallenger,
     handleCluster, handleStartTest, variantsByItem, historyItemOptions,
     visibleTabs, handleSetMode,
   } = usePromptEvolution();
@@ -131,6 +131,8 @@ export function PromptEvolutionView() {
               lastOptimization={lastOptimization}
               isOptimizing={isOptimizing}
               onOptimize={optimizePromptAction}
+              checklistItems={moduleChecklistItems}
+              onSaveChallenger={handleSaveChallenger}
             />
           )}
 

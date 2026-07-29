@@ -17,10 +17,21 @@
 import { buildTaskPrompt, type CLITask, type ChecklistTask } from '@/lib/cli-task';
 import type { ProjectContext } from '@/lib/prompt-context';
 import { tryApiFetch } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
 import type { ServedVariant } from '@/types/prompt-evolution';
 
 /** The sentinel recorded when a run used the static registry prompt. */
 export const STATIC_VARIANT_ID = 'static';
+
+/** Options shared by the resolve + compose entry points. */
+export interface DispatchResolveOptions {
+  /**
+   * Capture the served prompt as the item's baseline (v1) variant when the item
+   * has none. Only the REAL dispatch path sets this — a preview must never
+   * mutate the evolution DB just by being opened.
+   */
+  seed?: boolean;
+}
 
 /**
  * The (module, checklist-item) key a task resolves a variant against, or `null`
@@ -50,6 +61,7 @@ export function variantKeyForTask(
  */
 export async function resolveActivePrompt(
   task: CLITask,
+  opts: DispatchResolveOptions = {},
 ): Promise<{ prompt: string; variantId: string }> {
   const key = variantKeyForTask(task);
   if (!key) return { prompt: task.prompt, variantId: STATIC_VARIANT_ID };
@@ -60,8 +72,32 @@ export async function resolveActivePrompt(
     body: JSON.stringify({ action: 'resolve-dispatch-variant', ...key }),
   });
 
-  if (!res.ok || !res.data) return { prompt: task.prompt, variantId: STATIC_VARIANT_ID };
+  if (!res.ok || !res.data) {
+    // Nothing adopted → this run IS the baseline. Record it (fire-and-forget)
+    // so the item has a v1 to challenge; this run still dispatches the static
+    // prompt, byte-for-byte what we seeded.
+    if (opts.seed) seedBaseline(key, task.prompt);
+    return { prompt: task.prompt, variantId: STATIC_VARIANT_ID };
+  }
   return { prompt: res.data.variant.prompt, variantId: res.data.variant.id };
+}
+
+/**
+ * Fire-and-forget baseline capture. Deliberately NOT awaited: dispatch latency
+ * must not pay for the seed write, and a failed seed is never allowed to block
+ * or fail a run (the loop simply stays unfueled until the next dispatch).
+ */
+function seedBaseline(
+  key: { moduleId: CLITask['moduleId']; checklistItemId: string },
+  prompt: string,
+): void {
+  void tryApiFetch<unknown>('/api/prompt-evolution', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'seed-baseline-variant', ...key, prompt }),
+  }).then((r) => {
+    if (!r.ok) logger.debug(`[prompt-evolution] baseline seed skipped: ${r.error}`);
+  });
 }
 
 /**
@@ -73,8 +109,9 @@ export async function resolveActivePrompt(
 export async function composeTaskDispatch(
   task: CLITask,
   ctx: ProjectContext,
+  opts: DispatchResolveOptions = {},
 ): Promise<{ prompt: string; variantId: string }> {
-  const { prompt, variantId } = await resolveActivePrompt(task);
+  const { prompt, variantId } = await resolveActivePrompt(task, opts);
   const resolvedTask: CLITask = { ...task, prompt, promptVariantId: variantId };
   return { prompt: buildTaskPrompt(resolvedTask, ctx), variantId };
 }

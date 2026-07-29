@@ -14,8 +14,13 @@ export interface PromptVariant {
   label: string;
   /** The full prompt text */
   prompt: string;
-  /** How this variant was created */
-  origin: 'default' | 'mutation' | 'user-edit' | 'merged';
+  /**
+   * How this variant was created. `seeded` is the auto-captured baseline (v1):
+   * the first dispatch of a checklist item with no variants records the EXACT
+   * prompt it served, so the A/B rail always has a measured incumbent to
+   * challenge instead of an empty table.
+   */
+  origin: 'default' | 'mutation' | 'user-edit' | 'merged' | 'seeded';
   /** Phrasing style classification */
   style: VariantStyle;
   /** Parent variant id (null for originals) */
@@ -123,6 +128,17 @@ export interface ServedVariant {
   slot: 'A' | 'B' | null;
 }
 
+/**
+ * The baseline (v1) variant for a checklist item after {@link PromptVariant}
+ * auto-seeding: `seeded` is true only when this call captured it, false when the
+ * item already had versions (the call is idempotent, so a repeated dispatch
+ * never forks a second baseline).
+ */
+export interface SeededBaseline {
+  variant: PromptVariant;
+  seeded: boolean;
+}
+
 // ── Judge-scored fitness per quality-pack prompt version ──
 
 /**
@@ -226,6 +242,7 @@ export interface PromptEvolutionRequest {
   action:
     | 'get-variants'
     | 'create-variant'
+    | 'seed-baseline-variant'
     | 'mutate-variant'
     | 'start-ab-test'
     | 'record-trial'

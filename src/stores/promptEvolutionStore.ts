@@ -11,6 +11,7 @@ import type {
   PromptOptimizationResult,
   VariantVersionHistory,
   PromptVersionFitness,
+  SeededBaseline,
 } from '@/types/prompt-evolution';
 
 // ── Stable empty constants ──────────────────────────────────────────────────
@@ -79,6 +80,7 @@ interface PromptEvolutionState {
   loadVariants: (moduleId: SubModuleId, checklistItemId?: string) => Promise<void>;
   loadTests: (moduleId?: SubModuleId) => Promise<void>;
   createVariant: (moduleId: SubModuleId, checklistItemId: string, prompt: string) => Promise<PromptVariant | null>;
+  seedBaseline: (moduleId: SubModuleId, checklistItemId: string, prompt: string) => Promise<SeededBaseline | null>;
   mutateVariant: (variantId: string, mutation: MutationType) => Promise<PromptVariant | null>;
   startABTest: (moduleId: SubModuleId, checklistItemId: string, variantAId: string, variantBId: string) => Promise<ABTest | null>;
   recordTrial: (testId: string, variantSlot: 'A' | 'B', success: boolean, durationMs: number) => Promise<ABTest | null>;
@@ -186,6 +188,27 @@ export const usePromptEvolutionStore = create<PromptEvolutionState>((set, get) =
       return variant;
     } catch (err) {
       set({ error: err instanceof Error ? err.message : 'Failed to create variant', isMutating: false });
+      return null;
+    }
+  },
+
+  /**
+   * Ensure the checklist item has a baseline (v1) to challenge, capturing the
+   * given prompt as `origin: 'seeded'` when it has none. Idempotent — an item
+   * that already has versions returns its active one with `seeded: false`, so
+   * this never forks a second baseline or disturbs an adopted version.
+   */
+  seedBaseline: async (moduleId, checklistItemId, prompt) => {
+    try {
+      const result = await apiFetch<SeededBaseline | null>('/api/prompt-evolution', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'seed-baseline-variant', moduleId, checklistItemId, prompt }),
+      });
+      if (result?.seeded) set((s) => ({ variants: [...s.variants, result.variant] }));
+      return result;
+    } catch (err) {
+      set({ error: err instanceof Error ? err.message : 'Failed to seed baseline variant' });
       return null;
     }
   },

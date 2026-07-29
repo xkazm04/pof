@@ -97,6 +97,82 @@ describe('resolveActivePrompt', () => {
   });
 });
 
+describe('baseline auto-seeding (loop fuel)', () => {
+  /** Record every POST body so we can assert what the dispatch path asked the server. */
+  function recordingApi(served: ServedVariant | null) {
+    const bodies: Record<string, unknown>[] = [];
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body ?? '{}')) as Record<string, unknown>;
+      bodies.push(body);
+      const data = body.action === 'resolve-dispatch-variant' ? served : { variant: VARIANT, seeded: true };
+      return { json: async () => ({ success: true, data }) } as unknown as Response;
+    });
+    return { fetchMock, bodies };
+  }
+
+  /** Let the fire-and-forget seed POST land before asserting. */
+  const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+  it('seeds v1 from the EXACT prompt the run served when the item has no variant', async () => {
+    const { fetchMock, bodies } = recordingApi(null);
+    vi.stubGlobal('fetch', fetchMock);
+    const task = TaskFactory.checklist(MOD, 'combat-hit-detect', 'Static registry prompt.', 'Combat', ORIGIN);
+
+    const res = await resolveActivePrompt(task, { seed: true });
+    await flush();
+
+    // The run itself is untouched — still the static path, byte for byte.
+    expect(res.variantId).toBe(STATIC_VARIANT_ID);
+    expect(res.prompt).toBe('Static registry prompt.');
+    // …and the baseline captured is exactly that text under the item's key.
+    const seed = bodies.find((b) => b.action === 'seed-baseline-variant');
+    expect(seed).toBeDefined();
+    expect(seed).toMatchObject({
+      moduleId: MOD,
+      checklistItemId: 'combat-hit-detect',
+      prompt: 'Static registry prompt.',
+    });
+  });
+
+  it('does not seed when a variant is already adopted (never forks a second baseline)', async () => {
+    const { fetchMock, bodies } = recordingApi(adopted(VARIANT));
+    vi.stubGlobal('fetch', fetchMock);
+    const task = TaskFactory.checklist(MOD, 'combat-hit-detect', 'Static registry prompt.', 'Combat', ORIGIN);
+
+    await resolveActivePrompt(task, { seed: true });
+    await flush();
+
+    expect(bodies.some((b) => b.action === 'seed-baseline-variant')).toBe(false);
+  });
+
+  it('never seeds from a preview (no opts) — opening the inspector must not mutate the DB', async () => {
+    const { fetchMock, bodies } = recordingApi(null);
+    vi.stubGlobal('fetch', fetchMock);
+    const task = TaskFactory.checklist(MOD, 'combat-hit-detect', 'Static registry prompt.', 'Combat', ORIGIN);
+
+    await composeTaskDispatch(task, CTX);
+    await flush();
+
+    expect(bodies.some((b) => b.action === 'seed-baseline-variant')).toBe(false);
+  });
+
+  it('resolves without awaiting the seed write (a failing seed never blocks a run)', async () => {
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body ?? '{}')) as { action?: string };
+      if (body.action === 'seed-baseline-variant') throw new Error('seed write failed');
+      return { json: async () => ({ success: true, data: null }) } as unknown as Response;
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const task = TaskFactory.checklist(MOD, 'combat-hit-detect', 'Static registry prompt.', 'Combat', ORIGIN);
+
+    const { prompt, variantId } = await composeTaskDispatch(task, CTX, { seed: true });
+    await flush();
+
+    expect(variantId).toBe(STATIC_VARIANT_ID);
+    expect(prompt).toContain('Static registry prompt.');
+  });
+});
+
 describe('composeTaskDispatch', () => {
   it('builds the composed prompt from the adopted variant and records its id in the callback', async () => {
     vi.stubGlobal('fetch', mockApi(adopted(VARIANT)));

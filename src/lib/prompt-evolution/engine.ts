@@ -14,6 +14,7 @@ import type {
   VariantLineageNode,
   VariantVersionHistory,
   ServedVariant,
+  SeededBaseline,
 } from '@/types/prompt-evolution';
 import type { SessionRecord, ModuleStats } from '@/types/session-analytics';
 import { applyMutation, classifyStyle } from './mutations';
@@ -73,6 +74,35 @@ export function createVariant(
   };
   insertVariant(variant);
   return variant;
+}
+
+/**
+ * Capture the baseline (v1) variant for a checklist item from the prompt that is
+ * actually being served — the fuel the A/B rail never had.
+ *
+ * A fresh DB has zero variants, so `resolveDispatchVariant` returned `null`
+ * forever and every run dispatched the static registry prompt with no incumbent
+ * to challenge. The first dispatch of an item now records that exact text as an
+ * `origin: 'seeded'` variant, which is byte-identical to what the static path
+ * sends — so the run it seeds from, and every later run that serves the
+ * baseline, compose the same prompt.
+ *
+ * **Idempotent:** once the item has ANY version this is a no-op read that
+ * returns the current active one (`seeded: false`), so repeated dispatches never
+ * fork a second baseline and never overwrite a user's adopted version.
+ */
+export function seedBaselineVariant(
+  moduleId: SubModuleId,
+  checklistItemId: string,
+  prompt: string,
+): SeededBaseline | null {
+  const existing = getVariantsForItemDb(moduleId, checklistItemId);
+  if (existing.length > 0) {
+    const active = getActiveVariantForItem(moduleId, checklistItemId) ?? existing[0];
+    return { variant: active, seeded: false };
+  }
+  if (!prompt.trim()) return null;
+  return { variant: createVariant(moduleId, checklistItemId, prompt, 'seeded'), seeded: true };
 }
 
 export function getVariant(id: string): PromptVariant | null {

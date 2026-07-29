@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import {
   Zap, CheckCircle2, Sparkles, ArrowDown, ArrowUp,
-  ShieldCheck, FileCode2, Loader2, Wand2, Shuffle,
+  ShieldCheck, FileCode2, Loader2, Wand2, Shuffle, FlaskConical,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
@@ -29,18 +29,39 @@ export function OptimizerPanel({
   lastOptimization,
   isOptimizing,
   onOptimize,
+  checklistItems = [],
+  onSaveChallenger,
 }: {
   selectedModuleId: string | null;
   lastOptimization: PromptOptimizationResult | null;
   isOptimizing: boolean;
   onOptimize: (moduleId: SubModuleId, prompt: string) => Promise<PromptOptimizationResult | null>;
+  /** Checklist items of the selected module — the challenger must attach to one. */
+  checklistItems?: { id: string; label: string }[];
+  /** Save the optimized prompt as a challenger + start the A/B test against the baseline. */
+  onSaveChallenger?: (
+    checklistItemId: string,
+    prompt: string,
+  ) => Promise<{ ok: boolean; message: string }>;
 }) {
   const [inputPrompt, setInputPrompt] = useState('');
+  const [challengerItemId, setChallengerItemId] = useState('');
+  const [saveState, setSaveState] = useState<
+    { kind: 'idle' } | { kind: 'saving' } | { kind: 'done'; ok: boolean; message: string }
+  >({ kind: 'idle' });
 
   const handleOptimize = useCallback(async () => {
     if (!selectedModuleId || !inputPrompt.trim()) return;
+    setSaveState({ kind: 'idle' });
     await onOptimize(selectedModuleId as SubModuleId, inputPrompt.trim());
   }, [selectedModuleId, inputPrompt, onOptimize]);
+
+  const handleSaveChallenger = useCallback(async () => {
+    if (!onSaveChallenger || !lastOptimization || !challengerItemId) return;
+    setSaveState({ kind: 'saving' });
+    const result = await onSaveChallenger(challengerItemId, lastOptimization.optimized);
+    setSaveState({ kind: 'done', ok: result.ok, message: result.message });
+  }, [onSaveChallenger, lastOptimization, challengerItemId]);
 
   return (
     <div className="space-y-5">
@@ -123,6 +144,55 @@ export function OptimizerPanel({
                 </>
               )}
             </div>
+
+            {/* Save as challenger — the seam that turns a display-only diff into
+                a running experiment (baseline seeded + A/B test started). */}
+            {lastOptimization.wasModified && onSaveChallenger && (
+              <SurfaceCard level={2} className="p-3 space-y-2" data-testid="save-challenger">
+                <div className="flex items-center gap-2">
+                  <FlaskConical className="w-3.5 h-3.5" style={{ color: ACCENT }} />
+                  <h4 className="text-xs font-medium text-text">Test this rewrite for real</h4>
+                  <span className="text-xs text-text-muted">
+                    Saves it as a challenger and runs it against the current prompt
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <label className="sr-only" htmlFor="challenger-item">Checklist item</label>
+                  <select
+                    id="challenger-item"
+                    data-testid="challenger-item-select"
+                    value={challengerItemId}
+                    onChange={(e) => { setChallengerItemId(e.target.value); setSaveState({ kind: 'idle' }); }}
+                    className="px-2 py-1.5 text-xs rounded-md bg-surface border border-border text-text max-w-full"
+                  >
+                    <option value="">Attach to checklist item…</option>
+                    {checklistItems.map((item) => (
+                      <option key={item.id} value={item.id}>{item.id} — {item.label}</option>
+                    ))}
+                  </select>
+                  <button
+                    data-testid="save-challenger-run"
+                    onClick={handleSaveChallenger}
+                    disabled={!challengerItemId || saveState.kind === 'saving'}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md text-white disabled:opacity-40 transition-colors"
+                    style={{ backgroundColor: ACCENT }}
+                  >
+                    {saveState.kind === 'saving'
+                      ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      : <FlaskConical className="w-3.5 h-3.5" />}
+                    {saveState.kind === 'saving' ? 'Starting test…' : 'Save as challenger variant'}
+                  </button>
+                </div>
+                {saveState.kind === 'done' && (
+                  <p
+                    data-testid="save-challenger-result"
+                    className={`text-xs ${saveState.ok ? 'text-text' : 'text-red-400'}`}
+                  >
+                    {saveState.message}
+                  </p>
+                )}
+              </SurfaceCard>
+            )}
 
             {/* Diffs breakdown */}
             {lastOptimization.diffs.length > 0 && (

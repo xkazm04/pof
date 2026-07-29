@@ -33,6 +33,7 @@ export function usePromptEvolution() {
   const setActiveSubTab = usePromptEvolutionStore((s) => s.setActiveSubTab);
   const loadVariants = usePromptEvolutionStore((s) => s.loadVariants);
   const createVariant = usePromptEvolutionStore((s) => s.createVariant);
+  const seedBaseline = usePromptEvolutionStore((s) => s.seedBaseline);
   const mutateVariant = usePromptEvolutionStore((s) => s.mutateVariant);
   const startABTest = usePromptEvolutionStore((s) => s.startABTest);
   const concludeTestAction = usePromptEvolutionStore((s) => s.concludeTest);
@@ -109,6 +110,39 @@ export function usePromptEvolution() {
     setShowCreateForm(false);
   }, [selectedModuleId, newChecklistItemId, newPrompt, moduleChecklistItems, createVariant]);
 
+  /**
+   * Turn the optimizer's rewrite into a real experiment in one click: ensure the
+   * checklist item has a baseline (its registry prompt, seeded as v1), save the
+   * optimized text as a challenger variant, and start the A/B test between them.
+   * Without this the optimizer was display-only — a diff nobody could adopt.
+   */
+  const handleSaveChallenger = useCallback(async (checklistItemId: string, prompt: string) => {
+    if (!selectedModuleId) return { ok: false as const, message: 'Select a module first.' };
+    const item = moduleChecklistItems.find((c) => c.id === checklistItemId);
+    if (!item) return { ok: false as const, message: 'Pick a checklist item for this challenger.' };
+
+    const baseline = await seedBaseline(selectedModuleId, checklistItemId, item.prompt);
+    if (!baseline) {
+      const storeError = usePromptEvolutionStore.getState().error;
+      return { ok: false as const, message: storeError ?? 'Could not establish a baseline version.' };
+    }
+    const challenger = await createVariant(selectedModuleId, checklistItemId, prompt);
+    if (!challenger) {
+      const storeError = usePromptEvolutionStore.getState().error;
+      return { ok: false as const, message: storeError ?? 'Could not save the challenger variant.' };
+    }
+    const test = await startABTest(selectedModuleId, checklistItemId, baseline.variant.id, challenger.id);
+    if (!test) {
+      const storeError = usePromptEvolutionStore.getState().error;
+      return { ok: false as const, message: storeError ?? 'Challenger saved, but the A/B test could not start.' };
+    }
+    toast.success(`Challenger saved — A/B test running on “${item.label}”`);
+    return {
+      ok: true as const,
+      message: `Testing the optimized prompt against the baseline on “${item.label}”. Dispatch this checklist item a few times to collect trials.`,
+    };
+  }, [selectedModuleId, moduleChecklistItems, seedBaseline, createVariant, startABTest]);
+
   const handleMutate = useCallback(async (variantId: string) => {
     await mutateVariant(variantId, selectedMutation);
   }, [mutateVariant, selectedMutation]);
@@ -180,7 +214,7 @@ export function usePromptEvolution() {
     expandedVariantId, setExpandedVariantId, expandedTestId, setExpandedTestId,
     formErrors, setFormErrors, mode,
     // derived + handlers
-    handleSelectModule, moduleChecklistItems, handleCreateVariant, handleMutate,
+    handleSelectModule, moduleChecklistItems, handleCreateVariant, handleMutate, handleSaveChallenger,
     handleCluster, handleStartTest, variantsByItem, historyItemOptions,
     visibleTabs, handleSetMode,
   };
