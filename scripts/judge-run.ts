@@ -19,6 +19,13 @@
  *   npx tsx scripts/judge-run.ts --catalog items --median 3   # variance-robust near the 90 line
  *   npx tsx scripts/judge-run.ts --catalog items --no-canon    # A/B: disable canon+sibling context
  *   npx tsx scripts/judge-run.ts --catalog items --force-budget  # proceed despite a budget refusal
+ *   npx tsx scripts/judge-run.ts --catalog items --rejudge       # re-judge even unchanged steps
+ *   npx tsx scripts/judge-run.ts --all --concurrency 4           # bounded pool (default 4)
+ *
+ * SKIP: a step whose stored verdict is BOUND to the content on record (same `stepContentHash`
+ * under the current scheme, same rubric version) is skipped by default — the judgment already
+ * exists and would cost an Opus draw to reproduce. Every skip prints its reason, so a skipped
+ * step is never mistaken for a judged one. `--rejudge` forces the whole sweep.
  *
  * SPEND: every spawn is recorded through the same `recordSpend` seam as every other CLI
  * invocation in this app (task types `judge-content` / `judge-visual`, module `judge`, one row
@@ -45,6 +52,14 @@ import {
   type CliRunMetrics,
   type JudgeTaskType,
 } from '../src/lib/judge/spendMeter';
+import {
+  DEFAULT_JUDGE_CONCURRENCY,
+  indexVerdicts,
+  judgeSkipDecision,
+  runPool,
+  verdictKey,
+  type PriorVerdict,
+} from '../src/lib/judge/fleetPlan';
 import { getStepFact, isSyntheticEntity } from '../src/lib/status/statusModel';
 import { canonContextFor } from '../src/lib/catalog/canon/canonContext';
 import { CANON_SEED } from '../src/lib/catalog/canon/canon-seed';
@@ -66,6 +81,10 @@ const MEDIAN = Math.max(1, Number(arg('median') ?? 1));
 const NO_CANON = has('no-canon');
 /** Operator override: proceed even when the budget guardrail refuses. Never the default. */
 const FORCE_BUDGET = has('force-budget');
+/** Re-judge every target, including steps whose stored verdict still binds to their content. */
+const REJUDGE = has('rejudge');
+/** In-flight judge spawns. Bounded — each worker holds a real Claude CLI process. */
+const CONCURRENCY = Math.max(1, Number(arg('concurrency') ?? DEFAULT_JUDGE_CONCURRENCY));
 
 type Artifact = { entityId: string; step: string; status: string; data: Record<string, unknown> };
 
@@ -112,6 +131,22 @@ function meter(taskType: JudgeTaskType, label: string, m: CliRunMetrics): void {
 async function fetchArtifacts(catalogId: string): Promise<Artifact[]> {
   const j = await (await fetch(`${ORIGIN}/api/pipeline-artifacts?catalogId=${catalogId}`)).json();
   return (j.data?.artifacts ?? j.data ?? []) as Artifact[];
+}
+
+/**
+ * Stored verdicts for a catalog, indexed by (entity, step, judge class). This is what makes the
+ * skip decision possible: each row carries the `content_hash` of the content it judged.
+ * A fetch failure yields an EMPTY index — degrading to "judge everything" (the old behaviour),
+ * never to "skip everything".
+ */
+async function fetchVerdictIndex(catalogId: string): Promise<Map<string, PriorVerdict>> {
+  try {
+    const j = await (await fetch(`${ORIGIN}/api/judge-verdicts?catalogId=${catalogId}`)).json();
+    const rows = (j.data ?? []) as Array<PriorVerdict & { entityId: string; step: string }>;
+    return indexVerdicts(Array.isArray(rows) ? rows : []);
+  } catch {
+    return new Map();
+  }
 }
 
 /** Extract the judge payload for a deliverable class. Returns null if not judgeable here. */
@@ -162,12 +197,40 @@ function runClaude(prompt: string, modelId: string, effort: string): Promise<Cli
   });
 }
 
-async function judgeOne(catalogId: string, art: Artifact, entityArtifacts: Artifact[], tmpDir: string, policy: { cliModel: string; effort: string; modelId: string }, classFilter: Set<string> | null) {
-  if (isSyntheticEntity(art.entityId)) return { skipped: `${catalogId}::${art.step} [${art.entityId}] — test fixture, not content` };
+/** The `judge_verdicts.judge` class a given deliverable class's verdict is stored under. */
+function judgeClassOf(cls: DeliverableClass): 'llm-panel' | 'vlm' {
+  return cls === 'text-config' ? 'llm-panel' : 'vlm';
+}
+
+type Plan =
+  | { kind: 'none' }
+  | { kind: 'note'; text: string }
+  | { kind: 'judge'; cls: DeliverableClass };
+
+/**
+ * Decide, WITHOUT spawning anything, what should happen to one artifact. Cheap and pure enough
+ * to run over every row of every catalog — which is what lets `--dry` report the exact spawn
+ * count a real run would make.
+ */
+function planOne(catalogId: string, art: Artifact, classFilter: Set<string> | null, verdicts: Map<string, PriorVerdict>): Plan {
+  if (isSyntheticEntity(art.entityId)) return { kind: 'note', text: `${catalogId}::${art.step} [${art.entityId}] — test fixture, not content` };
   const fact = getStepFact(catalogId, art.step);
   const cls = deliverableClassOf(fact?.deliverable ?? '', catalogId);
-  if (!cls) return null;
-  if (classFilter && !classFilter.has(cls)) return null;
+  if (!cls) return { kind: 'none' };
+  if (classFilter && !classFilter.has(cls)) return { kind: 'none' };
+
+  const decision = judgeSkipDecision({
+    data: art.data,
+    prior: verdicts.get(verdictKey(art.entityId, art.step, judgeClassOf(cls))),
+    rubricVersion: RUBRIC_VERSION,
+    force: REJUDGE,
+  });
+  // Skipping is VISIBLE: the reason is printed, so a skipped step can never read as a judged one.
+  if (decision.skip) return { kind: 'note', text: `SKIP ${catalogId}::${art.step} [${art.entityId}] — ${decision.reason}` };
+  return { kind: 'judge', cls };
+}
+
+async function judgeOne(catalogId: string, art: Artifact, cls: DeliverableClass, entityArtifacts: Artifact[], tmpDir: string, policy: { cliModel: string; effort: string; modelId: string }) {
   const payload = buildPayload(cls, art, tmpDir);
   if (!payload) return { skipped: `${catalogId}::${art.step} — no judgeable ${cls} payload` };
 
@@ -244,7 +307,7 @@ async function main() {
   const classFilter = arg('classes') ? new Set(arg('classes')!.split(',')) : null;
   const limit = arg('limit') ? Number(arg('limit')) : Infinity;
 
-  console.log(`judge: model=${policy.cliModel} effort=${policy.effort} rubric=v${RUBRIC_VERSION}${NO_CANON ? '' : '+canon'} catalogs=${catalogs.length} classes=${classFilter ? [...classFilter].join('+') : 'all'} dry=${DRY}`);
+  console.log(`judge: model=${policy.cliModel} effort=${policy.effort} rubric=v${RUBRIC_VERSION}${NO_CANON ? '' : '+canon'} catalogs=${catalogs.length} classes=${classFilter ? [...classFilter].join('+') : 'all'} dry=${DRY} concurrency=${CONCURRENCY} skip-unchanged=${REJUDGE ? 'off (--rejudge)' : 'on'}`);
 
   // Up-front budget gate — refuse the whole fleet before the first Opus spawn rather than
   // discovering the ceiling halfway through it. A dry run never spawns, so it is never gated.
@@ -260,23 +323,51 @@ async function main() {
   }
 
   let n = 0;
+  let skipped = 0;
+  const t0 = Date.now();
   for (const c of catalogs) {
+    if (budgetStop) break;
     const allArts = await fetchArtifacts(c); // full set — sibling context needs every step of an entity
+    const verdicts = await fetchVerdictIndex(c); // what has already been judged, and of what content
     const toJudge = allArts.filter((a) => (stepFilter ? a.step === stepFilter : true) && (entityFilter ? a.entityId === entityFilter : true));
+
+    // ── Plan (no spawns) ───────────────────────────────────────────────────
+    // Deciding first is what lets `--limit` count real work and the pool schedule only targets
+    // that will actually spawn — a skipped step must not consume a limit slot.
+    const targets: { art: Artifact; cls: DeliverableClass }[] = [];
     for (const a of toJudge) {
-      if (n >= limit || budgetStop) break;
-      const res = await judgeOne(c, a, allArts, tmpDir, policy, classFilter);
+      const p = planOne(c, a, classFilter, verdicts);
+      if (p.kind === 'none') continue;
+      if (p.kind === 'note') {
+        console.log('  ' + p.text);
+        if (p.text.startsWith('SKIP ')) skipped++;
+        continue;
+      }
+      if (n + targets.length >= limit) break;
+      targets.push({ art: a, cls: p.cls });
+    }
+
+    // ── Judge (bounded pool) ───────────────────────────────────────────────
+    // These are real Claude CLI processes, so fan-out is capped at CONCURRENCY — the same
+    // ceiling the deep-eval engine uses. Results keep input order, so output reads as before.
+    const results = await runPool(targets, CONCURRENCY, async (t) => {
+      if (budgetStop) return null; // a mid-fleet budget stop halts the workers still to start
+      return judgeOne(c, t.art, t.cls, allArts, tmpDir, policy);
+    });
+    for (const res of results) {
       if (!res) continue;
       console.log('  ' + (res.verdict ?? res.skipped ?? res.dry ?? res.error));
       if (res.verdict || res.error) n++;
     }
-    if (budgetStop) break;
   }
   const costLine = DRY
     ? ''
     : ` — spend ${formatUsd(spend.costUsd)} over ${spend.spawns} spawn(s)` +
       (spend.unknownCost ? ` (${spend.unknownCost} spawn(s) reported no cost)` : '');
-  console.log(`done — ${n} judged${costLine}`);
+  const skipLine = skipped
+    ? `, ${skipped} skipped (verdict still bound to unchanged content — re-run with --rejudge to force)`
+    : '';
+  console.log(`done — ${n} judged${skipLine}${costLine} in ${((Date.now() - t0) / 1000).toFixed(1)}s`);
   if (budgetStop) {
     console.error(`STOPPED — ${budgetStop}`);
     process.exit(3);

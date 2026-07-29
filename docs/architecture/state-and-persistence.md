@@ -229,6 +229,18 @@ dev-server coupling beyond the artifact/verdict fetches the harness already need
 the CLI did not report is still recorded, labelled `(cost unreported by CLI)` rather than presented as
 a measured $0.
 
+`judge-run` also **plans before it spawns** (`src/lib/judge/fleetPlan.ts`, pure). It fetches the
+catalog's stored verdicts alongside its artifacts and, per (entity, step, judge class), asks
+`judgeSkipDecision` whether the standing verdict still binds: same `stepContentHash` **under the
+current scheme** (`isComparableHash` first — a legacy/absent/older-scheme hash MUST re-judge) and the
+same `RUBRIC_VERSION`. A bound verdict is SKIPPED with a printed reason (never on a timestamp, and
+never silently — a skipped step must not read as a judged one); `--rejudge` forces the sweep. The
+survivors run through `runPool` at `DEFAULT_JUDGE_CONCURRENCY` (4, the same ceiling
+`deep-eval-engine.ts` uses — these are real CLI processes), results kept in input order so output
+reads as the old serial loop did. Note that every verdict stored before the `content_hash` column
+existed is NULL, so nothing skips until a fresh run stamps hashes: that is the conservative
+behaviour, not a broken skip.
+
 **`prompt_variants` + `prompt_ab_tests`** (`src/lib/prompt-evolution/evolution-db.ts`, same guard
 pattern) make the Prompt Evolution engine durable. The engine (`prompt-evolution/engine.ts`) used to
 keep variants and A/B tests in module-scoped `Map`s, so a server restart silently wiped every
