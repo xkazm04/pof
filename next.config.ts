@@ -2,6 +2,16 @@ import type { NextConfig } from "next";
 import path from "path";
 
 const nextConfig: NextConfig = {
+  // Pin the workspace root to THIS directory. Sibling projects share
+  // `C:/Users/kazda/kiro/`, which carries its own `package-lock.json`, so Next's
+  // multi-lockfile inference can silently select the PARENT as the root. When it
+  // does, `serverExternalPackages` below stops matching and Turbopack tries to
+  // bundle better-sqlite3 for the browser — failing with `Can't resolve 'fs'`
+  // from `better-sqlite3/lib/database.js`. That surfaces as a Playwright
+  // `webServer` timeout with a bare "module-not-found" link and no named module,
+  // which is very hard to read back to its cause. Pinning removes the inference.
+  turbopack: { root: __dirname },
+  outputFileTracingRoot: __dirname,
   serverExternalPackages: ['better-sqlite3'],
   experimental: {
     // Tree-shake large/barrel packages so each route only bundles the exports it
