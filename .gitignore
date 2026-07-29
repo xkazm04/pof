@@ -90,3 +90,6 @@ docs/index.bleve/
 # append progress nodes here; the app ingests the file and deletes it. The
 # .personas/ dir itself IS committed (it marks the repo as Personas-managed).
 .personas/memory-outbox.jsonl
+
+# Throwaway hermetic SQLite the Playwright suite runs against (e2e/helpers/e2e-db.ts)
+/e2e/.tmp/

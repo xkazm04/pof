@@ -1,9 +1,27 @@
 # Catalog-Pipeline E2E Coverage
 
 Every registered catalog pipeline is walked end-to-end through the real `/layout` lab UI by
-Playwright, in stub mode (real Next.js dev server + real SQLite `~/.pof/pof.db`; no Claude CLI / UE
+Playwright, in stub mode (real Next.js dev server + real SQLite; no Claude CLI / UE
 bridge — `CliProduce` writes artifacts synchronously). This is the e2e complement to the ~160
 vitest unit tests, which don't see the UI → store → persistence seams.
+
+## Hermetic by construction
+
+The suite runs against a **throwaway database**, never `~/.pof/pof.db`:
+
+- `playwright.config.ts` passes `POF_DB_PATH=e2e/.tmp/e2e.db` to its `webServer` and wipes that
+  file (plus `-wal`/`-shm`) before launching it (`e2e/helpers/e2e-db.ts`; the reset is guarded to
+  the runner process, since the config module is re-evaluated inside every worker).
+- `reuseExistingServer` is **off by default** (opt in with `POF_E2E_REUSE_SERVER=1` for hand-driven
+  iteration). An already-running dev server was started without `POF_DB_PATH`, so adopting one would
+  silently put the real DB back under the suite.
+
+This matters because acceptance is a function of persisted state: a `judge_verdicts` row, a drain
+outcome or a leftover artifact from any earlier session used to feed straight into what the walker
+asserted. The walker's verdict was therefore a property of the machine, not of the code — a fresh
+clone and a long-lived dev box could not agree, and "the walker is red" carried no information.
+Note this is **isolation, not erasure**: the developer's real DB is untouched; the suite just stops
+reading and writing it.
 
 ## What runs
 
@@ -11,8 +29,10 @@ vitest unit tests, which don't see the UI → store → persistence seams.
 |------|------|
 | `e2e/catalog-pipeline-walker.spec.ts` | Data-driven walker. Enumerates `allCatalogPipelines()` and, per catalog, opens its first seeded entity and walks every step. |
 | `e2e/catalog-items-reference.spec.ts` | Bespoke deep walk of the 13-step Items reference pipeline. |
-| `e2e/helpers/lab-mode.ts` | Shared helpers: `gotoLab`, `openCatalog`, `selectStep`, `produceStep`, `acceptanceStatus`, `expectPersisted`, `expectPersistedDirection`. |
+| `e2e/helpers/lab-mode.ts` | Shared helpers: `gotoLab`, `openCatalog`, `selectStep`, `produceStep`, `acceptanceStatus`, `expectPersistedConfigComplete`, `expectPersistedDirection`. |
 | `e2e/helpers/pipeline-coverage.ts` | `WALKER_SKIP` — the single, documented list of pipelines the generic walker skips (and why). |
+| `e2e/helpers/e2e-db.ts` | The hermetic `POF_DB_PATH` seam + per-run reset (above). |
+| `e2e/helpers/walk-status.ts` + `e2e/walk-status.json` | The **walk-success signal**: which pipelines the last FULL walker run took green. Committed; read by the guard. |
 | `src/__tests__/catalog/pipeline-e2e-coverage.test.ts` | **Gap guard** (vitest, runs in `npm run validate`). |
 | `src/__tests__/catalog/pipeline-spec-linter.test.ts` | **Fleet spec linter** (vitest, runs in `npm run validate`). Guards spec↔renderer contracts (below). |
 
@@ -27,8 +47,23 @@ vitest unit tests, which don't see the UI → store → persistence seams.
   bespoke Items reference pipeline is a green demo (its Test Gate simulates `Result={Success}` →
   `pass`), unlike the generic registry `items.ts` which uses `runtimeDeferred`.
 - **Persist round-trip**: the produced artifact is `POST`ed to `/api/pipeline-artifacts` and the
-  stored status equals the in-UI status; a second test wipes `localStorage['pof-lab-pipeline']`,
-  reloads, and asserts every step hydrates back from the server.
+  stored row is asserted config-complete **in its own right**; a second test wipes
+  `localStorage['pof-lab-pipeline']`, reloads, and asserts every step hydrates back from the server.
+
+### Two truths, asserted separately — never against each other
+
+The walker used to assert `persisted status === on-screen status`. That is **structurally
+unsatisfiable** whenever a judge verdict binds, because the two are different verdicts on purpose:
+
+| Truth | Source | What it is |
+|-------|--------|------------|
+| On-screen banner | `resolveStepAcceptance` | checker → server drain overlay → **judge bridge** |
+| Persisted row | `POST /api/pipeline-artifacts` | the **pure checker** verdict (`graded.raw`); judge state lives apart in `judge_verdicts` and is bridged only on read |
+
+So a content-bound judge FAIL correctly turns the banner red while the row correctly still says
+`pass` — and the old equality assertion called that a walker failure. Each truth is now checked
+against the rule that governs it: both must be config-complete (`pass|deferred`), and neither is
+compared to the other (`expectPersistedConfigComplete` carries the full rationale).
 
 ## The gap guard (enforced in `npm run validate`)
 
@@ -37,6 +72,13 @@ vitest unit tests, which don't see the UI → store → persistence seams.
 the walker enumerates the registry, a new pipeline is auto-covered the moment it self-registers; the
 guard turns "added a pipeline with no e2e path" into a red `validate` instead of a silent gap. See
 **CLAUDE.md → Rule 5 — Every pipeline is e2e-walked**.
+
+It also reads the **walk-success signal**. Registration hygiene only proves a pipeline *could* be
+walked; it can't notice a walker that has rotted. So the walker writes `e2e/walk-status.json` after
+a **full** green run (a `--grep`/`--shard` subset never rewrites it, so a partial run can't shrink
+the record) and the guard fails when a registered, non-skipped pipeline has no green walk on record,
+or when the recorded `WALKER_SKIP` set no longer matches the code. Adding or breaking a pipeline is
+therefore a red `validate` until the walker is re-run.
 
 ## The fleet spec linter (enforced in `npm run validate`)
 
@@ -76,12 +118,14 @@ npm run test:e2e -- e2e/catalog-pipeline-walker.spec.ts e2e/catalog-items-refere
 npm run test:e2e
 ```
 
-The dev server is auto-started by Playwright's `webServer` (or reused if one is already on the
-target port — set `PLAYWRIGHT_PORT` if PoF isn't on the default 3000).
+Playwright starts its own dev server (on the throwaway DB). Set `PLAYWRIGHT_PORT` to a **free** port
+— the run now refuses to adopt a foreign process, so a squatter is a loud failure, not a silently
+non-hermetic run. `POF_E2E_REUSE_SERVER=1` opts back into reuse for iteration (and gives up
+isolation — the reused server holds the real DB).
 
-## Status (2026-06-08)
+## Status (2026-07-29)
 
-- **30 of 31 pipelines covered**: 29 generic catalogs via the walker + Items via the reference spec.
-- **Known gap**: `player-movement` registers a `CatalogPipeline` but has no `CATALOG_SECTIONS` /
-  `NEW_CATALOGS` entry, so the lab surfaces no entity to walk. It is documented in `WALKER_SKIP`;
-  closing it means adding a section + starter entity whose seed satisfies the pipeline's checkers.
+- **32 registered pipelines, 31 walked green** by the generic walker + Items via the reference spec
+  (`62 passed / 2 skipped`, ~5 min, hermetic DB). Recorded in `e2e/walk-status.json`.
+- `player-movement` is no longer a gap — it has a `NEW_CATALOGS` section + starter and walks like any
+  other pipeline. `items` is the only `WALKER_SKIP` entry (covered by the bespoke reference spec).

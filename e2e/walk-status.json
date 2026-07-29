@@ -1,0 +1,39 @@
+{
+  "generatedAt": "2026-07-29T11:43:53.340Z",
+  "walked": [
+    "achievements",
+    "ambient",
+    "bestiary",
+    "character-pipeline",
+    "characters",
+    "codex",
+    "combat-map",
+    "crafting-recipes",
+    "currencies",
+    "cutscenes",
+    "dialog-trees",
+    "factions",
+    "hud-elements",
+    "icon-sets",
+    "input-schemes",
+    "loot-tables",
+    "materials",
+    "music",
+    "player-movement",
+    "progression-curves",
+    "props",
+    "quests",
+    "save-points",
+    "screen-flow",
+    "spellbook",
+    "state-graph",
+    "status-effects",
+    "tutorial-beats",
+    "vendors",
+    "vfx",
+    "zone-map"
+  ],
+  "skipped": {
+    "items": "covered in depth by catalog-items-reference.spec.ts (bespoke 13-step UI)"
+  }
+}

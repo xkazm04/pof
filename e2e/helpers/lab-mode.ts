@@ -90,14 +90,33 @@ export async function expectPersistedDirection(
     .toBe(direction);
 }
 
-/** Poll the server until the step's persisted status equals the in-UI status. */
-export async function expectPersisted(
+/**
+ * Poll the server until the step's artifact exists, then assert the PERSISTED status
+ * against its OWN source of truth.
+ *
+ * ── Why this is not `persisted === on-screen` ──────────────────────────────────
+ * The two are DIFFERENT verdicts by design, and asserting they are equal is structurally
+ * unsatisfiable the moment a judge verdict exists:
+ *
+ *  - the persisted row holds the **pure Checker verdict** (`POST /api/pipeline-artifacts`
+ *    re-grades the submitted data and stores `graded.raw` — judge state lives apart in
+ *    `judge_verdicts` and is deliberately NOT folded in);
+ *  - the on-screen banner shows the **bridged** verdict (`resolveStepAcceptance` =
+ *    checker → server drain overlay → judge bridge), so a content-bound judge FAIL turns a
+ *    checker `pass` red on screen while the row correctly still says `pass`.
+ *
+ * So each truth is asserted against the rule that governs it: both must be
+ * config-complete (Rule 5), and the walker checks the on-screen one separately. Equality is
+ * never claimed.
+ */
+export async function expectPersistedConfigComplete(
   request: APIRequestContext,
   catalogId: string,
   entityId: string,
   step: string,
-  status: StepStatus,
+  allowed: ReadonlySet<StepStatus>,
 ): Promise<void> {
+  let seen: string | null = null;
   await expect
     .poll(
       async () => {
@@ -106,9 +125,19 @@ export async function expectPersisted(
         );
         if (!res.ok()) return null;
         const body = (await res.json()) as { data?: Array<{ step: string; status: string }> };
-        return body.data?.find((a) => a.step === step)?.status ?? null;
+        seen = body.data?.find((a) => a.step === step)?.status ?? null;
+        return seen;
       },
-      { timeout: 10_000, message: `${catalogId} · ${step} did not persist with status ${status}` },
+      { timeout: 10_000, message: `${catalogId} · ${step} never reached the server (no persisted artifact row)` },
     )
-    .toBe(status);
+    .not.toBeNull();
+
+  expect
+    .soft(
+      allowed.has(seen as unknown as StepStatus),
+      `${catalogId} · ${step}: persisted (pure-checker) status "${seen}" is not config-complete ` +
+        `(want ${[...allowed].join('|')}). This is the SERVER's own truth — the on-screen banner is ` +
+        `asserted separately and may legitimately differ (judge bridge).`,
+    )
+    .toBe(true);
 }

@@ -4,6 +4,7 @@ import { allCatalogPipelines } from '@/lib/catalog/pipeline-registry';
 import { CATALOG_SECTIONS, seedAllCatalogs } from '@/lib/catalog/sections';
 // Relative import (no @/ for an e2e helper): src/__tests__/catalog -> repo-root e2e/helpers.
 import { WALKER_SKIP } from '../../../e2e/helpers/pipeline-coverage';
+import { readWalkStatus } from '../../../e2e/helpers/walk-status';
 
 /**
  * Gap guard (runs in `npm run validate`). Fails fast when a registered catalog
@@ -51,5 +52,37 @@ describe('catalog-pipeline e2e coverage guard', () => {
     const ids = new Set(pipelines.map((p) => p.catalogId));
     const stale = Object.keys(WALKER_SKIP).filter((id) => !ids.has(id));
     expect(stale, `WALKER_SKIP references unknown catalogs: ${stale.join(', ')}`).toEqual([]);
+  });
+
+  // ── Walk-success signal ────────────────────────────────────────────────────
+  // Registration hygiene (above) proves a pipeline COULD be walked. It cannot notice a
+  // walker that has rotted — a pipeline whose walk now fails, or one added after the last
+  // full run. `e2e/walk-status.json` is written by the walker itself after a FULL green run
+  // and committed; reading it back here makes "never actually walked" a red `validate`.
+  describe('walk-success signal (e2e/walk-status.json)', () => {
+    const status = readWalkStatus();
+    const RERUN = 'Run the walker (`npm run test:e2e -- e2e/catalog-pipeline-walker.spec.ts`); a full green run rewrites e2e/walk-status.json.';
+
+    it('exists — the walker has been run at least once and recorded its result', () => {
+      expect(status, `e2e/walk-status.json is missing or unreadable. ${RERUN}`).not.toBeNull();
+    });
+
+    it('records a green walk for every non-skipped registered pipeline', () => {
+      if (!status) return; // reported by the test above
+      const walked = new Set(status.walked);
+      const unwalked = pipelines.map((p) => p.catalogId).filter((id) => !isSkipped(id) && !walked.has(id));
+      expect(
+        unwalked,
+        `pipelines with no recorded green e2e walk: ${unwalked.join(', ')}. ${RERUN}`,
+      ).toEqual([]);
+    });
+
+    it('was recorded against the current WALKER_SKIP set (no silently-skipped pipeline)', () => {
+      if (!status) return;
+      expect(
+        Object.keys(status.skipped).sort(),
+        `e2e/walk-status.json was recorded with a different WALKER_SKIP set. ${RERUN}`,
+      ).toEqual(Object.keys(WALKER_SKIP).sort());
+    });
   });
 });
