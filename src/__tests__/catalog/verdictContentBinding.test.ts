@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { stepContentHash } from '@/lib/judge/contentHash';
+import { stepContentHash, hashScheme, isComparableHash, CONTENT_HASH_SCHEME } from '@/lib/judge/contentHash';
 import { RUBRIC_VERSION, newestRubricVerdicts, isCurrentRubric } from '@/lib/judge/rubrics';
 import { bridgeJudgeVerdict, verdictProvenance, judgedContentOf } from '@/lib/catalog/acceptance/judgeBridge';
 import { resolveStepAcceptance } from '@/lib/catalog/acceptance/resolveStepAcceptance';
@@ -47,6 +47,22 @@ describe('stepContentHash', () => {
       .toBe(stepContentHash({ ...selected, genHistory: { batches: [1, 2, 3] } }));
   });
 
+  it('ignores the SERVER-STAMPED `_provenance` — the write and read paths must hash the same thing', () => {
+    // `POST /api/pipeline-artifacts` (`stampPromptVersion`) always writes this key, the browser
+    // never does, and `submitStepArtifact` (MCP) never does either. Hashing it made the verdict
+    // write path (persisted row) and the lab read path (local artifact) structurally unable to
+    // agree for every browser-produced step.
+    const produced = { price: 100 };
+    expect(stepContentHash({ ...produced, _provenance: { engine: 'stub', promptVersion: 'q7' } }))
+      .toBe(stepContentHash(produced));
+  });
+
+  it('carries the current scheme prefix, and legacy hashes are not comparable', () => {
+    expect(hashScheme(stepContentHash({ a: 1 }))).toBe(CONTENT_HASH_SCHEME);
+    expect(isComparableHash('v1-abc-def')).toBe(false);
+    expect(isComparableHash(stepContentHash({ a: 1 }))).toBe(true);
+  });
+
   it('treats absent data as empty, never throwing', () => {
     expect(stepContentHash(undefined)).toBe(stepContentHash({}));
   });
@@ -73,7 +89,13 @@ describe('verdictProvenance', () => {
   });
 
   it('stale — the hash disagrees (the step was re-produced)', () => {
-    expect(verdictProvenance(verdict({ contentHash: 'v1-x-y' }), content)).toBe('stale');
+    expect(verdictProvenance(verdict({ contentHash: stepContentHash({ price: 999 }) }), content)).toBe('stale');
+  });
+
+  it('unknown — a hash from a SUPERSEDED scheme is unbindable, and must not read as stale', () => {
+    // A `v1-` hash excluded a different key set; comparing it against a v2 hash proves nothing.
+    // Degrading it to `stale` would silently retire every standing condemnation at once.
+    expect(verdictProvenance(verdict({ contentHash: 'v1-abc-def' }), content)).toBe('unknown');
   });
 
   it('stale — legacy (no hash) but judged BEFORE the artifact was last written', () => {
@@ -127,7 +149,7 @@ describe('bridgeJudgeVerdict — a stale condemnation is cleared, never silently
   it('a current binding wins over a stale one for the same step', () => {
     const r = bridgeJudgeVerdict(
       pass,
-      [verdict({ judge: 'llm-panel', contentHash: 'v1-old-old' }), verdict({ contentHash: content.hash })],
+      [verdict({ judge: 'llm-panel', contentHash: stepContentHash({ price: 1 }) }), verdict({ contentHash: content.hash })],
       undefined, content,
     );
     expect(r.status).toBe('fail');

@@ -8,35 +8,22 @@ import { stepContentHash } from '@/lib/judge/contentHash';
  * checker still grades it `pass` — same verdict, different content, no signal anywhere.
  * This is the fingerprint the lab compares.
  *
- * Two classes of key are excluded, because they are BOOKKEEPING rather than produced content
- * and comparing them would make every step read as drifted forever:
- *  - `genHistory` — the gallery's kept re-roll log. Already excluded by
- *    {@link stepContentHash} (see `@/lib/judge/contentHash`), and deliberately preserved
- *    across an adopt, so local and server legitimately differ there.
- *  - `_provenance` — stamped SERVER-SIDE onto every persisted artifact by the
- *    `/api/pipeline-artifacts` POST route (`stampPromptVersion`). The row that comes back
- *    therefore always carries a key the local artifact never had; without stripping it,
- *    EVERY produced step would report content drift the moment it was compared.
+ * The bookkeeping keys that must NOT count as content (`genHistory`, `_provenance`) are excluded
+ * by {@link stepContentHash} itself — ONE exclusion rule, shared with the judge write path and
+ * the verdict bridge. This file used to keep a SECOND rule (a local `_provenance` strip), which
+ * is exactly how the two sides drifted apart: drift saw no divergence while the verdict bridge
+ * saw a hash mismatch on the same pair of artifacts, so a real judge failure was reported as
+ * "re-produced since" and neither the drift banner nor `adoptServer` could correct it. There is
+ * now nothing to strip here — do not reintroduce one.
  */
-const SERVER_STAMP_KEYS = ['_provenance'] as const;
-
-/** Strip the server's own bookkeeping stamp (never the produced payload). */
-function withoutServerStamp(data: Record<string, unknown> | undefined): Record<string, unknown> {
-  if (!data) return {};
-  let out: Record<string, unknown> | null = null;
-  for (const k of SERVER_STAMP_KEYS) {
-    if (k in data) { out = out ?? { ...data }; delete out[k]; }
-  }
-  return out ?? data;
-}
 
 /**
- * A stable fingerprint of what a step actually holds: its produced `data` (minus the
- * bookkeeping above) plus its UE asset list, order-normalized so a reordered manifest is
+ * A stable fingerprint of what a step actually holds: its produced `data` (minus the shared
+ * bookkeeping exclusions) plus its UE asset list, order-normalized so a reordered manifest is
  * not reported as a change.
  */
 export function labContentHash(data: Record<string, unknown> | undefined, ueAssets: string[] | undefined): string {
-  return `${stepContentHash(withoutServerStamp(data))}|${JSON.stringify([...(ueAssets ?? [])].sort())}`;
+  return `${stepContentHash(data)}|${JSON.stringify([...(ueAssets ?? [])].sort())}`;
 }
 
 /** True when the two sides hold genuinely different content (see {@link labContentHash}). */

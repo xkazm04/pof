@@ -12,15 +12,55 @@
  */
 
 /**
- * Bookkeeping keys that are NOT the judged content.
+ * Bookkeeping keys that are NOT the judged content. THE single exclusion rule — the write path
+ * (`POST /api/judge-verdicts`), the verdict bridge (`judgeBridge`) and the lab's drift
+ * comparator (`labContentDrift`) all hash through here, so no second stripping rule exists.
  *
  * `genHistory` is the gallery's kept re-roll log (`shared/genHistory.ts`). The SELECTED
  * candidate's payload is projected to the artifact's top level — that projection is what the
  * checker grades and what the judge reads — while the log itself grows on every re-roll. Hashing
  * it would mark every verdict stale after a browse that changed nothing, silently clearing real
  * condemnations. So the log is excluded and the selection (already top-level) is what binds.
+ *
+ * `_provenance` is stamped SERVER-SIDE by `POST /api/pipeline-artifacts` (`stampPromptVersion`,
+ * which always writes the key). It made the two sides of this hash structurally unable to agree:
+ * the verdict's hash is derived from the PERSISTED row (always stamped), while the lab hashes the
+ * LOCAL artifact the browser produced (never stamped) — so every locally-produced step's current
+ * verdict classified `stale` and quietly stopped condemning. The asymmetry also had the opposite
+ * polarity for the headless path: `submitStepArtifact` (the MCP `pof_submit_artifact` seam) and
+ * the L3/L4 gate re-persists (`staticVerify` / `packagingVerify`) write `data` WITHOUT the stamp,
+ * so those rows agreed by accident. Excluding the stamp makes both paths hash the same produced
+ * content, which is the only thing a judge ever read.
  */
-const VOLATILE_KEYS = new Set(['genHistory']);
+const VOLATILE_KEYS = new Set(['genHistory', '_provenance']);
+
+/**
+ * The hashing scheme in force. Bump it with ANY change to {@link VOLATILE_KEYS} or the
+ * serialization: an existing stamped hash was computed under a DIFFERENT rule and is not
+ * comparable, and silently comparing across schemes would report every standing verdict as
+ * judging content it never judged.
+ *
+ * v1 — `genHistory` excluded only. Its hashes are unbindable under v2 (they include the
+ *      server's `_provenance` stamp or not, depending on which write path produced the row).
+ * v2 — `_provenance` excluded too (see above).
+ */
+export const CONTENT_HASH_SCHEME = 'v2';
+
+/** The scheme prefix a stored hash was computed under (`undefined` for an unparseable value). */
+export function hashScheme(hash: string | undefined): string | undefined {
+  if (!hash) return undefined;
+  const i = hash.indexOf('-');
+  return i > 0 ? hash.slice(0, i) : undefined;
+}
+
+/**
+ * Can this stored hash be compared against one computed now? A hash from an older scheme
+ * CANNOT — it must degrade to a stated provenance (see `judgeBridge.verdictProvenance`), never
+ * to `stale`, which would silently drop every standing condemnation at once.
+ */
+export function isComparableHash(hash: string | undefined): boolean {
+  return hashScheme(hash) === CONTENT_HASH_SCHEME;
+}
 
 /** Deterministic JSON: object keys sorted at every depth, arrays in order. */
 function canonical(value: unknown, depth = 0): string {
@@ -46,12 +86,13 @@ function fnv1a(s: string): string {
 /**
  * A stable fingerprint of a step artifact's produced data.
  *
- * Format `v1-<len36>-<fnv36>`: the canonical serialization's LENGTH is part of the key, so the
- * (small) 32-bit collision space only matters between payloads of exactly the same size. This
+ * Format `<scheme>-<len36>-<fnv36>`: the canonical serialization's LENGTH is part of the key, so
+ * the (small) 32-bit collision space only matters between payloads of exactly the same size. This
  * detects "the content changed", it is not a security digest — a false "unchanged" would at
  * worst keep an existing verdict applied one re-produce too long, never fabricate one.
- * The `v1-` prefix lets the scheme change later without silently comparing across schemes.
+ * The {@link CONTENT_HASH_SCHEME} prefix lets the rule change without comparing across schemes.
  */
 export function stepContentHash(data: Record<string, unknown> | undefined | null): string {
-  return `v1-${(canonical(data ?? {})).length.toString(36)}-${fnv1a(canonical(data ?? {}))}`;
+  const c = canonical(data ?? {});
+  return `${CONTENT_HASH_SCHEME}-${c.length.toString(36)}-${fnv1a(c)}`;
 }

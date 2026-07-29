@@ -449,7 +449,13 @@ is now made **visible** rather than silent:
     checker still grades it identically. The fingerprint excludes `genHistory` (the gallery's kept
     re-roll log, deliberately preserved across an adopt) and `_provenance` (stamped SERVER-SIDE by
     the POST route's `stampPromptVersion`, so the row that comes back always carries a key the local
-    artifact never had — without stripping it, every produced step would read as drifted).
+    artifact never had — without excluding it, every produced step would read as drifted). Both
+    exclusions live in `stepContentHash` (`@/lib/judge/contentHash`) — **one** rule shared with the
+    judge write path and the verdict bridge. `labContentDrift.ts` used to keep a second, local
+    `_provenance` strip, and that duplication is precisely how the two sides diverged: drift saw no
+    change while the verdict bridge saw a hash mismatch on the same pair, so a current judge FAIL
+    was reported as "re-produced since" and neither the drift banner nor `adoptServer` could
+    correct it. Do not reintroduce a second stripping rule.
   A step whose write-through is already flagged (`syncError`) is not double-reported as drift.
 - The pipeline rail marks a drifted step with a `≠` badge; the work canvas shows a `DriftBanner`
   naming both verdicts (in words + glyph, never hue-only) with an **"Adopt server truth"** affordance.

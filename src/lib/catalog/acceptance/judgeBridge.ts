@@ -1,7 +1,7 @@
 import type { AcceptanceResult, JudgeAttribution, VerdictProvenance } from './types';
 import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
 import { newestRubricVerdicts, isCurrentRubric } from '@/lib/judge/rubrics';
-import { stepContentHash } from '@/lib/judge/contentHash';
+import { stepContentHash, isComparableHash, hashScheme, CONTENT_HASH_SCHEME } from '@/lib/judge/contentHash';
 
 /**
  * Judge → Acceptance bridge (pure).
@@ -67,12 +67,20 @@ function ts(v: string | undefined): number {
  *                   (legacy, hash-less) it was judged before the artifact's last write. It
  *                   does not condemn, and is reported so the gap is visible.
  *  - `unknown`    — no hash and no way to date it against the content (legacy rows, or a
- *                   caller that supplied no content). It STILL condemns — a recorded fail is
+ *                   caller that supplied no content), OR a hash stamped under a SUPERSEDED
+ *                   hashing scheme (see below). It STILL condemns — a recorded fail is
  *                   evidence, and dropping it would be the optimistic lie this whole layer
  *                   exists to prevent — but it is labelled, never passed off as `current`.
+ *
+ * ── Hash-scheme migration ──────────────────────────────────────────────────────
+ * A stored hash computed under an older {@link CONTENT_HASH_SCHEME} excluded a different set of
+ * bookkeeping keys, so comparing it against a hash computed now proves nothing. Such a verdict
+ * degrades to `unknown` — EXPLICITLY unverified, and still condemning — never to `stale`, which
+ * would silently retire every standing condemnation the moment the scheme moved.
  */
 export function verdictProvenance(v: JudgeVerdict, content?: JudgedContent): VerdictProvenance {
   if (!isCurrentRubric(v)) return 'superseded';
+  if (v.contentHash && !isComparableHash(v.contentHash)) return 'unknown';
   if (v.contentHash && content?.hash) return v.contentHash === content.hash ? 'current' : 'stale';
   if (!v.contentHash) {
     const judged = ts(v.judgedAt);
@@ -80,6 +88,16 @@ export function verdictProvenance(v: JudgeVerdict, content?: JudgedContent): Ver
     if (!Number.isNaN(judged) && !Number.isNaN(written) && judged < written) return 'stale';
   }
   return 'unknown';
+}
+
+/**
+ * Why an `unknown`-provenance verdict cannot be confirmed — STATED, so a migration never reads
+ * as "nobody ever recorded a binding" when in truth the binding is simply from an older scheme.
+ */
+export function unverifiedReason(v: JudgeVerdict): string {
+  return v.contentHash
+    ? `its content binding was recorded under hash scheme ${hashScheme(v.contentHash) ?? 'unknown'}, superseded by ${CONTENT_HASH_SCHEME}`
+    : 'it records no content binding';
 }
 
 /** Does a verdict at this provenance condemn a shape-pass? */
@@ -121,14 +139,14 @@ export function bridgeJudgeVerdict(
   if (binding && result.status === 'pass') {
     const { v, p } = binding;
     const excerpt = v.findings.trim().slice(0, 200);
-    const caveat = p === 'unknown' ? ' [unverified provenance: this verdict records no content binding]' : '';
+    const caveat = p === 'unknown' ? ` [unverified provenance: ${unverifiedReason(v)}]` : '';
     return {
       ...result,
       status: 'fail',
       reason: `judge ${v.model || v.judge} scored ${v.score} (fail)${excerpt ? `: ${excerpt}` : ''}${caveat}`,
       judge: attribute(v, p, p === 'current'
         ? 'Judged the content currently on record.'
-        : 'This verdict records no content binding, so it cannot be confirmed against the current content — it is still applied, and still needs a re-judge.'),
+        : `This verdict cannot be confirmed against the current content — ${unverifiedReason(v)}. It is still applied, and still needs a re-judge.`),
     };
   }
   if (binding) return { ...result, judge: attribute(binding.v, binding.p, 'A judge FAIL is on record; the checker had already not passed.') };
