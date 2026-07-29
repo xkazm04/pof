@@ -43,9 +43,11 @@ reading and writing it.
 - **The typed direction reaches the artifact**: the persisted row carries `data.produceDirection.direction` VERBATIM (`expectPersistedDirection`) — the Direction text area is a real produce input, not a write-only box.
 - **Acceptance derives a config-complete terminal status**: `status ∈ {pass, deferred}`, never
   `fail`/`pending`. `pass` for L0/L1/L2 (data/selection/static); `deferred` for L3/L4
-  (runtime/visual, pending a live bridge) — and a `deferred` gate must show a reason (Rule 4). The
-  bespoke Items reference pipeline is a green demo (its Test Gate simulates `Result={Success}` →
-  `pass`), unlike the generic registry `items.ts` which uses `runtimeDeferred`.
+  (runtime/visual, pending a live bridge) — and a `deferred` gate must show a reason (Rule 4). In the
+  bespoke Items reference pipeline the Test Gate DERIVES its verdict from sibling-step acceptance, so
+  a fully-walked item reads `Result={Success}` → `pass`; produced with nothing to derive from it is
+  `deferred` at L3 with a reason (never `pending`), mirroring the registry `items.ts`
+  `runtimeDeferred`.
 - **Persist round-trip**: the produced artifact is `POST`ed to `/api/pipeline-artifacts` and the
   stored row is asserted config-complete **in its own right**; a second test wipes
   `localStorage['pof-lab-pipeline']`, reloads, and asserts every step hydrates back from the server.
@@ -128,4 +130,7 @@ isolation — the reused server holds the real DB).
 - **32 registered pipelines, 31 walked green** by the generic walker + Items via the reference spec
   (`62 passed / 2 skipped`, ~5 min, hermetic DB). Recorded in `e2e/walk-status.json`.
 - `player-movement` is no longer a gap — it has a `NEW_CATALOGS` section + starter and walks like any
-  other pipeline. `items` is the only `WALKER_SKIP` entry (covered by the bespoke reference spec).
+  other pipeline. `items` is the only `WALKER_SKIP` entry: the lab renders its bespoke 13-step UI,
+  not the 11-label registry pipeline the generic walker would enumerate (see `ITEMS_SPEC_DUALITY`),
+  so it is walked in depth by `catalog-items-reference.spec.ts` and its bespoke produce/accept pair
+  is linted by `src/__tests__/catalog/items-spec-duality.test.ts`.

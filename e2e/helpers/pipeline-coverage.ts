@@ -9,7 +9,12 @@
 
 /** catalogId -> reason it is excluded from the generic walker. */
 export const WALKER_SKIP: Record<string, string> = {
-  items: 'covered in depth by catalog-items-reference.spec.ts (bespoke 13-step UI)',
+  // items has TWO specs (see ITEMS_SPEC_DUALITY in src/components/layout-lab/catalogManifest.ts):
+  // the lab renders the bespoke 13-step UI, never the 11-label registry pipeline the generic
+  // walker would enumerate. Walking it generically would grade steps nobody can see, so the
+  // 13 on-screen steps are walked in depth by the reference spec instead, and the bespoke
+  // produce/accept pair is linted by src/__tests__/catalog/items-spec-duality.test.ts.
+  items: 'the lab renders the bespoke 13-step UI (not the 11-label registry pipeline); walked in depth by catalog-items-reference.spec.ts + linted by src/__tests__/catalog/items-spec-duality.test.ts',
   // player-movement is no longer skipped (2026-06-21): it now has a NEW_CATALOGS section +
   // starter (Manny Locomotion), and its bridge steps are L3/L4-deferred-to-the-bridge in
   // stub mode (config-complete), so the generic walker covers it like any other pipeline.

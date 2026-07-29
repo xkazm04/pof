@@ -152,6 +152,38 @@ It applies the SAME functions in the SAME order as `resolveStepAcceptance`, so `
 - **One set of affordances** — `GenerativeStepFrame` (the generative counterpart to `StaticStepFrame`) wraps `useGenerativeStep` + `CandidateGallery` + `CliProduce` and supplies the SELECTION provenance chip; both frames append `RawArtifactDisclosure`. All 13 bespoke steps now render a provenance strip and a raw-artifact panel, asserted by `src/__tests__/components/layout-lab/bespokeStepHonesty.test.tsx`.
 - **Un-audited is now loud** — the 2026-07-07 gap audit covers a subset of the fleet's steps, and a step with no `StepFact` used to render *no* strip, which read identically to "audited and fine". `StepFrame` now renders the strip whenever a step names itself (`catalogId` + `step`), and `ProvenanceStrip` shows a `PROVENANCE: UNAUDITED` warning tag when no fact resolves. (An anonymous `StepFrame` with no catalog/step still renders no strip.) Display only — grading is untouched. This is why the Items 11-fact vs 13-bespoke-step name duality no longer silently hides five steps.
 
+### Items is ONE pipeline — the duality is declared, not implied (2026-07-29)
+
+`items` is the only catalog with **two** step specs, and they disagree: the registered
+`src/lib/catalog/pipelines/items.ts` declares **11** labels, while `steps/itemsSteps.ts`
+(`ITEM_STEP_SPECS`) declares the **13** the lab actually renders and grades — only 6 names overlap.
+Every fleet guard enumerates `allCatalogPipelines()`, so the guards covered the 11 nobody sees and
+none of the 13 everybody grades. Concretely: 7 on-screen steps had no `StepFact` (→ a loud
+`PROVENANCE: UNAUDITED`), no linter rule touched a bespoke `accept`, and `items::Test Gate` graded a
+non-terminal `pending` after a clean Produce — a **Rule 5 violation in the reference pipeline**.
+
+- **Declared in one place** — `ITEMS_SPEC_DUALITY` (+ `ITEMS_ON_SCREEN_STEPS`,
+  `itemsRegistrySteps()`, `itemsSharedSteps()`, `itemsAllStepLabels()`) in
+  `src/components/layout-lab/catalogManifest.ts`, next to the `BESPOKE_CATALOGS` routing that
+  creates the fork. **On-screen (13)** = what a human walks and grades; **registry (11)** = what
+  `/status`, the headless pof-mcp drains, the L3/L4 runner and the judge fleet enumerate.
+- **Not merged, on purpose** — registry labels key persisted `pipeline_artifacts` rows, recorded
+  `judge_verdicts`, `step-facts.json` and the headless drains; bespoke labels key the per-step UI
+  registry (`getStepComponent`) and the reference e2e walk. Renaming either side orphans recorded
+  data. A `StepFact` row is keyed by `(catalogId, step)`, so a **shared** label carries one fact
+  describing that step identity in both specs; the 7 bespoke-only labels now carry their own.
+- **Guarded** — `src/__tests__/catalog/items-spec-duality.test.ts` asserts the declaration against
+  both real sources, that **every** items label in either spec has a `StepFact` (18 rows, 0
+  unaudited), and applies the fleet linter's rules to the bespoke specs: every field an `accept`
+  reads is written by its `produce()`, and a clean Produce reaches a **terminal** status
+  (`pass`, or `deferred` **with a reason**).
+- **Rule 5 restored** — the bespoke `Test Gate` no longer returns `pending` when it has nothing to
+  derive from. It ran, so it is terminal: **`deferred` at tier `L3`** with the reason
+  "VSItemsDefinitionsTest has not reported and no sibling artifacts are in scope", mirroring the
+  registry Items gate's `entityRuntimeDeferred`. With real siblings it still derives green from
+  upstream acceptance, and an upstream failure still **fails** the gate — the derivation was
+  restored, not weakened.
+
 **Tables tell the truth (2026-07-29).** 99 of the fleet's 451 declared table columns could never resolve against their own `produce()` output — **28 tables rendered nothing but `— missing`** to every user (factions, cutscenes, dialog-trees, state-graph, screen-flow…). The cause was structural, not typos: the generic `table` view assumed the column keys lived at the TOP level of `data[field]`, while most produce bodies write a **LIST** of row records (`tiers: [{tier, minPoints, …}]`) or a **KEYED GROUP** of them (`layers: { bed: {name, gainDb, …} }`).
 
 - **One resolver** — `src/lib/catalog/tableView.ts` (`resolveTableView`, pure) understands all three shapes (`kv` / `rows` / `absent`+`mismatch`) and reports which declared columns no row carries. A metadata sibling (`wiringContract`, a scalar note) is never turned into a blank row: a nested record becomes a row only if it carries at least one declared column.

@@ -326,6 +326,18 @@ function gateCopy(data: Record<string, unknown>): AcceptanceCopy {
     suggestion: 'Fix the failing upstream steps (see the Checks panel), then the gate re-derives automatically.' };
 }
 
+/**
+ * Copy for the Test Gate's DEFERRED reading — the gate was dispatched but nothing in
+ * scope can supply its verdict (no sibling artifacts to derive from, and no recorded
+ * UE functional-test result). It is an L3 runtime gate, so `deferred` (with this
+ * reason) is its config-complete terminal status — never a silent `pending`.
+ * See {@link ITEMS_SPEC_DUALITY} for why this mirrors the registry Items Test Gate.
+ */
+export const GATE_DEFERRED_COPY: AcceptanceCopy = {
+  why: 'The gate was dispatched, but its verdict cannot be observed here: VSItemsDefinitionsTest has not reported, and no sibling step artifacts are in scope to derive the checks from.',
+  suggestion: 'Produce the upstream steps (the gate then derives from them), or run VSItemsDefinitionsTest in the UE project.',
+};
+
 function packagingCopy(data: Record<string, unknown>): AcceptanceCopy {
   const assets = (data.assets ?? []) as unknown[];
   return assets.length === 0
@@ -506,9 +518,23 @@ export const ITEM_STEP_SPECS: Record<string, ItemStepSpec> = {
           detail: ok ? `${passing}/${results.length} pass` : `${passing}/${results.length} pass · blocked by ${blocked.slice(0, 3).join(', ')}${blocked.length > 3 ? '…' : ''}`,
         });
       }
-      const legacyOk = data.pass === true;
       const checks = (data.checks ?? DEFAULT_GATE_CHECKS) as unknown[];
-      return withCopy('Test Gate', data, { label: 'All gate checks pass in the UE project', status: legacyOk ? 'pass' : 'pending', detail: legacyOk ? `${checks.length}/${checks.length} pass` : `0/${checks.length}` });
+      if (data.pass === true) {
+        // Legacy artifacts recorded the verdict itself.
+        return { label: 'All gate checks pass in the UE project', status: 'pass', detail: `${checks.length}/${checks.length} pass` };
+      }
+      // Rule 5: the gate RAN, so it must reach a terminal status. Without siblings to
+      // derive from it is an L3 runtime gate with no observed verdict — `deferred` with a
+      // reason, exactly like the registry Items Test Gate (`entityRuntimeDeferred`).
+      // A silent `pending` here was the reference pipeline's one Rule-5 violation.
+      return {
+        label: 'All gate checks pass in the UE project',
+        status: 'deferred',
+        tier: 'L3',
+        detail: `${checks.length} checks dispatched · verdict not observed`,
+        reason: 'VSItemsDefinitionsTest has not reported and no sibling artifacts are in scope to derive the checks from',
+        ...GATE_DEFERRED_COPY,
+      };
     },
   },
   'UE Packaging': {

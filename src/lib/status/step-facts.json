@@ -1732,6 +1732,76 @@
       "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job."
     },
     {
+      "catalogId": "items",
+      "step": "Attributes",
+      "trueEngine": "Code (deterministic)",
+      "deliverable": "text-config",
+      "generatorWired": true,
+      "judge": "llm-panel",
+      "checkerMeaningful": false,
+      "note": "Bespoke on-screen step (ITEM_STEP_SPECS; see ITEMS_SPEC_DUALITY). Produce writes the 8-key ITEM_ATTR_SCHEMA; accept only counts non-null keys, so any NUMBER is accepted - shape-only."
+    },
+    {
+      "catalogId": "items",
+      "step": "3D Generation",
+      "trueEngine": "Tripo",
+      "deliverable": "3d-mesh",
+      "generatorWired": true,
+      "judge": "vlm",
+      "checkerMeaningful": true,
+      "note": "Bespoke on-screen step (ITEM_STEP_SPECS; see ITEMS_SPEC_DUALITY). Accept grades the tri count against the artifact's own LOD0 cap (tris > 0 && tris <= cap), so a wrong number FAILS - a real budget law, not a presence check. It does not verify the mesh itself; that is the VLM/UE gate's job."
+    },
+    {
+      "catalogId": "items",
+      "step": "Material / Texture",
+      "trueEngine": "Claude",
+      "deliverable": "text-config",
+      "generatorWired": false,
+      "judge": "llm-panel",
+      "checkerMeaningful": false,
+      "note": "Bespoke on-screen step (ITEM_STEP_SPECS; see ITEMS_SPEC_DUALITY). Accept asserts the Albedo/Normal/ORM map NAMES are listed; no texture is generated or inspected, and no numeric value is graded."
+    },
+    {
+      "catalogId": "items",
+      "step": "Animations",
+      "trueEngine": "Claude",
+      "deliverable": "animation",
+      "generatorWired": false,
+      "judge": "none",
+      "checkerMeaningful": false,
+      "note": "Bespoke on-screen step (ITEM_STEP_SPECS; see ITEMS_SPEC_DUALITY). Accept counts clips (>= 2); the clip list is a hardcoded stub (DEFAULT_ANIM_CLIPS) and nothing retargets or plays - shape-only, no judge."
+    },
+    {
+      "catalogId": "items",
+      "step": "VFX",
+      "trueEngine": "Claude",
+      "deliverable": "vfx-particles",
+      "generatorWired": false,
+      "judge": "none",
+      "checkerMeaningful": true,
+      "note": "Bespoke on-screen step (ITEM_STEP_SPECS; see ITEMS_SPEC_DUALITY). Accept grades the declared GPU cost against the artifact's own frame budget (cost <= cap) alongside a variant count, so a wrong cost FAILS. The cost is DECLARED, not measured - no profiler and no wired Niagara generator stand behind it."
+    },
+    {
+      "catalogId": "items",
+      "step": "SFX",
+      "trueEngine": "Claude",
+      "deliverable": "audio",
+      "generatorWired": false,
+      "judge": "none",
+      "checkerMeaningful": false,
+      "note": "Bespoke on-screen step (ITEM_STEP_SPECS; see ITEMS_SPEC_DUALITY). Accept counts cues (>= 3) from a hardcoded stub (DEFAULT_SFX_CUES); no audio is generated or imported - shape-only, no judge."
+    },
+    {
+      "catalogId": "items",
+      "step": "Inventory UI Integration",
+      "trueEngine": "Claude",
+      "deliverable": "text-config",
+      "generatorWired": true,
+      "judge": "llm-panel",
+      "checkerMeaningful": false,
+      "note": "Bespoke on-screen step (ITEM_STEP_SPECS; see ITEMS_SPEC_DUALITY). Accept checks the artifact declares wired:true + a slot string - a presence check on the step's own claim, not a verification that the widget renders the item."
+    },
+    {
       "catalogId": "loot-tables",
       "step": "Concept Brief",
       "trueEngine": "Claude",

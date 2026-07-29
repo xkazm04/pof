@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-29T11:43:53.340Z",
+  "generatedAt": "2026-07-29T15:01:08.818Z",
   "walked": [
     "achievements",
     "ambient",
@@ -34,6 +34,6 @@
     "zone-map"
   ],
   "skipped": {
-    "items": "covered in depth by catalog-items-reference.spec.ts (bespoke 13-step UI)"
+    "items": "the lab renders the bespoke 13-step UI (not the 11-label registry pipeline); walked in depth by catalog-items-reference.spec.ts + linted by src/__tests__/catalog/items-spec-duality.test.ts"
   }
 }
