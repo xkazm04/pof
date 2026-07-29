@@ -18,6 +18,15 @@
  *   npx tsx scripts/judge-run.ts --all            # every catalog with a judgeable deliverable
  *   npx tsx scripts/judge-run.ts --catalog items --median 3   # variance-robust near the 90 line
  *   npx tsx scripts/judge-run.ts --catalog items --no-canon    # A/B: disable canon+sibling context
+ *   npx tsx scripts/judge-run.ts --catalog items --force-budget  # proceed despite a budget refusal
+ *
+ * SPEND: every spawn is recorded through the same `recordSpend` seam as every other CLI
+ * invocation in this app (task types `judge-content` / `judge-visual`, module `judge`, one row
+ * per DRAW labelled with its catalog::step [entity]), and every spawn is gated by the same
+ * `evaluatePreflight` guardrail — so a configured budget can refuse this run and the Spend tab's
+ * total is no longer structurally incomplete after a fleet run. Spend goes DIRECT to SQLite (the
+ * script already opens the DB for the model policy), so metering adds no dev-server coupling
+ * beyond the artifact/verdict fetches this harness has always needed.
  */
 import { spawn } from 'node:child_process';
 import { writeFileSync, mkdirSync } from 'node:fs';
@@ -26,6 +35,16 @@ import { join } from 'node:path';
 import { BANDS, buildRubricPrompt, parseJudgeResult, RUBRIC_VERSION, type JudgeResult } from '../src/lib/judge/rubrics';
 import { deliverableClassOf, type DeliverableClass } from '../src/lib/judge/dimensions';
 import { getModelPolicy, MODEL_IDS } from '../src/lib/model-policy';
+import { recordSpend, getBudgetStatus, getTaskTypeEstimate } from '../src/lib/cli-spend-db';
+import { formatUsd } from '../src/lib/cli-spend/format';
+import {
+  judgeBudgetGate,
+  judgeSpendRecord,
+  judgeTaskType,
+  parseCliJsonRun,
+  type CliRunMetrics,
+  type JudgeTaskType,
+} from '../src/lib/judge/spendMeter';
 import { getStepFact, isSyntheticEntity } from '../src/lib/status/statusModel';
 import { canonContextFor } from '../src/lib/catalog/canon/canonContext';
 import { CANON_SEED } from '../src/lib/catalog/canon/canon-seed';
@@ -45,8 +64,50 @@ const DRY = has('dry');
 const MEDIAN = Math.max(1, Number(arg('median') ?? 1));
 /** A/B escape hatch: judge canon-blind (no canon, no sibling context) to measure canon's effect. */
 const NO_CANON = has('no-canon');
+/** Operator override: proceed even when the budget guardrail refuses. Never the default. */
+const FORCE_BUDGET = has('force-budget');
 
 type Artifact = { entityId: string; step: string; status: string; data: Record<string, unknown> };
+
+// ── Spend metering ───────────────────────────────────────────────────────────
+/** Running totals so a fleet run's cost is attributable per step AND in aggregate. */
+const spend = { costUsd: 0, spawns: 0, unknownCost: 0 };
+/** Set once the budget guardrail refuses mid-run; stops scheduling further spawns. */
+let budgetStop: string | null = null;
+
+/**
+ * Ask the shared pre-flight guardrail whether this class of judge spawn may run, reading the
+ * live budget + this task type's historical average from SQLite. A headless harness has nobody
+ * to answer a confirm dialog, so a `warn` is a hard refusal unless `--force-budget`.
+ */
+function budgetGate(taskType: JudgeTaskType): { refuse: boolean; reasons: string[] } {
+  const b = getBudgetStatus();
+  const gate = judgeBudgetGate({
+    taskType,
+    estimate: getTaskTypeEstimate(taskType),
+    budget: {
+      dailyExceeded: b.dailyExceeded,
+      monthlyExceeded: b.monthlyExceeded,
+      dailyRemainingUsd: b.dailyRemainingUsd,
+      monthlyRemainingUsd: b.monthlyRemainingUsd,
+    },
+  });
+  return { refuse: gate.refuse && !FORCE_BUDGET, reasons: gate.reasons };
+}
+
+/** Persist one spawn's cost through the app's single spend seam. Never throws. */
+function meter(taskType: JudgeTaskType, label: string, m: CliRunMetrics): void {
+  spend.spawns += 1;
+  spend.costUsd += m.costUsd;
+  if (!m.costKnown) spend.unknownCost += 1;
+  try {
+    // Cost is attributable per run, not one opaque total: the label names the exact
+    // catalog::step [entity] draw this spawn paid for.
+    recordSpend(judgeSpendRecord(taskType, label, m));
+  } catch (e) {
+    console.error('  ! spend not recorded:', e instanceof Error ? e.message : e);
+  }
+}
 
 async function fetchArtifacts(catalogId: string): Promise<Artifact[]> {
   const j = await (await fetch(`${ORIGIN}/api/pipeline-artifacts?catalogId=${catalogId}`)).json();
@@ -75,16 +136,28 @@ function buildPayload(cls: DeliverableClass, art: Artifact, tmpDir: string): { p
   return null; // audio → human judge; skip in this harness
 }
 
-/** Spawn the Claude CLI headless at the policy model+effort; return final stdout text. */
-function runClaude(prompt: string, modelId: string, effort: string): Promise<string> {
+/**
+ * Spawn the Claude CLI headless at the policy model+effort; return the final text WITH its
+ * metered cost/usage.
+ *
+ * `--output-format json` (was `text`) is what makes the spawn meterable — the envelope carries
+ * `total_cost_usd` / `usage` / `duration_ms` alongside the same final `result` text the judge
+ * parser has always read. Nothing about the prompt, model, effort or rubric changes.
+ *
+ * `--dangerously-skip-permissions` is REQUIRED here, not incidental: a media judgment feeds the
+ * judge a `Read` instruction for a temp PNG this script just wrote (see `buildPayload`), and
+ * stdin is the prompt pipe — there is no interactive channel to approve the tool call on. The
+ * spawn is otherwise read-only (judge a file, print JSON) and now fully metered.
+ */
+function runClaude(prompt: string, modelId: string, effort: string): Promise<CliRunMetrics> {
   return new Promise((resolve, reject) => {
-    const args = ['-p', '-', '--model', modelId, '--effort', effort, '--output-format', 'text', '--dangerously-skip-permissions'];
+    const args = ['-p', '-', '--model', modelId, '--effort', effort, '--output-format', 'json', '--dangerously-skip-permissions'];
     const child = spawn('claude', args, { shell: true });
     let out = '', err = '';
     child.stdout.on('data', (d) => (out += d));
     child.stderr.on('data', (d) => (err += d));
     child.on('error', reject);
-    child.on('close', (code) => (code === 0 || out ? resolve(out) : reject(new Error(`claude exit ${code}: ${err.slice(0, 300)}`))));
+    child.on('close', (code) => (code === 0 || out ? resolve(parseCliJsonRun(out)) : reject(new Error(`claude exit ${code}: ${err.slice(0, 300)}`))));
     child.stdin.write(prompt); child.stdin.end();
   });
 }
@@ -117,12 +190,26 @@ async function judgeOne(catalogId: string, art: Artifact, entityArtifacts: Artif
   // A single strict-judge draw has ~+/-5 run-to-run variance, so a step whose true quality sits
   // near the 90 line flaps across it between judgings. --median N draws N times and keeps the
   // MEDIAN (never the max: best-of-N would silently inflate every borderline cell into green).
+  // Every spawn is gated then metered. The gate is re-read per step (not once per run) so a
+  // budget crossed mid-fleet actually STOPS the remaining spawns instead of only the first one.
+  const taskType = judgeTaskType(cls);
+  const gate = budgetGate(taskType);
+  if (gate.refuse) {
+    budgetStop = `budget guardrail refused ${taskType}: ${gate.reasons.join(' ')} — re-run with --force-budget to override`;
+    return { error: `${catalogId}::${art.step} — REFUSED by budget guardrail` };
+  }
+
   const draws: JudgeResult[] = [];
+  let stepCost = 0;
   for (let i = 0; i < MEDIAN; i++) {
-    const res = parseJudgeResult(await runClaude(prompt, policy.cliModel, policy.effort));
+    const m = await runClaude(prompt, policy.cliModel, policy.effort);
+    meter(taskType, `${catalogId}::${art.step} [${art.entityId}] draw ${i + 1}/${MEDIAN}`, m);
+    stepCost += m.costUsd;
+    const res = parseJudgeResult(m.text);
     if (res) draws.push(res);
   }
-  if (!draws.length) return { error: `${catalogId}::${art.step} — no parseable verdict in ${MEDIAN} draw(s)` };
+  const costTag = ` ${formatUsd(stepCost)}`;
+  if (!draws.length) return { error: `${catalogId}::${art.step} — no parseable verdict in ${MEDIAN} draw(s)${costTag}` };
   const sorted = [...draws].sort((a, b) => a.score - b.score);
   const res = sorted[Math.floor((sorted.length - 1) / 2)];
   // Verdict follows the MEDIAN score, not the drawn verdict of that sample.
@@ -143,7 +230,7 @@ async function judgeOne(catalogId: string, art: Artifact, entityArtifacts: Artif
   };
   const r = await fetch(`${ORIGIN}/api/judge-verdicts`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
   const ok = (await r.json()).success !== false;
-  return { verdict: `${verdict.toUpperCase()} ${res.score} ${catalogId}::${art.step} [${cls}]${spread} ${ok ? '' : '(POST FAIL)'}` };
+  return { verdict: `${verdict.toUpperCase()} ${res.score} ${catalogId}::${art.step} [${cls}]${spread}${costTag} ${ok ? '' : '(POST FAIL)'}` };
 }
 
 async function main() {
@@ -158,18 +245,41 @@ async function main() {
   const limit = arg('limit') ? Number(arg('limit')) : Infinity;
 
   console.log(`judge: model=${policy.cliModel} effort=${policy.effort} rubric=v${RUBRIC_VERSION}${NO_CANON ? '' : '+canon'} catalogs=${catalogs.length} classes=${classFilter ? [...classFilter].join('+') : 'all'} dry=${DRY}`);
+
+  // Up-front budget gate — refuse the whole fleet before the first Opus spawn rather than
+  // discovering the ceiling halfway through it. A dry run never spawns, so it is never gated.
+  if (!DRY) {
+    for (const t of ['judge-content', 'judge-visual'] as JudgeTaskType[]) {
+      const g = budgetGate(t);
+      if (g.refuse) {
+        console.error(`REFUSED — ${t}: ${g.reasons.join(' ')}`);
+        console.error('Raise the budget (Spend tab) or re-run with --force-budget.');
+        process.exit(3);
+      }
+    }
+  }
+
   let n = 0;
   for (const c of catalogs) {
     const allArts = await fetchArtifacts(c); // full set — sibling context needs every step of an entity
     const toJudge = allArts.filter((a) => (stepFilter ? a.step === stepFilter : true) && (entityFilter ? a.entityId === entityFilter : true));
     for (const a of toJudge) {
-      if (n >= limit) break;
+      if (n >= limit || budgetStop) break;
       const res = await judgeOne(c, a, allArts, tmpDir, policy, classFilter);
       if (!res) continue;
       console.log('  ' + (res.verdict ?? res.skipped ?? res.dry ?? res.error));
       if (res.verdict || res.error) n++;
     }
+    if (budgetStop) break;
   }
-  console.log(`done — ${n} judged`);
+  const costLine = DRY
+    ? ''
+    : ` — spend ${formatUsd(spend.costUsd)} over ${spend.spawns} spawn(s)` +
+      (spend.unknownCost ? ` (${spend.unknownCost} spawn(s) reported no cost)` : '');
+  console.log(`done — ${n} judged${costLine}`);
+  if (budgetStop) {
+    console.error(`STOPPED — ${budgetStop}`);
+    process.exit(3);
+  }
 }
 main().catch((e) => { console.error('FATAL', e); process.exit(1); });

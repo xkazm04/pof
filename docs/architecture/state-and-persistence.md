@@ -211,9 +211,23 @@ per-task-type rollups, a daily trend, a daily/monthly **budget guard** (editable
 `cli_spend_budget`), and per-module ROI (spend ÷ checklist items completed). The pre-flight guardrail
 (`src/lib/cli-spend/preflight.ts`, pure) reads `getTaskTypeEstimate`, which averages only
 `status='completed' AND cost_usd>0` rows so failed/aborted zero-cost rows never bias the estimate; it
-classifies expensive task types (live-editor runs + broad scans) and — only under genuine budget
-pressure — interrupts `useModuleCLI.execute` with the global `PreflightGuardDialog` (queued via
-`preflightStore`).
+classifies expensive task types (live-editor runs + broad scans + the strict **judge** classes) and —
+only under genuine budget pressure — interrupts `useModuleCLI.execute` with the global
+`PreflightGuardDialog` (queued via `preflightStore`).
+
+The **judge fleet** (`scripts/judge-run.ts`, `scripts/judge-one.ts`) reaches the same seam. Those
+harnesses spawn the Claude CLI themselves (Opus/high per draw, one spawn per entity×step×median), so
+until they were metered the Spend tab's total was structurally incomplete after any fleet run and no
+budget could refuse one. They now run `--output-format json` and pass the parsed envelope through
+`src/lib/judge/spendMeter.ts` (`parseCliJsonRun` → `judgeSpendRecord`) into `recordSpend` — module
+`judge`, task type `judge-content`/`judge-visual`, one row per DRAW labelled
+`catalog::step [entity] draw i/N`, so cost is attributable per run. `judgeBudgetGate` runs the same
+`evaluatePreflight` engine before every step; because a headless harness has nobody to answer a
+confirm dialog, a `warn` is a hard refusal (`--force-budget` overrides), checked again per step so a
+budget crossed mid-fleet stops the remaining spawns. Spend is written direct to SQLite, adding no
+dev-server coupling beyond the artifact/verdict fetches the harness already needs. A spawn whose cost
+the CLI did not report is still recorded, labelled `(cost unreported by CLI)` rather than presented as
+a measured $0.
 
 **`prompt_variants` + `prompt_ab_tests`** (`src/lib/prompt-evolution/evolution-db.ts`, same guard
 pattern) make the Prompt Evolution engine durable. The engine (`prompt-evolution/engine.ts`) used to

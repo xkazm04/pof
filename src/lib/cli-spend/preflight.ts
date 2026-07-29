@@ -13,10 +13,12 @@ import type { TaskTypeEstimate } from '@/types/cli-spend';
 import { formatUsd } from './format';
 
 /**
- * Task types that are resource-intensive to run. Two families:
+ * Task types that are resource-intensive to run. Three families:
  *  - "live editor" runs that spawn the full UE editor (minutes of wall-clock,
- *    many tool turns), and
- *  - broad scans that read large swathes of the codebase across multiple passes.
+ *    many tool turns),
+ *  - broad scans that read large swathes of the codebase across multiple passes, and
+ *  - strict judge runs (`scripts/judge-run.ts`), which spawn Opus at high effort once per
+ *    (entity x step) x median draw — the most expensive thing this app does.
  */
 export const EXPENSIVE_TASK_TYPES: ReadonlySet<string> = new Set<string>([
   // live editor runs
@@ -30,6 +32,9 @@ export const EXPENSIVE_TASK_TYPES: ReadonlySet<string> = new Set<string>([
   // broad scans
   'module-scan',
   'feature-review',
+  // strict judge fleet (Opus/high per draw)
+  'judge-content',
+  'judge-visual',
 ]);
 
 /** Friendly labels for task types (used in the dashboard + the guard dialog). */
@@ -51,6 +56,8 @@ export const TASK_TYPE_LABELS: Record<string, string> = {
   'draft-ability-spec': 'Draft ability spec',
   'generate-gas-effects': 'GAS effect codegen',
   'one-shot-step': 'Pipeline step (live CLI produce)',
+  'judge-content': 'Strict content judge',
+  'judge-visual': 'Strict visual judge',
   interactive: 'Interactive prompt',
 };
 

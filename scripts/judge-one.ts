@@ -12,27 +12,45 @@
  * rules, and --siblings <file> (a { step: config } JSON, e.g. from get-config without --step) to
  * give the judge the entity's other steps as cross-reference context. --step names the config
  * under judgment so it is excluded from its own sibling context.
+ *
+ * SPEND: like judge-run, this spawn is gated by the shared pre-flight guardrail and recorded
+ * through `recordSpend` (module `judge`), so a judging loop is visible to the Spend tab and
+ * refusable by a configured budget. `--force-budget` overrides a refusal.
  */
 import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { buildRubricPrompt, parseJudgeResult, RUBRIC_VERSION } from '../src/lib/judge/rubrics';
 import type { DeliverableClass } from '../src/lib/judge/dimensions';
 import { getModelPolicy } from '../src/lib/model-policy';
+import { recordSpend, getBudgetStatus, getTaskTypeEstimate } from '../src/lib/cli-spend-db';
+import {
+  judgeBudgetGate,
+  judgeSpendRecord,
+  judgeTaskType,
+  parseCliJsonRun,
+  type CliRunMetrics,
+} from '../src/lib/judge/spendMeter';
 import { canonContextFor } from '../src/lib/catalog/canon/canonContext';
 import { CANON_SEED } from '../src/lib/catalog/canon/canon-seed';
 import { buildSiblingContext } from '../src/lib/judge/siblingContext';
 
 const arg = (k: string) => { const i = process.argv.indexOf(`--${k}`); return i >= 0 ? process.argv[i + 1] : undefined; };
 
-function runClaude(prompt: string, model: string, effort: string): Promise<string> {
+/**
+ * `--output-format json` carries the cost/usage envelope alongside the same final text, which is
+ * what makes this spawn meterable. `--dangerously-skip-permissions` is required because an image
+ * judgment instructs the model to `Read` the candidate file while stdin is the prompt pipe —
+ * there is no interactive channel to approve that tool call on.
+ */
+function runClaude(prompt: string, model: string, effort: string): Promise<CliRunMetrics> {
   return new Promise((resolve, reject) => {
-    const args = ['-p', '-', '--model', model, '--effort', effort, '--output-format', 'text', '--dangerously-skip-permissions'];
+    const args = ['-p', '-', '--model', model, '--effort', effort, '--output-format', 'json', '--dangerously-skip-permissions'];
     const child = spawn('claude', args, { shell: true });
     let out = '', err = '';
     child.stdout.on('data', (d) => (out += d));
     child.stderr.on('data', (d) => (err += d));
     child.on('error', reject);
-    child.on('close', (code) => (code === 0 || out ? resolve(out) : reject(new Error(`claude exit ${code}: ${err.slice(0, 200)}`))));
+    child.on('close', (code) => (code === 0 || out ? resolve(parseCliJsonRun(out)) : reject(new Error(`claude exit ${code}: ${err.slice(0, 200)}`))));
     child.stdin.write(prompt); child.stdin.end();
   });
 }
@@ -63,8 +81,33 @@ async function main() {
   }
 
   const pol = getModelPolicy('judge-content');
+  const taskType = judgeTaskType(cls);
+
+  // Same guardrail as every other CLI invocation — a configured budget can refuse this spawn.
+  const b = getBudgetStatus();
+  const gate = judgeBudgetGate({
+    taskType,
+    estimate: getTaskTypeEstimate(taskType),
+    budget: {
+      dailyExceeded: b.dailyExceeded,
+      monthlyExceeded: b.monthlyExceeded,
+      dailyRemainingUsd: b.dailyRemainingUsd,
+      monthlyRemainingUsd: b.monthlyRemainingUsd,
+    },
+  });
+  if (gate.refuse && !process.argv.includes('--force-budget')) {
+    console.error(`REFUSED — ${taskType}: ${gate.reasons.join(' ')} (override with --force-budget)`);
+    process.exit(3);
+  }
+
   const prompt = buildRubricPrompt(cls, { subject, payload, canonContext, siblingContext });
-  const raw = await runClaude(prompt, pol.model, pol.effort);
+  const m = await runClaude(prompt, pol.model, pol.effort);
+  try {
+    recordSpend(judgeSpendRecord(taskType, `judge-one ${cls}: ${subject}`, m));
+  } catch (e) {
+    console.error('spend not recorded:', e instanceof Error ? e.message : e);
+  }
+  const raw = m.text;
   const res = parseJudgeResult(raw);
   if (!res) { console.log(JSON.stringify({ score: 0, verdict: 'fail', findings: 'unparseable judge output', fix: 'retry', raw: raw.slice(0, 200), rubricVersion: RUBRIC_VERSION })); return; }
   console.log(JSON.stringify({ ...res, rubricVersion: RUBRIC_VERSION }));
