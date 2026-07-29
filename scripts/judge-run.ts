@@ -28,6 +28,15 @@
  * exists and would cost an Opus draw to reproduce. Every skip prints its reason, so a skipped
  * step is never mistaken for a judged one. `--rejudge` forces the whole sweep.
  *
+ * OPERATIONAL TRAP (2026-07-29): stripping `produceDirection` out of the judged PAYLOAD (see
+ * `buildPayload`) does not move `stepContentHash` — `produceDirection` was never in
+ * `contentHash.ts`'s `VOLATILE_KEYS`, so it was already counted toward the hash, and it stays
+ * that way here on purpose (changing it would bump `CONTENT_HASH_SCHEME` and unbind every stored
+ * hash). Nor does the strip touch `RUBRIC_VERSION`. So a verdict recorded from a CONTAMINATED
+ * pre-fix payload still reads as "unchanged" (`judgeSkipDecision`, fleetPlan.ts:52-72) against the
+ * unchanged artifact and is SKIPPED by default — re-baselining those contaminated verdicts after
+ * this fix ships REQUIRES `--rejudge`, or the fix will look inert (nothing gets re-judged).
+ *
  * SPEND: every spawn is recorded through the same `recordSpend` seam as every other CLI
  * invocation in this app (task types `judge-content` / `judge-visual`, module `judge`, one row
  * per DRAW labelled with its catalog::step [entity]), and every spawn is gated by the same
@@ -86,7 +95,7 @@ const FORCE_BUDGET = has('force-budget');
 /** Re-judge every target, including steps whose stored verdict still binds to their content. */
 const REJUDGE = has('rejudge');
 /** Opt-in: include bounded nested objects in the sibling projection (default off — Task 4 A/Bs this). */
-const includeNested = process.argv.includes('--include-nested');
+const INCLUDE_NESTED = has('include-nested');
 /** In-flight judge spawns. Bounded — each worker holds a real Claude CLI process. */
 const CONCURRENCY = Math.max(1, Number(arg('concurrency') ?? DEFAULT_JUDGE_CONCURRENCY));
 
@@ -242,7 +251,7 @@ async function judgeOne(catalogId: string, art: Artifact, cls: DeliverableClass,
   const canonContext = NO_CANON ? undefined : canonContextFor(CANON_SEED, catalogId) || undefined;
   const siblingContext = NO_CANON || cls !== 'text-config'
     ? undefined
-    : buildSiblingContext(entityArtifacts.filter((a) => a.entityId === art.entityId).map((a) => ({ step: a.step, data: a.data ?? {} })), art.step, { includeNested }) || undefined;
+    : buildSiblingContext(entityArtifacts.filter((a) => a.entityId === art.entityId).map((a) => ({ step: a.step, data: a.data ?? {} })), art.step, { includeNested: INCLUDE_NESTED }) || undefined;
 
   const prompt = buildRubricPrompt(cls, {
     subject: `${catalogId} :: ${art.step} (entity ${art.entityId})`,

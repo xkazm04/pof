@@ -68,12 +68,24 @@ async function main() {
     ? `Use the Read tool to view the image at:\n${image}\nThen judge it.`
     : textFile
       ? (() => {
-          const raw = readFileSync(textFile, 'utf8').slice(0, 60000);
+          // Read the FULL file and parse BEFORE any truncation — slicing first (the old bug)
+          // could cut a >60KB config mid-JSON, throw, and fall back to the verbatim branch,
+          // which leaks produceDirection on exactly the configs the strip most needs to hit.
+          // The 60,000-char cap applies to the STRIPPED, serialized result instead.
+          const raw = readFileSync(textFile, 'utf8');
           try {
-            const parsed = JSON.parse(raw) as Record<string, unknown>;
-            return '```json\n' + JSON.stringify(stripNonContent(parsed), null, 2) + '\n```';
+            const parsed: unknown = JSON.parse(raw);
+            // JSON.parse succeeding doesn't mean it's an object: an array reshapes into an
+            // index-keyed object and a bare number/string reshapes into `{}`/a char map. Only a
+            // plain object is the shape stripNonContent (and the judge) expects — anything else
+            // falls through to the verbatim branch so it is judged in the shape it was written.
+            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+              const stripped = JSON.stringify(stripNonContent(parsed as Record<string, unknown>), null, 2);
+              return '```json\n' + stripped.slice(0, 60000) + '\n```';
+            }
+            return '```\n' + raw.slice(0, 60000) + '\n```'; // valid JSON, not a plain object — judge verbatim
           } catch {
-            return '```\n' + raw + '\n```'; // not JSON — judge it verbatim
+            return '```\n' + raw.slice(0, 60000) + '\n```'; // not JSON — judge it verbatim
           }
         })()
       : (() => { console.error('need --image or --text'); process.exit(2); })() as string;
