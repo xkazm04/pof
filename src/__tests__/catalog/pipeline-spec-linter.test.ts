@@ -4,6 +4,7 @@ import { allCatalogPipelines } from '@/lib/catalog/pipeline-registry';
 import { SUPPORTED_VIEW_KINDS, SUPPORTED_CHART_VARIANTS } from '@/lib/catalog/stepSpec';
 import type { ViewDescriptor, StepSpec } from '@/lib/catalog/stepSpec';
 import { readLinks } from '@/lib/catalog/acceptance/linkCheckers';
+import { resolveTableView } from '@/lib/catalog/tableView';
 import { isContentInvariant } from '@/lib/catalog/acceptance/contentInvariant';
 import { seedAllCatalogs } from '@/lib/catalog/sections';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
@@ -53,6 +54,11 @@ import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
  *  (f) the View's `field` is written by `produce()` — a View pointed at a field nothing
  *      produces renders an empty state forever. Exempt: python-bridge steps (`data.python`),
  *      whose manifest fields are filled by the module's return envelope.
+ *  (f2) every DECLARED TABLE COLUMN resolves against the step's own produce stub, through the
+ *      SAME pure resolver the renderer uses (`catalog/tableView.ts`). Rule (f) only checked
+ *      the container field, never descended into `view.columns` — which is how 99 of 451
+ *      declared columns (28 whole tables) came to render nothing but "— missing" to every
+ *      user. A column that no row and no flat record carries is a lie about the artifact.
  *  (g) the DISPLAYED data is the GRADED data: `accept` must read the View's `field` itself, or
  *      the field it grades must live INSIDE `data[view.field]` (a mirror of the displayed
  *      datum). Otherwise the user reads numbers no check ever touches.
@@ -278,6 +284,31 @@ describe('fleet spec linter', () => {
       if (isPythonBridge(data)) continue; // the python module's return envelope fills these
       const f = viewField(s.spec);
       if (f != null && !(f in data)) violations.push(`${at(s)}: view field "${f}" is never written by produce()`);
+    }
+    expect(violations).toEqual([]);
+  });
+
+  // ── (f2) every DECLARED TABLE COLUMN resolves against the step's own produce ─
+  it("every declared table column resolves against the step's own produce() (no all-missing tables)", () => {
+    const violations: string[] = [];
+    for (const s of steps) {
+      if (s.spec.view.kind !== 'table') continue;
+      const view = s.spec.view as Extract<ViewDescriptor, { kind: 'table' }>;
+      const data = produceData(s);
+      if (data instanceof Error) continue; // reported by (e)/(f)
+      if (isPythonBridge(data)) continue;  // the python envelope fills these later
+      const res = resolveTableView(data, view.field, view.columns, view.rowsKey);
+      if (res.mode === 'absent') {
+        violations.push(`${at(s)}: table field "${view.field}"${view.rowsKey ? `.${view.rowsKey}` : ''} is absent from produce() data`);
+        continue;
+      }
+      if (res.mode === 'mismatch') {
+        violations.push(`${at(s)}: table field "${view.field}" holds ${res.actual} — no row records for the declared columns`);
+        continue;
+      }
+      if (res.missing.length) {
+        violations.push(`${at(s)}: table columns [${res.missing.join(', ')}] never resolve in data.${view.field}${view.rowsKey ? `.${view.rowsKey}` : ''} — they would render "— missing" to every user`);
+      }
     }
     expect(violations).toEqual([]);
   });

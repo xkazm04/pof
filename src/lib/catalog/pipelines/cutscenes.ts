@@ -247,6 +247,8 @@ registerCatalogPipeline({
       view: {
         kind: 'table',
         field: 'lighting',
+        // Per-beat rows live under `lighting.beatSetups`; `globalSetup` is the shared block.
+        rowsKey: 'beatSetups',
         columns: [{ key: 'beat' }, { key: 'mood' }, { key: 'setup' }],
       },
       produce: () => ({
@@ -299,6 +301,7 @@ registerCatalogPipeline({
       view: {
         kind: 'table',
         field: 'vfx',
+        rowsKey: 'systems',
         columns: [{ key: 'beat' }, { key: 'system' }, { key: 'note' }],
       },
       produce: () => ({
@@ -372,7 +375,10 @@ registerCatalogPipeline({
       view: {
         kind: 'table',
         field: 'musicSfx',
-        columns: [{ key: 'element' }, { key: 'description' }, { key: 'timing' }],
+        // The row-shaped content is the timed cue list; the music/ambience blocks are
+        // narrative prose reachable in the Raw artifact panel.
+        rowsKey: 'sfxCues',
+        columns: [{ key: 'tc', label: 'timecode', unit: 's' }, { key: 'cue' }, { key: 'description' }],
       },
       produce: () => ({
         data: {
@@ -492,7 +498,14 @@ registerCatalogPipeline({
       view: {
         kind: 'table',
         field: 'skipReplay',
-        columns: [{ key: 'rule' }, { key: 'detail' }],
+        columns: [
+          { key: 'skipGraceWindowSecs', label: 'skip grace window', unit: 's' },
+          { key: 'skipInput', label: 'skip input' },
+          { key: 'skipBehavior', label: 'skip behavior' },
+          { key: 'replayAvailability', label: 'replay availability' },
+          { key: 'noRetrigger', label: 'no re-trigger' },
+          { key: 'hudBehavior', label: 'HUD behavior' },
+        ],
       },
       produce: (e: LabEntity) => ({
         data: {

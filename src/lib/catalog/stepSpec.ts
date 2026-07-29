@@ -61,7 +61,10 @@ export type ChartVariant = (typeof SUPPORTED_CHART_VARIANTS)[number];
 
 export type ViewDescriptor =
   | { kind: 'prose'; field: string; emptyText: string }
-  | { kind: 'table'; field: string; columns: { key: string; label?: string; unit?: string }[] }
+  // `rowsKey` points at a nested row container when the row list lives one level under
+  // `field` (`hazards.hazardList`, `telemetry.events`). `field` stays the top-level key so
+  // the linter's field-coherence rules (f)/(g) are unaffected. See `catalog/tableView.ts`.
+  | { kind: 'table'; field: string; columns: { key: string; label?: string; unit?: string }[]; rowsKey?: string }
   | { kind: 'chart'; variant: 'bars'; field: string; rows: { key: string; label?: string; unit?: string }[]; max?: number; highlightKey?: string }
   | { kind: 'chart'; variant: 'histogram'; field: string; keys: string[]; max?: number; highlightKey?: string }
   | { kind: 'chart'; variant: 'scatter'; field: string; referenceKey: string; pointsKey?: string; xDomain: readonly [number, number]; yDomain: readonly [number, number]; xLabel?: string; yLabel?: string }

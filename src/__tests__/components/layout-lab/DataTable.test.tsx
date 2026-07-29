@@ -35,6 +35,32 @@ describe('DataTable', () => {
     render(<DataTable t={t} columns={[{ key: 'Weight', unit: 'kg' }]} values={{}} />);
     expect(screen.getByText('— missing')).toBeTruthy();
   });
+
+  it('renders ROW mode as a real multi-column table with a header and row labels', () => {
+    render(
+      <DataTable
+        t={t}
+        columns={[{ key: 'tier' }, { key: 'minPoints', label: 'min' }]}
+        rows={[{ label: 'a', values: { tier: 'Neutral', minPoints: 0 } }, { label: 'b', values: { tier: 'Friendly', minPoints: 3000 } }]}
+      />,
+    );
+    // Column keys become the header, not one row per column.
+    expect(screen.getByText('tier')).toBeTruthy();
+    expect(screen.getByText('min')).toBeTruthy();
+    expect(screen.getByText('Neutral')).toBeTruthy();
+    expect(screen.getByText('3000')).toBeTruthy();
+    // Group keys render as row labels.
+    expect(screen.getByText('a')).toBeTruthy();
+  });
+
+  it('formats list and record cells instead of printing [object Object]', () => {
+    render(
+      <DataTable t={t} columns={[{ key: 'tags' }, { key: 'payload' }]}
+        rows={[{ values: { tags: ['x', 'y'], payload: { level: 'int' } } }]} />,
+    );
+    expect(screen.getByText('x · y')).toBeTruthy();
+    expect(screen.getByText('{"level":"int"}')).toBeTruthy();
+  });
 });
 
 // The generic `table` view is now backed by DataTable — assert an ArchetypeStep table
@@ -57,5 +83,43 @@ describe('ArchetypeStep table view via DataTable', () => {
     expect(screen.getByText('widget')).toBeTruthy();
     expect(screen.getByText('W_Wallet')).toBeTruthy();
     expect(screen.getByText('1,234')).toBeTruthy();
+  });
+
+  it('renders a LIST-shaped produce as rows (what used to be a column of "— missing")', () => {
+    const listSpec: StepSpec = {
+      archetype: 'rules', label: 'Rep Tiers',
+      view: { kind: 'table', field: 'tiers', columns: [{ key: 'tier' }, { key: 'minPoints' }] },
+      produce: () => ({ data: { tiers: [{ tier: 'Neutral', minPoints: 0 }, { tier: 'Friendly', minPoints: 3000 }] } }),
+      accept: minLength('tiers', 'Tiers set', 1),
+    };
+    render(<ArchetypeStep t={t} entity={entity} step="Rep Tiers" spec={listSpec} />);
+    fireEvent.click(screen.getByRole('button', { name: /Produce Rep Tiers/ }));
+    expect(screen.getByText('Friendly')).toBeTruthy();
+    expect(screen.queryByText('— missing')).toBeNull();
+  });
+
+  it('follows rowsKey into a nested row container', () => {
+    const nested: StepSpec = {
+      archetype: 'rules', label: 'Hazards',
+      view: { kind: 'table', field: 'hazards', rowsKey: 'hazardList', columns: [{ key: 'kind' }, { key: 'ge' }] },
+      produce: () => ({ data: { hazards: { hazardList: [{ kind: 'fire-floor', ge: 'GE_Hazard_FireFloor' }] } } }),
+      accept: minLength('hazards', 'Hazards set', 1),
+    };
+    render(<ArchetypeStep t={t} entity={entity} step="Hazards" spec={nested} />);
+    fireEvent.click(screen.getByRole('button', { name: /Produce Hazards/ }));
+    expect(screen.getByText('fire-floor')).toBeTruthy();
+  });
+
+  it('names a shape mismatch instead of rendering blank cells', () => {
+    const bad: StepSpec = {
+      archetype: 'rules', label: 'Bad Table',
+      view: { kind: 'table', field: 'rows', columns: [{ key: 'a' }] },
+      produce: () => ({ data: { rows: ['just', 'strings'] } }),
+      accept: minLength('rows', 'Rows set', 1),
+    };
+    render(<ArchetypeStep t={t} entity={entity} step="Bad Table" spec={bad} />);
+    fireEvent.click(screen.getByRole('button', { name: /Produce Bad Table/ }));
+    expect(screen.getByTestId('view-shape-mismatch')).toBeTruthy();
+    expect(screen.queryByText('— missing')).toBeNull();
   });
 });

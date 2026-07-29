@@ -580,7 +580,9 @@ registerCatalogPipeline({
       view: {
         kind: 'table',
         field: 'telemetry',
-        columns: [{ key: 'events' }, { key: 'payload' }, { key: 'sink' }],
+        // One row per emitted event; the shared `sink` is a scalar sibling.
+        rowsKey: 'events',
+        columns: [{ key: 'name' }, { key: 'trigger' }, { key: 'payload' }, { key: 'rationale' }],
       },
       produce: () => ({
         data: {

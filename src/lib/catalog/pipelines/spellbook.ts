@@ -88,7 +88,7 @@ registerCatalogPipeline({
           { key: 'baseDamage' },
           { key: 'manaCost' },
           { key: 'cooldown', unit: 's' },
-          { key: 'critChance', unit: '%' },
+          { key: 'critChancePct', label: 'critChance', unit: '%' },
           { key: 'critMulti', unit: '×' },
           { key: 'stackingBucket' },
           { key: 'onHitIgnite' },

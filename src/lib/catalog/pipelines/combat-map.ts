@@ -378,6 +378,8 @@ registerCatalogPipeline({
       view: {
         kind: 'table',
         field: 'hazards',
+        // The rows are the hazard LIST; `hazards` itself is the container block.
+        rowsKey: 'hazardList',
         columns: [{ key: 'kind' }, { key: 'damagePerTick' }, { key: 'damageIntervalSec' }, { key: 'ge' }],
       },
       produce: () => ({

@@ -207,7 +207,14 @@ registerCatalogPipeline({
       view: {
         kind: 'table',
         field: 'transitions',
-        columns: [{ key: 'combatEnter' }, { key: 'combatExit' }, { key: 'beatSync' }],
+        // Each transition (combatEnter / combatExit / …) is a ROW; these are its fields.
+        columns: [
+          { key: 'trigger' },
+          { key: 'fromLayer', label: 'from' },
+          { key: 'toLayer', label: 'to' },
+          { key: 'crossfadeDuration', label: 'crossfade' },
+          { key: 'beatSyncRule', label: 'beat sync' },
+        ],
       },
       produce: () => ({
         data: {

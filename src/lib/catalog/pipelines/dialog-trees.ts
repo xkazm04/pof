@@ -427,7 +427,15 @@ registerCatalogPipeline({
       view: {
         kind: 'table',
         field: 'subtitleUI',
-        columns: [{ key: 'widget' }, { key: 'format' }, { key: 'anchor' }],
+        columns: [
+          { key: 'subtitleWidget', label: 'subtitle widget' },
+          { key: 'subtitleFormat', label: 'subtitle format' },
+          { key: 'subtitleAnchor', label: 'subtitle anchor' },
+          { key: 'choiceWidget', label: 'choice widget' },
+          { key: 'choiceFormat', label: 'choice format' },
+          { key: 'choiceAnchor', label: 'choice anchor' },
+          { key: 'accessibilityNote', label: 'accessibility' },
+        ],
       },
       produce: () => ({
         data: {

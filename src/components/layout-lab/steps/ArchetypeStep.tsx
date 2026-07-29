@@ -28,6 +28,7 @@ import { apiFetch } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
 import { useCatalogStore } from '@/stores/catalogStore';
 import { linkTargetsExist, readLinks } from '@/lib/catalog/acceptance/linkCheckers';
+import { resolveTableView } from '@/lib/catalog/tableView';
 import type { AcceptanceResult, CheckerContext } from '@/lib/catalog/acceptance/types';
 import type { LabTheme } from '../theme';
 import type { LabEntity } from '../useLabCatalogData';
@@ -71,8 +72,20 @@ export function ViewPanel({ t, view, data }: { t: LabTheme; view: ViewDescriptor
       : <span style={{ fontSize: 15, color: t.muted }}>{view.emptyText}</span>;
   }
   if (view.kind === 'table') {
-    const obj = (data[view.field] ?? {}) as Record<string, unknown>;
-    return <DataTable t={t} columns={view.columns} values={obj} />;
+    // Resolved by the SHARED pure resolver (catalog/tableView.ts) the spec linter also
+    // uses, so a column the linter accepts is exactly a column this renders. It reads the
+    // three shapes produce bodies actually write — a flat record, a LIST of row records, or
+    // a KEYED GROUP of them — instead of assuming the columns live at the top level (which
+    // rendered 28 tables as nothing but "— missing").
+    const res = resolveTableView(data, view.field, view.columns, view.rowsKey);
+    if (res.mode === 'absent') return <span style={{ fontSize: 15, color: t.muted }}>Nothing yet — run Produce.</span>;
+    if (res.mode === 'mismatch') {
+      return <ShapeMismatch t={t} field={view.rowsKey ? `${view.field}.${view.rowsKey}` : view.field}
+        expected="a key·value record or a list of row records" actual={res.actual} />;
+    }
+    return res.mode === 'rows'
+      ? <DataTable t={t} columns={view.columns} rows={res.rows} />
+      : <DataTable t={t} columns={view.columns} values={res.values} />;
   }
   if (view.kind === 'chart') {
     const raw = data[view.field];
