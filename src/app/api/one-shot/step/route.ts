@@ -3,6 +3,7 @@ import { apiSuccess, apiError } from '@/lib/api-utils';
 import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 import { upsertArtifact } from '@/lib/pipeline-artifacts-db';
 import { seededEntities } from '@/lib/catalog/seed';
+import { withProduceDirection } from '@/lib/catalog/produceDirection';
 import { startExecution, awaitCallback } from '@/lib/claude-terminal/cli-service';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
@@ -10,6 +11,9 @@ import type { AcceptanceTier } from '@/lib/catalog/acceptance/types';
 import type { StoredCatalogEntity } from '@/lib/catalog/types';
 
 const PROJECT_PATH = process.env.POF_UE_UPROJECT ?? process.cwd();
+
+/** Used only when the caller supplies no direction of its own. */
+export const DEFAULT_DIRECTION = 'derive from approved design; minimal commentary';
 
 function entityToLab(e: { id: string; name: string; lifecycle: string; data?: unknown }): LabEntity {
   return { id: e.id, name: e.name, lifecycle: e.lifecycle as LabEntity['lifecycle'], data: e.data };
@@ -22,8 +26,13 @@ function entityToLab(e: { id: string; name: string; lifecycle: string; data?: un
  *   entityId: string;
  *   stepLabel: string;
  *   mode: 'deterministic' | 'cli';
+ *   direction?: string;                           // the operator's typed art direction
  *   proposal?: { name: string; data: unknown };   // required for draft entities (id draft-<cat>-<ts>)
  * }
+ * `direction` is forwarded to `step.produce(entity, direction)` and embedded in the CLI
+ * prompt; DEFAULT_DIRECTION is only the fallback when the caller supplies none. It is also
+ * stamped onto the persisted artifact (`data.produceDirection`) so the row records what
+ * drove it.
  * Runs a single pipeline step for the given entity and upserts the artifact.
  * Draft entities (created client-side) are resolved via the inline proposal payload;
  * seeded entities are resolved from the static catalog seed as before.
@@ -35,6 +44,10 @@ export async function POST(req: NextRequest) {
     const entityId = typeof body.entityId === 'string' ? body.entityId : '';
     const stepLabel = typeof body.stepLabel === 'string' ? body.stepLabel : '';
     const mode = body.mode === 'cli' ? 'cli' : 'deterministic';
+    // Caller-supplied direction wins; the old constant is now only the fallback.
+    const direction = typeof body.direction === 'string' && body.direction.trim()
+      ? body.direction.trim()
+      : DEFAULT_DIRECTION;
 
     // Optional inline proposal — required when entityId is a draft (not in seededEntities)
     const proposalRaw = body.proposal && typeof body.proposal === 'object' ? body.proposal as Record<string, unknown> : null;
@@ -65,7 +78,9 @@ export async function POST(req: NextRequest) {
     const entity = entityToLab(rawEntity);
 
     if (mode === 'deterministic') {
-      const out = step.produce(entity);
+      // No CLI prompt drove a deterministic produce — the stamp records that honestly
+      // (empty `prompt`) rather than fabricating one.
+      const out = withProduceDirection(step.produce(entity, direction), { direction, prompt: '' });
       const data = out.data ?? {};
       const accept = step.accept
         ? step.accept(data as Record<string, unknown>)
@@ -86,11 +101,12 @@ export async function POST(req: NextRequest) {
         outcome: accept.status === 'pass' ? 'pass' : 'fail',
         stepName: stepLabel,
         reason: accept.reason,
+        artifactData: data as Record<string, unknown>,
+        ueAssets: out.ueAssets ?? [],
       });
     }
 
     // CLI mode
-    const direction = 'derive from approved design; minimal commentary';
     const entitySummary = JSON.stringify({ id: entity.id, name: entity.name, data: entity.data }, null, 2);
     const promptText =
       `# PIPELINE STEP: ${stepLabel}\n\nCatalog: ${catalogId}\n\nEntity:\n${entitySummary}\n\n` +
@@ -103,17 +119,19 @@ export async function POST(req: NextRequest) {
     });
     const payload = await awaitCallback(executionId, { timeoutMs: UI_TIMEOUTS.callbackAwaitTimeout }) as Record<string, unknown>;
 
-    const mergedData = { ...(payload ?? {}) } as Record<string, unknown>;
+    const mergedData = (withProduceDirection({ data: { ...(payload ?? {}) } }, { direction, prompt: promptText }).data
+      ?? {}) as Record<string, unknown>;
     const accept = step.accept
       ? step.accept(mergedData)
       : { tier: 'L0' as AcceptanceTier, status: 'pass' as const, label: stepLabel, detail: '' };
 
+    const cliAssets = Array.isArray(payload.ueAssets) ? (payload.ueAssets as string[]) : [];
     upsertArtifact({
       catalogId,
       entityId,
       step: stepLabel,
       data: mergedData,
-      ueAssets: Array.isArray(payload.ueAssets) ? (payload.ueAssets as string[]) : [],
+      ueAssets: cliAssets,
       status: accept.status,
       tier: accept.tier,
       reason: accept.reason,
@@ -123,6 +141,8 @@ export async function POST(req: NextRequest) {
       outcome: accept.status === 'pass' ? 'pass' : 'fail',
       stepName: stepLabel,
       reason: accept.reason,
+      artifactData: mergedData,
+      ueAssets: cliAssets,
     });
   } catch (e) {
     return apiError(e instanceof Error ? e.message : 'step failed', 500);

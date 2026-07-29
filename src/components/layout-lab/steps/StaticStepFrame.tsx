@@ -14,7 +14,8 @@ import type { CheckerContext } from '@/lib/catalog/acceptance/types';
  *  shared produce dispatch (used as both `onComplete` and the banner `onFix`). */
 export interface StaticStepContext {
   art: LabStepArtifact | undefined;
-  runProduce: () => void;
+  /** Pass straight to `CliProduce.onComplete` — the typed direction reaches produce. */
+  runProduce: (ctx?: { direction: string; prompt: string }) => void;
 }
 
 /**
@@ -49,7 +50,9 @@ export function StaticStepFrame({ t, entity, step, panels }: {
     const ctx: CheckerContext = { catalog: 'items', siblings, has: () => false };
     return ITEM_STEP_SPECS[step].accept(art?.data ?? {}, ctx);
   }, [art?.data, step, entitySteps]);
+  // onFix carries a corrective DIRECTION STRING, not a produce ctx — drop it rather than
+  // letting it land in the ctx slot (it would stamp a prompt that was never built).
   return (
-    <StepFrame t={t} acceptance={acceptance} onFix={runProduce} catalogId="items" step={step} panels={panels({ art, runProduce })} />
+    <StepFrame t={t} acceptance={acceptance} onFix={() => runProduce()} catalogId="items" step={step} panels={panels({ art, runProduce })} />
   );
 }

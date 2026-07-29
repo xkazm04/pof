@@ -34,7 +34,7 @@ export interface CliProduceProps {
    * can stamp the batch they produce with the art direction (optional — zero-arg
    * handlers stay valid).
    */
-  onComplete: (ctx?: { direction: string; prompt: string }) => void;
+  onComplete: (ctx?: { direction: string; prompt: string }) => void | Promise<void>;
   /** What the production writes (UE row / asset / DB). Shown on success. */
   note?: string;
   placeholder?: string;
@@ -116,7 +116,8 @@ export function CliProduce({ t, label, buildPrompt, onComplete, note, placeholde
     <div style={{ display: 'grid', gap: 12 }}>
       {fields}
       <Lbl t={t}>Direction (your input)</Lbl>
-      <LabTextarea t={t} value={direction} onChange={setDirection} rows={rows} placeholder={placeholder ?? 'Steer this step — tone, constraints, references…'} />
+      <LabTextarea t={t} value={direction} onChange={setDirection} rows={rows} testId="cli-produce-direction"
+        placeholder={placeholder ?? 'Steer this step — tone, constraints, references…'} />
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
         <LabButton t={t} onClick={dispatch} disabled={dispatching} testId="cli-produce-run">{btnLabel}</LabButton>
         <button onClick={() => setShowPrompt((v) => !v)} className={t.fontMono}

@@ -2,6 +2,7 @@
 
 import { useLabStep, useLabPipelineStore } from '../labPipelineStore';
 import { ITEM_STEP_SPECS } from './itemsSteps';
+import { withProduceDirection } from '@/lib/catalog/produceDirection';
 import type { LabEntity } from '../useLabCatalogData';
 import type { LabStepArtifact } from '../labPipelineStore';
 
@@ -20,10 +21,15 @@ import type { LabStepArtifact } from '../labPipelineStore';
  */
 export function useStaticStep(entity: LabEntity, step: string): {
   art: LabStepArtifact | undefined;
-  runProduce: () => void;
+  runProduce: (ctx?: { direction: string; prompt: string }) => void;
 } {
   const art = useLabStep(entity.id, step);
   const produce = useLabPipelineStore((s) => s.produce);
-  const runProduce = () => produce(entity.id, step, ITEM_STEP_SPECS[step].produce(entity));
+  // The operator's typed direction (from `CliProduce.onComplete`) is forwarded to the step's
+  // produce body AND stamped on the artifact, exactly as the generic ArchetypeStep does — so
+  // the bespoke Items steps record what drove them too. Called with no ctx (the Acceptance
+  // banner's onFix) it behaves exactly as before.
+  const runProduce = (ctx?: { direction: string; prompt: string }) =>
+    produce(entity.id, step, withProduceDirection(ITEM_STEP_SPECS[step].produce(entity, ctx?.direction), ctx));
   return { art, runProduce };
 }

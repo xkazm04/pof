@@ -89,8 +89,19 @@ export interface StepSpec {
   archetype: ArchetypeId;
   label: string;
   view: ViewDescriptor;
-  /** What the Produce writes. */
-  produce: (entity: LabEntity) => StepOutput;
+  /**
+   * What the Produce writes.
+   *
+   * `direction` is the operator's typed art direction, forwarded by every dispatch site
+   * (ArchetypeStep, the Items static steps, the one-shot step route). It is OPTIONAL on
+   * both sides: a step body may ignore it (most do today — the per-catalog produce
+   * redesign that makes the constant bodies direction-sensitive is follow-on work), and
+   * every caller that has no direction (the spec linter, headless recipes, demo seeding)
+   * calls it with one argument exactly as before. Whether or not the body reads it, the
+   * direction + built prompt are persisted on the artifact via `withProduceDirection`
+   * (`@/lib/catalog/produceDirection`), so a produced step always records what drove it.
+   */
+  produce: (entity: LabEntity, direction?: string) => StepOutput;
   /** Derives the acceptance result from the persisted artifact data. */
   accept: Checker;
   /** Optional plain-language remediation copy for a non-passing acceptance. When

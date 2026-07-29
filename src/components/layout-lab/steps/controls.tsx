@@ -16,9 +16,9 @@ export function LabButton({ t, children, onClick, disabled, testId }: { t: LabTh
   );
 }
 
-export function LabTextarea({ t, value, onChange, rows = 6, placeholder }: { t: LabTheme; value: string; onChange: (v: string) => void; rows?: number; placeholder?: string }) {
+export function LabTextarea({ t, value, onChange, rows = 6, placeholder, testId }: { t: LabTheme; value: string; onChange: (v: string) => void; rows?: number; placeholder?: string; testId?: string }) {
   return (
-    <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={rows} placeholder={placeholder} className={t.fontBody}
+    <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={rows} placeholder={placeholder} data-testid={testId} className={t.fontBody}
       style={{ width: '100%', resize: 'vertical', background: t.bg, color: t.text, border: `1px solid ${t.line}`, borderRadius: t.glass ? 8 : 0, padding: '10px 12px', fontSize: 15, lineHeight: 1.55, outline: 'none' }} />
   );
 }

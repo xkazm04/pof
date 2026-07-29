@@ -1,6 +1,7 @@
 import { expect, type Page, type APIRequestContext } from '@playwright/test';
 import { seedAllCatalogs } from '@/lib/catalog/sections';
 import { POF_READY_TESTID } from './pof-identity';
+import { PRODUCE_DIRECTION_KEY } from '@/lib/catalog/produceDirection';
 
 export type StepStatus = 'pass' | 'fail' | 'deferred' | 'pending';
 
@@ -50,14 +51,43 @@ export async function acceptanceStatus(page: Page): Promise<StepStatus> {
 }
 
 /** Click Produce for the current step; gallery steps also select the first candidate
- *  so the `selected` field populates and acceptance can derive. */
-export async function produceStep(page: Page, isGallery: boolean): Promise<void> {
+ *  so the `selected` field populates and acceptance can derive.
+ *  `direction` (optional) is typed into the step's Direction text area first, so the walker
+ *  can prove the operator's input reaches the produced artifact (`data.produceDirection`). */
+export async function produceStep(page: Page, isGallery: boolean, direction?: string): Promise<void> {
+  if (direction != null) await page.getByTestId('cli-produce-direction').fill(direction);
   await page.getByTestId('cli-produce-run').click();
   if (isGallery) {
     await page.locator('[data-testid^="candidate-"]').first().click();
   } else {
     await expect(page.getByTestId('cli-produce-result')).toBeVisible({ timeout: 10_000 });
   }
+}
+
+/** Poll the server until the step's persisted artifact carries the typed direction VERBATIM.
+ *  Proves the direction is a real produce input, not a write-only textarea. */
+export async function expectPersistedDirection(
+  request: APIRequestContext,
+  catalogId: string,
+  entityId: string,
+  step: string,
+  direction: string,
+): Promise<void> {
+  await expect
+    .poll(
+      async () => {
+        const res = await request.get(
+          `/api/pipeline-artifacts?catalogId=${encodeURIComponent(catalogId)}&entityId=${encodeURIComponent(entityId)}`,
+        );
+        if (!res.ok()) return null;
+        const body = (await res.json()) as { data?: Array<{ step: string; data?: Record<string, unknown> }> };
+        const art = body.data?.find((a) => a.step === step);
+        const stamp = art?.data?.[PRODUCE_DIRECTION_KEY] as { direction?: string } | undefined;
+        return stamp?.direction ?? null;
+      },
+      { timeout: 10_000, message: `${catalogId} · ${step} did not persist the typed direction` },
+    )
+    .toBe(direction);
 }
 
 /** Poll the server until the step's persisted status equals the in-UI status. */

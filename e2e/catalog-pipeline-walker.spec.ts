@@ -3,7 +3,8 @@ import '@/lib/catalog/pipelines/registry.generated'; // side-effect: register al
 import { allCatalogPipelines } from '@/lib/catalog/pipeline-registry';
 import { WALKER_SKIP } from './helpers/pipeline-coverage';
 import {
-  gotoLab, openCatalog, selectStep, produceStep, acceptanceStatus, expectPersisted, type StepStatus,
+  gotoLab, openCatalog, selectStep, produceStep, acceptanceStatus, expectPersisted,
+  expectPersistedDirection, type StepStatus,
 } from './helpers/lab-mode';
 
 /**
@@ -31,7 +32,10 @@ for (const pipeline of allCatalogPipelines()) {
       for (let i = 0; i < steps.length; i++) {
         const step = steps[i];
         await selectStep(page, i);
-        await produceStep(page, step.view.kind === 'gallery');
+        // Type a unique direction into every step and assert it lands VERBATIM on the
+        // persisted artifact — the direction is a real produce input, not a write-only box.
+        const direction = `walker direction ${catalogId} #${i}`;
+        await produceStep(page, step.view.kind === 'gallery', direction);
 
         const status = await acceptanceStatus(page);
         expect
@@ -44,6 +48,7 @@ for (const pipeline of allCatalogPipelines()) {
         }
 
         await expectPersisted(request, catalogId, entityId, step.label, status);
+        await expectPersistedDirection(request, catalogId, entityId, step.label, direction);
       }
     });
 

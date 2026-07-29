@@ -185,7 +185,9 @@ export interface AcceptanceCopy {
  * worked example and the interactive flow stay identical.
  */
 export interface ItemStepSpec {
-  produce: (entity: LabEntity) => StepOutput;
+  /** `direction` — the operator's typed art direction, forwarded by `useStaticStep`
+   *  (mirrors `StepSpec.produce`); optional on both sides, existing bodies ignore it. */
+  produce: (entity: LabEntity, direction?: string) => StepOutput;
   /** Optional `ctx` (second arg) mirrors the shared `Checker` signature so a bespoke
    *  Items step can read siblings / resolve links; existing single-arg bodies are unaffected. */
   accept: (data: Record<string, unknown>, ctx?: CheckerContext) => Acceptance;

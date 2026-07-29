@@ -24,6 +24,10 @@ import { ARCHETYPE_CANON } from '@/lib/catalog/canon/archetypeCanon';
 import { qualityPack } from '@/lib/prompts/quality';
 import { deliverableClassOf } from '@/lib/judge/dimensions';
 import { getStepFact } from '@/lib/status/statusModel';
+import { withProduceDirection } from '@/lib/catalog/produceDirection';
+import { isCliEligible, isLiveProduceEnabled, type OneShotStepResult } from '../labProduceMode';
+import { apiFetch } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
 import { useCatalogStore } from '@/stores/catalogStore';
 import { linkTargetsExist, readLinks } from '@/lib/catalog/acceptance/linkCheckers';
 import type { CheckerContext } from '@/lib/catalog/acceptance/types';
@@ -257,6 +261,36 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
     return [pack, canon, `Produce ${spec.label} for ${entity.name}. ${dir}`].filter(Boolean).join('\n\n');
   };
 
+  /**
+   * The ONE dispatch path for a non-gallery step. The operator's typed direction is a real
+   * produce input now: it is forwarded to `spec.produce(entity, direction)` and stamped onto
+   * the artifact (`data.produceDirection`), so the Raw artifact panel shows verbatim what
+   * drove the step instead of the direction vanishing on unmount.
+   *
+   * When live-CLI produce is enabled (opt-in, off by default) AND the archetype is a text
+   * deliverable a CLI session can author, the dispatch goes through the real
+   * `POST /api/one-shot/step` seam and the store adopts what the SERVER persisted. A failure
+   * rejects, so `CliProduce` reports the reason and offers "Retry with same prompt" (Rule 4).
+   * Stub mode writes synchronously inside the click (no await before the store write), which
+   * is what keeps the Rule 5 walker green.
+   */
+  const dispatchProduce = async (pctx?: { direction: string; prompt: string }) => {
+    const dir = pctx?.direction ?? '';
+    if (catalogId && isCliEligible(spec.archetype) && isLiveProduceEnabled()) {
+      const res = await apiFetch<OneShotStepResult>('/api/one-shot/step', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          catalogId, entityId: entity.id, stepLabel: step, mode: 'cli', direction: dir,
+          proposal: { name: entity.name, data: entity.data },
+        }),
+      });
+      produce(entity.id, step, { data: res.artifactData ?? {}, ueAssets: res.ueAssets ?? [] });
+      return;
+    }
+    produce(entity.id, step, withProduceDirection(spec.produce(entity, dir), pctx));
+  };
+
   // One-click "Produce fix": dispatches the corrective direction through the step's OWN
   // prompt logic, reusing the exact state-change path the Produce panel uses (a gallery
   // step appends a corrective batch; a static step re-produces). Deferred is a correct
@@ -264,10 +298,11 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
   const runFix = (fixDir?: string) => {
     const dir = fixDir ?? spec.defaultDirection ?? '';
     if (spec.view.kind === 'gallery') generate(dir, buildPrompt(dir));
-    else produce(entity.id, step, produced);
+    else void dispatchProduce({ direction: dir, prompt: buildPrompt(dir) })
+      .catch((e: unknown) => logger.error('[ArchetypeStep] produce fix failed', e));
   };
 
-  const cli = (onComplete: (ctx?: { direction: string; prompt: string }) => void) => (
+  const cli = (onComplete: (ctx?: { direction: string; prompt: string }) => void | Promise<void>) => (
     <CliProduce t={t} label={`Produce ${spec.label}`} rows={3}
       defaultDirection={spec.defaultDirection} note={spec.produceNote}
       buildPrompt={buildPrompt} onComplete={onComplete} />
@@ -311,7 +346,7 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
     panels = [
       { label: 'View', node: <ViewPanel t={t} view={spec.view} data={data} /> },
       ...(dataGlbUrl ? [{ label: GLB_PREVIEW_LABEL, node: <GlbPreviewPanel t={t} url={dataGlbUrl} /> }] : []),
-      { label: 'Produce', node: cli(() => produce(entity.id, step, produced)) },
+      { label: 'Produce', node: cli((pctx) => dispatchProduce(pctx)) },
     ];
   }
 

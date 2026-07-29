@@ -11,7 +11,7 @@ vitest unit tests, which don't see the UI → store → persistence seams.
 |------|------|
 | `e2e/catalog-pipeline-walker.spec.ts` | Data-driven walker. Enumerates `allCatalogPipelines()` and, per catalog, opens its first seeded entity and walks every step. |
 | `e2e/catalog-items-reference.spec.ts` | Bespoke deep walk of the 13-step Items reference pipeline. |
-| `e2e/helpers/lab-mode.ts` | Shared helpers: `gotoLab`, `openCatalog`, `selectStep`, `produceStep`, `acceptanceStatus`, `expectPersisted`. |
+| `e2e/helpers/lab-mode.ts` | Shared helpers: `gotoLab`, `openCatalog`, `selectStep`, `produceStep`, `acceptanceStatus`, `expectPersisted`, `expectPersistedDirection`. |
 | `e2e/helpers/pipeline-coverage.ts` | `WALKER_SKIP` — the single, documented list of pipelines the generic walker skips (and why). |
 | `src/__tests__/catalog/pipeline-e2e-coverage.test.ts` | **Gap guard** (vitest, runs in `npm run validate`). |
 | `src/__tests__/catalog/pipeline-spec-linter.test.ts` | **Fleet spec linter** (vitest, runs in `npm run validate`). Guards spec↔renderer contracts (below). |
@@ -19,7 +19,8 @@ vitest unit tests, which don't see the UI → store → persistence seams.
 ## The assertions (per step)
 
 - **View renders** for the selected step.
-- **Produce dispatches** (click `cli-produce-run`; gallery steps also select the first candidate).
+- **Produce dispatches** (type a unique direction into `cli-produce-direction`, click `cli-produce-run`; gallery steps also select the first candidate).
+- **The typed direction reaches the artifact**: the persisted row carries `data.produceDirection.direction` VERBATIM (`expectPersistedDirection`) — the Direction text area is a real produce input, not a write-only box.
 - **Acceptance derives a config-complete terminal status**: `status ∈ {pass, deferred}`, never
   `fail`/`pending`. `pass` for L0/L1/L2 (data/selection/static); `deferred` for L3/L4
   (runtime/visual, pending a live bridge) — and a `deferred` gate must show a reason (Rule 4). The

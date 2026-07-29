@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { useLabStep, useLabPipelineStore } from '../../labPipelineStore';
 import { readHistory, makeBatch, appendBatch, selectCandidate, historyData, nextSeq } from './genHistory';
+import { withProduceDirection, readProduceDirection } from '@/lib/catalog/produceDirection';
 import type { GenCandidate, GenHistory } from './genHistory';
 import type { LabStepArtifact, StepOutput } from '../../labPipelineStore';
 
@@ -49,15 +50,26 @@ export function useGenerativeStep(
       const live = readHistory(prevData);
       const seq = nextSeq(live);
       const batch = makeBatch({ seq, at: new Date().toISOString(), direction, prompt, candidates: candidates(direction, seq) });
-      return { ...(base ?? {}), data: historyData(appendBatch(live, batch), base?.data) };
+      // The batch already carries its own direction/prompt; the top-level stamp makes a
+      // gallery artifact report the LAST direction that drove it in the same shape every
+      // other step uses (one key the Raw artifact panel + the server row can both read).
+      return withProduceDirection(
+        { ...(base ?? {}), data: historyData(appendBatch(live, batch), base?.data) },
+        { direction, prompt },
+      );
     });
   };
 
   const reselect = (candidateId: string) => {
-    produceFrom(entityId, step, (prevData) => ({
-      ...(base ?? {}),
-      data: historyData(selectCandidate(readHistory(prevData), candidateId), base?.data),
-    }));
+    produceFrom(entityId, step, (prevData) => {
+      // Re-selecting doesn't produce, so the recorded direction stamp must SURVIVE the
+      // rewrite (the base output has none — it would otherwise be silently dropped).
+      const prevStamp = readProduceDirection(prevData);
+      return withProduceDirection(
+        { ...(base ?? {}), data: historyData(selectCandidate(readHistory(prevData), candidateId), base?.data) },
+        prevStamp ?? undefined,
+      );
+    });
   };
 
   return { art, history, generate, reselect };
