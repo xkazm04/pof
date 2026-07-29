@@ -11,7 +11,8 @@
  * Canon-aware (matches judge-run): pass --catalog <id> to inject that catalog's binding design
  * rules, and --siblings <file> (a { step: config } JSON, e.g. from get-config without --step) to
  * give the judge the entity's other steps as cross-reference context. --step names the config
- * under judgment so it is excluded from its own sibling context.
+ * under judgment so it is excluded from its own sibling context. --include-nested widens that
+ * sibling projection to bounded nested objects (default off, matches judge-run).
  *
  * SPEND: like judge-run, this spawn is gated by the shared pre-flight guardrail and recorded
  * through `recordSpend` (module `judge`), so a judging loop is visible to the Spend tab and
@@ -33,6 +34,7 @@ import {
 import { canonContextFor } from '../src/lib/catalog/canon/canonContext';
 import { CANON_SEED } from '../src/lib/catalog/canon/canon-seed';
 import { buildSiblingContext } from '../src/lib/judge/siblingContext';
+import { stripNonContent } from '../src/lib/judge/payload';
 
 const arg = (k: string) => { const i = process.argv.indexOf(`--${k}`); return i >= 0 ? process.argv[i + 1] : undefined; };
 
@@ -65,19 +67,29 @@ async function main() {
   const payload = image
     ? `Use the Read tool to view the image at:\n${image}\nThen judge it.`
     : textFile
-      ? '```\n' + readFileSync(textFile, 'utf8').slice(0, 60000) + '\n```' // generous cap; 12k silently truncated real configs mid-field
+      ? (() => {
+          const raw = readFileSync(textFile, 'utf8').slice(0, 60000);
+          try {
+            const parsed = JSON.parse(raw) as Record<string, unknown>;
+            return '```json\n' + JSON.stringify(stripNonContent(parsed), null, 2) + '\n```';
+          } catch {
+            return '```\n' + raw + '\n```'; // not JSON — judge it verbatim
+          }
+        })()
       : (() => { console.error('need --image or --text'); process.exit(2); })() as string;
 
   // Canon-aware context (opt-in, mirrors judge-run): catalog canon + entity sibling projection.
   const catalog = arg('catalog');
   const canonContext = catalog ? canonContextFor(CANON_SEED, catalog) || undefined : undefined;
   const siblingsFile = arg('siblings');
+  // Opt-in: include bounded nested objects in the sibling projection (default off — Task 4 A/Bs this).
+  const includeNested = process.argv.includes('--include-nested');
   let siblingContext: string | undefined;
   if (siblingsFile) {
     const raw = JSON.parse(readFileSync(siblingsFile, 'utf8')) as Record<string, unknown>;
     // get-config (no --step) emits { step: config }; project every step except the one under judgment.
     const steps = Object.entries(raw).map(([step, data]) => ({ step, data: (data ?? {}) as Record<string, unknown> }));
-    siblingContext = buildSiblingContext(steps, arg('step') ?? '') || undefined;
+    siblingContext = buildSiblingContext(steps, arg('step') ?? '', { includeNested }) || undefined;
   }
 
   const pol = getModelPolicy('judge-content');
