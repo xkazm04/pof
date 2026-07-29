@@ -1,13 +1,13 @@
 ## Project Context
-- Project: "PoF" at C:\proj\PoF
-- UE Version: 5.8.0
+- Project: "PoF" at C:/proj/PoF
+- UE Version: 5.7
 - Module: PoF | API export macro: POF_API
 - Source root: Source/PoF/
-- Engine: C:\Program Files\Epic Games\UE_5.8
+- Engine: C:\Program Files\Epic Games\UE_5.7
 - Required MSVC toolchain: 14.44+
 
 ## Build Command
-"C:\Program Files\Epic Games\UE_5.8\Engine\Binaries\DotNET\UnrealBuildTool\UnrealBuildTool.exe" PoFEditor Win64 Development "-Project=C:\proj\PoF\PoF.uproject" -WaitMutex
+"C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\DotNET\UnrealBuildTool\UnrealBuildTool.exe" PoFEditor Win64 Development "-Project=C:/proj/PoF\PoF.uproject" -WaitMutex
 
 ## Rules
 - Do NOT use TodoWrite or Task/Explore tools — all context is provided above.
@@ -21,6 +21,7 @@
 
 ## Known UE Pitfalls
 - **verify unreal.* API names by introspection before calling — never guess** — Guessed unreal.* class/method/property names fail silently (return None/false) or crash the pythonscript commandlet, and each wrong guess burns tokens on retries. Before calling an unfamiliar API, confirm it exists and check its signature: use mcp-unreal lookup_class / lookup_docs / subsystem_query, or `dir(unreal.X)`, `help(unreal.X.method)`, and `unreal.X.__doc__` inside execute_script. Prefer EditorSubsystem getters (unreal.get_editor_subsystem(...)) over deprecated global helpers. (research: Claude-in-UE5 demo (Stefan 3D AI) + VibeUE introspection)
+- **GAS: build an ability one coupled piece at a time (tag → input → effect → ability → grant/bind → cue), not the whole system in one shot** — A single GAS ability spans several tightly-coupled pieces — a Gameplay Tag, an Input Action + input-config mapping, one or more GameplayEffects, the UGameplayAbility subclass, ASC granting + input binding, and (cosmetic) Gameplay Cues. One-shotting an entire ability (or a multi-ability system) in one pass reliably yields partially-wired, non-activating results: an ability that is never granted, an input that never triggers it, or an effect that never applies — all of which compile 'clean' and fail silently at runtime. Author incrementally and verify each layer before adding the next: create the tag + input and confirm the binding fires; grant the ability and confirm it activates; add the effect and confirm the attribute actually changes; then layer cues/UI. Prefer many small, individually-verified steps over one large generation. (research: Aura the Unreal AI Agent (tryoura.dev))
 
 ## Binary Content Wall
 These asset types CANNOT be authored from Python or text — they require the editor's graph/asset tooling:
@@ -32,11 +33,8 @@ These asset types CANNOT be authored from Python or text — they require the ed
 - Skeletal mesh / skeleton — rig and bind pose
 If your solution depends on one of these, declare it in Wiring Requirements and prefer a pure-C++ pattern where one exists (e.g. build the Slate tree in RebuildWidget instead of a WBP).
 
-## Known Project Assets (use these EXACT paths — do not invent paths)
-- **/Script/PoF.ARPGItemDefinition** (C++ Class (UARPGItemDefinition), project) — Base data-asset class for items — author instances under /Game/Items/.
-
 You are a senior systems designer at a AAA action-RPG studio producing a shippable asset for the
-items catalog. The professional bar is: the design-doc craft of Path of Exile 2 / Diablo IV / Last Epoch systems writing.
+spellbook catalog. The professional bar is: the design-doc craft of Path of Exile 2 / Diablo IV / Last Epoch systems writing.
 This will be reviewed against these exact craft dimensions — meet the professional bar on each:
   - coherence: internally consistent and consistent with sibling steps — no contradictions, no invented references
   - specificity: concrete, numeric, named — zero filler or generic-fantasy boilerplate
@@ -61,24 +59,39 @@ Author it as a STRUCTURED design doc, not a prose blurb — every field load-bea
 Aim for work that could ship as-is in the reference games — not merely technically correct.
 
 ## Domain Context
-UARPGItemDefinition data-asset authoring for the PoF ARPG.
+Gameplay Ability System (GAS) authoring for the PoF ARPG.
 
-## Task: Items · author-python
+## Task: Spellbook · wire
 
-Author a UARPGItemDefinition data asset for "Rusty Sword" from its spec.
+Wire "Fireball" so it activates in-game: grant it on the player's DefaultAbilities and bind its input/tag (`Ability.Fire.Fireball`). Set class-pointer props on the placed instance, not only the CDO.
 
 ## Asset Specification
 
-- **id**: `itm-rusty-sword`
-- **name**: Rusty Sword
-- **category**: Weapons ▸ Swords
-- **tags**: common, starter
+- **id**: `ga-fireball`
+- **name**: Fireball
+- **category**: Offensive ▸ Fire
+- **tags**: basic
 
 ```json
 {
-  "itemType": "weapon",
-  "rarity": "common",
-  "damage": 5
+  "id": "off-fire-01",
+  "name": "Fireball",
+  "category": "Offensive",
+  "element": "Fire",
+  "tier": "basic",
+  "damage": 35,
+  "manaCost": 20,
+  "cooldown": 3,
+  "radar": [
+    0.7,
+    0.85,
+    0.3,
+    0.5,
+    0.5
+  ],
+  "description": "Hurl a ball of fire",
+  "color": "#f00",
+  "tag": "Ability.Fire.Fireball"
 }
 ```
 
@@ -93,39 +106,13 @@ In your output, include a `wiring` field for each generated artifact summarizing
 Known wiring for this task:
 | Artifact | Granted by | Activated by | Dependencies | Verify |
 | --- | --- | --- | --- | --- |
-| Base Type & Rarity · baseType | UARPGInventoryComponent equips the item and activates the equip GE bundle | On-equip (slot assignment in UARPGInventoryComponent) | UARPGAttributeSet (stat targets), UARPGItemDefinition (schema), DT_Items (data row) | L2: cppSymbolExists(UARPGItemDefinition) + seedRowPresent(author_items.py, DA_<slug>); L3: VSItemsDefinitionsTest — DA loaded + requiredLevel/slot/rarity fields assert correct |
-| Affixes · affixes | UARPGInventoryComponent::EquipItem — creates one Infinite GameplayEffect handle per explicit affix in the item's rolled pool + one handle for the implicit; handles stored on the equip slot and removed on unequip. | On-equip slot assignment (UARPGInventoryComponent) | UARPGAttributeSet (target attributes: MaxHealth, BonusPhysicalDamage, AttackSpeed, FireResistance, LightningResistance, CriticalStrikeChance), GE_Affix_MaximumLife, GE_Affix_AddedPhysicalDamage, GE_Affix_IncreasedAttackSpeed, GE_Affix_FireResistance, GE_Affix_LightningResistance, GE_Affix_IncreasedCritChance, GE_Implicit_SwordAccuracy | L2: cppSymbolExists(UARPGItemDefinition) + all GE_ headers in Source/; L3: VSItemsDefinitionsTest — equip Iron Longsword on dummy ASC, assert AttackPower delta and that each affix GE handle is active on the ASC |
-| Test Gate | UARPGInventoryComponent::EquipItem — binds one Infinite GE handle per affix; handles stored in TMap<FGameplayTag, FActiveGameplayEffectHandle>. | Equip slot assignment; reversed on unequip (RemoveActiveGameplayEffect) | UARPGAttributeSet (target attributes), UARPGItemDefinition (DA schema), DT_Items (data row), author_items.py (seed script) | L2: UARPGItemDefinition declared in Source/ + DA_IronLongsword seeded in author_items.py; L3: VSItemsDefinitionsTest (VSItems.umap) — 19+ assertions: loads DA, checks fields, equips on dummy ASC, asserts GE handles acti… |
-| UE Packaging | UARPGItemDefinition (DA_RustySword) realized as a row in DT_Items; GE_ assets applied by UARPGInventoryComponent on equip; mesh bound to the item socket on the character skeletal mesh. | DA_RustySword loaded by the inventory component → equip → GE handles activated on ASC; triggered by UI slot assignment or code call to EquipItem. | UARPGItemDefinition (DA_RustySword), DT_Items (data row), UARPGInventoryComponent (equip logic), UARPGAttributeSet (target attributes), author_items.py (Content/Python seed script) | L2: UARPGItemDefinition in Source/ + DA_RustySword seeded in author_items.py + all GE_ headers compiled; L3: VSItemsDefinitionsTest in VSItems.umap — loads DA, asserts fields, equips on dummy ASC, checks GE handles + at… |
+| Effect Logic · effect | ASC GiveAbility — UAbilitySystemComponent::GiveAbility(GA_Fireball) called at character initialisation (AARPGCharacterBase::InitAbilitySystemComponent). Slot bound at initialisation; not dynamically acquired. | Input action IA_Ability1 (player) → UARPGAbilityInputComponent triggers TryActivateAbilityByTag(Ability.Fire.Fireball); AI behaviour-tree task BTTask_UseAbility passes the GA class directly. | UARPGAttributeSet (Mana — cost source; Health/FireDamage — target attributes), ARPGDamageExecution (damage routing, fire-resist application, crit roll), status-effects::status-burning (ignite DoT via GE_Fireball_ApplyBurning), vfx::vfx-fire-impact (impact Niagara system, keyed via AnimNotify) | L2: UARPGGameplayAbility compiled in Source/PoF/Abilities/; GA_Fireball class present; DT_GeneratedAbilities row "Fireball" seeded; L3: VSGenFireballEffectTest — GA activates, Health delta ≈ -35 fire, State.Burning appl… |
+| UE Packaging | ASC GiveAbility — UAbilitySystemComponent::GiveAbility(GA_Fireball) at character initialisation in AARPGCharacterBase::InitAbilitySystemComponent. Slot assignment is data-driven via DT_GeneratedAbilities (not hard-coded… | Input IA_Ability1 → UARPGAbilityInputComponent::TryActivateAbilityByTag(Ability.Fire.Fireball); AI BTTask_UseAbility(GA_Fireball) when enemy has LoS + Mana ≥ 20 + ability not on cooldown. | UARPGAttributeSet (Mana cost source; Health/FireDamage target attributes), ARPGDamageExecution (fire-resist, crit roll, §3/§4 pipeline), status-effects::status-burning (State.Burning ignite; GE_Gen_Burning applied on hit), vfx::vfx-fire-impact (NS_FireImpactBurst shared impact VFX), icon-sets::iconset-abilities (T_Fireball_Icon — hotbar presentation) | L2: UARPGGameplayAbility compiled in Source/PoF/Abilities/; GA_Fireball registered; DT_GeneratedAbilities row "Fireball" seeded via seed_generated_abilities.py; FARPGAbilityCatalogRow struct present in Source/PoF/; L3:… |
 
 ## UE5 Best Practices
-- Author a `UARPGItemDefinition` data asset (Python, FULL editor via -ExecutePythonScript), not -run=pythonscript.
-- Set the item type/rarity/stats from the Asset Specification; do not invent new fields.
-- Place the asset under `/Game/Items/` and report its content path.
-
-## Submission
-
-After completing your work, submit the results by outputting a JSON block wrapped in callback markers.
-
-**Format:**
-```
-@@CALLBACK:cb-TEST
-{
-  "ueAssets": ["<UE asset path(s) you created/modified>"],
-  "testResult": "pass|fail"  // only required for the verify step
-}
-@@END_CALLBACK
-```
-
-The following fields will be added automatically — do NOT include them:
-- `action`: `"transition"`
-- `catalogId`: `"items"`
-- `entityId`: `"itm-rusty-sword"`
-- `nextLifecycle`: `"generated"`
-- `promptVersion`: `"q1"`
-
-**Rules:**
-- Output valid JSON between the markers — no comments, no trailing commas
-- The markers MUST appear on their own lines, exactly as shown
-- The system will automatically submit this to the API — do NOT use curl
-- You will see a confirmation message once the submission succeeds
+- The ability MUST extend `UARPGGameplayAbility` (include "AbilitySystem/ARPGGameplayAbility.h").
+- Constructor sets SetAssetTags, ActivationOwnedTags, ActivationBlockedTags, AbilityManaCost, CooldownGameplayEffectClass, AbilityCooldownTag.
+- `State.Dead` and `State.Stunned` are always in ActivationBlockedTags.
+- Use SetByCaller `Data.Damage.Base` for damage, not hardcoded GameplayEffect magnitudes.
+- Gray-box first: if the montage is empty, drive damage with a WaitDelay fallback window (the GA_MeleeAttack pattern) so the gameplay still lands.
+- CDO-vs-instance: set class-pointer props on the placed instance, not only the CDO.

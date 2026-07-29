@@ -21,8 +21,8 @@ import { listVerdicts } from '@/lib/status/judge-verdicts-db';
 import { getStepFact } from '@/lib/status/statusModel';
 import { bridgeJudgeVerdict } from '@/lib/catalog/acceptance/judgeBridge';
 import { canonContextFor } from '@/lib/catalog/canon/canonContext';
-import { ARCHETYPE_CANON } from '@/lib/catalog/canon/archetypeCanon';
-import type { ProjectRule } from '@/lib/catalog/canon/types';
+import { stepContractBlock, canonCategoriesForStep } from '@/lib/catalog/contractPrompt';
+import type { ProjectRule, RuleCategory } from '@/lib/catalog/canon/types';
 import type { AcceptanceResult, Checker, CheckerContext } from '@/lib/catalog/acceptance/types';
 import type { ViewDescriptor, StepSpec } from '@/lib/catalog/stepSpec';
 import type { LifecycleState, TestResult, StoredCatalogEntity } from '@/lib/catalog/types';
@@ -254,10 +254,17 @@ export function buildStepRecipe(
   }
   const labEntity = toLabEntity(entity);
 
-  const canonCategories = ARCHETYPE_CANON[spec.archetype] ?? [];
-  const canon = canonContextFor(rules, catalogId, canonCategories);
+  // Same canon scoping + contract injection the `/layout` lab uses (ArchetypeStep), so a
+  // step driven headlessly receives the IDENTICAL prompt — including the step's own
+  // authored wiring contract, the thing its L2 checker grades it against.
+  const cats = canonCategoriesForStep(spec);
+  // A content-invariant step takes the FULL in-scope canon (no filter) — report that
+  // honestly rather than the archetype slice it no longer uses.
+  const canonCategories: RuleCategory[] = cats ?? ['art', 'game', 'project'];
+  const canon = canonContextFor(rules, catalogId, cats);
+  const contract = stepContractBlock(spec, labEntity);
   const dir = (direction ?? '').trim() || spec.defaultDirection || '';
-  const prompt = [canon, `Produce ${spec.label} for ${entity.name}. ${dir}`.trim()]
+  const prompt = [canon, contract, `Produce ${spec.label} for ${entity.name}. ${dir}`.trim()]
     .filter(Boolean)
     .join('\n\n');
 

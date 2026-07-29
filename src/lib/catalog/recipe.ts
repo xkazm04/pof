@@ -7,6 +7,10 @@ import { isArenaSlice } from '@/lib/catalog/arena-slice';
 import type { PromptKind } from '@/lib/knowledge/types';
 import { knownAssetDomainsForModule } from '@/lib/knowledge/ue-known-assets';
 import type { SubModuleId } from '@/types/modules';
+import '@/lib/catalog/pipelines/registry.generated'; // side-effect: register all pipelines (React-free, server-safe — same as headless.ts)
+import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
+import { catalogContractRequirements, catalogCriteriaLines } from '@/lib/catalog/contractPrompt';
+import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 
 export type GenerationStep = 'scaffold-cpp' | 'author-python' | 'wire' | 'verify';
 
@@ -76,17 +80,39 @@ function promptKindForStep(step: GenerationStep): PromptKind {
  * domains, so python-authoring recipe steps finally carry the python gotchas +
  * exact asset paths they previously omitted (all steps hardcoded `ue-cpp` with
  * no module → zero python pitfalls, zero known assets).
+ *
+ * It also carries the catalog's AUTHORED WIRING CONTRACTS + criteria
+ * (`@/lib/catalog/contractPrompt`) into the Wiring Requirements + Success Criteria
+ * sections. A `GenerationRecipe` has four PHASES (`scaffold-cpp`…`verify`) while
+ * contracts live on the catalog's NAMED pipeline steps and the phase→step mapping is
+ * undefined — so every contract-bearing step of the catalog is injected (contracts
+ * only), bounded by `MAX_CATALOG_CONTRACT_ROWS` / `MAX_CRITERIA_LINES`. Injection
+ * only: no contract is re-derived, re-validated, or graded here.
  */
-function recipeBuilder(ctx: ProjectContext, catalogId: string, step: GenerationStep): PromptBuilder {
+function recipeBuilder(
+  ctx: ProjectContext,
+  catalogId: string,
+  step: GenerationStep,
+  entity: CatalogEntityBase & { data?: unknown },
+): PromptBuilder {
   const recipeModule = moduleForRecipe(catalogId);
   const knownAssetDomains = recipeModule ? knownAssetDomainsForModule(recipeModule) : [];
+  const pipeline = getCatalogPipeline(catalogId);
+  const labEntity: LabEntity = {
+    id: entity.id,
+    name: entity.name,
+    lifecycle: entity.lifecycle,
+    data: entity.data,
+  };
   return new PromptBuilder()
     .withProjectContext(ctx, {
       promptKind: promptKindForStep(step),
       module: recipeModule,
       knownAssetDomains,
     })
-    .withQualityPack(step === 'verify' ? '' : qualityPack(disciplineFor(catalogId), catalogId));
+    .withQualityPack(step === 'verify' ? '' : qualityPack(disciplineFor(catalogId), catalogId))
+    .withWiringRequirements(catalogContractRequirements(pipeline, labEntity))
+    .withSuccessCriteria(catalogCriteriaLines(pipeline, labEntity));
 }
 
 /** The lifecycle a completed step advances the entity to. */
@@ -137,13 +163,13 @@ export const SPELLBOOK_RECIPE: GenerationRecipe<AbilityEntry> = {
   steps: ['scaffold-cpp', 'author-python', 'wire', 'verify'],
   testPath: 'Project.Functional Tests.Maps.VS09Ability.VSAbility09Test',
   buildStepPrompt(entity, step, ctx) {
-    const builder = recipeBuilder(ctx, this.catalogId, step)
+    const builder = recipeBuilder(ctx, this.catalogId, step, entity)
       .withDomainContext('Gameplay Ability System (GAS) authoring for the PoF ARPG.')
       .withAssetSpec(entity)
       .withTask(`Spellbook · ${step}`, STEP_TASK[step](entity))
       .withBestPractices(GAS_BEST_PRACTICES);
     if (step === 'verify') {
-      builder.withSuccessCriteria([
+      builder.addSuccessCriteria([
         `The functional test \`${this.testPath}\` returns Result={Success}.`,
         `"${entity.name}" activates by tag \`${entity.data.tag}\` and changes the target's attribute.`,
       ]);
@@ -170,12 +196,12 @@ export const ITEMS_RECIPE: GenerationRecipe<ItemEntry> = {
         : step === 'wire'
           ? `Register "${entity.name}" so it is discoverable by the item registry / a loot table.`
           : `Run the item-definitions functional test; assert the asset loads with valid fields.`;
-    const b = recipeBuilder(ctx, this.catalogId, step)
+    const b = recipeBuilder(ctx, this.catalogId, step, entity)
       .withDomainContext('UARPGItemDefinition data-asset authoring for the PoF ARPG.')
       .withAssetSpec(entity)
       .withTask(`Items · ${step}`, task)
       .withBestPractices(ITEM_BEST_PRACTICES);
-    if (step === 'verify') b.withSuccessCriteria([`The functional test \`${this.testPath}\` returns Result={Success}.`]);
+    if (step === 'verify') b.addSuccessCriteria([`The functional test \`${this.testPath}\` returns Result={Success}.`]);
     return b.build();
   },
 };
@@ -196,12 +222,12 @@ export const LOOT_RECIPE: GenerationRecipe<LootTableEntry> = {
       step === 'author-python'
         ? `Author a UARPGLootTable data asset "${entity.name}" with the spec's weighted entries.`
         : `Run the loot-distribution functional test; assert empirical drops match the configured weights within tolerance.`;
-    const b = recipeBuilder(ctx, this.catalogId, step)
+    const b = recipeBuilder(ctx, this.catalogId, step, entity)
       .withDomainContext('UARPGLootTable data-asset authoring for the PoF ARPG.')
       .withAssetSpec(entity)
       .withTask(`Loot · ${step}`, task)
       .withBestPractices(LOOT_BEST_PRACTICES);
-    if (step === 'verify') b.withSuccessCriteria([`The functional test \`${this.testPath}\` returns Result={Success}.`]);
+    if (step === 'verify') b.addSuccessCriteria([`The functional test \`${this.testPath}\` returns Result={Success}.`]);
     return b.build();
   },
 };
@@ -228,12 +254,12 @@ export const BESTIARY_RECIPE: GenerationRecipe<BestiaryEntry> = {
         : step === 'wire'
           ? `Wire BP_${entity.data.id}Enemy: grant its abilities (cross-catalog links provide spellbook ids) + bind the loot table (lt-${entity.data.id}) on the placed instance.`
           : `Run AVSBestiary_${entity.data.id}Test: spawn → chases + attacks (player Health drops) → drops linked loot on death.`;
-    const b = recipeBuilder(ctx, this.catalogId, step)
+    const b = recipeBuilder(ctx, this.catalogId, step, entity)
       .withDomainContext('AARPGEnemyCharacter Blueprint authoring + cross-catalog wiring for the PoF ARPG.')
       .withAssetSpec(entity)
       .withTask(`Bestiary · ${step}`, task)
       .withBestPractices(BESTIARY_BEST_PRACTICES);
-    if (step === 'verify') b.withSuccessCriteria([`The functional test \`${this.testPath}\` returns Result={Success}.`]);
+    if (step === 'verify') b.addSuccessCriteria([`The functional test \`${this.testPath}\` returns Result={Success}.`]);
     return b.build();
   },
 };
@@ -275,12 +301,12 @@ export const COMBAT_MAP_RECIPE: GenerationRecipe<CombatInteractionEntry> = {
         step === 'wire'
           ? `Place Arena Slice "${entity.name}" into the arena map: an AARPGEncounterArena (extent ±${a.extentCm}cm), ${a.cover.length} AARPGCoverPoint(s), an ASpawnVolume carrying ${a.waves.length} wave(s) [${a.waves.map((w) => `${w.enemyArchetype}×${w.count}`).join(', ')}], and ${a.hazards.length} AARPGEnvironmentalHazard(s). Win=${a.winCondition}, loss=${a.lossCondition}.`
           : `Run the arena functional tests against the placed slice (setup/lighting, bounds containment, floor collision).`;
-      const b = recipeBuilder(ctx, this.catalogId, step)
+      const b = recipeBuilder(ctx, this.catalogId, step, entity)
         .withDomainContext('Tactical encounter arena assembly (reuse of existing encounter actors) for the PoF ARPG.')
         .withAssetSpec(entity)
         .withTask(`Arena Slice · ${step}`, task)
         .withBestPractices(ARENA_SLICE_BEST_PRACTICES);
-      if (step === 'verify') b.withSuccessCriteria([`The functional test \`${ARENA_SLICE_TEST}\` returns Result={Success}.`]);
+      if (step === 'verify') b.addSuccessCriteria([`The functional test \`${ARENA_SLICE_TEST}\` returns Result={Success}.`]);
       return b.build();
     }
 
@@ -288,12 +314,12 @@ export const COMBAT_MAP_RECIPE: GenerationRecipe<CombatInteractionEntry> = {
       step === 'wire'
         ? `Wire combo "${entity.name}" (${entity.data.weaponCategory}): connect each chain step to its HitReact montage + Damage tag on the placed-instance damage table.`
         : `Run VSCombat_DamageMatrixTest: assert each interaction applies the expected damage/reaction to the target.`;
-    const b = recipeBuilder(ctx, this.catalogId, step)
+    const b = recipeBuilder(ctx, this.catalogId, step, entity)
       .withDomainContext('Combat interaction wiring (no new assets) for the PoF ARPG.')
       .withAssetSpec(entity)
       .withTask(`Combat Map · ${step}`, task)
       .withBestPractices(COMBAT_MAP_BEST_PRACTICES);
-    if (step === 'verify') b.withSuccessCriteria([`The functional test \`${this.testPath}\` returns Result={Success}.`]);
+    if (step === 'verify') b.addSuccessCriteria([`The functional test \`${this.testPath}\` returns Result={Success}.`]);
     return b.build();
   },
 };
@@ -321,12 +347,12 @@ export const SCREEN_FLOW_RECIPE: GenerationRecipe<ScreenEntry> = {
           : step === 'wire'
             ? `Wire screen "${entity.name}" into the screen-flow state machine (push/pop/replace), respecting its group "${entity.data.group ?? 'Misc'}".`
             : `Run VSScreen_${entity.data.id}Test: widget mounts/binds/transitions; bar moves on attribute change.`;
-    const b = recipeBuilder(ctx, this.catalogId, step)
+    const b = recipeBuilder(ctx, this.catalogId, step, entity)
       .withDomainContext('Pure-C++ UMG widgets (UARPGCodeWidgetBase) for the PoF ARPG.')
       .withAssetSpec(entity)
       .withTask(`Screen Flow · ${step}`, task)
       .withBestPractices(SCREEN_FLOW_BEST_PRACTICES);
-    if (step === 'verify') b.withSuccessCriteria([`The functional test \`${this.testPath}\` returns Result={Success}.`]);
+    if (step === 'verify') b.addSuccessCriteria([`The functional test \`${this.testPath}\` returns Result={Success}.`]);
     return b.build();
   },
 };
@@ -349,12 +375,12 @@ export const ZONE_MAP_RECIPE: GenerationRecipe<ZoneEntry> = {
       step === 'author-python'
         ? `Author /Game/Maps/${entity.data.id}.umap via a build_${entity.data.id}.py script (FULL editor): floor + lights + PlayerStart + zone-specific placement + portals from ZONE_EDGES.`
         : `Run VSZone_${entity.data.id}Test: player spawns, nav exists, encounter triggers; layout sane (Gemini-vision optional).`;
-    const b = recipeBuilder(ctx, this.catalogId, step)
+    const b = recipeBuilder(ctx, this.catalogId, step, entity)
       .withDomainContext('Zone (.umap) authoring + spawn/nav placement for the PoF ARPG.')
       .withAssetSpec(entity)
       .withTask(`Zone Map · ${step}`, task)
       .withBestPractices(ZONE_MAP_BEST_PRACTICES);
-    if (step === 'verify') b.withSuccessCriteria([`The functional test \`${this.testPath}\` returns Result={Success}.`]);
+    if (step === 'verify') b.addSuccessCriteria([`The functional test \`${this.testPath}\` returns Result={Success}.`]);
     return b.build();
   },
 };
@@ -379,12 +405,12 @@ export const STATE_GRAPH_RECIPE: GenerationRecipe<AnimationEntry> = {
       step === 'author-python'
         ? `Author the ${entity.data.name} montage shell from Mixamo (retarget to SK_Mannequin); place under /Game/Animations/${entity.data.category}/. Do NOT touch the AnimBP graph.`
         : `Run VSAnim_LocomotionTest: AnimInstance locomotion state updates under movement (the Python-authorable verify; AnimBP graph completeness is the operator's manual responsibility).`;
-    const b = recipeBuilder(ctx, this.catalogId, step)
+    const b = recipeBuilder(ctx, this.catalogId, step, entity)
       .withDomainContext('Mixamo + montage authoring for the PoF ARPG. AnimBP graph stays manual.')
       .withAssetSpec(entity)
       .withTask(`State Graph · ${step}`, task)
       .withBestPractices(STATE_GRAPH_BEST_PRACTICES);
-    if (step === 'verify') b.withSuccessCriteria([`The functional test \`${this.testPath}\` returns Result={Success}.`]);
+    if (step === 'verify') b.addSuccessCriteria([`The functional test \`${this.testPath}\` returns Result={Success}.`]);
     return b.build();
   },
 };
@@ -413,12 +439,12 @@ export const MATERIALS_RECIPE: GenerationRecipe<MaterialCatalogEntry> = {
       step === 'author-python'
         ? `Author ${inst} — a MaterialInstanceConstant parented to ${parent} — from "${entity.name}"'s spec, via a build_<id>.py script (FULL editor).`
         : `Run the build_<id>.py self-validating gate for "${entity.name}": assert parent=${parent}, every spec texture resolves, Normal/Roughness/DetailNormal are non-sRGB, and the scalar/tint overrides match. Judge by \`[gate] RESULT=PASS\` in the -abslog.`;
-    const b = recipeBuilder(ctx, this.catalogId, step)
+    const b = recipeBuilder(ctx, this.catalogId, step, entity)
       .withDomainContext('MaterialInstanceConstant authoring over M_ARPG_Surface_Master for the PoF ARPG.')
       .withAssetSpec(entity)
       .withTask(`Materials · ${step}`, task)
       .withBestPractices(MATERIALS_BEST_PRACTICES);
-    if (step === 'verify') b.withSuccessCriteria([`The build_<id>.py config gate prints \`[gate] RESULT=PASS\` in the -abslog (asset/parameter invariants hold).`]);
+    if (step === 'verify') b.addSuccessCriteria([`The build_<id>.py config gate prints \`[gate] RESULT=PASS\` in the -abslog (asset/parameter invariants hold).`]);
     return b.build();
   },
 };
@@ -446,12 +472,12 @@ export const CHARACTERS_RECIPE: GenerationRecipe<CharacterEntry> = {
         : step === 'wire'
           ? `Wire BP_${id} on the placed instance: grant its abilities (spellbook cross-catalog links) and bind its dialogue tree; for humanoids run the setup_characters_ue.py mannequin path.`
           : `Run the NPC-config gate (Project.Functional Tests.PoF.CharacterVael.NPCConfig): assert NPCID/role/indicator logic + the canonical attribute row. Judge by the Automation log, not file existence.`;
-    const b = recipeBuilder(ctx, this.catalogId, step)
+    const b = recipeBuilder(ctx, this.catalogId, step, entity)
       .withDomainContext('AARPGNPCActor Blueprint authoring + DT_AttributeDefaults + cross-catalog wiring for the PoF ARPG.')
       .withAssetSpec(entity)
       .withTask(`Characters · ${step}`, task)
       .withBestPractices(CHARACTERS_BEST_PRACTICES);
-    if (step === 'verify') b.withSuccessCriteria([`The functional test \`${this.testPath}\` returns Result={Success}.`]);
+    if (step === 'verify') b.addSuccessCriteria([`The functional test \`${this.testPath}\` returns Result={Success}.`]);
     return b.build();
   },
 };
@@ -481,12 +507,12 @@ export const CURRENCY_RECIPE: GenerationRecipe = {
         : step === 'wire'
           ? `Wire "${entity.name}": ensure the player carries a UARPGWalletComponent that RegisterCurrency's the row, route its sources (e.g. UARPGLootDropComponent gold) through AddCurrency and its sinks through SpendCurrency.`
           : `Run the economy gate (\`Project.Functional Tests.PoF.Currency.WalletRules\`): assert credit, cap clamp, daily decay, anti-exploit overspend/negative rejection, conversion, and the OnCurrencyChanged telemetry hook.`;
-    const b = recipeBuilder(ctx, this.catalogId, step)
+    const b = recipeBuilder(ctx, this.catalogId, step, entity)
       .withDomainContext('Currency / wallet economy (UARPGWalletComponent + FARPGCurrencyDef) for the PoF ARPG.')
       .withAssetSpec(entity)
       .withTask(`Currency · ${step}`, task)
       .withBestPractices(CURRENCY_BEST_PRACTICES);
-    if (step === 'verify') b.withSuccessCriteria([`The functional test \`${this.testPath}\` returns Result={Success}.`]);
+    if (step === 'verify') b.addSuccessCriteria([`The functional test \`${this.testPath}\` returns Result={Success}.`]);
     return b.build();
   },
 };

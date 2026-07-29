@@ -638,15 +638,44 @@ is:
 
 ```ts
 (dir) => {
-  const canon = canonContextFor(canonRules, catalogId, ARCHETYPE_CANON[spec.archetype]);
-  return [canon, `Produce ${spec.label} for ${entity.name}. ${dir}`].filter(Boolean).join('\n\n');
+  const canon = canonContextFor(canonRules, catalogId, canonCategoriesForStep(spec));
+  const pack = qualityPack(cls, catalogId);
+  const contract = stepContractBlock(spec, entity);   // the step's OWN wiring contract + criteria
+  return [pack, canon, contract, `Produce ${spec.label} for ${entity.name}. ${dir}`]
+    .filter(Boolean).join('\n\n');
 }
 ```
 
-`canonContextFor` injects Project Canon rules (filtered to the archetype's relevant
-`RuleCategory[]` — e.g. `brief → ['game']`, `schema → ['project', 'game']`) as a
-structured prefix before the user's free-text direction. This is the catalog
-pipeline's equivalent of the module system's `buildProjectContextHeader`.
+`canonContextFor` injects Project Canon rules as a structured prefix before the user's
+free-text direction — the catalog pipeline's equivalent of the module system's
+`buildProjectContextHeader`. **Category scope** comes from `canonCategoriesForStep`
+(`@/lib/catalog/contractPrompt`): a step whose checker is a **content invariant**
+(`isContentInvariant` — a wrong NUMBER fails it) gets the FULL in-scope canon so the
+threshold it will be graded by is visible; a shape-only step keeps its narrower
+`ARCHETYPE_CANON` slice (`brief → ['game']`, `schema → ['project','game']`).
+
+**Wiring contracts reach prompts** (`src/lib/catalog/contractPrompt.ts`). Pipelines author
+137 `wiringContract` blocks + per-step `criteria` inside their produce bodies; for a long
+time the ONLY consumer was the acceptance checker, so a CLI was asked to author an artifact
+without being told the contract it would be graded against. `stepContractBlock(spec, entity)`
+is the pure extraction that closes the gap — it runs the step's own produce stub, pulls out
+every `wiringContract` / `criteria` (depth-bounded walk), and renders a capped
+`# ACCEPTANCE CONTRACT FOR THIS STEP` block. Three seams share it so the prompt is identical
+wherever a step is driven:
+
+| Seam | File | What it injects |
+|------|------|-----------------|
+| generic lab step (~330) | `ArchetypeStep.buildPrompt` | that step's own contract + criteria |
+| headless / pof-mcp step | `catalog/headless.ts` `buildStepRecipe` | same block, same canon scope |
+| four-phase generation recipe | `catalog/recipe.ts` `recipeBuilder` | the **whole catalog's** contract-bearing steps as a `## Wiring Requirements` table + `## Success Criteria` (a `GenerationRecipe` phase has no defined mapping onto a named pipeline step, so all are injected) |
+
+It is **injection only** — nothing re-derives, re-validates or grades a contract, so no
+acceptance verdict can move. Everything is size-capped (`MAX_STEP_CONTRACT_CHARS`,
+`MAX_CATALOG_CONTRACT_ROWS`, `MAX_CRITERIA_LINES`, `MAX_CLAIM_CHARS`) and the caps are
+asserted against the LIVE registry by `src/__tests__/lib/catalog/contractPrompt.test.ts`.
+Golden pins live in `src/__tests__/lib/prompts/__golden__/contract-*.md` /
+`recipe-*.md`. `PromptBuilder.addSuccessCriteria` (appending) exists so a shared builder can
+seed criteria a later phase adds to — `withSuccessCriteria` replaces the section.
 
 See [../catalog/index.md](../catalog/index.md) for the full pipeline program.
 

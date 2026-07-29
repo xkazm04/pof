@@ -18,7 +18,7 @@ import { useLabPipelineStore } from '../labPipelineStore';
 import { useStepAcceptance } from './shared/useStepAcceptance';
 import { useCanonStore } from '../canonStore';
 import { canonContextFor } from '@/lib/catalog/canon/canonContext';
-import { ARCHETYPE_CANON } from '@/lib/catalog/canon/archetypeCanon';
+import { stepContractBlock, canonCategoriesForStep } from '@/lib/catalog/contractPrompt';
 import { qualityPack } from '@/lib/prompts/quality';
 import { deliverableClassOf } from '@/lib/judge/dimensions';
 import { getStepFact } from '@/lib/status/statusModel';
@@ -254,12 +254,20 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
   const linkRes = links.length ? linkTargetsExist(links, (c, e) => !!entitiesByCatalog[c]?.[e]) : null;
 
   const buildPrompt = (dir: string) => {
-    const canon = canonContextFor(canonRules, catalogId, ARCHETYPE_CANON[spec.archetype]);
+    // Canon scope: a content-invariant step (a wrong NUMBER fails it) gets the FULL in-scope
+    // canon so the threshold it will be graded by is visible; shape-only steps keep their
+    // archetype slice. Single-sourced with the headless recipe via `canonCategoriesForStep`.
+    const canon = canonContextFor(canonRules, catalogId, canonCategoriesForStep(spec));
     // Quality Program WS1: prepend the professional-grade quality pack for this deliverable
     // class (shares the judge's craft checklist), so production aims at the bar the judge enforces.
     const cls = catalogId ? deliverableClassOf(getStepFact(catalogId, step)?.deliverable ?? '', catalogId) : null;
     const pack = cls && catalogId ? qualityPack(cls, catalogId) : '';
-    return [pack, canon, `Produce ${spec.label} for ${entity.name}. ${dir}`].filter(Boolean).join('\n\n');
+    // The step's OWN authored wiring contract + criteria — the thing its L2 checker grades.
+    // Until this, ~330 generic steps were asked to produce an artifact without being told the
+    // contract it would be measured against. Injection only; nothing here changes acceptance.
+    const contract = stepContractBlock(spec, entity);
+    return [pack, canon, contract, `Produce ${spec.label} for ${entity.name}. ${dir}`]
+      .filter(Boolean).join('\n\n');
   };
 
   /**

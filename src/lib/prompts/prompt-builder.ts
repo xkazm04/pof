@@ -208,6 +208,23 @@ export class PromptBuilder {
   }
 
   /**
+   * APPEND success criteria, keeping anything already set.
+   *
+   * `withSuccessCriteria` REPLACES the section, which silently dropped criteria a
+   * shared builder had already seeded (the catalog recipes seed each step with the
+   * pipeline's authored acceptance criteria, then the `verify` phase adds its own
+   * functional-test line). Use this whenever you are adding to, not defining, the
+   * section.
+   */
+  addSuccessCriteria(criteria: string[]): this {
+    if (criteria.length === 0) return this;
+    const existing = this._successCriteria
+      ? this._successCriteria.split('\n').slice(1).map((l) => l.replace(/^\d+\.\s*/, ''))
+      : [];
+    return this.withSuccessCriteria([...existing, ...criteria]);
+  }
+
+  /**
    * Assemble the final prompt. Throws if required sections are missing.
    * Returns the sections object for inspection or the formatted string.
    */

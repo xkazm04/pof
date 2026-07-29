@@ -160,3 +160,33 @@ So a single UE "live check" job can **combine** L2 (always, free) with L3 (when 
 5. **Reuse, add one table.** Keep `headless_builds` (lease/queue), `visual_verifications` (L4), `ability_specs` (GAS) as-is; the only new persistence is `pipeline_artifacts`.
 
 Next: fold this data-contract + acceptance spec into the per-row archetype plan (the L0–L2 completion bar, the `pipeline_artifacts` write path, the live-UE lease, human-gated presentation steps), then finalize for multi-pipeline parallel development.
+
+## 6. Contracts reach the PROMPT, not only the checker (2026-07-29)
+
+The 137 authored `wiringContract` blocks (§2) were read by exactly one consumer —
+`acceptance/wiringCheckers.ts`. Every Produce prompt therefore asked a CLI to author an
+artifact **without telling it the contract the artifact would be graded against**.
+
+`src/lib/catalog/contractPrompt.ts` is the pure extraction that closes that loop. It runs a
+step's own produce stub, walks it (depth-bounded) for `wiringContract` / `criteria`, and
+renders a size-capped `# ACCEPTANCE CONTRACT FOR THIS STEP` block ending in the rule the L2
+checker actually enforces (no placeholder, ≥ `MIN_PROSE` chars, `verification` must name an
+L0–L4 tier). Three seams consume it, so the prompt is identical wherever a step is driven:
+
+- `ArchetypeStep.buildPrompt` — the ~330 generic lab steps (the high-leverage seam),
+- `headless.ts` `buildStepRecipe` — the pof-mcp / API step recipe,
+- `recipe.ts` `recipeBuilder` — the four-phase generation recipes. A `GenerationRecipe`
+  phase (`scaffold-cpp | author-python | wire | verify`) has no defined mapping onto a named
+  pipeline step, so the **whole catalog's** contract-bearing steps are injected (contracts
+  only) as a `## Wiring Requirements` table, capped at `MAX_CATALOG_CONTRACT_ROWS`.
+
+Canon scope follows the same module: `canonCategoriesForStep` widens a **content-invariant**
+step (`isContentInvariant` — a wrong NUMBER fails it) to the FULL in-scope canon, so the
+threshold the step will be graded by (tier power ≈100 ±10%, resists capped 75%, faucet/sink
+±15%) is present in the prompt that authors the number. Shape-only steps keep the narrower
+`ARCHETYPE_CANON` slice.
+
+**This is injection only.** Nothing here re-derives, re-validates or grades a contract; no
+acceptance verdict moves. Measured on the live registry: **137 contract-bearing steps across
+30 catalogs** (140 steps receive a block once criteria-only steps are counted), largest block
+1 920 chars against a 2 400 cap — guarded by `src/__tests__/lib/catalog/contractPrompt.test.ts`.
