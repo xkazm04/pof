@@ -6,6 +6,7 @@ import type { EntityRollup } from '@/lib/catalog/rollup';
 import { pickNextActionableStep, type StepStatus } from './nextActionableStep';
 import type { StepDrift } from './hooks/useEntityArtifacts';
 import { plainEntitySummary, STATUS_GLOSSARY } from './labGlossary';
+import { doneHeadline, type DoneProvenance } from './coachProvenance';
 import { statusColor } from './statusLanguage';
 import { Panel } from './ui/Panel';
 import { Button } from './ui/Button';
@@ -46,6 +47,15 @@ interface NextStepCoachProps {
   serverError?: string | null;
   /** Retry the failed artifact fetch (paired with {@link NextStepCoachProps.serverError}). */
   onRetryLoad?: () => void;
+  /**
+   * Audited provenance behind this entity's passes (`summarizeDoneProvenance` over
+   * `step-facts.json`). Used ONLY in the terminal "nothing left to do" state, where an
+   * unqualified "All done." would re-assert at the entity level exactly the overclaim the
+   * per-step `ProvenanceStrip` exists to remove. Omit it and the terminal copy is unchanged.
+   *
+   * Display only — it can never move a verdict or reorder the ladder.
+   */
+  doneProvenance?: DoneProvenance;
 }
 
 /**
@@ -60,13 +70,15 @@ interface NextStepCoachProps {
  */
 export function NextStepCoach({
   t, steps, statusByStep, rollup, onJump, plainMode, onTogglePlainMode, onDrain, draining, reasonForStep, driftByStep,
-  serverError = null, onRetryLoad,
+  serverError = null, onRetryLoad, doneProvenance,
 }: NextStepCoachProps) {
   const [expanded, setExpanded] = useState(false);
   const next = useMemo(
     () => pickNextActionableStep(steps, statusByStep, driftByStep),
     [steps, statusByStep, driftByStep],
   );
+  // Terminal state only: what the passes are actually standing on. Absent → "All done."
+  const done = !next && doneProvenance ? doneHeadline(doneProvenance) : null;
 
   // Prefer the concrete checker reason for a fail/deferred step over the generic
   // hint — but only when one is actually available (never invent text).
@@ -78,7 +90,11 @@ export function NextStepCoach({
 
   // A drift pick's own status is a (contradicted) pass/fail, so tint it by the
   // ladder rung instead — "needs review" is the honest signal, not "passed".
-  const tint = !next ? t.ok : next.priority === 'drift' ? t.warn : statusColor(next.status, t);
+  // An unproven "done" is tinted `warn`, not `ok` — a green rail beside "can't prove it"
+  // would let the colour contradict the sentence.
+  const tint = !next
+    ? (done && !done.verified ? t.warn : t.ok)
+    : next.priority === 'drift' ? t.warn : statusColor(next.status, t);
   const nextIsDeferred = next?.priority === 'deferred';
   const canDrain = !!onDrain && rollup.deferred > 0;
   const drainLabel = draining
@@ -149,10 +165,33 @@ export function NextStepCoach({
             <span data-testid="next-step-reason" style={{ color: 'var(--lab-muted)' }}> &mdash; {shownHint}</span>
           </span>
         ) : (
-          <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--lab-fs-sm)', color: 'var(--lab-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            <strong style={{ color: 'var(--lab-ink-deep)', fontWeight: 600 }}>All done.</strong>{' '}
-            <span style={{ color: 'var(--lab-muted)' }}>{STATUS_GLOSSARY.pass.plain}</span>
+          <span
+            data-testid="coach-done"
+            data-verified={done ? String(done.verified) : 'unknown'}
+            title={done && !done.verified ? done.detail : undefined}
+            style={{ flex: 1, minWidth: 0, fontSize: 'var(--lab-fs-sm)', color: 'var(--lab-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+          >
+            <strong style={{ color: 'var(--lab-ink-deep)', fontWeight: 600 }}>
+              {done ? done.headline : 'All done.'}
+            </strong>{' '}
+            <span data-testid="coach-done-detail" style={{ color: 'var(--lab-muted)' }}>
+              {done && !done.verified ? done.detail : STATUS_GLOSSARY.pass.plain}
+            </span>
           </span>
+        )}
+
+        {/* Terminal state with unproven passes: the weakest link is the only honest next
+            move, so it gets the same jump affordance an actionable step would. */}
+        {!next && done && !done.verified && doneProvenance?.weakest && (
+          <Button
+            onClick={() => onJump(doneProvenance.weakest!.index)}
+            data-testid="coach-weakest-jump"
+            ariaLabel={`Open the weakest step, ${doneProvenance.weakest.step}`}
+            mono
+            style={ctaStyle}
+          >
+            Open weakest &rarr;
+          </Button>
         )}
 
         {/* Primary CTA: drain when the next step is itself deferred, otherwise jump to it. */}

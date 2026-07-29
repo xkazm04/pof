@@ -19,6 +19,8 @@ import { Rail } from '../ui/Rail';
 import { Stat } from '../ui/Stat';
 import { LabDrawer, DrawerToggle } from '../LabDrawer';
 import { statusAriaLabel } from '../statusLanguage';
+import { summarizeDoneProvenance } from '../coachProvenance';
+import { getStepFact } from '@/lib/status/statusModel';
 import { summarizeEntity } from '@/lib/catalog/rollup';
 import { labPanelStyle } from '../theme';
 import { pad2 } from './constants';
@@ -196,6 +198,12 @@ export function Baseline(props: Props) {
             const Bespoke = detail && entity ? getStepComponent(detail.catalog.catalogId, stepName) : null;
             const spec = pipeline?.steps.find((s) => s.label === stepName) ?? null;
             const rollupSummary = summarizeEntity(artifacts, steps.length);
+            // What this entity's passes are actually standing on (audited step-facts), so
+            // the coach's terminal state can't read as verified when nothing proved it.
+            const catId = detail?.catalog.catalogId;
+            const doneProvenance = catId
+              ? summarizeDoneProvenance(steps, (s) => getStepFact(catId, s))
+              : undefined;
             return (
               <>
                 {entity && (
@@ -213,6 +221,7 @@ export function Baseline(props: Props) {
                     draining={draining}
                     serverError={artsError}
                     onRetryLoad={retryArts}
+                    doneProvenance={doneProvenance}
                   />
                 )}
                 <div className={t.fontMono} style={{ fontSize: 14, letterSpacing: '0.12em', color: t.muted, textTransform: 'uppercase' }}>Step {pad2(stepIdx + 1)} / {pad2(steps.length)}{stepDone(stepName, stepIdx) ? ' · complete' : ''}</div>

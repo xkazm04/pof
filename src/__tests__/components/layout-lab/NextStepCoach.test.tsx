@@ -124,6 +124,53 @@ describe('<NextStepCoach />', () => {
     expect(screen.getByText(/all done/i)).toBeTruthy();
   });
 
+  it('still says "All done." when every pass is backed by an audited fact', () => {
+    render(
+      <NextStepCoach
+        t={LIGHT}
+        steps={steps}
+        statusByStep={() => 'pass' as StepStatus}
+        rollup={rollup({ done: 5, pending: 0, configComplete: true })}
+        onJump={() => {}}
+        plainMode={false}
+        onTogglePlainMode={() => {}}
+        doneProvenance={{
+          total: 5, solid: 5, weak: 0, shapeOnly: 0, unjudged: 0, unwired: 0, unaudited: 0, weakest: null,
+        }}
+      />,
+    );
+    expect(screen.getByTestId('coach-done').getAttribute('data-verified')).toBe('true');
+    expect(screen.getByText(/all done/i)).toBeTruthy();
+    expect(screen.queryByTestId('coach-weakest-jump')).toBeNull();
+  });
+
+  it('refuses to celebrate when the passes rest on shape-only checkers, and offers the weakest step', () => {
+    const onJump = vi.fn();
+    render(
+      <NextStepCoach
+        t={LIGHT}
+        steps={steps}
+        statusByStep={() => 'pass' as StepStatus}
+        rollup={rollup({ done: 5, pending: 0, configComplete: true })}
+        onJump={onJump}
+        plainMode={false}
+        onTogglePlainMode={() => {}}
+        doneProvenance={{
+          total: 5, solid: 1, weak: 4, shapeOnly: 4, unjudged: 2, unwired: 0, unaudited: 0,
+          weakest: { step: 'Art', index: 1, reason: 'its checker only checks shape, not content' },
+        }}
+      />,
+    );
+    const done = screen.getByTestId('coach-done');
+    expect(done.getAttribute('data-verified')).toBe('false');
+    expect(screen.queryByText(/^All done\.$/)).toBeNull();
+    expect(done.textContent).toContain('4 of 5');
+    expect(screen.getByTestId('coach-done-detail').textContent).toContain('Art');
+
+    fireEvent.click(screen.getByTestId('coach-weakest-jump'));
+    expect(onJump).toHaveBeenCalledWith(1);
+  });
+
   it('is one compact row by default — plain-mode controls live behind the disclosure', () => {
     render(
       <NextStepCoach
