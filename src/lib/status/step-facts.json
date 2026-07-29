@@ -1,5 +1,4 @@
 {
-  "auditedAt": "2026-07-07",
   "steps": [
     {
       "catalogId": "achievements",
@@ -268,8 +267,8 @@
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
-      "checkerMeaningful": false,
-      "note": "fieldsPopulated checks tier/multiplier/modifiers exist, not that the multiplier table is internally consistent."
+      "checkerMeaningful": true,
+      "note": "Acceptance composes a CONTENT INVARIANT (2026-07-29 derivation audit): the rarity multiplier ladder is graded as real values - a wrong multiplier FAILS, not just a missing key. The tier table itself is still hand-authored, and no judge proves it is fun."
     },
     {
       "catalogId": "bestiary",
@@ -398,8 +397,8 @@
       "deliverable": "ue-runtime",
       "generatorWired": true,
       "judge": "llm-panel",
-      "checkerMeaningful": true,
-      "note": "Deterministic config/manifest produced by code (produce()); content verified by an LLM panel judge (72/100) — gap-loop 2026-07-08. Real config the game/UE consumes, not a placeholder."
+      "checkerMeaningful": false,
+      "note": "Acceptance is minCount('created', 3) - it counts manifest entries and nothing else, so any three strings pass. Corrected from checkerMeaningful:true by the 2026-07-29 derivation audit: no code probe (content invariant, link resolution, wiring contract, bridge result) backs a meaningful claim here. The produce output is real deterministic config an LLM panel scored 72/100, but the CHECKER does not verify it."
     },
     {
       "catalogId": "character-pipeline",
@@ -440,6 +439,26 @@
       "judge": "vlm",
       "checkerMeaningful": false,
       "note": "visualDeferred correctly names VLM/human capture as the eventual judge, but is itself a deferred placeholder — the checklist items are hand-authored text, no capture or VLM call runs here."
+    },
+    {
+      "catalogId": "character-pipeline",
+      "step": "Apparel",
+      "trueEngine": "UE Python",
+      "deliverable": "ue-runtime",
+      "generatorWired": true,
+      "judge": "ue-test",
+      "checkerMeaningful": false,
+      "note": "Added by the 2026-07-29 derivation audit (this live step had no fact and rendered PROVENANCE: UNAUDITED). Acceptance is entityRuntimeDeferred(VSCharacterApparelTest): it names a real functional test and always returns 'deferred' - honest about not having run, but not itself a check. Chaos Cloth authoring is headless-proven (2026-07-22, src/lib/visual-gen/chaos-cloth.ts); the PIE simulation verdict is what is missing."
+    },
+    {
+      "catalogId": "character-pipeline",
+      "step": "Skins",
+      "trueEngine": "Tripo",
+      "deliverable": "3d-mesh",
+      "generatorWired": true,
+      "judge": "vlm",
+      "checkerMeaningful": false,
+      "note": "Added by the 2026-07-29 derivation audit (this live step had no fact and rendered PROVENANCE: UNAUDITED). Acceptance is fieldsPopulated('skinSet', [geometryTaskId, variants, swap]) - a shape check that the three keys exist, not that the variants share one geometry task or that the swap actually works."
     },
     {
       "catalogId": "characters",
@@ -1818,8 +1837,8 @@
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
-      "checkerMeaningful": false,
-      "note": "Hardcoded weight/drop-count tables; fieldsPopulated is shape-only."
+      "checkerMeaningful": true,
+      "note": "Acceptance composes a CONTENT INVARIANT (2026-07-29 derivation audit): the drop weights/counts are graded as values, so a wrong number FAILS. The tables are still hand-authored constants, not measured from play."
     },
     {
       "catalogId": "loot-tables",
@@ -1828,8 +1847,8 @@
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
-      "checkerMeaningful": false,
-      "note": "Hardcoded percentages; fieldsPopulated shape-only."
+      "checkerMeaningful": true,
+      "note": "Acceptance composes a CONTENT INVARIANT (2026-07-29 derivation audit): the rarity percentages are graded as values (a wrong odds row FAILS), not merely present. The percentages themselves are hand-authored."
     },
     {
       "catalogId": "loot-tables",
@@ -2218,8 +2237,8 @@
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
-      "checkerMeaningful": false,
-      "note": "Math.pow values are genuinely computed, but the whole formula/base/growth choice is hand-authored constants, not derived from any live balance data; accept is fieldsPopulated (existence only)."
+      "checkerMeaningful": true,
+      "note": "Acceptance composes a CONTENT INVARIANT (2026-07-29 derivation audit): the curve's own numbers are re-derived and a value that contradicts the declared formula FAILS. The formula/base/growth choice is still hand-authored constants, not fitted to live balance data."
     },
     {
       "catalogId": "progression-curves",
@@ -3398,8 +3417,8 @@
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "none",
-      "checkerMeaningful": false,
-      "note": "areaLevel/monsterLevel/lootIlvl/sector breakdown are hardcoded literals (produce() ignores entity/direction). accept is fieldsPopulated — does not verify sectorBreakdown sums to totalEnemies, or that monsterLevel/lootIlvl actually equal areaLevel per the stated ARPG-LAWS §11 rule; a real content checker (like dpsConsistent elsewhere in the codebase) is not used here despite this being exactly the kind of derivable-consistency case that pattern exists for."
+      "checkerMeaningful": true,
+      "note": "Acceptance composes a CONTENT INVARIANT (2026-07-29 derivation audit): the area-level/density numbers are graded against their own declared relationship (ARPG-LAWS 11), so a sector breakdown that contradicts the totals FAILS. The literals are still hardcoded by produce() and no judge grades the design."
     },
     {
       "catalogId": "zone-map",

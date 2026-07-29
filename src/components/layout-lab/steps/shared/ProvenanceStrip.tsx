@@ -20,8 +20,12 @@ const VERDICT_CHIP: Record<VerdictProvenance, { level: 'ok' | 'warn'; word: stri
 
 /**
  * Compact per-step PROVENANCE strip — surfaces the audited truth behind a step's
- * Acceptance banner (`step-facts.json`, the 2026-07-07 gap audit) so a green "pass"
- * can never hide a shape-only checker with no judge. It reads three signals from
+ * Acceptance banner (`step-facts.json`) so a green "pass" can never hide a shape-only
+ * checker with no judge. The `checkerMeaningful` claim is no longer a hand-written
+ * date-stamped assertion: `src/__tests__/catalog/step-facts-derived.test.ts` re-derives
+ * it from the step's real `produce()`/`accept()` on every `validate` — a checker that
+ * grades values can never be shown as SHAPE-ONLY, and a MEANINGFUL claim no code backs
+ * fails the build. It reads three signals from
  * {@link getStepFact}, each colorblind-safe (glyph + word, never hue alone — WCAG
  * 1.4.1) via the shared {@link StatusTag} / {@link MicroLabel} primitives:
  *
@@ -124,8 +128,9 @@ export function ProvenanceStrip({ t, fact, selection, judge, explain }: {
           </>
         )}
         {/* No audited fact for this (catalog, step) — say so rather than rendering a strip
-            that silently looks like a clean bill of health. The 2026-07-07 audit covers a
-            subset of the fleet's steps; an un-audited step is UNKNOWN, not verified. */}
+            that silently looks like a clean bill of health. An un-audited step is UNKNOWN,
+            not verified. (A coverage guard now fails `validate` when a LIVE step has no
+            fact, so in practice this fires only for ad-hoc / not-yet-registered steps.) */}
         {!fact && <StatusTag level="warn" word="PROVENANCE: UNAUDITED" />}
         {/* A recorded judge verdict speaks for this step only as far as it can be bound to
             the content on record. `STALE` / `UNVERIFIED` says so out loud, so a condemnation

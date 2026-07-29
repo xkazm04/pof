@@ -152,6 +152,49 @@ It applies the SAME functions in the SAME order as `resolveStepAcceptance`, so `
 - **One set of affordances** — `GenerativeStepFrame` (the generative counterpart to `StaticStepFrame`) wraps `useGenerativeStep` + `CandidateGallery` + `CliProduce` and supplies the SELECTION provenance chip; both frames append `RawArtifactDisclosure`. All 13 bespoke steps now render a provenance strip and a raw-artifact panel, asserted by `src/__tests__/components/layout-lab/bespokeStepHonesty.test.tsx`.
 - **Un-audited is now loud** — the 2026-07-07 gap audit covers a subset of the fleet's steps, and a step with no `StepFact` used to render *no* strip, which read identically to "audited and fine". `StepFrame` now renders the strip whenever a step names itself (`catalogId` + `step`), and `ProvenanceStrip` shows a `PROVENANCE: UNAUDITED` warning tag when no fact resolves. (An anonymous `StepFrame` with no catalog/step still renders no strip.) Display only — grading is untouched. This is why the Items 11-fact vs 13-bespoke-step name duality no longer silently hides five steps.
 
+### Step facts derive from the code (2026-07-29)
+
+`step-facts.json` powers the strip's central claim — `CHECKER: MEANINGFUL` vs `SHAPE-ONLY` — and
+it was hand-maintained JSON with **no guard**. Measured against the live registry it had already
+drifted in **58 places**, 5 of them in the dangerous direction (the fact said shape-only while the
+checker was a real content invariant, so the strip *under-claimed* verification the code performs),
+plus 1 claim no code backed at all and 2 live steps (`character-pipeline::Apparel`, `::Skins`) with
+no fact — each rendering `PROVENANCE: UNAUDITED` with nothing to notice.
+
+`src/__tests__/catalog/step-facts-derived.test.ts` makes the code the evidence. Every claim is
+probed against the step's real `produce()` output and `accept()` closure:
+
+| Probe | What it proves |
+|---|---|
+| `content-invariant` | the `isContentInvariant` marker, **and** independently: perturbing ONE numeric leaf flips the verdict |
+| `link-integrity` | the checker READS `links` (it resolves cross-catalog references) |
+| `wiring-contract` | hollowing the declared `wiringContract` to `TBD` flips the verdict |
+| `bridge-result` | `produce()` dispatches a python module — a runner supplies the truth |
+| `value-content` | replacing every string leaf with a **same-length** nonsense token flips the verdict (a graph/reference law such as `graphValid` — it grades what the strings SAY, not how many there are) |
+
+Two rules, both code-derived, pinning both edges:
+
+1. **No under-claim** — a checker that is a content invariant may not be advertised as shape-only.
+   This hides real verification, and it is what the 5 drifted rows did.
+2. **No unjustified claim** — `checkerMeaningful: true` must be backed by ≥1 probe. A pure
+   `minCount` / `fieldsPopulated` / `minLength` checker cannot claim it. (`character-pipeline::UE
+   Import` — `minCount('created', 3)` — was corrected to `false`.)
+
+Deliberately **not** enforced: 1:1 equality with `isContentInvariant`. 53 of the 58 disagreements
+are a different *vocabulary* — a packaging manifest, a link resolution or a graph law is meaningful
+without grading a number — and forcing them to the invariant definition would mislabel them. Rules
+(1)+(2) get the guarantee without the mislabelling: a `true` is always backed by code, a `false` can
+never hide a content invariant, and weakening a checker turns its `true` red on the next `validate`.
+
+**Coverage runs both ways** — every live step has a fact, every fact has a live step, no duplicates.
+A new step can no longer ship rendering `PROVENANCE: UNAUDITED`, and a deleted step can no longer
+leave a fact asserting something about nothing. (`items` counts both specs' labels — see below.)
+
+**`auditedAt` is gone.** It was a hand-written date with **zero readers** in `src/`, three weeks
+stale on a file rewritten the same day, while `ProvenanceStrip` told readers the strip showed "the
+2026-07-07 gap audit". A freshness claim nothing can keep true is worse than none. The derivation
+rules above are the audit now: they re-run on every `validate`.
+
 ### Items is ONE pipeline — the duality is declared, not implied (2026-07-29)
 
 `items` is the only catalog with **two** step specs, and they disagree: the registered
