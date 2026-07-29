@@ -37,8 +37,8 @@ export function ForgeErrorCard({
   const [showDetails, setShowDetails] = useState(false);
   const card = classifyForgeError(error);
   const Icon = ICONS[card.iconName];
-  // Configure-action cards are warnings (amber); the rest are red.
-  const tone = card.kind === 'api-key-missing' ? STATUS_WARNING : ACCENT_RED;
+  // Configure-action cards (key / model config) are warnings (amber); the rest are red.
+  const tone = card.kind === 'api-key-missing' || card.kind === 'config' ? STATUS_WARNING : ACCENT_RED;
 
   const onAction = (a: ForgeErrorAction) => {
     if (a === 'retry') onRetry?.();

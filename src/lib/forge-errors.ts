@@ -9,15 +9,19 @@
  * isolation and reused anywhere an LLM-call error needs humanizing.
  */
 
+import type { ForgedAbility } from '@/lib/prompts/ability-forge';
+
 /** Action affordance the UI should render alongside the explanation. */
 export type ForgeErrorAction = 'retry' | 'edit-description' | 'configure';
 
 /** A single canonical failure mode the forge can hit. */
 export type ForgeErrorKind =
   | 'api-key-missing'
+  | 'config'
   | 'rate-limit'
   | 'network'
   | 'timeout'
+  | 'truncated'
   | 'json-parse'
   | 'schema-mismatch'
   | 'validation'
@@ -60,6 +64,25 @@ export function classifyForgeError(err: unknown): ForgeErrorCard {
     };
   }
 
+  // --- 1b. Model / deployment configuration (dead or unknown model) -----
+  // A decommissioned or misspelled model 404s upstream. That is a CONFIG
+  // problem — never "the AI returned gibberish".
+  if (
+    m.includes('decommissioned') || m.includes('deprecated') ||
+    m.includes('model not found') || m.includes('not found for api version') ||
+    m.includes('unknown model') || m.includes('unsupported model') ||
+    m.includes('model configuration') || /\b404\b/.test(raw)
+  ) {
+    return {
+      kind: 'config',
+      iconName: 'KeyRound',
+      title: 'AI model is misconfigured',
+      plainCause: 'The configured AI model is unavailable — it was likely retired or renamed. Point GEMINI_FORGE_MODEL at a current model and try again.',
+      actions: ['configure'],
+      rawMessage: raw,
+    };
+  }
+
   // --- 2. Rate limit / quota --------------------------------------------
   if (m.includes('rate limit') || m.includes('quota') || m.includes('too many requests') || /\b429\b/.test(raw)) {
     return {
@@ -96,6 +119,20 @@ export function classifyForgeError(err: unknown): ForgeErrorCard {
       title: "Couldn't reach the AI",
       plainCause: 'Your network or the AI service is unreachable. Check your connection and try again.',
       actions: ['retry'],
+      rawMessage: raw,
+    };
+  }
+
+  // --- 4b. Truncated generation (hit the output token ceiling) ----------
+  // Must precede the JSON-parse branch: a cut-off reply is also unparseable,
+  // but the honest cause is length, not gibberish.
+  if (m.includes('truncated') || m.includes('max_tokens') || m.includes('output token limit')) {
+    return {
+      kind: 'truncated',
+      iconName: 'FileWarning',
+      title: 'The ability was cut off',
+      plainCause: 'The model hit its output limit before finishing the two C++ files. Try again, or describe a simpler ability.',
+      actions: ['retry', 'edit-description'],
       rawMessage: raw,
     };
   }
@@ -161,4 +198,77 @@ export function classifyForgeError(err: unknown): ForgeErrorCard {
     actions: ['retry'],
     rawMessage: raw,
   };
+}
+
+/* ── ForgedAbility shape validation ───────────────────────────────────── */
+
+function isObject(x: unknown): x is Record<string, unknown> {
+  return typeof x === 'object' && x !== null;
+}
+
+function isStringArray(x: unknown): x is string[] {
+  return Array.isArray(x) && x.every(v => typeof v === 'string');
+}
+
+function isFiniteNumber(x: unknown): x is number {
+  return typeof x === 'number' && Number.isFinite(x);
+}
+
+/**
+ * Every field of the ForgedAbility contract that is absent or the wrong type.
+ * An empty array means the payload is safe to hand to `ForgeResult`, which
+ * deep-dereferences `tags`, `stats`, `comboEntry` and `radarValues`.
+ */
+export function missingForgedAbilityFields(x: unknown): string[] {
+  if (!isObject(x)) return ['(response was not an object)'];
+  const bad: string[] = [];
+  const req = (ok: boolean, field: string) => { if (!ok) bad.push(field); };
+
+  req(typeof x.className === 'string' && x.className.length > 0, 'className');
+  req(typeof x.displayName === 'string', 'displayName');
+  req(typeof x.description === 'string', 'description');
+  req(typeof x.headerCode === 'string' && x.headerCode.length > 0, 'headerCode');
+  req(typeof x.cppCode === 'string' && x.cppCode.length > 0, 'cppCode');
+
+  if (!isObject(x.tags)) bad.push('tags');
+  else {
+    const t = x.tags;
+    req(typeof t.abilityTag === 'string', 'tags.abilityTag');
+    req(typeof t.cooldownTag === 'string', 'tags.cooldownTag');
+    req(isStringArray(t.ownedTags), 'tags.ownedTags');
+    req(isStringArray(t.blockedTags), 'tags.blockedTags');
+  }
+
+  if (!isObject(x.stats)) bad.push('stats');
+  else {
+    const s = x.stats;
+    req(isFiniteNumber(s.baseDamage), 'stats.baseDamage');
+    req(isFiniteNumber(s.manaCost), 'stats.manaCost');
+    req(isFiniteNumber(s.cooldownSec), 'stats.cooldownSec');
+    req(typeof s.damageType === 'string', 'stats.damageType');
+  }
+
+  if (!isObject(x.comboEntry)) bad.push('comboEntry');
+  else {
+    const c = x.comboEntry;
+    req(isFiniteNumber(c.animDuration), 'comboEntry.animDuration');
+    req(
+      Array.isArray(c.damageWindow) && c.damageWindow.length === 2 && c.damageWindow.every(isFiniteNumber),
+      'comboEntry.damageWindow',
+    );
+    req(isFiniteNumber(c.recovery), 'comboEntry.recovery');
+    req(isFiniteNumber(c.comboMultiplier), 'comboEntry.comboMultiplier');
+  }
+
+  req(
+    Array.isArray(x.radarValues) && x.radarValues.length >= 5 && x.radarValues.every(isFiniteNumber),
+    'radarValues',
+  );
+
+  return bad;
+}
+
+/** Runtime validation so a malformed AI reply doesn't crash `ForgeResult`. */
+export function isValidForgedAbility(x: unknown): x is ForgedAbility {
+  return missingForgedAbilityFields(x).length === 0;
 }

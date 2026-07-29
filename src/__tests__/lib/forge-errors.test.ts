@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { classifyForgeError } from '@/lib/forge-errors';
+import { classifyForgeError, isValidForgedAbility, missingForgedAbilityFields } from '@/lib/forge-errors';
 
 describe('classifyForgeError', () => {
   it('classifies the API-key-missing 503 message', () => {
@@ -59,5 +59,51 @@ describe('classifyForgeError', () => {
   it('preserves raw message even for non-Error inputs', () => {
     expect(classifyForgeError('boom').rawMessage).toBe('boom');
     expect(classifyForgeError({ code: 42 }).rawMessage).toContain('42');
+  });
+
+  it('classifies a dead/unknown model as config, not json-parse', () => {
+    const c = classifyForgeError(new Error('[404 Not Found] models/gemini-2.0-flash is not found for API version v1beta'));
+    expect(c.kind).toBe('config');
+    expect(c.actions).toEqual(['configure']);
+    expect(classifyForgeError(new Error('model was decommissioned')).kind).toBe('config');
+  });
+
+  it('classifies a cut-off generation as truncated, not gibberish', () => {
+    const c = classifyForgeError(new Error('Generation was truncated — the model hit the 32768-token output limit'));
+    expect(c.kind).toBe('truncated');
+    expect(c.actions).toContain('retry');
+    expect(classifyForgeError(new Error('finishReason MAX_TOKENS')).kind).toBe('truncated');
+  });
+});
+
+describe('isValidForgedAbility / missingForgedAbilityFields', () => {
+  const valid = {
+    className: 'GA_X', displayName: 'X', description: 'd',
+    headerCode: 'h', cppCode: 'c',
+    tags: { abilityTag: 'Ability_X', cooldownTag: 'Cooldown_X', ownedTags: [], blockedTags: [] },
+    stats: { baseDamage: 1, manaCost: 2, cooldownSec: 3, damageType: 'Fire' },
+    comboEntry: { animDuration: 1, damageWindow: [0.1, 0.2], recovery: 0.1, comboMultiplier: 1 },
+    radarValues: [0, 0, 0, 0, 0],
+  };
+
+  it('accepts a complete ability', () => {
+    expect(isValidForgedAbility(valid)).toBe(true);
+    expect(missingForgedAbilityFields(valid)).toEqual([]);
+  });
+
+  it('rejects and names every missing/malformed field', () => {
+    const bad = { ...valid, cppCode: '', stats: { baseDamage: 1 }, radarValues: [1, 2] };
+    expect(isValidForgedAbility(bad)).toBe(false);
+    const missing = missingForgedAbilityFields(bad);
+    expect(missing).toContain('cppCode');
+    expect(missing).toContain('stats.manaCost');
+    expect(missing).toContain('stats.damageType');
+    expect(missing).toContain('radarValues');
+  });
+
+  it('rejects non-objects without throwing', () => {
+    expect(isValidForgedAbility(null)).toBe(false);
+    expect(isValidForgedAbility('nope')).toBe(false);
+    expect(missingForgedAbilityFields(undefined)).toHaveLength(1);
   });
 });
