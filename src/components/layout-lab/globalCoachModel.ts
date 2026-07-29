@@ -87,6 +87,66 @@ export function rankCoachCandidates(candidates: CoachCandidate[], topN: number):
 }
 
 /**
+ * Group a flat cross-catalog verdict list by catalog id — the scoping every per-catalog
+ * derivation needs. Exported so a caller that derives catalogs INDEPENDENTLY (the lab hook
+ * memoizes each catalog on its own inputs) can group once and reuse the same list objects,
+ * keeping each catalog's verdict slice referentially stable between renders.
+ */
+export function groupVerdictsByCatalog(verdicts: JudgeVerdict[]): Map<string, JudgeVerdict[]> {
+  const byCatalog = new Map<string, JudgeVerdict[]>();
+  for (const v of verdicts) {
+    const list = byCatalog.get(v.catalogId) ?? [];
+    list.push(v);
+    byCatalog.set(v.catalogId, list);
+  }
+  return byCatalog;
+}
+
+/**
+ * Every actionable candidate for ONE catalog, in entity order — the unit of work the
+ * whole-fleet aggregation is made of.
+ *
+ * Split out of {@link buildGlobalCoach} so a caller can memoize per catalog: the homepage
+ * fans out one artifact fetch per catalog and each resolution used to re-derive the ENTIRE
+ * fleet (every entity of every catalog), turning first paint into dozens of whole-project
+ * passes. Deriving catalogs independently makes that cost proportional to what actually
+ * changed. The output is byte-identical to the inline loop it replaced.
+ */
+export function buildCatalogCandidates(cin: CoachCatalogInput, verdicts: JudgeVerdict[] = []): CoachCandidate[] {
+  const candidates: CoachCandidate[] = [];
+  for (const e of cin.entities) {
+    const serverRow = cin.serverByEntity.get(e.id);
+    const serverArts: Record<string, PipelineArtifact> = {};
+    const serverAsLocal: Record<string, LabStepArtifact> = {};
+    if (serverRow) {
+      for (const [step, art] of serverRow) { serverArts[step] = art; serverAsLocal[step] = asLocal(art); }
+    }
+    const effective = { ...serverAsLocal, ...(cin.localByEntity[e.id] ?? {}) }; // add-only: local wins
+    const { displayStatus, driftByStep, artifactByStep } = deriveEntityArtifacts(cin.catalogId, e, cin.steps, effective, serverArts, {}, verdicts);
+    const issue = pickEntityIssue(cin.steps, displayStatus, driftByStep);
+    if (!issue) continue;
+    // The concrete reason: for drift, the local-vs-server disagreement; otherwise the
+    // reason carried on the derived artifact (fail/deferred checker output). Undefined
+    // for a pending step (nothing has run yet) → the row shows the generic hint.
+    const drift = driftByStep.get(issue.step);
+    const reason = issue.priority === 'drift'
+      ? (drift ? `local reads ${drift.local}, server says ${drift.server}` : undefined)
+      : artifactByStep.get(issue.step)?.reason;
+    candidates.push({
+      catalogId: cin.catalogId,
+      catalogLabel: cin.catalogLabel,
+      entityId: e.id,
+      entityName: e.name,
+      step: issue.step,
+      stepIndex: issue.index,
+      priority: issue.priority,
+      ...(reason ? { reason } : {}),
+    });
+  }
+  return candidates;
+}
+
+/**
  * Build every entity's most-urgent candidate across all catalogs via the shared
  * `deriveEntityArtifacts`, then rank + slice to the top N. Config-complete entities
  * contribute nothing.
@@ -98,43 +158,10 @@ export function buildGlobalCoach(
    *  carries the same judge bridge the banner and the matrix apply. */
   verdicts: JudgeVerdict[] = [],
 ): CoachCandidate[] {
-  const verdictsByCatalog = new Map<string, JudgeVerdict[]>();
-  for (const v of verdicts) {
-    const list = verdictsByCatalog.get(v.catalogId) ?? [];
-    list.push(v);
-    verdictsByCatalog.set(v.catalogId, list);
-  }
+  const verdictsByCatalog = groupVerdictsByCatalog(verdicts);
   const candidates: CoachCandidate[] = [];
   for (const cin of inputs) {
-    for (const e of cin.entities) {
-      const serverRow = cin.serverByEntity.get(e.id);
-      const serverArts: Record<string, PipelineArtifact> = {};
-      const serverAsLocal: Record<string, LabStepArtifact> = {};
-      if (serverRow) {
-        for (const [step, art] of serverRow) { serverArts[step] = art; serverAsLocal[step] = asLocal(art); }
-      }
-      const effective = { ...serverAsLocal, ...(cin.localByEntity[e.id] ?? {}) }; // add-only: local wins
-      const { displayStatus, driftByStep, artifactByStep } = deriveEntityArtifacts(cin.catalogId, e, cin.steps, effective, serverArts, {}, verdictsByCatalog.get(cin.catalogId) ?? []);
-      const issue = pickEntityIssue(cin.steps, displayStatus, driftByStep);
-      if (!issue) continue;
-      // The concrete reason: for drift, the local-vs-server disagreement; otherwise the
-      // reason carried on the derived artifact (fail/deferred checker output). Undefined
-      // for a pending step (nothing has run yet) → the row shows the generic hint.
-      const drift = driftByStep.get(issue.step);
-      const reason = issue.priority === 'drift'
-        ? (drift ? `local reads ${drift.local}, server says ${drift.server}` : undefined)
-        : artifactByStep.get(issue.step)?.reason;
-      candidates.push({
-        catalogId: cin.catalogId,
-        catalogLabel: cin.catalogLabel,
-        entityId: e.id,
-        entityName: e.name,
-        step: issue.step,
-        stepIndex: issue.index,
-        priority: issue.priority,
-        ...(reason ? { reason } : {}),
-      });
-    }
+    candidates.push(...buildCatalogCandidates(cin, verdictsByCatalog.get(cin.catalogId) ?? []));
   }
   return rankCoachCandidates(candidates, topN);
 }

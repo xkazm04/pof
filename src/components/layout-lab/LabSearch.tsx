@@ -47,12 +47,25 @@ interface IndexRow {
   hay: string;
 }
 
+/** No rows yet — a stable reference so the closed search never churns its consumers. */
+const NO_ROWS: IndexRow[] = [];
+
 export function LabSearch({ open, onClose, currentEntityId, onSelectCatalog, onNavigate }: LabSearchProps) {
   const entitiesByCatalog = useCatalogStore((s) => s.entitiesByCatalog);
+
+  // The search UI is mounted for the whole session but open for seconds of it, and its index
+  // spans every catalog, every seeded entity and every step of every registered pipeline —
+  // hundreds of rows built (and rebuilt on every entity change) while nothing was on screen.
+  // A render-phase latch defers the first build to the first open and keeps it afterwards, so
+  // reopening stays instant. (Adjusting state during render — not an effect — is the
+  // sanctioned pattern; an effect here would trip `react-hooks/set-state-in-effect`.)
+  const [everOpened, setEverOpened] = useState(open);
+  if (open && !everOpened) setEverOpened(true);
 
   // One flat index over catalogs + entities + steps, rebuilt only when the entity
   // universe changes (the step/catalog halves are static registry reads).
   const index = useMemo(() => {
+    if (!everOpened) return NO_ROWS;
     const rows: IndexRow[] = [];
     for (const section of CATALOG_SECTIONS) {
       const { catalogId, label } = section;
@@ -80,7 +93,7 @@ export function LabSearch({ open, onClose, currentEntityId, onSelectCatalog, onN
       });
     }
     return rows;
-  }, [entitiesByCatalog]);
+  }, [entitiesByCatalog, everOpened]);
 
   const search = useCallback(
     (needle: string) => index.filter((r) => r.hay.includes(needle)).map((r) => r.hit),

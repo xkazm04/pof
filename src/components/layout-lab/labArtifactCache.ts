@@ -41,10 +41,16 @@ export interface ArtifactCacheEntry {
   error: string | null;
 }
 
+// ONE frozen empty artifact list shared by every zero-data entry (EMPTY / LOADING / error).
+// Consumers that derive from `arts` can then memoize on its reference and skip a recompute
+// across the EMPTY→LOADING flip, which carries no artifact news at all — that flip alone was
+// one whole-fleet re-derivation per catalog on the homepage's first paint.
+const NO_ARTS: PipelineArtifact[] = [];
+
 // Frozen shared snapshots for the two zero-data states, so `useSyncExternalStore`'s
 // getSnapshot returns a STABLE reference (a fresh object each call would infinite-loop).
-const EMPTY: ArtifactCacheEntry = Object.freeze({ loading: false, arts: [], loaded: false, error: null });
-const LOADING: ArtifactCacheEntry = Object.freeze({ loading: true, arts: [], loaded: false, error: null });
+const EMPTY: ArtifactCacheEntry = Object.freeze({ loading: false, arts: NO_ARTS, loaded: false, error: null });
+const LOADING: ArtifactCacheEntry = Object.freeze({ loading: true, arts: NO_ARTS, loaded: false, error: null });
 
 const store = new Map<string, ArtifactCacheEntry>();
 const seqByKey = new Map<string, number>(); // per-key request sequence (stale-response guard)
@@ -61,9 +67,23 @@ function keyFor(catalogId: string, entityId?: string): string {
   return entityId ? `${catalogId}|${entityId}` : catalogId;
 }
 
+// Emissions are COALESCED onto a microtask. The homepage fans out one fetch per registered
+// catalog, and each key emits at least twice (loading → resolved); notifying synchronously
+// woke every subscriber ~2N times per paint. The store itself is still mutated
+// synchronously, so any `getCachedArtifacts` read in the same tick sees the new truth — only
+// the notification is batched, and it always lands before the next task.
+let flushScheduled = false;
+
+function flush(): void {
+  flushScheduled = false;
+  for (const l of listeners) l();
+}
+
 function emit(): void {
   version++;
-  for (const l of listeners) l();
+  if (flushScheduled) return;
+  flushScheduled = true;
+  queueMicrotask(flush);
 }
 
 function subscribe(l: () => void): () => void {
@@ -93,7 +113,7 @@ export function ensureArtifacts(catalogId: string, entityId?: string): void {
     // rendered a dead server as "nothing has been produced here".
     store.set(key, res.ok
       ? { loading: false, arts: res.data, loaded: true, error: null }
-      : { loading: false, arts: [], loaded: false, error: res.error });
+      : { loading: false, arts: NO_ARTS, loaded: false, error: res.error });
     emit();
   });
 }
@@ -171,5 +191,6 @@ export function _resetArtifactCache(): void {
   store.clear();
   seqByKey.clear();
   listeners.clear();
+  flushScheduled = false;
   version = 0;
 }
