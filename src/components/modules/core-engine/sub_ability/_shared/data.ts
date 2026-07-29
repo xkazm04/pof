@@ -695,6 +695,7 @@ export function buildLiveTagUsageFrequency(abilities: ParsedAbility[], tags: Par
 export function buildLiveTagAudit(
   abilities: ParsedAbility[],
   tags: ParsedTag[],
+  appAuthoredTags: readonly string[] = [],
 ): TagAuditBreakdown {
   const declared = tags.map((t) => t.tagString);
   const referenced: string[] = [];
@@ -703,7 +704,62 @@ export function buildLiveTagAudit(
     if (ab.cooldownTag) referenced.push(ab.cooldownTag);
     referenced.push(...ab.activationOwnedTags, ...ab.activationBlockedTags);
   }
-  return computeTagAudit(declared, referenced);
+  return computeTagAudit(declared, referenced, appAuthoredTags);
+}
+
+/** `A, B, C +2 more` — bounded tag listing for an audit category detail line. */
+function listTags(tags: readonly string[], max = 3): string {
+  const head = tags.slice(0, max).join(', ');
+  return tags.length > max ? `${head} +${tags.length - max} more` : head;
+}
+
+/** Dotted, alphanumeric segments — the UE5 gameplay-tag naming convention. */
+const TAG_NAME_RE = /^[A-Za-z0-9]+(\.[A-Za-z0-9]+)*$/;
+
+/**
+ * Derive the Tag Audit dashboard categories from a REAL {@link TagAuditBreakdown}.
+ * Replaces the hand-written `TAG_AUDIT_CATEGORIES` fiction whenever live source
+ * is parsed — every count here is a named set from the audit, not a guess.
+ */
+export function buildLiveTagAuditCategories(audit: TagAuditBreakdown): AuditCategory[] {
+  const misnamed = [...audit.matched, ...audit.undeclared, ...audit.orphaned]
+    .filter((t) => !TAG_NAME_RE.test(t))
+    .sort();
+
+  return [
+    {
+      name: 'Missing',
+      status: audit.undeclared.length ? 'error' : 'pass',
+      count: audit.undeclared.length,
+      detail: audit.undeclared.length
+        ? `${listTags(audit.undeclared)} referenced but never declared in C++`
+        : 'Every referenced tag is declared in C++',
+    },
+    {
+      name: 'Unused',
+      status: audit.orphaned.length ? 'warning' : 'pass',
+      count: audit.orphaned.length,
+      detail: audit.orphaned.length
+        ? `${listTags(audit.orphaned)} declared but referenced by no rule`
+        : 'Every declared tag is referenced by a rule',
+    },
+    {
+      name: 'Naming',
+      status: misnamed.length ? 'warning' : 'pass',
+      count: misnamed.length,
+      detail: misnamed.length
+        ? `${listTags(misnamed)} break the Dotted.Segment convention`
+        : 'All tags follow the Dotted.Segment convention',
+    },
+    {
+      name: 'App-authored',
+      status: 'pass',
+      count: audit.appReferenced.length,
+      detail: audit.appReferenced.length
+        ? `${listTags(audit.appReferenced)} referenced by saved ability specs`
+        : 'No app-authored ability spec references a tag yet',
+    },
+  ];
 }
 
 /** Build CORE_ATTRIBUTES and DERIVED_ATTRIBUTES from Data.Init.* tags */

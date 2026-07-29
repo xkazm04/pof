@@ -50,10 +50,14 @@ export function useGASFeatureMetrics(data: SpellbookLiveData) {
 
     const tagStats = countTags(data.TAG_TREE);
 
-    // Audit stats
-    const auditWarnings = data.TAG_AUDIT_CATEGORIES
-      .filter((c) => c.status !== 'pass')
-      .reduce((sum, c) => sum + c.count, 0);
+    // Audit stats — when a real breakdown exists (live source parsed) count its
+    // NAMED discrepancies; the static TAG_AUDIT_CATEGORIES array is a fiction
+    // and must never be summed while live data is available.
+    const auditWarnings = data.TAG_AUDIT
+      ? data.TAG_AUDIT.undeclared.length + data.TAG_AUDIT.orphaned.length
+      : data.TAG_AUDIT_CATEGORIES
+        .filter((c) => c.status !== 'pass')
+        .reduce((sum, c) => sum + c.count, 0);
 
     // Dependencies
     const depCount = data.TAG_DEP_EDGES.length;

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { forgedAbilityToSpec } from '@/lib/ability/forge-adopt';
+import { computeTagAudit, specTagReferences } from '@/lib/ability/tag-audit';
 import type { ForgedAbility } from '@/lib/prompts/ability-forge';
 
 const forged: ForgedAbility = {
@@ -75,5 +76,61 @@ describe('forgedAbilityToSpec — pure mapper', () => {
     const a = forgedAbilityToSpec('spellbook', 'off-fire-01', forged, 'p');
     const b = forgedAbilityToSpec('spellbook', 'off-fire-01', forged, 'p');
     expect(a).toEqual(b);
+  });
+});
+
+/* ── One tag dialect: the forge speaks C++, the spec must speak dotted ───── */
+
+/** What the forge OUTPUT_SCHEMA actually asks for: C++ tag identifiers. */
+const forgedCppDialect: ForgedAbility = {
+  ...forged,
+  tags: {
+    abilityTag: 'Ability_Fire_Fireball',
+    cooldownTag: 'Cooldown_Fireball',
+    ownedTags: ['State_Casting'],
+    blockedTags: ['State_Dead', 'State_Stunned'],
+  },
+};
+
+describe('forgedAbilityToSpec — tag dialect normalization', () => {
+  it('normalizes underscore C++ tag identifiers to dotted GameplayTags', () => {
+    const spec = forgedAbilityToSpec('spellbook', 'off-fire-01', forgedCppDialect);
+    expect(spec.effects[0].grantedTags).toEqual(['State.Casting']);
+    expect(spec.tagRules.map((r) => r.sourceTag)).toEqual(['Ability.Fire.Fireball', 'Ability.Fire.Fireball']);
+    expect(spec.tagRules.map((r) => r.targetTag)).toEqual(['State.Dead', 'State.Stunned']);
+  });
+
+  it('adopted forge tags MATCH the tags declared in UE5 source (audit reconciles)', () => {
+    const spec = forgedAbilityToSpec('spellbook', 'off-fire-01', forgedCppDialect);
+    // The dotted tag strings UE_DEFINE_GAMEPLAY_TAG_COMMENT declares.
+    const declared = ['Ability.Fire.Fireball', 'State.Casting', 'State.Dead', 'State.Stunned'];
+
+    const audit = computeTagAudit(declared, [], specTagReferences([spec]));
+
+    expect(audit.undeclared).toEqual([]);
+    expect(audit.orphaned).toEqual([]);
+    expect(audit.matched).toEqual([...declared].sort());
+    expect(audit.appReferenced).toEqual([...declared].sort());
+    expect(audit.score).toBe(100);
+  });
+
+  it('WITHOUT normalization the same tags would all read as undeclared (the bug)', () => {
+    const declared = ['Ability.Fire.Fireball', 'State.Casting', 'State.Dead', 'State.Stunned'];
+    // Raw forge output, un-normalized — every tag misses its declaration.
+    const raw = ['Ability_Fire_Fireball', 'State_Casting', 'State_Dead', 'State_Stunned'];
+    const spec = forgedAbilityToSpec('spellbook', 'off-fire-01', forgedCppDialect);
+    // The mapper's output is dotted, so it cannot reproduce the raw spelling.
+    expect(specTagReferences([spec]).some((t) => t.includes('_'))).toBe(false);
+    expect(raw.every((t) => !declared.includes(t))).toBe(true);
+  });
+
+  it('mixed-dialect input is idempotent (already-dotted tags pass through)', () => {
+    const mixed: ForgedAbility = {
+      ...forged,
+      tags: { ...forged.tags, abilityTag: 'Ability.Fire.Fireball', blockedTags: ['State_Dead', 'State.Stunned'] },
+    };
+    const spec = forgedAbilityToSpec('spellbook', 'off-fire-01', mixed);
+    expect(spec.tagRules[0].sourceTag).toBe('Ability.Fire.Fireball');
+    expect(spec.tagRules.map((r) => r.targetTag)).toEqual(['State.Dead', 'State.Stunned']);
   });
 });

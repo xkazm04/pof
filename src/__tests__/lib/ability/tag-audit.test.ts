@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { computeTagAudit } from '@/lib/ability/tag-audit';
+import { computeTagAudit, specTagReferences } from '@/lib/ability/tag-audit';
+import { STATUS_NEUTRAL } from '@/lib/chart-colors';
 
 describe('computeTagAudit', () => {
   it('scores 100 when declared and referenced sets are identical (all matched)', () => {
@@ -72,5 +73,52 @@ describe('computeTagAudit', () => {
     expect(r.matched).toEqual(['A.tag']);
     expect(r.undeclared).toEqual(['M.ref']);
     expect(r.orphaned).toEqual(['Z.tag']);
+  });
+
+  it('normalizes the C++ dialect on both sides before comparing', () => {
+    const r = computeTagAudit(['Ability.Fire'], ['Ability_Fire']);
+    expect(r.matched).toEqual(['Ability.Fire']);
+    expect(r.undeclared).toEqual([]);
+    expect(r.score).toBe(100);
+  });
+});
+
+describe('computeTagAudit — app-authored tags as a distinct source', () => {
+  it('app tags join the referenced set and are reported separately', () => {
+    const r = computeTagAudit(['Ability.Fire', 'State.Dead'], ['Ability.Fire'], ['State.Dead']);
+    expect(r.matched).toEqual(['Ability.Fire', 'State.Dead']);
+    expect(r.appReferenced).toEqual(['State.Dead']);
+    expect(r.orphaned).toEqual([]);
+    expect(r.score).toBe(100);
+  });
+
+  it('an app tag with no C++ declaration is a real undeclared-tag bug', () => {
+    const r = computeTagAudit(['Ability.Fire'], ['Ability.Fire'], ['Ability.Homebrew']);
+    expect(r.undeclared).toEqual(['Ability.Homebrew']);
+    expect(r.appReferenced).toEqual(['Ability.Homebrew']);
+  });
+
+  it('defaults to no app source (UE-vs-UE) — appReferenced is empty, not absent', () => {
+    const r = computeTagAudit(['Ability.Fire'], ['Ability.Fire']);
+    expect(r.appReferenced).toEqual([]);
+  });
+});
+
+describe('specTagReferences', () => {
+  const spec = {
+    catalogId: 'spellbook', entityId: 'off-fire-01',
+    effects: [{
+      id: 'e', name: 'GE_X', duration: 'instant' as const, durationSec: 0, cooldownSec: 0,
+      color: STATUS_NEUTRAL, modifiers: [], grantedTags: ['State_Casting', 'State.Casting'],
+    }],
+    tagRules: [{ id: 'r', sourceTag: 'Ability_Fire', targetTag: 'State.Dead', type: 'blocks' as const }],
+  };
+
+  it('collects rule + granted tags, normalized to dotted, de-duped and sorted', () => {
+    expect(specTagReferences([spec])).toEqual(['Ability.Fire', 'State.Casting', 'State.Dead']);
+  });
+
+  it('is empty for no specs', () => {
+    expect(specTagReferences([])).toEqual([]);
   });
 });

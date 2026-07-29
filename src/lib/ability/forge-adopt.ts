@@ -2,6 +2,7 @@ import { STATUS_NEUTRAL } from '@/lib/chart-colors';
 import type { ForgedAbility } from '@/lib/prompts/ability-forge';
 import type { EditorEffect, TagRule } from '@/lib/gas-codegen';
 import type { EnrichedAbilitySpec, SpecProvenance } from '@/lib/ability/spec';
+import { toDottedTag, toDottedTags } from '@/lib/ability/tag-dialect';
 
 /** GA_Fireball → fireball (stable id prefix for the generated effects). */
 function slugOf(className: string): string {
@@ -23,6 +24,12 @@ function slugOf(className: string): string {
  * The raw generated C++ + the prompt ride along as {@link SpecProvenance} — the
  * app stores them for audit but never writes C++ files; UE materialization is
  * the generateGasEffects agent task's job.
+ *
+ * **Dialect:** the forge emits C++ tag identifiers (`Ability_Fireball`) while
+ * specs, spellbook data and the tag audit speak dotted tag strings. Every tag
+ * crossing this boundary is normalized through `@/lib/ability/tag-dialect` so an
+ * adopted row can actually match a declared tag. The generated C++ in the
+ * provenance keeps its identifiers untouched — that is engine syntax, not a tag.
  */
 export function forgedAbilityToSpec(
   catalogId: string,
@@ -31,7 +38,7 @@ export function forgedAbilityToSpec(
   prompt?: string,
 ): EnrichedAbilitySpec {
   const slug = slugOf(forged.className);
-  const owned = forged.tags.ownedTags ?? [];
+  const owned = toDottedTags(forged.tags.ownedTags ?? []);
 
   const effects: EditorEffect[] = [
     {
@@ -58,8 +65,9 @@ export function forgedAbilityToSpec(
     });
   }
 
-  const blocked = forged.tags.blockedTags?.length ? forged.tags.blockedTags : ['State.Dead', 'State.Stunned'];
-  const abilityTag = forged.tags.abilityTag || slug;
+  const blockedRaw = toDottedTags(forged.tags.blockedTags ?? []);
+  const blocked = blockedRaw.length ? blockedRaw : ['State.Dead', 'State.Stunned'];
+  const abilityTag = toDottedTag(forged.tags.abilityTag || '') || slug;
   const tagRules: TagRule[] = blocked.map((targetTag, i) => ({
     id: `${slug}-block-${i}`,
     sourceTag: abilityTag,

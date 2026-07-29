@@ -12,6 +12,11 @@
 import fs from 'fs/promises';
 import path from 'path';
 
+// The cppName ↔ tagString dialect. Declared once in `@/lib/ability/tag-dialect`
+// (pure, importable from the client too) and re-exported here so server code
+// that already has the parser in hand never grows a second mapper.
+export { toDottedTag, toCppTagName, toDottedTags } from '@/lib/ability/tag-dialect';
+
 /* ── Types ──────────────────────────────────────────────────────────────── */
 
 export interface ParsedTag {

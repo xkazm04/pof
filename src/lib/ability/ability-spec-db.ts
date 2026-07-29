@@ -84,6 +84,17 @@ export function getSpec(catalogId: string, entityId: string): EnrichedAbilitySpe
   return row ? rowToSpec(row) : null;
 }
 
+/** Every persisted spec (optionally one catalog), newest first. */
+export function listSpecs(catalogId?: string): EnrichedAbilitySpec[] {
+  ensureTable();
+  const db = getDb();
+  const rows = (catalogId
+    ? db.prepare('SELECT * FROM ability_specs WHERE catalog_id = ? ORDER BY updated_at DESC').all(catalogId)
+    : db.prepare('SELECT * FROM ability_specs ORDER BY updated_at DESC').all()
+  ) as Record<string, unknown>[];
+  return rows.map(rowToSpec);
+}
+
 /**
  * Write all five editor slices + adoption provenance.
  *

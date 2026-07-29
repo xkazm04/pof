@@ -23,8 +23,9 @@ import {
   TAG_DETAIL_MAP as STATIC_TAG_DETAIL_MAP,
   buildLiveTagTree, buildLiveCooldownAbilities, buildLiveAbilityRadar,
   buildLiveTagDeps, buildLiveTagDetailMap, buildLiveTagUsageFrequency,
-  buildLiveTagAudit, buildLiveAttributes,
+  buildLiveTagAudit, buildLiveTagAuditCategories, buildLiveAttributes,
 } from './_shared/data';
+import { useAbilitySpecTags } from './_shared/useAbilitySpecTags';
 
 import { SpellbookDataCtx } from './_shared/context';
 import { ACCENT, SUBTABS } from './_shared/constants';
@@ -48,6 +49,8 @@ export function AbilitySpellbook({ moduleId }: AbilitySpellbookProps) {
   const [activeTab, setActiveTab] = useTabParam<SpellbookSubtab>('abilityTab', 'core', SPELLBOOK_TAB_IDS);
   const [expandedFeature, setExpandedFeature] = useState<string | null>(null);
   const { data: liveData, isLoading: isSyncing, refresh } = useUE5SourceSync();
+  // Third audit source: the tags app-authored ability specs reference.
+  const appTags = useAbilitySpecTags();
 
   const tabs: SubTab[] = useMemo(() => [
     { id: 'features', label: 'Features', icon: LayoutGrid },
@@ -126,6 +129,8 @@ export function AbilitySpellbook({ moduleId }: AbilitySpellbookProps) {
     const attrs = buildLiveAttributes(liveData.tags);
     const tagDeps = buildLiveTagDeps(liveData.abilities, liveData.tags);
     const usageFreq = buildLiveTagUsageFrequency(liveData.abilities, liveData.tags);
+    // Real audit — UE-declared vs UE-referenced vs app-authored spec tags.
+    const audit = buildLiveTagAudit(liveData.abilities, liveData.tags, appTags);
 
     return {
       isLive: true, parsedAt: liveData.parsedAt, refresh,
@@ -136,12 +141,13 @@ export function AbilitySpellbook({ moduleId }: AbilitySpellbookProps) {
       TAG_DEP_NODES: tagDeps.nodes,
       TAG_DEP_EDGES: tagDeps.edges,
       COOLDOWN_ABILITIES: buildLiveCooldownAbilities(liveData.abilities),
-      TAG_AUDIT_CATEGORIES: STATIC_TAG_AUDIT_CATEGORIES,
+      // Derived from the real breakdown — never the static fiction when live.
+      TAG_AUDIT_CATEGORIES: buildLiveTagAuditCategories(audit),
       TAG_USAGE_FREQUENCY: usageFreq,
-      TAG_AUDIT: buildLiveTagAudit(liveData.abilities, liveData.tags),
+      TAG_AUDIT: audit,
       TAG_DETAIL_MAP: buildLiveTagDetailMap(liveData.abilities, liveData.tags),
     };
-  }, [liveData, refresh]);
+  }, [liveData, appTags, refresh]);
 
   const spellbookData = useMemo<SpellbookLiveData>(
     () => ({ ...derivedData, isSyncing }),

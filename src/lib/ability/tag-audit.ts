@@ -26,6 +26,9 @@
  * on either side of the UE5 source-parse seam.
  */
 
+import type { EnrichedAbilitySpec } from '@/lib/ability/spec';
+import { toDottedTag, toDottedTags } from '@/lib/ability/tag-dialect';
+
 export interface TagAuditBreakdown {
   /** Derived 0-100 hygiene score (rounded). */
   score: number;
@@ -39,28 +42,65 @@ export interface TagAuditBreakdown {
   declaredCount: number;
   /** Distinct referenced-tag count (post de-dupe). */
   referencedCount: number;
+  /**
+   * The subset of referenced tags contributed by APP-authored `ability_specs`
+   * (as opposed to the UE5 C++ ability rules). Sorted. Empty when the audit was
+   * computed from UE source alone — which is exactly the blind spot this field
+   * exists to make visible.
+   */
+  appReferenced: string[];
 }
 
-/** De-dupe, trim, and drop empty entries — tolerant of raw parser output. */
+/**
+ * Tags an app-authored {@link EnrichedAbilitySpec} references: every tag rule's
+ * source/target plus each effect's granted tags, normalized to the dotted
+ * dialect and de-duped. Pure — this is the app-side counterpart of the parser's
+ * ability/cooldown/activation tag extraction.
+ */
+export function specTagReferences(specs: readonly EnrichedAbilitySpec[]): string[] {
+  const raw: string[] = [];
+  for (const spec of specs) {
+    for (const rule of spec.tagRules ?? []) {
+      raw.push(rule.sourceTag, rule.targetTag);
+    }
+    for (const effect of spec.effects ?? []) {
+      raw.push(...(effect.grantedTags ?? []));
+    }
+  }
+  return toDottedTags(raw).sort();
+}
+
+/**
+ * De-dupe, trim, normalize to the dotted dialect, and drop empty entries —
+ * tolerant of raw parser output AND of app-authored tags that still carry the
+ * forge's C++ underscore spelling.
+ */
 function toTagSet(tags: readonly string[]): Set<string> {
   const set = new Set<string>();
   for (const raw of tags) {
-    const tag = raw?.trim();
+    const tag = toDottedTag(raw ?? '');
     if (tag) set.add(tag);
   }
   return set;
 }
 
 /**
- * Compute the tag audit from declared tags (parsed source) and the tags
- * referenced by authored rules/specs. Order-independent; duplicates collapse.
+ * Compute the tag audit from declared tags (parsed source), the tags referenced
+ * by the parsed UE5 ability rules, and — as a DISTINCT third source — the tags
+ * referenced by app-authored `ability_specs` (see {@link specTagReferences}).
+ * App tags join the referenced set (an app tag with no C++ declaration is a real
+ * undeclared-tag bug) and are also reported separately as `appReferenced`, so
+ * the breakdown never hides which side of the seam a tag came from.
+ * Order-independent; duplicates collapse.
  */
 export function computeTagAudit(
   parsedTags: readonly string[],
   authoredRules: readonly string[],
+  appAuthoredTags: readonly string[] = [],
 ): TagAuditBreakdown {
   const declared = toTagSet(parsedTags);
-  const referenced = toTagSet(authoredRules);
+  const appSet = toTagSet(appAuthoredTags);
+  const referenced = toTagSet([...authoredRules, ...appSet]);
 
   const matched: string[] = [];
   const undeclared: string[] = [];
@@ -84,5 +124,6 @@ export function computeTagAudit(
     orphaned: orphaned.sort(),
     declaredCount: declared.size,
     referencedCount: referenced.size,
+    appReferenced: [...appSet].sort(),
   };
 }

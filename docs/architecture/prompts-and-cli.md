@@ -233,6 +233,22 @@ editor, not two of its five panels. Legacy rows read those three back as
 plus `provenance` but deliberately **never** the `codegen` column: that audit
 trail is owned solely by the codegen callback, so a Save/Adopt cannot clobber it.
 
+**One tag dialect.** UE5 spells every gameplay tag twice — a C++ identifier
+(`Ability_Fire_Fireball`) and a tag string (`Ability.Fire.Fireball`). The app
+speaks **dotted** everywhere: specs, spellbook data and the tag audit. The forge
+emits C++ identifiers (its `OUTPUT_SCHEMA` asks for them, because they go into
+generated C++), so `forgedAbilityToSpec` normalizes every tag crossing the adopt
+boundary through `@/lib/ability/tag-dialect` (`toDottedTag` / `toCppTagName` /
+`toDottedTags`) — the single mapper, re-exported from `ue5-source-parser.ts` for
+server code. Without it an adopted row could never match a declared tag.
+The tag audit (`@/lib/ability/tag-audit`) accordingly takes **three** sources:
+declared C++ tags, tags referenced by parsed UE5 ability rules, and — via
+`GET /api/ability-spec/tags` → `specTagReferences(listSpecs())` — the tags
+app-authored specs reference, reported separately as `appReferenced`. When live
+source is parsed the spellbook's audit categories are derived from that real
+breakdown (`buildLiveTagAuditCategories`), never the static
+`TAG_AUDIT_CATEGORIES` sample array.
+
 Tasks whose `prompt` is empty (e.g. `featureReview`, `moduleScan`) rely entirely on
 `buildTaskPrompt` to assemble all content from the extended fields.
 
