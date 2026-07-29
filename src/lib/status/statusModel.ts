@@ -19,7 +19,7 @@ import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 import type { JudgeVerdict } from './judge-verdicts-db';
 import stepFactsJson from './step-facts.json';
 import headlessCoverageJson from './headless-coverage.json';
-import { BANDS, RUBRIC_VERSION } from '@/lib/judge/rubrics';
+import { BANDS, newestRubricVerdicts, isCurrentRubric } from '@/lib/judge/rubrics';
 import { mirrorSupport, type MirrorSupport } from '@/lib/preview/browser-mirror';
 import { getRealization, type StepRealization } from '@/lib/preview/realization';
 
@@ -216,16 +216,17 @@ export function deriveCell(
   // content steps (the thing shape checkers can't see); a judge FAIL condemns the content
   // even when the shape checker passed.
   const allRelevant = verdicts.filter((v) => !fact || v.judge === fact.judge || v.judge === 'human');
-  // Prefer the NEWEST rubric — a strict v2 judgment supersedes a lenient v1 one for the same
-  // step, so an old lenient pass can never keep a cell green after the strict rubric ships.
-  const newestRubric = allRelevant.reduce((mx, v) => Math.max(mx, v.rubricVersion ?? 1), 0);
-  const relevant = allRelevant.filter((v) => (v.rubricVersion ?? 1) === newestRubric);
+  // THE shared rubric filter (`newestRubricVerdicts`, @/lib/judge/rubrics) — the SAME rule the
+  // judge→acceptance bridge applies, so /status and the pipeline's own acceptance can't diverge
+  // when RUBRIC_VERSION is bumped. Only the newest rubric present speaks: a strict v3 judgment
+  // supersedes a lenient v1 one, so an old lenient pass can never keep a cell green.
+  const relevant = newestRubricVerdicts(allRelevant);
   const judgedFail = relevant.find((v) => v.verdict === 'fail');
   const judgedPass = relevant.find((v) => v.verdict === 'pass');
   const judged = judgedFail ?? judgedPass;
   // Strict green requires a >=90 pass under the current strict rubric (v2+). A pass under an
   // old rubric, or a v2 pass below 90 (a "competent placeholder"), is trusted-amber, not green.
-  const strictPass = !!judgedPass && (judgedPass.rubricVersion ?? 1) >= RUBRIC_VERSION && judgedPass.score >= BANDS.shippable;
+  const strictPass = !!judgedPass && isCurrentRubric(judgedPass) && judgedPass.score >= BANDS.shippable;
 
   let grade: CellGrade;
   if (counts.pass > 0 && bestPassTier && GATE_TIERS.has(bestPassTier)) grade = 'verified';

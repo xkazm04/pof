@@ -31,6 +31,17 @@ export interface JudgeVerdict {
   /** Rubric version the verdict was scored under (WS2). A verdict under an older rubric
    *  must not silently count as a strict pass — statusModel prefers the newest version. */
   rubricVersion?: number;
+  /**
+   * Fingerprint of the artifact CONTENT this verdict judged (`stepContentHash`), so a verdict
+   * is bound to what it actually read. Without it a condemnation outlived the content: fix the
+   * step, re-produce it, and the stale verdict still downgraded the step forever.
+   *
+   * ABSENT on every verdict written before this column existed — those degrade to
+   * `unknown` provenance (see `judgeBridge.verdictProvenance`), NEVER to "current". Stamped
+   * server-side by `POST /api/judge-verdicts` from the artifact then on record, so every
+   * producer (judge-run, the gap-loop scripts, any future one) binds without opting in.
+   */
+  contentHash?: string;
   judgedAt?: string;
 }
 
@@ -57,6 +68,9 @@ function ensureTable() {
   if (!cols.has('rubric_version')) getDb().exec('ALTER TABLE judge_verdicts ADD COLUMN rubric_version INTEGER NOT NULL DEFAULT 1');
   // Nullable JSON (no default) — old rows stay NULL and render exactly as before (WS2).
   if (!cols.has('dimensions')) getDb().exec('ALTER TABLE judge_verdicts ADD COLUMN dimensions TEXT');
+  // Nullable content binding — legacy rows stay NULL and are reported as unknown-provenance,
+  // never silently upgraded to "judged the current content".
+  if (!cols.has('content_hash')) getDb().exec('ALTER TABLE judge_verdicts ADD COLUMN content_hash TEXT');
   tableEnsured = true;
 }
 
@@ -91,6 +105,7 @@ export function rowToVerdict(row: Record<string, unknown>): JudgeVerdict {
     model: (row.model as string) ?? '',
     ...(row.effort ? { effort: row.effort as string } : {}),
     ...(row.rubric_version != null ? { rubricVersion: Number(row.rubric_version) } : {}),
+    ...(row.content_hash ? { contentHash: row.content_hash as string } : {}),
     ...(dimensions ? { dimensions } : {}),
     ...(row.judged_at ? { judgedAt: row.judged_at as string } : {}),
   };
@@ -108,12 +123,12 @@ export function upsertVerdict(v: JudgeVerdict): JudgeVerdict {
   ensureTable();
   const dimensionsJson = v.dimensions && Object.keys(v.dimensions).length ? JSON.stringify(v.dimensions) : null;
   getDb().prepare(`
-    INSERT INTO judge_verdicts (catalog_id, entity_id, step, judge, verdict, score, findings, model, effort, rubric_version, dimensions, judged_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    INSERT INTO judge_verdicts (catalog_id, entity_id, step, judge, verdict, score, findings, model, effort, rubric_version, dimensions, content_hash, judged_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
     ON CONFLICT (catalog_id, entity_id, step, judge) DO UPDATE SET
       verdict = excluded.verdict, score = excluded.score, findings = excluded.findings,
       model = excluded.model, effort = excluded.effort, rubric_version = excluded.rubric_version,
-      dimensions = excluded.dimensions, judged_at = excluded.judged_at
-  `).run(v.catalogId, v.entityId, v.step, v.judge, v.verdict, Math.round(v.score), v.findings, v.model, v.effort ?? '', v.rubricVersion ?? 1, dimensionsJson);
+      dimensions = excluded.dimensions, content_hash = excluded.content_hash, judged_at = excluded.judged_at
+  `).run(v.catalogId, v.entityId, v.step, v.judge, v.verdict, Math.round(v.score), v.findings, v.model, v.effort ?? '', v.rubricVersion ?? 1, dimensionsJson, v.contentHash ?? null);
   return v;
 }

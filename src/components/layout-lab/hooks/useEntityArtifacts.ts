@@ -99,6 +99,8 @@ export function deriveEntityArtifacts(
         const merged = resolveStepAcceptance({
           catalogId, step: s, local, persisted: srv,
           verdicts: verdictsForStep(verdicts, entity?.id ?? '', s),
+          // Bind each verdict to the content the step holds now (see judgeBridge).
+          data: art.data, updatedAt: srv?.updatedAt ?? art.at,
         });
         const status = merged.status;
         const reason = merged.reason;

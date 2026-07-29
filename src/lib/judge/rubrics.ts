@@ -16,6 +16,40 @@ import { DIMENSIONS, STYLE_ANCHORS, type DeliverableClass } from './dimensions';
  */
 export const RUBRIC_VERSION = 3;
 
+/** The rubric-version field every verdict carries (absent on pre-WS2 rows → treated as v1). */
+export interface RubricStamped { rubricVersion?: number }
+
+/** A verdict's effective rubric version (absent → the pre-program v1 era). */
+export function rubricOf(v: RubricStamped): number {
+  return v.rubricVersion ?? 1;
+}
+
+/**
+ * THE rubric filter — the one rule both the judge→acceptance bridge (`judgeBridge.ts`) and the
+ * /status grader (`statusModel.deriveCell`) apply, so they cannot diverge.
+ *
+ * Rule: **only the verdicts at the NEWEST rubric present in the set speak for the step.** A
+ * later, stricter judgment supersedes an earlier one for the same content, so a lenient v1 pass
+ * can never keep a cell green once a v2+ verdict exists, and an old fail can never outvote a
+ * newer pass.
+ *
+ * The two consumers used to spell this differently — the bridge kept `rubricVersion >=
+ * RUBRIC_VERSION`, the grader kept `=== newestRubric` — which agree today and diverge the moment
+ * RUBRIC_VERSION is bumped (the bridge would then keep BOTH v3 and v4 verdicts and act on
+ * whichever failed). Strictness is a SEPARATE question, asked with {@link isCurrentRubric}.
+ */
+export function newestRubricVerdicts<T extends RubricStamped>(verdicts: T[]): T[] {
+  if (!verdicts.length) return verdicts;
+  const newest = verdicts.reduce((mx, v) => Math.max(mx, rubricOf(v)), 0);
+  return verdicts.filter((v) => rubricOf(v) === newest);
+}
+
+/** Was this verdict scored under the CURRENT strict rubric? An older one is provisional /
+ *  superseded — it never manufactures a strict pass and never condemns. */
+export function isCurrentRubric(v: RubricStamped): boolean {
+  return rubricOf(v) >= RUBRIC_VERSION;
+}
+
 /** Score bands the whole program agrees on. */
 export const BANDS = {
   shippable: 90,   // >= 90: shippable in a modern videogame → /status verified-green

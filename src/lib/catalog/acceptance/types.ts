@@ -2,6 +2,31 @@
 export type AcceptanceTier = 'L0' | 'L1' | 'L2' | 'L3' | 'L4';
 export type AcceptanceStatus = 'pass' | 'pending' | 'fail' | 'deferred';
 
+/**
+ * How much a recorded judge verdict still speaks for the content on record. See
+ * `judgeBridge.verdictProvenance` for the full rule.
+ */
+export type VerdictProvenance = 'current' | 'stale' | 'unknown' | 'superseded';
+
+/**
+ * The judge verdict behind (or NOT behind) a result — attached by `bridgeJudgeVerdict`
+ * whenever a failing verdict exists for the step, INCLUDING when it was not applied.
+ *
+ * That inclusion is the point: a verdict that judged content the step no longer holds is
+ * reported as `stale` rather than silently dropped, so "unjudged since the re-produce" can
+ * never be read as "judged and passed".
+ */
+export interface JudgeAttribution {
+  provenance: VerdictProvenance;
+  verdict: 'pass' | 'fail';
+  score: number;
+  judge: string;
+  model?: string;
+  judgedAt?: string;
+  /** Plain-language statement of what this verdict does and does not prove here. */
+  note: string;
+}
+
 export interface AcceptanceResult {
   label: string;
   status: AcceptanceStatus;
@@ -9,6 +34,8 @@ export interface AcceptanceResult {
   detail: string;
   /** Why it failed or was deferred (Rule 4 — never fail/skip silently). */
   reason?: string;
+  /** Judge provenance for this step, when a failing verdict exists (applied or not). */
+  judge?: JudgeAttribution;
 }
 
 /**

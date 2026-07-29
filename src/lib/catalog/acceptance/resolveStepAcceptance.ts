@@ -1,6 +1,6 @@
 import type { AcceptanceResult } from './types';
 import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
-import { bridgeJudgeVerdict } from './judgeBridge';
+import { bridgeJudgeVerdict, judgedContentOf, type JudgedContent } from './judgeBridge';
 import { getStepFact } from '@/lib/status/statusModel';
 
 /** The persisted (server-side) verdict for a step — the shape both the artifact cache and
@@ -45,7 +45,8 @@ export function serverVerdictOverlay(local: AcceptanceResult, persisted?: Persis
  *   2. the **server drain overlay** ({@link serverVerdictOverlay}) — a real L3/L4 gate
  *      outcome supersedes a local `deferred`;
  *   3. the **judge bridge** ({@link bridgeJudgeVerdict}) — a current-rubric, matching-class
- *      judge FAIL condemns a shape-pass.
+ *      judge FAIL that is BOUND to the content on record condemns a shape-pass; a verdict
+ *      about content the step no longer holds is reported as `stale`, never applied.
  *
  * ── Why this exists ────────────────────────────────────────────────────────────
  * Before this function TWO derivations both claimed to be the one truth: the step banner
@@ -58,7 +59,7 @@ export function serverVerdictOverlay(local: AcceptanceResult, persisted?: Persis
  * Pure and side-effect free: the caller supplies the verdicts it read (the lab from
  * `/api/judge-verdicts`, the server from `listVerdicts`). Nothing here re-grades anything.
  */
-export function resolveStepAcceptance({ catalogId, step, local, persisted, verdicts, judgeClass }: {
+export function resolveStepAcceptance({ catalogId, step, local, persisted, verdicts, judgeClass, content, data, updatedAt }: {
   /** Catalog the step belongs to — used only to resolve the step's audited judge class. */
   catalogId?: string;
   step: string;
@@ -70,11 +71,21 @@ export function resolveStepAcceptance({ catalogId, step, local, persisted, verdi
   verdicts?: JudgeVerdict[];
   /** Explicit judge class override; defaults to the audited `StepFact.judge`. */
   judgeClass?: string;
+  /**
+   * The content the step holds now, so each verdict's binding can be checked. Supply either
+   * the raw `data` (+ write time) or a prebuilt {@link JudgedContent}. Omitted → no verdict
+   * can be confirmed OR refuted, so every verdict degrades to `unknown` provenance
+   * (labelled, still applied) — honest, never silently "current".
+   */
+  content?: JudgedContent;
+  data?: Record<string, unknown>;
+  updatedAt?: string;
 }): AcceptanceResult {
   const overlaid = serverVerdictOverlay(local, persisted);
   if (!verdicts?.length) return overlaid;
   const cls = judgeClass ?? (catalogId ? getStepFact(catalogId, step)?.judge : undefined);
-  return bridgeJudgeVerdict(overlaid, verdicts, cls);
+  const bound = content ?? (data ? judgedContentOf(data, updatedAt) : undefined);
+  return bridgeJudgeVerdict(overlaid, verdicts, cls, bound);
 }
 
 /** Scope a catalog-wide verdict list to one (entity, step). Shared by every consumer so the

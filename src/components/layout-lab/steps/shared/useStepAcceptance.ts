@@ -52,6 +52,11 @@ export function useStepAcceptance({ catalogId, entityId, step, art, accept }: {
     const raw = accept(art?.data ?? {}, ctx) as AcceptanceResult;
     // The ONE shared truth — the exact function the rail/matrix/coaches/rollup and the
     // headless `/status` path call, so the banner can never disagree with them.
-    return resolveStepAcceptance({ catalogId, step, local: raw, persisted: art, verdicts }) as Acceptance;
+    // `data` + the artifact's write time bind each verdict to the content it judged, so a
+    // re-produce clears a stale condemnation instead of being condemned forever.
+    return resolveStepAcceptance({
+      catalogId, step, local: raw, persisted: art, verdicts,
+      data: art?.data ?? {}, updatedAt: art?.at,
+    }) as Acceptance;
   }, [accept, art, ctx, verdicts, catalogId, step]);
 }

@@ -111,13 +111,19 @@ function bridgeAcceptance(
   entityId: string,
   step: string,
   result: AcceptanceResult,
+  /** The data actually graded, so each verdict's content binding can be checked. Falls back
+   *  to the persisted artifact when the caller doesn't hand it over. */
+  data?: Record<string, unknown>,
 ): AcceptanceResult {
+  const art = listArtifacts(catalogId, entityId).find((a) => a.step === step);
   // The ONE shared truth (`resolveStepAcceptance`), the same function the lab's banner,
   // rail, matrix, coaches and rollup call. No `persisted` here: server-side the checker is
   // graded against the artifact itself, so there is no separate drain verdict to overlay.
   return resolveStepAcceptance({
     catalogId, step, local: result,
     verdicts: verdictsForStep(listVerdicts(catalogId), entityId, step),
+    data: data ?? art?.data ?? {},
+    ...(art?.updatedAt ? { updatedAt: art.updatedAt } : {}),
   });
 }
 
