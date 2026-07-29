@@ -9,6 +9,7 @@ import { DimensionScoreBars } from '@/components/ui/DimensionScoreBars';
 import { qualityColor } from '@/lib/chart-colors';
 import { RUBRIC_VERSION } from '@/lib/judge/rubrics';
 import { VERDICT_STANDING_CHIP, VERDICT_STANDING_NOTE, rubricStanding } from '@/lib/judge/verdictStanding';
+import { VerdictScoreTrend } from './VerdictScoreTrend';
 import type { ViewVerdict } from './verdictRollup';
 
 const JUDGE_LABEL: Record<JudgeVerdict['judge'], string> = {
@@ -23,7 +24,11 @@ const JUDGE_LABEL: Record<JudgeVerdict['judge'], string> = {
  *  It also states the verdict's STANDING: which rubric it was scored under versus the current
  *  one, and the content binding (`contentHash` + provenance) behind it. The modal used to print
  *  `rubric v2` with nothing to compare it to, and never mentioned the binding at all — so a
- *  verdict about content that no longer exists read exactly like one that still applies. */
+ *  verdict about content that no longer exists read exactly like one that still applies.
+ *
+ *  And it shows the SCORE TREND across re-judges (VerdictScoreTrend): a re-judge used to
+ *  overwrite the prior verdict, so the modal rendered a rich single number with nothing to
+ *  compare it against — the one question a quality loop exists to answer was unanswerable. */
 export function VerdictDetailModal({ verdict, onClose }: { verdict: ViewVerdict; onClose: () => void }) {
   const level = verdict.verdict === 'pass' ? 'ok' : 'bad';
   const chip = verdict.provenance ? VERDICT_STANDING_CHIP[verdict.provenance] : undefined;
@@ -66,6 +71,8 @@ export function VerdictDetailModal({ verdict, onClose }: { verdict: ViewVerdict;
             </MicroLabel>
           </p>
         </section>
+
+        <VerdictScoreTrend verdict={verdict} />
 
         {verdict.dimensions && <DimensionScoreBars dimensions={verdict.dimensions} />}
 
