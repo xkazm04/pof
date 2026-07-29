@@ -29,6 +29,7 @@ import { logger } from '@/lib/logger';
 import { useCatalogStore } from '@/stores/catalogStore';
 import { linkTargetsExist, readLinks } from '@/lib/catalog/acceptance/linkCheckers';
 import { resolveTableView } from '@/lib/catalog/tableView';
+import { collectStepEvidence, evidenceBlock } from './shared/stepEvidence';
 import type { AcceptanceResult, CheckerContext } from '@/lib/catalog/acceptance/types';
 import type { LabTheme } from '../theme';
 import type { LabEntity } from '../useLabCatalogData';
@@ -277,9 +278,18 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
     // Until this, ~330 generic steps were asked to produce an artifact without being told the
     // contract it would be measured against. Injection only; nothing here changes acceptance.
     const contract = stepContractBlock(spec, entity);
-    return [pack, canon, contract, `Produce ${spec.label} for ${entity.name}. ${dir}`]
+    // The REAL artifacts this step is currently showing, cited by served URL so a
+    // corrective produce is feedback ON the output rather than a re-description of it.
+    // Empty (and absent from the prompt) whenever nothing real exists to point at — a
+    // deterministic swatch is never cited as if it were a produced asset.
+    const evidence = evidenceBlock(collectStepEvidence(data));
+    return [pack, canon, contract, evidence, `Produce ${spec.label} for ${entity.name}. ${dir}`]
       .filter(Boolean).join('\n\n');
   };
+
+  // Surfaced beside the dispatch button: attached evidence must never ride invisibly into
+  // a prompt (the same rule the Style DNA indicator follows).
+  const evidence = collectStepEvidence(data);
 
   /**
    * The ONE dispatch path for a non-gallery step. The operator's typed direction is a real
@@ -336,6 +346,7 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
     <CliProduce t={t} label={`Produce ${spec.label}`} rows={3}
       defaultDirection={spec.defaultDirection} note={spec.produceNote}
       liveEligible={liveEligible}
+      attachments={evidence.map((e) => `${e.kind} · ${e.url}`)}
       buildPrompt={buildPrompt} onComplete={onComplete} />
   );
 

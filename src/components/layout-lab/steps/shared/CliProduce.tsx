@@ -66,9 +66,19 @@ export interface CliProduceProps {
    * Absent → no switch (a step live mode would not change must not offer one).
    */
   liveEligible?: boolean;
+  /**
+   * Real artifacts this step's prompt CITES (one short line each, e.g.
+   * `image · /api/visual-gen/asset/icon.png`). Rendered above the dispatch button so an
+   * attachment can never ride into a prompt invisibly — the operator sees what the next
+   * produce will be looking at, the same rule the Style DNA indicator follows.
+   *
+   * Building the prompt section itself stays the caller's job (`buildPrompt`); this is
+   * display only. Empty/absent renders nothing.
+   */
+  attachments?: readonly string[];
 }
 
-export function CliProduce({ t, label, buildPrompt, onComplete, note, placeholder, defaultDirection, rows = 4, fields, validate, sync, minDispatchMs, liveEligible }: CliProduceProps) {
+export function CliProduce({ t, label, buildPrompt, onComplete, note, placeholder, defaultDirection, rows = 4, fields, validate, sync, minDispatchMs, liveEligible, attachments }: CliProduceProps) {
   const [direction, setDirection] = useState(defaultDirection ?? '');
   const [showPrompt, setShowPrompt] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
@@ -135,6 +145,19 @@ export function CliProduce({ t, label, buildPrompt, onComplete, note, placeholde
       <Lbl t={t}>Direction (your input)</Lbl>
       <LabTextarea t={t} value={direction} onChange={setDirection} rows={rows} testId="cli-produce-direction"
         placeholder={placeholder ?? 'Steer this step — tone, constraints, references…'} />
+      {/* What the next produce will actually be looking at. Only real served artifacts
+          reach this list, so an empty step shows nothing rather than a false promise. */}
+      {attachments && attachments.length > 0 && (
+        <div data-testid="cli-produce-attachments" data-count={attachments.length}
+          className={t.fontMono} style={{ fontSize: 13, color: t.muted, display: 'grid', gap: 2 }}>
+          <span style={{ color: t.text }}>
+            📎 Attached to this prompt — {attachments.length} artifact{attachments.length === 1 ? '' : 's'} on screen:
+          </span>
+          {attachments.map((a) => (
+            <span key={a} data-testid="cli-produce-attachment" style={{ wordBreak: 'break-all' }}>· {a}</span>
+          ))}
+        </div>
+      )}
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
         <LabButton t={t} onClick={dispatch} disabled={dispatching} testId="cli-produce-run">{btnLabel}</LabButton>
         {/* The mode is legible AT THE POINT OF PRODUCE: the operator can see, without
