@@ -7,6 +7,7 @@ import { allOf } from '../acceptance/combinators';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
+import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -358,7 +359,7 @@ registerCatalogPipeline({
       label: '3D / Biome',
       view: { kind: 'gallery', field: 'biome', candidates: 3 },
       produce: (e: LabEntity) => ({
-        data: { biome: 0 },
+        data: { ...gallerySeed('biome', 3) },
         ueAssets: [
           `/Game/Zones/${slug(e.name)}/SM_CharredTrunk`,
           `/Game/Zones/${slug(e.name)}/SM_AshenRock`,
@@ -608,7 +609,7 @@ registerCatalogPipeline({
       label: 'Icon 2D Art',
       view: { kind: 'gallery', field: 'selected', candidates: 4 },
       produce: (e: LabEntity) => ({
-        data: { selected: 0 },
+        data: { ...gallerySeed('selected', 4) },
         // Link conceptually to the shared iconset-abilities set (the seeded icon-sets entity).
         ueAssets: [
           `/Game/UI/Icons/T_${slug(e.name)}_ZoneIcon_Ashen`,

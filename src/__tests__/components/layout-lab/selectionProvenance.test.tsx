@@ -40,8 +40,9 @@ describe('selection provenance in the step UI', () => {
 
     fireEvent.click(screen.getByRole('button', { name: new RegExp(`Produce ${STEP}`) }));
     await settle();
-    // Acceptance still passes (the walker's terminal status is preserved)…
-    expect(status()).toBe('pass');
+    // Terminal (walker-safe) status is preserved — deferred, because these candidates are
+    // swatches and the step now grades the selected candidate, not the index.
+    expect(status()).toBe('deferred');
     // …but the claim is honest: the machine picked it.
     expect(strip()).toContain('SELECTION: AUTO');
     expect(strip()).not.toContain('SELECTION: HUMAN');
@@ -49,7 +50,7 @@ describe('selection provenance in the step UI', () => {
     fireEvent.click(screen.getByTestId('candidate-b0-c2'));
     await settle();
     expect(strip()).toContain('SELECTION: HUMAN');
-    expect(status()).toBe('pass');
+    expect(status()).toBe('deferred');
   });
 
   it('a re-roll re-arms the auto claim (a new machine pick is not the old human choice)', async () => {

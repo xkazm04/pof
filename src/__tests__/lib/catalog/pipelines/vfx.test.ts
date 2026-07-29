@@ -27,14 +27,14 @@ describe('vfx pipeline', () => {
     // Icon 2D Art: gallery step → tier L1, pass after produce
     const iconStep = p!.steps.find((s) => s.label === 'Icon 2D Art')!;
     const iconResult = iconStep.accept(iconStep.produce(entity).data ?? {});
-    expect(iconResult.status).toBe('pass');
-    expect(iconResult.tier).toBe('L1');
+    expect(iconResult.status).toBe('deferred'); // a swatch placeholder is not a generated asset — the gallery gate now defers with a reason
+    expect(iconResult.tier).toBe('L4'); // a missing VISUAL asset, reported at the tier the walker expects for a deferral
 
     // Mesh / Sprite: gallery step → tier L1, pass after produce
     const meshStep = p!.steps.find((s) => s.label === 'Mesh / Sprite')!;
     const meshResult = meshStep.accept(meshStep.produce(entity).data ?? {});
-    expect(meshResult.status).toBe('pass');
-    expect(meshResult.tier).toBe('L1');
+    expect(meshResult.status).toBe('deferred'); // a swatch placeholder is not a generated asset — the gallery gate defers with a reason
+    expect(meshResult.tier).toBe('L4'); // a missing VISUAL asset
 
     // GPU / LOD Budget: balance step → pass with produced value at target
     const gpuStep = p!.steps.find((s) => s.label === 'GPU / LOD Budget')!;

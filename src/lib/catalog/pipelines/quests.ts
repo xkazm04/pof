@@ -6,6 +6,7 @@ import { entityRuntimeDeferred } from '../acceptance/deferred';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import { allOf } from '../acceptance/combinators';
 import { linksResolve } from '../acceptance/linkCheckers';
+import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -348,7 +349,7 @@ registerCatalogPipeline({
       label: 'Icon 2D Art',
       view: { kind: 'gallery', field: 'selected', candidates: 4 },
       produce: (e: LabEntity) => ({
-        data: { selected: 0 },
+        data: { ...gallerySeed('selected', 4) },
         ueAssets: [`/Game/UI/Icons/T_${slug(e.name)}_Icon`],
       }),
       accept: selected('selected', 'A quest icon is selected'),

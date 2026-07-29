@@ -72,8 +72,8 @@ describe('materials pipeline', () => {
     const mapsStep = p!.steps.find((s) => s.label === 'Maps')!;
     const mapsOut = mapsStep.produce(entity);
     const mapsResult = mapsStep.accept(mapsOut.data ?? {});
-    expect(mapsResult.status).toBe('pass');
-    expect(mapsResult.tier).toBe('L1');
+    expect(mapsResult.status).toBe('deferred'); // a swatch placeholder is not a generated asset — the gallery gate now defers with a reason
+    expect(mapsResult.tier).toBe('L4'); // a missing VISUAL asset, reported at the tier the walker expects for a deferral
     const reqMaps = mapsOut.data!.requiredMaps as Record<string, string>;
     expect(reqMaps.albedo).toContain('albedo');
     expect(reqMaps.normal).toContain('normal');
@@ -104,8 +104,8 @@ describe('materials pipeline', () => {
     const iconStep = p!.steps.find((s) => s.label === 'Icon 2D Art')!;
     const iconOut = iconStep.produce(entity);
     const iconResult = iconStep.accept(iconOut.data ?? {});
-    expect(iconResult.status).toBe('pass');
-    expect(iconResult.tier).toBe('L1');
+    expect(iconResult.status).toBe('deferred'); // a swatch placeholder is not a generated asset — the gallery gate defers with a reason
+    expect(iconResult.tier).toBe('L4'); // a missing VISUAL asset
     // Resolvable link to icon-sets::iconset-abilities
     const iconLinks = iconOut.links as Array<{ catalogId: string; entityId: string; role: string }>;
     expect(iconLinks).toBeDefined();

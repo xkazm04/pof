@@ -7,6 +7,7 @@ import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import { allOf } from '../acceptance/combinators';
 import { budgetWithinCap } from '../acceptance/invariants';
 import { linksResolve } from '../acceptance/linkCheckers';
+import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -700,7 +701,7 @@ registerCatalogPipeline({
       label: 'Icon 2D Art',
       view: { kind: 'gallery', field: 'selected', candidates: 4 },
       produce: (e: LabEntity) => ({
-        data: { selected: 0 },
+        data: { ...gallerySeed('selected', 4) },
         // Conceptually links to the shared icon-sets::iconset-abilities presentation library.
         // The ambient soundscape uses an "audio zone" icon in the HUD ambient indicator widget.
         ueAssets: [
@@ -714,8 +715,8 @@ registerCatalogPipeline({
         ],
       }),
       accept: allOf(
-        selected('selected', 'A soundscape icon candidate is selected'),
         linksResolve(),
+        selected('selected', 'A soundscape icon candidate is selected'),
       ),
     },
 

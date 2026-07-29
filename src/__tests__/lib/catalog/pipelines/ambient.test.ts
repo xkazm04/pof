@@ -77,8 +77,8 @@ describe('ambient pipeline', () => {
     // ── Icon 2D Art: L1 selection — selected:0 passes
     const iconStep = p!.steps.find((s) => s.label === 'Icon 2D Art')!;
     const iconResult = iconStep.accept(iconStep.produce(entity).data ?? {});
-    expect(iconResult.status).toBe('pass');
-    expect(iconResult.tier).toBe('L1');
+    expect(iconResult.status).toBe('deferred'); // a swatch placeholder is not a generated asset — the gallery gate now defers with a reason
+    expect(iconResult.tier).toBe('L4'); // a missing VISUAL asset, reported at the tier the walker expects for a deferral
 
     // ── Icon step top-level links include icon-sets::iconset-abilities
     const iconOutput = iconStep.produce(entity);

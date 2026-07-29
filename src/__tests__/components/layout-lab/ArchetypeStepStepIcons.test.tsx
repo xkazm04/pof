@@ -77,6 +77,9 @@ describe('ArchetypeStep — generated art reaches the step it was generated for'
     const caption = screen.getByTestId('gallery-selected-caption').textContent ?? '';
     expect(caption).toBe('Deterministic seed preview — not the generated asset.');
     expect(caption).not.toContain('Real generated asset');
-    expect(screen.getByTestId('acceptance-banner').getAttribute('data-status')).toBe('pass');
+    // The banner agrees with the caption: no generated asset → deferred with a reason,
+    // never a pass on the mere existence of a selection index.
+    expect(screen.getByTestId('acceptance-banner').getAttribute('data-status')).toBe('deferred');
+    expect(screen.getByTestId('acceptance-banner').textContent).toContain('swatch');
   });
 });

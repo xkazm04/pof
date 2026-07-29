@@ -1,3 +1,4 @@
+import { gradeGallerySelection } from './galleryArtifact';
 import type { Checker } from './types';
 
 /**
@@ -103,12 +104,17 @@ export function dpsConsistent(
   };
 }
 
+/**
+ * L1 gallery selection gate — grades the SELECTED CANDIDATE, not merely that an index exists.
+ *
+ * This used to be `typeof v === 'number' && v >= 0` → pass, and nothing else was examined:
+ * all 47 gallery steps went green whether or not anything had ever been generated. The rules
+ * (real asset → pass · swatch placeholder → deferred+reason · unresolved/mismatched selection
+ * → fail) and the reasoning behind them live in `galleryArtifact.ts`, next to the `gallerySeed`
+ * that writes the shape this reads.
+ */
 export function selected(field: string, label: string): Checker {
-  return (data) => {
-    const v = data[field];
-    const ok = typeof v === 'number' && v >= 0;
-    return { label, tier: 'L1', status: ok ? 'pass' : 'pending', detail: ok ? `candidate ${v}` : 'none selected', ...(ok ? {} : { reason: `field "${field}" has no selection (expected a non-negative candidate index, got ${JSON.stringify(v)})` }) };
-  };
+  return (data) => gradeGallerySelection(data, field, label);
 }
 
 /**

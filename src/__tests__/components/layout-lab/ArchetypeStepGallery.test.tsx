@@ -31,13 +31,16 @@ describe('ArchetypeStep gallery archetype', () => {
   beforeEach(() => { useLabPipelineStore.setState({ byEntity: {} }); localStorage.clear(); });
   afterEach(cleanup);
 
-  it('shows the empty gallery + pending before Produce, then the kept batch + pass after', () => {
+  it('shows the empty gallery + pending before Produce, then the kept batch + an honest deferral after', () => {
     render(<ArchetypeStep t={t} entity={entity} step={STEP} spec={spec} />);
     expect(status()).toBe('pending');
     expect(screen.getByTestId('candidate-gallery-empty')).toBeTruthy();
 
     produce();
-    expect(status()).toBe('pass');
+    // The candidates are deterministic swatches (no generated art on disk in jsdom), so the
+    // step SAYS SO instead of passing on the existence of an index.
+    expect(status()).toBe('deferred');
+    expect(screen.getByTestId('acceptance-banner').textContent).toContain('swatch');
     expect(screen.getByTestId('candidate-gallery').textContent).toContain('4 candidates · 1 re-roll kept');
     expect((screen.getByTestId('candidate-b0-c0') as HTMLButtonElement).getAttribute('aria-pressed')).toBe('true');
   });
@@ -60,7 +63,7 @@ describe('ArchetypeStep gallery archetype', () => {
 
     fireEvent.click(screen.getByTestId('candidate-b0-c2'));
     expect((screen.getByTestId('candidate-b0-c2') as HTMLButtonElement).getAttribute('aria-pressed')).toBe('true');
-    expect(status()).toBe('pass');
+    expect(status()).toBe('deferred'); // still a swatch — re-selecting one placeholder for another proves nothing
 
     const art = useLabPipelineStore.getState().byEntity['g1'][STEP];
     expect((art.data.genHistory as { selectedId: string }).selectedId).toBe('b0-c2');

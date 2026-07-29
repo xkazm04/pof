@@ -4,6 +4,7 @@ import { allOf } from '../acceptance/combinators';
 import { budgetWithinCap } from '../acceptance/invariants';
 import { entityRuntimeDeferred, visualDeferred } from '../acceptance/deferred';
 import { meshGalleryCandidates } from '@/components/layout-lab/steps/shared/meshGalleryCandidates';
+import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 
 /**
  * Character Pipeline (catalogId: 'character-pipeline').
@@ -41,7 +42,7 @@ registerCatalogPipeline({
             { name: 'jinx_v2_friendly', verdict: 'face gate PASS — defined eyes with whites+pupils', path: 'generated/jinx-leo/jinx_v2_friendly.png' },
             { name: 'jinx_hd_concept', verdict: 'face gate PASS + detail-maximized (engraved bullets, stitching, fishnet)', path: 'generated/jinx-leo/jinx_hd_concept.png' },
           ],
-          selected: 2,
+          ...gallerySeed('selected', 3, 2),
           promptLaws: 'FACE PRIORITY block (eyes with white sclera + crisp pupils, no glow/makeup) + plain white bg + relaxed A-pose + head-to-toe',
         },
       }),
@@ -78,7 +79,8 @@ registerCatalogPipeline({
       // Surface REAL generated .glb meshes when any exist on disk: each candidate carries
       // payload.glbUrl so the selected mesh renders in the interactive GlbViewer (orbit/
       // zoom) instead of a colored swatch. Empty manifest → honest deterministic swatch
-      // fallback (never a fake 3D preview); acceptance (`selected`) is unchanged either way.
+      // fallback (never a fake 3D preview) — and acceptance TELLS THEM APART: a candidate
+      // carrying a real payload.glbUrl passes, a swatch fallback defers with a reason.
       // The projection key MUST be the selection field ('selected') — projecting onto
       // 'candidates' would clobber the produced verdict array with a numeric index and leave
       // acceptance grading a field no selection ever writes.
@@ -94,7 +96,7 @@ registerCatalogPipeline({
             { name: 'P1-20260311', verdict: 'FAIL — low-poly tier (3MB, shard hair); NOT a hero model despite newest date', task: 'e83baf76' },
             { name: 'v3.1-20260211 (HD)', verdict: 'PASS — 45MB, woven braids, full facial structure', task: '696732ea-95df-4410-b6b6-42864a1408e4' },
           ],
-          selected: 2,
+          ...gallerySeed('selected', 3, 2),
           settings: 'Tripo image_to_model: model_version=v3.1-20260211, texture_quality=detailed, pbr=true',
         },
       }),
@@ -280,7 +282,7 @@ registerCatalogPipeline({
       produce: () => ({
         data: {
           candidates: [{ name: 'portrait crop of the gated HD concept (256px, upper-left light)', path: 'generated/tripo3d/face_hd3_pair.png' }],
-          selected: 0,
+          ...gallerySeed('selected', 3),
         },
       }),
       accept: selected('selected', 'character icon selected'),

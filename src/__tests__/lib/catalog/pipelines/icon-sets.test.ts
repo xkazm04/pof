@@ -18,8 +18,8 @@ describe('icon-sets pipeline', () => {
     // Icon 2D Art: produce + accept → pass, tier L1 (selection step)
     const iconStep = p!.steps.find((s) => s.label === 'Icon 2D Art')!;
     const iconResult = iconStep.accept(iconStep.produce(entity).data ?? {});
-    expect(iconResult.status).toBe('pass');
-    expect(iconResult.tier).toBe('L1');
+    expect(iconResult.status).toBe('deferred'); // a swatch placeholder is not a generated asset — the gallery gate now defers with a reason
+    expect(iconResult.tier).toBe('L4'); // a missing VISUAL asset, reported at the tier the walker expects for a deferral
 
     // Test Gate: deferred L3
     const gate = p!.steps.find((s) => s.label === 'Test Gate')!;

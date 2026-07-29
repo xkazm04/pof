@@ -7,6 +7,7 @@ import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import { allOf } from '../acceptance/combinators';
 import { descendingSeries } from '../acceptance/invariants';
 import { linksResolve } from '../acceptance/linkCheckers';
+import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -232,7 +233,7 @@ registerCatalogPipeline({
       label: 'Wireframe',
       view: { kind: 'gallery', field: 'selected', candidates: 3 },
       produce: (e: LabEntity) => ({
-        data: { selected: 0 },
+        data: { ...gallerySeed('selected', 3) },
         ueAssets: [
           `/Game/UI/HUD/Wireframes/T_${slug(e.name)}_WF_Standard`,
           `/Game/UI/HUD/Wireframes/T_${slug(e.name)}_WF_LowHealth`,
@@ -250,7 +251,7 @@ registerCatalogPipeline({
       label: 'Icon 2D Art',
       view: { kind: 'gallery', field: 'selected', candidates: 4 },
       produce: (e: LabEntity) => ({
-        data: { selected: 0 },
+        data: { ...gallerySeed('selected', 4) },
         links: [
           { catalogId: 'icon-sets', entityId: 'iconset-abilities', role: 'vitals-icon' },
         ],
@@ -262,8 +263,8 @@ registerCatalogPipeline({
         ],
       }),
       accept: allOf(
-        selected('selected', 'A health-bar icon is selected from the icon-sets family'),
         linksResolve(),
+        selected('selected', 'A health-bar icon is selected from the icon-sets family'),
       ),
     },
 

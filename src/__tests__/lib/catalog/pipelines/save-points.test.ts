@@ -140,7 +140,7 @@ describe('save-points pipeline', () => {
     // ── Icon 2D Art: selected L1 → pass; icon-sets link present ──────────────
     const iconStep = p!.steps.find((s) => s.label === 'Icon 2D Art')!;
     const iconOut = iconStep.produce(entity);
-    expect(iconStep.accept(iconOut.data ?? {}).status).toBe('pass');
+    expect(iconStep.accept(iconOut.data ?? {}).status).toBe('deferred'); // a swatch placeholder is not a generated asset — the gallery gate now defers with a reason
     expect(iconOut.links).toBeDefined();
     const iconLinks = iconOut.links as Array<{ catalogId: string; entityId: string; role: string }>;
     expect(iconLinks.some((l) => l.catalogId === 'icon-sets' && l.entityId === 'iconset-abilities')).toBe(true);

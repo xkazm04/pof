@@ -7,6 +7,7 @@ import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import { linksResolve } from '../acceptance/linkCheckers';
+import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -698,7 +699,7 @@ registerCatalogPipeline({
       view: { kind: 'gallery', field: 'selected', candidates: 4 },
       produce: (e: LabEntity) => ({
         data: {
-          selected: 0,
+          ...gallerySeed('selected', 4),
           description:
             'Level-up / XP icon — displayed in the HUD XP bar and level-up notification. ' +
             '256px, 3/4 view, strong readable silhouette; rarity-framed (gold frame for prestige milestones). ' +
@@ -710,8 +711,8 @@ registerCatalogPipeline({
         ueAssets: [`/Game/UI/Icons/T_${slug(e.name)}_LevelUpIcon`],
       }),
       accept: allOf(
-        selected('selected', 'A progression icon is selected'),
         linksResolve(),
+        selected('selected', 'A progression icon is selected'),
       ),
     },
 

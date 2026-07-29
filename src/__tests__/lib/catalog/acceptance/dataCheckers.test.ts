@@ -34,11 +34,22 @@ describe('L0 data checkers', () => {
     // withinPercent's ±% band would flip its ordering for a negative target and never pass:
     expect(withinPercent('lufs', 'x', -16, 12.5)({ lufs: -16 }).status).toBe('fail');
   });
-  it('selected passes when an index ≥ 0 is chosen', () => {
+  it('selected grades the SELECTED CANDIDATE, not merely that an index exists', () => {
     const c = selected('selected', 'Icon selected');
-    expect(c({ selected: 0 }).status).toBe('pass');
+    // No selection at all — unchanged.
     expect(c({ selected: -1 }).status).toBe('pending');
     expect(c({}).status).toBe('pending');
+    // An index with nothing behind it is no longer a pass (it was, for all 47 gallery steps).
+    expect(c({ selected: 0 }).status).toBe('deferred');
+    expect(c({ selected: 0 }).reason).toContain('no generation history');
+    // A real generated asset on the selected candidate is what earns the pass.
+    const hist = (cand: Record<string, unknown>) => ({
+      selected: 0,
+      genHistory: { batches: [{ id: 'b0', at: 'x', direction: 'd', prompt: 'p', candidates: [{ id: 'b0-c0', swatch: 'linear-gradient(1deg,a,b)', payload: { selected: 0 }, ...cand }] }], selectedId: 'b0-c0' },
+    });
+    expect(c(hist({ imageUrl: '/api/visual-gen/icon/x.png' })).status).toBe('pass');
+    expect(c(hist({})).status).toBe('deferred'); // swatch placeholder — says so instead of passing silently
+    // The full rule table lives in src/__tests__/catalog/galleryGrading.test.ts.
   });
   it('minCount counts array length', () => {
     const c = minCount('cues', 'Cues', 3);

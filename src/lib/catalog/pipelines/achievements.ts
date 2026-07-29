@@ -6,6 +6,7 @@ import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers'
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import { allOf } from '../acceptance/combinators';
 import { linksResolve } from '../acceptance/linkCheckers';
+import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -315,7 +316,7 @@ registerCatalogPipeline({
       view: { kind: 'gallery', field: 'selected', candidates: 4 },
       produce: (e: LabEntity) => ({
         data: {
-          selected: 0,
+          ...gallerySeed('selected', 4),
           iconDesignFlavor:
             'A blood droplet in a 3/4-view downward splash, 256px, rarity-framed Normal/white. ' +
             'Upper-left light per art-icons canon. Muted crimson on dark field — restrained (game-tone). ' +
@@ -331,8 +332,8 @@ registerCatalogPipeline({
         ueAssets: [`/Game/UI/Icons/T_${slug(e.name)}_AchievementIcon`],
       }),
       accept: allOf(
-        selected('selected', 'An achievement badge icon is selected'),
         linksResolve(),
+        selected('selected', 'An achievement badge icon is selected'),
       ),
     },
 

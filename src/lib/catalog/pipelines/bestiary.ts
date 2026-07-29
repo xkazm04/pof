@@ -7,6 +7,7 @@ import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import { linksResolve } from '../acceptance/linkCheckers';
+import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -341,7 +342,7 @@ registerCatalogPipeline({
       archetype: 'gallery', label: 'Concept 2D Art',
       view: { kind: 'gallery', field: 'selected', candidates: 4 },
       produce: (e: LabEntity) => ({
-        data: { selected: 0 },
+        data: { ...gallerySeed('selected', 4) },
         ueAssets: [`/Game/Bestiary/${slug(e.name)}/T_${slug(e.name)}_Concept`],
       }),
       accept: selected('selected', 'A concept is selected'),
@@ -352,7 +353,7 @@ registerCatalogPipeline({
       archetype: 'gallery', label: '3D & Rig',
       view: { kind: 'gallery', field: 'mesh', candidates: 3 },
       produce: (e: LabEntity) => ({
-        data: { mesh: 0 },
+        data: { ...gallerySeed('mesh', 3) },
         ueAssets: [`/Game/Bestiary/${slug(e.name)}/SK_${slug(e.name)}`],
       }),
       accept: selected('mesh', 'A rigged mesh candidate is selected'),

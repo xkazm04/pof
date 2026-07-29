@@ -6,6 +6,7 @@ import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/da
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
+import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 
 /**
  * Input Schemes pipeline (catalogId: 'input-schemes').
@@ -318,7 +319,7 @@ registerCatalogPipeline({
       view: { kind: 'gallery', field: 'glyphSet', candidates: 4 },
       produce: (e: LabEntity) => ({
         data: {
-          glyphSet: 0,
+          ...gallerySeed('glyphSet', 4),
           // No live icon-sets link: the only seeded icon-set is iconset-abilities (ability icons),
           // which does not carry input-device glyph semantics. The input-glyphs icon set is
           // deferred until a dedicated seed row is authored in the icon-sets catalog.

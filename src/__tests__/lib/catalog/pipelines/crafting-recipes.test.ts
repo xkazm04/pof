@@ -102,7 +102,7 @@ describe('crafting-recipes pipeline', () => {
     // ── Icon 2D Art: selected L1 → pass; iconset-abilities link declared ───────
     const iconStep = p!.steps.find((s) => s.label === 'Icon 2D Art')!;
     const iconOut = iconStep.produce(entity);
-    expect(iconStep.accept(iconOut.data ?? {}).status).toBe('pass');
+    expect(iconStep.accept(iconOut.data ?? {}).status).toBe('deferred'); // a swatch placeholder is not a generated asset — the gallery gate now defers with a reason
     expect(iconOut.ueAssets).toBeDefined();
     expect(iconOut.ueAssets!.some((a) => a.includes('Icon'))).toBe(true);
     // Icon step links to icon-sets catalog (universal icon step)

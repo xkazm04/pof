@@ -7,6 +7,7 @@ import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import { allOf } from '../acceptance/combinators';
 import { powerWithinTierTarget, sumReconciles, arithmeticReconciles } from '../acceptance/invariants';
 import { linksResolve } from '../acceptance/linkCheckers';
+import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -461,7 +462,7 @@ registerCatalogPipeline({
       produce: (e: LabEntity) => {
         const s = slug(e.name);
         return {
-          data: { selected: 0 },
+          data: { ...gallerySeed('selected', 4) },
           links: [
             { catalogId: 'icon-sets', entityId: 'iconset-abilities', role: 'icon-family' },
           ],
@@ -474,8 +475,8 @@ registerCatalogPipeline({
         };
       },
       accept: allOf(
-        selected('selected', 'An ability icon is selected'),
         linksResolve(),
+        selected('selected', 'An ability icon is selected'),
       ),
     },
 

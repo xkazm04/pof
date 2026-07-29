@@ -5,6 +5,7 @@ import { entityRuntimeDeferred } from '../acceptance/deferred';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import { allOf } from '../acceptance/combinators';
 import { linksResolve } from '../acceptance/linkCheckers';
+import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -241,7 +242,7 @@ registerCatalogPipeline({
       view: { kind: 'gallery', field: 'pointer', candidates: 4 },
       produce: (e: LabEntity) => ({
         data: {
-          pointer: 0,
+          ...gallerySeed('pointer', 4),
           pointerDesignFlavor: [
             'tutorial_pointer overlay — blinking arrow on the dodge input binding (built from hud-elements::hud-health-bar pointer slot)',
             'tutorial_icons highlight — dodge-input icon highlighted on the ability bar (from icon-sets::iconset-abilities family)',
@@ -271,9 +272,9 @@ registerCatalogPipeline({
         ueAssets: [`/Game/UI/Tutorial/T_${slug(e.name)}_Pointer`],
       }),
       accept: allOf(
-        selected('pointer', 'A pointer / highlight candidate is selected'),
         linksResolve(),
         wiringContractSound(),
+        selected('pointer', 'A pointer / highlight candidate is selected'),
       ),
     },
 
@@ -430,7 +431,7 @@ registerCatalogPipeline({
       label: 'Icon 2D Art',
       view: { kind: 'gallery', field: 'selected', candidates: 4 },
       produce: (e: LabEntity) => ({
-        data: { selected: 0 },
+        data: { ...gallerySeed('selected', 4) },
         ueAssets: [`/Game/UI/Icons/T_${slug(e.name)}_Icon`],
       }),
       accept: selected('selected', 'A tutorial beat icon is selected'),

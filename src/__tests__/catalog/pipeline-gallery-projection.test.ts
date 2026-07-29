@@ -59,11 +59,21 @@ describe('gallery selection projection (character-pipeline regression)', () => {
 
       const after = selectNth(spec, 1);
       expect(after[field]).toBe(1);
-      expect(spec.accept(after).status).toBe('pass');
+      // Terminal after a clean selection (Rule 5): `pass` when the selected candidate carries
+      // a real generated asset, `deferred` (with a reason) when it is only a swatch preview —
+      // never fail/pending. Which one it is, is the SELECTED CANDIDATE's property.
+      const r = spec.accept(after);
+      expect(['pass', 'deferred']).toContain(r.status);
+      if (r.status === 'deferred') expect(r.reason).toBeTruthy();
 
       // A cleared selection must NOT still pass on a stale produce value.
       const cleared = { ...after, [field]: null };
       expect(spec.accept(cleared).status).not.toBe('pass');
+
+      // …and neither may a selection that no longer names a kept candidate: the index alone
+      // is not the verdict any more.
+      const dangling = { ...after, genHistory: { ...(after.genHistory as object), selectedId: 'b9-c9' } };
+      expect(spec.accept(dangling).status).toBe('fail');
     });
   }
 

@@ -7,6 +7,7 @@ import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import { allOf } from '../acceptance/combinators';
 import { budgetWithinCap } from '../acceptance/invariants';
 import { linksResolve } from '../acceptance/linkCheckers';
+import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -208,7 +209,7 @@ registerCatalogPipeline({
       view: { kind: 'gallery', field: 'selected', candidates: 4 },
       produce: (e: LabEntity) => ({
         data: {
-          selected: 0,
+          ...gallerySeed('selected', 4),
           requiredMaps: {
             albedo: `T_${slug(e.name)}_albedo`,
             normal: `T_${slug(e.name)}_normal`,
@@ -238,8 +239,8 @@ registerCatalogPipeline({
         ],
       }),
       accept: allOf(
-        selected('selected', 'A texture map candidate is selected (L1)'),
         wiringContractSound(),
+        selected('selected', 'A texture map candidate is selected (L1)'),
       ),
     },
 
@@ -371,13 +372,13 @@ registerCatalogPipeline({
       label: 'Icon 2D Art',
       view: { kind: 'gallery', field: 'selected', candidates: 4 },
       produce: (e: LabEntity) => ({
-        data: { selected: 0 },
+        data: { ...gallerySeed('selected', 4) },
         links: [{ catalogId: 'icon-sets', entityId: 'iconset-abilities', role: 'icon-family' }],
         ueAssets: [`/Game/UI/Icons/T_${slug(e.name)}_Icon`],
       }),
       accept: allOf(
-        selected('selected', 'A material swatch icon is selected (L1)'),
         linksResolve(),
+        selected('selected', 'A material swatch icon is selected (L1)'),
       ),
     },
 

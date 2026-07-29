@@ -145,7 +145,7 @@ describe('items pipeline', () => {
     // ── Icon 2D Art: selected L1 + link to iconset-abilities ─────────────────
     const icon = p!.steps.find((s) => s.label === 'Icon 2D Art')!;
     const iconOut = icon.produce(entity);
-    expect(icon.accept(iconOut.data ?? {}).status).toBe('pass');
+    expect(icon.accept(iconOut.data ?? {}).status).toBe('deferred'); // a swatch placeholder is not a generated asset — the gallery gate now defers with a reason
     expect(iconOut.links).toBeDefined();
     const iconLinks = iconOut.links as Array<{ catalogId: string; entityId: string }>;
     expect(iconLinks.some((l) => l.catalogId === 'icon-sets' && l.entityId === 'iconset-abilities')).toBe(true);
@@ -154,7 +154,7 @@ describe('items pipeline', () => {
     // ── 3D Mesh: L1 gallery accept → pass ────────────────────────────────────
     const mesh3d = p!.steps.find((s) => s.label === '3D Mesh')!;
     const meshOut = mesh3d.produce(entity);
-    expect(mesh3d.accept(meshOut.data ?? {}).status).toBe('pass');
+    expect(mesh3d.accept(meshOut.data ?? {}).status).toBe('deferred'); // a swatch placeholder is not a generated mesh — the gallery gate defers with a reason
 
     // ── Tooltip / Compare: fields populated ───────────────────────────────────
     const tooltip = p!.steps.find((s) => s.label === 'Tooltip / Compare')!;

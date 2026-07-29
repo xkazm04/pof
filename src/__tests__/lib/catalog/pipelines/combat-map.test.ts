@@ -151,7 +151,7 @@ describe('combat-map pipeline', () => {
     // ── Icon 2D Art: L1 selected pass + link to icon-sets::iconset-abilities ──
     const iconStep = p!.steps.find((s) => s.label === 'Icon 2D Art')!;
     const iconOut = iconStep.produce(entity);
-    expect(iconStep.accept(iconOut.data ?? {}).status).toBe('pass');
+    expect(iconStep.accept(iconOut.data ?? {}).status).toBe('deferred'); // a swatch placeholder is not a generated asset — the gallery gate now defers with a reason
     expect(iconOut.ueAssets).toBeDefined();
     expect(iconOut.links).toBeDefined();
     const iconLinks = iconOut.links as Array<{ catalogId: string; entityId: string; role: string }>;

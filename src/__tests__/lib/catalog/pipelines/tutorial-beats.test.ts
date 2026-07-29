@@ -49,7 +49,7 @@ describe('tutorial-beats pipeline', () => {
 
     // Icon 2D Art: selected=0 → L1 pass
     const icon = p!.steps.find((s) => s.label === 'Icon 2D Art')!;
-    expect(icon.accept(icon.produce(entity).data ?? {}).status).toBe('pass');
+    expect(icon.accept(icon.produce(entity).data ?? {}).status).toBe('deferred'); // a swatch placeholder is not a generated asset — the gallery gate now defers with a reason
 
     // Test Gate: deferred L3
     const gate = p!.steps.find((s) => s.label === 'Test Gate')!;

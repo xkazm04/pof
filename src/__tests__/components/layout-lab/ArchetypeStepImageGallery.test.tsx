@@ -63,7 +63,9 @@ describe('ArchetypeStep pluggable candidate generator', () => {
     produce();
     expect(container.querySelectorAll('img').length).toBe(0);
     expect(screen.getByTestId('candidate-gallery').textContent).toContain('Variant 1');
-    expect(screen.getByTestId('acceptance-banner').getAttribute('data-status')).toBe('pass');
+    // …and acceptance says the same thing the gallery does: a swatch is not a generated asset.
+    expect(screen.getByTestId('acceptance-banner').getAttribute('data-status')).toBe('deferred');
+    expect(screen.getByTestId('acceptance-banner').textContent).toContain('swatch');
   });
 });
 

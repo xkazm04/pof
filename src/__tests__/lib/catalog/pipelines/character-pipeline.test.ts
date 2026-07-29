@@ -45,8 +45,8 @@ describe('character-pipeline pipeline', () => {
   it('Concept 2D produces a face-gated selection (L1 pass)', () => {
     const s = pipeline!.steps[0];
     const r = s.accept(s.produce(entity).data ?? {});
-    expect(r.status).toBe('pass');
-    expect(r.tier).toBe('L1');
+    expect(r.status).toBe('deferred'); // a swatch placeholder is not a generated asset — the gallery gate now defers with a reason
+    expect(r.tier).toBe('L4'); // a missing VISUAL asset, reported at the tier the walker expects for a deferral
   });
 
   it('face gates record verdict+method+evidence (L0 pass)', () => {
@@ -64,7 +64,7 @@ describe('character-pipeline pipeline', () => {
     expect(data.candidates).toHaveLength(3);
     expect(data.candidates[data.selected].name).toMatch(/v3\.1/);
     expect(data.candidates.filter((c) => /FAIL/.test(c.verdict))).toHaveLength(2);
-    expect(s.accept(data as never).status).toBe('pass');
+    expect(s.accept(data as never).status).toBe('deferred'); // a swatch placeholder is not a generated asset — the gallery gate now defers with a reason
   });
 
   it('Rig & Clips manifests one rig plus three preset takes', () => {

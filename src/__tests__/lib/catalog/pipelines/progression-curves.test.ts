@@ -114,7 +114,7 @@ describe('progression-curves pipeline', () => {
     // ── Icon 2D Art: selected L1 → pass; typed link to icon-sets ─────────────
     const icon = p!.steps.find((s) => s.label === 'Icon 2D Art')!;
     const iconOut = icon.produce(entity);
-    expect(icon.accept(iconOut.data ?? {}).status).toBe('pass');
+    expect(icon.accept(iconOut.data ?? {}).status).toBe('deferred'); // a swatch placeholder is not a generated asset — the gallery gate now defers with a reason
     expect(iconOut.links).toBeDefined();
     const iconLinks = iconOut.links as Array<{ catalogId: string; entityId: string; role: string }>;
     expect(iconLinks.some((l) => l.catalogId === 'icon-sets' && l.entityId === 'iconset-abilities')).toBe(true);

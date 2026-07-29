@@ -7,6 +7,7 @@ import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import { linksResolve } from '../acceptance/linkCheckers';
+import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -139,7 +140,7 @@ registerCatalogPipeline({
       view: { kind: 'gallery', field: 'selected', candidates: 4 },
       produce: (e: LabEntity) => ({
         data: {
-          selected: 0,
+          ...gallerySeed('selected', 4),
           meshName: `SM_${slug(e.name)}`,
           triBudget: {
             LOD0: {
@@ -169,8 +170,8 @@ registerCatalogPipeline({
       // Content invariant: a tri budget whose LODs don't get cheaper is not a LOD ladder —
       // the numbers are graded, not merely present.
       accept: allOf(
-        selected('selected', 'A 3D mesh candidate is selected (L1)'),
         descendingSeries('triBudget', ['LOD0', 'LOD1', 'LOD2', 'LOD3'], 'Tri budget descends across the LOD ladder', 'tris'),
+        selected('selected', 'A 3D mesh candidate is selected (L1)'),
       ),
     },
 
@@ -539,13 +540,13 @@ registerCatalogPipeline({
       label: 'Icon 2D Art',
       view: { kind: 'gallery', field: 'selected', candidates: 4 },
       produce: (e: LabEntity) => ({
-        data: { selected: 0 },
+        data: { ...gallerySeed('selected', 4) },
         links: [{ catalogId: 'icon-sets', entityId: 'iconset-abilities', role: 'icon-family' }],
         ueAssets: [`/Game/UI/Icons/T_${slug(e.name)}_Icon`],
       }),
       accept: allOf(
-        selected('selected', 'A prop icon candidate is selected (L1)'),
         linksResolve(),
+        selected('selected', 'A prop icon candidate is selected (L1)'),
       ),
     },
 

@@ -66,14 +66,14 @@ describe('hud-elements pipeline', () => {
     // ── Wireframe: selected L1 → pass ─────────────────────────────────────────
     const wireframe = p!.steps.find((s) => s.label === 'Wireframe')!;
     const wfOut = wireframe.produce(entity);
-    expect(wireframe.accept(wfOut.data ?? {}).status).toBe('pass');
-    expect(wireframe.accept(wfOut.data ?? {}).tier).toBe('L1');
+    expect(wireframe.accept(wfOut.data ?? {}).status).toBe('deferred'); // a swatch placeholder is not a generated asset — the gallery gate now defers with a reason
+    expect(wireframe.accept(wfOut.data ?? {}).tier).toBe('L4'); // a missing VISUAL asset, reported at the tier the walker expects for a deferral
 
     // ── Icon 2D Art: selected L1 → pass; link to icon-sets::iconset-abilities ─
     const iconStep = p!.steps.find((s) => s.label === 'Icon 2D Art')!;
     const iconOut = iconStep.produce(entity);
-    expect(iconStep.accept(iconOut.data ?? {}).status).toBe('pass');
-    expect(iconStep.accept(iconOut.data ?? {}).tier).toBe('L1');
+    expect(iconStep.accept(iconOut.data ?? {}).status).toBe('deferred'); // a swatch placeholder is not a generated asset — the gallery gate defers with a reason
+    expect(iconStep.accept(iconOut.data ?? {}).tier).toBe('L4'); // a missing VISUAL asset
     expect(iconOut.ueAssets).toBeDefined();
     // Icon assets carry the slug
     expect(iconOut.ueAssets!.some((a) => a.includes('HealthBar') || a.includes('Icon'))).toBe(true);

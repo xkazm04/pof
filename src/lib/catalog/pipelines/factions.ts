@@ -6,6 +6,7 @@ import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers'
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import { allOf } from '../acceptance/combinators';
 import { linksResolve } from '../acceptance/linkCheckers';
+import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -478,7 +479,7 @@ registerCatalogPipeline({
       label: 'Heraldry Icon',
       view: { kind: 'gallery', field: 'selected', candidates: 4 },
       produce: (e: LabEntity) => ({
-        data: { selected: 0 },
+        data: { ...gallerySeed('selected', 4) },
         ueAssets: [
           `/Game/UI/Icons/T_${slug(e.name)}_Sigil`,
           `/Game/UI/Icons/T_${slug(e.name)}_Emblem_Friendly`,

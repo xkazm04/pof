@@ -54,8 +54,8 @@ describe('props pipeline', () => {
     const mesh = p!.steps.find((s) => s.label === '3D & LODs')!;
     const meshOut = mesh.produce(entity);
     const meshResult = mesh.accept(meshOut.data ?? {});
-    expect(meshResult.status).toBe('pass');
-    expect(meshResult.tier).toBe('L1');
+    expect(meshResult.status).toBe('deferred'); // a swatch placeholder is not a generated asset — the gallery gate now defers with a reason
+    expect(meshResult.tier).toBe('L4'); // a missing VISUAL asset, reported at the tier the walker expects for a deferral
     const triBudget = meshOut.data!.triBudget as Record<string, { tris: number }>;
     expect(triBudget.LOD0.tris).toBeLessThanOrEqual(1200);
 
@@ -121,8 +121,8 @@ describe('props pipeline', () => {
     const icon = p!.steps.find((s) => s.label === 'Icon 2D Art')!;
     const iconOut = icon.produce(entity);
     const iconResult = icon.accept(iconOut.data ?? {});
-    expect(iconResult.status).toBe('pass');
-    expect(iconResult.tier).toBe('L1');
+    expect(iconResult.status).toBe('deferred'); // a swatch placeholder is not a generated asset — the gallery gate defers with a reason
+    expect(iconResult.tier).toBe('L4'); // a missing VISUAL asset
     const iconLinks = iconOut.links as Array<{ catalogId: string; entityId: string; role: string }>;
     expect(iconLinks.some((l) => l.catalogId === 'icon-sets' && l.entityId === 'iconset-abilities')).toBe(true);
 

@@ -6,6 +6,7 @@ import { minLength, fieldsPopulated, selected, minCount, withinPercent } from '.
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
+import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -95,7 +96,7 @@ registerCatalogPipeline({
       archetype: 'gallery', label: 'Mesh / Sprite',
       view: { kind: 'gallery', field: 'selectedAsset', candidates: 4 },
       produce: (e: LabEntity) => ({
-        data: { selectedAsset: 0 },
+        data: { ...gallerySeed('selectedAsset', 4) },
         ueAssets: [`/Game/VFX/${slug(e.name)}/SM_${slug(e.name)}_Sprite`],
       }),
       accept: selected('selectedAsset', 'A mesh/sprite candidate is selected'),
@@ -106,7 +107,7 @@ registerCatalogPipeline({
       archetype: 'gallery', label: 'Material',
       view: { kind: 'gallery', field: 'selectedMaterial', candidates: 4 },
       produce: (e: LabEntity) => ({
-        data: { selectedMaterial: 0 },
+        data: { ...gallerySeed('selectedMaterial', 4) },
         ueAssets: [`/Game/VFX/${slug(e.name)}/MI_${slug(e.name)}`],
       }),
       accept: selected('selectedMaterial', 'A material instance is selected'),
@@ -216,7 +217,7 @@ registerCatalogPipeline({
       archetype: 'gallery', label: 'Variants',
       view: { kind: 'gallery', field: 'selectedVariant', candidates: 3 },
       produce: (e: LabEntity) => ({
-        data: { selectedVariant: 0 },
+        data: { ...gallerySeed('selectedVariant', 3) },
         ueAssets: [
           `/Game/VFX/${slug(e.name)}/NS_${slug(e.name)}_Small`,
           `/Game/VFX/${slug(e.name)}/NS_${slug(e.name)}_Med`,
@@ -231,7 +232,7 @@ registerCatalogPipeline({
       archetype: 'gallery', label: 'Icon 2D Art',
       view: { kind: 'gallery', field: 'selectedIcon', candidates: 4 },
       produce: (e: LabEntity) => ({
-        data: { selectedIcon: 0 },
+        data: { ...gallerySeed('selectedIcon', 4) },
         ueAssets: [`/Game/UI/Icons/VFX/T_${slug(e.name)}_Icon`],
       }),
       accept: selected('selectedIcon', 'An icon candidate is selected'),

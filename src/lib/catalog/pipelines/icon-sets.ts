@@ -6,6 +6,7 @@ import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
 import { imageGalleryCandidates } from '@/components/layout-lab/steps/shared/imageGalleryCandidates';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
+import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -161,7 +162,7 @@ registerCatalogPipeline({
         build: (dir, seq, assets) => imageGalleryCandidates('selected', 4, assets, dir, seq),
       },
       produce: (e: LabEntity) => ({
-        data: { selected: 0 },
+        data: { ...gallerySeed('selected', 4) },
         ueAssets: [`/Game/UI/Icons/Sets/T_${slug(e.name)}_Atlas`],
       }),
       accept: selected('selected', 'A family style candidate is selected'),

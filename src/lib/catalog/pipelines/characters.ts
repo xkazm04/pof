@@ -6,6 +6,7 @@ import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers'
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import { allOf } from '../acceptance/combinators';
 import { linksResolve } from '../acceptance/linkCheckers';
+import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -51,7 +52,7 @@ registerCatalogPipeline({
     {
       archetype: 'gallery', label: 'Concept 2D Art',
       view: { kind: 'gallery', field: 'selected', candidates: 4 },
-      produce: (e: LabEntity) => ({ data: { selected: 0 }, ueAssets: [`/Game/Characters/${slug(e.name)}/T_${slug(e.name)}_Concept`] }),
+      produce: (e: LabEntity) => ({ data: { ...gallerySeed('selected', 4) }, ueAssets: [`/Game/Characters/${slug(e.name)}/T_${slug(e.name)}_Concept`] }),
       accept: selected('selected', 'A concept is selected'),
     },
 
@@ -138,7 +139,7 @@ registerCatalogPipeline({
     {
       archetype: 'gallery', label: '3D & Rig',
       view: { kind: 'gallery', field: 'mesh', candidates: 3 },
-      produce: (e: LabEntity) => ({ data: { mesh: 0 }, ueAssets: [`/Game/Characters/${slug(e.name)}/SK_${slug(e.name)}`] }),
+      produce: (e: LabEntity) => ({ data: { ...gallerySeed('mesh', 3) }, ueAssets: [`/Game/Characters/${slug(e.name)}/SK_${slug(e.name)}`] }),
       accept: selected('mesh', 'A rigged mesh candidate is selected'),
     },
 
@@ -146,7 +147,7 @@ registerCatalogPipeline({
     {
       archetype: 'gallery', label: 'Material / Outfit',
       view: { kind: 'gallery', field: 'material', candidates: 3 },
-      produce: (e: LabEntity) => ({ data: { material: 0 }, ueAssets: [`/Game/Characters/${slug(e.name)}/MI_${slug(e.name)}_Outfit`] }),
+      produce: (e: LabEntity) => ({ data: { ...gallerySeed('material', 3) }, ueAssets: [`/Game/Characters/${slug(e.name)}/MI_${slug(e.name)}_Outfit`] }),
       accept: selected('material', 'A material candidate is selected'),
     },
 
@@ -230,7 +231,7 @@ registerCatalogPipeline({
     {
       archetype: 'gallery', label: 'Icon 2D Art (portrait)',
       view: { kind: 'gallery', field: 'portrait', candidates: 4 },
-      produce: (e: LabEntity) => ({ data: { portrait: 0 }, ueAssets: [`/Game/Characters/${slug(e.name)}/T_${slug(e.name)}_Portrait`] }),
+      produce: (e: LabEntity) => ({ data: { ...gallerySeed('portrait', 4) }, ueAssets: [`/Game/Characters/${slug(e.name)}/T_${slug(e.name)}_Portrait`] }),
       accept: selected('portrait', 'A portrait is selected'),
     },
 
