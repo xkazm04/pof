@@ -37,6 +37,17 @@ export interface LabStepArtifact {
    */
   error?: string;
   /**
+   * WHEN the failure recorded in {@link LabStepArtifact.error} happened (ISO).
+   *
+   * It exists because `markFailure` deliberately does NOT touch `at`: the content from the
+   * last successful produce survives a failed re-produce, so `at` must keep pointing at the
+   * run that produced it. That leaves the failure with no time of its own, and anything
+   * ordering events (the produce log) would sort it by a moment it did not occur. Absent on
+   * artifacts that failed before this field existed — readers fall back to `at` rather than
+   * inventing a timestamp. Cleared with the error.
+   */
+  errorAt?: string;
+  /**
    * The REASON this step's last produce failed to reach the server — a rejected payload's
    * offending fields, the server's own message, or {@link NO_SYNC_SINK_REASON} when there
    * was no write-through sink at all. The local store still holds the optimistic artifact
@@ -214,9 +225,12 @@ function markFailure(
   error: string,
 ): { byEntity: Record<string, Record<string, LabStepArtifact>> } {
   const prev = s.byEntity[entityId]?.[step];
+  // `at` is left alone on an existing artifact (it dates the content that survived), so the
+  // failure carries its OWN stamp — otherwise nothing records when it actually happened.
+  const errorAt = new Date().toISOString();
   const next: LabStepArtifact = prev
-    ? { ...prev, error }
-    : { done: false, data: {}, ueAssets: [], at: new Date().toISOString(), error };
+    ? { ...prev, error, errorAt }
+    : { done: false, data: {}, ueAssets: [], at: errorAt, error, errorAt };
   return { byEntity: { ...s.byEntity, [entityId]: { ...s.byEntity[entityId], [step]: next } } };
 }
 
@@ -313,6 +327,7 @@ export const useLabPipelineStore = create<LabPipelineState>()(
           if (art.done) {
             const next = { ...art };
             delete next.error;
+            delete next.errorAt; // the stamp belongs to the error; it must not outlive it
             row[step] = next;
           } else {
             // Failure-marker only: drop it so the step reads as honestly `unproduced`

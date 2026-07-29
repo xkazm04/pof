@@ -11,6 +11,7 @@ import { NextStepCoach } from '../NextStepCoach';
 import { PipelineRail } from '../PipelineRail';
 import { DriftBanner } from '../DriftBanner';
 import { ProduceErrorBanner } from '../ProduceErrorBanner';
+import { ProduceLogPanel } from '../ProduceLogPanel';
 import { RefreshFromServer } from '../RefreshFromServer';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
@@ -145,6 +146,12 @@ export function Baseline(props: Props) {
         ariaFor={(step, i) => statusAriaLabel(step, displayStatus(step, i), artifactByStep.get(step)?.tier)}
         onSelectStep={selectStep}
       />
+      {/* What this pipeline has actually run, and anything that failed on a step nobody
+          currently has open. Sits below the rail because it is entity-scoped history,
+          not per-step state. Renders nothing until something has run. */}
+      {entity && (
+        <ProduceLogPanel t={t} steps={steps} byStep={entitySteps} onJump={selectStep} />
+      )}
     </>
   );
 
