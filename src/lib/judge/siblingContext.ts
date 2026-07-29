@@ -12,12 +12,13 @@
  * never blow the judge prompt.
  */
 
+import { NON_CONTENT_KEYS } from './payload';
+
 export interface SiblingStep {
   step: string;
   data: Record<string, unknown>;
 }
 
-const HEAVY_KEYS = new Set(['genHistory', 'audioAssets', '_provenance']);
 /** Keys whose nested content is the highest-signal cross-reference surface. */
 const PRIORITY_KEYS = ['statHooks', 'crossReferences', 'crossReferenceValues'];
 
@@ -25,20 +26,33 @@ function isScalar(v: unknown): boolean {
   return v === null || ['string', 'number', 'boolean'].includes(typeof v);
 }
 
-/** A compact one-line-ish projection of a single step's config: priority blocks first, then
- *  top-level scalars and short scalar arrays. Truncated to `perStepChars`. Pure. */
-export function projectStep(data: Record<string, unknown>, perStepChars: number): string {
+/** A compact projection of one step's config: priority blocks, then top-level scalars, then —
+ *  when `includeNested` — the remaining nested objects/arrays, each capped so one fat step
+ *  cannot eat the whole budget. Truncated to `perStepChars`. Pure. */
+export function projectStep(
+  data: Record<string, unknown>,
+  perStepChars: number,
+  opts: { includeNested?: boolean } = {},
+): string {
   const parts: string[] = [];
   for (const k of PRIORITY_KEYS) {
     if (data[k] && typeof data[k] === 'object') parts.push(`${k}=${JSON.stringify(data[k])}`);
   }
   const scalars: Record<string, unknown> = {};
+  const nested: string[] = [];
+  // Per-key cap so a 400-field object cannot crowd out its siblings before truncation.
+  const perKey = Math.max(40, Math.floor(perStepChars / 3));
   for (const [k, v] of Object.entries(data)) {
-    if (HEAVY_KEYS.has(k) || PRIORITY_KEYS.includes(k)) continue;
+    if (NON_CONTENT_KEYS.has(k) || PRIORITY_KEYS.includes(k)) continue;
     if (isScalar(v)) scalars[k] = v;
     else if (Array.isArray(v) && v.length <= 8 && v.every(isScalar)) scalars[k] = v;
+    else if (opts.includeNested && v && typeof v === 'object') {
+      const j = JSON.stringify(v);
+      nested.push(`${k}=${j.length > perKey ? j.slice(0, perKey - 1) + '…' : j}`);
+    }
   }
   if (Object.keys(scalars).length) parts.push(JSON.stringify(scalars));
+  parts.push(...nested);
   const s = parts.join(' ');
   return s.length > perStepChars ? s.slice(0, perStepChars - 1) + '…' : s;
 }
@@ -48,7 +62,7 @@ export function projectStep(data: Record<string, unknown>, perStepChars: number)
 export function buildSiblingContext(
   steps: SiblingStep[],
   currentStep: string,
-  opts: { perStepChars?: number; totalChars?: number } = {},
+  opts: { perStepChars?: number; totalChars?: number; includeNested?: boolean } = {},
 ): string {
   const perStepChars = opts.perStepChars ?? 600;
   const totalChars = opts.totalChars ?? 6000;
@@ -59,7 +73,7 @@ export function buildSiblingContext(
   const lines: string[] = [];
   let used = 0;
   for (const s of others) {
-    const proj = projectStep(s.data ?? {}, perStepChars);
+    const proj = projectStep(s.data ?? {}, perStepChars, { includeNested: opts.includeNested });
     if (!proj) continue;
     const line = `- ${s.step}: ${proj}`;
     if (used + line.length > totalChars) {

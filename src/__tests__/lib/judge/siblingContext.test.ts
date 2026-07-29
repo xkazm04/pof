@@ -58,6 +58,50 @@ describe('buildSiblingContext', () => {
   });
 });
 
+describe('projectStep — nested projection (opt-in)', () => {
+  const nestedOnly = { rules: { decayPerDay: 10, tiers: ['Revered', 'Exalted'] } };
+
+  it('by default a nested-only step still projects empty (unchanged contract)', () => {
+    expect(projectStep(nestedOnly, 600)).toBe('');
+  });
+
+  it('with includeNested the step becomes visible to the judge', () => {
+    const out = projectStep(nestedOnly, 600, { includeNested: true });
+    expect(out).toContain('rules=');
+    expect(out).toContain('"decayPerDay":10');
+  });
+
+  it('still drops non-content keys even when including nested', () => {
+    const out = projectStep(
+      { genHistory: { batches: [1] }, produceDirection: { prompt: 'y' }, rules: { a: 1 } },
+      600,
+      { includeNested: true },
+    );
+    expect(out).not.toContain('genHistory');
+    expect(out).not.toContain('produceDirection');
+    expect(out).toContain('"a":1');
+  });
+
+  it('stays within the per-step budget with a huge nested object', () => {
+    const big = { rules: Object.fromEntries(Array.from({ length: 400 }, (_, i) => [`k${i}`, i])) };
+    const out = projectStep(big, 200, { includeNested: true });
+    expect(out.length).toBeLessThanOrEqual(200);
+  });
+
+  it('buildSiblingContext threads the option and respects the total budget', () => {
+    const steps = [
+      { step: 'A', data: { rules: { x: 1 } } },
+      { step: 'B', data: { rules: { y: 2 } } },
+    ];
+    expect(buildSiblingContext(steps, 'A')).toBe('');
+    const on = buildSiblingContext(steps, 'A', { includeNested: true });
+    expect(on).toContain('- B:');
+    expect(on).toContain('"y":2');
+    expect(buildSiblingContext(steps, 'A', { includeNested: true, totalChars: 10 }).length)
+      .toBeLessThanOrEqual(80);
+  });
+});
+
 describe('buildRubricPrompt canon + sibling wiring', () => {
   const base = { subject: 'items :: Tooltip', payload: '```json\n{}\n```' };
 
