@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { resolveAccept } from '../labAcceptance';
 import { buildLabCheckerContext } from '../labCheckerContext';
+import { contentDiverges } from '../labContentDrift';
 import { resolveStepAcceptance, verdictsForStep } from '@/lib/catalog/acceptance/resolveStepAcceptance';
 import { useCatalogJudgeVerdicts } from './useStepJudgeVerdicts';
 import type { AcceptanceResult } from '@/lib/catalog/acceptance/types';
@@ -19,12 +20,23 @@ import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
  */
 export type StepDisplayStatus = 'pass' | 'fail' | 'deferred' | 'pending' | 'unproduced';
 
-/** A step where the local-derived verdict and the server-stored verdict genuinely diverge.
- *  Drift is only ever flagged for a CONCRETE local pass/fail contradicting a concrete
- *  server pass/fail (never `unproduced`/`pending`/`deferred`), so `local` narrows to pass|fail. */
+/**
+ * A step where local and server genuinely diverge — in either of the two ways they can.
+ *
+ * `status` drift is a CONCRETE local pass/fail contradicting a concrete server pass/fail
+ * (never `unproduced`/`pending`, and never the sanctioned `deferred`→server resolution).
+ *
+ * `content` drift is the quieter one the lab used to be blind to: both sides report the
+ * SAME verdict, but the produced data is not the same — another session, the MCP submit
+ * path or a headless run rewrote the step and the checker still graded it identically. The
+ * verdict alone can never reveal it, so it is compared by content fingerprint
+ * (`labContentDrift.ts`).
+ */
 export interface StepDrift {
+  /** Which kind of divergence this is (see above). */
+  kind: 'status' | 'content';
   /** What the local recompute (add-only kept data) reads as. */
-  local: 'pass' | 'fail';
+  local: PipelineArtifact['status'];
   /** What the server stored (its own re-grade / runner outcome). */
   server: PipelineArtifact['status'];
 }
@@ -111,8 +123,15 @@ export function deriveEntityArtifacts(
         // nextActionableStep never heard about it. A local `deferred` resolved BY the server is
         // reconciliation, not drift — `serverVerdictOverlay` has already adopted the server's
         // verdict there, so `status === srv.status` and nothing is flagged.
-        if (srv && (status === 'pass' || status === 'fail') && (srv.status === 'pass' || srv.status === 'fail') && status !== srv.status) {
-          driftByStep.set(s, { local: status, server: srv.status });
+        // A step whose write-through is on record as failed already tells this story
+        // precisely (its own banner + rail badge + retry), so it is not double-reported here.
+        if (srv && !art.syncError) {
+          if ((status === 'pass' || status === 'fail') && (srv.status === 'pass' || srv.status === 'fail') && status !== srv.status) {
+            driftByStep.set(s, { kind: 'status', local: status, server: srv.status });
+          } else if (status === srv.status && contentDiverges(art, srv)) {
+            // Same verdict, different produced data — invisible to a status-only comparison.
+            driftByStep.set(s, { kind: 'content', local: status, server: srv.status });
+          }
         }
         return { catalogId, entityId: entity?.id ?? '', step: s, data: art.data, ueAssets: art.ueAssets, status, ...(merged.tier ? { tier: merged.tier } : {}), ...(reason ? { reason } : {}) };
       })

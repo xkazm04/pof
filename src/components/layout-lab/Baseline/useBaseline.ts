@@ -4,7 +4,8 @@ import { useLabPipelineStore, useEntitySteps, setLabSync } from '../labPipelineS
 import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 import { catalogManifest } from '../catalogManifest';
 import { postArtifact, drainGates, deleteEntityArtifacts } from '../labArtifactClient';
-import { useCachedArtifacts, invalidateArtifacts, retryArtifacts } from '../labArtifactCache';
+import { useCachedArtifacts, invalidateArtifacts, retryArtifacts, refreshArtifacts } from '../labArtifactCache';
+import type { RefreshOutcome } from '../labPipelineStore';
 import { labGrade } from '../labCheckerContext';
 import { useEntityArtifacts } from '../hooks/useEntityArtifacts';
 import { useCatalogStore } from '@/stores/catalogStore';
@@ -34,6 +35,11 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
   // Reset (local + server) state — a failed server delete must be reported, never swallowed.
   const [resetting, setResetting] = useState(false);
   const [resetError, setResetError] = useState<string | null>(null);
+  // Explicit refresh-from-server state. A refresh RECONCILES (it can adopt content and drop
+  // steps the server no longer has), so what it did is reported, never applied silently.
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
+  const [refreshOutcome, setRefreshOutcome] = useState<RefreshOutcome | null>(null);
 
   // Responsive shell: below COLLAPSE_BREAKPOINT the 580px of catalog+pipeline chrome
   // is hidden and surfaced as left slide-over drawers, leaving the canvas full-width.
@@ -241,6 +247,43 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
     }
   }, [catalogId, entityKey]);
 
+  // ── Refresh from server ────────────────────────────────────────────────────
+  // The lab could only ever ADD server truth: hydration merges verdicts but never content,
+  // never drops a step the server dropped, and the only adopt path was buried behind the
+  // drift banner (which needs a concrete pass-vs-fail disagreement to appear at all). So a
+  // catalog changed by another session, by the MCP submit path or by a headless judge run
+  // stayed stale until you happened to produce, drain, reset or hard-reload.
+  //
+  // This is the explicit ask. NOT a poll: the modules are LRU-suspended and a background
+  // timer would fight `useSuspendableEffect` — freshness is requested, never scheduled.
+  // It force-refetches through the shared cache (so every surface sees the same rows) and
+  // reconciles the local store against exactly that response — non-destructively: any step
+  // holding local work the server has not got is KEPT and reported.
+  const refreshFromServer = useCallback(async () => {
+    if (!catalogId || !entityKey) return;
+    setRefreshError(null);
+    setRefreshOutcome(null);
+    setRefreshing(true);
+    try {
+      const res = await refreshArtifacts(catalogId, entityKey);
+      if (!res.ok) { setRefreshError(res.error); return; }
+      setRefreshOutcome(useLabPipelineStore.getState().refreshEntity(entityKey, res.data.map((a) => ({
+        step: a.step,
+        artifact: {
+          done: true, data: a.data, ueAssets: a.ueAssets, at: a.updatedAt ?? new Date().toISOString(),
+          status: a.status,
+          ...(a.tier ? { tier: a.tier } : {}),
+          ...(a.reason ? { reason: a.reason } : {}),
+        },
+      }))));
+    } finally {
+      setRefreshing(false);
+    }
+  }, [catalogId, entityKey]);
+
+  // A different entity's result must never be read as this one's.
+  useEffect(() => { setRefreshOutcome(null); setRefreshError(null); }, [entityKey]);
+
   const handleSelectCatalog = (id: string) => {
     onSelectCatalog(id);
     setStepIdx(0);
@@ -277,6 +320,8 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
     retryStepSync, dismissStepSyncError,
     artifacts, artifactByStep, displayStatus, stepDone, done,
     artsLoading, artsError, retryArts,
+    refreshFromServer, refreshing, refreshError, refreshOutcome,
+    dismissRefresh: () => { setRefreshOutcome(null); setRefreshError(null); },
     driftByStep, adoptServerStep, entitySteps,
     runDrain,
     handleSelectCatalog, handleSelectEntity, selectStep,

@@ -11,6 +11,7 @@ import { NextStepCoach } from '../NextStepCoach';
 import { PipelineRail } from '../PipelineRail';
 import { DriftBanner } from '../DriftBanner';
 import { ProduceErrorBanner } from '../ProduceErrorBanner';
+import { RefreshFromServer } from '../RefreshFromServer';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { Button } from '../ui/Button';
@@ -50,6 +51,7 @@ export function Baseline(props: Props) {
     retryStepSync, dismissStepSyncError,
     artifacts, artifactByStep, displayStatus, stepDone, done,
     artsLoading, artsError, retryArts,
+    refreshFromServer, refreshing, refreshError, refreshOutcome, dismissRefresh,
     driftByStep, adoptServerStep, entitySteps,
     runDrain,
     handleSelectCatalog, handleSelectEntity, selectStep,
@@ -74,6 +76,19 @@ export function Baseline(props: Props) {
 
   const pipelineBody = (
     <>
+      {/* Always available (any catalog, any entity) — not conditional on a drift banner.
+          Hydration is add-only, so without this the only routes to server truth are side
+          effects of producing, draining, resetting or reloading. */}
+      {entity && (
+        <RefreshFromServer
+          t={t}
+          onRefresh={() => { void refreshFromServer(); }}
+          refreshing={refreshing}
+          error={refreshError}
+          outcome={refreshOutcome}
+          onDismiss={dismissRefresh}
+        />
+      )}
       {isItems && entity && (
         <div style={{ display: 'flex', gap: 8, padding: '0 18px 8px' }}>
           <Button

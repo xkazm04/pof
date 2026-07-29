@@ -2,6 +2,7 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { contentDiverges } from './labContentDrift';
 import type { CatalogLinkRef } from '@/lib/catalog/acceptance/linkCheckers';
 
 /** The key under `data` holding a generative step's candidate-batch archive
@@ -62,7 +63,45 @@ export interface LabStepArtifact {
   status?: string;
   tier?: string;
   reason?: string;
+  /**
+   * The `at` of the NEWEST server row this local artifact has been reconciled against —
+   * written by `hydrateEntity` / `refreshEntity` whenever the server is observed to hold a
+   * row for this step. Absent means "the server has never been seen holding this step".
+   *
+   * It exists so a refresh can tell the two reasons a step can be missing from the server
+   * apart, which no timestamp alone can do: content that came FROM the server and has since
+   * been deleted there (safe to reconcile away) versus local work that never reached it
+   * (must survive, and be flagged). Without it the only options were "keep every dropped
+   * step green forever" or "destroy unsynced local work" — the lab did the former.
+   */
+  serverSeen?: string;
 }
+
+/**
+ * What a {@link LabPipelineState.refreshEntity} pass actually did, so the UI can REPORT it
+ * rather than silently mutate the operator's work. Every step is accounted for in exactly
+ * one bucket.
+ */
+export interface RefreshOutcome {
+  /** Steps whose content + verdict were taken from the server (local differed). */
+  adopted: string[];
+  /** Steps the server no longer has, and which were provably server-derived — reconciled away. */
+  removed: string[];
+  /** Steps deliberately left alone because they hold local work the server does not have. */
+  kept: string[];
+  /** Steps already identical to the server (the happy path). */
+  unchanged: number;
+}
+
+/**
+ * Recorded on a step the SERVER has no row for, when the local artifact holds work that
+ * never reached it. The step keeps its content (nothing is destroyed) but stops reading as
+ * server-confirmed, and the existing sync-error affordances — the rail badge, the work
+ * canvas banner, and its "Retry" (which re-POSTs the artifact) — become the recovery path.
+ */
+export const SERVER_MISSING_REASON =
+  'Not saved to the server: a refresh found no artifact for this step on the server, ' +
+  'so this result exists only in this browser.';
 
 export type StepOutput = { data?: Record<string, unknown>; ueAssets?: string[]; links?: CatalogLinkRef[] };
 
@@ -95,6 +134,28 @@ interface LabPipelineState {
   resetEntity: (entityId: string) => void;
   /** Merge server artifacts into the cache (add-only: never overwrites/clears local steps). */
   hydrateEntity: (entityId: string, steps: { step: string; artifact: LabStepArtifact }[]) => void;
+  /**
+   * EXPLICIT, operator-triggered reconciliation with the server — the escape from add-only
+   * for a whole entity at once (`hydrateEntity` can only ever ADD).
+   *
+   * `serverSteps` is the COMPLETE set of rows the server holds for the entity, so absence is
+   * information: a step missing from it was deleted server-side. Rules, in order:
+   *  1. server has it, local doesn't → adopt it.
+   *  2. both have it, content+verdict identical → nothing (`unchanged`).
+   *  3. both have it, but local holds work the server hasn't got (a recorded `syncError`,
+   *     or a local produce STRICTLY newer than the server row) → keep local, report `kept`.
+   *     This is the "never silently overwrite unsaved produce output" guarantee.
+   *  4. both have it and differ otherwise → adopt the server's content + verdict, preserving
+   *     the local candidate history (`data.genHistory`) exactly as `adoptServer` does.
+   *  5. only local has it, and it is provably server-derived ({@link LabStepArtifact.serverSeen}
+   *     with no newer local produce) → remove it, so a step deleted server-side stops reading
+   *     green forever.
+   *  6. only local has it, and it is local work → keep it and stamp
+   *     {@link SERVER_MISSING_REASON} on it, so it is honest rather than destroyed.
+   *
+   * Returns the {@link RefreshOutcome} so the caller can SHOW what happened.
+   */
+  refreshEntity: (entityId: string, serverSteps: { step: string; artifact: LabStepArtifact }[]) => RefreshOutcome;
   /**
    * Adopt the server's artifact for ONE step, overwriting the local one so the derived
    * status matches server truth (the operator-triggered escape from the add-only default
@@ -157,6 +218,40 @@ function markFailure(
     ? { ...prev, error }
     : { done: false, data: {}, ueAssets: [], at: new Date().toISOString(), error };
   return { byEntity: { ...s.byEntity, [entityId]: { ...s.byEntity[entityId], [step]: next } } };
+}
+
+/** Parse an ISO stamp defensively — an unparseable one must never look NEWER than the server. */
+function ms(at: string | undefined): number {
+  const n = at ? Date.parse(at) : NaN;
+  return Number.isNaN(n) ? 0 : n;
+}
+
+/**
+ * Does this local artifact hold work the server has not got? True when its write-through is
+ * on record as failed, or when it was produced STRICTLY after the server's row. Either way an
+ * adoption would destroy something that exists nowhere else, so a refresh keeps it.
+ */
+function hasUnsyncedLocalWork(cur: LabStepArtifact, server: LabStepArtifact | undefined): boolean {
+  if (cur.syncError !== undefined) return true;
+  return ms(cur.at) > ms(server?.at ?? cur.serverSeen);
+}
+
+/**
+ * Is this local artifact provably a COPY of a server row (rather than local-only work)? Only
+ * such a step may be reconciled away when the server drops it. An artifact from before
+ * `serverSeen` existed has no proof either way, so it is never removed.
+ */
+function isServerDerived(cur: LabStepArtifact): boolean {
+  return cur.serverSeen !== undefined && cur.syncError === undefined && ms(cur.at) <= ms(cur.serverSeen);
+}
+
+/** Take the server's artifact while preserving the local candidate archive (see `adoptServer`). */
+function withLocalHistory(server: LabStepArtifact, cur: LabStepArtifact | undefined): LabStepArtifact {
+  const prevHistory = (cur?.data as Record<string, unknown> | undefined)?.[GEN_HISTORY_KEY];
+  const data = prevHistory !== undefined && server.data?.[GEN_HISTORY_KEY] === undefined
+    ? { ...server.data, [GEN_HISTORY_KEY]: prevHistory }
+    : server.data;
+  return { ...server, data, serverSeen: server.at };
 }
 
 export const useLabPipelineStore = create<LabPipelineState>()(
@@ -255,7 +350,10 @@ export const useLabPipelineStore = create<LabPipelineState>()(
           const merged = { ...existing };
           for (const { step, artifact } of steps) {
             const cur = merged[step];
-            if (!cur) { merged[step] = artifact; changed = true; continue; }
+            // A first sighting is adopted whole, and STAMPED with the server row it came
+            // from (`serverSeen`) — that stamp is what later lets `refreshEntity` tell a
+            // server-derived step from local-only work when the server drops the row.
+            if (!cur) { merged[step] = { ...artifact, serverSeen: artifact.at }; changed = true; continue; }
             // ADD-ONLY still holds for CONTENT (data/ueAssets are never overwritten here —
             // that stays an explicit `adoptServer`). The server's VERDICT is a different
             // thing: a gate drain resolves L3/L4 server-side, so its status/tier/reason are
@@ -271,18 +369,72 @@ export const useLabPipelineStore = create<LabPipelineState>()(
               cur.syncError !== undefined && Date.parse(artifact.at) >= Date.parse(cur.at);
             const verdictChanged =
               cur.status !== artifact.status || cur.tier !== artifact.tier || cur.reason !== artifact.reason;
-            if (verdictChanged || staleSyncError) {
+            // Record the server row we just observed, even when nothing else moved: it is
+            // pure provenance (never content, never a verdict) and it is what makes a later
+            // refresh able to reconcile a server-side deletion instead of guessing.
+            const seenChanged = cur.serverSeen !== artifact.at;
+            if (verdictChanged || staleSyncError || seenChanged) {
               const next: LabStepArtifact = { ...cur };
               if (artifact.status === undefined) delete next.status; else next.status = artifact.status;
               if (artifact.tier === undefined) delete next.tier; else next.tier = artifact.tier;
               if (artifact.reason === undefined) delete next.reason; else next.reason = artifact.reason;
               if (staleSyncError) delete next.syncError;
+              next.serverSeen = artifact.at;
               merged[step] = next;
               changed = true;
             }
           }
           return changed ? { byEntity: { ...s.byEntity, [entityId]: merged } } : s;
         }),
+
+      refreshEntity: (entityId, serverSteps) => {
+        const outcome: RefreshOutcome = { adopted: [], removed: [], kept: [], unchanged: 0 };
+        set((s) => {
+          const existing = s.byEntity[entityId] ?? {};
+          const next: Record<string, LabStepArtifact> = {};
+          const serverByStep = new Map(serverSteps.map((x) => [x.step, x.artifact]));
+          let changed = false;
+
+          for (const { step, artifact } of serverSteps) {
+            const cur = existing[step];
+            if (!cur) { next[step] = { ...artifact, serverSeen: artifact.at }; changed = true; outcome.adopted.push(step); continue; }
+            const adopted = withLocalHistory(artifact, cur);
+            const sameVerdict = cur.status === adopted.status && cur.tier === adopted.tier && cur.reason === adopted.reason;
+            if (sameVerdict && !contentDiverges(cur, adopted)) {
+              // Already the server's truth. Only the provenance stamp may need refreshing.
+              outcome.unchanged += 1;
+              if (cur.serverSeen !== artifact.at || cur.syncError !== undefined) {
+                const stamped = { ...cur, serverSeen: artifact.at };
+                delete stamped.syncError; // the server demonstrably holds this exact content
+                next[step] = stamped;
+                changed = true;
+              } else next[step] = cur;
+              continue;
+            }
+            if (hasUnsyncedLocalWork(cur, artifact)) {
+              // Local work the server has not got — a refresh must never destroy it.
+              outcome.kept.push(step);
+              next[step] = cur;
+              continue;
+            }
+            next[step] = adopted;
+            outcome.adopted.push(step);
+            changed = true;
+          }
+
+          for (const step of Object.keys(existing)) {
+            if (serverByStep.has(step)) continue;
+            const cur = existing[step];
+            if (isServerDerived(cur)) { outcome.removed.push(step); changed = true; continue; }
+            outcome.kept.push(step);
+            next[step] = cur.syncError === SERVER_MISSING_REASON ? cur : { ...cur, syncError: SERVER_MISSING_REASON };
+            if (next[step] !== cur) changed = true;
+          }
+
+          return changed ? { byEntity: { ...s.byEntity, [entityId]: next } } : s;
+        });
+        return outcome;
+      },
 
       adoptServer: (entityId, step, artifact, opts) =>
         set((s) => {
@@ -292,7 +444,9 @@ export const useLabPipelineStore = create<LabPipelineState>()(
           const data = !opts?.replaceHistory && prevHistory !== undefined
             ? { ...artifact.data, [GEN_HISTORY_KEY]: prevHistory }
             : artifact.data;
-          return { byEntity: { ...s.byEntity, [entityId]: { ...s.byEntity[entityId], [step]: { ...artifact, data } } } };
+          // Stamp the server row this adoption came from, so a later refresh can tell the
+          // step apart from local-only work if the server ever drops it.
+          return { byEntity: { ...s.byEntity, [entityId]: { ...s.byEntity[entityId], [step]: { ...artifact, data, serverSeen: artifact.at } } } };
         }),
     }),
     { name: 'pof-lab-pipeline', storage: createJSONStorage(() => localStorage) },

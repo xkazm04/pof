@@ -94,10 +94,16 @@ export function useGlobalCoach(topN = Number.POSITIVE_INFINITY): GlobalCoachResu
   const catalogIds = useMemo(() => CATALOG_SECTIONS.map((s) => s.catalogId), []);
 
   // Kick off one deduped whole-catalog fetch per catalog. `ensureArtifacts` is a
-  // no-op once loading/loaded, so this can't storm on re-render.
+  // no-op once loading/loaded/errored, so this can't storm on re-render.
+  //
+  // `version` is a REAL dependency, not decoration: with `[catalogIds]` alone this effect
+  // fired exactly once, so a catalog whose entry was dropped by `invalidateArtifacts` (a
+  // produce, a drain, a refresh) was never re-fetched — the coach sat on `loading: true`
+  // forever for it. Re-running on every cache mutation costs 33 Map lookups and converges
+  // immediately (a no-op ensure emits nothing, so it cannot feed itself).
   useEffect(() => {
     for (const c of catalogIds) ensureArtifacts(c);
-  }, [catalogIds]);
+  }, [catalogIds, version]);
 
   // Verdicts grouped ONCE per verdict-list identity, so each catalog's slice keeps a
   // stable reference across renders (it is one of the per-catalog cache's dependencies).

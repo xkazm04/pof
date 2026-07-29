@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore, useEffect } from 'react';
 import { fetchArtifactsResult } from './labArtifactClient';
+import type { Result } from '@/types/result';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 
 /**
@@ -19,6 +20,9 @@ import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
  *   errored key never auto-retries, or a 500 would spin a fetch loop).
  * - `invalidateArtifacts(catalogId[, entityId])` drops the matching keys — called on
  *   produce (write-through) and drain — so the next read refetches server truth.
+ * - `refreshArtifacts(catalogId[, entityId])` FORCES a refetch and returns the rows: the
+ *   explicit, user-initiated "refresh from server". Nothing here polls — the modules are
+ *   LRU-suspended, so a timer would fight `useSuspendableEffect`; freshness is asked for.
  * - Stale responses are discarded via a per-key request sequence, so an invalidation
  *   or key switch mid-flight can never clobber the cache with a superseded result.
  *
@@ -128,6 +132,40 @@ export function retryArtifacts(catalogId: string, entityId?: string): void {
   store.delete(key);
   emit();
   ensureArtifacts(catalogId, entityId);
+}
+
+/**
+ * FORCE a refetch for a key and hand the caller the result — the explicit,
+ * user-initiated "refresh from server" path.
+ *
+ * It differs from {@link ensureArtifacts} (no-op when loaded/errored) and from
+ * {@link invalidateArtifacts} (drops the entry and hopes a subscriber's effect refetches)
+ * in the two ways a refresh needs: it always issues the request, and it RETURNS the rows,
+ * so the caller can reconcile the local store against exactly the response it just stored
+ * — no second fetch, and no race with whichever effect happens to re-`ensure` first.
+ *
+ * A per-entity refresh also drops the whole-catalog key, so the matrix and the coach
+ * re-read that catalog rather than keeping a snapshot this refresh has just disproved.
+ * Stale-response handling matches `ensureArtifacts`: a superseded result is returned to
+ * the caller but never written to the cache.
+ */
+export async function refreshArtifacts(catalogId: string, entityId?: string): Promise<Result<PipelineArtifact[], string>> {
+  const key = keyFor(catalogId, entityId);
+  const seq = (seqByKey.get(key) ?? 0) + 1;
+  seqByKey.set(key, seq);
+  store.set(key, LOADING);
+  emit();
+  const res = await fetchArtifactsResult(catalogId, entityId);
+  if (seqByKey.get(key) !== seq) return res; // superseded — never clobber newer truth
+  store.set(key, res.ok
+    ? { loading: false, arts: res.data, loaded: true, error: null }
+    : { loading: false, arts: NO_ARTS, loaded: false, error: res.error });
+  if (entityId && store.has(catalogId)) {
+    seqByKey.set(catalogId, (seqByKey.get(catalogId) ?? 0) + 1);
+    store.delete(catalogId);
+  }
+  emit();
+  return res;
 }
 
 /**

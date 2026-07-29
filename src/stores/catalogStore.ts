@@ -123,13 +123,26 @@ export const useCatalogStore = create<CatalogState>()(
     {
       name: 'pof-catalog',
       storage: createJSONStorage(() => localStorage),
-      // Re-seed any catalog the persisted blob is missing, so newly-added seed
-      // entries appear after a code update without wiping persisted ones.
+      // Re-seed any seed ENTITY the persisted blob is missing, so newly-added seed entries
+      // appear after a code update without wiping persisted ones.
+      //
+      // The merge has to run one level deeper than it looks. A per-CATALOG spread
+      // (`{...current.entitiesByCatalog, ...persisted.entitiesByCatalog}`) replaces each
+      // seeded catalog wholesale with whatever the persisted blob holds for it, so a newly
+      // seeded entity added to an EXISTING catalog never appeared for a returning user —
+      // only an entirely new catalog id did. Merging per entity keeps the persisted row
+      // authoritative where it exists (edits, lifecycle, ueAssets survive) while letting new
+      // seed entities through.
       merge: (persisted, current) => {
         const p = persisted as Partial<CatalogState> | undefined;
+        const persistedByCatalog = p?.entitiesByCatalog ?? {};
+        const entitiesByCatalog: Record<string, Record<string, CatalogEntityBase>> = { ...current.entitiesByCatalog };
+        for (const [catalogId, entities] of Object.entries(persistedByCatalog)) {
+          entitiesByCatalog[catalogId] = { ...(entitiesByCatalog[catalogId] ?? {}), ...entities };
+        }
         return {
           ...current,
-          entitiesByCatalog: { ...current.entitiesByCatalog, ...(p?.entitiesByCatalog ?? {}) },
+          entitiesByCatalog,
           draftEntitiesByCatalog: { ...(p?.draftEntitiesByCatalog ?? {}) },
         };
       },

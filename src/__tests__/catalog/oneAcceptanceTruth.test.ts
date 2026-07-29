@@ -103,16 +103,17 @@ describe('one acceptance truth — a judge-failed step reads the same on every s
   it('surfaces bridge-vs-server divergence as drift (the pre-bridge comparison hid it)', () => {
     // The server row still carries the PURE checker pass (write paths persist raw, by design),
     // while the judge condemns the same content → the screen says fail, the server says pass.
-    const srv: PipelineArtifact = { catalogId: CATALOG, entityId: entity.id, step: STEP, data: {}, ueAssets: [], status: 'pass' };
+    // Same CONTENT on both sides, so only the verdict can diverge (content drift is its own case).
+    const srv: PipelineArtifact = { catalogId: CATALOG, entityId: entity.id, step: STEP, data: { __status: 'pass' }, ueAssets: [], status: 'pass' };
     const { driftByStep } = deriveEntityArtifacts(CATALOG, entity, steps, localSteps, { [STEP]: srv }, {}, [judgeFail]);
-    expect(driftByStep.get(STEP)).toEqual({ local: 'fail', server: 'pass' });
+    expect(driftByStep.get(STEP)).toEqual({ kind: 'status', local: 'fail', server: 'pass' });
   });
 
   it('a server-resolved deferred gate is reconciliation, never drift', () => {
     const gateSteps: Record<string, LabStepArtifact> = {
       [STEP]: { done: true, data: { __status: 'deferred' }, ueAssets: [], at: '' },
     };
-    const srv: PipelineArtifact = { catalogId: CATALOG, entityId: entity.id, step: STEP, data: {}, ueAssets: [], status: 'pass' };
+    const srv: PipelineArtifact = { catalogId: CATALOG, entityId: entity.id, step: STEP, data: { __status: 'deferred' }, ueAssets: [], status: 'pass' };
     const { driftByStep, displayStatus } = deriveEntityArtifacts(CATALOG, entity, [STEP], gateSteps, { [STEP]: srv });
     expect(displayStatus(STEP, 0)).toBe('pass');
     expect(driftByStep.size).toBe(0);

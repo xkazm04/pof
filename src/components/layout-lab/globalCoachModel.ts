@@ -130,7 +130,13 @@ export function buildCatalogCandidates(cin: CoachCatalogInput, verdicts: JudgeVe
     // for a pending step (nothing has run yet) → the row shows the generic hint.
     const drift = driftByStep.get(issue.step);
     const reason = issue.priority === 'drift'
-      ? (drift ? `local reads ${drift.local}, server says ${drift.server}` : undefined)
+      ? (drift
+        ? (drift.kind === 'content'
+          // Naming the (identical) verdicts here would read as a contradiction that isn't
+          // one — the point of content drift is that the verdicts agree.
+          ? `both read ${drift.server}, but the produced content differs from the server`
+          : `local reads ${drift.local}, server says ${drift.server}`)
+        : undefined)
       : artifactByStep.get(issue.step)?.reason;
     candidates.push({
       catalogId: cin.catalogId,

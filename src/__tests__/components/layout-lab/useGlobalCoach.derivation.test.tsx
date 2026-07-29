@@ -60,7 +60,7 @@ vi.mock('@/components/layout-lab/labCheckerContext', async (orig) => {
 import { useGlobalCoach, _resetGlobalCoachCache } from '@/components/layout-lab/hooks/useGlobalCoach';
 import { buildGlobalCoach, type CoachCatalogInput } from '@/components/layout-lab/globalCoachModel';
 import { resolveCatalogSteps } from '@/components/layout-lab/catalogManifest';
-import { _resetArtifactCache, invalidateArtifacts } from '@/components/layout-lab/labArtifactCache';
+import { _resetArtifactCache, invalidateArtifacts, getCachedArtifacts } from '@/components/layout-lab/labArtifactCache';
 import { invalidateJudgeVerdicts } from '@/components/layout-lab/hooks/useStepJudgeVerdicts';
 import { CATALOG_SECTIONS } from '@/lib/catalog/sections';
 import { useCatalogStore } from '@/stores/catalogStore';
@@ -142,9 +142,15 @@ describe('useGlobalCoach — whole-fleet derivation cost', () => {
     h.counts.ctx = 0;
     await act(async () => { invalidateArtifacts(catalogId); });
     await act(async () => { await Promise.resolve(); });
+    await waitFor(() => expect(getCachedArtifacts(catalogId).loaded).toBe(true));
 
-    // Exactly the one catalog whose artifacts changed.
-    expect(h.counts.steps).toBe(1);
+    // Exactly the ONE catalog whose artifacts changed — the other 30+ are untouched.
+    // Twice, not once: the entry is dropped (one pass) and the refetch lands (a second).
+    // The second pass is the point — an invalidated catalog MUST re-fetch. It previously
+    // did not: this hook's `ensureArtifacts` effect keyed on `[catalogIds]` alone, so it
+    // fired once for the lifetime of the hook and a dropped entry was never re-read
+    // (`loaded` below would have stayed false and the coach would sit on stale advice).
+    expect(h.counts.steps).toBe(2);
   });
 
   it('IDENTICAL ADVICE: the cached hook output equals a straight call to the pure model', async () => {

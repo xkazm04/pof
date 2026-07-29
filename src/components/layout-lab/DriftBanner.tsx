@@ -39,10 +39,20 @@ export function DriftBanner({ t, step, drift, hasHistory, onAdopt }: DriftBanner
       }}
     >
       <span aria-hidden style={{ color: t.bad, fontWeight: 700 }}>⚠</span>
-      <span style={{ fontSize: 14, color: t.text }}>
-        Server truth differs for this step — local reads{' '}
-        <strong style={{ color: t.inkDeep }}>{STATUS_GLYPH[drift.local]} {STATUS_WORD[drift.local]}</strong>, server has{' '}
-        <strong style={{ color: t.inkDeep }}>{STATUS_GLYPH[drift.server]} {STATUS_WORD[drift.server]}</strong>.
+      <span style={{ fontSize: 14, color: t.text }} data-drift-kind={drift.kind}>
+        {drift.kind === 'status' ? (
+          <>
+            Server truth differs for this step — local reads{' '}
+            <strong style={{ color: t.inkDeep }}>{STATUS_GLYPH[drift.local]} {STATUS_WORD[drift.local]}</strong>, server has{' '}
+            <strong style={{ color: t.inkDeep }}>{STATUS_GLYPH[drift.server]} {STATUS_WORD[drift.server]}</strong>.
+          </>
+        ) : (
+          <>
+            Server CONTENT differs for this step — both read{' '}
+            <strong style={{ color: t.inkDeep }}>{STATUS_GLYPH[drift.server]} {STATUS_WORD[drift.server]}</strong>, but the
+            produced data is not the same. The verdicts agree, so nothing else would have told you.
+          </>
+        )}
       </span>
       <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
         {hasHistory && (

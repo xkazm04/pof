@@ -31,8 +31,14 @@ function seed(steps: Record<string, { status?: string; tier?: string }>): Record
   return out;
 }
 
-function srv(step: string, status: PipelineArtifact['status']): PipelineArtifact {
-  return { catalogId: 'items', entityId: 'e1', step, data: {}, ueAssets: [], status };
+function srv(step: string, status: PipelineArtifact['status'], data: Record<string, unknown> = {}): PipelineArtifact {
+  return { catalogId: 'items', entityId: 'e1', step, data, ueAssets: [], status };
+}
+
+/** The server row a `seed({ step: {status, tier} })` local artifact was synced FROM — same
+ *  content, so only the verdict can differ. Content drift is asserted explicitly below. */
+function srvMatching(step: string, status: PipelineArtifact['status'], local: { status?: string; tier?: string }): PipelineArtifact {
+  return srv(step, status, { ...(local.status ? { __status: local.status } : {}), ...(local.tier ? { __tier: local.tier } : {}) });
 }
 
 describe('deriveEntityArtifacts — server overlay rule', () => {
@@ -124,21 +130,61 @@ describe('deriveEntityArtifacts — server↔local drift', () => {
   it('flags drift when a concrete local verdict contradicts a concrete server verdict', () => {
     // Local recompute says pass; the server re-graded the same step to fail. Add-only
     // hydration keeps the local `pass` on screen, so this MUST surface as drift.
-    const { driftByStep, artifactByStep } = deriveEntityArtifacts('items', entity, steps, seed({ Economy: { status: 'pass' } }), { Economy: srv('Economy', 'fail') });
-    expect(driftByStep.get('Economy')).toEqual({ local: 'pass', server: 'fail' });
+    const { driftByStep, artifactByStep } = deriveEntityArtifacts('items', entity, steps, seed({ Economy: { status: 'pass' } }), { Economy: srvMatching('Economy', 'fail', { status: 'pass' }) });
+    expect(driftByStep.get('Economy')).toEqual({ kind: 'status', local: 'pass', server: 'fail' });
     expect(artifactByStep.get('Economy')?.status).toBe('pass'); // display stays local (no auto-clobber)
   });
 
   it('does NOT flag drift for the sanctioned deferred→server overlay (that is resolution)', () => {
     // Local deferred + server pass is the L3/L4 gate overlay, not drift — the server
     // verdict is adopted into the displayed status, and nothing needs operator action.
-    const { driftByStep, artifactByStep } = deriveEntityArtifacts('items', entity, steps, seed({ Economy: { status: 'deferred', tier: 'L3' } }), { Economy: srv('Economy', 'pass') });
+    const local = { status: 'deferred', tier: 'L3' };
+    const { driftByStep, artifactByStep } = deriveEntityArtifacts('items', entity, steps, seed({ Economy: local }), { Economy: srvMatching('Economy', 'pass', local) });
     expect(driftByStep.size).toBe(0);
     expect(artifactByStep.get('Economy')?.status).toBe('pass');
   });
 
   it('does NOT flag drift when local and server agree', () => {
-    const { driftByStep } = deriveEntityArtifacts('items', entity, steps, seed({ Economy: { status: 'pass' } }), { Economy: srv('Economy', 'pass') });
+    const { driftByStep } = deriveEntityArtifacts('items', entity, steps, seed({ Economy: { status: 'pass' } }), { Economy: srvMatching('Economy', 'pass', { status: 'pass' }) });
+    expect(driftByStep.size).toBe(0);
+  });
+
+  it('flags CONTENT drift when the verdicts agree but the produced data differs', () => {
+    // The divergence a status-only comparison can never see: another session (or the MCP
+    // submit path) rewrote the step's data and the checker still graded it `pass`.
+    const { driftByStep } = deriveEntityArtifacts('items', entity, steps, seed({ Economy: { status: 'pass' } }), {
+      Economy: srv('Economy', 'pass', { __status: 'pass', goldPerHour: 42 }),
+    });
+    expect(driftByStep.get('Economy')).toEqual({ kind: 'content', local: 'pass', server: 'pass' });
+  });
+
+  it('flags CONTENT drift on a differing UE asset manifest (order-insensitive)', () => {
+    const local = seed({ Economy: { status: 'pass' } });
+    local.Economy.ueAssets = ['/Game/A', '/Game/B'];
+    const reordered = srvMatching('Economy', 'pass', { status: 'pass' });
+    reordered.ueAssets = ['/Game/B', '/Game/A'];
+    expect(deriveEntityArtifacts('items', entity, steps, local, { Economy: reordered }).driftByStep.size).toBe(0);
+    const extra = srvMatching('Economy', 'pass', { status: 'pass' });
+    extra.ueAssets = ['/Game/A', '/Game/B', '/Game/C'];
+    expect(deriveEntityArtifacts('items', entity, steps, local, { Economy: extra }).driftByStep.get('Economy')?.kind).toBe('content');
+  });
+
+  it('ignores the SERVER-STAMPED `_provenance` key (or every produced step would read as drifted)', () => {
+    // `/api/pipeline-artifacts` POST stamps `_provenance` onto what it persists, so the row
+    // that comes back ALWAYS carries a key the local artifact never had.
+    const { driftByStep } = deriveEntityArtifacts('items', entity, steps, seed({ Economy: { status: 'pass' } }), {
+      Economy: srv('Economy', 'pass', { __status: 'pass', _provenance: { engine: 'stub', promptVersion: '7' } }),
+    });
+    expect(driftByStep.size).toBe(0);
+  });
+
+  it('does NOT double-report content drift for a step whose write-through is already flagged', () => {
+    // The sync-error banner + rail badge + retry already tell this story precisely.
+    const local = seed({ Economy: { status: 'pass' } });
+    local.Economy.syncError = 'Not saved to the server: HTTP 500';
+    const { driftByStep } = deriveEntityArtifacts('items', entity, steps, local, {
+      Economy: srv('Economy', 'pass', { __status: 'pass', stale: true }),
+    });
     expect(driftByStep.size).toBe(0);
   });
 

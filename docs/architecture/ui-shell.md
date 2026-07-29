@@ -31,10 +31,10 @@ rollup strip.
 | `src/components/layout-lab/globalCoachModel.ts` | Pure model for `GlobalCoach`: `pickEntityIssue` (alias of `pickLadderIssue`) / `rankCoachCandidates` / `buildCatalogCandidates` (ONE catalog — the memoizable unit) / `groupVerdictsByCatalog` / `buildGlobalCoach` = group + per-catalog + rank (reuses `deriveEntityArtifacts` — no new status logic). Candidates carry `stepIndex` + optional `reason`; `unproduced` (never-produced) ranks LAST, labelled honestly, so real in-flight work always outranks "start something new" |
 | `src/components/layout-lab/hooks/useGlobalCoach.ts` | Aggregation hook: one deduped whole-catalog fetch per catalog via the shared cache, memoized on `useArtifactCacheVersion()` so the ranked list fills in progressively without a per-catalog hook. **Derives per catalog, not per fleet** — a module-scoped `catalogId → (deps-by-reference, candidates)` memo (`_resetGlobalCoachCache()` is the test seam) means a catalog is re-derived only when its OWN entities / artifacts / verdicts / local steps change, so a landing fetch or a produce in one catalog leaves the other 30 untouched. Returns the FULL ranked list; the top-N cut is `GlobalCoach`'s presentation decision |
 | `src/components/layout-lab/LabBridgeStrip.tsx` | Compact UE bridge status dot+label; reads `usePofBridgeStore` (display-only) |
-| `src/components/layout-lab/labPipelineStore.ts` | Zustand persisted store (`pof-lab-pipeline`); `produce/produceFrom/fail/clearError/setSyncError/resetEntity/hydrateEntity/adoptServer`; module-level `_labSync` function pointer. `produce`/`produceFrom` call `fail` themselves when a dispatch throws (then re-raise), so a failed produce always leaves an artifact-level `error` — recorded NON-destructively (previously produced content survives) |
+| `src/components/layout-lab/labPipelineStore.ts` | Zustand persisted store (`pof-lab-pipeline`); `produce/produceFrom/fail/clearError/setSyncError/resetEntity/hydrateEntity/adoptServer`; module-level `_labSync` function pointer. `produce`/`produceFrom` call `fail` themselves when a dispatch throws (then re-raise), so a failed produce always leaves an artifact-level `error` — recorded NON-destructively (previously produced content survives). Also `refreshEntity` — the EXPLICIT reconciliation that may adopt server content and drop a step the server no longer has (see "Refresh from server"), and the `serverSeen` provenance stamp that makes that safe |
 | `src/components/layout-lab/ProduceErrorBanner.tsx` | Work-canvas banner for a step's recorded produce failure (`artifact.error`) + Dismiss (`clearError`). No retry button — the Produce panel below owns the prompt and already offers "Retry with same prompt" |
 | `src/components/layout-lab/labArtifactClient.ts` | `fetchArtifactsResult` (`Result` — keeps the failure; what the cache reads), its lossy `fetchArtifacts` wrapper (`[]` on failure, for the read-only /status aggregations), `postArtifact`, `drainGates` (single entity, for the per-entity coach drain), and `drainCatalogGates(catalogId, entityIds)` (409-aware whole-catalog BATCH drain returning ok/locked/error) — thin wrappers around `/api/pipeline-artifacts` |
-| `src/components/layout-lab/labArtifactCache.ts` | Shared artifact-fetch cache (`useCachedArtifacts`, `invalidateArtifacts`, `retryArtifacts`) — one deduped fetch path + LOADING / EMPTY / **ERROR** states for Baseline + Matrix. A failed GET is stored as an explicit `error` (never as a successful empty load) and never auto-retries. Also exposes `getCachedArtifacts` (non-hook read) + `useArtifactCacheVersion` (change signal) for the cross-catalog coach aggregation. **Notifications are coalesced onto a microtask** (the store is still mutated synchronously, so a same-tick `getCachedArtifacts` sees the new truth) — the homepage fans out one fetch per catalog and each key emits at least twice, which used to wake every subscriber ~2N times per paint. All zero-data entries (empty / loading / error) share ONE `arts` array reference, so a consumer memoizing on `arts` pays nothing for the empty→loading flip, which carries no artifact news |
+| `src/components/layout-lab/labArtifactCache.ts` | Shared artifact-fetch cache (`useCachedArtifacts`, `invalidateArtifacts`, `retryArtifacts`, `refreshArtifacts` — the user-initiated force-refetch that RETURNS the rows; nothing here polls) — one deduped fetch path + LOADING / EMPTY / **ERROR** states for Baseline + Matrix. A failed GET is stored as an explicit `error` (never as a successful empty load) and never auto-retries. Also exposes `getCachedArtifacts` (non-hook read) + `useArtifactCacheVersion` (change signal) for the cross-catalog coach aggregation. **Notifications are coalesced onto a microtask** (the store is still mutated synchronously, so a same-tick `getCachedArtifacts` sees the new truth) — the homepage fans out one fetch per catalog and each key emits at least twice, which used to wake every subscriber ~2N times per paint. All zero-data entries (empty / loading / error) share ONE `arts` array reference, so a consumer memoizing on `arts` pays nothing for the empty→loading flip, which carries no artifact news |
 | `src/components/layout-lab/catalogManifest.ts` | Single per-catalog resolver over section · steps · grader · bespoke-UI (`resolveCatalogSteps`, `isBespokeCatalog`) |
 | `src/components/layout-lab/matrixRows.ts` | `buildMatrixRows` — CatalogMatrix rows via the shared `deriveEntityArtifacts` path (one status code path with the rail). Blockers read the checker `reason` carried on each derived artifact (no second `resolveAccept` pass) |
 | `src/components/layout-lab/DriftBanner.tsx` | Server↔local drift banner + "adopt server truth" affordance (preserves `genHistory` unless confirmed) |
@@ -267,7 +267,9 @@ Key properties: **concurrent readers of a key share one fetch** (no storm); a pe
 sequence **discards stale in-flight responses**; and `invalidateArtifacts(catalogId[, entityId])` —
 called on **produce** (write-through) and **drain** — drops the matching keys so the next read
 refetches the server-graded verdict. `hydrateEntity` (store) only adds steps not already present in
-the local cache; it never overwrites or clears existing local state.
+the local cache; it never overwrites or clears existing local state — the explicit
+`refreshArtifacts` + `refreshEntity` pair is the one path that can adopt content or reconcile a
+deletion (see "Refresh from server" below).
 
 **A failed fetch is not an empty catalog.** Every GET failure used to be folded into `[]` and cached
 as a SUCCESSFUL empty load, so a dead server / 500 / offline moment rendered as "nothing has been
@@ -438,15 +440,62 @@ Because the server **re-grades every artifact POST** (`app/api/pipeline-artifact
 add-only rule can leave the local verdict and the server verdict genuinely diverged. That divergence
 is now made **visible** rather than silent:
 
-- `deriveEntityArtifacts` returns a `driftByStep: Map<step, {local, server}>` — a step where a
-  concrete local `pass`/`fail` contradicts a concrete server `pass`/`fail`. (The sanctioned
-  `deferred`→server overlay is *resolution*, not drift, and is excluded.)
+- `deriveEntityArtifacts` returns a `driftByStep: Map<step, {kind, local, server}>` with two kinds:
+  - `status` — a concrete local `pass`/`fail` contradicts a concrete server `pass`/`fail`. (The
+    sanctioned `deferred`→server overlay is *resolution*, not drift, and is excluded.)
+  - `content` — the verdicts AGREE but the produced data differs, compared by fingerprint
+    (`labContentDrift.ts` → `contentDiverges`). This is the quiet case a status-only comparison can
+    never see: another session, the MCP submit path or a headless run rewrites a step and the
+    checker still grades it identically. The fingerprint excludes `genHistory` (the gallery's kept
+    re-roll log, deliberately preserved across an adopt) and `_provenance` (stamped SERVER-SIDE by
+    the POST route's `stampPromptVersion`, so the row that comes back always carries a key the local
+    artifact never had — without stripping it, every produced step would read as drifted).
+  A step whose write-through is already flagged (`syncError`) is not double-reported as drift.
 - The pipeline rail marks a drifted step with a `≠` badge; the work canvas shows a `DriftBanner`
   naming both verdicts (in words + glyph, never hue-only) with an **"Adopt server truth"** affordance.
+  A `content` drift is phrased as such — claiming a verdict contradiction that does not exist would
+  hide the real news.
 - Adopting calls `adoptServer(entityId, step, artifact, opts)` — it overwrites the local step with the
   server artifact so the derived status matches server truth, but **preserves the local candidate
   history (`data.genHistory`) by default**; replacing it requires an explicit checkbox confirmation.
   A re-roll archive is never silently destroyed.
+
+### Refresh from server — the explicit reconciliation
+
+Add-only hydration can only ever ADD, and `invalidateArtifacts` fires only as a side effect of a
+produce, a drain or a reset. So a catalog changed by another session, by the MCP submit path or by a
+headless judge run stayed stale until you happened to do one of those, or hard-reloaded. The lab now
+offers an unconditional **"⟳ Refresh from server"** (`RefreshFromServer.tsx`, in the pipeline column
+for every catalog — not buried behind a banner that needs a pass-vs-fail contradiction to appear).
+
+There is deliberately **no poll**: lab modules are LRU-suspended, so a background timer would fight
+`useSuspendableEffect`. Freshness is asked for, never scheduled.
+
+```
+refreshArtifacts(catalogId, entityId)     force a refetch through the shared cache, RETURN the rows
+  → labPipelineStore.refreshEntity(...)   reconcile the local store against exactly that response
+  → RefreshOutcome { adopted, removed, kept, unchanged }   reported on screen, never silent
+```
+
+`refreshEntity` is the only path that may adopt server CONTENT wholesale or DROP a step, so its rules
+are explicit (and pinned by `labPipelineStore.refresh.test.ts`):
+
+| local | server | result |
+|-------|--------|--------|
+| absent | present | adopt |
+| present, identical | present | `unchanged` (only the provenance stamp refreshes) |
+| present, holds work the server has not got (`syncError`, or a produce strictly newer than the row) | present | **kept** — a refresh never overwrites unsaved produce output |
+| present, otherwise different | present | adopt (local `data.genHistory` preserved, as `adoptServer`) |
+| present, provably server-derived | absent | **removed** — a step deleted server-side stops reading green forever |
+| present, local-only work | absent | kept + stamped `SERVER_MISSING_REASON`, so the existing sync-error banner/badge/**Retry** (which re-POSTs it) becomes the recovery path |
+
+"Provably server-derived" is `LabStepArtifact.serverSeen` — the `at` of the newest server row the step
+has been reconciled against, written by `hydrateEntity`/`adoptServer`/`refreshEntity`. No timestamp
+alone can tell "came from the server and was then deleted there" from "never reached the server", and
+guessing either way is destructive; an artifact that predates the stamp is never removed.
+
+Adopting content changes the artifact's content hash, so any standing judge verdict bound to the old
+content correctly stops applying (see `judgeBridge`'s `VERDICT: STALE`).
 
 **One status code path.** `CatalogMatrix` derives its cells through the *same* `deriveEntityArtifacts`
 path as the rail (`buildMatrixRows` — the add-only merge of local store OVER server artifacts, then

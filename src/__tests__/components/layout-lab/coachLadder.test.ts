@@ -7,7 +7,7 @@ import type { StepDisplayStatus, StepDrift } from '@/components/layout-lab/hooks
 
 const steps = ['A', 'B', 'C', 'D'];
 const statuses = (list: StepDisplayStatus[]) => (_s: string, i: number) => list[i];
-const drift = (step: string) => new Map<string, StepDrift>([[step, { local: 'pass', server: 'fail' }]]);
+const drift = (step: string) => new Map<string, StepDrift>([[step, { kind: 'status', local: 'pass', server: 'fail' }]]);
 const noDrift = new Map<string, StepDrift>();
 
 describe('coachLadder — the ONE documented priority order', () => {
