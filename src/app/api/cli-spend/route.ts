@@ -7,13 +7,16 @@ import {
   setBudgetConfig,
   getTaskTypeEstimate,
 } from '@/lib/cli-spend-db';
-import { evaluatePreflight } from '@/lib/cli-spend/preflight';
+import { evaluatePreflight, taskTypeLabel } from '@/lib/cli-spend/preflight';
+import { resolveDispatchModelChoice, taskClassForDispatchType } from '@/lib/model-policy';
+import type { DispatchPlan } from '@/lib/cli-spend/dispatchPlan';
 import type { BudgetConfig } from '@/types/cli-spend';
 
 // GET /api/cli-spend
 //   ?action=dashboard                        → full spend dashboard (default)
 //   ?action=budget                           → budget config + live status
 //   ?action=preflight&taskType=X&moduleId=Y  → pre-flight guardrail verdict
+//   ?action=dispatch-plan&taskType=X         → which model/effort will run it + its cost history
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -47,6 +50,23 @@ export async function GET(req: NextRequest) {
           : null,
       });
       return apiSuccess(verdict);
+    }
+
+    // What a dispatch of this task type will actually run on, and what it has cost.
+    // Read-only: it joins the model policy with recorded spend and decides nothing.
+    if (action === 'dispatch-plan') {
+      const taskType = searchParams.get('taskType');
+      if (!taskType) return apiError('taskType required', 400);
+      const { model, effort } = resolveDispatchModelChoice({ taskType });
+      const plan: DispatchPlan = {
+        taskType,
+        label: taskTypeLabel(taskType),
+        taskClass: taskClassForDispatchType(taskType),
+        model: model ?? null,
+        effort: effort ?? null,
+        estimate: getTaskTypeEstimate(taskType),
+      };
+      return apiSuccess(plan);
     }
 
     return apiError('Unknown action', 400);

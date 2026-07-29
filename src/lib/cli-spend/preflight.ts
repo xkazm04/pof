@@ -50,6 +50,7 @@ export const TASK_TYPE_LABELS: Record<string, string> = {
   'evaluate-track': 'Track evaluation',
   'draft-ability-spec': 'Draft ability spec',
   'generate-gas-effects': 'GAS effect codegen',
+  'one-shot-step': 'Pipeline step (live CLI produce)',
   interactive: 'Interactive prompt',
 };
 

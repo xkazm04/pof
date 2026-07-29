@@ -114,6 +114,12 @@ export function taskClassForDispatchType(taskType: string | undefined | null): T
     case 'generate':
     case 'draft-ability-spec':
     case 'detect-stimuli':
+    // The lab's live-produce path (`POST /api/one-shot/step` with mode:'cli'). It was
+    // unmapped, so the ONE real CLI produce in the catalog pipeline ran unpinned — the
+    // Quality Program's policy governed every other dispatch and not this one. It is
+    // gated to text archetypes (brief/graph/rules, `CLI_ELIGIBLE_ARCHETYPES`), which is
+    // exactly what `produce-text` describes.
+    case 'one-shot-step':
       return 'produce-text';
     case 'generate-gas-effects':
     case 'run-ai-tests':

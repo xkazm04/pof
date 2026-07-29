@@ -100,4 +100,24 @@ describe('POST /api/one-shot/step', () => {
     expect(body.data.outcome).toBe('pass');
     expect(body.data.stepName).toBe('Concept Brief');
   });
+
+  it('cli mode: pins the model + effort model policy chose for this dispatch', async () => {
+    // This spawn was the one CLI produce in the app the Quality Program's model policy did
+    // not reach: `one-shot-step` had no entry in `taskClassForDispatchType`, so it resolved
+    // to no pin and ran on whatever the session default happened to be.
+    const { startExecution } = await import('@/lib/claude-terminal/cli-service');
+    const { resolveDispatchModelChoice } = await import('@/lib/model-policy');
+    const expected = resolveDispatchModelChoice({ taskType: 'one-shot-step' });
+    expect(expected.model).toBeDefined();
+
+    const res = await POST(makePost({
+      catalogId: 'items', entityId: 'e1', stepLabel: 'Concept Brief', mode: 'cli', direction: 'terse',
+    }));
+    expect(res.status).toBe(200);
+
+    const opts = vi.mocked(startExecution).mock.calls.at(-1)?.[4];
+    expect(opts?.model).toBe(expected.model);
+    expect(opts?.effort).toBe(expected.effort);
+    expect(opts?.attribution?.taskType).toBe('one-shot-step');
+  });
 });

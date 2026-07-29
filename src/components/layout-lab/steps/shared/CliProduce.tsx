@@ -4,6 +4,8 @@ import { useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Lbl, LabButton, LabTextarea, LabToggle } from '../controls';
 import { useLiveProduceMode } from '@/components/layout-lab/labProduceMode';
+import { useDispatchPlan } from './useDispatchPlan';
+import { describeDispatchPlan, ONE_SHOT_STEP_TASK_TYPE } from '@/lib/cli-spend/dispatchPlan';
 import type { LabTheme } from '../../theme';
 
 /**
@@ -77,6 +79,10 @@ export function CliProduce({ t, label, buildPrompt, onComplete, note, placeholde
   // Display-only mirror of the produce mode; the dispatch path re-reads it at click time.
   const [liveMode, setLiveMode] = useLiveProduceMode();
   const live = !!liveEligible && liveMode;
+  // Only fetched once this step is actually in live mode — a stub produce spends nothing,
+  // so it must not pay a request to be told so.
+  const plan = useDispatchPlan(live, ONE_SHOT_STEP_TASK_TYPE);
+  const planCopy = plan ? describeDispatchPlan(plan) : null;
 
   const successMsg = note ?? 'Recorded · step config + prompt saved to the pipeline.';
 
@@ -154,6 +160,19 @@ export function CliProduce({ t, label, buildPrompt, onComplete, note, placeholde
           ? 'LIVE mode — this dispatch spawns a real Claude session on the prompt below, spends model budget, and adopts the artifact the server persists. Switch to Stub for a local, free write.'
           : 'Records this step’s config + the exact prompt that drives Acceptance. The asset itself is produced by a CLI session or the gate drain — not in this panel.'}
       </span>
+      {/* "Spends model budget" names no model and no number. This does both — or says
+          plainly that it can't, rather than implying a governed model or a $0.00 cost. */}
+      {live && planCopy && (
+        <span
+          data-testid="cli-produce-plan"
+          data-pinned={String(planCopy.pinned)}
+          data-priced={String(planCopy.priced)}
+          className={t.fontMono}
+          style={{ fontSize: 13, color: planCopy.pinned ? t.muted : t.warn, lineHeight: 1.5 }}
+        >
+          Model: {planCopy.model} · Cost: {planCopy.cost}
+        </span>
+      )}
       {showPrompt && (
         <pre className={t.fontMono} style={{ fontSize: 14, color: t.muted, whiteSpace: 'pre-wrap', margin: 0, lineHeight: 1.55, padding: 10, border: `1px solid ${t.line}`, borderRadius: t.glass ? 8 : 0 }}>
           {buildPrompt(direction)}

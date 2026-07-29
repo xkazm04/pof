@@ -94,6 +94,19 @@ describe('live-dispatch model wiring (WS0)', () => {
     expect(args[args.indexOf('--effort') + 1]).toBe(choice.effort);
   });
 
+  it('governs the lab live-produce dispatch, which used to run unpinned', () => {
+    // `one-shot-step` is the ONE real CLI produce in the catalog pipeline. Before this
+    // mapping it fell through to `default → null`, so it was the only dispatch in the app
+    // the Quality Program's model policy did not reach.
+    expect(taskClassForDispatchType('one-shot-step')).toBe('produce-text');
+    const choice = resolveDispatchModelChoice({ taskType: 'one-shot-step' });
+    expect(choice.model).toBeDefined();
+    expect(choice.effort).toBeDefined();
+    const args = buildCliArgs(choice);
+    expect(args).toContain('--model');
+    expect(args).toContain('--effort');
+  });
+
   it('unpinned resolution appends no model/effort args', () => {
     const choice = resolveDispatchModelChoice({ taskType: 'checklist' });
     const args = buildCliArgs(choice);

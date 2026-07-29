@@ -57,9 +57,13 @@ describe('ArchetypeStep — direction reaches produce', () => {
     fireEvent.change(screen.getByTestId('cli-produce-direction'), { target: { value: 'baroque filigree' } });
     fireEvent.click(screen.getByTestId('cli-produce-run'));
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe('/api/one-shot/step');
+    // Find the dispatch by its route, not by call order: entering live mode also issues a
+    // read-only GET for the dispatch plan (which model/effort/cost), and which of the two
+    // lands first is not part of this contract.
+    const oneShotCall = () =>
+      (fetchMock.mock.calls as [string, RequestInit][]).find(([u]) => u === '/api/one-shot/step');
+    await waitFor(() => expect(oneShotCall()).toBeDefined());
+    const [, init] = oneShotCall()!;
     const body = JSON.parse(String(init.body)) as Record<string, unknown>;
     expect(body.mode).toBe('cli');
     expect(body.direction).toBe('baroque filigree');

@@ -5,6 +5,8 @@ import { upsertArtifact } from '@/lib/pipeline-artifacts-db';
 import { seededEntities } from '@/lib/catalog/seed';
 import { withProduceDirection } from '@/lib/catalog/produceDirection';
 import { startExecution, awaitCallback } from '@/lib/claude-terminal/cli-service';
+import { resolveDispatchModelChoice } from '@/lib/model-policy';
+import { ONE_SHOT_STEP_TASK_TYPE } from '@/lib/cli-spend/dispatchPlan';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import type { AcceptanceTier } from '@/lib/catalog/acceptance/types';
@@ -113,9 +115,15 @@ export async function POST(req: NextRequest) {
       `Direction: ${direction}\n\nProduce the step output as a JSON @@CALLBACK block:\n` +
       `@@CALLBACK:step-${Date.now()}\n{}\n@@END_CALLBACK`;
 
+    // Quality Program: this dispatch is governed by model policy like every other one.
+    // It was previously the sole CLI produce in the app that spawned unpinned, because
+    // `one-shot-step` had no entry in `taskClassForDispatchType`.
+    const { model, effort } = resolveDispatchModelChoice({ taskType: ONE_SHOT_STEP_TASK_TYPE });
     const executionId = startExecution(PROJECT_PATH, promptText, undefined, undefined, {
       enableMcp: true,
-      attribution: { moduleId: catalogId, taskType: 'one-shot-step', taskLabel: stepLabel },
+      ...(model ? { model } : {}),
+      ...(effort ? { effort } : {}),
+      attribution: { moduleId: catalogId, taskType: ONE_SHOT_STEP_TASK_TYPE, taskLabel: stepLabel },
     });
     const payload = await awaitCallback(executionId, { timeoutMs: UI_TIMEOUTS.callbackAwaitTimeout }) as Record<string, unknown>;
 
