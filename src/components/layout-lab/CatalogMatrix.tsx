@@ -8,6 +8,7 @@ import { useLabPipelineStore } from './labPipelineStore';
 import { useLabDetail } from './useLabCatalogData';
 import { resolveCatalogSteps } from './catalogManifest';
 import { buildMatrixRows } from './matrixRows';
+import { useCatalogJudgeVerdicts } from './hooks/useStepJudgeVerdicts';
 import { MatrixBatchDrain } from './MatrixBatchDrain';
 import { useBatchDrain } from './hooks/useBatchDrain';
 import { MatrixSkeleton } from './MatrixSkeleton';
@@ -67,9 +68,12 @@ export function CatalogMatrix({ t, groups, catalogId, onSelectCatalog, onOpenSte
   // rail hydrates the open entity — so the matrix reflects the same reconciled status.
   const localByEntity = useLabPipelineStore((s) => s.byEntity);
 
+  // Same judge bridge the rail and the step banner apply — one cached fetch per catalog.
+  const verdicts = useCatalogJudgeVerdicts(catalogId);
+
   const rows = useMemo(
-    () => buildMatrixRows(catalogId, detail?.entities ?? [], byEntity, localByEntity, steps),
-    [catalogId, detail?.entities, byEntity, localByEntity, steps],
+    () => buildMatrixRows(catalogId, detail?.entities ?? [], byEntity, localByEntity, steps, verdicts),
+    [catalogId, detail?.entities, byEntity, localByEntity, steps, verdicts],
   );
 
   const completeCount = rows.filter((r) => r.rollup.configComplete).length;

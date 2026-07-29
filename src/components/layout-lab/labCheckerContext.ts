@@ -70,34 +70,9 @@ export function labGrade(
   return accept ? accept(data, labCheckerContext(catalogId, entityId)) : null;
 }
 
-/** The persisted (server-side) verdict for a step — the shape both the artifact cache and
- *  the hydrated `LabStepArtifact` expose. */
-export interface PersistedVerdict {
-  status?: string;
-  tier?: string;
-  reason?: string;
-}
-
 /**
- * Overlay the SERVER's verdict on a locally-recomputed one.
- *
- * The only case where the server knows more than the local checker is an L3/L4 gate: a pure
- * Checker can only ever say `deferred` for an unrun runtime/visual gate, while the drain
- * runner has actually run it. So a concrete server `pass`/`fail` wins over a local
- * `deferred` (carrying the server's tier + reason); anything else leaves the local verdict
- * untouched — the server never silently overrides a checker that could decide for itself.
+ * The server-drain overlay + its persisted-verdict shape now live with the ONE acceptance
+ * truth (`@/lib/catalog/acceptance/resolveStepAcceptance`) so the server-importable path can
+ * use them too. Re-exported here for the lab's existing call sites.
  */
-export function serverVerdictOverlay(local: AcceptanceResult, persisted?: PersistedVerdict): AcceptanceResult {
-  if (local.status !== 'deferred') return local;
-  const s = persisted?.status;
-  if (s !== 'pass' && s !== 'fail') return local;
-  // Drop the local (deferred) reason — the server's outcome supersedes it.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- destructured to OMIT the key
-  const { reason: _localReason, ...rest } = local;
-  return {
-    ...rest,
-    status: s,
-    ...(persisted?.tier ? { tier: persisted.tier as AcceptanceResult['tier'] } : {}),
-    ...(persisted?.reason ? { reason: persisted.reason } : {}),
-  };
-}
+export { serverVerdictOverlay, type PersistedVerdict } from '@/lib/catalog/acceptance/resolveStepAcceptance';

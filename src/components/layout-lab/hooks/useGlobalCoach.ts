@@ -7,6 +7,7 @@ import { ensureArtifacts, getCachedArtifacts, useArtifactCacheVersion } from '..
 import { resolveCatalogSteps } from '../catalogManifest';
 import { buildGlobalCoach, type CoachCandidate, type CoachCatalogInput } from '../globalCoachModel';
 import { useLabPipelineStore } from '../labPipelineStore';
+import { useAllJudgeVerdicts } from './useStepJudgeVerdicts';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 
 /** How many next-step candidates the coach surfaces before "show all blockers". */
@@ -31,6 +32,9 @@ export function useGlobalCoach(topN = Number.POSITIVE_INFINITY): CoachCandidate[
   const entitiesByCatalog = useCatalogStore((s) => s.entitiesByCatalog);
   const localByEntity = useLabPipelineStore((s) => s.byEntity);
   const version = useArtifactCacheVersion();
+  // Cross-catalog judge verdicts (ONE unscoped cached read) so a coach candidate speaks the
+  // same acceptance truth as the rail, the matrix and the step banner.
+  const verdicts = useAllJudgeVerdicts();
 
   const catalogIds = useMemo(() => CATALOG_SECTIONS.map((s) => s.catalogId), []);
 
@@ -67,7 +71,7 @@ export function useGlobalCoach(topN = Number.POSITIVE_INFINITY): CoachCandidate[
         localByEntity,
       });
     }
-    return buildGlobalCoach(inputs, topN);
+    return buildGlobalCoach(inputs, topN, verdicts);
     // `version` is the "cache changed" signal — recompute as each catalog's fetch resolves.
-  }, [entitiesByCatalog, localByEntity, version, topN]);
+  }, [entitiesByCatalog, localByEntity, version, topN, verdicts]);
 }

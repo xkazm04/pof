@@ -18,8 +18,7 @@ import { seededEntities } from '@/lib/catalog/seed';
 import { listLifecycle } from '@/lib/catalog-db';
 import { listArtifacts, upsertArtifact } from '@/lib/pipeline-artifacts-db';
 import { listVerdicts } from '@/lib/status/judge-verdicts-db';
-import { getStepFact } from '@/lib/status/statusModel';
-import { bridgeJudgeVerdict } from '@/lib/catalog/acceptance/judgeBridge';
+import { resolveStepAcceptance, verdictsForStep } from '@/lib/catalog/acceptance/resolveStepAcceptance';
 import { canonContextFor } from '@/lib/catalog/canon/canonContext';
 import { stepContractBlock, canonCategoriesForStep } from '@/lib/catalog/contractPrompt';
 import type { ProjectRule, RuleCategory } from '@/lib/catalog/canon/types';
@@ -113,9 +112,13 @@ function bridgeAcceptance(
   step: string,
   result: AcceptanceResult,
 ): AcceptanceResult {
-  const verdicts = listVerdicts(catalogId).filter((v) => v.entityId === entityId && v.step === step);
-  if (!verdicts.length) return result;
-  return bridgeJudgeVerdict(result, verdicts, getStepFact(catalogId, step)?.judge);
+  // The ONE shared truth (`resolveStepAcceptance`), the same function the lab's banner,
+  // rail, matrix, coaches and rollup call. No `persisted` here: server-side the checker is
+  // graded against the artifact itself, so there is no separate drain verdict to overlay.
+  return resolveStepAcceptance({
+    catalogId, step, local: result,
+    verdicts: verdictsForStep(listVerdicts(catalogId), entityId, step),
+  });
 }
 
 /**

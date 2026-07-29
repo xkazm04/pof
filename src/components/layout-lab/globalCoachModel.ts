@@ -3,6 +3,7 @@ import { COACH_PRIORITY_RANK, pickLadderIssue, type CoachPriority } from './coac
 import type { LabEntity } from './useLabCatalogData';
 import type { LabStepArtifact } from './labPipelineStore';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
+import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
 
 /**
  * Pure model for the lab-level, cross-catalog "what should I do next?" coach.
@@ -90,7 +91,19 @@ export function rankCoachCandidates(candidates: CoachCandidate[], topN: number):
  * `deriveEntityArtifacts`, then rank + slice to the top N. Config-complete entities
  * contribute nothing.
  */
-export function buildGlobalCoach(inputs: CoachCatalogInput[], topN: number): CoachCandidate[] {
+export function buildGlobalCoach(
+  inputs: CoachCatalogInput[],
+  topN: number,
+  /** Judge verdicts across every catalog (scoped per catalog below), so a coach candidate
+   *  carries the same judge bridge the banner and the matrix apply. */
+  verdicts: JudgeVerdict[] = [],
+): CoachCandidate[] {
+  const verdictsByCatalog = new Map<string, JudgeVerdict[]>();
+  for (const v of verdicts) {
+    const list = verdictsByCatalog.get(v.catalogId) ?? [];
+    list.push(v);
+    verdictsByCatalog.set(v.catalogId, list);
+  }
   const candidates: CoachCandidate[] = [];
   for (const cin of inputs) {
     for (const e of cin.entities) {
@@ -101,7 +114,7 @@ export function buildGlobalCoach(inputs: CoachCatalogInput[], topN: number): Coa
         for (const [step, art] of serverRow) { serverArts[step] = art; serverAsLocal[step] = asLocal(art); }
       }
       const effective = { ...serverAsLocal, ...(cin.localByEntity[e.id] ?? {}) }; // add-only: local wins
-      const { displayStatus, driftByStep, artifactByStep } = deriveEntityArtifacts(cin.catalogId, e, cin.steps, effective, serverArts);
+      const { displayStatus, driftByStep, artifactByStep } = deriveEntityArtifacts(cin.catalogId, e, cin.steps, effective, serverArts, {}, verdictsByCatalog.get(cin.catalogId) ?? []);
       const issue = pickEntityIssue(cin.steps, displayStatus, driftByStep);
       if (!issue) continue;
       // The concrete reason: for drift, the local-vs-server disagreement; otherwise the

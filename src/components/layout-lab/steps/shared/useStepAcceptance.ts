@@ -2,10 +2,9 @@
 
 import { useMemo } from 'react';
 import { useEntitySteps, type LabStepArtifact } from '../../labPipelineStore';
-import { buildLabCheckerContext, serverVerdictOverlay } from '../../labCheckerContext';
+import { buildLabCheckerContext } from '../../labCheckerContext';
 import { useStepJudgeVerdicts } from '../../hooks/useStepJudgeVerdicts';
-import { bridgeJudgeVerdict } from '@/lib/catalog/acceptance/judgeBridge';
-import { getStepFact } from '@/lib/status/statusModel';
+import { resolveStepAcceptance } from '@/lib/catalog/acceptance/resolveStepAcceptance';
 import { useCatalogStore } from '@/stores/catalogStore';
 import type { AcceptanceResult, CheckerContext } from '@/lib/catalog/acceptance/types';
 import type { Acceptance } from '../StepFrame';
@@ -51,7 +50,8 @@ export function useStepAcceptance({ catalogId, entityId, step, art, accept }: {
 
   return useMemo(() => {
     const raw = accept(art?.data ?? {}, ctx) as AcceptanceResult;
-    const overlaid = serverVerdictOverlay(raw, art);
-    return bridgeJudgeVerdict(overlaid, verdicts, catalogId ? getStepFact(catalogId, step)?.judge : undefined) as Acceptance;
+    // The ONE shared truth — the exact function the rail/matrix/coaches/rollup and the
+    // headless `/status` path call, so the banner can never disagree with them.
+    return resolveStepAcceptance({ catalogId, step, local: raw, persisted: art, verdicts }) as Acceptance;
   }, [accept, art, ctx, verdicts, catalogId, step]);
 }

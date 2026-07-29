@@ -3,6 +3,7 @@ import { deriveEntityArtifacts, type StepDisplayStatus } from './hooks/useEntity
 import type { LabEntity } from './useLabCatalogData';
 import type { LabStepArtifact } from './labPipelineStore';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
+import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
 
 export interface MatrixBlocker { step: string; reason: string }
 export interface MatrixRow {
@@ -31,6 +32,9 @@ export function buildMatrixRows(
   serverByEntity: Map<string, Map<string, PipelineArtifact>>,
   localByEntity: Record<string, Record<string, LabStepArtifact>>,
   steps: string[],
+  /** The catalog's judge verdicts, so a matrix cell carries the same judge bridge the
+   *  step banner applies. Absent → no judge overlay (never a fabricated verdict). */
+  verdicts: JudgeVerdict[] = [],
 ): MatrixRow[] {
   return entities.map((e) => {
     const serverRow = serverByEntity.get(e.id);
@@ -41,7 +45,7 @@ export function buildMatrixRows(
     }
     const effective = { ...serverAsLocal, ...(localByEntity[e.id] ?? {}) }; // add-only: local wins
 
-    const { artifacts, displayStatus } = deriveEntityArtifacts(catalogId, e, steps, effective, serverArts);
+    const { artifacts, displayStatus } = deriveEntityArtifacts(catalogId, e, steps, effective, serverArts, {}, verdicts);
     // Precompute per-step status once (O(steps)) instead of re-deriving per cell (O(steps²)).
     const statusMap = new Map<string, StepDisplayStatus>(steps.map((s, i) => [s, displayStatus(s, i)]));
 

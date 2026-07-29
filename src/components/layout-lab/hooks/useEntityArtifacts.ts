@@ -2,8 +2,11 @@
 
 import { useMemo } from 'react';
 import { resolveAccept } from '../labAcceptance';
-import { buildLabCheckerContext, serverVerdictOverlay } from '../labCheckerContext';
+import { buildLabCheckerContext } from '../labCheckerContext';
+import { resolveStepAcceptance, verdictsForStep } from '@/lib/catalog/acceptance/resolveStepAcceptance';
+import { useCatalogJudgeVerdicts } from './useStepJudgeVerdicts';
 import type { AcceptanceResult } from '@/lib/catalog/acceptance/types';
+import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
 import type { LabStepArtifact } from '../labPipelineStore';
 import type { LabEntity } from '../useLabCatalogData';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
@@ -48,13 +51,14 @@ export interface EntityArtifacts {
 
 /**
  * Pure derivation of an entity's pipeline artifacts + display status from its
- * produced steps and the server runner's stored verdicts. Kept side-effect free
- * (no React) so the subtlest rule — the local-`deferred` → server pass/fail
- * overlay precedence — is unit-testable in isolation.
+ * produced steps, the server runner's stored verdicts, and the judge verdicts.
+ * Kept side-effect free (no React) so the merge rules are unit-testable in isolation.
  *
- * The overlay rule: a local recompute can only ever yield `deferred` for an
- * unrun L3/L4 Test Gate; when the server has a real pass/fail for that step the
- * server verdict wins (but a server `deferred`/`pending` never overrides).
+ * Every step is graded through the ONE shared truth
+ * ({@link resolveStepAcceptance}: checker → server drain overlay → judge bridge), the same
+ * function the step banner (`useStepAcceptance`) and the headless/`/status` path call. Until
+ * that consolidation this derivation stopped after the server overlay, so a judge-failed
+ * step showed a green rail dot beside its own red banner.
  */
 export function deriveEntityArtifacts(
   catalogId: string | undefined,
@@ -65,6 +69,9 @@ export function deriveEntityArtifacts(
   /** Live entity index for the shared CheckerContext's `has` (cross-catalog links).
    *  Optional so ctx-free callers keep working; absent → nothing resolves, exactly as before. */
   entitiesByCatalog: Record<string, Record<string, unknown>> = {},
+  /** The catalog's judge verdicts (unscoped by step — scoped per step here). Absent → no
+   *  judge overlay, i.e. exactly the pre-consolidation behaviour, never a fabricated verdict. */
+  verdicts: JudgeVerdict[] = [],
 ): EntityArtifacts {
   // Real per-step production state for EVERY catalog: a step is "done" iff it was
   // actually produced (has an artifact in the local store, hydrated add-only from
@@ -86,21 +93,24 @@ export function deriveEntityArtifacts(
         const art = entitySteps![s];
         const accept = resolveAccept(catalogId, s);
         const res = accept ? accept(art.data, checkerCtx) : null;
-        const localStatus = res?.status ?? 'pass';
-        // Overlay the runner's verdict through the SHARED rule (`serverVerdictOverlay`):
-        // when the local recompute is still `deferred` (an unrun L3/L4 gate) but the server
-        // has a real pass/fail, the server wins — carrying its own reason. Anything else
-        // keeps the local recompute's verdict + reason.
+        // Grade through the ONE shared truth: checker → server drain overlay → judge bridge.
         const srv = serverArts[s];
         const local: AcceptanceResult = res ?? { label: s, status: 'pass', tier: 'L0', detail: '' };
-        const merged = serverVerdictOverlay(local, srv);
+        const merged = resolveStepAcceptance({
+          catalogId, step: s, local, persisted: srv,
+          verdicts: verdictsForStep(verdicts, entity?.id ?? '', s),
+        });
         const status = merged.status;
         const reason = merged.reason;
-        // Drift: a concrete local pass/fail that a concrete server pass/fail contradicts —
-        // the add-only default keeps `localStatus` on screen, so flag it for adoption.
-        // (The deferred case above is reconciliation, not drift, and is excluded here.)
-        if (srv && (localStatus === 'pass' || localStatus === 'fail') && (srv.status === 'pass' || srv.status === 'fail') && localStatus !== srv.status) {
-          driftByStep.set(s, { local: localStatus, server: srv.status });
+        // Drift: the status this surface actually SHOWS (post-overlay, post-judge-bridge)
+        // contradicting a concrete server pass/fail. Comparing the PRE-bridge checker status
+        // (the old behaviour) made the most important divergence invisible: a judge-condemned
+        // step reads `fail` on screen while the server row still says `pass`, and DriftBanner /
+        // nextActionableStep never heard about it. A local `deferred` resolved BY the server is
+        // reconciliation, not drift — `serverVerdictOverlay` has already adopted the server's
+        // verdict there, so `status === srv.status` and nothing is flagged.
+        if (srv && (status === 'pass' || status === 'fail') && (srv.status === 'pass' || srv.status === 'fail') && status !== srv.status) {
+          driftByStep.set(s, { local: status, server: srv.status });
         }
         return { catalogId, entityId: entity?.id ?? '', step: s, data: art.data, ueAssets: art.ueAssets, status, ...(merged.tier ? { tier: merged.tier } : {}), ...(reason ? { reason } : {}) };
       })
@@ -123,7 +133,8 @@ export function deriveEntityArtifacts(
 /**
  * React wrapper around {@link deriveEntityArtifacts}. Lets the Baseline component
  * focus on layout while the artifact + status-overlay derivation lives in one
- * testable place.
+ * testable place. Reads the catalog's judge verdicts itself (one shared, cached fetch per
+ * catalog) so the rail/matrix/coach cannot fall behind the banner's judge bridge.
  */
 export function useEntityArtifacts(
   catalogId: string | undefined,
@@ -133,8 +144,9 @@ export function useEntityArtifacts(
   serverArts: Record<string, PipelineArtifact>,
   entitiesByCatalog: Record<string, Record<string, unknown>> = {},
 ): EntityArtifacts {
+  const verdicts = useCatalogJudgeVerdicts(catalogId);
   return useMemo(
-    () => deriveEntityArtifacts(catalogId, entity, steps, entitySteps, serverArts, entitiesByCatalog),
-    [catalogId, entity, steps, entitySteps, serverArts, entitiesByCatalog],
+    () => deriveEntityArtifacts(catalogId, entity, steps, entitySteps, serverArts, entitiesByCatalog, verdicts),
+    [catalogId, entity, steps, entitySteps, serverArts, entitiesByCatalog, verdicts],
   );
 }
