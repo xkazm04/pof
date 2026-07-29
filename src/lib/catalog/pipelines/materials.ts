@@ -5,6 +5,7 @@ import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import { allOf } from '../acceptance/combinators';
+import { budgetWithinCap } from '../acceptance/invariants';
 import { linksResolve } from '../acceptance/linkCheckers';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
@@ -294,11 +295,16 @@ registerCatalogPipeline({
           },
         };
       },
-      accept: withinPercent(
-        'instructionCount',
-        'Shader instruction count within ±20% of target (200)',
-        200,
-        20,
+      // Content invariant: the count must also sit under the budget the artifact declares
+      // (perfBudget.target) — ±20% of 200 alone would pass a 240-instruction shader.
+      accept: allOf(
+        budgetWithinCap('perfBudget', 'instructionCount', 'target', 'Instruction count within the declared shader budget'),
+        withinPercent(
+          'instructionCount',
+          'Shader instruction count within ±20% of target (200)',
+          200,
+          20,
+        ),
       ),
     },
 

@@ -5,6 +5,7 @@ import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import { allOf } from '../acceptance/combinators';
+import { powerWithinTierTarget, sumReconciles, arithmeticReconciles } from '../acceptance/invariants';
 import { linksResolve } from '../acceptance/linkCheckers';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
@@ -307,7 +308,15 @@ registerCatalogPipeline({
         };
       },
       // tier target 19.5, ±20% band = 15.6–23.4
-      accept: withinPercent('sustainedDPS', 'Combined fire DPS within ±20% of tier target (19.5)', 19.5, 20),
+      // Content invariants: the headline DPS must be the SUM of its declared components,
+      // the burst component must equal baseDamage/cooldown, and the total must land on the
+      // tier target the artifact declares (canon ±10%) — not just near a literal.
+      accept: allOf(
+        sumReconciles('balance.sustainedDPS', 'balance', ['hitDPS', 'igniteDPS'], 'sustainedDPS = hitDPS + igniteDPS'),
+        arithmeticReconciles('balance', { result: 'hitDPS', op: 'quotient', operands: ['baseDamage', 'cooldown'] }, 'hitDPS = baseDamage / cooldown'),
+        powerWithinTierTarget('balance.sustainedDPS', 'Sustained DPS within canon ±10% of the declared tier target', 'balance.tierTarget'),
+        withinPercent('sustainedDPS', 'Combined fire DPS within ±20% of tier target (19.5)', 19.5, 20),
+      ),
     },
 
     // ── 5. Combo / Synergy ────────────────────────────────────────────────────

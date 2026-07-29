@@ -5,6 +5,7 @@ import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import { allOf } from '../acceptance/combinators';
+import { descendingSeries } from '../acceptance/invariants';
 import { linksResolve } from '../acceptance/linkCheckers';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
@@ -211,11 +212,18 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('stateLogic', 'states / transitions / lowHealthThreshold populated', [
+      // Content invariant: the critical threshold must sit BELOW the low-health threshold
+      // (and the critical pulse must be faster) — thresholds that cross never fire the
+      // critical state at all, which a presence check can't see.
+      accept: allOf(
+        fieldsPopulated('stateLogic', 'states / transitions / lowHealthThreshold populated', [
         'states',
         'transitions',
         'lowHealthThreshold',
       ]),
+        descendingSeries('stateLogic', ['lowHealthThreshold', 'criticalThreshold'], 'Critical threshold sits below the low-health threshold'),
+        descendingSeries('stateLogic', ['pulsePeriodLow', 'pulsePeriodCritical'], 'Critical pulse is faster than the low-health pulse'),
+      ),
     },
 
     // ── 4. Wireframe ───────────────────────────────────────────────────────────

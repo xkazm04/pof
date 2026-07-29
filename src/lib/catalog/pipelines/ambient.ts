@@ -5,6 +5,7 @@ import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import { allOf } from '../acceptance/combinators';
+import { budgetWithinCap } from '../acceptance/invariants';
 import { linksResolve } from '../acceptance/linkCheckers';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
@@ -609,7 +610,13 @@ registerCatalogPipeline({
           },
         };
       },
-      accept: withinPercent('totalDecodedMb', 'Total decoded ≤8 MB (within ±33% of 6 MB target)', 6.0, 33),
+      // Content invariant: the decoded footprint must respect the cap this artifact
+      // ITSELF declares (budgetCapMb) — the ±33% band alone let a produce ship a
+      // memoryBudget whose own hard cap it blew.
+      accept: allOf(
+        withinPercent('totalDecodedMb', 'Total decoded ≤8 MB (within ±33% of 6 MB target)', 6.0, 33),
+        budgetWithinCap('memoryBudget', 'totalDecodedMb', 'budgetCapMb', 'Decoded footprint within the declared hard cap'),
+      ),
     },
 
     // ── 7. Zone Binding ───────────────────────────────────────────────────────

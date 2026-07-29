@@ -3,12 +3,12 @@ import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
 import {
   minLength,
   fieldsPopulated,
-  withinPercent,
   dpsConsistent,
   materialShape,
   selected,
   minCount,
 } from '../acceptance/dataCheckers';
+import { priceRatioWithinBand, sumReconciles } from '../acceptance/invariants';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
@@ -544,7 +544,13 @@ registerCatalogPipeline({
           },
         };
       },
-      accept: withinPercent('pricePowerRatio', 'Price/power ratio within 0.8–1.2× band', 1.0, 20),
+      // Content invariants: the ratio is graded against the CANON 0.8–1.2× band (parsed from
+      // proj-balance) and the power score must reconcile with the breakdown it publishes —
+      // a headline power that doesn't match its own components is the classic silent lie.
+      accept: allOf(
+        priceRatioWithinBand('pricePowerRatio', 'Price/power ratio within the canon 0.8–1.2× band'),
+        sumReconciles('economy.powerScore', 'economy.powerBreakdown', ['dpsPower', 'implicitAccuracyPower', 'affixPower'], 'powerScore = Σ powerBreakdown'),
+      ),
     },
 
     // ── 6. Material ───────────────────────────────────────────────────────────

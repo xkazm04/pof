@@ -5,6 +5,7 @@ import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import { allOf } from '../acceptance/combinators';
+import { valueWithinDeclaredBand } from '../acceptance/invariants';
 import { linksResolve } from '../acceptance/linkCheckers';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
@@ -463,7 +464,12 @@ registerCatalogPipeline({
         };
       },
       // Gate on the SIGNED −16 LUFS target with a ±2 LUFS absolute tolerance (band −14..−18).
-      accept: withinAbsolute('integratedLUFS', 'Integrated LUFS within ±2 of −16 LUFS target (−14 to −18 LUFS range)', -16.0, 2.0),
+      // Content invariant: the CHARTED magnitude must sit inside the band the artifact
+      // itself declares (lufsBandFloor/Ceil), so the bars and the verdict can't disagree.
+      accept: allOf(
+        withinAbsolute('integratedLUFS', 'Integrated LUFS within ±2 of −16 LUFS target (−14 to −18 LUFS range)', -16.0, 2.0),
+        valueWithinDeclaredBand('loudness', 'displayMagnitude', 'lufsBandFloor', 'lufsBandCeil', 'Loudness inside the declared LUFS band'),
+      ),
     },
 
     // ── 6. Trigger Binding ───────────────────────────────────────────────────

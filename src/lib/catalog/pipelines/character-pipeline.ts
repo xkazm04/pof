@@ -1,5 +1,7 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { fieldsPopulated, minCount, selected } from '../acceptance/dataCheckers';
+import { allOf } from '../acceptance/combinators';
+import { budgetWithinCap } from '../acceptance/invariants';
 import { entityRuntimeDeferred, visualDeferred } from '../acceptance/deferred';
 import { meshGalleryCandidates } from '@/components/layout-lab/steps/shared/meshGalleryCandidates';
 
@@ -224,6 +226,9 @@ registerCatalogPipeline({
             faceLimit: 40000,
             textureSize: 2048,
             sizeMB: 4.3,
+            // The shippable ceiling for one game-tier character (the ~4 MB tier with
+            // headroom); declared so the checker enforces it instead of trusting prose.
+            sizeCapMB: 8,
             hqSizeMB: 60,
             rigPreserved: true,
             animPreserved: true,
@@ -231,7 +236,12 @@ registerCatalogPipeline({
           law: 'convert_model on the RIGGED retarget task keeps bones+skinning+anim — convert once, ship the ~4MB tier; keep HQ as the archive master',
         },
       }),
-      accept: fieldsPopulated('gameTier', 'game-tier budget recorded (size/faces/rig intact)', ['faceLimit', 'textureSize', 'sizeMB', 'rigPreserved']),
+      // Content invariant: a 'converted' tier that is still 40 MB is not a game tier —
+      // the declared cap is graded, not merely the presence of the fields.
+      accept: allOf(
+        fieldsPopulated('gameTier', 'game-tier budget recorded (size/faces/rig intact)', ['faceLimit', 'textureSize', 'sizeMB', 'rigPreserved']),
+        budgetWithinCap('gameTier', 'sizeMB', 'sizeCapMB', 'Game-tier mesh within the declared size cap'),
+      ),
       produceNote: '~14x smaller per character at near-zero credit cost — the sustainability step for batch character production.',
     },
 

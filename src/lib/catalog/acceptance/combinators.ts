@@ -1,3 +1,4 @@
+import { isContentInvariant, markContentInvariant } from './contentInvariant';
 import type { Checker } from './types';
 
 /**
@@ -10,8 +11,11 @@ import type { Checker } from './types';
  * a content/link invariant on top of its base shape check without a bespoke checker body.
  */
 export function allOf(...checkers: Checker[]): Checker {
-  return (data, ctx) => {
+  const composed: Checker = (data, ctx) => {
     const results = checkers.map((c) => c(data, ctx));
     return results.find((r) => r.status !== 'pass') ?? results[0];
   };
+  // A composition is a content invariant iff at least one member grades real values —
+  // so `allOf(<shape check>, budgetWithinCap(...))` counts and the spec linter can see it.
+  return checkers.some(isContentInvariant) ? markContentInvariant(composed) : composed;
 }

@@ -3,11 +3,11 @@ import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
 import {
   minLength,
   fieldsPopulated,
-  withinPercent,
   selected,
   minCount,
 } from '../acceptance/dataCheckers';
 import { allOf } from '../acceptance/combinators';
+import { powerWithinTierTarget, arithmeticReconciles } from '../acceptance/invariants';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
@@ -541,7 +541,13 @@ registerCatalogPipeline({
           },
         };
       },
-      accept: withinPercent('derivedThreatScore', 'Encounter threat budget within ±10% of tier target (100)', 100, 10),
+      // Content invariants: the headline threat is graded against the CANON tier target
+      // (proj-balance, parsed — not a literal), and it must actually reconcile with the
+      // wave/hazard components it claims to derive from (rawThreat / tierThreatNorm).
+      accept: allOf(
+        powerWithinTierTarget('derivedThreatScore', 'Encounter threat within canon ±10% of tier target (proj-balance)'),
+        arithmeticReconciles('balance', { result: 'derivedThreatScore', op: 'quotient', operands: ['rawThreat', 'tierThreatNorm'] }, 'derivedThreatScore = rawThreat / tierThreatNorm'),
+      ),
     },
 
     // ── 7. 3D / Terrain ───────────────────────────────────────────────────────

@@ -1,5 +1,6 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { allOf } from '@/lib/catalog/acceptance/combinators';
+import { budgetWithinCap, descendingSeries } from '@/lib/catalog/acceptance/invariants';
 import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
 import { minLength, fieldsPopulated, selected, minCount, withinPercent } from '../acceptance/dataCheckers';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
@@ -199,7 +200,12 @@ registerCatalogPipeline({
       },
       // Grade the CHARTED bar (gpuBudget.gpuMs), not the duplicated top-level scalar — the
       // chart and the checker now read one and the same datum.
+      // Content invariants: the peak cost must fit the class budget the artifact declares,
+      // and the LOD ladder must actually get cheaper (LOD0 > LOD1 > LOD2) — a ladder that
+      // doesn't descend is not a LOD ladder.
       accept: allOf(
+        budgetWithinCap('gpuBudget', 'gpuMs', 'classBudgetMs', 'Peak GPU cost within the declared class budget'),
+        descendingSeries('gpuBudget.lodTiers', ['LOD0', 'LOD1'], 'LOD ladder gets cheaper per tier', 'gpuBudgetMs'),
         withinPercent('gpuBudget.gpuMs', 'GPU cost within ±15% of class budget target (0.48 ms)', 0.48, 15),
         wiringContractSound(),
       ),

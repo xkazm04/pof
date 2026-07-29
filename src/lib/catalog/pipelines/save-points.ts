@@ -5,6 +5,7 @@ import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import { allOf } from '../acceptance/combinators';
+import { budgetWithinCap } from '../acceptance/invariants';
 import { linksResolve } from '../acceptance/linkCheckers';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
@@ -567,7 +568,12 @@ registerCatalogPipeline({
           },
         };
       },
-      accept: withinPercent('measuredMs', 'Load time within 50% of 30 ms target', 30, 50),
+      // Content invariant: the measured synchronous load must be under the budget the
+      // artifact declares (loadBudget.targetMs), not merely near a literal.
+      accept: allOf(
+        budgetWithinCap('loadBudget', 'measuredMs', 'targetMs', 'Synchronous load within the declared budget'),
+        withinPercent('measuredMs', 'Load time within 50% of 30 ms target', 30, 50),
+      ),
     },
 
     // ── 10. Icon 2D Art ───────────────────────────────────────────────────────

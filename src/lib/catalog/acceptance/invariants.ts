@@ -14,6 +14,7 @@
  * SPECIFIC reason naming the law + actual-vs-allowed.
  */
 import { CANON_SEED } from '@/lib/catalog/canon/canon-seed';
+import { markContentInvariant } from './contentInvariant';
 import type { AcceptanceResult, Checker } from './types';
 
 /* ── Canon threshold parsing (single source of truth = CANON_SEED) ─────────── */
@@ -96,7 +97,7 @@ const fail = (label: string, detail: string, reason: string, tier: AcceptanceRes
 
 /** proj-balance: a power value sits within ±POWER_TOL_PCT of its tier target (default 100). */
 export function powerWithinTierTarget(field: string, label: string, targetField?: string): Checker {
-  return (data) => {
+  return markContentInvariant((data) => {
     const power = numOf(pick(data, field));
     if (power == null) return pending(label, `${field} not set`);
     const target = (targetField != null ? numOf(pick(data, targetField)) : null) ?? POWER_TARGET;
@@ -105,24 +106,24 @@ export function powerWithinTierTarget(field: string, label: string, targetField?
       ? pass(label, `${power} within ±${POWER_TOL_PCT}% of ${target}`)
       : fail(label, `${power} vs ${target} ±${POWER_TOL_PCT}%`,
           `proj-balance power target: ${field}=${power} is outside ±${POWER_TOL_PCT}% of ${target} (allowed ${lo.toFixed(1)}–${hi.toFixed(1)})`);
-  };
+  });
 }
 
 /** proj-balance: a precomputed price/power ratio sits within the 0.8–1.2× band. */
 export function priceRatioWithinBand(field: string, label: string): Checker {
-  return (data) => {
+  return markContentInvariant((data) => {
     const r = numOf(pick(data, field));
     if (r == null) return pending(label, `${field} not set`);
     return r >= PRICE_RATIO.min && r <= PRICE_RATIO.max
       ? pass(label, `${r}× within ${PRICE_RATIO.min}–${PRICE_RATIO.max}×`)
       : fail(label, `${r}× vs ${PRICE_RATIO.min}–${PRICE_RATIO.max}×`,
           `proj-balance price/power: ${field}=${r}× is outside the ${PRICE_RATIO.min}–${PRICE_RATIO.max}× band`);
-  };
+  });
 }
 
 /** proj-economy: per-hour faucet vs sink stay balanced within ±FAUCET_SINK_TOL_PCT. */
 export function faucetSinkBalanced(objField: string, faucetKey: string, sinkKey: string, label: string): Checker {
-  return (data) => {
+  return markContentInvariant((data) => {
     const f = numOf(pick(data, `${objField}.${faucetKey}`));
     const s = numOf(pick(data, `${objField}.${sinkKey}`));
     if (f == null || s == null) return pending(label, `${objField}.${faucetKey}/${sinkKey} not set`);
@@ -132,12 +133,12 @@ export function faucetSinkBalanced(objField: string, faucetKey: string, sinkKey:
       ? pass(label, `${imbalance.toFixed(1)}% ≤ ±${FAUCET_SINK_TOL_PCT}%`)
       : fail(label, `${imbalance.toFixed(1)}% > ±${FAUCET_SINK_TOL_PCT}%`,
           `proj-economy faucet/sink: faucet ${f} vs sink ${s} = ${imbalance.toFixed(1)}% imbalance, exceeds ±${FAUCET_SINK_TOL_PCT}%`);
-  };
+  });
 }
 
 /** arpg-item-level: requiredLevel is ~5..15 BELOW itemLevel (never above, never equal-high). */
 export function requiredLevelBand(objField: string, ilvlKey: string, reqKey: string, label: string): Checker {
-  return (data) => {
+  return markContentInvariant((data) => {
     const ilvl = numOf(pick(data, `${objField}.${ilvlKey}`));
     const req = numOf(pick(data, `${objField}.${reqKey}`));
     if (ilvl == null || req == null) return pending(label, `${objField}.${ilvlKey}/${reqKey} not set`);
@@ -146,12 +147,12 @@ export function requiredLevelBand(objField: string, ilvlKey: string, reqKey: str
       ? pass(label, `req ${req} = ilvl ${ilvl} − ${below} (in ${REQ_BELOW.min}..${REQ_BELOW.max})`)
       : fail(label, `req ${req} vs ilvl ${ilvl}`,
           `arpg-item-level: requiredLevel ${req} should be ${REQ_BELOW.min}..${REQ_BELOW.max} below itemLevel ${ilvl} (i.e. ${ilvl - REQ_BELOW.max}..${ilvl - REQ_BELOW.min}), got ${below} below`);
-  };
+  });
 }
 
 /** arpg-item-rarity: prefix/suffix counts stay within the rarity's affix budget. */
 export function rarityAffixBudget(objField: string, rarityKey: string, prefixKey: string, suffixKey: string, label: string): Checker {
-  return (data) => {
+  return markContentInvariant((data) => {
     const rarity = String(pick(data, `${objField}.${rarityKey}`) ?? '');
     const budget = AFFIX_BUDGET[rarity];
     const pfx = numOf(pick(data, `${objField}.${prefixKey}`));
@@ -161,12 +162,12 @@ export function rarityAffixBudget(objField: string, rarityKey: string, prefixKey
     if (pfx > budget.prefix) return fail(label, `${pfx} prefixes`, `arpg-item-rarity: ${rarity} allows ≤${budget.prefix} prefixes, got ${pfx}`);
     if (sfx > budget.suffix) return fail(label, `${sfx} suffixes`, `arpg-item-rarity: ${rarity} allows ≤${budget.suffix} suffixes, got ${sfx}`);
     return pass(label, `${rarity}: ${pfx}≤${budget.prefix} pfx · ${sfx}≤${budget.suffix} sfx`, 'L2');
-  };
+  });
 }
 
 /** arpg-monster-rarity: per-tier life multipliers sit within the canon bands. */
 export function monsterRarityWithinBands(objField: string, label: string): Checker {
-  return (data) => {
+  return markContentInvariant((data) => {
     const scale = pick(data, `${objField}.rarityScale`);
     if (!scale || typeof scale !== 'object') return pending(label, `${objField}.rarityScale not set`);
     const s = scale as Record<string, { lifeMulti?: unknown }>;
@@ -180,12 +181,12 @@ export function monsterRarityWithinBands(objField: string, label: string): Check
       }
     }
     return pass(label, `Magic/Rare/Unique life multipliers within canon bands`);
-  };
+  });
 }
 
 /** arpg-leveling: the XP curve growth exponent is ~XP_GROWTH (geometric), within tolPct. */
 export function xpGrowthWithinBand(objField: string, exponentKey: string, label: string, tolPct = 10): Checker {
-  return (data) => {
+  return markContentInvariant((data) => {
     const e = numOf(pick(data, `${objField}.${exponentKey}`));
     if (e == null) return pending(label, `${objField}.${exponentKey} not set`);
     const lo = XP_GROWTH * (1 - tolPct / 100), hi = XP_GROWTH * (1 + tolPct / 100);
@@ -193,7 +194,7 @@ export function xpGrowthWithinBand(objField: string, exponentKey: string, label:
       ? pass(label, `growth ${e} ≈ ${XP_GROWTH} (±${tolPct}%)`)
       : fail(label, `growth ${e} vs ${XP_GROWTH}`,
           `arpg-leveling: XP growth exponent ${e} is outside ±${tolPct}% of the canon geometric rate ${XP_GROWTH} (${lo.toFixed(3)}–${hi.toFixed(3)})`);
-  };
+  });
 }
 
 /**
@@ -217,7 +218,7 @@ export function xpGrowthWithinBand(objField: string, exponentKey: string, label:
  * and a DoT can never pass on an empty control budget. Every non-pass carries a specific reason.
  */
 export function statusBalanceEnvelope(dotTarget: number, tolPct: number, label: string): Checker {
-  return (data) => {
+  return markContentInvariant((data) => {
     const balance = pick(data, 'balance');
     const cb = balance && typeof balance === 'object' ? (balance as Record<string, unknown>).controlBudget : undefined;
 
@@ -253,14 +254,14 @@ export function statusBalanceEnvelope(dotTarget: number, tolPct: number, label: 
       ? pass(label, `${dps} within ±${tolPct}% of ${dotTarget}`)
       : fail(label, `${dps} vs ${dotTarget} ±${tolPct}%`,
           `DoT status: ignite/bleed/poison DPS ${dps} is outside ±${tolPct}% of the tier target ${dotTarget} (allowed ${lo.toFixed(2)}–${hi.toFixed(2)})`);
-  };
+  });
 }
 
 /* ── Arithmetic-reconciles (structural determinism, canon-independent) ─────── */
 
 /** Named numeric components under `objPath` must sum (within tolAbs) to a constant `total`. */
 export function componentsSumTo(objPath: string, keys: string[], total: number, label: string, tolAbs = 0.5): Checker {
-  return (data) => {
+  return markContentInvariant((data) => {
     const obj = pick(data, objPath);
     if (!obj || typeof obj !== 'object') return pending(label, `${objPath} not set`);
     const o = obj as Record<string, unknown>;
@@ -275,12 +276,12 @@ export function componentsSumTo(objPath: string, keys: string[], total: number, 
       ? pass(label, `Σ = ${sum} (target ${total})`)
       : fail(label, `Σ = ${sum} ≠ ${total}`,
           `arithmetic: ${objPath} components [${keys.join(', ')}] sum to ${sum}, expected ${total} (off by ${diff})`);
-  };
+  });
 }
 
 /** A stated total (`totalPath`) must equal the sum of named parts under `partsPath`. */
 export function sumReconciles(totalPath: string, partsPath: string, partKeys: string[], label: string, tolAbs = 0.5): Checker {
-  return (data) => {
+  return markContentInvariant((data) => {
     const total = numOf(pick(data, totalPath));
     const parts = pick(data, partsPath);
     if (total == null || !parts || typeof parts !== 'object') return pending(label, `${totalPath}/${partsPath} not set`);
@@ -296,7 +297,7 @@ export function sumReconciles(totalPath: string, partsPath: string, partKeys: st
       ? pass(label, `${totalPath}=${total} = Σparts ${sum}`)
       : fail(label, `${total} ≠ Σ ${sum}`,
           `arithmetic: ${totalPath}=${total} does not reconcile with Σ ${partsPath}[${partKeys.join(', ')}]=${sum} (off by ${diff})`);
-  };
+  });
 }
 
 export type ReconcileOp = 'product' | 'quotient' | 'sum';
@@ -308,7 +309,7 @@ export function arithmeticReconciles(
   label: string,
   tolPct = 1,
 ): Checker {
-  return (data) => {
+  return markContentInvariant((data) => {
     const obj = pick(data, objPath);
     if (!obj || typeof obj !== 'object') return pending(label, `${objPath} not set`);
     const o = obj as Record<string, unknown>;
@@ -326,5 +327,72 @@ export function arithmeticReconciles(
       ? pass(label, `${spec.result}=${result} ≈ ${spec.op}(${spec.operands.join(', ')})=${expected.toFixed(3)}`)
       : fail(label, `${result} ≠ ${expected.toFixed(3)}`,
           `arithmetic: ${objPath}.${spec.result}=${result} does not reconcile with ${spec.op} of [${spec.operands.join(', ')}]=${expected.toFixed(3)} (${diffPct.toFixed(1)}% off)`);
-  };
+  });
+}
+
+/* ── Self-consistency invariants (the artifact's own declared budget is the law) ──
+ *
+ * The canon-derived invariants above cover the balance laws canon states globally. Most
+ * `balance` steps, though, declare their OWN ceiling/band/series in the artifact (a memory
+ * cap, a LUFS band, a per-LOD tri budget) and then graded that number against a literal
+ * duplicated from the prose — so the DECLARED budget was never enforced: a produce could
+ * write `cap: 8` and `measured: 11` and still pass. These read both sides from the artifact,
+ * so the step can never contradict itself. Canon-independent, like the arithmetic reconciles.
+ */
+
+/** A measured value under `objPath` must not exceed the cap the SAME artifact declares. */
+export function budgetWithinCap(objPath: string, valueKey: string, capKey: string, label: string): Checker {
+  return markContentInvariant((data) => {
+    const value = numOf(pick(data, `${objPath}.${valueKey}`));
+    const cap = numOf(pick(data, `${objPath}.${capKey}`));
+    if (value == null || cap == null) return pending(label, `${objPath}.${valueKey}/${capKey} not set`);
+    if (cap <= 0) return fail(label, `cap ${cap}`, `budget: ${objPath}.${capKey} must be a positive ceiling, got ${cap}`);
+    return value <= cap
+      ? pass(label, `${value} ≤ ${cap} (${((value / cap) * 100).toFixed(0)}% of budget)`)
+      : fail(label, `${value} > ${cap}`,
+          `budget: ${objPath}.${valueKey}=${value} exceeds the declared cap ${objPath}.${capKey}=${cap} (${((value / cap) * 100).toFixed(0)}% of budget)`);
+  });
+}
+
+/** A value under `objPath` must sit inside the band the SAME artifact declares (inclusive). */
+export function valueWithinDeclaredBand(objPath: string, valueKey: string, minKey: string, maxKey: string, label: string): Checker {
+  return markContentInvariant((data) => {
+    const value = numOf(pick(data, `${objPath}.${valueKey}`));
+    const lo = numOf(pick(data, `${objPath}.${minKey}`));
+    const hi = numOf(pick(data, `${objPath}.${maxKey}`));
+    if (value == null || lo == null || hi == null) return pending(label, `${objPath}.${valueKey}/${minKey}/${maxKey} not set`);
+    if (lo > hi) return fail(label, `band ${lo}–${hi} inverted`, `band: ${objPath}.${minKey}=${lo} is above ${objPath}.${maxKey}=${hi} — the declared band is inverted`);
+    return value >= lo && value <= hi
+      ? pass(label, `${value} within ${lo}–${hi}`)
+      : fail(label, `${value} vs ${lo}–${hi}`,
+          `band: ${objPath}.${valueKey}=${value} is outside the declared band ${lo}–${hi}`);
+  });
+}
+
+/**
+ * A named series under `objPath` must be STRICTLY DESCENDING in the given key order — the
+ * shape of every budget ladder (LOD0 > LOD1 > LOD2 tris; low-health threshold > critical
+ * threshold). `valueKey` reads the number out of a nested entry (`LOD0: { tris }`); omit it
+ * when the keys hold numbers directly.
+ */
+export function descendingSeries(objPath: string, keys: string[], label: string, valueKey?: string): Checker {
+  return markContentInvariant((data) => {
+    const obj = pick(data, objPath);
+    if (!obj || typeof obj !== 'object') return pending(label, `${objPath} not set`);
+    const o = obj as Record<string, unknown>;
+    const values: number[] = [];
+    for (const k of keys) {
+      const raw = valueKey != null ? (o[k] as Record<string, unknown> | undefined)?.[valueKey] : o[k];
+      const n = numOf(raw);
+      if (n == null) return pending(label, `${objPath}.${k}${valueKey ? `.${valueKey}` : ''} not set`);
+      values.push(n);
+    }
+    for (let i = 1; i < values.length; i++) {
+      if (values[i] >= values[i - 1]) {
+        return fail(label, `${keys[i - 1]} ${values[i - 1]} ≤ ${keys[i]} ${values[i]}`,
+          `series: ${objPath} must descend across [${keys.join(' > ')}], but ${keys[i]}=${values[i]} is not below ${keys[i - 1]}=${values[i - 1]}`);
+      }
+    }
+    return pass(label, keys.map((k, i) => `${k} ${values[i]}`).join(' > '));
+  });
 }

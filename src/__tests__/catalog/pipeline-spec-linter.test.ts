@@ -4,6 +4,7 @@ import { allCatalogPipelines } from '@/lib/catalog/pipeline-registry';
 import { SUPPORTED_VIEW_KINDS, SUPPORTED_CHART_VARIANTS } from '@/lib/catalog/stepSpec';
 import type { ViewDescriptor, StepSpec } from '@/lib/catalog/stepSpec';
 import { readLinks } from '@/lib/catalog/acceptance/linkCheckers';
+import { isContentInvariant } from '@/lib/catalog/acceptance/contentInvariant';
 import { seedAllCatalogs } from '@/lib/catalog/sections';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 
@@ -32,6 +33,11 @@ import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
  *      number-grid table).
  *  (d) a gallery step's `genCandidates` (when present) has a `build` function and, when
  *      `needsAssets`, a valid `assetKind` ('2d' | '3d' | unset→'2d').
+ *  (k) every `archetype: 'balance'` step composes a CONTENT INVARIANT (acceptance/
+ *      invariants.ts, marked via `contentInvariant.ts` and propagated by `allOf`) — a balance
+ *      step graded only by shape/presence checkers can never fail on a wrong number, which is
+ *      exactly how one Produce click yielded 300 pass / 0 fail fleet-wide. A companion ratchet
+ *      guards fleet-wide adoption (INVARIANT_ADOPTION_FLOOR pipelines).
  *
  * ── Field coherence (e)–(g) ────────────────────────────────────────────────────
  * A step is three faces of ONE artifact — what Produce writes, what the View renders, what
@@ -65,6 +71,10 @@ import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
  *
  * Every failure names catalog / step / field precisely.
  */
+
+/** Fleet floor for content-invariant adoption (pipelines composing ≥1 real value law).
+ *  A ratchet: raise it as more pipelines are wired, never lower it to make a change pass. */
+const INVARIANT_ADOPTION_FLOOR = 20;
 
 const SYNTH_ENTITY: LabEntity = { id: 'lint-entity', name: 'Lint Entity', lifecycle: 'planned', data: {} };
 
@@ -366,6 +376,20 @@ describe('fleet spec linter', () => {
       }
     }
     expect(violations).toEqual([]);
+  });
+
+  // ── (k) balance steps grade real VALUES, not shapes ────────────────────────
+  it("every archetype:'balance' step composes a content invariant", () => {
+    const bad = steps
+      .filter((s) => s.spec.archetype === 'balance')
+      .filter((s) => !isContentInvariant(s.spec.accept));
+    expect(bad.map((s) => `${at(s)}: balance step must compose ≥1 content invariant (acceptance/invariants.ts) so a WRONG NUMBER fails — a shape/presence checker alone can't`)).toEqual([]);
+  });
+
+  it('content-invariant adoption does not regress below the fleet floor', () => {
+    const adopting = pipelines.filter((p) => p.steps.some((spec) => isContentInvariant(spec.accept)));
+    // Ratchet: raise this floor when you wire more pipelines; never lower it.
+    expect(adopting.length, `only ${adopting.length}/${pipelines.length} pipelines compose a content invariant`).toBeGreaterThanOrEqual(INVARIANT_ADOPTION_FLOOR);
   });
 
   // ── (g′) gallery: view field = selection field = candidate payload key ─────

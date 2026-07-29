@@ -5,6 +5,7 @@ import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import { allOf } from '../acceptance/combinators';
+import { powerWithinTierTarget } from '../acceptance/invariants';
 import { linksResolve } from '../acceptance/linkCheckers';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
@@ -307,12 +308,14 @@ registerCatalogPipeline({
         const markupPct = 43;
         const buybackPct = 50;
         const marginPct = 28.4; // derived: 30.1% Neutral margin less the 2.3% blended rep discount
+        const marginTargetPct = 30; // canon vendor-laws MARGIN target — declared, so the checker reads it
         return {
           data: {
             economySim: {
               markupPct,
               buybackPct,
               marginPct,
+              marginTargetPct,
               simNotes:
                 'Derivation chain (no free parameters): canon 30% MARGIN target → markup = 0.30/0.70 ≈ 43%. ' +
                 'sellPrice = cost × 1.43 → Neutral margin 30.1%. Buyer mix (60% Neutral / 30% Friendly −5% / ' +
@@ -327,7 +330,13 @@ registerCatalogPipeline({
           },
         };
       },
-      accept: withinPercent('marginPct', 'Vendor margin within ±20% of target (30)', 30, 20),
+      // Content invariant: the blended margin is graded against the target the artifact
+      // declares, with the canon (proj-balance) tolerance — a produce can no longer publish
+      // a 30% target in prose and a margin that misses it.
+      accept: allOf(
+        powerWithinTierTarget('economySim.marginPct', 'Blended margin within canon tolerance of the declared target', 'economySim.marginTargetPct'),
+        withinPercent('marginPct', 'Vendor margin within ±20% of target (30)', 30, 20),
+      ),
     },
 
     // ── 7. Shop UI ────────────────────────────────────────────────────────────

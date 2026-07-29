@@ -1,5 +1,6 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { allOf } from '@/lib/catalog/acceptance/combinators';
+import { valueWithinDeclaredBand } from '@/lib/catalog/acceptance/invariants';
 import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
 import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
@@ -264,7 +265,13 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('feel', 'Deadzone + rumble profile defined', ['deadzone', 'rumble']),
+      // Content invariant: the shipped default must sit inside the tunable range the
+      // artifact declares (canon input-a11y 0.1–0.25) — a default outside its own band is
+      // unreachable from the settings UI.
+      accept: allOf(
+        fieldsPopulated('feel', 'Deadzone + rumble profile defined', ['deadzone', 'rumble']),
+        valueWithinDeclaredBand('feel.deadzone', 'default', 'min', 'max', 'Default deadzone inside the declared tunable range'),
+      ),
     },
 
     // ── 6. Accessibility ──────────────────────────────────────────────────────

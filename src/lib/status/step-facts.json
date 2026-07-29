@@ -179,7 +179,7 @@
       "generatorWired": false,
       "judge": "none",
       "checkerMeaningful": true,
-      "note": "withinPercent(totalDecodedMb, 6.0, 33%) does perform a real numeric consistency check — but the 5.8 MB figure itself is a hand-typed estimate from code-comment arithmetic, not measured from real audio assets."
+      "note": "withinPercent(totalDecodedMb, 6.0, 33%) does perform a real numeric consistency check — but the 5.8 MB figure itself is a hand-typed estimate from code-comment arithmetic, not measured from real audio assets. 2026-07-29: acceptance now also composes budgetWithinCap(memoryBudget.totalDecodedMb <= budgetCapMb) - the decoded footprint is graded against the cap the artifact itself declares, so a produce can no longer blow its own hard cap and pass."
     },
     {
       "catalogId": "ambient",
@@ -418,8 +418,8 @@
       "deliverable": "3d-mesh",
       "generatorWired": true,
       "judge": "none",
-      "checkerMeaningful": false,
-      "note": "Powered by gap-loop batch 10 (2026-07-08): real Tripo image→model game-tier mesh (hero-render input), Qwen3-VL-4B gated (>=7), ref injected. Game-tier mesh (40k faces / 2K tex) produced by Tripo at generation face-limit; this is the converted deliverable."
+      "checkerMeaningful": true,
+      "note": "Powered by gap-loop batch 10 (2026-07-08): real Tripo image→model game-tier mesh (hero-render input), Qwen3-VL-4B gated (>=7), ref injected. Game-tier mesh (40k faces / 2K tex) produced by Tripo at generation face-limit; this is the converted deliverable. 2026-07-29: acceptance now composes budgetWithinCap(gameTier.sizeMB <= sizeCapMB, cap declared on the artifact) on top of the shape check - a 'converted' tier that is still 40 MB now FAILS instead of passing on field presence."
     },
     {
       "catalogId": "character-pipeline",
@@ -729,7 +729,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": true,
-      "note": "withinPercent mechanically compares derivedThreatScore to a target, but derivedThreatScore is hardcoded to exactly 100 with a scaleFactor engineered backward to hit it — not output of an independent balance simulator (pof_economy_simulate/pof_combat_simulate are unused here)."
+      "note": "withinPercent mechanically compares derivedThreatScore to a target, but derivedThreatScore is hardcoded to exactly 100 with a scaleFactor engineered backward to hit it — not output of an independent balance simulator (pof_economy_simulate/pof_combat_simulate are unused here). 2026-07-29: acceptance now composes the canon-parsed powerWithinTierTarget plus arithmeticReconciles(derivedThreatScore = rawThreat / tierThreatNorm) - the headline threat must reconcile with the wave/hazard components it claims to derive from."
     },
     {
       "catalogId": "combat-map",
@@ -1358,8 +1358,8 @@
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
-      "checkerMeaningful": false,
-      "note": "fieldsPopulated shape check on states/transitions/threshold keys only."
+      "checkerMeaningful": true,
+      "note": "fieldsPopulated shape check on states/transitions/threshold keys only. 2026-07-29: acceptance now also composes descendingSeries(lowHealthThreshold > criticalThreshold, pulsePeriodLow > pulsePeriodCritical) - crossed thresholds (a critical state that can never fire) now FAIL."
     },
     {
       "catalogId": "hud-elements",
@@ -1548,8 +1548,8 @@
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
-      "checkerMeaningful": false,
-      "note": "fieldsPopulated on deadzone/rumble keys only."
+      "checkerMeaningful": true,
+      "note": "fieldsPopulated on deadzone/rumble keys only. 2026-07-29: acceptance now also composes valueWithinDeclaredBand(feel.deadzone.default within min..max) - a default outside its own tunable range now FAILS."
     },
     {
       "catalogId": "input-schemes",
@@ -1669,7 +1669,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": true,
-      "note": "withinPercent checks pricePowerRatio against a real 0.8-1.2x band, though baseValue(12)/powerScore(12) are hand-picked constants engineered to land exactly at 1.0 — the mechanism is real but the inputs are not measured."
+      "note": "withinPercent checks pricePowerRatio against a real 0.8-1.2x band, though baseValue(12)/powerScore(12) are hand-picked constants engineered to land exactly at 1.0 — the mechanism is real but the inputs are not measured. 2026-07-29: acceptance now composes the canon-parsed priceRatioWithinBand plus sumReconciles(economy.powerScore = sum of powerBreakdown) - a headline power score that contradicts its own breakdown now FAILS."
     },
     {
       "catalogId": "items",
@@ -1888,8 +1888,8 @@
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "none",
-      "checkerMeaningful": false,
-      "note": "instructionCount(180) is a hardcoded stub, not a measured shader-compile output (the step's own note admits real GPU perf 'requires an RHI build — deferred'). withinPercent(200,20%) is checking a fabricated constant against itself, not a real budget."
+      "checkerMeaningful": true,
+      "note": "instructionCount(180) is a hardcoded stub, not a measured shader-compile output (the step's own note admits real GPU perf 'requires an RHI build — deferred'). withinPercent(200,20%) is checking a fabricated constant against itself, not a real budget. 2026-07-29: acceptance now also composes budgetWithinCap(perfBudget.instructionCount <= target) - the declared shader budget is enforced (240 instructions against a 200 target now FAILS), though the count itself is still an authored figure, not a compile output."
     },
     {
       "catalogId": "materials",
@@ -1978,8 +1978,8 @@
       "deliverable": "audio",
       "generatorWired": false,
       "judge": "human",
-      "checkerMeaningful": false,
-      "note": "integratedLUFS is hardcoded to 16.0 and the checker's target is also 16.0 — withinPercent(16.0±12.5%) passes trivially by construction since no real mix was ever measured. This is the audit's clearest false-precision example."
+      "checkerMeaningful": true,
+      "note": "integratedLUFS is hardcoded to 16.0 and the checker's target is also 16.0 — withinPercent(16.0±12.5%) passes trivially by construction since no real mix was ever measured. This is the audit's clearest false-precision example. 2026-07-29: acceptance now also composes valueWithinDeclaredBand(loudness.displayMagnitude within lufsBandFloor..Ceil) - the charted magnitude is graded against the band the artifact declares, so bars and verdict cannot disagree."
     },
     {
       "catalogId": "music",
@@ -2278,8 +2278,8 @@
       "deliverable": "3d-mesh",
       "generatorWired": true,
       "judge": "vlm",
-      "checkerMeaningful": false,
-      "note": "Powered by gap-loop batch 3 (2026-07-07): a real Leonardo Lucid Origin image is generated via /api/leonardo (Lucid Origin, download-then-delete), Qwen3-VL-4B gated (>=7), and injected into the artifact's data.genHistory as a data-URL swatch; VLM verdict recorded. trueEngine now reflects the real producing engine. Durability follow-up: the UI gallery producer (itemGenCandidates/genericGalleryCandidates) still emits placeholder swatches, so an e2e stub re-walk would overwrite the injected asset — wire the gallery Produce to /api/leonardo to make it regenerate in-app."
+      "checkerMeaningful": true,
+      "note": "Powered by gap-loop batch 3 (2026-07-07): a real Leonardo Lucid Origin image is generated via /api/leonardo (Lucid Origin, download-then-delete), Qwen3-VL-4B gated (>=7), and injected into the artifact's data.genHistory as a data-URL swatch; VLM verdict recorded. trueEngine now reflects the real producing engine. Durability follow-up: the UI gallery producer (itemGenCandidates/genericGalleryCandidates) still emits placeholder swatches, so an e2e stub re-walk would overwrite the injected asset — wire the gallery Produce to /api/leonardo to make it regenerate in-app. 2026-07-29: acceptance now also composes descendingSeries over triBudget LOD0>LOD1>LOD2>LOD3 - a tri ladder that does not get cheaper now FAILS (the selection gate alone never looked at the numbers)."
     },
     {
       "catalogId": "props",
@@ -2559,7 +2559,7 @@
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": true,
-      "note": "withinPercent genuinely checks measuredMs(15) against the 30ms target, but measuredMs is an invented sum of guessed per-field costs, never measured from an actual save/load in UE — no ue-test exists to substantiate it."
+      "note": "withinPercent genuinely checks measuredMs(15) against the 30ms target, but measuredMs is an invented sum of guessed per-field costs, never measured from an actual save/load in UE — no ue-test exists to substantiate it. 2026-07-29: acceptance now also composes budgetWithinCap(loadBudget.measuredMs <= targetMs) - the declared budget is enforced rather than a literal; measuredMs remains an estimate until a live load trace lands."
     },
     {
       "catalogId": "save-points",
@@ -2739,7 +2739,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": true,
-      "note": "withinPercent compares a genuinely derived sustainedDPS (35/3s + ignite) against the 19.5 tier target — a real content check, not a shape check."
+      "note": "withinPercent compares a genuinely derived sustainedDPS (35/3s + ignite) against the 19.5 tier target — a real content check, not a shape check. 2026-07-29: acceptance now also composes sumReconciles(sustainedDPS = hitDPS + igniteDPS), arithmeticReconciles(hitDPS = baseDamage / cooldown) and powerWithinTierTarget against the DECLARED tierTarget - the DPS chain must be internally consistent."
     },
     {
       "catalogId": "spellbook",
@@ -3149,7 +3149,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": true,
-      "note": "withinPercent checks the derived 28% margin against the real 30% vendor-laws target (±20%) — a genuine budget check, not a shape check."
+      "note": "withinPercent checks the derived 28% margin against the real 30% vendor-laws target (±20%) — a genuine budget check, not a shape check. 2026-07-29: the target is now DECLARED on the artifact (economySim.marginTargetPct) and graded by powerWithinTierTarget with the canon tolerance, so the prose target and the checked target are one number."
     },
     {
       "catalogId": "vendors",
@@ -3258,8 +3258,8 @@
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "none",
-      "checkerMeaningful": false,
-      "note": "gpuPct is computed in the same function as classBudgetMs*headroomPct = 0.48ms exactly, then accept checks withinPercent(gpuPct, 0.48, 15%) against that self-derived value — tautologically guaranteed to pass regardless of any real GPU cost; no profiling ever runs. Real verification is only named (VSVFXPerfTest) as a deferred reason on a later step, not executed here."
+      "checkerMeaningful": true,
+      "note": "gpuPct is computed in the same function as classBudgetMs*headroomPct = 0.48ms exactly, then accept checks withinPercent(gpuPct, 0.48, 15%) against that self-derived value — tautologically guaranteed to pass regardless of any real GPU cost; no profiling ever runs. Real verification is only named (VSVFXPerfTest) as a deferred reason on a later step, not executed here. 2026-07-29: acceptance now also composes budgetWithinCap(gpuBudget.gpuMs <= classBudgetMs) plus descendingSeries over the LOD ladder - a ladder whose tiers do not get cheaper, or a cost above the declared class budget, now FAILS."
     },
     {
       "catalogId": "vfx",

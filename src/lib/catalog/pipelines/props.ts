@@ -2,6 +2,7 @@ import { registerCatalogPipeline } from '../pipeline-registry';
 import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
 import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
 import { allOf } from '../acceptance/combinators';
+import { descendingSeries } from '../acceptance/invariants';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
@@ -165,7 +166,12 @@ registerCatalogPipeline({
           `/Game/Props/GC_${slug(e.name)}`,
         ],
       }),
-      accept: selected('selected', 'A 3D mesh candidate is selected (L1)'),
+      // Content invariant: a tri budget whose LODs don't get cheaper is not a LOD ladder —
+      // the numbers are graded, not merely present.
+      accept: allOf(
+        selected('selected', 'A 3D mesh candidate is selected (L1)'),
+        descendingSeries('triBudget', ['LOD0', 'LOD1', 'LOD2', 'LOD3'], 'Tri budget descends across the LOD ladder', 'tris'),
+      ),
     },
 
     // ── 4. Collision & Physics ────────────────────────────────────────────────
