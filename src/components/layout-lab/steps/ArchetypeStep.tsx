@@ -311,9 +311,14 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
       .catch((e: unknown) => logger.error('[ArchetypeStep] produce fix failed', e));
   };
 
+  // Exactly the condition `dispatchProduce` tests before taking the live branch — so the
+  // switch only appears where flipping it actually changes what the next click does.
+  const liveEligible = !!catalogId && isCliEligible(spec.archetype);
+
   const cli = (onComplete: (ctx?: { direction: string; prompt: string }) => void | Promise<void>) => (
     <CliProduce t={t} label={`Produce ${spec.label}`} rows={3}
       defaultDirection={spec.defaultDirection} note={spec.produceNote}
+      liveEligible={liveEligible}
       buildPrompt={buildPrompt} onComplete={onComplete} />
   );
 

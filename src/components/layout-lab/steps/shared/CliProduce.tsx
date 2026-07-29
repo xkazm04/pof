@@ -2,7 +2,8 @@
 
 import { useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Lbl, LabButton, LabTextarea } from '../controls';
+import { Lbl, LabButton, LabTextarea, LabToggle } from '../controls';
+import { useLiveProduceMode } from '@/components/layout-lab/labProduceMode';
 import type { LabTheme } from '../../theme';
 
 /**
@@ -56,9 +57,16 @@ export interface CliProduceProps {
    * as `onComplete` does).
    */
   minDispatchMs?: number;
+  /**
+   * This step's dispatch can go through the REAL CLI seam when live produce is on
+   * (`isCliEligible(archetype)`). Set it and the panel renders the mode switch + says, at
+   * the point of produce, whether the next click writes a stub or spends model budget.
+   * Absent → no switch (a step live mode would not change must not offer one).
+   */
+  liveEligible?: boolean;
 }
 
-export function CliProduce({ t, label, buildPrompt, onComplete, note, placeholder, defaultDirection, rows = 4, fields, validate, sync, minDispatchMs }: CliProduceProps) {
+export function CliProduce({ t, label, buildPrompt, onComplete, note, placeholder, defaultDirection, rows = 4, fields, validate, sync, minDispatchMs, liveEligible }: CliProduceProps) {
   const [direction, setDirection] = useState(defaultDirection ?? '');
   const [showPrompt, setShowPrompt] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
@@ -66,6 +74,9 @@ export function CliProduce({ t, label, buildPrompt, onComplete, note, placeholde
   // The last dispatched context, so "Retry with same prompt" re-runs the EXACT prompt
   // that failed (not a rebuild from the — possibly since-edited — direction field).
   const [lastCtx, setLastCtx] = useState<{ direction: string; prompt: string } | null>(null);
+  // Display-only mirror of the produce mode; the dispatch path re-reads it at click time.
+  const [liveMode, setLiveMode] = useLiveProduceMode();
+  const live = !!liveEligible && liveMode;
 
   const successMsg = note ?? 'Recorded · step config + prompt saved to the pipeline.';
 
@@ -110,7 +121,7 @@ export function CliProduce({ t, label, buildPrompt, onComplete, note, placeholde
     void runAsync(lastCtx);
   }
 
-  const btnLabel = dispatching ? `⏳ Dispatching ${label}` : `⚡ ${label}`;
+  const btnLabel = dispatching ? `⏳ Dispatching ${label}` : live ? `⚡ ${label} · LIVE` : `⚡ ${label}`;
 
   return (
     <div style={{ display: 'grid', gap: 12 }}>
@@ -120,6 +131,16 @@ export function CliProduce({ t, label, buildPrompt, onComplete, note, placeholde
         placeholder={placeholder ?? 'Steer this step — tone, constraints, references…'} />
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
         <LabButton t={t} onClick={dispatch} disabled={dispatching} testId="cli-produce-run">{btnLabel}</LabButton>
+        {/* The mode is legible AT THE POINT OF PRODUCE: the operator can see, without
+            leaving the panel, whether this click writes a local stub or spends budget. */}
+        {liveEligible && (
+          <span data-testid="cli-produce-mode" data-mode={live ? 'live' : 'stub'}>
+            <LabToggle t={t} checked={liveMode} onChange={setLiveMode} testId="cli-produce-mode-toggle"
+              tone={live ? 'warn' : undefined}
+              label={live ? 'Live CLI' : 'Stub'}
+              hint={live ? 'runs a real Claude session — spends model budget' : 'writes locally · no model spend'} />
+          </span>
+        )}
         <button onClick={() => setShowPrompt((v) => !v)} className={t.fontMono}
           style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: t.muted, textDecoration: 'underline' }}>
           {showPrompt ? 'hide prompt' : 'view prompt'}
@@ -128,8 +149,10 @@ export function CliProduce({ t, label, buildPrompt, onComplete, note, placeholde
       {/* Honesty note (functional-honesty): the lab is the design/config surface — it records the
           step config + the exact prompt that drives Acceptance. The real asset is produced by a CLI
           session or the gate drain, not synchronously here. Keeps the UI from overclaiming. */}
-      <span className={t.fontMono} style={{ fontSize: 13, color: t.muted, lineHeight: 1.5 }}>
-        Records this step&apos;s config + the exact prompt that drives Acceptance. The asset itself is produced by a CLI session or the gate drain — not in this panel.
+      <span className={t.fontMono} style={{ fontSize: 13, color: live ? t.warn : t.muted, lineHeight: 1.5 }}>
+        {live
+          ? 'LIVE mode — this dispatch spawns a real Claude session on the prompt below, spends model budget, and adopts the artifact the server persists. Switch to Stub for a local, free write.'
+          : 'Records this step’s config + the exact prompt that drives Acceptance. The asset itself is produced by a CLI session or the gate drain — not in this panel.'}
       </span>
       {showPrompt && (
         <pre className={t.fontMono} style={{ fontSize: 14, color: t.muted, whiteSpace: 'pre-wrap', margin: 0, lineHeight: 1.55, padding: 10, border: `1px solid ${t.line}`, borderRadius: t.glass ? 8 : 0 }}>

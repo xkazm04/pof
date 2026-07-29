@@ -23,6 +23,29 @@ export function LabTextarea({ t, value, onChange, rows = 6, placeholder, testId 
   );
 }
 
+/**
+ * Themed on/off switch in the lab's own visual language (mono label + hairline border,
+ * ≥14px). `tone: 'warn'` paints the ON state in the theme's warn ink — for a switch whose
+ * ON state has a real consequence (e.g. live CLI produce spends model budget).
+ */
+export function LabToggle({ t, checked, onChange, label, hint, tone, testId }: {
+  t: LabTheme; checked: boolean; onChange: (v: boolean) => void;
+  label: string; hint?: string; tone?: 'warn'; testId?: string;
+}) {
+  const accent = tone === 'warn' ? t.warn : t.ink;
+  return (
+    <label data-testid={testId} data-checked={checked ? 'true' : 'false'} className={t.fontMono}
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14,
+        padding: '6px 10px', border: `1px solid ${checked ? accent : t.line}`, borderRadius: t.glass ? 8 : 0 }}>
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)}
+        data-testid={testId ? `${testId}-input` : undefined}
+        style={{ width: 14, height: 14, margin: 0, accentColor: accent }} />
+      <span style={{ letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 600, color: checked ? accent : t.muted }}>{label}</span>
+      {hint && <span style={{ color: t.muted }}>{hint}</span>}
+    </label>
+  );
+}
+
 export function LabInput({ t, value, onChange, type = 'text', placeholder }: { t: LabTheme; value: string; onChange: (v: string) => void; type?: string; placeholder?: string }) {
   return (
     <input type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className={t.fontBody}
