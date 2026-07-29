@@ -46,18 +46,21 @@ export async function fetchArtifacts(catalogId: string, entityId?: string): Prom
 }
 
 /**
- * POST one produced step's artifact. Returns whether the write actually reached the
- * server (mirrors {@link fetchArtifacts}'s `r.ok` pattern) — `false` when the server is
- * offline / 500 — so the write-through can surface an honest "not synced" state instead
- * of leaving the optimistic local store looking as if the server accepted it.
+ * POST one produced step's artifact, keeping the REASON a rejected write gave.
+ *
+ * This used to collapse to a boolean, which threw away the only information the operator
+ * needed: the route answers a bad payload with the offending field names and a server
+ * failure with its message, and all of it was reduced to `false` → a single unexplained
+ * "not synced" dot. The `Result` mirrors {@link fetchArtifactsResult} on the read side, so
+ * both directions of the write-through report failures the same way.
  */
-export async function postArtifact(body: ArtifactUpsertBody): Promise<boolean> {
-  const r = await tryApiFetch('/api/pipeline-artifacts', {
+export async function postArtifact(body: ArtifactUpsertBody): Promise<Result<PipelineArtifact, string>> {
+  const r = await tryApiFetch<PipelineArtifact>('/api/pipeline-artifacts', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
-  return r.ok;
+  return r.ok ? { ok: true, data: r.data } : { ok: false, error: r.error };
 }
 
 /**

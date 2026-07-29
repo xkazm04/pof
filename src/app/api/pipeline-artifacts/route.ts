@@ -5,6 +5,21 @@ import { artifactUpsertSchema } from '@/lib/catalog/artifact-validation';
 import { gradeArtifact } from '@/lib/catalog/headless';
 import { stampPromptVersion } from '@/lib/prompt-evolution/judge-fitness';
 
+/** Max issues named in the error string — enough to fix the payload, short enough to render. */
+const MAX_REPORTED_ISSUES = 5;
+
+/**
+ * Turn zod issues into ONE human-readable sentence naming the offending fields, so the
+ * reason survives the `{ success:false, error }` envelope all the way to the operator.
+ */
+function describeInvalidPayload(issues: ReadonlyArray<{ path: PropertyKey[]; message: string }>): string {
+  const named = issues
+    .slice(0, MAX_REPORTED_ISSUES)
+    .map((i) => `${i.path.map(String).join('.') || '(root)'}: ${i.message}`);
+  const more = issues.length > MAX_REPORTED_ISSUES ? ` (+${issues.length - MAX_REPORTED_ISSUES} more)` : '';
+  return `Invalid artifact payload — ${named.join('; ')}${more}`;
+}
+
 /** GET /api/pipeline-artifacts?catalogId=items[&entityId=item-1] → PipelineArtifact[] */
 export async function GET(req: NextRequest) {
   try {
@@ -37,7 +52,11 @@ export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as unknown;
     const parsed = artifactUpsertSchema.safeParse(body);
-    if (!parsed.success) return apiError('Invalid artifact payload', 400, parsed.error.issues);
+    // The validation DETAIL goes in the `error` STRING, not only in `details`: the standard
+    // client (`tryApiFetch`) surfaces `error` and drops `details`, so a payload rejection
+    // used to reach the operator as a bare "Invalid artifact payload" with no way to tell
+    // WHICH field was wrong. `details` is kept for machine consumers.
+    if (!parsed.success) return apiError(describeInvalidPayload(parsed.error.issues), 400, parsed.error.issues);
     const p = parsed.data;
     // The prompt-evolution variant this run was served, read off the RAW body: it is an
     // additive provenance stamp (like `promptVersion`), not part of what gets graded, and

@@ -36,11 +36,17 @@ export interface LabStepArtifact {
    */
   error?: string;
   /**
-   * Set when the write-through POST to the server FAILED (offline/500) for this step's
-   * last produce. The local store still holds the optimistic artifact (add-only UX is
-   * preserved), but this flag makes the gap honest — the rail renders a persistent
-   * "not synced to server" indicator instead of a clean pass. Cleared once a later
-   * write-through for the same step succeeds.
+   * The REASON this step's last produce failed to reach the server — a rejected payload's
+   * offending fields, the server's own message, or {@link NO_SYNC_SINK_REASON} when there
+   * was no write-through sink at all. The local store still holds the optimistic artifact
+   * (add-only UX is preserved), but this makes the gap honest: the rail flags the step and
+   * the work canvas states that this step's Acceptance is local-only.
+   *
+   * It carries a sentence, not a flag, because "not synced" alone is unactionable — the
+   * operator cannot tell a malformed payload (fix the produce) from a dead server (retry).
+   *
+   * Cleared by a later successful write-through for the same step, by the operator, or by
+   * hydration proving the server holds a row at least as new as the local one.
    */
   syncError?: string;
   /**
@@ -100,6 +106,33 @@ interface LabPipelineState {
   adoptServer: (entityId: string, step: string, artifact: LabStepArtifact, opts?: { replaceHistory?: boolean }) => void;
 }
 
+/**
+ * Recorded when a produce runs with NO write-through sink registered.
+ *
+ * `setLabSync` is a module singleton the Baseline shell installs on mount and nulls on
+ * unmount, so anything that produces while the lab shell is not mounted (a background
+ * populate, a step rendered outside Baseline, a produce racing the unmount) wrote to
+ * localStorage only — and said nothing at all. Silence is the worst possible answer there:
+ * the step shows a derived `pass` that exists on exactly one machine.
+ */
+export const NO_SYNC_SINK_REASON =
+  'Not saved to the server: no write-through sink was registered when this step was produced ' +
+  '(the lab shell was not mounted). The result exists only in this browser.';
+
+/** Attach a sync failure to an already-written artifact (no-op if the step vanished). */
+function markSyncError(
+  s: { byEntity: Record<string, Record<string, LabStepArtifact>> },
+  entityId: string,
+  step: string,
+  error: string,
+): { byEntity: Record<string, Record<string, LabStepArtifact>> } {
+  const prev = s.byEntity[entityId]?.[step];
+  if (!prev || prev.syncError === error) return s;
+  return {
+    byEntity: { ...s.byEntity, [entityId]: { ...s.byEntity[entityId], [step]: { ...prev, syncError: error } } },
+  };
+}
+
 /** Normalize whatever was thrown into a reason string (never an empty message). */
 function reasonOf(e: unknown): string {
   const msg = e instanceof Error ? e.message : typeof e === 'string' ? e : '';
@@ -140,7 +173,10 @@ export const useLabPipelineStore = create<LabPipelineState>()(
         // reason inline and offers "Retry with same prompt".
         try {
           set((s) => ({ byEntity: { ...s.byEntity, [entityId]: { ...s.byEntity[entityId], [step]: artifact } } }));
-          _labSync?.(entityId, step, artifact);
+          if (_labSync) _labSync(entityId, step, artifact);
+          // A produce with no sink reached no server — say so on the artifact instead of
+          // letting the optimistic local write pass for a persisted one.
+          else set((s) => markSyncError(s, entityId, step, NO_SYNC_SINK_REASON));
         } catch (e) {
           set((s) => markFailure(s, entityId, step, reasonOf(e)));
           throw e;
@@ -160,7 +196,10 @@ export const useLabPipelineStore = create<LabPipelineState>()(
             written = { done: true, data, ueAssets: out.ueAssets ?? [], at: new Date().toISOString() };
             return { byEntity: { ...s.byEntity, [entityId]: { ...s.byEntity[entityId], [step]: written } } };
           });
-          if (written) _labSync?.(entityId, step, written);
+          if (written) {
+            if (_labSync) _labSync(entityId, step, written);
+            else set((s) => markSyncError(s, entityId, step, NO_SYNC_SINK_REASON));
+          }
         } catch (e) {
           // The step's OWN build logic threw (candidate generation, payload assembly) —
           // the most common real produce failure. Record it, then re-raise (see `produce`).
@@ -222,11 +261,22 @@ export const useLabPipelineStore = create<LabPipelineState>()(
             // thing: a gate drain resolves L3/L4 server-side, so its status/tier/reason are
             // merged onto the existing local artifact — otherwise a drain would leave the
             // step's banner frozen at `deferred` forever.
-            if (cur.status !== artifact.status || cur.tier !== artifact.tier || cur.reason !== artifact.reason) {
+            // A recorded sync failure is a claim about the SERVER ("your work never got
+            // there"). Hydration is the server answering — and if it holds a row at least
+            // as new as the local artifact, the claim is now false and keeping it would
+            // nag about a write that did land (a POST whose RESPONSE was lost, a retry
+            // from another tab). Strictly older server content leaves the flag alone: that
+            // row is a PREVIOUS produce and proves nothing about the failed one.
+            const staleSyncError =
+              cur.syncError !== undefined && Date.parse(artifact.at) >= Date.parse(cur.at);
+            const verdictChanged =
+              cur.status !== artifact.status || cur.tier !== artifact.tier || cur.reason !== artifact.reason;
+            if (verdictChanged || staleSyncError) {
               const next: LabStepArtifact = { ...cur };
               if (artifact.status === undefined) delete next.status; else next.status = artifact.status;
               if (artifact.tier === undefined) delete next.tier; else next.tier = artifact.tier;
               if (artifact.reason === undefined) delete next.reason; else next.reason = artifact.reason;
+              if (staleSyncError) delete next.syncError;
               merged[step] = next;
               changed = true;
             }

@@ -35,6 +35,9 @@ interface PipelineRailProps {
   /** The step's last produce failed to write through to the server (offline/500) — the
    *  local artifact is optimistic-only, so flag it as "not synced to server". */
   syncFailed?: (step: string, i: number) => boolean;
+  /** The REASON that write-through failed (server message / rejected fields / no sink), so
+   *  the flag is actionable on hover instead of a bare "not synced". */
+  syncFailedReason?: (step: string, i: number) => string | null | undefined;
   /** The step's last produce attempt FAILED and the store recorded the reason
    *  (`LabStepArtifact.error`) — flag it so the failure survives leaving the step,
    *  instead of living only in the Produce panel's inline message. */
@@ -54,6 +57,7 @@ export function PipelineRail({
   onRetryLoad,
   hasDrift,
   syncFailed,
+  syncFailedReason,
   produceFailed,
   isLive,
   tooltipFor,
@@ -164,6 +168,7 @@ export function PipelineRail({
         const unknown = !!error && !isLoading && (status === 'pending' || status === 'unproduced');
         const drifted = hasDrift?.(step, i) ?? false;
         const notSynced = syncFailed?.(step, i) ?? false;
+        const notSyncedWhy = (notSynced && syncFailedReason?.(step, i)) || null;
         const produceBroke = produceFailed?.(step, i) ?? false;
         const filled = status === 'pass' || status === 'fail';
         const fill = filled
@@ -350,7 +355,7 @@ export function PipelineRail({
                 <span
                   data-step-sync-failed="true"
                   aria-hidden="true"
-                  title="Not synced to server — this step's produce failed to save; it may be missing on other devices/sessions"
+                  title={notSyncedWhy ?? "Not synced to server — this step's produce failed to save; it may be missing on other devices/sessions"}
                   style={{
                     flexShrink: 0,
                     fontSize: 'var(--lab-fs-xs)',

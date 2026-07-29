@@ -121,31 +121,50 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
 
   // Write-through: register sync bound to the active catalogId so produce() fires
   // postArtifact, then invalidate the cache so the server-graded verdict is re-read.
+  // Failures record the SERVER'S OWN REASON (bad-payload field names / server message),
+  // never a bare flag — an operator can't act on "not synced".
+  const syncStep = useCallback(async (entityIdArg: string, step: string, art: { data: Record<string, unknown>; ueAssets: string[] }) => {
+    if (!catalogId) return;
+    // ONE grading path: `labGrade` runs the step's checker under the SAME CheckerContext
+    // the on-screen banner uses (real siblings + a live `has`), so the status we persist
+    // is by construction the status the user is looking at.
+    const res = labGrade(catalogId, entityIdArg, step, art.data);
+    const written = await postArtifact({
+      catalogId, entityId: entityIdArg, step, data: art.data, ueAssets: art.ueAssets,
+      status: res?.status ?? 'pass', tier: res?.tier ?? 'L0', reason: res?.reason,
+    });
+    const { setSyncError } = useLabPipelineStore.getState();
+    if (written.ok) {
+      // Server accepted the write — clear any stale not-synced flag and re-read the
+      // server-graded verdict through the shared fetch path.
+      setSyncError(entityIdArg, step, null);
+      invalidateArtifacts(catalogId, entityIdArg);
+    } else {
+      // The POST was rejected or never arrived. The optimistic local artifact stays
+      // (add-only UX preserved), but the reason is recorded verbatim so the rail and the
+      // work canvas can say WHY, and offer a retry.
+      setSyncError(entityIdArg, step, `Not saved to the server: ${written.error}`);
+    }
+  }, [catalogId]);
+
   useEffect(() => {
     if (!catalogId) { setLabSync(null); return; }
-    setLabSync((entityId, step, art) => {
-      // ONE grading path: `labGrade` runs the step's checker under the SAME CheckerContext
-      // the on-screen banner uses (real siblings + a live `has`), so the status we persist
-      // is by construction the status the user is looking at.
-      const res = labGrade(catalogId, entityId, step, art.data);
-      void postArtifact({ catalogId, entityId, step, data: art.data, ueAssets: art.ueAssets, status: res?.status ?? 'pass', tier: res?.tier ?? 'L0', reason: res?.reason })
-        .then((synced) => {
-          const { setSyncError } = useLabPipelineStore.getState();
-          if (synced) {
-            // Server accepted the write — clear any stale not-synced flag and re-read the
-            // server-graded verdict through the shared fetch path.
-            setSyncError(entityId, step, null);
-            invalidateArtifacts(catalogId, entityId);
-          } else {
-            // The POST never reached the server (offline/500). The optimistic local
-            // artifact stays (add-only UX preserved), but flag it so the rail shows an
-            // honest "not synced to server" indicator instead of a clean success.
-            setSyncError(entityId, step, 'Not synced to server');
-          }
-        });
-    });
+    setLabSync((entityIdArg, step, art) => { void syncStep(entityIdArg, step, art); });
     return () => setLabSync(null);
-  }, [catalogId]);
+  }, [catalogId, syncStep]);
+
+  /** Re-attempt the server write for a step whose write-through failed (the banner's Retry). */
+  const retryStepSync = useCallback((step: string) => {
+    if (!entityKey) return;
+    const art = useLabPipelineStore.getState().byEntity[entityKey]?.[step];
+    if (!art) return;
+    void syncStep(entityKey, step, { data: art.data, ueAssets: art.ueAssets });
+  }, [entityKey, syncStep]);
+
+  /** Dismiss a step's recorded sync failure without retrying (operator acknowledgement). */
+  const dismissStepSyncError = useCallback((step: string) => {
+    if (entityKey) useLabPipelineStore.getState().setSyncError(entityKey, step, null);
+  }, [entityKey]);
 
   // Hydrate the local store from the cached server artifacts (add-only — never wipes
   // local state). Runs when a fetch resolves; entityKey is the stable identity key.
@@ -255,6 +274,7 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
     resetEntityEverywhere, resetting, resetError, dismissResetError: () => setResetError(null),
     ueAssetCount,
     clearStepError,
+    retryStepSync, dismissStepSyncError,
     artifacts, artifactByStep, displayStatus, stepDone, done,
     artsLoading, artsError, retryArts,
     driftByStep, adoptServerStep, entitySteps,

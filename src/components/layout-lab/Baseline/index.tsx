@@ -47,6 +47,7 @@ export function Baseline(props: Props) {
     produce,
     resetEntityEverywhere, resetting, resetError, dismissResetError,
     ueAssetCount, clearStepError,
+    retryStepSync, dismissStepSyncError,
     artifacts, artifactByStep, displayStatus, stepDone, done,
     artsLoading, artsError, retryArts,
     driftByStep, adoptServerStep, entitySteps,
@@ -108,6 +109,7 @@ export function Baseline(props: Props) {
         onRetryLoad={retryArts}
         hasDrift={(step) => driftByStep.has(step)}
         syncFailed={(step) => !!entitySteps?.[step]?.syncError}
+        syncFailedReason={(step) => entitySteps?.[step]?.syncError}
         produceFailed={(step) => !!entitySteps?.[step]?.error}
         isLive={(step) => !!(detail && getStepComponent(detail.catalog.catalogId, step))}
         tooltipFor={(step, i) => {
@@ -208,6 +210,19 @@ export function Baseline(props: Props) {
                     hasContent={!!entitySteps[stepName].done}
                     onDismiss={() => clearStepError(stepName)}
                   />
+                )}
+                {/* The write-through failed for THIS step: its Acceptance below is derived
+                    from a local-only artifact the server never accepted. Sits directly above
+                    the step's acceptance banner (and carries the server's own reason) so a
+                    green banner can't be read as server-confirmed. */}
+                {entity && entitySteps?.[stepName]?.syncError && (
+                  <div data-testid="step-sync-error" style={{ marginBottom: 14 }}>
+                    <InlineErrorRetry
+                      message={`Acceptance below is LOCAL ONLY — ${entitySteps[stepName].syncError}`}
+                      onRetry={() => retryStepSync(stepName)}
+                      onDismiss={() => dismissStepSyncError(stepName)}
+                    />
+                  </div>
                 )}
                 {entity && driftByStep.has(stepName) && (
                   <DriftBanner

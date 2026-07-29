@@ -101,6 +101,20 @@ describe('POST /api/pipeline-artifacts — re-grades server-side (no fabricated 
     expect(body.data.status).toBe(expected);
   });
 
+  // The reason a rejection gives has to survive the `{ success:false, error }` envelope:
+  // the standard client (`tryApiFetch`) surfaces `error` and drops `details`, so a bare
+  // "Invalid artifact payload" left the operator with a red step and no way to fix it.
+  it('names the offending fields IN THE ERROR STRING when the payload is invalid', async () => {
+    const res = await POST(postReq({ catalogId: 'items', step: 'Economy' })); // no entityId, no data
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.success).toBe(false);
+    expect(body.error).toContain('entityId'); // the missing field, named
+    expect(body.error).toContain('status'); // ...and every other one, not just the first
+    // `details` is still there for machine consumers.
+    expect(Array.isArray(body.details)).toBe(true);
+  });
+
   it('trusts the caller status for a synthetic catalog with no server checker (loot-filter compat)', async () => {
     const res = await POST(postReq({
       catalogId: 'loot-filter-synthetic-shiploop-test', entityId: 'e1', step: 'Generate',

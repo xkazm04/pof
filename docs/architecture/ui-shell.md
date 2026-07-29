@@ -190,7 +190,7 @@ Three-column CSS grid `260px 320px 1fr`:
 | Column | Content |
 |--------|---------|
 | Left 260 px | `<CatalogTree>` |
-| Middle 320 px | Pipeline timeline: vertical connector line + step buttons; "Populate demo" / "Reset" buttons for the Items catalog. Step buttons carry badges for drift (`≠`), a failed server write-through (`⚠`), and a recorded produce failure (`✕`), each folded into the button's aria-label |
+| Middle 320 px | Pipeline timeline: vertical connector line + step buttons; "Populate demo" / "Reset" buttons for the Items catalog. Step buttons carry badges for drift (`≠`), a failed server write-through (`⚠`, whose `title` is the server's own reason), and a recorded produce failure (`✕`), each folded into the button's aria-label |
 | Right 1fr | Work canvas: compact `<NextStepCoach>` row + step heading + step component (the full per-step status lives in the middle pipeline rail, not repeated here) |
 
 **Responsive collapse**: the grid is `wide ? '260px 320px 1fr' : '1fr'`. Width comes from
