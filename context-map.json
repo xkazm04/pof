@@ -1044,8 +1044,11 @@
         "src/stores/deepEvalStore.ts",
         "src/types/evaluator.ts",
         "src/components/modules/evaluator/",
-        "src/app/api/evaluator/route.ts",
-        "src/__tests__/evaluator/"
+        "src/__tests__/evaluator/",
+        "src/lib/judge/",
+        "src/lib/status/judge-verdicts-db.ts",
+        "src/app/api/judge-verdicts/",
+        "scripts/judge-run.ts"
       ],
       "group": "Quality & Evaluation",
       "group_id": "f1644b8d-63c1-4c5e-8773-79fea0f4b424",
