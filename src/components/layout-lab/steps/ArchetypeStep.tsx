@@ -13,7 +13,7 @@ import { useGenerativeStep } from './shared/useGenerativeStep';
 import { useGeneratedImageAssets } from './shared/useGeneratedImageAssets';
 import { useGeneratedMeshAssets } from './shared/useGeneratedMeshAssets';
 import { withGenericFixCopy } from './shared/genericFixCopy';
-import { genericGalleryCandidates } from './shared/genericGalleryCandidates';
+import { imageGalleryCandidates } from './shared/imageGalleryCandidates';
 import { useLabPipelineStore } from '../labPipelineStore';
 import { useStepAcceptance } from './shared/useStepAcceptance';
 import { useCanonStore } from '../canonStore';
@@ -215,21 +215,32 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
   // data inside produceFrom, so two dispatches in one frame serialize (see 3d50330).
   //
   // A step may plug in its own candidate generator (spec.genCandidates) to surface REAL
-  // generated thumbnails; ArchetypeStep pre-fetches the asset manifest when it asks for
-  // one and passes it in. Absent → the default deterministic swatch generator (unchanged).
-  const wantsAssets = spec.view.kind === 'gallery' && !!spec.genCandidates?.needsAssets;
+  // generated thumbnails; ArchetypeStep pre-fetches the asset manifest and passes it in.
+  //
+  // 2D is now automatic for EVERY gallery step: the per-step art in `generated/icons/`
+  // is matched by (catalogId, step) from the generator's own filename id, so a step's own
+  // generated icon reaches its gallery without the step declaring anything. 3D stays
+  // opt-in (`genCandidates.assetKind: '3d'`) because a mesh isn't a thumbnail.
+  const isGallery = spec.view.kind === 'gallery';
   const assetKind = spec.genCandidates?.assetKind ?? '2d';
+  const wants3d = isGallery && !!spec.genCandidates?.needsAssets && assetKind === '3d';
   // Both hooks are called unconditionally (hooks discipline); each no-ops unless its
   // branch is the one requested. A '3d' gallery gets the .glb manifest so its candidates
-  // carry payload.glbUrl (→ interactive GlbViewer); '2d' gets served preview images.
-  const imageAssets = useGeneratedImageAssets(wantsAssets && assetKind === '2d');
-  const meshAssets = useGeneratedMeshAssets(wantsAssets && assetKind === '3d');
-  const galleryAssets = assetKind === '3d' ? meshAssets : imageAssets;
+  // carry payload.glbUrl (→ interactive GlbViewer); '2d' gets THIS step's generated art.
+  const imageMatch = useMemo(
+    () => (catalogId ? { catalogId, step } : null),
+    [catalogId, step],
+  );
+  const imageAssets = useGeneratedImageAssets(isGallery && !wants3d, imageMatch);
+  const meshAssets = useGeneratedMeshAssets(wants3d);
+  const galleryAssets = wants3d ? meshAssets : imageAssets;
   const galleryCandidates = useCallback(
     (dir: string, seq: number) => {
       if (spec.view.kind !== 'gallery') return [];
       if (spec.genCandidates) return spec.genCandidates.build(dir, seq, galleryAssets);
-      return genericGalleryCandidates(spec.view.field, spec.view.candidates, dir, seq);
+      // No bespoke generator: real per-step art when it exists, honest swatches otherwise
+      // (imageGalleryCandidates delegates to genericGalleryCandidates on an empty manifest).
+      return imageGalleryCandidates(spec.view.field, spec.view.candidates, galleryAssets, dir, seq);
     },
     [spec, galleryAssets],
   );
@@ -343,8 +354,13 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
               <img src={sel.imageUrl} alt={sel.caption ?? 'selected generated asset'} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
             )}
           </div>
-          <span style={{ fontSize: 12, color: t.muted }}>
-            {sel?.imageUrl ? 'Real generated asset preview.' : 'Deterministic seed preview — not the generated asset.'}
+          {/* An imageUrl is only ever set by imageGalleryCandidates from THIS step's own
+              matched art, so the "real" claim names the file it is actually showing —
+              it used to be attached to a TripoSR mesh turntable on any 2D gallery. */}
+          <span data-testid="gallery-selected-caption" style={{ fontSize: 12, color: t.muted }}>
+            {sel?.imageUrl
+              ? `Real generated asset for this step: ${sel.caption ?? 'generated image'}`
+              : 'Deterministic seed preview — not the generated asset.'}
           </span>
           {sel && assetPath
             ? <span className={t.fontMono} style={{ fontSize: 14, color: t.ok }}>✓ asset target: {assetPath} <span style={{ color: t.muted }}>(written by the drain)</span></span>
