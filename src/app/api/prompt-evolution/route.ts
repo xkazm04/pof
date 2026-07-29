@@ -21,7 +21,7 @@ import {
   restoreVariant,
   optimizePrompt,
 } from '@/lib/prompt-evolution/engine';
-import { getPromptVersionFitness } from '@/lib/prompt-evolution/judge-fitness';
+import { getPromptVersionFitness, getPromptVariantFitness } from '@/lib/prompt-evolution/judge-fitness';
 import { getModuleSessions, getModuleStats } from '@/lib/session-analytics-db';
 import type { PromptEvolutionRequest } from '@/types/prompt-evolution';
 import type { SubModuleId } from '@/types/modules';
@@ -127,6 +127,13 @@ export async function POST(req: NextRequest) {
         // Judge-scored quality per quality-pack prompt version (the WS1 improvement loop):
         // judge_verdicts ⋈ pipeline_artifacts ⋈ _provenance.promptVersion.
         return apiSuccess(getPromptVersionFitness());
+      }
+
+      case 'get-variant-fitness': {
+        // Judge-scored quality per SERVED VARIANT — the objective counterpart to a
+        // variant's self-reported trial record (join: judge_verdicts ⋈ pipeline_artifacts
+        // ⋈ _provenance.promptVariantId).
+        return apiSuccess(getPromptVariantFitness());
       }
 
       case 'get-tests': {

@@ -163,6 +163,22 @@ export interface PromptVersionFitness {
   isCurrent: boolean;
 }
 
+/**
+ * How well the artifacts produced under one SERVED VARIANT scored with the judge fleet.
+ * Same honesty rule as {@link PromptVersionFitness}: unjudged is `null`, never `0`. This is
+ * the objective half of a variant's record — its trial counter is what runs said about
+ * themselves; this is what an independent judge scored the output at.
+ */
+export interface PromptVariantFitness {
+  /** The variant id stamped into the artifacts' `_provenance.promptVariantId`. */
+  variantId: string;
+  producedArtifacts: number;
+  judgedArtifacts: number;
+  verdicts: number;
+  avgScore: number | null;
+  passRate: number | null;
+}
+
 // ── Prompt cluster result (from similarity analysis) ──
 
 export interface PromptCluster {
@@ -256,6 +272,7 @@ export interface PromptEvolutionRequest {
     | 'resolve-dispatch-variant'
     | 'record-variant-trial'
     | 'get-prompt-fitness'
+    | 'get-variant-fitness'
     | 'get-version-history'
     | 'restore-variant'
     | 'optimize-prompt';

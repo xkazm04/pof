@@ -10,6 +10,7 @@ import {
   startABTest,
   resolveDispatchVariant,
   recordTrialForServedVariant,
+  recordTrialForVariantId,
   getVersionHistory,
   getVariantsForItem,
 } from '@/lib/prompt-evolution/engine';
@@ -90,6 +91,22 @@ describe('seeded item → challenger → trials', () => {
     expect(totalTrials).toBe(2);
     expect(history.versions.every((v) => v.stats.testCount === 1)).toBe(true);
     expect(test.status).toBe('running');
+  });
+
+  it('books a recipe-path trial from the variant id alone (the /api/catalog callback)', () => {
+    // The recipe callback posts a lifecycle payload with no (module, item) key — the
+    // served variant id has to be enough to find the test it is an arm of.
+    const baseline = seedBaselineVariant(MOD, ITEM, STATIC_PROMPT)!.variant;
+    const challenger = createVariant(MOD, ITEM, 'Optimized: verify the build compiles after the change.', 'user-edit');
+    startABTest(MOD, ITEM, baseline.id, challenger.id);
+
+    const booked = recordTrialForVariantId(challenger.id, true, 250);
+    expect(booked).not.toBeNull();
+    expect(booked!.variantBTrials).toBe(1);
+    expect(booked!.variantBSuccesses).toBe(1);
+
+    // A variant under no running test is a normal, non-error no-op.
+    expect(recordTrialForVariantId('var-not-under-test', true)).toBeNull();
   });
 
   it('serves the challenger — not just the incumbent — within MIN_TRIALS', () => {

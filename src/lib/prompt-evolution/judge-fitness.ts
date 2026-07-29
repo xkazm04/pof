@@ -17,7 +17,7 @@
  */
 
 import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
-import type { PromptVersionFitness } from '@/types/prompt-evolution';
+import type { PromptVersionFitness, PromptVariantFitness } from '@/types/prompt-evolution';
 import { readProvenance, type Provenance } from '@/lib/provenance';
 import { PROMPT_VERSION } from '@/lib/prompts/quality';
 import { listVerdicts } from '@/lib/status/judge-verdicts-db';
@@ -37,11 +37,17 @@ function joinKey(catalogId: string, entityId: string, step: string): string {
 export function stampPromptVersion(
   data: Record<string, unknown>,
   promptVersion?: string,
+  promptVariantId?: string,
 ): Record<string, unknown> {
   const existing = readProvenance(data);
+  const variantId = promptVariantId ?? existing?.promptVariantId;
   const provenance: Provenance = {
     ...(existing ?? { engine: 'unknown' }),
     promptVersion: promptVersion ?? existing?.promptVersion ?? PROMPT_VERSION,
+    // Only stamp a REAL variant: `'static'` (or nothing) means the run used the
+    // registry/recipe prompt, and inventing a variant id for it would attribute
+    // scores to an experiment that never ran.
+    ...(variantId && variantId !== 'static' ? { promptVariantId: variantId } : {}),
   };
   return { ...data, _provenance: provenance };
 }
@@ -57,11 +63,41 @@ export function computeVersionFitness(
   artifacts: PipelineArtifact[],
   verdicts: JudgeVerdict[],
 ): PromptVersionFitness[] {
+  return aggregateFitness(artifacts, verdicts, (p) => p.promptVersion)
+    .map((f) => ({ ...f, promptVersion: f.bucket, isCurrent: f.bucket === PROMPT_VERSION }))
+    .sort((a, b) => a.promptVersion.localeCompare(b.promptVersion));
+}
+
+/**
+ * Aggregate judge scores per SERVED VARIANT — the join the A/B rail was missing.
+ *
+ * A variant's own trial counter only knows what the run reported about itself; this
+ * reads what the judge fleet independently scored the artifact that run produced. Same
+ * honesty rule: a variant whose artifacts nobody judged reports `null`, never `0`.
+ * Artifacts produced by the static prompt carry no `promptVariantId` and are excluded —
+ * they belong to no experiment.
+ */
+export function computeVariantFitness(
+  artifacts: PipelineArtifact[],
+  verdicts: JudgeVerdict[],
+): PromptVariantFitness[] {
+  return aggregateFitness(artifacts, verdicts, (p) => p.promptVariantId)
+    .map((f) => ({ ...f, variantId: f.bucket }))
+    .sort((a, b) => a.variantId.localeCompare(b.variantId));
+}
+
+/** Shared artifact⋈verdict aggregation, bucketed by whichever provenance field is asked for. */
+function aggregateFitness(
+  artifacts: PipelineArtifact[],
+  verdicts: JudgeVerdict[],
+  bucketOf: (p: Provenance) => string | undefined,
+): (Omit<PromptVersionFitness, 'promptVersion' | 'isCurrent'> & { bucket: string })[] {
   const versionByKey = new Map<string, string>();
   const produced = new Map<string, number>();
 
   for (const a of artifacts) {
-    const version = readProvenance(a.data)?.promptVersion;
+    const provenance = readProvenance(a.data);
+    const version = provenance ? bucketOf(provenance) : undefined;
     if (!version) continue;
     versionByKey.set(joinKey(a.catalogId, a.entityId, a.step), version);
     produced.set(version, (produced.get(version) ?? 0) + 1);
@@ -84,25 +120,27 @@ export function computeVersionFitness(
     judgedArtifactKeys.set(version, seen);
   }
 
-  return Array.from(produced.entries())
-    .map(([promptVersion, producedArtifacts]) => {
-      const verdicts = verdictCount.get(promptVersion) ?? 0;
-      const judgedArtifacts = judgedArtifactKeys.get(promptVersion)?.size ?? 0;
-      return {
-        promptVersion,
-        producedArtifacts,
-        judgedArtifacts,
-        verdicts,
-        // Unjudged is unknown, not zero.
-        avgScore: verdicts > 0 ? (scoreSum.get(promptVersion) ?? 0) / verdicts : null,
-        passRate: verdicts > 0 ? (passCount.get(promptVersion) ?? 0) / verdicts : null,
-        isCurrent: promptVersion === PROMPT_VERSION,
-      };
-    })
-    .sort((a, b) => a.promptVersion.localeCompare(b.promptVersion));
+  return Array.from(produced.entries()).map(([bucket, producedArtifacts]) => {
+    const verdicts = verdictCount.get(bucket) ?? 0;
+    const judgedArtifacts = judgedArtifactKeys.get(bucket)?.size ?? 0;
+    return {
+      bucket,
+      producedArtifacts,
+      judgedArtifacts,
+      verdicts,
+      // Unjudged is unknown, not zero.
+      avgScore: verdicts > 0 ? (scoreSum.get(bucket) ?? 0) / verdicts : null,
+      passRate: verdicts > 0 ? (passCount.get(bucket) ?? 0) / verdicts : null,
+    };
+  });
 }
 
 /** Read both tables and compute the per-version fitness. Server-only. */
 export function getPromptVersionFitness(): PromptVersionFitness[] {
   return computeVersionFitness(listAllArtifacts(), listVerdicts());
+}
+
+/** Read both tables and compute the per-VARIANT judge fitness. Server-only. */
+export function getPromptVariantFitness(): PromptVariantFitness[] {
+  return computeVariantFitness(listAllArtifacts(), listVerdicts());
 }

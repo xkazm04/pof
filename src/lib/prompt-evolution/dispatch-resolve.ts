@@ -14,14 +14,23 @@
  * same task + project context.
  */
 
-import { buildTaskPrompt, type CLITask, type ChecklistTask } from '@/lib/cli-task';
+import {
+  buildTaskPrompt,
+  STATIC_VARIANT_ID,
+  type CLITask,
+  type ChecklistTask,
+  type GenerateTask,
+  type EvaluateTrackTask,
+} from '@/lib/cli-task';
+import { taskVariantBody } from '@/lib/cli-task-handlers';
 import type { ProjectContext } from '@/lib/prompt-context';
 import { tryApiFetch } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
 import type { ServedVariant } from '@/types/prompt-evolution';
 
-/** The sentinel recorded when a run used the static registry prompt. */
-export const STATIC_VARIANT_ID = 'static';
+/** The sentinel recorded when a run used the static registry prompt (declared in
+ *  `cli-task` so the task handlers can read it without importing this resolver). */
+export { STATIC_VARIANT_ID };
 
 /** Options shared by the resolve + compose entry points. */
 export interface DispatchResolveOptions {
@@ -44,6 +53,20 @@ export function variantKeyForTask(
   if (task.type === 'checklist') {
     const ct = task as ChecklistTask;
     if (ct.itemId) return { moduleId: task.moduleId, checklistItemId: ct.itemId };
+  }
+  // Recipe-driven dispatches — the ONLY path whose output the judge fleet scores, so
+  // this is where an A/B can be settled by something better than a self-reported
+  // success flag. The synthetic key ENDS WITH THE ENTITY ID on purpose: a recipe step
+  // prompt embeds that entity's own spec (name, tag, attribute rows), so a variant
+  // seeded for one entity must never be served to another — that would dispatch the
+  // wrong entity's specification under the right-looking key.
+  if (task.type === 'generate') {
+    const gt = task as GenerateTask;
+    return { moduleId: task.moduleId, checklistItemId: `${gt.entity.catalogId}::${gt.step}::${gt.entity.id}` };
+  }
+  if (task.type === 'evaluate-track') {
+    const et = task as EvaluateTrackTask;
+    return { moduleId: task.moduleId, checklistItemId: `${et.entity.catalogId}::track:${et.trackId}::${et.entity.id}` };
   }
   return null;
 }
@@ -111,7 +134,14 @@ export async function composeTaskDispatch(
   ctx: ProjectContext,
   opts: DispatchResolveOptions = {},
 ): Promise<{ prompt: string; variantId: string }> {
-  const { prompt, variantId } = await resolveActivePrompt(task, opts);
+  // Materialize the variant-able body first. `checklist` already carries its text on
+  // `task.prompt`; the recipe-driven types compose theirs inside the handler, so
+  // without this the baseline seed would capture an EMPTY prompt and a served variant
+  // would be silently ignored. With no variant resolved the body is exactly what the
+  // handler would have recomputed, so the static path is byte-identical.
+  const body = taskVariantBody(task, ctx);
+  const withBody: CLITask = body === task.prompt ? task : { ...task, prompt: body };
+  const { prompt, variantId } = await resolveActivePrompt(withBody, opts);
   const resolvedTask: CLITask = { ...task, prompt, promptVariantId: variantId };
   return { prompt: buildTaskPrompt(resolvedTask, ctx), variantId };
 }

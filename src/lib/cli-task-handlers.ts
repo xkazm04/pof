@@ -34,6 +34,7 @@ import {
   registerCallback,
   getCallback,
   buildCallbackSection,
+  STATIC_VARIANT_ID,
   type CLITask,
   type CLITaskType,
   type ChecklistTask,
@@ -555,6 +556,47 @@ AnimNotify.
 ${buildCallbackSection(getCallback(cbId)!)}`;
 };
 
+/**
+ * The variant-able BODY of a generate dispatch — the recipe's step prompt, without
+ * the callback section. `''` when the catalog has no registered recipe (the caller
+ * decides what to say about that; this stays silent so it can be called twice —
+ * once to materialize the body for variant resolution, once to build the prompt).
+ */
+function recipeStepBody(gt: GenerateTask, ctx: ProjectContext): string {
+  const recipe = getRecipe(gt.entity.catalogId);
+  return recipe ? recipe.buildStepPrompt(gt.entity, gt.step, ctx) : '';
+}
+
+/** The variant-able body of an evaluate-track dispatch (no callback section). */
+function evaluateTrackBody(et: EvaluateTrackTask): string {
+  const label = trackLabel(et.trackId);
+  return (
+    `Evaluate the "${label}" production track for the ${et.entity.catalogId} entity "${et.entity.name}".\n\n` +
+    `Track scope: ${trackHint(et.trackId)}\n\n` +
+    `Assess what exists today (in the UE project + this catalog entity's data), then judge ` +
+    `whether the "${label}" track is not-started / in-progress / done / blocked, and list the ` +
+    `concrete next steps to bring it to a playable "done" state. Be specific about file paths, ` +
+    `asset names, and which existing PoF systems to reuse.`
+  );
+}
+
+/**
+ * The part of a task's prompt a prompt-evolution VARIANT may replace.
+ *
+ * For most task types that is simply `task.prompt` (the registry/caller text). The
+ * recipe-driven types (`generate`, `evaluate-track`) carry `prompt: ''` and compose
+ * their body inside the handler, so serving a variant to them was impossible — the
+ * swap had nothing to swap. Materializing the body here lets the dispatch path seed a
+ * baseline from it and hand a served variant back through `task.prompt`, which both
+ * handlers now prefer when non-empty. The callback section is deliberately NOT part of
+ * the body: it is per-dispatch machinery, not prompt wording under test.
+ */
+export function taskVariantBody(task: CLITask, ctx: ProjectContext): string {
+  if (task.type === 'generate') return recipeStepBody(task as GenerateTask, ctx);
+  if (task.type === 'evaluate-track') return evaluateTrackBody(task as EvaluateTrackTask);
+  return task.prompt;
+}
+
 const generate: TaskPromptHandler = (task, ctx) => {
   const gt = task as GenerateTask;
   const recipe = getRecipe(gt.entity.catalogId);
@@ -570,7 +612,10 @@ const generate: TaskPromptHandler = (task, ctx) => {
     );
     return gt.entity.name;
   }
-  const base = recipe.buildStepPrompt(gt.entity, gt.step, ctx);
+  // A served prompt-evolution variant (or the pre-materialized recipe body) arrives
+  // on `task.prompt`; recompute only when the dispatch path resolved nothing, so the
+  // static path stays byte-identical to the pre-variant output.
+  const base = gt.prompt.trim() ? gt.prompt : recipeStepBody(gt, ctx);
   const cbId = registerCallback({
     url: `${gt.appOrigin}/api/catalog`,
     method: 'POST',
@@ -582,6 +627,13 @@ const generate: TaskPromptHandler = (task, ctx) => {
       // Stamp the prompt-pack version into the callback payload so the judge
       // fleet can correlate verdicts to the prompt generation that produced them.
       promptVersion: PROMPT_VERSION,
+      // …and the VARIANT that was actually served, so /api/catalog can book the
+      // trial for the running test this run belongs to (the recipe path's leg 2).
+      // A run served the static recipe prompt is not a trial of anything, so it
+      // adds NO field — the static prompt stays byte-identical to the pre-A/B one.
+      ...(gt.promptVariantId && gt.promptVariantId !== STATIC_VARIANT_ID
+        ? { promptVariantId: gt.promptVariantId }
+        : {}),
     },
     schemaHint:
       '  "ueAssets": ["<UE asset path(s) you created/modified>"],\n' +
@@ -592,14 +644,8 @@ const generate: TaskPromptHandler = (task, ctx) => {
 
 const evaluateTrack: TaskPromptHandler = (task, ctx) => {
   const et = task as EvaluateTrackTask;
-  const label = trackLabel(et.trackId);
-  const base =
-    `Evaluate the "${label}" production track for the ${et.entity.catalogId} entity "${et.entity.name}".\n\n` +
-    `Track scope: ${trackHint(et.trackId)}\n\n` +
-    `Assess what exists today (in the UE project + this catalog entity's data), then judge ` +
-    `whether the "${label}" track is not-started / in-progress / done / blocked, and list the ` +
-    `concrete next steps to bring it to a playable "done" state. Be specific about file paths, ` +
-    `asset names, and which existing PoF systems to reuse.`;
+  // Prefer the served variant / pre-materialized body (see `taskVariantBody`).
+  const base = et.prompt.trim() ? et.prompt : evaluateTrackBody(et);
   const cbId = registerCallback({
     url: `${et.appOrigin}/api/pipeline`,
     method: 'POST',

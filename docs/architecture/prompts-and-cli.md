@@ -492,6 +492,36 @@ prompt (`origin: 'seeded'`), so the static golden rail is unchanged — only the
 `promptVariantId` moves from `'static'` to the baseline id on later runs. Previews
 (`TaskPromptInspector`) pass no options and therefore never seed.
 
+**Which task types are under test.** Variant serving covers `checklist` **and the
+recipe-driven types** (`generate`, `evaluate-track`) — the latter matter because the
+generate path is the only one whose OUTPUT the judge fleet scores, so its A/B can be
+settled by an independent verdict instead of a self-reported success flag. Two mechanics
+make that work:
+- **Key** (`variantKeyForTask`): `\<catalogId\>::\<step\>::\<entityId\>` (tracks:
+  `\<catalogId\>::track:\<trackId\>::\<entityId\>`). The entity id is part of the key on
+  purpose — a recipe prompt embeds that entity's own spec, so a variant seeded for one
+  entity must never be served to another.
+- **Body** (`taskVariantBody` in `cli-task-handlers.ts`): these tasks carry `prompt: ''`
+  and compose their text inside the handler, so there was nothing for a variant to
+  replace. `composeTaskDispatch` now materializes the recipe body first (seeding captures
+  THAT, not an empty string) and the handlers prefer a non-empty `task.prompt`. With no
+  variant resolved the body equals what the handler would have recomputed, so the static
+  prompt is byte-identical (asserted, and the `task-generate` golden is unmoved).
+
+**Leg 2 on the recipe path.** The generate callback posts to `/api/catalog` with a
+lifecycle payload that carries no prompt key, so the served id travels alone in the static
+fields (added ONLY for a real variant — `'static'` adds no field) and the route books the
+trial via `recordTrialForVariantId`, which finds the running test the id is an arm of.
+A `verify` step counts as a success only when its `testResult` passed.
+
+**Judge verdicts per variant.** `/api/pipeline-artifacts` POST accepts an additive
+`promptVariantId` (read off the raw body — it is a provenance stamp, not graded input) and
+`stampPromptVersion` writes it to `data._provenance.promptVariantId` beside
+`promptVersion`, preserving one a producer already wrote. `computeVariantFitness`
+(`get-variant-fitness`) then aggregates judge scores on that key with the same honesty
+rule as version fitness: unjudged is `null`, never `0`, and static-prompt artifacts are
+excluded because they belong to no experiment.
+
 **Challenger in one click.** The Optimizer tab's rewrite used to be display-only.
 `OptimizerPanel` now offers "save as challenger variant": pick the checklist item, and
 `usePromptEvolution.handleSaveChallenger` seeds the baseline from the registry prompt

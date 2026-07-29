@@ -348,6 +348,28 @@ export function recordTrialForServedVariant(
   return null;
 }
 
+/**
+ * Book a trial for a served variant when the caller knows only the variant id.
+ *
+ * The checklist callback carries its (module, item) key, but the recipe/generate
+ * callback posts to `/api/catalog` with a lifecycle payload that has no prompt key at
+ * all — so the id itself has to be enough. A variant id is unique across the table, so
+ * the running test it is an arm of is a direct lookup. Returns `null` when the variant
+ * is not under any running test (the adopted-version path — nothing to measure).
+ */
+export function recordTrialForVariantId(
+  variantId: string,
+  success: boolean,
+  durationMs = 0,
+): ABTest | null {
+  for (const test of getAllABTests()) {
+    if (test.status !== 'running') continue;
+    const slot = test.variantAId === variantId ? 'A' : test.variantBId === variantId ? 'B' : null;
+    if (slot) return recordTestTrial(test.id, slot, success, durationMs);
+  }
+  return null;
+}
+
 // ── Clustering ──────────────────────────────────────────────────────────────
 
 export function clusterModulePrompts(sessions: SessionRecord[]) {

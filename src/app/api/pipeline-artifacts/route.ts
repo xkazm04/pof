@@ -35,9 +35,19 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
-    const parsed = artifactUpsertSchema.safeParse(await req.json());
+    const body = (await req.json()) as unknown;
+    const parsed = artifactUpsertSchema.safeParse(body);
     if (!parsed.success) return apiError('Invalid artifact payload', 400, parsed.error.issues);
     const p = parsed.data;
+    // The prompt-evolution variant this run was served, read off the RAW body: it is an
+    // additive provenance stamp (like `promptVersion`), not part of what gets graded, and
+    // the upsert schema is owned by the catalog contract. Absent / `'static'` → nothing is
+    // stamped, so an artifact can never claim an experiment that did not run. A producer
+    // may equally pass it inside `data._provenance` — the stamp preserves that.
+    const promptVariantId =
+      typeof body === 'object' && body !== null && typeof (body as { promptVariantId?: unknown }).promptVariantId === 'string'
+        ? (body as { promptVariantId: string }).promptVariantId
+        : undefined;
 
     // Grade the SUBMITTED data, untouched — the provenance stamp is added only to what we
     // persist, so acceptance can never shift because of it (the additive-key pattern).
@@ -52,7 +62,7 @@ export async function POST(req: NextRequest) {
       catalogId: p.catalogId,
       entityId: p.entityId,
       step: p.step,
-      data: stampPromptVersion(p.data, p.promptVersion),
+      data: stampPromptVersion(p.data, p.promptVersion, promptVariantId),
       ueAssets: p.ueAssets,
       status,
       tier,

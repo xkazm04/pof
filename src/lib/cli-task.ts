@@ -298,6 +298,14 @@ export interface CLITask {
 }
 
 /**
+ * The sentinel `promptVariantId` a run records when it used the static registry /
+ * recipe prompt. Declared here (not in `prompt-evolution/dispatch-resolve`, which
+ * re-exports it) so the per-task-type handlers can recognise "no experiment ran"
+ * without importing the resolver — that import direction is already taken.
+ */
+export const STATIC_VARIANT_ID = 'static';
+
+/**
  * Extended checklist task — carries the checklist item id for progress tracking.
  */
 export interface ChecklistTask extends CLITask {

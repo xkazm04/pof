@@ -20,6 +20,14 @@ export interface Provenance {
   effort?: string;
   /** Version of the quality prompt pack used (WS1). */
   promptVersion?: string;
+  /**
+   * The prompt-evolution VARIANT that was served for the dispatch which produced this
+   * artifact (`'static'` when the run used the registry/recipe prompt). Sits beside
+   * `promptVersion` because it is the finer-grained half of the same join: the pack
+   * version says which prompt GENERATION ran, this says which phrasing under test did —
+   * so judge verdicts become per-variant fitness, not just per-pack.
+   */
+  promptVariantId?: string;
   /** ISO stamp (caller supplies; keeps this pure/test-stable). */
   at?: string;
 }
