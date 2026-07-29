@@ -172,6 +172,34 @@ motion-matching pitfalls it can never hit. Builder→module mapping: `level-desi
 shared fixture table (`builder-fixtures.ts`) and fails if a builder file is added
 without joining the routing.
 
+**Off-rail surfaces (`__tests__/lib/prompts/off-rail-join.test.ts`).** Outside
+`src/lib/prompts/` the same audit found two classes of gap, and that rail now pins
+both (with a golden per surface):
+
+- *Unrouted header callers* — they called `buildProjectContextHeader` with only
+  `extraRules`, so they took the conservative pitfall superset and no tips /
+  known assets. Now routed through `moduleKnowledge`:
+  `evaluator/fix-plan-generator.ts` (single + batch, scoped to the FINDING's own
+  module), `evaluator/deep-eval-engine.ts` (the pass prompt, extracted as the pure
+  `buildDeepEvalPassPrompt` so it is testable and pinnable), and
+  `harness/executor.ts`'s `buildAreaPrompt` (scoped to `area.moduleId` —
+  prompt-assembly only; the harness loop is untouched).
+- *Fully off-rail builders* — most are joined at their DISPATCH site: `ai-feel`'s
+  apply prompt and the inventory balance prompt go out as `ask-claude` tasks, so
+  `buildTaskPrompt` composes the routed header for them (pinned, so a refactor that
+  sends the raw string is caught). The genuinely raw one was **feature-init**:
+  `FeatureInitButton` sent `initPrompt.prompt` through `sendPrompt` with no
+  composition at all, and now dispatches `TaskFactory.quickAction` (prompt text
+  unchanged, full header + domain + knowledge gained).
+
+Deliberate **exemptions** are recorded in that same rail: `project-setup/prompts.ts`
+(the create prompt builds the very project a header would describe; the
+build-verify prompt is a terse diagnostic carrying its own engine/project paths and
+rules) and `ability/logic-prompts.ts` (the spec-draft prompt is app-side-only and a
+UE build header would contradict its own "do not modify any UE C++" constraint; the
+logic-change builder has no dispatch site yet — composition belongs to the task that
+eventually dispatches it).
+
 
 - `buildAnimationChecklistPrompt(step, ctx)` — injects animation-specific `extraRules`,
   builds the task from `ChecklistStep.{number, title, description, details, prompt}`,

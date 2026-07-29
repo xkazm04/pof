@@ -22,6 +22,7 @@ import {
   getModuleDomainContext,
 } from '@/lib/prompt-context';
 import type { ProjectContext } from '@/lib/prompt-context';
+import { moduleKnowledge } from '@/lib/prompts/module-knowledge';
 import { spawnClaudeSession, wrapHarnessResult, HARNESS_RESULT_REGEX } from './claude-session';
 import type {
   ExecutorConfig,
@@ -33,7 +34,8 @@ import type {
 
 // ── Prompt Assembly ─────────────────────────────────────────────────────────
 
-function buildAreaPrompt(
+/** Exported for the prompt-assembly rail (golden + knowledge-routing pins). */
+export function buildAreaPrompt(
   area: ModuleArea,
   plan: GamePlan,
   progress: ProgressEntry[],
@@ -45,6 +47,9 @@ function buildAreaPrompt(
 
   // 1. Project context
   sections.push(buildProjectContextHeader(ctx, {
+    // The area names the module it belongs to, so the autonomous session gets that
+    // module's scoped pitfalls + tips + known asset paths instead of the superset.
+    ...moduleKnowledge(area.moduleId),
     includeBuildCommand: true,
     includeRules: true,
   }));

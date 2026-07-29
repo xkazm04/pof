@@ -16,7 +16,48 @@ import type { EvalPass } from './module-eval-prompts';
 import { parseFindings, deduplicateFindings, aggregateFindings } from './finding-collector';
 import type { EvalFinding, ScanFindings } from './finding-collector';
 import { buildProjectContextHeader } from '@/lib/prompt-context';
+import { moduleKnowledge } from '@/lib/prompts/module-knowledge';
 import type { ProjectContext } from '@/lib/prompt-context';
+
+/**
+ * The composed prompt for ONE evaluation pass — header + eval body.
+ *
+ * Extracted from the run loop so the surface is pure and pinnable: it is a
+ * prompt-assembly seam, and it was one of the callers that asked
+ * `buildProjectContextHeader` for a header with NO knowledge routing, so every
+ * pass hauled the conservative pitfall superset and got none of its module's
+ * authored tips or known asset paths. It now routes through the same
+ * {@link moduleKnowledge} seam the CLITask path uses.
+ */
+export function buildDeepEvalPassPrompt(
+  projectContext: ProjectContext,
+  moduleId: SubModuleId,
+  pass: EvalPass,
+): string {
+  const moduleName = projectContext.projectName || 'MyProject';
+  const body = buildEvalPrompt({
+    moduleId,
+    pass,
+    projectName: projectContext.projectName,
+    moduleName,
+    sourcePath: `Source/${moduleName}/`,
+  });
+  const header = buildProjectContextHeader(projectContext, {
+    // Same knowledge routing the CLITask path uses — an evaluation pass reads the
+    // module's own domain, so it must see that module's pitfalls/tips, not the superset.
+    ...moduleKnowledge(moduleId),
+    includeBuildCommand: false,
+    includeRules: true,
+    extraRules: [
+      'This is an EVALUATION task — do NOT modify any files.',
+      'Read source files to analyze them, then output your findings.',
+      'Do NOT use TodoWrite.',
+    ],
+  });
+  return `${header}
+
+${body}`;
+}
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -100,9 +141,6 @@ export async function runDeepEval(options: DeepEvalOptions): Promise<DeepEvalRes
   const scanId = `deep-${Date.now()}`;
   const startTime = Date.now();
   const allFindings: EvalFinding[] = [];
-
-  const moduleName = projectContext.projectName || 'MyProject';
-  const sourcePath = `Source/${moduleName}/`;
 
   // Initialize progress
   const passStatuses: Record<string, Record<EvalPass, 'pending' | 'running' | 'done' | 'error' | 'skipped'>> = {};
@@ -189,26 +227,7 @@ export async function runDeepEval(options: DeepEvalOptions): Promise<DeepEvalRes
     emitProgress();
 
     try {
-      const prompt = buildEvalPrompt({
-        moduleId: moduleId as SubModuleId,
-        pass,
-        projectName: projectContext.projectName,
-        moduleName,
-        sourcePath,
-      });
-
-      // Wrap with project context header for the CLI
-      const fullPrompt = `${buildProjectContextHeader(projectContext, {
-        includeBuildCommand: false,
-        includeRules: true,
-        extraRules: [
-          'This is an EVALUATION task — do NOT modify any files.',
-          'Read source files to analyze them, then output your findings.',
-          'Do NOT use TodoWrite.',
-        ],
-      })}
-
-${prompt}`;
+      const fullPrompt = buildDeepEvalPassPrompt(projectContext, moduleId as SubModuleId, pass);
 
       const response = await fetch('/api/claude-terminal/query', {
         method: 'POST',

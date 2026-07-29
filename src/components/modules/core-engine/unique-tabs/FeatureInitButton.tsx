@@ -38,7 +38,7 @@ export function FeatureInitButton({
 }: FeatureInitButtonProps) {
   const initPrompt = getFeatureInitPrompt(moduleId, sectionId);
 
-  const { sendPrompt, isRunning } = useModuleCLI({
+  const { execute, isRunning } = useModuleCLI({
     moduleId,
     sessionKey: `init-${sectionId}`,
     label: `Init: ${sectionId}`,
@@ -53,8 +53,13 @@ export function FeatureInitButton({
   const handleInit = useCallback(() => {
     if (!initPrompt || isRunning) return;
     onInitStart();
-    sendPrompt(initPrompt.prompt);
-  }, [initPrompt, isRunning, onInitStart, sendPrompt]);
+    // Dispatch as a TASK, not a raw prompt: the init prompts asked Claude to create
+    // UE5 C++ for a module section while bypassing composition entirely — no project
+    // context header, no domain context, no module-scoped pitfalls / tips / known
+    // asset paths. `execute` routes it through `buildTaskPrompt`, which supplies all
+    // of that for `task.moduleId`. The prompt TEXT is unchanged.
+    execute(TaskFactory.quickAction(moduleId, initPrompt.prompt, `Init: ${sectionId}`));
+  }, [initPrompt, isRunning, onInitStart, execute, moduleId, sectionId]);
 
   if (!initPrompt) return null;
 

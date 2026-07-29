@@ -3,8 +3,10 @@
  */
 
 import type { EvalFinding, FindingSeverity } from './finding-collector';
+import type { SubModuleId } from '@/types/modules';
 import type { ProjectContext } from '@/lib/prompt-context';
 import { buildProjectContextHeader } from '@/lib/prompt-context';
+import { moduleKnowledge } from '@/lib/prompts/module-knowledge';
 import { MODULE_LABELS } from '@/lib/module-registry';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -32,7 +34,11 @@ export function generateFixPlan(
   finding: EvalFinding,
   ctx: ProjectContext,
 ): FixPlan {
+  // Routed through the shared knowledge seam: a fix prompt for a materials finding
+  // no longer hauls the GAS/Niagara pitfall superset, and it DOES get the finding's
+  // own module tips + known asset paths.
   const header = buildProjectContextHeader(ctx, {
+    ...moduleKnowledge(finding.moduleId),
     includeBuildCommand: true,
     includeRules: true,
     extraRules: [
@@ -103,6 +109,7 @@ export function generateBatchFixPlan(
   if (findings.length === 0) return null;
 
   const header = buildProjectContextHeader(ctx, {
+    ...moduleKnowledge(moduleId as SubModuleId),
     includeBuildCommand: true,
     includeRules: true,
     extraRules: [
