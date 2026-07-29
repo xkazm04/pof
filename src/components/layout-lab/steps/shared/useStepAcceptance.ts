@@ -5,8 +5,9 @@ import { useEntitySteps, type LabStepArtifact } from '../../labPipelineStore';
 import { buildLabCheckerContext } from '../../labCheckerContext';
 import { useStepJudgeVerdicts } from '../../hooks/useStepJudgeVerdicts';
 import { resolveStepAcceptance } from '@/lib/catalog/acceptance/resolveStepAcceptance';
+import { explainAcceptance } from '@/lib/catalog/acceptance/explainAcceptance';
 import { useCatalogStore } from '@/stores/catalogStore';
-import type { AcceptanceResult, CheckerContext } from '@/lib/catalog/acceptance/types';
+import type { AcceptanceResult, Checker, CheckerContext } from '@/lib/catalog/acceptance/types';
 import type { Acceptance } from '../StepFrame';
 
 /**
@@ -49,14 +50,17 @@ export function useStepAcceptance({ catalogId, entityId, step, art, accept }: {
   );
 
   return useMemo(() => {
-    const raw = accept(art?.data ?? {}, ctx) as AcceptanceResult;
+    const data = art?.data ?? {};
+    const raw = accept(data, ctx) as AcceptanceResult;
+    const args = { catalogId, step, local: raw, persisted: art, verdicts, data, updatedAt: art?.at };
     // The ONE shared truth — the exact function the rail/matrix/coaches/rollup and the
     // headless `/status` path call, so the banner can never disagree with them.
     // `data` + the artifact's write time bind each verdict to the content it judged, so a
     // re-produce clears a stale condemnation instead of being condemned forever.
-    return resolveStepAcceptance({
-      catalogId, step, local: raw, persisted: art, verdicts,
-      data: art?.data ?? {}, updatedAt: art?.at,
-    }) as Acceptance;
+    const merged = resolveStepAcceptance(args) as Acceptance;
+    // `explain` reconstructs the SAME chain on demand for the provenance strip's "Why this
+    // grade?" disclosure. A thunk, not a value: it re-runs the checker (and every `allOf`
+    // member), which must be a reader's cost, never a per-render one.
+    return { ...merged, explain: () => explainAcceptance({ ...args, checker: accept as Checker, ctx }) };
   }, [accept, art, ctx, verdicts, catalogId, step]);
 }

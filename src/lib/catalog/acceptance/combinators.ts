@@ -15,7 +15,20 @@ export function allOf(...checkers: Checker[]): Checker {
     const results = checkers.map((c) => c(data, ctx));
     return results.find((r) => r.status !== 'pass') ?? results[0];
   };
+  // Record the members ON the composed function (a symbol property, invisible to callers and
+  // to every existing consumer). `allOf` reports the FIRST non-pass, so the tier and reason a
+  // reader sees belong to whichever member spoke — and nothing on screen said which one.
+  // `explainAcceptance` reads this back to name it. Metadata only: grading is untouched.
+  Object.defineProperty(composed, ALL_OF_MEMBERS, { value: checkers, enumerable: false });
   // A composition is a content invariant iff at least one member grades real values —
   // so `allOf(<shape check>, budgetWithinCap(...))` counts and the spec linter can see it.
   return checkers.some(isContentInvariant) ? markContentInvariant(composed) : composed;
+}
+
+const ALL_OF_MEMBERS = Symbol.for('pof.acceptance.allOfMembers');
+
+/** The checkers an {@link allOf} composition runs, in order — `undefined` for a plain checker. */
+export function allOfMembers(checker: Checker): Checker[] | undefined {
+  const members = (checker as unknown as Record<symbol, unknown>)[ALL_OF_MEMBERS];
+  return Array.isArray(members) ? (members as Checker[]) : undefined;
 }

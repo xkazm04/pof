@@ -7,6 +7,8 @@ import { STATUS_GLYPH, STATUS_WORD, statusColor, type StatusKind } from '../stat
 import { ProvenanceStrip } from './shared/ProvenanceStrip';
 import type { SelectionSource } from './shared/genHistory';
 import { getStepFact } from '@/lib/status/statusModel';
+import type { JudgeAttribution } from '@/lib/catalog/acceptance/types';
+import type { AcceptanceExplanation } from '@/lib/catalog/acceptance/explainAcceptance';
 
 export interface Acceptance {
   /** The criterion this gate measures. */
@@ -22,6 +24,17 @@ export interface Acceptance {
   suggestion?: string;
   /** Optional preset direction text to seed a one-click fix dispatch. */
   fixDirection?: string;
+  /**
+   * The judge verdict behind (or NOT behind) this status — carried through from
+   * `AcceptanceResult.judge` by `useStepAcceptance`. Surfaced as a provenance chip.
+   */
+  judge?: JudgeAttribution;
+  /**
+   * Lazily reconstruct the acceptance chain (checker → server overlay → judge bridge) for
+   * the provenance strip's "Why this grade?" disclosure. Invoked only while that disclosure
+   * is open. Display only — it never changes the verdict shown here.
+   */
+  explain?: () => AcceptanceExplanation | undefined;
 }
 export interface StepPanel { label: string; node: ReactNode }
 
@@ -149,7 +162,7 @@ export function StepFrame({ t, acceptance, panels, onFix, catalogId, step, selec
             audited fact when one resolves, else a loud `PROVENANCE: UNAUDITED`. Silence
             used to read identically to "audited and fine". */}
         {((catalogId && step) || fact || (selection && selection !== 'none')) && (
-          <ProvenanceStrip t={t} fact={fact} selection={selection} />
+          <ProvenanceStrip t={t} fact={fact} selection={selection} judge={acceptance.judge} explain={acceptance.explain} />
         )}
 
         {acceptance.why && (
