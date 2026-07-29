@@ -1,0 +1,37 @@
+# Context names registered in Personas for this project (dev_contexts.name).
+# Copy names from here verbatim into .personas/memory-outbox.jsonl "context" fields.
+# An unregistered name silently degrades to unanchored and the coverage bar never moves.
+# Regenerate: sqlite3 <personas.db> "SELECT name FROM dev_contexts WHERE project_id='a930eeaa-9b55-4db9-94a0-343ca51445a7' ORDER BY name;"
+ability-design
+anim-video-gen
+animation-module
+app-navigation
+audio-module
+blender-3d-integration
+blueprint-tools
+build-packaging
+catalog-browser-ui
+catalog-database
+cli-terminal-system
+crash-analysis
+database-layer
+feature-matrix-tracking
+game-director-system
+gdd-compliance
+harness-autonomy
+image-generation
+item-catalog-pipeline
+knowledge-system
+level-design-module
+material-module
+module-evaluator
+module-system
+observation-testing
+pipeline-acceptance-engine
+pipeline-step-components
+prompt-engineering
+simulation-tools
+state-management
+ue5-bridge-client
+ue5-experiment-runner
+ui-primitives
