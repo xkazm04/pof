@@ -96,6 +96,10 @@ export function ProvenanceStrip({ t, fact, selection }: {
             )}
           </>
         )}
+        {/* No audited fact for this (catalog, step) — say so rather than rendering a strip
+            that silently looks like a clean bill of health. The 2026-07-07 audit covers a
+            subset of the fleet's steps; an un-audited step is UNKNOWN, not verified. */}
+        {!fact && <StatusTag level="warn" word="PROVENANCE: UNAUDITED" />}
       </div>
       {fact && (
         <details data-testid="provenance-note">

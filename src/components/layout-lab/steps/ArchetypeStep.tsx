@@ -14,10 +14,8 @@ import { useGeneratedImageAssets } from './shared/useGeneratedImageAssets';
 import { useGeneratedMeshAssets } from './shared/useGeneratedMeshAssets';
 import { withGenericFixCopy } from './shared/genericFixCopy';
 import { genericGalleryCandidates } from './shared/genericGalleryCandidates';
-import { useLabPipelineStore, useEntitySteps } from '../labPipelineStore';
-import { buildLabCheckerContext, serverVerdictOverlay } from '../labCheckerContext';
-import { useStepJudgeVerdicts } from '../hooks/useStepJudgeVerdicts';
-import { bridgeJudgeVerdict } from '@/lib/catalog/acceptance/judgeBridge';
+import { useLabPipelineStore } from '../labPipelineStore';
+import { useStepAcceptance } from './shared/useStepAcceptance';
 import { useCanonStore } from '../canonStore';
 import { canonContextFor } from '@/lib/catalog/canon/canonContext';
 import { ARCHETYPE_CANON } from '@/lib/catalog/canon/archetypeCanon';
@@ -30,7 +28,7 @@ import { apiFetch } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
 import { useCatalogStore } from '@/stores/catalogStore';
 import { linkTargetsExist, readLinks } from '@/lib/catalog/acceptance/linkCheckers';
-import type { CheckerContext } from '@/lib/catalog/acceptance/types';
+import type { AcceptanceResult, CheckerContext } from '@/lib/catalog/acceptance/types';
 import type { LabTheme } from '../theme';
 import type { LabEntity } from '../useLabCatalogData';
 import type { StepSpec, ViewDescriptor } from '@/lib/catalog/stepSpec';
@@ -225,30 +223,20 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
   const { art, history, generate, reselect } = useGenerativeStep(entity.id, step, galleryCandidates, produced);
 
   const data = art?.data ?? {};
-  // Cross-step / cross-catalog context for the step's Checker — built by the ONE shared
-  // constructor (`buildLabCheckerContext`) the write-through and the rail recompute also
-  // use, so the banner and the PERSISTED verdict can never be graded against different
-  // inputs (real siblings + a live `has`; see labCheckerContext.ts for the semantics).
-  const entitySteps = useEntitySteps(entity.id);
-  const ctx = useMemo<CheckerContext>(
-    () => buildLabCheckerContext(catalogId ?? '', entitySteps, entitiesByCatalog),
-    [catalogId, entitySteps, entitiesByCatalog],
+  // Derive acceptance through the SHARED hook (checker → server drain overlay → judge
+  // bridge) that the bespoke Items frames use too — one grading context for every step UI
+  // in the lab. The generic renderer then layers its plain-language remediation copy
+  // (bespoke `spec.copy` or the neutral fallback) on top, so the ~330 non-Items steps get
+  // the same why/suggestion/Produce-fix affordance the bespoke Items steps have.
+  const accept = useCallback(
+    (data: Record<string, unknown>, ctx: CheckerContext) => spec.accept(data, ctx),
+    [spec],
   );
-  // Judge verdicts for this step (read-only) — the same honesty overlay the headless path
-  // applies, so a current-rubric matching-class judge FAIL down-grades the on-screen banner
-  // instead of leaving a bare checker `pass` contradicting /status.
-  const verdicts = useStepJudgeVerdicts(catalogId, entity.id, step);
-  // Derive acceptance: checker → server drain overlay (an L3/L4 gate the runner resolved)
-  // → judge bridge → plain-language remediation copy (bespoke `spec.copy` or the neutral
-  // generic fallback), so the generic renderer — serving the ~330 non-Items steps — gets the
-  // same why/suggestion/Produce-fix affordance the bespoke Items steps have.
-  const acceptance = useMemo(() => {
-    const stepData = art?.data ?? {};
-    const raw = spec.accept(stepData, ctx);
-    const overlaid = serverVerdictOverlay(raw, art);
-    const judged = bridgeJudgeVerdict(overlaid, verdicts, catalogId ? getStepFact(catalogId, step)?.judge : undefined);
-    return withGenericFixCopy(spec, judged, stepData);
-  }, [spec, art, ctx, verdicts, catalogId, step]);
+  const judged = useStepAcceptance({ catalogId: catalogId ?? '', entityId: entity.id, step, art, accept });
+  const acceptance = useMemo(
+    () => withGenericFixCopy(spec, judged as AcceptanceResult, art?.data ?? {}),
+    [spec, judged, art],
+  );
   const links = readLinks(data);
   const linkRes = links.length ? linkTargetsExist(links, (c, e) => !!entitiesByCatalog[c]?.[e]) : null;
 

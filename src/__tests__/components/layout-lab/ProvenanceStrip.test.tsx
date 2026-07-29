@@ -79,10 +79,15 @@ describe('StepFrame provenance integration', () => {
     expect(screen.getByText('CHECKER: SHAPE-ONLY')).toBeTruthy();
   });
 
-  it('renders exactly as today (no strip) when no fact resolves', () => {
+  it('renders no strip for an anonymous step, and a loud UNAUDITED strip when a named step has no fact', () => {
+    // An anonymous StepFrame (no catalogId/step) can't resolve provenance at all.
     const { rerender } = render(<StepFrame t={t} acceptance={pass} panels={[]} />);
     expect(screen.queryByTestId('provenance-strip')).toBeNull();
+    // A step that NAMES itself but has no audited fact says so — silence used to read
+    // identically to "audited and fine".
     rerender(<StepFrame t={t} acceptance={pass} panels={[]} catalogId="items" step="No Such Step" />);
-    expect(screen.queryByTestId('provenance-strip')).toBeNull();
+    expect(screen.getByTestId('provenance-strip')).toBeTruthy();
+    expect(screen.getByText('PROVENANCE: UNAUDITED')).toBeTruthy();
+    expect(screen.queryByTestId('provenance-engine')).toBeNull();
   });
 });

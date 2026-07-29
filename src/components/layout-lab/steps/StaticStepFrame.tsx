@@ -1,10 +1,11 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useCallback } from 'react';
 import { StepFrame, type StepPanel } from './StepFrame';
+import { RawArtifactDisclosure } from './shared/RawArtifactDisclosure';
+import { useStepAcceptance } from './shared/useStepAcceptance';
 import { useStaticStep } from './useStaticStep';
 import { ITEM_STEP_SPECS } from './itemsSteps';
-import { useEntitySteps } from '../labPipelineStore';
 import type { LabTheme } from '../theme';
 import type { LabEntity } from '../useLabCatalogData';
 import type { LabStepArtifact } from '../labPipelineStore';
@@ -23,15 +24,20 @@ export interface StaticStepContext {
  *
  * It lifts the byte-identical prologue that each step body used to copy-paste —
  * `const { art, runProduce } = useStaticStep(entity, step);` followed by
- * `<StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art?.data ?? {})} onFix={runProduce} panels={...} />`
- * — into one place. A step now supplies only its `panels`, derived from the
- * `{ art, runProduce }` context.
+ * `<StepFrame t={t} acceptance={…} onFix={runProduce} panels={...} />` — into one
+ * place. A step now supplies only its `panels`, derived from the `{ art, runProduce }`
+ * context.
  *
- * The acceptance derivation is memoized on `[art?.data, step]`, so the
- * `ITEM_STEP_SPECS[step].accept(...)` call (and the `?? {}` allocation) no longer
- * runs on every render of the active step — stabilizing the `acceptance`
- * reference passed to StepFrame. Behavior is identical to the inline prologue:
- * same `accept` input (`art?.data ?? {}`), same `onFix` (`runProduce`).
+ * Acceptance is derived by the SHARED {@link useStepAcceptance} — the same hook the
+ * generic `ArchetypeStep` uses. That is what puts the reference pipeline back on the
+ * fleet's ONE truth: the unified `buildLabCheckerContext` (real siblings + a LIVE `has`,
+ * replacing the `has: () => false` this component used to hand-roll — the documented
+ * anti-pattern that drags every satisfied cross-catalog link to `deferred`), plus the
+ * server drain overlay and the judge bridge. A drained L3/L4 gate or a matching-class
+ * judge FAIL now reaches a bespoke banner exactly as it reaches a generic one.
+ *
+ * Every static step also gets the fleet's RAW-ARTIFACT disclosure appended to its panel
+ * grid, so what the step actually stored is inspectable here too.
  */
 export function StaticStepFrame({ t, entity, step, panels }: {
   t: LabTheme;
@@ -41,18 +47,21 @@ export function StaticStepFrame({ t, entity, step, panels }: {
   panels: (ctx: StaticStepContext) => StepPanel[];
 }) {
   const { art, runProduce } = useStaticStep(entity, step);
-  // Sibling-step artifacts feed the CheckerContext so derived gates (e.g. Test
-  // Gate) can read upstream acceptance instead of trusting fabricated data.
-  const entitySteps = useEntitySteps(entity.id);
-  const acceptance = useMemo(() => {
-    const siblings: Record<string, Record<string, unknown>> = {};
-    for (const [s, a] of Object.entries(entitySteps ?? {})) siblings[s] = a.data;
-    const ctx: CheckerContext = { catalog: 'items', siblings, has: () => false };
-    return ITEM_STEP_SPECS[step].accept(art?.data ?? {}, ctx);
-  }, [art?.data, step, entitySteps]);
+  const accept = useCallback(
+    (data: Record<string, unknown>, ctx: CheckerContext) => ITEM_STEP_SPECS[step].accept(data, ctx),
+    [step],
+  );
+  const acceptance = useStepAcceptance({ catalogId: 'items', entityId: entity.id, step, art, accept });
+
   // onFix carries a corrective DIRECTION STRING, not a produce ctx — drop it rather than
   // letting it land in the ctx slot (it would stamp a prompt that was never built).
   return (
-    <StepFrame t={t} acceptance={acceptance} onFix={() => runProduce()} catalogId="items" step={step} panels={panels({ art, runProduce })} />
+    <StepFrame t={t} acceptance={acceptance} onFix={() => runProduce()} catalogId="items" step={step}
+      panels={[
+        ...panels({ art, runProduce }),
+        { label: 'Raw artifact', node: (
+          <RawArtifactDisclosure t={t} data={art?.data ?? {}} ueAssets={art?.ueAssets} verdict={art} />
+        ) },
+      ]} />
   );
 }

@@ -145,7 +145,10 @@ export function StepFrame({ t, acceptance, panels, onFix, catalogId, step, selec
           </span>
         </div>
 
-        {(fact || (selection && selection !== 'none')) && (
+        {/* A step that names itself (catalogId + step) always gets the strip: with its
+            audited fact when one resolves, else a loud `PROVENANCE: UNAUDITED`. Silence
+            used to read identically to "audited and fine". */}
+        {((catalogId && step) || fact || (selection && selection !== 'none')) && (
           <ProvenanceStrip t={t} fact={fact} selection={selection} />
         )}
 
