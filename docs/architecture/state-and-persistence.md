@@ -16,7 +16,7 @@ server and client through a uniform API envelope.
 | `src/services/ProjectModuleBridge.ts` | Runtime bridge that breaks the project↔module circular dep |
 | `src/lib/db.ts` | `getDb()` singleton — creates `~/.pof/pof.db`, WAL, all DDL |
 | `src/lib/catalog-db.ts` | `catalog_lifecycle` table helpers (pattern representative) |
-| `src/lib/pipeline-artifacts-db.ts` | `pipeline_artifacts` table helpers |
+| `src/lib/pipeline-artifacts-db.ts` | `pipeline_artifacts` + `pipeline_artifact_revisions` table helpers |
 | `src/lib/visual-verification-db.ts` | `visual_verifications` table helpers |
 | `src/types/api.ts` | `ApiResponse<T>` discriminated-union envelope type |
 | `src/lib/api-utils.ts` | `apiSuccess`, `apiError`, `respondFromResult` (Result→envelope), `withRoute` (route try/catch wrapper), `apiFetch`, `tryApiFetch` |
@@ -176,6 +176,25 @@ the browser or edge runtime).
 `visual-verification-db.ts`) call `getDb()` and run `CREATE TABLE IF NOT EXISTS` in a local
 `ensureTable()` guard before every operation. They own row mapping (`rowToArtifact`, `rowToLifecycle`,
 etc.) and expose typed CRUD functions. No ORM — raw prepared statements throughout.
+
+**`pipeline_artifact_revisions`** (`src/lib/pipeline-artifacts-db.ts`, same guard pattern) is the
+version history behind `pipeline_artifacts`. The live table is keyed
+`(catalog_id, entity_id, step)` and upserted, so before this every re-produce **destroyed** what a
+step previously held — gallery steps survived because their candidate batches live inside
+`data.genHistory`, but a static step's prior output was simply gone. `upsertArtifact` now archives
+the row it is about to overwrite, but **only when `contentChanged`** (`data` / `ue_assets` differ):
+a gate drain, `verify-static` and `verify-packaging` all re-upsert identical data with a new
+verdict, and archiving those would bury the handful of real produce versions. History is bounded to
+`MAX_REVISIONS` (20) per step, and each row keeps its own `updated_at` (when that version was
+*written*) alongside `archived_at`.
+
+Read + restore go through **`GET/POST /api/pipeline-artifacts/revisions`**. A restore is *not* a raw
+copy: it re-runs the step's Checker via `gradeArtifact` exactly as the produce POST does, because an
+archived verdict can be stale and trusting a stored `status` would re-open the fabricated-pass hole
+that route closed. It returns `regraded` + `archivedStatus` so the UI can say when a restored version
+did **not** come back with the verdict it was archived under. A restore is itself a content-changing
+upsert, so the version it displaces is archived in turn — reverting is undoable. Surfaced per step by
+`layout-lab/steps/shared/StepHistoryPanel.tsx` (loaded on demand, not on mount across ~342 steps).
 
 **Dependency-injected variant** (`src/lib/visual-gen/asset-library-db.ts` — the local Asset Library
 backing `audio-asset-db.ts`'s style): the helpers take an explicit `Database` argument so they can be

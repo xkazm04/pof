@@ -8,6 +8,7 @@ import { DataTable } from './shared/DataTable';
 import { ChartPanel, type BarsRow, type ScatterPoint } from './shared/ChartPanel';
 import { GlbPreviewPanel, GLB_PREVIEW_LABEL } from './shared/GlbPreviewPanel';
 import { RawArtifactDisclosure } from './shared/RawArtifactDisclosure';
+import { StepHistoryPanel } from './shared/StepHistoryPanel';
 import { selectedCandidate, selectionSource } from './shared/genHistory';
 import { useGenerativeStep } from './shared/useGenerativeStep';
 import { useGeneratedImageAssets } from './shared/useGeneratedImageAssets';
@@ -401,7 +402,15 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
   // than any View renders or Checker grades (wiringContract, notes, breakdowns), and none of
   // it was reachable from the UI. Collapsed by default; serialized only when expanded.
   panels = [...panels, { label: 'Raw artifact', node: (
-    <RawArtifactDisclosure t={t} data={data} ueAssets={art?.ueAssets} verdict={art} />
+    <>
+      <RawArtifactDisclosure t={t} data={data} ueAssets={art?.ueAssets} verdict={art} />
+      {/* The versions this step's re-produces superseded. Server-side, because the local
+          store only ever holds the current artifact; loaded on demand, because a recovery
+          affordance must not cost a fetch on every one of the ~342 steps. */}
+      {catalogId && (
+        <StepHistoryPanel t={t} catalogId={catalogId} entityId={entity.id} step={step} />
+      )}
+    </>
   ) }];
 
   return (
