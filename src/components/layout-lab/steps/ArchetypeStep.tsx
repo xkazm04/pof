@@ -12,7 +12,7 @@ import { selectedCandidate, selectionSource } from './shared/genHistory';
 import { useGenerativeStep } from './shared/useGenerativeStep';
 import { useGeneratedImageAssets } from './shared/useGeneratedImageAssets';
 import { useGeneratedMeshAssets } from './shared/useGeneratedMeshAssets';
-import { withGenericFixCopy } from './shared/genericFixCopy';
+import { fixDirectionFor, withGenericFixCopy } from './shared/genericFixCopy';
 import { imageGalleryCandidates } from './shared/imageGalleryCandidates';
 import { useLabPipelineStore } from '../labPipelineStore';
 import { useStepAcceptance } from './shared/useStepAcceptance';
@@ -315,8 +315,14 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
   // prompt logic, reusing the exact state-change path the Produce panel uses (a gallery
   // step appends a corrective batch; a static step re-produces). Deferred is a correct
   // terminal state, so no fix is offered there (withGenericFixCopy also omits fixDirection).
+  //
+  // The dispatched direction is NEVER empty: `withGenericFixCopy` already guarantees a
+  // non-empty `fixDirection` for every non-deferred status (bespoke copy → the step's
+  // `defaultDirection` → the direction derived from the failing checker itself), and this
+  // resolves the same ladder again as a belt-and-braces last line. It used to end in
+  // `?? ''`, so every step whose checker returned no `reason` produced with NO instruction.
   const runFix = (fixDir?: string) => {
-    const dir = fixDir ?? spec.defaultDirection ?? '';
+    const dir = fixDir?.trim() || spec.defaultDirection?.trim() || fixDirectionFor(spec, judged);
     if (spec.view.kind === 'gallery') generate(dir, buildPrompt(dir));
     else void dispatchProduce({ direction: dir, prompt: buildPrompt(dir) })
       .catch((e: unknown) => logger.error('[ArchetypeStep] produce fix failed', e));

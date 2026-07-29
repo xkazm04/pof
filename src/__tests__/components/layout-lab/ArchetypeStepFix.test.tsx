@@ -57,6 +57,50 @@ describe('ArchetypeStep generic fix loop', () => {
     expect(screen.getByTestId('acceptance-produce-fix')).toBeTruthy();
   });
 
+  it('dispatches a NON-EMPTY direction naming the failure, and shows it before dispatch', async () => {
+    const seen: (string | undefined)[] = [];
+    const spy: StepSpec = {
+      ...failSpec,
+      // `produce` is also called during render for the step's base output (no direction).
+      produce: (_e, direction) => { if (direction !== undefined) seen.push(direction); return { data: { ok: true } }; },
+    };
+    render(<ArchetypeStep t={t} entity={entity} step="Concept Brief" spec={spy} />);
+
+    // Visible BEFORE dispatch: the suggestion previews the exact direction verbatim.
+    const preview = screen.getByTestId('acceptance-suggestion').textContent ?? '';
+    expect(preview).toContain('Produce fix will dispatch');
+    expect(preview).toContain('no brief authored');
+
+    fireEvent.click(screen.getByTestId('acceptance-produce-fix'));
+    await act(async () => {});
+    expect(seen).toHaveLength(1);
+    const dispatched = seen[0] ?? '';
+    expect(dispatched.trim()).not.toBe('');            // the regression: it used to be ''
+    expect(dispatched).toContain('no brief authored'); // names what actually failed
+    expect(dispatched).toContain('Concept Brief');
+    expect(preview).toContain(dispatched);
+    expect(status()).toBe('pass');
+  });
+
+  it('dispatches a real direction even when the checker gives NO reason', async () => {
+    const seen: (string | undefined)[] = [];
+    const noReason: StepSpec = {
+      ...failSpec,
+      // `produce` is also called during render for the step's base output (no direction);
+      // only a real dispatch carries one, so record those.
+      produce: (_e, direction) => { if (direction !== undefined) seen.push(direction); return { data: { ok: true } }; },
+      accept: (data): AcceptanceResult =>
+        data.ok
+          ? { label: 'Brief present', status: 'pass', tier: 'L0', detail: 'ok' }
+          : { label: 'Brief present', status: 'fail', tier: 'L0', detail: 'none' },
+    };
+    render(<ArchetypeStep t={t} entity={entity} step="Concept Brief" spec={noReason} />);
+    fireEvent.click(screen.getByTestId('acceptance-produce-fix'));
+    await act(async () => {});
+    expect((seen[0] ?? '').trim()).not.toBe('');
+    expect(seen[0]).toContain('Brief present'); // names the criterion it must satisfy
+  });
+
   it('offers no Produce-fix button on a deferred step (a runtime gate, not locally fixable)', () => {
     const deferredSpec: StepSpec = {
       ...failSpec,

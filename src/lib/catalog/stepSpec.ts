@@ -108,8 +108,13 @@ export interface StepSpec {
   /** Derives the acceptance result from the persisted artifact data. */
   accept: Checker;
   /** Optional plain-language remediation copy for a non-passing acceptance. When
-   *  absent, ArchetypeStep falls back to a generic copy derived from the checker
-   *  result (status + optional reason) — never invents catalog-specific content. */
+   *  absent — as it is for every step today — ArchetypeStep falls back to the generic
+   *  copy derived from the checker result (status + optional reason) plus this step's
+   *  own label/archetype, which never invents catalog-specific content
+   *  (`steps/shared/genericFixCopy.ts`). Authoring `copy` here overrides the `why` and
+   *  `suggestion`; a `fixDirection` you omit or leave blank still falls through to
+   *  `defaultDirection` and then to the derived direction, so "Produce fix" can never
+   *  dispatch an empty instruction. */
   copy?: (data: Record<string, unknown>) => StepFixCopy;
   /** Optional L2 static (UE codebase-analysis) checks, run server/CLI-side against the UE root.
    *  Entity-aware because the symbol/row names derive from the entity. */
@@ -125,6 +130,11 @@ export interface StepSpec {
   genCandidates?: GenCandidatesSpec;
   /** Optional CLI direction default + note for the Produce panel. */
   produceNote?: string;
+  /** Optional seed direction for the Produce panel's text area, and the SECOND rung of
+   *  the "Produce fix" ladder (bespoke `copy.fixDirection` → this → the direction derived
+   *  from the failing checker). Authoring it is optional precisely because the derived
+   *  rung is always non-empty; author it when a step has a standing house instruction
+   *  that a corrective run should always carry. */
   defaultDirection?: string;
   /** Engine powering this step's Produce (e.g. 'Claude', 'Tripo', 'Leonardo',
    *  'UE Python', 'Blender', 'Code') — surfaced on the /status health map, where it
