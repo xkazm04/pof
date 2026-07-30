@@ -56,7 +56,9 @@ registerCatalogPipeline({
       archetype: 'brief',
       label: 'Concept Brief',
       view: { kind: 'prose', field: 'brief', emptyText: 'No brief yet' },
-      produce: (e: LabEntity) => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name); // identity token — "Fireball" for the seeded exemplar
+        return {
         data: {
           brief:
             `${e.name} is a single-target fire projectile ability — the mage's bread-and-butter offensive ` +
@@ -65,15 +67,16 @@ registerCatalogPipeline({
             `target for a fire damage-over-time (DoT) ailment. Per ARPG-LAWS §3 the hit routes through the ` +
             `added → increased → more damage pipeline (damage type: Fire) and is subject to fire resistance ` +
             `(cap 75%, §4) and the mitigation order in ARPGDamageExecution. The on-hit ignite ` +
-            `(GE_Fireball_ApplyBurning → GE_Gen_Burning, State.Burning) delivers ~90% of the hit as ` +
-            `a fire DoT over 4 s (ARPG-LAWS §5c, stacking: highest). Fireball is the canonical ignite ` +
+            `(GE_${s}_ApplyBurning → GE_Gen_Burning, State.Burning) delivers ~90% of the hit as ` +
+            `a fire DoT over 4 s (ARPG-LAWS §5c, stacking: highest). ${e.name} is the canonical ignite ` +
             `vector for the fire archetype and the primary granting source of status-effects::status-burning. ` +
             `Fantasy: reliable, rhythmic pressure — throw, ignite, watch the burn tick while repositioning. ` +
             `Cost: 20 mana / 3.0 s cooldown; base damage 35 fire at the tier-100 power envelope. ` +
-            `UE identity: GA_Fireball (UARPGGameplayAbility subclass), GE_Fireball_Impact + ` +
-            `GE_Fireball_ApplyBurning effect chain, registered in DT_GeneratedAbilities.`,
+            `UE identity: GA_${s} (UARPGGameplayAbility subclass), GE_${s}_Impact + ` +
+            `GE_${s}_ApplyBurning effect chain, registered in DT_GeneratedAbilities.`,
         },
-      }),
+        };
+      },
       accept: minLength('brief', 'Brief ≥ 300 characters', 300),
     },
 
@@ -129,7 +132,7 @@ registerCatalogPipeline({
               critChancePct,                  // 5% base crit
               critMulti,                      // ×2.5 on crit (§3: base = +150%)
               onHitIgnite: {
-                // Routed through GE_Fireball_ApplyBurning → GE_Gen_Burning (status-effects::status-burning)
+                // Routed through GE_<slug>_ApplyBurning → GE_Gen_Burning (status-effects::status-burning)
                 linkedEffect: 'status-effects::status-burning',
                 state_tag: 'State.Burning',
                 tickDamage: igniteTickDmg,    // ≈ -3.9375 fire / 0.5 s
@@ -144,23 +147,23 @@ registerCatalogPipeline({
               // Wiring contract per ARPG-LAWS §12
               wiringContract: {
                 grantedBy:
-                  'ASC GiveAbility — UAbilitySystemComponent::GiveAbility(GA_Fireball) called at ' +
+                  `ASC GiveAbility — UAbilitySystemComponent::GiveAbility(GA_${s}) called at ` +
                   'character initialisation (AARPGCharacterBase::InitAbilitySystemComponent). ' +
                   'Slot bound at initialisation; not dynamically acquired.',
                 activatedBy:
                   'Input action IA_Ability1 (player) → UARPGAbilityInputComponent triggers ' +
-                  'TryActivateAbilityByTag(Ability.Fire.Fireball); ' +
+                  `TryActivateAbilityByTag(Ability.Fire.${s}); ` +
                   'AI behaviour-tree task BTTask_UseAbility passes the GA class directly.',
                 dependencies: [
                   'UARPGAttributeSet (Mana — cost source; Health/FireDamage — target attributes)',
                   'ARPGDamageExecution (damage routing, fire-resist application, crit roll)',
-                  'status-effects::status-burning (ignite DoT via GE_Fireball_ApplyBurning)',
+                  `status-effects::status-burning (ignite DoT via GE_${s}_ApplyBurning)`,
                   'vfx::vfx-fire-impact (impact Niagara system, keyed via AnimNotify)',
                 ],
                 verification:
                   'L2: UARPGGameplayAbility compiled in Source/PoF/Abilities/; ' +
-                  'GA_Fireball class present; DT_GeneratedAbilities row "Fireball" seeded; ' +
-                  'L3: VSGenFireballEffectTest — GA activates, Health delta ≈ -35 fire, ' +
+                  `GA_${s} class present; DT_GeneratedAbilities row "${s}" seeded; ` +
+                  `L3: VSGen${s}EffectTest — GA activates, Health delta ≈ -35 fire, ` +
                   'State.Burning applied, Mana reduced by 20, cooldown blocks re-activation < 3s',
               },
               // Formula annotation (audit trail for balance review)
@@ -221,7 +224,7 @@ registerCatalogPipeline({
           { key: 'projectileSpeed', unit: 'cm/s' },
         ],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => ({
         data: {
           targeting: {
             shape: 'single-target-projectile',
@@ -232,7 +235,7 @@ registerCatalogPipeline({
             piercing: false,          // first-target detonation
             homingStrength: 0,        // non-homing — skill expression via aim
             note:
-              'Fireball is a non-homing projectile; the player aims with the camera. ' +
+              `${e.name} is a non-homing projectile; the player aims with the camera. ` +
               'LoS is implicit — the projectile collides with blocking geometry. ' +
               'range(1800 cm) is a design ceiling; the projectile despawns at max range. ' +
               'No spread — single fire sphere per cast. ' +
@@ -261,7 +264,7 @@ registerCatalogPipeline({
         highlightKey: 'sustainedDPS',
         max: 24,
       },
-      produce: () => {
+      produce: (e: LabEntity) => {
         // Burst DPS model:
         //   Single cast: 35 base fire damage, no increased/more assumed (bare cast baseline)
         //   Cooldown 3.0 s → effective casts/s = 1 / 3.0 ≈ 0.333
@@ -298,7 +301,7 @@ registerCatalogPipeline({
                 `Ignite (status-effects::status-burning) adds ${igniteDPS} fire DPS sustained over 4s. ` +
                 `Combined pre-resist effective DPS ≈ ${sustainedDPS.toFixed(3)} — advanced-tier single-target nuke. ` +
                 `At 75% fire-resist cap (§4) effective post-resist ≈ ${(sustainedDPS * 0.25).toFixed(2)} DPS — ` +
-                `intended: Fireball punishes unresisted targets, scales with fire-penetration support. ` +
+                `intended: ${e.name} punishes unresisted targets, scales with fire-penetration support. ` +
                 `ManaCost(20) / CD(3s) is sustainable for an Int-build with base 60+ mana. ` +
                 `Within tier-100 power envelope per canon proj-balance.`,
               manaCostSustainNote: 'Int-build baseline: ~60–80 mana at level 20; 20 mana/cast is ~25–33% pool per cast — intentional pressure.',
@@ -329,7 +332,7 @@ registerCatalogPipeline({
         field: 'combos',
         columns: [{ key: 'condition' }, { key: 'effect' }, { key: 'multiplier' }],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => ({
         data: {
           combos: [
             {
@@ -337,7 +340,7 @@ registerCatalogPipeline({
               effect: 'comboMultiplier 1.1 applies — 10% bonus hit damage on burning targets',
               multiplier: 1.1,
               note: 'comboMultiplier is a "more" bonus (its own multiplier per §3) — distinct from increased-fire-damage.',
-              tagRule: 'Ability.Fire.Fireball can activate even while State.Burning is active (ignite refreshes)',
+              tagRule: `Ability.Fire.${slug(e.name)} can activate even while State.Burning is active (ignite refreshes)`,
             },
             {
               condition: 'Target has State.Chilled (status-effects::status-chilled)',
@@ -372,24 +375,27 @@ registerCatalogPipeline({
       archetype: 'checklist',
       label: 'Animation',
       view: { kind: 'checklist', field: 'checks' },
-      produce: () => ({
-        data: {
-          checks: [
-            'Cast windup: 0.0 s–0.3 s — weight-shift + arm draw-back (Blend Space in ABP)',
-            'Cast release / damage window: 0.3 s–0.5 s — forward arm thrust, AnimNotify_FireballRelease triggers projectile spawn',
-            'Damage window length: 0.2 s (from plan.md: damageWindow [0.3, 0.5])',
-            'Recovery: 0.5 s–0.8 s — arm settle, idle re-blend (recovery 0.3 s)',
-            'Total animDuration: 0.8 s (matches entity data animDuration 0.8)',
-            'AnimMontage: AM_Fireball_Cast (pending ability-animation pipeline)',
-            'AnimNotify_FireballRelease at normalized time 0.3/0.8 ≈ 0.375 — triggers GA on-notify',
-            'Blends out cleanly on interrupt/death during recovery window',
-          ],
-          note:
-            'Timing data is authoritative from the seeded entity (animDuration 0.8 / damageWindow [0.3,0.5] / recovery 0.3). ' +
-            'The AnimMontage asset (AM_Fireball_Cast) and the Mixamo/Blender import path are a known gap ' +
-            '(plan.md §8 findings). Checklist items are config-spec; L3 runtime test gates the firing.',
-        },
-      }),
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return {
+          data: {
+            checks: [
+              'Cast windup: 0.0 s–0.3 s — weight-shift + arm draw-back (Blend Space in ABP)',
+              `Cast release / damage window: 0.3 s–0.5 s — forward arm thrust, AnimNotify_${s}Release triggers projectile spawn`,
+              'Damage window length: 0.2 s (from plan.md: damageWindow [0.3, 0.5])',
+              'Recovery: 0.5 s–0.8 s — arm settle, idle re-blend (recovery 0.3 s)',
+              'Total animDuration: 0.8 s (matches entity data animDuration 0.8)',
+              `AnimMontage: AM_${s}_Cast (pending ability-animation pipeline)`,
+              `AnimNotify_${s}Release at normalized time 0.3/0.8 ≈ 0.375 — triggers GA on-notify`,
+              'Blends out cleanly on interrupt/death during recovery window',
+            ],
+            note:
+              'Timing data is authoritative from the seeded entity (animDuration 0.8 / damageWindow [0.3,0.5] / recovery 0.3). ' +
+              `The AnimMontage asset (AM_${s}_Cast) and the Mixamo/Blender import path are a known gap ` +
+              '(plan.md §8 findings). Checklist items are config-spec; L3 runtime test gates the firing.',
+          },
+        };
+      },
       accept: minCount('checks', '≥6 animation checklist items defined', 6),
     },
 
@@ -409,13 +415,13 @@ registerCatalogPipeline({
             vfx: {
               castGlow: {
                 asset: `NS_${s}_CastGlow`,
-                trigger: 'AnimNotify_FireballCastStart (windup frame 0)',
+                trigger: `AnimNotify_${s}CastStart (windup frame 0)`,
                 lod: 'full / medium-50% / culled at 3000cm',
                 note: 'Warm orange glow around caster hand during windup — restrained, no screen-wide bloom',
               },
               projectile: {
                 asset: `NS_${s}_Projectile`,
-                trigger: 'AnimNotify_FireballRelease → projectile actor attaches NS at spawn',
+                trigger: `AnimNotify_${s}Release → projectile actor attaches NS at spawn`,
                 lod: 'full / medium-50% / culled at 4000cm',
                 note: 'Rolling fire sphere with heat-shimmer; additive blend capped at vfx-budget ~0.48ms (canon vfx-budget)',
               },
@@ -489,12 +495,12 @@ registerCatalogPipeline({
         field: 'appliedStatus',
         columns: [{ key: 'statusId' }, { key: 'role' }, { key: 'trigger' }],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => ({
         data: {
           appliedStatus: {
             statusId: 'status-effects::status-burning',
             role: 'applies',
-            trigger: 'On-hit — fire impact detonation applies GE_Fireball_ApplyBurning → GE_Gen_Burning',
+            trigger: `On-hit — fire impact detonation applies GE_${slug(e.name)}_ApplyBurning → GE_Gen_Burning`,
             state_tag: 'State.Burning',
             stacking: 'highest',           // §5c: only the strongest ignite instance is active
             magnitude: '≈ -3.94 fire/tick',
@@ -505,7 +511,7 @@ registerCatalogPipeline({
               'The identity of the ignite is the State.Burning tag — VFX, AI threat, and the ' +
               'buff bar key off the tag, not this ability. The wiring is declared in ' +
               'status-effects::status-burning\'s Effect Logic step. This step declares the ' +
-              'Fireball end of the contract (applies role).',
+              `${e.name} end of the contract (applies role).`,
             links: [
               { catalogId: 'status-effects', entityId: 'status-burning', role: 'applies' },
             ],
@@ -531,20 +537,23 @@ registerCatalogPipeline({
       archetype: 'checklist',
       label: 'Test Gate',
       view: { kind: 'checklist', field: 'checks' },
-      produce: () => ({
-        data: {
-          checks: [
-            'GA_Fireball activates via TryActivateAbilityByTag(Ability.Fire.Fireball)',
-            'Target Health attribute reduced by ≈35 fire damage (±5% tolerance for resist calculation)',
-            'State.Burning tag applied to target after hit',
-            'Mana attribute reduced by 20 on cast',
-            'Cooldown GE blocks re-activation for 3.0 s after cast',
-            'State.Dead / State.Stunned tag blocks ability activation (tag rules)',
-            'comboMultiplier 1.1 applies on burning-target follow-up cast',
-            'GE_Gen_Burning ticks at 0.5 s period over 4 s (8 ticks ≈ 31.5 total fire dmg)',
-          ],
-        },
-      }),
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return {
+          data: {
+            checks: [
+              `GA_${s} activates via TryActivateAbilityByTag(Ability.Fire.${s})`,
+              'Target Health attribute reduced by ≈35 fire damage (±5% tolerance for resist calculation)',
+              'State.Burning tag applied to target after hit',
+              'Mana attribute reduced by 20 on cast',
+              'Cooldown GE blocks re-activation for 3.0 s after cast',
+              'State.Dead / State.Stunned tag blocks ability activation (tag rules)',
+              'comboMultiplier 1.1 applies on burning-target follow-up cast',
+              'GE_Gen_Burning ticks at 0.5 s period over 4 s (8 ticks ≈ 31.5 total fire dmg)',
+            ],
+          },
+        };
+      },
       // Defer with the REGISTERED automation name (dotted path / substring), not the C++
       // class name, so the L3 runner resolves it (verified live on 5.8). PER-ENTITY: the
       // artifact's own `automationName` wins (e.g. off-arc-fp → PoF.GenForcePush.DazeConfig)
@@ -578,24 +587,24 @@ registerCatalogPipeline({
             assets,
             wiringContract: {
               grantedBy:
-                'ASC GiveAbility — UAbilitySystemComponent::GiveAbility(GA_Fireball) at character ' +
+                `ASC GiveAbility — UAbilitySystemComponent::GiveAbility(GA_${s}) at character ` +
                 'initialisation in AARPGCharacterBase::InitAbilitySystemComponent. ' +
                 'Slot assignment is data-driven via DT_GeneratedAbilities (not hard-coded in C++).',
               activatedBy:
-                'Input IA_Ability1 → UARPGAbilityInputComponent::TryActivateAbilityByTag(Ability.Fire.Fireball); ' +
-                'AI BTTask_UseAbility(GA_Fireball) when enemy has LoS + Mana ≥ 20 + ability not on cooldown.',
+                `Input IA_Ability1 → UARPGAbilityInputComponent::TryActivateAbilityByTag(Ability.Fire.${s}); ` +
+                `AI BTTask_UseAbility(GA_${s}) when enemy has LoS + Mana ≥ 20 + ability not on cooldown.`,
               dependencies: [
                 'UARPGAttributeSet (Mana cost source; Health/FireDamage target attributes)',
                 'ARPGDamageExecution (fire-resist, crit roll, §3/§4 pipeline)',
                 'status-effects::status-burning (State.Burning ignite; GE_Gen_Burning applied on hit)',
                 'vfx::vfx-fire-impact (NS_FireImpactBurst shared impact VFX)',
-                'icon-sets::iconset-abilities (T_Fireball_Icon — hotbar presentation)',
+                `icon-sets::iconset-abilities (T_${s}_Icon — hotbar presentation)`,
               ],
               verification:
                 'L2: UARPGGameplayAbility compiled in Source/PoF/Abilities/; ' +
-                'GA_Fireball registered; DT_GeneratedAbilities row "Fireball" seeded via seed_generated_abilities.py; ' +
+                `GA_${s} registered; DT_GeneratedAbilities row "${s}" seeded via seed_generated_abilities.py; ` +
                 'FARPGAbilityCatalogRow struct present in Source/PoF/; ' +
-                'L3: VSGenFireballEffectTest in PIE — ability activates, Health/Mana deltas correct, ' +
+                `L3: VSGen${s}EffectTest in PIE — ability activates, Health/Mana deltas correct, ` +
                 'cooldown blocks re-cast, State.Burning applied + ticks, tag block rules enforced',
             },
           },

@@ -85,7 +85,9 @@ registerCatalogPipeline({
           { key: 'monsterLevel' }, { key: 'dangerRank' },
         ],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return ({
         data: {
           stats: {
             // Normal baseline at monsterLevel 20 (areaLevel 20).
@@ -103,9 +105,9 @@ registerCatalogPipeline({
             dangerRank: 3,
             wiringContract: {
               grantedBy:
-                'DT_AttributeDefaults row keyed by archetype slug; read by UARPGAttributeSet on BeginPlay',
+                `DT_AttributeDefaults row "${s}" (keyed by archetype slug); read by UARPGAttributeSet on BeginPlay`,
               activatedBy:
-                'BP_<slug> inherits AARPGEnemyCharacter; stats applied via GE_InitStats at spawn',
+                `BP_${s} inherits AARPGEnemyCharacter; stats applied via GE_InitStats at spawn`,
               dependencies: [
                 'AARPGEnemyCharacter (C++ base class)',
                 'UARPGAttributeSet (Armour, MaxHealth, BaseDamage, MoveSpeed attributes)',
@@ -116,7 +118,8 @@ registerCatalogPipeline({
             },
           },
         },
-      }),
+        });
+      },
       accept: allOf(
         fieldsPopulated('stats', 'Stat block populated', ['health', 'damage', 'armor', 'moveSpeed']),
         wiringContractSound('stats'),
@@ -397,7 +400,7 @@ registerCatalogPipeline({
             assets,
             wiringContract: {
               grantedBy:
-                'BP_<slug> (child of AARPGEnemyCharacter) + DT_AttributeDefaults row; ' +
+                `BP_${s} (child of AARPGEnemyCharacter) + DT_AttributeDefaults row "${s}"; ` +
                 'GE_Mod_ExtraFast and GE_InitResistances compiled in Source/PoF/',
               activatedBy:
                 'AARPGEnemyCharacter::BeginPlay → GE_InitStats + GE_InitResistances; ' +

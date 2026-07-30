@@ -36,7 +36,9 @@ registerCatalogPipeline({
       archetype: 'brief',
       label: 'Concept Brief',
       view: { kind: 'prose', field: 'brief', emptyText: 'No brief yet' },
-      produce: (e: LabEntity) => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return ({
         data: {
           brief:
             `${e.name} is the input scheme for PoF that maps physical device inputs to game ` +
@@ -49,11 +51,13 @@ registerCatalogPipeline({
             `non-system buttons: WBP_InputRebind calls FindConflictingAction on the Enhanced Input ` +
             `subsystem before committing any remap, and reserved platform buttons (Guide/Share/Create) ` +
             `are excluded from the remappable set by a static allowlist. Haptic feedback is layered ` +
-            `on top of bindings via a separate rumble profile asset. The scheme ships as a DA_ ` +
-            `DataAsset referencing IMC_Gameplay, IMC_Menu, and IMC_Dialogue contexts so the ` +
+            `on top of bindings via a separate rumble profile asset. The scheme ships as ` +
+            `DA_InputSchemes_${s} referencing IMC_Gameplay_${s}, IMC_Menu_${s}, and ` +
+            `IMC_Dialogue_${s} contexts so the ` +
             `player controller can push/pop contexts cleanly across game states.`,
         },
-      }),
+      });
+      },
       accept: minLength('brief', 'Brief ≥ 300 characters', 300),
     },
 
@@ -75,7 +79,9 @@ registerCatalogPipeline({
           { key: 'ability4' },
         ],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return ({
         data: {
           mapping: {
             // Core verbs — UE Enhanced Input action asset names + default gamepad binds
@@ -92,17 +98,18 @@ registerCatalogPipeline({
             wiringContract: {
               grantedBy:
                 'AARPGPlayerController::SetupInputComponent — binds each IA_* action to a ' +
-                'UEnhancedInputComponent callback; IMC_Gameplay pushed to the Enhanced Input subsystem on possess',
+                `UEnhancedInputComponent callback; IMC_Gameplay_${s} pushed to the Enhanced Input subsystem on possess`,
               activatedBy: 'Physical device input event → UEnhancedInputLocalPlayerSubsystem routes to active IMC',
-              dependencies: ['AARPGPlayerController (C++ class, ueAssets: DA_InputSchemes)'],
+              dependencies: [`AARPGPlayerController (C++ class, ueAssets: DA_InputSchemes_${s})`],
               verification:
-                'L2: AARPGPlayerController declared in Source/PoF/ + DA_InputSchemes in Content/Input/; ' +
+                `L2: AARPGPlayerController declared in Source/PoF/ + DA_InputSchemes_${s} in Content/Input/; ` +
                 'L3: VSInputBindTest — each IA_* action fires the expected callback in PIE',
             },
           },
         },
-        ueAssets: ['/Game/Input/DA_InputSchemes', '/Game/Input/IMC_Gameplay'],
-      }),
+        ueAssets: [`/Game/Input/DA_InputSchemes_${s}`, `/Game/Input/IMC_Gameplay_${s}`],
+      });
+      },
       accept: allOf(
         fieldsPopulated('mapping', 'Move/attack/dodge/interact + ability1–4 bindings defined', [
           'move',
@@ -130,33 +137,36 @@ registerCatalogPipeline({
         field: 'contexts',
         columns: [{ key: 'gameplay' }, { key: 'menu' }, { key: 'dialogue' }],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return ({
         data: {
           contexts: {
             gameplay: {
-              asset: 'IMC_Gameplay',
+              asset: `IMC_Gameplay_${s}`,
               priority: 0,
               pushedBy: 'AARPGPlayerController::OnPossess',
               poppedBy: 'AARPGPlayerController::OnUnPossess or menu open',
             },
             menu: {
-              asset: 'IMC_Menu',
+              asset: `IMC_Menu_${s}`,
               priority: 10,
-              pushedBy: 'UARPGUISubsystem::OpenMenu — pushed over IMC_Gameplay',
+              pushedBy: `UARPGUISubsystem::OpenMenu — pushed over IMC_Gameplay_${s}`,
               poppedBy: 'UARPGUISubsystem::CloseMenu',
             },
             dialogue: {
-              asset: 'IMC_Dialogue',
+              asset: `IMC_Dialogue_${s}`,
               priority: 5,
               pushedBy: 'UARPGDialogueComponent::BeginDialogue',
               poppedBy: 'UARPGDialogueComponent::EndDialogue',
             },
             wiringNote:
               'Higher priority IMC suppresses lower-priority mappings for overlapping actions. ' +
-              'All three IMCs are declared in DA_InputSchemes for one-stop DataAsset load.',
+              `All three IMCs are declared in DA_InputSchemes_${s} for one-stop DataAsset load.`,
           },
         },
-      }),
+      });
+      },
       accept: fieldsPopulated('contexts', 'Gameplay/menu/dialogue context mappings defined', [
         'gameplay',
         'menu',
@@ -173,7 +183,9 @@ registerCatalogPipeline({
         field: 'rebinding',
         columns: [{ key: 'widget' }, { key: 'conflictCheck' }, { key: 'reservedButtons' }, { key: 'reset' }],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return ({
         data: {
           rebinding: {
             widget: 'WBP_InputRebind',
@@ -199,7 +211,7 @@ registerCatalogPipeline({
             reset: {
               api: 'UEnhancedInputLocalPlayerSubsystem::RemoveAllPlayerMappedKeysForContext',
               label: 'Restore Defaults',
-              behaviour: 'Clears all user-mapped keys for the active IMC; reloads factory defaults from DA_InputSchemes',
+              behaviour: `Clears all user-mapped keys for the active IMC; reloads factory defaults from DA_InputSchemes_${s}`,
             },
             persistence: {
               mechanism: 'UARPGSaveGame — remaps serialized as TArray<FPlayerKeyMapping> per context',
@@ -216,8 +228,9 @@ registerCatalogPipeline({
             },
           },
         },
-        ueAssets: ['/Game/UI/WBP_InputRebind', '/Game/Input/DA_InputSchemes'],
-      }),
+        ueAssets: ['/Game/UI/WBP_InputRebind', `/Game/Input/DA_InputSchemes_${s}`],
+      });
+      },
       accept: allOf(
         fieldsPopulated('rebinding', 'Widget / conflictCheck / reservedButtons / reset defined', [
           'widget',
@@ -241,7 +254,9 @@ registerCatalogPipeline({
         field: 'feel',
         columns: [{ key: 'deadzone' }, { key: 'rumble' }],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return ({
         data: {
           feel: {
             // input-a11y canon: deadzone default 0.1–0.25, user-tunable, saved
@@ -251,7 +266,7 @@ registerCatalogPipeline({
               max: 0.25,
               tunable: true,
               savedIn: 'UARPGSaveGame::AnalogDeadzone',
-              appliedVia: 'UInputModifierDeadZone on IA_Move within IMC_Gameplay',
+              appliedVia: `UInputModifierDeadZone on IA_Move within IMC_Gameplay_${s}`,
               note:
                 'Per canon input-a11y: deadzone default must sit in 0.1–0.25; ' +
                 'user can adjust within that range in Settings → Accessibility → Deadzone. ' +
@@ -265,7 +280,8 @@ registerCatalogPipeline({
             },
           },
         },
-      }),
+      });
+      },
       // Content invariant: the shipped default must sit inside the tunable range the
       // artifact declares (canon input-a11y 0.1–0.25) — a default outside its own band is
       // unreachable from the settings UI.
@@ -331,7 +347,7 @@ registerCatalogPipeline({
           glyphSetSpec: {
             deviceFamily: 'Gamepad (PlayStation / Xbox / Generic)',
             buttonGlyphs: ['Cross/A', 'Circle/B', 'Square/X', 'Triangle/Y', 'L1/LB', 'R1/RB', 'L2/LT', 'R2/RT', 'LS', 'RS', 'D-Pad'],
-            format: '64×64 px PNG sprites + 256-px source PSD; packed into T_Glyphs_Gamepad_Atlas (4096 grid)',
+            format: `64×64 px PNG sprites + 256-px source PSD; packed into T_${slug(e.name)}_Glyphs_Atlas (4096 grid)`,
             atlasAsset: `T_${slug(e.name)}_Glyphs_Atlas`,
             styleNote: 'Flat silhouette style; high contrast on dark HUD; colorblind-safe (no hue-only distinction)',
           },
@@ -469,8 +485,8 @@ registerCatalogPipeline({
             pendingAssets,
             wiringContract: {
               grantedBy:
-                'AARPGPlayerController::SetupInputComponent reads DA_InputSchemes_* DataAsset; ' +
-                'pushes IMC_Gameplay on possess; WBP_InputRebind commits remaps via ' +
+                `AARPGPlayerController::SetupInputComponent reads the DA_InputSchemes_${s} DataAsset; ` +
+                `pushes IMC_Gameplay_${s} on possess; WBP_InputRebind commits remaps via ` +
                 'UEnhancedInputLocalPlayerSubsystem::AddPlayerMappedKeyInSlot after FindConflictingAction check',
               activatedBy:
                 'Possess / unpossess lifecycle for IMC push/pop; ' +
@@ -482,7 +498,8 @@ registerCatalogPipeline({
               ],
               verification:
                 'L2: AARPGPlayerController + UARPGSaveGame compiled in Source/PoF/; ' +
-                'DA_InputSchemes + IMC_* seeded in Content/Input/; T_*_Glyphs_Atlas in Content/UI/Icons/; ' +
+                `DA_InputSchemes_${s} + IMC_*_${s} seeded in Content/Input/; ` +
+                `T_${s}_Glyphs_Atlas in Content/UI/Icons/; ` +
                 'L3: VSInputRebindTest in PIE — full bind/remap/persist/a11y cycle',
             },
           },

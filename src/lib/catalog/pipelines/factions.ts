@@ -9,6 +9,10 @@ import { linksResolve } from '../acceptance/linkCheckers';
 import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
+/** Prose form of the faction name with a leading article dropped ("The Ashen Order" → "Ashen Order"). */
+const shortName = (n: string) => n.replace(/^the\s+/i, '');
+/** Id form without the catalog prefix ("faction-ashen-order" → "ashen-order") — used for unlock ids. */
+const factionKey = (id: string) => id.replace(/^faction-/, '');
 
 /**
  * Factions / Reputation pipeline (catalogId: 'factions').
@@ -19,6 +23,14 @@ const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
  *
  * The seeded starter entity is faction-ashen-order "The Ashen Order" — a
  * militant order in the post-Sundering dark-fantasy setting (canon game-setting).
+ *
+ * IDENTITY: every step derives the faction's own tokens from ONE family —
+ * slug(entity.name) for asset names (DT_* rows, T_<s>_Sigil, BP_FactionSubsystem_<s>),
+ * shortName(entity.name) for prose ("The Ashen Order" → "Ashen Order"), and
+ * entity.id / factionKey(entity.id) for subsystem calls and unlock ids — so a
+ * produce for another faction never writes this one's identity.  Lore place
+ * names (Ember Frontier, Ashen Crucible) and the tier-label / greeting loc keys
+ * (FACTION_GREET_*, shared across factions by design) stay as authored.
  *
  * Wiring: UARPGFactionSubsystem holds per-player repPoints per factionId,
  * evaluates thresholds on change, and broadcasts a RepTierChanged delegate.
@@ -68,7 +80,9 @@ registerCatalogPipeline({
         field: 'tiers',
         columns: [{ key: 'tier' }, { key: 'minPoints' }, { key: 'maxPoints' }, { key: 'decayPerDay' }],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const short = shortName(e.name);
+        return {
         data: {
           tiers: [
             // Six tiers: negative (hostile) through positive (exalted).
@@ -121,7 +135,7 @@ registerCatalogPipeline({
               tier: 'Exalted',
               minPoints: 12000,
               maxPoints: 15000,
-              label: 'Max tier. 20% discount; Ashen Order title; faction-gated endgame area access.',
+              label: `Max tier. 20% discount; ${short} title; faction-gated endgame area access.`,
               decayPerDay: 10,
             },
           ],
@@ -152,7 +166,8 @@ registerCatalogPipeline({
               'L3: VSFactionRepTest — rep at 3000 returns Friendly, at 12000 returns Exalted in PIE',
           },
         },
-      }),
+        };
+      },
       accept: allOf(
         minCount('tiers', '≥6 standing tiers declared', 6),
         entriesHaveFields('tiers', 'every tier carries its point band + label', ['tier', 'minPoints', 'maxPoints', 'label']),
@@ -173,7 +188,9 @@ registerCatalogPipeline({
         field: 'actionDeltas',
         columns: [{ key: 'action' }, { key: 'delta' }, { key: 'cooldown' }],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const short = shortName(e.name);
+        return {
         data: {
           actionDeltas: [
             // Positive sources — quest completions are the primary faucet.
@@ -200,7 +217,7 @@ registerCatalogPipeline({
             'investment, never automatic. Kill-based rep provides a trickle (+25 per tagged kill) ' +
             'supplementing quest play; cannot solo-grind to Exalted (would take ~480 kills). ' +
             'Hostile acts are punishing: killing one NPC member (−1000) erases ~4 side quests ' +
-            'of effort, creating genuine tension around the Ashen Order questline betrayal choice. ' +
+            `of effort, creating genuine tension around the ${short} questline betrayal choice. ` +
             'Per canon game-pillars: power is earned, not gifted.',
           wiringContract: {
             grantedBy:
@@ -209,7 +226,7 @@ registerCatalogPipeline({
               'kill credit callbacks (bound to OnEnemyKilled delegate), and trade transaction callbacks',
             activatedBy:
               'Quest completion → UARPGQuestSubsystem broadcasts QuestCompleted → ' +
-              'AddRepPoints(faction-ashen-order, delta); ' +
+              `AddRepPoints(${e.id}, delta); ` +
               'OnEnemyKilled(enemyActor) → tag check → AddRepPoints if Corruption-tagged',
             dependencies: [],
             verification:
@@ -217,7 +234,8 @@ registerCatalogPipeline({
               'L3: VSFactionRepTest — completing a mock quest event awards expected delta in PIE',
           },
         },
-      }),
+        };
+      },
       accept: allOf(
         minCount('actionDeltas', '≥8 action→rep deltas declared', 8),
         entriesHaveFields('actionDeltas', 'every action delta carries action + delta + category', ['action', 'delta', 'category']),
@@ -234,7 +252,10 @@ registerCatalogPipeline({
         field: 'tierRewards',
         columns: [{ key: 'tier' }, { key: 'reward' }, { key: 'discount' }],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const short = shortName(e.name);
+        const key = factionKey(e.id);
+        return {
         data: {
           tierRewards: [
             {
@@ -258,14 +279,14 @@ registerCatalogPipeline({
             {
               tier: 'Revered',
               discount: 15,
-              reward: '15% discount; Ashen Order heraldry cosmetic armor overlay unlocked.',
-              unlocks: ['vendor-discount-15pct', 'cosmetic-ashen-armor-overlay'],
+              reward: `15% discount; ${short} heraldry cosmetic armor overlay unlocked.`,
+              unlocks: ['vendor-discount-15pct', `cosmetic-${key}-armor-overlay`],
             },
             {
               tier: 'Exalted',
               discount: 20,
-              reward: '20% discount (ceiling per vendor-laws); "Sword of the Ashen Order" title; faction-gated endgame arena unlocked.',
-              unlocks: ['vendor-discount-20pct', 'title-sword-of-ashen-order', 'arena-ashen-crucible'],
+              reward: `20% discount (ceiling per vendor-laws); "Sword of the ${short}" title; faction-gated endgame arena unlocked.`,
+              unlocks: ['vendor-discount-20pct', `title-sword-of-${key}`, 'arena-ashen-crucible'],
             },
           ],
           discountFormula:
@@ -291,7 +312,7 @@ registerCatalogPipeline({
             ],
             verification:
               'L2: GE_FactionTierUp_Friendly / Honored / Revered / Exalted compiled; ' +
-              'DT_Factions seed row for faction-ashen-order with discount lookup compiled; ' +
+              `DT_Factions seed row for ${e.id} with discount lookup compiled; ` +
               'L3: VSFactionRepTest — at Exalted, vendor price is exactly 20% below Neutral price in PIE',
           },
           links: [
@@ -305,7 +326,8 @@ registerCatalogPipeline({
           { catalogId: 'items', entityId: 'item-6', role: 'honored-tier-stock' },
           { catalogId: 'vendors', entityId: 'vendor-wandering-merchant', role: 'discount-consumer' },
         ],
-      }),
+        };
+      },
       accept: allOf(
         minCount('tierRewards', '≥4 tier reward rows defined', 4),
         entriesHaveFields('tierRewards', 'every reward row carries tier + discount + reward', ['tier', 'discount', 'reward']),
@@ -319,7 +341,10 @@ registerCatalogPipeline({
       archetype: 'rules',
       label: 'NPC Members',
       view: { kind: 'manifest', field: 'members' },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const short = shortName(e.name);
+        const key = factionKey(e.id);
+        return {
         data: {
           members: [
             {
@@ -332,7 +357,7 @@ registerCatalogPipeline({
                 'Friendly: "Good to see you again, soldier."; ' +
                 'Honored: "The Order recognizes your deeds."; ' +
                 'Revered: "We few, we hold the line."; ' +
-                'Exalted: "Sword of the Ashen Order — a rare honor."; ' +
+                `Exalted: "Sword of the ${short} — a rare honor."; ` +
                 'Unfriendly: "Watch yourself."; ' +
                 'Hated: *attacks on sight — no dialogue node loaded*.',
               questsOffered: [
@@ -341,16 +366,16 @@ registerCatalogPipeline({
                 'Crucible Sparring (repeatable, +75/day)',
               ],
               onHostileActPenalty:
-                'Killing Captain Vael sets a permanent HOSTILE_FLAG on faction-ashen-order; ' +
+                `Killing Captain Vael sets a permanent HOSTILE_FLAG on ${e.id}; ` +
                 'rep hard-floored at −10000 (Hated); flag persists across saves.',
             },
             {
               role: 'Flavor Members (non-interactable)',
-              npcId: 'npc-ashen-sentry-a',
-              name: 'Ashen Order Sentry (generic)',
+              npcId: `npc-${key}-sentry-a`,
+              name: `${short} Sentry (generic)`,
               standingInteraction:
                 'Generic patrol NPC; guards faction-gated doors. Attacks at Hated. ' +
-                'Not individually named — represented by a shared BP_AshenSentry actor class.',
+                `Not individually named — represented by a shared BP_${slug(short)}Sentry actor class.`,
               questsOffered: [],
               onHostileActPenalty: '−1000 rep per kill (same rule as any Order NPC member).',
             },
@@ -362,7 +387,7 @@ registerCatalogPipeline({
           wiringContract: {
             grantedBy:
               'Each NPC member actor (AARPGNPCActor + UARPGDialogComponent) reads ' +
-              'UARPGFactionSubsystem::GetRepTier(faction-ashen-order, playerId) on TalkTo/approach to select the dialogue node; ' +
+              `UARPGFactionSubsystem::GetRepTier(${e.id}, playerId) on TalkTo/approach to select the dialogue node; ` +
               'hostile threshold triggers AARPGNPCActor::SetHostile(true) on the same delegate',
             activatedBy:
               'Player enters TalkTo range → DialogComponent.BeginDialog → GetRepTier → pick DialogSet[repTier]; ' +
@@ -376,7 +401,8 @@ registerCatalogPipeline({
           links: [{ catalogId: 'characters', entityId: 'char-captain-vael', role: 'faction-leader' }],
         },
         links: [{ catalogId: 'characters', entityId: 'char-captain-vael', role: 'faction-leader' }],
-      }),
+        };
+      },
       accept: allOf(
         minCount('members', '≥1 NPC member declared', 1),
         entriesHaveFields('members', 'every member carries role + npcId + name', ['role', 'npcId', 'name']),
@@ -397,7 +423,9 @@ registerCatalogPipeline({
         field: 'greetingHooks',
         columns: [{ key: 'tier' }, { key: 'dialogKey' }, { key: 'disposition' }],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const short = shortName(e.name);
+        return {
         data: {
           greetingHooks: [
             { tier: 'Hated', dialogKey: 'FACTION_GREET_HATED', disposition: 'hostile', npcBehavior: 'attacks on sight; TalkTo blocked; dialogue node null' },
@@ -413,7 +441,7 @@ registerCatalogPipeline({
             'The dialog key maps to a StringTable row (ST_FactionDialogue) — localized per §9 below. ' +
             'Disposition is a conceptual label; the actual behavior is a branch in the NPC\'s BT or the dialog component ' +
             '(e.g. bIsHostile flag on the NPC actor for Hated; vendor discount param for Friendly+). ' +
-            'All Ashen Order NPCs share the same tier-indexed greeting set, read from the same faction row.',
+            `All ${short} NPCs share the same tier-indexed greeting set, read from the same faction row.`,
           wiringContract: {
             grantedBy:
               'UARPGDialogComponent.SelectGreeting reads UARPGFactionSubsystem::GetRepTier ' +
@@ -423,11 +451,12 @@ registerCatalogPipeline({
             dependencies: [],
             verification:
               'L2: FARPGDialogueSet + UARPGDialogComponent::SelectGreeting compiled; ' +
-              'DT_FactionDialogue seeded with 7-tier rows for faction-ashen-order; ' +
+              `DT_FactionDialogue seeded with 7-tier rows for ${e.id}; ` +
               'L3: VSFactionRepTest — dialogue key matches expected tier on TalkTo event in PIE',
           },
         },
-      }),
+        };
+      },
       accept: allOf(
         minCount('greetingHooks', '≥5 greeting hooks declared', 5),
         entriesHaveFields('greetingHooks', 'every hook carries tier + dialogKey + disposition', ['tier', 'dialogKey', 'disposition']),
@@ -526,10 +555,10 @@ registerCatalogPipeline({
       archetype: 'checklist',
       label: 'Test Gate',
       view: { kind: 'checklist', field: 'checks' },
-      produce: () => ({
+      produce: (e: LabEntity) => ({
         data: {
           checks: [
-            'AddRepPoints(faction-ashen-order, +3000) from Neutral → tier becomes Friendly',
+            `AddRepPoints(${e.id}, +3000) from Neutral → tier becomes Friendly`,
             'AddRepPoints accumulating to 12000 → tier becomes Exalted',
             'Vendor discount at Exalted = 20% below Neutral price',
             'Vendor discount at Friendly = 5% below Neutral price',

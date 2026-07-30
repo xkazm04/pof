@@ -10,6 +10,8 @@ import { linksResolve } from '../acceptance/linkCheckers';
 import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
+/** snake_case token for the per-entity build script name (Weathered Stone → weathered_stone). */
+const snake = (n: string) => n.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
 
 /**
  * Materials pipeline (catalogId: 'materials').
@@ -51,9 +53,9 @@ registerCatalogPipeline({
             `touching the source ORM. The surface targets mesh geometry in the props, zone-map, and ` +
             `combat-map catalogs — any arena or world mesh that carries this material family simply ` +
             `points its material slot at MI_${slug(e.name)} (props/zone-map link role: 'material'). ` +
-            `Reference: existing arena stone textures T_wall_{albedo,normal,rough}; the canonical ` +
-            `Weathered Stone instance (mat-weathered-stone) set the baseline — new surface entities ` +
-            `follow the same pattern with their own texture set and scalar overrides. ` +
+            `Reference: existing arena stone textures T_wall_{albedo,normal,rough}; the catalog's ` +
+            `canonical surface baseline (materials::mat-weathered-stone) set the pattern — ${e.name} ` +
+            `follows it with its own texture set (T_${slug(e.name)}_{albedo,normal,orm}) and scalar overrides. ` +
             `Saturation is reserved for rarity and elemental accents (art-identity); ` +
             `environment surfaces stay in the desaturated ochre / iron / bone-white family.`,
         },
@@ -108,7 +110,9 @@ registerCatalogPipeline({
         field: 'shaderGraph',
         columns: [{ key: 'masterPath' }, { key: 'exposedPins' }, { key: 'restrictions' }],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return {
         data: {
           shaderGraph: {
             masterPath: '/Game/Materials/M_ARPG_Surface_Master',
@@ -128,23 +132,24 @@ registerCatalogPipeline({
             restrictions: [
               'Do NOT add new material nodes to M_ARPG_Surface_Master to service one surface — ' +
                 'open a chassis-change ticket if a new shared pin is required.',
-              'Do NOT author a standalone master (e.g. M_WeatheredStone) — the shared graph is the authority.',
+              `Do NOT author a standalone master (e.g. M_${s}) — the shared graph is the authority.`,
               'Use proj-naming prefix MI_ for the instance, T_ for each texture map.',
             ],
             wiringContract: {
               grantedBy:
-                'StaticMeshComponent.Materials[slot] = MI_<slug> on the actor blueprint ' +
+                `StaticMeshComponent.Materials[slot] = MI_${s} on the actor blueprint ` +
                 '(props/zone-map/combat-map actors reference the instance by path)',
               activatedBy: 'UE render pipeline — material slot resolved at render thread tick',
               dependencies: ['M_ARPG_Surface_Master (the shared master graph)'],
               verification:
                 'L2: FARPGSurfaceMaterialDef declared in ARPGEnvironmentMaterialSet.h (Source/); ' +
-                'L3: VSMasterMaterialInstanceTest — MI_<slug> compiles and samples maps in editor',
+                `L3: VSMasterMaterialInstanceTest — MI_${s} compiles and samples maps in editor`,
             },
           },
         },
         ueAssets: ['/Game/Materials/M_ARPG_Surface_Master'],
-      }),
+        };
+      },
       accept: allOf(
         fieldsPopulated('shaderGraph', 'masterPath / exposedPins / restrictions present', [
           'masterPath',
@@ -207,13 +212,15 @@ registerCatalogPipeline({
       archetype: 'gallery',
       label: 'Maps',
       view: { kind: 'gallery', field: 'selected', candidates: 4 },
-      produce: (e: LabEntity) => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return {
         data: {
           ...gallerySeed('selected', 4),
           requiredMaps: {
-            albedo: `T_${slug(e.name)}_albedo`,
-            normal: `T_${slug(e.name)}_normal`,
-            orm: `T_${slug(e.name)}_orm`,
+            albedo: `T_${s}_albedo`,
+            normal: `T_${s}_normal`,
+            orm: `T_${s}_orm`,
           },
           note:
             'Albedo / Normal / ORM are required per art-material canon. ORM = Occlusion (R) + ' +
@@ -223,7 +230,7 @@ registerCatalogPipeline({
             '(plan.md §5: the arena T_wall_* PBR set covers stone/masonry without regen).',
           wiringContract: {
             grantedBy:
-              'MI_<slug> texture parameter slots bound to T_<slug>_{albedo,normal,orm} ' +
+              `MI_${s} texture parameter slots bound to T_${s}_{albedo,normal,orm} ` +
               'via MaterialInstanceConstant parameter overrides in the UE asset',
             activatedBy: 'UE render thread — texture samples resolved when the MI is applied to a mesh',
             dependencies: ['M_ARPG_Surface_Master (owns the texture sampler slots)'],
@@ -233,11 +240,12 @@ registerCatalogPipeline({
           },
         },
         ueAssets: [
-          `/Game/ArenaBuild/Textures/T_${slug(e.name)}_albedo`,
-          `/Game/ArenaBuild/Textures/T_${slug(e.name)}_normal`,
-          `/Game/ArenaBuild/Textures/T_${slug(e.name)}_orm`,
+          `/Game/ArenaBuild/Textures/T_${s}_albedo`,
+          `/Game/ArenaBuild/Textures/T_${s}_normal`,
+          `/Game/ArenaBuild/Textures/T_${s}_orm`,
         ],
-      }),
+        };
+      },
       accept: allOf(
         wiringContractSound(),
         selected('selected', 'A texture map candidate is selected (L1)'),
@@ -318,44 +326,48 @@ registerCatalogPipeline({
         field: 'instanceLibrary',
         columns: [{ key: 'instancePath' }, { key: 'parentMaterial' }, { key: 'recipe' }],
       },
-      produce: (e: LabEntity) => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        const script = snake(e.name);
+        return {
         data: {
           instanceLibrary: {
-            instancePath: `/Game/Materials/MI_${slug(e.name)}`,
+            instancePath: `/Game/Materials/MI_${s}`,
             parentMaterial: '/Game/Materials/M_ARPG_Surface_Master',
             assetConvention:
               'MI_<PascalCaseSlug> under /Game/Materials/ — the single source of truth ' +
               'for this surface; reference it by full asset path in mesh material slots.',
             recipe:
               'MATERIALS_RECIPE (src/lib/catalog/recipe.ts): ' +
-              'author-python (build_<slug>.py mirrors the app data into a MI asset) → ' +
+              `author-python (build_${script}.py mirrors the app data into the MI_${s} asset) → ` +
               'verify (config gate checks asset/parameter structure + non-sRGB invariant on ORM). ' +
               'The recipe makes every materials entity a one-script, self-gating generator — ' +
-              'clone the Weathered Stone script and replace the slug + parameter values.',
+              'clone the canonical surface build script and replace the slug + parameter values.',
             repeatabilitynote:
               'All ~30 planned material entities follow the same recipe: new MaterialSpec in ' +
-              'seed-materials.ts → new build_<slug>.py mirroring its data → config gate passes → ' +
-              'committed. Never hand-author the MI in the UE editor; the Python script is the ' +
-              'authoritative source (plan.md §cross-catalog: app is the SYNC SOURCE).',
+              `seed-materials.ts → its own build script mirroring that data (this surface: build_${script}.py) → ` +
+              'config gate passes → committed. Never hand-author the MI in the UE editor; the Python ' +
+              'script is the authoritative source (plan.md §cross-catalog: app is the SYNC SOURCE).',
             wiringContract: {
               grantedBy:
                 'StaticMeshComponent.OverrideMaterials or Blueprint ConstructionScript sets ' +
-                'the material slot to MI_<slug> on any props/zone-map/combat-map actor that ' +
+                `the material slot to MI_${s} on any props/zone-map/combat-map actor that ` +
                 'carries this surface',
               activatedBy: 'Actor BeginPlay or static mesh placement — material slot resolved at load',
               dependencies: [
                 'M_ARPG_Surface_Master (parent material — must be compiled in the editor build)',
-                'T_<slug>_albedo / T_<slug>_normal / T_<slug>_orm (texture set)',
+                `T_${s}_albedo / T_${s}_normal / T_${s}_orm (texture set)`,
               ],
               verification:
                 'L2: FARPGSurfaceMaterialDef declared in ARPGEnvironmentMaterialSet.h; ' +
-                'L3: VSMasterMaterialInstanceTest — MI_<slug> asset found + parent is M_ARPG_Surface_Master ' +
+                `L3: VSMasterMaterialInstanceTest — MI_${s} asset found + parent is M_ARPG_Surface_Master ` +
                 'and all three required texture slots are non-null in editor',
             },
           },
         },
-        ueAssets: [`/Game/Materials/MI_${slug(e.name)}`],
-      }),
+        ueAssets: [`/Game/Materials/MI_${s}`],
+        };
+      },
       accept: allOf(
         fieldsPopulated('instanceLibrary', 'instancePath / parentMaterial / recipe populated', [
           'instancePath',
@@ -387,20 +399,23 @@ registerCatalogPipeline({
       archetype: 'checklist',
       label: 'Test Gate',
       view: { kind: 'checklist', field: 'checks' },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return {
         data: {
           checks: [
-            'MI_<slug> asset found at /Game/Materials/MI_<slug> in the editor content browser',
+            `MI_${s} asset found at /Game/Materials/MI_${s} in the editor content browser`,
             'parent material is M_ARPG_Surface_Master (not a standalone master)',
-            'Albedo, Normal, ORM texture slots all non-null (no missing texture references)',
+            `T_${s}_albedo / T_${s}_normal / T_${s}_orm texture slots all non-null (no missing texture references)`,
             'ORM texture import setting is Linear (non-sRGB) — not sRGB',
             'Albedo texture import setting is sRGB ON',
-            'MI compiles without shader errors in SM5 (no fallback to Default Material)',
+            `MI_${s} compiles without shader errors in SM5 (no fallback to Default Material)`,
             'WearAmount, RoughnessMultiplier, BaseColorTint parameters visible and non-default in editor',
             'PhysicalMaterial slot set to the correct SurfaceType (e.g. SurfaceType_Stone)',
           ],
         },
-      }),
+        };
+      },
       accept: entityRuntimeDeferred(
         'PoF.Materials.ArenaMasters',
         'Instance compiles + samples maps in editor',
@@ -433,7 +448,7 @@ registerCatalogPipeline({
                 'for interactable/destructible props also at ConstructionScript (Blueprint)',
               dependencies: [
                 'M_ARPG_Surface_Master (parent material; must be compiled in the target build)',
-                'T_<slug>_{albedo,normal,orm} (PBR texture set)',
+                `T_${s}_{albedo,normal,orm} (PBR texture set)`,
                 'props / zone-map / combat-map (consumer catalogs that reference MI by path)',
               ],
               verification:

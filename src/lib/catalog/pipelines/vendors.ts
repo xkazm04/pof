@@ -10,6 +10,9 @@ import { linksResolve } from '../acceptance/linkCheckers';
 import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
+/** UPPER form of the entity slug — the per-vendor localization key prefix (VENDOR_<V>_*),
+ *  so two vendors can never write the same LocRes key for their barks. */
+const KEY = (n: string) => slug(n).toUpperCase();
 
 /**
  * Vendor / Shop pipeline (catalogId: 'vendors').
@@ -60,7 +63,9 @@ registerCatalogPipeline({
       archetype: 'rules',
       label: 'Inventory Pool',
       view: { kind: 'manifest', field: 'stock' },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return {
         data: {
           // Resolvable stock references use real seeded item ids from the items catalog
           // (item-1 Iron Longsword, item-3 Crystal Staff, item-4 Steel Chestplate,
@@ -84,17 +89,17 @@ registerCatalogPipeline({
             'Additional stock added once those catalog rows are seeded.',
           wiringContract: {
             grantedBy:
-              'UARPGVendorComponent on the NPC actor reads FARPGVendorInventoryRow ' +
-              'from DT_VendorInventory keyed by entity slug',
+              `UARPGVendorComponent on BP_Vendor_${s} reads FARPGVendorInventoryRow ` +
+              `from DT_VendorInventory keyed by "${s}"`,
             activatedBy:
               'Player interacts with the NPC → TalkTo triggers OpenVendorWidget → ' +
-              'UARPGVendorComponent.PopulateInventory(DT_VendorInventory, entitySlug)',
+              `UARPGVendorComponent.PopulateInventory(DT_VendorInventory, "${s}")`,
             dependencies: [
               'items (item-1 Iron Longsword, item-3 Crystal Staff, item-4 Steel Chestplate, item-5 Assassin\'s Cowl)',
               'currencies (currency-gold — transaction settlement)',
             ],
             verification:
-              'L2: FARPGVendorInventoryRow declared in Source/PoF/; DT_VendorInventory seeded via ' +
+              `L2: FARPGVendorInventoryRow declared in Source/PoF/; DT_VendorInventory row "${s}" seeded via ` +
               'seed_vendor_inventory.py with item-1/3/4/5 entries; UARPGVendorComponent.cpp compiled; ' +
               'L3: VSVendorTransactionTest — buy deducts gold and adds item to inventory in PIE',
           },
@@ -112,7 +117,8 @@ registerCatalogPipeline({
           { catalogId: 'items', entityId: 'item-5', role: 'stock' },
         ],
         ueAssets: ['/Game/Economy/Vendors/DT_VendorInventory'],
-      }),
+        };
+      },
       accept: allOf(
         minCount('stock', '≥1 item linked from the items catalog', 1),
         linksResolve(),
@@ -227,7 +233,9 @@ registerCatalogPipeline({
         field: 'services',
         columns: [{ key: 'buy' }, { key: 'sell' }, { key: 'repair' }],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return {
         data: {
           services: {
             // canon vendor-laws: all three services declared explicitly
@@ -246,7 +254,7 @@ registerCatalogPipeline({
               'no reputation discount on repair (repair is a flat service fee, not a margin item).',
             wiringContract: {
               grantedBy:
-                'UARPGVendorComponent (attached to AARPGNPCActor) exposes Buy/Sell/Repair RPCs; ' +
+                `UARPGVendorComponent (attached to AARPGNPCActor BP_Vendor_${s}) exposes Buy/Sell/Repair RPCs; ` +
                 'currency transfer via UARPGCurrencySubsystem.Transact(playerID, amount, currency-gold)',
               activatedBy:
                 'Player confirms action in WBP_VendorShop → delegates Buy/SellItem/RepairItem ' +
@@ -270,7 +278,8 @@ registerCatalogPipeline({
           { catalogId: 'currencies', entityId: 'currency-gold', role: 'transaction-currency' },
         ],
         ueAssets: ['/Game/Economy/DT_Currencies'],
-      }),
+        };
+      },
       accept: allOf(
         fieldsPopulated('services', 'buy + sell + repair flags set', ['buy', 'sell', 'repair']),
         linksResolve(),
@@ -385,23 +394,28 @@ registerCatalogPipeline({
       archetype: 'checklist',
       label: 'Localization',
       view: { kind: 'checklist', field: 'keys' },
-      produce: () => ({
-        data: {
-          // Real localization content — en source + cs translation per key, not a bare
-          // key-name schema (the judge fleet failed the stub form, 2026-07-07).
-          keys: [
-            'VENDOR_GREETING: en "Roads are cruel, friend. My prices less so — mostly." · cs "Cesty jsou kruté, příteli. Mé ceny méně — většinou."',
-            'VENDOR_BUY_PROMPT: en "Show me your coin." · cs "Ukaž mi svůj měšec."',
-            'VENDOR_SELL_PROMPT: en "What are you offering?" · cs "Co nabízíš?"',
-            'VENDOR_REPAIR_PROMPT: en "Hand it over — dents and all." · cs "Podej to sem — i s těmi šrámy."',
-            'VENDOR_FAREWELL: en "Keep to the road. It keeps fewer secrets than the woods." · cs "Drž se cesty. Skrývá míň tajemství než les."',
-            'VENDOR_INSUFFICIENT_GOLD: en "Not enough gold. Sentiment buys nothing here." · cs "Málo zlata. Za dojetí tady nic nekoupíš."',
-            'VENDOR_RESTOCK_SOON: en "New stock with the next caravan — try me tomorrow." · cs "Nové zboží s příští karavanou — zkus to zítra."',
-          ],
-          locales: ['en', 'cs'],
-          format: 'key: en "<source>" · cs "<translation>" — en is the authoring truth; cs seeds the LocRes pipeline',
-        },
-      }),
+      produce: (e: LabEntity) => {
+        const V = KEY(e.name);
+        return {
+          data: {
+            // Real localization content — en source + cs translation per key, not a bare
+            // key-name schema (the judge fleet failed the stub form, 2026-07-07).
+            // Barks are per-vendor voice, so the key prefix carries the vendor's own slug
+            // (VENDOR_<V>_*) — a second vendor cannot overwrite this one's greeting.
+            keys: [
+              `VENDOR_${V}_GREETING: en "Roads are cruel, friend. My prices less so — mostly." · cs "Cesty jsou kruté, příteli. Mé ceny méně — většinou."`,
+              `VENDOR_${V}_BUY_PROMPT: en "Show me your coin." · cs "Ukaž mi svůj měšec."`,
+              `VENDOR_${V}_SELL_PROMPT: en "What are you offering?" · cs "Co nabízíš?"`,
+              `VENDOR_${V}_REPAIR_PROMPT: en "Hand it over — dents and all." · cs "Podej to sem — i s těmi šrámy."`,
+              `VENDOR_${V}_FAREWELL: en "Keep to the road. It keeps fewer secrets than the woods." · cs "Drž se cesty. Skrývá míň tajemství než les."`,
+              `VENDOR_${V}_INSUFFICIENT_GOLD: en "Not enough gold. Sentiment buys nothing here." · cs "Málo zlata. Za dojetí tady nic nekoupíš."`,
+              `VENDOR_${V}_RESTOCK_SOON: en "New stock with the next caravan — try me tomorrow." · cs "Nové zboží s příští karavanou — zkus to zítra."`,
+            ],
+            locales: ['en', 'cs'],
+            format: 'key: en "<source>" · cs "<translation>" — en is the authoring truth; cs seeds the LocRes pipeline',
+          },
+        };
+      },
       accept: minCount('keys', '≥1 localization key defined', 1),
     },
 
@@ -446,7 +460,7 @@ registerCatalogPipeline({
             wiringContract: {
               grantedBy:
                 'UARPGVendorComponent (attached to AARPGNPCActor BP_Vendor_' + s + ') ' +
-                'reads FARPGVendorInventoryRow from DT_VendorInventory keyed by entity slug; ' +
+                'reads FARPGVendorInventoryRow from DT_VendorInventory keyed by "' + s + '"; ' +
                 'currency settlement via UARPGCurrencySubsystem reading DT_Currencies (currency-gold)',
               activatedBy:
                 'Player TalkTo → OpenVendorWidget (WBP_VendorShop) → PopulateInventory + ComputePrices; ' +
@@ -458,7 +472,7 @@ registerCatalogPipeline({
               ],
               verification:
                 'L2: UARPGVendorComponent.cpp + FARPGVendorInventoryRow in Source/PoF/ compiled; ' +
-                'seed_vendor_inventory.py seeds entity slug row in DT_VendorInventory; ' +
+                'seed_vendor_inventory.py seeds the "' + s + '" row in DT_VendorInventory; ' +
                 'L3: VSVendorTransactionTest — buy/sell/repair cycle in PIE with gold wallet + rep discount',
             },
           },

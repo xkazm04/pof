@@ -70,7 +70,9 @@ registerCatalogPipeline({
         field: 'stemsLayers',
         columns: [{ key: 'stems' }, { key: 'layers' }, { key: 'mixRules' }],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return {
         data: {
           stemsLayers: {
             stems: [
@@ -173,8 +175,8 @@ registerCatalogPipeline({
             ],
             wiringContract: {
               grantedBy:
-                'UARPGMusicManager (GameState component) reads DT_Music row keyed by music entity slug, ' +
-                'instantiates SC_Music_<Slug> MetaSound asset, and sets the initial MusicLayer parameter.',
+                `UARPGMusicManager (GameState component) reads the DT_Music row keyed "${s}", ` +
+                `instantiates the SC_Music_${s} MetaSound asset, and sets the initial MusicLayer parameter.`,
               activatedBy:
                 'GAS GameplayEvent "MusicEvent.LayerChanged" broadcast by UARPGMusicManager when ' +
                 'CombatIntensity attribute crosses a layer threshold; MetaSound responds via a trigger wired ' +
@@ -189,7 +191,8 @@ registerCatalogPipeline({
             },
           },
         },
-      }),
+        };
+      },
       accept: allOf(
         fieldsPopulated('stemsLayers', 'stems / layers / mixRules / wiringContract populated', [
           'stems',
@@ -306,7 +309,9 @@ registerCatalogPipeline({
         field: 'loopMarkers',
         columns: [{ key: 'loopPoints' }, { key: 'transitionMarkers' }, { key: 'gridSpec' }],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return {
         data: {
           loopMarkers: {
             gridSpec: {
@@ -391,11 +396,13 @@ registerCatalogPipeline({
               'All stems delivered at exactly 20 000 ms (960 samples of silence padding at 48 kHz if needed).',
               'Zero-crossing check required on every loop point before UE import; MetaSound waveform editor confirmation mandatory.',
               'Stems authored in the same project session (same tempo map, same sample clock) to guarantee grid alignment.',
-              'Import as SoundWave assets in Content/Audio/Music/<Slug>/Stems/; loop points embedded in the .wav cue chunk.',
+              `Import as SoundWave assets in Content/Audio/Music/${s}/Stems/ (SW_${s}_<Stem>); ` +
+                'loop points embedded in the .wav cue chunk.',
             ],
           },
         },
-      }),
+        };
+      },
       accept: fieldsPopulated('loopMarkers', 'loopPoints / transitionMarkers / gridSpec / loopAuthoring', [
         'loopPoints',
         'transitionMarkers',
@@ -489,7 +496,9 @@ registerCatalogPipeline({
         field: 'triggerBinding',
         columns: [{ key: 'zoneTrigger' }, { key: 'arenaTrigger' }, { key: 'wiringContract' }],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return {
         data: {
           triggerBinding: {
             zoneTrigger: {
@@ -497,8 +506,8 @@ registerCatalogPipeline({
               event: 'MusicEvent.AmbientStart',
               layer: 'ambient-tension',
               trigger:
-                'UARPGMusicManager on zone load (AARPGGameMode::OnZoneLoaded) reads DT_Music row by slug, ' +
-                'instantiates SC_Music_<Slug>, and immediately sets layer=ambient-tension. ' +
+                `UARPGMusicManager on zone load (AARPGGameMode::OnZoneLoaded) reads the DT_Music row "${s}", ` +
+                `instantiates SC_Music_${s}, and immediately sets layer=ambient-tension. ` +
                 'No delay after zone streaming completes.',
               stopEvent: 'MusicEvent.ZoneExit — zone transition or fast-travel queues a 4-bar fade-out.',
             },
@@ -534,7 +543,7 @@ registerCatalogPipeline({
               ],
               verification:
                 'L0: triggerBinding fields populated and both catalogLinks present; ' +
-                'L2: DT_Music row seeded via seed_music.py; UARPGMusicManager.cpp compiled in Source/PoF/; ' +
+                `L2: DT_Music row "${s}" seeded via seed_music.py; UARPGMusicManager.cpp compiled in Source/PoF/; ` +
                 'L3 (deferred): VSMusicTransitionTest — ambient-tension plays on zone load, combat-low on first aggro.',
             },
           },
@@ -543,7 +552,8 @@ registerCatalogPipeline({
           { catalogId: 'zone-map', entityId: 'zone-z-ashen', role: 'zone-music-trigger' },
           { catalogId: 'combat-map', entityId: 'arena-ravaged-courtyard', role: 'combat-music-trigger' },
         ],
-      }),
+        };
+      },
       accept: allOf(
         fieldsPopulated('triggerBinding', 'zoneTrigger / arenaTrigger / wiringContract populated', [
         'zoneTrigger',
@@ -627,7 +637,9 @@ registerCatalogPipeline({
       archetype: 'checklist',
       label: 'Test Gate',
       view: { kind: 'checklist', field: 'checks' },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return {
         data: {
           checks: [
             'ambient-tension layer plays on zone-z-ashen load (MusicEvent.AmbientStart received)',
@@ -637,12 +649,13 @@ registerCatalogPipeline({
             'combat-exit crossfade completes over 4 bars (≈10 s) with no audible click',
             'integrated LUFS measured at −16 ±2 LUFS in the MetaSound profiler (50 consecutive loops)',
             'true peak of combined stems ≤ −1.0 dBTP',
-            'all 6 stem loop points are click-free over 100 loop iterations in PIE audio profiler',
-            'DT_Music row present; UARPGMusicManager resolves the row key without a missing-row warning in PIE log',
+            `all 6 SW_${s}_* stem loop points are click-free over 100 loop iterations in PIE audio profiler`,
+            `DT_Music row "${s}" present; UARPGMusicManager resolves the row key without a missing-row warning in PIE log`,
             'no audio stalls on layer switch (stream prebuffer completes within 2-bar beat-sync window)',
           ],
         },
-      }),
+        };
+      },
       accept: entityRuntimeDeferred(
         'VSMusicTransitionTest',
         'Combat transition crossfades on cue in PIE',

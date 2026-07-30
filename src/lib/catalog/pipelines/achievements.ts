@@ -9,6 +9,13 @@ import { linksResolve } from '../acceptance/linkCheckers';
 import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
+/**
+ * UPPER_SNAKE identity token for platform ids + localization keys:
+ * 'First Blood' → 'FIRST_BLOOD' (so the seeded exemplar keeps ACH_FIRST_BLOOD).
+ * Every step derives its ACH_ prefix from this ONE helper so siblings agree.
+ */
+const snake = (n: string) =>
+  n.trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
 
 /**
  * Achievements pipeline (catalogId: 'achievements').
@@ -33,7 +40,10 @@ registerCatalogPipeline({
       archetype: 'brief',
       label: 'Concept Brief',
       view: { kind: 'prose', field: 'brief', emptyText: 'No brief yet' },
-      produce: (e: LabEntity) => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        const ACH = `ACH_${snake(e.name)}`;
+        return ({
         data: {
           brief:
             `${e.name} is a server-tracked player accomplishment in PoF — the simplest entry in ` +
@@ -44,19 +54,20 @@ registerCatalogPipeline({
             `UARPGAchievementSubsystem on the GameState receives the event, increments the kill ` +
             `counter, and unlocks when threshold 1 is crossed. Unlock is idempotent — the ` +
             `subsystem guards against duplicate grants using a persistent world-state tag ` +
-            `(Achievement.FirstBlood.Unlocked) written to the save file. On unlock the server ` +
+            `(Achievement.${s}.Unlocked) written to the save file. On unlock the server ` +
             `RPC-notifies the PlayerController, which fires the HUD toast (WBP_AchievementToast, ` +
             `canvas slot AchievementToastAnchor, format "[icon] Achievement Unlocked: ${e.name}") ` +
-            `and grants GE_Achievement_${slug(e.name)} on the player's ASC, awarding 100 gold ` +
+            `and grants GE_Achievement_${s} on the player's ASC, awarding 100 gold ` +
             `(currency-gold) and one Minor Health Potion (item-7). Telemetry fires ` +
             `achievement_unlocked with the achievementId and sessionKillCount payload. ` +
             `The achievement is VISIBLE before unlock (players can see the objective) and maps to ` +
-            `platform trophy/achievement ID ACH_FIRST_BLOOD (Steam + PSN + Xbox) worth 5 points ` +
+            `platform trophy/achievement ID ${ACH} (Steam + PSN + Xbox) worth 5 points ` +
             `(Steam) / Bronze (PSN). Its icon is sourced from the iconset-abilities family ` +
             `(a blood-droplet silhouette, 256px, rarity-framed Normal/white). ` +
             `Anti-cheat: the kill event is server-authoritative; clients cannot self-report progress.`,
         },
-      }),
+        });
+      },
       accept: minLength('brief', 'Brief ≥ 300 characters', 300),
     },
 
@@ -74,7 +85,9 @@ registerCatalogPipeline({
           { key: 'guard' },
         ],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return ({
         data: {
           triggerProgress: {
             gameplayEvent:
@@ -84,7 +97,7 @@ registerCatalogPipeline({
             threshold: 1,
             incrementPerEvent: 1,
             guard:
-              'Achievement.FirstBlood.Unlocked world-state tag checked BEFORE incrementing — ' +
+              `Achievement.${s}.Unlocked world-state tag checked BEFORE incrementing — ` +
               'if tag is present the event is a no-op (idempotent unlock; exactly one grant per player).',
             progressBarDisplay:
               'integer fraction: current/threshold shown on the achievement detail panel ' +
@@ -112,7 +125,8 @@ registerCatalogPipeline({
             },
           },
         },
-      }),
+        });
+      },
       accept: allOf(
         fieldsPopulated(
           'triggerProgress',
@@ -197,14 +211,14 @@ registerCatalogPipeline({
               'UARPGAchievementSubsystem to the player\'s ASC on the server after unlock is ' +
               'confirmed. GE executes UARPGCurrencyExecution (+100 gold via currency-gold attribute) ' +
               'and UARPGInventoryGrantExecution (+1 item-7 to player inventory). ' +
-              'Both executions are idempotent (guard: Achievement.FirstBlood.Unlocked tag already set ' +
+              `Both executions are idempotent (guard: Achievement.${slug(e.name)}.Unlocked tag already set ` +
               'before GE is applied, so no double-grant on session reconnect).',
             wiringContract: {
               grantedBy:
                 'UARPGAchievementSubsystem::GrantReward() → ' +
                 'UAbilitySystemComponent::ApplyGameplayEffectToSelf(GE_Achievement_' + slug(e.name) + ')',
               activatedBy:
-                'Subsystem unlock path — fires immediately after Achievement.FirstBlood.Unlocked tag is written',
+                `Subsystem unlock path — fires immediately after Achievement.${slug(e.name)}.Unlocked tag is written`,
               dependencies: [
                 'currencies (currency-gold — UARPGCurrencyExecution modifies gold attribute)',
                 'items (item-7 Minor Health Potion — UARPGInventoryGrantExecution adds to inventory)',
@@ -249,33 +263,35 @@ registerCatalogPipeline({
         field: 'platform',
         columns: [{ key: 'steam' }, { key: 'psn' }, { key: 'xbox' }],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const ACH = `ACH_${snake(e.name)}`;
+        return ({
         data: {
           platform: {
-            canonicalId: 'ACH_FIRST_BLOOD',
+            canonicalId: ACH,
             steam: {
-              apiName: 'ACH_FIRST_BLOOD',
+              apiName: ACH,
               points: 5,
-              displayName: 'First Blood',
+              displayName: e.name,
               description: 'Kill your first enemy.',
               hidden: false,
             },
             psn: {
-              id: 'ACH_FIRST_BLOOD',
+              id: ACH,
               trophyType: 'Bronze',
-              label: 'First Blood',
+              label: e.name,
               description: 'Defeat your first enemy in the Shattered Realms.',
               hidden: false,
             },
             xbox: {
-              id: 'ACH_FIRST_BLOOD',
+              id: ACH,
               gamerscore: 5,
-              label: 'First Blood',
+              label: e.name,
               description: 'Kill your first enemy.',
               hidden: false,
             },
             mappingNote:
-              'All three platforms share the canonical id ACH_FIRST_BLOOD stored in ' +
+              `All three platforms share the canonical id ${ACH} stored in ` +
               'FARPGAchievementRow.PlatformId (a FString). The Subsystem calls the platform ' +
               'achievement API (ISteamUserStats / PSN TrophySystem / XboxLive AchievementsService) ' +
               'after the in-game unlock is confirmed. Scores are equivalent across platforms: ' +
@@ -286,7 +302,7 @@ registerCatalogPipeline({
                 'UARPGAchievementSubsystem::NotifyPlatform(PlatformId) called after in-game unlock ' +
                 'writes the save row; delegates to UAchievementOnlineSubsystem (wraps OSS layer)',
               activatedBy:
-                'In-game unlock confirmed → GrantReward() → NotifyPlatform("ACH_FIRST_BLOOD")',
+                `In-game unlock confirmed → GrantReward() → NotifyPlatform("${ACH}")`,
               dependencies: [
                 'Online Subsystem (Steam OSS, PSN, Xbox Live via UE5 UAchievementOnlineSubsystem)',
               ],
@@ -297,7 +313,8 @@ registerCatalogPipeline({
             },
           },
         },
-      }),
+        });
+      },
       accept: allOf(
         fieldsPopulated('platform', 'steam + psn + xbox platform entries defined', [
           'steam',
@@ -365,7 +382,7 @@ registerCatalogPipeline({
             animIn: 'slide-in from right (0.25s ease-out)',
             animOut: 'fade-out (0.5s, after duration elapses)',
             localizationKey: 'ACHIEVEMENT_TOAST_TITLE',
-            achievementNameKey: `ACH_${slug(e.name).toUpperCase()}_NAME`,
+            achievementNameKey: `ACH_${snake(e.name)}_NAME`,
             note:
               'Sound cue SC_AchievementUnlock plays simultaneously with the slide-in. ' +
               'No audio catalog entity seeded yet; add link once seeded.',
@@ -407,7 +424,9 @@ registerCatalogPipeline({
         field: 'antiCheat',
         columns: [{ key: 'authorityModel' }, { key: 'idempotencyGuard' }, { key: 'auditLog' }],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return ({
         data: {
           antiCheat: {
             authorityModel:
@@ -416,9 +435,9 @@ registerCatalogPipeline({
               'The kill event is forwarded from AARPGEnemyCharacter::OnDeath (server side only). ' +
               'No client-predicted progress — counter lives in FARPGAchievementSaveRow on the server.',
             idempotencyGuard:
-              'Achievement.FirstBlood.Unlocked world-state tag is written to the save file at ' +
+              `Achievement.${s}.Unlocked world-state tag is written to the save file at ` +
               'the moment of unlock. All subsequent OnEnemyKilled events check this tag first and ' +
-              'return early if set. GE_Achievement_FirstBlood is therefore applied at most once ' +
+              `return early if set. GE_Achievement_${s} is therefore applied at most once ` +
               'per save file.',
             auditLog:
               'Every unlock attempt (success and duplicate) is logged to UARPGTelemetrySubsystem ' +
@@ -444,7 +463,8 @@ registerCatalogPipeline({
             },
           },
         },
-      }),
+        });
+      },
       accept: allOf(
         fieldsPopulated('antiCheat', 'authorityModel + idempotencyGuard + auditLog defined', [
           'authorityModel',
@@ -467,7 +487,7 @@ registerCatalogPipeline({
         field: 'telemetry',
         columns: [{ key: 'events' }, { key: 'metric' }],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => ({
         data: {
           telemetry: {
             events: [
@@ -475,7 +495,7 @@ registerCatalogPipeline({
                 name: 'achievement_unlocked',
                 trigger: 'UARPGAchievementSubsystem — immediately after unlock tag is written',
                 payload:
-                  '{ achievementId: "achievement-first-blood", playerId, sessionId, ' +
+                  `{ achievementId: "${e.id}", playerId, sessionId, ` +
                   'sessionKillCount: number, timeToUnlock_ms: number }',
               },
               {
@@ -483,7 +503,7 @@ registerCatalogPipeline({
                 trigger: 'UARPGAchievementSubsystem — on each OnEnemyKilled event before unlock',
                 payload:
                   '{ achievementId, playerId, progressCurrent: number, progressThreshold: 1 }',
-                note: 'For First Blood this fires at most once (progress 0→1 = unlock); ' +
+                note: `For ${e.name} this fires at most once (progress 0→1 = unlock); ` +
                   'useful for multi-kill achievements in the same pipeline.',
               },
               {
@@ -496,7 +516,7 @@ registerCatalogPipeline({
             metric: 'unlock_rate',
             metricDef:
               'unlock_rate = sessions_where_achievement_unlocked / total_sessions_started. ' +
-              'Expected ≈ 1.0 for First Blood (every player kills an enemy). ' +
+              `Expected ≈ 1.0 for ${e.name} (every player kills an enemy). ` +
               'Significant deviation (< 0.8) flags a tutorial/onboarding funnel failure. ' +
               'Persisted to UARPGTelemetrySubsystem; queryable per achievement_id.',
             wiringContract: {
@@ -528,23 +548,26 @@ registerCatalogPipeline({
       archetype: 'checklist',
       label: 'Localization',
       view: { kind: 'checklist', field: 'keys' },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const ACH = `ACH_${snake(e.name)}`;
+        return ({
         data: {
           keys: [
-            'ACH_FIRST_BLOOD_NAME       — "First Blood"',
-            'ACH_FIRST_BLOOD_DESC       — "Kill your first enemy in the Shattered Realms."',
-            'ACH_FIRST_BLOOD_LOCKED     — "Defeat one enemy to unlock this achievement."',
+            `${ACH}_NAME       — "${e.name}"`,
+            `${ACH}_DESC       — "Kill your first enemy in the Shattered Realms."`,
+            `${ACH}_LOCKED     — "Defeat one enemy to unlock this achievement."`,
             'ACHIEVEMENT_TOAST_TITLE    — "Achievement Unlocked"',
-            'ACH_FIRST_BLOOD_REWARD     — "Reward: 100 Gold + 1× Minor Health Potion"',
+            `${ACH}_REWARD     — "Reward: 100 Gold + 1× Minor Health Potion"`,
           ],
           locNote:
             'Keys follow PascalCase with namespace prefix (ACH_). ' +
-            'PSN and Xbox platform strings share the ACH_FIRST_BLOOD_NAME / _DESC keys ' +
+            `PSN and Xbox platform strings share the ${ACH}_NAME / _DESC keys ` +
             '(the platform submission portal uses the same localization table). ' +
             'Steam API overrides with the SteamAppAdmin panel; keys act as fallback. ' +
             'Spoiler-gated achievements use ACH_*_LOCKED until the reveal condition is met.',
         },
-      }),
+        });
+      },
       accept: minCount('keys', '≥1 localization key defined', 1),
     },
 
@@ -553,22 +576,26 @@ registerCatalogPipeline({
       archetype: 'checklist',
       label: 'Test Gate',
       view: { kind: 'checklist', field: 'checks' },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        const ACH = `ACH_${snake(e.name)}`;
+        return ({
         data: {
           checks: [
             'achievement does NOT unlock before any enemy is killed (killCount = 0)',
             'killing one enemy increments killCount to 1 and fires the unlock path',
             'unlock fires exactly once — a second kill does not re-grant reward or re-fire RPC',
-            'Achievement.FirstBlood.Unlocked tag is written to save and persists across session reload',
-            'GE_Achievement_FirstBlood grants +100 currency-gold to the player ASC',
-            'GE_Achievement_FirstBlood grants +1 item-7 (Minor Health Potion) to player inventory',
+            `Achievement.${s}.Unlocked tag is written to save and persists across session reload`,
+            `GE_Achievement_${s} grants +100 currency-gold to the player ASC`,
+            `GE_Achievement_${s} grants +1 item-7 (Minor Health Potion) to player inventory`,
             'WBP_AchievementToast is visible in PIE within 1 frame of the unlock RPC',
-            'Platform WriteAchievement fires for ACH_FIRST_BLOOD via DevMode OSS stub',
+            `Platform WriteAchievement fires for ${ACH} via DevMode OSS stub`,
             'achievement_unlocked + achievement_reward_granted both appear in the telemetry log',
             'direct client RPC to unlock is rejected by server HasAuthority() guard',
           ],
         },
-      }),
+        });
+      },
       accept: entityRuntimeDeferred(
         'VSAchievementTest',
         'Trigger fires unlock + reward grants once in PIE',

@@ -36,8 +36,8 @@ registerCatalogPipeline({
           brief:
             `${e.name} is the loot-table entity governing drop distribution for a defined set of ` +
             `enemy sources (trash packs, elite packs, and their associated container/chest variants) ` +
-            `operating in the mid-game area-level band (≈40–60). It anchors the Brute/Goblin ` +
-            `archetype's kill reward — the primary faucet for Magic and Rare gear during the ` +
+            `operating in the mid-game area-level band (≈40–60). It anchors the kill reward of the ` +
+            `enemy archetype bound to ${e.name} — the primary faucet for Magic and Rare gear during the ` +
             `leveling loop. Its identity in the loot loop is "reliable currency trickle + occasional ` +
             `Rare upgrade", positioned above trash-minion tables (which rarely drop above Normal) but ` +
             `below boss tables (which pull from the named unique pool). ` +
@@ -226,7 +226,9 @@ registerCatalogPipeline({
         field: 'pools',
         columns: [{ key: 'currencyPool' }, { key: 'uniquePool' }],
       },
-      produce: (e: LabEntity) => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return {
         data: {
           pools: {
             currencyPool: {
@@ -285,11 +287,12 @@ registerCatalogPipeline({
                 'and item-5 (Assassin\'s Cowl, Epic). Full named-unique links will be added once those items are seeded.',
             },
             wiringContract: {
-              grantedBy: 'UARPGLootDropComponent on the monster actor — invoked on OnAllWavesComplete / on-death via FARPGLootTableRow.currencyPool + FARPGLootTableRow.uniquePool',
+              grantedBy: `UARPGLootDropComponent on the monster actor — invoked on OnAllWavesComplete / on-death via the DT_LootTables row "${s}" (FARPGLootTableRow.currencyPool + FARPGLootTableRow.uniquePool)`,
               activatedBy: 'On-death event (AARPGEnemyCharacter::OnDeath → broadcast to DropComponent)',
               dependencies: ['currencies (currency-gold; orb currencies pending catalog seed)', 'items (item-5 Assassin\'s Cowl Epic, item-6 Sunfire Amulet Legendary for unique pool)'],
               verification:
-                'L2: FARPGLootTableRow declared in Source/PoF/; seed_loot_tables.py seeds the row; ' +
+                `L2: FARPGLootTableRow declared in Source/PoF/; seed_loot_tables.py seeds the "${s}" row; ` +
+                `DA_${s}_UniquePool present under /Game/LootSystem/; ` +
                 'L3: VSLootDistributionTest — currency and unique pools resolved from DT_LootTables over N kills',
             },
           },
@@ -309,9 +312,11 @@ registerCatalogPipeline({
         ],
         ueAssets: [
           `/Game/LootSystem/DT_LootTables`,
-          `/Game/LootSystem/DA_${slug(e.name)}_UniquPool`,
+          // Must match the UE Packaging step's manifest name — siblings package ONE asset.
+          `/Game/LootSystem/DA_${s}_UniquePool`,
         ],
-      }),
+        };
+      },
       // Grade the displayed manifest (`pools`) as well as the link count — the View shows the
       // currency + unique pools, so both must be authored, not just a resolvable link.
       accept: allOf(
@@ -509,7 +514,7 @@ registerCatalogPipeline({
             wiringContract: {
               grantedBy:
                 'UARPGLootDropComponent (attached to AARPGEnemyCharacter) ' +
-                'reads FARPGLootTableRow from DT_LootTables keyed by entity slug',
+                `reads FARPGLootTableRow from DT_LootTables keyed "${s}"`,
               activatedBy:
                 'AARPGEnemyCharacter::OnDeath → delegate broadcast → UARPGLootDropComponent::ExecuteDrop → ' +
                 'resolves item base from items catalog + rolls rarity + selects ilvl-gated affixes (§2)',
@@ -519,7 +524,7 @@ registerCatalogPipeline({
                 'bestiary (spawner registers enemy → table binding via loot field on BestiaryEntry)',
               ],
               verification:
-                'L2: FARPGLootTableRow in Source/PoF/ + DT_LootTables seeded via seed_loot_tables.py + ' +
+                `L2: FARPGLootTableRow in Source/PoF/ + DT_LootTables row "${s}" seeded via seed_loot_tables.py + ` +
                 'UARPGLootDropComponent.cpp compiled; ' +
                 'L3: VSLootDistributionTest in PIE — N-kill distribution matches declared odds ±5%',
             },

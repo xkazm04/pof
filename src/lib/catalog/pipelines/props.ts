@@ -10,6 +10,8 @@ import { linksResolve } from '../acceptance/linkCheckers';
 import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
+/** The entity's head noun — "Reinforced Crate" → "Crate". Player-facing prompt/cue wording. */
+const noun = (n: string) => n.trim().split(/\s+/).pop() || n;
 
 /**
  * Props pipeline (catalogId: 'props').
@@ -79,25 +81,25 @@ registerCatalogPipeline({
           { key: 'healthThreshold' },
         ],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => ({
         data: {
           interaction: {
             interactType: 'destructible/openable',
             triggerCondition:
               'Player enters UE5 SphereComponent overlap radius (120 cm); ' +
               'Enhanced Input IA_Interact fires (hold 0.4 s, toggleable per input-a11y canon); ' +
-              'OR the crate health drops to 0 from damage — both paths invoke the same OnBroken delegate.',
-            prompt: 'Open Crate [hold E / hold A]',
+              `OR the ${noun(e.name).toLowerCase()} health drops to 0 from damage — both paths invoke the same OnBroken delegate.`,
+            prompt: `Open ${noun(e.name)} [hold E / hold A]`,
             healthThreshold: {
               total: 80,
               note:
-                'Reinforced Crate baseline HP = 80 (≈ 2 light player attacks). ' +
+                `${e.name} baseline HP = 80 (≈ 2 light player attacks). ` +
                 'Damaged state triggers at 40 HP (50% loss); destroyed state triggers at 0 HP. ' +
                 'These are world-object HP values, not character sheet attributes — they live in ' +
                 'the BP default properties, not DT_AttributeDefaults (which governs actor/enemy stats).',
             },
             openBehavior:
-              'Intact-open plays a swing-lid anim (A_ReinforcedCrate_Open, 0.6 s) then triggers ' +
+              `Intact-open plays a swing-lid anim (A_${slug(e.name)}_Open, 0.6 s) then triggers ` +
               'UARPGLootDropComponent::ExecuteDrop. No fracture; mesh stays intact.',
             destroyBehavior:
               'AARPGDestructibleActor::ApplyDestructionDamage is called when HP reaches 0; ' +
@@ -105,7 +107,7 @@ registerCatalogPipeline({
               'OnBroken delegate → UARPGLootDropComponent::ExecuteDrop + NS_FireImpactBurst spawn.',
             wiringContract: {
               grantedBy:
-                'BP_ReinforcedCrate (child of AARPGDestructibleActor) — UARPGLootDropComponent ' +
+                `BP_${slug(e.name)} (child of AARPGDestructibleActor) — UARPGLootDropComponent ` +
                 'attached as a component in the BP defaults',
               activatedBy:
                 'Enhanced Input IA_Interact (intact path: open animation → ExecuteDrop) OR ' +
@@ -146,7 +148,7 @@ registerCatalogPipeline({
             LOD0: {
               tris: 1200,
               note:
-                'Reinforced Crate LOD0 target ≤ 1 200 tris (a compact mid-size prop; ' +
+                `${e.name} LOD0 target ≤ 1 200 tris (a compact mid-size prop; ` +
                 'art-3d canon: PBR + Nanite-friendly, grounded real-world scale). ' +
                 'Box body 480 t, lid 220 t, iron bands × 4 at 80 t each = 1 020 t base; ' +
                 'rivet details can push to 1 200 t max.',
@@ -158,9 +160,9 @@ registerCatalogPipeline({
           nanite: true,
           note:
             'Per art-3d canon: Nanite enabled on LOD0 mesh; tri budget above is the pre-Nanite ' +
-            'source mesh target. Chaos geometry-collection (GC_ReinforcedCrate) is a separate ' +
+            `source mesh target. Chaos geometry-collection (GC_${slug(e.name)}) is a separate ` +
             'asset generated from the LOD0 source — GC does not use Nanite (UE5 limitation). ' +
-            'The intact SM and the fractured GC share the same material slot (MI_ReinforcedCrate).',
+            `The intact SM and the fractured GC share the same material slot (MI_${slug(e.name)}).`,
         },
         ueAssets: [
           `/Game/Props/SM_${slug(e.name)}`,
@@ -188,11 +190,11 @@ registerCatalogPipeline({
           { key: 'chaosEnabled' },
         ],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => ({
         data: {
           physics: {
             collisionPreset:
-              'BlockAllDynamic — the intact crate blocks player movement and projectiles. ' +
+              `BlockAllDynamic — the intact ${noun(e.name).toLowerCase()} blocks player movement and projectiles. ` +
               'Overlap sphere (120 cm radius) on a separate SphereComponent (ECC_WorldDynamic, ' +
               'GenerateOverlapEvents = true) drives the interact prompt. ' +
               'Post-fracture debris chunks use SimulatePhysics = true with the PhysicsObject ' +
@@ -205,7 +207,7 @@ registerCatalogPipeline({
               'convincing scatter without "flying debris" at this mass.',
             chaosEnabled: true,
             chaosNotes:
-              'GeometryCollection (GC_ReinforcedCrate) authored in the Fracture Editor: ' +
+              `GeometryCollection (GC_${slug(e.name)}) authored in the Fracture Editor: ` +
               '8–12 voronoi cells weighted toward the lid and corner-plate seams. ' +
               'Damage threshold = 80 (full HP) so a single player heavy-attack (≈ 80+ damage) ' +
               'fractures in one hit; lighter attacks accumulate via ApplyDestructionDamage. ' +
@@ -216,18 +218,18 @@ registerCatalogPipeline({
               'SC_Footstep_Wood; debris pieces use PM_Stone_Debris after fracture.',
             wiringContract: {
               grantedBy:
-                'BP_ReinforcedCrate ConstructionScript sets CollisionPreset and attaches ' +
+                `BP_${slug(e.name)} ConstructionScript sets CollisionPreset and attaches ` +
                 'the overlap SphereComponent; Chaos GC asset referenced in GeometryCollectionComponent',
               activatedBy:
                 'AARPGDestructibleActor::ApplyDestructionDamage called by damage pipeline; ' +
                 'GeometryCollectionComponent activates Chaos simulation on fracture threshold',
               dependencies: [
                 'AARPGDestructibleActor (Physics/ARPGDestructibleActor.h)',
-                'GC_ReinforcedCrate (Chaos geometry-collection asset)',
+                `GC_${slug(e.name)} (Chaos geometry-collection asset)`,
               ],
               verification:
                 'L2: AARPGDestructibleActor declared in Source/PoF/Physics/; ' +
-                'L3: VSPropInteractTest — crate blocks player movement intact; debris scatters on destroy in PIE',
+                `L3: VSPropInteractTest — ${noun(e.name).toLowerCase()} blocks player movement intact; debris scatters on destroy in PIE`,
             },
           },
         },
@@ -257,7 +259,7 @@ registerCatalogPipeline({
             instance: `MI_${slug(e.name)}`,
             parentMaterial: '/Game/Materials/M_ARPG_Surface_Master',
             instanceNote:
-              'MI_ReinforcedCrate is a MaterialInstanceConstant of the project-wide master ' +
+              `MI_${slug(e.name)} is a MaterialInstanceConstant of the project-wide master ` +
               '(M_ARPG_Surface_Master) following the art-material canon: never a standalone ' +
               'master material. The surface reads as banded hardwood + aged iron — both handled ' +
               'by the master\'s wear and tint paths.',
@@ -272,14 +274,14 @@ registerCatalogPipeline({
                 'BaseColorTint [0.55, 0.42, 0.30] = warm dark-brown (weathered hardwood). ' +
                 'WearAmount 0.85 = heavily aged surface; edge-brightening reveals bare wood grain. ' +
                 'RoughnessMultiplier 1.05 = matte/raw wood; iron bands are a second material overlay ' +
-                'handled by a tri-planar blend in the master (or a separate MI_ReinforcedCrate_Metal ' +
+                `handled by a tri-planar blend in the master (or a separate MI_${slug(e.name)}_Metal ` +
                 'for the bands if the master supports a second layer). ' +
                 'DetailTiling 6.0 = wood-grain micro-detail at 6× world-space tile.',
             },
             physicalMaterial: 'PM_Wood_Hollow',
             wiringContract: {
               grantedBy:
-                'StaticMeshComponent.Materials[0] = MI_ReinforcedCrate on BP_ReinforcedCrate; ' +
+                `StaticMeshComponent.Materials[0] = MI_${slug(e.name)} on BP_${slug(e.name)}; ` +
                 'same MI applied to the GeometryCollectionComponent material slots',
               activatedBy: 'UE render pipeline — material slot resolved at draw call',
               dependencies: [
@@ -288,7 +290,7 @@ registerCatalogPipeline({
               ],
               verification:
                 'L2: FARPGSurfaceMaterialDef declared in ARPGEnvironmentMaterialSet.h; ' +
-                'L3: VSMasterMaterialInstanceTest — MI_ReinforcedCrate compiles, all texture slots non-null',
+                `L3: VSMasterMaterialInstanceTest — MI_${slug(e.name)} compiles, all texture slots non-null`,
             },
           },
         },
@@ -321,20 +323,20 @@ registerCatalogPipeline({
           { key: 'destroyed' },
         ],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => ({
         data: {
           destructionStates: {
             intact: {
               hpRange: '80–41 HP',
-              mesh: 'SM_ReinforcedCrate (static mesh, full geometry)',
-              material: 'MI_ReinforcedCrate (WearAmount 0.85)',
+              mesh: `SM_${slug(e.name)} (static mesh, full geometry)`,
+              material: `MI_${slug(e.name)} (WearAmount 0.85)`,
               stateTag: 'State.Prop.Intact',
               note: 'Default state. Collision preset BlockAllDynamic. Interact prompt active.',
             },
             damaged: {
               hpRange: '40–1 HP',
-              mesh: 'SM_ReinforcedCrate with damage decals (D_CrateImpact_01)',
-              material: 'MI_ReinforcedCrate + dynamic damage parameter override (WearAmount → 1.0)',
+              mesh: `SM_${slug(e.name)} with damage decals (D_${slug(e.name)}Impact_01)`,
+              material: `MI_${slug(e.name)} + dynamic damage parameter override (WearAmount → 1.0)`,
               stateTag: 'State.Prop.Damaged',
               note:
                 'Triggered when HP drops below 50% (40 HP). A material parameter collection ' +
@@ -343,8 +345,8 @@ registerCatalogPipeline({
             },
             destroyed: {
               hpRange: '0 HP',
-              mesh: 'GC_ReinforcedCrate (Chaos geometry collection — 8–12 fracture chunks)',
-              material: 'MI_ReinforcedCrate (applied per-chunk)',
+              mesh: `GC_${slug(e.name)} (Chaos geometry collection — 8–12 fracture chunks)`,
+              material: `MI_${slug(e.name)} (applied per-chunk)`,
               stateTag: 'State.Prop.Destroyed',
               note:
                 'AARPGDestructibleActor::OnBroken delegate fires. Chaos simulation activates: ' +
@@ -361,13 +363,13 @@ registerCatalogPipeline({
             },
             wiringContract: {
               grantedBy:
-                'BP_ReinforcedCrate Blueprint graph: OnBroken event → set State.Prop.Destroyed tag ' +
+                `BP_${slug(e.name)} Blueprint graph: OnBroken event → set State.Prop.Destroyed tag ` +
                 '(UAbilitySystemComponent::AddLooseGameplayTag) + call ExecuteDrop on UARPGLootDropComponent',
               activatedBy:
                 'AARPGDestructibleActor damage accumulation → ApplyDestructionDamage → fracture threshold crossed',
               dependencies: [
                 'AARPGDestructibleActor (Physics/ARPGDestructibleActor.h)',
-                'GC_ReinforcedCrate (Chaos geometry collection)',
+                `GC_${slug(e.name)} (Chaos geometry collection)`,
                 'State.Prop.* gameplay tag hierarchy registered in GameplayTags.ini',
               ],
               verification:
@@ -401,9 +403,9 @@ registerCatalogPipeline({
           lootOnDestroy: {
             lootTable: 'loot-tables::lt-Brute',
             lootTableNote:
-              'The Reinforced Crate draws from the lt-Brute loot pool — the same table used by ' +
+              `${e.name} draws from the lt-Brute loot pool — the same table used by ` +
               'Brute/Goblin archetype enemies in the mid-game area band (ilvl 40–60). ' +
-              'This gives the crate a meaningful but unsurprising reward: a reliable currency ' +
+              `This gives the ${noun(e.name).toLowerCase()} a meaningful but unsurprising reward: a reliable currency ` +
               'trickle + occasional Rare upgrade, consistent with the "exploration reward" tier. ' +
               'Per ARPG-LAWS §7: the loot table sets itemClassWeights + rarityWeights; ilvl ' +
               'is sourced from areaLevel at time of fracture — the prop never self-assigns ilvl ' +
@@ -423,11 +425,11 @@ registerCatalogPipeline({
             },
             wiringContract: {
               grantedBy:
-                'UARPGLootDropComponent attached to BP_ReinforcedCrate; bound to the lt-Brute ' +
+                `UARPGLootDropComponent attached to BP_${slug(e.name)}; bound to the lt-Brute ` +
                 'FARPGLootTableRow by entityId slug "ltBrute" (slug(lt-Brute) in seed_loot_tables.py)',
               activatedBy:
-                'BP_ReinforcedCrate::OnBroken event → ExecuteDrop; also fired on intact-open ' +
-                'animation completion notify (A_ReinforcedCrate_Open → AnimNotify_LootDrop)',
+                `BP_${slug(e.name)}::OnBroken event → ExecuteDrop; also fired on intact-open ` +
+                `animation completion notify (A_${slug(e.name)}_Open → AnimNotify_LootDrop)`,
               dependencies: [
                 'loot-tables::lt-Brute (drop pool — seeded from DEFAULT_ENEMY_LOOT_BINDINGS)',
                 'UARPGLootDropComponent (Loot/ARPGLootDropComponent.h)',
@@ -474,30 +476,30 @@ registerCatalogPipeline({
           vfxAudio: {
             destructionVfx: {
               asset: 'NS_FireImpactBurst (vfx::vfx-fire-impact)',
-              spawnPoint: 'Crate centroid at fracture moment',
+              spawnPoint: `${noun(e.name)} centroid at fracture moment`,
               scaleFactor: 0.6,
               note:
                 'The NS_FireImpactBurst Niagara system from vfx::vfx-fire-impact is scaled to 0.6× ' +
                 '(a prop-sized burst, not an ability hit-flash) and tinted to a wood-dust amber palette ' +
-                'via a Niagara parameter override. Spawned from BP_ReinforcedCrate::OnBroken → ' +
+                `via a Niagara parameter override. Spawned from BP_${slug(e.name)}::OnBroken → ` +
                 'UNiagaraFunctionLibrary::SpawnSystemAtLocation. Per vfx-budget canon: fires from an ' +
                 'AnimNotify on the GeometryCollection activation (not BeginPlay/timer), 3 LOD tiers, ' +
                 'peak GPU ≤ 0.48 ms.',
             },
             openAudio: {
-              cue: 'SC_Crate_Open',
-              trigger: 'AnimNotify_LootDrop on A_ReinforcedCrate_Open at 0.4 s into the swing-lid animation',
+              cue: `SC_${noun(e.name)}_Open`,
+              trigger: `AnimNotify_LootDrop on A_${slug(e.name)}_Open at 0.4 s into the swing-lid animation`,
               note:
                 'Wood-creak + hinge-squeal composite cue, ~0.5 s. ' +
                 'Attenuation: InnerRadius 200 cm / FalloffDistance 600 cm (audible at interact range).',
             },
             impactAudio: {
-              cue: 'SC_Crate_Impact',
+              cue: `SC_${noun(e.name)}_Impact`,
               trigger: 'Each call to ApplyDestructionDamage that lowers HP below the damaged threshold',
               note: 'Wood-thud impact ~0.2 s; randomized pitch ± 5% via SoundCue modulator node.',
             },
             destroyAudio: {
-              cue: 'SC_Crate_Destroy',
+              cue: `SC_${noun(e.name)}_Destroy`,
               trigger: 'OnBroken delegate — fired simultaneously with the VFX spawn',
               note:
                 'Wood-splinter crack + metal-ring resonance, ~0.7 s. Spatially attenuated. ' +
@@ -505,8 +507,8 @@ registerCatalogPipeline({
             },
             wiringContract: {
               grantedBy:
-                'BP_ReinforcedCrate Blueprint event graph: OnBroken → SpawnSystemAtLocation(NS_FireImpactBurst) ' +
-                '+ SpawnSoundAtLocation(SC_Crate_Destroy); AnimNotify_LootDrop → SpawnSoundAtLocation(SC_Crate_Open)',
+                `BP_${slug(e.name)} Blueprint event graph: OnBroken → SpawnSystemAtLocation(NS_FireImpactBurst) ` +
+                `+ SpawnSoundAtLocation(SC_${noun(e.name)}_Destroy); AnimNotify_LootDrop → SpawnSoundAtLocation(SC_${noun(e.name)}_Open)`,
               activatedBy:
                 'AARPGDestructibleActor::OnBroken broadcast (destroy path) / AnimNotify (open path)',
               dependencies: [
@@ -515,7 +517,7 @@ registerCatalogPipeline({
               ],
               verification:
                 'L2: AARPGDestructibleActor::OnBroken delegate declared in Source/PoF/Physics/; ' +
-                'L3: VSPropInteractTest — NS_FireImpactBurst spawns at crate centroid on destroy in PIE',
+                `L3: VSPropInteractTest — NS_FireImpactBurst spawns at ${noun(e.name).toLowerCase()} centroid on destroy in PIE`,
             },
           },
         },
@@ -555,16 +557,16 @@ registerCatalogPipeline({
       archetype: 'checklist',
       label: 'Test Gate',
       view: { kind: 'checklist', field: 'checks' },
-      produce: () => ({
+      produce: (e: LabEntity) => ({
         data: {
           checks: [
-            'Interact prompt appears when player enters overlap radius',
-            'Intact-open path: swing-lid anim plays then ExecuteDrop fires',
+            `Interact prompt appears when player enters ${noun(e.name)} overlap radius`,
+            `Intact-open path: swing-lid anim plays (A_${slug(e.name)}_Open) then ExecuteDrop fires`,
             'Destroy path: HP drains to 0 → OnBroken fires → Chaos fracture + NS_FireImpactBurst + ExecuteDrop',
             'Loot drop resolves at ilvl = current areaLevel (not a fixed value)',
             'Debris chunks scatter with SimulatePhysics = true and do not block the player after fracture',
             'State.Prop.Destroyed tag applied on OnBroken; interact prompt disabled post-destroy',
-            'Crate cannot be re-opened or re-destroyed after the first destroy event',
+            `${e.name} cannot be re-opened or re-destroyed after the first destroy event`,
           ],
         },
       }),

@@ -62,26 +62,29 @@ registerCatalogPipeline({
       archetype: 'brief',
       label: 'Concept Brief',
       view: { kind: 'prose', field: 'brief', emptyText: 'No brief yet' },
-      produce: (e: LabEntity) => ({
-        data: {
-          brief:
-            `${e.name} is a fire damage-over-time ailment (ignite) applied by fire-type hits such as Fireball ` +
-            `and Blazing Slash. Per ARPG-LAWS §5c its identity is the granted State.Burning gameplay tag — ` +
-            `VFX, AI threat weighting, and the player's buff bar all key off this tag, never the source ability. ` +
-            `The ignite deals fire DoT equal to ~90% of the triggering fire hit distributed over 4 seconds at ` +
-            `a 0.5 s tick period (8 ticks). Stacking mode is 'highest': only the strongest active ignite ` +
-            `instance is live on the target at any time; a weaker re-apply is discarded, a stronger one ` +
-            `replaces and refreshes the duration. This design rewards escalating fire pressure without ` +
-            `trivialising the system through free stacking. The GE is GE_Gen_Burning (UGE_Gen_Burning), ` +
-            `registered in DT_GeneratedAbilities. Dispel/cleanse immediately removes State.Burning and ` +
-            `cancels the periodic GE. Bosses may carry ignite-resist or immunity modifiers but remain ` +
-            `vulnerable to the damaging variant unlike freeze/chill (control ailments). The primary ` +
-            `granting source is Fireball (spellbook::off-fire-01) whose on-hit gameplay effect applies ` +
-            `GE_Gen_Burning via ApplyGameplayEffectToTarget; other fire abilities (Blazing Slash, Flame Lance) ` +
-            `carry the same ignite application path. Ailment DPS for a 35-damage Fireball hit: ` +
-            `35 × 0.90 / 4 s ≈ 7.88 fire DPS sustained — inside the tier-100 power envelope.`,
-        },
-      }),
+      produce: (e: LabEntity) => {
+        const s = slug(e.name); // identity token — "Burning" for the seeded exemplar
+        return {
+          data: {
+            brief:
+              `${e.name} is a fire damage-over-time ailment (ignite) applied by fire-type hits such as Fireball ` +
+              `and Blazing Slash. Per ARPG-LAWS §5c its identity is the granted State.${s} gameplay tag — ` +
+              `VFX, AI threat weighting, and the player's buff bar all key off this tag, never the source ability. ` +
+              `The ignite deals fire DoT equal to ~90% of the triggering fire hit distributed over 4 seconds at ` +
+              `a 0.5 s tick period (8 ticks). Stacking mode is 'highest': only the strongest active ignite ` +
+              `instance is live on the target at any time; a weaker re-apply is discarded, a stronger one ` +
+              `replaces and refreshes the duration. This design rewards escalating fire pressure without ` +
+              `trivialising the system through free stacking. The GE is GE_Gen_${s} (UGE_Gen_${s}), ` +
+              `registered in DT_GeneratedAbilities. Dispel/cleanse immediately removes State.${s} and ` +
+              `cancels the periodic GE. Bosses may carry ignite-resist or immunity modifiers but remain ` +
+              `vulnerable to the damaging variant unlike freeze/chill (control ailments). The primary ` +
+              `granting source is Fireball (spellbook::off-fire-01) whose on-hit gameplay effect applies ` +
+              `GE_Gen_${s} via ApplyGameplayEffectToTarget; other fire abilities (Blazing Slash, Flame Lance) ` +
+              `carry the same ignite application path. Ailment DPS for a 35-damage Fireball hit: ` +
+              `35 × 0.90 / 4 s ≈ 7.88 fire DPS sustained — inside the tier-100 power envelope.`,
+          },
+        };
+      },
       accept: minLength('brief', 'Brief ≥ 300 characters', 300),
     },
 
@@ -134,8 +137,8 @@ registerCatalogPipeline({
               // Wiring contract per ARPG-LAWS §12
               wiringContract: {
                 grantedBy:
-                  'Fireball on-hit GE (GE_Fireball_ApplyBurning) → ' +
-                  'ApplyGameplayEffectToTarget(GE_Gen_Burning) on the hit target. ' +
+                  `Fireball on-hit GE (GE_Fireball_Apply${s}) → ` +
+                  `ApplyGameplayEffectToTarget(GE_Gen_${s}) on the hit target. ` +
                   'Other fire abilities (Blazing Slash off-fire-04, Flame Lance off-fire-05) ' +
                   'use the same apply-GE path.',
                 activatedBy: 'On-hit — fire ability projectile/melee impact that carries the Ignite tag',
@@ -145,9 +148,9 @@ registerCatalogPipeline({
                   'spellbook::off-fire-01 (Fireball — primary ignite vector)',
                 ],
                 verification:
-                  'L2: UGE_Gen_Burning compiled + DT_GeneratedAbilities row "Burning" seeded; ' +
-                  'L3: VSStatusBurningEffectTest — tick fires at 0.5 s intervals, ' +
-                  'State.Burning tag present during duration, tag removed on expiry/cleanse, ' +
+                  `L2: UGE_Gen_${s} compiled + DT_GeneratedAbilities row "${s}" seeded; ` +
+                  `L3: VSStatus${s}EffectTest — tick fires at 0.5 s intervals, ` +
+                  `State.${s} tag present during duration, tag removed on expiry/cleanse, ` +
                   'highest-stack law: weaker re-apply discarded (timer unchanged), ' +
                   'stronger re-apply replaces + resets timer',
               },
@@ -266,19 +269,22 @@ registerCatalogPipeline({
       archetype: 'checklist',
       label: 'Test Gate',
       view: { kind: 'checklist', field: 'checks' },
-      produce: () => ({
-        data: {
-          checks: [
-            'GE_Gen_Burning applies State.Burning tag on hit target',
-            'tick fires at 0.5 s period (8 ticks over 4 s)',
-            'total damage ≈ 90% of triggering fire hit (31.5 for Fireball base 35)',
-            'State.Burning tag removed on GE expiry (4 s)',
-            'cleanse/dispel removes State.Burning and cancels periodic GE immediately',
-            'highest-stack law: weaker re-apply is discarded (timer unchanged)',
-            'highest-stack law: stronger re-apply replaces active ignite and resets timer',
-          ],
-        },
-      }),
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return {
+          data: {
+            checks: [
+              `GE_Gen_${s} applies State.${s} tag on hit target`,
+              'tick fires at 0.5 s period (8 ticks over 4 s)',
+              'total damage ≈ 90% of triggering fire hit (31.5 for Fireball base 35)',
+              `State.${s} tag removed on GE expiry (4 s)`,
+              `cleanse/dispel removes State.${s} and cancels periodic GE immediately`,
+              'highest-stack law: weaker re-apply is discarded (timer unchanged)',
+              'highest-stack law: stronger re-apply replaces active ignite and resets timer',
+            ],
+          },
+        };
+      },
       // Registered automation name (not the C++ class) so the runner resolves it. PER-ENTITY:
       // the artifact's own `automationName` wins (a Knockback gate must never be "proven" by
       // the Burning test); the Burning gate name stays the fallback for undeclared rows.
@@ -306,12 +312,12 @@ registerCatalogPipeline({
             assets,
             wiringContract: {
               grantedBy:
-                'Fireball (GE_Fireball_ApplyBurning) → ApplyGameplayEffectToTarget(GE_Gen_Burning); ' +
-                'GE_Gen_Burning grants State.Burning and starts the periodic execution. ' +
+                `Fireball (GE_Fireball_Apply${s}) → ApplyGameplayEffectToTarget(GE_Gen_${s}); ` +
+                `GE_Gen_${s} grants State.${s} and starts the periodic execution. ` +
                 'Other fire abilities (off-fire-04, off-fire-05) use the same path.',
               activatedBy:
                 'On-hit for any fire ability carrying the Ignite application tag; ' +
-                'highest-stack logic: GE_Gen_Burning checks active magnitude before applying — ' +
+                `highest-stack logic: GE_Gen_${s} checks active magnitude before applying — ` +
                 'discards if weaker, replaces if stronger.',
               dependencies: [
                 'UARPGAttributeSet (FireDamage, Health)',
@@ -321,9 +327,9 @@ registerCatalogPipeline({
                 'spellbook::off-fire-05 (Flame Lance)',
               ],
               verification:
-                'L2: UGE_Gen_Burning compiled in Source/PoF/Abilities/Generated/; ' +
-                'DT_GeneratedAbilities seeded via seed_generated_abilities.py row "Burning"; ' +
-                'L3: VSStatusBurningEffectTest in PIE — ' +
+                `L2: UGE_Gen_${s} compiled in Source/PoF/Abilities/Generated/; ` +
+                `DT_GeneratedAbilities seeded via seed_generated_abilities.py row "${s}"; ` +
+                `L3: VSStatus${s}EffectTest in PIE — ` +
                 'tag apply/expire/cleanse + tick timing + highest-stack replacement all verified',
             },
           },

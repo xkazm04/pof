@@ -73,19 +73,21 @@ registerCatalogPipeline({
         field: 'dataBinding',
         columns: [{ key: 'source' }, { key: 'format' }, { key: 'anchor' }],
       },
-      produce: (e: LabEntity) => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return ({
         data: {
           dataBinding: {
             source: 'UARPGAttributeSet.Health / MaxHealth',
             delegate: 'OnAttributeChanged (UARPGAttributeSet::PostAttributeChange)',
             bindingPattern:
-              'UARPGHealthBarWidget::NativeConstruct subscribes to ' +
+              `UARPG${s}Widget::NativeConstruct subscribes to ` +
               'UARPGAttributeSet::OnHealthChanged; PostAttributeChange broadcasts ' +
               '(OldValue, NewValue) pair. The widget caches a weak pointer to the owning ' +
               'UARPGAbilitySystemComponent and reads Health / MaxHealth on each callback.',
             format: '{cur}/{max}',
             formatDetail:
-              'FText::Format(LOCTEXT("HUDHealthFmt", "{0}/{1}"), ' +
+              `FText::Format(LOCTEXT("HUD${s}Fmt", "{0}/{1}"), ` +
               'FText::AsNumber(FMath::FloorToInt(Health)), ' +
               'FText::AsNumber(FMath::FloorToInt(MaxHealth))). ' +
               'Integer floors match the PoF convention of whole-number health displays.',
@@ -105,11 +107,11 @@ registerCatalogPipeline({
             },
             wiringContract: {
               grantedBy:
-                'AARPGHUD::BeginPlay creates WBP_HudHealthBar and calls AddToViewport(ZOrder=10). ' +
+                `AARPGHUD::BeginPlay creates WBP_Hud${s} and calls AddToViewport(ZOrder=10). ` +
                 'The HUD class is set on the GameMode (DefaultHUDClass = AARPGHUD) per HUDClass→AARPGHUD wiring (project_improvements_04_hud_ui).',
               activatedBy:
                 'UARPGAttributeSet::PostAttributeChange → OnHealthChanged multicast delegate → ' +
-                'UARPGHealthBarWidget::OnHealthChanged(float NewHealth, float NewMaxHealth). ' +
+                `UARPG${s}Widget::OnHealthChanged(float NewHealth, float NewMaxHealth). ` +
                 'The delegate fires on every attribute-change tick, including shield overlay (OnEnergyShieldChanged).',
               dependencies: [
                 'UARPGAttributeSet (Health, MaxHealth, EnergyShield attributes)',
@@ -118,7 +120,7 @@ registerCatalogPipeline({
               ],
               verification:
                 'L2: UARPGAttributeSet declares Health + MaxHealth attributes in Source/PoF/; ' +
-                'AARPGHUD creates WBP_HudHealthBar in BeginPlay; ' +
+                `AARPGHUD creates WBP_Hud${s} in BeginPlay; ` +
                 'seed_hud_elements.py seeds the WBP row in DT_HUDElements. ' +
                 'L3: VSHUDElementTest — widget renders + reads correct values at 1080p and 4K in PIE.',
             },
@@ -128,10 +130,11 @@ registerCatalogPipeline({
           { catalogId: 'icon-sets', entityId: 'iconset-abilities', role: 'vitals-icon' },
         ],
         ueAssets: [
-          '/Game/UI/HUD/WBP_HudHealthBar',
+          `/Game/UI/HUD/WBP_Hud${s}`,
           '/Game/UI/HUD/DT_HUDElements',
         ],
-      }),
+      });
+      },
       accept: allOf(
         fieldsPopulated('dataBinding', 'source / format / anchor populated', [
         'source',
@@ -156,7 +159,9 @@ registerCatalogPipeline({
         field: 'stateLogic',
         columns: [{ key: 'states' }, { key: 'transitions' }, { key: 'lowHealthThreshold' }],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return ({
         data: {
           stateLogic: {
             states: {
@@ -180,7 +185,7 @@ registerCatalogPipeline({
                 condition: 'Health / MaxHealth ≤ 0.10 (≤10% of MaxHealth)',
                 visual:
                   'Pulse period halves to 0.6 s; vignette intensity increases to 0.55. ' +
-                  'Alert SFX fires once on transition (SC_HUDHealthCritical).',
+                  `Alert SFX fires once on transition (SC_HUD${s}Critical).`,
                 note: 'A second threshold gives the player a final escalating cue before death.',
               },
               dead: {
@@ -212,7 +217,8 @@ registerCatalogPipeline({
             },
           },
         },
-      }),
+      });
+      },
       // Content invariant: the critical threshold must sit BELOW the low-health threshold
       // (and the critical pulse must be faster) — thresholds that cross never fire the
       // critical state at all, which a presence check can't see.
@@ -315,10 +321,10 @@ registerCatalogPipeline({
       archetype: 'checklist',
       label: 'Localization',
       view: { kind: 'checklist', field: 'l10nChecks' },
-      produce: () => ({
+      produce: (e: LabEntity) => ({
         data: {
           l10nChecks: [
-            'Format string "{0}/{1}" sourced from LOCTEXT("HUDHealthFmt") — not a hard-coded literal',
+            `Format string "{0}/{1}" sourced from LOCTEXT("HUD${slug(e.name)}Fmt") — not a hard-coded literal`,
             'FText::AsNumber respects locale-specific numeral separators (e.g. 1.000 vs 1,000)',
             'Label slot width set to Auto with a max 96 dp clamp so 4-digit health values (9999/9999) do not overflow at any supported locale',
             'RTL layout: widget tested with right-to-left text direction; numeric label mirrors correctly via UMG auto-mirroring',
@@ -334,10 +340,10 @@ registerCatalogPipeline({
       archetype: 'checklist',
       label: 'Test Gate',
       view: { kind: 'checklist', field: 'testChecks' },
-      produce: () => ({
+      produce: (e: LabEntity) => ({
         data: {
           testChecks: [
-            'Widget renders at 1080p: WBP_HudHealthBar visible in PIE viewport',
+            `Widget renders at 1080p: WBP_Hud${slug(e.name)} visible in PIE viewport`,
             'Widget renders at 4K (3840×2160): layout correct, no overflow',
             'Health attribute change fires OnHealthChanged → bar fill updates to correct value',
             'MaxHealth = 0 edge case: widget shows "0/0" without divide-by-zero crash',
@@ -380,13 +386,13 @@ registerCatalogPipeline({
             assets,
             wiringContract: {
               grantedBy:
-                'AARPGHUD::BeginPlay calls CreateWidget<UUserWidget>(this, WBP_HudHealthBarClass) ' +
+                `AARPGHUD::BeginPlay calls CreateWidget<UUserWidget>(this, ${widget}Class) ` +
                 'and AddToViewport(ZOrder=10). DefaultHUDClass = AARPGHUD is set on the GameMode ' +
                 '(BP_ARPGGameMode). Per canon proj-hud-binding: widget declared, format string ' +
                 'declared, anchor declared — no hard-coded placement.',
               activatedBy:
                 'UARPGAttributeSet::PostAttributeChange broadcasts OnHealthChanged / OnMaxHealthChanged ' +
-                'multicast delegates → UARPGHealthBarWidget::OnHealthChanged(float, float) updates ' +
+                `multicast delegates → UARPG${s}Widget::OnHealthChanged(float, float) updates ` +
                 'ProgressBar fill and the FText label. OnEnergyShieldChanged drives the shield overlay. ' +
                 'State transitions (full / low / critical / dead) are driven by the normalized ratio ' +
                 'Health / MaxHealth evaluated on each callback.',
@@ -398,7 +404,7 @@ registerCatalogPipeline({
               ],
               verification:
                 'L2: UARPGAttributeSet + AARPGHUD declared in Source/PoF/ (cppSymbolExists); ' +
-                'seed_hud_elements.py must seed the WBP_HudHealthBar row in DT_HUDElements — ' +
+                `seed_hud_elements.py must seed the ${widget} row in DT_HUDElements — ` +
                 'currently DEFERRED because that row is not yet present in the seed script ' +
                 '(see the seedRowPresent static check); ' +
                 'L3: VSHUDElementTest — widget renders + attribute-change delegate fires correctly ' +

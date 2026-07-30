@@ -9,6 +9,15 @@ import { linksResolve } from '../acceptance/linkCheckers';
 import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
+/**
+ * The quest's identity token — the leading article is dropped so a quest titled
+ * "The Ember Pact" owns `EmberPact` (matching the cross-catalog contract
+ * `Ability.Quest.EmberPact.*` that dialog-trees::dialog-gatekeeper fires).
+ */
+const questKey = (n: string) => slug(n.replace(/^(the|a|an)\s+/i, ''));
+/** snake_case form of the same token: "The Ember Pact" → `ember_pact` (dialog-tree / stage ids). */
+const questSnake = (n: string) =>
+  questKey(n).replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
 
 /**
  * Quests pipeline (catalogId: 'quests').
@@ -60,7 +69,7 @@ registerCatalogPipeline({
       archetype: 'graph',
       label: 'Objective Graph',
       view: { kind: 'graph', field: 'graph' },
-      produce: () => ({
+      produce: (e: LabEntity) => ({
         data: {
           graph: {
             nodes: [
@@ -83,7 +92,7 @@ registerCatalogPipeline({
             ],
             note:
               'Two success terminals (pact / refuse) + one failure terminal (betray). ' +
-              'All nodes reachable from start. Stage transitions fire Ability.Quest.EmberPact.* ' +
+              `All nodes reachable from start. Stage transitions fire Ability.Quest.${questKey(e.name)}.* ` +
               'GameplayEvents consumed by UGameplayAbility_QuestAdvance.',
           },
         },
@@ -100,30 +109,30 @@ registerCatalogPipeline({
         field: 'triggers',
         columns: [{ key: 'start' }, { key: 'fail' }, { key: 'worldMutation' }],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => ({
         data: {
           triggers: {
             start:
               'Player interacts with Captain Vael (char-captain-vael) AND ' +
               'player characterLevel ≥ 10 (UARPGAttributeSet.CharacterLevel gate). ' +
-              'Fires GameplayEvent Ability.Quest.EmberPact.Start → ' +
+              `Fires GameplayEvent Ability.Quest.${questKey(e.name)}.Start → ` +
               'UGameplayAbility_QuestAdvance activates quest component.',
             fail:
               'Player kills Captain Vael (char-captain-vael) before reaching the "return" node ' +
-              '(stage < Stage3_Ritual). Fires GameplayEvent Ability.Quest.EmberPact.Betray → ' +
+              `(stage < Stage3_Ritual). Fires GameplayEvent Ability.Quest.${questKey(e.name)}.Betray → ` +
               'quest transitions to BETRAYED terminal; faction-ashen-order standing locked at -100.',
             worldMutation:
-              'On PACT terminal: EmberZone faction-state tag set to State.Faction.EmberPact.Active ' +
-              'via GE_WorldState_EmberPactActive (persisted to save via AARPGWorldStateComponent). ' +
-              'On REFUSE terminal: State.Faction.EmberPact.Refused set; faction-ashen-order ' +
-              'standing −50. On BETRAY: State.Faction.EmberPact.Betrayed; Vael respawn blocked.',
+              `On PACT terminal: EmberZone faction-state tag set to State.Faction.${questKey(e.name)}.Active ` +
+              `via GE_WorldState_${questKey(e.name)}Active (persisted to save via AARPGWorldStateComponent). ` +
+              `On REFUSE terminal: State.Faction.${questKey(e.name)}.Refused set; faction-ashen-order ` +
+              `standing −50. On BETRAY: State.Faction.${questKey(e.name)}.Betrayed; Vael respawn blocked.`,
             conditions:
-              'DA_EmberPact_Conditions DataAsset declares all gate values. ' +
+              `DA_${questKey(e.name)}_Conditions DataAsset declares all gate values. ` +
               'Level gate (10) validates against UARPGAttributeSet.CharacterLevel (canon char-stat-source). ' +
               'Core-count (3) is a transient integer on AARPGQuestComponent — reset on quest abandon.',
           },
         },
-        ueAssets: [`/Game/Quests/Conditions/DA_EmberPact_Conditions`],
+        ueAssets: [`/Game/Quests/Conditions/DA_${questKey(e.name)}_Conditions`],
       }),
       accept: fieldsPopulated('triggers', 'Start trigger, fail condition, and world mutation defined', [
         'start',
@@ -137,7 +146,7 @@ registerCatalogPipeline({
       archetype: 'rules',
       label: 'Rewards',
       view: { kind: 'manifest', field: 'rewards' },
-      produce: () => ({
+      produce: (e: LabEntity) => ({
         data: {
           // Array drives minCount acceptance; objects below carry ARPG-grade detail.
           rewards: ['pact-path', 'refuse-path'],
@@ -159,7 +168,7 @@ registerCatalogPipeline({
                 amount: 350,
                 note:
                   '350 gold — within the mid-game faucet band for a 3-stage quest. ' +
-                  'Granted by GE_QuestReward_EmberPact_Gold (instant modifier on currency-gold attribute). ' +
+                  `Granted by GE_QuestReward_${questKey(e.name)}_Gold (instant modifier on currency-gold attribute). ` +
                   'Per canon proj-economy: soft currency only; no premium currency grants from quests.',
               },
               factionRep: {
@@ -169,7 +178,7 @@ registerCatalogPipeline({
                 delta: +75,
                 note:
                   'faction-ashen-order repTier increments by +75 standing on PACT terminal. ' +
-                  'Applied by GE_QuestReward_EmberPact_Rep (modifies UARPGAttributeSet.FactionRep ' +
+                  `Applied by GE_QuestReward_${questKey(e.name)}_Rep (modifies UARPGAttributeSet.FactionRep ` +
                   'with a SetByCaller magnitude keyed to faction-ashen-order). Pending factions ' +
                   'catalog full pipeline — entity seeded as starter in new-catalogs.ts.',
               },
@@ -182,7 +191,7 @@ registerCatalogPipeline({
                 amount: 200,
                 note:
                   '200 gold for the REFUSE path — lower than PACT to preserve choice asymmetry. ' +
-                  'Granted by GE_QuestReward_EmberPact_RefuseGold.',
+                  `Granted by GE_QuestReward_${questKey(e.name)}_RefuseGold.`,
               },
               lootTable: {
                 catalogId: 'loot-tables',
@@ -197,11 +206,11 @@ registerCatalogPipeline({
             },
             wiringContract: {
               grantedBy:
-                'GE_QuestReward_EmberPact_Gold / GE_QuestReward_EmberPact_Rep / ' +
-                'GE_QuestReward_EmberPact_RefuseGold — GameplayEffects applied by ' +
+                `GE_QuestReward_${questKey(e.name)}_Gold / GE_QuestReward_${questKey(e.name)}_Rep / ` +
+                `GE_QuestReward_${questKey(e.name)}_RefuseGold — GameplayEffects applied by ` +
                 'UGameplayAbility_QuestAdvance on terminal-node activation.',
               activatedBy:
-                'AARPGQuestComponent fires Ability.Quest.EmberPact.Complete (or .CompletedRefuse) → ' +
+                `AARPGQuestComponent fires Ability.Quest.${questKey(e.name)}.Complete (or .CompletedRefuse) → ` +
                 'UGameplayAbility_QuestAdvance activates the corresponding reward GE batch.',
               dependencies: [
                 'loot-tables (lt-Brute, lt-EliteKnight — seeded from DEFAULT_ENEMY_LOOT_BINDINGS)',
@@ -209,8 +218,8 @@ registerCatalogPipeline({
                 'factions (faction-ashen-order — starter in new-catalogs.ts, pending full pipeline)',
               ],
               verification:
-                'L2: GE_QuestReward_EmberPact_Gold + GE_QuestReward_EmberPact_Rep compiled + ' +
-                'DA_EmberPact_Rewards seeded; ' +
+                `L2: GE_QuestReward_${questKey(e.name)}_Gold + GE_QuestReward_${questKey(e.name)}_Rep compiled + ` +
+                `DA_${questKey(e.name)}_Rewards seeded; ` +
                 'L3: VSQuestFlowTest — pact path grants ≥350 gold + rep delta +75; ' +
                 'refuse path grants ≥200 gold (deferred, PIE)',
             },
@@ -222,7 +231,7 @@ registerCatalogPipeline({
           { catalogId: 'currencies',  entityId: 'currency-gold',   role: 'gold-reward' },
           { catalogId: 'factions',    entityId: 'faction-ashen-order', role: 'reputation-grant' },
         ],
-        ueAssets: [`/Game/Quests/EmberPact/DA_EmberPact_Rewards`],
+        ueAssets: [`/Game/Quests/${questKey(e.name)}/DA_${questKey(e.name)}_Rewards`],
       }),
       accept: allOf(
         minCount('rewards', '≥1 reward path defined', 1),
@@ -236,12 +245,12 @@ registerCatalogPipeline({
       archetype: 'rules',
       label: 'NPC & Dialog Binding',
       view: { kind: 'manifest', field: 'npcs' },
-      produce: () => ({
+      produce: (e: LabEntity) => ({
         data: {
           npcs: [
             'characters::char-captain-vael (quest giver; stage-1 trigger and stage-3 ritual host)',
             'characters::char-captain-vael (stage-3 antagonist role — same actor, different dialogue node)',
-            'dialog-trees::dialog-gatekeeper (reused for the stage-1 accept node with EmberPact topic branch)',
+            `dialog-trees::dialog-gatekeeper (reused for the stage-1 accept node with ${questKey(e.name)} topic branch)`,
           ],
           npcFlavor: {
             vaelRole:
@@ -251,20 +260,20 @@ registerCatalogPipeline({
               'the BETRAY terminal fires immediately via his OnDeath delegate.',
             dialogBinding:
               'dialog-gatekeeper is reused for the stage-1 accept conversation by adding an ' +
-              '"EmberPact" topic branch to the existing Gatekeeper tree. The stage-3 ritual choice ' +
-              'tree dt_ember_pact_choice is authored below (judge-fleet fix 2026-07-07 — the ' +
+              `"${questKey(e.name)}" topic branch to the existing Gatekeeper tree. The stage-3 ritual choice ` +
+              `tree dt_${questSnake(e.name)}_choice is authored below (judge-fleet fix 2026-07-07 — the ` +
               'quest\'s dramatic centerpiece was previously only a placeholder name).',
             // The stage-3 ritual choice — the quest's centerpiece, authored to THIS row's
             // actual narrative (Ember Cores + the binding ritual; judge-refleet fix 2026-07-07).
             emberPactChoiceTree: {
-              id: 'dt_ember_pact_choice',
+              id: `dt_${questSnake(e.name)}_choice`,
               root: 'vael_ritual_open',
               nodes: [
                 { id: 'vael_ritual_open', speaker: 'Vael', line: 'Three cores, as asked. The brazier is lit. Kneel and the Order binds the ash to you — or stand, and walk out unbound.', choices: ['forge_pact', 'refuse_pact', 'ask_binding'] },
                 { id: 'ask_binding', speaker: 'Player', line: 'What does the binding take from me?', next: 'vael_binding' },
                 { id: 'vael_binding', speaker: 'Vael', line: 'Nothing you will miss today. The ash remembers its debts — that is its gift, and its price. Choose.', choices: ['forge_pact', 'refuse_pact'] },
-                { id: 'forge_pact', speaker: 'Player', line: 'I kneel. Bind it.', effects: ['SetStage(EMBER_PACT, PACT_FORGED_TERMINAL)', 'Reputation(faction-ashen-order, +20)', 'GrantReward(lt-ember-pact-forged: ember-laced weapon)'] },
-                { id: 'refuse_pact', speaker: 'Player', line: 'I carried your cores. I carry no one\'s leash.', effects: ['SetStage(EMBER_PACT, REFUSED_TERMINAL)', 'Reputation(faction-ashen-order, -10)', 'GrantReward(lt-ember-pact-refused: gold + cores\' salvage value)'] },
+                { id: 'forge_pact', speaker: 'Player', line: 'I kneel. Bind it.', effects: [`SetStage(${questSnake(e.name).toUpperCase()}, PACT_FORGED_TERMINAL)`, 'Reputation(faction-ashen-order, +20)', `GrantReward(lt-${questSnake(e.name).replace(/_/g, '-')}-forged: ember-laced weapon)`] },
+                { id: 'refuse_pact', speaker: 'Player', line: 'I carried your cores. I carry no one\'s leash.', effects: [`SetStage(${questSnake(e.name).toUpperCase()}, REFUSED_TERMINAL)`, 'Reputation(faction-ashen-order, -10)', `GrantReward(lt-${questSnake(e.name).replace(/_/g, '-')}-refused: gold + cores' salvage value)`] },
               ],
               conditions: 'gated on quest stage == 3 AND player carries 3 Ember Cores; Vael dead → BETRAY terminal bypasses this tree entirely',
               terminals: 'both branches terminal (quest-stage-graph canon: explicit success terminals; BETRAY is the fail terminal)',
@@ -280,14 +289,14 @@ registerCatalogPipeline({
               'UARPGDialogComponent reads dialog-gatekeeper tree row from DT_DialogTrees.',
             activatedBy:
               'Player interacts with Vael → UARPGDialogComponent plays the accept node → ' +
-              'fires GameplayEvent Ability.Quest.EmberPact.Start if level gate passes.',
+              `fires GameplayEvent Ability.Quest.${questKey(e.name)}.Start if level gate passes.`,
             dependencies: [
               'characters (char-captain-vael — seeded in seed-characters.ts)',
               'dialog-trees (dialog-gatekeeper — starter in new-catalogs.ts)',
             ],
             verification:
               'L2: AARPGNPCActor BP for CaptainVael configured with dialogTree=dialog-gatekeeper + ' +
-              'EmberPact topic branch present; ' +
+              `${questKey(e.name)} topic branch present; ` +
               'L3: VSQuestFlowTest — dialog fires on interact, quest start event received (deferred, PIE)',
           },
         },
@@ -308,15 +317,15 @@ registerCatalogPipeline({
         field: 'tracker',
         columns: [{ key: 'widget' }, { key: 'format' }, { key: 'anchor' }],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => ({
         data: {
           tracker: {
             widget: 'WBP_QuestTracker',
             format: '[Stage {n}/{total}] {objective}  ·  Cores: {coresCollected}/3',
-            anchor: 'HUD top-right · minimap icon T_EmberPact_MapIcon (48×48, RGBA)',
+            anchor: `HUD top-right · minimap icon T_${questKey(e.name)}_MapIcon (48×48, RGBA)`,
           },
         },
-        ueAssets: [`/Game/UI/HUD/WBP_QuestTracker`, `/Game/UI/Icons/T_EmberPact_MapIcon`],
+        ueAssets: [`/Game/UI/HUD/WBP_QuestTracker`, `/Game/UI/Icons/T_${questKey(e.name)}_MapIcon`],
       }),
       accept: fieldsPopulated('tracker', 'Widget, format, and anchor defined', ['widget', 'format', 'anchor']),
     },
@@ -350,7 +359,7 @@ registerCatalogPipeline({
       view: { kind: 'gallery', field: 'selected', candidates: 4 },
       produce: (e: LabEntity) => ({
         data: { ...gallerySeed('selected', 4) },
-        ueAssets: [`/Game/UI/Icons/T_${slug(e.name)}_Icon`],
+        ueAssets: [`/Game/UI/Icons/T_${questKey(e.name)}_Icon`],
       }),
       accept: selected('selected', 'A quest icon is selected'),
     },
@@ -361,7 +370,7 @@ registerCatalogPipeline({
       label: 'Localization',
       view: { kind: 'checklist', field: 'keys' },
       produce: (e: LabEntity) => {
-        const K = `QUEST_${slug(e.name).toUpperCase()}`;
+        const K = `QUEST_${questKey(e.name).toUpperCase()}`;
         return {
           data: {
             // Real localization content — en source + cs translation per key, not a bare
@@ -371,7 +380,7 @@ registerCatalogPipeline({
             // of the Ashen Forest; the return ritual offers the Pact choice). Judge-refleet
             // fix 2026-07-07 — the previous strings invented an off-canon narrative.
             keys: [
-              `${K}_TITLE: en "The Ember Pact" · cs "Pakt uhlíků"`,
+              `${K}_TITLE: en "${e.name}" · cs "Pakt uhlíků"`,
               `${K}_BRIEF: en "Captain Vael of the Ashen Order needs three Ember Cores from the corrupted spawn sites north of the Ashen Forest. Bring them back — then decide what you become." · cs "Kapitán Vael z Popelavého řádu potřebuje tři Žhnoucí jádra ze zamořených hnízd severně od Popelavého hvozdu. Přines je — a pak rozhodni, čím se staneš."`,
               `${K}_STAGE1: en "Recover 3 Ember Cores from the stone-brute spawn sites north of the Ashen Forest." · cs "Získej 3 Žhnoucí jádra z hnízd kamenných hromotluků severně od Popelavého hvozdu."`,
               `${K}_STAGE2: en "Return to Captain Vael. At the binding ritual, choose: forge the Ember Pact, or refuse the Order." · cs "Vrať se ke kapitánu Vaelovi. Při poutním rituálu zvol: uzavři Pakt uhlíků, nebo Řád odmítni."`,
@@ -411,7 +420,7 @@ registerCatalogPipeline({
       label: 'UE Packaging',
       view: { kind: 'manifest', field: 'assets' },
       produce: (e: LabEntity) => {
-        const s = slug(e.name);
+        const s = questKey(e.name);
         const assets = [
           `DT_QuestStages_${s}`,
           `DA_${s}_Conditions`,
@@ -425,11 +434,11 @@ registerCatalogPipeline({
             wiringContract: {
               grantedBy:
                 'AARPGQuestComponent (on the player character) reads FARPGQuestStageRow from ' +
-                `DT_QuestStages_${s} keyed by quest id (quest-ember-pact). ` +
-                'DA_EmberPact_Conditions declares level/core-count gates. ' +
-                'DA_EmberPact_Rewards declares GE handles for each terminal path.',
+                `DT_QuestStages_${s} keyed by quest id (${e.id}). ` +
+                `DA_${s}_Conditions declares level/core-count gates. ` +
+                `DA_${s}_Rewards declares GE handles for each terminal path.`,
               activatedBy:
-                'Stage transitions: GameplayEvent Ability.Quest.EmberPact.{Start|CoreCollected|' +
+                `Stage transitions: GameplayEvent Ability.Quest.${s}.{Start|CoreCollected|` +
                 'Complete|CompletedRefuse|Betray} → UGameplayAbility_QuestAdvance reads ' +
                 `DT_QuestStages_${s} row, advances stage, applies reward GEs on terminal.`,
               dependencies: [

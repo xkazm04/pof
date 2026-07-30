@@ -5,6 +5,12 @@ import { budgetWithinCap } from '../acceptance/invariants';
 import { entityRuntimeDeferred, visualDeferred } from '../acceptance/deferred';
 import { meshGalleryCandidates } from '@/components/layout-lab/steps/shared/meshGalleryCandidates';
 import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
+import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
+
+/** PascalCase asset token: 'Jinx' → 'Jinx' (UE package/asset names). */
+const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
+/** lowercase file token: 'Jinx' → 'jinx' (generated/ file + task naming). */
+const fileSlug = (n: string) => slug(n).toLowerCase();
 
 /**
  * Character Pipeline (catalogId: 'character-pipeline').
@@ -35,17 +41,20 @@ registerCatalogPipeline({
       // the produced candidate array (`candidates`), or selecting a candidate would overwrite
       // that array with a numeric index while acceptance graded an untouched field.
       view: { kind: 'gallery', field: 'selected', candidates: 3 },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const f = fileSlug(e.name);
+        return ({
         data: {
           candidates: [
-            { name: 'jinx_gptimg2 (v1)', verdict: 'face too menacing — glowing pupil-less eyes propagate to 3D', path: 'generated/jinx-leo/jinx_gptimg2.png' },
-            { name: 'jinx_v2_friendly', verdict: 'face gate PASS — defined eyes with whites+pupils', path: 'generated/jinx-leo/jinx_v2_friendly.png' },
-            { name: 'jinx_hd_concept', verdict: 'face gate PASS + detail-maximized (engraved bullets, stitching, fishnet)', path: 'generated/jinx-leo/jinx_hd_concept.png' },
+            { name: `${f}_gptimg2 (v1)`, verdict: 'face too menacing — glowing pupil-less eyes propagate to 3D', path: `generated/${f}-leo/${f}_gptimg2.png` },
+            { name: `${f}_v2_friendly`, verdict: 'face gate PASS — defined eyes with whites+pupils', path: `generated/${f}-leo/${f}_v2_friendly.png` },
+            { name: `${f}_hd_concept`, verdict: 'face gate PASS + detail-maximized (engraved bullets, stitching, fishnet)', path: `generated/${f}-leo/${f}_hd_concept.png` },
           ],
           ...gallerySeed('selected', 3, 2),
           promptLaws: 'FACE PRIORITY block (eyes with white sclera + crisp pupils, no glow/makeup) + plain white bg + relaxed A-pose + head-to-toe',
         },
-      }),
+        });
+      },
       accept: selected('selected', 'concept chosen after face gate'),
       produceNote: 'Leonardo GPT Image 2 (RENDER_3D, 1024x1536). The source face DETERMINES the 3D face — fix it here, not downstream.',
     },
@@ -130,17 +139,20 @@ registerCatalogPipeline({
       label: 'Rig & Clips',
       engine: 'Tripo',
       view: { kind: 'manifest', field: 'created' },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const f = fileSlug(e.name);
+        return ({
         data: {
           created: [
             'rig 35684390 (animate_rig, biped, spec:tripo — 41 bones, NO hair bones)',
-            'jinx_hd_run.glb (animate_retarget preset:run, baked, with geometry)',
-            'jinx_hd_idle.glb (preset:idle)',
-            'jinx_hd_roll.glb (preset:dive — the roll-type clip)',
+            `${f}_hd_run.glb (animate_retarget preset:run, baked, with geometry)`,
+            `${f}_hd_idle.glb (preset:idle)`,
+            `${f}_hd_roll.glb (preset:dive — the roll-type clip)`,
           ],
           presets: 'idle/walk/run/jump/slash/shoot/hurt/dive/climb… (AnimationType enum)',
         },
-      }),
+        });
+      },
       accept: minCount('created', 'rig + 3 preset clips produced', 4),
       produceNote: 'One rig, N retargets (reuse the rig task id — do not re-rig per clip). out_format glb imports cleanest via Interchange.',
     },
@@ -151,16 +163,20 @@ registerCatalogPipeline({
       label: 'UE Import',
       engine: 'UE Python',
       view: { kind: 'manifest', field: 'created' },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        const f = fileSlug(e.name);
+        return ({
         data: {
           created: [
-            '/Game/JinxHD/Idle (master: mesh + skeleton + idle take)',
-            '/Game/JinxHD/Run (anim-only, InterchangePipelineStackOverride bound to the idle skeleton)',
-            '/Game/JinxHD/Roll (anim-only, same skeleton)',
+            `/Game/${s}HD/Idle (master: mesh + skeleton + idle take)`,
+            `/Game/${s}HD/Run (anim-only, InterchangePipelineStackOverride bound to the idle skeleton)`,
+            `/Game/${s}HD/Roll (anim-only, same skeleton)`,
           ],
-          law: 'each Interchange glb import creates ITS OWN skeleton unless overridden — one master import, then bind every other take to that skeleton. When this pipeline targets the PoF UE project, emit proj-naming prefixes (SK_/A_) instead of the jinx-project paths recorded here.',
+          law: `each Interchange glb import creates ITS OWN skeleton unless overridden — one master import, then bind every other take to that skeleton. When this pipeline targets the PoF UE project, emit proj-naming prefixes (SK_/A_) instead of the ${f}-project paths recorded here.`,
         },
-      }),
+        });
+      },
       accept: minCount('created', 'mesh + takes on ONE shared skeleton', 3),
       produceNote: 'Commandlet (-run=pythonscript) with a PRE-QUOTED arg string (space-in-path silently boots the fallback project). Verify saves by re-reading the asset (save_asset only_if_is_dirty gotcha).',
     },
@@ -178,18 +194,22 @@ registerCatalogPipeline({
       label: 'Apparel',
       engine: 'UE Python',
       view: { kind: 'manifest', field: 'cloth' },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        const f = fileSlug(e.name);
+        return ({
         data: {
           cloth: [
-            'garment: jinx_cloak.glb → static mesh, FITTED to the imported Jinx skeleton (a mismatched garment fails the skin-weight transfer)',
+            `garment: ${f}_cloak.glb → static mesh, FITTED to the imported ${e.name} skeleton (a mismatched garment fails the skin-weight transfer)`,
             'target: the shared-skeleton SkeletalMesh + PA collider from UE Import',
             'method: ClosestPointOnSurface — auto skin-weight transfer, NO weight-map painting (the headless MVP)',
-            'ClothAsset: /Game/JinxHD/Cloth/CA_JinxCloak (regenerated from the Dataflow graph)',
+            `ClothAsset: /Game/${s}HD/Cloth/CA_${s}Cloak (regenerated from the Dataflow graph)`,
             'graph: StaticMeshImport → TransferSkinWeights → SetPhysicsAsset → Terminal (F-prefixed node types; terminal input pin CollectionLod0)',
           ],
           law: 'Authored headless via chaos-cloth.ts (buildClothGraphPython/attachClothToCharacter) over the ue-experiment runner; the Chaos Cloth Asset plugins enable per-run via ExperimentSpec.enablePlugins (no .uproject edit). evaluate_dataflow is the bind gate — false ⇒ the garment is not fitted to the target skeleton. Region weight-map painting is the one editor/bridge-gated step; the MVP uses the auto closest-point transfer.',
         },
-      }),
+        });
+      },
       accept: entityRuntimeDeferred('VSCharacterApparelTest', 'cloth binds + simulates on the clothed character in a live PIE session'),
       produceNote: 'Chaos Cloth Asset (UE 5.8) — headless authoring proven 2026-07-22 (create asset + build the Dataflow graph + regenerate, all via Python). Auto skin-weight transfer = the no-paint MVP; add WeightMap/SolverConfig nodes to the same graph for painted physics. Seam: src/lib/visual-gen/chaos-cloth.ts.',
     },
@@ -253,10 +273,10 @@ registerCatalogPipeline({
       label: 'Skins',
       engine: 'Tripo',
       view: { kind: 'manifest', field: 'skinSet' },
-      produce: () => ({
+      produce: (e: LabEntity) => ({
         data: {
           skinSet: {
-            geometryTaskId: 'tripo-jinx-image-to-model',
+            geometryTaskId: `tripo-${fileSlug(e.name)}-image-to-model`,
             variants: [
               'base — the gated concept colourway (texture_seed unset, standard quality)',
               'gold — high metallic; the noise mask carries the roughness break-up',

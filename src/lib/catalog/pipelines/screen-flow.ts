@@ -76,7 +76,7 @@ registerCatalogPipeline({
       archetype: 'graph',
       label: 'Navigation Graph',
       view: { kind: 'graph', field: 'graph' },
-      produce: () => ({
+      produce: (e: LabEntity) => ({
         data: {
           graph: {
             nodes: [
@@ -183,6 +183,7 @@ registerCatalogPipeline({
               // IN_GAME terminal is a logical leaf — overlays route through ingame_hud, not IN_GAME
             ],
             note:
+              `Authored for the "${e.name}" screen-flow entity. ` +
               'Terminals: QUIT_TO_DESKTOP (reached via quit_confirm) and IN_GAME (reached when ingame_hud ' +
               'is fully active with gameplay running). ' +
               'graphValid: 13 nodes, 22 edges, all reachable from main_menu[0]. ' +
@@ -452,7 +453,7 @@ registerCatalogPipeline({
       archetype: 'checklist',
       label: 'Transitions / Animation',
       view: { kind: 'checklist', field: 'transitionChecks' },
-      produce: () => ({
+      produce: (e: LabEntity) => ({
         data: {
           transitionChecks: [
             'WBP_MainMenu: FadeIn 0.4 s EaseOut on scene load; FadeOut 0.4 s EaseIn on scene unload',
@@ -466,6 +467,7 @@ registerCatalogPipeline({
             'UMG WidgetAnimation assets named WA_<WidgetName>_Open / WA_<WidgetName>_Close (canon proj-naming)',
           ],
           transitionNotes:
+            `Authored for the "${e.name}" screen-flow entity. ` +
             'Transitions authored as UMG WidgetAnimation (WA_ prefix). Durations chosen to feel ' +
             'responsive without feeling instant. Backdrop blur via BP_PostProcessOverlay (Material ' +
             'parameter-driven). Reduce Motion: UARPGSettingsSubsystem.ReduceMotion flag; when true all ' +
@@ -485,7 +487,7 @@ registerCatalogPipeline({
         field: 'juiceRules',
         columns: [{ key: 'trigger' }, { key: 'vfx' }, { key: 'sfx' }],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => ({
         data: {
           juiceRules: [
             {
@@ -528,6 +530,7 @@ registerCatalogPipeline({
             },
           ],
           note:
+            `Authored for the "${e.name}" screen-flow entity. ` +
             'All SFX assets use SC_ prefix (SoundCue, canon proj-naming). ' +
             'UI SFX volume routed through UIVolume mix class (UARPGSettingsSubsystem). ' +
             'VFX: no Niagara emitters in UI — all visual feedback via UMG WidgetAnimations and PostProcess params. ' +
@@ -596,7 +599,7 @@ registerCatalogPipeline({
             `UI_${slug(e.name).toUpperCase()}_DEATH_QUITTOMAIN: "Quit to Main Menu"`,
           ],
           locNotes:
-            'Keys authored in Content/Localization/UI/ScreenFlow.csv. ' +
+            `Keys authored for the "${e.name}" screen-flow entity in Content/Localization/UI/ScreenFlow.csv. ` +
             'German expansion ~135%: button text must fit in WBP_MenuButton at maximum expansion. ' +
             'Overflow guard: WBP_MenuButton uses SizeBox with MaxDesiredWidth; text wraps to 2 lines (no clipping). ' +
             'Japanese/Chinese ~85–90% (CJK text is compact): no overflow risk. ' +
@@ -690,7 +693,7 @@ registerCatalogPipeline({
               dependencies: [
                 'hud-elements (hud-health-bar — WBP_HealthBar binding in WBP_InGameHUD, canon proj-hud-binding)',
                 'input-schemes (IMC_Navigation mapping context; IA_ actions must be registered)',
-                'icon-sets (iconset-abilities — T_<slug>_ScreenFlowIcon source family)',
+                `icon-sets (iconset-abilities — T_${s}_ScreenFlowIcon source family)`,
               ],
               verification:
                 `L2: all WBP_ assets in /Game/UI/; UARPGHUDContext.cpp + UARPGInputModeComponent.cpp ` +

@@ -10,6 +10,8 @@ import { linksResolve } from '../acceptance/linkCheckers';
 import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
+/** Localization key stem: 'Health Potion' → 'HEALTH_POTION'. */
+const locStem = (n: string) => n.replace(/[^a-z0-9]+/gi, '_').toUpperCase();
 
 /**
  * Crafting Recipes pipeline (catalogId: 'crafting-recipes').
@@ -73,7 +75,7 @@ registerCatalogPipeline({
           { key: 'deterministic' },
         ],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => ({
         data: {
           io: {
             // Reagent inputs are modeled as descriptive data only — no seeded Weapon ids are
@@ -126,7 +128,7 @@ registerCatalogPipeline({
             wiringContract: {
               grantedBy:
                 'UARPGCraftingComponent on BP_AlchemistBench reads FARPGRecipeRow from ' +
-                'DT_Recipes (row key: recipe-health-potion); validates that both input reagents ' +
+                `DT_Recipes (row key: ${e.id}); validates that both input reagents ` +
                 'are present in UARPGInventoryComponent with quantity ≥ 1 each',
               activatedBy:
                 'Player selects recipe in WBP_CraftingStation and confirms Craft → ' +
@@ -138,7 +140,7 @@ registerCatalogPipeline({
               ],
               verification:
                 'L2: FARPGRecipeRow declared in Source/PoF/; seed_recipes.py seeds ' +
-                'recipe-health-potion row in DT_Recipes; UARPGCraftingComponent.cpp compiled; ' +
+                `${e.id} row in DT_Recipes; UARPGCraftingComponent.cpp compiled; ` +
                 'L3: VSCraftingTest — inputs consumed and output produced in PIE (deferred)',
             },
             // Resolvable links: only real seeded catalog ids.
@@ -342,15 +344,17 @@ registerCatalogPipeline({
         field: 'discovery',
         columns: [{ key: 'method' }, { key: 'trigger' }, { key: 'persistenceTag' }],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return {
         data: {
           discovery: {
             method: 'npc_interaction',
             trigger: 'First TalkTo interaction with any Alchemist NPC in the starting-area hub',
             displayName: 'Taught by Alchemist NPC',
             // No recipe scroll required at Tier 1 — knowledge is granted via a gameplay event
-            grantedVia: 'FGameplayEventData (EventTag: Crafting.RecipeUnlocked.HealthPotion)',
-            persistenceTag: 'Crafting.KnownRecipe.HealthPotion',
+            grantedVia: `FGameplayEventData (EventTag: Crafting.RecipeUnlocked.${s})`,
+            persistenceTag: `Crafting.KnownRecipe.${s}`,
             persistenceNote:
               'The tag is applied to the player GAS AbilitySystemComponent (ASC) on first grant; ' +
               're-interaction does not re-grant (idempotent guard via HasMatchingGameplayTag). ' +
@@ -358,13 +362,13 @@ registerCatalogPipeline({
               'undiscovered recipes are hidden (not just locked) per the grounded-tone canon.',
             tier2Unlock: {
               method: 'recipe_scroll',
-              item: 'T1_RecipeScroll_HealthPotion (Uncommon consumable — pending items seed)',
+              item: `T1_RecipeScroll_${s} (Uncommon consumable — pending items seed)`,
               note: 'Tier-2 variant (Greater Health Potion, 240 HP, Crafting Skill 11) uses a scroll drop',
             },
             wiringContract: {
               grantedBy:
                 'AARPGNPCActor (Alchemist archetype) TalkTo flow broadcasts ' +
-                'FGameplayEventData(EventTag: Crafting.RecipeUnlocked.HealthPotion) to ' +
+                `FGameplayEventData(EventTag: Crafting.RecipeUnlocked.${s}) to ` +
                 'the player ASC; a GameplayAbility listens and grants the KnownRecipe tag',
               activatedBy:
                 'Player TalkTo NPC → dialog branch "Teach me to brew" → ' +
@@ -374,12 +378,13 @@ registerCatalogPipeline({
                 'UE: BP_AlchemistNPC placed in starting hub (level design — deferred)',
               ],
               verification:
-                'L2: GA_GrantRecipe + Crafting.KnownRecipe.HealthPotion tag declared in GameplayTags.ini; ' +
+                `L2: GA_GrantRecipe + Crafting.KnownRecipe.${s} tag declared in GameplayTags.ini; ` +
                 'L3: VSCraftingTest — recipe appears in WBP_CraftingStation after TalkTo in PIE',
             },
           },
         },
-      }),
+        };
+      },
       accept: allOf(
         fieldsPopulated('discovery', 'method + trigger + persistenceTag defined', [
           'method',
@@ -419,14 +424,14 @@ registerCatalogPipeline({
             sfxLoop: {
               asset: `SC_Craft_${slug(e.name)}_Loop`,
               description:
-                'A low bubbling/simmering loop (1.2 s looping SoundCue, SC_Craft_HealthPotion_Loop) ' +
+                `A low bubbling/simmering loop (1.2 s looping SoundCue, SC_Craft_${slug(e.name)}_Loop) ` +
                 'that plays for the duration of the crafting animation (~2.8 s). Attenuated at 6 m. ' +
                 'Restrained — not melodic; a working-kitchen sound, not a UI fanfare.',
             },
             sfxSuccess: {
               asset: `SC_Craft_${slug(e.name)}_Success`,
               description:
-                'A short positive chime/pour-complete stinger (SC_Craft_HealthPotion_Success, ~0.6 s). ' +
+                `A short positive chime/pour-complete stinger (SC_Craft_${slug(e.name)}_Success, ~0.6 s). ` +
                 'Keyed to the AnimNotify AN_CraftBrew_Complete at end of the anim. ' +
                 'Consistent with the grounded tone (canon game-tone): a satisfying but subtle clink, ' +
                 'not a triumphant fanfare.',
@@ -474,7 +479,7 @@ registerCatalogPipeline({
         field: 'recipeUi',
         columns: [{ key: 'widget' }, { key: 'displayFormat' }, { key: 'hudAnchor' }],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => ({
         data: {
           recipeUi: {
             // canon proj-hud-binding: widget + display-format + HUD anchor declared
@@ -507,7 +512,7 @@ registerCatalogPipeline({
               verification:
                 'L2: WBP_CraftingStation widget exists in Content/UI/Crafting/; ' +
                 'L3: VSCraftingTest — WBP_CraftingStation opens at bench interaction and shows ' +
-                'recipe-health-potion in the list after discovery in PIE',
+                `${e.id} in the list after discovery in PIE`,
             },
           },
         },
@@ -545,7 +550,9 @@ registerCatalogPipeline({
       archetype: 'checklist',
       label: 'Localization',
       view: { kind: 'checklist', field: 'keys' },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const k = locStem(e.name);
+        return {
         data: {
           // Real localization content — en source + cs translation per key, not a bare
           // key-name schema (the judge fleet failed the stub form, 2026-07-07).
@@ -554,19 +561,20 @@ registerCatalogPipeline({
           // Health Potion (item-7). Judge-refleet fix 2026-07-07 — the previous strings
           // invented different reagents.
           keys: [
-            'RECIPE_HEALTH_POTION_NAME: en "Minor Health Potion" · cs "Malý lektvar zdraví"',
-            'RECIPE_HEALTH_POTION_DESCRIPTION: en "Thornleaf bitterness cut with ashroot — the field remedy every Ashen scout learns first." · cs "Hořkost trnolistu zjemněná popelokořenem — polní lék, který se každý zvěd Popelavých učí jako první."',
-            'RECIPE_HEALTH_POTION_INPUT_1: en "Thornleaf Extract ×1" · cs "Výtažek z trnolistu ×1"',
-            'RECIPE_HEALTH_POTION_INPUT_2: en "Ashroot Dust ×1" · cs "Prach z popelokořene ×1"',
-            'RECIPE_HEALTH_POTION_OUTPUT: en "Minor Health Potion ×1" · cs "Malý lektvar zdraví ×1"',
-            'RECIPE_HEALTH_POTION_STATION_REQUIRED: en "Requires: Alchemy Bench" · cs "Vyžaduje: Alchymistický stůl"',
-            'RECIPE_HEALTH_POTION_SKILL_REQUIRED: en "Requires: Alchemy I" · cs "Vyžaduje: Alchymie I"',
-            'RECIPE_HEALTH_POTION_UNLOCK_HINT: en "Taught at any Ashen Order field camp." · cs "Naučí tě v kterémkoli polním táboře Popelavého řádu."',
+            `RECIPE_${k}_NAME: en "Minor Health Potion" · cs "Malý lektvar zdraví"`,
+            `RECIPE_${k}_DESCRIPTION: en "Thornleaf bitterness cut with ashroot — the field remedy every Ashen scout learns first." · cs "Hořkost trnolistu zjemněná popelokořenem — polní lék, který se každý zvěd Popelavých učí jako první."`,
+            `RECIPE_${k}_INPUT_1: en "Thornleaf Extract ×1" · cs "Výtažek z trnolistu ×1"`,
+            `RECIPE_${k}_INPUT_2: en "Ashroot Dust ×1" · cs "Prach z popelokořene ×1"`,
+            `RECIPE_${k}_OUTPUT: en "Minor Health Potion ×1" · cs "Malý lektvar zdraví ×1"`,
+            `RECIPE_${k}_STATION_REQUIRED: en "Requires: Alchemy Bench" · cs "Vyžaduje: Alchymistický stůl"`,
+            `RECIPE_${k}_SKILL_REQUIRED: en "Requires: Alchemy I" · cs "Vyžaduje: Alchymie I"`,
+            `RECIPE_${k}_UNLOCK_HINT: en "Taught at any Ashen Order field camp." · cs "Naučí tě v kterémkoli polním táboře Popelavého řádu."`,
           ],
           locales: ['en', 'cs'],
           format: 'key: en "<source>" · cs "<translation>" — en is the authoring truth; cs seeds the LocRes pipeline',
         },
-      }),
+        };
+      },
       accept: minCount('keys', '≥1 localization key defined', 1),
     },
 
@@ -575,7 +583,7 @@ registerCatalogPipeline({
       archetype: 'checklist',
       label: 'Test Gate',
       view: { kind: 'checklist', field: 'checks' },
-      produce: () => ({
+      produce: (e: LabEntity) => ({
         data: {
           checks: [
             'inputs consumed on successful craft (Thornleaf Extract and Ashroot Dust removed from inventory)',
@@ -586,7 +594,7 @@ registerCatalogPipeline({
             'craft fails when CraftingSkill < 1',
             'craft fails at wrong station type (non-alchemist bench)',
             'recipe not visible in WBP_CraftingStation before discovery (KnownRecipe tag absent)',
-            'recipe visible after Alchemist NPC TalkTo grants KnownRecipe.HealthPotion tag',
+            `recipe visible after Alchemist NPC TalkTo grants KnownRecipe.${slug(e.name)} tag`,
           ],
         },
       }),
@@ -618,7 +626,7 @@ registerCatalogPipeline({
             wiringContract: {
               grantedBy:
                 'UARPGCraftingComponent (attached to BP_AlchemistBench, AARPGInteractable) ' +
-                'reads FARPGRecipeRow from DT_Recipes keyed by entity slug; ' +
+                `reads FARPGRecipeRow from DT_Recipes keyed by ${s}; ` +
                 'currency sink via UARPGCurrencySubsystem reading DT_Currencies (currency-gold); ' +
                 'output item spawned via UARPGInventoryComponent.AddItem',
               activatedBy:
@@ -636,7 +644,7 @@ registerCatalogPipeline({
                 'proj-hud-binding (WBP_CraftingStation registered to HUD)',
               ],
               verification:
-                'L2: FARPGRecipeRow in Source/PoF/; seed_recipes.py seeds entity slug row in DT_Recipes; ' +
+                `L2: FARPGRecipeRow in Source/PoF/; seed_recipes.py seeds the ${s} row in DT_Recipes; ` +
                 'UARPGCraftingComponent.cpp + UARPGCurrencySubsystem.cpp compiled; ' +
                 'WBP_CraftingStation exists in Content/UI/Crafting/; ' +
                 'L3: VSCraftingTest — full craft cycle (inputs consumed → output produced → gold deducted) in PIE',

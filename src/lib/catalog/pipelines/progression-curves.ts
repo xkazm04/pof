@@ -86,7 +86,10 @@ registerCatalogPipeline({
           { key: 'sampleValues' },
         ],
       },
-      produce: () => {
+      produce: (e: LabEntity) => {
+        // Identity token — the curve row this entity owns (CT_XPRequirements is shared;
+        // the ROW inside it is per-entity, matching the `seedRowPresent` static check below).
+        const s = slug(e.name);
         // xpToNext(L) = base × growth^L  where base = 100, growth = 1.08
         // Sample values (rounded to integers):
         //   L1  = 100 × 1.08^1  = 108
@@ -147,7 +150,7 @@ registerCatalogPipeline({
                 ],
                 verification:
                   'L2: FARPGXPCurveRow declared in Source/PoF/; GE_AwardXP compiled; ' +
-                  'CT_XPRequirements seeded via seed_progression_curves.py; ' +
+                  `CT_XPRequirements row ${s} seeded via seed_progression_curves.py; ` +
                   'L3: VSProgressionCurveTest — GE_AwardXP awards XP, XP crosses threshold, CharacterLevel increments',
               },
             },
@@ -778,11 +781,11 @@ registerCatalogPipeline({
                 'characters (CharacterLevel + XP in UARPGAttributeSet; passive tree in DT_PassiveTree)',
                 'quests (quest-completion events feed GE_AwardXP)',
                 'bestiary (monsterLevel feeds kill XP formula)',
-                'icon-sets (iconset-abilities — T_HeroLevelCurve_LevelUpIcon)',
+                `icon-sets (iconset-abilities — T_${s}_LevelUpIcon)`,
               ],
               verification:
                 'L2: FARPGXPCurveRow declared in Source/PoF/; GE_AwardXP + GE_DeathPenaltyXP compiled; ' +
-                'CT_XPRequirements seeded via seed_progression_curves.py; ' +
+                `CT_XPRequirements row ${s} seeded via seed_progression_curves.py; ` +
                 'UARPGProgressionComponent::OnXPChanged + GrantLevelUpRewards compiled; ' +
                 'L3: VSProgressionCurveTest in PIE — XP awards, level-up, death penalty, and WBP_XPBar update all validated',
             },

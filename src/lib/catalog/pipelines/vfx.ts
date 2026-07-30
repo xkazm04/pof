@@ -15,8 +15,8 @@ const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
  *
  * Represents a Niagara-based VFX system keyed to an AnimNotify. Per the `art-vfx`
  * and `vfx-budget` canon rules: fires from an AnimNotify (NS_ prefix name), ships
- * 3 LOD tiers (full / medium-50% / culled), peak GPU ≤ ~0.48 ms (60% headroom of
- * the 0.8 ms per-class budget). Restrained + gameplay-readable.
+ * 3 LOD tiers (full / medium-50% / culled), peak GPU ≤ ~0.48 ms of the 0.8 ms
+ * per-class budget — i.e. 60% CONSUMED, 40% headroom. Restrained + gameplay-readable.
  *
  * Wiring: the ability or anim montage contains an AnimNotify (named to match the
  * NS_ asset) that fires the Niagara system at the correct bone. The system is
@@ -39,8 +39,9 @@ registerCatalogPipeline({
             `burst that communicates hit/ability impact clearly without obscuring gameplay. ` +
             `The system ships 3 LOD tiers: LOD0 full-fidelity (spawn rate × 1.0), LOD1 medium ` +
             `(~50% particle count), LOD2 culled (system disabled). Per-class GPU budget is ` +
-            `0.8 ms at the 60 Hz frame; this system targets peak emission ≤ 0.48 ms (~60% ` +
-            `headroom) so it composes safely with simultaneous ability activations. ` +
+            `0.8 ms at the 60 Hz frame; this system targets peak emission ≤ 0.48 ms — 60% of ` +
+            `that budget consumed, leaving ~40% headroom so it composes safely with ` +
+            `simultaneous ability activations. ` +
             `Tone is grounded dark-fantasy: muted earthen palette, elemental accents on crit only, ` +
             `restrained additive stacking — canon art-vfx + art-identity. Sound cue (SC_${slug(e.name)}_Impact) ` +
             `is authored as a descriptive binding pending the audio catalog seed. ` +
@@ -75,7 +76,7 @@ registerCatalogPipeline({
               },
             },
             wiringContract: {
-              grantedBy: 'Ability montage (spellbook) grants the AnimNotify AN_${s} which activates NS_${s}',
+              grantedBy: `Ability montage (spellbook) grants the AnimNotify AN_${s} which activates NS_${s}`,
               activatedBy: `AnimNotify AN_${s} fired at the impact frame of the ability montage`,
               dependencies: ['spellbook (the ability montage that hosts the AnimNotify)'],
               verification:
@@ -144,8 +145,9 @@ registerCatalogPipeline({
 
     // ── 6. GPU / LOD Budget ───────────────────────────────────────────────────
     // Per vfx-budget canon: fires from AnimNotify (not BeginPlay/timer); 3 LOD tiers
-    // (full / medium-50% / culled); peak GPU ≤ ~0.48 ms (60% of 0.8 ms per-class budget).
-    // gpuPct is a real derived value in ms: 0.48 ms = 60% of 0.8 ms budget.
+    // (full / medium-50% / culled); peak GPU ≤ ~0.48 ms of the 0.8 ms per-class budget.
+    // gpuPct is a real derived value in ms: 0.48 ms = 60% of the 0.8 ms budget CONSUMED,
+    // which is 40% headroom — the label used to say "60% headroom" and was inverted.
     {
       archetype: 'balance', label: 'GPU / LOD Budget',
       // GPU cost budget bars: peak emission ms against the per-class budget ceiling
@@ -159,16 +161,16 @@ registerCatalogPipeline({
       produce: (e: LabEntity) => {
         const s = slug(e.name);
         // Per-class GPU budget: 0.8 ms at 60 Hz.
-        // Target at 60% headroom: 0.48 ms peak emission.
+        // Target leaves 40% headroom → 60% of the budget consumed → 0.48 ms peak emission.
         // gpuPct (as ms value) = 0.48 — withinPercent checks this against 0.48 ±15%.
         const classBudgetMs = 0.8;
-        const headroomPct = 0.60;
-        const gpuPct = classBudgetMs * headroomPct; // 0.48 ms
+        const headroomPct = 0.40;
+        const gpuPct = classBudgetMs * (1 - headroomPct); // 0.48 ms peak = 60% consumed
         return {
           data: {
             gpuBudget: {
               classBudgetMs,
-              headroomPct: `${headroomPct * 100}% of ${classBudgetMs} ms`,
+              headroomPct: `${headroomPct * 100}% headroom of ${classBudgetMs} ms (peak ${gpuPct} ms = ${(1 - headroomPct) * 100}% consumed)`,
               gpuMs: gpuPct,
               lodCount: 3,
               particlesCap: 200,

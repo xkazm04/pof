@@ -37,6 +37,14 @@ const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
  *   characters::char-captain-vael  — the speaker NPC (role: 'host')
  *   quests::quest-ember-pact       — the quest this dialog can advance (role: 'advances')
  *   icon-sets::iconset-abilities   — source for the dialog icon art (role: 'icon-source')
+ *
+ * IDENTITY: every step derives its asset names, DataTable row key and loc-key
+ * prefix from ONE token family — s = slug(entity.name), plus entity.id for the
+ * DT_DialogTrees row key — so producing for another entity never writes the
+ * exemplar's assets: DA_<s>_Effects, BP_DialogCameraRig_<s>, T_<s>_DialogIcon,
+ * DIALOG_<S>_* loc keys, Content/Localization/Dialog/<s>.csv.  The written
+ * dialogue itself (Vael's lines, the graph shape) stays template content —
+ * rewriting it per entity is live-mode LLM work.
  */
 registerCatalogPipeline({
   catalogId: 'dialog-trees',
@@ -75,7 +83,7 @@ registerCatalogPipeline({
       archetype: 'graph',
       label: 'Branch Graph',
       view: { kind: 'graph', field: 'graph' },
-      produce: () => ({
+      produce: (e: LabEntity) => ({
         data: {
           graph: {
             nodes: [
@@ -162,10 +170,10 @@ registerCatalogPipeline({
           wiringContract: {
             grantedBy:
               'UARPGDialogComponent on char-captain-vael reads the DT_DialogTrees row keyed ' +
-              '"dialog-gatekeeper".  Node conditions are FARPGDialogCondition structs evaluated ' +
+              `"${e.id}".  Node conditions are FARPGDialogCondition structs evaluated ` +
               'against UARPGAttributeSet (Intelligence attribute) and gameplay tags.',
             activatedBy:
-              'Player interact with Vael\'s collision capsule → UARPGDialogComponent.OpenTree("dialog-gatekeeper") → ' +
+              `Player interact with Vael's collision capsule → UARPGDialogComponent.OpenTree("${e.id}") → ` +
               'renders the root node and evaluates edge conditions each step.',
             dependencies: [
               'characters (char-captain-vael — the host NPC actor)',
@@ -198,7 +206,9 @@ registerCatalogPipeline({
         field: 'conditionsEffects',
         columns: [{ key: 'node' }, { key: 'condition' }, { key: 'effect' }],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return {
         data: {
           conditionsEffects: {
             // Per-node conditions and effects for the three non-trivial nodes
@@ -239,7 +249,7 @@ registerCatalogPipeline({
           wiringContract: {
             grantedBy:
               'FARPGDialogCondition structs in DT_DialogTrees row + GE_WorldState_EmberPactIntroPlayed + ' +
-              'GE_FactionDelta_AshenOrder — authored in DA_GatekeeperGreeting_Effects DataAsset.',
+              `GE_FactionDelta_AshenOrder — authored in DA_${s}_Effects DataAsset.`,
             activatedBy:
               'Terminal node reached during UARPGDialogComponent playback → ' +
               'fires mapped GameplayEvent or applies listed GEs.',
@@ -249,13 +259,14 @@ registerCatalogPipeline({
               'factions (faction-ashen-order — rep delta)',
             ],
             verification:
-              'L2: DA_GatekeeperGreeting_Effects seeded; FARPGDialogCondition struct present; ' +
+              `L2: DA_${s}_Effects seeded; FARPGDialogCondition struct present; ` +
               'GE_WorldState_EmberPactIntroPlayed + GE_FactionDelta_AshenOrder compiled; ' +
               'L3: VSDialogBranchTest — conditions evaluated correctly per terminal path (deferred)',
           },
         },
-        ueAssets: ['/Game/Dialog/DA_GatekeeperGreeting_Effects'],
-      }),
+        ueAssets: [`/Game/Dialog/DA_${s}_Effects`],
+        };
+      },
       accept: allOf(
         fieldsPopulated('conditionsEffects', 'skill-check, ember-pact, hostile, dismissed nodes defined', [
           'skillCheck',
@@ -276,7 +287,9 @@ registerCatalogPipeline({
         field: 'skillChecks',
         columns: [{ key: 'attribute' }, { key: 'threshold' }, { key: 'passEdge' }, { key: 'failEdge' }],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return {
         data: {
           skillChecks: [
             {
@@ -293,7 +306,7 @@ registerCatalogPipeline({
                 'reaches 14 around character level 25–30 on an Int-focused build. ' +
                 'Gate level is intentionally noteworthy — reachable mid-game on a dedicated build, ' +
                 'not a day-one trivial pass. ' +
-                'Threshold value stored in DA_GatekeeperGreeting_Effects.intelligenceGate = 14; ' +
+                `Threshold value stored in DA_${s}_Effects.intelligenceGate = 14; ` +
                 'FARPGDialogCondition reads it — never hardcoded.',
               balanceNote:
                 'Intelligence ≥ 14 is the only skill gate in this tree.  No Strength or Dexterity checks — ' +
@@ -311,12 +324,13 @@ registerCatalogPipeline({
               'characters (UARPGAttributeSet.Intelligence — validated against char-captain-vael stat row)',
             ],
             verification:
-              'L2: UARPGAttributeSet declares Intelligence attribute; DA_GatekeeperGreeting_Effects.intelligenceGate = 14; ' +
+              `L2: UARPGAttributeSet declares Intelligence attribute; DA_${s}_Effects.intelligenceGate = 14; ` +
               'L3: VSDialogBranchTest — Intelligence 13 routes to dismissed; Intelligence 14 routes to ember_pact_unlocked (deferred)',
           },
         },
-        ueAssets: ['/Game/Dialog/DA_GatekeeperGreeting_Effects'],
-      }),
+        ueAssets: [`/Game/Dialog/DA_${s}_Effects`],
+        };
+      },
       accept: allOf(
         minCount('skillChecks', '≥1 skill-check rule defined', 1),
         entriesHaveFields('skillChecks', 'every skill check carries node + attribute + threshold + both edges', ['node', 'attribute', 'threshold', 'passEdge', 'failEdge']),
@@ -374,7 +388,7 @@ registerCatalogPipeline({
         field: 'camera',
         columns: [{ key: 'phase' }, { key: 'shot' }, { key: 'anchor' }],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => ({
         data: {
           camera: {
             opening: {
@@ -410,7 +424,7 @@ registerCatalogPipeline({
             },
           },
         },
-        ueAssets: ['/Game/Cinematics/Dialog/BP_DialogCameraRig_GatekeeperGreeting'],
+        ueAssets: [`/Game/Cinematics/Dialog/BP_DialogCameraRig_${slug(e.name)}`],
       }),
       accept: fieldsPopulated('camera', 'opening / vael-speaking / player-choice / close phases defined', [
         'opening',
@@ -504,7 +518,7 @@ registerCatalogPipeline({
           ],
           locNotes:
             'All keys follow the DIALOG_<TREE>_<SPEAKER>_<LINE> convention and are authored in ' +
-            'Content/Localization/Dialog/GatekeeperGreeting.csv.  ' +
+            `Content/Localization/Dialog/${slug(e.name)}.csv.  ` +
             'Non-English strings must maintain ≤10-word cap on Vael lines (VO timing constraint). ' +
             'Condition hint strings (LOCKED_HINT) require a {statName} + {threshold} token pair.',
         },

@@ -75,10 +75,10 @@ registerCatalogPipeline({
       archetype: 'schema',
       label: 'Lore Body',
       view: { kind: 'prose', field: 'loreBody', emptyText: 'No lore body yet' },
-      produce: () => ({
+      produce: (e: LabEntity) => ({
         data: {
           loreBody:
-            `THE SUNDERING — CONSOLIDATED ACCOUNT (Ashen Order Archivist's Draft, Year 0 Post-Sundering)\n\n` +
+            `${e.name.toUpperCase()} — CONSOLIDATED ACCOUNT (Ashen Order Archivist's Draft, Year 0 Post-Sundering)\n\n` +
             `What the survivors call the Sundering lasted less than a night. What it left behind has ` +
             `not finished burning.\n\n` +
             `The event's proximate cause remains contested. The Order's formal position: a conclave of ` +
@@ -128,14 +128,14 @@ registerCatalogPipeline({
       archetype: 'graph',
       label: 'Cross-References',
       view: { kind: 'graph', field: 'graph' },
-      produce: () => ({
+      produce: (e: LabEntity) => ({
         data: {
           graph: {
             nodes: [
               // ── Root: this codex entry ────────────────────────────────────
               {
-                id: 'codex-sundering',
-                label: 'The Sundering [root — this entry]',
+                id: e.id,
+                label: `${e.name} [root — this entry]`,
               },
               // ── Faction ───────────────────────────────────────────────────
               {
@@ -171,10 +171,10 @@ registerCatalogPipeline({
             ],
             edges: [
               // Root references main catalog entities
-              { from: 'codex-sundering', to: 'faction-ashen-order',         label: 'references — primary respondent faction' },
-              { from: 'codex-sundering', to: 'zone-z-ashen',                label: 'references — ground-zero zone' },
-              { from: 'codex-sundering', to: 'char-captain-vael',           label: 'references — participant / classified testimony holder' },
-              { from: 'codex-sundering', to: 'concept-resonance-cascade',   label: 'explains — the physical mechanism' },
+              { from: e.id, to: 'faction-ashen-order',         label: 'references — primary respondent faction' },
+              { from: e.id, to: 'zone-z-ashen',                label: 'references — ground-zero zone' },
+              { from: e.id, to: 'char-captain-vael',           label: 'references — participant / classified testimony holder' },
+              { from: e.id, to: 'concept-resonance-cascade',   label: 'explains — the physical mechanism' },
 
               // Cascade connects to zone and faction (cascade caused the zone scar; faction responded)
               { from: 'concept-resonance-cascade', to: 'zone-z-ashen',      label: 'caused — resonance epicentre' },
@@ -192,7 +192,7 @@ registerCatalogPipeline({
               { from: 'zone-z-ashen',          to: 'concept-classified-testimony',    label: 'archives-at — outpost salvage records' },
             ],
             note:
-              'Cross-reference knowledge graph: 7 nodes, 11 edges, all reachable from codex-sundering[0]. ' +
+              `Cross-reference knowledge graph: 7 nodes, 11 edges, all reachable from ${e.id}[0]. ` +
               '2 terminal nodes: concept-classified-testimony + concept-magical-use-prohibition (leaf concepts). ' +
               'Catalog entity nodes (faction-ashen-order, zone-z-ashen, char-captain-vael) are not terminal — ' +
               'they carry outgoing edges to derived concepts. ' +
@@ -206,7 +206,7 @@ registerCatalogPipeline({
               'The cross-reference graph is read by the in-game Codex UI to render a "Related Entries" ' +
               'panel linking the player to adjacent codex entries and world entities.',
             activatedBy:
-              'Player unlocks codex-sundering (State.Codex.Unlocked.codex-sundering tag granted) → ' +
+              `Player unlocks ${e.id} (State.Codex.Unlocked.${e.id} tag granted) → ` +
               'UARPGCodexComponent exposes the cross-reference links in the Codex UI. ' +
               'Catalog-entity links (faction/zone/character) resolve to their respective catalog UI panels.',
             dependencies: [
@@ -216,7 +216,7 @@ registerCatalogPipeline({
             ],
             verification:
               'L0: graphValid — all 7 nodes reachable from root, 2 terminal nodes present, no dangling edges; ' +
-              'L3: VSCodexUnlockTest — codex-sundering entry unlocks at its trigger + cross-ref links resolve in PIE (deferred)',
+              `L3: VSCodexUnlockTest — ${e.id} entry unlocks at its trigger + cross-ref links resolve in PIE (deferred)`,
           },
         },
         links: [
@@ -241,7 +241,9 @@ registerCatalogPipeline({
         field: 'unlockRules',
         columns: [{ key: 'trigger' }, { key: 'tagGranted' }, { key: 'condition' }],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return {
         data: {
           unlockRules: {
             primary: {
@@ -249,14 +251,14 @@ registerCatalogPipeline({
                 'Player completes the first quest in the Ashen Forest zone that requires speaking ' +
                 'to Captain Vael (quest-ember-pact stage 1 accepted OR any Ashen Forest zone ' +
                 'completion tag set — whichever fires first in the critical path).',
-              tagGranted: 'State.Codex.Unlocked.codex-sundering',
+              tagGranted: `State.Codex.Unlocked.${e.id}`,
               condition:
-                'NOT State.Codex.Unlocked.codex-sundering (idempotent guard — re-entry does not re-trigger). ' +
-                'Tag is applied via GE_Codex_Unlock_Sundering (SetByCaller 1.0 on a binary attribute) + ' +
+                `NOT State.Codex.Unlocked.${e.id} (idempotent guard — re-entry does not re-trigger). ` +
+                `Tag is applied via GE_Codex_Unlock_${s} (SetByCaller 1.0 on a binary attribute) + ` +
                 'the UARPGCodexComponent saves the entry id to the persistent TSet on the save-game object.',
               ueWiring:
-                'GE_Codex_Unlock_Sundering is a GameplayEffect with tag container grant: ' +
-                'State.Codex.Unlocked.codex-sundering. Applied by AARPGQuestComponent on ' +
+                `GE_Codex_Unlock_${s} is a GameplayEffect with tag container grant: ` +
+                `State.Codex.Unlocked.${e.id}. Applied by AARPGQuestComponent on ` +
                 'quest-ember-pact stage 1 complete OR by zone-trigger volume in the Ashen Forest ' +
                 'on first full entry (player body enters the streaming cell).',
             },
@@ -264,37 +266,38 @@ registerCatalogPipeline({
               trigger:
                 'Player enters the Ashen Forest zone streaming cell for the first time ' +
                 '(zone transition trigger volume).',
-              tagGranted: 'State.Codex.Unlocked.codex-sundering',
+              tagGranted: `State.Codex.Unlocked.${e.id}`,
               condition:
-                'NOT State.Codex.Unlocked.codex-sundering. Fallback ensures the entry unlocks ' +
+                `NOT State.Codex.Unlocked.${e.id}. Fallback ensures the entry unlocks ` +
                 'even if quest-ember-pact is bypassed (e.g. player explores freely).',
               ueWiring:
-                'ATriggerVolume in the Ashen Forest level applies GE_Codex_Unlock_Sundering on Overlap ' +
+                `ATriggerVolume in the Ashen Forest level applies GE_Codex_Unlock_${s} on Overlap ` +
                 'with the player character\'s capsule component.',
             },
             wiringContract: {
               grantedBy:
-                'GE_Codex_Unlock_Sundering (GameplayEffect) — applied on quest-ember-pact stage 1 ' +
+                `GE_Codex_Unlock_${s} (GameplayEffect) — applied on quest-ember-pact stage 1 ` +
                 'completion (primary) OR on Ashen Forest zone entry trigger (fallback). ' +
                 'Both paths are idempotent (NOT-already-unlocked guard).',
               activatedBy:
                 'AARPGQuestComponent.OnStageComplete(quest-ember-pact, stage 1) → ' +
-                'ApplyGameplayEffectToSelf(GE_Codex_Unlock_Sundering); ' +
+                `ApplyGameplayEffectToSelf(GE_Codex_Unlock_${s}); ` +
                 'OR ATriggerVolume.OnActorBeginOverlap(PlayerCharacter) → ' +
-                'ApplyGameplayEffectToTarget(GE_Codex_Unlock_Sundering).',
+                `ApplyGameplayEffectToTarget(GE_Codex_Unlock_${s}).`,
               dependencies: [
                 'quests (quest-ember-pact — primary unlock trigger on stage 1)',
                 'zone-map (zone-z-ashen — fallback trigger volume placement)',
               ],
               verification:
-                'L2: GE_Codex_Unlock_Sundering compiled + tag registered in GameplayTagsList.ini; ' +
-                'seed_codex.py seeds DT_Codex row "codex-sundering"; ' +
+                `L2: GE_Codex_Unlock_${s} compiled + tag registered in GameplayTagsList.ini; ` +
+                `seed_codex.py seeds DT_Codex row "${e.id}"; ` +
                 'L3: VSCodexUnlockTest — entry unlocks via quest path AND via zone entry; ' +
                 're-entry does not duplicate (deferred)',
             },
           },
         },
-      }),
+        };
+      },
       accept: allOf(
         fieldsPopulated('unlockRules', 'primary + fallback unlock rules defined', [
           'primary',
@@ -313,32 +316,34 @@ registerCatalogPipeline({
         field: 'spoilerRules',
         columns: [{ key: 'field' }, { key: 'spoilerTag' }, { key: 'gateCondition' }],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return {
         data: {
           spoilerRules: {
             classifiedTestimonyField: {
               field: 'loreBody — paragraph referencing classified Vael testimony + Order facility origin dispute',
-              spoilerTag: 'State.Codex.Spoiler.codex-sundering.ClassifiedTestimony',
+              spoilerTag: `State.Codex.Spoiler.${e.id}.ClassifiedTestimony`,
               gateCondition:
                 'Revealed only after quest-ember-pact reaches stage 3 OR player obtains the ' +
                 '"Vael Field Report" key item — whichever fires first. Prior to that unlock, ' +
                 'the classified testimony paragraph is replaced with a redaction notice: ' +
                 '"[CLASSIFIED — Ashen Order FIELD DISPATCH — Access Restricted]".',
               ueWiring:
-                'The Codex UI reads State.Codex.Spoiler.codex-sundering.ClassifiedTestimony from ' +
+                `The Codex UI reads State.Codex.Spoiler.${e.id}.ClassifiedTestimony from ` +
                 'UARPGCodexComponent; if absent, the classified paragraph is replaced with the ' +
                 'redaction string at render time — never stripped from the DT_Codex row itself. ' +
-                'GE_Codex_Spoiler_Sundering_ClassifiedTestimony applies the tag on quest-ember-pact ' +
+                `GE_Codex_Spoiler_${s}_ClassifiedTestimony applies the tag on quest-ember-pact ` +
                 'stage 3 completion (or key-item grant event).',
             },
             orderFacilityOriginField: {
               field: 'loreBody — implication that the cascade originated at an Order facility',
-              spoilerTag: 'State.Codex.Spoiler.codex-sundering.ClassifiedTestimony',
+              spoilerTag: `State.Codex.Spoiler.${e.id}.ClassifiedTestimony`,
               gateCondition:
                 'Same gate as classifiedTestimonyField — both reveals are tied to the same unlock ' +
                 'because they are politically linked: revealing the facility origin without the ' +
                 'testimony context would be misleading. Both are gated together under the single ' +
-                'State.Codex.Spoiler.codex-sundering.ClassifiedTestimony tag.',
+                `State.Codex.Spoiler.${e.id}.ClassifiedTestimony tag.`,
               ueWiring: 'Same GE as classifiedTestimonyField — single tag gates both paragraphs.',
             },
             loreBodyBaseNote:
@@ -348,22 +353,23 @@ registerCatalogPipeline({
               'Only the classified testimony and the explicit facility-origin implication are spoiler-gated.',
             wiringContract: {
               grantedBy:
-                'GE_Codex_Spoiler_Sundering_ClassifiedTestimony — applied on quest-ember-pact stage 3 ' +
+                `GE_Codex_Spoiler_${s}_ClassifiedTestimony — applied on quest-ember-pact stage 3 ` +
                 'OR "Vael Field Report" key-item grant event.',
               activatedBy:
                 'AARPGQuestComponent.OnStageComplete(quest-ember-pact, stage 3) → ' +
-                'ApplyGameplayEffectToSelf(GE_Codex_Spoiler_Sundering_ClassifiedTestimony); ' +
+                `ApplyGameplayEffectToSelf(GE_Codex_Spoiler_${s}_ClassifiedTestimony); ` +
                 'OR AARPGItemComponent.OnKeyItemGranted("item-vael-field-report") → same GE.',
               dependencies: [
                 'quests (quest-ember-pact — stage 3 progression)',
               ],
               verification:
-                'L2: GE_Codex_Spoiler_Sundering_ClassifiedTestimony compiled; tag registered; ' +
+                `L2: GE_Codex_Spoiler_${s}_ClassifiedTestimony compiled; tag registered; ` +
                 'L3: VSCodexUnlockTest — spoiler paragraph absent before stage 3, present after (deferred)',
             },
           },
         },
-      }),
+        };
+      },
       accept: allOf(
         fieldsPopulated('spoilerRules', 'spoiler fields + gate conditions defined', [
           'classifiedTestimonyField',
@@ -408,7 +414,7 @@ registerCatalogPipeline({
         data: {
           audioSting: {
             unlockSting: {
-              event: 'Codex entry unlocked (State.Codex.Unlocked.codex-sundering tag granted)',
+              event: `Codex entry unlocked (State.Codex.Unlocked.${e.id} tag granted)`,
               asset: `SC_Codex_Unlock_${slug(e.name)}`,
               description:
                 'A brief (1.5–2.5 s) tonal sting: single struck low brass chord with a slow ' +
@@ -419,19 +425,19 @@ registerCatalogPipeline({
               ueWiring:
                 'UARPGCodexComponent calls UAudioComponent::PlaySoundAtLocation with ' +
                 `SC_Codex_Unlock_${slug(e.name)} at player location when ` +
-                'State.Codex.Unlocked.codex-sundering is first applied. ' +
+                `State.Codex.Unlocked.${e.id} is first applied. ` +
                 'Sound asset class: SC_ (SoundCue per proj-naming); ' +
                 'SFX mix bus; no spatial attenuation (UI-layer, 2D).',
             },
             spoilerRevealSting: {
-              event: 'Spoiler paragraph revealed (State.Codex.Spoiler.codex-sundering.ClassifiedTestimony granted)',
+              event: `Spoiler paragraph revealed (State.Codex.Spoiler.${e.id}.ClassifiedTestimony granted)`,
               asset: `SC_Codex_SpoilerReveal_${slug(e.name)}`,
               description:
                 'A very short (0.6–1.0 s) high-tension chord stab: muted string tremolo, single ' +
                 'hit, then silence. Signals that a previously redacted section has become readable. ' +
                 'Level: −14 dBFS peak. SFX category, 2D, plays once.',
               ueWiring:
-                'Same trigger pattern as unlockSting but on GE_Codex_Spoiler_Sundering_ClassifiedTestimony grant.',
+                `Same trigger pattern as unlockSting but on GE_Codex_Spoiler_${slug(e.name)}_ClassifiedTestimony grant.`,
             },
             wiringContract: {
               grantedBy: `SC_Codex_Unlock_${slug(e.name)} + SC_Codex_SpoilerReveal_${slug(e.name)} — SoundCue assets in /Game/Audio/Codex/`,
@@ -462,13 +468,13 @@ registerCatalogPipeline({
       archetype: 'checklist',
       label: 'Accessibility',
       view: { kind: 'checklist', field: 'a11yChecks' },
-      produce: () => ({
+      produce: (e: LabEntity) => ({
         data: {
           a11yChecks: [
             'Codex entry text is rendered in a scalable font (UI font-size setting, 14–24 pt range)',
             'Redaction notice is visually distinct (colour + icon, not color alone) for colorblind-safe diff',
             'Spoiler-gated paragraphs replaced with a legible text notice — not invisible/blank',
-            'Illustration alt-text ("T_TheSundering_CodexIllustration: Ashen Forest scar vista, post-Sundering") present for screen readers',
+            `Illustration alt-text ("T_${slug(e.name)}_CodexIllustration: Ashen Forest scar vista, post-Sundering") present for screen readers`,
             'Audio sting has a user-facing on/off toggle in the UI SFX settings (separate from gameplay SFX)',
             'Cross-reference links in the Related Entries panel are keyboard and controller navigable',
             'No timed UI elements — the codex can be read at any pace',
@@ -514,13 +520,13 @@ registerCatalogPipeline({
       archetype: 'checklist',
       label: 'Test Gate',
       view: { kind: 'checklist', field: 'checks' },
-      produce: () => ({
+      produce: (e: LabEntity) => ({
         data: {
           checks: [
-            'codex-sundering entry NOT visible before quest-ember-pact stage 1 or Ashen Forest zone entry',
-            'codex-sundering entry visible after quest-ember-pact stage 1 accepted (primary unlock path)',
-            'codex-sundering entry visible after Ashen Forest zone entry trigger (fallback unlock path)',
-            'State.Codex.Unlocked.codex-sundering tag applied exactly once (idempotent — re-trigger does not duplicate)',
+            `${e.id} entry NOT visible before quest-ember-pact stage 1 or Ashen Forest zone entry`,
+            `${e.id} entry visible after quest-ember-pact stage 1 accepted (primary unlock path)`,
+            `${e.id} entry visible after Ashen Forest zone entry trigger (fallback unlock path)`,
+            `State.Codex.Unlocked.${e.id} tag applied exactly once (idempotent — re-trigger does not duplicate)`,
             'classified testimony paragraph ABSENT (shows redaction notice) before quest-ember-pact stage 3',
             'classified testimony paragraph PRESENT after quest-ember-pact stage 3',
             'cross-reference links (faction / zone / character) navigate to their respective catalog panels in PIE',
@@ -582,8 +588,8 @@ registerCatalogPipeline({
                 `GE_Codex_Unlock_${s} + GE_Codex_Spoiler_${s}_ClassifiedTestimony compiled; ` +
                 `T_${s}_CodexIllustration + T_${s}_CodexIcon in /Game/UI/Icons/; ` +
                 `SC_Codex_Unlock_${s} + SC_Codex_SpoilerReveal_${s} in /Game/Audio/Codex/; ` +
-                `L3: VSCodexUnlockTest — unlock paths confirmed, spoiler gate respected, ' +
-                'cross-refs navigable in PIE (deferred)`,
+                `L3: VSCodexUnlockTest — unlock paths confirmed, spoiler gate respected, ` +
+                `cross-refs navigable in PIE (deferred)`,
             },
           },
           ueAssets: [

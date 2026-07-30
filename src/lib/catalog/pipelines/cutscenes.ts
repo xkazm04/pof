@@ -31,10 +31,19 @@ const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
  *   music::music-combat-a          — adaptive combat track (role: 'underscoring-music')
  *
  * Wiring: UARPGCinematicComponent on the GameMode/PlayerController starts the
- * LevelSequence asset (LS_Prologue_TheFall) at game start; skip/replay are
+ * LevelSequence asset (LS_<slug(entity.name)>) at game start; skip/replay are
  * handled via the component — never raw UE SequencePlayer calls in Blueprint
  * without the wrapper.  Beat markers in the Sequencer timeline fire
  * GameplayEvents that advance quest state or enable UI.
+ *
+ * IDENTITY: every step derives its asset/event names from ONE token family —
+ * s = slug(entity.name) — so a produce for a different entity never writes the
+ * exemplar's assets.  Assets: LS_<s>, T_<s>_CinematicIcon, V_PP_<s>_Cinematic,
+ * NS_<s>_*, SC_<s>_*, A_*_<s>_*, L_SkyLight_Cinematic<s>.  Events/tags:
+ * Cutscene.<s>.<Beat> (the artifact's own Cutscene.<Sequence>.<BeatName>
+ * convention) and State.<s>.CutsceneWatched.  Playback keys use entity.id.
+ * Story prose (the post-Sundering staging, Captain Vael's performance) stays
+ * template content — rewriting it per entity is live-mode LLM work.
  */
 registerCatalogPipeline({
   catalogId: 'cutscenes',
@@ -87,7 +96,14 @@ registerCatalogPipeline({
           { key: 'event' },
         ],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        // ONE derived identity family for every sibling step in this pipeline:
+        //   s        — the asset-name token (LS_<s>, NS_<s>_*, SC_<s>_*, V_PP_<s>_*)
+        //   evt(...)  — the GameplayEvent namespace, per the artifact's own
+        //               Cutscene.<Sequence>.<BeatName> convention (proj-naming).
+        const s = slug(e.name);
+        const evt = (beat: string) => `Cutscene.${s}.${beat}`;
+        return {
         data: {
           beats: [
             {
@@ -120,7 +136,7 @@ registerCatalogPipeline({
               tcOut: 58,
               description: 'Captain Vael enters frame left, moving at purpose.  He reaches a wounded soldier and hauls them clear of a collapsed arch — professional, no hesitation.',
               shot: 'Medium long-shot, Vael left-screen, fire-orange background right.  Cut to medium two-shot: Vael crouching over wounded, player watching in background (MG soft-focus).',
-              event: 'Gameplay event marker "Cutscene.Beat.VaelIntroEnter" fires at tcIn:38 (UARPGCinematicComponent notified; no player input at this beat)',
+              event: `Gameplay event marker "${evt('VaelIntroEnter')}" fires at tcIn:38 (UARPGCinematicComponent notified; no player input at this beat)`,
             },
             {
               index: 5,
@@ -128,7 +144,7 @@ registerCatalogPipeline({
               tcOut: 72,
               description: 'Vael stands.  Pauses.  Turns.  Eyes find the player character across the debris field.  Two-second hold on eye contact — Vael unreadable.',
               shot: 'Push-in on Vael face: bust shot, slight Dutch angle +3°, 50 mm lens.  Then match-cut reverse on player (Vael POV), similar framing.',
-              event: 'Beat marker "Cutscene.Beat.VaelEyeContact" fires at tcIn:58',
+              event: `Beat marker "${evt('VaelEyeContact')}" fires at tcIn:58`,
             },
             {
               index: 6,
@@ -136,7 +152,7 @@ registerCatalogPipeline({
               tcOut: 82,
               description: 'VFX: dying fire collapses in foreground, embers scatter across frame.  Wide pull-back to aerial match of Beat 1 — but the camera keeps rising.',
               shot: 'Wide shot matching Beat 1, then a slow crane-up exit.  VFX ember burst keyed to an AnimNotify at tcIn:72 (links vfx::vfx-fire-impact, muted palette variant).',
-              event: 'Beat marker "Cutscene.Beat.EmberCrescendo" at tcIn:72 — music-combat-a shifts from low-tension to silence stem over 10 s',
+              event: `Beat marker "${evt('EmberCrescendo')}" at tcIn:72 — music-combat-a shifts from low-tension to silence stem over 10 s`,
             },
             {
               index: 7,
@@ -144,7 +160,7 @@ registerCatalogPipeline({
               tcOut: 90,
               description: 'HARD CUT TO BLACK.  Two seconds of silence.  Then the first gameplay frame appears.',
               shot: 'Fade-to-black over 0.4 s.  Hold 2 s.  DISSOLVE to gameplay.',
-              event: 'Beat marker "Cutscene.Beat.End" at tcIn:82 — UARPGCinematicComponent fires Cutscene.End, re-enables player input, loads gameplay frame',
+              event: `Beat marker "${evt('End')}" at tcIn:82 — UARPGCinematicComponent fires ${evt('End')}, re-enables player input, loads gameplay frame`,
             },
           ],
           totalDurationSecs: 90,
@@ -155,23 +171,23 @@ registerCatalogPipeline({
             'GameplayEvent names follow Cutscene.<Sequence>.<BeatName> convention per proj-naming. ' +
             'Beat markers in the Sequencer timeline use an EventTrack bound to UARPGCinematicComponent. ' +
             'Wiring: UARPGCinematicComponent.NotifyBeat(name) dispatches events to the owning PlayerController; ' +
-            'Cutscene.Beat.End re-enables Enhanced Input and removes the cinematic input context.',
+            `${evt('End')} re-enables Enhanced Input and removes the cinematic input context.`,
           wiringContract: {
             grantedBy:
-              'UARPGCinematicComponent on the PlayerController/GameMode loads LS_Prologue_TheFall ' +
+              `UARPGCinematicComponent on the PlayerController/GameMode loads LS_${s} ` +
               'at game-start (pre-first-gameplay-frame); beat markers are EventTrack notifies ' +
               'bound to UARPGCinematicComponent.NotifyBeat.',
             activatedBy:
               'Game start (pre-gameplay) → PlayerController.BeginPlay → ' +
-              'UARPGCinematicComponent.PlayCutscene("cutscene-prologue") → ' +
-              'LS_Prologue_TheFall begins; beat events fire at marked frames.',
+              `UARPGCinematicComponent.PlayCutscene("${e.id}") → ` +
+              `LS_${s} begins; beat events fire at marked frames.`,
             dependencies: [
               'characters (char-captain-vael — animated actor in the sequence)',
               'music (music-combat-a — low-tension/silence stem switch at beat 6)',
               'vfx (vfx-fire-impact — ember burst at beat 6, muted palette)',
             ],
             verification:
-              'L2: LS_Prologue_TheFall asset path registered; UARPGCinematicComponent.cpp compiled; ' +
+              `L2: LS_${s} asset path registered; UARPGCinematicComponent.cpp compiled; ` +
               'L3: VSCutsceneTimingTest — sequence plays full 90 s, beat events fire at declared tc, ' +
               'skip/replay function in PIE (deferred)',
           },
@@ -181,7 +197,8 @@ registerCatalogPipeline({
           { catalogId: 'music',      entityId: 'music-combat-a',    role: 'underscoring-music' },
           { catalogId: 'vfx',        entityId: 'vfx-fire-impact',   role: 'ember-burst-vfx' },
         ],
-      }),
+        };
+      },
       accept: allOf(
         minCount('beats', '≥1 beat with tc/shot/event defined', 1),
         entriesHaveFields('beats', 'every beat carries tc in/out + shot + event', ['index', 'tcIn', 'tcOut', 'shot', 'event']),
@@ -195,17 +212,19 @@ registerCatalogPipeline({
       archetype: 'checklist',
       label: 'Blocking / Body Anim',
       view: { kind: 'checklist', field: 'blockingChecks' },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return {
         data: {
           blockingChecks: [
-            'Player character: regain-consciousness recovery animation (A_PCinema_Prologue_Wakeup) authored or selected from Manny base set',
-            'Player character: stand-up + cough loop (A_PCinema_Prologue_StandUp) — ≤4 s, loopable tail',
-            'Player character: idle-observe loop while watching Vael (A_PCinema_Prologue_Observe) — still, weight in feet',
-            'Captain Vael: purposeful-walk entry from frame-left (A_Vael_Prologue_WalkEntry) — military cadence, no bounce',
-            'Captain Vael: crouch-and-haul wounded soldier clear of arch (A_Vael_Prologue_HaulSurvivor) — contact anim, IK hands on wounded',
-            'Captain Vael: stand-and-turn (A_Vael_Prologue_TurnToPlayer) — held on last frame until eye-contact beat',
-            'Captain Vael: sustained eye-contact idle (A_Vael_Prologue_EyeContactIdle) — 2 s hold, micro shoulder breathe only',
-            'Wounded soldier: collapse-and-still transition (A_NPC_Prologue_CollapseStill) — generic, reuse from Manny morph if available',
+            `Player character: regain-consciousness recovery animation (A_PCinema_${s}_Wakeup) authored or selected from Manny base set`,
+            `Player character: stand-up + cough loop (A_PCinema_${s}_StandUp) — ≤4 s, loopable tail`,
+            `Player character: idle-observe loop while watching Vael (A_PCinema_${s}_Observe) — still, weight in feet`,
+            `Captain Vael: purposeful-walk entry from frame-left (A_Vael_${s}_WalkEntry) — military cadence, no bounce`,
+            `Captain Vael: crouch-and-haul wounded soldier clear of arch (A_Vael_${s}_HaulSurvivor) — contact anim, IK hands on wounded`,
+            `Captain Vael: stand-and-turn (A_Vael_${s}_TurnToPlayer) — held on last frame until eye-contact beat`,
+            `Captain Vael: sustained eye-contact idle (A_Vael_${s}_EyeContactIdle) — 2 s hold, micro shoulder breathe only`,
+            `Wounded soldier: collapse-and-still transition (A_NPC_${s}_CollapseStill) — generic, reuse from Manny morph if available`,
             'All clips are authored in the LevelSequence timeline with correct blend-in/-out frames (≥4 frames blend)',
             'Root motion baked for all walk/haul clips; no Z-swimming on Vael or player',
           ],
@@ -215,7 +234,8 @@ registerCatalogPipeline({
             'Control Rig pose-to-pose key-framing — no dedicated facial/lipsync pipeline.  This is an honest gap ' +
             'acknowledged below in the Facial/Lipsync step.',
         },
-      }),
+        };
+      },
       accept: minCount('blockingChecks', '≥1 blocking/body anim check listed', 1),
     },
 
@@ -252,12 +272,14 @@ registerCatalogPipeline({
         rowsKey: 'beatSetups',
         columns: [{ key: 'beat' }, { key: 'mood' }, { key: 'setup' }],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return {
         data: {
           lighting: {
             globalSetup: {
               timeOfDay: 'Overcast dawn — approximately 06:00, no direct sun',
-              skyLight: 'L_SkyLight_CinematicPrologue (intensity 0.4, Lux; diffuse-only to avoid harsh bounce)',
+              skyLight: `L_SkyLight_Cinematic${s} (intensity 0.4, Lux; diffuse-only to avoid harsh bounce)`,
               fogDensity: 'ExponentialHeightFog density 0.06 — ash-grey, horizon obscured past 400 m',
               colorTemp: '6200 K (neutral-cool, desaturated earth tones to match art-identity palette)',
             },
@@ -284,11 +306,12 @@ registerCatalogPipeline({
             ],
             notes:
               'All lights authored in the LevelSequence lighting track — no persistent world lights modified. ' +
-              'Cinematic post-process volume (V_PP_Prologue_Cinematic) overrides bloom 0.25, vignette 0.4, ' +
-              'contrast 1.05 for the cinematic look; deactivated at Cutscene.Beat.End.',
+              `Cinematic post-process volume (V_PP_${s}_Cinematic) overrides bloom 0.25, vignette 0.4, ` +
+              `contrast 1.05 for the cinematic look; deactivated at Cutscene.${s}.End.`,
           },
         },
-      }),
+        };
+      },
       accept: fieldsPopulated('lighting', 'global setup and per-beat setups defined', [
         'globalSetup',
         'beatSetups',
@@ -305,22 +328,24 @@ registerCatalogPipeline({
         rowsKey: 'systems',
         columns: [{ key: 'beat' }, { key: 'system' }, { key: 'note' }],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return {
         data: {
           vfx: {
             systems: [
               {
                 beat: 'Persistent (beats 1–7)',
-                system: 'NS_Prologue_AshFall',
+                system: `NS_${s}_AshFall`,
                 description:
                   'Continuous ambient ash / ember drift.  Spawn rate 30 particles/s, velocity drift left (matches sky-light direction). ' +
                   'GPU budget: ~0.12 ms (well within per-class limit ~0.48 ms).  ' +
-                  'Authored as a persistent Niagara actor spawned at Sequencer start, destroyed at Cutscene.Beat.End.',
+                  `Authored as a persistent Niagara actor spawned at Sequencer start, destroyed at Cutscene.${s}.End.`,
                 note: 'Original asset — no catalog link needed.',
               },
               {
                 beat: 'Beat 3 (tcIn:20) — survivor reach',
-                system: 'NS_Prologue_RubbleDust',
+                system: `NS_${s}_RubbleDust`,
                 description:
                   'One-shot dust burst as player character rises from rubble.  0.3 s burst, 80-particle count. ' +
                   'Keyed via Sequencer particle track at tc=20.  GPU budget: ~0.04 ms peak.',
@@ -341,7 +366,7 @@ registerCatalogPipeline({
             ],
             wiringContract: {
               grantedBy:
-                'Niagara actors spawned from the LevelSequence actor track (NS_Prologue_AshFall, NS_Prologue_RubbleDust) ' +
+                `Niagara actors spawned from the LevelSequence actor track (NS_${s}_AshFall, NS_${s}_RubbleDust) ` +
                 'or from an AnimNotify on the cinematic camera track (NS_FireImpactBurst at tc=72).',
               activatedBy:
                 'Sequencer playback — actors are spawned/enabled at the declared tc values; ' +
@@ -358,7 +383,8 @@ registerCatalogPipeline({
         links: [
           { catalogId: 'vfx', entityId: 'vfx-fire-impact', role: 'ember-burst-vfx' },
         ],
-      }),
+        };
+      },
       accept: allOf(
         fieldsPopulated('vfx', 'VFX systems and wiring contract defined', [
         'systems',
@@ -381,7 +407,9 @@ registerCatalogPipeline({
         rowsKey: 'sfxCues',
         columns: [{ key: 'tc', label: 'timecode', unit: 's' }, { key: 'cue' }, { key: 'description' }],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return {
         data: {
           musicSfx: {
             music: {
@@ -389,7 +417,7 @@ registerCatalogPipeline({
               description:
                 'The adaptive combat track music-combat-a is used in its lowest-tension stem configuration — ' +
                 'sparse strings and low drone, no percussion.  This is the ambient underscoring layer, not a combat cue. ' +
-                'Stem switch: at beat 6 (tcIn:72, "Cutscene.Beat.EmberCrescendo"), music-combat-a fades its active stems ' +
+                `Stem switch: at beat 6 (tcIn:72, "Cutscene.${s}.EmberCrescendo"), music-combat-a fades its active stems ` +
                 'to silence over 10 s via UARPGMusicComponent.FadeToSilence(duration=10).  ' +
                 'The sequence ends in silence (tc=82–90), giving the cut-to-gameplay a clean audio start.',
               startTime: 0,
@@ -400,25 +428,25 @@ registerCatalogPipeline({
             ambience: {
               description:
                 'Two ambient SFX layers run from the Sequencer audio track: ' +
-                '(1) SC_Prologue_WindEmbers — looping wind + crackle, 0.5 volume, panning left. ' +
-                '(2) SC_Prologue_DistantCollapse — one-shot structural-collapse impact at tc=8 (beat 1 end), ' +
+                `(1) SC_${s}_WindEmbers — looping wind + crackle, 0.5 volume, panning left. ` +
+                `(2) SC_${s}_DistantCollapse — one-shot structural-collapse impact at tc=8 (beat 1 end), ` +
                 'sub-bass emphasis, reinforcing the aerial reveal.',
-              assets: ['SC_Prologue_WindEmbers', 'SC_Prologue_DistantCollapse'],
+              assets: [`SC_${s}_WindEmbers`, `SC_${s}_DistantCollapse`],
             },
             sfxCues: [
               { tc: 20, cue: 'SC_PCinema_Cough', description: 'Player character cough — short, dry, 1 hit. Authored from SC pool.' },
               { tc: 38, cue: 'SC_Vael_Footstep_Stone', description: 'Vael boot on stone rubble — cadenced, 3 impacts over 1.5 s as he crosses.' },
-              { tc: 58, cue: 'SC_Prologue_BreathHold', description: '0.4 s near-silence breath-hold on eye-contact beat — dramatic beat pause.' },
+              { tc: 58, cue: `SC_${s}_BreathHold`, description: '0.4 s near-silence breath-hold on eye-contact beat — dramatic beat pause.' },
               { tc: 72, cue: 'SC_FireImpactBurst_Muted', description: 'Soft whoosh + ember crackle timed to the NS_FireImpactBurst VFX. Derived from fire SFX pool, filtered through a low-pass shelf to match the muted VFX palette.' },
             ],
             wiringContract: {
               grantedBy:
                 'Music: UARPGMusicComponent on PlayerController plays music-combat-a low-tension stem from tc=0; ' +
-                'fades to silence at beat 6 via Cutscene.Beat.EmberCrescendo event. ' +
+                `fades to silence at beat 6 via Cutscene.${s}.EmberCrescendo event. ` +
                 'SFX: Sequencer audio tracks carry the ambient loops and one-shot cues directly — no external trigger needed.',
               activatedBy:
                 'Music: UARPGCinematicComponent.PlayCutscene fires StartMusic(music-combat-a, stem:low-tension) at start; ' +
-                'beat event "Cutscene.Beat.EmberCrescendo" at tc=72 calls FadeToSilence(10). ' +
+                `beat event "Cutscene.${s}.EmberCrescendo" at tc=72 calls FadeToSilence(10). ` +
                 'SFX: Sequencer timeline — audio sub-tracks play at declared tc values.',
               dependencies: [
                 'music (music-combat-a — adaptive combat track, low-tension stem)',
@@ -433,7 +461,8 @@ registerCatalogPipeline({
         links: [
           { catalogId: 'music', entityId: 'music-combat-a', role: 'underscoring-music' },
         ],
-      }),
+        };
+      },
       accept: allOf(
         fieldsPopulated('musicSfx', 'music / ambience / sfxCues / wiring contract defined', [
         'music',
@@ -477,7 +506,7 @@ registerCatalogPipeline({
         data: {
           subtitleChecks: [
             '[NO VO → no spoken subtitles] Sequence has no dialogue lines requiring subtitle text',
-            `Accessibility caption for the sequence title: CINEMATIC_${slug(e.name).toUpperCase()}_TITLE — displayed in the skip-prompt overlay (e.g. "[A] Skip Cinematic: Prologue: The Fall")`,
+            `Accessibility caption for the sequence title: CINEMATIC_${slug(e.name).toUpperCase()}_TITLE — displayed in the skip-prompt overlay (e.g. "[A] Skip Cinematic: ${e.name}")`,
             `Skip-prompt loc key: CINEMATIC_${slug(e.name).toUpperCase()}_SKIP_PROMPT — format "{ButtonIcon} Skip Cinematic: {CinematicTitle}"`,
             `Replay-prompt loc key: CINEMATIC_${slug(e.name).toUpperCase()}_REPLAY_PROMPT — format "{ButtonIcon} Replay Cinematic: {CinematicTitle}"`,
             'All loc keys follow the CINEMATIC_<SLUG>_<KEY> convention in Content/Localization/Cinematics/',
@@ -508,22 +537,24 @@ registerCatalogPipeline({
           { key: 'hudBehavior', label: 'HUD behavior' },
         ],
       },
-      produce: (e: LabEntity) => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return {
         data: {
           skipReplay: {
             skipGraceWindowSecs: 3,
             skipInput: 'IA_Skip (Enhanced Input action; any face button / Space key); input mapping in IMC_Cinematic context',
             skipBehavior:
               'After the 3-second grace window, the skip-prompt overlay becomes visible. ' +
-              'On skip input: UARPGCinematicComponent.SkipCutscene() — immediately fires Cutscene.Beat.End, ' +
+              `On skip input: UARPGCinematicComponent.SkipCutscene() — immediately fires Cutscene.${s}.End, ` +
               'stops the LevelSequence, re-enables player input, and transitions to gameplay. ' +
-              'World state is force-set to match the post-cutscene state (State.Prologue.CutsceneWatched applied even on skip).',
+              `World state is force-set to match the post-cutscene state (State.${s}.CutsceneWatched applied even on skip).`,
             replayAvailability:
               'Replayable from the main menu via Settings → Gallery → Cinematics. ' +
-              `Replay key: '${e.id}' (cutscene-prologue).  UARPGCinematicComponent.ReplayCutscene("${e.id}") ` +
+              `Replay key: '${e.id}' (${e.id}).  UARPGCinematicComponent.ReplayCutscene("${e.id}") ` +
               'sets a ReplayMode flag that suppresses world-state mutation effects during replay.',
             noRetrigger:
-              'State.Prologue.CutsceneWatched tag applied on Cutscene.Beat.End (or on skip). ' +
+              `State.${s}.CutsceneWatched tag applied on Cutscene.${s}.End (or on skip). ` +
               'GameMode.BeginPlay checks the tag — if set, bypasses the cutscene entirely and goes directly to gameplay.',
             hudBehavior:
               'HUD is fully suppressed during the cutscene (input mode GameOnly, HUD hidden). ' +
@@ -542,12 +573,13 @@ registerCatalogPipeline({
               verification:
                 'L2: UARPGCinematicComponent.cpp compiled; IA_Skip input action declared in IMC_Cinematic; ' +
                 'WBP_CinematicSkipPrompt in /Game/UI/Cinematics/; ' +
-                'L3: VSCutsceneTimingTest — skip fires Cutscene.Beat.End, State.Prologue.CutsceneWatched applied, ' +
+                `L3: VSCutsceneTimingTest — skip fires Cutscene.${s}.End, State.${s}.CutsceneWatched applied, ` +
                 'replay suppresses world-state mutation (deferred)',
             },
           },
         },
-      }),
+        };
+      },
       accept: allOf(
         fieldsPopulated('skipReplay', 'skip/replay rules defined', [
           'skipGraceWindowSecs',
@@ -585,14 +617,16 @@ registerCatalogPipeline({
       archetype: 'checklist',
       label: 'Test Gate',
       view: { kind: 'checklist', field: 'checks' },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return {
         data: {
           checks: [
             'Sequence plays from tc=0 to tc=90 without stalls or hitches in PIE',
             'Beat events fire at declared tc values (±0.1 s tolerance): VaelIntroEnter@38, VaelEyeContact@58, EmberCrescendo@72, End@82',
-            'Skip input fires Cutscene.Beat.End and transitions to gameplay within 1 frame',
-            'State.Prologue.CutsceneWatched tag applied after sequence completes OR after skip',
-            'GameMode.BeginPlay skips the cutscene entirely if State.Prologue.CutsceneWatched is already set',
+            `Skip input fires Cutscene.${s}.End and transitions to gameplay within 1 frame`,
+            `State.${s}.CutsceneWatched tag applied after sequence completes OR after skip`,
+            `GameMode.BeginPlay skips the cutscene entirely if State.${s}.CutsceneWatched is already set`,
             'Replay mode: cutscene plays correctly from the gallery menu; world-state mutation suppressed',
             'music-combat-a FadeToSilence fires at tc=72; no audio artifact on fade',
             'NS_FireImpactBurst ember burst triggers at tc=72 (AnimNotify pathway)',
@@ -600,7 +634,8 @@ registerCatalogPipeline({
             'HUD is fully hidden during the sequence; WBP_CinematicSkipPrompt visible only after 3 s grace window',
           ],
         },
-      }),
+        };
+      },
       accept: entityRuntimeDeferred(
         'VSCutsceneTimingTest',
         'Sequence plays + skip/replay work in PIE',
@@ -639,7 +674,7 @@ registerCatalogPipeline({
                 `(the LevelSequence asset at /Game/Cinematics/${s}/LS_${s}). ` +
                 `WBP_CinematicSkipPrompt is spawned by the component after the grace window.`,
               activatedBy:
-                `PlayerController.BeginPlay (first game load, no State.Prologue.CutsceneWatched tag) → ` +
+                `PlayerController.BeginPlay (first game load, no State.${s}.CutsceneWatched tag) → ` +
                 `UARPGCinematicComponent.PlayCutscene("${e.id}") → LS_${s} plays; ` +
                 `beat EventTrack notifies bound to UARPGCinematicComponent.NotifyBeat(name). ` +
                 `Skip: IA_Skip → UARPGCinematicComponent.SkipCutscene(). ` +

@@ -9,6 +9,8 @@ import { linksResolve } from '../acceptance/linkCheckers';
 import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
+/** Entity-id stem per this catalog's id convention: 'char-captain-vael' → 'captain-vael'. */
+const idStem = (id: string) => id.replace(/^char-/, '');
 
 /**
  * Characters pipeline (catalogId: 'characters').
@@ -37,7 +39,7 @@ registerCatalogPipeline({
             `automatically displays a gold "!" indicator via GetRoleColor/GetRoleDisplayText. ` +
             `Martially capable but a talker first: level-5 base stats, Strength-primary attribute ` +
             `spread, and grants both Melee Attack (off-phy-01) and Heavy Attack (off-phy-02) via the ` +
-            `shared UARPGAbilitySystemComponent. His dialogue tree is bound to NPCID=CaptainVael; ` +
+            `shared UARPGAbilitySystemComponent. His dialogue tree is bound to NPCID=${slug(e.name)}; ` +
             `the TalkTo quest-subsystem event grants the introductory quest on conversation end. ` +
             `Visual presentation reuses the SKM_Manny + ABP_Manny mannequin path (no bespoke mesh ` +
             `pipeline exists yet); a captain-specific texture/material pass is a gap pending the ` +
@@ -114,11 +116,11 @@ registerCatalogPipeline({
                 'Stats live in DT_AttributeDefaults (FARPGAttributeInitRow, canon char-stat-source).',
             },
             wiringContract: {
-              grantedBy: 'AARPGNPCActor at BeginPlay — reads FARPGAttributeInitRow from DT_AttributeDefaults keyed by NPCID=CaptainVael',
+              grantedBy: `AARPGNPCActor at BeginPlay — reads FARPGAttributeInitRow from DT_AttributeDefaults keyed by NPCID=${s}`,
               activatedBy: 'BeginPlay → UARPGAbilitySystemComponent::InitAbilityActorInfo → attribute init from DT_AttributeDefaults row',
               dependencies: ['spellbook (off-phy-01 Melee Attack, off-phy-02 Heavy Attack — granted by UARPGAbilitySystemComponent)'],
               verification:
-                'L2: FARPGAttributeInitRow struct compiled in Source/PoF/; CaptainVael row present in DT_AttributeDefaults; ' +
+                `L2: FARPGAttributeInitRow struct compiled in Source/PoF/; ${s} row present in DT_AttributeDefaults; ` +
                 'L3: VSCharacterVaelTest — deferred (asserts NPCID/role/indicator config; runtime attribute init pending PIE run)',
             },
           },
@@ -131,7 +133,7 @@ registerCatalogPipeline({
       ),
       staticChecks: (e) => [
         cppSymbolExists('FARPGAttributeInitRow', 'Attribute init row struct present'),
-        seedRowPresent('seed_attribute_defaults.py', slug(e.name), 'CaptainVael stat row seeded in DT_AttributeDefaults'),
+        seedRowPresent('seed_attribute_defaults.py', slug(e.name), `${slug(e.name)} stat row seeded in DT_AttributeDefaults`),
       ],
     },
 
@@ -181,28 +183,29 @@ registerCatalogPipeline({
       view: { kind: 'table', field: 'behavior', columns: [{ key: 'role' }, { key: 'npcId' }, { key: 'dialogueBinding' }] },
       produce: (e: LabEntity) => {
         const s = slug(e.name);
+        const stem = idStem(e.id);
         return {
           data: {
             behavior: {
               role: 'QuestGiver',
               npcId: s,
-              // Real seeded dialog-trees entity; Vael's flavor name noted as pending its own seed.
+              // Real seeded dialog-trees entity; this entity's flavor name noted as pending its own seed.
               dialogueBinding: 'dialog-gatekeeper',
               roleNote:
                 'QuestGiver activates gold "!" indicator via AARPGNPCActor.GetRoleColor/GetRoleDisplayText. ' +
                 '"dialog-gatekeeper" is the resolvable seeded dialog-trees entity; ' +
-                'Vael\'s bespoke dialog-captain-vael entry is pending a dialog-trees catalog row (unblocking dep).',
+                `${e.name}'s bespoke dialog-${stem} entry is pending a dialog-trees catalog row (unblocking dep).`,
               questNote:
-                'Quest link targets quest-ember-pact (seeded). Vael\'s own quest (quest-vael-intro) ' +
+                `Quest link targets quest-ember-pact (seeded). ${e.name}'s own quest (quest-${stem}-intro) ` +
                 'is pending a quests catalog row; referenced in data.links as a pending note per ' +
                 'plan.md cross-catalog dependencies.',
             },
             wiringContract: {
-              grantedBy: 'AARPGNPCActor — UARPGDialogueComponent bound via NPCID=CaptainVael; AARPGQuestSubsystem TalkTo event fires on dialogue end',
+              grantedBy: `AARPGNPCActor — UARPGDialogueComponent bound via NPCID=${s}; AARPGQuestSubsystem TalkTo event fires on dialogue end`,
               activatedBy: 'Player interaction (overlap + input) → NPCID TalkTo lookup → UARPGDialogueComponent::StartDialogue → quest grant on complete',
               dependencies: [
-                'dialog-trees (dialog-gatekeeper — resolvable seeded entry; dialog-captain-vael pending catalog row)',
-                'quests (quest-ember-pact — resolvable seeded entry; quest-vael-intro pending catalog row)',
+                `dialog-trees (dialog-gatekeeper — resolvable seeded entry; dialog-${stem} pending catalog row)`,
+                `quests (quest-ember-pact — resolvable seeded entry; quest-${stem}-intro pending catalog row)`,
                 'spellbook (off-phy-01 Melee Attack, off-phy-02 Heavy Attack)',
               ],
               verification:
@@ -239,14 +242,14 @@ registerCatalogPipeline({
     {
       archetype: 'checklist', label: 'Test Gate',
       view: { kind: 'checklist', field: 'checks' },
-      produce: () => ({
+      produce: (e: LabEntity) => ({
         data: {
           checks: [
-            'NPC spawns in PIE with correct NPCID=CaptainVael',
+            `NPC spawns in PIE with correct NPCID=${slug(e.name)}`,
             'QuestGiver role indicator (gold "!") renders via GetRoleColor',
             'dialogue interaction fires UARPGDialogueComponent::StartDialogue',
             'quest-ember-pact objective granted on dialogue completion',
-            'FARPGAttributeInitRow values match DT_AttributeDefaults CaptainVael row',
+            `FARPGAttributeInitRow values match DT_AttributeDefaults ${slug(e.name)} row`,
             'off-phy-01 + off-phy-02 abilities granted by UARPGAbilitySystemComponent at BeginPlay',
           ],
         },
@@ -273,16 +276,16 @@ registerCatalogPipeline({
             assets,
             wiringContract: {
               grantedBy:
-                'AARPGNPCActor (BP_CaptainVael) — reads NPCID/role from BP defaults; ' +
-                'stats from DT_AttributeDefaults keyed by entity slug; ' +
+                `AARPGNPCActor (BP_${s}) — reads NPCID/role from BP defaults; ` +
+                `stats from DT_AttributeDefaults keyed by NPCID=${s}; ` +
                 'abilities from UARPGAbilitySystemComponent StartupAbilities array',
               activatedBy:
                 'BeginPlay → AARPGNPCActor::BeginPlay: init attribute set from DT_AttributeDefaults, ' +
                 'grant startup abilities (off-phy-01, off-phy-02), activate role indicator logic',
               dependencies: [
                 'spellbook (off-phy-01 Melee Attack + off-phy-02 Heavy Attack — compiled GEs in DT_GeneratedAbilities)',
-                'dialog-trees (dialog-gatekeeper seeded; dialog-captain-vael pending)',
-                'quests (quest-ember-pact seeded; quest-vael-intro pending)',
+                `dialog-trees (dialog-gatekeeper seeded; dialog-${idStem(e.id)} pending)`,
+                `quests (quest-ember-pact seeded; quest-${idStem(e.id)}-intro pending)`,
               ],
               verification:
                 'L2: AARPGNPCActor compiled + FARPGAttributeInitRow in Source/PoF/; ' +

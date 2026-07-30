@@ -134,7 +134,7 @@ registerCatalogPipeline({
               activatedBy: 'On-equip (slot assignment in UARPGInventoryComponent)',
               dependencies: ['UARPGAttributeSet (stat targets)', 'UARPGItemDefinition (schema)', 'DT_Items (data row)'],
               verification:
-                'L2: cppSymbolExists(UARPGItemDefinition) + seedRowPresent(author_items.py, DA_<slug>); ' +
+                `L2: cppSymbolExists(UARPGItemDefinition) + seedRowPresent(author_items.py, DA_${slug(e.name)}); ` +
                 'L3: VSItemsDefinitionsTest — DA loaded + requiredLevel/slot/rarity fields assert correct',
             },
           },
@@ -387,7 +387,7 @@ registerCatalogPipeline({
               ],
               verification:
                 'L2: cppSymbolExists(UARPGItemDefinition) + all GE_ headers in Source/; ' +
-                'L3: VSItemsDefinitionsTest — equip Iron Longsword on dummy ASC, assert AttackPower delta ' +
+                `L3: VSItemsDefinitionsTest — equip ${e.name} on dummy ASC, assert AttackPower delta ` +
                 'and that each affix GE handle is active on the ASC',
             },
           },
@@ -447,7 +447,7 @@ registerCatalogPipeline({
           data: {
             damage: {
               // Weapon base stats (no affixes applied)
-              baseType: 'Iron Longsword',
+              baseType: e.name,
               damageType: 'Physical',      // matches UE damage-type enum
               damageMin,                   // 12
               damageMax,                   // 18
@@ -654,7 +654,7 @@ registerCatalogPipeline({
             description:
               'A standard iron-forged longsword, edge kept sharp by a soldier\'s habit. ' +
               'Reliable and unremarkable — a weapon that outlasts the hands that wield it.',
-            headerLine: 'Iron Longsword',
+            headerLine: e.name,
             subHeaderLine: 'One-Handed Sword',
             implicitLine: '+30 Accuracy Rating',
             separatorAfterImplicit: true,
@@ -671,8 +671,8 @@ registerCatalogPipeline({
               'Increased Attack Speed displays as "APS ×(1+increased%)" to make speed intuitive. ' +
               'HUD tooltip binds to hud-elements presentation catalog (canon proj-hud-binding).',
             locKeys: {
-              name: 'Item_IronLongsword_Name',
-              desc: 'Item_IronLongsword_Desc',
+              name: `Item_${slug(e.name)}_Name`,
+              desc: `Item_${slug(e.name)}_Desc`,
             },
           },
         },
@@ -689,10 +689,12 @@ registerCatalogPipeline({
       archetype: 'checklist',
       label: 'Test Gate',
       view: { kind: 'checklist', field: 'checks' },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return ({
         data: {
           checks: [
-            'DA_IronLongsword loads correctly from /Game/Data/Items/',
+            `DA_${s} loads correctly from /Game/Data/Items/`,
             'DisplayName / Description / Type / Rarity / RequiredLevel match canonical fields',
             'OnEquipEffect GE grants expected AttackPower (or attribute delta)',
             'Each explicit affix GE handle is active on the ASC after equip',
@@ -714,12 +716,13 @@ registerCatalogPipeline({
               'author_items.py (seed script)',
             ],
             verification:
-              'L2: UARPGItemDefinition declared in Source/ + DA_IronLongsword seeded in author_items.py; ' +
+              `L2: UARPGItemDefinition declared in Source/ + DA_${s} seeded in author_items.py; ` +
               'L3: VSItemsDefinitionsTest (VSItems.umap) — 19+ assertions: loads DA, checks fields, ' +
               'equips on dummy ASC, asserts GE handles active, asserts attribute delta',
           },
         },
-      }),
+      });
+      },
       accept: allOf(
         entityRuntimeDeferred(
           'VSItemsDefinitionsTest',

@@ -92,7 +92,9 @@ registerCatalogPipeline({
           { key: 'assetRef' },
         ],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return ({
         data: {
           layers: {
             // ── BED (2D stereo, continuous) ──
@@ -103,7 +105,7 @@ registerCatalogPipeline({
               gainNote: '−6 dB relative to living-forest reference; marks transition from Whisper Woods',
               looping: true,
               loopCrossfadeMs: 200,
-              assetRef: 'SC_AshenForestBed',
+              assetRef: `SC_${s}Bed`,
               content:
                 'Low-frequency wind channelled through hollow dead trunks (100–400 Hz emphasis); ' +
                 'distant subsonic crackle (embers, not thunder); ' +
@@ -113,17 +115,17 @@ registerCatalogPipeline({
               wiringContract: {
                 grantedBy:
                   'UAmbientSoundComponent (AmbientSound actor placed in /Game/Maps/AshenForest.umap) ' +
-                  'plays SC_AshenForestBed on BeginPlay; references DT_Ambient row "AshenForestDay"',
+                  `plays SC_${s}Bed on BeginPlay; references DT_Ambient row "${s}"`,
                 activatedBy:
                   'Level BeginPlay — the AmbientSound actor auto-activates; ' +
                   'crossfades to "night" variant when TimeOfDay RTPC crosses the dusk threshold',
                 dependencies: [
                   'zone-map::zone-z-ashen (the level that hosts this AmbientSound actor)',
-                  'DT_Ambient :: AshenForestDay (row drives UAmbientSoundComponent selection)',
+                  `DT_Ambient :: ${s} (row drives UAmbientSoundComponent selection)`,
                 ],
                 verification:
-                  'L0: DT_Ambient row AshenForestDay present in seed_audio.py; ' +
-                  'L2: SC_AshenForestBed asset present in Content/Audio/Ambient/AshenForest/; ' +
+                  `L0: DT_Ambient row ${s} present in seed_audio.py; ` +
+                  `L2: SC_${s}Bed asset present in Content/Audio/Ambient/${s}/; ` +
                   'L3: VSAmbientTest — bed plays on level load, gain reads −6 dB at listener',
               },
             },
@@ -238,7 +240,8 @@ registerCatalogPipeline({
         links: [
           { catalogId: 'zone-map', entityId: 'zone-z-ashen', role: 'zone-binding' },
         ],
-      }),
+        });
+      },
       accept: allOf(
         fieldsPopulated('layers', 'Bed + detail loops + one-shots + wiring contract declared', [
         'bed',
@@ -263,7 +266,9 @@ registerCatalogPipeline({
           { key: 'attenuationPreset' },
         ],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return ({
         data: {
           spatialization: {
             // 2D bed plays as a non-spatialized stereo source — the listener is "inside" the zone.
@@ -300,7 +305,7 @@ registerCatalogPipeline({
               note: 'Any emitter whose computed gain drops below −40 dB at the listener position is virtualised (not rendered) by Wwise voice virtualization.',
             },
             attenuationPreset: {
-              name: 'ATT_AshenForest_Mid',
+              name: `ATT_${s}_Mid`,
               shape: 'Logarithmic (UE: Attenuation_Logarithmic)',
               minDistanceCm: 150,
               maxDistanceCm: 2000,
@@ -311,24 +316,25 @@ registerCatalogPipeline({
             },
             wiringContract: {
               grantedBy:
-                'UAudioComponent on each source SM actor reads ATT_AshenForest_Mid; ' +
+                `UAudioComponent on each source SM actor reads ATT_${s}_Mid; ` +
                 'Wwise AkComponent handles binaural + obstruction per Wwise project settings',
               activatedBy:
                 'Static mesh BeginPlay binds the UAudioComponent; 2D bed starts on level load ' +
                 'via the AmbientSound actor; one-shot timer driven by MetaSound patch',
               dependencies: [
                 'zone-map::zone-z-ashen (/Game/Maps/AshenForest.umap — emitter actors live in the level)',
-                'ATT_AshenForest_Mid (attenuation preset asset, Content/Audio/Attenuation/)',
+                `ATT_${s}_Mid (attenuation preset asset, Content/Audio/Attenuation/)`,
                 'Wwise project (AkGeometry + binaural render path configured)',
               ],
               verification:
-                'L0: ATT_AshenForest_Mid fields populated in this step; ' +
+                `L0: ATT_${s}_Mid fields populated in this step; ` +
                 'L2: UAudioComponent present on ember-pit + charred-trunk actors in the .umap; ' +
                 'L3: VSAmbientTest — 3D emitters audible within inner radius, inaudible at outer+10%',
             },
           },
         },
-      }),
+        });
+      },
       accept: allOf(
         fieldsPopulated('spatialization', 'Bed strategy + emitter contract + attenuation preset declared', [
           'bedStrategy',
@@ -352,7 +358,9 @@ registerCatalogPipeline({
           { key: 'antiRepetition' },
         ],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return ({
         data: {
           variants: {
             // Day/Night variants driven by a single TimeOfDay RTPC.
@@ -360,14 +368,14 @@ registerCatalogPipeline({
               variantCount: 2,
               switchMethod: 'Wwise RTPC "TimeOfDay" (0.0 = midday, 1.0 = midnight) crossfades bed texture over 8 s',
               dayVariant: {
-                label: 'Forest Day (this entity)',
-                bedAsset: 'SC_AshenForestBed_Day',
+                label: `${e.name} (this entity)`,
+                bedAsset: `SC_${s}Bed_Day`,
                 oneShotMix: 'ember drift active; branch collapse active; silence beat active',
                 gainModDb: 0,
               },
               nightVariant: {
-                label: 'Forest Night (future — not authored in this row)',
-                bedAsset: 'SC_AshenForestBed_Night',
+                label: `${e.name} — night variant (future — not authored in this row)`,
+                bedAsset: `SC_${s}Bed_Night`,
                 oneShotMix: 'ember drift active; branch collapse active; silence beat more frequent (30–60 s); add night-wind gust',
                 gainModDb: -2,
                 note: 'Night variant authored when TimeOfDay system is implemented; bed crossfade handles the transition.',
@@ -430,7 +438,8 @@ registerCatalogPipeline({
             },
           },
         },
-      }),
+        });
+      },
       accept: allOf(
         fieldsPopulated('variants', 'Day/night + randomization + anti-repetition rules declared', [
           'dayNight',
@@ -558,7 +567,8 @@ registerCatalogPipeline({
         highlightKey: 'totalDecodedMb',
         max: 8.5,
       },
-      produce: () => {
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
         // Asset-by-asset decoded size estimate:
         //   Bed (stereo, 120 s loop, 44.1 kHz, 16-bit, 2ch): 2×44100×2×120 / 1048576 ≈ 20 MB raw → Wwise ADPCM 4:1 ≈ 5.0 MB
         //   3 detail loops (mono, avg 30 s each, 44.1 kHz, 16-bit, 1ch): 3 × (44100×2×30)/1048576 ≈ 3×2.5 MB raw → ADPCM ≈ 3×0.63 = 1.9 MB
@@ -581,7 +591,7 @@ registerCatalogPipeline({
               budgetCapMb: 8.0,
               assetBreakdown: {
                 bedStreamed: {
-                  asset: 'SC_AshenForestBed_Day',
+                  asset: `SC_${s}Bed_Day`,
                   format: 'Wwise Vorbis (streamed, not resident)',
                   rawSizeMb: 20.0,
                   compressedMb: 5.0,
@@ -629,7 +639,9 @@ registerCatalogPipeline({
         field: 'zoneBinding',
         columns: [{ key: 'primaryZone' }, { key: 'activationEvents' }, { key: 'wiringContract' }],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return ({
         data: {
           zoneBinding: {
             primaryZone: {
@@ -642,7 +654,7 @@ registerCatalogPipeline({
               deactivationTrigger: 'Level EndPlay (explicit unload) or zone-exit crossfade to next zone',
             },
             activationEvents: {
-              onLoad: 'AmbientSound actor auto-activates; bed begins playing SC_AshenForestBed_Day',
+              onLoad: `AmbientSound actor auto-activates; bed begins playing SC_${s}Bed_Day`,
               onEnterFromWhisperWoods:
                 'Zone transition from z2 (seamless) — bed crossfades in over 3 s from silence; ' +
                 'the −6 dB gain shift versus the Whisper Woods soundscape is the perceptible tonal marker.',
@@ -657,7 +669,7 @@ registerCatalogPipeline({
             },
             wiringContract: {
               grantedBy:
-                'AmbientSound actor in /Game/Maps/AshenForest.umap plays SC_AshenForestBed_Day; ' +
+                `AmbientSound actor in /Game/Maps/AshenForest.umap plays SC_${s}Bed_Day; ` +
                 'Wwise RTPC "CombatState" ducks/unducks the ambient bus',
               activatedBy:
                 'Level BeginPlay — AmbientSound actor auto-activates; ' +
@@ -683,7 +695,8 @@ registerCatalogPipeline({
         links: [
           { catalogId: 'zone-map', entityId: 'zone-z-ashen', role: 'primary-zone' },
         ],
-      }),
+        });
+      },
       accept: allOf(
         fieldsPopulated('zoneBinding', 'Primary zone + activation events + wiring contract declared', [
         'primaryZone',
@@ -725,10 +738,10 @@ registerCatalogPipeline({
       archetype: 'checklist',
       label: 'Test Gate',
       view: { kind: 'checklist', field: 'checks' },
-      produce: () => ({
+      produce: (e: LabEntity) => ({
         data: {
           checks: [
-            'Ambient bed plays on level load (SC_AshenForestBed_Day active within 1 s of BeginPlay)',
+            `Ambient bed plays on level load (SC_${slug(e.name)}Bed_Day active within 1 s of BeginPlay)`,
             'Bed gain reads −6 dB at listener position (calibrated against living-forest reference)',
             'All 3 detail-loop emitters active and audible within their inner radius',
             'Ember drift one-shot triggers within 20 s of level load (first interval)',
@@ -763,7 +776,7 @@ registerCatalogPipeline({
           `SC_SilenceBeat`,
           `MS_${s}Patch`,
           `DT_Ambient :: ${s}`,
-          `ATT_AshenForest_Mid`,
+          `ATT_${s}_Mid`,
         ];
         return {
           data: {
@@ -772,14 +785,14 @@ registerCatalogPipeline({
               a.startsWith('DT_') ? `/Game/Audio/DataTables/${a}` :
               a.startsWith('ATT_') ? `/Game/Audio/Attenuation/${a}` :
               a.startsWith('MS_') ? `/Game/Audio/MetaSounds/Ambient/${a}` :
-              `/Game/Audio/Ambient/AshenForest/${a}`
+              `/Game/Audio/Ambient/${s}/${a}`
             ),
             wiringContract: {
               grantedBy:
                 `MS_${s}Patch (MetaSound asset) orchestrates all layer playback: ` +
                 'bed selection (day/night), detail-loop spawning, one-shot scheduler; ' +
                 `DT_Ambient row "${s}" drives UAmbientSoundComponent asset + gain selection; ` +
-                'ATT_AshenForest_Mid is the shared attenuation DataAsset for all 3D emitters',
+                `ATT_${s}_Mid is the shared attenuation DataAsset for all 3D emitters`,
               activatedBy:
                 `AmbientSound actor in /Game/Maps/AshenForest.umap references MS_${s}Patch; ` +
                 'BeginPlay triggers auto-activate; Wwise RTPC "TimeOfDay" + "CombatState" ' +
@@ -788,16 +801,16 @@ registerCatalogPipeline({
                 'zone-map::zone-z-ashen (/Game/Maps/AshenForest.umap — hosts AmbientSound + UAudioComponent emitters)',
                 'icon-sets::iconset-abilities (shared icon family; ambient icon belongs to the same set family)',
                 `DT_Ambient :: ${s} (DataTable row seeded via seed_audio.py)`,
-                'ATT_AshenForest_Mid (attenuation DataAsset)',
+                `ATT_${s}_Mid (attenuation DataAsset)`,
                 `MS_${s}Patch (MetaSound patch — random-interval + variant scheduler)`,
                 'Wwise project (AkGeometry + AkRoom + RTPC "TimeOfDay" + "CombatState" configured)',
               ],
               verification:
                 `L2: SC_${s}Bed_Day + SC_EmberPitCrackle + SC_CharredTreeCreak + SC_HollowWindPulse ` +
-                'present in Content/Audio/Ambient/AshenForest/; ' +
+                `present in Content/Audio/Ambient/${s}/; ` +
                 `MS_${s}Patch compiled without errors; ` +
                 `DT_Ambient row "${s}" seeded via seed_audio.py; ` +
-                'ATT_AshenForest_Mid present in Content/Audio/Attenuation/; ' +
+                `ATT_${s}_Mid present in Content/Audio/Attenuation/; ` +
                 'UE placement uses AAmbientSound actor + UAudioComponent for 3D emitters ' +
                 '(not UAmbientSoundComponent — that symbol does not exist in the engine); ' +
                 'L3: VSAmbientTest (deferred) — all checks in Test Gate step pass in PIE',
@@ -815,7 +828,7 @@ registerCatalogPipeline({
             a.startsWith('DT_') ? `/Game/Audio/DataTables/${a}` :
             a.startsWith('ATT_') ? `/Game/Audio/Attenuation/${a}` :
             a.startsWith('MS_') ? `/Game/Audio/MetaSounds/Ambient/${a}` :
-            `/Game/Audio/Ambient/AshenForest/${a}`
+            `/Game/Audio/Ambient/${s}/${a}`
           ),
         };
       },

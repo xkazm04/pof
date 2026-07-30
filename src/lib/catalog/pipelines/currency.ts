@@ -31,6 +31,13 @@ const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
  * Wiring: UARPGWalletComponent::AddCurrency / SpendCurrency on the player.
  * Currency mutations operate via the crafting/affix system on items.
  * Realizes to FARPGCurrencyDef rows in DT_Currencies.
+ *
+ * IDENTITY: every step names THIS entity from ONE token family —
+ * s = slug(entity.name) for assets (T_<s>_Icon, the DT_Currencies row key) and
+ * entity.name in the ledger prose — so producing for another currency never
+ * writes the exemplar's identity.  The two-tier taxonomy (soft vs crafting-orb)
+ * and the orb table are canon exposition, not this entity's identity, and stay
+ * as authored.
  */
 
 registerCatalogPipeline({
@@ -51,11 +58,11 @@ registerCatalogPipeline({
             `CURRENCIES (Transmute, Alteration, Augment, Regal, Alchemy, Chaos, Exalt, Divine orbs) ` +
             `— consumable item-mutation tools whose effect IS a deterministic-ish transformation of ` +
             `an item's affix pool, never a free-form gold shortcut. ` +
-            `Gold is uncapped by default (no inflation cap or decay unless tuned) but cap/decay knobs ` +
+            `${e.name} is uncapped by default (no inflation cap or decay unless tuned) but cap/decay knobs ` +
             `exist in FARPGCurrencyDef so endgame designers can opt-in. ` +
-            `Gold faucets: monster-kill gold drops (~120 G/kill at area level 50), quest completion ` +
+            `${e.name} faucets: monster-kill gold drops (~120 G/kill at area level 50), quest completion ` +
             `rewards (~3 000–8 000 G per quest depending on tier), item sell-back at 30% of vendor ` +
-            `buy price. Gold sinks: vendor purchase (item buy), repair (~2–5% of item value per use), ` +
+            `buy price. ${e.name} sinks: vendor purchase (item buy), repair (~2–5% of item value per use), ` +
             `and crafting bench fees (1–500 G per bench operation). ` +
             `Crafting-orb faucets: monster loot drops (weighted by rarity per loot-tables; ` +
             `Transmute common, Exalt/Divine extremely rare). Crafting-orb sinks: using the orb ` +
@@ -63,7 +70,7 @@ registerCatalogPipeline({
             `magnitude lower than Transmute/Alteration — the canonical affordability ladder that ` +
             `drives meaningful item-crafting decisions (canon arpg-crafting-currency). ` +
             `Faucet/sink balance targets ±15% (proj-economy); the balance step below pins ` +
-            `Gold at ~110 G/hour faucet vs ~105 G/hour sink = ~4.8% imbalance (well within envelope). ` +
+            `${e.name} at ~110 G/hour faucet vs ~105 G/hour sink = ~4.8% imbalance (well within envelope). ` +
             `All currencies realize to FARPGCurrencyDef rows in DT_Currencies; ` +
             `wallet operations route through UARPGWalletComponent (AddCurrency / SpendCurrency).`,
         },
@@ -80,10 +87,10 @@ registerCatalogPipeline({
         field: 'rules',
         columns: [{ key: 'kind' }, { key: 'faucets' }, { key: 'sinks' }, { key: 'cap' }, { key: 'conversionNote' }],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => ({
         data: {
           rules: {
-            // ── Soft currency (Gold) ──────────────────────────────────────────
+            // ── Soft currency (this entity) ───────────────────────────────────
             kind: 'soft',
             faucets: [
               'kill-drop: ~120 G/kill at areaLevel 50 (scales +5 G/level)',
@@ -97,7 +104,7 @@ registerCatalogPipeline({
             ],
             cap: 'uncapped by default (FARPGCurrencyDef.cap = 0 means no cap); cap/decay knobs exist for designer opt-in',
             conversionNote:
-              'Gold NEVER converts to crafting orbs or vice versa (canon proj-economy). ' +
+              `${e.name} NEVER converts to crafting orbs or vice versa (canon proj-economy). ` +
               'Soft and orb currencies are separate ledgers in UARPGWalletComponent.',
             // ── Crafting-orb currencies ──────────────────────────────────────
             craftingOrbs: {
@@ -123,11 +130,11 @@ registerCatalogPipeline({
               grantedBy:
                 'UARPGWalletComponent::AddCurrency on the player pawn — invoked by kill-drop ' +
                 '(UARPGLootDropComponent), quest completion (AARPGQuestManager), and item sell-back ' +
-                '(UARPGVendorComponent). Orb pickup adds to the orb slot, not Gold.',
+                `(UARPGVendorComponent). Orb pickup adds to the orb slot, not ${e.name}.`,
               activatedBy:
                 'Kill-drop: OnDeath → UARPGLootDropComponent::ExecuteDrop; ' +
                 'Quest: quest terminal stage reached → AARPGQuestManager::GrantRewards; ' +
-                'Sell: UARPGVendorComponent::SellItem → SpendCurrency on item + AddCurrency for Gold. ' +
+                `Sell: UARPGVendorComponent::SellItem → SpendCurrency on item + AddCurrency for ${e.name}. ` +
                 'Spend: UARPGWalletComponent::SpendCurrency called at vendor buy, repair, bench confirm.',
               dependencies: [
                 'vendors (buy/sell/repair pricing, vendor-laws)',
@@ -232,7 +239,7 @@ registerCatalogPipeline({
         field: 'ui',
         columns: [{ key: 'widget' }, { key: 'format' }, { key: 'position' }, { key: 'hudBinding' }],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => ({
         data: {
           ui: {
             widget: 'WBP_Wallet',
@@ -241,7 +248,7 @@ registerCatalogPipeline({
             hudBinding:
               'Binds to UARPGWalletComponent via a UMG binding or a GAS Attribute listener; ' +
               'widget slot declared in hud-elements catalog per proj-hud-binding; ' +
-              'Gold slot always visible, orb slots visible when count > 0.',
+              `${e.name} slot always visible, orb slots visible when count > 0.`,
             wiringContract: {
               grantedBy: 'WBP_Wallet is spawned by the HUD class (AARPGHUD) on player pawn possess',
               activatedBy:
@@ -272,14 +279,14 @@ registerCatalogPipeline({
       archetype: 'checklist',
       label: 'Test Gate',
       view: { kind: 'checklist', field: 'checks' },
-      produce: () => ({
+      produce: (e: LabEntity) => ({
         data: {
           checks: [
             'earn (AddCurrency) adds to wallet balance',
             'spend (SpendCurrency) deducts from wallet balance',
             'SpendCurrency fails gracefully when insufficient balance',
             'cap enforced when FARPGCurrencyDef.cap > 0 (excess AddCurrency clamped to cap)',
-            'Gold and orb ledgers are independent — Gold earn does NOT change orb counts',
+            `${e.name} and orb ledgers are independent — ${e.name} earn does NOT change orb counts`,
             'WBP_Wallet display updates on every earn/spend event',
           ],
         },
@@ -315,9 +322,9 @@ registerCatalogPipeline({
                 'Quest: terminal stage reached → AARPGQuestManager::GrantRewards; ' +
                 'Spend: vendor buy / repair confirm / crafting bench confirm → SpendCurrency',
               dependencies: [
-                'vendors (buy/sell/repair, vendor-laws; settles in Gold)',
+                `vendors (buy/sell/repair, vendor-laws; settles in ${e.name})`,
                 'crafting-recipes (bench fees + orb consumption operations)',
-                'loot-tables (currency sub-table drop weights, currency-gold entity)',
+                `loot-tables (currency sub-table drop weights, ${e.id} entity)`,
               ],
               verification:
                 'L2: FARPGCurrencyDef in Source/PoF/ + UARPGWalletComponent::AddCurrency / SpendCurrency compiled + ' +

@@ -30,7 +30,9 @@ registerCatalogPipeline({
       archetype: 'brief',
       label: 'Family Brief',
       view: { kind: 'prose', field: 'brief', emptyText: 'No brief yet' },
-      produce: (e: LabEntity) => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return ({
         data: {
           brief:
             `The ${e.name} icon family establishes one coherent visual language across all members ` +
@@ -50,12 +52,13 @@ registerCatalogPipeline({
             `iconographic detail) on the dark HUD and to remain colorblind-safe by relying on shape + ` +
             `brightness cues rather than hue alone. All slots follow the IconCategory_Name naming ` +
             `convention for DataTable lookup (e.g. IconItem_IronLongsword, IconAbility_Fireball, ` +
-            `IconStatus_Ignite). The atlas is the single source of truth wired via T_<Slug>_Atlas ` +
-            `sampled in MI_HUDIconSheet, consumed by UHUDWidget (item slots), UW_SpellBar (ability ` +
+            `IconStatus_Ignite). The atlas is the single source of truth wired via T_${s}_Atlas ` +
+            `sampled in MI_HUDIconSheet_${s}, consumed by UHUDWidget (item slots), UW_SpellBar (ability ` +
             `slots), and UW_StatusRow (status-effect slots) — no icon is hard-coded as a separate ` +
             `texture; all go through the atlas UV lookup in the common icon material.`,
         },
-      }),
+      });
+      },
       accept: minLength('brief', 'Brief ≥ 300 characters', 300),
     },
 
@@ -201,10 +204,12 @@ registerCatalogPipeline({
         field: 'atlas',
         columns: [{ key: 'texture' }, { key: 'packing' }, { key: 'slots' }],
       },
-      produce: (e: LabEntity) => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return ({
         data: {
           atlas: {
-            texture: `T_${slug(e.name)}_Atlas`,
+            texture: `T_${s}_Atlas`,
             textureSize: '4096×4096 px',
             cellSize: '256×256 px',
             gridLayout: '16×16 grid',
@@ -218,10 +223,10 @@ registerCatalogPipeline({
               '(Judge-fleet fix 2026-07-07: the old line claimed a 32 px floor AND mip count 7 — 7 mips would run cells down to 4 px.)',
             uvLookupMethod:
               'FIconSetRow.AtlasU + FIconSetRow.AtlasV (cell indices 0–15) stored in DT_IconSets; ' +
-              'MI_HUDIconSheet UV = vec2(AtlasU, AtlasV) / 16.0 + uv_in_cell / 16.0',
+              `MI_HUDIconSheet_${s} UV = vec2(AtlasU, AtlasV) / 16.0 + uv_in_cell / 16.0`,
             wiringContract: {
               grantedBy:
-                'MI_HUDIconSheet (a master-material instance) samples T_<Slug>_Atlas; ' +
+                `MI_HUDIconSheet_${s} (a master-material instance) samples T_${s}_Atlas; ` +
                 'UHUDWidget / UW_SpellBar / UW_StatusRow set the UV via SetVectorParameterValue ' +
                 'reading from FIconSetRow in DT_IconSets',
               activatedBy:
@@ -235,15 +240,16 @@ registerCatalogPipeline({
                 'currencies (IconCurrency_ names must match DT_Currencies.IconKey per currency row)',
               ],
               verification:
-                'L2: T_<Slug>_Atlas imported in Content/UI/Icons/; DT_IconSets seeded via seed_icon_sets.py; ' +
-                'MI_HUDIconSheet compiled with T_<Slug>_Atlas slot; ' +
+                `L2: T_${s}_Atlas imported in Content/UI/Icons/; DT_IconSets seeded via seed_icon_sets.py; ` +
+                `MI_HUDIconSheet_${s} compiled with T_${s}_Atlas slot; ` +
                 'L3: VSIconSetAtlasTest (runtime-deferred) — widget instantiation resolves all 224 UV ' +
                 'lookups without missing-row warnings in PIE log; contrast + 32 px legibility verified in editor',
             },
           },
         },
-        ueAssets: [`/Game/UI/Icons/Sets/T_${slug(e.name)}_Atlas`],
-      }),
+        ueAssets: [`/Game/UI/Icons/Sets/T_${s}_Atlas`],
+      });
+      },
       accept: allOf(
         fieldsPopulated('atlas', 'Texture + packing + slots', ['texture', 'packing', 'slots']),
         wiringContractSound('atlas'),
@@ -255,10 +261,10 @@ registerCatalogPipeline({
       archetype: 'checklist',
       label: 'Test Gate',
       view: { kind: 'checklist', field: 'checks' },
-      produce: () => ({
+      produce: (e: LabEntity) => ({
         data: {
           checks: [
-            'atlas imports without compression artefacts (BC7, no mip below 32 px)',
+            `T_${slug(e.name)}_Atlas imports without compression artefacts (BC7, no mip below 32 px)`,
             'all 224 allocated icon slots present (DT_IconSets row count = 224)',
             'contrast verified in editor: every icon edge ≥4.5:1 against HUD canvas luma 0.06',
             '32 px legibility bake review — 2 px outline preserved on all members',

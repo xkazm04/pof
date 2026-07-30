@@ -58,7 +58,9 @@ registerCatalogPipeline({
       archetype: 'brief',
       label: 'Concept Brief',
       view: { kind: 'prose', field: 'brief', emptyText: 'No brief yet' },
-      produce: (e: LabEntity) => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name); // identity token — resolves the ST_/BB_/ABP_ asset family below
+        return {
         data: {
           brief:
             `${e.name} is a generic finite state machine driving AI decision-making for melee enemy ` +
@@ -72,12 +74,13 @@ registerCatalogPipeline({
             `Hook points on state ENTER/EXIT fire AnimNotify-driven Niagara VFX, SFX cues, and blend-space ` +
             `switches so every sub-system keys off State.AI.* gameplay tags, never off imperative calls. ` +
             `Persistence: ephemeral session state (current state, patrol index) is discarded on session end; ` +
-            `only discrete world-state mutations (State.Enemy.Defeated.<slug>) are written to the save ` +
+            `only discrete world-state mutations (State.Enemy.Defeated.${s}) are written to the save ` +
             `game and respected on reload (per arpg-save-semantics canon).  ` +
-            `UE asset: ST_EnemyAI_<slug> (StateTree), BB_EnemyAI_<slug> (Blackboard), ` +
-            `ABP_EnemyAI_<slug> (AnimBP), seeded via seed_state_graph.py.`,
+            `UE asset: ST_EnemyAI_${s} (StateTree), BB_EnemyAI_${s} (Blackboard), ` +
+            `ABP_EnemyAI_${s} (AnimBP), seeded via seed_state_graph.py.`,
         },
-      }),
+        };
+      },
       accept: minLength('brief', 'Brief ≥ 300 characters', 300),
     },
 
@@ -91,7 +94,9 @@ registerCatalogPipeline({
       archetype: 'graph',
       label: 'State Graph',
       view: { kind: 'graph', field: 'graph' },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return {
         data: {
           graph: {
             nodes: [
@@ -206,14 +211,14 @@ registerCatalogPipeline({
               'All 6 nodes are reachable from IDLE[0]. ' +
               'graphValid: 6 nodes, 13 edges, no dangling edges. ' +
               'Guards read UStateTreeComponent blackboard keys evaluated each StateTree tick. ' +
-              'Wiring: UStateTreeComponent on AARPGEnemyCharacter owns the ST_EnemyAI asset; ' +
+              `Wiring: UStateTreeComponent on AARPGEnemyCharacter owns the ST_EnemyAI_${s} asset; ` +
               'DEAD terminal fires GameplayEvent Ability.Enemy.Defeated → UARPGLootDropComponent executes drop + ' +
-              'AARPGWorldStateComponent writes State.Enemy.Defeated.<slug> tag.',
+              `AARPGWorldStateComponent writes State.Enemy.Defeated.${s} tag.`,
           },
           wiringContract: {
             grantedBy:
-              'UStateTreeComponent (on AARPGEnemyCharacter) owns ST_EnemyAI_<slug> asset. ' +
-              'The StateTree evaluates transition guards against BB_EnemyAI_<slug> blackboard ' +
+              `UStateTreeComponent (on AARPGEnemyCharacter) owns ST_EnemyAI_${s} asset. ` +
+              `The StateTree evaluates transition guards against BB_EnemyAI_${s} blackboard ` +
               'keys updated by UAISenseConfig_Sight and UAISenseConfig_Damage perception services.',
             activatedBy:
               'AARPGEnemyCharacter::BeginPlay → UStateTreeComponent.StartLogic() → enters IDLE state. ' +
@@ -224,12 +229,13 @@ registerCatalogPipeline({
               'loot-tables (UARPGLootDropComponent — triggered on DEAD terminal)',
             ],
             verification:
-              'L2: UStateTreeComponent declared in Source/PoF/ + ST_EnemyAI seeded via seed_state_graph.py; ' +
+              `L2: UStateTreeComponent declared in Source/PoF/ + ST_EnemyAI_${s} seeded via seed_state_graph.py; ` +
               'L3: VSStateGraphTest — no deadlock, all 6 states reachable in PIE, ' +
               'DEAD terminal fires loot drop + world-state tag (deferred)',
           },
         },
-      }),
+        };
+      },
       accept: allOf(
         graphValid('graph', 'States reachable + ≥1 terminal'),
         wiringContractSound(),
@@ -246,7 +252,9 @@ registerCatalogPipeline({
         field: 'blackboard',
         columns: [{ key: 'key' }, { key: 'type' }, { key: 'updatedBy' }, { key: 'usedBy' }],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return {
         data: {
           blackboard: [
             {
@@ -304,7 +312,7 @@ registerCatalogPipeline({
           ],
           wiringContract: {
             grantedBy:
-              'BB_EnemyAI_<slug> BlackboardData asset; keys initialised on UStateTreeComponent.StartLogic(). ' +
+              `BB_EnemyAI_${s} BlackboardData asset; keys initialised on UStateTreeComponent.StartLogic(). ` +
               'Typed keys (not string lookups) — all reads use const FName keys compiled in USTTask/USTService headers.',
             activatedBy:
               'UStateTreeComponent reads blackboard each evaluation tick; ' +
@@ -313,12 +321,13 @@ registerCatalogPipeline({
               'bestiary (AARPGEnemyCharacter — host actor; UARPGAttributeSet — HealthPct source)',
             ],
             verification:
-              'L2: BB_EnemyAI_<slug> asset seeded via seed_state_graph.py; ' +
+              `L2: BB_EnemyAI_${s} asset seeded via seed_state_graph.py; ` +
               'USTService_UpdateDistanceToTarget + USTService_LOSTracker declared in Source/PoF/; ' +
               'L3: VSStateGraphTest — all 8 BB keys written before first state transition (deferred)',
           },
         },
-      }),
+        };
+      },
       accept: allOf(
         minCount('blackboard', '≥7 blackboard keys declared', 7),
         entriesHaveFields('blackboard', 'every key carries type + writer + reader', ['key', 'type', 'updatedBy', 'usedBy']),
@@ -469,7 +478,9 @@ registerCatalogPipeline({
         field: 'hooks',
         columns: [{ key: 'state' }, { key: 'event' }, { key: 'type' }, { key: 'binding' }],
       },
-      produce: (e: LabEntity) => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return {
         data: {
           hooks: [
             // IDLE hooks
@@ -477,14 +488,14 @@ registerCatalogPipeline({
               state: 'idle',
               event: 'ENTER',
               type: 'AnimBP',
-              binding: 'ABP_EnemyAI: State.AI.Idle tag → blend-space IdleBS (ambient sway)',
+              binding: `ABP_EnemyAI_${s}: State.AI.Idle tag → blend-space IdleBS (ambient sway)`,
             },
             // PATROL hooks
             {
               state: 'patrol',
               event: 'ENTER',
               type: 'AnimBP',
-              binding: 'ABP_EnemyAI: State.AI.Patrol tag → walk blend-space WalkBS (move speed 250 cm/s)',
+              binding: `ABP_EnemyAI_${s}: State.AI.Patrol tag → walk blend-space WalkBS (move speed 250 cm/s)`,
             },
             // CHASE hooks
             {
@@ -492,8 +503,8 @@ registerCatalogPipeline({
               event: 'ENTER',
               type: 'AnimBP + SFX',
               binding:
-                'ABP_EnemyAI: State.AI.Chase tag → run blend-space RunBS (move speed 500 cm/s); ' +
-                `SC_${slug(e.name)}_Alert plays once on ENTER (enemy "spotted" audio cue)`,
+                `ABP_EnemyAI_${s}: State.AI.Chase tag → run blend-space RunBS (move speed 500 cm/s); ` +
+                `SC_${s}_Alert plays once on ENTER (enemy "spotted" audio cue)`,
             },
             // ATTACK hooks
             {
@@ -508,7 +519,7 @@ registerCatalogPipeline({
               state: 'attack',
               event: 'ENTER',
               type: 'VFX',
-              binding: `NS_${slug(e.name)}_AttackTrail attached to weapon socket; activated by AN_HitDetect notify`,
+              binding: `NS_${s}_AttackTrail attached to weapon socket; activated by AN_HitDetect notify`,
             },
             {
               state: 'attack',
@@ -522,15 +533,15 @@ registerCatalogPipeline({
               event: 'ENTER',
               type: 'AnimBP + VFX + SFX',
               binding:
-                'ABP_EnemyAI: State.AI.Flee tag → flee-run blend-space FleeBS; ' +
-                `NS_${slug(e.name)}_LowHealthAura activated (red pulsing rim-light, per art-vfx canon); ` +
-                `SC_${slug(e.name)}_Flee plays once on ENTER (enemy vocalization)`,
+                `ABP_EnemyAI_${s}: State.AI.Flee tag → flee-run blend-space FleeBS; ` +
+                `NS_${s}_LowHealthAura activated (red pulsing rim-light, per art-vfx canon); ` +
+                `SC_${s}_Flee plays once on ENTER (enemy vocalization)`,
             },
             {
               state: 'flee',
               event: 'EXIT',
               type: 'VFX',
-              binding: `NS_${slug(e.name)}_LowHealthAura deactivated on EXIT (to prevent aura persisting after recovery to IDLE)`,
+              binding: `NS_${s}_LowHealthAura deactivated on EXIT (to prevent aura persisting after recovery to IDLE)`,
             },
             // DEAD hooks
             {
@@ -539,8 +550,8 @@ registerCatalogPipeline({
               type: 'AnimNotify + VFX + SFX',
               binding:
                 'Death montage AM_Death plays (ragdoll blend at frame end); ' +
-                `NS_${slug(e.name)}_DeathBurst fires once at ENTER (particle burst, ≤0.48 ms GPU per art-vfx); ` +
-                `SC_${slug(e.name)}_Death plays once; ` +
+                `NS_${s}_DeathBurst fires once at ENTER (particle burst, ≤0.48 ms GPU per art-vfx); ` +
+                `SC_${s}_Death plays once; ` +
                 'GameplayEvent Ability.Enemy.Defeated fired → UARPGLootDropComponent.ExecuteDrop()',
             },
           ],
@@ -563,10 +574,11 @@ registerCatalogPipeline({
             ],
             verification:
               `L2: USTTask_ApplyStateTag + UARPGVFXComponent declared in Source/PoF/; ` +
-              `L3: VSStateGraphTest — State.AI.Chase tag present during CHASE, NS_${slug(e.name)}_DeathBurst fires on DEAD (deferred)`,
+              `L3: VSStateGraphTest — State.AI.Chase tag present during CHASE, NS_${s}_DeathBurst fires on DEAD (deferred)`,
           },
         },
-      }),
+        };
+      },
       accept: allOf(
         minCount('hooks', '≥5 hook points declared', 5),
         entriesHaveFields('hooks', 'every hook carries state + event + type + binding', ['state', 'event', 'type', 'binding']),
@@ -584,7 +596,9 @@ registerCatalogPipeline({
         field: 'persistence',
         columns: [{ key: 'field' }, { key: 'saved' }, { key: 'rationale' }],
       },
-      produce: (e: LabEntity) => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return {
         data: {
           persistence: {
             currentState: {
@@ -610,12 +624,12 @@ registerCatalogPipeline({
                 'they are re-populated from attributes + AI sense config on BeginPlay. No serialization needed.',
             },
             defeatedTag: {
-              field: 'State.Enemy.Defeated.<slug> gameplay tag (world-state mutation)',
+              field: `State.Enemy.Defeated.${s} gameplay tag (world-state mutation)`,
               saved: true,
               rationale:
                 `Discrete world-state mutation written by AARPGWorldStateComponent when DEAD terminal is reached. ` +
                 `Persisted via the ARPG save game (USaveGame subclass ARPGWorldStateSave). ` +
-                `On reload, if State.Enemy.Defeated.${slug(e.name)} is present, the enemy actor is not spawned ` +
+                `On reload, if State.Enemy.Defeated.${s} is present, the enemy actor is not spawned ` +
                 `(or spawned as a corpse prop for narrative clarity). ` +
                 `This is the only saved field — consistent with arpg-wiring-contract canon (only world-state mutations persist).`,
             },
@@ -634,7 +648,7 @@ registerCatalogPipeline({
               'ARPGWorldStateSave.TagSet TArray<FGameplayTag> is serialised via standard UE SaveGame.',
             activatedBy:
               'USTTask_WriteDead task in the DEAD state: fires GameplayEvent Ability.Enemy.Defeated → ' +
-              'AARPGWorldStateComponent.ApplyMutation(State.Enemy.Defeated.<slug>).',
+              `AARPGWorldStateComponent.ApplyMutation(State.Enemy.Defeated.${s}).`,
             dependencies: [
               'bestiary (AARPGEnemyCharacter — actor spawner checks the defeated tag on BeginPlay)',
             ],
@@ -643,7 +657,8 @@ registerCatalogPipeline({
               'L3: VSStateGraphTest — save/reload with defeated tag suppresses enemy re-spawn (deferred)',
           },
         },
-      }),
+        };
+      },
       accept: allOf(
         fieldsPopulated('persistence', 'currentState / patrolIndex / defeatedTag fields present', [
           'currentState',
@@ -679,7 +694,9 @@ registerCatalogPipeline({
       archetype: 'checklist',
       label: 'Test Gate',
       view: { kind: 'checklist', field: 'checks' },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return {
         data: {
           checks: [
             'enemy spawns in IDLE state; UStateTreeComponent.StartLogic() called on BeginPlay',
@@ -694,12 +711,13 @@ registerCatalogPipeline({
             'all 6 states reachable from IDLE in automated state-coverage walk',
             'no deadlock: no state is a sink with outgoing transitions that can never fire',
             'DEAD terminal: loot drop fires (UARPGLootDropComponent.ExecuteDrop() called)',
-            'DEAD terminal: State.Enemy.Defeated.<slug> tag written to AARPGWorldStateComponent',
+            `DEAD terminal: State.Enemy.Defeated.${s} tag written to AARPGWorldStateComponent`,
             'reload after DEAD: enemy actor not re-spawned (defeated tag respected on BeginPlay)',
             'State.AI.* tags correctly applied/removed on each state transition (hook points fire)',
           ],
         },
-      }),
+        };
+      },
       accept: entityRuntimeDeferred('VSStateGraphTest', 'No deadlock + all states reachable in PIE'),
     },
 

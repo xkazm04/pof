@@ -12,6 +12,17 @@ import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
 /**
+ * The zone's own world id, recovered from the catalog entity id: `seed-zone-map.ts`
+ * mints entity ids as `zone-<ZoneRecord.id>`, so `zone-z-ashen` → `z-ashen`. Every
+ * ZONE_EDGES / ZONE_POIS / encounter-volume reference derives from this rather than
+ * naming one exemplar zone, so a zone can never claim another zone's graph rows.
+ */
+const zoneId = (e: LabEntity) => e.id.replace(/^zone-/, '') || e.id;
+/** Fast-travel node naming convention: "<first word of the zone name> Crossing"
+ *  ("Ashen Forest" → "Ashen Crossing"). Per-zone, so two zones cannot share a node. */
+const crossing = (n: string) => `${n.trim().split(/\s+/)[0] || slug(n)} Crossing`;
+
+/**
  * Zone Map pipeline (catalogId: 'zone-map').
  *
  * An explorable region that HOSTS combat encounters (arena slices) and drives
@@ -46,7 +57,7 @@ registerCatalogPipeline({
       produce: (e: LabEntity) => ({
         data: {
           brief:
-            `${e.name} is the explorable-region entity for the Ashen Forest — the scorched ` +
+            `${e.name} is the explorable-region entity for this zone — the scorched ` +
             `eastern continuation of Whisper Woods, burning after a wildfire touched off by ` +
             `the post-Sundering ley-line rupture. Once verdant, the clearing is now charred ` +
             `deadfall, drifting ash, smouldering ember pits, and a low dusk sun filtered ` +
@@ -60,7 +71,7 @@ registerCatalogPipeline({
             `— driving the first Rare gear tier for players finishing the Whisper Woods band. ` +
             `Ambient character: desaturated greys, dull ember orange, ExponentialHeightFog + ` +
             `post-process desaturation + warm bloom; mood is "the green you knew, burned." ` +
-            `The UE asset is /Game/Maps/AshenForest.umap (baked, reload-verified, committed ` +
+            `The UE asset is /Game/Maps/${slug(e.name)}.umap (baked, reload-verified, committed ` +
             `to pof-exp @1ec6353). Lighting is MOVABLE (dusk DirectionalLight + SkyLight + ` +
             `ember PointLight) to avoid a Lightmass bake in headless CI.`,
         },
@@ -82,7 +93,10 @@ registerCatalogPipeline({
           { key: 'navigationContract' },
         ],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const zid = zoneId(e);
+        const node = crossing(e.name);
+        return {
         data: {
           layout: {
             // Scorched clearing: ~44 m diameter walkable area, ringed by charred deadfall.
@@ -99,13 +113,13 @@ registerCatalogPipeline({
               { type: 'quest',    count: 3, note: 'Scout log, corpse, ley-stone inscription — feed quests::quest-ember-pact' },
               { type: 'treasure', count: 2, note: 'Locked chest + buried cache; ilvl 5 rolls' },
               { type: 'shrine',   count: 1, note: 'Ember shrine — temp resist buff while active' },
-              { type: 'bonfire',  count: 1, note: '"Ashen Crossing" fast-travel node; saves on interact' },
+              { type: 'bonfire',  count: 1, note: `"${node}" fast-travel node; saves on interact` },
             ],
             navigationContract: {
               // Seamless from Whisper Woods (navMeshContinuity:true); loading-door to Bandit Camp.
               entry: { from: 'z2 (Whisper Woods)', edgeType: 'seamless', navMeshContinuity: true, transitionSec: 0 },
               exit:  { to:   'z4 (Bandit Camp)',   edgeType: 'door',     navMeshContinuity: false, transitionSec: 1.5 },
-              fastTravelNode: 'Ashen Crossing',
+              fastTravelNode: node,
               // NavMesh bake is a documented gap (plan.md §3) — config gate proves lighting/PP, not traversal.
               navMeshBaked: false,
               navMeshGapNote: 'RecastNavMesh bake and ProcGenWalkTest are a shared gap — see plan.md §Finding-Nav.',
@@ -116,18 +130,19 @@ registerCatalogPipeline({
               activatedBy:
                 'Level load — ZONE_EDGES.edgeType seamless means navMesh carries through from z2 without a load screen',
               dependencies: [
-                'ZONE_EDGES z2→z-ashen (seamless), z-ashen→z4 (door) in sub_world/_shared/data.ts',
-                'ZONE_POIS z-ashen entries (quest×3, treasure×2, shrine×1, bonfire×1)',
-                'FAST_TRAVEL_NODES "Ashen Crossing" entry',
+                `ZONE_EDGES z2→${zid} (seamless), ${zid}→z4 (door) in sub_world/_shared/data.ts`,
+                `ZONE_POIS ${zid} entries (quest×3, treasure×2, shrine×1, bonfire×1)`,
+                `FAST_TRAVEL_NODES "${node}" entry`,
               ],
               verification:
-                'L0: ZONE_EDGES + ZONE_POIS entries present in data.ts seed; ' +
+                `L0: ZONE_EDGES + ZONE_POIS entries for ${zid} present in data.ts seed; ` +
                 'L2: AARPGEncounterVolume declared in Source/PoF/; ' +
                 'L3: VSZoneTest — zone loads, bonfire POI reachable from entry',
             },
           },
         },
-      }),
+        };
+      },
       accept: allOf(
         fieldsPopulated('layout', 'Sectors / POIs / navigation contract populated', [
           'sectors',
@@ -153,7 +168,9 @@ registerCatalogPipeline({
           { key: 'packDensity' },
         ],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const zid = zoneId(e);
+        return {
         data: {
           density: {
             // ARPG-LAWS §11: areaLevel is the ONLY scalar changed between difficulty copies.
@@ -181,7 +198,7 @@ registerCatalogPipeline({
             rewardScalar: 1.0,
             wiringContract: {
               grantedBy:
-                'AARPGEncounterVolume.areaLevel=5 on the z-ashen map; spawner reads areaLevel from the volume',
+                `AARPGEncounterVolume.areaLevel=5 on the ${zid} map; spawner reads areaLevel from the volume`,
               activatedBy:
                 'ASpawnVolume reads areaLevel at wave start to scale monsterLevel (= areaLevel 1:1) ' +
                 'and passes it to UARPGLootDropComponent for ilvl (= areaLevel) per §11',
@@ -197,7 +214,8 @@ registerCatalogPipeline({
             },
           },
         },
-      }),
+        };
+      },
       // Content invariant: the stated totalEnemies must reconcile with the per-sector
       // breakdown (no hand-set headline that disagrees with the sector packs).
       accept: allOf(
@@ -224,7 +242,9 @@ registerCatalogPipeline({
         field: 'encounters',
         columns: [{ key: 'hostedArena' }, { key: 'packPlacements' }, { key: 'wiringContract' }],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return {
         data: {
           encounters: {
             // The zone HOSTS the Ravaged Courtyard arena slice — a mid-zone two-wave skirmish.
@@ -256,7 +276,7 @@ registerCatalogPipeline({
             ],
             wiringContract: {
               grantedBy:
-                'ASpawnVolume actors placed at sector positions in /Game/Maps/AshenForest.umap; ' +
+                `ASpawnVolume actors placed at sector positions in /Game/Maps/${s}.umap; ` +
                 'each volume references AARPGEncounterVolume (parent) for areaLevel propagation',
               activatedBy:
                 'Level BeginPlay — ASpawnVolume begins Wave 1 on player aggro detection ' +
@@ -287,7 +307,8 @@ registerCatalogPipeline({
           { catalogId: 'combat-map', entityId: 'arena-ravaged-courtyard', role: 'hosted-arena' },
           { catalogId: 'bestiary',   entityId: 'bestiary-brute',          role: 'encounter-pack' },
         ],
-      }),
+        };
+      },
       // Shape (fields populated) AND cross-catalog links resolve in ACCEPT: the declared
       // combat-map / bestiary targets must exist. Satisfied → pass; a broken link → deferred
       // with the unresolved target named (the catalog-context path supplies `has`; a ctx-free
@@ -417,17 +438,17 @@ registerCatalogPipeline({
             ],
             wiringContract: {
               grantedBy:
-                'MI_AshenForest_Ground + MI_AshenForest_Trunk are material instances of ' +
+                `MI_${slug(e.name)}_Ground + MI_${slug(e.name)}_Trunk are material instances of ` +
                 'the mat-weathered-stone master material, applied to zone static meshes in the .umap',
               activatedBy:
-                'Static mesh actor material slot assignment in /Game/Maps/AshenForest.umap',
+                `Static mesh actor material slot assignment in /Game/Maps/${slug(e.name)}.umap`,
               dependencies: [
                 'materials::mat-weathered-stone (master material — must be seeded/present)',
                 'art-material canon (Albedo/Normal/ORM maps required; expose wear/tint/soot params)',
               ],
               verification:
                 'L0: mat-weathered-stone entry present in seed-materials.ts; ' +
-                'L2: /Game/Maps/AshenForest.umap contains static mesh actors with MI_AshenForest_Ground applied; ' +
+                `L2: /Game/Maps/${slug(e.name)}.umap contains static mesh actors with MI_${slug(e.name)}_Ground applied; ` +
                 'L4 (deferred): visual read "burned earth" confirmed via RHI+Gemini render check',
             },
             links: [
@@ -462,20 +483,25 @@ registerCatalogPipeline({
         field: 'audio',
         columns: [{ key: 'ambient' }, { key: 'music' }, { key: 'wiringContract' }],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        // Wwise event names carry the zone's short name so two zones cannot register the
+        // same event ("Ashen Forest" → Play_AMB_ForestDay_Ashen).
+        const short = e.name.trim().split(/\s+/)[0] || s;
+        return {
         data: {
           audio: {
             // ambient-forest-day: seeded in new-catalogs.ts:55 under catalogId 'ambient'.
             ambient: {
               catalogRef: 'ambient::ambient-forest-day',
               description:
-                'Forest Day soundscape (bed + one-shots) re-skinned for the Ashen Forest: ' +
+                `Forest Day soundscape (bed + one-shots) re-skinned for the ${e.name}: ` +
                 'base bed = low wind through dead trees + distant crackle; ' +
                 'one-shots = ember drift (10–20 s random interval), collapsing branch (30–60 s), ' +
                 'distant crow call replaced with a hollow silence beat. ' +
                 'Attenuation: AmbientZoneSettings on the level; volume −6 dB from Whisper Woods ' +
                 'to emphasize absence of life.',
-              wwise_event: 'Play_AMB_ForestDay_Ashen',
+              wwise_event: `Play_AMB_ForestDay_${short}`,
               attenuationProfile: 'ZoneAmbient_Medium',
             },
             // music-combat-a: seeded in new-catalogs.ts:54 under catalogId 'music'.
@@ -483,18 +509,18 @@ registerCatalogPipeline({
               catalogRef: 'music::music-combat-a',
               description:
                 'Combat Theme A (adaptive, stems) — triggers on enemy aggro. ' +
-                'Ashen Forest configuration: tempo held at 92 BPM (slower than standard 120 BPM ' +
+                `${e.name} configuration: tempo held at 92 BPM (slower than standard 120 BPM ` +
                 'for a foreboding, oppressive feel matching the zone tone); ' +
                 'exploration stem loops the low-register bed only until combat threshold is reached. ' +
                 'Horizontal re-sequencing: Explore → CombatBuild → Combat → Victory layers via Wwise RTPC.',
-              wwise_event: 'Play_MUS_Combat_A_Zone_Ashen',
+              wwise_event: `Play_MUS_Combat_A_Zone_${short}`,
               combatThreshold: 'EnemyAggro broadcast (UARPGAbilitySystemComponent OnCombatStart)',
               bpmOverride: 92,
             },
             wiringContract: {
               grantedBy:
-                'UAudioComponent placed in /Game/Maps/AshenForest.umap for ambient bed; ' +
-                'Wwise AkAmbientSound component plays Play_AMB_ForestDay_Ashen on BeginPlay; ' +
+                `UAudioComponent placed in /Game/Maps/${s}.umap for ambient bed; ` +
+                `Wwise AkAmbientSound component plays Play_AMB_ForestDay_${short} on BeginPlay; ` +
                 'music triggered by OnCombatStart GAS event broadcast',
               activatedBy:
                 'Ambient: BeginPlay (level load); Music: UARPGAbilitySystemComponent CombatStart broadcast',
@@ -521,7 +547,8 @@ registerCatalogPipeline({
           { catalogId: 'ambient', entityId: 'ambient-forest-day', role: 'zone-soundscape' },
           { catalogId: 'music',   entityId: 'music-combat-a',     role: 'combat-music' },
         ],
-      }),
+        };
+      },
       accept: allOf(
         fieldsPopulated('audio', 'Ambient + music + wiring contract populated', [
         'ambient',
@@ -542,13 +569,16 @@ registerCatalogPipeline({
         field: 'minimap',
         columns: [{ key: 'discoveryPct' }, { key: 'fastTravelNode' }, { key: 'hudBinding' }],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => {
+        const zid = zoneId(e);
+        const node = crossing(e.name);
+        return {
         data: {
           minimap: {
-            // Per ZONE_POIS: Ashen Forest discoveryPct = 0 initially (zone is locked/undiscovered).
+            // Per ZONE_POIS: discoveryPct = 0 initially (zone is locked/undiscovered).
             discoveryPct: 0,
             fastTravelNode: {
-              name: 'Ashen Crossing',
+              name: node,
               discovered: false,
               travelTimes: [
                 { to: 'Woods Gate', seconds: 10 },
@@ -565,7 +595,7 @@ registerCatalogPipeline({
             hudBinding: {
               // Per canon proj-hud-binding: declare widget + display-format + HUD anchor.
               widget: 'WBP_MinimapZone',
-              displayFormat: '"Ashen Forest" | level range "3–5" | discovery % shown',
+              displayFormat: `"${e.name}" | level range "3–5" | discovery % shown`,
               hudAnchor: 'TopRight',
               hudElementsCatalogRef: 'hud-elements::hud-health-bar (shared HUD shell; minimap is a sub-panel)',
               note:
@@ -581,18 +611,19 @@ registerCatalogPipeline({
                 'Zone load → HUD mounts WBP_MinimapZone; first-visit detection fires discovery event; ' +
                 'bonfire interact sets FastTravelNode.discovered = true',
               dependencies: [
-                'ZONE_POIS z-ashen entries (quest×3, treasure×2, shrine×1, bonfire×1)',
-                'FAST_TRAVEL_NODES "Ashen Crossing" entry',
+                `ZONE_POIS ${zid} entries (quest×3, treasure×2, shrine×1, bonfire×1)`,
+                `FAST_TRAVEL_NODES "${node}" entry`,
                 'hud-elements::hud-health-bar (shared HUD shell that hosts the minimap panel)',
                 'proj-hud-binding canon rule (widget + display-format + anchor declaration)',
               ],
               verification:
-                'L0: ZONE_POIS + FAST_TRAVEL_NODES entries present in data.ts; ' +
+                `L0: ZONE_POIS + FAST_TRAVEL_NODES entries for ${zid} present in data.ts; ` +
                 'L3 (deferred): VSZoneTest — minimap mounts, POI icons appear, discovery % updates on fog-of-war clear',
             },
           },
         },
-      }),
+        };
+      },
       accept: allOf(
         fieldsPopulated('minimap', 'Discovery / fast-travel / HUD binding declared', [
           'discoveryPct',
@@ -608,16 +639,22 @@ registerCatalogPipeline({
       archetype: 'gallery',
       label: 'Icon 2D Art',
       view: { kind: 'gallery', field: 'selected', candidates: 4 },
-      produce: (e: LabEntity) => ({
-        data: { ...gallerySeed('selected', 4) },
-        // Link conceptually to the shared iconset-abilities set (the seeded icon-sets entity).
-        ueAssets: [
-          `/Game/UI/Icons/T_${slug(e.name)}_ZoneIcon_Ashen`,
-          `/Game/UI/Icons/T_${slug(e.name)}_ZoneIcon_Explored`,
-          `/Game/UI/Icons/T_${slug(e.name)}_ZoneIcon_Locked`,
-          `/Game/UI/Icons/T_${slug(e.name)}_ZoneIcon_Active`,
-        ],
-      }),
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        // The base-state icon carries the zone's own short name (the other three are
+        // explicit states), so two zones cannot write the same base icon asset.
+        const short = e.name.trim().split(/\s+/)[0] || s;
+        return {
+          data: { ...gallerySeed('selected', 4) },
+          // Link conceptually to the shared iconset-abilities set (the seeded icon-sets entity).
+          ueAssets: [
+            `/Game/UI/Icons/T_${s}_ZoneIcon_${short}`,
+            `/Game/UI/Icons/T_${s}_ZoneIcon_Explored`,
+            `/Game/UI/Icons/T_${s}_ZoneIcon_Locked`,
+            `/Game/UI/Icons/T_${s}_ZoneIcon_Active`,
+          ],
+        };
+      },
       accept: selected('selected', 'A zone icon candidate is selected'),
       // icon-sets::iconset-abilities is the seeded shared icon family; zone icons belong to the same set.
       // Link declared in produce output below to satisfy linkTargetsExist.
@@ -628,11 +665,11 @@ registerCatalogPipeline({
       archetype: 'checklist',
       label: 'Test Gate',
       view: { kind: 'checklist', field: 'checks' },
-      produce: () => ({
+      produce: (e: LabEntity) => ({
         data: {
           checks: [
             'level loads without crash (DirectionalLight + SkyLight + PostProcessVolume present)',
-            'Ashen Crossing bonfire fast-travel node present and interactable',
+            `${crossing(e.name)} bonfire fast-travel node present and interactable`,
             'Brute packs spawn at correct sector positions with monsterLevel=5',
             'Ravaged Courtyard arena slice triggers on entry, waves complete, loot ilvl=5',
             'Ambient bed plays on load; music transitions on enemy aggro',
@@ -652,25 +689,27 @@ registerCatalogPipeline({
       view: { kind: 'manifest', field: 'assets' },
       produce: (e: LabEntity) => {
         const s = slug(e.name);
+        const zid = zoneId(e);
+        const short = e.name.trim().split(/\s+/)[0] || s;
         const assets = [
-          `/Game/Maps/AshenForest.umap`,
-          `DT_ZoneMap :: zone-z-ashen`,
-          `AARPGEncounterVolume :: z-ashen (areaLevel=5)`,
+          `/Game/Maps/${s}.umap`,
+          `DT_ZoneMap :: ${e.id}`,
+          `AARPGEncounterVolume :: ${zid} (areaLevel=5)`,
           `ASpawnVolume :: Sector_NW, Sector_NE, Sector_Center, Sector_SW, Sector_SE`,
           `MI_${s}_Ground (mat-weathered-stone instance)`,
           `MI_${s}_Trunk  (mat-weathered-stone instance)`,
-          `T_${s}_ZoneIcon_Ashen`,
+          `T_${s}_ZoneIcon_${short}`,
         ];
         return {
           data: {
             assets,
-            umap: '/Game/Maps/AshenForest.umap',
+            umap: `/Game/Maps/${s}.umap`,
             umapNote:
               'Baked and reload-verified (DirLight 1 / SkyLight 1 / PPV 1 / StaticMeshes 30 / Test 1). ' +
               'Committed to pof-exp at 1ec6353. Single monolithic .umap (World Partition pending).',
             wiringContract: {
               grantedBy:
-                '/Game/Maps/AshenForest.umap (the realised zone asset) + DT_ZoneMap row for zone-z-ashen; ' +
+                `/Game/Maps/${s}.umap (the realised zone asset) + DT_ZoneMap row for ${e.id}; ` +
                 'AARPGEncounterVolume actor in the map declares areaLevel=5',
               activatedBy:
                 'Level load — AARPGEncounterVolume BeginPlay propagates areaLevel to ASpawnVolume actors; ' +
@@ -688,7 +727,7 @@ registerCatalogPipeline({
               ],
               verification:
                 'L2: AARPGEncounterVolume + ASpawnVolume compiled in Source/PoF/; ' +
-                'AshenForest.umap present in pof-exp @1ec6353; DT_ZoneMap seeded; ' +
+                `${s}.umap present in pof-exp @1ec6353; DT_ZoneMap row ${e.id} seeded; ` +
                 'L3: VSZoneTest (deferred) — level loads, areaLevel=5 confirmed, ' +
                 'Brutes spawn at monsterLevel=5, loot ilvl=5, arena waves trigger',
             },

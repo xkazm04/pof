@@ -21,7 +21,7 @@ const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
  * effects, unsettled combat) is NEVER persisted — it is discarded on session
  * end and rebuilt from UARPGAttributeSet + DT_AttributeDefaults on load.
  *
- * Wiring: BP_Bonfire (Blueprint child of AARPGInteractableBase) detects Overlap
+ * Wiring: BP_<Entity> (Blueprint child of AARPGInteractableBase) detects Overlap
  * → shows UMG interact prompt → player confirms → UARPGSaveSubsystem::SaveToSlot
  * serializes UARPGSaveGame (a USaveGame subclass) + persists to slot via
  * UGameplayStatics::SaveGameToSlot.  Load inverts: DeserializeSave restores
@@ -56,15 +56,15 @@ registerCatalogPipeline({
             `effects, ongoing combat — is deliberately DISCARDED on session end and rebuilt ` +
             `from canonical data rows on load (canon state-graph-fsm-wiring). ` +
             `This "discrete-only" contract keeps save files small, forward-compatible, and ` +
-            `corruption-resistant. A bonfire interaction triggers a short (~0.3 s) commit ` +
+            `corruption-resistant. A ${e.name} interaction triggers a short (~0.3 s) commit ` +
             `window with a tactile SFX sting and a HUD save-indicator flash, then the game ` +
             `continues uninterrupted. Autosave fires on the same path (same serializer, same ` +
             `slot rules) on zone transitions and quest-stage completions. ` +
             `Multiple save slots are supported (default 3); slot selection is via WBP_SaveSlots ` +
             `surfaced from the pause menu and the main-menu load screen, bound per proj-hud-binding. ` +
-            `UE realization: UARPGSaveGame (USaveGame subclass) + BP_Bonfire (Blueprint child ` +
+            `UE realization: UARPGSaveGame (USaveGame subclass) + BP_${slug(e.name)} (Blueprint child ` +
             `of AARPGInteractableBase, config — no new C++) + ` +
-            `UARPGSaveSubsystem (GameInstanceSubsystem) + DA_SavePoint data asset.`,
+            `UARPGSaveSubsystem (GameInstanceSubsystem) + DA_SavePoint_${slug(e.name)} data asset.`,
         },
       }),
       accept: minLength('brief', 'Brief ≥ 300 characters', 300),
@@ -84,7 +84,7 @@ registerCatalogPipeline({
           { key: 'fieldsNote' },
         ],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => ({
         data: {
           stateSchema: {
             persisted: {
@@ -100,7 +100,7 @@ registerCatalogPipeline({
                 'defeatedEnemyTags: TArray<FGameplayTag> — each State.Enemy.Defeated.<EnemyId> that has fired',
                 'completedQuestStages: TArray<FARPGQuestSaveEntry> — {questId, stageIndex, outcome} for each terminal stage reached',
                 'unlockedZoneIds: TArray<FName> — zone catalog ids the player has entered at least once',
-                'checkpointActorTag: FGameplayTag — the State.Checkpoint.<BonfireId> tag marking this bonfire activated',
+                `checkpointActorTag: FGameplayTag — the State.Checkpoint.${slug(e.name)} tag marking this checkpoint activated`,
                 'repStandings: TMap<FName, int> — faction reputation points keyed by faction catalog id',
                 'passivePoints: int — total passive points spent',
                 'passiveAllocations: TArray<FName> — node ids of allocated passive tree nodes',
@@ -141,7 +141,7 @@ registerCatalogPipeline({
                 'world-state tags + inventory + wallet into UARPGSaveGame and calls ' +
                 'UGameplayStatics::SaveGameToSlot',
               activatedBy:
-                'Bonfire interaction (BP_Bonfire::Interact → AARPGInteractableBase::OnInteracted delegate → subsystem SaveToSlot); ' +
+                `${e.name} interaction (BP_${slug(e.name)}::Interact → AARPGInteractableBase::OnInteracted delegate → subsystem SaveToSlot); ` +
                 'Autosave trigger (zone transition / quest stage completion → UARPGSaveSubsystem::TriggerAutoSave)',
               dependencies: [
                 'characters (DT_AttributeDefaults for attribute baseline restore)',
@@ -239,23 +239,23 @@ registerCatalogPipeline({
           { key: 'cooldownMs' },
         ],
       },
-      produce: () => ({
+      produce: (e: LabEntity) => ({
         data: {
           triggers: {
             manualTrigger: {
-              source: 'BP_Bonfire (AARPGInteractableBase child)::Interact / OnInteracted delegate',
+              source: `BP_${slug(e.name)} (AARPGInteractableBase child)::Interact / OnInteracted delegate`,
               condition:
                 'Player within interact radius (AARPGInteractableBase::InteractionRadius, default 200 UU) + ' +
                 'interact input confirmed + no active combat flag (State.Player.InCombat absent) + cooldown elapsed',
               effect:
                 'Fires UARPGSaveSubsystem::SaveToSlot(activeSlot); ' +
                 'broadcasts SaveGameEvent.Committed to event bus; ' +
-                'activates State.Checkpoint.<BonfireId> tag on the bonfire actor; ' +
+                `activates State.Checkpoint.${slug(e.name)} tag on the checkpoint actor; ` +
                 'plays SC_Save_Sting + WBP_SaveIndicator HUD flash (200 ms)',
               wiringNote:
-                'BP_Bonfire is a Blueprint child of AARPGInteractableBase (config, not new C++ — canon char-config-not-cpp). ' +
-                'The bonfire registers its State.Checkpoint.* tag in DA_SavePoint. ' +
-                'Tag is persisted in checkpointActorTag so reloads know which bonfire to re-light.',
+                `BP_${slug(e.name)} is a Blueprint child of AARPGInteractableBase (config, not new C++ — canon char-config-not-cpp). ` +
+                `The checkpoint registers its State.Checkpoint.* tag in DA_SavePoint_${slug(e.name)}. ` +
+                'Tag is persisted in checkpointActorTag so reloads know which checkpoint to re-light.',
             },
             autosaveTriggers: [
               {
@@ -281,14 +281,14 @@ registerCatalogPipeline({
               'prevent double-fires on rapid events (e.g. two quest stages completing in the same frame).',
             cooldownMs: 3000,
             cooldownNote:
-              'Manual bonfire save has a 3-second cooldown per bonfire actor instance to ' +
-              'prevent save-spam. The cooldown is per-actor (not global) so different bonfires are independent.',
+              `Manual ${e.name} save has a 3-second cooldown per checkpoint actor instance to ` +
+              'prevent save-spam. The cooldown is per-actor (not global) so different checkpoints are independent.',
             wiringContract: {
               grantedBy:
-                'BP_Bonfire (AARPGInteractableBase child) overlap + interact input → UARPGSaveSubsystem::SaveToSlot; ' +
+                `BP_${slug(e.name)} (AARPGInteractableBase child) overlap + interact input → UARPGSaveSubsystem::SaveToSlot; ` +
                 'Autosave via UARPGSaveSubsystem::TriggerAutoSave (called on OnPostMapChange / boss defeat / zone transition)',
               activatedBy:
-                'Enhanced Input IA_Interact (confirm) on BP_Bonfire (AARPGInteractableBase::Interact); ' +
+                `Enhanced Input IA_Interact (confirm) on BP_${slug(e.name)} (AARPGInteractableBase::Interact); ` +
                 'Zone/Quest events → UARPGSaveSubsystem::TriggerAutoSave',
               dependencies: [
                 'quests (AARPGQuestManager::OnQuestStageComplete trigger)',
@@ -297,7 +297,7 @@ registerCatalogPipeline({
               ],
               verification:
                 'L2: AARPGInteractableBase + UARPGSaveSubsystem::SaveToSlot declared in Source/; ' +
-                'L3: VSSaveLoadTest — interact fires save commit + State.Checkpoint tag activated in PIE',
+                `L3: VSSaveLoadTest — interact fires save commit + State.Checkpoint.${slug(e.name)} tag activated in PIE`,
             },
           },
         },
@@ -598,10 +598,10 @@ registerCatalogPipeline({
       archetype: 'checklist',
       label: 'Test Gate',
       view: { kind: 'checklist', field: 'checks' },
-      produce: () => ({
+      produce: (e: LabEntity) => ({
         data: {
           checks: [
-            'bonfire interact triggers SaveToSlot and writes PoFSave_<slot>.sav',
+            `BP_${slug(e.name)} interact triggers SaveToSlot and writes PoFSave_<slot>.sav`,
             'reload of saved slot restores playerLevel, walletGold, defeatedEnemyTags',
             'ephemeral state (AI tags, in-flight GAS effects) is absent after reload',
             'autosave fires on zone transition (after StreamIn, not before)',
@@ -631,7 +631,7 @@ registerCatalogPipeline({
         const s = slug(e.name);
         const assets = [
           'UARPGSaveGame',
-          'BP_Bonfire (child of AARPGInteractableBase)',
+          `BP_${s} (child of AARPGInteractableBase)`,
           'UARPGSaveSubsystem',
           `DA_SavePoint_${s}`,
           `T_${s}_Icon`,
@@ -643,11 +643,11 @@ registerCatalogPipeline({
             assets,
             wiringContract: {
               grantedBy:
-                'BP_Bonfire (AARPGInteractableBase child) overlap + interact input → ' +
+                `BP_${s} (AARPGInteractableBase child) overlap + interact input → ` +
                 'UARPGSaveSubsystem::SaveToSlot serializes UARPGSaveGame → ' +
                 'UGameplayStatics::SaveGameToSlot("PoFSave_<slot>", 0, SaveObject)',
               activatedBy:
-                'Enhanced Input IA_Interact on BP_Bonfire (AARPGInteractableBase::Interact); ' +
+                `Enhanced Input IA_Interact on BP_${s} (AARPGInteractableBase::Interact); ` +
                 'autosave via UARPGSaveSubsystem::TriggerAutoSave on OnPostMapChange / zone transition / ' +
                 'AARPGQuestManager::OnQuestStageComplete',
               dependencies: [
@@ -660,14 +660,14 @@ registerCatalogPipeline({
               ],
               verification:
                 'L2: UARPGSaveGame + AARPGInteractableBase + UARPGSaveSubsystem declared in Source/PoF/ ' +
-                '+ DA_SavePoint data asset present + BP_Bonfire Blueprint child configured; ' +
+                `+ DA_SavePoint_${s} data asset present + BP_${s} Blueprint child configured; ` +
                 'L3: VSSaveLoadTest in PIE — save commits to disk, reload restores persisted state exactly, ' +
                 'ephemeral state absent post-load',
             },
           },
           ueAssets: [
             `/Game/SaveSystem/UARPGSaveGame`,
-            `/Game/World/Interactables/BP_Bonfire`,
+            `/Game/World/Interactables/BP_${s}`,
             `/Game/SaveSystem/DA_SavePoint_${s}`,
             `/Game/UI/Icons/T_${s}_Icon`,
             `/Game/UI/HUD/WBP_SaveSlots`,
