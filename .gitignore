@@ -45,6 +45,7 @@ yarn-error.log*
 .claude/commands/idea-*
 .claude/ship-loop/
 .claude/gap-loop/
+.claude/craft-loop/
 
 # Windows reserved name artifacts
 nul

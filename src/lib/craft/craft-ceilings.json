@@ -1,0 +1,45 @@
+{
+  "_comment": "The A-axis roof per deliverable class (see src/lib/status/craft.ts). Each ceiling records the project's explicit market assumption. 'permanent' = assumed never to move (generative 3D/animation will not reach top tier); 'arguable' = revisit as the model market moves; 'uncapped' = the long-term chase (LLMs are expected to reach AAA parity here). A step AT its ceiling renders as achievement, never amber shame. Changing a ceiling is a product decision — record why in the reason.",
+  "ceilings": {
+    "text-config": {
+      "ceiling": "A4",
+      "class": "uncapped",
+      "reason": "Design docs, systems specs, balance and config text — LLMs are expected to reach AAA-parity writing and systems design."
+    },
+    "graph-data": {
+      "ceiling": "A4",
+      "class": "uncapped",
+      "reason": "Quest DAGs, state machines, dialogue trees — structured design output LLMs are expected to master."
+    },
+    "ue-runtime": {
+      "ceiling": "A4",
+      "class": "uncapped",
+      "reason": "Runtime code, gates and UE-side assets driven from code — AAA-grade code generation is the core market bet."
+    },
+    "audio": {
+      "ceiling": "A4",
+      "class": "uncapped",
+      "reason": "SFX, music and voice generation (ElevenLabs class and beyond) are expected to reach professional parity."
+    },
+    "vfx-particles": {
+      "ceiling": "A4",
+      "class": "uncapped",
+      "reason": "Effect specs and Niagara graphs are authored as code/config; any capped mesh inputs are covered by the 3d-mesh ceiling."
+    },
+    "2d-art": {
+      "ceiling": "A3",
+      "class": "arguable",
+      "reason": "Image models arguably reach AA today; AAA key-art parity is unproven. Revisit as image models move."
+    },
+    "3d-mesh": {
+      "ceiling": "A2",
+      "class": "permanent",
+      "reason": "Assumed permanent: generative 3D modelling will not reach top-tier AAA asset quality. Reaching A2 here IS the roof."
+    },
+    "animation": {
+      "ceiling": "A2",
+      "class": "permanent",
+      "reason": "Assumed permanent: generative animation will not reach AAA motion quality (hand-keyed + mocap pipelines). Reaching A2 here IS the roof."
+    }
+  }
+}
