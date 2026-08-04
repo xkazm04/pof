@@ -46,6 +46,8 @@ yarn-error.log*
 .claude/ship-loop/
 .claude/gap-loop/
 .claude/craft-loop/
+.claude/green-loop/
+.claude/readiness-loop/
 
 # Windows reserved name artifacts
 nul
@@ -94,3 +96,9 @@ docs/index.bleve/
 
 # Throwaway hermetic SQLite the Playwright suite runs against (e2e/helpers/e2e-db.ts)
 /e2e/.tmp/
+
+# Loop scratch (measurement runs, A/B probe output) — regenerated, never shipped
+/.tmp-green/
+/.tmp-groupc/
+/.tmp-measure/
+/ab-results.json
