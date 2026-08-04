@@ -11,7 +11,9 @@
  * Canon-aware (matches judge-run): pass --catalog <id> to inject that catalog's binding design
  * rules, and --siblings <file> (a { step: config } JSON, e.g. from get-config without --step) to
  * give the judge the entity's other steps as cross-reference context. --step names the config
- * under judgment so it is excluded from its own sibling context.
+ * under judgment so it is excluded from its own sibling context. --no-nested narrows that sibling
+ * projection back to scalars only (nested objects are included by default as of rubric v4,
+ * matches judge-run).
  *
  * SPEND: like judge-run, this spawn is gated by the shared pre-flight guardrail and recorded
  * through `recordSpend` (module `judge`), so a judging loop is visible to the Spend tab and
@@ -33,6 +35,7 @@ import {
 import { canonContextFor } from '../src/lib/catalog/canon/canonContext';
 import { CANON_SEED } from '../src/lib/catalog/canon/canon-seed';
 import { buildSiblingContext } from '../src/lib/judge/siblingContext';
+import { stripNonContent } from '../src/lib/judge/payload';
 
 const arg = (k: string) => { const i = process.argv.indexOf(`--${k}`); return i >= 0 ? process.argv[i + 1] : undefined; };
 
@@ -65,19 +68,41 @@ async function main() {
   const payload = image
     ? `Use the Read tool to view the image at:\n${image}\nThen judge it.`
     : textFile
-      ? '```\n' + readFileSync(textFile, 'utf8').slice(0, 60000) + '\n```' // generous cap; 12k silently truncated real configs mid-field
+      ? (() => {
+          // Read the FULL file and parse BEFORE any truncation — slicing first (the old bug)
+          // could cut a >60KB config mid-JSON, throw, and fall back to the verbatim branch,
+          // which leaks produceDirection on exactly the configs the strip most needs to hit.
+          // The 60,000-char cap applies to the STRIPPED, serialized result instead.
+          const raw = readFileSync(textFile, 'utf8');
+          try {
+            const parsed: unknown = JSON.parse(raw);
+            // JSON.parse succeeding doesn't mean it's an object: an array reshapes into an
+            // index-keyed object and a bare number/string reshapes into `{}`/a char map. Only a
+            // plain object is the shape stripNonContent (and the judge) expects — anything else
+            // falls through to the verbatim branch so it is judged in the shape it was written.
+            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+              const stripped = JSON.stringify(stripNonContent(parsed as Record<string, unknown>), null, 2);
+              return '```json\n' + stripped.slice(0, 60000) + '\n```';
+            }
+            return '```\n' + raw.slice(0, 60000) + '\n```'; // valid JSON, not a plain object — judge verbatim
+          } catch {
+            return '```\n' + raw.slice(0, 60000) + '\n```'; // not JSON — judge it verbatim
+          }
+        })()
       : (() => { console.error('need --image or --text'); process.exit(2); })() as string;
 
   // Canon-aware context (opt-in, mirrors judge-run): catalog canon + entity sibling projection.
   const catalog = arg('catalog');
   const canonContext = catalog ? canonContextFor(CANON_SEED, catalog) || undefined : undefined;
   const siblingsFile = arg('siblings');
+  // Opt-out: exclude bounded nested objects from the sibling projection (default ON as of rubric v4 — Task 4 A/Bs this).
+  const noNested = process.argv.includes('--no-nested');
   let siblingContext: string | undefined;
   if (siblingsFile) {
     const raw = JSON.parse(readFileSync(siblingsFile, 'utf8')) as Record<string, unknown>;
     // get-config (no --step) emits { step: config }; project every step except the one under judgment.
     const steps = Object.entries(raw).map(([step, data]) => ({ step, data: (data ?? {}) as Record<string, unknown> }));
-    siblingContext = buildSiblingContext(steps, arg('step') ?? '') || undefined;
+    siblingContext = buildSiblingContext(steps, arg('step') ?? '', { includeNested: !noNested }) || undefined;
   }
 
   const pol = getModelPolicy('judge-content');

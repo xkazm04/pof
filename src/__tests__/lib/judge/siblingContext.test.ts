@@ -21,7 +21,7 @@ describe('projectStep', () => {
     expect(out).toContain('"rarity":"Common"');
     expect(out).not.toContain('genHistory');
     expect(out).not.toContain('_provenance');
-    expect(out).not.toContain('nested not included'); // non-priority nested objects are not dumped
+    expect(out).toContain('nested not included'); // v4: non-priority nested objects ARE dumped by default
   });
 
   it('truncates to the per-step budget', () => {
@@ -55,6 +55,73 @@ describe('buildSiblingContext', () => {
     const ctx = buildSiblingContext(many, 'S99', { totalChars: 1500 });
     expect(ctx.length).toBeLessThan(2000);
     expect(ctx).toContain('more sibling step(s) omitted');
+  });
+});
+
+describe('projectStep — nested projection (default-on since v4, opt-out available)', () => {
+  const nestedOnly = { rules: { decayPerDay: 10, tiers: ['Revered', 'Exalted'] } };
+
+  it('a nested-only step is visible by default (v4 contract)', () => {
+    expect(projectStep(nestedOnly, 600)).toContain('"decayPerDay":10');
+  });
+
+  it('with includeNested explicitly true the step is visible to the judge (unchanged)', () => {
+    const out = projectStep(nestedOnly, 600, { includeNested: true });
+    expect(out).toContain('rules=');
+    expect(out).toContain('"decayPerDay":10');
+  });
+
+  it('with { includeNested: false } the old empty-projection behaviour is preserved (opt-out)', () => {
+    expect(projectStep(nestedOnly, 600, { includeNested: false })).toBe('');
+  });
+
+  it('still drops non-content keys even when including nested', () => {
+    const out = projectStep(
+      { genHistory: { batches: [1] }, produceDirection: { prompt: 'y' }, rules: { a: 1 } },
+      600,
+      { includeNested: true },
+    );
+    expect(out).not.toContain('genHistory');
+    expect(out).not.toContain('produceDirection');
+    expect(out).toContain('"a":1');
+  });
+
+  it('stays within the per-step budget with a huge nested object', () => {
+    const big = { rules: Object.fromEntries(Array.from({ length: 400 }, (_, i) => [`k${i}`, i])) };
+    const out = projectStep(big, 200, { includeNested: true });
+    expect(out.length).toBeLessThanOrEqual(200);
+  });
+
+  it('caps each nested key individually so an earlier fat key cannot crowd out a later one', () => {
+    // Each `big` alone serializes to ~1980 chars — with no per-key cap, `a=<...>` would already
+    // exceed the 600-char overall budget by itself, and the final truncation would cut the string
+    // off inside `a`'s blob before `b=` ever appears. The per-key cap (perKey = perStepChars/3)
+    // truncates each nested value to ~200 chars first, so all three keys fit and a LATER key
+    // (b) still survives truncation — this is what would go undetected if `perKey` were deleted.
+    const big = Object.fromEntries(Array.from({ length: 200 }, (_, i) => [`k${i}`, i]));
+    const out = projectStep({ a: big, b: big, c: big }, 600, { includeNested: true });
+    expect(out).toContain('b=');
+  });
+
+  it('buildSiblingContext includes nested content by default (v4) and threads the option, respecting the total budget', () => {
+    const steps = [
+      { step: 'A', data: { rules: { x: 1 } } },
+      { step: 'B', data: { rules: { y: 2 } } },
+    ];
+    const byDefault = buildSiblingContext(steps, 'A');
+    expect(byDefault).toContain('- B:');
+    expect(byDefault).toContain('"y":2');
+    // Explicit opt-out still yields the old, scalars-only projection (empty here — `rules` is the
+    // only key and it's nested-only).
+    expect(buildSiblingContext(steps, 'A', { includeNested: false })).toBe('');
+    const on = buildSiblingContext(steps, 'A', { includeNested: true });
+    expect(on).toContain('- B:');
+    expect(on).toContain('"y":2');
+    // A tiny totalChars forces the omission line rather than a silent truncation — assert the
+    // omission text itself, not a length bound (a fixed-length omission line would pass this
+    // length check regardless of whether the budget logic actually ran).
+    expect(buildSiblingContext(steps, 'A', { includeNested: true, totalChars: 10 }))
+      .toContain('more sibling step(s) omitted');
   });
 });
 

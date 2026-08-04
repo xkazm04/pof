@@ -13,8 +13,16 @@ import { DIMENSIONS, STYLE_ANCHORS, type DeliverableClass } from './dimensions';
  * cross-step contradictions the isolated judge was blind to. A stricter, more accurate contract
  * than v2 — bumping the version correctly makes every canon-blind v2 pass provisional (no longer
  * a strict pass) until the step is re-judged under v3.
+ *
+ * v4 = v3 with the judge HARNESS corrected. Two measured defects made v3 scores non-comparable:
+ * (a) `produceDirection` (240/816 artifacts) put the full ~5.7k-char generation prompt INSIDE the
+ * judged payload, while the rubric penalises leaked prompt tokens; (b) the sibling projection
+ * emitted only scalars, so 314/816 steps projected EMPTY and the judge reported cross-references
+ * it could not see as invented. The contract TEXT is unchanged — the INPUT is. Measured on a
+ * 21-cell A/B (median-of-3 per arm): control +0.4 (sd 3.1), contaminated +16.9, blind-siblings
+ * +4.3. Every v3 verdict is therefore provisional until re-judged.
  */
-export const RUBRIC_VERSION = 3;
+export const RUBRIC_VERSION = 4;
 
 /** The rubric-version field every verdict carries (absent on pre-WS2 rows → treated as v1). */
 export interface RubricStamped { rubricVersion?: number }

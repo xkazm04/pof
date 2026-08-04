@@ -18,6 +18,7 @@
  *   npx tsx scripts/judge-run.ts --all            # every catalog with a judgeable deliverable
  *   npx tsx scripts/judge-run.ts --catalog items --median 3   # variance-robust near the 90 line
  *   npx tsx scripts/judge-run.ts --catalog items --no-canon    # A/B: disable canon+sibling context
+ *   npx tsx scripts/judge-run.ts --catalog items --no-nested      # A/B opt-out: pre-v4 sibling projection (nested projection is ON by default as of rubric v4)
  *   npx tsx scripts/judge-run.ts --catalog items --force-budget  # proceed despite a budget refusal
  *   npx tsx scripts/judge-run.ts --catalog items --rejudge       # re-judge even unchanged steps
  *   npx tsx scripts/judge-run.ts --all --concurrency 4           # bounded pool (default 4)
@@ -26,6 +27,15 @@
  * under the current scheme, same rubric version) is skipped by default — the judgment already
  * exists and would cost an Opus draw to reproduce. Every skip prints its reason, so a skipped
  * step is never mistaken for a judged one. `--rejudge` forces the whole sweep.
+ *
+ * OPERATIONAL TRAP (2026-07-29): stripping `produceDirection` out of the judged PAYLOAD (see
+ * `buildPayload`) does not move `stepContentHash` — `produceDirection` was never in
+ * `contentHash.ts`'s `VOLATILE_KEYS`, so it was already counted toward the hash, and it stays
+ * that way here on purpose (changing it would bump `CONTENT_HASH_SCHEME` and unbind every stored
+ * hash). Nor does the strip touch `RUBRIC_VERSION`. So a verdict recorded from a CONTAMINATED
+ * pre-fix payload still reads as "unchanged" (`judgeSkipDecision`, fleetPlan.ts:52-72) against the
+ * unchanged artifact and is SKIPPED by default — re-baselining those contaminated verdicts after
+ * this fix ships REQUIRES `--rejudge`, or the fix will look inert (nothing gets re-judged).
  *
  * SPEND: every spawn is recorded through the same `recordSpend` seam as every other CLI
  * invocation in this app (task types `judge-content` / `judge-visual`, module `judge`, one row
@@ -64,6 +74,7 @@ import { getStepFact, isSyntheticEntity } from '../src/lib/status/statusModel';
 import { canonContextFor } from '../src/lib/catalog/canon/canonContext';
 import { CANON_SEED } from '../src/lib/catalog/canon/canon-seed';
 import { buildSiblingContext } from '../src/lib/judge/siblingContext';
+import { stripNonContent } from '../src/lib/judge/payload';
 import stepFacts from '../src/lib/status/step-facts.json';
 
 /** All catalog ids (for --all), from the authoritative step-facts map. */
@@ -83,6 +94,8 @@ const NO_CANON = has('no-canon');
 const FORCE_BUDGET = has('force-budget');
 /** Re-judge every target, including steps whose stored verdict still binds to their content. */
 const REJUDGE = has('rejudge');
+/** Opt-out: exclude bounded nested objects from the sibling projection (default ON as of rubric v4 — Task 4 A/Bs this). */
+const NO_NESTED = has('no-nested');
 /** In-flight judge spawns. Bounded — each worker holds a real Claude CLI process. */
 const CONCURRENCY = Math.max(1, Number(arg('concurrency') ?? DEFAULT_JUDGE_CONCURRENCY));
 
@@ -153,9 +166,7 @@ async function fetchVerdictIndex(catalogId: string): Promise<Map<string, PriorVe
 function buildPayload(cls: DeliverableClass, art: Artifact, tmpDir: string): { payload: string; imageFile?: string } | null {
   const d = art.data ?? {};
   if (cls === 'text-config') {
-    const clone: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(d)) { if (k === 'genHistory' || k === 'audioAssets' || k === '_provenance') continue; clone[k] = v; }
-    return { payload: '```json\n' + JSON.stringify(clone, null, 2) + '\n```' };
+    return { payload: '```json\n' + JSON.stringify(stripNonContent(d), null, 2) + '\n```' };
   }
   if (cls === '2d-art' || cls === 'ui-glyph' || cls === '3d-mesh') {
     // Pull the selected candidate's data-URL image out of genHistory, save to a temp PNG.
@@ -240,7 +251,7 @@ async function judgeOne(catalogId: string, art: Artifact, cls: DeliverableClass,
   const canonContext = NO_CANON ? undefined : canonContextFor(CANON_SEED, catalogId) || undefined;
   const siblingContext = NO_CANON || cls !== 'text-config'
     ? undefined
-    : buildSiblingContext(entityArtifacts.filter((a) => a.entityId === art.entityId).map((a) => ({ step: a.step, data: a.data ?? {} })), art.step) || undefined;
+    : buildSiblingContext(entityArtifacts.filter((a) => a.entityId === art.entityId).map((a) => ({ step: a.step, data: a.data ?? {} })), art.step, { includeNested: !NO_NESTED }) || undefined;
 
   const prompt = buildRubricPrompt(cls, {
     subject: `${catalogId} :: ${art.step} (entity ${art.entityId})`,
