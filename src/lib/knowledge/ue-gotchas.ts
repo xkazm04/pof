@@ -253,6 +253,16 @@ export const UE_GOTCHAS: Gotcha[] = [
     source: 'research: MetaHuman Animator human-animation pipeline (Curtis Holt) + live 5.8 API probe',
   },
   {
+    id: 'metahuman-footage-ingest-capturemanager',
+    modules: ['character', 'animation'],
+    summary:
+      'Video → MetaHuman markerless mocap: MetaHumanCaptureSource is DEPRECATED (5.7) — ingest a plain .mp4 headless with CaptureManagerIngestBlueprintLibrary.ingest_mono_video_sync, which returns a saved FootageCaptureData',
+    detail:
+      "To turn ordinary camera (or generated) video into MetaHuman Animator input, do NOT use UMetaHumanCaptureSource / UMetaHumanCaptureSourceSync — both are deprecated in 5.7 with the functionality moved to the CaptureManager modules. The scriptable entry point is unreal.CaptureManagerIngestBlueprintLibrary, whose 'Blocking' variants are explicitly intended for Python: ingest_mono_video_sync(video_path, audio_path, slate, take_number, CaptureManagerConversionParams()) returns a (UFootageCaptureData, error_text) tuple; siblings are ingest_stereo_video_sync / ingest_take_archive_sync / ingest_live_link_face_sync / ingest_calibration_sync. It runs fully headless under -run=pythonscript -nullrhi with -EnablePlugins=MetaHuman,MetaHumanAnimationTools,CaptureManagerCore,CaptureManagerDevices,CaptureManagerApp,CaptureManagerEditor — no Capture Manager / Live Link Hub GUI. It DECODES the video to a PNG image sequence outside the project (…/AppData/Local/CaptureManager/Media/<project>/MonoVideo/<slate>_<take>/Video/frame_000000.png …) and creates /Game/CaptureManager/Imports/<slate>_<take>/CD_<slate>_<take> referencing an ImgMediaSource — so the take's frames are NOT under Content and must be treated as an external dependency. Two follow-through catches: (1) the ingested asset can come back with frame_rate 0 on both FootageCaptureMetadata.frame_rate and ImgMediaSource.frame_rate_override — stamp the real rate (FrameRate(30, 1)) before use, since IsInitialized() rejects an invalid frame rate; (2) MetaHumanPerformance.can_process() for input_type MONO_FOOTAGE does NOT require a MetaHumanIdentity (that requirement is on the DEPTH_FOOTAGE branch) — it needs footage plus EITHER face_tracking OR (body_tracking AND the MetaHumanBodyTracker modular feature), so a BODY-only solve can legitimately skip building a face identity. If can_process() is still false with valid footage, the remaining gates are engine-level, not footage-level: a supported RHI (fails under -nullrhi — use -RenderOffScreen), the MetaHuman authoring objects being present (the MetaHuman Optional Content install), and a processing range whose upper bound exceeds its lower bound (set_processing_range).",
+    appliesTo: ['ue-python'],
+    source: 'research: MetaHuman Animator human-animation pipeline (Curtis Holt) + live 5.8 headless ingest probe',
+  },
+  {
     id: 'ai-motion-generator-ue-ingestion',
     modules: ['animation', 'character'],
     summary:

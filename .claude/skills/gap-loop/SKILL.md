@@ -1,11 +1,25 @@
 ---
 name: gap-loop
-description: Iterative gap-coverage loop for the PoF /status map. Each run reads the map's truth (pipeline_artifacts + judge_verdicts + step-facts audit), picks the highest-value gap batch (unpowered media steps, unwired steps, deferred UE gates, unjudged content), executes it with the proven engine palette (Leonardo 2D + Qwen-VL gate, Tripo 3D, ElevenLabs SFX, UE Python/C++ + headless drain, Sonnet judge fleet), re-verifies through the full ladder, and journals state under .claude/gap-loop/. Invoke with "run gap-loop" / "gap-loop boot | pick | execute | verify | wrap".
+description: EXISTENCE half of the PoF readiness campaign — raises /status cells from R0 NOT WIRED / R1 HOLLOW up to R2-R4 by making something real power them. Each run reads the map's truth (pipeline_artifacts + judge_verdicts + step-facts audit), picks the highest-value gap batch (unpowered media steps, unwired steps, deferred UE gates, unjudged content), executes it with the proven engine palette (Leonardo 2D + Qwen-VL gate, Tripo 3D, ElevenLabs SFX, UE Python/C++ + headless drain, Sonnet judge fleet), re-verifies through the full ladder, and journals state under .claude/gap-loop/. Invoke with "run gap-loop" / "gap-loop boot | pick | execute | verify | wrap". For raising cells that ALREADY have content from R3 to R4 on judged quality, use green-loop instead.
 ---
 
 # Gap Loop — systematic /status gap coverage
 
 One question, run over run: **which cells on /status are not verified-green, and what is the highest-value batch that moves them — honestly?** The loop is the industrialized version of the 2026-07-07 transparency campaign (fleet audit → judge fleet → fix rounds → UE test gates: verified catalogs 4→14, 178/180 judge passes). Its law is inherited from that campaign: **never move a cell by weakening a checker — move it by making the claim true and letting the gate/judge confirm.**
+
+## Where this sits on the readiness ladder
+
+Since 2026-07-29 /status paints ONE scale, `R0`–`R5` (`src/lib/status/readiness.ts`). This loop owns the **bottom half — existence**:
+
+| From | To | Meaning |
+|---|---|---|
+| **R0** NOT WIRED | R2+ | nothing was ever produced → produce something real |
+| **R1** HOLLOW | R2+ | a checker passed on placeholder data, or nothing can produce it → wire a real engine |
+| **R4⋯** WAITING | R4 | a gate is declared but never ran → build the UE substance and drain it |
+
+It does **not** own R3 → R4 on *content quality* — that is **green-loop**'s job (raising a judged median to ≥90). The two are complementary, not alternatives: gap-loop makes the cell real, green-loop makes it good. `readiness-loop` is the driver that decides which of the two a given cell needs.
+
+Report movement in R-terms (`items::3D Mesh R1→R4`), not in the retired `verified/trusted/ungated` grade words — those still exist inside `deriveCell` but are no longer the language of the map.
 
 > Engine vs. memory: this file is the engine. Cross-session memory lives in the
 > **`.claude/gap-loop/` overlay** (`state.md`, `journal.md`, `lessons.md`) — gitignored
