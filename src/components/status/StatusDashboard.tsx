@@ -148,9 +148,11 @@ export function StatusDashboard() {
         {tab === 'pipelines' && (
           <>
             <TabIntro>
-              One row per pipeline, one cell per step — the cell names its engine, the background is the honest grade
-              (green = gate/judge-proven), the left stripe is the acceptance tier. Click a tier or engine chip to highlight,
-              or a pipeline to open its category overview.
+              One row per pipeline, one cell per step, and <strong>one scale</strong>: the cell names its engine and its
+              background is its rung on the production-readiness ladder R0–R5 (green is reserved for R4+, gate- or
+              judge-proven). A hatched cell is <strong>waiting</strong> — a gate declared but never run, which is not
+              progress; red is blocked. Click a readiness or engine chip to highlight, or a pipeline to open its category
+              overview.
             </TabIntro>
             <PipelinesView onFocusCatalog={focusCatalog} filterClass={filterClass} onClearFilter={clearFilter} />
           </>

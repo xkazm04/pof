@@ -87,9 +87,11 @@ describe('buildSwimlane', () => {
       // D unwired
     ], [], allOperable);
     expect(lane.cells.map((c) => c.grade)).toEqual(['trusted', 'ungated', 'verified', 'unwired']);
-    expect(lane.verifiedPct).toBe(25);
-    expect(lane.credibleGePct).toBe(50);
-    expect(lane.wiredPct).toBe(75);
+    // Readiness ladder: trusted=R3, ungated=R2, verified=R4, unwired=R0.
+    expect(lane.readyPct).toBe(25);    // R4+ : C
+    expect(lane.crediblePct).toBe(50); // R3+ : A, C
+    expect(lane.startedPct).toBe(75);  // R1+ : A, B, C
+    expect(lane.blockedCount).toBe(0);
   });
 });
 
@@ -172,8 +174,11 @@ describe('browserMirror — dual-execution annotation', () => {
     const lane = buildSwimlane('spellbook', 'Spellbook',
       [{ label: 'Effect Logic' }], [art('Effect Logic', 'pass', { catalogId: 'spellbook' })]);
     expect(lane.cells[0].realization?.browser).toBe('proven');
-    const other = buildSwimlane('items', 'Items',
-      [{ label: 'Concept Brief' }], [art('Concept Brief', 'pass', { catalogId: 'items' })]);
+    // A pipeline with NO realization-facts entry claims nothing. Uses a phantom catalog id
+    // rather than a real one: this assertion previously named `items`, which was later
+    // reviewed, so the test began failing on data growth rather than on a regression.
+    const other = buildSwimlane('phantom-catalog-xyz', 'Phantom',
+      [{ label: 'Concept Brief' }], [art('Concept Brief', 'pass', { catalogId: 'phantom-catalog-xyz' })]);
     expect(other.cells[0].realization).toBeUndefined();
   });
 });
@@ -317,7 +322,7 @@ describe('headless-operability gate — verified demands a machine-reproducible 
     ], [art('Gate', 'pass', { tier: 'L3' })]); // real getHeadlessFact default lookup
     expect(lane.cells[0].grade).toBe('trusted');
     expect(lane.cells[0].reason).toContain('not headless-operable via pof-mcp');
-    expect(lane.verifiedPct).toBe(0);
+    expect(lane.readyPct).toBe(0);
   });
 
   it('the coverage dataset is loaded (real headless fact lookup)', () => {

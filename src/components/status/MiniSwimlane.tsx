@@ -36,7 +36,7 @@ export function MiniSwimlane({
   const relation = `${edge}${node.role ? `, as ${node.role}` : ''}`;
   const rowLabel = `${node.name} — ${relation} — ${node.catalogId}${node.missing ? ' — link target not found' : ''}. Focus this entity.`;
   const pctLabel = graded
-    ? `${swimlane.verifiedPct}% of ${swimlane.cells.length} steps gate-verified · credible ${swimlane.credibleGePct}% · any artifact ${swimlane.wiredPct}%`
+    ? `${swimlane.readyPct}% of ${swimlane.cells.length} steps production-ready (R4+) · credible (R3+) ${swimlane.crediblePct}% · started (R1+) ${swimlane.startedPct}%${swimlane.blockedCount ? ` · ${swimlane.blockedCount} blocked` : ''}`
     : 'No pipeline registered for this catalog — nothing to grade yet';
   return (
     <div
@@ -89,9 +89,9 @@ export function MiniSwimlane({
         role="img"
         aria-label={pctLabel}
         title={pctLabel}
-        style={{ width: 44, flexShrink: 0, textAlign: 'right', fontSize: 'var(--lab-fs-xs)', fontFamily: 'var(--lab-font-mono)', color: !graded ? 'var(--text-subtle)' : swimlane.verifiedPct > 0 ? 'var(--lab-ok)' : 'var(--lab-muted)' }}
+        style={{ width: 44, flexShrink: 0, textAlign: 'right', fontSize: 'var(--lab-fs-xs)', fontFamily: 'var(--lab-font-mono)', color: !graded ? 'var(--text-subtle)' : swimlane.readyPct > 0 ? 'var(--lab-ok)' : 'var(--lab-muted)' }}
       >
-        {graded ? `${swimlane.verifiedPct}%` : '—'}
+        {graded ? `${swimlane.readyPct}%` : '—'}
       </span>
       <div style={{ display: 'flex', gap: 'var(--lab-s1)' }}>
         {!graded && (

@@ -154,12 +154,12 @@ export function resolveItemFocus(catalogId: string, entityId: string, ctx: ItemF
   return { focus, forward, reverse };
 }
 
-/** Order nodes weakest-first: least gate-verified coverage ascending, then name
+/** Order nodes weakest-first: least production-ready coverage (R4+) ascending, then name
  *  ascending as a stable tiebreak — the whole point of the category overview is to
  *  float the least-realized entities to the top so effort lands where it's needed. Pure. */
 export function sortWeakestFirst(nodes: FocusNode[]): FocusNode[] {
   return [...nodes].sort(
-    (a, b) => a.swimlane.verifiedPct - b.swimlane.verifiedPct || a.name.localeCompare(b.name),
+    (a, b) => a.swimlane.readyPct - b.swimlane.readyPct || a.name.localeCompare(b.name),
   );
 }
 

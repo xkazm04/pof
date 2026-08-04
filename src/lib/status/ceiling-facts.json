@@ -1,6 +1,6 @@
 {
   "_note": "Recorded quality ceilings mined from the green-loop campaign ledger (.claude/green-loop/state.md). Each entry pins a (catalogId, step[, entityId]) cell to the KIND of wall that caps its judge score, so the capability lens can tell 'our technique can't do better' apart from 'this project's data is locked/unseeded' and 'a checker forces the number the judge then flags'. project-data + checker-structural cells are EXCLUDED from a capability class's median (they don't measure technique); technique cells stay IN and CAP the class. When a cause is ambiguous it is classified 'technique' (conservative — counts against our capability, never inflates it). This is a READ-ONLY lens; it never touches statusModel grading or any gate.",
-  "auditedFrom": "green-loop/state.md (2026-07-16/17 waves W1-W4)",
+  "auditedFrom": "green-loop/state.md (2026-07-16/17 waves W1-W4; 2026-08-04 v4 harvest)",
   "ceilings": [
     {
       "catalogId": "loot-tables",
@@ -83,6 +83,27 @@
       "step": "Applies Status",
       "ceilingClass": "technique",
       "note": "Ignite rate-continuity is an arithmetic coin-flip: the judge re-flags a correct DoT rate as discontinuous — judge-arithmetic technique ceiling."
+    },
+    {
+      "catalogId": "progression-curves",
+      "step": "Curve Formula",
+      "entityId": "curve-hero-level",
+      "ceilingClass": "project-data",
+      "note": "The judge argues the L90-99 cost clamp flattens the curve exactly where PoE2/LE steepen it (70.4 h to L100 reads short for a 100-level ARPG). The clamp is the entity's authored soft-cap model, canon-cited to ARPG-LAWS section 9; changing it re-derives every minute and hour figure in the entity. A design decision for the owner, not a writing defect."
+    },
+    {
+      "catalogId": "progression-curves",
+      "step": "Concept Brief",
+      "entityId": "curve-hero-level",
+      "ceilingClass": "project-data",
+      "note": "45.0 minutes held flat across 53 levels (L32-84) is a flatness no shipped ARPG in the reference set runs. The flatness is the model's deliberate thesis and is proven algebraically; the judge disputes the design choice, not the derivation. Re-tuning the beat is an owner decision."
+    },
+    {
+      "catalogId": "achievements",
+      "step": "Localization",
+      "entityId": "achievement-first-blood",
+      "ceilingClass": "project-data",
+      "note": "The reward line's cs budget cannot be measured for real: items::item-7 authors no Localization step, so Item_MinorHealthPotion_Name has no cs entry and the composite resolves through the en-US fallback. Disclosed honestly in-cell; closing it needs the items catalog to ship the key."
     }
   ]
 }

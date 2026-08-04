@@ -22,6 +22,8 @@ import headlessCoverageJson from './headless-coverage.json';
 import { BANDS, newestRubricVerdicts, isCurrentRubric } from '@/lib/judge/rubrics';
 import { mirrorSupport, type MirrorSupport } from '@/lib/preview/browser-mirror';
 import { getRealization, type StepRealization } from '@/lib/preview/realization';
+// readiness.ts imports only TYPES from this module, so this is not a runtime cycle.
+import { readinessOf, atOrAbove, type ReadinessLevel } from './readiness';
 
 export type CellGrade = 'verified' | 'trusted' | 'ungated' | 'unpowered' | 'deferred' | 'attention' | 'pending' | 'unwired';
 
@@ -266,12 +268,16 @@ export interface Swimlane {
   catalogId: string;
   label: string;
   cells: StepCell[];
-  /** % of steps with a GATE-PROVEN pass (the professional-grade bar). */
-  verifiedPct: number;
-  /** % of steps at verified or trusted. */
-  credibleGePct: number;
-  /** % of steps with any artifact at all. */
-  wiredPct: number;
+  /** % of steps at R4+ — gate-proven or shipped. The professional-grade bar.
+   *  (Was `verifiedPct`; renamed with the readiness ladder rather than silently
+   *  redefined, so no caller can keep reading it as the old grade-only measure.) */
+  readyPct: number;
+  /** % of steps at R3+ — reviewed or better. (Was `credibleGePct`.) */
+  crediblePct: number;
+  /** % of steps at R1+ — anything has been produced at all. (Was `wiredPct`.) */
+  startedPct: number;
+  /** Steps a checker or judge condemned. Off-ladder, so it is a count, not a percent. */
+  blockedCount: number;
 }
 
 /** Build a swimlane for one pipeline from its step metas + all recorded artifacts. Pure. */
@@ -308,22 +314,28 @@ export function buildSwimlane(
     return gateHeadless(cell, catalogId, s.label, headless);
   });
   const n = Math.max(cells.length, 1);
-  const verified = cells.filter((c) => c.grade === 'verified').length;
-  const credible = cells.filter((c) => c.grade === 'verified' || c.grade === 'trusted').length;
-  const wired = cells.filter((c) => c.grade !== 'unwired').length;
+  // Lane numbers read the SAME ladder the cells paint, so a lane's headline percentage
+  // and the colours under it can never disagree. `waiting`/`blocked` are not rungs, so
+  // they are excluded from the "reached" percentages and counted separately.
+  const readings = cells.map(readinessOf);
+  const reached = readings.filter((r) => r.state === 'reached');
+  const pctAtOrAbove = (floor: ReadinessLevel) =>
+    Math.round((reached.filter((r) => atOrAbove(r.level, floor)).length / n) * 100);
   return {
     catalogId,
     label,
     cells,
-    verifiedPct: Math.round((verified / n) * 100),
-    credibleGePct: Math.round((credible / n) * 100),
-    wiredPct: Math.round((wired / n) * 100),
+    readyPct: pctAtOrAbove('R4'),
+    crediblePct: pctAtOrAbove('R3'),
+    startedPct: pctAtOrAbove('R1'),
+    blockedCount: readings.filter((r) => r.state === 'blocked').length,
   };
 }
 
-/** Sort lanes: gate-proven first, then credible, then alpha — gaps sink visibly. Pure. */
+/** Sort lanes: most production-ready first, then credible, then alpha — gaps sink
+ *  visibly. Pure. */
 export function sortLanes(lanes: Swimlane[]): Swimlane[] {
   return [...lanes].sort(
-    (a, b) => b.verifiedPct - a.verifiedPct || b.credibleGePct - a.credibleGePct || a.label.localeCompare(b.label),
+    (a, b) => b.readyPct - a.readyPct || b.crediblePct - a.crediblePct || a.label.localeCompare(b.label),
   );
 }

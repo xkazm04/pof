@@ -1,41 +1,46 @@
 'use client';
 
 /** One swimlane cell, Blueprint-styled: names the ENGINE powering the step (the step
- *  label moves to the second line + tooltip); background encodes the strict grade.
- *  A left edge stripe encodes the acceptance TIER (L0–L4) — see TIER_VAR — echoed by
- *  a small tier code on the engine line so the tier never rests on hue alone
- *  (WCAG 1.4.1). Unwired cells render hollow with a dashed border so bottlenecks pop.
- *  `dimmed` supports the highlight bars (tier / engine click-filters): non-matching
- *  cells drop to low opacity. */
-import type { StepCell, CellGrade } from '@/lib/status/statusModel';
+ *  label moves to the second line + tooltip); the background encodes ONE thing — the
+ *  step's position on the production-readiness ladder (`@/lib/status/readiness`).
+ *
+ *  There used to be a second colour language here: a 3px left stripe painting the
+ *  acceptance tier L0–L4. It fought the fill (L4's green and `verified`'s green were the
+ *  same token, so green meant "declares a gate" on the stripe and "passed a gate" in the
+ *  fill) and it rewarded ambition — a merely DECLARED L4 painted green. The stripe is
+ *  gone; the acceptance tier survives as evidence-class metadata in the tooltip, and the
+ *  code on the engine line now reads the readiness rung so it never rests on hue alone
+ *  (WCAG 1.4.1). `dimmed` supports the highlight chips: non-matching cells drop opacity. */
+import type { StepCell } from '@/lib/status/statusModel';
+import {
+  readinessOf,
+  readinessCode,
+  readinessLabel,
+  RAMP,
+  BLOCKED_TOKEN,
+  BLOCKED_FILL,
+} from '@/lib/status/readiness';
+import { craftCode, craftLabel } from '@/lib/status/craft';
+import type { CellCraft } from '@/lib/craft/craftCell';
 
-/** Grade → lab token. Green (ok) is reserved for gate-proven; ungated generative
- *  output holds at warn; trusted (LLM/code) uses the blueprint ink. */
-export const GRADE_VAR: Record<CellGrade, string> = {
-  verified: 'var(--lab-ok)',
-  trusted: 'var(--lab-ink)',
-  ungated: 'var(--lab-warn)',
-  unpowered: 'var(--lab-bad)',
-  deferred: 'var(--lab-deferred)',
-  attention: 'var(--lab-bad)',
-  pending: 'var(--lab-accent-bg)',
-  unwired: 'transparent',
-};
-
-/** Acceptance tier → stripe color. Climbing the ladder walks muted → ink → accent →
- *  warn → ok, mirroring "closer to gate-proven". */
-export const TIER_VAR: Record<string, string> = {
-  L0: 'var(--lab-muted)',
-  L1: 'var(--lab-ink)',
-  L2: 'var(--lab-accent)',
-  L3: 'var(--lab-warn)',
-  L4: 'var(--lab-ok)',
-};
-
-export function StatusCell({ cell, dimmed = false }: { cell: StepCell; dimmed?: boolean }) {
+export function StatusCell({
+  cell,
+  dimmed = false,
+  craft,
+}: {
+  cell: StepCell;
+  dimmed?: boolean;
+  /** The parallel A-axis reading (AAA-craft lens) — display-only, attached by the page
+   *  the way realization is; absent = the step was never audited OR gauges failed to
+   *  load, and no chip renders (absence is never painted as A0). */
+  craft?: CellCraft;
+}) {
   const { counts } = cell;
+  const readiness = readinessOf(cell);
   const title = [
-    `${cell.label} — ${cell.grade}${cell.tier ? ` (${cell.tier})` : ''} · engine: ${cell.engine}`,
+    `${cell.label} — ${readinessLabel(readiness)}`,
+    craft ? `craft: ${craftLabel(craft.craft)} · lens ${craft.lens} · roof ${craft.ceiling}` : '',
+    `engine: ${cell.engine}${cell.tier ? ` · evidence class ${cell.tier}` : ''} · internal grade ${cell.grade}`,
     cell.judged
       ? `JUDGED ${cell.judged.verdict.toUpperCase()} ${cell.judged.score}/100 by ${cell.judged.model}: ${cell.judged.findings}`
       : cell.judge ? `judge needed: ${cell.judge}${cell.checkerMeaningful === false ? ' · checker is shape-only' : ''}` : '',
@@ -49,25 +54,43 @@ export function StatusCell({ cell, dimmed = false }: { cell: StepCell; dimmed?: 
   ].filter(Boolean).join('\n');
 
   const unwired = cell.grade === 'unwired';
-  const unpowered = cell.grade === 'unpowered';
-  const color = GRADE_VAR[cell.grade];
-  const tierColor = cell.tier ? TIER_VAR[cell.tier] : undefined;
+  const blocked = readiness.state === 'blocked';
+  const waiting = readiness.state === 'waiting';
+  const step = RAMP[readiness.level];
+  const color = blocked ? BLOCKED_TOKEN : step.token;
+  const fill = blocked ? BLOCKED_FILL : step.fill;
+  // `waiting` keeps its rung's hue but is never solid: a diagonal hatch over a dashed
+  // border reads as "aiming at R4", not "at R4". This is what stops a declared-but-unrun
+  // gate from looking like progress — the defect the tier stripe used to create.
+  const background = waiting
+    ? `repeating-linear-gradient(45deg, color-mix(in srgb, ${color} ${fill}%, transparent) 0 4px, transparent 4px 8px)`
+    : fill === 0
+      ? 'transparent'
+      : `color-mix(in srgb, ${color} ${fill}%, transparent)`;
   return (
     <div
       role="img"
       aria-label={title}
       title={title}
+      data-readiness={readiness.level}
+      data-readiness-state={readiness.state}
       style={{
         height: 40,
-        width: 118,
+        // 118 before the craft chip joined the meta row; the engine span is the flex:1
+        // element that absorbs/releases the extra width.
+        width: 132,
         padding: 'var(--lab-s1) var(--lab-s2)',
-        // unpowered: hollow with a solid red frame — a claim with nothing behind it,
-        // visually distinct from real failures (filled red) and unwired (dashed grey).
-        border: unwired ? '1px dashed var(--lab-line)' : unpowered ? `1px solid ${color}` : `1px solid color-mix(in srgb, ${color} 70%, transparent)`,
-        // Tier stripe on the left edge — color IS the tier, no text needed.
-        borderLeft: tierColor ? `3px solid ${tierColor}` : undefined,
+        // R0 is hollow + dashed so bottlenecks pop; `blocked` and `waiting` take a solid
+        // and a dashed frame of their own colour so the state reads at the border too.
+        border: unwired
+          ? '1px dashed var(--lab-line)'
+          : waiting
+            ? `1px dashed ${color}`
+            : blocked
+              ? `1px solid ${color}`
+              : `1px solid color-mix(in srgb, ${color} 70%, transparent)`,
         borderRadius: 'var(--lab-r-sm)',
-        background: unwired || unpowered ? 'transparent' : `color-mix(in srgb, ${color} 24%, transparent)`,
+        background,
         color: unwired ? 'var(--text-subtle)' : 'var(--lab-text)',
         fontSize: 'var(--lab-fs-xs)',
         lineHeight: 1.25,
@@ -123,25 +146,54 @@ export function StatusCell({ cell, dimmed = false }: { cell: StepCell; dimmed?: 
           </span>
         )}
         <span style={{ flex: 1, minWidth: 0, opacity: 0.75, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {unwired ? '—' : unpowered ? 'no engine' : cell.engine}
+          {unwired ? '—' : cell.grade === 'unpowered' ? 'no engine' : cell.engine}
         </span>
-        {cell.tier && (
-          // The tier ALSO as text, not just as the left stripe's hue: L0–L4 differ only
-          // by color there, which is unreadable to a colorblind eye (WCAG 1.4.1). The
-          // stripe stays as the fast scan cue; this is the ground truth.
+        {/* The rung ALSO as text, never hue alone (WCAG 1.4.1) — the fill is the fast
+            scan cue, this is the ground truth. `⋯` marks waiting, `✕` blocked, so the
+            two non-rung states survive a colorblind or greyscale rendering. */}
+        <span
+          data-testid="readiness-code"
+          title={readinessLabel(readiness)}
+          style={{
+            flexShrink: 0,
+            fontFamily: 'var(--lab-font-mono)',
+            fontSize: 11,
+            lineHeight: '11px',
+            fontWeight: 700,
+            letterSpacing: '0.02em',
+            color: blocked ? 'var(--lab-bad)' : unwired ? 'var(--text-subtle)' : 'var(--lab-text)',
+          }}
+        >
+          {readinessCode(readiness)}
+        </span>
+        {craft && (
+          // The PARALLEL craft axis (A0 UNGAUGED → A4 AAA-PARITY): level + state as
+          // TEXT (`^` at-ceiling, `~` stale), never hue alone — same WCAG discipline
+          // as the readiness code. Colour is secondary reinforcement only: green for
+          // a roof reached (achievement), warn for stale, muted otherwise.
           <span
-            data-testid="tier-code"
+            data-testid="craft-code"
+            data-craft={craft.craft.level}
+            data-craft-state={craft.craft.state}
+            title={`${craftLabel(craft.craft)} · lens ${craft.lens} · roof ${craft.ceiling}`}
             style={{
               flexShrink: 0,
               fontFamily: 'var(--lab-font-mono)',
-              fontSize: 11,
+              fontSize: 9,
               lineHeight: '11px',
               fontWeight: 700,
               letterSpacing: '0.02em',
-              color: unwired ? 'var(--text-subtle)' : 'var(--lab-text)',
+              color:
+                craft.craft.state === 'at-ceiling'
+                  ? 'var(--lab-ok)'
+                  : craft.craft.state === 'stale'
+                    ? 'var(--lab-warn)'
+                    : craft.craft.level === 'A0'
+                      ? 'var(--text-subtle)'
+                      : 'var(--lab-muted)',
             }}
           >
-            {cell.tier}
+            {craftCode(craft.craft)}
           </span>
         )}
       </span>

@@ -122,8 +122,8 @@ describe('resolveItemFocus', () => {
   it('grades forward/reverse the same way the focus is graded', () => {
     const ctx = makeWorld();
     const result = resolveItemFocus('items', 'vael-blade', ctx)!;
-    // sanity: the reverse node's swimlane verifiedPct is a number
-    expect(typeof result.reverse[0].swimlane.verifiedPct).toBe('number');
+    // sanity: the reverse node's swimlane readyPct is a number
+    expect(typeof result.reverse[0].swimlane.readyPct).toBe('number');
   });
 
   it('dedupes and drops self-references', () => {
@@ -151,7 +151,7 @@ describe('resolveItemFocus', () => {
 });
 
 describe('buildCategoryNodes — the weakest-first category overview', () => {
-  // items has 2 steps; a verified (L3/L4 gate) pass on a step lifts verifiedPct.
+  // items has 2 steps; a verified (L3/L4 gate) pass on a step lifts readyPct.
   function categoryCtx() {
     const entitiesByCatalog = {
       items: {
@@ -175,7 +175,7 @@ describe('buildCategoryNodes — the weakest-first category overview', () => {
     const { entitiesByCatalog, ctx } = categoryCtx();
     const nodes = buildCategoryNodes('items', entitiesByCatalog, ctx);
     expect(nodes.map((n) => n.name)).toEqual(['Apple Dagger', 'Zephyr Edge', 'Mid Blade']);
-    expect(nodes.map((n) => n.swimlane.verifiedPct)).toEqual([0, 0, 50]);
+    expect(nodes.map((n) => n.swimlane.readyPct)).toEqual([0, 0, 50]);
   });
 
   it('each row is the entity-scoped realization (Mid Blade produced Economy, not 3D-Mesh)', () => {
@@ -193,7 +193,7 @@ describe('buildCategoryNodes — the weakest-first category overview', () => {
   });
 
   it('sortWeakestFirst is a pure, stable ordering', () => {
-    const mk = (name: string, pct: number) => ({ catalogId: 'x', entityId: name, name, swimlane: { verifiedPct: pct } });
+    const mk = (name: string, pct: number) => ({ catalogId: 'x', entityId: name, name, swimlane: { readyPct: pct } });
     const input = [mk('B', 10), mk('A', 10), mk('C', 0)] as unknown as Parameters<typeof sortWeakestFirst>[0];
     const out = sortWeakestFirst(input);
     expect(out.map((n) => n.name)).toEqual(['C', 'A', 'B']);
