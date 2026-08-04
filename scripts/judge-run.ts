@@ -46,7 +46,7 @@
  * beyond the artifact/verdict fetches this harness has always needed.
  */
 import { spawn } from 'node:child_process';
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { BANDS, buildRubricPrompt, parseJudgeResult, RUBRIC_VERSION, type JudgeResult } from '../src/lib/judge/rubrics';
@@ -168,16 +168,35 @@ function buildPayload(cls: DeliverableClass, art: Artifact, tmpDir: string): { p
   if (cls === 'text-config') {
     return { payload: '```json\n' + JSON.stringify(stripNonContent(d), null, 2) + '\n```' };
   }
-  if (cls === '2d-art' || cls === 'ui-glyph' || cls === '3d-mesh') {
-    // Pull the selected candidate's data-URL image out of genHistory, save to a temp PNG.
-    const gh = d.genHistory as { batches?: { candidates?: { id?: string; swatch?: string }[] }[]; selectedId?: string } | undefined;
+  if (cls === '2d-art' || cls === 'ui-glyph' || cls === 'ui-sheet' || cls === 'ui-diagram' || cls === '3d-mesh') {
+    const gh = d.genHistory as { batches?: { candidates?: { id?: string; swatch?: string; imageUrl?: string }[] }[]; selectedId?: string } | undefined;
     const cands = gh?.batches?.flatMap((b) => b.candidates ?? []) ?? [];
     const sel = cands.find((c) => c.id === gh?.selectedId) ?? cands[0];
+
+    // (a) An image EMBEDDED in the candidate as a data-URL swatch — how the early gap-loop
+    // batches injected gated art.
     const m = typeof sel?.swatch === 'string' ? sel.swatch.match(/^url\(data:image\/(\w+);base64,(.+)\)$/) : null;
-    if (!m) return null;
-    const file = join(tmpDir, `${art.entityId}__${cls}.${m[1] === 'jpeg' ? 'jpg' : m[1]}`);
-    writeFileSync(file, Buffer.from(m[2], 'base64'));
-    return { payload: `Use the Read tool to view the image at:\n${file}\nThen judge it.`, imageFile: file };
+    if (m) {
+      const file = join(tmpDir, `${art.entityId}__${cls}.${m[1] === 'jpeg' ? 'jpg' : m[1]}`);
+      writeFileSync(file, Buffer.from(m[2], 'base64'));
+      return { payload: `Use the Read tool to view the image at:\n${file}\nThen judge it.`, imageFile: file };
+    }
+
+    // (b) An image SERVED from the generated library — how `/api/pipeline-artifacts/bind-icons`
+    // records art. The judge must be able to see that art too, or every library-bound step
+    // silently drops out of judging ("no judgeable payload") while looking judged on the map.
+    // The URL is mapped back to its own allow-listed directory, never to an arbitrary path.
+    const served = typeof sel?.imageUrl === 'string' ? sel.imageUrl : null;
+    const icon = served?.match(/^\/api\/visual-gen\/icon\/([^/?#]+)$/);
+    const asset = served?.match(/^\/api\/visual-gen\/asset\/([^/?#]+)$/);
+    const hit = icon ? ['icons', icon[1]] : asset ? ['triposr', asset[1]] : null;
+    if (hit) {
+      const onDisk = join(process.cwd(), 'generated', hit[0], decodeURIComponent(hit[1]));
+      if (existsSync(onDisk)) {
+        return { payload: `Use the Read tool to view the image at:\n${onDisk}\nThen judge it.`, imageFile: onDisk };
+      }
+    }
+    return null;
   }
   return null; // audio → human judge; skip in this harness
 }
