@@ -122,7 +122,7 @@ The following fields will be added automatically — do NOT include them:
 - `catalogId`: `"items"`
 - `entityId`: `"itm-rusty-sword"`
 - `nextLifecycle`: `"generated"`
-- `promptVersion`: `"q1"`
+- `promptVersion`: `"q2"`
 
 **Rules:**
 - Output valid JSON between the markers — no comments, no trailing commas

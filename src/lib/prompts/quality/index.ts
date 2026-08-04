@@ -26,7 +26,7 @@ import { DIMENSIONS, STYLE_ANCHORS, type DeliverableClass } from '@/lib/judge/di
  * bucket on every typo fix, shattering the score history into single-artifact fragments,
  * and 'q1'/'q2' is what a human reads in the UI strip.
  */
-export const PROMPT_VERSION = 'q1';
+export const PROMPT_VERSION = 'q2';
 
 /**
  * A stable fingerprint of the ENTIRE pack content across every deliverable class.
@@ -52,6 +52,8 @@ const DISCIPLINE: Record<DeliverableClass, string> = {
   'text-config': 'senior systems designer',
   '2d-art': 'senior concept/UI artist',
   'ui-glyph': 'senior UI/UX icon designer',
+  'ui-sheet': 'senior UI/UX icon designer authoring a whole glyph SET',
+  'ui-diagram': 'senior UX lead drafting an annotated screen wireframe',
   '3d-mesh': 'senior 3D character/prop artist',
   'animation': 'senior gameplay animator',
   'audio': 'senior technical sound designer',
@@ -62,6 +64,8 @@ const NEGATIVES: Record<DeliverableClass, string[]> = {
   'text-config': ['no filler or generic-fantasy boilerplate', 'no placeholder/TODO values', 'no contradictions with sibling steps'],
   '2d-art': ['no watermark, signature, or text', 'no extra subjects or borders', 'no AI mush, banding, or halo artifacts', 'single centered subject on a clean readable ground'],
   'ui-glyph': ['no watermark, text, letters, or numbers', 'exactly one glyph, no icon grid or extra objects', 'must stay legible at 32-40px', 'clean flat or restrained-lit icon craft, not a painterly illustration'],
+  'ui-sheet': ['no watermark or jpeg smear', 'no garbled or invented letterforms — any text must be real, correctly-spelled words', 'one consistent family: same stroke weight, corner radius and optical size across every mark', 'even grid spacing, each glyph optically centred', 'every glyph must stay legible at 32-40px'],
+  'ui-diagram': ['no watermark or jpeg smear', 'no garbled or invented letterforms — every label must be a real, correctly-spelled word', 'no painterly rendering or decorative art — this is a wireframe', 'consistent line weights; leader lines must touch what they label'],
   '3d-mesh': ['no stretched or fused geometry', 'no untextured grey blob', '3/4 hero framing, neutral lighting'],
   'animation': ['no floaty weightless motion', 'no uniform robotic cadence', 'no foot sliding'],
   'audio': ['no clipping or artifacts', 'no raw un-mixed TTS/SFX dump', 'seamless where it must loop'],

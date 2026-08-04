@@ -14,8 +14,11 @@ import { PROMPT_VERSION, packFingerprint } from '@/lib/prompts/quality';
  * WITHOUT bumping the version is the bug this catches.
  */
 const PINNED = {
-  version: 'q1',
-  fingerprint: '1lm6bv4',
+  // q2 (2026-08-04): added the `ui-sheet` and `ui-diagram` classes — the two 2D deliverables
+  // that are multi-element by design (a glyph SET, an annotated wireframe) and were being
+  // asked for, and judged, against ui-glyph's "exactly one glyph" bar.
+  version: 'q2',
+  fingerprint: '1jc4duk',
 };
 
 describe('quality pack version guard', () => {

@@ -226,7 +226,7 @@ type Plan =
 function planOne(catalogId: string, art: Artifact, classFilter: Set<string> | null, verdicts: Map<string, PriorVerdict>): Plan {
   if (isSyntheticEntity(art.entityId)) return { kind: 'note', text: `${catalogId}::${art.step} [${art.entityId}] — test fixture, not content` };
   const fact = getStepFact(catalogId, art.step);
-  const cls = deliverableClassOf(fact?.deliverable ?? '', catalogId);
+  const cls = deliverableClassOf(fact?.deliverable ?? '', catalogId, art.step);
   if (!cls) return { kind: 'none' };
   if (classFilter && !classFilter.has(cls)) return { kind: 'none' };
 
