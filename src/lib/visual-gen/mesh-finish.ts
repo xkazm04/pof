@@ -44,9 +44,11 @@ export interface MeshFinishSpec {
   /** Author one half and mirror it across this axis (symmetric characters). */
   mirror?: MirrorAxis;
   /**
-   * Delete faces enclosed on all sides before decimating. An assembled multi-part
-   * character (armour over a body, a helmet over a head) hides whole surfaces that
-   * still cost budget and still get UV islands; nothing on screen changes.
+   * Delete WELDED interior faces before decimating — geometry enclosed inside one
+   * continuous shell. Measured on Blender 4.2: occlusion between SEPARATE shells (the
+   * body under a chest plate, the scalp under a helmet) is invisible to this operator,
+   * so on an assembled character this often removes nothing; `cullLimitReason` then says
+   * so rather than letting a `facesCulled: 0` read as "nothing is hidden".
    */
   cullInterior?: boolean;
   /** Request a UV unwrap — honoured only when the mesh is decimated first. */
@@ -70,6 +72,10 @@ export interface MeshFinishResult {
   facesOut?: number;
   /** Faces removed by the interior cull (absent when no cull ran). */
   facesCulled?: number;
+  /** Disconnected shells present when the interior cull ran. */
+  cullUnevaluatedShells?: number;
+  /** Why a `facesCulled: 0` does not mean "nothing was hidden". */
+  cullLimitReason?: string;
   sizeMB?: number;
   uvUnwrapped?: boolean;
   normalMapPath?: string;
@@ -146,7 +152,20 @@ export interface ParsedMeshFinish {
   uvUnwrapped?: boolean;
   normalMapPath?: string;
   aoMapPath?: string;
+  /** Disconnected shells present when the interior cull ran. */
+  cullUnevaluatedShells?: number;
+  /** Set when the cull removed nothing but the mesh had shells it cannot see into. */
+  cullLimitReason?: string;
   error?: string;
+}
+
+/**
+ * What `select_interior_faces` structurally cannot reach. Measured on Blender 4.2
+ * headless: an enclosed separate shell selects 0 faces, a welded shared wall selects 1.
+ */
+export function cullLimitReasonFor(facesCulled: number | undefined, shells: number | undefined): string | undefined {
+  if (facesCulled !== 0 || shells === undefined || shells <= 1) return undefined;
+  return `interior cull removed nothing: it selects only WELDED interior, so the ${shells} separate shells in this mesh were not evaluated — occlusion between parts needs visibility culling, not select_interior_faces`;
 }
 
 /** Parse the script's `POF_MESHFINISH_*` stdout markers. Pure. */
@@ -161,13 +180,17 @@ export function parseMeshFinishOutput(stdout: string): ParsedMeshFinish {
   };
   const done = get('DONE');
   const error = get('ERROR');
+  const facesCulled = num('FACES_CULLED');
+  const cullUnevaluatedShells = num('CULL_UNEVALUATED_SHELLS');
   return {
+    cullUnevaluatedShells,
+    cullLimitReason: cullLimitReasonFor(facesCulled, cullUnevaluatedShells),
     ok: done !== undefined && error === undefined,
     meshPath: done,
     error,
     facesIn: num('FACES_IN'),
     facesOut: num('FACES_OUT'),
-    facesCulled: num('FACES_CULLED'),
+    facesCulled,
     sizeMB: num('SIZE_MB'),
     uvUnwrapped: get('UV') === undefined ? undefined : get('UV') === '1',
     normalMapPath: get('BAKE_NORMAL'),
@@ -215,6 +238,8 @@ export async function runMeshFinish(spec: MeshFinishSpec, deps: MeshFinishDeps =
     facesIn: parsed.facesIn,
     facesOut: parsed.facesOut,
     facesCulled: parsed.facesCulled,
+    cullUnevaluatedShells: parsed.cullUnevaluatedShells,
+    cullLimitReason: parsed.cullLimitReason,
     sizeMB: parsed.sizeMB,
     uvUnwrapped: parsed.uvUnwrapped,
     normalMapPath: parsed.normalMapPath,

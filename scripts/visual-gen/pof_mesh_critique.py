@@ -8,6 +8,10 @@ venv python (which already has trimesh).
 import argparse
 import sys
 
+# A shattered mesh can have thousands of shells; the histogram only has to be long
+# enough to separate parts from specks, and a bounded marker keeps stdout parseable.
+MAX_COMPONENT_HISTOGRAM = 4096
+
 
 def main() -> int:
     ap = argparse.ArgumentParser()
@@ -26,7 +30,18 @@ def main() -> int:
         emit("FACES", len(mesh.faces))
         emit("WATERTIGHT", int(bool(mesh.is_watertight)))
         emit("WINDING_CONSISTENT", int(bool(mesh.is_winding_consistent)))
-        emit("COMPONENTS", len(mesh.split(only_watertight=False)))
+        # Component COUNT alone cannot tell an assembled character (head, lashes, brows,
+        # eye layers, mouth interior, teeth, tongue, body, hands, hair, cape) from a
+        # shattered mesh. Emit the per-component face histogram so the scorer can judge
+        # specks by face share instead of failing a correct multi-part character.
+        parts = mesh.split(only_watertight=False)
+        emit("COMPONENTS", len(parts))
+        part_faces = sorted((len(p.faces) for p in parts), reverse=True)
+        kept = part_faces[:MAX_COMPONENT_HISTOGRAM]
+        emit("COMPONENT_FACES", ",".join(str(n) for n in kept))
+        # Largest-first, so anything dropped is no bigger than the smallest kept entry.
+        # Say how many were dropped — silently truncating hides exactly the specks.
+        emit("COMPONENT_FACES_OMITTED", len(part_faces) - len(kept))
         emit("EULER", mesh.euler_number)
         ext = mesh.extents if mesh.extents is not None else [0, 0, 0]
         emit("BBOX", f"{ext[0]:.4f},{ext[1]:.4f},{ext[2]:.4f}")

@@ -127,6 +127,24 @@ describe('parseMeshFinishOutput', () => {
     expect(parseMeshFinishOutput(OK).facesCulled).toBeUndefined();
   });
 
+  // Blender probe (4.2, headless): a small cube fully enclosed inside a big cube and
+  // joined into one object yields 0 selected faces from select_interior_faces, because
+  // the operator only selects faces whose every edge has >2 face users — i.e. WELDED
+  // interior. A welded shared wall does select (1 face). So on the assembled
+  // multi-part character the cull was written for, `facesCulled: 0` is not a
+  // measurement of "nothing hidden" — it is the operator being blind to loose shells.
+  it('names the shells the interior cull could not evaluate instead of implying none were hidden', () => {
+    const p = parseMeshFinishOutput(`${OK}\nPOF_MESHFINISH_FACES_CULLED=0\nPOF_MESHFINISH_CULL_UNEVALUATED_SHELLS=14`);
+    expect(p.facesCulled).toBe(0);
+    expect(p.cullUnevaluatedShells).toBe(14);
+    expect(p.cullLimitReason).toMatch(/loose shell|separate shell|welded/i);
+  });
+
+  it('reports no cull limitation when the mesh is a single shell', () => {
+    const p = parseMeshFinishOutput(`${OK}\nPOF_MESHFINISH_FACES_CULLED=0\nPOF_MESHFINISH_CULL_UNEVALUATED_SHELLS=1`);
+    expect(p.cullLimitReason).toBeUndefined();
+  });
+
   it('reports an error marker instead of a silent pass', () => {
     const p = parseMeshFinishOutput('POF_MESHFINISH_ERROR=no mesh in C:/gen/x.glb');
     expect(p.ok).toBe(false);

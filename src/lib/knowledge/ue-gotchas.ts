@@ -235,6 +235,15 @@ export const UE_GOTCHAS: Gotcha[] = [
     source: 'research: Pro AI character workflow 2027 (Stefan 3D AI)',
   },
   {
+    id: 'assembled-character-is-multi-shell',
+    modules: ['character', '3d'],
+    summary: 'A correct game character is MANY disconnected shells — judge fragmentation by face share, not component count, and know that select_interior_faces cannot see between shells',
+    detail:
+      "A production character is assembled, not welded: head, lashes, brows, layered eyes, an interior mouth carrying teeth and tongue, body, hands, hair, cape, accessories. Each is its own connected component, and that is CORRECT — the separable shells are the prerequisite for expressions (blend shapes and gaze need eyes/lashes/brows/mouth interior addressable independently) and for modular swap-slots. Two consequences for any tool that inspects such a mesh. (1) A raw connected-component COUNT cannot distinguish an assembled character from a shattered generation; use each component's SHARE OF THE TOTAL FACES — components under ~0.5% of the faces are specks/floaters, the rest are body parts. Measured on real Tripo character output: 375 components resolved to 61 substantial parts plus 314 specks holding 36% of the face budget, which is two separate defects (too many parts AND speck debris) that a single count reported as one. (2) Blender's bpy.ops.mesh.select_interior_faces() selects only faces whose every edge has more than 2 face users — i.e. WELDED interior. Probed on Blender 4.2 headless: a small cube fully enclosed inside a big cube and joined into one object selects 0 of 12 faces, while a welded shared wall selects 1. So it cannot cull the body under a chest plate or the scalp under a helmet — those are separate shells — and a 0 result means 'no welded interior found', never 'nothing is hidden'. Occlusion culling between shells needs visibility testing (raycast/render-based), not this operator.",
+    appliesTo: ['ue-python'],
+    source: 'research: anime character full 3D workflow (Stefan 3D AI) + live Blender 4.2 + Tripo mesh probes',
+  },
+  {
     id: 'metahuman-animator-headless-memory-window',
     modules: ['character', 'animation'],
     summary: 'MetaHuman Animator markerless solve leaks memory on long clips — window the headless solve with MetaHumanPerformance.set_processing_range, do not feed a whole long clip',

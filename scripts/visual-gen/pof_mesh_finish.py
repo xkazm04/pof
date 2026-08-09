@@ -96,12 +96,42 @@ def apply_mirror(obj, axis):
     bpy.ops.object.modifier_apply(modifier=mod.name)
 
 
-def cull_interior(obj):
-    """Delete faces enclosed on all sides — invisible geometry that still costs.
+def loose_shell_count(obj):
+    """How many disconnected shells the object holds (parts of an assembled character)."""
+    mesh = obj.data
+    seen = set()
+    shells = 0
+    poly_of_vert = {}
+    for poly in mesh.polygons:
+        for v in poly.vertices:
+            poly_of_vert.setdefault(v, []).append(poly.index)
+    for poly in mesh.polygons:
+        if poly.index in seen:
+            continue
+        shells += 1
+        stack = [poly.index]
+        seen.add(poly.index)
+        while stack:
+            cur = mesh.polygons[stack.pop()]
+            for v in cur.vertices:
+                for nb in poly_of_vert.get(v, ()):
+                    if nb not in seen:
+                        seen.add(nb)
+                        stack.append(nb)
+    return shells
 
-    An assembled multi-part character buries whole surfaces (the body under the
-    chest plate, the scalp under the helmet). They never reach a pixel but they
-    do consume the face budget and take UV islands off the atlas.
+
+def cull_interior(obj):
+    """Delete WELDED interior faces — geometry enclosed within a single continuous shell.
+
+    Scope, measured against Blender 4.2 headless: select_interior_faces selects faces
+    whose every edge has more than 2 face users. A small cube fully enclosed inside a
+    big one and joined into the same object selects 0 of 12 faces; a welded shared wall
+    selects 1. So occlusion between SEPARATE shells — the body under a chest plate, the
+    scalp under a helmet — is invisible to this operator, and a 0 here means "no welded
+    interior found", never "nothing is hidden". The caller reports the unevaluated shell
+    count so that distinction survives to the result.
+
     Returns how many faces were removed.
     """
     before = face_count(obj)
@@ -214,7 +244,9 @@ def main():
     # Cull before decimating so the face budget is spent on visible surfaces only.
     # The high-poly keeps its interior faces — it is only ever the bake source.
     if args.cull_interior:
+        shells = loose_shell_count(low)
         marker("FACES_CULLED", cull_interior(low))
+        marker("CULL_UNEVALUATED_SHELLS", shells)
 
     faces_out = decimate(low, args.target_faces) if args.target_faces else face_count(low)
     marker("FACES_OUT", faces_out)

@@ -21,6 +21,14 @@ export interface MeshMetrics {
   volume: number | null;
   area: number;
   degenerateFaces: number;
+  /**
+   * Faces per connected component, largest first. Absent when the critique script
+   * predates the histogram — never defaulted to `[]`, which would read as "measured,
+   * and there are none".
+   */
+  componentFaces?: number[];
+  /** Components the capped histogram left out (each no larger than the smallest kept). */
+  componentFacesOmitted?: number;
 }
 
 /** Parse the `POF_CRITIQUE_*` marker block into typed metrics. Pure. */
@@ -35,6 +43,7 @@ export function parseCritiqueMetrics(stdout: string): { ok: boolean; metrics?: M
   if (!get('DONE') || verts === undefined) return { ok: false, error: 'no critique markers in output' };
   const bbox = (get('BBOX') ?? '0,0,0').split(',').map(Number);
   const vol = get('VOLUME');
+  const compFaces = get('COMPONENT_FACES');
   return {
     ok: true,
     metrics: {
@@ -48,7 +57,89 @@ export function parseCritiqueMetrics(stdout: string): { ok: boolean; metrics?: M
       volume: vol && vol !== 'nan' ? Number(vol) : null,
       area: Number(get('AREA') ?? 0),
       degenerateFaces: Number(get('DEGENERATE_FACES') ?? 0),
+      componentFaces: compFaces
+        ? compFaces.split(',').map(Number).filter((n) => Number.isFinite(n))
+        : undefined,
+      componentFacesOmitted: get('COMPONENT_FACES_OMITTED') !== undefined
+        ? Number(get('COMPONENT_FACES_OMITTED'))
+        : undefined,
     },
+  };
+}
+
+/** Below this share of the total faces a component is a speck, not a body part. */
+export const FLOATER_FACE_SHARE = 0.005;
+/** …and never call something a part on face share alone when it is this tiny. */
+export const FLOATER_MIN_FACES = 8;
+/** Separable shells a head needs before expression work is even attempted. */
+export const FACE_RIG_MIN_SHELLS = 4;
+
+export interface ComponentSplit {
+  /** False when the script emitted no histogram — callers must not infer from counts. */
+  measured: boolean;
+  parts: number;
+  floaters: number;
+  floaterFaces: number;
+}
+
+/**
+ * Split connected components into real parts and specks.
+ *
+ * An assembled character is legitimately multi-shell (head, lashes, brows, eye layers,
+ * mouth interior, teeth, tongue, body, hands, hair, cape, accessories) — a raw component
+ * COUNT cannot tell that apart from a shattered mesh. Face share can.
+ */
+export function classifyComponents(componentFaces: number[] | undefined, omitted = 0): ComponentSplit {
+  if (!componentFaces?.length) return { measured: false, parts: 0, floaters: 0, floaterFaces: 0 };
+  const total = componentFaces.reduce((a, b) => a + b, 0);
+  const floor = Math.max(FLOATER_MIN_FACES, total * FLOATER_FACE_SHARE);
+  const floaterList = componentFaces.filter((f) => f < floor);
+
+  // The histogram is capped and sorted largest-first, so anything omitted is no bigger
+  // than the smallest entry we kept. When that entry is already a speck, every omitted
+  // one is too. When it is substantial we cannot tell — so count them as parts, which
+  // pushes toward the harsher verdict. Neither branch can manufacture a pass.
+  const smallestKept = componentFaces[componentFaces.length - 1];
+  const omittedAreSpecks = smallestKept < floor;
+
+  return {
+    measured: true,
+    parts: componentFaces.length - floaterList.length + (omittedAreSpecks ? 0 : omitted),
+    floaters: floaterList.length + (omittedAreSpecks ? omitted : 0),
+    floaterFaces: floaterList.reduce((a, b) => a + b, 0),
+  };
+}
+
+export interface FaceRigReadiness {
+  /** `null` when unmeasured — readiness is never claimed from data we do not have. */
+  ready: boolean | null;
+  separableParts: number | null;
+  reason: string;
+}
+
+/**
+ * Can this head be given expressions at all? Blend shapes and gaze need the eyes,
+ * lashes, brows and mouth interior to exist as separable shells; a head that arrived
+ * welded into one shell cannot be rigged for them no matter which tool is used. That is
+ * knowable from geometry alone, before any MetaHuman/Faceit attempt spends time.
+ *
+ * Display/routing only — deliberately NOT folded into `scoreMesh`, since a prop with one
+ * shell is perfect and a head with one shell is merely unsuitable for a different job.
+ */
+export function faceRigReadiness(m: MeshMetrics): FaceRigReadiness {
+  const split = classifyComponents(m.componentFaces, m.componentFacesOmitted);
+  if (!split.measured) {
+    return { ready: null, separableParts: null, reason: 'unmeasured — the critique script emitted no per-component faces' };
+  }
+  if (split.parts >= FACE_RIG_MIN_SHELLS) {
+    return { ready: true, separableParts: split.parts, reason: `${split.parts} separable shells — eyes/lashes/brows/mouth interior can be driven independently` };
+  }
+  return {
+    ready: false,
+    separableParts: split.parts,
+    reason: split.parts <= 1
+      ? 'single welded shell — no separable eyes, lashes, brows or interior mouth to drive expressions'
+      : `only ${split.parts} separable shells (need ${FACE_RIG_MIN_SHELLS}) — eyes/lashes/brows/mouth interior are not independently addressable`,
   };
 }
 
@@ -57,9 +148,13 @@ export interface CritiqueThresholds {
   maxComponentsFail: number;
   maxFacesWarn: number;
   minExtent: number;
+  /** Specks tolerated before the mesh is called shattered (histogram path only). */
+  maxFloatersFail: number;
 }
 
-const DEFAULT_THRESHOLDS: CritiqueThresholds = { minVerts: 100, maxComponentsFail: 8, maxFacesWarn: 200_000, minExtent: 1e-4 };
+const DEFAULT_THRESHOLDS: CritiqueThresholds = {
+  minVerts: 100, maxComponentsFail: 8, maxFacesWarn: 200_000, minExtent: 1e-4, maxFloatersFail: 4,
+};
 
 export interface Scorecard {
   verdict: 'pass' | 'warn' | 'fail';
@@ -78,10 +173,30 @@ export function scoreMesh(m: MeshMetrics, thresholds: Partial<CritiqueThresholds
 
   if (m.verts < t.minVerts || m.faces < 1) fails.push(`empty/degenerate mesh (${m.verts} verts, ${m.faces} faces)`);
   if (m.bbox.some((e) => e < t.minExtent)) fails.push(`degenerate bounding box (flat: ${m.bbox.map((e) => e.toFixed(2)).join('×')})`);
-  if (m.components > t.maxComponentsFail) fails.push(`${m.components} disconnected components (fragmented / floaters)`);
+  // Component health. With a per-component face histogram we can tell a body part from
+  // a speck, so an assembled character (head + lashes + brows + eye layers + mouth
+  // interior + teeth + tongue + body + hands + hair + cape + accessories) is judged on
+  // its SPECK count rather than rejected for having parts. Without the histogram the
+  // original blunt count rule stands unchanged — no silent loosening on old data.
+  const split = classifyComponents(m.componentFaces, m.componentFacesOmitted);
+  if (split.measured) {
+    if (split.floaters > t.maxFloatersFail) {
+      fails.push(`${split.floaters} floater fragments (${split.floaterFaces} faces of specks)`);
+    }
+    if (split.parts > t.maxComponentsFail) {
+      fails.push(`${split.parts} substantial disconnected parts (above the ${t.maxComponentsFail} budget for this class)`);
+    }
+    if (split.floaters > 0 && split.floaters <= t.maxFloatersFail) {
+      warns.push(`${split.floaters} floater fragments (${split.floaterFaces} faces of specks)`);
+    }
+  } else if (m.components > t.maxComponentsFail) {
+    fails.push(`${m.components} disconnected components (fragmented / floaters)`);
+  }
 
   if (!m.watertight) warns.push('not watertight (open boundary / holes)');
-  if (m.components > 1 && m.components <= t.maxComponentsFail) warns.push(`${m.components} disconnected components (possible floaters)`);
+  if (!split.measured && m.components > 1 && m.components <= t.maxComponentsFail) {
+    warns.push(`${m.components} disconnected components (possible floaters)`);
+  }
   if (!m.windingConsistent) warns.push('inconsistent face winding (normals may flip)');
   if (m.degenerateFaces > 0) warns.push(`${m.degenerateFaces} degenerate faces`);
   if (m.faces > t.maxFacesWarn) warns.push(`high face count (${m.faces}) — needs decimation for game use`);

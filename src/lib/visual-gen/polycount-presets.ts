@@ -21,6 +21,13 @@ export interface PolycountPreset {
   faceLimit: number;
   /** Critique line — above this the Tier-1 gate warns "needs decimation". */
   warnAbove: number;
+  /**
+   * Substantial disconnected parts the class may legitimately have. A character is
+   * ASSEMBLED (head, lashes, brows, eye layers, mouth interior, teeth, tongue, body,
+   * hands, hair, cape, accessories); the class-blind default of 8 failed such a mesh as
+   * "fragmented". Specks are policed separately by the floater rule, which no class relaxes.
+   */
+  maxComponents: number;
   rationale: string;
 }
 
@@ -30,6 +37,7 @@ export const POLYCOUNT_PRESETS: PolycountPreset[] = [
     label: 'Character (hero/NPC)',
     faceLimit: 40_000,
     warnAbove: 60_000,
+    maxComponents: 24,
     rationale: 'Matches the character pipeline game-tier budget (40k faces, rig intact); hero characters carry the highest per-asset budget.',
   },
   {
@@ -37,6 +45,7 @@ export const POLYCOUNT_PRESETS: PolycountPreset[] = [
     label: 'Weapon / held item',
     faceLimit: 15_000,
     warnAbove: 22_500,
+    maxComponents: 6,
     rationale: 'First-person-adjacent but small on screen at ARPG camera distance; silhouette + normal map carry the detail.',
   },
   {
@@ -44,6 +53,7 @@ export const POLYCOUNT_PRESETS: PolycountPreset[] = [
     label: 'Prop / interactable',
     faceLimit: 10_000,
     warnAbove: 15_000,
+    maxComponents: 6,
     rationale: 'Placed many times per scene; Nanite tolerates more but generated props ship to non-Nanite paths (mobile preview, collision).',
   },
   {
@@ -51,6 +61,7 @@ export const POLYCOUNT_PRESETS: PolycountPreset[] = [
     label: 'Environment piece / building',
     faceLimit: 60_000,
     warnAbove: 90_000,
+    maxComponents: 40,
     rationale: 'Large silhouette pieces earn a bigger budget; still bounded because generated buildings fragment into many components.',
   },
   {
@@ -58,6 +69,7 @@ export const POLYCOUNT_PRESETS: PolycountPreset[] = [
     label: 'Modular part / swap-slot piece',
     faceLimit: 8_000,
     warnAbove: 12_000,
+    maxComponents: 3,
     rationale: 'Assembled in multiples onto one character/kit — the per-part budget must leave headroom for the assembled whole.',
   },
 ];
@@ -72,5 +84,5 @@ export function polycountFor(assetClass: string): PolycountPreset | undefined {
 /** Class-aware Tier-1 gate thresholds — empty for unknown classes (defaults apply). */
 export function critiqueThresholdsFor(assetClass: string): Partial<CritiqueThresholds> {
   const p = polycountFor(assetClass);
-  return p ? { maxFacesWarn: p.warnAbove } : {};
+  return p ? { maxFacesWarn: p.warnAbove, maxComponentsFail: p.maxComponents } : {};
 }
