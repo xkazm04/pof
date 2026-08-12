@@ -3,7 +3,11 @@
  *
  * Derives a tangent-space normal map from an albedo by treating luminance as a
  * height field and running a wrap-around Sobel filter. Wrap-around sampling
- * keeps a tileable albedo's normal map tileable too.
+ * keeps a tileable albedo's normal map tileable too. The same luminance
+ * heightfield is exportable as a height map (landscape displacement), and a
+ * documented-heuristic roughness map (inverted luminance — crevices read
+ * rougher) completes the derivable set. Metalness is deliberately NOT derived:
+ * albedo carries no metalness signal, and emitting one would be invented data.
  */
 import sharp from 'sharp';
 
@@ -57,5 +61,41 @@ export async function deriveNormalFromAlbedo(
   }
 
   const png = await sharp(out, { raw: { width: w, height: h, channels: 3 } }).png().toBuffer();
+  return new Uint8Array(png);
+}
+
+/**
+ * Export the luminance heightfield the normal derivation is built on, as a
+ * greyscale PNG. Usable as a displacement/height map (e.g. UE landscape
+ * paint). Per-pixel, so a tileable albedo stays tileable.
+ */
+export async function deriveHeightFromAlbedo(albedo: Uint8Array): Promise<Uint8Array> {
+  const png = await sharp(Buffer.from(albedo)).greyscale().png().toBuffer();
+  return new Uint8Array(png);
+}
+
+export interface DeriveRoughnessOptions {
+  /**
+   * Invert luminance (default true): dark crevices → rough, bright faces →
+   * smooth — the standard albedo-only heuristic. `false` tracks luminance
+   * directly for materials where bright means rough (e.g. chalky surfaces).
+   */
+  invert?: boolean;
+}
+
+/**
+ * Derive a roughness map from albedo luminance. This is a documented
+ * HEURISTIC (albedo has no true roughness signal) — good enough as a
+ * first-pass PBR set for generated tiles; author real roughness downstream
+ * when a material needs it.
+ */
+export async function deriveRoughnessFromAlbedo(
+  albedo: Uint8Array,
+  opts: DeriveRoughnessOptions = {},
+): Promise<Uint8Array> {
+  const invert = opts.invert ?? true;
+  let img = sharp(Buffer.from(albedo)).greyscale();
+  if (invert) img = img.negate();
+  const png = await img.png().toBuffer();
   return new Uint8Array(png);
 }
