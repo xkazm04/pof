@@ -1,7 +1,7 @@
 ---
 name: research
 description: "Use when the user shares a YouTube/article URL or raw text about Claude/AI game-dev automation, MCP/Unreal tooling, agent harnesses, or a dev-tool showcase and wants ideas PoF can adopt into its headless tooling or UI workflows. Triggers: '/research <url>', 'can we use this for PoF', 'research this video/technique', 'any ideas from this'."
-version: 1.0
+version: 1.1
 ---
 
 # Research — mine external showcases into PoF improvements
@@ -76,6 +76,14 @@ Classify the source up front; it changes the shape of every finding.
   **Cleanup (mandatory, scoped to THIS run's id):** `rm -f "$WORK"/<id>.*` as soon as the cleaned text is in memory — before Phase 3, so a mid-run failure leaves no residue. Never blind-sweep `$WORK/*` (races parallel runs).
 - **Article URL:** `WebFetch` for the body, stripped of nav/ads.
 - **Raw text:** use as-is.
+- **Designer-talk source** (a veteran designer explaining design tradeoffs, patterns, or war stories — no tooling, no engine specifics; e.g. Timothy Cain's channel): the yield is design-quality RULES for generated content, never providers or subsystems. Expect ~1-2 findings per short (10-15 min) video; all-S effort is a successful run. Route each finding by its SHAPE:
+  1. **Design principle** (a tradeoff/rule in prose — "telegraph or track, never neither") → an eval criterion in `module-eval-prompts.ts`. This is the ONLY prompt-reaching home for design knowledge: `UE_GOTCHAS` is API-pitfall-shaped and module `knowledgeTips` are UI-only.
+  2. **Design pattern / algorithm** (a concrete mechanic with a lifecycle — e.g. the melee reservation-slot system) → **dual home**: the eval criterion AND an enrichment of the matching generation-side checklist prompt in `module-registry.ts`, so content is born compliant, not just judged compliant. Gotcha: checklist ids are only unique PER sub-module (`ai-5` exists twice) — scope lookups by module id.
+  3. **Design taxonomy / list** (trait lists, encounter types): the raw list is NOT the finding — distill the ECONOMY or structure behind it (point symmetry, slot counts, coverage ratios) into a criterion.
+  4. **Engineering-practice talk** (code standards): route to a `ue-cpp` UE_GOTCHAS entry when it governs generated C++; don't pre-filter by title — the least game-shaped video can yield the most PoF-aligned rule (warning-vs-error mapped straight onto the honesty ethos).
+  5. **Open design challenge** ("nobody has solved X") → a short spec/backlog note under `docs/research/` IF PoF's generation stack plausibly attacks it; link it to any matching backlog idea.
+  - **Module-gap rule:** if a finding's target module exists in the registry but has NO `MODULE_CONTEXTS` entry, the module is effectively unjudged (generic fallback) — ADD the full context (focus + 3 check groups), seeded from the finding.
+  - **Batch mode:** N same-class videos share ONE run — one candidate table grouped per video, one pick gate, one TDD round, one `research:` commit. Cross-video repeats (the same rule from two talks) merge into one criterion, which is a signal of a load-bearing rule, not a duplicate.
 - **Web-discovery (a topic, no URL):** the user gives a topic/thread instead of a source. Run a focused `WebSearch` round (2-4 queries), then `WebFetch` the 1-2 **most substantive** results — prefer **research papers (arxiv) / primary docs / vendor docs over listicles/SEO posts**. Treat the fetched content as the source(s). This is how to reach material videos can't cover (e.g. agentic-3D research). Stay bounded — this is discovery, not a literature review.
 - If transcript is disabled / text <300 words / no substantive source found: report it's too thin and stop.
 
