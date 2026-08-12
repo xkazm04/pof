@@ -248,7 +248,8 @@ Output the numbered call graph first, then the JSON findings array.`,
 - Carry-over XP should be preserved on level-up
 - Attribute point allocation should be reversible (respec)
 - Ability unlock prerequisites should be validated
-- Hotbar assignment should persist across sessions`,
+- Hotbar assignment should persist across sessions
+- Trait systems should keep a point-symmetric economy: advantages COST build points, disadvantages/drawbacks GRANT them back (opt-in difficulty is paid for), and quirks are 1-point flavor traits hooked into only one or two gameplay checks — high flavor per implementation cost. Faction standing should be modeled as paired ± reputation traits per faction (with spare capacity for factions added later), not one global karma scalar`,
     performanceChecks: `- Level-up effects should not recalculate all attributes from scratch
 - XP award should be batched if multiple enemies die simultaneously
 - Ability UI refresh should be targeted, not full rebuild`,
@@ -260,7 +261,9 @@ Output the numbered call graph first, then the JSON findings array.`,
 - Spawn points should be data-driven (not hardcoded positions)
 - Boss encounters should have dedicated trigger volumes
 - Environmental hazards should use GAS effects for damage
-- Large-scale content placement should use PCG (5.7 production-ready) — PCG graphs are DATA-flow not exec-flow; expose parameters + use PCG graph INSTANCES (the material/material-instance paradigm) rather than authoring a bespoke graph per variation; use runtime hierarchical generation for open worlds; filter on sampled landscape layer-weight attributes for biome-aware placement`,
+- Large-scale content placement should use PCG (5.7 production-ready) — PCG graphs are DATA-flow not exec-flow; expose parameters + use PCG graph INSTANCES (the material/material-instance paradigm) rather than authoring a bespoke graph per variation; use runtime hierarchical generation for open worlds; filter on sampled landscape layer-weight attributes for biome-aware placement
+- Encounters should come in two explicit types: ANCHORED (placed on/near a visible map feature — ruins, a vehicle, a camp, a body — may be a full group) and NON-ANCHORED (wandering a radius or spline). Keep non-anchored encounters to one or two creatures: large wandering groups tax pathing, read as a conga line, and ambush players into unfair wipes
+- Outdoor maps must keep at least one point-of-interest landmark (mountain, tall structure, skybox fixture) visible from any playable position so players can orient themselves without opening the map`,
     qualityChecks: `- NavMesh should cover all walkable areas
 - Zone transitions should preserve player state
 - Boss phases should use behavior tree states, not hardcoded sequences
@@ -321,12 +324,28 @@ Output the numbered call graph first, then the JSON findings array.`,
 - AI should have proper state transitions (idle, alert, combat, flee)
 - Perception should have proper sight radius, angle, and age settings
 - State Tree: Re-Enter State behavior for looping, Output Properties for live binding
-- Group AI should coordinate without tight coupling between agents`,
+- Group AI should coordinate without tight coupling between agents
+- Melee group attacks should use a positional reservation/attack-slot system owned by the TARGET: sized slot counts per creature (man-sized ~4, large 8-16, whatever fits the silhouette), request→offer→confirm-or-timeout lifecycle, adjoining-slot requests for large attackers (with reseat asks to smaller holders), and mass-cancel of all reservations when the target dies, jumps, teleports, or takes flight (melee holders fall back to ranged or retarget)`,
     performanceChecks: `- BT tick interval should be > 0.1s for non-combat AI
 - EQS should have reasonable item count limits
 - Perception should be event-driven where possible
 - Distant AI should reduce update frequency
 - State Tree Rewind Debugger for perf-safe debugging`,
+  },
+  'dialogue-quests': {
+    focus: 'Dialogue trees, quest definitions, multi-solution quests, skill checks, quest state tracking',
+    structureChecks: `- Dialogue trees should be data-driven assets (DataTable/DataAsset), not hardcoded strings
+- Quest definitions should separate objectives, state, and rewards (data) from quest logic (code)
+- Skill/attribute checks in dialogue should read GAS attributes, not parallel stat copies
+- Quest state should live in a central QuestSubsystem, queryable by dialogue conditions
+- Dialogue conditions and consequences should be declarative (condition/effect entries), enabling systemic reuse across NPCs`,
+    qualityChecks: `- No one-shot dialog solutions: a dialog quest resolution must NOT collapse to a single skill-gated line ("speech high enough → click → done"). It should be multi-stage — unlocked by information or items gathered elsewhere through OTHER skills (documents from a locked safe, a secret learned from a third NPC, a bribe funded by a side quest) so several build types participate before the final conversation
+- Playthrough-build solution coverage: every main story quest beat (pickup, objectives, turn-in) must be completable by ALL supported playthrough builds (combat, stealth, talk); side quests may support fewer, but coverage must stay balanced across builds — flag when one build's solution share is disproportionately low
+- Skill-check outcomes should be roll-or-threshold by explicit design, and failed checks should route to an alternative path, not a dead end
+- Quest gating items/NPCs must be reachable without forced combat when a talk/stealth path is claimed`,
+    performanceChecks: `- Dialogue assets should be soft-referenced and loaded on conversation start
+- Quest state queries from dialogue conditions should be O(1) lookups, not scans
+- Long dialogue trees should not instantiate all nodes up front`,
   },
   'arpg-polish': {
     focus: 'Logging, debug tools, object pooling, tick optimization, async loading',

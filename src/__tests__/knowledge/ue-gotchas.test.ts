@@ -300,3 +300,12 @@ describe('formatGotchas module scoping', () => {
     expect(out).not.toMatch(/Constant3Vector/); // materials-only
   });
 });
+
+describe('warning-vs-error policy gotcha (T. Cain code standards)', () => {
+  it('every ue-cpp task carries the failure-severity policy', () => {
+    const out = formatGotchas('ue-cpp');
+    expect(out).toMatch(/cosmetic/i);
+    expect(out).toMatch(/hard-fail|gameplay-invariant/i);
+    expect(out).toMatch(/fabricat/i);
+  });
+});

@@ -36,6 +36,56 @@ describe('arpg-combat quality checks — real-time design semantics (T. Cain, RT
   });
 });
 
+describe('arpg-world — level design guidelines (T. Cain, 8 rules)', () => {
+  it('classifies encounters as anchored vs non-anchored with a small wander cap', () => {
+    const s = MODULE_CONTEXTS['arpg-world'].structureChecks;
+    expect(s).toMatch(/anchored/i);
+    expect(s).toMatch(/wander/i);
+    expect(s).toMatch(/one or two|conga/i);
+  });
+  it('requires a visible POI landmark from any point of an outdoor map', () => {
+    const s = MODULE_CONTEXTS['arpg-world'].structureChecks;
+    expect(s).toMatch(/point of interest|POI|landmark/i);
+    expect(s).toMatch(/orient/i);
+  });
+});
+
+describe('dialogue-quests — dedicated eval context (was generic fallback)', () => {
+  it('has a context with a dialog/quest focus', () => {
+    const ctx = MODULE_CONTEXTS['dialogue-quests'];
+    expect(ctx).toBeDefined();
+    expect(ctx.focus).toMatch(/dialog|quest/i);
+  });
+  it('bans one-shot dialog solutions in favor of multi-stage setups', () => {
+    const q = MODULE_CONTEXTS['dialogue-quests'].qualityChecks;
+    expect(q).toMatch(/one-shot/i);
+    expect(q).toMatch(/multi-stage|gathered elsewhere/i);
+  });
+  it('demands playthrough-build solution coverage balance', () => {
+    const q = MODULE_CONTEXTS['dialogue-quests'].qualityChecks;
+    expect(q).toMatch(/playthrough build|build coverage/i);
+    expect(q).toMatch(/main (story )?quest/i);
+  });
+});
+
+describe('ai-behavior quality checks — melee reservation slots (T. Cain, WildStar)', () => {
+  it('names the positional reservation/slot pattern with its lifecycle', () => {
+    const q = MODULE_CONTEXTS['ai-behavior'].qualityChecks;
+    expect(q).toMatch(/reservation|attack slot/i);
+    expect(q).toMatch(/confirm/i);
+    expect(q).toMatch(/cancel/i);
+  });
+});
+
+describe('arpg-progression quality checks — trait economy (GURPS Fallout)', () => {
+  it('describes point-symmetric advantages/disadvantages and cheap quirk hooks', () => {
+    const q = MODULE_CONTEXTS['arpg-progression'].qualityChecks;
+    expect(q).toMatch(/disadvantage|drawback/i);
+    expect(q).toMatch(/quirk/i);
+    expect(q).toMatch(/reputation traits per faction|faction reputation/i);
+  });
+});
+
 describe('arpg-world structure checks — PCG procedural placement', () => {
   it('recommends PCG for large-scale content with parameters/graph-instances', () => {
     const s = MODULE_CONTEXTS['arpg-world'].structureChecks;
