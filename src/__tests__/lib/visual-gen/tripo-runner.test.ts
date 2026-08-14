@@ -5,6 +5,8 @@ import {
   parseTaskStatus,
   parseUpload,
   runTripo,
+  deliveredFormat,
+  formatMismatchReason,
   type TripoHttp,
 } from '@/lib/visual-gen/tripo-runner';
 
@@ -178,5 +180,75 @@ describe('runTripo (orchestration)', () => {
     );
     expect(res.ok).toBe(false);
     expect(res.error).toMatch(/tim(e|ed) out/i);
+  });
+});
+
+describe('deliveredFormat', () => {
+  it('reads the extension off a plain model URL', () => {
+    expect(deliveredFormat('https://cdn.tripo3d.ai/abc/model.glb')).toBe('glb');
+  });
+
+  it('ignores query strings and fragments (signed CDN URLs carry both)', () => {
+    expect(deliveredFormat('https://cdn.tripo3d.ai/abc/model.fbx?sig=xyz&exp=1')).toBe('fbx');
+    expect(deliveredFormat('https://cdn.tripo3d.ai/abc/model.glb#frag')).toBe('glb');
+  });
+
+  it('is undefined when the URL carries no extension rather than guessing', () => {
+    expect(deliveredFormat('https://cdn.tripo3d.ai/abc/model')).toBeUndefined();
+    expect(deliveredFormat('')).toBeUndefined();
+  });
+});
+
+describe('formatMismatchReason', () => {
+  it('is silent when the delivered format matches the destination', () => {
+    expect(formatMismatchReason('https://x/m.glb', 'out/hero.glb')).toBeUndefined();
+  });
+
+  it('is case-insensitive about extensions', () => {
+    expect(formatMismatchReason('https://x/m.GLB', 'out/hero.glb')).toBeUndefined();
+  });
+
+  it('names the mismatch when quad mode returns FBX into a .glb destination', () => {
+    // The documented hazard: enabling `quad` can change the delivered container, and
+    // writing FBX bytes to a .glb path makes the extension a lie for every consumer.
+    const r = formatMismatchReason('https://x/m.fbx', 'out/hero.glb');
+    expect(r).toBeTruthy();
+    expect(r).toContain('fbx');
+    expect(r).toContain('glb');
+  });
+
+  it('says so when the delivered format is unknown instead of assuming a match', () => {
+    const r = formatMismatchReason('https://x/model', 'out/hero.glb');
+    expect(r).toBeTruthy();
+    expect(r).toMatch(/could not be determined|unknown/i);
+  });
+});
+
+describe('runTripo format reporting', () => {
+  const okHttp = (modelUrl: string): TripoHttp => ({
+    postJson: async () => ({ status: 200, json: { code: 0, data: { task_id: 't1' } } }),
+    getJson: async () => ({ status: 200, json: { code: 0, data: { status: 'success', output: { model: modelUrl } } } }),
+    uploadImage: async () => ({ status: 200, json: { code: 0, data: { image_token: 'tok' } } }),
+    download: async () => true,
+  });
+
+  it('reports a format mismatch on an otherwise successful run', async () => {
+    const res = await runTripo(
+      { mode: 'text-to-3d', prompt: 'x', outputPath: 'o.glb', quad: true },
+      { http: okHttp('https://x/m.fbx'), env: ENV, fileExists: () => true, now: () => 1, sleep: async () => {} },
+    );
+    // The mesh still downloaded — this is a truthfulness annotation, not a failure.
+    expect(res.ok).toBe(true);
+    expect(res.formatMismatch).toBeTruthy();
+    expect(res.formatMismatch).toContain('fbx');
+  });
+
+  it('leaves formatMismatch unset when the delivered format matches', async () => {
+    const res = await runTripo(
+      { mode: 'text-to-3d', prompt: 'x', outputPath: 'o.glb' },
+      { http: okHttp('https://x/m.glb'), env: ENV, fileExists: () => true, now: () => 1, sleep: async () => {} },
+    );
+    expect(res.ok).toBe(true);
+    expect(res.formatMismatch).toBeUndefined();
   });
 });
