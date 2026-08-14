@@ -36,11 +36,21 @@ export interface TripoSpec {
   imageType?: string;
   /** Tripo model version, e.g. 'v2.5-20250123'. Omitted → account default. */
   modelVersion?: string;
+  /**
+   * Face budget handed to the provider. Authored in TRIANGLES (see `face-budget.ts`);
+   * convert with `providerFaceLimit` when requesting `quad` topology, because the
+   * provider counts FACES and a quad is two triangles.
+   */
   faceLimit?: number;
   texture?: boolean;
   pbr?: boolean;
   /** Quad (game-ready) topology instead of triangles. */
   quad?: boolean;
+  /**
+   * Asset class this mesh is being generated as (`character`, `prop`, …). Carried so the
+   * Tier-1 gate can grade it class-aware; never sent to the provider.
+   */
+  assetClass?: string;
   /** Override the API key; else env.TRIPO_API_KEY. */
   apiKey?: string;
   pollIntervalMs?: number;
@@ -56,7 +66,41 @@ export interface TripoResult {
   taskId?: string;
   status?: string;
   modelUrl?: string;
+  /**
+   * Set when the format Tripo delivered does not match the extension we wrote it to.
+   * `quad: true` is documented to change the delivered container, so a `.glb` path can
+   * end up holding FBX bytes — the extension would then lie to every consumer
+   * (`mesh-critique`'s trimesh load, the GLB viewer, the UE import). Reported rather
+   * than assumed: the check reads the delivered URL instead of trusting the option.
+   */
+  formatMismatch?: string;
   durationMs: number;
+}
+
+/** Mesh extension carried by a model URL, lowercased. Query/fragment stripped
+ *  (signed CDN URLs carry both). Undefined when the URL states none — never guessed. */
+export function deliveredFormat(url: string | undefined): string | undefined {
+  if (!url) return undefined;
+  const path = url.split(/[?#]/)[0];
+  const last = path.split('/').pop() ?? '';
+  const dot = last.lastIndexOf('.');
+  if (dot <= 0 || dot === last.length - 1) return undefined;
+  return last.slice(dot + 1).toLowerCase();
+}
+
+/**
+ * Compare what the provider delivered against the file we are about to write it to.
+ * Returns a named reason on a mismatch (or when the delivered format is unknowable),
+ * and undefined when they agree. Pure.
+ */
+export function formatMismatchReason(modelUrl: string | undefined, outputPath: string): string | undefined {
+  const want = deliveredFormat(outputPath);
+  const got = deliveredFormat(modelUrl);
+  if (!got) {
+    return `delivered format could not be determined from the model URL — the bytes were written to a ${want ?? 'extension-less'} path without confirming they are ${want ?? 'that format'}`;
+  }
+  if (!want || got === want) return undefined;
+  return `Tripo delivered ${got} but the mesh was written to a .${want} path — the extension misreports the contents (quad topology can change the delivered container); convert it or write it to a .${got} path`;
 }
 
 function tripoErr(json: unknown): string {
@@ -198,7 +242,15 @@ export async function runTripo(spec: TripoSpec, deps: TripoDeps = {}): Promise<T
       if (!ps.modelUrl) return terr('task succeeded but no model URL in output', start, now, taskId);
       const ok = await http.download(ps.modelUrl, spec.outputPath);
       if (!ok || !fileExists(spec.outputPath)) return terr('model download failed', start, now, taskId);
-      return { ok: true, meshPath: spec.outputPath, taskId, status: ps.status, modelUrl: ps.modelUrl, durationMs: now() - start };
+      return {
+        ok: true,
+        meshPath: spec.outputPath,
+        taskId,
+        status: ps.status,
+        modelUrl: ps.modelUrl,
+        formatMismatch: formatMismatchReason(ps.modelUrl, spec.outputPath),
+        durationMs: now() - start,
+      };
     }
     if (ps.state === 'failed') return terr(ps.error ?? 'task failed', start, now, taskId);
     if (i < maxPolls - 1) await sleep(pollInterval);

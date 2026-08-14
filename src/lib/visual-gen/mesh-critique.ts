@@ -9,6 +9,7 @@
  */
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { gradeFaceBudget, type BudgetGrade, type BudgetRequest } from './face-budget';
 
 export interface MeshMetrics {
   verts: number;
@@ -160,13 +161,31 @@ export interface Scorecard {
   verdict: 'pass' | 'warn' | 'fail';
   score: number;
   reasons: string[];
+  /**
+   * How the delivered mesh compared to the face budget that was REQUESTED for it.
+   * Distinct from `maxFacesWarn`, which is the class CEILING: a 55k-triangle character
+   * sits under the 60k ceiling while still being 1.4x the 40k that was asked for, and
+   * only this grade can say so. Absent when no budget was supplied — silence about a
+   * budget must never read as compliance with one.
+   */
+  budget?: BudgetGrade;
 }
 
 /** A scorecard plus the metrics behind it — the shape surfaced to the UI / job result. */
 export type CritiqueCard = Scorecard & { metrics?: MeshMetrics };
 
-/** Score a mesh's structural health into a deterministic pass/warn/fail card. Pure. */
-export function scoreMesh(m: MeshMetrics, thresholds: Partial<CritiqueThresholds> = {}): Scorecard {
+/**
+ * Score a mesh's structural health into a deterministic pass/warn/fail card. Pure.
+ *
+ * `budget` is the face budget the caller ASKED the generator for. Supplying it adds a
+ * warn when the delivery overshot it — the check that catches a provider quietly
+ * ignoring a low-poly request, and the quad/triangle unit trap that doubles a budget.
+ */
+export function scoreMesh(
+  m: MeshMetrics,
+  thresholds: Partial<CritiqueThresholds> = {},
+  budget?: BudgetRequest,
+): Scorecard {
   const t = { ...DEFAULT_THRESHOLDS, ...thresholds };
   const fails: string[] = [];
   const warns: string[] = [];
@@ -201,9 +220,13 @@ export function scoreMesh(m: MeshMetrics, thresholds: Partial<CritiqueThresholds
   if (m.degenerateFaces > 0) warns.push(`${m.degenerateFaces} degenerate faces`);
   if (m.faces > t.maxFacesWarn) warns.push(`high face count (${m.faces}) — needs decimation for game use`);
 
+  // Budget honoured? trimesh triangulates on load, so `m.faces` is a triangle count.
+  const budgetGrade = budget ? gradeFaceBudget(m.faces, budget) : undefined;
+  if (budgetGrade?.verdict === 'over' && budgetGrade.reason) warns.push(budgetGrade.reason);
+
   const verdict = fails.length ? 'fail' : warns.length ? 'warn' : 'pass';
   const score = Math.max(0, Math.min(100, 100 - fails.length * 50 - warns.length * 15));
-  return { verdict, score, reasons: [...fails, ...warns] };
+  return { verdict, score, reasons: [...fails, ...warns], budget: budgetGrade };
 }
 
 export interface CritiqueResult extends Partial<Scorecard> {
@@ -221,6 +244,8 @@ export interface CritiqueDeps {
   triposrRoot?: string;
   /** Class-aware gate overrides (see polycount-presets `critiqueThresholdsFor`). */
   thresholds?: Partial<CritiqueThresholds>;
+  /** The face budget this mesh was generated against, so the delivery can be held to it. */
+  budget?: BudgetRequest;
 }
 
 /** Critique a generated mesh: run the trimesh script (via the TripoSR venv) + score it. */
@@ -237,7 +262,7 @@ export async function critiqueMesh(glbPath: string, deps: CritiqueDeps = {}): Pr
   const { stdout } = await run(py, [script, '--mesh', glbPath], 60_000);
   const parsed = parseCritiqueMetrics(stdout);
   if (!parsed.ok || !parsed.metrics) return { ok: false, error: parsed.error ?? 'critique produced no metrics' };
-  return { ok: true, metrics: parsed.metrics, ...scoreMesh(parsed.metrics, deps.thresholds) };
+  return { ok: true, metrics: parsed.metrics, ...scoreMesh(parsed.metrics, deps.thresholds, deps.budget) };
 }
 
 const defaultRun: RunFn = async (cmd, args, timeoutMs) => {
