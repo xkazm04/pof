@@ -72,7 +72,9 @@ describe('gate-driven regeneration (a broken cloud mesh is re-rolled, not kept)'
     const id = startTripoJob(
       { mode: 'text-to-3d', prompt: 'x', outputPath: 'o.glb', maxAttempts: 99 },
       runnerEchoingPath(count),
-      async () => fail,
+      // Each roll fails differently, so the cap — not the reproducible-failure guard —
+      // is what stops the run.
+      async () => ({ ...fail, reasons: [['degenerate bbox', 'bad winding', 'empty mesh'][count.n - 1] ?? 'other'] }),
     );
     await vi.waitFor(() => expect(getTripoJob(id)?.status).toBe('done'));
     expect(count.n).toBe(MAX_GENERATION_ATTEMPTS);

@@ -84,6 +84,23 @@ export async function generateBestOf(
  */
 export const DEFAULT_MAX_ATTEMPTS = 3;
 
+/**
+ * The SHAPE of a failure — its PRIMARY reason with every number blanked out.
+ *
+ * Two rolls of the same broken provider never fail identically. Measured against the live
+ * Tripo API across three runs: the counts move every roll ("33 floater fragments … 56
+ * disconnected parts", then "12 … 38"), and the tail of the list fluctuates too — an
+ * incidental "1 degenerate faces" appears on some rolls and not others. Comparing the raw
+ * strings never matches; comparing the whole normalised list still missed a repeat because
+ * of that tail noise. `scoreMesh` emits fails before warns, so the FIRST reason is the
+ * verdict-driving defect — normalising just that one identifies "same primary defect
+ * again" without being derailed by incidental extras. Pure.
+ */
+export function failureShape(critique: CritiqueResult | undefined): string | undefined {
+  const primary = critique?.reasons?.[0];
+  return primary === undefined ? undefined : primary.replace(/\d+(?:\.\d+)?/g, '#');
+}
+
 /** The minimum a generator result must expose for the retry loop to judge it. */
 export interface MeshRoll {
   ok: boolean;
@@ -136,6 +153,7 @@ export async function generateUntilAcceptable<R extends MeshRoll>(
   const isAcceptable = deps.isAcceptable ?? ((c) => c?.ok === true && c.verdict !== undefined && c.verdict !== 'fail');
 
   const attempts: RollAttempt<R>[] = [];
+  let previousFailure: string | undefined;
   for (let n = 1; n <= maxAttempts; n++) {
     const result = await roll(n);
     let critique: CritiqueResult | undefined;
@@ -148,6 +166,23 @@ export async function generateUntilAcceptable<R extends MeshRoll>(
     if (result.ok && isAcceptable(critique)) {
       return { attempts, best: entry, accepted: true, reason: `accepted on attempt ${n} of at most ${maxAttempts}` };
     }
+
+    // Re-rolling only buys anything when the failure is a dice roll. Measured against the
+    // live Tripo API: raw generator output fails the same way every time (500k faces, the
+    // same disconnected-part budget), so a blind loop paid the full cap for an outcome it
+    // could never change. Once a failure reproduces, stop and say so — the next attempt
+    // costs real money and would return the same verdict.
+    const failure = failureShape(critique);
+    if (failure !== undefined && failure === previousFailure) {
+      const best = attempts.filter((a) => a.result.ok).sort((a, b) => b.score - a.score)[0];
+      return {
+        attempts,
+        best,
+        accepted: false,
+        reason: `stopped after ${n} attempts — the same failure reproduced, so it is systematic rather than a bad roll: ${critique?.reasons?.[0] ?? 'unknown'}`,
+      };
+    }
+    previousFailure = failure;
   }
 
   const best = attempts.filter((a) => a.result.ok).sort((a, b) => b.score - a.score)[0];

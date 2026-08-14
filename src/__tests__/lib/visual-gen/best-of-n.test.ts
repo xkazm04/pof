@@ -60,8 +60,10 @@ describe('generateUntilAcceptable (gate-driven retry for a stochastic generator)
   it('reports honestly when the attempt budget is exhausted without a passing roll', async () => {
     let rolls = 0;
     const roll = async () => { rolls++; return { ok: true, meshPath: `m${rolls}.glb` }; };
-    // Second roll is the least-bad; none of them clear the gate.
-    const critic = async () => card('fail', rolls === 2 ? 40 : 10);
+    // Second roll is the least-bad; none clear the gate, and each fails DIFFERENTLY so
+    // the reproducible-failure guard does not (correctly) cut the run short.
+    const critic = async () => ({ ...card('fail', rolls === 2 ? 40 : 10),
+      reasons: [['degenerate bbox', 'bad winding', 'empty mesh'][rolls - 1] ?? 'other'] });
 
     const out = await generateUntilAcceptable(roll, { critic, maxAttempts: 3 });
 
@@ -82,5 +84,38 @@ describe('generateUntilAcceptable (gate-driven retry for a stochastic generator)
     expect(out.accepted).toBe(false);
     expect(critiqued).toBe(0); // nothing to critique — no mesh was written
     expect(out.best).toBeUndefined();
+  });
+});
+
+describe('generateUntilAcceptable — a reproducible failure is not a dice roll', () => {
+  const card = (reasons: string[]): CritiqueResult =>
+    ({ ok: true, verdict: 'fail' as const, score: 0, reasons });
+
+  it('stops paying once the same failure repeats, even though the counts differ', async () => {
+    let rolls = 0;
+    const roll = async () => { rolls++; return { ok: true, meshPath: `m${rolls}.glb` }; };
+    // Verbatim shape of the live Tripo failure: same defects every roll, different counts
+    // each time (measured: 12/38 floaters/parts on one roll, 33/56 on the next).
+    const critic = async () =>
+      card([`${rolls * 11} floater fragments (${rolls * 1000} faces of specks)`,
+            `${rolls * 18} substantial disconnected parts (above the 6 budget for this class)`,
+            'not watertight (open boundary / holes)']);
+
+    const out = await generateUntilAcceptable(roll, { critic, maxAttempts: 5 });
+
+    expect(rolls).toBe(2); // one re-roll to learn it reproduces, then stop
+    expect(out.accepted).toBe(false);
+    expect(out.reason).toMatch(/same|repeat|reproduc/i);
+  });
+
+  it('keeps re-rolling while the failure keeps changing', async () => {
+    let rolls = 0;
+    const roll = async () => { rolls++; return { ok: true, meshPath: `m${rolls}.glb` }; };
+    const critic = async () => card([['degenerate bounding box', 'inconsistent face winding', 'empty mesh'][rolls - 1] ?? 'other']);
+
+    const out = await generateUntilAcceptable(roll, { critic, maxAttempts: 3 });
+
+    expect(rolls).toBe(3); // genuinely varying failures are worth the re-roll
+    expect(out.accepted).toBe(false);
   });
 });
