@@ -165,27 +165,38 @@ def decimate(obj, target_faces):
 
 
 def apply_shading(obj, angle_deg):
-    """Auto-smooth the low-poly: edges sharper than the crease angle stay hard.
+    """Auto-smooth the low-poly by crease angle — but only when nothing better exists.
 
-    Generated meshes arrive faceted or mixed-shaded, and the decimate modifier
-    invalidates whatever custom split normals the source carried — so without this
-    the exported low-poly reads as flat no matter how good its topology is. This is
-    the "few annoying clicks" of the manual workflow, done headless.
+    Measured on Blender 4.2 against real Tripo output: a generated .glb arrives with
+    CUSTOM SPLIT NORMALS already set and every polygon already smooth, and custom
+    normals override the smooth flag — so shade_auto_smooth is a silent no-op there
+    (0 of 30,967 exported normals changed). Clearing them first does make it bite, and
+    that is exactly why this refuses to: on the same mesh it rewrote 99.9% of normals by
+    a mean of 73 degrees (max 179, i.e. flipped). Those normals carry the generator's own
+    surface information; a 30-degree crease guess is worse information, not better.
 
-    Blender 4.1 removed the `use_auto_smooth` mesh flag in favour of the
-    shade_auto_smooth operator (a Smooth by Angle modifier). Fall back to a plain
-    shade_smooth when that operator is unavailable, and report which one ran rather
-    than letting the caller assume the angle was honoured.
+    So the rule is: re-shade only a mesh that has no custom normals to lose — which is
+    the .obj/.fbx-without-normals case that genuinely imports faceted — and report the
+    refusal otherwise rather than claiming a shading pass that changed nothing.
+
+    Returns (applied, detail).
     """
+    if obj.data.has_custom_normals:
+        return (False, "source carries custom split normals (they override any crease "
+                       "angle); re-shading would discard the generator's own surface "
+                       "information for a guess")
+
     bpy.context.view_layer.objects.active = obj
     bpy.ops.object.select_all(action="DESELECT")
     obj.select_set(True)
+    # Blender 4.1 replaced the use_auto_smooth mesh flag with this operator; fall back to
+    # a plain shade_smooth and report which ran, so the angle is never assumed honoured.
     try:
         bpy.ops.object.shade_auto_smooth(angle=math.radians(angle_deg))
-        return "auto_smooth@%g" % angle_deg
+        return (True, "auto_smooth@%g" % angle_deg)
     except (AttributeError, RuntimeError, TypeError):
         bpy.ops.object.shade_smooth()
-        return "smooth_all"
+        return (True, "smooth_all")
 
 
 def unwrap(obj, mode):
@@ -361,7 +372,8 @@ def main():
     # After decimation (which destroys the source normals) and before the bake, whose
     # tangent-space normal map is computed against the low-poly's shading.
     if args.smooth_angle > 0:
-        marker("SHADING", apply_shading(low, args.smooth_angle))
+        shaded, detail = apply_shading(low, args.smooth_angle)
+        marker("SHADING" if shaded else "SHADING_SKIPPED", detail)
 
     if args.unwrap:
         unwrap(low, args.uv_mode)

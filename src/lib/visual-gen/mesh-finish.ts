@@ -75,12 +75,15 @@ export interface MeshFinishSpec {
   cullInterior?: boolean;
   /**
    * Crease angle (degrees) for the auto-smooth pass, applied after decimation. Defaults
-   * to `DEFAULT_SMOOTH_ANGLE`; `0` disables it and keeps whatever shading survived.
+   * to `DEFAULT_SMOOTH_ANGLE`; `0` disables it.
    *
-   * Generated meshes arrive faceted or mixed-shaded, and decimation invalidates whatever
-   * custom normals the source carried — so a finished mesh reads as flat-shaded unless
-   * something restores it. That "few annoying clicks" is the one manual step left in an
-   * otherwise headless path, which makes it exactly the thing to automate.
+   * Only ever re-shades a mesh that has NO custom split normals. Measured on Blender 4.2
+   * against real Tripo output: a generated .glb already carries custom normals and every
+   * polygon is already smooth, custom normals override the crease angle, and the pass is
+   * a no-op there (0 of 30,967 exported normals changed). Forcing it by clearing them
+   * rewrote 99.9% of normals by a mean of 73° — worse information, not better. So the
+   * angle serves the input class that genuinely imports faceted (.obj/.fbx without
+   * normals); otherwise `shadingSkippedReason` says why it was refused.
    */
   smoothAngle?: number;
   /** Request a UV unwrap — honoured only when the mesh is decimated first. */
@@ -118,6 +121,8 @@ export interface MeshFinishResult {
   uvModeFallbackReason?: string;
   /** Shading actually applied (e.g. `auto_smooth@30`); absent when none ran. */
   shading?: string;
+  /** Why the re-shade was refused — the source's own normals are better information. */
+  shadingSkippedReason?: string;
   normalMapPath?: string;
   aoMapPath?: string;
   diffuseMapPath?: string;
@@ -247,6 +252,8 @@ export interface ParsedMeshFinish {
   uvModeFallbackReason?: string;
   /** Shading the script actually applied (e.g. `auto_smooth@30`) — absent when none ran. */
   shading?: string;
+  /** Why the re-shade was refused (the source's own normals win) — never a silent skip. */
+  shadingSkippedReason?: string;
   normalMapPath?: string;
   aoMapPath?: string;
   diffuseMapPath?: string;
@@ -295,6 +302,7 @@ export function parseMeshFinishOutput(stdout: string): ParsedMeshFinish {
     uvMode: get('UV_MODE') as UvMode | undefined,
     uvModeFallbackReason: get('UV_MODE_FALLBACK'),
     shading: get('SHADING'),
+    shadingSkippedReason: get('SHADING_SKIPPED'),
     normalMapPath: get('BAKE_NORMAL'),
     aoMapPath: get('BAKE_AO'),
     diffuseMapPath: get('BAKE_DIFFUSE'),
@@ -351,6 +359,7 @@ export async function runMeshFinish(spec: MeshFinishSpec, deps: MeshFinishDeps =
     uvMode: parsed.uvMode,
     uvModeFallbackReason: parsed.uvModeFallbackReason,
     shading: parsed.shading,
+    shadingSkippedReason: parsed.shadingSkippedReason,
     normalMapPath: parsed.normalMapPath,
     aoMapPath: parsed.aoMapPath,
     diffuseMapPath: parsed.diffuseMapPath,

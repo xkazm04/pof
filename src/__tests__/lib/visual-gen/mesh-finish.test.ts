@@ -297,3 +297,21 @@ describe('shading — generated meshes arrive faceted and decimation destroys th
     expect(parsed.shading).toBe('auto_smooth@30');
   });
 });
+
+describe('shading refusal — the source normals are better information than a crease guess', () => {
+  it('reports the refusal instead of claiming a shading pass that changed nothing', () => {
+    const parsed = parseMeshFinishOutput(
+      'POF_MESHFINISH_SHADING_SKIPPED=source carries custom split normals\nPOF_MESHFINISH_DONE=C:/out.glb',
+    );
+    expect(parsed.shading).toBeUndefined();
+    expect(parsed.shadingSkippedReason).toMatch(/custom split normals/i);
+  });
+
+  it('leaves the refusal undefined when the shading actually ran', () => {
+    const parsed = parseMeshFinishOutput(
+      'POF_MESHFINISH_SHADING=auto_smooth@30\nPOF_MESHFINISH_DONE=C:/out.glb',
+    );
+    expect(parsed.shading).toBe('auto_smooth@30');
+    expect(parsed.shadingSkippedReason).toBeUndefined();
+  });
+});
