@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { combinedScore, generateBestOf } from '@/lib/visual-gen/best-of-n';
+import { combinedScore, generateBestOf, generateUntilAcceptable } from '@/lib/visual-gen/best-of-n';
 import type { TriposrResult } from '@/lib/visual-gen/triposr-runner';
+import type { CritiqueResult } from '@/lib/visual-gen/mesh-critique';
 
 const R = (clipMax?: number): TriposrResult => ({ ok: true, meshPath: 'm.glb', clipMax, durationMs: 1 });
 
@@ -36,5 +37,50 @@ describe('generateBestOf', () => {
       { runner, critic: async () => ({ ok: true, verdict: 'warn' as const, score: 70, reasons: [] }) },
     );
     expect(res.best?.variant).toBe('good');
+  });
+});
+
+describe('generateUntilAcceptable (gate-driven retry for a stochastic generator)', () => {
+  const card = (verdict: 'pass' | 'warn' | 'fail', score: number): CritiqueResult =>
+    ({ ok: true, verdict, score, reasons: [] });
+
+  it('stops re-rolling as soon as one clears the gate', async () => {
+    const verdicts: Array<'fail' | 'pass'> = ['fail', 'pass', 'pass'];
+    let rolls = 0;
+    const roll = async () => { rolls++; return { ok: true, meshPath: `m${rolls}.glb` }; };
+    const critic = async () => card(verdicts[rolls - 1], verdicts[rolls - 1] === 'pass' ? 100 : 5);
+
+    const out = await generateUntilAcceptable(roll, { critic, maxAttempts: 3 });
+
+    expect(out.accepted).toBe(true);
+    expect(out.best?.attempt).toBe(2);
+    expect(rolls).toBe(2); // the third roll is never spent
+  });
+
+  it('reports honestly when the attempt budget is exhausted without a passing roll', async () => {
+    let rolls = 0;
+    const roll = async () => { rolls++; return { ok: true, meshPath: `m${rolls}.glb` }; };
+    // Second roll is the least-bad; none of them clear the gate.
+    const critic = async () => card('fail', rolls === 2 ? 40 : 10);
+
+    const out = await generateUntilAcceptable(roll, { critic, maxAttempts: 3 });
+
+    expect(out.accepted).toBe(false);
+    expect(rolls).toBe(3);
+    expect(out.attempts).toHaveLength(3);
+    expect(out.best?.attempt).toBe(2); // best-so-far is still surfaced, just not accepted
+    expect(out.reason).toMatch(/3 attempts/i);
+  });
+
+  it('never accepts a roll the generator failed to produce', async () => {
+    const roll = async () => ({ ok: false, error: 'provider 500' } as { ok: boolean; meshPath?: string });
+    let critiqued = 0;
+    const critic = async () => { critiqued++; return card('pass', 100); };
+
+    const out = await generateUntilAcceptable(roll, { critic, maxAttempts: 2 });
+
+    expect(out.accepted).toBe(false);
+    expect(critiqued).toBe(0); // nothing to critique — no mesh was written
+    expect(out.best).toBeUndefined();
   });
 });
