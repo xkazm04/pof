@@ -1,7 +1,7 @@
 ---
 name: research
 description: "Use when the user shares a YouTube/article URL or raw text about Claude/AI game-dev automation, MCP/Unreal tooling, agent harnesses, or a dev-tool showcase and wants ideas PoF can adopt into its headless tooling or UI workflows. Triggers: '/research <url>', 'can we use this for PoF', 'research this video/technique', 'any ideas from this'."
-version: 1.1
+version: 1.2
 ---
 
 # Research — mine external showcases into PoF improvements
@@ -102,6 +102,7 @@ Note the source-type expected yield and flag any `descoped-reopenable` matches a
 Now spend the expensive budget, on the picks only:
 1. **Web-augment (bounded, ≤3 `WebSearch`/`WebFetch` calls for the whole run)** — only if a pick names a tool/technique/model whose definition sharpens framing and isn't already in the impact-map/`docs/`. One focused search → fetch the most authoritative page; capture a 2-4 sentence note (what / how / integration shape / why it matters to PoF). Don't validate the speaker's claims here; don't rabbit-hole.
 2. **Impact analysis (anti-re-scan):** impact-map first → **host-infrastructure-first grep** (MCP tool → `Register*Routes`/registry; harness step → `src/lib/harness/`; pipeline step → `getStepComponent`/`ArchetypeStep`; API route → `apiSuccess`) → **read the anchor file(s)** (~30-100 lines) for the exact `file:line`.
+   **Read the gap's NEIGHBOURS, not just the gap.** A candidate phrased as "feature X is missing" points you at the half that isn't built and away from the half that is — where the real defect often sits. 2026-08-14: the candidate was "add metallic/roughness bakes"; reading the surrounding bake code found that each bake *cleared the low-poly's material slots*, so the shipped normal+AO path had been exporting **untextured** meshes for weeks. Nobody files that as a candidate. Cost: ~20 extra lines of reading around the anchor. Ask "how do the already-built siblings of this feature behave?" before writing the finding up.
 3. **Drop if redundant** — a picked item can still resolve to an "already-have" catch; report that honestly, don't force it.
 4. **Security escalation:** PoF exposes HTTP bridges (`:8090`, `:30040`), MCP servers, and spawns `claude --dangerously-skip-permissions`. If a pick touches one of these and the area lacks auth/sandbox handling, escalate it to a finding even if the source never mentioned security.
 
