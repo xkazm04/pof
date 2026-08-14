@@ -81,6 +81,51 @@ export function polycountFor(assetClass: string): PolycountPreset | undefined {
   return POLYCOUNT_PRESETS.find((p) => p.assetClass === assetClass);
 }
 
+export interface PartBudget {
+  assetClass: AssetClass;
+  parts: number;
+  /** Face budget for ONE part, chosen so the assembled whole stays inside its class budget. */
+  perPartFaceLimit: number;
+  /** The budget the assembled asset must land inside. */
+  assembledFaceLimit: number;
+  /** True when the naive per-part budget would have overrun the assembled whole. */
+  constrained: boolean;
+  rationale: string;
+}
+
+/**
+ * Budget ONE part of a part-split generation.
+ *
+ * Generating a character in disconnected parts (body / head / hands / pack / props) is
+ * the endorsed workflow — it beats single-shot on every part's local quality. But each
+ * part was previously budgeted at the flat `modular-part` limit, and nothing checked the
+ * sum: eight parts at 8k is 64k against a 40k character budget. The `modular-part`
+ * rationale only *claimed* headroom; this computes it.
+ *
+ * Returns undefined for an unknown class or a non-positive part count — a budget that
+ * cannot be honoured is never invented.
+ */
+export function planPartBudget(assetClass: string, parts: number): PartBudget | undefined {
+  const whole = polycountFor(assetClass);
+  const part = polycountFor('modular-part');
+  if (!whole || !part || !Number.isFinite(parts) || parts < 1) return undefined;
+
+  const naive = part.faceLimit;
+  const fair = Math.floor(whole.faceLimit / parts);
+  const constrained = naive * parts > whole.faceLimit;
+
+  return {
+    assetClass: whole.assetClass,
+    parts,
+    perPartFaceLimit: constrained ? fair : naive,
+    assembledFaceLimit: whole.faceLimit,
+    constrained,
+    rationale: constrained
+      ? `${parts} parts at the ${naive}-face modular budget would reach ${naive * parts} faces, past the ${whole.faceLimit}-face ${whole.assetClass} budget — each part is cut to ${fair}.`
+      : `${parts} parts at the ${naive}-face modular budget total ${naive * parts} faces, inside the ${whole.faceLimit}-face ${whole.assetClass} budget.`,
+  };
+}
+
 /** Class-aware Tier-1 gate thresholds — empty for unknown classes (defaults apply). */
 export function critiqueThresholdsFor(assetClass: string): Partial<CritiqueThresholds> {
   const p = polycountFor(assetClass);

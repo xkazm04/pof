@@ -4,6 +4,7 @@ import {
   ASSET_CLASS_IDS,
   polycountFor,
   critiqueThresholdsFor,
+  planPartBudget,
 } from '@/lib/visual-gen/polycount-presets';
 import { scoreMesh, type MeshMetrics } from '@/lib/visual-gen/mesh-critique';
 
@@ -40,6 +41,29 @@ describe('POLYCOUNT_PRESETS', () => {
   it('polycountFor resolves known classes and returns undefined for unknown ones', () => {
     expect(polycountFor('weapon')?.assetClass).toBe('weapon');
     expect(polycountFor('nope')).toBeUndefined();
+  });
+});
+
+describe('planPartBudget (part-split generation vs the assembled budget)', () => {
+  it('shrinks the per-part budget when the parts would overrun the assembled whole', () => {
+    // 8 parts at the 8k modular-part budget = 64k, well past the 40k character budget.
+    const plan = planPartBudget('character', 8);
+    expect(plan?.constrained).toBe(true);
+    expect(plan?.assembledFaceLimit).toBe(40_000);
+    expect(plan?.perPartFaceLimit).toBe(5_000);
+    expect((plan?.perPartFaceLimit ?? 0) * 8).toBeLessThanOrEqual(40_000);
+  });
+
+  it('keeps the full modular-part budget when the parts already fit', () => {
+    const plan = planPartBudget('character', 2); // 2 × 8k = 16k, inside 40k
+    expect(plan?.constrained).toBe(false);
+    expect(plan?.perPartFaceLimit).toBe(8_000);
+  });
+
+  it('never returns a budget it cannot honour', () => {
+    expect(planPartBudget('character', 0)).toBeUndefined();
+    expect(planPartBudget('character', -3)).toBeUndefined();
+    expect(planPartBudget('nope', 4)).toBeUndefined();
   });
 });
 
