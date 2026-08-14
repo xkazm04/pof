@@ -1,7 +1,7 @@
 ---
 name: research
 description: "Use when the user shares a YouTube/article URL or raw text about Claude/AI game-dev automation, MCP/Unreal tooling, agent harnesses, or a dev-tool showcase and wants ideas PoF can adopt into its headless tooling or UI workflows. Triggers: '/research <url>', 'can we use this for PoF', 'research this video/technique', 'any ideas from this'."
-version: 1.3
+version: 1.4
 ---
 
 # Research — mine external showcases into PoF improvements
@@ -131,6 +131,8 @@ Honor `--no-commit` / "research only" if the user said so.
 Print: source, extracted/relevant/accepted/declined counts, already-have catches (surface prominently when finding count is low), files updated, commit SHA. Then commit (mandatory unless no changes or user opted out): **`git commit -m … -- <your paths>`** for in-scope files **+ `docs/research/impact-map.md`**; `research:`-prefixed message; let hooks run (no `--no-verify`); end with the Co-Authored-By footer. The Obsidian vault is outside the repo — it won't appear in git, and that's correct.
 
 **Commit with a PATHSPEC, not just a narrow `git add`.** Parallel sessions share this checkout AND its git **index**: a pathspec-less `git commit` commits everything staged, including files another session staged between your `add` and your `commit`. On 2026-08-14 that swallowed one run's finding into a concurrent run's skill commit (recovered with `git reset --soft`; local only, nothing lost). `git add <path>` is necessary but NOT sufficient — the pathspec on `commit` is what bounds the commit. Before committing, `git status --porcelain <your dirs>` and treat any file you did not touch as someone's live WIP: never stage it, never `git add -A`, and never rewrite shared history to tidy an over-broad commit while another session is committing on top of it — the content is safe, the attribution is not worth the risk.
+
+**Close every run by verifying each shipped symbol is actually in `HEAD`** — `git grep <symbol> HEAD -- <path>` per finding, not `git log`. A concurrent session can rewrite history and drop your commit's content back into the working tree, where **the tests still pass and nothing looks wrong**: green tests prove the working tree, never the commit. On 2026-08-14 this sweep was the only thing that caught a shipped finding sitting uncommitted after a parallel rebase.
 
 ## Common mistakes
 

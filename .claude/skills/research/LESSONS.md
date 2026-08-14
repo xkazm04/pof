@@ -59,3 +59,11 @@
   still editing SKILL.md. Bumping to 1.4 on top of a live editor would create a version race
   and risk clobbering their method edits. Per the contract — never bump without an applied
   edit — the lessons are recorded here for whichever session next edits the method safely.
+
+## 1.3 — 2026-08-14 — pof (same run, second bump: the verification half of the concurrency fix)
+- **Green tests prove the working tree, not the commit.** After the v1.3 pathspec fix, the
+  parallel session *rewrote history*, which dropped a shipped finding's content back into the
+  index — 306 tests still passed, `git log` still showed a plausible run, and nothing looked
+  wrong. Only a per-symbol `git grep <symbol> HEAD` sweep caught it. Applied to SKILL.md
+  Phase 10/11 as a mandatory closing check. Generalises to any shared checkout: verify the
+  artifact is in HEAD, never infer it from a successful commit command or a passing suite.
