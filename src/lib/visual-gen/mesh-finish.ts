@@ -39,6 +39,13 @@ export type BakeMap = 'normal' | 'ao' | 'diffuse' | 'roughness' | 'metallic';
 export const BAKEABLE_MAPS = ['normal', 'ao', 'diffuse', 'roughness'] as const;
 
 /**
+ * Crease angle (degrees) for the auto-smooth pass. Edges sharper than this stay hard,
+ * everything flatter is smoothed — 30° keeps a hard-surface bevel crisp while letting
+ * an organic body read as curved.
+ */
+export const DEFAULT_SMOOTH_ANGLE = 30;
+
+/**
  * UV layout for the decimated low-poly.
  * - `smart` — angle-based projection. Correct when the source carries no usable UVs.
  * - `pack-existing` — keep the islands the source parts already had and only re-pack
@@ -66,6 +73,16 @@ export interface MeshFinishSpec {
    * so rather than letting a `facesCulled: 0` read as "nothing is hidden".
    */
   cullInterior?: boolean;
+  /**
+   * Crease angle (degrees) for the auto-smooth pass, applied after decimation. Defaults
+   * to `DEFAULT_SMOOTH_ANGLE`; `0` disables it and keeps whatever shading survived.
+   *
+   * Generated meshes arrive faceted or mixed-shaded, and decimation invalidates whatever
+   * custom normals the source carried — so a finished mesh reads as flat-shaded unless
+   * something restores it. That "few annoying clicks" is the one manual step left in an
+   * otherwise headless path, which makes it exactly the thing to automate.
+   */
+  smoothAngle?: number;
   /** Request a UV unwrap — honoured only when the mesh is decimated first. */
   unwrap?: boolean;
   /** How to lay out the UVs when unwrapping (default `smart`). */
@@ -99,6 +116,8 @@ export interface MeshFinishResult {
   uvMode?: UvMode;
   /** Why the requested layout could not run (e.g. no authored UVs to pack). */
   uvModeFallbackReason?: string;
+  /** Shading actually applied (e.g. `auto_smooth@30`); absent when none ran. */
+  shading?: string;
   normalMapPath?: string;
   aoMapPath?: string;
   diffuseMapPath?: string;
@@ -201,6 +220,8 @@ export function buildMeshFinishArgs(scriptPath: string, spec: MeshFinishSpec): s
     '--output', spec.outputPath,
   ];
   if (spec.targetFaces !== undefined) args.push('--target-faces', String(spec.targetFaces));
+  const smoothAngle = spec.smoothAngle ?? DEFAULT_SMOOTH_ANGLE;
+  if (smoothAngle > 0) args.push('--smooth-angle', String(smoothAngle));
   if (spec.mirror) args.push('--mirror', spec.mirror);
   if (spec.cullInterior) args.push('--cull-interior');
   if (plan.unwrap) {
@@ -224,6 +245,8 @@ export interface ParsedMeshFinish {
   uvUnwrapped?: boolean;
   uvMode?: UvMode;
   uvModeFallbackReason?: string;
+  /** Shading the script actually applied (e.g. `auto_smooth@30`) — absent when none ran. */
+  shading?: string;
   normalMapPath?: string;
   aoMapPath?: string;
   diffuseMapPath?: string;
@@ -271,6 +294,7 @@ export function parseMeshFinishOutput(stdout: string): ParsedMeshFinish {
     uvUnwrapped: get('UV') === undefined ? undefined : get('UV') === '1',
     uvMode: get('UV_MODE') as UvMode | undefined,
     uvModeFallbackReason: get('UV_MODE_FALLBACK'),
+    shading: get('SHADING'),
     normalMapPath: get('BAKE_NORMAL'),
     aoMapPath: get('BAKE_AO'),
     diffuseMapPath: get('BAKE_DIFFUSE'),
@@ -326,6 +350,7 @@ export async function runMeshFinish(spec: MeshFinishSpec, deps: MeshFinishDeps =
     uvUnwrapped: parsed.uvUnwrapped,
     uvMode: parsed.uvMode,
     uvModeFallbackReason: parsed.uvModeFallbackReason,
+    shading: parsed.shading,
     normalMapPath: parsed.normalMapPath,
     aoMapPath: parsed.aoMapPath,
     diffuseMapPath: parsed.diffuseMapPath,

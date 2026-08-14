@@ -18,6 +18,7 @@ headless shutdown is noisy).
 """
 
 import argparse
+import math
 import os
 import sys
 
@@ -42,6 +43,7 @@ def parse_args():
     p.add_argument("--target-faces", type=int, default=None)
     p.add_argument("--mirror", choices=["x", "y", "z"], default=None)
     p.add_argument("--cull-interior", action="store_true")
+    p.add_argument("--smooth-angle", type=float, default=0.0)
     p.add_argument("--unwrap", action="store_true")
     p.add_argument("--uv-mode", choices=["smart", "pack-existing"], default="smart")
     p.add_argument("--bake", default="")
@@ -160,6 +162,30 @@ def decimate(obj, target_faces):
     mod.ratio = max(0.0001, float(target_faces) / float(current))
     bpy.ops.object.modifier_apply(modifier=mod.name)
     return face_count(obj)
+
+
+def apply_shading(obj, angle_deg):
+    """Auto-smooth the low-poly: edges sharper than the crease angle stay hard.
+
+    Generated meshes arrive faceted or mixed-shaded, and the decimate modifier
+    invalidates whatever custom split normals the source carried — so without this
+    the exported low-poly reads as flat no matter how good its topology is. This is
+    the "few annoying clicks" of the manual workflow, done headless.
+
+    Blender 4.1 removed the `use_auto_smooth` mesh flag in favour of the
+    shade_auto_smooth operator (a Smooth by Angle modifier). Fall back to a plain
+    shade_smooth when that operator is unavailable, and report which one ran rather
+    than letting the caller assume the angle was honoured.
+    """
+    bpy.context.view_layer.objects.active = obj
+    bpy.ops.object.select_all(action="DESELECT")
+    obj.select_set(True)
+    try:
+        bpy.ops.object.shade_auto_smooth(angle=math.radians(angle_deg))
+        return "auto_smooth@%g" % angle_deg
+    except (AttributeError, RuntimeError, TypeError):
+        bpy.ops.object.shade_smooth()
+        return "smooth_all"
 
 
 def unwrap(obj, mode):
@@ -331,6 +357,11 @@ def main():
 
     faces_out = decimate(low, args.target_faces) if args.target_faces else face_count(low)
     marker("FACES_OUT", faces_out)
+
+    # After decimation (which destroys the source normals) and before the bake, whose
+    # tangent-space normal map is computed against the low-poly's shading.
+    if args.smooth_angle > 0:
+        marker("SHADING", apply_shading(low, args.smooth_angle))
 
     if args.unwrap:
         unwrap(low, args.uv_mode)

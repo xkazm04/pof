@@ -3,6 +3,7 @@ import {
   UNWRAP_FACE_CEILING,
   BLENDER_CANDIDATES,
   BAKEABLE_MAPS,
+  DEFAULT_SMOOTH_ANGLE,
   resolveBlenderPath,
   unwrapPlan,
   bakePlan,
@@ -269,5 +270,30 @@ describe('runMeshFinish', () => {
   it('leaves bakeSkipped undefined when every requested map ran', async () => {
     const r = await runMeshFinish({ ...SPEC, unwrap: true, bake: ['diffuse'] }, deps());
     expect(r.bakeSkipped).toBeUndefined();
+  });
+});
+
+describe('shading — generated meshes arrive faceted and decimation destroys their normals', () => {
+  it('asks for auto-smooth by default, so a finished mesh is not shipped flat', () => {
+    const args = buildMeshFinishArgs('s.py', SPEC);
+    expect(args).toContain('--smooth-angle');
+    expect(args[args.indexOf('--smooth-angle') + 1]).toBe(String(DEFAULT_SMOOTH_ANGLE));
+  });
+
+  it('honours an explicit crease angle', () => {
+    const args = buildMeshFinishArgs('s.py', { ...SPEC, smoothAngle: 45 });
+    expect(args[args.indexOf('--smooth-angle') + 1]).toBe('45');
+  });
+
+  it('leaves shading alone at angle 0, for a mesh whose flat facets are intentional', () => {
+    const args = buildMeshFinishArgs('s.py', { ...SPEC, smoothAngle: 0 });
+    expect(args).not.toContain('--smooth-angle');
+  });
+
+  it('reports the shading actually applied, so a fallback is visible rather than assumed', () => {
+    const parsed = parseMeshFinishOutput(
+      'POF_MESHFINISH_SHADING=auto_smooth@30\nPOF_MESHFINISH_DONE=C:/out.glb',
+    );
+    expect(parsed.shading).toBe('auto_smooth@30');
   });
 });
