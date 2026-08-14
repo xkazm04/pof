@@ -1,7 +1,7 @@
 ---
 name: research
 description: "Use when the user shares a YouTube/article URL or raw text about Claude/AI game-dev automation, MCP/Unreal tooling, agent harnesses, or a dev-tool showcase and wants ideas PoF can adopt into its headless tooling or UI workflows. Triggers: '/research <url>', 'can we use this for PoF', 'research this video/technique', 'any ideas from this'."
-version: 1.5
+version: 1.6
 ---
 
 # Research — mine external showcases into PoF improvements
@@ -118,6 +118,8 @@ Route each verified finding:
 Honor `--no-commit` / "research only" if the user said so.
 
 **If a finding's value is "the output is now better", prove it with an ARTIFACT DIFF, not a passing test.** Unit tests and stdout markers can only show that the argv was built and the operator ran — neither can see the produced file, so both stay green while the change does nothing. On 2026-08-14 a shipped shading finding printed its success marker on a live run and had changed **0 of 30,967 exported normals**; a passing suite plus a live "it ran" was not evidence. The cheap decisive check is an **A/B against a control** (same input, feature off) plus a diff of the real output — bytes, counts, and the specific values the finding claims to change. Two traps it catches: a **no-op** (nothing changed), and a **degradation dressed as success** (forcing the same feature to bite rewrote 99.9% of normals by a mean of 73° — "the flag now does something" is not "the asset is better", so measure the MAGNITUDE and direction of the change, not just its presence). A finding that cannot be verified this way inside the run is not shipped-and-proven; say so in the summary rather than letting green tests imply it.
+
+**Build the fixture from CAPTURED output, not from imagination.** A guard written against invented data passes its test and never fires in production. Same run: a "stop when the failure repeats" guard was tested with two identical reason strings — real output never repeats identically (the counts move every roll, and the tail of the list fluctuates), so the shipped guard did nothing until a live run exposed it, twice, at real cost. Paste the actual observed payload into the fixture; if you have not seen the real output yet, the test is a guess and the finding is unproven.
 
 ### Phase 8 — Persist + grow the impact-map
 - **Obsidian Research note** `Research/{YYYY-MM-DD}-{slug}.md` (frontmatter: source, type, url, title, buckets, extracted/accepted/declined, commits, web_augmentations) + per-idea blocks with accept/decline + action taken.

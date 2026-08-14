@@ -84,3 +84,21 @@
   whose inputs are generator glTF carrying their own custom normals. The finding was
   well-evidenced against the code (the shading op really was absent) and still wrong about
   the world. Codebase-grounding proves the gap exists; it does not prove the gap matters.
+
+## 1.5 — 2026-08-14 — pof (live-credit run: fixtures must be captured, not imagined)
+- **A guard tested against invented data passes and never fires.** A "stop re-rolling when
+  the failure repeats" guard was unit-tested with two identical failure strings. Real output
+  never repeats identically — the counts move every roll, and the tail of the reason list
+  fluctuates — so the shipped guard did nothing. It took TWO live runs at real cost to find,
+  first the number drift, then the tail noise. Applied to SKILL.md Phase 7: paste the actual
+  observed payload into the fixture; an unseen payload means the test is a guess.
+- **Spending on a live run is how you learn the instrument is pointed at the wrong thing.**
+  The credits did not just validate the loop — they revealed that the quality gate the loop
+  depends on is calibrated for finished assets and runs on raw pre-retopo output, failing
+  ~100% of jobs. That is worth far more than the feature being tested, and no amount of unit
+  testing could have surfaced it. When a run's value hinges on an external service's real
+  behaviour, budget for the live call rather than inferring.
+- **Watch for a heuristic being tuned twice.** Two consecutive refinements of the same
+  matcher (whole-list → primary-reason) is the signal to ask whether the heuristic is the
+  right shape at all. Here it was worth keeping only because the default is off; had it been
+  on by default, the honest move would have been to remove the feature, not tune it again.
