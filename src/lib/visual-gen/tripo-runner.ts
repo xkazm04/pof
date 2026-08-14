@@ -51,6 +51,12 @@ export interface TripoSpec {
    * Tier-1 gate can grade it class-aware; never sent to the provider.
    */
   assetClass?: string;
+  /**
+   * How many generations this request may spend before giving up on the Tier-1 gate.
+   * Defaults to 1 (single shot, unchanged cost); the job store caps it at
+   * `MAX_GENERATION_ATTEMPTS`. Orchestration only — never sent to the provider.
+   */
+  maxAttempts?: number;
   /** Override the API key; else env.TRIPO_API_KEY. */
   apiKey?: string;
   pollIntervalMs?: number;

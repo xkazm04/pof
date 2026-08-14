@@ -22,6 +22,8 @@ export async function GET(req: NextRequest) {
       meshPath?: string; verts?: number; faces?: number; durationMs?: number;
       previewPath?: string; device?: string; clipMax?: number; vramGb?: number;
     } | undefined;
+    // Gate-driven regeneration (cloud Tripo only; absent on the local stores).
+    const gate = job as unknown as { attempts?: number; accepted?: boolean; gateReason?: string };
     return apiSuccess({
       status: job.status,
       meshPath: r?.meshPath,
@@ -35,6 +37,12 @@ export async function GET(req: NextRequest) {
       critique: job.critique ? { verdict: job.critique.verdict, score: job.critique.score, reasons: job.critique.reasons, metrics: job.critique.metrics } : undefined,
       // Tier-2 fidelity: CLIP cosine of NeRF renders vs the input image (TripoSR only).
       fidelity: r?.clipMax,
+      // Paid generations spent, and whether the DELIVERED mesh cleared the gate. A job
+      // can be `done` with `accepted: false` — the mesh is real but never passed, and
+      // reporting status alone would hide exactly that.
+      attempts: gate.attempts,
+      accepted: gate.accepted,
+      gateReason: gate.gateReason,
       error: job.error,
     });
   } catch (e) {
