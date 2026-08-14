@@ -3,12 +3,14 @@
 Turns a dense generated mesh (Hunyuan3D / Tripo / TripoSR) into a shippable
 low-poly: decimate to a face budget, optionally mirror a symmetric half,
 UV-unwrap the DECIMATED mesh only, and bake the high-poly detail down into
-normal / ambient-occlusion maps.
+normal / AO / base-colour / roughness maps, wired into one Principled material so
+the exported GLB is a textured asset rather than a bare mesh beside loose PNGs.
 
 Run:
     blender --background --python pof_mesh_finish.py -- \
         --input hi.glb --output low.glb --target-faces 40000 \
-        --mirror x --unwrap --bake normal,ao --bake-size 1024
+        --mirror x --unwrap --uv-mode pack-existing \
+        --bake normal,ao,diffuse,roughness --bake-size 2048
 
 Emits POF_MESHFINISH_* stdout markers consumed by
 `src/lib/visual-gen/mesh-finish.ts` (never judge by exit code — Blender's
@@ -41,6 +43,7 @@ def parse_args():
     p.add_argument("--mirror", choices=["x", "y", "z"], default=None)
     p.add_argument("--cull-interior", action="store_true")
     p.add_argument("--unwrap", action="store_true")
+    p.add_argument("--uv-mode", choices=["smart", "pack-existing"], default="smart")
     p.add_argument("--bake", default="")
     p.add_argument("--bake-size", type=int, default=1024)
     return p.parse_args(argv)
@@ -159,31 +162,105 @@ def decimate(obj, target_faces):
     return face_count(obj)
 
 
-def unwrap(obj):
+def unwrap(obj, mode):
+    """Lay out the decimated low-poly's UVs.
+
+    'smart' angle-projects a fresh atlas — right when the source has no usable UVs.
+    'pack-existing' keeps the islands the source parts already carried and only
+    re-packs them into one atlas: joining N textured parts stacks N layouts in the
+    same 0-1 space, and re-projecting discards authored seams that beat anything an
+    angle limit finds. Falling back is reported, never silent — a caller that asked
+    to keep authored UVs must not be told it got them.
+    """
+    if mode == "pack-existing" and not obj.data.uv_layers:
+        marker(
+            "UV_MODE_FALLBACK",
+            "pack-existing needs authored UVs on the source mesh; none survived the "
+            "import/join, so an angle-based smart projection ran instead",
+        )
+        mode = "smart"
+
     bpy.context.view_layer.objects.active = obj
     bpy.ops.object.select_all(action="DESELECT")
     obj.select_set(True)
     bpy.ops.object.mode_set(mode="EDIT")
     bpy.ops.mesh.select_all(action="SELECT")
-    # Angle-based seams, then unwrap — no hand-placed seams available headless.
-    bpy.ops.uv.smart_project(angle_limit=1.15, island_margin=0.02)
+    if mode == "pack-existing":
+        bpy.ops.uv.select_all(action="SELECT")
+        bpy.ops.uv.pack_islands(margin=0.02)
+    else:
+        # Angle-based seams, then unwrap — no hand-placed seams available headless.
+        bpy.ops.uv.smart_project(angle_limit=1.15, island_margin=0.02)
     bpy.ops.object.mode_set(mode="OBJECT")
+    marker("UV_MODE", mode)
 
 
-def new_bake_image(name, size):
+def new_bake_image(name, size, non_color):
     img = bpy.data.images.new(name, width=size, height=size, alpha=False)
+    if non_color:
+        img.colorspace_settings.name = "Non-Color"
     return img
 
 
-def ensure_bake_material(obj, image):
+def ensure_bake_material(obj):
+    """ONE material on the low-poly, reused by every bake.
+
+    Each bake used to build a fresh material and clear the object's slots, so a
+    multi-map run exported the mesh wearing only the last map and no base colour at
+    all. Bake targets are added as image nodes inside this one material and made
+    active per bake instead.
+    """
+    existing = obj.data.materials[0] if obj.data.materials else None
+    if existing is not None and existing.name.startswith("pof_bake_mat"):
+        return existing
     mat = bpy.data.materials.new(name="pof_bake_mat")
     mat.use_nodes = True
-    node = mat.node_tree.nodes.new("ShaderNodeTexImage")
-    node.image = image
-    mat.node_tree.nodes.active = node
     obj.data.materials.clear()
     obj.data.materials.append(mat)
     return mat
+
+
+def bake_target_node(mat, image):
+    """Add the destination image node and make it active — Cycles bakes into
+    whichever image node is active on the target's material."""
+    node = mat.node_tree.nodes.new("ShaderNodeTexImage")
+    node.image = image
+    node.label = image.name
+    mat.node_tree.nodes.active = node
+    node.select = True
+    return node
+
+
+def wire_baked_map(mat, node, kind):
+    """Connect a finished bake into the Principled BSDF so the exported GLB is a
+    real textured asset rather than a bare mesh beside some loose PNGs. AO has no
+    Principled socket — glTF carries occlusion separately, so it stays a file."""
+    tree = mat.node_tree
+    bsdf = next((n for n in tree.nodes if n.type == "BSDF_PRINCIPLED"), None)
+    if bsdf is None:
+        return
+    if kind == "diffuse":
+        tree.links.new(node.outputs["Color"], bsdf.inputs["Base Color"])
+    elif kind == "roughness":
+        tree.links.new(node.outputs["Color"], bsdf.inputs["Roughness"])
+    elif kind == "normal":
+        nm = tree.nodes.new("ShaderNodeNormalMap")
+        tree.links.new(node.outputs["Color"], nm.inputs["Color"])
+        tree.links.new(nm.outputs["Normal"], bsdf.inputs["Normal"])
+
+
+# Cycles native passes only. Metallic is absent on purpose: it has no bake pass and
+# would need an emission re-wire of every source material — `bakePlan` in
+# mesh-finish.ts refuses it by name rather than letting a partial set read as full.
+BAKE_TYPES = {
+    "normal": "NORMAL",
+    "ao": "AO",
+    "diffuse": "DIFFUSE",
+    "roughness": "ROUGHNESS",
+}
+
+# Data maps must not be colour-managed; only base colour is sRGB.
+NON_COLOR_MAPS = ("normal", "roughness")
 
 
 def bake_high_to_low(high, low, kind, size, out_dir, stem):
@@ -194,24 +271,28 @@ def bake_high_to_low(high, low, kind, size, out_dir, stem):
     scene.render.bake.use_selected_to_active = True
     scene.render.bake.cage_extrusion = 0.05
     scene.render.bake.use_clear = True
+    if kind == "diffuse":
+        # Albedo only — lighting baked into base colour double-shades in engine.
+        scene.render.bake.use_pass_direct = False
+        scene.render.bake.use_pass_indirect = False
+        scene.render.bake.use_pass_color = True
 
-    image = new_bake_image("pof_bake_%s" % kind, size)
-    if kind == "normal":
-        image.colorspace_settings.name = "Non-Color"
-    ensure_bake_material(low, image)
+    image = new_bake_image("pof_bake_%s" % kind, size, kind in NON_COLOR_MAPS)
+    mat = ensure_bake_material(low)
+    node = bake_target_node(mat, image)
 
     bpy.ops.object.select_all(action="DESELECT")
     high.select_set(True)
     low.select_set(True)
     bpy.context.view_layer.objects.active = low
 
-    bake_type = "NORMAL" if kind == "normal" else "AO"
-    bpy.ops.object.bake(type=bake_type)
+    bpy.ops.object.bake(type=BAKE_TYPES[kind])
 
     path = os.path.join(out_dir, "%s_%s.png" % (stem, kind))
     image.filepath_raw = path
     image.file_format = "PNG"
     image.save()
+    wire_baked_map(mat, node, kind)
     return path
 
 
@@ -252,13 +333,13 @@ def main():
     marker("FACES_OUT", faces_out)
 
     if args.unwrap:
-        unwrap(low)
+        unwrap(low, args.uv_mode)
         marker("UV", 1 if low.data.uv_layers else 0)
     else:
         marker("UV", 0)
 
     for kind in bake_kinds:
-        if kind not in ("normal", "ao"):
+        if kind not in BAKE_TYPES:
             continue
         try:
             path = bake_high_to_low(high, low, kind, args.bake_size, out_dir, stem)

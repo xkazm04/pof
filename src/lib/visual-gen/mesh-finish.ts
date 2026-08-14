@@ -32,7 +32,22 @@ export const BLENDER_CANDIDATES = [
 ];
 
 export type MirrorAxis = 'x' | 'y' | 'z';
-export type BakeMap = 'normal' | 'ao';
+export type BakeMap = 'normal' | 'ao' | 'diffuse' | 'roughness' | 'metallic';
+
+/** Maps Cycles can bake as a native pass. `metallic` is deliberately absent —
+ *  see `bakePlan`. */
+export const BAKEABLE_MAPS = ['normal', 'ao', 'diffuse', 'roughness'] as const;
+
+/**
+ * UV layout for the decimated low-poly.
+ * - `smart` — angle-based projection. Correct when the source carries no usable UVs.
+ * - `pack-existing` — keep the islands the source parts already had and only re-pack
+ *   them into one atlas. Joining N textured parts leaves N layouts stacked in the same
+ *   0-1 space; re-projecting throws away authored seams that are usually better than
+ *   anything an angle limit finds, so consolidating a textured multi-part asset wants
+ *   the pack, not the projection.
+ */
+export type UvMode = 'smart' | 'pack-existing';
 
 export interface MeshFinishSpec {
   /** Dense input mesh from a generator (.glb / .obj / .fbx). */
@@ -53,6 +68,8 @@ export interface MeshFinishSpec {
   cullInterior?: boolean;
   /** Request a UV unwrap — honoured only when the mesh is decimated first. */
   unwrap?: boolean;
+  /** How to lay out the UVs when unwrapping (default `smart`). */
+  uvMode?: UvMode;
   /** High→low bakes to render (needs `unwrap`). */
   bake?: BakeMap[];
   /** Baked map resolution (default 1024). */
@@ -78,8 +95,17 @@ export interface MeshFinishResult {
   cullLimitReason?: string;
   sizeMB?: number;
   uvUnwrapped?: boolean;
+  /** The layout Blender actually used — not necessarily the one requested. */
+  uvMode?: UvMode;
+  /** Why the requested layout could not run (e.g. no authored UVs to pack). */
+  uvModeFallbackReason?: string;
   normalMapPath?: string;
   aoMapPath?: string;
+  diffuseMapPath?: string;
+  roughnessMapPath?: string;
+  /** Requested maps that were not baked, each with the reason — a partial PBR set
+   *  must never be reported as a full one. */
+  bakeSkipped?: SkippedBake[];
   /** Set when an unwrap was asked for but refused — never dropped silently. */
   unwrapSkippedReason?: string;
   durationMs: number;
@@ -120,9 +146,52 @@ export function unwrapPlan(requested: boolean | undefined, targetFaces: number |
   return { unwrap: true };
 }
 
+export interface SkippedBake {
+  map: BakeMap;
+  reason: string;
+}
+
+export interface BakePlan {
+  run: BakeMap[];
+  skipped: SkippedBake[];
+}
+
+/**
+ * Decide which requested maps can actually be baked.
+ *
+ * Cycles exposes NORMAL, AO, DIFFUSE and ROUGHNESS as native passes, so those four
+ * cover a game-ready base set. There is **no metallic pass**: baking metallic means
+ * re-wiring every source material's Metallic input through an Emission shader and
+ * baking EMIT, which is graph surgery that behaves differently for a constant, a
+ * texture and a mix — not something to claim without a live Blender run. Refusing it
+ * by name beats dropping it silently, which would let a caller read a 3-map result as
+ * the full PBR set it asked for.
+ */
+export function bakePlan(requested: BakeMap[] | undefined): BakePlan {
+  const run: BakeMap[] = [];
+  const skipped: SkippedBake[] = [];
+  const seen = new Set<BakeMap>();
+
+  for (const map of requested ?? []) {
+    if (seen.has(map)) continue;
+    seen.add(map);
+    if ((BAKEABLE_MAPS as readonly BakeMap[]).includes(map)) {
+      run.push(map);
+    } else {
+      skipped.push({
+        map,
+        reason:
+          'Cycles has no metallic bake pass — it needs an emission re-wire of every source material, which is unproven here; the map is not claimed rather than faked',
+      });
+    }
+  }
+  return { run, skipped };
+}
+
 /** Build the blender argv. Pure. */
 export function buildMeshFinishArgs(scriptPath: string, spec: MeshFinishSpec): string[] {
   const plan = unwrapPlan(spec.unwrap, spec.targetFaces);
+  const bakes = bakePlan(spec.bake).run;
   const args = [
     '--background',
     '--python',
@@ -134,9 +203,12 @@ export function buildMeshFinishArgs(scriptPath: string, spec: MeshFinishSpec): s
   if (spec.targetFaces !== undefined) args.push('--target-faces', String(spec.targetFaces));
   if (spec.mirror) args.push('--mirror', spec.mirror);
   if (spec.cullInterior) args.push('--cull-interior');
-  if (plan.unwrap) args.push('--unwrap');
-  if (plan.unwrap && spec.bake?.length) {
-    args.push('--bake', spec.bake.join(','));
+  if (plan.unwrap) {
+    args.push('--unwrap');
+    args.push('--uv-mode', spec.uvMode ?? 'smart');
+  }
+  if (plan.unwrap && bakes.length) {
+    args.push('--bake', bakes.join(','));
     args.push('--bake-size', String(spec.bakeSize ?? 1024));
   }
   return args;
@@ -150,8 +222,12 @@ export interface ParsedMeshFinish {
   facesCulled?: number;
   sizeMB?: number;
   uvUnwrapped?: boolean;
+  uvMode?: UvMode;
+  uvModeFallbackReason?: string;
   normalMapPath?: string;
   aoMapPath?: string;
+  diffuseMapPath?: string;
+  roughnessMapPath?: string;
   /** Disconnected shells present when the interior cull ran. */
   cullUnevaluatedShells?: number;
   /** Set when the cull removed nothing but the mesh had shells it cannot see into. */
@@ -193,8 +269,12 @@ export function parseMeshFinishOutput(stdout: string): ParsedMeshFinish {
     facesCulled,
     sizeMB: num('SIZE_MB'),
     uvUnwrapped: get('UV') === undefined ? undefined : get('UV') === '1',
+    uvMode: get('UV_MODE') as UvMode | undefined,
+    uvModeFallbackReason: get('UV_MODE_FALLBACK'),
     normalMapPath: get('BAKE_NORMAL'),
     aoMapPath: get('BAKE_AO'),
+    diffuseMapPath: get('BAKE_DIFFUSE'),
+    roughnessMapPath: get('BAKE_ROUGHNESS'),
   };
 }
 
@@ -219,6 +299,8 @@ export async function runMeshFinish(spec: MeshFinishSpec, deps: MeshFinishDeps =
   const run = deps.run ?? defaultRun;
 
   const plan = unwrapPlan(spec.unwrap, spec.targetFaces);
+  const bakes = bakePlan(spec.bake);
+  const bakeSkipped = bakes.skipped.length ? bakes.skipped : undefined;
   const blender = resolveBlenderPath(spec.blenderPath, env, fileExists);
   if (!blender) return err('Blender not found — set POF_BLENDER to the blender executable', plan.reason);
   if (!fileExists(spec.highPolyPath)) return err(`input mesh not found at ${spec.highPolyPath}`, plan.reason);
@@ -242,8 +324,13 @@ export async function runMeshFinish(spec: MeshFinishSpec, deps: MeshFinishDeps =
     cullLimitReason: parsed.cullLimitReason,
     sizeMB: parsed.sizeMB,
     uvUnwrapped: parsed.uvUnwrapped,
+    uvMode: parsed.uvMode,
+    uvModeFallbackReason: parsed.uvModeFallbackReason,
     normalMapPath: parsed.normalMapPath,
     aoMapPath: parsed.aoMapPath,
+    diffuseMapPath: parsed.diffuseMapPath,
+    roughnessMapPath: parsed.roughnessMapPath,
+    bakeSkipped,
     unwrapSkippedReason: plan.reason,
     durationMs: now() - start,
   };

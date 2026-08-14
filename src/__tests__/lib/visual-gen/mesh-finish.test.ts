@@ -2,8 +2,10 @@ import { describe, it, expect } from 'vitest';
 import {
   UNWRAP_FACE_CEILING,
   BLENDER_CANDIDATES,
+  BAKEABLE_MAPS,
   resolveBlenderPath,
   unwrapPlan,
+  bakePlan,
   buildMeshFinishArgs,
   parseMeshFinishOutput,
   runMeshFinish,
@@ -50,6 +52,31 @@ describe('unwrapPlan — never UV-unwrap the high-poly', () => {
   });
 });
 
+describe('bakePlan — only claim the maps Cycles can actually produce', () => {
+  it('runs the four native Cycles passes, so a finished asset carries colour and not just detail', () => {
+    const plan = bakePlan(['normal', 'ao', 'diffuse', 'roughness']);
+    expect(plan.run).toEqual(['normal', 'ao', 'diffuse', 'roughness']);
+    expect(plan.skipped).toEqual([]);
+  });
+
+  it('refuses metallic with a reason — Cycles has no metallic pass, and a silent drop would read as baked', () => {
+    const plan = bakePlan(['diffuse', 'metallic']);
+    expect(plan.run).toEqual(['diffuse']);
+    expect(plan.skipped).toHaveLength(1);
+    expect(plan.skipped[0].map).toBe('metallic');
+    expect(plan.skipped[0].reason).toMatch(/no metallic bake pass|emission/i);
+  });
+
+  it('de-duplicates a repeated map instead of baking it twice', () => {
+    expect(bakePlan(['ao', 'ao', 'normal']).run).toEqual(['ao', 'normal']);
+  });
+
+  it('is empty for no request, and every runnable map is declared bakeable', () => {
+    expect(bakePlan(undefined)).toEqual({ run: [], skipped: [] });
+    expect(bakePlan([...BAKEABLE_MAPS]).skipped).toEqual([]);
+  });
+});
+
 describe('buildMeshFinishArgs', () => {
   it('runs blender headless with the script after the -- separator', () => {
     const args = buildMeshFinishArgs('C:/repo/scripts/pof_mesh_finish.py', SPEC);
@@ -88,6 +115,20 @@ describe('buildMeshFinishArgs', () => {
     expect(args).not.toContain('--bake');
   });
 
+  it('passes only the bakeable maps, so an unsupported one never reaches Blender', () => {
+    const args = buildMeshFinishArgs('s.py', { ...SPEC, unwrap: true, bake: ['diffuse', 'metallic', 'roughness'] });
+    expect(args[args.indexOf('--bake') + 1]).toBe('diffuse,roughness');
+  });
+
+  it('passes the UV mode so authored islands can be packed instead of re-projected', () => {
+    const args = buildMeshFinishArgs('s.py', { ...SPEC, unwrap: true, uvMode: 'pack-existing' });
+    expect(args[args.indexOf('--uv-mode') + 1]).toBe('pack-existing');
+  });
+
+  it('omits the UV mode when no unwrap runs — there is no layout to choose', () => {
+    expect(buildMeshFinishArgs('s.py', { ...SPEC, uvMode: 'pack-existing' })).not.toContain('--uv-mode');
+  });
+
   it('asks for the interior cull only when requested', () => {
     expect(buildMeshFinishArgs('s.py', { ...SPEC, cullInterior: true })).toContain('--cull-interior');
     expect(buildMeshFinishArgs('s.py', SPEC)).not.toContain('--cull-interior');
@@ -116,6 +157,26 @@ describe('parseMeshFinishOutput', () => {
     expect(p.uvUnwrapped).toBe(true);
     expect(p.normalMapPath).toBe('C:/gen/jinx_normal.png');
     expect(p.aoMapPath).toBe('C:/gen/jinx_ao.png');
+  });
+
+  it('reads the colour and roughness maps, so a textured result is reported as textured', () => {
+    const p = parseMeshFinishOutput(
+      `${OK}\nPOF_MESHFINISH_BAKE_DIFFUSE=C:/gen/jinx_diffuse.png\nPOF_MESHFINISH_BAKE_ROUGHNESS=C:/gen/jinx_roughness.png`,
+    );
+    expect(p.diffuseMapPath).toBe('C:/gen/jinx_diffuse.png');
+    expect(p.roughnessMapPath).toBe('C:/gen/jinx_roughness.png');
+  });
+
+  it('reports the UV layout actually used, and the reason when the asked-for one was not available', () => {
+    const p = parseMeshFinishOutput(
+      `${OK}\nPOF_MESHFINISH_UV_MODE=smart\nPOF_MESHFINISH_UV_MODE_FALLBACK=pack-existing needs authored UVs; none survived the join`,
+    );
+    expect(p.uvMode).toBe('smart');
+    expect(p.uvModeFallbackReason).toMatch(/authored UVs/i);
+  });
+
+  it('leaves the fallback reason undefined when the asked-for layout ran', () => {
+    expect(parseMeshFinishOutput(`${OK}\nPOF_MESHFINISH_UV_MODE=pack-existing`).uvModeFallbackReason).toBeUndefined();
   });
 
   it('reads how many interior faces the cull removed', () => {
@@ -197,5 +258,16 @@ describe('runMeshFinish', () => {
   it('surfaces the skipped-unwrap reason instead of silently dropping it', async () => {
     const r = await runMeshFinish({ ...SPEC, targetFaces: undefined, unwrap: true }, deps());
     expect(r.unwrapSkippedReason).toMatch(/low.?poly|decimat|targetFaces/i);
+  });
+
+  it('reports a requested map it could not bake, so the caller never assumes a full PBR set', async () => {
+    const r = await runMeshFinish({ ...SPEC, unwrap: true, bake: ['diffuse', 'metallic'] }, deps());
+    expect(r.bakeSkipped).toHaveLength(1);
+    expect(r.bakeSkipped?.[0].map).toBe('metallic');
+  });
+
+  it('leaves bakeSkipped undefined when every requested map ran', async () => {
+    const r = await runMeshFinish({ ...SPEC, unwrap: true, bake: ['diffuse'] }, deps());
+    expect(r.bakeSkipped).toBeUndefined();
   });
 });
