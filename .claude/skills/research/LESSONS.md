@@ -67,3 +67,20 @@
   wrong. Only a per-symbol `git grep <symbol> HEAD` sweep caught it. Applied to SKILL.md
   Phase 10/11 as a mandatory closing check. Generalises to any shared checkout: verify the
   artifact is in HEAD, never infer it from a successful commit command or a passing suite.
+
+## 1.4 — 2026-08-14 — pof (same run, third bump: prove the artifact, not the operator)
+- **A green suite and a success marker are not evidence that an output changed.** A shipped
+  finding (auto-smooth in a headless Blender stage) passed its unit tests, ran live, and
+  printed `SHADING=auto_smooth@30` — while changing **0 of 30,967 exported normals**. The
+  tests could only assert argv construction and marker parsing; neither can see the artifact.
+  Applied to SKILL.md Phase 7: any finding whose value is "the output is better" needs an
+  **A/B against a control plus a diff of the real output** before it counts as shipped.
+- **Measure the magnitude, not the presence, of the change.** Forcing the same feature to
+  take effect (clearing the source's custom normals) "worked" — and rewrote 99.9% of normals
+  by a mean of 73°. It would have been easy to bank that as success and ship a degradation.
+  The guard is comparing how much and in which direction, not whether something moved.
+- **Check a practice's REASON against our inputs, not just its plausibility.** The source's
+  "you must fix the shading" is true for a hand-driven Blender workflow and false for a path
+  whose inputs are generator glTF carrying their own custom normals. The finding was
+  well-evidenced against the code (the shading op really was absent) and still wrong about
+  the world. Codebase-grounding proves the gap exists; it does not prove the gap matters.

@@ -1,7 +1,7 @@
 ---
 name: research
 description: "Use when the user shares a YouTube/article URL or raw text about Claude/AI game-dev automation, MCP/Unreal tooling, agent harnesses, or a dev-tool showcase and wants ideas PoF can adopt into its headless tooling or UI workflows. Triggers: '/research <url>', 'can we use this for PoF', 'research this video/technique', 'any ideas from this'."
-version: 1.4
+version: 1.5
 ---
 
 # Research — mine external showcases into PoF improvements
@@ -116,6 +116,8 @@ Route each verified finding:
 - **XL** (framework bet) → write a spec/handoff doc under `docs/` (don't half-build a subsystem); link it from the impact-map.
 - **External / blocked** → the finding targets a system **outside this repo** (e.g. the UE C++ plugin) or needs an **unavailable dependency** (a disconnected MCP, an uninstalled engine, a preview product). Record a **backlog delta** in `docs/research/impact-map.md` under the owning subsystem AND a **`descoped-reopenable`** entry with a concrete reconsider-trigger (e.g. "when mcp-unreal reconnects / UE 5.8 installed"). This is **NOT a decline** — it's a real finding waiting on a blocker. PoF's UE-plugin work lands here often; don't force-fit it into an in-repo commit.
 Honor `--no-commit` / "research only" if the user said so.
+
+**If a finding's value is "the output is now better", prove it with an ARTIFACT DIFF, not a passing test.** Unit tests and stdout markers can only show that the argv was built and the operator ran — neither can see the produced file, so both stay green while the change does nothing. On 2026-08-14 a shipped shading finding printed its success marker on a live run and had changed **0 of 30,967 exported normals**; a passing suite plus a live "it ran" was not evidence. The cheap decisive check is an **A/B against a control** (same input, feature off) plus a diff of the real output — bytes, counts, and the specific values the finding claims to change. Two traps it catches: a **no-op** (nothing changed), and a **degradation dressed as success** (forcing the same feature to bite rewrote 99.9% of normals by a mean of 73° — "the flag now does something" is not "the asset is better", so measure the MAGNITUDE and direction of the change, not just its presence). A finding that cannot be verified this way inside the run is not shipped-and-proven; say so in the summary rather than letting green tests imply it.
 
 ### Phase 8 — Persist + grow the impact-map
 - **Obsidian Research note** `Research/{YYYY-MM-DD}-{slug}.md` (frontmatter: source, type, url, title, buckets, extracted/accepted/declined, commits, web_augmentations) + per-idea blocks with accept/decline + action taken.
