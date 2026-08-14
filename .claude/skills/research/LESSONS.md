@@ -35,3 +35,27 @@
   already user-declined, while its incidental asides produced 3 findings for 3. The pattern
   is broader than GUI tools: when a source drives the same pipeline stage the project
   automates, the yield is in its throwaway steps, not its thesis.
+
+## 1.1 — 2026-08-14 — pof (run `ai-vs-human-retopology`; ran v1.1, file was bumped to v1.3 mid-run by a parallel session)
+- **When a candidate dies against an API's SHAPE, record the shape — not the candidate.** A
+  pick died because the vendor's API keys every mesh-consuming task to a prior task id, so the
+  demo was showing the GUI. The same constraint had already killed a different endpoint in an
+  earlier run, and that run recorded only *that endpoint*, so this run re-derived it from
+  scratch with the web budget. The durable artifact is a note naming the whole family ("no
+  task type accepts an uploaded mesh; upload is images-only"), which inoculates against every
+  future sibling endpoint. Generalises to any vendor-API research: a catch scoped to one call
+  is a catch you will pay for again.
+- **"Nothing checks X" is usually "the check exists and is never called."** A finding about a
+  missing budget check turned out to be a *wired-nowhere* check: the class-aware thresholds
+  had zero production call sites and every asset had been graded against a blind default since
+  the day they shipped. Unit tests cannot see this — they import the function directly.
+  Method rule worth adding to the deep-verify phase: **before writing a "missing check"
+  finding, grep the checker's CALL SITES, not just its definition.** This is the third
+  same-shaped defect this project has surfaced (an unmapped switch case, a route with no
+  client callers, now a threshold resolver with no callers), which suggests it is a general
+  property of maturing codebases rather than a local quirk.
+- **No version bump with this entry, deliberately.** Both improvements above are real method
+  changes, but a parallel session bumped this skill 1.1 → 1.2 → 1.3 during this run and was
+  still editing SKILL.md. Bumping to 1.4 on top of a live editor would create a version race
+  and risk clobbering their method edits. Per the contract — never bump without an applied
+  edit — the lessons are recorded here for whichever session next edits the method safely.
