@@ -52,6 +52,14 @@ export interface TripoSpec {
    */
   assetClass?: string;
   /**
+   * Real-world size the asset should have — its longest extent in METRES. Every
+   * generator returns a ~1 m box regardless of the asset, so this is what the Tier-1
+   * gate holds the delivery to (see `world-scale.ts`). Never sent to the provider.
+   * Omitted → a character defaults to the UE5 Mannequin (1.8 m); other classes stay
+   * ungraded rather than guessed.
+   */
+  targetExtentM?: number;
+  /**
    * How many generations this request may spend before giving up on the Tier-1 gate.
    * Defaults to 1 (single shot, unchanged cost); the job store caps it at
    * `MAX_GENERATION_ATTEMPTS`. Orchestration only — never sent to the provider.

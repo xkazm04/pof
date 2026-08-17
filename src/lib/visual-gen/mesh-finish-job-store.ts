@@ -20,6 +20,7 @@ import { runMeshFinish, type MeshFinishSpec, type MeshFinishResult } from './mes
 import { critiqueMesh, type CritiqueDeps, type CritiqueResult } from './mesh-critique';
 import { critiqueThresholdsFor } from './polycount-presets';
 import type { BudgetRequest } from './face-budget';
+import { nominalExtentFor, type SizeRequest } from './world-scale';
 
 export interface MeshFinishJob {
   id: string;
@@ -54,7 +55,9 @@ export function critiqueDepsForFinish(spec: MeshFinishSpec, assetClass?: string)
     spec.targetFaces !== undefined
       ? { triangleBudget: spec.targetFaces, topology: 'triangles' }
       : undefined;
-  return { thresholds, budget };
+  const targetExtentM = spec.targetExtentM ?? nominalExtentFor(assetClass);
+  const size: SizeRequest | undefined = targetExtentM !== undefined ? { targetExtentM } : undefined;
+  return { thresholds, budget, size };
 }
 
 /**

@@ -10,6 +10,7 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { gradeFaceBudget, type BudgetGrade, type BudgetRequest } from './face-budget';
+import { gradeWorldScale, type ScaleGrade, type SizeRequest } from './world-scale';
 
 export interface MeshMetrics {
   verts: number;
@@ -169,6 +170,12 @@ export interface Scorecard {
    * budget must never read as compliance with one.
    */
   budget?: BudgetGrade;
+  /**
+   * How the delivered mesh compared to the real-world SIZE that was requested for it.
+   * Every generator normalises to a ~1 m box, so without this a 1 m hero passed clean
+   * next to a 1.8 m Mannequin. Absent when no size was supplied — same silence rule.
+   */
+  scale?: ScaleGrade;
 }
 
 /** A scorecard plus the metrics behind it — the shape surfaced to the UI / job result. */
@@ -180,11 +187,14 @@ export type CritiqueCard = Scorecard & { metrics?: MeshMetrics };
  * `budget` is the face budget the caller ASKED the generator for. Supplying it adds a
  * warn when the delivery overshot it — the check that catches a provider quietly
  * ignoring a low-poly request, and the quad/triangle unit trap that doubles a budget.
+ * `size` is the longest extent (m) the mesh was supposed to have; supplying it catches
+ * the generator-normalised 1 m box shipping at the wrong world scale.
  */
 export function scoreMesh(
   m: MeshMetrics,
   thresholds: Partial<CritiqueThresholds> = {},
   budget?: BudgetRequest,
+  size?: SizeRequest,
 ): Scorecard {
   const t = { ...DEFAULT_THRESHOLDS, ...thresholds };
   const fails: string[] = [];
@@ -224,9 +234,14 @@ export function scoreMesh(
   const budgetGrade = budget ? gradeFaceBudget(m.faces, budget) : undefined;
   if (budgetGrade?.verdict === 'over' && budgetGrade.reason) warns.push(budgetGrade.reason);
 
+  // Right size? bbox is trimesh extents in glTF metres. Always graded so the card can
+  // say "generator-normalised, size unknown" even when no target was requested.
+  const scaleGrade = gradeWorldScale(m.bbox, size);
+  if (scaleGrade.verdict === 'off' && scaleGrade.reason) warns.push(scaleGrade.reason);
+
   const verdict = fails.length ? 'fail' : warns.length ? 'warn' : 'pass';
   const score = Math.max(0, Math.min(100, 100 - fails.length * 50 - warns.length * 15));
-  return { verdict, score, reasons: [...fails, ...warns], budget: budgetGrade };
+  return { verdict, score, reasons: [...fails, ...warns], budget: budgetGrade, scale: scaleGrade };
 }
 
 export interface CritiqueResult extends Partial<Scorecard> {
@@ -246,6 +261,8 @@ export interface CritiqueDeps {
   thresholds?: Partial<CritiqueThresholds>;
   /** The face budget this mesh was generated against, so the delivery can be held to it. */
   budget?: BudgetRequest;
+  /** The real-world size (longest extent, m) this mesh should have. */
+  size?: SizeRequest;
 }
 
 /** Critique a generated mesh: run the trimesh script (via the TripoSR venv) + score it. */
@@ -262,7 +279,7 @@ export async function critiqueMesh(glbPath: string, deps: CritiqueDeps = {}): Pr
   const { stdout } = await run(py, [script, '--mesh', glbPath], 60_000);
   const parsed = parseCritiqueMetrics(stdout);
   if (!parsed.ok || !parsed.metrics) return { ok: false, error: parsed.error ?? 'critique produced no metrics' };
-  return { ok: true, metrics: parsed.metrics, ...scoreMesh(parsed.metrics, deps.thresholds, deps.budget) };
+  return { ok: true, metrics: parsed.metrics, ...scoreMesh(parsed.metrics, deps.thresholds, deps.budget, deps.size) };
 }
 
 const defaultRun: RunFn = async (cmd, args, timeoutMs) => {

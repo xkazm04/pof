@@ -82,6 +82,30 @@ describe('formatGotchas', () => {
     expect(out).toMatch(/Tripo|Rodin|CubePart/);
   });
 
+  it('tells ue-python import sessions that AI meshes arrive unit-normalised and need a per-asset ImportUniformScale', () => {
+    const out = formatGotchas('ue-python', 'models');
+    expect(out).toContain('normalised to a ~1 m box');
+    expect(out).toMatch(/1 m/);
+    expect(out).toMatch(/ImportUniformScale|import_uniform_scale/);
+    expect(out).toMatch(/Mannequin/);
+    // Complements, never replaces, the metre-unit gotcha.
+    expect(out).toContain('import_uniform_scale = 1.0');
+  });
+
+  it('keeps the unit-normalised mesh gotcha out of ue-cpp and out of a UI module', () => {
+    expect(formatGotchas('ue-cpp')).not.toContain('normalised to a ~1 m box');
+    expect(formatGotchas('ue-python', 'arpg-ui')).not.toContain('normalised to a ~1 m box');
+  });
+
+  it('tells ue-python world sessions to compose arenas from primitives + tiles + kit placement, not one generated mesh', () => {
+    const out = formatGotchas('ue-python', 'level-design');
+    expect(out).toContain('never the whole space as one AI mesh');
+    expect(out).toMatch(/tile|tiling/i);
+    expect(out).toMatch(/spline|array|PCG/);
+    expect(out).toMatch(/texel|blurr/i);
+    expect(formatGotchas('ue-python', 'arpg-ui')).not.toContain('never the whole space as one AI mesh');
+  });
+
   it('carries MetaHuman conform INPUT-PREP guidance for ue-python', () => {
     const out = formatGotchas('ue-python');
     expect(out).toMatch(/MetaHuman/);

@@ -63,6 +63,12 @@ export interface MeshFinishSpec {
   outputPath: string;
   /** Decimate to roughly this many faces. Omit to skip retopo (and unwrap). */
   targetFaces?: number;
+  /**
+   * Real-world size the finished asset should have — longest extent in METRES. Not
+   * applied by the script (the low-poly keeps the generator's ~1 m box); the Tier-1
+   * gate grades the delivery against it and reports the import scale that fixes it.
+   */
+  targetExtentM?: number;
   /** Author one half and mirror it across this axis (symmetric characters). */
   mirror?: MirrorAxis;
   /**

@@ -373,6 +373,26 @@ export const UE_GOTCHAS: Gotcha[] = [
     appliesTo: ['ue-cpp'],
     source: 'research: T. Cain code standards (WildStar/Outer Worlds notes)',
   },
+  {
+    id: 'ai-mesh-unit-normalized',
+    modules: ['3d', 'character', 'world'],
+    summary:
+      'AI-generated meshes arrive normalised to a ~1 m box (hero AND sword hilt alike) — set a per-asset ImportUniformScale from the intended real-world size, or the hero imports at 100 cm',
+    detail:
+      "Every image/text-to-3D generator (Tripo, TripoSR, Hunyuan…) normalises its output so the longest bounding-box extent is ~1.0 in glTF metres, whatever the asset is: measured over PoF's own generated/ library a hero character is 1.00 m tall, a crate 1.00 m, a sword HILT 1.02 m long. The unit is right (metres → the importer's own m→cm conversion applies), so the `fbx-import-scale` rule (import_uniform_scale = 1.0, not 100) still holds — but the SIZE is not, and a scale of 1.0 ships the hero at 100 cm next to the 180 cm UE5 Mannequin and the hilt at a metre. Do the pro workflow's manual step (export the UE reference skeleton into Blender as a size reference) automatically: know the intended longest extent per asset (character = 1.8 m Mannequin; weapons/props from the design spec — never a class-wide guess), measure the delivered bbox, and import with ImportUniformScale = target / measured (or rescale + apply transforms in Blender before export). PoF's Tier-1 mesh gate grades this (`scale` on the scorecard, `world-scale.ts`) and reports the exact factor; a static-mesh import that skips it silently mis-scales every generated asset.",
+    appliesTo: ['ue-python'],
+    source: 'research: Souls-like in 3 days (Stefan 3D AI) — UE reference-skeleton size check + measured generated/ library 2026-08-17',
+  },
+  {
+    id: 'arena-kit-composition',
+    modules: ['world'],
+    summary:
+      'Compose an arena/level from primitives + tiling PBR + procedurally-placed kit pieces; generate only the unique hero props — never the whole space as one AI mesh',
+    detail:
+      "Generating a whole arena, courtyard or room as ONE image-to-3D mesh fails twice: it is uncontrollable (no gap for a gate, no second ring of walls without a re-roll) and its texel density collapses — even an 8K bake goes blurry once the player walks up to a wall. Build the space the way the pro workflow does: (1) big surfaces (floor, ring, road, cliffs) are primitives or simple hand-built shapes with SEAMLESS tiling PBR materials, UV-tiled so density stays constant at any size (a circular arena floor UV-loops the tile around the ring); a flat one-off feature (a carved floor emblem) is a single generated image PROJECTED onto a primitive with a derived normal/AO, not a mesh; (2) repeated architecture (wall segments, pillars, rock rings, ruined outer ring) is a small generated modular KIT placed procedurally — Blender array+curve, a UE spline mesh, PCG, or a scripted radial placement — so a ring of 20 walls is one kit piece × a placement rule with a controllable gap; (3) only UNIQUE hero pieces (the boss throne, a statue, the gate) are individually generated, high-poly → retopo → bake per `ai-lowpoly-generation-not-final`; (4) scatter the small debris (dropped stones, rubble) with the engine's foliage/PCG tools, not as baked-in mesh detail. Weather + lighting (fog, sky, volumetrics) then carry half the read — spend budget there, not on more unique meshes.",
+    appliesTo: ['ue-python'],
+    source: 'research: Souls-like in 3 days (Stefan 3D AI) — arena built from primitives + tiles + array/curve wall kits',
+  },
 ];
 
 /**

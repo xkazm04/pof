@@ -11,6 +11,7 @@ import { critiqueMesh, type CritiqueDeps, type CritiqueResult } from './mesh-cri
 import { critiqueThresholdsFor } from './polycount-presets';
 import { generateUntilAcceptable } from './best-of-n';
 import type { BudgetRequest } from './face-budget';
+import { nominalExtentFor, type SizeRequest } from './world-scale';
 
 /**
  * Hard ceiling on the generations one job may spend, whatever a caller asks for. Every
@@ -72,7 +73,9 @@ export function critiqueDepsForSpec(spec: TripoSpec): CritiqueDeps {
     spec.faceLimit !== undefined
       ? { triangleBudget: spec.faceLimit, topology: spec.quad ? 'quads' : 'triangles' }
       : undefined;
-  return { thresholds, budget };
+  const targetExtentM = spec.targetExtentM ?? nominalExtentFor(spec.assetClass);
+  const size: SizeRequest | undefined = targetExtentM !== undefined ? { targetExtentM } : undefined;
+  return { thresholds, budget, size };
 }
 
 /**
