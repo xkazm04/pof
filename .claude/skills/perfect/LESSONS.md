@@ -1,5 +1,33 @@
 # Lessons — perfect
 
+## 2.0 — 2026-08-17 — pof (same session, after applying v2.0)
+
+- **The `@'...'@` commit-message trap is not a PowerShell caveat — it is a BASH-tool trap, and v2.0's
+  own wording got that wrong.** The inherited lesson read "never a PowerShell here-string", which
+  reads as advice for people using PowerShell. In fact the damage happens when that syntax is passed
+  through the *bash* tool: bash has no here-string operator there, so it keeps the leading `@` as the
+  first line of the message — i.e. as the subject. I hit it **twice within twenty minutes of writing
+  the rule into the file**, producing `@ skill(perfect): v2.0 …` and `@ chore(ledger): …`. Neither is
+  fixable after the fact: `--amend` is forbidden in a shared tree, and in the pof repo a sibling
+  session had already committed on top within minutes. Applied in v2.1 with the mechanism spelled out
+  plus a `git log --format=%s -1` verification step. **General form: a rule that names the wrong
+  cause teaches the wrong avoidance.**
+
+- **Regenerating generated files beat every alternative at merge conflicts — second toolchain, same
+  result.** A 206-commit merge conflicted in exactly three files: one append-only ledger and two
+  codegen outputs (`commandNames.generated.ts`, `enSectionStrings.ts`). Taking either side would have
+  dropped one of the two contributing sources; running the generators reconciled both automatically
+  (1586 commands from the merged `lib.rs`). This is the method's existing "regenerate from source,
+  always" rule validated outside the repo it was learned in, and it is worth stating that **conflict
+  count is a poor proxy for merge risk** — 206 commits produced 3 conflicts, of which 2 were not
+  really conflicts at all.
+
+- **A concurrency precondition is a measurement with a shelf life of minutes.** Recorded already in
+  the 1.0 entry below, but re-confirmed in the opposite direction the same session: the merge that
+  was unsafe at 19:00 was safe at 21:38 because the sibling had wrapped. The operational rule is
+  symmetric — re-measure before acting, and a "blocked" verdict deserves a retry just as much as an
+  "approved" one deserves a recheck. **Blocked is a timestamp, not a state.**
+
 ## 1.0 — 2026-08-17 — pof
 
 - **A per-project skill copy can be silently shadowed by the workspace library copy, and nothing warns

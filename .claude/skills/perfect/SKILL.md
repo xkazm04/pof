@@ -5,7 +5,7 @@ memory: vault
 category: Development
 description: Session-after-session product perfection loop for PoF. The strongest available model at xhigh reasoning (currently Fable 5) directs — it walks context-map.json context-by-context, proposes 5 challenged, high-value directions per context (features, design elevations, significant optimizations), gates them with the user until 10 are accepted, then orchestrates Opus-class builder subagents on ONE shared branch — grouped so their write sets cannot collide — while making every review/merge decision itself. All state lives in the Obsidian pof vault so any future session resumes the loop exactly where the last one stopped. Invoke with `/perfect [init|propose|build|status|smoke|reflect] [context-name]`.
 argument-hint: "[init|propose|build|status|smoke|reflect] [context]"
-version: 2.0
+version: 2.1
 ---
 
 # Perfect — the direction-and-delivery loop
@@ -343,8 +343,14 @@ SHARED-RESOURCE PROTOCOL (non-negotiable):
   FORBIDDEN: git add -A · git add . · git add -u · bare git commit · git commit -a
   · git stash · git checkout <path> · git restore · git commit --amend.
   An index.lock collision is harmless — retry it, never work around it.
-  Commit messages via bash-quoted -m or a UNIQUELY-NAMED -F file — never a
-  PowerShell here-string (it leaks a lone `@` as the subject line).
+  COMMIT MESSAGES: bash-quoted -m, or a UNIQUELY-NAMED -F file. NEVER the
+  PowerShell here-string form `-m @'...'@` — and note this is not a
+  "PowerShell-only" caveat: passing that syntax through the BASH tool is
+  exactly how it bites, because bash has no here-string operator there and
+  silently keeps the leading `@` as the first line, i.e. as your subject.
+  You cannot fix it afterwards: `--amend` is forbidden in a shared tree, and
+  a sibling can land a commit on top of yours within minutes. Verify the
+  subject with `git log --format=%s -1` right after committing.
 
 Implement these accepted directions, one atomic commit each, message `feat(<context>): <title>`:
 <per direction: What & why · Acceptance criteria · Evidence file:line · Risks/non-goals>
