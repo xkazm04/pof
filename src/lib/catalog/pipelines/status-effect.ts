@@ -12,6 +12,84 @@ import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
 /**
+ * The REGISTERED UE automation name that proves each status entity, keyed by entity id.
+ *
+ * Enumerated from the live editor (`Automation List`, UE 5.8, 2026-08-17) and each one run
+ * headless to `Result={Success}` before being wired here — a name that does not resolve would
+ * silently fall back and re-open the very hole this map closes. `ForcePushKnockback` is the
+ * ACTOR LABEL of the map-based functional test in /Game/Maps/VSForcePush, not its C++ class
+ * (`AVSForcePushKnockbackTest`); UE registers map tests under the label, which is why the class
+ * name never matched.
+ *
+ * An entity with no entry falls to the PLANNED name its own gate would register under (see
+ * `gateTestName`), never to another effect's test — `status-chilled` has no ice gate in UE yet,
+ * so it resolves to an unregistered name and stays honestly deferred.
+ */
+const GATE_TEST_BY_ENTITY: Record<string, string> = {
+  'status-burning': 'PoF.StatusBurning.EffectConfig',
+  'status-knockback': 'ForcePushKnockback',
+  'status-dazed': 'PoF.GenForcePush.DazeConfig',
+};
+
+/**
+ * The gate name for an entity: its real registered test, else the name a gate for THIS effect
+ * would register under. Because every row therefore declares an `automationName`, the
+ * pipeline-level fallback in `entityRuntimeDeferred` is unreachable here — which is the point.
+ * A planned-but-unregistered name resolves to `unregistered` in the runner and is mapped to
+ * `deferred` (an honest wait), never to a borrowed pass.
+ */
+function gateTestName(entityId: string, s: string): string {
+  return GATE_TEST_BY_ENTITY[entityId] ?? `PoF.Status${s}.EffectConfig`;
+}
+
+/**
+ * Per-entity gate checklist. The generic produce used to emit the BURNING checklist for every
+ * row, so Knockback advertised "total damage ≈ 90% of triggering fire hit" — a fire claim on a
+ * kinetic CC. Each list below is grounded in the assertions its own gate actually makes
+ * (`VSForcePushKnockbackTest.cpp`, `VSGenForcePushDazeTest.cpp`); the default carries only the
+ * status laws that hold for every effect, with no damage-type numerics invented for it.
+ */
+function gateChecks(entityId: string, s: string): string[] {
+  if (entityId === 'status-knockback') {
+    return [
+      `GE_Gen_${s} applies State.${s} tag on hit target`,
+      'Force Push (hotbar slot 0 / key \'1\') activates against a target in the 55° cone at 600 cm range',
+      'LaunchCharacter displaces the target > 80 cm in 2D from its start location within 0.8 s',
+      `State.${s} clears on landing (physics launch, not a timed duration)`,
+      'State.Immune.Knockback suppresses re-application while active',
+    ];
+  }
+  if (entityId === 'status-dazed') {
+    return [
+      'State.Dazed and State.Immune.Daze are registered native gameplay tags',
+      'UGE_Dazed CDO resolves and is duration-based with a static magnitude',
+      'Daze duration is the catalog\'s 1.6 s',
+      'UGE_Dazed grants State.Dazed for the whole time it is active',
+      'Dazed shamble multiplier is the catalog\'s 0.25 move-speed scale',
+    ];
+  }
+  if (entityId === 'status-burning') {
+    return [
+      `GE_Gen_${s} applies State.${s} tag on hit target`,
+      'tick fires at 0.5 s period (8 ticks over 4 s)',
+      'total damage ≈ 90% of triggering fire hit (31.5 for Fireball base 35)',
+      `State.${s} tag removed on GE expiry (4 s)`,
+      `cleanse/dispel removes State.${s} and cancels periodic GE immediately`,
+      'highest-stack law: weaker re-apply is discarded (timer unchanged)',
+      'highest-stack law: stronger re-apply replaces active ignite and resets timer',
+    ];
+  }
+  // No gate authored for this effect yet — assert only what is true of every status effect.
+  return [
+    `GE_Gen_${s} applies State.${s} tag on hit target`,
+    `State.${s} tag removed when the granting GE ends`,
+    `cleanse/dispel removes State.${s} and cancels the effect immediately`,
+    'highest-stack law: weaker re-apply is discarded (timer unchanged)',
+    'highest-stack law: stronger re-apply replaces the active instance and resets timer',
+  ];
+}
+
+/**
  * Status Effects pipeline (catalogId: 'status-effects').
  *
  * Models ARPG ailments: secondary effects that out-live the hit that applied them.
@@ -273,21 +351,16 @@ registerCatalogPipeline({
         const s = slug(e.name);
         return {
           data: {
-            checks: [
-              `GE_Gen_${s} applies State.${s} tag on hit target`,
-              'tick fires at 0.5 s period (8 ticks over 4 s)',
-              'total damage ≈ 90% of triggering fire hit (31.5 for Fireball base 35)',
-              `State.${s} tag removed on GE expiry (4 s)`,
-              `cleanse/dispel removes State.${s} and cancels periodic GE immediately`,
-              'highest-stack law: weaker re-apply is discarded (timer unchanged)',
-              'highest-stack law: stronger re-apply replaces active ignite and resets timer',
-            ],
+            checks: gateChecks(e.id, s),
+            // ALWAYS set, so no row can ever be proven by another effect's test.
+            automationName: gateTestName(e.id, s),
           },
         };
       },
       // Registered automation name (not the C++ class) so the runner resolves it. PER-ENTITY:
-      // the artifact's own `automationName` wins (a Knockback gate must never be "proven" by
-      // the Burning test); the Burning gate name stays the fallback for undeclared rows.
+      // the artifact's own `automationName` (from GATE_TEST_BY_ENTITY) wins — a Knockback gate
+      // must never be "proven" by the Burning test. The fallback below is the LAST resort for a
+      // row that declares nothing; every seeded entity that has a real gate declares one.
       accept: entityRuntimeDeferred(
         'PoF.StatusBurning.EffectConfig',
         'Status functional/config gate passes in UE (per-entity automationName)',

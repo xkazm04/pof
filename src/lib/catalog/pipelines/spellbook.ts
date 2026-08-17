@@ -12,6 +12,71 @@ import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
 /**
+ * The REGISTERED UE automation name that proves each spell, keyed by entity id. Enumerated from
+ * the live editor (`Automation List`, UE 5.8, 2026-08-17); each verified headless to
+ * `Result={Success}` before being wired.
+ *
+ * `off-arc-fp` gates on `PoF.ForcePush.EffectConfig` — the ABILITY's own contract (UGA_ForcePush
+ * mana 20, 5 s cooldown, horizontal/vertical knockback, cone, range). It previously rode on
+ * `PoF.GenForcePush.DazeConfig`, which asserts the State.Dazed FOLLOW-UP status rather than the
+ * push itself, and only did so because a hand-set artifact field survived; produce never wrote
+ * one, so any re-produce dropped the row back to the Fireball fallback.
+ */
+const GATE_TEST_BY_ENTITY: Record<string, string> = {
+  'off-fire-01': 'PoF.GenFireball.EffectConfig',
+  'off-arc-fp': 'PoF.ForcePush.EffectConfig',
+};
+
+/**
+ * The gate name for a spell: its real registered test, else the name a gate for THIS spell would
+ * register under. Every row therefore declares an `automationName`, which makes the
+ * pipeline-level fallback unreachable — a Force Push gate can no longer be "proven" by the
+ * Fireball test, and an undeclared spell stays honestly deferred on an unregistered name.
+ */
+function gateTestName(entityId: string, s: string): string {
+  return GATE_TEST_BY_ENTITY[entityId] ?? `PoF.Spell${s}.EffectConfig`;
+}
+
+/**
+ * Per-spell gate checklist. The generic produce used to emit the FIREBALL checklist for every
+ * row, so Force Push advertised `Ability.Fire.ArcForcePush`, 35 fire damage and State.Burning.
+ * Each list is grounded in the assertions its own gate actually makes; the default carries only
+ * the ability laws that hold for every spell, with no damage-type numerics invented for it.
+ */
+function gateChecks(entityId: string, s: string): string[] {
+  if (entityId === 'off-arc-fp') {
+    return [
+      'UGA_ForcePush CDO resolves and its asset tags include Ability.ForcePush',
+      'Mana cost is 20 on cast',
+      'Cooldown GE is UGE_Cooldown_ForcePush granting Cooldown.ForcePush',
+      'Cooldown duration is a 5 s static magnitude (HasDuration policy)',
+      'Horizontal knockback > 0 (launches the target away) and vertical knockback > 0 (upward arc)',
+      'Cone half-angle in (0,180] and push range > 0',
+      'State.Dead / State.Stunned tag blocks ability activation (tag rules)',
+    ];
+  }
+  if (entityId === 'off-fire-01') {
+    return [
+      `GA_${s} activates via TryActivateAbilityByTag(Ability.Fire.${s})`,
+      'Target Health attribute reduced by ≈35 fire damage (±5% tolerance for resist calculation)',
+      'State.Burning tag applied to target after hit',
+      'Mana attribute reduced by 20 on cast',
+      'Cooldown GE blocks re-activation for 3.0 s after cast',
+      'State.Dead / State.Stunned tag blocks ability activation (tag rules)',
+      'comboMultiplier 1.1 applies on burning-target follow-up cast',
+      'GE_Gen_Burning ticks at 0.5 s period over 4 s (8 ticks ≈ 31.5 total fire dmg)',
+    ];
+  }
+  // No gate authored for this spell yet — assert only what is true of every ability.
+  return [
+    `GA_${s} activates via its granted Ability tag`,
+    'Mana attribute is reduced by the spell\'s mana cost on cast',
+    'Cooldown GE blocks re-activation for the spell\'s cooldown duration',
+    'State.Dead / State.Stunned tag blocks ability activation (tag rules)',
+  ];
+}
+
+/**
  * Spellbook pipeline (catalogId: 'spellbook').
  *
  * Models active abilities used by characters and enemies.
@@ -541,24 +606,18 @@ registerCatalogPipeline({
         const s = slug(e.name);
         return {
           data: {
-            checks: [
-              `GA_${s} activates via TryActivateAbilityByTag(Ability.Fire.${s})`,
-              'Target Health attribute reduced by ≈35 fire damage (±5% tolerance for resist calculation)',
-              'State.Burning tag applied to target after hit',
-              'Mana attribute reduced by 20 on cast',
-              'Cooldown GE blocks re-activation for 3.0 s after cast',
-              'State.Dead / State.Stunned tag blocks ability activation (tag rules)',
-              'comboMultiplier 1.1 applies on burning-target follow-up cast',
-              'GE_Gen_Burning ticks at 0.5 s period over 4 s (8 ticks ≈ 31.5 total fire dmg)',
-            ],
+            checks: gateChecks(e.id, s),
+            // ALWAYS set, so no spell can ever be proven by another spell's test.
+            automationName: gateTestName(e.id, s),
           },
         };
       },
       // Defer with the REGISTERED automation name (dotted path / substring), not the C++
       // class name, so the L3 runner resolves it (verified live on 5.8). PER-ENTITY: the
-      // artifact's own `automationName` wins (e.g. off-arc-fp → PoF.GenForcePush.DazeConfig)
-      // so a Force Push gate can never be "proven" by the Fireball test; the Fireball gate
-      // name stays the fallback for rows that haven't declared one.
+      // artifact's own `automationName` (from GATE_TEST_BY_ENTITY) wins, so a Force Push gate
+      // can never be "proven" by the Fireball test. Produce now ALWAYS writes one, so the
+      // fallback below is unreachable for any row this pipeline produces — it remains only as
+      // the type-level default for a hand-written artifact that declares nothing.
       accept: entityRuntimeDeferred(
         'PoF.GenFireball.EffectConfig',
         'Spell functional/config gate passes in UE (per-entity automationName)',
