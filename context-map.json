@@ -1,6 +1,74 @@
 {
   "contexts": [
     {
+      "api_surface": "POST /api/visual-gen/generate (3D mode), UE5 Python import bridge",
+      "business_feature": "3D Mesh Generation",
+      "category": "lib",
+      "cross_refs": [
+        "image-generation",
+        "blender-3d-integration",
+        "ue5-bridge-client",
+        "catalog-pipeline-registry"
+      ],
+      "db_tables": [],
+      "description": "AI-based 3D mesh generation pipeline supporting TripoSR (open-weight) and Tripo v3.1 (API) for text/image-to-mesh, Hunyuan for video-based generation, and procedural generators for terrain, dungeon, vegetation, and biome composition. Mesh-finish applies polycount reduction, seam checks, and rig-preset binding before UE5 import. A mesh-critique VLM gate scores topology and silhouette quality (world-scale, face-budget). The ue-import module templates the UE5 Python import call for each generated asset type, closing the loop from prompt to imported skeletal/static mesh.",
+      "entry_points": [
+        "src/lib/visual-gen/tripo-runner.ts",
+        "src/lib/visual-gen/mesh-finish.ts"
+      ],
+      "file_paths": [
+        "src/lib/visual-gen/tripo-runner.ts",
+        "src/lib/visual-gen/tripo-job-store.ts",
+        "src/lib/visual-gen/tripo-skins.ts",
+        "src/lib/visual-gen/triposr-runner.ts",
+        "src/lib/visual-gen/triposr-job-store.ts",
+        "src/lib/visual-gen/hunyuan-runner.ts",
+        "src/lib/visual-gen/hunyuan-job-store.ts",
+        "src/lib/visual-gen/mesh-critique.ts",
+        "src/lib/visual-gen/mesh-finish.ts",
+        "src/lib/visual-gen/mesh-finish-job-store.ts",
+        "src/lib/visual-gen/face-budget.ts",
+        "src/lib/visual-gen/polycount-presets.ts",
+        "src/lib/visual-gen/world-scale.ts",
+        "src/lib/visual-gen/chaos-cloth.ts",
+        "src/lib/visual-gen/rig-presets.ts",
+        "src/lib/visual-gen/metahuman-conform.ts",
+        "src/lib/visual-gen/ue5-import-templates.ts",
+        "src/lib/visual-gen/ue-import.ts",
+        "src/lib/visual-gen/biome-textures.ts",
+        "src/lib/visual-gen/footage-gate.ts",
+        "src/lib/visual-gen/generators/composition.ts",
+        "src/lib/visual-gen/generators/dungeon.ts",
+        "src/lib/visual-gen/generators/placement-tags.ts",
+        "src/lib/visual-gen/generators/terrain.ts",
+        "src/lib/visual-gen/generators/vegetation.ts"
+      ],
+      "group": null,
+      "group_id": null,
+      "id": "937a3fa0-f698-49f7-a780-0d05f1f0ce01",
+      "keywords": [
+        "TripoSR",
+        "Tripo",
+        "Hunyuan",
+        "mesh-generation",
+        "3D-AI",
+        "polycount",
+        "rig-preset",
+        "mesh-critique",
+        "UE5-import",
+        "procgen"
+      ],
+      "last_written_at": "2026-08-17T19:58:55.862208600+00:00",
+      "name": "3d-mesh-generation",
+      "pinned": false,
+      "tech_stack": [
+        "TypeScript",
+        "Next.js 16",
+        "TripoSR API",
+        "Hunyuan API"
+      ]
+    },
+    {
       "api_surface": "GET/POST /api/ability-specs, GET/PUT/DELETE /api/ability-specs/[id]",
       "business_feature": "Ability & GAS Design",
       "category": "ui",
@@ -19,11 +87,7 @@
       "file_paths": [
         "src/lib/ability/",
         "src/stores/abilitySpecStore.ts",
-        "src/types/ability-spec.ts",
-        "src/components/modules/core-engine/sub_ability/",
-        "src/app/api/ability-specs/route.ts",
-        "src/app/api/ability-specs/[id]/route.ts",
-        "src/hooks/useAbilitySpec.ts"
+        "src/components/modules/core-engine/sub_ability/"
       ],
       "group": "Game Design Studio",
       "group_id": "2b214a4b-ebce-49ea-b1b5-d8b333b7ffbd",
@@ -38,7 +102,9 @@
         "C++-codegen",
         "ability-spec"
       ],
+      "last_written_at": "2026-08-17T19:58:56.937693500+00:00",
       "name": "ability-design",
+      "pinned": false,
       "tech_stack": [
         "TypeScript",
         "React"
@@ -61,9 +127,7 @@
       ],
       "file_paths": [
         "src/lib/anim-critique/",
-        "src/app/api/verify/animation/route.ts",
-        "src/scripts/anim-critique.mjs",
-        "src/types/anim-critique.ts"
+        "src/app/api/verify/animation/route.ts"
       ],
       "group": "Visual Asset Generation",
       "group_id": "5d0e17e3-006b-49f0-a319-948125800ecf",
@@ -80,7 +144,9 @@
         "Hailuo",
         "aesthetic"
       ],
+      "last_written_at": "2026-08-17T19:58:56.938525700+00:00",
       "name": "anim-video-gen",
+      "pinned": false,
       "tech_stack": [
         "TypeScript",
         "Gemini VLM",
@@ -102,14 +168,11 @@
         "src/lib/anim-critique/"
       ],
       "file_paths": [
-        "src/components/modules/content/animations/AnimationChecklist.tsx",
         "src/components/modules/core-engine/sub_animation/",
         "src/lib/animations.ts",
         "src/lib/anim-critique/",
         "src/lib/animation/",
-        "src/app/api/verify/animation/route.ts",
-        "src/app/api/animations/route.ts",
-        "src/types/animation.ts"
+        "src/app/api/verify/animation/route.ts"
       ],
       "group": "Game World & Content",
       "group_id": "d12395f2-0687-415c-8094-701fc58f59be",
@@ -126,7 +189,9 @@
         "FK",
         "blend-space"
       ],
+      "last_written_at": "2026-08-17T19:58:56.938899200+00:00",
       "name": "animation-module",
+      "pinned": false,
       "tech_stack": [
         "TypeScript",
         "React"
@@ -173,7 +238,9 @@
         "shell",
         "responsive"
       ],
+      "last_written_at": "2026-06-24T10:17:16.447520900+00:00",
       "name": "app-navigation",
+      "pinned": false,
       "tech_stack": [
         "TypeScript",
         "React",
@@ -200,7 +267,6 @@
       ],
       "file_paths": [
         "src/components/modules/content/audio/",
-        "src/components/modules/content/animations/music/",
         "src/lib/audio-asset-db.ts",
         "src/lib/audio-import-db.ts",
         "src/lib/audio-scene-db.ts",
@@ -228,7 +294,9 @@
         "voice-activity",
         "sound-design"
       ],
+      "last_written_at": "2026-08-17T19:58:56.939840200+00:00",
       "name": "audio-module",
+      "pinned": false,
       "tech_stack": [
         "TypeScript",
         "React",
@@ -272,7 +340,9 @@
         "Three.js",
         "pipeline-export"
       ],
+      "last_written_at": "2026-06-24T10:17:16.444907800+00:00",
       "name": "blender-3d-integration",
+      "pinned": false,
       "tech_stack": [
         "TypeScript",
         "React",
@@ -305,8 +375,7 @@
         "src/stores/characterBlueprintStore.ts",
         "src/types/blueprint.ts",
         "src/lib/shiki-highlighter.ts",
-        "src/components/ui/CodeViewer.tsx",
-        "src/app/api/blueprint/transpile/route.ts"
+        "src/components/ui/CodeViewer.tsx"
       ],
       "group": "UE5 Integration",
       "group_id": "2183a3fc-d77e-47cb-89ac-0acbb00098e6",
@@ -322,7 +391,9 @@
         "codegen",
         "round-trip"
       ],
+      "last_written_at": "2026-08-17T19:58:56.940654700+00:00",
       "name": "blueprint-tools",
+      "pinned": false,
       "tech_stack": [
         "TypeScript",
         "Shiki"
@@ -345,11 +416,8 @@
       "file_paths": [
         "src/lib/packaging/",
         "src/stores/preflightStore.ts",
-        "src/types/packaging.ts",
         "src/components/modules/game-systems/",
         "src/app/api/packaging/preflight/route.ts",
-        "src/app/api/packaging/cook/route.ts",
-        "src/app/api/packaging/status/route.ts",
         "src/instrumentation.ts",
         "src/__tests__/packaging/"
       ],
@@ -367,7 +435,9 @@
         "UE5",
         "compilation"
       ],
+      "last_written_at": "2026-08-17T19:58:56.941197100+00:00",
       "name": "build-packaging",
+      "pinned": false,
       "tech_stack": [
         "TypeScript",
         "React"
@@ -385,14 +455,17 @@
       "db_tables": [
         "pipeline_artifacts"
       ],
-      "description": "The main LayoutLab interface that serves as the application homepage, providing a Category → Catalog → Entity tree with a Baseline view for pipeline step navigation. A compact bridge strip shows live UE5 connection status. Responsive shell collapses to drawer panels below 1100px. Hydrates pipeline artifact state from the server on entity-open and renders a config-complete summary in the pipeline header.",
+      "description": "The main LayoutLab interface serving as the application homepage: Category → Catalog → Entity tree with a Baseline entity-view panel for pipeline step navigation. A global coaching overlay (NextStepCoach, GlobalCoach) recommends the highest-value next action per entity. The LabBridgeStrip shows live UE5 connection status; responsive shell collapses to drawer panels below 1100px. Hydrates pipeline artifact state from the server on entity-open and renders a config-complete summary in the pipeline header. The Baseline module is now a directory with focused hooks (useEntityArtifacts, useStepJudgeVerdicts, useBatchDrain) and a roving-focus keyboard model.",
       "entry_points": [
         "src/components/layout-lab/LayoutLab.tsx",
         "src/components/layout-lab/Baseline.tsx"
       ],
       "file_paths": [
         "src/components/layout-lab/LayoutLab.tsx",
-        "src/components/layout-lab/Baseline.tsx",
+        "src/components/layout-lab/Baseline/index.tsx",
+        "src/components/layout-lab/Baseline/constants.ts",
+        "src/components/layout-lab/Baseline/types.ts",
+        "src/components/layout-lab/Baseline/useBaseline.ts",
         "src/components/layout-lab/CatalogTree.tsx",
         "src/components/layout-lab/CatalogMatrix.tsx",
         "src/components/layout-lab/NewHome.tsx",
@@ -401,9 +474,15 @@
         "src/components/layout-lab/PipelineRail.tsx",
         "src/components/layout-lab/CanonView.tsx",
         "src/components/layout-lab/NextStepCoach.tsx",
+        "src/components/layout-lab/GlobalCoach.tsx",
+        "src/components/layout-lab/globalCoachModel.ts",
+        "src/components/layout-lab/coachLadder.ts",
         "src/components/layout-lab/useLabCatalogData.ts",
         "src/components/layout-lab/labPipelines.ts",
+        "src/components/layout-lab/labArtifactClient.ts",
+        "src/components/layout-lab/LabSearch.tsx",
         "src/components/layout-lab/lab-tokens.css",
+        "src/components/layout-lab/theme.ts",
         "src/app/layout/page.tsx"
       ],
       "group": "Catalog Pipeline",
@@ -420,7 +499,9 @@
         "category-tree",
         "bridge-strip"
       ],
+      "last_written_at": "2026-08-17T19:58:56.942052500+00:00",
       "name": "catalog-browser-ui",
+      "pinned": false,
       "tech_stack": [
         "React",
         "TypeScript",
@@ -441,7 +522,7 @@
         "pipeline_artifacts",
         "catalog_entities"
       ],
-      "description": "SQLite persistence layer for catalog entities, pipeline artifacts, and the canon (authoritative data set). Exposes REST API routes for reading/writing pipeline artifacts, and a drain endpoint that flips deferred L3/L4 artifacts to pass/fail after live UE5 verification. The labArtifactClient on the frontend wraps these endpoints and merges server state into the client pipeline store.",
+      "description": "SQLite persistence layer for catalog entities, pipeline artifacts (with revision history), and the canon authoritative data set. Exposes REST API routes for reading/writing pipeline artifacts, a drain endpoint that flips deferred L3/L4 artifacts to pass/fail after live UE5 verification, and revision routes for step history restore. The labArtifactClient on the frontend wraps these endpoints. Catalog seed helpers populate starter entities for every registered pipeline type on boot. Generated package manifests under generated/packages/ store the final UE-ready output for each entity.",
       "entry_points": [
         "src/lib/catalog-db.ts",
         "src/lib/pipeline-db.ts"
@@ -449,13 +530,26 @@
       "file_paths": [
         "src/lib/catalog-db.ts",
         "src/lib/pipeline-db.ts",
+        "src/lib/pipeline-artifacts-db.ts",
         "src/lib/catalog/canon/",
-        "src/lib/catalog/pipelines/",
+        "src/lib/catalog/seed.ts",
+        "src/lib/catalog/seed-animation-assets.ts",
+        "src/lib/catalog/seed-audio.ts",
+        "src/lib/catalog/seed-bestiary.ts",
+        "src/lib/catalog/seed-characters.ts",
+        "src/lib/catalog/seed-combat-map.ts",
+        "src/lib/catalog/seed-items.ts",
+        "src/lib/catalog/seed-loot.ts",
+        "src/lib/catalog/seed-materials.ts",
+        "src/lib/catalog/seed-screen-flow.ts",
+        "src/lib/catalog/seed-spellbook.ts",
+        "src/lib/catalog/seed-state-graph.ts",
+        "src/lib/catalog/seed-zone-map.ts",
         "src/stores/pipelineStore.ts",
         "src/app/api/pipeline-artifacts/route.ts",
         "src/app/api/pipeline-artifacts/drain/route.ts",
         "src/app/api/catalog/route.ts",
-        "src/types/catalog.ts"
+        "generated/packages/"
       ],
       "group": "Catalog Pipeline",
       "group_id": "cf8152f9-b26b-4fa8-a384-2b8081fff403",
@@ -471,11 +565,147 @@
         "artifact",
         "persist"
       ],
+      "last_written_at": "2026-08-17T19:58:56.942766700+00:00",
       "name": "catalog-database",
+      "pinned": false,
       "tech_stack": [
         "TypeScript",
         "SQLite",
         "better-sqlite3"
+      ]
+    },
+    {
+      "api_surface": "GET /api/catalog (entity listing)",
+      "business_feature": "Catalog Pipeline Registry",
+      "category": "lib",
+      "cross_refs": [
+        "catalog-database",
+        "pipeline-acceptance-engine",
+        "item-catalog-pipeline"
+      ],
+      "db_tables": [
+        "pipeline_artifacts"
+      ],
+      "description": "Self-registering pipeline definitions for every catalog type (30+ catalogs including items, bestiary, characters, combat-map, audio, materials, quests, cutscenes, dialog-trees, achievements, etc.). Each file exports a typed StepSpec array following the View/Produce/Acceptance model, plus seed data for the lab walker's e2e coverage guard. The registry.generated.ts auto-enumerates all pipelines so new catalogs are immediately covered by the e2e walker without writing new test specs. Seed helpers populate the SQLite DB with starter entities on first boot.",
+      "entry_points": [
+        "src/lib/catalog/pipelines/registry.generated.ts",
+        "src/lib/catalog/pipelines/items.ts"
+      ],
+      "file_paths": [
+        "src/lib/catalog/pipelines/registry.generated.ts",
+        "src/lib/catalog/pipelines/items.ts",
+        "src/lib/catalog/pipelines/achievements.ts",
+        "src/lib/catalog/pipelines/ambient.ts",
+        "src/lib/catalog/pipelines/bestiary.ts",
+        "src/lib/catalog/pipelines/character-pipeline.ts",
+        "src/lib/catalog/pipelines/characters.ts",
+        "src/lib/catalog/pipelines/codex.ts",
+        "src/lib/catalog/pipelines/combat-map.ts",
+        "src/lib/catalog/pipelines/crafting-recipes.ts",
+        "src/lib/catalog/pipelines/currency.ts",
+        "src/lib/catalog/pipelines/cutscenes.ts",
+        "src/lib/catalog/pipelines/dialog-trees.ts",
+        "src/lib/catalog/pipelines/factions.ts",
+        "src/lib/catalog/pipelines/hud-elements.ts",
+        "src/lib/catalog/pipelines/icon-sets.ts",
+        "src/lib/catalog/pipelines/input-schemes.ts",
+        "src/lib/catalog/pipelines/loot-tables.ts",
+        "src/lib/catalog/pipelines/materials.ts",
+        "src/lib/catalog/pipelines/music.ts",
+        "src/lib/catalog/pipelines/player-movement.ts",
+        "src/lib/catalog/pipelines/progression-curves.ts",
+        "src/lib/catalog/pipelines/props.ts",
+        "src/lib/catalog/pipelines/quests.ts",
+        "src/lib/catalog/pipelines/save-points.ts",
+        "src/lib/catalog/pipelines/screen-flow.ts",
+        "src/lib/catalog/pipelines/spellbook.ts",
+        "src/lib/catalog/pipelines/state-graph.ts",
+        "src/lib/catalog/pipelines/status-effect.ts",
+        "src/lib/catalog/pipelines/tutorial-beats.ts",
+        "src/lib/catalog/pipelines/vendors.ts",
+        "src/lib/catalog/pipelines/vfx.ts",
+        "src/lib/catalog/pipelines/zone-map.ts"
+      ],
+      "group": null,
+      "group_id": null,
+      "id": "49719a0b-acde-4859-bab2-945e72f4524e",
+      "keywords": [
+        "pipeline-definition",
+        "step-spec",
+        "catalog",
+        "archetype",
+        "gallery",
+        "balance",
+        "static",
+        "seed",
+        "e2e-walker"
+      ],
+      "last_written_at": "2026-08-17T19:58:57.529715300+00:00",
+      "name": "catalog-pipeline-registry",
+      "pinned": false,
+      "tech_stack": [
+        "TypeScript",
+        "Next.js 16"
+      ]
+    },
+    {
+      "api_surface": "POST /api/pipeline-artifacts/drain, GET /api/pipeline-artifacts",
+      "business_feature": "Catalog Produce Runtime",
+      "category": "ui",
+      "cross_refs": [
+        "catalog-browser-ui",
+        "pipeline-step-components",
+        "pipeline-acceptance-engine"
+      ],
+      "db_tables": [
+        "pipeline_artifacts"
+      ],
+      "description": "Runtime orchestration layer for the catalog pipeline: tracks in-flight produce jobs via a runner chip, detects content drift between artifact data and the active produce direction, and records a structured produce log for every CLI dispatch. The batch-drain model coordinates multi-step L3/L4 drains across the whole entity matrix, surfacing errors and retries inline. The labRunnerStore and labPipelineStore are the reactive state layer for this system, while labArtifactCache prevents redundant server fetches during batch operations.",
+      "entry_points": [
+        "src/components/layout-lab/MatrixBatchDrain.tsx",
+        "src/components/layout-lab/labRunnerStore.ts"
+      ],
+      "file_paths": [
+        "src/components/layout-lab/MatrixBatchDrain.tsx",
+        "src/components/layout-lab/MatrixSkeleton.tsx",
+        "src/components/layout-lab/batchDrainModel.ts",
+        "src/components/layout-lab/DriftBanner.tsx",
+        "src/components/layout-lab/labContentDrift.ts",
+        "src/components/layout-lab/labRunnerStore.ts",
+        "src/components/layout-lab/labArtifactCache.ts",
+        "src/components/layout-lab/labCheckerContext.ts",
+        "src/components/layout-lab/catalogManifest.ts",
+        "src/components/layout-lab/produceLog.ts",
+        "src/components/layout-lab/ProduceLogPanel.tsx",
+        "src/components/layout-lab/ProduceErrorBanner.tsx",
+        "src/components/layout-lab/RunnerChip.tsx",
+        "src/components/layout-lab/LabJobsChip.tsx",
+        "src/components/layout-lab/labProduceMode.ts",
+        "src/components/layout-lab/labPipelineStore.ts",
+        "src/components/layout-lab/coachProvenance.ts",
+        "src/components/layout-lab/RefreshFromServer.tsx"
+      ],
+      "group": null,
+      "group_id": null,
+      "id": "9bdbc545-a593-4be8-ad2f-18feb2dfe1b3",
+      "keywords": [
+        "batch-drain",
+        "produce-log",
+        "content-drift",
+        "runner",
+        "pipeline-store",
+        "artifact-cache",
+        "retry",
+        "in-flight"
+      ],
+      "last_written_at": "2026-08-17T19:58:56.943983800+00:00",
+      "name": "catalog-produce-runtime",
+      "pinned": false,
+      "tech_stack": [
+        "Next.js 16",
+        "React 19",
+        "Zustand 5",
+        "TypeScript"
       ]
     },
     {
@@ -505,7 +735,6 @@
         "src/hooks/useModuleReviewCli.ts",
         "src/hooks/useCliSpend.ts",
         "src/lib/cli-spend-db.ts",
-        "src/stores/cliOptimizationStore.ts",
         "src/types/cli-spend.ts",
         "src/types/cli-task-registry.ts"
       ],
@@ -523,7 +752,9 @@
         "skills",
         "spend-tracking"
       ],
+      "last_written_at": "2026-08-17T19:58:56.944464600+00:00",
       "name": "cli-terminal-system",
+      "pinned": false,
       "tech_stack": [
         "TypeScript",
         "React",
@@ -545,7 +776,6 @@
         "src/components/bridge-doctor/"
       ],
       "file_paths": [
-        "src/lib/crash-analysis-engine.ts",
         "src/lib/crash-glossary.ts",
         "src/lib/crash-analyzer/",
         "src/stores/crashAnalyzerStore.ts",
@@ -567,7 +797,9 @@
         "regression",
         "log-parsing"
       ],
+      "last_written_at": "2026-08-17T19:58:56.944800300+00:00",
       "name": "crash-analysis",
+      "pinned": false,
       "tech_stack": [
         "TypeScript",
         "React"
@@ -602,7 +834,6 @@
         "src/lib/catalog-db.ts",
         "src/lib/pipeline-db.ts",
         "src/lib/cli-spend-db.ts",
-        "src/lib/material-db.ts",
         "next.config.ts"
       ],
       "group": "Application Infrastructure",
@@ -618,7 +849,9 @@
         "query",
         "connection"
       ],
+      "last_written_at": "2026-08-17T19:58:56.945156900+00:00",
       "name": "database-layer",
+      "pinned": false,
       "tech_stack": [
         "TypeScript",
         "SQLite",
@@ -645,8 +878,6 @@
       "file_paths": [
         "src/lib/feature-matrix-db.ts",
         "src/types/feature-matrix.ts",
-        "src/components/modules/shared/FeatureMatrix.tsx",
-        "src/components/modules/evaluator/FeatureConstellation.tsx",
         "src/lib/constellation/layout.ts",
         "src/hooks/useFeatureMatrix.ts",
         "src/app/api/feature-matrix/route.ts",
@@ -664,7 +895,9 @@
         "NBA",
         "implementation-tracking"
       ],
+      "last_written_at": "2026-08-17T19:58:56.945738100+00:00",
       "name": "feature-matrix-tracking",
+      "pinned": false,
       "tech_stack": [
         "TypeScript",
         "React",
@@ -684,7 +917,7 @@
         "project_sessions",
         "regression_events"
       ],
-      "description": "Session-level project health tracking that aggregates build quality scores, regression signals, and crash trends across development sessions. The severity legend surfaces critical findings with one-click fix suggestions. Provides a regression tracker that diffs session vs session to catch newly introduced issues. Depends on the evaluator for per-module scores and crash analyzer for fault signals.",
+      "description": "Session-level project health tracking that aggregates build quality scores, regression signals, and crash trends across development sessions. The severity legend surfaces critical findings with one-click fix suggestions and a regression tracker diffs session vs session. The dzin (src/lib/dzin/) and ecw (src/lib/ecw/) modules provide entity-level roadmap summaries, milestone forecasts, progress tracks, and shell preferences for a longer-horizon planning view that complements the session-scoped game-director data.",
       "entry_points": [
         "src/components/modules/game-director/",
         "src/stores/projectHealthStore.ts"
@@ -697,6 +930,11 @@
         "src/types/session-analytics.ts",
         "src/hooks/useSessionAnalytics.ts",
         "src/lib/consistency-grade.ts",
+        "src/lib/game-director-db.ts",
+        "src/lib/ecw/entity-summary.ts",
+        "src/lib/ecw/forecast.ts",
+        "src/lib/ecw/glossary.ts",
+        "src/lib/ecw/shell-pref.ts",
         "src/app/api/project-health/route.ts"
       ],
       "group": "Quality & Evaluation",
@@ -712,7 +950,9 @@
         "trend",
         "fix-suggestion"
       ],
+      "last_written_at": "2026-08-17T19:58:56.946266300+00:00",
       "name": "game-director-system",
+      "pinned": false,
       "tech_stack": [
         "TypeScript",
         "React"
@@ -739,10 +979,8 @@
         "src/lib/gdd-synthesizer.ts",
         "src/stores/gddComplianceStore.ts",
         "src/types/gdd-compliance.ts",
-        "src/components/modules/evaluator/GDDCompliance.tsx",
         "src/components/ui/MermaidDiagram.tsx",
-        "src/hooks/useGameDesignDoc.ts",
-        "src/app/api/gdd/route.ts"
+        "src/hooks/useGameDesignDoc.ts"
       ],
       "group": "Game Design Studio",
       "group_id": "2b214a4b-ebce-49ea-b1b5-d8b333b7ffbd",
@@ -757,7 +995,9 @@
         "synthesis",
         "validation"
       ],
+      "last_written_at": "2026-08-17T19:58:56.946875600+00:00",
       "name": "gdd-compliance",
+      "pinned": false,
       "tech_stack": [
         "TypeScript",
         "React",
@@ -801,7 +1041,9 @@
         "end-to-end",
         "build-loop"
       ],
+      "last_written_at": "2026-06-24T10:17:16.445444700+00:00",
       "name": "harness-autonomy",
+      "pinned": false,
       "tech_stack": [
         "TypeScript",
         "React",
@@ -817,20 +1059,38 @@
         "genome-character"
       ],
       "db_tables": [],
-      "description": "AI image generation pipeline supporting Leonardo.ai (2D tiling/transparency/ControlNet/upscaler) and other providers. Every generation downloads then deletes the asset from the provider. Supports genome build codes for sharing generation parameters via deflate+base64url. The one-shot lab enables rapid single-image generation with style direction.",
+      "description": "AI 2D image generation pipeline supporting Leonardo.ai (tiling, transparency, ControlNet, upscaler) and Qwen VLM (image recognition/critique). Every generation downloads then deletes the asset from the provider. Style DNA captures per-project art direction (style-dna.ts, style-dna-db.ts) and is injected into prompt chips. The one-shot lab enables rapid single-image generation; best-of-n runs parallel generations and auto-selects the highest quality. A generated-icons system (generated-icons.ts) serves per-step icon assets to gallery steps via /api/visual-gen/icons. The asset library (asset-library-db.ts, library-filter.ts) tracks all downloaded assets with license metadata.",
       "entry_points": [
         "src/lib/visual-gen/",
         "src/app/api/visual-gen/generate/route.ts"
       ],
       "file_paths": [
-        "src/lib/visual-gen/",
+        "src/lib/visual-gen/generated-assets.ts",
+        "src/lib/visual-gen/generated-icons.ts",
+        "src/lib/visual-gen/asset-library-db.ts",
+        "src/lib/visual-gen/asset-sources.ts",
+        "src/lib/visual-gen/library-db-conn.ts",
+        "src/lib/visual-gen/library-filter.ts",
+        "src/lib/visual-gen/style-dna.ts",
+        "src/lib/visual-gen/style-dna-db.ts",
+        "src/lib/visual-gen/style-keywords.ts",
+        "src/lib/visual-gen/prompt-chips.ts",
+        "src/lib/visual-gen/providers.ts",
+        "src/lib/visual-gen/qwen-image-runner.ts",
+        "src/lib/visual-gen/best-of-n.ts",
+        "src/lib/visual-gen/input-gate.ts",
+        "src/lib/visual-gen/lighting-presets.ts",
+        "src/lib/visual-gen/seam-check.ts",
+        "src/lib/visual-gen/material-db.ts",
+        "src/lib/visual-gen/reference-roles.ts",
+        "src/lib/visual-gen/poll.ts",
+        "src/lib/visual-gen/ui.ts",
         "src/lib/one-shot/",
         "src/stores/oneShotLabStore.ts",
         "src/stores/oneShotJobStore.ts",
-        "src/types/visual-gen.ts",
         "src/components/layout-lab/one-shot/",
-        "src/app/api/visual-gen/route.ts",
-        "src/app/api/visual-gen/generate/route.ts"
+        "src/app/api/visual-gen/generate/route.ts",
+        "src/app/api/leonardo/route.ts"
       ],
       "group": "Visual Asset Generation",
       "group_id": "5d0e17e3-006b-49f0-a319-948125800ecf",
@@ -846,7 +1106,9 @@
         "upscaler",
         "generation"
       ],
+      "last_written_at": "2026-08-17T19:58:56.947746800+00:00",
       "name": "image-generation",
+      "pinned": false,
       "tech_stack": [
         "TypeScript",
         "React",
@@ -865,17 +1127,26 @@
       "db_tables": [
         "pipeline_artifacts"
       ],
-      "description": "The reference implementation of the catalog pipeline for the Items catalog (13 steps: economy, art, attributes, etc.). Serves as the canonical example of how every catalog pipeline should be built using CliProduce + StepFrame + CandidateGallery. Tests serve as the regression guard for the pipeline authoring conventions.",
+      "description": "The reference implementation of the catalog pipeline for the Items catalog (15 steps including economy, art, attributes, concept-brief, anim-audio, integration, etc.). Serves as the canonical example of how every catalog pipeline should be built using CliProduce + StepFrame + CandidateGallery. Tests serve as the regression guard for the pipeline authoring conventions. The items pipeline is exercised by the dedicated e2e spec while all other catalogs are covered by the generic walker.",
       "entry_points": [
         "src/components/layout-lab/steps/items/",
         "e2e/catalog-pipeline-walker.spec.ts"
       ],
       "file_paths": [
-        "src/components/layout-lab/steps/items/",
-        "src/lib/catalog/pipelines/items/",
+        "src/components/layout-lab/steps/ItemArt.tsx",
+        "src/components/layout-lab/steps/ItemAttributes.tsx",
+        "src/components/layout-lab/steps/ItemEconomy.tsx",
+        "src/components/layout-lab/steps/ItemGate.tsx",
+        "src/components/layout-lab/steps/ItemIntegration.tsx",
+        "src/components/layout-lab/steps/ItemAnimAudio.tsx",
+        "src/components/layout-lab/steps/ItemConceptBrief.tsx",
+        "src/components/layout-lab/steps/itemsSteps.ts",
+        "src/lib/catalog/pipelines/items.ts",
         "src/__tests__/catalog/pipeline-e2e-coverage.test.ts",
         "e2e/catalog-items-reference.spec.ts",
-        "e2e/catalog-pipeline-walker.spec.ts"
+        "e2e/catalog-pipeline-walker.spec.ts",
+        "e2e/helpers/e2e-db.ts",
+        "e2e/helpers/walk-status.ts"
       ],
       "group": "Catalog Pipeline",
       "group_id": "cf8152f9-b26b-4fa8-a384-2b8081fff403",
@@ -891,11 +1162,73 @@
         "walker",
         "step-spec"
       ],
+      "last_written_at": "2026-08-17T19:58:56.948460600+00:00",
       "name": "item-catalog-pipeline",
+      "pinned": false,
       "tech_stack": [
         "TypeScript",
         "React",
         "Playwright"
+      ]
+    },
+    {
+      "api_surface": "GET/POST /api/judge-verdicts, GET/POST /api/craft-verdicts",
+      "business_feature": "Judge & Craft Quality Engine",
+      "category": "lib",
+      "cross_refs": [
+        "module-evaluator",
+        "status-health-dashboard",
+        "pipeline-acceptance-engine"
+      ],
+      "db_tables": [
+        "judge_verdicts",
+        "craft_verdicts"
+      ],
+      "description": "AAA-lens quality scoring engine operating on two axes: the judge fleet (rubrics-based multi-dimensional scoring with content hashing, sibling context awareness, spend metering, and verdict trend tracking) and the craft loop (per-cell lens verdicts from 10 authored AAA rubric lenses in lib/craft/lenses/). Judge verdicts are stored in judge_verdicts and exposed via REST; craft verdicts in craft_verdicts. The status dashboard reads both to produce the A-axis quality layer beside the R-ladder. verdictStanding aggregates per-step judge outputs into a single PASS/FAIL/VERIFIED signal; fleetPlan orchestrates which rubric dimensions to evaluate per payload type.",
+      "entry_points": [
+        "src/lib/judge/fleetPlan.ts",
+        "src/lib/craft/craftCell.ts"
+      ],
+      "file_paths": [
+        "src/lib/judge/dimensions.ts",
+        "src/lib/judge/rubrics.ts",
+        "src/lib/judge/fleetPlan.ts",
+        "src/lib/judge/payload.ts",
+        "src/lib/judge/contentHash.ts",
+        "src/lib/judge/siblingContext.ts",
+        "src/lib/judge/spendMeter.ts",
+        "src/lib/judge/verdictStanding.ts",
+        "src/lib/judge/verdictTrend.ts",
+        "src/lib/judge/calibration.ts",
+        "src/lib/craft/craftCell.ts",
+        "src/lib/craft/craft-verdicts-db.ts",
+        "src/lib/craft/lens-map.ts",
+        "src/lib/craft/lens-versions.ts",
+        "src/app/api/judge-verdicts/route.ts",
+        "src/app/api/craft-verdicts/route.ts"
+      ],
+      "group": null,
+      "group_id": null,
+      "id": "ac4cee9e-1527-46e9-8b16-f0f49affbe37",
+      "keywords": [
+        "judge-fleet",
+        "craft-loop",
+        "rubrics",
+        "lens",
+        "verdict",
+        "AAA-quality",
+        "dimensions",
+        "content-hash",
+        "spend-meter",
+        "verdict-trend"
+      ],
+      "last_written_at": "2026-08-17T19:58:55.862003200+00:00",
+      "name": "judge-craft-quality",
+      "pinned": false,
+      "tech_stack": [
+        "TypeScript",
+        "Next.js 16",
+        "better-sqlite3"
       ]
     },
     {
@@ -918,7 +1251,6 @@
         "src/lib/localization/",
         "src/stores/localizationPipelineStore.ts",
         "src/types/localization-pipeline.ts",
-        "src/app/api/implementation-plan/route.ts",
         "src/__tests__/knowledge/"
       ],
       "group": "AI & Developer Tooling",
@@ -934,7 +1266,9 @@
         "localization",
         "i18n"
       ],
+      "last_written_at": "2026-08-17T19:58:56.949114100+00:00",
       "name": "knowledge-system",
+      "pinned": false,
       "tech_stack": [
         "TypeScript"
       ]
@@ -958,9 +1292,7 @@
         "src/lib/level-design/",
         "src/lib/world/",
         "src/types/level-design.ts",
-        "src/types/procgen.ts",
-        "src/app/api/level-design/procgen/route.ts",
-        "src/app/api/level-design/scatter/route.ts"
+        "src/types/procgen.ts"
       ],
       "group": "Game World & Content",
       "group_id": "d12395f2-0687-415c-8094-701fc58f59be",
@@ -975,7 +1307,9 @@
         "world-building",
         "text-to-world"
       ],
+      "last_written_at": "2026-08-17T19:58:56.949414400+00:00",
       "name": "level-design-module",
+      "pinned": false,
       "tech_stack": [
         "TypeScript",
         "React"
@@ -997,10 +1331,7 @@
         "src/components/modules/content/materials/"
       ],
       "file_paths": [
-        "src/components/modules/content/materials/",
-        "src/lib/material-db.ts",
-        "src/app/api/materials/route.ts",
-        "src/types/material.ts"
+        "src/components/modules/content/materials/"
       ],
       "group": "Game World & Content",
       "group_id": "d12395f2-0687-415c-8094-701fc58f59be",
@@ -1015,7 +1346,9 @@
         "shader",
         "material-generation"
       ],
+      "last_written_at": "2026-08-17T19:58:56.949837500+00:00",
       "name": "material-module",
+      "pinned": false,
       "tech_stack": [
         "TypeScript",
         "React"
@@ -1033,22 +1366,19 @@
       "db_tables": [
         "evaluator_results"
       ],
-      "description": "Four-pass quality evaluation system (structure → quality → performance → compliance) that runs automated assessments against each module's code. Deep eval runs multi-dimensional scoring in parallel across configurable prompts. The evaluator module renders scorecards, trend charts, and drill-down views per evaluation pass. Results drive the Game Director's quality regression tracking.",
+      "description": "Four-pass quality evaluation system (ground-truth → structure → quality → performance) that runs automated assessments against each module's code. Deep eval runs multi-dimensional scoring in parallel across configurable prompts. The evaluator module renders scorecards, trend charts, and drill-down views per evaluation pass. Results feed the Game Director's quality regression tracking and the judge-craft-quality engine reads evaluator verdicts to populate the craft_verdicts table for the A-axis quality layer in the status dashboard.",
       "entry_points": [
         "src/lib/evaluator/",
         "src/components/modules/evaluator/"
       ],
       "file_paths": [
         "src/lib/evaluator/",
+        "src/lib/evaluator/module-eval-prompts.ts",
         "src/stores/evaluatorStore.ts",
         "src/stores/deepEvalStore.ts",
         "src/types/evaluator.ts",
         "src/components/modules/evaluator/",
-        "src/__tests__/evaluator/",
-        "src/lib/judge/",
-        "src/lib/status/judge-verdicts-db.ts",
-        "src/app/api/judge-verdicts/",
-        "scripts/judge-run.ts"
+        "src/__tests__/evaluator/"
       ],
       "group": "Quality & Evaluation",
       "group_id": "f1644b8d-63c1-4c5e-8773-79fea0f4b424",
@@ -1063,7 +1393,9 @@
         "performance",
         "multi-pass"
       ],
+      "last_written_at": "2026-08-17T19:58:56.950339100+00:00",
       "name": "module-evaluator",
+      "pinned": false,
       "tech_stack": [
         "TypeScript",
         "React"
@@ -1093,7 +1425,6 @@
         "src/hooks/useActiveModuleId.ts",
         "src/hooks/useTabFeatures.ts",
         "src/hooks/useNBA.ts",
-        "src/components/modules/shared/FeatureMatrix.tsx",
         "src/components/modules/shared/QuickActionsPanel.tsx"
       ],
       "group": "Game Design Studio",
@@ -1110,7 +1441,9 @@
         "dependency-graph",
         "knowledge-tips"
       ],
+      "last_written_at": "2026-08-17T19:58:56.951180500+00:00",
       "name": "module-system",
+      "pinned": false,
       "tech_stack": [
         "TypeScript",
         "Zustand"
@@ -1153,7 +1486,9 @@
         "spawn",
         "bridge-executor"
       ],
+      "last_written_at": "2026-06-24T10:17:16.446782+00:00",
       "name": "observation-testing",
+      "pinned": false,
       "tech_stack": [
         "TypeScript"
       ]
@@ -1169,7 +1504,7 @@
       "db_tables": [
         "pipeline_artifacts"
       ],
-      "description": "Acceptance logic engine that derives L0–L4 tier status (data/human-selection/static/runtime/visual) from pipeline artifact state rather than manual toggles. Resolves config-complete vs deferred status, provides the language/labels used in acceptance banners, and summarizes entity pipeline health. The acceptance engine is the single source of truth for whether a pipeline step has been completed.",
+      "description": "Acceptance logic engine that derives L0–L4 tier status (data/human-selection/static/runtime/visual) from pipeline artifact state rather than manual toggles. Resolves config-complete vs deferred status and provides the language/labels used in acceptance banners. The judgeBridge integrates judge-fleet verdicts into the acceptance resolution chain. bindGeneratedIcons and bindIconsAll wire produced icon assets into gallery acceptance. pythonDrain handles acceptance for Python-executed drain gates. The acceptance engine is the single source of truth for pipeline step completion.",
       "entry_points": [
         "src/components/layout-lab/labAcceptance.ts",
         "src/lib/catalog/acceptance/"
@@ -1180,6 +1515,12 @@
         "src/components/layout-lab/nextActionableStep.ts",
         "src/components/layout-lab/labGlossary.ts",
         "src/lib/catalog/acceptance/",
+        "src/lib/catalog/acceptance/bindGeneratedIcons.ts",
+        "src/lib/catalog/acceptance/bindIconsAll.ts",
+        "src/lib/catalog/acceptance/dataCheckers.ts",
+        "src/lib/catalog/acceptance/galleryArtifact.ts",
+        "src/lib/catalog/acceptance/judgeBridge.ts",
+        "src/lib/catalog/acceptance/pythonDrain.ts",
         "src/lib/catalog/gap-analysis/"
       ],
       "group": "Catalog Pipeline",
@@ -1197,7 +1538,9 @@
         "config-complete",
         "pipeline-status"
       ],
+      "last_written_at": "2026-08-17T19:58:56.072171400+00:00",
       "name": "pipeline-acceptance-engine",
+      "pinned": false,
       "tech_stack": [
         "TypeScript"
       ]
@@ -1212,7 +1555,7 @@
         "catalog-browser-ui"
       ],
       "db_tables": [],
-      "description": "Shared component library for catalog pipeline steps implementing the View/Produce/Acceptance model. CliProduce handles CLI invocation with direction text and prompt logic; StepFrame wraps steps with an acceptance banner; ChartPanel renders budget bars, scatter, and histograms; CandidateGallery browses and compares generative batches. Every pipeline step must reuse these rather than hand-rolling equivalent UI.",
+      "description": "Shared component library for catalog pipeline steps implementing the View/Produce/Acceptance model. CliProduce handles CLI invocation with direction text; StepFrame wraps steps with an acceptance banner (ProvenanceStrip, StepHistoryPanel for revision restore); ChartPanel renders budget bars, scatter, histogram, and waveform; CandidateGallery browses and compares generative batches with persistent genHistory. DataTable renders attribute manifests. GlbViewer/GlbPreviewPanel provide interactive 3D mesh preview. StepLibraryPicker lets produce panels reference the asset library. stepEvidence cites served artifacts in prompts. useStepAcceptance is the single on-screen acceptance derivation hook for all step UIs. Every pipeline step must reuse these rather than hand-rolling equivalent UI.",
       "entry_points": [
         "src/components/layout-lab/steps/shared/CliProduce.tsx",
         "src/components/layout-lab/steps/StepFrame.tsx"
@@ -1222,12 +1565,32 @@
         "src/components/layout-lab/steps/StepFrame.tsx",
         "src/components/layout-lab/steps/shared/ChartPanel.tsx",
         "src/components/layout-lab/steps/shared/CandidateGallery.tsx",
-        "src/components/layout-lab/steps/controls.tsx",
-        "src/components/layout-lab/steps/index.ts",
+        "src/components/layout-lab/steps/shared/DataTable.tsx",
+        "src/components/layout-lab/steps/shared/GlbViewer.tsx",
+        "src/components/layout-lab/steps/shared/GlbPreviewPanel.tsx",
+        "src/components/layout-lab/steps/shared/RawArtifactDisclosure.tsx",
+        "src/components/layout-lab/steps/shared/StepHistoryPanel.tsx",
+        "src/components/layout-lab/steps/shared/StepLibraryPicker.tsx",
+        "src/components/layout-lab/steps/shared/ProvenanceStrip.tsx",
+        "src/components/layout-lab/steps/shared/stepEvidence.ts",
+        "src/components/layout-lab/steps/shared/libraryReference.ts",
+        "src/components/layout-lab/steps/shared/useStepAcceptance.ts",
+        "src/components/layout-lab/steps/shared/useDispatchPlan.ts",
+        "src/components/layout-lab/steps/shared/useGeneratedImageAssets.ts",
+        "src/components/layout-lab/steps/shared/useGeneratedMeshAssets.ts",
         "src/components/layout-lab/steps/shared/genHistory.ts",
         "src/components/layout-lab/steps/shared/genericGalleryCandidates.ts",
+        "src/components/layout-lab/steps/shared/imageGalleryCandidates.ts",
+        "src/components/layout-lab/steps/shared/meshGalleryCandidates.ts",
         "src/components/layout-lab/steps/shared/itemGenCandidates.ts",
-        "src/components/layout-lab/ArchetypeStep.tsx"
+        "src/components/layout-lab/steps/shared/genericFixCopy.ts",
+        "src/components/layout-lab/steps/shared/hash.ts",
+        "src/components/layout-lab/steps/StaticStepFrame.tsx",
+        "src/components/layout-lab/steps/GenerativeStepFrame.tsx",
+        "src/components/layout-lab/steps/stepProps.ts",
+        "src/components/layout-lab/steps/useStaticStep.ts",
+        "src/components/layout-lab/steps/controls.tsx",
+        "src/components/layout-lab/steps/index.ts"
       ],
       "group": "Catalog Pipeline",
       "group_id": "cf8152f9-b26b-4fa8-a384-2b8081fff403",
@@ -1244,7 +1607,9 @@
         "produce",
         "view"
       ],
+      "last_written_at": "2026-08-17T19:58:56.952744800+00:00",
       "name": "pipeline-step-components",
+      "pinned": false,
       "tech_stack": [
         "React",
         "TypeScript"
@@ -1272,9 +1637,7 @@
         "src/lib/prompt-evolution/",
         "src/stores/promptEvolutionStore.ts",
         "src/types/prompt-evolution.ts",
-        "src/lib/text-diff.ts",
-        "src/components/ui/PromptDiffView.tsx",
-        "src/hooks/usePromptEvolution.ts"
+        "src/lib/text-diff.ts"
       ],
       "group": "Game Design Studio",
       "group_id": "2b214a4b-ebce-49ea-b1b5-d8b333b7ffbd",
@@ -1291,7 +1654,9 @@
         "best-practices",
         "output-schema"
       ],
+      "last_written_at": "2026-08-17T19:58:56.953208300+00:00",
       "name": "prompt-engineering",
+      "pinned": false,
       "tech_stack": [
         "TypeScript"
       ]
@@ -1312,13 +1677,10 @@
         "src/components/modules/evaluator/EconomySimulator.tsx"
       ],
       "file_paths": [
-        "src/components/modules/evaluator/CombatSimulator.tsx",
-        "src/components/modules/evaluator/EconomySimulator.tsx",
         "src/stores/combatSimulatorStore.ts",
         "src/stores/economySimulatorStore.ts",
         "src/lib/combat/",
         "src/lib/economy/",
-        "src/lib/economy-sensitivity-sweep.ts",
         "src/lib/balance/",
         "src/types/combat-simulator.ts",
         "src/types/economy-simulator.ts",
@@ -1339,7 +1701,9 @@
         "tuning",
         "faucet-sink"
       ],
+      "last_written_at": "2026-08-17T19:58:56.953661500+00:00",
       "name": "simulation-tools",
+      "pinned": false,
       "tech_stack": [
         "TypeScript",
         "React"
@@ -1383,11 +1747,79 @@
         "replay-buffer",
         "state-management"
       ],
+      "last_written_at": "2026-06-24T10:17:16.447028400+00:00",
       "name": "state-management",
+      "pinned": false,
       "tech_stack": [
         "TypeScript",
         "Zustand",
         "React"
+      ]
+    },
+    {
+      "api_surface": "GET /api/judge-verdicts, GET /api/craft-verdicts",
+      "business_feature": "Status Health Dashboard",
+      "category": "ui",
+      "cross_refs": [
+        "pipeline-acceptance-engine",
+        "judge-craft-quality",
+        "catalog-pipeline-registry",
+        "module-evaluator"
+      ],
+      "db_tables": [
+        "judge_verdicts",
+        "craft_verdicts",
+        "pipeline_artifacts"
+      ],
+      "description": "Project-wide status health map at /status showing pipeline coverage per catalog with tier stripes (L0–L4), capability model benchmarks, item-focus detail views, and model performance comparisons. The statusModel derives engine attribution (verified/trusted/ungated/dark) from step-facts.json and judge-verdicts; readiness.ts computes a readiness score across pipeline completeness, UE test gates, and craft-loop ceilings. Each pipeline swimlane is clickable, surfacing evidence modals with audit provenance. The Dev Inspector (_dev-inspector) provides a developer-facing overlay for locating components and inspecting capability coverage.",
+      "entry_points": [
+        "src/components/status/StatusDashboard.tsx",
+        "src/lib/status/statusModel.ts"
+      ],
+      "file_paths": [
+        "src/app/_dev-inspector/DevInspector.tsx",
+        "src/app/_dev-inspector/devInspectorUi.tsx",
+        "src/app/_dev-inspector/devLocate.ts",
+        "src/components/status/StatusDashboard.tsx",
+        "src/components/status/StatusTabs.tsx",
+        "src/components/status/StatusCell.tsx",
+        "src/components/status/PipelinesView.tsx",
+        "src/components/status/CapabilityView.tsx",
+        "src/components/status/CategoryView.tsx",
+        "src/components/status/ModelsView.tsx",
+        "src/components/status/ItemFocusView.tsx",
+        "src/components/status/MiniSwimlane.tsx",
+        "src/components/status/EvidenceModal.tsx",
+        "src/components/status/EntitySearch.tsx",
+        "src/lib/status/statusModel.ts",
+        "src/lib/status/readiness.ts",
+        "src/lib/status/craft.ts",
+        "src/lib/status/itemFocusModel.ts",
+        "src/lib/status/capabilityModel.ts",
+        "src/lib/status/judge-verdicts-db.ts"
+      ],
+      "group": null,
+      "group_id": null,
+      "id": "3e63083f-1284-42d4-9d76-9ff18ba3e3e2",
+      "keywords": [
+        "status-map",
+        "pipeline-health",
+        "tier-stripes",
+        "readiness",
+        "step-facts",
+        "capability-model",
+        "swimlane",
+        "dev-inspector",
+        "verdict-db",
+        "ceiling"
+      ],
+      "last_written_at": "2026-08-17T19:58:56.954749100+00:00",
+      "name": "status-health-dashboard",
+      "pinned": false,
+      "tech_stack": [
+        "Next.js 16",
+        "React 19",
+        "TypeScript"
       ]
     },
     {
@@ -1434,7 +1866,9 @@
         "plugin",
         "connection"
       ],
+      "last_written_at": "2026-06-24T10:17:16.443097300+00:00",
       "name": "ue5-bridge-client",
+      "pinned": false,
       "tech_stack": [
         "TypeScript",
         "React"
@@ -1457,13 +1891,9 @@
       ],
       "file_paths": [
         "src/lib/ue-experiment/",
-        "src/lib/observation/",
         "src/stores/baselineStore.ts",
-        "src/types/ue-experiment.ts",
         "src/components/experiment-lab/",
-        "src/app/api/experiments/route.ts",
-        "src/app/api/verify/visual/route.ts",
-        "src/lib/animation-ledger.mjs"
+        "src/app/api/verify/visual/route.ts"
       ],
       "group": "UE5 Integration",
       "group_id": "2183a3fc-d77e-47cb-89ac-0acbb00098e6",
@@ -1478,7 +1908,9 @@
         "visual-capture",
         "reality-ledger"
       ],
+      "last_written_at": "2026-08-17T19:58:56.955509700+00:00",
       "name": "ue5-experiment-runner",
+      "pinned": false,
       "tech_stack": [
         "TypeScript",
         "React"
@@ -1525,7 +1957,9 @@
         "chart-colors",
         "accessibility"
       ],
+      "last_written_at": "2026-06-24T10:17:16.447277600+00:00",
       "name": "ui-primitives",
+      "pinned": false,
       "tech_stack": [
         "TypeScript",
         "React",
@@ -1534,7 +1968,7 @@
       ]
     }
   ],
-  "generated_at": "2026-06-24T10:17:16.922495400+00:00",
+  "generated_at": "2026-08-17T19:58:57.623235800+00:00",
   "generator": "personas-context-scan",
   "groups": [
     {
@@ -1599,10 +2033,15 @@
     "name": "pof",
     "root": "C:\\Users\\kazda\\kiro\\pof"
   },
+  "provenance": {
+    "git_commit": "6b03c783e9dced30fd5db81ced5754d36eb796c7",
+    "git_commit_count": 1750
+  },
   "stats": {
-    "contexts": 33,
-    "files": 286,
-    "groups": 8
+    "contexts": 38,
+    "files": 441,
+    "groups": 8,
+    "use_cases": 0
   },
   "taxonomy": {
     "context_categories": [
@@ -1621,5 +2060,6 @@
       "data"
     ]
   },
+  "use_cases": [],
   "version": 2
 }
