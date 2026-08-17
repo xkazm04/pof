@@ -102,3 +102,19 @@
   matcher (whole-list → primary-reason) is the signal to ask whether the heuristic is the
   right shape at all. Here it was worth keeping only because the default is off; had it been
   on by default, the honest move would have been to remove the feature, not tune it again.
+
+## 1.6 — 2026-08-17 — pof (run `souls-like-3-days`; bumped to 1.7 in the same change)
+- **Measure a numeric premise on local artifacts BEFORE the pick gate.** Phase 3's "no grep/read yet"
+  rule is right for code, wrong for produced artifacts that already sit on disk: one `trimesh`
+  extents loop over `generated/*.glb` cost seconds and converted a hunch into a proven, fixture-
+  bearing finding (every mesh = 1.0 m). Applied to SKILL.md Phase 3 as a scoped exception.
+- **"Affected tests" must include the golden/snapshot suites that pin the edited data.** Two prior
+  research runs each added a `ue-gotchas.ts` entry, ran the gotcha unit test, and shipped — while
+  the prompt golden rail that renders those entries into every task prompt went red and stayed red
+  for 8 days. Applied to SKILL.md Phase 7 validate line.
+- **Version conflict note — THIRD strike.** `~/.claude/skills/research/` (personas lineage, v1.3
+  now) auto-loaded over this skill again on invocation and had to be overridden by reading the
+  repo-local SKILL.md. Sync step (b) skipped again (overwriting would destroy the personas skill).
+  Three strikes = the rename to `research-pof` is now warranted; not done here because renaming the
+  slash command is the user's call. Recommend it explicitly.
+
