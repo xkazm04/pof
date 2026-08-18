@@ -15,6 +15,7 @@ import { useGeneratedImageAssets } from './shared/useGeneratedImageAssets';
 import { useGeneratedMeshAssets } from './shared/useGeneratedMeshAssets';
 import { fixDirectionFor, withGenericFixCopy } from './shared/genericFixCopy';
 import { imageGalleryCandidates } from './shared/imageGalleryCandidates';
+import { PanelCrashBoundary } from '../StepCrashBoundary';
 import { useLabPipelineStore } from '../labPipelineStore';
 import { useStepAcceptance } from './shared/useStepAcceptance';
 import { useCanonStore } from '../canonStore';
@@ -379,8 +380,13 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
     const glbUrl = typeof sel?.payload?.glbUrl === 'string' ? sel.payload.glbUrl : null;
     panels = [
       { label: 'Candidate gallery (kept across re-rolls)', node: (
-        <CandidateGallery t={t} history={history} onSelect={reselect}
-          emptyHint="No candidates yet — run Produce to generate the first batch." />
+        // Panel-scoped containment: the gallery projects whatever `data.genHistory` holds —
+        // written by other sessions, the MCP submit path and headless drains. A throw here
+        // costs this panel, never the acceptance verdict or the Raw artifact beside it.
+        <PanelCrashBoundary t={t} panel="candidate gallery" step={step}>
+          <CandidateGallery t={t} history={history} onSelect={reselect}
+            emptyHint="No candidates yet — run Produce to generate the first batch." />
+        </PanelCrashBoundary>
       ) },
       ...(glbUrl ? [{ label: GLB_PREVIEW_LABEL, node: <GlbPreviewPanel t={t} url={glbUrl} /> }] : []),
       { label: 'Selected', node: (
@@ -411,7 +417,13 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
     // data get the same interactive preview — rotate the rigged/animated mesh in-place.
     const dataGlbUrl = typeof (data as { glbUrl?: unknown })?.glbUrl === 'string' ? (data as { glbUrl: string }).glbUrl : null;
     panels = [
-      { label: 'View', node: <ViewPanel t={t} view={spec.view} data={data} /> },
+      // Same containment for the generic View: it coerces arbitrary artifact `data` into
+      // charts/tables/graphs for ~330 steps, so a malformed row breaks the panel, not the step.
+      { label: 'View', node: (
+        <PanelCrashBoundary t={t} panel="View" step={step}>
+          <ViewPanel t={t} view={spec.view} data={data} />
+        </PanelCrashBoundary>
+      ) },
       ...(dataGlbUrl ? [{ label: GLB_PREVIEW_LABEL, node: <GlbPreviewPanel t={t} url={dataGlbUrl} /> }] : []),
       { label: 'Produce', node: cli((pctx) => dispatchProduce(pctx)) },
     ];

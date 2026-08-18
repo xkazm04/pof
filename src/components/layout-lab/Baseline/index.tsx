@@ -13,6 +13,7 @@ import { DriftBanner } from '../DriftBanner';
 import { ProduceErrorBanner } from '../ProduceErrorBanner';
 import { ProduceLogPanel } from '../ProduceLogPanel';
 import { RefreshFromServer } from '../RefreshFromServer';
+import { StepCrashBoundary, type AdoptOutcome } from '../StepCrashBoundary';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { Button } from '../ui/Button';
@@ -62,6 +63,20 @@ export function Baseline(props: Props) {
   // Reset is destructive on BOTH sides (local store + persisted server artifacts), so it
   // goes through the shared ConfirmDialog rather than firing on the click.
   const [confirmReset, setConfirmReset] = useState(false);
+
+  /**
+   * The crash card's "adopt server truth" escape, and the ONE thing `adoptServerStep`
+   * cannot say for itself: it silently no-ops when the server holds no row for the step.
+   * Comparing the stored artifact identity across the call reports which happened, so a
+   * click that changed nothing says so instead of looking like a fix.
+   */
+  const adoptServerForStep = (step: string): AdoptOutcome => {
+    if (!entity) return 'no-server-artifact';
+    const read = () => useLabPipelineStore.getState().byEntity[entity.id]?.[step];
+    const before = read();
+    adoptServerStep(step);
+    return read() === before ? 'no-server-artifact' : 'adopted';
+  };
 
   // Column bodies, factored so they render either inline (wide) or inside a
   // slide-over drawer (narrow) without duplicating the tree/timeline markup.
@@ -212,7 +227,22 @@ export function Baseline(props: Props) {
               ? summarizeDoneProvenance(steps, (s) => getStepFact(catId, s))
               : undefined;
             return (
-              <>
+              // Crash containment: one throw in any of the ~350 step renderers — or in the
+              // coach/banners reading the same untrusted artifact `data` — used to take the
+              // whole application shell down with it, because this lab IS the homepage.
+              // Contained here it costs exactly this canvas: the tree, rail, header and
+              // search stay mounted and interactive. Keyed on entity+step, so moving to
+              // another step is itself an escape from a crashed one.
+              <StepCrashBoundary
+                key={`${entity?.id ?? 'none'}:${stepName}`}
+                t={t}
+                step={stepName}
+                catalogId={catId}
+                catalogLabel={detail?.catalog.label}
+                entityName={entity?.name}
+                artifact={entitySteps?.[stepName]}
+                onAdoptServer={entity ? () => adoptServerForStep(stepName) : undefined}
+              >
                 {entity && (
                   <NextStepCoach
                     t={t}
@@ -276,7 +306,7 @@ export function Baseline(props: Props) {
                     </p>
                   </div>
                 )}
-              </>
+              </StepCrashBoundary>
             );
           })() : (
             <div style={{ maxWidth: 620 }}>
