@@ -24,6 +24,8 @@ export function useLevelFlowEditor({
     offsetX: number;
     offsetY: number;
   } | null>(null);
+  /** True once a drag has actually moved the node — a plain click must not write. */
+  const didDragRef = useRef(false);
   const [connectingFrom, setConnectingFrom] = useState<string | null>(null);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
@@ -80,10 +82,14 @@ export function useLevelFlowEditor({
     setPendingDeleteRoomId(null);
   }, [pendingDeleteRoomId, deleteRoom]);
 
-  /** Keyboard alternative to dragging a node with the mouse. */
+  /**
+   * Keyboard alternative to dragging a node with the mouse. Held arrow keys
+   * auto-repeat, so the move is buffered locally and written once the repeat
+   * settles — same one-edit-one-write rule as a mouse drag.
+   */
   const nudgeRoom = useCallback((roomId: string, dx: number, dy: number) => {
     if (readOnly) return;
-    onUpdateRooms(rooms.map((r) => (r.id === roomId ? { ...r, x: r.x + dx, y: r.y + dy } : r)));
+    onUpdateRooms(rooms.map((r) => (r.id === roomId ? { ...r, x: r.x + dx, y: r.y + dy } : r)), 'debounce');
   }, [readOnly, rooms, onUpdateRooms]);
 
   // ── Connection handling ──
@@ -171,17 +177,23 @@ export function useLevelFlowEditor({
     }
     if (!dragState) return;
     const pt = getSVGPoint(e);
+    // Staged, not written: a drag is ONE edit however many frames it spans.
+    didDragRef.current = true;
     onUpdateRooms(rooms.map((r) =>
       r.id === dragState.roomId
         ? { ...r, x: pt.x - dragState.offsetX, y: pt.y - dragState.offsetY }
         : r
-    ));
+    ), 'stage');
   }, [dragState, isPanning, getSVGPoint, rooms, onUpdateRooms]);
 
   const handleMouseUp = useCallback(() => {
+    // Mouseup is the commit boundary. `rooms` is already the staged result of the
+    // last mouse-move, so this writes the drag's final position exactly once.
+    if (dragState && didDragRef.current) onUpdateRooms(rooms, 'commit');
+    didDragRef.current = false;
     setDragState(null);
     setIsPanning(false);
-  }, []);
+  }, [dragState, rooms, onUpdateRooms]);
 
   const handleSvgMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.target === svgRef.current || (e.target as SVGElement).tagName === 'rect') {

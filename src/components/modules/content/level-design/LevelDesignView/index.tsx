@@ -10,7 +10,7 @@ export { SyncDot } from './SyncDot';
 
 export function LevelDesignView() {
   const vm = useLevelDesignView();
-  const { activeDoc, isLoading, error, retry } = vm;
+  const { activeDoc, docs, isLoading, error, retry } = vm;
 
   if (isLoading) {
     return (
@@ -20,7 +20,10 @@ export function LevelDesignView() {
     );
   }
 
-  if (error) {
+  // A load failure only replaces the view while there is nothing to show. Once
+  // documents are on screen, a failed background refresh must never unmount the
+  // editor out from under an in-progress edit — it reports inline instead.
+  if (error && docs.length === 0) {
     return <FetchError message={error} onRetry={retry} />;
   }
 

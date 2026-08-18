@@ -23,12 +23,14 @@ import type { StreamingZonePlannerConfig } from '../StreamingZonePlanner';
 import type { ProceduralLevelConfig } from '../ProceduralLevelWizard';
 import { MODULE_COLORS, getAppOrigin } from '@/lib/constants';
 import type { TabId } from './types';
+import type { EditCommitMode } from '../editCommitMode';
+import { useDocCommitBuffer, type CommitOptions, type DocPatch } from './useDocCommitBuffer';
 
 export function useLevelDesignView() {
   const {
     docs,
     summary,
-    activeDoc,
+    activeDoc: serverDoc,
     isLoading,
     error,
     retry,
@@ -37,6 +39,29 @@ export function useLevelDesignView() {
     updateDoc,
     deleteDoc,
   } = useDesignDocument();
+
+  // Every edit below goes through the buffer: local immediately, written on a
+  // real commit boundary. `activeDoc` is the buffered view, so the whole tree
+  // renders the user's latest keystroke/drag frame without waiting on a PUT.
+  const buffer = useDocCommitBuffer({ baseDoc: serverDoc, updateDoc });
+  const {
+    doc: activeDoc,
+    stage,
+    stageDebounced,
+    commit,
+    flush: flushDoc,
+    retry: retrySave,
+    dismissError: dismissSaveError,
+    saveError,
+    isSaving,
+    isDirty,
+  } = buffer;
+
+  const applyEdit = useCallback((patch: DocPatch, mode: EditCommitMode = 'commit', opts?: CommitOptions) => {
+    if (mode === 'stage') stage(patch, opts);
+    else if (mode === 'debounce') stageDebounced(patch, opts);
+    else commit(patch, opts);
+  }, [stage, stageDebounced, commit]);
 
   const projectName = useProjectStore((s) => s.projectName);
   const projectPath = useProjectStore((s) => s.projectPath);
@@ -67,11 +92,8 @@ export function useLevelDesignView() {
     accentColor: MODULE_COLORS.content,
     onComplete: (success) => {
       if (success && activeDoc) {
-        updateDoc({
-          id: activeDoc.id,
-          syncStatus: 'synced',
-          lastGeneratedAt: new Date().toISOString(),
-        });
+        // An explicit syncStatus wins over the buffer's doc-ahead escalation.
+        commit({ syncStatus: 'synced', lastGeneratedAt: new Date().toISOString() });
       }
     },
   });
@@ -174,26 +196,39 @@ export function useLevelDesignView() {
   const handleCreateDoc = useCallback(async () => {
     if (!newDocName.trim()) return;
     setIsCreating(true);
-    await createDoc({ name: newDocName.trim(), description: '' });
-    setNewDocName('');
+    const result = await createDoc({ name: newDocName.trim(), description: '' });
     setIsCreating(false);
+    if (!result.ok) {
+      toast.error(`Could not create the level design: ${result.error}`);
+      return;
+    }
+    setNewDocName('');
   }, [newDocName, createDoc]);
 
-  const handleUpdateRooms = useCallback((rooms: RoomNode[]) => {
-    if (!activeDoc) return;
-    updateDoc({ id: activeDoc.id, rooms, syncStatus: activeDoc.syncStatus === 'synced' ? 'doc-ahead' : activeDoc.syncStatus });
-  }, [activeDoc, updateDoc]);
+  /** Switching documents must not abandon a buffered edit on the one being left. */
+  const selectDoc = useCallback((id: number | null) => {
+    flushDoc();
+    setActiveDocId(id);
+  }, [flushDoc, setActiveDocId]);
+
+  const handleDeleteDoc = useCallback(async (id: number) => {
+    const result = await deleteDoc(id);
+    if (!result.ok) toast.error(`Could not delete the level design: ${result.error}`);
+  }, [deleteDoc]);
+
+  const handleUpdateRooms = useCallback((rooms: RoomNode[], mode?: EditCommitMode) => {
+    applyEdit({ rooms }, mode, { marksDocAhead: true });
+  }, [applyEdit]);
 
   const handleUpdateConnections = useCallback((connections: LevelDesignDocument['connections']) => {
-    if (!activeDoc) return;
-    updateDoc({ id: activeDoc.id, connections });
-  }, [activeDoc, updateDoc]);
+    applyEdit({ connections });
+  }, [applyEdit]);
 
-  const handleRoomUpdate = useCallback((updatedRoom: RoomNode) => {
+  const handleRoomUpdate = useCallback((updatedRoom: RoomNode, mode?: EditCommitMode) => {
     if (!activeDoc) return;
     const rooms = activeDoc.rooms.map((r) => (r.id === updatedRoom.id ? updatedRoom : r));
-    updateDoc({ id: activeDoc.id, rooms, syncStatus: activeDoc.syncStatus === 'synced' ? 'doc-ahead' : activeDoc.syncStatus });
-  }, [activeDoc, updateDoc]);
+    applyEdit({ rooms }, mode, { marksDocAhead: true });
+  }, [activeDoc, applyEdit]);
 
   const handleGenerateRoomCode = useCallback((room: RoomNode) => {
     if (!activeDoc) return;
@@ -219,20 +254,19 @@ export function useLevelDesignView() {
     codegenCli.sendPrompt(prompt);
   }, [activeDoc, ctx, codegenCli]);
 
+  // Free-text fields: applied locally on every keystroke (so the textarea is never
+  // a round trip behind the cursor) and written once the typing pauses.
   const handleNarrativeChange = useCallback((designNarrative: string) => {
-    if (!activeDoc) return;
-    updateDoc({ id: activeDoc.id, designNarrative });
-  }, [activeDoc, updateDoc]);
+    stageDebounced({ designNarrative });
+  }, [stageDebounced]);
 
   const handlePacingNotesChange = useCallback((pacingNotes: string) => {
-    if (!activeDoc) return;
-    updateDoc({ id: activeDoc.id, pacingNotes });
-  }, [activeDoc, updateDoc]);
+    stageDebounced({ pacingNotes });
+  }, [stageDebounced]);
 
   const handleDescriptionChange = useCallback((description: string) => {
-    if (!activeDoc) return;
-    updateDoc({ id: activeDoc.id, description });
-  }, [activeDoc, updateDoc]);
+    stageDebounced({ description });
+  }, [stageDebounced]);
 
   const selectedRoom = activeDoc?.rooms.find((r) => r.id === selectedRoomId) ?? null;
   const isAnyRunning = codegenCli.isRunning || syncCli.isRunning;
@@ -249,8 +283,15 @@ export function useLevelDesignView() {
     isLoading,
     error,
     retry,
-    setActiveDocId,
-    deleteDoc,
+    setActiveDocId: selectDoc,
+    deleteDoc: handleDeleteDoc,
+    // Buffer surface — a failed save stays on screen and stays retryable.
+    saveError,
+    retrySave,
+    dismissSaveError,
+    isSaving,
+    isDirty,
+    flushDoc,
     activeTab,
     setActiveTab,
     selectedRoomId,

@@ -1,5 +1,6 @@
 import { getDb } from './db';
 import { buildUpdateQuery } from './db-utils';
+import { logger } from './logger';
 import type {
   LevelDesignDocument,
   LevelDesignSummary,
@@ -38,23 +39,67 @@ export function ensureLevelDesignTable() {
 
 // ── Helpers ──
 
-function rowToDoc(row: Record<string, unknown>): LevelDesignDocument {
-  return {
+/**
+ * Parse one JSON blob column, reporting failure instead of throwing.
+ *
+ * These columns are free-form TEXT: a truncated write, a hand-edited row or an
+ * older schema is enough to make `JSON.parse` throw. Thrown from inside a
+ * `rows.map()`, that single bad row used to 500 the whole GET — every level
+ * design in the project became unreachable because one was damaged.
+ */
+function parseBlob<T>(raw: unknown, field: string, broken: string[]): T[] {
+  const text = typeof raw === 'string' ? raw : '';
+  if (!text) return [];
+  try {
+    const parsed: unknown = JSON.parse(text);
+    if (!Array.isArray(parsed)) {
+      broken.push(field);
+      return [];
+    }
+    return parsed as T[];
+  } catch {
+    broken.push(field);
+    return [];
+  }
+}
+
+/**
+ * Marker appended to a document whose stored data could not be read, so a
+ * damaged row is loudly identifiable in the sidebar rather than silently
+ * appearing as an empty (and therefore over-writable) level.
+ */
+export const BROKEN_DOC_MARKER = 'UNREADABLE';
+
+export function brokenDocName(name: string, brokenFields: string[]): string {
+  return `${name} [${BROKEN_DOC_MARKER}: ${brokenFields.join(', ')}]`;
+}
+
+export function rowToDoc(row: Record<string, unknown>): LevelDesignDocument {
+  const broken: string[] = [];
+  const name = (row.name as string) ?? '';
+
+  const doc: LevelDesignDocument = {
     id: row.id as number,
-    name: row.name as string,
-    description: row.description as string,
-    designNarrative: row.design_narrative as string,
-    rooms: JSON.parse((row.rooms as string) || '[]'),
-    connections: JSON.parse((row.connections as string) || '[]'),
-    difficultyArc: JSON.parse((row.difficulty_arc as string) || '[]'),
-    pacingNotes: row.pacing_notes as string,
+    name,
+    description: (row.description as string) ?? '',
+    designNarrative: (row.design_narrative as string) ?? '',
+    rooms: parseBlob<RoomNode>(row.rooms, 'rooms', broken),
+    connections: parseBlob<LevelDesignDocument['connections'][number]>(row.connections, 'connections', broken),
+    difficultyArc: parseBlob<string>(row.difficulty_arc, 'difficultyArc', broken),
+    pacingNotes: (row.pacing_notes as string) ?? '',
     syncStatus: row.sync_status as LevelDesignDocument['syncStatus'],
-    syncReport: JSON.parse((row.sync_report as string) || '[]'),
+    syncReport: parseBlob<LevelDesignDocument['syncReport'][number]>(row.sync_report, 'syncReport', broken),
     lastGeneratedAt: row.last_generated_at as string | null,
     lastCodeHash: row.last_code_hash as string | null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };
+
+  if (broken.length > 0) {
+    logger.error(`level-design doc ${doc.id} has unreadable data in: ${broken.join(', ')}`);
+    doc.name = brokenDocName(name, broken);
+  }
+  return doc;
 }
 
 // ── CRUD ──
@@ -146,7 +191,9 @@ export function getSummary(): LevelDesignSummary {
     else if (status === 'diverged' || status === 'doc-ahead' || status === 'code-ahead') divergedCount++;
     else if (status === 'unlinked') unlinkedCount++;
 
-    const rooms: RoomNode[] = JSON.parse(row.rooms || '[]');
+    // Same guard as rowToDoc: one damaged blob must not take down the summary
+    // (and with it the whole document list) for every other level.
+    const rooms = parseBlob<RoomNode>(row.rooms, 'rooms', []);
     totalRooms += rooms.length;
     for (const room of rooms) {
       if (room.difficulty >= 1 && room.difficulty <= 5) diffDist[room.difficulty]++;

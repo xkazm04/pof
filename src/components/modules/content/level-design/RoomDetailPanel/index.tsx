@@ -5,12 +5,20 @@ import {
   FileCode, ChevronDown, ChevronRight, Zap,
 } from 'lucide-react';
 import type { RoomNode, PacingCurve, SpawnEntry } from '@/types/level-design';
+import type { EditCommitMode } from '../editCommitMode';
 import { ROOM_TYPE_CONFIG, ALL_ROOM_TYPES, ALL_PACING, ALL_DIFFICULTIES, DIFFICULTY_COLORS } from './constants';
 import { SpawnEntriesPanel } from './SpawnEntriesPanel';
 
 interface RoomDetailPanelProps {
   room: RoomNode;
-  onUpdate: (room: RoomNode) => void;
+  /**
+   * Discrete edits (type, difficulty, pacing, spawn rows) arrive with the default
+   * `commit`; the free-text fields arrive as `debounce` so a typed sentence is one
+   * write, not one per character. `onBlur` still commits immediately.
+   */
+  onUpdate: (room: RoomNode, mode?: EditCommitMode) => void;
+  /** Commit whatever the panel has buffered (field blur). */
+  onFlush?: () => void;
   onGenerateCode: (room: RoomNode) => void;
   accentColor: string;
   isGenerating: boolean;
@@ -19,6 +27,7 @@ interface RoomDetailPanelProps {
 export function RoomDetailPanel({
   room,
   onUpdate,
+  onFlush,
   onGenerateCode,
   accentColor,
   isGenerating,
@@ -29,9 +38,16 @@ export function RoomDetailPanel({
   const cfg = ROOM_TYPE_CONFIG[room.type];
   const Icon = cfg.icon;
 
-  const updateField = useCallback(<K extends keyof RoomNode>(key: K, value: RoomNode[K]) => {
-    onUpdate({ ...room, [key]: value });
+  const updateField = useCallback(<K extends keyof RoomNode>(key: K, value: RoomNode[K], mode?: EditCommitMode) => {
+    onUpdate({ ...room, [key]: value }, mode);
   }, [room, onUpdate]);
+
+  /** Free-text field: the value is applied locally now and written after the pause. */
+  const editText = useCallback(<K extends keyof RoomNode>(key: K, value: RoomNode[K]) => {
+    updateField(key, value, 'debounce');
+  }, [updateField]);
+
+  const flush = useCallback(() => onFlush?.(), [onFlush]);
 
   const addSpawnEntry = useCallback(() => {
     const entry: SpawnEntry = {
@@ -44,10 +60,11 @@ export function RoomDetailPanel({
     updateField('spawnEntries', [...room.spawnEntries, entry]);
   }, [room.spawnEntries, updateField]);
 
-  const updateSpawn = useCallback((id: string, patch: Partial<SpawnEntry>) => {
+  const updateSpawn = useCallback((id: string, patch: Partial<SpawnEntry>, mode?: EditCommitMode) => {
     updateField(
       'spawnEntries',
-      room.spawnEntries.map((s) => (s.id === id ? { ...s, ...patch } : s))
+      room.spawnEntries.map((s) => (s.id === id ? { ...s, ...patch } : s)),
+      mode,
     );
   }, [room.spawnEntries, updateField]);
 
@@ -74,7 +91,8 @@ export function RoomDetailPanel({
             <input
               type="text"
               value={room.name}
-              onChange={(e) => updateField('name', e.target.value)}
+              onChange={(e) => editText('name', e.target.value)}
+              onBlur={flush}
               className="w-full bg-transparent text-lg font-bold text-violet-100 outline-none border-b border-transparent focus:border-violet-500/50 transition-colors uppercase tracking-wider truncate"
               spellCheck={false}
             />
@@ -122,7 +140,8 @@ export function RoomDetailPanel({
               <label className="text-[11px] font-bold text-violet-400 block mb-1">Narrative Role</label>
               <textarea
                 value={room.description}
-                onChange={(e) => updateField('description', e.target.value)}
+                onChange={(e) => editText('description', e.target.value)}
+                onBlur={flush}
                 placeholder="Aesthetics and narrative role..."
                 className="w-full bg-transparent text-[11px] text-violet-200 placeholder-violet-500/40 outline-none resize-none leading-relaxed font-mono"
                 rows={2}
@@ -136,7 +155,8 @@ export function RoomDetailPanel({
               <label className="text-[11px] font-bold text-amber-500/80 block mb-1">Encounter Design</label>
               <textarea
                 value={room.encounterDesign}
-                onChange={(e) => updateField('encounterDesign', e.target.value)}
+                onChange={(e) => editText('encounterDesign', e.target.value)}
+                onBlur={flush}
                 placeholder="Wave patterns, triggers, hazards..."
                 className="w-full bg-transparent text-[11px] text-amber-100/90 placeholder-amber-500/40 outline-none resize-none leading-relaxed font-mono"
                 rows={3}
@@ -197,6 +217,7 @@ export function RoomDetailPanel({
           addSpawnEntry={addSpawnEntry}
           updateSpawn={updateSpawn}
           removeSpawn={removeSpawn}
+          onFlush={flush}
         />
 
         {/* Linked Files */}

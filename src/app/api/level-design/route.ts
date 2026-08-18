@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
 import {
   getAllDocs,
   getDoc,
@@ -27,7 +28,7 @@ export async function GET(req: NextRequest) {
     const summary = getSummary();
     return apiSuccess({ docs, summary });
   } catch (err) {
-    console.error('GET /api/level-design error:', err);
+    logger.error('GET /api/level-design error:', err);
     return apiError('Internal error', 500);
   }
 }
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
     const doc = createDoc(body);
     return apiSuccess({ doc }, 201);
   } catch (err) {
-    console.error('POST /api/level-design error:', err);
+    logger.error('POST /api/level-design error:', err);
     return apiError('Internal error', 500);
   }
 }
@@ -60,7 +61,7 @@ export async function PUT(req: NextRequest) {
     if (!doc) return apiError('Not found', 404);
     return apiSuccess({ doc });
   } catch (err) {
-    console.error('PUT /api/level-design error:', err);
+    logger.error('PUT /api/level-design error:', err);
     return apiError('Internal error', 500);
   }
 }
@@ -76,7 +77,7 @@ export async function DELETE(req: NextRequest) {
     if (!deleted) return apiError('Not found', 404);
     return apiSuccess({ ok: true });
   } catch (err) {
-    console.error('DELETE /api/level-design error:', err);
+    logger.error('DELETE /api/level-design error:', err);
     return apiError('Internal error', 500);
   }
 }

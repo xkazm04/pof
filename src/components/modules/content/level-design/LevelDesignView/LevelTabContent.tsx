@@ -55,6 +55,7 @@ export function LevelTabContent({ vm }: { vm: LevelDesignVM }) {
     handleNarrativeChange,
     handlePacingNotesChange,
     handleDescriptionChange,
+    flushDoc,
   } = vm;
 
   if (!activeDoc) return null;
@@ -116,6 +117,7 @@ export function LevelTabContent({ vm }: { vm: LevelDesignVM }) {
               <RoomDetailPanel
                 room={selectedRoom}
                 onUpdate={handleRoomUpdate}
+                onFlush={flushDoc}
                 onGenerateCode={handleGenerateRoomCode}
                 accentColor={MODULE_COLORS.content}
                 isGenerating={codegenCli.isRunning}
@@ -163,6 +165,7 @@ export function LevelTabContent({ vm }: { vm: LevelDesignVM }) {
             <textarea
               value={activeDoc.description}
               onChange={(e) => handleDescriptionChange(e.target.value)}
+              onBlur={flushDoc}
               placeholder="High-level overview of this level — setting, tone, player objectives..."
               className="w-full px-4 py-3 bg-surface-deep border border-border rounded-lg text-xs text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors resize-none leading-relaxed"
               rows={3}
@@ -180,6 +183,7 @@ export function LevelTabContent({ vm }: { vm: LevelDesignVM }) {
             <textarea
               value={activeDoc.designNarrative}
               onChange={(e) => handleNarrativeChange(e.target.value)}
+              onBlur={flushDoc}
               placeholder={`Example:\n\nThe player enters through a narrow stone corridor (low difficulty, building tension). The corridor opens into a grand hall with 3 pillars — first wave: 4 skeleton warriors patrol the perimeter. After clearing them, wave 2 spawns 2 skeleton archers from the balcony above.\n\nThe east door leads to a puzzle room (rest pacing) where the player must rotate statues to unlock the boss chamber. The boss chamber features a Lich King encounter (difficulty 5) with 3 phases...`}
               className="w-full px-4 py-3 bg-surface-deep border border-border rounded-lg text-xs text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors resize-none leading-relaxed font-mono"
               rows={16}
@@ -194,6 +198,7 @@ export function LevelTabContent({ vm }: { vm: LevelDesignVM }) {
             <textarea
               value={activeDoc.pacingNotes}
               onChange={(e) => handlePacingNotesChange(e.target.value)}
+              onBlur={flushDoc}
               placeholder="Notes on pacing: tension curve, rest areas, difficulty spikes, narrative beats..."
               className="w-full px-4 py-3 bg-surface-deep border border-border rounded-lg text-xs text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors resize-none leading-relaxed"
               rows={4}

@@ -2,14 +2,18 @@
 
 import { ChevronDown, ChevronRight, Plus, Trash2 } from 'lucide-react';
 import type { SpawnEntry } from '@/types/level-design';
+import type { EditCommitMode } from '../editCommitMode';
 
 interface SpawnEntriesPanelProps {
   spawnEntries: SpawnEntry[];
   showSpawns: boolean;
   setShowSpawns: (v: boolean) => void;
   addSpawnEntry: () => void;
-  updateSpawn: (id: string, patch: Partial<SpawnEntry>) => void;
+  /** Field edits pass `debounce` — typing a class name is one write, not one per key. */
+  updateSpawn: (id: string, patch: Partial<SpawnEntry>, mode?: EditCommitMode) => void;
   removeSpawn: (id: string) => void;
+  /** Commit the buffered field edit when the input loses focus. */
+  onFlush?: () => void;
 }
 
 export function SpawnEntriesPanel({
@@ -19,6 +23,7 @@ export function SpawnEntriesPanel({
   addSpawnEntry,
   updateSpawn,
   removeSpawn,
+  onFlush,
 }: SpawnEntriesPanelProps) {
   return (
     <div className="bg-black/40 border border-violet-900/30 rounded-xl overflow-hidden">
@@ -53,7 +58,8 @@ export function SpawnEntriesPanel({
                 <input
                   type="text"
                   value={entry.enemyClass}
-                  onChange={(e) => updateSpawn(entry.id, { enemyClass: e.target.value })}
+                  onChange={(e) => updateSpawn(entry.id, { enemyClass: e.target.value }, 'debounce')}
+                  onBlur={onFlush}
                   className="bg-transparent text-xs text-violet-100 outline-none font-mono placeholder-violet-500/40 px-2 uppercase"
                   placeholder="ENTITY_CLASS"
                 />
@@ -62,7 +68,8 @@ export function SpawnEntriesPanel({
                   <input
                     type="number"
                     value={entry.count}
-                    onChange={(e) => updateSpawn(entry.id, { count: Number(e.target.value) })}
+                    onChange={(e) => updateSpawn(entry.id, { count: Number(e.target.value) }, 'debounce')}
+                    onBlur={onFlush}
                     className="w-full bg-transparent text-xs text-violet-100 outline-none text-center font-mono"
                     min={1}
                   />
@@ -72,7 +79,8 @@ export function SpawnEntriesPanel({
                   <input
                     type="number"
                     value={entry.wave}
-                    onChange={(e) => updateSpawn(entry.id, { wave: Number(e.target.value) })}
+                    onChange={(e) => updateSpawn(entry.id, { wave: Number(e.target.value) }, 'debounce')}
+                    onBlur={onFlush}
                     className="w-full bg-transparent text-xs text-violet-100 outline-none text-center font-mono"
                     min={1}
                   />

@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { MODULE_COLORS } from '@/lib/constants';
 import { STATUS_ERROR, STATUS_WARNING, STATUS_INFO } from '@/lib/chart-colors';
+import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { ScrollableTabBar, TabButton } from './TabBar';
 import { LevelTabContent } from './LevelTabContent';
 import type { LevelDesignVM } from './useLevelDesignView';
@@ -19,9 +20,18 @@ export function ActiveDocView({ vm }: { vm: LevelDesignVM }) {
     deleteDoc,
     pacingLint,
     handleGenerateAllCode,
+    saveError,
+    retrySave,
+    dismissSaveError,
+    isSaving,
+    isDirty,
+    error,
+    retry,
   } = vm;
 
   if (!activeDoc) return null;
+
+  const saveState = isSaving ? 'Saving…' : isDirty ? 'Unsaved changes' : null;
 
   return (
     <>
@@ -31,6 +41,9 @@ export function ActiveDocView({ vm }: { vm: LevelDesignVM }) {
           <h1 className="text-sm font-semibold text-text truncate">{activeDoc.name}</h1>
           <p className="text-xs text-text-muted mt-0.5">
             {activeDoc.rooms.length} rooms &middot; {activeDoc.connections.length} connections
+            {saveState && (
+              <span className="ml-2" data-testid="doc-save-state">&middot; {saveState}</span>
+            )}
           </p>
         </div>
 
@@ -60,6 +73,25 @@ export function ActiveDocView({ vm }: { vm: LevelDesignVM }) {
           <Trash2 className="w-3.5 h-3.5" />
         </button>
       </div>
+
+      {/* A failed write is never silent, and never costs the user their edit —
+          the buffered change stays on screen and Retry re-sends exactly it. */}
+      {saveError && (
+        <div className="px-5 py-2 border-b border-border">
+          <InlineErrorRetry
+            message={`Save failed — your changes are still here. ${saveError}`}
+            onRetry={retrySave}
+            onDismiss={dismissSaveError}
+            dense
+          />
+        </div>
+      )}
+
+      {error && (
+        <div className="px-5 py-2 border-b border-border">
+          <InlineErrorRetry message={`Could not refresh the document list. ${error}`} onRetry={retry} dense />
+        </div>
+      )}
 
       {/* Tab bar */}
       <ScrollableTabBar>
