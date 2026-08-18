@@ -82,8 +82,8 @@ export function AudioView() {
     commitScene,
     commitZones,
     commitEmitters,
-    handleZoneUpdate,
-    handleEmitterUpdate,
+    commitZonePatch,
+    commitEmitterPatch,
     handleGenerateAll,
     handleGenerateZoneCode,
     handleGenerateSoundscape,
@@ -257,10 +257,10 @@ export function AudioView() {
                   selectedEmitterId={selectedEmitterId}
                   selectedZone={selectedZone}
                   selectedEmitter={selectedEmitter}
-                  handleZoneUpdate={handleZoneUpdate}
+                  commitZonePatch={commitZonePatch}
+                  commitEmitterPatch={commitEmitterPatch}
                   handleGenerateZoneCode={handleGenerateZoneCode}
                   handleGenerateSoundscape={handleGenerateSoundscape}
-                  handleEmitterUpdate={handleEmitterUpdate}
                   audioCli={audioCli}
                 />
               )}

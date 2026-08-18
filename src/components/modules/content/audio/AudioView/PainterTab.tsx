@@ -19,10 +19,11 @@ interface PainterTabProps {
   selectedEmitterId: string | null;
   selectedZone: AudioZone | null;
   selectedEmitter: SoundEmitter | null;
-  handleZoneUpdate: (updatedZone: AudioZone) => void;
+  /** One patch of one zone; rejects so the property panel keeps its draft. */
+  commitZonePatch: (zoneId: string, patch: Partial<AudioZone>) => Promise<void>;
+  commitEmitterPatch: (emitterId: string, patch: Partial<SoundEmitter>) => Promise<void>;
   handleGenerateZoneCode: (zone: AudioZone) => void;
   handleGenerateSoundscape: (zone: AudioZone) => void;
-  handleEmitterUpdate: (updatedEmitter: SoundEmitter) => void;
   audioCli: ReturnType<typeof useModuleCLI>;
 }
 
@@ -37,10 +38,10 @@ export function PainterTab({
   selectedEmitterId,
   selectedZone,
   selectedEmitter,
-  handleZoneUpdate,
+  commitZonePatch,
+  commitEmitterPatch,
   handleGenerateZoneCode,
   handleGenerateSoundscape,
-  handleEmitterUpdate,
   audioCli,
 }: PainterTabProps) {
   return (
@@ -63,10 +64,14 @@ export function PainterTab({
       {/* Property sidebar */}
       {(selectedZone || selectedEmitter) && (
         <div className="w-72 border-l border-border bg-surface-deep flex-shrink-0 overflow-y-auto">
+          {/* Keyed by id: the panel's commit buffer belongs to exactly one record,
+              and switching selection unmounts it — flushing a pending edit instead
+              of dropping it. */}
           {selectedZone && (
             <ZonePropertyPanel
+              key={selectedZone.id}
               zone={selectedZone}
-              onUpdate={handleZoneUpdate}
+              onCommit={(patch) => commitZonePatch(selectedZone.id, patch)}
               onGenerateCode={handleGenerateZoneCode}
               onGenerateSoundscape={handleGenerateSoundscape}
               accentColor={MODULE_COLORS.content}
@@ -75,8 +80,9 @@ export function PainterTab({
           )}
           {selectedEmitter && !selectedZone && (
             <EmitterPropertyPanel
+              key={selectedEmitter.id}
               emitter={selectedEmitter}
-              onUpdate={handleEmitterUpdate}
+              onCommit={(patch) => commitEmitterPatch(selectedEmitter.id, patch)}
               accentColor={MODULE_COLORS.content}
             />
           )}

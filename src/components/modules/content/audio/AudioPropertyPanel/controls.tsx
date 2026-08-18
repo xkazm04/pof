@@ -12,10 +12,18 @@ export function Field({ label, children }: { label: string; children: React.Reac
 }
 
 export function SliderField({
-  label, value, min, max, step, onChange, suffix, displayValue,
+  label, value, min, max, step, onChange, onRelease, suffix, displayValue,
 }: {
   label: string; value: number; min: number; max: number; step: number;
-  onChange: (v: number) => void; suffix?: string; displayValue?: number;
+  onChange: (v: number) => void;
+  /**
+   * The gesture ended (pointer up, key up, blur) — the commit boundary of a
+   * drag. `onChange` fires per frame and must stay local; this is where the
+   * write belongs. Optional so a slider rendered without a commit buffer
+   * behaves exactly as it did before.
+   */
+  onRelease?: () => void;
+  suffix?: string; displayValue?: number;
 }) {
   return (
     <div>
@@ -28,6 +36,10 @@ export function SliderField({
         min={min} max={max} step={step}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
+        onPointerUp={onRelease}
+        onKeyUp={onRelease}
+        onBlur={onRelease}
+        aria-label={label}
         className="w-full h-1 rounded-full appearance-none bg-border accent-blue-400 focus-ring"
       />
     </div>
