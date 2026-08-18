@@ -27,7 +27,7 @@ import stepFactsJson from './step-facts.json';
 import ceilingFactsJson from './ceiling-facts.json';
 import capabilityBenchmarksJson from './capability-benchmarks.json';
 import { deliverableClassOf } from '@/lib/judge/dimensions';
-import { getStepFact, isSyntheticEntity, type StepFact } from './statusModel';
+import { getStepFact, isSyntheticEntity, type FactAddress, type StepFact } from './statusModel';
 import { verdictProvenance, judgedContentOf, type JudgedContent } from '@/lib/catalog/acceptance/judgeBridge';
 import { RUBRIC_VERSION } from '@/lib/judge/rubrics';
 import type { JudgeVerdict } from './judge-verdicts-db';
@@ -90,6 +90,13 @@ export interface CeilingFact {
 }
 
 const CEILINGS: CeilingFact[] = (ceilingFactsJson.ceilings as CeilingFact[]) ?? [];
+
+/** Every (catalogId, step-label) ceiling-facts.json claims to describe — label-keyed like the
+ *  other audited JSONs, so it carries the same rename-drift risk (a dropped ceiling silently
+ *  UN-caps a capability class). Exposed for the drift check; see `orphanedFacts`. */
+export function ceilingFactAddresses(): FactAddress[] {
+  return CEILINGS.map((c) => ({ catalogId: c.catalogId, step: c.step }));
+}
 const FACTS: StepFact[] = stepFactsJson.steps as StepFact[];
 const EXCLUDE_KINDS = new Set<CeilingFact['ceilingClass']>(['project-data', 'checker-structural']);
 

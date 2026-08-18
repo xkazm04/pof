@@ -80,6 +80,51 @@ export function getHeadlessFact(catalogId: string, step: string): HeadlessFact |
   return HEADLESS.get(`${catalogId}|${step}`);
 }
 
+/* ── audited-fact drift ──────────────────────────────────────────────────────────────────
+ *
+ * Every audited JSON in this subsystem addresses a step by `catalogId | step-LABEL`:
+ * step-facts.json (what really powers a step), headless-coverage.json (may a cell grade
+ * `verified`), ceiling-facts.json (what caps a capability class) and preview/
+ * realization-facts.json (may a cell reach R5). Labels are DISPLAY strings that authors
+ * reword freely — so a rename silently drops the audit and falls the step through to the
+ * heuristic. The map does not error; it just gets quieter and more confident at the same
+ * time, which is the one failure mode /status must not have.
+ *
+ * The lookups cannot be re-keyed here (the JSONs are audit records, owned elsewhere), so the
+ * defence is a DRIFT CHECK: every audited address must resolve to a registered step, and an
+ * orphan is REPORTED for a human. Never reattached by fuzzy match — guessing which renamed
+ * step an audit meant would fabricate provenance, which is worse than losing it.
+ */
+
+/** One (catalogId, step-label) address an audited fact claims to describe. */
+export interface FactAddress {
+  catalogId: string;
+  step: string;
+}
+
+/** The key both the fact indexes and the drift check address a step by. */
+export function factKey(catalogId: string, step: string): string {
+  return `${catalogId}|${step}`;
+}
+
+/** Every address in step-facts.json. */
+export function stepFactAddresses(): FactAddress[] {
+  return (stepFactsJson.steps as StepFact[]).map((s) => ({ catalogId: s.catalogId, step: s.step }));
+}
+
+/** Every address in headless-coverage.json. */
+export function headlessFactAddresses(): FactAddress[] {
+  return (headlessCoverageJson.steps as HeadlessFact[]).map((s) => ({ catalogId: s.catalogId, step: s.step }));
+}
+
+/**
+ * Audited facts whose address no longer resolves to a live step. Pure — `liveKeys` (a set of
+ * {@link factKey}s) is supplied by the caller, so the model never imports the registry.
+ */
+export function orphanedFacts(facts: readonly FactAddress[], liveKeys: ReadonlySet<string>): FactAddress[] {
+  return facts.filter((f) => !liveKeys.has(factKey(f.catalogId, f.step)));
+}
+
 export type HeadlessLookup = (catalogId: string, step: string) => HeadlessFact | undefined;
 
 /** Gate a derived cell on headless-operability: a `verified` grade demands the step be

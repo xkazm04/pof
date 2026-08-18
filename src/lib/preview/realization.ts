@@ -35,3 +35,19 @@ export function getRealization(catalogId: string, step: string): StepRealization
 export function reviewedPipelines(): string[] {
   return Object.keys(FACTS.pipelines);
 }
+
+/**
+ * Every (catalogId, step-label) this audit claims to describe.
+ *
+ * Like `step-facts.json` and `headless-coverage.json` these rows are keyed on the step's
+ * DISPLAY LABEL, so a rename silently drops the fact and the step quietly loses its R5
+ * eligibility — no error, no warning. Exposed so the drift check
+ * (`src/__tests__/lib/status/factDrift.test.ts`, run by `npm run validate`) can prove every
+ * address still resolves to a registered step. Shaped structurally rather than importing
+ * `FactAddress` from statusModel, which imports THIS module.
+ */
+export function realizationAddresses(): { catalogId: string; step: string }[] {
+  return Object.entries(FACTS.pipelines).flatMap(([catalogId, p]) =>
+    Object.keys(p.steps).map((step) => ({ catalogId, step })),
+  );
+}
