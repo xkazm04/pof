@@ -188,4 +188,22 @@ export interface StepSpec {
 export interface CatalogPipeline {
   catalogId: string;
   steps: StepSpec[];
+  /**
+   * Why this pipeline has NO packaging step — the machine-readable half of a rule with
+   * exactly two states and no third.
+   *
+   * Every registered pipeline must EITHER own a packaging step (`isPackagingStep`: the
+   * `packaging: true` flag, or the canonical "UE Packaging" label 30 of them end on) OR
+   * declare this reason. Before it existed, two pipelines simply ended on something else,
+   * so the packaging-truth drain had nothing to re-grade for them and said nothing about
+   * it — an intentional exemption was indistinguishable from an authoring omission, and
+   * the drain reported it as an ordinary skip.
+   *
+   * Set it only where a packaging step would be MEANINGLESS (a pipeline whose outputs
+   * never pass through PoF's package staging); never to silence the rule. The reason is
+   * surfaced by the drain (`verifyPackagingAll` → `summary.exempt`), so it is read by an
+   * operator, not just by whoever opens this file.
+   * `src/__tests__/catalog/packaging-coverage.test.ts` enforces the two-state rule.
+   */
+  packagingExempt?: string;
 }

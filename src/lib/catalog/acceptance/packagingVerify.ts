@@ -13,7 +13,7 @@ import type { AcceptanceResult } from './types';
 import type { SiblingArtifact } from '../packaging/collect';
 import type { PackageManifest, PackagingFsDeps } from '../packaging/packageArtifacts';
 import { buildPackage, defaultPackagingFsDeps } from '../packaging/packageArtifacts';
-import { getCatalogPipeline } from '../pipeline-registry';
+import { allCatalogPipelines, getCatalogPipeline } from '../pipeline-registry';
 import { listAllArtifacts, getArtifact, upsertArtifact } from '@/lib/pipeline-artifacts-db';
 
 export interface PackagingVerifyFilter {
@@ -25,6 +25,33 @@ export interface PackagingVerifyFilter {
  *  "UE Packaging" label every catalog pipeline ends with (no 30-file rollout needed). */
 export function isPackagingStep(spec: { packaging?: boolean; label: string }): boolean {
   return spec.packaging === true || spec.label === 'UE Packaging';
+}
+
+/** A pipeline that declares WHY it owns no packaging step, so the drain can report
+ *  "exempt by declaration" instead of silently re-grading nothing. */
+export interface PackagingExemption {
+  catalogId: string;
+  reason: string;
+}
+
+/**
+ * Packaging coverage for one pipeline — the two states the rule allows, and nothing else.
+ * Pure; the linter test and the drain both read it, so "has a packaging step" is decided
+ * in ONE place.
+ */
+export type PackagingCoverage =
+  | { kind: 'step'; label: string }
+  | { kind: 'exempt'; reason: string }
+  | { kind: 'none' };
+
+export function packagingCoverage(pipeline: {
+  steps: { packaging?: boolean; label: string }[];
+  packagingExempt?: string;
+}): PackagingCoverage {
+  const step = pipeline.steps.find(isPackagingStep);
+  if (step) return { kind: 'step', label: step.label };
+  const reason = pipeline.packagingExempt?.trim();
+  return reason ? { kind: 'exempt', reason } : { kind: 'none' };
 }
 
 /** Grade a rebuilt manifest into the step's L2 verdict. Pure.
@@ -97,11 +124,18 @@ export interface PackagingVerifySummary {
   skipped: number;
   changed: number;
   results: PackagingVerifyRow[];
+  /** Pipelines in scope that own NO packaging step and say why (CatalogPipeline.
+   *  `packagingExempt`). Reported so a catalog the drain cannot touch reads as an
+   *  explicit exemption rather than as nothing at all. */
+  exempt: PackagingExemption[];
 }
 
 export interface PackagingVerifyDeps {
   listArtifacts: (filter: PackagingVerifyFilter) => { catalogId: string; entityId: string; step: string; status: string }[];
   isPackaging: (catalogId: string, step: string) => boolean;
+  /** Registered pipelines in scope that declare a packaging exemption. Optional so a
+   *  hand-built dep set (tests, headless recipes) needs no change; absent → none. */
+  listExemptions?: (filter: PackagingVerifyFilter) => PackagingExemption[];
   /** The row's OTHER persisted artifacts — what the package must reflect. */
   getSiblings: (catalogId: string, entityId: string, packagingStep: string) => SiblingArtifact[];
   build: (catalogId: string, entityId: string, siblings: SiblingArtifact[]) => PackageManifest;
@@ -140,13 +174,26 @@ export function verifyPackagingAll(
     });
   }
 
-  return { verified, passed, deferred, skipped, changed, results };
+  return { verified, passed, deferred, skipped, changed, results, exempt: deps.listExemptions?.(filter) ?? [] };
 }
 
 // ── default (server) deps — real registry / artifacts db / filesystem ──
 function defaultIsPackaging(catalogId: string, step: string): boolean {
   const spec = getCatalogPipeline(catalogId)?.steps.find((s) => s.label === step);
   return spec ? isPackagingStep(spec) : step === 'UE Packaging';
+}
+
+/** Every registered pipeline in scope that declares a packaging exemption. Read from the
+ *  REGISTRY, not from persisted rows: a catalog with no artifacts yet is still exempt by
+ *  declaration, and reporting it only when a row happens to exist would be the same
+ *  silence this replaces. */
+function defaultListExemptions(filter: PackagingVerifyFilter): PackagingExemption[] {
+  return allCatalogPipelines()
+    .filter((p) => !filter.catalogId || p.catalogId === filter.catalogId)
+    .map((p) => ({ catalogId: p.catalogId, coverage: packagingCoverage(p) }))
+    .flatMap(({ catalogId, coverage }) =>
+      coverage.kind === 'exempt' ? [{ catalogId, reason: coverage.reason }] : [],
+    );
 }
 
 /** Sibling view for the package build: every OTHER artifact contributes data + declarations;
@@ -184,6 +231,7 @@ export function defaultPackagingVerifyDeps(fsDeps: PackagingFsDeps = defaultPack
   return {
     listArtifacts: (filter) => listAllArtifacts(filter),
     isPackaging: defaultIsPackaging,
+    listExemptions: defaultListExemptions,
     getSiblings: defaultGetSiblings,
     build: (catalogId, entityId, siblings) => buildPackage(catalogId, entityId, siblings, fsDeps),
     upsertStatus: defaultUpsertStatus,

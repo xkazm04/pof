@@ -30,6 +30,13 @@ const fileSlug = (n: string) => slug(n).toLowerCase();
 
 registerCatalogPipeline({
   catalogId: 'character-pipeline',
+  // No packaging step, declared rather than merely absent (see CatalogPipeline.packagingExempt).
+  packagingExempt:
+    'Workflow recipe, not a shippable PoF content row: every step here was ground-truthed on the ' +
+    'standalone `jinx` UE 5.8 project and none declares `ueAssets` for the PoF project, so a ' +
+    'packaging step would stage nothing this project ships. The terminal proof is the L4 Visual ' +
+    'Gate — a gameplay-camera frame — not a package manifest. Revisit if this catalog ever lands ' +
+    'assets in the PoF Content tree.',
   steps: [
     // ── 01. Face-priority 2D concept ──────────────────────────────────────────
     {

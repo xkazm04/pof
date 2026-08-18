@@ -19,6 +19,13 @@ const py = (module: string) => ({ python: { module, function: 'run' } });
 
 registerCatalogPipeline({
   catalogId: 'player-movement',
+  // No packaging step, declared rather than merely absent (see CatalogPipeline.packagingExempt).
+  packagingExempt:
+    'Every asset-building step dispatches a Python module on the UE editor thread ' +
+    '(/pof/python/run), so the .uassets are written straight into the project Content tree and ' +
+    "graded from the editor's own {created, skipped, failed} envelope. Nothing passes through " +
+    "PoF's package staging, so the packaging drain would have no manifest to rebuild; the " +
+    'terminal proof is the L4 Playable Gate (PIE + WASD/Sprint/Roll + frame variance).',
   steps: [
     // ── 01. Mesh + skeleton + input bindings ──────────────────────────────────
     {
