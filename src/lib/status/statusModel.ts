@@ -106,12 +106,18 @@ export function gateHeadless(
  *  hand-typed placeholder data must NOT read as produced capability). */
 const MEDIA_DELIVERABLES = new Set(['2d-art', '3d-mesh', 'audio', 'vfx-particles', 'animation']);
 
-export type EngineClass = 'llm' | 'gen2d' | 'gen3d' | 'audio' | 'runtime' | 'tooling' | 'code' | 'human';
+export type EngineClass = 'llm' | 'gen2d' | 'gen3d' | 'audio' | 'runtime' | 'tooling' | 'code' | 'human' | 'unaudited';
+
+/** The engine name a step gets when NOTHING identifies its engine: no `StepSpec.engine`, no
+ *  audited `StepFact.trueEngine`, and no heuristic match. It is a real name (not a guess at a
+ *  real engine) so the cell can SAY the engine is unknown. */
+export const UNAUDITED_ENGINE = 'Unaudited';
 
 /** Engine-name → credibility class. LLM text/code/human-selection scale to quality;
  *  generative media and unproven runtime claims need a real gate. */
 export const ENGINE_CLASS: Record<string, EngineClass> = {
   Claude: 'llm',
+  [UNAUDITED_ENGINE]: 'unaudited',
   Code: 'code',
   Human: 'human',
   Leonardo: 'gen2d',
@@ -127,7 +133,9 @@ export const ENGINE_CLASS: Record<string, EngineClass> = {
   VLM: 'tooling',
 };
 
-/** Classes whose L0–L2 pass is credible without a gate. */
+/** Classes whose L0–L2 pass is credible without a gate. `unaudited` is deliberately absent:
+ *  a step nobody has identified an engine for has earned no credibility, and putting the
+ *  unknown case in the trusted bucket is how uncertainty gets read as quality. */
 const TRUSTED_CLASSES: ReadonlySet<EngineClass> = new Set(['llm', 'code', 'human']);
 
 /** Entities created by test/smoke harnesses (`src/__tests__/catalog/headless.test.ts`, the MCP
@@ -145,8 +153,17 @@ export interface StepMeta {
   engine?: string;
 }
 
-/** Resolve the engine powering a step: explicit StepSpec.engine wins, else a
- *  heuristic over catalog + archetype + label. Pure. */
+/**
+ * Resolve the engine powering a step: explicit StepSpec.engine wins, else a heuristic over
+ * catalog + archetype + label. Pure.
+ *
+ * An UNMATCHED step resolves to {@link UNAUDITED_ENGINE}, not `Claude`. `StepSpec.engine` is
+ * authored on 12 of ~344 steps, so this heuristic speaks for the rest — and its old fallback
+ * put every step it could not classify into `llm`, the HIGHEST-credibility class. That is
+ * uncertainty being read as quality: a step nobody audited and no rule matched looked exactly
+ * like one genuinely powered by an LLM. The unknown case now says it is unknown and earns no
+ * credibility (see `TRUSTED_CLASSES`).
+ */
 export function inferEngine(catalogId: string, step: StepMeta): string {
   if (step.engine) return step.engine;
   if (catalogId === 'player-movement') return 'UE Python';
@@ -160,7 +177,21 @@ export function inferEngine(catalogId: string, step: StepMeta): string {
   }
   if (/playable|runtime|test gate|in-game|pie\b/.test(label)) return 'UE Runtime';
   if (/visual gate|screenshot|capture/.test(label)) return 'VLM';
-  return 'Claude';
+  return UNAUDITED_ENGINE;
+}
+
+/** Where a cell's engine name came from — an AUDITED fact, an AUTHORED spec, or a heuristic
+ *  GUESS. Nothing marked which was which, so an inferred label read as established fact. */
+export type EngineSource = 'audited' | 'authored' | 'inferred';
+
+/** Resolve a step's engine AND how confidently it is known. The audited fleet fact
+ *  (`StepFact.trueEngine`) outranks the authored spec, which outranks the heuristic. Pure. */
+export function resolveEngine(catalogId: string, step: StepMeta, fact?: StepFact): { engine: string; source: EngineSource } {
+  if (fact?.trueEngine && fact.trueEngine !== 'None') {
+    return { engine: fact.trueEngine.replace(' (deterministic)', ''), source: 'audited' };
+  }
+  if (step.engine) return { engine: step.engine, source: 'authored' };
+  return { engine: inferEngine(catalogId, step), source: 'inferred' };
 }
 
 export function engineClass(engine: string): EngineClass {
@@ -170,6 +201,10 @@ export function engineClass(engine: string): EngineClass {
 export interface StepCell {
   label: string;
   engine: string;
+  /** Whether `engine` is an AUDITED fact, an AUTHORED spec value, or a heuristic GUESS.
+   *  Set by `buildSwimlane` (which knows all three sources); absent on a bare `deriveCell`,
+   *  where the caller supplied the engine and only the caller knows where it came from. */
+  engineSource?: EngineSource;
   grade: CellGrade;
   tier?: string;
   counts: { pass: number; deferred: number; fail: number; pending: number };
@@ -399,10 +434,9 @@ export function buildSwimlane(
   }
   const cells = steps.map((s) => {
     const fact = getStepFact(catalogId, s.label);
-    const engine = fact?.trueEngine && fact.trueEngine !== 'None'
-      ? fact.trueEngine.replace(' (deterministic)', '')
-      : inferEngine(catalogId, s);
+    const { engine, source } = resolveEngine(catalogId, s, fact);
     const cell = deriveCell(s.label, engine, byStep.get(s.label) ?? [], fact, verdictsByStep.get(s.label) ?? []);
+    cell.engineSource = source;
     const realization = getRealization(catalogId, s.label);
     if (realization) cell.realization = realization;
     return gateHeadless(cell, catalogId, s.label, headless);

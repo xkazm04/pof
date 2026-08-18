@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildSwimlane, deriveCell, engineClass, gateHeadless, getHeadlessFact, getStepFact, inferEngine, isSyntheticEntity, sortLanes, type HeadlessLookup, type StepCell, type StepFact } from '@/lib/status/statusModel';
+import { buildSwimlane, deriveCell, engineClass, gateHeadless, getHeadlessFact, getStepFact, inferEngine, isSyntheticEntity, resolveEngine, sortLanes, UNAUDITED_ENGINE, type HeadlessLookup, type StepCell, type StepFact } from '@/lib/status/statusModel';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
 import { RUBRIC_VERSION } from '@/lib/judge/rubrics';
@@ -19,17 +19,66 @@ describe('inferEngine', () => {
   it('explicit StepSpec.engine wins', () => {
     expect(inferEngine('items', { label: 'Anything', engine: 'Tripo' })).toBe('Tripo');
   });
-  it('player-movement is UE Python; galleries split 2D/3D; default is Claude', () => {
+  it('player-movement is UE Python; galleries split 2D/3D', () => {
     expect(inferEngine('player-movement', { label: 'Retarget Clips' })).toBe('UE Python');
     expect(inferEngine('items', { label: 'Icon 2D Art', archetype: 'gallery' })).toBe('Leonardo');
     expect(inferEngine('items', { label: '3D Mesh', archetype: 'gallery' })).toBe('Tripo');
-    expect(inferEngine('items', { label: 'Brief', archetype: 'brief' })).toBe('Claude');
+  });
+  it('an UNMATCHED step is Unaudited, NOT Claude — uncertainty is not credibility', () => {
+    // The old fallback put every unclassifiable step into `llm`, the highest-credibility
+    // class, so a step nobody had audited looked exactly like a genuinely LLM-powered one.
+    expect(inferEngine('items', { label: 'Brief', archetype: 'brief' })).toBe(UNAUDITED_ENGINE);
+    expect(engineClass(UNAUDITED_ENGINE)).toBe('unaudited');
   });
   it('classifies engines into credibility classes', () => {
     expect(engineClass('Claude')).toBe('llm');
     expect(engineClass('Tripo')).toBe('gen3d');
     expect(engineClass('UE Python')).toBe('runtime');
-    expect(engineClass('SomethingNew')).toBe('llm');
+  });
+});
+
+describe('resolveEngine — audited beats authored beats guessed, and says which', () => {
+  const fact = (trueEngine: string): StepFact => ({
+    catalogId: 'c', step: 'S', trueEngine, deliverable: 'text-config',
+    generatorWired: true, judge: 'llm-panel', checkerMeaningful: false, note: '',
+  });
+
+  it('an audited trueEngine wins and is marked audited', () => {
+    expect(resolveEngine('c', { label: 'S', engine: 'Claude' }, fact('Tripo'))).toEqual({ engine: 'Tripo', source: 'audited' });
+    // the ` (deterministic)` suffix is stripped exactly as before
+    expect(resolveEngine('c', { label: 'S' }, fact('Code (deterministic)'))).toEqual({ engine: 'Code', source: 'audited' });
+  });
+
+  it('an authored StepSpec.engine wins over the heuristic and is marked authored', () => {
+    expect(resolveEngine('c', { label: 'S', engine: 'Blender' })).toEqual({ engine: 'Blender', source: 'authored' });
+    // trueEngine 'None' is not an engine — the audit says nothing produces this.
+    expect(resolveEngine('c', { label: 'S', engine: 'Blender' }, fact('None'))).toEqual({ engine: 'Blender', source: 'authored' });
+  });
+
+  it('everything else is a GUESS and says so', () => {
+    expect(resolveEngine('c', { label: 'Whatever This Is' })).toEqual({ engine: UNAUDITED_ENGINE, source: 'inferred' });
+    expect(resolveEngine('items', { label: 'Icon 2D Art', archetype: 'gallery' })).toEqual({ engine: 'Leonardo', source: 'inferred' });
+  });
+});
+
+describe('an unaudited engine earns no credibility', () => {
+  it('a plain L0 pass from an UNAUDITED engine is ungated, not trusted', () => {
+    expect(deriveCell('S', UNAUDITED_ENGINE, [art('S', 'pass', { tier: 'L0' })]).grade).toBe('ungated');
+    // …where the same pass from a genuinely LLM-powered step is still trusted.
+    expect(deriveCell('S', 'Claude', [art('S', 'pass', { tier: 'L0' })]).grade).toBe('trusted');
+  });
+
+  it('buildSwimlane stamps engineSource on every cell', () => {
+    const lane = buildSwimlane('phantom-catalog-xyz', 'Phantom', [
+      { label: 'Guessable Gallery', archetype: 'gallery' },
+      { label: 'Nothing Matches This', archetype: 'checklist' },
+      { label: 'Authored', engine: 'Blender' },
+    ], [], [], allOperable);
+    expect(lane.cells.map((c) => [c.engine, c.engineSource])).toEqual([
+      ['Leonardo', 'inferred'],
+      [UNAUDITED_ENGINE, 'inferred'],
+      ['Blender', 'authored'],
+    ]);
   });
 });
 
