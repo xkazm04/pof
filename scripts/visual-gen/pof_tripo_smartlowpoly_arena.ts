@@ -38,14 +38,24 @@ import { gradeFaceBudget } from '../../src/lib/visual-gen/face-budget';
 const CRITIQUE_PYTHON = process.env.POF_ARENA_PYTHON
   ?? 'C:/Users/kazda/AppData/Local/Programs/Python/Python312/python.exe';
 
+// Defense in depth, on top of the pof_mesh_critique.py fix (2026-08-18): a real run
+// against a heavily-fragmented, HD-PBR-textured mesh ran the python process to ~211GB
+// of virtual memory and crashed the host, because the script used mesh.split() — which
+// deep-copies material data per connected component — instead of the topology-only
+// adjacency grouping it uses now. This hand-rolled spawn had NO timeout at all, unlike
+// critiqueMesh()'s own `defaultRun` (60s + SIGKILL); that gap is why nothing stopped it.
+// Mirror that same guard here so a future unknown pathological mesh cannot repeat this.
+const CRITIQUE_TIMEOUT_MS = 60_000;
+
 function runCritiqueScript(glbPath: string): Promise<{ stdout: string; code: number | null }> {
   return new Promise((resolve) => {
     const child = spawn(CRITIQUE_PYTHON, ['scripts/visual-gen/pof_mesh_critique.py', '--mesh', glbPath], { windowsHide: true });
     let stdout = '';
     child.stdout?.on('data', (d) => { stdout += d.toString(); });
     child.stderr?.on('data', (d) => { stdout += d.toString(); });
-    child.on('exit', (code) => resolve({ stdout, code }));
-    child.on('error', (e) => resolve({ stdout: `spawn error: ${e.message}`, code: null }));
+    const timer = setTimeout(() => { try { child.kill('SIGKILL'); } catch { /* already gone */ } }, CRITIQUE_TIMEOUT_MS);
+    child.on('exit', (code) => { clearTimeout(timer); resolve({ stdout, code }); });
+    child.on('error', (e) => { clearTimeout(timer); resolve({ stdout: `spawn error: ${e.message}`, code: null }); });
   });
 }
 import { TRIPO_AUDITED_MODEL, TRIPO_AUDITED_TEXTURE_QUALITY } from '../../src/lib/visual-gen/tripo-models';

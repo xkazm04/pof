@@ -34,9 +34,22 @@ def main() -> int:
         # eye layers, mouth interior, teeth, tongue, body, hands, hair, cape) from a
         # shattered mesh. Emit the per-component face histogram so the scorer can judge
         # specks by face share instead of failing a correct multi-part character.
-        parts = mesh.split(only_watertight=False)
-        emit("COMPONENTS", len(parts))
-        part_faces = sorted((len(p.faces) for p in parts), reverse=True)
+        #
+        # DELIBERATELY NOT mesh.split(only_watertight=False): on a heavily-fragmented,
+        # HD-PBR-textured mesh (e.g. a smart_low_poly Tripo output — 1600+ components x
+        # three 4096x4096 material maps) split() materializes a full textured Trimesh
+        # PER COMPONENT, which observably ran a single generation to ~211GB of virtual
+        # memory and crashed the host (2026-08-18, P-series arena run). Grouping is a
+        # pure topology question — it needs face_adjacency, never material data — so
+        # group directly off the adjacency graph instead. face_adjacency only contains
+        # faces that SHARE AN EDGE with another face; a fully isolated face never
+        # appears in it, so any face not covered by a group is its own 1-face component
+        # (verified: grouped-face-count + isolated-count == len(mesh.faces) exactly).
+        groups = trimesh.graph.connected_components(mesh.face_adjacency, min_len=1)
+        grouped_face_count = sum(len(g) for g in groups)
+        isolated_faces = len(mesh.faces) - grouped_face_count
+        part_faces = sorted([len(g) for g in groups] + [1] * isolated_faces, reverse=True)
+        emit("COMPONENTS", len(part_faces))
         kept = part_faces[:MAX_COMPONENT_HISTOGRAM]
         emit("COMPONENT_FACES", ",".join(str(n) for n in kept))
         # Largest-first, so anything dropped is no bigger than the smallest kept entry.
