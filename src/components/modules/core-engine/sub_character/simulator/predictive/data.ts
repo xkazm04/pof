@@ -5,6 +5,7 @@ import {
 
 export {
   type BalanceReport,
+  type CanonCheckStatus,
   type HeatmapCell,
   type SurvivalCurvePoint,
   type SensitivityCurve,

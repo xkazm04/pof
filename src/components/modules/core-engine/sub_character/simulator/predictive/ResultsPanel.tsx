@@ -1,7 +1,7 @@
 'use client';
 
 import {
-  AlertTriangle, TrendingUp, Shield,
+  AlertTriangle, TrendingUp, Shield, Scale,
   Heart, Swords, Crosshair, Timer, Activity,
 } from 'lucide-react';
 import {
@@ -19,6 +19,7 @@ import { SurvivalCurveChart } from './SurvivalCurveChart';
 import { DPSBreakdownChart } from './DPSBreakdownChart';
 import { SensitivityChart } from './SensitivityChart';
 import { AlertBadges } from './AlertBadges';
+import { CanonChecksPanel } from './CanonChecksPanel';
 
 export function ResultsPanel({ report, levels, enemyLabels }: {
   report: BalanceReport;
@@ -36,6 +37,7 @@ export function ResultsPanel({ report, levels, enemyLabels }: {
   const avgEHP = avg(c => c.avgEHP);
 
   const hasCritical = report.alerts.some(a => a.severity === 'critical');
+  const canonViolations = report.canonChecks.filter(c => c.status === 'violation').length;
 
   return (
     <div className="space-y-3">
@@ -103,6 +105,16 @@ export function ResultsPanel({ report, levels, enemyLabels }: {
             );
           })}
         </div>
+      </Section>
+
+      {/* Canon conformance (ARPG-LAWS) */}
+      <Section
+        title={`Canon Conformance (${canonViolations} violation${canonViolations === 1 ? '' : 's'})`}
+        icon={Scale}
+        color={canonViolations > 0 ? STATUS_ERROR : ACCENT_EMERALD}
+        defaultOpen={canonViolations > 0}
+      >
+        <CanonChecksPanel checks={report.canonChecks} />
       </Section>
 
       {/* Balance Alerts */}

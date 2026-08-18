@@ -16,6 +16,13 @@ import {
   GEAR_LOADOUTS,
   DEFAULT_TUNING,
 } from '@/lib/combat/definitions';
+import {
+  checkOneShot,
+  checkResistCap,
+  readCanonThresholds,
+  type CanonThresholds,
+  type CanonViolation,
+} from '@/lib/balance/canon-conformance';
 import { createXorShift32RNG } from '@/lib/seeded-rng';
 import { calculateDamage } from '@/lib/combat/damage';
 import { armourEffectiveHpMultiplier } from '@/lib/combat/canon-kernel';
@@ -194,6 +201,14 @@ export interface HeatmapCell {
   avgTTK: number;
   avgDPS: number;
   avgEHP: number;
+  /**
+   * Largest single un-crit enemy hit available in this cell (raw, pre-mitigation:
+   * `baseDamage + attackPower x scaling`, times `enemyDamageMul`, max over the
+   * archetype's abilities). Observation only — nothing in the fight loop reads it;
+   * it exists so the canon one-shot law (arpg-defenses) can be policed against
+   * `avgEHP`, which already folds the armour soft-cap in.
+   */
+  biggestHit: number;
 }
 
 export interface SurvivalCurvePoint {
@@ -222,13 +237,51 @@ export interface SensitivityCurve {
   diminishingAt: number | null;
 }
 
+/** One alert line in a balance report. */
+export interface BalanceReportAlert {
+  severity: 'info' | 'warning' | 'critical';
+  message: string;
+  /**
+   * `canon-violation` marks an ARPG-LAWS breach found by the canon linter
+   * (`@/lib/balance/canon-conformance`), mirroring the economy sim's alert
+   * idiom. Absent/`heuristic` = the sweep's own tuning heuristics.
+   */
+  type?: 'heuristic' | 'canon-violation';
+  /** For `canon-violation`: the canon rule id (canon-seed) that was breached. */
+  lawId?: string;
+}
+
+/**
+ * The outcome of ONE canon law check over this sweep. Every law the combat sim
+ * is responsible for gets a row — including the ones that could not run, so a
+ * law is never silently "passing" because nothing fed it.
+ */
+export interface CanonCheckStatus {
+  /** Canon rule id in canon-seed. */
+  lawId: string;
+  law: string;
+  status: 'pass' | 'violation' | 'not-evaluated';
+  /** The canon envelope, human-readable (read from the seed, never hardcoded). */
+  allowed: string;
+  /** What was measured, when the check ran. */
+  metric?: string;
+  /** Worst observed value, when the check ran. */
+  observed?: number;
+  /** Where the worst value came from (heatmap cell), when the check ran. */
+  observedAt?: string;
+  /** Why the check could NOT run — required whenever status is `not-evaluated`. */
+  reason?: string;
+}
+
 export interface BalanceReport {
   summary: string;
   heatmap: HeatmapCell[];
   survivalCurves: Record<string, SurvivalCurvePoint[]>;
   dpsBreakdowns: Record<string, DPSBreakdown[]>;
   sensitivity: SensitivityCurve[];
-  alerts: { severity: 'info' | 'warning' | 'critical'; message: string }[];
+  alerts: BalanceReportAlert[];
+  /** Per-law canon conformance outcome for this sweep (incl. laws that could not run). */
+  canonChecks: CanonCheckStatus[];
   durationMs: number;
 }
 
@@ -240,6 +293,13 @@ export interface PredictiveBalanceConfig {
   enemyConfigs: { archetypeId: string; count: number; levelOffset: number }[];
   tuning: TuningOverrides;
   sensitivityAttributes: AttributeKey[];
+  /**
+   * OPTIONAL per-type resist profile (0–1) of the simulated defender, for canon
+   * policing ONLY — the fight loop does not read it (the sim's damage model has
+   * no resist layer; see RESIST_FACET_MISSING_REASON). Left unset by the shipped
+   * config, so `arpg-resists` reports as not-evaluated rather than falsely passing.
+   */
+  defenderResists?: { type: string; value: number }[];
 }
 
 export const DEFAULT_PREDICTIVE_CONFIG: PredictiveBalanceConfig = {
@@ -259,6 +319,165 @@ export const DEFAULT_PREDICTIVE_CONFIG: PredictiveBalanceConfig = {
 
 const ABILITY_COLORS = ['#3b82f6', '#ef4444', '#f59e0b', '#10b981', '#8b5cf6', '#ec4899', '#06b6d4'];
 
+// ── Canon policing (ARPG-LAWS) ─────────────────────────────────────────────
+// The canon-conformance linter (`@/lib/balance/canon-conformance`) already owns
+// the laws and reads every threshold out of the canon seed. The economy sim has
+// been policed by it since July; the two COMBAT-facing laws had no caller at all,
+// so the arena sweep could publish a canon-violating build and nothing said so.
+// This wires them, using the same `canon-violation` alert idiom the economy sim
+// uses (`src/lib/economy/simulation-engine.ts`).
+//
+// `checkPricePower` (proj-balance, law 5) is deliberately NOT wired here: it
+// polices item price vs power, and the combat sweep carries no item prices — it
+// has no `price` anywhere in `AttributeSet` / `GearLoadout` / `CombatAbility`.
+// Its home is the item/economy side, not this engine. Left unwired, on purpose.
+
+/**
+ * The facets of a sweep the canon linter can police. `null` means the sim holds
+ * no such data — which is REPORTED as `not-evaluated`, never silently passed.
+ */
+export interface CombatCanonFacets {
+  /** Defender per-type resist fractions (0–1), or null when the model carries none. */
+  resists: { type: string; value: number }[] | null;
+  /** Worst (biggest raw hit vs EHP) pairing across the sweep, or null when nothing ran. */
+  defense: { ehp: number; biggestHit: number; label: string } | null;
+  /** How many heatmap cells breached the one-shot fraction (context for the alert). */
+  oneShotBreachCells?: number;
+  /** How many heatmap cells were evaluable at all. */
+  evaluatedCells?: number;
+}
+
+/**
+ * Why the resist-cap law cannot be evaluated from an arena sweep today. This is
+ * a finding, not a shrug: the sim's damage model (`@/types/combat-simulator`)
+ * has ONE flat `armor` stat and no Fire/Cold/Lightning/Chaos resists, and
+ * `GearLoadout.bonuses` is keyed by `AttributeKey`, so no resist value exists.
+ * Reading the armour soft-cap as if it were a resist would police a DIFFERENT
+ * law and report a number canon never meant. The wiring is live regardless —
+ * pass resists into `collectCanonFacets` and the check runs.
+ */
+export const RESIST_FACET_MISSING_REASON =
+  'the combat sim models a single flat `armor` stat and no per-type resists ' +
+  '(AttributeSet has no Fire/Cold/Lightning/Chaos fields, GearLoadout.bonuses is ' +
+  'keyed by AttributeKey) — there is no resist value in the sweep to police';
+
+/**
+ * Collect what this sweep can offer the canon linter. Pure.
+ *
+ * The one-shot facet is the WORST cell in the sweep (highest biggestHit/EHP), so
+ * the law is judged on the harshest encounter a designer configured rather than
+ * on an average that could hide it. `resists` is passed through — the sweep has
+ * none today (see RESIST_FACET_MISSING_REASON), but a caller that has them gets
+ * the law policed with no other change.
+ */
+export function collectCanonFacets(
+  heatmap: readonly HeatmapCell[],
+  thresholds: CanonThresholds,
+  resists: { type: string; value: number }[] | null = null,
+): CombatCanonFacets {
+  const evaluable = heatmap.filter((c) => c.avgEHP > 0 && c.biggestHit > 0);
+  if (evaluable.length === 0) return { resists, defense: null };
+
+  let worst = evaluable[0];
+  let worstRatio = worst.biggestHit / worst.avgEHP;
+  let breaching = 0;
+  for (const c of evaluable) {
+    const ratio = c.biggestHit / c.avgEHP;
+    if (ratio >= thresholds.oneShotEhpFraction) breaching++;
+    if (ratio > worstRatio) { worst = c; worstRatio = ratio; }
+  }
+
+  return {
+    resists,
+    defense: {
+      ehp: Math.round(worst.avgEHP),
+      biggestHit: Math.round(worst.biggestHit),
+      label: `Lv.${worst.playerLevel} vs ${worst.enemyLabel}`,
+    },
+    oneShotBreachCells: breaching,
+    evaluatedCells: evaluable.length,
+  };
+}
+
+/**
+ * Run the combat-facing canon laws over a sweep. Returns one `CanonCheckStatus`
+ * per law — including laws that could not run — plus the alert lines for any
+ * violation. Pure; the checkers themselves are untouched.
+ */
+export function lintCombatCanon(
+  facets: CombatCanonFacets,
+  thresholds: CanonThresholds,
+): { alerts: BalanceReportAlert[]; checks: CanonCheckStatus[] } {
+  const alerts: BalanceReportAlert[] = [];
+  const checks: CanonCheckStatus[] = [];
+  const toAlert = (v: CanonViolation, suffix = ''): BalanceReportAlert => ({
+    severity: v.severity,
+    type: 'canon-violation',
+    lawId: v.lawId,
+    message: `Canon (${v.law}): ${v.message}${suffix}`,
+  });
+
+  // Law 2 — per-type resist cap (arpg-resists).
+  const resistAllowed = `≤${(thresholds.resistCap * 100).toFixed(1)}%`;
+  if (facets.resists === null) {
+    checks.push({
+      lawId: 'arpg-resists',
+      law: 'Resist cap',
+      status: 'not-evaluated',
+      allowed: resistAllowed,
+      reason: RESIST_FACET_MISSING_REASON,
+    });
+  } else {
+    const violations = checkResistCap(facets.resists, thresholds);
+    const worst = facets.resists.reduce(
+      (m, r) => (r.value > m.value ? r : m),
+      facets.resists[0] ?? { type: 'none', value: 0 },
+    );
+    for (const v of violations) alerts.push(toAlert(v));
+    checks.push({
+      lawId: 'arpg-resists',
+      law: 'Resist cap',
+      status: violations.length > 0 ? 'violation' : 'pass',
+      allowed: resistAllowed,
+      metric: `${worst.type} resist (highest of ${facets.resists.length})`,
+      observed: worst.value,
+    });
+  }
+
+  // Law 3 — no one-shot at/above the EHP fraction (arpg-defenses).
+  const oneShotAllowed = `<${(thresholds.oneShotEhpFraction * 100).toFixed(1)}% of EHP`;
+  if (!facets.defense) {
+    checks.push({
+      lawId: 'arpg-defenses',
+      law: 'No one-shots below the EHP floor',
+      status: 'not-evaluated',
+      allowed: oneShotAllowed,
+      reason:
+        'the sweep produced no heatmap cell with a positive EHP and a resolvable ' +
+        'enemy hit (empty level range, or every encounter archetype unresolved)',
+    });
+  } else {
+    const { ehp, biggestHit, label } = facets.defense;
+    const violations = checkOneShot({ ehp, biggestHit }, thresholds);
+    const breadth =
+      facets.oneShotBreachCells !== undefined && facets.evaluatedCells !== undefined
+        ? ` — worst of ${facets.oneShotBreachCells}/${facets.evaluatedCells} sweep cells breaching, at ${label}`
+        : ` — at ${label}`;
+    for (const v of violations) alerts.push(toAlert(v, breadth));
+    checks.push({
+      lawId: 'arpg-defenses',
+      law: 'No one-shots below the EHP floor',
+      status: violations.length > 0 ? 'violation' : 'pass',
+      allowed: oneShotAllowed,
+      metric: 'biggest raw enemy hit / EHP',
+      observed: ehp > 0 ? biggestHit / ehp : 0,
+      observedAt: label,
+    });
+  }
+
+  return { alerts, checks };
+}
+
 // ── Main simulation runner ─────────────────────────────────────────────────
 
 export function runPredictiveBalance(config: PredictiveBalanceConfig): BalanceReport {
@@ -272,7 +491,7 @@ export function runPredictiveBalance(config: PredictiveBalanceConfig): BalanceRe
   const heatmap: HeatmapCell[] = [];
   const survivalCurves: Record<string, SurvivalCurvePoint[]> = {};
   const dpsBreakdowns: Record<string, DPSBreakdown[]> = {};
-  const alerts: BalanceReport['alerts'] = [];
+  const alerts: BalanceReportAlert[] = [];
 
   // For each enemy config, sweep across player levels
   for (const ec of config.enemyConfigs) {
@@ -324,7 +543,19 @@ export function runPredictiveBalance(config: PredictiveBalanceConfig): BalanceRe
         playerAttrs.armor, refHit, config.tuning.armorEffectivenessWeight,
       );
 
-      heatmap.push({ playerLevel, enemyLabel: label, survivalRate, avgTTK, avgDPS, avgEHP });
+      // Biggest single raw hit this encounter can land (no crit, pre-mitigation) —
+      // observation only, for the canon one-shot law. The fight loop is untouched.
+      const biggestHit = refEnemy
+        ? Math.max(
+            0,
+            ...archetype.abilities.map(
+              (ab) => (ab.baseDamage + refEnemy.attrs.attackPower * ab.attackPowerScaling)
+                * config.tuning.enemyDamageMul,
+            ),
+          )
+        : 0;
+
+      heatmap.push({ playerLevel, enemyLabel: label, survivalRate, avgTTK, avgDPS, avgEHP, biggestHit });
       curvePoints.push({ level: playerLevel, survivalRate, avgTTK, avgDPS });
 
       // Alerts for specific levels
@@ -416,6 +647,17 @@ export function runPredictiveBalance(config: PredictiveBalanceConfig): BalanceRe
     }
   }
 
+  // Canon conformance: police the COMBAT-facing ARPG-LAWS over this sweep and
+  // surface breaches through the same alert channel, tagged `canon-violation`
+  // with the law id — the idiom the economy sim already uses. Thresholds come
+  // from the canon seed. Laws that cannot be evaluated are recorded as such.
+  const thresholds = readCanonThresholds();
+  const { alerts: canonAlerts, checks: canonChecks } = lintCombatCanon(
+    collectCanonFacets(heatmap, thresholds, config.defenderResists ?? null),
+    thresholds,
+  );
+  alerts.push(...canonAlerts);
+
   // Build summary
   const midCells = heatmap.filter(c => c.playerLevel === Math.floor((config.levelRange[0] + config.levelRange[1]) / 2));
   const avgSurvival = midCells.length > 0 ? midCells.reduce((s, c) => s + c.survivalRate, 0) / midCells.length : 0;
@@ -423,7 +665,8 @@ export function runPredictiveBalance(config: PredictiveBalanceConfig): BalanceRe
 
   const summary = `Player Lv.${config.levelRange[0]}-${config.levelRange[1]} across ${config.enemyConfigs.length} encounter types: ` +
     `${(avgSurvival * 100).toFixed(0)}% avg mid-level survival, ${avgTTK.toFixed(1)}s avg fight duration. ` +
-    `${alerts.filter(a => a.severity === 'critical').length} critical, ${alerts.filter(a => a.severity === 'warning').length} warnings.`;
+    `${alerts.filter(a => a.severity === 'critical').length} critical, ${alerts.filter(a => a.severity === 'warning').length} warnings, ` +
+    `${canonChecks.filter(c => c.status === 'violation').length} canon violation(s).`;
 
   return {
     summary,
@@ -432,6 +675,7 @@ export function runPredictiveBalance(config: PredictiveBalanceConfig): BalanceRe
     dpsBreakdowns,
     sensitivity,
     alerts,
+    canonChecks,
     durationMs: Math.round(performance.now() - start),
   };
 }
