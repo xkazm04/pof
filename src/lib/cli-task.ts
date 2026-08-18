@@ -517,6 +517,12 @@ export interface AudioImportTask extends CLITask {
   setName: string;
   eventKey: string | null;
   surface: string | null;
+  /**
+   * The set's `loopable` flag. Documented as "applied at UE import
+   * (USoundWave.looping)" but it never reached the task, so the Library's "· loop"
+   * badge was decorative. Threaded through to the dispatch env + the prompt.
+   */
+  loop: boolean;
   assets: AudioImportAssetRef[];
   appOrigin: string;
 }
@@ -748,7 +754,7 @@ export const TaskFactory = {
    * USoundWaves + a randomising USoundCue under /Game/Audio/<setName>/.
    */
   importAudioSet(
-    params: { setName: string; eventKey?: string | null; surface?: string | null; assets: AudioImportAssetRef[] },
+    params: { setName: string; eventKey?: string | null; surface?: string | null; loop?: boolean; assets: AudioImportAssetRef[] },
     appOrigin: string,
     label = 'Audio Import',
   ): AudioImportTask {
@@ -760,6 +766,7 @@ export const TaskFactory = {
       setName: params.setName,
       eventKey: params.eventKey ?? null,
       surface: params.surface ?? null,
+      loop: params.loop ?? false,
       assets: params.assets,
       appOrigin,
     };

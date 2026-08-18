@@ -31,12 +31,25 @@ Import the **footstep-stone** set into the UE project as USoundWaves + a
 randomising USoundCue, and (best-effort) wire it to the corresponding
 AnimNotify.
 
-1. From the UE project root, set the env vars then run the FULL editor with
+Loop flag for this set: **one-shot** — set
+`USoundWave.looping = False` on every imported wave.
+
+1. FIRST verify the importer exists: `C:\proj\PoF/Content/Python/import_audio_set.py`.
+   PoF does NOT ship this script. If it is absent, author it before step 2 (read
+   `AUDIO_SET_NAME` / `AUDIO_EVENT_KEY` / `AUDIO_SURFACE` / `AUDIO_LOOP` /
+   `AUDIO_SOURCES` from the environment, import each source path as a USoundWave
+   under `/Game/Audio/<set>/`, set `looping` from `AUDIO_LOOP`, build a randomising
+   USoundCue `SC_<set>`, best-effort wire the AnimNotify, and print the DONE line in
+   step 3). Never report an import you did not actually run.
+2. From the UE project root, set the env vars then run the FULL editor with
    `-ExecutePythonScript` (PowerShell):
-   `$env:AUDIO_SET_NAME="footstep-stone"; $env:AUDIO_EVENT_KEY="AnimNotify_FootstepEffect"; $env:AUDIO_SURFACE="stone"; $env:AUDIO_SOURCES="C:\audio\step_01.wav;C:\audio\step_02.wav"; & "C:\Program Files\Epic Games\UE_5.8\Engine\Binaries\Win64\UnrealEditor.exe" "<the .uproject>" -ExecutePythonScript="Content/Python/import_audio_set.py" -unattended -nopause -nosplash`
-2. Read the script's final `[import_audio_set] DONE` line: it prints
+   `$env:AUDIO_SET_NAME="footstep-stone"; $env:AUDIO_EVENT_KEY="AnimNotify_FootstepEffect"; $env:AUDIO_SURFACE="stone"; $env:AUDIO_LOOP="0"; $env:AUDIO_SOURCES="C:\audio\step_01.wav;C:\audio\step_02.wav"; & "C:\Program Files\Epic Games\UE_5.8\Engine\Binaries\Win64\UnrealEditor.exe" "<the .uproject>" -ExecutePythonScript="Content/Python/import_audio_set.py" -unattended -nopause -nosplash`
+   The source paths above are absolute — do not re-expand them.
+3. Read the script's final `[import_audio_set] DONE` line: it prints
    `assetsImported=N cuePath=/Game/Audio/<set>/SC_<set> wiredEvent=<name|null>`.
-3. Submit the result via @@CALLBACK:
+4. Submit the result via @@CALLBACK. If the import did not run, submit
+   `assetsImported: 0` with `cuePath: null` — the Library reads that as UNVERIFIED,
+   which is the truth; a fabricated cue path is not.
 
 ## Submission
 

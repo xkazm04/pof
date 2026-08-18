@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Trash2, Upload, RefreshCw, Loader2, Star, Search, X } from 'lucide-react';
+import { Trash2, Upload, RefreshCw, Loader2, Star, Search, X, AlertTriangle } from 'lucide-react';
 import { tryApiFetch } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
@@ -22,13 +22,41 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { WaveformThumbnail } from './WaveformThumbnail';
 import { AudioUsageMeter } from './AudioUsageMeter';
+import { AudioImportStatus } from './AudioImportStatus';
+import type { AudioImportResult } from '@/types/audio-import';
+import type { AudioImportPreflight } from '@/lib/audio-import-status';
 
 /** A pending destructive delete awaiting user confirmation. */
 type PendingDelete =
   | { kind: 'asset'; id: string; label: string }
   | { kind: 'set'; id: string; label: string };
 
-interface LibraryData { sets: AudioSet[]; assets: AudioAsset[]; usage: AudioUsageSummary | null }
+interface LibraryData {
+  sets: AudioSet[];
+  assets: AudioAsset[];
+  usage: AudioUsageSummary | null;
+  /** Server-resolved absolute AUDIO_DIR — the import CLI needs a real path, not `~/…`. */
+  audioDir: string | null;
+}
+
+/** What `audio_import_runs` records, per set, plus the UE-side dependency check. */
+interface ImportReality {
+  bySet: Record<string, AudioImportResult>;
+  preflight: AudioImportPreflight | null;
+}
+
+/** Defensive read of GET /api/audio/import-result — an unexpected shape must read
+ *  as "nothing recorded" (never imported), never as a silent success. */
+function parseImportReality(raw: unknown): ImportReality {
+  const d = raw as { bySet?: unknown; preflight?: unknown } | null;
+  const bySet = d && typeof d.bySet === 'object' && d.bySet !== null
+    ? (d.bySet as Record<string, AudioImportResult>)
+    : {};
+  const pf = d && typeof d.preflight === 'object' && d.preflight !== null
+    ? (d.preflight as AudioImportPreflight)
+    : null;
+  return { bySet, preflight: pf && typeof pf.ok === 'boolean' ? pf : null };
+}
 
 function fmtDuration(ms: number): string {
   if (ms <= 0) return 'auto';
@@ -36,9 +64,13 @@ function fmtDuration(ms: number): string {
 }
 
 export function AudioLibraryPanel() {
-  const [data, setData] = useState<LibraryData>({ sets: [], assets: [], usage: null });
+  const [data, setData] = useState<LibraryData>({ sets: [], assets: [], usage: null, audioDir: null });
+  const [reality, setReality] = useState<ImportReality>({ bySet: {}, preflight: null });
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState<string | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  /** The set whose import was refused, so the inline banner can offer a real retry. */
+  const [failedImportSetId, setFailedImportSetId] = useState<string | null>(null);
   const [filter, setFilter] = useState<LibraryFilter>(DEFAULT_FILTER);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
   const [failedDelete, setFailedDelete] = useState<PendingDelete | null>(null);
@@ -47,9 +79,24 @@ export function AudioLibraryPanel() {
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await tryApiFetch<LibraryData>('/api/audio-gen');
-      if (res.ok) setData({ sets: res.data.sets, assets: res.data.assets, usage: res.data.usage ?? null });
-      else logger.warn('library fetch failed', { err: res.error });
+      const [res, imp] = await Promise.all([
+        tryApiFetch<LibraryData>('/api/audio-gen'),
+        // The recorded reality of every past import. A failure here leaves the
+        // map empty, which renders as "never imported" — the honest default.
+        tryApiFetch<unknown>('/api/audio/import-result'),
+      ]);
+      if (res.ok) {
+        setData({
+          sets: res.data.sets, assets: res.data.assets,
+          usage: res.data.usage ?? null,
+          audioDir: typeof res.data.audioDir === 'string' ? res.data.audioDir : null,
+        });
+      } else logger.warn('library fetch failed', { err: res.error });
+      if (imp.ok) setReality(parseImportReality(imp.data));
+      else {
+        logger.warn('import-result fetch failed', { err: imp.error });
+        setReality({ bySet: {}, preflight: null });
+      }
     } finally {
       setLoading(false);
     }
@@ -87,13 +134,45 @@ export function AudioLibraryPanel() {
 
   async function handleImport(set: AudioSet, assets: AudioAsset[]) {
     if (assets.length === 0) return;
+    setImportError(null);
+    setFailedImportSetId(null);
+    const refuse = (reason: string) => {
+      setFailedImportSetId(set.id);
+      setImportError(`Import not dispatched for "${set.name}": ${reason} Nothing was imported.`);
+    };
+
+    // Preflight BEFORE spawning the CLI. The dispatch drives a UE-side python
+    // script this repo does not ship; without it the session burns and fails at
+    // runtime with no explanation. A missing/unverifiable dependency is reported
+    // here with its reason and the dispatch does NOT happen.
+    const pf = await tryApiFetch<unknown>(`/api/audio/import-result?setName=${encodeURIComponent(set.name)}`);
+    const preflight = pf.ok ? parseImportReality(pf.data).preflight : null;
+    setReality((r) => ({ ...r, preflight: preflight ?? r.preflight }));
+    if (!preflight) {
+      refuse(`the UE dependency check could not run${pf.ok ? '' : ` (${pf.error})`}.`);
+      return;
+    }
+    if (!preflight.ok) {
+      refuse(preflight.reason);
+      return;
+    }
+
+    // The CLI needs a real absolute path. `~/.pof/audio/…` was never expanded by
+    // the PowerShell env-var assignment that carried it.
+    const audioDir = data.audioDir;
+    if (!audioDir) {
+      refuse('the server did not report the audio directory, so clip paths cannot be made absolute.');
+      return;
+    }
+
     setImporting(set.id);
     const appOrigin = getAppOrigin();
     const task = TaskFactory.importAudioSet({
       setName: set.name,
       eventKey: set.eventKey,
       surface: set.surface,
-      assets: assets.map((a) => ({ filename: a.filename, srcAbsPath: relPathToAbs(a.relPath) })),
+      loop: set.loopable,
+      assets: assets.map((a) => ({ filename: a.filename, srcAbsPath: relPathToAbs(audioDir, a.relPath) })),
     }, appOrigin, `Audio Import (${set.name})`);
     importCli.execute(task);
   }
@@ -213,6 +292,34 @@ export function AudioLibraryPanel() {
           </span>
         </div>
 
+        {/* The UE-side dependency the "Import to UE" button drives. Stated up front
+            so a user does not discover it by watching a CLI session fail. */}
+        {reality.preflight && !reality.preflight.ok && (
+          <div
+            data-testid="audio-import-preflight"
+            className="mb-3 flex items-start gap-1.5 px-2.5 py-2 rounded border text-2xs"
+            style={{ borderColor: `${STATUS_WARNING}4d`, backgroundColor: `${STATUS_WARNING}14`, color: STATUS_WARNING }}
+          >
+            <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" aria-hidden />
+            <span>Import to UE is blocked: {reality.preflight.reason}</span>
+          </div>
+        )}
+
+        {importError && (
+          <div className="mb-3" data-testid="audio-import-error">
+            <InlineErrorRetry
+              message={importError}
+              onRetry={() => {
+                const g = groups.find((x) => x.set.id === failedImportSetId);
+                setImportError(null);
+                if (g) handleImport(g.set, g.assets);
+              }}
+              onDismiss={() => setImportError(null)}
+              dense
+            />
+          </div>
+        )}
+
         {loading && <div className="text-2xs text-text-muted">Loading…</div>}
 
         {!loading && totalCount === 0 && (
@@ -232,7 +339,12 @@ export function AudioLibraryPanel() {
               <div className="flex items-center gap-2 px-3 py-2 bg-surface-deep border-b border-border">
                 <span className="text-xs font-semibold text-text truncate">{s.name}</span>
                 <span className="text-2xs text-text-muted truncate">
-                  {s.kind}{s.eventKey ? ` · ${s.eventKey}` : ''}{s.surface ? ` · ${s.surface}` : ''}{s.loopable ? ' · loop' : ''}
+                  {s.kind}{s.eventKey ? ` · ${s.eventKey}` : ''}{s.surface ? ` · ${s.surface}` : ''}
+                  {s.loopable && (
+                    // The flag now actually reaches the import dispatch
+                    // (AUDIO_LOOP → USoundWave.looping); before it was decorative.
+                    <span title="Imported as looping — sets USoundWave.looping on every wave">{' · loop'}</span>
+                  )}
                 </span>
                 <span className="text-2xs text-text-muted">· {assets.length}</span>
                 <button onClick={() => handleImport(s, assets)} disabled={importing === s.id}
@@ -246,6 +358,10 @@ export function AudioLibraryPanel() {
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
+
+              {/* What the DB actually recorded about this set's last import —
+                  absence is stated as "never imported", never as success. */}
+              <AudioImportStatus record={reality.bySet[s.name] ?? null} />
 
               <div className="divide-y divide-border">
                 {assets.map((a) => (
@@ -326,9 +442,17 @@ function FacetSelect({ value, onChange, options, testId }: {
   );
 }
 
-/** Resolve a relPath stored in the DB to an absolute path for the import CLI. */
-function relPathToAbs(relPath: string): string {
-  // Server-side AUDIO_DIR isn't importable in this client component; pass a
-  // tilde-prefixed path the import CLI/script can expand via os.path.expanduser.
-  return `~/.pof/audio/${relPath}`;
+/**
+ * Resolve a relPath stored in the DB to an absolute path for the import CLI.
+ *
+ * `audioDir` is the server-resolved `AUDIO_DIR` (os.homedir()-expanded), handed
+ * to the client by GET /api/audio-gen. The previous form passed a literal
+ * `~/.pof/audio/<rel>`, which the dispatch dropped into a PowerShell env var —
+ * `~` is NOT expanded there, so the path was unusable and the claim that the
+ * (absent) script would expanduser it was unverifiable.
+ */
+function relPathToAbs(audioDir: string, relPath: string): string {
+  const sep = audioDir.includes('\\') ? '\\' : '/';
+  const base = audioDir.replace(/[\\/]+$/, '');
+  return `${base}${sep}${relPath.split('/').join(sep)}`;
 }

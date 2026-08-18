@@ -126,7 +126,11 @@ export async function GET() {
   const sets = listSets(d);
   const assets = listAllAssets(d);
   const usage = getUsageSummary(d, startOfMonth(), monthlyQuota());
-  return apiSuccess({ sets, assets, usage });
+  // `audioDir` is the server-resolved absolute AUDIO_DIR. The client used to hand
+  // the import CLI a `~/.pof/audio/...` path, but `~` is not expanded by PowerShell
+  // env-var assignment — the dispatch carried an unusable path that only an
+  // (absent) script's expanduser would have saved.
+  return apiSuccess({ sets, assets, usage, audioDir: AUDIO_DIR });
 }
 
 interface PatchBody { assetId?: string; favorite?: boolean }

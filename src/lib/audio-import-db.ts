@@ -23,8 +23,22 @@ function db(): Database.Database {
       wiredEvent TEXT,
       createdAt INTEGER NOT NULL
     );
+    CREATE INDEX IF NOT EXISTS idx_audio_import_runs_setName ON audio_import_runs(setName, id);
   `);
   return _db;
+}
+
+function rowToImport(row: Record<string, unknown>): AudioImportResult {
+  return {
+    id: Number(row.id),
+    setName: String(row.setName),
+    eventKey: (row.eventKey as string | null) ?? null,
+    surface: (row.surface as string | null) ?? null,
+    assetsImported: Number(row.assetsImported),
+    cuePath: (row.cuePath as string | null) ?? null,
+    wiredEvent: (row.wiredEvent as string | null) ?? null,
+    createdAt: Number(row.createdAt),
+  };
 }
 
 export interface RecordAudioImportInput {
@@ -56,15 +70,31 @@ export function recordAudioImport(input: RecordAudioImportInput): AudioImportRes
 
 export function getLatestAudioImport(): AudioImportResult | null {
   const row = db().prepare('SELECT * FROM audio_import_runs ORDER BY createdAt DESC LIMIT 1').get() as Record<string, unknown> | undefined;
-  if (!row) return null;
-  return {
-    id: Number(row.id),
-    setName: String(row.setName),
-    eventKey: (row.eventKey as string | null) ?? null,
-    surface: (row.surface as string | null) ?? null,
-    assetsImported: Number(row.assetsImported),
-    cuePath: (row.cuePath as string | null) ?? null,
-    wiredEvent: (row.wiredEvent as string | null) ?? null,
-    createdAt: Number(row.createdAt),
-  };
+  return row ? rowToImport(row) : null;
+}
+
+/** The most recent recorded run for ONE set, or null when it has never been imported. */
+export function getLatestAudioImportForSet(setName: string): AudioImportResult | null {
+  const row = db().prepare(
+    'SELECT * FROM audio_import_runs WHERE setName = ? ORDER BY id DESC LIMIT 1',
+  ).get(setName) as Record<string, unknown> | undefined;
+  return row ? rowToImport(row) : null;
+}
+
+/**
+ * The latest run per set name, keyed by set name — the shape the Library reads to
+ * report each set's real last-import outcome. Max(id) rather than max(createdAt) so
+ * two runs recorded in the same millisecond still resolve to the later insert.
+ * A set absent from this map has NEVER been imported (never assume otherwise).
+ */
+export function listLatestAudioImportsBySet(): Record<string, AudioImportResult> {
+  const rows = db().prepare(
+    'SELECT * FROM audio_import_runs WHERE id IN (SELECT MAX(id) FROM audio_import_runs GROUP BY setName)',
+  ).all() as Array<Record<string, unknown>>;
+  const out: Record<string, AudioImportResult> = {};
+  for (const r of rows) {
+    const rec = rowToImport(r);
+    out[rec.setName] = rec;
+  }
+  return out;
 }

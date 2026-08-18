@@ -565,12 +565,25 @@ Import the **${at.setName}** set into the UE project as USoundWaves + a
 randomising USoundCue, and (best-effort) wire it to the corresponding
 AnimNotify.
 
-1. From the UE project root, set the env vars then run the FULL editor with
+Loop flag for this set: **${at.loop ? 'LOOPING' : 'one-shot'}** — set
+\`USoundWave.looping = ${at.loop ? 'True' : 'False'}\` on every imported wave.
+
+1. FIRST verify the importer exists: \`${ctx.projectPath}/Content/Python/import_audio_set.py\`.
+   PoF does NOT ship this script. If it is absent, author it before step 2 (read
+   \`AUDIO_SET_NAME\` / \`AUDIO_EVENT_KEY\` / \`AUDIO_SURFACE\` / \`AUDIO_LOOP\` /
+   \`AUDIO_SOURCES\` from the environment, import each source path as a USoundWave
+   under \`/Game/Audio/<set>/\`, set \`looping\` from \`AUDIO_LOOP\`, build a randomising
+   USoundCue \`SC_<set>\`, best-effort wire the AnimNotify, and print the DONE line in
+   step 3). Never report an import you did not actually run.
+2. From the UE project root, set the env vars then run the FULL editor with
    \`-ExecutePythonScript\` (PowerShell):
-   \`$env:AUDIO_SET_NAME="${at.setName}"; $env:AUDIO_EVENT_KEY="${at.eventKey ?? ''}"; $env:AUDIO_SURFACE="${at.surface ?? ''}"; $env:AUDIO_SOURCES="${assetsArg}"; & "${editorExe}" "<the .uproject>" -ExecutePythonScript="Content/Python/import_audio_set.py" -unattended -nopause -nosplash\`
-2. Read the script's final \`[import_audio_set] DONE\` line: it prints
+   \`$env:AUDIO_SET_NAME="${at.setName}"; $env:AUDIO_EVENT_KEY="${at.eventKey ?? ''}"; $env:AUDIO_SURFACE="${at.surface ?? ''}"; $env:AUDIO_LOOP="${at.loop ? '1' : '0'}"; $env:AUDIO_SOURCES="${assetsArg}"; & "${editorExe}" "<the .uproject>" -ExecutePythonScript="Content/Python/import_audio_set.py" -unattended -nopause -nosplash\`
+   The source paths above are absolute — do not re-expand them.
+3. Read the script's final \`[import_audio_set] DONE\` line: it prints
    \`assetsImported=N cuePath=/Game/Audio/<set>/SC_<set> wiredEvent=<name|null>\`.
-3. Submit the result via @@CALLBACK:
+4. Submit the result via @@CALLBACK. If the import did not run, submit
+   \`assetsImported: 0\` with \`cuePath: null\` — the Library reads that as UNVERIFIED,
+   which is the truth; a fabricated cue path is not.
 
 ${buildCallbackSection(getCallback(cbId)!)}`;
 };
