@@ -14,13 +14,18 @@
  * because a lane built from a failure's empty list paints every step R0 NOT WIRED — the map
  * would then report "nothing was ever produced here" on the strength of a network blip, and
  * send someone to rebuild something that already works. Failure is per-lane: one dead catalog
- * never blanks the other 31.
+ * never blanks the other 31, and its retry re-reads only itself.
+ *
+ * The artifact half of the map comes from `statusArtifactSource` — ONE shared, cross-tab
+ * cached read of every catalog. This view used to fan out its own 32 artifact GETs on mount,
+ * and the Capability tab fanned out the same 32 again on tab switch, and again on the way
+ * back. Now the whole walk costs one read per catalog.
  */
 import { useEffect, useMemo, useState } from 'react';
 import '@/lib/catalog/pipelines/registry.generated';
 import { allCatalogPipelines } from '@/lib/catalog/pipeline-registry';
-import { fetchArtifactsResult } from '@/components/layout-lab/labArtifactClient';
 import { tryApiFetch } from '@/lib/api-utils';
+import { useStatusArtifacts } from './statusArtifactSource';
 import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
 import { buildSwimlane, sortLanes, getStepFact, type Swimlane, type StepCell } from '@/lib/status/statusModel';
 import {
@@ -182,9 +187,17 @@ interface UnknownLane {
   error: string;
 }
 
-/** Per-catalog outcome of the map load. `ok:false` keeps the failure instead of folding it
- *  into an empty artifact list (see {@link UnknownLane}). */
-type LaneLoad = { ok: true; lane: Swimlane } | { ok: false; catalogId: string; error: string };
+/** Stable empty list, so `built === null` doesn't hand a fresh array to memo dependents. */
+const NO_UNKNOWN_LANES: UnknownLane[] = [];
+
+/** The two whole-project verdict streams, settled together. `craftByCatalog` is null when
+ *  the craft fetch FAILED — absent gauges must never paint as A0. */
+interface VerdictLoad {
+  byCatalog: Map<string, JudgeVerdict[]>;
+  craftByCatalog: Map<string, CraftVerdictView[]> | null;
+  verdictsDegraded: boolean;
+  craftDegraded: boolean;
+}
 
 /** Shared retry affordance for the two degraded-load surfaces below. */
 function RetryButton({ onClick, label = 'Retry' }: { onClick: () => void; label?: string }) {
@@ -222,42 +235,32 @@ export function PipelinesView({
   filterClass?: string | null;
   onClearFilter?: () => void;
 }) {
-  const [lanes, setLanes] = useState<Swimlane[] | null>(null);
+  // The artifact half of the map comes from the SHARED whole-project read (one deduped
+  // fetch per catalog, cached across tabs) — not a private per-mount fan-out.
+  const { catalogs, retryCatalog, reload: reloadArtifacts } = useStatusArtifacts();
   /** Non-null when the map could not be loaded at all — the view must SAY so rather than
    *  sit on "Loading…" forever (an honesty dashboard cannot fail silently). */
   const [error, setError] = useState<string | null>(null);
-  /** True when the map rendered but judge verdicts did not load: grades below then reflect
-   *  gate/checker status only, so a judged pass/fail is missing. Say it, don't hide it. */
-  const [verdictsDegraded, setVerdictsDegraded] = useState(false);
-  /** The parallel A-axis (craft) readings, keyed `catalogId step`. Null while loading OR
-   *  when the craft fetch failed — an absent chip means "not loaded", never a painted A0
-   *  (painting UNGAUGED over a fetch failure would fabricate an audit result). */
-  const [craftByKey, setCraftByKey] = useState<Map<string, CellCraft> | null>(null);
-  const [craftDegraded, setCraftDegraded] = useState(false);
-  /** Catalogs whose artifact read FAILED. They are held apart from `lanes` and rendered as
-   *  UNKNOWN rows — never as a lane — because the alternative (building a lane from the
-   *  failure's empty list) paints a grade the data does not support. */
-  const [unknownLanes, setUnknownLanes] = useState<UnknownLane[]>([]);
+  /** The two verdict streams, settled together. Null until they have. */
+  const [verdicts, setVerdicts] = useState<VerdictLoad | null>(null);
   const [reload, setReload] = useState(0);
   const [highlight, setHighlight] = useState<Highlight>(null);
   // Clicking a cell opens the evidence modal (the stored output the gate evaluated),
   // NOT Item Focus — so a verdict can be audited against its actual proof.
   const [evidence, setEvidence] = useState<{ catalogId: string; step: string; cell: StepCell } | null>(null);
 
+  // Judge + craft verdicts are two whole-project reads, unchanged: one request each, and
+  // neither is per-catalog, so there is nothing to fan out.
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
-        const pipelines = allCatalogPipelines();
         const [verdictRes, craftRes] = await Promise.all([
           tryApiFetch<JudgeVerdict[]>('/api/judge-verdicts'),
           tryApiFetch<CraftVerdictView[]>('/api/craft-verdicts'),
         ]);
-        const allVerdicts = verdictRes.ok ? verdictRes.data : [];
-        if (alive) setVerdictsDegraded(!verdictRes.ok);
-        if (alive) setCraftDegraded(!craftRes.ok);
         const byCatalog = new Map<string, JudgeVerdict[]>();
-        for (const v of allVerdicts) {
+        for (const v of verdictRes.ok ? verdictRes.data : []) {
           const list = byCatalog.get(v.catalogId) ?? [];
           list.push(v);
           byCatalog.set(v.catalogId, list);
@@ -268,46 +271,13 @@ export function PipelinesView({
           list.push(v);
           craftByCatalog.set(v.catalogId, list);
         }
-        const craft = craftRes.ok ? new Map<string, CellCraft>() : null;
-        const results: LaneLoad[] = await Promise.all(
-          pipelines.map(async (p): Promise<LaneLoad> => {
-            // The `Result` form, not the lossy `fetchArtifacts` wrapper: its `[]` on failure
-            // is indistinguishable from an empty catalog, and every cell derived from it
-            // would read R0 NOT WIRED.
-            const res = await fetchArtifactsResult(p.catalogId);
-            if (!res.ok) return { ok: false, catalogId: p.catalogId, error: res.error };
-            const artifacts = res.data;
-            const metas = p.steps.map((s) => ({ label: s.label, archetype: s.archetype, engine: s.engine }));
-            if (craft) {
-              // Per-step entity → current artifact updatedAt: the staleness anchor a
-              // craft gauge is projected against (a verdict older than a re-produce
-              // must read as stale, never current).
-              const updatedByStep = new Map<string, Map<string, string>>();
-              for (const a of artifacts) {
-                if (!a.updatedAt) continue;
-                const m = updatedByStep.get(a.step) ?? new Map<string, string>();
-                m.set(a.entityId, a.updatedAt);
-                updatedByStep.set(a.step, m);
-              }
-              for (const s of p.steps) {
-                const c = craftForCell(
-                  p.catalogId,
-                  s.label,
-                  craftByCatalog.get(p.catalogId) ?? [],
-                  updatedByStep.get(s.label) ?? new Map(),
-                );
-                if (c) craft.set(`${p.catalogId} ${s.label}`, c);
-              }
-            }
-            return { ok: true, lane: buildSwimlane(p.catalogId, p.catalogId, metas, artifacts, byCatalog.get(p.catalogId) ?? []) };
-          }),
-        );
-        // Partial stays partial: the catalogs that answered still render their lanes; the
-        // ones that failed are held aside as UNKNOWN and named in the banner below.
         if (alive) {
-          setLanes(sortLanes(results.flatMap((r) => (r.ok ? [r.lane] : []))));
-          setUnknownLanes(results.flatMap((r) => (r.ok ? [] : [{ catalogId: r.catalogId, error: r.error }])));
-          setCraftByKey(craft);
+          setVerdicts({
+            byCatalog,
+            craftByCatalog: craftRes.ok ? craftByCatalog : null,
+            verdictsDegraded: !verdictRes.ok,
+            craftDegraded: !craftRes.ok,
+          });
         }
       } catch (err) {
         if (alive) setError(err instanceof Error ? err.message : String(err));
@@ -316,16 +286,74 @@ export function PipelinesView({
     return () => { alive = false; };
   }, [reload]);
 
+  /**
+   * Derive the map. Pure over (catalogs, verdicts) — nothing here fetches, so a tab switch
+   * that finds the cache warm renders the same lanes with no request at all.
+   *
+   * It waits for BOTH inputs on purpose: a lane painted before its judge verdicts arrive
+   * would show a grade the verdicts then change, and this surface must not flicker a grade.
+   */
+  const built = useMemo(() => {
+    if (!catalogs || !verdicts) return null;
+    const specs = new Map(allCatalogPipelines().map((p) => [p.catalogId, p]));
+    const craft = verdicts.craftByCatalog ? new Map<string, CellCraft>() : null;
+    const lanes: Swimlane[] = [];
+    const unknown: UnknownLane[] = [];
+    for (const c of catalogs) {
+      const p = specs.get(c.catalogId);
+      if (!p) continue;
+      // A failed read is NOT an empty catalog: building a lane from `[]` would grade every
+      // step R0 NOT WIRED. It is held out of `lanes` and reported as UNKNOWN instead.
+      if (c.error !== null) {
+        unknown.push({ catalogId: c.catalogId, error: c.error });
+        continue;
+      }
+      const metas = p.steps.map((s) => ({ label: s.label, archetype: s.archetype, engine: s.engine }));
+      if (craft && verdicts.craftByCatalog) {
+        // Per-step entity → current artifact updatedAt: the staleness anchor a
+        // craft gauge is projected against (a verdict older than a re-produce
+        // must read as stale, never current).
+        const updatedByStep = new Map<string, Map<string, string>>();
+        for (const a of c.rows) {
+          if (!a.updatedAt) continue;
+          const m = updatedByStep.get(a.step) ?? new Map<string, string>();
+          m.set(a.entityId, a.updatedAt);
+          updatedByStep.set(a.step, m);
+        }
+        for (const s of p.steps) {
+          const cc = craftForCell(
+            c.catalogId,
+            s.label,
+            verdicts.craftByCatalog.get(c.catalogId) ?? [],
+            updatedByStep.get(s.label) ?? new Map(),
+          );
+          if (cc) craft.set(`${c.catalogId} ${s.label}`, cc);
+        }
+      }
+      lanes.push(buildSwimlane(c.catalogId, c.catalogId, metas, c.rows, verdicts.byCatalog.get(c.catalogId) ?? []));
+    }
+    return { lanes: sortLanes(lanes), unknown, craft };
+  }, [catalogs, verdicts]);
+
+  const lanes = built?.lanes ?? null;
+  /** Catalogs whose artifact read FAILED — rendered as UNKNOWN rows, never as lanes. */
+  const unknownLanes = built?.unknown ?? NO_UNKNOWN_LANES;
+  /** The parallel A-axis (craft) readings, keyed `catalogId step`. Null while loading OR
+   *  when the craft fetch failed — an absent chip means "not loaded", never a painted A0
+   *  (painting UNGAUGED over a fetch failure would fabricate an audit result). */
+  const craftByKey = built?.craft ?? null;
+  /** True when the map rendered but judge verdicts did not load: grades below then reflect
+   *  gate/checker status only, so a judged pass/fail is missing. Say it, don't hide it. */
+  const verdictsDegraded = verdicts?.verdictsDegraded ?? false;
+  const craftDegraded = verdicts?.craftDegraded ?? false;
+
   /** Operator-driven only — nothing here re-fetches a failed catalog on its own. An errored
    *  key that auto-retried would spin against a 500 (the lab's artifact cache learned this
    *  the hard way and bails out of `ensure` on a stored error for the same reason). */
   const retry = () => {
     setError(null);
-    setLanes(null);
-    setUnknownLanes([]);
-    setVerdictsDegraded(false);
-    setCraftByKey(null);
-    setCraftDegraded(false);
+    setVerdicts(null);
+    reloadArtifacts();
     setReload((n) => n + 1);
   };
 
@@ -715,7 +743,11 @@ export function PipelinesView({
             <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--lab-s2)', fontSize: 'var(--lab-fs-xs)', color: 'var(--lab-text)' }}>
               <strong style={{ fontFamily: 'var(--lab-font-mono)', color: 'var(--lab-warn)' }}>UNKNOWN</strong>
               <span style={{ color: 'var(--lab-muted)' }}>could not read this pipeline&apos;s artifacts: {u.error}</span>
-              <RetryButton onClick={retry} />
+              {/* Targeted: issues a read for THIS catalog only — the ones that answered are
+                  still served from the shared cache and are never re-fetched. (The map does
+                  show its loading state until the re-read settles: lanes are derived only
+                  once every catalog has settled, so a half-settled map is never painted.) */}
+              <RetryButton onClick={() => retryCatalog(u.catalogId)} />
             </span>
           </div>
         ))}

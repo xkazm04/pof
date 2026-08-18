@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, cleanup, waitFor, fireEvent } from '@testing-library/react';
 import { PipelinesView } from '@/components/status/PipelinesView';
+import { _resetArtifactCache } from '@/components/layout-lab/labArtifactCache';
 import type { Result } from '@/types/result';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 
@@ -30,15 +31,16 @@ vi.mock('@/lib/catalog/pipeline-registry', async (importOriginal) => {
   };
 });
 
-/** `items` answers with a produced artifact; `npcs` fails the read. */
+/** `items` answers with produced artifacts; `npcs` fails the read. The shared source reads
+ *  through the `Result` form, so this is the fetch that has to keep its failure. */
 const fetchArtifactsResult = vi.fn(
   async (catalogId: string): Promise<Result<PipelineArtifact[], string>> => {
     if (catalogId === 'npcs') return { ok: false, error: 'HTTP 500' };
     return {
       ok: true,
       data: [
-        { catalogId: 'items', entityId: 'e1', step: 'Concept Brief', data: {}, ueAssets: [], status: 'pass', tier: 'L0' },
-        { catalogId: 'items', entityId: 'e1', step: 'Economy', data: {}, ueAssets: [], status: 'pass', tier: 'L0' },
+        { catalogId, entityId: 'e1', step: 'Concept Brief', data: {}, ueAssets: [], status: 'pass', tier: 'L0' },
+        { catalogId, entityId: 'e1', step: 'Economy', data: {}, ueAssets: [], status: 'pass', tier: 'L0' },
       ],
     };
   },
@@ -46,6 +48,7 @@ const fetchArtifactsResult = vi.fn(
 
 vi.mock('@/components/layout-lab/labArtifactClient', () => ({
   fetchArtifactsResult: (catalogId: string) => fetchArtifactsResult(catalogId),
+  fetchStepSummaryResult: vi.fn(async () => ({ ok: true, data: [] })),
   fetchArtifacts: vi.fn(async () => []),
 }));
 
@@ -67,6 +70,9 @@ function lane(container: HTMLElement, catalogId: string): Element | null {
 }
 
 beforeEach(() => {
+  // The shared read is a MODULE-LEVEL cache — it deliberately outlives an unmount, so each
+  // case starts from an empty one.
+  _resetArtifactCache();
   fetchArtifactsResult.mockClear();
 });
 afterEach(cleanup);
@@ -136,5 +142,22 @@ describe('PipelinesView — a failed read is not a grade', () => {
     await waitFor(() => {
       expect(fetchArtifactsResult).toHaveBeenCalledTimes(4);
     });
+  });
+
+  it('retries only the failed lane, leaving the catalogs that answered alone', async () => {
+    const { container } = render(<PipelinesView onFocusCatalog={vi.fn()} />);
+    const row = await waitFor(() => {
+      const r = container.querySelector('[data-testid="unknown-lane-npcs"]');
+      expect(r).toBeTruthy();
+      return r!;
+    });
+    expect(fetchArtifactsResult).toHaveBeenCalledTimes(2);
+
+    fireEvent.click([...row.querySelectorAll('button')].find((b) => b.textContent === 'Retry')!);
+    await waitFor(() => {
+      expect(fetchArtifactsResult).toHaveBeenCalledTimes(3);
+    });
+    // The third read is npcs again — items is still served from the shared cache.
+    expect(fetchArtifactsResult.mock.calls.map((c) => c[0])).toEqual(['items', 'npcs', 'npcs']);
   });
 });

@@ -8,15 +8,19 @@
  * it never touches grading or any gate.
  *
  * Clicking a row drops into the Pipelines map FILTERED to that class's steps.
+ *
+ * Its artifact input is the SHARED whole-project read (`statusArtifactSource`) — one
+ * deduped fetch per catalog held in `labArtifactCache`, which is module-level and so
+ * survives the tab unmount. This tab is the default landing and used to fan out its OWN
+ * 32 per-catalog GETs on every mount (7,828,924 bytes against the real DB), which the
+ * Pipelines tab then paid again. A catalog that fails to read is NAMED rather than folded
+ * into the gate denominators.
  */
-import { useEffect, useState } from 'react';
-import '@/lib/catalog/pipelines/registry.generated';
-import { allCatalogPipelines } from '@/lib/catalog/pipeline-registry';
-import { fetchArtifacts } from '@/components/layout-lab/labArtifactClient';
+import { useEffect, useMemo, useState } from 'react';
 import { tryApiFetch } from '@/lib/api-utils';
 import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
-import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 import { buildCapabilityRows, type CapabilityRow, type CapabilityGradeLevel } from '@/lib/status/capabilityModel';
+import { useStatusArtifacts } from './statusArtifactSource';
 import { StatusTag } from '@/components/ui/StatusTag';
 import { MicroLabel } from '@/components/ui/MicroLabel';
 import type { StatusLevel } from '@/lib/status-token';
@@ -124,7 +128,11 @@ function Row({ row, onFilter }: { row: CapabilityRow; onFilter: (klass: string) 
 }
 
 export function CapabilityView({ onFilterClass }: { onFilterClass: (klass: string) => void }) {
-  const [rows, setRows] = useState<CapabilityRow[] | null>(null);
+  // The L3/L4 gate artifacts come from the SHARED whole-project read the Pipelines map also
+  // consumes — one deduped fetch per catalog, cached across tabs. This tab is the DEFAULT
+  // landing, and it used to fan out its own per-catalog artifact GETs on every mount.
+  const { catalogs, reload } = useStatusArtifacts();
+  const [verdicts, setVerdicts] = useState<JudgeVerdict[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   /** Bumped by Retry to re-run the load effect. */
   const [attempt, setAttempt] = useState(0);
@@ -133,31 +141,41 @@ export function CapabilityView({ onFilterClass }: { onFilterClass: (klass: strin
     let alive = true;
     (async () => {
       // Verdicts (all judges: llm-panel + vlm + human) feed the score/human streams; the
-      // L3/L4 gate artifacts (fetched per catalog, same source the Pipelines map uses) feed
-      // the gate-judged classes. buildCapabilityRows routes each class to its own stream.
+      // L3/L4 gate artifacts feed the gate-judged classes. buildCapabilityRows routes each
+      // class to its own stream.
       const res = await tryApiFetch<JudgeVerdict[]>('/api/judge-verdicts');
       if (!alive) return;
       if (!res.ok) {
         // Grading an EMPTY verdict set would render every score-judged class as
         // "unproven / no evidence" — a fabricated verdict manufactured by a dead
         // endpoint, in the one view whose whole job is honest capability truth.
-        // Report the failure instead. (fetchArtifacts below is non-throwing by
-        // contract and degrades to [], so only this stream can be surfaced here.)
+        // Report the failure instead.
         setError(res.error);
         return;
       }
-      const perCatalog = await Promise.all(allCatalogPipelines().map((p) => fetchArtifacts(p.catalogId)));
-      const artifacts: PipelineArtifact[] = perCatalog.flat();
-      if (alive) setRows(buildCapabilityRows(res.data, artifacts));
+      setVerdicts(res.data);
     })();
     return () => {
       alive = false;
     };
   }, [attempt]);
 
+  /** Catalogs whose gate artifacts could not be read. Their L3/L4 rows are MISSING from the
+   *  denominators below, so an "N/M gates pass" figure is incomplete — named, not hidden. */
+  const unknownCatalogs = useMemo(
+    () => (catalogs ?? []).filter((c) => c.error !== null).map((c) => c.catalogId),
+    [catalogs],
+  );
+
+  const rows = useMemo(
+    () => (verdicts && catalogs ? buildCapabilityRows(verdicts, catalogs.flatMap((c) => c.rows)) : null),
+    [verdicts, catalogs],
+  );
+
   const retry = () => {
     setError(null);
-    setRows(null);
+    setVerdicts(null);
+    reload();
     setAttempt((a) => a + 1);
   };
 
@@ -204,6 +222,55 @@ export function CapabilityView({ onFilterClass }: { onFilterClass: (klass: strin
               border: '1px solid var(--lab-line)',
               borderRadius: 'var(--lab-r-sm)',
               padding: 'var(--lab-s1) var(--lab-s3)',
+              cursor: 'pointer',
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {/* A catalog whose gate artifacts could not be read leaves a HOLE in the gate
+          pass-rate denominators. Silently grading around it would understate exactly the
+          way a swallowed fetch does on the Pipelines map. */}
+      {unknownCatalogs.length > 0 && !error && (
+        <div
+          role="status"
+          data-testid="capability-unknown-banner"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 'var(--lab-s3)',
+            maxWidth: 880,
+            padding: 'var(--lab-s2) var(--lab-s3)',
+            marginBottom: 'var(--lab-s3)',
+            fontSize: 'var(--lab-fs-xs)',
+            color: 'var(--lab-text)',
+            // shorthand first — a later `border` would wipe the warn stripe.
+            border: '1px solid var(--lab-line)',
+            borderLeft: '3px solid var(--lab-warn)',
+            borderRadius: 'var(--lab-r-sm)',
+          }}
+        >
+          <span style={{ minWidth: 0 }}>
+            <strong style={{ fontFamily: mono }}>PARTIAL</strong> — {unknownCatalogs.length} catalog
+            {unknownCatalogs.length === 1 ? '' : 's'} could not be read, so any gate pass-rate below counts
+            fewer gates than exist: <span style={{ fontFamily: mono }}>{unknownCatalogs.join(', ')}</span>.
+            Missing, not absent.
+          </span>
+          <button
+            type="button"
+            onClick={retry}
+            className="focus-ring"
+            style={{
+              flexShrink: 0,
+              font: 'inherit',
+              color: 'var(--lab-ink)',
+              background: 'transparent',
+              border: '1px solid var(--lab-ink)',
+              borderRadius: 'var(--lab-r-sm)',
+              padding: 'var(--lab-s1) var(--lab-s2)',
               cursor: 'pointer',
             }}
           >
