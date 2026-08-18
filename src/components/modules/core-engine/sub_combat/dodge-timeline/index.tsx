@@ -76,6 +76,12 @@ export function DodgeTimelineEditor({ initialParams }: { initialParams?: Partial
   const stats = usePlayheadStats(playhead, params, phases, hitMarkers);
 
   /* Playback */
+  // NOT suspend-gated, deliberately. Unlike the choreography playhead (an
+  // encounter runs for tens of seconds), a dodge timeline is a sub-second
+  // animation — it self-terminates at `phases.totalTimeline` and cancels on
+  // unmount, so the worst case in a hidden pane is a fraction of a second of
+  // frames. Gating it would mean moving the rAF chain out of this imperative
+  // `play()` into an effect for no measurable saving.
   const play = useCallback(() => {
     setIsPlaying(true);
     lastFrameRef.current = performance.now();

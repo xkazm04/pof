@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useSuspendableEffect } from '@/hooks/useSuspend';
 import { DEFAULT_THRESHOLD, DEFAULT_PULSE_SPEED, HEALTHY_COLOR, DANGER_COLOR } from './constants';
 import { toCSS, lerpColor } from './helpers';
 
@@ -8,25 +9,45 @@ import { toCSS, lerpColor } from './helpers';
 
 function useAnimationTime(active: boolean): [number, () => void] {
   const [time, setTime] = useState(0);
+  // The pulse clock, hoisted out of the effect closure so a suspend/resume
+  // continues the sine wave instead of restarting it.
+  const accumulatedRef = useRef(0);
 
-  useEffect(() => {
+  /* Suspend-gated (see `useSuspend.ts`). The module LRU keeps up to five panes
+     MOUNTED behind `display:none`, and the browser only throttles rAF for a
+     hidden TAB — so an unwatched low-health preview would otherwise pulse at
+     60fps, calling setState every frame, indefinitely.
+
+     Pausing is lossless because the loop already integrates dt into an
+     accumulator rather than reading a wall clock: banking it in a ref means the
+     resumed run restarts `lastTs` at the first live frame (dt from the hidden
+     span is never integrated) and continues the sine phase from the same value
+     it paused on. The alpha/colour are pure functions of that accumulator, so
+     the resumed frame is the one that would have been drawn next. */
+  useSuspendableEffect(() => {
     if (!active) return;
 
     let raf = 0;
     let lastTs = 0;
-    let accumulated = 0;
 
     const frame = (now: number) => {
       if (lastTs === 0) lastTs = now;
       const dt = (now - lastTs) / 1000;
       lastTs = now;
-      accumulated += dt;
-      setTime(accumulated);
+      accumulatedRef.current += dt;
+      setTime(accumulatedRef.current);
       raf = requestAnimationFrame(frame);
     };
 
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
+  }, [active]);
+
+  // Leaving the animating range (paused, or health back above the threshold)
+  // still zeroes the clock so the next pulse starts at phase 0 — unchanged from
+  // before the suspend gate, which never touches `active`.
+  useEffect(() => {
+    if (!active) accumulatedRef.current = 0;
   }, [active]);
 
   const reset = useCallback(() => {

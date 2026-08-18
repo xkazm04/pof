@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
+import { useSuspendableEffect } from '@/hooks/useSuspend';
 import { Users } from 'lucide-react';
 import { ACCENT_CYAN } from '@/lib/chart-colors';
 import { DEFAULT_TUNING } from '@/lib/combat/definitions';
@@ -61,7 +62,18 @@ export function CombatChoreographyEditor() {
     [debouncedEnemies, debouncedWaves, debouncedTuning, debouncedPlayerLevel],
   );
 
-  useEffect(() => {
+  /* Suspend-gated (see `useSuspend.ts`). Encounter playback advances the scrub
+     head at 60fps for the whole encounter duration (tens of seconds). The module
+     LRU keeps this pane MOUNTED behind `display:none` and the browser only
+     throttles rAF for a hidden TAB, so playback left running would otherwise
+     scrub — and re-render the timeline — in a pane nobody can see.
+
+     Pausing is lossless because the playhead is React state (`scrubTime`), not
+     a closure variable: it survives the pause untouched, and the resumed run
+     re-seeds `lastFrameRef` from the current frame time so the hidden span is
+     never added as one huge dt (which would jump the head to the end and stop
+     playback). Resuming continues from the exact frame the pane was hidden on. */
+  useSuspendableEffect(() => {
     if (!isPlaying) {
       if (playRef.current) cancelAnimationFrame(playRef.current);
       return;
@@ -79,7 +91,8 @@ export function CombatChoreographyEditor() {
     };
     playRef.current = requestAnimationFrame(tick);
     return () => { if (playRef.current) cancelAnimationFrame(playRef.current); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Deliberately keyed on `isPlaying` alone (unchanged): adding `simResult`
+    // would restart playback from the current frame on every tuning edit.
   }, [isPlaying]);
 
   const handlePlace = useCallback((x: number, y: number) => {

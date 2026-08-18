@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useSuspendableEffect } from '@/hooks/useSuspend';
 import { DEFAULT_PHYSICS, DEFAULT_COMBAT, PRESETS } from './constants';
 import { spawnParticle, updateParticle, computeReadability } from './simulation';
 import type { PhysicsConfig, CombatConfig, DmgParticle, ReadabilityMetrics } from './types';
@@ -109,18 +110,47 @@ export function useDamageNumberPhysicsSimulator() {
     animFrameRef.current = requestAnimationFrame(tick);
   }, [physics, combat, canvasW, canvasH]);
 
+  // The loop reads the config captured when the run started (unchanged from
+  // when `toggleRunning` owned the rAF chain), so keep the latest `tick` in a
+  // ref and snapshot it at run start rather than restarting on every edit.
+  const tickRef = useRef(tick);
+  tickRef.current = tick;
+
   const toggleRunning = useCallback(() => {
     setIsRunning(prev => {
       if (!prev) {
-        lastTimeRef.current = 0;
         spawnAccRef.current = 0;
-        animFrameRef.current = requestAnimationFrame(tick);
         return true;
       }
-      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
       return false;
     });
-  }, [tick]);
+  }, []);
+
+  /* Suspend-gated (see `useSuspend.ts`). This is an UNBOUNDED 60fps physics
+     simulation: it spawns, integrates and re-renders particles every frame for
+     as long as `isRunning`. The module LRU keeps the pane MOUNTED while hidden
+     (`display:none`) and the browser only throttles rAF for a hidden TAB, so
+     before this gate a forgotten "Running" simulator burned a full frame budget
+     in a pane nobody could see. Ownership of the rAF chain moved out of
+     `toggleRunning` into this effect precisely so the suspend signal can reach
+     it — while visible the lifecycle is identical (start on true, cancel on
+     false/unmount).
+
+     Pausing is lossless because every piece of simulation state is already
+     out-of-frame: particles live in `particlesRef`, the spawn debt in
+     `spawnAccRef`, and the frame clock is a `lastTimeRef` delta that is zeroed
+     on resume so the hidden span is never integrated as one giant dt (which
+     would teleport every particle). The resumed frame is the frame that would
+     have come next, drawn from the same particle set. */
+  useSuspendableEffect(() => {
+    if (!isRunning) return;
+    lastTimeRef.current = 0;
+    const step = tickRef.current;
+    animFrameRef.current = requestAnimationFrame(step);
+    return () => {
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    };
+  }, [isRunning]);
 
   // Cleanup on unmount
   useEffect(() => {

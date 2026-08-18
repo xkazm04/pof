@@ -85,6 +85,9 @@ export function AbilitySpellbook({ moduleId }: AbilitySpellbookProps) {
 
     // Bounded retry: generous headroom over the 300ms exit + enter transitions,
     // then give up silently (e.g. section removed from the target tab).
+    // NOT suspend-gated, deliberately: this loop is already deadline-bounded to
+    // 2s and only ever runs as the tail of a click the user just made in the
+    // VISIBLE pane — it cannot still be alive by the time the pane is hidden.
     const deadline = performance.now() + 2000;
     const tryScroll = () => {
       pendingScrollRafRef.current = null;

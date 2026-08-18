@@ -61,6 +61,12 @@ export function GASBalanceSimulator() {
     let completed = 0;
     setSimProgress({ current: 0, total });
 
+    // NOT suspend-gated, deliberately. This is a FINITE chunked compute (it
+    // stops itself at `total`), not an animation — rAF is only being borrowed to
+    // yield between chunks so the progress bar can paint. Pausing it while the
+    // pane is hidden would strand the user's explicitly-started run behind a
+    // frozen "Running…" spinner; letting it finish costs a bounded slice of CPU
+    // and has the results waiting when they come back.
     const processChunk = () => {
       if (runIdRef.current !== runId) return;
       const end = Math.min(completed + chunkSize, total);
