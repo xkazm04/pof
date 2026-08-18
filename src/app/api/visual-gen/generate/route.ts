@@ -9,6 +9,7 @@ import { startHunyuanJob } from '@/lib/visual-gen/hunyuan-job-store';
 import { startTripoJob } from '@/lib/visual-gen/tripo-job-store';
 import { polycountFor } from '@/lib/visual-gen/polycount-presets';
 import { providerFaceLimit } from '@/lib/visual-gen/face-budget';
+import { tripoModelFor } from '@/lib/visual-gen/tripo-models';
 
 /**
  * POST /api/visual-gen/generate
@@ -32,8 +33,27 @@ export async function POST(request: NextRequest) {
       mcResolution?: number;
       assetClass?: string;
       maxAttempts?: number;
+      topology?: string;
     };
-    const { mode, providerId, imageDataUrl, prompt, mcResolution, assetClass, maxAttempts } = body;
+    const { mode, providerId, imageDataUrl, prompt, mcResolution, assetClass, maxAttempts, topology } = body;
+
+    // Quad topology is REACHABLE but refused, rather than silently unavailable. Tripo
+    // delivers a quad request as FBX, and every consumer downstream of this route assumes
+    // GLB: the GlbViewer, `pof_mesh_critique.py`'s trimesh load (which feeds the Tier-1
+    // gate), and the UE .glb import. Writing FBX bytes to the .glb path this route builds
+    // would make the extension lie to all three — `formatMismatchReason` in tripo-runner
+    // exists to catch exactly that. Enabling quad is a format-conversion change, not a
+    // flag, so the refusal names what has to happen first instead of pretending the
+    // option does not exist.
+    if (topology === 'quads') {
+      return apiError(
+        'quad topology is not wired: Tripo delivers a quad request as FBX, and this route writes a .glb consumed by the GlbViewer, the trimesh Tier-1 gate, and the UE .glb import. Enabling it needs a format-aware output path (or an FBX→GLB conversion) first — see tripo-runner formatMismatchReason.',
+        400,
+      );
+    }
+    if (topology !== undefined && topology !== 'triangles') {
+      return apiError(`unknown topology "${topology}" — expected "triangles" or "quads"`, 400);
+    }
     // The preset budget is authored in TRIANGLES; `providerFaceLimit` converts it to the
     // number the provider's `face_limit` actually counts (halved for quad topology).
     const triangleBudget = assetClass ? polycountFor(assetClass)?.faceLimit : undefined;
@@ -72,16 +92,21 @@ export async function POST(request: NextRequest) {
 
     if (providerId === 'tripo3d') {
       const { stamp, outputPath } = outFor('tripo3d');
+      // Never leave model_version unset — the character-pipeline arena graded the silent
+      // account default a FAIL. `tripoModelFor` pins the one model it graded PASS, with
+      // the texture quality both recorded pass recipes call for.
+      const pin = tripoModelFor(assetClass);
+      const tripoPin = { modelVersion: pin.modelVersion, textureQuality: pin.textureQuality };
       if (mode === 'text-to-3d') {
         if (!prompt?.trim()) return apiError('Missing prompt for text-to-3d', 400);
-        const jobId = startTripoJob({ mode: 'text-to-3d', prompt, outputPath, pbr: true, faceLimit, assetClass, maxAttempts });
+        const jobId = startTripoJob({ mode: 'text-to-3d', prompt, outputPath, pbr: true, faceLimit, assetClass, maxAttempts, ...tripoPin });
         return apiSuccess({ jobId, provider: 'tripo3d', mode }, 202);
       }
       if (mode === 'image-to-3d') {
         if (!imageDataUrl) return apiError('Missing imageDataUrl for image-to-3d', 400);
         const inPath = imageToFile('tripo3d', stamp);
         if (!inPath) return apiError('imageDataUrl must be a base64 PNG/JPG/WebP data URL', 400);
-        const jobId = startTripoJob({ mode: 'image-to-3d', imagePath: inPath, outputPath, pbr: true, faceLimit, assetClass, maxAttempts });
+        const jobId = startTripoJob({ mode: 'image-to-3d', imagePath: inPath, outputPath, pbr: true, faceLimit, assetClass, maxAttempts, ...tripoPin });
         return apiSuccess({ jobId, provider: 'tripo3d', mode }, 202);
       }
       return apiError('tripo3d supports text-to-3d and image-to-3d', 400);

@@ -21,6 +21,7 @@ export async function GET(req: NextRequest) {
     const r = job.result as {
       meshPath?: string; verts?: number; faces?: number; durationMs?: number;
       previewPath?: string; device?: string; clipMax?: number; vramGb?: number;
+      renderUrl?: string; formatMismatch?: string;
     } | undefined;
     // Gate-driven regeneration (cloud Tripo only; absent on the local stores).
     const gate = job as unknown as { attempts?: number; accepted?: boolean; gateReason?: string };
@@ -33,6 +34,13 @@ export async function GET(req: NextRequest) {
       device: r?.device,
       vramGb: r?.vramGb,
       durationMs: r?.durationMs,
+      // Tripo's own preview render of the mesh (cloud only). The Tier-1 gate is geometry
+      // only and cannot see a smeared face; this is the image an aesthetic gate scores.
+      renderUrl: r?.renderUrl,
+      // The runner detects when the delivered container does not match the extension it
+      // was written to (a quad request arrives as FBX). It was being computed and then
+      // dropped here, so a .glb path holding FBX bytes reached callers with no signal.
+      formatMismatch: r?.formatMismatch,
       // Tier-1 quality gate (auto-run on the produced mesh).
       critique: job.critique ? { verdict: job.critique.verdict, score: job.critique.score, reasons: job.critique.reasons, metrics: job.critique.metrics } : undefined,
       // Tier-2 fidelity: CLIP cosine of NeRF renders vs the input image (TripoSR only).
