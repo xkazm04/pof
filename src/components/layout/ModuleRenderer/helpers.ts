@@ -14,6 +14,41 @@ export function moduleLabel(id: string): string {
   return MODULE_LABELS[id] ?? SPECIAL_CATEGORY_LABELS[id] ?? id;
 }
 
+/**
+ * THE VISIBILITY RULE: a set `activeSubModule` wins over its owning special
+ * category. Returns the ONE module id the user should see, or `null` for the
+ * welcome state.
+ *
+ * Why the sub-module wins — it is what every path that can produce the dual-set
+ * state actually asked for:
+ * - `setActiveCategory(id)` (the L1 rail) sets `activeSubModule: null`, so a
+ *   category selection can never be the state we are disambiguating here.
+ * - `setActiveSubModule(id)` (the L2 list) keeps `activeCategory`, so a set
+ *   sub-module is always the LATER, more specific request.
+ * - `navigateToModule('game-design-doc')` names the SUB-MODULE and merely
+ *   derives its parent category (`getCategoryForSubModule`) — the category is
+ *   context for the rails, not the requested destination.
+ * So `activeCategory` alone means "show the category"; both set always means
+ * "show the sub-module".
+ *
+ * This is the single source for BOTH `currentActiveId` (which drives the
+ * crossfade veil) and each pane's `isVisible` — one predicate, so exactly one
+ * pane can be visible and the veil always covers the pane the user sees. Panes
+ * for other ids stay MOUNTED (the LRU's job) and are suspended, as any hidden
+ * pane is.
+ *
+ * `isSpecialCategory` is passed in so this stays free of the lazy component
+ * registry; the caller already resolved it.
+ */
+export function resolveVisibleModule(
+  activeCategory: string | null | undefined,
+  activeSubModule: string | null | undefined,
+  isSpecialCategory: boolean,
+): string | null {
+  if (activeSubModule) return activeSubModule;
+  return isSpecialCategory ? activeCategory ?? null : null;
+}
+
 /** Outcome of an LRU touch: the new list plus what (if anything) it cost. */
 export interface LruTouch {
   /** The new list, most-recently-used first. `list` itself is never mutated. */

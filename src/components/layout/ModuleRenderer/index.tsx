@@ -16,7 +16,14 @@ import { ModuleErrorBoundary } from '../ModuleErrorBoundary';
 import { ModuleSkeleton } from '../ModuleSkeleton';
 import type { SubModuleId } from '@/types/modules';
 import { MODULE_COMPONENTS, SPECIAL_CATEGORIES } from './registry';
-import { moduleLabel, lruTouched, lruTouchedAll, describeEviction, reportEviction } from './helpers';
+import {
+  moduleLabel,
+  lruTouched,
+  lruTouchedAll,
+  describeEviction,
+  reportEviction,
+  resolveVisibleModule,
+} from './helpers';
 
 /** Max number of modules kept mounted simultaneously. Oldest are evicted. */
 const LRU_CAP = 5;
@@ -109,16 +116,25 @@ export function ModuleRenderer() {
     }
   }, [sessionEviction]);
 
-  // Determine what to render
-  const isSpecialCategory = activeCategory && SPECIAL_CATEGORIES[activeCategory];
-  const hasActiveContent = isSpecialCategory || activeSubModule;
+  // Determine what to render. `currentActiveId` is the ONE visible module —
+  // `resolveVisibleModule` states the rule (a set sub-module wins over its owning
+  // special category) and is the single source for the pane predicates below, the
+  // crossfade veil and the welcome state, so those three can never disagree.
+  // A sub-module with no view cannot win the rule — navigation state is persisted
+  // to localStorage, so a stale id from an older build stays readable here. Letting
+  // it win would render an empty canvas; instead it defers to its category (or to
+  // the welcome state), which is what the user saw before this rule existed.
+  const isSpecialCategory = Boolean(activeCategory && SPECIAL_CATEGORIES[activeCategory]);
+  const renderableSubModule =
+    activeSubModule && MODULE_COMPONENTS[activeSubModule] ? activeSubModule : null;
+  const currentActiveId = resolveVisibleModule(activeCategory, renderableSubModule, isSpecialCategory);
+  const hasActiveContent = currentActiveId !== null;
 
   // Track module switches to trigger entrance animations (must be before early return)
   const [prevActiveId, setPrevActiveId] = useState<string | null>(null);
   const [switchKey, setSwitchKey] = useState(0);
-  const currentActiveId = isSpecialCategory ? activeCategory : activeSubModule;
   if (currentActiveId !== prevActiveId) {
-    setPrevActiveId(currentActiveId ?? null);
+    setPrevActiveId(currentActiveId);
     setSwitchKey(k => k + 1);
   }
 
@@ -177,18 +193,25 @@ export function ModuleRenderer() {
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Scrollable module content */}
-      <div className="flex-1 overflow-y-auto min-h-0 relative">
+      <div className="flex-1 overflow-y-auto min-h-0 relative" data-active-module={currentActiveId}>
         {moduleLru.map((moduleId) => {
+          // ONE predicate for both pane kinds. The special-category pane used to
+          // test `activeCategory === moduleId` and the sub-module pane
+          // `activeSubModule === moduleId` — independent predicates, so the
+          // dual-set state showed BOTH and whichever painted last won by stacking
+          // order rather than by navigational intent. `currentActiveId` decides.
+          const isVisible = currentActiveId === moduleId;
+
           // Special category modules render without sub-modules.
           const SpecialComponent = SPECIAL_CATEGORIES[moduleId];
           if (SpecialComponent) {
-            return renderModulePane(moduleId, SpecialComponent, activeCategory === moduleId);
+            return renderModulePane(moduleId, SpecialComponent, isVisible);
           }
 
           // Regular sub-module views.
           const Component = MODULE_COMPONENTS[moduleId as SubModuleId];
           if (!Component) return null;
-          return renderModulePane(moduleId, Component, activeSubModule === moduleId);
+          return renderModulePane(moduleId, Component, isVisible);
         })}
 
         {/* Crossfade veil — bg-colored overlay that fades out to reveal incoming module */}
