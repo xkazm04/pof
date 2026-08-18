@@ -5,9 +5,11 @@ import { scoreColor } from './helpers';
 import { CONFIDENCE_META, UNMEASURED_ICON } from './constants';
 import { EvidenceStrip } from './EvidenceStrip';
 
-export function ModuleCard({ module, isSelected, onClick }: {
+export function ModuleCard({ module, isSelected, now, onClick }: {
   module: ModuleCompliance;
   isSelected: boolean;
+  /** The report's `generatedAt` — evidence age is measured against the audit. */
+  now: string;
   onClick: () => void;
 }) {
   const unresolvedGaps = module.gaps.filter((g) => !g.resolved).length;
@@ -78,7 +80,7 @@ export function ModuleCard({ module, isSelected, onClick }: {
       </div>
 
       <div className="flex items-center justify-between gap-2 mt-1">
-        <EvidenceStrip evidence={module.evidence} compact />
+        <EvidenceStrip evidence={module.evidence} now={now} compact />
         {isSelected ? (
           <ChevronDown className="w-3 h-3 text-text-muted flex-shrink-0" aria-hidden="true" />
         ) : (

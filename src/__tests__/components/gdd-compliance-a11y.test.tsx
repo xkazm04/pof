@@ -17,6 +17,7 @@ const moduleFixture: ModuleCompliance = {
   evidence: {
     featuresTotal: 10, featuresMeasured: 10, featuresUnmeasured: 0,
     coverage: 1, confidence: 'high', measured: true,
+    oldestEvidenceAt: '2026-05-20T10:00:00.000Z', newestEvidenceAt: '2026-05-27T10:00:00.000Z', undatedEvidence: 0,
   },
   totalFeatures: 10, implemented: 6, improved: 0, partial: 2, missing: 2, unknown: 0,
   checklistTotal: 8, checklistDone: 5, gaps: [gap],
@@ -29,6 +30,7 @@ const report: ComplianceReport = {
   evidence: {
     featuresTotal: 10, featuresMeasured: 10, featuresUnmeasured: 0,
     coverage: 1, confidence: 'high', measured: true,
+    oldestEvidenceAt: '2026-05-20T10:00:00.000Z', newestEvidenceAt: '2026-05-27T10:00:00.000Z', undatedEvidence: 0,
   },
   modulesTotal: 1, modulesMeasured: 1,
   modules: [moduleFixture], totalGaps: 1, criticalGaps: 0, suggestions,

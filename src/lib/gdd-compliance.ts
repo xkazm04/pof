@@ -244,7 +244,23 @@ function confidenceFor(featuresMeasured: number, coverage: number): ComplianceCo
   return CONFIDENCE_BANDS.find((b) => coverage >= b.min)?.band ?? 'low';
 }
 
-function buildEvidence(featuresTotal: number, featuresMeasured: number): ComplianceEvidence {
+/** Earlier / later of two nullable ISO timestamps; null only when both are null. */
+function earlier(a: string | null, b: string | null): string | null {
+  if (!a) return b;
+  if (!b) return a;
+  return a < b ? a : b;
+}
+function later(a: string | null, b: string | null): string | null {
+  if (!a) return b;
+  if (!b) return a;
+  return a > b ? a : b;
+}
+
+function buildEvidence(
+  featuresTotal: number,
+  featuresMeasured: number,
+  age: Pick<ComplianceEvidence, 'oldestEvidenceAt' | 'newestEvidenceAt' | 'undatedEvidence'>,
+): ComplianceEvidence {
   const coverage = featuresTotal > 0 ? featuresMeasured / featuresTotal : 0;
   return {
     featuresTotal,
@@ -253,7 +269,58 @@ function buildEvidence(featuresTotal: number, featuresMeasured: number): Complia
     coverage,
     confidence: confidenceFor(featuresMeasured, coverage),
     measured: featuresMeasured > 0,
+    ...age,
   };
+}
+
+/**
+ * Evidence for one module, including the review timestamps of the rows the score
+ * was actually computed from. Those timestamps used to be read off the rows and
+ * dropped on the floor, leaving "Last audit: just now" — the time the arithmetic
+ * ran — as the only freshness signal on screen, over evidence of any age.
+ *
+ * Only MEASURED rows contribute: the age of a row nobody gave a verdict to says
+ * nothing about the age of the score.
+ */
+function evidenceFromRows(features: FeatureRow[]): ComplianceEvidence {
+  const measured = features.filter((f) => isMeasured(f.status));
+  let oldest: string | null = null;
+  let newest: string | null = null;
+  let undated = 0;
+  for (const f of measured) {
+    if (!f.lastReviewedAt) {
+      undated += 1;
+      continue;
+    }
+    oldest = earlier(oldest, f.lastReviewedAt);
+    newest = later(newest, f.lastReviewedAt);
+  }
+  return buildEvidence(features.length, measured.length, {
+    oldestEvidenceAt: oldest,
+    newestEvidenceAt: newest,
+    undatedEvidence: undated,
+  });
+}
+
+/** Roll per-module evidence up to the project scope, preserving the age envelope. */
+function mergeEvidence(parts: ComplianceEvidence[]): ComplianceEvidence {
+  let total = 0;
+  let measured = 0;
+  let undated = 0;
+  let oldest: string | null = null;
+  let newest: string | null = null;
+  for (const p of parts) {
+    total += p.featuresTotal;
+    measured += p.featuresMeasured;
+    undated += p.undatedEvidence;
+    oldest = earlier(oldest, p.oldestEvidenceAt);
+    newest = later(newest, p.newestEvidenceAt);
+  }
+  return buildEvidence(total, measured, {
+    oldestEvidenceAt: oldest,
+    newestEvidenceAt: newest,
+    undatedEvidence: undated,
+  });
 }
 
 /**
@@ -393,8 +460,8 @@ export function runComplianceAudit(
       moduleProgress,
     );
 
-    const featuresMeasured = features.filter((f) => isMeasured(f.status)).length;
-    const evidence = buildEvidence(summary.total, featuresMeasured);
+    const evidence = evidenceFromRows(features);
+    const featuresMeasured = evidence.featuresMeasured;
     const conformance = calculateConformance(summary, featuresMeasured);
     // No evidence ⇒ no score. Not a low score, not a neutral one — the UI reads
     // `evidence.measured` and renders UNMEASURED instead of this 0.
@@ -431,10 +498,7 @@ export function runComplianceAudit(
       )
     : 0;
 
-  const evidence = buildEvidence(
-    modules.reduce((s, m) => s + m.evidence.featuresTotal, 0),
-    measuredWeight,
-  );
+  const evidence = mergeEvidence(modules.map((m) => m.evidence));
 
   const allGaps = modules.flatMap((m) => m.gaps);
   const suggestions = generateSuggestions(modules);

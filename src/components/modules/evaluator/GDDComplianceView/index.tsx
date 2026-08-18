@@ -8,8 +8,9 @@ import { useGDDComplianceStore } from '@/stores/gddComplianceStore';
 import { useModuleStore } from '@/stores/moduleStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { SEVERITY_TOKENS, STATUS_ERROR, ACCENT_VIOLET } from '@/lib/chart-colors';
-import { CONFIDENCE_META } from './constants';
-import { EvidenceStrip } from './EvidenceStrip';
+import { evidenceAge } from '@/types/gdd-compliance';
+import { CONFIDENCE_META, FRESHNESS_META } from './constants';
+import { EvidenceStrip, freshnessSentence } from './EvidenceStrip';
 import { ScoreRing } from './ScoreRing';
 import { ModuleCard } from './ModuleCard';
 import { ModuleDetail } from './ModuleDetail';
@@ -69,6 +70,7 @@ export function GDDComplianceView() {
     ? modules.find((m) => m.moduleId === selectedModuleId)
     : null;
   const unmeasuredModules = report.modulesTotal - report.modulesMeasured;
+  const overallAge = evidenceAge(report.evidence, report.generatedAt);
 
   return (
     <div className="space-y-6">
@@ -105,7 +107,7 @@ export function GDDComplianceView() {
                 </span>
               )}
             </p>
-            <EvidenceStrip evidence={report.evidence} />
+            <EvidenceStrip evidence={report.evidence} now={report.generatedAt} />
           </div>
         </div>
         <button
@@ -126,6 +128,7 @@ export function GDDComplianceView() {
             key={mod.moduleId}
             module={mod}
             isSelected={mod.moduleId === selectedModuleId}
+            now={report.generatedAt}
             onClick={() => selectModule(mod.moduleId === selectedModuleId ? null : mod.moduleId)}
           />
         ))}
@@ -133,7 +136,7 @@ export function GDDComplianceView() {
 
       {/* Selected module detail */}
       {selectedModule && (
-        <ModuleDetail module={selectedModule} onResolve={resolveGap} />
+        <ModuleDetail module={selectedModule} now={report.generatedAt} onResolve={resolveGap} />
       )}
 
       {/* Reconciliation suggestions */}
@@ -141,9 +144,15 @@ export function GDDComplianceView() {
         <SuggestionsPanel suggestions={suggestions} />
       )}
 
-      <p className="text-2xs text-text-muted text-center">
-        Last audit: {new Date(report.generatedAt).toLocaleString()}
-      </p>
+      {/* Audit time and evidence age are two different facts and are printed as two.
+          "Last audit" is regenerated on every button press, so on its own it made
+          months-old feature verdicts read as freshly established truth. */}
+      <div className="text-2xs text-text-muted text-center space-y-0.5">
+        <p>Audit ran: {new Date(report.generatedAt).toLocaleString()}</p>
+        <p style={{ color: FRESHNESS_META[overallAge.state].color }}>
+          {FRESHNESS_META[overallAge.state].label} — {freshnessSentence(overallAge)}
+        </p>
+      </div>
     </div>
   );
 }

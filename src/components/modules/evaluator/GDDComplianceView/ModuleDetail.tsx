@@ -10,8 +10,10 @@ import { SEVERITY_CONFIG, EFFORT_LABELS, DIRECTION_META } from './constants';
 import { EvidenceStrip } from './EvidenceStrip';
 import { GapSplitIndicator, GapSideCard } from './GapIndicators';
 
-export function ModuleDetail({ module, onResolve }: {
+export function ModuleDetail({ module, now, onResolve }: {
   module: ModuleCompliance;
+  /** The report's `generatedAt` — evidence age is measured against the audit. */
+  now: string;
   onResolve: (gapId: string) => void;
 }) {
   const unresolvedGaps = module.gaps.filter((g) => !g.resolved);
@@ -30,7 +32,7 @@ export function ModuleDetail({ module, onResolve }: {
           `conformance` is the raw match rate; `score` is that damped by the
           unresolved conformance gaps below — showing both keeps the damping honest. */}
       <div className="rounded-md border border-border bg-surface-deep p-2.5 space-y-1.5">
-        <EvidenceStrip evidence={module.evidence} />
+        <EvidenceStrip evidence={module.evidence} now={now} />
         {module.evidence.measured && (
           <p className="text-2xs text-text-muted">
             Conformance {module.conformance}% of measured rows · score {module.score}% after gap damping

@@ -1,5 +1,7 @@
-import { AlertTriangle, AlertCircle, Info, HelpCircle } from 'lucide-react';
-import type { ComplianceConfidence, GapSeverity, GapDirection } from '@/types/gdd-compliance';
+import { AlertTriangle, AlertCircle, Clock, Info, HelpCircle } from 'lucide-react';
+import type {
+  ComplianceConfidence, EvidenceFreshness, GapSeverity, GapDirection,
+} from '@/types/gdd-compliance';
 import {
   SEVERITY_TOKENS, ACCENT_VIOLET, ACCENT_CYAN_LIGHT,
   type SeverityToken,
@@ -46,6 +48,22 @@ export const CONFIDENCE_META: Record<ComplianceConfidence, { label: string; colo
 
 /** Icon for the unmeasured/no-evidence state, kept beside the severity icons. */
 export const UNMEASURED_ICON = HelpCircle;
+
+// ── Evidence freshness ───────────────────────────────────────────────────────
+//
+// Distinct from the audit timestamp. The audit is regenerated on every button
+// press, so "Last audit: just now" was the only freshness signal on screen even
+// when every feature verdict behind it was months old. These read the age of the
+// EVIDENCE, and `unknown` is never quietly rounded up to fresh.
+
+export const FRESHNESS_META: Record<EvidenceFreshness, { label: string; color: string }> = {
+  unknown: { label: 'Evidence age unknown', color: 'var(--text-subtle)' },
+  fresh: { label: 'Fresh evidence', color: SEVERITY_TOKENS.positive.color },
+  aging: { label: 'Aging evidence', color: SEVERITY_TOKENS.medium.color },
+  stale: { label: 'Stale evidence', color: SEVERITY_TOKENS.high.color },
+};
+
+export const FRESHNESS_ICON = Clock;
 
 export const EFFORT_LABELS: Record<string, string> = {
   trivial: '< 1h',
