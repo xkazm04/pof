@@ -22,6 +22,15 @@
  *   npx tsx scripts/judge-run.ts --catalog items --force-budget  # proceed despite a budget refusal
  *   npx tsx scripts/judge-run.ts --catalog items --rejudge       # re-judge even unchanged steps
  *   npx tsx scripts/judge-run.ts --all --concurrency 4           # bounded pool (default 4)
+ *   npx tsx scripts/judge-run.ts --calibrate [--dry]             # anti-drift: score the labelled set
+ *
+ * CALIBRATE: `--calibrate` scores the hand-labelled `src/lib/judge/calibration.ts` targets with
+ * the same prompt/median/spend machinery as a fleet sweep and reports per-target agreement plus
+ * the aggregate rate, then APPENDS the run to `~/.pof/judge-calibration.jsonl` so drift between
+ * runs is comparable. It writes NOTHING to `judge_verdicts` — measuring the judge must not
+ * re-grade live content as a side effect. Enforcement is scoped to NON-provisional targets (all
+ * three seeds are provisional today, so the honest standing is PROVISIONAL, not a green); exit
+ * code 4 means the measured rate is under `CALIBRATION_THRESHOLD`. `--dry` plans it for free.
  *
  * SKIP: a step whose stored verdict is BOUND to the content on record (same `stepContentHash`
  * under the current scheme, same rubric version) is skipped by default — the judgment already
@@ -70,6 +79,19 @@ import {
   verdictKey,
   type PriorVerdict,
 } from '../src/lib/judge/fleetPlan';
+import {
+  appendCalibrationRun,
+  bandOf,
+  buildCalibrationRun,
+  calibrationDrift,
+  calibrationKey,
+  CALIBRATION,
+  CALIBRATION_THRESHOLD,
+  evaluateCalibration,
+  latestCalibrationRun,
+  readCalibrationHistory,
+  type CalibrationTarget,
+} from '../src/lib/judge/calibration';
 import { getStepFact, isSyntheticEntity } from '../src/lib/status/statusModel';
 import { canonContextFor } from '../src/lib/catalog/canon/canonContext';
 import { CANON_SEED } from '../src/lib/catalog/canon/canon-seed';
@@ -98,6 +120,8 @@ const REJUDGE = has('rejudge');
 const NO_NESTED = has('no-nested');
 /** In-flight judge spawns. Bounded — each worker holds a real Claude CLI process. */
 const CONCURRENCY = Math.max(1, Number(arg('concurrency') ?? DEFAULT_JUDGE_CONCURRENCY));
+/** Anti-drift mode: score the hand-labelled CALIBRATION set and report agreement. */
+const CALIBRATE = has('calibrate');
 
 type Artifact = { entityId: string; step: string; status: string; data: Record<string, unknown> };
 
@@ -260,9 +284,10 @@ function planOne(catalogId: string, art: Artifact, classFilter: Set<string> | nu
   return { kind: 'judge', cls };
 }
 
-async function judgeOne(catalogId: string, art: Artifact, cls: DeliverableClass, entityArtifacts: Artifact[], tmpDir: string, policy: { cliModel: string; effort: string; modelId: string }) {
+/** The rubric prompt for one artifact, or null when this step has no judgeable payload. */
+function prepareJudge(catalogId: string, art: Artifact, cls: DeliverableClass, entityArtifacts: Artifact[], tmpDir: string): { prompt: string; imageFile?: string; canon: boolean; sibling: boolean } | null {
   const payload = buildPayload(cls, art, tmpDir);
-  if (!payload) return { skipped: `${catalogId}::${art.step} — no judgeable ${cls} payload` };
+  if (!payload) return null;
 
   // Canon-aware context: the catalog's binding design rules + the entity's sibling steps. Text
   // configs get the sibling cross-reference surface; media steps only get canon (their siblings
@@ -278,11 +303,36 @@ async function judgeOne(catalogId: string, art: Artifact, cls: DeliverableClass,
     canonContext,
     siblingContext,
   });
-  if (DRY) return { dry: `${catalogId}::${art.step} [${cls}] canon=${canonContext ? 'y' : 'n'} sib=${siblingContext ? 'y' : 'n'} → ${payload.imageFile ?? 'text'} (${prompt.length} chars)` };
+  return { prompt, imageFile: payload.imageFile, canon: !!canonContext, sibling: !!siblingContext };
+}
 
-  // A single strict-judge draw has ~+/-5 run-to-run variance, so a step whose true quality sits
-  // near the 90 line flaps across it between judgings. --median N draws N times and keeps the
-  // MEDIAN (never the max: best-of-N would silently inflate every borderline cell into green).
+/**
+ * Draw the judge and keep the MEDIAN score.
+ *
+ * A single strict-judge draw has ~+/-5 run-to-run variance, so a step whose true quality sits
+ * near the 90 line flaps across it between judgings. --median N draws N times and keeps the
+ * MEDIAN (never the max: best-of-N would silently inflate every borderline cell into green).
+ * Every spawn is metered here, so both the fleet sweep and `--calibrate` pay through one seam.
+ */
+async function drawJudge(prompt: string, taskType: JudgeTaskType, label: string, policy: { cliModel: string; effort: string }): Promise<{ res: JudgeResult | null; scores: number[]; costUsd: number }> {
+  const draws: JudgeResult[] = [];
+  let costUsd = 0;
+  for (let i = 0; i < MEDIAN; i++) {
+    const m = await runClaude(prompt, policy.cliModel, policy.effort);
+    meter(taskType, `${label} draw ${i + 1}/${MEDIAN}`, m);
+    costUsd += m.costUsd;
+    const res = parseJudgeResult(m.text);
+    if (res) draws.push(res);
+  }
+  const sorted = [...draws].sort((a, b) => a.score - b.score);
+  return { res: sorted.length ? sorted[Math.floor((sorted.length - 1) / 2)] : null, scores: sorted.map((d) => d.score), costUsd };
+}
+
+async function judgeOne(catalogId: string, art: Artifact, cls: DeliverableClass, entityArtifacts: Artifact[], tmpDir: string, policy: { cliModel: string; effort: string; modelId: string }) {
+  const prep = prepareJudge(catalogId, art, cls, entityArtifacts, tmpDir);
+  if (!prep) return { skipped: `${catalogId}::${art.step} — no judgeable ${cls} payload` };
+  if (DRY) return { dry: `${catalogId}::${art.step} [${cls}] canon=${prep.canon ? 'y' : 'n'} sib=${prep.sibling ? 'y' : 'n'} → ${prep.imageFile ?? 'text'} (${prep.prompt.length} chars)` };
+
   // Every spawn is gated then metered. The gate is re-read per step (not once per run) so a
   // budget crossed mid-fleet actually STOPS the remaining spawns instead of only the first one.
   const taskType = judgeTaskType(cls);
@@ -292,22 +342,13 @@ async function judgeOne(catalogId: string, art: Artifact, cls: DeliverableClass,
     return { error: `${catalogId}::${art.step} — REFUSED by budget guardrail` };
   }
 
-  const draws: JudgeResult[] = [];
-  let stepCost = 0;
-  for (let i = 0; i < MEDIAN; i++) {
-    const m = await runClaude(prompt, policy.cliModel, policy.effort);
-    meter(taskType, `${catalogId}::${art.step} [${art.entityId}] draw ${i + 1}/${MEDIAN}`, m);
-    stepCost += m.costUsd;
-    const res = parseJudgeResult(m.text);
-    if (res) draws.push(res);
-  }
-  const costTag = ` ${formatUsd(stepCost)}`;
-  if (!draws.length) return { error: `${catalogId}::${art.step} — no parseable verdict in ${MEDIAN} draw(s)${costTag}` };
-  const sorted = [...draws].sort((a, b) => a.score - b.score);
-  const res = sorted[Math.floor((sorted.length - 1) / 2)];
+  const drawn = await drawJudge(prep.prompt, taskType, `${catalogId}::${art.step} [${art.entityId}]`, policy);
+  const costTag = ` ${formatUsd(drawn.costUsd)}`;
+  if (!drawn.res) return { error: `${catalogId}::${art.step} — no parseable verdict in ${MEDIAN} draw(s)${costTag}` };
+  const res = drawn.res;
   // Verdict follows the MEDIAN score, not the drawn verdict of that sample.
   const verdict: 'pass' | 'fail' = res.score >= BANDS.shippable ? 'pass' : 'fail';
-  const spread = draws.length > 1 ? ` [median-of-${draws.length}: ${sorted.map((d) => d.score).join(',')}]` : '';
+  const spread = drawn.scores.length > 1 ? ` [median-of-${drawn.scores.length}: ${drawn.scores.join(',')}]` : '';
 
   const judge = cls === 'text-config' ? 'llm-panel' : 'vlm';
   const canonTag = NO_CANON ? '' : '+canon';
@@ -326,6 +367,104 @@ async function judgeOne(catalogId: string, art: Artifact, cls: DeliverableClass,
   return { verdict: `${verdict.toUpperCase()} ${res.score} ${catalogId}::${art.step} [${cls}]${spread}${costTag} ${ok ? '' : '(POST FAIL)'}` };
 }
 
+// ── Calibration (--calibrate) ────────────────────────────────────────────────
+/**
+ * Score the hand-labelled `CALIBRATION` targets and report how far the judge sits from the human.
+ *
+ * This is the mode the calibration module's threshold claim rests on: without it, `CALIBRATION`
+ * and `computeAgreement` had ZERO consumers and the documented "guard test enforces 85%" was a
+ * claim nothing could check — while the judge's verdicts really do downgrade a step to `fail`.
+ *
+ * It reuses the fleet's own machinery deliberately: the SAME `prepareJudge` prompt (canon +
+ * sibling context, honouring `--no-canon` / `--no-nested`), the SAME `drawJudge` median policy,
+ * and the SAME `budgetGate` + `meter` spend seam — a calibration draw is a real Opus draw and is
+ * billed like one. It records NOTHING to `judge_verdicts`: calibration is measurement of the
+ * judge, not a judgment of the content (a verdict written here would re-grade live steps as a
+ * side effect of an audit). The run IS appended to the calibration history so drift between runs
+ * is comparable rather than scrolling past in a terminal.
+ *
+ * Returns the process exit code: 4 when the measured rate is under the threshold.
+ */
+async function calibrate(tmpDir: string, policy: { cliModel: string; effort: string; modelId: string }): Promise<number> {
+  const scores: Record<string, number> = {};
+  const unscored: Record<string, string> = {};
+  const byCatalog = new Map<string, CalibrationTarget[]>();
+  for (const t of CALIBRATION) byCatalog.set(t.catalogId, [...(byCatalog.get(t.catalogId) ?? []), t]);
+  const confirmed = CALIBRATION.filter((t) => !t.provisional).length;
+
+  console.log(
+    `calibrate: ${CALIBRATION.length} target(s), ${confirmed} with a CONFIRMED human label ` +
+    `(${CALIBRATION.length - confirmed} provisional), threshold ${(CALIBRATION_THRESHOLD * 100).toFixed(0)}%, ` +
+    `median-of-${MEDIAN} — verdicts are NOT recorded (measurement only)`,
+  );
+
+  for (const [catalogId, targets] of byCatalog) {
+    // An unreachable catalog is reported AS unreachable, never as "no stored artifact" — a
+    // calibration that could not read the content must not read like content that is missing.
+    let fetchError: string | null = null;
+    const arts = budgetStop ? [] : await fetchArtifacts(catalogId).catch((e: unknown) => {
+      fetchError = `artifacts unreachable at ${ORIGIN} (${e instanceof Error ? e.message : String(e)}) — is the dev server running?`;
+      return [] as Artifact[];
+    });
+    for (const t of targets) {
+      const key = calibrationKey(t);
+      const tag = t.provisional ? ' (provisional)' : '';
+      if (budgetStop) { unscored[key] = 'budget guardrail stopped the run before this target'; continue; }
+      if (fetchError) { unscored[key] = fetchError; console.log(`  UNSCORED ${key} — ${fetchError}`); continue; }
+      const art = arts.find((a) => a.entityId === t.entityId && a.step === t.step);
+      if (!art) { unscored[key] = 'no stored artifact'; console.log(`  UNSCORED ${key} — no stored artifact`); continue; }
+      const cls = deliverableClassOf(getStepFact(catalogId, t.step)?.deliverable ?? '', catalogId, t.step);
+      if (!cls) { unscored[key] = 'step has no judgeable deliverable class'; console.log(`  UNSCORED ${key} — no judgeable deliverable class`); continue; }
+      const prep = prepareJudge(catalogId, art, cls, arts, tmpDir);
+      if (!prep) { unscored[key] = `no judgeable ${cls} payload`; console.log(`  UNSCORED ${key} — no judgeable ${cls} payload`); continue; }
+      if (DRY) { unscored[key] = 'dry run — not drawn'; console.log(`  DRY ${key} [${cls}] human ${t.label}${tag} → ${prep.imageFile ?? 'text'} (${prep.prompt.length} chars)`); continue; }
+
+      const taskType = judgeTaskType(cls);
+      const gate = budgetGate(taskType);
+      if (gate.refuse) {
+        budgetStop = `budget guardrail refused ${taskType}: ${gate.reasons.join(' ')} — re-run with --force-budget to override`;
+        unscored[key] = 'refused by the budget guardrail';
+        continue;
+      }
+      const drawn = await drawJudge(prep.prompt, taskType, `calibration ${key}`, policy);
+      if (!drawn.res) { unscored[key] = `no parseable verdict in ${MEDIAN} draw(s)`; console.log(`  UNSCORED ${key} — no parseable verdict in ${MEDIAN} draw(s) ${formatUsd(drawn.costUsd)}`); continue; }
+      scores[key] = drawn.res.score;
+      const band = bandOf(drawn.res.score);
+      const spread = drawn.scores.length > 1 ? ` [median-of-${drawn.scores.length}: ${drawn.scores.join(',')}]` : '';
+      console.log(`  ${band === t.label ? 'AGREE   ' : 'DISAGREE'} ${key} — human ${t.label}${tag}, judge ${band} (${drawn.res.score})${spread} ${formatUsd(drawn.costUsd)}`);
+    }
+  }
+
+  const prev = latestCalibrationRun();
+  const run = buildCalibrationRun({
+    targets: CALIBRATION, scores, unscored,
+    rubricVersion: RUBRIC_VERSION, model: policy.modelId, effort: policy.effort,
+    spend: { costUsd: spend.costUsd, spawns: spend.spawns, unknownCost: spend.unknownCost },
+  });
+  const verdict = evaluateCalibration(run, RUBRIC_VERSION);
+  console.log(`calibration: ${verdict.message}`);
+  for (const d of run.overall.disagreements) console.log(`  disagreement: ${d.key} — human ${d.human}, judge ${d.judge} (${d.score})`);
+  console.log(`  scored ${run.overall.scored}/${run.overall.total}; ${run.confirmed.scored} confirmed target(s) back the enforced rate; spend ${formatUsd(spend.costUsd)} over ${spend.spawns} spawn(s)` +
+    (spend.unknownCost ? ` (${spend.unknownCost} unmeasured — cost unknown, not free)` : ''));
+
+  if (DRY) {
+    console.log('  (dry run — nothing was judged and nothing was persisted)');
+    return 0;
+  }
+  const saved = appendCalibrationRun(run);
+  if (saved.ok) console.log(`  persisted → ${saved.data} (${readCalibrationHistory().length} run(s) on record)`);
+  else console.error(`  ! NOT PERSISTED — ${saved.error}; this run exists only in the output above`);
+
+  const drift = calibrationDrift(prev, run);
+  if (prev) {
+    const delta = drift.rateDelta === null ? 'n/a' : `${drift.rateDelta >= 0 ? '+' : ''}${(drift.rateDelta * 100).toFixed(0)}pp`;
+    console.log(`  drift vs ${prev.ranAt} (rubric v${prev.rubricVersion}): rate ${delta}, ${drift.moved.length} target(s) changed band${drift.setChanged.length ? `, ${drift.setChanged.length} target(s) entered/left the set` : ''}`);
+    for (const m of drift.moved) console.log(`    ${m.key}: ${m.from ?? 'unscored'} (${m.fromScore ?? '—'}) → ${m.to ?? 'unscored'} (${m.toScore ?? '—'})`);
+  }
+  if (budgetStop) console.error(`STOPPED — ${budgetStop}`);
+  return verdict.belowThreshold ? 4 : 0;
+}
+
 async function main() {
   const pol = getModelPolicy('judge-content'); // judge-visual shares this policy today
   const policy = { cliModel: pol.model, modelId: MODEL_IDS[pol.model], effort: pol.effort };
@@ -337,7 +476,7 @@ async function main() {
   const classFilter = arg('classes') ? new Set(arg('classes')!.split(',')) : null;
   const limit = arg('limit') ? Number(arg('limit')) : Infinity;
 
-  console.log(`judge: model=${policy.cliModel} effort=${policy.effort} rubric=v${RUBRIC_VERSION}${NO_CANON ? '' : '+canon'} catalogs=${catalogs.length} classes=${classFilter ? [...classFilter].join('+') : 'all'} dry=${DRY} concurrency=${CONCURRENCY} skip-unchanged=${REJUDGE ? 'off (--rejudge)' : 'on'}`);
+  console.log(`judge: model=${policy.cliModel} effort=${policy.effort} rubric=v${RUBRIC_VERSION}${NO_CANON ? '' : '+canon'} ${CALIBRATE ? 'mode=calibrate' : `catalogs=${catalogs.length}`} classes=${classFilter ? [...classFilter].join('+') : 'all'} dry=${DRY} concurrency=${CONCURRENCY} skip-unchanged=${REJUDGE ? 'off (--rejudge)' : 'on'}`);
 
   // Up-front budget gate — refuse the whole fleet before the first Opus spawn rather than
   // discovering the ceiling halfway through it. A dry run never spawns, so it is never gated.
@@ -350,6 +489,14 @@ async function main() {
         process.exit(3);
       }
     }
+  }
+
+  // Calibration is its own sweep (the hand-labelled targets, not a catalog filter), so it runs
+  // AFTER the up-front budget gate and instead of the fleet loop.
+  if (CALIBRATE) {
+    const code = await calibrate(tmpDir, policy);
+    if (code) process.exit(code);
+    return;
   }
 
   let n = 0;
