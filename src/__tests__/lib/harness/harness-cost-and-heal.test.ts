@@ -7,7 +7,12 @@ import {
 
 describe('cost governor helpers', () => {
   it('emptyCost reflects the configured cap', () => {
-    expect(emptyCost(5)).toEqual({ spentUsd: 0, byArea: {}, sessions: 0, budgetUsd: 5, paused: false });
+    // Heal counters start at zero explicitly (not undefined) so a fresh cost.json
+    // is self-describing about self-heal spend rather than silent about it.
+    expect(emptyCost(5)).toEqual({
+      spentUsd: 0, byArea: {}, sessions: 0, budgetUsd: 5, paused: false,
+      healUsd: 0, healSessions: 0, healUnmeasuredSessions: 0,
+    });
     expect(emptyCost(null).budgetUsd).toBeNull();
   });
 

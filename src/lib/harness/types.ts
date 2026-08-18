@@ -341,16 +341,40 @@ export interface HarnessConfig {
  * run resumes with its previous cumulative total instead of restarting at zero.
  */
 export interface HarnessCostTotals {
-  /** Sum of all executor session `costUsd` values reported so far. */
+  /**
+   * Every dollar the run has booked — executor sessions AND self-heal fix
+   * sessions. This is the single number the budget governor compares to the cap,
+   * so a spawn that is missing here is a spawn the ceiling cannot hold back.
+   */
   spentUsd: number;
-  /** Per-area attribution — sums of costUsd grouped by `areaId`. */
+  /** Per-area attribution — sums of costUsd grouped by `areaId` (heal spend included). */
   byArea: Record<string, number>;
-  /** Number of sessions that contributed to `spentUsd`. */
+  /**
+   * Number of EXECUTOR sessions that contributed to `spentUsd`. Heal sessions are
+   * counted in `healSessions` instead, so `avgSessionCost` stays an estimate of
+   * the next *executor* session (heals are capped at 5 min and would drag it
+   * down, making the in-flight reservation less conservative than reality).
+   */
   sessions: number;
   /** Configured ceiling (mirrored here so reloads + the guide are self-describing). */
   budgetUsd: number | null;
   /** Whether the governor has stopped launches because the cap was hit. */
   paused: boolean;
+  /**
+   * Portion of `spentUsd` spent by `attemptSelfHeal`'s fix sessions. Reported on
+   * its own line in the run summary: healing is a second full `claude -p` session
+   * per failing gate, and an operator reading only the executor total would be
+   * looking at the wrong number.
+   */
+  healUsd?: number;
+  /** Number of self-heal fix sessions folded into `spentUsd` / `healUsd`. */
+  healSessions?: number;
+  /**
+   * How many of those heal sessions reported NO cost and were therefore booked at
+   * the per-session estimate. An unmeasured spawn is recorded as *unknown*, never
+   * as free — this field is what keeps that visible.
+   */
+  healUnmeasuredSessions?: number;
 }
 
 // ── Orchestrator Events ─────────────────────────────────────────────────────

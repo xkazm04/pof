@@ -208,7 +208,10 @@ export function resolveBudgetUsd(
 // ── Cost governor ───────────────────────────────────────────────────────────
 
 export function emptyCost(budgetUsd: number | null): HarnessCostTotals {
-  return { spentUsd: 0, byArea: {}, sessions: 0, budgetUsd, paused: false };
+  return {
+    spentUsd: 0, byArea: {}, sessions: 0, budgetUsd, paused: false,
+    healUsd: 0, healSessions: 0, healUnmeasuredSessions: 0,
+  };
 }
 
 function loadCost(sp: string, budgetUsd: number | null): HarnessCostTotals {
@@ -414,6 +417,19 @@ export function pickHealVerifyCommand(
 export interface SelfHealResult {
   healed: boolean;
   reason?: string;
+  /**
+   * Whether a `claude -p` fix session was actually spawned. `false` only for the
+   * early bail-out below (no verify command) — the ONE path where healing is
+   * genuinely free. Anything else spent money, measured or not.
+   */
+  sessionSpawned: boolean;
+  /**
+   * Cost the fix session reported, in USD. `undefined` means UNMEASURED, not
+   * free: when `sessionSpawned` is true the caller must book an estimate rather
+   * than $0, or the budget governor under-counts every heal the CLI stays quiet
+   * about.
+   */
+  costUsd?: number;
 }
 
 export async function attemptSelfHeal(
@@ -426,7 +442,11 @@ export async function attemptSelfHeal(
     // No reliable command to re-run means no way to CONFIRM a repair. We refuse
     // to optimistically claim `healed` (this used to return true and silently
     // advance) — the area's normal retry will re-attempt under full verification.
-    return { healed: false, reason: 'no verify command available to confirm the fix — not self-certifying' };
+    return {
+      healed: false,
+      sessionSpawned: false,
+      reason: 'no verify command available to confirm the fix — not self-certifying',
+    };
   }
 
   const errorSummary = errors.slice(0, 20).join('\n');
@@ -443,21 +463,49 @@ If there are remaining errors, fix those too. Do NOT give up — keep fixing unt
 When done, output exactly:
 ${wrapHarnessResult('{"areaId":"self-heal","completed":true,"features":[],"filesCreated":[],"filesModified":[],"learnings":[],"summary":"Fixed errors"}')}`;
 
-  await spawnClaudeSession(fixPrompt, {
+  // This is a FULL second `claude -p` session: its cost is real money and must
+  // travel back to the caller, which folds it into the same totals the budget
+  // governor reads (see `recordHealCost`). Dropping it here was how a run with a
+  // $25 ceiling could quietly spend past $25, one gate failure at a time.
+  const session = await spawnClaudeSession(fixPrompt, {
     cwd: projectPath,
     allowedTools: ['Bash', 'Read', 'Edit', 'Write', 'Glob', 'Grep'],
     skipPermissions: config.skipPermissions,
     enableMcp: true,
     timeoutMs: Math.min(config.sessionTimeoutMs, 300_000), // Max 5 min for fix
   });
+  const costUsd = typeof session.costUsd === 'number' ? session.costUsd : undefined;
 
   return new Promise<SelfHealResult>((resolve) => {
     exec(verifyCommand, { cwd: projectPath, timeout: 60_000 }, (err) => {
       resolve(err === null
-        ? { healed: true }
-        : { healed: false, reason: 'verify command still failing after the fix session' });
+        ? { healed: true, sessionSpawned: true, ...(costUsd != null ? { costUsd } : {}) }
+        : {
+            healed: false,
+            sessionSpawned: true,
+            reason: 'verify command still failing after the fix session',
+            ...(costUsd != null ? { costUsd } : {}),
+          });
     });
   });
+}
+
+/**
+ * The run summary's self-heal line. Healing spawns a second full session per
+ * failing gate, so an operator reading only the executor total is reading the
+ * wrong number — this states heal spend on its own, and states outright when
+ * some of it was booked at the estimate because the CLI reported no cost.
+ */
+export function formatHealSpendLine(totals: HarnessCostTotals): string {
+  const healSessions = totals.healSessions ?? 0;
+  if (healSessions === 0) return 'Self-heal spend: $0.00 — no self-heal sessions ran.';
+  const healUsd = totals.healUsd ?? 0;
+  const unmeasured = totals.healUnmeasuredSessions ?? 0;
+  const share = totals.spentUsd > 0 ? ` (${Math.round((healUsd / totals.spentUsd) * 100)}% of total spend)` : '';
+  const caveat = unmeasured > 0
+    ? ` — ${unmeasured} session${unmeasured === 1 ? '' : 's'} reported no cost and ${unmeasured === 1 ? 'was' : 'were'} booked at the per-session estimate (unmeasured, NOT free)`
+    : '';
+  return `Self-heal spend: $${healUsd.toFixed(2)} across ${healSessions} heal session${healSessions === 1 ? '' : 's'}${share}${caveat}.`;
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -685,6 +733,32 @@ export function createHarnessOrchestrator(
     saveCost(config.statePath, cost);
   }
 
+  /** Reservation key for an in-flight self-heal session — distinct from the area's own
+   *  executor reservation so the two can never overwrite each other's entry. */
+  const healReservationKey = (areaId: string) => `self-heal:${areaId}`;
+
+  /** Book a self-heal fix session's spend into the SAME totals the governor reads.
+   *  `attemptSelfHeal` spawns a full second `claude -p` session; before this the cost was
+   *  discarded at the boundary, so a `budgetUsd: 25` run could exceed $25 by one heal per
+   *  gate failure — precisely when a run is already going badly and heals repeatedly.
+   *  Heal spend lands in `spentUsd` + `byArea` (it is that area's spend) and additionally
+   *  in `healUsd` so the run summary can report it on its own line. It is deliberately NOT
+   *  counted in `sessions`: that denominator estimates the next EXECUTOR session, and a
+   *  5-min heal would drag the average — and therefore the in-flight reservation — down.
+   *  A session that reported no cost is booked at the estimate and counted as unmeasured;
+   *  an unmeasured spawn must never read as free. */
+  function recordHealCost(areaId: string, costUsd: number | undefined): void {
+    reserved.delete(healReservationKey(areaId)); // release the optimistic reservation
+    const measured = typeof costUsd === 'number' && costUsd > 0;
+    const amount = measured ? costUsd! : SESSION_COST_ESTIMATE_USD;
+    cost.spentUsd += amount;
+    cost.byArea[areaId] = (cost.byArea[areaId] ?? 0) + amount;
+    cost.healUsd = (cost.healUsd ?? 0) + amount;
+    cost.healSessions = (cost.healSessions ?? 0) + 1;
+    if (!measured) cost.healUnmeasuredSessions = (cost.healUnmeasuredSessions ?? 0) + 1;
+    saveCost(config.statePath, cost);
+  }
+
   /**
    * Roll the working tree back to the last green checkpoint before an area is
    * promoted-with-gaps. No-op when checkpointing is disabled or nothing has been
@@ -765,17 +839,42 @@ export function createHarnessOrchestrator(
         .filter((g): g is NonNullable<typeof g> => !!g);
       const verifyCommand = pickHealVerifyCommand(failingGateConfigs, gates);
 
-      if (gateErrors.length > 0) {
+      if (gateErrors.length > 0 && wouldOverflowNow()) {
+        // A heal is a full second session. Counting its spend is necessary but not
+        // sufficient: without this admission check the ceiling could still be
+        // crossed by an unbounded number of heals, since heals fire from inside
+        // processArea and never pass through fillPool's governor.
+        emit({
+          type: 'harness:learning',
+          learning: `Skipping self-heal for ${area.id} — budget cap reached `
+            + `($${cost.spentUsd.toFixed(2)} of $${budgetUsd?.toFixed(2)}); a heal is a full session and would spend past the ceiling`,
+        });
+      } else if (gateErrors.length > 0) {
         emit({
           type: 'harness:learning',
           learning: `Self-healing: attempting to fix ${gateErrors.length} gate errors for ${area.id}`
             + (verifyCommand ? ` (verify: ${verifyCommand})` : ' (no verify command — cannot confirm)'),
         });
 
-        const heal = await attemptSelfHeal(config.projectPath, gateErrors, verifyCommand, {
-          sessionTimeoutMs: config.executor.sessionTimeoutMs,
-          skipPermissions: config.executor.skipPermissions,
-        });
+        // Reserve the heal's estimated spend for its duration so concurrent areas
+        // see it in flight, exactly like an executor launch.
+        reserved.set(healReservationKey(area.id), sessionCostEstimate(cost, SESSION_COST_ESTIMATE_USD));
+        let heal: SelfHealResult;
+        try {
+          heal = await attemptSelfHeal(config.projectPath, gateErrors, verifyCommand, {
+            sessionTimeoutMs: config.executor.sessionTimeoutMs,
+            skipPermissions: config.executor.skipPermissions,
+          });
+        } catch (err) {
+          // A throw after the session spawned still spent money — book the estimate
+          // rather than letting a crashed heal read as free, then release.
+          recordHealCost(area.id, undefined);
+          throw err;
+        }
+        // Book the heal's spend into the governor's totals BEFORE acting on the
+        // outcome, so the cap is honoured even when the heal succeeded.
+        if (heal.sessionSpawned) recordHealCost(area.id, heal.costUsd);
+        else reserved.delete(healReservationKey(area.id));
 
         if (heal.healed) {
           // Re-run verification after fix
@@ -1251,6 +1350,15 @@ export function createHarnessOrchestrator(
       updatePlanStats(plan);
       savePlan(config.statePath, plan);
     }
+
+    // Run summary: self-heal spend gets its OWN line. It is a second full
+    // `claude -p` session per failing gate, so an operator reading the executor
+    // totals alone would be looking at the wrong number — and a heal that
+    // reported no cost says so instead of reading as free.
+    const healLine = formatHealSpendLine(cost);
+    guide.cost = { ...cost, byArea: { ...cost.byArea } };
+    if (!guide.learnings.includes(healLine)) guide.learnings.push(healLine);
+    emit({ type: 'harness:learning', learning: healLine });
 
     // Cleanup (dev server teardown happens in runLoopWithErrorCapture's
     // `finally` so it also covers every error/crash/early-return path).
