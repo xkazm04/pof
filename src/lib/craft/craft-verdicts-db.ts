@@ -1,4 +1,7 @@
 import { getDb } from '@/lib/db';
+import { logger } from '@/lib/logger';
+import { recordSpend, type RecordSpendInput } from '@/lib/cli-spend-db';
+import type { CliRunMetrics } from '@/lib/judge/spendMeter';
 import type { GaugedCraftLevel } from '@/lib/status/craft';
 import type { LensId } from './lens-map';
 import { CRAFT_HISTORY_LIMIT } from './craftCell';
@@ -183,6 +186,92 @@ export function listCraftVerdicts(catalogId?: string): CraftVerdict[] {
   return (rows as Record<string, unknown>[]).map(rowToCraftVerdict);
 }
 
+// ── Spend metering — the A-axis's half of the ledger ────────────────────────────────
+//
+// Every R-axis judge draw reaches `recordSpend` through `@/lib/judge/spendMeter`, so the judge
+// fleet's ROI is visible. The A-axis was completely unmetered: craft gauging spends real model
+// budget and appeared in no ledger, which made "is the craft campaign worth what it spends?"
+// unanswerable while the same question was answerable next door. These helpers put craft writes
+// in the SAME `cli_spend` ledger under a DISTINCT module + task types, so the two axes are
+// separable in reporting rather than fused into one opaque total.
+
+/** The spend module every craft gauge is attributed to. Distinct from `judge` on purpose. */
+export const CRAFT_SPEND_MODULE = 'craft';
+
+/**
+ * The spend task types a craft write is recorded under: a per-step gauge, or the per-catalog
+ * `production-process` scorecard (a different unit of work at a different frequency).
+ */
+export type CraftTaskType = 'craft-gauge' | 'craft-process';
+
+export function craftTaskType(v: Pick<CraftVerdict, 'entityId' | 'step'>): CraftTaskType {
+  return v.step === PROCESS_STEP || v.entityId === PROCESS_ENTITY ? 'craft-process' : 'craft-gauge';
+}
+
+/**
+ * The metered cost of one craft gauge — the metering half of the judge fleet's
+ * {@link CliRunMetrics}, minus the CLI transcript a craft POST has no analogue for. Reusing that
+ * shape means a future craft runner that spawns `claude -p --output-format json` can hand
+ * `parseCliJsonRun(stdout)` straight in.
+ */
+export type CraftGaugeCost = Omit<CliRunMetrics, 'text'>;
+
+function meteredNumber(v: unknown): number {
+  return typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : 0;
+}
+
+/**
+ * Normalize the OPTIONAL cost a craft writer may report into the metering shape.
+ *
+ * `costKnown` is the honesty flag. The only thing writing craft verdicts today is an agent
+ * following the craft-loop skill, which cannot report its own cost — so an absent (or explicitly
+ * disclaimed) cost yields `costKnown: false`, and the run is recorded as unmeasured rather than
+ * as a measured $0.00. A fabricated zero that looked like a real measurement is exactly the
+ * invisibility this seam exists to remove.
+ */
+export function craftGaugeCost(reported?: Partial<CraftGaugeCost>): CraftGaugeCost {
+  const usd = typeof reported?.costUsd === 'number' && Number.isFinite(reported.costUsd) ? reported.costUsd : null;
+  const costKnown = reported?.costKnown === false ? false : usd !== null;
+  return {
+    costUsd: costKnown && usd !== null ? usd : 0,
+    costKnown,
+    tokensIn: meteredNumber(reported?.tokensIn),
+    tokensOut: meteredNumber(reported?.tokensOut),
+    cacheReadTokens: meteredNumber(reported?.cacheReadTokens),
+    cacheCreationTokens: meteredNumber(reported?.cacheCreationTokens),
+    durationMs: meteredNumber(reported?.durationMs),
+    sessionKey: typeof reported?.sessionKey === 'string' ? reported.sessionKey : null,
+    isError: reported?.isError === true,
+  };
+}
+
+/**
+ * Build the `recordSpend` input for one craft gauge. Pure, so the metering contract (module,
+ * task type, label, status) is asserted in a test without a DB.
+ *
+ * `label` names the exact unit of work so a campaign's cost is attributable per gauge instead of
+ * arriving as one opaque total. A write whose cost the caller did not report is LABELLED as
+ * unreported rather than presented as a measured $0.00 — the same honesty marker the judge path
+ * uses, and the only one the `cli_spend` schema can carry today (it has no `cost_known` column).
+ */
+export function craftSpendRecord(v: CraftVerdict, m: CraftGaugeCost): RecordSpendInput {
+  const label = `${v.catalogId}::${v.step} [${v.entityId}] ${v.lens} → ${v.aLevel}`;
+  return {
+    moduleId: CRAFT_SPEND_MODULE,
+    taskType: craftTaskType(v),
+    taskLabel: (m.costKnown ? label : `${label} (cost unreported by writer)`).slice(0, 300),
+    sessionKey: m.sessionKey,
+    costUsd: m.costUsd,
+    tokensIn: m.tokensIn,
+    tokensOut: m.tokensOut,
+    cacheReadTokens: m.cacheReadTokens,
+    cacheCreationTokens: m.cacheCreationTokens,
+    durationMs: m.durationMs,
+    success: !m.isError,
+    status: m.isError ? 'failed' : 'completed',
+  };
+}
+
 /**
  * Record a craft gauge: append it to the bounded history AND make it the CURRENT verdict.
  *
@@ -190,8 +279,13 @@ export function listCraftVerdicts(catalogId?: string): CraftVerdict[] {
  * newest history entry can never disagree, and a crash can never leave a trend point with no
  * verdict (or the reverse). `craft_verdicts` still holds exactly one row per cell, so the
  * projection in `craftCell` — and therefore the /status chip — is unchanged.
+ *
+ * The write is also the METERING seam: every gauge lands in `cli_spend` under the `craft` module
+ * (see {@link craftSpendRecord}), so any producer — the route, a future script — is costed
+ * without opting in. `cost` is OPTIONAL: the skill-driven writer that cannot report its spend
+ * still succeeds, and its run is recorded as cost-unknown rather than free.
  */
-export function upsertCraftVerdict(v: CraftVerdict): CraftVerdict {
+export function upsertCraftVerdict(v: CraftVerdict, cost?: Partial<CraftGaugeCost>): CraftVerdict {
   ensureTable();
   const db = getDb();
   // One timestamp for both writes, in SQLite's own format (the column's historic shape).
@@ -235,6 +329,13 @@ export function upsertCraftVerdict(v: CraftVerdict): CraftVerdict {
     ).run(...args);
   });
   write();
+  // Metering is secondary to the gauge and deliberately OUTSIDE the transaction: a ledger
+  // failure must never lose a verdict that was already committed.
+  try {
+    recordSpend(craftSpendRecord(v, craftGaugeCost(cost)));
+  } catch (e) {
+    logger.warn('craft spend metering failed; the gauge is recorded regardless', e);
+  }
   return { ...v, judgedAt: now };
 }
 

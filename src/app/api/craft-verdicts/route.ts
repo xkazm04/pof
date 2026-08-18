@@ -73,6 +73,26 @@ const findingSchema = z.object({
   class: z.enum(['content', 'capability', 'ux']),
 });
 
+/**
+ * What the gauge COST, if the writer happens to know.
+ *
+ * Every field is optional and so is the whole block: the only thing writing craft verdicts
+ * today is an agent following the craft-loop skill, which cannot report its own spend. It must
+ * keep working — so an absent cost degrades to a cost-unknown ledger row, never a rejection.
+ * `costKnown: false` may also be sent explicitly to disclaim a reported number.
+ */
+const craftCostSchema = z.object({
+  costUsd: z.number().nonnegative().optional(),
+  costKnown: z.boolean().optional(),
+  tokensIn: z.number().int().nonnegative().optional(),
+  tokensOut: z.number().int().nonnegative().optional(),
+  cacheReadTokens: z.number().int().nonnegative().optional(),
+  cacheCreationTokens: z.number().int().nonnegative().optional(),
+  durationMs: z.number().nonnegative().optional(),
+  sessionKey: z.string().nullable().optional(),
+  isError: z.boolean().optional(),
+});
+
 const craftVerdictSchema = z.object({
   catalogId: z.string().min(1),
   entityId: z.string().min(1),
@@ -84,6 +104,7 @@ const craftVerdictSchema = z.object({
   findings: z.array(findingSchema),
   model: z.string().min(1),
   effort: z.string().optional(),
+  cost: craftCostSchema.optional(),
 });
 
 /**
@@ -94,12 +115,17 @@ const craftVerdictSchema = z.object({
  * producer binds without opting in and a gauge can never silently outlive the content
  * it gauged. A row with no artifact (the `__process__` scorecard) leaves it NULL —
  * staleness unknown, never fabricated.
+ *
+ * The write is METERED into `cli_spend` under the `craft` module (`craftSpendRecord`), so the
+ * A-axis campaign's spend is visible beside the R-axis judge fleet's instead of nowhere. An
+ * optional `cost` block carries what the writer knows; omitting it records the gauge as
+ * cost-unknown, never as free.
  */
 export async function POST(req: NextRequest) {
   try {
     const parsed = craftVerdictSchema.safeParse(await req.json());
     if (!parsed.success) return apiError('Invalid craft verdict', 400, parsed.error.issues);
-    const v = parsed.data;
+    const { cost, ...v } = parsed.data;
     if (v.aLevel !== 'A4' && v.findings.length === 0) {
       return apiError('a below-A4 gauge must name at least one finding', 400);
     }
@@ -114,7 +140,7 @@ export async function POST(req: NextRequest) {
       ? undefined
       : listArtifacts(v.catalogId, v.entityId).find((a) => a.step === v.step)?.updatedAt;
     return apiSuccess(
-      upsertCraftVerdict({ ...v, ...(artifactUpdatedAt ? { artifactUpdatedAt } : {}) }),
+      upsertCraftVerdict({ ...v, ...(artifactUpdatedAt ? { artifactUpdatedAt } : {}) }, cost),
     );
   } catch (e) {
     return apiError(e instanceof Error ? e.message : 'craft-verdicts POST failed', 500);
