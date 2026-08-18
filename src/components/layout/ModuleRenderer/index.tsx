@@ -16,7 +16,7 @@ import { ModuleErrorBoundary } from '../ModuleErrorBoundary';
 import { ModuleSkeleton } from '../ModuleSkeleton';
 import type { SubModuleId } from '@/types/modules';
 import { MODULE_COMPONENTS, SPECIAL_CATEGORIES } from './registry';
-import { moduleLabel, lruTouched, describeEviction, reportEviction } from './helpers';
+import { moduleLabel, lruTouched, lruTouchedAll, describeEviction, reportEviction } from './helpers';
 
 /** Max number of modules kept mounted simultaneously. Oldest are evicted. */
 const LRU_CAP = 5;
@@ -24,9 +24,13 @@ const LRU_CAP = 5;
 /** Max number of inline terminal sessions kept mounted simultaneously. */
 const SESSION_LRU_CAP = 5;
 
-/** An eviction recorded during render, reported from an effect (never in render). */
+/**
+ * Evictions recorded during render, reported from an effect (never in render).
+ * A single pass can evict more than once (both module touches can push an id off
+ * the tail), so this carries a list — one report per genuine eviction, no more.
+ */
 interface PendingEviction {
-  evictedId: string;
+  evictedIds: string[];
   scope: 'module' | 'session';
   cap: number;
 }
@@ -61,22 +65,20 @@ export function ModuleRenderer() {
   const [sessionEviction, setSessionEviction] = useState<PendingEviction | null>(null);
 
   // Track visited modules with LRU eviction (render-time state adjustment).
-  if (activeSubModule) {
-    const touch = lruTouched(moduleLru, activeSubModule, LRU_CAP);
-    if (touch) {
-      setModuleLru(touch.next);
-      if (touch.evicted) {
-        setModuleEviction({ evictedId: touch.evicted, scope: 'module', cap: LRU_CAP });
-      }
-    }
-  }
-  if (activeCategory && SPECIAL_CATEGORIES[activeCategory]) {
-    const touch = lruTouched(moduleLru, activeCategory, LRU_CAP);
-    if (touch) {
-      setModuleLru(touch.next);
-      if (touch.evicted) {
-        setModuleEviction({ evictedId: touch.evicted, scope: 'module', cap: LRU_CAP });
-      }
+  // BOTH the sub-module and the special-category touch land on the SAME list, so
+  // they must fold through it together: two `lruTouched` calls against the same
+  // `moduleLru` binding would each set state from the stale list and the second
+  // would discard the first, dropping a just-visited module. Order is
+  // most-recent-last, matching the previous sequential calls (the special
+  // category ends up MRU). Eviction timing and LRU_CAP are unchanged.
+  const moduleTouches: string[] = [];
+  if (activeSubModule) moduleTouches.push(activeSubModule);
+  if (activeCategory && SPECIAL_CATEGORIES[activeCategory]) moduleTouches.push(activeCategory);
+  const moduleTouch = lruTouchedAll(moduleLru, moduleTouches, LRU_CAP);
+  if (moduleTouch) {
+    setModuleLru(moduleTouch.next);
+    if (moduleTouch.evicted.length > 0) {
+      setModuleEviction({ evictedIds: moduleTouch.evicted, scope: 'module', cap: LRU_CAP });
     }
   }
   if (inlineSessionId) {
@@ -84,7 +86,7 @@ export function ModuleRenderer() {
     if (touch) {
       setSessionLru(touch.next);
       if (touch.evicted) {
-        setSessionEviction({ evictedId: touch.evicted, scope: 'session', cap: SESSION_LRU_CAP });
+        setSessionEviction({ evictedIds: [touch.evicted], scope: 'session', cap: SESSION_LRU_CAP });
       }
     }
   }
@@ -93,26 +95,18 @@ export function ModuleRenderer() {
   // subscribed) so the classification costs nothing on the non-evicting path.
   useEffect(() => {
     if (!moduleEviction) return;
-    reportEviction(
-      describeEviction(
-        moduleEviction.evictedId,
-        'module',
-        moduleEviction.cap,
-        useCLIPanelStore.getState().sessions,
-      ),
-    );
+    const sessions = useCLIPanelStore.getState().sessions;
+    for (const evictedId of moduleEviction.evictedIds) {
+      reportEviction(describeEviction(evictedId, 'module', moduleEviction.cap, sessions));
+    }
   }, [moduleEviction]);
 
   useEffect(() => {
     if (!sessionEviction) return;
-    reportEviction(
-      describeEviction(
-        sessionEviction.evictedId,
-        'session',
-        sessionEviction.cap,
-        useCLIPanelStore.getState().sessions,
-      ),
-    );
+    const sessions = useCLIPanelStore.getState().sessions;
+    for (const evictedId of sessionEviction.evictedIds) {
+      reportEviction(describeEviction(evictedId, 'session', sessionEviction.cap, sessions));
+    }
   }, [sessionEviction]);
 
   // Determine what to render

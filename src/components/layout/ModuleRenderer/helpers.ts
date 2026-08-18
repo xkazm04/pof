@@ -42,6 +42,45 @@ export function lruTouched(list: string[], id: string, cap: number): LruTouch | 
   return { next, evicted };
 }
 
+/** Outcome of folding several touches through ONE list — see `lruTouchedAll`. */
+export interface LruTouchAll {
+  /** The new list, most-recently-used first. `list` itself is never mutated. */
+  next: string[];
+  /**
+   * Every id that actually fell off the tail, in eviction order. An id evicted by
+   * one touch and re-added by a later one is NOT listed — it is still mounted, so
+   * reporting it would be a phantom teardown.
+   */
+  evicted: string[];
+}
+
+/**
+ * Apply several touches to ONE list in a single pass, in order (most-recent LAST,
+ * so the last id ends up MRU).
+ *
+ * Folding is the only correct composition: each touch must see the list the
+ * previous one produced. Calling `lruTouched` twice against the same binding and
+ * setting state from each result silently DISCARDS the first touch — the caller's
+ * second `setState` wins — which can drop a just-visited module out of the list.
+ *
+ * Returns `null` when the fold leaves the list unchanged BY CONTENT. The content
+ * comparison is load-bearing, not an optimisation: two ids that are both already
+ * in the list swap places on every pass, so an identity-only check would set state
+ * every render and never converge.
+ */
+export function lruTouchedAll(list: string[], ids: string[], cap: number): LruTouchAll | null {
+  let next = list;
+  const evicted: string[] = [];
+  for (const id of ids) {
+    const touch = lruTouched(next, id, cap);
+    if (!touch) continue;
+    next = touch.next;
+    if (touch.evicted) evicted.push(touch.evicted);
+  }
+  if (next.length === list.length && next.every((x, i) => x === list[i])) return null;
+  return { next, evicted: evicted.filter(id => !next.includes(id)) };
+}
+
 /** Minimal shape of a CLI session the shell needs to judge "was work live?". */
 export interface EvictionSessionInfo {
   moduleId?: string;
