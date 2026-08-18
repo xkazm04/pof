@@ -228,6 +228,108 @@ export function parseUpload(json: unknown): ParsedUpload {
   return { ok: false, error: tripoErr(json) };
 }
 
+// ── v3 groundwork (2026-08-18) ──────────────────────────────────────────────
+//
+// Tripo's own official Python SDK (VAST-AI-Research/tripo-python-sdk, verified against
+// its source — the vendor's real reference client, more authoritative than the docs
+// site) still routes text_to_model/image_to_model through v2's universal POST /task as
+// of its latest commit. v3 is used for exactly ONE operation there: mesh segmentation,
+// and only for its newest model (v2.0-20260430). So this does NOT migrate generation —
+// TripoSpec/buildCreateTaskBody/runTripo/TRIPO_BASE are all untouched and stay on v2,
+// which is what actually works today. This adds the verified-real v3 transport + the
+// one verified-real v3 request shape (mesh segmentation), so a future session building
+// that feature (tracked in docs/research/impact-map.md as a real backlog item) has a
+// tested foundation instead of starting from an unverified docs-site example. Nothing
+// here is called by the production generation path.
+
+export const TRIPO_V3_BASE = 'https://openapi.tripo3d.ai';
+
+/** The only model version the SDK actually routes to v3 for mesh segmentation. */
+export const TRIPO_V3_SEGMENT_MODEL = 'v2.0-20260430';
+
+export interface MeshSegmentSpec {
+  /** task_id of the already-generated model to segment. */
+  originalModelTaskId: string;
+  segmentationGranularity?: 'simple' | 'balanced' | 'detailed';
+  /** Local file path or an apiv3 file_<uuid> token — pass the token, upload separately. */
+  refImageToken?: string;
+  splitByConnectivity?: boolean;
+}
+
+/**
+ * Build the POST /v3/mesh/segment JSON body. Pure. Mirrors the SDK's verified v3 branch
+ * of `mesh_segmentation()` exactly (model pinned to the v3-routed version — the v1.0
+ * legacy version stays on v2's create_task, out of scope here).
+ */
+export function buildMeshSegmentBody(spec: MeshSegmentSpec): Record<string, unknown> {
+  const body: Record<string, unknown> = {
+    type: 'mesh_segmentation',
+    model: TRIPO_V3_SEGMENT_MODEL,
+    input: spec.originalModelTaskId,
+  };
+  if (spec.segmentationGranularity) body.segmentation_granularity = spec.segmentationGranularity;
+  if (spec.refImageToken) body.ref_image = spec.refImageToken;
+  if (spec.splitByConnectivity !== undefined) body.split_by_connectivity = spec.splitByConnectivity;
+  return body;
+}
+
+/**
+ * v3 task-status response shape, verified verbatim from Tripo's own quick-start example:
+ * `{"code":0,"data":{"task_id":...,"type":...,"status":...,"progress":...,"output":
+ * {"model_url":...,"rendered_image_url":...}}}`. The create-task envelope
+ * (`{code,data:{task_id}}`) is IDENTICAL to v2's, so `parseTaskCreate` above already
+ * covers v3 task creation — only the status/output field names differ (`model_url` /
+ * `rendered_image_url` singular, vs v2's three-way model split and three render-field
+ * spellings), which is why this gets its own parser instead of extending
+ * `parseTaskStatus`.
+ */
+export function parseV3TaskStatus(json: unknown): ParsedStatus {
+  const j = json as { code?: number; data?: { status?: string; progress?: number; output?: { model_url?: string; rendered_image_url?: string } } } | undefined;
+  if (!j || j.code !== 0 || !j.data) return { state: 'failed', error: tripoErr(json) };
+  const status = String(j.data.status ?? '').toLowerCase();
+  const out = j.data.output ?? {};
+  if (status === 'success') {
+    return { state: 'success', status, progress: 100, modelUrl: out.model_url, renderUrl: out.rendered_image_url };
+  }
+  if (TERMINAL_FAIL.has(status)) return { state: 'failed', status, error: `task ${status}` };
+  return { state: 'pending', status, progress: typeof j.data.progress === 'number' ? j.data.progress : undefined };
+}
+
+export interface TripoV3Http {
+  postJson: (url: string, headers: Record<string, string>, body: unknown) => Promise<{ status: number; json: unknown }>;
+  getJson: (url: string, headers: Record<string, string>) => Promise<{ status: number; json: unknown }>;
+}
+
+const defaultV3Http: TripoV3Http = {
+  postJson: async (url, headers, body) => {
+    const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
+    return { status: res.status, json: await res.json().catch(() => undefined) };
+  },
+  getJson: async (url, headers) => {
+    const res = await fetch(url, { headers });
+    return { status: res.status, json: await res.json().catch(() => undefined) };
+  },
+};
+
+/**
+ * Create a mesh-segmentation task on v3. No polling/download loop yet — unlike
+ * `runTripo`, this has no production caller, so a full orchestration would be
+ * unexercised code. Returns the task id; poll it with `parseV3TaskStatus` against
+ * `GET {TRIPO_V3_BASE}/v3/tasks/{task_id}`.
+ */
+export async function createMeshSegmentTask(
+  spec: MeshSegmentSpec,
+  deps: { http?: TripoV3Http; env?: Record<string, string | undefined>; apiKey?: string } = {},
+): Promise<{ ok: boolean; taskId?: string; error?: string }> {
+  const env = deps.env ?? process.env;
+  const key = deps.apiKey ?? env.TRIPO_API_KEY;
+  if (!key) return { ok: false, error: 'TRIPO_API_KEY not set (get a free key at https://platform.tripo3d.ai)' };
+  const http = deps.http ?? defaultV3Http;
+  const body = buildMeshSegmentBody(spec);
+  const res = await http.postJson(`${TRIPO_V3_BASE}/v3/mesh/segment`, { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }, body);
+  return parseTaskCreate(res.json);
+}
+
 export interface TripoHttp {
   postJson: (url: string, headers: Record<string, string>, body: unknown) => Promise<{ status: number; json: unknown }>;
   getJson: (url: string, headers: Record<string, string>) => Promise<{ status: number; json: unknown }>;

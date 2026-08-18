@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   buildCreateTaskBody,
   parseTaskCreate,
@@ -7,7 +7,13 @@ import {
   runTripo,
   deliveredFormat,
   formatMismatchReason,
+  buildMeshSegmentBody,
+  parseV3TaskStatus,
+  createMeshSegmentTask,
+  TRIPO_V3_BASE,
+  TRIPO_V3_SEGMENT_MODEL,
   type TripoHttp,
+  type TripoV3Http,
 } from '@/lib/visual-gen/tripo-runner';
 
 describe('buildCreateTaskBody', () => {
@@ -286,5 +292,79 @@ describe('runTripo format reporting', () => {
     );
     expect(res.ok).toBe(true);
     expect(res.formatMismatch).toBeUndefined();
+  });
+});
+
+describe('v3 groundwork (mesh segmentation only — generation stays on v2)', () => {
+  describe('buildMeshSegmentBody', () => {
+    it('builds the minimal body, pinned to the v3-routed model', () => {
+      const b = buildMeshSegmentBody({ originalModelTaskId: 'task_abc' });
+      expect(b).toEqual({ type: 'mesh_segmentation', model: TRIPO_V3_SEGMENT_MODEL, input: 'task_abc' });
+    });
+
+    it('includes optional fields only when set', () => {
+      const b = buildMeshSegmentBody({
+        originalModelTaskId: 'task_abc',
+        segmentationGranularity: 'detailed',
+        refImageToken: 'file_xyz',
+        splitByConnectivity: true,
+      });
+      expect(b.segmentation_granularity).toBe('detailed');
+      expect(b.ref_image).toBe('file_xyz');
+      expect(b.split_by_connectivity).toBe(true);
+    });
+  });
+
+  describe('parseV3TaskStatus', () => {
+    it('reads the v3 output shape (model_url / rendered_image_url), not the v2 one', () => {
+      const s = parseV3TaskStatus({
+        code: 0,
+        data: { status: 'success', output: { model_url: 'https://x/m.glb', rendered_image_url: 'https://x/r.png' } },
+      });
+      expect(s).toEqual({ state: 'success', status: 'success', progress: 100, modelUrl: 'https://x/m.glb', renderUrl: 'https://x/r.png' });
+    });
+
+    it('does not read v2 field names (model/pbr_model/rendered_image) as a fallback', () => {
+      const s = parseV3TaskStatus({
+        code: 0,
+        data: { status: 'success', output: { model: 'https://x/m.glb', rendered_image: 'https://x/r.png' } },
+      });
+      expect(s.modelUrl).toBeUndefined();
+      expect(s.renderUrl).toBeUndefined();
+    });
+
+    it('treats terminal-fail statuses the same as v2', () => {
+      expect(parseV3TaskStatus({ code: 0, data: { status: 'failed' } }).state).toBe('failed');
+    });
+
+    it('reports pending with progress', () => {
+      const s = parseV3TaskStatus({ code: 0, data: { status: 'running', progress: 42 } });
+      expect(s).toEqual({ state: 'pending', status: 'running', progress: 42 });
+    });
+  });
+
+  describe('createMeshSegmentTask', () => {
+    const v3Http = (json: unknown): TripoV3Http => ({
+      postJson: vi.fn(async () => ({ status: 200, json })),
+      getJson: vi.fn(async () => ({ status: 200, json: undefined })),
+    });
+
+    it('posts to the v3 base + path with the segment body, and parses the v2-shaped envelope', async () => {
+      const http = v3Http({ code: 0, data: { task_id: 'seg_1' } });
+      const res = await createMeshSegmentTask({ originalModelTaskId: 'task_abc' }, { http, apiKey: 'k' });
+      expect(res).toEqual({ ok: true, taskId: 'seg_1' });
+      expect(http.postJson).toHaveBeenCalledWith(
+        `${TRIPO_V3_BASE}/v3/mesh/segment`,
+        { Authorization: 'Bearer k', 'Content-Type': 'application/json' },
+        { type: 'mesh_segmentation', model: TRIPO_V3_SEGMENT_MODEL, input: 'task_abc' },
+      );
+    });
+
+    it('fails without an API key, never silently calling the network', async () => {
+      const http = v3Http({ code: 0, data: { task_id: 'seg_1' } });
+      const res = await createMeshSegmentTask({ originalModelTaskId: 'task_abc' }, { http, env: {} });
+      expect(res.ok).toBe(false);
+      expect(http.postJson).not.toHaveBeenCalled();
+    });
   });
 });
