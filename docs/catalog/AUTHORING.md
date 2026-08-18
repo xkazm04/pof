@@ -25,17 +25,17 @@ Read alongside (don't duplicate these — they're the source of truth for their 
 - The **seeded entity** the row drives (`src/lib/catalog/seed-*.ts` / `new-catalogs.ts`) for *what to build*, plus a gate-approved **exemplar pipeline** (`loot-tables.ts`, or `dialog-trees.ts` for a graph row) for *how*.
 
 ## Worked exemplars (copy one)
-- `src/lib/catalog/pipelines/currency.ts` — logic/systems (L2 `cppSymbolExists` + L3 `runtimeDeferred`).
+- `src/lib/catalog/pipelines/currencies.ts` — logic/systems (L2 `cppSymbolExists` + L3 `runtimeDeferred`).
 - `src/lib/catalog/pipelines/icon-sets.ts` — pure presentation (L0 + L1 + deferred L3, no L2).
 - `src/lib/catalog/pipelines/bestiary.ts` — composite (cross-catalog links + mixed tiers).
 - `src/lib/catalog/pipelines/player-movement.ts` — **python-driven UE asset build** (each step's Produce calls a Python module on the editor thread via `/pof/python/run`; acceptance reads the `{created, skipped, failed}` envelope via `pythonStepSuccess`/`pythonStepOk`). See `ui-shell.md` §9 + `docs/superpowers/specs/2026-05-27-player-movement-design.md`.
-- `src/lib/catalog/pipelines/status-effect.ts` — the original pilot.
+- `src/lib/catalog/pipelines/status-effects.ts` — the original pilot.
 
 ## The recipe
 
 **1. Use the EXACT `catalogId`.** Grep `src/lib/catalog/new-catalogs.ts` + `src/lib/catalog/sections.ts` for your row's registered `catalogId` and use it verbatim. It is **not** the folder slug — e.g. the folder `economy-meta/currency/` registers `catalogId: 'currencies'`; `ui/icon-set/` → `'icon-sets'`; `status-effect-buff` → `'status-effects'`. A wrong id = the pipeline registers but never renders (it won't match the catalog's seeded entities).
 
-**2. Create `src/lib/catalog/pipelines/<catalogId>.ts`** — one `registerCatalogPipeline({ catalogId, steps })` call. Each step:
+**2. Create `src/lib/catalog/pipelines/<catalogId>.ts`** — one `registerCatalogPipeline({ catalogId, steps })` call. **The filename IS the catalogId**, so a catalog id in `pipeline_artifacts` (or a /status cell) leads straight to the file that declares it; `src/__tests__/catalog/pipeline-filename-parity.test.ts` pins it. If the two ever disagree, rename the **file** — catalog ids are persisted in the database and must never change. Each step:
 ```ts
 { archetype, label, view, produce, accept, /* optional: */ staticChecks }
 ```

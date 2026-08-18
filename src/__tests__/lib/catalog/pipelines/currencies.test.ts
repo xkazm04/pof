@@ -6,7 +6,7 @@ describe('currency pipeline', () => {
   beforeEach(() => _resetRegistry());
 
   it('registers under "currencies" with correct step labels and acceptance', async () => {
-    await import('@/lib/catalog/pipelines/currency');
+    await import('@/lib/catalog/pipelines/currencies');
     const p = getCatalogPipeline('currencies');
     expect(p).not.toBeNull();
 

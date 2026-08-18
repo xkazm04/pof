@@ -14,10 +14,14 @@ export interface NewCatalogDef {
 }
 
 /**
- * The new catalog entities — 21 from game_catalog_pipelines.xlsx + `player-movement` (the
- * autonomously-built Mixamo→Manny locomotion pipeline, surfaced here so it's lab-visible
- * and walker-covered instead of orphaned). One source of truth: CATALOG_SECTIONS,
- * PIPELINE_BY_CATALOG and CATALOG_MODULE are all derived from this.
+ * The new catalog entities — the `game_catalog_pipelines.xlsx` set plus the two
+ * autonomously-built pipelines surfaced here so they are lab-visible and walker-covered
+ * instead of orphaned (`player-movement`, the Mixamo→Manny locomotion pipeline, and
+ * `character-pipeline`). One source of truth: CATALOG_SECTIONS, PIPELINE_BY_CATALOG and
+ * CATALOG_MODULE are all derived from this.
+ *
+ * Deliberately no hand-written count in this doc comment — the previous one ("21 from the
+ * xlsx + player-movement") was already wrong by two. Use `NEW_CATALOG_COUNT` below.
  */
 export const NEW_CATALOGS: NewCatalogDef[] = [
   // ── Quests & Narrative ──
@@ -105,6 +109,10 @@ export const NEW_CATALOGS: NewCatalogDef[] = [
   { catalogId: 'character-pipeline', label: 'Character Pipeline', category: 'Game Assets', description: 'Idea→playable hero: gated 2D concept → Tripo v3.1 image-to-3D → auto-rig + preset clips → UE import → playable wire → game-tier convert.', module: 'arpg-character', tracks: ['art-2d', 'art-3d', 'animation', 'test'],
     starters: [{ id: 'char-pipeline-jinx', name: 'Jinx', categoryPath: ['Hero'], tags: ['tripo', 'v3.1', 'proven'], description: 'The proven exemplar: HD friendly-face Jinx — WASD run + SPACE roll + wheel zoom, playable in the standalone jinx UE 5.8 project.' }] },
 ];
+
+/** How many catalogs the expansion holds — COMPUTED, so prose that quotes it (docs, the
+ *  CATALOG_SECTIONS comment, a status readout) can reference a figure that cannot go stale. */
+export const NEW_CATALOG_COUNT = NEW_CATALOGS.length;
 
 /** Materialize a new catalog's starters into CatalogEntityBase[] (planned, minimal data). */
 export function newCatalogStarters(def: NewCatalogDef): CatalogEntityBase[] {

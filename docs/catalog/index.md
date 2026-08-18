@@ -49,7 +49,7 @@ Green tests are necessary, not sufficient. Two layers raise the bar:
 
 ## How a row gets built
 
-Author the spec + its test, reach config-complete, pass the blocking gate, commit narrowly. The full recipe + the per-CLI loop + the do-not-touch list are in [`AUTHORING.md`](AUTHORING.md). The exemplars to copy: `currency.ts` (logic), `icon-sets.ts` (presentation), `bestiary.ts` (composite, cross-catalog links), `loot-tables.ts` / `dialog-trees.ts` (gate-approved; graph).
+Author the spec + its test, reach config-complete, pass the blocking gate, commit narrowly. The full recipe + the per-CLI loop + the do-not-touch list are in [`AUTHORING.md`](AUTHORING.md). The exemplars to copy: `currencies.ts` (logic), `icon-sets.ts` (presentation), `bestiary.ts` (composite, cross-catalog links), `loot-tables.ts` / `dialog-trees.ts` (gate-approved; graph).
 
 ## Document map
 

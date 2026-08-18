@@ -2,7 +2,7 @@
 
 > Catalog ID `currencies` · Category Economy / Meta · `arpg-inventory` module · 7 steps · Tracks: logic, art-2d, vfx, audio, test
 >
-> *(source file is `currency.ts`; catalogId is `currencies`)*
+> *(source file is `currencies.ts` — the module filename always equals the `catalogId`)*
 
 **Purpose.** Models PoF's two-tier economy (ARPG-LAWS §10, canon `proj-economy` / `arpg-crafting-currency`): a soft currency (Gold) as the general medium of exchange and crafting-orb currencies (Transmute … Divine) whose effect IS a deterministic-ish item-affix mutation. The two ledgers never inter-convert freely. It realizes as `FARPGCurrencyDef` rows in `DT_Currencies`, with wallet operations routed through `UARPGWalletComponent::AddCurrency` / `SpendCurrency`.
 

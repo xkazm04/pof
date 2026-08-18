@@ -341,13 +341,13 @@ registerCatalogPipeline({
         //     → effective combined ≈ 11.667 + 7.875 = 19.54 DPS
         //   Simplified headline DPS: 19.5 (pre-mitigation, baseline 75% fire-resist target → ×0.25 = ~4.9 post-resist)
         //   Pre-mitigation 19.5 vs tier-100 target envelope (proj-balance ≈ 100 ±10% power, but
-        //   the fire DPS target is ~8–12 for a single-target nuke per tier — see status-effect.ts §Balance).
+        //   the fire DPS target is ~8–12 for a single-target nuke per tier — see status-effects.ts §Balance).
         //   The burst hit DPS (11.7) sits within that band; the ignite augments total output to 19.5,
         //   consistent with Fireball being an advanced-tier nuke (plan.md) above basic attacks (~8 DPS).
         //   Crit at 5% base adds minor uplift (~(35 × 2.5 × 0.05) / 3.0 ≈ 1.46 crit DPS) — within envelope.
         const baseDamage = 35;
         const cooldown = 3.0;
-        const igniteDPS = 7.875;   // status-effect.ts §Balance derivation
+        const igniteDPS = 7.875;   // status-effects.ts §Balance derivation
         const hitDPS = baseDamage / cooldown;          // ≈ 11.667
         const sustainedDPS = hitDPS + igniteDPS;       // ≈ 19.54 combined pre-resist
         const tierTarget = 19.5;

@@ -37,7 +37,10 @@ export const CATALOG_SECTIONS: CatalogSection[] = [
   { catalogId: 'materials', label: 'Materials', category: 'Core / Existing', description: 'Shader/material definitions with parameters and variants.', seed: seedMaterialEntries },
   { catalogId: 'audio', label: 'Audio', category: 'Audio & FX', description: 'SFX sets imported into UE.', seed: seedAudioEntries },
   { catalogId: 'animation-assets', label: 'Animation Assets', category: 'Core / Existing', description: 'Imported/retargeted animation assets.', seed: seedAnimationAssetEntries },
-  // Catalog Pipeline Expansion — the 21 new catalogs, derived from NEW_CATALOGS.
+  // Catalog Pipeline Expansion — EVERY catalog in NEW_CATALOGS, spread verbatim.
+  // Deliberately carries no count: the previous comment said "the 21 new catalogs" while
+  // NEW_CATALOGS had grown to 23. `NEW_CATALOG_COUNT` (new-catalogs.ts) is the computed
+  // figure if you need one — a hand-written number here can only ever go stale again.
   // `characters` uses its dedicated designed seed (the Captain Vael target asset);
   // the rest fall back to the generic planned starter.
   ...NEW_CATALOGS.map((c) => ({

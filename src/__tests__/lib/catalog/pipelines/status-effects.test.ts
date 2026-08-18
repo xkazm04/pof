@@ -5,7 +5,7 @@ import { _resetRegistry, getCatalogPipeline } from '@/lib/catalog/pipeline-regis
 describe('status-effect pilot pipeline', () => {
   beforeEach(() => _resetRegistry());
   it('registers a config-complete-capable pipeline with a deferred runtime gate', async () => {
-    await import('@/lib/catalog/pipelines/status-effect');
+    await import('@/lib/catalog/pipelines/status-effects');
     const p = getCatalogPipeline('status-effects');
     expect(p).not.toBeNull();
     const labels = p!.steps.map((s) => s.label);
