@@ -26,16 +26,24 @@ import { renderHook, waitFor, act, cleanup } from '@testing-library/react';
  * same as batching. See the staggered case below.
  */
 
-const h = vi.hoisted(() => ({ counts: { steps: 0, ctx: 0 }, stagger: false, seq: 0 }));
+const h = vi.hoisted(() => {
+  const s = { counts: { steps: 0, ctx: 0 }, stagger: false, seq: 0 };
+  return Object.assign(s, {
+    /** One resolver for both reads — the coach fetches the blob-free summary, but the cost
+     *  contract must hold whichever half of the cache a catalog is served from. */
+    respond(catalogId: string): Promise<unknown> {
+      const res = catalogId === '__boom__' ? { ok: false, error: 'HTTP 500' } : { ok: true, data: [] };
+      if (!s.stagger) return Promise.resolve(res);
+      // Each catalog resolves on its OWN task, so every landing is a separate emission —
+      // the real-browser shape the batched case hides.
+      return new Promise((r) => setTimeout(() => r(res), 1 + (s.seq++ % 5)));
+    },
+  });
+});
 
 vi.mock('@/components/layout-lab/labArtifactClient', () => ({
-  fetchArtifactsResult: vi.fn((catalogId: string) => {
-    const res = catalogId === '__boom__' ? { ok: false, error: 'HTTP 500' } : { ok: true, data: [] };
-    if (!h.stagger) return Promise.resolve(res);
-    // Each catalog resolves on its OWN task, so every landing is a separate emission —
-    // the real-browser shape the batched case hides.
-    return new Promise((r) => setTimeout(() => r(res), 1 + (h.seq++ % 5)));
-  }),
+  fetchArtifactsResult: vi.fn((catalogId: string) => h.respond(catalogId)),
+  fetchStepSummaryResult: vi.fn((catalogId: string) => h.respond(catalogId)),
 }));
 
 vi.mock('@/components/layout-lab/catalogManifest', async (orig) => {
@@ -60,7 +68,7 @@ vi.mock('@/components/layout-lab/labCheckerContext', async (orig) => {
 import { useGlobalCoach, _resetGlobalCoachCache } from '@/components/layout-lab/hooks/useGlobalCoach';
 import { buildGlobalCoach, type CoachCatalogInput } from '@/components/layout-lab/globalCoachModel';
 import { resolveCatalogSteps } from '@/components/layout-lab/catalogManifest';
-import { _resetArtifactCache, invalidateArtifacts, getCachedArtifacts } from '@/components/layout-lab/labArtifactCache';
+import { _resetArtifactCache, invalidateArtifacts, getCachedSummary } from '@/components/layout-lab/labArtifactCache';
 import { invalidateJudgeVerdicts } from '@/components/layout-lab/hooks/useStepJudgeVerdicts';
 import { CATALOG_SECTIONS } from '@/lib/catalog/sections';
 import { useCatalogStore } from '@/stores/catalogStore';
@@ -142,14 +150,14 @@ describe('useGlobalCoach — whole-fleet derivation cost', () => {
     h.counts.ctx = 0;
     await act(async () => { invalidateArtifacts(catalogId); });
     await act(async () => { await Promise.resolve(); });
-    await waitFor(() => expect(getCachedArtifacts(catalogId).loaded).toBe(true));
+    await waitFor(() => expect(getCachedSummary(catalogId).loaded).toBe(true));
 
     // Exactly the ONE catalog whose artifacts changed — the other 30+ are untouched.
     // Twice, not once: the entry is dropped (one pass) and the refetch lands (a second).
     // The second pass is the point — an invalidated catalog MUST re-fetch. It previously
-    // did not: this hook's `ensureArtifacts` effect keyed on `[catalogIds]` alone, so it
-    // fired once for the lifetime of the hook and a dropped entry was never re-read
-    // (`loaded` below would have stayed false and the coach would sit on stale advice).
+    // did not: this hook's ensure effect keyed on `[catalogIds]` alone, so it fired once
+    // for the lifetime of the hook and a dropped entry was never re-read (`loaded` below
+    // would have stayed false and the coach would sit on stale advice).
     expect(h.counts.steps).toBe(2);
   });
 

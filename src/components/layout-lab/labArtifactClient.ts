@@ -7,6 +7,7 @@ import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 import type { AcceptanceStatus, AcceptanceTier } from '@/lib/catalog/acceptance/types';
 import type { DrainSummary } from '@/lib/test-gate-runner/types';
 import type { DrainOutcome } from './batchDrainModel';
+import type { StepSummary } from './stepSummary';
 
 export interface ArtifactUpsertBody {
   catalogId: string;
@@ -31,6 +32,22 @@ export async function fetchArtifactsResult(catalogId: string, entityId?: string)
   const q = new URLSearchParams({ catalogId });
   if (entityId) q.set('entityId', entityId);
   const r = await tryApiFetch<PipelineArtifact[]>(`/api/pipeline-artifacts?${q.toString()}`);
+  return r.ok ? { ok: true, data: r.data } : { ok: false, error: r.error };
+}
+
+/**
+ * GET the VERDICT-ONLY projection of a catalog's artifacts — status/tier/reason plus the two
+ * content hashes, with no `data`/`ueAssets` blobs (see {@link StepSummary}).
+ *
+ * The whole-project read path. The coach ranks every catalog on first paint, and the full
+ * route answers that with 7.41 MB of produce bodies against the real DB where this answers
+ * with 134 KB. Same `Result` discipline as {@link fetchArtifactsResult}: a failed GET is NOT
+ * an empty catalog, so the caller can render "unknown" rather than "nothing produced".
+ */
+export async function fetchStepSummaryResult(catalogId: string, entityId?: string): Promise<Result<StepSummary[], string>> {
+  const q = new URLSearchParams({ catalogId });
+  if (entityId) q.set('entityId', entityId);
+  const r = await tryApiFetch<StepSummary[]>(`/api/pipeline-artifacts/summary?${q.toString()}`);
   return r.ok ? { ok: true, data: r.data } : { ok: false, error: r.error };
 }
 

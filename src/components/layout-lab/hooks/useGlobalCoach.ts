@@ -8,9 +8,16 @@ import '@/lib/catalog/pipelines/registry.generated';
 import { useEffect, useMemo } from 'react';
 import { CATALOG_SECTIONS } from '@/lib/catalog/sections';
 import { useCatalogStore } from '@/stores/catalogStore';
-import { ensureArtifacts, getCachedArtifacts, useArtifactCacheVersion } from '../labArtifactCache';
+import { ensureSummary, getCachedArtifacts, getCachedSummary, useArtifactCacheVersion } from '../labArtifactCache';
 import { resolveCatalogSteps } from '../catalogManifest';
-import { buildCatalogCandidates, groupVerdictsByCatalog, rankCoachCandidates, type CoachCandidate } from '../globalCoachModel';
+import {
+  buildCatalogCandidates,
+  buildCatalogCandidatesFromSummary,
+  groupSummaryByEntity,
+  groupVerdictsByCatalog,
+  rankCoachCandidates,
+  type CoachCandidate,
+} from '../globalCoachModel';
 import { useLabPipelineStore } from '../labPipelineStore';
 import { useAllJudgeVerdicts } from './useStepJudgeVerdicts';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
@@ -27,12 +34,21 @@ export const GLOBAL_COACH_TOP_N = 5;
  * "show all blockers" expansion needs no second pass and no extra fetch — ranking a
  * few hundred already-derived candidates is free next to the derivation itself.
  *
- * It fetches every registered catalog's artifacts ONCE through the shared cache
- * (deduped, one whole-catalog GET per catalog — never per entity), and re-derives
- * the ranked candidate list progressively as each fetch lands (keyed on the cache
- * version). The whole aggregation is memoized, so it never re-fires on an unrelated
- * render. First paint is never blocked: the effect fires post-paint and the list
- * fills in as the fetches resolve.
+ * It reads every registered catalog ONCE through the shared cache (deduped, one
+ * whole-catalog GET per catalog — never per entity), and re-derives the ranked candidate
+ * list progressively as each fetch lands (keyed on the cache version). The whole
+ * aggregation is memoized, so it never re-fires on an unrelated render. First paint is
+ * never blocked: the effect fires post-paint and the list fills in as the fetches resolve.
+ *
+ * ── The read is BLOB-FREE ─────────────────────────────────────────────────────
+ * What it fetches is the verdict PROJECTION (`/api/pipeline-artifacts/summary`), not the
+ * produced artifacts. Ranking a top-5 list used to download every produce body in the
+ * project: measured against the real `~/.pof/pof.db` (817 artifacts / 33 catalogs) that is
+ * 7.41 MB and ~13 ms of main-thread `JSON.parse` on first paint, versus 134 KB for the same
+ * rows projected. A catalog whose FULL artifacts are already cached (the open catalog, which
+ * the Matrix and the Baseline fetch for their own reasons) is still derived from those — the
+ * coach never pays for the blobs, but it never ignores them either, so the catalog on screen
+ * cannot be coached from a thinner input than the one the Matrix is rendering.
  */
 export interface GlobalCoachResult {
   /** The full ranked candidate list (the top-N cut is the component's decision). */
@@ -93,16 +109,17 @@ export function useGlobalCoach(topN = Number.POSITIVE_INFINITY): GlobalCoachResu
 
   const catalogIds = useMemo(() => CATALOG_SECTIONS.map((s) => s.catalogId), []);
 
-  // Kick off one deduped whole-catalog fetch per catalog. `ensureArtifacts` is a
-  // no-op once loading/loaded/errored, so this can't storm on re-render.
+  // Kick off one deduped whole-catalog SUMMARY fetch per catalog (status/tier/reason +
+  // content hashes — no produce bodies). `ensureSummary` is a no-op once
+  // loading/loaded/errored, so this can't storm on re-render.
   //
   // `version` is a REAL dependency, not decoration: with `[catalogIds]` alone this effect
   // fired exactly once, so a catalog whose entry was dropped by `invalidateArtifacts` (a
   // produce, a drain, a refresh) was never re-fetched — the coach sat on `loading: true`
-  // forever for it. Re-running on every cache mutation costs 33 Map lookups and converges
-  // immediately (a no-op ensure emits nothing, so it cannot feed itself).
+  // forever for it. Re-running on every cache mutation costs one Map lookup per catalog and
+  // converges immediately (a no-op ensure emits nothing, so it cannot feed itself).
   useEffect(() => {
-    for (const c of catalogIds) ensureArtifacts(c);
+    for (const c of catalogIds) ensureSummary(c);
   }, [catalogIds, version]);
 
   // Verdicts grouped ONCE per verdict-list identity, so each catalog's slice keeps a
@@ -122,30 +139,40 @@ export function useGlobalCoach(topN = Number.POSITIVE_INFINITY): GlobalCoachResu
     // Unsettled = neither loaded nor errored: the pre-fetch state on first paint AND
     // every in-flight fetch. Counted over ALL sections (not just those with entities)
     // so an unhydrated catalog store still reads as "still loading", never as "clear".
+    // A catalog whose FULL artifacts are already cached counts as settled even if its
+    // summary has not landed — the coach can already derive it.
     const loading = CATALOG_SECTIONS.some((s) => {
-      const e = getCachedArtifacts(s.catalogId);
-      return !e.loaded && !e.error;
+      const sum = getCachedSummary(s.catalogId);
+      return !sum.loaded && !sum.error && !getCachedArtifacts(s.catalogId).loaded;
     });
     const live = new Set<string>();
     for (const section of CATALOG_SECTIONS) {
       const entMap = entitiesByCatalog[section.catalogId];
       if (!entMap || Object.keys(entMap).length === 0) continue;
 
-      const { arts, error } = getCachedArtifacts(section.catalogId);
-      if (error) {
+      // Prefer the full artifacts when this catalog's blobs are ALREADY in the cache (the
+      // open catalog, fetched by the Matrix/Baseline for their own reasons). The coach never
+      // pays for them, but ignoring them would let it coach the catalog on screen from a
+      // thinner input than the Matrix is rendering — a disagreement nobody could explain.
+      const full = getCachedArtifacts(section.catalogId);
+      const summary = getCachedSummary(section.catalogId);
+      const useFull = full.loaded;
+      if (!useFull && summary.error) {
         // A failed fetch is NOT an empty catalog — skip it rather than emit a bogus
         // "nothing has run here" candidate for every one of its entities.
-        failedCatalogs.push({ catalogId: section.catalogId, label: section.label, error });
+        failedCatalogs.push({ catalogId: section.catalogId, label: section.label, error: summary.error });
         continue;
       }
       live.add(section.catalogId);
       const catalogVerdicts = verdictsByCatalog.get(section.catalogId) ?? EMPTY_VERDICTS;
-      // Everything the derivation reads, by reference. `arts` (not the cache ENTRY) is the
-      // artifact dependency on purpose: the entry object changes on the `loading` flip while
-      // the artifacts it exposes are the same empty list, and `loading` is a chrome concern
-      // the candidates do not depend on. `localByEntity` is keyed by entity, so only this
-      // catalog's entity rows matter — a produce elsewhere must not invalidate this catalog.
-      const deps: unknown[] = [entMap, arts, catalogVerdicts];
+      // Everything the derivation reads, by reference. The PAYLOAD (not the cache ENTRY) is
+      // the server dependency on purpose: the entry object changes on the `loading` flip while
+      // the rows it exposes are the same empty list, and `loading` is a chrome concern the
+      // candidates do not depend on. The source tag is a dependency too — the same catalog
+      // derived from blobs and from its projection must not share a memo slot.
+      // `localByEntity` is keyed by entity, so only this catalog's entity rows matter — a
+      // produce elsewhere must not invalidate this catalog.
+      const deps: unknown[] = [useFull, useFull ? full.arts : summary.rows, catalogVerdicts, entMap];
       for (const id of Object.keys(entMap)) deps.push(localByEntity[id]);
 
       const hit = cache.get(section.catalogId);
@@ -155,20 +182,25 @@ export function useGlobalCoach(topN = Number.POSITIVE_INFINITY): GlobalCoachResu
       }
 
       const entities = Object.values(entMap).map((e) => ({ id: e.id, name: e.name, lifecycle: e.lifecycle, data: (e as { data?: unknown }).data }));
-      const serverByEntity = new Map<string, Map<string, PipelineArtifact>>();
-      for (const a of arts) {
-        const row = serverByEntity.get(a.entityId) ?? new Map<string, PipelineArtifact>();
-        row.set(a.step, a);
-        serverByEntity.set(a.entityId, row);
-      }
-      const fresh = buildCatalogCandidates({
+      const shared = {
         catalogId: section.catalogId,
         catalogLabel: section.label,
         steps: resolveCatalogSteps(section.catalogId),
         entities,
-        serverByEntity,
         localByEntity,
-      }, catalogVerdicts);
+      };
+      let fresh: CoachCandidate[];
+      if (useFull) {
+        const serverByEntity = new Map<string, Map<string, PipelineArtifact>>();
+        for (const a of full.arts) {
+          const row = serverByEntity.get(a.entityId) ?? new Map<string, PipelineArtifact>();
+          row.set(a.step, a);
+          serverByEntity.set(a.entityId, row);
+        }
+        fresh = buildCatalogCandidates({ ...shared, serverByEntity }, catalogVerdicts);
+      } else {
+        fresh = buildCatalogCandidatesFromSummary({ ...shared, summaryByEntity: groupSummaryByEntity(summary.rows) }, catalogVerdicts);
+      }
       cache.set(section.catalogId, { deps, candidates: fresh });
       candidates.push(...fresh);
     }

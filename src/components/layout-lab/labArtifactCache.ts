@@ -1,9 +1,10 @@
 'use client';
 
 import { useSyncExternalStore, useEffect } from 'react';
-import { fetchArtifactsResult } from './labArtifactClient';
+import { fetchArtifactsResult, fetchStepSummaryResult } from './labArtifactClient';
 import type { Result } from '@/types/result';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
+import type { StepSummary } from './stepSummary';
 
 /**
  * A small shared artifact-fetch cache for the /layout lab, keyed `catalogId` (a
@@ -59,6 +60,31 @@ const LOADING: ArtifactCacheEntry = Object.freeze({ loading: true, arts: NO_ARTS
 const store = new Map<string, ArtifactCacheEntry>();
 const seqByKey = new Map<string, number>(); // per-key request sequence (stale-response guard)
 const listeners = new Set<() => void>();
+
+/**
+ * The BLOB-FREE half of the same cache: one entry per catalog holding only the verdict
+ * projection of its rows ({@link StepSummary}). Same store discipline (dedup, stale-response
+ * guard, error-as-a-state), same listener set and the SAME `version` signal — so a reader
+ * that already subscribes to the cache picks up summary arrivals with no second subscription.
+ *
+ * It is a separate Map rather than a `summary:` key in `store` because the entries carry a
+ * different payload type; folding them into one map would force every existing reader to
+ * narrow. Invalidation/retry/reset drive BOTH maps from the same call sites below, so the two
+ * halves can never hold contradictory truth about a catalog.
+ */
+export interface SummaryCacheEntry {
+  loading: boolean;
+  rows: StepSummary[];
+  loaded: boolean;
+  error: string | null;
+}
+
+const NO_ROWS: StepSummary[] = [];
+const EMPTY_SUMMARY: SummaryCacheEntry = Object.freeze({ loading: false, rows: NO_ROWS, loaded: false, error: null });
+const LOADING_SUMMARY: SummaryCacheEntry = Object.freeze({ loading: true, rows: NO_ROWS, loaded: false, error: null });
+
+const summaryStore = new Map<string, SummaryCacheEntry>();
+const summarySeq = new Map<string, number>();
 
 // Monotonic version bumped on every cache mutation. It is the stable snapshot value
 // the cross-catalog coach aggregation subscribes to (via `useArtifactCacheVersion`),
@@ -123,15 +149,62 @@ export function ensureArtifacts(catalogId: string, entityId?: string): void {
 }
 
 /**
+ * Kick off (or reuse) the BLOB-FREE fetch for a catalog — the whole-project read path.
+ * Mirrors {@link ensureArtifacts} exactly (no-op while loading/loaded/errored, stale-response
+ * guard, a failure stored AS a failure so a dead server never reads as "nothing produced").
+ */
+export function ensureSummary(catalogId: string): void {
+  const cur = summaryStore.get(catalogId);
+  if (cur && (cur.loading || cur.loaded || cur.error)) return;
+  const seq = (summarySeq.get(catalogId) ?? 0) + 1;
+  summarySeq.set(catalogId, seq);
+  summaryStore.set(catalogId, LOADING_SUMMARY);
+  emit();
+  fetchStepSummaryResult(catalogId).then((res) => {
+    if (summarySeq.get(catalogId) !== seq) return; // superseded by an invalidation or a newer fetch
+    summaryStore.set(catalogId, res.ok
+      ? { loading: false, rows: res.data, loaded: true, error: null }
+      : { loading: false, rows: NO_ROWS, loaded: false, error: res.error });
+    emit();
+  });
+}
+
+/**
+ * Non-hook read of a catalog's summary entry. Pair with {@link useArtifactCacheVersion} —
+ * the cross-catalog coach reads 36 catalogs inside ONE memo, which the rules of hooks forbid
+ * doing with 36 subscriptions.
+ */
+export function getCachedSummary(catalogId: string): SummaryCacheEntry {
+  return summaryStore.get(catalogId) ?? EMPTY_SUMMARY;
+}
+
+/** Drop a catalog's summary entry (bumping its sequence so an in-flight result is discarded). */
+function dropSummary(catalogId: string): boolean {
+  if (!summaryStore.has(catalogId)) return false;
+  summarySeq.set(catalogId, (summarySeq.get(catalogId) ?? 0) + 1);
+  summaryStore.delete(catalogId);
+  return true;
+}
+
+/**
  * Explicit retry after a failed fetch: drop the stored error (and any cached data for
  * the key) and re-issue. Backs the "Retry" affordance every errored surface offers.
+ *
+ * It retries BOTH halves for the catalog. The coach's own "status unknown for N catalogs —
+ * retry" control calls this with a bare `catalogId`, and after the coach moved to the
+ * blob-free read that button would otherwise re-issue a fetch nobody is waiting on while
+ * leaving the failure it is pointing at in place.
  */
 export function retryArtifacts(catalogId: string, entityId?: string): void {
   const key = keyFor(catalogId, entityId);
   seqByKey.set(key, (seqByKey.get(key) ?? 0) + 1);
   store.delete(key);
+  // Only RE-issue a summary that existed: a per-entity retry from the Baseline must not
+  // conjure a whole-catalog summary fetch nobody is reading.
+  const hadSummary = dropSummary(catalogId);
   emit();
   ensureArtifacts(catalogId, entityId);
+  if (hadSummary) ensureSummary(catalogId);
 }
 
 /**
@@ -164,6 +237,10 @@ export async function refreshArtifacts(catalogId: string, entityId?: string): Pr
     seqByKey.set(catalogId, (seqByKey.get(catalogId) ?? 0) + 1);
     store.delete(catalogId);
   }
+  // A refresh has just PROVED the server moved, so the catalog's blob-free projection of the
+  // same rows is stale by construction — drop it too, or the coach would keep ranking against
+  // exactly the truth this refresh disproved.
+  dropSummary(catalogId);
   emit();
   return res;
 }
@@ -185,6 +262,10 @@ export function invalidateArtifacts(catalogId: string, entityId?: string): void 
     store.delete(key);
     changed = true;
   }
+  // The summary is a projection of the very rows this invalidation says have moved, so it is
+  // dropped with them — an entity-scoped produce stales the whole-catalog projection exactly
+  // as it stales the whole-catalog artifact key above.
+  if (dropSummary(catalogId)) changed = true;
   if (changed) emit();
 }
 
@@ -228,6 +309,8 @@ export function useCachedArtifacts(catalogId: string | undefined, entityId?: str
 export function _resetArtifactCache(): void {
   store.clear();
   seqByKey.clear();
+  summaryStore.clear();
+  summarySeq.clear();
   listeners.clear();
   flushScheduled = false;
   version = 0;

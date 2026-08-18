@@ -30,6 +30,8 @@ vi.mock('framer-motion', async () => {
 vi.mock('@/components/layout-lab/labArtifactClient', () => ({
   fetchArtifacts: vi.fn().mockResolvedValue([]),
   fetchArtifactsResult: vi.fn().mockResolvedValue({ ok: true, data: [] }),
+  // The cross-catalog coach reads the blob-free verdict projection, not the artifacts.
+  fetchStepSummaryResult: vi.fn().mockResolvedValue({ ok: true, data: [] }),
   postArtifact: vi.fn().mockResolvedValue(undefined),
   drainGates: vi.fn().mockResolvedValue(null),
   drainCatalogGates: vi.fn().mockResolvedValue({ kind: 'ok', summary: { ran: 0, passed: 0, failed: 0, skipped: 0, results: [] } }),
