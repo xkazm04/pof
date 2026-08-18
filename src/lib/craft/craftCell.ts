@@ -223,7 +223,7 @@ export function ceilingFor(deliverable: DeliverableClass): CraftLevel {
 }
 
 const factIndex = new Map<string, StepFact>();
-for (const f of FACTS) factIndex.set(`${f.catalogId} ${f.step}`, f);
+for (const f of FACTS) factIndex.set(`${f.catalogId}\u0000${f.step}`, f);
 
 export interface CellCraft {
   craft: Craft;
@@ -256,7 +256,7 @@ export function craftForCell(
   verdicts: CraftVerdictView[],
   artifactUpdatedAtByEntity: ReadonlyMap<string, string>,
 ): CellCraft | undefined {
-  const fact = factIndex.get(`${catalogId} ${stepLabel}`);
+  const fact = factIndex.get(`${catalogId}\u0000${stepLabel}`);
   if (!fact) return undefined;
   const lens = lensForStep(fact.deliverable, catalogId);
   const ceiling = ceilingFor(fact.deliverable);
