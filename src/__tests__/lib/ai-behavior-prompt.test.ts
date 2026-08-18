@@ -7,7 +7,7 @@ describe('ai-5 group AI coordination prompt — melee reservation system', () =>
   // NOTE: checklist ids are only unique per sub-module — arpg-inventory also
   // uses the 'ai-' prefix, so scope the lookup to the ai-behavior module.
   const item = SUB_MODULES.find((m) => m.id === 'ai-behavior')
-    ?.checklist.find((c) => c.id === 'ai-5');
+    ?.checklist?.find((c) => c.id === 'ai-5');
 
   it('exists', () => {
     expect(item).toBeDefined();
