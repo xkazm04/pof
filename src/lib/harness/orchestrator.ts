@@ -30,7 +30,7 @@ import {
   readAgentsMd,
   appendAgentsMd,
 } from './executor';
-import { spawnClaudeSession, wrapHarnessResult } from './claude-session';
+import { spawnClaudeSession, wrapHarnessResult, killProcessTree, type TreeKillOutcome } from './claude-session';
 import { verify, formatVerificationSummary, detectGates, checkSuccessReachable } from './verifier';
 import {
   createEmptyGuide,
@@ -357,30 +357,19 @@ function checkPort(port: number): Promise<boolean> {
   });
 }
 
-function killDevServer(handle: DevServerHandle) {
-  if (handle.proc) {
-    const proc = handle.proc;
-    const pid = proc.pid;
-    handle.proc = null;
-    // The dev server is spawned with `shell: true`, so on Windows `proc.pid` is
-    // the wrapping `cmd.exe` and `proc.kill()` would orphan the real `next dev`
-    // node process holding port 3000. Kill the whole process tree so the port
-    // is actually released: `taskkill /T` on win32, the process group on POSIX.
-    if (pid != null) {
-      if (process.platform === 'win32') {
-        try {
-          exec(`taskkill /pid ${pid} /T /F`, () => { /* best-effort reap */ });
-        } catch { /* ignore */ }
-      } else {
-        // Fall back to a plain kill if the group kill isn't available.
-        try { process.kill(-pid, 'SIGKILL'); } catch {
-          try { proc.kill('SIGKILL'); } catch { /* ignore */ }
-        }
-      }
-    } else {
-      try { proc.kill(); } catch { /* ignore */ }
-    }
-  }
+export function killDevServer(handle: DevServerHandle): Promise<TreeKillOutcome | null> {
+  if (!handle.proc) return Promise.resolve(null);
+  const proc = handle.proc;
+  handle.proc = null;
+  // The dev server is spawned with `shell: true`, so on Windows `proc.pid` is the
+  // wrapping `cmd.exe` and `proc.kill()` would orphan the real `next dev` node
+  // process holding port 3000. Kill the whole process tree so the port is
+  // actually released — through the SAME helper the session timeout uses
+  // (`killProcessTree`), so the two kill paths cannot drift apart again. SIGKILL
+  // on POSIX because the port must be free immediately; the session keeps the
+  // gentler SIGTERM.
+  return killProcessTree(proc, { posixSignal: 'SIGKILL' })
+    .catch(() => null); // teardown is best-effort — never throw out of a `finally`
 }
 
 // ── Self-Healing Fix Session ────────────────────────────────────────────────
@@ -1424,8 +1413,9 @@ export function createHarnessOrchestrator(
     } finally {
       // Tear down the dev server on EVERY exit path — normal completion,
       // pause/early-return breaks, and thrown/crashed errors — so we never
-      // leak a `next dev` process bound to port 3000 across runs.
-      killDevServer(devServer);
+      // leak a `next dev` process bound to port 3000 across runs. Awaited so the
+      // tree-kill's outcome is known before the run's promise settles.
+      await killDevServer(devServer);
     }
   }
 
