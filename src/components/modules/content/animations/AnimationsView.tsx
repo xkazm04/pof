@@ -41,6 +41,12 @@ export function AnimationsView() {
 
   const appOrigin = getAppOrigin();
 
+  // `step.id` is load-bearing, not just a progress key: the `checklist` task
+  // handler resolves it back to this step (`findAnimationChecklistStep`) and
+  // composes the body with `buildAnimationChecklistPrompt`, so the authored
+  // Mixamo-retarget + commandlet-automation guidance ships. `step.prompt` stays
+  // the argument so an id that no longer resolves degrades to the generic body
+  // instead of dispatching an empty task.
   const handleGenerateStep = useCallback((step: ChecklistStep) => {
     if (!step.prompt) return;
     const task = TaskFactory.checklist('animations', step.id, step.prompt, 'Anim Setup', appOrigin);

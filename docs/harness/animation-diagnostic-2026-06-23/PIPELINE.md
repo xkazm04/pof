@@ -5,6 +5,25 @@ Scope: read-only investigation. The owner reports generated animation outputs ar
 
 Verification note: in-editor Grep/Glob give false "no matches" on this repo; all reference checks below were done with Bash ripgrep against `C:/Users/kazda/kiro/pof/src`.
 
+> **Status update (2026-08-18) — findings 5.1 and 5.2 are CLOSED.** The rest of this
+> document is preserved as the dated record it was; these two are not.
+>
+> - **5.2 (module-id mismatch)** — `knownAssetDomainsForModule` has an explicit
+>   `animations` case (`src/lib/knowledge/ue-known-assets.ts`), so the real asset
+>   paths (`SKM_Manny`, `SK_Mannequin`, `ABP_Manny`) DO reach the animations prompt.
+> - **5.1 (the builder never shipped)** — the Setup Guide's `TaskFactory.checklist`
+>   dispatch now routes through `buildAnimationChecklistPrompt`: the `checklist`
+>   handler in `src/lib/cli-task-handlers.ts` resolves the step by `itemId`
+>   (`findAnimationChecklistStep`) and composes the body from the builder, so its
+>   authored Mixamo-retarget and commandlet-automation guidance is in the emitted
+>   prompt. Pinned by `src/__tests__/lib/prompts/animation-checklist-dispatch.test.ts`,
+>   which asserts against the string `buildTaskPrompt` actually emits — the builder
+>   in isolation is what let this gap hide for two months.
+>
+> Still open from §5: **5.3** — nothing validates generated montages/states against
+> the real skeleton, and the manifest/scanner data (§4.1, §4.2) still never flows
+> into a generation prompt.
+
 ---
 
 ## 1. End-to-end flow (ASCII)
@@ -126,7 +145,7 @@ Three real ground-truth feeds EXIST but none reaches the generators:
 ---
 
 ## Sample files in this directory
-- `sample-prompt-builder.ts` — verbatim `buildAnimationChecklistPrompt` (proves no asset injection)
+- `sample-prompt-builder.ts` — verbatim `buildAnimationChecklistPrompt` **as of 2026-06-23**, when it had no dispatch site (snapshot, not current source — see the status update at the top: the builder now composes the Setup Guide's dispatched prompt and the known-asset block is injected)
 - `sample-montage-prompt.ts` — verbatim `buildMontagePrompt` (says "reuse the skeleton" but never reads it)
 - `sample-checklist-montage-step.txt` — a hardcoded checklist step prompt (literal slot/section names)
 - `sample-combo-codegen.ts` — deterministic combo C++/JSON generator (no real asset refs)

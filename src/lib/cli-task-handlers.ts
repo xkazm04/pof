@@ -28,6 +28,10 @@ import { buildAbilitySpecDraftPrompt } from '@/lib/ability/logic-prompts';
 import { buildGenerateAbilityBundlePrompt } from '@/lib/ability/effect-codegen-prompt';
 import { buildRunTestsPrompt, buildMockStimuliPrompt } from '@/lib/prompts/ai-testing';
 import { MIXAMO_DOWNLOAD_CONTRACT, MIXAMO_DOWNLOAD_CONTRACT_HEADING } from '@/lib/prompts/_shared';
+import {
+  buildAnimationChecklistPrompt,
+  findAnimationChecklistStep,
+} from '@/lib/prompts/animation-checklist';
 import { logger } from '@/lib/logger';
 
 import {
@@ -95,6 +99,14 @@ function domainSection(isUE5: boolean, moduleId: SubModuleId, ueVersion: string)
 
 const checklist: TaskPromptHandler = (task, ctx, { isUE5, knownAssetDomains, wiringBlock, touchesBinaryAssets }) => {
   const ct = task as ChecklistTask;
+  // The animations Setup Guide dispatches its steps as plain checklist tasks, so
+  // for years only the step's bare `prompt` string shipped and the authored
+  // Mixamo-retarget / commandlet-automation guidance in
+  // `prompts/animation-checklist.ts` never reached a dispatched prompt. Resolve
+  // the step by `itemId` and let that builder compose the body. `undefined` for
+  // every other checklist item — including the `animations` roadmap items from
+  // `module-registry`, which own their prompts — so they keep the generic body.
+  const animStep = task.moduleId === 'animations' ? findAnimationChecklistStep(ct.itemId) : undefined;
   const header = buildProjectContextHeader(ctx, {
     knownAssetDomains,
     promptKind: 'ue-cpp',
@@ -154,7 +166,14 @@ const checklist: TaskPromptHandler = (task, ctx, { isUE5, knownAssetDomains, wir
         })}`
       : '';
 
-  return `${header}${domainBlock}\n\n## Task\n${task.prompt}${wiringBlock}\n\n${buildCallbackSection(getCallback(cbId)!)}${visualBlock}${lightingBlock}${characterBlock}`;
+  // The builder emits its own routed header (same `moduleKnowledge('animations')`
+  // routing + binary tripwire) plus the Domain Context line, so it replaces the
+  // generic body wholesale rather than being appended to it.
+  const body = animStep
+    ? buildAnimationChecklistPrompt(animStep, ctx)
+    : `${header}${domainBlock}\n\n## Task\n${task.prompt}`;
+
+  return `${body}${wiringBlock}\n\n${buildCallbackSection(getCallback(cbId)!)}${visualBlock}${lightingBlock}${characterBlock}`;
 };
 
 const quickActionOrAskClaude: TaskPromptHandler = (task, ctx, { isUE5, knownAssetDomains, wiringBlock, touchesBinaryAssets }) => {

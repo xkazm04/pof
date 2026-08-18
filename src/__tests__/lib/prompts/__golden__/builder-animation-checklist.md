@@ -54,6 +54,9 @@ If your solution depends on one of these, declare it in Wiring Requirements and 
 ## Project Knowledge Tips
 - **C++ AnimInstance** — Use C++ AnimInstance for performance-critical animation logic, expose variables to AnimBP for visual state machine.
 
+## Domain Context
+You are helping create animation systems including AnimBP, locomotion states, montages, and notifies in UE5.
+
 ## Task: Step 3 — Locomotion blend space
 
 ### Overview
