@@ -15,11 +15,21 @@ export interface DurationBucket {
   max: number | null;
 }
 
+/**
+ * Buckets partition the whole range, and `auto` owns 0 alone.
+ *
+ * A clip generated without a requested duration stores `durationMs: 0` — the
+ * provider chose the length and never reported it. The library already renders
+ * that as "auto", but the facet used to sort it into "< 1s", asserting a
+ * measurement nobody made. `< 1s` now starts at 1ms and means a REAL sub-second
+ * length; 0 is its own bucket, labelled for what it is.
+ */
 export const DURATION_BUCKETS: DurationBucket[] = [
-  { id: 'short', label: '< 1s', min: 0, max: 1000 },
+  { id: 'short', label: '< 1s', min: 1, max: 1000 },
   { id: 'med', label: '1–3s', min: 1000, max: 3000 },
   { id: 'long', label: '3–10s', min: 3000, max: 10000 },
   { id: 'xl', label: '> 10s', min: 10000, max: null },
+  { id: 'auto', label: 'Auto (length not recorded)', min: 0, max: 1 },
 ];
 
 export interface LibraryFilter {
@@ -77,8 +87,11 @@ function matchesDuration(durationMs: number, bucketId: string): boolean {
   if (bucketId === 'all') return true;
   const bucket = DURATION_BUCKETS.find((b) => b.id === bucketId);
   if (!bucket) return true;
-  if (durationMs < bucket.min) return false;
-  if (bucket.max !== null && durationMs >= bucket.max) return false;
+  // A missing/absurd duration is 0 ("auto"), never a negative length that would
+  // fall out of every bucket and vanish from the facets.
+  const d = Math.max(0, durationMs);
+  if (d < bucket.min) return false;
+  if (bucket.max !== null && d >= bucket.max) return false;
   return true;
 }
 

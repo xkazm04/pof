@@ -30,7 +30,8 @@ import {
   upsertSet,
   type FileRemoval,
 } from '@/lib/audio-asset-db';
-import type { AudioKind } from '@/lib/audio-gen/types';
+import { AUDIO_KINDS, type AudioKind } from '@/lib/audio-gen/types';
+import { isAudioKind, refusalMessage, supportsKind } from '@/lib/audio-gen/capabilities';
 
 /** Start-of-current-month epoch ms — the window the usage meter counts within. */
 function startOfMonth(): number {
@@ -38,6 +39,16 @@ function startOfMonth(): number {
   return new Date(d.getFullYear(), d.getMonth(), 1).getTime();
 }
 
+/**
+ * The monthly budget the usage meter fills against — INFORMATIONAL by design,
+ * and POST deliberately never consults it.
+ *
+ * The number is a default nobody chose (200), so blocking on it would refuse a
+ * generation the user never asked to have limited — a silent 402 replacing the
+ * old silent overclaim. The meter says so in the UI (`AudioUsageMeter`), which
+ * is the honest half of the pair: a limit that is displayed but not enforced
+ * must say it is not enforced.
+ */
 function monthlyQuota(): number {
   const env = Number(process.env.AUDIO_MONTHLY_QUOTA);
   return Number.isFinite(env) && env > 0 ? env : DEFAULT_AUDIO_MONTHLY_QUOTA;
@@ -76,6 +87,16 @@ export async function POST(request: NextRequest) {
   }
   const p = getAudioProvider(provider);
   if (!p) return apiError(`Unknown provider: ${provider}`, 400);
+
+  // The provider's capability contract, enforced — BEFORE the cache and before
+  // any billed call. Until now `capabilities` was never consulted, so a `music`
+  // or `tts` request went to ElevenLabs' sound-generation endpoint like any
+  // other and returned an SFX clip filed under the requested kind. A kind the
+  // provider cannot serve is now refused with the provider's own reason.
+  if (!isAudioKind(kind)) {
+    return apiError(`Unknown audio kind: ${String(kind)}. Expected one of ${AUDIO_KINDS.join(', ')}.`, 400);
+  }
+  if (!supportsKind(p, kind)) return apiError(refusalMessage(p, kind), 400);
 
   // Scope the cache to the destination set/event so the same prompt aimed at a
   // different set is a miss (and generates INTO that set) rather than returning

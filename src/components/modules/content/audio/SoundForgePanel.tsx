@@ -6,12 +6,30 @@ import { apiFetch } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
 import { LicenseBadge } from './LicenseBadge';
 import { AUDIO_PROVIDERS } from '@/lib/audio-gen/registry';
+import { supportsKind, unsupportedKinds } from '@/lib/audio-gen/capabilities';
 import { MODULE_COLORS } from '@/lib/constants';
-import { STATUS_SUCCESS } from '@/lib/chart-colors';
-import type { AudioKind } from '@/lib/audio-gen/types';
+import { STATUS_SUCCESS, STATUS_WARNING } from '@/lib/chart-colors';
+import { AUDIO_KINDS, type AudioKind } from '@/lib/audio-gen/types';
 import type { AudioAsset, AudioSet } from '@/types/audio-asset';
 
-export function SoundForgePanel({ onAssetCreated }: { onAssetCreated?: () => void }) {
+/**
+ * The Sound Forge offers exactly what the selected provider serves.
+ *
+ * Previously the picker hard-coded `sfx`/`ambient` while the provider advertised
+ * `tts` and priced `music` — three lists that never agreed, and a route that
+ * checked none of them. Now the picker is derived: every `AudioKind` is listed,
+ * the ones outside `provider.capabilities` are disabled and their reasons are
+ * printed underneath, and the route refuses them too (belt and braces).
+ *
+ * There is deliberately no `onAssetCreated` refresh hook. The Library is a
+ * SIBLING TAB of this panel in `AudioView` (`{activeTab === 'library' && …}`),
+ * so it is unmounted while the Forge runs and refetches on mount when the user
+ * opens it — a callback here could only ever refresh a panel that is not there.
+ * The prop existed, was invoked, and was never passed by the mount; a refresh
+ * that provably cannot happen is removed rather than left as a promise. If the
+ * two are ever shown together, wire a real refresh at that point.
+ */
+export function SoundForgePanel() {
   const [providerId, setProviderId] = useState('elevenlabs');
   const [kind, setKind] = useState<AudioKind>('sfx');
   const [prompt, setPrompt] = useState('footstep on stone, short, dry, no reverb');
@@ -26,7 +44,13 @@ export function SoundForgePanel({ onAssetCreated }: { onAssetCreated?: () => voi
   const [error, setError] = useState<string | null>(null);
 
   const provider = AUDIO_PROVIDERS[providerId];
-  const license = provider?.commercialLicense[kind] ?? 'non-commercial';
+  // Derived, never stored: switching to a provider that cannot serve the current
+  // kind falls back to one it can, without a render-phase setState.
+  const effectiveKind: AudioKind = provider && !supportsKind(provider, kind)
+    ? (provider.capabilities[0] ?? kind)
+    : kind;
+  const license = provider?.commercialLicense[effectiveKind];
+  const unavailable = provider ? unsupportedKinds(provider) : [];
 
   async function handleGenerate() {
     setRunning(true);
@@ -39,7 +63,7 @@ export function SoundForgePanel({ onAssetCreated }: { onAssetCreated?: () => voi
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            provider: providerId, kind, prompt: `${prompt} (variation ${i + 1})`,
+            provider: providerId, kind: effectiveKind, prompt: `${prompt} (variation ${i + 1})`,
             durationSeconds: duration > 0 ? duration : undefined,
             loop, setId, setName, eventKey, surface,
           }),
@@ -47,7 +71,6 @@ export function SoundForgePanel({ onAssetCreated }: { onAssetCreated?: () => voi
         setId = res.set.id;
         setGenerated((g) => [...g, res]);
       }
-      onAssetCreated?.();
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Generation failed';
       logger.warn('sound-forge generate failed', { msg });
@@ -61,7 +84,15 @@ export function SoundForgePanel({ onAssetCreated }: { onAssetCreated?: () => voi
     <div className="space-y-4 p-5 overflow-y-auto h-full">
       <div className="flex items-center gap-3">
         <h3 className="text-xs font-semibold text-text">Sound Forge</h3>
-        <LicenseBadge license={license} kind={kind} />
+        {license ? (
+          <LicenseBadge license={license} kind={effectiveKind} />
+        ) : (
+          // No invented default: an undeclared licence is reported as undeclared,
+          // never downgraded to a badge the provider never stated.
+          <span className="text-2xs" style={{ color: STATUS_WARNING }} data-testid="forge-license-undeclared">
+            Licence not declared for {effectiveKind}
+          </span>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -72,12 +103,33 @@ export function SoundForgePanel({ onAssetCreated }: { onAssetCreated?: () => voi
           </select>
         </Field>
         <Field label="Kind">
-          <select value={kind} onChange={(e) => setKind(e.target.value as AudioKind)}
+          <select value={effectiveKind} onChange={(e) => setKind(e.target.value as AudioKind)}
+                  aria-label="Kind"
                   className="w-full px-2 py-1.5 bg-surface-deep border border-border rounded text-xs text-text">
-            {(['sfx', 'ambient'] as AudioKind[]).map((k) => <option key={k} value={k}>{k}</option>)}
+            {AUDIO_KINDS.map((k) => {
+              const served = provider ? supportsKind(provider, k) : false;
+              return (
+                <option key={k} value={k} disabled={!served}>
+                  {served ? k : `${k} — not available`}
+                </option>
+              );
+            })}
           </select>
         </Field>
       </div>
+
+      {/* An unavailable kind is shown, disabled, WITH the provider's reason —
+          the route refuses it too, so the picker and the server agree. */}
+      {unavailable.length > 0 && (
+        <ul className="space-y-1 text-2xs text-text-muted" data-testid="forge-unsupported-kinds">
+          {unavailable.map(({ kind: k, reason }) => (
+            <li key={k}>
+              <span className="font-semibold" style={{ color: STATUS_WARNING }}>{k} unavailable</span>
+              {' — '}{reason}
+            </li>
+          ))}
+        </ul>
+      )}
 
       <Field label="Prompt">
         <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={3}
@@ -97,7 +149,7 @@ export function SoundForgePanel({ onAssetCreated }: { onAssetCreated?: () => voi
         </Field>
         <Field label="Loopable (ambient)">
           <label className="flex items-center gap-2 text-xs text-text-muted-hover py-1.5">
-            <input type="checkbox" checked={loop} disabled={kind !== 'ambient'} onChange={(e) => setLoop(e.target.checked)} /> loop
+            <input type="checkbox" checked={loop} disabled={effectiveKind !== 'ambient'} onChange={(e) => setLoop(e.target.checked)} /> loop
           </label>
         </Field>
       </div>
