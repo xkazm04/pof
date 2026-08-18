@@ -53,6 +53,15 @@
  * total is no longer structurally incomplete after a fleet run. Spend goes DIRECT to SQLite (the
  * script already opens the DB for the model policy), so metering adds no dev-server coupling
  * beyond the artifact/verdict fetches this harness has always needed.
+ *
+ * BUDGET STOP — DRAIN, NEVER KILL (stated policy, see `stopRun`): when the gate trips mid-run no
+ * NEW spawn is created — `runDrainPool` claims no further target and `drawJudge` takes no further
+ * draw of a step it has already begun — but draws ALREADY in flight are awaited, because a draw's
+ * cost only arrives in the CLI's closing envelope and killing one would burn the tokens while
+ * making them unmeasurable. So a stop can overshoot by up to CONCURRENCY draws, and the closing
+ * report states it: actual spend vs the ceiling the run started with (`judgeSpendCeiling`), how
+ * much was spent AFTER the stop, how many draws were drained, and how many spawns reported no
+ * cost — an unmeasured spawn is not a free one, so the printed total is flagged as a FLOOR.
  */
 import { spawn } from 'node:child_process';
 import { writeFileSync, mkdirSync, existsSync } from 'node:fs';
@@ -65,17 +74,20 @@ import { recordSpend, getBudgetStatus, getTaskTypeEstimate } from '../src/lib/cl
 import { formatUsd } from '../src/lib/cli-spend/format';
 import {
   judgeBudgetGate,
+  judgeSpendCeiling,
   judgeSpendRecord,
   judgeTaskType,
   parseCliJsonRun,
+  summarizeJudgeSpend,
   type CliRunMetrics,
+  type JudgeSpendTotals,
   type JudgeTaskType,
 } from '../src/lib/judge/spendMeter';
 import {
   DEFAULT_JUDGE_CONCURRENCY,
   indexVerdicts,
   judgeSkipDecision,
-  runPool,
+  runDrainPool,
   verdictKey,
   type PriorVerdict,
 } from '../src/lib/judge/fleetPlan';
@@ -127,9 +139,30 @@ type Artifact = { entityId: string; step: string; status: string; data: Record<s
 
 // ── Spend metering ───────────────────────────────────────────────────────────
 /** Running totals so a fleet run's cost is attributable per step AND in aggregate. */
-const spend = { costUsd: 0, spawns: 0, unknownCost: 0 };
+const spend: JudgeSpendTotals = { costUsd: 0, spawns: 0, unknownCost: 0 };
 /** Set once the budget guardrail refuses mid-run; stops scheduling further spawns. */
 let budgetStop: string | null = null;
+/** What had been spent at the INSTANT the gate tripped — the baseline every overshoot is measured from. */
+let spendAtStop: JudgeSpendTotals | null = null;
+/** The headroom this run started with (min of the configured daily/monthly remainders), if any. */
+let runCeilingUsd: number | null = null;
+
+/**
+ * Trip the budget stop.
+ *
+ * STOP POLICY — DRAIN, NEVER KILL (stated, not incidental). From here on no NEW spawn is
+ * created: `runDrainPool` stops claiming targets and `drawJudge` stops taking further draws of
+ * a step it has already begun. Draws ALREADY in flight are awaited to completion, because a
+ * judge draw's cost only arrives in the CLI's closing JSON envelope — killing one would still
+ * burn the tokens while making them unmeasurable, and a half-read stdout could be parsed into a
+ * partial verdict. So the ceiling can be overshot by up to CONCURRENCY draws, and that overshoot
+ * is MEASURED (`spendAtStop`) and REPORTED at the end rather than implied away.
+ */
+function stopRun(reason: string): void {
+  if (budgetStop) return; // first stop wins — later refusals are the same event
+  budgetStop = reason;
+  spendAtStop = { ...spend };
+}
 
 /**
  * Ask the shared pre-flight guardrail whether this class of judge spawn may run, reading the
@@ -313,19 +346,32 @@ function prepareJudge(catalogId: string, art: Artifact, cls: DeliverableClass, e
  * near the 90 line flaps across it between judgings. --median N draws N times and keeps the
  * MEDIAN (never the max: best-of-N would silently inflate every borderline cell into green).
  * Every spawn is metered here, so both the fleet sweep and `--calibrate` pay through one seam.
+ *
+ * A budget stop is honoured BETWEEN draws (see {@link stopRun}): the draw in flight is drained,
+ * but the 2nd/3rd draw of a `--median 3` step is not yet in flight and is therefore never
+ * started. Without this, one stop could still buy CONCURRENCY x MEDIAN more Opus draws. The
+ * step then reports a median of fewer draws — visible in the `[median-of-N]` tag, not hidden.
  */
-async function drawJudge(prompt: string, taskType: JudgeTaskType, label: string, policy: { cliModel: string; effort: string }): Promise<{ res: JudgeResult | null; scores: number[]; costUsd: number }> {
+async function drawJudge(prompt: string, taskType: JudgeTaskType, label: string, policy: { cliModel: string; effort: string }): Promise<{ res: JudgeResult | null; scores: number[]; costUsd: number; cutShort: boolean }> {
   const draws: JudgeResult[] = [];
   let costUsd = 0;
+  let taken = 0;
   for (let i = 0; i < MEDIAN; i++) {
+    if (i > 0 && budgetStop) break; // a draw not yet started is not in flight — do not start it
     const m = await runClaude(prompt, policy.cliModel, policy.effort);
+    taken++;
     meter(taskType, `${label} draw ${i + 1}/${MEDIAN}`, m);
     costUsd += m.costUsd;
     const res = parseJudgeResult(m.text);
     if (res) draws.push(res);
   }
   const sorted = [...draws].sort((a, b) => a.score - b.score);
-  return { res: sorted.length ? sorted[Math.floor((sorted.length - 1) / 2)] : null, scores: sorted.map((d) => d.score), costUsd };
+  return {
+    res: sorted.length ? sorted[Math.floor((sorted.length - 1) / 2)] : null,
+    scores: sorted.map((d) => d.score),
+    costUsd,
+    cutShort: taken < MEDIAN,
+  };
 }
 
 async function judgeOne(catalogId: string, art: Artifact, cls: DeliverableClass, entityArtifacts: Artifact[], tmpDir: string, policy: { cliModel: string; effort: string; modelId: string }) {
@@ -338,12 +384,12 @@ async function judgeOne(catalogId: string, art: Artifact, cls: DeliverableClass,
   const taskType = judgeTaskType(cls);
   const gate = budgetGate(taskType);
   if (gate.refuse) {
-    budgetStop = `budget guardrail refused ${taskType}: ${gate.reasons.join(' ')} — re-run with --force-budget to override`;
+    stopRun(`budget guardrail refused ${taskType}: ${gate.reasons.join(' ')} — re-run with --force-budget to override`);
     return { error: `${catalogId}::${art.step} — REFUSED by budget guardrail` };
   }
 
   const drawn = await drawJudge(prep.prompt, taskType, `${catalogId}::${art.step} [${art.entityId}]`, policy);
-  const costTag = ` ${formatUsd(drawn.costUsd)}`;
+  const costTag = ` ${formatUsd(drawn.costUsd)}${drawn.cutShort ? ' (draws cut short by the budget stop)' : ''}`;
   if (!drawn.res) return { error: `${catalogId}::${art.step} — no parseable verdict in ${MEDIAN} draw(s)${costTag}` };
   const res = drawn.res;
   // Verdict follows the MEDIAN score, not the drawn verdict of that sample.
@@ -422,7 +468,7 @@ async function calibrate(tmpDir: string, policy: { cliModel: string; effort: str
       const taskType = judgeTaskType(cls);
       const gate = budgetGate(taskType);
       if (gate.refuse) {
-        budgetStop = `budget guardrail refused ${taskType}: ${gate.reasons.join(' ')} — re-run with --force-budget to override`;
+        stopRun(`budget guardrail refused ${taskType}: ${gate.reasons.join(' ')} — re-run with --force-budget to override`);
         unscored[key] = 'refused by the budget guardrail';
         continue;
       }
@@ -444,8 +490,12 @@ async function calibrate(tmpDir: string, policy: { cliModel: string; effort: str
   const verdict = evaluateCalibration(run, RUBRIC_VERSION);
   console.log(`calibration: ${verdict.message}`);
   for (const d of run.overall.disagreements) console.log(`  disagreement: ${d.key} — human ${d.human}, judge ${d.judge} (${d.score})`);
-  console.log(`  scored ${run.overall.scored}/${run.overall.total}; ${run.confirmed.scored} confirmed target(s) back the enforced rate; spend ${formatUsd(spend.costUsd)} over ${spend.spawns} spawn(s)` +
-    (spend.unknownCost ? ` (${spend.unknownCost} unmeasured — cost unknown, not free)` : ''));
+  console.log(`  scored ${run.overall.scored}/${run.overall.total}; ${run.confirmed.scored} confirmed target(s) back the enforced rate`);
+  // Calibration draws are real Opus draws — reported against the ceiling like any fleet run.
+  if (!DRY) {
+    const report = summarizeJudgeSpend({ totals: spend, ceilingUsd: runCeilingUsd, atStop: spendAtStop, stopReason: budgetStop });
+    for (const line of report.lines) console.log('  ' + line);
+  }
 
   if (DRY) {
     console.log('  (dry run — nothing was judged and nothing was persisted)');
@@ -491,6 +541,18 @@ async function main() {
     }
   }
 
+  // The headroom this run starts with, so the end-of-run report can state spend AGAINST a
+  // ceiling instead of as a bare number that reads as "within budget".
+  if (!DRY) {
+    const b = getBudgetStatus();
+    runCeilingUsd = judgeSpendCeiling({
+      dailyExceeded: b.dailyExceeded,
+      monthlyExceeded: b.monthlyExceeded,
+      dailyRemainingUsd: b.dailyRemainingUsd,
+      monthlyRemainingUsd: b.monthlyRemainingUsd,
+    });
+  }
+
   // Calibration is its own sweep (the hand-labelled targets, not a catalog filter), so it runs
   // AFTER the up-front budget gate and instead of the fleet loop.
   if (CALIBRATE) {
@@ -501,6 +563,8 @@ async function main() {
 
   let n = 0;
   let skipped = 0;
+  let drainedAtStop = 0;
+  let unstarted = 0;
   const t0 = Date.now();
   for (const c of catalogs) {
     if (budgetStop) break;
@@ -524,27 +588,40 @@ async function main() {
       targets.push({ art: a, cls: p.cls });
     }
 
-    // ── Judge (bounded pool) ───────────────────────────────────────────────
+    // ── Judge (bounded, drain-on-stop pool) ────────────────────────────────
     // These are real Claude CLI processes, so fan-out is capped at CONCURRENCY — the same
     // ceiling the deep-eval engine uses. Results keep input order, so output reads as before.
-    const results = await runPool(targets, CONCURRENCY, async (t) => {
-      if (budgetStop) return null; // a mid-fleet budget stop halts the workers still to start
-      return judgeOne(c, t.art, t.cls, allArts, tmpDir, policy);
+    // On a budget stop the pool claims nothing further and DRAINS what is in flight (policy in
+    // `stopRun`); it reports how many draws that was, which is the overshoot the ceiling could
+    // not prevent.
+    const pool = await runDrainPool(targets, CONCURRENCY, async (t) => judgeOne(c, t.art, t.cls, allArts, tmpDir, policy), {
+      stopRequested: () => budgetStop !== null,
     });
-    for (const res of results) {
+    drainedAtStop = Math.max(drainedAtStop, pool.drainedAtStop);
+    unstarted += pool.unstarted;
+    for (const res of pool.results) {
       if (!res) continue;
       console.log('  ' + (res.verdict ?? res.skipped ?? res.dry ?? res.error));
       if (res.verdict || res.error) n++;
     }
   }
-  const costLine = DRY
-    ? ''
-    : ` — spend ${formatUsd(spend.costUsd)} over ${spend.spawns} spawn(s)` +
-      (spend.unknownCost ? ` (${spend.unknownCost} spawn(s) reported no cost)` : '');
   const skipLine = skipped
     ? `, ${skipped} skipped (verdict still bound to unchanged content — re-run with --rejudge to force)`
     : '';
-  console.log(`done — ${n} judged${skipLine}${costLine} in ${((Date.now() - t0) / 1000).toFixed(1)}s`);
+  const unstartedLine = unstarted ? `, ${unstarted} target(s) never started` : '';
+  console.log(`done — ${n} judged${skipLine}${unstartedLine} in ${((Date.now() - t0) / 1000).toFixed(1)}s`);
+  // Spend is reported against the ceiling, with any overshoot named — a run that blew past a
+  // configured budget must not print a line that reads as if the budget held.
+  if (!DRY) {
+    const report = summarizeJudgeSpend({
+      totals: spend,
+      ceilingUsd: runCeilingUsd,
+      atStop: spendAtStop,
+      drainedAtStop,
+      stopReason: budgetStop,
+    });
+    for (const line of report.lines) console.log('  ' + line);
+  }
   if (budgetStop) {
     console.error(`STOPPED — ${budgetStop}`);
     process.exit(3);

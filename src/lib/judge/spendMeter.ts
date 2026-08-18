@@ -16,6 +16,7 @@
 import type { DeliverableClass } from './dimensions';
 import type { TaskTypeEstimate } from '@/types/cli-spend';
 import { evaluatePreflight, type PreflightBudget, type PreflightVerdict } from '@/lib/cli-spend/preflight';
+import { formatUsd } from '@/lib/cli-spend/format';
 
 /**
  * The spend task types a judge spawn is recorded under. These are the SAME vocabulary the
@@ -160,4 +161,102 @@ export function judgeBudgetGate(input: {
 }): JudgeBudgetGate {
   const verdict = evaluatePreflight(input);
   return { refuse: verdict.warn, reasons: verdict.reasons, verdict };
+}
+
+// ── What a run actually spent, against what it was allowed to ────────────────
+
+/** A running total of judge spend. The harness keeps one; it is also snapshotted at a stop. */
+export interface JudgeSpendTotals {
+  costUsd: number;
+  spawns: number;
+  /** Spawns whose CLI envelope carried no cost. Unmeasured — NOT free. */
+  unknownCost: number;
+}
+
+/**
+ * The headroom a run starts with: the smaller of the configured daily/monthly remainders, or
+ * null when no budget is configured (no ceiling exists to hold, and saying "$0 ceiling" would
+ * be a lie). A negative remainder is a ceiling of 0 — already over.
+ */
+export function judgeSpendCeiling(budget?: PreflightBudget | null): number | null {
+  if (!budget) return null;
+  const remainders = [budget.dailyRemainingUsd, budget.monthlyRemainingUsd].filter(
+    (v): v is number => typeof v === 'number' && Number.isFinite(v),
+  );
+  if (!remainders.length) return null;
+  return Math.max(0, Math.min(...remainders));
+}
+
+/** The truthful end-of-run spend statement. */
+export interface JudgeRunSpendReport {
+  costUsd: number;
+  spawns: number;
+  unknownCost: number;
+  ceilingUsd: number | null;
+  /** Spend recorded AFTER the budget gate tripped — exactly what the ceiling failed to prevent. */
+  overshootUsd: number;
+  overshootSpawns: number;
+  /** Draws that were already in flight at the stop and were drained rather than killed. */
+  drainedAtStop: number;
+  /** True when the recorded spend passed the headroom the run started with. */
+  exceededCeiling: boolean;
+  /** True when the total is a FLOOR because some spawns reported no cost. */
+  totalIsFloor: boolean;
+  /** Printable lines — the harness prints these verbatim, so the claim can't drift from the math. */
+  lines: string[];
+}
+
+/**
+ * Turn a run's totals into a statement that cannot imply the ceiling held when it did not.
+ *
+ * Three honesty rules, all pure and testable here rather than interpolated into a console.log:
+ *  1. Spend is stated AGAINST the ceiling the run started with, or explicitly as "no ceiling
+ *     configured" — never as a bare number that reads as within budget.
+ *  2. Any spend recorded after the stop tripped is reported as OVERSHOOT, with the number of
+ *     drained in-flight draws that produced it (the drain policy is `runDrainPool`'s).
+ *  3. Spawns with `costKnown: false` make the total a FLOOR, and the line says so — an
+ *     unmeasured spawn is not a free one.
+ */
+export function summarizeJudgeSpend(input: {
+  totals: JudgeSpendTotals;
+  ceilingUsd?: number | null;
+  /** Totals captured at the instant the gate tripped; null/absent when it never did. */
+  atStop?: JudgeSpendTotals | null;
+  drainedAtStop?: number;
+  stopReason?: string | null;
+}): JudgeRunSpendReport {
+  const { costUsd, spawns, unknownCost } = input.totals;
+  const ceilingUsd = input.ceilingUsd ?? null;
+  const atStop = input.atStop ?? null;
+  const overshootUsd = atStop ? Math.max(0, costUsd - atStop.costUsd) : 0;
+  const overshootSpawns = atStop ? Math.max(0, spawns - atStop.spawns) : 0;
+  const exceededCeiling = ceilingUsd !== null && costUsd > ceilingUsd;
+  const totalIsFloor = unknownCost > 0;
+
+  const lines: string[] = [];
+  lines.push(
+    `spend ${formatUsd(costUsd)} over ${spawns} spawn(s)` +
+      (ceilingUsd === null
+        ? ' — no budget configured, so this run had no ceiling to hold'
+        : ` of a ${formatUsd(ceilingUsd)} ceiling (the budget headroom at run start)`),
+  );
+  if (exceededCeiling) {
+    lines.push(`CEILING EXCEEDED by ${formatUsd(costUsd - ceilingUsd)} — the configured budget did not hold.`);
+  }
+  if (atStop) {
+    lines.push(
+      `budget stop tripped at ${formatUsd(atStop.costUsd)}; ${formatUsd(overshootUsd)} was spent AFTER it across ` +
+        `${overshootSpawns} spawn(s)` +
+        (input.drainedAtStop
+          ? ` — ${input.drainedAtStop} draw(s) were already in flight and were drained, not killed (a killed draw still costs but reports nothing).`
+          : ' (no draw was in flight when it tripped).'),
+    );
+    if (input.stopReason) lines.push(`stop reason: ${input.stopReason}`);
+  }
+  if (totalIsFloor) {
+    lines.push(
+      `${unknownCost} spawn(s) reported no cost — unmeasured, not free, so ${formatUsd(costUsd)} is a FLOOR on what this run spent.`,
+    );
+  }
+  return { costUsd, spawns, unknownCost, ceilingUsd, overshootUsd, overshootSpawns, drainedAtStop: input.drainedAtStop ?? 0, exceededCeiling, totalIsFloor, lines };
 }
