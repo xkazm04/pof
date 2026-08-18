@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { useSuspendableEffect } from '@/hooks/useSuspend';
 import { TaskFactory } from '@/lib/cli-task';
 import { getAppOrigin, UI_TIMEOUTS } from '@/lib/constants';
+import { logger } from '@/lib/logger';
 import type { FeatureRow } from '@/types/feature-matrix';
 import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
@@ -73,23 +74,54 @@ export function useReviewableModuleView({
   // Helper: advance to next batch item (shared by onComplete and watchdog).
   // Reads from batchQueueRef to avoid stale closures, then performs a pure
   // state update followed by a separate side-effect (setTimeout).
+  //
+  // The timer is self-rescheduling, not a one-shot: each dispatched item's
+  // completion calls back into advanceBatch, so the chain re-enters until an
+  // exit fires — and each exit says why:
+  //   • queue drained   — the batch finished normally
+  //   • item not in the checklist — skipped; the watchdog below re-advances, so
+  //     the drain continues rather than stalling
+  //   • hook unmounted  — LRU eviction destroys the queue and progress UI, so a
+  //     further tick would dispatch a paid CLI run nobody can observe
+  // Deliberately NOT suspended when the module is hidden: a batch run the user
+  // started is a paid, multi-minute CLI job and must survive navigation (same
+  // reasoning as the forge poll in visual-gen/asset-forge/useForgeStore.ts).
+  const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const advanceBatch = useCallback(() => {
     const queue = batchQueueRef.current;
-    if (queue.length === 0) return;
+    if (queue.length === 0) {
+      logger.info(`[${moduleId}] batch run ended: queue drained`);
+      return;
+    }
 
     const [nextId, ...rest] = queue;
     setBatchQueue(rest);
 
     const nextItem = checklistRef.current.find((c) => c.id === nextId);
-    if (nextItem) {
-      setTimeout(() => {
-        activeItemIdRef.current = nextId;
-        setActiveItemId(nextId);
-        const task = TaskFactory.checklist(moduleId, nextId, nextItem.prompt, moduleLabel, appOrigin);
-        checklistCliRef.current?.execute(task);
-      }, UI_TIMEOUTS.batchItemDelay);
+    if (!nextItem) {
+      logger.warn(`[${moduleId}] batch run skipped "${nextId}": no such checklist item — the watchdog will advance to the next`);
+      return;
     }
+
+    if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
+    advanceTimerRef.current = setTimeout(() => {
+      advanceTimerRef.current = null;
+      activeItemIdRef.current = nextId;
+      setActiveItemId(nextId);
+      const task = TaskFactory.checklist(moduleId, nextId, nextItem.prompt, moduleLabel, appOrigin);
+      checklistCliRef.current?.execute(task);
+    }, UI_TIMEOUTS.batchItemDelay);
   }, [moduleId, moduleLabel, appOrigin]);
+
+  // An unmount is a terminal condition for the chain, and a stated one.
+  useEffect(() => () => {
+    if (advanceTimerRef.current) {
+      clearTimeout(advanceTimerRef.current);
+      advanceTimerRef.current = null;
+      logger.info(`[${moduleId}] batch run chain stopped: view unmounted with items still queued`);
+    }
+  }, [moduleId]);
 
   const handleChecklistComplete = useCallback((success: boolean) => {
     const completedId = activeItemIdRef.current;

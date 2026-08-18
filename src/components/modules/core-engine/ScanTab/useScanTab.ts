@@ -10,6 +10,7 @@ import { EVAL_PASSES, type EvalPass } from '@/lib/evaluator/module-eval-prompts'
 import type { SubModuleId } from '@/types/modules';
 import type { ScanFinding, ScanSeverity } from '@/types/scan';
 import { getAppOrigin, UI_TIMEOUTS } from '@/lib/constants';
+import { logger } from '@/lib/logger';
 import { ACCENT, EMPTY_FINDINGS } from './constants';
 
 export function useScanTab(moduleId: SubModuleId) {
@@ -59,11 +60,37 @@ export function useScanTab(moduleId: SubModuleId) {
   });
 
   // --- Batch fix CLI ---
+  // Self-rescheduling timer, NOT a one-shot delay: every fix completion arms the
+  // next tick, so the chain re-enters itself until something ends it. It is
+  // bounded by a queue that strictly shrinks one id per tick, and every exit
+  // REPORTS its reason rather than stopping silently:
+  //   • queue drained            — the batch finished normally
+  //   • finding no longer listed — that id is skipped and the drain continues
+  //     (it would otherwise stall with `isBatchFixing` stuck true forever, since
+  //     no CLI run is dispatched and nothing would ever call onComplete again)
+  //   • hook unmounted           — LRU eviction destroys the queue and progress
+  //     UI, so a further tick would dispatch a paid CLI run nobody can see
+  // It deliberately does NOT pause under SuspendContext: a batch fix is a
+  // user-initiated, paid, multi-minute CLI run, and hiding the module in the LRU
+  // must not stall it — the same reasoning that keeps the forge poll alive
+  // (see visual-gen/asset-forge/useForgeStore.ts).
+  const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const advanceFixRef = useRef<() => void>(() => {});
+
+  const scheduleAdvance = useCallback(() => {
+    if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
+    advanceTimerRef.current = setTimeout(() => {
+      advanceTimerRef.current = null;
+      advanceFixRef.current();
+    }, UI_TIMEOUTS.batchItemDelay);
+  }, []);
+
   const advanceFix = useCallback(() => {
     const queue = fixQueueRef.current;
     if (queue.length === 0) {
       setActiveFixId(null);
       fixTotalRef.current = 0;
+      logger.info(`[ScanTab] ${moduleId} batch fix ended: queue drained`);
       return;
     }
 
@@ -72,11 +99,28 @@ export function useScanTab(moduleId: SubModuleId) {
     setActiveFixId(nextId);
 
     const finding = useModuleStore.getState().scanResults[moduleId]?.find((f) => f.id === nextId);
-    if (finding) {
-      const prompt = `Fix the following issue in the ${moduleLabel} module:\n\n**${finding.category}** (${finding.severity})\n${finding.description}\n\nFile: ${finding.file ?? 'N/A'}\n\nSuggested fix: ${finding.suggestedFix}`;
-      fixCliRef.current?.sendPrompt(prompt);
+    if (!finding) {
+      logger.warn(`[ScanTab] ${moduleId} batch fix skipped "${nextId}": finding no longer in scan results — advancing to the next item`);
+      scheduleAdvance();
+      return;
     }
-  }, [moduleId, moduleLabel]);
+
+    const prompt = `Fix the following issue in the ${moduleLabel} module:\n\n**${finding.category}** (${finding.severity})\n${finding.description}\n\nFile: ${finding.file ?? 'N/A'}\n\nSuggested fix: ${finding.suggestedFix}`;
+    fixCliRef.current?.sendPrompt(prompt);
+  }, [moduleId, moduleLabel, scheduleAdvance]);
+
+  advanceFixRef.current = advanceFix;
+
+  // Cancel a pending advance when the view goes away for good, and say so —
+  // an LRU eviction mid-batch must not leave a tick that dispatches into a
+  // torn-down hook.
+  useEffect(() => () => {
+    if (advanceTimerRef.current) {
+      clearTimeout(advanceTimerRef.current);
+      advanceTimerRef.current = null;
+      logger.info(`[ScanTab] ${moduleId} batch fix chain stopped: view unmounted with items still queued`);
+    }
+  }, [moduleId]);
 
   const handleFixComplete = useCallback((success: boolean) => {
     const completedId = activeFixId;
@@ -84,8 +128,8 @@ export function useScanTab(moduleId: SubModuleId) {
       resolveScanFinding(moduleId, completedId);
     }
     // Advance to next in queue
-    setTimeout(advanceFix, UI_TIMEOUTS.batchItemDelay);
-  }, [activeFixId, moduleId, resolveScanFinding, advanceFix]);
+    scheduleAdvance();
+  }, [activeFixId, moduleId, resolveScanFinding, scheduleAdvance]);
 
   const fixCli = useModuleCLI({
     moduleId,
