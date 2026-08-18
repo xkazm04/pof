@@ -1,15 +1,23 @@
 /**
  * Live in-browser procgen preview. Runs the BSP / cellular / WFC / Perlin
- * algorithm purely in TypeScript — using the same {@link FRandomStream} seed
- * the UE C++ codegen targets — and returns a `CellType` grid plus derived
+ * algorithm purely in TypeScript, seeding {@link FRandomStream} with the same
+ * seed the UE task is asked to use, and returns a `CellType` grid plus derived
  * layout stats (room count + connectivity) so designers can judge a layout
  * instantly, before dispatching the expensive CLI C++ generation task.
+ *
+ * **What parity means here, honestly.** This shares the algorithm FAMILY and the
+ * seed intent with the C++ path — not its output. The UE side is regenerated
+ * freehand by the LLM from `buildProceduralLevelPrompt`, so nothing enforces
+ * that it reproduces this exact layout; treat the preview as a judgement of the
+ * parameters, not a picture of the map UE will bake. (Making the two provably
+ * identical is the parked determinism inversion.)
  */
 import type { CellType } from '@/lib/blender-mcp/scripts/dungeon-to-geometry';
 import { FRandomStream, hashSeed } from './frandom-stream';
 import { bspGrid, cellularGrid, wfcGrid, perlinGrid, type PreviewRoom } from './procgen-algorithms';
+import { normalizeRoomBand, type PreviewAlgorithm } from './algo-params';
 
-export type PreviewAlgorithm = 'bsp' | 'wfc' | 'cellular' | 'perlin';
+export type { PreviewAlgorithm };
 export type { PreviewRoom };
 
 export interface PreviewConfig {
@@ -102,9 +110,12 @@ export function generatePreview(config: PreviewConfig): PreviewResult {
   const { w, h, scale } = fitToPreview(config.gridWidth, config.gridHeight, cap);
   const seedValue = hashSeed(config.seed);
   const rng = new FRandomStream(seedValue);
+  // An inverted band is flagged in the wizard and read swapped here, so a
+  // mis-dragged pair still previews something rather than collapsing to nothing.
+  const band = normalizeRoomBand(config.roomCountMin, config.roomCountMax);
   const params = {
-    roomCountMin: config.roomCountMin,
-    roomCountMax: config.roomCountMax,
+    roomCountMin: band.min,
+    roomCountMax: band.max,
     corridorWidth: Math.max(1, Math.round(config.corridorWidth * scale)) || 1,
   };
 

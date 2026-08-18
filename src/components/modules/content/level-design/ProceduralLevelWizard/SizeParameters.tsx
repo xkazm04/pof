@@ -2,9 +2,10 @@
 
 import { Grid3X3 } from 'lucide-react';
 import { MODULE_COLORS } from '@/lib/constants';
+import { paramDisabledReason, roomBandError } from '@/lib/level-design/algo-params';
 import { LEVEL_TYPES } from './constants';
 import { SizeSlider } from './SizeSlider';
-import type { SizeParams } from './types';
+import type { SizeParams, GenAlgorithm } from './types';
 
 interface SizeParametersProps {
   size: SizeParams;
@@ -12,21 +13,37 @@ interface SizeParametersProps {
   seed: string;
   setSeed: (v: string) => void;
   ltDef: (typeof LEVEL_TYPES)[number];
+  /** The selected algorithm decides which room/corridor sliders do anything. */
+  algorithm: GenAlgorithm;
 }
 
-export function SizeParameters({ size, updateSize, seed, setSeed, ltDef }: SizeParametersProps) {
+export function SizeParameters({ size, updateSize, seed, setSeed, ltDef, algorithm }: SizeParametersProps) {
+  // Grid size and seed feed every algorithm; the room/corridor trio does not,
+  // and a slider that cannot move anything is disabled WITH its reason.
+  const minRoomsReason = paramDisabledReason(algorithm, 'roomCountMin');
+  const maxRoomsReason = paramDisabledReason(algorithm, 'roomCountMax');
+  const corridorReason = paramDisabledReason(algorithm, 'corridorWidth');
+  const bandError = minRoomsReason ? null : roomBandError(size.roomCountMin, size.roomCountMax);
+
   return (
     <div className="space-y-3 relative z-10">
       <h4 className="flex items-center gap-2 text-xs font-bold text-violet-400 uppercase tracking-widest border-b border-violet-900/30 pb-2">
         <Grid3X3 className="w-3 h-3" /> Size Parameters
         <span className="ml-1 text-violet-500/50">[{ltDef.label}]</span>
       </h4>
+
+      {bandError && (
+        <p role="alert" data-testid="size-room-band-error" className="text-xs text-red-400">
+          {bandError}
+        </p>
+      )}
+
       <div className="grid grid-cols-2 gap-3">
-        <SizeSlider label="Grid Width" value={size.gridWidth} min={16} max={512} step={16} onChange={(v) => updateSize('gridWidth', v)} color={MODULE_COLORS.content} />
-        <SizeSlider label="Grid Height" value={size.gridHeight} min={16} max={512} step={16} onChange={(v) => updateSize('gridHeight', v)} color={MODULE_COLORS.content} />
-        <SizeSlider label="Min Rooms" value={size.roomCountMin} min={1} max={50} step={1} onChange={(v) => updateSize('roomCountMin', v)} color={MODULE_COLORS.content} />
-        <SizeSlider label="Max Rooms" value={size.roomCountMax} min={1} max={100} step={1} onChange={(v) => updateSize('roomCountMax', v)} color={MODULE_COLORS.content} />
-        <SizeSlider label="Corridor Width" value={size.corridorWidth} min={1} max={10} step={1} onChange={(v) => updateSize('corridorWidth', v)} color={MODULE_COLORS.content} />
+        <SizeSlider label="Grid Width" value={size.gridWidth} min={16} max={512} step={16} onChange={(v) => updateSize('gridWidth', v)} color={MODULE_COLORS.content} testId="size-gridWidth" />
+        <SizeSlider label="Grid Height" value={size.gridHeight} min={16} max={512} step={16} onChange={(v) => updateSize('gridHeight', v)} color={MODULE_COLORS.content} testId="size-gridHeight" />
+        <SizeSlider label="Min Rooms" value={size.roomCountMin} min={1} max={50} step={1} onChange={(v) => updateSize('roomCountMin', v)} color={MODULE_COLORS.content} disabledReason={minRoomsReason} testId="size-roomCountMin" />
+        <SizeSlider label="Max Rooms" value={size.roomCountMax} min={1} max={100} step={1} onChange={(v) => updateSize('roomCountMax', v)} color={MODULE_COLORS.content} disabledReason={maxRoomsReason} testId="size-roomCountMax" />
+        <SizeSlider label="Corridor Width" value={size.corridorWidth} min={1} max={10} step={1} onChange={(v) => updateSize('corridorWidth', v)} color={MODULE_COLORS.content} disabledReason={corridorReason} testId="size-corridorWidth" />
         {/* Seed Input */}
         <div className="px-4 py-3 rounded-xl bg-black/60 border border-violet-900/40 relative group overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-violet-500/0 via-violet-500/5 to-violet-500/0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />

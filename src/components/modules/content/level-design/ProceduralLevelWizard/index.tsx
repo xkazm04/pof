@@ -77,7 +77,7 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating }: ProceduralLe
       <LevelTypeSelector levelType={levelType} selectLevelType={selectLevelType} ltNav={ltNav} />
 
       {/* ─── Size Parameters ─── */}
-      <SizeParameters size={size} updateSize={updateSize} seed={seed} setSeed={setSeed} ltDef={ltDef} />
+      <SizeParameters size={size} updateSize={updateSize} seed={seed} setSeed={setSeed} ltDef={ltDef} algorithm={algorithm} />
 
       {/* ─── Gameplay Constraints ─── */}
       <ConstraintsPanel constraints={constraints} toggleConstraint={toggleConstraint} />

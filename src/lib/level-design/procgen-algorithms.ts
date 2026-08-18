@@ -7,6 +7,7 @@
  */
 import type { CellType } from '@/lib/blender-mcp/scripts/dungeon-to-geometry';
 import { FRandomStream } from './frandom-stream';
+import { normalizeRoomBand } from './algo-params';
 
 export interface PreviewRoom {
   id: number;
@@ -122,11 +123,20 @@ function connect(grid: CellType[][], node: BSPNode, cw: number, rng: FRandomStre
   if (a && b) carveCorridor(grid, a, b, cw, w, h);
 }
 
+/** Split depth that can yield at least `rooms` leaves, clamped to the BSP budget. */
+function depthFor(rooms: number): number {
+  return Math.max(2, Math.min(6, Math.ceil(Math.log2(Math.max(2, rooms)))));
+}
+
 export function bspGrid(w: number, h: number, p: AlgoParams, rng: FRandomStream): GridResult {
   const grid = emptyGrid(w, h);
   const minRoom = Math.max(3, Math.floor(Math.min(w, h) / 12));
   const maxRoom = Math.max(minRoom + 2, Math.floor(Math.min(w, h) / 4));
-  const iterations = Math.max(2, Math.min(6, Math.ceil(Math.log2(Math.max(2, p.roomCountMax)))));
+  // Both ends of the room band are read: the max sets the split depth, and the
+  // MIN raises the floor on it — the parameter that used to have no consumer at
+  // all. Raising Min Rooms therefore subdivides further, as the label implies.
+  const band = normalizeRoomBand(p.roomCountMin, p.roomCountMax);
+  const iterations = Math.max(depthFor(band.min), depthFor(band.max));
   const root: BSPNode = { x: 0, y: 0, w, h };
   splitBSP(root, minRoom + 2, rng, iterations);
   const rooms: PreviewRoom[] = [];
@@ -143,6 +153,11 @@ export function bspGrid(w: number, h: number, p: AlgoParams, rng: FRandomStream)
 
 // ── Cellular automata (organic caves) ──────────────────────────────────────
 
+/**
+ * Caves have no room list and no corridors, so this generator genuinely reads
+ * none of the room/corridor parameters — which is why the wizard DISABLES them
+ * with that reason (`ALGO_PARAM_SUPPORT`) rather than offering inert sliders.
+ */
 export function cellularGrid(w: number, h: number, _p: AlgoParams, rng: FRandomStream): GridResult {
   let cells: boolean[][] = Array.from({ length: h }, (_, y) =>
     Array.from({ length: w }, (_, x) =>
@@ -176,6 +191,13 @@ export function cellularGrid(w: number, h: number, _p: AlgoParams, rng: FRandomS
 export function wfcGrid(w: number, h: number, p: AlgoParams, rng: FRandomStream): GridResult {
   const tile = Math.max(5, Math.floor(Math.min(w, h) / 8));
   const cols = Math.max(1, Math.floor(w / tile)), rowsN = Math.max(1, Math.floor(h / tile));
+  // The room band drives the collapse probability: a tile becomes a room often
+  // enough that the expected room count lands inside [min, max]. Before this the
+  // rate was a hardcoded 0.45 and the band was never dereferenced at all.
+  const band = normalizeRoomBand(p.roomCountMin, p.roomCountMax);
+  const tiles = cols * rowsN;
+  const target = Math.max(1, Math.min(tiles, Math.round((band.min + band.max) / 2)));
+  const baseChance = Math.min(0.95, Math.max(0.05, target / tiles));
   // Collapse each tile to room/gap, biased toward neighbours already collapsed to rooms.
   const filled: boolean[][] = Array.from({ length: rowsN }, () => new Array<boolean>(cols).fill(false));
   const order: Array<[number, number]> = [];
@@ -190,7 +212,7 @@ export function wfcGrid(w: number, h: number, p: AlgoParams, rng: FRandomStream)
     if (r < rowsN - 1 && filled[r + 1][c]) neighbours++;
     if (c > 0 && filled[r][c - 1]) neighbours++;
     if (c < cols - 1 && filled[r][c + 1]) neighbours++;
-    filled[r][c] = rng.chance(0.45 + neighbours * 0.18);
+    filled[r][c] = rng.chance(baseChance + neighbours * 0.18);
   }
   const grid = emptyGrid(w, h);
   const rooms: PreviewRoom[] = [];
@@ -201,12 +223,24 @@ export function wfcGrid(w: number, h: number, p: AlgoParams, rng: FRandomStream)
       if (rw < 2 || rh < 2) continue;
       rooms.push({ id: rooms.length, x: rx, y: ry, width: rw, height: rh });
       for (let y = ry; y < ry + rh; y++) for (let x = rx; x < rx + rw; x++) grid[y][x] = 'floor';
-      // Door into the right / down neighbour when both are rooms.
+      // Door into the right / down neighbour when both are rooms — widened to
+      // the requested corridor width (the third parameter WFC used to ignore).
       const midY = ry + Math.floor(rh / 2), midX = rx + Math.floor(rw / 2);
-      if (c < cols - 1 && filled[r][c + 1])
-        for (let x = rx + rw; x < (c + 1) * tile + 1; x++) grid[midY][x] = x === rx + rw ? 'door' : 'corridor';
-      if (r < rowsN - 1 && filled[r + 1][c])
-        for (let y = ry + rh; y < (r + 1) * tile + 1; y++) grid[y][midX] = y === ry + rh ? 'door' : 'corridor';
+      const half = Math.floor(Math.max(1, p.corridorWidth) / 2);
+      if (c < cols - 1 && filled[r][c + 1]) {
+        for (let o = -half; o <= half; o++) {
+          const y = midY + o;
+          if (y < 0 || y >= h) continue;
+          for (let x = rx + rw; x < (c + 1) * tile + 1; x++) grid[y][x] = x === rx + rw ? 'door' : 'corridor';
+        }
+      }
+      if (r < rowsN - 1 && filled[r + 1][c]) {
+        for (let o = -half; o <= half; o++) {
+          const x = midX + o;
+          if (x < 0 || x >= w) continue;
+          for (let y = ry + rh; y < (r + 1) * tile + 1; y++) grid[y][x] = y === ry + rh ? 'door' : 'corridor';
+        }
+      }
     }
   }
   addWalls(grid, w, h);
@@ -215,6 +249,10 @@ export function wfcGrid(w: number, h: number, p: AlgoParams, rng: FRandomStream)
 
 // ── Perlin / value noise (open-world terrain) ──────────────────────────────
 
+/**
+ * Terrain regions, not rooms — like {@link cellularGrid} this reads none of the
+ * room/corridor parameters, and the wizard says so instead of pretending.
+ */
 export function perlinGrid(w: number, h: number, _p: AlgoParams, rng: FRandomStream): GridResult {
   const octaves = 4, persistence = 0.5;
   const smooth = (t: number) => t * t * (3 - 2 * t);
