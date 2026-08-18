@@ -20,6 +20,7 @@ import { DPSBreakdownChart } from './DPSBreakdownChart';
 import { SensitivityChart } from './SensitivityChart';
 import { AlertBadges } from './AlertBadges';
 import { CanonChecksPanel } from './CanonChecksPanel';
+import { EnemySourcePanel } from './EnemySourcePanel';
 
 export function ResultsPanel({ report, levels, enemyLabels }: {
   report: BalanceReport;
@@ -46,6 +47,9 @@ export function ResultsPanel({ report, levels, enemyLabels }: {
         {report.summary}
         <span className="text-text-muted ml-2 opacity-60">({report.durationMs}ms)</span>
       </div>
+
+      {/* Which enemies these numbers actually describe */}
+      <EnemySourcePanel provenance={report.enemySource} />
 
       {/* Stat badges */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">

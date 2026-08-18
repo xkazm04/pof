@@ -12,7 +12,7 @@ import {
   BASE_PLAYER_ATTRIBUTES,
   PLAYER_LEVEL_SCALING,
   PLAYER_ABILITIES,
-  ENEMY_ARCHETYPES,
+  ENEMY_ARCHETYPE_BY_ID,
   GEAR_LOADOUTS,
   DEFAULT_TUNING,
 } from '@/lib/combat/definitions';
@@ -23,6 +23,11 @@ import {
   type CanonThresholds,
   type CanonViolation,
 } from '@/lib/balance/canon-conformance';
+import {
+  HARDCODED_ENEMY_SOURCE,
+  type ArchetypeRegistry,
+  type EnemySourceReport,
+} from '@/lib/combat/simulation-engine';
 import { createXorShift32RNG } from '@/lib/seeded-rng';
 import { calculateDamage } from '@/lib/combat/damage';
 import { armourEffectiveHpMultiplier } from '@/lib/combat/canon-kernel';
@@ -280,6 +285,13 @@ export interface BalanceReport {
   dpsBreakdowns: Record<string, DPSBreakdown[]>;
   sensitivity: SensitivityCurve[];
   alerts: BalanceReportAlert[];
+  /**
+   * WHERE the enemies in this sweep came from — catalog bestiary rows, the
+   * hardcoded fixtures, or a mix — plus every bestiary row that could not be
+   * hydrated, named with its reason. A survival number is meaningless without
+   * it: fixture enemies and authored enemies produce identical-looking numbers.
+   */
+  enemySource: EnemySourceReport;
   /** Per-law canon conformance outcome for this sweep (incl. laws that could not run). */
   canonChecks: CanonCheckStatus[];
   durationMs: number;
@@ -480,8 +492,25 @@ export function lintCombatCanon(
 
 // ── Main simulation runner ─────────────────────────────────────────────────
 
-export function runPredictiveBalance(config: PredictiveBalanceConfig): BalanceReport {
+/**
+ * Run the level x encounter sweep.
+ *
+ * `enemies` supplies the archetype registry the sweep resolves `archetypeId`
+ * against — build it from real bestiary artifacts with
+ * `hydrateEnemyRegistryFromBestiary` (see ./simulation-engine) and pass its
+ * provenance through, so the report can say which source it used. Omitted =>
+ * the hardcoded fixtures, and the report SAYS so rather than implying the
+ * numbers describe creatures someone authored.
+ */
+export function runPredictiveBalance(
+  config: PredictiveBalanceConfig,
+  enemies?: { registry: ArchetypeRegistry; provenance?: EnemySourceReport },
+): BalanceReport {
   const start = performance.now();
+  const registry: ArchetypeRegistry = enemies?.registry ?? ENEMY_ARCHETYPE_BY_ID;
+  const enemySource: EnemySourceReport = enemies
+    ? enemies.provenance ?? HARDCODED_ENEMY_SOURCE
+    : HARDCODED_ENEMY_SOURCE;
 
   const levels: number[] = [];
   for (let l = config.levelRange[0]; l <= config.levelRange[1]; l += config.levelStep) {
@@ -495,7 +524,7 @@ export function runPredictiveBalance(config: PredictiveBalanceConfig): BalanceRe
 
   // For each enemy config, sweep across player levels
   for (const ec of config.enemyConfigs) {
-    const archetype = ENEMY_ARCHETYPES.find(a => a.id === ec.archetypeId);
+    const archetype = registry.get(ec.archetypeId);
     if (!archetype) continue;
 
     const label = `${ec.count}x ${archetype.name}`;
@@ -590,7 +619,7 @@ export function runPredictiveBalance(config: PredictiveBalanceConfig): BalanceRe
   const sensitivity: SensitivityCurve[] = [];
   const sensLevel = Math.floor((config.levelRange[0] + config.levelRange[1]) / 2);
   const firstEnemy = config.enemyConfigs[0];
-  const sensArchetype = ENEMY_ARCHETYPES.find(a => a.id === firstEnemy?.archetypeId);
+  const sensArchetype = firstEnemy ? registry.get(firstEnemy.archetypeId) : undefined;
 
   if (sensArchetype && firstEnemy) {
     for (const attr of config.sensitivityAttributes) {
@@ -675,6 +704,7 @@ export function runPredictiveBalance(config: PredictiveBalanceConfig): BalanceRe
     dpsBreakdowns,
     sensitivity,
     alerts,
+    enemySource,
     canonChecks,
     durationMs: Math.round(performance.now() - start),
   };

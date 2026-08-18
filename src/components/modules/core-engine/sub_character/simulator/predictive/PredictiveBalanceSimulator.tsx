@@ -7,19 +7,24 @@ import { OPACITY_20,
   withOpacity, OPACITY_25,
 } from '@/lib/chart-colors';
 import {
-  ACCENT, ENEMY_ARCHETYPES,
+  ACCENT,
   runPredictiveBalance, DEFAULT_PREDICTIVE_CONFIG,
   type BalanceReport, type PredictiveBalanceConfig,
 } from './data';
 import { BlueprintPanel, SectionHeader } from './design';
 import { ConfigPanel } from './ConfigPanel';
 import { ResultsPanel } from './ResultsPanel';
+import { EnemySourcePanel } from './EnemySourcePanel';
+import { useBestiaryEnemies } from './useBestiaryEnemies';
 
 export function PredictiveBalanceSimulator() {
   const [report, setReport] = useState<BalanceReport | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [config, setConfig] = useState<PredictiveBalanceConfig>(DEFAULT_PREDICTIVE_CONFIG);
   const runLock = useRef(false);
+  // Enemies come from the REAL bestiary catalog when it holds usable rows, and
+  // fall back to the hardcoded fixtures otherwise — the panel says which.
+  const enemies = useBestiaryEnemies();
 
   const runSim = useCallback(() => {
     if (runLock.current) return;
@@ -27,12 +32,15 @@ export function PredictiveBalanceSimulator() {
     setIsRunning(true);
 
     requestAnimationFrame(() => {
-      const result = runPredictiveBalance(config);
+      const result = runPredictiveBalance(config, {
+        registry: enemies.registry,
+        provenance: enemies.provenance,
+      });
       setReport(result);
       setIsRunning(false);
       runLock.current = false;
     });
-  }, [config]);
+  }, [config, enemies.registry, enemies.provenance]);
 
   const levels = useMemo(() => {
     const ls: number[] = [];
@@ -44,10 +52,10 @@ export function PredictiveBalanceSimulator() {
 
   const enemyLabels = useMemo(() => {
     return config.enemyConfigs.map(ec => {
-      const arch = ENEMY_ARCHETYPES.find(a => a.id === ec.archetypeId);
+      const arch = enemies.registry.get(ec.archetypeId);
       return `${ec.count}x ${arch?.name ?? ec.archetypeId}`;
     });
-  }, [config]);
+  }, [config, enemies.registry]);
 
   return (
     <BlueprintPanel color={ACCENT} className="p-0 overflow-hidden">
@@ -79,7 +87,18 @@ export function PredictiveBalanceSimulator() {
       </div>
 
       <div className="p-3 space-y-3">
-        <ConfigPanel config={config} setConfig={setConfig} />
+        <EnemySourcePanel
+          provenance={enemies.provenance}
+          loading={enemies.loading}
+          error={enemies.error}
+        />
+
+        <ConfigPanel
+          config={config}
+          setConfig={setConfig}
+          registry={enemies.registry}
+          catalogSourced={new Set(enemies.provenance.hydrated.map(h => h.archetypeId))}
+        />
 
         {/* Empty state */}
         {!report && !isRunning && (

@@ -1,14 +1,20 @@
 'use client';
 
 import {
-  ENCOUNTER_COLORS, ENEMY_ARCHETYPES, GEAR_LOADOUTS,
+  ENCOUNTER_COLORS, ENEMY_ARCHETYPE_BY_ID, GEAR_LOADOUTS,
   type PredictiveBalanceConfig,
 } from './data';
+import type { ArchetypeRegistry } from '@/lib/combat/simulation-engine';
 
-export function ConfigPanel({ config, setConfig }: {
+export function ConfigPanel({ config, setConfig, registry = ENEMY_ARCHETYPE_BY_ID, catalogSourced }: {
   config: PredictiveBalanceConfig;
   setConfig: React.Dispatch<React.SetStateAction<PredictiveBalanceConfig>>;
+  /** Archetypes the sweep will actually resolve — catalog-hydrated when available. */
+  registry?: ArchetypeRegistry;
+  /** Archetype ids that came from a bestiary row, so the option can say so. */
+  catalogSourced?: ReadonlySet<string>;
 }) {
+  const archetypes = [...registry.values()];
   return (
     <div className="space-y-3">
       {/* Parameter grid */}
@@ -98,8 +104,10 @@ export function ConfigPanel({ config, setConfig }: {
                 }}
                 className="flex-1 bg-transparent text-text border-none outline-none"
               >
-                {ENEMY_ARCHETYPES.map(a => (
-                  <option key={a.id} value={a.id}>{a.name}</option>
+                {archetypes.map(a => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}{catalogSourced?.has(a.id) ? ' (catalog)' : ''}
+                  </option>
                 ))}
               </select>
               <span className="text-text-muted">&times;</span>

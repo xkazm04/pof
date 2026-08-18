@@ -28,6 +28,12 @@ import {
   PLAYER_LEVEL_SCALING,
   ENEMY_ARCHETYPE_BY_ID,
 } from './definitions';
+import {
+  bestiaryToEnemyArchetype,
+  buildEnemyRegistry,
+  type BestiaryArtifactLike,
+  type HydrateOptions,
+} from './catalog-enemy-adapter';
 import { createRNG } from '@/lib/seeded-rng';
 import { calculateDamage } from './damage';
 import { buildHistogram, type CountBucket } from './histogram';
@@ -39,6 +45,144 @@ import { buildHistogram, type CountBucket } from './histogram';
 // simulated without mutating the module-level map. Absent override → identical
 // behavior to before (the stand-alone defaults).
 export type ArchetypeRegistry = ReadonlyMap<string, EnemyArchetype>;
+
+// ── Enemy source: the bestiary catalog, with disclosed provenance ────────────
+// `catalog-enemy-adapter` has been able to turn bestiary `pipeline_artifacts`
+// into `EnemyArchetype`s since July, and nothing called it — so every simulated
+// survival number described a hand-authored constant, not the creature a
+// designer authored in /layout. This is the wiring, and it is DISCLOSED: a run
+// always reports which source each enemy came from, and a bestiary row that the
+// adapter rejects is NAMED with the adapter's own reason rather than quietly
+// replaced by a hardcoded stand-in.
+//
+// Scope is the adapter's: bestiary → enemy. Items/gear/player hydration are
+// deliberately not attempted here (see the adapter's docstring).
+
+/** One bestiary entity's stored artifacts, as read from `pipeline_artifacts`. */
+export interface BestiaryEntityRows {
+  /** Catalog entity id, e.g. `bestiary-brute`. */
+  entityId: string;
+  /** Display name; falls back to a titleized entity id. */
+  name?: string;
+  artifacts: BestiaryArtifactLike[];
+}
+
+/** Where the enemies in a run actually came from. Always reported, never implied. */
+export interface EnemySourceReport {
+  /**
+   * `bestiary` — every archetype the run resolved came from a catalog row;
+   * `mixed`    — some catalog rows hydrated, the rest fell back to the defaults;
+   * `hardcoded`— nothing hydrated, the run is entirely on `ENEMY_ARCHETYPES`.
+   */
+  source: 'bestiary' | 'mixed' | 'hardcoded';
+  /** Archetypes hydrated from the catalog: registry id ← entity id. */
+  hydrated: { archetypeId: string; entityId: string; name: string }[];
+  /** Rows the adapter REFUSED, each named with its own reason (never silently defaulted). */
+  skipped: { entityId: string; reason: string }[];
+  /** One-line, designer-facing statement of provenance for the UI. */
+  summary: string;
+}
+
+/** The provenance of a run that used no catalog data at all. */
+export const HARDCODED_ENEMY_SOURCE: EnemySourceReport = {
+  source: 'hardcoded',
+  hydrated: [],
+  skipped: [],
+  summary:
+    `Enemies: hardcoded defaults (${ENEMY_ARCHETYPE_BY_ID.size} archetypes from ` +
+    'src/lib/combat/definitions) — no bestiary rows were supplied. These are ' +
+    'FIXTURES, not creatures anyone authored.',
+};
+
+/**
+ * Registry id for a bestiary entity. Catalog ids are `bestiary-<archetype>`;
+ * the sim's scenarios reference the bare archetype id (`brute`), so the prefix
+ * is stripped — that is what lets an authored `bestiary-brute` row OVERRIDE the
+ * hardcoded `brute` instead of sitting beside it under a different key.
+ */
+export function archetypeIdForBestiaryEntity(entityId: string): string {
+  return entityId.replace(/^bestiary-/, '');
+}
+
+/** Titleize `bestiary-elite-knight` → `Elite Knight` when no name was supplied. */
+function nameForEntity(row: BestiaryEntityRows): string {
+  if (row.name) return row.name;
+  const fromData = row.artifacts.map((a) => a.data?.name).find((n) => typeof n === 'string');
+  if (typeof fromData === 'string' && fromData.length > 0) return fromData;
+  return archetypeIdForBestiaryEntity(row.entityId)
+    .split('-')
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+}
+
+/**
+ * Group a flat `pipeline_artifacts` list (as returned by
+ * `GET /api/pipeline-artifacts?catalogId=bestiary`) into per-entity rows.
+ * Pure; input order is preserved per entity.
+ */
+export function groupBestiaryArtifacts(
+  artifacts: readonly { entityId: string; step: string; data: Record<string, unknown> }[],
+): BestiaryEntityRows[] {
+  const byEntity = new Map<string, BestiaryEntityRows>();
+  for (const a of artifacts) {
+    let row = byEntity.get(a.entityId);
+    if (!row) { row = { entityId: a.entityId, artifacts: [] }; byEntity.set(a.entityId, row); }
+    row.artifacts.push({ step: a.step, data: a.data });
+  }
+  return [...byEntity.values()];
+}
+
+/**
+ * Build the registry the engines resolve `archetypeId` against, from real
+ * bestiary rows — merged OVER the hardcoded defaults via the adapter's own
+ * `buildEnemyRegistry`, so an un-authored archetype still resolves and the sim
+ * still runs stand-alone.
+ *
+ * Returns the provenance alongside it. Callers MUST surface that: a survival
+ * number computed on fixtures and one computed on authored creatures look
+ * identical, and only this report tells them apart.
+ */
+export function hydrateEnemyRegistryFromBestiary(
+  rows: readonly BestiaryEntityRows[],
+  opts: HydrateOptions = {},
+): { registry: ArchetypeRegistry; provenance: EnemySourceReport } {
+  const hydratedArchetypes: EnemyArchetype[] = [];
+  const hydrated: EnemySourceReport['hydrated'] = [];
+  const skipped: EnemySourceReport['skipped'] = [];
+
+  for (const row of rows) {
+    const archetypeId = opts.archetypeId ?? archetypeIdForBestiaryEntity(row.entityId);
+    const name = nameForEntity(row);
+    const result = bestiaryToEnemyArchetype({ id: row.entityId, name }, row.artifacts, {
+      ...opts,
+      archetypeId,
+    });
+    if (result.ok) {
+      hydratedArchetypes.push(result.data);
+      hydrated.push({ archetypeId, entityId: row.entityId, name });
+    } else {
+      // The adapter's own message names the entity AND the missing fields.
+      skipped.push({ entityId: row.entityId, reason: result.error });
+    }
+  }
+
+  const registry = buildEnemyRegistry(hydratedArchetypes);
+  const source: EnemySourceReport['source'] =
+    hydrated.length === 0 ? 'hardcoded' : skipped.length === 0 ? 'bestiary' : 'mixed';
+
+  const summary =
+    hydrated.length === 0
+      ? `${HARDCODED_ENEMY_SOURCE.summary}${rows.length > 0
+          ? ` ${rows.length} bestiary row(s) were read but none could be hydrated.`
+          : ''}`
+      : `Enemies: ${hydrated.length} of ${rows.length} bestiary row(s) hydrated from the ` +
+        `catalog (${hydrated.map((h) => h.archetypeId).join(', ')})` +
+        `${skipped.length > 0 ? `; ${skipped.length} row(s) skipped and named below` : ''}` +
+        '; any archetype not authored falls back to the hardcoded defaults.';
+
+  return { registry, provenance: { source, hydrated, skipped, summary } };
+}
 
 // ── Seeded RNG ──────────────────────────────────────────────────────────────
 // Re-exported from the shared helper so existing combat sims (e.g. choreography-sim)
