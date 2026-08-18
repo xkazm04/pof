@@ -12,8 +12,10 @@ import { buildMatrixRows } from './matrixRows';
 import { useCatalogJudgeVerdicts } from './hooks/useStepJudgeVerdicts';
 import { MatrixBatchDrain } from './MatrixBatchDrain';
 import { RefreshCatalogFromServer } from './RefreshCatalogFromServer';
+import { CatalogChangesDigest } from './CatalogChangesDigest';
 import { useBatchDrain } from './hooks/useBatchDrain';
 import { useCatalogRefresh } from './hooks/useCatalogRefresh';
+import { useCatalogChanges } from './hooks/useCatalogChanges';
 import { MatrixSkeleton } from './MatrixSkeleton';
 import { STATUS_GLYPH, STATUS_WORD, statusColor, UNPRODUCED_GLYPH, UNPRODUCED_WORD, type LabDisplayStatus } from './statusLanguage';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
@@ -105,6 +107,15 @@ export function CatalogMatrix({ t, groups, catalogId, onSelectCatalog, onOpenSte
   );
   const catalogRefresh = useCatalogRefresh(catalogId, refreshEntities);
 
+  // "What moved since I was last here" — computed from STORED rows + archived versions when
+  // this catalog is opened (never polled, never inferred). The board is where the question
+  // belongs: it is the surface that shows the whole catalog, and every row can jump to its step.
+  const changes = useCatalogChanges(catalogId);
+  const entityNameOf = useMemo(() => {
+    const names = new Map((detail?.entities ?? []).map((e) => [e.id, e.name]));
+    return (id: string) => names.get(id);
+  }, [detail?.entities]);
+
   // Memoize cell styles per status (only ~5 distinct statuses) instead of
   // allocating a fresh CSSProperties object for every cell on every render — the
   // grid is entities × steps cells, so this was O(rows·cols) object churn.
@@ -185,6 +196,10 @@ export function CatalogMatrix({ t, groups, catalogId, onSelectCatalog, onOpenSte
             error={catalogRefresh.error} outcome={catalogRefresh.outcome} onDismiss={catalogRefresh.dismiss} />
         </div>
       </div>
+
+      {/* ── What moved since this catalog was last opened (stored facts only) ── */}
+      <CatalogChangesDigest t={t} state={changes.state} steps={steps} nameOf={entityNameOf} onRetry={changes.retry}
+        onOpenStep={(entityId, stepIdx) => onOpenStep(catalogId, entityId, stepIdx)} />
 
       {/* ── Numbered legend so the column numbers decode to step names ── */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '10px 28px', borderBottom: `1px solid ${t.line}` }}>
