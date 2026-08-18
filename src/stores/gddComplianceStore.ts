@@ -2,6 +2,7 @@
 
 import { create } from 'zustand';
 import { apiFetch } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
 import type { SubModuleId } from '@/types/modules';
 import type { ComplianceReport, ReconciliationSuggestion } from '@/types/gdd-compliance';
 
@@ -19,17 +20,20 @@ function hashChecklist(cp: ChecklistProgress): string {
 }
 
 /**
- * Mark a gap resolved on a copy of the report and recompute the gap counters.
- * Pure, immutable transform — no nested mutation of the held report — so resolve
- * runs client-side against the report the store already holds, with no server
- * round-trip and no shared server-side cache. (Mirrors `resolveGap` in
- * `@/lib/gdd-compliance`, re-implemented here to avoid importing that module's
- * server-only DB dependencies into this `'use client'` store.)
+ * Flip one gap's resolved flag on a copy of the report and recompute the open-gap
+ * counters. Pure, immutable transform — no nested mutation of the held report — so
+ * the UI updates optimistically while the SQLite write (the source of truth, see
+ * `@/lib/gdd-compliance`) is in flight. That module is not imported here: it pulls
+ * in better-sqlite3, which cannot cross into a `'use client'` store.
  */
-function applyResolveGap(report: ComplianceReport, gapId: string): ComplianceReport {
+function applyGapResolution(
+  report: ComplianceReport,
+  gapId: string,
+  resolved: boolean,
+): ComplianceReport {
   const modules = report.modules.map((mod) => ({
     ...mod,
-    gaps: mod.gaps.map((g) => (g.id === gapId ? { ...g, resolved: true } : g)),
+    gaps: mod.gaps.map((g) => (g.id === gapId ? { ...g, resolved } : g)),
   }));
   const allGaps = modules.flatMap((m) => m.gaps);
   return {
@@ -45,6 +49,10 @@ function applyResolveGap(report: ComplianceReport, gapId: string): ComplianceRep
  * report and recompute the gap counters. Gap ids are deterministic across
  * audits (see `@/lib/gdd-compliance`), so a re-audit no longer silently
  * discards resolutions — the markers are merged back by id.
+ *
+ * The server now applies the persisted resolutions itself, so this is a
+ * belt-and-braces merge for a resolution recorded since the request was sent;
+ * it is kept because it also covers the optimistic window.
  */
 function applyResolvedMarkers(
   report: ComplianceReport,
@@ -80,12 +88,81 @@ interface GDDComplianceState {
    */
   resolvedGapIds: Record<string, true>;
 
+  /**
+   * True when the displayed report predates a FAILED refresh — the numbers on
+   * screen are the last good audit, not current truth, and the view says so
+   * instead of leaving the failure invisible behind a populated dashboard.
+   */
+  refreshFailed: boolean;
+
   runAudit: (checklistProgress?: ChecklistProgress, projectPath?: string) => Promise<void>;
   /** Audit only if the report is missing or stale vs. the given project/checklist. */
   ensureAudit: (checklistProgress: ChecklistProgress, projectPath: string) => Promise<void>;
   clearReport: () => void;
-  resolveGap: (gapId: string) => Promise<void>;
+  resolveGap: (gapId: string, note?: string) => Promise<void>;
+  /** Re-open a resolved gap; removes the durable resolution too. */
+  unresolveGap: (gapId: string) => Promise<void>;
   selectModule: (moduleId: SubModuleId | null) => void;
+}
+
+type Setter = (partial: Partial<GDDComplianceState>) => void;
+type Getter = () => GDDComplianceState;
+
+/**
+ * The one path for both directions of gap triage. The report updates
+ * optimistically so the click feels instant, then the durable write goes to
+ * SQLite; a failed write is ROLLED BACK and surfaced, because a triage decision
+ * that did not persist must never sit on screen looking as if it did.
+ */
+async function mutateResolution(
+  set: Setter,
+  get: Getter,
+  gapId: string,
+  resolved: boolean,
+  note?: string,
+): Promise<void> {
+  const current = get().report;
+  if (!current) return;
+  const gap = current.modules.flatMap((m) => m.gaps).find((g) => g.id === gapId);
+  const previousResolvedIds = get().resolvedGapIds;
+
+  const optimistic = applyGapResolution(current, gapId, resolved);
+  const nextResolvedIds = { ...previousResolvedIds };
+  if (resolved) nextResolvedIds[gapId] = true;
+  else delete nextResolvedIds[gapId];
+  set({
+    report: optimistic,
+    modules: optimistic.modules,
+    suggestions: optimistic.suggestions,
+    resolvedGapIds: nextResolvedIds,
+    error: null,
+  });
+
+  try {
+    await apiFetch('/api/gdd-compliance', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: resolved ? 'resolve-gap' : 'unresolve-gap',
+        gapId,
+        moduleId: gap?.moduleId,
+        note,
+        projectPath: get().reportProjectPath ?? '',
+      }),
+    });
+  } catch (err) {
+    const message = (err as Error).message;
+    logger.error(`[gddComplianceStore] gap ${resolved ? 'resolve' : 'un-resolve'} failed: ${message}`);
+    const held = get().report ?? current;
+    const rolledBack = applyGapResolution(held, gapId, !resolved);
+    set({
+      report: rolledBack,
+      modules: rolledBack.modules,
+      suggestions: rolledBack.suggestions,
+      resolvedGapIds: previousResolvedIds,
+      error: message,
+    });
+  }
 }
 
 export const useGDDComplianceStore = create<GDDComplianceState>((set, get) => ({
@@ -98,21 +175,29 @@ export const useGDDComplianceStore = create<GDDComplianceState>((set, get) => ({
   reportProjectPath: null,
   reportChecklistHash: null,
   resolvedGapIds: {},
+  refreshFailed: false,
 
   runAudit: async (checklistProgress?: ChecklistProgress, projectPath?: string) => {
     const cp = checklistProgress ?? {};
-    set({ isAuditing: true, error: null });
+    set({ isAuditing: true, error: null, refreshFailed: false });
     try {
+      const scope = projectPath ?? get().reportProjectPath ?? '';
       const fresh = await apiFetch<ComplianceReport>('/api/gdd-compliance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'audit', checklistProgress: cp }),
+        body: JSON.stringify({ action: 'audit', checklistProgress: cp, projectPath: scope }),
       });
       // A project switch starts with a clean slate (gap ids are only unique
       // within a project); a re-audit of the same project preserves the user's
-      // manual resolutions by merging them back onto the fresh report.
+      // manual resolutions by merging them back onto the fresh report. The server
+      // already applied the persisted ones, so the fresh report's own resolved
+      // flags seed the local mirror — that is the rehydration path after a reload.
       const projectChanged = !!projectPath && projectPath !== get().reportProjectPath;
-      const resolvedGapIds = projectChanged ? {} : get().resolvedGapIds;
+      const local = projectChanged ? {} : get().resolvedGapIds;
+      const resolvedGapIds: Record<string, true> = { ...local };
+      for (const mod of fresh.modules) {
+        for (const gap of mod.gaps) if (gap.resolved) resolvedGapIds[gap.id] = true;
+      }
       const report = applyResolvedMarkers(fresh, resolvedGapIds);
       set({
         report,
@@ -124,7 +209,13 @@ export const useGDDComplianceStore = create<GDDComplianceState>((set, get) => ({
         reportChecklistHash: hashChecklist(cp),
       });
     } catch (err) {
-      set({ error: (err as Error).message, isAuditing: false });
+      // A failed refresh over an existing report used to vanish: the view gated
+      // its error state on `!report`, so the stale numbers stayed on screen
+      // looking current. Keep the report (it is the last thing we actually knew),
+      // flag it stale, and log — never swallow the reason into state alone.
+      const message = (err as Error).message;
+      logger.error(`[gddComplianceStore] compliance audit failed: ${message}`);
+      set({ error: message, isAuditing: false, refreshFailed: !!get().report });
     }
   },
 
@@ -150,23 +241,16 @@ export const useGDDComplianceStore = create<GDDComplianceState>((set, get) => ({
       reportProjectPath: null,
       reportChecklistHash: null,
       resolvedGapIds: {},
+      refreshFailed: false,
+      error: null,
     }),
 
-  resolveGap: async (gapId: string) => {
-    // Resolve against the report the store already holds — no server round-trip,
-    // so there is no shared server-side cache to corrupt across clients/projects.
-    // `reportProjectPath`/`reportChecklistHash` are left untouched (staleness
-    // detection in `ensureAudit` keeps working).
-    const current = get().report;
-    if (!current) return;
-    const report = applyResolveGap(current, gapId);
-    // Record the resolution so a subsequent re-audit re-applies it.
-    set({
-      report,
-      modules: report.modules,
-      suggestions: report.suggestions,
-      resolvedGapIds: { ...get().resolvedGapIds, [gapId]: true },
-    });
+  resolveGap: async (gapId: string, note?: string) => {
+    await mutateResolution(set, get, gapId, true, note);
+  },
+
+  unresolveGap: async (gapId: string) => {
+    await mutateResolution(set, get, gapId, false);
   },
 
   selectModule: (moduleId) => set({ selectedModuleId: moduleId }),

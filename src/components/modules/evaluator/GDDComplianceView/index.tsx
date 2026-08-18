@@ -27,6 +27,8 @@ export function GDDComplianceView() {
   const selectedModuleId = useGDDComplianceStore((s) => s.selectedModuleId);
   const selectModule = useGDDComplianceStore((s) => s.selectModule);
   const resolveGap = useGDDComplianceStore((s) => s.resolveGap);
+  const unresolveGap = useGDDComplianceStore((s) => s.unresolveGap);
+  const refreshFailed = useGDDComplianceStore((s) => s.refreshFailed);
   const checklistProgress = useModuleStore((s) => s.checklistProgress);
   const projectPath = useProjectStore((s) => s.projectPath);
 
@@ -74,6 +76,37 @@ export function GDDComplianceView() {
 
   return (
     <div className="space-y-6">
+      {/* A refresh that FAILED over an existing report used to be invisible: the
+          error state was gated on `!report`, so the last good numbers stayed on
+          screen reading as current. They are still the best thing we know, so they
+          stay — but labelled as what they are. */}
+      {refreshFailed && (
+        <div
+          role="alert"
+          className="flex items-start gap-2 p-2.5 rounded-lg border"
+          style={{ borderColor: STATUS_ERROR, backgroundColor: `${STATUS_ERROR}12` }}
+        >
+          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-px" style={{ color: STATUS_ERROR }} />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium" style={{ color: STATUS_ERROR }}>
+              Re-audit failed — showing the last successful audit
+            </p>
+            <p className="text-2xs text-text-muted mt-0.5">
+              {error} · these numbers are from{' '}
+              {new Date(report.generatedAt).toLocaleString()}, not from now.
+            </p>
+          </div>
+          <button
+            onClick={handleAudit}
+            disabled={isAuditing}
+            className="text-2xs hover:underline flex-shrink-0 disabled:opacity-50"
+            style={{ color: STATUS_ERROR }}
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* Header with score. The ring reports conformance over the MEASURED surface
           only; the evidence strip below it says how much of the project that is, so
           the two halves of the old conflated number are never read as one. */}
@@ -136,7 +169,12 @@ export function GDDComplianceView() {
 
       {/* Selected module detail */}
       {selectedModule && (
-        <ModuleDetail module={selectedModule} now={report.generatedAt} onResolve={resolveGap} />
+        <ModuleDetail
+          module={selectedModule}
+          now={report.generatedAt}
+          onResolve={resolveGap}
+          onUnresolve={unresolveGap}
+        />
       )}
 
       {/* Reconciliation suggestions */}

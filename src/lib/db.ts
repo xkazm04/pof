@@ -403,6 +403,23 @@ export function getDb(): Database.Database {
     ON genre_suggestions(status, created_at DESC)
   `);
 
+  // GDD compliance gap triage. Read/written only by src/lib/gdd-compliance.ts.
+  // Gap ids are deterministic across audits, so a resolution is durable: it is
+  // re-applied to every subsequent report instead of dying with the browser tab.
+  // Scoped by project — gap ids are only unique within one project. An audit that
+  // carries no project scope (e.g. the pof_gdd_compliance MCP tool) uses the empty
+  // string, so it sees only unscoped resolutions rather than another project's.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS gdd_gap_resolutions (
+      project_path TEXT NOT NULL DEFAULT '',
+      gap_id TEXT NOT NULL,
+      module_id TEXT NOT NULL DEFAULT '',
+      resolved_at TEXT NOT NULL DEFAULT (datetime('now')),
+      note TEXT NOT NULL DEFAULT '',
+      PRIMARY KEY (project_path, gap_id)
+    )
+  `);
+
   // NOTE: the `headless_builds` table is owned and created by
   // `ensureHeadlessBuildsTable()` in src/lib/ue5-bridge/build-pipeline.ts — the
   // sole reader/writer. A duplicate definition previously lived here with a

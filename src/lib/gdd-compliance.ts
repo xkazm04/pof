@@ -6,11 +6,12 @@
 import type { SubModuleId } from '@/types/modules';
 import { SUB_MODULES } from './module-registry';
 import { countChecklist } from './checklist-progress';
+import { getDb } from './db';
 import { getFeaturesByModule } from './feature-matrix-db';
 import type { FeatureRow, FeatureStatus, FeatureSummary } from '@/types/feature-matrix';
 import type {
   ComplianceConfidence, ComplianceEvidence, ComplianceGap, ComplianceReport,
-  GapSeverity, ModuleCompliance, ReconciliationSuggestion, EffortEstimate,
+  GapResolution, GapSeverity, ModuleCompliance, ReconciliationSuggestion, EffortEstimate,
 } from '@/types/gdd-compliance';
 
 // ─── Gap Detection ──────────────────────────────────────────────────────────
@@ -434,8 +435,12 @@ function generateSuggestions(
 
 export function runComplianceAudit(
   checklistProgress: Record<string, Record<string, boolean>>,
+  projectPath = '',
 ): ComplianceReport {
   const modules: ModuleCompliance[] = [];
+  // Durable triage: resolutions live in SQLite, so a re-audit re-applies them
+  // instead of resurrecting every gap the user already dealt with.
+  const resolved = resolvedGapIds(projectPath);
 
   for (const mod of SUB_MODULES) {
     const checklist = mod.checklist ?? [];
@@ -458,7 +463,7 @@ export function runComplianceAudit(
       features,
       checklist.map((c) => ({ id: c.id, label: c.label })),
       moduleProgress,
-    );
+    ).map((g) => (resolved.has(g.id) ? { ...g, resolved: true } : g));
 
     const evidence = evidenceFromRows(features);
     const featuresMeasured = evidence.featuresMeasured;
@@ -516,27 +521,75 @@ export function runComplianceAudit(
       if (a.evidence.measured !== b.evidence.measured) return a.evidence.measured ? -1 : 1;
       return a.score - b.score;
     }),
-    totalGaps: allGaps.length,
-    criticalGaps: allGaps.filter((g) => g.severity === 'critical').length,
+    // OPEN gap counts. A gap the user has resolved is still listed on its module
+    // (and is un-resolvable), but the headline counters report what is outstanding —
+    // matching the client-side transform, and keeping `criticalGaps <= totalGaps`.
+    totalGaps: allGaps.filter((g) => !g.resolved).length,
+    criticalGaps: allGaps.filter((g) => g.severity === 'critical' && !g.resolved).length,
     suggestions,
   };
 }
 
+// ─── Gap resolution persistence ─────────────────────────────────────────────
+//
+// Triage used to die with the browser tab: the store held resolutions in memory,
+// nothing wrote them anywhere, and this module exported a `resolveGap` that
+// rewrote a report object nobody imported while the API declared a `resolve-gap`
+// action that 400'd. All three phantoms are replaced by one real path — the API
+// action calls these, they write SQLite, and `runComplianceAudit` re-applies them.
+
+/** Ids of the gaps resolved for a project, as a set for the audit merge. */
+function resolvedGapIds(projectPath: string): Set<string> {
+  const rows = getDb()
+    .prepare('SELECT gap_id FROM gdd_gap_resolutions WHERE project_path = ?')
+    .all(projectPath) as { gap_id: string }[];
+  return new Set(rows.map((r) => r.gap_id));
+}
+
+/**
+ * Mark a gap resolved for a project. Idempotent — re-resolving refreshes the
+ * timestamp and note rather than erroring, so a double click is harmless.
+ */
 export function resolveGap(
-  report: ComplianceReport,
+  projectPath: string,
   gapId: string,
-): ComplianceReport {
-  const updated = { ...report };
-  for (const mod of updated.modules) {
-    const gap = mod.gaps.find((g) => g.id === gapId);
-    if (gap) {
-      gap.resolved = true;
-      break;
-    }
-  }
-  updated.totalGaps = updated.modules.flatMap((m) => m.gaps).filter((g) => !g.resolved).length;
-  updated.criticalGaps = updated.modules
-    .flatMap((m) => m.gaps)
-    .filter((g) => g.severity === 'critical' && !g.resolved).length;
-  return updated;
+  opts: { moduleId?: string; note?: string } = {},
+): GapResolution {
+  const resolvedAt = new Date().toISOString();
+  getDb()
+    .prepare(
+      `INSERT INTO gdd_gap_resolutions (project_path, gap_id, module_id, resolved_at, note)
+       VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT(project_path, gap_id) DO UPDATE SET
+         module_id = excluded.module_id,
+         resolved_at = excluded.resolved_at,
+         note = excluded.note`,
+    )
+    .run(projectPath, gapId, opts.moduleId ?? '', resolvedAt, opts.note ?? '');
+  return { gapId, moduleId: opts.moduleId ?? '', resolvedAt, note: opts.note ?? '' };
+}
+
+/** Re-open a resolved gap. Returns whether a resolution was actually removed. */
+export function unresolveGap(projectPath: string, gapId: string): boolean {
+  const info = getDb()
+    .prepare('DELETE FROM gdd_gap_resolutions WHERE project_path = ? AND gap_id = ?')
+    .run(projectPath, gapId);
+  return info.changes > 0;
+}
+
+/** Every resolution recorded for a project, newest first. */
+export function listResolutions(projectPath: string): GapResolution[] {
+  const rows = getDb()
+    .prepare(
+      `SELECT gap_id, module_id, resolved_at, note
+       FROM gdd_gap_resolutions WHERE project_path = ?
+       ORDER BY resolved_at DESC`,
+    )
+    .all(projectPath) as { gap_id: string; module_id: string; resolved_at: string; note: string }[];
+  return rows.map((r) => ({
+    gapId: r.gap_id,
+    moduleId: r.module_id,
+    resolvedAt: r.resolved_at,
+    note: r.note,
+  }));
 }

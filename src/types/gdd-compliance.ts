@@ -183,8 +183,20 @@ export interface ReconciliationSuggestion {
   priority: number;           // 1 = highest
 }
 
+/** A durable triage decision: this gap was dealt with, when, and optionally why. */
+export interface GapResolution {
+  gapId: string;
+  moduleId: string;
+  resolvedAt: string;
+  /** Free-text reason. Empty string when the user gave none — never null. */
+  note: string;
+}
+
 export interface ComplianceRequest {
-  action: 'audit' | 'resolve-gap';
+  action: 'audit' | 'resolve-gap' | 'unresolve-gap' | 'resolutions';
   moduleId?: string;
   gapId?: string;
+  /** Scopes resolutions; gap ids are only unique within one project. */
+  projectPath?: string;
+  note?: string;
 }

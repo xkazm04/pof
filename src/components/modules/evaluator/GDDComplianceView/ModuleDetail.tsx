@@ -1,5 +1,5 @@
 import {
-  CheckCircle2, ChevronDown, ChevronRight, Lightbulb,
+  CheckCircle2, ChevronDown, ChevronRight, Lightbulb, RotateCcw,
 } from 'lucide-react';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import type { ComplianceGap, ModuleCompliance } from '@/types/gdd-compliance';
@@ -10,11 +10,12 @@ import { SEVERITY_CONFIG, EFFORT_LABELS, DIRECTION_META } from './constants';
 import { EvidenceStrip } from './EvidenceStrip';
 import { GapSplitIndicator, GapSideCard } from './GapIndicators';
 
-export function ModuleDetail({ module, now, onResolve }: {
+export function ModuleDetail({ module, now, onResolve, onUnresolve }: {
   module: ModuleCompliance;
   /** The report's `generatedAt` — evidence age is measured against the audit. */
   now: string;
   onResolve: (gapId: string) => void;
+  onUnresolve: (gapId: string) => void;
 }) {
   const unresolvedGaps = module.gaps.filter((g) => !g.resolved);
   const resolvedGaps = module.gaps.filter((g) => g.resolved);
@@ -50,6 +51,33 @@ export function ModuleDetail({ module, now, onResolve }: {
         <div className="space-y-2">
           {unresolvedGaps.map((gap) => (
             <GapRow key={gap.id} gap={gap} onResolve={() => onResolve(gap.id)} />
+          ))}
+        </div>
+      )}
+
+      {/* Resolved gaps were counted and then hidden, with no way back — a triage
+          decision you could neither review nor undo. They are listed and
+          re-openable now, and the resolution itself is durable (SQLite). */}
+      {resolvedGaps.length > 0 && (
+        <div className="border-t border-border pt-2 space-y-1">
+          <h4 className="text-2xs font-medium text-text-muted">
+            Resolved ({resolvedGaps.length})
+          </h4>
+          {resolvedGaps.map((gap) => (
+            <div
+              key={gap.id}
+              className="flex items-center gap-2 px-2 py-1 rounded bg-surface-deep border border-border"
+            >
+              <CheckCircle2 className="w-3 h-3 flex-shrink-0" style={{ color: STATUS_SUCCESS }} aria-hidden="true" />
+              <span className="text-2xs text-text-muted flex-1 truncate line-through">{gap.title}</span>
+              <button
+                onClick={() => onUnresolve(gap.id)}
+                className="flex items-center gap-1 px-1.5 py-0.5 rounded text-2xs font-medium border border-border hover:bg-surface-hover transition-colors text-text-muted flex-shrink-0"
+              >
+                <RotateCcw className="w-2.5 h-2.5" aria-hidden="true" />
+                Re-open
+              </button>
+            </div>
           ))}
         </div>
       )}
