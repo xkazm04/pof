@@ -12,6 +12,8 @@ import {
 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import { StatInput } from './StatInput';
+import { armorMitigation } from '@/lib/ability/damage-formula';
+import { referenceIncomingHit } from './simulation';
 import type { SimScenario, CombatantStats, EnemyConfig } from './data';
 import { ENEMY_PRESETS } from './data';
 
@@ -39,6 +41,9 @@ export function ScenarioEditor({ scenario, onChange }: { scenario: SimScenario; 
   }, [scenario, onChange]);
 
   const p = scenario.player;
+  // Canon armour is soft-capped against hit size — the mitigation hint is only
+  // meaningful against the hit the scenario's enemies actually land.
+  const refHit = referenceIncomingHit(scenario.enemies);
 
   return (
     <div className="space-y-4">
@@ -53,7 +58,7 @@ export function ScenarioEditor({ scenario, onChange }: { scenario: SimScenario; 
           <StatInput label="Dexterity" value={p.dexterity} onChange={v => updatePlayer({ dexterity: v })} min={1} max={100} icon={Crosshair} color={ACCENT_EMERALD} />
           <StatInput label="Intelligence" value={p.intelligence} onChange={v => updatePlayer({ intelligence: v })} min={1} max={100} icon={Zap} color={ACCENT_VIOLET} />
           <StatInput label="Armor" value={p.armor} onChange={v => updatePlayer({ armor: v })} min={0} max={200} icon={Shield} color={MODULE_COLORS.core}
-            hint={`${(p.armor / (p.armor + 100) * 100).toFixed(1)}% mit`} />
+            hint={`${(armorMitigation(p.armor, refHit) * 100).toFixed(1)}% mit vs hit ${refHit.toFixed(0)}`} />
           <StatInput label="Atk Power" value={p.attackPower} onChange={v => updatePlayer({ attackPower: v })} min={1} max={300} icon={Swords} color={STATUS_ERROR}
             hint={`\u03A3${p.attackPower + p.strength * 2} eff`} />
           <StatInput label="Base Dmg" value={p.baseDamage} onChange={v => updatePlayer({ baseDamage: v })} min={10} max={200} icon={Target} color={ACCENT_ORANGE} />

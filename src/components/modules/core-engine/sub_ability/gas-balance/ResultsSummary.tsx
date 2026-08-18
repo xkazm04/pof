@@ -15,6 +15,7 @@ import { BlueprintPanel, SectionHeader, GlowStat } from '../../unique-tabs/_desi
 import { HistogramChart } from './HistogramChart';
 import { BalanceHealthReport } from './BalanceHealthReport';
 import { buildHistogram } from './simulation';
+import { armorMitigation, effectiveHpVsHit } from '@/lib/ability/damage-formula';
 import type { SimResults, SimScenario } from './data';
 import { TEXT_SCALE } from '@/lib/typography-scale';
 import { ACCENT } from './data';
@@ -41,18 +42,29 @@ export function ResultsSummary({ results, scenario }: { results: SimResults; sce
   const maxBin = Math.max(...ttkHist.bins.map(b => b.count), 1);
   const maxDpsBin = Math.max(...dpsHist.bins.map(b => b.count), 1);
 
+  const playerArmor = scenario.player.armor;
+  // CANON armour: reduction = armour / (armour + 5 x rawHit), soft-capped against the
+  // hit size — so the whole breakpoint curve is only defined relative to a reference
+  // hit (the one the run measured), and the 50% point moves with it.
+  const refHit = results.armorRefHit;
+  const threshold50Armor = Math.round(5 * refHit);
+  const axisMax = Math.max(200, Math.ceil((threshold50Armor * 2) / 10) * 10, Math.ceil((playerArmor * 1.5) / 10) * 10);
+
   const armorBreakpoints = useMemo(() => {
     const points: { armor: number; mitigation: number; ehp: number }[] = [];
-    for (let a = 0; a <= 200; a += 10) {
-      const mit = a / (a + 100);
-      points.push({ armor: a, mitigation: mit, ehp: scenario.player.maxHealth / (1 - mit) });
+    const step = axisMax / 20;
+    for (let i = 0; i <= 20; i++) {
+      const a = Math.round(step * i);
+      points.push({
+        armor: a,
+        mitigation: armorMitigation(a, refHit),
+        ehp: effectiveHpVsHit(scenario.player.maxHealth, a, refHit),
+      });
     }
     return points;
-  }, [scenario.player.maxHealth]);
+  }, [scenario.player.maxHealth, refHit, axisMax]);
 
-  const playerArmor = scenario.player.armor;
-  const playerMit = playerArmor / (playerArmor + 100);
-  const threshold50Armor = 100;
+  const playerMit = armorMitigation(playerArmor, refHit);
 
   return (
     <div className="space-y-4">
@@ -68,7 +80,7 @@ export function ResultsSummary({ results, scenario }: { results: SimResults; sce
           <StatBadge label="Crit Rate" value={`${(results.critRate * 100).toFixed(1)}%`} color={STATUS_WARNING} icon={Crosshair} />
           <StatBadge label="Survival" value={`${(results.survivalRate * 100).toFixed(0)}%`} color={results.survivalRate > 0.5 ? STATUS_SUCCESS : STATUS_ERROR} icon={Heart} />
           <StatBadge label="EHP" value={results.effectiveHp.toFixed(0)} color={ACCENT_EMERALD} icon={Shield} />
-          <StatBadge label="Armor Mit." value={`${(results.armorMitigation * 100).toFixed(1)}%`} color={MODULE_COLORS.core} icon={Shield} />
+          <StatBadge label={`Armor Mit. vs hit ${results.armorRefHit.toFixed(0)}`} value={`${(results.armorMitigation * 100).toFixed(1)}%`} color={MODULE_COLORS.core} icon={Shield} />
         </div>
       </BlueprintPanel>
 
@@ -120,14 +132,16 @@ export function ResultsSummary({ results, scenario }: { results: SimResults; sce
       <BlueprintPanel color={MODULE_COLORS.core} className="p-3">
         <SectionHeader icon={Shield} label="Armor Breakpoint Analysis" color={MODULE_COLORS.core} />
         <p className={`${TEXT_SCALE.body} text-text-muted mt-0.5 mb-2`}>
-          Formula: mitigation = armor / (armor + 100). Shows diminishing returns on damage reduction.
+          Canon formula: mitigation = armor / (armor + 5 x rawHit), measured against this run&apos;s
+          average incoming hit of {refHit.toFixed(0)}. Armor is soft-capped against hit size, so bigger
+          hits are mitigated less by the same armor.
         </p>
         <div className="overflow-x-auto">
           <div className="relative flex items-end gap-0.5 min-w-[400px]">
-            {armorBreakpoints.map(bp => {
+            {armorBreakpoints.map((bp, i) => {
               const hPct = bp.mitigation * 100;
-              const isCurrent = bp.armor === Math.round(playerArmor / 10) * 10;
-              const is50 = bp.armor === threshold50Armor;
+              const isCurrent = Math.abs(bp.armor - playerArmor) < axisMax / 40;
+              const is50 = Math.abs(bp.armor - threshold50Armor) < axisMax / 40;
               return (
                 <div key={bp.armor} className="flex flex-col items-center flex-1 min-w-[16px] relative"
                   title={`${bp.armor} Armor \u2192 ${(bp.mitigation * 100).toFixed(1)}% mitigation, ${bp.ehp.toFixed(0)} EHP`}>
@@ -138,12 +152,12 @@ export function ResultsSummary({ results, scenario }: { results: SimResults; sce
                       opacity: isCurrent ? 1 : is50 ? 0.85 : 0.5 + bp.mitigation * 0.5,
                     }} />
                   </div>
-                  {bp.armor % 40 === 0 && <span className="text-2xs text-text-muted mt-0.5">{bp.armor}</span>}
+                  {i % 4 === 0 && <span className="text-2xs text-text-muted mt-0.5">{bp.armor}</span>}
                 </div>
               );
             })}
             {/* Current armor marker */}
-            <div className="absolute bottom-0 pointer-events-none" style={{ left: `${(Math.min(playerArmor, 200) / 200) * 100}%`, height: '100%' }}>
+            <div className="absolute bottom-0 pointer-events-none" style={{ left: `${(Math.min(playerArmor, axisMax) / axisMax) * 100}%`, height: '100%' }}>
               <div className="absolute bottom-0 w-px h-full" style={{ backgroundColor: STATUS_SUCCESS }} />
               <div className="absolute -top-5 -translate-x-1/2 whitespace-nowrap text-2xs font-mono font-bold px-1 rounded"
                 style={{ color: STATUS_SUCCESS, backgroundColor: `${withOpacity(STATUS_SUCCESS, OPACITY_10)}` }}>
@@ -151,7 +165,7 @@ export function ResultsSummary({ results, scenario }: { results: SimResults; sce
               </div>
             </div>
             {/* 50% threshold marker */}
-            <div className="absolute bottom-0 pointer-events-none" style={{ left: `${(threshold50Armor / 200) * 100}%`, height: '100%' }}>
+            <div className="absolute bottom-0 pointer-events-none" style={{ left: `${(Math.min(threshold50Armor, axisMax) / axisMax) * 100}%`, height: '100%' }}>
               <div className="absolute bottom-0 w-px h-full opacity-70" style={{ backgroundColor: STATUS_WARNING, borderLeft: `1px dashed ${STATUS_WARNING}` }} />
               <div className="absolute -top-5 -translate-x-1/2 whitespace-nowrap text-2xs font-mono px-1 rounded"
                 style={{ color: STATUS_WARNING, backgroundColor: `${withOpacity(STATUS_WARNING, OPACITY_10)}` }}>
@@ -167,11 +181,11 @@ export function ResultsSummary({ results, scenario }: { results: SimResults; sce
             <div className="text-xs font-bold text-text">{(playerMit * 100).toFixed(1)}%</div>
             <div className="text-2xs text-text-muted">current</div>
           </div>
-          {[25, 50, 100, 200].map(a => {
-            const mit = a / (a + 100);
-            const is50 = a === threshold50Armor;
+          {[0.25, 0.5, 1, 2].map(f => Math.round(threshold50Armor * f)).map((a, i) => {
+            const mit = armorMitigation(a, refHit);
+            const is50 = i === 2;
             return (
-              <div key={a} className="text-center">
+              <div key={`${a}-${i}`} className="text-center">
                 <div className="text-2xs font-mono" style={{ color: is50 ? STATUS_WARNING : MODULE_COLORS.core }}>{a} Armor</div>
                 <div className="text-xs font-bold text-text">{(mit * 100).toFixed(1)}%</div>
                 <div className="text-2xs text-text-muted">{is50 ? '50% threshold' : 'mitigation'}</div>

@@ -33,7 +33,8 @@ export function GASBalanceHeader({ scenario, selectedPreset, onLoadPreset, onOpe
       <div className="absolute right-0 top-0 w-40 h-40 blur-3xl rounded-full pointer-events-none" style={{ backgroundColor: `${withOpacity(ACCENT, OPACITY_8)}` }} />
       <SectionHeader icon={BarChart3} label="Monte Carlo Balance Simulator" color={ACCENT} />
       <p className={`${TEXT_SCALE.body} text-text-muted mt-1`}>
-        Simulate thousands of combat encounters using the full GAS damage pipeline (Strength{'→'}AttackPower scaling, armor/(armor+100) reduction, crit rolls, health depletion).
+        Simulate thousands of combat encounters using the full GAS damage pipeline (Strength{'→'}AttackPower scaling, canon armor soft-cap armor/(armor+5{'×'}hit), crit rolls capped at 95%, health depletion).
+        Runs are seeded, so the same scenario reproduces the same numbers.
         Identify TTK distributions, DPS curves, effective HP, and attribute sensitivity breakpoints.
       </p>
 

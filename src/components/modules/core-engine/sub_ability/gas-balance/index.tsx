@@ -12,8 +12,9 @@ import { ResultsSummary } from './ResultsSummary';
 import { ResultsAnalysis } from './ResultsAnalysis';
 import { ImportScenarioModal } from './ImportScenarioModal';
 import { GASBalanceHeader } from './GASBalanceHeader';
-import { runIteration, finalizeSimulation } from './simulation';
+import { runIteration, finalizeSimulation, referenceIncomingHit, GAS_SIM_DEFAULT_SEED } from './simulation';
 import { armorMitigation } from '@/lib/ability/damage-formula';
+import { createRNG } from '@/lib/seeded-rng';
 import type { SimScenario, SimResults, SimIterationResult } from './data';
 import { ACCENT, SCENARIO_PRESETS } from './data';
 import { TEXT_SCALE } from '@/lib/typography-scale';
@@ -53,6 +54,9 @@ export function GASBalanceSimulator() {
     const runId = ++runIdRef.current;
     const total = scenario.iterations;
     const chunkSize = 200;
+    // One seeded stream per run: the chunked runner and runSimulation() therefore
+    // agree, and re-running the same scenario reproduces the same numbers.
+    const rng = createRNG(GAS_SIM_DEFAULT_SEED);
     const allIterations: SimIterationResult[] = [];
     let completed = 0;
     setSimProgress({ current: 0, total });
@@ -61,7 +65,7 @@ export function GASBalanceSimulator() {
       if (runIdRef.current !== runId) return;
       const end = Math.min(completed + chunkSize, total);
       for (let i = completed; i < end; i++) {
-        allIterations.push(runIteration(scenario.player, scenario.enemies));
+        allIterations.push(runIteration(scenario.player, scenario.enemies, rng));
       }
       completed = end;
       setSimProgress({ current: completed, total });
@@ -69,7 +73,7 @@ export function GASBalanceSimulator() {
       if (completed < total) {
         requestAnimationFrame(processChunk);
       } else {
-        const simResults = finalizeSimulation(scenario, allIterations);
+        const simResults = finalizeSimulation(scenario, allIterations, GAS_SIM_DEFAULT_SEED);
         if (runIdRef.current === runId) {
           setResults(simResults);
           setIsRunning(false);
@@ -81,6 +85,9 @@ export function GASBalanceSimulator() {
     requestAnimationFrame(processChunk);
   }, [scenario]);
 
+  // Canon armour is soft-capped against hit size, so the preview mitigation is
+  // quoted against the average raw hit the scenario's enemies actually land.
+  const armorRefHit = referenceIncomingHit(scenario.enemies);
   const totalEnemies = scenario.enemies.reduce((s, e) => s + e.count, 0);
   const totalEnemyHp = scenario.enemies.reduce((s, e) => s + e.stats.maxHealth * e.count, 0);
 
@@ -133,7 +140,7 @@ export function GASBalanceSimulator() {
             <div>Player: Lv.{scenario.player.level} — {scenario.player.maxHealth} HP, {scenario.player.attackPower} AtkPow</div>
             <div>Enemies: {totalEnemies} targets, {totalEnemyHp} total HP</div>
             <div>Scaling: AtkPow +Str{'×'}2 = {scenario.player.attackPower + scenario.player.strength * 2}</div>
-            <div>Armor Mit: {(armorMitigation(scenario.player.armor) * 100).toFixed(1)}%</div>
+            <div>Armor Mit: {(armorMitigation(scenario.player.armor, armorRefHit) * 100).toFixed(1)}% vs avg hit {armorRefHit.toFixed(0)} (canon soft-cap)</div>
           </BlueprintPanel>
         </div>
 

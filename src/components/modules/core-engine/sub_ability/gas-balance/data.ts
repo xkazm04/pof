@@ -52,7 +52,16 @@ export interface SimResults {
   critRate: number;
   survivalRate: number;
   effectiveHp: number;
+  /**
+   * Player armour mitigation fraction under the CANON soft-cap
+   * `armour/(armour + 5·rawHit)` — measured against `armorRefHit`, because canon
+   * armour is capped against hit size and has no hit-independent percentage.
+   */
   armorMitigation: number;
+  /** The reference incoming hit `armorMitigation`/`effectiveHp` are measured against. */
+  armorRefHit: number;
+  /** Seed the Monte-Carlo ran on — the same scenario + seed reproduces exactly. */
+  seed: number;
   timestamp: number;
 }
 

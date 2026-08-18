@@ -3,7 +3,16 @@ import type {
   SimIterationResult, SensitivityPoint, SensitivityResult,
   LevelSweepPoint, LevelSweepConfig,
 } from './data';
-import { scaleAndMitigate, armorMitigation } from '@/lib/ability/damage-formula';
+import { rollAbilityHit, rawScaledHit, armorMitigation, effectiveHpVsHit } from '@/lib/ability/damage-formula';
+import { createRNG } from '@/lib/seeded-rng';
+
+/**
+ * Default seed for the GAS Monte-Carlo. Runs used to draw from raw `Math.random()`,
+ * so no two runs of the same scenario agreed and nothing was reproducible; they now
+ * default to this seed and are byte-identical run to run. Pass an explicit seed to
+ * compare two scenarios under the same rolls.
+ */
+export const GAS_SIM_DEFAULT_SEED = 0x5EED;
 
 /* ── Attribute Scaling ────────────────────────────────────────────────── */
 
@@ -19,17 +28,40 @@ export function applyScaling(stats: CombatantStats): CombatantStats {
 /* ── Damage Pipeline ──────────────────────────────────────────────────── */
 
 /**
- * Damage pipeline per hit (mirrors UE5 DamageExecution). The pre-crit core
- * (scale by power, then armor mitigation) is the shared canonical GAS model
- * from @/lib/ability/damage-formula; only the crit step is sim-specific:
- * 1. afterArmor = scaleAndMitigate(baseDamage, attackPower, targetArmor)
- * 2. if crit (rolled): afterArmor * critDamage, else afterArmor
+ * Damage pipeline per hit — routed through the CANON kernel via
+ * `@/lib/ability/damage-formula` (`rollAbilityHit`), the same authority the
+ * arena/combat sim uses. Per hit: raw = base·(1+power/100) → crit roll (chance
+ * hard-capped at 95%) → canon armour soft-cap `armour/(armour + 5·rawHit)`.
+ * Exactly one rng() is drawn (the crit roll).
  */
-function rollDamage(attacker: CombatantStats, targetArmor: number): { damage: number; isCrit: boolean } {
-  const afterArmor = scaleAndMitigate(attacker.baseDamage, attacker.attackPower, targetArmor);
-  const isCrit = Math.random() < attacker.criticalChance;
-  const damage = isCrit ? afterArmor * attacker.criticalDamage : afterArmor;
-  return { damage, isCrit };
+function rollDamage(attacker: CombatantStats, targetArmor: number, rng: () => number): { damage: number; isCrit: boolean } {
+  return rollAbilityHit(
+    attacker.baseDamage,
+    attacker.attackPower,
+    { armor: targetArmor },
+    attacker.criticalChance,
+    attacker.criticalDamage,
+    rng,
+  );
+}
+
+/**
+ * Reference incoming hit used to express the player's armour mitigation / EHP.
+ * Canon armour is soft-capped AGAINST the hit size, so "mitigation %" and EHP are
+ * only defined relative to a hit. We use the count-weighted mean raw hit of the
+ * scenario's (scaled) enemies — the damage the player actually faces.
+ */
+export function referenceIncomingHit(enemies: EnemyConfig[]): number {
+  let weighted = 0;
+  let count = 0;
+  for (const e of enemies) {
+    const n = Math.max(0, Math.floor(e.count) || 0);
+    if (n === 0) continue;
+    const s = applyScaling(e.stats);
+    weighted += rawScaledHit(s.baseDamage, s.attackPower) * n;
+    count += n;
+  }
+  return count > 0 ? weighted / count : 0;
 }
 
 /* ── Single Iteration ─────────────────────────────────────────────────── */
@@ -38,7 +70,7 @@ function rollDamage(attacker: CombatantStats, targetArmor: number): { damage: nu
 const MAX_MATERIALIZED_ENEMIES = 5000;
 
 /** Run one iteration: player attacks all enemies sequentially, enemies attack back */
-export function runIteration(player: CombatantStats, enemies: EnemyConfig[]): SimIterationResult {
+export function runIteration(player: CombatantStats, enemies: EnemyConfig[], rng: () => number = Math.random): SimIterationResult {
   const scaledPlayer = applyScaling(player);
   const allEnemies = enemies.flatMap(e => {
     // Guard the allocation: clamp to a non-negative integer count and a hard ceiling
@@ -58,13 +90,13 @@ export function runIteration(player: CombatantStats, enemies: EnemyConfig[]): Si
   const dt = 0.05;
 
   let playerNextAttack = 0;
-  const enemyNextAttack = allEnemies.map(() => Math.random() * (1 / 0.5));
+  const enemyNextAttack = allEnemies.map(() => rng() * (1 / 0.5));
 
   while (time < 300) {
     if (time >= playerNextAttack) {
       const target = allEnemies.find(e => e.currentHp > 0);
       if (!target) break;
-      const { damage, isCrit } = rollDamage(scaledPlayer, target.armor);
+      const { damage, isCrit } = rollDamage(scaledPlayer, target.armor, rng);
       target.currentHp -= damage;
       totalDamage += damage;
       totalHits++;
@@ -76,7 +108,7 @@ export function runIteration(player: CombatantStats, enemies: EnemyConfig[]): Si
       const enemy = allEnemies[i];
       if (enemy.currentHp <= 0) continue;
       if (time >= enemyNextAttack[i]) {
-        const { damage } = rollDamage(enemy, scaledPlayer.armor);
+        const { damage } = rollDamage(enemy, scaledPlayer.armor, rng);
         playerHp -= damage;
         enemyNextAttack[i] = time + (1 / enemy.attackSpeed);
       }
@@ -101,13 +133,15 @@ const stdDev = (arr: number[], avg: number) => Math.sqrt(arr.reduce((s, v) => s 
 
 /* ── Full Simulation ──────────────────────────────────────────────────── */
 
-function computeResults(scenario: SimScenario, iterations: SimIterationResult[]): SimResults {
+function computeResults(scenario: SimScenario, iterations: SimIterationResult[], seed: number): SimResults {
   const ttks = iterations.map(it => it.ttk).sort((a, b) => a - b);
   const dpsList = iterations.map(it => it.ttk > 0 ? it.totalDamage / it.ttk : 0).sort((a, b) => a - b);
   const ttkMean = mean(ttks);
   const scaledPlayer = applyScaling(scenario.player);
-  const playerArmorMit = armorMitigation(scaledPlayer.armor);
-  const effectiveHp = scaledPlayer.maxHealth / (1 - playerArmorMit);
+  // Canon mitigation/EHP are defined against a reference hit — see referenceIncomingHit.
+  const armorRefHit = referenceIncomingHit(scenario.enemies);
+  const playerArmorMit = armorMitigation(scaledPlayer.armor, armorRefHit);
+  const effectiveHp = effectiveHpVsHit(scaledPlayer.maxHealth, scaledPlayer.armor, armorRefHit);
   const totalCrits = iterations.reduce((s, it) => s + it.critHits, 0);
   const totalHitsAll = iterations.reduce((s, it) => s + it.totalHits, 0);
 
@@ -122,22 +156,27 @@ function computeResults(scenario: SimScenario, iterations: SimIterationResult[])
     dpsStats: { mean: mean(dpsList), median: percentile(dpsList, 50), min: dpsList[0] ?? 0, max: dpsList[dpsList.length - 1] ?? 0 },
     critRate: totalHitsAll > 0 ? totalCrits / totalHitsAll : 0,
     survivalRate: iterations.filter(it => it.playerSurvived).length / iterations.length,
-    effectiveHp, armorMitigation: playerArmorMit, timestamp: Date.now(),
+    effectiveHp, armorMitigation: playerArmorMit, armorRefHit, seed, timestamp: Date.now(),
   };
 }
 
-/** Run full Monte Carlo simulation */
-export function runSimulation(scenario: SimScenario): SimResults {
+/** Run full Monte Carlo simulation. Seeded → the same scenario+seed always reproduces. */
+export function runSimulation(scenario: SimScenario, seed: number = GAS_SIM_DEFAULT_SEED): SimResults {
+  const rng = createRNG(seed);
   const iterations: SimIterationResult[] = [];
   for (let i = 0; i < scenario.iterations; i++) {
-    iterations.push(runIteration(scenario.player, scenario.enemies));
+    iterations.push(runIteration(scenario.player, scenario.enemies, rng));
   }
-  return computeResults(scenario, iterations);
+  return computeResults(scenario, iterations, seed);
 }
 
 /** Finalize simulation results from pre-collected iterations (chunked runner) */
-export function finalizeSimulation(scenario: SimScenario, iterations: SimIterationResult[]): SimResults {
-  return computeResults(scenario, iterations);
+export function finalizeSimulation(
+  scenario: SimScenario,
+  iterations: SimIterationResult[],
+  seed: number = GAS_SIM_DEFAULT_SEED,
+): SimResults {
+  return computeResults(scenario, iterations, seed);
 }
 
 /* ── Sensitivity Analysis ─────────────────────────────────────────────── */
