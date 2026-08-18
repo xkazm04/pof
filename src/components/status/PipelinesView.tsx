@@ -8,13 +8,19 @@
  *
  * Click-through: a lane's label (and any of its cells) opens Item Focus on that
  * catalog — the entity-centric complement — via `onFocusCatalog`.
+ *
+ * A FAILED READ IS NOT A GRADE. Every per-catalog fetch here keeps its `Result`: a catalog
+ * that could not be read is held out of `lanes` entirely and rendered as an UNKNOWN row,
+ * because a lane built from a failure's empty list paints every step R0 NOT WIRED — the map
+ * would then report "nothing was ever produced here" on the strength of a network blip, and
+ * send someone to rebuild something that already works. Failure is per-lane: one dead catalog
+ * never blanks the other 31.
  */
 import { useEffect, useMemo, useState } from 'react';
 import '@/lib/catalog/pipelines/registry.generated';
 import { allCatalogPipelines } from '@/lib/catalog/pipeline-registry';
-import { fetchArtifacts } from '@/components/layout-lab/labArtifactClient';
+import { fetchArtifactsResult } from '@/components/layout-lab/labArtifactClient';
 import { tryApiFetch } from '@/lib/api-utils';
-import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
 import { buildSwimlane, sortLanes, getStepFact, type Swimlane, type StepCell } from '@/lib/status/statusModel';
 import {
@@ -167,6 +173,19 @@ function Legend() {
   );
 }
 
+/** One catalog whose artifacts could not be read. It is deliberately NOT a `Swimlane`:
+ *  a lane built from a failed fetch's `[]` would paint every step R0 NOT WIRED, which is
+ *  a GRADE — the map would report "nothing was ever produced here" on the strength of a
+ *  network blip, and understate the one way this surface must never be wrong. */
+interface UnknownLane {
+  catalogId: string;
+  error: string;
+}
+
+/** Per-catalog outcome of the map load. `ok:false` keeps the failure instead of folding it
+ *  into an empty artifact list (see {@link UnknownLane}). */
+type LaneLoad = { ok: true; lane: Swimlane } | { ok: false; catalogId: string; error: string };
+
 /** Shared retry affordance for the two degraded-load surfaces below. */
 function RetryButton({ onClick, label = 'Retry' }: { onClick: () => void; label?: string }) {
   return (
@@ -215,6 +234,10 @@ export function PipelinesView({
    *  (painting UNGAUGED over a fetch failure would fabricate an audit result). */
   const [craftByKey, setCraftByKey] = useState<Map<string, CellCraft> | null>(null);
   const [craftDegraded, setCraftDegraded] = useState(false);
+  /** Catalogs whose artifact read FAILED. They are held apart from `lanes` and rendered as
+   *  UNKNOWN rows — never as a lane — because the alternative (building a lane from the
+   *  failure's empty list) paints a grade the data does not support. */
+  const [unknownLanes, setUnknownLanes] = useState<UnknownLane[]>([]);
   const [reload, setReload] = useState(0);
   const [highlight, setHighlight] = useState<Highlight>(null);
   // Clicking a cell opens the evidence modal (the stored output the gate evaluated),
@@ -246,9 +269,14 @@ export function PipelinesView({
           craftByCatalog.set(v.catalogId, list);
         }
         const craft = craftRes.ok ? new Map<string, CellCraft>() : null;
-        const results = await Promise.all(
-          pipelines.map(async (p) => {
-            const artifacts: PipelineArtifact[] = await fetchArtifacts(p.catalogId);
+        const results: LaneLoad[] = await Promise.all(
+          pipelines.map(async (p): Promise<LaneLoad> => {
+            // The `Result` form, not the lossy `fetchArtifacts` wrapper: its `[]` on failure
+            // is indistinguishable from an empty catalog, and every cell derived from it
+            // would read R0 NOT WIRED.
+            const res = await fetchArtifactsResult(p.catalogId);
+            if (!res.ok) return { ok: false, catalogId: p.catalogId, error: res.error };
+            const artifacts = res.data;
             const metas = p.steps.map((s) => ({ label: s.label, archetype: s.archetype, engine: s.engine }));
             if (craft) {
               // Per-step entity → current artifact updatedAt: the staleness anchor a
@@ -271,11 +299,14 @@ export function PipelinesView({
                 if (c) craft.set(`${p.catalogId} ${s.label}`, c);
               }
             }
-            return buildSwimlane(p.catalogId, p.catalogId, metas, artifacts, byCatalog.get(p.catalogId) ?? []);
+            return { ok: true, lane: buildSwimlane(p.catalogId, p.catalogId, metas, artifacts, byCatalog.get(p.catalogId) ?? []) };
           }),
         );
+        // Partial stays partial: the catalogs that answered still render their lanes; the
+        // ones that failed are held aside as UNKNOWN and named in the banner below.
         if (alive) {
-          setLanes(sortLanes(results));
+          setLanes(sortLanes(results.flatMap((r) => (r.ok ? [r.lane] : []))));
+          setUnknownLanes(results.flatMap((r) => (r.ok ? [] : [{ catalogId: r.catalogId, error: r.error }])));
           setCraftByKey(craft);
         }
       } catch (err) {
@@ -285,9 +316,13 @@ export function PipelinesView({
     return () => { alive = false; };
   }, [reload]);
 
+  /** Operator-driven only — nothing here re-fetches a failed catalog on its own. An errored
+   *  key that auto-retried would spin against a 500 (the lab's artifact cache learned this
+   *  the hard way and bails out of `ensure` on a stored error for the same reason). */
   const retry = () => {
     setError(null);
     setLanes(null);
+    setUnknownLanes([]);
     setVerdictsDegraded(false);
     setCraftByKey(null);
     setCraftDegraded(false);
@@ -440,7 +475,7 @@ export function PipelinesView({
         ))}
         {engines.length === 0 && (
           <span style={{ fontSize: 'var(--lab-fs-xs)', fontFamily: 'var(--lab-font-mono)', color: 'var(--text-subtle)', alignSelf: 'center' }}>
-            {lanes ? 'no engine has produced a step yet' : 'awaiting data…'}
+            {!lanes ? 'awaiting data…' : unknownLanes.length > 0 ? 'no engine has produced a step in the pipelines that loaded' : 'no engine has produced a step yet'}
           </span>
         )}
       </div>
@@ -489,6 +524,36 @@ export function PipelinesView({
             — the map below is missing, not empty: {error}
           </span>
           <RetryButton onClick={retry} />
+        </div>
+      )}
+
+      {unknownLanes.length > 0 && !error && (
+        <div
+          role="status"
+          data-testid="unknown-lanes-banner"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 'var(--lab-s3)',
+            padding: 'var(--lab-s2) var(--lab-s3)',
+            marginBottom: 'var(--lab-s3)',
+            fontSize: 'var(--lab-fs-xs)',
+            color: 'var(--lab-text)',
+            // shorthand first — a later `border` would wipe the warn stripe.
+            border: '1px solid var(--lab-line)',
+            borderLeft: '3px solid var(--lab-warn)',
+            borderRadius: 'var(--lab-r-sm)',
+          }}
+        >
+          <span style={{ minWidth: 0 }}>
+            <strong style={{ fontFamily: 'var(--lab-font-mono)' }}>PARTIAL</strong> —{' '}
+            {unknownLanes.length} pipeline{unknownLanes.length === 1 ? '' : 's'} could not be read, so{' '}
+            {unknownLanes.length === 1 ? 'its' : 'their'} steps are <strong>UNKNOWN</strong> below, not R0 NOT WIRED:{' '}
+            <span style={{ fontFamily: 'var(--lab-font-mono)' }}>{unknownLanes.map((u) => u.catalogId).join(', ')}</span>.
+            Every other pipeline below is real truth.
+          </span>
+          <RetryButton onClick={retry} label="Reload map" />
         </div>
       )}
 
@@ -567,7 +632,9 @@ export function PipelinesView({
           the highlight is otherwise a pure opacity change no screen reader can perceive. */}
       <div role="status" aria-live="polite" style={{ fontSize: 'var(--lab-fs-sm)', color: 'var(--lab-muted)' }}>
         {!lanes && !error && 'Loading pipeline truth…'}
-        {lanes && lanes.length === 0 && 'No catalog pipelines are registered yet — nothing to map.'}
+        {/* Only claim "nothing is registered" when we actually READ every pipeline — with
+            unknown lanes present, an empty map is missing truth, not absent truth. */}
+        {lanes && lanes.length === 0 && unknownLanes.length === 0 && 'No catalog pipelines are registered yet — nothing to map.'}
         {lanes && lanes.length > 0 && filterClass && visibleLanes?.length === 0 && (
           <>
             No steps match the <strong>{filterClass}</strong> capability class. Clear the filter above to see the whole map.
@@ -623,6 +690,33 @@ export function PipelinesView({
                 </button>
               ))}
             </div>
+          </div>
+        ))}
+        {/* UNKNOWN lanes render LAST and carry no cells and no percentage — there is nothing
+            to grade. A `—` where the readiness number goes is the whole point: the map says
+            "we could not read this", not "this is at 0%". */}
+        {unknownLanes.map((u) => (
+          <div
+            key={u.catalogId}
+            data-testid={`unknown-lane-${u.catalogId}`}
+            style={{ display: 'flex', alignItems: 'center', gap: 'var(--lab-s2)', marginBottom: 'var(--lab-s2)', minWidth: 'max-content' }}
+          >
+            <span style={{ width: 200, flexShrink: 0, fontSize: 'calc(var(--lab-fs-xs) + 3px)', fontWeight: 700, fontFamily: 'var(--lab-font-mono)', color: 'var(--lab-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {u.catalogId}
+            </span>
+            <span
+              role="img"
+              aria-label={`${u.catalogId} readiness is unknown — its steps could not be read`}
+              title="readiness unknown — this pipeline's artifacts could not be read"
+              style={{ width: 44, flexShrink: 0, textAlign: 'right', fontSize: 'var(--lab-fs-xs)', fontFamily: 'var(--lab-font-mono)', color: 'var(--lab-muted)' }}
+            >
+              —
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--lab-s2)', fontSize: 'var(--lab-fs-xs)', color: 'var(--lab-text)' }}>
+              <strong style={{ fontFamily: 'var(--lab-font-mono)', color: 'var(--lab-warn)' }}>UNKNOWN</strong>
+              <span style={{ color: 'var(--lab-muted)' }}>could not read this pipeline&apos;s artifacts: {u.error}</span>
+              <RetryButton onClick={retry} />
+            </span>
           </div>
         ))}
       </div>
