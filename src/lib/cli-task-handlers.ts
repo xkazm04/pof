@@ -391,8 +391,20 @@ const procgenDungeon: TaskPromptHandler = (task, ctx, { touchesBinaryAssets }) =
   const cbId = registerCallback({
     url: `${pt.appOrigin}/api/level-design/procgen-result`,
     method: 'POST',
-    staticFields: { moduleId: task.moduleId, seed: pt.seed },
-    schemaHint: '  "roomCount": <number of rooms the generator reported>',
+    // Everything that describes the run AS DISPATCHED rides here, so the ledger
+    // records what was actually asked for and a prompt cannot rewrite it.
+    staticFields: {
+      moduleId: task.moduleId,
+      seed: pt.seed,
+      docId: pt.docId ?? null,
+      algorithm: 'ARPGLevelGenerator',
+      params: { moduleId: task.moduleId, roomCountRequested: pt.roomCount },
+    },
+    schemaHint:
+      '  "roomCount": <number of rooms the generator reported>,\n' +
+      '  "mapPath": "<the map the run wrote, e.g. /Game/Maps/ProcGenDungeon>",\n' +
+      '  "success": true,\n' +
+      '  "failureReason": ""',
   });
   return `${header}
 
@@ -413,6 +425,9 @@ Steps:
    by the LOG, not the exit code. In the newest \`Saved/Logs/PoF*.log\`, find the
    line \`[LevelGenerator] ... Generated N rooms\` and \`Baked N BlockoutRoom actors\`.
 4. Submit the generated room count via the callback below.
+5. **If the run FAILED, submit anyway** with \`"success": false\` and a
+   \`failureReason\` naming what went wrong (the log line, the missing asset, the
+   exception). A failed run is recorded as a run — staying silent erases it.
 
 ${buildCallbackSection(getCallback(cbId)!)}`;
 };
@@ -427,8 +442,18 @@ const biomeScatter: TaskPromptHandler = (task, ctx, { touchesBinaryAssets }) => 
   const cbId = registerCallback({
     url: `${st.appOrigin}/api/level-design/scatter-result`,
     method: 'POST',
-    staticFields: { moduleId: task.moduleId, seed: st.seed },
-    schemaHint: '  "instanceCount": <number of instances the scatter reported>',
+    staticFields: {
+      moduleId: task.moduleId,
+      seed: st.seed,
+      docId: st.docId ?? null,
+      algorithm: 'AARPGVegetationScatter',
+      params: { moduleId: task.moduleId, density: st.density },
+    },
+    schemaHint:
+      '  "instanceCount": <number of instances the scatter reported>,\n' +
+      '  "mapPath": "<the map the run wrote, e.g. /Game/Maps/VerticalSlice>",\n' +
+      '  "success": true,\n' +
+      '  "failureReason": ""',
   });
   return `${header}
 
@@ -448,6 +473,9 @@ Steps:
 3. The headless editor exits non-zero on a benign shutdown crash — judge by the
    LOG. In the newest \`Saved/Logs/PoF*.log\`, find \`[scatter_biome] Scattered N instances\`.
 4. Submit the instance count via the callback below.
+5. **If the run FAILED, submit anyway** with \`"success": false\` and a
+   \`failureReason\` naming what went wrong. A failed run is recorded as a run —
+   staying silent erases it.
 
 ${buildCallbackSection(getCallback(cbId)!)}`;
 };

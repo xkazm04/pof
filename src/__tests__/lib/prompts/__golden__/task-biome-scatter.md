@@ -56,6 +56,9 @@ Steps:
 3. The headless editor exits non-zero on a benign shutdown crash — judge by the
    LOG. In the newest `Saved/Logs/PoF*.log`, find `[scatter_biome] Scattered N instances`.
 4. Submit the instance count via the callback below.
+5. **If the run FAILED, submit anyway** with `"success": false` and a
+   `failureReason` naming what went wrong. A failed run is recorded as a run —
+   staying silent erases it.
 
 ## Submission
 
@@ -65,7 +68,10 @@ After completing your work, submit the results by outputting a JSON block wrappe
 ```
 @@CALLBACK:cb-TEST
 {
-  "instanceCount": <number of instances the scatter reported>
+  "instanceCount": <number of instances the scatter reported>,
+  "mapPath": "<the map the run wrote, e.g. /Game/Maps/VerticalSlice>",
+  "success": true,
+  "failureReason": ""
 }
 @@END_CALLBACK
 ```
@@ -73,6 +79,9 @@ After completing your work, submit the results by outputting a JSON block wrappe
 The following fields will be added automatically — do NOT include them:
 - `moduleId`: `"arpg-world"`
 - `seed`: `99`
+- `docId`: `null`
+- `algorithm`: `"AARPGVegetationScatter"`
+- `params`: `{"moduleId":"arpg-world","density":1.5}`
 
 **Rules:**
 - Output valid JSON between the markers — no comments, no trailing commas

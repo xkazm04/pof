@@ -1,11 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Trees, Loader2, Dice5 } from 'lucide-react';
 import { MODULE_COLORS } from '@/lib/constants';
-import { tryApiFetch } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
+import { validateSeed, SEED_ROLL_MAX } from '@/lib/level-design/run-params';
+import { RunHistoryList } from './RunHistoryList';
+import { useRunHistory } from './useRunHistory';
 import type { ScatterRun } from '@/types/procgen';
+
+// Re-exported so the panel's existing named import surface is unchanged; the
+// rule itself is single-sourced (it was duplicated in ProcGenDungeonPanel).
+export { validateSeed };
 
 interface BiomeScatterPanelProps {
   onGenerate: (density: number, seed: number) => void;
@@ -28,46 +34,16 @@ export function validateDensity(raw: string): string | null {
   return null;
 }
 
-/**
- * Pure validator for the seed field. Returns an error string when the raw input
- * is empty, non-numeric (NaN), non-integer, or negative; null when acceptable.
- */
-export function validateSeed(raw: string): string | null {
-  if (raw.trim() === '') return 'Enter a seed';
-  const n = Number(raw);
-  if (!Number.isFinite(n)) return 'Seed must be a number';
-  if (!Number.isInteger(n)) return 'Seed must be a whole number';
-  if (n < 0) return 'Seed must be 0 or greater';
-  return null;
-}
-
 export function BiomeScatterPanel({ onGenerate, isGenerating }: BiomeScatterPanelProps) {
   // Inputs are kept as raw strings so out-of-range / cleared (NaN) values can be
   // validated and surfaced inline, rather than silently clamped at generate time.
   const [densityInput, setDensityInput] = useState('1');
   const [seedInput, setSeedInput] = useState('1337');
-  const [lastRun, setLastRun] = useState<ScatterRun | null>(null);
-  const [fetchError, setFetchError] = useState<string | null>(null);
   const [generateError, setGenerateError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (isGenerating) return;
-    let cancelled = false;
-    void (async () => {
-      const r = await tryApiFetch<ScatterRun | null>('/api/level-design/scatter-result');
-      if (cancelled) return;
-      if (r.ok) {
-        setLastRun(r.data);
-        setFetchError(null);
-      } else {
-        // Surface the failure instead of swallowing it silently.
-        setFetchError(r.error);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [isGenerating]);
+  // One request: the history's newest row IS the "last scatter" line.
+  const { runs, error: fetchError } = useRunHistory<ScatterRun>('/api/level-design/scatter-result', isGenerating);
+  const lastRun = runs[0] ?? null;
 
   const densityErr = validateDensity(densityInput);
   const seedErr = validateSeed(seedInput);
@@ -133,8 +109,11 @@ export function BiomeScatterPanel({ onGenerate, isGenerating }: BiomeScatterPane
             />
             <button
               type="button"
-              onClick={() => setSeedInput(String(Math.floor(Math.random() * 100000)))}
+              // Re-rolling is safe because the previous seed is still a row in
+              // the history below — that list IS the undo.
+              onClick={() => setSeedInput(String(Math.floor(Math.random() * SEED_ROLL_MAX)))}
               title="Randomize seed"
+              aria-label="Randomize seed"
               className="px-3 rounded-lg border border-violet-900/50 text-violet-400 hover:text-violet-200"
             >
               <Dice5 className="w-4 h-4" />
@@ -187,11 +166,24 @@ export function BiomeScatterPanel({ onGenerate, isGenerating }: BiomeScatterPane
           Could not load last scatter: {fetchError}
         </div>
       ) : (
-        <div className="text-xs px-3 py-2 rounded-lg border border-violet-900/40 bg-violet-950/20">
-          {lastRun
-            ? `Last scatter: ${lastRun.instanceCount} instances (seed ${lastRun.seed}) at ${lastRun.createdAt}`
-            : 'No scatter yet. Set density + seed and scatter — props are placed (no-collision) on the arena floor.'}
-        </div>
+        <>
+          <div className="text-xs px-3 py-2 rounded-lg border border-violet-900/40 bg-violet-950/20">
+            {/* A failed latest run must not read as "0 instances scattered". */}
+            {lastRun
+              ? lastRun.success
+                ? `Last scatter: ${lastRun.instanceCount} instances (seed ${lastRun.seed}) at ${lastRun.createdAt}`
+                : `Last scatter FAILED (seed ${lastRun.seed}) at ${lastRun.createdAt}: ${lastRun.failureReason || 'no reason reported'}`
+              : 'No scatter yet. Set density + seed and scatter — props are placed (no-collision) on the arena floor.'}
+          </div>
+
+          <RunHistoryList
+            runs={runs}
+            describe={(run) => `${run.instanceCount} instances`}
+            onReuseSeed={(seed) => setSeedInput(String(seed))}
+            emptyText="No scatters recorded yet. Every run — including a failed one — lands here with its seed."
+            testIdPrefix="scatter-history"
+          />
+        </>
       )}
     </div>
   );

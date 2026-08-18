@@ -57,6 +57,9 @@ Steps:
    by the LOG, not the exit code. In the newest `Saved/Logs/PoF*.log`, find the
    line `[LevelGenerator] ... Generated N rooms` and `Baked N BlockoutRoom actors`.
 4. Submit the generated room count via the callback below.
+5. **If the run FAILED, submit anyway** with `"success": false` and a
+   `failureReason` naming what went wrong (the log line, the missing asset, the
+   exception). A failed run is recorded as a run — staying silent erases it.
 
 ## Submission
 
@@ -66,7 +69,10 @@ After completing your work, submit the results by outputting a JSON block wrappe
 ```
 @@CALLBACK:cb-TEST
 {
-  "roomCount": <number of rooms the generator reported>
+  "roomCount": <number of rooms the generator reported>,
+  "mapPath": "<the map the run wrote, e.g. /Game/Maps/ProcGenDungeon>",
+  "success": true,
+  "failureReason": ""
 }
 @@END_CALLBACK
 ```
@@ -74,6 +80,9 @@ After completing your work, submit the results by outputting a JSON block wrappe
 The following fields will be added automatically — do NOT include them:
 - `moduleId`: `"arpg-world"`
 - `seed`: `1234`
+- `docId`: `null`
+- `algorithm`: `"ARPGLevelGenerator"`
+- `params`: `{"moduleId":"arpg-world","roomCountRequested":8}`
 
 **Rules:**
 - Output valid JSON between the markers — no comments, no trailing commas

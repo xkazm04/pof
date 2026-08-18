@@ -1,10 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Boxes, Loader2, Dice5 } from 'lucide-react';
 import { MODULE_COLORS } from '@/lib/constants';
-import { tryApiFetch } from '@/lib/api-utils';
+import { validateSeed, SEED_ROLL_MAX } from '@/lib/level-design/run-params';
+import { RunHistoryList } from './RunHistoryList';
+import { useRunHistory } from './useRunHistory';
 import type { ProcgenRun } from '@/types/procgen';
+
+// Re-exported so the panel's existing named import surface is unchanged; the
+// rule itself is single-sourced (it was duplicated in BiomeScatterPanel).
+export { validateSeed };
 
 interface ProcGenDungeonPanelProps {
   /** Dispatch a generation run with the chosen params. */
@@ -30,48 +36,16 @@ export function validateRoomCount(raw: string): string | null {
   return null;
 }
 
-/**
- * Pure validator for the seed field. Returns an error string when the raw input
- * is empty, non-numeric (NaN), non-integer, or negative; null when acceptable.
- */
-export function validateSeed(raw: string): string | null {
-  if (raw.trim() === '') return 'Enter a seed';
-  const n = Number(raw);
-  if (!Number.isFinite(n)) return 'Seed must be a number';
-  if (!Number.isInteger(n)) return 'Seed must be a whole number';
-  if (n < 0) return 'Seed must be 0 or greater';
-  return null;
-}
-
 export function ProcGenDungeonPanel({ onGenerate, isGenerating }: ProcGenDungeonPanelProps) {
   // Inputs are kept as raw strings so cleared (NaN) / out-of-range values can be
   // validated and surfaced inline, rather than silently clamped at generate time.
   const [roomsInput, setRoomsInput] = useState('6');
   const [seedInput, setSeedInput] = useState('1337');
-  const [lastRun, setLastRun] = useState<ProcgenRun | null>(null);
-  const [fetchError, setFetchError] = useState<string | null>(null);
 
-  // Refetch the latest run on mount + whenever a generation finishes
-  // (isGenerating true -> false). The fetch is async, so the setState lands
-  // after the await — never synchronously within the effect.
-  useEffect(() => {
-    if (isGenerating) return;
-    let cancelled = false;
-    void (async () => {
-      const r = await tryApiFetch<ProcgenRun | null>('/api/level-design/procgen-result');
-      if (cancelled) return;
-      if (r.ok) {
-        setLastRun(r.data);
-        setFetchError(null);
-      } else {
-        // Surface the failure instead of swallowing it silently.
-        setFetchError(r.error);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [isGenerating]);
+  // The history is refetched on mount and whenever a generation finishes
+  // (isGenerating true -> false); its newest row IS the "last run" line.
+  const { runs, error: fetchError } = useRunHistory<ProcgenRun>('/api/level-design/procgen-result', isGenerating);
+  const lastRun = runs[0] ?? null;
 
   const roomsErr = validateRoomCount(roomsInput);
   const seedErr = validateSeed(seedInput);
@@ -129,7 +103,9 @@ export function ProcGenDungeonPanel({ onGenerate, isGenerating }: ProcGenDungeon
             />
             <button
               type="button"
-              onClick={() => setSeedInput(String(Math.floor(Math.random() * 100000)))}
+              // Re-rolling is safe because the previous seed is still a row in
+              // the history below — that list IS the undo.
+              onClick={() => setSeedInput(String(Math.floor(Math.random() * SEED_ROLL_MAX)))}
               title="Randomize seed"
               aria-label="Randomize seed"
               className="px-3 rounded-lg border border-violet-900/50 text-violet-400 hover:text-violet-200 focus-ring"
@@ -175,11 +151,24 @@ export function ProcGenDungeonPanel({ onGenerate, isGenerating }: ProcGenDungeon
           Could not load last run: {fetchError}
         </div>
       ) : (
-        <div className="text-xs px-3 py-2 rounded-lg border border-violet-900/40 bg-violet-950/20">
-          {lastRun
-            ? `Last run: ${lastRun.roomCount} rooms (seed ${lastRun.seed}) at ${lastRun.createdAt}`
-            : 'No runs yet. Set params and generate — the dungeon is baked into /Game/Maps/ProcGenDungeon.'}
-        </div>
+        <>
+          <div className="text-xs px-3 py-2 rounded-lg border border-violet-900/40 bg-violet-950/20">
+            {/* A failed latest run must not read as "0 rooms generated". */}
+            {lastRun
+              ? lastRun.success
+                ? `Last run: ${lastRun.roomCount} rooms (seed ${lastRun.seed}) at ${lastRun.createdAt}`
+                : `Last run FAILED (seed ${lastRun.seed}) at ${lastRun.createdAt}: ${lastRun.failureReason || 'no reason reported'}`
+              : 'No runs yet. Set params and generate — the dungeon is baked into /Game/Maps/ProcGenDungeon.'}
+          </div>
+
+          <RunHistoryList
+            runs={runs}
+            describe={(run) => `${run.roomCount} rooms`}
+            onReuseSeed={(seed) => setSeedInput(String(seed))}
+            emptyText="No runs recorded yet. Every run — including a failed one — lands here with its seed."
+            testIdPrefix="dungeon-history"
+          />
+        </>
       )}
     </div>
   );

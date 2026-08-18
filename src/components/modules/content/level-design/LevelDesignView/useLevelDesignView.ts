@@ -149,11 +149,18 @@ export function useLevelDesignView() {
     accentColor: MODULE_COLORS.content,
   });
 
+  // The open document rides along so the run is a row LINKED to the design it
+  // was generated for, not an anonymous entry in a global ledger.
   const handleGenerateDungeon = useCallback((roomCount: number, seed: number) => {
     dungeonCli.execute(
-      TaskFactory.procgenDungeon('level-design', { roomCount, seed }, getAppOrigin(), 'Dungeon (UE)'),
+      TaskFactory.procgenDungeon(
+        'level-design',
+        { roomCount, seed, docId: activeDoc?.id ?? null },
+        getAppOrigin(),
+        'Dungeon (UE)',
+      ),
     );
-  }, [dungeonCli]);
+  }, [dungeonCli, activeDoc]);
 
   const scatterCli = useModuleCLI({
     moduleId: 'level-design',
@@ -164,9 +171,14 @@ export function useLevelDesignView() {
 
   const handleScatter = useCallback((density: number, seed: number) => {
     scatterCli.execute(
-      TaskFactory.scatterBiome('level-design', { density, seed }, getAppOrigin(), 'Scatter (UE)'),
+      TaskFactory.scatterBiome(
+        'level-design',
+        { density, seed, docId: activeDoc?.id ?? null },
+        getAppOrigin(),
+        'Scatter (UE)',
+      ),
     );
-  }, [scatterCli]);
+  }, [scatterCli, activeDoc]);
 
   // ── Review/Checklist CLI sessions (shared harness) ──
 

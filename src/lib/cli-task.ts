@@ -368,6 +368,8 @@ export interface ProcgenDungeonTask extends CLITask {
   type: 'procgen-dungeon';
   roomCount: number;
   seed: number;
+  /** The level design doc this run belongs to — persisted with the run row. */
+  docId?: number | null;
   appOrigin: string;
 }
 
@@ -379,6 +381,8 @@ export interface BiomeScatterTask extends CLITask {
   type: 'biome-scatter';
   density: number;
   seed: number;
+  /** The level design doc this run belongs to — persisted with the run row. */
+  docId?: number | null;
   appOrigin: string;
 }
 
@@ -688,7 +692,7 @@ export const TaskFactory = {
   /** Create a task that runs the parameterized build_procgen_dungeon.py via the editor */
   procgenDungeon(
     moduleId: SubModuleId,
-    params: { roomCount: number; seed: number },
+    params: { roomCount: number; seed: number; docId?: number | null },
     appOrigin: string,
     label: string,
   ): ProcgenDungeonTask {
@@ -699,6 +703,7 @@ export const TaskFactory = {
       label,
       roomCount: params.roomCount,
       seed: params.seed,
+      docId: params.docId ?? null,
       appOrigin,
     };
   },
@@ -726,7 +731,7 @@ export const TaskFactory = {
   /** Create a task that runs scatter_biome_ue.py via the editor */
   scatterBiome(
     moduleId: SubModuleId,
-    params: { density: number; seed: number },
+    params: { density: number; seed: number; docId?: number | null },
     appOrigin: string,
     label: string,
   ): BiomeScatterTask {
@@ -737,6 +742,7 @@ export const TaskFactory = {
       label,
       density: params.density,
       seed: params.seed,
+      docId: params.docId ?? null,
       appOrigin,
     };
   },
