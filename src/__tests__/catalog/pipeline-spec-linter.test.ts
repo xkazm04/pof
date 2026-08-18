@@ -487,6 +487,22 @@ describe('fleet spec linter', () => {
     expect(adopting.length, `only ${adopting.length}/${pipelines.length} pipelines compose a content invariant`).toBeGreaterThanOrEqual(INVARIANT_ADOPTION_FLOOR);
   });
 
+  // ── (l) StepSpec.copy is retired — authoring it makes a banner LESS honest ─
+  it('no step authors the retired StepSpec.copy (its signature cannot see the verdict)', () => {
+    const authored = steps.filter((s) => typeof s.spec.copy === 'function');
+    expect(
+      authored.map(
+        (s) =>
+          `${at(s)}: StepSpec.copy is RETIRED. It receives only the artifact \`data\`, never the graded ` +
+          `AcceptanceResult, so an authored why/suggestion structurally cannot name the checker's status ` +
+          `or its reason — while the derived fallback (steps/shared/genericFixCopy.ts) always does. ` +
+          `Authoring it makes this step's banner strictly LESS honest than the fallback it replaces. ` +
+          `For step-bespoke copy that CAN see the verdict, follow ITEM_STEP_COPY (steps/itemsSteps.ts), ` +
+          `which is applied inside the checker where the base verdict is in scope.`,
+      ),
+    ).toEqual([]);
+  });
+
   // ── (g′) gallery: view field = selection field = candidate payload key ─────
   it('every gallery step grades its selection field, and genCandidates project onto that same field', () => {
     const violations: string[] = [];

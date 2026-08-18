@@ -120,10 +120,14 @@ export const ARCHETYPE_VIEW_KINDS: Record<ArchetypeId, readonly ViewKind[]> = {
   custom: ['manifest'],
 };
 
-/** Per-step remediation copy: a plain-language cause (`why`), an optional suggested
- *  action (`suggestion`), and an optional corrective direction (`fixDirection`) that
- *  seeds a one-click "Produce fix". Optional on a StepSpec — ArchetypeStep derives a
- *  neutral, honest fallback from the checker result when a step supplies none. */
+/** Remediation copy for a non-passing acceptance: a plain-language cause (`why`), an
+ *  optional suggested action (`suggestion`), and the corrective direction (`fixDirection`)
+ *  a one-click "Produce fix" dispatches.
+ *
+ *  This is the RETURN type of the derived generic copy (`steps/shared/genericFixCopy.ts`),
+ *  which composes all three from the checker's own status + `reason` + this step's label
+ *  and archetype. It is no longer an authoring surface on a StepSpec — see `StepSpec.copy`
+ *  for why the per-step override was retired. */
 export interface StepFixCopy {
   why: string;
   suggestion?: string;
@@ -149,14 +153,27 @@ export interface StepSpec {
   produce: (entity: LabEntity, direction?: string) => StepOutput;
   /** Derives the acceptance result from the persisted artifact data. */
   accept: Checker;
-  /** Optional plain-language remediation copy for a non-passing acceptance. When
-   *  absent — as it is for every step today — ArchetypeStep falls back to the generic
-   *  copy derived from the checker result (status + optional reason) plus this step's
-   *  own label/archetype, which never invents catalog-specific content
-   *  (`steps/shared/genericFixCopy.ts`). Authoring `copy` here overrides the `why` and
-   *  `suggestion`; a `fixDirection` you omit or leave blank still falls through to
-   *  `defaultDirection` and then to the derived direction, so "Produce fix" can never
-   *  dispatch an empty instruction. */
+  /**
+   * RETIRED — do not author. Enforced by spec-linter rule (l).
+   *
+   * Zero of the registered steps ever used it, and the SIGNATURE is why: `copy` is handed
+   * only the artifact `data`, never the graded `AcceptanceResult`. So an authored `why` /
+   * `suggestion` structurally cannot name the checker's status or its own `reason`, while
+   * the derived fallback always does (`steps/shared/genericFixCopy.ts` composes
+   * `base.reason` verbatim). Authoring it therefore either makes a step's banner strictly
+   * LESS honest than the fallback it replaces, or duplicates the checker's cause-derivation
+   * in a second place that can drift out of step with the verdict it explains.
+   *
+   * Step-bespoke copy that does work already exists: the Items table
+   * (`steps/itemsSteps.ts` → `ITEM_STEP_COPY`, applied inside the checker where the base
+   * verdict is in scope). For everything else `fixDirectionFor` is the SINGLE source of a
+   * step's corrective direction. If a step genuinely needs bespoke copy, change this
+   * signature to take the `AcceptanceResult` first — as a deliberate act — rather than
+   * authoring against a shape that cannot see the verdict.
+   *
+   * Still declared only because `withGenericFixCopy` reads it; with rule (l) green that
+   * branch is provably dead and should be deleted the next time that file is touched.
+   */
   copy?: (data: Record<string, unknown>) => StepFixCopy;
   /** Optional L2 static (UE codebase-analysis) checks, run server/CLI-side against the UE root.
    *  Entity-aware because the symbol/row names derive from the entity. */
@@ -172,11 +189,22 @@ export interface StepSpec {
   genCandidates?: GenCandidatesSpec;
   /** Optional CLI direction default + note for the Produce panel. */
   produceNote?: string;
-  /** Optional seed direction for the Produce panel's text area, and the SECOND rung of
-   *  the "Produce fix" ladder (bespoke `copy.fixDirection` → this → the direction derived
-   *  from the failing checker). Authoring it is optional precisely because the derived
-   *  rung is always non-empty; author it when a step has a standing house instruction
-   *  that a corrective run should always carry. */
+  /**
+   * Optional seed direction for the Produce panel's text area, and — now that `copy` is
+   * retired — the FIRST rung of the "Produce fix" ladder (this → the direction derived from
+   * the failing checker by `fixDirectionFor`).
+   *
+   * KEPT, unlike `copy`, and the distinction is the signature: this is a plain string a step
+   * author writes deliberately, not a callback that must reason about a verdict it cannot
+   * see. It is legitimately usable — author it when a step has a standing house instruction
+   * every corrective run should carry.
+   *
+   * It is authored on ZERO steps today (verified 2026-08-18), and that is NOT a defect: the
+   * derived rung is always non-empty, so "Produce fix" can never dispatch an empty
+   * instruction, and an option nobody has needed yet is not a broken one. Do not mass-author
+   * placeholder directions to "adopt" it — a fabricated house instruction is worse than the
+   * derived one, which at least names the criterion and the checker's own reason.
+   */
   defaultDirection?: string;
   /** Engine powering this step's Produce (e.g. 'Claude', 'Tripo', 'Leonardo',
    *  'UE Python', 'Blender', 'Code') — surfaced on the /status health map, where it
