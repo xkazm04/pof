@@ -16,8 +16,10 @@ import {
   EMPTY_DIAGNOSES,
   EMPTY_PATTERNS,
 } from '@/stores/crashAnalyzerStore';
+import { MicroLabel } from '@/components/ui/MicroLabel';
 import { CrashHealthMap } from '../CrashHealthMap';
 import type { CrashSeverity } from '@/types/crash-analyzer';
+import { CRASH_HISTORY_LIMITS } from '@/types/crash-analyzer';
 import { ACCENT_ROSE, STATUS_ERROR, STATUS_WARNING, SEVERITY_TOKENS } from '@/lib/chart-colors';
 import { DURATION, EASE_OUT, motionSafe } from '@/lib/motion';
 import { SEVERITY_LABELS, CRASH_TYPE_LABELS, type ViewTab } from './constants';
@@ -72,6 +74,14 @@ export function CrashAnalyzerView() {
     }
     return result;
   }, [reports, searchQuery, severityFilter]);
+
+  // Demo vs observed. Counted over ALL reports, not the filtered view, so the
+  // statement above the list describes the crash set rather than the filter.
+  const importedCount = useMemo(
+    () => reports.filter((r) => r.source === 'imported').length,
+    [reports],
+  );
+  const sampleCount = reports.length - importedCount;
 
   // Severity counts for pill badges
   const severityCounts = useMemo(() => {
@@ -229,6 +239,19 @@ export function CrashAnalyzerView() {
                 activeIds={severityFilter}
                 onToggle={toggleSeverity}
               />
+            </div>
+
+            {/* The demo/real split, stated once above the list. Eight of these
+                rows ship with PoF; the rest are crashes actually observed in this
+                project and persisted server-side. Retention is bounded, and a
+                bounded record has to SAY it is bounded or it reads as complete. */}
+            <div data-testid="crash-provenance-summary">
+              <MicroLabel tone="muted" as="p">
+                {sampleCount} built-in sample {sampleCount === 1 ? 'crash' : 'crashes'} &middot;{' '}
+                {importedCount === 0
+                  ? 'no crashes imported from this project yet'
+                  : `${importedCount} imported from this project (kept: the ${CRASH_HISTORY_LIMITS.signatures} most recent crash signatures)`}
+              </MicroLabel>
             </div>
 
             {/* Real listbox: each CrashListItem is a focusable role=option that

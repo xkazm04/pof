@@ -58,6 +58,53 @@ export interface MachineState {
   isEditor: boolean;
 }
 
+/**
+ * Where a crash in the analyzer came from.
+ *
+ * `sample` is one of the eight built-in demo crashes that ship with PoF;
+ * `imported` is a crash actually observed in this project and persisted to
+ * `crash_history`. The distinction is load-bearing, not cosmetic: demo data
+ * standing in for a project's real crash history is the same overstatement class
+ * the rest of this module removes, so a crash must always declare which it is
+ * rather than defaulting into whichever reads better.
+ */
+export type CrashSource = 'sample' | 'imported';
+
+/**
+ * What a persisted crash is allowed to cost.
+ *
+ * Lives here rather than beside the DB code because the UI has to STATE the
+ * bound (a bounded record that does not say so reads as complete), and the UI
+ * cannot import the better-sqlite3 module to find it out.
+ */
+export const CRASH_HISTORY_LIMITS = {
+  /** Characters of raw log kept per crash (~64 KB). Excess is dropped with a marker. */
+  rawLogChars: 64_000,
+  /** Callstack frames kept per crash — a stack-overflow dump can carry thousands. */
+  frames: 200,
+  /** Distinct crash signatures retained; the least-recently-seen are pruned first. */
+  signatures: 200,
+} as const;
+
+/**
+ * The persisted "have I seen this before?" facts for an OBSERVED crash.
+ * Absent on built-in samples — they were never observed, so they have no history.
+ */
+export interface CrashHistoryMeta {
+  /** How many times this crash signature has been imported. */
+  occurrences: number;
+  /** Crash time of the earliest sighting (widens backwards if an older log is imported). */
+  firstSeenAt: string;
+  /** Crash time of the most recent sighting. */
+  lastSeenAt: string;
+  /** When PoF first recorded it — as opposed to when the crash happened. */
+  recordedAt: string;
+  /** ORIGINAL raw-log length in characters, before the stored copy was bounded. */
+  rawLogChars: number;
+  /** True when the stored raw log is shorter than the original. */
+  rawLogTruncated: boolean;
+}
+
 /** A parsed crash report */
 export interface CrashReport {
   id: string;
@@ -83,6 +130,17 @@ export interface CrashReport {
   rawLog: string;
   /** Whether this has been analyzed by AI */
   analyzed: boolean;
+  /**
+   * Built-in demo crash or a crash observed in this project. Required so no
+   * crash can reach the UI unlabelled — see {@link CrashSource}.
+   */
+  source: CrashSource;
+  /**
+   * Persisted sighting history. Present ONLY for `imported` crashes; a built-in
+   * sample has none, which is what stops demo data from displaying a fabricated
+   * "seen 3 times" record.
+   */
+  history?: CrashHistoryMeta;
 }
 
 /**

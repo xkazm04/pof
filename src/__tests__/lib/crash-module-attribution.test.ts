@@ -41,6 +41,7 @@ function crash(callstack: CallstackFrame[]): CrashReport {
     mappedModule: null,
     rawLog: '',
     analyzed: false,
+    source: 'imported',
   };
 }
 

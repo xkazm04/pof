@@ -47,6 +47,7 @@ const REPORT: CrashReport = {
   mappedModule: 'arpg-character',
   rawLog: 'raw',
   analyzed: true,
+  source: 'sample',
 };
 
 describe('CrashTimeMachine', () => {

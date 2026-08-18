@@ -77,6 +77,9 @@ export const SAMPLE_CRASHES: CrashReport[] = [
 [2026.02.14-22.15.33:456][  0]LogWindows: Error: UnrealEditor-MyGame!AARPGCharacterBase::ActivateAbility() [ARPGCharacterBase.cpp:234]
 [2026.02.14-22.15.33:456][  0]LogWindows: Error: UnrealEditor-MyGame!AARPGCharacterBase::HandleInputAction_Ability1() [ARPGCharacterBase.cpp:189]`,
     analyzed: false,
+    // Demo data. NEVER written to `crash_history` — a built-in sample must not
+    // be able to inflate the project's real, observed crash record.
+    source: 'sample',
   },
 
   /* ── 2. GAS ability during death flow ────────────────────────── */
@@ -105,6 +108,9 @@ export const SAMPLE_CRASHES: CrashReport[] = [
 [2026.02.14-21.42.17:891][  0]LogWindows: Error: [Callstack]
 [2026.02.14-21.42.17:891][  0]LogWindows: Error: UnrealEditor-MyGame!UARPGAbilitySystemComponent::OnDeathStarted() [ARPGAbilitySystemComponent.cpp:87]`,
     analyzed: false,
+    // Demo data. NEVER written to `crash_history` — a built-in sample must not
+    // be able to inflate the project's real, observed crash record.
+    source: 'sample',
   },
 
   /* ── 3. Null check missing on loot table ─────────────────────── */
@@ -130,6 +136,9 @@ export const SAMPLE_CRASHES: CrashReport[] = [
 [2026.02.14-20.08.44:123][  0]LogWindows: Error: UnrealEditor-MyGame!UARPGLootManager::RollLootTable() [ARPGLootManager.cpp:156]
 [2026.02.14-20.08.44:123][  0]LogWindows: Error: UnrealEditor-MyGame!AARPGEnemyCharacter::DropLoot() [ARPGEnemyCharacter.cpp:203]`,
     analyzed: false,
+    // Demo data. NEVER written to `crash_history` — a built-in sample must not
+    // be able to inflate the project's real, observed crash record.
+    source: 'sample',
   },
 
   /* ── 4. GC reference crash in inventory ──────────────────────── */
@@ -154,6 +163,9 @@ export const SAMPLE_CRASHES: CrashReport[] = [
 [2026.02.14-19.30.12:567][  0]LogWindows: Error: [Callstack]
 [2026.02.14-19.30.12:567][  0]LogWindows: Error: UnrealEditor-MyGame!UARPGInventoryComponent::GetItemAtSlot() [ARPGInventoryComponent.cpp:89]`,
     analyzed: false,
+    // Demo data. NEVER written to `crash_history` — a built-in sample must not
+    // be able to inflate the project's real, observed crash record.
+    source: 'sample',
   },
 
   /* ── 5. Save/load deserialization crash ──────────────────────── */
@@ -177,6 +189,9 @@ export const SAMPLE_CRASHES: CrashReport[] = [
 [2026.02.14-18.15.28:234][  0]LogWindows: Error: [Callstack]
 [2026.02.14-18.15.28:234][  0]LogWindows: Error: UnrealEditor-MyGame!UARPGSaveGame::DeserializeInventory() [ARPGSaveGame.cpp:203]`,
     analyzed: false,
+    // Demo data. NEVER written to `crash_history` — a built-in sample must not
+    // be able to inflate the project's real, observed crash record.
+    source: 'sample',
   },
 
   /* ── 6. Ensure failed — AI behavior tree ─────────────────────── */
@@ -199,6 +214,9 @@ export const SAMPLE_CRASHES: CrashReport[] = [
     rawLog: `[2026.02.14-17.50.55:789][  0]LogOutputDevice: Error: Ensure condition failed: BlackboardComp != nullptr
 [2026.02.14-17.50.55:789][  0]LogOutputDevice: Error: [File:BTTask_ARPGAttackTarget.cpp] [Line: 34]`,
     analyzed: false,
+    // Demo data. NEVER written to `crash_history` — a built-in sample must not
+    // be able to inflate the project's real, observed crash record.
+    source: 'sample',
   },
 
   /* ── 7. Stack overflow in recursive path ─────────────────────── */
@@ -223,6 +241,9 @@ export const SAMPLE_CRASHES: CrashReport[] = [
 [2026.02.13-23.20.11:999][  0]LogWindows: Error: [Callstack] (truncated due to stack overflow)
 [2026.02.13-23.20.11:999][  0]LogWindows: Error: UnrealEditor-MyGame!UARPGQuestManager::EvaluateQuestConditions() [ARPGQuestManager.cpp:145]`,
     analyzed: false,
+    // Demo data. NEVER written to `crash_history` — a built-in sample must not
+    // be able to inflate the project's real, observed crash record.
+    source: 'sample',
   },
 
   /* ── 8. Duplicate null ASC crash (pattern match with #1) ─────── */
@@ -247,6 +268,9 @@ export const SAMPLE_CRASHES: CrashReport[] = [
 [2026.02.14-23.01.09:111][  0]LogWindows: Error: [Callstack]
 [2026.02.14-23.01.09:111][  0]LogWindows: Error: UnrealEditor-MyGame!AARPGCharacterBase::ActivateAbility() [ARPGCharacterBase.cpp:234]`,
     analyzed: false,
+    // Demo data. NEVER written to `crash_history` — a built-in sample must not
+    // be able to inflate the project's real, observed crash record.
+    source: 'sample',
   },
 ];
 

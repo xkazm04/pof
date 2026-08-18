@@ -41,6 +41,7 @@ const REPORT: CrashReport = {
   mappedModule: 'arpg-character',
   rawLog: 'raw crash log text',
   analyzed: true,
+  source: 'sample',
 };
 
 const DIAGNOSIS: CrashDiagnosis = {

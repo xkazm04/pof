@@ -20,6 +20,12 @@ interface ImportOutcome {
    * the match was, rather than reporting a transfer as a hit.
    */
   matchedFrom: { sourceCrashId: string; similarity: number; strength: string } | null;
+  /**
+   * The persisted sighting record, when the crash was stored. `occurrences > 1`
+   * is the answer to "have I seen this before?" — the question the analyzer
+   * could not answer at all before crash history existed.
+   */
+  history: { occurrences: number; firstSeenAt: string } | null;
 }
 
 export function ImportPanel() {
@@ -53,6 +59,9 @@ export function ImportPanel() {
                 similarity: attached.match.similarity,
                 strength: attached.match.strength,
               }
+            : null,
+          history: report.history
+            ? { occurrences: report.history.occurrences, firstSeenAt: report.history.firstSeenAt }
             : null,
         });
         setImportError(null);
@@ -102,6 +111,16 @@ export function ImportPanel() {
               <p className="text-2xs text-emerald-400">
                 Parsed crash {outcome.id} — {outcome.typeLabel} ({outcome.severity})
               </p>
+              {/* "Seen before?" reported as a separate fact from the parse and
+                  from the diagnosis, because it is a separate fact — and it is
+                  the one that only became answerable once history persisted. */}
+              {outcome.history && (
+                <MicroLabel tone="muted" as="p" className="mt-0.5">
+                  {outcome.history.occurrences > 1
+                    ? `Seen before — sighting #${outcome.history.occurrences}, first seen ${new Date(outcome.history.firstSeenAt).toLocaleString()}.`
+                    : 'First time PoF has seen this crash — saved to crash history.'}
+                </MicroLabel>
+              )}
               {/* Stated separately from the parse result, because it is a separate
                   thing that either happened or did not. */}
               <MicroLabel tone="muted" as="p" className="mt-0.5">

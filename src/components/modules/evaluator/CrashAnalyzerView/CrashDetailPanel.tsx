@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { MicroLabel } from '@/components/ui/MicroLabel';
 import { DecoratedCrashText } from '@/components/ui/CrashTerm';
 import { SEVERITY_TOKENS } from '@/lib/chart-colors';
 import type { CrashReport, CrashDiagnosis } from '@/types/crash-analyzer';
@@ -64,6 +65,27 @@ export function CrashDetailPanel({
             <Layers className="w-3 h-3" />
             {report.mappedModule ?? <span className="italic">module not determined</span>}
           </span>
+        </div>
+        {/* Provenance + sighting record. A built-in sample says it is one and
+            carries NO history — it was never observed, so any "seen N times"
+            here would be invented. An imported crash reports the real count and
+            the date PoF first saw it. */}
+        <div className="mt-2" data-testid="crash-provenance">
+          {report.source === 'imported' ? (
+            <MicroLabel tone="muted" as="p">
+              Imported from this project ·{' '}
+              {report.history
+                ? `seen ${report.history.occurrences} ${report.history.occurrences === 1 ? 'time' : 'times'}, first seen ${new Date(report.history.firstSeenAt).toLocaleString()}`
+                : 'not yet recorded in crash history'}
+              {report.history?.rawLogTruncated
+                ? ` · raw log stored truncated (${report.history.rawLogChars.toLocaleString()} chars originally)`
+                : ''}
+            </MicroLabel>
+          ) : (
+            <MicroLabel tone="muted" as="p">
+              Built-in sample crash — demo data, not observed in this project.
+            </MicroLabel>
+          )}
         </div>
       </SurfaceCard>
 

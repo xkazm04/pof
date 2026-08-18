@@ -476,14 +476,18 @@ export function computeStats(reports: CrashReport[], patterns: CrashPattern[]): 
  */
 let cachedResult: CrashAnalyzerResult | null = null;
 
-export function analyzeAllCrashes(): CrashAnalyzerResult {
-  if (cachedResult) return cachedResult;
-
-  // Process each crash report
-  const processedReports = SAMPLE_CRASHES.map(findCulpritFrame).map((r) => ({
-    ...r,
-    analyzed: true,
-  }));
+/**
+ * Run the full analysis over an arbitrary set of crashes — the built-in samples,
+ * the crashes actually observed in this project (`crash_history`), or both.
+ *
+ * Patterns and stats are derived over whatever is passed, so a persisted crash
+ * counts toward `mostAffectedModule` and can form a recurring pattern together
+ * with a sample or another import. Nothing here decides WHICH crashes belong in
+ * the set; that is the caller's call, and the caller is the one that must keep
+ * demo data and observed data distinguishable (`CrashReport.source`).
+ */
+export function analyzeReports(reports: CrashReport[]): CrashAnalyzerResult {
+  const processedReports = reports.map(findCulpritFrame).map((r) => ({ ...r, analyzed: true }));
 
   // Resolve each report's diagnosis through the SAME signature matcher an
   // imported crash goes through. For the samples this reproduces the authored
@@ -494,18 +498,14 @@ export function analyzeAllCrashes(): CrashAnalyzerResult {
     .map((r) => resolveDiagnosis(r).diagnosis)
     .filter((d): d is CrashDiagnosis => d !== null);
 
-  // Detect patterns
   const patterns = detectPatterns(processedReports);
-
-  // Compute stats
   const stats = computeStats(processedReports, patterns);
 
-  cachedResult = {
-    reports: processedReports,
-    diagnoses,
-    patterns,
-    stats,
-  };
+  return { reports: processedReports, diagnoses, patterns, stats };
+}
+
+export function analyzeAllCrashes(): CrashAnalyzerResult {
+  cachedResult ??= analyzeReports(SAMPLE_CRASHES);
   return cachedResult;
 }
 
@@ -628,5 +628,7 @@ export function parseCrashLog(rawText: string): CrashReport | null {
     mappedModule: null,
     rawLog: rawText,
     analyzed: false,
+    // Observed, not shipped — this is a crash from the operator's own project.
+    source: 'imported',
   };
 }

@@ -45,11 +45,27 @@ export function CrashListItem({
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 mb-1">
+          <div className="flex flex-wrap items-center gap-1.5 mb-1">
             <SeverityBadge severity={report.severity} />
             <Badge variant="default">{CRASH_TYPE_LABELS[report.crashType]}</Badge>
             {report.mappedModule && (
               <span className="text-2xs text-text-muted">{report.mappedModule}</span>
+            )}
+            {/* Every row says whether it is a built-in demo crash or one observed
+                in this project. Without it the eight samples are indistinguishable
+                from real crash history — and they would be read as the project's. */}
+            <MicroLabel tone="muted" uppercase>
+              {report.source === 'imported' ? 'imported' : 'sample'}
+            </MicroLabel>
+            {/* "Have I seen this before?" answered in the triage list itself. */}
+            {report.history && report.history.occurrences > 1 && (
+              <MicroLabel
+                tone="muted"
+                mono
+                title={`First seen ${new Date(report.history.firstSeenAt).toLocaleString()}`}
+              >
+                seen {report.history.occurrences}&times;
+              </MicroLabel>
             )}
           </div>
           <p className="text-xs text-text truncate">{report.errorMessage}</p>
