@@ -19,12 +19,23 @@ export function NewHome() {
   usePofBridge();
   const isSetupComplete = useProjectStore((s) => s.isSetupComplete);
 
-  // Wait for Zustand persist to rehydrate from localStorage before gating — the
-  // SSR snapshot sees the default (false); the client may rehydrate to true. The
-  // guard avoids flashing the wizard over a loaded project on first paint.
+  // Wait for Zustand persist to ACTUALLY finish rehydrating before gating on
+  // isSetupComplete — subscribe to the persist middleware's onFinishHydration and
+  // read the real hasHydrated() flag, exactly as the legacy AppShell does, so the
+  // two shells guard the same store the same way.
+  //
+  // This previously used the repo's SSR/client-split idiom (no-op subscribe,
+  // client snapshot hard-coded to `true`), whose comment claimed a persist wait it
+  // never performed. No behaviour changes here: projectStore persists through
+  // createJSONStorage(() => localStorage), which is SYNCHRONOUS, so hasHydrated()
+  // is already true on the first client render and no skeleton flash is added.
+  // That synchronicity is load-bearing for the OLD code, not this one — if
+  // persistence ever moves to an async backend (IndexedDB, a server store), this
+  // guard keeps working while the hard-coded `true` would have flashed the
+  // SetupWizard over a loaded project.
   const hydrated = useSyncExternalStore(
-    () => () => {},
-    () => true,
+    (onStoreChange) => useProjectStore.persist.onFinishHydration(onStoreChange),
+    () => useProjectStore.persist.hasHydrated(),
     () => false,
   );
 
