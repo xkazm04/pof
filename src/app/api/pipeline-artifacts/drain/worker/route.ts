@@ -1,7 +1,9 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { getOriginFromRequest } from '@/lib/constants';
-import { startDrainWorker, stopDrainWorker, getWorkerStatus, parseDrainFilter } from '@/lib/test-gate-runner';
+import {
+  startDrainWorker, stopDrainWorker, getWorkerStatus, parseDrainFilter, MIN_WORKER_INTERVAL_MS,
+} from '@/lib/test-gate-runner';
 
 /** GET /api/pipeline-artifacts/drain/worker → current worker status. */
 export async function GET() {
@@ -27,7 +29,11 @@ export async function POST(req: NextRequest) {
 
     const filter = parseDrainFilter((k) => body[k]);
     return apiSuccess(startDrainWorker({
-      intervalMs: Math.max(5_000, body.intervalMs ?? 30_000),
+      // A start through this route is always an OPERATOR action — the boot-time
+      // auto-start in instrumentation.ts stamps `autostart` instead, so the status
+      // read can never present a background worker as something a human asked for.
+      origin: 'operator',
+      intervalMs: Math.max(MIN_WORKER_INTERVAL_MS, body.intervalMs ?? 30_000),
       ...(body.cooldownMs != null ? { cooldownMs: body.cooldownMs } : {}),
       ...(Object.keys(filter).length ? { filter } : {}),
       executor: {

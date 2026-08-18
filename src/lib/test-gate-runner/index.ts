@@ -3,7 +3,11 @@ export { collectDeferred, drainOne, applyVerdict, drainJobs, drainAll, parseTier
 export { settleGatesFromTestRun, gatesWaitingOnTest, type SettleOutcome, type SettledGate } from './settleFromTest';
 export { readEvidence, buildEvidenceAudit, type EvidenceAudit, type EvidenceAuditFilter, type GateEvidenceRow } from './evidenceAudit';
 export { DRAIN_REQUEST_KEYS, parseDrainRequest, type DrainRequest, type DrainRequestKey } from './drainRequest';
-export { startDrainWorker, stopDrainWorker, getWorkerStatus, runDrainTick, type WorkerConfig, type WorkerStatus } from './worker';
+export {
+  startDrainWorker, stopDrainWorker, getWorkerStatus, runDrainTick,
+  resolveAutostartConfig, AUTOSTART_ENV, AUTOSTART_DEFAULT_INTERVAL_MS, MIN_WORKER_INTERVAL_MS,
+  type WorkerConfig, type WorkerStatus, type WorkerOrigin, type AutostartDecision,
+} from './worker';
 export { parseTestName } from './parse';
 export { makeBridgeExecutor, interpretAutomationResult, automationOutcome, type AutomationOutcome, type BridgeExecutorOptions } from './bridgeExecutor';
 export { makeSpawnExecutor, buildAutomationArgs, parseAbslogVerdict, type SpawnExecutorOptions } from './spawnExecutor';
