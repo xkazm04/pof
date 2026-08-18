@@ -176,6 +176,17 @@ export const ENGINE_CLASS: Record<string, EngineClass> = {
   'UE Runtime': 'runtime',
   Blender: 'tooling',
   VLM: 'tooling',
+  // Audited `trueEngine` strings from step-facts.json that were absent here and therefore fell
+  // through to the trusted `llm` bucket — 95 audited steps presented as trusted LLM work
+  // (measured 2026-08-18). `Leonardo` was mapped but the audited string is the fuller
+  // "Leonardo (Lucid Origin)", so the shorter key never matched.
+  'Leonardo (Lucid Origin)': 'gen2d',
+  'Code (deterministic)': 'code',
+  // The packaging verifier rebuilds the package from sibling artifacts and grades it from DISK
+  // TRUTH (real staged+hashed files) — deterministic code, no model and no UE runtime.
+  // See src/lib/catalog/acceptance/packagingVerify.ts.
+  'Packaging engine': 'code',
+  'UE test': 'runtime',
 };
 
 /** Classes whose L0–L2 pass is credible without a gate. `unaudited` is deliberately absent:
@@ -240,7 +251,12 @@ export function resolveEngine(catalogId: string, step: StepMeta, fact?: StepFact
 }
 
 export function engineClass(engine: string): EngineClass {
-  return ENGINE_CLASS[engine] ?? 'llm';
+  // An engine name we do not recognise is UNKNOWN, not trusted. The old `?? 'llm'` put every
+  // unrecognised string into `TRUSTED_CLASSES`, so uncertainty was biased toward the highest
+  // credibility bucket — the same defect `inferEngine`'s fallback had, one seam down and with a
+  // far larger blast radius, because it caught AUDITED engines whose spelling had drifted from
+  // this map. Adding a new engine now requires adding it here, which is the point.
+  return ENGINE_CLASS[engine] ?? 'unaudited';
 }
 
 export interface StepCell {
