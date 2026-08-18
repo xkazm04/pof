@@ -12,6 +12,9 @@ export function CLIBottomPanel() {
   const maximizeTab = useCLIPanelStore((s) => s.maximizeTab);
   const minimizeTab = useCLIPanelStore((s) => s.minimizeTab);
   const navigateToModule = useNavigationStore((s) => s.navigateToModule);
+  // The module the user is LOOKING AT — same rule as the pane ModuleRenderer
+  // shows, so "already viewing this session's module" is judged against what is
+  // on screen rather than against a category the sub-module pane is covering.
   const activeModuleId = useActiveModuleId();
 
   if (tabOrder.length === 0) return null;

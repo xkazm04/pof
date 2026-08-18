@@ -54,7 +54,10 @@ export function ModuleRenderer() {
 
   const activeModuleId = useActiveModuleId();
 
-  // Show inline terminal only when the maximized tab belongs to the current module
+  // Show inline terminal only when the maximized tab belongs to the module the
+  // user is LOOKING AT. `useActiveModuleId` now resolves that through the same
+  // `resolveVisibleModule` rule as `currentActiveId` below, so this attribution
+  // and the pane visibility can no longer disagree inside this one component.
   const maximizedTabId = useCLIPanelStore((s) => s.maximizedTabId);
   const maximizedSession = useCLIPanelStore((s) =>
     s.maximizedTabId ? s.sessions[s.maximizedTabId] : null
