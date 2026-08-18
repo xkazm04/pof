@@ -1,4 +1,5 @@
 import { logger } from '@/lib/logger';
+import { ambiguousMatchDetail, attributeUniquely } from '@/lib/ue-automation/abslog';
 import type { GateEvidence } from '@/types/observation';
 import type { GateExecutor, GateJob, GateVerdict } from './types';
 
@@ -32,12 +33,18 @@ export interface BridgeExecutorOptions {
  * `{results:[{testId,status:"passed"|"failed",...}]}` (status is binary). A top-level
  * `status` of "accepted"/"running" is the non-terminal poll state of the async fallback.
  * `matchName` correlates the results array to our test (the recorded testId may embed the
- * automation name). Exported pure for unit tests.
+ * automation name) — and that correlation must be UNIQUE. UE registers map-based tests under
+ * the map/actor label, so one requested leaf can be a substring of several registered paths;
+ * crediting an arbitrary one of them would attribute ANOTHER test's pass or fail to this gate,
+ * the only false-verdict path in the runner. Uniqueness is decided by the shared
+ * `attributeUniquely` (the same rule the abslog leaf-scoping path uses, so the two cannot
+ * drift), and a collision is reported as `ambiguous` — the caller must park the gate
+ * `deferred`, never pass and never fail. Exported pure for unit tests.
  */
 export function interpretAutomationResult(
   data: unknown,
   matchName?: string,
-): { terminal: boolean; status?: 'pass' | 'fail'; detail: string; testId?: string } {
+): { terminal: boolean; status?: 'pass' | 'fail'; detail: string; testId?: string; ambiguous?: boolean } {
   if (data == null || typeof data !== 'object') {
     return { terminal: false, detail: 'no result payload' };
   }
@@ -52,10 +59,23 @@ export function interpretAutomationResult(
       : all;
     // matchName given but not yet recorded → keep polling (not terminal).
     if (!matched.length) return { terminal: false, detail: matchName ? 'result not recorded yet' : 'no results yet' };
+    let attributed: string | undefined;
+    if (matchName) {
+      // Correlation must resolve to ONE recorded test. Two DIFFERENT registered tests both
+      // containing the requested name is a collision we cannot resolve here — refuse to
+      // attribute either one (the caller turns this into a deferred wait naming the ids).
+      // The same testId recorded twice is one identity, not a collision.
+      const attribution = attributeUniquely(matched.map((r) => r.testId as string));
+      if (attribution.kind === 'ambiguous') {
+        return { terminal: false, ambiguous: true, detail: ambiguousMatchDetail(matchName, attribution.ids) };
+      }
+      if (attribution.kind === 'none') return { terminal: false, detail: 'result not recorded yet' };
+      attributed = attribution.id;
+    }
     const failed = matched.filter((r) => r.status !== 'passed');
     return failed.length
-      ? { terminal: true, status: 'fail', detail: `${failed.length} failed / ${matched.length}` }
-      : { terminal: true, status: 'pass', detail: `${matched.length} passed` };
+      ? { terminal: true, status: 'fail', detail: `${failed.length} failed / ${matched.length}`, ...(attributed ? { testId: attributed } : {}) }
+      : { terminal: true, status: 'pass', detail: `${matched.length} passed`, ...(attributed ? { testId: attributed } : {}) };
   }
 
   // POST run-automation — synchronous top-level verdict { status, testId }. Any other
@@ -99,6 +119,20 @@ export function automationOutcome(testName: string, payload: unknown): Automatio
     };
   }
   const interp = interpretAutomationResult(payload, testName);
+  // An AMBIGUOUS correlation is terminal in the only way that is honest: polling cannot break
+  // a name collision, and inheriting either candidate's status would be a false verdict. The
+  // gate parks `deferred` with the colliding ids NAMED, so the author can disambiguate the
+  // declared test name — the same "ran but could not decide" bucket as `not_found`.
+  if (interp.ambiguous) {
+    return {
+      kind: 'verdict',
+      verdict: {
+        status: 'deferred',
+        detail: `${testName}: ${interp.detail}`,
+        evidence: { kind: 'bridge', at, markers: [interp.detail] },
+      },
+    };
+  }
   if (!interp.terminal || !interp.status) {
     return { kind: 'pending', detail: interp.detail, ...(interp.testId ? { testId: interp.testId } : {}) };
   }

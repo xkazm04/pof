@@ -91,6 +91,41 @@ export function readAbslogFacts(log: string): AbslogFacts {
   };
 }
 
+/**
+ * The ONE attribution rule, shared by BOTH correlation paths so they cannot drift:
+ *  - `scopeAbslogPerTest` below (a leaf marker may only be credited to its dotted owner when
+ *    that leaf has exactly ONE owner in the requested batch), and
+ *  - the bridge executor's results-array correlation (`interpretAutomationResult`), where a
+ *    requested name may match several RECORDED testIds.
+ *
+ * A candidate set may be credited only when it resolves to exactly ONE identity: zero →
+ * unobserved; MORE THAN ONE → `ambiguous`, which must degrade to an honest deferred wait —
+ * never a pass and never a fail. A false verdict is the worst thing this subsystem can
+ * produce (a step reads as gate-verified when another test's result was credited to it);
+ * an unresolved one only costs another run. Duplicate spellings of the SAME identity are
+ * one identity, not a collision. Pure.
+ */
+export type TestAttribution =
+  | { kind: 'unique'; id: string }
+  | { kind: 'none' }
+  | { kind: 'ambiguous'; ids: string[] };
+
+export function attributeUniquely(candidateIds: readonly string[]): TestAttribution {
+  const ids = [...new Set(candidateIds.filter((s): s is string => typeof s === 'string' && s.trim().length > 0))];
+  if (ids.length === 0) return { kind: 'none' };
+  if (ids.length === 1) return { kind: 'unique', id: ids[0] };
+  return { kind: 'ambiguous', ids };
+}
+
+/** Shared vocabulary for a refused attribution, so every surface names a collision the same way. */
+export const AMBIGUOUS_MATCH_DETAIL = 'ambiguous test match — no verdict attributed';
+
+/** The collision sentence, NAMING the colliding ids (bounded) so the operator can disambiguate. */
+export function ambiguousMatchDetail(requested: string, ids: readonly string[]): string {
+  const shown = ids.slice(0, 4).join(', ');
+  return `${AMBIGUOUS_MATCH_DETAIL}: "${requested}" matches ${ids.length} recorded tests (${shown}${ids.length > 4 ? ', …' : ''})`;
+}
+
 /** A per-test verdict scoped from a combined abslog. `none` = no per-test observation. */
 export type PerTestStatus = 'pass' | 'fail' | 'none';
 export interface PerTestAbslog {
@@ -131,19 +166,23 @@ export function scopeAbslogPerTest(
   // UE marker lines often carry only the LEAF test name (`Name={NPCConfig}`) while artifacts
   // declare the full dotted spec (`PoF.CharacterVael.NPCConfig`). A leaf may attribute to its
   // dotted owner ONLY when that leaf is unique within the requested batch — two tests sharing
-  // a leaf stay unobserved (deferred) rather than risk mis-crediting either.
+  // a leaf stay unobserved (deferred) rather than risk mis-crediting either. The uniqueness
+  // decision itself is `attributeUniquely` above, shared with the bridge correlation path.
   const leafOf = (n: string) => n.slice(n.lastIndexOf('.') + 1);
-  const leafCounts = new Map<string, number>();
+  const leafOwners = new Map<string, string[]>();
   for (const n of testNames) {
-    const leaf = leafOf(n.toLowerCase());
-    leafCounts.set(leaf, (leafCounts.get(leaf) ?? 0) + 1);
+    const lower = n.toLowerCase();
+    const leaf = leafOf(lower);
+    const owners = leafOwners.get(leaf);
+    if (owners) owners.push(lower);
+    else leafOwners.set(leaf, [lower]);
   }
 
   const out = new Map<string, PerTestAbslog>();
   for (const name of testNames) {
     const lc = name.toLowerCase();
     const leaf = leafOf(lc);
-    const leafUnique = leafCounts.get(leaf) === 1;
+    const leafUnique = attributeUniquely(leafOwners.get(leaf) ?? []).kind === 'unique';
     let sawPass = false;
     let sawFail = false;
     let mentioned = false;
