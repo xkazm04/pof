@@ -1,7 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import { UI_TIMEOUTS } from '@/lib/constants';
+import { useEntityCommitBuffer } from '@/hooks/useEntityCommitBuffer';
 
 export interface DebouncedCommit<T> {
   /** What the control renders: the local draft while one exists, else the server value. */
@@ -19,11 +20,24 @@ export interface DebouncedCommit<T> {
 }
 
 /**
+ * A single field's value, boxed so the buffer's doc/patch types work for a
+ * primitive `T` (a bare `null`/`0`/`''` would be indistinguishable from "no
+ * record open").
+ */
+type Boxed<T> = { v: T };
+
+const applyBox = <T,>(_base: Boxed<T>, patch: Boxed<T>): Boxed<T> => patch;
+const foldBox = <T,>(_prev: Boxed<T> | null, next: Boxed<T>): Boxed<T> => next;
+
+/**
  * Local-first field editing: every keystroke used to fire a PUT plus a full
  * refetch of every audio scene. This holds the edit in a local draft, commits
  * ONCE per typing pause, and — crucially — only drops the draft when the commit
  * RESOLVES, so the value never flickers back to the round-trip-stale server copy
  * and a failed write leaves the user's text on screen instead of erasing it.
+ *
+ * The single-field face of the shared `useEntityCommitBuffer` (which owns the
+ * stage/debounce/commit engine and its ordering + failure guarantees).
  *
  * `commit` must reject on failure (see `useAudioScene.commitDoc`); a promise that
  * resolves is taken as "the server has it now".
@@ -37,47 +51,26 @@ export function useDebouncedCommit<T>(
   commit: (next: T) => void | Promise<unknown>,
   delay: number = UI_TIMEOUTS.textEditDebounce,
 ): DebouncedCommit<T> {
-  const [draft, setDraft] = useState<{ v: T } | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const seq = useRef(0);
+  const base = useMemo<Boxed<T>>(() => ({ v: serverValue }), [serverValue]);
 
-  const run = useCallback(async (next: T) => {
-    const mine = ++seq.current;
-    setError(null);
-    try {
-      await commit(next);
-      // A newer edit landed while this was in flight — it owns the draft now.
-      if (seq.current === mine) setDraft(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save the change.');
-    }
-  }, [commit]);
+  const write = useCallback(async (patch: Boxed<T>) => { await commit(patch.v); }, [commit]);
 
-  const onChange = useCallback((next: T) => {
-    setDraft({ v: next });
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => {
-      timer.current = null;
-      void run(next);
-    }, delay);
-  }, [run, delay]);
+  const { doc, isDirty, saveError, stageDebounced, retry, dismissError } =
+    useEntityCommitBuffer<Boxed<T>, Boxed<T>>({
+      base,
+      apply: applyBox,
+      fold: foldBox,
+      commit: write,
+      debounceMs: delay,
+    });
 
-  const retry = useCallback(() => {
-    if (draft) void run(draft.v);
-  }, [draft, run]);
-
-  const dismissError = useCallback(() => setError(null), []);
-
-  useEffect(() => () => {
-    if (timer.current) clearTimeout(timer.current);
-  }, []);
+  const onChange = useCallback((next: T) => { stageDebounced({ v: next }); }, [stageDebounced]);
 
   return {
-    value: draft ? draft.v : serverValue,
+    value: doc ? doc.v : serverValue,
     onChange,
-    isPending: draft !== null,
-    error,
+    isPending: isDirty,
+    error: saveError,
     retry,
     dismissError,
   };

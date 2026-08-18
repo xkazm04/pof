@@ -1,9 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useRef } from 'react';
 import type { LevelDesignDocument, UpdateDocPayload } from '@/types/level-design';
-import { UI_TIMEOUTS } from '@/lib/constants';
-import { useIsMounted } from '@/hooks/useIsMounted';
+import { useEntityCommitBuffer } from '@/hooks/useEntityCommitBuffer';
 import type { Result } from '@/types/result';
 
 /** Everything a level-design PUT can carry, minus the row id. */
@@ -45,159 +44,79 @@ export interface DocCommitBuffer {
   dismissError: () => void;
 }
 
-/**
- * How long a typed edit rests before it is written. Sourced from the shared
- * timing table so it is tuned with the rest of the app's debounces, never as a
- * magic number at the call site.
- */
-const TEXT_COMMIT_DEBOUNCE_MS = UI_TIMEOUTS.textEditDebounce;
-
-const EMPTY_PATCH: DocPatch = {};
-
-type PendingEntry = { docId: number; patch: DocPatch } | null;
-
-/** The buffered patch for `docId`, or an empty patch when it belongs to another doc. */
-function patchFor(entry: PendingEntry, docId: number): DocPatch {
-  return entry && entry.docId === docId ? entry.patch : EMPTY_PATCH;
-}
+const applyPatch = (doc: LevelDesignDocument, patch: DocPatch): LevelDesignDocument => ({ ...doc, ...patch });
+const foldPatch = (prev: DocPatch | null, next: DocPatch): DocPatch => ({ ...(prev ?? {}), ...next });
+const isEmptyPatch = (patch: DocPatch): boolean => Object.keys(patch).length === 0;
 
 /**
- * Commits, not keystrokes.
+ * The level-design face of the shared `useEntityCommitBuffer`.
  *
  * Every level-design edit used to be a PUT + a full re-GET: a node drag wrote
  * ~60 times a second and a typed sentence wrote once per character, each round
  * trip blanking the editor and re-echoing a controlled value back into the
- * textarea (dropped characters, lost focus).
- *
- * This buffer splits the two halves of an edit:
- *   - the LOCAL half is instant and unconditional (`stage`) — the UI renders
- *     `baseDoc` merged with the buffered patch, so nothing ever lags the cursor;
- *   - the REMOTE half happens on a real commit boundary — mouseup, a click, a
- *     typing pause, blur, switching documents, or unmount.
- *
- * A failed commit KEEPS the buffer (the user's work stays on screen and stays
- * editable) and reports `saveError` for a visible retry, instead of the old
- * silent `console.error` + revert-on-next-refetch.
+ * textarea (dropped characters, lost focus). The shared buffer supplies the
+ * stage/debounce/commit engine; this adapter supplies the two level-design
+ * specifics — the `Result`-returning PUT (which must become a rejection so a
+ * failure is distinguishable from a save) and the one-flip-per-commit
+ * `doc-ahead` escalation.
  */
 export function useDocCommitBuffer({ baseDoc, updateDoc }: UseDocCommitBufferArgs): DocCommitBuffer {
-  const isMounted = useIsMounted();
-
-  const [pending, setPending] = useState<PendingEntry>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-
-  // Mirror of `pending` readable from timers/callbacks without re-subscribing.
-  const pendingRef = useRef<PendingEntry>(null);
-  // Bumped by every stage; lets a completed commit tell "nothing changed while
-  // I was in flight" (clear the buffer) from "a newer edit landed" (keep it).
-  const stageSeqRef = useRef(0);
   const marksDocAheadRef = useRef(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const writePending = useCallback((next: PendingEntry) => {
-    pendingRef.current = next;
-    stageSeqRef.current++;
-    if (isMounted()) setPending(next);
-  }, [isMounted]);
-
-  const clearTimer = useCallback(() => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
+  // One flip per committed change. An explicit syncStatus in the patch (e.g. the
+  // codegen callback marking the doc `synced`) always wins over the escalation.
+  const finalize = useCallback((patch: DocPatch, doc: LevelDesignDocument): DocPatch => {
+    if (patch.syncStatus === undefined && marksDocAheadRef.current && doc.syncStatus === 'synced') {
+      return { ...patch, syncStatus: 'doc-ahead' };
     }
+    return patch;
+  }, []);
+
+  const write = useCallback(async (patch: DocPatch, doc: LevelDesignDocument) => {
+    const result = await updateDoc({ id: doc.id, ...patch });
+    // The buffer treats a resolve as "the server has it"; a failed PUT must reject.
+    if (!result.ok) throw new Error(result.error);
+  }, [updateDoc]);
+
+  const onCommitted = useCallback(() => { marksDocAheadRef.current = false; }, []);
+
+  const {
+    doc, isDirty, isSaving, saveError,
+    stage: stageBuffer,
+    stageDebounced: stageDebouncedBuffer,
+    commit: commitBuffer,
+    flush, retry, dismissError,
+  } = useEntityCommitBuffer<LevelDesignDocument, DocPatch>({
+    base: baseDoc,
+    entityId: baseDoc?.id ?? null,
+    apply: applyPatch,
+    fold: foldPatch,
+    isEmpty: isEmptyPatch,
+    finalize,
+    commit: write,
+    onCommitted,
+    flushOnUnmount: true,
+    errorMessage: 'Could not save the document.',
+  });
+
+  const remember = useCallback((opts?: CommitOptions) => {
+    if (opts?.marksDocAhead) marksDocAheadRef.current = true;
   }, []);
 
   const stage = useCallback((patch: DocPatch, opts?: CommitOptions) => {
-    if (!baseDoc) return;
-    if (opts?.marksDocAhead) marksDocAheadRef.current = true;
-    writePending({ docId: baseDoc.id, patch: { ...patchFor(pendingRef.current, baseDoc.id), ...patch } });
-  }, [baseDoc, writePending]);
-
-  const commitNow = useCallback(async (extra?: DocPatch, opts?: CommitOptions) => {
-    clearTimer();
-    if (!baseDoc) return;
-    if (opts?.marksDocAhead) marksDocAheadRef.current = true;
-
-    const merged: DocPatch = { ...patchFor(pendingRef.current, baseDoc.id), ...(extra ?? EMPTY_PATCH) };
-    if (Object.keys(merged).length === 0) return;
-
-    // One flip per committed change. An explicit syncStatus in the patch (e.g. the
-    // codegen callback marking the doc `synced`) always wins over the escalation.
-    if (merged.syncStatus === undefined && marksDocAheadRef.current && baseDoc.syncStatus === 'synced') {
-      merged.syncStatus = 'doc-ahead';
-    }
-
-    writePending({ docId: baseDoc.id, patch: merged });
-    const seqAtCommit = stageSeqRef.current;
-
-    if (isMounted()) {
-      setIsSaving(true);
-      setSaveError(null);
-    }
-
-    const result = await updateDoc({ id: baseDoc.id, ...merged });
-    if (!isMounted()) return;
-
-    setIsSaving(false);
-    if (result.ok) {
-      marksDocAheadRef.current = false;
-      // Nothing was staged while the write was in flight → the server copy is now
-      // authoritative and the overlay can go. Otherwise keep the (cumulative)
-      // buffer; its own commit boundary will send it.
-      if (stageSeqRef.current === seqAtCommit) writePending(null);
-    } else {
-      setSaveError(result.error);
-    }
-  }, [baseDoc, clearTimer, isMounted, updateDoc, writePending]);
-
-  const commit = useCallback((patch?: DocPatch, opts?: CommitOptions) => {
-    void commitNow(patch, opts);
-  }, [commitNow]);
-
-  // Timers fire long after the render that scheduled them — always call the
-  // freshest commit so the write targets the currently open document.
-  const commitRef = useRef(commitNow);
-  useEffect(() => { commitRef.current = commitNow; });
+    remember(opts);
+    stageBuffer(patch);
+  }, [remember, stageBuffer]);
 
   const stageDebounced = useCallback((patch: DocPatch, opts?: CommitOptions) => {
-    stage(patch, opts);
-    clearTimer();
-    timerRef.current = setTimeout(() => {
-      timerRef.current = null;
-      void commitRef.current();
-    }, TEXT_COMMIT_DEBOUNCE_MS);
-  }, [stage, clearTimer]);
+    remember(opts);
+    stageDebouncedBuffer(patch);
+  }, [remember, stageDebouncedBuffer]);
 
-  const flush = useCallback(() => {
-    if (!timerRef.current && !pendingRef.current) return;
-    void commitRef.current();
-  }, []);
+  const commit = useCallback((patch?: DocPatch, opts?: CommitOptions) => {
+    remember(opts);
+    commitBuffer(patch);
+  }, [remember, commitBuffer]);
 
-  // Leaving the module must not silently drop a buffered edit. The state writes
-  // inside commitNow are already mount-guarded, so this is a write-only flush.
-  const flushRef = useRef(flush);
-  useEffect(() => { flushRef.current = flush; });
-  useEffect(() => () => { flushRef.current(); }, []);
-
-  const doc = useMemo(() => {
-    if (!baseDoc) return null;
-    if (!pending || pending.docId !== baseDoc.id) return baseDoc;
-    return { ...baseDoc, ...pending.patch };
-  }, [baseDoc, pending]);
-
-  const retry = useCallback(() => { void commitNow(); }, [commitNow]);
-  const dismissError = useCallback(() => setSaveError(null), []);
-
-  return {
-    doc,
-    isDirty: pending !== null && pending.docId === baseDoc?.id,
-    isSaving,
-    saveError,
-    stage,
-    stageDebounced,
-    commit,
-    flush,
-    retry,
-    dismissError,
-  };
+  return { doc, isDirty, isSaving, saveError, stage, stageDebounced, commit, flush, retry, dismissError };
 }

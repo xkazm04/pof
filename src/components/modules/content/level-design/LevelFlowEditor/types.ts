@@ -1,6 +1,6 @@
 import type { RoomNode, RoomConnection } from '@/types/level-design';
 import type { PacingFinding } from '@/lib/level-design/pacing-linter';
-import type { EditCommitMode } from '../editCommitMode';
+import type { EditCommitMode } from '@/hooks/useEntityCommitBuffer';
 
 export interface LevelFlowEditorProps {
   rooms: RoomNode[];

@@ -2,7 +2,7 @@
 
 import { ChevronDown, ChevronRight, Plus, Trash2 } from 'lucide-react';
 import type { SpawnEntry } from '@/types/level-design';
-import type { EditCommitMode } from '../editCommitMode';
+import type { EditCommitMode } from '@/hooks/useEntityCommitBuffer';
 
 interface SpawnEntriesPanelProps {
   spawnEntries: SpawnEntry[];

@@ -5,7 +5,7 @@ import {
   FileCode, ChevronDown, ChevronRight, Zap,
 } from 'lucide-react';
 import type { RoomNode, PacingCurve, SpawnEntry } from '@/types/level-design';
-import type { EditCommitMode } from '../editCommitMode';
+import type { EditCommitMode } from '@/hooks/useEntityCommitBuffer';
 import { ROOM_TYPE_CONFIG, ALL_ROOM_TYPES, ALL_PACING, ALL_DIFFICULTIES, DIFFICULTY_COLORS } from './constants';
 import { SpawnEntriesPanel } from './SpawnEntriesPanel';
 

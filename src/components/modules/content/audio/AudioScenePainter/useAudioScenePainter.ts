@@ -7,9 +7,14 @@ import {
   viewportRectInContent, unionBounds, minimapProjection, minimapToContent, panToCenter,
 } from '@/lib/audio-scene-viewport';
 import { useElementSize } from '@/hooks/useElementSize';
+import { useEntityCommitBuffer } from '@/hooks/useEntityCommitBuffer';
 import { MINIMAP_W, MINIMAP_H, ZONE_COLORS } from './constants';
 import { findContainingZone } from './helpers';
 import type { AudioScenePainterProps, PaintMode, DrawState, SceneDraft } from './types';
+
+/** The painter's "patch" IS the whole scene — a staged frame replaces the last. */
+const applyScene = (_base: SceneDraft, patch: SceneDraft): SceneDraft => patch;
+const foldScene = (_prev: SceneDraft | null, next: SceneDraft): SceneDraft => next;
 
 export function useAudioScenePainter({
   zones,
@@ -38,74 +43,57 @@ export function useAudioScenePainter({
   // ── Optimistic commit buffer ──
   // A drag/resize used to call `onUpdateZones` on EVERY mousemove: one PUT + one
   // full refetch per event, and the refetch's `isLoading` unmounted this whole
-  // subtree mid-gesture. Now a gesture only ever writes to `draft` (pure local
-  // state, zero network) and commits ONCE on mouseup.
+  // subtree mid-gesture. Now a gesture only ever stages into the shared buffer
+  // (pure local state, zero network) and commits ONCE on mouseup.
   //
-  // `draft` is the render source of truth while set; it is cleared only when a
-  // commit SUCCEEDS, so the props (which arrive a round-trip later) never make the
-  // canvas snap back. When a commit FAILS the draft is deliberately retained — the
-  // user's gesture outlives the network — and `commitError` offers a retry.
-  const [draft, setDraft] = useState<SceneDraft | null>(null);
-  const [commitError, setCommitError] = useState<string | null>(null);
-  const [isCommitting, setIsCommitting] = useState(false);
-  /** Mirror of `draft` readable synchronously inside event handlers. */
-  const draftRef = useRef<SceneDraft | null>(null);
-  /** Last scene handed to a commit — what "Retry" re-sends. */
-  const pendingRef = useRef<SceneDraft | null>(null);
-  /** Guards against a slow earlier commit clearing a newer gesture's draft. */
-  const commitSeq = useRef(0);
+  // The staged scene is the render source of truth while set; it is cleared only
+  // when a commit SUCCEEDS, so the props (which arrive a round-trip later) never
+  // make the canvas snap back. When a commit FAILS the buffer is deliberately
+  // retained — the user's gesture outlives the network — and `commitError` offers
+  // a retry. All of that lives in `useEntityCommitBuffer`.
   /** True once a pointer gesture has actually moved something. */
   const gestureDirty = useRef(false);
 
-  const sceneZones = draft?.zones ?? zones;
-  const sceneEmitters = draft?.emitters ?? emitters;
+  const serverScene = useMemo<SceneDraft>(() => ({ zones, emitters }), [zones, emitters]);
 
-  const setDraftScene = useCallback((next: SceneDraft | null) => {
-    draftRef.current = next;
-    setDraft(next);
-  }, []);
+  const writeScene = useCallback(async (next: SceneDraft, base: SceneDraft) => {
+    if (onCommit) {
+      await onCommit(next);
+      return;
+    }
+    // Compat path (no `onCommit`): write only the half that changed. The
+    // comparison is against the server props, so a retry after a failed commit
+    // may re-send both halves — correct, just not minimal.
+    const writes: Array<void | Promise<unknown>> = [];
+    if (next.zones !== base.zones) writes.push(onUpdateZones(next.zones));
+    if (next.emitters !== base.emitters) writes.push(onUpdateEmitters(next.emitters));
+    await Promise.all(writes);
+  }, [onCommit, onUpdateZones, onUpdateEmitters]);
+
+  const {
+    doc: paintedScene,
+    isDirty: hasUncommittedEdits,
+    isSaving: isCommitting,
+    saveError: commitError,
+    stage: setDraftScene,
+    commit: runCommit,
+    retry: retryCommit,
+    /** Hides the banner. The buffer is kept — dismissing is not discarding. */
+    dismissError: dismissCommitError,
+    peek,
+  } = useEntityCommitBuffer<SceneDraft, SceneDraft>({
+    base: serverScene,
+    apply: applyScene,
+    fold: foldScene,
+    commit: writeScene,
+    errorMessage: 'Could not save the scene change.',
+  });
+
+  const sceneZones = paintedScene?.zones ?? zones;
+  const sceneEmitters = paintedScene?.emitters ?? emitters;
 
   /** The scene a gesture mutates: the live buffer if one exists, else the server props. */
-  const baseScene = useCallback(
-    (): SceneDraft => draftRef.current ?? { zones, emitters },
-    [zones, emitters],
-  );
-
-  const runCommit = useCallback(async (next: SceneDraft) => {
-    const mine = ++commitSeq.current;
-    pendingRef.current = next;
-    setDraftScene(next);
-    setCommitError(null);
-    setIsCommitting(true);
-    try {
-      if (onCommit) {
-        await onCommit(next);
-      } else {
-        // Compat path (no `onCommit`): write only the half that changed. The
-        // comparison is against the server props, so a retry after a failed commit
-        // may re-send both halves — correct, just not minimal.
-        const writes: Array<void | Promise<unknown>> = [];
-        if (next.zones !== zones) writes.push(onUpdateZones(next.zones));
-        if (next.emitters !== emitters) writes.push(onUpdateEmitters(next.emitters));
-        await Promise.all(writes);
-      }
-      if (commitSeq.current === mine) {
-        pendingRef.current = null;
-        setDraftScene(null);
-      }
-    } catch (err) {
-      setCommitError(err instanceof Error ? err.message : 'Could not save the scene change.');
-    } finally {
-      if (commitSeq.current === mine) setIsCommitting(false);
-    }
-  }, [onCommit, onUpdateZones, onUpdateEmitters, zones, emitters, setDraftScene]);
-
-  const retryCommit = useCallback(() => {
-    if (pendingRef.current) void runCommit(pendingRef.current);
-  }, [runCommit]);
-
-  /** Hides the banner. The buffer is kept — dismissing is not discarding. */
-  const dismissCommitError = useCallback(() => setCommitError(null), []);
+  const baseScene = useCallback((): SceneDraft => peek() ?? serverScene, [peek, serverScene]);
 
   // ── Parent ↔ child relationship highlighting ──
   // Selecting an emitter clears the zone selection (and vice-versa), so the
@@ -165,7 +153,7 @@ export function useAudioScenePainter({
         cooldownSeconds: 0,
         zoneId: findContainingZone(pt.x, pt.y, base.zones),
       };
-      void runCommit({ zones: base.zones, emitters: [...base.emitters, newEmitter] });
+      runCommit({ zones: base.zones, emitters: [...base.emitters, newEmitter] });
       onSelectEmitter(id);
       onSelectZone(null);
       setPaintMode('select');
@@ -264,7 +252,7 @@ export function useAudioScenePainter({
           color: Object.values(ZONE_COLORS)[base.zones.length % Object.values(ZONE_COLORS).length],
           linkedFiles: [],
         };
-        void runCommit({ zones: [...base.zones, newZone], emitters: base.emitters });
+        runCommit({ zones: [...base.zones, newZone], emitters: base.emitters });
         onSelectZone(id);
         onSelectEmitter(null);
       }
@@ -278,7 +266,8 @@ export function useAudioScenePainter({
     // The single write for the whole drag/resize — and only if something moved.
     if (gestureDirty.current) {
       gestureDirty.current = false;
-      if (draftRef.current) void runCommit(draftRef.current);
+      // No argument: commit exactly what the gesture staged.
+      runCommit();
     }
 
     setResizeState(null);
@@ -321,7 +310,7 @@ export function useAudioScenePainter({
   const deleteZone = useCallback((zoneId: string) => {
     const base = baseScene();
     // One commit for both halves — removing the zone also unlinks its emitters.
-    void runCommit({
+    runCommit({
       zones: base.zones.filter((z) => z.id !== zoneId),
       emitters: base.emitters.map((em) => (em.zoneId === zoneId ? { ...em, zoneId: null } : em)),
     });
@@ -330,7 +319,7 @@ export function useAudioScenePainter({
 
   const deleteEmitter = useCallback((emitterId: string) => {
     const base = baseScene();
-    void runCommit({
+    runCommit({
       zones: base.zones,
       emitters: base.emitters.filter((em) => em.id !== emitterId),
     });
@@ -450,7 +439,7 @@ export function useAudioScenePainter({
     /** Scene as the user sees it: the optimistic buffer if one is live, else props. */
     sceneZones,
     sceneEmitters,
-    hasUncommittedEdits: draft !== null,
+    hasUncommittedEdits,
     isCommitting,
     commitError,
     retryCommit,
