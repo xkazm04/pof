@@ -50,8 +50,21 @@ export interface AudioZone {
   priority: number;
   /** Accent color for visual display */
   color: string;
-  /** Linked C++ files */
-  linkedFiles: string[];
+  /**
+   * @deprecated RETIRED 2026-08-18 — never read, and now superseded.
+   *
+   * This was a previous attempt at the asset↔scene edge: it was initialised to
+   * `[]` by the painter and the spatial-audio generator and then never written
+   * to and never read by anything in the audio module. The real edge is
+   * {@link SoundEmitter.assetSetId} (an emitter references a generated asset set,
+   * and codegen resolves that set's last recorded UE import).
+   *
+   * Kept OPTIONAL rather than deleted so the `audio_scenes` JSON blobs already on
+   * disk keep parsing and the (settled) painter/generator writers keep compiling.
+   * Nothing may start reading it; delete it outright the next time those writers
+   * are open for edit.
+   */
+  linkedFiles?: string[];
 }
 
 export interface SoundEmitter {
@@ -61,8 +74,21 @@ export interface SoundEmitter {
   /** Position in the painter canvas */
   x: number;
   y: number;
-  /** Sound Cue asset reference */
+  /**
+   * Sound Cue asset path, typed by hand. The MANUAL OVERRIDE: it wins over
+   * {@link assetSetId} in codegen, and is not verified against anything.
+   */
   soundCueRef: string;
+  /**
+   * The generated audio set (`audio_sets.id`) this emitter is bound to.
+   *
+   * Additive and nullable — scenes written before this field read unchanged, and
+   * an emitter with no binding behaves exactly as it always did. Codegen resolves
+   * the bound set's last recorded UE import to a REAL cue path; when the set has
+   * never been imported it says so rather than emitting a guess as if it were an
+   * asset that exists.
+   */
+  assetSetId?: string | null;
   /** Attenuation radius (visual circle on canvas) */
   attenuationRadius: number;
   /** Volume multiplier (0-2) */

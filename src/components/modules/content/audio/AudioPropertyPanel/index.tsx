@@ -5,6 +5,7 @@
 // commit boundary through the THROWING commit path) plus its own save-error
 // surface, and the emitter panel additionally binds to a generated asset set.
 
+export { AssetSetPicker } from './AssetSetPicker';
 export { ZonePropertyPanel } from './ZonePropertyPanel';
 export { EmitterPropertyPanel } from './EmitterPropertyPanel';
 export { useRecordCommit } from './useRecordCommit';

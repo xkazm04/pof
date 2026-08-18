@@ -2,6 +2,7 @@
 
 import { Radio } from 'lucide-react';
 import type { SoundEmitter } from '@/types/audio-scene';
+import { AssetSetPicker } from './AssetSetPicker';
 import { EMITTER_TYPES } from './constants';
 import { Field, SliderField } from './controls';
 import { SaveErrorBanner } from './SaveErrorBanner';
@@ -69,8 +70,16 @@ export function EmitterPropertyPanel({
         </div>
       </Field>
 
-      {/* Sound Cue ref */}
-      <Field label="Sound Cue">
+      {/* What this emitter is actually pointed at. The binding is the primary
+          route (codegen resolves the set's REAL imported cue path); the raw path
+          box below it is the manual override. */}
+      <AssetSetPicker
+        assetSetId={v.assetSetId ?? null}
+        onBind={(setId) => buf.pick('assetSetId', setId)}
+      />
+
+      {/* Sound Cue ref — manual override, deliberately secondary */}
+      <Field label="Sound Cue path (manual override)">
         <input
           type="text"
           value={v.soundCueRef}
@@ -80,6 +89,11 @@ export function EmitterPropertyPanel({
           placeholder="/Game/Audio/SC_Ambient..."
           className="field-input font-mono focus-ring-inset"
         />
+        <p className="mt-1 text-2xs text-text-muted">
+          {v.assetSetId
+            ? 'The bound set’s imported path wins; this is used only if it has no recorded import.'
+            : 'Nothing is bound, so codegen uses this path — or, if it is blank, a labelled placeholder.'}
+        </p>
       </Field>
 
       {/* Volume */}

@@ -40,6 +40,78 @@ export interface CodeGenResult {
   };
 }
 
+// ─── Asset bindings: what the emitter is actually pointed at ──────────────────
+
+/**
+ * What the server knows about ONE generated audio set an emitter is bound to.
+ * Assembled by the codegen route from `audio_sets` + `audio_import_runs`; the
+ * generator itself stays pure.
+ */
+export interface AudioAssetBinding {
+  /** The set's display name — quoted in the emitted comment. */
+  setName: string;
+  /**
+   * The cue path from the set's LAST RECORDED UE import, or `null` when the set
+   * has never been imported. `null` is a real answer, never a reason to guess.
+   */
+  cuePath: string | null;
+}
+
+/** Bindings keyed by `audio_sets.id` — the value of `SoundEmitter.assetSetId`. */
+export type AudioAssetBindings = Record<string, AudioAssetBinding>;
+
+/** How an emitter's cue path was arrived at — decided once, reported verbatim. */
+export type CueProvenance = 'imported' | 'manual' | 'placeholder';
+
+export interface ResolvedCue {
+  /** The path written into the generated C++. */
+  cuePath: string;
+  provenance: CueProvenance;
+  /** The C++ comment that sits directly above the assignment. */
+  comment: string;
+}
+
+/**
+ * Resolve one emitter's Sound Cue path, and say where it came from.
+ *
+ * Codegen used to emit `em.soundCueRef || '/Game/Audio/SC_<PascalCase(name)>'` —
+ * so a blank box produced a path with no relation to any asset that exists, and
+ * the generated file presented that invention exactly like a real reference.
+ * The order is now: the set's REAL imported path → the hand-typed override →
+ * a placeholder that is LABELLED a placeholder.
+ */
+export function resolveEmitterCue(em: SoundEmitter, bindings: AudioAssetBindings = {}): ResolvedCue {
+  const binding = em.assetSetId ? bindings[em.assetSetId] : undefined;
+
+  if (binding?.cuePath) {
+    return {
+      cuePath: binding.cuePath,
+      provenance: 'imported',
+      comment: `// Cue path from the recorded UE import of audio set "${binding.setName}".`,
+    };
+  }
+
+  if (em.soundCueRef) {
+    return {
+      cuePath: em.soundCueRef,
+      provenance: 'manual',
+      comment: '// Cue path typed by hand in the property panel — NOT verified against a UE import.',
+    };
+  }
+
+  const placeholder = `/Game/Audio/SC_${pascalCase(em.name)}`;
+  const why = em.assetSetId
+    ? binding
+      ? `audio set "${binding.setName}" is bound to this emitter but has NO recorded UE import`
+      : `this emitter is bound to audio set ${em.assetSetId}, which no longer exists`
+    : 'nothing is bound to this emitter and no path was typed';
+  return {
+    cuePath: placeholder,
+    provenance: 'placeholder',
+    comment: `// PLACEHOLDER — ${why}. The path below is derived from the emitter name; no such asset is known to exist. Import the audio set (or type a real path) before shipping.`,
+  };
+}
+
 // ─── Reverb parameter mapping ─────────────────────────────────────────────────
 
 const REVERB_PARAMS: Record<ReverbPreset, { decayTime: number; diffusion: number; density: number; wetDry: number; earlyDelay: number; lateDelay: number }> = {
@@ -85,7 +157,17 @@ function makeFile(filename: string, language: 'cpp' | 'h', category: GeneratedFi
 
 // ─── Main generator ───────────────────────────────────────────────────────────
 
-export function generateAudioCode(doc: AudioSceneDocument, moduleName: string, apiMacro: string): CodeGenResult {
+export function generateAudioCode(
+  doc: AudioSceneDocument,
+  moduleName: string,
+  apiMacro: string,
+  /**
+   * Real asset facts for the sets emitters are bound to, keyed by set id. Empty
+   * (the default) means the caller resolved nothing — every emitter then falls
+   * back to its manual path or a LABELLED placeholder, never a silent guess.
+   */
+  bindings: AudioAssetBindings = {},
+): CodeGenResult {
   const files: GeneratedFile[] = [];
   const reverbPresetsUsed = new Set<string>();
   const occlusionModesUsed = new Set<string>();
@@ -112,7 +194,7 @@ export function generateAudioCode(doc: AudioSceneDocument, moduleName: string, a
   // 4. Ambient sound spawner from emitters
   if (doc.emitters.length > 0) {
     files.push(generateEmitterSpawnerHeader(doc, apiMacro));
-    files.push(generateEmitterSpawnerCpp(doc, moduleName));
+    files.push(generateEmitterSpawnerCpp(doc, moduleName, bindings));
   }
 
   // 5. MetaSounds integration for procedural ambient
@@ -517,15 +599,20 @@ private:
   return makeFile('SceneEmitterSpawner.h', 'h', 'emitter', content);
 }
 
-function generateEmitterSpawnerCpp(doc: AudioSceneDocument, moduleName: string): GeneratedFile {
+function generateEmitterSpawnerCpp(
+  doc: AudioSceneDocument,
+  moduleName: string,
+  bindings: AudioAssetBindings = {},
+): GeneratedFile {
   const EMITTER_SCALE = 50; // Canvas units → UE world units
   const emitterDefs = doc.emitters.map(em => {
     const name = safeName(em.name);
-    const cueRef = em.soundCueRef || `/Game/Audio/SC_${pascalCase(em.name)}`;
+    const cue = resolveEmitterCue(em, bindings);
     return `\t{
 \t\tFEmitterDefinition Def;
 \t\tDef.EmitterName = FName(TEXT("${name}"));
-\t\tDef.SoundCue = TSoftObjectPtr<USoundCue>(FSoftObjectPath(TEXT("${cueRef}")));
+\t\t${cue.comment}
+\t\tDef.SoundCue = TSoftObjectPtr<USoundCue>(FSoftObjectPath(TEXT("${cue.cuePath}")));
 \t\tDef.WorldPosition = FVector(${(em.x * EMITTER_SCALE).toFixed(0)}.f, ${(em.y * EMITTER_SCALE).toFixed(0)}.f, 0.f);
 \t\tDef.VolumeMultiplier = ${em.volumeMultiplier.toFixed(2)}f;
 \t\tDef.PitchMin = ${em.pitchMin.toFixed(2)}f;
