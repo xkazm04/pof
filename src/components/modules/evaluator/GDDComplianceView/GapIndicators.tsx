@@ -1,4 +1,4 @@
-import { ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { ChevronsLeft, ChevronsRight, Minus } from 'lucide-react';
 import type { GapDirection } from '@/types/gdd-compliance';
 import { statusBg, statusBorder } from '@/lib/chart-colors';
 import { SIDE, DIRECTION_META, type GapSide } from './constants';
@@ -8,6 +8,10 @@ import { SIDE, DIRECTION_META, type GapSide } from './constants';
  * the side that's ahead, with a double-chevron leaning toward it. `variant='full'`
  * adds the Design / Code end labels (expanded-panel header); the compact variant is
  * row-sized. Carries a directional `aria-label` so the lean is not color-only.
+ *
+ * A gap with no measured evidence has no lean: the bar splits evenly, dims both
+ * sides, and the chevron becomes a flat dash — the split must not imply a
+ * direction the evidence does not support.
  */
 export function GapSplitIndicator({ direction, variant = 'compact' }: {
   direction: GapDirection;
@@ -15,10 +19,12 @@ export function GapSplitIndicator({ direction, variant = 'compact' }: {
 }) {
   const meta = DIRECTION_META[direction];
   const designAhead = meta.ahead === 'design';
-  const designPct = designAhead ? 66 : 34;
-  const aheadColor = SIDE[meta.ahead].color;
-  const Lean = designAhead ? ChevronsLeft : ChevronsRight;
+  const unmeasured = meta.ahead === null;
+  const designPct = unmeasured ? 50 : designAhead ? 66 : 34;
+  const aheadColor = unmeasured ? 'var(--text-subtle)' : SIDE[meta.ahead as GapSide].color;
+  const Lean = unmeasured ? Minus : designAhead ? ChevronsLeft : ChevronsRight;
   const full = variant === 'full';
+  const sideOpacity = (side: GapSide) => (unmeasured ? 0.4 : meta.ahead === side ? 1 : 0.55);
 
   return (
     <span
@@ -29,7 +35,7 @@ export function GapSplitIndicator({ direction, variant = 'compact' }: {
       {full && (
         <span
           className="text-2xs font-medium"
-          style={{ color: SIDE.design.color, opacity: designAhead ? 1 : 0.55 }}
+          style={{ color: SIDE.design.color, opacity: sideOpacity('design') }}
         >
           {SIDE.design.label}
         </span>
@@ -40,17 +46,17 @@ export function GapSplitIndicator({ direction, variant = 'compact' }: {
       >
         <span
           className="h-full transition-all duration-slow"
-          style={{ width: `${designPct}%`, backgroundColor: SIDE.design.color }}
+          style={{ width: `${designPct}%`, backgroundColor: SIDE.design.color, opacity: sideOpacity('design') }}
         />
         <span
           className="h-full transition-all duration-slow"
-          style={{ width: `${100 - designPct}%`, backgroundColor: SIDE.code.color }}
+          style={{ width: `${100 - designPct}%`, backgroundColor: SIDE.code.color, opacity: sideOpacity('code') }}
         />
       </span>
       {full && (
         <span
           className="text-2xs font-medium"
-          style={{ color: SIDE.code.color, opacity: designAhead ? 0.55 : 1 }}
+          style={{ color: SIDE.code.color, opacity: sideOpacity('code') }}
         >
           {SIDE.code.label}
         </span>

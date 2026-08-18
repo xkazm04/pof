@@ -7,6 +7,7 @@ import {
   severityAccentCard, STATUS_WARNING, STATUS_SUCCESS,
 } from '@/lib/chart-colors';
 import { SEVERITY_CONFIG, EFFORT_LABELS, DIRECTION_META } from './constants';
+import { EvidenceStrip } from './EvidenceStrip';
 import { GapSplitIndicator, GapSideCard } from './GapIndicators';
 
 export function ModuleDetail({ module, onResolve }: {
@@ -23,6 +24,19 @@ export function ModuleDetail({ module, onResolve }: {
         <span className="text-2xs text-text-muted">
           {unresolvedGaps.length} open · {resolvedGaps.length} resolved
         </span>
+      </div>
+
+      {/* The evidence behind this module's number, stated before any gap is read.
+          `conformance` is the raw match rate; `score` is that damped by the
+          unresolved conformance gaps below — showing both keeps the damping honest. */}
+      <div className="rounded-md border border-border bg-surface-deep p-2.5 space-y-1.5">
+        <EvidenceStrip evidence={module.evidence} />
+        {module.evidence.measured && (
+          <p className="text-2xs text-text-muted">
+            Conformance {module.conformance}% of measured rows · score {module.score}% after gap damping
+            {module.unknown > 0 && ` · ${module.unknown} row(s) never evaluated`}
+          </p>
+        )}
       </div>
 
       {unresolvedGaps.length === 0 ? (
@@ -48,7 +62,6 @@ function GapRow({ gap, onResolve }: { gap: ComplianceGap; onResolve: () => void 
   const config = SEVERITY_CONFIG[gap.severity];
   const SeverityIcon = config.icon;
   const meta = DIRECTION_META[gap.direction];
-  const designAhead = meta.ahead === 'design';
 
   return (
     <div
@@ -81,8 +94,11 @@ function GapRow({ gap, onResolve }: { gap: ComplianceGap; onResolve: () => void 
           <p className="text-xs text-text-muted">{gap.description}</p>
 
           <div className="grid grid-cols-2 gap-2 text-2xs">
-            <GapSideCard side="design" state={gap.designState} ahead={designAhead} />
-            <GapSideCard side="code" state={gap.codeState} ahead={!designAhead} />
+            {/* `ahead` is asked of each side independently — an `unmeasured` gap has
+                no side ahead, and the old `!designAhead` fallback would have crowned
+                code the winner of a comparison that never happened. */}
+            <GapSideCard side="design" state={gap.designState} ahead={meta.ahead === 'design'} />
+            <GapSideCard side="code" state={gap.codeState} ahead={meta.ahead === 'code'} />
           </div>
 
           {/* Suggestion gets its own full-width line — never truncated behind a tooltip. */}

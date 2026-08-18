@@ -8,6 +8,8 @@ import { useGDDComplianceStore } from '@/stores/gddComplianceStore';
 import { useModuleStore } from '@/stores/moduleStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { SEVERITY_TOKENS, STATUS_ERROR, ACCENT_VIOLET } from '@/lib/chart-colors';
+import { CONFIDENCE_META } from './constants';
+import { EvidenceStrip } from './EvidenceStrip';
 import { ScoreRing } from './ScoreRing';
 import { ModuleCard } from './ModuleCard';
 import { ModuleDetail } from './ModuleDetail';
@@ -66,23 +68,44 @@ export function GDDComplianceView() {
   const selectedModule = selectedModuleId
     ? modules.find((m) => m.moduleId === selectedModuleId)
     : null;
+  const unmeasuredModules = report.modulesTotal - report.modulesMeasured;
 
   return (
     <div className="space-y-6">
-      {/* Header with score */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <ScoreRing score={report.overallScore} size={56} />
-          <div>
-            <h2 className="text-sm font-semibold text-text">GDD Compliance</h2>
-            <p className="text-xs text-text-muted mt-0.5">
+      {/* Header with score. The ring reports conformance over the MEASURED surface
+          only; the evidence strip below it says how much of the project that is, so
+          the two halves of the old conflated number are never read as one. */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-4 flex-1 min-w-0">
+          <ScoreRing
+            score={report.overallScore}
+            size={56}
+            measured={report.evidence.measured}
+          />
+          <div className="flex-1 min-w-0 space-y-1.5">
+            <h2 className="text-sm font-semibold text-text">
+              GDD Compliance
+              <span className="ml-2 text-2xs font-normal text-text-muted">
+                {report.evidence.measured
+                  ? 'conformance of what was measured'
+                  : 'nothing has been measured yet'}
+              </span>
+            </h2>
+            <p className="text-xs text-text-muted">
               {report.totalGaps} gap{report.totalGaps !== 1 ? 's' : ''} detected
               {report.criticalGaps > 0 && (
                 <span className="ml-1" style={{ color: SEVERITY_TOKENS.critical.color }}>
                   ({report.criticalGaps} critical)
                 </span>
               )}
+              {unmeasuredModules > 0 && (
+                <span className="ml-1" style={{ color: CONFIDENCE_META.none.color }}>
+                  · {unmeasuredModules} of {report.modulesTotal} module
+                  {report.modulesTotal !== 1 ? 's' : ''} unmeasured
+                </span>
+              )}
             </p>
+            <EvidenceStrip evidence={report.evidence} />
           </div>
         </div>
         <button

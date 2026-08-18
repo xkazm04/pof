@@ -1,5 +1,5 @@
-import { AlertTriangle, AlertCircle, Info } from 'lucide-react';
-import type { GapSeverity, GapDirection } from '@/types/gdd-compliance';
+import { AlertTriangle, AlertCircle, Info, HelpCircle } from 'lucide-react';
+import type { ComplianceConfidence, GapSeverity, GapDirection } from '@/types/gdd-compliance';
 import {
   SEVERITY_TOKENS, ACCENT_VIOLET, ACCENT_CYAN_LIGHT,
   type SeverityToken,
@@ -13,6 +13,39 @@ export const SEVERITY_CONFIG: Record<GapSeverity, SeverityToken & { icon: typeof
   minor: { icon: Info, label: 'Minor', ...SEVERITY_TOKENS.minor },
   info: { icon: Info, label: 'Info', ...SEVERITY_TOKENS.info },
 };
+
+// ── Evidence confidence ──────────────────────────────────────────────────────
+//
+// A compliance score is only as good as the fraction of the surface that was
+// actually evaluated. `none` is not a bad score — it is the absence of one, and
+// is rendered as a word (UNMEASURED), never as a number or a colour band, so it
+// cannot be read as "evaluated, and fine".
+
+export const CONFIDENCE_META: Record<ComplianceConfidence, { label: string; color: string; note: string }> = {
+  none: {
+    label: 'UNMEASURED',
+    color: 'var(--text-subtle)',
+    note: 'No feature here has a verdict, so there is no compliance score to read.',
+  },
+  low: {
+    label: 'Low confidence',
+    color: SEVERITY_TOKENS.high.color,
+    note: 'Under a third of the declared features have been evaluated.',
+  },
+  moderate: {
+    label: 'Moderate confidence',
+    color: SEVERITY_TOKENS.medium.color,
+    note: 'Most but not all of the declared features have been evaluated.',
+  },
+  high: {
+    label: 'High confidence',
+    color: SEVERITY_TOKENS.positive.color,
+    note: 'At least three quarters of the declared features have been evaluated.',
+  },
+};
+
+/** Icon for the unmeasured/no-evidence state, kept beside the severity icons. */
+export const UNMEASURED_ICON = HelpCircle;
 
 export const EFFORT_LABELS: Record<string, string> = {
   trivial: '< 1h',
@@ -39,7 +72,8 @@ export const SIDE: Record<GapSide, { color: string; label: string }> = {
 };
 
 export const DIRECTION_META: Record<GapDirection, {
-  ahead: GapSide;
+  /** Which side is ahead — `null` when nothing was measured, so neither is. */
+  ahead: GapSide | null;
   short: string;
   /** Full sentence — drives the indicator's aria-label + the panel banner. */
   label: string;
@@ -57,5 +91,11 @@ export const DIRECTION_META: Record<GapDirection, {
     short: 'Code ahead',
     label: 'Code is ahead of design',
     consequence: 'The code implements more than the design documents — update the GDD to match.',
+  },
+  'unmeasured': {
+    ahead: null,
+    short: 'No evidence',
+    label: 'Neither side is verified — no evidence',
+    consequence: 'Nothing has been scanned here, so design and code cannot be compared at all.',
   },
 };

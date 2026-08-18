@@ -13,8 +13,12 @@ const gap: ComplianceGap = {
   designState: 'Dodge with i-frames', codeState: 'No dodge', suggestion: 'Implement dodge', resolved: false,
 };
 const moduleFixture: ModuleCompliance = {
-  moduleId: 'arpg-combat', moduleName: 'Combat', score: 64,
-  totalFeatures: 10, implemented: 6, partial: 2, missing: 2,
+  moduleId: 'arpg-combat', moduleName: 'Combat', score: 64, conformance: 70,
+  evidence: {
+    featuresTotal: 10, featuresMeasured: 10, featuresUnmeasured: 0,
+    coverage: 1, confidence: 'high', measured: true,
+  },
+  totalFeatures: 10, implemented: 6, improved: 0, partial: 2, missing: 2, unknown: 0,
   checklistTotal: 8, checklistDone: 5, gaps: [gap],
 };
 const suggestions: ReconciliationSuggestion[] = [
@@ -22,6 +26,11 @@ const suggestions: ReconciliationSuggestion[] = [
 ];
 const report: ComplianceReport = {
   generatedAt: '2026-05-28T10:00:00.000Z', overallScore: 82,
+  evidence: {
+    featuresTotal: 10, featuresMeasured: 10, featuresUnmeasured: 0,
+    coverage: 1, confidence: 'high', measured: true,
+  },
+  modulesTotal: 1, modulesMeasured: 1,
   modules: [moduleFixture], totalGaps: 1, criticalGaps: 0, suggestions,
 };
 

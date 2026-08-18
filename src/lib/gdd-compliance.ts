@@ -7,10 +7,10 @@ import type { SubModuleId } from '@/types/modules';
 import { SUB_MODULES } from './module-registry';
 import { countChecklist } from './checklist-progress';
 import { getFeaturesByModule } from './feature-matrix-db';
-import type { FeatureRow, FeatureSummary } from '@/types/feature-matrix';
+import type { FeatureRow, FeatureStatus, FeatureSummary } from '@/types/feature-matrix';
 import type {
-  ComplianceGap, ComplianceReport, ModuleCompliance,
-  ReconciliationSuggestion, EffortEstimate,
+  ComplianceConfidence, ComplianceEvidence, ComplianceGap, ComplianceReport,
+  GapSeverity, ModuleCompliance, ReconciliationSuggestion, EffortEstimate,
 } from '@/types/gdd-compliance';
 
 // ─── Gap Detection ──────────────────────────────────────────────────────────
@@ -112,6 +112,72 @@ function detectFeatureGaps(
     }
   }
 
+  // 4. Partial implementations — design specifies a whole feature, the scan found
+  //    part of one. Previously silent (a `partial` row produced no gap at all and
+  //    took half credit for free); it is a real design-ahead finding and is now said
+  //    out loud. It is excluded from the gap load (see GAP_LOAD_EXCLUDED) because the
+  //    half-credit already prices it — the gap exists to be visible, not to punish twice.
+  for (const f of features) {
+    if (f.status === 'partial') {
+      gaps.push({
+        id: `gap-${moduleId}-partial-${f.id}`,
+        moduleId,
+        moduleName,
+        category: 'partial-implementation',
+        title: `"${f.featureName}" only partially implemented`,
+        description: f.reviewNotes || f.description || 'Scan found a partial implementation of a fully-specified feature.',
+        direction: 'design-ahead',
+        severity: 'minor',
+        effort: estimateEffort(f.featureName),
+        designState: 'Designed: complete',
+        codeState: 'Scan: partial',
+        suggestion: f.nextSteps || `Finish ${f.featureName}, or narrow the design to what ships.`,
+        resolved: false,
+      });
+    }
+  }
+
+  // 5. Coverage — features declared but never evaluated. `unknown` used to take FULL
+  //    credit in the score (it simply was not counted against anything); it is now an
+  //    explicit evidence gap so an un-scanned module can never read as a conforming one.
+  //    One aggregate gap per module rather than one per row: the finding is "nobody
+  //    looked", which is a single fact about the module, and per-row copies would bury
+  //    the real conformance findings under hundreds of identical lines.
+  const unmeasured = features.filter((f) => !isMeasured(f.status)).length;
+  if (features.length === 0) {
+    gaps.push({
+      id: `gap-${moduleId}-noevidence`,
+      moduleId,
+      moduleName,
+      category: 'unmeasured',
+      title: `No feature scan for ${moduleName}`,
+      description: 'This module has a design checklist but no scanned features, so there is nothing to compare the design against.',
+      direction: 'unmeasured',
+      severity: 'minor',
+      effort: 'trivial',
+      designState: `Checklist: ${checklistItems.length} item(s)`,
+      codeState: 'Scan: never run',
+      suggestion: 'Run a module feature scan to produce evidence.',
+      resolved: false,
+    });
+  } else if (unmeasured > 0) {
+    gaps.push({
+      id: `gap-${moduleId}-unmeasured`,
+      moduleId,
+      moduleName,
+      category: 'unmeasured',
+      title: `${unmeasured} of ${features.length} features never evaluated`,
+      description: `${unmeasured} feature row(s) are still 'unknown' — declared in the design but never given a verdict by a scan or review.`,
+      direction: 'unmeasured',
+      severity: 'minor',
+      effort: 'trivial',
+      designState: 'Designed',
+      codeState: 'Scan: no verdict',
+      suggestion: 'Re-run the feature scan (or review these rows) so the score has evidence behind it.',
+      resolved: false,
+    });
+  }
+
   return gaps;
 }
 
@@ -137,39 +203,108 @@ function summarizeFeatures(features: FeatureRow[]): FeatureSummary {
   return summary;
 }
 
-// ─── Scoring ────────────────────────────────────────────────────────────────
+// ─── Evidence & Scoring ─────────────────────────────────────────────────────
+//
+// The old single number conflated two unrelated things and then invented values for
+// the parts it did not know: a module with no scan took a flat 60/100 "neutral", a
+// module with no checklist took a flat +30, and zero gaps added +10 — so a module
+// nobody had ever evaluated rendered 70/100, indistinguishable from a measured 70.
+// (Measured on the real DB 2026-08-18: twelve modules scored exactly 70 with zero
+// evidence, while fifteen modules whose rows were all `unknown` scored 10 — the same
+// epistemic state, a 60-point spread, in opposite directions.)
+//
+// The number is now split at the type level:
+//   coverage    — how much of the declared surface actually has a verdict
+//   conformance — of what has a verdict, how much matches the design
+// and `score` reports conformance only, always alongside `evidence`. There is no
+// neutral constant anywhere: an unmeasured module is `measured: false`, not a number.
 
-function calculateModuleScore(
-  summary: FeatureSummary,
-  checklistTotal: number,
-  checklistDone: number,
-  gapCount: number,
-): number {
-  if (summary.total === 0 && checklistTotal === 0) return 100;
+/** Statuses that count as evidence. `unknown` is the absence of a verdict, never one. */
+const MEASURED_STATUSES: ReadonlySet<FeatureStatus> = new Set<FeatureStatus>([
+  'implemented', 'improved', 'partial', 'missing',
+]);
 
-  let score = 100;
+function isMeasured(status: FeatureStatus): boolean {
+  return MEASURED_STATUSES.has(status);
+}
 
-  // Feature implementation weight (60%)
-  if (summary.total > 0) {
-    const featureScore =
-      ((summary.implemented + summary.improved + summary.partial * 0.5) / summary.total) * 100;
-    score = featureScore * 0.6;
-  } else {
-    score = 60; // No scan data, assume neutral
-  }
+/**
+ * Coverage → confidence band. Named so the UI can say WHY a score is soft rather
+ * than tinting it. `none` is reserved for "no measured row at all" — it is not a
+ * low score, it is the absence of one.
+ */
+export const CONFIDENCE_BANDS: ReadonlyArray<{ min: number; band: ComplianceConfidence }> = [
+  { min: 0.75, band: 'high' },
+  { min: 0.34, band: 'moderate' },
+  { min: 0, band: 'low' },
+];
 
-  // Checklist weight (30%)
-  if (checklistTotal > 0) {
-    score += (checklistDone / checklistTotal) * 100 * 0.3;
-  } else {
-    score += 30;
-  }
+function confidenceFor(featuresMeasured: number, coverage: number): ComplianceConfidence {
+  if (featuresMeasured === 0) return 'none';
+  return CONFIDENCE_BANDS.find((b) => coverage >= b.min)?.band ?? 'low';
+}
 
-  // Gap penalty (10%)
-  const gapPenalty = Math.min(gapCount * 2, 10);
-  score += 10 - gapPenalty;
+function buildEvidence(featuresTotal: number, featuresMeasured: number): ComplianceEvidence {
+  const coverage = featuresTotal > 0 ? featuresMeasured / featuresTotal : 0;
+  return {
+    featuresTotal,
+    featuresMeasured,
+    featuresUnmeasured: featuresTotal - featuresMeasured,
+    coverage,
+    confidence: confidenceFor(featuresMeasured, coverage),
+    measured: featuresMeasured > 0,
+  };
+}
 
-  return Math.round(Math.max(0, Math.min(100, score)));
+/**
+ * Severity weights for the gap load. `info` is deliberately near-zero: a code-ahead
+ * "implemented but not checked off" is bookkeeping, not non-conformance.
+ */
+export const GAP_SEVERITY_WEIGHT: Record<GapSeverity, number> = {
+  critical: 4,
+  major: 2,
+  minor: 1,
+  info: 0.25,
+};
+
+/**
+ * Gap categories already priced by the status arithmetic, excluded from the gap
+ * load so nothing is punished twice: `missing` already scores 0 credit,
+ * `partial` already scores half, and `unmeasured` is what `coverage` reports.
+ */
+const GAP_LOAD_EXCLUDED: ReadonlySet<string> = new Set([
+  'missing-feature', 'partial-implementation', 'unmeasured',
+]);
+
+/**
+ * Severity-weighted gap DENSITY damping, replacing `Math.min(gapCount * 2, 10)`.
+ * The old penalty saturated at 10 points, so five gaps and five hundred were the
+ * same number, and it ignored severity and module size entirely. The new curve is
+ *
+ *     factor = 1 / (1 + load / measuredRows)
+ *
+ * — strictly decreasing, never saturating (each additional gap always costs
+ * something), scale-free (six gaps over eight features is worse than six over
+ * eighty), and asymptotic to 0 rather than reaching it, because a score of exactly
+ * zero would claim certainty of total failure that gap counting cannot support.
+ */
+function gapDamping(gaps: ComplianceGap[], measuredRows: number): number {
+  if (measuredRows === 0) return 1;
+  const load = gaps
+    .filter((g) => !g.resolved && !GAP_LOAD_EXCLUDED.has(g.category))
+    .reduce((sum, g) => sum + GAP_SEVERITY_WEIGHT[g.severity], 0);
+  return 1 / (1 + load / measuredRows);
+}
+
+/**
+ * Conformance of the MEASURED rows only, 0-100. `improved` counts as implemented,
+ * `partial` as half, `missing` as zero — and `unknown` rows are simply not in the
+ * denominator, because a row nobody looked at is a coverage fact, not a quality one.
+ */
+function calculateConformance(summary: FeatureSummary, featuresMeasured: number): number {
+  if (featuresMeasured === 0) return 0;
+  const credit = summary.implemented + summary.improved + summary.partial * 0.5;
+  return Math.max(0, Math.min(100, (credit / featuresMeasured) * 100));
 }
 
 // ─── Reconciliation Suggestions ─────────────────────────────────────────────
@@ -258,32 +393,48 @@ export function runComplianceAudit(
       moduleProgress,
     );
 
-    const score = calculateModuleScore(summary, checklistTotal, checklistDone, gaps.length);
+    const featuresMeasured = features.filter((f) => isMeasured(f.status)).length;
+    const evidence = buildEvidence(summary.total, featuresMeasured);
+    const conformance = calculateConformance(summary, featuresMeasured);
+    // No evidence ⇒ no score. Not a low score, not a neutral one — the UI reads
+    // `evidence.measured` and renders UNMEASURED instead of this 0.
+    const score = evidence.measured
+      ? Math.round(Math.max(0, Math.min(100, conformance * gapDamping(gaps, featuresMeasured))))
+      : 0;
 
     modules.push({
       moduleId: mod.id,
       moduleName: mod.label,
       score,
+      conformance: Math.round(conformance),
+      evidence,
       totalFeatures: summary.total,
       implemented: summary.implemented,
+      improved: summary.improved,
       partial: summary.partial,
       missing: summary.missing,
+      unknown: summary.unknown,
       checklistTotal,
       checklistDone,
       gaps,
     });
   }
 
-  // Overall score = weighted by total items per module
-  const totalItems = modules.reduce((s, m) => s + m.totalFeatures + m.checklistTotal, 0);
-  const overallScore = totalItems > 0
+  // Overall = conformance across the MEASURED surface, weighted by measured rows.
+  // Unmeasured modules carry weight 0 rather than dragging the mean toward an
+  // invented value in either direction; how much of the project that leaves out is
+  // reported by `evidence`, never hidden inside the number.
+  const measuredWeight = modules.reduce((s, m) => s + m.evidence.featuresMeasured, 0);
+  const overallScore = measuredWeight > 0
     ? Math.round(
-        modules.reduce(
-          (s, m) => s + m.score * (m.totalFeatures + m.checklistTotal),
-          0,
-        ) / totalItems,
+        modules.reduce((s, m) => s + m.score * m.evidence.featuresMeasured, 0) / measuredWeight,
       )
-    : 100;
+    : 0;
+
+  const evidence = buildEvidence(
+    modules.reduce((s, m) => s + m.evidence.featuresTotal, 0),
+    measuredWeight,
+  );
 
   const allGaps = modules.flatMap((m) => m.gaps);
   const suggestions = generateSuggestions(modules);
@@ -291,7 +442,16 @@ export function runComplianceAudit(
   return {
     generatedAt: new Date().toISOString(),
     overallScore,
-    modules: modules.sort((a, b) => a.score - b.score),
+    evidence,
+    modulesTotal: modules.length,
+    modulesMeasured: modules.filter((m) => m.evidence.measured).length,
+    // Measured modules first, worst conformance first (the triage order); the
+    // unmeasured ones follow, so a wall of "no evidence" cards can never bury a
+    // real failure. Their count is stated in the header either way.
+    modules: modules.sort((a, b) => {
+      if (a.evidence.measured !== b.evidence.measured) return a.evidence.measured ? -1 : 1;
+      return a.score - b.score;
+    }),
     totalGaps: allGaps.length,
     criticalGaps: allGaps.filter((g) => g.severity === 'critical').length,
     suggestions,
