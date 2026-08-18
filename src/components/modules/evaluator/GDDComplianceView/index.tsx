@@ -11,7 +11,11 @@ import { SEVERITY_TOKENS, STATUS_ERROR, ACCENT_VIOLET } from '@/lib/chart-colors
 import { evidenceAge } from '@/types/gdd-compliance';
 import { CONFIDENCE_META, FRESHNESS_META } from './constants';
 import { EvidenceStrip, freshnessSentence } from './EvidenceStrip';
-import { ScoreRing } from './ScoreRing';
+// The shared primitive, not a local copy: `ui/ScoreRing` now carries the
+// unmeasured state, the accessible-name override, and the canonical band ladder
+// this view needed — the three gaps the duplicate existed to work around.
+import { ScoreRing } from '@/components/ui/ScoreRing';
+import { scoreColor } from './helpers';
 import { ModuleCard } from './ModuleCard';
 import { ModuleDetail } from './ModuleDetail';
 import { SuggestionsPanel } from './SuggestionsPanel';
@@ -113,9 +117,18 @@ export function GDDComplianceView() {
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-4 flex-1 min-w-0">
           <ScoreRing
-            score={report.overallScore}
+            value={report.overallScore}
             size={56}
             measured={report.evidence.measured}
+            ariaLabel={
+              report.evidence.measured
+                ? `Compliance score ${report.overallScore} out of 100`
+                : 'Compliance score unmeasured — no evidence'
+            }
+            labelClassName="text-sm font-bold tabular-nums"
+            label={
+              <span style={{ color: scoreColor(report.overallScore) }}>{report.overallScore}</span>
+            }
           />
           <div className="flex-1 min-w-0 space-y-1.5">
             <h2 className="text-sm font-semibold text-text">
