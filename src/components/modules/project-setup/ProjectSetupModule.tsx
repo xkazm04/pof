@@ -14,6 +14,7 @@ import { BuildVerifyPanel } from './BuildVerifyPanel';
 import { ToolingBootstrapPanel } from './ToolingBootstrapPanel';
 import { ManifestPreview } from './ManifestPreview';
 import { BlueprintInspector } from './BlueprintInspector';
+import { UE5ConnectionPanel } from './UE5ConnectionPanel';
 import { deriveNextStep, type NextStepId } from './nextStep';
 import { buildCreateProjectPrompt, buildBuildVerifyPrompt } from './prompts';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
@@ -158,6 +159,14 @@ export function ProjectSetupModule() {
             disabled={nextStepDisabled}
           />
         )}
+
+        {/* UE5 editor connection — the app's authoritative mount of the live
+            connection stream, and the control the inject-gate copy points at.
+            Rendered UNCONDITIONALLY: the mount is the subscription, so gating
+            it on hasProject would take the whole app's connection state
+            offline. Not dimmed by `dimUnless` either — it reports live truth
+            rather than proposing a step. */}
+        <UE5ConnectionPanel />
 
         {/* Create Project */}
         {!hasProject && projectPath.trim() && (

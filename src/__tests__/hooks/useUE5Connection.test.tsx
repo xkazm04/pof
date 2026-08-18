@@ -145,6 +145,62 @@ describe('useUE5Connection — the live transport', () => {
   });
 });
 
+describe('useUE5Connection — one stream per tab, not one per mount', () => {
+  it('two mounts share a single EventSource, closed only when the last releases it', () => {
+    const first = renderHook(() => useUE5Connection());
+    const second = renderHook(() => useUE5Connection());
+
+    expect(FakeEventSource.instances).toHaveLength(1);
+    const stream = latestStream();
+
+    first.unmount();
+    expect(stream.closed).toBe(false); // the console (say) still holds it
+
+    second.unmount();
+    expect(stream.closed).toBe(true);
+  });
+
+  it('a mount arriving after the first frame inherits live state', () => {
+    const first = renderHook(() => useUE5Connection());
+    act(() => { latestStream().push(CONNECTED); });
+
+    const late = renderHook(() => useUE5Connection());
+
+    // No second stream, and no false "Checking…" — with one shared stream the
+    // next frame could be minutes away, so liveness must be shared too.
+    expect(FakeEventSource.instances).toHaveLength(1);
+    expect(late.result.current.isStateLive).toBe(true);
+    expect(late.result.current.isConnected).toBe(true);
+    expect(first.result.current.isStateLive).toBe(true);
+  });
+
+  it('forgets liveness when the last mount goes, so a fresh mount must earn it', () => {
+    const first = renderHook(() => useUE5Connection());
+    act(() => { latestStream().push(CONNECTED); });
+    first.unmount();
+
+    const next = renderHook(() => useUE5Connection());
+
+    // A new stream, and nothing observed on it yet: the store still holds the
+    // old snapshot, but we no longer KNOW it is current.
+    expect(FakeEventSource.instances).toHaveLength(2);
+    expect(next.result.current.isStateLive).toBe(false);
+  });
+
+  it('auto-connects once for the tab, not once per mounted surface', async () => {
+    const fetchMock = okFetch(DISCONNECTED);
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+    useUE5BridgeStore.setState({ autoConnect: true });
+
+    renderHook(() => useUE5Connection());
+    renderHook(() => useUE5Connection());
+
+    await act(async () => { latestStream().push(DISCONNECTED); });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('useUE5Connection — actions go over the wire', () => {
   it('connect() posts action "connect" with the store host/port', async () => {
     const fetchMock = okFetch(DISCONNECTED);
