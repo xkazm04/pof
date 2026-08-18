@@ -21,6 +21,24 @@
  * whether the health-check failure path reseeds `reconnectAttempts` to 0
  * (UE5 does — a prior fix; PoF historically does not). That divergence is a
  * caller-supplied flag, NOT a behavior change.
+ *
+ * ── Two exports, deliberately ─────────────────────────────────────────────
+ *
+ * `createReconnectScheduler` owns ONLY the retry policy: the backoff formula
+ * `min(base * 2^attempt, max)`, the attempt counter bump, the log line, and
+ * the timer. It is the single implementation of that formula in the bridge
+ * context — `createConnectionLifecycle` delegates to it, and so does the UE5
+ * WebSocket live-state channel (`ue5-bridge/ws-live-state.ts`), which used to
+ * carry a third private copy.
+ *
+ * `createConnectionLifecycle` adds the HEALTH-CHECK half on top: a periodic
+ * `probe()` poll with a 3-consecutive-failure threshold, and a retry that
+ * awaits a probe to decide success. That half is request/response-shaped and
+ * genuinely does NOT fit a WebSocket: a socket has no probe (its liveness is
+ * `onclose`, an event, not a poll), and running a probe loop against it would
+ * open a fresh socket on every tick. So the WS channel consumes the scheduler
+ * and stops there — that is a real difference in transport, not a fork. Do
+ * not "finish the job" by teaching this engine a no-probe mode.
  */
 
 import { logger } from '@/lib/logger';
@@ -78,6 +96,79 @@ export interface ConnectionLifecycle {
   resetFailures(): void;
 }
 
+// ── Reconnect scheduler (the retry policy, transport-independent) ───────────
+
+export interface ReconnectSchedulerOptions {
+  /** Log prefix, e.g. `'[UE5-WS]'`. */
+  label: string;
+  /** Base reconnect delay (ms) — the `min(base * 2^attempt, max)` base. */
+  backoffBase: number;
+  /** Maximum reconnect delay (ms). */
+  backoffMax: number;
+  /** Read the caller's live attempt counter — the backoff exponent. */
+  getAttempt: () => number;
+  /** Record the next attempt index. The caller owns the counter and resets it. */
+  setAttempt: (next: number) => void;
+  /**
+   * False = do not retry. Checked twice: before scheduling, and again inside
+   * the timer, so a disconnect between the two never fires a stale attempt.
+   */
+  shouldRetry: () => boolean;
+  /**
+   * Perform ONE reconnect attempt. What happens after it — awaiting a probe
+   * (HTTP) or waiting for a socket event (WS) — is the caller's business; call
+   * `schedule()` again to keep escalating.
+   */
+  attempt: () => void;
+}
+
+export interface ReconnectScheduler {
+  /** Schedule the next attempt using exponential backoff. */
+  schedule(): void;
+  /** Cancel a pending attempt. */
+  clear(): void;
+}
+
+/**
+ * The ONE exponential-backoff reconnect timer in the bridge context.
+ *
+ * Consumed by `createConnectionLifecycle` (HTTP bridges) and directly by the
+ * UE5 WebSocket live-state channel. Keeping the formula, the counter bump and
+ * the log line in one place is the whole point: a tuning change lands once.
+ */
+export function createReconnectScheduler(options: ReconnectSchedulerOptions): ReconnectScheduler {
+  const { label, backoffBase, backoffMax, getAttempt, setAttempt, shouldRetry, attempt } = options;
+
+  let timer: ReturnType<typeof setTimeout> | null = null;
+
+  function schedule(): void {
+    if (!shouldRetry()) return;
+
+    const current = getAttempt();
+    const delay = Math.min(backoffBase * Math.pow(2, current), backoffMax);
+
+    setAttempt(current + 1);
+    logger.info(`${label} Reconnect attempt`, current + 1, `in ${delay}ms`);
+
+    timer = setTimeout(() => {
+      timer = null;
+      if (!shouldRetry()) return;
+      attempt();
+    }, delay);
+  }
+
+  function clear(): void {
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
+  }
+
+  return { schedule, clear };
+}
+
+// ── Health-check lifecycle (adds polling on top of the scheduler) ───────────
+
 /** Number of consecutive failed health checks before reconnecting. */
 const HEALTH_FAILURE_THRESHOLD = 3;
 
@@ -101,18 +192,37 @@ export function createConnectionLifecycle<T>(
   } = options;
 
   let healthInterval: ReturnType<typeof setInterval> | null = null;
-  let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   let consecutiveFailures = 0;
+
+  // The retry policy is shared (see `createReconnectScheduler`); this engine
+  // only supplies what "one attempt" means for a request/response transport:
+  // await a probe, then either settle as connected or escalate the backoff.
+  const scheduler = createReconnectScheduler({
+    label,
+    backoffBase,
+    backoffMax,
+    getAttempt: getReconnectAttempts,
+    setAttempt: onReconnecting,
+    shouldRetry: hasClient,
+    attempt: async () => {
+      const result = await probe();
+
+      if (result.ok) {
+        consecutiveFailures = 0;
+        onConnected(result.data);
+        startHealthCheck();
+      } else {
+        scheduler.schedule();
+      }
+    },
+  });
 
   function clearTimers(): void {
     if (healthInterval) {
       clearInterval(healthInterval);
       healthInterval = null;
     }
-    if (reconnectTimer) {
-      clearTimeout(reconnectTimer);
-      reconnectTimer = null;
-    }
+    scheduler.clear();
   }
 
   function resetFailures(): void {
@@ -144,36 +254,15 @@ export function createConnectionLifecycle<T>(
         );
         clearTimers();
         onDisconnectedForReconnect(resetAttemptsOnHealthFailure);
-        scheduleReconnect();
+        scheduler.schedule();
       }
     }, healthCheckMs);
   }
 
-  function scheduleReconnect(): void {
-    if (!hasClient()) return;
-
-    const attempt = getReconnectAttempts();
-    const delay = Math.min(backoffBase * Math.pow(2, attempt), backoffMax);
-
-    onReconnecting(attempt + 1);
-    logger.info(`${label} Reconnect attempt`, attempt + 1, `in ${delay}ms`);
-
-    reconnectTimer = setTimeout(async () => {
-      reconnectTimer = null;
-
-      if (!hasClient()) return;
-
-      const result = await probe();
-
-      if (result.ok) {
-        consecutiveFailures = 0;
-        onConnected(result.data);
-        startHealthCheck();
-      } else {
-        scheduleReconnect();
-      }
-    }, delay);
-  }
-
-  return { startHealthCheck, scheduleReconnect, clearTimers, resetFailures };
+  return {
+    startHealthCheck,
+    scheduleReconnect: () => scheduler.schedule(),
+    clearTimers,
+    resetFailures,
+  };
 }

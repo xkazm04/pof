@@ -7,12 +7,21 @@
  *   - Sends: property watch subscriptions, property writes, snapshot requests, pings
  *
  * Designed to work alongside the existing HTTP connection-manager.
+ *
+ * Reconnect policy is NOT hand-rolled here: the exponential backoff, the
+ * attempt counter and the retry timer come from the shared
+ * `createReconnectScheduler` in `@/lib/connection-lifecycle`, the same one the
+ * HTTP bridges use through `createConnectionLifecycle`. Only the WS-shaped
+ * part stays local — "one attempt" means re-opening the socket, and liveness
+ * is the socket's own `onclose` event rather than a polled health probe, so
+ * this channel takes the scheduler without the health-check half.
  */
 
 import { UI_TIMEOUTS } from '@/lib/constants';
 import { logger } from '@/lib/logger';
 import { eventBus } from '@/lib/event-bus';
 import { createStateEmitter } from '@/lib/state-emitter';
+import { createReconnectScheduler } from '@/lib/connection-lifecycle';
 import type {
   WSConnectionStatus,
   WSInboundMessage,
@@ -33,9 +42,28 @@ type LiveStateHandler = (state: LiveEditorState) => void;
 class UE5LiveStateClient {
   private ws: WebSocket | null = null;
   private pingInterval: ReturnType<typeof setInterval> | null = null;
-  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private reconnectAttempts = 0;
   private intentionalClose = false;
+
+  /** Endpoint of the current session — what a reconnect attempt re-opens. */
+  private target: { host: string; wsPort: number } | null = null;
+
+  /**
+   * Shared exponential-backoff retry timer (`min(base * 2^attempt, max)`).
+   * The counter stays local because `onopen` resets it; the scheduler only
+   * reads and bumps it.
+   */
+  private reconnect = createReconnectScheduler({
+    label: '[UE5-WS]',
+    backoffBase: UI_TIMEOUTS.ue5WsReconnectBase,
+    backoffMax: UI_TIMEOUTS.ue5WsReconnectMax,
+    getAttempt: () => this.reconnectAttempts,
+    setAttempt: (next) => { this.reconnectAttempts = next; },
+    shouldRetry: () => !this.intentionalClose,
+    attempt: () => {
+      if (this.target) this.openSocket(this.target.host, this.target.wsPort);
+    },
+  });
 
   /** Active property watches keyed by watchId. */
   private watches = new Map<string, PropertyWatchRequest>();
@@ -88,6 +116,7 @@ class UE5LiveStateClient {
     this.intentionalClose = false;
     this.cleanup();
     this.reconnectAttempts = 0;
+    this.target = { host, wsPort };
 
     this.setState({ wsStatus: 'connecting' });
     logger.info('[UE5-WS] Connecting to', `ws://${host}:${wsPort}/pof/live`);
@@ -154,7 +183,7 @@ class UE5LiveStateClient {
       this.ws = new WebSocket(`ws://${host}:${wsPort}/pof/live`);
     } catch (e) {
       logger.warn('[UE5-WS] Failed to create WebSocket:', e);
-      this.scheduleReconnect(host, wsPort);
+      this.reconnect.schedule();
       return;
     }
 
@@ -196,7 +225,7 @@ class UE5LiveStateClient {
       if (!this.intentionalClose) {
         logger.warn('[UE5-WS] Connection closed unexpectedly, reconnecting...');
         this.setState({ wsStatus: 'reconnecting' });
-        this.scheduleReconnect(host, wsPort);
+        this.reconnect.schedule();
       }
     };
 
@@ -364,35 +393,12 @@ class UE5LiveStateClient {
     this.frameRate = 0;
   }
 
-  // ── Reconnect ───────────────────────────────────────────────────────────
-
-  private scheduleReconnect(host: string, wsPort: number) {
-    const delay = Math.min(
-      UI_TIMEOUTS.ue5WsReconnectBase * Math.pow(2, this.reconnectAttempts),
-      UI_TIMEOUTS.ue5WsReconnectMax,
-    );
-
-    this.reconnectAttempts++;
-    logger.info('[UE5-WS] Reconnect attempt', this.reconnectAttempts, `in ${delay}ms`);
-
-    this.reconnectTimer = setTimeout(() => {
-      this.reconnectTimer = null;
-      if (!this.intentionalClose) {
-        this.openSocket(host, wsPort);
-      }
-    }, delay);
-  }
-
   // ── Cleanup ─────────────────────────────────────────────────────────────
 
   private cleanup() {
     this.stopPing();
     this.stopFpsCounter();
-
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
-      this.reconnectTimer = null;
-    }
+    this.reconnect.clear();
 
     if (this.ws) {
       // Prevent onclose from triggering reconnect
