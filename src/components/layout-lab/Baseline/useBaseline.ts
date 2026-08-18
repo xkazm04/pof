@@ -13,8 +13,38 @@ import { useCatalogStore } from '@/stores/catalogStore';
 import { useViewportAtLeast } from '@/hooks/useViewportWidth';
 import { useLabRunnerStore } from '../labRunnerStore';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
+import type { AcceptanceResult } from '@/lib/catalog/acceptance/types';
 import { COLLAPSE_BREAKPOINT } from './constants';
 import type { Props } from './types';
+
+/**
+ * Normalize whatever the write-through threw into an actionable reason string.
+ * The thrown message IS the actionable part (which checker, on which field), so it is
+ * never replaced by a generic label — only backfilled when the throw carried no message.
+ */
+function thrownReason(e: unknown): string {
+  if (e instanceof Error) return e.message.trim() || e.name || 'Error';
+  if (typeof e === 'string' && e.trim()) return e.trim();
+  return String(e).trim() || 'unknown error';
+}
+
+/**
+ * The step's Acceptance checker THREW while grading the produced data, so the write-through
+ * stopped before it sent anything.
+ *
+ * Deliberately its OWN failure mode, not merged into the network one below: there is no
+ * server message to quote (nothing was sent), and retrying the POST cannot help until the
+ * data or the checker is fixed. Checkers are arbitrary functions over untrusted artifact
+ * `data` (produce bodies, the MCP submit path, headless drains) — this is a real failure
+ * mode, which is why `StepCrashBoundary` exists for the render side of the same hazard.
+ */
+export const gradeThrewReason = (reason: string): string =>
+  "Not saved to the server: this step's Acceptance checker THREW while grading the produced data, "
+  + `so nothing was sent — ${reason}`;
+
+/** Last-resort net: something else in the write-through threw, so the write is unconfirmed. */
+export const writeThroughThrewReason = (reason: string): string =>
+  `Not saved to the server: the write-through threw before the server write could be confirmed — ${reason}`;
 
 export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity, stepIdx: controlledStepIdx, onSelectStep }: Props) {
   // Controlled step position when the parent owns it (LayoutLab, so it survives the
@@ -132,15 +162,32 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
   // never a bare flag — an operator can't act on "not synced".
   const syncStep = useCallback(async (entityIdArg: string, step: string, art: { data: Record<string, unknown>; ueAssets: string[] }) => {
     if (!catalogId) return;
+    const { setSyncError } = useLabPipelineStore.getState();
     // ONE grading path: `labGrade` runs the step's checker under the SAME CheckerContext
     // the on-screen banner uses (real siblings + a live `has`), so the status we persist
     // is by construction the status the user is looking at.
-    const res = labGrade(catalogId, entityIdArg, step, art.data);
+    //
+    // The CALLER guards the checker call, not `labGrade` — deliberately, and for two
+    // reasons. (1) `labGrade` returns `null` to mean "this (catalog, step) has no
+    // resolvable checker", and the POST below then falls back to `pass`; folding a THROW
+    // into that same `null` would persist a FABRICATED pass for data the checker could not
+    // even read. (2) `labGrade` must stay the single grading path the on-screen banner
+    // shares — a second, guarded copy is exactly the drift this module was built to remove.
+    // So `labGrade` stays throw-transparent and the write-through, the only path that
+    // PERSISTS, decides what a throw means.
+    let res: AcceptanceResult | null;
+    try {
+      res = labGrade(catalogId, entityIdArg, step, art.data);
+    } catch (e) {
+      // Nothing was sent. The optimistic local artifact stays (add-only UX preserved), but
+      // it is on record as unsynced with the checker's own reason — never a clean success.
+      setSyncError(entityIdArg, step, gradeThrewReason(thrownReason(e)));
+      return;
+    }
     const written = await postArtifact({
       catalogId, entityId: entityIdArg, step, data: art.data, ueAssets: art.ueAssets,
       status: res?.status ?? 'pass', tier: res?.tier ?? 'L0', reason: res?.reason,
     });
-    const { setSyncError } = useLabPipelineStore.getState();
     if (written.ok) {
       // Server accepted the write — clear any stale not-synced flag and re-read the
       // server-graded verdict through the shared fetch path.
@@ -154,19 +201,38 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
     }
   }, [catalogId]);
 
+  /**
+   * The ONE launcher for the write-through — and the reason it can no longer fail silently.
+   *
+   * `syncStep` is async, so a throw anywhere inside it (the checker, the client, the store
+   * update) surfaces as a REJECTED PROMISE, not a synchronous throw. The old sink discarded
+   * that promise (`void syncStep(...)`), so the rejection became an unhandled rejection and
+   * the artifact carried neither `error` nor `syncError`: it rendered as a clean success
+   * that never left the browser. `syncStep` already reports a thrown GRADE precisely; this
+   * catch is the net for everything else, so no path can end in silence.
+   */
+  const runSync = useCallback(
+    (entityIdArg: string, step: string, art: { data: Record<string, unknown>; ueAssets: string[] }) => {
+      syncStep(entityIdArg, step, art).catch((e: unknown) => {
+        useLabPipelineStore.getState().setSyncError(entityIdArg, step, writeThroughThrewReason(thrownReason(e)));
+      });
+    },
+    [syncStep],
+  );
+
   useEffect(() => {
     if (!catalogId) { setLabSync(null); return; }
-    setLabSync((entityIdArg, step, art) => { void syncStep(entityIdArg, step, art); });
+    setLabSync(runSync);
     return () => setLabSync(null);
-  }, [catalogId, syncStep]);
+  }, [catalogId, runSync]);
 
   /** Re-attempt the server write for a step whose write-through failed (the banner's Retry). */
   const retryStepSync = useCallback((step: string) => {
     if (!entityKey) return;
     const art = useLabPipelineStore.getState().byEntity[entityKey]?.[step];
     if (!art) return;
-    void syncStep(entityKey, step, { data: art.data, ueAssets: art.ueAssets });
-  }, [entityKey, syncStep]);
+    runSync(entityKey, step, { data: art.data, ueAssets: art.ueAssets });
+  }, [entityKey, runSync]);
 
   /** Dismiss a step's recorded sync failure without retrying (operator acknowledgement). */
   const dismissStepSyncError = useCallback((step: string) => {

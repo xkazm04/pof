@@ -59,6 +59,20 @@ export function labCheckerContext(catalogId: string, entityId: string): CheckerC
  * Grade a step's data exactly as the banner does — the write-through's single entry point,
  * so the status it PERSISTS can never diverge from the status on screen. `null` when the
  * (catalog, step) has no resolvable checker (the caller's own status then stands).
+ *
+ * ── This function is deliberately THROW-TRANSPARENT ────────────────────────────
+ * Checkers are arbitrary functions over artifact `data` — untrusted input from produce
+ * bodies, the MCP submit path and headless drains — so `accept(...)` CAN throw, and the
+ * throw propagates to the caller on purpose. Two reasons it is not swallowed here:
+ *  1. `null` already means "no checker resolvable", and every caller reads that as
+ *     "use my own status" (the write-through falls back to `pass`). Collapsing a THROW
+ *     into the same `null` would persist a fabricated `pass` for data no checker read.
+ *  2. This must stay the ONE grading path the on-screen banner shares. A second, guarded
+ *     copy would let the persisted status and the displayed status drift — exactly what
+ *     this module exists to prevent.
+ * So each caller decides what a throw MEANS for it. The write-through
+ * (`Baseline/useBaseline.ts` → `syncStep`) catches it and records a `syncError` naming the
+ * thrown reason, sending nothing.
  */
 export function labGrade(
   catalogId: string,
