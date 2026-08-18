@@ -31,8 +31,20 @@ export function RawArtifactDisclosure({ t, data, ueAssets, verdict }: {
   const produced = keys.length > 0;
 
   // Only pay for serialization while expanded.
-  const json = open
-    ? JSON.stringify(
+  //
+  // Serialization MUST NOT throw. This panel is the payload window inside
+  // `StepCrashBoundary`'s fallback card, so a throw here escalates out of the
+  // fallback to the route boundary — a crash card that itself crashes, taking
+  // down the shell the boundary exists to protect. An artifact reaches us from
+  // SQLite, written by other sessions, the MCP submit path and headless drains,
+  // so a circular structure or a BigInt is untrusted input, not a theoretical.
+  // Report the failure verbatim instead: an unreadable payload is a finding, and
+  // saying so beats both a blank panel and a second crash.
+  let json = '';
+  let serializeError: string | null = null;
+  if (open) {
+    try {
+      json = JSON.stringify(
         {
           data,
           ...(ueAssets?.length ? { ueAssets } : {}),
@@ -40,8 +52,12 @@ export function RawArtifactDisclosure({ t, data, ueAssets, verdict }: {
         },
         null,
         2,
-      )
-    : '';
+      );
+    } catch (err) {
+      serializeError = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+      json = `This artifact could not be serialized for display.\n\n${serializeError}\n\nThe stored payload is intact — only this preview failed. Top-level keys: ${keys.length ? keys.join(', ') : '(none)'}`;
+    }
+  }
 
   return (
     <details data-testid="raw-artifact" open={open} style={{ display: 'grid', gap: 8 }}>
@@ -56,7 +72,12 @@ export function RawArtifactDisclosure({ t, data, ueAssets, verdict }: {
       {open && (
         produced ? (
           <div style={{ display: 'grid', gap: 6 }}>
-            <MicroLabel mono uppercase tone="muted">Exactly what is stored for this step</MicroLabel>
+            {/* MicroLabel is a de-emphasis primitive (subtle|muted only) — the warning
+                is carried by the wording and by the message in the pre block below,
+                not by widening a shared primitive for one caller. */}
+            <MicroLabel mono uppercase tone="muted">
+              {serializeError ? 'Payload could not be serialized — preview failed, stored data intact' : 'Exactly what is stored for this step'}
+            </MicroLabel>
             <pre
               data-testid="raw-artifact-json"
               className={t.fontMono}
