@@ -102,3 +102,4 @@ docs/index.bleve/
 /.tmp-groupc/
 /.tmp-measure/
 /ab-results.json
+/.benchmark-tripo/
