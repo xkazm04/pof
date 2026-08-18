@@ -5,7 +5,7 @@ memory: vault
 category: Development
 description: Session-after-session product perfection loop for PoF. The strongest available model at xhigh reasoning (currently Fable 5) directs — it walks context-map.json context-by-context, proposes 5 challenged, high-value directions per context (features, design elevations, significant optimizations), gates them with the user until 10 are accepted, then orchestrates Opus-class builder subagents on ONE shared branch — grouped so their write sets cannot collide — while making every review/merge decision itself. All state lives in the Obsidian pof vault so any future session resumes the loop exactly where the last one stopped. Invoke with `/perfect [init|propose|build|status|smoke|reflect] [context-name]`.
 argument-hint: "[init|propose|build|status|smoke|reflect] [context]"
-version: 2.1
+version: 2.2
 ---
 
 # Perfect — the direction-and-delivery loop
@@ -118,6 +118,14 @@ Loop while `pool < 10` and the user hasn't said stop:
    - Does it conflict with an active arc or a "removed/settled, don't re-suggest" memory?
    - Is the value claim concrete — can I name the user moment it improves?
    - Can one builder session genuinely ship it behind the acceptance criteria?
+
+   **State a predicted EFFECT as a hypothesis to measure, never as an assertion.** Write "measure
+   which cells move and report it" rather than "this will move cells off green — that is the point".
+   A confident prediction in a direction note is an instruction to confirm it, and a builder that
+   believes it may tune toward it. In round 13 the Director asserted a provenance fix would cost
+   greens; measured, it lost none and instead lifted 17 cells off RED — the map had been
+   over-condemning, the opposite failure. The prediction was wrong in DIRECTION, not degree, and only
+   survived contact because the criteria demanded a measurement.
 
    **Director self-check before the gate** — a proposal that fails any of these never reaches the user:
    - Names the concrete files it will touch (from scout evidence, not guessed).
@@ -246,6 +254,17 @@ Loop while `pool < 10` and the user hasn't said stop:
    describing behavior the code doesn't have is worse than nothing.
    **Builder refusals are signal, not disobedience.** A builder that argues an instruction down with
    evidence and satisfies the acceptance criterion another way has done its job; weigh the evidence.
+   **A criterion written to BOUND one change will sometimes block fixing a larger defect that change
+   uncovers.** That is the criterion working, not failing — but the Director must then decide, not
+   leave it. Round 13: "no audited step may change class" correctly bounded an engine-fallback fix,
+   and correctly stopped the builder fixing the *real* defect one seam down (an unrecognised engine
+   name defaulting into the TRUSTED bucket, mis-classing 95 audited steps). The builder reported and
+   refused; the Director landed it as a separate commit in the same wave — because that wave's own
+   change had just routed 10 newly-un-condemned cells through the mismatch. **If your wave creates an
+   overstatement, your wave corrects it.**
+   **Re-measure a builder's headline number before repeating it.** The same round reported 82
+   affected steps; the independent re-count found 95 (a whole engine string had been missed). Builder
+   numbers are evidence, not verdicts.
    **Any branch-vs-master comparison, for any purpose, is three-dot or it is wrong** — and after a squash
    merge neither form answers "did this land": grep for a signature symbol instead.
 
@@ -303,7 +322,14 @@ dirties or advances a file you must land into.</summary>
 ## Direction quality bar (what earns a slot in the 5)
 
 - **Value-first**: names the user moment it improves; "nice refactor" is not a direction unless it unlocks something.
-- **Evidence-backed**: cites today's code (`file:line`), not vibes.
+- **Evidence-backed**: cites today's code (`file:line`), not vibes — **and cites the SYMBOL beside the
+  line number**, because coordinates rot. In a multi-wave session they rot within hours: round 13's
+  brief cited `labArtifactClient.ts:43-46` and wave 2 had already pushed that code to ~55-62 by
+  inserting a function above it. A symbol survives; a line number is a convenience.
+- **Claims about what a consumer USES must be traced, never inferred from what it is FOR.** "This
+  input is unused, so dropping it is free" is the single most expensive wrong premise this loop has
+  produced — the coach was described as ranking on status alone and in fact re-grades data, compares
+  drift, and binds judge verdicts to a content hash.
 - **One-session-shippable**: ≲15 files, no cross-context schema breaks; else slice it.
 - **Novel to the vault**: not shipped, not pending, not previously rejected (unless the world changed — say so).
 - **Lens-diverse**: default one per lens; substituting a second entry in one lens requires the Director to say why.
@@ -343,14 +369,23 @@ SHARED-RESOURCE PROTOCOL (non-negotiable):
   FORBIDDEN: git add -A · git add . · git add -u · bare git commit · git commit -a
   · git stash · git checkout <path> · git restore · git commit --amend.
   An index.lock collision is harmless — retry it, never work around it.
-  COMMIT MESSAGES: bash-quoted -m, or a UNIQUELY-NAMED -F file. NEVER the
-  PowerShell here-string form `-m @'...'@` — and note this is not a
+  COMMIT MESSAGES: bash **single**-quoted `-m '...'`, or a UNIQUELY-NAMED -F file.
+  NEVER the PowerShell here-string form `-m @'...'@` — and note this is not a
   "PowerShell-only" caveat: passing that syntax through the BASH tool is
   exactly how it bites, because bash has no here-string operator there and
   silently keeps the leading `@` as the first line, i.e. as your subject.
-  You cannot fix it afterwards: `--amend` is forbidden in a shared tree, and
+  DOUBLE quotes are not safe either: `-m "...`code`..."` runs command
+  substitution and SILENTLY EATS the backticked word — a commit body naming
+  a symbol in backticks loses it. Use single quotes for any message
+  containing code, `$`, or backticks.
+  You cannot fix either afterwards: `--amend` is forbidden in a shared tree, and
   a sibling can land a commit on top of yours within minutes. Verify the
   subject with `git log --format=%s -1` right after committing.
+- **Temp files: scratchpad only, and never inside a test tree.** Name them with
+  your lot id AND put them in the harness scratchpad directory — never at the
+  repo root, and *never* under `src/__tests__/` where the integration gate will
+  execute them as part of the suite. A measurement harness that lands in the test
+  tree becomes a test the whole wave has to explain.
 
 Implement these accepted directions, one atomic commit each, message `feat(<context>): <title>`:
 <per direction: What & why · Acceptance criteria · Evidence file:line · Risks/non-goals>

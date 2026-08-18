@@ -64,3 +64,53 @@
   session in that tree had moved on to `Cargo.toml`/`Cargo.lock`/`lib.rs`, all of which the incoming
   commits also touch. **Re-measure a concurrency precondition immediately before the mutating command, not
   at the moment you ask about it** — an approval is not a lease on the other session's tree.
+
+## 2.1 — 2026-08-18 — pof (autonomous sweep, 3 waves / 27 directions shipped)
+
+- **The Director's predicted EFFECT is the most dangerous sentence in a direction note.** I wrote
+  "this will visibly move cells off green — that is the point" into a provenance fix. Measured against
+  the real DB, it lost *zero* greens and instead lifted 17 cells off RED: the map had been
+  over-condemning on provisional verdicts its own drill-down already refused to apply. Wrong in
+  DIRECTION, not degree. A builder that trusted the framing would have tuned toward it. **Phrase
+  predicted effects as hypotheses to measure.** Applied in v2.2.
+
+- **A criterion that correctly bounds one change will sometimes correctly block the bigger fix that
+  change uncovers — and the Director must then act.** "No audited step may change class" properly
+  scoped an engine-fallback fix, and properly stopped the builder fixing the real defect one seam
+  down: an unrecognised engine name defaulting into the TRUSTED bucket, mis-classing 95 audited steps.
+  It mattered *because* the same wave had just routed 10 newly-un-condemned cells through that
+  mismatch. **If your wave creates an overstatement, your wave corrects it** — as a separate commit,
+  in the same wave. Applied in v2.2.
+
+- **Re-measure a builder's headline number before repeating it.** The builder reported 82 affected
+  steps; the independent re-count found 95 — an entire engine string had been missed. Builder numbers
+  are evidence, not verdicts. Applied in v2.2.
+
+- **Evidence coordinates rot within a single session.** A wave-3 brief cited `file.ts:43-46`; wave 2
+  had already moved that code to ~55-62 by inserting a function above it. Cite the SYMBOL beside the
+  line number. Applied in v2.2.
+
+- **"This input is unused so dropping it is free" is the costliest wrong premise this loop produces.**
+  Twice now. Prove it by following the consumer, never by reading what the consumer is *for*. Applied
+  in v2.2 (direction quality bar).
+
+- **A bash-quoted `-m "..."` is NOT safe for commit bodies.** Double quotes run command substitution,
+  so a backticked symbol name is silently eaten mid-sentence. Single-quote any message containing
+  code, `$` or backticks. (The v2.1 lesson fixed the `@'...'@` half and left this one.) Applied in v2.2.
+
+- **Temp-file rules need a LOCATION, not just a name.** Told to name temp files with their lot id,
+  a builder put measurement harnesses in `src/__tests__/` — where the integration gate executes them —
+  and dumps at the repo root. Scratchpad only, never a test tree. Applied in v2.2.
+
+### Redesign proposal
+Seven of this session's directions were auto-accepted, dispatched, and then materially corrected by the
+builder — wrong evidence line, wrong scope, wrong predicted outcome, or a premise that did not survive
+contact with the source. That is a ~30% brief-defect rate, and every instance was caught by a builder
+reading the code the Director had only read *about* (via a scout brief). The scout→Director→builder
+chain loses fidelity at each hop, and the Director is the only link that never opens the file.
+**Proposal (NOT applied): before a direction is dispatched, the Director must personally verify its
+single load-bearing evidence line in the source** — not the whole brief, just the one claim the
+direction stands on. In this session every Director spot-check (the crash id-equality lookup, the
+`PofBridgeStatus` shape, the `useUE5Connection` zero-consumer claim) held, while un-spot-checked
+scout claims failed repeatedly. One grep per direction would have caught most of the seven. Not applied
+now because it changes the propose-phase cost model and deserves its own measured round.
