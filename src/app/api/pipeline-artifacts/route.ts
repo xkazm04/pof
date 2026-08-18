@@ -2,7 +2,8 @@ import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { listArtifacts, upsertArtifact, deleteArtifact } from '@/lib/pipeline-artifacts-db';
 import { artifactUpsertSchema } from '@/lib/catalog/artifact-validation';
-import { gradeArtifact } from '@/lib/catalog/headless';
+import { gradeArtifact, hasRegisteredChecker } from '@/lib/catalog/headless';
+import { describeUngraded } from '@/lib/catalog/acceptance/stepGradability';
 import { stampPromptVersion } from '@/lib/prompt-evolution/judge-fitness';
 
 /** Max issues named in the error string — enough to fix the payload, short enough to render. */
@@ -39,9 +40,11 @@ export async function GET(req: NextRequest) {
  * submitted `data` with the step's own Checker and the caller's `status` is discarded —
  * a client can never persist a fabricated `pass` (nor an optimistic `?? 'pass'` default)
  * for a step the server can verify. A registered checker that fails to resolve degrades to
- * `pending`, never `pass`. Only catalogs with no server checker (bespoke Items specs, the
- * synthetic loot-filter catalog) keep the caller-supplied status. This matches the headless
- * MCP path (`submitStepArtifact`), so both write paths grade identically.
+ * `pending`, never `pass`. Only steps with no server checker at all (the synthetic loot-filter
+ * catalog) keep the caller-supplied status — and those rows are stamped with an explicit
+ * `UNGRADED:` reason naming why nothing could grade them, so a preserved producer status can
+ * never be mistaken for a verified one. This matches the headless MCP path
+ * (`submitStepArtifact`), so both write paths grade identically.
  *
  * The PERSISTED status is the PURE checker verdict (`graded.raw`), NOT the judge-bridged one —
  * the artifact row holds the checker's own truth and judge state lives apart in
@@ -73,9 +76,13 @@ export async function POST(req: NextRequest) {
     const { graded, raw } = gradeArtifact(p.catalogId, p.step, p.data, p.entityId);
     const status = graded ? (raw?.status ?? 'pending') : p.status;
     const tier = graded ? (raw?.tier ?? 'L0') : p.tier;
+    // An UNGRADED row is a finding, not a quiet pass. The producer's status is preserved
+    // (there is nothing truer to replace it with), but the persisted `reason` now SAYS the
+    // server never verified it — and names why no checker resolved. Silently keeping a
+    // producer's `pass` with no annotation is what re-opens the fabricated-pass hole.
     const reason = graded
       ? (raw?.reason ?? (raw ? undefined : 'unverified: acceptance check did not resolve'))
-      : p.reason;
+      : describeUngraded(p.catalogId, p.step, hasRegisteredChecker, p.reason);
 
     return apiSuccess(upsertArtifact({
       catalogId: p.catalogId,

@@ -19,6 +19,7 @@ import { listLifecycle } from '@/lib/catalog-db';
 import { listArtifacts, upsertArtifact } from '@/lib/pipeline-artifacts-db';
 import { listVerdicts } from '@/lib/status/judge-verdicts-db';
 import { resolveStepAcceptance, verdictsForStep } from '@/lib/catalog/acceptance/resolveStepAcceptance';
+import { bespokeCheckerFor } from '@/lib/catalog/acceptance/stepGradability';
 import { canonContextFor } from '@/lib/catalog/canon/canonContext';
 import { stepContractBlock, canonCategoriesForStep } from '@/lib/catalog/contractPrompt';
 import type { ProjectRule, RuleCategory } from '@/lib/catalog/canon/types';
@@ -145,14 +146,28 @@ function serverCheckerContext(catalogId: string, entityId?: string): CheckerCont
 }
 
 /**
- * The server-side acceptance Checker for a (catalog, step), or null when the catalog
- * has no registered pipeline. Bespoke Items specs and synthetic catalogs (loot-filter)
- * have no server-importable checker, so the server genuinely can't re-derive them.
+ * The server-side acceptance Checker for a (catalog, step), or null when nothing can grade it.
+ *
+ * Resolution order, registered pipeline FIRST so this can only ever ADD gradability:
+ *  1. the registered catalog pipeline's step with that label;
+ *  2. the BESPOKE checker registry (`acceptance/stepGradability`) — legacy labels that live in
+ *     `pipeline_artifacts` but predate the registered pipeline, the Items UI steps above all.
+ *     Without (2) those rows kept whatever status the PRODUCER wrote, which is exactly the door
+ *     the produce-POST re-grade exists to close (15 of the `items` catalog's 90 rows, measured
+ *     2026-08-18).
+ *
+ * Still null for synthetic catalogs (loot-filter) — see `UNSERVABLE_CATALOGS`, where that is
+ * recorded WITH a reason rather than left silent.
  */
 export function serverCheckerFor(catalogId: string, step: string): Checker | null {
   const pipeline = getCatalogPipeline(catalogId);
-  if (!pipeline) return null;
-  return pipeline.steps.find((s) => s.label === step)?.accept ?? null;
+  const registered = pipeline?.steps.find((s) => s.label === step)?.accept;
+  return registered ?? bespokeCheckerFor(catalogId, step);
+}
+
+/** True when a REGISTERED pipeline declares this step — the `stepGradability` discriminator. */
+export function hasRegisteredChecker(catalogId: string, step: string): boolean {
+  return !!getCatalogPipeline(catalogId)?.steps.some((s) => s.label === step);
 }
 
 /**

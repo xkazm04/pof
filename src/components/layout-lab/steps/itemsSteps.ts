@@ -1,4 +1,9 @@
 import { PRICE_RATIO, POWER_TOL_PCT } from '@/lib/catalog/acceptance/invariants';
+import {
+  ITEM_ATTR_SCHEMA,
+  ITEM_ATTR_KEYS,
+  ITEMS_BESPOKE_CHECKERS,
+} from '@/lib/catalog/acceptance/itemsBespokeCheckers';
 import { useCatalogStore } from '@/stores/catalogStore';
 import type { Acceptance } from './StepFrame';
 import type { CheckerContext } from '@/lib/catalog/acceptance/types';
@@ -68,19 +73,10 @@ export function itemAsset(entity: LabEntity, prefix: string, suffix = ''): strin
  * their key list + default stats from it, so the preview can't drift from what
  * Produce actually writes.
  */
-export interface ItemAttr { key: string; unit: string; value: number }
-export const ITEM_ATTR_SCHEMA: ItemAttr[] = [
-  { key: 'Damage', unit: 'hp', value: 34 },
-  { key: 'Attack Speed', unit: '/s', value: 1.1 },
-  { key: 'Weight', unit: 'kg', value: 3.4 },
-  { key: 'Durability', unit: 'pt', value: 180 },
-  { key: 'Crit Chance', unit: '%', value: 5 },
-  { key: 'Range', unit: 'm', value: 1.8 },
-  { key: 'Stagger', unit: 'pt', value: 22 },
-  { key: 'Value', unit: 'g', value: 120 },
-];
+export type { ItemAttr } from '@/lib/catalog/acceptance/itemsBespokeCheckers';
+export { ITEM_ATTR_SCHEMA };
 /** Attribute key list — derived from the schema; drives accept() / copy completeness. */
-const ATTR_KEYS = ITEM_ATTR_SCHEMA.map((a) => a.key);
+const ATTR_KEYS = ITEM_ATTR_KEYS;
 const RARITY_MULT = 1.4; // expected gold per power point
 
 /* ── Economy curve math ─────────────────────────────────────────────────────
@@ -388,11 +384,9 @@ export const ITEM_STEP_SPECS: Record<string, ItemStepSpec> = {
   },
   'Attributes': {
     produce: () => ({ data: { stats: Object.fromEntries(ITEM_ATTR_SCHEMA.map((a) => [a.key, a.value] as const)) } }),
-    accept: (data) => {
-      const stats = (data.stats ?? {}) as Record<string, unknown>;
-      const have = ATTR_KEYS.filter((k) => stats[k] != null).length;
-      return withCopy('Attributes', data, { label: 'All attributes populated per schema (Weapon)', status: have === ATTR_KEYS.length ? 'pass' : 'pending', detail: `${have} / ${ATTR_KEYS.length} populated` });
-    },
+    // Gate logic lives in the SERVER-IMPORTABLE checker so the on-screen verdict and the
+    // produce-POST re-grade are the same function (see itemsBespokeCheckers.ts).
+    accept: (data, ctx) => withCopy('Attributes', data, ITEMS_BESPOKE_CHECKERS['Attributes'](data, ctx)),
   },
   'Economy': {
     // Judge-fleet fix 2026-07-07: the artifact carried bare power/cost with no curve, so
@@ -427,47 +421,39 @@ export const ITEM_STEP_SPECS: Record<string, ItemStepSpec> = {
   },
   '3D Generation': {
     produce: (e) => ({ data: { tris: 4200, cap: 6000 }, ueAssets: [itemAsset(e, 'SM_')] }),
-    accept: (data) => {
-      const tris = Number(data.tris ?? 0), cap = Number(data.cap ?? 6000);
-      return withCopy('3D Generation', data, { label: 'Mesh generated · tri count under LOD0 budget', status: tris > 0 && tris <= cap ? 'pass' : 'pending', detail: tris > 0 ? `${tris} / ${cap} tris` : 'no mesh' });
-    },
+    // Gate logic lives in the SERVER-IMPORTABLE checker so the on-screen verdict and the
+    // produce-POST re-grade are the same function (see itemsBespokeCheckers.ts).
+    accept: (data, ctx) => withCopy('3D Generation', data, ITEMS_BESPOKE_CHECKERS['3D Generation'](data, ctx)),
   },
   'Material / Texture': {
     produce: (e) => ({ data: { maps: ['Albedo', 'Normal', 'ORM', 'Height'] }, ueAssets: [itemAsset(e, 'MI_')] }),
-    accept: (data) => {
-      const maps = (data.maps ?? []) as string[];
-      const need = ['Albedo', 'Normal', 'ORM'];
-      const ok = need.every((m) => maps.includes(m));
-      return withCopy('Material / Texture', data, { label: 'Required PBR maps present (Albedo · Normal · ORM)', status: ok ? 'pass' : 'pending', detail: maps.length ? `${maps.length} maps` : '0 maps' });
-    },
+    // Gate logic lives in the SERVER-IMPORTABLE checker so the on-screen verdict and the
+    // produce-POST re-grade are the same function (see itemsBespokeCheckers.ts).
+    accept: (data, ctx) => withCopy('Material / Texture', data, ITEMS_BESPOKE_CHECKERS['Material / Texture'](data, ctx)),
   },
   'Animations': {
     produce: (e) => ({ data: { clips: DEFAULT_ANIM_CLIPS }, ueAssets: [itemAsset(e, 'A_', '_Equip')] }),
-    accept: (data) => {
-      const clips = (data.clips ?? []) as unknown[];
-      return withCopy('Animations', data, { label: 'Required clips present (Pickup · Equip)', status: clips.length >= 2 ? 'pass' : 'pending', detail: clips.length ? `${clips.length} clips` : '0 clips' });
-    },
+    // Gate logic lives in the SERVER-IMPORTABLE checker so the on-screen verdict and the
+    // produce-POST re-grade are the same function (see itemsBespokeCheckers.ts).
+    accept: (data, ctx) => withCopy('Animations', data, ITEMS_BESPOKE_CHECKERS['Animations'](data, ctx)),
   },
   'VFX': {
     produce: (e) => ({ data: { cost: 0.4, cap: 0.8, variants: DEFAULT_VFX_VARIANTS }, ueAssets: [itemAsset(e, 'NS_', '_Use')] }),
-    accept: (data) => {
-      const variants = (data.variants ?? []) as unknown[];
-      const cost = Number(data.cost ?? 0), cap = Number(data.cap ?? 0.8);
-      return withCopy('VFX', data, { label: 'At least one VFX bound · GPU cost under budget', status: variants.length >= 1 && cost <= cap ? 'pass' : 'pending', detail: variants.length ? `${cost.toFixed(1)} / ${cap} ms` : 'no vfx' });
-    },
+    // Gate logic lives in the SERVER-IMPORTABLE checker so the on-screen verdict and the
+    // produce-POST re-grade are the same function (see itemsBespokeCheckers.ts).
+    accept: (data, ctx) => withCopy('VFX', data, ITEMS_BESPOKE_CHECKERS['VFX'](data, ctx)),
   },
   'SFX': {
     produce: (e) => ({ data: { cues: DEFAULT_SFX_CUES }, ueAssets: [itemAsset(e, 'SC_')] }),
-    accept: (data) => {
-      const cues = (data.cues ?? []) as unknown[];
-      return withCopy('SFX', data, { label: 'Required SFX events covered (pickup · equip · use)', status: cues.length >= 3 ? 'pass' : 'pending', detail: cues.length ? `${cues.length} cues` : '0 cues' });
-    },
+    // Gate logic lives in the SERVER-IMPORTABLE checker so the on-screen verdict and the
+    // produce-POST re-grade are the same function (see itemsBespokeCheckers.ts).
+    accept: (data, ctx) => withCopy('SFX', data, ITEMS_BESPOKE_CHECKERS['SFX'](data, ctx)),
   },
   'Inventory UI Integration': {
     produce: () => ({ data: { slot: 'Weapon', wired: true } }),
-    accept: (data) => {
-      return withCopy('Inventory UI Integration', data, { label: 'Item renders in the inventory grid · slot category set', status: data.wired && data.slot ? 'pass' : 'pending', detail: data.wired ? `slot: ${data.slot}` : 'not wired' });
-    },
+    // Gate logic lives in the SERVER-IMPORTABLE checker so the on-screen verdict and the
+    // produce-POST re-grade are the same function (see itemsBespokeCheckers.ts).
+    accept: (data, ctx) => withCopy('Inventory UI Integration', data, ITEMS_BESPOKE_CHECKERS['Inventory UI Integration'](data, ctx)),
   },
   'Tooltip / Compare': {
     // Judge-fleet fix 2026-07-07: the old {fields:4, compare:true} stub carried nothing a
