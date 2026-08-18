@@ -45,7 +45,7 @@ import {
   type CheckpointState,
 } from './checkpoint';
 import { startRun, finalizeRun, reopenRun, getRun, type HarnessRunStatus } from '@/lib/harness-runs-db';
-import { readJsonFile, writeJsonFile } from './state-io';
+import { readJsonFile, readJsonFileState, writeJsonFile, StateFileCorruptError } from './state-io';
 import { reconcileReportedFeatures, markUnreportedUnverified } from './feature-match';
 import { logger } from '@/lib/logger';
 
@@ -1148,8 +1148,37 @@ export function createHarnessOrchestrator(
 
   // ── Core Loop ───────────────────────────────────────────────────────────
 
+  /**
+   * Read a durable run-state sidecar, REFUSING to continue when it is corrupt.
+   *
+   * `readJsonFile`'s fallback is correct for a MISSING file (first run) and a lie
+   * for a truncated one — and the loop's `loadPlan(...) ?? buildGamePlan(config)`
+   * turns that lie into silent data loss: a run that crashed mid-write comes back
+   * and rebuilds the plan from scratch, discarding every completed area without
+   * an error anywhere. Corruption stops the run loudly instead; the file is left
+   * on disk so an operator can inspect it rather than having it quietly replaced.
+   */
+  function requireRunState<T>(filePath: string, what: string): T | null {
+    const read = readJsonFileState<T | null>(filePath, null);
+    if (read.state !== 'corrupt') return read.value;
+    const detail = `Harness ${what} state file is CORRUPT: ${filePath} — ${read.error}. `
+      + 'Refusing to continue — falling back to a default here would silently discard the previous '
+      + 'run\'s state. Inspect the file (typically a truncated write from a crashed run); delete it to start over.';
+    logger.error(`[harness] ${detail}`);
+    emit({ type: 'harness:error', error: detail, fatal: true });
+    throw new StateFileCorruptError(filePath, read.error ?? 'unparseable');
+  }
+
   async function runLoop(): Promise<GameBuildGuide> {
-    const plan = loadPlan(config.statePath) ?? buildGamePlan(config);
+    // A MISSING plan means "first run — build one". A CORRUPT plan means the
+    // previous run's work is UNREADABLE, and `?? buildGamePlan(config)` would
+    // silently restart from scratch: every completed area discarded, no error.
+    // Stop and say so instead — the file is left in place for inspection.
+    const plan = requireRunState<GamePlan | null>(planPath(config.statePath), 'plan')
+      ?? buildGamePlan(config);
+    // Same rule for the spend ledger: read as $0 it would silently un-cap the
+    // run, since committed spend is the budget governor's only durable input.
+    requireRunState<HarnessCostTotals | null>(costPath(config.statePath), 'cost ledger');
     // Heal areas stranded mid-flight by a crash or an old abandoning build (also
     // the resume/rehydrate path: a run interrupted mid-area resumes cleanly).
     healStrandedAreas(plan);
