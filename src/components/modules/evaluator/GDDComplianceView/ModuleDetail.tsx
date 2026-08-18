@@ -8,6 +8,7 @@ import {
 } from '@/lib/chart-colors';
 import { SEVERITY_CONFIG, EFFORT_LABELS, DIRECTION_META } from './constants';
 import { EvidenceStrip } from './EvidenceStrip';
+import { MappingStrip } from './MappingStrip';
 import { GapSplitIndicator, GapSideCard } from './GapIndicators';
 
 export function ModuleDetail({ module, now, onResolve, onUnresolve }: {
@@ -40,6 +41,10 @@ export function ModuleDetail({ module, now, onResolve, onUnresolve }: {
             {module.unknown > 0 && ` · ${module.unknown} row(s) never evaluated`}
           </p>
         )}
+        {/* How much of the checklist the two checklist gap categories can see.
+            An unmapped item raises no gap, so without this line its silence is
+            indistinguishable from compliance. */}
+        <MappingStrip mapping={module.checklistMapping} unmappedItems={module.unmappedItems} />
       </div>
 
       {unresolvedGaps.length === 0 ? (

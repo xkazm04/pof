@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { ComplianceGap, ComplianceReport, ModuleCompliance } from '@/types/gdd-compliance';
+import { NO_CHECKLIST_MAPPING } from '@/types/gdd-compliance';
 
 const apiFetch = vi.fn();
 vi.mock('@/lib/api-utils', () => ({ apiFetch: (...a: unknown[]) => apiFetch(...a) }));
@@ -26,12 +27,14 @@ function report(gaps: ComplianceGap[]): ComplianceReport {
     moduleId: 'arpg-combat', moduleName: 'Combat', score: 50, conformance: 50, evidence,
     totalFeatures: 2, implemented: 1, improved: 0, partial: 0, missing: 1, unknown: 0,
     checklistTotal: 2, checklistDone: 1, gaps,
+    checklistMapping: { ...NO_CHECKLIST_MAPPING, itemsTotal: 2, mapped: 2 }, unmappedItems: [],
   };
   return {
     generatedAt: '2026-08-18T00:00:00.000Z', overallScore: 50, evidence,
     modulesTotal: 1, modulesMeasured: 1, modules: [mod],
     totalGaps: gaps.filter((g) => !g.resolved).length,
     criticalGaps: gaps.filter((g) => !g.resolved).length,
+    checklistMapping: { ...NO_CHECKLIST_MAPPING, itemsTotal: 2, mapped: 2 },
     suggestions: [],
   };
 }

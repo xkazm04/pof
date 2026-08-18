@@ -8,13 +8,117 @@ import { SUB_MODULES } from './module-registry';
 import { countChecklist } from './checklist-progress';
 import { getDb } from './db';
 import { getFeaturesByModule } from './feature-matrix-db';
+import { mappedFeaturesFor } from './feature-definitions';
 import type { FeatureRow, FeatureStatus, FeatureSummary } from '@/types/feature-matrix';
 import type {
-  ComplianceConfidence, ComplianceEvidence, ComplianceGap, ComplianceReport,
-  GapResolution, GapSeverity, ModuleCompliance, ReconciliationSuggestion, EffortEstimate,
+  ChecklistMappingStats, ChecklistMatchSource, ComplianceConfidence, ComplianceEvidence,
+  ComplianceGap, ComplianceReport, GapResolution, GapSeverity, ModuleCompliance,
+  ReconciliationSuggestion, EffortEstimate, UnmappedChecklistItem,
 } from '@/types/gdd-compliance';
 
+// ─── Checklist ↔ feature matching ───────────────────────────────────────────
+//
+// The relation is declared in `feature-definitions.ts` (`CHECKLIST_FEATURE_MAP`)
+// — see the rationale there. What lives here is how the audit CONSUMES it:
+//
+//   • an explicitly mapped item resolves to EVERY named row, not the first one,
+//     so a package item ("Character foundation package" = six C++ classes) is
+//     graded against all six;
+//   • an unmapped item still gets the old 20-character substring guess, but the
+//     guess is labelled `heuristic` on the gap and the item is listed in
+//     `unmappedItems` — a fallback hit is never presented as a declared mapping;
+//   • an item mapped to `[]` produces no checklist gap by construction, and says
+//     so as `noFeatureEvidence` rather than looking like a clean pass.
+
+/** Statuses that mean the code side considers this feature done. */
+const DONE_STATUSES: ReadonlySet<FeatureStatus> = new Set<FeatureStatus>(['implemented', 'improved']);
+
+interface ChecklistResolution {
+  source: ChecklistMatchSource;
+  /** The scanned rows this item is graded against. */
+  features: FeatureRow[];
+  /** Mapped names with no scanned row (only meaningful when the module was scanned). */
+  dangling: string[];
+  /** True when the map explicitly declares that no feature row can evidence this item. */
+  noFeatureEvidence: boolean;
+  /** The name the substring fallback guessed, when it guessed one. */
+  heuristicFeature?: string;
+}
+
+/** The legacy 20-character, both-directions, first-hit substring guess. Fallback only. */
+function heuristicMatch(features: FeatureRow[], label: string): FeatureRow | undefined {
+  return features.find(
+    (f) => f.featureName.toLowerCase().includes(label.toLowerCase().slice(0, 20)) ||
+           label.toLowerCase().includes(f.featureName.toLowerCase().slice(0, 20))
+  );
+}
+
+function resolveChecklistItem(
+  moduleId: SubModuleId,
+  item: { id: string; label: string },
+  features: FeatureRow[],
+  byName: Map<string, FeatureRow>,
+): ChecklistResolution {
+  const mapped = mappedFeaturesFor(moduleId, item.id);
+  if (mapped) {
+    const hits: FeatureRow[] = [];
+    const dangling: string[] = [];
+    for (const name of mapped) {
+      const row = byName.get(name.toLowerCase());
+      if (row) hits.push(row);
+      else dangling.push(name);
+    }
+    return {
+      source: 'mapped',
+      features: hits,
+      // A module with no scan at all would report every mapped name as dangling,
+      // which says nothing beyond "nobody scanned it" (already an `unmeasured` gap).
+      dangling: features.length > 0 ? dangling : [],
+      noFeatureEvidence: mapped.length === 0,
+    };
+  }
+  const guess = heuristicMatch(features, item.label);
+  return guess
+    ? { source: 'heuristic', features: [guess], dangling: [], noFeatureEvidence: false, heuristicFeature: guess.featureName }
+    : { source: 'unmapped', features: [], dangling: [], noFeatureEvidence: false };
+}
+
+function emptyMappingStats(): ChecklistMappingStats {
+  return {
+    itemsTotal: 0, mapped: 0, noFeatureEvidence: 0, multiFeature: 0,
+    heuristic: 0, unmapped: 0, danglingMappings: 0,
+  };
+}
+
+/** Sum per-module mapping stats into one scope-level figure. */
+function mergeMappingStats(parts: ChecklistMappingStats[]): ChecklistMappingStats {
+  const total = emptyMappingStats();
+  for (const p of parts) {
+    total.itemsTotal += p.itemsTotal;
+    total.mapped += p.mapped;
+    total.noFeatureEvidence += p.noFeatureEvidence;
+    total.multiFeature += p.multiFeature;
+    total.heuristic += p.heuristic;
+    total.unmapped += p.unmapped;
+    total.danglingMappings += p.danglingMappings;
+  }
+  return total;
+}
+
+/** Sentence naming the provenance of a checklist gap's item→feature relation. */
+function provenanceNote(res: ChecklistResolution): string {
+  return res.source === 'mapped'
+    ? 'Relation declared in CHECKLIST_FEATURE_MAP.'
+    : 'Relation GUESSED by the label-substring fallback (this item has no explicit feature mapping) — verify before acting.';
+}
+
 // ─── Gap Detection ──────────────────────────────────────────────────────────
+
+interface ModuleGapResult {
+  gaps: ComplianceGap[];
+  mapping: ChecklistMappingStats;
+  unmappedItems: UnmappedChecklistItem[];
+}
 
 function detectFeatureGaps(
   moduleId: SubModuleId,
@@ -22,44 +126,71 @@ function detectFeatureGaps(
   features: FeatureRow[],
   checklistItems: { id: string; label: string }[],
   checklistProgress: Record<string, boolean>,
-): ComplianceGap[] {
+): ModuleGapResult {
   const gaps: ComplianceGap[] = [];
+  const mapping = emptyMappingStats();
+  const unmappedItems: UnmappedChecklistItem[] = [];
+  const byName = new Map(features.map((f) => [f.featureName.toLowerCase(), f]));
 
-  // 1. Missing features — checklist says it should exist, feature_matrix says missing/unknown
+  // 1. Checklist vs scan — in BOTH directions, over every feature the item maps to.
   for (const item of checklistItems) {
-    const matchingFeature = features.find(
-      (f) => f.featureName.toLowerCase().includes(item.label.toLowerCase().slice(0, 20)) ||
-             item.label.toLowerCase().includes(f.featureName.toLowerCase().slice(0, 20))
-    );
-
+    const res = resolveChecklistItem(moduleId, item, features, byName);
     const isChecked = checklistProgress[item.id] ?? false;
 
-    if (isChecked && matchingFeature && matchingFeature.status === 'missing') {
+    mapping.itemsTotal += 1;
+    mapping.danglingMappings += res.dangling.length;
+    if (res.source === 'mapped') {
+      mapping.mapped += 1;
+      if (res.noFeatureEvidence) mapping.noFeatureEvidence += 1;
+      if (res.features.length > 1) mapping.multiFeature += 1;
+    } else {
+      if (res.source === 'heuristic') mapping.heuristic += 1;
+      else mapping.unmapped += 1;
+      unmappedItems.push({
+        id: item.id,
+        label: item.label,
+        fallback: res.source === 'heuristic' ? 'heuristic' : 'none',
+        ...(res.heuristicFeature ? { heuristicFeature: res.heuristicFeature } : {}),
+      });
+    }
+
+    if (res.features.length === 0) continue;
+    const matchedNames = res.features.map((f) => f.featureName);
+    const missing = res.features.filter((f) => f.status === 'missing');
+
+    if (isChecked && missing.length > 0) {
+      const names = missing.map((f) => `"${f.featureName}"`).join(', ');
       gaps.push({
         id: `gap-${moduleId}-checklist-${item.id}`,
         moduleId,
         moduleName,
         category: 'checklist-vs-scan',
         title: `"${item.label}" marked done but scan shows missing`,
-        description: `Checklist item is checked off but the feature scanner found no implementation.`,
+        description: `Checklist item is checked off but the feature scanner found no implementation of ${names}. ${provenanceNote(res)}`,
         direction: 'design-ahead',
         severity: 'major',
         effort: estimateEffort(item.label),
         designState: 'Checklist: done',
-        codeState: 'Scan: missing',
+        codeState: missing.length === res.features.length
+          ? 'Scan: missing'
+          : `Scan: ${missing.length} of ${res.features.length} features missing`,
         suggestion: 'Re-run feature scan or verify the implementation exists.',
         resolved: false,
+        matchSource: res.source === 'mapped' ? 'mapped' : 'heuristic',
+        matchedFeatures: matchedNames,
       });
     }
 
-    if (!isChecked && matchingFeature && matchingFeature.status === 'implemented') {
+    // Code-ahead needs EVERY mapped feature done — one implemented row out of six
+    // is not an item the user forgot to tick, it is an item still in progress.
+    if (!isChecked && res.features.every((f) => DONE_STATUSES.has(f.status))) {
       gaps.push({
         id: `gap-${moduleId}-ahead-${item.id}`,
         moduleId,
         moduleName,
         category: 'code-ahead',
         title: `"${item.label}" implemented but not checked off`,
-        description: `Feature scan shows implementation, but checklist item is unchecked.`,
+        description: `Feature scan shows ${res.features.length === 1 ? 'implementation' : `all ${res.features.length} mapped features implemented`}, but the checklist item is unchecked. ${provenanceNote(res)}`,
         direction: 'code-ahead',
         severity: 'info',
         effort: 'trivial',
@@ -67,6 +198,8 @@ function detectFeatureGaps(
         codeState: 'Scan: implemented',
         suggestion: 'Mark checklist item as complete.',
         resolved: false,
+        matchSource: res.source === 'mapped' ? 'mapped' : 'heuristic',
+        matchedFeatures: matchedNames,
       });
     }
   }
@@ -179,7 +312,7 @@ function detectFeatureGaps(
     });
   }
 
-  return gaps;
+  return { gaps, mapping, unmappedItems };
 }
 
 function estimateEffort(label: string): EffortEstimate {
@@ -457,13 +590,14 @@ export function runComplianceAudit(
     const moduleProgress = checklistProgress[mod.id] ?? {};
     const { done: checklistDone, total: checklistTotal } = countChecklist(mod, moduleProgress);
 
-    const gaps = detectFeatureGaps(
+    const detected = detectFeatureGaps(
       mod.id,
       mod.label,
       features,
       checklist.map((c) => ({ id: c.id, label: c.label })),
       moduleProgress,
-    ).map((g) => (resolved.has(g.id) ? { ...g, resolved: true } : g));
+    );
+    const gaps = detected.gaps.map((g) => (resolved.has(g.id) ? { ...g, resolved: true } : g));
 
     const evidence = evidenceFromRows(features);
     const featuresMeasured = evidence.featuresMeasured;
@@ -489,6 +623,8 @@ export function runComplianceAudit(
       checklistTotal,
       checklistDone,
       gaps,
+      checklistMapping: detected.mapping,
+      unmappedItems: detected.unmappedItems,
     });
   }
 
@@ -526,6 +662,10 @@ export function runComplianceAudit(
     // matching the client-side transform, and keeping `criticalGaps <= totalGaps`.
     totalGaps: allGaps.filter((g) => !g.resolved).length,
     criticalGaps: allGaps.filter((g) => g.severity === 'critical' && !g.resolved).length,
+    // How much of the checklist surface the two checklist gap categories can see
+    // at all. Stated in the envelope so an audit reporting few checklist gaps is
+    // read against how many items were even in scope.
+    checklistMapping: mergeMappingStats(modules.map((m) => m.checklistMapping)),
     suggestions,
   };
 }

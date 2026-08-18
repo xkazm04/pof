@@ -2,6 +2,7 @@ import { describe, it, expect, afterEach, beforeEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { useGDDComplianceStore } from '@/stores/gddComplianceStore';
 import type { ComplianceReport, ModuleCompliance, ComplianceGap, ReconciliationSuggestion } from '@/types/gdd-compliance';
+import { NO_CHECKLIST_MAPPING } from '@/types/gdd-compliance';
 
 // setup.ts has no afterEach(cleanup) — see reference_test_no_autocleanup.
 afterEach(cleanup);
@@ -21,6 +22,7 @@ const moduleFixture: ModuleCompliance = {
   },
   totalFeatures: 10, implemented: 6, improved: 0, partial: 2, missing: 2, unknown: 0,
   checklistTotal: 8, checklistDone: 5, gaps: [gap],
+  checklistMapping: { ...NO_CHECKLIST_MAPPING, itemsTotal: 8, mapped: 8 }, unmappedItems: [],
 };
 const suggestions: ReconciliationSuggestion[] = [
   { id: 's1', moduleId: 'arpg-combat', type: 'update-gdd', title: 'Update combat GDD', description: 'Sync dodge spec', effort: 'small', priority: 1 },
@@ -34,6 +36,7 @@ const report: ComplianceReport = {
   },
   modulesTotal: 1, modulesMeasured: 1,
   modules: [moduleFixture], totalGaps: 1, criticalGaps: 0, suggestions,
+  checklistMapping: { ...NO_CHECKLIST_MAPPING, itemsTotal: 8, mapped: 8 },
 };
 
 import { GDDComplianceView } from '@/components/modules/evaluator/GDDComplianceView';

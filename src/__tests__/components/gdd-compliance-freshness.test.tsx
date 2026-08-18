@@ -4,6 +4,7 @@ import { useGDDComplianceStore } from '@/stores/gddComplianceStore';
 import type {
   ComplianceEvidence, ComplianceReport, ModuleCompliance,
 } from '@/types/gdd-compliance';
+import { NO_CHECKLIST_MAPPING } from '@/types/gdd-compliance';
 import { GDDComplianceView } from '@/components/modules/evaluator/GDDComplianceView';
 
 // setup.ts has no afterEach(cleanup) — see reference_test_no_autocleanup.
@@ -27,11 +28,13 @@ function mount(ev: ComplianceEvidence) {
     evidence: ev, totalFeatures: ev.featuresTotal, implemented: 8, improved: 0,
     partial: 0, missing: 0, unknown: ev.featuresUnmeasured,
     checklistTotal: 8, checklistDone: 5, gaps: [],
+    checklistMapping: { ...NO_CHECKLIST_MAPPING, itemsTotal: 8, mapped: 8 }, unmappedItems: [],
   };
   const report: ComplianceReport = {
     generatedAt: AUDITED_AT, overallScore: 80, evidence: ev,
     modulesTotal: 1, modulesMeasured: ev.measured ? 1 : 0,
     modules: [mod], totalGaps: 0, criticalGaps: 0, suggestions: [],
+    checklistMapping: { ...NO_CHECKLIST_MAPPING, itemsTotal: 8, mapped: 8 },
   };
   useGDDComplianceStore.setState({
     report, modules: [mod], suggestions: [],

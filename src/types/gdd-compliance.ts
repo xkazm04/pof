@@ -82,6 +82,64 @@ export function evidenceAge(evidence: ComplianceEvidence, now: string | number):
   return { state: 'fresh', newestDays, oldestDays, undated };
 }
 
+/**
+ * How a checklist item was related to the feature rows it is graded against.
+ *
+ *   `mapped`    — an explicit `CHECKLIST_FEATURE_MAP` entry names the features.
+ *   `heuristic` — no explicit entry; the legacy 20-character label-substring
+ *                 fallback guessed one. A guess, and labelled as one everywhere
+ *                 it is shown — it must never read as a declared relation.
+ *   `unmapped`  — no entry and no fallback hit: the item is invisible to the
+ *                 checklist gap categories, which is a finding, not a pass.
+ */
+export type ChecklistMatchSource = 'mapped' | 'heuristic' | 'unmapped';
+
+/** A checklist item with no explicit feature mapping, and what (if anything) stood in. */
+export interface UnmappedChecklistItem {
+  id: string;
+  label: string;
+  /** `heuristic` = the substring fallback guessed a feature; `none` = nothing matched. */
+  fallback: 'heuristic' | 'none';
+  /** The feature the fallback guessed. Present only when `fallback` is `heuristic`. */
+  heuristicFeature?: string;
+}
+
+/**
+ * How much of a checklist is actually wired to the feature matrix. Reported
+ * beside the score because an unmapped item produces NO checklist gap in either
+ * direction — its silence is missing evidence, not compliance.
+ */
+export interface ChecklistMappingStats {
+  /** Checklist items the audit considered for this scope. */
+  itemsTotal: number;
+  /** Items with an explicit mapping (including the deliberate empty ones). */
+  mapped: number;
+  /** Of `mapped`, items explicitly declared un-evidenceable by any feature row. */
+  noFeatureEvidence: number;
+  /** Of `mapped`, items resolving to more than one feature row (impossible before). */
+  multiFeature: number;
+  /** Items with no mapping where the substring fallback guessed a feature. */
+  heuristic: number;
+  /** Items with no mapping and no fallback hit — dark to the checklist categories. */
+  unmapped: number;
+  /**
+   * Mapped feature names with no matching row in a module that HAS been scanned
+   * — the design names a feature the scan has never heard of. Modules with no
+   * scan at all are excluded: there, everything is "missing" for a duller reason.
+   */
+  danglingMappings: number;
+}
+
+/**
+ * The all-zero mapping figure — what a scope with no checklist items reports.
+ * Frozen, and never used as a stand-in for a scope that HAS a checklist: an
+ * un-computed mapping must not read as "nothing to map".
+ */
+export const NO_CHECKLIST_MAPPING: Readonly<ChecklistMappingStats> = Object.freeze({
+  itemsTotal: 0, mapped: 0, noFeatureEvidence: 0, multiFeature: 0,
+  heuristic: 0, unmapped: 0, danglingMappings: 0,
+});
+
 export interface ComplianceGap {
   id: string;
   moduleId: SubModuleId;
@@ -96,6 +154,14 @@ export interface ComplianceGap {
   codeState: string;
   suggestion: string;
   resolved: boolean;
+  /**
+   * For the two checklist-derived categories only: whether the item→feature
+   * relation behind this gap was declared or guessed. Absent on gaps derived
+   * from a feature row alone (quality, missing-feature, partial, unmeasured).
+   */
+  matchSource?: Exclude<ChecklistMatchSource, 'unmapped'>;
+  /** The feature rows this gap was raised over, by name. Empty for row-derived gaps. */
+  matchedFeatures?: string[];
 }
 
 /**
@@ -151,6 +217,10 @@ export interface ModuleCompliance {
   checklistTotal: number;
   checklistDone: number;
   gaps: ComplianceGap[];
+  /** How much of this module's checklist is explicitly wired to features. */
+  checklistMapping: ChecklistMappingStats;
+  /** The unmapped items themselves, so the UI can name them rather than count them. */
+  unmappedItems: UnmappedChecklistItem[];
 }
 
 export interface ComplianceReport {
@@ -170,6 +240,12 @@ export interface ComplianceReport {
   modules: ModuleCompliance[];
   totalGaps: number;
   criticalGaps: number;
+  /**
+   * Project-wide roll-up of the checklist→feature mapping. The share of the
+   * design surface the `checklist-vs-scan` / `code-ahead` categories can see at
+   * all — previously unstated, and previously most of it.
+   */
+  checklistMapping: ChecklistMappingStats;
   suggestions: ReconciliationSuggestion[];
 }
 

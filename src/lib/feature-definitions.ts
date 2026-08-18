@@ -411,6 +411,292 @@ export const MODULE_FEATURE_DEFINITIONS: PartialModuleMap<FeatureDefinition[]> =
   ],
 };
 
+// ─── Checklist ↔ feature mapping ──────────────────────────────────────────────
+//
+// The GDD compliance audit used to relate a checklist item to a feature row with
+// a 20-character substring test in both directions, taking the FIRST hit. Two
+// things were wrong with that, both measured on the real DB (2026-08-18):
+//
+//   • Coverage. Only 88 of the 216 registry checklist items the audit can see
+//     matched anything at all, so the `checklist-vs-scan` and `code-ahead` gap
+//     categories were dark for 59% of the design surface. `ac-1` "Character
+//     foundation package" — six C++ classes in one item — matched nothing.
+//   • Arity. `features.find` returns one row, so an item covering six features
+//     could only ever be evidenced by one of them.
+//
+// The relation is declared here instead, beside the features it names, in the
+// same registry that already models `dependsOn`. It is keyed **module → item id
+// → feature names** rather than by a flat item id, because checklist ids are NOT
+// globally unique: `ai-1`…`ai-7` exist in both `arpg-inventory` and
+// `ai-behavior`, and a flat map would silently cross-wire the two modules.
+//
+// Three deliberate states, all honest:
+//   • a list of names  — this item is evidenced by exactly these feature rows;
+//   • `[]`             — NOTHING in the feature matrix can evidence this item
+//                        (verification/test/tuning items such as "Test full
+//                        save/load cycle"). Mapping them to a plausible-looking
+//                        feature is the false positive this table exists to
+//                        remove, so they are declared empty on purpose;
+//   • absent           — not mapped yet. The audit falls back to the substring
+//                        heuristic and FLAGS the item as unmapped in the report;
+//                        a fallback hit is never presented as a real mapping.
+//
+// Names must match `MODULE_FEATURE_DEFINITIONS[moduleId]` exactly (pinned by
+// `src/__tests__/lib/evaluator/gdd-compliance-mapping.test.ts`). Cross-module
+// references are deliberately not supported: the audit compares one module's
+// checklist against that module's own scanned rows.
+export const CHECKLIST_FEATURE_MAP: PartialModuleMap<Record<string, string[]>> = {
+  // ─── Core Engine (aRPG curriculum) ──────────────────────────────────────────
+  'arpg-character': {
+    'ac-1': ['AARPGCharacterBase', 'Enhanced Input actions', 'AARPGPlayerController',
+             'AARPGPlayerCharacter', 'Isometric camera', 'WASD movement'],
+    'ac-2': ['Sprint system'],
+    'ac-3': ['Dodge/dash'],
+    'ac-4': ['AARPGGameMode', 'UARPGGameInstance'],
+    'ac-5': ['WASD movement'],
+    'ac-6': [], // runtime locomotion check — no feature row can evidence it
+  },
+  'arpg-animation': {
+    'aa-1': ['UARPGAnimInstance'],
+    'aa-2': ['Locomotion Blend Space'],
+    'aa-3': ['Animation state machine'],
+    'aa-4': ['Attack montages'],
+    'aa-5': ['Anim Notify classes'],
+    'aa-6': ['Motion Warping'],
+    'aa-7': ['Root motion toggle'],
+    'aa-8': ['Mixamo import & retarget pipeline'],
+  },
+  'arpg-gas': {
+    'ag-1': ['AbilitySystemComponent'],
+    'ag-2': ['Core AttributeSet'],
+    'ag-3': ['Gameplay Tags hierarchy'],
+    'ag-4': ['Base GameplayAbility'],
+    'ag-5': ['Core Gameplay Effects'],
+    'ag-6': ['Damage execution calculation'],
+    'ag-7': ['Default attribute initialization'],
+    'ag-8': [], // "Test and debug GAS"
+  },
+  'arpg-combat': {
+    'acb-1': ['Melee attack ability'],
+    'acb-2': ['Combo system'],
+    'acb-3': ['Hit detection'],
+    'acb-4': ['GAS damage application'],
+    'acb-5': ['Hit reaction system'],
+    'acb-6': ['Dodge ability (GAS)'],
+    'acb-7': ['Death flow'],
+    'acb-8': ['Combat feedback'],
+    'acb-9': [], // "Create test dummy and validate combat loop"
+  },
+  'arpg-enemy-ai': {
+    'ae-1': ['AARPGAIController'],
+    'ae-2': ['AARPGEnemyCharacter'],
+    'ae-3': ['AI Perception'],
+    'ae-4': ['Behavior Tree'],
+    'ae-5': ['EQS queries'],
+    'ae-6': ['Enemy archetypes'],
+    'ae-7': ['Enemy Gameplay Abilities'],
+    'ae-8': ['Spawn system'],
+  },
+  'arpg-inventory': {
+    'ai-1': ['UARPGItemDefinition'],
+    'ai-2': ['UARPGItemInstance'],
+    'ai-3': ['UARPGInventoryComponent'],
+    'ai-4': ['Equipment slot system'],
+    'ai-5': ['Equip/unequip GAS flow'],
+    'ai-6': ['Consumable usage'],
+    'ai-7': ['Affix system'],
+    'ai-8': [], // "Test inventory operations"
+  },
+  'arpg-loot': {
+    'al-1': ['UARPGLootTable'],
+    'al-2': ['UARPGLootTable', 'Loot drop on death'],
+    'al-3': ['Weighted random selection'],
+    'al-4': ['AARPGWorldItem'],
+    'al-5': ['Loot drop on death'],
+    'al-6': ['Item pickup'],
+    'al-7': ['Loot visual feedback'],
+    'al-8': ['Chest/container actors'],
+  },
+  'arpg-ui': {
+    'au-1': ['Main HUD widget'],
+    'au-2': ['GAS attribute binding'],
+    'au-3': ['Enemy health bars'],
+    'au-4': ['Ability cooldown UI'],
+    'au-5': ['Inventory screen'],
+    'au-6': ['Character stats screen'],
+    'au-7': ['Floating damage numbers'],
+    'au-8': ['Pause/settings menus'],
+  },
+  'arpg-progression': {
+    'ap-1': ['XP and Level attributes'],
+    'ap-2': ['XP award on enemy death'],
+    'ap-3': ['Level-up detection', 'XP curve table'],
+    'ap-4': ['Active abilities'],
+    'ap-5': ['Ability unlock system'],
+    'ap-6': ['Attribute point allocation'],
+    'ap-7': ['Ability loadout'],
+    'ap-8': [], // "Test full progression loop"
+  },
+  'arpg-world': {
+    'aw-1': ['Zone layout design'],
+    'aw-2': ['Blockout levels'],
+    'aw-3': ['Enemy spawn placement'],
+    'aw-4': ['Interactive world objects'],
+    'aw-5': ['Zone transitions'],
+    'aw-6': ['Boss encounter'],
+    'aw-7': ['Environmental hazards'],
+    'aw-8': ['NavMesh coverage'],
+  },
+  'arpg-save': {
+    'as-1': ['UARPGSaveGame'],
+    'as-2': ['Custom serialization'],
+    'as-3': ['Save function'],
+    'as-4': ['Load function'],
+    'as-5': ['Auto-save'],
+    'as-6': ['Save slot system'],
+    'as-7': ['Save versioning'],
+    'as-8': [], // "Test full save/load cycle"
+  },
+  'arpg-polish': {
+    'apl-1': ['Structured logging'],
+    'apl-2': ['Debug draw helpers'],
+    'apl-3': ['Debug console commands'],
+    'apl-4': [], // "Profile with Unreal Insights"
+    'apl-5': ['Object pooling'],
+    'apl-6': ['Tick optimization'],
+    'apl-7': ['Async asset loading'],
+    'apl-8': [], // "Final integration test"
+  },
+
+  // ─── Content ────────────────────────────────────────────────────────────────
+  'models': {
+    'mod-1': ['Static mesh import pipeline', 'Skeletal mesh import'],
+    'mod-2': ['LOD generation'],
+    'mod-3': ['Collision setup'],
+    'mod-4': ['Nanite mesh enabling'],
+    'mod-5': [], // material slots / UV setup — no feature declared for it
+    'mod-6': [], // asset validation workflow — no feature declared for it
+  },
+  'animations': {
+    'anim-1': ['Custom AnimInstance base'],
+    'anim-2': ['Blend Space setup'],
+    'anim-3': ['Animation state machine'],
+    'anim-4': ['Montage system'],
+    'anim-5': ['Anim Notify framework'],
+    'anim-6': ['Animation retargeting'],
+    'anim-7': [], // "Test animation integration"
+  },
+  'materials': {
+    'mat-1': ['Master material'],
+    'mat-2': ['Dynamic material instances'],
+    'mat-3': ['Material Parameter Collection'],
+    'mat-4': ['Material functions library', 'Material layer system'],
+    'mat-5': ['HLSL custom nodes'],
+    'mat-6': [], // "Optimize material performance"
+  },
+  'level-design': {
+    'ld-1': ['Blockout geometry'],
+    'ld-2': ['Spawn point placement'],
+    'ld-3': ['Level streaming setup', 'Zone transition system'],
+    'ld-4': ['NavMesh configuration'],
+    'ld-5': [], // "Add environmental storytelling"
+    'ld-6': ['Blockout geometry', 'Environmental hazards'],
+    'ld-7': [], // "Test level flow and pacing"
+  },
+  'ui-hud': {
+    'ui-1': ['Main menu widget'],
+    'ui-2': ['HUD framework'],
+    'ui-3': ['Inventory screen'],
+    'ui-4': ['Floating damage numbers'],
+    'ui-5': ['Settings menu'],
+    'ui-6': [], // notification system — no feature declared for it
+    'ui-7': [], // "Test UI across resolutions"
+  },
+  'audio': {
+    'aud-1': ['Sound manager subsystem'],
+    'aud-2': ['Ambient sound system'],
+    'aud-3': ['Dynamic music system'],
+    'aud-4': [], // combat audio — no feature declared for it
+    'aud-5': ['MetaSounds integration'],
+    'aud-6': [], // "Test audio mix and spatialization"
+  },
+
+  // ─── Game Systems ───────────────────────────────────────────────────────────
+  'ai-behavior': {
+    'ai-1': ['AI Controller base'],
+    'ai-2': ['Behavior Tree system'],
+    'ai-3': ['AI Perception setup'],
+    'ai-4': ['EQS queries'],
+    'ai-5': ['Group AI coordination'],
+    'ai-6': ['AI debugging tools'],
+    'ai-7': ['AI Controller base', 'State Tree AI system'],
+  },
+  'physics': {
+    'phy-1': ['Collision profiles and channels'],
+    'phy-2': ['Physics materials'],
+    'phy-3': ['Projectile system'],
+    'phy-4': ['Chaos destruction'],
+    'phy-5': [], // "Configure physics substepping"
+    'phy-6': ['Physics constraints', 'Trace utilities'],
+  },
+  'multiplayer': {
+    'mp-1': ['Replicated properties'],
+    'mp-2': ['RPC framework'],
+    'mp-3': ['GameState replication'],
+    'mp-4': ['Session management'],
+    'mp-5': ['Network prediction'],
+    'mp-6': ['Net relevancy settings', 'Iris replication system'],
+    'mp-7': [], // "Test full multiplayer flow"
+  },
+  'save-load': {
+    'sl-1': ['USaveGame subclass'],
+    'sl-2': ['Save and load functions', 'Custom serialization'],
+    'sl-3': ['Auto-save system'],
+    'sl-4': ['Save slot UI'],
+    'sl-5': ['Save versioning'],
+    'sl-6': [], // "Test full save/load cycle"
+  },
+  'input-handling': {
+    'ih-1': ['Enhanced Input actions'],
+    'ih-2': ['Input Mapping Context setup'],
+    'ih-3': ['Key rebinding system'],
+    'ih-4': ['Gamepad support'],
+    'ih-5': ['Input mode management', 'Context-sensitive input'],
+    'ih-6': [], // "Test input across scenarios"
+  },
+  'dialogue-quests': {
+    'dq-1': ['Dialogue data asset'],
+    'dq-2': ['Branching conversation system'],
+    'dq-3': ['Quest tracker', 'Quest objectives'],
+    'dq-4': ['Quest log UI'],
+    'dq-5': ['NPC interaction system'],
+    'dq-6': ['Branching conversation system', 'Quest objectives'],
+  },
+  'packaging': {
+    'pkg-1': ['Build configuration'],
+    'pkg-2': ['Cooking settings'],
+    'pkg-3': ['Platform configuration'],
+    'pkg-4': ['Build automation'],
+    'pkg-5': ['Version numbering system'],
+  },
+
+  // The nine Asset Studio modules (asset-viewer … scene-composer, 39 checklist
+  // items) are deliberately absent: they declare no features in
+  // MODULE_FEATURE_DEFINITIONS at all, so there is nothing to map them to. They
+  // report as UNMAPPED rather than being quietly mapped to something else.
+};
+
+/**
+ * The features an explicit mapping declares for a checklist item, or `null` when
+ * the item is not mapped at all. `[]` is a real answer — "no feature row can
+ * evidence this item" — and is deliberately distinct from `null`.
+ */
+export function mappedFeaturesFor(moduleId: SubModuleId, itemId: string): readonly string[] | null {
+  const forModule = CHECKLIST_FEATURE_MAP[moduleId];
+  if (!forModule) return null;
+  return Object.prototype.hasOwnProperty.call(forModule, itemId) ? forModule[itemId] : null;
+}
+
 // ─── Dependency resolution engine ─────────────────────────────────────────────
 
 export interface ResolvedDependency {

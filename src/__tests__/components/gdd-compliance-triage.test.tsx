@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { useGDDComplianceStore } from '@/stores/gddComplianceStore';
 import type { ComplianceGap, ComplianceReport, ModuleCompliance } from '@/types/gdd-compliance';
+import { NO_CHECKLIST_MAPPING } from '@/types/gdd-compliance';
 import { GDDComplianceView } from '@/components/modules/evaluator/GDDComplianceView';
 
 // setup.ts has no afterEach(cleanup) — see reference_test_no_autocleanup.
@@ -27,11 +28,13 @@ function mount(gaps: ComplianceGap[], over: Partial<{ refreshFailed: boolean; er
     moduleId: 'arpg-combat', moduleName: 'Combat', score: 60, conformance: 60, evidence,
     totalFeatures: 4, implemented: 2, improved: 0, partial: 0, missing: 2, unknown: 0,
     checklistTotal: 4, checklistDone: 2, gaps,
+    checklistMapping: { ...NO_CHECKLIST_MAPPING, itemsTotal: 4, mapped: 4 }, unmappedItems: [],
   };
   const report: ComplianceReport = {
     generatedAt: '2026-08-18T00:00:00.000Z', overallScore: 60, evidence,
     modulesTotal: 1, modulesMeasured: 1, modules: [mod],
     totalGaps: gaps.filter((g) => !g.resolved).length, criticalGaps: 0, suggestions: [],
+    checklistMapping: { ...NO_CHECKLIST_MAPPING, itemsTotal: 4, mapped: 4 },
   };
   useGDDComplianceStore.setState({
     report, modules: [mod], suggestions: [], selectedModuleId: 'arpg-combat',
