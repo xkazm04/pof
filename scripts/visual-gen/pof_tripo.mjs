@@ -9,6 +9,9 @@
  *   node pof_tripo.mjs --prompt "a stylized fantasy warrior, full body" --output out.glb
  *   node pof_tripo.mjs --image ref.png --output out.glb
  *   # optional: --model v2.5-20250123 --pbr --quad --face-limit 40000
+ *   # optional: --smart-low-poly (Tripo's "Smart Mesh" / marketed as P1-P2 mode
+ *   #   -- a flag on the SAME model_version, not a separate model id; face_limit
+ *   #   must be 1000-20000 when set, or 500-10000 if --quad is ALSO set)
  */
 import { writeFileSync, mkdirSync, readFileSync, existsSync, statSync } from 'fs';
 import { dirname, resolve, basename } from 'path';
@@ -59,6 +62,7 @@ async function main() {
   if (a['face-limit']) opt.face_limit = parseInt(a['face-limit'], 10);
   if (a.pbr) opt.pbr = true;
   if (a.quad) opt.quad = true;
+  if (a['smart-low-poly']) opt.smart_low_poly = true;
   if (a['texture-quality']) opt.texture_quality = a['texture-quality']; // standard | detailed
 
   let body;

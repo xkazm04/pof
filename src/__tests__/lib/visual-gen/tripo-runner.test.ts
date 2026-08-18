@@ -46,6 +46,21 @@ describe('buildCreateTaskBody', () => {
     const b = buildCreateTaskBody({ mode: 'text-to-3d', prompt: 'x', outputPath: 'o.glb' });
     expect('texture_quality' in b).toBe(false);
   });
+
+  it('sends smart_low_poly, and lets it coexist with texture/pbr (not the generate_parts constraint)', () => {
+    const b = buildCreateTaskBody({
+      mode: 'image-to-3d', imageUrl: 'https://x/y.jpg', outputPath: 'o.glb',
+      smartLowPoly: true, texture: true, pbr: true, textureQuality: 'detailed', faceLimit: 10000,
+    });
+    expect(b.smart_low_poly).toBe(true);
+    expect(b.texture).toBe(true);
+    expect(b.pbr).toBe(true);
+  });
+
+  it('omits smart_low_poly when unset', () => {
+    const b = buildCreateTaskBody({ mode: 'text-to-3d', prompt: 'x', outputPath: 'o.glb' });
+    expect('smart_low_poly' in b).toBe(false);
+  });
 });
 
 describe('parseTaskCreate', () => {

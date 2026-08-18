@@ -57,6 +57,16 @@ export interface TripoSpec {
   /** Quad (game-ready) topology instead of triangles. */
   quad?: boolean;
   /**
+   * Tripo's "Smart Mesh" / hand-crafted-topology mode — what the vendor markets as
+   * "P1"/"P2" is this flag on the SAME `model_version`, not a distinct model id (verified
+   * against the primary API docs: model_version only ever accepts v3.1-20260211 or
+   * v3.0-20250812). Unlike `quad`, this stays compatible with `texture`/`pbr` and does not
+   * change the delivered container — the docs' apparent incompatibility note actually
+   * belongs to a different flag, `generate_parts`, not this one. `face_limit` must be
+   * 1000-20000 when this is true (500-10000 if `quad` is ALSO true). Costs +10 credits.
+   */
+  smartLowPoly?: boolean;
+  /**
    * Asset class this mesh is being generated as (`character`, `prop`, …). Carried so the
    * Tier-1 gate can grade it class-aware; never sent to the provider.
    */
@@ -158,6 +168,7 @@ export function buildCreateTaskBody(spec: TripoSpec): Record<string, unknown> {
   if (spec.pbr !== undefined) opt.pbr = spec.pbr;
   if (spec.textureQuality) opt.texture_quality = spec.textureQuality;
   if (spec.quad !== undefined) opt.quad = spec.quad;
+  if (spec.smartLowPoly !== undefined) opt.smart_low_poly = spec.smartLowPoly;
 
   if (spec.mode === 'text-to-3d') {
     return { type: 'text_to_model', prompt: spec.prompt ?? '', ...opt };
