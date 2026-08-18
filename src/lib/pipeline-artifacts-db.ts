@@ -63,6 +63,27 @@ function ensureTable() {
 
     CREATE INDEX IF NOT EXISTS idx_artifact_revisions_step
       ON pipeline_artifact_revisions (catalog_id, entity_id, step, id DESC);
+
+    -- The runner's work queue (listDeferredArtifacts / deferredQuery) is the hottest read
+    -- in the subsystem: EVERY worker tick and every drain GET/POST runs it. Its predicate
+    -- always pins status, and the PRIMARY KEY autoindex leads with catalog_id — useless for
+    -- a global or tier-only sweep, which therefore scanned the WHOLE table.
+    --
+    -- Column order is measured, not guessed: status first (the one always-present equality),
+    -- then catalog_id, entity_id, step in EXACTLY the ORDER BY order, so the sort is free and
+    -- the scoped drains (catalog / catalog+entity) also seek through this index. A
+    -- (status, tier, …) variant was measured slower on the hottest query — the interposed
+    -- tier breaks the ordering and forces a TEMP B-TREE FOR ORDER BY; tier is instead a
+    -- cheap residual filter over the already-narrowed deferred set.
+    --
+    -- Measured on a copy of the real ~/.pof/pof.db, before/after in ONE process (300 runs each).
+    --   today (817 artifacts / 66 deferred):  global tick 0.376 -> 0.191 ms, L3 sweep 0.279 -> 0.106 ms
+    --   same DB grown 20x (17,157 / 1,386):   global tick 116.6 -> 5.1 ms,   L3 sweep 161.5 -> 3.0 ms
+    -- The plan flips SCAN(whole table) -> SEARCH(status=?), which is why the gap widens with
+    -- every produce. No query regressed; the scoped drains got faster too. Additive +
+    -- idempotent: building an index never rewrites rows (1.3 ms on the real DB, integrity ok).
+    CREATE INDEX IF NOT EXISTS idx_artifacts_deferred_queue
+      ON pipeline_artifacts (status, catalog_id, entity_id, step);
   `);
   tableEnsured = true;
 }
@@ -167,15 +188,27 @@ export function getArtifact(catalogId: string, entityId: string, step: string): 
   return row ? rowToArtifact(row) : null;
 }
 
-/** All `deferred` artifacts (the runner's work queue), optionally narrowed. */
-export function listDeferredArtifacts(filter?: DrainFilter): PipelineArtifact[] {
-  ensureTable();
+/**
+ * The deferred-queue statement — the SQL + args, built in ONE place so the query that
+ * actually runs and the index that must cover it (`idx_artifacts_deferred_queue`, see the
+ * DDL above) can never diverge: the index-coverage test EXPLAINs exactly this. Pure.
+ */
+export function deferredQuery(filter?: DrainFilter): { sql: string; args: string[] } {
   const where = ["status = 'deferred'"];
   const args: string[] = [];
   if (filter?.tier) { where.push('tier = ?'); args.push(filter.tier); }
   if (filter?.catalogId) { where.push('catalog_id = ?'); args.push(filter.catalogId); }
   if (filter?.entityId) { where.push('entity_id = ?'); args.push(filter.entityId); }
-  const sql = `SELECT * FROM pipeline_artifacts WHERE ${where.join(' AND ')} ORDER BY catalog_id, entity_id, step`;
+  return {
+    sql: `SELECT * FROM pipeline_artifacts WHERE ${where.join(' AND ')} ORDER BY catalog_id, entity_id, step`,
+    args,
+  };
+}
+
+/** All `deferred` artifacts (the runner's work queue), optionally narrowed. */
+export function listDeferredArtifacts(filter?: DrainFilter): PipelineArtifact[] {
+  ensureTable();
+  const { sql, args } = deferredQuery(filter);
   return (getDb().prepare(sql).all(...args) as Record<string, unknown>[]).map(rowToArtifact);
 }
 
