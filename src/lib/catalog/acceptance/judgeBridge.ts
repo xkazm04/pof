@@ -51,6 +51,24 @@ export function judgedContentOf(data: Record<string, unknown> | undefined, updat
   return { hash: stepContentHash(data), ...(updatedAt ? { updatedAt } : {}) };
 }
 
+/**
+ * Build a {@link JudgedContent} from a hash the ROW already carries, for a reader that has the
+ * binding but not the blob (the `/status` summary projection stamps `contentHash` server-side
+ * with this very `stepContentHash`).
+ *
+ * It is a SIBLING of {@link judgedContentOf}, not a change to it: `resolveStepAcceptance` and
+ * `explainAcceptance` both call that function on the grading path, and widening it would put a
+ * whole-project read optimisation inside the acceptance spine.
+ *
+ * `hash` is deliberately optional and NOT defaulted: a caller with no binding must produce a
+ * hash-less {@link JudgedContent} (→ `unknown` provenance: still condemning, never elevating),
+ * because `stepContentHash(undefined)` fingerprints `{}` and would fabricate a binding for
+ * content nobody read.
+ */
+export function judgedContentFromHash(hash: string | undefined, updatedAt?: string): JudgedContent {
+  return { ...(hash ? { hash } : {}), ...(updatedAt ? { updatedAt } : {}) };
+}
+
 /** Tolerant timestamp parse: SQLite `datetime('now')` ("YYYY-MM-DD HH:MM:SS", UTC) and ISO
  *  both appear in this data, so they can't be compared as strings. `NaN` → unknown. */
 function ts(v: string | undefined): number {

@@ -27,11 +27,11 @@ import stepFactsJson from './step-facts.json';
 import ceilingFactsJson from './ceiling-facts.json';
 import capabilityBenchmarksJson from './capability-benchmarks.json';
 import { deliverableClassOf } from '@/lib/judge/dimensions';
-import { getStepFact, isSyntheticEntity, type FactAddress, type StepFact } from './statusModel';
-import { verdictProvenance, judgedContentOf, type JudgedContent } from '@/lib/catalog/acceptance/judgeBridge';
+import { getStepFact, isSyntheticEntity, judgedContentOfRow, type FactAddress, type StepFact } from './statusModel';
+import { verdictProvenance, type JudgedContent } from '@/lib/catalog/acceptance/judgeBridge';
 import { RUBRIC_VERSION } from '@/lib/judge/rubrics';
 import type { JudgeVerdict } from './judge-verdicts-db';
-import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
+import type { ArtifactVerdictRow } from '@/lib/pipeline-artifacts-db';
 
 /** Minimum rubric version an llm-panel verdict must carry to count as capability
  *  evidence — v3 is the canon-aware strict bar (see judge/rubrics.ts). VLM verdicts
@@ -411,7 +411,7 @@ function emptyEvidence(): ClassEvidence {
  */
 export function buildCapabilityRows(
   verdicts: JudgeVerdict[],
-  artifacts: PipelineArtifact[] = [],
+  artifacts: ArtifactVerdictRow[] = [],
   benchmarks: CapabilityBenchmarkRow[] = CAPABILITY_BENCHMARKS,
 ): CapabilityRow[] {
   const ev = new Map<string, ClassEvidence>();
@@ -425,11 +425,14 @@ export function buildCapabilityRows(
   };
 
   // The artifacts this view already receives ARE the content each verdict is checked against
-  // (same (catalog, entity, step) key), so the binding costs no new input.
+  // (same (catalog, entity, step) key), so the binding costs no new input. The binding comes
+  // from the ROW (`judgedContentOfRow` — THE shared rule, so this view and the swimlane can
+  // never bind the same verdict differently), which means a verdict-only projection binds
+  // exactly as a full row does and this view needs no produce blobs at all.
   const byCell = new Map(artifacts.map((a) => [`${a.catalogId}|${a.entityId}|${a.step}`, a]));
   const contentOf = (v: JudgeVerdict): JudgedContent | undefined => {
     const a = byCell.get(`${v.catalogId}|${v.entityId}|${v.step}`);
-    return a ? judgedContentOf(a.data, a.updatedAt) : undefined;
+    return a ? judgedContentOfRow(a) : undefined;
   };
 
   for (const v of latestVerdictsByJudge(verdicts, contentOf).values()) {

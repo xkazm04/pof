@@ -1,4 +1,4 @@
-import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
+import type { ArtifactVerdictRow, PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 import type { AcceptanceStatus, AcceptanceTier } from '@/lib/catalog/acceptance/types';
 import { stepContentHash } from '@/lib/judge/contentHash';
 import { labContentHash } from './labContentDrift';
@@ -61,5 +61,31 @@ export function toStepSummary(a: PipelineArtifact): StepSummary {
     ...(a.updatedAt ? { updatedAt: a.updatedAt } : {}),
     contentHash: stepContentHash(a.data),
     driftHash: labContentHash(a.data, a.ueAssets),
+  };
+}
+
+/**
+ * Lift a summary back into the row shape a GRADER consumes ({@link ArtifactVerdictRow}) — the
+ * inverse of {@link toStepSummary}, kept beside it so the projection and its inverse cannot
+ * drift apart.
+ *
+ * `catalogId` is re-attached from the fetch key: the wire shape omits it because every summary
+ * in a response belongs to the catalog that was asked for, and the capability model keys its
+ * evidence by `(catalog, entity, step)`.
+ *
+ * It carries NO `data` on purpose. That is the whole point of the projection — and the reason
+ * `contentHash` rides along: with the binding on the row, `statusModel.judgedContentOfRow` can
+ * check a verdict against the content on record without the blob it was computed from.
+ */
+export function summaryToVerdictRow(catalogId: string, s: StepSummary): ArtifactVerdictRow {
+  return {
+    catalogId,
+    entityId: s.entityId,
+    step: s.step,
+    status: s.status,
+    ...(s.tier ? { tier: s.tier } : {}),
+    ...(s.reason ? { reason: s.reason } : {}),
+    ...(s.updatedAt ? { updatedAt: s.updatedAt } : {}),
+    contentHash: s.contentHash,
   };
 }

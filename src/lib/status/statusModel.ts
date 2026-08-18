@@ -15,7 +15,7 @@
  *   pending   — produced but not yet passing
  *   unwired   — NO artifact exists (mocked / skipped / never run) ← the bottleneck
  */
-import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
+import type { ArtifactVerdictRow } from '@/lib/pipeline-artifacts-db';
 import type { JudgeVerdict } from './judge-verdicts-db';
 import stepFactsJson from './step-facts.json';
 import headlessCoverageJson from './headless-coverage.json';
@@ -26,6 +26,7 @@ import { BANDS, newestRubricVerdicts } from '@/lib/judge/rubrics';
 import {
   verdictProvenance,
   judgedContentOf,
+  judgedContentFromHash,
   unverifiedReason,
   CONDEMNING_PROVENANCE,
   type JudgedContent,
@@ -297,12 +298,35 @@ export interface StepCell {
 
 const GATE_TIERS = new Set(['L3', 'L4']);
 
+/**
+ * What ONE row holds right now, for checking a verdict's content binding against it.
+ *
+ * THE row-hash rule, in priority order — shared by both /status models so they cannot answer
+ * the same question differently:
+ *  1. the row CARRIES its binding (`contentHash`) → take it. The blob-free summary projection
+ *     stamps it server-side with the same `stepContentHash` the full path computes, so this is
+ *     the identical fingerprint, not a second rule.
+ *  2. the row was read in FULL → hash its own blob, byte-identically to before.
+ *  3. NEITHER → no hash at all. A reader that has no blob and no binding cannot prove one, and
+ *     `judgedContentOf(undefined)` would fingerprint `{}` — fabricating a binding that could
+ *     match a genuinely-empty step's verdict. Hash-less degrades to `unknown` provenance:
+ *     still CONDEMNING (a recorded fail is evidence) but never ELEVATING. Unprovable falls to
+ *     the conservative side.
+ *
+ * Pure.
+ */
+export function judgedContentOfRow(a: ArtifactVerdictRow): JudgedContent {
+  if (a.contentHash) return judgedContentFromHash(a.contentHash, a.updatedAt);
+  if (a.data) return judgedContentOf(a.data, a.updatedAt);
+  return judgedContentFromHash(undefined, a.updatedAt);
+}
+
 /** What each ENTITY of this step holds right now. `judge_verdicts` and `pipeline_artifacts`
  *  are both keyed by (catalog, entity, step), so this is the join that lets a verdict be
  *  checked against the content it claims to have judged. Pure. */
-function contentByEntity(artifacts: PipelineArtifact[]): Map<string, JudgedContent> {
+function contentByEntity(artifacts: ArtifactVerdictRow[]): Map<string, JudgedContent> {
   const m = new Map<string, JudgedContent>();
-  for (const a of artifacts) m.set(a.entityId, judgedContentOf(a.data, a.updatedAt));
+  for (const a of artifacts) m.set(a.entityId, judgedContentOfRow(a));
   return m;
 }
 
@@ -348,7 +372,7 @@ function attribution(v: JudgeVerdict, p: VerdictProvenance, applied: boolean): J
 export function deriveCell(
   label: string,
   engine: string,
-  artifacts: PipelineArtifact[],
+  artifacts: ArtifactVerdictRow[],
   fact?: StepFact,
   verdicts: JudgeVerdict[] = [],
 ): StepCell {
@@ -393,6 +417,10 @@ export function deriveCell(
   // regressed held a cell green forever, and a FAIL that judged content since FIXED held a
   // re-produced step red forever. The map and its own drill-down could disagree, with the
   // map trusting the staler evidence.
+  //
+  // The binding is taken from the ROW (`judgedContentOfRow`) rather than re-hashed from a
+  // blob, so this grades a verdict-only projection and a full row to the same cell — that is
+  // what lets /status read the 40×-smaller summary without moving a grade.
   const content = contentByEntity(artifacts);
   const classified = relevant.map((v) => ({ v, p: verdictProvenance(v, content.get(v.entityId)) }));
   // CONDEMNS on `current` (binding confirmed) or `unknown` (nobody can confirm OR refute —
@@ -475,11 +503,11 @@ export function buildSwimlane(
   catalogId: string,
   label: string,
   steps: StepMeta[],
-  artifacts: PipelineArtifact[],
+  artifacts: ArtifactVerdictRow[],
   verdicts: JudgeVerdict[] = [],
   headless: HeadlessLookup = getHeadlessFact,
 ): Swimlane {
-  const byStep = new Map<string, PipelineArtifact[]>();
+  const byStep = new Map<string, ArtifactVerdictRow[]>();
   for (const a of artifacts) {
     if (isSyntheticEntity(a.entityId)) continue;
     const list = byStep.get(a.step) ?? [];

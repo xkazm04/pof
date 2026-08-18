@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, cleanup, waitFor, fireEvent } from '@testing-library/react';
 import { PipelinesView } from '@/components/status/PipelinesView';
 import { _resetArtifactCache } from '@/components/layout-lab/labArtifactCache';
+import { toStepSummary } from '@/components/layout-lab/stepSummary';
+import type { StepSummary } from '@/components/layout-lab/stepSummary';
 import type { Result } from '@/types/result';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 
@@ -31,24 +33,25 @@ vi.mock('@/lib/catalog/pipeline-registry', async (importOriginal) => {
   };
 });
 
-/** `items` answers with produced artifacts; `npcs` fails the read. The shared source reads
- *  through the `Result` form, so this is the fetch that has to keep its failure. */
-const fetchArtifactsResult = vi.fn(
-  async (catalogId: string): Promise<Result<PipelineArtifact[], string>> => {
+/** `items` answers with produced artifacts; `npcs` fails the read. /status reads the
+ *  BLOB-FREE projection of those same rows (`GET /api/pipeline-artifacts/summary`), through
+ *  the `Result` form — so this is the fetch that has to keep its failure. The rows are
+ *  projected with the real `toStepSummary`, never a hand-written wire shape. */
+const rowsFor = (catalogId: string): PipelineArtifact[] => [
+  { catalogId, entityId: 'e1', step: 'Concept Brief', data: {}, ueAssets: [], status: 'pass', tier: 'L0' },
+  { catalogId, entityId: 'e1', step: 'Economy', data: {}, ueAssets: [], status: 'pass', tier: 'L0' },
+];
+
+const fetchStepSummaryResult = vi.fn(
+  async (catalogId: string): Promise<Result<StepSummary[], string>> => {
     if (catalogId === 'npcs') return { ok: false, error: 'HTTP 500' };
-    return {
-      ok: true,
-      data: [
-        { catalogId, entityId: 'e1', step: 'Concept Brief', data: {}, ueAssets: [], status: 'pass', tier: 'L0' },
-        { catalogId, entityId: 'e1', step: 'Economy', data: {}, ueAssets: [], status: 'pass', tier: 'L0' },
-      ],
-    };
+    return { ok: true, data: rowsFor(catalogId).map(toStepSummary) };
   },
 );
 
 vi.mock('@/components/layout-lab/labArtifactClient', () => ({
-  fetchArtifactsResult: (catalogId: string) => fetchArtifactsResult(catalogId),
-  fetchStepSummaryResult: vi.fn(async () => ({ ok: true, data: [] })),
+  fetchArtifactsResult: vi.fn(async () => ({ ok: true, data: [] })),
+  fetchStepSummaryResult: (catalogId: string) => fetchStepSummaryResult(catalogId),
   fetchArtifacts: vi.fn(async () => []),
 }));
 
@@ -73,7 +76,7 @@ beforeEach(() => {
   // The shared read is a MODULE-LEVEL cache — it deliberately outlives an unmount, so each
   // case starts from an empty one.
   _resetArtifactCache();
-  fetchArtifactsResult.mockClear();
+  fetchStepSummaryResult.mockClear();
 });
 afterEach(cleanup);
 
@@ -131,16 +134,16 @@ describe('PipelinesView — a failed read is not a grade', () => {
 
     // Exactly one read per catalog: a failed lane must never re-issue on its own, or a
     // 500 would spin a fetch loop.
-    expect(fetchArtifactsResult).toHaveBeenCalledTimes(2);
+    expect(fetchStepSummaryResult).toHaveBeenCalledTimes(2);
     await new Promise((r) => setTimeout(r, 20));
-    expect(fetchArtifactsResult).toHaveBeenCalledTimes(2);
+    expect(fetchStepSummaryResult).toHaveBeenCalledTimes(2);
 
     // The operator-driven retry does re-issue.
     const reload = [...banner.querySelectorAll('button')].find((b) => b.textContent === 'Reload map');
     expect(reload).toBeTruthy();
     fireEvent.click(reload!);
     await waitFor(() => {
-      expect(fetchArtifactsResult).toHaveBeenCalledTimes(4);
+      expect(fetchStepSummaryResult).toHaveBeenCalledTimes(4);
     });
   });
 
@@ -151,13 +154,13 @@ describe('PipelinesView — a failed read is not a grade', () => {
       expect(r).toBeTruthy();
       return r!;
     });
-    expect(fetchArtifactsResult).toHaveBeenCalledTimes(2);
+    expect(fetchStepSummaryResult).toHaveBeenCalledTimes(2);
 
     fireEvent.click([...row.querySelectorAll('button')].find((b) => b.textContent === 'Retry')!);
     await waitFor(() => {
-      expect(fetchArtifactsResult).toHaveBeenCalledTimes(3);
+      expect(fetchStepSummaryResult).toHaveBeenCalledTimes(3);
     });
     // The third read is npcs again — items is still served from the shared cache.
-    expect(fetchArtifactsResult.mock.calls.map((c) => c[0])).toEqual(['items', 'npcs', 'npcs']);
+    expect(fetchStepSummaryResult.mock.calls.map((c) => c[0])).toEqual(['items', 'npcs', 'npcs']);
   });
 });

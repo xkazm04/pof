@@ -3,16 +3,42 @@ import type { AcceptanceStatus, AcceptanceTier } from '@/lib/catalog/acceptance/
 // Type-only import (erased at runtime), so the runner→db dependency stays one-way.
 import type { DrainFilter } from '@/lib/test-gate-runner/drain';
 
-export interface PipelineArtifact {
+/**
+ * The VERDICT-shaped view of a persisted artifact row: everything a grader reads EXCEPT the
+ * produced blob, plus the row's own content binding.
+ *
+ * /status grades ~817 rows across 32 pipelines and reads five fields from each, yet it had to
+ * fetch every produce body (7,828,924 B measured) for ONE reason: the model bound each judge
+ * verdict to the content it judged by RE-hashing `data`. A row that already carries
+ * `contentHash` — the blob-free summary projection (`toStepSummary`) stamps it server-side
+ * with the SAME `stepContentHash` — needs no blob at all.
+ *
+ * {@link PipelineArtifact} extends this (its `data` is required), so a parameter widened to
+ * this type still accepts every full row: nothing narrows, and no caller changes.
+ */
+export interface ArtifactVerdictRow {
   catalogId: string;
   entityId: string;
   step: string;
-  data: Record<string, unknown>;
-  ueAssets: string[];
   status: AcceptanceStatus;
   tier?: AcceptanceTier;
   reason?: string;
   updatedAt?: string;
+  /**
+   * `stepContentHash(data)` for the content this row holds, when the reader has it WITHOUT the
+   * blob. Absent does not mean "no content": it means this reader cannot prove a binding, and a
+   * grader must then degrade to NOT-proven rather than invent one — never hash a missing `data`,
+   * which would fingerprint `{}` and fabricate a binding for a blob nobody read. See
+   * `statusModel.judgedContentOfRow`.
+   */
+  contentHash?: string;
+  /** The produced blob, when the row was read in FULL. Absent on the summary projection. */
+  data?: Record<string, unknown>;
+}
+
+export interface PipelineArtifact extends ArtifactVerdictRow {
+  data: Record<string, unknown>;
+  ueAssets: string[];
 }
 
 /**

@@ -19,19 +19,24 @@
  * return costs zero, and produce/drain invalidation already flows through it. It is the same
  * cache `/layout` fills, so a catalog the lab already read is free here.
  *
- * ── Why NOT the blob-free summary (yet) ──────────────────────────────────────
- * `GET /api/pipeline-artifacts/summary` projects these same rows 40× smaller (195,928 B for
- * the same 32 catalogs, measured) and is the obvious next step — but it CANNOT feed this
- * surface today. The status model binds every judge verdict to the content it judged by
- * recomputing `stepContentHash(artifact.data)` (`statusModel.contentByEntity`,
- * `capabilityModel`), and the summary deliberately carries no `data`. Measured on a fixture:
- * a hash-bound current PASS derives `verified` / provenance `current` / lane readyPct **100**
- * from the full rows and `trusted` / `stale` / readyPct **0** from the projection — a silent
- * UNDERSTATEMENT of exactly the kind this dashboard exists to prevent. The fix is one model
- * change, not a view change: `StepSummary` ALREADY carries `contentHash`, computed by the
- * same `stepContentHash` on the server, so the model needs to take the row's hash instead of
- * recomputing it from a blob. Until it does, /status reads the full rows — sharing them is
- * the win that is available without moving a single grade.
+ * ── The blob-free read ───────────────────────────────────────────────────────
+ * It reads `GET /api/pipeline-artifacts/summary` — the SAME rows, projected to their verdict
+ * fields (status, tier, reason, write time, content hash) with the produce bodies left on the
+ * server: **195,928 B for the same 32 catalogs, against 7,828,924 B of full rows — 40× less**.
+ *
+ * That was blocked until the model stopped needing `data`. It bound every judge verdict to the
+ * content it judged by RE-hashing `stepContentHash(artifact.data)`, so a projection made a
+ * hash-bound CURRENT pass compare against the hash of `{}` and read `stale` — measured on a
+ * fixture: `verified` / `current` / lane readyPct 100 from full rows vs `trusted` / `stale` /
+ * readyPct 0 from the projection, a silent UNDERSTATEMENT of exactly the kind this dashboard
+ * exists to prevent. The model now TAKES the binding the row carries
+ * (`statusModel.judgedContentOfRow`, fed by `summaryToVerdictRow`), which is the same
+ * `stepContentHash` value computed server-side by `toStepSummary` — one function, both sides.
+ * Equivalence is pinned on a fixture covering a hash-bound current PASS, a stale verdict and an
+ * unhashable legacy one (`src/__tests__/lib/status/statusRowContentHash.test.ts`).
+ *
+ * A row that carries NO binding still degrades to NOT-proven (it condemns, it never elevates),
+ * so the projection can only ever be more conservative than the blob, never more optimistic.
  *
  * A failed read stays a failure, per catalog (`CatalogArtifacts.error`). Nothing here
  * retries on its own; `retryCatalog` is operator-driven.
@@ -41,18 +46,20 @@ import { useEffect, useMemo } from 'react';
 import '@/lib/catalog/pipelines/registry.generated';
 import { allCatalogPipelines } from '@/lib/catalog/pipeline-registry';
 import {
-  ensureArtifacts,
-  getCachedArtifacts,
-  retryArtifacts,
+  ensureSummary,
+  getCachedSummary,
+  invalidateArtifacts,
   useArtifactCacheVersion,
 } from '@/components/layout-lab/labArtifactCache';
-import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
+import { summaryToVerdictRow } from '@/components/layout-lab/stepSummary';
+import type { ArtifactVerdictRow } from '@/lib/pipeline-artifacts-db';
 
 /** One catalog's outcome. `error` non-null means UNKNOWN — never "nothing produced". */
 export interface CatalogArtifacts {
   catalogId: string;
-  /** The rows read for this catalog; `[]` when `error` is set, which means UNKNOWN. */
-  rows: PipelineArtifact[];
+  /** The rows read for this catalog — VERDICT-shaped, no produce blobs (see above);
+   *  `[]` when `error` is set, which means UNKNOWN. */
+  rows: ArtifactVerdictRow[];
   /** True only when a fetch actually SUCCEEDED — distinguishes empty from unknown. */
   loaded: boolean;
   error: string | null;
@@ -72,7 +79,18 @@ export interface StatusArtifactSource {
 }
 
 /** Stable empty row list for an UNKNOWN catalog, so a re-render can't churn dependents. */
-const NO_ROWS: PipelineArtifact[] = [];
+const NO_ROWS: ArtifactVerdictRow[] = [];
+
+/**
+ * Operator-driven re-read of ONE catalog: drop the stored entry (error included) and re-issue
+ * the blob-free fetch. Deliberately NOT `retryArtifacts`, which also re-issues the FULL
+ * per-catalog read — the 7.4 MB this surface exists not to pay. `invalidateArtifacts` drops
+ * both halves of the shared cache, so the lab re-reads its blobs lazily if it ever needs them.
+ */
+function retry(catalogId: string): void {
+  invalidateArtifacts(catalogId);
+  ensureSummary(catalogId);
+}
 
 /**
  * Subscribe to the shared whole-project read. Safe to call from several tabs/views: the
@@ -85,22 +103,23 @@ export function useStatusArtifacts(): StatusArtifactSource {
   // life of the page — memoized so the derivation below can key on the cache version alone.
   const catalogIds = useMemo(() => allCatalogPipelines().map((p) => p.catalogId), []);
 
-  // `ensureArtifacts` is a no-op while a key is loading, loaded OR errored, so re-running
+  // `ensureSummary` is a no-op while a key is loading, loaded OR errored, so re-running
   // this on every cache mutation cannot loop and an errored catalog is never auto-retried.
   useEffect(() => {
-    for (const id of catalogIds) ensureArtifacts(id);
+    for (const id of catalogIds) ensureSummary(id);
   }, [catalogIds, version]);
 
   const catalogs = useMemo(() => {
     // The "cache changed" signal — reading it here makes the dep honest, exactly as
-    // `useGlobalCoach` does (`getCachedArtifacts` reads external state keyed on it).
+    // `useGlobalCoach` does (`getCachedSummary` reads external state keyed on it).
     void version;
-    const entries = catalogIds.map((catalogId) => ({ catalogId, entry: getCachedArtifacts(catalogId) }));
+    const entries = catalogIds.map((catalogId) => ({ catalogId, entry: getCachedSummary(catalogId) }));
     if (entries.some(({ entry }) => !entry.loaded && !entry.error)) return null; // still settling
     return entries.map(({ catalogId, entry }) => ({
       catalogId,
-      // An errored entry's `arts` is `[]` meaning UNKNOWN — never handed on as data.
-      rows: entry.loaded ? entry.arts : NO_ROWS,
+      // An errored entry's `rows` is `[]` meaning UNKNOWN — never handed on as data.
+      // `catalogId` is re-attached here because the wire shape omits it (see summaryToVerdictRow).
+      rows: entry.loaded ? entry.rows.map((r) => summaryToVerdictRow(catalogId, r)) : NO_ROWS,
       loaded: entry.loaded,
       error: entry.error,
     }));
@@ -109,12 +128,9 @@ export function useStatusArtifacts(): StatusArtifactSource {
   return useMemo(
     () => ({
       catalogs,
-      // `retryArtifacts` drops the stored error and re-issues exactly this catalog. It also
-      // re-issues a blob-free summary only if one already existed — /status never creates
-      // one, so this costs precisely one request.
-      retryCatalog: (catalogId: string) => retryArtifacts(catalogId),
+      retryCatalog: retry,
       reload: () => {
-        for (const id of catalogIds) retryArtifacts(id);
+        for (const id of catalogIds) retry(id);
       },
     }),
     [catalogs, catalogIds],

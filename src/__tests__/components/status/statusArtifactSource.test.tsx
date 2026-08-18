@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, cleanup, waitFor } from '@testing-library/react';
 import { _resetArtifactCache } from '@/components/layout-lab/labArtifactCache';
-import { toStepSummary } from '@/components/layout-lab/stepSummary';
+import { toStepSummary, summaryToVerdictRow } from '@/components/layout-lab/stepSummary';
+import type { StepSummary } from '@/components/layout-lab/stepSummary';
 import { buildSwimlane } from '@/lib/status/statusModel';
 import { PipelinesView } from '@/components/status/PipelinesView';
 import { CapabilityView } from '@/components/status/CapabilityView';
@@ -34,19 +35,23 @@ vi.mock('@/lib/catalog/pipeline-registry', async (importOriginal) => {
   };
 });
 
-const fetchArtifactsResult = vi.fn(
-  async (catalogId: string): Promise<Result<PipelineArtifact[], string>> => ({
+/** The rows the server holds. /status reads their BLOB-FREE projection — the real
+ *  `toStepSummary`, so the wire shape under test is the one the route actually serves. */
+const rowsFor = (catalogId: string): PipelineArtifact[] => [
+  { catalogId, entityId: 'e1', step: 'Concept Brief', data: { brief: 'x' }, ueAssets: [], status: 'pass', tier: 'L0' },
+  { catalogId, entityId: 'e1', step: 'Test Gate', data: {}, ueAssets: [], status: 'pass', tier: 'L3' },
+];
+
+const fetchStepSummaryResult = vi.fn(
+  async (catalogId: string): Promise<Result<StepSummary[], string>> => ({
     ok: true,
-    data: [
-      { catalogId, entityId: 'e1', step: 'Concept Brief', data: { brief: 'x' }, ueAssets: [], status: 'pass', tier: 'L0' },
-      { catalogId, entityId: 'e1', step: 'Test Gate', data: {}, ueAssets: [], status: 'pass', tier: 'L3' },
-    ],
+    data: rowsFor(catalogId).map(toStepSummary),
   }),
 );
 
 vi.mock('@/components/layout-lab/labArtifactClient', () => ({
-  fetchArtifactsResult: (catalogId: string) => fetchArtifactsResult(catalogId),
-  fetchStepSummaryResult: vi.fn(async () => ({ ok: true, data: [] })),
+  fetchArtifactsResult: vi.fn(async () => ({ ok: true, data: [] })),
+  fetchStepSummaryResult: (catalogId: string) => fetchStepSummaryResult(catalogId),
   fetchArtifacts: vi.fn(async () => []),
 }));
 
@@ -59,7 +64,7 @@ beforeEach(() => {
   // The shared read is a MODULE-LEVEL cache — it deliberately outlives an unmount, so each
   // case starts from an empty one.
   _resetArtifactCache();
-  fetchArtifactsResult.mockClear();
+  fetchStepSummaryResult.mockClear();
 });
 afterEach(cleanup);
 
@@ -70,7 +75,7 @@ describe('statusArtifactSource — one shared read across tabs', () => {
       expect(first.container.querySelector('[title^="Focus an entity — achievements "]')).toBeTruthy();
     });
     // 2 registered catalogs → 2 reads. Nothing more.
-    expect(fetchArtifactsResult).toHaveBeenCalledTimes(2);
+    expect(fetchStepSummaryResult).toHaveBeenCalledTimes(2);
 
     // Tab switch: StatusDashboard renders one view per tab, so the Pipelines view unmounts.
     // Before this refactor the next tab re-fanned out the full per-catalog read.
@@ -80,7 +85,7 @@ describe('statusArtifactSource — one shared read across tabs', () => {
       expect(second.container.textContent).toMatch(/gates pass|no declared gates|median|benchmark/);
     });
     // The cache outlives the unmount: the second tab pays ZERO further requests.
-    expect(fetchArtifactsResult).toHaveBeenCalledTimes(2);
+    expect(fetchStepSummaryResult).toHaveBeenCalledTimes(2);
 
     // …and going back is free too.
     second.unmount();
@@ -88,24 +93,21 @@ describe('statusArtifactSource — one shared read across tabs', () => {
     await waitFor(() => {
       expect(third.container.querySelector('[title^="Focus an entity — achievements "]')).toBeTruthy();
     });
-    expect(fetchArtifactsResult).toHaveBeenCalledTimes(2);
+    expect(fetchStepSummaryResult).toHaveBeenCalledTimes(2);
   });
 
-  it('hands the model the SAME rows the server sent — no projection between them', async () => {
+  it('paints the grade the FULL rows derive, from the blob-free projection of them', async () => {
     const { container } = render(<PipelinesView onFocusCatalog={vi.fn()} />);
     await waitFor(() => {
       expect(container.querySelector('[title^="Focus an entity — achievements "]')).toBeTruthy();
     });
-    // Grade the served rows directly and compare against what the view painted: the source
-    // is an input path, not a second grading rule.
-    const served: PipelineArtifact[] = [
-      { catalogId: 'achievements', entityId: 'e1', step: 'Concept Brief', data: { brief: 'x' }, ueAssets: [], status: 'pass', tier: 'L0' },
-      { catalogId: 'achievements', entityId: 'e1', step: 'Test Gate', data: {}, ueAssets: [], status: 'pass', tier: 'L3' },
-    ];
+    // Grade the server's FULL rows directly and compare against what the view painted from the
+    // projection. The source is an input path, not a second grading rule — and the projection
+    // may only ever be a cheaper way to reach the same grade, never a different one.
     const expected = buildSwimlane(
       'achievements', 'achievements',
       [{ label: 'Concept Brief' }, { label: 'Test Gate' }],
-      served, [],
+      rowsFor('achievements'), [],
     );
     const pct = [...container.querySelectorAll('[role="img"]')].find((el) =>
       (el.getAttribute('aria-label') ?? '').includes('achievements'),
@@ -115,42 +117,38 @@ describe('statusArtifactSource — one shared read across tabs', () => {
 });
 
 /**
- * WHY /status still reads the FULL rows rather than the 40× smaller
- * `GET /api/pipeline-artifacts/summary` projection.
+ * The projection /status reads is the SAME truth, 40× smaller.
  *
- * The status model binds a judge verdict to the content it judged by RECOMPUTING
- * `stepContentHash(artifact.data)`. The summary carries no `data` (that is the point of it),
- * so every hash-bound verdict would compare against the hash of `{}` and grade `stale` —
- * a verdict that no longer applies — silently demoting real, current, judge-proven cells.
+ * The model used to bind every judge verdict to the content it judged by RE-hashing
+ * `stepContentHash(artifact.data)`, so a blob-free row compared a standing verdict against the
+ * hash of `{}` and read `stale` — silently demoting real, current, judge-proven cells. It now
+ * TAKES the binding the row carries; `toStepSummary` stamps it server-side with that same
+ * function, and `summaryToVerdictRow` lifts it onto the row the model grades.
  *
- * This case pins the mechanism so the follow-up is unambiguous: the summary ALREADY carries
- * the right hash (`toStepSummary` → `contentHash`, the same `stepContentHash` on the server).
- * The model has to take the row's hash instead of recomputing it from a blob; that is a model
- * change, not a view change.
+ * The grade-equivalence gate (current / stale / unhashable-legacy provenances) lives in
+ * `src/__tests__/lib/status/statusRowContentHash.test.ts`. This case pins the WIRE end of it:
+ * what the source hands the model still carries the binding, and still carries no blob.
  */
-describe('statusArtifactSource — the blob-free projection is blocked on the model', () => {
-  it('a blob-free row hashes to a different content binding than the row it projects', () => {
+describe('statusArtifactSource — the blob-free projection carries the content binding', () => {
+  it('lifts the server hash onto the row, with no produced data attached', () => {
     const artifact: PipelineArtifact = {
       catalogId: 'achievements', entityId: 'e1', step: 'Concept Brief',
       data: { brief: 'real produced content' }, ueAssets: [], status: 'pass', tier: 'L0',
       updatedAt: '2026-08-01T00:00:00Z',
     };
-    const summary = toStepSummary(artifact);
-    // The projection carries the CORRECT binding…
-    expect(summary.contentHash).toBe(stepContentHash(artifact.data));
-    // …but a row rebuilt from it without `data` hashes to something else entirely, which is
-    // what a hash-recomputing model would compare a standing verdict against. Measured on
-    // this exact fixture against the content-binding model: a current judge PASS derives
-    // `verified` / provenance `current` / lane readyPct 100 from the full row and
-    // `trusted` / `stale` / readyPct 0 from the blob-free one.
-    expect(stepContentHash({})).not.toBe(summary.contentHash);
-    // The verdict binding a real cell would be compared with — recorded so the follow-up is
-    // concrete: thread THIS value through instead of rehashing `data`.
+    const row = summaryToVerdictRow('achievements', toStepSummary(artifact));
+    // The binding survives the projection — byte-identical to the full row's own hash…
+    expect(row.contentHash).toBe(stepContentHash(artifact.data));
+    // …and it is NOT the hash of `{}`, which is what a rehashing model compared against.
+    expect(row.contentHash).not.toBe(stepContentHash({}));
+    // The blob does not.
+    expect(row.data).toBeUndefined();
+    // A verdict bound to that content therefore still matches on the thin row.
     const bound: JudgeVerdict = {
       catalogId: 'achievements', entityId: 'e1', step: 'Concept Brief', judge: 'human',
       verdict: 'pass', score: 95, model: 'm', findings: '', rubricVersion: RUBRIC_VERSION,
-      contentHash: summary.contentHash,
+      contentHash: row.contentHash,
     } as JudgeVerdict;
-    expect(bound.contentHash).toBe(summary.contentHash);
+    expect(bound.contentHash).toBe(row.contentHash);
   });
 });
