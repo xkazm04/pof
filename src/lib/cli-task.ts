@@ -18,6 +18,7 @@ import type { PipelineTrackId } from '@/lib/pipeline/tracks';
 import type { AbilityRef } from '@/lib/ability/logic-prompts';
 import type { EditorEffect, TagRule } from '@/lib/ability/spec';
 import type { TestSuite } from '@/types/ai-testing';
+import type { LevelDesignDocument } from '@/types/level-design';
 import { taskPromptHandlers } from '@/lib/cli-task-handlers';
 import { logger } from '@/lib/logger';
 
@@ -253,6 +254,7 @@ export type CLITaskType =
   | 'wbp-starter'
   | 'procgen-dungeon'
   | 'biome-scatter'
+  | 'level-sync'
   | 'mixamo-import'
   | 'character-setup'
   | 'audio-import'
@@ -377,6 +379,21 @@ export interface BiomeScatterTask extends CLITask {
   type: 'biome-scatter';
   density: number;
   seed: number;
+  appOrigin: string;
+}
+
+/**
+ * Level-sync task — compares one level design document against the C++ it
+ * generated and reports the verdict + field-level divergences through a
+ * callback, which is what makes `code-ahead` / `diverged` reachable at all.
+ *
+ * The doc is carried whole: the prompt lists the rooms and their linked files,
+ * and `docId` rides in the callback's staticFields so the report can only ever
+ * land on the document that asked for it.
+ */
+export interface LevelSyncTask extends CLITask {
+  type: 'level-sync';
+  doc: LevelDesignDocument;
   appOrigin: string;
 }
 
@@ -682,6 +699,26 @@ export const TaskFactory = {
       label,
       roomCount: params.roomCount,
       seed: params.seed,
+      appOrigin,
+    };
+  },
+
+  /**
+   * Create a task that compares one level design doc against its generated C++
+   * and submits the verdict + divergences through a validated callback.
+   */
+  levelSync(
+    moduleId: SubModuleId,
+    doc: LevelDesignDocument,
+    appOrigin: string,
+    label: string,
+  ): LevelSyncTask {
+    return {
+      type: 'level-sync',
+      moduleId,
+      prompt: '', // assembled by buildTaskPrompt
+      label,
+      doc,
       appOrigin,
     };
   },

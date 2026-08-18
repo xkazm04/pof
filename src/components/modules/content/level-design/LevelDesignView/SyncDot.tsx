@@ -1,4 +1,4 @@
-import { Check, ArrowUp, ArrowDown, AlertTriangle, Circle } from 'lucide-react';
+import { Check, ArrowUp, ArrowDown, AlertTriangle, Circle, HelpCircle } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { SyncStatus } from '@/types/level-design';
 import { STATUS_SUCCESS, STATUS_ERROR, STATUS_WARNING, STATUS_INFO } from '@/lib/chart-colors';
@@ -16,8 +16,17 @@ const SYNC_DISPLAY: Record<SyncStatus, { color: string; Icon: LucideIcon; label:
   unlinked: { color: 'var(--text-muted)', Icon: Circle, label: 'Not linked' },
 };
 
-export function SyncDot({ status }: { status: SyncStatus }) {
-  const { color, Icon, label } = SYNC_DISPLAY[status] ?? SYNC_DISPLAY.unlinked;
+/**
+ * Only the sync callback writes `lastCodeHash`, so its absence proves no
+ * comparison has ever run. A `synced` dot on such a document would claim a
+ * verdict nobody reached — code generation sets `synced` optimistically.
+ */
+const NEVER_CHECKED = { color: 'var(--text-muted)', Icon: HelpCircle, label: 'Never checked against code' } as const;
+
+export function SyncDot({ status, lastCodeHash = null }: { status: SyncStatus; lastCodeHash?: string | null }) {
+  const { color, Icon, label } = status === 'synced' && !lastCodeHash
+    ? NEVER_CHECKED
+    : SYNC_DISPLAY[status] ?? SYNC_DISPLAY.unlinked;
   return (
     <span
       role="img"

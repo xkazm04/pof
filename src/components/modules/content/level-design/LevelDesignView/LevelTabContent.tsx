@@ -52,6 +52,7 @@ export function LevelTabContent({ vm }: { vm: LevelDesignVM }) {
     handleGenerateAllCode,
     handleCheckSync,
     handleReconcile,
+    handleAdoptCode,
     handleNarrativeChange,
     handlePacingNotesChange,
     handleDescriptionChange,
@@ -231,8 +232,10 @@ export function LevelTabContent({ vm }: { vm: LevelDesignVM }) {
           <SyncStatusPanel
             syncStatus={activeDoc.syncStatus}
             divergences={activeDoc.syncReport}
+            lastCodeHash={activeDoc.lastCodeHash}
             onCheckSync={handleCheckSync}
             onReconcile={handleReconcile}
+            onAdoptCode={handleAdoptCode}
             isChecking={syncCli.isRunning}
             accentColor={MODULE_COLORS.content}
           />

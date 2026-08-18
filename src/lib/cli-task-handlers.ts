@@ -28,6 +28,7 @@ import { buildAbilitySpecDraftPrompt } from '@/lib/ability/logic-prompts';
 import { buildGenerateAbilityBundlePrompt } from '@/lib/ability/effect-codegen-prompt';
 import { buildRunTestsPrompt, buildMockStimuliPrompt } from '@/lib/prompts/ai-testing';
 import { MIXAMO_DOWNLOAD_CONTRACT, MIXAMO_DOWNLOAD_CONTRACT_HEADING } from '@/lib/prompts/_shared';
+import { buildSyncCheckPrompt } from '@/lib/prompts/level-design';
 import {
   buildAnimationChecklistPrompt,
   findAnimationChecklistStep,
@@ -48,6 +49,7 @@ import {
   type WBPStarterTask,
   type ProcgenDungeonTask,
   type BiomeScatterTask,
+  type LevelSyncTask,
   type MixamoImportTask,
   type CharacterSetupTask,
   type AudioImportTask,
@@ -450,6 +452,41 @@ Steps:
 ${buildCallbackSection(getCallback(cbId)!)}`;
 };
 
+/**
+ * Level sync check — the one path that can write `syncReport` / `lastCodeHash`.
+ *
+ * The prompt body is the shared `buildSyncCheckPrompt` (so the sync instructions
+ * live with the other level-design prompts); this handler only bolts on the
+ * callback, exactly like its procgen/scatter neighbours above. `docId` rides in
+ * `staticFields`, so the report can only ever land on the document that asked
+ * for it — a prompt cannot retarget another level.
+ */
+const levelSync: TaskPromptHandler = (task, ctx) => {
+  const lt = task as LevelSyncTask;
+  const cbId = registerCallback({
+    url: `${lt.appOrigin}/api/level-design/sync-result`,
+    method: 'POST',
+    staticFields: { moduleId: task.moduleId, docId: lt.doc.id },
+    schemaHint:
+      '  "status": "synced|doc-ahead|code-ahead|diverged",\n' +
+      '  "codeHash": "<fingerprint of the code you compared>",\n' +
+      '  "divergences": [\n' +
+      '    {\n' +
+      '      "roomId": "<one of the room ids above>",\n' +
+      '      "roomName": "<room name>",\n' +
+      '      "field": "difficulty",\n' +
+      '      "docValue": "<value in the design doc>",\n' +
+      '      "codeValue": "<value in the C++>",\n' +
+      '      "severity": "info|warning|critical",\n' +
+      '      "suggestion": "<one-line fix>"\n' +
+      '    }\n' +
+      '  ]',
+  });
+  return `${buildSyncCheckPrompt(lt.doc, ctx)}
+
+${buildCallbackSection(getCallback(cbId)!)}`;
+};
+
 const mixamoImport: TaskPromptHandler = (task, ctx, { touchesBinaryAssets }) => {
   const mt = task as MixamoImportTask;
   const header = buildProjectContextHeader(ctx, {
@@ -784,6 +821,7 @@ export const taskPromptHandlers: Record<CLITaskType, TaskPromptHandler> = {
   'wbp-starter': wbpStarter,
   'procgen-dungeon': procgenDungeon,
   'biome-scatter': biomeScatter,
+  'level-sync': levelSync,
   'mixamo-import': mixamoImport,
   'character-setup': characterSetup,
   'audio-import': audioImport,

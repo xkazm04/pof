@@ -16,7 +16,7 @@ import type { AbilityRef } from '@/lib/ability/logic-prompts';
 import type { TestSuite } from '@/types/ai-testing';
 import { logger } from '@/lib/logger';
 import { expectGolden } from './golden';
-import { STANDALONE_BUILDERS } from './builder-fixtures';
+import { STANDALONE_BUILDERS, GOLDEN_LEVEL_DOC } from './builder-fixtures';
 
 /**
  * The golden rail — byte-level regression armour for EVERY composed prompt.
@@ -144,6 +144,7 @@ const TASK_CASES: Record<CLITaskType, () => CLITask> = {
   'wbp-starter': () => TaskFactory.wbpStarter('arpg-ui', 'UARPGHUDWidget', ORIGIN, 'WBP Starter'),
   'procgen-dungeon': () => TaskFactory.procgenDungeon('arpg-world', { roomCount: 8, seed: 1234 }, ORIGIN, 'ProcGen'),
   'biome-scatter': () => TaskFactory.scatterBiome('arpg-world', { density: 1.5, seed: 99 }, ORIGIN, 'Scatter'),
+  'level-sync': () => TaskFactory.levelSync('level-design', GOLDEN_LEVEL_DOC, ORIGIN, 'Level Sync Check'),
   'mixamo-import': () =>
     TaskFactory.mixamoImport(
       'arpg-animation',

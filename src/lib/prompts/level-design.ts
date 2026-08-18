@@ -72,21 +72,28 @@ ${roomSummary}
 INSTRUCTIONS:
 1. For each room with linked files, read the C++ files and compare against the design doc
 2. Check: spawn counts match, enemy classes match, wave configuration matches, difficulty parameters match
-3. Output a JSON array of divergences to stdout in this format:
-[
-  {
-    "roomId": "room-xxx",
-    "roomName": "Room Name",
-    "field": "spawnCount",
-    "docValue": "5",
-    "codeValue": "3",
-    "severity": "warning",
-    "suggestion": "Update SpawnCount in code from 3 to 5 to match design doc"
-  }
-]
-
-4. If everything is in sync, output an empty array: []
-5. Write the JSON to: ${ctx.projectPath}/.pof/level-design-sync.json`;
+3. Decide ONE verdict for the whole document:
+   - \`synced\` — the code matches the design doc on every field you compared
+   - \`doc-ahead\` — the doc describes design the code does not implement yet
+   - \`code-ahead\` — the code has behaviour the doc never described
+   - \`diverged\` — both sides changed independently (doc and code each hold something the other lacks)
+4. Report each field-level difference as a divergence object:
+   - \`roomId\` / \`roomName\` — the room it belongs to (roomId must be one of the ids above)
+   - \`field\` — the differing field, named as the DESIGN DOC names it where possible
+     (\`difficulty\`, \`pacing\`, \`type\`, \`name\`, \`description\`, \`encounterDesign\`,
+     \`linkedFiles\`, \`tags\`) so the doc can adopt the code value in one click
+   - \`docValue\` / \`codeValue\` — the two differing values (they must NOT be equal)
+   - \`severity\` — \`info\`, \`warning\` or \`critical\`
+   - \`suggestion\` — the one-line fix
+5. \`codeHash\` is required: a short fingerprint of the code you compared (the git
+   commit SHA of HEAD if the project is a git repo, else a short digest of the
+   file paths + sizes you read). It is the evidence a comparison actually ran.
+6. Rules the submission is CHECKED against — a violation is rejected with a reason:
+   - \`synced\` must ship an empty \`divergences\` array;
+   - \`diverged\` must name at least one divergence;
+   - a divergence whose \`docValue\` equals its \`codeValue\` is refused.
+7. Do NOT write a report file anywhere — submit through the callback below; that
+   is the only path the app reads.`;
 }
 
 export function buildReconcilePrompt(divergence: SyncDivergence, doc: LevelDesignDocument, ctx: ProjectContext): string {

@@ -75,6 +75,9 @@ const LEVEL_DOC: LevelDesignDocument = {
   updatedAt: '2026-01-01T00:00:00.000Z',
 };
 
+/** Shared with the task-prompt golden rail — the `level-sync` task carries a whole doc. */
+export { LEVEL_DOC as GOLDEN_LEVEL_DOC };
+
 const MATERIAL_CONFIG: MaterialConfiguratorConfig = {
   surfaceType: 'metal',
   features: ['emissive'],

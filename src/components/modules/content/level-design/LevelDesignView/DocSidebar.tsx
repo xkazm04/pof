@@ -93,7 +93,7 @@ export function DocSidebar({ vm }: { vm: LevelDesignVM }) {
                 </div>
                 <div className="flex items-center gap-2 mt-1 ml-5">
                   <span className="text-2xs text-text-muted">{doc.rooms.length} rooms</span>
-                  <SyncDot status={doc.syncStatus} />
+                  <SyncDot status={doc.syncStatus} lastCodeHash={doc.lastCodeHash} />
                 </div>
               </button>
             );

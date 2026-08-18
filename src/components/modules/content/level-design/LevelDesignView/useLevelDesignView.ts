@@ -10,9 +10,9 @@ import { useModuleReviewCli } from '@/hooks/useModuleReviewCli';
 import { useProjectStore } from '@/stores/projectStore';
 import { TaskFactory } from '@/lib/cli-task';
 import { lintLevelPacing } from '@/lib/level-design/pacing-linter';
+import { adoptCodeValue } from '@/lib/level-design/reconcile';
 import {
   buildRoomCodegenPrompt,
-  buildSyncCheckPrompt,
   buildReconcilePrompt,
   buildNarrativeCodegenPrompt,
   buildStreamingZonePrompt,
@@ -23,7 +23,7 @@ import type { StreamingZonePlannerConfig } from '../StreamingZonePlanner';
 import type { ProceduralLevelConfig } from '../ProceduralLevelWizard';
 import { MODULE_COLORS, getAppOrigin } from '@/lib/constants';
 import type { TabId } from './types';
-import type { EditCommitMode } from '../editCommitMode';
+import type { EditCommitMode } from '@/hooks/useEntityCommitBuffer';
 import { useDocCommitBuffer, type CommitOptions, type DocPatch } from './useDocCommitBuffer';
 
 export function useLevelDesignView() {
@@ -38,6 +38,7 @@ export function useLevelDesignView() {
     createDoc,
     updateDoc,
     deleteDoc,
+    refetch,
   } = useDesignDocument();
 
   // Every edit below goes through the buffer: local immediately, written on a
@@ -98,11 +99,17 @@ export function useLevelDesignView() {
     },
   });
 
+  // The sync run writes its verdict SERVER-side (the task callback POSTs to
+  // /api/level-design/sync-result, which is the only validated writer of
+  // syncReport/lastCodeHash). So completion re-reads the document rather than
+  // guessing a status here — a rejected report leaves the old verdict standing,
+  // which is exactly what should happen.
   const syncCli = useModuleCLI({
     moduleId: 'level-design',
     sessionKey: 'level-design-sync',
     label: 'Level Sync Check',
     accentColor: MODULE_COLORS.content,
+    onComplete: () => { void refetch(); },
   });
 
   // ── Streaming zone CLI session ──
@@ -244,15 +251,37 @@ export function useLevelDesignView() {
 
   const handleCheckSync = useCallback(() => {
     if (!activeDoc) return;
-    const prompt = buildSyncCheckPrompt(activeDoc, ctx);
-    syncCli.sendPrompt(prompt);
-  }, [activeDoc, ctx, syncCli]);
+    // Write any buffered edit first: the comparison should judge the document
+    // the user is looking at, not the one the server still holds.
+    flushDoc();
+    void syncCli.execute(
+      TaskFactory.levelSync('level-design', activeDoc, getAppOrigin(), 'Level Sync Check'),
+    );
+  }, [activeDoc, flushDoc, syncCli]);
 
+  /** Code adopts the doc's value — the existing reconcile codegen task. */
   const handleReconcile = useCallback((divergence: SyncDivergence) => {
     if (!activeDoc) return;
     const prompt = buildReconcilePrompt(divergence, activeDoc, ctx);
     codegenCli.sendPrompt(prompt);
   }, [activeDoc, ctx, codegenCli]);
+
+  /**
+   * Doc adopts the code's value — a local document edit, no CLI run. Refused
+   * with a reason when the reported field is not one the document actually has
+   * (the sync report's `field` is LLM free text, so guessing would silently
+   * rewrite a designer's level).
+   */
+  const handleAdoptCode = useCallback((divergence: SyncDivergence) => {
+    if (!activeDoc) return;
+    const result = adoptCodeValue(activeDoc, divergence);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    commit(result.data);
+    toast.success(`${divergence.roomName}: ${divergence.field} now matches the code.`);
+  }, [activeDoc, commit]);
 
   // Free-text fields: applied locally on every keystroke (so the textarea is never
   // a round trip behind the cursor) and written once the typing pauses.
@@ -328,6 +357,7 @@ export function useLevelDesignView() {
     handleGenerateAllCode,
     handleCheckSync,
     handleReconcile,
+    handleAdoptCode,
     handleNarrativeChange,
     handlePacingNotesChange,
     handleDescriptionChange,
