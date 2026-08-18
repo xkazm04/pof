@@ -3,7 +3,7 @@ import {
   tripoModelFor,
   TRIPO_AUDITED_MODEL,
   TRIPO_AUDITED_TEXTURE_QUALITY,
-  UNAUDITED_TOPOLOGY_TIER,
+  SMART_LOW_POLY_VERDICT,
 } from '@/lib/visual-gen/tripo-models';
 
 describe('tripoModelFor', () => {
@@ -28,10 +28,11 @@ describe('tripoModelFor', () => {
     expect(tripoModelFor('nonsense-class').modelVersion.trim()).not.toBe('');
   });
 
-  // Guards the honesty rule: the P-series is recorded as a candidate, not as a pin.
-  it('does not pin the unbenchmarked P-series topology tier', () => {
+  // Guards the honesty rule: smart_low_poly is a flag on the pinned model, never a
+  // separate model id, and it was benchmarked and rejected — never silently enabled.
+  it('does not pin a separate P-series model id, and records the completed rejection', () => {
     const pins = ['character', 'weapon', 'prop', undefined].map((c) => tripoModelFor(c).modelVersion);
     expect(pins.some((m) => /^P\d/i.test(m))).toBe(false);
-    expect(UNAUDITED_TOPOLOGY_TIER.blockedOn).toContain('arena run');
+    expect(SMART_LOW_POLY_VERDICT.verdict).toBe('rejected');
   });
 });

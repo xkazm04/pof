@@ -9,19 +9,27 @@
  * "FAIL — smeared face; the silent default, never leave model_version unset". An
  * unpinned model is an unaudited engine, and an unaudited engine is not a trusted one.
  *
- * Two verdicts from that same arena are encoded here:
- *  - `v3.1-20260211` PASSED (45MB, woven braids, full facial structure) — it is the only
- *    model PoF has watched clear its own bar, so it is the only one pinned.
- *  - `P1-20260311` FAILED as a hero model *despite carrying the newest date*. That is the
- *    trap worth naming: the P-series ("Smart Mesh", P1 → P2) is a separate TOPOLOGY tier
- *    — quad output, a controllable poly budget, seconds-fast, topology-only with
- *    texturing as a second pass — not a newer general-purpose model. Picking it by date
- *    is how PoF got a shard-haired 3MB character out of a hero-tier request.
+ *  - `v3.1-20260211` PASSED that arena (45MB, woven braids, full facial structure) — it
+ *    is the only model PoF has watched clear its own bar, so it is the only one pinned.
+ *  - The same arena also tried a `model_version: 'P1-20260311'` request and got FAIL
+ *    (shard hair, 3MB) despite carrying the newest date — a distinct legacy model id,
+ *    separate from the `smart_low_poly` finding below.
  *
- * So the P-series is NOT pinned here. It is a real candidate for the budgeted classes
- * (weapon / prop / modular-part), and this file is where that pin belongs — once someone
- * has actually benchmarked it, the way v3.1 was benchmarked. Recording an unbenchmarked
- * id would be inventing an audit, which is the failure this module exists to prevent.
+ * `smart_low_poly` — what Tripo markets as "P1/P2 Smart Mesh" — is a FLAG on the SAME
+ * `model_version` already pinned here (verified against the primary API docs: the
+ * `model_version` field accepts only `v3.1-20260211` or `v3.0-20250812`; there is no
+ * separate P-series model id today). It was benchmarked 2026-08-18 across all three
+ * budgeted classes (weapon/prop/modular-part) that had no production caller — same
+ * model, same texture settings, `smart_low_poly: true` vs `false`, graded on
+ * `gradeFaceBudget` + `classifyComponents` + a Qwen-VL score of the provider's own
+ * preview render (`pof_tripo_smartlowpoly_arena.ts`). Result, consistent on all three:
+ * `smart_low_poly` OVERSHOT its own requested face_limit every time (1.26x-1.35x —
+ * baseline honoured its budget every time, 0.82x-0.96x), produced far more fragmented
+ * output (1,900-2,400 raw components vs baseline's 83-137), and scored equal-or-worse
+ * on Qwen's aesthetic judgment in every class. The vendor's "controllable poly count,
+ * no further refine needed" claim did not hold up. `smart_low_poly` is therefore
+ * DELIBERATELY NOT enabled anywhere — this is a completed, negative audit, not an
+ * unbenchmarked gap.
  */
 
 /** The one model PoF has observed clear its own hero-tier gate. */
@@ -39,15 +47,23 @@ export interface TripoModelPin {
 }
 
 /**
- * The candidate PoF deliberately has not pinned, kept next to the pin so the gap is
- * visible at the decision point instead of living in a commit message.
+ * `smart_low_poly` — benchmarked 2026-08-18 and REJECTED, kept next to the pin so a
+ * future session sees the completed verdict at the decision point instead of assuming
+ * this is still an open gap and re-benchmarking it. Per-class detail:
+ *  - weapon (budget 15,000): baseline 14,368 faces (honoured) vs smart_low_poly 18,920
+ *    (1.26x over); 83 vs 2,365 raw components; Qwen 3 vs 3 (tie, both scored poorly).
+ *  - prop (budget 10,000): baseline 8,245 (honoured) vs smart_low_poly 13,548 (1.35x
+ *    over); 396 vs 1,658 raw components; Qwen 6 vs not scored (geometry alone decided
+ *    it — see the arena run notes).
+ *  - modular-part (budget 8,000): baseline 7,464 (honoured) vs smart_low_poly 10,288
+ *    (1.29x over); 137 vs 1,952 raw components; Qwen 4 vs 3 (worse).
  */
-export const UNAUDITED_TOPOLOGY_TIER = {
-  family: 'Tripo P-series (Smart Mesh: P1, P2)',
-  offers: 'quad topology, a controllable face budget, ~seconds per mesh, topology-only (texturing is a separate pass)',
-  whyNotPinned:
-    'P1-20260311 was graded FAIL as a hero model despite the newest date — the P-series is a low-poly topology tier, not a newer general model. It is a genuine candidate for the budgeted classes (weapon / prop / modular-part), but pinning an id nobody has benchmarked would fabricate an audit.',
-  blockedOn: 'a PoF arena run over the budgeted classes, graded the way v3.1-20260211 was',
+export const SMART_LOW_POLY_VERDICT = {
+  benchmarked: '2026-08-18',
+  verdict: 'rejected' as const,
+  reason:
+    'Overshot its own requested face_limit in all 3 budgeted classes (1.26x-1.35x; baseline honoured its budget every time), produced 15x-30x more raw components (far more fragmented, not "hand-crafted"), and scored equal-or-worse on Qwen aesthetic judgment. Not enabled anywhere.',
+  harness: 'scripts/visual-gen/pof_tripo_smartlowpoly_arena.ts',
 } as const;
 
 /**
@@ -61,7 +77,7 @@ export function tripoModelFor(assetClass?: string): TripoModelPin {
     textureQuality: TRIPO_AUDITED_TEXTURE_QUALITY,
     audited: true,
     rationale: assetClass
-      ? `${assetClass} runs on ${TRIPO_AUDITED_MODEL} — the only model graded PASS by the character-pipeline arena. The P-series topology tier is a candidate for the budgeted classes but is not benchmarked (see UNAUDITED_TOPOLOGY_TIER).`
+      ? `${assetClass} runs on ${TRIPO_AUDITED_MODEL} — the only model graded PASS by the character-pipeline arena. smart_low_poly was benchmarked and rejected for this class (see SMART_LOW_POLY_VERDICT).`
       : `no asset class was supplied; pinned to ${TRIPO_AUDITED_MODEL} rather than falling back to the account default, which the character-pipeline arena graded FAIL.`,
   };
 }
