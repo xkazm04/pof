@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/Badge';
 import { MicroLabel } from '@/components/ui/MicroLabel';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { formatTimeAgo } from '@/lib/format-time';
-import { ACCENT_EMERALD, SEVERITY_TOKENS } from '@/lib/chart-colors';
+import { ACCENT_EMERALD, STATUS_WARNING, SEVERITY_TOKENS } from '@/lib/chart-colors';
 import type { CrashReport, CrashDiagnosis } from '@/types/crash-analyzer';
 import { CRASH_TYPE_LABELS } from './constants';
 import { SeverityBadge } from './SeverityBadge';
@@ -63,19 +63,35 @@ export function CrashListItem({
               undiagnosed rather than just omitting the line — in a triage list the
               two are compared side by side, so silence reads as "nothing to say
               about this one" instead of "never analyzed". */}
+          {/* A row whose analysis was TRANSFERRED from another crash says so in
+              the same breath as the finding. In a triage list the rows are read
+              against each other, so an unqualified "AI:" on a fuzzy match would
+              rank it beside the hand-verified ones. */}
           {diagnosis ? (
-            <p className="text-2xs text-emerald-400 mt-0.5 truncate">
-              AI: {diagnosis.summary}
-            </p>
+            diagnosis.match ? (
+              <p className="text-2xs text-amber-400 mt-0.5 truncate">
+                Matched {diagnosis.match.sourceCrashId} ({diagnosis.match.strength}): {diagnosis.summary}
+              </p>
+            ) : (
+              <p className="text-2xs text-emerald-400 mt-0.5 truncate">
+                AI: {diagnosis.summary}
+              </p>
+            )
           ) : (
             <MicroLabel tone="muted" className="block mt-0.5">No diagnosis</MicroLabel>
           )}
         </div>
         <div className="flex flex-col items-end gap-1 shrink-0">
           <span className="text-2xs text-text-muted">{timeAgo}</span>
-          {/* A confidence ring is shown only where a confidence exists. */}
+          {/* A confidence ring is shown only where a confidence exists — and a
+              computed one is drawn in a different hue from a hand-written one. */}
           {diagnosis && (
-            <ProgressRing value={Math.round(diagnosis.confidence * 100)} size={24} strokeWidth={2.5} color={ACCENT_EMERALD} />
+            <ProgressRing
+              value={Math.round(diagnosis.confidence * 100)}
+              size={24}
+              strokeWidth={2.5}
+              color={diagnosis.match ? STATUS_WARNING : ACCENT_EMERALD}
+            />
           )}
         </div>
       </div>

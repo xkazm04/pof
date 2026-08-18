@@ -6,15 +6,16 @@ import { StatusTag } from '@/components/ui/StatusTag';
 import { MicroLabel } from '@/components/ui/MicroLabel';
 import { DecoratedCrashText } from '@/components/ui/CrashTerm';
 import { plainCrashType } from '@/lib/crash-glossary';
+import { resolveDiagnosis } from '@/lib/crash-analyzer/analysis-engine';
 import type { CrashReport } from '@/types/crash-analyzer';
 
 /**
  * The honest presentation of a crash that has NO diagnosis.
  *
- * A diagnosis is looked up by exact crash id against a fixed set of hand-authored
- * analyses (`analyzeSingleCrash`), so every imported crash comes back with
- * `diagnosis: null`. The UI used to paper over that by silently falling back to
- * the crash-CATEGORY template and rendering it under the same "What happened /
+ * A diagnosis is resolved by comparing the crash's SIGNATURE against the crashes
+ * PoF holds hand-written analyses for; when nothing clears the match floor, the
+ * crash has no diagnosis. The UI used to paper over that by silently falling back
+ * to the crash-CATEGORY template and rendering it under the same "What happened /
  * What to do" headings a confidence-0.95 hand-written diagnosis uses — generic
  * advice wearing the clothes of a specific finding.
  *
@@ -23,11 +24,22 @@ import type { CrashReport } from '@/types/crash-analyzer';
  * ("Typical cause" / "Where to start", not "What happened" / "What to do"). The
  * guidance is kept — it is genuinely useful — it just no longer masquerades.
  *
+ * It also names the NEAR MISS: which known crash came closest and by how much,
+ * against the floor it failed to clear. "Nothing matched" is a measurement, and
+ * showing the measurement is what makes it checkable rather than asserted.
+ *
  * Rendered as the lead in Plain mode and in the AI-analysis slot in Technical
  * mode, so the distinction holds in both.
  */
 export function NoDiagnosisNotice({ report }: { report: CrashReport }) {
   const plain = plainCrashType(report.crashType);
+  // Re-running the (pure) resolver is how the notice reports the near miss
+  // without a diagnosis to read it from — 8 candidate comparisons over a cached
+  // corpus. Left unmemoized deliberately: `resolveDiagnosis` takes computed
+  // default arguments, which the React Compiler cannot see through, so a manual
+  // `useMemo` here is rejected outright (react-hooks/preserve-manual-memoization)
+  // and the compiler's own memoization covers the call.
+  const nearest = resolveDiagnosis(report);
 
   return (
     <SurfaceCard level={2} data-testid="no-diagnosis-notice">
@@ -47,9 +59,16 @@ export function NoDiagnosisNotice({ report }: { report: CrashReport }) {
           </p>
           <p className="text-xs text-text-muted leading-relaxed">
             PoF only holds hand-written root-cause analyses for a fixed set of known crashes,
-            and this one did not match any of them. Nothing below was derived from this
-            crash&rsquo;s callstack.
+            and this one did not match any of them &mdash; its shape (failure class, culprit
+            function and file, module, engine terms) was compared against every one. Nothing
+            below was derived from this crash&rsquo;s callstack.
           </p>
+          {nearest.nearest && (
+            <MicroLabel tone="muted" as="p" className="mt-1">
+              Closest known crash: {nearest.nearest.crashId} at {nearest.nearest.similarity.toFixed(2)}{' '}
+              signature similarity &mdash; below the {nearest.floor.toFixed(2)} match floor.
+            </MicroLabel>
+          )}
         </div>
 
         {/* Category guidance — deliberately fenced off (dashed, recessed, its own

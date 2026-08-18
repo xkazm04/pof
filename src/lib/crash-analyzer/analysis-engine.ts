@@ -14,6 +14,15 @@ import type {
 } from '@/types/crash-analyzer';
 import { emptyCrashTypeCounts, emptyCrashSeverityCounts } from '@/types/crash-analyzer';
 import { SAMPLE_CRASHES, SAMPLE_DIAGNOSES } from './sample-crashes';
+import {
+  crashSignature,
+  matchSignature,
+  MATCH_FLOOR,
+  type CrashSignature,
+  type DiagnosisCandidate,
+  type MatchStrength,
+  type RankedCandidate,
+} from './crash-signature';
 
 /* ------------------------------------------------------------------ */
 /*  Module Attribution                                                 */
@@ -223,6 +232,132 @@ function findCulpritFrame(report: CrashReport): CrashReport {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Diagnosis Resolution (signature matching)                          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The known-crash corpus: every hand-written analysis paired with the SIGNATURE
+ * of the crash it was written for.
+ *
+ * Joining a diagnosis to its crash by id is the corpus's internal structure — a
+ * diagnosis belongs to exactly one authored crash — and is not the matching. The
+ * matching is {@link matchSignature}, which never looks at the query's id.
+ */
+export function buildDiagnosisCorpus(
+  crashes: CrashReport[],
+  diagnoses: CrashDiagnosis[],
+): DiagnosisCandidate[] {
+  const byId = new Map(crashes.map((c) => [c.id, c]));
+  const candidates: DiagnosisCandidate[] = [];
+  for (const diagnosis of diagnoses) {
+    const crash = byId.get(diagnosis.crashId);
+    if (!crash) continue; // an analysis with no crash to compare against cannot be matched
+    candidates.push({ diagnosis, signature: crashSignature(crash, attributeModule(crash).module) });
+  }
+  return candidates;
+}
+
+/**
+ * The default corpus is a pure function of the static sample imports, which
+ * never change at runtime — so it is built once rather than per crash.
+ */
+let cachedCorpus: DiagnosisCandidate[] | null = null;
+
+export function defaultDiagnosisCorpus(): DiagnosisCandidate[] {
+  cachedCorpus ??= buildDiagnosisCorpus(SAMPLE_CRASHES, SAMPLE_DIAGNOSES);
+  return cachedCorpus;
+}
+
+/** Why a crash ended up with (or without) a diagnosis. */
+export type DiagnosisOrigin =
+  /** Hand-written for exactly this crash. `confidence` is a human judgement. */
+  | 'authored'
+  /** Transferred from a different crash with a close signature. `confidence` is computed. */
+  | 'signature-match'
+  /** Nothing in the corpus was close enough. An explicit no-match. */
+  | 'none';
+
+export interface DiagnosisResolution {
+  diagnosis: CrashDiagnosis | null;
+  origin: DiagnosisOrigin;
+  /**
+   * The closest known crash whether or not it cleared the floor. Present even on
+   * a no-match, so "nothing matched" can say HOW close the nearest thing was
+   * instead of being an unexplained blank.
+   */
+  nearest: { crashId: string; similarity: number; strength: MatchStrength; cleared: boolean } | null;
+  /** The similarity a candidate has to clear to be reported as a match at all. */
+  floor: number;
+}
+
+function nearestOf(best: RankedCandidate | null): DiagnosisResolution['nearest'] {
+  if (!best) return null;
+  return {
+    crashId: best.crashId,
+    similarity: best.similarity,
+    strength: best.strength,
+    cleared: best.cleared,
+  };
+}
+
+/** Two decimal places, matching the similarity scale a confidence is derived from. */
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
+/**
+ * Resolve the diagnosis for a crash by comparing its SIGNATURE against the known
+ * crashes — replacing the exact `crashId === report.id` lookup that could only
+ * ever fire for `crash-001`..`crash-008`.
+ *
+ * Three outcomes, and they are deliberately different things:
+ *
+ *  - **authored** — the winning candidate is the crash's own analysis (it scores
+ *    1.0 against itself). Returned byte-identical, so a hand-verified confidence
+ *    is never rewritten.
+ *  - **signature-match** — a DIFFERENT crash's analysis was close enough. A new
+ *    diagnosis object is produced, stamped with `match` and a confidence of
+ *    `authored × similarity`, so it can never be mistaken for hand-verified work.
+ *  - **none** — nothing cleared {@link MATCH_FLOOR}. `diagnosis` is null and the
+ *    caller must SAY there is no diagnosis (see `NoDiagnosisNotice`); `nearest`
+ *    carries the near miss so the absence can be explained rather than asserted.
+ */
+export function resolveDiagnosis(
+  report: CrashReport,
+  corpus: DiagnosisCandidate[] = defaultDiagnosisCorpus(),
+  signature: CrashSignature = crashSignature(report, report.mappedModule ?? attributeModule(report).module),
+): DiagnosisResolution {
+  const outcome = matchSignature(signature, corpus, { selfCrashId: report.id });
+  const nearest = nearestOf(outcome.best);
+  const winner = outcome.match;
+
+  if (!winner) return { diagnosis: null, origin: 'none', nearest, floor: MATCH_FLOOR };
+
+  // The crash's OWN analysis — pass it through untouched.
+  if (winner.crashId === report.id) {
+    return { diagnosis: winner.diagnosis, origin: 'authored', nearest, floor: MATCH_FLOOR };
+  }
+
+  const transferred: CrashDiagnosis = {
+    ...winner.diagnosis,
+    crashId: report.id,
+    // A product, never a copy: the analyst's confidence in their own finding,
+    // discounted by how alike the two crashes actually are. Always ≤ the authored
+    // value, and carried alongside the `match` provenance that says what it is.
+    confidence: round2(winner.diagnosis.confidence * winner.similarity),
+    match: {
+      sourceCrashId: winner.diagnosis.crashId,
+      similarity: winner.similarity,
+      strength: winner.strength,
+      agreements: winner.agreements,
+      differences: winner.differences,
+    },
+  };
+
+  return { diagnosis: transferred, origin: 'signature-match', nearest, floor: MATCH_FLOOR };
+}
+
+/* ------------------------------------------------------------------ */
 /*  Pattern Detection                                                  */
 /* ------------------------------------------------------------------ */
 
@@ -350,8 +485,14 @@ export function analyzeAllCrashes(): CrashAnalyzerResult {
     analyzed: true,
   }));
 
-  // Map diagnoses to processed reports
-  const diagnoses = SAMPLE_DIAGNOSES;
+  // Resolve each report's diagnosis through the SAME signature matcher an
+  // imported crash goes through. For the samples this reproduces the authored
+  // mapping exactly (each crash scores 1.0 against itself), which is the only
+  // ground truth available — and pinning it here is what proves the matcher did
+  // not quietly re-file the eight known crashes onto each other's analyses.
+  const diagnoses = processedReports
+    .map((r) => resolveDiagnosis(r).diagnosis)
+    .filter((d): d is CrashDiagnosis => d !== null);
 
   // Detect patterns
   const patterns = detectPatterns(processedReports);
@@ -371,28 +512,30 @@ export function analyzeAllCrashes(): CrashAnalyzerResult {
 /**
  * Parse-and-attribute a single crash report (used by the import path).
  *
- * **`diagnosis` is null for every imported crash, by construction.** The lookup
- * below is an EXACT id match against the hand-authored `SAMPLE_DIAGNOSES`, whose
- * `crashId`s are the fixed `crash-001`..`crash-008`; {@link parseCrashLog} stamps
- * an imported crash `crash-<base36 timestamp>`, which can never equal one of
- * them. There is no signature or pattern matching here — the callstack is not
- * consulted at all.
+ * The diagnosis is resolved by comparing this crash's SIGNATURE — failure class,
+ * culprit function/file, attributed module, engine vocabulary — against the
+ * crashes PoF holds hand-written analyses for (see {@link resolveDiagnosis}).
+ * It replaces the exact `crashId === report.id` lookup, which could only ever
+ * fire for `crash-001`..`crash-008` and so returned `null` for every crash a
+ * user actually imported.
  *
- * So a caller must treat a null diagnosis as the normal case for real user input
- * and SAY there is no diagnosis, rather than substituting generic crash-category
- * text under a diagnosis heading. (Making the matching real is separate work.)
+ * `diagnosis` is still null whenever nothing clears the match floor, and that
+ * remains the normal outcome for an unfamiliar crash: callers must SAY there is
+ * no diagnosis rather than substituting generic crash-category text under a
+ * diagnosis heading. `resolution` carries the near miss so the absence can be
+ * explained. A diagnosis that came back with `match` set was written for a
+ * DIFFERENT crash and must be presented as transferred, never as hand-verified.
  */
 export function analyzeSingleCrash(report: CrashReport): {
   report: CrashReport;
   diagnosis: CrashDiagnosis | null;
+  resolution: DiagnosisResolution;
 } {
   const processed = findCulpritFrame(report);
   processed.analyzed = true;
 
-  // Exact id equality against the fixed sample diagnoses — NOT pattern matching.
-  const matchingDiagnosis = SAMPLE_DIAGNOSES.find((d) => d.crashId === report.id) ?? null;
-
-  return { report: processed, diagnosis: matchingDiagnosis };
+  const resolution = resolveDiagnosis(processed);
+  return { report: processed, diagnosis: resolution.diagnosis, resolution };
 }
 
 /** Parse raw crash log text into a CrashReport */

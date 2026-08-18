@@ -85,6 +85,31 @@ export interface CrashReport {
   analyzed: boolean;
 }
 
+/**
+ * How a hand-written analysis came to be attached to a crash it was NOT written
+ * for — i.e. the crash's signature was close enough to a known crash's that PoF
+ * transferred the known root cause across.
+ *
+ * Its presence is the marker that separates the two kinds of number a
+ * {@link CrashDiagnosis} can carry in `confidence`. A diagnosis with no `match`
+ * was written FOR its crash and its confidence is a human judgement. A diagnosis
+ * with a `match` was transferred, and its confidence is COMPUTED — the author's
+ * own confidence discounted by how alike the two crashes actually are. The two
+ * must never be presented as the same kind of claim.
+ */
+export interface DiagnosisSignatureMatch {
+  /** The known crash whose analysis this is. */
+  sourceCrashId: string;
+  /** 0–1 signature similarity between the two crashes (computed, not authored). */
+  similarity: number;
+  /** `weak` when the match cleared the floor but not the strong threshold. */
+  strength: 'strong' | 'weak';
+  /** What the two crashes share. */
+  agreements: string[];
+  /** Where they differ — the reason a weak match is weak. */
+  differences: string[];
+}
+
 /** AI-generated root cause analysis */
 export interface CrashDiagnosis {
   crashId: string;
@@ -94,8 +119,21 @@ export interface CrashDiagnosis {
   rootCause: string;
   /** The specific UE5 pattern that caused this */
   uePattern: string;
-  /** Confidence in diagnosis (0-1) */
+  /**
+   * Confidence in diagnosis (0-1).
+   *
+   * TWO different kinds of number live in this field, told apart by {@link match}:
+   * without a `match` it is the analyst's own judgement about the crash they
+   * wrote the analysis for; with one it is `authored confidence × signature
+   * similarity`, a derived score for a root cause transferred from a different
+   * crash. Never render them identically.
+   */
   confidence: number;
+  /**
+   * Set only when this analysis was transferred to a crash it was not written
+   * for. Absent ⇒ hand-written for exactly this crash.
+   */
+  match?: DiagnosisSignatureMatch;
   /** Suggested fix description */
   fixDescription: string;
   /** One-click CLI fix prompt */

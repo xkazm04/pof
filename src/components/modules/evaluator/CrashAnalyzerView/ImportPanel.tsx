@@ -12,8 +12,14 @@ interface ImportOutcome {
   id: string;
   typeLabel: string;
   severity: string;
-  /** True only when a hand-authored diagnosis was matched for this crash id. */
+  /** True only when a diagnosis was actually attached to this crash. */
   diagnosed: boolean;
+  /**
+   * Set when the attached analysis was written for a DIFFERENT crash and reached
+   * this one by signature matching — the sentence must say so, and say how strong
+   * the match was, rather than reporting a transfer as a hit.
+   */
+  matchedFrom: { sourceCrashId: string; similarity: number; strength: string } | null;
 }
 
 export function ImportPanel() {
@@ -30,17 +36,24 @@ export function ImportPanel() {
     try {
       const report = await importCrashLog(rawLog);
       if (report) {
-        // The import only PARSES. A diagnosis is a separate, exact-id lookup that
-        // an imported crash cannot currently satisfy — so read whether one landed
-        // instead of reporting success as though analysis had run.
-        const diagnosed = useCrashAnalyzerStore
+        // The import PARSES, then matches the crash's signature against the
+        // crashes PoF holds analyses for. Read what actually landed instead of
+        // reporting success as though an analysis had been written here.
+        const attached = useCrashAnalyzerStore
           .getState()
-          .diagnoses.some((d) => d.crashId === report.id);
+          .diagnoses.find((d) => d.crashId === report.id);
         setOutcome({
           id: report.id,
           typeLabel: CRASH_TYPE_LABELS[report.crashType],
           severity: report.severity,
-          diagnosed,
+          diagnosed: Boolean(attached),
+          matchedFrom: attached?.match
+            ? {
+                sourceCrashId: attached.match.sourceCrashId,
+                similarity: attached.match.similarity,
+                strength: attached.match.strength,
+              }
+            : null,
         });
         setImportError(null);
         setRawLog(''); // only clear the paste on success
@@ -64,8 +77,10 @@ export function ImportPanel() {
         </h3>
         <p className="text-2xs text-text-muted mb-3">
           Paste a UE5 crash log (from Saved/Logs/ or CrashReportClient output) to parse its
-          callstack and attribute it to a module. A root-cause diagnosis is only attached when
-          the crash matches one PoF already has on file.
+          callstack and attribute it to a module. Its shape — failure class, culprit function
+          and file, module, engine terms — is then compared against the crashes PoF holds
+          analyses for; a close enough match attaches that crash&rsquo;s analysis, labelled as
+          borrowed.
         </p>
         <textarea
           value={rawLog}
@@ -90,9 +105,11 @@ export function ImportPanel() {
               {/* Stated separately from the parse result, because it is a separate
                   thing that either happened or did not. */}
               <MicroLabel tone="muted" as="p" className="mt-0.5">
-                {outcome.diagnosed
-                  ? 'Matched a known crash — diagnosis attached.'
-                  : 'No diagnosis matched — general guidance for the crash type is shown instead.'}
+                {outcome.matchedFrom
+                  ? `${outcome.matchedFrom.strength === 'strong' ? 'Matched' : 'Weakly matched'} ${outcome.matchedFrom.sourceCrashId} by signature (${outcome.matchedFrom.similarity.toFixed(2)}) — that crash's analysis was attached, not written for this one.`
+                  : outcome.diagnosed
+                    ? 'Matched a known crash — diagnosis attached.'
+                    : 'No diagnosis matched — general guidance for the crash type is shown instead.'}
               </MicroLabel>
             </div>
           )}

@@ -62,17 +62,20 @@ function seedImportable() {
 /*  The engine fact                                                    */
 /* ------------------------------------------------------------------ */
 
-describe('an imported crash never receives a diagnosis', () => {
+describe('an unfamiliar imported crash still receives no diagnosis', () => {
   it('parses, attributes a module, and returns diagnosis: null', () => {
     const parsed = parseCrashLog(RAW_LOG);
     expect(parsed).not.toBeNull();
 
-    const { report, diagnosis } = analyzeSingleCrash(parsed!);
+    const { report, diagnosis, resolution } = analyzeSingleCrash(parsed!);
 
-    // The lookup is exact-id equality against crash-001..crash-008, and an
-    // imported crash is stamped `crash-<timestamp>` — so it can never match.
+    // Resolution is now SIGNATURE matching, not id equality — so this fixture is
+    // undiagnosed on its merits (it shares a file and module with crash-004 but a
+    // different failure class and culprit function) rather than by construction.
     expect(report.id).not.toMatch(/^crash-00\d$/);
     expect(diagnosis).toBeNull();
+    expect(resolution.origin).toBe('none');
+    expect(resolution.nearest!.similarity).toBeLessThan(resolution.floor);
 
     // Parsing DID succeed and did real work — that is what may be claimed.
     expect(report.crashType).toBe('nullptr_deref');

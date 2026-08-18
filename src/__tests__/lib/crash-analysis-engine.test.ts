@@ -22,8 +22,13 @@ describe('analyzeAllCrashes — memoization', () => {
     expect(result.reports).toHaveLength(SAMPLE_CRASHES.length);
     expect(result.reports.every((r) => r.analyzed)).toBe(true);
 
-    // Diagnoses are passed through unchanged.
-    expect(result.diagnoses).toBe(SAMPLE_DIAGNOSES);
+    // Diagnoses are now RESOLVED through signature matching rather than handed
+    // back as the raw import, so the array is rebuilt — but every element must
+    // still be the authored object itself (identity, not a copy), in order. That
+    // is the ground-truth pin: the matcher reproduces the hand-written mapping
+    // instead of quietly re-filing the eight known crashes onto each other.
+    expect(result.diagnoses).toHaveLength(SAMPLE_DIAGNOSES.length);
+    result.diagnoses.forEach((d, i) => expect(d).toBe(SAMPLE_DIAGNOSES[i]));
 
     // Culprit detection maps the null-ASC crashes to the character module.
     const crash001 = result.reports.find((r) => r.id === 'crash-001');
