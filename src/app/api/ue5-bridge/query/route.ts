@@ -10,6 +10,13 @@
  *     - callFunction  — invoke a UFUNCTION
  *     - searchAssets  — search project assets
  *     - describeObject — describe a UObject's schema
+ *     - consoleCommand — execute a UE5 console command
+ *
+ *   The connection itself is server-owned (see
+ *   `@/lib/ue5-bridge/connection-manager`), so this route is the ONLY way
+ *   browser code can reach it. Every action either executes against a live
+ *   connection or returns a 503 naming the reason — nothing is buffered or
+ *   retried behind the caller's back.
  *
  * GET /api/ue5-bridge/query
  *   Returns current connection state (quick status check).
@@ -111,6 +118,16 @@ export async function POST(request: NextRequest) {
           return apiError('objectPath is required', 400);
         }
         const result = await client.describeObject(objectPath);
+        if (!result.ok) return apiError(result.error, 502);
+        return apiSuccess(result.data);
+      }
+
+      case 'consoleCommand': {
+        const { command } = body as { command: string };
+        if (typeof command !== 'string' || !command.trim()) {
+          return apiError('command is required', 400);
+        }
+        const result = await client.executeConsoleCommand(command.trim());
         if (!result.ok) return apiError(result.error, 502);
         return apiSuccess(result.data);
       }

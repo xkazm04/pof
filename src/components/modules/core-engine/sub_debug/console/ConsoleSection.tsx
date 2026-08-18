@@ -4,17 +4,29 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Terminal, Play, Loader2, CornerDownLeft,
-  CheckCircle2, AlertTriangle,
+  CheckCircle2, AlertTriangle, PlugZap,
 } from 'lucide-react';
 import {
   STATUS_SUCCESS, STATUS_WARNING,
   ACCENT_EMERALD, OPACITY_10, OPACITY_30,
   withOpacity, OPACITY_37, OPACITY_80, OPACITY_87, OPACITY_5,
 } from '@/lib/chart-colors';
-import { ue5Connection } from '@/lib/ue5-bridge/connection-manager';
+import { useUE5Connection } from '@/hooks/useUE5Connection';
+import { BridgeStatusIndicator } from '@/components/ui/BridgeStatusIndicator';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import { CommandCatalog } from './CommandCatalog';
 import { ACCENT, type ConsoleHistoryEntry } from '../_shared/data';
+
+/**
+ * Shown when a command is typed with no live UE5 Remote Control connection.
+ *
+ * It used to read "UE5 not connected — command queued locally", which was two
+ * untruths at once: it was flagged as an error AND it promised a retry queue
+ * that has never existed. Nothing buffers console commands; if there is no
+ * connection the keystroke goes nowhere, and the console now says exactly that.
+ */
+const NOT_SENT_OUTPUT =
+  'Not sent — UE5 Remote Control is not connected. Commands are not queued; connect, then run it again.';
 
 /* -- Interactive Console --------------------------------------------------- */
 
@@ -23,12 +35,25 @@ export function ConsoleSection() {
   const [cmdHistory, setCmdHistory] = useState<ConsoleHistoryEntry[]>([]);
   const [cmdHistoryIdx, setCmdHistoryIdx] = useState(-1);
   const [isExecuting, setIsExecuting] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
   const historyEndRef = useRef<HTMLDivElement>(null);
   const cmdInputRef = useRef<HTMLInputElement>(null);
+
+  // The connection is server-owned; this hook is the browser's live view of it
+  // (SSE) and its only way to drive it (POST /api/ue5-bridge/query).
+  const { status, isConnected, isStateLive, connect, executeConsoleCommand } = useUE5Connection();
 
   useEffect(() => {
     historyEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [cmdHistory.length]);
+
+  const settle = useCallback((entryId: string, ok: boolean, output: string) => {
+    setCmdHistory(prev => prev.map(e =>
+      e.id === entryId
+        ? { ...e, status: ok ? 'success' as const : 'error' as const, output }
+        : e,
+    ));
+  }, []);
 
   const executeCommand = useCallback(async (command: string) => {
     const trimmed = command.trim();
@@ -39,23 +64,34 @@ export function ConsoleSection() {
     setCmdInput('');
     setCmdHistoryIdx(-1);
     setIsExecuting(true);
-    const client = ue5Connection.getClient();
-    if (!client) {
-      setCmdHistory(prev => prev.map(e =>
-        e.id === entryId ? { ...e, status: 'error' as const, output: 'UE5 not connected — command queued locally' } : e
-      ));
+
+    if (!isConnected) {
+      settle(entryId, false, NOT_SENT_OUTPUT);
       setIsExecuting(false);
       return;
     }
-    const result = await client.executeConsoleCommand(trimmed);
-    setCmdHistory(prev => prev.map(e => {
-      if (e.id !== entryId) return e;
-      return result.ok
-        ? { ...e, status: 'success' as const, output: `Executed: ${trimmed}` }
-        : { ...e, status: 'error' as const, output: result.error };
-    }));
+
+    // Dispatched to the server-held connection. On failure the route's own
+    // reason is surfaced verbatim — we don't guess whether UE5 saw it.
+    const result = await executeConsoleCommand(trimmed);
+    settle(entryId, result.ok, result.ok ? `Executed: ${trimmed}` : result.error);
     setIsExecuting(false);
-  }, [isExecuting]);
+  }, [isExecuting, isConnected, executeConsoleCommand, settle]);
+
+  const handleConnect = useCallback(async () => {
+    setIsConnecting(true);
+    const result = await connect();
+    setIsConnecting(false);
+    if (!result.ok) {
+      setCmdHistory(prev => [...prev, {
+        id: `connect-${Date.now()}`,
+        command: 'connect',
+        timestamp: Date.now(),
+        status: 'error' as const,
+        output: result.error,
+      }]);
+    }
+  }, [connect]);
 
   const handleCmdKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -85,11 +121,42 @@ export function ConsoleSection() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
         <SectionHeader label="INTERACTIVE_CONSOLE" color={ACCENT} icon={Terminal} />
-        <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted shrink-0 ml-2">
-          {cmdHistory.length > 0 ? `${cmdHistory.length} CMD${cmdHistory.length !== 1 ? 'S' : ''} IN HISTORY` : 'NO HISTORY'}
-        </span>
+        <div className="flex items-center gap-2 shrink-0 ml-auto">
+          <BridgeStatusIndicator
+            status={isStateLive ? status : 'connecting'}
+            variant="strip"
+            label={isStateLive ? undefined : 'Checking…'}
+            title={
+              isStateLive
+                ? 'UE5 Remote Control state, streamed live from the server'
+                : 'Waiting for the first status frame from /api/ue5-bridge/status'
+            }
+            className="text-xs"
+          />
+          {isStateLive && !isConnected && (
+            <button
+              type="button"
+              onClick={handleConnect}
+              disabled={isConnecting}
+              className="flex items-center gap-1 text-xs font-mono uppercase tracking-[0.15em] px-2 py-1 rounded border transition-all disabled:opacity-40"
+              style={{
+                backgroundColor: `${withOpacity(ACCENT_EMERALD, OPACITY_10)}`,
+                color: ACCENT_EMERALD,
+                borderColor: `${withOpacity(ACCENT_EMERALD, OPACITY_30)}`,
+              }}
+              title="Connect the server to UE5 Remote Control"
+            >
+              {isConnecting
+                ? <Loader2 className="w-3 h-3 animate-spin" />
+                : <PlugZap className="w-3 h-3" />} CONNECT
+            </button>
+          )}
+          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
+            {cmdHistory.length > 0 ? `${cmdHistory.length} CMD${cmdHistory.length !== 1 ? 'S' : ''} IN HISTORY` : 'NO HISTORY'}
+          </span>
+        </div>
       </div>
       <BlueprintPanel color={ACCENT} className="p-0 overflow-hidden">
         {/* Console output */}
