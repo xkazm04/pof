@@ -199,6 +199,15 @@ export const UE_GOTCHAS: Gotcha[] = [
     source: 'research: Roblox CubePart 3D part-segmentation (Stefan 3D AI)',
   },
   {
+    id: 'ai-3d-model-tier-and-budget-shaping',
+    modules: ['character', '3d'],
+    summary: 'Pick an image-to-3D model by TIER, not by date — and treat the face budget as a SHAPING parameter, not a ceiling; text never survives as geometry at any budget',
+    detail:
+      "Three separate traps when driving an image/text-to-3D generator (Tripo and its peers). (1) MODEL TIER, NOT DATE: the vendor ships parallel families, not a single improving line. Tripo's P-series ('Smart Mesh': P1, P2) is a low-poly TOPOLOGY tier — quad output, a caller-controlled poly budget, seconds per mesh, and topology ONLY (texturing is a second pass) — while the v3.x line is the high-detail hero tier. PoF's own arena graded 'P1-20260311' a FAIL as a hero model DESPITE carrying the newest date (3MB, shard hair) and 'v3.1-20260211' a PASS (45MB, woven braids), so choosing the newest id is how you get a low-poly tier answering a hero-tier request. Pin the model explicitly per asset class; the same arena graded the silent account default a FAIL too. (2) BUDGET SHAPES, IT DOES NOT ONLY CAP: a generator spends the budget it is given, so an over-generous budget makes output WORSE, not merely heavier. Observed on hair: 1,500 quads produced a mess, 3,000 produced individually-resolved strands, and 6,000 made the generator invent a whole head that should not have existed — the budget had nowhere legitimate to go. A budget is therefore a per-asset authoring decision, not a class ceiling to max out; a simple asset given a big budget is a defect risk, and the good generators SKIP spending it on flat surfaces rather than adding loops. (3) TEXT IS NEVER GEOMETRY: lettering on a sign, a coin or an engraved blade is ignored or scrambled at every budget (verified up to 10,000 quads). Author text as a TEXTURE/decal in the material, never as a modelled feature, and do not spend budget trying to force it.",
+    appliesTo: ['ue-python'],
+    source: 'research: Tripo P2 quad-topology walkthrough (Stefan 3D AI) + PoF character-pipeline model arena',
+  },
+  {
     id: 'metahuman-conform-input-prep',
     modules: ['character', '3d'],
     summary: 'AI→MetaHuman conform: input mesh needs an A-pose, separated fingers, armpit/leg clearance, hair+lashes removed, a separate high-poly head, and a NEUTRAL facial expression — or the auto-solve mis-conforms',

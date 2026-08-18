@@ -9,6 +9,13 @@
  *
  * Budgets are game-ready UE5 targets at ARPG camera distance. The character budget is
  * locked to the character pipeline's game-tier spec (40k) — keep them in sync.
+ *
+ * CEILING, NOT A TARGET TO MAX OUT. These are per-class upper bounds for what may ship.
+ * At the generator they behave differently: a generator SPENDS the budget it is handed,
+ * so an over-generous one degrades the mesh rather than merely fattening it (observed on
+ * hair — 3,000 quads resolved individual strands, 6,000 made the generator invent a whole
+ * head). A simple asset should be requested well under its class ceiling. See the
+ * `ai-3d-model-tier-and-budget-shaping` gotcha in `knowledge/ue-gotchas.ts`.
  */
 import type { CritiqueThresholds } from './mesh-critique';
 
