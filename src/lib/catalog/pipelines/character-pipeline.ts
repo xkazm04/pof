@@ -61,7 +61,7 @@ registerCatalogPipeline({
 
     // ── 02. 2D face gate ──────────────────────────────────────────────────────
     {
-      archetype: 'checklist',
+      archetype: 'schema',
       label: 'Face Gate 2D',
       engine: 'Blender',
       view: { kind: 'table', field: 'gate', columns: [{ key: 'verdict' }, { key: 'method' }, { key: 'criteria' }, { key: 'evidence' }] },
@@ -115,7 +115,7 @@ registerCatalogPipeline({
 
     // ── 04. 3D face gate ──────────────────────────────────────────────────────
     {
-      archetype: 'checklist',
+      archetype: 'schema',
       label: 'Face Gate 3D',
       engine: 'Blender',
       view: { kind: 'table', field: 'gate', columns: [{ key: 'verdict' }, { key: 'method' }, { key: 'criteria' }, { key: 'evidence' }] },

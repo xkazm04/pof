@@ -72,7 +72,7 @@ registerCatalogPipeline({
 
     // ── 2. Lore Body ─────────────────────────────────────────────────────────
     {
-      archetype: 'schema',
+      archetype: 'brief',
       label: 'Lore Body',
       view: { kind: 'prose', field: 'loreBody', emptyText: 'No lore body yet' },
       produce: (e: LabEntity) => ({

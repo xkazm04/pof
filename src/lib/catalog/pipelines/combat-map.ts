@@ -624,7 +624,7 @@ registerCatalogPipeline({
 
     // ── 9. Ambient / Audio ────────────────────────────────────────────────────
     {
-      archetype: 'rules',
+      archetype: 'brief',
       label: 'Ambient / Audio',
       view: { kind: 'prose', field: 'audio', emptyText: 'No audio spec yet' },
       produce: () => ({

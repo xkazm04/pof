@@ -78,6 +78,48 @@ export type ViewDescriptor =
 export const SUPPORTED_VIEW_KINDS = ['prose', 'table', 'chart', 'gallery', 'checklist', 'manifest', 'graph'] as const;
 export type ViewKind = (typeof SUPPORTED_VIEW_KINDS)[number];
 
+/**
+ * Which View kinds each archetype is allowed to render — the archetype↔view coherence
+ * contract the fleet spec linter enforces (rule (a2)).
+ *
+ * The archetype IS the deliverable contract (it picks the corrective language in
+ * `steps/shared/genericFixCopy.ts`, the canon slice in `canon/archetypeCanon.ts`, and
+ * whether a live CLI may author the step at all — `labProduceMode.CLI_ELIGIBLE_ARCHETYPES`).
+ * So a step whose view renders in a shape its archetype's peers never use is either
+ * mis-archetyped or mis-viewed, and until this list existed nothing said which.
+ *
+ * DERIVED BY MEASUREMENT, not invented: this is exactly the set of (archetype, view.kind)
+ * pairs the 344 registered steps use. The four steps that once diverged were corrected to
+ * the cohort whose payload shape and checker they already matched, rather than widening an
+ * archetype to cover a one-off:
+ *   - character-pipeline "Face Gate 2D" / "Face Gate 3D" were `checklist` + `table`; their
+ *     `gate` payload is a flat record graded by `fieldsPopulated`, which is the `schema`
+ *     cohort's shape (11 other schema steps render exactly that), not a checklist's array.
+ *   - codex "Lore Body" was `schema` + `prose` and combat-map "Ambient / Audio" was `rules`
+ *     + `prose`; both write a single prose string graded by `minLength` — the `brief`
+ *     contract, which all 32 brief steps share.
+ *
+ * This is a RATCHET. Widening an entry is a deliberate act: add the kind here together with
+ * a one-line reason, so a new shape is a recorded decision rather than silent drift. Never
+ * widen it merely to make a failing step pass.
+ */
+export const ARCHETYPE_VIEW_KINDS: Record<ArchetypeId, readonly ViewKind[]> = {
+  brief: ['prose'],
+  schema: ['table'],
+  balance: ['chart'],
+  gallery: ['gallery'],
+  // `rules` is the one genuinely two-shaped archetype: 115 steps render a row/record table,
+  // 11 render a manifest list (an enumeration of wired assets rather than a rule grid).
+  rules: ['table', 'manifest'],
+  checklist: ['checklist'],
+  manifest: ['manifest'],
+  graph: ['graph'],
+  // `custom` is the bespoke escape hatch, but all 5 of its steps are audio manifests today.
+  // A future custom step in another shape must add its kind here — deliberately, with a
+  // reason — rather than the escape hatch silently accepting anything.
+  custom: ['manifest'],
+};
+
 /** Per-step remediation copy: a plain-language cause (`why`), an optional suggested
  *  action (`suggestion`), and an optional corrective direction (`fixDirection`) that
  *  seeds a one-click "Produce fix". Optional on a StepSpec — ArchetypeStep derives a

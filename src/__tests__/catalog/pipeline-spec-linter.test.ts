@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import '@/lib/catalog/pipelines/registry.generated'; // side-effect: register all pipelines
 import { allCatalogPipelines } from '@/lib/catalog/pipeline-registry';
-import { SUPPORTED_VIEW_KINDS, SUPPORTED_CHART_VARIANTS } from '@/lib/catalog/stepSpec';
+import { SUPPORTED_VIEW_KINDS, SUPPORTED_CHART_VARIANTS, ARCHETYPE_VIEW_KINDS } from '@/lib/catalog/stepSpec';
 import type { ViewDescriptor, StepSpec } from '@/lib/catalog/stepSpec';
 import { readLinks } from '@/lib/catalog/acceptance/linkCheckers';
 import { resolveTableView } from '@/lib/catalog/tableView';
@@ -22,6 +22,12 @@ import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
  * What it checks, per step of every `allCatalogPipelines()` pipeline:
  *  (a) `view.kind` is one the generic ViewPanel renderer supports (SUPPORTED_VIEW_KINDS),
  *      and a `chart` view's `variant` is one ChartPanel supports (SUPPORTED_CHART_VARIANTS).
+ *  (a2) `view.kind` is one the step's own ARCHETYPE allows (`ARCHETYPE_VIEW_KINDS`, measured
+ *      from the fleet). The archetype is the deliverable contract — it selects the corrective
+ *      language, the canon slice and CLI eligibility — so a step rendering in a shape its
+ *      archetype's peers never use is mis-declared on one side or the other, and nothing said
+ *      which until this rule. Four such steps had already drifted (two character-pipeline face
+ *      gates, codex "Lore Body", combat-map "Ambient / Audio").
  *  (b) chart descriptors point at REAL numeric data: the step's `produce()` stub output is
  *      statically reachable (produce is a pure `(entity) => StepOutput`), so we run it with
  *      a synthetic entity and assert every declared `bars`/`histogram` key resolves to a
@@ -158,6 +164,21 @@ function hollowWiring(data: Record<string, unknown>, path: string[]): Record<str
   return copy;
 }
 
+/**
+ * Rule (a2): the step's `view.kind` must be one its own archetype declares. Returns the
+ * violation message (naming step, archetype and view kind) or null. Shared by the fleet
+ * walk and the fixture test that proves the rule actually rejects a new mismatch.
+ */
+function archetypeViewViolation(s: Step): string | null {
+  const allowed = ARCHETYPE_VIEW_KINDS[s.spec.archetype];
+  if (allowed == null || (allowed as readonly string[]).includes(s.spec.view.kind)) return null;
+  return (
+    `${at(s)}: archetype "${s.spec.archetype}" renders view kind "${s.spec.view.kind}", which is not ` +
+    `one of [${allowed.join(', ')}] — re-declare the archetype to match the shape this step actually ` +
+    `produces, or widen ARCHETYPE_VIEW_KINDS deliberately (with a stated reason) in stepSpec.ts`
+  );
+}
+
 const pipelines = allCatalogPipelines();
 const steps: Step[] = pipelines.flatMap((p) =>
   p.steps.map((spec) => ({ catalogId: p.catalogId, label: spec.label, spec })),
@@ -181,6 +202,49 @@ describe('fleet spec linter', () => {
       .filter((s) => s.spec.view.kind === 'chart')
       .filter((s) => !(SUPPORTED_CHART_VARIANTS as readonly string[]).includes((s.spec.view as Extract<ViewDescriptor, { kind: 'chart' }>).variant));
     expect(bad.map((s) => `${at(s)}: unsupported chart variant`)).toEqual([]);
+  });
+
+  // ── (a2) view kind agrees with the step's archetype ────────────────────────
+  it("every step's view kind is one its archetype declares (ARCHETYPE_VIEW_KINDS)", () => {
+    expect(steps.map(archetypeViewViolation).filter((v): v is string => v != null)).toEqual([]);
+  });
+
+  it('the archetype/view rule rejects a NEW mismatching step and names step, archetype and kind', () => {
+    const rogue: Step = {
+      catalogId: 'lint-fixture',
+      label: 'Rogue Step',
+      // A checklist archetype rendering a chart — the drift class (a2) exists to catch.
+      spec: { ...steps[0].spec, archetype: 'checklist', view: { kind: 'chart', variant: 'bars', field: 'x', rows: [] } },
+    };
+    const msg = archetypeViewViolation(rogue);
+    expect(msg).not.toBeNull();
+    expect(msg).toContain('Rogue Step');
+    expect(msg).toContain('"checklist"');
+    expect(msg).toContain('"chart"');
+  });
+
+  it('every archetype has a declared view-kind allow-list (no silent escape hatch)', () => {
+    const undeclared = [...new Set(steps.map((s) => s.spec.archetype))].filter(
+      (a) => !Array.isArray(ARCHETYPE_VIEW_KINDS[a]) || ARCHETYPE_VIEW_KINDS[a].length === 0,
+    );
+    expect(undeclared).toEqual([]);
+  });
+
+  it('ARCHETYPE_VIEW_KINDS lists no kind the renderer does not support, and none the fleet never uses', () => {
+    const used = new Set(steps.map((s) => `${s.spec.archetype}/${s.spec.view.kind}`));
+    const violations: string[] = [];
+    for (const [archetype, kinds] of Object.entries(ARCHETYPE_VIEW_KINDS)) {
+      for (const k of kinds) {
+        if (!(SUPPORTED_VIEW_KINDS as readonly string[]).includes(k)) {
+          violations.push(`${archetype}: allows view kind "${k}", which the ViewPanel renderer does not support`);
+        } else if (!used.has(`${archetype}/${k}`)) {
+          // The list is MEASURED from the fleet; an entry no step uses is an invented
+          // permission that would silently license a future divergence.
+          violations.push(`${archetype}: allows view kind "${k}", but no registered step pairs them — drop the unused permission`);
+        }
+      }
+    }
+    expect(violations).toEqual([]);
   });
 
   // ── (b) chart descriptors point at real numeric/array data in produce() ─────
