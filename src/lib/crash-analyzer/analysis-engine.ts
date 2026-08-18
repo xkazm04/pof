@@ -3,6 +3,7 @@
 /* ------------------------------------------------------------------ */
 
 import type {
+  CallstackFrame,
   CrashReport,
   CrashDiagnosis,
   CrashPattern,
@@ -15,35 +16,191 @@ import { emptyCrashTypeCounts, emptyCrashSeverityCounts } from '@/types/crash-an
 import { SAMPLE_CRASHES, SAMPLE_DIAGNOSES } from './sample-crashes';
 
 /* ------------------------------------------------------------------ */
-/*  Module Mapping                                                     */
+/*  Module Attribution                                                 */
 /* ------------------------------------------------------------------ */
 
-const MODULE_MAP: { pattern: RegExp; module: string }[] = [
-  { pattern: /Character|Player|Movement/i, module: 'arpg-character' },
-  { pattern: /AbilitySystem|GAS|Ability|GameplayEffect/i, module: 'arpg-abilities' },
-  { pattern: /Inventory|Item|Equip|Slot/i, module: 'arpg-inventory' },
-  { pattern: /Menu|HUD|Widget|UI|UMG/i, module: 'arpg-ui-hud' },
-  { pattern: /Dialog|Quest|NPC|Conversation/i, module: 'arpg-dialogue-quests' },
-  { pattern: /Combat|Damage|Hit|Attack/i, module: 'arpg-combat' },
-  { pattern: /Loot|Drop|Reward|Treasure/i, module: 'arpg-loot' },
-  { pattern: /AI|BehaviorTree|BTTask|Blackboard|Enemy/i, module: 'arpg-ai' },
-  { pattern: /Save|Load|Serial|Persist|Archive/i, module: 'arpg-save-load' },
-  { pattern: /Audio|Sound|Music/i, module: 'arpg-audio' },
-  { pattern: /Health|Component/i, module: 'arpg-character' },
+/**
+ * One vocabulary rule: a token pattern and the PoF module it points at.
+ *
+ * Rules are NOT ordered — every rule is tested against every piece of evidence
+ * and the winner is decided by score (see {@link attributeModule}). The previous
+ * implementation was a first-match scan in fixed array order, so a crash was
+ * credited to whichever pattern happened to sit earliest in the list: an AI
+ * Behavior Tree crash in `Source/AI/BTTask_ARPGAttackTarget.cpp` was filed under
+ * `arpg-combat` purely because the combat rule was tested before the AI rule and
+ * the function name contains "Attack"; a save-archive crash in
+ * `Source/SaveLoad/ARPGSaveGame.cpp` was filed under `arpg-inventory` because the
+ * function is called `DeserializeInventory`.
+ *
+ * Patterns are matched against TOKENIZED text (CamelCase, `snake_case` and path
+ * separators split into words), so `\bai\b` matches the `Source/AI/` directory
+ * without also matching the "ai" inside `CheckDependencyChain`, and `\bui\b`
+ * matches `Source/UI/` without matching the "ui" inside `Build`. Raw-substring
+ * matching on identifiers is exactly what made the old map imprecise.
+ */
+interface ModuleRule {
+  pattern: RegExp;
+  module: string;
+  /**
+   * Optional multiplier for rules whose vocabulary is weak evidence. Defaults
+   * to 1. (The legacy `Component` catch-all was dropped rather than
+   * down-weighted: nearly every UE class name ends in "Component", so it added
+   * noise to every comparison while never being able to carry an attribution on
+   * its own. `Health` — the useful half of that rule — is kept below.)
+   */
+  weight?: number;
+}
+
+const MODULE_RULES: ModuleRule[] = [
+  { pattern: /\b(character|player|pawn|movement|locomotion)\b/, module: 'arpg-character' },
+  { pattern: /\b(health|stamina|vitals)\b/, module: 'arpg-character' },
+  { pattern: /\b(gas|asc|ability|abilities|gameplay|attribute|attributes|cue)\b/, module: 'arpg-abilities' },
+  { pattern: /\b(inventory|item|items|equip|equipment|slot|slots|stash)\b/, module: 'arpg-inventory' },
+  { pattern: /\b(ui|hud|widget|umg|menu|slate|viewmodel)\b/, module: 'arpg-ui-hud' },
+  { pattern: /\b(dialog|dialogue|quest|quests|npc|conversation|objective)\b/, module: 'arpg-dialogue-quests' },
+  { pattern: /\b(combat|damage|hit|attack|weapon|melee|projectile)\b/, module: 'arpg-combat' },
+  { pattern: /\b(loot|drop|reward|treasure|rarity)\b/, module: 'arpg-loot' },
+  { pattern: /\b(ai|bt|btt|behavior|behaviour|blackboard|enemy|perception|eqs|aicontroller)\b/, module: 'arpg-ai' },
+  { pattern: /\b(save|load|persist|archive|checkpoint|\w*serializ\w*)\b/, module: 'arpg-save-load' },
+  { pattern: /\b(audio|sound|music|sfx|metasound|submix)\b/, module: 'arpg-audio' },
 ];
 
-function mapToModule(report: CrashReport): string | null {
-  // Check game code frames for module hints
+/* ---- Evidence weights -------------------------------------------- */
+
+/**
+ * The file PATH outranks the symbol name when they disagree.
+ *
+ * A directory is a deliberate filing decision by the developer (`Source/AI/…`
+ * means "this is AI code"); a file name is nearly as strong; a token of a
+ * function name is the weakest of the three — it is precisely the evidence that
+ * misfiled the Behavior Tree crash as combat.
+ */
+const WEIGHT_DIRECTORY = 3;
+const WEIGHT_FILENAME = 2;
+const WEIGHT_SYMBOL = 1;
+
+/**
+ * ALL game-code frames are consulted, not only the first one, so a deeper and
+ * more specific frame can corroborate an attribution. Each frame below the
+ * culprit contributes 40% of the weight of the frame above it: the caller chain
+ * says who INVOKED the code, not who owns the defect, so it may confirm an
+ * attribution but must never outvote the frame the crash happened in.
+ */
+const FRAME_DECAY = 0.4;
+
+/**
+ * Confidence gates. Below either of these the crash reports UNKNOWN (`null`)
+ * instead of defaulting to whichever rule happened to score highest.
+ *
+ * - `MIN_SCORE` requires at least file-name-level evidence: a bare token of a
+ *   function name (weight 1) can corroborate an attribution but cannot carry one
+ *   on its own.
+ * - `MIN_MARGIN` requires the winner to lead the runner-up by 25%; a near-tie
+ *   between two subsystems is genuinely ambiguous and is reported as such.
+ */
+const MIN_SCORE = 2;
+const MIN_MARGIN = 1.25;
+
+/** Split CamelCase / snake_case / path text into lowercase word tokens. */
+const TOKEN_RE = /[A-Z]+(?=[A-Z][a-z])|[A-Z]?[a-z]+|[A-Z]+|\d+/g;
+
+function tokenize(text: string): string {
+  const matched = text.match(TOKEN_RE);
+  if (!matched) return '';
+  return ` ${matched.join(' ').toLowerCase()} `;
+}
+
+type EvidenceKind = 'directory' | 'file' | 'symbol';
+
+interface FrameEvidence {
+  kind: EvidenceKind;
+  weight: number;
+  raw: string;
+  tokens: string;
+}
+
+function frameEvidence(frame: CallstackFrame): FrameEvidence[] {
+  const src = frame.sourceFile ?? '';
+  const cut = Math.max(src.lastIndexOf('/'), src.lastIndexOf('\\'));
+  const dir = cut >= 0 ? src.slice(0, cut) : '';
+  const file = cut >= 0 ? src.slice(cut + 1) : src;
+  const parts: FrameEvidence[] = [
+    { kind: 'directory', weight: WEIGHT_DIRECTORY, raw: dir, tokens: tokenize(dir) },
+    { kind: 'file', weight: WEIGHT_FILENAME, raw: file, tokens: tokenize(file) },
+    { kind: 'symbol', weight: WEIGHT_SYMBOL, raw: frame.functionName, tokens: tokenize(frame.functionName) },
+  ];
+  return parts.filter((p) => p.tokens.length > 0);
+}
+
+/** Why an attribution did — or did not — land. */
+export type AttributionReason = 'attributed' | 'no-evidence' | 'ambiguous';
+
+/** The full, inspectable result of attributing a crash to a PoF module. */
+export interface ModuleAttribution {
+  /** The winning module, or `null` when it could not be determined confidently. */
+  module: string | null;
+  reason: AttributionReason;
+  /** Score of the top-ranked module (0 when nothing matched). */
+  score: number;
+  /** The next-best module when one exists — the reason an `ambiguous` call is ambiguous. */
+  runnerUp: { module: string; score: number } | null;
+  /** Human-readable trace of the evidence that fed the score, strongest first. */
+  evidence: string[];
+}
+
+/**
+ * Attribute a crash to a PoF module by SCORING every rule against every
+ * game-code frame — weighting path evidence over symbol evidence — instead of
+ * returning whichever regex matched first.
+ *
+ * Returns `module: null` when the evidence is too thin (`no-evidence`) or two
+ * subsystems land within {@link MIN_MARGIN} of each other (`ambiguous`). An
+ * honest "unknown" beats a confident wrong subsystem here, because this value
+ * feeds `crashesByModule` / `mostAffectedModule` — the stat a developer reads to
+ * decide WHERE their crashes are concentrated.
+ */
+export function attributeModule(report: CrashReport): ModuleAttribution {
   const gameFrames = report.callstack.filter((f) => f.isGameCode);
-  for (const frame of gameFrames) {
-    const combined = `${frame.functionName} ${frame.sourceFile ?? ''}`;
-    for (const entry of MODULE_MAP) {
-      if (entry.pattern.test(combined)) {
-        return entry.module;
+  const scores = new Map<string, number>();
+  const evidence: { text: string; points: number }[] = [];
+
+  gameFrames.forEach((frame, depth) => {
+    const frameWeight = FRAME_DECAY ** depth;
+    for (const ev of frameEvidence(frame)) {
+      for (const rule of MODULE_RULES) {
+        if (!rule.pattern.test(ev.tokens)) continue;
+        const points = ev.weight * (rule.weight ?? 1) * frameWeight;
+        scores.set(rule.module, (scores.get(rule.module) ?? 0) + points);
+        evidence.push({
+          text: `${rule.module} +${points.toFixed(2)} — ${ev.kind} "${ev.raw}" (frame ${frame.index})`,
+          points,
+        });
       }
     }
+  });
+
+  // Deterministic ranking: score desc, then module name asc, so a tie never
+  // depends on Map insertion order.
+  const ranked = [...scores.entries()]
+    .map(([module, score]) => ({ module, score }))
+    .sort((a, b) => b.score - a.score || a.module.localeCompare(b.module));
+
+  const trace = [...evidence].sort((a, b) => b.points - a.points).map((e) => e.text);
+  const top = ranked[0] ?? null;
+  const runnerUp = ranked[1] ?? null;
+
+  if (!top || top.score < MIN_SCORE) {
+    return { module: null, reason: 'no-evidence', score: top?.score ?? 0, runnerUp, evidence: trace };
   }
-  return null;
+  if (runnerUp && top.score < runnerUp.score * MIN_MARGIN) {
+    return { module: null, reason: 'ambiguous', score: top.score, runnerUp, evidence: trace };
+  }
+  return { module: top.module, reason: 'attributed', score: top.score, runnerUp, evidence: trace };
+}
+
+/** The winning module for a crash, or `null` when it cannot be determined confidently. */
+function mapToModule(report: CrashReport): string | null {
+  return attributeModule(report).module;
 }
 
 /* ------------------------------------------------------------------ */

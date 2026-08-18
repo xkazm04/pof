@@ -56,7 +56,13 @@ export function CrashDetailPanel({
         <div className="flex flex-wrap gap-2 text-2xs text-text-muted">
           <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{new Date(report.timestamp).toLocaleString()}</span>
           <span className="flex items-center gap-1"><Cpu className="w-3 h-3" />{report.machineState.engineVersion} {report.machineState.buildConfig}</span>
-          {report.mappedModule && <span className="flex items-center gap-1"><Layers className="w-3 h-3" />{report.mappedModule}</span>}
+          {/* An unattributed crash SAYS so. Module attribution is scored (path over
+              symbol) and reports unknown when the evidence is thin or two subsystems
+              tie — silently omitting the chip would read as "no module involved". */}
+          <span className="flex items-center gap-1" data-testid="crash-module">
+            <Layers className="w-3 h-3" />
+            {report.mappedModule ?? <span className="italic">module not determined</span>}
+          </span>
         </div>
       </SurfaceCard>
 
