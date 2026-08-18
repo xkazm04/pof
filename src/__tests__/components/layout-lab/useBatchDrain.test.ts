@@ -265,6 +265,45 @@ describe('useBatchDrain — cancel tells the truth', () => {
     expect(result.current.state.cancelRequested).toBe(false);
   });
 
+  it('a registered cancel reaches the shared runner scope, so the ONE activity surface shows it', async () => {
+    // The batch's own state is component-local `useState` — invisible to the header. The
+    // published scope is the only channel out, so a cancel that never re-publishes leaves
+    // the unified "what is running" chip reporting a plain drain it knows more about.
+    const d1 = deferred<DrainOutcome>();
+    drainMock.mockReturnValueOnce(d1.promise);
+
+    const { result } = renderHook(() => useBatchDrain('c', 0));
+    let run!: Promise<void>;
+    act(() => { run = result.current.start(ents); });
+    await waitFor(() => expect(drainMock).toHaveBeenCalledTimes(1));
+    expect(useLabRunnerStore.getState().localDrain).toBe('c · 3 sets');
+
+    act(() => { result.current.cancel(); });
+    expect(useLabRunnerStore.getState().localDrain).toBe('c · 3 sets · cancel requested');
+
+    // …and the re-publish must not orphan the chip: the run still owns it and clears it.
+    await act(async () => { d1.resolve(okOutcome({ ran: 3, passed: 3 })); await run; });
+    expect(useLabRunnerStore.getState().localDrain).toBeNull();
+  });
+
+  it('a cancel does NOT touch a runner scope another drain has taken over', async () => {
+    const d1 = deferred<DrainOutcome>();
+    drainMock.mockReturnValueOnce(d1.promise);
+
+    const { result } = renderHook(() => useBatchDrain('c', 0));
+    let run!: Promise<void>;
+    act(() => { run = result.current.start(ents); });
+    await waitFor(() => expect(drainMock).toHaveBeenCalledTimes(1));
+    act(() => { useLabRunnerStore.getState().setLocalDrain('c/e9'); }); // a coach drain took the chip
+
+    act(() => { result.current.cancel(); });
+    expect(result.current.state.cancelRequested).toBe(true);   // the click still registers locally
+    expect(useLabRunnerStore.getState().localDrain).toBe('c/e9'); // but never overwrites another drain
+
+    await act(async () => { d1.resolve(okOutcome()); await run; });
+    expect(useLabRunnerStore.getState().localDrain).toBe('c/e9');
+  });
+
   it('cancel() outside a live run is a no-op (a stale summary cannot grow a cancel note)', async () => {
     drainMock.mockResolvedValue(okOutcome({ ran: 1, passed: 1 }));
     const { result } = renderHook(() => useBatchDrain('c', 0));

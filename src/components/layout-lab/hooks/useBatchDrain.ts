@@ -68,6 +68,12 @@ export function useBatchDrain(catalogId: string, retryDelayMs: number = UI_TIMEO
   const [state, setState] = useState<BatchDrainState>(IDLE);
   const cancelRef = useRef(false);
   const runningRef = useRef(false);
+  /** The scope string this hook last published to `labRunnerStore` — the only part of the
+   *  batch's in-flight state that leaves this component (everything else is `useState` and
+   *  dies with the matrix). The header activity surface reads it, so a cancel has to be
+   *  written HERE to be visible there; the ownership guard compares against this ref rather
+   *  than a captured constant so a re-publish never orphans the chip. */
+  const publishedRef = useRef<string | null>(null);
 
   /**
    * Request a cancel. It cannot abort the in-flight editor boot (that is a server/runner
@@ -80,6 +86,16 @@ export function useBatchDrain(catalogId: string, retryDelayMs: number = UI_TIMEO
     if (!runningRef.current) return;
     cancelRef.current = true;
     setState((s) => (s.cancelRequested ? s : { ...s, cancelRequested: true }));
+    // Re-publish the header scope so the ONE "what is running" surface shows the registered
+    // cancel too. Without this the request is visible only on the matrix panel that issued
+    // it, and the header would keep reporting a plain drain — true, but less than we know.
+    // Only if the chip is still ours: a concurrent drain may have taken it over.
+    const runner = useLabRunnerStore.getState();
+    if (publishedRef.current && runner.localDrain === publishedRef.current) {
+      const next = `${publishedRef.current} · cancel requested`;
+      publishedRef.current = next;
+      runner.setLocalDrain(next);
+    }
   }, []);
 
   const start = useCallback(async (entities: BatchEntity[]) => {
@@ -91,6 +107,7 @@ export function useBatchDrain(catalogId: string, retryDelayMs: number = UI_TIMEO
     setState({ running: true, cancelRequested: false, cancelEffect: null, activeEntityIds: new Set(ids), doneEntityIds: new Set(), summary: emptyBatchSummary(), total: entities.length });
     // Publish this session's batch-drain scope so the header runner chip shows "draining …".
     const scope = `${catalogId} · ${entities.length} set${entities.length > 1 ? 's' : ''}`;
+    publishedRef.current = scope;
     useLabRunnerStore.getState().setLocalDrain(scope);
 
     try {
@@ -135,7 +152,8 @@ export function useBatchDrain(catalogId: string, retryDelayMs: number = UI_TIMEO
       // unconditionally blanked "draining …" while that drain was still live, which is a lie.
       // Mirrors the per-entity ownership guard in Baseline/useBaseline.ts.
       const runner = useLabRunnerStore.getState();
-      if (runner.localDrain === scope) runner.setLocalDrain(null);
+      if (publishedRef.current && runner.localDrain === publishedRef.current) runner.setLocalDrain(null);
+      publishedRef.current = null;
     }
   }, [catalogId, retryDelayMs]);
 

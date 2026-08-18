@@ -12,8 +12,7 @@ import { LabSearch, useLabSearchShortcut } from './LabSearch';
 import { LAB_THEMES, LIGHT, themeAttr } from './theme';
 import { labFontVars } from './fonts';
 import { LabBridgeStrip } from './LabBridgeStrip';
-import { LabJobsChip } from './LabJobsChip';
-import { RunnerChip } from './RunnerChip';
+import { ActivityChip } from './ActivityChip';
 import { OneShotPanel } from './one-shot/OneShotPanel';
 import { useOneShotLabStore } from '@/stores/oneShotLabStore';
 import { setupOneShotToastHandler } from './one-shot/toastHandler';
@@ -183,8 +182,10 @@ export function LayoutLab() {
         </div>
         {/* Right zone: status + theme toggle in the corner */}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 'var(--lab-s2)' }}>
-          <LabJobsChip />
-          <RunnerChip t={theme} />
+          {/* ONE affordance for "what is running right now" — the UE drain lease, the
+              one-shot orchestrator and the forge's background polls in one vocabulary.
+              (Replaces the old RunnerChip + LabJobsChip pair, which shared nothing.) */}
+          <ActivityChip t={theme} />
           <LabBridgeStrip t={theme} />
           <ThemeToggle themeId={themeId} onToggle={() => setPrefs({ themeId: themeId === 'light' ? 'dark' : 'light' })} />
         </div>
