@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, act, waitFor, cleanup } from '@testing-library/react';
 import { useAudioScene } from '@/hooks/useAudioScene';
+import { useAudioEventCatalogStore } from '@/components/modules/content/audio/audioEventCatalogStore';
 
 /**
  * Pins the "one commit == one PUT" half of the writes-per-gesture claim, and the
@@ -54,5 +55,18 @@ describe('useAudioScene.commitDoc', () => {
     let swallowed: unknown = 'unset';
     await act(async () => { swallowed = await result.current.updateDoc({ id: 1, zones: [] }); });
     expect(swallowed).toBeNull();
+  });
+});
+
+describe('useAudioScene.deleteDoc', () => {
+  it('drops the deleted scene\'s event catalog instead of stranding it in localStorage', async () => {
+    useAudioEventCatalogStore.getState().setEvents('7', [{ id: 'ev1' } as never]);
+    expect(useAudioEventCatalogStore.getState().getEvents('7')).toHaveLength(1);
+
+    const { result } = renderHook(() => useAudioScene());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    await act(async () => { await result.current.deleteDoc(7); });
+    expect('7' in useAudioEventCatalogStore.getState().byScene).toBe(false);
   });
 });

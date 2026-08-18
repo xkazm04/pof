@@ -7,6 +7,7 @@ import type {
   CreateAudioScenePayload,
   UpdateAudioScenePayload,
 } from '@/types/audio-scene';
+import { useAudioEventCatalogStore } from '@/components/modules/content/audio/audioEventCatalogStore';
 import { apiFetch } from '@/lib/api-utils';
 import { useCRUD } from './useCRUD';
 
@@ -98,7 +99,13 @@ export function useAudioScene(): UseAudioSceneResult {
 
   const deleteDoc = useCallback(async (id: number) => {
     const result = await mutate<unknown>(`/api/audio-scene?id=${id}`, { method: 'DELETE' });
-    if (result !== null && activeDocId === id) setActiveDocId(null);
+    if (result !== null) {
+      // The event catalog is keyed by the scene id as a STRING (what
+      // AudioEventCatalog passes to getEvents/setEvents). Deleting the scene
+      // without this strands `byScene[id]` in localStorage forever.
+      useAudioEventCatalogStore.getState().clearScene(String(id));
+      if (activeDocId === id) setActiveDocId(null);
+    }
     return result !== null;
   }, [activeDocId, mutate]);
 
