@@ -5,6 +5,7 @@ import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 import { catalogManifest } from '../catalogManifest';
 import { postArtifact, drainGates, deleteEntityArtifacts } from '../labArtifactClient';
 import { useCachedArtifacts, invalidateArtifacts, retryArtifacts, refreshArtifacts } from '../labArtifactCache';
+import { toLabArtifacts } from '../labCatalogRefresh';
 import type { RefreshOutcome } from '../labPipelineStore';
 import { labGrade } from '../labCheckerContext';
 import { useEntityArtifacts } from '../hooks/useEntityArtifacts';
@@ -267,15 +268,9 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
     try {
       const res = await refreshArtifacts(catalogId, entityKey);
       if (!res.ok) { setRefreshError(res.error); return; }
-      setRefreshOutcome(useLabPipelineStore.getState().refreshEntity(entityKey, res.data.map((a) => ({
-        step: a.step,
-        artifact: {
-          done: true, data: a.data, ueAssets: a.ueAssets, at: a.updatedAt ?? new Date().toISOString(),
-          status: a.status,
-          ...(a.tier ? { tier: a.tier } : {}),
-          ...(a.reason ? { reason: a.reason } : {}),
-        },
-      }))));
+      // ONE server-row → local-artifact projection, shared with the catalog-wide refresh
+      // (`labCatalogRefresh.ts`) so the two scopes cannot reconcile against different shapes.
+      setRefreshOutcome(useLabPipelineStore.getState().refreshEntity(entityKey, toLabArtifacts(res.data)));
     } finally {
       setRefreshing(false);
     }

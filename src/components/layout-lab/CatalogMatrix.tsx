@@ -11,7 +11,9 @@ import { resolveCatalogSteps } from './catalogManifest';
 import { buildMatrixRows } from './matrixRows';
 import { useCatalogJudgeVerdicts } from './hooks/useStepJudgeVerdicts';
 import { MatrixBatchDrain } from './MatrixBatchDrain';
+import { RefreshCatalogFromServer } from './RefreshCatalogFromServer';
 import { useBatchDrain } from './hooks/useBatchDrain';
+import { useCatalogRefresh } from './hooks/useCatalogRefresh';
 import { MatrixSkeleton } from './MatrixSkeleton';
 import { STATUS_GLYPH, STATUS_WORD, statusColor, UNPRODUCED_GLYPH, UNPRODUCED_WORD, type LabDisplayStatus } from './statusLanguage';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
@@ -92,6 +94,17 @@ export function CatalogMatrix({ t, groups, catalogId, onSelectCatalog, onOpenSte
   );
   const { state: drainState, start: startDrain, cancel: cancelDrain, reset: dismissDrain } = useBatchDrain(catalogId);
 
+  // Catalog-wide refresh from server. The board is the surface whose staleness actually
+  // bites — another session's commit, a headless drain resolving L3/L4 gates, an MCP write —
+  // and until now only the open ENTITY could be reconciled. It composes the same per-entity
+  // `refreshEntity` (no second merge rule), keeps local-only work and REPORTS what it did.
+  // Nothing polls: lab modules are LRU-suspended, so freshness is asked for.
+  const refreshEntities = useMemo(
+    () => (detail?.entities ?? []).map((e) => ({ id: e.id, name: e.name })),
+    [detail?.entities],
+  );
+  const catalogRefresh = useCatalogRefresh(catalogId, refreshEntities);
+
   // Memoize cell styles per status (only ~5 distinct statuses) instead of
   // allocating a fresh CSSProperties object for every cell on every render — the
   // grid is entities × steps cells, so this was O(rows·cols) object churn.
@@ -165,9 +178,11 @@ export function CatalogMatrix({ t, groups, catalogId, onSelectCatalog, onOpenSte
           </span>
           <span>{steps.length} steps</span>
         </div>
-        <div style={{ marginLeft: 'auto' }}>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
           <MatrixBatchDrain t={t} deferredEntities={deferredEntities} state={drainState}
             onStart={() => startDrain(deferredEntities)} onCancel={cancelDrain} onDismiss={dismissDrain} />
+          <RefreshCatalogFromServer t={t} onRefresh={catalogRefresh.refresh} refreshing={catalogRefresh.refreshing}
+            error={catalogRefresh.error} outcome={catalogRefresh.outcome} onDismiss={catalogRefresh.dismiss} />
         </div>
       </div>
 
