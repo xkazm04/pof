@@ -28,6 +28,8 @@ import ceilingFactsJson from './ceiling-facts.json';
 import capabilityBenchmarksJson from './capability-benchmarks.json';
 import { deliverableClassOf } from '@/lib/judge/dimensions';
 import { getStepFact, isSyntheticEntity, type StepFact } from './statusModel';
+import { verdictProvenance, judgedContentOf, type JudgedContent } from '@/lib/catalog/acceptance/judgeBridge';
+import { RUBRIC_VERSION } from '@/lib/judge/rubrics';
 import type { JudgeVerdict } from './judge-verdicts-db';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 
@@ -316,15 +318,58 @@ function dominantJudge(judges: Map<string, number>): string {
   return best;
 }
 
-/** Latest verdict per (judge, catalog|entity|step), skipping synthetic fixtures. llm-panel
- *  verdicts must carry rubric>=3 (the strict canon-aware bar); vlm/human verdicts are NOT
- *  rubric-gated (both predate the rubric column). Each judge stream is kept independently so
- *  a cell can be scored by its OWN step's audited judge class. */
-function latestVerdictsByJudge(verdicts: JudgeVerdict[]): Map<string, JudgeVerdict> {
+/**
+ * The CONTENT axis of the shared provenance rule, asked with the rubric axis neutralized.
+ *
+ * `verdictProvenance` checks rubric FIRST and returns `superseded` before it ever compares
+ * hashes — correct for acceptance, where superseded and stale have the same consequence (do
+ * not condemn). Here they do NOT: this module governs its own rubric policy (`MIN_PANEL_RUBRIC`,
+ * with vlm/human deliberately un-gated because they predate the column), so asking the raw
+ * function would have every vlm verdict answer `superseded` and the staleness check would be
+ * dead code across the entire 2d-art / 3d-mesh / ui-glyph evidence base.
+ *
+ * Stamping the current rubric on the COPY isolates the one question this module is asking —
+ * "does this verdict still bind to the content on record?" — while keeping ONE staleness
+ * implementation. Nothing is written back; the verdict itself is untouched.
+ */
+function contentBinding(v: JudgeVerdict, content: JudgedContent | undefined) {
+  return verdictProvenance({ ...v, rubricVersion: RUBRIC_VERSION }, content);
+}
+
+/**
+ * Latest verdict per (judge, catalog|entity|step), skipping synthetic fixtures. llm-panel
+ * verdicts must carry rubric>=3 (the strict canon-aware bar); vlm/human verdicts are NOT
+ * rubric-gated (both predate the rubric column). Each judge stream is kept independently so
+ * a cell can be scored by its OWN step's audited judge class.
+ *
+ * ── Content binding ────────────────────────────────────────────────────────────
+ * A verdict is dropped when it is `stale`: its recorded `contentHash` disagrees with what
+ * the step holds now, or (legacy, hash-less) it was judged BEFORE the artifact's last write.
+ * Such a verdict demonstrably scored content that no longer exists, so it measures nothing
+ * about current capability — it used to sit in the median regardless, exactly the gap
+ * `deriveCell` had. THE shared rule (`verdictProvenance`, @/lib/catalog/acceptance) decides,
+ * never a second staleness implementation.
+ *
+ * Only `stale` is dropped. `superseded` is a RUBRIC judgment and this module already states
+ * its own rubric policy above (`MIN_PANEL_RUBRIC`, and vlm/human deliberately un-gated);
+ * re-deciding it here would silently retire every pre-rubric-column vlm verdict — the whole
+ * 2d-art / 3d-mesh / ui-glyph evidence base — on a question this function does not own.
+ * `unknown` (no binding recorded, or one from a superseded hash scheme) is kept for the same
+ * reason acceptance keeps it: it is real evidence nobody can refute, and it is labelled.
+ * Filtering happens BEFORE "latest wins", so a step whose newest verdict went stale falls
+ * back to an older BINDING one instead of losing its evidence entirely.
+ *
+ * See {@link contentBinding} for why the shared rule is asked with the rubric axis neutralized.
+ */
+function latestVerdictsByJudge(
+  verdicts: JudgeVerdict[],
+  content: (v: JudgeVerdict) => JudgedContent | undefined = () => undefined,
+): Map<string, JudgeVerdict> {
   const latest = new Map<string, JudgeVerdict>();
   for (const v of verdicts) {
     if (isSyntheticEntity(v.entityId)) continue;
     if (v.judge === 'llm-panel' && (v.rubricVersion ?? 1) < MIN_PANEL_RUBRIC) continue;
+    if (contentBinding(v, content(v)) === 'stale') continue;
     const key = `${v.judge}|${v.catalogId}|${v.entityId}|${v.step}`;
     const prev = latest.get(key);
     if (!prev || (v.judgedAt ?? '') > (prev.judgedAt ?? '')) latest.set(key, v);
@@ -372,7 +417,15 @@ export function buildCapabilityRows(
     return e;
   };
 
-  for (const v of latestVerdictsByJudge(verdicts).values()) {
+  // The artifacts this view already receives ARE the content each verdict is checked against
+  // (same (catalog, entity, step) key), so the binding costs no new input.
+  const byCell = new Map(artifacts.map((a) => [`${a.catalogId}|${a.entityId}|${a.step}`, a]));
+  const contentOf = (v: JudgeVerdict): JudgedContent | undefined => {
+    const a = byCell.get(`${v.catalogId}|${v.entityId}|${v.step}`);
+    return a ? judgedContentOf(a.data, a.updatedAt) : undefined;
+  };
+
+  for (const v of latestVerdictsByJudge(verdicts, contentOf).values()) {
     const fact = getStepFact(v.catalogId, v.step);
     if (!fact || v.judge !== fact.judge) continue; // score a cell only by its OWN step's judge
     const klass = capabilityClassOf(fact.deliverable, v.catalogId);

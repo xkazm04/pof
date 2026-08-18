@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { buildCapabilityRows, capabilityClassOf, type CapabilityBenchmarkRow } from '@/lib/status/capabilityModel';
 import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
+import { stepContentHash } from '@/lib/judge/contentHash';
 
 /** Instance-path builder: no benchmark overlay, so these assert PURE project-instance grading
  *  independent of the real capability-benchmarks.json. The benchmark overlay is covered in its
@@ -336,5 +337,52 @@ describe('neutral-benchmark overlay (Phase 2)', () => {
     const rows = buildCapabilityRows([]);
     expect(rows.length).toBeGreaterThan(0);
     for (const r of rows) expect(['proven', 'strong', 'capped', 'unproven']).toContain(r.grade);
+  });
+});
+
+describe('content binding — a verdict that judged other content is not capability evidence', () => {
+  // `latestVerdictsByJudge` used to pool every stored verdict, so a score about content the
+  // step no longer holds sat in the class median forever — the same gap `deriveCell` had.
+  const DATA = { icon: 'the icon on record' };
+  const HASH = stepContentHash(DATA);
+  const held = (entityId: string) => ({
+    catalogId: 'items', entityId, step: ICON, data: DATA, ueAssets: [], status: 'pass' as const, tier: 'L1' as const,
+  });
+
+  it('a STALE verdict is dropped from the class median (it scored content that is gone)', () => {
+    const artifacts = [held('e1'), held('e2'), held('e3')];
+    const bound = [
+      vlm('items', 'e1', ICON, 90, { contentHash: HASH }),
+      vlm('items', 'e2', ICON, 90, { contentHash: HASH }),
+      vlm('items', 'e3', ICON, 90, { contentHash: HASH }),
+    ];
+    expect(row(build(bound, artifacts), '2d-art').n).toBe(3);
+    // Re-bind ONE of them to content the step no longer holds: it stops counting.
+    const withStale = [...bound.slice(0, 2), vlm('items', 'e3', ICON, 20, { contentHash: stepContentHash({ icon: 'the OLD icon' }) })];
+    const r = row(build(withStale, artifacts), '2d-art');
+    expect(r.n).toBe(2);
+    expect(r.median).toBe(90); // the obsolete 20 no longer drags the class down
+  });
+
+  it('an UNKNOWN binding (legacy, hash-less) is KEPT — real evidence nobody can refute', () => {
+    const artifacts = [held('e1')];
+    const r = row(build([vlm('items', 'e1', ICON, 88)], artifacts), '2d-art');
+    expect(r.n).toBe(1);
+  });
+
+  it('a step with no artifact on record is unaffected (nothing to compare against)', () => {
+    const r = row(build([vlm('items', 'e1', ICON, 88)], []), '2d-art');
+    expect(r.n).toBe(1);
+  });
+
+  it('falls back to an older BINDING verdict when the newest one went stale', () => {
+    const artifacts = [held('e1')];
+    const verdicts = [
+      vlm('items', 'e1', ICON, 95, { contentHash: HASH, judgedAt: '2026-01-01 00:00:00' }),
+      vlm('items', 'e1', ICON, 40, { contentHash: stepContentHash({ icon: 'gone' }), judgedAt: '2026-06-01 00:00:00' }),
+    ];
+    const r = row(build(verdicts, artifacts), '2d-art');
+    expect(r.n).toBe(1);
+    expect(r.median).toBe(95); // not 40: the newer verdict judged content the step no longer holds
   });
 });

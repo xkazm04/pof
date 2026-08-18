@@ -19,7 +19,18 @@ import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 import type { JudgeVerdict } from './judge-verdicts-db';
 import stepFactsJson from './step-facts.json';
 import headlessCoverageJson from './headless-coverage.json';
-import { BANDS, newestRubricVerdicts, isCurrentRubric } from '@/lib/judge/rubrics';
+import { BANDS, newestRubricVerdicts } from '@/lib/judge/rubrics';
+// THE staleness rule, shared with the per-step Acceptance banner (`bridgeJudgeVerdict`) so
+// the map and the drill-down can never disagree about the same verdict. Pure (hash + rubric
+// arithmetic, no I/O), so the model stays JSON + args only.
+import {
+  verdictProvenance,
+  judgedContentOf,
+  unverifiedReason,
+  CONDEMNING_PROVENANCE,
+  type JudgedContent,
+} from '@/lib/catalog/acceptance/judgeBridge';
+import type { JudgeAttribution, VerdictProvenance } from '@/lib/catalog/acceptance/types';
 import { mirrorSupport, type MirrorSupport } from '@/lib/preview/browser-mirror';
 import { getRealization, type StepRealization } from '@/lib/preview/realization';
 // readiness.ts imports only TYPES from this module, so this is not a runtime cycle.
@@ -172,6 +183,14 @@ export interface StepCell {
   checkerMeaningful?: boolean;
   /** Content-quality judgment (LLM panel / VLM), when one has run. */
   judged?: { verdict: 'pass' | 'fail'; score: number; model: string; findings: string; effort?: string; rubricVersion?: number };
+  /**
+   * Whether that judgment still speaks for the content on record — the SAME
+   * `JudgeAttribution` the per-step Acceptance banner carries, plus `applied`: did it move
+   * this cell's grade? Present whenever `judged` is, INCLUDING when the verdict was not
+   * applied, so a green that went away (or a red that lifted) states its reason instead of
+   * changing silently.
+   */
+  judgeAttribution?: JudgeAttribution & { applied: boolean };
   /** Dual execution: the step class also runs in the browser preview ('direct'/'partial').
    *  Absent when there is no browser path (incl. the ue-runtime moat). */
   browserMirror?: MirrorSupport;
@@ -181,6 +200,52 @@ export interface StepCell {
 }
 
 const GATE_TIERS = new Set(['L3', 'L4']);
+
+/** What each ENTITY of this step holds right now. `judge_verdicts` and `pipeline_artifacts`
+ *  are both keyed by (catalog, entity, step), so this is the join that lets a verdict be
+ *  checked against the content it claims to have judged. Pure. */
+function contentByEntity(artifacts: PipelineArtifact[]): Map<string, JudgedContent> {
+  const m = new Map<string, JudgedContent>();
+  for (const a of artifacts) m.set(a.entityId, judgedContentOf(a.data, a.updatedAt));
+  return m;
+}
+
+/**
+ * What a verdict does and does not prove HERE — the same vocabulary `bridgeJudgeVerdict`
+ * puts on the per-step Acceptance banner, so an operator reading the map and the drill-down
+ * hears one sentence, not two.
+ */
+function provenanceNote(v: JudgeVerdict, p: VerdictProvenance, applied: boolean): string {
+  if (p === 'current') return 'Judged the content currently on record.';
+  const kind = v.verdict === 'fail' ? 'FAIL' : 'PASS';
+  if (applied) {
+    return `This verdict cannot be confirmed against the current content — ${unverifiedReason(v)}.`
+      + ' It is still applied, and still needs a re-judge.';
+  }
+  if (p === 'stale') {
+    return `A judge ${kind} is on record but it judged content this step no longer holds`
+      + ' (re-produced since). Not applied — this step is UNJUDGED, not judged-and-passed.';
+  }
+  if (p === 'superseded') {
+    return `A judge ${kind} is on record under a superseded rubric. Not applied — this step`
+      + ' needs a re-judge under the current rubric.';
+  }
+  return `A judge ${kind} is on record but ${unverifiedReason(v)}. Not applied — a binding`
+    + ' nobody can confirm cannot PROVE quality (it can still condemn).';
+}
+
+function attribution(v: JudgeVerdict, p: VerdictProvenance, applied: boolean): JudgeAttribution & { applied: boolean } {
+  return {
+    provenance: p,
+    verdict: v.verdict,
+    score: v.score,
+    judge: v.judge,
+    ...(v.model ? { model: v.model } : {}),
+    ...(v.judgedAt ? { judgedAt: v.judgedAt } : {}),
+    note: provenanceNote(v, p, applied),
+    applied,
+  };
+}
 
 /** Derive one cell from every artifact recorded for that step label, cross-examined
  *  against the audited step fact and any content-quality judge verdicts. Pure. */
@@ -223,12 +288,38 @@ export function deriveCell(
   // when RUBRIC_VERSION is bumped. Only the newest rubric present speaks: a strict v3 judgment
   // supersedes a lenient v1 one, so an old lenient pass can never keep a cell green.
   const relevant = newestRubricVerdicts(allRelevant);
-  const judgedFail = relevant.find((v) => v.verdict === 'fail');
-  const judgedPass = relevant.find((v) => v.verdict === 'pass');
-  const judged = judgedFail ?? judgedPass;
-  // Strict green requires a >=90 pass under the current strict rubric (v2+). A pass under an
-  // old rubric, or a v2 pass below 90 (a "competent placeholder"), is trusted-amber, not green.
-  const strictPass = !!judgedPass && isCurrentRubric(judgedPass) && judgedPass.score >= BANDS.shippable;
+
+  // ── Content binding ──────────────────────────────────────────────────────────────────
+  // A verdict speaks only for the content it actually judged. THE shared rule is
+  // `verdictProvenance` + `CONDEMNING_PROVENANCE` (@/lib/catalog/acceptance/judgeBridge) —
+  // the very functions the per-step Acceptance banner applies. Before this, `deriveCell`
+  // read neither `contentHash` nor `updatedAt`, so a PASS that judged content since
+  // regressed held a cell green forever, and a FAIL that judged content since FIXED held a
+  // re-produced step red forever. The map and its own drill-down could disagree, with the
+  // map trusting the staler evidence.
+  const content = contentByEntity(artifacts);
+  const classified = relevant.map((v) => ({ v, p: verdictProvenance(v, content.get(v.entityId)) }));
+  // CONDEMNS on `current` (binding confirmed) or `unknown` (nobody can confirm OR refute —
+  // a recorded fail is evidence, and dropping it would be the optimistic lie this layer
+  // exists to prevent). A `stale` / `superseded` fail does not condemn.
+  const condemningFail = classified.find((c) => c.v.verdict === 'fail' && CONDEMNING_PROVENANCE.has(c.p));
+  // ELEVATION is deliberately stricter than condemnation: only a CONFIRMED binding proves
+  // quality, so a verdict whose provenance cannot be determined degrades to not-proven,
+  // never to proven. (`current` also implies the current rubric — see verdictProvenance.)
+  const bindingPass = classified.find((c) => c.v.verdict === 'pass' && c.p === 'current');
+  // Whatever is on record but did NOT move the grade is still REPORTED, so "unjudged since
+  // the re-produce" can never be read as "judged and passed".
+  const reported = condemningFail
+    ?? bindingPass
+    ?? classified.find((c) => c.v.verdict === 'fail')
+    ?? classified.find((c) => c.v.verdict === 'pass');
+  const judgedFail = condemningFail?.v;
+  const judgedPass = bindingPass?.v;
+  const judged = reported?.v;
+  // Strict green requires a >=90 pass under the current strict rubric, bound to the content
+  // on record. A pass under an old rubric, one below 90 (a "competent placeholder"), or one
+  // that judged content this step no longer holds, is not green.
+  const strictPass = !!bindingPass && bindingPass.v.score >= BANDS.shippable;
 
   let grade: CellGrade;
   if (counts.pass > 0 && bestPassTier && GATE_TIERS.has(bestPassTier)) grade = 'verified';
@@ -261,6 +352,9 @@ export function deriveCell(
       ? { browserMirror: mirrorSupport(fact.deliverable, fact.step) }
       : {}),
     ...(judged ? { judged: { verdict: judged.verdict, score: judged.score, model: judged.model, findings: judged.findings, ...(judged.effort ? { effort: judged.effort } : {}), ...(judged.rubricVersion != null ? { rubricVersion: judged.rubricVersion } : {}) } } : {}),
+    ...(reported
+      ? { judgeAttribution: attribution(reported.v, reported.p, reported === condemningFail || reported === bindingPass) }
+      : {}),
   };
 }
 
