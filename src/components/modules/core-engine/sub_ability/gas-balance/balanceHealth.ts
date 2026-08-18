@@ -5,6 +5,7 @@
  * Pure functions only; no React, no formatters that depend on UI state.
  */
 
+import { ARMOUR_HIT_COEFF } from '@/lib/combat/canon-kernel';
 import type { SimResults, SimScenario } from './data';
 
 export type HealthSeverity = 'good' | 'info' | 'warning' | 'critical';
@@ -237,33 +238,160 @@ function assessConsistency(results: SimResults): { score: number; finding: Healt
 
 /* ── Defense (armor) assessment ──────────────────────────────────────────── */
 
-function assessDefense(results: SimResults, scenario: SimScenario): { score: number; finding: HealthFinding } {
-  const mit = results.armorMitigation;
-  const score = curveScore(mit, 0.3, 0.45);
+/**
+ * Canon armour is soft-capped AGAINST THE HIT SIZE:
+ *
+ *     mitigation(A, H) = A / (A + 5·H)          (ARMOUR_HIT_COEFF = 5)
+ *
+ * so a mitigation percentage is not a property of an armour rating — it is a
+ * property of the RATIO between the rating and the hit it is measured against.
+ * The pre-canon bands (0.08 / 0.30 / 0.45) were bare percentages calibrated
+ * against the retired `armour/(armour+100)` curve, where a rating alone DID have
+ * a fixed percentage. Under canon they graded a quantity whose definition had
+ * changed underneath them.
+ *
+ * The bands below are therefore stated in the one hit-independent quantity the
+ * canon curve has: `ratio = armourRating / referenceHit` (`SimResults.armorRefHit`).
+ * Mitigation and effective HP follow from it exactly:
+ *
+ *     mitigation = r / (r + 5)            EHP multiplier = 1 + r/5
+ *
+ * DERIVATION — what is intended to read weak / fair / strong:
+ *  - `weak` r = 1 — the armour RATING equals ONE raw incoming hit: 16.7%
+ *    mitigation, +20% effective health. The hit is the soft-cap's own yardstick;
+ *    below one hit the build sits on the steep, near-worthless part of the curve
+ *    and the entire armour stat is worth less than a fifth of a health bar, so
+ *    armour affixes lose to plain health affixes and the loot category is dead.
+ *  - `target` r = 2.5 — +50% effective health (33.3% mitigation): the largest
+ *    single defensive contributor without eclipsing the others.
+ *  - `dominant` r = 10 — armour alone TRIPLES effective health (66.7%
+ *    mitigation). Past this, evasion/block/resists are rounding errors.
+ *
+ * These are ratios, not percentages: they survive the reference hit changing (a
+ * bigger enemy simply needs proportionally more armour to read the same), which
+ * is exactly what the retired constants could not do. Every rendered number
+ * names the reference hit it is quoted against.
+ */
+export const ARMOUR_HIT_RATIO_BANDS = {
+  /** Below this the armour stat is not worth a gear slot. r = 1 → 16.7% mit, EHP ×1.20. */
+  weak: 1,
+  /** Intended "armour pulls its weight" centre. r = 2.5 → 33.3% mit, EHP ×1.50. */
+  target: 2.5,
+  /** At/above this, armour eclipses every other defence. r = 10 → 66.7% mit, EHP ×3.00. */
+  dominant: 10,
+} as const;
 
-  if (mit < 0.08) {
+/** Canon mitigation fraction for an armour:hit ratio — `r / (r + 5)`. */
+export function mitigationAtRatio(ratio: number): number {
+  if (!(ratio > 0)) return 0;
+  return ratio / (ratio + ARMOUR_HIT_COEFF);
+}
+
+/**
+ * Invert the canon soft-cap: the armour:hit ratio a mitigation fraction implies,
+ * `r = 5·m / (1 − m)`. Derived from the mitigation itself, so it holds for
+ * whatever rating/hit pair produced it.
+ */
+export function armourHitRatio(mitigation: number): number {
+  if (!(mitigation > 0)) return 0;
+  if (mitigation >= 1) return Infinity;
+  return (ARMOUR_HIT_COEFF * mitigation) / (1 - mitigation);
+}
+
+/** Effective-HP multiplier armour buys at a given ratio — `1 + r/5`. */
+export function ehpMultiplierAtRatio(ratio: number): number {
+  return 1 + ratio / ARMOUR_HIT_COEFF;
+}
+
+export type DefenceBand = 'weak' | 'healthy' | 'dominant';
+
+/**
+ * Which band a measured mitigation fraction falls in, via its implied ratio.
+ * The comparison carries a relative epsilon: a ratio is recovered through two
+ * float divisions, so a build sitting EXACTLY on a boundary (r = 1 → m = 1/6 →
+ * r = 0.9999999999999999) must not fall to the wrong side of its own band.
+ */
+export function defenceBand(mitigation: number): DefenceBand {
+  const r = armourHitRatio(mitigation);
+  const EPS = 1e-9;
+  if (r < ARMOUR_HIT_RATIO_BANDS.weak * (1 - EPS)) return 'weak';
+  if (r >= ARMOUR_HIT_RATIO_BANDS.dominant * (1 - EPS)) return 'dominant';
+  return 'healthy';
+}
+
+const TARGET_MIT = mitigationAtRatio(ARMOUR_HIT_RATIO_BANDS.target);
+/** Zero marks at the dominant edge (and, symmetrically, at zero armour); the weak edge scores 50. */
+const MIT_TOLERANCE = mitigationAtRatio(ARMOUR_HIT_RATIO_BANDS.dominant) - TARGET_MIT;
+
+/**
+ * 0–100 defence subscore for a measured mitigation fraction: a bell curve
+ * centred on the target ratio, reaching zero at the dominant edge (and,
+ * symmetrically, below zero armour). The weak edge scores exactly 50.
+ */
+export function defenceScore(mitigation: number): number {
+  return curveScore(mitigation, TARGET_MIT, MIT_TOLERANCE);
+}
+
+/** "+20% effective health" / "×3 effective health" phrasing for a ratio. */
+function ehpPhrase(ratio: number): string {
+  const mult = ehpMultiplierAtRatio(ratio);
+  if (!Number.isFinite(mult)) return 'effectively unkillable by physical hits';
+  return mult >= 2
+    ? `×${mult.toFixed(mult % 1 === 0 ? 0 : 1)} effective health`
+    : `+${Math.round((mult - 1) * 100)}% effective health`;
+}
+
+/** `score: null` = not gradable (no reference hit) — reported, but kept out of the average. */
+function assessDefense(results: SimResults): { score: number | null; finding: HealthFinding } {
+  const refHit = results.armorRefHit;
+  const mit = results.armorMitigation;
+
+  // Canon mitigation is only defined against a hit. With no incoming hit there is
+  // nothing to grade — say so rather than scoring a build that was never measured.
+  if (!(refHit > 0)) {
+    return {
+      score: null,
+      finding: {
+        id: 'defense',
+        severity: 'info',
+        title: 'Armor could not be graded',
+        narrative: `This scenario lands no enemy hit, and canon armor is soft-capped against hit size — without a reference hit there is no mitigation percentage to grade. Add an enemy to measure defense.`,
+        anchor: { label: 'Armor blocks', value: 'n/a' },
+      },
+    };
+  }
+
+  const ratio = armourHitRatio(mit);
+  const band = defenceBand(mit);
+  const score = defenceScore(mit);
+  const hit = Math.round(refHit);
+  const ratioText = `${ratio.toFixed(ratio < 10 ? 2 : 1)}× the ${hit}-damage reference hit`;
+  const anchor = { label: `Armor blocks (vs ${hit} hit)`, value: pct(mit) };
+  const targetArmor = roundTo(ARMOUR_HIT_RATIO_BANDS.target * refHit, 5);
+
+  if (band === 'weak') {
     return {
       score,
       finding: {
         id: 'defense',
         severity: 'warning',
         title: 'Armor is barely doing anything',
-        narrative: `The player's armor blocks only ${pct(mit)} of the average incoming hit (canon soft-cap). Armor stats on gear will feel pointless — players will ignore that whole loot category.`,
-        suggestion: `Try raising starting armor to ~${roundTo(scenario.player.armor + 30, 5)}, or boost armor scaling per level.`,
-        anchor: { label: 'Armor blocks', value: pct(mit) },
+        narrative: `The player's armor rating is only ${ratioText}, so it blocks ${pct(mit)} of that hit — ${ehpPhrase(ratio)}. Canon armor is soft-capped against hit size: below a rating of one whole hit (${hit}) the stat is worth less than a plain health affix, and players will ignore that whole loot category.`,
+        suggestion: `Raise armor to ~${targetArmor} (${ARMOUR_HIT_RATIO_BANDS.target}× the ${hit}-damage reference hit) for ${ehpPhrase(ARMOUR_HIT_RATIO_BANDS.target)}, or cut enemy hit size — under canon it is the ratio, not the rating, that moves the number.`,
+        anchor,
       },
     };
   }
-  if (mit > 0.7) {
+  if (band === 'dominant') {
     return {
       score,
       finding: {
         id: 'defense',
         severity: 'warning',
         title: 'Armor dominates the fight',
-        narrative: `The player's armor blocks ${pct(mit)} of the average incoming hit (canon soft-cap). Combat will revolve around stacking armor; other defensive stats and abilities will feel weak.`,
-        suggestion: 'Try lowering armor scaling, or add an armor-pierce stat on tougher enemies.',
-        anchor: { label: 'Armor blocks', value: pct(mit) },
+        narrative: `The player's armor rating is ${ratioText}, blocking ${pct(mit)} of it — ${ehpPhrase(ratio)} from armor alone. Combat will revolve around stacking armor; evasion, block and resists become rounding errors.`,
+        suggestion: `Lower armor toward ~${targetArmor} (${ARMOUR_HIT_RATIO_BANDS.target}× the ${hit}-damage reference hit), or add an armor-pierce stat on tougher enemies.`,
+        anchor,
       },
     };
   }
@@ -273,8 +401,8 @@ function assessDefense(results: SimResults, scenario: SimScenario): { score: num
       id: 'defense',
       severity: 'good',
       title: 'Armor pulls its weight',
-      narrative: `The player's armor blocks about ${pct(mit)} of the average incoming hit (canon soft-cap) — meaningful enough that gearing matters, not so high that it eclipses other defenses.`,
-      anchor: { label: 'Armor blocks', value: pct(mit) },
+      narrative: `The player's armor rating is ${ratioText}, blocking ${pct(mit)} of it — ${ehpPhrase(ratio)}. Meaningful enough that gearing matters, not so high that it eclipses other defenses.`,
+      anchor,
     },
   };
 }
@@ -390,7 +518,7 @@ export function buildBalanceHealthReport(results: SimResults, scenario: SimScena
   const survival = assessSurvival(results, scenario);
   const duration = assessDuration(results);
   const consistency = assessConsistency(results);
-  const defense = assessDefense(results, scenario);
+  const defense = assessDefense(results);
   const margin = assessWinMargin(results, scenario);
   const overkill = assessOverkill(results);
 
@@ -410,7 +538,7 @@ export function buildBalanceHealthReport(results: SimResults, scenario: SimScena
   const subScores = [
     survival.score,
     duration.score,
-    defense.score,
+    ...(defense.score !== null ? [defense.score] : []),
     ...(consistency ? [consistency.score] : []),
   ];
   const score = Math.round(subScores.reduce((s, v) => s + v, 0) / subScores.length);
