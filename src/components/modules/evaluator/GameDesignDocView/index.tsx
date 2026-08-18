@@ -27,11 +27,31 @@ export function GameDesignDocView() {
   const [exportingPitch, setExportingPitch] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
+  // Copy/error feedback timers, cleared on unmount so a tab switch can't fire a
+  // setState into a torn-down component.
+  const feedbackTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
-  // Auto-generate on mount
+  // Mount-time refresh. `generate()` is gated in the hook: this is a no-op when
+  // neither the project nor the checklist moved since the last synthesis, so the
+  // conditional remount on every tab switch no longer costs a full rebuild.
   useEffect(() => {
     generate();
   }, [generate]);
+
+  useEffect(() => () => {
+    for (const id of feedbackTimersRef.current) clearTimeout(id);
+    feedbackTimersRef.current = [];
+  }, []);
+
+  const scheduleFeedback = useCallback((fn: () => void, ms: number) => {
+    const id = setTimeout(() => {
+      feedbackTimersRef.current = feedbackTimersRef.current.filter((t) => t !== id);
+      fn();
+    }, ms);
+    feedbackTimersRef.current.push(id);
+  }, []);
+
+  const handleRefresh = useCallback(() => { void generate(true); }, [generate]);
 
   const toggleSection = useCallback((id: string) => {
     setExpandedSections((prev) => {
@@ -41,10 +61,13 @@ export function GameDesignDocView() {
     });
   }, []);
 
+  // Every export below derives from `gdd` — the ONE document instance on screen.
+  // Nothing re-synthesizes, so .md, the pitch and the PDF cannot disagree.
   const handleExport = useCallback(async () => {
+    if (!gdd) return;
     clearExportError();
     setExporting(true);
-    const markdown = await exportMarkdown();
+    const markdown = await exportMarkdown(gdd);
     setExporting(false);
     if (!markdown) return;
 
@@ -56,12 +79,13 @@ export function GameDesignDocView() {
     a.download = `${projectName}-GDD.md`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [exportMarkdown, projectName]);
+  }, [gdd, clearExportError, exportMarkdown, projectName]);
 
   const handleExportPitch = useCallback(async () => {
+    if (!gdd) return;
     clearExportError();
     setExportingPitch(true);
-    const html = await exportPitch();
+    const html = await exportPitch(gdd);
     setExportingPitch(false);
     if (!html) return;
 
@@ -72,24 +96,25 @@ export function GameDesignDocView() {
     a.download = `${projectName}-pitch.html`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [exportPitch, projectName]);
+  }, [gdd, clearExportError, exportPitch, projectName]);
 
   const handleCopyMarkdown = useCallback(async () => {
+    if (!gdd) return;
     clearExportError();
     setCopyError(null);
-    const markdown = await exportMarkdown();
+    const markdown = await exportMarkdown(gdd);
     if (!markdown) return;
     try {
       if (!navigator.clipboard?.writeText) throw new Error('Clipboard API unavailable');
       await navigator.clipboard.writeText(markdown);
       setCopied(true);
-      setTimeout(() => setCopied(false), UI_TIMEOUTS.copyFeedback);
+      scheduleFeedback(() => setCopied(false), UI_TIMEOUTS.copyFeedback);
     } catch (err) {
       logger.error('GDD copy-to-clipboard failed', err);
       setCopyError('Copy failed — clipboard unavailable.');
-      setTimeout(() => setCopyError(null), UI_TIMEOUTS.copyFeedback);
+      scheduleFeedback(() => setCopyError(null), UI_TIMEOUTS.copyFeedback);
     }
-  }, [exportMarkdown, clearExportError]);
+  }, [gdd, exportMarkdown, clearExportError, scheduleFeedback]);
 
   // Print-to-PDF: render the live GDD (cover scorecard + diagrams) into a new
   // window and let the browser "Save as PDF". Falls back to downloading the
@@ -134,7 +159,7 @@ export function GameDesignDocView() {
       <SurfaceCard className="m-4 p-6 text-center">
         <p className="text-sm mb-3" style={{ color: STATUS_ERROR }}>{error}</p>
         <button
-          onClick={generate}
+          onClick={handleRefresh}
           className="px-3 py-1.5 text-xs rounded-lg transition-colors"
           style={{ backgroundColor: `${ACCENT}15`, color: ACCENT, border: `1px solid ${ACCENT}30` }}
         >
@@ -155,7 +180,7 @@ export function GameDesignDocView() {
           Generate a comprehensive Game Design Document synthesized from your project configuration, module progress, and checklist state.
         </p>
         <button
-          onClick={generate}
+          onClick={handleRefresh}
           className="flex items-center gap-1.5 mt-4 px-4 py-2 rounded-lg text-xs font-medium transition-colors"
           style={{ backgroundColor: `${ACCENT}14`, color: ACCENT, border: `1px solid ${ACCENT}38` }}
         >
@@ -222,7 +247,7 @@ export function GameDesignDocView() {
           </div>
           <div className="flex items-center gap-1.5">
             <button
-              onClick={generate}
+              onClick={handleRefresh}
               disabled={isLoading}
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs text-text-muted hover:text-text hover:bg-surface-hover transition-colors disabled:opacity-40"
               title="Regenerate"
@@ -232,7 +257,8 @@ export function GameDesignDocView() {
             </button>
             <button
               onClick={handleCopyMarkdown}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs text-text-muted hover:text-text hover:bg-surface-hover transition-colors"
+              disabled={isLoading}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs text-text-muted hover:text-text hover:bg-surface-hover transition-colors disabled:opacity-40"
               title="Copy as Markdown"
             >
               {copied ? <Check className="w-3 h-3" style={{ color: STATUS_SUCCESS }} /> : <ClipboardCopy className="w-3 h-3" />}
@@ -240,8 +266,8 @@ export function GameDesignDocView() {
             </button>
             <button
               onClick={handleExport}
-              disabled={exporting}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs transition-colors"
+              disabled={exporting || isLoading}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs transition-colors disabled:opacity-40"
               style={{ backgroundColor: `${ACCENT}15`, color: ACCENT, border: `1px solid ${ACCENT}30` }}
             >
               {exporting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
@@ -249,8 +275,8 @@ export function GameDesignDocView() {
             </button>
             <button
               onClick={handleExportPitch}
-              disabled={exportingPitch}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs transition-colors"
+              disabled={exportingPitch || isLoading}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs transition-colors disabled:opacity-40"
               style={{ backgroundColor: `${ACCENT}15`, color: ACCENT, border: `1px solid ${ACCENT}30` }}
               title="Export a shareable single-page pitch (HTML)"
             >
@@ -259,7 +285,7 @@ export function GameDesignDocView() {
             </button>
             <button
               onClick={handleExportPDF}
-              disabled={exportingPdf}
+              disabled={exportingPdf || isLoading}
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs transition-colors disabled:opacity-40"
               style={{ backgroundColor: `${ACCENT}15`, color: ACCENT, border: `1px solid ${ACCENT}30` }}
               title="Export a print-ready PDF (compliance scorecard cover + diagrams)"
