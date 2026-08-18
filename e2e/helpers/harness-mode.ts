@@ -78,13 +78,30 @@ export async function setupHarnessMode(page: Page): Promise<HarnessHandle> {
     });
 
     // Mock the Next.js proxy too (in case any caller goes through /api/pof-bridge/status).
+    // The body MUST be a real `PofBridgeStatus` (src/types/pof-bridge.ts): the route returns exactly
+    // that type on success and `pofProxyError` otherwise, so the old `{connected, version,
+    // pluginName}` shape — which was never PofBridgeStatus and named no field it declares — would
+    // hand a future consumer 12 `undefined`s through a passing type check.
     await page.route('**/api/pof-bridge/status**', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
           success: true,
-          data: { connected: true, version: '1.0.0', pluginName: 'PillarsOfFortuneBridge' },
+          data: {
+            pluginVersion: '1.0.0',
+            engineVersion: '5.8.0',
+            projectName: 'PoF',
+            projectRoot: 'C:/Users/kazda/Documents/Unreal Projects/PoF',
+            editorState: 'idle',
+            pieRunning: false,
+            liveCodingEnabled: false,
+            manifestReady: true,
+            manifestAssetCount: 0,
+            manifestLastUpdated: '2026-08-18T00:00:00.000Z',
+            uptimeSeconds: 0,
+            port: 30040,
+          },
         }),
       });
     });
