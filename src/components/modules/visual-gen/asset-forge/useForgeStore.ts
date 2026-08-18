@@ -43,6 +43,11 @@ interface ForgeState {
   activeStyleDna: StyleDnaProfile | null;
   /** When true (default), the active style fragment is appended to generation prompts. */
   applyStyleDna: boolean;
+  /** Local job ids whose background status poll is currently running. This is the
+   *  OPERATOR-VISIBLE mirror of the module-level poller map: the poll deliberately
+   *  outlives the forge module (see `pollingIntervals` below), so it must be
+   *  visible and stoppable from the UI rather than being an invisible daemon. */
+  activePolls: string[];
 
   addJob: (job: Omit<GenerationJob, 'id' | 'status' | 'progress' | 'createdAt'>) => string;
   updateJob: (id: string, updates: Partial<GenerationJob>) => void;
@@ -52,6 +57,12 @@ interface ForgeState {
    *  entry is dropped so the queue shows the fresh attempt, not a stale twin. */
   retryJob: (id: string) => void;
   clearCompleted: () => void;
+  /** Explicit operator stop for ONE background poll. The remote generation may
+   *  still be running on the provider — the job is marked failed with that stated
+   *  in its error, never silently left in a forever-"generating" limbo. */
+  stopPolling: (id: string) => void;
+  /** Explicit operator stop for every background poll (the queue's "Stop" button). */
+  stopAllPolling: () => void;
   setActiveProvider: (id: string) => void;
   addToHistory: (prompt: string) => void;
   setActiveStyleDnaProfile: (profile: StyleDnaProfile | null) => void;
@@ -77,11 +88,49 @@ const MCP_PROVIDER_MAP: Record<string, McpProvider> = {
  * after the current async body settles, so polls can never overlap. `stop()`
  * sets `stopped` (so any in-flight body bails before mutating state) and clears
  * the pending timeout (so no further tick fires).
+ *
+ * DELIBERATE LIFETIME — READ BEFORE "FIXING": these polls live in a store action,
+ * not a React effect, so neither `SuspendContext` nor the module LRU's unmount
+ * reaches them. That is INTENTIONAL: a remote 3D generation runs for minutes and
+ * is already paid for, so navigating to another module must not abandon it. What
+ * was missing — and what the three mechanisms below supply — is a guarantee that
+ * it ENDS:
+ *   1. terminal remote status (`completed` / `failed`) — the normal exit;
+ *   2. `MAX_CONSECUTIVE_POLL_FAILURES` transport misses in a row;
+ *   3. `FORGE_POLL_MAX_DURATION_MS` wall-clock deadline — the backstop for a
+ *      remote job that never reaches a terminal status at all;
+ *   plus an explicit operator stop (`stopPolling` / `stopAllPolling`).
+ * Every running poll is mirrored into `activePolls` so the queue UI can show
+ * that background work is still in flight and offer that stop.
  */
 interface Poller {
   stop: () => void;
 }
 const pollingIntervals = new Map<string, Poller>();
+
+/**
+ * Hard ceiling on how long ONE job may be polled (30 min). Provider generations
+ * are minutes, not tens of minutes, so this only ever fires on a remote job that
+ * is stuck — it cannot cut a healthy generation short. Exported so the test can
+ * assert the poll terminates at exactly this deadline.
+ */
+export const FORGE_POLL_MAX_DURATION_MS = 30 * 60_000;
+
+/** Register a running poll: cancellable via the map, visible via `activePolls`. */
+function trackPoller(id: string, stop: () => void): void {
+  pollingIntervals.set(id, { stop });
+  useForgeStore.setState((s) =>
+    s.activePolls.includes(id) ? s : { activePolls: [...s.activePolls, id] },
+  );
+}
+
+/** De-register a finished/stopped poll. Safe to call for an id that isn't tracked. */
+function untrackPoller(id: string): void {
+  pollingIntervals.delete(id);
+  useForgeStore.setState((s) =>
+    s.activePolls.includes(id) ? { activePolls: s.activePolls.filter((p) => p !== id) } : s,
+  );
+}
 
 export const useForgeStore = create<ForgeState>((set, get) => ({
   jobs: [],
@@ -89,6 +138,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
   promptHistory: [],
   activeStyleDna: null,
   applyStyleDna: true,
+  activePolls: [],
 
   addJob: (jobData) => {
     const id = `forge-${Date.now()}-${++jobCounter}`;
@@ -113,7 +163,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
     const poller = pollingIntervals.get(id);
     if (poller) {
       poller.stop();
-      pollingIntervals.delete(id);
+      untrackPoller(id);
     }
     set((s) => ({ jobs: s.jobs.filter((j) => j.id !== id) }));
   },
@@ -162,13 +212,34 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
         const poller = pollingIntervals.get(job.id);
         if (poller) {
           poller.stop();
-          pollingIntervals.delete(job.id);
+          untrackPoller(job.id);
         }
       }
     }
     set((s) => ({
       jobs: s.jobs.filter((j) => j.status !== 'completed' && j.status !== 'failed'),
     }));
+  },
+
+  stopPolling: (id) => {
+    const poller = pollingIntervals.get(id);
+    if (!poller) return;
+    poller.stop();
+    untrackPoller(id);
+    const job = get().jobs.find((j) => j.id === id);
+    // A stopped poll must not leave the job reading as still-in-progress: state
+    // the truth — tracking ended here, the provider may still be working.
+    if (job && job.status !== 'completed' && job.status !== 'failed') {
+      get().updateJob(id, {
+        status: 'failed',
+        error: 'Tracking stopped by operator — the remote generation may still be running.',
+        completedAt: Date.now(),
+      });
+    }
+  },
+
+  stopAllPolling: () => {
+    for (const id of [...get().activePolls]) get().stopPolling(id);
   },
 
   setActiveProvider: (id) => set({ activeProviderId: id }),
@@ -236,6 +307,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
     // generating state-flip race), and `timer` is nulled/cleared on stop.
     let stopped = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
+    const pollStartedAt = Date.now();
 
     const stop = () => {
       stopped = true;
@@ -255,6 +327,19 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       timer = null;
       if (stopped) return;
 
+      // Terminal condition 3: wall-clock deadline. A remote job that never
+      // reaches `completed`/`failed` would otherwise be polled forever.
+      if (Date.now() - pollStartedAt >= FORGE_POLL_MAX_DURATION_MS) {
+        stop();
+        untrackPoller(localId);
+        get().updateJob(localId, {
+          status: 'failed',
+          error: `Gave up tracking after ${Math.round(FORGE_POLL_MAX_DURATION_MS / 60_000)} min without a terminal status from the provider.`,
+          completedAt: Date.now(),
+        });
+        return;
+      }
+
       const statusResult = await tryApiFetch<JobStatusResult>(
         `/api/blender-mcp/generate/status?jobId=${encodeURIComponent(mcpJobId)}&provider=${encodeURIComponent(mcpProvider)}`,
       );
@@ -267,7 +352,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
           return;
         }
         stop();
-        pollingIntervals.delete(localId);
+        untrackPoller(localId);
         get().updateJob(localId, {
           status: 'failed',
           error: `Status polling failed ${pollFailures} times in a row: ${statusResult.error}`,
@@ -284,7 +369,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
         // import; `stopped` is now set, so any race that re-enters this body
         // bails immediately.
         stop();
-        pollingIntervals.delete(localId);
+        untrackPoller(localId);
 
         // Auto-import into Blender
         get().updateJob(localId, {
@@ -319,7 +404,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
 
       if (status === 'failed') {
         stop();
-        pollingIntervals.delete(localId);
+        untrackPoller(localId);
         get().updateJob(localId, {
           status: 'failed',
           error: 'Generation failed on remote provider',
@@ -333,7 +418,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       scheduleNext();
     }
 
-    pollingIntervals.set(localId, { stop });
+    trackPoller(localId, stop);
     scheduleNext();
   },
 
@@ -360,12 +445,24 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
     let pollFailures = 0;
     let stopped = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
+    const pollStartedAt = Date.now();
     const stop = () => { stopped = true; if (timer !== null) { clearTimeout(timer); timer = null; } };
     const scheduleNext = () => { if (!stopped) timer = setTimeout(tick, UI_TIMEOUTS.blenderGenPollInterval); };
 
     async function tick() {
       timer = null;
       if (stopped) return;
+      // Terminal condition 3: wall-clock deadline (see the poller doc block).
+      if (Date.now() - pollStartedAt >= FORGE_POLL_MAX_DURATION_MS) {
+        stop();
+        untrackPoller(localId);
+        get().updateJob(localId, {
+          status: 'failed',
+          error: `Gave up tracking after ${Math.round(FORGE_POLL_MAX_DURATION_MS / 60_000)} min without a terminal status from the local runner.`,
+          completedAt: Date.now(),
+        });
+        return;
+      }
       const res = await tryApiFetch<{ status: string; meshPath?: string; error?: string; critique?: CritiqueCard; fidelity?: number }>(
         `/api/visual-gen/generate/status?jobId=${encodeURIComponent(jobId)}`,
       );
@@ -377,7 +474,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
           return;
         }
         stop();
-        pollingIntervals.delete(localId);
+        untrackPoller(localId);
         get().updateJob(localId, {
           status: 'failed',
           error: `Status polling failed ${pollFailures} times in a row: ${res.error}`,
@@ -389,19 +486,19 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       const { status, meshPath, error, critique, fidelity } = res.data;
       if (status === 'done') {
         stop();
-        pollingIntervals.delete(localId);
+        untrackPoller(localId);
         get().updateJob(localId, { status: 'completed', progress: 100, resultUrl: meshPath, critique, fidelity, completedAt: Date.now() });
         return;
       }
       if (status === 'error') {
         stop();
-        pollingIntervals.delete(localId);
+        untrackPoller(localId);
         get().updateJob(localId, { status: 'failed', error: error ?? 'generation failed', completedAt: Date.now() });
         return;
       }
       scheduleNext();
     }
-    pollingIntervals.set(localId, { stop });
+    trackPoller(localId, stop);
     scheduleNext();
   },
 }));

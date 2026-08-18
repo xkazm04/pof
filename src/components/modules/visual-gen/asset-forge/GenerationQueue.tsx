@@ -99,6 +99,12 @@ function JobCard({ job, now }: { job: GenerationJob; now: number }) {
 export function GenerationQueue() {
   const jobs = useForgeStore((s) => s.jobs);
   const clearCompleted = useForgeStore((s) => s.clearCompleted);
+  // Background status polls run in store actions, so they deliberately survive
+  // leaving this module (a paid multi-minute generation must not be abandoned).
+  // That makes them invisible unless we show them — this is that surface, plus
+  // the operator's explicit stop.
+  const activePolls = useForgeStore((s) => s.activePolls);
+  const stopAllPolling = useForgeStore((s) => s.stopAllPolling);
 
   // Single shared 1s ticker for all cards' elapsed-time labels.
   // Only runs while at least one job is still in flight (no completedAt),
@@ -137,6 +143,25 @@ export function GenerationQueue() {
           </button>
         )}
       </div>
+      {activePolls.length > 0 && (
+        <div
+          data-testid="forge-active-polls"
+          className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-border bg-surface/50"
+        >
+          <p className="text-xs text-text-muted">
+            {activePolls.length} background status {activePolls.length === 1 ? 'poll' : 'polls'} running —
+            {' '}keeps tracking while you work in other modules.
+          </p>
+          <button
+            onClick={stopAllPolling}
+            data-testid="forge-stop-polls"
+            className="flex items-center gap-1 text-xs text-text-muted hover:text-text transition-colors focus-ring rounded"
+          >
+            <X size={10} />
+            Stop tracking
+          </button>
+        </div>
+      )}
       <div className="space-y-2">
         {jobs.map((job) => (
           <JobCard key={job.id} job={job} now={now} />
