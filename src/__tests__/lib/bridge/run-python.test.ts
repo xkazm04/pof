@@ -1,9 +1,21 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { runPython, type RunPythonResult } from '@/lib/bridge/run-python';
+import {
+  runPython,
+  RUN_PYTHON_DEFAULT_TIMEOUT_MS,
+  type RunPythonResult,
+} from '@/lib/bridge/run-python';
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
 });
+
+/** A bridge that accepts the connection and never answers — the wedged-editor case. */
+function neverAnswers() {
+  return vi.fn((_url: string, init?: RequestInit) => new Promise<Response>((_resolve, reject) => {
+    init?.signal?.addEventListener('abort', () => reject(new Error('The operation was aborted')));
+  }));
+}
 
 /** A response whose body is the JSON serialization of `payload`. */
 function jsonResponse(payload: unknown, status = 200) {
@@ -127,5 +139,89 @@ describe('runPython', () => {
     expect(err.kind).toBe('malformed-body');
     expect(err.error).toMatch(/socket hang up/);
     expect(err.error).not.toMatch(/unreachable/i);
+  });
+
+  // ── bounded waits ──────────────────────────────────────────────────────────
+
+  it('rejects a never-answering bridge within the bound instead of hanging', async () => {
+    const fetchSpy = neverAnswers();
+
+    const err = asErr(
+      await runPython('m', 'fn', {}, { fetchImpl: fetchSpy as never, timeoutMs: 20 }),
+    );
+
+    expect(err.kind).toBe('timeout');
+    expect(err.error).toMatch(/timed out after 20ms/);
+    // A timeout is never dressed up as a dead editor or a broken payload.
+    expect(err.error).not.toMatch(/unreachable/i);
+  });
+
+  it('applies the default bound when the caller supplies neither signal nor timeoutMs', async () => {
+    vi.useFakeTimers();
+    const fetchSpy = neverAnswers();
+
+    const pending = runPython('m', 'fn', {}, { fetchImpl: fetchSpy as never });
+    // The signal handed to fetch is ours, not undefined: the call IS bounded.
+    expect((fetchSpy.mock.calls[0][1] as RequestInit).signal).toBeInstanceOf(AbortSignal);
+
+    await vi.advanceTimersByTimeAsync(RUN_PYTHON_DEFAULT_TIMEOUT_MS);
+
+    const err = asErr(await pending);
+    expect(err.kind).toBe('timeout');
+    expect(err.error).toContain(String(RUN_PYTHON_DEFAULT_TIMEOUT_MS));
+  });
+
+  it('lets a caller-supplied signal win — no default bound is imposed on top of it', async () => {
+    vi.useFakeTimers();
+    const fetchSpy = neverAnswers();
+    const controller = new AbortController();
+
+    const pending = runPython('m', 'fn', {}, {
+      fetchImpl: fetchSpy as never,
+      signal: controller.signal,
+    });
+    let settled = false;
+    void pending.then(() => {
+      settled = true;
+    });
+
+    await vi.advanceTimersByTimeAsync(RUN_PYTHON_DEFAULT_TIMEOUT_MS * 2);
+    expect(settled).toBe(false);
+
+    controller.abort();
+    const err = asErr(await pending);
+    // The caller's own cancel is reported as such, not as an unreachable bridge.
+    expect(err.kind).toBe('aborted');
+    expect(err.error).not.toMatch(/unreachable/i);
+  });
+
+  it('composes a caller signal with an explicit timeoutMs — either one ends the call', async () => {
+    vi.useFakeTimers();
+    const fetchSpy = neverAnswers();
+    const controller = new AbortController();
+
+    const byTimeout = runPython('m', 'fn', {}, {
+      fetchImpl: fetchSpy as never,
+      signal: controller.signal,
+      timeoutMs: 5_000,
+    });
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(asErr(await byTimeout).kind).toBe('timeout');
+
+    const byCaller = runPython('m', 'fn', {}, {
+      fetchImpl: fetchSpy as never,
+      signal: controller.signal,
+      timeoutMs: 5_000,
+    });
+    controller.abort();
+    expect(asErr(await byCaller).kind).toBe('aborted');
+  });
+
+  it('treats timeoutMs: 0 as an explicit unbounded wait', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue(jsonResponse({ ok: true, data: null }));
+
+    await runPython('m', 'fn', {}, { fetchImpl: fetchSpy as never, timeoutMs: 0 });
+
+    expect((fetchSpy.mock.calls[0][1] as RequestInit).signal).toBeUndefined();
   });
 });
