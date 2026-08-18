@@ -188,6 +188,34 @@ verdict, and archiving those would bury the handful of real produce versions. Hi
 `MAX_REVISIONS` (20) per step, and each row keeps its own `updated_at` (when that version was
 *written*) alongside `archived_at`.
 
+**`GET /api/pipeline-artifacts/summary`** (2026-08-18) is the blob-free projection of the same rows —
+`status`/`tier`/`reason`/`updatedAt` plus `contentHash` (`stepContentHash`, the judge binding) and
+`driftHash` (`labContentHash`, the drift fingerprint), through the single `toStepSummary` projection in
+`layout-lab/stepSummary.ts`. It exists for whole-project readers: the lab's cross-catalog coach reads
+every registered catalog on first paint. Measured against the real DB (817 artifacts / 33 catalogs,
+live server, warm, concurrency 6, median of 3) the full route answers that fan-out with **7.47 MB** of
+produce bodies and this one with **191.5 KB** — a 39.9× reduction, and browser `JSON.parse` drops from
+13.4 ms of main-thread work to under 1 ms with retained cache heap falling ~7.4 MB → ~190 KB.
+**It is not a wall-time win on localhost** (157 ms → 202 ms): the projection computes two content
+hashes the full route never computes, measured at 47 ms of canonicalization + FNV per pass. Persisting
+those hashes as columns at write time would make it strictly better and is the recorded follow-up. A
+route-level memo was deliberately rejected — the only available key (`updated_at`) has 1-second
+resolution, so two writes in one second would serve a stale row, and silent staleness is worse than
+47 ms. The summary is a projection, **never a second source of truth**: anything that grades still goes
+through `resolveStepAcceptance`. `labArtifactCache` holds it as a second half sharing one listener set,
+version signal and invalidation path. Known divergence, measured: a step existing only on the server
+reports the persisted verdict rather than a client re-grade — 786 of 817 rows identical, all 31
+differences in `items`, the one bespoke catalog the server cannot grade.
+
+**`GET /api/pipeline-artifacts/changes?catalogId&since`** (2026-08-18) answers "what moved since I was
+last here" from stored rows and archived versions ONLY. `revisionsSince > 0` is *proof* of a content
+change, since a version is archived only when content differed; `0` means the row was written and
+nothing more can be claimed — a verdict-only write archives nothing, and the digest says exactly that
+rather than implying no change. `historyTruncated` marks a step at the `MAX_REVISIONS` cap, where the
+count is a floor, and the row says so. The baseline is `LabPrefs.lastVisitByCatalog`, frozen per page
+session by `hooks/useLastVisit.ts` so a visit cannot become its own baseline; a **missing baseline is
+refused with a 400**, never treated as "everything changed".
+
 Read + restore go through **`GET/POST /api/pipeline-artifacts/revisions`**. A restore is *not* a raw
 copy: it re-runs the step's Checker via `gradeArtifact` exactly as the produce POST does, because an
 archived verdict can be stale and trusting a stored `status` would re-open the fabricated-pass hole
