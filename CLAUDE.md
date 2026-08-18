@@ -39,6 +39,10 @@ Rules for every session:
    the file exceeds ~200 lines).
 4. Appending is the only edit mode — if your tooling can't append safely,
    skip the write rather than risk clobbering parallel writers.
+5. **Commit it scoped:** `git commit --only .claude/fleet-memory.md -m '...'` —
+   never a bare `git commit` or `git commit -a`. Parallel sessions stage their
+   own new files in this shared index; a bare commit sweeps them into yours
+   (it happened 2026-08-18, commit `906783b6`).
 
 ## Fleet Machine Protocol (mechanical orchestration cues)
 

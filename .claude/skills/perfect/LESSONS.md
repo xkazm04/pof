@@ -114,3 +114,21 @@ direction stands on. In this session every Director spot-check (the crash id-equ
 `PofBridgeStatus` shape, the `useUE5Connection` zero-consumer claim) held, while un-spot-checked
 scout claims failed repeatedly. One grep per direction would have caught most of the seven. Not applied
 now because it changes the propose-phase cost model and deserves its own measured round.
+
+## 2026-08-18 — the bare-commit sweep (foreign session, not a builder)
+
+A research sibling session appended to `.claude/fleet-memory.md` and committed with a BARE
+`git commit` (`906783b6`) at the instant a wave-9 builder had `git add`ed two NEW test files ahead of
+its own `git commit --only`. The sibling's commit swept both files in. Content is correct at HEAD;
+attribution is off; nothing was lost.
+
+**What the protocol already got right:** the builder's `--only` would have protected ITS commit from
+the sibling's staging — the hazard is the reverse direction, and `--only` cannot defend against a
+foreign bare commit. `git add` of a NEW file is the one moment a builder's work sits in the shared
+index unprotected.
+
+**Rule change (SKILL.md v2.3):** builders should stage-and-commit new files in ONE step —
+`git add <new> && git commit --only <new> <modified...>` as a single command, minimizing the window —
+and the fleet-memory CLAUDE.md rule should say explicitly: *append with `git commit --only
+.claude/fleet-memory.md`, never a bare `git commit`.* Not a builder failure; a shared-tree hygiene
+rule that only this loop's participants currently follow.
