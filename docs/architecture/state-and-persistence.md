@@ -248,6 +248,27 @@ dev-server coupling beyond the artifact/verdict fetches the harness already need
 the CLI did not report is still recorded, labelled `(cost unreported by CLI)` rather than presented as
 a measured $0.
 
+A mid-run budget stop **drains, never kills** (2026-08-18). `runDrainPool` stops claiming new targets
+and `drawJudge` refuses to start a further median draw, but spawns already in flight are awaited: a
+draw's cost only arrives in the CLI's closing JSON envelope, so killing one burns the tokens *and*
+makes them unmeasurable, and half-read stdout could parse into a partial verdict. A counted overshoot
+beats an invisible one. The overshoot is bounded rather than merely reported — the drained width is
+observed at claim boundaries and returned as `drainedAtStop` (measured: 12 post-stop draws before,
+4 after, at concurrency 4 × median 3). The closing report (`summarizeJudgeSpend`) states spend against
+the run's starting headroom (`judgeSpendCeiling`), or says plainly that no budget was configured so
+the run had no ceiling to hold; it names any `CEILING EXCEEDED by $X`, the spend recorded *after* the
+stop, and any `costKnown:false` spawns — which make the printed total a **floor**, not a measurement.
+
+**Judge calibration** (`--calibrate` on `scripts/judge-run.ts`) measures the judge against the
+human-labelled targets in `src/lib/judge/calibration.ts` without writing to `judge_verdicts` —
+measuring the judge must not re-grade live content. Runs append to `~/.pof/judge-calibration.jsonl`
+(override with `POF_JUDGE_CALIBRATION_PATH`), and `calibrationDrift()` compares consecutive runs.
+`CALIBRATION_THRESHOLD` is 0.85 and enforcement is scoped to **non-provisional** labels only:
+`unrun` / `stale` / `unscored` / `provisional` are explicit not-proven standings, never a green. As
+shipped, all seeded targets are still `provisional`, so the standing reads UNCALIBRATED with 0
+confirmed targets backing any rate — the module, the harness output and the guard all say so out
+loud rather than implying an enforcement that no label yet supports.
+
 `judge-run` also **plans before it spawns** (`src/lib/judge/fleetPlan.ts`, pure). It fetches the
 catalog's stored verdicts alongside its artifacts and, per (entity, step, judge class), asks
 `judgeSkipDecision` whether the standing verdict still binds: same `stepContentHash` **under the

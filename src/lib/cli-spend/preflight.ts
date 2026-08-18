@@ -58,6 +58,11 @@ export const TASK_TYPE_LABELS: Record<string, string> = {
   'one-shot-step': 'Pipeline step (live CLI produce)',
   'judge-content': 'Strict content judge',
   'judge-visual': 'Strict visual judge',
+  // A-axis (craft) gauging. Deliberately NOT in EXPENSIVE_TASK_TYPES: craft gauging is
+  // agent-driven and never passes through the interactive pre-flight dialog, so a confirm
+  // gate there would block on a prompt nobody can answer.
+  'craft-gauge': 'Craft gauge (step)',
+  'craft-process': 'Craft gauge (process scorecard)',
   interactive: 'Interactive prompt',
 };
 
