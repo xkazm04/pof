@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useNavigationStore } from '@/stores/navigationStore';
 import { DURATION, EASE_OUT } from '@/lib/motion';
@@ -16,13 +16,20 @@ import { ModuleErrorBoundary } from '../ModuleErrorBoundary';
 import { ModuleSkeleton } from '../ModuleSkeleton';
 import type { SubModuleId } from '@/types/modules';
 import { MODULE_COMPONENTS, SPECIAL_CATEGORIES } from './registry';
-import { moduleLabel, lruTouched } from './helpers';
+import { moduleLabel, lruTouched, describeEviction, reportEviction } from './helpers';
 
 /** Max number of modules kept mounted simultaneously. Oldest are evicted. */
 const LRU_CAP = 5;
 
 /** Max number of inline terminal sessions kept mounted simultaneously. */
 const SESSION_LRU_CAP = 5;
+
+/** An eviction recorded during render, reported from an effect (never in render). */
+interface PendingEviction {
+  evictedId: string;
+  scope: 'module' | 'session';
+  cap: number;
+}
 
 export function ModuleRenderer() {
   const activeCategory = useNavigationStore((s) => s.activeCategory);
@@ -46,19 +53,67 @@ export function ModuleRenderer() {
       ? maximizedTabId
       : null;
 
+  // An eviction UNMOUNTS a pane — any stream, poll or CLI session it held dies with
+  // it. Record it here (pure: plain state, no side effects in the render body) and
+  // report it from the effects below, so navigation can never tear down live work
+  // silently. Nothing about WHEN eviction happens changes.
+  const [moduleEviction, setModuleEviction] = useState<PendingEviction | null>(null);
+  const [sessionEviction, setSessionEviction] = useState<PendingEviction | null>(null);
+
   // Track visited modules with LRU eviction (render-time state adjustment).
   if (activeSubModule) {
-    const next = lruTouched(moduleLru, activeSubModule, LRU_CAP);
-    if (next) setModuleLru(next);
+    const touch = lruTouched(moduleLru, activeSubModule, LRU_CAP);
+    if (touch) {
+      setModuleLru(touch.next);
+      if (touch.evicted) {
+        setModuleEviction({ evictedId: touch.evicted, scope: 'module', cap: LRU_CAP });
+      }
+    }
   }
   if (activeCategory && SPECIAL_CATEGORIES[activeCategory]) {
-    const next = lruTouched(moduleLru, activeCategory, LRU_CAP);
-    if (next) setModuleLru(next);
+    const touch = lruTouched(moduleLru, activeCategory, LRU_CAP);
+    if (touch) {
+      setModuleLru(touch.next);
+      if (touch.evicted) {
+        setModuleEviction({ evictedId: touch.evicted, scope: 'module', cap: LRU_CAP });
+      }
+    }
   }
   if (inlineSessionId) {
-    const next = lruTouched(sessionLru, inlineSessionId, SESSION_LRU_CAP);
-    if (next) setSessionLru(next);
+    const touch = lruTouched(sessionLru, inlineSessionId, SESSION_LRU_CAP);
+    if (touch) {
+      setSessionLru(touch.next);
+      if (touch.evicted) {
+        setSessionEviction({ evictedId: touch.evicted, scope: 'session', cap: SESSION_LRU_CAP });
+      }
+    }
   }
+
+  // Report evictions. Sessions are read at report time via getState() (not
+  // subscribed) so the classification costs nothing on the non-evicting path.
+  useEffect(() => {
+    if (!moduleEviction) return;
+    reportEviction(
+      describeEviction(
+        moduleEviction.evictedId,
+        'module',
+        moduleEviction.cap,
+        useCLIPanelStore.getState().sessions,
+      ),
+    );
+  }, [moduleEviction]);
+
+  useEffect(() => {
+    if (!sessionEviction) return;
+    reportEviction(
+      describeEviction(
+        sessionEviction.evictedId,
+        'session',
+        sessionEviction.cap,
+        useCLIPanelStore.getState().sessions,
+      ),
+    );
+  }, [sessionEviction]);
 
   // Determine what to render
   const isSpecialCategory = activeCategory && SPECIAL_CATEGORIES[activeCategory];

@@ -135,6 +135,23 @@ export interface NavigationEvents {
   'nav.tab.changed': {
     tabKey: string;
   };
+  /** A keep-alive pane was pushed out of the shell's LRU and UNMOUNTED. Emitted by
+   *  `ModuleRenderer` so a surface can react to work that navigation tore down. */
+  'nav.module.evicted': {
+    /** The id that left the keep-alive list: a module / special-category id
+     *  (`scope: 'module'`) or an inline CLI session id (`scope: 'session'`). */
+    evictedId: string;
+    /** Human-readable label for `evictedId` (falls back to the id itself). */
+    label: string;
+    scope: 'module' | 'session';
+    /** The cap that forced the eviction. */
+    cap: number;
+    /** Whether the eviction tore down live work, **as far as the shell can observe**.
+     *  `cli-session-running` — a CLI session attributable to the evicted pane was running.
+     *  `none-observed` — no such session; the shell CANNOT see streams/polls/subscriptions
+     *  a module holds internally, so this is "nothing detected", never "nothing lost". */
+    liveWork: 'cli-session-running' | 'none-observed';
+  };
 }
 
 /** Test-gate verdict events — emitted by the L3/L4 drain (`drainOne`) whenever a
