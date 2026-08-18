@@ -54,8 +54,10 @@ const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
  * - On HTTP 409 (the batch lease is held — another drain has ANY of these entities in flight)
  *   it waits `retryDelayMs` and retries the whole batch once; if still locked it records EVERY
  *   requested entity as locked (`entitiesLocked`) — no silent skip.
- * - The shared artifact cache is invalidated for the catalog when the batch resolves, so the
- *   grid refetches and updates live.
+ * - The shared artifact cache is invalidated for exactly the DRAINED entities when the batch
+ *   resolves (the entity-scoped form also drops the whole-catalog key + summary, so the grid
+ *   and the coach refetch server truth); entities this batch never touched keep their cached
+ *   rows, because nothing could have changed them.
  * - Cancel is honest about the all-or-nothing contract: the in-flight editor boot cannot be
  *   interrupted, so `cancel()` only prevents the automatic RETRY after a 409 — it never aborts
  *   a running batch. The click still REGISTERS visibly (`cancelRequested`), and when the run
@@ -108,7 +110,15 @@ export function useBatchDrain(catalogId: string, retryDelayMs: number = UI_TIMEO
       }
 
       const summary = summarizeBatchDrain(entities, outcome);
-      invalidateArtifacts(catalogId); // whole-catalog invalidate → grid refetches every entity live
+      // Invalidate ONLY what this batch could have moved. `collectDeferred` filters the drain
+      // to exactly `ids`, so no other entity's rows can have changed — and the entity-scoped
+      // form of the same call ALSO drops the whole-catalog key (which the matrix grid reads)
+      // and the catalog's summary projection, so the grid and coach still see the new verdicts
+      // immediately. What is preserved is the cached rows of entities the drain never touched:
+      // across the 30 catalogs that currently have a drainable entity, 85% of the cached
+      // artifact bytes (6.34 MB of 7.44 MB) belong to entities a batch drain leaves alone, and
+      // the old whole-catalog form threw all of it away.
+      for (const id of ids) invalidateArtifacts(catalogId, id);
 
       setState({
         running: false,

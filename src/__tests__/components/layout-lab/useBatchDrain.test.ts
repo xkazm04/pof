@@ -62,9 +62,13 @@ describe('useBatchDrain — one-boot batch', () => {
     // Result mapping from the aggregate batch summary.
     expect(result.current.state.summary).toMatchObject({ entitiesRun: 1, passed: 2, failed: 1 });
     expect(result.current.state.summary?.fails).toEqual([{ entityId: 'e2', entityName: 'Two', step: 'Gate', reason: 'bad' }]);
-    // One whole-catalog cache invalidation (grid refetches every entity).
-    expect(invalidateMock).toHaveBeenCalledTimes(1);
-    expect(invalidateMock).toHaveBeenCalledWith('c');
+    // Invalidation is NARROWED to the entities this batch drained — never the bare
+    // whole-catalog form, which threw away every untouched entity's cached rows too.
+    // (The entity-scoped call still drops the catalog key + summary internally, so the
+    // matrix grid and the coach refetch server truth — see batchDrainInvalidation.test.)
+    expect(invalidateMock).toHaveBeenCalledTimes(3);
+    expect(invalidateMock.mock.calls).toEqual([['c', 'e1'], ['c', 'e2'], ['c', 'e3']]);
+    expect(invalidateMock).not.toHaveBeenCalledWith('c');
   });
 
   it('on a 409 batch lease it retries the whole batch once, then records ALL entities locked', async () => {
