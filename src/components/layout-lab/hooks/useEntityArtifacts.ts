@@ -6,7 +6,8 @@ import { buildLabCheckerContext } from '../labCheckerContext';
 import { contentDiverges } from '../labContentDrift';
 import { resolveStepAcceptance, verdictsForStep } from '@/lib/catalog/acceptance/resolveStepAcceptance';
 import { useCatalogJudgeVerdicts } from './useStepJudgeVerdicts';
-import type { AcceptanceResult } from '@/lib/catalog/acceptance/types';
+import { logger } from '@/lib/logger';
+import type { AcceptanceResult, CheckerContext } from '@/lib/catalog/acceptance/types';
 import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
 import type { LabStepArtifact } from '../labPipelineStore';
 import type { LabEntity } from '../useLabCatalogData';
@@ -62,6 +63,89 @@ export interface EntityArtifacts {
 }
 
 /**
+ * The `UNGRADED:` stamp (Rule 4b) a step carries when nothing could grade it. Exported so
+ * consumers and tests key off ONE literal rather than re-spelling the prefix.
+ */
+export const UNGRADED_PREFIX = 'UNGRADED:';
+
+/** Normalize whatever a checker threw into the actionable part of the reason. */
+function thrownReason(e: unknown): string {
+  if (e instanceof Error) return e.message.trim() || e.name || 'Error';
+  if (typeof e === 'string' && e.trim()) return e.trim();
+  return String(e).trim() || 'unknown error';
+}
+
+/**
+ * The verdict a step gets when its Acceptance checker THREW while being derived.
+ *
+ * ── Why `fail`, and why not the three alternatives ─────────────────────────────
+ * Checkers are arbitrary functions over artifact `data` — untrusted input from produce
+ * bodies, the MCP submit path and headless drains — so they demonstrably throw (the same
+ * hazard `StepCrashBoundary` exists for on the render side). Whatever this returns must be
+ * impossible to read as verified:
+ *  - **not `null`** — `null` already means "no checker resolvable", and every caller reads
+ *    that as "use my own status" (falling back to `pass`). Folding a throw into it would
+ *    persist a fabricated pass for data no checker ever read.
+ *  - **not `deferred`** — that is the one status `serverVerdictOverlay` adopts a concrete
+ *    server verdict over, so a crashed grade would be silently replaced by a (possibly
+ *    stale) server `pass`. Same fabricated-pass hole by a longer route.
+ *  - **not `pending`** — the lab's `pending` means "produced, acceptance still resolving"
+ *    (see `coachLadder`), i.e. transient in-flight work. A throw is terminal, not in-flight.
+ * `fail` is the only status no downstream layer can quietly upgrade (the judge bridge only
+ * ever down-grades), so it survives to the screen — and the `UNGRADED:` reason travels with
+ * it everywhere the status goes (rail tooltip, matrix blocker, coach row), saying plainly
+ * that this is NOT a verdict on the step's content.
+ */
+export function ungradedResult(step: string, err: unknown): AcceptanceResult {
+  const msg = thrownReason(err);
+  return {
+    label: step,
+    status: 'fail',
+    tier: 'L0',
+    detail: `Acceptance checker threw while deriving this step — ${msg}`,
+    reason: `${UNGRADED_PREFIX} the Acceptance checker THREW while deriving this step — ${msg}. `
+      + 'No grade could be computed, so this is not a verdict on the step\'s content (neither a pass nor a failed gate).',
+  };
+}
+
+/** One step's grade, plus whether it is the {@link ungradedResult} degradation. */
+export interface GuardedGrade {
+  /** The checker's result, the `UNGRADED` degradation, or `null` when no checker resolved. */
+  result: AcceptanceResult | null;
+  /** True ONLY when a resolved checker threw — never for the `null` no-checker case. */
+  ungraded: boolean;
+}
+
+/**
+ * Resolve + run a step's Acceptance checker with the throw contained to THAT step.
+ *
+ * `labGrade` (the write-through's entry point) is deliberately throw-transparent so the
+ * persisted status can never diverge from the displayed one — see its doc comment. That
+ * leaves each CALL SITE to decide what a throw means for it, and for the derive side the
+ * answer is: degrade this one step, keep deriving the rest. `deriveEntityArtifacts` runs
+ * inside `useBaseline` BEFORE any component renders, so `StepCrashBoundary` cannot catch a
+ * throw here — only `app/error.tsx` can, which replaces the entire app shell. This guard is
+ * what keeps one bad artifact from taking down the canvas, the CatalogMatrix and the global
+ * coach (all three derive through this function).
+ */
+export function gradeStepGuarded(
+  catalogId: string,
+  step: string,
+  data: Record<string, unknown>,
+  ctx: CheckerContext | undefined,
+): GuardedGrade {
+  try {
+    const accept = resolveAccept(catalogId, step);
+    // No checker for this (catalog, step): the caller's own status stands — unchanged behaviour.
+    if (!accept) return { result: null, ungraded: false };
+    return { result: accept(data, ctx), ungraded: false };
+  } catch (err) {
+    logger.error(`[lab] acceptance checker threw for ${catalogId}/${step}`, err);
+    return { result: ungradedResult(step, err), ungraded: true };
+  }
+}
+
+/**
  * Pure derivation of an entity's pipeline artifacts + display status from its
  * produced steps, the server runner's stored verdicts, and the judge verdicts.
  * Kept side-effect free (no React) so the merge rules are unit-testable in isolation.
@@ -103,10 +187,19 @@ export function deriveEntityArtifacts(
   const artifacts: PipelineArtifact[] = catalogId
     ? steps.filter((s) => entitySteps?.[s]).map((s) => {
         const art = entitySteps![s];
-        const accept = resolveAccept(catalogId, s);
-        const res = accept ? accept(art.data, checkerCtx) : null;
-        // Grade through the ONE shared truth: checker → server drain overlay → judge bridge.
+        const { result: res, ungraded } = gradeStepGuarded(catalogId, s, art.data, checkerCtx);
         const srv = serverArts[s];
+        const base = { catalogId, entityId: entity?.id ?? '', step: s, data: art.data, ueAssets: art.ueAssets };
+        if (ungraded) {
+          // The checker threw: this step has NO verdict, so it short-circuits the merge
+          // entirely. Nothing may be overlaid onto a non-verdict — the server overlay and the
+          // judge bridge both reason about a verdict that exists — and it is deliberately NOT
+          // reported as drift below: drift means two verdicts disagree, and there is only one
+          // here. The `UNGRADED:` reason is what the user reads.
+          const g = res!;
+          return { ...base, status: g.status, tier: g.tier, ...(g.reason ? { reason: g.reason } : {}) };
+        }
+        // Grade through the ONE shared truth: checker → server drain overlay → judge bridge.
         const local: AcceptanceResult = res ?? { label: s, status: 'pass', tier: 'L0', detail: '' };
         const merged = resolveStepAcceptance({
           catalogId, step: s, local, persisted: srv,
@@ -133,7 +226,7 @@ export function deriveEntityArtifacts(
             driftByStep.set(s, { kind: 'content', local: status, server: srv.status });
           }
         }
-        return { catalogId, entityId: entity?.id ?? '', step: s, data: art.data, ueAssets: art.ueAssets, status, ...(merged.tier ? { tier: merged.tier } : {}), ...(reason ? { reason } : {}) };
+        return { ...base, status, ...(merged.tier ? { tier: merged.tier } : {}), ...(reason ? { reason } : {}) };
       })
     : [];
 

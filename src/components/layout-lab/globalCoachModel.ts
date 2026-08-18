@@ -1,6 +1,5 @@
-import { deriveEntityArtifacts, type StepDisplayStatus, type StepDrift } from './hooks/useEntityArtifacts';
+import { deriveEntityArtifacts, gradeStepGuarded, type StepDisplayStatus, type StepDrift } from './hooks/useEntityArtifacts';
 import { COACH_PRIORITY_RANK, pickLadderIssue, type CoachPriority } from './coachLadder';
-import { resolveAccept } from './labAcceptance';
 import { buildLabCheckerContext } from './labCheckerContext';
 import { labContentHash } from './labContentDrift';
 import { resolveStepAcceptance, verdictsForStep } from '@/lib/catalog/acceptance/resolveStepAcceptance';
@@ -193,7 +192,9 @@ export interface EntitySummaryDerivation {
  * ({@link StepSummary}) instead of its produced `data`.
  *
  * ── What is identical, and what is not (stated, not assumed) ───────────────────
- * Every step the local store holds is graded exactly as before: the same `resolveAccept`
+ * Every step the local store holds is graded exactly as before: the same checker (resolved
+ * through the shared, throw-guarded {@link gradeStepGuarded}, so a checker that THROWS
+ * degrades that ONE step to `UNGRADED` instead of the whole cross-catalog derivation)
  * over the same local `data`, through the same `resolveStepAcceptance` (checker → server
  * overlay → judge bridge), with the judge binding built from the same `stepContentHash`.
  * Content drift is the same comparison too — `labContentHash` on the local side against the
@@ -209,6 +210,11 @@ export interface EntitySummaryDerivation {
  * derivation whenever a catalog's blobs are already in the cache, so the catalog on screen
  * is never coached from a thinner input than the one the Matrix is rendering.
  */
+/** Project an `AcceptanceStatus` onto the rail/matrix display vocabulary (mirrors `displayStatus`). */
+function toDisplayStatus(status: AcceptanceResult['status']): StepDisplayStatus {
+  return status === 'pass' || status === 'fail' || status === 'deferred' ? status : 'pending';
+}
+
 export function deriveEntityFromSummary(
   catalogId: string,
   entityId: string,
@@ -235,8 +241,17 @@ export function deriveEntityFromSummary(
 
     let merged: AcceptanceResult;
     if (local) {
-      const accept = resolveAccept(catalogId, step);
-      const res = accept ? accept(local.data, ctx) : null;
+      // Same throw containment as the artifact path (`gradeStepGuarded`): a checker that
+      // throws degrades THIS step to the `UNGRADED:` non-verdict and the rest of the fleet
+      // still derives. It short-circuits the merge for the same reason — nothing can be
+      // overlaid onto a grade that was never computed, and it is not drift.
+      const { result: res, ungraded } = gradeStepGuarded(catalogId, step, local.data, ctx);
+      if (ungraded) {
+        const g = res!;
+        statusByStep.set(step, toDisplayStatus(g.status));
+        if (g.reason) reasonByStep.set(step, g.reason);
+        continue;
+      }
       const localResult: AcceptanceResult = res ?? { label: step, status: 'pass', tier: 'L0', detail: '' };
       merged = resolveStepAcceptance({
         catalogId, step, local: localResult, persisted: srv,
@@ -269,7 +284,7 @@ export function deriveEntityFromSummary(
       });
     }
 
-    statusByStep.set(step, merged.status === 'pass' || merged.status === 'fail' || merged.status === 'deferred' ? merged.status : 'pending');
+    statusByStep.set(step, toDisplayStatus(merged.status));
     if (merged.reason) reasonByStep.set(step, merged.reason);
   }
 

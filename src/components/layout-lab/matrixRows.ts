@@ -25,6 +25,11 @@ function asLocal(a: PipelineArtifact): LabStepArtifact {
  * entity the effective per-step input is the add-only merge of the local store OVER the
  * server artifacts (local wins, exactly as `hydrateEntity` does for the open entity), then
  * `deriveEntityArtifacts` applies the shared accept-recompute + `deferred`→server overlay.
+ *
+ * Throw containment comes from that shared path too (`gradeStepGuarded`): a checker that
+ * throws on one entity's step degrades THAT cell to the `UNGRADED:` non-verdict — surfacing
+ * as a blocker with the reason — instead of aborting the whole `entities.map` and taking the
+ * matrix (and, since this runs during derivation, the app shell) down with it.
  */
 export function buildMatrixRows(
   catalogId: string,
