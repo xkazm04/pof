@@ -8,10 +8,15 @@ import type { FeatureRow, FeatureStatus } from '@/types/feature-matrix';
  *
  * Measured on the real DB the day this landed (2026-08-18): of the 216 registry
  * checklist items the audit can see, the heuristic matched 88 (40.7%) and could
- * only ever match ONE feature per item. The map covers 177 (81.9%), 140 resolve
- * to a scanned row, and 11 items span more than one feature. The remaining 39
- * belong to the nine Asset Studio modules, which declare no features at all —
- * they report UNMAPPED rather than being quietly matched to something else.
+ * only ever match ONE feature per item. The map first covered 177 (81.9%); the
+ * remaining 39 belonged to the nine Asset Studio modules, which declared no
+ * features at all. Those nine now declare their app-side feature surface, so
+ * every one of the 216 items is explicitly mapped — 30 to named features and 9
+ * to the deliberate `[]` ("nothing here can evidence this"), never to a guess.
+ *
+ * The heuristic fallback branch therefore has no live subject left in the real
+ * registry; it is exercised against a forced-unmapped item in
+ * `gdd-compliance-heuristic-fallback.test.ts`.
  *
  * The DB is mocked so the audit is a pure function of the fixtures; SUB_MODULES
  * and MODULE_FEATURE_DEFINITIONS (read-only references) supply the real data.
@@ -108,7 +113,59 @@ describe('CHECKLIST_FEATURE_MAP integrity', () => {
 
   it('distinguishes "no feature can evidence this" from "not mapped yet"', () => {
     expect(mappedFeaturesFor('arpg-save', 'as-8')).toEqual([]); // "Test full save/load cycle"
-    expect(mappedFeaturesFor('asset-viewer', 'viewer-load')).toBeNull();
+    expect(mappedFeaturesFor('material-lab', 'mat-ue5')).toEqual([]); // no UE5 material codegen exists
+    // `null` is the third state and is reachable only for an id the map does not
+    // list — every id the registry actually declares is now mapped.
+    expect(mappedFeaturesFor('asset-viewer', 'viewer-does-not-exist')).toBeNull();
+    expect(mappedFeaturesFor('game-design-doc', 'anything')).toBeNull();
+  });
+});
+
+/**
+ * The nine Asset Studio modules were the last unmapped surface. Their features
+ * are app artifacts (a component, a store, a lib function, an API route), not
+ * UE5 classes — so this table also pins that each module declares a feature set
+ * at all, which is what lets the import route validate a scan row for it.
+ */
+describe('the nine Asset Studio modules are measurable', () => {
+  const ASSET_STUDIO: { id: SubModuleId; items: number; mapped: number; empty: number }[] = [
+    { id: 'asset-viewer', items: 6, mapped: 6, empty: 0 },
+    { id: 'asset-forge', items: 5, mapped: 4, empty: 1 },
+    { id: 'material-lab', items: 5, mapped: 4, empty: 1 },
+    { id: 'blender-pipeline', items: 4, mapped: 4, empty: 0 },
+    { id: 'asset-browser', items: 4, mapped: 3, empty: 1 },
+    { id: 'import-automation', items: 4, mapped: 2, empty: 2 },
+    { id: 'auto-rig', items: 4, mapped: 2, empty: 2 },
+    { id: 'procedural-engine', items: 4, mapped: 4, empty: 0 },
+    { id: 'scene-composer', items: 3, mapped: 2, empty: 1 },
+  ];
+
+  it.each(ASSET_STUDIO)('$id: $items items, $mapped evidenced, $empty deliberate []', (row) => {
+    expect((MODULE_FEATURE_DEFINITIONS[row.id] ?? []).length).toBeGreaterThan(0);
+
+    const mod = moduleOf(audit({}), row.id);
+    expect(mod.checklistMapping.itemsTotal).toBe(row.items);
+    expect(mod.checklistMapping.mapped).toBe(row.items);
+    expect(mod.checklistMapping.unmapped).toBe(0);
+    expect(mod.checklistMapping.heuristic).toBe(0);
+    expect(mod.checklistMapping.noFeatureEvidence).toBe(row.empty);
+    expect(mod.unmappedItems).toEqual([]);
+  });
+
+  it('accounts for all 39 of the formerly unmapped items', () => {
+    const items = ASSET_STUDIO.reduce((s, r) => s + r.items, 0);
+    expect(items).toBe(39);
+    expect(ASSET_STUDIO.reduce((s, r) => s + r.mapped + r.empty, 0)).toBe(items);
+  });
+
+  it('names only things the app has — every declared feature is described', () => {
+    for (const { id } of ASSET_STUDIO) {
+      for (const f of MODULE_FEATURE_DEFINITIONS[id]!) {
+        expect(f.featureName.trim()).toBeTruthy();
+        expect(f.category.trim()).toBeTruthy();
+        expect(f.description.length).toBeGreaterThan(20);
+      }
+    }
   });
 });
 
@@ -179,32 +236,37 @@ describe('a mapped item is graded against every feature it names', () => {
   });
 });
 
-describe('an unmapped item is flagged, never silently substring-matched', () => {
-  it('lists an item with no mapping and no fallback hit as invisible', () => {
-    const mod = moduleOf(audit({}), 'asset-viewer');
-    expect(mod.checklistMapping.mapped).toBe(0);
-    expect(mod.checklistMapping.unmapped).toBe(mod.checklistMapping.itemsTotal);
-    const item = mod.unmappedItems.find((u) => u.id === 'viewer-load');
-    expect(item).toEqual({ id: 'viewer-load', label: 'Load 3D model', fallback: 'none' });
-    expect(mod.gaps.some((g) => g.category === 'code-ahead' || g.category === 'checklist-vs-scan')).toBe(false);
-  });
-
-  it('keeps the substring heuristic only as a STATED fallback — the gap says it guessed', () => {
+describe('a mapped item is never downgraded to a guess', () => {
+  it('grades an Asset Studio item against its declared feature, not a substring hit', () => {
+    // "Load 3D model" is declared to be evidenced by 'Model file loader' +
+    // 'SceneViewer canvas'. A row whose NAME merely looks like the label must
+    // not become the evidence — the mapping decides, and it reports the two
+    // declared names as missing from this scan.
     const mod = moduleOf(
       audit({ 'asset-viewer': [row('asset-viewer', 'Load 3D model loader', 'implemented')] }),
       'asset-viewer',
     );
-    const gap = mod.gaps.find((g) => g.id === 'gap-asset-viewer-ahead-viewer-load');
-    expect(gap).toBeDefined();
-    expect(gap!.matchSource).toBe('heuristic');
-    expect(gap!.description).toContain('GUESSED');
+    expect(mod.checklistMapping.heuristic).toBe(0);
+    expect(mod.checklistMapping.mapped).toBe(mod.checklistMapping.itemsTotal);
+    expect(mod.unmappedItems).toEqual([]);
+    expect(mod.checklistMapping.danglingMappings).toBeGreaterThan(0);
+    expect(mod.gaps.some((g) => g.matchSource === 'heuristic')).toBe(false);
+  });
 
-    // …and the item is STILL reported as unmapped: a guess is not a mapping.
-    expect(mod.checklistMapping.heuristic).toBe(1);
-    expect(mod.checklistMapping.mapped).toBe(0);
-    expect(mod.unmappedItems.find((u) => u.id === 'viewer-load')).toEqual({
-      id: 'viewer-load', label: 'Load 3D model', fallback: 'heuristic', heuristicFeature: 'Load 3D model loader',
-    });
+  it('reports a real scan of a declared Asset Studio feature as code-ahead', () => {
+    const mod = moduleOf(
+      audit({
+        'asset-viewer': [
+          row('asset-viewer', 'Orbit controls', 'implemented'),
+          row('asset-viewer', 'Grid and axis gizmo', 'implemented'),
+        ],
+      }),
+      'asset-viewer',
+    );
+    const gap = mod.gaps.find((g) => g.id === 'gap-asset-viewer-ahead-viewer-orbit');
+    expect(gap).toBeDefined();
+    expect(gap!.matchSource).toBe('mapped');
+    expect(gap!.matchedFeatures).toEqual(['Orbit controls']);
   });
 });
 
@@ -216,19 +278,31 @@ describe('the report states how much of the checklist surface it can see', () =>
     expect(report.checklistMapping.mapped).toBe(
       report.modules.reduce((s, m) => s + m.checklistMapping.mapped, 0),
     );
-    // The nine Asset Studio modules declare no features, so a real audit always
-    // has unmapped items — the number is reported, not rounded away.
-    expect(report.checklistMapping.unmapped).toBeGreaterThan(0);
+    // Every registry item is now explicitly mapped, so a real audit reports no
+    // unmapped surface at all — and the three buckets still partition the total.
+    expect(report.checklistMapping.unmapped).toBe(0);
+    expect(report.checklistMapping.heuristic).toBe(0);
     expect(report.checklistMapping.mapped + report.checklistMapping.heuristic + report.checklistMapping.unmapped)
       .toBe(report.checklistMapping.itemsTotal);
   });
 
-  it('covers 177 of the 216 registry checklist items the audit can see', () => {
-    // The stated coverage of this lot. If the registry grows, this number must be
-    // re-derived rather than relaxed — that is the point of pinning it.
+  it('covers all 216 registry checklist items the audit can see', () => {
+    // The stated coverage of this lot. If the registry grows, these numbers must
+    // be re-derived rather than relaxed — that is the point of pinning them.
+    // 216 mapped = 177 from the UE5 modules + 39 from the nine Asset Studio ones.
     const report = audit({});
     expect(report.checklistMapping.itemsTotal).toBe(216);
-    expect(report.checklistMapping.mapped).toBe(177);
-    expect(report.checklistMapping.unmapped).toBe(39);
+    expect(report.checklistMapping.mapped).toBe(216);
+    expect(report.checklistMapping.unmapped).toBe(0);
+  });
+
+  it('says how many of the 216 are the honest "nothing can evidence this" state', () => {
+    // Mapped is not the same as evidenced: 30 items are declared `[]` on
+    // purpose — 21 verification/tuning items in the UE5 modules plus the 9
+    // Asset Studio gaps. The number is surfaced so a 100% mapping cannot be
+    // read as 100% coverage.
+    const report = audit({});
+    expect(report.checklistMapping.noFeatureEvidence).toBe(30);
+    expect(report.checklistMapping.mapped - report.checklistMapping.noFeatureEvidence).toBe(186);
   });
 });

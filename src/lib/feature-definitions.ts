@@ -409,6 +409,87 @@ export const MODULE_FEATURE_DEFINITIONS: PartialModuleMap<FeatureDefinition[]> =
     { featureName: 'Version numbering system', category: 'Versioning', description: 'UpdateBuildVersion with FEngineVersion, build metadata in config', dependsOn: ['Build configuration'] },
     { featureName: 'Content validation', category: 'Validation', description: 'Asset audit commandlet, reference viewer checks, cook error reporting', dependsOn: ['Cooking settings'] },
   ],
+
+  // ─── Visual Generation (Asset Studio) ───────────────────────────────────────
+  //
+  // Unlike the modules above — whose features are UE5 C++ classes the scan looks
+  // for in the game project — the nine Asset Studio modules are surfaces of the
+  // PoF app itself. Their features are therefore named after the app artifacts
+  // that implement them: a component that renders, a Zustand store, a pure lib
+  // function, an API route. Each name below was read off the code on 2026-08-18;
+  // nothing is declared that could not be pointed at.
+
+  'asset-viewer': [
+    { featureName: 'SceneViewer canvas', category: 'Viewport', description: 'react-three-fiber Canvas host (asset-viewer/SceneViewer.tsx) with a Suspense boundary, auto-centred model mount and an empty-scene placeholder' },
+    { featureName: 'Model file loader', category: 'Loading', description: 'GLTFLoader-backed LoadedModel plus the ViewerToolbar file picker (.glb/.gltf/.fbx) handing an object URL to useViewerStore.setModel', dependsOn: ['SceneViewer canvas'] },
+    { featureName: 'Orbit controls', category: 'Camera', description: 'drei OrbitControls with damping, zoom clamps and the auto-rotate toggle held in useViewerStore', dependsOn: ['SceneViewer canvas'] },
+    { featureName: 'Three-point scene lighting', category: 'Lighting', description: 'Ambient base plus key/fill/rim directional lights and a drei Environment studio preset for reflections', dependsOn: ['SceneViewer canvas'] },
+    { featureName: 'Render mode switching', category: 'Rendering', description: 'textured / solid / wireframe RenderMode applied by traversing the loaded scene and swapping materials, with the originals restored on change', dependsOn: ['Model file loader'] },
+    { featureName: 'Grid and axis gizmo', category: 'Reference', description: 'drei Grid ground plane and the GizmoHelper/GizmoViewport orientation cube, each toggled from useViewerStore', dependsOn: ['SceneViewer canvas'] },
+    { featureName: 'Viewport screenshot export', category: 'Export', description: 'canvas.toDataURL PNG capture downloaded as <model>_<timestamp>.png from AssetViewerView', dependsOn: ['SceneViewer canvas'] },
+    { featureName: 'Asset stats and budget inspector', category: 'Inspection', description: 'computeAssetStats (triangles, vertices, draw calls, materials, textures, animations) graded against the UE5_PRESETS budgets in the AssetInspector panel', dependsOn: ['Model file loader'] },
+  ],
+  'asset-forge': [
+    { featureName: 'Generation provider registry', category: 'Providers', description: 'GENERATION_PROVIDERS (lib/visual-gen/providers.ts) filtered per generation mode, splitting MCP-dispatched from runner-backed providers' },
+    { featureName: 'Prompt chip builder', category: 'Prompting', description: 'composeVisualPrompt over the PromptBuilder chip set, with a raw-prompt override and recallable prompt history in useForgeStore' },
+    { featureName: 'Text-to-3D generation', category: 'Generation', description: 'text-to-3d submit path in GenerationPanel dispatching useForgeStore.submitMcpJob against the selected provider', dependsOn: ['Generation provider registry', 'Prompt chip builder'] },
+    { featureName: 'Image-to-3D generation', category: 'Generation', description: 'image-to-3d mode: reference image read as a data URL and submitted through submitLocalJob for runner-backed providers', dependsOn: ['Generation provider registry'] },
+    { featureName: 'Generation job queue', category: 'Queue', description: 'useForgeStore job list (pending/generating/importing/completed/failed) with progress, retry, cancel and clear-completed, rendered by GenerationQueue', dependsOn: ['Text-to-3D generation'] },
+    { featureName: 'Job status polling', category: 'Queue', description: 'bounded polling of /api/visual-gen/generate/status capped by FORGE_POLL_MAX_DURATION_MS, with per-job stop handles', dependsOn: ['Generation job queue'] },
+    { featureName: 'Style DNA profiles', category: 'Style', description: 'StyleDnaPanel over style-dna-db and /api/visual-gen/style-dna; the active profile fragment is appended to the submitted prompt', dependsOn: ['Prompt chip builder'] },
+    { featureName: 'Mesh critique gate', category: 'Quality', description: 'parseCritiqueMetrics / classifyComponents geometry verdict surfaced per job by CritiqueBadge (verdict, score, fidelity)', dependsOn: ['Generation job queue'] },
+    { featureName: 'Generated mesh gallery', category: 'Output', description: 'generated meshes persisted under generated/triposr and listed/served by /api/visual-gen/assets and /api/visual-gen/asset/[name] (buildAssetList + safeAssetName allow-list)', dependsOn: ['Generation job queue'] },
+  ],
+  'material-lab': [
+    { featureName: 'PBR parameter editor', category: 'Editor', description: 'PBREditor base-colour picker plus metallic / roughness / normal-strength / AO sliders bound to the useMaterialStore PBRParams' },
+    { featureName: 'Built-in material presets', category: 'Presets', description: 'BUILT_IN_PRESETS quick-apply swatches (polished metal, rough stone, wood, plastic, gold, rubber) in PBREditor', dependsOn: ['PBR parameter editor'] },
+    { featureName: 'Texture channel slots', category: 'Textures', description: 'albedo / normal / metallic / roughness / AO upload slots with thumbnail, clear and highlight tick in useMaterialStore', dependsOn: ['PBR parameter editor'] },
+    { featureName: 'Live PBR preview', category: 'Preview', description: 'MaterialPreview MeshStandardMaterial on a switchable sphere/cube/plane/cylinder under a drei studio Environment, updated from the store in real time', dependsOn: ['PBR parameter editor', 'Texture channel slots'] },
+    { featureName: 'Material preset store', category: 'Presets', description: 'useMaterialStore addPreset / loadPreset / removePreset holding named PBRParams snapshots for the session', dependsOn: ['PBR parameter editor'] },
+    { featureName: 'Saved material API', category: 'Persistence', description: 'SQLite-backed material records (createMaterial / listMaterials / updateMaterial / deleteMaterial) behind /api/visual-gen/materials', dependsOn: ['Material preset store'] },
+    { featureName: 'Send material to Blender', category: 'Bridge', description: 'useMaterialStore.sendToBlender emits createMaterialScript through /api/blender-mcp/execute and returns a Result', dependsOn: ['PBR parameter editor'] },
+    { featureName: 'Advanced texture generation', category: 'Textures', description: 'AdvancedTexturePanel tiles: Scenario seamless PBR set generation with seam-check reroll, plus Leonardo upscale, unzoom, ControlNet and inpaint', dependsOn: ['Texture channel slots'] },
+  ],
+  'blender-pipeline': [
+    { featureName: 'Blender install detection', category: 'Setup', description: 'GET /api/visual-gen/blender/detect probing the known Windows/Linux/macOS install paths and reading `blender --version`' },
+    { featureName: 'Blender MCP script runner', category: 'Execution', description: 'ScriptRunner.executeViaMCP posting generated Python to /api/blender-mcp/execute, with the job list, output and status held in useBlenderStore' },
+    { featureName: 'FBX to glTF conversion', category: 'Conversion', description: 'convertFbxScript driven by FBXConversionTab — import, apply transforms, triangulate, export GLB', dependsOn: ['Blender MCP script runner'] },
+    { featureName: 'LOD generation', category: 'Optimization', description: 'generateLodsScript driven by LODGenerationTab with configurable decimate ratios per LOD level', dependsOn: ['Blender MCP script runner'] },
+    { featureName: 'Mesh optimization', category: 'Optimization', description: 'optimizeMeshScript driven by MeshOptimizationTab — merge by distance, recalculate normals, remove loose geometry, smooth shading', dependsOn: ['Blender MCP script runner'] },
+    { featureName: 'Blender connection bar', category: 'Setup', description: 'BlenderConnectionBar + ViewportPreview in BlenderSetup: live MCP connection state and captured Blender viewport frames' },
+  ],
+  'asset-browser': [
+    { featureName: 'Poly Haven search', category: 'Sources', description: 'searchPolyHaven (lib/visual-gen/asset-sources.ts) behind GET /api/visual-gen/browse?source=polyhaven with hdris/textures/models category filtering' },
+    { featureName: 'ambientCG search', category: 'Sources', description: 'searchAmbientCG over the ambientCG full_json API behind the same /api/visual-gen/browse route' },
+    { featureName: 'Sketchfab search', category: 'Sources', description: 'useAssetBrowserStore.searchSketchfab querying /api/blender-mcp/assets for Sketchfab results' },
+    { featureName: 'Asset library persistence', category: 'Library', description: 'asset-library-db recordAsset / listLibraryAssets / deleteLibraryAsset behind /api/visual-gen/library, recording source, license and file paths per download', dependsOn: ['Poly Haven search'] },
+    { featureName: 'Collections and favourites', category: 'Library', description: 'collection CRUD plus the favourite toggle and LibraryFilter (source / category / favourites / collection / query) driving CollectionSidebar and LibraryPanel', dependsOn: ['Asset library persistence'] },
+    { featureName: 'Blender import from results', category: 'Bridge', description: 'useAssetBrowserStore.importToBlender sending a browse or library row into the live Blender session, gated on the MCP connection', dependsOn: ['Poly Haven search'] },
+  ],
+  'import-automation': [
+    { featureName: 'Import configuration form', category: 'Config', description: 'ConfigTab controls for asset name, source format, mesh type, scale, collision, material import, LOD count and UE5 content path, with copy-to-clipboard output' },
+    { featureName: 'UE5 import script generator', category: 'Codegen', description: 'generateImportScript (lib/visual-gen/ue5-import-templates.ts) emitting a UEditorUtilityWidget importer wired to UFbxFactory or UGLTFImporterFactory from an ImportConfig', dependsOn: ['Import configuration form'] },
+    { featureName: 'UE5 DataAsset generator', category: 'Codegen', description: 'generateDataAsset emitting a UDataAsset subclass cataloguing the imported mesh, material slots, LOD distances and source metadata', dependsOn: ['Import configuration form'] },
+  ],
+  'auto-rig': [
+    { featureName: 'Rig preset library', category: 'Presets', description: 'RIG_PRESETS (UE5 Mannequin, MetaHuman, Minimal Humanoid) with bone counts, IK chain definitions and Mixamo bone mappings, rendered by RigPresetCard' },
+    { featureName: 'Mixamo workflow guide', category: 'Guidance', description: 'the step-by-step Mixamo upload/download walkthrough in AutoRigView plus the per-preset Mixamo→target bone mapping table', dependsOn: ['Rig preset library'] },
+    { featureName: 'Blender armature creation', category: 'Rigging', description: 'presetToBones + createArmatureScript executed through /api/blender-mcp/execute, reporting per-preset success or error', dependsOn: ['Rig preset library'] },
+  ],
+  'procedural-engine': [
+    { featureName: 'Terrain heightmap generator', category: 'Generators', description: 'generateDiamondSquare over a TerrainConfig (size, roughness, height range, seed) plus heightmapToUint16 for 16-bit export' },
+    { featureName: 'Dungeon layout generator', category: 'Generators', description: 'generateDungeon BSP room/corridor/door placement producing a typed DungeonResult cell grid' },
+    { featureName: 'Vegetation scatter generator', category: 'Generators', description: 'generateVegetation Poisson-disk scatter over DEFAULT_SPECIES with per-species radius, slope and height constraints' },
+    { featureName: 'Generator parameter editors', category: 'UI', description: 'ParameterEditors controls bound to the terrain / dungeon / vegetation configs in useProceduralStore' },
+    { featureName: 'Canvas result previews', category: 'Preview', description: 'TerrainPreview, DungeonPreview and VegetationPreview 2D canvas renderers for the generated result', dependsOn: ['Terrain heightmap generator', 'Dungeon layout generator', 'Vegetation scatter generator'] },
+    { featureName: 'Blender export bridge', category: 'Export', description: 'exportTerrainToBlender / exportDungeonToBlender / exportVegetationToBlender emitting terrainToMeshScript, dungeonToGeometryScript and scatterVegetationScript through the MCP execute route, with ExportFeedback status', dependsOn: ['Terrain heightmap generator', 'Dungeon layout generator', 'Vegetation scatter generator'] },
+  ],
+  'scene-composer': [
+    { featureName: 'Blender scene tree', category: 'Scene', description: 'useSceneComposerStore.refreshScene over /api/blender-mcp/scene rendered as a typed object tree by SceneTree' },
+    { featureName: 'Scene object operations', category: 'Scene', description: 'select, duplicate and confirm-guarded delete executed through the MCP bridge and re-synced into the store', dependsOn: ['Blender scene tree'] },
+    { featureName: 'Scene export', category: 'Export', description: 'SceneExporter FBX/glTF format picker emitting exportSceneScript to the configured output path', dependsOn: ['Blender scene tree'] },
+    { featureName: 'Viewport screenshot preview', category: 'Preview', description: 'ViewportPreview capture of the live Blender viewport shown alongside the tree in the Composer tab' },
+  ],
 };
 
 // ─── Checklist ↔ feature mapping ──────────────────────────────────────────────
@@ -680,10 +761,71 @@ export const CHECKLIST_FEATURE_MAP: PartialModuleMap<Record<string, string[]>> =
     'pkg-5': ['Version numbering system'],
   },
 
-  // The nine Asset Studio modules (asset-viewer … scene-composer, 39 checklist
-  // items) are deliberately absent: they declare no features in
-  // MODULE_FEATURE_DEFINITIONS at all, so there is nothing to map them to. They
-  // report as UNMAPPED rather than being quietly mapped to something else.
+  // ─── Visual Generation (Asset Studio) ───────────────────────────────────────
+  // These nine modules used to be absent entirely — they declared no features,
+  // so their 39 checklist items reported UNMAPPED forever. Each module's
+  // component surface was read on 2026-08-18 and its features declared above;
+  // the items follow here. Nine of the 39 resolve to `[]`: the app genuinely has
+  // no artifact that could evidence them, and the reason is stated on the line.
+  // Inventing a plausible-looking mapping for those nine is exactly the false
+  // positive this table exists to remove.
+  'asset-viewer': {
+    'viewer-load': ['Model file loader', 'SceneViewer canvas'],
+    'viewer-orbit': ['Orbit controls'],
+    'viewer-lighting': ['Three-point scene lighting'],
+    'viewer-wireframe': ['Render mode switching'],
+    'viewer-grid': ['Grid and axis gizmo'],
+    'viewer-export': ['Viewport screenshot export'],
+  },
+  'asset-forge': {
+    'forge-prompt': ['Text-to-3D generation', 'Prompt chip builder'],
+    'forge-image': ['Image-to-3D generation'],
+    'forge-queue': ['Generation job queue', 'Job status polling'],
+    'forge-preview': [], // no in-app 3D preview of a result: the queue shows status + critique, and nothing hands a finished mesh to the viewer
+    'forge-export': ['Generated mesh gallery'],
+  },
+  'material-lab': {
+    'mat-params': ['PBR parameter editor', 'Built-in material presets'],
+    'mat-textures': ['Texture channel slots'],
+    'mat-preview': ['Live PBR preview'],
+    'mat-presets': ['Material preset store', 'Saved material API'],
+    'mat-ue5': [], // no UE5 material-instance codegen exists in Material Lab — the only export path is the Blender MCP bridge
+  },
+  'blender-pipeline': {
+    'blender-detect': ['Blender install detection'],
+    'blender-convert': ['FBX to glTF conversion', 'Blender MCP script runner'],
+    'blender-lods': ['LOD generation'],
+    'blender-optimize': ['Mesh optimization'],
+  },
+  'asset-browser': {
+    'browse-polyhaven': ['Poly Haven search'],
+    'browse-ambientcg': ['ambientCG search'],
+    'browse-download': ['Asset library persistence', 'Collections and favourites'],
+    'browse-preview': [], // cards show the source thumbnail only; there is no hand-off of a downloaded asset to the Asset Viewer or Material Lab
+  },
+  'import-automation': {
+    'import-fbx': ['UE5 import script generator', 'Import configuration form'],
+    'import-gltf': ['UE5 import script generator'],
+    'import-preset': [], // the ImportConfig lives in component state — no preset save/load exists
+    'import-batch': [], // the generator emits a single-asset script; there is no directory sweep or queue
+  },
+  'auto-rig': {
+    'rig-prep': [], // no mesh preparation or validation tooling exists in this module
+    'rig-mixamo': ['Mixamo workflow guide'],
+    'rig-presets': ['Rig preset library'],
+    'rig-retarget': [], // no UE5 IK Rig / IK Retargeter codegen exists; the only generated rig code is the Blender armature script
+  },
+  'procedural-engine': {
+    'proc-terrain': ['Terrain heightmap generator', 'Generator parameter editors'],
+    'proc-dungeon': ['Dungeon layout generator'],
+    'proc-vegetation': ['Vegetation scatter generator'],
+    'proc-preview': ['Canvas result previews', 'Blender export bridge'],
+  },
+  'scene-composer': {
+    'sc-1': ['Blender scene tree', 'Scene object operations'],
+    'sc-2': [], // no placement or transform workflow in this module — assets reach the scene from the Asset Browser's Blender import
+    'sc-3': ['Scene export'],
+  },
 };
 
 /**
