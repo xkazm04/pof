@@ -24,6 +24,13 @@ interface AudioEventCatalogState {
    */
   getEvents: (sceneId: string) => AudioEvent[] | null;
   setEvents: (sceneId: string, events: AudioEvent[]) => void;
+  /**
+   * Drop a deleted scene's catalog. Scene delete had no cleanup hook, so
+   * `byScene[id]` outlived its scene in localStorage forever — the store now
+   * owns its own garbage collection. Idempotent, and a no-op for an unknown
+   * scene returns the SAME state object (Zustand v5 skips the notify).
+   */
+  clearScene: (sceneId: string) => void;
 }
 
 /**
@@ -49,6 +56,13 @@ export const useAudioEventCatalogStore = create<AudioEventCatalogState>()(
       },
       setEvents: (sceneId, events) =>
         set((s) => ({ byScene: { ...s.byScene, [sceneId]: events } })),
+      clearScene: (sceneId) =>
+        set((s) => {
+          if (!(sceneId in s.byScene)) return s;
+          const next = { ...s.byScene };
+          delete next[sceneId];
+          return { byScene: next };
+        }),
     }),
     {
       name: 'pof-audio-event-catalog',

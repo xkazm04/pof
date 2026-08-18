@@ -1,8 +1,8 @@
 import Database from 'better-sqlite3';
 import { randomUUID } from 'node:crypto';
-import { existsSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, rmSync, statSync, unlinkSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { isAbsolute, join, normalize, relative } from 'node:path';
 import type { AudioAsset, AudioSet, AudioUsageSummary } from '@/types/audio-asset';
 import type { AudioKind } from '@/lib/audio-gen/types';
 
@@ -94,6 +94,11 @@ export function getSet(db: Database.Database, id: string): AudioSet | null {
   return row ? rowToSet(row) : null;
 }
 
+export function getAsset(db: Database.Database, id: string): AudioAsset | null {
+  const row = db.prepare('SELECT * FROM audio_assets WHERE id = ?').get(id) as Record<string, unknown> | undefined;
+  return row ? rowToAsset(row) : null;
+}
+
 export function deleteSet(db: Database.Database, id: string): void {
   db.prepare('DELETE FROM audio_sets WHERE id = ?').run(id);
 }
@@ -176,6 +181,101 @@ function rowToAsset(r: Record<string, unknown>): AudioAsset {
     promptHash: (r.promptHash as string | null) ?? null,
     createdAt: Number(r.createdAt),
   };
+}
+
+// ── On-disk lifecycle (nothing here used to garbage-collect) ──
+
+/**
+ * Outcome of one delete's file work. Never a bare boolean: when an unlink fails
+ * the caller must be able to state WHAT was left behind and WHERE, alongside the
+ * DB row's fate — a half-silent state (row gone, bytes forever) is the bug.
+ */
+export interface FileRemoval {
+  ok: boolean;
+  /** The path acted on (resolved + verified), or null when it could not be resolved. */
+  path: string | null;
+  /** How many files were actually removed. */
+  removed: number;
+  /** Populated whenever `ok` is false. */
+  reason?: string;
+}
+
+/**
+ * Resolve a module-relative path under {@link AUDIO_DIR} and prove containment.
+ *
+ * Deletion must only ever touch paths inside the module's own root — never a
+ * caller-supplied path. Same structural guard the asset-serving route uses:
+ * reject `..` up front, then require `path.relative(root, abs)` to be non-empty,
+ * not `..`-prefixed and not absolute. Returns null when containment fails.
+ */
+export function resolveAudioPath(rel: string): string | null {
+  if (!rel || rel.includes('..')) return null;
+  const root = normalize(AUDIO_DIR);
+  const abs = normalize(join(root, rel));
+  const r = relative(root, abs);
+  if (!r || r.startsWith('..') || isAbsolute(r)) return null;
+  return abs;
+}
+
+/**
+ * Delete one variation's file. Absence is success (the goal state is "gone"),
+ * a containment failure or an fs error is reported with its reason.
+ */
+export function removeAssetFile(relPath: string): FileRemoval {
+  const abs = resolveAudioPath(relPath);
+  if (!abs) {
+    return { ok: false, path: null, removed: 0, reason: `Refused: "${relPath}" does not resolve inside ${AUDIO_DIR}` };
+  }
+  if (!existsSync(abs)) return { ok: true, path: abs, removed: 0 };
+  try {
+    unlinkSync(abs);
+    return { ok: true, path: abs, removed: 1 };
+  } catch (e) {
+    return { ok: false, path: abs, removed: 0, reason: e instanceof Error ? e.message : 'unlink failed' };
+  }
+}
+
+/** Delete a set's whole `~/.pof/audio/<setId>` directory, guard-checked as above. */
+export function removeSetDirectory(setId: string): FileRemoval {
+  const abs = resolveAudioPath(setId);
+  if (!abs) {
+    return { ok: false, path: null, removed: 0, reason: `Refused: set id "${setId}" does not resolve inside ${AUDIO_DIR}` };
+  }
+  if (!existsSync(abs)) return { ok: true, path: abs, removed: 0 };
+  let removed = 0;
+  try {
+    removed = readdirSync(abs).length;
+    rmSync(abs, { recursive: true, force: true });
+    return { ok: true, path: abs, removed };
+  } catch (e) {
+    return { ok: false, path: abs, removed: 0, reason: e instanceof Error ? e.message : 'directory removal failed' };
+  }
+}
+
+/** Total bytes + file count actually sitting under AUDIO_DIR. */
+export interface AudioDiskFootprint { bytes: number; files: number }
+
+/**
+ * Measure the module's real on-disk footprint. Disk grew monotonically with no
+ * surface even showing it; the Library now states this number.
+ */
+export function getDiskFootprint(root: string = AUDIO_DIR): AudioDiskFootprint {
+  let bytes = 0;
+  let files = 0;
+  const walk = (dir: string) => {
+    let entries: string[];
+    try { entries = readdirSync(dir); } catch { return; }
+    for (const name of entries) {
+      const p = join(dir, name);
+      try {
+        const st = statSync(p);
+        if (st.isDirectory()) walk(p);
+        else { bytes += st.size; files += 1; }
+      } catch { /* raced with a delete — not part of the footprint */ }
+    }
+  };
+  if (existsSync(root)) walk(root);
+  return { bytes, files };
 }
 
 // ── Generation usage log (powers the quota meter) ──

@@ -17,13 +17,18 @@ import {
   deleteSet,
   ensureAudioDir,
   findAssetByPromptHash,
+  getAsset,
+  getDiskFootprint,
   getSet,
   getUsageSummary,
   listAllAssets,
   listSets,
   logUsage,
+  removeAssetFile,
+  removeSetDirectory,
   setAssetFavorite,
   upsertSet,
+  type FileRemoval,
 } from '@/lib/audio-asset-db';
 import type { AudioKind } from '@/lib/audio-gen/types';
 
@@ -130,7 +135,8 @@ export async function GET() {
   // the import CLI a `~/.pof/audio/...` path, but `~` is not expanded by PowerShell
   // env-var assignment — the dispatch carried an unusable path that only an
   // (absent) script's expanduser would have saved.
-  return apiSuccess({ sets, assets, usage, audioDir: AUDIO_DIR });
+  // `disk` is the module's REAL footprint under AUDIO_DIR (bytes never had a surface).
+  return apiSuccess({ sets, assets, usage, audioDir: AUDIO_DIR, disk: getDiskFootprint() });
 }
 
 interface PatchBody { assetId?: string; favorite?: boolean }
@@ -146,11 +152,38 @@ export async function PATCH(request: NextRequest) {
   return apiSuccess({ asset });
 }
 
+/**
+ * Delete removes what it owns — the DB row AND the bytes it wrote.
+ *
+ * Previously SQL-only, so every mp3 under `~/.pof/audio/<setId>/` survived its
+ * row forever and the module's disk use only ever grew. The file work is
+ * attempted FIRST and its outcome is always reported alongside the DB row's
+ * fate: a failed unlink returns `fileRemoval.ok === false` with the path left
+ * behind, never a bare success. Paths are resolved and proven to sit under
+ * AUDIO_DIR before anything is unlinked (`resolveAudioPath`).
+ */
 export async function DELETE(request: NextRequest) {
   const url = new URL(request.url);
   const assetId = url.searchParams.get('assetId');
   const setId = url.searchParams.get('setId');
-  if (assetId) { deleteAsset(db(), assetId); return apiSuccess({ deleted: 'asset' }); }
-  if (setId) { deleteSet(db(), setId); return apiSuccess({ deleted: 'set' }); }
+
+  if (assetId) {
+    // Read the row's relPath BEFORE deleting it — afterwards the path is unknowable.
+    const asset = getAsset(db(), assetId);
+    const fileRemoval: FileRemoval = asset
+      ? removeAssetFile(asset.relPath)
+      : { ok: true, path: null, removed: 0, reason: 'No such asset row — nothing on disk to remove' };
+    deleteAsset(db(), assetId);
+    return apiSuccess({ deleted: 'asset', dbRowDeleted: true, fileRemoval });
+  }
+
+  if (setId) {
+    // The whole `<setId>` directory: assets cascade in SQL, and every clip the
+    // set ever wrote lives under that one root.
+    const fileRemoval = removeSetDirectory(setId);
+    deleteSet(db(), setId);
+    return apiSuccess({ deleted: 'set', dbRowDeleted: true, fileRemoval });
+  }
+
   return apiError('Pass assetId or setId', 400);
 }

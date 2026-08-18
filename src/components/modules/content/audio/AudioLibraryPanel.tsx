@@ -8,6 +8,7 @@ import { useModuleCLI } from '@/hooks/useModuleCLI';
 import { TaskFactory } from '@/lib/cli-task';
 import { MODULE_COLORS, getAppOrigin } from '@/lib/constants';
 import { STATUS_WARNING } from '@/lib/chart-colors';
+import { formatBytes } from '@/lib/format';
 import type { AudioAsset, AudioSet, AudioUsageSummary } from '@/types/audio-asset';
 import {
   DEFAULT_FILTER,
@@ -37,7 +38,13 @@ interface LibraryData {
   usage: AudioUsageSummary | null;
   /** Server-resolved absolute AUDIO_DIR — the import CLI needs a real path, not `~/…`. */
   audioDir: string | null;
+  /** Real on-disk footprint under AUDIO_DIR. */
+  disk: { bytes: number; files: number } | null;
 }
+
+/** What a DELETE reported about the bytes it owned. */
+interface FileRemoval { ok: boolean; path: string | null; removed: number; reason?: string }
+interface DeleteResult { deleted: string; dbRowDeleted?: boolean; fileRemoval?: FileRemoval }
 
 /** What `audio_import_runs` records, per set, plus the UE-side dependency check. */
 interface ImportReality {
@@ -64,7 +71,7 @@ function fmtDuration(ms: number): string {
 }
 
 export function AudioLibraryPanel() {
-  const [data, setData] = useState<LibraryData>({ sets: [], assets: [], usage: null, audioDir: null });
+  const [data, setData] = useState<LibraryData>({ sets: [], assets: [], usage: null, audioDir: null, disk: null });
   const [reality, setReality] = useState<ImportReality>({ bySet: {}, preflight: null });
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState<string | null>(null);
@@ -90,6 +97,7 @@ export function AudioLibraryPanel() {
           sets: res.data.sets, assets: res.data.assets,
           usage: res.data.usage ?? null,
           audioDir: typeof res.data.audioDir === 'string' ? res.data.audioDir : null,
+          disk: res.data.disk && typeof res.data.disk.bytes === 'number' ? res.data.disk : null,
         });
       } else logger.warn('library fetch failed', { err: res.error });
       if (imp.ok) setReality(parseImportReality(imp.data));
@@ -183,9 +191,20 @@ export function AudioLibraryPanel() {
   async function runDelete(pending: PendingDelete) {
     setDeleteError(null);
     const query = pending.kind === 'asset' ? `assetId=${pending.id}` : `setId=${pending.id}`;
-    const res = await tryApiFetch<{ deleted: string }>(`/api/audio-gen?${query}`, { method: 'DELETE' });
+    const res = await tryApiFetch<DeleteResult>(`/api/audio-gen?${query}`, { method: 'DELETE' });
     if (res.ok) {
       setFailedDelete(null);
+      // The row is gone but the bytes may not be. Never let that stay silent —
+      // state both outcomes, and name the path left on disk.
+      const fr = res.data.fileRemoval;
+      if (fr && !fr.ok) {
+        setFailedDelete(null);
+        setDeleteError(
+          `Deleted ${pending.label} from the database, but its files were NOT removed` +
+          `${fr.path ? ` (${fr.path})` : ''}: ${fr.reason ?? 'unknown reason'}. ` +
+          'Those bytes are still on disk.',
+        );
+      }
       refresh();
     } else {
       logger.warn('audio delete failed', { pending, err: res.error });
@@ -224,6 +243,22 @@ export function AudioLibraryPanel() {
 
         <div className="p-3 space-y-3">
           {data.usage && <AudioUsageMeter usage={data.usage} />}
+
+          {/* The module's real on-disk footprint. Deleting a set/variation now
+              removes its bytes too, so this number can actually go down. */}
+          {data.disk && (
+            <div
+              className="flex items-baseline justify-between text-2xs text-text-muted"
+              data-testid="audio-disk-footprint"
+              title={data.audioDir ?? undefined}
+            >
+              <span>On disk</span>
+              <span className="tabular-nums text-text">
+                {formatBytes(data.disk.bytes)}
+                <span className="text-text-muted"> · {data.disk.files} file{data.disk.files === 1 ? '' : 's'}</span>
+              </span>
+            </div>
+          )}
 
           {/* Text search */}
           <div className="relative">
@@ -396,7 +431,9 @@ export function AudioLibraryPanel() {
         <div className="px-3 pb-3">
           <InlineErrorRetry
             message={deleteError}
-            onRetry={() => { setDeleteError(null); if (failedDelete) runDelete(failedDelete); }}
+            // A failed DELETE retries the delete; an orphaned-file report has no
+            // delete left to retry, so it re-reads the library (and its footprint).
+            onRetry={() => { setDeleteError(null); if (failedDelete) runDelete(failedDelete); else refresh(); }}
             onDismiss={() => setDeleteError(null)}
             dense
           />
