@@ -15,7 +15,8 @@ import { LIGHT } from '@/components/layout-lab/theme';
 afterEach(cleanup);
 
 const idleState = (summary: BatchDrainSummary | null, total = 3): BatchDrainState => ({
-  running: false, activeEntityIds: new Set(), doneEntityIds: new Set(), summary, total,
+  running: false, cancelRequested: false, cancelEffect: null,
+  activeEntityIds: new Set(), doneEntityIds: new Set(), summary, total,
 });
 
 const renderDrain = (state: BatchDrainState, onDismiss = vi.fn()) => {
@@ -42,7 +43,8 @@ describe('MatrixBatchDrain — summary is dismissible', () => {
 
   it('offers no dismiss while the batch is still running (a live run cannot be dismissed)', () => {
     renderDrain({
-      running: true, activeEntityIds: new Set(['e1']), doneEntityIds: new Set(),
+      running: true, cancelRequested: false, cancelEffect: null,
+      activeEntityIds: new Set(['e1']), doneEntityIds: new Set(),
       summary: emptyBatchSummary(), total: 1,
     });
     expect(screen.queryByTestId('batch-drain-dismiss')).toBeNull();
@@ -117,11 +119,60 @@ describe('MatrixBatchDrain — a mixed drain result reaches the human', () => {
 
   it('holds the reason lists and frames back while the batch is still in flight', () => {
     renderDrain({
-      running: true, activeEntityIds: new Set(['e1']), doneEntityIds: new Set(),
+      running: true, cancelRequested: false, cancelEffect: null,
+      activeEntityIds: new Set(['e1']), doneEntityIds: new Set(),
       summary: mixed, total: 2,
     });
     expect(screen.queryByTestId('batch-drain-fails')).toBeNull();
     expect(screen.queryByTestId('batch-drain-deferrals')).toBeNull();
     expect(screen.queryByTestId('batch-drain-frames')).toBeNull();
+  });
+});
+
+describe('MatrixBatchDrain — cancel tells the truth', () => {
+  const runningState = (cancelRequested: boolean): BatchDrainState => ({
+    running: true, cancelRequested, cancelEffect: null,
+    activeEntityIds: new Set(['e1']), doneEntityIds: new Set(), summary: emptyBatchSummary(), total: 2,
+  });
+
+  it('states in the OPEN (not only in a hover title) what cancel can and cannot stop', () => {
+    renderDrain(runningState(false));
+    const scope = screen.getByTestId('batch-drain-cancel-scope').textContent ?? '';
+    expect(scope).toContain("can't interrupt the running editor boot");
+    expect(scope).toContain('skips the automatic retry');
+  });
+
+  it('a REQUESTED cancel is visible on the control and does not claim the drain stopped', () => {
+    renderDrain(runningState(true));
+    const btn = screen.getByTestId('batch-drain-cancel') as HTMLButtonElement;
+    // The click registered: the control changed, and cannot be clicked a second time.
+    expect(btn.textContent).toContain('Cancel requested');
+    expect(btn.disabled).toBe(true);
+    const scope = screen.getByTestId('batch-drain-cancel-scope').textContent ?? '';
+    expect(scope).toContain('Cancel requested');
+    // …but it must NOT imply the boot was aborted — the run is still in flight.
+    expect(scope).toContain('cannot be interrupted');
+    expect(screen.getByTestId('batch-drain-progress').textContent).toContain('Draining');
+    // No outcome claim while running.
+    expect(screen.queryByTestId('batch-drain-cancel-outcome')).toBeNull();
+  });
+
+  it('reports a cancel that had NOTHING left to skip as exactly that', () => {
+    renderDrain({ ...idleState({ ...emptyBatchSummary(), ran: 2, passed: 2 }), cancelEffect: 'nothing-to-skip' });
+    const out = screen.getByTestId('batch-drain-cancel-outcome').textContent ?? '';
+    expect(out).toContain('nothing left to skip');
+    expect(out.toLowerCase()).not.toContain('stopped the');
+  });
+
+  it('reports a cancel that DID skip the retry, without claiming it aborted the boot', () => {
+    renderDrain({ ...idleState({ ...emptyBatchSummary(), entitiesLocked: 3 }), cancelEffect: 'skipped-retry' });
+    const out = screen.getByTestId('batch-drain-cancel-outcome').textContent ?? '';
+    expect(out).toContain('retry after the lease conflict was skipped');
+    expect(out).toContain('still finished');
+  });
+
+  it('says nothing about cancel when no cancel was requested', () => {
+    renderDrain(idleState({ ...emptyBatchSummary(), ran: 1, passed: 1 }));
+    expect(screen.queryByTestId('batch-drain-cancel-outcome')).toBeNull();
   });
 });

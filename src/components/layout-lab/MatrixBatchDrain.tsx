@@ -26,12 +26,14 @@ interface Props {
  * rendered L4 frame the run captured (so a human can judge the render, which is the whole
  * reason the runner hoists them) — no silent skips. The finished summary
  * is DISMISSIBLE (and the next run replaces it), so a stale run can't masquerade as current
- * state. Cancel is honest:
- * the in-flight boot can't be interrupted, so it only skips the retry after a lease conflict.
+ * state. Cancel is honest AND legible: the click flips a visible REQUESTED state, the panel
+ * states in the open what cancel can and cannot stop (the in-flight boot can't be interrupted;
+ * only the retry after a lease conflict can be skipped), and when the run resolves it reports
+ * which of the two actually happened — including "nothing left to skip".
  * The batch request + lease handling lives in `useBatchDrain`.
  */
 export function MatrixBatchDrain({ t, deferredEntities, state, onStart, onCancel, onDismiss }: Props) {
-  const { running, summary, total } = state;
+  const { running, cancelRequested, cancelEffect, summary, total } = state;
   // Hide entirely when there's nothing to drain and no run to report.
   if (deferredEntities.length === 0 && !running && !summary) return null;
 
@@ -46,11 +48,25 @@ export function MatrixBatchDrain({ t, deferredEntities, state, onStart, onCancel
           <span data-testid="batch-drain-progress" aria-live="polite" style={{ color: t.text }}>
             Draining {total} set{total > 1 ? 's' : ''} in one editor boot…
           </span>
+          {/* Cancel now has a REQUESTED state. The click used to flip nothing at all — the ref it
+              set is only read around the 409 retry — so an operator watching a headless UE boot
+              had no way to tell the request had landed. It still cannot abort the boot; it says so. */}
           <Button mono onClick={onCancel} data-testid="batch-drain-cancel"
-            ariaLabel="Cancel batch drain (skips the retry only — the running boot can't be interrupted)"
+            disabled={cancelRequested}
+            style={cancelRequested ? { opacity: 0.65, cursor: 'default', color: t.warn } : undefined}
+            ariaLabel={cancelRequested
+              ? 'Cancel requested — the running editor boot cannot be interrupted; the retry will be skipped'
+              : "Cancel batch drain (skips the retry only — the running boot can't be interrupted)"}
             title="The batch runs in one editor boot and can't be interrupted mid-run; this only skips the retry after a lease conflict.">
-            Cancel
+            {cancelRequested ? '⏳ Cancel requested' : 'Cancel'}
           </Button>
+          {/* What cancel CAN and CANNOT stop, in the open — not only in a hover title. */}
+          <span data-testid="batch-drain-cancel-scope" role="status" aria-live="polite"
+            style={{ flexBasis: '100%', fontSize: 12, color: cancelRequested ? t.warn : t.muted }}>
+            {cancelRequested
+              ? 'Cancel requested. The editor boot already running cannot be interrupted — it will finish. What the cancel does stop is the automatic retry after a lease conflict.'
+              : "Cancel can't interrupt the running editor boot; it only skips the automatic retry after a lease conflict."}
+          </span>
         </>
       ) : (
         deferredEntities.length > 0 && (
@@ -64,6 +80,18 @@ export function MatrixBatchDrain({ t, deferredEntities, state, onStart, onCancel
             ⏵ Drain {deferredEntities.length} deferred set{deferredEntities.length > 1 ? 's' : ''}
           </Button>
         )
+      )}
+
+      {/* What the cancel ACTUALLY achieved. A cancel that arrived after the batch's only
+          attempt had resolved stopped nothing — saying "cancelled" there would credit the
+          click with an interruption that never happened. */}
+      {!running && cancelEffect && (
+        <span data-testid="batch-drain-cancel-outcome" role="status" aria-live="polite"
+          style={{ flexBasis: '100%', fontSize: 12, color: t.warn }}>
+          {cancelEffect === 'skipped-retry'
+            ? 'Cancel took effect: the retry after the lease conflict was skipped. The editor boot that was already running still finished.'
+            : 'Cancel had nothing left to skip — the batch had already spent its single attempt, so the run completed as it would have anyway.'}
+        </span>
       )}
 
       {/* Summary of flips — visible during (live counts) and after the run. */}

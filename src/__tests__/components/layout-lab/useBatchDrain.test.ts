@@ -197,3 +197,77 @@ describe('useBatchDrain — summary lifecycle + runner-chip ownership', () => {
     expect(useLabRunnerStore.getState().localDrain).toBe('c/e9');
   });
 });
+
+describe('useBatchDrain — cancel tells the truth', () => {
+  it('a cancel during the FIRST in-flight request registers immediately (before the batch resolves)', async () => {
+    const d1 = deferred<DrainOutcome>();
+    drainMock.mockReturnValueOnce(d1.promise);
+
+    const { result } = renderHook(() => useBatchDrain('c', 0));
+    let run!: Promise<void>;
+    act(() => { run = result.current.start(ents); });
+    await waitFor(() => expect(drainMock).toHaveBeenCalledTimes(1));
+    expect(result.current.state.cancelRequested).toBe(false);
+
+    act(() => { result.current.cancel(); });
+    // THE point of this direction: the click is observable while the boot is still running.
+    // Before the change `cancel()` only set a ref and the state was byte-identical.
+    expect(result.current.state.cancelRequested).toBe(true);
+    // …and it must NOT pretend the drain stopped — the run is still live.
+    expect(result.current.state.running).toBe(true);
+    expect(result.current.state.cancelEffect).toBeNull();
+
+    await act(async () => { d1.resolve(okOutcome({ ran: 3, passed: 3 })); await run; });
+    expect(result.current.state.running).toBe(false);
+  });
+
+  it("a cancel that arrives after the only attempt reports 'nothing-to-skip', not a stop", async () => {
+    const d1 = deferred<DrainOutcome>();
+    drainMock.mockReturnValueOnce(d1.promise);
+
+    const { result } = renderHook(() => useBatchDrain('c', 0));
+    let run!: Promise<void>;
+    act(() => { run = result.current.start(ents); });
+    await waitFor(() => expect(drainMock).toHaveBeenCalledTimes(1));
+    act(() => { result.current.cancel(); });
+    // The batch comes back OK — there was never a retry for the cancel to remove.
+    await act(async () => { d1.resolve(okOutcome({ ran: 3, passed: 3 })); await run; });
+
+    expect(result.current.state.cancelEffect).toBe('nothing-to-skip');
+    expect(result.current.state.cancelRequested).toBe(false);
+    expect(result.current.state.summary).toMatchObject({ passed: 3 });
+  });
+
+  it("a cancel that suppresses the 409 retry reports 'skipped-retry'", async () => {
+    const d1 = deferred<DrainOutcome>();
+    drainMock.mockReturnValueOnce(d1.promise);
+
+    const { result } = renderHook(() => useBatchDrain('c', 0));
+    let run!: Promise<void>;
+    act(() => { run = result.current.start(ents); });
+    await waitFor(() => expect(drainMock).toHaveBeenCalledTimes(1));
+    act(() => { result.current.cancel(); });
+    await act(async () => { d1.resolve({ kind: 'locked' }); await run; });
+
+    expect(drainMock).toHaveBeenCalledTimes(1); // retry really was skipped
+    expect(result.current.state.cancelEffect).toBe('skipped-retry');
+  });
+
+  it('a run with no cancel carries no cancel claim at all', async () => {
+    drainMock.mockResolvedValue(okOutcome({ ran: 1, passed: 1 }));
+    const { result } = renderHook(() => useBatchDrain('c', 0));
+    await act(async () => { await result.current.start(ents); });
+    expect(result.current.state.cancelEffect).toBeNull();
+    expect(result.current.state.cancelRequested).toBe(false);
+  });
+
+  it('cancel() outside a live run is a no-op (a stale summary cannot grow a cancel note)', async () => {
+    drainMock.mockResolvedValue(okOutcome({ ran: 1, passed: 1 }));
+    const { result } = renderHook(() => useBatchDrain('c', 0));
+    await act(async () => { await result.current.start(ents); });
+
+    act(() => { result.current.cancel(); });
+    expect(result.current.state.cancelRequested).toBe(false);
+    expect(result.current.state.cancelEffect).toBeNull();
+  });
+});
