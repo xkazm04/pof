@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useSuspendableEffect } from '@/hooks/useSuspend';
 import { Play, ChevronDown } from 'lucide-react';
 import { OVERLAY_WHITE, withOpacity, OPACITY_5, OPACITY_8, OPACITY_12, OPACITY_25, OPACITY_37 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
@@ -42,7 +43,9 @@ export function FrameScrubberPanel() {
   // Use a ref to track whether we should stop, avoiding nested setState
   const shouldStopRef = useRef(false);
 
-  useEffect(() => {
+  // Suspendable: scrubber playback that cannot be seen is pure waste, and the
+  // frame counter resumes where it paused (functional setState).
+  useSuspendableEffect(() => {
     if (!scrubberPlaying) return;
     shouldStopRef.current = false;
     scrubberRef.current = setInterval(() => {

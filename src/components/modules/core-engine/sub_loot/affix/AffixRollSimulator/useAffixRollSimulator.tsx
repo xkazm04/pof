@@ -102,6 +102,10 @@ export function useAffixRollSimulator() {
     setWinSlots([false, false, false]);
 
     // Cycle a random affix name through every slot that is still in motion.
+    // NOT a useSuspendableEffect candidate: this interval is started imperatively
+    // by a visible click, not by an effect, and it self-terminates in <2s when the
+    // last REEL_STOP_MS timeout lands (plus `clearTimers` on unmount). There is no
+    // hidden-module burn to reclaim.
     const stillSpinning = [true, true, true];
     const randomName = () => activePool[Math.floor(Math.random() * activePool.length)].name;
     cycleRef.current = setInterval(() => {

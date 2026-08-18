@@ -10,6 +10,7 @@ import {
 } from '@/lib/chart-colors';
 import { DURATION, EASE_OUT, motionSafe } from '@/lib/motion';
 import { UI_TIMEOUTS } from '@/lib/constants';
+import { useSuspendableEffect } from '@/hooks/useSuspend';
 import type { CrashReport } from '@/types/crash-analyzer';
 import {
   orderCallstackForReplay,
@@ -48,7 +49,10 @@ export function CrashTimeMachine({ report }: { report: CrashReport }) {
   useEffect(() => {
     playheadRef.current = playhead;
   }, [playhead]);
-  useEffect(() => {
+  // Suspendable: a replay the operator cannot see must not keep advancing — it
+  // would silently run to the culprit while hidden. On resume playback continues
+  // from the current playhead.
+  useSuspendableEffect(() => {
     if (!isPlaying) return;
     const id = setInterval(() => {
       const next = playheadRef.current + 1;

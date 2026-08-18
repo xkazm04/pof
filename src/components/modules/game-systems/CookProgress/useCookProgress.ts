@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSuspendableEffect } from '@/hooks/useSuspend';
 import { type ListImperativeAPI } from 'react-window';
 import type { CookEvent, CookPhase } from '@/lib/packaging/cook-executor';
 import { UI_TIMEOUTS } from '@/lib/constants';
@@ -142,8 +143,10 @@ export function useCookProgress({ request, onComplete }: CookProgressProps) {
   }, [request]);
 
   // Live elapsed ticker: updates once a second while the cook runs, then stops
-  // (and freezes to the exact total) once a result arrives.
-  useEffect(() => {
+  // (and freezes to the exact total) once a result arrives. Suspendable: while the
+  // module is hidden the label cannot be read, and the effect below re-derives the
+  // elapsed total from `startedAtRef` on resume, so nothing is lost by pausing.
+  useSuspendableEffect(() => {
     if (!request || result) return;
     const id = setInterval(() => {
       if (startedAtRef.current != null) setElapsedMs(Date.now() - startedAtRef.current);

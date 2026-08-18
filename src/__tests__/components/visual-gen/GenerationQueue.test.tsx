@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, cleanup, screen, fireEvent } from '@testing-library/react';
+import { render, cleanup, screen, fireEvent, act } from '@testing-library/react';
+import { createElement } from 'react';
+import { SuspendContext } from '@/hooks/useSuspend';
 import { GenerationQueue } from '@/components/modules/visual-gen/asset-forge/GenerationQueue';
 import { useForgeStore } from '@/components/modules/visual-gen/asset-forge/useForgeStore';
 
@@ -34,5 +36,36 @@ describe('GenerationQueue — background-poll visibility', () => {
     useForgeStore.getState().addJob({ mode: 'text-to-3d', prompt: 'A shield', providerId: 'triposr' });
     render(<GenerationQueue />);
     expect(screen.queryByTestId('forge-active-polls')).toBeNull();
+  });
+});
+
+describe('GenerationQueue — elapsed ticker suspends with the module', () => {
+  function renderSuspended(suspended: boolean) {
+    return render(createElement(SuspendContext.Provider, { value: suspended }, createElement(GenerationQueue)));
+  }
+
+  /** The elapsed label of the (only) in-flight job card. */
+  function elapsedLabel(): string {
+    const el = screen.getByText(/^\d+s$/);
+    return el.textContent ?? '';
+  }
+
+  it('advances the elapsed clock while visible', () => {
+    vi.useFakeTimers();
+    useForgeStore.getState().addJob({ mode: 'text-to-3d', prompt: 'A', providerId: 'triposr' });
+    renderSuspended(false);
+    const before = elapsedLabel();
+    act(() => { vi.advanceTimersByTime(5_000); });
+    expect(elapsedLabel()).not.toBe(before);
+  });
+
+  it('stops ticking while suspended', () => {
+    vi.useFakeTimers();
+    useForgeStore.getState().addJob({ mode: 'text-to-3d', prompt: 'A', providerId: 'triposr' });
+    renderSuspended(true);
+    const before = elapsedLabel();
+    act(() => { vi.advanceTimersByTime(30_000); });
+    // 30s of wall clock, zero re-renders: the hidden module burns no interval.
+    expect(elapsedLabel()).toBe(before);
   });
 });

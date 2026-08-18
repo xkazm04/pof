@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useSuspendableEffect } from '@/hooks/useSuspend';
 import { CheckCircle, AlertCircle, Loader2, X, Trash2 } from 'lucide-react';
 import { tryApiFetch } from '@/lib/api-utils';
 import type { ExecuteOutput } from '@/lib/blender-mcp/types';
@@ -19,7 +20,9 @@ function ScriptCard({ job }: { job: ScriptJob }) {
   const StatusIcon = config.icon;
   const [now, setNow] = useState(() => Date.now());
 
-  useEffect(() => {
+  // Suspendable: elapsed label only; `now` is re-read on resume so the value is
+  // correct again immediately.
+  useSuspendableEffect(() => {
     if (job.completedAt) return;
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);

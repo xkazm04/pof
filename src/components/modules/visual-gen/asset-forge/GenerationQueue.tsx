@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useSuspendableEffect } from '@/hooks/useSuspend';
 import { Clock, CheckCircle, AlertCircle, Loader2, Trash2, X, Download, RotateCcw } from 'lucide-react';
 import { useForgeStore, type GenerationJob, type JobStatus } from './useForgeStore';
 import { CritiqueBadge } from './CritiqueBadge';
@@ -112,7 +113,11 @@ export function GenerationQueue() {
   const hasActive = jobs.some((j) => !j.completedAt);
   const [now, setNow] = useState(() => Date.now());
 
-  useEffect(() => {
+  // Suspendable: the labels are unreadable while the module is hidden, and `now`
+  // is re-read from the clock on resume, so the elapsed values are correct again
+  // immediately. (The background STATUS polls are separate and deliberately keep
+  // running — see useForgeStore's poller doc block.)
+  useSuspendableEffect(() => {
     if (!hasActive) return;
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { useSuspendableEffect } from '@/hooks/useSuspend';
 import type {
   EditorAttribute, EditorEffect, AttrRelationship, QueuedEffect, SimSnapshot,
 } from './types';
@@ -57,8 +58,9 @@ export function useSimulationSandbox({ attributes, effects, relationships }: {
   // Auto-run on first mount
   useEffect(() => { runSim(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Playback
-  useEffect(() => {
+  // Playback — suspendable: a hidden sandbox must not run the timeline out from
+  // under the user at 12.5 fps. On resume it continues from `playbackIdx`.
+  useSuspendableEffect(() => {
     if (isPlaying && snapshots.length > 0) {
       const startIdx = playbackIdx ?? 0;
       let idx = startIdx;
@@ -74,7 +76,7 @@ export function useSimulationSandbox({ attributes, effects, relationships }: {
       }, 80);
     }
     return () => { if (playRef.current) clearInterval(playRef.current); };
-  }, [isPlaying, snapshots.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isPlaying, snapshots.length]);
 
   // Add effect to queue
   const addQueueItem = useCallback(() => {
