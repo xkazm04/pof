@@ -44,6 +44,16 @@ export interface TripoSpec {
   faceLimit?: number;
   texture?: boolean;
   pbr?: boolean;
+  /**
+   * Texture fidelity Tripo renders at. `detailed` is what BOTH of PoF's independently
+   * recorded pass recipes require — the character pipeline's audited winner
+   * (`model_version=v3.1-20260211, texture_quality=detailed, pbr=true`) and the gap-loop
+   * campaign's "settings that clear the bar" (`--face-limit 40000 --pbr
+   * --texture-quality detailed`). The CLI (`scripts/visual-gen/pof_tripo.mjs`) could send
+   * it and this server seam could not, so the governed path was unable to express the
+   * only settings either source had ever seen pass.
+   */
+  textureQuality?: 'standard' | 'detailed';
   /** Quad (game-ready) topology instead of triangles. */
   quad?: boolean;
   /**
@@ -80,6 +90,14 @@ export interface TripoResult {
   taskId?: string;
   status?: string;
   modelUrl?: string;
+  /**
+   * Tripo's own preview render of the finished mesh, when the task output carried one.
+   * Captured because the Tier-1 gate is GEOMETRY only (`pof_mesh_critique.py` measures
+   * faces/watertight/components through trimesh and cannot see a smeared face), while the
+   * proven aesthetic gate is a VLM scoring an image. This is that image, produced by the
+   * provider — so the app path can be gated without a local GLB renderer.
+   */
+  renderUrl?: string;
   /**
    * Set when the format Tripo delivered does not match the extension we wrote it to.
    * `quad: true` is documented to change the delivered container, so a `.glb` path can
@@ -138,6 +156,7 @@ export function buildCreateTaskBody(spec: TripoSpec): Record<string, unknown> {
   if (spec.faceLimit !== undefined) opt.face_limit = spec.faceLimit;
   if (spec.texture !== undefined) opt.texture = spec.texture;
   if (spec.pbr !== undefined) opt.pbr = spec.pbr;
+  if (spec.textureQuality) opt.texture_quality = spec.textureQuality;
   if (spec.quad !== undefined) opt.quad = spec.quad;
 
   if (spec.mode === 'text-to-3d') {
@@ -166,6 +185,8 @@ export interface ParsedStatus {
   progress?: number;
   modelUrl?: string;
   pbrModelUrl?: string;
+  /** Provider-rendered preview of the finished mesh, when the output carried one. */
+  renderUrl?: string;
   error?: string;
 }
 const TERMINAL_FAIL = new Set(['failed', 'cancelled', 'banned', 'expired', 'unknown']);
@@ -177,8 +198,11 @@ export function parseTaskStatus(json: unknown): ParsedStatus {
   const status = String(j.data.status ?? '').toLowerCase();
   const out = j.data.output ?? {};
   const modelUrl = out.pbr_model || out.model || out.base_model;
+  // Tripo names the preview render inconsistently across model versions; read all three
+  // spellings the CLI already handles rather than pinning one and silently losing it.
+  const renderUrl = out.rendered_image || out.render_image || out.thumbnail;
   if (status === 'success') {
-    return { state: 'success', status, progress: 100, modelUrl, pbrModelUrl: out.pbr_model };
+    return { state: 'success', status, progress: 100, modelUrl, pbrModelUrl: out.pbr_model, renderUrl };
   }
   if (TERMINAL_FAIL.has(status)) return { state: 'failed', status, error: `task ${status}` };
   return { state: 'pending', status, progress: typeof j.data.progress === 'number' ? j.data.progress : undefined };
@@ -262,6 +286,7 @@ export async function runTripo(spec: TripoSpec, deps: TripoDeps = {}): Promise<T
         taskId,
         status: ps.status,
         modelUrl: ps.modelUrl,
+        renderUrl: ps.renderUrl,
         formatMismatch: formatMismatchReason(ps.modelUrl, spec.outputPath),
         durationMs: now() - start,
       };

@@ -36,6 +36,16 @@ describe('buildCreateTaskBody', () => {
     expect(b.pbr).toBe(true);
     expect(b.quad).toBe(false);
   });
+
+  it('sends texture_quality when requested (the audited pass recipe needs it)', () => {
+    const b = buildCreateTaskBody({ mode: 'text-to-3d', prompt: 'x', outputPath: 'o.glb', textureQuality: 'detailed' });
+    expect(b.texture_quality).toBe('detailed');
+  });
+
+  it('omits texture_quality when unset rather than inventing a default', () => {
+    const b = buildCreateTaskBody({ mode: 'text-to-3d', prompt: 'x', outputPath: 'o.glb' });
+    expect('texture_quality' in b).toBe(false);
+  });
 });
 
 describe('parseTaskCreate', () => {
@@ -65,6 +75,17 @@ describe('parseTaskStatus', () => {
   it('falls back to model then base_model', () => {
     expect(parseTaskStatus({ code: 0, data: { status: 'success', output: { model: 'm.glb' } } }).modelUrl).toBe('m.glb');
     expect(parseTaskStatus({ code: 0, data: { status: 'success', output: { base_model: 'base.glb' } } }).modelUrl).toBe('base.glb');
+  });
+
+  it('captures the provider preview render under any of its three spellings', () => {
+    const of = (output: Record<string, string>) => parseTaskStatus({ code: 0, data: { status: 'success', output } }).renderUrl;
+    expect(of({ model: 'm.glb', rendered_image: 'r.png' })).toBe('r.png');
+    expect(of({ model: 'm.glb', render_image: 'r2.png' })).toBe('r2.png');
+    expect(of({ model: 'm.glb', thumbnail: 't.png' })).toBe('t.png');
+  });
+
+  it('leaves renderUrl unset when the task output carried no preview', () => {
+    expect(parseTaskStatus({ code: 0, data: { status: 'success', output: { model: 'm.glb' } } }).renderUrl).toBeUndefined();
   });
   it('classifies terminal failure states', () => {
     for (const s of ['failed', 'cancelled', 'banned', 'expired', 'unknown']) {
