@@ -3,11 +3,19 @@
 import { Zap, Loader2, Monitor } from 'lucide-react';
 import { MODULE_COLORS } from '@/lib/constants';
 import { ALGORITHMS } from './constants';
+import { BlenderExportConfirm } from './BlenderExportConfirm';
+import type { PendingBlenderExport } from './useProceduralLevelWizard';
 
 interface GenerateActionsProps {
   isGenerating: boolean;
   handleGenerate: () => void;
-  handleExportToBlender: () => void;
+  /** Prepares the export and its stated numbers — does NOT dispatch to Blender. */
+  prepareBlenderExport: () => void;
+  cancelBlenderExport: () => void;
+  confirmBlenderExport: () => void;
+  pendingExport: PendingBlenderExport | null;
+  exportPlanSummary: string | null;
+  spawnPlacementSummary: string | null;
   blenderConnected: boolean;
   blenderExporting: boolean;
   blenderResult: { message: string; isError: boolean } | null;
@@ -15,7 +23,9 @@ interface GenerateActionsProps {
 }
 
 export function GenerateActions({
-  isGenerating, handleGenerate, handleExportToBlender,
+  isGenerating, handleGenerate,
+  prepareBlenderExport, cancelBlenderExport, confirmBlenderExport,
+  pendingExport, exportPlanSummary, spawnPlacementSummary,
   blenderConnected, blenderExporting, blenderResult, algDef,
 }: GenerateActionsProps) {
   return (
@@ -51,9 +61,9 @@ export function GenerateActions({
         )}
       </button>
 
-      {/* Export to Blender */}
+      {/* Export to Blender — opens the confirm step; never dispatches directly. */}
       <button
-        onClick={handleExportToBlender}
+        onClick={prepareBlenderExport}
         disabled={!blenderConnected || blenderExporting}
         className="focus-ring-outline relative w-full overflow-hidden flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-all disabled:opacity-40 group"
         style={{
@@ -62,7 +72,7 @@ export function GenerateActions({
           border: '1px solid rgba(16,185,129,0.4)',
           boxShadow: '0 0 20px rgba(16,185,129,0.2), inset 0 0 10px rgba(16,185,129,0.1)',
         }}
-        title={!blenderConnected ? 'Connect to Blender first' : 'Export level geometry + metadata to Blender'}
+        title={!blenderConnected ? 'Connect to Blender first' : 'Review the export size, then confirm'}
       >
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-emerald-300 to-transparent opacity-50" />
         {blenderExporting ? (
@@ -73,10 +83,22 @@ export function GenerateActions({
         ) : (
           <>
             <Monitor className="w-5 h-5 group-hover:scale-110 transition-all" />
-            Export to Blender
+            Export to Blender…
           </>
         )}
       </button>
+
+      {/* Size, scale, seed and spawn placement — stated before anything is sent. */}
+      {pendingExport && exportPlanSummary && spawnPlacementSummary && (
+        <BlenderExportConfirm
+          pending={pendingExport}
+          planSummary={exportPlanSummary}
+          spawnSummary={spawnPlacementSummary}
+          exporting={blenderExporting}
+          onConfirm={confirmBlenderExport}
+          onCancel={cancelBlenderExport}
+        />
+      )}
 
       {/* Blender result */}
       {blenderResult && (

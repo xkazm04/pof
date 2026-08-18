@@ -4,15 +4,28 @@ import { useState, useCallback, useRef, useMemo, useDeferredValue } from 'react'
 import type { KeyboardEvent } from 'react';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
 import { tryApiFetch } from '@/lib/api-utils';
-import { dungeonToGeometryScript } from '@/lib/blender-mcp/scripts/dungeon-to-geometry';
+import { dungeonToGeometryScript, type CellType } from '@/lib/blender-mcp/scripts/dungeon-to-geometry';
 import { levelMetadataScript } from '@/lib/blender-mcp/scripts/level-metadata';
 import type { ExecuteOutput } from '@/lib/blender-mcp/types';
 import { logger } from '@/lib/logger';
 import { generatePreview, type PreviewConfig } from '@/lib/level-design/procgen-preview';
 import { ALGORITHMS, LEVEL_TYPES, DEFAULT_SIZE } from './constants';
+import {
+  MAX_EXPORT_SIZE, EXPORT_CELL_SIZE, EXPORT_WALL_HEIGHT,
+  buildExportPlan, describeExportPlan, describeSpawnPlacement, type ExportPlan,
+} from './exportPlan';
+import { planSpawns, type SpawnPlacement } from './spawnPlacement';
 import type {
   GenAlgorithm, LevelType, SizeParams, GameplayConstraints, ProceduralLevelConfig,
 } from './types';
+
+/** A prepared export, held until the operator confirms the size it states. */
+export interface PendingBlenderExport {
+  plan: ExportPlan;
+  placement: SpawnPlacement;
+  /** The regenerated full-size grid this export will ship — NOT the preview grid. */
+  grid: CellType[][];
+}
 
 /**
  * Roving-tabindex keyboard navigation for a single-select `role="radiogroup"`.
@@ -69,6 +82,7 @@ export function useProceduralLevelWizard({ onGenerate }: UseProceduralLevelWizar
   const [seed, setSeed] = useState('');
   const [blenderExporting, setBlenderExporting] = useState(false);
   const [blenderResult, setBlenderResult] = useState<{ message: string; isError: boolean } | null>(null);
+  const [pendingExport, setPendingExport] = useState<PendingBlenderExport | null>(null);
   const blenderConnected = useBlenderMCPStore((s) => s.connection.connected);
 
   // ── Live preview ──
@@ -104,36 +118,52 @@ export function useProceduralLevelWizard({ onGenerate }: UseProceduralLevelWizar
     onGenerate({ algorithm, levelType, size, constraints, seed });
   }, [algorithm, levelType, size, constraints, seed, onGenerate]);
 
-  const handleExportToBlender = useCallback(async () => {
+  // ── Blender export: prepare → state the real numbers → confirm ──
+  // The export does NOT ship the preview grid. The preview is capped at 96 per
+  // side for interactive smoothness, so exporting it silently downscaled a
+  // configured 256x256 level to 96x96. Preparing REGENERATES at the requested
+  // size (bounded by MAX_EXPORT_SIZE, measured at 8-25ms for a 256x256 grid),
+  // from the LIVE config rather than the deferred one, so the operator confirms
+  // the settings currently on screen.
+  const prepareBlenderExport = useCallback(() => {
+    setBlenderResult(null);
+    const full = generatePreview({ ...previewConfig, maxPreviewSize: MAX_EXPORT_SIZE });
+    const plan = buildExportPlan({
+      algorithm: previewConfig.algorithm,
+      requestedWidth: previewConfig.gridWidth,
+      requestedHeight: previewConfig.gridHeight,
+      grid: full.grid,
+      scale: full.scale,
+      seedLabel: previewConfig.seed,
+      seedValue: full.seedValue,
+    });
+    setPendingExport({ plan, placement: planSpawns(full.grid, constraints, EXPORT_CELL_SIZE), grid: full.grid });
+  }, [previewConfig, constraints]);
+
+  const cancelBlenderExport = useCallback(() => setPendingExport(null), []);
+
+  const confirmBlenderExport = useCallback(async () => {
+    if (!pendingExport) return;
+    const { plan, placement, grid } = pendingExport;
     setBlenderExporting(true);
     setBlenderResult(null);
     try {
-      // Export the *actual* previewed layout (same seed + algorithm the designer
-      // is looking at), not a placeholder border. The preview grid is already a
-      // CellType[][], so dungeonToGeometryScript consumes it directly.
-      const grid = preview.grid;
-      const rows = preview.height;
-      const cols = preview.width;
-
+      // The header carries the same numbers the confirm step showed, so the
+      // script stays honest once it is read in Blender with no UI beside it.
       const geometryCode = dungeonToGeometryScript({
         grid,
-        cellSize: 2,
-        wallHeight: 3,
+        cellSize: EXPORT_CELL_SIZE,
+        wallHeight: EXPORT_WALL_HEIGHT,
+        meta: {
+          algorithm: plan.algorithm,
+          requestedWidth: plan.requestedWidth,
+          requestedHeight: plan.requestedHeight,
+          scale: plan.scale,
+          seedLabel: plan.seedLabel,
+          seedValue: plan.seedValue,
+        },
       });
-
-      // Build spawn points from constraints
-      const spawnPoints: { x: number; y: number; type: string }[] = [];
-      if (constraints.spawnPoints) {
-        spawnPoints.push({ x: 2, y: 2, type: 'player' });
-      }
-      if (constraints.bossRoom) {
-        spawnPoints.push({ x: (cols - 2) * 2, y: (rows - 2) * 2, type: 'boss' });
-      }
-      if (constraints.lootPlacement) {
-        spawnPoints.push({ x: Math.floor(cols / 2) * 2, y: Math.floor(rows / 2) * 2, type: 'loot' });
-      }
-
-      const metadataCode = levelMetadataScript({ spawnPoints });
+      const metadataCode = levelMetadataScript({ spawnPoints: placement.spawns });
       const combinedCode = geometryCode + '\n\n' + metadataCode;
 
       const result = await tryApiFetch<ExecuteOutput>('/api/blender-mcp/execute', {
@@ -142,7 +172,10 @@ export function useProceduralLevelWizard({ onGenerate }: UseProceduralLevelWizar
         body: JSON.stringify({ code: combinedCode }),
       });
       if (result.ok) {
-        setBlenderResult({ message: result.data.output || `Exported ${rows}x${cols} dungeon to Blender`, isError: false });
+        // Report the size that was actually shipped, never the configured one.
+        const shipped = `Exported ${plan.width}x${plan.height} ${plan.isFullSize ? '' : `(${Math.round(plan.scale * 100)}% of requested) `}level to Blender. ${describeSpawnPlacement(placement)}`;
+        setBlenderResult({ message: result.data.output || shipped, isError: false });
+        setPendingExport(null);
       } else {
         setBlenderResult({ message: result.error, isError: true });
       }
@@ -152,7 +185,7 @@ export function useProceduralLevelWizard({ onGenerate }: UseProceduralLevelWizar
     } finally {
       setBlenderExporting(false);
     }
-  }, [preview, constraints]);
+  }, [pendingExport]);
 
   const algNav = useRovingRadioGroup(ALGORITHMS.length, (i) => setAlgorithm(ALGORITHMS[i].id));
   const ltNav = useRovingRadioGroup(LEVEL_TYPES.length, (i) => selectLevelType(LEVEL_TYPES[i].id));
@@ -171,12 +204,17 @@ export function useProceduralLevelWizard({ onGenerate }: UseProceduralLevelWizar
     blenderExporting,
     blenderResult,
     blenderConnected,
+    pendingExport,
+    exportPlanSummary: pendingExport ? describeExportPlan(pendingExport.plan) : null,
+    spawnPlacementSummary: pendingExport ? describeSpawnPlacement(pendingExport.placement) : null,
     preview,
     selectLevelType,
     toggleConstraint,
     updateSize,
     handleGenerate,
-    handleExportToBlender,
+    prepareBlenderExport,
+    cancelBlenderExport,
+    confirmBlenderExport,
     algNav,
     ltNav,
     algDef,

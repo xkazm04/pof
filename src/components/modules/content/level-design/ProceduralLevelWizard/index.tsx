@@ -32,12 +32,17 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating }: ProceduralLe
     blenderExporting,
     blenderResult,
     blenderConnected,
+    pendingExport,
+    exportPlanSummary,
+    spawnPlacementSummary,
     preview,
     selectLevelType,
     toggleConstraint,
     updateSize,
     handleGenerate,
-    handleExportToBlender,
+    prepareBlenderExport,
+    cancelBlenderExport,
+    confirmBlenderExport,
     algNav,
     ltNav,
     algDef,
@@ -84,7 +89,12 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating }: ProceduralLe
       <GenerateActions
         isGenerating={isGenerating}
         handleGenerate={handleGenerate}
-        handleExportToBlender={handleExportToBlender}
+        prepareBlenderExport={prepareBlenderExport}
+        cancelBlenderExport={cancelBlenderExport}
+        confirmBlenderExport={confirmBlenderExport}
+        pendingExport={pendingExport}
+        exportPlanSummary={exportPlanSummary}
+        spawnPlacementSummary={spawnPlacementSummary}
         blenderConnected={blenderConnected}
         blenderExporting={blenderExporting}
         blenderResult={blenderResult}
