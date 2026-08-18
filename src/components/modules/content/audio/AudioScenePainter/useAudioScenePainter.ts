@@ -9,13 +9,14 @@ import {
 import { useElementSize } from '@/hooks/useElementSize';
 import { MINIMAP_W, MINIMAP_H, ZONE_COLORS } from './constants';
 import { findContainingZone } from './helpers';
-import type { AudioScenePainterProps, PaintMode, DrawState } from './types';
+import type { AudioScenePainterProps, PaintMode, DrawState, SceneDraft } from './types';
 
 export function useAudioScenePainter({
   zones,
   emitters,
   onUpdateZones,
   onUpdateEmitters,
+  onCommit,
   onSelectZone,
   onSelectEmitter,
   selectedZoneId,
@@ -34,12 +35,84 @@ export function useAudioScenePainter({
   const [drawState, setDrawState] = useState<DrawState | null>(null);
   const [resizeState, setResizeState] = useState<{ zoneId: string; handle: string; startX: number; startY: number; origW: number; origH: number } | null>(null);
 
+  // ── Optimistic commit buffer ──
+  // A drag/resize used to call `onUpdateZones` on EVERY mousemove: one PUT + one
+  // full refetch per event, and the refetch's `isLoading` unmounted this whole
+  // subtree mid-gesture. Now a gesture only ever writes to `draft` (pure local
+  // state, zero network) and commits ONCE on mouseup.
+  //
+  // `draft` is the render source of truth while set; it is cleared only when a
+  // commit SUCCEEDS, so the props (which arrive a round-trip later) never make the
+  // canvas snap back. When a commit FAILS the draft is deliberately retained — the
+  // user's gesture outlives the network — and `commitError` offers a retry.
+  const [draft, setDraft] = useState<SceneDraft | null>(null);
+  const [commitError, setCommitError] = useState<string | null>(null);
+  const [isCommitting, setIsCommitting] = useState(false);
+  /** Mirror of `draft` readable synchronously inside event handlers. */
+  const draftRef = useRef<SceneDraft | null>(null);
+  /** Last scene handed to a commit — what "Retry" re-sends. */
+  const pendingRef = useRef<SceneDraft | null>(null);
+  /** Guards against a slow earlier commit clearing a newer gesture's draft. */
+  const commitSeq = useRef(0);
+  /** True once a pointer gesture has actually moved something. */
+  const gestureDirty = useRef(false);
+
+  const sceneZones = draft?.zones ?? zones;
+  const sceneEmitters = draft?.emitters ?? emitters;
+
+  const setDraftScene = useCallback((next: SceneDraft | null) => {
+    draftRef.current = next;
+    setDraft(next);
+  }, []);
+
+  /** The scene a gesture mutates: the live buffer if one exists, else the server props. */
+  const baseScene = useCallback(
+    (): SceneDraft => draftRef.current ?? { zones, emitters },
+    [zones, emitters],
+  );
+
+  const runCommit = useCallback(async (next: SceneDraft) => {
+    const mine = ++commitSeq.current;
+    pendingRef.current = next;
+    setDraftScene(next);
+    setCommitError(null);
+    setIsCommitting(true);
+    try {
+      if (onCommit) {
+        await onCommit(next);
+      } else {
+        // Compat path (no `onCommit`): write only the half that changed. The
+        // comparison is against the server props, so a retry after a failed commit
+        // may re-send both halves — correct, just not minimal.
+        const writes: Array<void | Promise<unknown>> = [];
+        if (next.zones !== zones) writes.push(onUpdateZones(next.zones));
+        if (next.emitters !== emitters) writes.push(onUpdateEmitters(next.emitters));
+        await Promise.all(writes);
+      }
+      if (commitSeq.current === mine) {
+        pendingRef.current = null;
+        setDraftScene(null);
+      }
+    } catch (err) {
+      setCommitError(err instanceof Error ? err.message : 'Could not save the scene change.');
+    } finally {
+      if (commitSeq.current === mine) setIsCommitting(false);
+    }
+  }, [onCommit, onUpdateZones, onUpdateEmitters, zones, emitters, setDraftScene]);
+
+  const retryCommit = useCallback(() => {
+    if (pendingRef.current) void runCommit(pendingRef.current);
+  }, [runCommit]);
+
+  /** Hides the banner. The buffer is kept — dismissing is not discarding. */
+  const dismissCommitError = useCallback(() => setCommitError(null), []);
+
   // ── Parent ↔ child relationship highlighting ──
   // Selecting an emitter clears the zone selection (and vice-versa), so the
   // parent-zone ring and the child-emitter cues are never active simultaneously.
-  const zoneById = useMemo(() => new Map(zones.map((z) => [z.id, z])), [zones]);
+  const zoneById = useMemo(() => new Map(sceneZones.map((z) => [z.id, z])), [sceneZones]);
   const selectedEmitter = selectedEmitterId
-    ? emitters.find((em) => em.id === selectedEmitterId) ?? null
+    ? sceneEmitters.find((em) => em.id === selectedEmitterId) ?? null
     : null;
   /** Zone whose child emitter is currently selected — gets the soft highlight ring. */
   const highlightedParentZoneId = selectedEmitter?.zoneId ?? null;
@@ -75,10 +148,11 @@ export function useAudioScenePainter({
 
     if (paintMode === 'emitter') {
       const pt = getSVGPoint(e);
+      const base = baseScene();
       const id = `emitter-${Date.now()}`;
       const newEmitter: SoundEmitter = {
         id,
-        name: `Emitter ${emitters.length + 1}`,
+        name: `Emitter ${base.emitters.length + 1}`,
         type: 'ambient',
         x: pt.x,
         y: pt.y,
@@ -89,9 +163,9 @@ export function useAudioScenePainter({
         pitchMax: 1.1,
         spawnChance: 1.0,
         cooldownSeconds: 0,
-        zoneId: findContainingZone(pt.x, pt.y, zones),
+        zoneId: findContainingZone(pt.x, pt.y, base.zones),
       };
-      onUpdateEmitters([...emitters, newEmitter]);
+      void runCommit({ zones: base.zones, emitters: [...base.emitters, newEmitter] });
       onSelectEmitter(id);
       onSelectZone(null);
       setPaintMode('select');
@@ -103,7 +177,7 @@ export function useAudioScenePainter({
     setIsPanning(true);
     onSelectZone(null);
     onSelectEmitter(null);
-  }, [paintMode, getSVGPoint, emitters, zones, onUpdateEmitters, onSelectEmitter, onSelectZone, view]);
+  }, [paintMode, getSVGPoint, baseScene, runCommit, onSelectEmitter, onSelectZone, view]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (drawState) {
@@ -118,9 +192,14 @@ export function useAudioScenePainter({
       const dy = pt.y - resizeState.startY;
       const newW = Math.max(40, resizeState.origW + dx);
       const newH = Math.max(40, resizeState.origH + dy);
-      onUpdateZones(zones.map((z) =>
-        z.id === resizeState.zoneId ? { ...z, width: newW, height: newH } : z
-      ));
+      const base = baseScene();
+      gestureDirty.current = true;
+      setDraftScene({
+        zones: base.zones.map((z) =>
+          z.id === resizeState.zoneId ? { ...z, width: newW, height: newH } : z
+        ),
+        emitters: base.emitters,
+      });
       return;
     }
 
@@ -135,17 +214,25 @@ export function useAudioScenePainter({
 
     if (dragState) {
       const pt = getSVGPoint(e);
+      const base = baseScene();
+      gestureDirty.current = true;
       if (dragState.type === 'zone') {
-        onUpdateZones(zones.map((z) =>
-          z.id === dragState.id ? { ...z, x: pt.x - dragState.offsetX, y: pt.y - dragState.offsetY } : z
-        ));
+        setDraftScene({
+          zones: base.zones.map((z) =>
+            z.id === dragState.id ? { ...z, x: pt.x - dragState.offsetX, y: pt.y - dragState.offsetY } : z
+          ),
+          emitters: base.emitters,
+        });
       } else {
-        onUpdateEmitters(emitters.map((em) =>
-          em.id === dragState.id ? { ...em, x: pt.x - dragState.offsetX, y: pt.y - dragState.offsetY } : em
-        ));
+        setDraftScene({
+          zones: base.zones,
+          emitters: base.emitters.map((em) =>
+            em.id === dragState.id ? { ...em, x: pt.x - dragState.offsetX, y: pt.y - dragState.offsetY } : em
+          ),
+        });
       }
     }
-  }, [drawState, resizeState, isPanning, dragState, getSVGPoint, zones, emitters, onUpdateZones, onUpdateEmitters]);
+  }, [drawState, resizeState, isPanning, dragState, getSVGPoint, baseScene, setDraftScene]);
 
   const handleMouseUp = useCallback(() => {
     if (drawState) {
@@ -155,11 +242,12 @@ export function useAudioScenePainter({
       const h = Math.abs(drawState.currentY - drawState.startY);
 
       if (w > 20 || h > 20) {
+        const base = baseScene();
         const id = `zone-${Date.now()}`;
         const isCircle = drawState.shape === 'circle';
         const newZone: AudioZone = {
           id,
-          name: `Zone ${zones.length + 1}`,
+          name: `Zone ${base.zones.length + 1}`,
           shape: drawState.shape,
           x: isCircle ? drawState.startX : x,
           y: isCircle ? drawState.startY : y,
@@ -173,23 +261,30 @@ export function useAudioScenePainter({
           attenuationRadius: 200,
           occlusionMode: 'medium',
           priority: 5,
-          color: Object.values(ZONE_COLORS)[zones.length % Object.values(ZONE_COLORS).length],
+          color: Object.values(ZONE_COLORS)[base.zones.length % Object.values(ZONE_COLORS).length],
           linkedFiles: [],
         };
-        onUpdateZones([...zones, newZone]);
+        void runCommit({ zones: [...base.zones, newZone], emitters: base.emitters });
         onSelectZone(id);
         onSelectEmitter(null);
       }
 
+      gestureDirty.current = false;
       setDrawState(null);
       setPaintMode('select');
       return;
     }
 
+    // The single write for the whole drag/resize — and only if something moved.
+    if (gestureDirty.current) {
+      gestureDirty.current = false;
+      if (draftRef.current) void runCommit(draftRef.current);
+    }
+
     setResizeState(null);
     setDragState(null);
     setIsPanning(false);
-  }, [drawState, zones, onUpdateZones, onSelectZone, onSelectEmitter]);
+  }, [drawState, baseScene, runCommit, onSelectZone, onSelectEmitter]);
 
   // ── Item interaction ──
 
@@ -197,43 +292,50 @@ export function useAudioScenePainter({
     if (paintMode !== 'select') return;
     e.stopPropagation();
     const pt = getSVGPoint(e);
-    const zone = zones.find((z) => z.id === zoneId);
+    const zone = sceneZones.find((z) => z.id === zoneId);
     if (!zone) return;
     setDragState({ id: zoneId, type: 'zone', offsetX: pt.x - zone.x, offsetY: pt.y - zone.y });
     onSelectZone(zoneId);
     onSelectEmitter(null);
-  }, [paintMode, getSVGPoint, zones, onSelectZone, onSelectEmitter]);
+  }, [paintMode, getSVGPoint, sceneZones, onSelectZone, onSelectEmitter]);
 
   const handleEmitterMouseDown = useCallback((e: React.MouseEvent, emitterId: string) => {
     if (paintMode !== 'select') return;
     e.stopPropagation();
     const pt = getSVGPoint(e);
-    const em = emitters.find((em) => em.id === emitterId);
+    const em = sceneEmitters.find((em) => em.id === emitterId);
     if (!em) return;
     setDragState({ id: emitterId, type: 'emitter', offsetX: pt.x - em.x, offsetY: pt.y - em.y });
     onSelectEmitter(emitterId);
     onSelectZone(null);
-  }, [paintMode, getSVGPoint, emitters, onSelectEmitter, onSelectZone]);
+  }, [paintMode, getSVGPoint, sceneEmitters, onSelectEmitter, onSelectZone]);
 
   const handleResizeStart = useCallback((e: React.MouseEvent, zoneId: string, handle: string) => {
     e.stopPropagation();
     const pt = getSVGPoint(e);
-    const zone = zones.find((z) => z.id === zoneId);
+    const zone = sceneZones.find((z) => z.id === zoneId);
     if (!zone) return;
     setResizeState({ zoneId, handle, startX: pt.x, startY: pt.y, origW: zone.width, origH: zone.height });
-  }, [getSVGPoint, zones]);
+  }, [getSVGPoint, sceneZones]);
 
   const deleteZone = useCallback((zoneId: string) => {
-    onUpdateZones(zones.filter((z) => z.id !== zoneId));
-    // Unlink emitters from this zone
-    onUpdateEmitters(emitters.map((em) => em.zoneId === zoneId ? { ...em, zoneId: null } : em));
+    const base = baseScene();
+    // One commit for both halves — removing the zone also unlinks its emitters.
+    void runCommit({
+      zones: base.zones.filter((z) => z.id !== zoneId),
+      emitters: base.emitters.map((em) => (em.zoneId === zoneId ? { ...em, zoneId: null } : em)),
+    });
     if (selectedZoneId === zoneId) onSelectZone(null);
-  }, [zones, emitters, onUpdateZones, onUpdateEmitters, selectedZoneId, onSelectZone]);
+  }, [baseScene, runCommit, selectedZoneId, onSelectZone]);
 
   const deleteEmitter = useCallback((emitterId: string) => {
-    onUpdateEmitters(emitters.filter((em) => em.id !== emitterId));
+    const base = baseScene();
+    void runCommit({
+      zones: base.zones,
+      emitters: base.emitters.filter((em) => em.id !== emitterId),
+    });
     if (selectedEmitterId === emitterId) onSelectEmitter(null);
-  }, [emitters, onUpdateEmitters, selectedEmitterId, onSelectEmitter]);
+  }, [baseScene, runCommit, selectedEmitterId, onSelectEmitter]);
 
   // ── Zoom / pan viewport controls ──
   // The painter applies `view` as a `translate … scale` transform on the inner
@@ -250,8 +352,8 @@ export function useAudioScenePainter({
   );
   const resetView = useCallback(() => setView(IDENTITY_VIEW), []);
   const fitToContent = useCallback(
-    () => setView(fitView(contentBounds(zones, emitters), size.width, size.height)),
-    [zones, emitters, size.width, size.height],
+    () => setView(fitView(contentBounds(sceneZones, sceneEmitters), size.width, size.height)),
+    [sceneZones, sceneEmitters, size.width, size.height],
   );
 
   // Ctrl/Cmd + wheel zooms about the cursor. Attached natively (non-passive) so
@@ -285,12 +387,12 @@ export function useAudioScenePainter({
   // and the "you are here" rectangle always stay on the minimap.
   //
   // The O(zones+emitters) content-bounds scan only depends on the scene content, so
-  // it is memoized separately on `[zones, emitters]` — panning (which mutates
+  // it is memoized separately on `[sceneZones, sceneEmitters]` — panning (which mutates
   // `view.panX/panY` every mousemove) never re-runs it. The remaining per-frame work
   // (the viewport rect, its union with the content bounds, and the projection) is all
   // O(1) and *must* track `view` so the "you are here" box and the world union stay
   // correct; the rendered minimap is byte-identical to the previous single memo.
-  const sceneBounds = useMemo(() => contentBounds(zones, emitters), [zones, emitters]);
+  const sceneBounds = useMemo(() => contentBounds(sceneZones, sceneEmitters), [sceneZones, sceneEmitters]);
   const minimap = useMemo(() => {
     const vpRect = viewportRectInContent(view, size.width, size.height);
     const world = unionBounds(sceneBounds, vpRect) ?? vpRect;
@@ -345,6 +447,14 @@ export function useAudioScenePainter({
     showMinimap,
     setShowMinimap,
     drawState,
+    /** Scene as the user sees it: the optimistic buffer if one is live, else props. */
+    sceneZones,
+    sceneEmitters,
+    hasUncommittedEdits: draft !== null,
+    isCommitting,
+    commitError,
+    retryCommit,
+    dismissCommitError,
     zoneById,
     highlightedParentZoneId,
     handleCanvasMouseDown,

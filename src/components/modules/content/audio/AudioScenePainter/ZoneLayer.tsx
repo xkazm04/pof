@@ -56,6 +56,7 @@ export function ZoneLayer({
             {/* Zone body */}
             {zone.shape === 'circle' ? (
               <circle
+                data-zone-id={zone.id}
                 cx={zone.x} cy={zone.y}
                 r={zone.width / 2}
                 fill={`${zoneColor}10`}
@@ -66,6 +67,7 @@ export function ZoneLayer({
               />
             ) : (
               <rect
+                data-zone-id={zone.id}
                 x={zone.x} y={zone.y}
                 width={zone.width} height={zone.height}
                 rx={2}

@@ -1,18 +1,46 @@
 'use client';
+import { useCallback } from 'react';
+import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import type { AudioSceneDocument } from '@/types/audio-scene';
+import { useDebouncedCommit } from './useDebouncedCommit';
+
+type SettingKey = 'soundPoolSize' | 'maxConcurrentSounds' | 'globalReverbPreset';
 
 interface SettingsTabProps {
   activeDoc: AudioSceneDocument;
-  handleSettingsChange: (
-    key: 'soundPoolSize' | 'maxConcurrentSounds' | 'globalReverbPreset',
-    value: unknown
-  ) => void;
+  commitSetting: (key: SettingKey, value: unknown) => Promise<void>;
 }
 
-export function SettingsTab({ activeDoc, handleSettingsChange }: SettingsTabProps) {
+export function SettingsTab({ activeDoc, commitSetting }: SettingsTabProps) {
+  // Each control edits locally and writes once the user pauses — a spinner-click
+  // run on a number input used to fire one PUT + one full refetch per increment.
+  const poolSize = useDebouncedCommit(
+    activeDoc.soundPoolSize,
+    useCallback((v: number) => commitSetting('soundPoolSize', v), [commitSetting]),
+  );
+  const maxConcurrent = useDebouncedCommit(
+    activeDoc.maxConcurrentSounds,
+    useCallback((v: number) => commitSetting('maxConcurrentSounds', v), [commitSetting]),
+  );
+  const reverb = useDebouncedCommit(
+    activeDoc.globalReverbPreset,
+    useCallback((v: string) => commitSetting('globalReverbPreset', v), [commitSetting]),
+  );
+  const failed = [poolSize, maxConcurrent, reverb].find((f) => f.error);
+
   return (
     <div className="overflow-y-auto p-5 space-y-5">
       <h3 className="text-xs font-semibold text-text">Audio System Settings</h3>
+
+      {failed && (
+        <InlineErrorRetry
+          message={`${failed.error} — your setting is still shown below.`}
+          onRetry={failed.retry}
+          onDismiss={failed.dismissError}
+          dismissLabel="Dismiss save error"
+          dense
+        />
+      )}
 
       <div className="grid grid-cols-2 gap-4">
         <div>
@@ -21,8 +49,9 @@ export function SettingsTab({ activeDoc, handleSettingsChange }: SettingsTabProp
           </label>
           <input
             type="number"
-            value={activeDoc.soundPoolSize}
-            onChange={(e) => handleSettingsChange('soundPoolSize', Math.max(1, Number(e.target.value)))}
+            value={poolSize.value}
+            aria-label="Sound Pool Size"
+            onChange={(e) => poolSize.onChange(Math.max(1, Number(e.target.value)))}
             min={1} max={256}
             className="w-full px-3 py-2 bg-surface-deep border border-border rounded-md text-xs text-text outline-none focus:border-border-bright transition-colors"
           />
@@ -35,8 +64,9 @@ export function SettingsTab({ activeDoc, handleSettingsChange }: SettingsTabProp
           </label>
           <input
             type="number"
-            value={activeDoc.maxConcurrentSounds}
-            onChange={(e) => handleSettingsChange('maxConcurrentSounds', Math.max(1, Number(e.target.value)))}
+            value={maxConcurrent.value}
+            aria-label="Max Concurrent Sounds"
+            onChange={(e) => maxConcurrent.onChange(Math.max(1, Number(e.target.value)))}
             min={1} max={128}
             className="w-full px-3 py-2 bg-surface-deep border border-border rounded-md text-xs text-text outline-none focus:border-border-bright transition-colors"
           />
@@ -52,13 +82,13 @@ export function SettingsTab({ activeDoc, handleSettingsChange }: SettingsTabProp
           {(['none', 'small-room', 'large-hall', 'outdoor'] as const).map((preset) => (
             <button
               key={preset}
-              onClick={() => handleSettingsChange('globalReverbPreset', preset)}
+              onClick={() => reverb.onChange(preset)}
               className={`px-2.5 py-1.5 rounded text-xs transition-colors ${
-                activeDoc.globalReverbPreset === preset
+                reverb.value === preset
                   ? 'bg-border-bright text-text'
                   : 'bg-surface text-text-muted hover:bg-surface-hover'
               }`}
-              style={{ border: `1px solid ${activeDoc.globalReverbPreset === preset ? 'var(--checkbox-border)' : 'var(--border)'}` }}
+              style={{ border: `1px solid ${reverb.value === preset ? 'var(--checkbox-border)' : 'var(--border)'}` }}
             >
               {preset}
             </button>

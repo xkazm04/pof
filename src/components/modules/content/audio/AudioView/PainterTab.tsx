@@ -4,12 +4,15 @@ import { useModuleCLI } from '@/hooks/useModuleCLI';
 import { AudioScenePainter } from '@/components/modules/content/audio/AudioScenePainter';
 import { ZonePropertyPanel, EmitterPropertyPanel } from '@/components/modules/content/audio/AudioPropertyPanel';
 import { MODULE_COLORS } from '@/lib/constants';
+import type { SceneDraft } from '@/components/modules/content/audio/AudioScenePainter/types';
 import type { AudioSceneDocument, AudioZone, SoundEmitter } from '@/types/audio-scene';
 
 interface PainterTabProps {
   activeDoc: AudioSceneDocument;
-  handleUpdateZones: (zones: AudioZone[]) => void;
-  handleUpdateEmitters: (emitters: SoundEmitter[]) => void;
+  /** Single write for a whole painter gesture; rejects so the painter keeps its buffer. */
+  commitScene: (next: SceneDraft) => Promise<void>;
+  commitZones: (zones: AudioZone[]) => Promise<void>;
+  commitEmitters: (emitters: SoundEmitter[]) => Promise<void>;
   setSelectedZoneId: Dispatch<SetStateAction<string | null>>;
   setSelectedEmitterId: Dispatch<SetStateAction<string | null>>;
   selectedZoneId: string | null;
@@ -25,8 +28,9 @@ interface PainterTabProps {
 
 export function PainterTab({
   activeDoc,
-  handleUpdateZones,
-  handleUpdateEmitters,
+  commitScene,
+  commitZones,
+  commitEmitters,
   setSelectedZoneId,
   setSelectedEmitterId,
   selectedZoneId,
@@ -45,8 +49,9 @@ export function PainterTab({
         <AudioScenePainter
           zones={activeDoc.zones}
           emitters={activeDoc.emitters}
-          onUpdateZones={handleUpdateZones}
-          onUpdateEmitters={handleUpdateEmitters}
+          onUpdateZones={commitZones}
+          onUpdateEmitters={commitEmitters}
+          onCommit={commitScene}
           onSelectZone={(id) => { setSelectedZoneId(id); if (id) setSelectedEmitterId(null); }}
           onSelectEmitter={(id) => { setSelectedEmitterId(id); if (id) setSelectedZoneId(null); }}
           selectedZoneId={selectedZoneId}

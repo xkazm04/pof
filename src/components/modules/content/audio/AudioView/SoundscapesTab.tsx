@@ -1,28 +1,31 @@
 'use client';
 import { Zap, Volume2 } from 'lucide-react';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
+import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { ACCENT_VIOLET, OPACITY_15, OPACITY_30 } from '@/lib/chart-colors';
-import type {
-  AudioSceneDocument,
-  AudioZone,
-  UpdateAudioScenePayload,
-} from '@/types/audio-scene';
+import type { AudioSceneDocument, AudioZone } from '@/types/audio-scene';
+import { useDebouncedCommit } from './useDebouncedCommit';
+import { ZoneSoundscapeField } from './ZoneSoundscapeField';
 
 interface SoundscapesTabProps {
   activeDoc: AudioSceneDocument;
-  handleDescriptionChange: (description: string) => void;
-  updateDoc: (payload: UpdateAudioScenePayload) => Promise<AudioSceneDocument | null>;
+  commitDescription: (description: string) => Promise<void>;
+  commitZones: (zones: AudioZone[]) => Promise<void>;
   handleGenerateSoundscape: (zone: AudioZone) => void;
   audioCli: ReturnType<typeof useModuleCLI>;
 }
 
 export function SoundscapesTab({
   activeDoc,
-  handleDescriptionChange,
-  updateDoc,
+  commitDescription,
+  commitZones,
   handleGenerateSoundscape,
   audioCli,
 }: SoundscapesTabProps) {
+  // One write per typing pause, not per keystroke — and the draft outlives a
+  // failed write so the user never watches their sentence vanish.
+  const description = useDebouncedCommit(activeDoc.description, commitDescription);
+
   return (
     <div className="overflow-y-auto p-5 space-y-5">
       {/* Scene description */}
@@ -31,12 +34,24 @@ export function SoundscapesTab({
           Scene Description
         </label>
         <textarea
-          value={activeDoc.description}
-          onChange={(e) => handleDescriptionChange(e.target.value)}
+          value={description.value}
+          onChange={(e) => description.onChange(e.target.value)}
+          aria-label="Scene description"
           placeholder="Describe the overall audio atmosphere for this scene..."
           className="w-full px-4 py-3 bg-surface-deep border border-border rounded-lg text-xs text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors resize-none leading-relaxed"
           rows={3}
         />
+        {description.error && (
+          <div className="mt-1.5">
+            <InlineErrorRetry
+              message={`${description.error} — your text is still here.`}
+              onRetry={description.retry}
+              onDismiss={description.dismissError}
+              dismissLabel="Dismiss save error"
+              dense
+            />
+          </div>
+        )}
       </div>
 
       {/* Per-zone soundscapes */}
@@ -52,17 +67,11 @@ export function SoundscapesTab({
                   <h4 className="text-xs font-semibold text-text">{zone.name}</h4>
                   <span className="text-2xs text-text-muted">{zone.reverbPreset} · {zone.occlusionMode}</span>
                 </div>
-                <textarea
-                  value={zone.soundscapeDescription}
-                  onChange={(e) => {
-                    const zones = activeDoc.zones.map((z) =>
-                      z.id === zone.id ? { ...z, soundscapeDescription: e.target.value } : z
-                    );
-                    updateDoc({ id: activeDoc.id, zones });
-                  }}
-                  placeholder={`Describe the soundscape for "${zone.name}"...\ne.g., 'dripping water echoing off stone walls, distant machinery hum'`}
-                  className="w-full px-3 py-2 bg-surface border border-border rounded-md text-xs text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors resize-none leading-relaxed font-mono"
-                  rows={3}
+                <ZoneSoundscapeField
+                  key={zone.id}
+                  zone={zone}
+                  zones={activeDoc.zones}
+                  commitZones={commitZones}
                 />
                 {zoneEmitters.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1.5">

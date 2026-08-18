@@ -52,7 +52,6 @@ export function AudioView() {
     error,
     retry,
     setActiveDocId,
-    updateDoc,
     deleteDoc,
     refetch,
     activeTab,
@@ -80,20 +79,26 @@ export function AudioView() {
     rvChecklist,
     AUD_MODULE_ID,
     handleCreateDoc,
-    handleUpdateZones,
-    handleUpdateEmitters,
+    commitScene,
+    commitZones,
+    commitEmitters,
     handleZoneUpdate,
     handleEmitterUpdate,
     handleGenerateAll,
     handleGenerateZoneCode,
     handleGenerateSoundscape,
-    handleDescriptionChange,
-    handleSettingsChange,
+    commitDescription,
+    commitSetting,
     selectedZone,
     selectedEmitter,
   } = useAudioView();
 
-  if (isLoading) {
+  // The full-screen spinner is for the FIRST load only. `useCRUD.refetch` raises
+  // `isLoading` on every background refetch (each save triggers one), and blanking
+  // the view for those unmounted the scene painter mid-gesture — destroying the
+  // drag/resize/zoom state the user was holding. Once a scene is on screen the view
+  // stays mounted and refreshes in place.
+  if (isLoading && docs.length === 0) {
     return (
       <div className="flex items-center justify-center h-full">
         <Loader2 className="w-5 h-5 animate-spin text-text-muted-hover" />
@@ -243,8 +248,9 @@ export function AudioView() {
               {activeTab === 'painter' && (
                 <PainterTab
                   activeDoc={activeDoc}
-                  handleUpdateZones={handleUpdateZones}
-                  handleUpdateEmitters={handleUpdateEmitters}
+                  commitScene={commitScene}
+                  commitZones={commitZones}
+                  commitEmitters={commitEmitters}
                   setSelectedZoneId={setSelectedZoneId}
                   setSelectedEmitterId={setSelectedEmitterId}
                   selectedZoneId={selectedZoneId}
@@ -270,9 +276,10 @@ export function AudioView() {
 
               {activeTab === 'soundscapes' && (
                 <SoundscapesTab
+                  key={activeDoc.id}
                   activeDoc={activeDoc}
-                  handleDescriptionChange={handleDescriptionChange}
-                  updateDoc={updateDoc}
+                  commitDescription={commitDescription}
+                  commitZones={commitZones}
                   handleGenerateSoundscape={handleGenerateSoundscape}
                   audioCli={audioCli}
                 />
@@ -280,8 +287,9 @@ export function AudioView() {
 
               {activeTab === 'settings' && (
                 <SettingsTab
+                  key={activeDoc.id}
                   activeDoc={activeDoc}
-                  handleSettingsChange={handleSettingsChange}
+                  commitSetting={commitSetting}
                 />
               )}
 

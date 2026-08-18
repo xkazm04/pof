@@ -11,11 +11,10 @@ import { EmitterLayer } from './EmitterLayer';
 import { DrawPreview } from './DrawPreview';
 import { ZoomCluster } from './ZoomCluster';
 import { DesktopCanvasNotice } from '@/components/ui/DesktopCanvasNotice';
+import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 
 export function AudioScenePainter(props: AudioScenePainterProps) {
   const {
-    zones,
-    emitters,
     selectedZoneId,
     selectedEmitterId,
     accentColor,
@@ -31,6 +30,13 @@ export function AudioScenePainter(props: AudioScenePainterProps) {
     showMinimap,
     setShowMinimap,
     drawState,
+    // Render the optimistic buffer, not the (round-trip-stale) props.
+    sceneZones,
+    sceneEmitters,
+    isCommitting,
+    commitError,
+    retryCommit,
+    dismissCommitError,
     zoneById,
     highlightedParentZoneId,
     handleCanvasMouseDown,
@@ -69,8 +75,8 @@ export function AudioScenePainter(props: AudioScenePainterProps) {
 
       {/* Top-right cluster — stats badge + minimap */}
       <Minimap
-        zones={zones}
-        emitters={emitters}
+        zones={sceneZones}
+        emitters={sceneEmitters}
         showMinimap={showMinimap}
         setShowMinimap={setShowMinimap}
         minimapRef={minimapRef}
@@ -109,7 +115,7 @@ export function AudioScenePainter(props: AudioScenePainterProps) {
         <g transform={`translate(${view.panX},${view.panY}) scale(${view.zoom})`}>
           {/* Audio zones */}
           <ZoneLayer
-            zones={zones}
+            zones={sceneZones}
             selectedZoneId={selectedZoneId}
             highlightedParentZoneId={highlightedParentZoneId}
             accentColor={accentColor}
@@ -121,7 +127,7 @@ export function AudioScenePainter(props: AudioScenePainterProps) {
 
           {/* Zone ↔ child-emitter connectors + sound emitters */}
           <EmitterLayer
-            emitters={emitters}
+            emitters={sceneEmitters}
             zoneById={zoneById}
             selectedZoneId={selectedZoneId}
             selectedEmitterId={selectedEmitterId}
@@ -135,6 +141,28 @@ export function AudioScenePainter(props: AudioScenePainterProps) {
           <DrawPreview drawState={drawState} accentColor={accentColor} />
         </g>
       </svg>
+
+      {/* Commit feedback — a gesture writes once, on mouseup; this says whether it
+          landed. On failure the local buffer is KEPT (the canvas still shows the
+          user's edit) and Retry re-sends exactly that buffer. */}
+      {commitError ? (
+        <div className="absolute bottom-3 left-3 right-3 z-30 max-w-lg" data-testid="painter-commit-error">
+          <InlineErrorRetry
+            message={`${commitError} — your change is still on the canvas.`}
+            onRetry={retryCommit}
+            onDismiss={dismissCommitError}
+            dismissLabel="Dismiss save error"
+            dense
+          />
+        </div>
+      ) : isCommitting ? (
+        <div
+          className="absolute bottom-3 left-3 z-30 px-2 py-1 rounded text-2xs text-text-muted bg-surface-deep border border-border"
+          role="status"
+        >
+          Saving…
+        </div>
+      ) : null}
 
       {/* Zoom control cluster — zoom% | − | + | fit | 1:1 */}
       <ZoomCluster

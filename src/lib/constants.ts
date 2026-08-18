@@ -89,6 +89,10 @@ export const UI_TIMEOUTS = {
   dbSettle: 300,
   /** Debounce before persisting an edited ability spec to /api/ability-spec. */
   specSaveDebounce: 600,
+  /** Debounce before persisting a free-text / numeric field edit (audio scene
+   *  description, per-zone soundscape text, audio settings) — one write per
+   *  typing pause instead of one per keystroke. */
+  textEditDebounce: 400,
   /** Heartbeat interval for long-running tasks. */
   heartbeatInterval: 2 * 60 * 1000,
   /** Interval to check for stuck/stale tasks. */

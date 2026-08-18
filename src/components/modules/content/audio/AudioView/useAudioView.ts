@@ -29,6 +29,7 @@ export function useAudioView() {
     setActiveDocId,
     createDoc,
     updateDoc,
+    commitDoc,
     deleteDoc,
     refetch,
   } = useAudioScene();
@@ -135,15 +136,27 @@ export function useAudioView() {
     setIsCreating(false);
   }, [newDocName, createDoc]);
 
-  const handleUpdateZones = useCallback((zones: AudioZone[]) => {
-    if (!activeDoc) return;
-    updateDoc({ id: activeDoc.id, zones });
-  }, [activeDoc, updateDoc]);
+  // ── Commit helpers ──
+  // These all use the THROWING `commitDoc`: their callers (the painter's gesture
+  // buffer, the debounced text fields) hold the user's edit locally and must learn
+  // that a write failed so they can keep it and offer a retry. `updateDoc` swallows
+  // failures and is reserved for fire-and-forget bookkeeping (e.g. lastGeneratedAt).
 
-  const handleUpdateEmitters = useCallback((emitters: SoundEmitter[]) => {
+  /** One write for a whole painter gesture — zones and emitters together. */
+  const commitScene = useCallback(async (next: { zones: AudioZone[]; emitters: SoundEmitter[] }) => {
     if (!activeDoc) return;
-    updateDoc({ id: activeDoc.id, emitters });
-  }, [activeDoc, updateDoc]);
+    await commitDoc({ id: activeDoc.id, zones: next.zones, emitters: next.emitters });
+  }, [activeDoc, commitDoc]);
+
+  const commitZones = useCallback(async (zones: AudioZone[]) => {
+    if (!activeDoc) return;
+    await commitDoc({ id: activeDoc.id, zones });
+  }, [activeDoc, commitDoc]);
+
+  const commitEmitters = useCallback(async (emitters: SoundEmitter[]) => {
+    if (!activeDoc) return;
+    await commitDoc({ id: activeDoc.id, emitters });
+  }, [activeDoc, commitDoc]);
 
   const handleZoneUpdate = useCallback((updatedZone: AudioZone) => {
     if (!activeDoc) return;
@@ -174,15 +187,18 @@ export function useAudioView() {
     audioCli.sendPrompt(prompt);
   }, [ctx, audioCli]);
 
-  const handleDescriptionChange = useCallback((description: string) => {
+  const commitDescription = useCallback(async (description: string) => {
     if (!activeDoc) return;
-    updateDoc({ id: activeDoc.id, description });
-  }, [activeDoc, updateDoc]);
+    await commitDoc({ id: activeDoc.id, description });
+  }, [activeDoc, commitDoc]);
 
-  const handleSettingsChange = useCallback((key: 'soundPoolSize' | 'maxConcurrentSounds' | 'globalReverbPreset', value: unknown) => {
+  const commitSetting = useCallback(async (
+    key: 'soundPoolSize' | 'maxConcurrentSounds' | 'globalReverbPreset',
+    value: unknown,
+  ) => {
     if (!activeDoc) return;
-    updateDoc({ id: activeDoc.id, [key]: value });
-  }, [activeDoc, updateDoc]);
+    await commitDoc({ id: activeDoc.id, [key]: value });
+  }, [activeDoc, commitDoc]);
 
   const selectedZone = activeDoc?.zones.find((z) => z.id === selectedZoneId) ?? null;
   const selectedEmitter = activeDoc?.emitters.find((e) => e.id === selectedEmitterId) ?? null;
@@ -223,15 +239,16 @@ export function useAudioView() {
     rvChecklist,
     AUD_MODULE_ID,
     handleCreateDoc,
-    handleUpdateZones,
-    handleUpdateEmitters,
+    commitScene,
+    commitZones,
+    commitEmitters,
     handleZoneUpdate,
     handleEmitterUpdate,
     handleGenerateAll,
     handleGenerateZoneCode,
     handleGenerateSoundscape,
-    handleDescriptionChange,
-    handleSettingsChange,
+    commitDescription,
+    commitSetting,
     selectedZone,
     selectedEmitter,
   };

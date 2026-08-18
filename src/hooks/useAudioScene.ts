@@ -7,6 +7,7 @@ import type {
   CreateAudioScenePayload,
   UpdateAudioScenePayload,
 } from '@/types/audio-scene';
+import { apiFetch } from '@/lib/api-utils';
 import { useCRUD } from './useCRUD';
 
 interface AudioSceneData {
@@ -24,6 +25,15 @@ interface UseAudioSceneResult {
   setActiveDocId: (id: number | null) => void;
   createDoc: (payload: CreateAudioScenePayload) => Promise<AudioSceneDocument | null>;
   updateDoc: (payload: UpdateAudioScenePayload) => Promise<AudioSceneDocument | null>;
+  /**
+   * Throwing variant of `updateDoc` used by the editing surfaces that hold a local
+   * optimistic buffer (the scene painter's gesture commit, the debounced text
+   * fields). `updateDoc` swallows the failure and returns `null`, which is
+   * indistinguishable from "no active doc" — a buffer owner needs to know the write
+   * failed so it can KEEP the user's edit and surface a retry. Resolves with the
+   * persisted document, rejects with the server's own reason.
+   */
+  commitDoc: (payload: UpdateAudioScenePayload) => Promise<AudioSceneDocument>;
   deleteDoc: (id: number) => Promise<boolean>;
   refetch: () => Promise<void>;
 }
@@ -73,6 +83,19 @@ export function useAudioScene(): UseAudioSceneResult {
     return result?.doc ?? null;
   }, [mutate]);
 
+  const commitDoc = useCallback(async (payload: UpdateAudioScenePayload) => {
+    // Deliberately bypasses useCRUD.mutate: `mutate` catches and returns null, and
+    // the reason only lands in state a tick later. apiFetch throws the server's own
+    // message, which is what the caller's error banner shows.
+    const result = await apiFetch<{ doc: AudioSceneDocument }>('/api/audio-scene', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    await refetch();
+    return result.doc;
+  }, [refetch]);
+
   const deleteDoc = useCallback(async (id: number) => {
     const result = await mutate<unknown>(`/api/audio-scene?id=${id}`, { method: 'DELETE' });
     if (result !== null && activeDocId === id) setActiveDocId(null);
@@ -89,6 +112,7 @@ export function useAudioScene(): UseAudioSceneResult {
     setActiveDocId,
     createDoc,
     updateDoc,
+    commitDoc,
     deleteDoc,
     refetch,
   };
