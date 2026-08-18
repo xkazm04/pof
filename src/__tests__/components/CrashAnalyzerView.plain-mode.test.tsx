@@ -72,11 +72,18 @@ describe('CrashAnalyzerView — Plain English mode', () => {
     seed();
     render(<CrashAnalyzerView />);
 
-    // Humanized "what happened / what to do" block leads.
+    // With NO diagnosis the lead is the explicit "no diagnosis" notice — never the
+    // "What happened / What to do" headings a real diagnosis owns. (This case used
+    // to render the crash-category template under those exact headings.)
     const summary = screen.getByTestId('plain-crash-summary');
     expect(summary).toBeTruthy();
-    expect(screen.getByText('What happened')).toBeTruthy();
-    expect(screen.getByText('What to do')).toBeTruthy();
+    expect(screen.getByTestId('no-diagnosis-notice')).toBeTruthy();
+    expect(screen.queryByText('What happened')).toBeNull();
+    expect(screen.queryByText('What to do')).toBeNull();
+
+    // The category guidance is kept, under headings that say what it is.
+    expect(screen.getByText('Typical cause')).toBeTruthy();
+    expect(screen.getByText('Where to start')).toBeTruthy();
     // The plain crashType translation is shown (from the glossary).
     expect(summary.textContent).toMatch(/empty reference/i);
 
@@ -101,6 +108,13 @@ describe('CrashAnalyzerView — Plain English mode', () => {
     const summary = screen.getByTestId('plain-crash-summary');
     expect(summary.textContent).toContain('Null');
     expect(summary.textContent).toContain('Add a null check');
+    // A real diagnosis owns the "What happened / What to do" headings, is stamped
+    // as a diagnosis, and shows the confidence that actually exists.
+    expect(screen.getByText('What happened')).toBeTruthy();
+    expect(screen.getByText('What to do')).toBeTruthy();
+    expect(summary.textContent).toContain('DIAGNOSIS');
+    expect(summary.textContent).toMatch(/confidence 95%/);
+    expect(screen.queryByTestId('no-diagnosis-notice')).toBeNull();
     // Known jargon inside the summary gets a hover-glossary trigger.
     expect(screen.getAllByRole('button').some((b) => b.textContent === 'AbilitySystemComponent')).toBe(true);
   });

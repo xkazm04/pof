@@ -1,6 +1,7 @@
 'use client';
 
 import { Badge } from '@/components/ui/Badge';
+import { MicroLabel } from '@/components/ui/MicroLabel';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { formatTimeAgo } from '@/lib/format-time';
 import { ACCENT_EMERALD, SEVERITY_TOKENS } from '@/lib/chart-colors';
@@ -58,14 +59,21 @@ export function CrashListItem({
               {report.culpritFrame.sourceFile && ` — ${report.culpritFrame.sourceFile}:${report.culpritFrame.lineNumber}`}
             </p>
           )}
-          {diagnosis && (
+          {/* Diagnosed rows lead with the finding; undiagnosed rows SAY they are
+              undiagnosed rather than just omitting the line — in a triage list the
+              two are compared side by side, so silence reads as "nothing to say
+              about this one" instead of "never analyzed". */}
+          {diagnosis ? (
             <p className="text-2xs text-emerald-400 mt-0.5 truncate">
               AI: {diagnosis.summary}
             </p>
+          ) : (
+            <MicroLabel tone="muted" className="block mt-0.5">No diagnosis</MicroLabel>
           )}
         </div>
         <div className="flex flex-col items-end gap-1 shrink-0">
           <span className="text-2xs text-text-muted">{timeAgo}</span>
+          {/* A confidence ring is shown only where a confidence exists. */}
           {diagnosis && (
             <ProgressRing value={Math.round(diagnosis.confidence * 100)} size={24} strokeWidth={2.5} color={ACCENT_EMERALD} />
           )}

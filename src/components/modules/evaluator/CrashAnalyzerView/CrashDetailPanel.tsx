@@ -14,6 +14,7 @@ import { SeverityBadge } from './SeverityBadge';
 import { PlainCrashSummary } from './PlainCrashSummary';
 import { CallstackCard } from './CallstackCard';
 import { AiDiagnosisCard } from './AiDiagnosisCard';
+import { NoDiagnosisNotice } from './NoDiagnosisNotice';
 import { RawLogBlock, RawLogDisclosure } from './RawLog';
 
 export function CrashDetailPanel({
@@ -101,9 +102,12 @@ export function CrashDetailPanel({
         </>
       ) : (
         <>
-          {/* Technical mode — dense developer view */}
+          {/* Technical mode — dense developer view. The AI-analysis slot is never
+              left silently empty: with no diagnosis it carries the explicit notice
+              (+ clearly-labelled category guidance), so an expert reader sees the
+              same honesty a Plain-mode reader gets. */}
           <CallstackCard report={report} />
-          {diagnosis && <AiDiagnosisCard diagnosis={diagnosis} />}
+          {diagnosis ? <AiDiagnosisCard diagnosis={diagnosis} /> : <NoDiagnosisNotice report={report} />}
           <RawLogDisclosure rawLog={report.rawLog} />
         </>
       )}

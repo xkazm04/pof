@@ -368,7 +368,20 @@ export function analyzeAllCrashes(): CrashAnalyzerResult {
   return cachedResult;
 }
 
-/** Analyze a single crash report (for importing new crashes) */
+/**
+ * Parse-and-attribute a single crash report (used by the import path).
+ *
+ * **`diagnosis` is null for every imported crash, by construction.** The lookup
+ * below is an EXACT id match against the hand-authored `SAMPLE_DIAGNOSES`, whose
+ * `crashId`s are the fixed `crash-001`..`crash-008`; {@link parseCrashLog} stamps
+ * an imported crash `crash-<base36 timestamp>`, which can never equal one of
+ * them. There is no signature or pattern matching here — the callstack is not
+ * consulted at all.
+ *
+ * So a caller must treat a null diagnosis as the normal case for real user input
+ * and SAY there is no diagnosis, rather than substituting generic crash-category
+ * text under a diagnosis heading. (Making the matching real is separate work.)
+ */
 export function analyzeSingleCrash(report: CrashReport): {
   report: CrashReport;
   diagnosis: CrashDiagnosis | null;
@@ -376,7 +389,7 @@ export function analyzeSingleCrash(report: CrashReport): {
   const processed = findCulpritFrame(report);
   processed.analyzed = true;
 
-  // Try to find a matching diagnosis from known patterns
+  // Exact id equality against the fixed sample diagnoses — NOT pattern matching.
   const matchingDiagnosis = SAMPLE_DIAGNOSES.find((d) => d.crashId === report.id) ?? null;
 
   return { report: processed, diagnosis: matchingDiagnosis };
