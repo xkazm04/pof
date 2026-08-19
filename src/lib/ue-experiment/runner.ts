@@ -12,7 +12,7 @@
 import { existsSync, writeFileSync, readFileSync, unlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { buildLaunchArgs, buildPythonExecFile, resolveEditorBinary, captureScenarioFrame, type EnvLike, type CaptureScenarioInput } from '@/lib/ue-launch';
+import { buildLaunchArgs, buildPythonExecFile, resolveEditorBinaryDetailed, editorNotFoundMessage, captureScenarioFrame, type EnvLike, type CaptureScenarioInput } from '@/lib/ue-launch';
 import { parseScenarioVerdict } from '@/lib/test-gate-runner/spawnExecutor';
 import type { GateAssertion } from '@/lib/test-gate-runner/types';
 import { createExperimentRun } from './editor-process';
@@ -258,8 +258,15 @@ export async function runExperiment(spec: ExperimentSpec, deps: RunnerDeps = {})
   const uproject = spec.uproject ?? env.POF_UE_UPROJECT;
   if (!uproject) return err('POF_UE_UPROJECT not set (path to the PoF .uproject)');
 
-  const binary = resolveEditorBinary({ windowed: !!spec.capture || !!spec.scenario, ...(spec.engine ? { engine: spec.engine } : {}) }, env);
-  if (!fileExists(binary)) return err(`UE editor not found at ${binary} (install UE 5.8 or set POF_UE_CMD/POF_UE_EDITOR)`, binary);
+  // Resolve WITH provenance: a missing binary must say what it looked for and every
+  // variable it consulted, so a moved engine install is a fixable error rather than a
+  // path the user never configured plus advice to set two variables they do not use.
+  const resolved = resolveEditorBinaryDetailed(
+    { windowed: !!spec.capture || !!spec.scenario, ...(spec.engine ? { engine: spec.engine } : {}) },
+    env,
+  );
+  const binary = resolved.binary;
+  if (!fileExists(binary)) return err(editorNotFoundMessage(resolved), binary);
 
   // ── Preconditions: refuse, never kill (see editor-precondition.ts) ──────────
   if (!spec.allowRunningEditor) {

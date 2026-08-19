@@ -7,7 +7,17 @@
  * harness / test-gate-runner for fully autonomous UE operation. Pure cores
  * (engines/args/parse) are unit-tested; `launchEditor` is the spawn seam.
  */
-export { resolveEditorBinary, type ResolveEditorOptions, type EnvLike } from './engines';
+export {
+  resolveEditorBinary,
+  resolveEditorBinaryDetailed,
+  editorNotFoundMessage,
+  windowedSiblingOf,
+  type ResolveEditorOptions,
+  type EditorBinaryResolution,
+  type EditorBinarySource,
+  type ConsultedInput,
+  type EnvLike,
+} from './engines';
 export { buildLaunchArgs, type LaunchArgsOptions } from './args';
 export { extractLogMarker } from './parse';
 export { buildPythonExecCmd, buildPythonExecFile } from './python';
