@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import '@/lib/catalog/pipelines/registry.generated'; // side-effect: register all pipelines
 import {
   ITEMS_SPEC_DUALITY, ITEMS_ON_SCREEN_STEPS, itemsRegistrySteps, itemsSharedSteps, itemsAllStepLabels,
+  itemsRegistryOnlySteps, catalogManifest, hasStepGrader,
 } from '@/components/layout-lab/catalogManifest';
 import { ITEM_STEP_SPECS, ITEM_STEP_NAMES } from '@/components/layout-lab/steps/itemsSteps';
 import { getStepFact } from '@/lib/status/statusModel';
@@ -23,6 +24,13 @@ import type { CheckerContext } from '@/lib/catalog/acceptance/types';
  * The 11-vs-13 duality is DECLARED in `catalogManifest.ts` ({@link ITEMS_SPEC_DUALITY});
  * this file asserts the declaration matches both sources and holds the bespoke specs to
  * the fleet's rules.
+ *
+ * 2026-08-19 — DECLARED was not the same as VISIBLE. The lab rendered the bespoke list only,
+ * so the 5 registry-only labels had no screen and no on-screen grader while carrying 31 of the
+ * catalog's 90 persisted `pipeline_artifacts` rows (measured read-only on the live DB). The lab
+ * now renders the ordered UNION, tagged by source. The labels themselves are untouched — a
+ * rename would orphan every one of those rows (Rule 4b) — so this file keeps asserting the two
+ * specs against their own sources, and additionally that neither one hides the other.
  */
 
 const E: LabEntity = { id: 'items-lint-entity', name: 'Lint Longsword', lifecycle: 'planned', data: {} };
@@ -56,6 +64,25 @@ describe('Items spec duality — declared, not implied', () => {
     expect(itemsAllStepLabels()).toEqual(
       expect.arrayContaining([...itemsRegistrySteps(), ...ITEMS_ON_SCREEN_STEPS]),
     );
+    // The declaration itself must say what happens to the registry-only half, because
+    // 'declared' silently coexisted with 'invisible' for three weeks.
+    expect(ITEMS_SPEC_DUALITY.reason).toMatch(/union/i);
+  });
+
+  it('renders BOTH specs — neither half of the duality can hide produced rows', () => {
+    const m = catalogManifest('items');
+    const registryOnly = itemsRegistryOnlySteps();
+    // The duality is real: there IS a registry-only half, and it is not empty.
+    expect(registryOnly.length).toBeGreaterThan(0);
+    expect(registryOnly.every((s) => !ITEMS_ON_SCREEN_STEPS.includes(s))).toBe(true);
+    // …and every label a persisted artifact row can be keyed on is both rendered and graded.
+    for (const label of itemsAllStepLabels()) {
+      expect(m.steps, `items step "${label}" is declared but never rendered`).toContain(label);
+      expect(hasStepGrader('items', label), `items step "${label}" is rendered but ungraded`).toBe(true);
+    }
+    // …tagged, not merged: the reader can still tell the two specs apart.
+    expect(m.mixedStepSources).toBe(true);
+    expect(m.stepEntries.filter((e) => e.source === 'registry').map((e) => e.label)).toEqual(registryOnly);
   });
 
   it('gives EVERY items step in either spec an audited StepFact (no PROVENANCE: UNAUDITED)', () => {
@@ -110,11 +137,25 @@ describe('Items bespoke steps — held to the fleet linter rules', () => {
     expect(bare.tier).toBe('L3');
     expect(bare.reason).toBeTruthy();
 
-    // Every upstream step produced → the gate derives green from real sibling acceptance.
+    // Every upstream step produced → the gate derives from real sibling acceptance. The three
+    // generative upstreams (Icon 2D Art · 3D Generation · Material / Texture) own no generated
+    // asset from a produce STUB, so they are `deferred`, and a gate blocked only by deferred
+    // upstreams is deferred too — nothing failed, and no local edit can make it pass.
     const siblings: Record<string, Record<string, unknown>> = {};
     for (const s of STEPS) siblings[s.label] = s.data;
     const ctx: CheckerContext = { catalog: 'items', siblings, has: () => true };
-    expect(gate.accept(data, ctx).status).toBe('pass');
+    const derived = gate.accept(data, ctx);
+    expect(derived.status).toBe('deferred');
+    expect(derived.tier).toBe('L3');
+    expect(derived.reason).toBeTruthy();
+
+    // With those three upstreams carrying a REAL generated asset the gate goes green — the
+    // derivation is not permanently pinned to deferred.
+    const withArt = { ...siblings };
+    for (const label of ['Icon 2D Art', '3D Generation', 'Material / Texture']) {
+      withArt[label] = withRealAsset(withArt[label]);
+    }
+    expect(gate.accept(data, { ...ctx, siblings: withArt }).status).toBe('pass');
 
     // An upstream failure still FAILS the gate — the derivation is not weakened.
     const blocked: Record<string, Record<string, unknown>> = { ...siblings, Economy: { power: 500, target: 100, cost: 1 } };
