@@ -1,3 +1,5 @@
+/* eslint-disable no-restricted-syntax -- the hex literals below are PBR base
+   COLOURS under test (material data), not UI theme colours. */
 /**
  * "Material created in Blender" used to follow a send that carried three of the
  * lab's parameters and dropped the rest. These assert the two halves of the fix:

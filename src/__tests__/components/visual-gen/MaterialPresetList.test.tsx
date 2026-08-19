@@ -1,3 +1,5 @@
+/* eslint-disable no-restricted-syntax -- the hex literals below are PBR base
+   COLOURS under test (material data), not UI theme colours. */
 /**
  * The saved-preset list must never present a swallowed error as "no presets".
  * A failed load/save/delete renders the server's reason with a Retry that

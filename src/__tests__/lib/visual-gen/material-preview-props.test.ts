@@ -1,3 +1,5 @@
+/* eslint-disable no-restricted-syntax -- the hex literals below are PBR base
+   COLOURS under test (material data), not UI theme colours. */
 /**
  * `aoStrength` was a full phantom: in the params, in every preset, with a
  * slider — and read by NOTHING. `aoTexture` was uploadable, stored and reset,

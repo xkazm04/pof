@@ -1,3 +1,5 @@
+/* eslint-disable no-restricted-syntax -- the hex literals below are PBR base
+   COLOURS under test (material data), not UI theme colours. */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { useMaterialStore } from '@/components/modules/visual-gen/material-lab/useMaterialStore';
 

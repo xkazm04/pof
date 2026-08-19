@@ -1,3 +1,5 @@
+/* eslint-disable no-restricted-syntax -- the hex literals below are PBR base
+   COLOURS under test (material data), not UI theme colours. */
 /**
  * material-db + /api/visual-gen/materials — the Material Lab preset persistence
  * seam. Real SQLite (throwaway DB via POF_DB_PATH, set before the import graph
