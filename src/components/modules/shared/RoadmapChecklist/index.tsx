@@ -33,7 +33,7 @@ export function RoadmapChecklist({
     toggleSelected, selectAll, selectNone, exitSelectMode,
     saveMetadata, handleSetPriority, toggleNotes,
     nbaTop, nbaRecs, nbaLoading, nbaExpanded, setNbaExpanded,
-    nbaScope, nbaScopedRows,
+    nbaScope, nbaScopedRows, patternLibrary,
     completedCount, progressPercent, criticalCount, importantCount,
   } = useRoadmapChecklist(items, subModuleId);
 
@@ -54,6 +54,7 @@ export function RoadmapChecklist({
           onRun={(rec) => onRunPrompt(rec.item.id, rec.item.prompt)}
           accentColor={accentColor}
           isRunning={isRunning}
+          patternLibrary={patternLibrary}
         />
       )}
 

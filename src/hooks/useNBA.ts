@@ -7,6 +7,7 @@ import { useFeatureStatuses } from '@/hooks/useFeatureStatuses';
 import { invalidateFeatureData } from '@/hooks/useModuleAggregates';
 import { countModuleRows } from '@/components/modules/shared/FeatureMatrix/matrixScope';
 import type { ProjectScopeReport } from '@/lib/feature-matrix-db';
+import type { ImplementationPattern } from '@/types/pattern-library';
 import type { SubModuleId } from '@/types/modules';
 
 export interface UseNBAResult {
@@ -34,7 +35,15 @@ export interface UseNBAResult {
  * instead of each running the unfiltered table scan independently. NBA then
  * re-computes when progress changes or when the shared status map updates.
  */
-export function useNBA(moduleId: SubModuleId): UseNBAResult {
+export function useNBA(
+  moduleId: SubModuleId,
+  /**
+   * Module-scoped implementation patterns. Optional so existing callers are
+   * unchanged; when omitted `computeNBA` falls back to the pattern-library store
+   * slice, which only the Pattern Library evaluator tab ever fills.
+   */
+  modulePatterns?: readonly ImplementationPattern[],
+): UseNBAResult {
   // Shared, deduped cross-module status map (same data the Feature Matrix reads).
   const { statusMap, isLoading: statusesLoading, loaded, failed, scope } = useFeatureStatuses();
 
@@ -48,8 +57,10 @@ export function useNBA(moduleId: SubModuleId): UseNBAResult {
   const recommendations = useMemo<NBARecommendation[]>(() => {
     if (!loaded) return [];
     void progress;
-    return failed ? computeNBA(moduleId) : computeNBA(moduleId, statusMap);
-  }, [moduleId, statusMap, loaded, failed, progress]);
+    return failed
+      ? computeNBA(moduleId, undefined, modulePatterns)
+      : computeNBA(moduleId, statusMap, modulePatterns);
+  }, [moduleId, statusMap, loaded, failed, progress, modulePatterns]);
 
   // Force a refetch of the shared status map; the memo recomputes when it
   // updates. NBA itself reads only the statuses, but a user-driven refresh means

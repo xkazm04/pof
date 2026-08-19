@@ -118,6 +118,7 @@ export { firstWordMatch };
 export function computeNBA(
   moduleId: SubModuleId,
   featureStatusMap?: Map<string, string>,
+  modulePatterns?: readonly ImplementationPattern[],
 ): NBARecommendation[] {
   const mod = SUB_MODULE_MAP[moduleId as keyof typeof SUB_MODULE_MAP];
   if (!mod?.checklist?.length) return [];
@@ -126,7 +127,13 @@ export function computeNBA(
   const { checklistProgress, moduleHistory } = useModuleStore.getState();
   const progress = checklistProgress[moduleId] ?? {};
   const history = moduleHistory[moduleId] ?? [];
-  const patterns = usePatternLibraryStore.getState().patterns;
+  // Patterns feed the pitfalls warning and the success/approach metrics row.
+  // The store slice is filled ONLY by the Pattern Library evaluator tab (no
+  // persist middleware), so relying on it made both structurally unreachable
+  // from a module view — callers now pass a module-scoped read explicitly
+  // (see RoadmapChecklist/useModulePatterns). The store stays the fallback so
+  // an existing caller that has it loaded keeps working.
+  const patterns = modulePatterns ?? usePatternLibraryStore.getState().patterns;
   const lastScan = useEvaluatorStore.getState().lastScan;
 
   // Dependency graph

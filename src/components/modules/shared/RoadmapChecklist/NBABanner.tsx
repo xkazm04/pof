@@ -1,15 +1,16 @@
 'use client';
 
 import {
-  Play, Zap, AlertTriangle, TrendingUp, ChevronUp, ChevronDown,
+  Play, Zap, AlertTriangle, TrendingUp, ChevronUp, ChevronDown, HelpCircle,
 } from 'lucide-react';
 import { AccentButton } from '@/components/ui/AccentButton';
 import { NBAScoreBar } from '@/components/modules/shared/NBAScoreBar';
 import type { NBARecommendation } from '@/lib/nba-engine';
+import type { ModulePatternsResult } from './useModulePatterns';
 import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR } from '@/lib/chart-colors';
 
 export function NBABanner({
-  top, runners, expanded, onToggleExpand, onRun, accentColor, isRunning,
+  top, runners, expanded, onToggleExpand, onRun, accentColor, isRunning, patternLibrary,
 }: {
   top: NBARecommendation;
   runners: NBARecommendation[];
@@ -18,6 +19,12 @@ export function NBABanner({
   onRun: (rec: NBARecommendation) => void;
   accentColor: string;
   isRunning: boolean;
+  /**
+   * State of the module-scoped pattern read that feeds the pitfalls warning.
+   * Required for the card to distinguish "nothing to warn about" from "nothing
+   * was checked" — an absent warning must never read as "no known pitfalls".
+   */
+  patternLibrary?: ModulePatternsResult;
 }) {
   const successPct = Math.round(top.successProbability * 100);
 
@@ -69,10 +76,19 @@ export function NBABanner({
 
             {/* Pitfalls */}
             {top.pitfalls.length > 0 && (
-              <div className="flex items-start gap-1.5 mt-2 px-2 py-1.5 bg-status-red-subtle border border-status-red-medium rounded text-2xs text-red-400">
+              <div
+                data-testid="nba-pitfalls"
+                className="flex items-start gap-1.5 mt-2 px-2 py-1.5 bg-status-red-subtle border border-status-red-medium rounded text-2xs text-red-400"
+              >
                 <AlertTriangle className="w-3 h-3 flex-shrink-0 mt-0.5" />
                 <span>{top.pitfalls[0]}{top.pitfalls.length > 1 ? ` (+${top.pitfalls.length - 1} more)` : ''}</span>
               </div>
+            )}
+
+            {/* Why there is no warning. Silence here used to be indistinguishable
+                from "checked, nothing found" — so the card states which it is. */}
+            {top.pitfalls.length === 0 && (
+              <PitfallCheckNote library={patternLibrary} />
             )}
           </div>
 
@@ -113,6 +129,60 @@ export function NBABanner({
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * Names what the pitfall check actually did when it produced no warning.
+ *
+ * Rendered ONLY when there is no warning to show. Three honest outcomes: the
+ * read is still running, it failed (so nothing was checked), or it succeeded
+ * against an empty library (so there is nothing recorded to warn from — which is
+ * not the same as "this approach is known to be safe").
+ */
+function PitfallCheckNote({ library }: { library?: ModulePatternsResult }) {
+  if (!library) return null;
+
+  if (library.state === 'loading') {
+    return (
+      <p className="mt-2 text-2xs text-text-muted" role="status" aria-live="polite">
+        Checking recorded patterns for known pitfalls…
+      </p>
+    );
+  }
+
+  if (library.state === 'failed') {
+    return (
+      <div
+        data-testid="nba-pitfalls-unchecked"
+        className="flex items-start gap-1.5 mt-2 px-2 py-1.5 rounded text-2xs text-text-muted border border-border"
+        role="status"
+      >
+        <HelpCircle className="w-3 h-3 flex-shrink-0 mt-0.5" />
+        <span>
+          Pitfalls not checked — the pattern library could not be read
+          {library.error ? `: ${library.error}` : '.'}{' '}
+          <button onClick={library.retry} className="underline hover:text-text focus-ring rounded">
+            Retry
+          </button>
+        </span>
+      </div>
+    );
+  }
+
+  if (library.patterns.length === 0) {
+    return (
+      <p data-testid="nba-pitfalls-empty" className="mt-2 text-2xs text-text-muted">
+        No implementation patterns recorded for this module yet — nothing to check
+        against, not a clean bill of health.
+      </p>
+    );
+  }
+
+  return (
+    <p data-testid="nba-pitfalls-none" className="mt-2 text-2xs text-text-muted">
+      Checked {library.patterns.length} recorded pattern{library.patterns.length === 1 ? '' : 's'} — no known pitfalls for this item.
+    </p>
   );
 }
 

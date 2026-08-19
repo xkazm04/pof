@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useReducer } from 'react';
 import { useModuleStore } from '@/stores/moduleStore';
 import { usePatternLibraryStore } from '@/stores/patternLibraryStore';
 import { useNBA } from '@/hooks/useNBA';
+import { useModulePatterns } from './useModulePatterns';
 import type { ChecklistItem, SubModuleId } from '@/types/modules';
 import { EMPTY_PROGRESS, EMPTY_SUGGESTIONS, EMPTY_VERIFICATION } from './constants';
 import { getMetadataData, metadataReducer, selectReducer } from './reducers';
@@ -141,11 +142,15 @@ export function useRoadmapChecklist(items: ChecklistItem[], subModuleId: string)
     });
   }, []);
 
-  // NBA recommendations
+  // NBA recommendations. The pattern library is fetched HERE, per module: the
+  // NBA card's pitfalls warning and success metrics read it, and the shared
+  // store slice is only ever filled by the Pattern Library evaluator tab — so
+  // without this read both were unreachable from a module view.
+  const patternLibrary = useModulePatterns(subModuleId as SubModuleId);
   const {
     top: nbaTop, recommendations: nbaRecs, isLoading: nbaLoading,
     scope: nbaScope, scopedRows: nbaScopedRows,
-  } = useNBA(subModuleId as SubModuleId);
+  } = useNBA(subModuleId as SubModuleId, patternLibrary.patterns);
   const [nbaExpanded, setNbaExpanded] = useState(false);
 
   const completedCount = items.filter((item) => progress[item.id]).length;
@@ -169,7 +174,7 @@ export function useRoadmapChecklist(items: ChecklistItem[], subModuleId: string)
     toggleSelected, selectAll, selectNone, exitSelectMode,
     saveMetadata, handleSetPriority, toggleNotes,
     nbaTop, nbaRecs, nbaLoading, nbaExpanded, setNbaExpanded,
-    nbaScope, nbaScopedRows,
+    nbaScope, nbaScopedRows, patternLibrary,
     completedCount, progressPercent, criticalCount, importantCount,
   };
 }
