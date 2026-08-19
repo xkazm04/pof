@@ -1,6 +1,6 @@
 import { getDb } from './db';
-import { listSessions, getFindings, isTriageExcluded } from './game-director-db';
-import type { PlaytestFinding, PlaytestSession } from '@/types/game-director';
+import { getFindings, isTriageExcluded } from './game-director-db';
+import type { PlaytestConfig, PlaytestFinding, PlaytestSession } from '@/types/game-director';
 import type {
   FindingFingerprint,
   FingerprintOccurrence,
@@ -139,6 +139,35 @@ function countFingerprintStatuses(rows: { status: string }[]): RegressionStatusC
   };
 }
 
+// ─── Session projections ─────────────────────────────────────────────────────
+
+/**
+ * The only two session fields this module reads: chronological identity and the
+ * name shown on a regression alert. Deliberately NOT a `PlaytestSession` — the
+ * tracker has no business hydrating configs and summaries it never looks at.
+ */
+interface SessionRef {
+  id: string;
+  name: string;
+}
+
+/**
+ * Test categories a stored session config declares. Tolerates a missing,
+ * malformed or non-array config by returning nothing — a session whose scope
+ * cannot be read tests nothing as far as the sweep is concerned, which can only
+ * ever under-sweep.
+ */
+function parseTestCategories(rawConfig: string): string[] {
+  try {
+    const parsed = JSON.parse(rawConfig) as Partial<PlaytestConfig>;
+    return Array.isArray(parsed?.testCategories)
+      ? parsed.testCategories.filter((c): c is PlaytestConfig['testCategories'][number] => typeof c === 'string')
+      : [];
+  } catch {
+    return [];
+  }
+}
+
 // ─── Core tracking ───────────────────────────────────────────────────────────
 
 /** Process all findings from a session and update fingerprint tracking */
@@ -155,17 +184,15 @@ export function processSession(session: PlaytestSession): RegressionReport {
   // fingerprinting so noise doesn't inflate regression counts.
   const findings = getFindings(session.id).filter(f => !isTriageExcluded(f.triageStatus));
 
-  // Session ordering: derive the chronological index straight from SQL instead of
-  // loading every session and sorting in JS. We still need the full session list
-  // (for name/lookups in the regression branch), but the index map drives ordering.
-  const allSessions = listSessions();
-  const sortedIdRows = db.prepare(
-    'SELECT id FROM game_director_sessions ORDER BY datetime(created_at)'
-  ).all() as { id: string }[];
-  const sessionById = new Map(allSessions.map(s => [s.id, s]));
-  const sortedSessions = sortedIdRows
-    .map(r => sessionById.get(r.id))
-    .filter((s): s is PlaytestSession => s !== undefined);
+  // Session ordering + names in ONE chronological SELECT. This used to call
+  // listSessions() unbounded — hydrating and JSON-parsing every session's config
+  // and summary for the whole project's history — purely so the regression
+  // branch could look up one session's NAME. The ordered id+name projection is
+  // all this function ever read off it.
+  const sortedSessions = db.prepare(
+    'SELECT id, name FROM game_director_sessions ORDER BY datetime(created_at)'
+  ).all() as SessionRef[];
+  const nameById = new Map(sortedSessions.map(s => [s.id, s.name]));
 
   // Build session index ordered by creation date
   const sessionIndex = new Map<string, number>();
@@ -295,7 +322,7 @@ export function processSession(session: PlaytestSession): RegressionReport {
 
         // Find the session where it was last fixed
         const lastFixedSessionId = findLastFixedSession(db, fpId, session.id, sortedSessions);
-        const fixedSession = allSessions.find(s => s.id === lastFixedSessionId);
+        const fixedSessionName = lastFixedSessionId ? nameById.get(lastFixedSessionId) : undefined;
         const fixedOrder = lastFixedSessionId ? (sessionIndex.get(lastFixedSessionId) ?? 0) : 0;
         const buildGap = sessionOrder - fixedOrder;
 
@@ -312,7 +339,7 @@ export function processSession(session: PlaytestSession): RegressionReport {
         `).run(
           alertId, fpId,
           lastFixedSessionId ?? session.id, session.id,
-          fixedSession?.name ?? '', session.name,
+          fixedSessionName ?? '', session.name,
           finding.category, finding.severity, finding.title,
           buildGap,
         );
@@ -339,21 +366,79 @@ export function processSession(session: PlaytestSession): RegressionReport {
     }
   }
 
-  // Find fingerprints that were open/regressed but NOT in this session → mark fixed
+  // ── The "mark fixed" sweep, SCOPED to what this session actually tested ────
+  //
+  // This sweep used to be global: every open/regressed fingerprint anywhere in
+  // the DB whose hash was absent from THIS session was flipped to 'fixed'.
+  // Analyzing a combat-only session therefore declared every exploration,
+  // audio and save-load fingerprint fixed — and the next session that tested
+  // those categories fired a regression alert for each one, with a build gap
+  // measured against a fix that never happened. Every alert the tracker has
+  // ever raised is downstream of that.
+  //
+  // A session can only testify about ground it covered. Absence of evidence is
+  // evidence of a fix ONLY where the session looked.
   const newlyFixed: FindingFingerprint[] = [];
+  const sweepScope = new Set<string>(session.config?.testCategories ?? []);
   const openFingerprints = db.prepare(
     "SELECT * FROM regression_fingerprints WHERE status IN ('open', 'regressed')"
   ).all() as Record<string, unknown>[];
 
+  // Which test categories has each open fingerprint ever been observed under?
+  // Fingerprints carry a FindingCategory ('animation-issue', 'level-pacing'),
+  // while sessions declare TestCategories ('combat', 'exploration') — two
+  // different taxonomies with no stored mapping between them. What IS recorded
+  // is which sessions a fingerprint occurred in, and what those sessions tested.
+  // So a fingerprint is in scope when this session re-covered ground that has
+  // previously produced it. Bounded to open fingerprints: a resolved/fixed one
+  // is not swept.
+  const scopeByFingerprint = new Map<string, Set<string>>();
+  if (openFingerprints.length > 0 && sweepScope.size > 0) {
+    const configCache = new Map<string, string[]>();
+    const rows = db.prepare(
+      `SELECT DISTINCT o.fingerprint_id AS fp, s.config AS config
+       FROM regression_occurrences o
+       JOIN regression_fingerprints f ON f.id = o.fingerprint_id
+       JOIN game_director_sessions s ON s.id = o.session_id
+       WHERE f.status IN ('open', 'regressed')`
+    ).all() as Array<{ fp: string; config: string | null }>;
+    for (const r of rows) {
+      const raw = r.config ?? '{}';
+      let cats = configCache.get(raw);
+      if (!cats) {
+        cats = parseTestCategories(raw);
+        configCache.set(raw, cats);
+      }
+      let set = scopeByFingerprint.get(r.fp);
+      if (!set) { set = new Set(); scopeByFingerprint.set(r.fp, set); }
+      for (const c of cats) set.add(c);
+    }
+  }
+
   for (const row of openFingerprints) {
     const hash = row.hash as string;
-    if (!currentHashes.has(hash)) {
-      // Not found in this session — mark as fixed
-      db.prepare(
-        "UPDATE regression_fingerprints SET status = 'fixed' WHERE id = ?"
-      ).run(row.id as string);
-      newlyFixed.push(rowToFingerprint({ ...row, status: 'fixed' }));
-    }
+    if (currentHashes.has(hash)) continue;
+
+    // A session may vindicate a fingerprint only if its scope COVERS every
+    // category that has ever produced it — not merely overlaps one. Overlap is
+    // not enough: a session testing [combat, exploration] produces exploration
+    // fingerprints whose covered set includes combat, so an overlap rule would
+    // let the next combat-only session clear them and re-open the exact false
+    // regression this scoping exists to kill.
+    //
+    // Unknown scope (no readable categories behind the fingerprint) is treated
+    // as NOT covered. Under-sweeping leaves a fingerprint 'open' — an honest "we
+    // have not shown this is fixed"; over-sweeping invents a fix and then a
+    // regression against it. Only one of those two errors lies.
+    const covered = scopeByFingerprint.get(row.id as string);
+    const inScope = covered != null && covered.size > 0
+      && [...covered].every(c => sweepScope.has(c));
+    if (!inScope) continue;
+
+    db.prepare(
+      "UPDATE regression_fingerprints SET status = 'fixed' WHERE id = ?"
+    ).run(row.id as string);
+    newlyFixed.push(rowToFingerprint({ ...row, status: 'fixed' }));
   }
 
   // Persistent: open fingerprints that appeared in this session AND were already known
@@ -395,7 +480,7 @@ function findLastFixedSession(
   db: ReturnType<typeof getDb>,
   fingerprintId: string,
   currentSessionId: string,
-  sortedSessions: PlaytestSession[],
+  sortedSessions: SessionRef[],
 ): string | null {
   // Find the most recent session before this one that had the occurrence
   const occurrences = db.prepare(
