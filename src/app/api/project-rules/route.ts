@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
-import { listRules, upsertRule, deleteRule } from '@/lib/project-rules-db';
+import { listRules, upsertRule, deleteRule, restoreCanonSeed } from '@/lib/project-rules-db';
 import { ruleUpsertSchema } from '@/lib/catalog/canon/validation';
 import type { ProjectRule } from '@/lib/catalog/canon/types';
 
@@ -13,9 +13,19 @@ export async function GET() {
   }
 }
 
-/** POST /api/project-rules — upsert a rule */
+/**
+ * POST /api/project-rules — upsert a rule.
+ *
+ * POST /api/project-rules?action=restore-defaults re-writes the shipped canon.
+ * That is the ONLY path that puts `CANON_SEED` back: emptying the table no longer
+ * resurrects it, so restoring has to be something the caller asked for by name.
+ * The body is ignored for this action.
+ */
 export async function POST(req: NextRequest) {
   try {
+    if (req.nextUrl.searchParams.get('action') === 'restore-defaults') {
+      return apiSuccess(restoreCanonSeed());
+    }
     const body = await req.json();
     const parsed = ruleUpsertSchema.safeParse(body);
     if (!parsed.success) {
@@ -35,7 +45,12 @@ export async function POST(req: NextRequest) {
   }
 }
 
-/** DELETE /api/project-rules?id=<id> */
+/**
+ * DELETE /api/project-rules?id=<id>
+ *
+ * Deleting the last rule leaves the canon EMPTY and keeps it that way — it used to
+ * report success and then hand the full seed back on the next read.
+ */
 export async function DELETE(req: NextRequest) {
   try {
     const id = req.nextUrl.searchParams.get('id');

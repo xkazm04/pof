@@ -28,30 +28,58 @@ export function getDb(): Database.Database {
     fs.mkdirSync(DB_DIR, { recursive: true });
   }
 
-  db = new Database(DB_PATH);
-  db.pragma('journal_mode = WAL');
+  // Bootstrap into a LOCAL handle and publish the singleton only after EVERY
+  // statement has succeeded. The connection used to be assigned first, so a throw
+  // anywhere below cached a half-built connection: every later getDb() handed it
+  // back and the app returned 500s ("no such table: X") at unrelated query sites for the
+  // rest of the process. Nothing "retried next time" — the cache short-circuited
+  // the retry. A failed bootstrap now closes the handle and leaves the singleton
+  // null, so the next call re-attempts against the real state of the file.
+  const conn = new Database(DB_PATH);
+  try {
+    bootstrap(conn);
+  } catch (err) {
+    try {
+      conn.close();
+    } catch {
+      /* the handle is already unusable; the bootstrap error is the one that matters */
+    }
+    throw err;
+  }
+
+  db = conn;
+  return db;
+}
+
+/**
+ * Every statement the connection needs before it may be published as the shared
+ * singleton. Takes the handle explicitly: it must NOT be reachable through the
+ * module-level `db` until it has returned cleanly.
+ */
+function bootstrap(conn: Database.Database): void {
+  conn.pragma('journal_mode = WAL');
   // Enforce foreign keys for the whole shared connection (SQLite defaults them OFF, per
   // connection). Without this, declared `REFERENCES ... ON DELETE CASCADE` clauses are
   // decorative — deletes leak orphan child rows and inserts can reference nonexistent
   // parents — and whether they fire becomes non-deterministic based on which feature's
   // init happened to toggle the pragma first.
-  db.pragma('foreign_keys = ON');
+  conn.pragma('foreign_keys = ON');
 
   // Skip the one-off introspection/rebuild probes once a DB has been stamped at the
   // current schema version — they are idempotent guards whose only job is the initial
   // upgrade, so re-running the PRAGMA table_info / sqlite_master scans on every cold
   // start is pure waste.
-  const schemaVersion = db.pragma('user_version', { simple: true }) as number;
+  const schemaVersion = conn.pragma('user_version', { simple: true }) as number;
   const needsMigrations = schemaVersion < SCHEMA_VERSION;
 
-  db.exec(`
+  conn.exec(`
     CREATE TABLE IF NOT EXISTS settings (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
     )
   `);
 
-  db.exec(`
+  conn.exec(`
     CREATE TABLE IF NOT EXISTS feature_matrix (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       module_id TEXT NOT NULL,
@@ -87,47 +115,23 @@ export function getDb(): Database.Database {
 
   // Migrate: add columns if missing (table may already exist from earlier schema)
   if (needsMigrations) {
-  const cols = db.prepare("PRAGMA table_info(feature_matrix)").all() as { name: string }[];
+  const cols = conn.prepare("PRAGMA table_info(feature_matrix)").all() as { name: string }[];
   const colNames = new Set(cols.map((c) => c.name));
   if (!colNames.has('quality_score')) {
-    db.exec('ALTER TABLE feature_matrix ADD COLUMN quality_score INTEGER');
+    conn.exec('ALTER TABLE feature_matrix ADD COLUMN quality_score INTEGER');
   }
   if (!colNames.has('next_steps')) {
-    db.exec("ALTER TABLE feature_matrix ADD COLUMN next_steps TEXT NOT NULL DEFAULT ''");
+    conn.exec("ALTER TABLE feature_matrix ADD COLUMN next_steps TEXT NOT NULL DEFAULT ''");
   }
 
-  // Migrate: update CHECK constraint to allow 'improved' status
-  // SQLite cannot ALTER constraints, so we recreate the table if the old constraint is present
-  const sqlRow = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='feature_matrix'").get() as { sql: string } | undefined;
-  if (sqlRow?.sql && !sqlRow.sql.includes("'improved'")) {
-    db.exec(`
-      CREATE TABLE feature_matrix_new (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        module_id TEXT NOT NULL,
-        feature_name TEXT NOT NULL,
-        category TEXT NOT NULL DEFAULT 'general',
-        status TEXT NOT NULL DEFAULT 'unknown'
-          CHECK(status IN ('implemented', 'improved', 'partial', 'missing', 'unknown')),
-        description TEXT NOT NULL DEFAULT '',
-        file_paths TEXT NOT NULL DEFAULT '[]',
-        review_notes TEXT NOT NULL DEFAULT '',
-        quality_score INTEGER,
-        next_steps TEXT NOT NULL DEFAULT '',
-        last_reviewed_at TEXT,
-        created_at TEXT NOT NULL DEFAULT (datetime('now')),
-        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-        project_id TEXT NOT NULL DEFAULT '',
-        UNIQUE(module_id, feature_name)
-      );
-      INSERT INTO feature_matrix_new SELECT * FROM feature_matrix;
-      DROP TABLE feature_matrix;
-      ALTER TABLE feature_matrix_new RENAME TO feature_matrix;
-    `);
-  }
+  // Migrate: the pre-'improved' CHECK constraint. SQLite cannot ALTER a
+  // constraint, so the table is REBUILT — see the function for the explicit
+  // column copy, the count check and the transaction the old inline version had none of.
+  migrateFeatureMatrixImprovedStatus(conn);
   }
 
   // Review snapshots — captures module state at each review for trend tracking
-  db.exec(`
+  conn.exec(`
     CREATE TABLE IF NOT EXISTS review_snapshots (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       module_id TEXT NOT NULL,
@@ -150,13 +154,13 @@ export function getDb(): Database.Database {
   `);
 
   // Index for fast per-module history lookups
-  db.exec(`
+  conn.exec(`
     CREATE INDEX IF NOT EXISTS idx_review_snapshots_module
     ON review_snapshots(module_id, reviewed_at)
   `);
 
   // Deep evaluation findings — stores results from multi-pass deep eval scans
-  db.exec(`
+  conn.exec(`
     CREATE TABLE IF NOT EXISTS eval_findings (
       id TEXT PRIMARY KEY,
       scan_id TEXT NOT NULL,
@@ -175,18 +179,18 @@ export function getDb(): Database.Database {
     )
   `);
 
-  db.exec(`
+  conn.exec(`
     CREATE INDEX IF NOT EXISTS idx_eval_findings_scan
     ON eval_findings(scan_id, module_id)
   `);
 
-  db.exec(`
+  conn.exec(`
     CREATE INDEX IF NOT EXISTS idx_eval_findings_severity
     ON eval_findings(severity, module_id)
   `);
 
   // Build history — records every package/build operation for trending & comparison
-  db.exec(`
+  conn.exec(`
     CREATE TABLE IF NOT EXISTS build_history (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       platform TEXT NOT NULL,
@@ -205,13 +209,13 @@ export function getDb(): Database.Database {
     )
   `);
 
-  db.exec(`
+  conn.exec(`
     CREATE INDEX IF NOT EXISTS idx_build_history_platform
     ON build_history(platform, created_at)
   `);
 
   // Recent projects — tracks all opened projects for the switcher
-  db.exec(`
+  conn.exec(`
     CREATE TABLE IF NOT EXISTS recent_projects (
       id TEXT PRIMARY KEY,
       project_name TEXT NOT NULL,
@@ -223,61 +227,61 @@ export function getDb(): Database.Database {
     )
   `);
 
-  db.exec(`
+  conn.exec(`
     CREATE INDEX IF NOT EXISTS idx_recent_projects_opened
     ON recent_projects(last_opened_at DESC)
   `);
 
   // Migrate: add project_id column to scoped tables
   if (needsMigrations) {
-  const fmCols = db.prepare("PRAGMA table_info(feature_matrix)").all() as { name: string }[];
+  const fmCols = conn.prepare("PRAGMA table_info(feature_matrix)").all() as { name: string }[];
   const fmColNames = new Set(fmCols.map((c) => c.name));
   if (!fmColNames.has('project_id')) {
-    db.exec("ALTER TABLE feature_matrix ADD COLUMN project_id TEXT NOT NULL DEFAULT ''");
+    conn.exec("ALTER TABLE feature_matrix ADD COLUMN project_id TEXT NOT NULL DEFAULT ''");
   }
   // Provenance: which write path (review / verify / fix / seed) last set the row's
   // status. Rows written before this column existed default to 'unknown' — the
   // honest reading, since nothing recorded how they were set.
   if (!fmColNames.has('source')) {
-    db.exec("ALTER TABLE feature_matrix ADD COLUMN source TEXT NOT NULL DEFAULT 'unknown'");
+    conn.exec("ALTER TABLE feature_matrix ADD COLUMN source TEXT NOT NULL DEFAULT 'unknown'");
   }
 
-  const rsCols = db.prepare("PRAGMA table_info(review_snapshots)").all() as { name: string }[];
+  const rsCols = conn.prepare("PRAGMA table_info(review_snapshots)").all() as { name: string }[];
   const rsColNames = new Set(rsCols.map((c) => c.name));
   if (!rsColNames.has('project_id')) {
-    db.exec("ALTER TABLE review_snapshots ADD COLUMN project_id TEXT NOT NULL DEFAULT ''");
+    conn.exec("ALTER TABLE review_snapshots ADD COLUMN project_id TEXT NOT NULL DEFAULT ''");
   }
   if (!rsColNames.has('improved')) {
-    db.exec("ALTER TABLE review_snapshots ADD COLUMN improved INTEGER NOT NULL DEFAULT 0");
+    conn.exec("ALTER TABLE review_snapshots ADD COLUMN improved INTEGER NOT NULL DEFAULT 0");
   }
 
-  const bhCols = db.prepare("PRAGMA table_info(build_history)").all() as { name: string }[];
+  const bhCols = conn.prepare("PRAGMA table_info(build_history)").all() as { name: string }[];
   if (!new Set(bhCols.map((c) => c.name)).has('project_id')) {
-    db.exec("ALTER TABLE build_history ADD COLUMN project_id TEXT NOT NULL DEFAULT ''");
+    conn.exec("ALTER TABLE build_history ADD COLUMN project_id TEXT NOT NULL DEFAULT ''");
   }
 
   // Widen the feature_matrix UNIQUE key to include the project, and backfill the
   // unattributed rows. A table rebuild (SQLite cannot ALTER a constraint) that
   // preserves EVERY row — see the function for the count checks that abort it.
-  migrateFeatureMatrixProjectKey(db);
+  migrateFeatureMatrixProjectKey(conn);
   }
 
   // Every feature-matrix read is now scoped by project (see `feature-matrix-db.ts`),
   // so `project_id` leads both indexes. Created after the migration block because the
   // 'improved' rebuild above drops and renames the table, which would take an index
   // built before it with it.
-  db.exec(`
+  conn.exec(`
     CREATE INDEX IF NOT EXISTS idx_feature_matrix_project
     ON feature_matrix(project_id, module_id)
   `);
 
-  db.exec(`
+  conn.exec(`
     CREATE INDEX IF NOT EXISTS idx_review_snapshots_project
     ON review_snapshots(project_id, module_id, reviewed_at)
   `);
 
   // Checklist metadata — stores priority and notes per checklist item
-  db.exec(`
+  conn.exec(`
     CREATE TABLE IF NOT EXISTS checklist_metadata (
       module_id TEXT NOT NULL,
       item_id TEXT NOT NULL,
@@ -290,7 +294,7 @@ export function getDb(): Database.Database {
   `);
 
   // Milestone deadlines — user-set target dates for milestone deliverables
-  db.exec(`
+  conn.exec(`
     CREATE TABLE IF NOT EXISTS milestone_deadlines (
       milestone_id TEXT PRIMARY KEY,
       target_date TEXT NOT NULL,
@@ -300,7 +304,7 @@ export function getDb(): Database.Database {
   `);
 
   // Project progress — stores full module state (checklist, health, verification, history) per project
-  db.exec(`
+  conn.exec(`
     CREATE TABLE IF NOT EXISTS project_progress (
       project_id TEXT PRIMARY KEY,
       checklist_json TEXT NOT NULL DEFAULT '{}',
@@ -312,7 +316,7 @@ export function getDb(): Database.Database {
   `);
 
   // Session log — unified audit trail linking CLI sessions to modules and projects
-  db.exec(`
+  conn.exec(`
     CREATE TABLE IF NOT EXISTS session_log (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       tab_id TEXT NOT NULL,
@@ -327,18 +331,18 @@ export function getDb(): Database.Database {
     )
   `);
 
-  db.exec(`
+  conn.exec(`
     CREATE INDEX IF NOT EXISTS idx_session_log_project
     ON session_log(project_path, created_at)
   `);
 
-  db.exec(`
+  conn.exec(`
     CREATE INDEX IF NOT EXISTS idx_session_log_module
     ON session_log(module_id, created_at)
   `);
 
   // Request log — idempotency key replay detection for import/mutation routes
-  db.exec(`
+  conn.exec(`
     CREATE TABLE IF NOT EXISTS request_log (
       idempotency_key TEXT PRIMARY KEY,
       route TEXT NOT NULL,
@@ -348,7 +352,7 @@ export function getDb(): Database.Database {
     )
   `);
 
-  db.exec(`
+  conn.exec(`
     CREATE INDEX IF NOT EXISTS idx_request_log_created
     ON request_log(created_at)
   `);
@@ -357,7 +361,7 @@ export function getDb(): Database.Database {
   // analytics dashboard, insights, and prompt suggestions. Read/written via
   // src/lib/session-analytics-db.ts (plus weekly-digest / project-wrapped /
   // pattern-extractor, which query the table directly).
-  db.exec(`
+  conn.exec(`
     CREATE TABLE IF NOT EXISTS session_analytics (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       module_id TEXT NOT NULL,
@@ -379,44 +383,19 @@ export function getDb(): Database.Database {
 
   // Migrate: the ISO defaults above reach FRESH databases only — CREATE TABLE
   // IF NOT EXISTS never updates an existing table's schema, so installs created
-  // before the default change still carry datetime('now') (space-separated,
-  // sorts below 'T' and falls out of the lexicographic week-range filters).
-  // SQLite can't alter a column default in place: rebuild via the
-  // feature_matrix pattern and normalize any legacy space-format rows.
-  if (needsMigrations) {
-  const saSql = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='session_analytics'").get() as { sql: string } | undefined;
-  if (saSql?.sql && saSql.sql.includes("datetime('now')")) {
-    db.exec(`
-      CREATE TABLE session_analytics_new (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        module_id TEXT NOT NULL,
-        session_key TEXT NOT NULL,
-        prompt TEXT NOT NULL,
-        prompt_preview TEXT NOT NULL,
-        had_project_context INTEGER NOT NULL DEFAULT 0,
-        prompt_length INTEGER NOT NULL DEFAULT 0,
-        success INTEGER NOT NULL DEFAULT 0,
-        duration_ms INTEGER NOT NULL DEFAULT 0,
-        started_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
-        completed_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
-      );
-      INSERT INTO session_analytics_new SELECT * FROM session_analytics;
-      DROP TABLE session_analytics;
-      ALTER TABLE session_analytics_new RENAME TO session_analytics;
-      UPDATE session_analytics SET started_at = replace(started_at, ' ', 'T') || 'Z' WHERE started_at LIKE '% %';
-      UPDATE session_analytics SET completed_at = replace(completed_at, ' ', 'T') || 'Z' WHERE completed_at LIKE '% %';
-    `);
-  }
-  }
+  // before the default change still carry datetime('now') (space-separated, sorts
+  // below 'T' and falls out of the lexicographic week-range filters). Rebuilt by
+  // the function below, transactionally and by explicit column list.
+  if (needsMigrations) migrateSessionAnalyticsIsoDefaults(conn);
 
-  db.exec(`
+  conn.exec(`
     CREATE INDEX IF NOT EXISTS idx_session_analytics_module
     ON session_analytics(module_id)
   `);
 
   // Telemetry snapshots + genre suggestions — drive the genre-evolution engine
   // (TelemetryEvolution module). Read/written via src/lib/telemetry-db.ts.
-  db.exec(`
+  conn.exec(`
     CREATE TABLE IF NOT EXISTS telemetry_snapshots (
       id TEXT PRIMARY KEY,
       scanned_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -426,12 +405,12 @@ export function getDb(): Database.Database {
     )
   `);
 
-  db.exec(`
+  conn.exec(`
     CREATE INDEX IF NOT EXISTS idx_telemetry_snapshots_time
     ON telemetry_snapshots(scanned_at DESC)
   `);
 
-  db.exec(`
+  conn.exec(`
     CREATE TABLE IF NOT EXISTS genre_suggestions (
       id TEXT PRIMARY KEY,
       sub_genre TEXT NOT NULL,
@@ -447,7 +426,7 @@ export function getDb(): Database.Database {
     )
   `);
 
-  db.exec(`
+  conn.exec(`
     CREATE INDEX IF NOT EXISTS idx_genre_suggestions_status
     ON genre_suggestions(status, created_at DESC)
   `);
@@ -458,7 +437,7 @@ export function getDb(): Database.Database {
   // Scoped by project — gap ids are only unique within one project. An audit that
   // carries no project scope (e.g. the pof_gdd_compliance MCP tool) uses the empty
   // string, so it sees only unscoped resolutions rather than another project's.
-  db.exec(`
+  conn.exec(`
     CREATE TABLE IF NOT EXISTS gdd_gap_resolutions (
       project_path TEXT NOT NULL DEFAULT '',
       gap_id TEXT NOT NULL,
@@ -477,11 +456,11 @@ export function getDb(): Database.Database {
   // truth.
 
   // Stamp the schema version so the one-off probes above are skipped on the next
-  // cold start. Only advances after a clean bootstrap; a throw earlier leaves the
-  // version untouched so migrations retry next time.
-  if (needsMigrations) db.pragma(`user_version = ${SCHEMA_VERSION}`);
-
-  return db;
+  // cold start. Only advances after a clean bootstrap — a throw earlier leaves the
+  // version untouched AND (since `getDb()` publishes the singleton only when this
+  // function returns) the next call really does re-attempt, which is what the old
+  // "migrations retry next time" comment claimed while the cached handle prevented it.
+  if (needsMigrations) conn.pragma(`user_version = ${SCHEMA_VERSION}`);
 }
 
 // ─── Migration: project in the feature_matrix UNIQUE key ─────────────────────
@@ -505,11 +484,12 @@ export function getDb(): Database.Database {
 /** Columns copied by the rebuild, in the order the new table declares them. Named
  *  EXPLICITLY — a `SELECT *` positional copy silently shifts every value one column
  *  left the moment the source and target column orders differ. */
-const FEATURE_MATRIX_COLUMNS = [
+const FEATURE_MATRIX_COLUMN_LIST = [
   'id', 'module_id', 'feature_name', 'category', 'status', 'description',
   'file_paths', 'review_notes', 'quality_score', 'next_steps', 'last_reviewed_at',
   'created_at', 'updated_at', 'project_id', 'source',
-].join(', ');
+];
+const FEATURE_MATRIX_COLUMNS = FEATURE_MATRIX_COLUMN_LIST.join(', ');
 
 /** The marker that says the widened key is already in place. */
 const PROJECT_KEY_MARKER = 'UNIQUE(project_id, module_id, feature_name)';
@@ -628,6 +608,190 @@ function migrateFeatureMatrixProjectKey(database: Database.Database): void {
         ? `Backfilled ${unattributedFeatures} feature row(s) and ${unattributedSnapshots} snapshot(s) ` +
           `from project_id = '' to "${target}" (operator rule, 2026-08-19).`
         : `No backfill was applied.`),
+  );
+}
+
+// ─── Migration: the pre-'improved' feature_matrix CHECK constraint ───────────
+//
+// SQLite cannot ALTER a CHECK constraint, so a database predating the `improved`
+// status must be REBUILT. The original did it inline with
+//   INSERT INTO feature_matrix_new SELECT * FROM feature_matrix;
+// in a bare `db.exec` — a POSITIONAL copy, no count check, no transaction. Run
+// against the exact shape it targets (the 13-column pre-`project_id` table, see
+// commits a733da4b / bc20b505) it THREW:
+//
+//   table feature_matrix_new has 14 columns but 13 values were supplied
+//
+// and, because nothing was transactional, left a stray empty `feature_matrix_new`
+// behind — after which EVERY later boot died on `CREATE TABLE feature_matrix_new`.
+// The block also declared the table WITHOUT `source` and with the pre-wave-16
+// `UNIQUE(module_id, feature_name)` key, so had it ever succeeded it would have
+// undone both waves.
+//
+// This rebuild copies by EXPLICIT column list (intersected with what the source
+// actually holds), verifies the copied row count and throws INSIDE the transaction
+// before anything is dropped — the recorded convention, and the shape
+// `migrateFeatureMatrixProjectKey` above already follows.
+
+/** Temp table name for this rebuild. Deliberately NOT `feature_matrix_new`: a DB
+ *  bitten by the old block still carries one, and a collision there is what made
+ *  it unbootable. */
+const IMPROVED_REBUILD_TABLE = 'feature_matrix_improved_rebuild';
+
+function migrateFeatureMatrixImprovedStatus(database: Database.Database): void {
+  const sqlRow = database
+    .prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='feature_matrix'")
+    .get() as { sql: string } | undefined;
+  if (!sqlRow?.sql || sqlRow.sql.includes("'improved'")) return;
+
+  // Clear the wreckage of the old broken rebuild, but only when it is provably
+  // empty (which is what a CREATE-then-failed-INSERT leaves). Anything else is
+  // reported and left alone — this migration does not delete rows it cannot account for.
+  const stray = database
+    .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='feature_matrix_new'")
+    .get() as { name: string } | undefined;
+  if (stray) {
+    const strayRows = countRows(database, 'feature_matrix_new');
+    if (strayRows === 0) {
+      database.exec('DROP TABLE feature_matrix_new');
+      logger.warn(
+        `[db] dropped a stray EMPTY feature_matrix_new — the residue of the old positional ` +
+          `rebuild, which failed and then blocked every subsequent boot.`,
+      );
+    } else {
+      logger.warn(
+        `[db] a stray feature_matrix_new holding ${strayRows} row(s) was found and LEFT IN PLACE. ` +
+          `The rebuild below uses its own table name, so it does not collide — inspect it by hand.`,
+      );
+    }
+  }
+
+  const present = new Set(
+    (database.prepare('PRAGMA table_info(feature_matrix)').all() as { name: string }[]).map((c) => c.name),
+  );
+  // Only what the SOURCE actually holds is copied; the rest take the new table's
+  // declared defaults (project_id '' / source 'unknown' — the honest reading for a
+  // row written before either column existed).
+  const copyList = FEATURE_MATRIX_COLUMN_LIST.filter((c) => present.has(c)).join(', ');
+  const rowsBefore = countRows(database, 'feature_matrix');
+
+  const rebuild = database.transaction(() => {
+    database.exec(`
+      CREATE TABLE ${IMPROVED_REBUILD_TABLE} (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        module_id TEXT NOT NULL,
+        feature_name TEXT NOT NULL,
+        category TEXT NOT NULL DEFAULT 'general',
+        status TEXT NOT NULL DEFAULT 'unknown'
+          CHECK(status IN ('implemented', 'improved', 'partial', 'missing', 'unknown')),
+        description TEXT NOT NULL DEFAULT '',
+        file_paths TEXT NOT NULL DEFAULT '[]',
+        review_notes TEXT NOT NULL DEFAULT '',
+        quality_score INTEGER,
+        next_steps TEXT NOT NULL DEFAULT '',
+        last_reviewed_at TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+        project_id TEXT NOT NULL DEFAULT '',
+        source TEXT NOT NULL DEFAULT 'unknown',
+        UNIQUE(module_id, feature_name)
+      )
+    `);
+    database.exec(
+      `INSERT INTO ${IMPROVED_REBUILD_TABLE} (${copyList}) SELECT ${copyList} FROM feature_matrix`,
+    );
+
+    const copied = countRows(database, IMPROVED_REBUILD_TABLE);
+    if (copied !== rowsBefore) {
+      throw new Error(
+        `[db] feature_matrix 'improved' rebuild ABORTED: copied ${copied} of ${rowsBefore} rows. ` +
+          `Nothing was dropped; the original table is intact.`,
+      );
+    }
+
+    database.exec('DROP TABLE feature_matrix');
+    database.exec(`ALTER TABLE ${IMPROVED_REBUILD_TABLE} RENAME TO feature_matrix`);
+  });
+
+  rebuild();
+
+  logger.info(
+    `[db] feature_matrix rebuilt for the 'improved' status: ${rowsBefore} row(s) copied by name ` +
+      `(${copyList}). The project key is widened by the migration that follows.`,
+  );
+}
+
+// ─── Migration: session_analytics ISO timestamp defaults ─────────────────────
+//
+// `CREATE TABLE IF NOT EXISTS` never updates an existing table's schema, so
+// installs created before the ISO default change still carry `datetime('now')` —
+// space-separated, which sorts BELOW 'T' and drops the row out of every
+// lexicographic week-range filter. SQLite cannot alter a column default in place,
+// so this is a rebuild too, and it carried the same `SELECT *` / no-transaction /
+// no-count-check pattern as the one above.
+
+const SESSION_ANALYTICS_COLUMN_LIST = [
+  'id', 'module_id', 'session_key', 'prompt', 'prompt_preview', 'had_project_context',
+  'prompt_length', 'success', 'duration_ms', 'started_at', 'completed_at',
+];
+const SESSION_ANALYTICS_REBUILD_TABLE = 'session_analytics_iso_rebuild';
+
+function migrateSessionAnalyticsIsoDefaults(database: Database.Database): void {
+  const saSql = database
+    .prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='session_analytics'")
+    .get() as { sql: string } | undefined;
+  if (!saSql?.sql || !saSql.sql.includes("datetime('now')")) return;
+
+  const present = new Set(
+    (database.prepare('PRAGMA table_info(session_analytics)').all() as { name: string }[]).map((c) => c.name),
+  );
+  const copyList = SESSION_ANALYTICS_COLUMN_LIST.filter((c) => present.has(c)).join(', ');
+  const rowsBefore = countRows(database, 'session_analytics');
+
+  const rebuild = database.transaction(() => {
+    database.exec(`
+      CREATE TABLE ${SESSION_ANALYTICS_REBUILD_TABLE} (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        module_id TEXT NOT NULL,
+        session_key TEXT NOT NULL,
+        prompt TEXT NOT NULL,
+        prompt_preview TEXT NOT NULL,
+        had_project_context INTEGER NOT NULL DEFAULT 0,
+        prompt_length INTEGER NOT NULL DEFAULT 0,
+        success INTEGER NOT NULL DEFAULT 0,
+        duration_ms INTEGER NOT NULL DEFAULT 0,
+        started_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+        completed_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+      )
+    `);
+    database.exec(
+      `INSERT INTO ${SESSION_ANALYTICS_REBUILD_TABLE} (${copyList}) SELECT ${copyList} FROM session_analytics`,
+    );
+
+    const copied = countRows(database, SESSION_ANALYTICS_REBUILD_TABLE);
+    if (copied !== rowsBefore) {
+      throw new Error(
+        `[db] session_analytics ISO rebuild ABORTED: copied ${copied} of ${rowsBefore} rows. ` +
+          `Nothing was dropped; the original table is intact.`,
+      );
+    }
+
+    database.exec('DROP TABLE session_analytics');
+    database.exec(`ALTER TABLE ${SESSION_ANALYTICS_REBUILD_TABLE} RENAME TO session_analytics`);
+    // Rows written under the old default keep their space-separated stamp until
+    // they are normalized — same transaction, so a failure leaves neither half.
+    database.exec(
+      "UPDATE session_analytics SET started_at = replace(started_at, ' ', 'T') || 'Z' WHERE started_at LIKE '% %'",
+    );
+    database.exec(
+      "UPDATE session_analytics SET completed_at = replace(completed_at, ' ', 'T') || 'Z' WHERE completed_at LIKE '% %'",
+    );
+  });
+
+  rebuild();
+
+  logger.info(
+    `[db] session_analytics rebuilt onto the ISO timestamp defaults: ${rowsBefore} row(s) copied by name.`,
   );
 }
 
