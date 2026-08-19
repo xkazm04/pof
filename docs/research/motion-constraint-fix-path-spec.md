@@ -72,18 +72,52 @@ prompt ──> generate ──> Tier-1 numeric gate ──> Tier-2 VLM critique 
 5. Re-gate. Bounded retries (propose 2), then surface the best-scoring attempt with its
    score — never silently ship attempt N.
 
-## What must be read from a real export before building
+## The constraint schema (read from ARDY source 2026-08-19 — NOT invented)
 
-**Do not invent the constraint file schema.** The 2026-07-14 ARDY run recorded exactly this
-lesson for the npz→FBX converter — "should be built against a real export, not blind" — and
-it applies unchanged here. Before any of this is implemented:
+`scripts/generate.py --constraints <path>` → `ardy.constraints.load_constraints_lst(path,
+skeleton)`. The file is **plain JSON**: a list of objects, each with a `"type"` key dispatched
+through `TYPE_TO_CLASS`:
 
-- Dump one real constraint list from the ARDY interactive demo (it has checkboxes for
-  sampling constraint types: full body, hands, feet, hands+feet, 2D waypoints, 2D
-  trajectory) and read the serialized shape.
-- Confirm whether constraints are expressed in the model's own skeleton space (Core-27 for
-  ARDY) or in a normalized space, and whether frame indices are absolute or fractional.
-- Confirm the seed + constraints combination is deterministic.
+| `type` | Class | Use |
+|---|---|---|
+| `fullbody` | `FullBodyConstraintSet` | pin the whole pose at given frames |
+| `root2d` | `Root2DConstraintSet` | ground-plane path / waypoints |
+| `end-effector` | `EndEffectorConstraintSet` | arbitrary named joints |
+| `left-hand` / `right-hand` / `left-foot` / `right-foot` | subclasses of the above | the common IK targets |
+
+**The serialized shape is NOT the constructor's shape — this is the trap.** The
+`FullBodyConstraintSet.__init__` signature takes `global_joints_positions`, but
+`from_dict` (constraints.py:204) reads:
+
+```json
+{ "type": "fullbody",
+  "frame_indices":    [ ... ],           // int frame indices
+  "local_joints_rot": [ [ [x,y,z], ... ] ],  // AXIS-ANGLE, per frame per joint
+  "root_positions":   [ [x,y,z], ... ],
+  "root_2d":          [ [x,z], ... ]     // optional; "smooth_root_2d" also accepted
+}
+```
+
+and derives the globals itself via `skeleton.fk(axis_angle_to_matrix(local_joints_rot),
+root_positions)`. Emitting global positions — the obvious reading of the constructor — would
+be silently wrong. `root2d` is the simpler `{frame_indices, root_2d, global_root_heading?}`.
+Round-trip helper: `save_constraints_lst(path, lst)` (tensors → lists).
+
+**This lines up with what PoF already stores.** The generated npz carries `local_rot_mats`
+and `root_positions`, so a loop-closure repair constraint is a direct transform of data the
+pipeline already has: take frame 0's `local_rot_mats`, convert to axis-angle, emit at
+`frame_indices: [last]`.
+
+Enforcement strength is a first-class knob: `--cfg_weight <text_weight> <constraint_weight>`
+(default `2.0 2.0`), so the fix path can push constraint adherence without re-weighting the
+prompt.
+
+### Still to verify against a live run
+
+- That seed + constraints is deterministic (needed for "correct this clip" to mean anything).
+- Whether `frame_indices` are clamped or wrapped at the clip boundary.
+- Whether a single-frame `fullbody` constraint at the last frame actually pulls the seam
+  closed in practice, or fights the model's own momentum and needs a 2–3 frame ramp.
 
 Everything downstream of the mapping is engine-specific; everything upstream of it
 (gates, verdicts) already exists.
