@@ -152,8 +152,8 @@ the browser or edge runtime).
 | Table | Purpose |
 |-------|---------|
 | `settings` | Key/value app settings |
-| `feature_matrix` | Per-module/feature implementation status + quality scores |
-| `review_snapshots` | Point-in-time module health snapshots for trending |
+| `feature_matrix` | Per-module/feature implementation status + quality scores. Every row carries `source` (`review` = CLI review import · `verify` = UE5 auto-verify · `fix` = CLI fix PATCH · `seed` · `unknown` for legacy rows) and `last_reviewed_at`, stamped by every write path — the compliance engine reads these as evidence provenance, and a PATCH stamps `last_reviewed_at = now` + `source='fix'` (a dated but weaker-class assertion, since the actor that made the change is the one reporting it). `reviewedAt` on import is validated as ISO-8601 before any write. |
+| `review_snapshots` | Point-in-time module health snapshots for trending. Captured only when a write actually changed rows; an identical-timestamp re-capture updates the row in place; retention bounded to 200/module (module-scoped prune, so a quiet module never loses its only point). `getReviewHistory` returns the RECENT window. |
 | `eval_findings` | Multi-pass deep-eval scan results |
 | `build_history` | Headless UBT build records |
 | `recent_projects` | Project switcher history |
