@@ -57,7 +57,20 @@ function ScriptCard({ job }: { job: ScriptJob }) {
   );
 }
 
-/** Execute a Python script via the Blender MCP bridge and track it in the store. */
+/**
+ * THE dispatcher for `/api/blender-mcp/execute`.
+ *
+ * Every Python script PoF sends to Blender must go through here, because this
+ * is also what records it in the Script History panel — the panel presented to
+ * the user as the record of what PoF ran in their Blender. Call sites that
+ * fetched the route directly were invisible there (the panel would still say
+ * "No scripts have been run yet" after a real dispatch), and several of them
+ * discarded the `Result` entirely, so a failed script and a successful one were
+ * indistinguishable on screen.
+ *
+ * `src/__tests__/lib/blender-mcp/execute-dispatch-guard.test.ts` enforces this:
+ * a NEW raw fetch of the execute route fails the build.
+ */
 export async function executeViaMCP(scriptName: string, scriptCode: string) {
   const { addScript, updateScript } = useBlenderStore.getState();
   const jobId = addScript(scriptName, []);
@@ -92,9 +105,12 @@ export function ScriptRunner() {
   if (scripts.length === 0) {
     return (
       <div className="text-center py-6">
-        <p className="text-xs text-text-muted">No scripts have been run yet.</p>
+        <p className="text-xs text-text-muted">
+          No scripts have been dispatched from this session yet.
+        </p>
         <p className="text-xs text-text-muted mt-1">
-          Use the pipeline tabs above to run LOD, optimization, or conversion scripts via Blender MCP.
+          This lists scripts PoF sent through the Blender MCP dispatcher, in this
+          browser session only — it is not a log of everything that ran in Blender.
         </p>
       </div>
     );
@@ -105,7 +121,9 @@ export function ScriptRunner() {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <h3 className="text-xs font-medium text-text">Script History ({scripts.length})</h3>
+        <h3 className="text-xs font-medium text-text">
+          Dispatched scripts ({scripts.length})
+        </h3>
         {hasCompleted && (
           <button
             onClick={clearCompleted}

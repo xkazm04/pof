@@ -16,8 +16,12 @@ export function SceneTree() {
     duplicateObject,
     isRefreshing,
     lastError,
+    actionError,
+    actionResult,
+    failedAction,
     hasRefreshed,
     refreshScene,
+    clearActionFeedback,
   } = useSceneComposerStore();
 
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
@@ -56,6 +60,31 @@ export function SceneTree() {
           message={`Scene refresh failed: ${lastError}`}
           onRetry={() => refreshScene()}
         />
+      )}
+
+      {/* A destructive operation that did not happen must say so. Distinct from
+          the refresh banner above: the tree is fine, the ACT failed. */}
+      {actionError && (
+        <InlineErrorRetry
+          dense
+          message={actionError}
+          onRetry={() => {
+            if (!failedAction) return;
+            if (failedAction.op === 'delete') deleteObject(failedAction.name);
+            else duplicateObject(failedAction.name);
+          }}
+          onDismiss={clearActionFeedback}
+        />
+      )}
+
+      {actionResult && (
+        <p
+          role="status"
+          aria-live="polite"
+          className="px-2 text-xs text-emerald-400"
+        >
+          {actionResult}
+        </p>
       )}
 
       {!sceneInfo ? (

@@ -2,32 +2,46 @@
 
 import { useState } from 'react';
 import { Download } from 'lucide-react';
-import { tryApiFetch } from '@/lib/api-utils';
-import { exportSceneScript } from '@/lib/blender-mcp/scripts/export-scene';
-import type { ExecuteOutput } from '@/lib/blender-mcp/types';
+import { executeViaMCP } from '@/components/modules/visual-gen/blender-pipeline/ScriptRunner';
+import {
+  exportSceneScript,
+  EXPORT_OK_MARKER,
+} from '@/lib/blender-mcp/scripts/export-scene';
 
 export function SceneExporter() {
   const [outputPath, setOutputPath] = useState('');
   const [format, setFormat] = useState<'fbx' | 'gltf'>('gltf');
   const [status, setStatus] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
 
   const handleExport = async () => {
     if (!outputPath) return;
-    setStatus('Exporting...');
+    setStatus('Exporting…');
+    setFailed(false);
     const code = exportSceneScript({ outputPath, format });
-    const result = await tryApiFetch<ExecuteOutput>(
-      '/api/blender-mcp/execute',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code }),
-      },
-    );
-    setStatus(
-      result.ok
-        ? `Exported: ${result.data.output}`
-        : `Error: ${result.error}`,
-    );
+    const result = await executeViaMCP(`Export scene (${format})`, code);
+
+    if (!result.ok) {
+      setFailed(true);
+      setStatus(`Export failed: ${result.error}`);
+      return;
+    }
+
+    // A 200 from the execute route means the ADDON accepted the script, not
+    // that a file exists. The bridge may be on another machine, so PoF cannot
+    // check — the honest ceiling is what Blender itself printed. If the marker
+    // is absent, say we could not confirm rather than claiming "Exported".
+    const output = result.data.output ?? '';
+    if (output.includes(EXPORT_OK_MARKER)) {
+      setStatus(`Blender reported the export finished: ${outputPath}`);
+    } else {
+      setFailed(true);
+      setStatus(
+        `Script ran without error, but Blender printed no export confirmation — ` +
+          `could not confirm ${outputPath} was written. Blender said: ` +
+          `${output.trim() || '(nothing)'}`,
+      );
+    }
   };
 
   return (
@@ -57,7 +71,13 @@ export function SceneExporter() {
         </button>
       </div>
       {status && (
-        <div className="text-[11px] text-text-muted">{status}</div>
+        <div
+          role="status"
+          aria-live="polite"
+          className={`text-xs ${failed ? 'text-amber-400' : 'text-text-muted'}`}
+        >
+          {status}
+        </div>
       )}
     </div>
   );
