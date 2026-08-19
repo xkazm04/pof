@@ -9,6 +9,7 @@ import { AssetGallery } from './AssetGallery';
 import { StudioToolbar } from './StudioToolbar';
 import { StudioInspector } from './StudioInspector';
 import type { GeneratedAsset } from '@/lib/visual-gen/generated-assets';
+import { LAB_RETURN } from '@/lib/shell/surfaces';
 
 // Three.js needs the browser — never SSR the canvas.
 const SceneViewer = dynamic(
@@ -58,6 +59,16 @@ export function Studio3D() {
       <header style={{ display: 'flex', alignItems: 'center', gap: 'var(--lab-s3)', height: 44, flexShrink: 0, padding: '0 var(--lab-s4)', borderBottom: '1px solid var(--lab-line)', background: 'var(--lab-panel)' }}>
         <h1 style={{ margin: 0, fontFamily: 'var(--lab-font-mono)', fontSize: 'var(--lab-fs-xs)', fontWeight: 400, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--lab-ink)' }}>PoF · 3D Studio</h1>
         <span style={{ fontFamily: 'var(--lab-font-mono)', fontSize: 'var(--lab-fs-xs)', color: 'var(--lab-muted)' }}>preview generated assets before Unreal</span>
+        {/* The studio is a full-page jump FROM the lab and had no way back — the only
+            exit was the browser's own Back button. Same accessible name as /status. */}
+        <a
+          href={LAB_RETURN.href}
+          className="focus-ring"
+          aria-label={LAB_RETURN.ariaLabel}
+          style={{ marginLeft: 'auto', fontFamily: 'var(--lab-font-mono)', fontSize: 'var(--lab-fs-xs)', color: 'var(--lab-ink)', textDecoration: 'underline', textUnderlineOffset: 3, whiteSpace: 'nowrap' }}
+        >
+          {LAB_RETURN.label}
+        </a>
       </header>
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
         <AssetGallery activeUrl={modelUrl} onPick={onPick} />

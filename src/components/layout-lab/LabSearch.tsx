@@ -16,12 +16,18 @@
  * belongs to the hit's catalog, otherwise the catalog's first seeded entity. When a
  * catalog has no entity at all the hit degrades to selecting the catalog (honest — there
  * is nothing to open the step on).
+ *
+ * The index also carries the app's OTHER surfaces (`NAVIGABLE_SURFACES`): before this,
+ * nothing in the lab — palette or header — could reach `/experiment` at all. A route hit
+ * is a full-page jump, so it says so in its badge and leaves the lab's own nav callbacks
+ * untouched.
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { useCatalogStore } from '@/stores/catalogStore';
 import { CATALOG_SECTIONS } from '@/lib/catalog/sections';
+import { NAVIGABLE_SURFACES } from '@/lib/shell/surfaces';
 import { resolveCatalogSteps } from './catalogManifest';
 import { SearchCombobox, type SearchHit } from './ui/SearchCombobox';
 
@@ -29,7 +35,9 @@ import { SearchCombobox, type SearchHit } from './ui/SearchCombobox';
 export type LabSearchTarget =
   | { kind: 'catalog'; catalogId: string }
   | { kind: 'entity'; catalogId: string; entityId: string }
-  | { kind: 'step'; catalogId: string; stepIndex: number };
+  | { kind: 'step'; catalogId: string; stepIndex: number }
+  /** A different top-level surface — a full-page jump, not an in-lab navigation. */
+  | { kind: 'route'; route: string };
 
 interface LabSearchProps {
   open: boolean;
@@ -67,6 +75,17 @@ export function LabSearch({ open, onClose, currentEntityId, onSelectCatalog, onN
   const index = useMemo(() => {
     if (!everOpened) return NO_ROWS;
     const rows: IndexRow[] = [];
+    // The other surfaces first — they are few, and one of them (`/experiment`) had no
+    // entry point anywhere in the shell before this.
+    for (const s of NAVIGABLE_SURFACES) {
+      rows.push({
+        hay: `${s.name} ${s.route} ${s.detail}`.toLowerCase(),
+        hit: {
+          key: `r:${s.route}`, label: s.name, detail: s.route, meta: s.detail, badge: 'page',
+          payload: { kind: 'route', route: s.route },
+        },
+      });
+    }
     for (const section of CATALOG_SECTIONS) {
       const { catalogId, label } = section;
       rows.push({
@@ -102,7 +121,10 @@ export function LabSearch({ open, onClose, currentEntityId, onSelectCatalog, onN
 
   const go = useCallback((hit: SearchHit<LabSearchTarget>) => {
     const t = hit.payload;
-    if (t.kind === 'catalog') {
+    if (t.kind === 'route') {
+      // A whole different page: leave the lab rather than pretending it is an in-lab view.
+      window.location.href = t.route;
+    } else if (t.kind === 'catalog') {
       onSelectCatalog(t.catalogId);
     } else if (t.kind === 'entity') {
       onNavigate(t.catalogId, t.entityId, 0);
@@ -124,8 +146,8 @@ export function LabSearch({ open, onClose, currentEntityId, onSelectCatalog, onN
         onDismiss={onClose}
         autoFocus
         idPrefix="lab-search"
-        ariaLabel="Search catalogs, entities and pipeline steps"
-        placeholder="Catalog, entity or step — name or id…"
+        ariaLabel="Search catalogs, entities, pipeline steps and pages"
+        placeholder="Catalog, entity, step or page — name or id…"
         noun="result"
         emptyUniverse={index.length === 0}
       />
