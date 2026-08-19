@@ -11,10 +11,13 @@
 
 import type { SubModuleId } from '@/types/modules';
 import {
-  MODULE_FEATURE_DEFINITIONS,
   buildDependencyMap,
   computeBlockers,
   getDependentCounts,
+  resolveItemFeatures,
+  firstWordMatch,
+  HEURISTIC_MATCH_NOTE,
+  type ItemFeatureSource,
 } from '@/lib/feature-definitions';
 import { SUB_MODULE_MAP } from '@/lib/module-registry';
 import { useModuleStore } from '@/stores/moduleStore';
@@ -43,6 +46,31 @@ export interface NBARecommendation {
   successProbability: number;
   /** Score breakdown for transparency */
   breakdown: ScoreBreakdown;
+  /**
+   * Which feature rows the urgency/impact/readiness numbers were computed from,
+   * and how that binding was established. Every confident claim on the card
+   * ("Unblocks 3 dependent features") is only as true as this — so it travels
+   * WITH the score instead of being re-derived by whoever renders it.
+   */
+  featureMatch: ItemFeatureMatch;
+}
+
+/** Provenance of the item→feature binding a recommendation was scored against. */
+export interface ItemFeatureMatch {
+  /** Which resolution tier produced the binding (`none` ⇒ nothing was scored). */
+  source: ItemFeatureSource;
+  /** Feature names (unqualified) the score was computed from. */
+  featureNames: readonly string[];
+  /** Declared names that match no feature row — reported, never scored. */
+  unresolved: readonly string[];
+  /**
+   * Fan-out actually used for urgency + impact: the MAX dependent count across
+   * `featureNames` (an item that produces several features is as urgent as its
+   * most-depended-on one; summing would multiply-count shared dependents).
+   */
+  dependentCount: number;
+  /** One sentence naming where the relation came from. */
+  note: string;
 }
 
 export interface ScoreBreakdown {
@@ -73,14 +101,12 @@ export const NBA_FACTOR_WEIGHTS = W;
 // ── Fuzzy matching ─────────────────────────────────────────────────────────
 
 /**
- * First-word fuzzy match: does `label` (case-insensitive) contain the first
- * whitespace-delimited token of `candidate`? This single heuristic drives every
- * NBA match site — feature, evaluator-rec, pattern, and failure-history — so
- * tuning it (or testing it) happens in exactly one place.
+ * Re-exported from `feature-definitions` (its new home, beside the exact
+ * `CHECKLIST_FEATURE_MAP` it is the fallback for). It still drives the NBA's
+ * evaluator-rec, pattern and failure-history matches — where a fuzzy match is
+ * appropriate because no exact map exists for those relations.
  */
-export function firstWordMatch(label: string, candidate: string): boolean {
-  return label.toLowerCase().includes(candidate.toLowerCase().split(' ')[0]);
-}
+export { firstWordMatch };
 
 // ── Engine ───────────────────────────────────────────────────────────────────
 
@@ -109,8 +135,8 @@ export function computeNBA(
   // Fan-out counts are a static graph property — looked up, not rescanned.
   const dependentCounts = getDependentCounts();
 
-  // Module features for mapping checklist items → features
-  const moduleFeatures = MODULE_FEATURE_DEFINITIONS[moduleId] ?? [];
+  // Every item in this module's checklist — used to resolve `dependsOn` refs.
+  const checklist = mod.checklist;
 
   // Evaluator recommendations for this module
   const evalRecs: Recommendation[] = lastScan?.recommendations?.filter(
@@ -136,45 +162,75 @@ export function computeNBA(
     const reasons: string[] = [];
 
     // ── 1. Urgency (0–30): Is this item blocking other work? ─────────────
-    // Match item to feature(s) by label similarity
-    const matchingFeature = moduleFeatures.find((f) =>
-      firstWordMatch(item.label, f.featureName) || firstWordMatch(f.featureName, item.label),
-    );
+    // Bind the item to the feature rows that can evidence it. The exact
+    // CHECKLIST_FEATURE_MAP is consulted FIRST and is terminal — an item mapped
+    // to `[]` scores no urgency and no impact, because nothing can evidence it.
+    const resolved = resolveItemFeatures(moduleId, item);
+    const featureKeys = resolved.names.map((n) => `${moduleId}::${n}`);
 
-    if (matchingFeature) {
-      const featureKey = `${moduleId}::${matchingFeature.featureName}`;
-      const featureStatus = statusMap.get(featureKey);
+    // Fan-out across every feature the item produces. MAX, not sum: distinct
+    // features often share dependents, and summing would count them twice.
+    const dependentCount = featureKeys.length > 0
+      ? Math.max(...featureKeys.map((k) => dependentCounts.get(k) ?? 0))
+      : 0;
 
-      // Count how many other features depend on this one (fan-out).
-      // Static graph property — precomputed once in buildDependencyMap.
-      const dependentCount = dependentCounts.get(featureKey) ?? 0;
+    if (featureKeys.length > 0) {
+      // Only claim to unblock work while at least one produced feature is still
+      // unimplemented — an item whose features are all done unblocks nothing.
+      const allImplemented = featureKeys.every((k) => statusMap.get(k) === 'implemented');
 
-      if (dependentCount > 0 && featureStatus !== 'implemented') {
-        // This unimplemented feature blocks others
-        const urgencyScore = Math.min(dependentCount * 6, W.urgency);
-        breakdown.urgency = urgencyScore;
-        reasons.push(`Unblocks ${dependentCount} dependent feature${dependentCount > 1 ? 's' : ''}`);
+      if (dependentCount > 0 && !allImplemented) {
+        breakdown.urgency = Math.min(dependentCount * 6, W.urgency);
+        const across = featureKeys.length > 1
+          ? ` (most-depended-on of ${featureKeys.length} features this item produces)`
+          : '';
+        reasons.push(
+          `Unblocks ${dependentCount} dependent feature${dependentCount > 1 ? 's' : ''}${across}`,
+        );
       }
 
-      // Check if this item itself is blocked
-      const info = depMap.get(featureKey);
-      if (info && !info.isBlocked) {
-        breakdown.readiness = W.readiness; // all deps met
-        reasons.push('All dependencies satisfied');
-      } else if (info?.isBlocked) {
+      // Blocked if ANY produced feature is blocked — the item is not startable
+      // until every feature it owns can be built.
+      const infos = featureKeys
+        .map((k) => depMap.get(k))
+        .filter((i): i is NonNullable<typeof i> => Boolean(i));
+
+      if (infos.length === 0) {
+        // No dependency info for any key — assume ready
+        breakdown.readiness = W.readiness * 0.7;
+      } else if (infos.some((i) => i.isBlocked)) {
         breakdown.readiness = 0;
-        const blockerNames = info.blockers.map((b) => b.featureName).slice(0, 2);
+        const blockerNames = [
+          ...new Set(infos.flatMap((i) => i.blockers.map((b) => b.featureName))),
+        ].slice(0, 2);
         reasons.push(`Blocked by: ${blockerNames.join(', ')}`);
       } else {
-        // No dependency info — assume ready
-        breakdown.readiness = W.readiness * 0.7;
+        breakdown.readiness = W.readiness; // all deps met
+        reasons.push('All dependencies satisfied');
       }
 
       // ── 3. Impact (0–20): Fan-out unblocking ────────────────────────────
       breakdown.impact = Math.min(dependentCount * 4, W.impact);
     } else {
-      // No feature match — neutral readiness
+      // Nothing can evidence this item — neutral readiness, and NO fabricated
+      // urgency/impact borrowed from a same-prefix neighbour.
       breakdown.readiness = W.readiness * 0.5;
+    }
+
+    // ── Checklist-level prerequisites ───────────────────────────────────────
+    // `ChecklistItem.dependsOn` names sibling items in the same module. An item
+    // whose prerequisites are unchecked is not ready however clean its feature
+    // graph looks, so this can only ever LOWER readiness.
+    const siblingDeps = item.dependsOn ?? [];
+    const unmetDeps = siblingDeps
+      .map((depId) => checklist.find((c) => c.id === depId))
+      .filter((c): c is ChecklistItem => c !== undefined && !progress[c.id]);
+    if (unmetDeps.length > 0) {
+      breakdown.readiness = 0;
+      const names = unmetDeps.slice(0, 2).map((c) => c.label).join(', ');
+      reasons.unshift(
+        `Waiting on checklist item${unmetDeps.length > 1 ? 's' : ''}: ${names}`,
+      );
     }
 
     // ── Evaluator recommendation boost ──────────────────────────────────────
@@ -238,10 +294,16 @@ export function computeNBA(
       ? matchedPattern.successRate
       : moduleSuccessRate || 0.5;
 
-    // Build reason string
-    const reason = reasons.length > 0
+    // Build reason string. A tier-3 guess is ALWAYS labelled: the card's claims
+    // are only as true as the binding they were computed from.
+    const base = reasons.length > 0
       ? reasons[0]
-      : 'Next uncompleted item';
+      : resolved.source === 'mapped' && resolved.names.length === 0
+        ? 'No feature row can evidence this item — nothing to unblock'
+        : 'Next uncompleted item';
+    const reason = resolved.source === 'heuristic'
+      ? `${base} (${HEURISTIC_MATCH_NOTE})`
+      : base;
 
     return {
       item,
@@ -252,6 +314,13 @@ export function computeNBA(
       pitfalls: [...new Set(pitfalls)], // deduplicate
       successProbability,
       breakdown,
+      featureMatch: {
+        source: resolved.source,
+        featureNames: resolved.names,
+        unresolved: resolved.unresolved,
+        dependentCount,
+        note: resolved.note,
+      },
     };
   });
 

@@ -840,6 +840,130 @@ export function mappedFeaturesFor(moduleId: SubModuleId, itemId: string): readon
   return Object.prototype.hasOwnProperty.call(forModule, itemId) ? forModule[itemId] : null;
 }
 
+// ─── Checklist item → feature resolution (the ONE binding) ───────────────────
+//
+// Everything that scores a checklist item against the feature graph resolves the
+// relation HERE, in this order:
+//
+//   1. `CHECKLIST_FEATURE_MAP` — exact, integrity-tested, and TERMINAL. `[]` is a
+//      real answer ("no feature row can evidence this item") and must never fall
+//      through to a guess: falling through is how a pure test item ends up
+//      claiming it unblocks three features.
+//   2. `ChecklistItem.features` — names the item declares for itself, filtered to
+//      names that actually exist in `MODULE_FEATURE_DEFINITIONS[moduleId]`. A
+//      declared name that resolves to nothing is REPORTED (`unresolved`), never
+//      scored.
+//   3. the first-word substring guess — a last resort that is labelled as a guess
+//      everywhere it is surfaced, mirroring `gdd-compliance`'s provenance note.
+
+/**
+ * First-word fuzzy match: does `label` (case-insensitive) contain the first
+ * whitespace-delimited token of `candidate`? The last-resort tier of
+ * {@link resolveItemFeatures}, and the same heuristic the NBA engine uses for its
+ * evaluator-rec / pattern / failure-history matches — so tuning it (or testing
+ * it) happens in exactly one place.
+ */
+export function firstWordMatch(label: string, candidate: string): boolean {
+  return label.toLowerCase().includes(candidate.toLowerCase().split(' ')[0]);
+}
+
+/** Which tier of {@link resolveItemFeatures} produced the binding. */
+export type ItemFeatureSource = 'mapped' | 'declared' | 'heuristic' | 'none';
+
+/** The sentence fragment that marks a tier-3 guess wherever it is surfaced. */
+export const HEURISTIC_MATCH_NOTE = 'matched by name — not mapped';
+
+export interface ResolvedItemFeatures {
+  source: ItemFeatureSource;
+  /** Feature names in THIS module the item is graded against. May be empty. */
+  names: readonly string[];
+  /**
+   * EVERY name declared for this item — by `CHECKLIST_FEATURE_MAP` *and* by
+   * `ChecklistItem.features` — that exists in no `MODULE_FEATURE_DEFINITIONS` row
+   * for this module. Always computed, even when a higher tier won, so dead
+   * authored data stays visible instead of being silently skipped. Never scored.
+   */
+  unresolved: readonly string[];
+  /** One sentence naming where the relation came from. */
+  note: string;
+}
+
+/** Minimal shape {@link resolveItemFeatures} needs — a `ChecklistItem` satisfies it. */
+export interface ChecklistItemRef {
+  id: string;
+  label: string;
+  features?: string[];
+}
+
+/**
+ * Bind a checklist item to the feature rows that can evidence it.
+ *
+ * Pure and side-effect free. `names` is empty whenever nothing can evidence the
+ * item — callers must treat that as "no fan-out to claim", not as a reason to
+ * guess again.
+ */
+export function resolveItemFeatures(
+  moduleId: SubModuleId,
+  item: ChecklistItemRef,
+): ResolvedItemFeatures {
+  const defs = MODULE_FEATURE_DEFINITIONS[moduleId] ?? [];
+  const known = new Set(defs.map((d) => d.featureName));
+  const mapped = mappedFeaturesFor(moduleId, item.id);
+  const declared = item.features ?? [];
+
+  // Dead authored data is reported no matter which tier wins.
+  const unresolved = [
+    ...new Set([...(mapped ?? []), ...declared].filter((n) => !known.has(n))),
+  ];
+
+  // 1. The explicit map wins, and `[]` is terminal.
+  if (mapped) {
+    const danglingMapped = mapped.filter((n) => !known.has(n));
+    const dangling = danglingMapped.length > 0
+      ? ` ${danglingMapped.length} mapped name(s) match no feature row: ${danglingMapped.join(', ')}.`
+      : '';
+    return {
+      source: 'mapped',
+      names: mapped.filter((n) => known.has(n)),
+      unresolved,
+      note: mapped.length === 0
+        ? 'CHECKLIST_FEATURE_MAP declares that no feature row can evidence this item.'
+        : `Relation declared in CHECKLIST_FEATURE_MAP.${dangling}`,
+    };
+  }
+
+  // 2. Names the item declares for itself.
+  const declaredNames = declared.filter((n) => known.has(n));
+  if (declaredNames.length > 0) {
+    return {
+      source: 'declared',
+      names: declaredNames,
+      unresolved,
+      note: 'Relation declared on the checklist item (ChecklistItem.features).',
+    };
+  }
+
+  // 3. Last resort — a guess, and it says so.
+  const guess = defs.find(
+    (f) => firstWordMatch(item.label, f.featureName) || firstWordMatch(f.featureName, item.label),
+  );
+  if (guess) {
+    return {
+      source: 'heuristic',
+      names: [guess.featureName],
+      unresolved,
+      note: `Feature "${guess.featureName}" ${HEURISTIC_MATCH_NOTE}.`,
+    };
+  }
+
+  return {
+    source: 'none',
+    names: [],
+    unresolved,
+    note: 'No feature row matched this item.',
+  };
+}
+
 // ─── Dependency resolution engine ─────────────────────────────────────────────
 
 export interface ResolvedDependency {

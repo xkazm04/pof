@@ -14,6 +14,13 @@ function makeRec(breakdown: Partial<NBARecommendation['breakdown']>, extra: Part
     pitfalls: [],
     successProbability: 0.5,
     breakdown: full,
+    featureMatch: {
+      source: 'mapped',
+      featureNames: ['Test feature'],
+      unresolved: [],
+      dependentCount: Math.round(full.impact / 4),
+      note: 'Relation declared in CHECKLIST_FEATURE_MAP.',
+    },
     ...extra,
   };
 }
