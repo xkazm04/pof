@@ -153,7 +153,10 @@ export function useFeatureMatrix(moduleId: SubModuleId): UseFeatureMatrixResult 
     if (!manifest) return [];
     setIsVerifying(true);
     try {
-      const results = await autoUpdateFeatureMatrix(manifest, moduleId);
+      // The active project travels with the verify: it was the ONE feature-matrix
+      // write path that stamped nothing, so every auto-verified row landed
+      // unattributed and visible to every project.
+      const results = await autoUpdateFeatureMatrix(manifest, moduleId, undefined, projectPath);
       setVerificationResults(results);
       // Auto-verify writes statuses — every consumer of the shared derived
       // caches must see them, not just this view.
@@ -164,7 +167,7 @@ export function useFeatureMatrix(moduleId: SubModuleId): UseFeatureMatrixResult 
     } finally {
       setIsVerifying(false);
     }
-  }, [moduleId, fetchData]);
+  }, [moduleId, projectPath, fetchData]);
 
   // Auto-seed on first load if no data exists
   useEffect(() => {

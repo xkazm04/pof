@@ -26,27 +26,48 @@ export function runVerification(
   }));
 }
 
+/** Append the active project to a feature-matrix URL. Omitted when no project was
+ *  given, so an unscoped verify is VISIBLY unscoped instead of sending an empty
+ *  parameter that reads like a scope. Mirrors `useFeatureMatrix.withProject`. */
+function withProject(url: string, projectId: string | undefined): string {
+  if (!projectId) return url;
+  const sep = url.includes('?') ? '&' : '?';
+  return `${url}${sep}projectId=${encodeURIComponent(projectId)}`;
+}
+
 /**
  * Run verification for a specific module and update the Feature Matrix DB
  * via the API. Compares against current feature statuses and only updates
  * rows whose status actually changed.
  *
  * Emits `checklist.item.changed` events for each changed feature.
+ *
+ * `projectId` is the ACTIVE PROJECT, passed explicitly by the caller (the same
+ * `projectPath` every other feature-matrix path already carries). It was the one
+ * write path left unstamped after project scoping, so every UE5 auto-verify row
+ * landed unattributed (`project_id = ''`) — visible to every project, and a fresh
+ * source of exactly the unattributed rows the scoping work exists to end. Nothing
+ * here infers it: a verify run with no project available still writes, but writes
+ * UNATTRIBUTED rather than being silently adopted by whatever happens to be open.
  */
 export async function autoUpdateFeatureMatrix(
   manifest: AssetManifest,
   moduleId: SubModuleId,
   rules?: VerificationRule[],
+  projectId?: string,
 ): Promise<VerificationResult[]> {
   const applicableRules = (rules ?? VERIFICATION_RULES).filter(
     (r) => r.moduleId === moduleId,
   );
   if (applicableRules.length === 0) return [];
 
-  // Fetch current feature matrix state for this module
+  // Fetch current feature matrix state for this module — through the SAME scope the
+  // write below uses. A global read paired with a scoped write would diff this
+  // project's rules against another project's rows and "change" statuses that never
+  // moved.
   const currentResult = await tryApiFetch<{
     features: FeatureRow[];
-  }>(`/api/feature-matrix?moduleId=${encodeURIComponent(moduleId)}`);
+  }>(withProject(`/api/feature-matrix?moduleId=${encodeURIComponent(moduleId)}`, projectId));
 
   const currentFeatures = currentResult.ok ? currentResult.data.features : [];
   const featureMap = new Map(
@@ -97,7 +118,10 @@ export async function autoUpdateFeatureMatrix(
       headers: { 'Content-Type': 'application/json' },
       // source 'verify': these verdicts come from matching the live UE5 asset
       // manifest, not from a code review — the row must be able to say which.
-      body: JSON.stringify({ moduleId, features: updates, source: 'verify' }),
+      // projectId: the verdicts belong to the project whose UE5 manifest produced
+      // them. Omitted (⇒ unattributed) when the caller had no project, never
+      // guessed.
+      body: JSON.stringify({ moduleId, features: updates, source: 'verify', projectId }),
     });
 
     // Only emit "changed" events when the write actually persisted. If it failed, the next
