@@ -8,7 +8,7 @@ import type {
   JobStatusResult,
   ImportedObject,
 } from '@/lib/blender-mcp/types';
-import type { ForgeCritique, ForgeStatusResponse } from './forgeJobStatus';
+import type { ForgeCritique, ForgeGateProjection, ForgeStatusResponse } from './forgeJobStatus';
 import type { StyleDnaProfile } from '@/lib/visual-gen/style-dna-db';
 import { getOfficialProvider, getProviderById, providerExecution } from '@/lib/visual-gen/providers';
 
@@ -397,7 +397,10 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
         return;
       }
 
-      const statusResult = await tryApiFetch<JobStatusResult>(
+      // The MCP status route now projects the SAME verdict axis as the runner route, so
+      // the client type is the transport shape plus that projection — an MCP delivery
+      // can no longer arrive here as a bare status and render as a passed gate.
+      const statusResult = await tryApiFetch<JobStatusResult & ForgeGateProjection>(
         `/api/blender-mcp/generate/status?jobId=${encodeURIComponent(mcpJobId)}&provider=${encodeURIComponent(mcpProvider)}`,
       );
       if (stopped) return;
@@ -419,7 +422,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       }
       pollFailures = 0;
 
-      const { status, progress, resultUrl } = statusResult.data;
+      const { status, progress, resultUrl, accepted, ungated, gateReason } = statusResult.data;
 
       if (status === 'completed') {
         // Stop scheduling BEFORE the long /import await so no poll fires during
@@ -447,6 +450,11 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
         if (importResult.ok) {
           get().updateJob(localId, {
             status: 'completed',
+            // The server's verdict rides onto the job exactly as it does for a runner
+            // job, so ONE queue-card code path serves both. On this path it is always
+            // "delivered, ungated, and here is why nothing measured it" — which is the
+            // truth a bare `completed` was quietly rounding up to a pass.
+            accepted, ungated, gateReason,
             completedAt: Date.now(),
           });
         } else {
