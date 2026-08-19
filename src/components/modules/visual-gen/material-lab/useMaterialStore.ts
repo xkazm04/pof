@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { tryApiFetch } from '@/lib/api-utils';
 import { createMaterialScript } from '@/lib/blender-mcp/scripts/create-material';
-import type { Result } from '@/types/result';
+import { ok, type Result } from '@/types/result';
 
 export interface PBRParams {
   baseColor: string;     // hex color
@@ -15,7 +15,39 @@ export interface MaterialPreset {
   id: string;
   name: string;
   params: PBRParams;
-  createdAt: number;
+  /** SQLite `created_at` (UTC "YYYY-MM-DD HH:MM:SS") — the server is the single source. */
+  createdAt: string;
+}
+
+/** Shape returned by `/api/visual-gen/materials` (see `material-db.ts`). */
+interface MaterialRecordDto {
+  id: string;
+  name: string;
+  params: Record<string, unknown>;
+  createdAt: string;
+}
+
+const MATERIALS_ENDPOINT = '/api/visual-gen/materials';
+
+/**
+ * Coerce a stored params blob back into `PBRParams`, filling any field an older
+ * row is missing from the defaults rather than letting `undefined` reach a
+ * slider. Named fields only — an unknown key in the row is not silently adopted.
+ */
+function toPbrParams(raw: Record<string, unknown>): PBRParams {
+  const num = (key: keyof PBRParams, fallback: number) =>
+    typeof raw[key] === 'number' ? (raw[key] as number) : fallback;
+  return {
+    baseColor: typeof raw.baseColor === 'string' ? raw.baseColor : DEFAULT_PARAMS.baseColor,
+    metallic: num('metallic', DEFAULT_PARAMS.metallic),
+    roughness: num('roughness', DEFAULT_PARAMS.roughness),
+    normalStrength: num('normalStrength', DEFAULT_PARAMS.normalStrength),
+    aoStrength: num('aoStrength', DEFAULT_PARAMS.aoStrength),
+  };
+}
+
+function toPreset(record: MaterialRecordDto): MaterialPreset {
+  return { id: record.id, name: record.name, params: toPbrParams(record.params), createdAt: record.createdAt };
 }
 
 export type PreviewMesh = 'sphere' | 'cube' | 'plane' | 'cylinder';
@@ -34,8 +66,19 @@ function hexToRgb(hex: string): [number, number, number] {
 interface MaterialState {
   params: PBRParams;
   previewMesh: PreviewMesh;
+  /**
+   * User presets, mirroring the `materials` table. These are the SAVED ones —
+   * {@link BUILT_IN_PRESETS} are compiled-in starting points that are never
+   * persisted and have no delete affordance, so a built-in can neither be lost
+   * nor removed by the user.
+   */
   presets: MaterialPreset[];
   activePresetId: string | null;
+  /** True once a `loadPresets` has SUCCEEDED — a failed load must not look loaded. */
+  presetsLoaded: boolean;
+  presetsLoading: boolean;
+  /** Monotonic per-session suffix so two presets saved in the same millisecond differ. */
+  presetSeq: number;
 
   // Texture URLs (blob URLs from file uploads)
   albedoTexture: string | null;
@@ -53,9 +96,13 @@ interface MaterialState {
   setParams: (params: Partial<PBRParams>) => void;
   setPreviewMesh: (mesh: PreviewMesh) => void;
   setTexture: (channel: TextureChannel, url: string | null) => void;
-  addPreset: (name: string) => string;
+  /** Fetch the saved presets. Returns the failure so the caller can show it with a retry. */
+  loadPresets: () => Promise<Result<MaterialPreset[], string>>;
+  /** Persist the current params under `name`. Resolves to the new preset id. */
+  addPreset: (name: string) => Promise<Result<string, string>>;
   loadPreset: (id: string) => void;
-  removePreset: (id: string) => void;
+  /** Delete a saved preset server-side, then locally. A failure leaves the row visible. */
+  removePreset: (id: string) => Promise<Result<true, string>>;
   reset: () => void;
   sendToBlender: (materialName?: string) => Promise<Result<unknown, string>>;
 }
@@ -77,13 +124,14 @@ export const BUILT_IN_PRESETS: Array<{ name: string; params: PBRParams }> = [
   { name: 'Rubber', params: { baseColor: '#2a2a2a', metallic: 0, roughness: 0.9, normalStrength: 0.3, aoStrength: 1 } },
 ];
 
-let presetCounter = 0;
-
 export const useMaterialStore = create<MaterialState>((set, get) => ({
   params: { ...DEFAULT_PARAMS },
   previewMesh: 'sphere',
   presets: [],
   activePresetId: null,
+  presetsLoaded: false,
+  presetsLoading: false,
+  presetSeq: 0,
 
   albedoTexture: null,
   normalTexture: null,
@@ -112,16 +160,40 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
     } as Partial<MaterialState>));
   },
 
-  addPreset: (name) => {
-    const id = `preset-${Date.now()}-${++presetCounter}`;
-    const preset: MaterialPreset = {
-      id,
-      name,
-      params: { ...get().params },
-      createdAt: Date.now(),
-    };
-    set((s) => ({ presets: [...s.presets, preset], activePresetId: id }));
-    return id;
+  loadPresets: async () => {
+    set({ presetsLoading: true });
+    const result = await tryApiFetch<MaterialRecordDto[]>(MATERIALS_ENDPOINT);
+    if (!result.ok) {
+      // Deliberately do NOT set presetsLoaded: an empty list after a failed load
+      // reads as "you have no presets", which is a lie. The caller renders the
+      // error with a retry instead.
+      set({ presetsLoading: false });
+      return result;
+    }
+    const presets = result.data.map(toPreset);
+    set({ presets, presetsLoaded: true, presetsLoading: false });
+    return ok(presets);
+  },
+
+  addPreset: async (name) => {
+    const { params, presetSeq } = get();
+    const seq = presetSeq + 1;
+    const id = `preset-${Date.now()}-${seq}`;
+    const snapshot = { ...params };
+    set({ presetSeq: seq });
+
+    const result = await tryApiFetch<MaterialRecordDto>(MATERIALS_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, name, params: snapshot }),
+    });
+    // The preset joins the list only once the row exists — an optimistic entry
+    // that vanished on the next reload would be exactly the bug being fixed.
+    if (!result.ok) return result;
+
+    const preset = toPreset(result.data);
+    set((s) => ({ presets: [preset, ...s.presets], activePresetId: preset.id }));
+    return ok(preset.id);
   },
 
   loadPreset: (id) => {
@@ -130,11 +202,20 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
     set({ params: { ...preset.params }, activePresetId: id });
   },
 
-  removePreset: (id) =>
+  removePreset: async (id) => {
+    const result = await tryApiFetch<{ deleted: boolean }>(MATERIALS_ENDPOINT, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    });
+    if (!result.ok) return result;
+
     set((s) => ({
       presets: s.presets.filter((p) => p.id !== id),
       activePresetId: s.activePresetId === id ? null : s.activePresetId,
-    })),
+    }));
+    return ok(true as const);
+  },
 
   reset: () =>
     set({

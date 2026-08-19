@@ -10,6 +10,7 @@ import {
   type TextureChannel,
 } from './useMaterialStore';
 import { StyledSlider } from '@/components/ui/StyledSlider';
+import { MaterialPresetList } from './MaterialPresetList';
 
 function Slider({
   label,
@@ -132,7 +133,7 @@ export function PBREditor() {
     <div className="space-y-5">
       {/* Presets */}
       <div>
-        <label className="text-xs text-text-muted mb-1.5 block">Material Presets</label>
+        <label className="text-xs text-text-muted mb-1.5 block">Built-in Presets</label>
         <div className="flex flex-wrap gap-1.5">
           {BUILT_IN_PRESETS.map((preset) => (
             <button
@@ -149,6 +150,9 @@ export function PBREditor() {
           ))}
         </div>
       </div>
+
+      {/* Saved (persisted) presets — a built-in above cannot be deleted; these can. */}
+      <MaterialPresetList />
 
       {/* Base Color */}
       <div>
