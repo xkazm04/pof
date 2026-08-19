@@ -11,7 +11,7 @@ import type { FeatureRow, FeatureStatus } from '@/types/feature-matrix';
  * only ever match ONE feature per item. The map first covered 177 (81.9%); the
  * remaining 39 belonged to the nine Asset Studio modules, which declared no
  * features at all. Those nine now declare their app-side feature surface, so
- * every one of the 216 items is explicitly mapped — 30 to named features and 9
+ * every one of the 216 items is explicitly mapped — 31 to named features and 8
  * to the deliberate `[]` ("nothing here can evidence this"), never to a guess.
  *
  * The heuristic fallback branch therefore has no live subject left in the real
@@ -113,7 +113,9 @@ describe('CHECKLIST_FEATURE_MAP integrity', () => {
 
   it('distinguishes "no feature can evidence this" from "not mapped yet"', () => {
     expect(mappedFeaturesFor('arpg-save', 'as-8')).toEqual([]); // "Test full save/load cycle"
-    expect(mappedFeaturesFor('material-lab', 'mat-ue5')).toEqual([]); // no UE5 material codegen exists
+    // `mat-ue5` was one of these until the Material Lab actually emitted a UE5
+    // material instance — a deliberate `[]` is a hole to close, not a resting state.
+    expect(mappedFeaturesFor('material-lab', 'mat-ue5')).toEqual(['UE5 material instance export']);
     // `null` is the third state and is reachable only for an id the map does not
     // list — every id the registry actually declares is now mapped.
     expect(mappedFeaturesFor('asset-viewer', 'viewer-does-not-exist')).toBeNull();
@@ -131,7 +133,7 @@ describe('the nine Asset Studio modules are measurable', () => {
   const ASSET_STUDIO: { id: SubModuleId; items: number; mapped: number; empty: number }[] = [
     { id: 'asset-viewer', items: 6, mapped: 6, empty: 0 },
     { id: 'asset-forge', items: 5, mapped: 4, empty: 1 },
-    { id: 'material-lab', items: 5, mapped: 4, empty: 1 },
+    { id: 'material-lab', items: 5, mapped: 5, empty: 0 },
     { id: 'blender-pipeline', items: 4, mapped: 4, empty: 0 },
     { id: 'asset-browser', items: 4, mapped: 3, empty: 1 },
     { id: 'import-automation', items: 4, mapped: 2, empty: 2 },
@@ -297,12 +299,13 @@ describe('the report states how much of the checklist surface it can see', () =>
   });
 
   it('says how many of the 216 are the honest "nothing can evidence this" state', () => {
-    // Mapped is not the same as evidenced: 30 items are declared `[]` on
-    // purpose — 21 verification/tuning items in the UE5 modules plus the 9
-    // Asset Studio gaps. The number is surfaced so a 100% mapping cannot be
+    // Mapped is not the same as evidenced: 29 items are declared `[]` on
+    // purpose — 21 verification/tuning items in the UE5 modules plus the 8
+    // remaining Asset Studio gaps (`mat-ue5` left the list once the Material
+    // Lab actually emitted a UE5 material instance). The number is surfaced so a 100% mapping cannot be
     // read as 100% coverage.
     const report = audit({});
-    expect(report.checklistMapping.noFeatureEvidence).toBe(30);
-    expect(report.checklistMapping.mapped - report.checklistMapping.noFeatureEvidence).toBe(186);
+    expect(report.checklistMapping.noFeatureEvidence).toBe(29);
+    expect(report.checklistMapping.mapped - report.checklistMapping.noFeatureEvidence).toBe(187);
   });
 });

@@ -2,12 +2,13 @@
 
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Paintbrush, Send, Loader2, CheckCircle2, XCircle, AlertTriangle, Sparkles } from 'lucide-react';
+import { Paintbrush, Send, Loader2, CheckCircle2, XCircle, AlertTriangle, Sparkles, FileUp } from 'lucide-react';
 import { ReviewableModuleView } from '@/components/modules/shared/ReviewableModuleView';
 import type { ExtraTab } from '@/components/modules/shared/ReviewableModuleView';
 import { SUB_MODULE_MAP, getCategoryForSubModule, getModuleChecklist } from '@/lib/module-registry';
 import { PBREditor } from './PBREditor';
 import { AdvancedTexturePanel } from './AdvancedTexturePanel';
+import { UE5ExportPanel } from './UE5ExportPanel';
 import { useMaterialStore, type SendToBlenderResult } from './useMaterialStore';
 import { BlenderConnectionBar } from '@/components/blender-mcp/BlenderConnectionBar';
 import { ViewportPreview } from '@/components/blender-mcp/ViewportPreview';
@@ -156,6 +157,12 @@ export function MaterialLabView() {
       label: 'Advanced',
       icon: Sparkles,
       render: () => <AdvancedTexturePanel />,
+    },
+    {
+      id: 'ue5-export',
+      label: 'UE5 Export',
+      icon: FileUp,
+      render: () => <UE5ExportPanel />,
     },
   ];
 

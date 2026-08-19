@@ -447,7 +447,8 @@ export const MODULE_FEATURE_DEFINITIONS: PartialModuleMap<FeatureDefinition[]> =
     { featureName: 'Live PBR preview', category: 'Preview', description: 'MaterialPreview MeshStandardMaterial on a switchable sphere/cube/plane/cylinder under a drei studio Environment, updated from the store in real time', dependsOn: ['PBR parameter editor', 'Texture channel slots'] },
     { featureName: 'Material preset store', category: 'Presets', description: 'useMaterialStore loadPresets / addPreset / loadPreset / removePreset backed by the saved-material API, surfaced by MaterialPresetList with an InlineErrorRetry on any failed load, save or delete', dependsOn: ['PBR parameter editor'] },
     { featureName: 'Saved material API', category: 'Persistence', description: 'SQLite-backed material records (createMaterial / listMaterials / updateMaterial / deleteMaterial) behind /api/visual-gen/materials, read on lab mount and written on every preset save so a preset survives a reload', dependsOn: ['Material preset store'] },
-    { featureName: 'Send material to Blender', category: 'Bridge', description: 'useMaterialStore.sendToBlender emits createMaterialScript through /api/blender-mcp/execute and returns a Result', dependsOn: ['PBR parameter editor'] },
+    { featureName: 'Send material to Blender', category: 'Bridge', description: 'useMaterialStore.sendToBlender emits createMaterialScript through /api/blender-mcp/execute, carrying every scalar plus each resolvable texture channel, and returns the transfer plan so the UI names what did not travel', dependsOn: ['PBR parameter editor'] },
+    { featureName: 'UE5 material instance export', category: 'Export', description: 'buildUE5MaterialInstance emits deterministic UE Python creating a MaterialInstanceConstant of the shared M_ARPG_Surface_Master (empty-pin-safe colour wiring, run-time report of parameters the parent does not expose), surfaced by the UE5ExportPanel tab via CodeViewer copy/download', dependsOn: ['PBR parameter editor'] },
     { featureName: 'Advanced texture generation', category: 'Textures', description: 'AdvancedTexturePanel tiles: Scenario seamless PBR set generation with seam-check reroll, plus Leonardo upscale, unzoom, ControlNet and inpaint', dependsOn: ['Texture channel slots'] },
   ],
   'blender-pipeline': [
@@ -789,7 +790,7 @@ export const CHECKLIST_FEATURE_MAP: PartialModuleMap<Record<string, string[]>> =
     'mat-textures': ['Texture channel slots'],
     'mat-preview': ['Live PBR preview'],
     'mat-presets': ['Material preset store', 'Saved material API'],
-    'mat-ue5': [], // no UE5 material-instance codegen exists in Material Lab — the only export path is the Blender MCP bridge
+    'mat-ue5': ['UE5 material instance export'],
   },
   'blender-pipeline': {
     'blender-detect': ['Blender install detection'],
