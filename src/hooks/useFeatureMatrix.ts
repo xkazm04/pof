@@ -7,7 +7,11 @@ import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
 import { autoUpdateFeatureMatrix } from '@/lib/pof-bridge/verification-engine';
 import { usePofBridgeStore } from '@/stores/pofBridgeStore';
 import { tryApiFetch } from '@/lib/api-utils';
-import { invalidateFeatureStatuses } from '@/hooks/useFeatureStatuses';
+// Every write below changes the feature_matrix rows, and the per-module roll-up
+// is a projection of those same rows — so both derived caches move together.
+// Dropping only the statuses cache left the Evaluator's aggregates contradicting
+// its own status cells for a whole TTL window.
+import { invalidateFeatureData } from '@/hooks/useModuleAggregates';
 import type { SubModuleId } from '@/types/modules';
 
 interface UseFeatureMatrixResult {
@@ -63,7 +67,7 @@ export function useFeatureMatrix(moduleId: SubModuleId): UseFeatureMatrixResult 
       const rows = result.data.features ?? [];
       const signature = rows.map((f) => `${f.featureName}:${f.status}`).join('|');
       if (statusSigRef.current !== null && statusSigRef.current !== signature) {
-        invalidateFeatureStatuses();
+        invalidateFeatureData();
       }
       statusSigRef.current = signature;
       setFeatures(rows);
@@ -97,8 +101,9 @@ export function useFeatureMatrix(moduleId: SubModuleId): UseFeatureMatrixResult 
       body: JSON.stringify({ moduleId, features: seedFeatures, seedOnly: true, source: 'seed' }),
     });
     if (result.ok) {
-      // New rows change the cross-module status table every other view reads.
-      invalidateFeatureStatuses();
+      // New rows change the cross-module status table every other view reads —
+      // and the counts every module roll-up is built from.
+      invalidateFeatureData();
       await fetchData();
     } else {
       console.error('useFeatureMatrix seed error:', result.error);
@@ -112,9 +117,9 @@ export function useFeatureMatrix(moduleId: SubModuleId): UseFeatureMatrixResult 
     try {
       const results = await autoUpdateFeatureMatrix(manifest, moduleId);
       setVerificationResults(results);
-      // Auto-verify writes statuses — every consumer of the shared all-statuses
-      // cache must see them, not just this view.
-      invalidateFeatureStatuses();
+      // Auto-verify writes statuses — every consumer of the shared derived
+      // caches must see them, not just this view.
+      invalidateFeatureData();
       // Refetch to show updated statuses
       await fetchData();
       return results;

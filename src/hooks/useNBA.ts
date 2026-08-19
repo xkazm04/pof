@@ -3,7 +3,8 @@
 import { useMemo, useCallback } from 'react';
 import { computeNBA, type NBARecommendation } from '@/lib/nba-engine';
 import { useModuleStore } from '@/stores/moduleStore';
-import { useFeatureStatuses, invalidateFeatureStatuses } from '@/hooks/useFeatureStatuses';
+import { useFeatureStatuses } from '@/hooks/useFeatureStatuses';
+import { invalidateFeatureData } from '@/hooks/useModuleAggregates';
 import type { SubModuleId } from '@/types/modules';
 
 export interface UseNBAResult {
@@ -39,8 +40,11 @@ export function useNBA(moduleId: SubModuleId): UseNBAResult {
     return failed ? computeNBA(moduleId) : computeNBA(moduleId, statusMap);
   }, [moduleId, statusMap, loaded, failed, progress]);
 
-  // Force a refetch of the shared status map; the memo recomputes when it updates.
-  const refresh = useCallback(() => { invalidateFeatureStatuses(); }, []);
+  // Force a refetch of the shared status map; the memo recomputes when it
+  // updates. NBA itself reads only the statuses, but a user-driven refresh means
+  // "re-read the matrix" — dropping the statuses while leaving the roll-up cached
+  // would refresh this card into disagreeing with the dashboards beside it.
+  const refresh = useCallback(() => { invalidateFeatureData(); }, []);
 
   const isLoading = !loaded && statusesLoading;
   const top = recommendations[0] ?? null;
