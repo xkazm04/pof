@@ -25,10 +25,23 @@ export interface AssetStats {
   triangles: number;
   vertices: number;
   meshes: number;
+  /**
+   * Mesh x material-slot pairs traversed in the loaded scene. A PROXY for draw calls,
+   * not a measured draw count (instancing, merging and Nanite all change the real
+   * number), and PoF authors no draw-call budget — so it is labelled as a proxy
+   * wherever it is shown, and never graded. See `DRAW_CALLS_PROXY_NOTE` in assetGrade.ts.
+   */
   drawCalls: number;
   materials: MaterialStat[];
   textures: TextureStat[];
   animations: AnimationStat[];
+  /**
+   * Bounding-box extents in the glTF file's own units (metres by spec) — NOT a
+   * real-world size. Every generator PoF runs normalises its output to a ~1 m box:
+   * measured 2026-08-19 over all 51 served `.glb` files, the longest extent is
+   * 0.950-1.069 on every one. Grade it through `world-scale`, never print it under a
+   * "metres" heading as though it described the asset.
+   */
   boundingBox: {
     width: number;
     height: number;
@@ -36,30 +49,21 @@ export interface AssetStats {
   };
 }
 
-export interface AssetBudget {
-  /** Maximum triangle count */
-  maxTriangles: number;
-  /** Maximum texture dimension (width or height in pixels) */
-  maxTextureSize: number;
-  /** Maximum unique material slots */
-  maxMaterials: number;
-  /** Maximum draw calls (unique mesh+material pairs) */
-  maxDrawCalls: number;
-}
-
-export const DEFAULT_UE5_PROP_BUDGET: AssetBudget = {
-  maxTriangles: 100_000,
-  maxTextureSize: 2048,
-  maxMaterials: 4,
-  maxDrawCalls: 8,
-};
-
-export const UE5_PRESETS: Record<string, AssetBudget> = {
-  prop: { maxTriangles: 100_000, maxTextureSize: 2048, maxMaterials: 4, maxDrawCalls: 8 },
-  character: { maxTriangles: 200_000, maxTextureSize: 4096, maxMaterials: 8, maxDrawCalls: 16 },
-  hero: { maxTriangles: 500_000, maxTextureSize: 4096, maxMaterials: 12, maxDrawCalls: 24 },
-  environment: { maxTriangles: 50_000, maxTextureSize: 2048, maxMaterials: 6, maxDrawCalls: 12 },
-};
+/**
+ * NO BUDGET TABLE LIVES HERE.
+ *
+ * This file used to export `AssetBudget` / `DEFAULT_UE5_PROP_BUDGET` / `UE5_PRESETS`
+ * (prop = 100,000 triangles, character = 200,000) — a second, rival authority that
+ * contradicted the project's authored budgets in `src/lib/visual-gen/polycount-presets.ts`
+ * (prop `faceLimit` 10,000 / `warnAbove` 15,000; character 40,000 / 60,000) by up to 10x.
+ * Under it, `chair.glb` at 83,728 measured triangles — 5.6x the authored prop ceiling —
+ * was stamped "Within budget".
+ *
+ * This module MEASURES. Grading lives in `assetGrade.ts`, which reads
+ * `polycount-presets` + `face-budget` + `world-scale` and owns no numbers of its own.
+ * If you are about to add a threshold constant to this file, put it in
+ * `polycount-presets.ts` instead — one table, with its rationale, or none.
+ */
 
 function isPowerOfTwo(n: number): boolean {
   return n > 0 && (n & (n - 1)) === 0;
@@ -178,63 +182,6 @@ export function computeAssetStats(gltf: GLTF): AssetStats {
       depth: size.z,
     },
   };
-}
-
-export interface BudgetViolation {
-  metric: 'triangles' | 'textureSize' | 'materials' | 'drawCalls';
-  label: string;
-  actual: number;
-  limit: number;
-  detail?: string;
-}
-
-export function findBudgetViolations(
-  stats: AssetStats,
-  budget: AssetBudget,
-): BudgetViolation[] {
-  const out: BudgetViolation[] = [];
-
-  if (stats.triangles > budget.maxTriangles) {
-    out.push({
-      metric: 'triangles',
-      label: 'Triangle count',
-      actual: stats.triangles,
-      limit: budget.maxTriangles,
-    });
-  }
-
-  if (stats.materials.length > budget.maxMaterials) {
-    out.push({
-      metric: 'materials',
-      label: 'Material slots',
-      actual: stats.materials.length,
-      limit: budget.maxMaterials,
-    });
-  }
-
-  if (stats.drawCalls > budget.maxDrawCalls) {
-    out.push({
-      metric: 'drawCalls',
-      label: 'Draw calls',
-      actual: stats.drawCalls,
-      limit: budget.maxDrawCalls,
-    });
-  }
-
-  for (const tex of stats.textures) {
-    const dim = Math.max(tex.width, tex.height);
-    if (dim > budget.maxTextureSize) {
-      out.push({
-        metric: 'textureSize',
-        label: `Texture "${tex.name}"`,
-        actual: dim,
-        limit: budget.maxTextureSize,
-        detail: `${tex.width}×${tex.height}`,
-      });
-    }
-  }
-
-  return out;
 }
 
 export function formatNumber(n: number): string {

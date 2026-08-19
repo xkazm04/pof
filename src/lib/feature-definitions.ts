@@ -427,7 +427,12 @@ export const MODULE_FEATURE_DEFINITIONS: PartialModuleMap<FeatureDefinition[]> =
     { featureName: 'Render mode switching', category: 'Rendering', description: 'textured / solid / wireframe RenderMode applied by traversing the loaded scene and swapping materials, with the originals restored on change', dependsOn: ['Model file loader'] },
     { featureName: 'Grid and axis gizmo', category: 'Reference', description: 'drei Grid ground plane and the GizmoHelper/GizmoViewport orientation cube, each toggled from useViewerStore', dependsOn: ['SceneViewer canvas'] },
     { featureName: 'Viewport screenshot export', category: 'Export', description: 'canvas.toDataURL PNG capture downloaded as <model>_<timestamp>.png from AssetViewerView', dependsOn: ['SceneViewer canvas'] },
-    { featureName: 'Asset stats and budget inspector', category: 'Inspection', description: 'computeAssetStats (triangles, vertices, draw calls, materials, textures, animations) graded against the UE5_PRESETS budgets in the AssetInspector panel', dependsOn: ['Model file loader'] },
+    // Was: "graded against the UE5_PRESETS budgets in the AssetInspector panel". Both
+    // are gone (2026-08-19). AssetInspector had zero importers outside its own folder —
+    // this line was its only reference anywhere — and UE5_PRESETS was a rival budget
+    // table contradicting polycount-presets by up to 10x. The grading that ships now runs
+    // through the project's authored authorities and is mounted on the /3d studio rail.
+    { featureName: 'Asset stats and budget inspector', category: 'Inspection', description: 'computeAssetStats (triangles, vertices, material slots, textures, animations) graded by gradeViewerAsset (asset-viewer/assetGrade.ts) through polycount-presets + face-budget + world-scale, rendered by StudioInspector on the /3d studio rail; asset class is a stated input and an unstated one grades unmeasured', dependsOn: ['Model file loader'] },
   ],
   'asset-forge': [
     { featureName: 'Generation provider registry', category: 'Providers', description: 'GENERATION_PROVIDERS (lib/visual-gen/providers.ts) filtered per generation mode, splitting MCP-dispatched from runner-backed providers' },

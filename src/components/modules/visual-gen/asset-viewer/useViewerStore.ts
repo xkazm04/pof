@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { type AssetStats, type AssetBudget, DEFAULT_UE5_PROP_BUDGET } from './assetStats';
+import type { AssetClass } from '@/lib/visual-gen/polycount-presets';
+import type { AssetStats } from './assetStats';
 import type { ViewerLoadState } from './loadStatus';
 
 export type RenderMode = 'textured' | 'solid' | 'wireframe';
@@ -16,8 +17,19 @@ interface ViewerState {
   autoRotate: boolean;
   /** Geometry/material/texture stats for the loaded model (null until computed). */
   stats: AssetStats | null;
-  /** Active UE5 budget the inspector checks the loaded model against. */
-  budget: AssetBudget;
+  /**
+   * The asset class the USER stated for the loaded mesh — the input the triangle and
+   * size grades resolve through. Null until stated, and never inferred from a filename:
+   * `warrior.glb` is not evidence, and a wrong guess grades a character against a prop
+   * ceiling. Null grades `unmeasured`, never "within budget".
+   */
+  assetClass: AssetClass | null;
+  /**
+   * The longest extent (m) this mesh was SUPPOSED to be, when the user states one. Null
+   * falls back to `world-scale`'s nominal for the class, which exists only where it is
+   * honest (a character = the 1.8 m UE5 Mannequin; a prop can be a coin or a wagon).
+   */
+  targetExtentM: number | null;
   /** Which of idle / loading / loaded / error is true of {@link modelUrl} right now. */
   loadState: ViewerLoadState;
   /** Why the load failed, when it did. Null in every other state. */
@@ -34,7 +46,8 @@ interface ViewerState {
   reportLoadError: (url: string, message: string) => void;
   /** The model was unmounted — its numbers describe nothing now. */
   clearStats: () => void;
-  setBudget: (budget: AssetBudget) => void;
+  setAssetClass: (assetClass: AssetClass | null) => void;
+  setTargetExtentM: (targetExtentM: number | null) => void;
   reset: () => void;
 }
 
@@ -46,7 +59,8 @@ const INITIAL_STATE = {
   showAxes: true,
   autoRotate: false,
   stats: null as AssetStats | null,
-  budget: DEFAULT_UE5_PROP_BUDGET,
+  assetClass: null as AssetClass | null,
+  targetExtentM: null as number | null,
   loadState: 'idle' as ViewerLoadState,
   loadError: null as string | null,
 };
@@ -86,6 +100,7 @@ export const useViewerStore = create<ViewerState>((set) => ({
     ),
   clearStats: () => set({ stats: null }),
 
-  setBudget: (budget) => set({ budget }),
+  setAssetClass: (assetClass) => set({ assetClass }),
+  setTargetExtentM: (targetExtentM) => set({ targetExtentM }),
   reset: () => set(INITIAL_STATE),
 }));
