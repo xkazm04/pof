@@ -1,7 +1,14 @@
 import { create } from 'zustand';
 import { tryApiFetch } from '@/lib/api-utils';
+import { getAppOrigin } from '@/lib/constants';
 import { createMaterialScript } from '@/lib/blender-mcp/scripts/create-material';
+import { planMaterialTransfer, type MaterialTransferPlan } from './materialTransfer';
 import { ok, type Result } from '@/types/result';
+
+export interface SendToBlenderResult {
+  name: string;
+  plan: MaterialTransferPlan;
+}
 
 export interface PBRParams {
   baseColor: string;     // hex color
@@ -104,7 +111,12 @@ interface MaterialState {
   /** Delete a saved preset server-side, then locally. A failure leaves the row visible. */
   removePreset: (id: string) => Promise<Result<true, string>>;
   reset: () => void;
-  sendToBlender: (materialName?: string) => Promise<Result<unknown, string>>;
+  /**
+   * Send the material to Blender. Resolves with the material name AND the
+   * transfer plan — what actually travelled and what did not — so the UI cannot
+   * report a bare success over dropped edits.
+   */
+  sendToBlender: (materialName?: string) => Promise<Result<SendToBlenderResult, string>>;
 }
 
 const DEFAULT_PARAMS: PBRParams = {
@@ -230,19 +242,41 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
     }),
 
   sendToBlender: async (materialName?: string) => {
-    const { params } = get();
+    const state = get();
+    const { params } = state;
     const name = materialName ?? `PoF_Material_${Date.now()}`;
+
+    // Decide what can travel BEFORE sending, so the result can report both
+    // halves. Nothing here is silently dropped: a slot that cannot be resolved
+    // becomes a named `notSent` entry carrying its reason.
+    const plan = planMaterialTransfer(
+      params,
+      {
+        albedo: state.albedoTexture,
+        normal: state.normalTexture,
+        metallic: state.metallicTexture,
+        roughness: state.roughnessTexture,
+        ao: state.aoTexture,
+      },
+      getAppOrigin(),
+    );
+
     const code = createMaterialScript({
       name,
       baseColor: hexToRgb(params.baseColor),
       metallic: params.metallic,
       roughness: params.roughness,
+      normalStrength: params.normalStrength,
+      aoStrength: params.aoStrength,
+      textures: plan.textures,
     });
 
-    return tryApiFetch<unknown>('/api/blender-mcp/execute', {
+    const result = await tryApiFetch<unknown>('/api/blender-mcp/execute', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code }),
     });
+    if (!result.ok) return result;
+    return ok({ name, plan });
   },
 }));

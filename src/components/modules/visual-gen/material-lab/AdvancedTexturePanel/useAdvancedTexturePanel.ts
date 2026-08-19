@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { tryApiFetch } from '@/lib/api-utils';
+import { UI_TIMEOUTS } from '@/lib/constants';
 import { logger } from '@/lib/logger';
 import { useMaterialStore, type TextureChannel } from '../useMaterialStore';
 import type { ScenarioResult, ImageResult } from './types';
@@ -47,9 +48,18 @@ export function useAdvancedTexturePanel() {
   const setTexture = useMaterialStore((s) => s.setTexture);
   const [appliedChannels, setAppliedChannels] = useState<TextureChannel[]>([]);
 
+  // Clear the flash timer on unmount (and before re-arming it) — an uncleared
+  // one fires setState into a torn-down component. UI_TIMEOUTS.copyFeedback is
+  // the house value for this "flash then fade" acknowledgement.
+  const flashTimer = useRef<number | null>(null);
+  useEffect(() => () => {
+    if (flashTimer.current !== null) window.clearTimeout(flashTimer.current);
+  }, []);
+
   const flashApplied = (channels: TextureChannel[]) => {
     setAppliedChannels(channels);
-    window.setTimeout(() => setAppliedChannels([]), 1400);
+    if (flashTimer.current !== null) window.clearTimeout(flashTimer.current);
+    flashTimer.current = window.setTimeout(() => setAppliedChannels([]), UI_TIMEOUTS.copyFeedback);
   };
 
   const goToEditorTab = () => {

@@ -5,6 +5,7 @@ import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Environment } from '@react-three/drei';
 import * as THREE from 'three';
 import type { PBRParams, PreviewMesh } from './useMaterialStore';
+import { buildStandardMaterialProps } from './materialPreviewProps';
 
 /**
  * Load a texture from a URL and dispose the previous one whenever the URL (or
@@ -57,6 +58,7 @@ function MaterialMesh({
   normalTexture,
   metallicTexture,
   roughnessTexture,
+  aoTexture,
 }: {
   params: PBRParams;
   previewMesh: PreviewMesh;
@@ -64,36 +66,34 @@ function MaterialMesh({
   normalTexture: string | null;
   metallicTexture: string | null;
   roughnessTexture: string | null;
+  aoTexture: string | null;
 }) {
-  const color = useMemo(() => new THREE.Color(params.baseColor), [params.baseColor]);
-
-  // Albedo is a color map (sRGB); normal/metallic/roughness are data maps and
+  // Albedo is a color map (sRGB); normal/metallic/roughness/AO are data maps and
   // must stay in linear space (NoColorSpace) or their values get gamma-skewed.
   const albedoMap = useDisposableTexture(albedoTexture, THREE.SRGBColorSpace);
   const normalMap = useDisposableTexture(normalTexture, THREE.NoColorSpace);
   const metallicMap = useDisposableTexture(metallicTexture, THREE.NoColorSpace);
   const roughnessMap = useDisposableTexture(roughnessTexture, THREE.NoColorSpace);
+  const aoMap = useDisposableTexture(aoTexture, THREE.NoColorSpace);
 
-  // normalStrength drives the normal map's perturbation intensity. Recreate the
-  // Vector2 by value so the material updates when the slider moves.
-  const normalScale = useMemo(
-    () => new THREE.Vector2(params.normalStrength, params.normalStrength),
-    [params.normalStrength],
+  // The slot→material mapping is a pure function so it can be asserted directly
+  // (see materialPreviewProps.ts) instead of only through a WebGL render.
+  const materialProps = useMemo(
+    () =>
+      buildStandardMaterialProps(params, {
+        albedo: albedoMap,
+        normal: normalMap,
+        metallic: metallicMap,
+        roughness: roughnessMap,
+        ao: aoMap,
+      }),
+    [params, albedoMap, normalMap, metallicMap, roughnessMap, aoMap],
   );
 
   return (
     <mesh castShadow receiveShadow>
       <PreviewGeometry mesh={previewMesh} />
-      <meshStandardMaterial
-        color={albedoMap ? undefined : color}
-        map={albedoMap}
-        normalMap={normalMap}
-        normalScale={normalMap ? normalScale : undefined}
-        metalnessMap={metallicMap}
-        roughnessMap={roughnessMap}
-        metalness={params.metallic}
-        roughness={params.roughness}
-      />
+      <meshStandardMaterial {...materialProps} />
     </mesh>
   );
 }
@@ -105,6 +105,7 @@ interface MaterialPreviewProps {
   normalTexture: string | null;
   metallicTexture: string | null;
   roughnessTexture: string | null;
+  aoTexture: string | null;
 }
 
 export function MaterialPreview({
@@ -114,6 +115,7 @@ export function MaterialPreview({
   normalTexture,
   metallicTexture,
   roughnessTexture,
+  aoTexture,
 }: MaterialPreviewProps) {
   return (
     <div className="w-full h-full rounded-lg overflow-hidden bg-[var(--surface-deep)]">
@@ -136,6 +138,7 @@ export function MaterialPreview({
             normalTexture={normalTexture}
             metallicTexture={metallicTexture}
             roughnessTexture={roughnessTexture}
+            aoTexture={aoTexture}
           />
 
           <OrbitControls

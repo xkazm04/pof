@@ -168,9 +168,56 @@ describe('useMaterialStore', () => {
   });
 });
 
+describe('sendToBlender reports what actually travelled', () => {
+  beforeEach(() => {
+    useMaterialStore.setState({
+      params: { baseColor: '#c0c0c0', metallic: 1, roughness: 0.1, normalStrength: 1.7, aoStrength: 0.3 },
+      albedoTexture: null,
+      normalTexture: null,
+      metallicTexture: null,
+      roughnessTexture: null,
+      aoTexture: null,
+    });
+  });
+
+  it('names the tuned strengths as NOT sent when their maps are missing', async () => {
+    const result = await useMaterialStore.getState().sendToBlender('Test');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.name).toBe('Test');
+    expect(result.data.plan.notSent.map((d) => d.label)).toEqual(
+      expect.arrayContaining(['Normal Strength', 'AO Strength']),
+    );
+  });
+
+  it('a blob upload is reported as dropped rather than silently ignored', async () => {
+    useMaterialStore.getState().setTexture('ao', 'blob:http://localhost/ao');
+    const result = await useMaterialStore.getState().sendToBlender('Test');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.plan.notSent.some((d) => d.label === 'AO map')).toBe(true);
+    expect(result.data.plan.sent).not.toContain('AO map');
+  });
+
+  it('a real URL map travels and carries its strength', async () => {
+    useMaterialStore.getState().setTexture('ao', 'https://cdn.example/ao.png');
+    useMaterialStore.getState().setTexture('normal', 'https://cdn.example/n.png');
+    const result = await useMaterialStore.getState().sendToBlender('Test');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.plan.sent).toEqual(
+      expect.arrayContaining(['AO map', 'Normal map', 'AO Strength', 'Normal Strength']),
+    );
+    expect(result.data.plan.notSent).toEqual([]);
+  });
+});
+
 describe('preset persistence', () => {
   beforeEach(() => {
-    useMaterialStore.setState({ presets: [], presetsLoaded: false, presetsLoading: false, presetSeq: 0, activePresetId: null });
+    useMaterialStore.setState({
+      params: { baseColor: '#808080', metallic: 0, roughness: 0.5, normalStrength: 1, aoStrength: 1 },
+      presets: [], presetsLoaded: false, presetsLoading: false, presetSeq: 0, activePresetId: null,
+    });
   });
 
   it('a saved preset survives a reload — a fresh load returns it', async () => {

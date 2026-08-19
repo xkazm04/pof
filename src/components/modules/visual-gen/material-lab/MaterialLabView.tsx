@@ -2,13 +2,13 @@
 
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Paintbrush, Send, Loader2, CheckCircle2, XCircle, Sparkles } from 'lucide-react';
+import { Paintbrush, Send, Loader2, CheckCircle2, XCircle, AlertTriangle, Sparkles } from 'lucide-react';
 import { ReviewableModuleView } from '@/components/modules/shared/ReviewableModuleView';
 import type { ExtraTab } from '@/components/modules/shared/ReviewableModuleView';
 import { SUB_MODULE_MAP, getCategoryForSubModule, getModuleChecklist } from '@/lib/module-registry';
 import { PBREditor } from './PBREditor';
 import { AdvancedTexturePanel } from './AdvancedTexturePanel';
-import { useMaterialStore } from './useMaterialStore';
+import { useMaterialStore, type SendToBlenderResult } from './useMaterialStore';
 import { BlenderConnectionBar } from '@/components/blender-mcp/BlenderConnectionBar';
 import { ViewportPreview } from '@/components/blender-mcp/ViewportPreview';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
@@ -18,6 +18,40 @@ const MaterialPreview = dynamic(
   { ssr: false },
 );
 
+/**
+ * What the send ACTUALLY carried. The old copy said "Material created in
+ * Blender" after transmitting three of the lab's parameters and dropping the
+ * rest; this names both halves, so a success can never cover a dropped edit.
+ */
+function BlenderSendReport({ result }: { result: SendToBlenderResult }) {
+  const { plan } = result;
+  return (
+    <div data-testid="blender-send-report" className="space-y-1.5">
+      <div className="flex items-start gap-1.5 text-xs text-emerald-400 bg-emerald-500/10 rounded px-2 py-1.5">
+        <CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+        <span>
+          Created <span className="font-mono">{result.name}</span> in Blender with {plan.sent.join(', ')}.
+        </span>
+      </div>
+      {plan.notSent.length > 0 && (
+        <div className="flex items-start gap-1.5 text-xs text-amber-400 bg-amber-500/10 rounded px-2 py-1.5">
+          <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium">Not sent:</p>
+            <ul className="mt-0.5 space-y-0.5">
+              {plan.notSent.map((dropped) => (
+                <li key={dropped.label}>
+                  <span className="font-medium">{dropped.label}</span> — {dropped.reason}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function EditorTab() {
   const params = useMaterialStore((s) => s.params);
   const previewMesh = useMaterialStore((s) => s.previewMesh);
@@ -25,24 +59,24 @@ function EditorTab() {
   const normalTexture = useMaterialStore((s) => s.normalTexture);
   const metallicTexture = useMaterialStore((s) => s.metallicTexture);
   const roughnessTexture = useMaterialStore((s) => s.roughnessTexture);
+  const aoTexture = useMaterialStore((s) => s.aoTexture);
   const sendToBlender = useMaterialStore((s) => s.sendToBlender);
   const connected = useBlenderMCPStore((s) => s.connection.connected);
 
   const [isSending, setIsSending] = useState(false);
-  const [sendResult, setSendResult] = useState<'success' | 'error' | null>(null);
+  const [sent, setSent] = useState<SendToBlenderResult | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
 
   const handleSendToBlender = async () => {
     setIsSending(true);
-    setSendResult(null);
+    setSent(null);
     setSendError(null);
 
     const result = await sendToBlender();
 
     if (result.ok) {
-      setSendResult('success');
+      setSent(result.data);
     } else {
-      setSendResult('error');
       setSendError(result.error);
     }
     setIsSending(false);
@@ -72,17 +106,12 @@ function EditorTab() {
             {isSending ? 'Sending...' : 'Send to Blender'}
           </button>
 
-          {sendResult === 'success' && (
-            <div className="flex items-center gap-1.5 text-[11px] text-emerald-400 bg-emerald-500/10 rounded px-2 py-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-              Material created in Blender
-            </div>
-          )}
+          {sent && <BlenderSendReport result={sent} />}
 
-          {sendResult === 'error' && (
-            <div className="flex items-start gap-1.5 text-[11px] text-red-400 bg-red-500/10 rounded px-2 py-1.5">
+          {sendError !== null && (
+            <div className="flex items-start gap-1.5 text-xs text-red-400 bg-red-500/10 rounded px-2 py-1.5">
               <XCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-              <span>{sendError ?? 'Failed to send material'}</span>
+              <span>{sendError}</span>
             </div>
           )}
         </div>
@@ -97,6 +126,7 @@ function EditorTab() {
               normalTexture={normalTexture}
               metallicTexture={metallicTexture}
               roughnessTexture={roughnessTexture}
+              aoTexture={aoTexture}
             />
           </div>
 

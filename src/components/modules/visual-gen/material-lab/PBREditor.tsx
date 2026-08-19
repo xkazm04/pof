@@ -109,6 +109,21 @@ function TextureSlot({
   );
 }
 
+/**
+ * Normal Strength and AO Strength both modulate a MAP — three's `normalScale`
+ * needs a `normalMap` and `aoMapIntensity` needs an `aoMap`, and Blender is the
+ * same. Without one the slider still records a real value (the UE5 export
+ * carries it as a scalar parameter) but the preview cannot change, so it says so
+ * instead of moving silently.
+ */
+function MapRequiredNote({ map }: { map: string }) {
+  return (
+    <p className="text-2xs text-text-muted mt-0.5">
+      Load a {map} map to see this in the preview — the value still exports to UE5.
+    </p>
+  );
+}
+
 const MESH_OPTIONS: { value: PreviewMesh; label: string }[] = [
   { value: 'sphere', label: 'Sphere' },
   { value: 'cube', label: 'Cube' },
@@ -171,8 +186,14 @@ export function PBREditor() {
       {/* Sliders */}
       <Slider label="Metallic" value={params.metallic} min={0} max={1} step={0.01} onChange={(v) => setParam('metallic', v)} />
       <Slider label="Roughness" value={params.roughness} min={0} max={1} step={0.01} onChange={(v) => setParam('roughness', v)} />
-      <Slider label="Normal Strength" value={params.normalStrength} min={0} max={2} step={0.01} onChange={(v) => setParam('normalStrength', v)} />
-      <Slider label="AO Strength" value={params.aoStrength} min={0} max={1} step={0.01} onChange={(v) => setParam('aoStrength', v)} />
+      <div>
+        <Slider label="Normal Strength" value={params.normalStrength} min={0} max={2} step={0.01} onChange={(v) => setParam('normalStrength', v)} />
+        {!normalTexture && <MapRequiredNote map="normal" />}
+      </div>
+      <div>
+        <Slider label="AO Strength" value={params.aoStrength} min={0} max={1} step={0.01} onChange={(v) => setParam('aoStrength', v)} />
+        {!aoTexture && <MapRequiredNote map="AO" />}
+      </div>
 
       {/* Texture Maps */}
       <div>
