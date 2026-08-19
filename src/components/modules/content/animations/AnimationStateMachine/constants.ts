@@ -32,6 +32,22 @@ export const FALLBACK_TRANSITIONS: TransitionEdge[] = [
   { from: 'anim-land', to: 'anim-idle', rule: 'AnimTime < 0.2' },
 ];
 
+// ── Graph provenance ──
+//
+// Where the drawn graph actually came from. The header used to badge EVERY
+// graph `RUNTIME` unconditionally, including the six hardcoded fallback states
+// — i.e. the app claimed live/authored data while showing a template nobody's
+// project produced. The three sources are mutually exclusive and each names
+// itself; `resolveGraphProvenance` is the single place the precedence lives.
+
+export type GraphProvenance = 'bridge' | 'scanned' | 'template';
+
+export const GRAPH_PROVENANCE: Record<GraphProvenance, { badge: string; label: string }> = {
+  bridge: { badge: 'BRIDGE', label: 'LIVE FROM BRIDGE' },
+  scanned: { badge: 'PROJECT SCAN', label: 'SCANNED FROM PROJECT' },
+  template: { badge: 'TEMPLATE', label: 'UNSCANNED TEMPLATE — CLICK TO IMPLEMENT' },
+};
+
 export const EMPTY_PROGRESS: Record<string, boolean> = {};
 export const NODE_W = 110;
 export const NODE_H = 46;

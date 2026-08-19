@@ -1,6 +1,35 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { getModuleName } from '@/lib/prompt-context';
+import { tryApiFetch } from '@/lib/api-utils';
 import type { AnimBPScanResult } from '@/app/api/filesystem/scan-animbp/route';
+
+// `POST /api/filesystem/scan-animbp` answers with the standard `{success,data}`
+// envelope (`apiSuccess(result)`), so the body is NOT the scan result — reading
+// `body.states` yields `undefined` and every consumer that dereferences
+// `.length` throws on the render after a *successful* scan. `tryApiFetch`
+// unwraps the envelope and turns every failure (error envelope, non-2xx,
+// unparseable body, network fault) into a `Result` we can report as text.
+//
+// Unwrapping is not enough on its own: a 200 whose `data` is the wrong shape
+// would fail exactly the same way one render later, far from the fetch. So the
+// payload is validated at the boundary and a bad shape becomes a REPORTED scan
+// error, never a stored half-result.
+
+/** The fields consumers dereference without a guard — all must really be arrays. */
+function isScanResult(value: unknown): value is AnimBPScanResult {
+  if (!value || typeof value !== 'object') return false;
+  const v = value as Partial<AnimBPScanResult>;
+  return Array.isArray(v.states) && Array.isArray(v.transitions);
+}
+
+/** Fill the display-only arrays an older/partial payload may omit. */
+function normalizeScanResult(data: AnimBPScanResult): AnimBPScanResult {
+  return {
+    ...data,
+    montageRefs: Array.isArray(data.montageRefs) ? data.montageRefs : [],
+    animVariables: Array.isArray(data.animVariables) ? data.animVariables : [],
+  };
+}
 
 // Owns AnimBP scan state, the scan request, and the "what changed since last
 // scan" diff tracking (new states + modified transitions, auto-cleared after 5s).
@@ -22,17 +51,22 @@ export function useAnimBpScan(projectPath: string | null, projectName: string | 
 
     try {
       const moduleName = getModuleName(projectName);
-      const res = await fetch('/api/filesystem/scan-animbp', {
+      const result = await tryApiFetch<AnimBPScanResult>('/api/filesystem/scan-animbp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ projectPath, moduleName }),
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: 'Scan failed' }));
-        setScanError(err.error ?? `Scan failed (${res.status})`);
+      if (!result.ok) {
+        // An error envelope with no message would otherwise render the literal
+        // string "undefined" as the reason.
+        setScanError(result.error || 'Scan failed — the server reported no reason');
         return;
       }
-      const data: AnimBPScanResult = await res.json();
+      if (!isScanResult(result.data)) {
+        setScanError('Scan returned an unreadable result (no states/transitions in the response)');
+        return;
+      }
+      const data = normalizeScanResult(result.data);
 
       // Compute diff against previous scan
       if (prevScanRef.current && prevScanRef.current.states.length > 0) {

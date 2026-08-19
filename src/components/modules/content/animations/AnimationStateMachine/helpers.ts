@@ -1,6 +1,24 @@
 import type { StateType } from '../shared/state-machine-shared';
 import type { StateNode, TransitionEdge } from './types';
 import { LOCOMOTION_KEYWORDS, COMBAT_KEYWORDS, REACTION_KEYWORDS } from './constants';
+import type { GraphProvenance } from './constants';
+
+// ── Graph provenance ──
+
+/**
+ * Which of the three mutually exclusive sources produced the graph on screen.
+ * Mirrors the precedence in `useAnimationStateMachine`'s `displayStates`: a
+ * connected bridge wins over a scan, and with neither the graph is the
+ * hardcoded template — which must say so rather than badge itself `RUNTIME`.
+ */
+export function resolveGraphProvenance(
+  useBridgeData: boolean,
+  hasScannedData: boolean,
+): GraphProvenance {
+  if (useBridgeData) return 'bridge';
+  if (hasScannedData) return 'scanned';
+  return 'template';
+}
 
 // ── State type classification ──
 

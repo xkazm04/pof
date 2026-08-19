@@ -1,7 +1,8 @@
-import { Film, RefreshCw, Scan, Play, RotateCcw, Plug, Monitor } from 'lucide-react';
+import { Film, RefreshCw, Scan, Play, RotateCcw, Plug, Monitor, LayoutTemplate } from 'lucide-react';
 import { ACCENT_ORANGE, STATUS_SUCCESS } from '@/lib/chart-colors';
 import { ExplainToggle } from '@/components/animations/explain';
-import { ANIM_ACCENT } from './constants';
+import { ANIM_ACCENT, GRAPH_PROVENANCE } from './constants';
+import { resolveGraphProvenance } from './helpers';
 import type { StateNode } from './types';
 
 interface StateMachineHeaderProps {
@@ -37,6 +38,12 @@ export function StateMachineHeader({
   blenderConnected,
   blenderExporting,
 }: StateMachineHeaderProps) {
+  // One badge, one source of truth: the graph never claims RUNTIME while it is
+  // showing the hardcoded template.
+  const provenance = resolveGraphProvenance(useBridgeData, !!hasScannedData);
+  const { badge, label } = GRAPH_PROVENANCE[provenance];
+  const isBridge = provenance === 'bridge';
+
   return (
     <div className="flex items-center justify-between relative z-10 border-b border-violet-900/40 pb-4">
       <div className="flex items-center gap-3">
@@ -46,20 +53,29 @@ export function StateMachineHeader({
         </div>
         <div className="flex flex-col">
           <h3 className="text-sm font-bold text-violet-100 font-mono tracking-widest uppercase flex items-center gap-3" style={{ textShadow: '0 0 8px rgba(167,139,250,0.4)' }}>
-            STATE_MACHINE.graph <span className="text-[11px] bg-violet-500/20 text-violet-300 px-2 py-0.5 rounded border border-violet-500/30 shadow-[0_0_10px_rgba(139,92,246,0.2)]">RUNTIME</span>
-            {useBridgeData && (
-              <span className="text-[11px] bg-green-500/20 text-green-300 px-2 py-0.5 rounded border border-green-500/30 shadow-[0_0_10px_rgba(34,197,94,0.2)] flex items-center gap-1">
-                <Plug className="w-2.5 h-2.5" />
-                BRIDGE
-              </span>
-            )}
+            STATE_MACHINE.graph
+            <span
+              data-testid="graph-provenance"
+              data-provenance={provenance}
+              title={label}
+              className={`text-[11px] px-2 py-0.5 rounded border flex items-center gap-1 ${
+                isBridge
+                  ? 'bg-green-500/20 text-green-300 border-green-500/30 shadow-[0_0_10px_rgba(34,197,94,0.2)]'
+                  : 'bg-violet-500/20 text-violet-300 border-violet-500/30 shadow-[0_0_10px_rgba(139,92,246,0.2)]'
+              }`}
+            >
+              {provenance === 'bridge' ? <Plug className="w-2.5 h-2.5" />
+                : provenance === 'scanned' ? <Scan className="w-2.5 h-2.5" />
+                : <LayoutTemplate className="w-2.5 h-2.5" />}
+              {badge}
+            </span>
           </h3>
           <p className="text-xs text-violet-400/80 font-mono uppercase tracking-widest mt-0.5">
             {simMode
               ? simPath.length === 0
                 ? 'Click a state to begin tracing'
                 : `${simPath.length} states in path — click valid transitions to continue`
-              : `${completedCount}/${displayStates.length} states${useBridgeData ? ' // LIVE FROM BRIDGE' : hasScannedData ? ' // SCANNED FROM PROJECT' : ' // CLICK TO IMPLEMENT'}`
+              : `${completedCount}/${displayStates.length} states // ${label}`
             }
           </p>
         </div>
