@@ -1,10 +1,12 @@
 'use client';
 
 import { useCallback, useMemo } from 'react';
-import { Music, Lock, Check, ChevronUp, Volume2, Radio, Layers, Loader2, Send } from 'lucide-react';
+import { Music, Lock, Check, ChevronUp, Volume2, Radio, Layers, Loader2, Send, AlertTriangle } from 'lucide-react';
 import { useModuleStore } from '@/stores/moduleStore';
+import { getModuleChecklist } from '@/lib/module-registry';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
-import { MODULE_COLORS, STATUS_SUCCESS, withOpacity, OPACITY_10, OPACITY_20, OPACITY_30 } from '@/lib/chart-colors';
+import { MODULE_COLORS, STATUS_SUCCESS, STATUS_ERROR, withOpacity, OPACITY_10, OPACITY_20, OPACITY_30 } from '@/lib/chart-colors';
+import type { LucideIcon } from 'lucide-react';
 
 const ACCENT = MODULE_COLORS.content;
 
@@ -13,40 +15,58 @@ interface PipelineLayer {
   label: string;
   subtitle: string;
   description: string;
-  icon: typeof Music;
+  icon: LucideIcon;
   prompt: string;
+  prerequisites: string[];
+  /** True when `id` resolves to no registry checklist item — surfaced, not hidden. */
+  missing: boolean;
+}
+
+/**
+ * The shape of the diagram: which REAL `audio` checklist items it draws and how
+ * they stack. Labels, descriptions and — critically — prompts come from
+ * `module-registry` (`aud-1`…`aud-5`), never from a parallel copy here.
+ *
+ * These ids used to be `au-1`/`au-2`/`au-3`, which are the audio module's
+ * QUICK-ACTION ids and belong to no checklist item: every layer this diagram
+ * completed wrote a progress key nothing reads, so the module's checklist
+ * percentage, the feature matrix and the module views could never count it.
+ * They mirror `aud-1..aud-3` one-for-one, so `ORPHAN_KEY_MIGRATIONS` moves any
+ * already-stored `au-*` completion onto the real id rather than resetting it.
+ */
+interface PipelineLayerSpec {
+  id: string;
+  subtitle: string;
+  icon: LucideIcon;
   prerequisites: string[];
 }
 
-const LAYERS: PipelineLayer[] = [
-  {
-    id: 'au-3',
-    label: 'Dynamic Music',
-    subtitle: 'Adaptive',
-    description: 'Layer-based music that transitions with game state',
-    icon: Layers,
-    prompt: 'Implement a dynamic music system that transitions between layers based on game state.',
-    prerequisites: ['au-1', 'au-2'],
-  },
-  {
-    id: 'au-2',
-    label: 'Ambient System',
-    subtitle: 'Spatial',
-    description: 'Audio volumes, time-of-day variation, environmental triggers',
-    icon: Radio,
-    prompt: 'Build an ambient sound system with audio volumes, time-of-day variation, and environmental triggers.',
-    prerequisites: ['au-1'],
-  },
-  {
-    id: 'au-1',
-    label: 'Sound Manager',
-    subtitle: 'Foundation',
-    description: 'Pooling, fading, priority — the base of your audio stack',
-    icon: Volume2,
-    prompt: 'Create an audio manager component for playing sounds with pooling, fading, and priority.',
-    prerequisites: [],
-  },
+// Rendered top-down (most advanced first); the build order runs bottom-up.
+const HIERARCHY: PipelineLayerSpec[] = [
+  { id: 'aud-3', subtitle: 'Adaptive', icon: Layers, prerequisites: ['aud-1', 'aud-2'] },
+  { id: 'aud-2', subtitle: 'Spatial', icon: Radio, prerequisites: ['aud-1'] },
+  { id: 'aud-1', subtitle: 'Foundation', icon: Volume2, prerequisites: [] },
 ];
+
+/**
+ * Resolve a layer against the registry. A spec whose id no longer exists renders
+ * as a loud, undispatchable drift marker rather than vanishing from the diagram —
+ * a silently-dropped node is exactly how the `au-*` divergence survived.
+ */
+function layerFrom(spec: PipelineLayerSpec): PipelineLayer {
+  const item = getModuleChecklist('audio').find((i) => i.id === spec.id);
+  return {
+    ...spec,
+    label: item?.label ?? spec.id,
+    description:
+      item?.description ??
+      `No "${spec.id}" item exists in the audio checklist — this diagram and the registry have drifted.`,
+    prompt: item?.prompt ?? '',
+    missing: !item,
+  };
+}
+
+const LAYERS: PipelineLayer[] = HIERARCHY.map(layerFrom);
 
 /** Label lookup so prerequisite copy can never drift from the layer list above. */
 const LAYER_LABELS: Record<string, string> = Object.fromEntries(LAYERS.map((l) => [l.id, l.label]));
@@ -66,9 +86,10 @@ export function AudioPipelineDiagram({ onRunPrompt, isRunning, activeItemId }: A
     return LAYERS.map((layer) => {
       const completed = !!progress[layer.id];
       const prerequisitesMet = layer.prerequisites.every((pid) => !!progress[pid]);
-      const locked = !prerequisitesMet && !completed;
+      // A drifted layer has no registry prompt behind it, so it is never runnable.
+      const locked = layer.missing || (!prerequisitesMet && !completed);
       const isActive = activeItemId === layer.id;
-      const isFoundation = layer.id === 'au-1';
+      const isFoundation = layer.prerequisites.length === 0;
       const prereqLabel = layer.prerequisites.map((pid) => LAYER_LABELS[pid] ?? pid).join(' + ');
       return { ...layer, completed, locked, isActive, isFoundation, prereqLabel };
     });
@@ -76,7 +97,9 @@ export function AudioPipelineDiagram({ onRunPrompt, isRunning, activeItemId }: A
 
   const handleClick = useCallback(
     (layer: PipelineLayer, locked: boolean) => {
-      if (locked || isRunning) return;
+      // An unresolved layer has no registry prompt — dispatching an empty task
+      // would look like a run and produce nothing.
+      if (locked || isRunning || !layer.prompt) return;
       onRunPrompt(layer.id, layer.prompt);
     },
     [onRunPrompt, isRunning],
@@ -119,7 +142,9 @@ export function AudioPipelineDiagram({ onRunPrompt, isRunning, activeItemId }: A
           const statusColor = layer.completed ? STATUS_SUCCESS : ACCENT;
           // Clicking only does something when nothing is running and prerequisites are met.
           const actionable = !layer.locked && !isRunning;
-          const statusText = layer.locked
+          const statusText = layer.missing
+            ? `REGISTRY_DRIFT: ${layer.id} — not runnable`
+            : layer.locked
             ? `Locked — requires ${layer.prereqLabel}`
             : layer.isActive
               ? 'Generating now'
@@ -201,8 +226,21 @@ export function AudioPipelineDiagram({ onRunPrompt, isRunning, activeItemId }: A
                       {layer.description}
                     </p>
 
+                    {/* Registry drift — loud, and never silently dropped */}
+                    {layer.missing && (
+                      <div
+                        className="mt-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border w-fit"
+                        style={{ backgroundColor: withOpacity(STATUS_ERROR, OPACITY_10), borderColor: withOpacity(STATUS_ERROR, OPACITY_30) }}
+                      >
+                        <AlertTriangle className="w-3 h-3" style={{ color: STATUS_ERROR }} aria-hidden="true" />
+                        <span className="text-2xs font-medium" style={{ color: STATUS_ERROR }}>
+                          REGISTRY_DRIFT: {layer.id}
+                        </span>
+                      </div>
+                    )}
+
                     {/* Locked prerequisite hint */}
-                    {layer.locked && (
+                    {layer.locked && !layer.missing && (
                       <div className="mt-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-deep border border-border w-fit">
                         <Lock className="w-3 h-3 text-text-muted" aria-hidden="true" />
                         <span className="text-2xs font-medium text-text-muted">

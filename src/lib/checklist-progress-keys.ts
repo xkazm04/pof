@@ -61,17 +61,11 @@ export const AUX_PROGRESS_SURFACES: Partial<Record<SubModuleId, readonly AuxProg
       prefixes: ['scanned-'],
     },
   ],
-  audio: [
-    {
-      owner: 'AudioPipelineDiagram (components/modules/content/audio/AudioPipelineDiagram.tsx)',
-      ids: ['au-1', 'au-2', 'au-3'],
-      gap:
-        'AudioPipelineDiagram keys its nodes by the audio QUICK-ACTION ids (au-1..au-3), not the ' +
-        'checklist ids they mirror one-for-one (aud-1..aud-3), so its completions never count toward ' +
-        'the audio checklist. Accepted here (rewriting the ids would reset every existing user\'s ' +
-        'diagram) — the fix belongs in that component, and this note is the record that it is owed.',
-    },
-  ],
+  // audio: AudioPipelineDiagram's `au-*` node ids were accepted here with a logged
+  // `gap` until 2026-08-19, because renaming them would have reset every existing
+  // user's diagram. The diagram now draws the real `aud-*` checklist ids and the
+  // old keys are MIGRATED (below) instead of accepted — so the gap is retired
+  // rather than merely re-described, and no unlock is lost.
 };
 
 /**
@@ -79,6 +73,12 @@ export const AUX_PROGRESS_SURFACES: Partial<Record<SubModuleId, readonly AuxProg
  * id they should always have been. A completion arriving under the old key is
  * written under the new one, and blobs already holding the old key are migrated
  * (`migrateProgressBlob`) rather than left as dead weight.
+ *
+ * A migration NEVER downgrades a completion: when both the old and the new key
+ * are present in a blob, the merged value is `old || new`, so an unlock a user
+ * already earned survives regardless of which key carried it or what order the
+ * keys are iterated in. A migration that silently dropped a completion would be
+ * worse than the orphan-key bug it fixes.
  */
 export const ORPHAN_KEY_MIGRATIONS: Partial<Record<SubModuleId, Readonly<Record<string, string>>>> = {
   // MaterialLayerGraph's node ids until 2026-08-19 — the materials quick-action
@@ -87,6 +87,14 @@ export const ORPHAN_KEY_MIGRATIONS: Partial<Record<SubModuleId, Readonly<Record<
     'mt-3': 'mat-1', // Master Material  → Create master material
     'mt-1': 'mat-2', // Dynamic Materials → Set up dynamic material instances
     'mt-2': 'mat-3', // Post-Process     → Configure material parameter collections
+  },
+  // AudioPipelineDiagram's node ids until 2026-08-19 — the audio quick-action
+  // namespace, which mirrors the `aud-*` checklist one-for-one but is a different
+  // namespace, so every completion the diagram wrote was unreadable.
+  audio: {
+    'au-1': 'aud-1', // Sound Manager   → Create sound manager
+    'au-2': 'aud-2', // Ambient System  → Build ambient sound system
+    'au-3': 'aud-3', // Dynamic Music   → Implement dynamic music system
   },
 };
 
