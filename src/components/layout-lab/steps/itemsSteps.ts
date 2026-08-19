@@ -8,7 +8,7 @@ import { gradeGallerySelection } from '@/lib/catalog/acceptance/galleryArtifact'
 import { readHistory } from './shared/genHistory';
 import { useCatalogStore } from '@/stores/catalogStore';
 import type { Acceptance } from './StepFrame';
-import type { CheckerContext } from '@/lib/catalog/acceptance/types';
+import type { CheckerContext, SiblingVerdict } from '@/lib/catalog/acceptance/types';
 import type { LabEntity } from '../useLabCatalogData';
 import type { StepOutput } from '../labPipelineStore';
 
@@ -143,6 +143,13 @@ export interface GateBlocker {
   step: string;
   /** The upstream step's resolved status, or `missing` when it has no artifact at all. */
   status: string;
+  /**
+   * WHICH LAYER condemned it — the step's own checker, a server drain, or a judge (or
+   * `missing`, i.e. nothing produced it). Without this the operator was told a gate check was
+   * blocked but not by what kind of evidence, and so had no way to know whether to fix data,
+   * re-run a drain, or re-judge.
+   */
+  layer: SiblingVerdict['source'] | 'missing';
 }
 
 export interface GateCheckResult {
@@ -160,27 +167,46 @@ export interface GateCheckResult {
   blockers: GateBlocker[];
 }
 
-/** Render one blocker for the checklist row / log / banner detail. */
+/** Render one blocker for the checklist row / log / banner detail — the step AND the layer
+ *  that condemned it, so the operator knows whether to fix data, re-drain, or re-judge. */
 function blockerLabel(b: GateBlocker): string {
-  return `${b.step} (${b.status === 'missing' ? 'not produced' : b.status})`;
+  return b.layer === 'missing' ? `${b.step} (not produced)` : `${b.step} (${b.status} · ${b.layer})`;
 }
 
 /**
- * Evaluate every gate check against the entity's sibling step artifacts
- * (step label → persisted data). A check passes only when ALL of its upstream
- * steps have an artifact whose own acceptance is `pass`. Shared by the Test
- * Gate accept(), the ItemTestGate view, and the log rendering so the badge,
- * checklist rows, and log can never disagree.
+ * Evaluate every gate check against the entity's sibling steps. Shared by the Test Gate
+ * accept(), the ItemTestGate view, and the log rendering so the badge, checklist rows, and log
+ * can never disagree.
+ *
+ * ── Why `resolved` exists ──────────────────────────────────────────────────────
+ * This used to re-run each sibling's own LOCAL shape checker on raw `data` — no
+ * `CheckerContext`, no server drain verdict, no judge verdict — while
+ * `resolveStepAcceptance` is the app's declared single truth for exactly that merge. So the
+ * step that gates the whole item was the one step that bypassed it: `item-1`'s `Icon 2D Art`
+ * was `deferred/L4` on the SERVER with the reason "not a generated asset", and this gate's
+ * `"Visual QA (icon + mesh)"` row printed PASS beside a log line reading `Result={Success}`.
+ * A drain or a judge that condemned an upstream step changed nothing in the gate that is
+ * supposed to be downstream of it.
+ *
+ * The fix is INJECTION, not a store import: `resolved` is `CheckerContext.siblingVerdict`,
+ * which the lab fills from `buildLabCheckerContext` and the server path fills from its own
+ * sources. This function stays pure and context-fed, so it grades identically wherever it
+ * runs; with no resolver it falls back to the sibling's own checker (labelled `checker`),
+ * which is exactly the previous behavior.
  */
-export function deriveGateChecks(siblings: Record<string, Record<string, unknown>>): GateCheckResult[] {
+export function deriveGateChecks(
+  siblings: Record<string, Record<string, unknown>>,
+  resolved?: (step: string) => SiblingVerdict | undefined,
+): GateCheckResult[] {
   return DEFAULT_GATE_CHECKS.map((name) => {
     const deps = GATE_CHECK_DEPS[name] ?? [];
     const blockers: GateBlocker[] = [];
     for (const step of deps) {
       const data = siblings[step];
-      if (!data) { blockers.push({ step, status: 'missing' }); continue; }
-      const status = ITEM_STEP_SPECS[step]?.accept(data).status ?? 'pending';
-      if (status !== 'pass') blockers.push({ step, status });
+      if (!data) { blockers.push({ step, status: 'missing', layer: 'missing' }); continue; }
+      const v = resolved?.(step)
+        ?? { status: ITEM_STEP_SPECS[step]?.accept(data).status ?? 'pending', source: 'checker' as const };
+      if (v.status !== 'pass') blockers.push({ step, status: v.status, layer: v.source });
     }
     return {
       name,
@@ -562,7 +588,9 @@ export const ITEM_STEP_SPECS: Record<string, ItemStepSpec> = {
       // data-only reading — per CheckerContext's contract, a satisfied step is
       // never regressed purely because context wasn't provided.
       if (ctx && Object.keys(ctx.siblings).length > 0) {
-        const results = deriveGateChecks(ctx.siblings);
+        // The gate is DOWNSTREAM of its siblings, so it must see what they resolved to — the
+        // checker/drain/judge merge, not a re-run of their raw shape checkers.
+        const results = deriveGateChecks(ctx.siblings, ctx.siblingVerdict);
         const passing = results.filter((r) => r.ok).length;
         const blocked = [...new Set(results.flatMap((r) => r.blockedBy))];
         const ok = passing === results.length;

@@ -4,6 +4,9 @@ import { StaticStepFrame } from './StaticStepFrame';
 import { CliProduce } from './shared/CliProduce';
 import { deriveGateChecks, type GateCheckResult } from './itemsSteps';
 import { useEntitySteps } from '../labPipelineStore';
+import { buildLabCheckerContext } from '../labCheckerContext';
+import { useCatalogJudgeVerdicts } from '../hooks/useStepJudgeVerdicts';
+import { useCatalogStore } from '@/stores/catalogStore';
 import type { LabTheme } from '../theme';
 import type { StepProps } from './stepProps';
 
@@ -52,12 +55,16 @@ function logLine(name: string, verdict: 'pass' | 'defer' | 'fail' | 'idle'): str
  *  (never fabricated; the gate can genuinely fail). Produce: run functional test. */
 export function ItemTestGate({ t, entity, step }: StepProps) {
   const entitySteps = useEntitySteps(entity.id);
+  const entitiesByCatalog = useCatalogStore((s) => s.entitiesByCatalog);
+  const verdicts = useCatalogJudgeVerdicts('items');
+  // The SAME context the banner grades through (`useStepAcceptance` → `buildLabCheckerContext`),
+  // so the Checks panel and the acceptance banner cannot disagree — this panel used to rebuild
+  // its own lossy `step → data` map, dropping the server verdict every artifact carries.
+  const ctx = buildLabCheckerContext('items', entitySteps, entitiesByCatalog, { entityId: entity.id, verdicts });
   return (
     <StaticStepFrame t={t} entity={entity} step={step} panels={({ art, runProduce }) => {
       const ran = art?.data?.ran === true || art?.data?.pass === true; // `pass` = legacy artifacts
-      const siblings: Record<string, Record<string, unknown>> = {};
-      for (const [s, a] of Object.entries(entitySteps ?? {})) siblings[s] = a.data;
-      const results = deriveGateChecks(siblings);
+      const results = deriveGateChecks(ctx.siblings, ctx.siblingVerdict);
       const allOk = results.every((r) => r.ok);
       // Same three-state reading the derived Acceptance uses, so the log can never print
       // `Result={Success}` next to a banner that says otherwise (it did: an upstream step the

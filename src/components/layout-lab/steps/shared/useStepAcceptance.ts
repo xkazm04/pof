@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { useEntitySteps, type LabStepArtifact } from '../../labPipelineStore';
 import { buildLabCheckerContext } from '../../labCheckerContext';
-import { useStepJudgeVerdicts } from '../../hooks/useStepJudgeVerdicts';
+import { useCatalogJudgeVerdicts, useStepJudgeVerdicts } from '../../hooks/useStepJudgeVerdicts';
 import { resolveStepAcceptance } from '@/lib/catalog/acceptance/resolveStepAcceptance';
 import { explainAcceptance } from '@/lib/catalog/acceptance/explainAcceptance';
 import { useCatalogStore } from '@/stores/catalogStore';
@@ -43,10 +43,14 @@ export function useStepAcceptance({ catalogId, entityId, step, art, accept }: {
   const entitySteps = useEntitySteps(entityId);
   const entitiesByCatalog = useCatalogStore((s) => s.entitiesByCatalog);
   const verdicts = useStepJudgeVerdicts(catalogId || undefined, entityId, step);
+  // Catalog-wide verdicts (the same cached read `useStepJudgeVerdicts` already performs — no
+  // extra fetch) so a DERIVED checker can resolve its siblings through all three layers, not
+  // just re-run their raw shape checkers. The Items Test Gate is the reference consumer.
+  const catalogVerdicts = useCatalogJudgeVerdicts(catalogId || undefined);
 
   const ctx = useMemo<CheckerContext>(
-    () => buildLabCheckerContext(catalogId, entitySteps, entitiesByCatalog),
-    [catalogId, entitySteps, entitiesByCatalog],
+    () => buildLabCheckerContext(catalogId, entitySteps, entitiesByCatalog, { entityId, verdicts: catalogVerdicts }),
+    [catalogId, entitySteps, entitiesByCatalog, entityId, catalogVerdicts],
   );
 
   return useMemo(() => {
