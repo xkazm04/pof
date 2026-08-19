@@ -1,4 +1,7 @@
-import { getSetting, setSetting } from '@/lib/db';
+import {
+  expectRecord, readSettingsBlob, writeSettingsBlob,
+  type SettingsBlobRead, type SettingsBlobSpec,
+} from '@/lib/settings/settings-blob';
 import { formatBytes } from '@/lib/format';
 import { normalizePlatformId, platformLabel } from './build-profiles';
 
@@ -18,6 +21,13 @@ export interface SizeBudgetConfig {
   budgets: SizeBudgetMap;
   /** When true, record API returns a non-success envelope on regression (gate the pipeline) */
   failOnRegression: boolean;
+  /**
+   * Read-time marker: the stored config could NOT be read, so these budgets are
+   * fail-closed defaults rather than anything the operator chose. Never
+   * persisted (`setBudgetConfig` strips it) — a disabled gate and a corrupt one
+   * must stay distinguishable, and this is what tells them apart.
+   */
+  unreadable?: boolean;
 }
 
 /**
@@ -94,24 +104,47 @@ export function getDefaultBudgets(): SizeBudgetMap {
   return JSON.parse(JSON.stringify(DEFAULT_BUDGETS));
 }
 
-export function getBudgetConfig(): SizeBudgetConfig {
-  const raw = getSetting(BUDGETS_KEY);
-  if (!raw) {
-    return { budgets: getDefaultBudgets(), failOnRegression: false };
-  }
-  try {
-    const parsed = JSON.parse(raw) as Partial<SizeBudgetConfig>;
+/**
+ * The budget config is one JSON string in one `settings` row, and its failure
+ * direction was the sharpest kind of fail-OPEN: an unparseable value returned
+ * `failOnRegression: false`, so a corrupt row silently DISABLED the size gate —
+ * indistinguishable from an operator who had switched it off on purpose.
+ *
+ * The corrupt default is now `failOnRegression: true`: an unreadable gate config
+ * leaves the gate armed. An ABSENT row keeps returning `false` — never
+ * configured is a different fact from configured-but-unreadable, and only the
+ * second one is a defect.
+ */
+const BUDGETS_SPEC: SettingsBlobSpec<SizeBudgetConfig> = {
+  key: BUDGETS_KEY,
+  absent: () => ({ budgets: getDefaultBudgets(), failOnRegression: false }),
+  corrupt: () => ({ budgets: getDefaultBudgets(), failOnRegression: true, unreadable: true }),
+  hydrate: (parsed) => {
+    const record = expectRecord(parsed, 'size budget config') as Partial<SizeBudgetConfig>;
     return {
-      budgets: parsed.budgets && typeof parsed.budgets === 'object' ? parsed.budgets : getDefaultBudgets(),
-      failOnRegression: Boolean(parsed.failOnRegression),
+      budgets: record.budgets && typeof record.budgets === 'object' ? record.budgets : getDefaultBudgets(),
+      failOnRegression: Boolean(record.failOnRegression),
     };
-  } catch {
-    return { budgets: getDefaultBudgets(), failOnRegression: false };
-  }
+  },
+};
+
+/** The full read, for a caller that wants to REPORT an unreadable budget config. */
+export function readBudgetConfig(): SettingsBlobRead<SizeBudgetConfig> {
+  return readSettingsBlob(BUDGETS_SPEC);
+}
+
+export function getBudgetConfig(): SizeBudgetConfig {
+  return readSettingsBlob(BUDGETS_SPEC).value;
 }
 
 export function setBudgetConfig(config: SizeBudgetConfig): void {
-  setSetting(BUDGETS_KEY, JSON.stringify(config));
+  // `unreadable` is a read-time marker, never persisted: it would otherwise be
+  // stored as configuration and outlive the corruption that produced it. The
+  // rest of the object is written with its original key order, so a config that
+  // never carried the marker serialises byte-identically to before.
+  const persisted: SizeBudgetConfig = { ...config };
+  delete persisted.unreadable;
+  writeSettingsBlob(BUDGETS_SPEC, persisted);
 }
 
 function platformBudget(platform: string, budgets: SizeBudgetMap): SizeBudget {
@@ -171,7 +204,12 @@ export function evaluateBuildSize(
       // (and whose project) it came from was not supplied. Say that, don't imply it.
       ? `compared against an unidentified last-green size of ${formatBytes(lastGreenSizeBytes, { signed: true })} — the caller passed no baseline build, so its project is unknown`
       : describeSizeBaseline(null);
-  const note = `${SIZE_REGRESSION_NOTE_PREFIX} ${platformLabel(platform)} ${formatBytes(sizeBytes, { signed: true })} — ${parts.join('; ')} [${baselineNote}]`;
+  // A verdict reached with fail-closed defaults says so, so nobody reads it as a
+  // budget the operator set.
+  const configNote = config.unreadable
+    ? ' [budget config UNREADABLE — these are fail-closed defaults, not your configured budgets]'
+    : '';
+  const note = `${SIZE_REGRESSION_NOTE_PREFIX} ${platformLabel(platform)} ${formatBytes(sizeBytes, { signed: true })} — ${parts.join('; ')} [${baselineNote}]${configNote}`;
 
   return {
     sizeBytes,
