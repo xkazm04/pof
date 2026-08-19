@@ -8,6 +8,8 @@ import { runExperimentJob } from './client';
 import { buildAssertions, type AssertionToggles } from './assertions';
 import { ExperimentHistory } from './ExperimentHistory';
 import { VISUAL_CHECK_MODES, type ExperimentResult, type ExperimentSpec, type VisualCheckMode } from '@/lib/ue-experiment/runner';
+import { experimentPollBudget, formatDurationMs } from '@/lib/ue-experiment/poll-budget';
+import { experimentChips } from './outcome';
 import { StatusTag } from '@/components/ui/StatusTag';
 
 type Status = 'idle' | 'running' | 'done' | 'error';
@@ -97,6 +99,9 @@ export function ExperimentLab() {
   }, [mode, python, capture, scenarioMap, scenarioInputs, removeEnemies, verifyMode, allowRunningEditor, asserts]);
 
   const s = result?.observationSummary;
+  // What this page will actually wait, derived from the server's own settle ceiling for the
+  // selected mode — the running copy states it instead of "a minute or two".
+  const runBudget = experimentPollBudget(mode === 'scenario' ? { scenario: {} } : {});
 
   return (
     <div className="mx-auto max-w-4xl space-y-4 p-6 text-sm">
@@ -227,7 +232,11 @@ export function ExperimentLab() {
       {/* Run outcome is announced, not just coloured — the run takes minutes, so a
           screen-reader user must hear it start, and an error must interrupt. */}
       <p role="status" aria-live="polite" className="text-text-muted empty:hidden">
-        {status === 'running' ? 'Launching UE 5.8 — this takes a minute or two…' : ''}
+        {status === 'running'
+          ? `Launching UE 5.8 — status is read immediately and then every ${formatDurationMs(runBudget.pollMs)}. `
+            + `The editor gets ${formatDurationMs(runBudget.ceilingMs)} (${runBudget.ceilingSource}); this page gives up after `
+            + `${formatDurationMs(runBudget.waitMs)} and says so.`
+          : ''}
       </p>
       {status === 'error' && <p role="alert" className="text-red-500">Error: {errMsg}</p>}
 
@@ -242,23 +251,19 @@ export function ExperimentLab() {
 
       {result && !result.refused && (
         <section className="space-y-3 rounded border border-border p-4">
+          {/* Every chip is derived by `experimentChips` (pure, tested): the run chip states
+              what it MEASURED rather than claiming the run passed, and it can never sit green
+              beside a failed verdict for the same run. A scenario with nothing asserted gets a
+              loud UNVERIFIED chip instead of the old silence. */}
           <div className="flex flex-wrap items-center gap-3">
-            <span className={result.ok ? 'font-medium text-emerald-500' : 'font-medium text-red-500'}>{result.ok ? '✓ ran' : '✗ failed'}</span>
+            {experimentChips(result).map((c) => (
+              <span key={c.key} className="inline-flex items-center gap-1.5">
+                {c.label && <span className="text-text-muted">{c.label}</span>}
+                <StatusTag level={c.level} word={c.word} />
+                <span className="text-text-muted">{c.detail}</span>
+              </span>
+            ))}
             <span className="text-text-muted">{Math.round(result.durationMs / 1000)}s</span>
-            {result.behavioralVerdict && (
-              <span className="inline-flex items-center gap-1.5">
-                <span className="text-text-muted">behavior</span>
-                <StatusTag level={result.behavioralVerdict.status === 'pass' ? 'ok' : 'bad'} word={result.behavioralVerdict.status} />
-                <span className="text-text-muted">{result.behavioralVerdict.detail}</span>
-              </span>
-            )}
-            {result.verdict && (
-              <span className="inline-flex items-center gap-1.5">
-                <span className="text-text-muted">visual</span>
-                <StatusTag level={VERDICT_LEVEL[result.verdict.status]} word={result.verdict.status} />
-                <span className="text-text-muted">{result.verdict.detail}</span>
-              </span>
-            )}
           </div>
           {result.error && <p className="font-mono text-xs text-red-500">{result.error}</p>}
           {s && (
@@ -289,9 +294,6 @@ export function ExperimentLab() {
     </div>
   );
 }
-
-/** A judge that could not run is WARN (deferred), never the red an observed defect earns. */
-const VERDICT_LEVEL = { pass: 'ok', fail: 'bad', deferred: 'warn' } as const;
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (

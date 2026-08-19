@@ -164,6 +164,15 @@ export const UI_TIMEOUTS = {
   cursorBlink: 500,
   /** Per-frame cadence for the Crash Time Machine auto-play replay. */
   crashReplayStep: 600,
+  /** Interval between Experiment Lab job-status polls. The lab polls BEFORE it sleeps,
+   *  so a run that dies at spawn surfaces on the first tick rather than one interval late. */
+  experimentPoll: 5_000,
+  /** Margin added to the server's OWN settle ceiling to form the client's poll budget.
+   *  The settle ceiling bounds only the editor process; editor boot, screenshot write,
+   *  abslog read, the vision-judge round-trip and the history write all sit outside it.
+   *  The client waits ceiling + this, and says so when it gives up — it never invents a
+   *  budget unrelated to what the server can possibly spend. */
+  experimentBudgetMargin: 3 * 60 * 1000,
 } as const;
 
 /**

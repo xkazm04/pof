@@ -2,11 +2,14 @@
  * so the POST→poll loop is unit-tested with a mock fetch. */
 import type { ExperimentResult, ExperimentSpec } from '@/lib/ue-experiment/runner';
 import type { ExperimentRunSummary, ExperimentRunDetail } from '@/lib/ue-experiment/experiment-db';
+import { experimentPollBudget, experimentTimeoutMessage } from '@/lib/ue-experiment/poll-budget';
 import type { ApiResponse } from '@/types/api';
 
 interface RunOpts {
   fetchImpl?: typeof fetch;
+  /** Override the poll interval (default `UI_TIMEOUTS.experimentPoll`). */
   pollMs?: number;
+  /** Override the poll bound (default: derived from the server's own settle ceiling). */
   maxPolls?: number;
 }
 
@@ -23,16 +26,20 @@ export async function runExperimentJob(spec: ExperimentSpec, opts: RunOpts = {})
   const { jobId } = await unwrap<{ jobId: string }>(
     await f('/api/experiment/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(spec) }),
   );
-  const maxPolls = opts.maxPolls ?? 600;
-  for (let i = 0; i < maxPolls; i++) {
-    await sleep(opts.pollMs ?? 30_000);
+  // Poll THEN sleep. The old order slept a full interval first, so a run the server had
+  // already refused at spawn (no POF_UE_UPROJECT, editor binary missing) still showed
+  // "Launching UE 5.8…" for 30 s before reporting a failure that was known immediately.
+  const budget = experimentPollBudget(spec, { pollMs: opts.pollMs, maxPolls: opts.maxPolls });
+  for (let i = 0; i < budget.maxPolls; i++) {
     const s = await unwrap<{ status: 'running' | 'done' | 'error'; result?: ExperimentResult; error?: string }>(
       await f(`/api/experiment/status/${jobId}`),
     );
     if (s.status === 'done' && s.result) return { jobId, result: s.result };
     if (s.status === 'error') throw new Error(s.error ?? 'experiment failed');
+    if (i < budget.maxPolls - 1) await sleep(budget.pollMs);
   }
-  throw new Error('experiment timed out');
+  // Never a bare "timed out": say which ceiling was hit and what it was derived from.
+  throw new Error(experimentTimeoutMessage(jobId, budget));
 }
 
 /** List persisted runs (newest first) for the history panel. */

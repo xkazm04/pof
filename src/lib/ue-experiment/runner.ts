@@ -17,6 +17,9 @@ import { parseScenarioVerdict } from '@/lib/test-gate-runner/spawnExecutor';
 import type { GateAssertion } from '@/lib/test-gate-runner/types';
 import { createExperimentRun } from './editor-process';
 import { captureDirFor, captureFileFor, ensureCaptureDir } from './capture-store';
+// The settle ceilings live beside the client's poll-budget derivation so the number the
+// browser quotes when it gives up is provably the number spent here.
+import { EXPERIMENT_SETTLE_MS } from './poll-budget';
 import {
   detectRunningEditors,
   editorPreconditionReason,
@@ -302,7 +305,7 @@ async function runPythonProbe(
 
   const start = now();
   try {
-    await run(binary, args, spec.settleMs ?? 60_000);
+    await run(binary, args, spec.settleMs ?? EXPERIMENT_SETTLE_MS.python);
   } finally {
     try { unlinkSync(probePath); } catch { /* ignore */ }
   }
@@ -358,7 +361,7 @@ async function runScenario(spec: ExperimentSpec, ctx: ScenarioCtx): Promise<Expe
       ...(scn.map ? { map: scn.map } : {}),
       ...(spec.engine ? { engine: spec.engine } : {}),
       outDir,
-      settleMs: spec.settleMs ?? 180_000,
+      settleMs: spec.settleMs ?? EXPERIMENT_SETTLE_MS.scenario,
       scenario: { totalSeconds: scn.totalSeconds, numSamples: scn.numSamples, settle: scn.settle, inputs: scn.inputs, disableAI: scn.disableAI },
     },
     { run: ctx.run, now: ctx.now },
