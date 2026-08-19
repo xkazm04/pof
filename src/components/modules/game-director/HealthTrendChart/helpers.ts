@@ -1,4 +1,5 @@
 import type { HealthTrendPoint } from '@/lib/game-director-db';
+import { computeVelocityForecast, type ForecastResult } from '@/lib/ecw/forecast';
 import { PADDING, VIEW_W } from './constants';
 import type { SeriesPoint } from './types';
 
@@ -6,6 +7,55 @@ export function formatDate(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '—';
   return `${d.getMonth() + 1}/${d.getDate()}`;
+}
+
+/**
+ * The score at which a build counts as healthy — the top band of the app's
+ * canonical score ladder (`scoreBandToken`: >=80 green). A projection needs a
+ * finish line, and this is the one the rest of the UI already colours by.
+ */
+export const HEALTHY_SCORE = 80;
+
+/**
+ * "Days to a healthy build at the current rate", projected from the trend the
+ * chart is already drawing. Maps the health series onto the shared velocity
+ * forecaster: score-points-toward-80 play the role of "verified of total", and
+ * the series' own timestamps play the role of history.
+ *
+ * Returns null — and the chart shows nothing — whenever a projection would be
+ * dishonest: fewer than two sessions, an already-healthy build, a flat or
+ * declining score, or unparseable timestamps.
+ *
+ * The clock is the LAST SESSION's timestamp, not `Date.now()`. Two reasons: a
+ * wall-clock read in render is a `react-hooks/purity` error, and the honest
+ * anchor for "at the current rate" is the last time anything was measured — not
+ * the moment someone happened to open the tab, which would silently stretch the
+ * estimate the longer a project sat idle. `now` stays injectable for tests.
+ */
+export function forecastHealthRecovery(
+  data: HealthTrendPoint[],
+  now?: number,
+): ForecastResult | null {
+  if (data.length < 2) return null;
+
+  const history = data.slice(0, -1).map(d => ({
+    verified: Math.max(0, Math.min(HEALTHY_SCORE, d.overallScore)),
+    at: new Date(d.createdAt).getTime(),
+  }));
+  if (history.some(h => Number.isNaN(h.at))) return null;
+
+  const latest = data[data.length - 1];
+  const latestAt = new Date(latest.createdAt).getTime();
+  if (Number.isNaN(latestAt)) return null;
+
+  return computeVelocityForecast(
+    {
+      verified: Math.max(0, Math.min(HEALTHY_SCORE, latest.overallScore)),
+      total: HEALTHY_SCORE,
+      history,
+    },
+    now ?? latestAt,
+  );
 }
 
 export function computeChart(data: HealthTrendPoint[], height: number) {

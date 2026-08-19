@@ -5,8 +5,13 @@
  * project is already complete / has insufficient data / is stalled.
  *
  * Phase 11-OBS / Mission Control forecaster foundation (ideas 8a45533b,
- * 925151c6, ae20a945). The MissionControl ForecastCard uses this once the
- * lifecycle history persistence lands in Phase 10-MC.
+ * 925151c6, ae20a945).
+ *
+ * Consumer: the Game Director's HealthTrendChart projects "days to a healthy
+ * build at the current rate" through this
+ * (`HealthTrendChart/helpers.ts → forecastHealthRecovery`). It was previously
+ * dead code whose only exercise was a test that read the wall clock — see the
+ * `now` parameter below.
  */
 
 export interface ForecastInput {
@@ -25,7 +30,19 @@ export interface ForecastResult {
 
 const MS_PER_DAY = 86_400_000;
 
-export function computeVelocityForecast(input: ForecastInput): ForecastResult | null {
+/**
+ * @param now Epoch ms to measure elapsed time against. Injectable so callers and
+ * tests are deterministic — the house pattern (`consistency-grade.ts`
+ * `formatSince(iso, now = new Date())`). The internal `Date.now()` this replaces
+ * made the unit test a coin flip: the test built its history timestamp from its
+ * OWN `Date.now()`, so elapsed was `4 days + ε`, velocity `20 / (4 + ε)`, and
+ * `daysRemaining` was 10 or 11 depending on whether the two reads straddled a
+ * millisecond.
+ */
+export function computeVelocityForecast(
+  input: ForecastInput,
+  now: number = Date.now(),
+): ForecastResult | null {
   const { verified, total, history } = input;
 
   if (verified >= total) return null;
@@ -35,7 +52,7 @@ export function computeVelocityForecast(input: ForecastInput): ForecastResult | 
   // Could be smarter (linear regression) but the simple delta works for the
   // foundation; Phase 10-MC enhances with weighted regression if needed.
   const oldest = history[0];
-  const elapsedMs = Date.now() - oldest.at;
+  const elapsedMs = now - oldest.at;
   if (elapsedMs <= 0) return null;
 
   const elapsedDays = elapsedMs / MS_PER_DAY;

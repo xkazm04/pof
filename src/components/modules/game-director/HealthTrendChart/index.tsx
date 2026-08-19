@@ -8,7 +8,7 @@ import {
 } from '@/lib/chart-colors';
 import { PADDING, VIEW_W } from './constants';
 import type { HealthTrendChartProps } from './types';
-import { computeChart, formatDate } from './helpers';
+import { computeChart, formatDate, forecastHealthRecovery, HEALTHY_SCORE } from './helpers';
 import { RegressionMarker } from './RegressionMarker';
 import { DeltaBadge } from './DeltaBadge';
 import { Legend } from './Legend';
@@ -17,6 +17,10 @@ export type { HealthTrendChartProps, SeriesPoint } from './types';
 
 export function HealthTrendChart({ data, height = 200 }: HealthTrendChartProps) {
   const computed = useMemo(() => computeChart(data, height), [data, height]);
+  // "Days to healthy at the current rate", projected from this very series.
+  // Anchored to the last session's timestamp, so it is a pure derivation of
+  // props (no wall-clock read in render).
+  const forecast = useMemo(() => forecastHealthRecovery(data), [data]);
 
   if (data.length === 0) {
     return (
@@ -76,10 +80,16 @@ export function HealthTrendChart({ data, height = 200 }: HealthTrendChartProps) 
     : simulatedCount > 0
       ? `Partly simulated trend — ${simulatedCount} of ${data.length} sessions came from the dev-fixture simulator.`
       : 'Measured trend — every session was written by an external playtest harness.';
+  const forecastSentence = forecast
+    ? ` At ${forecast.velocityPerDay} points per day, ${allSimulated ? 'the simulated series' : 'this trend'} ` +
+      `reaches a healthy ${HEALTHY_SCORE} in about ${forecast.daysRemaining} day${forecast.daysRemaining === 1 ? '' : 's'} ` +
+      `from the last session.`
+    : '';
   const chartSummary =
     `${provenanceSentence} Score ${first.overallScore} to ${last.overallScore} out of 100 (${direction}). ` +
     `Findings ${first.findingsCount} to ${last.findingsCount}. ` +
-    `${regressionMarkers.length} session${regressionMarkers.length !== 1 ? 's' : ''} with regressions.`;
+    `${regressionMarkers.length} session${regressionMarkers.length !== 1 ? 's' : ''} with regressions.` +
+    forecastSentence;
 
   return (
     <motion.div
@@ -283,6 +293,23 @@ export function HealthTrendChart({ data, height = 200 }: HealthTrendChartProps) 
           ))}
         </tbody>
       </table>
+
+      {/* Velocity projection. A display line, never a score: it inherits the
+          trend's provenance verbatim, so a projection off canned sessions says
+          it is projecting off canned sessions. Hidden entirely when the data
+          cannot support it (flat/declining score, already healthy, <2 points). */}
+      {forecast && (
+        <p className="mt-2 text-2xs text-text-muted">
+          {allSimulated && <span className="italic">Simulated projection — </span>}
+          at <span className="font-medium text-text-muted-hover">{forecast.velocityPerDay}</span>
+          {' '}points/day, healthy ({HEALTHY_SCORE}) in about{' '}
+          <span className="font-medium text-text-muted-hover">
+            {forecast.daysRemaining} day{forecast.daysRemaining === 1 ? '' : 's'}
+          </span>
+          {' '}from the last session
+          <span className="text-text-muted"> · confidence {forecast.confidence}</span>
+        </p>
+      )}
 
       <Legend regressionCount={regressionMarkers.length} />
     </motion.div>
