@@ -6,6 +6,7 @@ import { useBlueprintTranspiler } from '@/hooks/useBlueprintTranspiler';
 import { useProjectStore } from '@/stores/projectStore';
 import type { TranspilerTab } from '@/types/blueprint';
 import { TAB_CONFIG, SAMPLE_BLUEPRINT } from './constants';
+import { sanitizeModule } from './helpers';
 import { TranspilePane } from './TranspilePane';
 import { DiffPane } from './DiffPane';
 
@@ -15,6 +16,12 @@ export function BlueprintTranspilerView() {
 
   const projectName = useProjectStore((s) => s.projectName);
   const projectPath = useProjectStore((s) => s.projectPath);
+
+  // The target C++ module. It decides BOTH the `<MODULE>_API` macro baked into
+  // the header and the `Source/<Module>/` directory the file is written to, so
+  // it is owned here and threaded into codegen — the write modal used to hold
+  // it privately, which let the two halves of one decision disagree.
+  const [moduleName, setModuleName] = useState(() => sanitizeModule(projectName));
   const {
     blueprintJson, setBlueprintJson,
     existingCpp, setExistingCpp,
@@ -36,11 +43,24 @@ export function BlueprintTranspilerView() {
     inFlightRef.current = true;
     try {
       await parse(blueprintJson);
-      await transpile(blueprintJson, projectName || undefined);
+      await transpile(blueprintJson, projectName || undefined, moduleName || undefined);
     } finally {
       inFlightRef.current = false;
     }
-  }, [blueprintJson, projectName, parse, transpile]);
+  }, [blueprintJson, projectName, moduleName, parse, transpile]);
+
+  // Retargeting the module invalidates the generated header (its API macro is
+  // module-derived), so the code is regenerated for the new target rather than
+  // left declaring the old module. The write modal's staleness banners then
+  // force a fresh dry-run before anything reaches disk.
+  const handleModuleChange = useCallback((next: string) => {
+    setModuleName(next);
+    if (!transpileResult || !blueprintJson.trim() || inFlightRef.current) return;
+    inFlightRef.current = true;
+    void transpile(blueprintJson, projectName || undefined, next || undefined)
+      .catch(() => { /* surfaced by the hook's `error` state */ })
+      .finally(() => { inFlightRef.current = false; });
+  }, [blueprintJson, projectName, transpile, transpileResult]);
 
   const handleDiff = useCallback(async () => {
     if (!blueprintJson.trim() || !existingCpp.trim() || inFlightRef.current) return;
@@ -107,7 +127,8 @@ export function BlueprintTranspilerView() {
             result={transpileResult}
             showCode={showCode}
             setShowCode={setShowCode}
-            projectName={projectName}
+            moduleName={moduleName}
+            onModuleChange={handleModuleChange}
             projectPath={projectPath}
           />
         ) : (

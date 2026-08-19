@@ -11,6 +11,7 @@ import {
   OPACITY_10, OPACITY_15, OPACITY_20, OPACITY_30,
 } from '@/lib/chart-colors';
 import { ACCENT } from './constants';
+import { apiMacroFor, headerDeclaresModule } from './helpers';
 
 // ─── Write to Project (dry-run diff → confirm) ──────────────────────────────
 
@@ -25,14 +26,15 @@ type PlanSnapshot = {
   moduleName: string;
 };
 
-export function WriteToProjectButton({ className, header, source, projectPath, defaultModule }: {
+export function WriteToProjectButton({ className, header, source, projectPath, moduleName, onModuleChange }: {
   className: string;
   header: string;
   source: string;
   projectPath: string;
-  defaultModule: string;
+  /** Owned by the view — the same value codegen used for the API macro. */
+  moduleName: string;
+  onModuleChange: (next: string) => void;
 }) {
-  const [moduleName, setModuleName] = useState(defaultModule);
   const [plan, setPlan] = useState<WritePlan | null>(null);
   const [snapshot, setSnapshot] = useState<PlanSnapshot | null>(null);
   const [busy, setBusy] = useState(false);
@@ -49,6 +51,11 @@ export function WriteToProjectButton({ className, header, source, projectPath, d
     header !== snapshot.header || source !== snapshot.source || className !== snapshot.className
   );
   const planStale = moduleStale || codeStale;
+  // Last line of defence: the header's `<MODULE>_API` macro must name the
+  // module the file is being written into. If it does not, the class is
+  // exported from a module it does not live in — a link error, and one nothing
+  // in the app used to mention.
+  const macroMismatch = header.length > 0 && !headerDeclaresModule(header, moduleName);
 
   const dryRun = useCallback(async () => {
     // Freeze what this plan is computed against at request time.
@@ -136,11 +143,29 @@ export function WriteToProjectButton({ className, header, source, projectPath, d
                 Module
                 <input
                   value={moduleName}
-                  onChange={(e) => setModuleName(e.target.value)}
+                  onChange={(e) => onModuleChange(e.target.value)}
                   className="w-28 bg-surface-deep border border-border rounded px-1.5 py-0.5 text-xs text-text font-mono focus-ring"
                 />
               </label>
             </div>
+
+            {macroMismatch && (
+              <div
+                data-testid="api-macro-mismatch"
+                className="flex items-center gap-2 rounded-lg px-3 py-2 mb-3 text-2xs"
+                style={{
+                  backgroundColor: `${STATUS_WARNING}${OPACITY_10}`,
+                  border: `1px solid ${STATUS_WARNING}${OPACITY_30}`,
+                  color: STATUS_WARNING,
+                }}
+              >
+                <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="flex-1">
+                  The header does not declare <code className="font-mono">{apiMacroFor(moduleName)}</code>, so this class
+                  would be exported from a module it does not live in — re-transpile before writing.
+                </span>
+              </div>
+            )}
 
             {codeStale && (
               <div
@@ -194,11 +219,13 @@ export function WriteToProjectButton({ className, header, source, projectPath, d
               <button onClick={closeModal} className="px-3 py-1.5 rounded-md text-xs text-text-muted hover:text-text hover:bg-surface-hover transition-colors">
                 Cancel
               </button>
-              {planStale ? (
-                codeStale ? (
+              {planStale || macroMismatch ? (
+                codeStale || macroMismatch ? (
                   <button
                     disabled
-                    title="The transpiled code changed — refresh the diff before confirming"
+                    title={macroMismatch
+                      ? `The header declares a different module than ${moduleName} — re-transpile before confirming`
+                      : 'The transpiled code changed — refresh the diff before confirming'}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium opacity-40 cursor-not-allowed"
                     style={{ backgroundColor: `${ACCENT}${OPACITY_20}`, color: ACCENT, border: `1px solid ${ACCENT}${OPACITY_30}` }}
                   >

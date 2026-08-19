@@ -33,6 +33,71 @@ import type {
 } from '@/types/blueprint';
 
 /**
+ * Sanitize a project/module name into a UE C++ module identifier.
+ *
+ * `projectName` is raw user text (Project Setup allows spaces), and it feeds
+ * the `<MODULE>_API` macro. `"My Game"` used to emit `class MY GAME_API AFoo` —
+ * a header that no compiler accepts. This is the single source of truth for the
+ * identifier; the write modal's default module name uses it too, so the macro
+ * and the `Source/<Module>/` directory are derived from the same rule.
+ */
+export function sanitizeModuleName(name: string): string {
+  const cleaned = (name || '').replace(/[^A-Za-z0-9_]/g, '');
+  return /^[A-Za-z_]/.test(cleaned) ? cleaned : 'Game';
+}
+
+/** The DLL-export macro a module's classes must be declared with. */
+export function apiMacroFor(moduleName: string): string {
+  return `${sanitizeModuleName(moduleName).toUpperCase()}_API`;
+}
+
+/**
+ * A UE engine event this transpiler knows how to override, resolved to the ONE
+ * signature used by both the declaration and the definition.
+ *
+ * The header used to declare `EndPlay` while the source pass only ever defined
+ * `BeginPlay`/`Tick` — a declared-but-undefined override is an unresolved
+ * external at link time. Both passes now walk the same resolved list, so a
+ * declaration without a definition is structurally impossible.
+ */
+export interface EventOverride {
+  /** C++ member name. `Tick` becomes `TickComponent` on a UActorComponent. */
+  name: string;
+  /** Parameter list, identical in the declaration and the definition. */
+  params: string;
+  /** Argument list for the `Super::` call in the definition body. */
+  args: string;
+}
+
+export function resolveEventOverride(eventName: string, isComponent = false): EventOverride | null {
+  // UE names the Blueprint-side node `ReceiveBeginPlay`; the C++ override is `BeginPlay`.
+  switch (eventName.replace(/^Receive/, '')) {
+    case 'BeginPlay':
+      return { name: 'BeginPlay', params: '', args: '' };
+    case 'Tick':
+      return isComponent
+        ? {
+            name: 'TickComponent',
+            params: 'float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction',
+            args: 'DeltaTime, TickType, ThisTickFunction',
+          }
+        : { name: 'Tick', params: 'float DeltaTime', args: 'DeltaTime' };
+    case 'EndPlay':
+      return { name: 'EndPlay', params: 'const EEndPlayReason::Type EndPlayReason', args: 'EndPlayReason' };
+    default:
+      return null;
+  }
+}
+
+export function overrideDeclaration(o: EventOverride): string {
+  return `virtual void ${o.name}(${o.params}) override;`;
+}
+
+export function overrideDefinitionSignature(cppClassName: string, o: EventOverride): string {
+  return `void ${cppClassName}::${o.name}(${o.params})`;
+}
+
+/**
  * Derive the C++ parameter list and return type for a Blueprint function from
  * its entry/result nodes. Shared by both the header and source passes so their
  * signatures can never drift apart. Also returns the entry node, which the
@@ -68,23 +133,48 @@ export function generateCppFromBlueprint(
   moduleName?: string,
 ): TranspileResult {
   const warnings: TranspileWarning[] = [];
-  const mod = moduleName ?? projectName;
-  const apiMacro = `${mod.toUpperCase()}_API`;
+  const requestedModule = moduleName ?? projectName;
+  const mod = sanitizeModuleName(requestedModule);
+  const apiMacro = apiMacroFor(requestedModule);
+  if (mod !== requestedModule) {
+    warnings.push({
+      message: `Module name "${requestedModule}" is not a C++ identifier — the API macro was emitted as ${apiMacro}. `
+        + `That macro only exists if the module is named "${mod}"; set the module explicitly when writing to the project.`,
+      severity: 'warning',
+    });
+  }
 
   // Replication scaffolding — drives the GetLifetimeReplicatedProps body,
   // the ReplicatedUsing specifiers, OnRep handlers, and the UnrealNetwork include.
   const replication = buildReplicationInfo(asset);
   const repProps = replication.properties;
 
+  const parentClass = asset.parentClass;
+  // UHT derives the required class prefix from the parent: UObject-rooted
+  // (components included) take `U`, AActor-rooted take `A`. The old blanket `A`
+  // emitted `AHealthComponent : public UActorComponent`, a prefix error, from
+  // the same function that recognises components one branch later.
+  const isComponent = parentClass === 'UActorComponent' || parentClass.includes('Component');
+  const prefix = isComponent || parentClass.startsWith('U') ? 'U' : 'A';
+
   // Strip BP_ prefix for C++ class name
   const cppClassName = asset.className.startsWith('BP_')
-    ? `A${asset.className.slice(3)}`
+    ? `${prefix}${asset.className.slice(3)}`
     : asset.className.startsWith('A') || asset.className.startsWith('U')
       ? asset.className
-      : `A${asset.className}`;
+      : `${prefix}${asset.className}`;
 
-  const parentClass = asset.parentClass;
-  const includes = new Set<string>(['CoreMinimal.h', `${cppClassName}.generated.h`]);
+  // An explicitly-prefixed source name we must not rewrite can still disagree
+  // with the parent — say so rather than emitting a header UHT will reject.
+  if (cppClassName[0] !== prefix) {
+    warnings.push({
+      message: `Class "${cppClassName}" carries a "${cppClassName[0]}" prefix but parent "${parentClass}" requires "${prefix}" — `
+        + 'UHT rejects a mismatched class prefix. Rename the Blueprint or change its parent.',
+      severity: 'error',
+    });
+  }
+
+  const includes = new Set<string>(['CoreMinimal.h']);
 
   // Determine parent include
   if (parentClass === 'ACharacter' || parentClass === 'Character') {
@@ -93,16 +183,23 @@ export function generateCppFromBlueprint(
     includes.add('GameFramework/Pawn.h');
   } else if (parentClass === 'AActor' || parentClass === 'Actor') {
     includes.add('GameFramework/Actor.h');
-  } else if (parentClass === 'UActorComponent' || parentClass.includes('Component')) {
+  } else if (isComponent) {
     includes.add('Components/ActorComponent.h');
   }
+
+  // `<Class>.generated.h` MUST be the final include — UHT errors on anything
+  // after it, a rule this repo already prints a fix for in error-fingerprint.ts.
+  // It is appended here (not seeded into the Set) so no later `includes.add`
+  // can slip in behind it, and the reported `includes` list mirrors emission
+  // order so a consumer rebuilding the header cannot reintroduce the defect.
+  const emittedIncludes = [...includes, `${cppClassName}.generated.h`];
 
   // ── Header generation ──
 
   const headerLines: string[] = [];
   headerLines.push('#pragma once');
   headerLines.push('');
-  for (const inc of includes) {
+  for (const inc of emittedIncludes) {
     headerLines.push(`#include "${inc}"`);
   }
   headerLines.push('');
@@ -150,26 +247,47 @@ export function generateCppFromBlueprint(
     headerLines.push('');
   }
 
-  // Event graph events → overrides
+  // Event graph events → overrides.
+  //
+  // Resolved ONCE here; the header declares and the source defines from this
+  // same list, so every declaration is guaranteed a matching definition. A
+  // repeated event (e.g. both `BeginPlay` and `ReceiveBeginPlay` present)
+  // collapses to a single override — declaring it twice is a redefinition error.
   const eventNodes = asset.eventGraph.nodes.filter((n) =>
     n.type.includes('Event') && !n.type.includes('Custom')
   );
-  if (eventNodes.length > 0) {
+  const overrides: { override: EventOverride; node: BlueprintNode }[] = [];
+  const unknownEvents: { name: string; node: BlueprintNode }[] = [];
+  const seenOverrides = new Set<string>();
+  for (const ev of eventNodes) {
+    const eventName = ev.memberName ?? ev.name;
+    const resolved = resolveEventOverride(eventName, isComponent);
+    if (!resolved) {
+      unknownEvents.push({ name: eventName, node: ev });
+      continue;
+    }
+    if (seenOverrides.has(resolved.name)) {
+      warnings.push({
+        nodeId: ev.id,
+        message: `Duplicate event "${eventName}" — ${resolved.name} is already overridden; this node's logic was not emitted.`,
+        severity: 'warning',
+      });
+      continue;
+    }
+    seenOverrides.add(resolved.name);
+    overrides.push({ override: resolved, node: ev });
+  }
+
+  if (overrides.length > 0 || unknownEvents.length > 0) {
     headerLines.push('protected:');
     headerLines.push('\t// ── Event Overrides ──');
     headerLines.push('');
-    for (const ev of eventNodes) {
-      const eventName = ev.memberName ?? ev.name;
-      if (eventName === 'BeginPlay' || eventName === 'ReceiveBeginPlay') {
-        headerLines.push('\tvirtual void BeginPlay() override;');
-      } else if (eventName === 'Tick' || eventName === 'ReceiveTick') {
-        headerLines.push('\tvirtual void Tick(float DeltaTime) override;');
-      } else if (eventName === 'EndPlay') {
-        headerLines.push('\tvirtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;');
-      } else {
-        headerLines.push(`\t// TODO: Override for ${eventName}`);
-        warnings.push({ nodeId: ev.id, message: `Unknown event: ${eventName}`, severity: 'warning' });
-      }
+    for (const { override } of overrides) {
+      headerLines.push(`\t${overrideDeclaration(override)}`);
+    }
+    for (const unknown of unknownEvents) {
+      headerLines.push(`\t// TODO: Override for ${unknown.name}`);
+      warnings.push({ nodeId: unknown.node.id, message: `Unknown event: ${unknown.name}`, severity: 'warning' });
     }
     headerLines.push('');
   }
@@ -219,32 +337,23 @@ export function generateCppFromBlueprint(
   sourceLines.push('');
   sourceLines.push(`${cppClassName}::${cppClassName}()`);
   sourceLines.push('{');
-  if (eventNodes.some((n) => (n.memberName ?? n.name).includes('Tick'))) {
-    sourceLines.push('\tPrimaryActorTick.bCanEverTick = true;');
-  } else {
-    sourceLines.push('\tPrimaryActorTick.bCanEverTick = false;');
-  }
+  // A UActorComponent has no PrimaryActorTick — its tick function is
+  // PrimaryComponentTick, and naming the wrong one is a compile error.
+  const tickField = isComponent ? 'PrimaryComponentTick' : 'PrimaryActorTick';
+  const ticks = overrides.some((o) => o.override.name === 'Tick' || o.override.name === 'TickComponent');
+  sourceLines.push(`\t${tickField}.bCanEverTick = ${ticks ? 'true' : 'false'};`);
   sourceLines.push('}');
   sourceLines.push('');
 
-  // Event implementations
-  for (const ev of eventNodes) {
-    const eventName = ev.memberName ?? ev.name;
-    if (eventName === 'BeginPlay' || eventName === 'ReceiveBeginPlay') {
-      sourceLines.push(`void ${cppClassName}::BeginPlay()`);
-      sourceLines.push('{');
-      sourceLines.push('\tSuper::BeginPlay();');
-      sourceLines.push('');
-      sourceLines.push(generateNodeLogic(asset.eventGraph, ev, cppClassName, warnings));
-      sourceLines.push('}');
-    } else if (eventName === 'Tick' || eventName === 'ReceiveTick') {
-      sourceLines.push(`void ${cppClassName}::Tick(float DeltaTime)`);
-      sourceLines.push('{');
-      sourceLines.push('\tSuper::Tick(DeltaTime);');
-      sourceLines.push('');
-      sourceLines.push(generateNodeLogic(asset.eventGraph, ev, cppClassName, warnings));
-      sourceLines.push('}');
-    }
+  // Event implementations — one per DECLARED override, from the same resolved
+  // list the header used, so nothing can be declared without being defined.
+  for (const { override, node: ev } of overrides) {
+    sourceLines.push(overrideDefinitionSignature(cppClassName, override));
+    sourceLines.push('{');
+    sourceLines.push(`\tSuper::${override.name}(${override.args});`);
+    sourceLines.push('');
+    sourceLines.push(generateNodeLogic(asset.eventGraph, ev, cppClassName, warnings));
+    sourceLines.push('}');
     sourceLines.push('');
   }
 
@@ -292,7 +401,7 @@ export function generateCppFromBlueprint(
     sourceCode: sourceLines.join('\n'),
     className: cppClassName,
     parentClass,
-    includes: [...includes],
+    includes: emittedIncludes,
     warnings,
     nodeCount: asset.eventGraph.nodes.length + asset.functions.reduce((s, f) => s + f.nodes.length, 0),
     functionCount: asset.functions.length + customEvents.length,

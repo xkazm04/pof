@@ -223,6 +223,140 @@ describe('generateCppFromBlueprint', () => {
   });
 });
 
+// ─── UHT validity of the emitted header (bp-header-uht-valid) ─────────────────
+//
+// Everything below is a property the Unreal Header Tool enforces *before* a
+// single line of the user's logic is compiled. A header that violates one of
+// them breaks the build the moment Write to Project lands it on disk, so each
+// case asserts the emitted text directly rather than a summary field.
+
+/** Every `#include "..."` line of a header, in emission order. */
+function includeLines(header: string): string[] {
+  return header
+    .split('\n')
+    .filter((l) => l.startsWith('#include '))
+    .map((l) => l.replace(/^#include\s+"(.*)"$/, '$1'));
+}
+
+/** Every `virtual <ret> <Name>(<params>) override;` declared in a header. */
+function declaredOverrides(header: string): { name: string; params: string }[] {
+  const out: { name: string; params: string }[] = [];
+  for (const m of header.matchAll(/virtual\s+[\w:<>*&\s]+?\s(\w+)\(([^)]*)\)\s*(?:const\s*)?override\s*;/g)) {
+    out.push({ name: m[1], params: m[2] });
+  }
+  return out;
+}
+
+describe('generateCppFromBlueprint — UHT header validity', () => {
+  it('emits the .generated.h include LAST (UHT rejects any include after it)', () => {
+    const result = generateCppFromBlueprint(
+      asset({ className: 'BP_PlayerCharacter', parentClass: 'ACharacter' }),
+      'MyProject',
+    );
+    const lines = includeLines(result.headerCode);
+    expect(lines.length).toBeGreaterThan(1);
+    expect(lines[lines.length - 1]).toBe('APlayerCharacter.generated.h');
+    // The reported include list mirrors the emitted order, so a consumer that
+    // rebuilds the header from `includes` cannot reintroduce the defect.
+    expect(result.includes[result.includes.length - 1]).toBe('APlayerCharacter.generated.h');
+  });
+
+  it('derives a legal API macro from a project name that is not a C++ identifier', () => {
+    const result = generateCppFromBlueprint(asset({ className: 'BP_Hero' }), 'My Game');
+    const macro = result.headerCode.match(/class\s+(\S+)\s+AHero/)?.[1];
+    expect(macro).toBe('MYGAME_API');
+    expect(macro).toMatch(/^[A-Z_][A-Z0-9_]*_API$/);
+    // …and says so, because MYGAME_API only exists if the module is named MyGame.
+    expect(result.warnings.some((w) => w.message.includes('My Game'))).toBe(true);
+  });
+
+  it('prefixes a component Blueprint with U, not A', () => {
+    const result = generateCppFromBlueprint(
+      asset({ className: 'BP_Health', parentClass: 'UActorComponent' }),
+      'P',
+    );
+    expect(result.className).toBe('UHealth');
+    expect(result.headerCode).toContain('class P_API UHealth : public UActorComponent');
+    expect(result.headerCode).not.toContain('AHealth');
+  });
+
+  it('flags an explicit class prefix that disagrees with the parent kind', () => {
+    const result = generateCppFromBlueprint(
+      asset({ className: 'AHealthComponent', parentClass: 'UActorComponent' }),
+      'P',
+    );
+    expect(result.warnings.some((w) => w.severity === 'error' && w.message.includes('AHealthComponent'))).toBe(true);
+  });
+
+  it('defines EVERY override it declares (an undefined override is an unresolved external)', () => {
+    const result = generateCppFromBlueprint(
+      asset({
+        className: 'BP_Hero',
+        parentClass: 'ACharacter',
+        eventGraph: {
+          name: 'EventGraph',
+          graphType: 'event',
+          nodes: [
+            node({ id: 'e1', type: 'K2Node_Event', name: 'BeginPlay', memberName: 'BeginPlay' }),
+            node({ id: 'e2', type: 'K2Node_Event', name: 'Tick', memberName: 'Tick' }),
+            node({ id: 'e3', type: 'K2Node_Event', name: 'EndPlay', memberName: 'EndPlay' }),
+          ],
+        },
+      }),
+      'P',
+    );
+    const overrides = declaredOverrides(result.headerCode);
+    expect(overrides.map((o) => o.name).sort()).toEqual(['BeginPlay', 'EndPlay', 'Tick']);
+    for (const o of overrides) {
+      expect(result.sourceCode).toContain(`void AHero::${o.name}(${o.params})`);
+    }
+    expect(result.sourceCode).toContain('Super::EndPlay(EndPlayReason);');
+  });
+
+  it('uses the component tick override + tick struct for a UActorComponent', () => {
+    const result = generateCppFromBlueprint(
+      asset({
+        className: 'BP_Health',
+        parentClass: 'UActorComponent',
+        eventGraph: {
+          name: 'EventGraph',
+          graphType: 'event',
+          nodes: [node({ id: 'e1', type: 'K2Node_Event', name: 'Tick', memberName: 'Tick' })],
+        },
+      }),
+      'P',
+    );
+    expect(result.headerCode).toContain(
+      'virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;',
+    );
+    expect(result.sourceCode).toContain('PrimaryComponentTick.bCanEverTick = true;');
+    expect(result.sourceCode).not.toContain('PrimaryActorTick');
+    for (const o of declaredOverrides(result.headerCode)) {
+      expect(result.sourceCode).toContain(`void UHealth::${o.name}(${o.params})`);
+    }
+  });
+
+  it('declares a repeated event override only once', () => {
+    const result = generateCppFromBlueprint(
+      asset({
+        eventGraph: {
+          name: 'EventGraph',
+          graphType: 'event',
+          nodes: [
+            node({ id: 'e1', type: 'K2Node_Event', name: 'BeginPlay', memberName: 'BeginPlay' }),
+            node({ id: 'e2', type: 'K2Node_Event', name: 'ReceiveBeginPlay', memberName: 'ReceiveBeginPlay' }),
+          ],
+        },
+      }),
+      'P',
+    );
+    const decls = result.headerCode.split('\n').filter((l) => l.includes('virtual void BeginPlay()'));
+    expect(decls).toHaveLength(1);
+    const defs = result.sourceCode.split('\n').filter((l) => l.startsWith('void ATest::BeginPlay('));
+    expect(defs).toHaveLength(1);
+  });
+});
+
 // ─── generateNodeLogic ────────────────────────────────────────────────────────
 
 describe('generateNodeLogic', () => {

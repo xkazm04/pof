@@ -10,7 +10,6 @@ import { StaggerContainer, StaggerItem } from '@/components/ui/Stagger';
 import { TermChip, DecoratedJargon } from '@/components/ui/TermChip';
 import { OPACITY_20, OPACITY_30 } from '@/lib/chart-colors';
 import { ACCENT } from './constants';
-import { sanitizeModule } from './helpers';
 import { WriteToProjectButton } from './WriteToProjectButton';
 
 // ─── Transpile Pane ─────────────────────────────────────────────────────────
@@ -20,7 +19,7 @@ export function TranspilePane({
   onTranspile, onLoadSample,
   isLoading, error, asset, summary, result,
   showCode, setShowCode,
-  projectName, projectPath,
+  moduleName, onModuleChange, projectPath,
 }: {
   blueprintJson: string;
   setBlueprintJson: (v: string) => void;
@@ -33,7 +32,9 @@ export function TranspilePane({
   result: ReturnType<typeof useBlueprintTranspiler>['transpileResult'];
   showCode: 'header' | 'source';
   setShowCode: (v: 'header' | 'source') => void;
-  projectName: string;
+  /** Target C++ module — decides the API macro AND the Source/<Module>/ path. */
+  moduleName: string;
+  onModuleChange: (next: string) => void;
   projectPath: string;
 }) {
   return (
@@ -142,7 +143,8 @@ export function TranspilePane({
                   header={result.headerCode}
                   source={result.sourceCode}
                   projectPath={projectPath}
-                  defaultModule={sanitizeModule(projectName)}
+                  moduleName={moduleName}
+                  onModuleChange={onModuleChange}
                 />
               </div>
             </div>
