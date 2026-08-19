@@ -3,6 +3,7 @@ import { apiSuccess, apiError } from '@/lib/api-utils';
 import { getTriposrJob } from '@/lib/visual-gen/triposr-job-store';
 import { getHunyuanJob } from '@/lib/visual-gen/hunyuan-job-store';
 import { getTripoJob } from '@/lib/visual-gen/tripo-job-store';
+import { projectCritique } from '@/components/modules/visual-gen/asset-forge/forgeJobStatus';
 
 /**
  * GET /api/visual-gen/generate/status?jobId=...
@@ -41,8 +42,13 @@ export async function GET(req: NextRequest) {
       // was written to (a quad request arrives as FBX). It was being computed and then
       // dropped here, so a .glb path holding FBX bytes reached callers with no signal.
       formatMismatch: r?.formatMismatch,
-      // Tier-1 quality gate (auto-run on the produced mesh).
-      critique: job.critique ? { verdict: job.critique.verdict, score: job.critique.score, reasons: job.critique.reasons, metrics: job.critique.metrics } : undefined,
+      // Tier-1 quality gate (auto-run on the produced mesh). Projected through the
+      // shared discriminated shape: a critique that FAILED TO RUN travels as
+      // `{ ok:false, error }` instead of an object whose every field is undefined —
+      // which JSON dropped to `{}`, truthy enough to render a scorecard with no
+      // verdict in it. `metrics.componentFaces` (up to 4096 numbers, a gate input no
+      // client reads) is dropped here rather than shipped on every 5 s poll.
+      critique: projectCritique(job.critique),
       // Tier-2 fidelity: CLIP cosine of NeRF renders vs the input image (TripoSR only).
       fidelity: r?.clipMax,
       // Paid generations spent, and whether the DELIVERED mesh cleared the gate. A job

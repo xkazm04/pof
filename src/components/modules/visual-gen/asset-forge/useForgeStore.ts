@@ -8,7 +8,7 @@ import type {
   JobStatusResult,
   ImportedObject,
 } from '@/lib/blender-mcp/types';
-import type { CritiqueCard } from '@/lib/visual-gen/mesh-critique';
+import type { ForgeCritique, ForgeStatusResponse } from './forgeJobStatus';
 import type { StyleDnaProfile } from '@/lib/visual-gen/style-dna-db';
 import { getOfficialProvider, getProviderById } from '@/lib/visual-gen/providers';
 
@@ -29,10 +29,27 @@ export interface GenerationJob {
   completedAt?: number;
   /** Remote job id returned by the MCP generation API */
   mcpJobId?: string;
-  /** Tier-1 quality-gate scorecard (local subprocess providers, e.g. TripoSR). */
-  critique?: CritiqueCard;
+  /** Tier-1 quality-gate outcome — a scorecard, or a stated "did not run" reason. */
+  critique?: ForgeCritique;
   /** Tier-2 CLIP fidelity (0–1) of the generated mesh vs the input image. */
   fidelity?: number;
+  /**
+   * The server's VERDICT axis, deliberately orthogonal to `status`. A job can be
+   * `completed` with `accepted: false` — the mesh is real and was handed over, it
+   * just never cleared the Tier-1 gate. Carrying only `status` is what let that
+   * render as a green "Complete".
+   */
+  accepted?: boolean;
+  /** Why the regeneration loop stopped — the reason behind `accepted: false`. */
+  gateReason?: string;
+  /** Paid generations spent on this job (best-of-n retries each cost one). */
+  attempts?: number;
+  /** Set when the delivered container does not match the extension it was written to. */
+  formatMismatch?: string;
+  /** The provider's own render of the mesh (cloud Tripo only) — an image URL. */
+  renderUrl?: string;
+  /** Server-side path of the delivered mesh (may not be servable — see `meshPreview`). */
+  meshPath?: string;
 }
 
 interface ForgeState {
@@ -463,7 +480,9 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
         });
         return;
       }
-      const res = await tryApiFetch<{ status: string; meshPath?: string; error?: string; critique?: CritiqueCard; fidelity?: number }>(
+      // The client type IS the route's projection (`ForgeStatusResponse`), so the
+      // honesty signals the server computes cannot be silently dropped here again.
+      const res = await tryApiFetch<ForgeStatusResponse>(
         `/api/visual-gen/generate/status?jobId=${encodeURIComponent(jobId)}`,
       );
       if (stopped) return;
@@ -483,11 +502,20 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
         return;
       }
       pollFailures = 0;
-      const { status, meshPath, error, critique, fidelity } = res.data;
+      const {
+        status, meshPath, error, critique, fidelity,
+        accepted, gateReason, attempts, formatMismatch, renderUrl,
+      } = res.data;
       if (status === 'done') {
         stop();
         untrackPoller(localId);
-        get().updateJob(localId, { status: 'completed', progress: 100, resultUrl: meshPath, critique, fidelity, completedAt: Date.now() });
+        // `done` is a TRANSPORT outcome. `accepted`/`gateReason` are the verdict,
+        // and both ride onto the job so the card can tell them apart.
+        get().updateJob(localId, {
+          status: 'completed', progress: 100, resultUrl: meshPath, meshPath,
+          critique, fidelity, accepted, gateReason, attempts, formatMismatch, renderUrl,
+          completedAt: Date.now(),
+        });
         return;
       }
       if (status === 'error') {
