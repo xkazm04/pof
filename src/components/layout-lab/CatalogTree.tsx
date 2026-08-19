@@ -23,9 +23,26 @@ interface CatalogTreeProps {
    * the seeded `entity.lifecycle` is the hardcoded `'planned'` for every entity in the
    * product, so without this the tree paints `pending ○` no matter what the pipeline
    * proved. Absent/unfetched entities fall back to the seed — never to a guess.
+   *
+   * It also feeds the OPEN catalog row's `verified/total` counter, which used to count the
+   * same hardcoded seed field and so could only ever read `0`.
    */
   derivedLifecycle?: DerivedLifecycleMap;
 }
+
+/**
+ * The counter's honest unknown. `GET /api/catalog/lifecycle` is per-catalog, so only the
+ * OPEN catalog is derived — fanning it out would be 46 requests to paint a rail. Every other
+ * catalog reports that it has no derivation instead of borrowing the seed's structural zero.
+ */
+const UNKNOWN_VERIFIED_TITLE =
+  'Verified count unknown — the lifecycle derivation is read per catalog, and only the open '
+  + 'catalog is derived. Open this catalog to count what its pipeline has actually proven. '
+  + '(A “0” here would be the seeded default, not a measurement.)';
+
+const verifiedTitle = (n: number, total: number) =>
+  `${n} of ${total} entities derive as verified — config-complete AND a drained L3/L4 gate `
+  + 'passes. Derived from persisted pipeline artifacts; display only.';
 
 function lifecycleColor(status: StatusKind, t: LabTheme, isDraft: boolean): string {
   if (isDraft) return t.warn;
@@ -47,6 +64,7 @@ function lifecycleTitle(name: string, lifecycle: LifecycleState, summary?: strin
 
 function CatalogRow({
   t, catalog, isSelected, entities, selectedEntityId, onSelectCatalog, onSelectEntity, rovingItemProps, derivedLifecycle,
+  verified,
 }: {
   t: LabTheme;
   catalog: LabCatalog;
@@ -57,6 +75,8 @@ function CatalogRow({
   onSelectEntity: (id: string) => void;
   rovingItemProps?: { tabIndex: number; 'data-roving-active'?: boolean };
   derivedLifecycle?: DerivedLifecycleMap;
+  /** Entities derived as `verified`, or `null` when nothing has been derived for this catalog. */
+  verified: number | null;
 }) {
   return (
     <>
@@ -83,9 +103,12 @@ function CatalogRow({
         </span>
         <span
           className={t.fontMono}
+          data-testid={`catalog-verified-${catalog.catalogId}`}
+          data-derived={verified === null ? 'unknown' : 'derived'}
+          title={verified === null ? UNKNOWN_VERIFIED_TITLE : verifiedTitle(verified, catalog.total)}
           style={{ fontSize: 12, color: t.muted, flexShrink: 0, marginLeft: 8 }}
         >
-          {catalog.verified}/{catalog.total}
+          {verified === null ? '—' : verified}/{catalog.total}
         </span>
       </button>
       {isSelected && entities.map((entity) => {
@@ -165,6 +188,26 @@ export function CatalogTree({
   t, groups, selectedCatalogId, entities, selectedEntityId, onSelectCatalog, onSelectEntity, derivedLifecycle,
 }: CatalogTreeProps) {
   const reduce = useReducedMotion();
+  /**
+   * The OPEN catalog's verified count, from the very derivation its entity dots render —
+   * so a green `verified` dot can no longer sit inside a row that says `0/N`.
+   *
+   * `null` (rendered `—`) whenever nothing has been derived: no map supplied, or a failed /
+   * absent fetch (which resolves to an EMPTY map — see `useDerivedLifecycle`). Costs zero
+   * extra requests: the one fetch the open catalog already issues serves both.
+   *
+   * Drafts are excluded because `LabCatalog.total` counts persisted entities only — a count
+   * that could exceed its own denominator would be a new lie, not a fix for the old one.
+   */
+  const verifiedInSelected = useMemo(() => {
+    if (!derivedLifecycle || derivedLifecycle.size === 0) return null;
+    let n = 0;
+    for (const e of entities) {
+      if (e.id.startsWith('draft-')) continue;
+      if (derivedLifecycle.get(e.id)?.lifecycle === 'verified') n++;
+    }
+    return n;
+  }, [derivedLifecycle, entities]);
   // Chapters are compact by default — only the chapter holding the current
   // selection opens, so the tree reads as a chapter overview. `override` records
   // the user's explicit per-chapter expand/collapse; absent ⇒ the default rule.
@@ -245,6 +288,7 @@ export function CatalogTree({
                   onSelectCatalog={onSelectCatalog}
                   onSelectEntity={onSelectEntity}
                   derivedLifecycle={derivedLifecycle}
+                  verified={catalog.catalogId === selectedCatalogId ? verifiedInSelected : null}
                   rovingItemProps={roving.itemProps(visibleIndex.get(catalog) ?? -1)}
                 />
               </motion.div>

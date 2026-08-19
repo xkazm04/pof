@@ -11,8 +11,17 @@ export interface LabCatalog {
   label: string;
   description: string;
   total: number;
-  verified: number;
 }
+/**
+ * There is deliberately NO `verified` here. It used to be
+ * `entities.filter((e) => e.lifecycle === 'verified').length` — and every catalog seed in the
+ * product hardcodes `lifecycle: 'planned'`, `catalog_lifecycle` holds zero rows, and the only
+ * writer of that field lives in the legacy shell. So the count was structurally incapable of
+ * being anything but `0`, rendered directly above entity dots that DO read the server-derived
+ * lifecycle: one render could show a green `verified` dot inside a catalog row saying `0/3`.
+ * The tree now counts from that same derivation (`useDerivedLifecycle`), and shows `—` for a
+ * catalog it has no derivation for rather than a zero that reads as "nothing landed here".
+ */
 
 export interface LabGroup {
   category: string;
@@ -36,7 +45,6 @@ export function useLabCatalogData(): LabGroup[] {
         label: s.label,
         description: s.description ?? '',
         total: entities.length,
-        verified: entities.filter((e) => e.lifecycle === 'verified').length,
       };
       const arr = byCat.get(s.category ?? 'Other') ?? [];
       arr.push(cat);
@@ -76,7 +84,7 @@ export function useLabDetail(catalogId: string | null): LabDetail | null {
     return {
       catalog: {
         catalogId, label: section.label, description: section.description ?? '',
-        total: all.length, verified: all.filter((e) => e.lifecycle === 'verified').length,
+        total: all.length,
       },
       entities: all.map((e) => ({
         id: e.id, name: e.name, lifecycle: e.lifecycle, data: (e as { data?: unknown }).data,

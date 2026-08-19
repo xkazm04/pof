@@ -22,7 +22,8 @@ import type { DerivedLifecycleMap } from '@/components/layout-lab/useDerivedLife
 afterEach(cleanup);
 
 const groups = [{ category: 'Core', catalogs: [
-  { catalogId: 'items', label: 'Items', description: '', verified: 0, total: 3 },
+  { catalogId: 'items', label: 'Items', description: '', total: 3 },
+  { catalogId: 'spellbook', label: 'Spellbook', description: '', total: 4 },
 ] }];
 
 const entities = [
@@ -81,5 +82,40 @@ describe('CatalogTree — derived lifecycle dots', () => {
     for (const e of entities) {
       expect(screen.getByTestId(`entity-lifecycle-${e.id}`).getAttribute('data-lifecycle')).toBe('planned');
     }
+  });
+});
+
+/**
+ * The catalog row's `verified/total` counter used to read `entity.lifecycle === 'verified'`
+ * over the SEED — where every entity is the hardcoded `'planned'` — so it was structurally
+ * incapable of being anything but `0`, two pixels above dots that DO read the derivation.
+ * It now reads that same derivation; a catalog with none says so with `—`, never `0`.
+ */
+describe('CatalogTree — catalog verified counter', () => {
+  const count = (id: string) => screen.getByTestId(`catalog-verified-${id}`);
+
+  it('counts the DERIVATION, not the always-zero seed field', () => {
+    renderTree(derived);
+    // e-gated derives `verified`; e-shape is `wired` (shape-only) and must NOT count.
+    expect(count('items').textContent).toBe('1/3');
+    expect(count('items').getAttribute('data-derived')).toBe('derived');
+  });
+
+  it('renders an explicit unknown marker (—/N), never 0/N, with no derivation', () => {
+    renderTree(undefined);
+    expect(count('items').textContent).toBe('—/3');
+    expect(count('items').getAttribute('data-derived')).toBe('unknown');
+    expect(count('items').getAttribute('title') ?? '').toMatch(/unknown/i);
+  });
+
+  it('marks every UNOPENED catalog unknown — the derivation is per-catalog and is not fanned out', () => {
+    renderTree(derived);
+    expect(count('spellbook').textContent).toBe('—/4');
+    expect(count('spellbook').getAttribute('data-derived')).toBe('unknown');
+  });
+
+  it('an empty derivation (failed/absent fetch) is unknown, not zero', () => {
+    renderTree(new Map());
+    expect(count('items').textContent).toBe('—/3');
   });
 });

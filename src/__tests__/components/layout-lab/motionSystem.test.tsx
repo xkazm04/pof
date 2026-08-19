@@ -21,8 +21,8 @@ const groups: LabGroup[] = [
   {
     category: 'core',
     catalogs: [
-      { catalogId: 'items', label: 'Items', description: '', verified: 1, total: 3 },
-      { catalogId: 'enemies', label: 'Enemies', description: '', verified: 0, total: 2 },
+      { catalogId: 'items', label: 'Items', description: '', total: 3 },
+      { catalogId: 'enemies', label: 'Enemies', description: '', total: 2 },
     ],
   },
 ];

@@ -18,54 +18,19 @@ describe('catalogStore lifecycle actions', () => {
     ));
   });
 
-  describe('applyLifecycle', () => {
-    it('advances one legal step and merges ueAssets', () => {
-      useCatalogStore.getState().applyLifecycle({
-        catalogId: 'spellbook', entityId: SEED_ID, nextLifecycle: 'scaffolded',
-        ueAssets: ['/Script/PoF.GA_Fireball'],
-      });
-      const e = useCatalogStore.getState().entitiesByCatalog.spellbook[SEED_ID];
-      expect(e.lifecycle).toBe('scaffolded');
-      expect(e.ueAssets).toContain('/Script/PoF.GA_Fireball');
-    });
-
-    it('does NOT promote to verified without a passing test', () => {
-      const s = useCatalogStore.getState();
-      s.setEntities('spellbook', Object.values(s.entitiesByCatalog.spellbook).map((x) =>
-        x.id === SEED_ID ? { ...x, lifecycle: 'wired' } : x));
-      useCatalogStore.getState().applyLifecycle({
-        catalogId: 'spellbook', entityId: SEED_ID, nextLifecycle: 'verified', testResult: 'fail',
-      });
-      expect(lifecycleOf(SEED_ID)).toBe('wired');
-    });
-
-    it('promotes to verified with a pass and records the verdict', () => {
-      const s = useCatalogStore.getState();
-      s.setEntities('spellbook', Object.values(s.entitiesByCatalog.spellbook).map((x) =>
-        x.id === SEED_ID ? { ...x, lifecycle: 'wired' } : x));
-      useCatalogStore.getState().applyLifecycle({
-        catalogId: 'spellbook', entityId: SEED_ID, nextLifecycle: 'verified', testResult: 'pass',
-      });
-      const e = useCatalogStore.getState().entitiesByCatalog.spellbook[SEED_ID];
-      expect(e.lifecycle).toBe('verified');
-      expect(e.lastTestResult).toBe('pass');
-      expect(e.lastVerifiedAt).toBeTruthy();
-    });
-
-    it('rejects an illegal skip (state unchanged)', () => {
-      useCatalogStore.getState().applyLifecycle({
-        catalogId: 'spellbook', entityId: SEED_ID, nextLifecycle: 'verified', testResult: 'pass',
-      });
-      expect(lifecycleOf(SEED_ID)).toBe('planned');
-    });
-
-    it('is a no-op for an unknown entity', () => {
-      const before = useCatalogStore.getState().entitiesByCatalog;
-      useCatalogStore.getState().applyLifecycle({
-        catalogId: 'spellbook', entityId: 'nope', nextLifecycle: 'scaffolded',
-      });
-      expect(useCatalogStore.getState().entitiesByCatalog).toBe(before);
-    });
+  /**
+   * `applyLifecycle` and its five cases were DELETED with the action (2026-08-19).
+   *
+   * It was a client-side lifecycle mutator with zero production callers — the transition gate
+   * it re-implemented lives on the server (`POST /api/catalog` → `resolveTransition`, still
+   * tested in `src/__tests__/lib/catalog/lifecycle.test.ts`), and what the lab renders is the
+   * server's read-only derivation. Keeping a tested-but-uncalled mutator beside a display path
+   * that must never move a verdict was the hazard, not the coverage.
+   */
+  it('exposes no client-side lifecycle mutator', () => {
+    expect('applyLifecycle' in useCatalogStore.getState()).toBe(false);
+    // …while the state the seed sets is still readable and untouched.
+    expect(lifecycleOf(SEED_ID)).toBe('planned');
   });
 
   describe('loadLifecycle', () => {

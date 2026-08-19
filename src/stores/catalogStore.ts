@@ -4,10 +4,8 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
 import type {
-  CatalogEntityBase, AbilityEntry, ItemEntry, LifecycleState, TestResult, LifecycleRecord,
-  StoredCatalogEntity,
+  CatalogEntityBase, AbilityEntry, ItemEntry, LifecycleRecord, StoredCatalogEntity,
 } from '@/lib/catalog/types';
-import { resolveTransition } from '@/lib/catalog/lifecycle';
 import { seedAllCatalogs } from '@/lib/catalog/sections';
 
 interface CatalogState {
@@ -16,11 +14,18 @@ interface CatalogState {
   setEntities: (catalogId: string, entities: CatalogEntityBase[]) => void;
   /** Insert/replace a single entity in a catalog (used by the catalog "Add Item" flow). */
   addEntity: (catalogId: string, entity: CatalogEntityBase) => void;
-  /** Advance an entity's lifecycle in-memory through the shared gate (optimistic + post-callback sync). */
-  applyLifecycle: (input: {
-    catalogId: string; entityId: string; nextLifecycle: LifecycleState;
-    ueAssets?: string[]; testResult?: TestResult;
-  }) => void;
+  /**
+   * NOTE — there is deliberately no `applyLifecycle` here.
+   *
+   * It advanced an entity's lifecycle IN THE CLIENT STORE through `resolveTransition`, and it
+   * had zero production callers: nothing in the app ever called it, so its only effect was to
+   * keep a tested-but-uncalled lifecycle mutator alive next to a display path that must never
+   * move a verdict. Lifecycle is DERIVED server-side from persisted artifacts
+   * (`GET /api/catalog/lifecycle` → `deriveEntityLifecycle`, where `verified` is reachable only
+   * through a drained L3/L4 gate) and read for display via `useDerivedLifecycle`. Advancing it
+   * belongs to the server (`POST /api/catalog`), which owns the same gate; a client-side mutator
+   * could only ever produce a second, drift-prone copy of it.
+   */
   /** Merge server-side lifecycle records over seeded entities (called on load). */
   loadLifecycle: (records: LifecycleRecord[]) => void;
   /** Draft entities staged for a one-shot produce step, keyed by catalogId then entityId. */
@@ -55,30 +60,6 @@ export const useCatalogStore = create<CatalogState>()(
             [catalogId]: { ...(s.entitiesByCatalog[catalogId] ?? {}), [entity.id]: entity },
           },
         })),
-
-      applyLifecycle: ({ catalogId, entityId, nextLifecycle, ueAssets, testResult }) =>
-        set((s) => {
-          const current = s.entitiesByCatalog[catalogId]?.[entityId];
-          if (!current) return s;
-          const resolved = resolveTransition(current.lifecycle, nextLifecycle, testResult);
-          if (!resolved) return s;
-          const mergedAssets = ueAssets
-            ? Array.from(new Set([...(current.ueAssets ?? []), ...ueAssets]))
-            : current.ueAssets;
-          const updated: CatalogEntityBase = {
-            ...current,
-            lifecycle: resolved,
-            ...(mergedAssets ? { ueAssets: mergedAssets } : {}),
-            ...(testResult ? { lastTestResult: testResult } : {}),
-            ...(resolved === 'verified' ? { lastVerifiedAt: new Date().toISOString() } : {}),
-          };
-          return {
-            entitiesByCatalog: {
-              ...s.entitiesByCatalog,
-              [catalogId]: { ...s.entitiesByCatalog[catalogId], [entityId]: updated },
-            },
-          };
-        }),
 
       loadLifecycle: (records) =>
         set((s) => {

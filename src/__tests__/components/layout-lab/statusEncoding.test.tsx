@@ -15,7 +15,7 @@ import type { LabGroup, LabEntity } from '@/components/layout-lab/useLabCatalogD
 
 const group = (entities: LabEntity[]): LabGroup => ({
   category: 'Combat',
-  catalogs: [{ catalogId: 'items', label: 'Items', description: '', total: entities.length, verified: entities.filter(e => e.lifecycle === 'verified').length }],
+  catalogs: [{ catalogId: 'items', label: 'Items', description: '', total: entities.length }],
 });
 
 describe('CatalogTree status encoding (shape + label, not color alone)', () => {

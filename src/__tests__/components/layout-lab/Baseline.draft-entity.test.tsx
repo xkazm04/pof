@@ -50,7 +50,7 @@ describe('CatalogTree draft rendering', () => {
     render(
       <CatalogTree
         t={LIGHT}
-        groups={[{ category: 'Core Existing', catalogs: [{ catalogId: 'items', label: 'Items', description: '', verified: 0, total: 1 }] }]}
+        groups={[{ category: 'Core Existing', catalogs: [{ catalogId: 'items', label: 'Items', description: '', total: 1 }] }]}
         selectedCatalogId="items"
         entities={[{ id: 'draft-items-disc', name: 'Draft With Discard', lifecycle: 'planned', data: {} }]}
         selectedEntityId={null}
