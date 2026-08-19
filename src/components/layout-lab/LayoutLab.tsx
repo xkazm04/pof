@@ -19,7 +19,7 @@ import { useOneShotLabStore } from '@/stores/oneShotLabStore';
 import { setupOneShotToastHandler } from './one-shot/toastHandler';
 import { useCanonStore } from './canonStore';
 import { writeShellPref } from '@/lib/ecw/shell-pref';
-import { useLabPrefs } from './hooks/useLabPrefs';
+import { useLabPrefs, type LabView } from './hooks/useLabPrefs';
 import { Button } from './ui/Button';
 import { IconButton } from './ui/IconButton';
 
@@ -43,16 +43,31 @@ export function LayoutLab() {
   // of a fragile "remount reads the initial focus" channel — so there is no lingering
   // focus value to replay stale (it is consumed exactly once, when set).
   const [stepIdx, setStepIdx] = useState(0);
-  const [view, setView] = useState<'catalogs' | 'canon' | 'matrix'>('catalogs');
+  const [view, setView] = useState<LabView>('catalogs');
   // Adopt persisted last-location once after hydration (React-sanctioned
   // adjust-state-during-render bail-out; StrictMode-safe, no ref mutation).
+  // The location is catalog + entity + STEP + view: the shell used to persist only the
+  // first two while claiming "reopens where you left off", so every reload and every
+  // return from the full-page /status and /3d jumps landed on step 01 of a pipeline that
+  // can be 20 steps long.
   const [navAdopted, setNavAdopted] = useState(false);
   if (hydrated && !navAdopted) {
     setNavAdopted(true);
     if (prefs.lastCatalogId) setCatalogId(prefs.lastCatalogId);
     if (prefs.lastEntityId) setEntityId(prefs.lastEntityId);
+    if (prefs.lastStepIdx !== undefined) setStepIdx(prefs.lastStepIdx);
+    if (prefs.lastView) setView(prefs.lastView);
   }
   const detail = useLabDetail(catalogId);
+  // A restored step index can outlive the pipeline it was recorded against — a catalog whose
+  // step list shrank, or a blob hand-edited/carried over from a longer catalog — and an index
+  // past the end renders NO step at all. Clamp to the first step in STATE (the same
+  // adjust-during-render bail-out as the entity reconciliation below), so nothing downstream
+  // reads a phantom position. Deliberately no `setPrefs` here: a render must not write
+  // localStorage, and the stored value is re-clamped on every read anyway — so the bogus
+  // index is never persisted back as if it were the real location.
+  const stepCount = detail?.steps.length ?? 0;
+  if (navAdopted && stepIdx > 0 && stepIdx >= stepCount) setStepIdx(0);
   // Reconcile the selected entity in STATE, not just at render. Baseline falls back to
   // `entities[0]` when `entityId` is missing or names an entity that no longer exists —
   // but the state stayed wrong, so the app RENDERED one entity while every state consumer
@@ -77,12 +92,20 @@ export function LayoutLab() {
     setCatalogId(id);
     setEntityId(null);
     setStepIdx(0);
-    setPrefs({ lastCatalogId: id, lastEntityId: null });
+    setPrefs({ lastCatalogId: id, lastEntityId: null, lastStepIdx: 0 });
   }, [setPrefs]);
   const selectEntity = useCallback((id: string) => {
     setEntityId(id);
     setStepIdx(0);
-    setPrefs({ lastEntityId: id });
+    setPrefs({ lastEntityId: id, lastStepIdx: 0 });
+  }, [setPrefs]);
+  // The step rail's single write path. Every other nav callback resets or sets the step, so
+  // persisting it in ONE place per mutation keeps "where you left off" whole: without this the
+  // rail — the most-used control in the lab — was the one channel that moved the location
+  // without recording it.
+  const selectStep = useCallback((i: number) => {
+    setStepIdx(i);
+    setPrefs({ lastStepIdx: i });
   }, [setPrefs]);
   // Jump to a specific entity+step (matrix cell / coach), persisting the location the
   // same way a tree click does — so the daily driver reopens where you left off.
@@ -90,7 +113,13 @@ export function LayoutLab() {
     setCatalogId(cid);
     setEntityId(eid);
     setStepIdx(step);
-    setPrefs({ lastCatalogId: cid, lastEntityId: eid });
+    setPrefs({ lastCatalogId: cid, lastEntityId: eid, lastStepIdx: step });
+  }, [setPrefs]);
+  // Which of the three screens is open is part of the location too — a reload used to drop
+  // you back on Catalogs from the Matrix or Canon.
+  const selectView = useCallback((v: LabView) => {
+    setView(v);
+    setPrefs({ lastView: v });
   }, [setPrefs]);
 
   useEffect(() => { hydrate(); }, [hydrate]);
@@ -116,8 +145,8 @@ export function LayoutLab() {
   // Jump straight from a matrix cell to that entity's step, then surface the composition view.
   const openFromMatrix = useCallback((cid: string, eid: string, step: number) => {
     navigateTo(cid, eid, step);
-    setView('catalogs');
-  }, [navigateTo]);
+    selectView('catalogs');
+  }, [navigateTo, selectView]);
 
   const switchToLegacy = useCallback(() => {
     writeShellPref('legacy');
@@ -173,9 +202,9 @@ export function LayoutLab() {
           >
             Search <span aria-hidden="true" style={{ color: 'var(--lab-muted)' }}>⌘K</span>
           </Button>
-          <Button active={view === 'catalogs'} onClick={() => setView('catalogs')}>Catalogs</Button>
-          <Button active={view === 'matrix'} onClick={() => setView('matrix')}>Matrix</Button>
-          <Button active={view === 'canon'} onClick={() => setView('canon')}>Canon</Button>
+          <Button active={view === 'catalogs'} onClick={() => selectView('catalogs')}>Catalogs</Button>
+          <Button active={view === 'matrix'} onClick={() => selectView('matrix')}>Matrix</Button>
+          <Button active={view === 'canon'} onClick={() => selectView('canon')}>Canon</Button>
           <Button onClick={() => setPanelOpen(true)}>+ One-shot</Button>
           {/* Full-page jumps to the app's other surfaces — derived from NAVIGABLE_SURFACES
               and drawn distinctly from the in-place view toggles above. */}
@@ -210,7 +239,7 @@ export function LayoutLab() {
                   entityId={entityId}
                   onSelectEntity={selectEntity}
                   stepIdx={stepIdx}
-                  onSelectStep={setStepIdx}
+                  onSelectStep={selectStep}
                 />}
           </motion.div>
         </AnimatePresence>
@@ -220,7 +249,7 @@ export function LayoutLab() {
         onClose={() => setSearchOpen(false)}
         currentEntityId={entityId}
         onSelectCatalog={selectCatalog}
-        onNavigate={(cid, eid, step) => { navigateTo(cid, eid, step); setView('catalogs'); }}
+        onNavigate={(cid, eid, step) => { navigateTo(cid, eid, step); selectView('catalogs'); }}
       />
       <OneShotPanel t={theme} />
     </div>
