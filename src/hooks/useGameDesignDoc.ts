@@ -5,6 +5,7 @@ import { apiFetch } from '@/lib/api-utils';
 import { useIsMounted } from '@/hooks/useIsMounted';
 import { useModuleStore } from '@/stores/moduleStore';
 import { logger } from '@/lib/logger';
+import { normalizeProjectId } from '@/lib/project-id';
 import type { GDDDocument } from '@/lib/gdd-synthesizer';
 
 type ChecklistProgress = Record<string, Record<string, boolean>>;
@@ -57,25 +58,40 @@ function readChecklist(): ChecklistProgress {
  * unchanged GDD costs zero syntheses. Deliberately NOT persisted: it is a
  * freshness gate, not storage — same contract as the compliance store's.
  */
-let docCache: { projectName: string; checklistHash: string; doc: GDDDocument } | null = null;
+let docCache: { projectName: string; projectId: string; checklistHash: string; doc: GDDDocument } | null = null;
 
 /** Test-only: drop the in-memory gate so suites don't leak documents into each other. */
 export function __resetGddDocCache(): void {
   docCache = null;
 }
 
-function cachedDoc(projectName: string, checklistHash: string): GDDDocument | null {
+/**
+ * The project id is part of the key, not just the name: the synthesis is SCOPED to
+ * it server-side, so serving a cached document across a project switch would show
+ * one project another project's feature counts. Two projects can also share a
+ * display name — the path is the identity (`normalizeProjectId`).
+ */
+function cachedDoc(projectName: string, projectId: string, checklistHash: string): GDDDocument | null {
   if (!docCache) return null;
-  return docCache.projectName === projectName && docCache.checklistHash === checklistHash
+  return docCache.projectName === projectName
+    && docCache.projectId === projectId
+    && docCache.checklistHash === checklistHash
     ? docCache.doc
     : null;
 }
 
-export function useGameDesignDoc(projectName: string): UseGameDesignDocResult {
+/**
+ * @param projectName display title of the document.
+ * @param projectPath the ACTIVE project, passed explicitly by the caller (never
+ *   inferred server-side) — it scopes the synthesis and keys the staleness gate.
+ *   Omitted/blank ⇒ the documented global/legacy view, which says so in the document.
+ */
+export function useGameDesignDoc(projectName: string, projectPath = ''): UseGameDesignDocResult {
+  const projectId = normalizeProjectId(projectPath);
   // Adopt a still-fresh document on the very first render, so a tab flip back
   // shows the GDD without a loading flash and without a server round-trip.
   const [gdd, setGdd] = useState<GDDDocument | null>(
-    () => cachedDoc(projectName, hashChecklist(readChecklist())),
+    () => cachedDoc(projectName, projectId, hashChecklist(readChecklist())),
   );
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -92,7 +108,7 @@ export function useGameDesignDoc(projectName: string): UseGameDesignDocResult {
     const checklistHash = hashChecklist(checklist);
 
     if (!force) {
-      const fresh = cachedDoc(projectName, checklistHash);
+      const fresh = cachedDoc(projectName, projectId, checklistHash);
       if (fresh) {
         // Nothing the GDD is derived from moved — adopt, don't re-synthesize.
         if (isMounted()) {
@@ -112,11 +128,11 @@ export function useGameDesignDoc(projectName: string): UseGameDesignDocResult {
       const data = await apiFetch<GDDDocument>('/api/game-design-doc', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'generate', projectName, checklist }),
+        body: JSON.stringify({ action: 'generate', projectName, projectPath: projectId, checklist }),
       });
       // A newer generate() started while this was in flight — discard.
       if (token !== generateTokenRef.current) return;
-      docCache = { projectName, checklistHash, doc: data };
+      docCache = { projectName, projectId, checklistHash, doc: data };
       if (isMounted()) setGdd(data);
     } catch (err) {
       if (token !== generateTokenRef.current) return;
@@ -124,7 +140,7 @@ export function useGameDesignDoc(projectName: string): UseGameDesignDocResult {
     } finally {
       if (token === generateTokenRef.current && isMounted()) setIsLoading(false);
     }
-  }, [projectName, isMounted]);
+  }, [projectName, projectId, isMounted]);
 
   /**
    * Both exports POST the document the view is rendering. The server formats

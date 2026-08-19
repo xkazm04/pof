@@ -18,7 +18,11 @@ import { StatRow } from './StatRow';
 
 export function GameDesignDocView() {
   const projectName = useProjectStore((s) => s.projectName);
-  const { gdd, isLoading, error, exportError, clearExportError, generate, exportMarkdown, exportPitch } = useGameDesignDoc(projectName);
+  // The ACTIVE project rides the synthesis explicitly (never inferred server-side):
+  // it scopes the feature/review reads and keys the staleness gate, so switching
+  // projects regenerates instead of serving the other project's document.
+  const projectPath = useProjectStore((s) => s.projectPath);
+  const { gdd, isLoading, error, exportError, clearExportError, generate, exportMarkdown, exportPitch } = useGameDesignDoc(projectName, projectPath);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);

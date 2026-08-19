@@ -23,9 +23,25 @@ export interface GDDSection {
   updatedAt: string;
 }
 
+/**
+ * Which rows this document was synthesized from.
+ *
+ * Optional on the type so a client-held document from an older session still
+ * satisfies the shape guard in `/api/game-design-doc`; `synthesizeGDD` ALWAYS
+ * sets it, and the scope is additionally stated in prose inside the overview
+ * section so it survives every export (.md, pitch, print) unchanged.
+ */
+export interface GDDScope {
+  /** The normalized project id this document is scoped to; `''` when none was stated. */
+  projectId: string;
+  /** `false` ⇒ the global/legacy view: every project's rows, counted per project. */
+  scoped: boolean;
+}
+
 export interface GDDDocument {
   title: string;
   generatedAt: string;
+  scope?: GDDScope;
   sections: GDDSection[];
   stats: {
     totalFeatures: number;
@@ -111,10 +127,11 @@ interface SnapshotRow {
  * behaviour and the only one that still produces a document. Applying the scoped
  * rule to an unscoped call would return the legacy set, which is empty on any DB
  * where the rows have been attributed — an empty GDD reads as "nothing is built".
- * The residual is stated rather than hidden: with the project now in the
- * feature_matrix UNIQUE key, two projects CAN hold the same feature, so an unscoped
- * synthesis counts such a feature once per project. `/api/game-design-doc` does not
- * yet forward a project, so today's GDD is still the global view.
+ * With the project now in the `feature_matrix` UNIQUE key, two projects CAN hold the
+ * same feature, so an unscoped synthesis counts such a feature once per project.
+ * That is no longer a hidden residual: `/api/game-design-doc` forwards the caller's
+ * project on every generating path, and an unscoped document SAYS in its overview
+ * that it is the global view and what that does to the counts (see {@link GDDScope}).
  */
 function gddScope(projectId: string | undefined): { sql: string; params: string[] } {
   const pid = normalizeProjectId(projectId);
@@ -133,6 +150,7 @@ export function synthesizeGDD(
   ensureLevelDesignTable();
   const now = new Date().toISOString();
   const scope = gddScope(projectId);
+  const docScope: GDDScope = { projectId: normalizeProjectId(projectId), scoped: scope.params.length > 0 };
 
   // 1. Feature Matrix
   const featureSummary = db.prepare(
@@ -198,7 +216,7 @@ export function synthesizeGDD(
   const sections: GDDSection[] = [];
 
   // Section 1: Project Overview
-  sections.push(buildOverviewSection(projectName, totalFeatures, implementedFeatures, checklistTotal, checklistDone, now));
+  sections.push(buildOverviewSection(projectName, totalFeatures, implementedFeatures, checklistTotal, checklistDone, now, docScope));
 
   // Section 2: Core Systems
   sections.push(buildCoreSystemsSection(featureDetails, checklistProgress, now));
@@ -229,6 +247,7 @@ export function synthesizeGDD(
   return {
     title: `${projectName} — Game Design Document`,
     generatedAt: now,
+    scope: docScope,
     sections,
     stats: {
       totalFeatures,
@@ -245,6 +264,23 @@ export function synthesizeGDD(
 
 // ─── Section Builders ───────────────────────────────────────────────────────
 
+/**
+ * One prose line saying which rows the reader is looking at.
+ *
+ * The counts below it are only meaningful with this stated: an unscoped document
+ * spans every project in the database, and since the `feature_matrix` UNIQUE key
+ * includes the project, a feature two projects both hold appears once PER project.
+ * A reader who is not told that reads the sum as one project's progress.
+ */
+export function scopeDisclosure(scope: GDDScope): string {
+  return scope.scoped
+    ? '**Data scope:** project `' + scope.projectId + '` — feature and review data below is '
+      + "this project's rows plus the unattributed legacy ones."
+    : '**Data scope:** GLOBAL (no project stated) — feature and review data below spans '
+      + 'EVERY project in this database, so a feature two projects both hold is counted '
+      + 'once per project. Open the GDD with a project selected for a single-project view.';
+}
+
 function buildOverviewSection(
   projectName: string,
   totalFeatures: number,
@@ -252,6 +288,7 @@ function buildOverviewSection(
   checklistTotal: number,
   checklistDone: number,
   now: string,
+  scope: GDDScope,
 ): GDDSection {
   const featurePct = totalFeatures > 0 ? Math.round((implemented / totalFeatures) * 100) : 0;
   const checklistPct = checklistTotal > 0 ? Math.round((checklistDone / checklistTotal) * 100) : 0;
@@ -262,6 +299,8 @@ function buildOverviewSection(
     `**Genre:** Action RPG (aRPG)  `,
     `**Engine:** Unreal Engine 5 (C++)  `,
     `**Last Updated:** ${new Date(now).toLocaleDateString()}`,
+    '',
+    scopeDisclosure(scope),
     '',
     '## Project Status',
     '',
