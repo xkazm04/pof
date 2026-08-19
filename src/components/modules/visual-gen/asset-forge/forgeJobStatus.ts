@@ -10,6 +10,7 @@
  * right. Everything here is PURE and shared by both sides.
  */
 import type { CritiqueResult, MeshMetrics, Scorecard } from '@/lib/visual-gen/mesh-critique';
+import { ASSET_DIRS, assetUrl } from '@/lib/visual-gen/generated-assets';
 
 /**
  * The critique metrics the UI actually reads. `componentFaces` (up to 4096
@@ -101,12 +102,14 @@ export function jobOutcome(job: { status: string; accepted?: boolean }): ForgeOu
 }
 
 /**
- * Directories under `generated/` that `GET /api/visual-gen/asset/:name` can serve
- * TODAY (it joins `generated/triposr/<name>`). Kept here as data so the gap the
- * UI reports is derived from the real serving rule rather than guessed; when the
- * asset route is widened, add the dir here and the preview follows.
+ * Directories under `generated/` that `GET /api/visual-gen/asset/:name` can serve.
+ *
+ * Now DERIVED from the route's own allow-list (`ASSET_DIRS`) rather than restated,
+ * so the gap this UI reports cannot drift from the real serving rule: the route was
+ * widened from `generated/triposr` alone to every provider dir + mesh-finish, and a
+ * hand-maintained copy here would have gone on reporting a gap that no longer exists.
  */
-export const SERVED_ASSET_DIRS = ['triposr'] as const;
+export const SERVED_ASSET_DIRS: readonly string[] = ASSET_DIRS.map((d) => d.dir);
 
 export type MeshPreview =
   | { kind: 'servable'; url: string }
@@ -125,7 +128,7 @@ export function meshPreview(meshPath: string | undefined): MeshPreview | null {
   if (!name || !/\.(glb|gltf)$/i.test(name)) {
     return { kind: 'gap', reason: `No 3D preview: "${name ?? meshPath}" is not a .glb/.gltf file.` };
   }
-  if (!dir || !(SERVED_ASSET_DIRS as readonly string[]).includes(dir)) {
+  if (!dir || !SERVED_ASSET_DIRS.includes(dir)) {
     return {
       kind: 'gap',
       reason:
@@ -133,5 +136,7 @@ export function meshPreview(meshPath: string | undefined): MeshPreview | null {
         `and this mesh is at ${meshPath}. The file exists on disk — it just has no serving route yet.`,
     };
   }
-  return { kind: 'servable', url: `/api/visual-gen/asset/${encodeURIComponent(name)}` };
+  // The URL must NAME the dir for anything but the legacy default, or the preview
+  // 404s: basenames repeat across provider dirs, so the route cannot guess.
+  return { kind: 'servable', url: assetUrl(name, dir) };
 }

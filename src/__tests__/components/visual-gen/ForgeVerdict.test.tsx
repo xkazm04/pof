@@ -82,12 +82,21 @@ describe('meshPreview — render what the asset route can serve, state the gap',
     });
   });
 
-  it('names the gap for a mesh the asset route cannot reach today', () => {
-    const p = meshPreview('C:/x/pof/generated/tripo3d/1751.glb');
+  // The asset route was widened to every provider dir + mesh-finish, so a cloud mesh
+  // is now genuinely servable — it just has to NAME its dir, since basenames repeat.
+  it('serves a Tripo cloud mesh, naming its dir in the URL', () => {
+    expect(meshPreview('C:/x/pof/generated/tripo3d/1751.glb')).toEqual({
+      kind: 'servable',
+      url: '/api/visual-gen/asset/1751.glb?dir=tripo3d',
+    });
+  });
+
+  it('names the gap for a mesh in a dir the asset route still does not serve', () => {
+    const p = meshPreview('C:/x/pof/generated/jinx-leo/1751.glb');
     expect(p?.kind).toBe('gap');
     if (p?.kind !== 'gap') throw new Error('unreachable');
     expect(p.reason).toContain('generated/triposr');
-    expect(p.reason).toContain('generated/tripo3d/1751.glb');
+    expect(p.reason).toContain('generated/jinx-leo/1751.glb');
   });
 
   it('returns nothing when there is no mesh at all', () => {
@@ -146,7 +155,7 @@ describe('GenerationQueue — the card shows what the server measured', () => {
     expect(screen.getByTestId('glb-viewer-stub').textContent).toBe('/api/visual-gen/asset/9001.glb');
   });
 
-  it('states the serving gap instead of a silent blank for an unservable mesh', () => {
+  it('renders the viewer for a Tripo CLOUD mesh too, now the route serves its dir', () => {
     const id = useForgeStore.getState().addJob({ mode: 'text-to-3d', prompt: 'A axe', providerId: 'tripo3d' });
     useForgeStore.getState().updateJob(id, {
       status: 'completed', accepted: true, completedAt: Date.now(),
@@ -154,8 +163,19 @@ describe('GenerationQueue — the card shows what the server measured', () => {
     });
 
     render(<GenerationQueue />);
+    expect(screen.getByTestId('glb-viewer-stub').textContent).toBe('/api/visual-gen/asset/9002.glb?dir=tripo3d');
+  });
+
+  it('states the serving gap instead of a silent blank for a mesh outside every served dir', () => {
+    const id = useForgeStore.getState().addJob({ mode: 'text-to-3d', prompt: 'A axe', providerId: 'tripo3d' });
+    useForgeStore.getState().updateJob(id, {
+      status: 'completed', accepted: true, completedAt: Date.now(),
+      meshPath: 'C:/x/pof/generated/jinx-leo/9002.glb',
+    });
+
+    render(<GenerationQueue />);
     expect(screen.queryByTestId('glb-viewer-stub')).toBeNull();
-    expect(screen.getByTestId('job-preview-gap').textContent).toContain('generated/tripo3d/9002.glb');
+    expect(screen.getByTestId('job-preview-gap').textContent).toContain('generated/jinx-leo/9002.glb');
   });
 
   it('does not crash on a job whose critique failed to run', () => {

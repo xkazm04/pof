@@ -8,7 +8,7 @@ import { Skeleton } from '@/components/layout-lab/ui/Skeleton';
 import { tryApiFetch } from '@/lib/api-utils';
 import { formatBytes } from '@/lib/format';
 import { logger } from '@/lib/logger';
-import type { GeneratedAsset } from '@/lib/visual-gen/generated-assets';
+import { GENERATED_ASSETS_ENDPOINT, type GeneratedAsset } from '@/lib/visual-gen/generated-assets';
 
 const mono = { fontFamily: 'var(--lab-font-mono)', fontSize: 'var(--lab-fs-xs)' } as const;
 
@@ -22,7 +22,7 @@ export function AssetGallery({ activeUrl, onPick }: { activeUrl: string | null; 
 
   useEffect(() => {
     let live = true;
-    tryApiFetch<{ assets: GeneratedAsset[] }>('/api/visual-gen/assets').then((r) => {
+    tryApiFetch<{ assets: GeneratedAsset[] }>(GENERATED_ASSETS_ENDPOINT).then((r) => {
       if (!live) return;
       if (r.ok) { setAssets(r.data.assets); setError(null); }
       else { setError(r.error); logger.error('asset gallery fetch failed', r.error); }
@@ -55,7 +55,7 @@ export function AssetGallery({ activeUrl, onPick }: { activeUrl: string | null; 
             const active = activeUrl === a.url;
             return (
               <button
-                key={a.name}
+                key={a.url}
                 type="button"
                 onClick={() => onPick(a)}
                 aria-pressed={active}
@@ -77,7 +77,15 @@ export function AssetGallery({ activeUrl, onPick }: { activeUrl: string | null; 
                 </div>
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{ ...mono, color: 'var(--lab-ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={a.name}>{a.name}</div>
-                  <div style={{ ...mono, color: 'var(--lab-muted)' }}>{formatBytes(a.sizeBytes)}</div>
+                  {/* Which generator made it. Basenames repeat across provider dirs (both
+                      stores name by timestamp), so the name alone is not an identity. An
+                      `_aN` file is labelled as a retry ATTEMPT, never as "rejected" — disk
+                      does not record which attempt the job actually delivered. */}
+                  <div style={{ ...mono, color: 'var(--lab-muted)' }}>
+                    {formatBytes(a.sizeBytes)}
+                    {a.providerLabel ? ` · ${a.providerLabel}` : ''}
+                    {a.attempt !== undefined ? ` · retry attempt ${a.attempt}` : ''}
+                  </div>
                 </div>
               </button>
             );
