@@ -6,7 +6,8 @@ import { FeatureCard } from '../../unique-tabs/_shared';
 import { ACCENT, ASSET_FEATURES } from '../_shared/data';
 import type { FeatureRow } from '@/types/feature-matrix';
 import { MontageAssetBrowser } from './MontageAssetBrowser';
-import { BudgetTracker, NotifyCoverage } from './BudgetCoveragePanels';
+import { BudgetTracker } from './BudgetCoveragePanels';
+import { AnimationRealityLedger } from './AnimationRealityLedger';
 
 interface BudgetTabProps {
   featureMap: Map<string, FeatureRow>;
@@ -42,7 +43,7 @@ export function BudgetTab({ featureMap, defs }: BudgetTabProps) {
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <BudgetTracker />
-        <NotifyCoverage />
+        <AnimationRealityLedger />
       </div>
     </>
   );

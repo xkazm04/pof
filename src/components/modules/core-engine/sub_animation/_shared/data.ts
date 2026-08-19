@@ -3,8 +3,9 @@ import {
   ACCENT_VIOLET, ACCENT_CYAN, ACCENT_EMERALD,
 } from '@/lib/chart-colors';
 import { Activity, Play, RefreshCw, Cpu } from 'lucide-react';
-import type { HeatmapCell, GaugeMetric, TimelineEvent } from '@/types/unique-tab-improvements';
+import type { HeatmapCell, TimelineEvent } from '@/types/unique-tab-improvements';
 import type { LucideIcon } from 'lucide-react';
+import type { AnimAssetEntry } from '@/types/pof-bridge';
 
 export const ACCENT = ACCENT_VIOLET;
 
@@ -398,13 +399,30 @@ export const BLEND_CLIPS: BlendClip[] = [
 
 export const BLEND_CURRENT = { x: 15, y: 0.5 };
 
-/* ── Animation Budget Tracker data ─────────────────────────────────────────── */
+/* ── Animation budget LIMITS (targets — never a reading) ───────────────────── */
 
-export const BUDGET_GAUGES: GaugeMetric[] = [
-  { label: 'Montage Slots', current: 2, target: 4, unit: '' },
-  { label: 'Blend Depth', current: 3, target: 8, unit: '' },
-  { label: 'Active IK', current: 1, target: 4, unit: '' },
-  { label: 'Bone Count', current: 65, target: 120, unit: '' },
+/**
+ * The animation budget PoF holds a project to.
+ *
+ * These are TARGETS, not measurements, and the type deliberately has **no
+ * `current` field**: nothing in PoF reads a live UE5 animation graph's
+ * concurrent montage slots, blend depth, active IK chains or evaluated bone
+ * count, and the bridge manifest (`AssetManifest.animAssets`) carries none of
+ * them either. Until something measures them, a panel may render the limit and
+ * must say the usage is unmeasured — it may not print a literal as a reading.
+ * (It used to: `{ current: 65, target: 120 }` shipped as "65/120 bones".)
+ */
+export interface BudgetLimit {
+  label: string;
+  target: number;
+  unit: string;
+}
+
+export const BUDGET_LIMITS: BudgetLimit[] = [
+  { label: 'Montage Slots', target: 4, unit: '' },
+  { label: 'Blend Depth', target: 8, unit: '' },
+  { label: 'Active IK', target: 4, unit: '' },
+  { label: 'Bone Count', target: 120, unit: '' },
 ];
 
 /* ── Combo Chain Graph Editor data ─────────────────────────────────────────── */
@@ -480,34 +498,20 @@ export const RETARGET_PIPELINE_STEPS: RetargetStep[] = [
   { name: 'Commandlet', color: STATUS_SUCCESS, detail: 'Asset automation ran successfully. All assets cooked.' },
 ];
 
-/* ── Notify Coverage data ──────────────────────────────────────────────────── */
+/* ── (removed) fabricated notify-coverage findings ─────────────────────────── */
 
-export interface NotifyCoverageIssue {
-  montage: string;
-  message: string;
-  severity: 'error' | 'warning';
-}
-
-export interface MontageCoverage {
-  montage: string;
-  coverage: number;
-}
-
-export const NOTIFY_ISSUES: NotifyCoverageIssue[] = [
-  { montage: 'AM_HeavyAttack', message: 'Missing HitDetection notify', severity: 'error' },
-  { montage: 'AM_Dodge', message: 'No sound notify', severity: 'warning' },
-  { montage: 'AM_Combo3', message: 'ComboWindow has no follow-up', severity: 'warning' },
-  { montage: 'AM_Death', message: 'No VFX notify', severity: 'warning' },
-];
-
-export const MONTAGE_COVERAGES: MontageCoverage[] = [
-  { montage: 'AM_Combo1', coverage: 1.0 },
-  { montage: 'AM_Combo2', coverage: 1.0 },
-  { montage: 'AM_Combo3', coverage: 0.6 },
-  { montage: 'AM_HeavyAttack', coverage: 0.3 },
-  { montage: 'AM_Dodge', coverage: 0.5 },
-  { montage: 'AM_Death', coverage: 0.4 },
-];
+/*
+ * Two literal arrays used to live here — four "notify coverage errors" and six
+ * per-montage coverage percentages — and the Budget tab rendered them under
+ * "Gaps in animation notify coverage. Errors must be resolved". They named
+ * montages (AM_HeavyAttack, AM_Dodge, AM_Death) that the user's project may not
+ * contain, and no code ever read a project to produce them.
+ *
+ * The real finding of that shape is computed by `src/lib/animation/reality-ledger.mjs`
+ * and served by `GET /api/animation-ledger?projectPath=…`; it is rendered by
+ * `budget/AnimationRealityLedger.tsx`. A guard test asserts these identifiers
+ * never come back (see `src/__tests__/components/core-engine/animation-reality-ledger.test.tsx`).
+ */
 
 /* ── State Duration Statistics data ────────────────────────────────────────── */
 
@@ -561,6 +565,14 @@ export interface MontageTiming {
   blendInTime: number;
 }
 
+/**
+ * FIXTURE — invented montage timings for the header metric tiles only.
+ *
+ * These numbers describe no project. They must never feed the Predictive
+ * Responsiveness Analyzer again: that panel reads {@link DerivedMontageTiming}
+ * values produced by {@link timingsFromManifest} from the PoF bridge manifest,
+ * and a guard test asserts the analyzer does not import this array.
+ */
 export const MONTAGE_TIMINGS: MontageTiming[] = [
   { name: 'AM_Combo1', state: 'Attacking', totalFrames: 30, fps: 30, cancelWindowStart: 20, cancelWindowEnd: 30, blendInTime: 0.05 },
   { name: 'AM_Combo2', state: 'Attacking', totalFrames: 36, fps: 30, cancelWindowStart: 24, cancelWindowEnd: 36, blendInTime: 0.05 },
@@ -596,12 +608,116 @@ export const TRANSITION_RULES: TransitionRule[] = [
   { from: 'HitReact', to: 'Death', condition: 'bIsDead', useCancelWindow: false, gateBool: 'bIsDead' },
 ];
 
+/**
+ * Genre norms — a RUBRIC, not a measurement.
+ *
+ * These are the response-latency budgets an ARPG is judged against; a derived
+ * row above one is flagged. They describe the genre, never this project.
+ */
 export const GENRE_NORMS: Record<string, number> = {
   'Locomotion': 0.05,
   'Attacking': 0.20,
   'Dodging': 0.15,
   'HitReact': 0.10,
 };
+
+/** Norm applied to a state with no entry in {@link GENRE_NORMS}. */
+export const DEFAULT_GENRE_NORM = 0.2;
+
+/**
+ * A montage timing DERIVED FROM A REAL SOURCE — currently the PoF bridge
+ * manifest (`AnimAssetEntry.duration` and `AnimNotify.time`), both in seconds.
+ *
+ * There is deliberately no `fps` / `totalFrames`: the manifest carries no frame
+ * rate, so any frame number here could only be invented. Absent means absent —
+ * an unknown cancel window stays `undefined` rather than taking a default.
+ */
+export interface DerivedMontageTiming {
+  name: string;
+  state: AnimStateName;
+  durationSec: number;
+  cancelWindowStartSec?: number;
+  cancelWindowEndSec?: number;
+  /** Notify that opened the cancel window, when the source carried one. */
+  cancelNotify?: string;
+  /** Asset path the numbers were read from. */
+  sourcePath: string;
+}
+
+/** Montage-name → state machine state. Ordered: the first match wins. */
+const STATE_NAME_PATTERNS: { state: AnimStateName; re: RegExp }[] = [
+  { state: 'Death', re: /death|dying/i },
+  { state: 'HitReact', re: /hitreact|stagger|knock(back|down)|guardbreak|stumble|parried|blockimpact|launch/i },
+  { state: 'Dodging', re: /dodge|roll|evade|sidestep|backstep/i },
+  { state: 'Attacking', re: /attack|combo|slash|strike|thrust|swing|cleave|kick|sweep|stab|riposte|execute|finisher|uppercut|spin|pommel|parry/i },
+  { state: 'Locomotion', re: /walk|run|sprint|idle|jump|land|fall|crouch|swim|climb|slide|loco/i },
+];
+
+/**
+ * Classify a montage by name. Returns `null` when the name matches nothing —
+ * an unrecognised montage is REPORTED as unclassified, never defaulted into a
+ * state, because a wrong state would put a real duration on a wrong transition.
+ */
+export function stateFromMontageName(name: string): AnimStateName | null {
+  for (const { state, re } of STATE_NAME_PATTERNS) if (re.test(name)) return state;
+  return null;
+}
+
+/** A notify whose name marks the point a montage becomes cancellable. */
+const CANCEL_NOTIFY_RE = /combo|cancel/i;
+
+export type ManifestMontage = Pick<AnimAssetEntry, 'path' | 'assetType' | 'duration' | 'notifies'>;
+
+export interface ManifestTimingRead {
+  timings: DerivedMontageTiming[];
+  /** How many `AnimMontage` entries the manifest carried. */
+  montages: number;
+  /** Montage names skipped: the manifest carried no usable duration. */
+  withoutDuration: string[];
+  /** Montage names skipped: the name maps to no state machine state. */
+  unclassified: string[];
+}
+
+/**
+ * Read montage timings out of a bridge manifest. Pure; no defaults, no
+ * estimates. Anything unusable is returned in `withoutDuration` / `unclassified`
+ * so the panel can say what it could not read instead of quietly dropping it.
+ */
+export function timingsFromManifest(assets: ManifestMontage[] | null | undefined): ManifestTimingRead {
+  const montageAssets = (assets ?? []).filter((a) => a.assetType === 'AnimMontage');
+  const timings: DerivedMontageTiming[] = [];
+  const withoutDuration: string[] = [];
+  const unclassified: string[] = [];
+
+  for (const asset of montageAssets) {
+    const name = asset.path.slice(asset.path.lastIndexOf('/') + 1);
+    const duration = asset.duration;
+    if (typeof duration !== 'number' || !Number.isFinite(duration) || duration <= 0) {
+      withoutDuration.push(name);
+      continue;
+    }
+    const state = stateFromMontageName(name);
+    if (!state) {
+      unclassified.push(name);
+      continue;
+    }
+    const cancel = (asset.notifies ?? [])
+      .filter((n) => CANCEL_NOTIFY_RE.test(n.name) && n.time >= 0 && n.time <= duration)
+      .sort((a, b) => a.time - b.time)[0];
+
+    timings.push({
+      name,
+      state,
+      durationSec: duration,
+      cancelWindowStartSec: cancel ? cancel.time : undefined,
+      cancelWindowEndSec: cancel ? duration : undefined,
+      cancelNotify: cancel ? cancel.name : undefined,
+      sourcePath: asset.path,
+    });
+  }
+
+  return { timings, montages: montageAssets.length, withoutDuration, unclassified };
+}
 
 export interface ResponsivenessResult {
   from: AnimStateName;
@@ -610,94 +726,69 @@ export interface ResponsivenessResult {
   bestCase: number;
   worstCase: number;
   avgCase: number;
-  frameRange: string;
-  cancelPct: string;
+  /** Plain statement of which read values produced these seconds. */
+  derivedFrom: string;
+  /** Asset path the seconds were read from. */
+  sourcePath: string;
   exceedsNorm: boolean;
   normThreshold: number;
   gateBool: string;
 }
 
-function computeResponsiveness(): ResponsivenessResult[] {
+/**
+ * Input-to-visual latency per transition, as a PURE function of the timings it
+ * is handed.
+ *
+ * It used to be a module-load constant (`RESPONSIVENESS_RESULTS`) folded over
+ * fixture arrays, and printed "Attacking: 383ms — Sluggish" against a project
+ * it had never read. Two branches were removed with it: a synthetic
+ * "from idle" row (a literal 0.05s blend plus a literal 1/60s input lag) and a
+ * fallback that invented 0.3s for a state with no montage. Both manufactured
+ * numbers, so both are gone — with no timings this returns nothing.
+ *
+ * Blend-in time is NOT added: the bridge manifest does not carry it. The
+ * transition topology (`rules`) is PoF's declared ARPG state machine, a design
+ * contract rather than a scan of the user's AnimBP; only the seconds are read.
+ */
+export function computeResponsiveness(
+  timings: DerivedMontageTiming[],
+  rules: TransitionRule[] = TRANSITION_RULES,
+  norms: Record<string, number> = GENRE_NORMS,
+): ResponsivenessResult[] {
   const results: ResponsivenessResult[] = [];
 
-  for (const rule of TRANSITION_RULES) {
-    const sourceMontages = MONTAGE_TIMINGS.filter(m => m.state === rule.from);
+  for (const rule of rules) {
+    const norm = norms[rule.from] ?? DEFAULT_GENRE_NORM;
 
-    if (rule.from === 'Locomotion') {
-      const blendIn = 0.05;
-      const inputLag = 1 / 60;
-      const total = blendIn + inputLag;
+    for (const t of timings) {
+      if (t.state !== rule.from) continue;
+
+      const canCancel = rule.useCancelWindow
+        && t.cancelWindowStartSec !== undefined
+        && t.cancelWindowEndSec !== undefined;
+      const best = canCancel ? t.cancelWindowStartSec as number : t.durationSec;
+      const worst = canCancel ? t.cancelWindowEndSec as number : t.durationSec;
+
       results.push({
-        from: rule.from, to: rule.to,
-        action: `${rule.to} from idle`,
-        bestCase: inputLag, worstCase: total, avgCase: (inputLag + total) / 2,
-        frameRange: 'frame 0-1', cancelPct: 'immediate',
-        exceedsNorm: total > (GENRE_NORMS[rule.from] ?? 0.2),
-        normThreshold: GENRE_NORMS[rule.from] ?? 0.2,
+        from: rule.from,
+        to: rule.to,
+        action: `${rule.to} from ${t.name}`,
+        bestCase: best,
+        worstCase: worst,
+        avgCase: (best + worst) / 2,
+        derivedFrom: canCancel
+          ? `cancellable from notify ${t.cancelNotify} at ${best.toFixed(2)}s of ${t.durationSec.toFixed(2)}s`
+          : `plays out — ${t.durationSec.toFixed(2)}s`,
+        sourcePath: t.sourcePath,
+        exceedsNorm: best > norm,
+        normThreshold: norm,
         gateBool: rule.gateBool,
       });
-      continue;
-    }
-
-    if (sourceMontages.length === 0) {
-      const montage = MONTAGE_TIMINGS.find(m => m.state === rule.from);
-      const dur = montage ? montage.totalFrames / montage.fps : 0.3;
-      results.push({
-        from: rule.from, to: rule.to,
-        action: `${rule.to} from ${rule.from}`,
-        bestCase: 0, worstCase: dur, avgCase: dur / 2,
-        frameRange: `0-${montage?.totalFrames ?? '?'}`,
-        cancelPct: 'on completion',
-        exceedsNorm: dur > (GENRE_NORMS[rule.from] ?? 0.2),
-        normThreshold: GENRE_NORMS[rule.from] ?? 0.2,
-        gateBool: rule.gateBool,
-      });
-      continue;
-    }
-
-    for (const montage of sourceMontages) {
-      const frameDur = 1 / montage.fps;
-      const totalDur = montage.totalFrames * frameDur;
-
-      if (rule.useCancelWindow && montage.cancelWindowStart !== undefined && montage.cancelWindowEnd !== undefined) {
-        const cancelStart = montage.cancelWindowStart * frameDur;
-        const cancelEnd = montage.cancelWindowEnd * frameDur;
-        const blendIn = montage.blendInTime;
-        const best = cancelStart + blendIn;
-        const worst = cancelEnd + blendIn;
-        const pctStart = Math.round((montage.cancelWindowStart / montage.totalFrames) * 100);
-        const pctEnd = Math.round((montage.cancelWindowEnd / montage.totalFrames) * 100);
-
-        results.push({
-          from: rule.from, to: rule.to,
-          action: `${rule.to} from ${montage.name}`,
-          bestCase: best, worstCase: worst, avgCase: (best + worst) / 2,
-          frameRange: `frames ${montage.cancelWindowStart}-${montage.cancelWindowEnd} of ${montage.totalFrames}`,
-          cancelPct: `${pctStart}-${pctEnd}%`,
-          exceedsNorm: best > (GENRE_NORMS[rule.from] ?? 0.2),
-          normThreshold: GENRE_NORMS[rule.from] ?? 0.2,
-          gateBool: rule.gateBool,
-        });
-      } else {
-        const blendIn = montage.blendInTime;
-        results.push({
-          from: rule.from, to: rule.to,
-          action: `${rule.to} from ${montage.name}`,
-          bestCase: totalDur + blendIn, worstCase: totalDur + blendIn, avgCase: totalDur + blendIn,
-          frameRange: `after frame ${montage.totalFrames}`,
-          cancelPct: 'on completion',
-          exceedsNorm: (totalDur + blendIn) > (GENRE_NORMS[rule.from] ?? 0.2),
-          normThreshold: GENRE_NORMS[rule.from] ?? 0.2,
-          gateBool: rule.gateBool,
-        });
-      }
     }
   }
 
   return results;
 }
-
-export const RESPONSIVENESS_RESULTS = computeResponsiveness();
 
 export const RESPONSIVENESS_GRADE_THRESHOLDS = [
   { max: 0.05, label: 'Instant', color: STATUS_SUCCESS },
