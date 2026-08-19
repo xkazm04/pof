@@ -147,6 +147,63 @@ describe('LayoutLab navigation state truth', { timeout: 20000 }, () => {
     expect(screen.getByRole('heading', { level: 2, name: 'Economy' })).toBeTruthy();
   });
 
+  /**
+   * "The daily driver reopens where you left off" was only ever half true: catalog and
+   * entity were stored, `stepIdx` initialised to 0. Every reload — and every return from
+   * the full-page jump to /status or /3d — dropped you at step 01 of a pipeline that can
+   * be 20 steps long. These pin the whole location, and pin that a restored index which
+   * outlived its pipeline can never land the canvas on an undefined step.
+   */
+  describe('restores the step position it left off at', () => {
+    const itemsSteps = () => renderHook(() => useLabDetail('items')).result.current!.steps;
+
+    it('reopens on the stored step index, not step 01', () => {
+      const steps = itemsSteps();
+      const target = steps.indexOf('Economy');
+      expect(target).toBeGreaterThan(0);
+      localStorage.setItem(PREFS_KEY, JSON.stringify({ themeId: 'light', lastCatalogId: 'items', lastStepIdx: target }));
+
+      render(<LayoutLab />);
+      expect(screen.getByRole('heading', { level: 2, name: 'Economy' })).toBeTruthy();
+    });
+
+    it('persists the step position on a rail click', () => {
+      const target = itemsSteps().indexOf('Economy');
+      render(<LayoutLab />);
+      fireEvent.click(within(pipeline()).getByRole('button', { name: /Economy/ }));
+      expect(readPrefs().lastStepIdx).toBe(target);
+    });
+
+    it('falls back to step 01 when the stored index outran the pipeline — and writes nothing', () => {
+      localStorage.setItem(PREFS_KEY, JSON.stringify({ themeId: 'light', lastCatalogId: 'items', lastStepIdx: 999 }));
+
+      render(<LayoutLab />);
+      // Step 01, and a REAL step heading — never an undefined-step blank canvas.
+      expect(screen.getByText(/^Step 01 \//)).toBeTruthy();
+      expect(screen.getByRole('heading', { level: 2, name: itemsSteps()[0] })).toBeTruthy();
+      // The render-phase fallback performed NO write: the bogus value is neither re-persisted
+      // nor rewritten, because a render must not touch localStorage.
+      expect(readPrefs().lastStepIdx).toBe(999);
+    });
+
+    it('a negative / non-integer stored index is rejected at parse, not adopted', () => {
+      localStorage.setItem(PREFS_KEY, JSON.stringify({ themeId: 'light', lastCatalogId: 'items', lastStepIdx: -3 }));
+      render(<LayoutLab />);
+      expect(screen.getByText(/^Step 01 \//)).toBeTruthy();
+    });
+
+    it('reopens in the view it left off in, and persists a view switch', () => {
+      render(<LayoutLab />);
+      fireEvent.click(screen.getByRole('button', { name: 'Matrix' }));
+      expect(readPrefs().lastView).toBe('matrix');
+
+      cleanup();
+      render(<LayoutLab />);
+      // The Matrix's catalog picker — proof the stored view was adopted, not the default.
+      expect(screen.getByLabelText('Catalog')).toBeTruthy();
+    });
+  });
+
   it('persists last-location on a matrix open the same way a tree click does', () => {
     const { result } = renderHook(() => useLabDetail('items'));
     const firstEntity = result.current!.entities[0];

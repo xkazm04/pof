@@ -1,10 +1,28 @@
 'use client';
 import { useSyncExternalStore } from 'react';
 
+/** The lab's three top-level screens. Persisted so a reload reopens the one you left. */
+export type LabView = 'catalogs' | 'canon' | 'matrix';
+
 export interface LabPrefs {
   themeId: 'light' | 'dark';
   lastCatalogId?: string;
   lastEntityId?: string | null;
+  /**
+   * The pipeline step the catalogs view was last on, as an index into the OPEN catalog's
+   * step list. Stored beside the catalog/entity because "reopens where you left off" is a
+   * location, and a location missing its step drops you at step 01 of a pipeline that can be
+   * 20 steps long — on every reload, and on every return from the full-page /status and /3d
+   * jumps in the header.
+   *
+   * Deliberately an index into a list that can CHANGE (a catalog's pipeline can shrink), so
+   * the reader clamps: an out-of-range restore falls back to the first step. Deliberately NOT
+   * url-shaped either — this is the same local prefs blob the shell already owns, so it adds
+   * no query params and no history entries.
+   */
+  lastStepIdx?: number;
+  /** Which top-level view was open (catalogs / matrix / canon). */
+  lastView?: LabView;
   /**
    * When each catalog was last OPENED (ISO), keyed by catalogId — the baseline the
    * "what moved since I was last here" digest compares against.
@@ -29,11 +47,21 @@ function parse(raw: string | null): LabPrefs {
       themeId: parsed.themeId === 'dark' ? 'dark' : 'light',
       lastCatalogId: typeof parsed.lastCatalogId === 'string' ? parsed.lastCatalogId : undefined,
       lastEntityId: typeof parsed.lastEntityId === 'string' ? parsed.lastEntityId : null,
+      // A stored step index is only ever a non-negative integer. Anything else (a negative,
+      // a float, a string, a hand-edited blob) is dropped here rather than reaching the
+      // shell — the shell's own range clamp is the second line of defence, not the first.
+      ...(Number.isInteger(parsed.lastStepIdx) && (parsed.lastStepIdx as number) >= 0
+        ? { lastStepIdx: parsed.lastStepIdx as number } : {}),
+      ...(isLabView(parsed.lastView) ? { lastView: parsed.lastView } : {}),
       ...(visits && typeof visits === 'object' ? { lastVisitByCatalog: onlyStrings(visits) } : {}),
     };
   } catch {
     return DEFAULTS;
   }
+}
+
+function isLabView(v: unknown): v is LabView {
+  return v === 'catalogs' || v === 'canon' || v === 'matrix';
 }
 
 /** Keep only `catalogId → ISO string` entries — a corrupt map must not reach the digest. */
