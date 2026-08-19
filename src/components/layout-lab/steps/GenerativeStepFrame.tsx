@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { StepFrame, type StepPanel } from './StepFrame';
 import { CliProduce } from './shared/CliProduce';
 import { CandidateGallery } from './shared/CandidateGallery';
@@ -8,6 +8,7 @@ import { RawArtifactDisclosure } from './shared/RawArtifactDisclosure';
 import { selectedCandidate, selectionSource, type GenCandidate, type GenHistory } from './shared/genHistory';
 import { useGenerativeStep } from './shared/useGenerativeStep';
 import { useStepAcceptance } from './shared/useStepAcceptance';
+import { withItemFixCopy } from './shared/itemFixCopy';
 import { ITEM_STEP_SPECS } from './itemsSteps';
 import type { LabTheme } from '../theme';
 import type { LabEntity } from '../useLabCatalogData';
@@ -68,7 +69,15 @@ export function GenerativeStepFrame({
     (data: Record<string, unknown>, ctx: CheckerContext) => ITEM_STEP_SPECS[step].accept(data, ctx),
     [step],
   );
-  const acceptance = useStepAcceptance({ catalogId: 'items', entityId: entity.id, step, art, accept });
+  const judged = useStepAcceptance({ catalogId: 'items', entityId: entity.id, step, art, accept });
+  // Same position the generic renderer merges its copy in: on the RESOLVED verdict, so a
+  // judge-bridge or drain down-grade still carries a plain-language `why` — and therefore
+  // still renders StepFrame's "⚡ Produce fix" button, which is nested inside it. Display
+  // only; `withItemFixCopy` passes every graded field through untouched.
+  const acceptance = useMemo(
+    () => withItemFixCopy(step, art?.data ?? {}, judged, defaultDirection),
+    [step, art, judged, defaultDirection],
+  );
   const run = (dir?: string, prompt?: string) => generate(dir ?? defaultDirection, prompt ?? buildPrompt(dir ?? defaultDirection));
 
   const galleryPanel: StepPanel = {
@@ -83,7 +92,7 @@ export function GenerativeStepFrame({
   return (
     <StepFrame t={t} acceptance={acceptance} catalogId="items" step={step}
       selection={selectionSource(history)}
-      onFix={(fixDir) => run(fixDir)}
+      onFix={acceptance.status === 'deferred' ? undefined : (fixDir) => run(fixDir)}
       panels={[
         ...(galleryFirst ? [galleryPanel, ...ownPanels] : [...ownPanels, galleryPanel]),
         { label: 'Produce', node: (

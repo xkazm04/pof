@@ -1,9 +1,10 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { StepFrame, type StepPanel } from './StepFrame';
 import { RawArtifactDisclosure } from './shared/RawArtifactDisclosure';
 import { useStepAcceptance } from './shared/useStepAcceptance';
+import { withItemFixCopy } from './shared/itemFixCopy';
 import { useStaticStep } from './useStaticStep';
 import { ITEM_STEP_SPECS } from './itemsSteps';
 import type { LabTheme } from '../theme';
@@ -51,12 +52,25 @@ export function StaticStepFrame({ t, entity, step, panels }: {
     (data: Record<string, unknown>, ctx: CheckerContext) => ITEM_STEP_SPECS[step].accept(data, ctx),
     [step],
   );
-  const acceptance = useStepAcceptance({ catalogId: 'items', entityId: entity.id, step, art, accept });
+  const judged = useStepAcceptance({ catalogId: 'items', entityId: entity.id, step, art, accept });
+  // Remediation copy is merged onto the RESOLVED verdict — the position the generic
+  // renderer uses (`withGenericFixCopy` over `judged`). `withCopy` inside `accept` returns
+  // early on `pass`, so a server-drain or judge down-grade used to land a bare FAIL with no
+  // `why` — and StepFrame nests "⚡ Produce fix" inside `{acceptance.why && …}`, so the step
+  // silently lost its one-click remediation exactly when it needed it. Display only.
+  const acceptance = useMemo(
+    () => withItemFixCopy(step, art?.data ?? {}, judged),
+    [step, art, judged],
+  );
 
   // onFix carries a corrective DIRECTION STRING, not a produce ctx — drop it rather than
   // letting it land in the ctx slot (it would stamp a prompt that was never built).
+  // `deferred` gets no fix affordance at all (the generic contract): a runtime/visual gate
+  // is proved by the drain, not by re-producing from this panel.
   return (
-    <StepFrame t={t} acceptance={acceptance} onFix={() => runProduce()} catalogId="items" step={step}
+    <StepFrame t={t} acceptance={acceptance}
+      onFix={acceptance.status === 'deferred' ? undefined : () => runProduce()}
+      catalogId="items" step={step}
       panels={[
         ...panels({ art, runProduce }),
         { label: 'Raw artifact', node: (
