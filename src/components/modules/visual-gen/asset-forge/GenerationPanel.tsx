@@ -11,7 +11,7 @@ import {
 import { StatusTag } from '@/components/ui/StatusTag';
 import { POLYCOUNT_PRESETS } from '@/lib/visual-gen/polycount-presets';
 import { composeVisualPrompt } from '@/lib/visual-gen/prompt-chips';
-import { styleDnaToPromptFragment } from '@/lib/visual-gen/style-dna';
+import { applyStyleFragment, styleDnaToPromptFragment } from '@/lib/visual-gen/style-dna';
 import { useForgeStore } from './useForgeStore';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
 import { BlenderConnectionBar } from '@/components/blender-mcp/BlenderConnectionBar';
@@ -64,8 +64,11 @@ export function GenerationPanel() {
   );
   const effectivePrompt = (advanced ? rawPrompt : composedPrompt).trim();
   // Project style: append the active Style DNA fragment to the submitted prompt.
+  // Through the SHARED helper, so this path is capped exactly like the Leonardo route —
+  // it used to concatenate uncapped, i.e. the path with no server-side length check was
+  // the one that could overrun a provider limit.
   const styleFragment = applyStyleDna && activeStyleDna ? styleDnaToPromptFragment(activeStyleDna.dna) : null;
-  const styledPrompt = styleFragment && effectivePrompt ? `${effectivePrompt}. ${styleFragment}` : effectivePrompt;
+  const styledPrompt = applyStyleFragment(effectivePrompt, styleFragment);
 
   /**
    * Why the submit button is off, in the user's terms — or null when it can run.

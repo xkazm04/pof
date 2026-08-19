@@ -1,7 +1,7 @@
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { generateImage, upscaleImage, unzoomImage, generateTextureOn3DModel, MAX_PROMPT_LENGTH, type GenerateImageOptions } from '@/lib/leonardo';
 import { detectSeamsSafe, detectSeamsFromUrl, type SeamCheckResult } from '@/lib/visual-gen/seam-check';
-import { styleDnaToPromptFragment } from '@/lib/visual-gen/style-dna';
+import { applyStyleFragment, styleDnaToPromptFragment } from '@/lib/visual-gen/style-dna';
 import { getActiveStyleDna } from '@/lib/visual-gen/style-dna-db';
 import { getDb } from '@/lib/db';
 import { logger } from '@/lib/logger';
@@ -23,14 +23,18 @@ export async function POST(request: Request) {
       if (prompt.length > MAX_PROMPT_LENGTH) return apiError(`Prompt exceeds ${MAX_PROMPT_LENGTH} character limit`, 400);
       const opts: GenerateImageOptions = body?.opts ?? {};
 
-      // Opt-in project-style consistency: append the active Style DNA fragment,
-      // capped so the combined prompt never exceeds the provider limit.
+      // Opt-in project-style consistency: append the active Style DNA fragment through
+      // the SHARED helper, capped so the combined prompt never exceeds the provider limit.
+      //
+      // NOTE ON REACH: nothing in `src/` sends `applyStyleDna` — only the gap-loop batch
+      // scripts do. The forge's Style DNA panel now STATES that (`STYLE_DNA_REACH`)
+      // instead of implying this path with a label that just says "prompts".
       let styleDnaApplied: string | null = null;
       let finalPrompt = prompt;
       if (body?.applyStyleDna === true) {
         const active = getActiveStyleDna(getDb());
         if (active) {
-          finalPrompt = `${prompt}. ${styleDnaToPromptFragment(active.dna)}`.slice(0, MAX_PROMPT_LENGTH);
+          finalPrompt = applyStyleFragment(prompt, styleDnaToPromptFragment(active.dna), MAX_PROMPT_LENGTH);
           styleDnaApplied = active.name;
         }
       }

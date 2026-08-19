@@ -1,12 +1,26 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { ChevronDown, ChevronRight, Dna, ImagePlus, Loader2, X } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronRight, Dna, ImagePlus, Loader2, X } from 'lucide-react';
 import { tryApiFetch } from '@/lib/api-utils';
+import { formatBytes } from '@/lib/format';
 import type { StyleDnaProfile } from '@/lib/visual-gen/style-dna-db';
-import type { StyleDna } from '@/lib/visual-gen/style-dna';
+import { STYLE_DNA_REACH, type StyleDna } from '@/lib/visual-gen/style-dna';
 import { InlineErrorRetry } from '../../shared/InlineErrorRetry';
 import { useForgeStore } from './useForgeStore';
+
+/** Hard caps on the mood-board intake, exported so the test asserts the SAME numbers the UI states. */
+export const MAX_BOARD_IMAGES = 6;
+export const MAX_BOARD_IMAGE_BYTES = 5 * 1024 * 1024;
+
+/**
+ * What a failed action should re-run when the user clicks Retry.
+ *
+ * This exists because the retry used to be hardwired to `distill`: a failed *activation*
+ * (a PATCH) offered a Retry button that fired a PAID VLM distillation of whatever
+ * happened to be on the board. A retry may only ever repeat the action that failed.
+ */
+type RetryTarget = { kind: 'load' } | { kind: 'distill' } | { kind: 'activate'; id: string };
 
 const DNA_ROWS: Array<{ key: keyof StyleDna; label: string }> = [
   { key: 'palette', label: 'Palette' },
@@ -54,14 +68,30 @@ export function StyleDnaPanel() {
   const [board, setBoard] = useState<string[]>([]);
   const [name, setName] = useState('');
   const [distilling, setDistilling] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ message: string; target: RetryTarget } | null>(null);
+  /** Intake refusals (unreadable / oversize / over-cap files). No retry — nothing to repeat. */
+  const [notice, setNotice] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  /** Async settlers (fetches, FileReader callbacks) must not touch state after unmount. */
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
 
   const load = async () => {
     const res = await tryApiFetch<{ active: StyleDnaProfile | null; profiles: StyleDnaProfile[] }>(
       '/api/visual-gen/style-dna',
     );
-    if (!res.ok) return; // no profiles yet is not an error surface
+    if (!mounted.current) return;
+    if (!res.ok) {
+      // A 500 used to return silently here, leaving "none yet — distill one from a mood
+      // board" indistinguishable from "the server could not tell us". Say which it is,
+      // and expand so the message is actually on screen.
+      setError({ message: `Could not load saved styles: ${res.error}`, target: { kind: 'load' } });
+      setExpanded(true);
+      return;
+    }
     setProfiles(res.data.profiles);
     setActiveProfile(res.data.active);
     if (!res.data.active) setExpanded(true); // empty state invites a first board
@@ -70,14 +100,42 @@ export function StyleDnaPanel() {
   useEffect(() => { void load(); }, []);
 
   const addImages = (files: FileList | null) => {
-    if (!files) return;
-    for (const file of Array.from(files)) {
+    if (!files || files.length === 0) return;
+    const incoming = Array.from(files);
+    const room = MAX_BOARD_IMAGES - board.length;
+    if (room <= 0) {
+      setNotice(`Mood board is full at ${MAX_BOARD_IMAGES} images — remove one to add another.`);
+      return;
+    }
+    const refused: string[] = [];
+    if (incoming.length > room) {
+      refused.push(`${incoming.length - room} file(s) skipped — the board caps at ${MAX_BOARD_IMAGES} images.`);
+    }
+    for (const file of incoming.slice(0, room)) {
+      if (file.size > MAX_BOARD_IMAGE_BYTES) {
+        refused.push(
+          `“${file.name}” is ${formatBytes(file.size)} — over the ${formatBytes(MAX_BOARD_IMAGE_BYTES)} per-image cap.`,
+        );
+        continue;
+      }
       const reader = new FileReader();
       reader.onload = () => {
-        if (typeof reader.result === 'string') setBoard((b) => [...b, reader.result as string]);
+        if (!mounted.current) return;
+        if (typeof reader.result === 'string') {
+          const src = reader.result;
+          setBoard((b) => (b.length >= MAX_BOARD_IMAGES ? b : [...b, src]));
+        } else {
+          setNotice(`Could not read “${file.name}” — the browser returned no image data.`);
+        }
+      };
+      // Without this an unreadable image simply never appeared, with nothing said.
+      reader.onerror = () => {
+        if (!mounted.current) return;
+        setNotice(`Could not read “${file.name}”: ${reader.error?.message ?? 'the file could not be read'}.`);
       };
       reader.readAsDataURL(file);
     }
+    setNotice(refused.length ? refused.join(' ') : null);
   };
 
   const distill = async () => {
@@ -88,8 +146,9 @@ export function StyleDnaPanel() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ images: board, name: name.trim() || undefined }),
     });
+    if (!mounted.current) return;
     setDistilling(false);
-    if (!res.ok) { setError(res.error); return; }
+    if (!res.ok) { setError({ message: res.error, target: { kind: 'distill' } }); return; }
     setBoard([]);
     setName('');
     setActiveProfile(res.data.profile);
@@ -103,9 +162,21 @@ export function StyleDnaPanel() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id }),
     });
-    if (!res.ok) { setError(res.error); return; }
+    if (!mounted.current) return;
+    // The retry target is THIS activation — never the paid distillation.
+    if (!res.ok) { setError({ message: res.error, target: { kind: 'activate', id } }); return; }
     setActiveProfile(res.data.active);
     setProfiles((p) => p.map((x) => ({ ...x, active: x.id === id })));
+  };
+
+  /** Re-run exactly the action that failed. */
+  const retry = () => {
+    const target = error?.target;
+    setError(null);
+    if (!target) return;
+    if (target.kind === 'load') void load();
+    else if (target.kind === 'distill') void distill();
+    else void activate(target.id);
   };
 
   return (
@@ -130,22 +201,58 @@ export function StyleDnaPanel() {
             type="button"
             aria-pressed={applyStyleDna}
             onClick={() => setApplyStyleDna(!applyStyleDna)}
+            title={STYLE_DNA_REACH.note}
+            data-testid="style-dna-toggle"
             className={`px-2.5 py-1 rounded-full text-2xs border transition-colors ${
               applyStyleDna
                 ? 'border-[var(--visual-gen)] bg-[var(--visual-gen)]/15 text-[var(--visual-gen)]'
                 : 'border-border text-text-muted hover:text-text'
             }`}
           >
-            {applyStyleDna ? 'Applied to prompts' : 'Apply to prompts'}
+            {/* The label NAMES the path — the switch used to say "prompts" while reaching
+                only the 3D submit. See STYLE_DNA_REACH. */}
+            {applyStyleDna ? 'Applied to' : 'Apply to'} {STYLE_DNA_REACH.label}
           </button>
         )}
       </div>
 
       {expanded && (
         <div className="px-3 pb-3 space-y-3 border-t border-border pt-3">
-          {error && <InlineErrorRetry dense message={error} onRetry={() => void distill()} onDismiss={() => setError(null)} />}
+          {error && (
+            <InlineErrorRetry
+              dense
+              message={error.message}
+              onRetry={retry}
+              onDismiss={() => setError(null)}
+            />
+          )}
+
+          {notice && (
+            <div
+              role="status"
+              data-testid="style-dna-notice"
+              className="flex items-start gap-1.5 rounded px-2 py-1.5 text-2xs text-amber-400 bg-amber-400/10 border border-amber-400/20"
+            >
+              <AlertTriangle size={12} className="mt-px shrink-0" />
+              <span className="min-w-0">{notice}</span>
+              <button
+                type="button"
+                aria-label="Dismiss notice"
+                onClick={() => setNotice(null)}
+                className="ml-auto shrink-0 text-text-muted hover:text-text"
+              >
+                <X size={10} />
+              </button>
+            </div>
+          )}
 
           {activeStyleDna && <DnaStrip dna={activeStyleDna.dna} />}
+
+          {/* Reach, stated. The toggle is opt-in style injection into ONE path; saying which
+              is the difference between a promise and a claim. */}
+          <p className="text-2xs text-text-muted" data-testid="style-dna-reach">
+            {STYLE_DNA_REACH.note}
+          </p>
 
           {/* Other saved profiles */}
           {profiles.filter((p) => !p.active).length > 0 && (

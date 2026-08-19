@@ -1,6 +1,7 @@
 /**
  * Style DNA — distill a mood board ONCE into a compact per-project style descriptor,
- * then inject it into every 2D-generation prompt. The $0 alternative to per-generation
+ * then inject it into generation prompts (see `STYLE_DNA_REACH` for exactly which
+ * paths inject it today — the claim is asserted, not assumed). The $0 alternative to per-generation
  * image conditioning: no image-reference API dependency, works identically across
  * Leonardo, local SDXL and Tripo text-to-3d prompts, and keeps all generated concepts
  * in one coherent art direction (the "repeat the process in the same style" loop).
@@ -77,6 +78,60 @@ export function styleDnaToPromptFragment(dna: StyleDna): string {
   ].filter(Boolean);
   return `In the established project art style — ${parts.join('; ')}.`;
 }
+
+/**
+ * Provider prompt ceiling the COMBINED prompt+fragment is capped against.
+ *
+ * 1500 is Leonardo's `MAX_PROMPT_LENGTH` — the tightest limit of the paths that inject
+ * the fragment, so capping there is safe everywhere. The two injection sites used to
+ * disagree: the Leonardo route sliced, the 3D submit concatenated uncapped, so the path
+ * with NO server-side length check was the one that could overrun a provider limit.
+ */
+export const STYLE_PROMPT_MAX_LENGTH = 1500;
+
+/**
+ * The ONE way a style fragment is appended to a generation prompt. Pure.
+ *
+ * A falsy fragment (style off, or no active profile) returns the prompt untouched —
+ * including its original length, so a route's own "prompt too long" 400 still fires on
+ * the user's text instead of being silently truncated behind their back.
+ */
+export function applyStyleFragment(
+  prompt: string,
+  fragment: string | null | undefined,
+  maxLength: number = STYLE_PROMPT_MAX_LENGTH,
+): string {
+  const base = prompt.trim();
+  if (!fragment || !base) return prompt;
+  return `${base}. ${fragment}`.slice(0, maxLength);
+}
+
+/**
+ * WHERE the forge's "apply project style" flag actually reaches — declared, so the
+ * toggle's LABEL cannot claim more than its senders deliver.
+ *
+ * The switch used to read "Applied to prompts" while reaching exactly one consumer: the
+ * Asset Forge 3D submit. `/api/leonardo` implements the same injection behind
+ * `applyStyleDna: true`, but nothing in `src/` has ever sent it — only the gap-loop
+ * batch scripts do — so a user who distilled a mood board and flipped the switch got
+ * style injection into a *mesh* prompt and nothing at all in the 2D image path the
+ * panel appeared to describe.
+ *
+ * `senders` is asserted against the real readers of the flag by
+ * `src/__tests__/components/visual-gen/StyleDnaReach.test.tsx`: widening the reach
+ * without widening the label (or the reverse) fails that test.
+ */
+export const STYLE_DNA_REACH = {
+  /** Source files that READ the flag and inject the fragment into a submitted prompt. */
+  senders: ['src/components/modules/visual-gen/asset-forge/GenerationPanel.tsx'],
+  /** The noun the toggle uses. Must name exactly what `senders` covers. */
+  label: '3D prompts',
+  /** The full sentence shown beside the toggle — reach AND the path it does not cover. */
+  note:
+    'Appended to Asset Forge 3D generation prompts (text-to-3D and image-to-3D) only. ' +
+    'The 2D Leonardo image route accepts the same style, but nothing in the app sends it — ' +
+    'only the gap-loop batch scripts do.',
+} as const;
 
 export type StyleDnaResult =
   | { ok: true; dna: StyleDna; raw: string }

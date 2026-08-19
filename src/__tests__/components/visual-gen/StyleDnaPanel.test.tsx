@@ -58,12 +58,12 @@ describe('StyleDnaPanel', () => {
   it('the apply toggle flips the store flag generation prompts read', async () => {
     fetchMock.mockResolvedValueOnce(envelope({ active: PROFILE, profiles: [PROFILE] }));
     render(<StyleDnaPanel />);
-    const toggle = await screen.findByRole('button', { name: /applied to prompts/i });
+    const toggle = await screen.findByRole('button', { name: /applied to 3d prompts/i });
     expect(toggle.getAttribute('aria-pressed')).toBe('true');
 
     fireEvent.click(toggle);
     expect(useForgeStore.getState().applyStyleDna).toBe(false);
-    expect(screen.getByRole('button', { name: /^apply to prompts$/i }).getAttribute('aria-pressed')).toBe('false');
+    expect(screen.getByRole('button', { name: /^apply to 3d prompts$/i }).getAttribute('aria-pressed')).toBe('false');
   });
 
   it('distills an uploaded board and promotes the returned profile to active', async () => {
