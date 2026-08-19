@@ -32,7 +32,7 @@ describe('BlenderSetupWizard', () => {
 
   it('shows a success state when Blender is connected', () => {
     useBlenderMCPStore.setState({
-      connection: { host: 'localhost', port: 9876, connected: true, blenderVersion: '4.2' },
+      connection: { host: 'localhost', port: 9876, connected: true },
     });
     render(<BlenderSetupWizard open onClose={() => {}} />);
     expect(screen.getByText(/connected to blender/i)).toBeTruthy();

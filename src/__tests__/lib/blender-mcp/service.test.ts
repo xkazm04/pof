@@ -1,33 +1,11 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import net from 'net';
-
-function createMockBlenderServer(
-  handler: (data: string) => string,
-): Promise<{ server: net.Server; port: number }> {
-  return new Promise((resolve) => {
-    const server = net.createServer((socket) => {
-      let buffer = '';
-      socket.on('data', (chunk) => {
-        buffer += chunk.toString('utf-8');
-        try {
-          JSON.parse(buffer);
-          const response = handler(buffer);
-          buffer = '';
-          socket.write(response);
-        } catch {
-          /* incomplete JSON, wait for more */
-        }
-      });
-    });
-    server.listen(0, '127.0.0.1', () => {
-      const addr = server.address() as net.AddressInfo;
-      resolve({ server, port: addr.port });
-    });
-  });
-}
+import {
+  createMockBlenderServer,
+  type MockBlenderServer,
+} from './mockBlenderServer';
 
 describe('BlenderMCPService', () => {
-  let mockServer: net.Server | null = null;
+  let mockServer: MockBlenderServer | null = null;
 
   afterEach(async () => {
     // Dynamic import to get fresh singleton per test via resetService
@@ -37,7 +15,7 @@ describe('BlenderMCPService', () => {
     getService().disconnect();
     resetService();
     if (mockServer) {
-      await new Promise<void>((r) => mockServer!.close(() => r()));
+      await mockServer.close();
       mockServer = null;
     }
   });
@@ -59,7 +37,7 @@ describe('BlenderMCPService', () => {
       }
       return JSON.stringify({ status: 'error', message: 'Unknown command' });
     });
-    mockServer = created.server;
+    mockServer = created;
 
     const { getService } = await import('@/lib/blender-mcp/service');
     const svc = getService();
@@ -84,10 +62,8 @@ describe('BlenderMCPService', () => {
 
   it('executes arbitrary Python code', async () => {
     // First call is health-check (get_scene_info from connect), second is execute_code
-    let callCount = 0;
     const created = await createMockBlenderServer((data) => {
       const cmd = JSON.parse(data);
-      callCount++;
       if (cmd.type === 'get_scene_info') {
         return JSON.stringify({
           status: 'success',
@@ -106,7 +82,7 @@ describe('BlenderMCPService', () => {
       }
       return JSON.stringify({ status: 'error', message: 'Unknown' });
     });
-    mockServer = created.server;
+    mockServer = created;
 
     const { getService } = await import('@/lib/blender-mcp/service');
     const svc = getService();
@@ -122,10 +98,9 @@ describe('BlenderMCPService', () => {
   });
 
   it('returns error when Blender reports error status', async () => {
-    let callCount = 0;
-    const created = await createMockBlenderServer((data) => {
-      callCount++;
-      if (callCount === 1) {
+    let calls = 0;
+    const created = await createMockBlenderServer(() => {
+      if (++calls === 1) {
         // Health check during connect
         return JSON.stringify({
           status: 'success',
@@ -137,7 +112,7 @@ describe('BlenderMCPService', () => {
         message: 'NameError: name "foo" is not defined',
       });
     });
-    mockServer = created.server;
+    mockServer = created;
 
     const { getService } = await import('@/lib/blender-mcp/service');
     const svc = getService();

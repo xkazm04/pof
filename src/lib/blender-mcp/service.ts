@@ -116,6 +116,14 @@ class BlenderMCPService {
           return;
         }
 
+        // The health check above IS a probe — stamp it so a page that loads
+        // moments later can tell how fresh the "connected" verdict is.
+        this.connection = {
+          host: h,
+          port: p,
+          connected: true,
+          lastProbeAt: Date.now(),
+        };
         logger.info(`[BlenderMCP] Connected to Blender at ${h}:${p}`);
         resolve(ok(this.connection));
       });
@@ -145,8 +153,77 @@ class BlenderMCPService {
     this.connection = { ...this.connection, connected: false };
   }
 
+  /**
+   * The cached view of the connection. Callers that need to KNOW the bridge is
+   * alive must use `probe()` — this returns whatever the last real round-trip
+   * left behind, which is stale the moment Blender quits, crashes, or the OS
+   * tears the socket down without notifying us.
+   */
   getStatus(): BlenderConnection {
     return { ...this.connection };
+  }
+
+  /**
+   * Liveness probe — the honest answer to "is the bridge up?".
+   *
+   * `getStatus()` used to BE the whole of `action:'status'`, so the pill, the
+   * wizard banner and every Produce gate in the app read a boolean no traffic
+   * ever verified: a wedged addon kept every button enabled and only failed
+   * 30s later, per dispatch. This sends a real `get_scene_info` and reports
+   * what came back.
+   *
+   * Cost/safety notes:
+   * - `get_scene_info` is in `FAST_COMMANDS`, so the probe's own budget is 8s,
+   *   not the 30s blanket.
+   * - It goes through `sendCommand`, i.e. it QUEUES on the serialized chain. It
+   *   therefore cannot pre-empt a long user script, and it cannot be timed out
+   *   by waiting for one either: the timer is created inside `sendCommandRaw`,
+   *   which runs only after the chain hands over. Asserted in
+   *   `service-probe.test.ts` ("does not time out while queued …").
+   * - Concurrent probes collapse onto one in-flight request, so a probe stuck
+   *   behind a slow script cannot stack up one queue entry per health tick.
+   * - No traffic at all when we already believe we are disconnected: there is
+   *   no socket to ask, and dialling is `connect()`'s job, not a probe's.
+   */
+  async probe(): Promise<BlenderConnection> {
+    if (!this.socket || !this.connection.connected) return this.getStatus();
+    if (this.probeInFlight) return this.probeInFlight;
+    const run = this.runProbe();
+    this.probeInFlight = run;
+    try {
+      return await run;
+    } finally {
+      if (this.probeInFlight === run) this.probeInFlight = null;
+    }
+  }
+
+  private probeInFlight: Promise<BlenderConnection> | null = null;
+
+  private async runProbe(): Promise<BlenderConnection> {
+    const result = await this.sendCommand({ type: 'get_scene_info' });
+    if (result.ok) {
+      this.connection = {
+        ...this.connection,
+        connected: true,
+        lastProbeAt: Date.now(),
+        lastProbeError: undefined,
+      };
+      return this.getStatus();
+    }
+    // Record WHY before tearing down — `disconnect()` spreads the current
+    // connection, so the reason survives and the UI can name the failure
+    // instead of silently flipping a dot to grey.
+    this.connection = {
+      ...this.connection,
+      connected: false,
+      lastProbeAt: Date.now(),
+      lastProbeError: result.error,
+    };
+    logger.warn(`[BlenderMCP] Liveness probe failed: ${result.error}`);
+    // A socket we cannot get an answer out of is not a connection. Drop it so
+    // queued work fails fast (epoch bump) rather than piling onto a dead link.
+    this.disconnect();
+    return this.getStatus();
   }
 
   // ── Low-level TCP send/receive ──────────────────────────────────────────

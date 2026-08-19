@@ -20,7 +20,13 @@ export const POST = withRoute(async (req: NextRequest) => {
   }
 
   if (action === 'status') {
-    return apiSuccess({ connection: svc.getStatus() });
+    // A real round-trip, not a cached boolean. This is the ONE call the whole
+    // app's connection state derives from (the pill, the wizard banner and 19
+    // Produce gates), so answering it from a field nothing verifies meant a
+    // wedged addon kept every button enabled. `probe()` sends `get_scene_info`
+    // (8s fast class, queued on the serialized chain) and reports what came
+    // back — including WHY, when it did not.
+    return apiSuccess({ connection: await svc.probe() });
   }
 
   return apiError('Unknown action', 400);

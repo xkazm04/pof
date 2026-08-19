@@ -40,7 +40,10 @@ interface BlenderMCPState {
   setAutoConnect: (autoConnect: boolean) => void;
   /** Honor the persisted autoConnect flag on mount (idempotent). */
   maybeAutoConnect: () => void;
-  /** Arm the liveness probe when already connected (idempotent). For mount. */
+  /**
+   * Adopt the server's real connection state on mount and arm the liveness
+   * probe if the bridge answers (idempotent). For mount.
+   */
   ensureHealthCheck: () => void;
   /** Tear down the liveness probe without touching the connection. For unmount. */
   stopHealthCheck: () => void;
@@ -70,8 +73,10 @@ function clearRetryTimer() {
 // Module-level liveness probe. Same rationale as retryTimer: a timer handle is
 // not serializable, and at most one probe loop runs while connected. The OS can
 // tear down the TCP socket on a Blender close/crash/sleep without any client
-// notification, so we poll the service's cached connection state to detect the
-// silent drop and self-heal.
+// notification, so each tick asks the server to ROUND-TRIP a `get_scene_info`
+// (`action:'status'` → `BlenderMCPService.probe()`) to detect the silent drop —
+// and a wedged-but-open addon, which a cached flag could never see — and
+// self-heal.
 let healthTimer: ReturnType<typeof setInterval> | null = null;
 
 function clearHealthTimer() {
@@ -108,9 +113,10 @@ export const useBlenderMCPStore = create<BlenderMCPState>()(
 
       /**
        * Arm the periodic liveness probe. Idempotent — clears any prior loop
-       * first so a reconnect never stacks intervals. Each tick refreshes the
-       * connection state from the service, which detects a socket the OS tore
-       * down silently and triggers self-healing (see refreshStatus).
+       * first so a reconnect never stacks intervals. Each tick makes the server
+       * round-trip a real `get_scene_info`, which is what detects a socket the
+       * OS tore down silently (and an addon that is wedged but still holding
+       * the socket open) and triggers self-healing (see refreshStatus).
        */
       const startHealthCheck = () => {
         clearHealthTimer();
@@ -197,20 +203,55 @@ export const useBlenderMCPStore = create<BlenderMCPState>()(
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'status' }),
           });
-          if (!result.ok) return;
 
-          const fresh = result.data.connection;
-          set({ connection: fresh });
-
-          // The probe found Blender gone (OS tore down the socket; the service
-          // already flipped its own connected=false). Stop polling a dead link
-          // and, when auto-connect is on, arm the backoff loop to self-heal.
-          if (wasConnected && !fresh.connected) {
+          // A transport failure, OR a success envelope that does not actually
+          // carry a connection (a shape only a bug or a stubbed fetch produces —
+          // the previous code assigned `undefined` straight into `connection`
+          // and left the rest of the app dereferencing it). Either way we could
+          // not establish that the bridge is alive.
+          const fresh = result.ok ? result.data?.connection : undefined;
+          if (!fresh || typeof fresh.connected !== 'boolean') {
+            // Returning here used to leave the last "Connected" pill on screen
+            // with every Produce gate open, which is the same lie as a cached
+            // flag — just one layer up. We do not know, so we must not claim it.
             clearHealthTimer();
-            if (get().autoConnect && !get().autoRetrying) {
+            set({
+              connection: { ...get().connection, connected: false },
+              lastError: result.ok
+                ? 'Bridge status response did not include a connection'
+                : result.error,
+            });
+            if (wasConnected && get().autoConnect && !get().autoRetrying) {
               set({ retryAttempt: 0 });
               scheduleRetry();
             }
+            return;
+          }
+
+          set({
+            connection: fresh,
+            // A probe that put bytes on the wire and failed carries its own
+            // reason; show it rather than a bare grey dot. A live probe clears
+            // whatever the previous failure said.
+            lastError: fresh.connected ? null : (fresh.lastProbeError ?? get().lastError),
+          });
+
+          if (fresh.connected) {
+            // The server says the bridge answered. Arm the probe loop even if
+            // THIS page load never clicked Connect: `merge` resets `connection`
+            // on rehydration, it does not close the socket, so a reload used to
+            // show "Disconnected" over a live bridge.
+            if (!healthTimer) startHealthCheck();
+            return;
+          }
+
+          // The probe found Blender gone (OS tore down the socket, or the addon
+          // stopped answering). Stop polling a dead link and, when auto-connect
+          // is on, arm the backoff loop to self-heal.
+          clearHealthTimer();
+          if (wasConnected && get().autoConnect && !get().autoRetrying) {
+            set({ retryAttempt: 0 });
+            scheduleRetry();
           }
         },
 
@@ -248,11 +289,18 @@ export const useBlenderMCPStore = create<BlenderMCPState>()(
         },
 
         ensureHealthCheck: () => {
-          // Re-arm after a remount if the connection is still live but the
-          // probe was torn down on the previous unmount.
-          if (get().connection.connected && !healthTimer) {
-            startHealthCheck();
-          }
+          // A fresh page load knows NOTHING about the bridge: `merge` resets
+          // `connection` to INITIAL_CONNECTION, so the old
+          // `if (get().connection.connected)` guard was ALWAYS false on mount.
+          // The bar therefore read "Disconnected" over a perfectly live socket
+          // and the user clicked Connect — which destroys and rebuilds a working
+          // connection. Ask the server instead of trusting the reset copy;
+          // `refreshStatus` arms the loop when the probe says the bridge is up.
+          // No client-side dedupe needed for concurrent bars: `probe()` collapses
+          // simultaneous requests onto one in-flight `get_scene_info`, so N bars
+          // still cost exactly one command on the wire.
+          if (get().isConnecting) return;
+          void get().refreshStatus();
         },
 
         stopHealthCheck: () => {

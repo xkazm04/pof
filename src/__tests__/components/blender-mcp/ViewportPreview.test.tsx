@@ -8,7 +8,7 @@ afterEach(cleanup);
 beforeEach(() => {
   // Reset store transient state between tests
   useBlenderMCPStore.setState({
-    connection: { host: '127.0.0.1', port: 9876, connected: true, blenderVersion: '4.2' },
+    connection: { host: '127.0.0.1', port: 9876, connected: true },
     isConnecting: false,
     lastError: null,
     recentScreenshots: [],

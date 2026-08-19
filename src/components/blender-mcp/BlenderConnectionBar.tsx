@@ -90,8 +90,11 @@ export function BlenderConnectionBar() {
       ? 'connecting'
       : 'disconnected';
 
+  // No version suffix: `BlenderConnection` carries no `blenderVersion` because
+  // nothing on this bridge can produce one (see types.ts). The label says only
+  // what the probe actually established.
   const statusLabel = connection.connected
-    ? `Connected${connection.blenderVersion ? ` (${connection.blenderVersion})` : ''}`
+    ? 'Connected'
     : isConnecting
       ? 'Connecting…'
       : autoRetrying

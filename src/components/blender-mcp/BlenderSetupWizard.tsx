@@ -85,10 +85,8 @@ function WizardBody() {
         >
           <CheckCircle2 className="w-5 h-5 mt-0.5 shrink-0 text-green-400" aria-hidden="true" />
           <div>
-            <p className="font-semibold text-text">
-              Connected to Blender
-              {connection.blenderVersion ? ` ${connection.blenderVersion}` : ''}
-            </p>
+            {/* No version suffix — see the note on `BlenderConnection`. */}
+            <p className="font-semibold text-text">Connected to Blender</p>
             <p className="text-text-muted text-xs mt-0.5">
               The MCP bridge is live on {connection.host}:{connection.port}.
             </p>

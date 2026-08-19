@@ -15,10 +15,24 @@ import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
  *  - the download endpoint
  *  - the screenshot endpoint (returns no payload → snapshot is a no-op)
  */
+/**
+ * The connection the mocked bridge reports. The connection bar now PROBES the
+ * server on mount (a live socket can no longer be read off a rehydrated store
+ * field), so the status route has to answer with the state each test set up.
+ */
+let mockConnected = false;
+
 function mockAssetFetch() {
   const mock = vi.fn().mockImplementation((url: string) => {
     let body: unknown = { success: true, data: {} };
-    if (url.includes('/assets/download')) {
+    if (url === '/api/blender-mcp') {
+      body = {
+        success: true,
+        data: {
+          connection: { host: '127.0.0.1', port: 9876, connected: mockConnected },
+        },
+      };
+    } else if (url.includes('/assets/download')) {
       body = { success: true, data: { objectName: 'Imported_Object' } };
     } else if (url.includes('/screenshot')) {
       body = { success: true, data: { screenshot: '' } };
@@ -64,6 +78,8 @@ function mockAssetFetch() {
 }
 
 function setConnected(connected: boolean) {
+  mockConnected = connected;
+  useBlenderMCPStore.getState().stopHealthCheck();
   useBlenderMCPStore.setState({
     host: '127.0.0.1',
     port: 9876,
@@ -78,7 +94,10 @@ function setConnected(connected: boolean) {
   });
 }
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  useBlenderMCPStore.getState().stopHealthCheck();
+});
 beforeEach(() => setConnected(true));
 
 describe('AssetBrowser — search', () => {

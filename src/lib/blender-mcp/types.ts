@@ -3,9 +3,29 @@
 export interface BlenderConnection {
   host: string;
   port: number;
+  /**
+   * Whether the bridge answered the LAST liveness probe. This is not a cached
+   * flag: `BlenderMCPService.probe()` round-trips a real `get_scene_info` before
+   * this value is reported, so `true` means bytes came back, not "we once
+   * dialled successfully". See `lastProbeAt` / `lastProbeError`.
+   */
   connected: boolean;
-  blenderVersion?: string;
+  /** Epoch ms of the last probe that actually put bytes on the wire. */
+  lastProbeAt?: number;
+  /**
+   * Why the last probe failed, in the addon's / socket's own words. Set whenever
+   * a probe flips `connected` to false so the UI can say WHY the bridge went
+   * away instead of only that it did. Cleared by a successful probe.
+   */
+  lastProbeError?: string;
 }
+// NOTE: there is deliberately no `blenderVersion` here. It was rendered by the
+// connection bar and the setup wizard for months while NOTHING in the service
+// ever wrote it — the only values in the tree were test fixtures. Neither the
+// health check (`get_scene_info`) nor any other command on this bridge carries a
+// Blender version, so the field could only ever have been a fabrication. The
+// separate `useBlenderStore.blenderVersion` is unrelated and IS real: it comes
+// from `/api/visual-gen/blender/detect` running the local Blender executable.
 
 export const DEFAULT_BLENDER_HOST = 'localhost';
 export const DEFAULT_BLENDER_PORT = 9876;

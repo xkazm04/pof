@@ -1,11 +1,23 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, cleanup, screen, fireEvent } from '@testing-library/react';
+import { render, cleanup, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BlenderConnectionBar } from '@/components/blender-mcp/BlenderConnectionBar';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
 
 afterEach(cleanup);
 
+/** The status envelope `POST /api/blender-mcp { action:'status' }` returns. */
+function mockStatus(connection: Record<string, unknown>) {
+  global.fetch = vi.fn(async () => ({
+    json: async () => ({ success: true, data: { connection } }),
+  })) as unknown as typeof fetch;
+}
+
 beforeEach(() => {
+  // The bar now probes the server on mount (it can no longer read a live bridge
+  // off a store field that rehydration resets). Default every case to "the
+  // bridge is down" so only the tests that care drive the probe.
+  mockStatus({ host: '127.0.0.1', port: 9876, connected: false });
+  useBlenderMCPStore.getState().stopHealthCheck();
   useBlenderMCPStore.setState({
     host: '127.0.0.1',
     port: 9876,
@@ -23,12 +35,24 @@ beforeEach(() => {
 describe('BlenderConnectionBar — accessibility', () => {
   it('exposes the status pill as a polite live region with a descriptive label', () => {
     useBlenderMCPStore.setState({
-      connection: { host: '127.0.0.1', port: 9876, connected: true, blenderVersion: '4.2' },
+      connection: { host: '127.0.0.1', port: 9876, connected: true },
     });
     render(<BlenderConnectionBar />);
     const status = screen.getByRole('status');
     expect(status.getAttribute('aria-live')).toBe('polite');
-    expect(status.getAttribute('aria-label')).toMatch(/Connected.*4\.2/);
+    expect(status.getAttribute('aria-label')).toMatch(/Blender MCP status: Connected$/);
+  });
+
+  it('never announces a Blender version, because the bridge cannot report one', () => {
+    // This assertion used to read `/Connected.*4\.2/` against a `blenderVersion`
+    // that NOTHING in the service ever wrote — the only "4.2" in the tree was
+    // this fixture. The field is deleted rather than faked; if a real handshake
+    // ever produces one, this test is the place that must change with it.
+    useBlenderMCPStore.setState({
+      connection: { host: '127.0.0.1', port: 9876, connected: true },
+    });
+    render(<BlenderConnectionBar />);
+    expect(screen.getByRole('status').getAttribute('aria-label')).not.toMatch(/\d+\.\d+/);
   });
 
   it('announces error banners via role="alert"', () => {
@@ -134,6 +158,22 @@ describe('BlenderConnectionBar — guided setup + auto-connect', () => {
     });
     fireEvent.click(toggle);
     expect(spy).toHaveBeenCalledWith(true);
+  });
+
+  it('shows Connected after mount, without the user clicking Connect', async () => {
+    // RED at HEAD~1: `merge` resets `connection` on every rehydration and
+    // `ensureHealthCheck` was gated on that reset copy, so a page reload showed
+    // "Disconnected" over a live bridge — and the fix the user reaches for
+    // (Connect) destroys and rebuilds a working socket.
+    mockStatus({ host: '127.0.0.1', port: 9876, connected: true, lastProbeAt: 1 });
+    render(<BlenderConnectionBar />);
+
+    expect(screen.getByRole('status').getAttribute('aria-label')).toMatch(/Disconnected/);
+    await waitFor(() =>
+      expect(screen.getByRole('status').getAttribute('aria-label')).toMatch(/Connected/),
+    );
+    expect(screen.getByRole('button', { name: /disconnect from blender mcp/i })).toBeTruthy();
+    useBlenderMCPStore.getState().stopHealthCheck();
   });
 
   it('reflects an active backoff retry in the status pill', () => {
