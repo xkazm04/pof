@@ -1,19 +1,18 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Sparkles, Loader2, RefreshCw, Stars } from 'lucide-react';
 import { MODULE_LABELS } from '@/lib/module-registry';
 import { layoutModuleConstellation } from '@/lib/constellation/layout';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { useCRUD } from '@/hooks/useCRUD';
-import { tryApiFetch } from '@/lib/api-utils';
+import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
+import { useFeatureStatuses } from '@/hooks/useFeatureStatuses';
 import type { SubModuleId } from '@/types/modules';
 import type { FeatureStatus } from '@/types/feature-matrix';
 import {
   PLAN_STATUS_COLORS, STATUS_SUCCESS, STATUS_BLOCKER, STATUS_INFO,
 } from '@/lib/chart-colors';
 import { NODE_W, STATUS_ORDER, STATUS_LABEL, GRAPH_MODULES } from './constants';
-import type { StatusRow } from './constants';
 import { buildStars } from './helpers';
 import { ConstellationNodeG } from './ConstellationNodeG';
 import { NextCallout } from './NextCallout';
@@ -24,23 +23,10 @@ export function FeatureConstellation() {
   const [moduleId, setModuleId] = useState<SubModuleId>('arpg-character');
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
 
-  // Feature statuses, fetched + cached via the blessed useCRUD hook (avoids a
-  // hand-rolled fetch effect). The custom fetcher unwraps the envelope and
-  // reduces the status rows into the "moduleId::featureName" → status map.
-  const fetcher = useCallback(async (): Promise<Map<string, string>> => {
-    const result = await tryApiFetch<{ statuses: StatusRow[] }>('/api/feature-matrix/all-statuses');
-    const map = new Map<string, string>();
-    if (result.ok) {
-      for (const row of result.data.statuses ?? []) map.set(`${row.moduleId}::${row.featureName}`, row.status);
-    }
-    return map;
-  }, []);
-
-  const { data: statusMap, isLoading, refetch } = useCRUD<Map<string, string>>(
-    '/api/feature-matrix/all-statuses',
-    new Map<string, string>(),
-    { fetcher },
-  );
+  // Feature statuses come from the ONE shared all-statuses path, so mounting
+  // beside the other Evaluator views costs no extra full-table scan and a
+  // review/auto-verify invalidation refreshes this view too.
+  const { statusMap, isLoading, failed, error, refresh } = useFeatureStatuses();
 
   const layout = useMemo(() => layoutModuleConstellation(moduleId, statusMap), [moduleId, statusMap]);
   const nodeByKey = useMemo(() => new Map(layout.nodes.map((n) => [n.key, n])), [layout]);
@@ -75,6 +61,28 @@ export function FeatureConstellation() {
     );
   }
 
+  // A failed status load must NOT fall through to the constellation: every node
+  // would paint "unknown" and the header would claim "0/N lit", which is
+  // indistinguishable from a module nobody has reviewed. Say what broke instead.
+  if (failed) {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Stars className="w-4 h-4" style={{ color: STATUS_INFO }} />
+          <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">Feature Constellation</span>
+        </div>
+        <InlineErrorRetry
+          message={`Could not load feature statuses: ${error ?? 'unknown error'}`}
+          onRetry={refresh}
+        />
+        <p className="text-2xs text-text-muted">
+          The constellation is not drawn while statuses are unavailable — an unlit map would read as
+          &ldquo;nothing implemented&rdquo; rather than &ldquo;nothing loaded&rdquo;.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {/* Header / controls */}
@@ -102,7 +110,7 @@ export function FeatureConstellation() {
             ))}
           </select>
           <button
-            onClick={() => refetch()}
+            onClick={refresh}
             className="p-1.5 rounded-md text-text-muted hover:text-text hover:bg-border transition-colors"
             aria-label="Refresh statuses"
             title="Refresh statuses"

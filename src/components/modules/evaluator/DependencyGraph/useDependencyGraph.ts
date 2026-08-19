@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { MODULE_FEATURE_DEFINITIONS, buildDependencyMap, computeBlockers } from '@/lib/feature-definitions';
-import { tryApiFetch } from '@/lib/api-utils';
+import { useFeatureStatuses } from '@/hooks/useFeatureStatuses';
 import { MODULE_LABELS } from '@/lib/module-registry';
 import { useManifest } from '@/hooks/useManifest';
 import type { SubModuleId } from '@/types/modules';
@@ -8,9 +8,14 @@ import { MODULE_COLORS, COL_WIDTH, ROW_HEIGHT, NODE_W, NODE_H, PAD_X, PAD_Y, get
 import type { ModuleNode, Edge } from './types';
 
 export function useDependencyGraph() {
-  const [statusMap, setStatusMap] = useState<Map<string, string>>(new Map());
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Statuses come from the ONE shared all-statuses path. A failed load must not
+  // masquerade as "no feature data yet" — that empty state claims the project has
+  // no reviewed features, which is a different (and actionable) fact — so the
+  // hook's `error` is surfaced and `refetch` invalidates the shared cache.
+  const {
+    statusMap, isLoading, loaded, failed, error: statusError, refresh: refetch,
+  } = useFeatureStatuses();
+  const error = failed ? (statusError ?? 'Failed to load feature statuses') : null;
   const [selectedModule, setSelectedModule] = useState<string | null>(null);
   const [hoveredModule, setHoveredModule] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
@@ -34,32 +39,6 @@ export function useDependencyGraph() {
     for (const oa of manifest.otherAssets) addRefs(oa.path, oa.crossReferences);
     return refs;
   }, [manifest]);
-
-  const fetchStatuses = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      // Route returns apiSuccess({ statuses }); tryApiFetch unwraps the envelope so
-      // the status map isn't silently empty (which hid all cross-module blockers).
-      const result = await tryApiFetch<{ statuses: { moduleId: string; featureName: string; status: string }[] }>('/api/feature-matrix/all-statuses');
-      if (result.ok) {
-        const map = new Map<string, string>();
-        for (const row of result.data.statuses ?? []) {
-          map.set(`${row.moduleId}::${row.featureName}`, row.status);
-        }
-        setStatusMap(map);
-      } else {
-        // A failed fetch must not masquerade as "no feature data yet" — that empty
-        // state claims the project has no reviewed features, which is a different
-        // (and actionable) fact. Surface the reason and let the user retry.
-        setError(result.error);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { fetchStatuses(); }, [fetchStatuses]);
 
   // Build dep map with blocker info
   const depMap = useMemo(() => {
@@ -177,9 +156,11 @@ export function useDependencyGraph() {
 
   return {
     statusMap,
-    isLoading,
+    // Only the FIRST load blocks the graph: a background refresh keeps the
+    // rendered graph on screen instead of flashing back to the spinner.
+    isLoading: isLoading && !loaded,
     error,
-    refetch: fetchStatuses,
+    refetch,
     selectedModule,
     setSelectedModule,
     setHoveredModule,

@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { ModuleAggregate } from '@/lib/feature-matrix-db';
-import type { FeatureStatusEntry } from '@/lib/feature-matrix-db';
 import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
 import { MODULE_LABELS } from '@/lib/module-registry';
 import { apiFetch } from '@/lib/api-utils';
+import { useFeatureStatuses } from '@/hooks/useFeatureStatuses';
 import { useNavigationStore } from '@/stores/navigationStore';
 import type { SubModuleId } from '@/types/modules';
 import { ALL_MODULE_IDS, MODULE_CATEGORIES, type StatusKey, type SortKey } from './constants';
@@ -13,31 +13,40 @@ import type { CellData, MissingFeatureGroup } from './types';
 
 export function useCrossModuleFeatureDashboard() {
   const [aggregates, setAggregates] = useState<ModuleAggregate[]>([]);
-  const [allStatuses, setAllStatuses] = useState<FeatureStatusEntry[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isAggLoading, setIsAggLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortKey>('completion');
   const [hoveredCell, setHoveredCell] = useState<{ module: string; status: StatusKey } | null>(null);
   const navigateToModule = useNavigationStore((s) => s.navigateToModule);
 
-  const fetchData = useCallback(async () => {
-    setIsLoading(true);
+  // The status rows come from the ONE shared all-statuses path (row form, the
+  // same cached payload every other consumer reads); only the aggregate roll-up
+  // is this view's own fetch.
+  const {
+    statuses: allStatuses, isLoading: statusesLoading, loaded: statusesLoaded, refresh: refreshStatuses,
+  } = useFeatureStatuses();
+
+  const fetchAggregates = useCallback(async () => {
+    setIsAggLoading(true);
     try {
-      const [aggData, statusData] = await Promise.all([
-        apiFetch<{ modules: ModuleAggregate[] }>('/api/feature-matrix/aggregate'),
-        apiFetch<{ statuses: FeatureStatusEntry[] }>('/api/feature-matrix/all-statuses'),
-      ]);
+      const aggData = await apiFetch<{ modules: ModuleAggregate[] }>('/api/feature-matrix/aggregate');
       setAggregates(aggData.modules ?? []);
-      setAllStatuses(statusData.statuses ?? []);
     } catch (err) {
       console.error('CrossModuleFeatureDashboard fetch error:', err);
     } finally {
-      setIsLoading(false);
+      setIsAggLoading(false);
     }
   }, []);
 
+  const fetchData = useCallback(async () => {
+    refreshStatuses();
+    await fetchAggregates();
+  }, [fetchAggregates, refreshStatuses]);
+
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchAggregates();
+  }, [fetchAggregates]);
+
+  const isLoading = isAggLoading || (statusesLoading && !statusesLoaded);
 
   // Build cell data for each module
   const cells: CellData[] = useMemo(() => {

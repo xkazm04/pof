@@ -12,49 +12,53 @@ import type { ModuleAggregate } from '@/lib/feature-matrix-db';
 import type { AnalyticsDashboard } from '@/types/session-analytics';
 import { MODULE_FEATURE_DEFINITIONS, buildDependencyMap, computeBlockers } from '@/lib/feature-definitions';
 import { tryApiFetch } from '@/lib/api-utils';
+import { useFeatureStatuses } from '@/hooks/useFeatureStatuses';
 import { useEvaluatorStore } from '@/stores/evaluatorStore';
 import type { ViewMode } from './types';
 
 export function useUnifiedSummaryView() {
   const [aggregates, setAggregates] = useState<ModuleAggregate[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsDashboard | null>(null);
-  const [statusMap, setStatusMap] = useState<Map<string, string>>(new Map());
-  const [isLoading, setIsLoading] = useState(true);
+  const [isOwnLoading, setIsOwnLoading] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('detailed');
 
   const lastScan = useEvaluatorStore((s) => s.lastScan);
 
-  // ── Fetch all data sources in parallel ─────────────────────────────────────
+  // Cross-module statuses come from the ONE shared all-statuses path — this view
+  // mounts beside the other Evaluator dashboards, which used to mean one
+  // full-table scan each.
+  const { statusMap, isLoading: statusesLoading, loaded: statusesLoaded, refresh: refreshStatuses } = useFeatureStatuses();
 
-  const fetchAll = useCallback(async () => {
-    setIsLoading(true);
+  // ── Fetch this view's own data sources in parallel ─────────────────────────
+
+  const fetchOwn = useCallback(async () => {
+    setIsOwnLoading(true);
     try {
-      // All three routes return the standard apiSuccess(...) envelope, so the real
+      // Both routes return the standard apiSuccess(...) envelope, so the real
       // payload lives at data.data.*. tryApiFetch unwraps it — reading off the raw
-      // fetch silently left aggregates/analytics/status all empty or mis-shaped.
-      const [aggRes, analyticsRes, statusRes] = await Promise.all([
+      // fetch silently left aggregates/analytics empty or mis-shaped.
+      const [aggRes, analyticsRes] = await Promise.all([
         tryApiFetch<{ modules: ModuleAggregate[] }>('/api/feature-matrix/aggregate'),
         tryApiFetch<AnalyticsDashboard>('/api/session-analytics?action=dashboard'),
-        tryApiFetch<{ statuses: { moduleId: string; featureName: string; status: string }[] }>('/api/feature-matrix/all-statuses'),
       ]);
 
       if (aggRes.ok) setAggregates(aggRes.data.modules ?? []);
       if (analyticsRes.ok) setAnalytics(analyticsRes.data);
-      if (statusRes.ok) {
-        const map = new Map<string, string>();
-        for (const row of statusRes.data.statuses ?? []) {
-          map.set(`${row.moduleId}::${row.featureName}`, row.status);
-        }
-        setStatusMap(map);
-      }
     } finally {
-      setIsLoading(false);
+      setIsOwnLoading(false);
     }
   }, []);
 
+  const fetchAll = useCallback(async () => {
+    refreshStatuses();
+    await fetchOwn();
+  }, [fetchOwn, refreshStatuses]);
+
   useEffect(() => {
-    fetchAll();
-  }, [fetchAll]);
+    fetchOwn();
+  }, [fetchOwn]);
+
+  const isLoading = isOwnLoading || (statusesLoading && !statusesLoaded);
 
   // ── Compute dependency blocked/count maps ──────────────────────────────────
 

@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { MODULE_FEATURE_DEFINITIONS, buildDependencyMap, computeBlockers } from '@/lib/feature-definitions';
-import { tryApiFetch } from '@/lib/api-utils';
+import { useFeatureStatuses } from '@/hooks/useFeatureStatuses';
 import { MODULE_LABELS, SUB_MODULE_MAP } from '@/lib/module-registry';
 import { countChecklist } from '@/lib/checklist-progress';
 import { useModuleStore } from '@/stores/moduleStore';
@@ -15,9 +15,13 @@ import type { NexusNode, NexusEdge } from './types';
 import { getNodeCenter, computeGenreCoverage } from './helpers';
 
 export function useNexusView() {
+  // Feature statuses come from the ONE shared all-statuses path (this view and
+  // the other Evaluator dashboards mount together; each used to run the same
+  // full-table scan). Only the first load shows the spinner.
+  const { statusMap, isLoading: statusesLoading, loaded: statusesLoaded } = useFeatureStatuses();
+  const isLoading = statusesLoading && !statusesLoaded;
+
   // State
-  const [statusMap, setStatusMap] = useState<Map<string, string>>(new Map());
-  const [isLoading, setIsLoading] = useState(true);
   const [selectedModule, setSelectedModule] = useState<string | null>(null);
   const [hoveredModule, setHoveredModule] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
@@ -30,27 +34,6 @@ export function useNexusView() {
   const moduleHistory = useModuleStore((s) => s.moduleHistory);
   const lastScan = useEvaluatorStore((s) => s.lastScan);
   const sessions = useCLIPanelStore((s) => s.sessions);
-
-  // Fetch feature statuses. Route returns apiSuccess({ statuses }); tryApiFetch
-  // unwraps the envelope so the status map isn't silently empty (which previously
-  // left every cross-module dependency edge uncolored / unblocked).
-  const fetchStatuses = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const result = await tryApiFetch<{ statuses: { moduleId: string; featureName: string; status: string }[] }>('/api/feature-matrix/all-statuses');
-      if (result.ok) {
-        const map = new Map<string, string>();
-        for (const row of result.data.statuses ?? []) {
-          map.set(`${row.moduleId}::${row.featureName}`, row.status);
-        }
-        setStatusMap(map);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { fetchStatuses(); }, [fetchStatuses]);
 
   // Build dep map
   const depMap = useMemo(() => {
