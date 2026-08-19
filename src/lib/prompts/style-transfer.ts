@@ -62,8 +62,11 @@ export function buildStyleTransferPrompt(config: StyleTransferConfig, ctx: Proje
     ? `\n### User Description\n${config.referenceDescription}`
     : '';
 
+  // The image is NOT sent with this prompt and was NOT analyzed by /api/style-transfer
+  // (which reads the text description only). Saying it "was analyzed" told the model the
+  // numbers below carry visual evidence they do not carry.
   const imageNote = config.imageDataUrl
-    ? '\n**Note:** A reference image was provided and analyzed. The properties above were extracted from it.'
+    ? '\n**Note:** A reference image was attached in the app but is NOT available to you and was NOT analyzed — every property above was inferred from the text description alone. Treat them as a starting point, not measurements.'
     : '\n**Note:** No reference image was provided. Properties were inferred from the text description.';
 
   const surfaceType = analysis?.surfaceType ?? 'stone';

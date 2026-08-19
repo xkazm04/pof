@@ -15,7 +15,9 @@ export async function POST(req: NextRequest) {
       const description = (body.description ?? '') as string;
       const hasImage = !!body.imageDataUrl;
       const analysis = analyzeFromDescription(description, hasImage);
-      return apiSuccess({ analysis });
+      // Additive and machine-checkable: nothing here decodes the image, so every consumer
+      // can see that the attachment did not inform a single number in `analysis`.
+      return apiSuccess({ analysis, imageAnalyzed: false });
     }
 
     return apiError('Unknown action', 400);
@@ -25,10 +27,28 @@ export async function POST(req: NextRequest) {
 }
 
 // ── Heuristic analysis engine ───────────────────────────────────────────────
-// Keyword-based inference from the text description. When the CLI generates
-// the actual material, Claude will refine these with actual vision analysis
-// if an image was provided. The keyword rules live in @/lib/visual-gen/
-// style-keywords so the visual prompt builder's chips share the same source.
+// Keyword-based inference from the TEXT DESCRIPTION ONLY. The keyword rules live
+// in @/lib/visual-gen/style-keywords so the visual prompt builder's chips share
+// the same source.
+//
+// THE REFERENCE IMAGE IS NOT EXAMINED. Nothing in this route — or downstream in
+// buildStyleTransferPrompt — decodes, samples or sends `imageDataUrl` anywhere;
+// the bytes reach this handler and are dropped. This used to raise
+// `surfaceConfidence` by +0.15 on the mere presence of an attachment and print
+// "Reference image provided for visual matching." / "Properties estimated from
+// reference image." — a confidence number and two sentences asserting a
+// measurement that never happened.
+//
+// The repo does have a real vision seam (`makeQwenVision`, used by style-dna.ts
+// and input-gate.ts). Wiring it here is a deliberate NON-goal for now: it is a
+// paid remote call on what is currently a free, synchronous, keystroke-cheap
+// analyze button, and there is no opt-in on the caller. Until that call is
+// actually made, the honest report is that only the words were read.
+
+/** Said whenever an image is attached, so the attachment can never read as evidence. */
+const IMAGE_NOT_EXAMINED =
+  'A reference image is attached but was NOT examined — no code path decodes it, so it did not ' +
+  'influence any value above. Describe the look in words to change the result.';
 
 function analyzeFromDescription(description: string, hasImage: boolean): AnalyzedProperties {
   const lower = description.toLowerCase();
@@ -65,21 +85,22 @@ function analyzeFromDescription(description: string, hasImage: boolean): Analyze
     if (rule.colors) colors = rule.colors;
   }
 
-  // Boost confidence if image was provided
-  if (hasImage) {
-    surfaceConfidence = Math.min(surfaceConfidence + 0.15, 0.95);
-  }
+  // NO confidence bump for an attached image: the confidence reported here is a
+  // keyword-match confidence, and an image nothing reads cannot raise it.
 
-  // Build description
-  const desc = description.trim()
-    ? `Material properties inferred from: "${description.substring(0, 100)}${description.length > 100 ? '...' : ''}". ${hasImage ? 'Reference image provided for visual matching.' : 'No reference image — results based on text description.'}`
-    : hasImage
-      ? 'Properties estimated from reference image. Add a text description for more accurate results.'
-      : 'No reference provided. Using default stone material properties.';
+  // Build description — the text is the ONLY input, and the copy says so.
+  const base = description.trim()
+    ? `Material properties inferred from the text description: "${description.substring(0, 100)}${description.length > 100 ? '...' : ''}".`
+    : 'No text description given — using default stone material properties.';
+  const desc = hasImage
+    ? `${base} ${IMAGE_NOT_EXAMINED}`
+    : `${base} Results are based on the text description alone.`;
 
   // Suggestions
   const suggestions: string[] = [];
-  if (!hasImage) suggestions.push('Upload a reference screenshot for more accurate color palette extraction');
+  // Deliberately NOT "upload a reference screenshot": an upload changes nothing here,
+  // so suggesting one would sell the same phantom measurement in a second place.
+  if (hasImage) suggestions.push('Name the dominant colors and materials you see in the reference — the palette above is a per-keyword default, not sampled from your image');
   if (matchCount === 0) suggestions.push('Add more specific keywords (e.g., "metallic", "glowing", "rough stone") to improve detection');
   if (emissive > 0 && !features.has('emissive')) features.add('emissive');
   if (subsurface > 0.3 && !features.has('subsurface')) features.add('subsurface');

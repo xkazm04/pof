@@ -6,7 +6,10 @@ import type { SurfaceType, RenderFeature } from '@/components/modules/content/ma
 /**
  * Single source of truth for the plain-English → material-property keyword
  * mapping. Consumed by:
- *  - `src/app/api/style-transfer/route.ts` — heuristic material analyzer.
+ *  - `src/app/api/style-transfer/route.ts` — heuristic material analyzer. These
+ *    rules are that route's ONLY input: an attached reference image is never
+ *    decoded there, so every property and confidence it reports traces back to a
+ *    keyword match in this file and nothing else.
  *  - `src/lib/visual-gen/prompt-chips.ts` — chip vocabulary for the visual
  *    prompt builder (every chip keyword resolves to a rule here, so chip-built
  *    prompts stay analyzable by the same engine — no jargon drift).
