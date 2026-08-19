@@ -146,7 +146,7 @@ export function GenomeImportPanel<T>({
                 value={importText}
                 onChange={(e) => { setImportText(e.target.value); setError(''); }}
                 placeholder="Paste a build code (e.g. pofc1.…) or genome JSON here…"
-                className="w-full h-24 text-xs font-mono bg-surface-deep border border-border/40 rounded-lg p-2.5 text-text placeholder:text-text-muted/40 focus:outline-none focus:border-blue-500/50 resize-none custom-scrollbar"
+                className="w-full h-24 text-xs font-mono bg-surface-deep border border-border/40 rounded-lg p-2.5 text-text placeholder:text-text-subtle focus:outline-none focus:border-blue-500/50 resize-none custom-scrollbar"
               />
               {error && <p className="text-xs font-mono" style={{ color: STATUS_ERROR }}>{error}</p>}
               <div className="flex gap-2">

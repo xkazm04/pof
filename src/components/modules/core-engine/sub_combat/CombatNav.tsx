@@ -24,7 +24,7 @@ export function NarrativeBreadcrumb({ activeTab, onNavigate }: { activeTab: Comb
         const isActive = i === activeIdx;
         return (
           <div key={step.key} className="flex items-center gap-0.5 flex-shrink-0">
-            {i > 0 && <span aria-hidden className="text-text-muted/40 mx-0.5">{'>'}</span>}
+            {i > 0 && <span aria-hidden className="text-text-subtle mx-0.5">{'>'}</span>}
             <button
               type="button"
               onClick={() => onNavigate(step.key)}

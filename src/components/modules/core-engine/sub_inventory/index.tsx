@@ -30,7 +30,7 @@ function NarrativeBreadcrumb({ activeTab, onNavigate }: { activeTab: ItemCatalog
         const isActive = i === activeIdx;
         return (
           <div key={step.key} className="flex items-center gap-0.5 flex-shrink-0">
-            {i > 0 && <span className="text-text-muted/40 mx-0.5">{'>'}</span>}
+            {i > 0 && <span className="text-text-subtle mx-0.5">{'>'}</span>}
             <button
               onClick={() => onNavigate(step.key)}
               className="px-1.5 py-0.5 rounded transition-all cursor-pointer"

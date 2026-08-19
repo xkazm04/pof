@@ -46,7 +46,7 @@ export function PropertyWatchForm({ onAdd }: { onAdd: (req: PropertyWatchRequest
             onChange={(e) => setObjectPath(e.target.value)}
             placeholder="/Game/BP_Player.BP_Player_C"
             aria-describedby="lss-watch-hint"
-            className="w-full text-xs font-mono px-2 py-1 rounded bg-surface-deep border border-border/40 text-text placeholder:text-text-muted/40 focus-ring-inset"
+            className="w-full text-xs font-mono px-2 py-1 rounded bg-surface-deep border border-border/40 text-text placeholder:text-text-subtle focus-ring-inset"
           />
         </div>
         <div className="w-32">
@@ -58,7 +58,7 @@ export function PropertyWatchForm({ onAdd }: { onAdd: (req: PropertyWatchRequest
             onChange={(e) => setPropertyName(e.target.value)}
             placeholder="MaxHealth"
             aria-describedby="lss-watch-hint"
-            className="w-full text-xs font-mono px-2 py-1 rounded bg-surface-deep border border-border/40 text-text placeholder:text-text-muted/40 focus-ring-inset"
+            className="w-full text-xs font-mono px-2 py-1 rounded bg-surface-deep border border-border/40 text-text placeholder:text-text-subtle focus-ring-inset"
           />
         </div>
         <button

@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Plus, Trash2 } from 'lucide-react';
+import { motionSafe } from '@/lib/motion';
 import { STATUS_ERROR, ACCENT_CYAN,
   withOpacity, OPACITY_12, OPACITY_25, OPACITY_5, OPACITY_22, OPACITY_30, OPACITY_20, OPACITY_10, OPACITY_0,
 } from '@/lib/chart-colors';
@@ -22,6 +23,9 @@ export function SpatialGrid({ enemies, selectedWave, totalWaves, onPlace, onRemo
   onRemove: (id: string) => void;
   onMove: (id: string, toX: number, toY: number, toWave?: number) => void;
 }) {
+  // The next-wave ghost cells loop borderColor + boxShadow — neither is a
+  // positional key, so the root MotionConfig leaves them animating forever.
+  const prefersReduced = useReducedMotion();
   const dragRef = useRef<DragState | null>(null);
   const [dropTarget, setDropTarget] = useState<{ x: number; y: number } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -136,7 +140,7 @@ export function SpatialGrid({ enemies, selectedWave, totalWaves, onPlace, onRemo
                 title={`Previous wave: ${ENEMY_ARCHETYPES.find((a) => a.id === prevGhost.archetypeId)?.name ?? prevGhost.archetypeId} Lv${prevGhost.level}`}
               >
                 <span className="text-xs font-mono font-bold" style={{ color }}>{icon}</span>
-                <span className="absolute bottom-0.5 right-0.5 text-xs font-mono text-text-muted/50">prev</span>
+                <span className="absolute bottom-0.5 right-0.5 text-xs font-mono text-text-subtle">prev</span>
               </div>
             );
           }
@@ -149,12 +153,12 @@ export function SpatialGrid({ enemies, selectedWave, totalWaves, onPlace, onRemo
                 className="relative flex items-center justify-center rounded-md cursor-pointer"
                 style={{ width: CELL_SIZE, height: CELL_SIZE, border: `1px dashed ${withOpacity(color, OPACITY_22)}`, backgroundColor: `${withOpacity(color, OPACITY_5)}` }}
                 animate={{ borderColor: [`${withOpacity(color, OPACITY_12)}`, `${withOpacity(color, OPACITY_30)}`, `${withOpacity(color, OPACITY_12)}`], boxShadow: [`0 0 0px ${withOpacity(color, OPACITY_0)}`, `0 0 6px ${withOpacity(color, OPACITY_20)}`, `0 0 0px ${withOpacity(color, OPACITY_0)}`] }}
-                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                transition={motionSafe({ duration: 2, repeat: Infinity, ease: 'easeInOut' } as const, prefersReduced)}
                 onClick={() => onPlace(x, y)}
                 title={`Next wave: ${ENEMY_ARCHETYPES.find((a) => a.id === nextGhost.archetypeId)?.name ?? nextGhost.archetypeId} Lv${nextGhost.level}`}
               >
                 <span className="text-xs font-mono font-bold" style={{ color, opacity: 0.35 }}>{icon}</span>
-                <span className="absolute bottom-0.5 right-0.5 text-xs font-mono text-text-muted/40">next</span>
+                <span className="absolute bottom-0.5 right-0.5 text-xs font-mono text-text-subtle">next</span>
               </motion.div>
             );
           }

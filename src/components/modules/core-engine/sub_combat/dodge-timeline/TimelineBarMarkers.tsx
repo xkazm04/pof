@@ -5,6 +5,7 @@ import {
   ACCENT_EMERALD, STATUS_ERROR,
   withOpacity, OPACITY_20, OPACITY_37,
 } from '@/lib/chart-colors';
+import { TEXT_SCALE } from '@/lib/typography-scale';
 import type { DodgePhases, HitMarker } from '../_shared/dodge-types';
 
 /* ── Hit marker dots ────────────────────────────────────────────────────── */
@@ -35,7 +36,7 @@ export function HitMarkerDots({ hitMarkers, phases, totalTime }: {
                 boxShadow: `0 0 6px ${withOpacity(dotColor, OPACITY_37)}`,
               }}
             >
-              <span className="text-[6px] font-bold" style={{ color: dotColor }}>
+              <span className={`${TEXT_SCALE.meta} font-bold leading-none`} style={{ color: dotColor }}>
                 {iFrameActive ? '✓' : '!'}
               </span>
             </div>

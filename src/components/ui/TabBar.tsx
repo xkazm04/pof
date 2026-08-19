@@ -4,6 +4,7 @@ import { forwardRef, useCallback, useRef, type KeyboardEvent } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import type { LucideIcon } from 'lucide-react';
 import { OVERLAY_WHITE } from '@/lib/chart-colors';
+import { TEXT_SCALE } from '@/lib/typography-scale';
 
 /**
  * Underline-style tab bar — one reusable primitive for the bottom-border tab
@@ -163,11 +164,17 @@ const Tab = forwardRef<HTMLButtonElement, TabProps>(function Tab(
   );
 });
 
+/**
+ * Trailing count pill. Sized at {@link TEXT_SCALE.meta} (10px) rather than a raw
+ * `text-[9px]`: a count is dense metadata, which is the one sub-`text-xs` tier the
+ * typography scale sanctions — and the shared accessible tab primitive must not
+ * itself sit below the legibility floor it is meant to model.
+ */
 function TabBadgePill({ badge }: { badge: TabBadge }) {
   if (badge.color) {
     return (
       <span
-        className="inline-flex items-center justify-center min-w-4 h-4 px-1 rounded-full text-[9px] font-bold"
+        className={`inline-flex items-center justify-center min-w-4 h-4 px-1 rounded-full ${TEXT_SCALE.meta} font-bold`}
         style={{ backgroundColor: badge.color, color: OVERLAY_WHITE }}
         aria-label={badge.label}
         title={badge.label}

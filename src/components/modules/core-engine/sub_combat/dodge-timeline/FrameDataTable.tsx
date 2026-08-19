@@ -67,7 +67,7 @@ export function FrameDataTable({ params }: { params: DodgeParams }) {
       </BlueprintPanel>
 
       {/* Footnote */}
-      <div className="text-xs font-mono text-text-muted/40 px-0.5">
+      <div className="text-xs font-mono text-text-subtle px-0.5">
         Frame counts at 60 FPS &middot; Forgiveness = i-frame% of dodge &middot; Responsiveness = cancel window / dodge duration &middot; Efficiency = dodges per full stamina bar
       </div>
     </div>

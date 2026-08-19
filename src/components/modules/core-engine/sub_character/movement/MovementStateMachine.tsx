@@ -2,8 +2,10 @@
 
 import { useState } from 'react';
 import { Zap } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
+import { motionSafe } from '@/lib/motion';
 import { ACCENT_ORANGE, OPACITY_5, OPACITY_15, withOpacity } from '@/lib/chart-colors';
+import { TEXT_SCALE } from '@/lib/typography-scale';
 import { BlueprintPanel, SectionHeader } from '../_shared/design';
 import { MOVEMENT_STATES } from '../_shared/data';
 import {
@@ -13,6 +15,9 @@ import {
 
 export function MovementStateMachine() {
   const [hoveredState, setHoveredState] = useState<number | null>(null);
+  // The hover halo pulses opacity only — the root MotionConfig leaves
+  // non-positional loops running, so gate this one explicitly.
+  const prefersReduced = useReducedMotion();
 
   return (
     <BlueprintPanel className="p-4">
@@ -61,7 +66,7 @@ export function MovementStateMachine() {
                   x={(x1 + nx + x2 + nx) / 2}
                   y={(y1 + ny + y2 + ny) / 2 - 4}
                   textAnchor="middle"
-                  className="text-[7px] font-mono fill-text-muted"
+                  className={`${TEXT_SCALE.meta} font-mono fill-text-muted`}
                   style={{ fill: MOVEMENT_STATES[t.from].color }}
                 >
                   {t.label}
@@ -98,7 +103,7 @@ export function MovementStateMachine() {
                   cx={pos.x} cy={pos.y} rx={NODE_RX + 3} ry={NODE_RY + 2}
                   fill="none" stroke={state.color} strokeWidth={0.5}
                   initial={{ opacity: 0 }} animate={{ opacity: [0, 0.4, 0] }}
-                  transition={{ duration: 1.5, repeat: Infinity }}
+                  transition={motionSafe({ duration: 1.5, repeat: Infinity }, prefersReduced)}
                 />
               )}
               <text

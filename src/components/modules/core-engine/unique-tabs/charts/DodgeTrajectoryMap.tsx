@@ -1,6 +1,7 @@
 'use client';
 
 import { OVERLAY_WHITE, withOpacity, OPACITY_2, OPACITY_5, OPACITY_10, OPACITY_37 } from '@/lib/chart-colors';
+import { TEXT_SCALE } from '@/lib/typography-scale';
 
 export interface Trajectory {
   id: number | string;
@@ -31,7 +32,7 @@ export function DodgeTrajectoryMap({
       ))}
       {/* Player origin */}
       <circle cx={50} cy={80} r={4} fill={originColor} style={{ filter: `drop-shadow(0 0 4px ${originColor})` }} />
-      <text x={50} y={93} textAnchor="middle" className="text-[6px] font-mono font-bold fill-[var(--text-muted)]">Start</text>
+      <text x={50} y={93} textAnchor="middle" className={`${TEXT_SCALE.meta} font-mono font-bold fill-[var(--text-muted)]`}>Start</text>
       {/* Trajectories */}
       {trajectories.map((traj) => (
         <path

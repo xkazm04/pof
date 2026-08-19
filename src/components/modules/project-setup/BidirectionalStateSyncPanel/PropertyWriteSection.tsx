@@ -74,7 +74,7 @@ export function PropertyWriteSection({
                       value={propEdit.objectPath}
                       onChange={(e) => setPropEdit((p) => ({ ...p, objectPath: e.target.value }))}
                       placeholder="/Game/BP_Player.BP_Player_C"
-                      className="w-full text-xs font-mono px-2 py-1 rounded bg-surface-deep border border-border/40 text-text placeholder:text-text-muted/40 focus:outline-none focus:border-blue-500/50"
+                      className="w-full text-xs font-mono px-2 py-1 rounded bg-surface-deep border border-border/40 text-text placeholder:text-text-subtle focus:outline-none focus:border-blue-500/50"
                     />
                   </div>
                   <div className="w-28">
@@ -85,7 +85,7 @@ export function PropertyWriteSection({
                       value={propEdit.propertyName}
                       onChange={(e) => setPropEdit((p) => ({ ...p, propertyName: e.target.value }))}
                       placeholder="MaxHealth"
-                      className="w-full text-xs font-mono px-2 py-1 rounded bg-surface-deep border border-border/40 text-text placeholder:text-text-muted/40 focus:outline-none focus:border-blue-500/50"
+                      className="w-full text-xs font-mono px-2 py-1 rounded bg-surface-deep border border-border/40 text-text placeholder:text-text-subtle focus:outline-none focus:border-blue-500/50"
                     />
                   </div>
                   <div className="w-28">
@@ -96,7 +96,7 @@ export function PropertyWriteSection({
                       value={propEdit.value}
                       onChange={(e) => setPropEdit((p) => ({ ...p, value: e.target.value }))}
                       placeholder="100"
-                      className="w-full text-xs font-mono px-2 py-1 rounded bg-surface-deep border border-border/40 text-text placeholder:text-text-muted/40 focus:outline-none focus:border-blue-500/50"
+                      className="w-full text-xs font-mono px-2 py-1 rounded bg-surface-deep border border-border/40 text-text placeholder:text-text-subtle focus:outline-none focus:border-blue-500/50"
                     />
                   </div>
                   <button

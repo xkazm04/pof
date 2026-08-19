@@ -6,6 +6,7 @@ import {
   ACCENT_CYAN, ACCENT_EMERALD, ACCENT_ORANGE,
   OVERLAY_WHITE, withOpacity, OPACITY_25, OPACITY_22, OPACITY_12, OPACITY_30, OPACITY_50, GLOW_SM,
 } from '@/lib/chart-colors';
+import { MicroLabel } from '@/components/ui/MicroLabel';
 import type { DamageEvent, FeedbackEvent, WaveDef } from '@/lib/combat/choreography-sim';
 import type { TensionCurve } from '@/lib/combat/tension-curve';
 import {
@@ -116,7 +117,7 @@ export function TimelineLanes({
       {/* Time axis */}
       <div className="relative" style={{ height: 14 }}>
         {Array.from({ length: Math.ceil(duration) + 1 }, (_, i) => (
-          <span key={i} className="absolute top-0 text-[9px] font-mono text-text-muted/40" style={{ left: i * pxPerSec + 1 }}>{i}s</span>
+          <MicroLabel key={i} mono className="absolute top-0" style={{ left: i * pxPerSec + 1 }}>{i}s</MicroLabel>
         ))}
       </div>
     </>

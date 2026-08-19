@@ -23,7 +23,7 @@ export const STATUS_STYLE: Record<DAGNodeStatus, { icon: React.ComponentType<{ c
   running: { icon: Loader2, color: 'text-cyan-400', bg: 'bg-cyan-400/10' },
   completed: { icon: CheckCircle2, color: 'text-green-400', bg: 'bg-green-400/10' },
   failed: { icon: XCircle, color: 'text-red-400', bg: 'bg-red-400/10' },
-  skipped: { icon: SkipForward, color: 'text-text-muted/40', bg: 'bg-text-muted/5' },
+  skipped: { icon: SkipForward, color: 'text-text-subtle', bg: 'bg-text-muted/5' },
   retrying: { icon: RotateCcw, color: 'text-amber-400', bg: 'bg-amber-400/10' },
 };
 

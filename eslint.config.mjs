@@ -22,10 +22,28 @@ const eslintConfig = defineConfig([
         {
           // Legibility floor: no Tailwind text-[<12px] arbitrary sizes. The design system's
           // floor is 12px (text-xs); dense meta uses text-2xs (10px) via ui/MicroLabel or the
-          // TEXT_SCALE tokens, which own the justified exceptions. Flags text-[8/9/10/11px] in
-          // any className string so each violation is reviewed (bump to ≥12px, or use MicroLabel).
-          selector: "Literal[value=/text-\\[(?:8|9|10|11)px\\]/]",
+          // TEXT_SCALE tokens, which own the justified exceptions.
+          //
+          // The regex covers 6 and 7 as well as 8–11: the original range silently
+          // exempted the smallest sizes in the codebase (SVG chart labels), which is
+          // the opposite of what a floor should do.
+          selector: "Literal[value=/text-\\[(?:6|7|8|9|10|11)px\\]/]",
           message: "Text below the 12px legibility floor. Use text-xs (12px), or ui/MicroLabel / TEXT_SCALE for justified dense meta (WCAG 1.4.4).",
+        },
+        {
+          // Same floor, seen through a template literal. A `Literal` selector only
+          // matches plain string classNames, so every `className={`… text-[9px] …`}`
+          // escaped the rule entirely — and template classNames are the dominant
+          // form in this codebase.
+          selector: "TemplateElement[value.raw=/text-\\[(?:6|7|8|9|10|11)px\\]/]",
+          message: "Text below the 12px legibility floor (in a template className). Use text-xs (12px), or ui/MicroLabel / TEXT_SCALE for justified dense meta (WCAG 1.4.4).",
+        },
+        {
+          // Same floor, expressed as an inline style. `style={{ fontSize: 9 }}` renders
+          // exactly as illegibly as `text-[9px]` but was invisible to a className-only
+          // rule. Numeric literals only — a computed size can't be judged statically.
+          selector: "Property[key.name='fontSize'] > Literal[value<12][value>0]",
+          message: "Inline fontSize below the 12px legibility floor. Use text-xs (12px), or ui/MicroLabel / TEXT_SCALE for justified dense meta (WCAG 1.4.4).",
         },
       ],
     },

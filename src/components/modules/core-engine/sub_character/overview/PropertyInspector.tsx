@@ -84,7 +84,7 @@ export function PropertyInspector() {
             placeholder="Search..."
             value={propSearch}
             onChange={(e) => setPropSearch(e.target.value)}
-            className="text-xs font-mono pl-7 pr-3 py-1.5 rounded-md bg-surface border border-border/30 text-text placeholder:text-text-muted/40 focus:outline-none w-40 transition-colors"
+            className="text-xs font-mono pl-7 pr-3 py-1.5 rounded-md bg-surface border border-border/30 text-text placeholder:text-text-subtle focus:outline-none w-40 transition-colors"
             style={{ borderColor: propSearch ? withOpacity(ACCENT, OPACITY_25) : undefined }}
           />
         </div>

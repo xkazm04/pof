@@ -4,6 +4,8 @@ import { useState, useMemo, useCallback } from 'react';
 import { Camera } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { ACCENT_ORANGE, OVERLAY_WHITE, OPACITY_4, OPACITY_5, OPACITY_8, OPACITY_15, OPACITY_20, OPACITY_25, GLOW_MD, withOpacity } from '@/lib/chart-colors';
+import { TEXT_SCALE } from '@/lib/typography-scale';
+import { MicroLabel } from '@/components/ui/MicroLabel';
 import { RadarChart } from '../../unique-tabs/_shared';
 import { BlueprintPanel, SectionHeader, CornerBrackets } from '../_shared/design';
 import { CAMERA_PROFILES } from '../_shared/data';
@@ -50,7 +52,7 @@ function ViewportMockup({ profile }: { profile: typeof CAMERA_PROFILES[number] }
           fill={withOpacity(profile.color, OPACITY_15)}
           stroke={profile.color} strokeWidth={1.5} />
         <text x={90 - armLen} y={13} textAnchor="middle"
-          className="text-[7px] font-mono" style={{ fill: profile.color }}>CAM</text>
+          className={`${TEXT_SCALE.meta} font-mono`} style={{ fill: profile.color }}>CAM</text>
 
         {/* Character marker */}
         <circle cx={90} cy={90} r={5}
@@ -62,7 +64,7 @@ function ViewportMockup({ profile }: { profile: typeof CAMERA_PROFILES[number] }
           fill="none" stroke={withOpacity(profile.color, OPACITY_15)}
           strokeWidth={1} strokeDasharray="2 2" />
         <text x={90 + lagRadius + 3} y={90 + 3}
-          className="text-[6px] font-mono" style={{ fill: 'var(--text-muted)' }}>lag</text>
+          className={`${TEXT_SCALE.meta} font-mono`} style={{ fill: 'var(--text-muted)' }}>lag</text>
 
         {/* Smoothness indicator (trailing dots behind camera) */}
         {Array.from({ length: Math.round(smooth * 5) }, (_, i) => (
@@ -71,13 +73,20 @@ function ViewportMockup({ profile }: { profile: typeof CAMERA_PROFILES[number] }
         ))}
 
         {/* Labels */}
-        <text x={4} y={12} className="text-[7px] font-mono uppercase" style={{ fill: profile.color }}>
+        <text x={4} y={12} className={`${TEXT_SCALE.meta} font-mono uppercase`} style={{ fill: profile.color }}>
           {profile.label}
         </text>
-        <text x={4} y={115} className="text-[6px] font-mono" style={{ fill: 'var(--text-muted)' }}>
-          FOV {(fov * 100).toFixed(0)}% | Arm {(dist * 100).toFixed(0)}% | Lag {((1 - responsive) * 100).toFixed(0)}%
-        </text>
       </svg>
+      {/*
+        The numeric readout used to be a 6px SVG label squeezed along the bottom of
+        the viewBox. It is a data readout, not a diagram annotation, so it now lives
+        outside the SVG as real HTML at the sanctioned metadata tier — which also
+        frees it from the viewBox's user-unit scaling, where the rendered size
+        depended on however wide the grid column happened to be.
+      */}
+      <MicroLabel as="div" mono className="mt-1 tabular-nums">
+        FOV {(fov * 100).toFixed(0)}% · Arm {(dist * 100).toFixed(0)}% · Lag {((1 - responsive) * 100).toFixed(0)}%
+      </MicroLabel>
     </div>
   );
 }
@@ -150,9 +159,9 @@ export function CameraProfileComparison() {
                 </motion.button>
               );
             })}
-            <div className="text-[9px] font-mono text-text-muted text-center mt-1">
+            <MicroLabel as="div" tone="muted" mono className="text-center mt-1">
               {selected.size} / {CAMERA_PROFILES.length} profiles
-            </div>
+            </MicroLabel>
           </div>
         </div>
 
