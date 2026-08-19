@@ -1,12 +1,39 @@
 'use client';
 
-import { Flame, Package, Lock, Zap, Map, Puzzle, Image } from 'lucide-react';
+import { Flame, Package, Lock, Zap, Map, Puzzle, Image, AlertTriangle } from 'lucide-react';
 import type { CookSettings } from '@/lib/packaging/build-profiles';
-import { MODULE_COLORS } from '@/lib/chart-colors';
+import { COOK_SETTING_APPLICATION } from '@/lib/packaging/uat-command-generator';
+import { MODULE_COLORS, STATUS_WARNING } from '@/lib/chart-colors';
 
 interface CookSettingsPanelProps {
   settings: CookSettings;
   onChange: (settings: CookSettings) => void;
+}
+
+/**
+ * The disclosure a control gets when the generated BuildCookRun command cannot carry it.
+ *
+ * Read from the ONE application table in `uat-command-generator`, so the editor can never
+ * promise something the command does not do. These controls stay editable — the value is
+ * a real record of intent an operator can act on in `.uproject`/`.ini` — but the panel
+ * says at the control that saving it does NOT change the build.
+ */
+function NotAppliedNote({ settingKey }: { settingKey: keyof CookSettings }) {
+  const entry = COOK_SETTING_APPLICATION[settingKey];
+  if (entry.appliedAs !== null) return null;
+  return (
+    <div
+      className="flex items-start gap-1 mt-1 text-2xs leading-tight"
+      style={{ color: STATUS_WARNING }}
+      data-testid={`cook-setting-not-applied-${settingKey}`}
+    >
+      <AlertTriangle className="w-2.5 h-2.5 flex-shrink-0 mt-px" />
+      <span>
+        <span className="font-semibold uppercase tracking-wider">Not applied by the generated command.</span>{' '}
+        {entry.reason}
+      </span>
+    </div>
+  );
 }
 
 function Toggle({ label, description, checked, onChange, icon }: {
@@ -96,13 +123,16 @@ export function CookSettingsPanel({ settings, onChange }: CookSettingsPanelProps
           onChange={(v) => update('cookOnTheFly', v)}
           icon={<Flame className="w-3 h-3" />}
         />
-        <Toggle
-          label="Compress textures"
-          description="Apply texture compression during cooking"
-          checked={settings.compressTextures}
-          onChange={(v) => update('compressTextures', v)}
-          icon={<Image className="w-3 h-3" />}
-        />
+        <div>
+          <Toggle
+            label="Compress textures"
+            description="Recorded intent only — the cook takes texture compression from the .ini/asset settings"
+            checked={settings.compressTextures}
+            onChange={(v) => update('compressTextures', v)}
+            icon={<Image className="w-3 h-3" />}
+          />
+          <NotAppliedNote settingKey="compressTextures" />
+        </div>
       </Section>
 
       {/* Maps */}
@@ -131,9 +161,10 @@ export function CookSettingsPanel({ settings, onChange }: CookSettingsPanelProps
           <textarea
             value={settings.pluginsToDisable.join('\n')}
             onChange={(e) => update('pluginsToDisable', e.target.value.split('\n').filter((p) => p.trim()))}
-            placeholder="Plugins to exclude from the build.&#10;One per line, e.g.:&#10;OnlineSubsystemSteam"
+            placeholder="Recorded here; NOT excluded by the generated command.&#10;One per line, e.g.:&#10;OnlineSubsystemSteam"
             className={`${inputClass} mt-1 h-12 resize-none`}
           />
+          <NotAppliedNote settingKey="pluginsToDisable" />
         </div>
       </Section>
 
@@ -150,6 +181,7 @@ export function CookSettingsPanel({ settings, onChange }: CookSettingsPanelProps
             min={0}
             className={`${inputClass} mt-1 w-24`}
           />
+          <NotAppliedNote settingKey="textureStreamingBudgetMB" />
         </div>
       </Section>
     </div>

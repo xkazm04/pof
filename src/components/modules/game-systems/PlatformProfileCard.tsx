@@ -5,10 +5,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Monitor, Terminal, Laptop, Smartphone, Tablet,
   ChevronDown, ChevronRight, Star, Trash2, Play, Copy,
-  AlertCircle,
+  AlertCircle, AlertTriangle,
 } from 'lucide-react';
 import type { BuildProfile, PlatformId } from '@/lib/packaging/build-profiles';
-import { PLATFORM_NOTES } from '@/lib/packaging/uat-command-generator';
+import { PLATFORM_NOTES, unappliedCookSettings } from '@/lib/packaging/uat-command-generator';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import { MODULE_COLORS, STATUS_SUCCESS, STATUS_WARNING, STATUS_INFO, STATUS_ERROR, ACCENT_ORANGE, ACCENT_VIOLET } from '@/lib/chart-colors';
 
@@ -46,6 +46,7 @@ export function PlatformProfileCard({
   const Icon = PLATFORM_ICONS[profile.platform] ?? Monitor;
   const color = PLATFORM_COLORS[profile.platform] ?? 'var(--text-muted)';
   const notes = PLATFORM_NOTES[profile.platform] ?? [];
+  const unapplied = unappliedCookSettings(profile.cookSettings);
 
   return (
     <motion.div
@@ -124,7 +125,6 @@ export function PlatformProfileCard({
                 <div className="flex flex-wrap gap-1 mt-1">
                   {profile.cookSettings.useIoStore && <Badge label="IoStore" />}
                   {profile.cookSettings.iterativeCooking && <Badge label="Iterative" />}
-                  {profile.cookSettings.compressTextures && <Badge label="Tex Compress" />}
                   {profile.cookSettings.mapsToInclude.length > 0 && (
                     <Badge label={`${profile.cookSettings.mapsToInclude.length} maps`} />
                   )}
@@ -133,6 +133,32 @@ export function PlatformProfileCard({
                   {profile.archive && <Badge label="Archive" />}
                 </div>
               </div>
+
+              {/* Settings this profile asks for that the command below does NOT carry.
+                  A "Tex Compress" badge used to sit in the group above, next to a UAT
+                  preview containing nothing about textures — the card contradicting
+                  itself. These are listed apart, with the reason, and never as a badge
+                  that implies the build honoured them. */}
+              {unapplied.length > 0 && (
+                <div data-testid={`profile-unapplied-${profile.id}`}>
+                  <span
+                    className="text-2xs uppercase tracking-wider font-medium flex items-center gap-1"
+                    style={{ color: STATUS_WARNING }}
+                  >
+                    <AlertTriangle className="w-2.5 h-2.5" />
+                    Set here, NOT applied by this command
+                  </span>
+                  <div className="mt-1 space-y-1">
+                    {unapplied.map((u) => (
+                      <div key={u.key} className="text-2xs text-text-muted-hover leading-tight">
+                        <span className="font-medium text-text">{u.label}</span>
+                        <span className="font-mono text-text-muted"> = {u.value}</span>
+                        <div className="text-text-muted">{u.reason}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* UAT Command preview */}
               {uatCommand && (
