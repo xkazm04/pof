@@ -14,6 +14,16 @@
  * **Honesty rule.** A version that produced artifacts nobody has judged yet reports
  * `avgScore: null` / `passRate: null` — never `0`. An unjudged prompt is unknown, not bad,
  * and rendering it as a zero-height bar would invent a failure the judges never found.
+ *
+ * **Fixtures are not output.** Test/smoke harnesses POST into the same tables as real content
+ * (`isSyntheticEntity` — `test-headless*`, `item-mcp-smoke`), and those rows carry a prompt
+ * version stamp like any other. Counting them made this join, the one surface that answers
+ * "are my prompts getting better?", report fixture volume as productivity — and asymmetrically,
+ * because the harness only ever exercised one arm: measured on the real DB on 2026-08-19,
+ * `q1` reported 780 producedArtifacts of which **342 (43.8%) were synthetic**, while `q2`
+ * reported 7 of which 0 were. Excluding them here matches what `/status`, `capabilityModel`,
+ * the drain and the evidence audit already do; the exclusion lives in `aggregateFitness` so
+ * both the version and the variant join get it, and neither can drift from the other.
  */
 
 import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
@@ -22,6 +32,7 @@ import { readProvenance, type Provenance } from '@/lib/provenance';
 import { PROMPT_VERSION } from '@/lib/prompts/quality';
 import { listVerdicts } from '@/lib/status/judge-verdicts-db';
 import { listAllArtifacts, type PipelineArtifact } from '@/lib/pipeline-artifacts-db';
+import { isSyntheticEntity } from '@/lib/status/statusModel';
 
 /** Key an artifact/verdict pair identically so the two tables can be joined. */
 function joinKey(catalogId: string, entityId: string, step: string): string {
@@ -86,7 +97,13 @@ export function computeVariantFitness(
     .sort((a, b) => a.variantId.localeCompare(b.variantId));
 }
 
-/** Shared artifact⋈verdict aggregation, bucketed by whichever provenance field is asked for. */
+/**
+ * Shared artifact⋈verdict aggregation, bucketed by whichever provenance field is asked for.
+ *
+ * Synthetic (fixture) entities are dropped on BOTH sides — see the module docstring. The
+ * filter is here rather than in the two DB entry points so the pure functions a caller may
+ * feed by hand cannot report a different number from the ones the app renders.
+ */
 function aggregateFitness(
   artifacts: PipelineArtifact[],
   verdicts: JudgeVerdict[],
@@ -96,6 +113,7 @@ function aggregateFitness(
   const produced = new Map<string, number>();
 
   for (const a of artifacts) {
+    if (isSyntheticEntity(a.entityId)) continue;
     const provenance = readProvenance(a.data);
     const version = provenance ? bucketOf(provenance) : undefined;
     if (!version) continue;
@@ -109,6 +127,7 @@ function aggregateFitness(
   const judgedArtifactKeys = new Map<string, Set<string>>();
 
   for (const v of verdicts) {
+    if (isSyntheticEntity(v.entityId)) continue;
     const key = joinKey(v.catalogId, v.entityId, v.step);
     const version = versionByKey.get(key);
     if (!version) continue; // verdict on an artifact produced by no known prompt version

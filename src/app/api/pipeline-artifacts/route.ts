@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
-import { listArtifacts, upsertArtifact, deleteArtifact } from '@/lib/pipeline-artifacts-db';
+import { listArtifacts, upsertArtifact } from '@/lib/pipeline-artifacts-db';
+import { purgeEntity } from '@/lib/catalog/artifact-purge';
 import { artifactUpsertSchema } from '@/lib/catalog/artifact-validation';
 import { gradeArtifact, hasRegisteredChecker } from '@/lib/catalog/headless';
 import { describeUngraded } from '@/lib/catalog/acceptance/stepGradability';
@@ -108,18 +109,26 @@ export async function POST(req: NextRequest) {
  * the server rows on the next load, silently un-doing the reset. `entityId` is required,
  * so there is no whole-catalog wipe surface here.
  *
- * Returns `{ deleted: n }` — the number of rows actually removed.
+ * A step lives in FOUR tables, not one — the live row, its superseded revisions, the current
+ * judge verdicts and the bounded judgment log — so the delete goes through `purgeEntity`,
+ * which removes all four in one transaction. Leaving the other three behind is what made a
+ * "reset" step come back condemned by a judge that had read content it no longer held.
+ *
+ * Returns `{ deleted, artifacts, revisions, verdicts, verdictHistory }` — every number a real
+ * `changes()` from the statement that ran. It used to return `targets.length`, the number of
+ * rows *attempted*, while documenting itself as "the number of rows actually removed": a count
+ * that could not be wrong in any observable way because nothing ever looked. `deleted` is kept
+ * as the artifact-row count for existing callers (the lab's Reset).
  */
 export async function DELETE(req: NextRequest) {
   try {
     const catalogId = req.nextUrl.searchParams.get('catalogId');
     const entityId = req.nextUrl.searchParams.get('entityId');
-    const step = req.nextUrl.searchParams.get('step');
+    const step = req.nextUrl.searchParams.get('step') ?? undefined;
     if (!catalogId || !entityId) return apiError('catalogId and entityId are required', 400);
 
-    const targets = step ? [step] : listArtifacts(catalogId, entityId).map((a) => a.step);
-    for (const s of targets) deleteArtifact(catalogId, entityId, s);
-    return apiSuccess({ deleted: targets.length });
+    const counts = purgeEntity(catalogId, entityId, step);
+    return apiSuccess({ deleted: counts.artifacts, ...counts });
   } catch (e) {
     return apiError(e instanceof Error ? e.message : 'Artifacts DELETE failed', 500);
   }

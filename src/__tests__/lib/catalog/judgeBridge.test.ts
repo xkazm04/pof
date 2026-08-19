@@ -1,4 +1,16 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+
+// `upsertVerdict` PERSISTS — to `judge_verdicts` AND the append-only `judge_verdict_history`.
+// Without an override this suite wrote a `fail` verdict per registered catalog into the
+// operator's `~/.pof/pof.db` on every run; the live DB still held 114 verdicts + 255 history
+// rows for `test-headless-bridge-*` entities across 12 catalogs. `vitest.config.ts` now sets a
+// throwaway `POF_DB_PATH` for every worker, but the suite that does the writing states its own
+// isolation rather than inheriting it silently: this file must be safe to run on its own.
+vi.hoisted(() => {
+  const dir = process.env.TEMP || process.env.TMPDIR || '/tmp';
+  process.env.POF_DB_PATH = `${dir}/pof-test-judge-bridge-${process.pid}.db`;
+});
+
 import { bridgeJudgeVerdict } from '@/lib/catalog/acceptance/judgeBridge';
 import type { AcceptanceResult } from '@/lib/catalog/acceptance/types';
 import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
