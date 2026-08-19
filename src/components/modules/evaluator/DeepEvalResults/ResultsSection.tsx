@@ -20,6 +20,7 @@ export function ResultsSection({
   expandedModules,
   expandedCategories,
   taggingActive,
+  discardedBaselineProject,
   activeFindings,
   toggleModule,
   toggleCategory,
@@ -37,6 +38,8 @@ export function ResultsSection({
   expandedModules: Set<string>;
   expandedCategories: Set<string>;
   taggingActive: boolean;
+  /** The project a cached baseline belonged to when it was discarded as cross-project. */
+  discardedBaselineProject: string | null;
   activeFindings: ScanFindings | null;
   toggleModule: (moduleId: SubModuleId) => void;
   toggleCategory: (key: string) => void;
@@ -57,6 +60,20 @@ export function ResultsSection({
           onViewChange={setView}
           totalFindings={result.findings.totalFindings}
         />
+      )}
+
+      {/* The cached baseline described another project — say so, rather than letting
+          "no baseline yet" read as "this project was never scanned". */}
+      {discardedBaselineProject !== null && (
+        <div
+          data-testid="pof-baseline-project-mismatch"
+          className="px-3 py-2 rounded-lg text-xs"
+          style={{ backgroundColor: statusBg(STATUS_WARNING, 0.05), border: `1px solid ${statusBorder(STATUS_WARNING, 0.20)}`, color: STATUS_WARNING }}
+        >
+          The stored regression baseline belongs to another project
+          {discardedBaselineProject ? ` (${discardedBaselineProject})` : ''} — it was discarded rather than
+          diffed against this scan. This scan is the new baseline for the current project.
+        </div>
       )}
 
       {/* Summary bar */}

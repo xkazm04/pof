@@ -39,6 +39,7 @@ export function DeepEvalResults() {
     toggleSelectedModule,
     activeFindings,
     taggingActive,
+    discardedBaselineProject,
   } = useDeepEvalResults();
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -124,6 +125,7 @@ export function DeepEvalResults() {
           expandedModules={expandedModules}
           expandedCategories={expandedCategories}
           taggingActive={taggingActive}
+          discardedBaselineProject={discardedBaselineProject}
           activeFindings={activeFindings}
           toggleModule={toggleModule}
           toggleCategory={toggleCategory}

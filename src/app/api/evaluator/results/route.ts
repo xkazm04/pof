@@ -47,18 +47,35 @@ export const POST = withRoute(async (req: NextRequest) => {
 
 /**
  * Read scan history. `?latest=1` returns the single most-recent scan (baseline
- * hydration); otherwise returns up to `?limit=N` scans, newest first. `?project=`
- * scopes to a project path.
+ * hydration); otherwise returns up to `?limit=N` scans, newest first.
+ *
+ * `?project=<path>` scopes to a project. An **empty** `?project=` scopes to the
+ * unscoped rows (`project_id = ''`, i.e. scans taken with no project open) — it must
+ * not silently widen to every project, because the caller asking for a scoped
+ * baseline would then be handed some other project's findings to diff against.
+ * Omitting the parameter entirely is what means "all projects".
  */
 export const GET = withRoute(async (req: NextRequest) => {
   const { searchParams } = new URL(req.url);
-  const projectId = searchParams.get('project') || undefined;
+  const projectId = searchParams.has('project') ? (searchParams.get('project') ?? '') : undefined;
 
   if (searchParams.get('latest') === '1') {
-    return apiSuccess({ scan: getLatestScan(projectId) });
+    return apiSuccess({ scan: inRequestedProject(getLatestScan(projectId), projectId) });
   }
 
   const limitRaw = Number(searchParams.get('limit'));
   const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? Math.min(limitRaw, 500) : 50;
-  return apiSuccess({ scans: getScanHistory(limit, projectId) });
+  const scans = getScanHistory(limit, projectId).filter((s) => inRequestedProject(s, projectId) !== null);
+  return apiSuccess({ scans });
 }, 'Failed to read scan history');
+
+/**
+ * Guard the one identity `getScanHistory` cannot enforce: it treats an **empty**
+ * `projectId` as falsy and falls back to its unscoped query, so a request scoped to
+ * the no-project rows would otherwise be answered with some other project's scan.
+ * Returning `null` (no baseline) is always safe here; returning a foreign scan is not.
+ */
+function inRequestedProject<T extends { projectId: string }>(scan: T | null, projectId: string | undefined): T | null {
+  if (!scan || projectId === undefined) return scan;
+  return scan.projectId === projectId ? scan : null;
+}

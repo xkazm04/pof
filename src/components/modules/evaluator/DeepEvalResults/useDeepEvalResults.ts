@@ -10,7 +10,7 @@ import type { RegressionDiff } from '@/lib/evaluator/regression-diff';
 import type { AttributionMap } from '@/lib/evaluator/git-attribution';
 import type { SubModuleId } from '@/types/modules';
 import { useProjectStore } from '@/stores/projectStore';
-import { useDeepEvalStore } from '@/stores/deepEvalStore';
+import { useDeepEvalStore, projectIdOf } from '@/stores/deepEvalStore';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
 import { apiFetch, tryApiFetch } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
@@ -31,6 +31,9 @@ export function useDeepEvalResults() {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [selectedModuleIds, setSelectedModuleIds] = useState<Set<string>>(new Set(getEvaluableModuleIds()));
   const [showModuleSelector, setShowModuleSelector] = useState(false);
+  // The project a discarded baseline belonged to, when the last scan found a cached
+  // baseline from a *different* project. Reported rather than silently diffed.
+  const [discardedBaselineProject, setDiscardedBaselineProject] = useState<string | null>(null);
 
   const fixCli = useModuleCLI({
     moduleId: 'ai-behavior',
@@ -43,41 +46,49 @@ export function useDeepEvalResults() {
   // shows the running spinner (not every Fix button on the page). Module batch
   // fixes are keyed `module:<id>`; single findings by their finding id.
   const [fixTargetId, setFixTargetId] = useState<string | null>(null);
-  // Clear the target once the shared CLI finishes.
-  useEffect(() => {
-    if (!fixCli.isRunning) setFixTargetId(null);
-  }, [fixCli.isRunning]);
+  // The target only means anything while the shared CLI is running — derive that
+  // rather than clearing it from an effect (which cost a cascading render and was a
+  // standing `react-hooks/set-state-in-effect` error).
+  const activeFixTargetId = fixCli.isRunning ? fixTargetId : null;
 
   const isRunning = progress?.status === 'running';
 
   // ── Baseline hydration ──────────────────────────────────────────────────────
 
-  // localStorage is the fast baseline cache; when it's empty (fresh browser /
-  // cleared storage) fall back to the durable server history so regression
-  // diffing still has a baseline. One-shot: never overwrites a present cache.
-  const hydratedRef = useRef(false);
+  // localStorage is the fast baseline cache; when it holds no baseline FOR THIS
+  // PROJECT (fresh browser / cleared storage / project switch) fall back to the
+  // durable server history, scoped to the same project. Runs once per project id:
+  // never overwrites a warm cache, and a project switch re-hydrates for the new one.
+  const hydratedForRef = useRef<string | null>(null);
   useEffect(() => {
-    if (hydratedRef.current) return;
-    hydratedRef.current = true;
-    if (useDeepEvalStore.getState().lastScan) return; // cache already warm
+    const projectId = projectIdOf(projectPath);
+    if (hydratedForRef.current === projectId) return;
+    hydratedForRef.current = projectId;
+    if (useDeepEvalStore.getState().baselineFor(projectId)) return; // cache already warm for this project
 
     let cancelled = false;
     void (async () => {
-      const res = await tryApiFetch<{ scan: PersistedScan | null }>('/api/evaluator/results?latest=1');
+      const res = await tryApiFetch<{ scan: PersistedScan | null }>(
+        `/api/evaluator/results?latest=1&project=${encodeURIComponent(projectId)}`,
+      );
       if (cancelled || !res.ok || !res.data.scan) return;
       // Re-check under the async gap — a scan may have completed meanwhile.
-      if (useDeepEvalStore.getState().lastScan) return;
+      if (useDeepEvalStore.getState().baselineFor(projectId)) return;
       const s = res.data.scan;
+      // The query is scoped, but a baseline is a verdict input: verify the identity
+      // the server returned rather than trusting the request we sent.
+      if (projectIdOf(s.projectId) !== projectId) return;
       useDeepEvalStore.getState().recordScan({
         scanId: s.scanId,
         timestamp: s.timestamp,
+        projectPath: projectId,
         findings: s.findings,
       });
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [projectPath]);
 
   // ── Result processing ───────────────────────────────────────────────────────
 
@@ -98,7 +109,16 @@ export function useDeepEvalResults() {
       const scope = evalResult.modulesEvaluated.filter(
         (m) => !evalResult.failedModules.includes(m),
       );
-      const previous = useDeepEvalStore.getState().lastScan;
+      // A baseline belongs to exactly one project. One from a *different* project is
+      // not a baseline at all — diffing against it would tag every finding of this
+      // project NEW, every finding of the other RESOLVED, and blame this project's
+      // commits for them. Discard it, report it, and start a fresh baseline here.
+      const projectId = projectIdOf(projectPath);
+      const cached = useDeepEvalStore.getState().lastScan;
+      const previous = useDeepEvalStore.getState().baselineFor(projectId);
+      setDiscardedBaselineProject(
+        !previous && cached && typeof cached.projectPath === 'string' ? cached.projectPath : null,
+      );
 
       const d = diffScans(previous?.findings ?? null, currentFlat, { scopeModuleIds: scope });
       setDiff(d);
@@ -113,6 +133,7 @@ export function useDeepEvalResults() {
       useDeepEvalStore.getState().recordScan({
         scanId: evalResult.scanId,
         timestamp: completedAt,
+        projectPath: projectId,
         findings: mergedBaseline,
       });
 
@@ -124,7 +145,7 @@ export function useDeepEvalResults() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           scanId: evalResult.scanId,
-          projectId: projectPath ?? '',
+          projectId,
           scannedAt: new Date(completedAt).toISOString(),
           durationMs: evalResult.duration,
           modulesEvaluated: scope,
@@ -285,7 +306,7 @@ export function useDeepEvalResults() {
     showModuleSelector,
     setShowModuleSelector,
     fixCli,
-    fixTargetId,
+    fixTargetId: activeFixTargetId,
     isRunning,
     handleRunEval,
     handleRunSingle,
@@ -297,5 +318,6 @@ export function useDeepEvalResults() {
     toggleSelectedModule,
     activeFindings,
     taggingActive,
+    discardedBaselineProject,
   };
 }

@@ -77,6 +77,39 @@ describe('/api/evaluator/results', () => {
     expect(json.data.scan.scanId).toBe('s2');
   });
 
+  it('GET ?project= scopes the latest scan to that project', async () => {
+    await POST(postReq({ scanId: 'a1', projectId: '/proj-a', scannedAt: '2026-07-15T01:00:00.000Z', modulesEvaluated: [], findings: [] }));
+    await POST(postReq({ scanId: 'b1', projectId: '/proj-b', scannedAt: '2026-07-15T02:00:00.000Z', modulesEvaluated: [], findings: [] }));
+
+    const res = await GET(new NextRequest('http://localhost/api/evaluator/results?latest=1&project=%2Fproj-a'));
+    const json = await res.json();
+    expect(json.data.scan.scanId).toBe('a1');
+  });
+
+  it('GET with an EMPTY ?project= returns no baseline rather than another project\'s', async () => {
+    // The baseline is a verdict input: a request scoped to the no-project rows must
+    // never be answered with a scan belonging to a real project.
+    await POST(postReq({ scanId: 'b1', projectId: '/proj-b', scannedAt: '2026-07-15T02:00:00.000Z', modulesEvaluated: [], findings: [] }));
+
+    const res = await GET(new NextRequest('http://localhost/api/evaluator/results?latest=1&project='));
+    const json = await res.json();
+    expect(json.success).toBe(true);
+    expect(json.data.scan).toBeNull();
+
+    const listRes = await GET(new NextRequest('http://localhost/api/evaluator/results?project='));
+    const listJson = await listRes.json();
+    expect(listJson.data.scans).toEqual([]);
+  });
+
+  it('GET without ?project= still spans every project', async () => {
+    await POST(postReq({ scanId: 'a1', projectId: '/proj-a', scannedAt: '2026-07-15T01:00:00.000Z', modulesEvaluated: [], findings: [] }));
+    await POST(postReq({ scanId: 'b1', projectId: '/proj-b', scannedAt: '2026-07-15T02:00:00.000Z', modulesEvaluated: [], findings: [] }));
+
+    const res = await GET(new NextRequest('http://localhost/api/evaluator/results?latest=1'));
+    const json = await res.json();
+    expect(json.data.scan.scanId).toBe('b1');
+  });
+
   it('POST rejects a missing scanId with 400', async () => {
     const res = await POST(postReq({ findings: [] }));
     expect(res.status).toBe(400);
