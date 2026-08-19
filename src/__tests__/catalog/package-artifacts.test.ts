@@ -76,6 +76,23 @@ describe('buildPackage', () => {
     expect(noRoot.ueDeclarations).toEqual([{ path: '/Game/Items/DA_Ghost', realized: null }]);
   });
 
+  it('stages a ?dir= served mesh and REPORTS one it cannot resolve in missing[]', () => {
+    const { deps } = fakeFs();
+    const manifest = buildPackage('bestiary', 'grunt', [
+      // Resolves through the same allow-list the serve route uses → staged.
+      { step: '3D & Rig', data: { glbUrl: '/api/visual-gen/asset/warrior.glb?dir=tripo3d' }, ueAssets: [] },
+      // Off the allow-list: previously dropped in silence, so the package looked
+      // complete while shipping without the mesh the step displays.
+      { step: '3D Alt', data: { glbUrl: '/api/visual-gen/asset/warrior.glb?dir=nowhere' }, ueAssets: [] },
+    ], deps);
+
+    expect(manifest.files.map((f) => f.path)).toEqual(['generated/tripo3d/warrior.glb']);
+    expect(manifest.missing).toHaveLength(1);
+    expect(manifest.missing[0].sourceStep).toBe('3D Alt');
+    expect(manifest.missing[0].path).toBe('/api/visual-gen/asset/warrior.glb?dir=nowhere');
+    expect(manifest.missing[0].reason).toMatch(/allow-list/i);
+  });
+
   it('an empty sibling set yields an empty—but still honest—manifest', () => {
     const { deps } = fakeFs();
     const manifest = buildPackage('items', 'rusted-blade', [], deps);

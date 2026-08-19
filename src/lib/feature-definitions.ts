@@ -438,7 +438,7 @@ export const MODULE_FEATURE_DEFINITIONS: PartialModuleMap<FeatureDefinition[]> =
     { featureName: 'Job status polling', category: 'Queue', description: 'bounded polling of /api/visual-gen/generate/status capped by FORGE_POLL_MAX_DURATION_MS, with per-job stop handles', dependsOn: ['Generation job queue'] },
     { featureName: 'Style DNA profiles', category: 'Style', description: 'StyleDnaPanel over style-dna-db and /api/visual-gen/style-dna; the active profile fragment is appended to the submitted prompt', dependsOn: ['Prompt chip builder'] },
     { featureName: 'Mesh critique gate', category: 'Quality', description: 'parseCritiqueMetrics / classifyComponents geometry verdict surfaced per job by CritiqueBadge (verdict, score, fidelity)', dependsOn: ['Generation job queue'] },
-    { featureName: 'Generated mesh gallery', category: 'Output', description: 'generated meshes persisted under generated/triposr and listed/served by /api/visual-gen/assets and /api/visual-gen/asset/[name] (buildAssetList + safeAssetName allow-list)', dependsOn: ['Generation job queue'] },
+    { featureName: 'Generated mesh gallery', category: 'Output', description: 'generated meshes persisted under every dir in the ASSET_DIRS allow-list (triposr, tripo3d, hunyuan3d, mesh-finish, meshes) and listed/served by /api/visual-gen/assets and /api/visual-gen/asset/[name]?dir= (buildMultiDirAssetList + safeAssetName/safeAssetDir allow-lists)', dependsOn: ['Generation job queue'] },
   ],
   'material-lab': [
     { featureName: 'PBR parameter editor', category: 'Editor', description: 'PBREditor base-colour picker plus metallic / roughness / normal-strength / AO sliders bound to the useMaterialStore PBRParams' },

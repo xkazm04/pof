@@ -88,6 +88,14 @@ export function buildPackage(
   const files: ManifestFile[] = [];
   const missing: ManifestMissing[] = [];
 
+  // A served artifact whose disk location could not be derived is a REPORTED
+  // omission, not a silent one: it reaches `missing[]` exactly like a reference
+  // that pointed at nothing, so the package can never claim to be complete while
+  // quietly lacking a mesh the step is showing on screen.
+  for (const u of inputs.unresolved) {
+    missing.push({ path: u.reference, sourceStep: u.sourceStep, reason: u.reason });
+  }
+
   for (const ref of inputs.files) {
     if (!deps.exists(ref.path)) {
       missing.push({ path: ref.path, sourceStep: ref.sourceStep, reason: 'referenced file not found on disk' });
