@@ -30,6 +30,39 @@ async function settleGates(
   }
 }
 
+const HISTORY_PATH = '/api/packaging/history';
+
+/**
+ * What a build-history read could and could NOT see, in the agent's own response.
+ *
+ * `build_history.project_id` is scoped by the app's one own-plus-legacy rule
+ * (`projectScopeSql`): a NAMED project sees its own rows plus the unattributed legacy
+ * `''` rows, and an UNSCOPED caller sees ONLY the legacy set — it does not silently get
+ * everything. `pof_package_history` passed no project at all, so every headless query
+ * answered from the pre-attribution rows and could not see a single build cooked since.
+ *
+ * The scope counts come from the route's own `action=scope` (never recomputed here), and
+ * a scope lookup that fails is REPORTED beside the result rather than swallowed — an
+ * agent must never read "0 builds" as "you have never built".
+ */
+async function historyScope(pof: PofClient, projectPath: string | undefined): Promise<unknown> {
+  const note = projectPath
+    ? `Scoped to project "${projectPath}": this read sees that project's builds PLUS the unattributed legacy rows (project_id = '').`
+    : 'UNSCOPED — no projectPath was given, so this read sees ONLY the unattributed legacy rows '
+      + "(project_id = ''), NOT every build. Builds recorded under a named project are excluded. "
+      + 'Pass projectPath to see a project\'s own cooks.';
+  let counts: unknown;
+  try {
+    const res = await pof.get<{ scope?: unknown }>(
+      `${HISTORY_PATH}${qs({ action: 'scope', ...(projectPath ? { projectPath } : {}) })}`,
+    );
+    counts = res && typeof res === 'object' && 'scope' in res ? res.scope : res;
+  } catch (e) {
+    counts = { error: e instanceof Error ? e.message : String(e) };
+  }
+  return { projectPath: projectPath ?? null, scoped: !!projectPath, note, counts };
+}
+
 /**
  * UE truth & growth. The pof-bridge/* tools need a live editor (degrade gracefully when
  * offline). The filesystem/ue5-source scans + ue5-bridge build queue read disk and work
@@ -186,10 +219,31 @@ export const UE_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_package_history',
-    description: 'Query the persistent build/cook history: list builds, stats, size trend, platforms, or version. Final .exe sizes are a growth/shipping metric.',
-    inputSchema: obj({ action: { type: 'string', enum: ['list', 'get', 'stats', 'trend', 'platforms', 'version'] }, limit: NUM, id: STR, platform: STR }),
-    example: { args: { action: 'list' } },
-    handler: (args, pof) =>
-      pof.get(`/api/packaging/history${qs({ action: optStr(args, 'action') ?? 'list', ...(optNum(args, 'limit') != null ? { limit: optNum(args, 'limit') } : {}), ...(optStr(args, 'id') ? { id: optStr(args, 'id') } : {}), ...(optStr(args, 'platform') ? { platform: optStr(args, 'platform') } : {}) })}`),
+    description:
+      'Query the persistent build/cook history: list builds, stats, size trend, platforms, or version. Final .exe sizes are a growth/shipping metric. SCOPE IT with `projectPath`: build rows carry the project that cooked them, and WITHOUT a projectPath this reads ONLY the unattributed legacy rows recorded before builds carried a project — never every build. The response always states which view you got and what it could not see.',
+    inputSchema: obj({
+      action: { type: 'string', enum: ['list', 'get', 'stats', 'trend', 'platforms', 'version', 'scope', 'dashboard'] },
+      limit: NUM,
+      id: STR,
+      platform: STR,
+      projectPath: {
+        type: 'string',
+        description: 'Absolute UE project path to scope the read to (that project\'s builds + the unattributed legacy rows). Stated EXPLICITLY — never inferred server-side. Omit only when you want the legacy/unattributed view.',
+      },
+    }),
+    example: { args: { action: 'list' }, note: 'No projectPath = the legacy/unattributed view; the response says so.' },
+    handler: async (args, pof) => {
+      const projectPath = optStr(args, 'projectPath');
+      const result = await pof.get(
+        `${HISTORY_PATH}${qs({
+          action: optStr(args, 'action') ?? 'list',
+          ...(optNum(args, 'limit') != null ? { limit: optNum(args, 'limit') } : {}),
+          ...(optStr(args, 'id') ? { id: optStr(args, 'id') } : {}),
+          ...(optStr(args, 'platform') ? { platform: optStr(args, 'platform') } : {}),
+          ...(projectPath ? { projectPath } : {}),
+        })}`,
+      );
+      return { result, scope: await historyScope(pof, projectPath) };
+    },
   },
 ];

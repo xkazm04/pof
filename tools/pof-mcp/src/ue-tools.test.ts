@@ -85,3 +85,81 @@ test('pof_ue_test_results settles only when a testName is given', async () => {
   assert.equal(calls[2].path, SETTLE);
   assert.deepEqual(settled.settle, { matched: 1, settled: 1 });
 });
+
+// ── pof_package_history — the read an AGENT makes must be project-scoped ──────
+//
+// `build_history.project_id` is scoped own-plus-legacy: an unscoped read sees ONLY the
+// unattributed `''` rows. This tool passed no project at all, so every headless query of
+// build history answered from the pre-attribution set and could not see anything cooked
+// since. Same regression class as wave 20 (insertBuild) and wave 23 (browser surface).
+
+const HISTORY = '/api/packaging/history';
+
+function historyRecorder() {
+  return recorder({
+    // action=scope is matched FIRST by longest-prefix intent; the recorder matches on
+    // startsWith, so both land on the same key and we discriminate by query string.
+    [HISTORY]: { builds: [], scope: { projectId: '', unscoped: true, totalRows: 6, legacyRows: 6, ownedRows: 0, foreignRows: 0, projects: [], distinctProjects: 0 } },
+  });
+}
+
+test('pof_package_history declares projectPath in its input schema', () => {
+  const schema = tool('pof_package_history').inputSchema as {
+    properties: Record<string, unknown>;
+    additionalProperties?: boolean;
+  };
+  assert.ok(
+    'projectPath' in schema.properties,
+    'the tool cannot be scoped at all: no project parameter is declared, so an agent literally cannot ask for its own builds',
+  );
+});
+
+test('pof_package_history FORWARDS projectPath to the route (explicitly, never inferred)', async () => {
+  const { pof, calls } = historyRecorder();
+  await tool('pof_package_history').handler(
+    { action: 'list', projectPath: 'C:/Users/kazda/Documents/Unreal Projects/PoF' },
+    pof,
+  );
+  const listCall = calls.find((c) => c.path.includes('action=list'));
+  assert.ok(listCall, 'no list request was made');
+  assert.match(
+    listCall!.path,
+    /projectPath=C%3A%2FUsers%2Fkazda%2FDocuments%2FUnreal\+Projects%2FPoF/,
+    `the project was dropped on the way to the route: ${listCall!.path}`,
+  );
+});
+
+test('pof_package_history states the scope it read and what it could not see', async () => {
+  const { pof, calls } = historyRecorder();
+  const out = await tool('pof_package_history').handler({ action: 'list' }, pof) as {
+    result: unknown;
+    scope: { scoped: boolean; projectPath: string | null; note: string; counts: unknown };
+  };
+  // The raw route payload survives unchanged beside the disclosure.
+  assert.deepEqual((out.result as { builds: unknown[] }).builds, []);
+  assert.equal(out.scope.scoped, false);
+  assert.equal(out.scope.projectPath, null);
+  assert.match(out.scope.note, /UNSCOPED/, 'an unscoped read must SAY it is unscoped');
+  assert.match(out.scope.note, /legacy/i);
+  // And the route's own scope counts ride along, so 0 builds reads as "another project
+  // owns these" rather than "you have never built".
+  assert.equal((out.scope.counts as { totalRows: number }).totalRows, 6);
+  assert.ok(calls.some((c) => c.path.includes('action=scope')), 'the scope disclosure was never fetched');
+});
+
+test('pof_package_history reports a failed scope lookup instead of swallowing it', async () => {
+  const calls: Array<{ path: string }> = [];
+  const pof = {
+    get: async (path: string) => {
+      calls.push({ path });
+      if (path.includes('action=scope')) throw new Error('backend exploded');
+      return { builds: [] };
+    },
+    post: async () => ({}),
+  } as unknown as import('./pofClient.js').PofClient;
+  const out = await tool('pof_package_history').handler({ action: 'list', projectPath: 'C:/p' }, pof) as {
+    scope: { scoped: boolean; counts: { error?: string } };
+  };
+  assert.equal(out.scope.scoped, true);
+  assert.match(out.scope.counts.error ?? '', /backend exploded/);
+});
