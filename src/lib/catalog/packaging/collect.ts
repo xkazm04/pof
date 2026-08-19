@@ -5,7 +5,9 @@
  * this walks the sibling artifacts' data for the two kinds of real, verifiable output:
  *
  *  - file references — strings pointing at produced files on disk (generated/ paths or
- *    absolute paths with a media/data extension). Verified in place by the engine.
+ *    absolute paths with a media/data extension), plus the app's own serve-route URLs
+ *    (`/api/visual-gen/asset/…` meshes and `/api/visual-gen/icon/…` icons), each resolved
+ *    through the SAME allow-list its route serves with. Verified in place by the engine.
  *  - embedded data-URLs — the gap-loop pattern stores generated art INSIDE the artifact
  *    as `url(data:image/...;base64,...)` swatches; these are materialized into the
  *    package as real files.
@@ -15,6 +17,7 @@
  * Client-safe (no fs/crypto here).
  */
 import { safeAssetDir, safeAssetName } from '@/lib/visual-gen/generated-assets';
+import { safeIconName } from '@/lib/visual-gen/generated-icons';
 
 export interface SiblingArtifact {
   step: string;
@@ -110,6 +113,50 @@ function resolveAssetUrl(s: string): { path?: string; reason?: string } | null {
   return { path: `generated/${spec.dir}/${name}` };
 }
 
+/** `/api/visual-gen/icon/<name>` — the 2D serve route. It takes no `?dir=`; any query is ignored, as the route ignores it. */
+const ICON_URL_RE = /^\/api\/visual-gen\/icon\/([^/?#]+)(?:\?[^#]*)?$/;
+
+/**
+ * Resolve a per-step ICON serve-route URL to its disk location, under the same discipline
+ * as {@link resolveAssetUrl} and using the route's own allow-list (`safeIconName`).
+ *
+ * The 3D half was taught to resolve in wave 13; the 2D half was not, so an icon URL fell
+ * through to `looksLikeFile`, which rejects it (no `generated/` segment, no drive letter)
+ * — and packaging DROPPED it. A row whose selected gallery candidate carries a real
+ * served icon (`imageUrl`, the whole point of the gap-loop icon library) shipped a package
+ * silently missing the image it displays.
+ *
+ * Icons deliberately do NOT live in `ASSET_DIRS`: they are served by a parallel route from
+ * the single fixed dir `generated/icons/`, so this is its own branch, not a list entry.
+ */
+function resolveIconUrl(s: string): { path?: string; reason?: string } | null {
+  const m = s.replace(/\\/g, '/').match(ICON_URL_RE);
+  if (!m) return null;
+  const [, rawName] = m;
+
+  let name: string;
+  try {
+    name = decodeURIComponent(rawName);
+  } catch {
+    // Artifact data is untrusted input (SQLite / MCP / headless drains).
+    return { reason: `icon URL has an undecodable filename ("${rawName}")` };
+  }
+  if (!safeIconName(name)) {
+    return { reason: `icon URL names a file the serve route would refuse ("${name}")` };
+  }
+  return { path: `generated/icons/${name}` };
+}
+
+/**
+ * Resolve any app serve-route URL — mesh or icon — to its disk path. `null` means the
+ * string is not a serve-route URL at all (the overwhelmingly common case); a `reason`
+ * means it IS one this app could not serve, which is a finding to report rather than a
+ * string to quietly skip.
+ */
+function resolveServedUrl(s: string): { path?: string; reason?: string } | null {
+  return resolveAssetUrl(s) ?? resolveIconUrl(s);
+}
+
 const DATA_URL = /data:([a-z0-9.+-]+\/[a-z0-9.+-]+);base64,([A-Za-z0-9+/=]+)/gi;
 
 const EXT_BY_MIME: Record<string, string> = {
@@ -163,7 +210,7 @@ export function collectPackageInputs(siblings: SiblingArtifact[]): PackageInputs
       }
       if (matched) return;
 
-      const served = resolveAssetUrl(s);
+      const served = resolveServedUrl(s);
       if (served?.reason) {
         if (seenUnresolved.has(s)) return;
         seenUnresolved.add(s);
