@@ -11,6 +11,12 @@ import {
 
 const ABSLOG_RE = /^-abslog=(.*)$/;
 const ENV = { POF_UE_UPROJECT: 'C:/p/PoF.uproject' };
+// The live-editor precondition + editor lease are real seams (see editor-precondition.test.ts);
+// these orchestration tests declare a clear machine so they never read the real process table.
+const CLEAR: { detectEditors: () => []; editorLease: { acquire: () => { ok: true }; release: () => void } } = {
+  detectEditors: () => [],
+  editorLease: { acquire: () => ({ ok: true }), release: () => {} },
+};
 
 describe('buildExperimentProbe', () => {
   it('wraps the user python in try/except with a DONE marker', () => {
@@ -91,7 +97,7 @@ describe('runExperiment (orchestration, deps-seam)', () => {
     };
     const res = await runExperiment(
       { python: "unreal.log('hi')", capture: true, verify: { prompt: 'looks right?' } },
-      { run, fileExists: () => true, verifyVisual: async () => ({ status: 'pass', detail: 'ok' }), env: ENV, now: () => 1 },
+      { run, fileExists: () => true, verifyVisual: async () => ({ status: 'pass', detail: 'ok' }), env: ENV, now: () => 1, ...CLEAR },
     );
     expect(res.ok).toBe(true);
     expect(res.markers.RESULT).toBe('5.8.0');
@@ -144,7 +150,7 @@ describe('runExperiment scenario mode', () => {
   it('drives a scenario, summarizes observations + picks the action frame', async () => {
     const res = await runExperiment(
       { python: '', scenario: { map: '/Game/Maps/VerticalSlice', inputs: [{ key: 'W', start: 0, duration: 2 }] } },
-      { run: scnRun({ samples: [{ t: 0, speed: 0 }, { t: 1, speed: 300, anim_speed: 5, montage_playing: true }] }), fileExists: () => true, env: ENV, now: () => 1 },
+      { run: scnRun({ samples: [{ t: 0, speed: 0 }, { t: 1, speed: 300, anim_speed: 5, montage_playing: true }] }), fileExists: () => true, env: ENV, now: () => 1, ...CLEAR },
     );
     expect(res.observationSummary?.maxSpeed).toBe(300);
     expect(res.observationSummary?.montagePlayed).toBe(true);
@@ -156,7 +162,7 @@ describe('runExperiment scenario mode', () => {
     const obs = { started: true, samples: [{ t: 0, loc_x: 0, loc_y: 0, droopL: 60, droopR: 60 }, { t: 1, loc_x: 100, loc_y: 0, droopL: 80, droopR: 80 }] };
     const res = await runExperiment(
       { python: '', scenario: { map: '/m', inputs: [{ key: 'W', start: 0, duration: 1 }], assert: [{ kind: 'moved', minDist: 50 }] } },
-      { run: scnRun(obs, 'shot_00.png'), fileExists: () => true, env: ENV, now: () => 1 },
+      { run: scnRun(obs, 'shot_00.png'), fileExists: () => true, env: ENV, now: () => 1, ...CLEAR },
     );
     expect(res.behavioralVerdict?.status).toBe('pass');
   });
@@ -165,7 +171,7 @@ describe('runExperiment scenario mode', () => {
     const obs = { started: true, samples: [{ t: 0, loc_x: 0, loc_y: 0, droopL: 60, droopR: 60 }, { t: 1, loc_x: 10, loc_y: 0, droopL: 60, droopR: 60 }] };
     const res = await runExperiment(
       { python: '', scenario: { map: '/m', inputs: [{ key: 'W', start: 0, duration: 1 }], assert: [{ kind: 'moved', minDist: 200 }] } },
-      { run: scnRun(obs, 'shot_00.png'), fileExists: () => true, env: ENV, now: () => 1 },
+      { run: scnRun(obs, 'shot_00.png'), fileExists: () => true, env: ENV, now: () => 1, ...CLEAR },
     );
     expect(res.behavioralVerdict?.status).toBe('fail');
     expect(res.behavioralVerdict?.detail).toMatch(/moved/);

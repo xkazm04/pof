@@ -40,6 +40,7 @@ export function ExperimentLab() {
   const [scenarioInputs, setScenarioInputs] = useState(STARTER_INPUTS);
   const [removeEnemies, setRemoveEnemies] = useState(true);
   const [verifyPrompt, setVerifyPrompt] = useState('');
+  const [allowRunningEditor, setAllowRunningEditor] = useState(false);
   const [asserts, setAsserts] = useState<AssertionToggles>({});
   const [status, setStatus] = useState<Status>('idle');
   const [jobId, setJobId] = useState<string | null>(null);
@@ -65,6 +66,7 @@ export function ExperimentLab() {
           python: '',
           scenario: { map: scenarioMap, inputs, totalSeconds: 4, numSamples: 8, disableAI: removeEnemies, ...(assert.length ? { assert } : {}) },
           verify: verifyPrompt.trim() ? { prompt: verifyPrompt.trim() } : undefined,
+          allowRunningEditor,
         };
       } catch {
         setErrMsg('Inputs must be valid JSON (an array of { key/action, start, duration }).');
@@ -72,7 +74,7 @@ export function ExperimentLab() {
         return;
       }
     } else {
-      spec = { python, capture, verify: verifyPrompt.trim() ? { prompt: verifyPrompt.trim() } : undefined };
+      spec = { python, capture, verify: verifyPrompt.trim() ? { prompt: verifyPrompt.trim() } : undefined, allowRunningEditor };
     }
     setStatus('running'); setErrMsg(null); setResult(null); setJobId(null);
     try {
@@ -84,7 +86,7 @@ export function ExperimentLab() {
       setStatus('error');
       logger.error('experiment run failed', e);
     }
-  }, [mode, python, capture, scenarioMap, scenarioInputs, removeEnemies, verifyPrompt, asserts]);
+  }, [mode, python, capture, scenarioMap, scenarioInputs, removeEnemies, verifyPrompt, allowRunningEditor, asserts]);
 
   const s = result?.observationSummary;
 
@@ -184,6 +186,27 @@ export function ExperimentLab() {
         </button>
       </div>
 
+      {/* A run boots its OWN editor. PoF refuses when one is already live rather than killing
+          it (that used to destroy unsaved work); this is the explicit override, and it states
+          its consequence at the control — it never kills anything either way. */}
+      <label className="flex items-start gap-2 text-xs">
+        <input
+          type="checkbox"
+          checked={allowRunningEditor}
+          onChange={(e) => setAllowRunningEditor(e.target.checked)}
+          aria-describedby="experiment-allow-editor-hint"
+          aria-label="Run anyway with an editor already open"
+        />
+        <span>
+          Run anyway if an editor is already open
+          <span id="experiment-allow-editor-hint" className="block text-2xs text-text-muted">
+            By default a live UnrealEditor blocks the run and PoF explains why — it will never kill an editor it
+            did not start. Ticking this launches a second instance beside yours: it commonly fails to start or
+            fights the first for project file locks. Your open editor is left untouched either way.
+          </span>
+        </span>
+      </label>
+
       {/* Run outcome is announced, not just coloured — the run takes minutes, so a
           screen-reader user must hear it start, and an error must interrupt. */}
       <p role="status" aria-live="polite" className="text-text-muted empty:hidden">
@@ -191,7 +214,16 @@ export function ExperimentLab() {
       </p>
       {status === 'error' && <p role="alert" className="text-red-500">Error: {errMsg}</p>}
 
-      {result && (
+      {/* A precondition refusal is NOT a failed experiment — nothing ran and nothing was
+          observed. It gets its own state so it can never read as an observed defect. */}
+      {result?.refused && (
+        <section role="alert" className="space-y-1 rounded border border-amber-500/60 bg-amber-500/5 p-4">
+          <p className="font-medium text-amber-500">⚠ Refused — nothing ran</p>
+          <p className="text-xs text-text-muted">{result.error}</p>
+        </section>
+      )}
+
+      {result && !result.refused && (
         <section className="space-y-3 rounded border border-border p-4">
           <div className="flex flex-wrap items-center gap-3">
             <span className={result.ok ? 'font-medium text-emerald-500' : 'font-medium text-red-500'}>{result.ok ? '✓ ran' : '✗ failed'}</span>

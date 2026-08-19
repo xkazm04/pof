@@ -15,6 +15,15 @@ import { join } from 'node:path';
 import { buildLaunchArgs, buildPythonExecFile, resolveEditorBinary, captureScenarioFrame, type EnvLike, type CaptureScenarioInput } from '@/lib/ue-launch';
 import { parseScenarioVerdict } from '@/lib/test-gate-runner/spawnExecutor';
 import type { GateAssertion } from '@/lib/test-gate-runner/types';
+import { createExperimentRun } from './editor-process';
+import {
+  detectRunningEditors,
+  editorPreconditionReason,
+  leaseConflictReason,
+  drainEditorLease,
+  type EditorLease,
+  type RunningEditor,
+} from './editor-precondition';
 
 const DONE = 'POF_EXPERIMENT_DONE';
 const ERR = 'POF_EXPERIMENT_ERROR';
@@ -162,11 +171,18 @@ export interface ExperimentSpec {
   /** Extra engine plugins to enable (beyond PythonScriptPlugin) for a probe that
    *  touches a plugin not enabled in the .uproject (e.g. Chaos Cloth Asset). */
   enablePlugins?: string[];
+  /** Explicit user override of the live-editor precondition: launch a second editor beside
+   *  the operator's own instead of refusing. Never kills the running editor — see
+   *  `editor-precondition.ts`. The drain lease stays non-overridable. */
+  allowRunningEditor?: boolean;
 }
 
 export interface ExperimentResult {
   ok: boolean;
   error?: string;
+  /** The run never started: a precondition refused it (live editor / drain lease held). The
+   *  `error` carries the named reason. Distinct from a failed run — nothing was observed. */
+  refused?: boolean;
   logs: string[];
   markers: Record<string, string>;
   screenshotPath?: string;
@@ -191,10 +207,18 @@ export interface RunnerDeps {
   fileExists?: (p: string) => boolean;
   now?: () => number;
   env?: EnvLike;
+  /** Live-editor probe (default: `tasklist`). Injectable so tests never read the process table. */
+  detectEditors?: () => RunningEditor[];
+  /** Editor lease (default: the gate-runner's global drain lease). */
+  editorLease?: EditorLease;
 }
 
 function err(message: string, binary = '', args: string[] = []): ExperimentResult {
   return { ok: false, error: message, logs: [], markers: {}, durationMs: 0, binary, args };
+}
+
+function refuse(message: string, binary: string): ExperimentResult {
+  return { ...err(message, binary), refused: true };
 }
 
 /** Run one ad-hoc experiment on the connected UE editor and return its observed output. */
@@ -210,12 +234,33 @@ export async function runExperiment(spec: ExperimentSpec, deps: RunnerDeps = {})
   const binary = resolveEditorBinary({ windowed: !!spec.capture || !!spec.scenario, ...(spec.engine ? { engine: spec.engine } : {}) }, env);
   if (!fileExists(binary)) return err(`UE editor not found at ${binary} (install UE 5.8 or set POF_UE_CMD/POF_UE_EDITOR)`, binary);
 
-  const stamp = now();
-
-  if (spec.scenario) {
-    return runScenario(spec, { uproject, binary, run, now, env, verifyVisual: deps.verifyVisual }, stamp);
+  // ── Preconditions: refuse, never kill (see editor-precondition.ts) ──────────
+  if (!spec.allowRunningEditor) {
+    const reason = editorPreconditionReason((deps.detectEditors ?? (() => detectRunningEditors()))());
+    if (reason) return refuse(reason, binary);
   }
+  const lease = deps.editorLease ?? drainEditorLease;
+  const held = lease.acquire();
+  if (!held.ok) return refuse(leaseConflictReason(held.conflict), binary);
 
+  const stamp = now();
+  try {
+    return spec.scenario
+      ? await runScenario(spec, { uproject, binary, run, now, env, verifyVisual: deps.verifyVisual }, stamp)
+      : await runPythonProbe(spec, { uproject, binary, run, now, env, verifyVisual: deps.verifyVisual }, stamp, fileExists);
+  } finally {
+    lease.release();
+  }
+}
+
+/** Editor-Python mode: write the probe, launch, read the abslog, verify the capture. */
+async function runPythonProbe(
+  spec: ExperimentSpec,
+  ctx: ScenarioCtx,
+  stamp: number,
+  fileExists: (p: string) => boolean,
+): Promise<ExperimentResult> {
+  const { uproject, binary, run, now, env } = ctx;
   const outPath = join(tmpdir(), `pof_exp_${stamp}.png`).replace(/\\/g, '/');
   const probePath = join(tmpdir(), `pof_exp_probe_${stamp}.py`).replace(/\\/g, '/');
   const abslog = join(tmpdir(), `pof_exp_${stamp}.log`).replace(/\\/g, '/');
@@ -234,7 +279,7 @@ export async function runExperiment(spec: ExperimentSpec, deps: RunnerDeps = {})
 
   let verdict: ExperimentResult['verdict'];
   if (spec.verify && screenshotPath) {
-    const verify = deps.verifyVisual ?? postVerifyVisual(env);
+    const verify = ctx.verifyVisual ?? postVerifyVisual(env);
     verdict = await verify(screenshotPath, spec.verify.mode ?? 'character', spec.verify.prompt);
   }
 
@@ -317,20 +362,12 @@ async function runScenario(spec: ExperimentSpec, ctx: ScenarioCtx, stamp: number
 
 // ── default seams (not unit-tested; exercised by the live acceptance run) ──────
 
-const defaultRun: RunFn = async (binary, args, settleMs) => {
-  const { spawn, execFileSync } = await import('node:child_process');
-  await new Promise<void>((resolve) => {
-    const child = spawn(binary, args, { windowsHide: true, stdio: 'ignore' });
-    const done = () => {
-      try { if (child.pid) execFileSync('taskkill', ['/PID', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch { /* gone */ }
-      try { execFileSync('taskkill', ['/IM', 'UnrealEditor.exe', '/F'], { stdio: 'ignore' }); } catch { /* none */ }
-      try { execFileSync('taskkill', ['/IM', 'UnrealEditor-Cmd.exe', '/F'], { stdio: 'ignore' }); } catch { /* none */ }
-      resolve();
-    };
-    const timer = setTimeout(done, settleMs);
-    child.on('error', () => { clearTimeout(timer); resolve(); });
-  });
-};
+/**
+ * Spawn the editor, let it settle, then kill ONLY our own PID tree. Previously this also issued
+ * two unscoped `taskkill /IM UnrealEditor*.exe /F` sweeps — see `editor-process.ts` for why they
+ * are gone and must never come back.
+ */
+const defaultRun: RunFn = createExperimentRun();
 
 function postVerifyVisual(env: EnvLike) {
   return async (screenshotPath: string, mode: string, prompt: string) => {

@@ -25,6 +25,7 @@ export async function POST(req: NextRequest) {
       settleMs: body.settleMs,
       uproject: body.uproject,
       engine: body.engine,
+      allowRunningEditor: body.allowRunningEditor,
     });
     return apiSuccess({ jobId }, 202);
   } catch (e) {
