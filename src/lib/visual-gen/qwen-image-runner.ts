@@ -2,6 +2,13 @@
  * Qwen-Image cloud 2D runner — a text-to-image route next to the Leonardo
  * (`scripts/visual-gen/pof_leonardo.mjs`) front of the pipeline.
  *
+ * REACH: this used to propose itself as "a route next to Leonardo" while having zero
+ * production importers — a complete runner nothing in the app could reach. It is now
+ * one of the two runner-backed entries in the 2D provider registry
+ * (`src/lib/visual-gen/image-providers.ts`), driven by
+ * POST /api/visual-gen/generate-2d from the Asset Forge's 2D Image tab. The gap-loop
+ * batch scripts remain a separate, script-only caller path.
+ *
  * Why add it: Qwen-Image 3.0's stated strength is the one thing the Leonardo
  * `gpt-image-2` front is weakest at — READABLE TEXT IN THE IMAGE (down to ~10px,
  * 12 languages, 20+ fonts) and multi-layer UI / infographic layouts in a single

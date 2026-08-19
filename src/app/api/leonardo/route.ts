@@ -7,6 +7,20 @@ import { logger } from '@/lib/logger';
 
 type Mode = 'image' | 'upscale' | 'unzoom' | 'texture3d';
 
+/**
+ * The hardcoded-Leonardo route. Its in-app callers are the Material Lab's
+ * upscale/unzoom/controlnet/inpaint actions, each of which needs an opaque Leonardo
+ * image id the user types by hand.
+ *
+ * `mode: 'image'` (prompt → image) is NOT the app's 2D generation front. That is
+ * POST /api/visual-gen/generate-2d, which resolves a PROVIDER from the 2D registry
+ * (`src/lib/visual-gen/image-providers.ts`) — Leonardo or Qwen-Image — refuses with a
+ * reason when the chosen one has no key here, calls `generateImage` directly, and
+ * saves the bytes to `generated/images/` so the result is retrievable. This route
+ * stays as the Leonardo-specific surface (and the `applyStyleDna` path the gap-loop
+ * batch scripts use); the 2D front does not send style DNA — see `STYLE_DNA_REACH`.
+ */
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
