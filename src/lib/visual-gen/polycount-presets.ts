@@ -17,7 +17,8 @@
  * head). A simple asset should be requested well under its class ceiling. See the
  * `ai-3d-model-tier-and-budget-shaping` gotcha in `knowledge/ue-gotchas.ts`.
  */
-import type { CritiqueThresholds } from './mesh-critique';
+import type { CritiqueDeps, CritiqueThresholds } from './mesh-critique';
+import { nominalExtentFor, type SizeRequest } from './world-scale';
 
 export type AssetClass = 'character' | 'weapon' | 'prop' | 'environment' | 'modular-part';
 
@@ -133,8 +134,67 @@ export function planPartBudget(assetClass: string, parts: number): PartBudget | 
   };
 }
 
+export interface ResolvedAssetClass {
+  /** The recognised class, or undefined — a class is NEVER invented for a caller. */
+  assetClass?: AssetClass;
+  /** One line naming what the mesh will actually be graded against. */
+  gradedAs: string;
+}
+
+/**
+ * Resolve the `assetClass` a caller sent into the class the gate will grade by, plus a
+ * sentence stating it. Pure.
+ *
+ * The stated default is **unclassified**: absent (or unrecognised) input does NOT get
+ * silently promoted to some "typical" class, because that would grade a character
+ * against a prop's component budget and fail it for being assembled. It degrades to the
+ * class-blind defaults — the same behaviour as before — with the difference that the
+ * degradation is now REPORTED instead of invisible. An unknown string in particular used
+ * to vanish into an empty threshold override with no signal anywhere.
+ */
+export function resolveAssetClass(assetClass: string | undefined): ResolvedAssetClass {
+  if (!assetClass) {
+    return {
+      gradedAs: `no assetClass supplied — graded class-blind against the default ceilings; send one of ${ASSET_CLASS_IDS.join(', ')} to grade against a class budget`,
+    };
+  }
+  const preset = polycountFor(assetClass);
+  if (!preset) {
+    return {
+      gradedAs: `unrecognised assetClass "${assetClass}" — graded class-blind against the default ceilings; known classes are ${ASSET_CLASS_IDS.join(', ')}`,
+    };
+  }
+  return {
+    assetClass: preset.assetClass,
+    gradedAs: `graded against the ${preset.label} budget (${preset.faceLimit} tri target, warn above ${preset.warnAbove}, up to ${preset.maxComponents} parts)`,
+  };
+}
+
 /** Class-aware Tier-1 gate thresholds — empty for unknown classes (defaults apply). */
 export function critiqueThresholdsFor(assetClass: string): Partial<CritiqueThresholds> {
   const p = polycountFor(assetClass);
   return p ? { maxFacesWarn: p.warnAbove, maxComponentsFail: p.maxComponents } : {};
+}
+
+/**
+ * Tier-1 gate deps for a generator that cannot be handed a face budget (TripoSR,
+ * Hunyuan3D). Pure.
+ *
+ * Deliberately sets `thresholds` + `size` but NOT `budget`: `budget` means "the budget
+ * this generation was REQUESTED at", and these providers accept no such request — a
+ * fabricated one would report "the provider ignored your budget" about a budget nobody
+ * ever sent. The class CEILING (`warnAbove`) is the honest class-aware line for them,
+ * and it is what these two stores were missing entirely: every local mesh was graded
+ * against the class-blind 200k default, which is the exact bug `polycount-presets`
+ * exists to fix.
+ */
+export function localCritiqueDeps(
+  assetClass: string | undefined,
+  targetExtentM?: number,
+): { deps: CritiqueDeps; gradedAs: string } {
+  const resolved = resolveAssetClass(assetClass);
+  const thresholds = resolved.assetClass ? critiqueThresholdsFor(resolved.assetClass) : {};
+  const extent = targetExtentM ?? nominalExtentFor(resolved.assetClass);
+  const size: SizeRequest | undefined = extent !== undefined ? { targetExtentM: extent } : undefined;
+  return { deps: { thresholds, size }, gradedAs: resolved.gradedAs };
 }

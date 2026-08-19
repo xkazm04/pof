@@ -7,7 +7,7 @@ import { parseImageDataUrl } from '@/lib/visual-gen/triposr-runner';
 import { startTriposrJob } from '@/lib/visual-gen/triposr-job-store';
 import { startHunyuanJob } from '@/lib/visual-gen/hunyuan-job-store';
 import { startTripoJob } from '@/lib/visual-gen/tripo-job-store';
-import { polycountFor } from '@/lib/visual-gen/polycount-presets';
+import { polycountFor, resolveAssetClass } from '@/lib/visual-gen/polycount-presets';
 import { providerFaceLimit } from '@/lib/visual-gen/face-budget';
 import { tripoModelFor } from '@/lib/visual-gen/tripo-models';
 
@@ -56,6 +56,7 @@ export async function POST(request: NextRequest) {
     }
     // The preset budget is authored in TRIANGLES; `providerFaceLimit` converts it to the
     // number the provider's `face_limit` actually counts (halved for quad topology).
+    const gradedAs = resolveAssetClass(assetClass).gradedAs;
     const triangleBudget = assetClass ? polycountFor(assetClass)?.faceLimit : undefined;
     const faceLimit = triangleBudget !== undefined
       ? providerFaceLimit({ triangleBudget, topology: 'triangles' })
@@ -84,10 +85,15 @@ export async function POST(request: NextRequest) {
       const inPath = imageToFile(providerId, stamp);
       if (!inPath) return apiError('imageDataUrl must be a base64 PNG/JPG/WebP data URL', 400);
 
+      // `assetClass` is OPTIONAL and its default is stated, never guessed: absent (or
+      // unrecognised) input grades class-blind and `gradedAs` says so, because promoting
+      // a missing class to a "typical" one would fail an assembled character against a
+      // prop's component budget. Until this arrived, the local stores graded every mesh
+      // against the class-blind 200k ceiling with nothing anywhere admitting it.
       const jobId = providerId === 'hunyuan3d'
-        ? startHunyuanJob({ imagePath: inPath, outputPath })
-        : startTriposrJob({ imagePath: inPath, outputPath, mcResolution, fidelity: true });
-      return apiSuccess({ jobId, provider: providerId, mode }, 202);
+        ? startHunyuanJob({ imagePath: inPath, outputPath, assetClass })
+        : startTriposrJob({ imagePath: inPath, outputPath, mcResolution, fidelity: true, assetClass });
+      return apiSuccess({ jobId, provider: providerId, mode, gradedAs: resolveAssetClass(assetClass).gradedAs }, 202);
     }
 
     if (providerId === 'tripo3d') {
@@ -100,14 +106,14 @@ export async function POST(request: NextRequest) {
       if (mode === 'text-to-3d') {
         if (!prompt?.trim()) return apiError('Missing prompt for text-to-3d', 400);
         const jobId = startTripoJob({ mode: 'text-to-3d', prompt, outputPath, pbr: true, faceLimit, assetClass, maxAttempts, ...tripoPin });
-        return apiSuccess({ jobId, provider: 'tripo3d', mode }, 202);
+        return apiSuccess({ jobId, provider: 'tripo3d', mode, gradedAs }, 202);
       }
       if (mode === 'image-to-3d') {
         if (!imageDataUrl) return apiError('Missing imageDataUrl for image-to-3d', 400);
         const inPath = imageToFile('tripo3d', stamp);
         if (!inPath) return apiError('imageDataUrl must be a base64 PNG/JPG/WebP data URL', 400);
         const jobId = startTripoJob({ mode: 'image-to-3d', imagePath: inPath, outputPath, pbr: true, faceLimit, assetClass, maxAttempts, ...tripoPin });
-        return apiSuccess({ jobId, provider: 'tripo3d', mode }, 202);
+        return apiSuccess({ jobId, provider: 'tripo3d', mode, gradedAs }, 202);
       }
       return apiError('tripo3d supports text-to-3d and image-to-3d', 400);
     }

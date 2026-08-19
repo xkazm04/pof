@@ -8,7 +8,7 @@
  * 2D input) lives upstream and isn't wired yet.
  */
 import { runTriposr, type TriposrSpec, type TriposrResult } from './triposr-runner';
-import { critiqueMesh, type CritiqueResult } from './mesh-critique';
+import { critiqueMesh, ungatedReason, CRITIQUE_CALIBRATION_CAVEAT, type CritiqueResult } from './mesh-critique';
 
 export interface Variant {
   label: string;
@@ -20,8 +20,10 @@ export interface GenCandidate {
   variant: string;
   result: TriposrResult;
   critique?: CritiqueResult;
-  /** 0–100: blends geometry health + CLIP fidelity. */
+  /** 0–100, over the components that were actually measured (see `scoreLabel`). */
   combinedScore: number;
+  /** What that number is made of — geometry+fidelity, geometry-only, or ungraded. */
+  scoreLabel: string;
 }
 
 export interface BestOfResult {
@@ -29,11 +31,59 @@ export interface BestOfResult {
   candidates: GenCandidate[];
 }
 
-/** Blend the deterministic geometry score (0–100) with CLIP fidelity (0–1 → 0–100). Pure. */
+/** Which components a combined score was actually computed from. */
+export type ScoreBasis = 'geometry+fidelity' | 'geometry-only' | 'ungraded';
+
+export interface ScoreBreakdown {
+  score: number;
+  basis: ScoreBasis;
+  /** One line naming what the number is made of — never a bare number. */
+  label: string;
+}
+
+/**
+ * Score a roll from the components that were actually MEASURED. Pure.
+ *
+ * The old blend was a fixed `0.5*geometry + 0.5*clipMax`. Only TripoSR reports a CLIP
+ * similarity; `TripoResult` has no `clipMax` at all, so every cloud roll was scored as
+ * though its fidelity had been measured at zero — a structurally perfect Tripo mesh
+ * read "score 50", and the cap was invisible in the number. Averaging in a component
+ * nobody measured is a lie about precision, so a missing component is now DROPPED and
+ * the basis is stated instead.
+ */
+export function scoreBreakdown(result: { clipMax?: number }, critique?: CritiqueResult): ScoreBreakdown {
+  const graded = critique?.ok === true && typeof critique.score === 'number';
+  const geometry = graded ? (critique?.score ?? 0) : 0;
+  const clip = result.clipMax;
+
+  if (!graded) {
+    return {
+      score: 0,
+      basis: 'ungraded',
+      label: critique?.unavailable
+        ? 'score 0 (ungraded — the geometry critic could not run, so nothing was measured)'
+        : 'score 0 (ungraded — no geometry critique completed for this roll)',
+    };
+  }
+  if (typeof clip !== 'number' || !Number.isFinite(clip)) {
+    return {
+      score: Math.round(geometry),
+      basis: 'geometry-only',
+      label: `score ${Math.round(geometry)} (geometry-only — this provider reports no CLIP fidelity, so none is averaged in)`,
+    };
+  }
+  const fidelity = Math.round(clip * 100);
+  const score = Math.round(0.5 * geometry + 0.5 * fidelity);
+  return {
+    score,
+    basis: 'geometry+fidelity',
+    label: `score ${score} (geometry ${Math.round(geometry)} + CLIP fidelity ${fidelity}, evenly weighted)`,
+  };
+}
+
+/** The combined score alone. See {@link scoreBreakdown} for what it is made of. Pure. */
 export function combinedScore(result: { clipMax?: number }, critique?: CritiqueResult): number {
-  const geometry = critique?.score ?? 0;
-  const fidelity = Math.round((result.clipMax ?? 0) * 100);
-  return Math.round(0.5 * geometry + 0.5 * fidelity);
+  return scoreBreakdown(result, critique).score;
 }
 
 type Runner = (spec: TriposrSpec) => Promise<TriposrResult>;
@@ -68,7 +118,8 @@ export async function generateBestOf(
     if (result.ok && result.meshPath) {
       try { critique = await critic(result.meshPath); } catch { /* critique is best-effort */ }
     }
-    candidates.push({ variant: v.label, result, critique, combinedScore: combinedScore(result, critique) });
+    const breakdown = scoreBreakdown(result, critique);
+    candidates.push({ variant: v.label, result, critique, combinedScore: breakdown.score, scoreLabel: breakdown.label });
   }
 
   const best = candidates.filter((c) => c.result.ok).sort((a, b) => b.combinedScore - a.combinedScore)[0];
@@ -113,6 +164,10 @@ export interface RollAttempt<R> {
   result: R;
   critique?: CritiqueResult;
   score: number;
+  /** What the score was computed from — a bare number cannot say "half of me is missing". */
+  scoreBasis: ScoreBasis;
+  /** The score stated in words, e.g. "score 100 (geometry-only — …)". */
+  scoreLabel: string;
 }
 
 export interface RetryOutcome<R> {
@@ -121,7 +176,14 @@ export interface RetryOutcome<R> {
   best?: RollAttempt<R>;
   /** True only when a roll actually cleared the gate. Never inferred from `best`. */
   accepted: boolean;
+  /**
+   * True when the mesh was delivered with NOTHING having graded it (the critic could not
+   * run). Distinct from `accepted: false`, which means a gate ran and rejected it.
+   */
+  ungated?: boolean;
   reason: string;
+  /** The calibration caveat, present only when a real failing verdict is being reported. */
+  note?: string;
 }
 
 /**
@@ -160,11 +222,29 @@ export async function generateUntilAcceptable<R extends MeshRoll>(
     if (result.ok && result.meshPath) {
       try { critique = await critic(result.meshPath); } catch { /* critique is best-effort */ }
     }
-    const entry: RollAttempt<R> = { attempt: n, result, critique, score: combinedScore(result, critique) };
+    const breakdown = scoreBreakdown(result, critique);
+    const entry: RollAttempt<R> = {
+      attempt: n, result, critique,
+      score: breakdown.score, scoreBasis: breakdown.basis, scoreLabel: breakdown.label,
+    };
     attempts.push(entry);
 
     if (result.ok && isAcceptable(critique)) {
-      return { attempts, best: entry, accepted: true, reason: `accepted on attempt ${n} of at most ${maxAttempts}` };
+      return { attempts, best: entry, accepted: true, reason: `accepted on attempt ${n} of at most ${maxAttempts} — ${breakdown.label}` };
+    }
+
+    // The critic could not RUN. Re-rolling cannot change that: an absent gate rejects
+    // every mesh identically, so each further attempt is a paid provider task bought
+    // against an outcome it can never influence. Stop at one roll and say what is
+    // missing, instead of blaming the mesh for a tool that was never there.
+    if (critique?.unavailable) {
+      return {
+        attempts,
+        best: result.ok ? entry : undefined,
+        accepted: false,
+        ungated: true,
+        reason: ungatedReason(critique),
+      };
     }
 
     // Re-rolling only buys anything when the failure is a dice roll. Measured against the
@@ -180,6 +260,7 @@ export async function generateUntilAcceptable<R extends MeshRoll>(
         best,
         accepted: false,
         reason: `stopped after ${n} attempts — the same failure reproduced, so it is systematic rather than a bad roll: ${critique?.reasons?.[0] ?? 'unknown'}`,
+        note: CRITIQUE_CALIBRATION_CAVEAT,
       };
     }
     previousFailure = failure;
@@ -191,7 +272,8 @@ export async function generateUntilAcceptable<R extends MeshRoll>(
     best,
     accepted: false,
     reason: best
-      ? `no roll cleared the gate in ${maxAttempts} attempts — best was attempt ${best.attempt} (score ${best.score})`
+      ? `no roll cleared the gate in ${maxAttempts} attempts — best was attempt ${best.attempt} (${best.scoreLabel})`
       : `no roll produced a mesh in ${maxAttempts} attempts`,
+    ...(best ? { note: CRITIQUE_CALIBRATION_CAVEAT } : {}),
   };
 }

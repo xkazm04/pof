@@ -248,6 +248,77 @@ export interface CritiqueResult extends Partial<Scorecard> {
   ok: boolean;
   metrics?: MeshMetrics;
   error?: string;
+  /**
+   * The critic could not RUN at all (missing env var / missing binary / missing script)
+   * — categorically different from `ok: false`, which means it ran and the mesh failed.
+   *
+   * Nothing downstream could previously tell those apart, so an absent critic read as a
+   * mesh problem: an errored critique is never "acceptable", so a retry loop spent every
+   * paid attempt against a gate structurally incapable of passing, and the delivered
+   * reason blamed the mesh. `error` carries WHAT is missing in this state.
+   */
+  unavailable?: boolean;
+}
+
+/**
+ * The one honest caveat that belongs beside any FAILING Tier-1 verdict.
+ *
+ * On record from the smart-low-poly arena: the gate reads RAW pre-retopo generator
+ * output against thresholds authored for finished, game-ready meshes, so it fails near
+ * 100% of raw deliveries on face count alone regardless of how good the mesh is.
+ * Recalibrating the thresholds is a separate tuning decision; saying so is not.
+ */
+export const CRITIQUE_CALIBRATION_CAVEAT =
+  'gate calibrated for finished meshes; raw provider output may fail on face count alone';
+
+/** Build the distinct "the critic could not run" outcome. Pure. */
+export function critiqueUnavailable(reason: string): CritiqueResult {
+  return { ok: false, unavailable: true, error: reason };
+}
+
+/** The sentence a delivered-but-ungraded mesh is reported with. Pure. */
+export function ungatedReason(critique: CritiqueResult | undefined): string {
+  return `critique unavailable: ${critique?.error ?? 'reason not reported'} — mesh delivered ungated`;
+}
+
+export interface GateSummary {
+  /** True ONLY when a critique actually ran and did not fail the mesh. */
+  accepted: boolean;
+  /** True when nothing graded the mesh — it was delivered, not passed. */
+  ungated: boolean;
+  reason: string;
+  /** The calibration caveat, present only where a real failing verdict is shown. */
+  note?: string;
+}
+
+/**
+ * Turn one critique into the gate fields a job reports. Pure.
+ *
+ * Single-shot stores (TripoSR / Hunyuan) have no retry loop to derive these from, and
+ * without them a job that was never graded looked exactly like one that passed.
+ */
+export function summarizeGate(critique: CritiqueResult | undefined): GateSummary {
+  if (!critique) {
+    return { accepted: false, ungated: true, reason: 'no mesh was produced, so nothing was graded' };
+  }
+  if (critique.unavailable) {
+    return { accepted: false, ungated: true, reason: ungatedReason(critique) };
+  }
+  if (!critique.ok) {
+    return { accepted: false, ungated: true, reason: `critique did not complete: ${critique.error ?? 'unknown error'} — mesh delivered ungated` };
+  }
+  if (critique.verdict === undefined) {
+    return { accepted: false, ungated: true, reason: 'critique returned no verdict — mesh delivered ungated' };
+  }
+  if (critique.verdict === 'fail') {
+    return {
+      accepted: false,
+      ungated: false,
+      reason: `Tier-1 gate FAIL (score ${critique.score ?? 0}): ${critique.reasons?.[0] ?? 'no reason reported'}`,
+      note: CRITIQUE_CALIBRATION_CAVEAT,
+    };
+  }
+  return { accepted: true, ungated: false, reason: `Tier-1 gate ${critique.verdict} (score ${critique.score ?? 0})` };
 }
 
 type RunFn = (cmd: string, args: string[], timeoutMs: number) => Promise<{ stdout: string; code: number | null }>;
@@ -265,16 +336,23 @@ export interface CritiqueDeps {
   size?: SizeRequest;
 }
 
-/** Critique a generated mesh: run the trimesh script (via the TripoSR venv) + score it. */
+/**
+ * Critique a generated mesh: run the trimesh script (via the TripoSR venv) + score it.
+ *
+ * Three outcomes, deliberately distinct: `unavailable` (the critic could not run — the
+ * caller must NOT read this as a mesh problem, and must not pay for a re-roll against
+ * it), `ok: false` (it ran and could not produce metrics), and a scored card.
+ */
 export async function critiqueMesh(glbPath: string, deps: CritiqueDeps = {}): Promise<CritiqueResult> {
   const env = deps.env ?? process.env;
   const fileExists = deps.fileExists ?? existsSync;
   const run = deps.run ?? defaultRun;
   const root = deps.triposrRoot ?? env.POF_TRIPOSR_ROOT;
-  if (!root) return { ok: false, error: 'POF_TRIPOSR_ROOT not set (the TripoSR venv has trimesh)' };
+  if (!root) return critiqueUnavailable('POF_TRIPOSR_ROOT is not set (the TripoSR venv is where trimesh lives)');
   const py = join(root, '.venv', 'Scripts', 'python.exe');
-  if (!fileExists(py)) return { ok: false, error: `venv python not found at ${py}` };
+  if (!fileExists(py)) return critiqueUnavailable(`venv python not found at ${py}`);
   const script = join(process.cwd(), 'scripts', 'visual-gen', 'pof_mesh_critique.py');
+  if (!fileExists(script)) return critiqueUnavailable(`critique script not found at ${script}`);
 
   const { stdout } = await run(py, [script, '--mesh', glbPath], 60_000);
   const parsed = parseCritiqueMetrics(stdout);

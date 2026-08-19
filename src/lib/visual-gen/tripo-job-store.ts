@@ -8,7 +8,7 @@
  */
 import { runTripo, type TripoSpec, type TripoResult } from './tripo-runner';
 import { critiqueMesh, type CritiqueDeps, type CritiqueResult } from './mesh-critique';
-import { critiqueThresholdsFor } from './polycount-presets';
+import { critiqueThresholdsFor, resolveAssetClass } from './polycount-presets';
 import { generateUntilAcceptable } from './best-of-n';
 import type { BudgetRequest } from './face-budget';
 import { nominalExtentFor, type SizeRequest } from './world-scale';
@@ -45,8 +45,16 @@ export interface TripoJob {
    * separate from `status` so a failing mesh cannot read as a clean result.
    */
   accepted?: boolean;
+  /**
+   * True when NOTHING graded the delivered mesh (the Tier-1 critic could not run at
+   * all). `accepted: false` alone cannot express that: it reads as "a gate looked at
+   * this mesh and rejected it", which is a different — and much harsher — claim.
+   */
+  ungated?: boolean;
   /** Why the regeneration loop stopped — honest when nothing cleared the gate. */
   gateReason?: string;
+  /** What the mesh was graded against (class budget, or class-blind and why). */
+  gradedAs?: string;
   error?: string;
   startedAt: number;
 }
@@ -97,6 +105,7 @@ export function startTripoJob(spec: TripoSpec, runner: Runner = runTripo, critic
 
   const maxAttempts = Math.min(Math.max(1, spec.maxAttempts ?? 1), MAX_GENERATION_ATTEMPTS);
   const critiqueDeps = critiqueDepsForSpec(spec);
+  job.gradedAs = resolveAssetClass(spec.assetClass).gradedAs;
 
   generateUntilAcceptable<TripoResult>(
     (attempt) => runner({ ...spec, outputPath: attemptPath(spec.outputPath, attempt) }),
@@ -110,7 +119,10 @@ export function startTripoJob(spec: TripoSpec, runner: Runner = runTripo, critic
       job.critique = delivered?.critique;
       job.attempts = outcome.attempts.length;
       job.accepted = outcome.accepted;
-      job.gateReason = outcome.reason;
+      job.ungated = outcome.ungated === true;
+      // The calibration caveat rides on the reason itself, so the one field the status
+      // route already projects carries it to wherever the verdict is shown.
+      job.gateReason = outcome.note ? `${outcome.reason} — note: ${outcome.note}` : outcome.reason;
       const produced = delivered?.result.ok === true;
       job.status = produced ? 'done' : 'error';
       if (!produced) job.error = delivered?.result.error;
