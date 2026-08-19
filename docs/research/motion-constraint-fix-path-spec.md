@@ -1,8 +1,8 @@
 # Constraint-conditioned motion fix path (spec)
 
-**Status:** specced, NOT built. Blocked on a local motion-engine install (see
-[`ardy-text-to-motion-spec.md`](./ardy-text-to-motion-spec.md) — the install is currently
-ABSENT from this machine).
+**Status:** the loop-closure half of the mechanism is **PROVEN LIVE 2026-08-19** against a
+reinstalled ARDY (see [`ardy-text-to-motion-spec.md`](./ardy-text-to-motion-spec.md)). The
+critique→constraint mapping for the *aesthetic* dimensions is still unbuilt.
 **Source run:** `/research` 2026-08-19, "Text to Animation in UE 5.8 | DDS Motion + NVIDIA
 Kimodo" (Dark Dojo Studios).
 **Effort:** L.
@@ -112,12 +112,50 @@ Enforcement strength is a first-class knob: `--cfg_weight <text_weight> <constra
 (default `2.0 2.0`), so the fix path can push constraint adherence without re-weighting the
 prompt.
 
-### Still to verify against a live run
+### PROVEN 2026-08-19 — the loop-closure repair, measured end to end
 
-- That seed + constraints is deterministic (needed for "correct this clip" to mean anything).
+Model `ARDY-Core-RP-20FPS-Horizon40`, prompt "a person walks forward at a steady pace",
+seed 1, 80 frames @ 20 fps, graded by `scripts/visual-gen/ardy/pof_loop_closure.py`:
+
+| run | poseGap | worstJoint | velJump | rootTravel |
+|---|---|---|---|---|
+| raw generation | 141.80 mm | 381.01 mm | 25.94 mm | 5645.6 mm |
+| pin LAST frame only → **worse** | 153.46 | 436.04 | 39.64 | 5641.7 |
+| pin BOTH endpoints → **pose solved** | **0.0001** | **0.0002** | 29.28 | 5645.6 |
+| + velocity-matched 3rd frame → **best** | **0.0001** | **0.0002** | **15.73** | 5645.6 |
+
+**Raw text→motion output does not loop.** The model generates a *take*, not a cycle — it has
+no notion of returning to its start pose. Every raw locomotion clip measured (walk 141.8, run
+197.1) fails; only a near-static idle (10.1) comes close. Any Blend Space built on raw output
+is sliding, and nothing in PoF detected that before this gate.
+
+**Constraints are honoured EXACTLY.** The constrained frame matched its target to **0.0 mm**.
+The mechanism is not approximate — it is a hard pin.
+
+**Three findings that a spec written blind would have gotten wrong:**
+
+1. **Pinning only the last frame makes the loop WORSE** (141.8 → 153.5). The pin lands
+   perfectly, but regeneration moves the *new* clip's first frame (153.5 mm off the target),
+   so the seam opens at the other end. **Always pin both endpoints to one shared pose.**
+2. **Pose closure does not imply a usable loop.** At 0.0001 mm the poses are identical and a
+   first-frame-equals-last-frame check — the criterion the source video states — reports a
+   flawless loop. `velJump` stayed at 29.28 mm: the clip still hitches. Adding a third
+   velocity-matched frame (step backward from the seam pose by the same per-joint rotation
+   delta as frame 0→1) roughly halves it, to 15.73 mm.
+3. **`--cfg_weight`'s constraint component is NOT the enforcement lever.** Sweeping it
+   2.0 → 4.0 → 8.0 left pose closure identical (the pin is already exact) and made the seam
+   *worse* (15.73 → 15.85 → 18.39): the extra weight only bends the surrounding motion.
+   Leave it at the default and change the constraint instead.
+
+Net: a walk cycle moves from **fail** (141.8 mm) to **warn** (velocity-only, 15.73 mm vs a
+15 mm pass threshold) while still travelling its full 5.6 m. Closing that last gap is the
+open question — likely a wider velocity ramp at each end rather than a single frame.
+
+### Still to verify
+
+- Whether a 2–3 frame ramp at each end (rather than one frame) reaches a full `pass`.
 - Whether `frame_indices` are clamped or wrapped at the clip boundary.
-- Whether a single-frame `fullbody` constraint at the last frame actually pulls the seam
-  closed in practice, or fights the model's own momentum and needs a 2–3 frame ramp.
+- Whether the same two-endpoint recipe holds for run/sprint, whose seam velocity is larger.
 
 Everything downstream of the mapping is engine-specific; everything upstream of it
 (gates, verdicts) already exists.

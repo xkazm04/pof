@@ -1,25 +1,50 @@
-# ARDY text→motion engine for PoF (PROTOTYPE PROVEN 2026-07-15 — INSTALL NOW ABSENT)
+# ARDY text→motion engine for PoF (PROVEN 2026-07-15 · REINSTALLED 2026-08-19)
 
 > Source: /research run 2026-07-14 (Stefan 3D AI, "NVIDIA ARDY: The Real-Time Leap in AI Animation").
 > Verified: [nv-tlabs/ardy](https://github.com/nv-tlabs/ardy) — SIGGRAPH 2026, NVIDIA Toronto AI Lab.
 > Status: **END-TO-END PROVEN LIVE 2026-07-15** — text prompt → UE 5.8 AnimSequence, fully headless, $0.
 
-> ## ⚠️ 2026-08-19 — THE INSTALL IS GONE; THIS RECIPE IS NOT CURRENTLY RUNNABLE
+> ## 2026-08-19 — the install VANISHED and was REBUILT the same session
 >
-> An uncapped search of the machine (`find /c/Users/kazda -maxdepth 4 -iname "ardy*"`) returns
-> **nothing**. `C:/Users/kazda/kiro/ardy` — the venv, the weights, the locally-assembled
-> `text_encoders/` that solved the gated-Llama problem — is absent. `POF_ARDY_ROOT` is unset.
+> An uncapped search (`find /c/Users/kazda -maxdepth 4 -iname "ardy*"`) returned **nothing**:
+> the venv, the weights and the locally-assembled `text_encoders/` were all gone, while the
+> committed converters survived. The recipe below still read "PROVEN LIVE" — the docs and the
+> machine had silently diverged, and only a filesystem check could tell them apart.
+> **A doc claiming a proven pipeline should carry a runnable preflight, not prose.**
 >
-> What SURVIVES is everything that was committed: the 6 converters in
-> `scripts/visual-gen/ardy/` and the 12 `ardy_*.py` scripts in the UE project's
-> `Content/Python/`. What is LOST is the model install itself, so every step below from
-> "Generate" onward is currently unrunnable.
+> **Rebuilt and re-verified 2026-08-19** at `C:/Users/kazda/kiro/ardy`: torch 2.13.0+cu126
+> (`cuda_avail True`), ardy 0.2.0 editable, transformers 5.8.1, numpy 1.26.4,
+> `motion_correction` 1.0.0 C++ ext, text_encoders reassembled. Generation confirmed on
+> `ARDY-Core-RP-20FPS-Horizon40` — 5 clips, <1 s GPU each after load.
+>
+> ### NEW GOTCHA — `pip install -e .` does NOT build the C++ extension, and the failure is SILENT
+>
+> This spec previously implied the motion-correction extension comes with the root editable
+> install. It does not. `motion_correction` is a **separate package** under `MotionCorrection/`
+> with its own `setup.py` + `CMakeLists.txt`, and `ardy/postprocess.py:309` imports it
+> lowercase. Two traps:
+>
+> - `pip install ./MotionCorrection` fails with `RuntimeError: CMake must be installed` even
+>   when cmake IS in the venv — pip's **isolated build env** cannot see it. Working command:
+>   `pip install ./MotionCorrection --no-cache-dir --no-build-isolation` with the venv's
+>   `Scripts/` on PATH (`pip install cmake` first).
+> - Without it, `import MotionCorrection` still **succeeds** — Python resolves the repo's
+>   source folder as an empty namespace package (`__file__ is None`, `dir()` empty). So the
+>   foot-skate post-process is silently absent and clips generate without any error.
+>   Verify with `from motion_correction import motion_postprocess`, never `import MotionCorrection`.
+>
+> ### The gated-Llama workaround still works, and all three repos are UNGATED
+>
+> `McGill-NLP/LLM2Vec-Meta-Llama-3-8B-Instruct-mntp`, its `-supervised` sibling and
+> `NousResearch/Meta-Llama-3-8B-Instruct` all report `gated: False`. Assemble by fetching the
+> McGill repo whole, then overlaying ONLY `model-*.safetensors` + `model.safetensors.index.json`
+> from the Nous mirror — McGill's `config.json` must win (`architectures: ['LlamaEncoderModel']`;
+> the Nous one would restore causal-LM behaviour). A single `lm_head.weight UNEXPECTED` in the
+> load report is the expected, benign artifact.
 >
 > Consequence for `/status`: `characters::Combat Anim`, `cutscenes::Blocking / Body Anim` and
-> `spellbook::Animation` are still `trueEngine: None, generatorWired: false` in
-> `src/lib/status/step-facts.json` — and now the engine that would power them is not on disk
-> either. **Reinstalling ARDY is the prerequisite for every animation-engine item in the
-> backlog.** Budget the gated-Llama workaround again (§1 below documents it).
+> `spellbook::Animation` remain `trueEngine: None, generatorWired: false` — the engine is back
+> on disk, but wiring those steps is still unbuilt work.
 >
 > ### Lineage correction — ARDY is the NEWER model, Kimodo is the earlier one
 >
@@ -55,7 +80,9 @@
 ## Proven pipeline (2026-07-15)
 
 Install at `C:/Users/kazda/kiro/ardy` (`.venv`, torch 2.13+cu126, transformers 5.8.1; `pip install -e .
---no-cache-dir` — the C++ motion-correction extension builds cleanly with pip-provided CMake + VS2022).
+--no-cache-dir`, THEN `pip install ./MotionCorrection --no-cache-dir --no-build-isolation` — see the
+2026-08-19 gotcha above; the root editable install does NOT build the C++ extension and its absence
+is silent).
 Four game verbs generated and imported end-to-end:
 
 1. **Generate** — `TEXT_ENCODERS_DIR=<root>/text_encoders TEXT_ENCODER_MODE=local .venv/Scripts/python

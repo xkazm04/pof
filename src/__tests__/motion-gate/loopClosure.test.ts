@@ -155,6 +155,49 @@ describe('parseLoopMetrics against real extractor output', () => {
   });
 });
 
+describe('real ARDY clips (measured 2026-08-19, ARDY-Core-RP-20FPS-Horizon40)', () => {
+  // Captured from pof_loop_closure.py on real generated motion, seed 1, 80 frames @ 20fps,
+  // prompt "a person walks forward at a steady pace". These pin the gate against the
+  // behaviour of an actual text-to-motion model rather than only synthetic fixtures.
+  const raw = (o: Partial<LoopMetrics> = {}): LoopMetrics => ({
+    poseGapMm: 141.8048, worstJointMm: 381.0114, velJumpMm: 25.9432,
+    rootTravelMm: 5645.5943, frames: 80, ...o,
+  });
+
+  it('fails a RAW generated walk — text-to-motion does not produce cycles', () => {
+    // The headline empirical result: a model that generates a "take" has no notion of
+    // returning to its start pose, so raw locomotion output is not Blend-Space usable.
+    const card = scoreLoopClosure(raw());
+    expect(card.verdict).toBe('fail');
+  });
+
+  it('reports pose closure as solved after a two-endpoint constraint regeneration', () => {
+    // Same prompt + seed, regenerated with a fullbody constraint pinning frames 0 and 79
+    // to one shared pose: 141.8 -> 0.0001 mm, and the cycle still travels the full 5.6 m.
+    const fixed = raw({ poseGapMm: 0.0001, worstJointMm: 0.0002, velJumpMm: 15.7280 });
+    expect(scoreLoopClosure(fixed).worstAxis).toBe('velJump');
+    expect(fixed.rootTravelMm).toBeGreaterThan(5000);
+  });
+
+  it('still refuses to call the constraint-closed clip a pass — the seam velocity remains', () => {
+    // THE reason this gate has three axes. Pose closure is exact (0.0001 mm) so a
+    // first-frame-equals-last-frame check - the criterion the source video states - would
+    // now report a flawless loop. The clip still hitches.
+    const fixed = raw({ poseGapMm: 0.0001, worstJointMm: 0.0002, velJumpMm: 15.7280 });
+    const card = scoreLoopClosure(fixed);
+    expect(card.verdict).toBe('warn');
+    expect(card.reason).toContain('jumps');
+  });
+
+  it('grades a near-static idle far better than a travelling walk', () => {
+    // Sanity that the root-relative measurement is doing its job: idle barely moves
+    // (18 mm root travel) and closes almost perfectly; the walk travels 5.6 m and does not.
+    const idle = raw({ poseGapMm: 10.059, worstJointMm: 18.9353, velJumpMm: 1.177, rootTravelMm: 18.334 });
+    expect(scoreLoopClosure(idle).verdict).toBe('warn');
+    expect(scoreLoopClosure(raw()).verdict).toBe('fail');
+  });
+});
+
 describe('critiqueLoop', () => {
   it('parses and scores in one call', () => {
     const r = critiqueLoop(markers());
