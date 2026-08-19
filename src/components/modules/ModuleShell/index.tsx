@@ -24,7 +24,6 @@ export function ModuleShell({ moduleId }: ModuleShellProps) {
   const [contextExpanded, setContextExpanded] = useState(false);
   const mod = SUB_MODULE_MAP[moduleId];
   const category = getCategoryForSubModule(moduleId);
-  const moduleHealth = useModuleStore((s) => s.moduleHealth[moduleId]);
   const moduleHistory = useModuleStore((s) => s.moduleHistory[moduleId]) ?? EMPTY_HISTORY;
   const projectPath = useProjectStore((s) => s.projectPath);
   const projectName = useProjectStore((s) => s.projectName);
@@ -156,15 +155,13 @@ export function ModuleShell({ moduleId }: ModuleShellProps) {
         );
       })()}
 
-      {/* Status card */}
-      {moduleHealth && moduleHealth.tasksCompleted > 0 && (
-        <SurfaceCard className="mb-6 p-4">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-text-muted">Tasks completed</span>
-            <span className="text-sm font-semibold" style={{ color: accentColor }}>{moduleHealth.tasksCompleted}</span>
-          </div>
-        </SurfaceCard>
-      )}
+      {/* No "Tasks completed" card here.
+          It was gated on `moduleHealth.tasksCompleted > 0`, and NOTHING writes
+          `moduleHealth`: `useModuleStore.updateHealth` has zero call sites
+          repo-wide, and the real DB's `project_progress.health_json` is `{}`.
+          A card that can only ever be invisible is not a feature — the module's
+          real run record lives in `session_analytics` and is surfaced by the NBA
+          card (see `useModuleRunEvidence`). */}
 
       {/* Quick Actions */}
       <section className="mb-6" aria-label="Quick actions">

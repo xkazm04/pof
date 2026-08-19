@@ -67,7 +67,10 @@ function plainFor(key: NBAFactorKey, rec: NBARecommendation): string {
     case 'urgency':
       return 'Clears a path for blocked or critical work';
     case 'successProb':
-      return `${Math.round(rec.successProbability * 100)}% past success on similar work`;
+      // The engine's own evidence sentence, verbatim — it names the sample size
+      // ("2 of 3 past runs succeeded"). A bare percentage hid whether the number
+      // came from 30 recorded runs or from a hard-coded neutral default.
+      return rec.successEvidence.note;
     case 'impact': {
       // Engine: impact = min(dependentCount × 4, 20) — recover the count exactly
       // below the cap, show "5+" at the cap.
@@ -102,6 +105,33 @@ export function nbaFactorSegments(rec: NBARecommendation): NBAFactorSegment[] {
       plain: plainFor(key, rec),
     }))
     .filter((seg) => seg.points > 0);
+}
+
+/** How a card should present a recommendation's success odds. */
+export interface NBASuccessOdds {
+  /** Whole-number percentage, or `null` when nothing evidences the odds. */
+  pct: number | null;
+  /** The sentence naming the sample — or naming its absence. Always present. */
+  note: string;
+  /** True when the success factor actually contributed points to the score. */
+  scored: boolean;
+}
+
+/**
+ * Single-source the success-odds presentation.
+ *
+ * The factor segment is dropped from the bar whenever it scored 0 points, which
+ * is exactly the "nothing has ever run" case — so a card that only rendered
+ * segments would fall silent precisely where it most needs to speak. UI reads
+ * this instead: it always has a sentence, and `pct === null` is the instruction
+ * NOT to print a number.
+ */
+export function nbaSuccessOdds(rec: NBARecommendation): NBASuccessOdds {
+  return {
+    pct: rec.successProbability === null ? null : Math.round(rec.successProbability * 100),
+    note: rec.successEvidence.note,
+    scored: Math.round(rec.breakdown.successProb) > 0,
+  };
 }
 
 /**

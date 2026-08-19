@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { nbaFactorSegments, nbaBreakdownAriaLabel } from '@/lib/nba-breakdown';
+import { nbaFactorSegments, nbaBreakdownAriaLabel, nbaSuccessOdds } from '@/lib/nba-breakdown';
 import { NBA_FACTOR_WEIGHTS, type NBARecommendation } from '@/lib/nba-engine';
 import {
   STATUS_BLOCKER, STATUS_SUCCESS, STATUS_INFO, STATUS_STALE, STATUS_LIME,
@@ -20,6 +20,12 @@ function makeRec(
     reason: 'Test reason',
     pitfalls: [],
     successProbability: 0.5,
+    successEvidence: {
+      source: 'runs',
+      runs: 2,
+      successes: 1,
+      note: '1 of 2 past runs succeeded',
+    },
     breakdown: full,
     featureMatch: {
       source: 'mapped',
@@ -76,10 +82,15 @@ describe('nbaFactorSegments', () => {
     expect(segs[0].points).toBe(7);
   });
 
-  it('uses the real success probability in the success-odds sentence', () => {
-    const segs = nbaFactorSegments(makeRec({ successProb: 17 }, { successProbability: 0.82 }));
+  it('names the recorded sample in the success-odds sentence, not a bare percentage', () => {
+    const segs = nbaFactorSegments(makeRec({ successProb: 17 }, {
+      successProbability: 0.82,
+      successEvidence: {
+        source: 'runs', runs: 50, successes: 41, note: '41 of 50 past runs succeeded',
+      },
+    }));
     const success = segs.find((s) => s.key === 'successProb');
-    expect(success?.plain).toBe('82% past success on similar work');
+    expect(success?.plain).toBe('41 of 50 past runs succeeded');
   });
 
   it('recovers the unblocked-feature count from the impact points', () => {
@@ -103,6 +114,41 @@ describe('nbaFactorSegments', () => {
     expect(ready[0].plain).toBe('All dependencies satisfied — ready now');
     const partial = nbaFactorSegments(makeRec({ readiness: 5 }));
     expect(partial[0].plain).toBe('Most dependencies satisfied');
+  });
+});
+
+describe('nbaSuccessOdds', () => {
+  it('refuses to produce a percentage when nothing evidences one', () => {
+    const odds = nbaSuccessOdds(makeRec({ urgency: 18 }, {
+      successProbability: null,
+      successEvidence: {
+        source: 'none', runs: 0, successes: 0,
+        note: 'No recorded runs for this module yet — success odds not scored',
+      },
+    }));
+    expect(odds.pct).toBeNull();
+    expect(odds.scored).toBe(false);
+    expect(odds.note).toContain('No recorded runs');
+  });
+
+  it('still carries a sentence when the segment was dropped for scoring zero', () => {
+    // The bar filters out zero-point factors, so a card that read only segments
+    // would fall silent exactly where the honest statement is needed.
+    const rec = makeRec({ urgency: 18 }, {
+      successProbability: null,
+      successEvidence: {
+        source: 'none', runs: 0, successes: 0,
+        note: 'No recorded runs for this module yet — success odds not scored',
+      },
+    });
+    expect(nbaFactorSegments(rec).find((s) => s.key === 'successProb')).toBeUndefined();
+    expect(nbaSuccessOdds(rec).note).not.toBe('');
+  });
+
+  it('rounds an evidenced probability to a whole percent', () => {
+    const odds = nbaSuccessOdds(makeRec({ successProb: 8 }, { successProbability: 2 / 3 }));
+    expect(odds.pct).toBe(67);
+    expect(odds.scored).toBe(true);
   });
 });
 

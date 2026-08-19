@@ -20,6 +20,12 @@ import {
   type ItemFeatureSource,
 } from '@/lib/feature-definitions';
 import { SUB_MODULE_MAP } from '@/lib/module-registry';
+import {
+  summarizeRuns,
+  describeRunEvidence,
+  NO_RUN_EVIDENCE,
+  type ModuleRunEvidence,
+} from '@/lib/nba-run-evidence';
 import { useModuleStore } from '@/stores/moduleStore';
 import { usePatternLibraryStore } from '@/stores/patternLibraryStore';
 import { useEvaluatorStore } from '@/stores/evaluatorStore';
@@ -42,8 +48,19 @@ export interface NBARecommendation {
   pattern?: ImplementationPattern;
   /** Known pitfalls from patterns or failed history */
   pitfalls: string[];
-  /** Estimated success probability 0–1 */
-  successProbability: number;
+  /**
+   * Estimated success probability 0–1, or `null` when NOTHING has ever run for
+   * this module and no pattern matched. `null` is the honest answer and must be
+   * rendered as such — it was previously a hard-coded `0.5`, which the card
+   * printed as "50% past success on similar work" on brand-new projects.
+   */
+  successProbability: number | null;
+  /**
+   * What the success odds were computed from, and how big that sample was. The
+   * card is required to quote this instead of a bare percentage — the sample
+   * size is the part that makes the number honest.
+   */
+  successEvidence: NBASuccessEvidence;
   /** Score breakdown for transparency */
   breakdown: ScoreBreakdown;
   /**
@@ -53,6 +70,22 @@ export interface NBARecommendation {
    * WITH the score instead of being re-derived by whoever renders it.
    */
   featureMatch: ItemFeatureMatch;
+}
+
+/** Provenance of a recommendation's success odds — never a bare percentage. */
+export interface NBASuccessEvidence {
+  /**
+   * `pattern` — a matched implementation pattern's own recorded success rate.
+   * `runs`    — this module's recorded CLI runs (`session_analytics`).
+   * `none`    — nothing has ever run and no pattern matched; odds are unscored.
+   */
+  source: 'pattern' | 'runs' | 'none';
+  /** Recorded module runs behind the module rate (0 when none exist). */
+  runs: number;
+  /** How many of those runs succeeded. */
+  successes: number;
+  /** One sentence naming the sample — or naming its absence. */
+  note: string;
 }
 
 /** Provenance of the item→feature binding a recommendation was scored against. */
@@ -119,6 +152,13 @@ export function computeNBA(
   moduleId: SubModuleId,
   featureStatusMap?: Map<string, string>,
   modulePatterns?: readonly ImplementationPattern[],
+  /**
+   * This module's REAL recorded run outcomes (`session_analytics`, fetched by
+   * {@link useModuleRunEvidence}). Omitted ⇒ fall back to the local
+   * `moduleStore.moduleHistory` slice, which nothing in the app writes — so the
+   * honest result of omitting it is "no evidence", never a neutral constant.
+   */
+  runEvidence?: ModuleRunEvidence | null,
 ): NBARecommendation[] {
   const mod = SUB_MODULE_MAP[moduleId as keyof typeof SUB_MODULE_MAP];
   if (!mod?.checklist?.length) return [];
@@ -152,11 +192,16 @@ export function computeNBA(
 
   // Failure history analysis
   const failedPrompts = history.filter((h) => h.status === 'failed');
-  const successCount = history.filter((h) => h.status === 'completed').length;
-  const failCount = failedPrompts.length;
-  const moduleSuccessRate = successCount + failCount > 0
-    ? successCount / (successCount + failCount)
-    : 0.5; // neutral default
+
+  // Success odds come from REAL recorded runs. The injected evidence (SQLite
+  // `session_analytics`, which every module dispatch already writes) wins; the
+  // local history slice is the fallback for the same shape. When neither has a
+  // single run, `rate` is null — the factor scores ZERO rather than borrowing
+  // the old `0.5` neutral default, which the card rendered as a confident
+  // "50% past success on similar work" about work that had never been attempted.
+  const runs: ModuleRunEvidence = runEvidence
+    ?? summarizeRuns(history.map((h) => ({ success: h.status === 'completed' })));
+  const moduleSuccessRate: number | null = runs.rate;
 
   // ── Score each uncompleted item ────────────────────────────────────────────
   const uncompleted = mod.checklist.filter((item) => !progress[item.id]);
@@ -271,7 +316,9 @@ export function computeNBA(
           : best,
       );
       const patternScore = matchedPattern.successRate * W.successProb * 0.7;
-      const moduleScore = moduleSuccessRate * W.successProb * 0.3;
+      // The module track record only contributes when it EXISTS. A module with no
+      // recorded runs adds nothing here rather than a synthesised half-mark.
+      const moduleScore = (moduleSuccessRate ?? 0) * W.successProb * 0.3;
       breakdown.successProb = Math.round(patternScore + moduleScore);
 
       pitfalls.push(...matchedPattern.pitfalls);
@@ -279,8 +326,12 @@ export function computeNBA(
         `${Math.round(matchedPattern.successRate * 100)}% success rate (${matchedPattern.approach} approach, ${matchedPattern.sessionCount} sessions)`,
       );
     } else {
-      // No pattern match — use module success rate only
-      breakdown.successProb = Math.round(moduleSuccessRate * W.successProb * 0.5);
+      // No pattern match — use the module's recorded success rate only. With no
+      // recorded runs there is no evidence, so the factor contributes 0 points
+      // and `nbaFactorSegments` drops the "Success odds" segment entirely.
+      breakdown.successProb = moduleSuccessRate === null
+        ? 0
+        : Math.round(moduleSuccessRate * W.successProb * 0.5);
     }
 
     // Add pitfalls from failed history
@@ -296,10 +347,37 @@ export function computeNBA(
       breakdown.urgency + breakdown.successProb + breakdown.impact + breakdown.recency + breakdown.readiness,
     );
 
-    // Success probability estimate
-    const successProbability = matchedPattern
+    // Success probability estimate — `null` when nothing evidences it.
+    const successProbability: number | null = matchedPattern
       ? matchedPattern.successRate
-      : moduleSuccessRate || 0.5;
+      : moduleSuccessRate;
+
+    // …and the sentence that must accompany it. A pattern names its own sample;
+    // otherwise the module's recorded runs do, including when there are none.
+    const successEvidence: NBASuccessEvidence = matchedPattern
+      ? {
+          source: 'pattern',
+          runs: runs.runs,
+          successes: runs.successes,
+          note:
+            `${Math.round(matchedPattern.successRate * 100)}% success across ` +
+            `${matchedPattern.sessionCount} recorded ` +
+            `${matchedPattern.sessionCount === 1 ? 'session' : 'sessions'} of the ` +
+            `"${matchedPattern.approach}" pattern`,
+        }
+      : moduleSuccessRate === null
+        ? {
+            source: 'none',
+            runs: 0,
+            successes: 0,
+            note: describeRunEvidence(NO_RUN_EVIDENCE),
+          }
+        : {
+            source: 'runs',
+            runs: runs.runs,
+            successes: runs.successes,
+            note: describeRunEvidence(runs),
+          };
 
     // Build reason string. A tier-3 guess is ALWAYS labelled: the card's claims
     // are only as true as the binding they were computed from.
@@ -320,6 +398,7 @@ export function computeNBA(
       pattern: matchedPattern,
       pitfalls: [...new Set(pitfalls)], // deduplicate
       successProbability,
+      successEvidence,
       breakdown,
       featureMatch: {
         source: resolved.source,
@@ -352,15 +431,30 @@ export function getTopRecommendation(
 /**
  * Project-wide Next Best Actions: compute NBA for every sub-module and return
  * the top `limit` recommendations across the whole project, sorted by score.
- * Powers Mission Control's critical-path / what-to-do-next card (ECW Phase 10-MC).
+ *
+ * Rendered by `ProjectNBACard`, hosted on the Project Setup module — the project
+ * home — so "what should I do next *in this project*" is answerable without
+ * first guessing which module to open. (Until 2026-08-19 this docstring claimed
+ * it powered a "Mission Control" surface; no such component, route or page has
+ * ever existed in this repo, and the function had zero non-test callers.)
+ *
+ * Cost note: this runs {@link computeNBA} once per sub-module (~40), each of
+ * which copies the memoized dependency graph. Callers memoize the result — see
+ * `useProjectNBA`.
  */
 export function computeProjectNBA(
   featureStatusMap?: Map<string, string>,
   limit = 5,
+  /**
+   * Recorded run outcomes per module. A module absent from the map has no
+   * recorded runs, so its recommendations score no success-odds points — the
+   * project-wide card must not manufacture odds it does not have either.
+   */
+  runEvidence?: ReadonlyMap<string, ModuleRunEvidence> | null,
 ): NBARecommendation[] {
   const all: NBARecommendation[] = [];
   for (const moduleId of Object.keys(SUB_MODULE_MAP) as SubModuleId[]) {
-    all.push(...computeNBA(moduleId, featureStatusMap));
+    all.push(...computeNBA(moduleId, featureStatusMap, undefined, runEvidence?.get(moduleId)));
   }
   return all.sort((a, b) => b.score - a.score).slice(0, Math.max(0, limit));
 }

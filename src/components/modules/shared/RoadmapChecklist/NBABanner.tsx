@@ -5,9 +5,49 @@ import {
 } from 'lucide-react';
 import { AccentButton } from '@/components/ui/AccentButton';
 import { NBAScoreBar } from '@/components/modules/shared/NBAScoreBar';
+import { nbaSuccessOdds } from '@/lib/nba-breakdown';
 import type { NBARecommendation } from '@/lib/nba-engine';
 import type { ModulePatternsResult } from './useModulePatterns';
 import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR } from '@/lib/chart-colors';
+
+/** Odds colour — only ever applied to a number that actually has evidence. */
+function oddsColor(pct: number): string {
+  return pct >= 70 ? STATUS_SUCCESS : pct >= 40 ? STATUS_WARNING : STATUS_ERROR;
+}
+
+/**
+ * The success-odds line.
+ *
+ * Rendered UNCONDITIONALLY — it used to hang off `top.pattern`, so on the
+ * overwhelmingly common no-pattern path the card showed nothing here while the
+ * hover legend still asserted "50% past success on similar work" from a
+ * hard-coded constant. Now the sentence always names its sample, and a module
+ * with no recorded runs says exactly that instead of showing a percentage.
+ */
+function SuccessOdds({ rec }: { rec: NBARecommendation }) {
+  const odds = nbaSuccessOdds(rec);
+
+  return (
+    <span
+      data-testid="nba-success-odds"
+      data-odds-source={rec.successEvidence.source}
+      className="flex items-center gap-1 text-2xs text-text-muted"
+    >
+      {odds.pct === null ? (
+        <>
+          <HelpCircle className="w-3 h-3 flex-shrink-0" aria-hidden="true" />
+          {odds.note}
+        </>
+      ) : (
+        <>
+          <TrendingUp className="w-3 h-3 flex-shrink-0" style={{ color: oddsColor(odds.pct) }} aria-hidden="true" />
+          <strong style={{ color: oddsColor(odds.pct) }}>{odds.pct}%</strong>
+          <span>— {odds.note}</span>
+        </>
+      )}
+    </span>
+  );
+}
 
 export function NBABanner({
   top, runners, expanded, onToggleExpand, onRun, accentColor, isRunning, patternLibrary,
@@ -26,8 +66,6 @@ export function NBABanner({
    */
   patternLibrary?: ModulePatternsResult;
 }) {
-  const successPct = Math.round(top.successProbability * 100);
-
   return (
     <div className="rounded-lg border" style={{ borderColor: `${accentColor}30`, backgroundColor: `${accentColor}08` }}>
       {/* Top recommendation */}
@@ -55,13 +93,8 @@ export function NBABanner({
             <NBAScoreBar rec={top} />
 
             {/* Metrics row */}
-            <div className="flex items-center gap-3 mt-2">
-              {top.pattern && (
-                <span className="flex items-center gap-1 text-2xs text-text-muted">
-                  <TrendingUp className="w-3 h-3" style={{ color: successPct >= 70 ? STATUS_SUCCESS : successPct >= 40 ? STATUS_WARNING : STATUS_ERROR }} />
-                  <strong style={{ color: successPct >= 70 ? STATUS_SUCCESS : successPct >= 40 ? STATUS_WARNING : STATUS_ERROR }}>{successPct}%</strong> success
-                </span>
-              )}
+            <div className="flex items-center gap-3 mt-2 flex-wrap">
+              <SuccessOdds rec={top} />
               {top.pattern?.approach && (
                 <span className="text-2xs text-text-muted">
                   {top.pattern.approach} approach
@@ -194,7 +227,7 @@ function NBARunnerRow({
   onRun: (rec: NBARecommendation) => void;
   isRunning: boolean;
 }) {
-  const successPct = Math.round(rec.successProbability * 100);
+  const odds = nbaSuccessOdds(rec);
 
   return (
     <div className="flex items-center gap-2.5 px-3 py-2 hover:bg-surface-hover/50 transition-colors group">
@@ -208,9 +241,14 @@ function NBARunnerRow({
         <p className="text-xs text-text truncate">{rec.item.label}</p>
         <div className="flex items-center gap-2 mt-0.5">
           <span className="text-2xs text-text-muted truncate">{rec.reason}</span>
-          {rec.pattern && (
-            <span className="flex-shrink-0 text-2xs" style={{ color: successPct >= 70 ? STATUS_SUCCESS : successPct >= 40 ? STATUS_WARNING : STATUS_ERROR }}>
-              {successPct}%
+          {/* A percentage only where one is evidenced — `title` carries the sample. */}
+          {odds.pct !== null && (
+            <span
+              className="flex-shrink-0 text-2xs"
+              style={{ color: oddsColor(odds.pct) }}
+              title={odds.note}
+            >
+              {odds.pct}%
             </span>
           )}
         </div>

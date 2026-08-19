@@ -13,6 +13,12 @@ function makeRec(breakdown: Partial<NBARecommendation['breakdown']>, extra: Part
     reason: 'Test reason',
     pitfalls: [],
     successProbability: 0.5,
+    successEvidence: {
+      source: 'runs',
+      runs: 2,
+      successes: 1,
+      note: '1 of 2 past runs succeeded',
+    },
     breakdown: full,
     featureMatch: {
       source: 'mapped',
@@ -46,11 +52,25 @@ describe('NBAScoreBar', () => {
 
   it('exposes a plain-language legend and a screen-reader summary', () => {
     const { container } = render(
-      <NBAScoreBar rec={makeRec({ successProb: 17, impact: 12 }, { successProbability: 0.82 })} />,
+      <NBAScoreBar
+        rec={makeRec(
+          { successProb: 17, impact: 12 },
+          {
+            successProbability: 0.82,
+            successEvidence: {
+              source: 'runs', runs: 50, successes: 41, note: '41 of 50 past runs succeeded',
+            },
+          },
+        )}
+      />,
     );
     const text = container.textContent ?? '';
     expect(text).toContain('Why recommended');
-    expect(text).toContain('82% past success on similar work');
+    // The legend names the SAMPLE, not a bare percentage — a bare "82% past
+    // success on similar work" read identically whether it came from 50 runs or
+    // from the hard-coded 0.5 default that used to be the only production path.
+    expect(text).toContain('41 of 50 past runs succeeded');
+    expect(text).not.toContain('past success on similar work');
     expect(text).toContain('Unblocks 3 downstream features');
 
     const label = container.querySelector('[role="img"]')?.getAttribute('aria-label') ?? '';
