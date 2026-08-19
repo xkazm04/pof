@@ -10,16 +10,59 @@ import type {
 import { TaskDAGOrchestrator, validateWorkflow } from '@/lib/task-dag-orchestrator';
 import { WORKFLOW_TEMPLATES, hydrateTemplate } from '@/lib/workflow-templates';
 
+// ── Interrupted-execution vocabulary ─────────────────────────────────────────
+
+/**
+ * Why an execution ended without running to completion. `WorkflowExecution` has no
+ * status for "the process that owned this run is gone", and renaming a shared type
+ * would ripple through every consumer — so the persisted row carries the reason.
+ */
+export type ExecutionFailureReason = 'reload-interrupted';
+
+/** A persisted execution, plus why it ended if it did not end by itself. */
+export interface StoredExecution extends WorkflowExecution {
+  failureReason?: ExecutionFailureReason;
+}
+
+/** Statuses that mean "an orchestrator is driving this right now". */
+const LIVE_STATUSES: ReadonlyArray<WorkflowStatus> = ['running', 'paused'];
+
+/** Cap on the persisted execution list — it used to grow without bound. */
+export const MAX_KEPT_EXECUTIONS = 20;
+
+/**
+ * The orchestrator is deliberately transient, so a `running`/`paused` row read back
+ * from localStorage is a run nobody owns: it is not active (no `activeExecution`),
+ * not in history (history shows terminal statuses), not pausable/resumable/cancellable
+ * (every action early-returns on the null orchestrator) and not even clearable
+ * (`clearCompletedExecutions` kept exactly those two statuses). Demote it to a
+ * terminal state that carries WHY — the shape `oneShotJobStore` already uses.
+ *
+ * `completedAt` is deliberately left unset: we do not know when the run died, and
+ * stamping the reload time would render a duration that includes the hours the app
+ * was closed. Node states are kept as-is — they are what the run actually reached.
+ */
+function demoteInterrupted(e: StoredExecution): StoredExecution {
+  if (!LIVE_STATUSES.includes(e.status)) return e;
+  return {
+    ...e,
+    status: 'failed',
+    failureReason: 'reload-interrupted',
+    runningNodeIds: [],
+    currentStepLabel: 'Interrupted — the app reloaded while this workflow was running',
+  };
+}
+
 // ── Stable empty constants ───────────────────────────────────────────────────
 
-const EMPTY_EXECUTIONS: WorkflowExecution[] = [];
+const EMPTY_EXECUTIONS: StoredExecution[] = [];
 const EMPTY_CUSTOM_TEMPLATES: WorkflowTemplate[] = [];
 
 // ── Store interface ──────────────────────────────────────────────────────────
 
 interface TaskDAGStoreState {
   // Persisted
-  executions: WorkflowExecution[];
+  executions: StoredExecution[];
   customTemplates: WorkflowTemplate[];
 
   // Transient (not persisted)
@@ -130,7 +173,8 @@ export const useTaskDAGStore = create<TaskDAGStoreState>()(
         set((state) => ({
           activeOrchestrator: orchestrator,
           activeExecution: initialExecution,
-          executions: [...state.executions, initialExecution],
+          // Bounded: the newest MAX_KEPT_EXECUTIONS survive (the one just started is last).
+          executions: [...state.executions, initialExecution].slice(-MAX_KEPT_EXECUTIONS),
         }));
 
         // Start the workflow
@@ -188,9 +232,13 @@ export const useTaskDAGStore = create<TaskDAGStoreState>()(
       },
 
       clearCompletedExecutions: () => {
+        // Keep only a run this session is actually driving. The old filter kept every
+        // `running`/`paused` row, which made an orphaned run — the one nobody owns —
+        // precisely the thing that survived the clear.
+        const activeId = get().activeExecution?.id;
         set((state) => ({
           executions: state.executions.filter(
-            (e) => e.status === 'running' || e.status === 'paused'
+            (e) => e.id === activeId && LIVE_STATUSES.includes(e.status)
           ),
         }));
       },
@@ -202,6 +250,19 @@ export const useTaskDAGStore = create<TaskDAGStoreState>()(
         executions: state.executions,
         customTemplates: state.customTemplates,
       }),
+      merge: (persisted, current) => {
+        const p = (persisted as Partial<TaskDAGStoreState> | null | undefined) ?? {};
+        const executions = (p.executions ?? []).map(demoteInterrupted).slice(-MAX_KEPT_EXECUTIONS);
+        return {
+          ...current,
+          ...p,
+          executions,
+          // Never rehydrated: a persisted orchestrator would be a plain object, and
+          // calling pause()/cancel() on it would throw.
+          activeOrchestrator: null,
+          activeExecution: null,
+        };
+      },
     }
   )
 );

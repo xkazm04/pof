@@ -49,6 +49,10 @@ export function WorkflowOrchestratorView() {
     activeExecution.status === 'running' || activeExecution.status === 'paused'
   );
 
+  // Terminal runs, newest first. A run interrupted by a reload is stored as `failed`
+  // (see taskDAGStore.demoteInterrupted) so it lands here and is labelled as
+  // interrupted by the row — rather than persisting as a `running` ghost that no
+  // surface in the app ever showed.
   const pastExecutions = useMemo(
     () => executions.filter((e) =>
       e.status === 'completed' || e.status === 'failed' || e.status === 'cancelled'
@@ -114,6 +118,7 @@ export function WorkflowOrchestratorView() {
       {pastExecutions.length > 0 && (
         <SurfaceCard className="overflow-hidden">
           <button
+            data-testid="pof-dag-history-toggle"
             onClick={() => setShowHistory(!showHistory)}
             className="w-full flex items-center gap-2 px-4 py-3 hover:bg-surface-hover/50 transition-colors"
           >
