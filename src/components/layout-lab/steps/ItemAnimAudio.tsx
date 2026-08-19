@@ -3,12 +3,21 @@
 import { StaticStepFrame } from './StaticStepFrame';
 import { CliProduce } from './shared/CliProduce';
 import { ChartPanel } from './shared/ChartPanel';
+import { AssetTarget } from './shared/assetHonesty';
 import { entitySlug, DEFAULT_ANIM_CLIPS, DEFAULT_VFX_VARIANTS, DEFAULT_SFX_CUES } from './itemsSteps';
 import type { LabTheme } from '../theme';
 import type { StepProps } from './stepProps';
 
-/** Deterministic sample bank for the SFX waveform — derived once, not per render. */
-const WAVEFORM_SAMPLES = Array.from({ length: 48 }, (_, i) => Math.sin(i * 0.7) * 0.5 + 0.5);
+/**
+ * Deterministic sample bank for the SFX strip — derived once, not per render.
+ *
+ * It is a SYNTHETIC sine trace, not the item's audio: the SFX artifact carries cue names
+ * and loudness targets only (`itemsSteps.ts` → `{ cues }`), and nothing in this pipeline
+ * decodes a SoundCue. It used to render unlabelled beside "Cues · loudness", reading as the
+ * produced waveform; the panel now says what it is. When a future produce writes real
+ * samples on `data.waveform`, {@link ItemSFX} shows those instead and drops the caveat.
+ */
+const PLACEHOLDER_SAMPLES = Array.from({ length: 48 }, (_, i) => Math.sin(i * 0.7) * 0.5 + 0.5);
 
 function Row({ t, name, right, on }: { t: LabTheme; name: string; right: string; on: boolean }) {
   return (
@@ -34,7 +43,7 @@ export function ItemAnimations({ t, entity, step }: StepProps) {
           <div style={{ display: 'grid', gap: 10 }}>
             <span className={t.fontMono} style={{ fontSize: 14, color: t.muted }}>skeleton: SK_Mannequin</span>
             <span style={{ fontSize: 14, color: t.muted, lineHeight: 1.55 }}>Clips retarget from the shared mannequin library; per-weapon timing comes from the Attributes step (attack speed).</span>
-            {made && art?.ueAssets?.[0] && <span className={t.fontMono} style={{ fontSize: 14, color: t.ok }}>✓ {art.ueAssets[0]}</span>}
+            {made && art?.ueAssets?.[0] && <AssetTarget t={t} path={art.ueAssets[0]} />}
           </div>
         ) },
         { label: 'Produce', node: (
@@ -82,11 +91,20 @@ export function ItemSFX({ t, entity, step }: StepProps) {
       const cues = (art?.data?.cues ?? []) as [string, string][];
       const made = cues.length > 0;
       const rows = made ? cues : DEFAULT_SFX_CUES;
+      const recorded = (art?.data?.waveform ?? null) as number[] | null;
+      const real = Array.isArray(recorded) && recorded.length > 0;
       return [
         { label: 'Cues · loudness', node: <div>{rows.map(([n, dur]) => <Row key={n} t={t} name={n} right={dur} on={made} />)}</div> },
-        { label: 'Waveform', node: (
-          <ChartPanel t={t} variant="waveform" samples={WAVEFORM_SAMPLES} active={made}
-            ariaLabel={`SFX waveform — ${made ? 'imported' : 'idle'}`} />
+        { label: real ? 'Waveform' : 'Waveform (placeholder)', node: (
+          <div style={{ display: 'grid', gap: 8 }}>
+            <ChartPanel t={t} variant="waveform" samples={real ? recorded : PLACEHOLDER_SAMPLES} active={made}
+              ariaLabel={real ? 'SFX waveform — recorded samples' : 'placeholder waveform — not the produced audio'} />
+            <span data-testid="sfx-waveform-provenance" style={{ fontSize: 14, color: t.muted, lineHeight: 1.55 }}>
+              {real
+                ? 'Samples recorded on this step’s artifact.'
+                : 'Synthetic trace — not the produced audio. This step’s artifact records cue names and loudness targets only; nothing here decodes a SoundCue.'}
+            </span>
+          </div>
         ) },
         { label: 'Produce', node: (
           <CliProduce t={t} label="Import set (CLI)" rows={3}

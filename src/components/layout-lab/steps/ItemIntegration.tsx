@@ -11,13 +11,23 @@ export function ItemInventoryUI({ t, entity, step }: StepProps) {
       const wired = !!art?.data?.wired;
       const slot = String((art?.data?.slot as string) ?? 'Weapon');
       return [
-        { label: 'Inventory grid', node: (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6 }}>
-            {Array.from({ length: 15 }, (_, i) => (
-              <div key={i} style={{ aspectRatio: '1', borderRadius: t.glass ? 8 : 2, border: `1px solid ${t.line}`, background: wired && i === 0 ? 'linear-gradient(135deg,#8a5a2b,#d8a657)' : t.panel, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {wired && i === 0 && <span className={t.fontMono} style={{ fontSize: 14, color: '#fff' }}>★</span>}
-              </div>
-            ))}
+        // A LAYOUT MOCK, not a render of the widget. The step's checker only reads
+        // `wired` + `slot` off the artifact (step-facts: "Accept checks the artifact
+        // declares wired:true + a slot"), so a grid depicting the widget drawing the item
+        // asserted something nothing here observed. The caption now says so, and the
+        // occupied cell is drawn from the theme rather than invented item colours.
+        { label: 'Inventory grid (layout mock)', node: (
+          <div style={{ display: 'grid', gap: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6 }}>
+              {Array.from({ length: 15 }, (_, i) => (
+                <div key={i} style={{ aspectRatio: '1', borderRadius: t.glass ? 8 : 2, border: `1px solid ${wired && i === 0 ? t.ink : t.line}`, background: wired && i === 0 ? t.accentBg : t.panel, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {wired && i === 0 && <span className={t.fontMono} style={{ fontSize: 14, color: t.ink }}>★</span>}
+                </div>
+              ))}
+            </div>
+            <span data-testid="inventory-grid-provenance" style={{ fontSize: 14, color: t.muted, lineHeight: 1.55 }}>
+              Layout mock — the inventory widget is not rendered or verified here. Acceptance only checks that the artifact declares a slot and <code>wired: true</code>.
+            </span>
           </div>
         ) },
         { label: 'Binding', node: (

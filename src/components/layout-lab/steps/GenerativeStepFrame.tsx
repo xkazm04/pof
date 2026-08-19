@@ -7,6 +7,8 @@ import { CandidateGallery } from './shared/CandidateGallery';
 import { RawArtifactDisclosure } from './shared/RawArtifactDisclosure';
 import { selectedCandidate, selectionSource, type GenCandidate, type GenHistory } from './shared/genHistory';
 import { useGenerativeStep } from './shared/useGenerativeStep';
+import { useGeneratedImageAssets } from './shared/useGeneratedImageAssets';
+import { withGeneratedImages } from './shared/assetHonesty';
 import { useStepAcceptance } from './shared/useStepAcceptance';
 import { withItemFixCopy } from './shared/itemFixCopy';
 import { ITEM_STEP_SPECS } from './itemsSteps';
@@ -64,7 +66,18 @@ export function GenerativeStepFrame({
   /** The step's bespoke preview panels. */
   panels: (ctx: GenerativeStepContext) => StepPanel[];
 }) {
-  const { art, history, generate, reselect } = useGenerativeStep(entity.id, step, candidates, base);
+  // The REAL 2D art generated FOR this step (`generated/icons/<catalog>_<step>.jpg`, matched
+  // by the generator's own filename rule). The bespoke gallery never fetched it, so
+  // `items_icon_2d_art.jpg` — an exact slug match for `Icon 2D Art` — sat unreachable on
+  // disk while the panel captioned a CSS gradient as the output. A step with no art gets
+  // `[]` and every slot stays an honest deterministic swatch.
+  const imageMatch = useMemo(() => ({ catalogId: 'items', step }), [step]);
+  const imageAssets = useGeneratedImageAssets(true, imageMatch);
+  const galleryCandidates = useCallback(
+    (dir: string, seq: number) => withGeneratedImages(candidates(dir, seq), imageAssets, seq),
+    [candidates, imageAssets],
+  );
+  const { art, history, generate, reselect } = useGenerativeStep(entity.id, step, galleryCandidates, base);
   const accept = useCallback(
     (data: Record<string, unknown>, ctx: CheckerContext) => ITEM_STEP_SPECS[step].accept(data, ctx),
     [step],
