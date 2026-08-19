@@ -601,7 +601,14 @@ export function runComplianceAudit(
 
     // Single read per module; the summary is derived from these rows below
     // instead of issuing a second `feature_matrix` query.
-    const features = getFeaturesByModule(mod.id);
+    //
+    // Scoped to the SAME project the gap resolutions below are scoped to. This read
+    // was global while the resolutions were per-project, so an audit run for project
+    // B scored B's checklist against A's scan rows and then subtracted B's triage
+    // from the result. `projectPath` is the audit's declared scope; an audit that
+    // names none reads the unattributed legacy rows (see `projectScopeSql`), which
+    // is what every pre-scoping row is.
+    const features = getFeaturesByModule(mod.id, projectPath);
 
     // Skip modules with neither a checklist nor any scanned features.
     if (checklist.length === 0 && features.length === 0) continue;

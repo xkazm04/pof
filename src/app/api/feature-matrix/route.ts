@@ -1,5 +1,8 @@
 import { NextRequest } from 'next/server';
-import { getFeaturesByModule, getFeatureSummary, upsertFeatures, updateFeatureStatus } from '@/lib/feature-matrix-db';
+import {
+  getFeaturesByModule, getFeatureSummary, upsertFeatures, updateFeatureStatus,
+  getProjectScopeReport, normalizeProjectId,
+} from '@/lib/feature-matrix-db';
 import { apiSuccess, apiError, withRoute } from '@/lib/api-utils';
 import { FEATURE_STATUSES, FEATURE_SOURCES } from '@/types/feature-matrix';
 import type { FeatureSource, FeatureStatus } from '@/types/feature-matrix';
@@ -16,15 +19,36 @@ function resolvePostSource(raw: unknown, seedOnly: boolean): FeatureSource {
   return seedOnly ? 'seed' : 'unknown';
 }
 
+/**
+ * The active project, taken EXPLICITLY from the caller — `projectId` (or the
+ * `projectPath` the rest of the app already passes around, which is the same
+ * value). Nothing here infers it: a server-side read that guessed its own scope
+ * would be the silent mis-attribution the scoping exists to remove. Absent ⇒ `''`,
+ * the unscoped/legacy set, and every response says so via `scope`.
+ */
+function resolveProjectId(source: { get(key: string): string | null }): string {
+  return normalizeProjectId(source.get('projectId') ?? source.get('projectPath'));
+}
+
+function bodyProjectId(body: Record<string, unknown>): string {
+  const raw = body.projectId ?? body.projectPath;
+  return normalizeProjectId(typeof raw === 'string' ? raw : '');
+}
+
 export const GET = withRoute(async (request: NextRequest) => {
   const moduleId = request.nextUrl.searchParams.get('moduleId');
   if (!moduleId) {
     return apiError('moduleId is required', 400);
   }
 
-  const features = getFeaturesByModule(moduleId as SubModuleId);
-  const summary = getFeatureSummary(moduleId as SubModuleId);
-  return apiSuccess({ features, summary });
+  const projectId = resolveProjectId(request.nextUrl.searchParams);
+  const features = getFeaturesByModule(moduleId as SubModuleId, projectId);
+  const summary = getFeatureSummary(moduleId as SubModuleId, projectId);
+  // `scope` travels with the rows so a caller can never mistake a scoped read for a
+  // project-wide one, and an empty module can say whether it is genuinely empty or
+  // whether another project holds its rows.
+  const scope = getProjectScopeReport(projectId, moduleId);
+  return apiSuccess({ features, summary, scope });
 }, 'Failed to read features');
 
 export const POST = withRoute(async (request: NextRequest) => {
@@ -55,8 +79,17 @@ export const POST = withRoute(async (request: NextRequest) => {
 
   const seedOnly = body.seedOnly === true;
   const source = resolvePostSource(body.source, seedOnly);
-  upsertFeatures(moduleId as SubModuleId, features, { seedOnly, source });
-  return apiSuccess({ count: features.length, source });
+  const projectId = bodyProjectId(body);
+  const result = upsertFeatures(moduleId as SubModuleId, features, { seedOnly, source, projectId });
+  // `takenOver` is reported, not swallowed: under the phase-1 UNIQUE key a feature
+  // is one row, so writing under project B can reassign rows project A was reading.
+  return apiSuccess({
+    count: features.length,
+    source,
+    projectId: result.projectId,
+    written: result.written,
+    takenOverFromOtherProjects: result.takenOver,
+  });
 }, 'Failed to save features');
 
 /**
@@ -93,9 +126,24 @@ export const PATCH = withRoute(async (request: NextRequest) => {
       ? (body.source as FeatureSource)
       : 'fix';
 
-  const result = updateFeatureStatus(moduleId as SubModuleId, featureName, status, { source });
+  const projectId = bodyProjectId(body);
+  const result = updateFeatureStatus(moduleId as SubModuleId, featureName, status, {
+    source,
+    projectId,
+  });
 
   if (!result.updated) {
+    // A row held by ANOTHER project is a different failure from a missing row, and
+    // must say so — silently reporting "no such feature" for a row that plainly
+    // exists is the mis-attribution this scoping removes.
+    if (result.foreignOwner) {
+      return apiError(
+        `"${featureName}" in module "${moduleId}" belongs to project "${result.foreignOwner}", not to ` +
+          `"${projectId || '(unscoped)'}" — nothing was updated. One feature is one row until the ` +
+          `UNIQUE key includes the project (phase 2).`,
+        409,
+      );
+    }
     return apiError(
       `No feature row for "${featureName}" in module "${moduleId}" — nothing was updated (seed the module or check the feature name)`,
       404,
@@ -108,5 +156,6 @@ export const PATCH = withRoute(async (request: NextRequest) => {
     statusChanged: result.statusChanged,
     reviewedAt: result.reviewedAt,
     source: result.source,
+    projectId,
   });
 }, 'Failed to update status');

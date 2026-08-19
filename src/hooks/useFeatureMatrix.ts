@@ -6,7 +6,9 @@ import type { VerificationResult } from '@/types/pof-bridge';
 import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
 import { autoUpdateFeatureMatrix } from '@/lib/pof-bridge/verification-engine';
 import { usePofBridgeStore } from '@/stores/pofBridgeStore';
+import { useProjectStore } from '@/stores/projectStore';
 import { tryApiFetch } from '@/lib/api-utils';
+import type { ProjectScopeReport } from '@/lib/feature-matrix-db';
 // Every write below changes the feature_matrix rows, and the per-module roll-up
 // is a projection of those same rows — so both derived caches move together.
 // Dropping only the statuses cache left the Evaluator's aggregates contradicting
@@ -25,6 +27,15 @@ interface UseFeatureMatrixResult {
   runAutoVerify: () => Promise<VerificationResult[]>;
   isVerifying: boolean;
   verificationResults: VerificationResult[];
+  /**
+   * What the project scope let this read see — including how many of the module's
+   * rows are unattributed legacy rows and how many belong to another project. Null
+   * until the first successful fetch. An empty `features` list with
+   * `scope.foreignRows > 0` is NOT an unreviewed module: it is a module whose rows
+   * another project holds (one feature is one row until phase 2 puts the project in
+   * the UNIQUE key).
+   */
+  scope: ProjectScopeReport | null;
 }
 
 const EMPTY_SUMMARY: FeatureSummary = { total: 0, implemented: 0, improved: 0, partial: 0, missing: 0, unknown: 0 };
@@ -34,10 +45,28 @@ const EMPTY_SUMMARY: FeatureSummary = { total: 0, implemented: 0, improved: 0, p
 // background prefetch + a foreground tab); a per-instance ref lets both fire the
 // insert-if-missing POST and race a duplicate seed. Keying the guard on moduleId
 // across all instances means at most one seed is ever dispatched per module.
+//
+// The key includes the PROJECT: a module seeded under project A is not seeded
+// under project B, and a project-keyed guard is what lets B seed its own rows
+// after a switch instead of sitting on A's guard entry forever.
 const seededModules = new Set<string>();
 
+/** Append the active project to a feature-matrix URL. Omitted when there is no
+ *  active project, so an unscoped call is visibly unscoped rather than sending
+ *  an empty parameter that reads like a scope. */
+function withProject(url: string, projectId: string): string {
+  if (!projectId) return url;
+  const sep = url.includes('?') ? '&' : '?';
+  return `${url}${sep}projectId=${encodeURIComponent(projectId)}`;
+}
+
 export function useFeatureMatrix(moduleId: SubModuleId): UseFeatureMatrixResult {
+  // The active project, read from the store the user actually switches. Every
+  // fetch below depends on it, so switching projects re-reads the matrix rather
+  // than leaving the previous project's rows on screen.
+  const projectPath = useProjectStore((s) => s.projectPath);
   const [features, setFeatures] = useState<FeatureRow[]>([]);
+  const [scope, setScope] = useState<ProjectScopeReport | null>(null);
   const [summary, setSummary] = useState<FeatureSummary>(EMPTY_SUMMARY);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +89,11 @@ export function useFeatureMatrix(moduleId: SubModuleId): UseFeatureMatrixResult 
     const requestId = ++requestIdRef.current;
     setIsLoading(true);
     setError(null);
-    const result = await tryApiFetch<{ features: FeatureRow[]; summary: FeatureSummary }>(`/api/feature-matrix?moduleId=${encodeURIComponent(moduleId)}`);
+    const result = await tryApiFetch<{
+      features: FeatureRow[];
+      summary: FeatureSummary;
+      scope?: ProjectScopeReport;
+    }>(withProject(`/api/feature-matrix?moduleId=${encodeURIComponent(moduleId)}`, projectPath));
     // A newer request has since been issued — discard this stale response.
     if (requestId !== requestIdRef.current) return;
     if (result.ok) {
@@ -71,13 +104,14 @@ export function useFeatureMatrix(moduleId: SubModuleId): UseFeatureMatrixResult 
       }
       statusSigRef.current = signature;
       setFeatures(rows);
+      setScope(result.data.scope ?? null);
       setSummary(result.data.summary ?? EMPTY_SUMMARY);
     } else {
       console.error('useFeatureMatrix fetch error:', result.error);
       setError(result.error);
     }
     setIsLoading(false);
-  }, [moduleId]);
+  }, [moduleId, projectPath]);
 
   const seed = useCallback(async () => {
     const defs = MODULE_FEATURE_DEFINITIONS[moduleId];
@@ -98,7 +132,11 @@ export function useFeatureMatrix(moduleId: SubModuleId): UseFeatureMatrixResult 
       // seedOnly: insert-if-missing — a seed must never clobber review data
       // that exists in the DB (e.g. when this ran because a fetch failed).
       // source 'seed': these rows carry no verdict, and must not read as reviewed.
-      body: JSON.stringify({ moduleId, features: seedFeatures, seedOnly: true, source: 'seed' }),
+      // projectId: the seeded rows belong to the project that is open, so the next
+      // project to open this module does not inherit them as its own.
+      body: JSON.stringify({
+        moduleId, features: seedFeatures, seedOnly: true, source: 'seed', projectId: projectPath,
+      }),
     });
     if (result.ok) {
       // New rows change the cross-module status table every other view reads —
@@ -108,7 +146,7 @@ export function useFeatureMatrix(moduleId: SubModuleId): UseFeatureMatrixResult 
     } else {
       console.error('useFeatureMatrix seed error:', result.error);
     }
-  }, [moduleId, fetchData]);
+  }, [moduleId, projectPath, fetchData]);
 
   const runAutoVerify = useCallback(async (): Promise<VerificationResult[]> => {
     const manifest = usePofBridgeStore.getState().manifest;
@@ -147,11 +185,15 @@ export function useFeatureMatrix(moduleId: SubModuleId): UseFeatureMatrixResult 
   // Only after a SUCCESSFUL empty fetch — a failed GET also leaves features at []
   // and seeding then would write over review data the DB still holds.
   useEffect(() => {
-    if (!isLoading && !error && features.length === 0 && !seededModules.has(moduleId)) {
-      seededModules.add(moduleId);
+    const seedKey = `${projectPath}::${moduleId}`;
+    if (!isLoading && !error && features.length === 0 && !seededModules.has(seedKey)) {
+      seededModules.add(seedKey);
       seed();
     }
-  }, [isLoading, error, features.length, moduleId, seed]);
+  }, [isLoading, error, features.length, moduleId, projectPath, seed]);
 
-  return { features, summary, isLoading, error, retry: fetchData, refetch: fetchData, seed, runAutoVerify, isVerifying, verificationResults };
+  return {
+    features, summary, isLoading, error, retry: fetchData, refetch: fetchData, seed,
+    runAutoVerify, isVerifying, verificationResults, scope,
+  };
 }

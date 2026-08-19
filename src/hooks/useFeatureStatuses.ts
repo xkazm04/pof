@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { tryApiFetch } from '@/lib/api-utils';
 import { UI_TIMEOUTS } from '@/lib/constants';
+import { useProjectStore } from '@/stores/projectStore';
+import type { ProjectScopeReport } from '@/lib/feature-matrix-db';
 
 /**
  * Shared loader for `/api/feature-matrix/all-statuses` — the unfiltered
@@ -42,6 +44,12 @@ export interface FeatureStatusesResult {
   failed: boolean;
   /** Reason the most recent settled load failed (`null` when it succeeded / has not settled). */
   error: string | null;
+  /**
+   * Which project the loaded rows were scoped to, and what that scope excluded.
+   * `null` until a load settles / on error. `scope.unscoped` means no project was
+   * open, so these are the unattributed legacy rows — NOT every project's rows.
+   */
+  scope: ProjectScopeReport | null;
   /** Drop the shared cache and refetch — for every subscriber, not just this one. */
   refresh: () => void;
 }
@@ -56,15 +64,29 @@ interface CacheEntry {
   rows: FeatureStatusRow[];
   failed: boolean;
   error: string | null;
+  scope: ProjectScopeReport | null;
   fetchedAt: number;
+  /** Which project this entry was loaded for. A cached entry from a DIFFERENT
+   *  project is not a hit at any age — serving it is precisely the cross-project
+   *  contamination the scoping removes. */
+  projectId: string;
   /** Invalidation generation this entry was loaded in (see `generation`). */
   gen: number;
+}
+
+/** The active project, read at fetch time from the store the user switches. It is
+ *  read late (never captured at module load) so a project switch is picked up
+ *  without a reload. */
+function activeProjectId(): string {
+  return useProjectStore.getState().projectPath ?? '';
 }
 
 // Module-level singletons survive component remounts within the tab session.
 let cache: CacheEntry | null = null;
 let inflight: Promise<CacheEntry> | null = null;
 let inflightGen = -1;
+/** The project the in-flight request was issued for (see `getStatuses`). */
+let inflightProject = '';
 /**
  * Bumped by every invalidation. A load started before an invalidation must not
  * populate the cache afterwards (it read the pre-mutation table), and a
@@ -81,13 +103,18 @@ function notify() {
   for (const cb of subscribers) cb();
 }
 
-/** The cache entry if it is still inside the TTL, else null. */
+/** The cache entry if it is still inside the TTL AND was loaded for the project
+ *  that is open now, else null. */
 function freshCache(): CacheEntry | null {
-  return cache && Date.now() - cache.fetchedAt < TTL_MS ? cache : null;
+  if (!cache) return null;
+  if (cache.projectId !== activeProjectId()) return null;
+  return Date.now() - cache.fetchedAt < TTL_MS ? cache : null;
 }
 
 async function loadStatuses(gen: number): Promise<CacheEntry> {
-  const result = await tryApiFetch<{ statuses: FeatureStatusRow[] }>(ENDPOINT);
+  const projectId = activeProjectId();
+  const url = projectId ? `${ENDPOINT}?projectId=${encodeURIComponent(projectId)}` : ENDPOINT;
+  const result = await tryApiFetch<{ statuses: FeatureStatusRow[]; scope?: ProjectScopeReport }>(url);
   const map = new Map<string, string>();
   const rows = result.ok ? (result.data.statuses ?? []) : EMPTY_ROWS;
   if (result.ok) {
@@ -98,6 +125,8 @@ async function loadStatuses(gen: number): Promise<CacheEntry> {
     rows,
     failed: !result.ok,
     error: result.ok ? null : result.error,
+    scope: result.ok ? (result.data.scope ?? null) : null,
+    projectId,
     fetchedAt: Date.now(),
     gen,
   };
@@ -111,9 +140,12 @@ async function loadStatuses(gen: number): Promise<CacheEntry> {
 function getStatuses(): Promise<CacheEntry> {
   const hit = freshCache();
   if (hit) return Promise.resolve(hit);
-  if (inflight && inflightGen === generation) return inflight;
+  // An in-flight request for a DIFFERENT project answers a different question —
+  // sharing it would hand the new project the old project's rows.
+  if (inflight && inflightGen === generation && inflightProject === activeProjectId()) return inflight;
 
   const gen = generation;
+  inflightProject = activeProjectId();
   const promise = loadStatuses(gen).then((entry) => {
     // A newer generation means the table changed under us: keep the result for
     // the awaiting callers (they gen-guard it) but never seat it as the cache.
@@ -147,6 +179,9 @@ export function invalidateFeatureStatuses() {
  * `Map` instance from the same cache entry).
  */
 export function useFeatureStatuses(): FeatureStatusesResult {
+  // Subscribed, not merely read: switching projects must re-resolve the shared map
+  // for every live consumer, not leave the previous project's statuses on screen.
+  const projectPath = useProjectStore((s) => s.projectPath);
   // Seed from a fresh cache so a second consumer mounting within the TTL renders
   // the data on its first paint without waiting for an effect tick. The seed is a
   // LAZY initialiser: reading the clock during every render is impure
@@ -178,17 +213,23 @@ export function useFeatureStatuses(): FeatureStatusesResult {
       cancelled = true;
       subscribers.delete(sync);
     };
-  }, []);
+  }, [projectPath]);
 
   const refresh = useCallback(() => { invalidateFeatureStatuses(); }, []);
 
+  // Never serve an entry loaded for another project: `freshCache` already refuses
+  // it, but a subscriber holding the previous project's entry in state must not
+  // render it while the new load is in flight.
+  const current = entry && entry.projectId === projectPath ? entry : null;
+
   return {
-    statusMap: entry?.map ?? EMPTY_MAP,
-    statuses: entry?.rows ?? EMPTY_ROWS,
+    statusMap: current?.map ?? EMPTY_MAP,
+    statuses: current?.rows ?? EMPTY_ROWS,
     isLoading,
-    loaded: entry !== null,
-    failed: entry?.failed ?? false,
-    error: entry?.error ?? null,
+    loaded: current !== null,
+    failed: current?.failed ?? false,
+    error: current?.error ?? null,
+    scope: current?.scope ?? null,
     refresh,
   };
 }

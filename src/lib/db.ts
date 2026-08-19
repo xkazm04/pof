@@ -65,6 +65,12 @@ export function getDb(): Database.Database {
       last_reviewed_at TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      -- Which project owns the row. Existed only as an ALTER migration below, so a
+      -- fresh DB created after a SCHEMA_VERSION bump (which skips the migration
+      -- probes) would have been missing the column every scoped query now reads.
+      -- Declared here in the same position the migration produces, since the
+      -- 'improved' rebuild above copies columns positionally (SELECT *).
+      project_id TEXT NOT NULL DEFAULT '',
       source TEXT NOT NULL DEFAULT 'unknown',
       UNIQUE(module_id, feature_name)
     )
@@ -127,7 +133,10 @@ export function getDb(): Database.Database {
       missing INTEGER NOT NULL DEFAULT 0,
       unknown INTEGER NOT NULL DEFAULT 0,
       avg_quality REAL,
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      -- Same reasoning as feature_matrix.project_id: migration-added, so a fresh DB
+      -- that skips the probes must still get it — captureReviewSnapshot inserts it.
+      project_id TEXT NOT NULL DEFAULT ''
     )
   `);
 
@@ -238,6 +247,20 @@ export function getDb(): Database.Database {
     db.exec("ALTER TABLE build_history ADD COLUMN project_id TEXT NOT NULL DEFAULT ''");
   }
   }
+
+  // Every feature-matrix read is now scoped by project (see `feature-matrix-db.ts`),
+  // so `project_id` leads both indexes. Created after the migration block because the
+  // 'improved' rebuild above drops and renames the table, which would take an index
+  // built before it with it.
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_feature_matrix_project
+    ON feature_matrix(project_id, module_id)
+  `);
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_review_snapshots_project
+    ON review_snapshots(project_id, module_id, reviewed_at)
+  `);
 
   // Checklist metadata — stores priority and notes per checklist item
   db.exec(`

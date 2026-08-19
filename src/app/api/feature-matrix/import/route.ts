@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { z } from 'zod';
-import { upsertFeatures } from '@/lib/feature-matrix-db';
+import { upsertFeatures, normalizeProjectId } from '@/lib/feature-matrix-db';
 import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
 import { checkIdempotencyKey, saveIdempotencyResult } from '@/lib/request-log';
 import { FEATURE_STATUSES } from '@/types/feature-matrix';
@@ -216,13 +216,25 @@ export const POST = withRoute(async (request: NextRequest) => {
     lastReviewedAt: reviewedAt.value,
   }));
 
+  // Which project this review is ABOUT. Disk mode already carries the project it
+  // read the report from; direct mode may name it explicitly. Absent ⇒ the row is
+  // written unattributed (`''`) — visible to every project, and counted as legacy
+  // by the scope report, rather than being guessed onto one.
+  const projectId = normalizeProjectId(
+    typeof body.projectId === 'string' ? body.projectId
+      : typeof body.projectPath === 'string' ? body.projectPath
+      : '',
+  );
+
   // This route IS the CLI review path — every row it writes is stamped as such.
-  upsertFeatures(moduleId, features, { source: 'review' });
+  const upserted = upsertFeatures(moduleId, features, { source: 'review', projectId });
 
   const responseData = {
     imported: accepted.length,
     reviewedAt: reviewedAt.value,
     source: 'review' as const,
+    projectId,
+    takenOverFromOtherProjects: upserted.takenOver,
     ...(rejected.length > 0 ? { rejected } : {}),
   };
 

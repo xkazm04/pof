@@ -4,7 +4,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { tryApiFetch } from '@/lib/api-utils';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import { invalidateFeatureStatuses } from '@/hooks/useFeatureStatuses';
-import type { ModuleAggregate } from '@/lib/feature-matrix-db';
+import { useProjectStore } from '@/stores/projectStore';
+import type { ModuleAggregate, ProjectScopeReport } from '@/lib/feature-matrix-db';
 
 /**
  * Shared loader for `/api/feature-matrix/aggregate` — the per-module roll-up of
@@ -39,6 +40,12 @@ export interface ModuleAggregatesResult {
   failed: boolean;
   /** Reason the most recent settled load failed (`null` when it succeeded / has not settled). */
   error: string | null;
+  /**
+   * Which project the roll-up was scoped to, and what that scope excluded. `null`
+   * until a load settles / on error. `scope.unscoped` means no project was open, so
+   * these totals cover the unattributed legacy rows only — not every project.
+   */
+  scope: ProjectScopeReport | null;
   /** Drop the shared caches and refetch — for every subscriber, not just this one. */
   refresh: () => void;
 }
@@ -54,15 +61,27 @@ interface CacheEntry {
   byModule: Map<string, ModuleAggregate>;
   failed: boolean;
   error: string | null;
+  scope: ProjectScopeReport | null;
+  /** Which project this entry was loaded for. An entry from a DIFFERENT project is
+   *  never a hit — serving it would show one project's roll-up under another's name. */
+  projectId: string;
   fetchedAt: number;
   /** Invalidation generation this entry was loaded in (see `generation`). */
   gen: number;
+}
+
+/** The active project, read at fetch time (never captured at module load) so a
+ *  project switch is picked up without a reload. */
+function activeProjectId(): string {
+  return useProjectStore.getState().projectPath ?? '';
 }
 
 // Module-level singletons survive component remounts within the tab session.
 let cache: CacheEntry | null = null;
 let inflight: Promise<CacheEntry> | null = null;
 let inflightGen = -1;
+/** The project the in-flight request was issued for (see `getAggregates`). */
+let inflightProject = '';
 /**
  * Bumped by every invalidation. A load started before an invalidation must not
  * populate the cache afterwards (it read the pre-mutation table), and a
@@ -79,13 +98,18 @@ function notify() {
   for (const cb of subscribers) cb();
 }
 
-/** The cache entry if it is still inside the TTL, else null. */
+/** The cache entry if it is still inside the TTL AND was loaded for the project
+ *  that is open now, else null. */
 function freshCache(): CacheEntry | null {
-  return cache && Date.now() - cache.fetchedAt < TTL_MS ? cache : null;
+  if (!cache) return null;
+  if (cache.projectId !== activeProjectId()) return null;
+  return Date.now() - cache.fetchedAt < TTL_MS ? cache : null;
 }
 
 async function loadAggregates(gen: number): Promise<CacheEntry> {
-  const result = await tryApiFetch<{ modules: ModuleAggregate[] }>(ENDPOINT);
+  const projectId = activeProjectId();
+  const url = projectId ? `${ENDPOINT}?projectId=${encodeURIComponent(projectId)}` : ENDPOINT;
+  const result = await tryApiFetch<{ modules: ModuleAggregate[]; scope?: ProjectScopeReport }>(url);
   const rows = result.ok ? (result.data.modules ?? []) : EMPTY_ROWS;
   const byModule = new Map<string, ModuleAggregate>();
   for (const row of rows) byModule.set(row.moduleId, row);
@@ -94,6 +118,8 @@ async function loadAggregates(gen: number): Promise<CacheEntry> {
     byModule,
     failed: !result.ok,
     error: result.ok ? null : result.error,
+    scope: result.ok ? (result.data.scope ?? null) : null,
+    projectId,
     fetchedAt: Date.now(),
     gen,
   };
@@ -107,9 +133,11 @@ async function loadAggregates(gen: number): Promise<CacheEntry> {
 function getAggregates(): Promise<CacheEntry> {
   const hit = freshCache();
   if (hit) return Promise.resolve(hit);
-  if (inflight && inflightGen === generation) return inflight;
+  // An in-flight request for a DIFFERENT project answers a different question.
+  if (inflight && inflightGen === generation && inflightProject === activeProjectId()) return inflight;
 
   const gen = generation;
+  inflightProject = activeProjectId();
   const promise = loadAggregates(gen).then((entry) => {
     // A newer generation means the table changed under us: keep the result for
     // the awaiting callers (they gen-guard it) but never seat it as the cache.
@@ -155,6 +183,9 @@ export function invalidateFeatureData() {
  * the same cache entry).
  */
 export function useModuleAggregates(): ModuleAggregatesResult {
+  // Subscribed, not merely read: switching projects must re-resolve the roll-up for
+  // every live dashboard, not leave the previous project's numbers on screen.
+  const projectPath = useProjectStore((s) => s.projectPath);
   // Seed from a fresh cache so a second consumer mounting within the TTL renders
   // the data on its first paint without waiting for an effect tick. The seed is a
   // LAZY initialiser: reading the clock during every render is impure
@@ -186,19 +217,23 @@ export function useModuleAggregates(): ModuleAggregatesResult {
       cancelled = true;
       subscribers.delete(sync);
     };
-  }, []);
+  }, [projectPath]);
 
   // A user-driven refresh of a dashboard refreshes the whole derived set, not
   // just this endpoint — the two caches move together or they lie to each other.
   const refresh = useCallback(() => { invalidateFeatureData(); }, []);
 
+  // Never serve an entry loaded for another project (see `freshCache`).
+  const current = entry && entry.projectId === projectPath ? entry : null;
+
   return {
-    aggregates: entry?.rows ?? EMPTY_ROWS,
-    byModule: entry?.byModule ?? EMPTY_MAP,
+    aggregates: current?.rows ?? EMPTY_ROWS,
+    byModule: current?.byModule ?? EMPTY_MAP,
     isLoading,
-    loaded: entry !== null,
-    failed: entry?.failed ?? false,
-    error: entry?.error ?? null,
+    loaded: current !== null,
+    failed: current?.failed ?? false,
+    error: current?.error ?? null,
+    scope: current?.scope ?? null,
     refresh,
   };
 }
