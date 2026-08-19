@@ -6,9 +6,10 @@
  * this is the durable record.
  */
 import { getDb } from '@/lib/db';
-import type { ExperimentResult, ExperimentSpec, ObservationSummary } from './runner';
+import type { ExperimentResult, ExperimentSpec, ObservationSummary, VisualVerdict } from './runner';
 
-type Verdict = { status: 'pass' | 'fail'; detail: string };
+/** Visual verdicts carry `deferred` (judge outage ≠ observed failure); behavioral ones don't. */
+type Verdict = VisualVerdict;
 
 export interface ExperimentRunSummary {
   id: string;

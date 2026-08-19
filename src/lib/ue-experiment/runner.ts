@@ -156,10 +156,29 @@ export interface ScenarioSpec {
   assert?: GateAssertion[];
 }
 
+/**
+ * The four visual checks `/api/verify/visual` implements. Each owns a SERVER-SIDE prompt; the
+ * mode is the whole of what a caller chooses. The lab used to send a free-text `prompt` the
+ * route never declared and always discarded — the control is gone, this one is honoured
+ * end-to-end (and a user-authored judge rubric would be a hole: a subject who can edit the
+ * judge's instructions can write "answer pass").
+ */
+export type VisualCheckMode = 'hud' | 'texture' | 'lighting' | 'character';
+
+export const VISUAL_CHECK_MODES: readonly VisualCheckMode[] = ['character', 'hud', 'lighting', 'texture'];
+
+/** Verdict status. `deferred` = the judge could not run — NOT an observed failure. */
+export type VerdictStatus = 'pass' | 'fail' | 'deferred';
+
+export interface VisualVerdict {
+  status: VerdictStatus;
+  detail: string;
+}
+
 export interface ExperimentSpec {
   python: string;
   capture?: boolean;
-  verify?: { mode?: string; prompt: string };
+  verify?: { mode: VisualCheckMode };
   /** Scenario mode: drive `-game -PoFScenario` (player + inputs) and observe behavioral
    *  metrics + the peak-action frame instead of running a Python probe. */
   scenario?: ScenarioSpec;
@@ -186,7 +205,7 @@ export interface ExperimentResult {
   logs: string[];
   markers: Record<string, string>;
   screenshotPath?: string;
-  verdict?: { status: 'pass' | 'fail'; detail: string };
+  verdict?: VisualVerdict;
   /** Scenario mode only: the captured behavioral samples (capped) + their summary + the
    *  assertion verdict (if assertions were given). */
   observations?: ObservationSample[];
@@ -199,11 +218,15 @@ export interface ExperimentResult {
 
 type RunFn = (binary: string, args: string[], settleMs: number) => Promise<void>;
 
+export type VerifyVisualFn = (screenshotPath: string, mode: VisualCheckMode) => Promise<VisualVerdict>;
+
 export interface RunnerDeps {
   /** Spawn the editor, let it run `settleMs`, then kill. Default: real spawn + taskkill. */
   run?: RunFn;
   /** Visual verify a screenshot (default: POST the app's /api/verify/visual). */
-  verifyVisual?: (screenshotPath: string, mode: string, prompt: string) => Promise<{ status: 'pass' | 'fail'; detail: string }>;
+  verifyVisual?: VerifyVisualFn;
+  /** Identity this run is recorded under in `visual_verifications` (the job id). */
+  runId?: string;
   fileExists?: (p: string) => boolean;
   now?: () => number;
   env?: EnvLike;
@@ -244,10 +267,15 @@ export async function runExperiment(spec: ExperimentSpec, deps: RunnerDeps = {})
   if (!held.ok) return refuse(leaseConflictReason(held.conflict), binary);
 
   const stamp = now();
+  const ctx: ScenarioCtx = {
+    uproject, binary, run, now, env,
+    ...(deps.verifyVisual ? { verifyVisual: deps.verifyVisual } : {}),
+    runId: deps.runId ?? `exp-${stamp}`,
+  };
   try {
     return spec.scenario
-      ? await runScenario(spec, { uproject, binary, run, now, env, verifyVisual: deps.verifyVisual }, stamp)
-      : await runPythonProbe(spec, { uproject, binary, run, now, env, verifyVisual: deps.verifyVisual }, stamp, fileExists);
+      ? await runScenario(spec, ctx, stamp)
+      : await runPythonProbe(spec, ctx, stamp, fileExists);
   } finally {
     lease.release();
   }
@@ -279,8 +307,8 @@ async function runPythonProbe(
 
   let verdict: ExperimentResult['verdict'];
   if (spec.verify && screenshotPath) {
-    const verify = ctx.verifyVisual ?? postVerifyVisual(env);
-    verdict = await verify(screenshotPath, spec.verify.mode ?? 'character', spec.verify.prompt);
+    const verify = ctx.verifyVisual ?? postVerifyVisual(env, ctx.runId);
+    verdict = await verify(screenshotPath, spec.verify.mode);
   }
 
   return {
@@ -306,7 +334,9 @@ interface ScenarioCtx {
   run: RunFn;
   now: () => number;
   env: EnvLike;
-  verifyVisual?: RunnerDeps['verifyVisual'];
+  verifyVisual?: VerifyVisualFn;
+  /** The run identity recorded alongside the verdict in `visual_verifications`. */
+  runId: string;
 }
 
 /** Scenario mode: drive `-game -PoFScenario` (player + inputs) via captureScenarioFrame,
@@ -333,8 +363,8 @@ async function runScenario(spec: ExperimentSpec, ctx: ScenarioCtx, stamp: number
 
   let verdict: ExperimentResult['verdict'];
   if (spec.verify && shot) {
-    const verify = ctx.verifyVisual ?? postVerifyVisual(ctx.env);
-    verdict = await verify(shot, spec.verify.mode ?? 'character', spec.verify.prompt);
+    const verify = ctx.verifyVisual ?? postVerifyVisual(ctx.env, ctx.runId);
+    verdict = await verify(shot, spec.verify.mode);
   }
   let behavioralVerdict: ExperimentResult['behavioralVerdict'];
   if (scn.assert?.length) {
@@ -369,15 +399,56 @@ async function runScenario(spec: ExperimentSpec, ctx: ScenarioCtx, stamp: number
  */
 const defaultRun: RunFn = createExperimentRun();
 
-function postVerifyVisual(env: EnvLike) {
-  return async (screenshotPath: string, mode: string, prompt: string) => {
+/** The `moduleId` every experiment verdict is filed under in `visual_verifications`. */
+export const EXPERIMENT_MODULE_ID = 'experiment';
+
+/**
+ * The real visual-verify seam: POST the app's `/api/verify/visual` and map its envelope to a
+ * verdict. Two bugs lived here and this is the shape that fixes both.
+ *
+ * 1. **It never ran.** The body omitted `moduleId` + `itemId`, which the route REQUIRES — so
+ *    every call 400'd, `json.data` was undefined, and the seam returned its own literal
+ *    `{ status: 'fail' }`. A comparison that never happened read as an observed defect. The ids
+ *    now go with the request (ported from `test-gate-runner/visualExecutor.ts`), which also
+ *    means every experiment verdict is queryable via `listVisualVerifications('experiment')`.
+ * 2. **A judge outage is not a failure.** 4xx/5xx, a missing key, a transport error or an
+ *    unrecognised reply shape are all `deferred` WITH the reason — never a red fail. Same
+ *    discrimination `visualExecutor` makes, and the reason names what actually happened.
+ *
+ * Note the envelope: the route returns the model's own verdict object (`{ verdict, notes }`),
+ * NOT `{ status, detail }` — the old seam would have mis-read the shape even with the ids.
+ */
+export function postVerifyVisual(env: EnvLike, runId: string, fetchImpl: typeof fetch = fetch): VerifyVisualFn {
+  return async (screenshotPath, mode) => {
     const origin = env.POF_APP_ORIGIN ?? `http://127.0.0.1:${env.PORT ?? 3000}`;
-    const res = await fetch(`${origin}/api/verify/visual`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ screenshotPath, mode, prompt }),
+    const defer = (why: string): VisualVerdict => ({
+      status: 'deferred',
+      detail: `visual ${mode}: auto-judge unavailable (${why}) — frame captured for review (${screenshotPath})`,
     });
-    const json = (await res.json()) as { data?: { status: 'pass' | 'fail'; detail: string } };
-    return json.data ?? { status: 'fail' as const, detail: 'verify call failed' };
+    let res: Response;
+    try {
+      res = await fetchImpl(`${origin}/api/verify/visual`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          moduleId: EXPERIMENT_MODULE_ID,
+          itemId: runId,
+          screenshotPath,
+          mode,
+        }),
+      });
+    } catch (e) {
+      return defer(e instanceof Error ? e.message : 'verify request failed');
+    }
+    const envelope = (await res.json().catch(() => null)) as
+      | { success?: boolean; data?: { verdict?: string; notes?: string }; error?: string }
+      | null;
+    if (!res.ok || !envelope?.success) return defer(envelope?.error ?? `HTTP ${res.status}`);
+    const verdict = envelope.data?.verdict;
+    // An unrecognised reply shape is an outage of the judge, not a fail: never let a shape
+    // mismatch condemn a frame nobody actually judged.
+    if (verdict !== 'pass' && verdict !== 'fail') return defer('judge returned an unrecognised verdict shape');
+    const notes = envelope.data?.notes;
+    return { status: verdict, detail: `visual ${mode}: ${verdict}${notes ? ` — ${notes}` : ''} (frame: ${screenshotPath})` };
   };
 }

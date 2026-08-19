@@ -4,12 +4,14 @@ import { runExperimentJob, fetchHistory, fetchRun } from '@/components/experimen
 import { buildAssertions } from '@/components/experiment-lab/assertions';
 
 describe('seedFromGotcha', () => {
-  it('builds a runnable starter probe + verify prompt from a gotcha', () => {
-    const { python, verifyPrompt } = seedFromGotcha({ summary: 'Lumen surface cache', detail: 'reflections go black' });
-    expect(python).toContain('# Lumen surface cache');
-    expect(python).toContain('# reflections go black');
-    expect(python).toContain("unreal.log('RESULT=");
-    expect(verifyPrompt).toBe('Lumen surface cache');
+  it('builds a runnable starter probe from a gotcha', () => {
+    const seeded = seedFromGotcha({ summary: 'Lumen surface cache', detail: 'reflections go black' });
+    expect(seeded.python).toContain('# Lumen surface cache');
+    expect(seeded.python).toContain('# reflections go black');
+    expect(seeded.python).toContain("unreal.log('RESULT=");
+    // It no longer seeds a free-text verify prompt: the route never read that field, so the
+    // seeded words were discarded. The visual check is chosen by MODE now.
+    expect(seeded).not.toHaveProperty('verifyPrompt');
   });
 });
 

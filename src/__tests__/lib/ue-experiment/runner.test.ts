@@ -96,8 +96,8 @@ describe('runExperiment (orchestration, deps-seam)', () => {
       writeFileSync(abslog, '[x] LogPython: RESULT=5.8.0\n[x] LogPython: POF_EXPERIMENT_DONE=ok\n');
     };
     const res = await runExperiment(
-      { python: "unreal.log('hi')", capture: true, verify: { prompt: 'looks right?' } },
-      { run, fileExists: () => true, verifyVisual: async () => ({ status: 'pass', detail: 'ok' }), env: ENV, now: () => 1, ...CLEAR },
+      { python: "unreal.log('hi')", capture: true, verify: { mode: 'character' } },
+      { run, fileExists: () => true, verifyVisual: async () => ({ status: 'pass' as const, detail: 'ok' }), env: ENV, now: () => 1, ...CLEAR },
     );
     expect(res.ok).toBe(true);
     expect(res.markers.RESULT).toBe('5.8.0');

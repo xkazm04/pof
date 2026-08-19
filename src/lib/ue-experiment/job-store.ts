@@ -37,7 +37,9 @@ export function startExperimentJob(spec: ExperimentSpec, deps?: RunnerDeps, runn
   const id = `exp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const job: ExperimentJob = { id, status: 'running', spec, startedAt: Date.now() };
   jobs.set(id, job);
-  runner(spec, deps)
+  // The job id IS the run's identity in `visual_verifications` (moduleId 'experiment'), so a
+  // verdict recorded there can be traced back to the run that produced it.
+  runner(spec, { ...deps, runId: deps?.runId ?? id })
     .then((result) => { job.result = result; job.status = 'done'; persist(job); })
     .catch((e: unknown) => { job.error = e instanceof Error ? e.message : String(e); job.status = 'error'; });
   return id;

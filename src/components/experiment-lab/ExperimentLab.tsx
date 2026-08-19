@@ -7,7 +7,8 @@ import { seedFromGotcha } from './seed';
 import { runExperimentJob } from './client';
 import { buildAssertions, type AssertionToggles } from './assertions';
 import { ExperimentHistory } from './ExperimentHistory';
-import type { ExperimentResult, ExperimentSpec } from '@/lib/ue-experiment/runner';
+import { VISUAL_CHECK_MODES, type ExperimentResult, type ExperimentSpec, type VisualCheckMode } from '@/lib/ue-experiment/runner';
+import { StatusTag } from '@/components/ui/StatusTag';
 
 type Status = 'idle' | 'running' | 'done' | 'error';
 type Mode = 'python' | 'scenario';
@@ -20,6 +21,15 @@ const ASSERT_KINDS: { key: keyof AssertionToggles; label: string }[] = [
   { key: 'animated', label: 'animated' },
   { key: 'montage', label: 'montage played' },
 ];
+
+/** What each server-owned check actually looks for (route.ts:33-89) — named so the choice is
+ *  informed rather than a bare mode word. */
+const VERIFY_MODE_LABELS: Record<VisualCheckMode, string> = {
+  character: 'Character — a humanoid renders, not missing / T-posed',
+  hud: 'HUD — no UI element reads empty or zero-width',
+  lighting: 'Lighting — the scene is lit, not black / un-lit',
+  texture: 'Texture — seamless / tileable, no seam or baked lighting',
+};
 
 const STARTER = "unreal.log('RESULT=' + unreal.SystemLibrary.get_engine_version())";
 // action+value injects the post-modifier vector straight into Enhanced Input — reliable,
@@ -39,7 +49,7 @@ export function ExperimentLab() {
   const [scenarioMap, setScenarioMap] = useState('/Game/Maps/VerticalSlice');
   const [scenarioInputs, setScenarioInputs] = useState(STARTER_INPUTS);
   const [removeEnemies, setRemoveEnemies] = useState(true);
-  const [verifyPrompt, setVerifyPrompt] = useState('');
+  const [verifyMode, setVerifyMode] = useState<VisualCheckMode | ''>('');
   const [allowRunningEditor, setAllowRunningEditor] = useState(false);
   const [asserts, setAsserts] = useState<AssertionToggles>({});
   const [status, setStatus] = useState<Status>('idle');
@@ -51,9 +61,7 @@ export function ExperimentLab() {
   const onSeed = useCallback((id: string) => {
     const g = UE_GOTCHAS.find((x) => x.id === id);
     if (!g) return;
-    const seeded = seedFromGotcha(g);
-    setPython(seeded.python);
-    setVerifyPrompt(seeded.verifyPrompt);
+    setPython(seedFromGotcha(g).python);
   }, []);
 
   const onRun = useCallback(async () => {
@@ -65,7 +73,7 @@ export function ExperimentLab() {
         spec = {
           python: '',
           scenario: { map: scenarioMap, inputs, totalSeconds: 4, numSamples: 8, disableAI: removeEnemies, ...(assert.length ? { assert } : {}) },
-          verify: verifyPrompt.trim() ? { prompt: verifyPrompt.trim() } : undefined,
+          verify: verifyMode ? { mode: verifyMode } : undefined,
           allowRunningEditor,
         };
       } catch {
@@ -74,7 +82,7 @@ export function ExperimentLab() {
         return;
       }
     } else {
-      spec = { python, capture, verify: verifyPrompt.trim() ? { prompt: verifyPrompt.trim() } : undefined, allowRunningEditor };
+      spec = { python, capture, verify: verifyMode ? { mode: verifyMode } : undefined, allowRunningEditor };
     }
     setStatus('running'); setErrMsg(null); setResult(null); setJobId(null);
     try {
@@ -86,7 +94,7 @@ export function ExperimentLab() {
       setStatus('error');
       logger.error('experiment run failed', e);
     }
-  }, [mode, python, capture, scenarioMap, scenarioInputs, removeEnemies, verifyPrompt, allowRunningEditor, asserts]);
+  }, [mode, python, capture, scenarioMap, scenarioInputs, removeEnemies, verifyMode, allowRunningEditor, asserts]);
 
   const s = result?.observationSummary;
 
@@ -169,17 +177,26 @@ export function ExperimentLab() {
       )}
 
       <div className="flex flex-wrap items-end gap-4">
+        {/* The four checks the judge route actually implements. This replaced a free-text
+            prompt box whose value the route never declared and always discarded — a control
+            whose value is discarded is worse than no control. The rubric stays server-owned
+            on purpose: a judge whose instructions the subject can edit is not a judge. */}
         <div className="min-w-64 flex-1">
-          <label htmlFor="experiment-verify-prompt" className="block text-xs text-text-muted">Visual check (optional)</label>
-          <input
-            id="experiment-verify-prompt"
+          <label htmlFor="experiment-verify-mode" className="block text-xs text-text-muted">Visual check (optional)</label>
+          <select
+            id="experiment-verify-mode"
             aria-describedby="experiment-verify-hint"
             className="focus-ring mt-1 w-full rounded border border-border bg-surface p-2"
-            placeholder="e.g. the character is standing upright, not in a T-pose"
-            value={verifyPrompt}
-            onChange={(e) => setVerifyPrompt(e.target.value)}
-          />
-          <p id="experiment-verify-hint" className="mt-1 text-2xs text-text-muted">What a vision model should look for in the captured frame. Leave blank to skip.</p>
+            value={verifyMode}
+            onChange={(e) => setVerifyMode(e.target.value as VisualCheckMode | '')}
+          >
+            <option value="">Off — no visual check</option>
+            {VISUAL_CHECK_MODES.map((m) => <option key={m} value={m}>{VERIFY_MODE_LABELS[m]}</option>)}
+          </select>
+          <p id="experiment-verify-hint" className="mt-1 text-2xs text-text-muted">
+            Runs the server-owned vision check for the chosen mode on the captured frame. If the judge
+            can&apos;t run (no key, an API error), the result is <em>deferred</em> with the reason — never a fail.
+          </p>
         </div>
         <button type="button" onClick={onRun} disabled={status === 'running'} aria-busy={status === 'running'} className="focus-ring rounded bg-emerald-600 px-4 py-2 font-medium text-white disabled:opacity-50">
           {status === 'running' ? 'Running on UE 5.8…' : 'Run on UE 5.8'}
@@ -228,8 +245,20 @@ export function ExperimentLab() {
           <div className="flex flex-wrap items-center gap-3">
             <span className={result.ok ? 'font-medium text-emerald-500' : 'font-medium text-red-500'}>{result.ok ? '✓ ran' : '✗ failed'}</span>
             <span className="text-text-muted">{Math.round(result.durationMs / 1000)}s</span>
-            {result.behavioralVerdict && <span className={result.behavioralVerdict.status === 'pass' ? 'text-emerald-500' : 'text-amber-500'}>behavior: {result.behavioralVerdict.status} — {result.behavioralVerdict.detail}</span>}
-            {result.verdict && <span className={result.verdict.status === 'pass' ? 'text-emerald-500' : 'text-amber-500'}>visual: {result.verdict.status} — {result.verdict.detail}</span>}
+            {result.behavioralVerdict && (
+              <span className="inline-flex items-center gap-1.5">
+                <span className="text-text-muted">behavior</span>
+                <StatusTag level={result.behavioralVerdict.status === 'pass' ? 'ok' : 'bad'} word={result.behavioralVerdict.status} />
+                <span className="text-text-muted">{result.behavioralVerdict.detail}</span>
+              </span>
+            )}
+            {result.verdict && (
+              <span className="inline-flex items-center gap-1.5">
+                <span className="text-text-muted">visual</span>
+                <StatusTag level={VERDICT_LEVEL[result.verdict.status]} word={result.verdict.status} />
+                <span className="text-text-muted">{result.verdict.detail}</span>
+              </span>
+            )}
           </div>
           {result.error && <p className="font-mono text-xs text-red-500">{result.error}</p>}
           {s && (
@@ -260,6 +289,9 @@ export function ExperimentLab() {
     </div>
   );
 }
+
+/** A judge that could not run is WARN (deferred), never the red an observed defect earns. */
+const VERDICT_LEVEL = { pass: 'ok', fail: 'bad', deferred: 'warn' } as const;
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (

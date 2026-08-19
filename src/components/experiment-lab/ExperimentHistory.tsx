@@ -4,15 +4,22 @@ import { useCallback, useEffect, useState } from 'react';
 import { logger } from '@/lib/logger';
 import { LoadingRow } from '@/components/ui/LoadingRow';
 import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
+import { StatusTag } from '@/components/ui/StatusTag';
 import { fetchHistory, fetchRun } from './client';
 import type { ExperimentRunSummary, ExperimentRunDetail } from '@/lib/ue-experiment/experiment-db';
+
+/** A judge that could not run is WARN (deferred), never the red an observed defect earns. */
+const VERDICT_LEVEL = { pass: 'ok', fail: 'bad', deferred: 'warn' } as const;
 
 /** History list + A-B compare for past experiment runs. Re-fetches when refreshKey changes. */
 export function ExperimentHistory({ refreshKey = 0 }: { refreshKey?: number }) {
   const [runs, setRuns] = useState<ExperimentRunSummary[]>([]);
-  const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
+  /** The (refresh, retry) generation whose fetch has SETTLED. `loading` is derived from it
+   *  rather than set at the top of the effect — `react-hooks/set-state-in-effect` errors on
+   *  the latter, and a derived flag can't drift out of sync with the request it describes. */
+  const [settledKey, setSettledKey] = useState<string | null>(null);
   const [aId, setAId] = useState<string | null>(null);
   const [bId, setBId] = useState<string | null>(null);
   const [a, setA] = useState<ExperimentRunDetail | null>(null);
@@ -21,18 +28,20 @@ export function ExperimentHistory({ refreshKey = 0 }: { refreshKey?: number }) {
   // The empty state ("no past runs") is only honest once a load has actually
   // succeeded — while in flight we show a spinner, and a failure explains itself
   // with a Retry instead of masquerading as "you have no history".
+  const loadKey = `${refreshKey}:${retryKey}`;
+  const loading = settledKey !== loadKey;
+
   useEffect(() => {
     let live = true;
-    setLoading(true);
     fetchHistory()
       .then((r) => { if (live) { setRuns(r); setLoadError(null); } })
       .catch((e) => {
         logger.error('history fetch failed', e);
         if (live) setLoadError(e instanceof Error ? e.message : 'Could not load run history.');
       })
-      .finally(() => { if (live) setLoading(false); });
+      .finally(() => { if (live) setSettledKey(loadKey); });
     return () => { live = false; };
-  }, [refreshKey, retryKey]);
+  }, [loadKey]);
 
   // Fetch detail when a slot is assigned (never clears state synchronously — the
   // compare render guards on id match, so a deselected/changed slot just stops matching).
@@ -88,11 +97,20 @@ function CompareColumn({ run, slot }: { run: ExperimentRunDetail; slot: string }
       </div>
       <div className="truncate font-mono text-2xs text-text-muted" title={run.label}>{run.label}</div>
       {run.behavioralVerdict && (
-        <div className={run.behavioralVerdict.status === 'pass' ? 'text-emerald-500' : 'text-amber-500'}>behavior: {run.behavioralVerdict.status} — {run.behavioralVerdict.detail}</div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-text-muted">behavior</span>
+          <StatusTag level={run.behavioralVerdict.status === 'pass' ? 'ok' : 'bad'} word={run.behavioralVerdict.status} />
+          <span className="truncate text-text-muted" title={run.behavioralVerdict.detail}>{run.behavioralVerdict.detail}</span>
+        </div>
       )}
       {run.verdict && (
-        <div className={run.verdict.status === 'pass' ? 'text-emerald-500' : 'text-amber-500'}>visual: {run.verdict.status}</div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-text-muted">visual</span>
+          {/* deferred = the judge never ran; it must not read as either a pass or a fail. */}
+          <StatusTag level={VERDICT_LEVEL[run.verdict.status]} word={run.verdict.status} />
+        </div>
       )}
+      {run.verdict?.status === 'deferred' && <div className="text-2xs text-text-muted">{run.verdict.detail}</div>}
       {s && (
         <div className="text-2xs text-text-muted">samples {s.sampleCount} · maxSpeed {s.maxSpeed.toFixed(0)} · disp {s.displacement.toFixed(0)} · montage {s.montagePlayed ? 'yes' : 'no'}</div>
       )}
