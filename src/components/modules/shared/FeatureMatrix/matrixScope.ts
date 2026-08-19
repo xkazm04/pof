@@ -1,5 +1,5 @@
 /**
- * Turn a {@link ProjectScopeReport} into the one sentence the matrix owes the user.
+ * Turn a project-scope report into the one sentence the matrix owes the user.
  *
  * Project scoping (phase 1) made every feature-matrix read return counts for what
  * it could and could not see — `ownedRows`, `legacyRows`, `foreignRows`. Until this
@@ -21,8 +21,27 @@
  * not offered here.
  */
 
-import type { ProjectScopeReport } from '@/lib/feature-matrix-db';
+import type { ProjectScopeCounts } from '@/lib/project-id';
 import type { StatusLevel } from '@/lib/status-token';
+
+/**
+ * The facts {@link describeMatrixScope} actually reads.
+ *
+ * The feature matrix's `ProjectScopeReport` satisfies it — and so does the plain {@link ProjectScopeCounts}
+ * that every OTHER project-scoped table returns (`build_history`,
+ * `telemetry_snapshots`). Widened to this structural minimum so those surfaces can
+ * REUSE this four-state classification instead of forking a second one that would
+ * drift from it; only the domain SENTENCE differs per surface, and that is supplied
+ * by the caller (see `BuildHistoryDashboard/buildScope.ts`).
+ *
+ * Type-only widening: every existing caller passes a full report and is unaffected.
+ */
+export type ScopeClassifierFacts = ProjectScopeCounts & {
+  /** The module the counts are restricted to; absent/null = whole-table counts. */
+  moduleId?: string | null;
+  /** The report's own sentence, when it has one. */
+  note?: string;
+};
 
 /**
  * Which of the four scope situations a module is in.
@@ -88,10 +107,11 @@ export function shortProjectLabel(projectId: string): string {
  *                    it is escalated so it cannot read as a quiet caveat.
  */
 export function describeMatrixScope(
-  scope: ProjectScopeReport | null | undefined,
+  scope: ScopeClassifierFacts | null | undefined,
   visibleRows: number,
 ): MatrixScopeDescription | null {
   if (!scope) return null;
+  const scopeNote = scope.note ?? '';
 
   const label = scope.unscoped ? '' : shortProjectLabel(scope.projectId);
   const under = label ? `"${label}"` : 'this read';
@@ -117,7 +137,7 @@ export function describeMatrixScope(
       headline: blind
         ? `${thisSubject} is not unreviewed — ${rowWord(scope.foreignRows)} ${ofItself} are owned by another project and are not visible under ${under}.`
         : `${rowWord(scope.foreignRows)} ${ofSubject} are owned by another project and are excluded from this view.`,
-      note: scope.note,
+      note: scopeNote,
     };
   }
 
@@ -131,7 +151,7 @@ export function describeMatrixScope(
       headline: scope.unscoped
         ? `No project is open, so this is the unattributed legacy set: ${rowWord(scope.legacyRows)} that no project owns. They exist and are shown — that is not the same as a ${subject} nothing has reviewed.`
         : `All ${rowWord(scope.legacyRows)} here are unattributed legacy rows that every project sees; nothing has been written under ${under}. They exist — that is not the same as a ${subject} nothing has reviewed.`,
-      note: scope.note,
+      note: scopeNote,
     };
   }
 
@@ -143,7 +163,7 @@ export function describeMatrixScope(
       level: 'warn',
       word: 'PARTLY UNATTRIBUTED',
       headline: `${rowWord(scope.ownedRows)} are attributed to ${under}; ${rowWord(scope.legacyRows)} carry no project attribution and are shown to every project.`,
-      note: scope.note,
+      note: scopeNote,
     };
   }
 
@@ -154,7 +174,7 @@ export function describeMatrixScope(
     level: 'ok',
     word: 'SCOPED',
     headline: `${rowWord(scope.ownedRows)} in view, all attributed to ${under}. Nothing was excluded by scope.`,
-    note: scope.note,
+    note: scopeNote,
   };
 }
 

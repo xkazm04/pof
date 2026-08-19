@@ -6,9 +6,11 @@ import {
   History, TrendingUp, ArrowLeftRight, Plus, RefreshCw,
 } from 'lucide-react';
 import type { BuildRecord, BuildStats, SizeTrendPoint } from '@/lib/packaging/build-history-store';
+import type { ProjectScopeCounts } from '@/lib/project-id';
 import { PLATFORM_IDS, platformLabel, normalizePlatformId } from '@/lib/packaging/build-profiles';
 import { apiFetch } from '@/lib/api-utils';
 import { MODULE_COLORS } from '@/lib/chart-colors';
+import { useProjectStore } from '@/stores/projectStore';
 import { SizeTrendChart } from '../SizeTrendChart';
 import { BuildComparison } from '../BuildComparison';
 import type { DashboardTab, SortKey, SortDir } from './types';
@@ -16,6 +18,8 @@ import { RecordBuildForm } from './RecordBuildForm';
 import { MetricsRow } from './MetricsRow';
 import { PlatformBreakdown } from './PlatformBreakdown';
 import { HistoryTab } from './HistoryTab';
+import { describeBuildScope } from './buildScope';
+import { BuildScopeBanner } from './BuildScopeBanner';
 
 // ---------- Dashboard ----------
 
@@ -30,6 +34,14 @@ export function BuildHistoryDashboard() {
   const [sortKey, setSortKey] = useState<SortKey>('date');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [platformFilter, setPlatformFilter] = useState<Set<string>>(new Set());
+  const [scope, setScope] = useState<ProjectScopeCounts | null>(null);
+
+  // The active project travels EXPLICITLY on every read and on the manual record.
+  // Wave 20 taught `insertBuild` to persist `project_id` but taught no CALLER to pass
+  // one — and `projectScopeSql('')` resolves to `project_id = ''`, so an unscoped
+  // dashboard returned LEGACY ROWS ONLY. Ten cooks with a project open showed zero
+  // builds under "No builds recorded yet".
+  const projectPath = useProjectStore((s) => s.projectPath);
 
   const handleSort = useCallback((key: SortKey) => {
     setSortKey((prev) => {
@@ -94,22 +106,27 @@ export function BuildHistoryDashboard() {
       // One composite request replaces the former 4-way fan-out (list / stats /
       // trend / version). The `dashboard` action returns the identical pieces
       // produced by those same store functions in a single route invocation.
+      const q = projectPath ? `&projectPath=${encodeURIComponent(projectPath)}` : '';
       const data = await apiFetch<{
         builds: BuildRecord[];
         stats: BuildStats | null;
         trend: SizeTrendPoint[];
         version: string;
-      }>('/api/packaging/history?action=dashboard&limit=100&trendLimit=50');
+        // The route has always computed this; the type used to omit it, so the one
+        // fact that explains an empty tab was fetched and thrown away.
+        scope?: ProjectScopeCounts;
+      }>(`/api/packaging/history?action=dashboard&limit=100&trendLimit=50${q}`);
       setBuilds(data.builds ?? []);
       setStats(data.stats ?? null);
       setTrend(data.trend ?? []);
       setVersion(data.version ?? '0.1.0');
+      setScope(data.scope ?? null);
     } catch (e) {
       console.error('Failed to fetch build history:', e);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [projectPath]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
@@ -118,14 +135,17 @@ export function BuildHistoryDashboard() {
       await apiFetch('/api/packaging/history', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'record', ...data }),
+        // Attributed to the same project the reads are scoped to — otherwise a
+        // manual record lands in the legacy `''` bucket and is the only thing the
+        // scoped tab can see, which is how this defect stayed invisible.
+        body: JSON.stringify({ action: 'record', projectPath, ...data }),
       });
       setShowForm(false);
       fetchAll();
     } catch (e) {
       console.error('Failed to record build:', e);
     }
-  }, [fetchAll]);
+  }, [fetchAll, projectPath]);
 
   const handleDelete = useCallback(async (id: number) => {
     try {
@@ -148,6 +168,10 @@ export function BuildHistoryDashboard() {
       console.error('Failed to bump version:', e);
     }
   }, []);
+
+  // Escalates to `bad` exactly when the tab is BLIND — nothing on screen while builds
+  // provably exist under another project.
+  const scopeDesc = useMemo(() => describeBuildScope(scope, builds.length), [scope, builds.length]);
 
   const tabClass = (t: DashboardTab) =>
     `px-2.5 py-1 text-xs font-medium rounded-t transition-colors ${
@@ -195,6 +219,9 @@ export function BuildHistoryDashboard() {
         )}
       </AnimatePresence>
 
+      {/* What this project's scope could NOT see — silent only when it hid nothing. */}
+      <BuildScopeBanner desc={scopeDesc} />
+
       {/* Metrics row */}
       {stats && (
         <MetricsRow stats={stats} version={version} onBump={handleBump} />
@@ -231,6 +258,7 @@ export function BuildHistoryDashboard() {
           filteredSortedBuilds={filteredSortedBuilds}
           builds={builds}
           handleDelete={handleDelete}
+          scope={scope}
         />
       )}
 

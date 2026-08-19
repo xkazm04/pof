@@ -1,14 +1,16 @@
 import type { Dispatch, SetStateAction } from 'react';
 import type { BuildRecord } from '@/lib/packaging/build-history-store';
+import type { ProjectScopeCounts } from '@/lib/project-id';
 import { platformLabel } from '@/lib/packaging/build-profiles';
 import { ACCENT_VIOLET } from '@/lib/chart-colors';
 import { SortableHeader } from './SortableHeader';
 import { BuildRow } from './BuildRow';
+import { emptyHistoryCopy } from './buildScope';
 import type { SortKey, SortDir } from './types';
 
 export function HistoryTab({
   availablePlatforms, platformFilter, togglePlatform, setPlatformFilter,
-  sortKey, sortDir, handleSort, filteredSortedBuilds, builds, handleDelete,
+  sortKey, sortDir, handleSort, filteredSortedBuilds, builds, handleDelete, scope,
 }: {
   availablePlatforms: string[];
   platformFilter: Set<string>;
@@ -20,6 +22,9 @@ export function HistoryTab({
   filteredSortedBuilds: BuildRecord[];
   builds: BuildRecord[];
   handleDelete: (id: number) => void;
+  /** What the scoped read could and could not see — the empty state is not entitled
+   *  to claim "no builds recorded" without it. */
+  scope?: ProjectScopeCounts | null;
 }) {
   return (
     <div className="space-y-2">
@@ -69,7 +74,7 @@ export function HistoryTab({
         {filteredSortedBuilds.length === 0 ? (
           <div className="text-center text-text-muted text-xs py-8">
             {builds.length === 0
-              ? 'No builds recorded yet. Use "Record" to add your first build.'
+              ? emptyHistoryCopy(scope)
               : 'No builds match the current filter.'}
           </div>
         ) : (
