@@ -15,6 +15,7 @@ import { ToolingBootstrapPanel } from './ToolingBootstrapPanel';
 import { ManifestPreview } from './ManifestPreview';
 import { BlueprintInspector } from './BlueprintInspector';
 import { UE5ConnectionPanel } from './UE5ConnectionPanel';
+import { ProjectNBACard } from '@/components/modules/shared/ProjectNBACard';
 import { deriveNextStep, type NextStepId } from './nextStep';
 import { buildCreateProjectPrompt, buildBuildVerifyPrompt } from './prompts';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
@@ -158,6 +159,17 @@ export function ProjectSetupModule() {
             loading={nextStepLoading}
             disabled={nextStepDisabled}
           />
+        )}
+
+        {/* What to do next across the WHOLE project, once a project exists.
+            Project Setup is the project home, and the setup banner above only
+            ever answers "how do I finish setting up" — this answers "what should
+            I build next", without first guessing which module to open. Dimmed
+            like every other panel while a setup step is still pending. */}
+        {projectPath.trim() && (
+          <div className={nextStep ? 'opacity-50 transition-opacity duration-base' : ''}>
+            <ProjectNBACard />
+          </div>
         )}
 
         {/* UE5 editor connection — the app's authoritative mount of the live
