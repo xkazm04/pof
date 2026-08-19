@@ -250,7 +250,6 @@ export function useAudioScenePainter({
           occlusionMode: 'medium',
           priority: 5,
           color: Object.values(ZONE_COLORS)[base.zones.length % Object.values(ZONE_COLORS).length],
-          linkedFiles: [],
         };
         runCommit({ zones: [...base.zones, newZone], emitters: base.emitters });
         onSelectZone(id);

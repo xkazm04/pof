@@ -23,7 +23,7 @@ function rectZone(over: Partial<AudioZone> = {}): AudioZone {
     id: 'z', name: 'Z', shape: 'rect', x: 100, y: 100, width: 50, height: 40,
     soundscapeDescription: '', reverbPreset: 'none', reverbDecayTime: 1.5,
     reverbDiffusion: 0.7, reverbWetDry: 0.5, attenuationRadius: 200,
-    occlusionMode: 'medium', priority: 5, color: '', linkedFiles: [],
+    occlusionMode: 'medium', priority: 5, color: '',
     ...over,
   };
 }

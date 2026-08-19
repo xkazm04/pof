@@ -369,7 +369,6 @@ export function generateSpatialAudio(input: SpatialAudioGeneratorInput): Spatial
       occlusionMode: finalOcclusion,
       priority: profile.priority,
       color: profile.color,
-      linkedFiles: room.linkedFiles ?? [],
     };
     zones.push(zone);
 

@@ -130,7 +130,6 @@ const AUDIO_ZONE: AudioZone = {
   occlusionMode: 'medium',
   priority: 5,
   color: 'var(--accent)',
-  linkedFiles: [],
 };
 
 const AUDIO_DOC: AudioSceneDocument = {

@@ -50,21 +50,13 @@ export interface AudioZone {
   priority: number;
   /** Accent color for visual display */
   color: string;
-  /**
-   * @deprecated RETIRED 2026-08-18 — never read, and now superseded.
-   *
-   * This was a previous attempt at the asset↔scene edge: it was initialised to
-   * `[]` by the painter and the spatial-audio generator and then never written
-   * to and never read by anything in the audio module. The real edge is
-   * {@link SoundEmitter.assetSetId} (an emitter references a generated asset set,
-   * and codegen resolves that set's last recorded UE import).
-   *
-   * Kept OPTIONAL rather than deleted so the `audio_scenes` JSON blobs already on
-   * disk keep parsing and the (settled) painter/generator writers keep compiling.
-   * Nothing may start reading it; delete it outright the next time those writers
-   * are open for edit.
-   */
-  linkedFiles?: string[];
+  // NOTE: `linkedFiles` was DELETED 2026-08-19. It was a previous attempt at the
+  // asset↔scene edge — written (`[]`, or copied off a level-design room) by the
+  // painter and the spatial-audio generator, then never read by anything. The
+  // real edge is `SoundEmitter.assetSetId`. Zone blobs already on disk still
+  // carry the key; `rowToDoc` JSON.parses the blob as-is, so extra keys are
+  // simply not surfaced (proved by audio-zone-legacy-blob.test.ts). Do not
+  // reintroduce it — bind assets through the emitter.
 }
 
 export interface SoundEmitter {

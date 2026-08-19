@@ -9,7 +9,7 @@ function rectZone(over: Partial<AudioZone> = {}): AudioZone {
     id: 'z1', name: 'Cavern', shape: 'rect', x: 100, y: 100, width: 120, height: 80,
     soundscapeDescription: '', reverbPreset: 'cave', reverbDecayTime: 1.5,
     reverbDiffusion: 0.7, reverbWetDry: 0.5, attenuationRadius: 200,
-    occlusionMode: 'medium', priority: 5, color: '', linkedFiles: [],
+    occlusionMode: 'medium', priority: 5, color: '',
     ...over,
   };
 }

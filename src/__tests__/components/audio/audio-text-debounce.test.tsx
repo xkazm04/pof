@@ -15,7 +15,7 @@ function zone(over: Partial<AudioZone> = {}): AudioZone {
     id: 'z1', name: 'Cavern', shape: 'rect', x: 0, y: 0, width: 100, height: 100,
     soundscapeDescription: '', reverbPreset: 'cave', reverbDecayTime: 1.5,
     reverbDiffusion: 0.7, reverbWetDry: 0.5, attenuationRadius: 200,
-    occlusionMode: 'medium', priority: 5, color: '', linkedFiles: [],
+    occlusionMode: 'medium', priority: 5, color: '',
     ...over,
   };
 }
