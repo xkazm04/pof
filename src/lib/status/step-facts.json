@@ -1708,7 +1708,7 @@
       "generatorWired": true,
       "judge": "vlm",
       "checkerMeaningful": true,
-      "note": "Powered by gap-loop batch 3 (2026-07-07): a real Leonardo Lucid Origin image is generated via /api/leonardo (Lucid Origin, download-then-delete), Qwen3-VL-4B gated (>=7), and injected into the artifact's data.genHistory as a data-URL swatch; VLM verdict recorded. trueEngine now reflects the real producing engine. Durability follow-up: the UI gallery producer (itemGenCandidates/genericGalleryCandidates) still emits placeholder swatches, so an e2e stub re-walk would overwrite the injected asset — wire the gallery Produce to /api/leonardo to make it regenerate in-app. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified. 2026-07-29: the selection gate now grades the SELECTED CANDIDATE (real asset -> pass; deterministic swatch -> deferred with a reason; an unresolved or mismatched selection -> fail), so a wrong index or a lost candidate no longer passes."
+      "note": "Powered by gap-loop batch 3 (2026-07-07): a real Leonardo Lucid Origin image is generated via /api/leonardo (Lucid Origin, download-then-delete), Qwen3-VL-4B gated (>=7), and injected into the artifact's data.genHistory as a data-URL swatch; VLM verdict recorded. trueEngine now reflects the real producing engine. Durability follow-up: the UI gallery producer (itemGenCandidates/genericGalleryCandidates) still emits placeholder swatches, so an e2e stub re-walk would overwrite the injected asset — wire the gallery Produce to /api/leonardo to make it regenerate in-app. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified. 2026-07-29: the selection gate now grades the SELECTED CANDIDATE (real asset -> pass; deterministic swatch -> deferred with a reason; an unresolved or mismatched selection -> fail), so a wrong index or a lost candidate no longer passes. 2026-08-19 (wave 21, df9d12b5): the BESPOKE on-screen step now delegates to the same gradeGallerySelection('selected') as the registered step, so the two specs can no longer return different verdicts for the same row."
     },
     {
       "catalogId": "items",
@@ -1738,7 +1738,7 @@
       "generatorWired": false,
       "judge": "ue-test",
       "checkerMeaningful": false,
-      "note": "runtimeDeferred names VSItemsDefinitionsTest (a real functional test target) but always returns status:'deferred' regardless of data — honest about not having run yet, but not itself a check."
+      "note": "runtimeDeferred names VSItemsDefinitionsTest (a real functional test target) but always returns status:'deferred' regardless of data — honest about not having run yet, but not itself a check. 2026-08-19 (wave 21, 7539cb5e): this note describes the REGISTRY entityRuntimeDeferred only. The bespoke on-screen gate now derives from RESOLVED sibling verdicts (checker → drain → judge via ctx.siblingVerdict) and names the condemning layer in blockedBy; checkerMeaningful for this registry row is unchanged."
     },
     {
       "catalogId": "items",
@@ -1768,7 +1768,7 @@
       "generatorWired": true,
       "judge": "vlm",
       "checkerMeaningful": true,
-      "note": "Bespoke on-screen step (ITEM_STEP_SPECS; see ITEMS_SPEC_DUALITY). Accept grades the tri count against the artifact's own LOD0 cap (tris > 0 && tris <= cap), so a wrong number FAILS - a real budget law, not a presence check. It does not verify the mesh itself; that is the VLM/UE gate's job."
+      "note": "Bespoke on-screen step (ITEM_STEP_SPECS; see ITEMS_SPEC_DUALITY). Accept grades the tri count against the artifact's own LOD0 cap (tris > 0 && tris <= cap), so a wrong number FAILS - a real budget law, not a presence check. It does not verify the mesh itself; that is the VLM/UE gate's job. 2026-08-19 (wave 21, df9d12b5): the tri count it grades is a CONSTANT from itemGenCandidates.ts ([4200,5200,5900]), so accept now composes the budget check with the selected-candidate asset gate — shape defect still wins first, then swatch-only → deferred/L4."
     },
     {
       "catalogId": "items",
@@ -1777,8 +1777,8 @@
       "deliverable": "text-config",
       "generatorWired": false,
       "judge": "llm-panel",
-      "checkerMeaningful": false,
-      "note": "Bespoke on-screen step (ITEM_STEP_SPECS; see ITEMS_SPEC_DUALITY). Accept asserts the Albedo/Normal/ORM map NAMES are listed; no texture is generated or inspected, and no numeric value is graded."
+      "checkerMeaningful": true,
+      "note": "Bespoke on-screen step (ITEM_STEP_SPECS; see ITEMS_SPEC_DUALITY). Accept asserts the Albedo/Normal/ORM map NAMES are listed; no texture is generated or inspected, and no numeric value is graded. 2026-08-19 (wave 21, df9d12b5): accept now ALSO grades the gallery's SELECTED CANDIDATE (withGeneratedAsset) — a swatch-only or history-less artifact defers at L4 with a reason instead of passing on the map NAMES alone, so the step can no longer read green while no texture generator has ever run."
     },
     {
       "catalogId": "items",
