@@ -1,6 +1,7 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
+import { motionSafe } from '@/lib/motion';
 import { STAGGER_SLOW } from '@/components/modules/core-engine/unique-tabs/_shared';
 import type { ItemGenome } from '@/types/item-genome';
 import { AXIS_CONFIGS } from './data';
@@ -9,6 +10,10 @@ import { withOpacity, OPACITY_25, OPACITY_30 } from '@/lib/chart-colors';
 /* ── DNA Strand Visualization ──────────────────────────────────────────── */
 
 export function DNAStrand({ genome }: { genome: ItemGenome }) {
+  // 40 base pairs breathe on the SVG `r` attribute. `r` is not one of framer's
+  // positional keys, so the root MotionConfig leaves every one of them looping
+  // for a motion-sensitive user.
+  const prefersReduced = useReducedMotion();
   const bases = 20;
   const height = 120;
   const width = 260;
@@ -32,14 +37,14 @@ export function DNAStrand({ genome }: { genome: ItemGenome }) {
               fill={cfg.color}
               style={{ filter: `drop-shadow(0 0 ${2 + intensity * 4}px ${cfg.color})` }}
               animate={{ r: [2 + intensity * 3, 3 + intensity * 3, 2 + intensity * 3] }}
-              transition={{ duration: 2, repeat: Infinity, delay: i * STAGGER_SLOW }}
+              transition={motionSafe({ duration: 2, repeat: Infinity, delay: i * STAGGER_SLOW }, prefersReduced)}
             />
             <motion.circle
               cx={x} cy={y2} r={2 + intensity * 3}
               fill={cfg.color}
               opacity={0.6}
               animate={{ r: [2 + intensity * 2, 3 + intensity * 2, 2 + intensity * 2] }}
-              transition={{ duration: 2, repeat: Infinity, delay: i * STAGGER_SLOW + 1 }}
+              transition={motionSafe({ duration: 2, repeat: Infinity, delay: i * STAGGER_SLOW + 1 }, prefersReduced)}
             />
           </g>
         );

@@ -2,14 +2,14 @@
 
 import { useState } from 'react';
 import { GitBranch, ExternalLink, ChevronRight, Layers } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   STATUS_ERROR,
   OPACITY_5, OPACITY_8, OPACITY_12, OPACITY_15, OPACITY_20, OPACITY_25,
   GLOW_LG,
   withOpacity,
 } from '@/lib/chart-colors';
-import { MOTION_CONFIG } from '@/lib/motion';
+import { MOTION_CONFIG, motionSafe } from '@/lib/motion';
 import { BlueprintPanel, SectionHeader, CornerBrackets } from '../_shared/design';
 import { CLASS_TREE, type ClassNode } from '../_shared/data';
 
@@ -29,6 +29,9 @@ function ClassTreeNode({ node, depth, index }: { node: ClassNode; depth: number;
   const hasChildren = node.children && node.children.length > 0;
   const [expanded, setExpanded] = useState(true);
   const [hovered, setHovered] = useState(false);
+  // The junction dot pulses opacity only — non-positional, so the root
+  // MotionConfig would keep it looping for a motion-sensitive user.
+  const prefersReduced = useReducedMotion();
 
   return (
     <motion.div
@@ -59,7 +62,7 @@ function ClassTreeNode({ node, depth, index }: { node: ClassNode; depth: number;
             fill={node.color}
             initial={{ opacity: 0 }}
             animate={{ opacity: [0.3, 0.8, 0.3] }}
-            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+            transition={motionSafe({ duration: 2, repeat: Infinity, ease: 'easeInOut' } as const, prefersReduced)}
           />
         </svg>
       )}

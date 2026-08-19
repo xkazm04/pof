@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
+import { AppMotionProvider } from "@/components/providers/AppMotionProvider";
 import { DevInspector } from "./_dev-inspector/DevInspector";
 import "./globals.css";
 
@@ -19,6 +20,18 @@ export const metadata: Metadata = {
   description: "Power of Fun - UE5 C++ game development assistant powered by Claude",
 };
 
+/**
+ * Root layout.
+ *
+ * Two things are load-bearing here beyond the fonts:
+ *  - `<AppMotionProvider>` supplies the app's only `MotionConfig`. framer-motion
+ *    defaults to `reducedMotion: "never"`, so without it every `motion.*` element
+ *    ignores the OS preference that `globals.css` honours for CSS animations.
+ *  - The body floor is token-backed (`bg-background` / `text-text`). It used to
+ *    hardcode an arbitrary hex that had drifted one digit off the real
+ *    `--background` (#0a0a16), so the page floor never matched the surface ladder
+ *    painted on top of it.
+ */
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -27,9 +40,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[#0a0a1a] text-[#e0e4f0]`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-text`}
       >
-        {children}
+        <AppMotionProvider>{children}</AppMotionProvider>
         {process.env.NODE_ENV === "development" && <DevInspector />}
         <Toaster
           theme="dark"

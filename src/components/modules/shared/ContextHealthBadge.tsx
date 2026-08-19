@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { RefreshCw } from 'lucide-react';
 import { useProjectStore } from '@/stores/projectStore';
 import { useNavigationStore } from '@/stores/navigationStore';
 import { STATUS_SUCCESS, STATUS_ERROR, MODULE_COLORS, statusGlow } from '@/lib/chart-colors';
 import { formatTimeAgo } from '@/lib/format-time';
 import { Z_INDEX } from '@/lib/constants';
+import { motionSafe, EASE_OUT } from '@/lib/motion';
 
 interface FieldStatus {
   label: string;
@@ -40,6 +41,10 @@ function getFieldStatuses(
 }
 
 export function ContextHealthBadge() {
+  // The unhealthy-state pulse ring loops scale + opacity. The root MotionConfig
+  // freezes the scale but keeps the opacity fading, so this badge — pinned in
+  // every module header — would still blink forever. Gate the whole loop.
+  const prefersReduced = useReducedMotion();
   const projectName = useProjectStore((s) => s.projectName);
   const projectPath = useProjectStore((s) => s.projectPath);
   const ueVersion = useProjectStore((s) => s.ueVersion);
@@ -141,7 +146,7 @@ export function ContextHealthBadge() {
             className="absolute inset-0 rounded-full"
             style={{ border: `1px solid ${dotColor}` }}
             animate={{ scale: [1, 1.6], opacity: [0.5, 0] }}
-            transition={{ duration: 1.5, repeat: Infinity, ease: [0.16, 1, 0.3, 1] }}
+            transition={motionSafe({ duration: 1.5, repeat: Infinity, ease: EASE_OUT }, prefersReduced)}
           />
         )}
       </motion.button>

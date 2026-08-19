@@ -1,6 +1,7 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
+import { motionSafe } from '@/lib/motion';
 import {
   STATUS_ERROR, OVERLAY_WHITE, ACCENT_ORANGE,
   OPACITY_5, OPACITY_8, OPACITY_12, OPACITY_20, OPACITY_37,
@@ -30,6 +31,9 @@ interface Props {
 export function InputBindingsRow({
   binding, index, isOverridden, isRebinding, displayKey, conflicts, status, onStartRebind,
 }: Props) {
+  // Both pulses below are opacity-only, which the root MotionConfig deliberately
+  // keeps animating — so they opt out of the endless loop explicitly.
+  const prefersReduced = useReducedMotion();
   const sc = STATUS_COLORS[status];
   const freq = KEY_FREQUENCY_MAP.get(binding.defaultKey) ?? 0;
   const freqColor = heatColor(freq);
@@ -60,7 +64,7 @@ export function InputBindingsRow({
           }}
         >
           {isRebinding ? (
-            <motion.span animate={{ opacity: [1, 0.4, 1] }} transition={{ duration: 1.2, repeat: Infinity }}>
+            <motion.span animate={{ opacity: [1, 0.4, 1] }} transition={motionSafe({ duration: 1.2, repeat: Infinity }, prefersReduced)}>
               Press a key...
             </motion.span>
           ) : (
@@ -89,7 +93,7 @@ export function InputBindingsRow({
             className="w-1.5 h-1.5 rounded-full"
             style={{ backgroundColor: sc.dot, boxShadow: `${GLOW_SM} ${sc.dot}` }}
             animate={status === 'implemented' ? { opacity: [0.5, 1, 0.5] } : {}}
-            transition={{ duration: 2, repeat: Infinity }}
+            transition={motionSafe({ duration: 2, repeat: Infinity }, prefersReduced)}
           />
           <span className="text-xs uppercase font-bold tracking-wider" style={{ color: sc.dot }}>{sc.label}</span>
         </span>

@@ -1,6 +1,7 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
+import { motionSafe } from '@/lib/motion';
 import { WIDGET_Z_COLOR } from './data';
 import type { WidgetRectProps } from './data';
 import { STATUS_SUBDUED,
@@ -8,6 +9,9 @@ import { STATUS_SUBDUED,
 } from '@/lib/chart-colors';
 
 export function WidgetRect({ placement, visible, changed, showZLayer, contextColor }: WidgetRectProps) {
+  // The "changed" highlight ring pulses opacity only — non-positional, so the
+  // root MotionConfig leaves it blinking for a motion-sensitive user.
+  const prefersReduced = useReducedMotion();
   const zColor = WIDGET_Z_COLOR[placement.id] ?? STATUS_SUBDUED;
   const borderColor = showZLayer ? zColor : contextColor;
 
@@ -67,7 +71,7 @@ export function WidgetRect({ placement, visible, changed, showZLayer, contextCol
           style={{ borderColor: `${contextColor}` }}
           initial={{ opacity: 0.8 }}
           animate={{ opacity: [0.8, 0, 0.8] }}
-          transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+          transition={motionSafe({ duration: 1.5, repeat: Infinity, ease: 'easeInOut' } as const, prefersReduced)}
         />
       )}
     </motion.div>

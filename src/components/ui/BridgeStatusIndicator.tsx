@@ -1,6 +1,7 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
+import { motionSafe } from '@/lib/motion';
 import { Loader2, Plug, PlugZap, AlertCircle, type LucideIcon } from 'lucide-react';
 import {
   STATUS_SUCCESS, STATUS_ERROR, STATUS_NEUTRAL, ACCENT_ORANGE,
@@ -78,6 +79,10 @@ export function BridgeStatusIndicator({
   paletteOverride,
   className,
 }: BridgeStatusIndicatorProps) {
+  // The pulse loops scale + opacity. The root MotionConfig freezes the scale for
+  // a motion-sensitive user but keeps the opacity fading — a dot that still
+  // blinks forever — so the whole loop is gated here.
+  const prefersReduced = useReducedMotion();
   const config = STATUS_CONFIG[status] ?? STATUS_CONFIG.disconnected;
   const color = paletteOverride?.[status] ?? config.color;
   const displayLabel = label ?? config.label;
@@ -118,7 +123,7 @@ export function BridgeStatusIndicator({
           className={`${DOT_SIZES.strip} rounded-full inline-block flex-shrink-0`}
           style={{ backgroundColor: color, boxShadow: `0 0 6px ${color}60` }}
           animate={config.pulse ? PULSE_ANIM : {}}
-          transition={PULSE_TRANSITION}
+          transition={motionSafe(PULSE_TRANSITION, prefersReduced)}
           aria-hidden="true"
         />
         <span>{displayLabel}</span>
@@ -139,7 +144,7 @@ export function BridgeStatusIndicator({
         className={`${DOT_SIZES.panel} rounded-full`}
         style={{ backgroundColor: color, boxShadow: `0 0 6px ${color}60` }}
         animate={config.pulse ? PULSE_ANIM : {}}
-        transition={PULSE_TRANSITION}
+        transition={motionSafe(PULSE_TRANSITION, prefersReduced)}
         aria-hidden="true"
       />
       {displayLabel}

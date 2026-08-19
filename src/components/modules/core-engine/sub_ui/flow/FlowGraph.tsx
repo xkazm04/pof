@@ -1,7 +1,8 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Network } from 'lucide-react';
+import { motionSafe } from '@/lib/motion';
 import { ACCENT_PINK, OVERLAY_WHITE,
   withOpacity, OPACITY_50, OPACITY_25, OPACITY_12, OPACITY_20, GLOW_SM,
 } from '@/lib/chart-colors';
@@ -16,6 +17,9 @@ interface FlowGraphProps {
 }
 
 export function FlowGraph({ highlightedFlowNode, onToggleNode }: FlowGraphProps) {
+  // Edges loop strokeDashoffset + opacity. Neither is a positional key, so the
+  // root MotionConfig keeps them marching for a motion-sensitive user.
+  const prefersReduced = useReducedMotion();
   return (
     <BlueprintPanel color={ACCENT} className="p-3">
       <SectionHeader label="Interactive Screen Flow Graph" color={ACCENT} icon={Network} />
@@ -54,10 +58,10 @@ export function FlowGraph({ highlightedFlowNode, onToggleNode }: FlowGraphProps)
                     strokeDashoffset: edge.style === 'dashed' ? 32 : -32,
                     opacity: isHighlighted ? [0.4, 0.8, 0.4] : [0.15, 0.35, 0.15],
                   }}
-                  transition={{
+                  transition={motionSafe({
                     strokeDashoffset: { duration: 1.8, ease: 'linear', repeat: Infinity },
                     opacity: { duration: 1.8, ease: 'easeInOut', repeat: Infinity },
-                  }}
+                  } as const, prefersReduced)}
                   style={isHighlighted ? { filter: `drop-shadow(0 0 3px ${withOpacity(ACCENT, OPACITY_50)})` } : undefined}
                 />
                 {edge.label && (

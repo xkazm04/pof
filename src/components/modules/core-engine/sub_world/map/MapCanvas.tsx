@@ -2,7 +2,8 @@
 
 import { memo, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
+import { motionSafe } from '@/lib/motion';
 import { STATUS_SUCCESS, STATUS_WARNING, STATUS_LOCKED, STATUS_LOCKED_STROKE, ACCENT_CYAN, OVERLAY_WHITE,
   withOpacity, OPACITY_50,
 } from '@/lib/chart-colors';
@@ -34,6 +35,10 @@ const STATUS_WORD: Record<MapZone['status'], string> = {
 };
 
 function ZoneMapCanvasImpl<Z extends MapZone>({ zones, selectedZone, onSelectZone, matchingIds }: MapCanvasProps<Z>) {
+  // The active-zone sonar ring loops scale + opacity. The root MotionConfig
+  // freezes the scale for a motion-sensitive user but keeps the opacity fading,
+  // which leaves a perpetually blinking ring — so gate the whole loop here.
+  const prefersReduced = useReducedMotion();
   const hasFilter = matchingIds !== undefined && matchingIds.size > 0;
   const isInRange = (id: string) => !hasFilter || matchingIds!.has(id);
   /* Keyboard operability: the node list is a roving-tabindex listbox — Tab
@@ -179,7 +184,7 @@ function ZoneMapCanvasImpl<Z extends MapZone>({ zones, selectedZone, onSelectZon
                 fill="transparent" stroke={color} strokeWidth="1.5"
                 initial={{ scale: 1, opacity: 0.8 }}
                 animate={{ scale: 2.5, opacity: 0 }}
-                transition={{ duration: 2, repeat: Infinity }}
+                transition={motionSafe({ duration: 2, repeat: Infinity }, prefersReduced)}
               />
             )}
 

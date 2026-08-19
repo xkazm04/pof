@@ -1,6 +1,7 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
+import { motionSafe } from '@/lib/motion';
 import {
   ACCENT_CYAN, OVERLAY_WHITE, STATUS_ERROR,
   OPACITY_5, OPACITY_8, OPACITY_10, OPACITY_12, OPACITY_25, OPACITY_37,
@@ -21,6 +22,9 @@ interface KeyData {
  * Tint priority (Phase 2 F3): conflict (red) > ability-category color > cyan fallback > unbound (muted).
  */
 export function KeyboardKey({ kd }: { kd: KeyData }) {
+  // The two halo pulses below animate opacity, which the root MotionConfig keeps
+  // running by design — so they gate their own loop on the OS preference.
+  const prefersReduced = useReducedMotion();
   const binding = KEY_BINDING_MAP.get(kd.key);
   const isBound = !!binding;
   const hasConflict = KEY_CONFLICTS.has(kd.key);
@@ -57,7 +61,7 @@ export function KeyboardKey({ kd }: { kd: KeyData }) {
           className="absolute inset-0 rounded-md border-2"
           style={{ borderColor: STATUS_ERROR }}
           animate={{ opacity: [0.2, 0.8, 0.2], scale: [1, 1.04, 1] }}
-          transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+          transition={motionSafe({ duration: 1.5, repeat: Infinity, ease: 'easeInOut' } as const, prefersReduced)}
         />
       )}
       {isBound && !hasConflict && (
@@ -65,7 +69,7 @@ export function KeyboardKey({ kd }: { kd: KeyData }) {
           className="absolute inset-0 rounded-md border"
           style={{ borderColor: accentColor }}
           animate={{ opacity: [0, 0.3, 0] }}
-          transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+          transition={motionSafe({ duration: 2.5, repeat: Infinity, ease: 'easeInOut' } as const, prefersReduced)}
         />
       )}
       {kd.label ?? kd.key}

@@ -1,7 +1,8 @@
 'use client';
 
 import { Command } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
+import { motionSafe } from '@/lib/motion';
 import {
   ACCENT_CYAN, OVERLAY_WHITE, STATUS_ERROR,
   OPACITY_5, OPACITY_8, OPACITY_10, OPACITY_12, OPACITY_25,
@@ -13,6 +14,9 @@ import { KeyboardKey } from './KeyboardKey';
 import { MouseWidget } from './MouseWidget';
 
 export function KeyboardVisualization() {
+  // Legend swatches pulse opacity only — not a positional key, so the root
+  // MotionConfig would keep looping them for a motion-sensitive user.
+  const prefersReduced = useReducedMotion();
   return (
     <BlueprintPanel className="p-4">
       <SectionHeader icon={Command} label="Input Binding Map" color={ACCENT_CYAN} />
@@ -75,7 +79,7 @@ export function KeyboardVisualization() {
               className="w-4 h-4 rounded-md border-2"
               style={{ borderColor: STATUS_ERROR }}
               animate={{ opacity: [0.3, 1, 0.3] }}
-              transition={{ duration: 1.5, repeat: Infinity }}
+              transition={motionSafe({ duration: 1.5, repeat: Infinity }, prefersReduced)}
             />
             <span style={{ color: STATUS_ERROR }}>
               {KEY_CONFLICTS.size} conflict{KEY_CONFLICTS.size > 1 ? 's' : ''}
@@ -87,7 +91,7 @@ export function KeyboardVisualization() {
             className="w-2 h-2 rounded-full"
             style={{ backgroundColor: ACCENT_CYAN }}
             animate={{ opacity: [0.3, 1, 0.3] }}
-            transition={{ duration: 2, repeat: Infinity }}
+            transition={motionSafe({ duration: 2, repeat: Infinity }, prefersReduced)}
           />
           {KEY_BINDING_MAP.size} bindings active
         </span>

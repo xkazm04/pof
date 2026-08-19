@@ -1,4 +1,5 @@
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
+import { motionSafe } from '@/lib/motion';
 import {
   ArrowLeftRight, Square, Zap, ArrowDown, ArrowUp,
   AlertTriangle, Radio,
@@ -28,6 +29,9 @@ export function PanelHeader({
   connectWs: () => void;
   disconnectWs: () => void;
 }) {
+  // The LIVE badge pulses opacity only — not a positional key, so the root
+  // MotionConfig would keep it breathing for a motion-sensitive user.
+  const prefersReduced = useReducedMotion();
   return (
     <div className="px-4 py-3 border-b border-border/40">
       <div className="flex items-center gap-3">
@@ -45,7 +49,7 @@ export function PanelHeader({
                 aria-live="polite"
                 style={{ color: STATUS_SUCCESS, backgroundColor: `${STATUS_SUCCESS}${OPACITY_15}` }}
                 animate={{ opacity: [0.7, 1, 0.7] }}
-                transition={{ duration: 2, repeat: Infinity }}
+                transition={motionSafe({ duration: 2, repeat: Infinity }, prefersReduced)}
               >
                 <Radio className="w-2.5 h-2.5" /> LIVE
               </motion.span>

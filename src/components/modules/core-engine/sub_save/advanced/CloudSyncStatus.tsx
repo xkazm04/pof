@@ -1,7 +1,8 @@
 'use client';
 
 import { Cloud, Wifi, CheckCircle2 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
+import { motionSafe } from '@/lib/motion';
 import { STATUS_SUCCESS, STATUS_INFO, STATUS_ERROR, STATUS_WARNING,
   ACCENT_CYAN_LIGHT, withOpacity, OPACITY_5,
 } from '@/lib/chart-colors';
@@ -10,6 +11,9 @@ import { ACCENT } from '../_shared/data';
 import { CLOUD_SYNC } from '../_shared/data-panels';
 
 export function CloudSyncSection() {
+  // The status dot pulses opacity only — non-positional, so the root MotionConfig
+  // leaves it blinking forever for a motion-sensitive user.
+  const prefersReduced = useReducedMotion();
   const statusColor = CLOUD_SYNC.status === 'synced' ? STATUS_SUCCESS
     : CLOUD_SYNC.status === 'syncing' ? STATUS_INFO
     : CLOUD_SYNC.status === 'conflict' ? STATUS_ERROR : STATUS_WARNING;
@@ -23,7 +27,7 @@ export function CloudSyncSection() {
             className="w-2 h-2 rounded-full"
             style={{ backgroundColor: statusColor }}
             animate={{ opacity: [0.5, 1, 0.5] }}
-            transition={{ duration: 2, repeat: Infinity }}
+            transition={motionSafe({ duration: 2, repeat: Infinity }, prefersReduced)}
           />
           <span className="text-xs font-mono font-bold uppercase tracking-[0.15em]" style={{ color: statusColor }}>
             {CLOUD_SYNC.status}
