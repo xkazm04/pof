@@ -85,9 +85,25 @@ export interface BuildRecordInput {
 }
 
 export interface BuildStats {
+  /** Every row in scope, cancelled included. */
   totalBuilds: number;
   successCount: number;
   failedCount: number;
+  /**
+   * Builds that actually reached a verdict (`success` + `failed`). A cancelled
+   * build was never judged, so it belongs in NEITHER half of the split.
+   */
+  decidedBuilds: number;
+  /** Builds the user (or a dropped client) aborted — judged by nothing. */
+  cancelledCount: number;
+  /**
+   * success / decidedBuilds — NOT success / totalBuilds.
+   *
+   * Cancelled rows used to sit in the denominator while being excluded from
+   * `failedCount`, so the Failed card's `100 - successRate` sub-label counted every
+   * abort as a failure. Two aborts on a nine-build day read as 22% failing when
+   * nothing had failed at all.
+   */
   successRate: number;
   avgDurationMs: number | null;
   avgSizeBytes: number | null;
@@ -366,6 +382,7 @@ export function getBuildStats(projectId?: string | null): BuildStats {
   const total = db.prepare(`SELECT COUNT(*) as cnt FROM build_history ${s.where}`).get(...p) as { cnt: number };
   const success = db.prepare(`SELECT COUNT(*) as cnt FROM build_history ${s.where} AND status = 'success'`).get(...p) as { cnt: number };
   const failed = db.prepare(`SELECT COUNT(*) as cnt FROM build_history ${s.where} AND status = 'failed'`).get(...p) as { cnt: number };
+  const cancelled = db.prepare(`SELECT COUNT(*) as cnt FROM build_history ${s.where} AND status = 'cancelled'`).get(...p) as { cnt: number };
   const avgDur = db.prepare(`SELECT AVG(duration_ms) as v FROM build_history ${s.where} AND duration_ms IS NOT NULL AND status = 'success'`).get(...p) as { v: number | null };
   const avgSize = db.prepare(`SELECT AVG(size_bytes) as v FROM build_history ${s.where} AND size_bytes IS NOT NULL AND status = 'success'`).get(...p) as { v: number | null };
   const latest = db.prepare(`SELECT version FROM build_history ${s.where} AND version IS NOT NULL ORDER BY created_at DESC LIMIT 1`).get(...p) as { version: string } | undefined;
@@ -407,17 +424,22 @@ export function getBuildStats(projectId?: string | null): BuildStats {
     total: r.total,
     success: r.success,
     failed: r.failed,
-    successRate: r.total > 0 ? (r.success / r.total) * 100 : 0,
+    // Same rule as the top-level rate: a cancelled build was judged by nothing
+    // and must not dilute the platform's success percentage.
+    successRate: r.success + r.failed > 0 ? (r.success / (r.success + r.failed)) * 100 : 0,
     avgDurationMs: r.avg_dur ? Math.round(r.avg_dur) : null,
     avgSizeBytes: r.avg_size ? Math.round(r.avg_size) : null,
     latestSizeBytes: latestSizeByPlatform.get(r.platform) ?? null,
   }));
 
+  const decided = success.cnt + failed.cnt;
   return {
     totalBuilds: total.cnt,
     successCount: success.cnt,
     failedCount: failed.cnt,
-    successRate: total.cnt > 0 ? (success.cnt / total.cnt) * 100 : 0,
+    decidedBuilds: decided,
+    cancelledCount: cancelled.cnt,
+    successRate: decided > 0 ? (success.cnt / decided) * 100 : 0,
     avgDurationMs: avgDur.v ? Math.round(avgDur.v) : null,
     avgSizeBytes: avgSize.v ? Math.round(avgSize.v) : null,
     latestVersion: latest?.version ?? null,

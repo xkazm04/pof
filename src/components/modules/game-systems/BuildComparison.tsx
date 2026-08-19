@@ -211,7 +211,11 @@ export function BuildComparison({ builds }: BuildComparisonProps) {
       </div>
 
       {/* Comparison table */}
-      {left && right ? (
+      {left && right ? (() => {
+        const hasCounts =
+          left.warningCount > 0 || right.warningCount > 0
+          || left.errorCount > 0 || right.errorCount > 0;
+        return (
         <div className="rounded border border-border bg-background/60 p-3">
           {/* Build headers */}
           <div className="grid grid-cols-[1fr_auto_1fr] gap-2 mb-3 pb-2 border-b border-border-bright">
@@ -272,13 +276,28 @@ export function BuildComparison({ builds }: BuildComparisonProps) {
             rightVal={right.version ?? '-'}
           />
 
-          <CompareRow
-            label="Warnings"
-            icon={<AlertTriangle className="w-2.5 h-2.5" />}
-            leftVal={left.warningCount}
-            rightVal={right.warningCount}
-            delta={<DeltaBadge a={left.warningCount} b={right.warningCount} format={(n) => String(Math.abs(n))} metricLabel="Warnings" />}
-          />
+          {/* Warnings/errors are written by the manual Record form ONLY — no cook path
+              tallies them into build_history. Rendering the row unconditionally meant
+              every real comparison showed a permanent "0 vs 0 · same" presented as a
+              measured delta. The row appears only when a build actually carries a
+              count; otherwise the absence is STATED. */}
+          {hasCounts ? (
+            <CompareRow
+              label="Warnings"
+              icon={<AlertTriangle className="w-2.5 h-2.5" />}
+              leftVal={left.warningCount}
+              rightVal={right.warningCount}
+              delta={<DeltaBadge a={left.warningCount} b={right.warningCount} format={(n) => String(Math.abs(n))} metricLabel="Warnings" />}
+            />
+          ) : (
+            <div
+              className="flex items-center justify-center gap-1 py-1.5 border-b border-border/40 text-2xs text-text-muted"
+              data-testid="build-comparison-warnings-unrecorded"
+            >
+              <AlertTriangle className="w-2.5 h-2.5" aria-hidden="true" />
+              <span>Warnings/errors not recorded for either build — no cook path writes these counts.</span>
+            </div>
+          )}
 
           <CompareRow
             label="Config"
@@ -287,7 +306,8 @@ export function BuildComparison({ builds }: BuildComparisonProps) {
             rightVal={`${platformLabel(right.platform)} / ${right.config}`}
           />
         </div>
-      ) : (
+        );
+      })() : (
         <div className="text-center text-text-muted text-xs py-4">
           Select two builds to compare
         </div>

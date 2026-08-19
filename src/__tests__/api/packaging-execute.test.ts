@@ -13,6 +13,12 @@ vi.mock('@/lib/packaging/build-history-store', () => ({
   insertBuild: vi.fn().mockReturnValue({ id: 1 }),
 }));
 
+// A green cook now stamps the version it was built at (bump-per-green-cook) — the
+// field was previously written only by the manual Record form.
+vi.mock('@/lib/packaging/version-manager', () => ({
+  autoIncrementOnSuccess: vi.fn().mockReturnValue('0.1.1'),
+}));
+
 import { POST } from '@/app/api/packaging/execute/route';
 import { cookExecutor } from '@/lib/packaging/cook-executor';
 import { getProfile } from '@/lib/packaging/build-profiles-db';
@@ -100,9 +106,13 @@ describe('POST /api/packaging/execute', () => {
     expect(res.status).toBe(200);
     expect(res.headers.get('Content-Type')).toBe('text/event-stream');
     const events = await readSSE(res.body!);
-    expect(events.length).toBe(3);
-    expect(events[0].type).toBe('phase');
-    expect(events[2].type).toBe('done');
+    // The cook's own events are unchanged; a terminal `recorded` event now follows,
+    // so a persistence failure can be told apart from a successful record.
+    const cookEvents = events.filter((e) => e.type !== ('recorded' as CookEvent['type']));
+    expect(cookEvents.length).toBe(3);
+    expect(cookEvents[0].type).toBe('phase');
+    expect(cookEvents[2].type).toBe('done');
+    expect(events.at(-1)?.type).toBe('recorded');
     expect(insertBuild).toHaveBeenCalledTimes(1);
   });
 
@@ -115,7 +125,8 @@ describe('POST /api/packaging/execute', () => {
       profileId: 'p1', projectPath: 'C:\\x', projectName: 'PoF', ueVersion: '5.7.3',
     }));
     const events = await readSSE(res.body!);
-    expect(events.at(-1)?.type).toBe('error');
+    expect(events.some((e) => e.type === 'error')).toBe(true);
+    expect(events.at(-1)?.type).toBe('recorded');
     expect(insertBuild).toHaveBeenCalledTimes(1);
   });
 });

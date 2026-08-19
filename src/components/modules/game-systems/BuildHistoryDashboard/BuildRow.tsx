@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  CheckCircle, XCircle, Clock, Trash2, ChevronDown, ChevronRight,
+  CheckCircle, XCircle, Ban, Trash2, ChevronDown, ChevronRight,
 } from 'lucide-react';
 import type { BuildRecord } from '@/lib/packaging/build-history-store';
 import { platformLabel } from '@/lib/packaging/build-profiles';
@@ -33,11 +33,25 @@ export function BuildRow({ build, onDelete }: { build: BuildRecord; onDelete: (i
           ) : build.status === 'failed' ? (
             <XCircle className="w-3 h-3 flex-shrink-0" style={{ color: STATUS_ERROR }} aria-label="Build failed" />
           ) : (
-            <Clock className="w-3 h-3 flex-shrink-0" style={{ color: STATUS_WARNING }} aria-label="Build in progress" />
+            // The third arm of a 'success' | 'failed' | 'cancelled' union — there is
+            // no in-progress state in build_history, every row is terminal. This used
+            // to render a clock labelled "Build in progress", so an aborted cook read
+            // as still running FOREVER.
+            <Ban className="w-3 h-3 flex-shrink-0" style={{ color: STATUS_WARNING }} aria-label="Build cancelled" />
           )}
           <span className="text-text-muted font-mono truncate">
             #{build.id}
           </span>
+          {build.status === 'cancelled' && (
+            // Glyph AND word — the icon alone left an aborted cook indistinguishable
+            // from a running one at a glance.
+            <span
+              className="text-2xs px-1 py-px rounded font-medium uppercase tracking-wide"
+              style={{ backgroundColor: statusBg(STATUS_WARNING, 0.12), color: STATUS_WARNING }}
+            >
+              cancelled
+            </span>
+          )}
           {build.version && (
             <span className="text-2xs px-1 py-px rounded font-mono" style={{ backgroundColor: statusBg(MODULE_COLORS.systems, 0.12), color: ACCENT_VIOLET }}>
               v{build.version}

@@ -2,7 +2,9 @@ import { cookExecutor, type CookEvent } from '@/lib/packaging/cook-executor';
 import { getProfile } from '@/lib/packaging/build-profiles-db';
 import { insertBuild, lastGreenBaseline, updateBuildNotes } from '@/lib/packaging/build-history-store';
 import { evaluateBuildSize, describeSizeBaseline } from '@/lib/packaging/size-budgets';
+import { autoIncrementOnSuccess } from '@/lib/packaging/version-manager';
 import { apiError } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
 
 interface ExecuteRequest {
   profileId: string;
@@ -77,6 +79,14 @@ export async function POST(req: Request): Promise<Response> {
                 ? lastGreenBaseline(profile.platform, projectPath)
                 : null;
               const lastGreen = baseline?.sizeBytes ?? null;
+              // VERSION SEMANTICS: bump-per-green-cook. `version` was stamped ONLY by
+              // the manual Record form (`history/route.ts`), so every build this route
+              // and the scheduled runner produced was `version: null` while the Version
+              // card showed a counter no build had ever been produced at. This converges
+              // on the one existing writer's rule — `autoIncrementOnSuccess()` — so the
+              // current version is the version of the last green cook, not a free-
+              // floating number.
+              const version = autoIncrementOnSuccess();
               const rec = insertBuild({
                 projectId: projectPath,
                 platform: profile.platform,
@@ -86,7 +96,16 @@ export async function POST(req: Request): Promise<Response> {
                 durationMs: lastEvent.durationMs,
                 outputPath: lastEvent.exePath,
                 cookTimeMs: lastEvent.durationMs,
+                version,
               });
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({
+                  type: 'recorded',
+                  buildId: rec.id,
+                  version,
+                  versionRule: 'bump-per-green-cook',
+                })}\n\n`),
+              );
               // A passing build records exactly as before; a regression gets the
               // note recorded and surfaces a final SSE event for the UI.
               const regression = lastEvent.sizeBytes && lastEvent.sizeBytes > 0
@@ -111,7 +130,7 @@ export async function POST(req: Request): Promise<Response> {
                 );
               }
             } else {
-              insertBuild({
+              const rec = insertBuild({
                 projectId: projectPath,
                 platform: profile.platform,
                 config: profile.config,
@@ -121,8 +140,32 @@ export async function POST(req: Request): Promise<Response> {
                 durationMs: Date.now() - startedAt,
                 errorSummary: lastEvent.message,
               });
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({
+                  type: 'recorded',
+                  buildId: rec.id,
+                  version: null,
+                  versionRule: 'no version — only a green cook carries one',
+                })}\n\n`),
+              );
             }
-          } catch { /* don't crash stream on persistence error */ }
+          } catch (persistErr) {
+            // A cook the app FAILED TO RECORD must not read as a recorded green
+            // build. This block used to be a bare `catch {}`: the insert threw, the
+            // user was told the cook succeeded, and no row existed anywhere. The
+            // stream stays alive (the cook really did happen) but says so.
+            const message = persistErr instanceof Error ? persistErr.message : String(persistErr);
+            logger.error('[packaging/execute] failed to record build to history', persistErr);
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify({
+                type: 'record-error',
+                message,
+                note:
+                  'The cook finished, but writing it to build history FAILED — no row exists for '
+                  + 'this build. It will not appear in history, stats, or the size baseline.',
+              })}\n\n`),
+            );
+          }
         }
         controller.close();
       }

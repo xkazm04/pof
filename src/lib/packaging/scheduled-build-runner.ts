@@ -180,15 +180,35 @@ async function defaultRunCook(ctx: ScheduledRunContext): Promise<CookOutcome> {
   };
 }
 
-const MAX_SIZE_WALK_FILES = 50_000;
+export const MAX_SIZE_WALK_FILES = 50_000;
 
-/** Sum file sizes under the staged exe's directory (best-effort). */
-async function measureBuildSize(exePath: string): Promise<number | null> {
+/**
+ * Sum file sizes under the staged exe's directory (best-effort).
+ *
+ * TRUNCATION IS NOT A MEASUREMENT. The walk stops at {@link MAX_SIZE_WALK_FILES}, and
+ * the partial sum used to be returned as if it were the package size — then
+ * `runScheduledBuild` step 4 OVERRODE `cookExecutor`'s uncapped measurement with it and
+ * fed it to `evaluateBuildSize`. A shipping stage that crosses 50 000 files therefore
+ * reports a size that shrinks as the project grows, which reads as an improvement and
+ * can only ever mask a real regression.
+ *
+ * A truncated walk now returns `null` — "not measured" — so the caller keeps the
+ * cook's own uncapped figure and the budget gate never grades a partial sum. The cap
+ * itself stays: it is what keeps an unattended nightly run bounded.
+ *
+ * `maxFiles` is defaulted, not configured — it exists so the cap itself is testable
+ * without materializing 50 000 files on disk.
+ */
+export async function measureBuildSize(
+  exePath: string,
+  maxFiles: number = MAX_SIZE_WALK_FILES,
+): Promise<number | null> {
   const root = path.dirname(exePath);
   let total = 0;
   let count = 0;
+  let truncated = false;
   async function walk(dir: string): Promise<void> {
-    if (count >= MAX_SIZE_WALK_FILES) return;
+    if (count >= maxFiles) { truncated = true; return; }
     let entries: import('node:fs').Dirent[];
     try {
       entries = await readdir(dir, { withFileTypes: true });
@@ -196,7 +216,7 @@ async function measureBuildSize(exePath: string): Promise<number | null> {
       return;
     }
     for (const e of entries) {
-      if (count >= MAX_SIZE_WALK_FILES) return;
+      if (count >= maxFiles) { truncated = true; return; }
       const full = path.join(dir, e.name);
       if (e.isDirectory()) {
         await walk(full);
@@ -210,6 +230,14 @@ async function measureBuildSize(exePath: string): Promise<number | null> {
   }
   try {
     await walk(root);
+    if (truncated) {
+      logger.warn(
+        `[nightly] size walk of ${root} hit the ${maxFiles}-file cap after `
+        + `${total} bytes — reporting UNMEASURED rather than a partial sum, so the size `
+        + 'budget is not graded against a truncated number.',
+      );
+      return null;
+    }
     return total > 0 ? total : null;
   } catch {
     return null;
