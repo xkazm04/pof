@@ -7,6 +7,7 @@ import type {
   PlaytestSummary,
   PlaytestStatus,
   TriageStatus,
+  SessionSource,
 } from '@/types/game-director';
 
 /** Triage states that suppress a finding from regression tracking and health scoring. */
@@ -47,9 +48,21 @@ function ensureTables() {
       duration_ms INTEGER,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       started_at TEXT,
-      completed_at TEXT
+      completed_at TEXT,
+      source TEXT NOT NULL DEFAULT 'simulated'
+        CHECK(source IN ('simulated','external'))
     )
   `);
+
+  // Provenance backfill for pre-existing databases. Every row that predates this
+  // column was written by `game-director-sim.ts` — there was no other writer —
+  // so the 'simulated' default is a statement of fact, not an assumption.
+  const sessCols = db.prepare("PRAGMA table_info(game_director_sessions)").all() as { name: string }[];
+  if (!sessCols.some(c => c.name === 'source')) {
+    // No CHECK on the ALTER path: SQLite rejects adding a column with a
+    // constraint that would have to be validated against existing rows.
+    db.exec(`ALTER TABLE game_director_sessions ADD COLUMN source TEXT NOT NULL DEFAULT 'simulated'`);
+  }
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS game_director_findings (
@@ -129,14 +142,15 @@ export function createSession(
   name: string,
   buildPath: string,
   config: PlaytestConfig,
+  source: SessionSource = 'simulated',
 ): PlaytestSession {
   ensureTables();
   const db = getDb();
 
   db.prepare(`
-    INSERT INTO game_director_sessions (id, name, build_path, config)
-    VALUES (?, ?, ?, ?)
-  `).run(id, name, buildPath, JSON.stringify(config));
+    INSERT INTO game_director_sessions (id, name, build_path, config, source)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(id, name, buildPath, JSON.stringify(config), source);
 
   const session = getSession(id);
   if (!session) {
@@ -186,21 +200,28 @@ export function updateSessionStatus(id: string, status: PlaytestStatus) {
   db.prepare(`UPDATE game_director_sessions SET ${sets.join(', ')} WHERE id = ?`).run(...vals);
 }
 
+/**
+ * Write a session's final summary. `source` stamps the provenance of the numbers
+ * being written: the simulator passes `'simulated'`, the external writer API's
+ * `complete` action passes `'external'`. It is part of the same write as the
+ * summary on purpose — a score and its provenance must never be settable apart.
+ */
 export function updateSessionSummary(
   id: string,
   summary: PlaytestSummary,
   durationMs: number,
   systemsTestedCount: number,
   findingsCount: number,
+  source: SessionSource = 'simulated',
 ) {
   ensureTables();
   const db = getDb();
   db.prepare(`
     UPDATE game_director_sessions
     SET summary = ?, duration_ms = ?, systems_tested_count = ?, findings_count = ?,
-        status = 'complete', completed_at = datetime('now')
+        status = 'complete', completed_at = datetime('now'), source = ?
     WHERE id = ?
-  `).run(JSON.stringify(summary), durationMs, systemsTestedCount, findingsCount, id);
+  `).run(JSON.stringify(summary), durationMs, systemsTestedCount, findingsCount, source, id);
 }
 
 export function deleteSession(id: string) {
@@ -357,8 +378,23 @@ export interface DirectorStats {
   /** Undismissed regression alerts — drives the nav "Regressions" pill. */
   activeAlerts: number;
   avgScore: number | null;
+  /**
+   * Provenance of the sessions `avgScore` averages over: `'simulated'` when every
+   * contributing session came from the dev-fixture simulator, `'external'` when
+   * every one came through the writer API, `'mixed'` when both, `null` when there
+   * is no score at all.
+   *
+   * Optional on the interface so hand-built stats objects stay valid; **absent is
+   * read as `'simulated'`** by the UI — an unattributed score is not a verified one.
+   */
+  scoreSource?: ScoreSource | null;
+  /** How many completed sessions the average covers. Absent ⇒ unknown. */
+  scoredSessions?: number;
   recentSessions: PlaytestSession[];
 }
+
+/** Provenance rollup across a set of sessions. */
+export type ScoreSource = SessionSource | 'mixed';
 
 /**
  * Time-series datapoint: one completed session with its score, finding counts,
@@ -373,6 +409,8 @@ export interface HealthTrendPoint {
   findingsCount: number;
   criticalCount: number;
   regressionCount: number;
+  /** Provenance of this point's score — see {@link SessionSource}. */
+  source: SessionSource;
 }
 
 export function getDirectorStats(): DirectorStats {
@@ -401,10 +439,28 @@ export function getDirectorStats(): DirectorStats {
     ? (db.prepare('SELECT COUNT(*) as c FROM regression_alerts WHERE dismissed = 0').get() as { c: number }).c
     : 0;
 
-  // Average overall score from completed sessions
+  // Average overall score from completed sessions, WITH the provenance of the
+  // rows it averages — a score and the answer to "was any of this measured?"
+  // are read together or the number is not interpretable.
   const avgRow = db.prepare(
     "SELECT AVG(json_extract(summary, '$.overallScore')) as avg FROM game_director_sessions WHERE status = 'complete' AND summary IS NOT NULL"
   ).get() as { avg: number | null };
+
+  const sourceRows = db.prepare(
+    `SELECT source, COUNT(*) as c FROM game_director_sessions
+     WHERE status = 'complete' AND summary IS NOT NULL GROUP BY source`
+  ).all() as Array<{ source: string | null; c: number }>;
+  let externalScored = 0;
+  let simulatedScored = 0;
+  for (const r of sourceRows) {
+    if (r.source === 'external') externalScored += r.c;
+    else simulatedScored += r.c;
+  }
+  const scoreSource: ScoreSource | null =
+    externalScored + simulatedScored === 0 ? null
+      : externalScored === 0 ? 'simulated'
+        : simulatedScored === 0 ? 'external'
+          : 'mixed';
 
   const recentRows = db.prepare(
     'SELECT * FROM game_director_sessions ORDER BY created_at DESC LIMIT 5'
@@ -418,6 +474,8 @@ export function getDirectorStats(): DirectorStats {
     openCriticalHigh: findAgg.openCritHigh ?? 0,
     activeAlerts,
     avgScore: avgRow.avg != null ? Math.round(avgRow.avg) : null,
+    scoreSource,
+    scoredSessions: externalScored + simulatedScored,
     recentSessions: recentRows.map(rowToSession),
   };
 }
@@ -439,7 +497,7 @@ export function getHealthTrend(limit = 30): HealthTrendPoint[] {
   const db = getDb();
 
   const rows = db.prepare(`
-    SELECT id, name, created_at, summary, findings_count
+    SELECT id, name, created_at, summary, findings_count, source
     FROM game_director_sessions
     WHERE status = 'complete' AND summary IS NOT NULL
     ORDER BY datetime(created_at) ASC
@@ -450,6 +508,7 @@ export function getHealthTrend(limit = 30): HealthTrendPoint[] {
     created_at: string;
     summary: string;
     findings_count: number;
+    source: string | null;
   }>;
 
   if (rows.length === 0) return [];
@@ -503,6 +562,7 @@ export function getHealthTrend(limit = 30): HealthTrendPoint[] {
       findingsCount: r.findings_count ?? 0,
       criticalCount: critCounts.get(r.id) ?? 0,
       regressionCount: regCounts.get(r.id) ?? 0,
+      source: r.source === 'external' ? 'external' : 'simulated',
     };
   });
 }
@@ -522,6 +582,7 @@ interface SessionRow {
   created_at: string;
   started_at: string | null;
   completed_at: string | null;
+  source: string | null;
 }
 
 interface FindingRow {
@@ -568,6 +629,9 @@ function rowToSession(row: SessionRow): PlaytestSession {
     summary: row.summary ? JSON.parse(row.summary) : null,
     systemsTestedCount: row.systems_tested_count || 0,
     findingsCount: row.findings_count || 0,
+    // Anything that isn't an explicit 'external' is simulated — an unrecognised
+    // or missing value must fall to the unverified side, never the trusted one.
+    source: row.source === 'external' ? 'external' : 'simulated',
   };
 }
 

@@ -13,8 +13,8 @@ export function TimelineView({ events, onSimulate }: { events: DirectorEvent[]; 
         iconColor={ACCENT}
         satelliteIcons={[Clock, Zap]}
         title="No events recorded yet"
-        description="The timeline shows every action, observation, and screenshot taken during a playtest. Run a playtest session to see the full sequence of events here."
-        action={onSimulate ? { label: 'Run Playtest', onClick: () => { void onSimulate(); }, icon: Play } : undefined}
+        description="The timeline shows every action and observation recorded during a playtest. Simulated sessions record only what the fixture actually did — the entries are prefixed SIMULATED and no screenshot events appear, because none are captured."
+        action={onSimulate ? { label: 'Simulate Playtest', onClick: () => { void onSimulate(); }, icon: Play } : undefined}
       />
     );
   }

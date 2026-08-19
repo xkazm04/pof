@@ -65,8 +65,19 @@ export function HealthTrendChart({ data, height = 200 }: HealthTrendChartProps) 
   const first = data[0];
   const last = data[data.length - 1];
   const direction = delta > 0 ? `up ${delta}` : delta < 0 ? `down ${Math.abs(delta)}` : 'unchanged';
+  // Provenance leads the accessible summary. The sentence used to open "Game
+  // health trend across N sessions" for a series whose every point could be
+  // arithmetic over canned findings — an assertion about the game made from
+  // numbers that never touched it.
+  const simulatedCount = data.filter(d => d.source !== 'external').length;
+  const allSimulated = simulatedCount === data.length;
+  const provenanceSentence = allSimulated
+    ? 'Simulated trend — every session came from the dev-fixture simulator; no build was measured.'
+    : simulatedCount > 0
+      ? `Partly simulated trend — ${simulatedCount} of ${data.length} sessions came from the dev-fixture simulator.`
+      : 'Measured trend — every session was written by an external playtest harness.';
   const chartSummary =
-    `Game health trend across ${data.length} sessions. Score ${first.overallScore} to ${last.overallScore} out of 100 (${direction}). ` +
+    `${provenanceSentence} Score ${first.overallScore} to ${last.overallScore} out of 100 (${direction}). ` +
     `Findings ${first.findingsCount} to ${last.findingsCount}. ` +
     `${regressionMarkers.length} session${regressionMarkers.length !== 1 ? 's' : ''} with regressions.`;
 
@@ -80,8 +91,15 @@ export function HealthTrendChart({ data, height = 200 }: HealthTrendChartProps) 
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <LineChart className="w-4 h-4 text-text-muted" />
-          <span className="text-xs font-medium text-text">Game Health Trend</span>
+          <span className="text-xs font-medium text-text">
+            {allSimulated ? 'Game Health Trend (simulated)' : 'Game Health Trend'}
+          </span>
           <span className="text-2xs text-text-muted">{data.length} sessions</span>
+          {simulatedCount > 0 && (
+            <span className="text-2xs italic text-text-muted">
+              {allSimulated ? 'nothing measured' : `${simulatedCount} simulated`}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-3">
           <DeltaBadge delta={delta} />
@@ -248,6 +266,7 @@ export function HealthTrendChart({ data, height = 200 }: HealthTrendChartProps) 
             <th scope="col">Findings</th>
             <th scope="col">Critical</th>
             <th scope="col">Regressions</th>
+            <th scope="col">Source</th>
           </tr>
         </thead>
         <tbody>
@@ -259,6 +278,7 @@ export function HealthTrendChart({ data, height = 200 }: HealthTrendChartProps) 
               <td>{d.findingsCount}</td>
               <td>{d.criticalCount}</td>
               <td>{d.regressionCount}</td>
+              <td>{d.source === 'external' ? 'Measured' : 'Simulated'}</td>
             </tr>
           ))}
         </tbody>

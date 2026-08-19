@@ -46,6 +46,22 @@ export type TestCategory =
   | 'performance-stress'
   | 'visual-quality';
 
+/**
+ * Where a session's numbers came from.
+ *
+ * `simulated` — produced by `game-director-sim.ts`, the in-repo dev fixture. Its
+ * findings are canned templates and its score is arithmetic over them; NO build
+ * was launched, no frame was captured, nothing was measured.
+ * `external` — written through the game-director writer API (update-status /
+ * add-finding / add-event / complete) by a real harness (Gauntlet, the pof-mcp
+ * headless runner, a human).
+ *
+ * Optional on the interface only so hand-built session objects (tests, fixtures)
+ * stay valid: **absent means `simulated`**, never "verified". Resolve it with
+ * `resolveSessionSource()` rather than reading the field directly.
+ */
+export type SessionSource = 'simulated' | 'external';
+
 export interface PlaytestSession {
   id: string;
   name: string;
@@ -59,6 +75,8 @@ export interface PlaytestSession {
   summary: PlaytestSummary | null;
   systemsTestedCount: number;
   findingsCount: number;
+  /** Provenance of every number on this session. Absent ⇒ `simulated`. */
+  source?: SessionSource;
 }
 
 export interface PlaytestConfig {
@@ -76,12 +94,22 @@ export interface PlaytestConfig {
 
 export interface PlaytestSummary {
   overallScore: number;          // 0-100
-  totalScreenshotsAnalyzed: number;
+  /**
+   * Screenshots actually analyzed. `null` = nothing was captured, so the count
+   * is not measured — the simulator writes null because it captures no frames.
+   */
+  totalScreenshotsAnalyzed: number | null;
   systemsTested: string[];
-  testCoverage: Record<TestCategory, number>; // 0-100 per category
+  /**
+   * 0-100 per category, or `null` for "not measured" — a category nothing
+   * actually exercised has no coverage figure, and a made-up one is worse than
+   * an absent one.
+   */
+  testCoverage: Record<TestCategory, number | null>;
   topIssue: string;
   topPraise: string;
-  playtimeSeconds: number;
+  /** Seconds of game time played, or `null` when no build was played. */
+  playtimeSeconds: number | null;
 }
 
 export interface PlaytestFinding {
@@ -139,6 +167,12 @@ export interface CreateSessionPayload {
   name: string;
   buildPath: string;
   config: PlaytestConfig;
+  /**
+   * Declared provenance of the session being created. Omitted ⇒ `simulated`.
+   * A real harness creating a session it will fill through the writer API
+   * passes `'external'`.
+   */
+  source?: SessionSource;
 }
 
 export interface StartSessionPayload {

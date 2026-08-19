@@ -10,9 +10,23 @@ import type {
   PlaytestSummary,
 } from '@/types/game-director';
 
-// ─── Simulation engine ──────────────────────────────────────────────────────
-// Generates realistic-looking playtest data for the UI to render.
-// In production, this would orchestrate actual UE5 Gauntlet automation.
+// ─── Simulation engine (dev fixture) ────────────────────────────────────────
+// Replays a fixed set of authored findings so the Director UI has something to
+// render without a game build. It launches NOTHING, captures NO frames, and
+// measures NO coverage — every session it writes is stamped `source:
+// 'simulated'` and every figure it cannot honestly produce is written as null
+// ("not measured") rather than invented.
+//
+// A real playtest harness (UE5 Gauntlet, the pof-mcp headless runner) does not
+// replace this file: it writes through the API's external-writer actions
+// (update-status / add-finding / add-event / complete), which stamp
+// `source: 'external'`.
+
+/** Provenance stamped on every session this module writes. */
+export const SIMULATED_SOURCE = 'simulated' as const;
+
+/** Prefix making a simulator-authored timeline entry unmistakable in the UI. */
+const SIM = 'SIMULATED —';
 
 export async function simulatePlaytest(sessionId: string, config: PlaytestConfig) {
   updateSessionStatus(sessionId, 'launching');
@@ -23,7 +37,7 @@ export async function simulatePlaytest(sessionId: string, config: PlaytestConfig
     sessionId,
     timestamp: new Date().toISOString(),
     type: 'action',
-    message: 'Launching packaged build in headless mode...',
+    message: `${SIM} no build is launched; replaying authored findings`,
   });
 
   updateSessionStatus(sessionId, 'playing');
@@ -39,8 +53,8 @@ export async function simulatePlaytest(sessionId: string, config: PlaytestConfig
       sessionId,
       timestamp: new Date().toISOString(),
       type: 'system-test',
-      message: `Testing ${category} systems...`,
-      data: { category },
+      message: `${SIM} replaying authored ${category} findings (no ${category} system was exercised)`,
+      data: { category, simulated: true },
     });
 
     // Generate findings per category
@@ -53,30 +67,23 @@ export async function simulatePlaytest(sessionId: string, config: PlaytestConfig
         sessionId,
         timestamp: new Date().toISOString(),
         type: 'finding',
-        message: `[${f.severity.toUpperCase()}] ${f.title}`,
-        data: { findingId: f.id, category: f.category },
+        message: `${SIM} [${f.severity.toUpperCase()}] ${f.title}`,
+        data: { findingId: f.id, category: f.category, simulated: true },
       });
     }
-
-    // Screenshots
-    addEvent({
-      id: `ev-${Date.now()}-${category}-screenshot`,
-      sessionId,
-      timestamp: new Date().toISOString(),
-      type: 'screenshot',
-      message: `Captured screenshot during ${category} test`,
-      data: { category },
-    });
   }
 
-  // Analysis phase
+  // Analysis phase. No screenshot event is emitted: the previous
+  // "Captured screenshot during <category> test" entry described a capture that
+  // never happened, and a timeline is evidence — it may not contain acts the
+  // program did not perform.
   updateSessionStatus(sessionId, 'analyzing');
   addEvent({
     id: `ev-${Date.now()}-analyze`,
     sessionId,
     timestamp: new Date().toISOString(),
     type: 'action',
-    message: 'Analyzing captured screenshots with Claude Vision...',
+    message: `${SIM} scoring the authored findings (no screenshots exist, no vision model runs)`,
   });
 
   // Build summary
@@ -87,9 +94,15 @@ export async function simulatePlaytest(sessionId: string, config: PlaytestConfig
     - (findings.filter(f => f.severity === 'medium').length * 3) + (positives * 5)
   ));
 
-  const testCoverage: Record<string, number> = {};
+  // Coverage is NOT MEASURED. This engine executes no game code, so it has no
+  // basis for "72% of combat was covered" — the line that stood here was
+  // `Math.floor(60 + Math.random() * 40)`, i.e. a random number rendered as an
+  // authoritative percentage bar with green/amber/red banding. Every category is
+  // written as null and rendered as "Not measured"; a real harness fills these
+  // through the writer API's `complete` action.
+  const testCoverage: Record<string, number | null> = {};
   for (const cat of systems) {
-    testCoverage[cat] = Math.floor(60 + Math.random() * 40);
+    testCoverage[cat] = null;
   }
 
   const topIssue = findings.find(f => f.severity === 'critical' || f.severity === 'high');
@@ -101,16 +114,21 @@ export async function simulatePlaytest(sessionId: string, config: PlaytestConfig
     sessionId,
     {
       overallScore,
-      totalScreenshotsAnalyzed: systems.length * 3,
+      // No frame is ever captured, so the count is null, not `systems.length * 3`.
+      totalScreenshotsAnalyzed: null,
       systemsTested: systems,
       testCoverage: testCoverage as PlaytestSummary['testCoverage'],
       topIssue: topIssue?.title ?? 'No critical issues found',
       topPraise: topPraise?.title ?? 'Overall build stability',
-      playtimeSeconds: Math.floor(durationMs / 1000) + config.maxPlaytimeMinutes * 60,
+      // Nothing was played. The old value was this function's own DB round-trip
+      // time plus the user's `maxPlaytimeMinutes` slider — a config echo dressed
+      // as an observation.
+      playtimeSeconds: null,
     },
     durationMs,
     systems.length,
     findings.length,
+    SIMULATED_SOURCE,
   );
 }
 

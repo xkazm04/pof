@@ -16,8 +16,11 @@ import { MeterBar } from '@/components/ui/MeterBar';
 import { MetricCard } from '@/components/ui/MetricCard';
 import { EmptyState as SharedEmptyState } from '@/components/ui/EmptyState';
 import { StatusChip } from '@/components/ui/StatusChip';
-import { SESSION_STATUS_TOKENS } from '@/lib/game-director-styles';
+import { SESSION_STATUS_TOKENS, resolveSessionSource } from '@/lib/game-director-styles';
 import { HealthTrendChart } from './HealthTrendChart';
+import {
+  AggregateProvenanceNotice, ProvenanceChip, sessionScoreRingLabel,
+} from './ProvenanceNotice';
 
 const ACCENT = ACCENT_ORANGE;
 
@@ -75,7 +78,7 @@ export function DirectorOverview({
           delay={0.1}
         />
         <MetricCard
-          label="Avg Score"
+          label={stats?.scoreSource === 'external' ? 'Avg Score' : 'Avg Score (simulated)'}
           value={stats?.avgScore != null ? `${stats.avgScore}/100` : '—'}
           icon={TrendingUp}
           accent={STATUS_SUCCESS}
@@ -97,10 +100,29 @@ export function DirectorOverview({
         >
           <div className="flex items-center gap-3 mb-3">
             <BarChart3 className="w-4 h-4 text-text-muted" />
-            <span className="text-xs font-medium text-text">Game Health Score</span>
+            {/* The label is qualified at the source: a "Game Health Score" over
+                simulated sessions is a score of the fixture, not of the game. */}
+            <span className="text-xs font-medium text-text">
+              {stats.scoreSource === 'external' ? 'Game Health Score' : 'Game Health Score (simulated)'}
+            </span>
           </div>
+          <AggregateProvenanceNotice
+            scoreSource={stats.scoreSource}
+            sessionCount={stats.scoredSessions}
+            what="This average"
+            className="mb-3"
+          />
           <div className="flex items-center gap-4">
-            <ScoreRing value={stats.avgScore} size={64} strokeWidth={4} />
+            <ScoreRing
+              value={stats.avgScore}
+              size={64}
+              strokeWidth={4}
+              ariaLabel={
+                stats.scoreSource === 'external'
+                  ? `Game health score: ${stats.avgScore} out of 100, measured`
+                  : `Simulated game health score: ${stats.avgScore} out of 100 — not measured, averaged over canned playtest sessions`
+              }
+            />
             <div className="flex-1 space-y-1.5">
               <ScoreBar label="Completed" value={stats.completedSessions} max={stats.totalSessions} color={STATUS_SUCCESS} />
               <ScoreBar label="Findings" value={stats.totalFindings} max={Math.max(stats.totalFindings, 20)} color={STATUS_INFO} />
@@ -196,6 +218,7 @@ function SessionCard({
           value={session.summary.overallScore}
           size={36}
           strokeWidth={2.5}
+          ariaLabel={sessionScoreRingLabel(session.summary.overallScore, session)}
           className="flex-shrink-0"
         />
       ) : (
@@ -212,6 +235,9 @@ function SessionCard({
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-text truncate">{session.name}</span>
           <StatusChip token={statusToken} className="flex-shrink-0" />
+          {/* Provenance rides beside the status on every row — the list is where
+              a simulated run and a measured one are most easily confused. */}
+          <ProvenanceChip source={resolveSessionSource(session)} className="flex-shrink-0" />
         </div>
         <div className="flex items-center gap-3 mt-0.5">
           {session.findingsCount > 0 && (
@@ -243,7 +269,7 @@ function EmptyState({ onNewSession }: { onNewSession: () => void }) {
         iconColor={ACCENT}
         satelliteIcons={[Target, CheckCircle2]}
         title="No playtest sessions yet"
-        description="Create a session to launch the AI agent that plays your game, finds bugs, and generates critiques."
+        description="Create a session, then either run the built-in simulator (authored findings — nothing is launched or measured) or have a real playtest harness POST its results through the writer API."
         action={{ label: 'Create First Session', onClick: onNewSession, icon: Plus }}
       />
     </motion.div>

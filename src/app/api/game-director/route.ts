@@ -23,8 +23,20 @@ import type {
   DirectorEvent,
   PlaytestStatus,
   UpdateTriagePayload,
+  SessionSource,
 } from '@/types/game-director';
 import { simulatePlaytest } from '@/lib/game-director-sim';
+import { logger } from '@/lib/logger';
+
+/**
+ * Coerce a client-supplied `source` to a known value. Anything unrecognised
+ * falls back to the caller's default rather than reaching the DB CHECK
+ * constraint — and an unrecognised value can never resolve to 'external',
+ * because provenance is only ever claimed explicitly.
+ */
+function normalizeSource(value: unknown, fallback: SessionSource): SessionSource {
+  return value === 'external' || value === 'simulated' ? value : fallback;
+}
 
 // ─── GET: list sessions, get single session, get findings, get events, get stats
 export async function GET(req: Request) {
@@ -71,7 +83,7 @@ export async function GET(req: Request) {
         return apiError(`Unknown action: ${action}`, 400);
     }
   } catch (err) {
-    console.error('[game-director] GET error:', err);
+    logger.error('[game-director] GET error:', err);
     return apiError(String(err));
   }
 }
@@ -84,9 +96,11 @@ export async function POST(req: Request) {
 
     switch (action) {
       case 'create': {
-        const { name, buildPath, config } = body as CreateSessionPayload & { action: string };
+        const { name, buildPath, config, source } = body as CreateSessionPayload & { action: string };
         const id = `gd-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-        const session = createSession(id, name, buildPath, config);
+        // Unstated provenance is 'simulated': a caller must SAY it is feeding real
+        // playtest data, and the default can only ever understate the truth.
+        const session = createSession(id, name, buildPath, config, normalizeSource(source, 'simulated'));
         return apiSuccess(session);
       }
 
@@ -97,15 +111,23 @@ export async function POST(req: Request) {
       }
 
       case 'complete': {
-        const { sessionId, summary, durationMs, systemsTestedCount, findingsCount } = body as {
+        const { sessionId, summary, durationMs, systemsTestedCount, findingsCount, source } = body as {
           action: string;
           sessionId: string;
           summary: PlaytestSummary;
           durationMs: number;
           systemsTestedCount: number;
           findingsCount: number;
+          source?: SessionSource;
         };
-        updateSessionSummary(sessionId, summary, durationMs, systemsTestedCount, findingsCount);
+        // This is the EXTERNAL writer seam: a real harness (Gauntlet, the pof-mcp
+        // headless runner, a human) POSTs its own measured summary here, so the
+        // default provenance is 'external'. The in-repo simulator never reaches
+        // this branch — it calls updateSessionSummary directly with 'simulated'.
+        updateSessionSummary(
+          sessionId, summary, durationMs, systemsTestedCount, findingsCount,
+          normalizeSource(source, 'external'),
+        );
         return apiSuccess({ ok: true });
       }
 
@@ -143,7 +165,8 @@ export async function POST(req: Request) {
       }
 
       case 'simulate': {
-        // Simulate a playtest session for demo/dev purposes
+        // Runs the in-repo dev fixture: replays authored findings and stamps the
+        // session `source: 'simulated'`. Nothing is launched or measured.
         const { sessionId } = body as { action: string; sessionId: string };
         const session = getSession(sessionId);
         if (!session) return apiError('Session not found', 404);
@@ -157,7 +180,7 @@ export async function POST(req: Request) {
         return apiError(`Unknown action: ${action}`, 400);
     }
   } catch (err) {
-    console.error('[game-director] POST error:', err);
+    logger.error('[game-director] POST error:', err);
     return apiError(String(err));
   }
 }
@@ -171,7 +194,7 @@ export async function DELETE(req: Request) {
     deleteSession(sessionId);
     return apiSuccess({ ok: true });
   } catch (err) {
-    console.error('[game-director] DELETE error:', err);
+    logger.error('[game-director] DELETE error:', err);
     return apiError(String(err));
   }
 }

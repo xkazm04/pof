@@ -100,8 +100,14 @@ export function GameDirectorModule() {
           </div>
           <div>
             <h1 className="text-lg font-semibold text-text">AI Game Director</h1>
+            {/* The old subtitle — "Autonomous playtesting agent that plays and
+                critiques your game" — described software that does not exist
+                here. Nothing in this module launches a build; sessions are
+                either replays of authored findings or results POSTed by an
+                external harness. The header says so before any number does. */}
             <p className="text-xs text-text-muted">
-              Autonomous playtesting agent that plays and critiques your game
+              Playtest findings, triage and regression tracking — from the built-in
+              simulator, or from a real harness via the writer API
             </p>
           </div>
         </div>

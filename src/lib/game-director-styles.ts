@@ -1,9 +1,11 @@
 import {
   AlertOctagon, AlertTriangle, Info, ArrowDown, CheckCircle2,
   Settings, Play, Activity, Search,
-  ShieldCheck, BellOff, EyeOff, Clock, type LucideIcon,
+  ShieldCheck, BellOff, EyeOff, Clock, FlaskConical, Satellite, type LucideIcon,
 } from 'lucide-react';
-import type { FindingSeverity, FindingCategory, PlaytestStatus, TriageStatus } from '@/types/game-director';
+import type {
+  FindingSeverity, FindingCategory, PlaytestStatus, TriageStatus, SessionSource,
+} from '@/types/game-director';
 import type { RegressionStatus } from '@/types/regression-tracker';
 import {
   STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO, STATUS_BLOCKER, ACCENT_PURPLE,
@@ -85,6 +87,42 @@ export const TRIAGE_TOKENS: Record<TriageStatus, SemanticToken> = {
   ignore: { icon: EyeOff, color: 'var(--text-muted)', label: 'Ignored' },
   snooze: { icon: Clock, color: ACCENT_PURPLE, label: 'Snoozed' },
 };
+
+// ─── Provenance ──────────────────────────────────────────────────────────────
+
+/**
+ * Resolve a session's provenance. An **absent** `source` resolves to
+ * `'simulated'`, never `'external'`: every row written before the column existed
+ * came from the simulator, and an object that does not claim measurement has not
+ * measured anything. Read provenance through this function, never off the field,
+ * so the safe default is applied in exactly one place.
+ */
+export function resolveSessionSource(
+  session: { source?: SessionSource } | null | undefined,
+): SessionSource {
+  return session?.source === 'external' ? 'external' : 'simulated';
+}
+
+export function isSimulatedSession(session: { source?: SessionSource } | null | undefined): boolean {
+  return resolveSessionSource(session) === 'simulated';
+}
+
+/** Tokens for the session-provenance chip (icon + word, never colour alone). */
+export const SOURCE_TOKENS: Record<SessionSource, SemanticToken> = {
+  simulated: { icon: FlaskConical, color: ACCENT_PURPLE, label: 'Simulated' },
+  external: { icon: Satellite, color: STATUS_SUCCESS, label: 'Measured' },
+};
+
+/** One-line explanation of what each provenance means, in plain language. */
+export const SOURCE_DESCRIPTIONS: Record<SessionSource, string> = {
+  simulated:
+    'Dev fixture — no build was launched and nothing was measured. Findings are authored templates and the score is arithmetic over them.',
+  external:
+    'Written by a real playtest harness through the Game Director writer API.',
+};
+
+/** Text for "this figure was never measured", used wherever a null stands in. */
+export const NOT_MEASURED = 'Not measured';
 
 export const CATEGORY_LABELS: Record<FindingCategory, string> = {
   'visual-glitch': 'Visual Glitch',

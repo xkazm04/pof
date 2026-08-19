@@ -16,6 +16,8 @@ import {
   OPACITY_10,
 } from '@/lib/chart-colors';
 import { formatDuration } from '@/lib/format';
+import { NOT_MEASURED, resolveSessionSource } from '@/lib/game-director-styles';
+import { ProvenanceNotice, sessionScoreRingLabel } from '../ProvenanceNotice';
 import { ACCENT } from './constants';
 import type { DetailTab, SessionDetailProps } from './types';
 import { SummaryStat } from './SummaryStat';
@@ -73,6 +75,7 @@ export function SessionDetail({
 
   const isComplete = session.status === 'complete';
   const canSimulate = session.status === 'configuring' || session.status === 'complete';
+  const source = resolveSessionSource(session);
 
   // Group findings by severity
   const criticals = findings.filter(f => f.severity === 'critical');
@@ -112,7 +115,12 @@ export function SessionDetail({
           {/* Score badge */}
           {session.summary && (
             <div className="flex items-center gap-2">
-              <ScoreRing value={session.summary.overallScore} size={40} strokeWidth={3} />
+              <ScoreRing
+                value={session.summary.overallScore}
+                size={40}
+                strokeWidth={3}
+                ariaLabel={sessionScoreRingLabel(session.summary.overallScore, session)}
+              />
             </div>
           )}
 
@@ -130,7 +138,8 @@ export function SessionDetail({
                 }}
               >
                 {simulating ? <Loader2 className="w-3 h-3 animate-spin" aria-hidden="true" /> : <Play className="w-3 h-3" aria-hidden="true" />}
-                {simulating ? 'Running…' : isComplete ? 'Re-run' : 'Run Playtest'}
+                {/* This button runs the simulator, not a playtest. It says so. */}
+                {simulating ? 'Simulating…' : isComplete ? 'Re-simulate' : 'Simulate Playtest'}
               </button>
             )}
             <button
@@ -146,6 +155,15 @@ export function SessionDetail({
           </div>
         </div>
 
+        {/* Provenance banner — above the numbers, not tucked under them. */}
+        {session.summary && (
+          <ProvenanceNotice
+            source={source}
+            findingsCount={source === 'simulated' ? session.findingsCount : undefined}
+            className="mb-3"
+          />
+        )}
+
         {/* Summary strip */}
         {session.summary && (
           <motion.div
@@ -155,8 +173,26 @@ export function SessionDetail({
           >
             <SummaryStat icon={Target} label="Findings" value={session.findingsCount} color={STATUS_INFO} />
             <SummaryStat icon={Gamepad2} label="Systems" value={session.systemsTestedCount} color={ACCENT} />
-            <SummaryStat icon={Camera} label="Screenshots" value={session.summary.totalScreenshotsAnalyzed} color={ACCENT_PURPLE} />
-            <SummaryStat icon={Clock} label="Playtime" value={`${Math.floor(session.summary.playtimeSeconds / 60)}m`} color={STATUS_WARNING} />
+            {/* Null means the figure was never measured — it renders as words, not
+                as a plausible-looking count. */}
+            <SummaryStat
+              icon={Camera}
+              label="Screenshots"
+              value={session.summary.totalScreenshotsAnalyzed ?? NOT_MEASURED}
+              muted={session.summary.totalScreenshotsAnalyzed == null}
+              color={ACCENT_PURPLE}
+            />
+            <SummaryStat
+              icon={Clock}
+              label="Playtime"
+              value={
+                session.summary.playtimeSeconds != null
+                  ? `${Math.floor(session.summary.playtimeSeconds / 60)}m`
+                  : NOT_MEASURED
+              }
+              muted={session.summary.playtimeSeconds == null}
+              color={STATUS_WARNING}
+            />
             <div className="ml-auto flex items-center gap-3 text-2xs">
               {criticals.length > 0 && (
                 <span style={{ color: STATUS_ERROR }}>{criticals.length} critical</span>

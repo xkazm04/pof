@@ -7,8 +7,11 @@ import {
   STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR,
   statusBg, statusBorder,
 } from '@/lib/chart-colors';
-import { SEVERITY_TOKENS, CATEGORY_LABELS, severitySurface } from '@/lib/game-director-styles';
+import {
+  SEVERITY_TOKENS, CATEGORY_LABELS, severitySurface, NOT_MEASURED, resolveSessionSource,
+} from '@/lib/game-director-styles';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ProvenanceNotice } from '../ProvenanceNotice';
 import { ACCENT } from './constants';
 
 /** Coverage threshold coloring: green ≥80%, amber ≥50%, red below. */
@@ -23,13 +26,15 @@ export function CoverageView({ session, findings, onSimulate }: { session: Playt
         iconColor={ACCENT}
         satelliteIcons={[Target, CheckCircle2]}
         title="Coverage data not yet available"
-        description="Coverage shows how thoroughly each game system was tested and breaks down findings by severity and category. Complete a playtest to generate coverage data for this session."
-        action={onSimulate ? { label: 'Run Playtest', onClick: () => { void onSimulate(); }, icon: Play } : undefined}
+        description="Coverage shows how thoroughly each game system was tested and breaks down findings by severity and category. Complete a playtest to generate coverage data for this session. The built-in simulator does not measure coverage — only a real harness can fill it in."
+        action={onSimulate ? { label: 'Simulate Playtest', onClick: () => { void onSimulate(); }, icon: Play } : undefined}
       />
     );
   }
 
-  const categories = Object.entries(session.summary.testCoverage);
+  const categories = Object.entries(session.summary.testCoverage) as Array<[string, number | null]>;
+  const source = resolveSessionSource(session);
+  const anyMeasured = categories.some(([, pct]) => pct != null);
 
   // Count findings per severity
   const severityCounts: Record<string, number> = {};
@@ -45,7 +50,19 @@ export function CoverageView({ session, findings, onSimulate }: { session: Playt
 
   return (
     <div className="space-y-6">
-      {/* Test Coverage Bars */}
+      <ProvenanceNotice
+        source={source}
+        findingsCount={source === 'simulated' ? findings.length : undefined}
+        detail={
+          anyMeasured
+            ? undefined
+            : 'Coverage was not measured for this session, so no percentage is shown.'
+        }
+      />
+
+      {/* Test Coverage Bars. A null percentage renders as words, never as a bar:
+          the bars used to be fed `Math.floor(60 + Math.random() * 40)` and were
+          banded green/amber/red, so a random number carried a verdict. */}
       <div>
         <h3 className="text-xs uppercase tracking-wider text-text-muted font-semibold mb-3">
           Test Coverage by Category
@@ -60,16 +77,31 @@ export function CoverageView({ session, findings, onSimulate }: { session: Playt
               className="flex items-center gap-3"
             >
               <span className="text-sm text-text-muted-hover w-28 capitalize">{cat.replace(/-/g, ' ')}</span>
-              <MeterBar
-                value={pct}
-                color={coverageBand}
-                height={8}
-                delayMs={300 + idx * 50}
-                ariaLabel={`${cat.replace(/-/g, ' ')} test coverage`}
-                valueText={`${pct}%`}
-                className="flex-1"
-              />
-              <span className="text-sm font-medium text-text w-8 text-right">{pct}%</span>
+              {pct != null ? (
+                <>
+                  <MeterBar
+                    value={pct}
+                    color={coverageBand}
+                    height={8}
+                    delayMs={300 + idx * 50}
+                    ariaLabel={`${cat.replace(/-/g, ' ')} test coverage`}
+                    valueText={`${pct}%`}
+                    className="flex-1"
+                  />
+                  <span className="text-sm font-medium text-text w-8 text-right">{pct}%</span>
+                </>
+              ) : (
+                <>
+                  <div
+                    className="flex-1 rounded-full border border-dashed border-border"
+                    style={{ height: 8 }}
+                    aria-hidden="true"
+                  />
+                  <span className="text-2xs italic text-text-muted whitespace-nowrap">
+                    {NOT_MEASURED}
+                  </span>
+                </>
+              )}
             </motion.div>
           ))}
         </div>
