@@ -135,3 +135,104 @@ export function buildAssetList(
 export function buildMultiDirAssetList(listings: AssetDirListing[]): GeneratedAsset[] {
   return listings.flatMap(listOne).sort((a, b) => b.mtimeMs - a.mtimeMs);
 }
+
+/* ── Serving ONE generated file over HTTP ─────────────────────────────────── */
+
+/**
+ * Cache policy for a single served generated file (`/api/visual-gen/asset/:name` and
+ * `/api/visual-gen/icon/:name`), which used to be a flat `no-store`.
+ *
+ * `private, no-cache` — deliberately NOT `immutable` / a long `max-age`. Generated
+ * filenames are not content-addressed, and at least two writers reuse one
+ * DETERMINISTICALLY: `scripts/gap-loop/power-icon.mjs` names every icon from
+ * `iconSlug(catalogId, step)`, so re-generating a step's art OVERWRITES that exact path
+ * in place, and `tripo-skins.ts` writes `<slug>.glb` into a caller-named dir. Those are
+ * mutable paths; a long max-age would pin a stale image behind a URL whose bytes had
+ * genuinely changed, and no cache-busting query exists to rescue it.
+ *
+ * `no-cache` is not "don't cache" — it lets the client STORE the bytes and requires
+ * revalidation before reuse. Paired with the `ETag` below, a repeat mount costs one
+ * conditional request and ZERO body bytes while the file is unchanged (the win `no-store`
+ * forbade outright), and an in-place overwrite changes the etag so the very next request
+ * is served in full. A re-roll that writes a NEW filename is a new URL entirely, so no
+ * cached entry can mask it.
+ */
+export const GENERATED_FILE_CACHE_CONTROL = 'private, no-cache';
+
+/**
+ * Validator for a served generated file: its size + mtime, which move the instant the
+ * bytes do — an in-place overwrite of the same filename included. Pure.
+ *
+ * `mtimeMs` is embedded at FULL precision (it is sub-millisecond on NTFS/ext4), not
+ * rounded: rounding would widen the window in which a same-size rewrite could reuse a
+ * validator, and a same-size rewrite of a deterministically-named icon is precisely the
+ * case this policy has to get right.
+ */
+export function fileEtag(sizeBytes: number, mtimeMs: number): string {
+  return `"${sizeBytes.toString(16)}-${mtimeMs}"`;
+}
+
+/** Does an `If-None-Match` header list this etag (or `*`)? RFC 9110 §13.1.2. Pure. */
+export function etagMatches(ifNoneMatch: string | null | undefined, etag: string): boolean {
+  if (!ifNoneMatch) return false;
+  const bare = (t: string) => t.trim().replace(/^W\//, '');
+  const want = bare(etag);
+  return ifNoneMatch.split(',').some((t) => {
+    const v = bare(t);
+    return v === '*' || v === want;
+  });
+}
+
+/* ── In-process directory-listing cache ───────────────────────────────────── */
+
+/**
+ * How long a shaped directory listing may be reused without re-reading the directory.
+ *
+ * Deliberately SHORT, because these libraries are written OUT OF PROCESS —
+ * `scripts/gap-loop/*.mjs` write straight into `generated/icons/`, mesh jobs into
+ * `generated/<provider>/` — so no in-process invalidation could ever be complete, and a
+ * long TTL would be a freshness claim this process cannot back. The cache learns about an
+ * out-of-process write two ways:
+ *
+ *  1. **Directory-stamp revalidation.** Every read compares the DIRECTORY's own `mtimeMs`
+ *     against the stamp the entry was built with (one `stat`, replacing one `stat` per
+ *     file). A file added, removed or renamed out of process bumps that stamp, so the
+ *     entry is dropped immediately — and that is the case that changes which URLs exist.
+ *  2. **The TTL** bounds the one remaining case: a file overwritten IN PLACE, which
+ *     leaves the directory mtime alone. That changes no URL at all — only the cached
+ *     `mtimeMs` used for sort order — and the file's own bytes are revalidated per
+ *     request by `ETag`, never by this cache.
+ *
+ * There is no filesystem watcher. {@link invalidateListingCache} exists for tests and for
+ * a future in-process writer; nothing is wired to it today.
+ */
+export const LISTING_TTL_MS = 5_000;
+
+interface ListingEntry {
+  value: unknown;
+  at: number;
+  /** The directory's `mtimeMs` when this listing was built. */
+  stamp: number;
+}
+
+const listingCache = new Map<string, ListingEntry>();
+
+/** The cached listing for `key`, iff within TTL AND the directory stamp is unchanged. */
+export function readListingCache<T>(key: string, stamp: number | null, now: number = Date.now()): T | undefined {
+  if (stamp === null) return undefined; // could not stat the dir ⇒ cannot claim freshness
+  const hit = listingCache.get(key);
+  if (!hit || hit.stamp !== stamp || now - hit.at >= LISTING_TTL_MS) return undefined;
+  return hit.value as T;
+}
+
+/** Remember a shaped listing against the directory stamp it came from. A null stamp is never cached. */
+export function writeListingCache<T>(key: string, value: T, stamp: number | null, now: number = Date.now()): void {
+  if (stamp === null) return;
+  listingCache.set(key, { value, at: now, stamp });
+}
+
+/** Drop one key, or the whole cache when called with no key. */
+export function invalidateListingCache(key?: string): void {
+  if (key === undefined) listingCache.clear();
+  else listingCache.delete(key);
+}
