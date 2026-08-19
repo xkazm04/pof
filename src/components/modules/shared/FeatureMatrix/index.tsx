@@ -11,6 +11,7 @@ import { formatRelativeTime } from './helpers';
 import { useFeatureMatrixState } from './useFeatureMatrixState';
 import { FeatureMatrixSkeleton } from './FeatureMatrixSkeleton';
 import { NeverReviewedState } from './NeverReviewedState';
+import { MatrixScopeBanner } from './MatrixScopeBanner';
 import { SummaryBar } from './SummaryBar';
 import { StatusFilterChips } from './StatusFilterChips';
 import { QualitySparkline } from './QualitySparkline';
@@ -58,6 +59,7 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
     lastReviewed,
     neverReviewed,
     undatedReviewed,
+    scope,
   } = state;
 
   // Sticky offset for category headers: measure the filter toolbar so headers
@@ -89,19 +91,29 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
   }
 
   if (neverReviewed) {
+    // The scope banner sits ABOVE "No review yet": these seeded rows may sit beside
+    // rows another project owns, and "nothing has reviewed this" would then be a lie.
     return (
-      <NeverReviewedState
-        features={features}
-        isReviewing={isReviewing}
-        reviewProgress={reviewProgress}
-        onReview={onReview}
-        accentColor={accentColor}
-      />
+      <div className="space-y-4">
+        <MatrixScopeBanner scope={scope} visibleRows={features.length} />
+        <NeverReviewedState
+          features={features}
+          isReviewing={isReviewing}
+          reviewProgress={reviewProgress}
+          onReview={onReview}
+          accentColor={accentColor}
+        />
+      </div>
     );
   }
 
   return (
     <div ref={rootRef} className="space-y-4">
+      {/* What the active project's scope let this read see. Renders only when the
+          scope actually excluded or failed to attribute something — an empty list
+          with foreign rows is NOT an unreviewed module. */}
+      <MatrixScopeBanner scope={scope} visibleRows={features.length} />
+
       {/* Summary bar + Sparkline + Review button */}
       <div className="flex items-center gap-4">
         <SummaryBar summary={summary} />

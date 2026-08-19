@@ -24,7 +24,10 @@ export function useFeatureMatrixState({
   isReviewing: boolean;
   isFixing?: boolean;
 }) {
-  const { features, summary, isLoading, error, retry, refetch, runAutoVerify, isVerifying, verificationResults } = useFeatureMatrix(moduleId);
+  // `scope` is what the project scoping let this read SEE (owned / legacy / foreign
+  // row counts). It is threaded through untouched so the view can tell an empty
+  // module apart from one whose rows another project holds — see `matrixScope.ts`.
+  const { features, summary, isLoading, error, retry, refetch, runAutoVerify, isVerifying, verificationResults, scope } = useFeatureMatrix(moduleId);
   const projectPath = useProjectStore((s) => s.projectPath);
   const bridgeConnected = usePofBridgeStore((s) => s.connectionStatus === 'connected');
   const needsBinaryContent = useMemo(() => moduleNeedsBinaryContent(moduleId), [moduleId]);
@@ -291,7 +294,7 @@ export function useFeatureMatrixState({
   }, [features]);
 
   return {
-    features, summary, isLoading, error, retry, refetch, runAutoVerify, isVerifying, verificationResults,
+    features, summary, isLoading, error, retry, refetch, runAutoVerify, isVerifying, verificationResults, scope,
     projectPath, bridgeConnected, needsBinaryContent, wiringAssets, showWiring, setShowWiring, verificationMap,
     expandedRows, isSyncing, setIsSyncing, collapsedCategories, snapshots, reviewProgress,
     searchQuery, setSearchQuery, qualityMin, setQualityMin, qualityMax, setQualityMax,
