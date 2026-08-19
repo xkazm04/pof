@@ -1,12 +1,12 @@
 import { getAllModuleAggregates } from '@/lib/feature-matrix-db';
-import { apiSuccess, apiError } from '@/lib/api-utils';
+import { apiSuccess, withRoute } from '@/lib/api-utils';
 
-export async function GET() {
-  try {
-    const modules = getAllModuleAggregates();
-    return apiSuccess({ modules });
-  } catch (error) {
-    console.error('Aggregate GET error:', error);
-    return apiError(error instanceof Error ? error.message : 'Failed to read aggregates', 500);
-  }
-}
+/**
+ * Per-module roll-up of the feature matrix. Read through the ONE shared client
+ * path (`useModuleAggregates`), so a single Evaluator mount runs this query once
+ * rather than once per dashboard.
+ */
+export const GET = withRoute(async () => {
+  const modules = getAllModuleAggregates();
+  return apiSuccess({ modules });
+}, 'Failed to read aggregates');

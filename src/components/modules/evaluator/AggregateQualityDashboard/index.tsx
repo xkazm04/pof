@@ -3,10 +3,11 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Loader2, AlertTriangle, RotateCcw } from 'lucide-react';
 import { STATUS_ERROR, statusBg, statusBorder } from '@/lib/chart-colors';
-import type { ModuleAggregate, ReviewSnapshot } from '@/lib/feature-matrix-db';
+import type { ReviewSnapshot } from '@/lib/feature-matrix-db';
 import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
 import { MODULE_LABELS } from '@/lib/module-registry';
-import { apiFetch } from '@/lib/api-utils';
+import { tryApiFetch } from '@/lib/api-utils';
+import { useModuleAggregates } from '@/hooks/useModuleAggregates';
 import type { SubModuleId } from '@/types/modules';
 import { ALL_MODULE_IDS, daysSince } from './helpers';
 import type { CellData, Props } from './types';
@@ -20,10 +21,20 @@ import { QualityDiscrepancyBanner } from './QualityDiscrepancyBanner';
 // ─── Component ──────────────────────────────────────────────────────────────────
 
 export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBatchReview }: Props) {
-  const [aggregates, setAggregates] = useState<ModuleAggregate[]>([]);
+  // The roll-up comes from the ONE shared aggregate path — the same cached rows
+  // the Cross-Module dashboard and the Unified Summary read, so the three can no
+  // longer disagree. Only the review history is this view's own fetch.
+  const {
+    aggregates,
+    byModule: aggMap,
+    isLoading: aggLoading,
+    error: aggError,
+    refresh: refreshAggregates,
+  } = useModuleAggregates();
+
   const [historyMap, setHistoryMap] = useState<Record<string, ReviewSnapshot[]>>({});
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyError, setHistoryError] = useState<string | null>(null);
   const [hoveredModule, setHoveredModule] = useState<string | null>(null);
   const [selectedModule, setSelectedModule] = useState<string | null>(null);
   const [customStaleDays, setCustomStaleDays] = useState(staleDays);
@@ -32,32 +43,32 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
   // on every data refresh while the grid stays mounted.
   const hasAnimatedRef = useRef(false);
 
-  const fetchData = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const [aggData, histData] = await Promise.all([
-        apiFetch<{ modules: ModuleAggregate[] }>('/api/feature-matrix/aggregate'),
-        apiFetch<{ history: Record<string, ReviewSnapshot[]> }>('/api/feature-matrix/history'),
-      ]);
-      setAggregates(aggData.modules ?? []);
-      setHistoryMap(histData.history ?? {});
-    } catch (err) {
-      console.error('AggregateQualityDashboard fetch error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load quality data');
-    } finally {
-      setIsLoading(false);
-    }
+  const fetchHistory = useCallback(async () => {
+    setHistoryLoading(true);
+    const res = await tryApiFetch<{ history: Record<string, ReviewSnapshot[]> }>(
+      '/api/feature-matrix/history',
+    );
+    // A failed history load is reported, never swallowed into "no reviews yet" —
+    // an empty history reads as a never-reviewed project.
+    setHistoryError(res.ok ? null : res.error);
+    if (res.ok) setHistoryMap(res.data.history ?? {});
+    setHistoryLoading(false);
   }, []);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchHistory();
+  }, [fetchHistory]);
+
+  const fetchData = useCallback(() => {
+    refreshAggregates();
+    fetchHistory();
+  }, [refreshAggregates, fetchHistory]);
+
+  const isLoading = aggLoading || historyLoading;
+  const error = aggError ?? historyError;
 
   // Merge DB data with all known modules (some may not be seeded yet)
   const cells: CellData[] = useMemo(() => {
-    const aggMap = new Map(aggregates.map((a) => [a.moduleId, a]));
-
     return ALL_MODULE_IDS.map((moduleId) => {
       const agg = aggMap.get(moduleId);
       const defCount = MODULE_FEATURE_DEFINITIONS[moduleId]?.length ?? 0;
@@ -88,7 +99,7 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
         pctReviewed,
       };
     });
-  }, [aggregates]);
+  }, [aggMap]);
 
   // Project-wide totals
   const totals = useMemo(() => {

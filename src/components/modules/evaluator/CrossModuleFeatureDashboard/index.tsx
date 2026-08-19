@@ -1,6 +1,7 @@
 'use client';
 
 import { Loader2 } from 'lucide-react';
+import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { useCrossModuleFeatureDashboard } from './useCrossModuleFeatureDashboard';
 import { OverallSummary } from './OverallSummary';
 import { HeatmapGrid } from './HeatmapGrid';
@@ -11,6 +12,8 @@ import { BottomPanels } from './BottomPanels';
 export function CrossModuleFeatureDashboard() {
   const {
     isLoading,
+    error,
+    hasData,
     sortBy,
     setSortBy,
     hoveredCell,
@@ -33,8 +36,25 @@ export function CrossModuleFeatureDashboard() {
     );
   }
 
+  // Nothing was read: say so. Rendering the grid here would show every module as
+  // 0% complete / all-"unknown" — a fetch failure dressed up as an unreviewed
+  // (but healthy) project.
+  if (error && !hasData) {
+    return (
+      <div className="py-4">
+        <InlineErrorRetry message={`Couldn't load cross-module data — ${error}`} onRetry={fetchData} />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-5">
+      {/* Refresh failed but earlier data is still mounted — flag it as stale
+          instead of silently presenting it as current. */}
+      {error && (
+        <InlineErrorRetry message={`Refresh failed — showing previously loaded data. ${error}`} onRetry={fetchData} />
+      )}
+
       <OverallSummary totals={totals} overallPct={overallPct} onRefresh={fetchData} />
 
       {/* ── Heatmap Grid: Rows = modules, Columns = status categories ─── */}

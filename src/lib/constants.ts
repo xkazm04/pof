@@ -85,6 +85,8 @@ export const UI_TIMEOUTS = {
   pollInterval: 3000,
   /** TTL of the shared /api/feature-matrix/all-statuses cache (useFeatureStatuses). */
   featureStatusTtl: 5000,
+  /** TTL of the shared /api/feature-matrix/aggregate cache (useModuleAggregates). */
+  moduleAggregateTtl: 5000,
   /** Interval the lab runner chip polls the drain lease status (suspend-gated). */
   runnerLeasePoll: 5000,
   /** Short settle time for DB writes before UI refresh. */

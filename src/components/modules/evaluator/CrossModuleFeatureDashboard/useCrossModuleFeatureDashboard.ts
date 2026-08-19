@@ -1,57 +1,42 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import type { ModuleAggregate } from '@/lib/feature-matrix-db';
+import { useState, useCallback, useMemo } from 'react';
 import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
 import { MODULE_LABELS } from '@/lib/module-registry';
-import { apiFetch } from '@/lib/api-utils';
 import { useFeatureStatuses } from '@/hooks/useFeatureStatuses';
+import { useModuleAggregates } from '@/hooks/useModuleAggregates';
 import { useNavigationStore } from '@/stores/navigationStore';
 import type { SubModuleId } from '@/types/modules';
 import { ALL_MODULE_IDS, MODULE_CATEGORIES, type StatusKey, type SortKey } from './constants';
 import type { CellData, MissingFeatureGroup } from './types';
 
 export function useCrossModuleFeatureDashboard() {
-  const [aggregates, setAggregates] = useState<ModuleAggregate[]>([]);
-  const [isAggLoading, setIsAggLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortKey>('completion');
   const [hoveredCell, setHoveredCell] = useState<{ module: string; status: StatusKey } | null>(null);
   const navigateToModule = useNavigationStore((s) => s.navigateToModule);
 
-  // The status rows come from the ONE shared all-statuses path (row form, the
-  // same cached payload every other consumer reads); only the aggregate roll-up
-  // is this view's own fetch.
+  // Both reads come from their ONE shared path — the same cached payloads every
+  // other Evaluator dashboard sees, so this view can no longer show a roll-up
+  // that contradicts the status cells beside it.
   const {
-    statuses: allStatuses, isLoading: statusesLoading, loaded: statusesLoaded, refresh: refreshStatuses,
+    statuses: allStatuses, isLoading: statusesLoading, loaded: statusesLoaded,
+    error: statusesError,
   } = useFeatureStatuses();
+  const {
+    byModule: aggMap, isLoading: aggLoading, loaded: aggLoaded,
+    error: aggError, refresh: refreshAll,
+  } = useModuleAggregates();
 
-  const fetchAggregates = useCallback(async () => {
-    setIsAggLoading(true);
-    try {
-      const aggData = await apiFetch<{ modules: ModuleAggregate[] }>('/api/feature-matrix/aggregate');
-      setAggregates(aggData.modules ?? []);
-    } catch (err) {
-      console.error('CrossModuleFeatureDashboard fetch error:', err);
-    } finally {
-      setIsAggLoading(false);
-    }
-  }, []);
+  // `refresh` invalidates BOTH caches (they are two projections of one table).
+  const fetchData = useCallback(() => { refreshAll(); }, [refreshAll]);
 
-  const fetchData = useCallback(async () => {
-    refreshStatuses();
-    await fetchAggregates();
-  }, [fetchAggregates, refreshStatuses]);
-
-  useEffect(() => {
-    fetchAggregates();
-  }, [fetchAggregates]);
-
-  const isLoading = isAggLoading || (statusesLoading && !statusesLoaded);
+  const isLoading = (aggLoading && !aggLoaded) || (statusesLoading && !statusesLoaded);
+  // A failed load is never dressed up as an all-"unknown" heatmap: the reason
+  // reaches the UI, which renders it instead of a summary of nothing.
+  const error = aggError ?? statusesError;
 
   // Build cell data for each module
   const cells: CellData[] = useMemo(() => {
-    const aggMap = new Map(aggregates.map((a) => [a.moduleId, a]));
-
     return ALL_MODULE_IDS.map((moduleId) => {
       const agg = aggMap.get(moduleId);
       const defCount = MODULE_FEATURE_DEFINITIONS[moduleId]?.length ?? 0;
@@ -76,7 +61,7 @@ export function useCrossModuleFeatureDashboard() {
         pctComplete,
       };
     });
-  }, [aggregates]);
+  }, [aggMap]);
 
   // Sort cells
   const sortedCells = useMemo(() => {
@@ -153,6 +138,9 @@ export function useCrossModuleFeatureDashboard() {
 
   return {
     isLoading,
+    error,
+    /** False ⇒ nothing was actually read; a heatmap here would be all-"unknown" fiction. */
+    hasData: aggMap.size > 0,
     sortBy,
     setSortBy,
     hoveredCell,

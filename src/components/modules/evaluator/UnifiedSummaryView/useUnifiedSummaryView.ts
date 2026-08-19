@@ -8,57 +8,62 @@ import { buildProducersBrief } from '@/lib/evaluator/brief-narrator';
 import type { CorrelationResult } from '@/lib/evaluator/correlation-engine';
 import type { CorrelatedInsight } from '@/lib/evaluator/insight-generator';
 import type { ProjectHealthSummary } from '@/lib/evaluator/combined-health';
-import type { ModuleAggregate } from '@/lib/feature-matrix-db';
 import type { AnalyticsDashboard } from '@/types/session-analytics';
 import { MODULE_FEATURE_DEFINITIONS, buildDependencyMap, computeBlockers } from '@/lib/feature-definitions';
 import { tryApiFetch } from '@/lib/api-utils';
 import { useFeatureStatuses } from '@/hooks/useFeatureStatuses';
+import { useModuleAggregates } from '@/hooks/useModuleAggregates';
 import { useEvaluatorStore } from '@/stores/evaluatorStore';
 import type { ViewMode } from './types';
 
 export function useUnifiedSummaryView() {
-  const [aggregates, setAggregates] = useState<ModuleAggregate[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsDashboard | null>(null);
   const [isOwnLoading, setIsOwnLoading] = useState(true);
+  const [analyticsError, setAnalyticsError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('detailed');
 
   const lastScan = useEvaluatorStore((s) => s.lastScan);
 
-  // Cross-module statuses come from the ONE shared all-statuses path — this view
-  // mounts beside the other Evaluator dashboards, which used to mean one
-  // full-table scan each.
-  const { statusMap, isLoading: statusesLoading, loaded: statusesLoaded, refresh: refreshStatuses } = useFeatureStatuses();
+  // Cross-module statuses and the per-module roll-up both come from their ONE
+  // shared path — this view mounts beside the other Evaluator dashboards, which
+  // used to mean one full-table scan AND one roll-up query each.
+  const { statusMap, isLoading: statusesLoading, loaded: statusesLoaded, error: statusesError } = useFeatureStatuses();
+  const {
+    aggregates, isLoading: aggLoading, loaded: aggLoaded, error: aggError,
+    refresh: refreshFeatureData,
+  } = useModuleAggregates();
 
-  // ── Fetch this view's own data sources in parallel ─────────────────────────
+  // ── Fetch this view's own data source ──────────────────────────────────────
 
   const fetchOwn = useCallback(async () => {
     setIsOwnLoading(true);
     try {
-      // Both routes return the standard apiSuccess(...) envelope, so the real
-      // payload lives at data.data.*. tryApiFetch unwraps it — reading off the raw
-      // fetch silently left aggregates/analytics empty or mis-shaped.
-      const [aggRes, analyticsRes] = await Promise.all([
-        tryApiFetch<{ modules: ModuleAggregate[] }>('/api/feature-matrix/aggregate'),
-        tryApiFetch<AnalyticsDashboard>('/api/session-analytics?action=dashboard'),
-      ]);
-
-      if (aggRes.ok) setAggregates(aggRes.data.modules ?? []);
+      // The route returns the standard apiSuccess(...) envelope, so the real payload
+      // lives at data.data.*. tryApiFetch unwraps it — reading off the raw fetch
+      // silently left analytics empty or mis-shaped.
+      const analyticsRes = await tryApiFetch<AnalyticsDashboard>('/api/session-analytics?action=dashboard');
+      setAnalyticsError(analyticsRes.ok ? null : analyticsRes.error);
       if (analyticsRes.ok) setAnalytics(analyticsRes.data);
     } finally {
       setIsOwnLoading(false);
     }
   }, []);
 
-  const fetchAll = useCallback(async () => {
-    refreshStatuses();
-    await fetchOwn();
-  }, [fetchOwn, refreshStatuses]);
+  const fetchAll = useCallback(() => {
+    // One call invalidates both feature-matrix caches (statuses + aggregates).
+    refreshFeatureData();
+    fetchOwn();
+  }, [fetchOwn, refreshFeatureData]);
 
   useEffect(() => {
     fetchOwn();
   }, [fetchOwn]);
 
-  const isLoading = isOwnLoading || (statusesLoading && !statusesLoaded);
+  const isLoading = isOwnLoading || (aggLoading && !aggLoaded) || (statusesLoading && !statusesLoaded);
+  // A source that FAILED is not a source that is empty. The health composite
+  // treats a missing input as a zero, so an unreported failure reads as a
+  // genuinely unhealthy project — surface the reason instead.
+  const error = aggError ?? statusesError ?? analyticsError;
 
   // ── Compute dependency blocked/count maps ──────────────────────────────────
 
@@ -133,6 +138,7 @@ export function useUnifiedSummaryView() {
     analytics,
     statusMap,
     isLoading,
+    error,
     viewMode,
     setViewMode,
     lastScan,

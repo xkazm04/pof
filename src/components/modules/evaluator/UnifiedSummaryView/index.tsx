@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { BriefView } from '@/components/modules/evaluator/BriefView';
 import { InsightCard } from '@/components/modules/evaluator/InsightCard';
+import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO, ACCENT_VIOLET, MODULE_COLORS } from '@/lib/chart-colors';
 import type { Props } from './types';
@@ -36,6 +37,7 @@ export function UnifiedSummaryView({ onNavigateTab }: Props) {
     analytics,
     statusMap,
     isLoading,
+    error,
     viewMode,
     setViewMode,
     lastScan,
@@ -64,6 +66,13 @@ export function UnifiedSummaryView({ onNavigateTab }: Props) {
 
   return (
     <div className="space-y-5">
+      {/* A source that failed to load is reported, not folded into the composite
+          as a zero — an unreported failure reads as a genuinely unhealthy (or
+          never-reviewed) project. Rendered in both view modes. */}
+      {error && (
+        <InlineErrorRetry message={`Some project data couldn't be loaded — ${error}`} onRetry={fetchAll} />
+      )}
+
       {/* ── View-mode toggle (Detailed engineer view vs Brief stakeholder view) ── */}
       <div className="flex items-center justify-between">
         <ViewModeToggle mode={viewMode} onChange={setViewMode} />
@@ -228,7 +237,9 @@ export function UnifiedSummaryView({ onNavigateTab }: Props) {
       </div>
 
       {/* ── Empty state when no data ──────────────────────────────────────── */}
-      {activeSources === 0 && (
+      {/* Only when the loads SUCCEEDED and found nothing. With an error in play
+          the banner above is the truth; "run some reviews" would be a lie. */}
+      {activeSources === 0 && !error && (
         <SurfaceCard level={3} className="p-8 text-center">
           <Shield className="w-10 h-10 mx-auto text-border-bright mb-3" />
           <h3 className="text-sm font-semibold text-text mb-2">No Evaluation Data Yet</h3>
