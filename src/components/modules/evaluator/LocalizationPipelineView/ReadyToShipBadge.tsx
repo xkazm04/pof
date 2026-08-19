@@ -15,7 +15,9 @@ export function ReadyToShipBadge({ status }: { status: LocaleQAStatus }) {
   }
   if (status.readyToShip) {
     return (
-      <Badge variant="success">
+      // The domain glyph IS this badge's shape cue, so opt out of the generic
+      // ramp check-mark rather than stacking two icons in one 10px pill.
+      <Badge variant="success" showIcon={false}>
         <span className="inline-flex items-center gap-1">
           <ShieldCheck aria-hidden="true" className="w-3 h-3" />
           ready to ship
