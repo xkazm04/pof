@@ -5,9 +5,12 @@ import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, Grid, GizmoHelper, GizmoViewport, Environment, Center } from '@react-three/drei';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { logger } from '@/lib/logger';
 import type { RenderMode } from './useViewerStore';
 import { useViewerStore } from './useViewerStore';
 import { computeAssetStats } from './assetStats';
+import { describeLoadError } from './loadStatus';
+import { ViewportStatus } from './ViewportStatus';
 
 // ── Model component that loads from URL ──────────────────────────────────────
 
@@ -15,7 +18,9 @@ function LoadedModel({ url, renderMode }: { url: string; renderMode: RenderMode 
   const groupRef = useRef<THREE.Group>(null);
   const originalMaterials = useRef<Map<THREE.Mesh, THREE.Material | THREE.Material[]>>(new Map());
   const { scene: threeScene } = useThree();
-  const setStats = useViewerStore((s) => s.setStats);
+  const reportLoaded = useViewerStore((s) => s.reportLoaded);
+  const reportLoadError = useViewerStore((s) => s.reportLoadError);
+  const clearStats = useViewerStore((s) => s.clearStats);
 
   // Load model
   const loadedScene = useMemo(() => {
@@ -34,8 +39,9 @@ function LoadedModel({ url, renderMode }: { url: string; renderMode: RenderMode 
         });
         group.add(gltf.scene);
 
-        // Report geometry/material/texture stats to the inspector budget check.
-        setStats(computeAssetStats(gltf));
+        // Report geometry/material/texture stats to the inspector. Keyed on `url` so a
+        // superseded load that lands late is dropped rather than shown under a new name.
+        reportLoaded(url, computeAssetStats(gltf));
 
         // Auto-fit camera to model
         const box = new THREE.Box3().setFromObject(gltf.scene);
@@ -51,8 +57,11 @@ function LoadedModel({ url, renderMode }: { url: string; renderMode: RenderMode 
       },
       undefined,
       (error) => {
-        // eslint-disable-next-line no-console
-        console.error('Failed to load model:', error);
+        // A 404, a bad ?dir=, or a corrupt mesh used to end here as a console line and
+        // nothing else — an empty studio the user could not tell from "still loading".
+        const reason = describeLoadError(error);
+        logger.error('asset viewer: failed to load model', url, reason);
+        reportLoadError(url, reason);
       },
     );
 
@@ -96,9 +105,9 @@ function LoadedModel({ url, renderMode }: { url: string; renderMode: RenderMode 
   useEffect(() => {
     return () => {
       originalMaterials.current.clear();
-      setStats(null);
+      clearStats();
     };
-  }, [setStats]);
+  }, [clearStats]);
 
   return <primitive ref={groupRef} object={loadedScene} />;
 }
@@ -141,8 +150,15 @@ export function SceneViewer({
   gridColor,
   backgroundColor,
 }: SceneViewerProps) {
+  const loadState = useViewerStore((s) => s.loadState);
+  const loadError = useViewerStore((s) => s.loadError);
+  const modelName = useViewerStore((s) => s.modelName);
+
   return (
-    <div className="w-full h-full rounded-lg overflow-hidden" style={{ background: backgroundColor ?? 'var(--surface-deep)' }}>
+    <div
+      className="w-full h-full rounded-lg overflow-hidden"
+      style={{ background: backgroundColor ?? 'var(--surface-deep)', position: 'relative' }}
+    >
       <Canvas
         ref={canvasRef}
         camera={{ position: [3, 2, 3], fov: 50, near: 0.01, far: 1000 }}
@@ -209,6 +225,14 @@ export function SceneViewer({
           />
         </Suspense>
       </Canvas>
+      {/* Outside the Canvas on purpose — plain DOM survives a dead GL context and is
+          what makes the three states assertable without WebGL. */}
+      <ViewportStatus
+        loadState={loadState}
+        loadError={loadError}
+        modelName={modelName}
+        modelUrl={modelUrl}
+      />
     </div>
   );
 }
