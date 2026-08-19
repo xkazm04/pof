@@ -18,8 +18,10 @@ import { createTimerLifecycle, type Lifecycle } from '@/lib/lifecycle';
 interface ModuleStoreAccessor {
   getState: () => {
     checklistProgress: Record<string, Record<string, boolean>>;
+    progressProjectPath: string | null;
     saveProgress: (projectPath: string) => Promise<void>;
     loadProgress: (projectPath: string) => Promise<void>;
+    clearProgress: () => void;
   };
 }
 
@@ -64,6 +66,22 @@ export function getChecklistProgress(): Record<string, Record<string, boolean>> 
   return moduleStore.getState().checklistProgress;
 }
 
+/**
+ * Drop the outgoing project's module progress.
+ *
+ * Progress lives in ONE global localStorage blob while the server row is
+ * per-project, so a project switch / reset that leaves it in place renders (and
+ * eventually WRITES) the previous project's completions as the new project's.
+ */
+export function clearModuleProgress(): void {
+  moduleStore?.getState().clearProgress();
+}
+
+/** Which project the in-memory module progress currently belongs to (null = unowned). */
+export function getProgressOwner(): string | null {
+  return moduleStore?.getState().progressProjectPath ?? null;
+}
+
 // ─── Auto-save lifecycle (used by moduleStore) ──────────────────────────────
 
 /** Lifecycle-managed debounced auto-save to SQLite. */
@@ -78,4 +96,16 @@ export const autoSaveLifecycle: Lifecycle<void> = createTimerLifecycle(() => {
 /** Schedule a debounced save. Called by moduleStore after every checklist mutation. */
 export function scheduleAutoSave(): void {
   autoSaveLifecycle.init();
+}
+
+/**
+ * Cancel a pending auto-save.
+ *
+ * The timer reads `projectPath` at FIRE time, not at schedule time, so a save
+ * scheduled while project A was open would otherwise fire after a switch and
+ * write A's in-memory progress under B's path. Every path that changes the open
+ * project must call this before setting the new path.
+ */
+export function cancelAutoSave(): void {
+  autoSaveLifecycle.dispose();
 }

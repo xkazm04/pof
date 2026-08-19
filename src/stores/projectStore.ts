@@ -8,6 +8,8 @@ import {
   saveModuleProgress,
   loadModuleProgress,
   getChecklistProgress,
+  clearModuleProgress,
+  cancelAutoSave,
 } from '@/services/ProjectModuleBridge';
 import { useCLIPanelStore } from '@/components/cli/store/cliPanelStore';
 import type { DynamicProjectContext } from '@/lib/prompt-context';
@@ -91,11 +93,19 @@ export const useProjectStore = create<ProjectState>()(
       },
 
       resetProject: () => {
-        // Save current module progress before resetting
+        // Save current module progress before resetting. The call captures the
+        // state snapshot synchronously, so clearing immediately below is safe.
         const { projectPath, isSetupComplete } = get();
         if (projectPath && isSetupComplete) {
           saveModuleProgress(projectPath);
         }
+        // A pending debounced auto-save reads projectPath at FIRE time; left
+        // running it would write this project's progress into the next one.
+        cancelAutoSave();
+        // Module progress lives in one global blob — without this, "New Project"
+        // inherits the previous project's entire completed checklist and
+        // completeSetup({ isNewProject: true }) writes it into the new row.
+        clearModuleProgress();
         set({
           projectName: '',
           projectPath: '',
@@ -216,6 +226,15 @@ export const useProjectStore = create<ProjectState>()(
             saveModuleProgress(projectPath),
           ]);
         }
+
+        // Dispose the pending auto-save BEFORE the new path is set — it reads
+        // projectPath at fire time, so a stale timer would write the outgoing
+        // project's progress into the incoming project's row.
+        cancelAutoSave();
+        // Drop the outgoing project's progress so it is never rendered as the
+        // target's while the load is in flight, and never re-saved under the new
+        // path if that load fails.
+        clearModuleProgress();
 
         // Clear terminal sessions to prevent cross-project leakage
         useCLIPanelStore.getState().clearAllSessions();

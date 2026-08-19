@@ -3,6 +3,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { apiFetch } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
 import {
   registerModuleStore,
   scheduleAutoSave,
@@ -12,6 +13,50 @@ import type { ScanFinding } from '@/types/scan';
 
 /** Semantic verification status for a checklist item */
 export type VerificationStatus = 'full' | 'partial' | 'stub' | 'missing';
+
+/**
+ * localStorage key of the persisted project store. Read directly (never imported)
+ * so moduleStore keeps its zero-import relationship with projectStore — the exact
+ * circular dependency ProjectModuleBridge exists to break.
+ */
+const PROJECT_PERSIST_KEY = 'pof-project';
+
+/** The projectPath the persisted project store was last left on, or null. */
+export function readPersistedProjectPath(): string | null {
+  try {
+    const raw = globalThis.localStorage?.getItem(PROJECT_PERSIST_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { state?: { projectPath?: unknown } };
+    const path = parsed?.state?.projectPath;
+    return typeof path === 'string' && path.length > 0 ? path : null;
+  } catch {
+    return null;
+  }
+}
+
+interface OwnerClaim {
+  progressProjectPath: string | null;
+  progressAdopted: true;
+}
+
+/**
+ * One-time adoption of the pre-identity global progress blob.
+ *
+ * Before this slice, `pof-modules` held ONE global blob while the server row is
+ * per-project — so existing installs have real, unattributed user work in
+ * localStorage. It is attributed (never discarded) to the project that was open
+ * when it was written: the persisted `projectPath`. Runs once, then `progressAdopted`
+ * keeps it from ever re-claiming.
+ *
+ * Returns null when the state is already adopted (nothing to do).
+ */
+export function claimUnadoptedOwner(
+  state: { progressAdopted?: boolean } | null | undefined,
+  persistedProjectPath: string | null = readPersistedProjectPath(),
+): OwnerClaim | null {
+  if (!state || state.progressAdopted === true) return null;
+  return { progressProjectPath: persistedProjectPath, progressAdopted: true };
+}
 
 export interface VerificationInfo {
   status: VerificationStatus;
@@ -31,6 +76,23 @@ interface ModuleState {
   /** Accumulated scan findings per module */
   scanResults: Record<string, ScanFinding[]>;
 
+  /**
+   * Which project the in-memory progress belongs to. `null` = empty / unowned.
+   * The blob above is ONE project's ground truth while the server row is
+   * per-project, so every read/write is gated on this identity.
+   */
+  progressProjectPath: string | null;
+  /** One-shot: the pre-identity global blob has been attributed to a project. */
+  progressAdopted: boolean;
+  /** Last load failure — surfaced with a retry, never swallowed. */
+  progressLoadError: string | null;
+  /** Last refused or failed save — surfaced, never swallowed. */
+  progressSaveError: string | null;
+  /** Path of the most recent load attempt (retry target). */
+  progressLoadPath: string | null;
+  /** True while loadProgress is in flight. */
+  isLoadingProgress: boolean;
+
   addHistoryEntry: (entry: TaskHistoryEntry) => void;
   updateHealth: (moduleId: SubModuleId, health: Partial<ModuleHealth>) => void;
   toggleChecklistItem: (subModuleId: SubModuleId, itemId: string) => void;
@@ -45,6 +107,12 @@ interface ModuleState {
   saveProgress: (projectPath: string) => Promise<void>;
   /** Restore module progress from SQLite for the given project path */
   loadProgress: (projectPath: string) => Promise<void>;
+  /** Drop all per-project progress (used on project switch / reset). */
+  clearProgress: () => void;
+  /** Re-attempt the last failed load. */
+  retryLoadProgress: () => Promise<void>;
+  /** Dismiss the visible load/save error without retrying. */
+  dismissProgressError: () => void;
 }
 
 const defaultHealth: ModuleHealth = {
@@ -62,6 +130,13 @@ export const useModuleStore = create<ModuleState>()(
       checklistVerification: {},
       quickActionsPanelCollapsed: true,
       scanResults: {},
+
+      progressProjectPath: null,
+      progressAdopted: false,
+      progressLoadError: null,
+      progressSaveError: null,
+      progressLoadPath: null,
+      isLoadingProgress: false,
 
       addHistoryEntry: (entry) => {
         set((state) => {
@@ -177,7 +252,31 @@ export const useModuleStore = create<ModuleState>()(
 
       saveProgress: async (projectPath: string) => {
         if (!projectPath) return;
-        const { checklistProgress, moduleHealth, checklistVerification, moduleHistory } = get();
+        const {
+          checklistProgress,
+          moduleHealth,
+          checklistVerification,
+          moduleHistory,
+          progressProjectPath,
+        } = get();
+
+        // Identity gate. The server POST unions checklist `true`s into the stored
+        // blob and can never un-do them, so a write under the wrong path fabricates
+        // permanent "done" marks for work never done. Refuse and REPORT rather than
+        // writing memory into whatever project happens to be open (a stale auto-save
+        // timer, or a switch whose load failed, both land here).
+        if (progressProjectPath !== null && progressProjectPath !== projectPath) {
+          const message =
+            `Progress not saved: the loaded progress belongs to "${progressProjectPath}", ` +
+            `but the open project is "${projectPath}".`;
+          logger.warn(`moduleStore.saveProgress refused — ${message}`);
+          set({ progressSaveError: message });
+          return;
+        }
+        // Unowned (freshly cleared, or a first save after adoption found no project):
+        // this write claims the blob for the project being written.
+        if (progressProjectPath === null) set({ progressProjectPath: projectPath });
+
         try {
           await apiFetch('/api/project-progress', {
             method: 'POST',
@@ -190,13 +289,21 @@ export const useModuleStore = create<ModuleState>()(
               moduleHistory,
             }),
           });
-        } catch {
-          // Silent fail — localStorage is still the primary store
+          set({ progressSaveError: null });
+        } catch (err) {
+          // localStorage still holds the state, but the DB — which every other
+          // surface reads — does not. Say so instead of failing silently.
+          set({
+            progressSaveError: `Progress not saved to the project database: ${
+              err instanceof Error ? err.message : 'unknown error'
+            }`,
+          });
         }
       },
 
       loadProgress: async (projectPath: string) => {
         if (!projectPath) return;
+        set({ isLoadingProgress: true, progressLoadError: null, progressLoadPath: projectPath });
         try {
           const data = await apiFetch<{
             checklistProgress: Record<string, Record<string, boolean>>;
@@ -210,11 +317,60 @@ export const useModuleStore = create<ModuleState>()(
             moduleHealth: data.moduleHealth ?? {},
             checklistVerification: data.checklistVerification ?? {},
             moduleHistory: data.moduleHistory ?? {},
+            progressProjectPath: projectPath,
+            progressLoadError: null,
+            progressSaveError: null,
+            isLoadingProgress: false,
           });
-        } catch {
-          // Silent fail — keep whatever localStorage had
+        } catch (err) {
+          const reason = err instanceof Error ? err.message : 'unknown error';
+          const owner = get().progressProjectPath;
+          // Whatever is in memory is ANOTHER project's progress. Rendering it as
+          // this project's is the corruption — drop it and say the numbers are
+          // unknown, rather than letting the next auto-save write it into this row.
+          const foreign = owner !== null && owner !== projectPath;
+          set({
+            ...(foreign
+              ? {
+                  checklistProgress: {},
+                  moduleHealth: {},
+                  checklistVerification: {},
+                  moduleHistory: {},
+                  scanResults: {},
+                }
+              : {}),
+            progressProjectPath: projectPath,
+            isLoadingProgress: false,
+            progressLoadError: foreign
+              ? `Could not load this project's progress (${reason}). Showing nothing — the previously open project's marks were discarded rather than shown here.`
+              : `Could not load this project's progress (${reason}). Showing the last locally cached values, which may be out of date.`,
+          });
+          logger.warn(`moduleStore.loadProgress failed for "${projectPath}" — ${reason}`);
         }
       },
+
+      clearProgress: () => {
+        set({
+          checklistProgress: {},
+          moduleHealth: {},
+          checklistVerification: {},
+          moduleHistory: {},
+          scanResults: {},
+          progressProjectPath: null,
+          progressLoadError: null,
+          progressSaveError: null,
+          progressLoadPath: null,
+          isLoadingProgress: false,
+        });
+      },
+
+      retryLoadProgress: async () => {
+        const path = get().progressLoadPath;
+        if (!path) return;
+        await get().loadProgress(path);
+      },
+
+      dismissProgressError: () => set({ progressLoadError: null, progressSaveError: null }),
     }),
     {
       name: 'pof-modules',
@@ -225,8 +381,21 @@ export const useModuleStore = create<ModuleState>()(
         checklistProgress: state.checklistProgress,
         checklistVerification: state.checklistVerification,
         quickActionsPanelCollapsed: state.quickActionsPanelCollapsed,
+        // Identity of the persisted blob — without it a reload cannot tell whose
+        // progress it is holding. Errors / in-flight flags are transient by design.
+        progressProjectPath: state.progressProjectPath,
+        progressAdopted: state.progressAdopted,
         // scanResults intentionally excluded — restored from DB on mount via ScanTab's fetchAndMergeFindings
       }),
+      onRehydrateStorage: () => (state) => {
+        const claim = claimUnadoptedOwner(state);
+        if (!state || !claim) return;
+        // Adopt (never discard) pre-identity progress into the project it was
+        // written under. Mutating the just-hydrated state is intentional: this runs
+        // at boot, before any subscriber can read a wrong owner.
+        state.progressProjectPath = claim.progressProjectPath;
+        state.progressAdopted = claim.progressAdopted;
+      },
     }
   )
 );

@@ -1,9 +1,10 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useModuleStore } from '@/stores/moduleStore';
 import { CheckCircle2 } from 'lucide-react';
 import { MODULE_COLORS } from '@/lib/chart-colors';
+import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import {
   MODULE_CHECKLIST_COUNTS,
   TOTAL_CHECKLIST_ITEMS,
@@ -13,6 +14,20 @@ import {
 
 export function ProjectStats() {
   const checklistProgress = useModuleStore((s) => s.checklistProgress) || EMPTY_PROGRESS;
+  const loadError = useModuleStore((s) => s.progressLoadError);
+  const saveError = useModuleStore((s) => s.progressSaveError);
+  const retryLoadProgress = useModuleStore((s) => s.retryLoadProgress);
+  const dismissProgressError = useModuleStore((s) => s.dismissProgressError);
+
+  // A load failure means these numbers are not this project's ground truth; a save
+  // refusal/failure means the DB every other surface reads no longer matches them.
+  // Either way the headline percentage would be a claim we cannot support.
+  const progressError = loadError ?? saveError;
+
+  const handleRetry = useCallback(() => {
+    if (loadError) void retryLoadProgress();
+    else dismissProgressError();
+  }, [loadError, retryLoadProgress, dismissProgressError]);
 
   const stats = useMemo(() => {
     let completed = 0;
@@ -41,6 +56,22 @@ export function ProjectStats() {
   }, [checklistProgress]);
 
   if (TOTAL_CHECKLIST_ITEMS === 0) return null;
+
+  if (progressError) {
+    return (
+      <div className="max-w-[22rem]" title={progressError}>
+        {/* Full reason stays in the DOM (visually truncated) so the alert is
+            readable by assistive tech and the numbers are never shown as fact. */}
+        <InlineErrorRetry
+          dense
+          message={progressError}
+          onRetry={handleRetry}
+          onDismiss={dismissProgressError}
+          dismissLabel="Dismiss progress error"
+        />
+      </div>
+    );
+  }
 
   const barColor = stats.pct >= 75 ? MODULE_COLORS.setup : stats.pct >= 40 ? MODULE_COLORS.content : 'var(--text-muted)';
 
