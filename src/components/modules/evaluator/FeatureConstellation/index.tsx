@@ -7,6 +7,8 @@ import { layoutModuleConstellation } from '@/lib/constellation/layout';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { useFeatureStatuses } from '@/hooks/useFeatureStatuses';
+import { MatrixScopeBanner } from '@/components/modules/shared/FeatureMatrix/MatrixScopeBanner';
+import { countModuleRows } from '@/components/modules/shared/FeatureMatrix/matrixScope';
 import type { SubModuleId } from '@/types/modules';
 import type { FeatureStatus } from '@/types/feature-matrix';
 import {
@@ -26,7 +28,13 @@ export function FeatureConstellation() {
   // Feature statuses come from the ONE shared all-statuses path, so mounting
   // beside the other Evaluator views costs no extra full-table scan and a
   // review/auto-verify invalidation refreshes this view too.
-  const { statusMap, isLoading, failed, error, refresh } = useFeatureStatuses();
+  const { statusMap, isLoading, failed, error, refresh, scope } = useFeatureStatuses();
+
+  // How many rows of THIS module the scoped read actually returned. An unlit
+  // constellation is drawn from feature DEFINITIONS, so it looks identical whether
+  // the module is unreviewed or whether another project owns every one of its rows
+  // — this count is what lets the shared banner tell those apart.
+  const moduleRows = useMemo(() => countModuleRows(statusMap, moduleId), [statusMap, moduleId]);
 
   const layout = useMemo(() => layoutModuleConstellation(moduleId, statusMap), [moduleId, statusMap]);
   const nodeByKey = useMemo(() => new Map(layout.nodes.map((n) => [n.key, n])), [layout]);
@@ -85,6 +93,11 @@ export function FeatureConstellation() {
 
   return (
     <div className="space-y-4">
+      {/* What the active project's scope let this read see. Sits above the summary
+          counts, because "0/N lit" is exactly the sentence a foreign-owned matrix
+          would otherwise put on screen without qualification. */}
+      <MatrixScopeBanner scope={scope} visibleRows={moduleRows} testId="pof-constellation-scope" />
+
       {/* Header / controls */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">

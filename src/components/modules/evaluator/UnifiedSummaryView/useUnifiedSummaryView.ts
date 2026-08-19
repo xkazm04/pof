@@ -14,6 +14,7 @@ import { tryApiFetch } from '@/lib/api-utils';
 import { useFeatureStatuses } from '@/hooks/useFeatureStatuses';
 import { useModuleAggregates } from '@/hooks/useModuleAggregates';
 import { useEvaluatorStore } from '@/stores/evaluatorStore';
+import { countAggregateRows } from '@/components/modules/shared/FeatureMatrix/matrixScope';
 import type { ViewMode } from './types';
 
 export function useUnifiedSummaryView() {
@@ -30,7 +31,7 @@ export function useUnifiedSummaryView() {
   const { statusMap, isLoading: statusesLoading, loaded: statusesLoaded, error: statusesError } = useFeatureStatuses();
   const {
     aggregates, isLoading: aggLoading, loaded: aggLoaded, error: aggError,
-    refresh: refreshFeatureData,
+    refresh: refreshFeatureData, scope,
   } = useModuleAggregates();
 
   // ── Fetch this view's own data source ──────────────────────────────────────
@@ -149,5 +150,9 @@ export function useUnifiedSummaryView() {
     brief,
     sourceStatus,
     activeSources,
+    /** What the project scope let the feature-matrix half of this composite see. */
+    scope,
+    /** The roll-up's own row count, for the scope banner's empty-view escalation. */
+    scopedRows: countAggregateRows(aggregates),
   };
 }

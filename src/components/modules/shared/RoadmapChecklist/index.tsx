@@ -5,6 +5,7 @@ import type { SubModuleId } from '@/types/modules';
 import { PRIORITY_CONFIG } from './constants';
 import type { RoadmapChecklistProps } from './types';
 import { useRoadmapChecklist } from './useRoadmapChecklist';
+import { MatrixScopeBanner } from '@/components/modules/shared/FeatureMatrix/MatrixScopeBanner';
 import { NBABanner } from './NBABanner';
 import { BulkActionBar } from './BulkActionBar';
 import { CompactChecklist } from './CompactChecklist';
@@ -32,11 +33,17 @@ export function RoadmapChecklist({
     toggleSelected, selectAll, selectNone, exitSelectMode,
     saveMetadata, handleSetPriority, toggleNotes,
     nbaTop, nbaRecs, nbaLoading, nbaExpanded, setNbaExpanded,
+    nbaScope, nbaScopedRows,
     completedCount, progressPercent, criticalCount, importantCount,
   } = useRoadmapChecklist(items, subModuleId);
 
   return (
     <div className="space-y-4">
+      {/* NBA scores an unseen feature as unimplemented, so rows held by another
+          project turn into confident advice to redo reviewed work. The shared
+          scope disclosure sits ABOVE the recommendation it qualifies. */}
+      <MatrixScopeBanner scope={nbaScope} visibleRows={nbaScopedRows} testId="pof-nba-scope" />
+
       {/* Next Best Action banner */}
       {!nbaLoading && nbaTop && !progress[nbaTop.item.id] && activeItemId !== nbaTop.item.id && (
         <NBABanner

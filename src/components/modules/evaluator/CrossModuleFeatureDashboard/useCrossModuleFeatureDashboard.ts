@@ -6,6 +6,7 @@ import { MODULE_LABELS } from '@/lib/module-registry';
 import { useFeatureStatuses } from '@/hooks/useFeatureStatuses';
 import { useModuleAggregates } from '@/hooks/useModuleAggregates';
 import { useNavigationStore } from '@/stores/navigationStore';
+import { countAggregateRows } from '@/components/modules/shared/FeatureMatrix/matrixScope';
 import type { SubModuleId } from '@/types/modules';
 import { ALL_MODULE_IDS, MODULE_CATEGORIES, type StatusKey, type SortKey } from './constants';
 import type { CellData, MissingFeatureGroup } from './types';
@@ -23,8 +24,8 @@ export function useCrossModuleFeatureDashboard() {
     error: statusesError,
   } = useFeatureStatuses();
   const {
-    byModule: aggMap, isLoading: aggLoading, loaded: aggLoaded,
-    error: aggError, refresh: refreshAll,
+    aggregates, byModule: aggMap, isLoading: aggLoading, loaded: aggLoaded,
+    error: aggError, refresh: refreshAll, scope,
   } = useModuleAggregates();
 
   // `refresh` invalidates BOTH caches (they are two projections of one table).
@@ -141,6 +142,11 @@ export function useCrossModuleFeatureDashboard() {
     error,
     /** False ⇒ nothing was actually read; a heatmap here would be all-"unknown" fiction. */
     hasData: aggMap.size > 0,
+    /** What the project scope let this read see (`null` until a load settles). */
+    scope,
+    /** The roll-up's OWN row count — never `totals.total`, which back-fills from
+     *  MODULE_FEATURE_DEFINITIONS and so stays large when the read saw nothing. */
+    scopedRows: countAggregateRows(aggregates),
     sortBy,
     setSortBy,
     hoveredCell,

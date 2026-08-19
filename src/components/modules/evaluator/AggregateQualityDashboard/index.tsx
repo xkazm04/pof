@@ -8,6 +8,8 @@ import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
 import { MODULE_LABELS } from '@/lib/module-registry';
 import { tryApiFetch } from '@/lib/api-utils';
 import { useModuleAggregates } from '@/hooks/useModuleAggregates';
+import { MatrixScopeBanner } from '@/components/modules/shared/FeatureMatrix/MatrixScopeBanner';
+import { countAggregateRows } from '@/components/modules/shared/FeatureMatrix/matrixScope';
 import type { SubModuleId } from '@/types/modules';
 import { ALL_MODULE_IDS, daysSince } from './helpers';
 import type { CellData, Props } from './types';
@@ -30,6 +32,7 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
     isLoading: aggLoading,
     error: aggError,
     refresh: refreshAggregates,
+    scope,
   } = useModuleAggregates();
 
   const [historyMap, setHistoryMap] = useState<Record<string, ReviewSnapshot[]>>({});
@@ -239,6 +242,16 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
           </button>
         </div>
       )}
+
+      {/* What the project scope let the roll-up read. `cells` back-fills every
+          module from MODULE_FEATURE_DEFINITIONS, so an all-"unknown" heatmap looks
+          the same whether nothing is reviewed or another project owns every row —
+          the row count here is the roll-up's OWN, un-backfilled total. */}
+      <MatrixScopeBanner
+        scope={scope}
+        visibleRows={countAggregateRows(aggregates)}
+        testId="pof-aggregate-quality-scope"
+      />
 
       <QualityDiscrepancyBanner cells={cells} />
 

@@ -142,7 +142,10 @@ export function useRoadmapChecklist(items: ChecklistItem[], subModuleId: string)
   }, []);
 
   // NBA recommendations
-  const { top: nbaTop, recommendations: nbaRecs, isLoading: nbaLoading } = useNBA(subModuleId as SubModuleId);
+  const {
+    top: nbaTop, recommendations: nbaRecs, isLoading: nbaLoading,
+    scope: nbaScope, scopedRows: nbaScopedRows,
+  } = useNBA(subModuleId as SubModuleId);
   const [nbaExpanded, setNbaExpanded] = useState(false);
 
   const completedCount = items.filter((item) => progress[item.id]).length;
@@ -166,6 +169,7 @@ export function useRoadmapChecklist(items: ChecklistItem[], subModuleId: string)
     toggleSelected, selectAll, selectNone, exitSelectMode,
     saveMetadata, handleSetPriority, toggleNotes,
     nbaTop, nbaRecs, nbaLoading, nbaExpanded, setNbaExpanded,
+    nbaScope, nbaScopedRows,
     completedCount, progressPercent, criticalCount, importantCount,
   };
 }

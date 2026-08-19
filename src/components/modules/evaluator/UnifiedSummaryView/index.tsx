@@ -16,6 +16,7 @@ import {
 import { BriefView } from '@/components/modules/evaluator/BriefView';
 import { InsightCard } from '@/components/modules/evaluator/InsightCard';
 import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
+import { MatrixScopeBanner } from '@/components/modules/shared/FeatureMatrix/MatrixScopeBanner';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO, ACCENT_VIOLET, MODULE_COLORS } from '@/lib/chart-colors';
 import type { Props } from './types';
@@ -48,6 +49,8 @@ export function UnifiedSummaryView({ onNavigateTab }: Props) {
     brief,
     sourceStatus,
     activeSources,
+    scope,
+    scopedRows,
   } = useUnifiedSummaryView();
 
   // ── Loading state ──────────────────────────────────────────────────────────
@@ -72,6 +75,11 @@ export function UnifiedSummaryView({ onNavigateTab }: Props) {
       {error && (
         <InlineErrorRetry message={`Some project data couldn't be loaded — ${error}`} onRetry={fetchAll} />
       )}
+
+      {/* The composite folds a missing feature-matrix input in as a zero, so rows
+          held by ANOTHER project depress the health gauge exactly like an
+          unreviewed project would. Rendered in both view modes, above the gauge. */}
+      <MatrixScopeBanner scope={scope} visibleRows={scopedRows} testId="pof-unified-summary-scope" />
 
       {/* ── View-mode toggle (Detailed engineer view vs Brief stakeholder view) ── */}
       <div className="flex items-center justify-between">

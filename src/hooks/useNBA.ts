@@ -5,12 +5,23 @@ import { computeNBA, type NBARecommendation } from '@/lib/nba-engine';
 import { useModuleStore } from '@/stores/moduleStore';
 import { useFeatureStatuses } from '@/hooks/useFeatureStatuses';
 import { invalidateFeatureData } from '@/hooks/useModuleAggregates';
+import { countModuleRows } from '@/components/modules/shared/FeatureMatrix/matrixScope';
+import type { ProjectScopeReport } from '@/lib/feature-matrix-db';
 import type { SubModuleId } from '@/types/modules';
 
 export interface UseNBAResult {
   recommendations: NBARecommendation[];
   top: NBARecommendation | null;
   isLoading: boolean;
+  /**
+   * What the project scope let the status read see (`null` until it settles).
+   * NBA scores a feature it cannot see as unimplemented, so rows owned by another
+   * project produce confident "do this next" advice about work that may already be
+   * reviewed — the card must be able to say so.
+   */
+  scope: ProjectScopeReport | null;
+  /** How many rows of THIS module the scoped read returned (0 ⇒ nothing in view). */
+  scopedRows: number;
   refresh: () => void;
 }
 
@@ -25,7 +36,7 @@ export interface UseNBAResult {
  */
 export function useNBA(moduleId: SubModuleId): UseNBAResult {
   // Shared, deduped cross-module status map (same data the Feature Matrix reads).
-  const { statusMap, isLoading: statusesLoading, loaded, failed } = useFeatureStatuses();
+  const { statusMap, isLoading: statusesLoading, loaded, failed, scope } = useFeatureStatuses();
 
   // Subscribe to progress so a checklist toggle re-scores (computeNBA reads
   // checklist state from the store; `progress` is the recompute trigger).
@@ -49,5 +60,10 @@ export function useNBA(moduleId: SubModuleId): UseNBAResult {
   const isLoading = !loaded && statusesLoading;
   const top = recommendations[0] ?? null;
 
-  return { recommendations, top, isLoading, refresh };
+  // Rows of this module the scoped read actually returned. `computeNBA` falls back
+  // to "unknown" for every key it misses, so this count is the only way the card
+  // can distinguish "nothing reviewed here" from "another project holds it all".
+  const scopedRows = useMemo(() => countModuleRows(statusMap, moduleId), [statusMap, moduleId]);
+
+  return { recommendations, top, isLoading, scope, scopedRows, refresh };
 }

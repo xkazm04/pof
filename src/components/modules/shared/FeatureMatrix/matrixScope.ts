@@ -38,8 +38,21 @@ import type { StatusLevel } from '@/lib/status-token';
  */
 export type MatrixScopeState = 'own' | 'mixed' | 'legacy' | 'foreign';
 
+/**
+ * What the underlying report's counts are ABOUT.
+ *
+ * `getProjectScopeReport(projectId, moduleId?)` returns `moduleId: null` when it
+ * counted the whole table — which is exactly what `/all-statuses` and `/aggregate`
+ * ask for. A project-wide report therefore cannot say how many rows of any ONE
+ * module are foreign, and copy that claimed it would overclaim. The subject is
+ * derived from the report itself so a surface can never mislabel its own counts.
+ */
+export type MatrixScopeSubject = 'module' | 'project';
+
 export interface MatrixScopeDescription {
   state: MatrixScopeState;
+  /** Whether the counts describe one module or the whole matrix (see {@link MatrixScopeSubject}). */
+  subject: MatrixScopeSubject;
   /** False only for `own` — the read hid nothing, so a banner would be noise. */
   show: boolean;
   /** Ramp level for the shared `StatusTag` / container tint. */
@@ -83,18 +96,27 @@ export function describeMatrixScope(
   const label = scope.unscoped ? '' : shortProjectLabel(scope.projectId);
   const under = label ? `"${label}"` : 'this read';
 
+  // Derived from the report, never from the calling surface: a project-wide read
+  // knows nothing about any single module, so it must not borrow that noun.
+  const subject: MatrixScopeSubject = scope.moduleId ? 'module' : 'project';
+  const isModule = subject === 'module';
+  const thisSubject = isModule ? 'This module' : 'This project';
+  const ofSubject = isModule ? 'of this module' : 'of the feature matrix';
+  const ofItself = isModule ? 'of it' : 'of the feature matrix';
+
   // Foreign rows first: it is the strongest claim on screen, and the only state in
   // which an EMPTY module is provably not an unreviewed one.
   if (scope.foreignRows > 0) {
     const blind = visibleRows === 0;
     return {
       state: 'foreign',
+      subject,
       show: true,
       level: blind ? 'bad' : 'warn',
       word: 'OTHER PROJECT',
       headline: blind
-        ? `This module is not unreviewed — ${rowWord(scope.foreignRows)} of it are owned by another project and are not visible under ${under}.`
-        : `${rowWord(scope.foreignRows)} of this module are owned by another project and are excluded from this view.`,
+        ? `${thisSubject} is not unreviewed — ${rowWord(scope.foreignRows)} ${ofItself} are owned by another project and are not visible under ${under}.`
+        : `${rowWord(scope.foreignRows)} ${ofSubject} are owned by another project and are excluded from this view.`,
       note: scope.note,
     };
   }
@@ -102,12 +124,13 @@ export function describeMatrixScope(
   if (scope.legacyRows > 0 && scope.ownedRows === 0) {
     return {
       state: 'legacy',
+      subject,
       show: true,
       level: 'warn',
       word: 'UNATTRIBUTED',
       headline: scope.unscoped
-        ? `No project is open, so this is the unattributed legacy set: ${rowWord(scope.legacyRows)} that no project owns. They exist and are shown — that is not the same as a module nothing has reviewed.`
-        : `All ${rowWord(scope.legacyRows)} here are unattributed legacy rows that every project sees; nothing has been written under ${under}. They exist — that is not the same as a module nothing has reviewed.`,
+        ? `No project is open, so this is the unattributed legacy set: ${rowWord(scope.legacyRows)} that no project owns. They exist and are shown — that is not the same as a ${subject} nothing has reviewed.`
+        : `All ${rowWord(scope.legacyRows)} here are unattributed legacy rows that every project sees; nothing has been written under ${under}. They exist — that is not the same as a ${subject} nothing has reviewed.`,
       note: scope.note,
     };
   }
@@ -115,6 +138,7 @@ export function describeMatrixScope(
   if (scope.legacyRows > 0) {
     return {
       state: 'mixed',
+      subject,
       show: true,
       level: 'warn',
       word: 'PARTLY UNATTRIBUTED',
@@ -125,10 +149,41 @@ export function describeMatrixScope(
 
   return {
     state: 'own',
+    subject,
     show: false,
     level: 'ok',
     word: 'SCOPED',
     headline: `${rowWord(scope.ownedRows)} in view, all attributed to ${under}. Nothing was excluded by scope.`,
     note: scope.note,
   };
+}
+
+/**
+ * How many feature-matrix rows one module actually has in a shared status map.
+ *
+ * The evaluator surfaces read `/all-statuses` (project-wide), but several of them
+ * render ONE module — the Constellation, the NBA card. `describeMatrixScope`'s
+ * escalation to `bad` turns on "this view is showing nothing", so those surfaces
+ * need the per-module count rather than the map's size. Pure, so it is the same
+ * number in the component and in the test.
+ */
+export function countModuleRows(statusMap: Map<string, string>, moduleId: string): number {
+  const prefix = `${moduleId}::`;
+  let n = 0;
+  for (const key of statusMap.keys()) if (key.startsWith(prefix)) n++;
+  return n;
+}
+
+/**
+ * How many feature-matrix rows a per-module roll-up was built from.
+ *
+ * The roll-up dashboards must NOT use their own `totals.total`: that figure falls
+ * back to `MODULE_FEATURE_DEFINITIONS.length` for modules with no rows, so it stays
+ * large even when the scoped read returned nothing — precisely the "looks reviewed,
+ * saw nothing" reading this disclosure exists to prevent.
+ */
+export function countAggregateRows(aggregates: { total: number }[]): number {
+  let n = 0;
+  for (const a of aggregates) n += a.total;
+  return n;
 }
