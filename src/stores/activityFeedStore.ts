@@ -11,7 +11,11 @@ export type ActivityEventType =
   | 'quality-change'
   | 'build-result'
   | 'evaluator-recommendation'
-  | 'checklist-progress';
+  | 'checklist-progress'
+  /** The shell's keep-alive LRU unmounted a pane while work it could SEE was
+   *  running. Reported here (not only at debug level) because the teardown is a
+   *  loss the user did not ask for and would otherwise never learn about. */
+  | 'shell-eviction';
 
 export interface ActivityEvent {
   id: string;

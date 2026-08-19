@@ -136,7 +136,8 @@ export interface NavigationEvents {
     tabKey: string;
   };
   /** A keep-alive pane was pushed out of the shell's LRU and UNMOUNTED. Emitted by
-   *  `ModuleRenderer` so a surface can react to work that navigation tore down. */
+   *  `ModuleRenderer`; consumed by `useActivityFeedBridge`, which surfaces the
+   *  evictions that tore down work the shell could observe. */
   'nav.module.evicted': {
     /** The id that left the keep-alive list: a module / special-category id
      *  (`scope: 'module'`) or an inline CLI session id (`scope: 'session'`). */
@@ -151,6 +152,13 @@ export interface NavigationEvents {
      *  `none-observed` — no such session; the shell CANNOT see streams/polls/subscriptions
      *  a module holds internally, so this is "nothing detected", never "nothing lost". */
     liveWork: 'cli-session-running' | 'none-observed';
+    /** How the victim was chosen — the decision-side twin of `liveWork`.
+     *  `unprobed` — the LRU had no liveness input; the tail was popped blind.
+     *  `no-observed-live-work` — the least-recently-used pane NOT flagged live was
+     *  preferred. "Not flagged" ≠ idle: same blind spot as `none-observed` above.
+     *  `forced-over-live-work` — every candidate was flagged live and the cap
+     *  evicted one anyway. This is the case a user is told about. */
+    basis: 'unprobed' | 'no-observed-live-work' | 'forced-over-live-work';
   };
 }
 

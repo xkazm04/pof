@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useNavigationStore } from '@/stores/navigationStore';
 import { DURATION, EASE_OUT } from '@/lib/motion';
@@ -23,6 +23,8 @@ import {
   describeEviction,
   reportEviction,
   resolveVisibleModule,
+  observedLiveKey,
+  observedLiveProbe,
 } from './helpers';
 
 /** Max number of modules kept mounted simultaneously. Oldest are evicted. */
@@ -38,6 +40,8 @@ const SESSION_LRU_CAP = 5;
  */
 interface PendingEviction {
   evictedIds: string[];
+  /** Subset of `evictedIds` the LRU had to evict over observed live work. */
+  forcedIds: string[];
   scope: 'module' | 'session';
   cap: number;
 }
@@ -67,6 +71,20 @@ export function ModuleRenderer() {
       ? maximizedTabId
       : null;
 
+  // The ONE thing this shell can observe about live work: which CLI sessions are
+  // running, and which module each is attributed to. Subscribed as an order-stable
+  // STRING (never a fresh Set/array) because the LRU below adjusts state during
+  // render — a new identity every render would loop, which this component has
+  // already been bitten by once.
+  //
+  // What the probe cannot see is the honest part: a module's own SSE streams,
+  // polls and in-flight fetches are invisible here, so `false` means "nothing
+  // observed", not "idle". `lruTouched` treats it as a preference, never a licence
+  // (see `ObservedLiveProbe` / `EvictionBasis` in ./helpers).
+  const liveKey = useCLIPanelStore((s) => observedLiveKey(s.sessions));
+  const isModuleLive = useMemo(() => observedLiveProbe(liveKey, 'module'), [liveKey]);
+  const isSessionLive = useMemo(() => observedLiveProbe(liveKey, 'session'), [liveKey]);
+
   // An eviction UNMOUNTS a pane — any stream, poll or CLI session it held dies with
   // it. Record it here (pure: plain state, no side effects in the render body) and
   // report it from the effects below, so navigation can never tear down live work
@@ -84,19 +102,34 @@ export function ModuleRenderer() {
   const moduleTouches: string[] = [];
   if (activeSubModule) moduleTouches.push(activeSubModule);
   if (activeCategory && SPECIAL_CATEGORIES[activeCategory]) moduleTouches.push(activeCategory);
-  const moduleTouch = lruTouchedAll(moduleLru, moduleTouches, LRU_CAP);
+  //
+  // The probe makes liveness an INPUT to the choice rather than an epitaph for it:
+  // the victim is the least-recently-used pane with no observed live work, and the
+  // classic tail is evicted only when every candidate is live (cap unchanged,
+  // memory still bounded) — reported as `forced-over-live-work` so it surfaces.
+  const moduleTouch = lruTouchedAll(moduleLru, moduleTouches, LRU_CAP, isModuleLive);
   if (moduleTouch) {
     setModuleLru(moduleTouch.next);
     if (moduleTouch.evicted.length > 0) {
-      setModuleEviction({ evictedIds: moduleTouch.evicted, scope: 'module', cap: LRU_CAP });
+      setModuleEviction({
+        evictedIds: moduleTouch.evicted,
+        forcedIds: moduleTouch.forced,
+        scope: 'module',
+        cap: LRU_CAP,
+      });
     }
   }
   if (inlineSessionId) {
-    const touch = lruTouched(sessionLru, inlineSessionId, SESSION_LRU_CAP);
+    const touch = lruTouched(sessionLru, inlineSessionId, SESSION_LRU_CAP, isSessionLive);
     if (touch) {
       setSessionLru(touch.next);
       if (touch.evicted) {
-        setSessionEviction({ evictedIds: [touch.evicted], scope: 'session', cap: SESSION_LRU_CAP });
+        setSessionEviction({
+          evictedIds: [touch.evicted],
+          forcedIds: touch.basis === 'forced-over-live-work' ? [touch.evicted] : [],
+          scope: 'session',
+          cap: SESSION_LRU_CAP,
+        });
       }
     }
   }
@@ -107,7 +140,10 @@ export function ModuleRenderer() {
     if (!moduleEviction) return;
     const sessions = useCLIPanelStore.getState().sessions;
     for (const evictedId of moduleEviction.evictedIds) {
-      reportEviction(describeEviction(evictedId, 'module', moduleEviction.cap, sessions));
+      const basis = moduleEviction.forcedIds.includes(evictedId)
+        ? 'forced-over-live-work'
+        : 'no-observed-live-work';
+      reportEviction(describeEviction(evictedId, 'module', moduleEviction.cap, sessions, basis));
     }
   }, [moduleEviction]);
 
@@ -115,7 +151,10 @@ export function ModuleRenderer() {
     if (!sessionEviction) return;
     const sessions = useCLIPanelStore.getState().sessions;
     for (const evictedId of sessionEviction.evictedIds) {
-      reportEviction(describeEviction(evictedId, 'session', sessionEviction.cap, sessions));
+      const basis = sessionEviction.forcedIds.includes(evictedId)
+        ? 'forced-over-live-work'
+        : 'no-observed-live-work';
+      reportEviction(describeEviction(evictedId, 'session', sessionEviction.cap, sessions, basis));
     }
   }, [sessionEviction]);
 

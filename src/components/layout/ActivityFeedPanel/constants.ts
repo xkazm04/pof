@@ -5,6 +5,7 @@ import {
   Hammer,
   AlertTriangle,
   CheckSquare,
+  Unplug,
 } from 'lucide-react';
 import type { ActivityEventType } from '@/stores/activityFeedStore';
 import { STATUS_SUCCESS, STATUS_ERROR, STATUS_WARNING, MODULE_COLORS } from '@/lib/chart-colors';
@@ -29,4 +30,5 @@ export const EVENT_CONFIG: Record<ActivityEventType, { icon: typeof CheckCircle2
   'build-result': { icon: Hammer, color: MODULE_COLORS.core, label: 'Build' },
   'evaluator-recommendation': { icon: AlertTriangle, color: MODULE_COLORS.evaluator, label: 'Recommendation' },
   'checklist-progress': { icon: CheckSquare, color: STATUS_SUCCESS, label: 'Progress' },
+  'shell-eviction': { icon: Unplug, color: STATUS_ERROR, label: 'Torn Down' },
 };

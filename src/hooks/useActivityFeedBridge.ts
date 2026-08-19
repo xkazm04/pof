@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useActivityFeedStore } from '@/stores/activityFeedStore';
 import { eventBus } from '@/lib/event-bus';
 import { eventBusBridgeLifecycle } from '@/lib/event-bus-bridge';
+import { tearsDownObservedWork } from '@/components/layout/ModuleRenderer/helpers';
 import { useGuardedLifecycle } from '@/hooks/useLifecycle';
 import type { BusEvent } from '@/types/event-bus';
 
@@ -59,6 +60,38 @@ export function useActivityFeedBridge() {
         description,
         moduleId,
         meta: { priority, prompt: suggestedPrompt },
+      });
+    });
+  }, [addEvent]);
+
+  // ── Shell LRU eviction → activity feed ──
+  //
+  // This is the registered consumer `nav.module.evicted` was emitted for. Until it
+  // existed the channel had NO subscriber in `src/`, so a navigation that unmounted
+  // a running CLI session produced one `logger.debug` line and nothing else.
+  //
+  // Only evictions that destroyed work the shell could OBSERVE are surfaced
+  // (`tearsDownObservedWork`). That is not a claim the quiet ones were harmless —
+  // the shell cannot see a module's own streams or polls — and the copy below says
+  // so rather than implying the feed is a complete ledger of what navigation cost.
+  useEffect(() => {
+    return eventBus.on('nav.module.evicted', (event: BusEvent<'nav.module.evicted'>) => {
+      const { evictedId, label, scope, cap, liveWork, basis } = event.payload;
+      if (!tearsDownObservedWork({ evictedId, label, scope, cap, liveWork, basis })) return;
+
+      const what = scope === 'session' ? 'Terminal session' : 'Module';
+      addEvent({
+        type: 'shell-eviction',
+        title: `${what} torn down: ${label}`,
+        description:
+          (basis === 'forced-over-live-work'
+            ? `Only ${cap} panes stay mounted and every candidate had live work, so this one was unmounted anyway`
+            : `The ${cap}-pane keep-alive limit unmounted this one`) +
+          (liveWork === 'cli-session-running'
+            ? ' while a CLI session was still running.'
+            : '.') +
+          ' Streams and polls a module holds internally are invisible to the shell, so more may have gone with it.',
+        moduleId: scope === 'module' ? evictedId : undefined,
       });
     });
   }, [addEvent]);

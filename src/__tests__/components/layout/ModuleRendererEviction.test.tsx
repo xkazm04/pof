@@ -126,7 +126,11 @@ describe('ModuleRenderer emits an observable signal on LRU eviction', () => {
     expect(events[0].payload.liveWork).toBe('none-observed');
   });
 
-  it('distinguishes an eviction that tore down a running CLI session', () => {
+  // The LRU now takes observed liveness as an INPUT, so a running session on the
+  // least-recently-used pane moves the victim rather than merely colouring the
+  // report. The protected-pane and forced-eviction contracts live in
+  // ModuleRendererLiveEviction.test.tsx; this asserts the shape of the signal.
+  it('spares the least-recently-used pane when a CLI session is running in it', () => {
     useCLIPanelStore.setState({
       sessions: {
         t1: {
@@ -142,7 +146,8 @@ describe('ModuleRenderer emits an observable signal on LRU eviction', () => {
     for (const id of MODULES) visit(id);
 
     expect(events).toHaveLength(1);
-    expect(events[0].payload.evictedId).toBe('arpg-character');
-    expect(events[0].payload.liveWork).toBe('cli-session-running');
+    expect(events[0].payload.evictedId).toBe('arpg-animation');
+    expect(events[0].payload.basis).toBe('no-observed-live-work');
+    expect(events[0].payload.liveWork).toBe('none-observed');
   });
 });
