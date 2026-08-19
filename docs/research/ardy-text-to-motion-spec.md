@@ -46,6 +46,27 @@
 > `spellbook::Animation` remain `trueEngine: None, generatorWired: false` — the engine is back
 > on disk, but wiring those steps is still unbuilt work.
 >
+> ### App seam BUILT 2026-08-19 — `src/lib/visual-gen/ardy-runner.ts`
+>
+> The seam four sessions listed as "remaining" now exists: `runArdy` (pure `buildArdyArgs` /
+> `resolveArdyEnv` / `parseArdyOutput` + injectable spawn, triposr/hunyuan shape) and
+> **`preflightArdy`**, which makes this recipe re-provable in one command instead of trusting
+> the prose above:
+>
+> ```
+> POF_ARDY_ROOT=C:/Users/kazda/kiro/ardy npx vitest run src/__tests__/lib/visual-gen/ardy-runner.live.test.ts
+> ```
+>
+> Env-gated, so it skips in `npm run validate`. Preflight checks the checkout, the encoder
+> assembly, CUDA, and imports `motion_correction` **lowercase** (the capitalised import is the
+> one that fails open). It distinguishes *gone* from *misconfigured* — the 2026-08-19 failure.
+>
+> **Gotcha the live smoke caught, which the unit suite structurally could not:** the spawn must
+> set `cwd` to the checkout. ARDY resolves a relative `--output` against its own cwd, so without
+> it a relative stem writes into the CALLER's directory — it dropped an `outputs/` folder into
+> the PoF repo — and a resolver that checks the caller's cwd first will then "find" the stray
+> and report success. Resolve reported relative paths against the checkout, never the caller.
+>
 > ### Lineage correction — ARDY is the NEWER model, Kimodo is the earlier one
 >
 > A 2026-08-19 `/research` run initially proposed adopting **NVIDIA Kimodo** as an ARDY
