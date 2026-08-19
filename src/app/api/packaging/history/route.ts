@@ -2,21 +2,27 @@ import { NextRequest } from 'next/server';
 import { apiSuccess, apiError, withRoute } from '@/lib/api-utils';
 import {
   getBuilds, getBuild, insertBuild, deleteBuild,
-  getBuildStats, getSizeTrend, getPlatforms,
+  getBuildStats, getSizeTrend, getPlatforms, getBuildScopeReport,
   type BuildRecordInput,
 } from '@/lib/packaging/build-history-store';
 import { getCurrentVersion, bumpVersion, formatVersion, autoIncrementOnSuccess } from '@/lib/packaging/version-manager';
 
+// `?projectPath=` scopes every read to one project (own rows + the unattributed ones
+// recorded before builds carried a project). Omitting it is an UNSCOPED read of the
+// unattributed rows only — it is never "every project's builds shown as yours".
 export const GET = withRoute(async (request: NextRequest) => {
   const action = request.nextUrl.searchParams.get('action') ?? 'list';
+  const projectPath = request.nextUrl.searchParams.get('projectPath');
 
   switch (action) {
     case 'list': {
       const limit = Number(request.nextUrl.searchParams.get('limit') ?? '100');
       const offset = Number(request.nextUrl.searchParams.get('offset') ?? '0');
-      const builds = getBuilds(limit, offset);
+      const builds = getBuilds(limit, offset, projectPath);
       return apiSuccess({ builds });
     }
+    case 'scope':
+      return apiSuccess({ scope: getBuildScopeReport(projectPath) });
     case 'dashboard': {
       // Composite "load the dashboard" payload: the four pieces the dashboard
       // used to fetch in a 4-way Promise.all, reusing the exact same store
@@ -26,11 +32,14 @@ export const GET = withRoute(async (request: NextRequest) => {
       const trendLimit = Number(request.nextUrl.searchParams.get('trendLimit') ?? '30');
       const version = getCurrentVersion();
       return apiSuccess({
-        builds: getBuilds(listLimit, 0),
-        stats: getBuildStats(),
-        trend: getSizeTrend(undefined, trendLimit),
+        builds: getBuilds(listLimit, 0, projectPath),
+        stats: getBuildStats(projectPath),
+        trend: getSizeTrend(undefined, trendLimit, projectPath),
         version: formatVersion(version),
         parsed: version,
+        // What this scope could NOT see, so an empty dashboard reads as "another
+        // project owns these builds", never as "you have never built".
+        scope: getBuildScopeReport(projectPath),
       });
     }
     case 'get': {
@@ -41,17 +50,17 @@ export const GET = withRoute(async (request: NextRequest) => {
       return apiSuccess({ build });
     }
     case 'stats': {
-      const stats = getBuildStats();
+      const stats = getBuildStats(projectPath);
       return apiSuccess({ stats });
     }
     case 'trend': {
       const platform = request.nextUrl.searchParams.get('platform') ?? undefined;
       const limit = Number(request.nextUrl.searchParams.get('limit') ?? '30');
-      const trend = getSizeTrend(platform, limit);
+      const trend = getSizeTrend(platform, limit, projectPath);
       return apiSuccess({ trend });
     }
     case 'platforms': {
-      const platforms = getPlatforms();
+      const platforms = getPlatforms(projectPath);
       return apiSuccess({ platforms });
     }
     case 'version': {
@@ -70,6 +79,9 @@ export const POST = withRoute(async (request: NextRequest) => {
   switch (action) {
     case 'record': {
       const input: BuildRecordInput = {
+        // Explicit or nothing — a build recorded without a project stays honestly
+        // unattributed rather than being assigned to whichever project is open.
+        projectId: typeof body.projectPath === 'string' ? body.projectPath : null,
         platform: body.platform,
         config: body.config ?? 'Development',
         status: body.status,

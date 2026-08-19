@@ -20,6 +20,40 @@ export interface SizeBudgetConfig {
   failOnRegression: boolean;
 }
 
+/**
+ * The build a growth check compared against — enough to NAME it. Structurally the
+ * subset of `SizeBaselineBuild` this module needs; kept local so `size-budgets` stays
+ * free of a DB import.
+ */
+export interface SizeBaselineRef {
+  buildId: number;
+  projectId: string;
+  sizeBytes: number;
+  version: string | null;
+  createdAt: string;
+}
+
+/**
+ * Plain statement of WHICH build the growth check used as its reference — or that it
+ * had none.
+ *
+ * `lastGreenSizeBytes` used to take the most recent green build of ANY project,
+ * because `build_history.project_id` was never written. A verdict therefore could not
+ * be distinguished from one computed against a foreign baseline, and `null` (no
+ * reference at all) was reported the same way as "no regression". Both now say what
+ * they are.
+ */
+export function describeSizeBaseline(baseline: SizeBaselineRef | null | undefined): string {
+  if (!baseline) {
+    return 'no baseline: this project has no green build with a measured size for this platform, so growth was NOT evaluated (this is "no reference", not "no regression")';
+  }
+  const owner = baseline.projectId
+    ? `project ${baseline.projectId}`
+    : 'a build recorded before builds carried a project (unattributed)';
+  const version = baseline.version ? ` v${baseline.version}` : '';
+  return `compared against build #${baseline.buildId}${version} — ${formatBytes(baseline.sizeBytes, { signed: true })}, ${owner}, ${baseline.createdAt}`;
+}
+
 export interface SizeRegression {
   /** Build size in bytes */
   sizeBytes: number;
@@ -35,6 +69,10 @@ export interface SizeRegression {
   exceedsBudget: boolean;
   /** True if growth vs last green exceeds the configured percent */
   exceedsGrowth: boolean;
+  /** The build the growth check referenced, when the caller supplied one; null = none. */
+  baseline: SizeBaselineRef | null;
+  /** Which baseline this verdict used, in words — see {@link describeSizeBaseline}. */
+  baselineNote: string;
   /** Human-readable summary, suitable for build notes */
   note: string;
 }
@@ -93,6 +131,7 @@ export function evaluateBuildSize(
   sizeBytes: number | null | undefined,
   lastGreenSizeBytes: number | null,
   config: SizeBudgetConfig = getBudgetConfig(),
+  baseline: SizeBaselineRef | null = null,
 ): SizeRegression | null {
   if (sizeBytes == null || sizeBytes <= 0) return null;
   const budget = platformBudget(platform, config.budgets);
@@ -123,7 +162,16 @@ export function evaluateBuildSize(
     );
   }
 
-  const note = `${SIZE_REGRESSION_NOTE_PREFIX} ${platformLabel(platform)} ${formatBytes(sizeBytes, { signed: true })} — ${parts.join('; ')}`;
+  // Every verdict names its reference. A budget-only verdict with no baseline used to
+  // read as "the package did not grow"; it now says growth was never evaluated.
+  const baselineNote = baseline
+    ? describeSizeBaseline(baseline)
+    : lastGreenSizeBytes && lastGreenSizeBytes > 0
+      // A bare size with no record behind it: the comparison happened, but which build
+      // (and whose project) it came from was not supplied. Say that, don't imply it.
+      ? `compared against an unidentified last-green size of ${formatBytes(lastGreenSizeBytes, { signed: true })} — the caller passed no baseline build, so its project is unknown`
+      : describeSizeBaseline(null);
+  const note = `${SIZE_REGRESSION_NOTE_PREFIX} ${platformLabel(platform)} ${formatBytes(sizeBytes, { signed: true })} — ${parts.join('; ')} [${baselineNote}]`;
 
   return {
     sizeBytes,
@@ -133,6 +181,8 @@ export function evaluateBuildSize(
     actualGrowthPercent,
     exceedsBudget,
     exceedsGrowth,
+    baseline,
+    baselineNote,
     note,
   };
 }

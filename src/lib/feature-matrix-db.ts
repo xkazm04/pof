@@ -1,6 +1,6 @@
 import { getDb } from './db';
 import { logger } from '@/lib/logger';
-import { normalizeProjectId } from '@/lib/project-id';
+import { normalizeProjectId, projectScopeSql } from '@/lib/project-id';
 import type { SubModuleId } from '@/types/modules';
 import { FEATURE_STATUSES, normalizeFeatureSource } from '@/types/feature-matrix';
 import type { FeatureRow, FeatureSource, FeatureStatus, FeatureSummary } from '@/types/feature-matrix';
@@ -56,23 +56,11 @@ function validateStatus(status: string): FeatureStatus {
 // imports `db.ts`). Re-exported here because this is where every caller already looks.
 export { normalizeProjectId, UNSCOPED_PROJECT_ID } from '@/lib/project-id';
 
-/**
- * WHERE fragment + params scoping a read to the active project.
- *
- * - A NAMED project sees its own rows **plus** the unattributed legacy rows
- *   (`project_id = ''`). Legacy rows cannot be proven to belong to anyone else, and
- *   a user's whole matrix vanishing is a worse failure than the contamination this
- *   change is narrowing — so they stay visible and are COUNTED
- *   (`ProjectScopeReport.legacyRows`) instead of being hidden or silently adopted.
- * - An UNSCOPED caller (no project named) sees ONLY the legacy set. It does not
- *   silently get everything: rows owned by named projects are excluded and counted
- *   as `foreignRows`, so the ambiguity is stated rather than papered over.
- */
-function projectScopeSql(projectId: string, col = 'project_id'): { sql: string; params: string[] } {
-  return projectId
-    ? { sql: `(${col} = ? OR ${col} = '')`, params: [projectId] }
-    : { sql: `${col} = ''`, params: [] };
-}
+// `projectScopeSql` — the own-plus-legacy WHERE fragment — MOVED to `@/lib/project-id`
+// in wave 20 (unchanged, byte-for-byte; imported at the top of this file) so
+// `telemetry-db` and `build-history-store` scope with the SAME rule instead of each
+// growing its own copy. Its full contract is documented at the definition; every call
+// site below is untouched.
 
 /**
  * What a scoped read could and could not see, in counts — the "REPORT, don't

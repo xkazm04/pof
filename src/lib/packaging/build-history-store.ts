@@ -1,10 +1,57 @@
 import { getDb } from '@/lib/db';
+import {
+  normalizeProjectId,
+  projectScopeSql,
+  foldProjectScopeCounts,
+  type ProjectScopeCounts,
+} from '@/lib/project-id';
 import { normalizePlatformId } from './build-profiles';
+
+// ---------- Project scoping ----------
+//
+// `build_history.project_id` was added by the same migration block as
+// `feature_matrix.project_id` and then written by NOTHING and read by NOTHING —
+// `insertBuild`'s column list omitted it, so every row on this machine carries `''`.
+// The consequence is not cosmetic: `lastGreenSizeBytes` took the most recent green
+// build OF ANY PROJECT as the size baseline, so cooking one project after another's
+// green build either fabricates a "package grew N%" regression or MASKS a real one
+// behind a larger foreign reference.
+//
+// IDENTITY: the same normalized `projectPath` the rest of the app uses
+// (`@/lib/project-id`), passed EXPLICITLY by the caller — never inferred here.
+// RULE: the ONE own-plus-legacy `projectScopeSql` — a named project sees its own rows
+// plus the unattributed `''` rows; an unscoped caller sees ONLY the `''` rows. The six
+// existing `''` rows stay visible and counted (`getBuildScopeReport`); nothing guesses
+// them into an owner.
+
+/** WHERE fragment scoping a build read, optionally ANDed with more conditions. */
+function buildScope(projectId?: string | null, ...extra: string[]): { where: string; params: string[] } {
+  const scope = projectScopeSql(normalizeProjectId(projectId));
+  const clauses = [scope.sql, ...extra];
+  return { where: `WHERE ${clauses.join(' AND ')}`, params: scope.params };
+}
+
+/**
+ * What a scoped build-history read could and could not see, in counts. Pure reporting
+ * — it never moves a row or adopts one. Lets a UI say "6 builds belong to no recorded
+ * project" instead of showing them as this project's history without comment.
+ */
+export function getBuildScopeReport(projectPath?: string | null): ProjectScopeCounts {
+  const rows = getDb()
+    .prepare('SELECT project_id, COUNT(*) as cnt FROM build_history GROUP BY project_id')
+    .all() as { project_id: string; cnt: number }[];
+  return foldProjectScopeCounts(
+    rows.map((r) => ({ projectValue: r.project_id, count: r.cnt })),
+    normalizeProjectId(projectPath),
+  );
+}
 
 // ---------- Types ----------
 
 export interface BuildRecord {
   id: number;
+  /** Normalized project this build belongs to; `''` = recorded before the column was written. */
+  projectId: string;
   platform: string;
   config: string;
   status: 'success' | 'failed' | 'cancelled';
@@ -21,6 +68,8 @@ export interface BuildRecord {
 }
 
 export interface BuildRecordInput {
+  /** Project this build belongs to (raw `projectPath`; normalized on write). Omitted = unattributed. */
+  projectId?: string | null;
   platform: string;
   config: string;
   status: 'success' | 'failed' | 'cancelled';
@@ -69,6 +118,7 @@ export interface SizeTrendPoint {
 
 interface BuildRow {
   id: number;
+  project_id: string | null;
   platform: string;
   config: string;
   status: string;
@@ -87,6 +137,7 @@ interface BuildRow {
 function rowToRecord(row: BuildRow): BuildRecord {
   return {
     id: row.id,
+    projectId: row.project_id ?? '',
     platform: row.platform,
     config: row.config,
     status: row.status as BuildRecord['status'],
@@ -109,10 +160,13 @@ export function insertBuild(input: BuildRecordInput): BuildRecord {
   const db = getDb();
   // Normalize the platform to its canonical token on write so every row stores
   // one spelling — budgets and history filters then match without guessing.
+  // `project_id` is persisted here for the first time — the column existed from the
+  // start and this INSERT omitted it, which is why every pre-existing row reads `''`.
   const result = db.prepare(`
-    INSERT INTO build_history (platform, config, status, size_bytes, duration_ms, version, output_path, error_summary, cook_time_ms, warning_count, error_count, notes)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO build_history (project_id, platform, config, status, size_bytes, duration_ms, version, output_path, error_summary, cook_time_ms, warning_count, error_count, notes)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
+    normalizeProjectId(input.projectId),
     normalizePlatformId(input.platform),
     input.config,
     input.status,
@@ -135,30 +189,62 @@ export function getBuild(id: number): BuildRecord | null {
   return row ? rowToRecord(row) : null;
 }
 
-export function getBuilds(limit = 100, offset = 0): BuildRecord[] {
+export function getBuilds(limit = 100, offset = 0, projectId?: string | null): BuildRecord[] {
+  const scope = buildScope(projectId);
   const rows = getDb().prepare(
-    'SELECT * FROM build_history ORDER BY created_at DESC LIMIT ? OFFSET ?'
-  ).all(limit, offset) as BuildRow[];
+    `SELECT * FROM build_history ${scope.where} ORDER BY created_at DESC LIMIT ? OFFSET ?`
+  ).all(...scope.params, limit, offset) as BuildRow[];
   return rows.map(rowToRecord);
 }
 
-export function getBuildsByPlatform(platform: string, limit = 50): BuildRecord[] {
+export function getBuildsByPlatform(platform: string, limit = 50, projectId?: string | null): BuildRecord[] {
+  const scope = buildScope(projectId, 'platform = ?');
   const rows = getDb().prepare(
-    'SELECT * FROM build_history WHERE platform = ? ORDER BY created_at DESC LIMIT ?'
-  ).all(normalizePlatformId(platform), limit) as BuildRow[];
+    `SELECT * FROM build_history ${scope.where} ORDER BY created_at DESC LIMIT ?`
+  ).all(...scope.params, normalizePlatformId(platform), limit) as BuildRow[];
   return rows.map(rowToRecord);
 }
 
 /**
- * Size (bytes) of the most recent green build for a platform, or null when none
- * has a measured size. Shared baseline for the size-budget growth check so the
- * scheduled runner and the interactive cook path evaluate against the same
- * "last green" reference. Mirrors scheduled-build-runner's lastGreenSize.
+ * The build the size-budget growth check compares against: the most recent green build
+ * WITH A MEASURED SIZE for this platform, in scope of this project. `null` means there
+ * is no reference — NOT that the package did not grow.
+ *
+ * Returning the record rather than a bare number so the verdict can NAME the build it
+ * compared to. A baseline that silently came from another project is the failure this
+ * exists to end, and a number alone cannot show which project it came from.
  */
-export function lastGreenSizeBytes(platform: string): number | null {
-  const recent = getBuildsByPlatform(platform, 50);
+export interface SizeBaselineBuild {
+  buildId: number;
+  projectId: string;
+  platform: string;
+  sizeBytes: number;
+  version: string | null;
+  createdAt: string;
+}
+
+export function lastGreenBaseline(platform: string, projectId?: string | null): SizeBaselineBuild | null {
+  const recent = getBuildsByPlatform(platform, 50, projectId);
   const green = recent.find((b) => b.status === 'success' && b.sizeBytes && b.sizeBytes > 0);
-  return green?.sizeBytes ?? null;
+  if (!green || green.sizeBytes == null) return null;
+  return {
+    buildId: green.id,
+    projectId: green.projectId,
+    platform: green.platform,
+    sizeBytes: green.sizeBytes,
+    version: green.version,
+    createdAt: green.createdAt,
+  };
+}
+
+/**
+ * Size (bytes) of the most recent green build for a platform IN SCOPE of `projectId`,
+ * or null when none has a measured size. Shared baseline for the size-budget growth
+ * check so the scheduled runner and the interactive cook path evaluate against the
+ * same "last green" reference.
+ */
+export function lastGreenSizeBytes(platform: string, projectId?: string | null): number | null {
+  return lastGreenBaseline(platform, projectId)?.sizeBytes ?? null;
 }
 
 /**
@@ -181,11 +267,17 @@ export function deleteBuild(id: number): boolean {
  * matching success is reliably the build it verified. Returns the updated
  * record, or null if no matching build exists.
  */
-export function attachSmokeResultToLatestBuild(platform: string, config: string, note: string): BuildRecord | null {
+export function attachSmokeResultToLatestBuild(
+  platform: string,
+  config: string,
+  note: string,
+  projectId?: string | null,
+): BuildRecord | null {
   const db = getDb();
+  const scope = buildScope(projectId, 'platform = ?', 'config = ?', "status = 'success'");
   const row = db.prepare(
-    "SELECT id FROM build_history WHERE platform = ? AND config = ? AND status = 'success' ORDER BY created_at DESC LIMIT 1"
-  ).get(normalizePlatformId(platform), config) as { id: number } | undefined;
+    `SELECT id FROM build_history ${scope.where} ORDER BY created_at DESC LIMIT 1`
+  ).get(...scope.params, normalizePlatformId(platform), config) as { id: number } | undefined;
   if (!row) return null;
   db.prepare('UPDATE build_history SET notes = ? WHERE id = ?').run(note, row.id);
   return getBuild(row.id);
@@ -193,15 +285,17 @@ export function attachSmokeResultToLatestBuild(platform: string, config: string,
 
 // ---------- Analytics ----------
 
-export function getBuildStats(): BuildStats {
+export function getBuildStats(projectId?: string | null): BuildStats {
   const db = getDb();
+  const s = buildScope(projectId);
+  const p = s.params;
 
-  const total = db.prepare('SELECT COUNT(*) as cnt FROM build_history').get() as { cnt: number };
-  const success = db.prepare("SELECT COUNT(*) as cnt FROM build_history WHERE status = 'success'").get() as { cnt: number };
-  const failed = db.prepare("SELECT COUNT(*) as cnt FROM build_history WHERE status = 'failed'").get() as { cnt: number };
-  const avgDur = db.prepare("SELECT AVG(duration_ms) as v FROM build_history WHERE duration_ms IS NOT NULL AND status = 'success'").get() as { v: number | null };
-  const avgSize = db.prepare("SELECT AVG(size_bytes) as v FROM build_history WHERE size_bytes IS NOT NULL AND status = 'success'").get() as { v: number | null };
-  const latest = db.prepare("SELECT version FROM build_history WHERE version IS NOT NULL ORDER BY created_at DESC LIMIT 1").get() as { version: string } | undefined;
+  const total = db.prepare(`SELECT COUNT(*) as cnt FROM build_history ${s.where}`).get(...p) as { cnt: number };
+  const success = db.prepare(`SELECT COUNT(*) as cnt FROM build_history ${s.where} AND status = 'success'`).get(...p) as { cnt: number };
+  const failed = db.prepare(`SELECT COUNT(*) as cnt FROM build_history ${s.where} AND status = 'failed'`).get(...p) as { cnt: number };
+  const avgDur = db.prepare(`SELECT AVG(duration_ms) as v FROM build_history ${s.where} AND duration_ms IS NOT NULL AND status = 'success'`).get(...p) as { v: number | null };
+  const avgSize = db.prepare(`SELECT AVG(size_bytes) as v FROM build_history ${s.where} AND size_bytes IS NOT NULL AND status = 'success'`).get(...p) as { v: number | null };
+  const latest = db.prepare(`SELECT version FROM build_history ${s.where} AND version IS NOT NULL ORDER BY created_at DESC LIMIT 1`).get(...p) as { version: string } | undefined;
 
   // Per-platform stats
   const platformRows = db.prepare(`
@@ -213,9 +307,10 @@ export function getBuildStats(): BuildStats {
       AVG(CASE WHEN status = 'success' AND duration_ms IS NOT NULL THEN duration_ms END) as avg_dur,
       AVG(CASE WHEN status = 'success' AND size_bytes IS NOT NULL THEN size_bytes END) as avg_size
     FROM build_history
+    ${s.where}
     GROUP BY platform
     ORDER BY total DESC
-  `).all() as Array<{
+  `).all(...p) as Array<{
     platform: string; total: number; success: number; failed: number;
     avg_dur: number | null; avg_size: number | null;
   }>;
@@ -227,9 +322,9 @@ export function getBuildStats(): BuildStats {
       SELECT platform, size_bytes,
         ROW_NUMBER() OVER (PARTITION BY platform ORDER BY created_at DESC) rn
       FROM build_history
-      WHERE size_bytes IS NOT NULL AND status = 'success'
+      ${s.where} AND size_bytes IS NOT NULL AND status = 'success'
     ) WHERE rn = 1
-  `).all() as Array<{ platform: string; size_bytes: number }>;
+  `).all(...p) as Array<{ platform: string; size_bytes: number }>;
   const latestSizeByPlatform = new Map<string, number>(
     latestSizeRows.map((r) => [r.platform, r.size_bytes])
   );
@@ -257,13 +352,19 @@ export function getBuildStats(): BuildStats {
   };
 }
 
-export function getSizeTrend(platform?: string, limit = 30): SizeTrendPoint[] {
+export function getSizeTrend(platform?: string, limit = 30, projectId?: string | null): SizeTrendPoint[] {
   const db = getDb();
-  const query = platform
-    ? "SELECT id, platform, size_bytes, version, created_at FROM build_history WHERE size_bytes IS NOT NULL AND status = 'success' AND platform = ? ORDER BY created_at ASC LIMIT ?"
-    : "SELECT id, platform, size_bytes, version, created_at FROM build_history WHERE size_bytes IS NOT NULL AND status = 'success' ORDER BY created_at ASC LIMIT ?";
+  const s = buildScope(
+    projectId,
+    'size_bytes IS NOT NULL',
+    "status = 'success'",
+    ...(platform ? ['platform = ?'] : []),
+  );
+  const query = `SELECT id, platform, size_bytes, version, created_at FROM build_history ${s.where} ORDER BY created_at ASC LIMIT ?`;
 
-  const params = platform ? [normalizePlatformId(platform), limit] : [limit];
+  const params: (string | number)[] = platform
+    ? [...s.params, normalizePlatformId(platform), limit]
+    : [...s.params, limit];
   const rows = db.prepare(query).all(...params) as Array<{
     id: number; platform: string; size_bytes: number; version: string | null; created_at: string;
   }>;
@@ -277,7 +378,10 @@ export function getSizeTrend(platform?: string, limit = 30): SizeTrendPoint[] {
   }));
 }
 
-export function getPlatforms(): string[] {
-  const rows = getDb().prepare('SELECT DISTINCT platform FROM build_history ORDER BY platform').all() as Array<{ platform: string }>;
+export function getPlatforms(projectId?: string | null): string[] {
+  const s = buildScope(projectId);
+  const rows = getDb()
+    .prepare(`SELECT DISTINCT platform FROM build_history ${s.where} ORDER BY platform`)
+    .all(...s.params) as Array<{ platform: string }>;
   return rows.map((r) => r.platform);
 }

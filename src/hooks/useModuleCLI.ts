@@ -222,8 +222,10 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
       const scanProject = useProjectStore.getState().scanProject;
       await scanProject();
 
-      // Resolve adaptive skills from telemetry patterns (fire-and-forget on failure)
-      resolveAndApplySkills(opts.sessionKey);
+      // Resolve adaptive skills from telemetry patterns (fire-and-forget on failure).
+      // The project is passed EXPLICITLY: these patterns choose which skill packs are
+      // injected into the prompt, and the route no longer serves an unscoped read.
+      resolveAndApplySkills(opts.sessionKey, useProjectStore.getState().projectPath);
 
       const { projectName, projectPath: pp, ueVersion, dynamicContext } = useProjectStore.getState();
       const ctx = { projectName, projectPath: pp, ueVersion, dynamicContext };
@@ -245,12 +247,18 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
 /**
  * Resolve adaptive skills from telemetry patterns and apply to the session.
  * Non-blocking — silently skips on failure so it never blocks prompt dispatch.
+ *
+ * `projectPath` is required by the route: the resolved packs come from THIS project's
+ * telemetry scan. With no project set the route refuses and no packs are injected —
+ * which is the honest outcome, where the previous unscoped read injected whichever
+ * project was scanned most recently.
  */
-function resolveAndApplySkills(sessionKey: string): void {
+function resolveAndApplySkills(sessionKey: string, projectPath: string | null): void {
+  if (!projectPath) return;
   fetch('/api/telemetry', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'resolve-skills' }),
+    body: JSON.stringify({ action: 'resolve-skills', projectPath }),
   })
     .then((res) => (res.ok ? res.json() : null))
     .then((envelope: { success: boolean; data: { skills?: SkillId[] } } | null) => {

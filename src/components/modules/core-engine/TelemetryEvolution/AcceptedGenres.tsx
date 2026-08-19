@@ -29,6 +29,13 @@ export function AcceptedGenres({ genres }: { genres: SubGenreId[] }) {
         </span>
         <span className="text-2xs text-text-muted">tap for genome templates</span>
       </div>
+      {/* Sub-genre acceptances are stored WITHOUT a project (unlike scans, which are
+          project-scoped), and accepting one changes module checklists everywhere. Say
+          so — a global effect sitting inside a project-scoped panel must not be left
+          to be inferred. */}
+      <p className="text-2xs text-text-muted mb-2.5" data-testid="accepted-genres-scope">
+        Applies to every project in this install — sub-genre acceptances are not project-scoped.
+      </p>
       <div className="flex flex-wrap gap-2">
         {genres.map(g => {
           const style = SUB_GENRE_STYLES[g] ?? { color: 'var(--text-muted)', icon: Layers };

@@ -6,6 +6,7 @@ import type {
 } from '@/types/telemetry';
 import type { DynamicProjectContext } from '@/lib/prompt-context';
 import { apiFetch } from '@/lib/api-utils';
+import { useProjectStore } from '@/stores/projectStore';
 import { useCRUD } from './useCRUD';
 
 export interface UseGenreEvolutionResult {
@@ -27,19 +28,27 @@ interface GenreEvolutionData {
 
 const EMPTY: GenreEvolutionData = { stats: null, history: [] };
 
-const fetchGenreData = async (): Promise<GenreEvolutionData> => {
+// Reads are scoped to the ACTIVE project. `telemetry_snapshots` stores the project a
+// scan belongs to and every read used to ignore it, so this panel showed another
+// project's scans as this one's — and the same unscoped row fed CLI skill injection.
+// The project travels explicitly; `stats.scope` reports what was excluded so an empty
+// panel says "another project owns these scans" rather than "nobody ever scanned".
+const fetchGenreData = async (projectPath: string | null): Promise<GenreEvolutionData> => {
+  const q = projectPath ? `&projectPath=${encodeURIComponent(projectPath)}` : '';
   const [stats, history] = await Promise.all([
-    apiFetch<TelemetryStats>('/api/telemetry?action=stats').catch(() => null),
-    apiFetch<TelemetrySnapshot[]>('/api/telemetry?action=history&limit=10').catch(() => [] as TelemetrySnapshot[]),
+    apiFetch<TelemetryStats>(`/api/telemetry?action=stats${q}`).catch(() => null),
+    apiFetch<TelemetrySnapshot[]>(`/api/telemetry?action=history&limit=10${q}`).catch(() => [] as TelemetrySnapshot[]),
   ]);
   return { stats, history };
 };
 
 export function useGenreEvolution(): UseGenreEvolutionResult {
+  const projectPath = useProjectStore((s) => s.projectPath);
+  const fetcher = useCallback(() => fetchGenreData(projectPath), [projectPath]);
   const { data, isLoading: loading, refetch: refresh } = useCRUD<GenreEvolutionData>(
     '/api/telemetry',
     EMPTY,
-    { fetcher: fetchGenreData },
+    { fetcher },
   );
 
   const [scanning, setScanning] = useState(false);

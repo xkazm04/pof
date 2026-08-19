@@ -37,6 +37,10 @@ export function TelemetryEvolution() {
   const patterns = stats?.detectedPatterns ?? [];
   const suggestions = stats?.activeSuggestions ?? [];
   const accepted = stats?.acceptedSubGenres ?? [];
+  // Scans belonging to OTHER projects are excluded from this panel (and from the skill
+  // packs the CLI injects). Count them out loud: without this line, "0 scans" reads as
+  // "nobody ever scanned" when the truth is "those scans belong to another project".
+  const foreignScans = stats?.scope?.foreignRows ?? 0;
 
   return (
     <div className="space-y-5">
@@ -101,6 +105,15 @@ export function TelemetryEvolution() {
             Retry
           </button>
         </div>
+      )}
+
+      {/* Out-of-scope scans — stated and counted, never adopted into this project. */}
+      {foreignScans > 0 && (
+        <p className="text-2xs text-text-muted" data-testid="telemetry-scope-note">
+          {foreignScans} scan{foreignScans === 1 ? '' : 's'} on this machine belong to
+          {' '}other project{foreignScans === 1 ? '' : 's'} and are excluded — this panel and the
+          {' '}skill packs the CLI injects use only this project&apos;s scans.
+        </p>
       )}
 
       {/* Empty state */}

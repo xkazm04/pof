@@ -1,5 +1,7 @@
 // ─── Gameplay Telemetry & Genre Evolution Types ──────────────────────────────
 
+import type { ProjectScopeCounts } from '@/lib/project-id';
+
 /** Detected gameplay pattern from UE5 profiling data or project scan. */
 export type GameplayPattern =
   | 'dodge-roll-heavy'       // Frequent dodge/i-frame usage → Souls-like
@@ -115,11 +117,20 @@ export interface GenreEvolutionSuggestion {
 
 /** Summary stats for the telemetry dashboard. */
 export interface TelemetryStats {
+  /** Scans THIS project scope can see (own + unattributed) — not every scan on the machine. */
   totalScans: number;
   lastScanAt: string | null;
   detectedPatterns: PatternDetection[];
   activeSuggestions: GenreEvolutionSuggestion[];
   acceptedSubGenres: SubGenreId[];
+  /**
+   * What the scoped read could and could not see. `foreignRows > 0` means other
+   * projects' scans exist and were excluded — so an empty panel states that rather
+   * than reading as "nobody ever scanned". Reporting only; adopts nothing.
+   */
+  scope?: ProjectScopeCounts;
+  /** Whether accepted sub-genres are project-scoped (they are not) — stated, not implied. */
+  subGenreScope?: { scoped: boolean; note: string };
 }
 
 // ─── API Payloads ────────────────────────────────────────────────────────────
