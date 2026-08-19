@@ -24,7 +24,7 @@ describe('filterLibraryAssets', () => {
   const items: LibraryAsset[] = [
     asset({ id: '1', name: 'Wood Planks', source: 'polyhaven', category: 'textures', tags: ['wood'], favorite: true, collectionIds: ['c1'] }),
     asset({ id: '2', name: 'Brick Wall', source: 'ambientcg', category: 'materials', tags: ['brick', 'masonry'], collectionIds: ['c2'] }),
-    asset({ id: '3', name: 'Oak Tree', source: 'sketchfab', category: 'models', tags: ['nature'], favorite: true }),
+    asset({ id: '3', name: 'Oak Tree', source: 'polyhaven', category: 'models', tags: ['nature'], favorite: true }),
   ];
 
   it('returns everything when no filter is set', () => {
@@ -49,7 +49,7 @@ describe('filterLibraryAssets', () => {
   });
 
   it('combines filters (AND)', () => {
-    expect(filterLibraryAssets(items, { favoritesOnly: true, source: 'sketchfab' }).map((a) => a.id)).toEqual(['3']);
+    expect(filterLibraryAssets(items, { favoritesOnly: true, source: 'polyhaven', category: 'models' }).map((a) => a.id)).toEqual(['3']);
     expect(filterLibraryAssets(items, { query: 'wood', favoritesOnly: true })).toHaveLength(1);
     expect(filterLibraryAssets(items, { query: 'wood', favoritesOnly: false, category: 'models' })).toHaveLength(0);
   });

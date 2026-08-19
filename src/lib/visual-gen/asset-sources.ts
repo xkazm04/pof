@@ -3,7 +3,17 @@
  * All sources are Creative Commons Zero — free for commercial use.
  */
 
-export type AssetSource = 'polyhaven' | 'ambientcg' | 'sketchfab';
+/**
+ * `sketchfab` used to be a third member of this union with no `searchSketchfab` beside it:
+ * `/api/visual-gen/browse` answered `400 Unknown source`, and the panel only avoided that by
+ * routing the chip to the Blender MCP bridge, whose `{ assets }` envelope the store then
+ * assigned straight into an array-typed field — so the chip silently rendered nothing. It is
+ * REMOVED rather than implemented for two reasons: `AssetSearchResult.license` below is the
+ * literal `'CC0'`, which Sketchfab models are not, and the bridge-backed Sketchfab search
+ * already exists as its own surface (`visual-gen/blender-pipeline/AssetBrowser.tsx` over
+ * `/api/blender-mcp/assets`, whose separate union in `@/lib/blender-mcp/types` keeps it).
+ */
+export type AssetSource = 'polyhaven' | 'ambientcg';
 export type AssetCategory = 'hdris' | 'textures' | 'models' | 'materials';
 
 export interface AssetSearchResult {

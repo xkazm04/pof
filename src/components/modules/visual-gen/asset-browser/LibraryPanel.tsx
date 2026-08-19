@@ -9,11 +9,16 @@ import { filterLibraryAssets } from '@/lib/visual-gen/library-filter';
 import { VISUAL_GEN_FOCUS_RING } from '@/lib/visual-gen/ui';
 import type { AssetSource, AssetCategory } from '@/types/asset-library';
 
+/**
+ * The sources the Browse tab can actually download from — so a filter chip here always
+ * corresponds to something that can be in the library. (Sketchfab was offered as a chip
+ * while no search behind it worked; see `@/lib/visual-gen/asset-sources`. "All sources"
+ * still shows any legacy row whose recorded source predates that removal.)
+ */
 const SOURCES: { value: AssetSource | 'all'; label: string }[] = [
   { value: 'all', label: 'All sources' },
   { value: 'polyhaven', label: 'Poly Haven' },
   { value: 'ambientcg', label: 'ambientCG' },
-  { value: 'sketchfab', label: 'Sketchfab' },
 ];
 
 const CATEGORIES: { value: AssetCategory | 'all'; label: string }[] = [

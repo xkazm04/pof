@@ -5,19 +5,28 @@ import { Search, Loader2 } from 'lucide-react';
 import { useAssetBrowserStore } from './useAssetBrowserStore';
 import { useAssetLibraryStore } from './useAssetLibraryStore';
 import { AssetCard } from './AssetCard';
+import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { VISUAL_GEN_FOCUS_RING } from '@/lib/visual-gen/ui';
 import type { AssetSearchResult, AssetSource, AssetCategory } from '@/lib/visual-gen/asset-sources';
 
+/**
+ * Only sources `/api/visual-gen/browse` can actually serve. Sketchfab used to sit here as a
+ * third chip with no implementation on this route (it answered `400 Unknown source`) — the
+ * panel dodged the error by routing that one source to the Blender MCP bridge instead, which
+ * returned a differently-shaped envelope and silently rendered nothing. Sketchfab is also not
+ * CC0, which this browser's `license: 'CC0'` result type asserts of everything it returns.
+ * The real Sketchfab surface is the Blender pipeline's own AssetBrowser
+ * (`visual-gen/blender-pipeline/AssetBrowser.tsx` over `/api/blender-mcp/assets`).
+ */
 const SOURCES: { value: AssetSource; label: string }[] = [
   { value: 'polyhaven', label: 'Poly Haven' },
   { value: 'ambientcg', label: 'ambientCG' },
-  { value: 'sketchfab', label: 'Sketchfab' },
 ];
 
 const CATEGORIES: { value: AssetCategory; label: string; sources: AssetSource[] }[] = [
   { value: 'textures', label: 'Textures', sources: ['polyhaven'] },
   { value: 'hdris', label: 'HDRIs', sources: ['polyhaven'] },
-  { value: 'models', label: '3D Models', sources: ['polyhaven', 'sketchfab'] },
+  { value: 'models', label: '3D Models', sources: ['polyhaven'] },
   { value: 'materials', label: 'PBR Materials', sources: ['ambientcg'] },
 ];
 
@@ -27,39 +36,18 @@ export function BrowsePanel() {
   const activeCategory = useAssetBrowserStore((s) => s.activeCategory);
   const results = useAssetBrowserStore((s) => s.results);
   const isSearching = useAssetBrowserStore((s) => s.isSearching);
+  const error = useAssetBrowserStore((s) => s.error);
+  const hasSearched = useAssetBrowserStore((s) => s.hasSearched);
+  const importError = useAssetBrowserStore((s) => s.importError);
   const setQuery = useAssetBrowserStore((s) => s.setQuery);
   const setActiveSource = useAssetBrowserStore((s) => s.setActiveSource);
   const setActiveCategory = useAssetBrowserStore((s) => s.setActiveCategory);
-  const setResults = useAssetBrowserStore((s) => s.setResults);
-  const setSearching = useAssetBrowserStore((s) => s.setSearching);
-  const searchSketchfab = useAssetBrowserStore((s) => s.searchSketchfab);
+  const search = useAssetBrowserStore((s) => s.search);
+  const importToBlender = useAssetBrowserStore((s) => s.importToBlender);
+  const clearImportError = useAssetBrowserStore((s) => s.clearImportError);
   const recordDownload = useAssetLibraryStore((s) => s.recordDownload);
 
-  const handleSearch = useCallback(async () => {
-    if (activeSource === 'sketchfab') {
-      await searchSketchfab(query.trim());
-      return;
-    }
-
-    setSearching(true);
-    try {
-      const params = new URLSearchParams({
-        source: activeSource,
-        category: activeCategory,
-      });
-      if (query.trim()) params.set('q', query.trim());
-
-      const res = await fetch(`/api/visual-gen/browse?${params}`);
-      const json = await res.json();
-      if (json.success) {
-        setResults(json.data ?? []);
-      }
-    } catch {
-      // Silent fail
-    } finally {
-      setSearching(false);
-    }
-  }, [activeSource, activeCategory, query, setResults, setSearching, searchSketchfab]);
+  const handleSearch = useCallback(() => { void search(); }, [search]);
 
   const handleDownload = useCallback((asset: AssetSearchResult) => {
     // Track every download in the local library (source/category/license/tags +
@@ -70,6 +58,10 @@ export function BrowsePanel() {
       window.open(asset.downloadUrl, '_blank');
     }
   }, [recordDownload]);
+
+  const handleRetryImport = useCallback(() => {
+    if (importError) void importToBlender(importError.source, importError.assetId);
+  }, [importError, importToBlender]);
 
   const availableCategories = CATEGORIES.filter((c) => c.sources.includes(activeSource));
 
@@ -118,6 +110,7 @@ export function BrowsePanel() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search free assets..."
+          aria-label="Search free assets"
           className="flex-1 bg-surface border border-border rounded-lg px-3 py-2 text-sm text-text placeholder:text-text-muted focus:outline-none focus:border-[var(--visual-gen)]"
           onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
         />
@@ -133,6 +126,19 @@ export function BrowsePanel() {
         </button>
       </div>
 
+      {/* A failed search states its reason and offers a retry — it never falls through to
+          the empty state, which now means EMPTY and nothing else. */}
+      {error && <InlineErrorRetry message={`Search failed — ${error}`} onRetry={handleSearch} />}
+
+      {importError && (
+        <InlineErrorRetry
+          message={`Blender import failed — ${importError.message}`}
+          onRetry={handleRetryImport}
+          onDismiss={clearImportError}
+          dense
+        />
+      )}
+
       {/* Results grid */}
       {results.length > 0 ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
@@ -143,7 +149,13 @@ export function BrowsePanel() {
       ) : (
         <div className="text-center py-8">
           <p className="text-xs text-text-muted">
-            {isSearching ? 'Searching...' : 'Click Search to browse free CC0 assets.'}
+            {isSearching
+              ? 'Searching...'
+              : error
+                ? 'No results — the search above did not complete.'
+                : hasSearched
+                  ? `No CC0 assets matched${query.trim() ? ` "${query.trim()}"` : ''} on this source.`
+                  : 'Click Search to browse free CC0 assets.'}
           </p>
         </div>
       )}

@@ -461,7 +461,7 @@ export const MODULE_FEATURE_DEFINITIONS: PartialModuleMap<FeatureDefinition[]> =
   'asset-browser': [
     { featureName: 'Poly Haven search', category: 'Sources', description: 'searchPolyHaven (lib/visual-gen/asset-sources.ts) behind GET /api/visual-gen/browse?source=polyhaven with hdris/textures/models category filtering' },
     { featureName: 'ambientCG search', category: 'Sources', description: 'searchAmbientCG over the ambientCG full_json API behind the same /api/visual-gen/browse route' },
-    { featureName: 'Sketchfab search', category: 'Sources', description: 'useAssetBrowserStore.searchSketchfab querying /api/blender-mcp/assets for Sketchfab results' },
+    { featureName: 'Sketchfab search', category: 'Sources', description: 'blender-pipeline/AssetBrowser querying /api/blender-mcp/assets for Sketchfab results over the live MCP bridge — NOT part of the CC0 browse route, which serves polyhaven + ambientcg only' },
     { featureName: 'Asset library persistence', category: 'Library', description: 'asset-library-db recordAsset / listLibraryAssets / deleteLibraryAsset behind /api/visual-gen/library, recording source, license and file paths per download', dependsOn: ['Poly Haven search'] },
     { featureName: 'Collections and favourites', category: 'Library', description: 'collection CRUD plus the favourite toggle and LibraryFilter (source / category / favourites / collection / query) driving CollectionSidebar and LibraryPanel', dependsOn: ['Asset library persistence'] },
     { featureName: 'Blender import from results', category: 'Bridge', description: 'useAssetBrowserStore.importToBlender sending a browse or library row into the live Blender session, gated on the MCP connection', dependsOn: ['Poly Haven search'] },

@@ -36,7 +36,10 @@ export async function GET(request: NextRequest) {
     } else if (source === 'ambientcg') {
       results = await searchAmbientCG(query, 50, 0);
     } else {
-      return apiError(`Unknown source: ${source}`, 400);
+      // Name what IS servable: the panel used to offer a `sketchfab` chip this route could
+      // only answer with a bare "Unknown source", so the reason never told anyone what to
+      // pick instead.
+      return apiError(`Unknown source: ${source}. This route serves polyhaven and ambientcg (CC0 only); Sketchfab lives behind /api/blender-mcp/assets.`, 400);
     }
 
     return apiSuccess(results);
