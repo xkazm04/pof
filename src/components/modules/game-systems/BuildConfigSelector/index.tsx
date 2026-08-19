@@ -146,9 +146,13 @@ export function BuildConfigSelector() {
         projectName,
         platform: profile.platform,
         config: profile.config,
+        // The project MUST travel: without it the server chooses the build to record
+        // the verdict against with an unscoped query, and it lands on whichever
+        // unattributed legacy row is newest rather than on the build just cooked.
+        projectPath,
       });
     }
-  }, [cookRequest, profiles, projectName, fetchProfiles]);
+  }, [cookRequest, profiles, projectName, projectPath, fetchProfiles]);
 
   // New profile
   const handleNewProfile = useCallback((platform: PlatformId) => {

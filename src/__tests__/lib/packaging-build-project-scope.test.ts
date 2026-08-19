@@ -180,10 +180,13 @@ describe('every build-history read scopes with the same own-plus-legacy rule', (
   });
 
   it('a smoke result lands on THIS project\'s build', () => {
-    const updated = attachSmokeResultToLatestBuild('Linux', 'Shipping', 'smoke: passed', PROJECT_A);
-    expect(updated).toBeNull(); // A has no Linux build — B's must not be touched.
+    // A has no Linux build — B's must not be touched, and the miss is REPORTED
+    // rather than returned as a bare null (see `smoke-verdict.test.ts`).
+    const missed = attachSmokeResultToLatestBuild('Linux', 'Shipping', 'smoke: passed', PROJECT_A);
+    expect(missed.build).toBeNull();
+    expect(missed.unrecordedReason).toBeTruthy();
 
     const own = attachSmokeResultToLatestBuild('Win64', 'Shipping', 'smoke: passed', PROJECT_A);
-    expect(own?.projectId).toBe('c:/users/kazda/documents/unreal projects/pof');
+    expect(own.build?.projectId).toBe('c:/users/kazda/documents/unreal projects/pof');
   });
 });

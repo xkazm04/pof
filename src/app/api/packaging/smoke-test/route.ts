@@ -43,9 +43,22 @@ export async function POST(req: Request): Promise<Response> {
     const result = await runSmokeTest({ bootstrapExe: exePath, gameImage, observeMs });
     const note = smokeResultNote(result);
     // Scoped: a smoke result must land on THIS project's latest matching build, not
-    // whichever project cooked most recently.
-    const updated = attachSmokeResultToLatestBuild(platform, config, note, projectPath ?? null);
-    return apiSuccess({ result, recordedToBuildId: updated?.id ?? null });
+    // whichever project cooked most recently. The VERDICT travels too — a failing
+    // smoke condemns the build, exactly as the scheduled runner classifies it.
+    const attached = attachSmokeResultToLatestBuild(
+      platform, config, note, projectPath ?? null, result.status,
+    );
+    // The FINAL smoke verdict. The cook's SSE stream has already emitted
+    // `done: success`, so flipping the row to `failed` without saying so would leave
+    // the panel and the DB disagreeing with no way to tell which is true.
+    return apiSuccess({
+      result,
+      recordedToBuildId: attached.build?.id ?? null,
+      buildStatus: attached.build?.status ?? null,
+      previousStatus: attached.previousStatus,
+      statusChanged: attached.statusChanged,
+      unrecordedReason: attached.unrecordedReason,
+    });
   } catch (err) {
     return apiError(err instanceof Error ? err.message : 'smoke-test failed');
   }

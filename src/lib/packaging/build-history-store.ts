@@ -256,31 +256,104 @@ export function updateBuildNotes(id: number, notes: string): void {
   getDb().prepare('UPDATE build_history SET notes = ? WHERE id = ?').run(notes, id);
 }
 
+/**
+ * Add a note line to a build WITHOUT destroying what is already there.
+ *
+ * A build accumulates notes from more than one stage — `execute/route.ts` writes the
+ * `[SIZE_BUDGET]` verdict the moment the size is known, and the smoke test appends its
+ * own moments later. The smoke path used a wholesale `UPDATE ... SET notes = ?`, so the
+ * size-regression verdict was silently overwritten and `extractRegressionNote` could
+ * never find it again. Newline-joined, because that is exactly what
+ * `extractRegressionNote` splits on.
+ */
+export function appendBuildNote(id: number, note: string): void {
+  const db = getDb();
+  const row = db.prepare('SELECT notes FROM build_history WHERE id = ?').get(id) as { notes: string | null } | undefined;
+  if (!row) return;
+  const merged = row.notes ? `${row.notes}\n${note}` : note;
+  db.prepare('UPDATE build_history SET notes = ? WHERE id = ?').run(merged, id);
+}
+
 export function deleteBuild(id: number): boolean {
   const result = getDb().prepare('DELETE FROM build_history WHERE id = ?').run(id);
   return result.changes > 0;
 }
 
+/** What a smoke verdict did to the build history — never a bare `BuildRecord | null`. */
+export interface SmokeAttachment {
+  /** The build the verdict landed on, or null when none was in scope. */
+  build: BuildRecord | null;
+  /** The status that build carried BEFORE the verdict. */
+  previousStatus: BuildRecord['status'] | null;
+  /** True when the verdict CHANGED the build's status — the UI must reconcile. */
+  statusChanged: boolean;
+  /**
+   * Why nothing was recorded, when `build` is null. A smoke test whose verdict went
+   * nowhere used to return `recordedToBuildId: null` beside a pass, which reads as
+   * "verified" — the only proof the packaged exe runs, silently discarded.
+   */
+  unrecordedReason: string | null;
+}
+
 /**
- * Attach a post-cook smoke-test note to the most recent successful build for a
- * platform+config. The smoke-test runs immediately after a cook, so the latest
- * matching success is reliably the build it verified. Returns the updated
- * record, or null if no matching build exists.
+ * Attach a post-cook smoke verdict to the most recent successful build for a
+ * platform+config, IN SCOPE of the project that cooked it. The smoke-test runs
+ * immediately after a cook, so the latest matching success is reliably the build it
+ * verified.
+ *
+ * `smokeStatus` is the verdict itself, and a `fail` CONDEMNS the build: status flips
+ * to `failed` and the note becomes its `errorSummary`. This is the classification the
+ * scheduled runner has always made (`smokeFailed ? 'failed' : 'success'`,
+ * `scheduled-build-runner.ts:136`); the interactive path had no equivalent, so a build
+ * whose exe died in 25 s stayed `status='success'` in history forever. The runner is
+ * deliberately unchanged — this converges onto it.
+ *
+ * The note is APPENDED (see {@link appendBuildNote}), so a `[SIZE_BUDGET]` note written
+ * moments earlier survives.
  */
 export function attachSmokeResultToLatestBuild(
   platform: string,
   config: string,
   note: string,
   projectId?: string | null,
-): BuildRecord | null {
+  smokeStatus?: 'pass' | 'fail',
+): SmokeAttachment {
   const db = getDb();
+  const normalizedPlatform = normalizePlatformId(platform);
   const scope = buildScope(projectId, 'platform = ?', 'config = ?', "status = 'success'");
   const row = db.prepare(
-    `SELECT id FROM build_history ${scope.where} ORDER BY created_at DESC LIMIT 1`
-  ).get(...scope.params, normalizePlatformId(platform), config) as { id: number } | undefined;
-  if (!row) return null;
-  db.prepare('UPDATE build_history SET notes = ? WHERE id = ?').run(note, row.id);
-  return getBuild(row.id);
+    `SELECT id, status FROM build_history ${scope.where} ORDER BY created_at DESC LIMIT 1`
+  ).get(...scope.params, normalizedPlatform, config) as { id: number; status: string } | undefined;
+
+  if (!row) {
+    const where = normalizeProjectId(projectId)
+      ? `project "${normalizeProjectId(projectId)}" (or the unattributed legacy set)`
+      : 'the unattributed legacy set — no project was named on the request';
+    return {
+      build: null,
+      previousStatus: null,
+      statusChanged: false,
+      unrecordedReason:
+        `no successful ${normalizedPlatform}/${config} build is recorded under ${where}, `
+        + 'so this smoke verdict was NOT saved to build history.',
+    };
+  }
+
+  const previousStatus = row.status as BuildRecord['status'];
+  appendBuildNote(row.id, note);
+
+  const condemned = smokeStatus === 'fail';
+  if (condemned) {
+    db.prepare('UPDATE build_history SET status = ?, error_summary = ? WHERE id = ?')
+      .run('failed', note, row.id);
+  }
+
+  return {
+    build: getBuild(row.id),
+    previousStatus,
+    statusChanged: condemned && previousStatus !== 'failed',
+    unrecordedReason: null,
+  };
 }
 
 // ---------- Analytics ----------
