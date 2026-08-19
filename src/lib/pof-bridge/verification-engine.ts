@@ -95,7 +95,9 @@ export async function autoUpdateFeatureMatrix(
     const writeResult = await tryApiFetch('/api/feature-matrix', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ moduleId, features: updates }),
+      // source 'verify': these verdicts come from matching the live UE5 asset
+      // manifest, not from a code review — the row must be able to say which.
+      body: JSON.stringify({ moduleId, features: updates, source: 'verify' }),
     });
 
     // Only emit "changed" events when the write actually persisted. If it failed, the next

@@ -57,6 +57,7 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
     filtered,
     lastReviewed,
     neverReviewed,
+    undatedReviewed,
   } = state;
 
   // Sticky offset for category headers: measure the filter toolbar so headers
@@ -126,14 +127,28 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
           <QualitySparkline snapshots={snapshots} accentColor={accentColor} />
         )}
         <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Module freshness = the OLDEST review in the module (see useFeatureMatrixState),
+              so the dot cannot read fresher than the weakest evidence under it. Rows with a
+              verdict but no date are counted separately — they are not "0 days old". */}
           {lastReviewed && (() => {
             const { label, dotColor, isOutdated } = formatRelativeTime(lastReviewed);
             return (
-              <span className="flex items-center gap-1.5 text-xs text-text-muted" title={new Date(lastReviewed).toLocaleString()}>
+              <span
+                data-testid="pof-feature-matrix-oldest-review"
+                className="flex items-center gap-1.5 text-xs text-text-muted"
+                title={`Oldest review in this module: ${new Date(lastReviewed).toLocaleString()}${
+                  undatedReviewed > 0 ? `\n${undatedReviewed} row(s) carry a verdict but no review date.` : ''
+                }`}
+              >
                 <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: dotColor }} />
-                {label}
+                oldest {label}
                 {isOutdated && (
                   <span className="text-2xs font-medium" style={{ color: STATUS_ERROR, opacity: 0.7 }}>outdated</span>
+                )}
+                {undatedReviewed > 0 && (
+                  <span className="text-2xs font-medium" style={{ color: STATUS_ERROR, opacity: 0.7 }}>
+                    +{undatedReviewed} undated
+                  </span>
                 )}
               </span>
             );

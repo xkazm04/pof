@@ -1,8 +1,8 @@
 import { getDb } from './db';
 import { logger } from '@/lib/logger';
 import type { SubModuleId } from '@/types/modules';
-import { FEATURE_STATUSES } from '@/types/feature-matrix';
-import type { FeatureRow, FeatureStatus, FeatureSummary } from '@/types/feature-matrix';
+import { FEATURE_STATUSES, normalizeFeatureSource } from '@/types/feature-matrix';
+import type { FeatureRow, FeatureSource, FeatureStatus, FeatureSummary } from '@/types/feature-matrix';
 
 const VALID_STATUSES: Set<string> = new Set(FEATURE_STATUSES);
 
@@ -30,6 +30,24 @@ function clampQualityScore(score: unknown): number | null {
   return Math.min(5, Math.max(1, Math.round(score)));
 }
 
+/**
+ * Normalize a review timestamp to ISO-8601 UTC before it is stored.
+ *
+ * `last_reviewed_at` is the evidence date the GDD compliance engine reads, and it
+ * compares those values across rows. Storing whatever text a caller supplied made
+ * two equally-valid spellings of the same instant (`2026-08-18T00:00:00+02:00` vs
+ * the UTC form) sort against each other by their first differing CHARACTER. Every
+ * parseable value is written in one canonical spelling so lexical and chronological
+ * order agree. An unparseable value is passed through untouched rather than
+ * silently replaced with `now` — inventing a date is the failure mode this whole
+ * column exists to prevent; the import route rejects such values up front.
+ */
+export function normalizeReviewTimestamp(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const ms = Date.parse(value);
+  return Number.isNaN(ms) ? value : new Date(ms).toISOString();
+}
+
 interface RawRow {
   id: number;
   module_id: string;
@@ -44,6 +62,7 @@ interface RawRow {
   last_reviewed_at: string | null;
   created_at: string;
   updated_at: string;
+  source: string | null;
 }
 
 function safeParseJsonArray(value: string | null | undefined, rowId: number): string[] {
@@ -69,6 +88,7 @@ function toFeatureRow(raw: RawRow): FeatureRow {
     qualityScore: raw.quality_score,
     nextSteps: raw.next_steps || '',
     lastReviewedAt: raw.last_reviewed_at,
+    source: normalizeFeatureSource(raw.source),
   };
 }
 
@@ -114,10 +134,14 @@ export interface UpsertFeature {
 export function upsertFeatures(
   moduleId: SubModuleId,
   features: UpsertFeature[],
-  opts?: { seedOnly?: boolean },
+  opts?: { seedOnly?: boolean; source?: FeatureSource },
 ): void {
   ensureTables();
   const db = getDb();
+  // Provenance travels with the WRITE PATH, not with the individual row: one call
+  // is one path (a CLI review, an auto-verify sweep, a seed). Callers that do not
+  // say which they are get 'unknown' — silence must not be able to claim 'review'.
+  const source = normalizeFeatureSource(opts?.source);
   // seedOnly = insert-if-missing: seeding static definitions must never
   // clobber an existing row's review data (statuses, scores, notes) — the
   // full DO UPDATE path is for real reviews/imports only.
@@ -132,16 +156,22 @@ export function upsertFeatures(
       quality_score = excluded.quality_score,
       next_steps = excluded.next_steps,
       last_reviewed_at = excluded.last_reviewed_at,
+      source = excluded.source,
       updated_at = datetime('now')`;
   const stmt = db.prepare(`
-    INSERT INTO feature_matrix (module_id, feature_name, category, status, description, file_paths, review_notes, quality_score, next_steps, last_reviewed_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    INSERT INTO feature_matrix (module_id, feature_name, category, status, description, file_paths, review_notes, quality_score, next_steps, last_reviewed_at, source, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
     ${conflictClause}
   `);
 
+  // Count what the statements ACTUALLY wrote. A seedOnly batch is `DO NOTHING` on
+  // every existing row, so the input array says nothing about whether the table
+  // changed — and a snapshot taken off the input records a "review" that never
+  // touched a row.
   const transaction = db.transaction((items: UpsertFeature[]) => {
+    let written = 0;
     for (const f of items) {
-      stmt.run(
+      const info = stmt.run(
         moduleId,
         f.featureName,
         f.category,
@@ -151,29 +181,91 @@ export function upsertFeatures(
         f.reviewNotes,
         clampQualityScore(f.qualityScore),
         f.nextSteps ?? '',
-        f.lastReviewedAt ?? null
+        normalizeReviewTimestamp(f.lastReviewedAt),
+        source,
       );
+      written += info.changes;
     }
+    return written;
   });
 
-  transaction(features);
+  const writtenRows = transaction(features) as number;
 
-  // Auto-capture a review snapshot after upsert (skip for seed-only writes with all unknown)
+  // Auto-capture a review snapshot after upsert — only when a row actually changed
+  // AND the batch carried a verdict (a seed of `unknown` placeholders is not a review).
   const hasReviewData = features.some(
     (f) => f.status !== 'unknown' || f.qualityScore != null,
   );
-  if (hasReviewData) {
+  if (writtenRows > 0 && hasReviewData) {
     captureReviewSnapshot(moduleId);
   }
 }
 
-export function updateFeatureStatus(moduleId: SubModuleId, featureName: string, status: FeatureStatus): void {
+/** Outcome of a single-row status write, so the caller can report what happened
+ *  instead of always answering `{ updated: true }`. */
+export interface StatusUpdateResult {
+  /** False when no row matched (module/feature name typo, or the row was never seeded). */
+  updated: boolean;
+  /** The status the row held before this write (`null` when no row matched). */
+  previousStatus: FeatureStatus | null;
+  /** True when the write actually moved the status — the signal a snapshot needs. */
+  statusChanged: boolean;
+  /** The review timestamp stamped by this write (`null` when nothing was written). */
+  reviewedAt: string | null;
+  source: FeatureSource;
+}
+
+/**
+ * Update ONE row's status — the CLI fix flow's write path.
+ *
+ * This used to write `status` + `updated_at` and nothing else, which broke the row's
+ * provenance in the worst possible direction: the status became NEW while
+ * `last_reviewed_at` still pointed at an older review that had assessed a DIFFERENT
+ * state, and the compliance engine read that pair as a measured verdict with evidence
+ * of that older date.
+ *
+ * DECISION: a fix DOES stamp `last_reviewed_at = now` and `source = 'fix'`.
+ * The alternative — leaving the date alone and having the compliance engine discount
+ * `fix` rows — keeps a date on the row that provably describes a different status, and
+ * would require changing how compliance SCORES rather than what it reads. A fix is a
+ * real, dated assertion about the row's current state; it is simply a weaker CLASS of
+ * assertion than an independent review, because the actor that made the change is the
+ * one reporting it. `source` carries that caveat explicitly (surfaced per row in the
+ * matrix), so the date can be honest without anything having to be re-weighted.
+ */
+export function updateFeatureStatus(
+  moduleId: SubModuleId,
+  featureName: string,
+  status: FeatureStatus,
+  opts?: { source?: FeatureSource; reviewedAt?: string },
+): StatusUpdateResult {
   ensureTables();
-  getDb()
-    .prepare(
-      `UPDATE feature_matrix SET status = ?, updated_at = datetime('now') WHERE module_id = ? AND feature_name = ?`
-    )
-    .run(validateStatus(status), moduleId, featureName);
+  const db = getDb();
+  const source = normalizeFeatureSource(opts?.source ?? 'fix');
+  const reviewedAt = normalizeReviewTimestamp(opts?.reviewedAt) ?? new Date().toISOString();
+  const nextStatus = validateStatus(status);
+
+  const existing = db
+    .prepare('SELECT status FROM feature_matrix WHERE module_id = ? AND feature_name = ?')
+    .get(moduleId, featureName) as { status: string } | undefined;
+
+  if (!existing) {
+    return { updated: false, previousStatus: null, statusChanged: false, reviewedAt: null, source };
+  }
+
+  db.prepare(
+    `UPDATE feature_matrix
+     SET status = ?, last_reviewed_at = ?, source = ?, updated_at = datetime('now')
+     WHERE module_id = ? AND feature_name = ?`,
+  ).run(nextStatus, reviewedAt, source, moduleId, featureName);
+
+  const previousStatus = existing.status as FeatureStatus;
+  const statusChanged = previousStatus !== nextStatus;
+  // Only a real status move changes the module's counts — re-asserting the same
+  // status is fresh evidence for the row but not a new point on the trend line.
+  if (statusChanged) captureReviewSnapshot(moduleId);
+
+  return { updated: true, previousStatus, statusChanged, reviewedAt, source };
 }
 
 export function clearModuleFeatures(moduleId: SubModuleId): void {

@@ -15,7 +15,7 @@ const DB_DIR = path.dirname(DB_PATH);
 // rebuilds) are gated behind this so they run once per DB instead of on every
 // cold start. A fresh DB (user_version 0) runs them once against freshly-created
 // tables (all guards no-op) then stamps the version.
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 
 let db: Database.Database | null = null;
 
@@ -65,6 +65,7 @@ export function getDb(): Database.Database {
       last_reviewed_at TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      source TEXT NOT NULL DEFAULT 'unknown',
       UNIQUE(module_id, feature_name)
     )
   `);
@@ -208,8 +209,15 @@ export function getDb(): Database.Database {
   // Migrate: add project_id column to scoped tables
   if (needsMigrations) {
   const fmCols = db.prepare("PRAGMA table_info(feature_matrix)").all() as { name: string }[];
-  if (!new Set(fmCols.map((c) => c.name)).has('project_id')) {
+  const fmColNames = new Set(fmCols.map((c) => c.name));
+  if (!fmColNames.has('project_id')) {
     db.exec("ALTER TABLE feature_matrix ADD COLUMN project_id TEXT NOT NULL DEFAULT ''");
+  }
+  // Provenance: which write path (review / verify / fix / seed) last set the row's
+  // status. Rows written before this column existed default to 'unknown' — the
+  // honest reading, since nothing recorded how they were set.
+  if (!fmColNames.has('source')) {
+    db.exec("ALTER TABLE feature_matrix ADD COLUMN source TEXT NOT NULL DEFAULT 'unknown'");
   }
 
   const rsCols = db.prepare("PRAGMA table_info(review_snapshots)").all() as { name: string }[];

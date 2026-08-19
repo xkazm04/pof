@@ -7,6 +7,7 @@ import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
 import { autoUpdateFeatureMatrix } from '@/lib/pof-bridge/verification-engine';
 import { usePofBridgeStore } from '@/stores/pofBridgeStore';
 import { tryApiFetch } from '@/lib/api-utils';
+import { invalidateFeatureStatuses } from '@/hooks/useFeatureStatuses';
 import type { SubModuleId } from '@/types/modules';
 
 interface UseFeatureMatrixResult {
@@ -43,6 +44,12 @@ export function useFeatureMatrix(moduleId: SubModuleId): UseFeatureMatrixResult 
   // at dispatch and ignore any response that is no longer the latest, so a
   // stale request can never overwrite the current module's state.
   const requestIdRef = useRef(0);
+  // Last observed status per feature, so a refetch can tell whether the table moved
+  // under us. The CLI fix flow PATCHes rows by curl — nothing in the app issues that
+  // write, so polling is the only place the app can learn the shared all-statuses
+  // cache is stale. Without this the Constellation / NBA / dependency views kept
+  // serving a pre-fix status for the whole TTL.
+  const statusSigRef = useRef<string | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!moduleId) return;
@@ -53,7 +60,13 @@ export function useFeatureMatrix(moduleId: SubModuleId): UseFeatureMatrixResult 
     // A newer request has since been issued — discard this stale response.
     if (requestId !== requestIdRef.current) return;
     if (result.ok) {
-      setFeatures(result.data.features ?? []);
+      const rows = result.data.features ?? [];
+      const signature = rows.map((f) => `${f.featureName}:${f.status}`).join('|');
+      if (statusSigRef.current !== null && statusSigRef.current !== signature) {
+        invalidateFeatureStatuses();
+      }
+      statusSigRef.current = signature;
+      setFeatures(rows);
       setSummary(result.data.summary ?? EMPTY_SUMMARY);
     } else {
       console.error('useFeatureMatrix fetch error:', result.error);
@@ -80,9 +93,12 @@ export function useFeatureMatrix(moduleId: SubModuleId): UseFeatureMatrixResult 
       headers: { 'Content-Type': 'application/json' },
       // seedOnly: insert-if-missing — a seed must never clobber review data
       // that exists in the DB (e.g. when this ran because a fetch failed).
-      body: JSON.stringify({ moduleId, features: seedFeatures, seedOnly: true }),
+      // source 'seed': these rows carry no verdict, and must not read as reviewed.
+      body: JSON.stringify({ moduleId, features: seedFeatures, seedOnly: true, source: 'seed' }),
     });
     if (result.ok) {
+      // New rows change the cross-module status table every other view reads.
+      invalidateFeatureStatuses();
       await fetchData();
     } else {
       console.error('useFeatureMatrix seed error:', result.error);
@@ -96,6 +112,9 @@ export function useFeatureMatrix(moduleId: SubModuleId): UseFeatureMatrixResult 
     try {
       const results = await autoUpdateFeatureMatrix(manifest, moduleId);
       setVerificationResults(results);
+      // Auto-verify writes statuses — every consumer of the shared all-statuses
+      // cache must see them, not just this view.
+      invalidateFeatureStatuses();
       // Refetch to show updated statuses
       await fetchData();
       return results;

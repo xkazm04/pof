@@ -254,10 +254,37 @@ export function useFeatureMatrixState({
     return { grouped, categories };
   }, [filtered]);
 
-  const { lastReviewed, neverReviewed } = useMemo(() => {
-    const lastReviewed = features.find((f) => f.lastReviewedAt)?.lastReviewedAt;
+  // Module freshness = the OLDEST review in the module, not the first row that
+  // happened to carry a timestamp. The old `find()` read whichever row sorted first
+  // by (category, feature_name) — an arbitrary pick that let a module reviewed once a
+  // year ago render "2 hours ago" because one recently-fixed row sorted to the top.
+  // The dot answers "how stale is the WEAKEST evidence here", so it takes the minimum;
+  // per-row ages are on the rows themselves (FeatureProvenanceBadge).
+  const { lastReviewed, neverReviewed, undatedReviewed } = useMemo(() => {
+    let oldest: string | null = null;
+    let undatedReviewed = 0;
+    for (const f of features) {
+      if (f.status === 'unknown') continue; // no verdict → its age is not evidence
+      if (!f.lastReviewedAt) {
+        undatedReviewed += 1;
+        continue;
+      }
+      const t = Date.parse(f.lastReviewedAt);
+      if (Number.isNaN(t)) continue;
+      if (oldest === null || t < Date.parse(oldest)) oldest = f.lastReviewedAt;
+    }
+    // Fall back to the oldest date on ANY row when no row carries a verdict yet, so a
+    // seeded-but-dated module still reports something true rather than nothing.
+    if (oldest === null) {
+      for (const f of features) {
+        if (!f.lastReviewedAt) continue;
+        const t = Date.parse(f.lastReviewedAt);
+        if (Number.isNaN(t)) continue;
+        if (oldest === null || t < Date.parse(oldest)) oldest = f.lastReviewedAt;
+      }
+    }
     const neverReviewed = features.length > 0 && features.every((f) => f.status === 'unknown' && !f.lastReviewedAt);
-    return { lastReviewed, neverReviewed };
+    return { lastReviewed: oldest ?? undefined, neverReviewed, undatedReviewed };
   }, [features]);
 
   return {
@@ -267,7 +294,7 @@ export function useFeatureMatrixState({
     searchQuery, setSearchQuery, qualityMin, setQualityMin, qualityMax, setQualityMax,
     sortKey, sortDir, activeFilters, viewMode, setViewMode, depMap,
     toggleRow, toggleCategory, toggleFilter, toggleSort,
-    filtered, grouped, categories, lastReviewed, neverReviewed,
+    filtered, grouped, categories, lastReviewed, neverReviewed, undatedReviewed,
   };
 }
 

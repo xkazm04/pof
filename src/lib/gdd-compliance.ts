@@ -378,16 +378,37 @@ function confidenceFor(featuresMeasured: number, coverage: number): ComplianceCo
   return CONFIDENCE_BANDS.find((b) => coverage >= b.min)?.band ?? 'low';
 }
 
+/**
+ * Chronological comparison of two review timestamps.
+ *
+ * These were compared as raw STRINGS, which is only correct while every value is a
+ * UTC-`Z` ISO timestamp of identical shape. `last_reviewed_at` accepted whatever a
+ * CLI report supplied, so a value carrying an offset (`…T02:00:00+02:00`) or a
+ * date-only form sorted against a real timestamp by its first differing CHARACTER —
+ * and the evidence-age envelope reported an "oldest" that was not the oldest.
+ *
+ * A value that is not a parseable date falls back to string order rather than being
+ * treated as year 0, so an unparseable legacy value cannot silently win the
+ * comparison and become the module's reported evidence age. This changes ordering
+ * only; no score, band or threshold is touched.
+ */
+function cmpReviewedAt(a: string, b: string): number {
+  const ta = Date.parse(a);
+  const tb = Date.parse(b);
+  if (Number.isNaN(ta) || Number.isNaN(tb)) return a < b ? -1 : a > b ? 1 : 0;
+  return ta - tb;
+}
+
 /** Earlier / later of two nullable ISO timestamps; null only when both are null. */
 function earlier(a: string | null, b: string | null): string | null {
   if (!a) return b;
   if (!b) return a;
-  return a < b ? a : b;
+  return cmpReviewedAt(a, b) <= 0 ? a : b;
 }
 function later(a: string | null, b: string | null): string | null {
   if (!a) return b;
   if (!b) return a;
-  return a > b ? a : b;
+  return cmpReviewedAt(a, b) >= 0 ? a : b;
 }
 
 function buildEvidence(

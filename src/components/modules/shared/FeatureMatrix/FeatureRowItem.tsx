@@ -11,6 +11,7 @@ import type { VerificationResult } from '@/types/pof-bridge';
 import { slugifyForTestId } from '@/lib/test-ids';
 import { STATUS_CONFIG } from './constants';
 import { QualityStars } from './QualityStars';
+import { FeatureProvenanceBadge } from './FeatureProvenanceBadge';
 import { VerificationBadge } from './VerificationBadge';
 import { DependencyChain } from './DependencyChain';
 
@@ -185,6 +186,15 @@ export function FeatureRowItem({
             {feature.filePaths.length}
           </span>
         )}
+
+        {/* Per-row provenance — how this row's status was set, and how long ago.
+            The module-level dot averages nothing away here: each row states its own
+            evidence age, so a stale row inside a freshly-reviewed module is visible. */}
+        <FeatureProvenanceBadge
+          testId={`pof-feature-matrix-provenance-${testIdSlug}`}
+          lastReviewedAt={feature.lastReviewedAt}
+          source={feature.source}
+        />
 
         {/* Verification badge — shown after auto-verify runs */}
         {verificationResult && (
