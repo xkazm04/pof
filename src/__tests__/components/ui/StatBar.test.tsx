@@ -32,7 +32,7 @@ describe('StatBar — shared meter primitive', () => {
     expect(fillEl(container).style.width).toBe('0%');
   });
 
-  it('clamps the fill to 0–100', () => {
+  it('clamps the fill to 0–100 when overflow is not opted into', () => {
     const { container, rerender } = render(<StatBar value={150} color={STATUS_SUCCESS} animate />);
     expect(fillEl(container).style.width).toBe('100%');
     rerender(<StatBar value={-20} color={STATUS_SUCCESS} animate />);
@@ -50,5 +50,28 @@ describe('StatBar — shared meter primitive', () => {
   it('stays out of the a11y tree when decorative (no ariaLabel)', () => {
     render(<StatBar value={50} color={STATUS_SUCCESS} animate />);
     expect(screen.queryByRole('progressbar')).toBeNull();
+  });
+
+  // The same clamp lie MeterBar carried: 150 rendered identically to 100 with
+  // hue as the sole cue. `overflow` opts into the shared honest geometry so the
+  // two bar primitives cannot diverge on the rule.
+  it('renders an over-100 value honestly when overflow is opted into', () => {
+    const { container } = render(
+      <StatBar value={150} color={STATUS_SUCCESS} animate overflow ariaLabel="texture memory" />,
+    );
+    expect(parseFloat(fillEl(container).style.width)).toBeCloseTo(100 / 1.5, 2);
+    expect(container.querySelector('[data-meter-overflow]')).not.toBeNull();
+    const bar = screen.getByRole('progressbar', { name: 'texture memory' });
+    expect(bar.getAttribute('aria-valuenow')).toBe('150');
+    expect(bar.getAttribute('aria-valuemax')).toBe('150');
+    expect(bar.getAttribute('aria-valuetext')).toMatch(/over/i);
+  });
+
+  it('leaves the under-100 overflow path identical to the clamped one', () => {
+    const { container } = render(
+      <StatBar value={72} color={STATUS_SUCCESS} animate overflow />,
+    );
+    expect(fillEl(container).style.width).toBe('72%');
+    expect(container.querySelector('[data-meter-overflow]')).toBeNull();
   });
 });

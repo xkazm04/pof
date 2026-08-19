@@ -5,7 +5,7 @@ import {
   Layers as LayersIcon, Zap, Monitor, Cpu, AlertTriangle,
 } from 'lucide-react';
 import { MODULE_COLORS } from '@/lib/constants';
-import { ACCENT_VIOLET } from '@/lib/chart-colors';
+import { ACCENT_VIOLET, STATUS_ERROR } from '@/lib/chart-colors';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
 import { BlenderConnectionBar } from '@/components/blender-mcp/BlenderConnectionBar';
 import { tryApiFetch } from '@/lib/api-utils';
@@ -14,6 +14,7 @@ import type { ExecuteOutput } from '@/lib/blender-mcp/types';
 import { logger } from '@/lib/logger';
 import { estimateGPUBudget } from '@/lib/post-process-studio/gpu-estimator';
 import { usePostProcessStudioStore } from '@/stores/postProcessStudioStore';
+import { MeterBar } from '@/components/ui/MeterBar';
 import { TARGET_RESOLUTION } from './constants';
 import { EffectRow } from './EffectRow';
 
@@ -64,7 +65,6 @@ export function PostProcessStackBuilder({ onGenerate, isGenerating }: PostProces
     budget.effects.forEach((e) => m.set(e.effectId, e.costMs));
     return m;
   }, [budget]);
-  const budgetPct = budget.budgetMs > 0 ? Math.min((budget.totalCostMs / budget.budgetMs) * 100, 100) : 0;
 
   const toggleEffect = useCallback((effectId: string) => {
     const current = usePostProcessStudioStore.getState().effects.find((e) => e.id === effectId);
@@ -172,15 +172,19 @@ export function PostProcessStackBuilder({ onGenerate, isGenerating }: PostProces
               </span>
               <span className="text-[10px] font-mono text-violet-400/70">/ {budget.budgetMs}ms @ {budget.resolution}</span>
             </div>
-            <div className="w-32 h-1 bg-violet-950/60 rounded-full mt-1 overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all"
-                style={{
-                  width: `${budgetPct}%`,
-                  backgroundColor: budget.overBudget ? '#f87171' : ACCENT_VIOLET,
-                }}
-              />
-            </div>
+            {/* Over budget the excess renders as a hatched segment past the
+                limit tick — a 2.4ms frame on a 1.2ms budget used to crop to a
+                full bar and announce "100%". */}
+            <MeterBar
+              value={budget.totalCostMs}
+              max={budget.budgetMs}
+              overflow
+              color={budget.overBudget ? STATUS_ERROR : ACCENT_VIOLET}
+              height={6}
+              ariaLabel="GPU frame budget"
+              valueText={`${budget.totalCostMs.toFixed(2)}ms of ${budget.budgetMs}ms`}
+              className="w-32 mt-1"
+            />
             {budget.overBudget && (
               <div className="flex items-center gap-1 mt-1 text-[10px] font-mono text-red-400">
                 <AlertTriangle className="w-2.5 h-2.5" aria-hidden="true" />

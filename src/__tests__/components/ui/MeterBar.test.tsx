@@ -1,7 +1,8 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
-import { MeterBar } from '@/components/ui/MeterBar';
+import { MeterBar, resolveMeterScale } from '@/components/ui/MeterBar';
 import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR } from '@/lib/chart-colors';
+import { STATUS_TOKENS } from '@/lib/status-token';
 
 // setup.ts has no afterEach(cleanup) — see reference_test_no_autocleanup.
 afterEach(cleanup);
@@ -51,7 +52,7 @@ describe('MeterBar — shared progress meter primitive', () => {
     expect(fillEl(lo).style.backgroundColor).toBe(hexToRgb(STATUS_ERROR));
   });
 
-  it('clamps the fill and aria-valuenow to 0–100', () => {
+  it('clamps the fill and aria-valuenow to 0–100 when overflow is not opted into', () => {
     const { container, rerender } = render(<MeterBar value={150} color={STATUS_SUCCESS} ariaLabel="rate" />);
     expect(fillEl(container).style.width).toBe('100%');
     expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('100');
@@ -77,5 +78,127 @@ describe('MeterBar — shared progress meter primitive', () => {
     const fill = fillEl(container);
     expect(fill.className).toContain('meter-fill-grow');
     expect(fill.style.getPropertyValue('--meter-grow-delay')).toBe('150ms');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Over-budget honesty: a clamped meter renders 150-of-100 identically to
+// 100-of-100 and announces "100%". Opt-in `overflow` rescales the track so the
+// limit sits at a tick and the excess is a hatched segment (shape cue #2).
+// ---------------------------------------------------------------------------
+
+/** The overflow segment carries the ramp's hatch; the limit tick is a hairline. */
+const overflowEl = (c: HTMLElement) => c.querySelector('[data-meter-overflow]') as HTMLElement | null;
+const limitEl = (c: HTMLElement) => c.querySelector('[data-meter-limit]') as HTMLElement | null;
+
+describe('MeterBar — over-budget honesty', () => {
+  it('announces the TRUE ratio rather than a clamped 100%', () => {
+    render(<MeterBar value={150} max={100} overflow color={STATUS_ERROR} ariaLabel="texture memory" />);
+    const bar = screen.getByRole('progressbar', { name: 'texture memory' });
+    expect(bar.getAttribute('aria-valuetext')).toContain('150');
+    expect(bar.getAttribute('aria-valuetext')).toMatch(/over/i);
+    // aria-valuenow may not exceed aria-valuemax, so the ceiling rises with it.
+    expect(bar.getAttribute('aria-valuenow')).toBe('150');
+    expect(bar.getAttribute('aria-valuemax')).toBe('150');
+  });
+
+  it('renders the excess as a hatched segment from STATUS_TOKENS.bad.pattern', () => {
+    const { container } = render(
+      <MeterBar value={150} max={100} overflow color={STATUS_ERROR} ariaLabel="samplers" />,
+    );
+    const over = overflowEl(container);
+    expect(over).not.toBeNull();
+    expect(over!.style.backgroundImage).toContain('repeating-linear-gradient');
+    expect(STATUS_TOKENS.bad.pattern).toContain('repeating-linear-gradient');
+  });
+
+  it('is distinguishable from at-budget under grayscale — hatch present vs absent', () => {
+    // The colourblind-safety assertion: strip hue and the two states must still
+    // differ structurally, not just in fill colour.
+    const { container: at } = render(
+      <MeterBar value={100} max={100} overflow color={STATUS_ERROR} ariaLabel="at" />,
+    );
+    const { container: over } = render(
+      <MeterBar value={150} max={100} overflow color={STATUS_ERROR} ariaLabel="over" />,
+    );
+    expect(overflowEl(at)).toBeNull();
+    expect(overflowEl(over)).not.toBeNull();
+    expect(limitEl(at)).toBeNull();
+    expect(limitEl(over)).not.toBeNull();
+  });
+
+  it('rescales the track so the limit tick moves left as the overrun grows', () => {
+    const { container: mild } = render(
+      <MeterBar value={125} max={100} overflow color={STATUS_ERROR} ariaLabel="mild" />,
+    );
+    const { container: bad } = render(
+      <MeterBar value={400} max={100} overflow color={STATUS_ERROR} ariaLabel="bad" />,
+    );
+    // 125% over → budget occupies 80% of the track; 400% over → 25%.
+    expect(fillEl(mild).style.width).toBe('80%');
+    expect(fillEl(bad).style.width).toBe('25%');
+    // A 150%-over bar can therefore never look identical to an at-budget one.
+    const { container: at } = render(
+      <MeterBar value={100} max={100} overflow color={STATUS_ERROR} ariaLabel="at" />,
+    );
+    expect(fillEl(at).style.width).toBe('100%');
+  });
+
+  it('never announces an over value without saying so, even with a custom valueText', () => {
+    render(
+      <MeterBar value={18} max={16} overflow color={STATUS_ERROR} ariaLabel="samplers" valueText="18 / 16" />,
+    );
+    const text = screen.getByRole('progressbar').getAttribute('aria-valuetext')!;
+    expect(text).toContain('18 / 16');
+    expect(text).toMatch(/over/i);
+  });
+
+  it('leaves the under-budget path byte-identical (no tick, no overflow node)', () => {
+    const { container } = render(
+      <MeterBar value={40} max={100} overflow color={STATUS_SUCCESS} ariaLabel="rate" />,
+    );
+    expect(fillEl(container).style.width).toBe('40%');
+    expect(fillEl(container).className).toContain('meter-fill-grow');
+    expect(overflowEl(container)).toBeNull();
+    expect(screen.getByRole('progressbar').getAttribute('aria-valuetext')).toBe('40%');
+  });
+
+  it('positions reference marks against the same rescaled geometry', () => {
+    const { container } = render(
+      <MeterBar
+        value={200}
+        max={100}
+        overflow
+        color={STATUS_WARNING}
+        ariaLabel="section budget"
+        marks={[{ at: 0.8, color: STATUS_WARNING, label: '80%' }]}
+      />,
+    );
+    // Budget occupies 50% of a 200%-over track, so its 80% line sits at 40%.
+    const mark = container.querySelector('[data-meter-mark]') as HTMLElement;
+    expect(mark.style.left).toBe('40%');
+  });
+});
+
+describe('resolveMeterScale — the shared geometry both bar primitives use', () => {
+  it('reports the true ratio while keeping the clamped fill for legacy callers', () => {
+    const s = resolveMeterScale(150, 100, false);
+    expect(s.over).toBe(false);
+    expect(s.fillPct).toBe(100);
+    expect(s.reportedPct).toBe(100);
+  });
+
+  it('rescales and reports honestly when overflow is enabled', () => {
+    const s = resolveMeterScale(150, 100, true);
+    expect(s.over).toBe(true);
+    expect(s.ratio).toBeCloseTo(1.5);
+    expect(s.fillPct).toBeCloseTo(100 / 1.5);
+    expect(s.reportedPct).toBe(150);
+  });
+
+  it('guards a zero or negative max and a negative value', () => {
+    expect(resolveMeterScale(5, 0, true).fillPct).toBe(0);
+    expect(resolveMeterScale(-5, 100, true).fillPct).toBe(0);
+    expect(resolveMeterScale(-5, 100, true).over).toBe(false);
   });
 });

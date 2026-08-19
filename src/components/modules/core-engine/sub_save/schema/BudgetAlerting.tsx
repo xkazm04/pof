@@ -4,10 +4,11 @@ import { useMemo } from 'react';
 import { TrendingUp } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { STATUS_WARNING, STATUS_ERROR, ACCENT_CYAN_LIGHT,
-  withOpacity, OPACITY_56, OPACITY_5, OPACITY_20, OPACITY_8, OPACITY_37, OPACITY_50,
+  withOpacity, OPACITY_56, OPACITY_5, OPACITY_20, OPACITY_37, OPACITY_50,
 } from '@/lib/chart-colors';
 import { budgetStatusToken } from '@/lib/status-token';
 import { StatusTag } from '@/components/ui/StatusTag';
+import { MeterBar, resolveMeterScale } from '@/components/ui/MeterBar';
 import { BlueprintPanel, SectionHeader, SAVE_TYPE } from '../_shared/design';
 import {
   ACCENT, SECTION_BUDGETS, FILE_SIZE_SECTIONS, GROWTH_HISTORY, TOTAL_BYTES,
@@ -27,7 +28,8 @@ export function BudgetAlerting() {
 
     const rows = SECTION_BUDGETS.map(budget => {
       const currentBytes = bytesByLabel.get(budget.sectionLabel) ?? 0;
-      const pct = Math.min((currentBytes / budget.budgetBytes) * 100, 100);
+      // Unclamped: a section 40% past its budget must not render as a full bar.
+      const scale = resolveMeterScale(currentBytes, budget.budgetBytes, true);
       const status = getBudgetStatus(currentBytes, budget.budgetBytes);
       const statusToken = budgetStatusToken(status);
       const history = GROWTH_HISTORY.map(g => g.sectionBytes[budget.sectionLabel] ?? 0);
@@ -36,7 +38,7 @@ export function BudgetAlerting() {
       const projectedColor = budgetStatusToken(projectedStatus).color;
       const maxVal = Math.max(...history, budget.budgetBytes);
       return {
-        budget, currentBytes, pct, statusToken,
+        budget, currentBytes, scale, statusToken,
         statusColor: statusToken.color,
         history, projected, projectedColor, maxVal,
       };
@@ -64,7 +66,7 @@ export function BudgetAlerting() {
 
       <div className="p-4 space-y-4 relative z-10">
         <div className="space-y-3">
-          {rows.map(({ budget, currentBytes, pct, statusToken, statusColor, history, projected, projectedColor, maxVal }, i) => {
+          {rows.map(({ budget, currentBytes, scale, statusToken, statusColor, history, projected, projectedColor, maxVal }, i) => {
             return (
               <motion.div
                 key={budget.sectionLabel}
@@ -85,15 +87,29 @@ export function BudgetAlerting() {
                   </div>
                 </div>
 
-                <div className="relative h-3 rounded-full overflow-hidden border border-border/10" style={{ backgroundColor: `${withOpacity(ACCENT, OPACITY_8)}` }}>
-                  <motion.div className="absolute top-0 bottom-0 left-0 rounded-full" initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.7, ease: 'easeOut' }} style={{ backgroundColor: `${withOpacity(statusColor, OPACITY_37)}`, backgroundImage: statusToken.pattern }} />
-                  <div className="absolute top-0 bottom-0" style={{ left: '80%', width: '1px', backgroundColor: `${withOpacity(STATUS_WARNING, OPACITY_37)}` }} />
-                  {currentBytes < budget.budgetBytes && <div className="absolute top-0 bottom-0 right-0" style={{ width: '1px', backgroundColor: `${withOpacity(STATUS_ERROR, OPACITY_37)}` }} />}
-                </div>
-                <div className="flex justify-between mt-1 text-xs text-text-muted font-mono">
-                  <span>0</span>
-                  <span style={{ marginLeft: '76%', position: 'relative', left: '-8px', color: withOpacity(STATUS_WARNING, OPACITY_56) }}>80%</span>
-                  <span>100%</span>
+                {/* The budget line is a MARK, not the track's right edge: once a
+                    section is over, the whole track represents its real size and
+                    the 100% tick slides left, with the excess hatched. */}
+                <MeterBar
+                  value={currentBytes}
+                  max={budget.budgetBytes}
+                  overflow
+                  color={withOpacity(statusColor, OPACITY_37)}
+                  pattern={statusToken.pattern}
+                  height={12}
+                  ariaLabel={`${budget.sectionLabel} budget`}
+                  valueText={`${formatBytes(currentBytes)} of ${formatBytes(budget.budgetBytes)}`}
+                  marks={[
+                    { at: 0.8, color: withOpacity(STATUS_WARNING, OPACITY_37), label: '80% of budget' },
+                    ...(scale.over ? [] : [{ at: 1, color: withOpacity(STATUS_ERROR, OPACITY_37), label: 'budget' }]),
+                  ]}
+                  className="border border-border/10"
+                />
+                <div className="relative h-4 mt-1 text-xs text-text-muted font-mono">
+                  <span className="absolute left-0">0</span>
+                  <span className="absolute -translate-x-1/2" style={{ left: `${0.8 * scale.limitPct}%`, color: withOpacity(STATUS_WARNING, OPACITY_56) }}>80%</span>
+                  <span className="absolute -translate-x-full" style={{ left: `${scale.limitPct}%` }}>100%</span>
+                  {scale.over && <span className="absolute right-0" style={{ color: statusColor }}>{scale.reportedPct}%</span>}
                 </div>
 
                 {/* Sparkline + projected */}

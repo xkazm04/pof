@@ -10,6 +10,7 @@ import {
   estimateMaterialBudget, SAMPLER_HARD_LIMIT, SAMPLER_WARN_LIMIT, INSTRUCTION_WARN_THRESHOLD,
   type MaterialBudgetReport,
 } from '@/lib/material-cost-estimator';
+import { MeterBar } from '@/components/ui/MeterBar';
 import type { SurfaceType, RenderFeature } from './MaterialParameterConfigurator';
 
 /**
@@ -39,10 +40,11 @@ export function MaterialBudgetBar({
         icon={Layers}
         label="Samplers"
         valueLabel={`${report.samplers} / ${SAMPLER_HARD_LIMIT}`}
-        valueFraction={Math.min(report.samplers / SAMPLER_HARD_LIMIT, 1)}
-        toneAt={(v) =>
-          v * SAMPLER_HARD_LIMIT > SAMPLER_HARD_LIMIT ? STATUS_ERROR
-            : v * SAMPLER_HARD_LIMIT >= SAMPLER_WARN_LIMIT ? STATUS_WARNING
+        value={report.samplers}
+        max={SAMPLER_HARD_LIMIT}
+        toneAt={(n) =>
+          n > SAMPLER_HARD_LIMIT ? STATUS_ERROR
+            : n >= SAMPLER_WARN_LIMIT ? STATUS_WARNING
               : STATUS_SUCCESS}
         breakdown={report.samplerBreakdown.map((b) => ({ label: b.source, amount: b.count, formatter: (n) => `${n}` }))}
       />
@@ -51,9 +53,9 @@ export function MaterialBudgetBar({
         icon={Cpu}
         label="Instructions"
         valueLabel={`${report.instructionScore.toFixed(2)}× metal base`}
-        valueFraction={Math.min(report.instructionScore / (INSTRUCTION_WARN_THRESHOLD * 1.5), 1)}
-        toneAt={(v) =>
-          v * (INSTRUCTION_WARN_THRESHOLD * 1.5) >= INSTRUCTION_WARN_THRESHOLD ? STATUS_WARNING : STATUS_SUCCESS}
+        value={report.instructionScore}
+        max={INSTRUCTION_WARN_THRESHOLD}
+        toneAt={(n) => (n >= INSTRUCTION_WARN_THRESHOLD ? STATUS_WARNING : STATUS_SUCCESS)}
         breakdown={report.instructionBreakdown.map((b) => ({ label: b.source, amount: b.cost, formatter: (n) => `${n.toFixed(2)}×` }))}
       />
 
@@ -83,14 +85,24 @@ interface BudgetMeterProps {
   icon: React.ComponentType<{ size?: number; className?: string }>;
   label: string;
   valueLabel: string;
-  valueFraction: number;
-  toneAt: (v: number) => string;
+  /** Raw measured value — NEVER pre-clamped; the meter owns the overflow story. */
+  value: number;
+  /** The real limit this value is graded against (UE5's sampler cap, the warn threshold). */
+  max: number;
+  toneAt: (value: number) => string;
   breakdown: Array<{ label: string; amount: number; formatter: (n: number) => string }>;
 }
 
-function BudgetMeter({ icon: Icon, label, valueLabel, valueFraction, toneAt, breakdown }: BudgetMeterProps) {
-  const tone = toneAt(valueFraction);
-  const widthPct = Math.max(2, Math.round(valueFraction * 100));
+/**
+ * One shader-budget row. The value reaches the bar unclamped: the callers used
+ * to `Math.min(…, 1)` before handing it over, which cropped every overrun to a
+ * full bar (and made the sampler meter's own STATUS_ERROR branch unreachable,
+ * since it re-derived the count from a fraction that could never exceed 1).
+ * `MeterBar`'s `overflow` now carries the excess as a hatched segment and
+ * announces the true multiple.
+ */
+function BudgetMeter({ icon: Icon, label, valueLabel, value, max, toneAt, breakdown }: BudgetMeterProps) {
+  const tone = toneAt(value);
   return (
     <div className="space-y-1.5" data-meter={label.toLowerCase()}>
       <div className="flex items-center gap-2 text-xs">
@@ -98,9 +110,17 @@ function BudgetMeter({ icon: Icon, label, valueLabel, valueFraction, toneAt, bre
         <span className="text-text-muted">{label}</span>
         <span className="font-mono text-text-muted ml-auto" data-meter-value>{valueLabel}</span>
       </div>
-      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: withOpacity(tone, OPACITY_15) }}>
-        <div className="h-full rounded-full" style={{ width: `${widthPct}%`, background: tone, transition: 'width 200ms ease' }} />
-      </div>
+      <MeterBar
+        value={value}
+        max={max}
+        overflow
+        color={tone}
+        // A 45° hatch needs a few pixels of track to read; the old 1.5px rail
+        // would have swallowed the over-budget cue entirely.
+        height={6}
+        ariaLabel={label}
+        valueText={valueLabel}
+      />
       <ul className="flex flex-wrap gap-1 text-2xs" aria-label={`${label} breakdown`}>
         {breakdown.map((b, i) => (
           <li key={`${b.label}-${i}`} className="px-1.5 py-0.5 rounded font-mono"
