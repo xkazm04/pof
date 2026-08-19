@@ -1,9 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import {
   deriveFunctionSignature,
+  describeTranspileFidelity,
   generateCppFromBlueprint,
   generateNodeLogic,
+  renderPinLiteral,
 } from '@/lib/blueprint-cpp-codegen';
+import { parseBlueprintJson } from '@/lib/blueprint-parser';
+import { SAMPLE_BLUEPRINT } from '@/components/modules/game-systems/blueprint-transpiler/BlueprintTranspilerView/constants';
 import type {
   BlueprintAsset,
   BlueprintGraph,
@@ -379,16 +383,23 @@ describe('generateNodeLogic', () => {
     expect(warnings).toHaveLength(0);
   });
 
+  // RE-BASELINED (bp-body-fabrication): the fixture used to hand the Condition
+  // pin `defaultValue: 'bIsAlive'` — an identifier posing as a bool literal,
+  // which a real export never produces (a bool pin's default is "true"/"false";
+  // anything else arrives over a link). The condition is now read from a real
+  // connected VariableGet, which is where `bIsAlive` genuinely comes from, so
+  // the assertions below are unchanged and are now backed by real graph data.
   it('generates an if/else block for a branch node', () => {
     const branch = node({
       id: 'br',
       type: 'K2Node_IfThenElse',
       pins: [
-        pin({ name: 'Condition', type: 'bool', direction: 'input', defaultValue: 'bIsAlive' }),
+        pin({ name: 'Condition', type: 'bool', direction: 'input', linkedTo: ['cond'] }),
         pin({ name: 'Then', type: 'exec', direction: 'output', linkedTo: ['t'] }),
         pin({ name: 'Else', type: 'exec', direction: 'output', linkedTo: ['e'] }),
       ],
     });
+    const cond = node({ id: 'cond', type: 'K2Node_VariableGet', name: 'Get bIsAlive', memberName: 'bIsAlive' });
     // Branch targets are located via `n.pins.some(p => ... || n.id === id)`, so a
     // pinless node is never matched — real exec targets always carry an exec pin.
     const thenNode = node({
@@ -403,7 +414,7 @@ describe('generateNodeLogic', () => {
       memberName: 'Lose',
       pins: [pin({ name: 'exec', type: 'exec', direction: 'input' })],
     });
-    const code = generateNodeLogic({ nodes: [branch, thenNode, elseNode] }, branch, 'AFoo', []);
+    const code = generateNodeLogic({ nodes: [branch, cond, thenNode, elseNode] }, branch, 'AFoo', []);
     expect(code).toContain('if (bIsAlive)');
     expect(code).toContain('Win();');
     expect(code).toContain('else');
@@ -429,8 +440,14 @@ describe('generateNodeLogic', () => {
   });
 
   it('emits a UE_LOG for a PrintString node', () => {
-    // A real PrintString is a CallFunction caught by the first branch; the UE_LOG
-    // path fires only for a node whose type itself contains "PrintString".
+    // RE-BASELINED COMMENT (bp-body-fabrication): this used to read "a real
+    // PrintString is a CallFunction caught by the first branch; the UE_LOG path
+    // fires only for a node whose type itself contains PrintString" — i.e. the
+    // branch was green only because the fixture was shaped to reach it. The
+    // PrintString translation now runs BEFORE the generic CallFunction branch,
+    // so the real export shape reaches it too (asserted in "refuses to
+    // fabricate" below). This case is kept as a preserved-behaviour pin for the
+    // K2Node_PrintString spelling.
     const print = node({
       id: 'p',
       type: 'K2Node_PrintString',
@@ -528,6 +545,222 @@ describe('generateNodeLogic', () => {
     expect(code).toContain('StepOne();');
     expect(code).toContain('StepTwo();'); // would be silently dropped before the fix
     expect(warnings).toHaveLength(0);
+  });
+});
+
+// ─── Refusing to fabricate (bp-body-fabrication) ──────────────────────────────
+//
+// The walker used to build argument lists out of PIN NAMES, emit string
+// defaults unquoted, and print `MemberParent` (a UE object path) verbatim as a
+// C++ scope — none of it warned, so a fully invented body rendered as a clean
+// transpile. Each case below asserts the walker now falls into the honest
+// `// TODO` + warning path instead of guessing.
+
+describe('generateNodeLogic — refuses to fabricate', () => {
+  it('does not emit a connected input pin as an argument identifier', () => {
+    const call = node({
+      id: 'call',
+      type: 'K2Node_CallFunction',
+      name: 'Add',
+      memberName: 'Add',
+      pins: [
+        pin({ id: 'p-in', name: 'exec', type: 'exec', direction: 'input' }),
+        // Connected to a math node: the value is computed elsewhere, and the
+        // pin's own name is not an expression.
+        pin({ name: 'A', type: 'float', direction: 'input', linkedTo: ['math'] }),
+      ],
+    });
+    const math = node({ id: 'math', type: 'K2Node_CommutativeAssociativeBinaryOperator', name: 'Multiply' });
+    const warnings: TranspileWarning[] = [];
+    const code = generateNodeLogic({ nodes: [call, math] }, call, 'AFoo', warnings);
+
+    expect(code).not.toContain('Add(A);');
+    expect(code).toContain('// TODO');
+    expect(warnings.some((w) => w.nodeId === 'call')).toBe(true);
+  });
+
+  it('resolves a connected pin to the VARIABLE it reads, which is real graph data', () => {
+    const call = node({
+      id: 'call',
+      type: 'K2Node_CallFunction',
+      name: 'SetHealth',
+      memberName: 'SetHealth',
+      pins: [
+        pin({ name: 'exec', type: 'exec', direction: 'input' }),
+        pin({ name: 'NewValue', type: 'float', direction: 'input', linkedTo: ['get'] }),
+      ],
+    });
+    const get = node({ id: 'get', type: 'K2Node_VariableGet', name: 'Get MaxHealth', memberName: 'MaxHealth' });
+    const warnings: TranspileWarning[] = [];
+    const code = generateNodeLogic({ nodes: [call, get] }, call, 'AFoo', warnings);
+    expect(code).toContain('SetHealth(MaxHealth);');
+    expect(warnings).toHaveLength(0);
+  });
+
+  it('never emits a Blueprint object path as a C++ scope', () => {
+    const call = node({
+      id: 'call',
+      type: 'K2Node_CallFunction',
+      name: 'PrintText',
+      memberName: 'PrintText',
+      memberParent: '/Script/Engine.KismetSystemLibrary',
+      pins: [pin({ name: 'exec', type: 'exec', direction: 'input' })],
+    });
+    const warnings: TranspileWarning[] = [];
+    const code = generateNodeLogic({ nodes: [call] }, call, 'AFoo', warnings);
+    expect(code).not.toContain('/Script/Engine.KismetSystemLibrary::');
+    expect(code).toContain('// TODO');
+    expect(warnings[0].message).toContain('/Script/Engine.KismetSystemLibrary');
+  });
+
+  it('quotes a string default instead of emitting it as bare tokens', () => {
+    const call = node({
+      id: 'call',
+      type: 'K2Node_CallFunction',
+      name: 'SetLabel',
+      memberName: 'SetLabel',
+      pins: [
+        pin({ name: 'exec', type: 'exec', direction: 'input' }),
+        pin({ name: 'Label', type: 'string', direction: 'input', defaultValue: 'Player Spawned!' }),
+      ],
+    });
+    const code = generateNodeLogic({ nodes: [call] }, call, 'AFoo', []);
+    expect(code).toContain('SetLabel(TEXT("Player Spawned!"));');
+  });
+
+  it('refuses a VariableSet whose value is not a literal of the pin type', () => {
+    const set = node({
+      id: 's',
+      type: 'K2Node_VariableSet',
+      name: 'Set Health',
+      memberName: 'Health',
+      pins: [
+        pin({ name: 'exec', type: 'exec', direction: 'input' }),
+        pin({ name: 'Health', type: 'float', direction: 'input', defaultValue: 'Health - DamageAmount' }),
+      ],
+    });
+    const warnings: TranspileWarning[] = [];
+    const code = generateNodeLogic({ nodes: [set] }, set, 'AFoo', warnings);
+    expect(code).not.toContain('Health = Health - DamageAmount;');
+    expect(code).toContain('// TODO');
+    expect(warnings).toHaveLength(1);
+  });
+
+  it('refuses a branch whose condition is not derivable, rather than inventing bCondition', () => {
+    const branch = node({
+      id: 'br',
+      type: 'K2Node_IfThenElse',
+      name: 'Branch',
+      pins: [
+        pin({ name: 'Condition', type: 'bool', direction: 'input', linkedTo: ['cmp'] }),
+        pin({ name: 'Then', type: 'exec', direction: 'output', linkedTo: ['t'] }),
+      ],
+    });
+    const cmp = node({ id: 'cmp', type: 'K2Node_CallFunction', name: 'Less', memberName: 'Less' });
+    const thenNode = node({
+      id: 't',
+      type: 'K2Node_CallFunction',
+      memberName: 'Win',
+      pins: [pin({ name: 'exec', type: 'exec', direction: 'input' })],
+    });
+    const warnings: TranspileWarning[] = [];
+    const code = generateNodeLogic({ nodes: [branch, cmp, thenNode] }, branch, 'AFoo', warnings);
+    expect(code).not.toContain('bCondition');
+    expect(code).not.toContain('if (');
+    // Nothing gated behind an unresolved condition is emitted — running it
+    // unconditionally would be a wrong answer dressed as a translation.
+    expect(code).not.toContain('Win();');
+    expect(warnings.some((w) => w.nodeId === 'br')).toBe(true);
+  });
+
+  it('translates a real UE-export PrintString (a CallFunction, not a K2Node_PrintString)', () => {
+    const print = node({
+      id: 'p',
+      type: 'K2Node_CallFunction',
+      name: 'PrintString',
+      memberName: 'PrintString',
+      pins: [
+        pin({ name: 'exec', type: 'exec', direction: 'input' }),
+        pin({ name: 'InString', type: 'string', direction: 'input', defaultValue: 'Player Spawned!' }),
+      ],
+    });
+    const code = generateNodeLogic({ nodes: [print] }, print, 'AFoo', []);
+    expect(code).toContain('UE_LOG(LogTemp, Log, TEXT("Player Spawned!"));');
+    expect(code).not.toContain('PrintString(');
+  });
+
+  it('refuses a PrintString whose text is connected instead of printing a bare %s', () => {
+    const print = node({
+      id: 'p',
+      type: 'K2Node_CallFunction',
+      name: 'PrintString',
+      memberName: 'PrintString',
+      pins: [
+        pin({ name: 'exec', type: 'exec', direction: 'input' }),
+        pin({ name: 'InString', type: 'string', direction: 'input', linkedTo: ['src'] }),
+      ],
+    });
+    const src = node({ id: 'src', type: 'K2Node_CallFunction', name: 'Format', memberName: 'Format' });
+    const warnings: TranspileWarning[] = [];
+    const code = generateNodeLogic({ nodes: [print, src] }, print, 'AFoo', warnings);
+    expect(code).not.toContain('TEXT("%s")');
+    expect(code).toContain('// TODO');
+    expect(warnings).toHaveLength(1);
+  });
+});
+
+describe('renderPinLiteral', () => {
+  it('quotes string/text/name pins and escapes embedded quotes', () => {
+    expect(renderPinLiteral({ name: 'S', type: 'string', direction: 'input', defaultValue: 'a "b"' }))
+      .toEqual({ ok: true, code: 'TEXT("a \\"b\\"")' });
+  });
+
+  it('accepts bool and numeric literals but not identifiers posing as them', () => {
+    expect(renderPinLiteral({ name: 'B', type: 'bool', direction: 'input', defaultValue: 'true' }).ok).toBe(true);
+    expect(renderPinLiteral({ name: 'B', type: 'bool', direction: 'input', defaultValue: 'bIsAlive' }).ok).toBe(false);
+    expect(renderPinLiteral({ name: 'N', type: 'float', direction: 'input', defaultValue: '1.5' }).ok).toBe(true);
+    expect(renderPinLiteral({ name: 'N', type: 'float', direction: 'input', defaultValue: 'Speed * 2' }).ok).toBe(false);
+  });
+
+  it('refuses a connected pin even when it carries a stale default', () => {
+    const r = renderPinLiteral({ name: 'X', type: 'float', direction: 'input', defaultValue: '0', linkedTo: ['n'] });
+    expect(r.ok).toBe(false);
+  });
+});
+
+describe('describeTranspileFidelity', () => {
+  it('derives translated/TODO counts from the warning list, not a constant', () => {
+    const f = describeTranspileFidelity({
+      nodeCount: 5,
+      warnings: [
+        { nodeId: 'n2', message: 'x', severity: 'info' },
+        { nodeId: 'n2', message: 'y', severity: 'info' },   // same node, counted once
+        { message: 'module warning', severity: 'warning' }, // no node, not a TODO
+      ],
+    });
+    expect(f.total).toBe(5);
+    expect(f.todo).toBe(1);
+    expect(f.translated).toBe(4);
+    expect(f.label).toBe('4 of 5 nodes translated · 1 left as TODO');
+  });
+
+  it('reports a fully translated graph without a TODO clause', () => {
+    expect(describeTranspileFidelity({ nodeCount: 3, warnings: [] }).label)
+      .toBe('3 of 3 nodes translated');
+  });
+});
+
+describe('the shipped sample transpiles honestly', () => {
+  const result = generateCppFromBlueprint(parseBlueprintJson(SAMPLE_BLUEPRINT), 'PoF');
+
+  it('never emits the fabricated `PrintString(Player Spawned!);`', () => {
+    expect(result.sourceCode).not.toContain('PrintString(Player Spawned!)');
+    expect(result.sourceCode).toContain('UE_LOG(LogTemp, Log, TEXT("Player Spawned!"));');
+  });
+
+  it('reports a non-zero warning count for the parts it did not translate', () => {
+    expect(result.warnings.length).toBeGreaterThan(0);
+    expect(describeTranspileFidelity(result).todo).toBeGreaterThan(0);
   });
 });
 

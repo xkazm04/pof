@@ -30,7 +30,11 @@ import type {
   BlueprintAsset,
   BlueprintGraph,
   BlueprintNode,
+  BlueprintPin,
 } from '@/types/blueprint';
+
+/** A C++ identifier — anything else cannot appear as a name, scope, or macro. */
+const CPP_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 /**
  * Sanitize a project/module name into a UE C++ module identifier.
@@ -412,9 +416,134 @@ export function generateCppFromBlueprint(
 // ─── Node Logic Generator ───────────────────────────────────────────────────
 
 /**
+ * A pin's value rendered as C++, or the reason it could not be.
+ *
+ * The walker used to fall back to the PIN NAME when a pin had no literal, which
+ * produced identifiers that exist nowhere. Every value now goes through this
+ * type, and a `false` result routes the whole node into the honest `// TODO` +
+ * warning path instead of guessing.
+ */
+export type PinExpression = { ok: true; code: string } | { ok: false; reason: string };
+
+/** Matches a C++ numeric literal (including the UE `f` suffix). */
+const NUMERIC_LITERAL = /^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?[fF]?$/;
+
+const STRING_PIN_TYPES = new Set(['string', 'text', 'name']);
+const NUMERIC_PIN_TYPES = new Set(['int', 'int64', 'byte', 'float', 'double', 'real']);
+
+function cppStringLiteral(raw: string): string {
+  const escaped = raw
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/\r/g, '\\r')
+    .replace(/\n/g, '\\n');
+  return `TEXT("${escaped}")`;
+}
+
+/**
+ * Render a pin's own default value as a C++ literal of that pin's type.
+ *
+ * A pin that is CONNECTED is refused outright: its default is the (unused)
+ * fallback UE keeps around, so emitting it would state a value the graph does
+ * not use. A default that is not a literal of the declared type — an identifier
+ * on a bool pin, an expression on a float pin, a `(X=,Y=,Z=)` struct blob — is
+ * refused too. String/text/name are the only types where any content is valid,
+ * and they are always quoted; they used to be emitted bare, which is how the
+ * sample produced `PrintString(Player Spawned!);`.
+ */
+export function renderPinLiteral(pin: BlueprintPin): PinExpression {
+  if (pin.linkedTo && pin.linkedTo.length > 0) {
+    return { ok: false, reason: `pin "${pin.name}" is connected — its value comes from another node` };
+  }
+  const raw = pin.defaultValue;
+  if (raw === undefined || raw === '') {
+    return { ok: false, reason: `pin "${pin.name}" has no literal value` };
+  }
+  const type = pin.type.toLowerCase();
+  if (STRING_PIN_TYPES.has(type)) return { ok: true, code: cppStringLiteral(raw) };
+  if (type === 'bool') {
+    const v = raw.trim().toLowerCase();
+    if (v === 'true' || v === 'false') return { ok: true, code: v };
+    return { ok: false, reason: `pin "${pin.name}" default "${raw}" is not a bool literal` };
+  }
+  if (NUMERIC_PIN_TYPES.has(type)) {
+    const v = raw.trim();
+    if (NUMERIC_LITERAL.test(v)) return { ok: true, code: v };
+    return { ok: false, reason: `pin "${pin.name}" default "${raw}" is not a numeric literal` };
+  }
+  return {
+    ok: false,
+    reason: `pin "${pin.name}" default "${raw}" is a Blueprint ${pin.type} literal with no C++ equivalent`,
+  };
+}
+
+/**
+ * Resolve what an input pin evaluates to: its own literal, or — when it is fed
+ * by a variable read — the NAME OF THAT VARIABLE, which is real graph data and
+ * not a guess. Anything else (a math node, a function result, a cast) is
+ * refused with the reason, naming the node that actually drives the pin.
+ */
+function resolveInputExpression(
+  pin: BlueprintPin,
+  endpointIndex: Map<string, BlueprintNode>,
+): PinExpression {
+  const links = pin.linkedTo ?? [];
+  if (links.length === 0) return renderPinLiteral(pin);
+
+  for (const id of links) {
+    const src = endpointIndex.get(id);
+    if (src?.type.includes('VariableGet') && src.memberName && CPP_IDENTIFIER.test(src.memberName)) {
+      return { ok: true, code: src.memberName };
+    }
+  }
+  const driver = endpointIndex.get(links[0]);
+  return {
+    ok: false,
+    reason: driver
+      ? `pin "${pin.name}" is driven by [${driver.type}] ${driver.name} — the expression is not derivable`
+      : `pin "${pin.name}" is connected to an unresolved endpoint`,
+  };
+}
+
+/** Input pins that carry a value (exec and the implicit `self` target excluded). */
+function valueInputPins(node: BlueprintNode): BlueprintPin[] {
+  return node.pins.filter(
+    (p) => p.direction === 'input' && p.type !== 'exec' && p.name.toLowerCase() !== 'self',
+  );
+}
+
+/**
+ * How much of the graph actually became code.
+ *
+ * Derived from the warning list — every node the walker refused to translate
+ * raises exactly one warning carrying its `nodeId` — so the readout cannot
+ * drift from what was emitted. Warnings with no `nodeId` (e.g. a module-name
+ * warning) describe the class, not a node, and are not counted as TODOs.
+ */
+export function describeTranspileFidelity(
+  result: Pick<TranspileResult, 'warnings' | 'nodeCount'>,
+): { total: number; translated: number; todo: number; label: string } {
+  const flagged = new Set(
+    result.warnings.filter((w) => w.nodeId !== undefined).map((w) => w.nodeId),
+  );
+  const total = result.nodeCount;
+  const todo = Math.min(flagged.size, total);
+  const translated = total - todo;
+  return {
+    total,
+    translated,
+    todo,
+    label: todo > 0
+      ? `${translated} of ${total} nodes translated · ${todo} left as TODO`
+      : `${translated} of ${total} nodes translated`,
+  };
+}
+
+/**
  * Walk a Blueprint exec chain from `startNode` and emit a best-effort C++
- * statement body. Unrecognised node types become `// TODO` comments plus an
- * info-level warning so nothing is silently dropped.
+ * statement body. Unrecognised node types — and any node whose operands cannot
+ * be derived from the graph — become `// TODO` comments plus an info-level
+ * warning so nothing is silently dropped OR silently invented.
  */
 export function generateNodeLogic(
   graph: { nodes: BlueprintNode[] },
@@ -431,6 +560,21 @@ export function generateNodeLogic(
   // either and O(N+E) overall instead of the old per-edge O(N·pins) scan.
   const endpointIndex = buildEndpointIndex(graph.nodes);
 
+  /**
+   * The one honest exit for anything the walker cannot translate: a `// TODO`
+   * naming the node AND the reason, plus an info warning carrying the node id
+   * (which is what the fidelity readout counts).
+   */
+  function untranslated(node: BlueprintNode, indent: string, reason: string) {
+    const member = node.memberName ? ` — ${node.memberName}` : '';
+    lines.push(`${indent}// TODO: [${node.type}] ${node.name}${member} — ${reason}`);
+    warnings.push({
+      nodeId: node.id,
+      message: `Node "${node.name}" (${node.type}) needs manual translation: ${reason}`,
+      severity: 'info',
+    });
+  }
+
   function walk(node: BlueprintNode, indent: string) {
     if (visited.has(node.id)) return;
     visited.add(node.id);
@@ -439,17 +583,60 @@ export function generateNodeLogic(
     const execOut = node.pins.find((p) => p.direction === 'output' && p.type === 'exec');
     const nextNodeIds = execOut?.linkedTo ?? [];
 
-    // Generate code based on node type
-    if (node.type.includes('CallFunction') && node.memberName) {
-      const args = node.pins
-        .filter((p) => p.direction === 'input' && p.type !== 'exec')
-        .map((p) => p.defaultValue ?? p.name)
-        .join(', ');
-      const target = node.memberParent ? `${node.memberParent}::` : '';
-      lines.push(`${indent}${target}${node.memberName}(${args});`);
+    // Generate code based on node type.
+    //
+    // PrintString is matched FIRST. A real UE export spells it as a
+    // `K2Node_CallFunction` with `MemberName: PrintString`, so it used to be
+    // swallowed by the generic call branch and emitted as a bare
+    // `PrintString(...)` — a function that does not exist unqualified. The old
+    // dedicated branch below was unreachable for every real export.
+    if (node.type.includes('PrintString') || node.memberName === 'PrintString') {
+      const textPin = node.pins.find(
+        (p) => p.direction === 'input' && ['instring', 'string', 'text'].includes(p.name.toLowerCase()),
+      );
+      const literal = textPin
+        ? renderPinLiteral(textPin)
+        : { ok: false as const, reason: 'no string input pin' };
+      if (literal.ok && literal.code.startsWith('TEXT(')) {
+        lines.push(`${indent}UE_LOG(LogTemp, Log, ${literal.code});`);
+      } else {
+        // The old fallback printed `TEXT("%s")` with no argument — a format
+        // string promising a value it never passes.
+        untranslated(node, indent, literal.ok ? 'printed value is not a string literal' : literal.reason);
+      }
+    } else if (node.type.includes('CallFunction') && node.memberName) {
+      // `memberParent` is a UE object path (`/Script/Engine.KismetSystemLibrary`),
+      // not a C++ scope — it used to be emitted verbatim in front of `::`.
+      const parent = node.memberParent;
+      if (parent !== undefined && !CPP_IDENTIFIER.test(parent)) {
+        untranslated(node, indent, `call target "${parent}" is a Blueprint object path, not a C++ scope`);
+      } else if (!CPP_IDENTIFIER.test(node.memberName)) {
+        untranslated(node, indent, `function name "${node.memberName}" is not a C++ identifier`);
+      } else {
+        const exprs = valueInputPins(node).map((p) => resolveInputExpression(p, endpointIndex));
+        const unresolved = exprs.find((e) => !e.ok);
+        if (unresolved && !unresolved.ok) {
+          // Emitting the call with a hole (or with the pin's own name in the
+          // hole) would look translated and compile to nothing meaningful.
+          untranslated(node, indent, `argument not derivable — ${unresolved.reason}`);
+        } else {
+          const args = exprs.map((e) => (e.ok ? e.code : '')).join(', ');
+          lines.push(`${indent}${parent ? `${parent}::` : ''}${node.memberName}(${args});`);
+        }
+      }
     } else if (node.type.includes('IfThenElse')) {
       const condPin = node.pins.find((p) => p.direction === 'input' && p.name === 'Condition');
-      const condExpr = condPin?.defaultValue ?? 'bCondition';
+      const cond = condPin
+        ? resolveInputExpression(condPin, endpointIndex)
+        : { ok: false as const, reason: 'no Condition pin' };
+      if (!cond.ok) {
+        // Neither branch is emitted. An invented condition (the old
+        // `bCondition`) makes one path run unconditionally — a wrong answer
+        // dressed as a translation, which is worse than an unwritten one.
+        untranslated(node, indent, `branch not emitted — ${cond.reason}; both exec paths need manual translation`);
+        return;
+      }
+      const condExpr = cond.code;
       const thenPin = node.pins.find((p) => p.direction === 'output' && p.name === 'Then');
       const elsePin = node.pins.find((p) => p.direction === 'output' && p.name === 'Else');
 
@@ -476,14 +663,22 @@ export function generateNodeLogic(
       }
       return; // Branch handles its own continuations
     } else if (node.type.includes('VariableSet') && node.memberName) {
-      const valuePin = node.pins.find((p) => p.direction === 'input' && p.type !== 'exec' && p.name !== 'self');
-      lines.push(`${indent}${node.memberName} = ${valuePin?.defaultValue ?? '/* value */'};`);
+      const valuePin = valueInputPins(node)[0];
+      const value = valuePin
+        ? resolveInputExpression(valuePin, endpointIndex)
+        : { ok: false as const, reason: 'no value pin' };
+      if (!CPP_IDENTIFIER.test(node.memberName)) {
+        untranslated(node, indent, `variable name "${node.memberName}" is not a C++ identifier`);
+      } else if (!value.ok) {
+        // `/* value */` used to stand in for the right-hand side, producing an
+        // assignment statement with no assignment in it.
+        untranslated(node, indent, `assignment not emitted — ${value.reason}`);
+      } else {
+        lines.push(`${indent}${node.memberName} = ${value.code};`);
+      }
     } else if (node.type.includes('SpawnActor')) {
       lines.push(`${indent}// TODO: SpawnActor — use GetWorld()->SpawnActor<>()`);
       warnings.push({ nodeId: node.id, message: 'SpawnActor requires manual completion', severity: 'info' });
-    } else if (node.type.includes('PrintString') || node.memberName === 'PrintString') {
-      const textPin = node.pins.find((p) => p.direction === 'input' && (p.name === 'InString' || p.name === 'string'));
-      lines.push(`${indent}UE_LOG(LogTemp, Log, TEXT("${textPin?.defaultValue ?? '%s'}"));`);
     } else if (!node.type.includes('Event') && !node.type.includes('FunctionEntry')) {
       lines.push(`${indent}// TODO: [${node.type}] ${node.name}${node.memberName ? ` — ${node.memberName}` : ''}`);
       warnings.push({ nodeId: node.id, message: `Node type "${node.type}" needs manual translation`, severity: 'info' });

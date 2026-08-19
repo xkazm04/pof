@@ -281,10 +281,14 @@ describe('dialog shell convergence — the five hand-rolled dialogs use ui/Modal
       return render(
         <WriteToProjectButton
           className="AFoo"
-          header="// header"
+          // The module is now owned by the view and threaded into codegen, so
+          // the header must declare the matching API macro — a header naming a
+          // different module blocks the confirm (bp-header-uht-valid).
+          header={'class POF_API AFoo : public AActor'}
           source="// source"
           projectPath="C:/proj"
-          defaultModule="PoF"
+          moduleName="PoF"
+          onModuleChange={() => {}}
         />,
       );
     }

@@ -5,6 +5,7 @@ import {
   XCircle, Loader2, Upload,
 } from 'lucide-react';
 import { useBlueprintTranspiler } from '@/hooks/useBlueprintTranspiler';
+import { describeTranspileFidelity } from '@/lib/blueprint-cpp-codegen';
 import { CodeViewer } from '@/components/ui/CodeViewer';
 import { StaggerContainer, StaggerItem } from '@/components/ui/Stagger';
 import { TermChip, DecoratedJargon } from '@/components/ui/TermChip';
@@ -37,6 +38,9 @@ export function TranspilePane({
   onModuleChange: (next: string) => void;
   projectPath: string;
 }) {
+  // Derived from the result's own warning list — never a constant.
+  const fidelity = describeTranspileFidelity(result ?? { warnings: [], nodeCount: 0 });
+
   return (
     <div className="flex flex-col md:flex-row h-full overflow-auto md:overflow-hidden">
       {/* Left: Input */}
@@ -108,8 +112,18 @@ export function TranspilePane({
               <span className="text-2xs text-text-muted">
                 <strong className="text-text">{result.className}</strong> : {result.parentClass}
               </span>
-              <span className="text-2xs text-text-muted">{result.nodeCount} nodes</span>
               <span className="text-2xs text-text-muted">{result.functionCount} functions</span>
+              {/* Fidelity — how much of the graph actually became code. Always
+                  shown: the warning badge below appears only when non-empty, so
+                  a body the walker refused to write used to read as a clean
+                  transpile with nothing stating otherwise. */}
+              <span
+                data-testid="transpile-fidelity"
+                className={`text-2xs ${fidelity.todo > 0 ? 'text-amber-400' : 'text-text-muted'}`}
+                title="Counted from the transpiler's own warnings: every node it refused to translate raises one carrying that node's id."
+              >
+                {fidelity.label}
+              </span>
               {result.warnings.length > 0 && (
                 <span className="text-2xs text-amber-400 flex items-center gap-1">
                   <AlertTriangle className="w-3 h-3" /> {result.warnings.length} warnings
