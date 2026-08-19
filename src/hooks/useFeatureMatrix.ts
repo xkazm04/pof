@@ -31,9 +31,10 @@ interface UseFeatureMatrixResult {
    * What the project scope let this read see — including how many of the module's
    * rows are unattributed legacy rows and how many belong to another project. Null
    * until the first successful fetch. An empty `features` list with
-   * `scope.foreignRows > 0` is NOT an unreviewed module: it is a module whose rows
-   * another project holds (one feature is one row until phase 2 puts the project in
-   * the UNIQUE key).
+   * `scope.foreignRows > 0` is NOT an unreviewed module: it is a module another
+   * project has reviewed and this one has not. Since the project entered the UNIQUE
+   * key those rows are no longer contested — this project can hold its own row for
+   * every one of them without disturbing the owner's.
    */
   scope: ProjectScopeReport | null;
 }

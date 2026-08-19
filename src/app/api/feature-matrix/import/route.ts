@@ -234,7 +234,11 @@ export const POST = withRoute(async (request: NextRequest) => {
     reviewedAt: reviewedAt.value,
     source: 'review' as const,
     projectId,
+    // Structurally 0 since the UNIQUE key includes the project — an import can no
+    // longer reassign another project's row. `claimedUnattributedRows` is the one
+    // ownership change still possible: adopting a legacy (`project_id = ''`) row.
     takenOverFromOtherProjects: upserted.takenOver,
+    claimedUnattributedRows: upserted.adoptedLegacy,
     ...(rejected.length > 0 ? { rejected } : {}),
   };
 

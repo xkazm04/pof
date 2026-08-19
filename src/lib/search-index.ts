@@ -116,8 +116,21 @@ export function rebuildSearchIndex(): { indexed: number } {
     }
 
     // 6. Feature matrix rows from DB (reviewed features with notes)
+    //
+    // The search index is PROJECT-AGNOSTIC — it is one shared FTS5 table rebuilt on
+    // demand, with no project to scope it to, and its doc ids are
+    // `fm-<module>-<feature>`. That stays true here; the global scan is stated, not
+    // fixed. What it must NOT do is list the same feature twice: since the project
+    // entered the feature_matrix UNIQUE key, several projects can hold a row for one
+    // (module, feature), and a plain scan would emit a duplicate search hit per
+    // project. One row per feature is picked — the most recently updated — so the
+    // result set names each feature once, as it always did.
     const fmRows = db.prepare(
-      'SELECT module_id, feature_name, description, review_notes, next_steps, status FROM feature_matrix'
+      // MAX(updated_at) in the select list is SQLite's documented bare-column rule:
+      // the other columns are taken from the row that produced the maximum.
+      `SELECT module_id, feature_name, description, review_notes, next_steps, status, MAX(updated_at)
+       FROM feature_matrix
+       GROUP BY module_id, feature_name`
     ).all() as { module_id: string; feature_name: string; description: string; review_notes: string; next_steps: string; status: string }[];
 
     for (const row of fmRows) {

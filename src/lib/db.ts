@@ -2,6 +2,8 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import os from 'os';
 import fs from 'fs';
+import { logger } from '@/lib/logger';
+import { normalizeProjectId } from '@/lib/project-id';
 
 // POF_DB_PATH overrides the SQLite location — used by the pof-mcp integration suite to
 // run against a throwaway DB instead of the user's real ~/.pof/pof.db. Falls back to the
@@ -15,7 +17,7 @@ const DB_DIR = path.dirname(DB_PATH);
 // rebuilds) are gated behind this so they run once per DB instead of on every
 // cold start. A fresh DB (user_version 0) runs them once against freshly-created
 // tables (all guards no-op) then stamps the version.
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 let db: Database.Database | null = null;
 
@@ -72,7 +74,14 @@ export function getDb(): Database.Database {
       -- 'improved' rebuild above copies columns positionally (SELECT *).
       project_id TEXT NOT NULL DEFAULT '',
       source TEXT NOT NULL DEFAULT 'unknown',
-      UNIQUE(module_id, feature_name)
+      -- The project is PART OF THE KEY. It used to be UNIQUE(module_id, feature_name),
+      -- which made a feature physically ONE row across every project: a full upsert
+      -- under project B REASSIGNED project A's row. Phase 1 made that visible
+      -- (an upsert takenOver count, a 409 naming the owner); this makes it
+      -- impossible. Two projects can now hold the same (module_id, feature_name)
+      -- simultaneously without either overwriting the other. Existing DBs are
+      -- rebuilt into this shape by the migration below, which preserves every row.
+      UNIQUE(project_id, module_id, feature_name)
     )
   `);
 
@@ -246,6 +255,11 @@ export function getDb(): Database.Database {
   if (!new Set(bhCols.map((c) => c.name)).has('project_id')) {
     db.exec("ALTER TABLE build_history ADD COLUMN project_id TEXT NOT NULL DEFAULT ''");
   }
+
+  // Widen the feature_matrix UNIQUE key to include the project, and backfill the
+  // unattributed rows. A table rebuild (SQLite cannot ALTER a constraint) that
+  // preserves EVERY row — see the function for the count checks that abort it.
+  migrateFeatureMatrixProjectKey(db);
   }
 
   // Every feature-matrix read is now scoped by project (see `feature-matrix-db.ts`),
@@ -468,6 +482,153 @@ export function getDb(): Database.Database {
   if (needsMigrations) db.pragma(`user_version = ${SCHEMA_VERSION}`);
 
   return db;
+}
+
+// ─── Migration: project in the feature_matrix UNIQUE key ─────────────────────
+//
+// The key was `UNIQUE(module_id, feature_name)`, so a feature was physically ONE
+// row across every project: a full upsert under project B REASSIGNED project A's
+// row. Phase 1 (1f27793f) made that visible rather than silent; this makes it
+// impossible. SQLite cannot ALTER a constraint, so the table is REBUILT — copy,
+// verify counts, swap — and never touched with a destructive ALTER.
+//
+// BACKFILL: every row carried the unattributed `project_id = ''` (165 feature rows
+// and 10 review snapshots when this shipped). Leaving them there would strand them
+// under `''` forever; guessing an owner is the mis-attribution the whole scoping
+// effort exists to end. The OPERATOR STATED THE RULE on 2026-08-19: attribute all
+// existing unattributed rows to the **PoF** project. `resolveBackfillProjectId`
+// derives that id from `recent_projects` through the SAME `normalizeProjectId` the
+// application writes with — nothing here hardcodes a path. If no such project row
+// exists the backfill is SKIPPED and said so loudly: the rows stay `''`, stay
+// visible to every project under phase 1's legacy rule, and nothing is invented.
+
+/** Columns copied by the rebuild, in the order the new table declares them. Named
+ *  EXPLICITLY — a `SELECT *` positional copy silently shifts every value one column
+ *  left the moment the source and target column orders differ. */
+const FEATURE_MATRIX_COLUMNS = [
+  'id', 'module_id', 'feature_name', 'category', 'status', 'description',
+  'file_paths', 'review_notes', 'quality_score', 'next_steps', 'last_reviewed_at',
+  'created_at', 'updated_at', 'project_id', 'source',
+].join(', ');
+
+/** The marker that says the widened key is already in place. */
+const PROJECT_KEY_MARKER = 'UNIQUE(project_id, module_id, feature_name)';
+
+/**
+ * The project the operator's backfill rule names, derived (never hardcoded) from
+ * `recent_projects` — the table that records the projects actually opened. Returns
+ * `''` when no PoF project has ever been opened in this DB, which the caller treats
+ * as "do not backfill" rather than "backfill to nothing".
+ */
+function resolveBackfillProjectId(database: Database.Database): string {
+  const rows = database
+    .prepare('SELECT project_path FROM recent_projects ORDER BY last_opened_at DESC')
+    .all() as { project_path: string }[];
+  for (const r of rows) {
+    const id = normalizeProjectId(r.project_path);
+    if (id.split('/').pop() === 'pof') return id;
+  }
+  return '';
+}
+
+function countRows(database: Database.Database, table: string): number {
+  return (database.prepare(`SELECT COUNT(*) as c FROM ${table}`).get() as { c: number }).c;
+}
+
+function migrateFeatureMatrixProjectKey(database: Database.Database): void {
+  const sqlRow = database
+    .prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='feature_matrix'")
+    .get() as { sql: string } | undefined;
+  // Already widened (or a fresh DB created straight into the new shape).
+  if (!sqlRow?.sql || sqlRow.sql.includes(PROJECT_KEY_MARKER)) return;
+
+  const featuresBefore = countRows(database, 'feature_matrix');
+  const snapshotsBefore = countRows(database, 'review_snapshots');
+  const target = resolveBackfillProjectId(database);
+  const unattributedFeatures = (
+    database.prepare("SELECT COUNT(*) as c FROM feature_matrix WHERE project_id = ''").get() as { c: number }
+  ).c;
+  const unattributedSnapshots = (
+    database.prepare("SELECT COUNT(*) as c FROM review_snapshots WHERE project_id = ''").get() as { c: number }
+  ).c;
+
+  if (!target && (unattributedFeatures > 0 || unattributedSnapshots > 0)) {
+    logger.warn(
+      `[db] feature_matrix key migration: NO backfill. ${unattributedFeatures} feature row(s) and ` +
+        `${unattributedSnapshots} snapshot(s) carry project_id = '' and recent_projects holds no PoF ` +
+        `project to attribute them to. They are preserved as-is and stay visible to every project ` +
+        `(the legacy rule) — no owner was guessed.`,
+    );
+  }
+
+  const rebuild = database.transaction(() => {
+    if (target) {
+      database.prepare("UPDATE feature_matrix SET project_id = ? WHERE project_id = ''").run(target);
+      database.prepare("UPDATE review_snapshots SET project_id = ? WHERE project_id = ''").run(target);
+    }
+
+    // The backfill cannot collide: the OLD key already made (module_id, feature_name)
+    // globally unique, so no two rows can normalize onto the same widened key.
+    database.exec(`
+      CREATE TABLE feature_matrix_projectkey (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        module_id TEXT NOT NULL,
+        feature_name TEXT NOT NULL,
+        category TEXT NOT NULL DEFAULT 'general',
+        status TEXT NOT NULL DEFAULT 'unknown'
+          CHECK(status IN ('implemented', 'improved', 'partial', 'missing', 'unknown')),
+        description TEXT NOT NULL DEFAULT '',
+        file_paths TEXT NOT NULL DEFAULT '[]',
+        review_notes TEXT NOT NULL DEFAULT '',
+        quality_score INTEGER,
+        next_steps TEXT NOT NULL DEFAULT '',
+        last_reviewed_at TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+        project_id TEXT NOT NULL DEFAULT '',
+        source TEXT NOT NULL DEFAULT 'unknown',
+        ${PROJECT_KEY_MARKER}
+      )
+    `);
+    database.exec(
+      `INSERT INTO feature_matrix_projectkey (${FEATURE_MATRIX_COLUMNS})
+       SELECT ${FEATURE_MATRIX_COLUMNS} FROM feature_matrix`,
+    );
+
+    // A lost row is a failed migration: verify the copy BEFORE anything is dropped,
+    // and throw to roll the whole transaction back rather than swap in a short table.
+    const copied = countRows(database, 'feature_matrix_projectkey');
+    if (copied !== featuresBefore) {
+      throw new Error(
+        `[db] feature_matrix key migration ABORTED: copied ${copied} of ${featuresBefore} rows. ` +
+          `Nothing was dropped; the original table is intact.`,
+      );
+    }
+
+    database.exec('DROP TABLE feature_matrix');
+    database.exec('ALTER TABLE feature_matrix_projectkey RENAME TO feature_matrix');
+  });
+
+  rebuild();
+
+  const featuresAfter = countRows(database, 'feature_matrix');
+  const snapshotsAfter = countRows(database, 'review_snapshots');
+  if (featuresAfter !== featuresBefore || snapshotsAfter !== snapshotsBefore) {
+    throw new Error(
+      `[db] feature_matrix key migration LOST ROWS: feature_matrix ${featuresBefore} -> ${featuresAfter}, ` +
+        `review_snapshots ${snapshotsBefore} -> ${snapshotsAfter}.`,
+    );
+  }
+
+  logger.info(
+    `[db] feature_matrix UNIQUE key widened to (project_id, module_id, feature_name). ` +
+      `Rows preserved: feature_matrix ${featuresBefore} -> ${featuresAfter}, ` +
+      `review_snapshots ${snapshotsBefore} -> ${snapshotsAfter}. ` +
+      (target
+        ? `Backfilled ${unattributedFeatures} feature row(s) and ${unattributedSnapshots} snapshot(s) ` +
+          `from project_id = '' to "${target}" (operator rule, 2026-08-19).`
+        : `No backfill was applied.`),
+  );
 }
 
 // ─── Prepared-statement cache ────────────────────────────────────────────────

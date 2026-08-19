@@ -1,5 +1,6 @@
 import { getDb } from './db';
 import { logger } from '@/lib/logger';
+import { normalizeProjectId } from '@/lib/project-id';
 import type { SubModuleId } from '@/types/modules';
 import { FEATURE_STATUSES, normalizeFeatureSource } from '@/types/feature-matrix';
 import type { FeatureRow, FeatureSource, FeatureStatus, FeatureSummary } from '@/types/feature-matrix';
@@ -39,28 +40,21 @@ function validateStatus(status: string): FeatureStatus {
 // infers it, because a read that guessed which project it was scoped to would be
 // exactly the silent mis-attribution this change exists to remove.
 //
-// NOT in this slice (phase 2, deliberately): the UNIQUE key is still
-// `(module_id, feature_name)` — so a feature is physically ONE row and can belong
-// to only one project at a time — and legacy rows are NOT backfilled. Both are
-// reported by {@link getProjectScopeReport} rather than migrated.
+// PHASE 2 (shipped): the UNIQUE key is now `(project_id, module_id, feature_name)`
+// and the previously-unattributed rows were backfilled to the project the operator
+// named. Two projects can hold the same feature simultaneously — a write under B can
+// no longer reassign A's row — so `UpsertResult.takenOver` is structurally 0 and the
+// 409 below reports "you have no row of your own", not a completed takeover. See the
+// migration in `db.ts` for the rebuild + row-count checks.
+//
+// STILL TRUE (phase 1's rule, deliberately unchanged): a named project reads its own
+// rows PLUS any `project_id = ''` rows, so an unattributed row written after the
+// backfill (an unscoped write path) never becomes invisible.
 
-/**
- * Normalize an active-project identity into the value stored in `project_id`.
- *
- * Paths are compared case-insensitively with forward slashes and no trailing
- * separator, so `C:\Users\...\PoF\` and `c:/users/.../pof` are one project rather
- * than three. An absent/blank value normalizes to `''` — the UNSCOPED id, which is
- * also what every legacy row carries.
- */
-export function normalizeProjectId(raw: string | null | undefined): string {
-  if (typeof raw !== 'string') return '';
-  const trimmed = raw.trim();
-  if (!trimmed) return '';
-  return trimmed.replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
-}
-
-/** The id every legacy (never-attributed) row carries, and what an unscoped caller resolves to. */
-export const UNSCOPED_PROJECT_ID = '';
+// `normalizeProjectId` lives in `@/lib/project-id` so the SCHEMA MIGRATION in `db.ts`
+// can derive the exact id the application writes without importing this module (which
+// imports `db.ts`). Re-exported here because this is where every caller already looks.
+export { normalizeProjectId, UNSCOPED_PROJECT_ID } from '@/lib/project-id';
 
 /**
  * WHERE fragment + params scoping a read to the active project.
@@ -156,7 +150,7 @@ export function getProjectScopeReport(projectId?: string, moduleId?: string): Pr
       `${rows.legacy} carry no project attribution (shown, because nothing proves they belong elsewhere), ` +
       `and ${rows.foreign} belong to another project and are NOT shown. ` +
       `${distinctProjects} named project(s) are represented across the table. ` +
-      `The UNIQUE key is still (module_id, feature_name), so a feature is one row and can be held by only one project — phase 2.`
+      `The UNIQUE key is (project_id, module_id, feature_name), so two projects can hold the same feature at once and neither can overwrite the other.`
     : `NO project was named, so this read is UNSCOPED: it returned only the ${rows.legacy} unattributed row(s) of ${where} ` +
       `and excluded ${rows.foreign} row(s) owned by ${distinctProjects} named project(s). ` +
       `This is not a project-wide view — it is the legacy set, stated as such.`;
@@ -300,13 +294,25 @@ export interface UpsertResult {
   /**
    * Rows this write took over from a DIFFERENT named project.
    *
-   * The UNIQUE key is still `(module_id, feature_name)`, so a feature is physically
-   * ONE row: a full upsert under project B necessarily overwrites project A's row.
-   * Stamping the writer is the honest half (the project that wrote can see what it
-   * wrote); this count is the other half — the takeover is REPORTED rather than
-   * silent. Phase 2 (project in the UNIQUE key) is what removes the takeover itself.
+   * **Structurally 0 since the project entered the UNIQUE key.** It used to be the
+   * honest report of an unavoidable overwrite: with `UNIQUE(module_id, feature_name)`
+   * a feature was physically ONE row, so an upsert under project B reassigned project
+   * A's. The key is now `(project_id, module_id, feature_name)`, so B gets its OWN row
+   * and A's is untouched. The field is kept — and kept truthful — because the routes
+   * report it and a caller reading `takenOverFromOtherProjects: 0` should be able to
+   * trust that it means no takeover, not that the count was dropped.
    */
   takenOver: number;
+  /**
+   * Rows this write CLAIMED from the unattributed legacy bucket (`project_id = ''`).
+   *
+   * A named project writing a feature that exists only as a legacy row adopts that
+   * row rather than inserting beside it — the same claim `updateFeatureStatus` has
+   * always made. Without it the widened key would leave the project reading BOTH its
+   * new row and the legacy one (a named project sees `own OR ''`), i.e. one feature
+   * listed twice. Reported, not silent: an adoption changes who owns a row.
+   */
+  adoptedLegacy: number;
 }
 
 export function upsertFeatures(
@@ -324,9 +330,14 @@ export function upsertFeatures(
   // seedOnly = insert-if-missing: seeding static definitions must never
   // clobber an existing row's review data (statuses, scores, notes) — the
   // full DO UPDATE path is for real reviews/imports only.
+  //
+  // The conflict target matches the UNIQUE key exactly — `(project_id, module_id,
+  // feature_name)`. Naming a narrower target than the key would make the upsert
+  // raise "ON CONFLICT clause does not match any PRIMARY KEY or UNIQUE constraint"
+  // rather than upsert, so this pair moves together with the schema.
   const conflictClause = opts?.seedOnly
-    ? 'ON CONFLICT(module_id, feature_name) DO NOTHING'
-    : `ON CONFLICT(module_id, feature_name) DO UPDATE SET
+    ? 'ON CONFLICT(project_id, module_id, feature_name) DO NOTHING'
+    : `ON CONFLICT(project_id, module_id, feature_name) DO UPDATE SET
       category = excluded.category,
       status = excluded.status,
       description = excluded.description,
@@ -344,11 +355,14 @@ export function upsertFeatures(
     ${conflictClause}
   `);
 
-  // Which of the rows this batch touches are currently held by ANOTHER named
-  // project. Measured BEFORE the write, because the write reassigns them.
-  const ownerStmt = db.prepare(
-    'SELECT project_id FROM feature_matrix WHERE module_id = ? AND feature_name = ?',
+  // Does this (module, feature) exist in the UNATTRIBUTED bucket? A named project
+  // reads `own OR ''`, so inserting its own row beside a legacy one would list the
+  // same feature twice. Claiming the legacy row instead keeps the list honest and
+  // matches what `updateFeatureStatus` has always done with an unattributed row.
+  const legacyStmt = db.prepare(
+    "SELECT id FROM feature_matrix WHERE module_id = ? AND feature_name = ? AND project_id = ''",
   );
+  const adoptStmt = db.prepare('UPDATE feature_matrix SET project_id = ? WHERE id = ?');
 
   // Count what the statements ACTUALLY wrote. A seedOnly batch is `DO NOTHING` on
   // every existing row, so the input array says nothing about whether the table
@@ -356,11 +370,18 @@ export function upsertFeatures(
   // touched a row.
   const transaction = db.transaction((items: UpsertFeature[]) => {
     let written = 0;
-    let takenOver = 0;
+    let adoptedLegacy = 0;
     for (const f of items) {
-      const owner = ownerStmt.get(moduleId, f.featureName) as { project_id: string } | undefined;
-      const isForeign =
-        owner !== undefined && owner.project_id !== '' && owner.project_id !== projectId;
+      const legacy = projectId
+        ? (legacyStmt.get(moduleId, f.featureName) as { id: number } | undefined)
+        : undefined;
+      if (legacy) {
+        // A seed must never claim (or clobber) a row that already exists — the legacy
+        // row IS this feature, so the insert-if-missing batch is already satisfied.
+        if (opts?.seedOnly) continue;
+        adoptStmt.run(projectId, legacy.id);
+        adoptedLegacy += 1;
+      }
       const info = stmt.run(
         moduleId,
         f.featureName,
@@ -376,22 +397,20 @@ export function upsertFeatures(
         projectId,
       );
       written += info.changes;
-      // A `seedOnly` conflict is DO NOTHING: nothing changed, so nothing was taken.
-      if (isForeign && info.changes > 0) takenOver += 1;
     }
-    return { written, takenOver };
+    return { written, adoptedLegacy };
   });
 
-  const { written: writtenRows, takenOver } = transaction(features) as {
+  const { written: writtenRows, adoptedLegacy } = transaction(features) as {
     written: number;
-    takenOver: number;
+    adoptedLegacy: number;
   };
 
-  if (takenOver > 0) {
-    logger.warn(
-      `[feature-matrix-db] ${takenOver} row(s) in "${moduleId}" were re-assigned to project ` +
-        `"${projectId || '(unscoped)'}" by this write — the UNIQUE key is still ` +
-        `(module_id, feature_name), so one feature is one row across all projects (phase 2).`,
+  if (adoptedLegacy > 0) {
+    logger.info(
+      `[feature-matrix-db] ${adoptedLegacy} unattributed row(s) in "${moduleId}" were claimed by ` +
+        `project "${projectId}" by this write. No row was taken from another project — the UNIQUE ` +
+        `key is (project_id, module_id, feature_name), so projects cannot overwrite each other.`,
     );
   }
 
@@ -404,7 +423,10 @@ export function upsertFeatures(
     captureReviewSnapshot(moduleId, projectId);
   }
 
-  return { written: writtenRows, projectId, takenOver };
+  // `takenOver: 0` is a fact about the SCHEMA, not an unmeasured default: with the
+  // project in the UNIQUE key there is no statement here that can reach another
+  // project's row.
+  return { written: writtenRows, projectId, takenOver: 0, adoptedLegacy };
 }
 
 /** Outcome of a single-row status write, so the caller can report what happened
@@ -458,32 +480,46 @@ export function updateFeatureStatus(
   const reviewedAt = normalizeReviewTimestamp(opts?.reviewedAt) ?? new Date().toISOString();
   const nextStatus = validateStatus(status);
 
+  // With the project in the UNIQUE key, several rows can share (module, feature) —
+  // one per project. Resolve the one this caller may write, IN SCOPE: its own row
+  // first, then the unattributed legacy row (which it claims, as it always has).
+  // Selecting by (module, feature) alone would now pick an arbitrary project's row.
+  const scope = projectScopeSql(projectId);
   const existing = db
-    .prepare('SELECT status, project_id FROM feature_matrix WHERE module_id = ? AND feature_name = ?')
-    .get(moduleId, featureName) as { status: string; project_id: string } | undefined;
+    .prepare(
+      `SELECT id, status, project_id FROM feature_matrix
+       WHERE module_id = ? AND feature_name = ? AND ${scope.sql}
+       ORDER BY (project_id = '') ASC
+       LIMIT 1`,
+    )
+    .get(moduleId, featureName, ...scope.params) as
+    | { id: number; status: string; project_id: string }
+    | undefined;
 
   if (!existing) {
+    // Nothing in scope. A row may still exist under ANOTHER project — that is a
+    // different failure from "no such feature" and must say so, rather than letting
+    // a plainly-present feature be reported as missing. Under the widened key this
+    // no longer means "someone took your row": it means this project has none of its
+    // own, and (unlike before) creating one would not disturb the owner's.
+    const foreign = db
+      .prepare(
+        "SELECT project_id FROM feature_matrix WHERE module_id = ? AND feature_name = ? AND project_id <> '' AND project_id <> ? LIMIT 1",
+      )
+      .get(moduleId, featureName, projectId) as { project_id: string } | undefined;
     return {
       updated: false, previousStatus: null, statusChanged: false,
-      reviewedAt: null, source, foreignOwner: null,
+      reviewedAt: null, source, foreignOwner: foreign?.project_id ?? null,
     };
   }
 
-  // The row exists but is held by another named project: this fix is about a
-  // feature the active project cannot see, so it must not silently rewrite it.
-  // Reported as a distinct outcome rather than folded into "no such feature".
-  if (existing.project_id !== '' && existing.project_id !== projectId) {
-    return {
-      updated: false, previousStatus: null, statusChanged: false,
-      reviewedAt: null, source, foreignOwner: existing.project_id,
-    };
-  }
-
+  // Addressed by id: the WHERE that found the row is the WHERE that writes it, so a
+  // sibling project's row for the same feature can never be caught by this UPDATE.
   db.prepare(
     `UPDATE feature_matrix
      SET status = ?, last_reviewed_at = ?, source = ?, project_id = ?, updated_at = datetime('now')
-     WHERE module_id = ? AND feature_name = ?`,
-  ).run(nextStatus, reviewedAt, source, projectId, moduleId, featureName);
+     WHERE id = ?`,
+  ).run(nextStatus, reviewedAt, source, projectId, existing.id);
 
   const previousStatus = existing.status as FeatureStatus;
   const statusChanged = previousStatus !== nextStatus;

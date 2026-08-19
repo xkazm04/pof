@@ -18,10 +18,15 @@
  *
  * Runs against the real SQLite schema (throwaway DB), not a mock.
  *
- * DELIBERATELY NOT ASSERTED (phase 2, out of this slice): that two projects can
- * hold the same `(module_id, feature_name)`. The UNIQUE key is unchanged, so a
- * feature is physically ONE row — the takeover that follows from that is asserted
- * to be REPORTED (`takenOver` / `foreignOwner`), not to be impossible.
+ * PHASE 2 (now shipped) RE-POINTED the takeover assertions rather than deleting
+ * them. They pinned `takenOver` / `takenOverFromOtherProjects` / the 409-naming-the-
+ * owner because takeover was POSSIBLE: the UNIQUE key was `(module_id, feature_name)`
+ * so a feature was physically one row. The key is now
+ * `(project_id, module_id, feature_name)`, so the same scenarios assert the new
+ * truth — two projects hold the same feature simultaneously and NO takeover occurs —
+ * and `takenOver` is asserted to be 0 for the write that used to return 1. The
+ * 409 is kept and re-pointed: it no longer means "your row was taken", it means
+ * "you have no row of your own and the one that exists is someone else's".
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { NextRequest } from 'next/server';
@@ -217,7 +222,7 @@ describe('legacy rows (project_id = "") never silently vanish', () => {
     expect(forB.foreignRows).toBe(1); // A's row — excluded, and said so
   });
 
-  it('a scoped read does not adopt or backfill the legacy row (that is phase 2)', () => {
+  it('a scoped READ still never adopts or backfills the legacy row (only a write can)', () => {
     getFeaturesByModule(MODULE, PROJECT_A);
     getProjectScopeReport(PROJECT_A, MODULE);
     const stored = getDb()
@@ -328,7 +333,11 @@ describe('every write path stamps the active project', () => {
     expect(getFeaturesByModule(MODULE, PROJECT_A)[0].status).toBe('implemented');
   });
 
-  it('a PATCH against ANOTHER project\'s row is refused and says whose it is', async () => {
+  it('a PATCH where the caller holds NO row is refused and names who does', async () => {
+    // RE-POINTED (phase 2): this used to assert a takeover was refused. Under the
+    // widened key B simply has no row of its own — but reporting "no such feature"
+    // for a feature that plainly exists in the module is the mis-attribution the
+    // scoping removes, so the 409 still names the project that does hold one.
     upsertFeatures(MODULE, [row(A_ONLY, 'partial', 'A')], { projectId: PROJECT_A });
     const res = await PATCH(req('/api/feature-matrix', 'PATCH', {
       moduleId: MODULE, featureName: A_ONLY, status: 'implemented', projectId: PROJECT_B,
@@ -351,24 +360,61 @@ describe('every write path stamps the active project', () => {
     expect(stored.project_id).toBe(normalizeProjectId(PROJECT_B));
   });
 
-  it('a takeover under the phase-1 UNIQUE key is REPORTED, not silent', () => {
+  it('RE-POINTED: a write under B takes NOTHING from A — both hold the feature', () => {
+    // This assertion pinned `takenOver === 1` while takeover was possible. The
+    // project is now part of the UNIQUE key, so the same scenario asserts the new
+    // truth: B gets its own row, A keeps its own, and neither status is the other's.
     upsertFeatures(MODULE, [row(SHARED, 'implemented', 'A')], { projectId: PROJECT_A });
     const result = upsertFeatures(MODULE, [row(SHARED, 'missing', 'B')], { projectId: PROJECT_B });
-    expect(result.takenOver).toBe(1);
+    expect(result.takenOver).toBe(0);
     expect(result.projectId).toBe(normalizeProjectId(PROJECT_B));
-    // The phase-2 consequence, asserted so it cannot regress into a surprise:
-    // one feature is one row, so A can no longer see it — and A's scope says why.
-    expect(getFeaturesByModule(MODULE, PROJECT_A)).toHaveLength(0);
+
+    const forA = getFeaturesByModule(MODULE, PROJECT_A);
+    const forB = getFeaturesByModule(MODULE, PROJECT_B);
+    expect(forA.map((f) => f.featureName)).toEqual([SHARED]);
+    expect(forB.map((f) => f.featureName)).toEqual([SHARED]);
+    expect(forA[0].status).toBe('implemented');
+    expect(forB[0].status).toBe('missing');
+    // Two physical rows now, and A's is not foreign to A.
+    expect(getProjectScopeReport(PROJECT_A, MODULE).ownedRows).toBe(1);
     expect(getProjectScopeReport(PROJECT_A, MODULE).foreignRows).toBe(1);
   });
 
-  it('a seedOnly write reports no takeover (DO NOTHING changed nothing)', () => {
+  it('RE-POINTED: a seedOnly write under B also gets its own row, taking nothing', () => {
     upsertFeatures(MODULE, [row(SHARED, 'implemented', 'A')], { projectId: PROJECT_A });
     const result = upsertFeatures(MODULE, [row(SHARED, 'unknown' as 'missing', '')], {
       projectId: PROJECT_B, seedOnly: true,
     });
     expect(result.takenOver).toBe(0);
+    // A is untouched (the original assertion) AND B now has a seed row of its own
+    // (the new truth) — a seed under one project used to be a DO NOTHING against
+    // another project's reviewed row.
     expect(getFeaturesByModule(MODULE, PROJECT_A)).toHaveLength(1);
+    expect(getFeaturesByModule(MODULE, PROJECT_A)[0].status).toBe('implemented');
+    expect(getFeaturesByModule(MODULE, PROJECT_B).map((f) => f.status)).toEqual(['unknown']);
+  });
+
+  it('RE-POINTED: the POST route reports zero takeovers where it used to report one', async () => {
+    upsertFeatures(MODULE, [row(SHARED, 'implemented', 'A')], { projectId: PROJECT_A });
+    const res = await json(await POST(req('/api/feature-matrix', 'POST', {
+      moduleId: MODULE, projectId: PROJECT_B, source: 'review',
+      features: [row(SHARED, 'missing', 'B')],
+    })));
+    expect(res.data!.takenOverFromOtherProjects).toBe(0);
+    expect(getFeaturesByModule(MODULE, PROJECT_A)[0].status).toBe('implemented');
+  });
+
+  it('a write CLAIMS an unattributed row instead of listing the feature twice', () => {
+    // A named project reads `own OR ''`. Inserting beside a legacy row would show
+    // the same feature twice; the legacy row is adopted, and the adoption reported.
+    insertLegacyRow(SHARED, 'partial');
+    const result = upsertFeatures(MODULE, [row(SHARED, 'implemented', 'A')], { projectId: PROJECT_A });
+    expect(result.adoptedLegacy).toBe(1);
+    expect(getFeaturesByModule(MODULE, PROJECT_A).map((f) => f.featureName)).toEqual([SHARED]);
+    const stored = getDb()
+      .prepare('SELECT project_id FROM feature_matrix WHERE module_id = ? AND feature_name = ?')
+      .all(MODULE, SHARED) as { project_id: string }[];
+    expect(stored).toEqual([{ project_id: normalizeProjectId(PROJECT_A) }]);
   });
 
   it('clearModuleFeatures cannot reach another project\'s rows', () => {

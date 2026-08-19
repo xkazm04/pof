@@ -81,14 +81,18 @@ export const POST = withRoute(async (request: NextRequest) => {
   const source = resolvePostSource(body.source, seedOnly);
   const projectId = bodyProjectId(body);
   const result = upsertFeatures(moduleId as SubModuleId, features, { seedOnly, source, projectId });
-  // `takenOver` is reported, not swallowed: under the phase-1 UNIQUE key a feature
-  // is one row, so writing under project B can reassign rows project A was reading.
+  // `takenOverFromOtherProjects` is now structurally 0 — the UNIQUE key includes the
+  // project, so this write cannot reach another project's row. It is still reported
+  // rather than dropped, so a client that used to watch it keeps a truthful answer.
+  // `claimedUnattributedRows` is the write that CAN still change ownership: claiming
+  // a legacy (`project_id = ''`) row for this project.
   return apiSuccess({
     count: features.length,
     source,
     projectId: result.projectId,
     written: result.written,
     takenOverFromOtherProjects: result.takenOver,
+    claimedUnattributedRows: result.adoptedLegacy,
   });
 }, 'Failed to save features');
 
@@ -138,9 +142,10 @@ export const PATCH = withRoute(async (request: NextRequest) => {
     // exists is the mis-attribution this scoping removes.
     if (result.foreignOwner) {
       return apiError(
-        `"${featureName}" in module "${moduleId}" belongs to project "${result.foreignOwner}", not to ` +
-          `"${projectId || '(unscoped)'}" — nothing was updated. One feature is one row until the ` +
-          `UNIQUE key includes the project (phase 2).`,
+        `"${featureName}" in module "${moduleId}" has no row under project "${projectId || '(unscoped)'}" — ` +
+          `the row that exists belongs to project "${result.foreignOwner}". Nothing was updated, and ` +
+          `nothing was taken: the UNIQUE key is (project_id, module_id, feature_name), so this project ` +
+          `may hold its OWN row for the same feature — seed or review the module under it first.`,
         409,
       );
     }

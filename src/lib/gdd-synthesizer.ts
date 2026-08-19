@@ -10,6 +10,7 @@ import { countChecklist, countAllChecklists } from './checklist-progress';
 import type { FeatureStatus } from '@/types/feature-matrix';
 import type { SubModuleId } from '@/types/modules';
 import { formatBytes, formatDuration } from '@/lib/format';
+import { normalizeProjectId } from '@/lib/project-id';
 
 // ─── GDD Section Types ──────────────────────────────────────────────────────
 
@@ -99,22 +100,48 @@ interface SnapshotRow {
 
 // ─── Synthesizer ────────────────────────────────────────────────────────────
 
-export function synthesizeGDD(projectName: string, checklistProgress: Record<string, Record<string, boolean>>): GDDDocument {
+/**
+ * Scope fragment for the three `feature_matrix` / `review_snapshots` reads below.
+ *
+ * A named project sees its own rows plus the unattributed legacy ones — the SAME
+ * rule `feature-matrix-db.projectScopeSql` applies everywhere else, so the GDD and
+ * the matrix cannot disagree about which rows exist.
+ *
+ * NO project given ⇒ the reads stay GLOBAL, deliberately: this is the historical
+ * behaviour and the only one that still produces a document. Applying the scoped
+ * rule to an unscoped call would return the legacy set, which is empty on any DB
+ * where the rows have been attributed — an empty GDD reads as "nothing is built".
+ * The residual is stated rather than hidden: with the project now in the
+ * feature_matrix UNIQUE key, two projects CAN hold the same feature, so an unscoped
+ * synthesis counts such a feature once per project. `/api/game-design-doc` does not
+ * yet forward a project, so today's GDD is still the global view.
+ */
+function gddScope(projectId: string | undefined): { sql: string; params: string[] } {
+  const pid = normalizeProjectId(projectId);
+  return pid ? { sql: `WHERE (project_id = ? OR project_id = '')`, params: [pid] } : { sql: '', params: [] };
+}
+
+export function synthesizeGDD(
+  projectName: string,
+  checklistProgress: Record<string, Record<string, boolean>>,
+  projectId?: string,
+): GDDDocument {
   const db = getDb();
   // The synthesizer reads level_design_docs directly; ensure its owning module's table
   // exists so the GDD works on a fresh project DB (the table is otherwise only created
   // when a level-design API is first hit). Surfaced by the pof-mcp integration suite.
   ensureLevelDesignTable();
   const now = new Date().toISOString();
+  const scope = gddScope(projectId);
 
   // 1. Feature Matrix
   const featureSummary = db.prepare(
-    "SELECT module_id, status, COUNT(*) as cnt FROM feature_matrix GROUP BY module_id, status"
-  ).all() as FeatureSummaryRow[];
+    `SELECT module_id, status, COUNT(*) as cnt FROM feature_matrix ${scope.sql} GROUP BY module_id, status`
+  ).all(...scope.params) as FeatureSummaryRow[];
 
   const featureDetails = db.prepare(
-    "SELECT module_id, feature_name, status, description, quality_score FROM feature_matrix ORDER BY module_id, feature_name"
-  ).all() as FeatureDetailRow[];
+    `SELECT module_id, feature_name, status, description, quality_score FROM feature_matrix ${scope.sql} ORDER BY module_id, feature_name`
+  ).all(...scope.params) as FeatureDetailRow[];
 
   let totalFeatures = 0;
   let implementedFeatures = 0;
@@ -155,12 +182,16 @@ export function synthesizeGDD(projectName: string, checklistProgress: Record<str
   ).all() as BuildRow[];
 
   // 7. Review snapshots (latest per module)
+  // The scope filter goes INSIDE the MAX(id) sub-select as well, so "latest per
+  // module" is the latest point this project can see — not another project's newer
+  // one, which would put a trend line the reader never produced into their GDD.
   const snapshots = db.prepare(
     `SELECT module_id, reviewed_at, total, implemented, partial, avg_quality
      FROM review_snapshots
-     WHERE id IN (SELECT MAX(id) FROM review_snapshots GROUP BY module_id)
+     WHERE id IN (SELECT MAX(id) FROM review_snapshots ${scope.sql} GROUP BY module_id)
+       ${scope.sql ? scope.sql.replace(/^WHERE/, 'AND') : ''}
      ORDER BY module_id`
-  ).all() as SnapshotRow[];
+  ).all(...scope.params, ...scope.params) as SnapshotRow[];
 
   // ─── Build Sections ─────────────────────────────────────────────────────
 
