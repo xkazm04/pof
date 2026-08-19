@@ -4,9 +4,11 @@ import { useMemo, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import type { LabTheme } from './theme';
 import type { LabGroup, LabCatalog, LabEntity } from './useLabCatalogData';
+import type { LifecycleState } from '@/lib/catalog/types';
 import { STATUS_GLYPH, lifecycleStatus, statusAriaLabel, type StatusKind } from './statusLanguage';
 import { useCatalogStore } from '@/stores/catalogStore';
 import { useRovingFocus } from './hooks/useRovingFocus';
+import type { DerivedLifecycleMap } from './useDerivedLifecycle';
 
 interface CatalogTreeProps {
   t: LabTheme;
@@ -16,6 +18,13 @@ interface CatalogTreeProps {
   selectedEntityId: string | null;
   onSelectCatalog: (id: string) => void;
   onSelectEntity: (id: string) => void;
+  /**
+   * Server-derived lifecycle per entity (see `useDerivedLifecycle`). Display only:
+   * the seeded `entity.lifecycle` is the hardcoded `'planned'` for every entity in the
+   * product, so without this the tree paints `pending ○` no matter what the pipeline
+   * proved. Absent/unfetched entities fall back to the seed — never to a guess.
+   */
+  derivedLifecycle?: DerivedLifecycleMap;
 }
 
 function lifecycleColor(status: StatusKind, t: LabTheme, isDraft: boolean): string {
@@ -25,8 +34,19 @@ function lifecycleColor(status: StatusKind, t: LabTheme, isDraft: boolean): stri
   return t.muted;
 }
 
+/**
+ * The dot's tooltip: the state, then the evidence sentence behind it. A derived
+ * `wired` says its runtime is unproven, so a shape-only all-`pass` entity can never
+ * read as verified; with no derivation the tooltip says the state is the seed's.
+ */
+function lifecycleTitle(name: string, lifecycle: LifecycleState, summary?: string): string {
+  return summary
+    ? `${name}: ${lifecycle} — ${summary}`
+    : `${name}: ${lifecycle} (seeded default — no pipeline artifacts derived yet)`;
+}
+
 function CatalogRow({
-  t, catalog, isSelected, entities, selectedEntityId, onSelectCatalog, onSelectEntity, rovingItemProps,
+  t, catalog, isSelected, entities, selectedEntityId, onSelectCatalog, onSelectEntity, rovingItemProps, derivedLifecycle,
 }: {
   t: LabTheme;
   catalog: LabCatalog;
@@ -36,6 +56,7 @@ function CatalogRow({
   onSelectCatalog: (id: string) => void;
   onSelectEntity: (id: string) => void;
   rovingItemProps?: { tabIndex: number; 'data-roving-active'?: boolean };
+  derivedLifecycle?: DerivedLifecycleMap;
 }) {
   return (
     <>
@@ -70,7 +91,10 @@ function CatalogRow({
       {isSelected && entities.map((entity) => {
         const isDraft = entity.id.startsWith('draft-');
         const isEntitySelected = entity.id === selectedEntityId;
-        const status = lifecycleStatus(entity.lifecycle);
+        // Derived-from-artifacts state wins over the seed's hardcoded `planned`.
+        const derived = derivedLifecycle?.get(entity.id);
+        const lifecycle = derived?.lifecycle ?? entity.lifecycle;
+        const status = lifecycleStatus(lifecycle);
         const dotColor = lifecycleColor(status, t, isDraft);
         // Pass fills the dot; fail/pending use a glyph-bearing capsule so the status
         // is readable in grayscale and announces a plain-language word to AT.
@@ -100,7 +124,9 @@ function CatalogRow({
             >
               <span
                 aria-hidden="true"
-                title={`${entity.name}: ${entity.lifecycle}`}
+                data-testid={`entity-lifecycle-${entity.id}`}
+                data-lifecycle={lifecycle}
+                title={lifecycleTitle(entity.name, lifecycle, derived?.summary)}
                 style={{
                   minWidth: 14, height: 14, padding: isPass ? 0 : '0 3px',
                   flexShrink: 0, borderRadius: isPass ? '50%' : 4,
@@ -136,7 +162,7 @@ function CatalogRow({
 
 /** Category → Catalog → Entity collapsible tree for the Baseline left column. */
 export function CatalogTree({
-  t, groups, selectedCatalogId, entities, selectedEntityId, onSelectCatalog, onSelectEntity,
+  t, groups, selectedCatalogId, entities, selectedEntityId, onSelectCatalog, onSelectEntity, derivedLifecycle,
 }: CatalogTreeProps) {
   const reduce = useReducedMotion();
   // Chapters are compact by default — only the chapter holding the current
@@ -218,6 +244,7 @@ export function CatalogTree({
                   selectedEntityId={selectedEntityId}
                   onSelectCatalog={onSelectCatalog}
                   onSelectEntity={onSelectEntity}
+                  derivedLifecycle={derivedLifecycle}
                   rovingItemProps={roving.itemProps(visibleIndex.get(catalog) ?? -1)}
                 />
               </motion.div>

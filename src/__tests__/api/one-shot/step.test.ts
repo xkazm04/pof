@@ -1,5 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
+
+// The route now grades through the shared server path (`gradeArtifact`), which reads
+// `judge_verdicts` to bridge any current-rubric verdict onto the checker's result — so
+// this suite needs its own throwaway DB rather than the operator's real one.
+vi.hoisted(() => {
+  const dir = process.env.TEMP || process.env.TMPDIR || '/tmp';
+  process.env.POF_DB_PATH = `${dir}/pof-test-oneshot-step-${process.pid}.db`;
+});
+
 import { POST } from '@/app/api/one-shot/step/route';
 
 vi.mock('@/lib/catalog/seed', () => ({
@@ -13,6 +22,9 @@ vi.mock('@/lib/catalog/seed', () => ({
 }));
 
 vi.mock('@/lib/catalog/pipeline-registry', () => ({
+  // `registry.generated` self-registers every pipeline on import (the route reaches it
+  // through the shared grader), so the mock has to accept those registrations.
+  registerCatalogPipeline: vi.fn(),
   getCatalogPipeline: vi.fn().mockReturnValue({
     catalogId: 'items',
     steps: [
@@ -29,6 +41,8 @@ vi.mock('@/lib/catalog/pipeline-registry', () => ({
 
 vi.mock('@/lib/pipeline-artifacts-db', () => ({
   upsertArtifact: vi.fn().mockImplementation((a) => a),
+  // Read by the shared grader's CheckerContext (sibling steps) and judge bridge.
+  listArtifacts: vi.fn().mockReturnValue([]),
 }));
 
 vi.mock('@/lib/claude-terminal/cli-service', () => ({

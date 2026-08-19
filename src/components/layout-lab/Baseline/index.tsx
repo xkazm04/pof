@@ -7,6 +7,7 @@ import { ArchetypeStep } from '../steps/ArchetypeStep';
 import { populateItemDemo } from '../steps/itemsSteps';
 import { useLabPipelineStore } from '../labPipelineStore';
 import { CatalogTree } from '../CatalogTree';
+import { useDerivedLifecycle } from '../useDerivedLifecycle';
 import { NextStepCoach } from '../NextStepCoach';
 import { PipelineRail } from '../PipelineRail';
 import { DriftBanner } from '../DriftBanner';
@@ -64,6 +65,14 @@ export function Baseline(props: Props) {
   // goes through the shared ConfirmDialog rather than firing on the click.
   const [confirmReset, setConfirmReset] = useState(false);
 
+  // Entity lifecycle DERIVED from the persisted artifacts (server-side, read-only). Every
+  // seed hardcodes `lifecycle: 'planned'`, so both the tree dot and this header used to
+  // read "planned" for every entity in the product no matter what the pipeline proved.
+  // Display only — it cannot move an Acceptance verdict, and `verified` is reachable only
+  // via a drained L3/L4 gate (`deriveEntityLifecycle`).
+  const derivedLifecycle = useDerivedLifecycle(detail?.catalog.catalogId ?? null);
+  const entityLifecycle = (entity && derivedLifecycle.get(entity.id)) || null;
+
   /**
    * The crash card's "adopt server truth" escape, and the ONE thing `adoptServerStep`
    * cannot say for itself: it silently no-ops when the server holds no row for the step.
@@ -89,6 +98,7 @@ export function Baseline(props: Props) {
       selectedEntityId={entity?.id ?? null}
       onSelectCatalog={handleSelectCatalog}
       onSelectEntity={handleSelectEntity}
+      derivedLifecycle={derivedLifecycle}
     />
   );
 
@@ -196,7 +206,16 @@ export function Baseline(props: Props) {
         </div>
         {/* stat strip (moved from the title block) */}
         <div style={{ marginLeft: 'auto', display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'flex-end' }}>
-          <Stat label="lifecycle" value={entity?.lifecycle ?? '—'} accent />
+          {/* The state derived from this entity's own artifacts when the server has one,
+              otherwise the seeded default — the wrapper's tooltip names which, and the
+              evidence behind it, so a config-complete `wired` never reads as verified. */}
+          <span
+            data-testid="entity-lifecycle-stat"
+            data-lifecycle={entityLifecycle?.lifecycle ?? entity?.lifecycle ?? ''}
+            title={entityLifecycle?.summary || 'seeded default — no pipeline artifacts derived yet'}
+          >
+            <Stat label="lifecycle" value={entityLifecycle?.lifecycle ?? entity?.lifecycle ?? '—'} accent />
+          </span>
           {isItems && <Stat label="pipeline" value={`${done}/${steps.length}`} accent />}
           {isItems && ueAssetCount > 0 && <Stat label="ue assets" value={String(ueAssetCount)} />}
           {fields.map((f) => <Stat key={f.label} label={f.label} value={f.value} />)}

@@ -15,9 +15,11 @@ import '@/lib/catalog/pipelines/registry.generated'; // side-effect: register al
 import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 import { CATALOG_SECTIONS } from '@/lib/catalog/sections';
 import { seededEntities } from '@/lib/catalog/seed';
-import { listLifecycle } from '@/lib/catalog-db';
+import { listLifecycle, getLifecycle, upsertLifecycle } from '@/lib/catalog-db';
+import { deriveEntityLifecycle, type DerivedLifecycle } from '@/lib/catalog/lifecycle';
 import { listArtifacts, upsertArtifact } from '@/lib/pipeline-artifacts-db';
 import { listVerdicts } from '@/lib/status/judge-verdicts-db';
+import { logger } from '@/lib/logger';
 import { resolveStepAcceptance, verdictsForStep } from '@/lib/catalog/acceptance/resolveStepAcceptance';
 import { bespokeCheckerFor } from '@/lib/catalog/acceptance/stepGradability';
 import { canonContextFor } from '@/lib/catalog/canon/canonContext';
@@ -25,7 +27,7 @@ import { stepContractBlock, canonCategoriesForStep } from '@/lib/catalog/contrac
 import type { ProjectRule, RuleCategory } from '@/lib/catalog/canon/types';
 import type { AcceptanceResult, Checker, CheckerContext } from '@/lib/catalog/acceptance/types';
 import type { ViewDescriptor, StepSpec } from '@/lib/catalog/stepSpec';
-import type { LifecycleState, TestResult, StoredCatalogEntity } from '@/lib/catalog/types';
+import type { LifecycleRecord, LifecycleState, TestResult, StoredCatalogEntity } from '@/lib/catalog/types';
 
 /** A "not found" recipe error carries a 404 so routes can map it precisely. */
 export class CatalogNotFoundError extends Error {
@@ -228,17 +230,127 @@ export function listEntitySummaries(catalogId: string): EntitySummary[] {
     throw new CatalogNotFoundError(`Unknown catalog: ${catalogId}`);
   }
   const byId = new Map(listLifecycle(catalogId).map((r) => [r.entityId, r]));
+  // Derived-from-artifacts truth wins over both the persisted row (a cache of an
+  // earlier derivation) and the seed's hardcoded `planned`. An entity with no
+  // artifacts has nothing to derive from, so the row — then the seed — stands.
+  const derived = derivedByEntity(catalogId);
   return seeded.map((e) => {
     const row = byId.get(e.id);
-    const lastTestResult = row?.lastTestResult ?? e.lastTestResult;
+    const lastTestResult = derived.get(e.id)?.testResult ?? row?.lastTestResult ?? e.lastTestResult;
     return {
       id: e.id,
       name: e.name,
-      lifecycle: row?.lifecycle ?? e.lifecycle,
+      lifecycle: derived.get(e.id)?.lifecycle ?? row?.lifecycle ?? e.lifecycle,
       ueAssets: row?.ueAssets ?? e.ueAssets ?? [],
       ...(lastTestResult ? { lastTestResult: lastTestResult as TestResult } : {}),
     };
   });
+}
+
+// ── Entity lifecycle, derived from pipeline truth ────────────────────────────
+//
+// `catalog_lifecycle` held ZERO rows (measured 2026-08-19, against 817 artifacts),
+// because the only writer was the legacy generation callback — so the merge in
+// `listEntitySummaries` above was wired to an always-empty map and every entity in
+// the product rendered the seed's hardcoded `planned`. These functions derive the
+// state from what the pipeline actually persisted and (for `sync*`) write it back
+// through the existing table. Nothing here is a manual toggle, and nothing here can
+// reach `verified` without a drained L3/L4 gate — see `lifecycle.ts`.
+
+/** A derived lifecycle for one entity, next to whatever is currently persisted. */
+export interface EntityLifecycleView extends DerivedLifecycle {
+  catalogId: string;
+  entityId: string;
+  entityName?: string;
+  /** What `catalog_lifecycle` currently holds, or null when nothing was ever written. */
+  persisted: LifecycleState | null;
+  lastVerifiedAt?: string;
+}
+
+/** Steps a catalog declares; falls back to the distinct step labels actually persisted. */
+function totalStepsFor(catalogId: string, arts: ReturnType<typeof listArtifacts>): number {
+  const pipeline = getCatalogPipeline(catalogId);
+  if (pipeline) return pipeline.steps.length;
+  return new Set(arts.map((a) => a.step)).size;
+}
+
+/**
+ * Derive the lifecycle of every entity in a catalog (seeded entities plus any entity
+ * that has persisted artifacts — one-shot drafts included). READ-ONLY: it computes,
+ * it does not write, so a display read can never mutate state.
+ */
+function derivedByEntity(catalogId: string): Map<string, DerivedLifecycle> {
+  const allArts = listArtifacts(catalogId);
+  const totalSteps = totalStepsFor(catalogId, allArts);
+  const byEntity = new Map<string, typeof allArts>();
+  for (const a of allArts) {
+    const arr = byEntity.get(a.entityId) ?? [];
+    arr.push(a);
+    byEntity.set(a.entityId, arr);
+  }
+  const out = new Map<string, DerivedLifecycle>();
+  for (const [id, arts] of byEntity) out.set(id, deriveEntityLifecycle(arts, totalSteps));
+  return out;
+}
+
+export function deriveCatalogLifecycle(catalogId: string, entityId?: string): EntityLifecycleView[] {
+  const byEntity = derivedByEntity(catalogId);
+  const emptyDerived = deriveEntityLifecycle([], totalStepsFor(catalogId, []));
+  const seeded = seededEntities(catalogId);
+  const names = new Map(seeded.map((e) => [e.id, e.name] as const));
+  const ids = entityId
+    ? [entityId]
+    : Array.from(new Set([...seeded.map((e) => e.id), ...byEntity.keys()]));
+
+  return ids.map((id) => {
+    const derived = byEntity.get(id) ?? emptyDerived;
+    const row = getLifecycle(catalogId, id);
+    const name = names.get(id);
+    return {
+      catalogId,
+      entityId: id,
+      ...(name ? { entityName: name } : {}),
+      ...derived,
+      persisted: row?.lifecycle ?? null,
+      ...(row?.lastVerifiedAt ? { lastVerifiedAt: row.lastVerifiedAt } : {}),
+    };
+  });
+}
+
+/**
+ * Persist the derived lifecycle for one entity. Idempotent (the state is re-derivable
+ * from the artifacts at any time), and `lastVerifiedAt` is stamped the first time an
+ * entity reaches `verified` and preserved on later re-syncs of the same state — so the
+ * timestamp records when the gate first passed, not when someone last refreshed a view.
+ */
+export function syncEntityLifecycle(
+  catalogId: string,
+  entityId: string,
+): { record: LifecycleRecord; derived: EntityLifecycleView; changed: boolean } {
+  const derived = deriveCatalogLifecycle(catalogId, entityId)[0];
+  const existing = getLifecycle(catalogId, entityId);
+  const arts = listArtifacts(catalogId, entityId);
+  const ueAssets = Array.from(new Set([
+    ...(existing?.ueAssets ?? []),
+    ...arts.flatMap((a) => a.ueAssets),
+  ]));
+  const verifiedAt = derived.lifecycle === 'verified'
+    ? (existing?.lifecycle === 'verified' && existing.lastVerifiedAt) || new Date().toISOString()
+    : undefined;
+  const record = upsertLifecycle({
+    catalogId,
+    entityId,
+    lifecycle: derived.lifecycle,
+    ueAssets,
+    ...(derived.testResult ? { lastTestResult: derived.testResult } : {}),
+    ...(verifiedAt ? { lastVerifiedAt: verifiedAt } : {}),
+  });
+  return { record, derived, changed: existing?.lifecycle !== record.lifecycle };
+}
+
+/** Persist the derived lifecycle for every entity of a catalog. */
+export function syncCatalogLifecycle(catalogId: string): ReturnType<typeof syncEntityLifecycle>[] {
+  return deriveCatalogLifecycle(catalogId).map((v) => syncEntityLifecycle(catalogId, v.entityId));
 }
 
 /** Resolve the pipeline + step spec for a (catalog, step), or throw a 404 with hints. */
@@ -395,6 +507,14 @@ export function submitStepArtifact(
     tier,
     ...(reason ? { reason } : {}),
   });
+  // The entity's lifecycle is DERIVED from its artifacts, so a write to one of them
+  // is exactly when it can change. Best-effort: the artifact is the primary job and
+  // must never fail because the (re-derivable) lifecycle cache could not be written.
+  try {
+    syncEntityLifecycle(catalogId, entityId);
+  } catch (e) {
+    logger.warn('submitStepArtifact: could not sync derived lifecycle', e);
+  }
   // The persisted artifact keeps the checker's own verdict (storage separation is
   // deliberate — judge_verdicts lives apart). The RETURNED acceptance the caller consumes
   // is bridged, so a current-rubric judge FAIL surfaces here instead of a stale pass.

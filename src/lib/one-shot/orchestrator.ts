@@ -144,7 +144,16 @@ export function createOrchestrator(opts: OrchestratorOptions = {}): Orchestrator
             const mode = dec.mode === 'run-cli' ? 'cli' : 'deterministic';
             // Re-read proposal from store after each await to avoid stale closure snapshot.
             const currentProposal = useOneShotJobStore.getState().proposal;
-            const result = await postJson<{ outcome: 'pass' | 'fail'; reason?: string }>(
+            // `deferred` is a legal terminal state for an L3/L4 gate (Rule 5), and the
+            // route used to collapse it into `fail` before it ever reached this log —
+            // reporting a correct deferral to the operator as a failure. `status` carries
+            // the exact 4-state checker verdict alongside the run-log outcome.
+            const result = await postJson<{
+              outcome: 'pass' | 'fail' | 'deferred';
+              status?: string;
+              tier?: string;
+              reason?: string;
+            }>(
               '/api/one-shot/step',
               {
                 catalogId: store.catalogId,
@@ -157,7 +166,10 @@ export function createOrchestrator(opts: OrchestratorOptions = {}): Orchestrator
               },
             );
             outcome = result.outcome;
-            reason = result.reason;
+            // A deferral must always carry a reason (Rule 4); if the checker gave none,
+            // say at least which tier deferred it rather than logging a bare "deferred".
+            reason = result.reason
+              ?? (result.outcome === 'deferred' ? `${result.tier ?? s.tier} deferred by the step's checker` : undefined);
           }
         } catch (e) {
           outcome = 'fail';
