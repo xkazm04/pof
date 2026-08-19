@@ -119,6 +119,10 @@ export function getDb(): Database.Database {
       reviewed_at TEXT NOT NULL,
       total INTEGER NOT NULL DEFAULT 0,
       implemented INTEGER NOT NULL DEFAULT 0,
+      -- improved existed only as an ALTER migration below, so a fresh DB created
+      -- after a SCHEMA_VERSION bump (which skips the migration probes) would have
+      -- been missing the column captureReviewSnapshot inserts into.
+      improved INTEGER NOT NULL DEFAULT 0,
       partial INTEGER NOT NULL DEFAULT 0,
       missing INTEGER NOT NULL DEFAULT 0,
       unknown INTEGER NOT NULL DEFAULT 0,

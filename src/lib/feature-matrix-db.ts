@@ -332,6 +332,27 @@ function mapSnapshotRow(r: SnapshotRow): ReviewSnapshot {
   };
 }
 
+/**
+ * Retention bound per module. The table was unbounded — one row per review, forever,
+ * for a trend line nothing reads more than ~20 points of. 200 keeps years of real
+ * review history while giving the table a ceiling. Pruning can never empty a module:
+ * it only ever deletes rows BEYOND the newest {@link MAX_SNAPSHOTS_PER_MODULE}.
+ */
+export const MAX_SNAPSHOTS_PER_MODULE = 200;
+
+/**
+ * Record the module's current counts as a point on its quality trend.
+ *
+ * Two ways this used to write points that were not review events:
+ *  - the timestamp is `MAX(last_reviewed_at)`, so re-importing a report (same
+ *    `reviewedAt`) appended a SECOND row at an identical timestamp — a duplicate
+ *    point that reads as a flat stretch of the trend that never happened;
+ *  - nothing bounded the table.
+ *
+ * A capture at a timestamp the module's latest snapshot already holds now updates
+ * that row in place instead of appending beside it: one point per reviewed instant,
+ * carrying the newest counts for it.
+ */
 export function captureReviewSnapshot(moduleId: SubModuleId): void {
   ensureTables();
   const db = getDb();
@@ -353,12 +374,35 @@ export function captureReviewSnapshot(moduleId: SubModuleId): void {
 
   if (!row || row.total === 0) return;
 
+  const reviewedAt = row.last_reviewed ?? new Date().toISOString();
+
+  const latest = db
+    .prepare(
+      `SELECT id, reviewed_at FROM review_snapshots
+       WHERE module_id = ?
+       ORDER BY reviewed_at DESC, id DESC
+       LIMIT 1`,
+    )
+    .get(moduleId) as { id: number; reviewed_at: string } | undefined;
+
+  if (latest && latest.reviewed_at === reviewedAt) {
+    db.prepare(
+      `UPDATE review_snapshots
+       SET total = ?, implemented = ?, improved = ?, partial = ?, missing = ?, unknown = ?, avg_quality = ?
+       WHERE id = ?`,
+    ).run(
+      row.total, row.implemented, row.improved, row.partial, row.missing, row.unknown,
+      row.avg_quality, latest.id,
+    );
+    return;
+  }
+
   db.prepare(
     `INSERT INTO review_snapshots (module_id, reviewed_at, total, implemented, improved, partial, missing, unknown, avg_quality)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     moduleId,
-    row.last_reviewed ?? new Date().toISOString(),
+    reviewedAt,
     row.total,
     row.implemented,
     row.improved,
@@ -367,17 +411,49 @@ export function captureReviewSnapshot(moduleId: SubModuleId): void {
     row.unknown,
     row.avg_quality,
   );
+
+  pruneReviewSnapshots(moduleId);
 }
 
+/** Drop everything older than the newest {@link MAX_SNAPSHOTS_PER_MODULE} snapshots
+ *  for one module. Scoped by `module_id`, so a quiet module's only point is never a
+ *  casualty of a busy module's history. */
+function pruneReviewSnapshots(moduleId: SubModuleId): void {
+  getDb()
+    .prepare(
+      `DELETE FROM review_snapshots
+       WHERE module_id = ?
+         AND id NOT IN (
+           SELECT id FROM review_snapshots
+           WHERE module_id = ?
+           ORDER BY reviewed_at DESC, id DESC
+           LIMIT ?
+         )`,
+    )
+    .run(moduleId, moduleId, MAX_SNAPSHOTS_PER_MODULE);
+}
+
+/**
+ * The most RECENT `limit` snapshots for one module, oldest-first (the order the
+ * sparkline plots left-to-right).
+ *
+ * This read `ORDER BY reviewed_at ASC LIMIT ?` — the OLDEST N — while its sibling
+ * `getAllReviewHistory` already took the newest via ROW_NUMBER. Past 20 snapshots the
+ * per-module sparkline froze on ancient history and never moved again, however many
+ * reviews ran. The inner query takes the recent window; the outer restores chronology.
+ */
 export function getReviewHistory(moduleId: SubModuleId, limit = 20): ReviewSnapshot[] {
   ensureTables();
   const rows = getDb()
     .prepare(
-      `SELECT ${SNAPSHOT_SELECT}
-       FROM review_snapshots
-       WHERE module_id = ?
-       ORDER BY reviewed_at ASC
-       LIMIT ?`,
+      `SELECT * FROM (
+         SELECT ${SNAPSHOT_SELECT}
+         FROM review_snapshots
+         WHERE module_id = ?
+         ORDER BY reviewed_at DESC, id DESC
+         LIMIT ?
+       )
+       ORDER BY reviewed_at ASC, id ASC`,
     )
     .all(moduleId, limit) as SnapshotRow[];
 

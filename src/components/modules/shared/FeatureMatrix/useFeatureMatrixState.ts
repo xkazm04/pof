@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSuspendableEffect } from '@/hooks/useSuspend';
 import { useFeatureMatrix } from '@/hooks/useFeatureMatrix';
 import { useFeatureStatuses } from '@/hooks/useFeatureStatuses';
+import { tryApiFetch } from '@/lib/api-utils';
 import { useProjectStore } from '@/stores/projectStore';
 import { usePofBridgeStore } from '@/stores/pofBridgeStore';
 import { FEATURE_STATUSES } from '@/types/feature-matrix';
@@ -129,14 +130,16 @@ export function useFeatureMatrixState({
     return () => clearInterval(interval);
   }, [isFixing, refetch]);
 
+  // The route answers in the standard `{ success, data }` envelope, but this read
+  // took `snapshots` off the ENVELOPE (`data.snapshots`, always undefined) rather
+  // than off `data.data`. The list was therefore always empty and the sparkline —
+  // gated on `snapshots.length >= 2` — has never rendered here. `tryApiFetch`
+  // unwraps the envelope, so the trend line finally receives its points.
   const fetchHistory = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/feature-matrix/history?moduleId=${encodeURIComponent(moduleId)}`);
-      if (res.ok) {
-        const data = await res.json();
-        setSnapshots(data.snapshots ?? []);
-      }
-    } catch { /* silent */ }
+    const result = await tryApiFetch<{ snapshots: ReviewSnapshot[] }>(
+      `/api/feature-matrix/history?moduleId=${encodeURIComponent(moduleId)}`,
+    );
+    if (result.ok) setSnapshots(result.data.snapshots ?? []);
   }, [moduleId]);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- pre-existing fetch-on-mount, preserved verbatim in extraction
