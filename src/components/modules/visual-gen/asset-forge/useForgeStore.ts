@@ -40,8 +40,22 @@ export interface GenerationJob {
    * render as a green "Complete".
    */
   accepted?: boolean;
+  /**
+   * The mesh was delivered with NOTHING having graded it — distinct from
+   * `accepted: false`, which means a gate ran and rejected it. Both are "not a pass",
+   * and only this tells the operator whether the problem is the mesh or the missing gate.
+   */
+  ungated?: boolean;
   /** Why the regeneration loop stopped — the reason behind `accepted: false`. */
   gateReason?: string;
+  /** The asset-class budget this job was SUBMITTED with (undefined = class-blind). */
+  assetClass?: string;
+  /**
+   * The server's own sentence naming what this mesh is graded against — the class budget
+   * or the stated class-blind default. Read verbatim from the generate 202 (and refreshed
+   * by the status poll) so the default is visible rather than assumed.
+   */
+  gradedAs?: string;
   /** Paid generations spent on this job (best-of-n retries each cost one). */
   attempts?: number;
   /** Set when the delivered container does not match the extension it was written to. */
@@ -93,12 +107,18 @@ interface ForgeState {
    *  Serves BOTH modes — image-to-3d (TripoSR / Hunyuan3D / Tripo3D, `imageDataUrl`)
    *  and text-to-3d (Tripo3D, `prompt`). The prompt used to be dropped here, which
    *  is why Tripo3D text-to-3d — fully implemented server-side — was unreachable
-   *  from the UI. */
+   *  from the UI.
+   *
+   *  `assetClass` is OPTIONAL and omitting it is legitimate: the route then grades
+   *  class-blind and says so in the 202's `gradedAs`, which is stored on the job. It was
+   *  never sent from the app at all until now, so class-aware grading — fully implemented
+   *  server-side — was unreachable exactly the way text-to-3d had been. */
   submitLocalJob: (
     providerId: string,
     mode: GenerationMode,
     imageDataUrl?: string,
     prompt?: string,
+    assetClass?: string,
   ) => Promise<void>;
 }
 
@@ -216,12 +236,14 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       // Runner-backed image-to-3D: the reference image was stored as a data URL on
       // the job, so the retry can reuse it verbatim. (A `blob:` URL cannot — it
       // belongs to a revoked object URL, not to bytes we can re-POST.)
+      // The `assetClass` rides along too: a retry graded against a different budget than
+      // the original submission would report a verdict about a job nobody asked for.
       if (job.mode === 'image-to-3d' && job.imageUrl?.startsWith('data:')) {
-        return () => void get().submitLocalJob(job.providerId, job.mode, job.imageUrl, job.prompt);
+        return () => void get().submitLocalJob(job.providerId, job.mode, job.imageUrl, job.prompt, job.assetClass);
       }
       // Runner-backed text-to-3D: the prompt is the whole input.
       if (job.mode === 'text-to-3d' && job.prompt.trim()) {
-        return () => void get().submitLocalJob(job.providerId, job.mode, undefined, job.prompt);
+        return () => void get().submitLocalJob(job.providerId, job.mode, undefined, job.prompt, job.assetClass);
       }
       return null;
     })();
@@ -457,22 +479,26 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
     scheduleNext();
   },
 
-  submitLocalJob: async (providerId, mode, imageDataUrl, prompt) => {
-    const localId = get().addJob({ mode, prompt: prompt ?? '', providerId, imageUrl: imageDataUrl });
+  submitLocalJob: async (providerId, mode, imageDataUrl, prompt, assetClass) => {
+    const localId = get().addJob({ mode, prompt: prompt ?? '', providerId, imageUrl: imageDataUrl, assetClass });
 
-    const submit = await tryApiFetch<{ jobId: string }>('/api/visual-gen/generate', {
+    const submit = await tryApiFetch<{ jobId: string; gradedAs?: string }>('/api/visual-gen/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       // `prompt` is what makes text-to-3d reach the real route (the handler refuses
-      // a text-to-3d submit without one) — it was never sent before.
-      body: JSON.stringify({ mode, providerId, imageDataUrl, prompt }),
+      // a text-to-3d submit without one) — it was never sent before. `assetClass` is
+      // the same shape of gap: the route has graded class-aware since wave 12 and this
+      // body never carried the class, so every app-submitted mesh was graded class-blind.
+      body: JSON.stringify({ mode, providerId, imageDataUrl, prompt, assetClass }),
     });
     if (!submit.ok) {
       get().updateJob(localId, { status: 'failed', error: submit.error, completedAt: Date.now() });
       return;
     }
-    const { jobId } = submit.data;
-    get().updateJob(localId, { status: 'generating', mcpJobId: jobId });
+    const { jobId, gradedAs } = submit.data;
+    // `gradedAs` is the server's own sentence about the budget in force — stored at
+    // SUBMIT time so the class-blind default is visible before any poll returns.
+    get().updateJob(localId, { status: 'generating', mcpJobId: jobId, gradedAs });
     if (prompt?.trim()) get().addToHistory(prompt.trim());
 
     // Self-scheduling poll loop (same discipline as submitMcpJob: no overlapping
@@ -525,16 +551,20 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       pollFailures = 0;
       const {
         status, meshPath, error, critique, fidelity,
-        accepted, gateReason, attempts, formatMismatch, renderUrl,
+        accepted, ungated, gradedAs: polledGradedAs, gateReason, attempts, formatMismatch, renderUrl,
       } = res.data;
       if (status === 'done') {
         stop();
         untrackPoller(localId);
-        // `done` is a TRANSPORT outcome. `accepted`/`gateReason` are the verdict,
-        // and both ride onto the job so the card can tell them apart.
+        // `done` is a TRANSPORT outcome. `accepted`/`ungated`/`gateReason` are the
+        // verdict, and all of them ride onto the job so the card can tell apart a mesh
+        // a gate rejected from one nothing ever measured.
         get().updateJob(localId, {
           status: 'completed', progress: 100, resultUrl: meshPath, meshPath,
-          critique, fidelity, accepted, gateReason, attempts, formatMismatch, renderUrl,
+          critique, fidelity, accepted, ungated, gateReason, attempts, formatMismatch, renderUrl,
+          // Refreshed from the store's own record; falls back to the 202's sentence
+          // rather than blanking a line the operator has already read.
+          ...(polledGradedAs !== undefined ? { gradedAs: polledGradedAs } : {}),
           completedAt: Date.now(),
         });
         return;

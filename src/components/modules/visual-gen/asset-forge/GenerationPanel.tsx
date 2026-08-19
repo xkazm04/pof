@@ -9,6 +9,7 @@ import {
   type GenerationMode,
 } from '@/lib/visual-gen/providers';
 import { StatusTag } from '@/components/ui/StatusTag';
+import { POLYCOUNT_PRESETS } from '@/lib/visual-gen/polycount-presets';
 import { composeVisualPrompt } from '@/lib/visual-gen/prompt-chips';
 import { styleDnaToPromptFragment } from '@/lib/visual-gen/style-dna';
 import { useForgeStore } from './useForgeStore';
@@ -19,6 +20,14 @@ import { PromptBuilder } from './PromptBuilder';
 export function GenerationPanel() {
   const [mode, setMode] = useState<GenerationMode>('text-to-3d');
   const [imageFile, setImageFile] = useState<File | null>(null);
+  /**
+   * The grading budget this generation is held to. EMPTY IS A REAL CHOICE, not an
+   * unset field: the route grades class-blind when no class arrives and states that in
+   * `gradedAs`, which is rendered verbatim below. Defaulting the picker to some
+   * "typical" class would grade an assembled character against a prop's component
+   * budget and fail it for being assembled.
+   */
+  const [assetClass, setAssetClass] = useState<string>('');
 
   // Prompt builder state — chips compose the real prompt under the hood.
   const [subject, setSubject] = useState('');
@@ -33,6 +42,11 @@ export function GenerationPanel() {
   const activeStyleDna = useForgeStore((s) => s.activeStyleDna);
   const applyStyleDna = useForgeStore((s) => s.applyStyleDna);
   const promptHistory = useForgeStore((s) => s.promptHistory);
+  // Scalar selector on purpose: the newest job's `gradedAs` only changes on submit, so
+  // this panel does not re-render on every progress tick of a running poll. Strictly
+  // jobs[0] — showing an OLDER job's sentence beside a newer submission would attribute
+  // a budget to a generation that never used it.
+  const latestGradedAs = useForgeStore((s) => s.jobs[0]?.gradedAs);
   const blenderConnected = useBlenderMCPStore((s) => s.connection.connected);
 
   const filteredProviders = GENERATION_PROVIDERS.filter((p) => p.modes.includes(mode));
@@ -119,7 +133,7 @@ export function GenerationPanel() {
       const reader = new FileReader();
       reader.onload = () => {
         if (typeof reader.result === 'string') {
-          void submitLocalJob(providerId, mode, reader.result, styledPrompt);
+          void submitLocalJob(providerId, mode, reader.result, styledPrompt, assetClass || undefined);
         }
       };
       reader.readAsDataURL(imageFile);
@@ -130,7 +144,7 @@ export function GenerationPanel() {
 
     // Runner-backed text-to-3D (Tripo3D). Fully implemented server-side and, until
     // now, unreachable from this panel because the real path was gated on image mode.
-    void submitLocalJob(activeProvider.id, mode, undefined, styledPrompt);
+    void submitLocalJob(activeProvider.id, mode, undefined, styledPrompt, assetClass || undefined);
     resetBuilder();
     setImageFile(null);
   };
@@ -221,6 +235,40 @@ export function GenerationPanel() {
             );
           })}
         </div>
+      </div>
+
+      {/* Asset class — the budget the Tier-1 gate grades the delivered mesh against.
+          Optional by design: the blank option is a REAL choice, and the server's own
+          sentence about what it did with it is rendered underneath rather than assumed. */}
+      <div>
+        <label htmlFor="forge-asset-class" className="text-xs text-text-muted mb-1.5 block">
+          Asset class (grading budget)
+        </label>
+        <select
+          id="forge-asset-class"
+          data-testid="forge-asset-class"
+          value={assetClass}
+          onChange={(e) => setAssetClass(e.target.value)}
+          className="w-full px-3 py-2 rounded-lg text-xs bg-surface border border-border text-text focus-ring"
+        >
+          <option value="">No class — grade class-blind (default)</option>
+          {POLYCOUNT_PRESETS.map((p) => (
+            <option key={p.assetClass} value={p.assetClass}>
+              {p.label} — {p.faceLimit.toLocaleString()} tri budget
+            </option>
+          ))}
+        </select>
+        {isMcpProvider && (
+          <p className="mt-1 text-2xs text-amber-400" data-testid="forge-asset-class-mcp-note">
+            The Blender MCP bridge takes a provider and a prompt only — this class is not
+            sent on that path, and nothing on this server grades an MCP-generated mesh.
+          </p>
+        )}
+        {latestGradedAs && (
+          <p className="mt-1 text-2xs text-text-muted" data-testid="forge-graded-as">
+            Last submission: {latestGradedAs}
+          </p>
+        )}
       </div>
 
       {/* Blender connection bar for MCP providers */}

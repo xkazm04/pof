@@ -24,8 +24,14 @@ export async function GET(req: NextRequest) {
       previewPath?: string; device?: string; clipMax?: number; vramGb?: number;
       renderUrl?: string; formatMismatch?: string;
     } | undefined;
-    // Gate-driven regeneration (cloud Tripo only; absent on the local stores).
-    const gate = job as unknown as { attempts?: number; accepted?: boolean; gateReason?: string };
+    // The gate axis. `attempts` is cloud-Tripo only (the local stores are single-shot),
+    // but `accepted` / `ungated` / `gradedAs` are written by ALL THREE stores — the local
+    // pair through `summarizeGate` + `localCritiqueDeps` — and only the first of the three
+    // was projected here, so a mesh nothing graded arrived indistinguishable from one a
+    // gate ran on and rejected, and the class budget in force was invisible.
+    const gate = job as unknown as {
+      attempts?: number; accepted?: boolean; ungated?: boolean; gateReason?: string; gradedAs?: string;
+    };
     return apiSuccess({
       status: job.status,
       meshPath: r?.meshPath,
@@ -56,7 +62,13 @@ export async function GET(req: NextRequest) {
       // reporting status alone would hide exactly that.
       attempts: gate.attempts,
       accepted: gate.accepted,
+      // Delivered with nothing having graded it. `accepted: false` alone reads as "a gate
+      // looked at this and said no", which is a different — and fixable — problem.
+      ungated: gate.ungated,
       gateReason: gate.gateReason,
+      // What the mesh is actually graded against: the class budget, or the STATED
+      // class-blind default when the submit carried no `assetClass`.
+      gradedAs: gate.gradedAs,
       error: job.error,
     });
   } catch (e) {
