@@ -89,6 +89,62 @@ export function getProviderById(id: string): GenerationProvider | undefined {
   return GENERATION_PROVIDERS.find((p) => p.id === id);
 }
 
+/** How (or whether) PoF can actually execute a provider for one mode. */
+export interface ProviderExecution {
+  /** True when some code path in PoF drives this provider end-to-end for `mode`. */
+  executable: boolean;
+  /** Which path drives it. Absent when nothing does. */
+  path?: 'runner' | 'mcp';
+  /** Why it cannot run. Always present when `executable` is false. */
+  reason?: string;
+}
+
+/**
+ * Resolve a provider's execution path for one mode. Pure, and the single source of
+ * truth for "can this be submitted?".
+ *
+ * Registry membership is NOT capability. `trellis2` and `meshy` are descriptive
+ * entries with no runner behind them, and submitting to one used to enqueue a job
+ * that nothing would ever update — pending forever, no poller, no error, a live
+ * elapsed clock for the rest of the session. A provider with no execution path is
+ * now refusable with the reason instead of silently swallowing a submit.
+ */
+export function providerExecution(provider: GenerationProvider, mode: GenerationMode): ProviderExecution {
+  if (!provider.modes.includes(mode)) {
+    return {
+      executable: false,
+      reason: `${provider.name} does not support ${mode} (it supports ${provider.modes.join(', ')}).`,
+    };
+  }
+  // MCP-backed providers execute through the Blender bridge. Whether the bridge is
+  // CONNECTED right now is a separate, recoverable condition the caller checks —
+  // the execution path itself exists.
+  if (provider.mcpBacked) return { executable: true, path: 'mcp' };
+  if (provider.runnerBacked) return { executable: true, path: 'runner' };
+  return {
+    executable: false,
+    reason:
+      `No runner configured for this provider on this machine — ${provider.name} is registry ` +
+      `metadata only${provider.status === 'coming-soon' ? ' (not implemented yet)' : ''}. ` +
+      `Pick a provider marked Runner or MCP.`,
+  };
+}
+
+/**
+ * The provider a fresh panel should preselect for `mode`: the official one when it
+ * can run that mode, else the first registry entry that can, else `undefined` —
+ * which the UI must report as "nothing here can run this mode" rather than falling
+ * back to whatever happens to be listed first. Pure.
+ *
+ * The old fallback was `providersForMode[0]`, which for the DEFAULT text-to-3d mode
+ * resolved to `trellis2` — the metadata-only entry — making the default first click
+ * produce a job that never resolved.
+ */
+export function defaultProviderForMode(mode: GenerationMode): GenerationProvider | undefined {
+  const runnable = GENERATION_PROVIDERS.filter((p) => providerExecution(p, mode).executable);
+  return runnable.find((p) => p.official) ?? runnable[0];
+}
+
 export function getAvailableProviders(mode: GenerationMode): GenerationProvider[] {
   return GENERATION_PROVIDERS.filter((p) => p.modes.includes(mode));
 }

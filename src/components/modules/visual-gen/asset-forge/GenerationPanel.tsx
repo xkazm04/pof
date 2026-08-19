@@ -1,8 +1,14 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Dna, Send, Upload, Sparkles, Lock, Monitor } from 'lucide-react';
-import { GENERATION_PROVIDERS, type GenerationMode } from '@/lib/visual-gen/providers';
+import { Dna, Send, Upload, Sparkles, Monitor, Cpu } from 'lucide-react';
+import {
+  GENERATION_PROVIDERS,
+  providerExecution,
+  defaultProviderForMode,
+  type GenerationMode,
+} from '@/lib/visual-gen/providers';
+import { StatusTag } from '@/components/ui/StatusTag';
 import { composeVisualPrompt } from '@/lib/visual-gen/prompt-chips';
 import { styleDnaToPromptFragment } from '@/lib/visual-gen/style-dna';
 import { useForgeStore } from './useForgeStore';
@@ -22,8 +28,6 @@ export function GenerationPanel() {
 
   const activeProviderId = useForgeStore((s) => s.activeProviderId);
   const setActiveProvider = useForgeStore((s) => s.setActiveProvider);
-  const addJob = useForgeStore((s) => s.addJob);
-  const addToHistory = useForgeStore((s) => s.addToHistory);
   const submitMcpJob = useForgeStore((s) => s.submitMcpJob);
   const submitLocalJob = useForgeStore((s) => s.submitLocalJob);
   const activeStyleDna = useForgeStore((s) => s.activeStyleDna);
@@ -32,8 +36,13 @@ export function GenerationPanel() {
   const blenderConnected = useBlenderMCPStore((s) => s.connection.connected);
 
   const filteredProviders = GENERATION_PROVIDERS.filter((p) => p.modes.includes(mode));
-  const activeProvider = filteredProviders.find((p) => p.id === activeProviderId) ?? filteredProviders[0];
-  const isMcpProvider = activeProvider?.mcpBacked === true;
+  // The fallback is the provider that CAN run this mode, not whichever entry the
+  // registry happens to list first. (That fallback resolved to `trellis2` for the
+  // default text-to-3d mode — a metadata-only entry with no runner.)
+  const activeProvider =
+    filteredProviders.find((p) => p.id === activeProviderId) ?? defaultProviderForMode(mode);
+  const execution = activeProvider ? providerExecution(activeProvider, mode) : null;
+  const isMcpProvider = execution?.path === 'mcp';
 
   const composedPrompt = useMemo(
     () => composeVisualPrompt({ subject, chipIds: selectedChipIds, mode }),
@@ -43,6 +52,26 @@ export function GenerationPanel() {
   // Project style: append the active Style DNA fragment to the submitted prompt.
   const styleFragment = applyStyleDna && activeStyleDna ? styleDnaToPromptFragment(activeStyleDna.dna) : null;
   const styledPrompt = styleFragment && effectivePrompt ? `${effectivePrompt}. ${styleFragment}` : effectivePrompt;
+
+  /**
+   * Why the submit button is off, in the user's terms — or null when it can run.
+   * The provider clauses come FIRST: a provider with no execution path is refused
+   * with the reason instead of accepting a click that enqueues a job nothing will
+   * ever update.
+   */
+  const blockReason: string | null = (() => {
+    if (!activeProvider || !execution) {
+      return `No provider on this machine can run ${mode}. Every entry listed for this mode is registry metadata with no runner behind it.`;
+    }
+    if (!execution.executable) return execution.reason ?? 'This provider cannot run here.';
+    if (execution.path === 'mcp' && !blenderConnected) {
+      return 'Blender MCP is not connected — connect the bridge above to generate through it.';
+    }
+    if (mode === 'text-to-3d' && !effectivePrompt) return 'Describe what to generate first.';
+    if (mode === 'image-to-3d' && !imageFile) return 'Upload a reference image first.';
+    return null;
+  })();
+  const canSubmit = blockReason === null;
 
   const toggleChip = (id: string) =>
     setSelectedChipIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -69,29 +98,28 @@ export function GenerationPanel() {
   };
 
   const handleSubmit = () => {
-    if (!effectivePrompt && mode === 'text-to-3d') return;
-    if (!imageFile && mode === 'image-to-3d') return;
-    if (!activeProvider) return;
+    // One gate for the button and the handler, so a click can never take a path the
+    // button says is unavailable. There is no placeholder branch any more: if
+    // nothing can execute the request, nothing is enqueued.
+    if (!canSubmit || !activeProvider || !execution) return;
 
-    // MCP-backed providers go through the Blender MCP pipeline
-    if (activeProvider.mcpBacked) {
-      if (!blenderConnected) return;
-      submitMcpJob(activeProvider.id, styledPrompt, mode);
+    // MCP-backed providers go through the Blender MCP pipeline.
+    if (execution.path === 'mcp') {
+      void submitMcpJob(activeProvider.id, styledPrompt, mode);
       resetBuilder();
       setImageFile(null);
       return;
     }
 
-    // Non-MCP providers: must be free status
-    if (activeProvider.status !== 'free') return;
-
-    // Runner-backed local providers (TripoSR) actually execute via the generate API:
-    // read the reference image as a data URL the server can decode, then submit + poll.
-    if (activeProvider.runnerBacked && mode === 'image-to-3d' && imageFile) {
+    // Runner-backed image-to-3D: read the reference image as a data URL the server
+    // can decode, then submit + poll.
+    if (mode === 'image-to-3d') {
+      if (!imageFile) return;
+      const providerId = activeProvider.id;
       const reader = new FileReader();
       reader.onload = () => {
         if (typeof reader.result === 'string') {
-          void submitLocalJob(activeProvider.id, mode, reader.result);
+          void submitLocalJob(providerId, mode, reader.result, styledPrompt);
         }
       };
       reader.readAsDataURL(imageFile);
@@ -100,10 +128,9 @@ export function GenerationPanel() {
       return;
     }
 
-    // Other local providers aren't wired to execute yet — queue a placeholder job.
-    const imageUrl = imageFile ? URL.createObjectURL(imageFile) : undefined;
-    addJob({ mode, prompt: styledPrompt, imageUrl, providerId: activeProvider.id });
-    if (effectivePrompt) addToHistory(effectivePrompt);
+    // Runner-backed text-to-3D (Tripo3D). Fully implemented server-side and, until
+    // now, unreachable from this panel because the real path was gated on image mode.
+    void submitLocalJob(activeProvider.id, mode, undefined, styledPrompt);
     resetBuilder();
     setImageFile(null);
   };
@@ -112,14 +139,6 @@ export function GenerationPanel() {
     const file = e.target.files?.[0];
     if (file) setImageFile(file);
   };
-
-  const canSubmit = (() => {
-    if (!activeProvider) return false;
-    if (!effectivePrompt && mode === 'text-to-3d') return false;
-    if (!imageFile && mode === 'image-to-3d') return false;
-    if (activeProvider.mcpBacked) return blenderConnected;
-    return activeProvider.status === 'free';
-  })();
 
   return (
     <div className="space-y-4">
@@ -154,43 +173,49 @@ export function GenerationPanel() {
         <label className="text-xs text-text-muted mb-1.5 block">Provider</label>
         <div className="grid grid-cols-2 gap-2">
           {filteredProviders.map((provider) => {
-            const isSelectable = provider.status === 'free' || provider.mcpBacked;
+            // Selectability is EXECUTABILITY, not price. `status: 'free'` said nothing
+            // about whether anything on this machine can run the provider.
+            const exec = providerExecution(provider, mode);
             return (
               <button
                 key={provider.id}
-                onClick={() => isSelectable && setActiveProvider(provider.id)}
-                disabled={!isSelectable}
+                onClick={() => exec.executable && setActiveProvider(provider.id)}
+                disabled={!exec.executable}
+                title={exec.reason}
+                data-testid={`forge-provider-${provider.id}`}
+                data-executable={exec.executable}
                 className={`relative px-3 py-2 rounded-lg text-left text-xs transition-colors border ${
                   activeProvider?.id === provider.id
                     ? 'border-[var(--visual-gen)] bg-[var(--visual-gen)]/10'
-                    : isSelectable
+                    : exec.executable
                       ? 'border-border hover:border-text-muted'
                       : 'border-border opacity-50 cursor-not-allowed'
                 }`}
               >
                 <div className="flex items-center gap-1.5">
                   <span className="font-medium text-text">{provider.name}</span>
-                  {provider.status === 'coming-soon' && !provider.mcpBacked && (
-                    <span className="flex items-center gap-0.5 text-xs text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded">
-                      <Lock size={10} />
-                      Coming Soon
-                    </span>
-                  )}
-                  {provider.mcpBacked && (
+                  {exec.path === 'mcp' && (
                     <span className="flex items-center gap-0.5 text-xs text-blue-400 bg-blue-400/10 px-1.5 py-0.5 rounded">
                       <Monitor size={10} />
                       MCP
                     </span>
                   )}
-                  {provider.status === 'free' && !provider.mcpBacked && (
-                    <span className="text-xs text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded">
-                      Free
+                  {exec.path === 'runner' && (
+                    <span className="flex items-center gap-0.5 text-xs text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded">
+                      <Cpu size={10} />
+                      Runner
                     </span>
+                  )}
+                  {!exec.executable && (
+                    <StatusTag level="bad" word="NO RUNNER" iconClassName="w-2.5 h-2.5" />
                   )}
                 </div>
                 <p className="text-text-muted mt-0.5 line-clamp-2">{provider.description}</p>
                 {provider.vramGb && (
                   <p className="text-text-muted mt-0.5">~{provider.vramGb}GB VRAM</p>
+                )}
+                {!exec.executable && (
+                  <p className="text-amber-400 mt-1">{exec.reason}</p>
                 )}
               </button>
             );
@@ -252,17 +277,23 @@ export function GenerationPanel() {
         </p>
       )}
 
-      {/* Submit */}
-      <button
-        onClick={handleSubmit}
-        disabled={!canSubmit}
-        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium
-                   bg-[var(--visual-gen)] text-white hover:brightness-110 transition-all
-                   disabled:opacity-40 disabled:cursor-not-allowed"
-      >
-        <Send size={14} />
-        {isMcpProvider ? 'Generate via Blender MCP' : 'Generate 3D Model'}
-      </button>
+      {/* Submit — and, when it is off, the reason. A disabled button that never
+          says why is how the unrunnable providers stayed invisible. */}
+      <div className="space-y-1.5">
+        <button
+          onClick={handleSubmit}
+          disabled={!canSubmit}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium
+                     bg-[var(--visual-gen)] text-white hover:brightness-110 transition-all
+                     disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <Send size={14} />
+          {isMcpProvider ? 'Generate via Blender MCP' : 'Generate 3D Model'}
+        </button>
+        {blockReason && (
+          <p className="text-2xs text-amber-400" data-testid="forge-submit-block">{blockReason}</p>
+        )}
+      </div>
     </div>
   );
 }

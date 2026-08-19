@@ -10,7 +10,7 @@ import type {
 } from '@/lib/blender-mcp/types';
 import type { ForgeCritique, ForgeStatusResponse } from './forgeJobStatus';
 import type { StyleDnaProfile } from '@/lib/visual-gen/style-dna-db';
-import { getOfficialProvider, getProviderById } from '@/lib/visual-gen/providers';
+import { getOfficialProvider, getProviderById, providerExecution } from '@/lib/visual-gen/providers';
 
 export type JobStatus = 'pending' | 'generating' | 'completed' | 'failed' | 'importing';
 export type GenerationMode = 'text-to-3d' | 'image-to-3d';
@@ -66,6 +66,10 @@ interface ForgeState {
    *  visible and stoppable from the UI rather than being an invisible daemon. */
   activePolls: string[];
 
+  /** Enqueue a `pending` job. ONLY for a caller that immediately drives it to a
+   *  terminal state (`submitMcpJob` / `submitLocalJob` do). A `pending` job with no
+   *  poller behind it is a phantom: no update, no error, no timeout, and a live
+   *  elapsed clock for the rest of the session. */
   addJob: (job: Omit<GenerationJob, 'id' | 'status' | 'progress' | 'createdAt'>) => string;
   updateJob: (id: string, updates: Partial<GenerationJob>) => void;
   removeJob: (id: string) => void;
@@ -85,10 +89,17 @@ interface ForgeState {
   setActiveStyleDnaProfile: (profile: StyleDnaProfile | null) => void;
   setApplyStyleDna: (apply: boolean) => void;
   submitMcpJob: (providerId: string, prompt: string, mode: GenerationMode) => Promise<void>;
-  /** Local-subprocess generation (e.g. TripoSR image-to-3d): POST the image to
-   *  /api/visual-gen/generate, then poll /status. The runner-backed counterpart to
-   *  submitMcpJob. */
-  submitLocalJob: (providerId: string, mode: GenerationMode, imageDataUrl: string) => Promise<void>;
+  /** Runner-backed generation: POST to /api/visual-gen/generate, then poll /status.
+   *  Serves BOTH modes — image-to-3d (TripoSR / Hunyuan3D / Tripo3D, `imageDataUrl`)
+   *  and text-to-3d (Tripo3D, `prompt`). The prompt used to be dropped here, which
+   *  is why Tripo3D text-to-3d — fully implemented server-side — was unreachable
+   *  from the UI. */
+  submitLocalJob: (
+    providerId: string,
+    mode: GenerationMode,
+    imageDataUrl?: string,
+    prompt?: string,
+  ) => Promise<void>;
 }
 
 let jobCounter = 0;
@@ -190,35 +201,42 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
     if (!job || job.status !== 'failed') return;
 
     const provider = getProviderById(job.providerId);
+    const exec = provider
+      ? providerExecution(provider, job.mode)
+      : { executable: false, reason: `Unknown provider "${job.providerId}".` };
 
-    // Drop the stale failed entry; each path below enqueues a fresh job.
+    // Resolve the retry BEFORE dropping the stale entry. A retry that cannot run
+    // must not re-queue a job nothing will ever update — the old fallback did
+    // exactly that, minting a fresh `pending` twin for unwired providers.
+    const rerun: (() => void) | null = (() => {
+      if (!exec.executable) return null;
+      // MCP-backed (Blender) providers. A disconnected bridge simply re-fails the
+      // fresh job with the transport error — honest, not silently swallowed.
+      if (exec.path === 'mcp') return () => void get().submitMcpJob(job.providerId, job.prompt, job.mode);
+      // Runner-backed image-to-3D: the reference image was stored as a data URL on
+      // the job, so the retry can reuse it verbatim. (A `blob:` URL cannot — it
+      // belongs to a revoked object URL, not to bytes we can re-POST.)
+      if (job.mode === 'image-to-3d' && job.imageUrl?.startsWith('data:')) {
+        return () => void get().submitLocalJob(job.providerId, job.mode, job.imageUrl, job.prompt);
+      }
+      // Runner-backed text-to-3D: the prompt is the whole input.
+      if (job.mode === 'text-to-3d' && job.prompt.trim()) {
+        return () => void get().submitLocalJob(job.providerId, job.mode, undefined, job.prompt);
+      }
+      return null;
+    })();
+
+    if (!rerun) {
+      get().updateJob(id, {
+        error: `${job.error ?? 'Generation failed.'} Retry unavailable: ${
+          exec.reason ?? 'the original inputs are no longer available on this job.'
+        }`,
+      });
+      return;
+    }
+
     get().removeJob(id);
-
-    // MCP-backed (Blender) providers. A disconnected bridge simply re-fails the
-    // fresh job with the transport error — honest, not silently swallowed.
-    if (provider?.mcpBacked) {
-      void get().submitMcpJob(job.providerId, job.prompt, job.mode);
-      return;
-    }
-
-    // Runner-backed local image-to-3D (TripoSR/Hunyuan): the reference image was
-    // stored as a data URL on the job, so the retry can reuse it verbatim.
-    if (
-      provider?.runnerBacked &&
-      job.mode === 'image-to-3d' &&
-      job.imageUrl?.startsWith('data:')
-    ) {
-      void get().submitLocalJob(job.providerId, job.mode, job.imageUrl);
-      return;
-    }
-
-    // Everything else (unwired placeholder jobs): re-queue with the same inputs.
-    get().addJob({
-      mode: job.mode,
-      prompt: job.prompt,
-      imageUrl: job.imageUrl,
-      providerId: job.providerId,
-    });
+    rerun();
   },
 
   clearCompleted: () => {
@@ -439,13 +457,15 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
     scheduleNext();
   },
 
-  submitLocalJob: async (providerId, mode, imageDataUrl) => {
-    const localId = get().addJob({ mode, prompt: '', providerId, imageUrl: imageDataUrl });
+  submitLocalJob: async (providerId, mode, imageDataUrl, prompt) => {
+    const localId = get().addJob({ mode, prompt: prompt ?? '', providerId, imageUrl: imageDataUrl });
 
     const submit = await tryApiFetch<{ jobId: string }>('/api/visual-gen/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mode, providerId, imageDataUrl }),
+      // `prompt` is what makes text-to-3d reach the real route (the handler refuses
+      // a text-to-3d submit without one) — it was never sent before.
+      body: JSON.stringify({ mode, providerId, imageDataUrl, prompt }),
     });
     if (!submit.ok) {
       get().updateJob(localId, { status: 'failed', error: submit.error, completedAt: Date.now() });
@@ -453,6 +473,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
     }
     const { jobId } = submit.data;
     get().updateJob(localId, { status: 'generating', mcpJobId: jobId });
+    if (prompt?.trim()) get().addToHistory(prompt.trim());
 
     // Self-scheduling poll loop (same discipline as submitMcpJob: no overlapping
     // ticks, `stopped` guards every post-await branch). A poll miss is a TRANSPORT
