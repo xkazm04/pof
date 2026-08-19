@@ -16,6 +16,7 @@ import { buildLaunchArgs, buildPythonExecFile, resolveEditorBinary, captureScena
 import { parseScenarioVerdict } from '@/lib/test-gate-runner/spawnExecutor';
 import type { GateAssertion } from '@/lib/test-gate-runner/types';
 import { createExperimentRun } from './editor-process';
+import { captureDirFor, captureFileFor, ensureCaptureDir } from './capture-store';
 import {
   detectRunningEditors,
   editorPreconditionReason,
@@ -274,7 +275,7 @@ export async function runExperiment(spec: ExperimentSpec, deps: RunnerDeps = {})
   };
   try {
     return spec.scenario
-      ? await runScenario(spec, ctx, stamp)
+      ? await runScenario(spec, ctx)
       : await runPythonProbe(spec, ctx, stamp, fileExists);
   } finally {
     lease.release();
@@ -289,7 +290,11 @@ async function runPythonProbe(
   fileExists: (p: string) => boolean,
 ): Promise<ExperimentResult> {
   const { uproject, binary, run, now, env } = ctx;
-  const outPath = join(tmpdir(), `pof_exp_${stamp}.png`).replace(/\\/g, '/');
+  // The CAPTURE is durable (~/.pof/experiments) — the history persists this path, and a temp
+  // path rots into a broken image with the verdict still standing. The probe + abslog stay in
+  // tmp: they are consumed within this call and nothing records where they were.
+  ensureCaptureDir();
+  const outPath = captureFileFor(ctx.runId);
   const probePath = join(tmpdir(), `pof_exp_probe_${stamp}.py`).replace(/\\/g, '/');
   const abslog = join(tmpdir(), `pof_exp_${stamp}.log`).replace(/\\/g, '/');
   writeFileSync(probePath, buildExperimentProbe(spec.python, spec.capture ? { capturePath: outPath, resX: spec.resX, resY: spec.resY } : {}));
@@ -341,9 +346,11 @@ interface ScenarioCtx {
 
 /** Scenario mode: drive `-game -PoFScenario` (player + inputs) via captureScenarioFrame,
  * then read the observation samples + pick the peak-action frame. */
-async function runScenario(spec: ExperimentSpec, ctx: ScenarioCtx, stamp: number): Promise<ExperimentResult> {
+async function runScenario(spec: ExperimentSpec, ctx: ScenarioCtx): Promise<ExperimentResult> {
   const scn = spec.scenario!;
-  const outDir = join(tmpdir(), `pof_exp_scn_${stamp}`).replace(/\\/g, '/');
+  // Durable shot directory (see runPythonProbe) — `shot_NN.png` + observations.json land here.
+  ensureCaptureDir();
+  const outDir = captureDirFor(ctx.runId);
   const start = ctx.now();
   const shot = await captureScenarioFrame(
     {

@@ -26,7 +26,11 @@ describe('experiment run persistence', () => {
     expect(got?.id).toBe(id);
     expect(got?.mode).toBe('python');
     expect(got?.markers.RESULT).toBe('5.8.0');
-    expect(got?.hasScreenshot).toBe(true);
+    // `C:/x.png` does not exist. This assertion used to expect `true` — encoding the very bug
+    // that made every rotted run keep rendering an <img>: hasScreenshot came from "a path was
+    // recorded", not from the file being there. It now reflects EXISTENCE.
+    expect(got?.hasScreenshot).toBe(false);
+    expect(got?.captureState).toBe('missing');
 
     expect(listExperimentRuns(50).some((r) => r.id === id)).toBe(true);
 

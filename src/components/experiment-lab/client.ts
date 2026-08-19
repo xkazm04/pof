@@ -46,3 +46,8 @@ export async function fetchHistory(opts: { fetchImpl?: typeof fetch; limit?: num
 export async function fetchRun(id: string, fetchImpl: typeof fetch = fetch): Promise<ExperimentRunDetail> {
   return unwrap<ExperimentRunDetail>(await fetchImpl(`/api/experiment/runs/${id}`));
 }
+
+/** Delete one persisted run and its capture (experiment retention is explicit, not automatic). */
+export async function deleteRun(id: string, fetchImpl: typeof fetch = fetch): Promise<void> {
+  await unwrap<{ id: string; deleted: boolean }>(await fetchImpl(`/api/experiment/runs/${id}`, { method: 'DELETE' }));
+}

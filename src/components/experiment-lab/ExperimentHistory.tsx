@@ -5,7 +5,8 @@ import { logger } from '@/lib/logger';
 import { LoadingRow } from '@/components/ui/LoadingRow';
 import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { StatusTag } from '@/components/ui/StatusTag';
-import { fetchHistory, fetchRun } from './client';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { fetchHistory, fetchRun, deleteRun } from './client';
 import type { ExperimentRunSummary, ExperimentRunDetail } from '@/lib/ue-experiment/experiment-db';
 
 /** A judge that could not run is WARN (deferred), never the red an observed defect earns. */
@@ -24,6 +25,8 @@ export function ExperimentHistory({ refreshKey = 0 }: { refreshKey?: number }) {
   const [bId, setBId] = useState<string | null>(null);
   const [a, setA] = useState<ExperimentRunDetail | null>(null);
   const [b, setB] = useState<ExperimentRunDetail | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // The empty state ("no past runs") is only honest once a load has actually
   // succeeded — while in flight we show a spinner, and a failure explains itself
@@ -52,6 +55,22 @@ export function ExperimentHistory({ refreshKey = 0 }: { refreshKey?: number }) {
     (slot === 'a' ? setAId : setBId)((cur) => (cur === id ? null : id));
   }, []);
 
+  const onConfirmDelete = useCallback(async () => {
+    if (!pendingDelete) return;
+    try {
+      await deleteRun(pendingDelete);
+      setDeleteError(null);
+      setPendingDelete(null);
+      setRetryKey((k) => k + 1); // re-list
+    } catch (e) {
+      // A delete that failed must SAY so — the row silently reappearing on the next load would
+      // read as the app ignoring the action.
+      logger.error('experiment run delete failed', e);
+      setPendingDelete(null);
+      setDeleteError(e instanceof Error ? e.message : 'Could not delete that run.');
+    }
+  }, [pendingDelete]);
+
   const showCompare = a && b && a.id === aId && b.id === bId;
 
   if (loading) return <LoadingRow label="Loading run history…" variant="inline" className="text-xs" />;
@@ -69,9 +88,26 @@ export function ExperimentHistory({ refreshKey = 0 }: { refreshKey?: number }) {
             <span className="sr-only">{r.ok ? 'ran' : 'failed'}</span>
             <span className="rounded bg-background px-1 text-2xs text-text-muted">{r.mode}</span>
             <span className="flex-1 truncate font-mono" title={r.label}>{r.label}</span>
+            {/* Evidence state on the ROW: a run whose capture is gone says so here, rather than
+                being discovered as a broken image inside the compare view. */}
+            {r.captureState === 'missing' && (
+              <span className="rounded bg-amber-500/10 px-1 text-2xs text-amber-500" title="The captured frame is no longer on disk — any visual verdict on this run cannot be audited.">
+                capture gone
+              </span>
+            )}
             <span className="text-2xs text-text-muted">{Math.round(r.durationMs / 1000)}s</span>
             <button type="button" onClick={() => pick('a', r.id)} aria-pressed={aId === r.id} className={`focus-ring rounded px-1.5 ${aId === r.id ? 'bg-emerald-600 text-white' : 'bg-background text-text-muted'}`} aria-label={`Compare "${r.label}" as A`}>A</button>
             <button type="button" onClick={() => pick('b', r.id)} aria-pressed={bId === r.id} className={`focus-ring rounded px-1.5 ${bId === r.id ? 'bg-emerald-600 text-white' : 'bg-background text-text-muted'}`} aria-label={`Compare "${r.label}" as B`}>B</button>
+            {/* Retention is unbounded on purpose (an old baseline stays comparable); deletion is
+                explicit, and takes the capture with the row. */}
+            <button
+              type="button"
+              onClick={() => setPendingDelete(r.id)}
+              className="focus-ring rounded px-1.5 text-text-muted hover:text-red-500"
+              aria-label={`Delete run "${r.label}"`}
+            >
+              ✕
+            </button>
           </div>
         ))}
       </div>
@@ -82,7 +118,31 @@ export function ExperimentHistory({ refreshKey = 0 }: { refreshKey?: number }) {
           <CompareColumn run={b} slot="B" />
         </div>
       )}
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        onClose={() => setPendingDelete(null)}
+        onConfirm={onConfirmDelete}
+        title="Delete this run?"
+        description="The run row and its captured frame are removed permanently. Experiments are otherwise kept indefinitely, so an old baseline stays available to compare against."
+        confirmLabel="Delete run"
+      />
+      {deleteError && <InlineErrorRetry dense message={deleteError} onRetry={onConfirmDelete} />}
     </section>
+  );
+}
+
+/**
+ * A recorded capture that is gone. The `<img>` used to render regardless (a broken image with
+ * no explanation) while the verdict text beside it kept asserting "visual: pass". The verdict is
+ * NOT deleted — it is labelled unauditable, so it stops standing on its own.
+ */
+function MissingCaptureNote({ judged }: { judged: boolean }) {
+  return (
+    <p className="rounded border border-amber-500/40 bg-amber-500/5 p-1.5 text-2xs text-amber-500">
+      Capture no longer on disk.
+      {judged ? ' The visual verdict above is UNAUDITABLE — the frame it judged cannot be re-read.' : ''}
+    </p>
   );
 }
 
@@ -117,10 +177,11 @@ function CompareColumn({ run, slot }: { run: ExperimentRunDetail; slot: string }
       {Object.keys(run.markers).length > 0 && (
         <pre className="overflow-x-auto rounded bg-surface p-1.5 font-mono text-2xs">{Object.entries(run.markers).map(([k, v]) => `${k}=${v}`).join('\n')}</pre>
       )}
-      {run.hasScreenshot && (
+      {run.captureState === 'present' && (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={`/api/experiment/screenshot/${run.id}`} alt={`run ${slot} frame`} className="max-w-full rounded border border-border" />
       )}
+      {run.captureState === 'missing' && <MissingCaptureNote judged={!!run.verdict} />}
     </div>
   );
 }

@@ -6,6 +6,7 @@
  * this is the durable record.
  */
 import { getDb } from '@/lib/db';
+import { captureStateOf, deleteCaptureFor, type CaptureState } from './capture-store';
 import type { ExperimentResult, ExperimentSpec, ObservationSummary, VisualVerdict } from './runner';
 
 /** Visual verdicts carry `deferred` (judge outage ≠ observed failure); behavioral ones don't. */
@@ -18,7 +19,15 @@ export interface ExperimentRunSummary {
   ok: boolean;
   error: string | null;
   durationMs: number;
+  /**
+   * The capture is on disk RIGHT NOW. Derived from file existence, not from "a path was
+   * recorded" — the old derivation kept rendering an `<img>` for captures Windows had already
+   * swept out of `%TEMP%`, so the history showed a broken image and the verdict beside it went
+   * on standing as if its evidence were still there.
+   */
   hasScreenshot: boolean;
+  /** `none` (never captured) · `present` · `missing` (recorded, gone) — see {@link CaptureState}. */
+  captureState: CaptureState;
   label: string;
 }
 
@@ -98,6 +107,7 @@ export function saveExperimentRun(input: SaveRunInput): void {
 }
 
 function rowToSummary(row: Record<string, unknown>): ExperimentRunSummary {
+  const capture = captureStateOf(row.screenshot_path as string | null);
   return {
     id: row.id as string,
     createdAt: row.created_at as string,
@@ -105,7 +115,8 @@ function rowToSummary(row: Record<string, unknown>): ExperimentRunSummary {
     ok: (row.ok as number) === 1,
     error: (row.error as string | null) ?? null,
     durationMs: (row.duration_ms as number) ?? 0,
-    hasScreenshot: !!(row.screenshot_path as string | null),
+    hasScreenshot: capture === 'present',
+    captureState: capture,
     label: (row.label as string) ?? '',
   };
 }
@@ -139,7 +150,16 @@ export function getExperimentRun(id: string): ExperimentRunDetail | null {
   };
 }
 
+/**
+ * Delete one run and its capture. Retention is unbounded by design (see `capture-store.ts`) —
+ * this is the explicit, user-driven half of that decision, reached from the history row and
+ * `DELETE /api/experiment/runs/:id`. It was dead code until then.
+ */
 export function deleteExperimentRun(id: string): boolean {
   ensureTable();
-  return getDb().prepare('DELETE FROM experiment_runs WHERE id = ?').run(id).changes > 0;
+  const removed = getDb().prepare('DELETE FROM experiment_runs WHERE id = ?').run(id).changes > 0;
+  // Evidence follows its row: leaving the PNG behind would accumulate captures nothing can
+  // reach. Only ever inside the durable root.
+  deleteCaptureFor(id);
+  return removed;
 }
