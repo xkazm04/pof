@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Send, ListChecks, Workflow, Sparkles, Download } from 'lucide-react';
 import { ReviewableModuleView } from '../../shared/ReviewableModuleView';
 import type { ExtraTab } from '../../shared/ReviewableModuleView';
@@ -13,6 +13,7 @@ import { useModuleStore } from '@/stores/moduleStore';
 import { TaskFactory } from '@/lib/cli-task';
 import { getAppOrigin } from '@/lib/constants';
 import { AnimationStateMachine } from './AnimationStateMachine';
+import { EMPTY_PROGRESS } from './AnimationStateMachine/constants';
 import { AnimationChecklist } from './AnimationChecklist';
 import { AIComboChoreographer } from './AIComboChoreographer';
 import { MixamoImport } from './MixamoImport';
@@ -28,7 +29,24 @@ export function AnimationsView() {
   const setChecklistItem = useModuleStore((s) => s.setChecklistItem);
 
   const [customPrompt, setCustomPrompt] = useState('');
-  const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
+
+  // The Setup Guide's completions are DERIVED from the persisted module
+  // progress, never held in a local Set. `onMarkComplete` has always written
+  // into `moduleStore.checklistProgress` (a declared aux progress surface, see
+  // `checklist-progress-keys`), and that record survives reload — but the bar
+  // used to read a `useState` Set that was never seeded from it, so every
+  // checkmark vanished on remount while the app still held the record. The
+  // sibling state-machine graph reads the same store correctly
+  // (`useAnimationStateMachine`); this is that pattern.
+  //
+  // The module record also carries the state-machine's `anim-*` / `scanned-*`
+  // node keys; `AnimationChecklist` counts only its own `ANIMATION_STEPS`, so
+  // passing the whole set is safe and adds no key namespace.
+  const animProgress = useModuleStore((s) => s.checklistProgress['animations'] ?? EMPTY_PROGRESS);
+  const completedSteps = useMemo(
+    () => new Set(Object.keys(animProgress).filter((id) => animProgress[id])),
+    [animProgress],
+  );
 
   // ── Checklist CLI session (for AnimationChecklist setup guide) ──
 
@@ -53,12 +71,9 @@ export function AnimationsView() {
     checklistCli.execute(task);
   }, [checklistCli, appOrigin]);
 
+  // Single write: the store IS the state the bar renders, so there is no
+  // local-only copy left to drift out of sync with it.
   const handleMarkComplete = useCallback((stepId: string) => {
-    setCompletedSteps((prev) => {
-      const next = new Set(prev);
-      next.add(stepId);
-      return next;
-    });
     setChecklistItem('animations', stepId, true);
   }, [setChecklistItem]);
 
