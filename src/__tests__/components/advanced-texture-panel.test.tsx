@@ -49,12 +49,25 @@ describe('AdvancedTexturePanel — seam check', () => {
     expect(screen.getByTestId('scenario-reroll')).toBeTruthy();
   });
 
-  it('does not render the seam badge for a clean tile', async () => {
+  it('a clean tile says the check RAN — not nothing, which reads as never checked', async () => {
     mockFetch({ body: { success: true, data: { albedoUrl: 'a.png', seam: { ...seamData.seam, hasSeam: false, worstEdge: undefined } } } });
     render(<AdvancedTexturePanel />);
     fireEvent.click(screen.getByTestId('scenario-generate'));
 
     await waitFor(() => expect(screen.getByTestId('pbr-albedo')).toBeTruthy());
+    expect(screen.queryByTestId('scenario-seam-badge')).toBeNull();
+    expect(screen.getByTestId('scenario-seam-clean').textContent).toMatch(/checked — no seam/i);
+    expect(screen.queryByTestId('scenario-seam-unchecked')).toBeNull();
+  });
+
+  it('a texture the seam pass could not read says so, rather than looking clean', async () => {
+    mockFetch({ body: { success: true, data: { albedoUrl: 'a.png', seam: null } } });
+    render(<AdvancedTexturePanel />);
+    fireEvent.click(screen.getByTestId('scenario-generate'));
+
+    await waitFor(() => expect(screen.getByTestId('pbr-albedo')).toBeTruthy());
+    expect(screen.getByTestId('scenario-seam-unchecked').textContent).toMatch(/not checked/i);
+    expect(screen.queryByTestId('scenario-seam-clean')).toBeNull();
     expect(screen.queryByTestId('scenario-seam-badge')).toBeNull();
   });
 

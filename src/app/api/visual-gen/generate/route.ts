@@ -10,6 +10,16 @@ import { startTripoJob } from '@/lib/visual-gen/tripo-job-store';
 import { polycountFor, resolveAssetClass } from '@/lib/visual-gen/polycount-presets';
 import { providerFaceLimit } from '@/lib/visual-gen/face-budget';
 import { tripoModelFor } from '@/lib/visual-gen/tripo-models';
+import {
+  gateInputImage,
+  parseVisionImage,
+  summarizeInputGate,
+  inputGateUnavailable,
+  inputGateSkipped,
+  inputGateRefusal,
+  inputGateOverridden,
+  type InputGateOutcome,
+} from '@/lib/visual-gen/input-gate';
 
 /**
  * POST /api/visual-gen/generate
@@ -22,6 +32,10 @@ import { tripoModelFor } from '@/lib/visual-gen/tripo-models';
  *    PBR-textured output (free tier is non-commercial). Needs env TRIPO_API_KEY.
  * Both start a job (poll GET /api/visual-gen/generate/status?jobId=...). MCP-backed
  * providers (rodin) go through /api/blender-mcp/generate, not here.
+ *
+ * Every `image-to-3d` submit passes the Tier-0 INPUT gate before a provider job starts
+ * (`gateInput: false` opts out, `overrideInputGate: true` generates through a fail). The
+ * outcome rides on the 202 as `inputGate` — including when the gate could not run.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -34,8 +48,15 @@ export async function POST(request: NextRequest) {
       assetClass?: string;
       maxAttempts?: number;
       topology?: string;
+      /** Opt OUT of the Tier-0 input gate. Absent = gate runs (the credit-saving default). */
+      gateInput?: boolean;
+      /** Generate anyway despite a `fail` verdict. The outcome is still reported. */
+      overrideInputGate?: boolean;
     };
-    const { mode, providerId, imageDataUrl, prompt, mcResolution, assetClass, maxAttempts, topology } = body;
+    const {
+      mode, providerId, imageDataUrl, prompt, mcResolution, assetClass, maxAttempts, topology,
+      gateInput, overrideInputGate,
+    } = body;
 
     // Quad topology is REACHABLE but refused, rather than silently unavailable. Tripo
     // delivers a quad request as FBX, and every consumer downstream of this route assumes
@@ -63,6 +84,38 @@ export async function POST(request: NextRequest) {
       : undefined;
 
     if (!mode || !providerId) return apiError('Missing required fields: mode, providerId', 400);
+
+    /**
+     * Tier-0 INPUT gate — the symmetric twin of the Tier-1 mesh critique, and the ONE
+     * place the input-gate lib's "a bad input caught here saves the generation credits"
+     * claim is actually cashed. It runs BEFORE any `start*Job` call, so a refusal costs
+     * nothing but the vision call it replaces.
+     *
+     * Three honest outcomes, and only one of them can refuse:
+     *  - ran + `fail`   → 400 with the defects (or, with `overrideInputGate`, generate and
+     *                     say it was overridden);
+     *  - ran + pass/warn → generate, outcome attached to the 202;
+     *  - could not run   → generate, stamped `unavailable`/`skipped`. A gate with no key
+     *                     has measured nothing and must not condemn an image — the same
+     *                     rule wave 12 gave the mesh critique (`unavailable → ungated`).
+     * Submit-time only: never a paid vision call per keystroke.
+     */
+    let inputGate: InputGateOutcome | undefined;
+    if (mode === 'image-to-3d' && imageDataUrl) {
+      if (gateInput === false) {
+        inputGate = inputGateSkipped();
+      } else {
+        const image = parseVisionImage(imageDataUrl);
+        inputGate = image
+          ? summarizeInputGate(await gateInputImage(image, { subject: prompt?.trim().slice(0, 120) || undefined }))
+          : inputGateUnavailable('imageDataUrl is not a base64 image data URL the vision seam can read');
+        const refusal = inputGateRefusal(inputGate);
+        if (refusal) {
+          if (overrideInputGate !== true) return apiError(refusal, 400);
+          inputGate = inputGateOverridden(inputGate);
+        }
+      }
+    }
 
     const outFor = (id: string) => {
       const stamp = Date.now();
@@ -93,7 +146,7 @@ export async function POST(request: NextRequest) {
       const jobId = providerId === 'hunyuan3d'
         ? startHunyuanJob({ imagePath: inPath, outputPath, assetClass })
         : startTriposrJob({ imagePath: inPath, outputPath, mcResolution, fidelity: true, assetClass });
-      return apiSuccess({ jobId, provider: providerId, mode, gradedAs: resolveAssetClass(assetClass).gradedAs }, 202);
+      return apiSuccess({ jobId, provider: providerId, mode, gradedAs: resolveAssetClass(assetClass).gradedAs, inputGate }, 202);
     }
 
     if (providerId === 'tripo3d') {
@@ -106,6 +159,7 @@ export async function POST(request: NextRequest) {
       if (mode === 'text-to-3d') {
         if (!prompt?.trim()) return apiError('Missing prompt for text-to-3d', 400);
         const jobId = startTripoJob({ mode: 'text-to-3d', prompt, outputPath, pbr: true, faceLimit, assetClass, maxAttempts, ...tripoPin });
+        // No `inputGate` here on purpose: a text-to-3d submit has no input image to gate.
         return apiSuccess({ jobId, provider: 'tripo3d', mode, gradedAs }, 202);
       }
       if (mode === 'image-to-3d') {
@@ -113,7 +167,7 @@ export async function POST(request: NextRequest) {
         const inPath = imageToFile('tripo3d', stamp);
         if (!inPath) return apiError('imageDataUrl must be a base64 PNG/JPG/WebP data URL', 400);
         const jobId = startTripoJob({ mode: 'image-to-3d', imagePath: inPath, outputPath, pbr: true, faceLimit, assetClass, maxAttempts, ...tripoPin });
-        return apiSuccess({ jobId, provider: 'tripo3d', mode, gradedAs }, 202);
+        return apiSuccess({ jobId, provider: 'tripo3d', mode, gradedAs, inputGate }, 202);
       }
       return apiError('tripo3d supports text-to-3d and image-to-3d', 400);
     }

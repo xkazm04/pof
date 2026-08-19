@@ -64,6 +64,14 @@ export interface GenerationJob {
   renderUrl?: string;
   /** Server-side path of the delivered mesh (may not be servable — see `meshPreview`). */
   meshPath?: string;
+  /**
+   * The Tier-0 INPUT gate's own sentence about the reference image this job was submitted
+   * with, read verbatim from the generate 202. Present for every image-to-3d submit —
+   * including when the gate could NOT run, which is the state that must never round to a
+   * silent pass. A `fail` verdict never reaches here: the route refuses with it instead,
+   * before any provider call, and the reason lands on `error`.
+   */
+  inputGateNote?: string;
 }
 
 interface ForgeState {
@@ -490,7 +498,12 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
   submitLocalJob: async (providerId, mode, imageDataUrl, prompt, assetClass) => {
     const localId = get().addJob({ mode, prompt: prompt ?? '', providerId, imageUrl: imageDataUrl, assetClass });
 
-    const submit = await tryApiFetch<{ jobId: string; gradedAs?: string }>('/api/visual-gen/generate', {
+    const submit = await tryApiFetch<{
+      jobId: string;
+      gradedAs?: string;
+      /** Tier-0 input-gate outcome (image-to-3d only) — see `inputGateNote`. */
+      inputGate?: { note: string };
+    }>('/api/visual-gen/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       // `prompt` is what makes text-to-3d reach the real route (the handler refuses
@@ -503,10 +516,13 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       get().updateJob(localId, { status: 'failed', error: submit.error, completedAt: Date.now() });
       return;
     }
-    const { jobId, gradedAs } = submit.data;
+    const { jobId, gradedAs, inputGate } = submit.data;
     // `gradedAs` is the server's own sentence about the budget in force — stored at
     // SUBMIT time so the class-blind default is visible before any poll returns.
-    get().updateJob(localId, { status: 'generating', mcpJobId: jobId, gradedAs });
+    // `inputGate.note` is the same discipline for the Tier-0 INPUT gate: a submit whose
+    // image nothing could check says so here rather than reading as a checked one. (A
+    // refusal never gets this far — it arrives as `!submit.ok` above, with its reasons.)
+    get().updateJob(localId, { status: 'generating', mcpJobId: jobId, gradedAs, inputGateNote: inputGate?.note });
     if (prompt?.trim()) get().addToHistory(prompt.trim());
 
     // Self-scheduling poll loop (same discipline as submitMcpJob: no overlapping

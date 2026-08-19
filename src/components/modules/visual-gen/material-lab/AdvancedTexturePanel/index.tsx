@@ -115,6 +115,28 @@ export function AdvancedTexturePanel() {
                 </button>
               </div>
             )}
+            {/* A CLEAN check used to render nothing, so "checked and clean" was visually
+                identical to "never checked" — and a tile nobody had tiled looked exactly
+                like a tile that wraps. The pass says so, with the same measured deltas. */}
+            {pbr.seam && !pbr.seam.hasSeam && (
+              <div
+                data-testid="scenario-seam-clean"
+                title={`Wrap-around edge deltas — sides ${Math.round(pbr.seam.horizontal.delta * 100)}%, top/bottom ${Math.round(pbr.seam.vertical.delta * 100)}% (flagged above ${Math.round(pbr.seam.threshold * 100)}%)`}
+                className="flex items-center gap-1.5 text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 rounded px-2 py-1.5"
+              >
+                <Check className="w-3.5 h-3.5 shrink-0" />
+                <span className="font-medium">Tiling checked — no seam</span>
+              </div>
+            )}
+            {pbr.albedoUrl && pbr.seam == null && (
+              <div
+                data-testid="scenario-seam-unchecked"
+                className="flex items-start gap-1.5 text-xs text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded px-2 py-1.5"
+              >
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                <span>Tiling not checked — the seam pass could not read this texture.</span>
+              </div>
+            )}
             <button
               type="button"
               data-testid="scenario-use-as-material"

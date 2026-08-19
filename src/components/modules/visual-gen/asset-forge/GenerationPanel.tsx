@@ -47,6 +47,9 @@ export function GenerationPanel() {
   // jobs[0] — showing an OLDER job's sentence beside a newer submission would attribute
   // a budget to a generation that never used it.
   const latestGradedAs = useForgeStore((s) => s.jobs[0]?.gradedAs);
+  // Same rule as `gradedAs`: strictly jobs[0], scalar, so the Tier-0 input-gate sentence
+  // can never be attributed to a submission that did not produce it.
+  const latestInputGate = useForgeStore((s) => s.jobs[0]?.inputGateNote);
   const blenderConnected = useBlenderMCPStore((s) => s.connection.connected);
 
   const filteredProviders = GENERATION_PROVIDERS.filter((p) => p.modes.includes(mode));
@@ -270,6 +273,13 @@ export function GenerationPanel() {
         {latestGradedAs && (
           <p className="mt-1 text-2xs text-text-muted" data-testid="forge-graded-as">
             Last submission: {latestGradedAs}
+          </p>
+        )}
+        {/* The Tier-0 INPUT gate's verdict on the reference image, verbatim. An
+            "unavailable" gate reads as unavailable here — never as a quiet pass. */}
+        {latestInputGate && (
+          <p className="mt-1 text-2xs text-text-muted" data-testid="forge-input-gate">
+            {latestInputGate}
           </p>
         )}
       </div>

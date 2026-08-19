@@ -56,18 +56,15 @@ describe('POST /api/leonardo', () => {
     expect(leo.generateImage).toHaveBeenCalledWith('rock', { tiling: true });
   });
 
-  it('runs a seam check and attaches it when tiling is requested', async () => {
+  // The route no longer returns a `seam` field. It was gated on `opts.tiling`, which
+  // NOTHING in the app or the scripts has ever set, so it was null on every response ever
+  // served — a permanent "not checked" wearing the shape of a result. The live seam path
+  // is /api/scenario, which runs the check for real and renders both verdicts.
+  it('returns no seam field — the tileability pass has no caller and is not faked', async () => {
     const res = await POST(req({ mode: 'image', prompt: 'rock', opts: { tiling: true } }));
     const json = await res.json();
-    expect(detectSeamsSafe).toHaveBeenCalled();
-    expect(json.data.seam).toMatchObject({ hasSeam: true, worstEdge: 'left edge' });
-  });
-
-  it('skips the seam check for non-tiling image generation', async () => {
-    const res = await POST(req({ mode: 'image', prompt: 'a sword' }));
-    const json = await res.json();
     expect(detectSeamsSafe).not.toHaveBeenCalled();
-    expect(json.data.seam ?? null).toBeNull();
+    expect('seam' in json.data).toBe(false);
   });
 
   it('mode=image forwards controlnets + inpaint opts', async () => {

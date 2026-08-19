@@ -1,6 +1,5 @@
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { generateImage, upscaleImage, unzoomImage, generateTextureOn3DModel, MAX_PROMPT_LENGTH, type GenerateImageOptions } from '@/lib/leonardo';
-import { detectSeamsSafe, detectSeamsFromUrl, type SeamCheckResult } from '@/lib/visual-gen/seam-check';
 import { applyStyleFragment, styleDnaToPromptFragment } from '@/lib/visual-gen/style-dna';
 import { getActiveStyleDna } from '@/lib/visual-gen/style-dna-db';
 import { getDb } from '@/lib/db';
@@ -40,16 +39,16 @@ export async function POST(request: Request) {
       }
       const result = await generateImage(finalPrompt, opts);
 
-      // Tileability pass — only meaningful when a seamless tile was requested.
-      // Prefer the already-downloaded bytes; fall back to the URL if cleanup was off.
-      let seam: SeamCheckResult | null = null;
-      if (opts.tiling) {
-        seam = result.imageBase64
-          ? await detectSeamsSafe(new Uint8Array(Buffer.from(result.imageBase64, 'base64')))
-          : await detectSeamsFromUrl(result.imageUrl);
-      }
-
-      return apiSuccess({ ...result, seam, styleDnaApplied });
+      // NO SEAM FIELD HERE, DELIBERATELY. This route used to run a tileability pass gated
+      // on `opts.tiling` and return a `seam` alongside the image — but nothing anywhere
+      // sets `tiling` (the only producer is the `GenerateImageOptions` type itself), so
+      // the field was `null` on every single response ever served: a permanent "not
+      // checked" wearing the shape of a result. The LIVE seam path is /api/scenario, which
+      // genuinely runs `detectSeamsFromUrl` on the albedo it generates and whose verdict
+      // the material lab renders in BOTH directions (seam found / checked and clean).
+      // To bring it back, add a caller that actually requests a seamless tile from
+      // Leonardo and restore the branch with it — not before.
+      return apiSuccess({ ...result, styleDnaApplied });
     }
 
     if (mode === 'upscale') {

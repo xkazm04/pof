@@ -10,6 +10,11 @@ import { gateInputImage, parseVisionImage } from '@/lib/visual-gen/input-gate';
  * callers decide what to do with a warn/fail verdict; a gate that cannot run (no
  * QWEN_API_KEY) is an error with the reason, never a silent pass.
  *
+ * This is the STANDALONE probe — "score this image on its own". The credit saving is
+ * cashed in `POST /api/visual-gen/generate`, which calls the same `gateInputImage`
+ * in-process before starting a provider job (no HTTP hop, so the gate cannot be
+ * bypassed by a caller that simply forgets to probe first).
+ *
  * Body: { imageDataUrl: string, subject?: string }
  * Data: { verdict: 'pass'|'warn'|'fail', score: 0-100, reasons: string[], raw: string }
  */
