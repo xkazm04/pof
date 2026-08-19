@@ -1,8 +1,56 @@
-# ARDY text→motion engine for PoF (PROTOTYPE PROVEN 2026-07-15)
+# ARDY text→motion engine for PoF (PROTOTYPE PROVEN 2026-07-15 — INSTALL NOW ABSENT)
 
 > Source: /research run 2026-07-14 (Stefan 3D AI, "NVIDIA ARDY: The Real-Time Leap in AI Animation").
 > Verified: [nv-tlabs/ardy](https://github.com/nv-tlabs/ardy) — SIGGRAPH 2026, NVIDIA Toronto AI Lab.
 > Status: **END-TO-END PROVEN LIVE 2026-07-15** — text prompt → UE 5.8 AnimSequence, fully headless, $0.
+
+> ## ⚠️ 2026-08-19 — THE INSTALL IS GONE; THIS RECIPE IS NOT CURRENTLY RUNNABLE
+>
+> An uncapped search of the machine (`find /c/Users/kazda -maxdepth 4 -iname "ardy*"`) returns
+> **nothing**. `C:/Users/kazda/kiro/ardy` — the venv, the weights, the locally-assembled
+> `text_encoders/` that solved the gated-Llama problem — is absent. `POF_ARDY_ROOT` is unset.
+>
+> What SURVIVES is everything that was committed: the 6 converters in
+> `scripts/visual-gen/ardy/` and the 12 `ardy_*.py` scripts in the UE project's
+> `Content/Python/`. What is LOST is the model install itself, so every step below from
+> "Generate" onward is currently unrunnable.
+>
+> Consequence for `/status`: `characters::Combat Anim`, `cutscenes::Blocking / Body Anim` and
+> `spellbook::Animation` are still `trueEngine: None, generatorWired: false` in
+> `src/lib/status/step-facts.json` — and now the engine that would power them is not on disk
+> either. **Reinstalling ARDY is the prerequisite for every animation-engine item in the
+> backlog.** Budget the gated-Llama workaround again (§1 below documents it).
+>
+> ### Lineage correction — ARDY is the NEWER model, Kimodo is the earlier one
+>
+> A 2026-08-19 `/research` run initially proposed adopting **NVIDIA Kimodo** as an ARDY
+> *successor*. That was backwards, and the correction is recorded here so it is not
+> re-proposed. From Kimodo's own README changelog:
+>
+> > **[2026-07-10]** Released the ARDY project — a *real-time* motion generation model with
+> > all the controllability of Kimodo!
+>
+> | | **ARDY** (this spec) | **Kimodo** |
+> |---|---|---|
+> | Released | 2026-07-10 | 2026-03-16 |
+> | Skeleton | **Core-27** — Mixamo-convention names; UE 5.8's auto-template matched it with **zero manual chains** (`IK_ArdyCore`) | **SOMA-77** since 2026-03-19 (breaking) — would strand the entire Core-27 retarget rig |
+> | Training data | Bones Rigplay 1 | Bones Rigplay 1 — **identical**, so there is no quality lever here |
+> | Text encoder | gated `meta-llama/Meta-Llama-3-8B-Instruct` via LLM2Vec | **the same** (`kimodo/model/llm2vec/llm2vec.py:173`) — the gating problem is not solved by switching |
+> | Constraints | yes — `--constraints <saved list>` | yes |
+> | Multi-prompt | **no** (single `--prompt`) | **yes** ("improved multi-prompt generation", 2026-04-24) |
+> | Real-time | yes (~33 ms/step) | no |
+>
+> **Verdict: reinstall ARDY, do not switch to Kimodo.** Same dataset means no quality gain,
+> and SOMA-77 would discard a proven retarget rig for nothing.
+>
+> **The one genuine Kimodo capability PoF lacks is native multi-prompt generation** — a single
+> continuous clip from a sequence of prompts ("run forward, then vault over"). PoF fakes this
+> today with `scripts/visual-gen/ardy/pof_npz_concat.py`, and session 5 (2026-07-16) found
+> that `duplicate_and_retarget` **explodes on the concatenated clip only** (bones at 78 m,
+> while individually-retargeted clips sit clean at ~6 cm) — still open and undiagnosed, worked
+> around by "retarget clips individually". A model that emits the blend as one take with one
+> root track removes the concat step the bug lives in. That is the *only* reason to keep
+> Kimodo on the radar, and it is a second engine for combo clips, never a replacement.
 
 ## Proven pipeline (2026-07-15)
 
