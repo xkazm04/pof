@@ -729,8 +729,16 @@ with a 180 ms opacity + 6 px y-shift. List-entrance stagger in panel grids uses
 when `prefers-reduced-motion: reduce` is set the variants collapse to an immediate opacity-only
 fade (or are disabled entirely for the y-axis), satisfying WCAG SC 2.3.3.
 
-The same preference is honored for non-framer motion via a **layered policy** (see the header
-comment on the `@media (prefers-reduced-motion: reduce)` block in `globals.css`): (1) that block
+The same preference is honored via a **layered policy**. **Layer 0 is `AppMotionProvider`**
+(`src/components/providers/AppMotionProvider.tsx`), mounted in `src/app/layout.tsx`, which supplies the
+app's only `MotionConfig` with `reducedMotion="user"` — framer-motion defaults to `"never"` and **never
+reads the CSS media query**, so without it every `motion.*` element ignores the OS preference. It
+neutralises all *positional* animation (transform props, `width/height/top/left/right/bottom`, and
+`layout`/`layoutId`). Non-positional loops — `opacity`, `borderColor`, `boxShadow`, `strokeDashoffset`,
+SVG `r` — **keep animating by framer's design** and must gate themselves with
+`motionSafe(t, prefersReduced)`; `src/__tests__/a11y/motion-loop-guard.test.ts` enforces that every
+`repeat: Infinity` site does. The remaining layers cover non-framer motion (see the header comment on the
+`@media (prefers-reduced-motion: reduce)` block in `globals.css`): (1) that block
 zeroes every CSS animation/transition *duration* app-wide (progress fills like the shared `MeterBar`
 grow-in `.meter-fill-grow`, grid-row expand/collapse, chip tweens, `animate-pulse` skeletons snap
 instantly); (2) JS entrance motion collapses via

@@ -14,7 +14,7 @@ Cross-cutting infrastructure that every module in the app depends on: the typed 
 | `src/hooks/useLifecycle.ts` | `useLifecycle()` / `useGuardedLifecycle()` React hooks |
 | `src/lib/state-emitter.ts` | `createStateEmitter<T>()` — shared subscribe/notify/getState primitive for the bridge singletons |
 | `src/hooks/useSuspend.ts` | `SuspendContext`, `useSuspendableEffect`, `useSuspendableSelector` |
-| `src/components/layout/ModuleRenderer.tsx` | LRU module cache (`LRU_CAP = 5`, `SESSION_LRU_CAP = 5`) |
+| `src/components/layout/ModuleRenderer/index.tsx` · `helpers.ts` | LRU module cache (`LRU_CAP = 5`, `SESSION_LRU_CAP = 5`) + `lruTouched()` / `ObservedLiveProbe` / `EvictionBasis` |
 | `src/lib/logger.ts` | Thin `logger` wrapper — `info`, `warn`, `debug`, `log` |
 | `src/lib/chart-colors.ts` | Full semantic color palette: `STATUS_*`, `ACCENT_*`, `MODULE_COLORS`, helpers |
 | `src/lib/constants.ts` | `UI_TIMEOUTS`, `Z_INDEX`, `MOTION`/`CLI_ANIM`, `getAppOrigin()` |
@@ -146,9 +146,15 @@ const unsub = emitter.subscribe(handler);  // returns an unsubscribe fn
 
 Navigating between modules unmounts components, destroying local state and interrupting running CLI sessions. Keeping every visited module mounted wastes memory and causes invisible timers/subscriptions to fire.
 
-### LRU cache (`src/components/layout/ModuleRenderer.tsx`)
+### LRU cache (`src/components/layout/ModuleRenderer/index.tsx` · `helpers.ts`)
 
-`ModuleRenderer` keeps the last **5 modules** (`LRU_CAP = 5`, line 11) and the last **5 inline terminal sessions** (`SESSION_LRU_CAP = 5`, line 14) mounted simultaneously. Navigation promotes the active module to the front of the list via `lruTouched()` (line 156). The tail (least-recently-used) entry is evicted — its DOM subtree unmounts and cleans up. All mounted-but-hidden modules have `display: none` applied via `style`.
+`ModuleRenderer` keeps the last **5 modules** (`LRU_CAP = 5`, `index.tsx:29`) and the last **5 inline terminal sessions** (`SESSION_LRU_CAP = 5`, `index.tsx:32`) mounted simultaneously. Navigation promotes the active module to the front of the list via `lruTouched()` (`helpers.ts`).
+
+The victim is the least-recently-used entry with **no observed live work** — `lruTouched()` takes an `ObservedLiveProbe` derived from the CLI session store, so a pane with a running CLI session is skipped. The classic tail is evicted only when every candidate is live (the cap always holds); that case is reported with basis `forced-over-live-work` and surfaces in the Activity Feed as a `shell-eviction` event.
+
+**The probe is positive-evidence only:** `false` means "nothing observed", never "idle" — the shell cannot see a module's own streams or polls. `EvictionBasis` (`'unprobed' | 'no-observed-live-work' | 'forced-over-live-work'`) carries that distinction outward beside the existing `liveWork` verdict, so no report can upgrade it, and `unprobed` exists so "no probe was supplied" can never render as a clean bill of health. Routine `no-observed-live-work` evictions stay a `logger.debug` line by design: surfacing them would put "something may have been lost" in front of the user on every 6th navigation, in exactly the case the shell cannot characterise.
+
+The evicted entry's DOM subtree unmounts and cleans up. All mounted-but-hidden modules have `display: none` applied via `style`.
 
 ### SuspendContext (`src/hooks/useSuspend.ts:17`)
 
