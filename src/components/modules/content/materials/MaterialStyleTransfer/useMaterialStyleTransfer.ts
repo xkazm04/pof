@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
 import { formatBytes } from '@/lib/format';
 import { logger } from '@/lib/logger';
+import type { ApiResponse } from '@/types/api';
 import type { SurfaceType } from '../MaterialParameterConfigurator';
 import type { AnalyzedProperties, StyleTransferConfig } from './types';
 
@@ -116,10 +117,19 @@ export function useMaterialStyleTransfer(onGenerate: (config: StyleTransferConfi
           description: referenceDescription,
         }),
       });
-      const json = await res.json();
-      if (json.success) {
+      // Typed, and every field guarded: an envelope that says `success` but
+      // carries no analysis used to throw on `json.data.analysis` INSIDE the try,
+      // so the catch below reported it as a connection problem — blaming the
+      // user's network for a malformed server response.
+      const json = (await res.json()) as ApiResponse<{ analysis?: AnalyzedProperties }>;
+      if (json.success && json.data?.analysis) {
         setAnalysis(json.data.analysis);
         setAdjustmentsOpen(true);
+      } else if (json.success) {
+        logger.warn('[MaterialStyleTransfer] analyze succeeded with no analysis payload', json);
+        setAnalyzeError(
+          'The analyzer returned no material properties — try a different image or a more specific description.',
+        );
       } else {
         setAnalyzeError(
           typeof json.error === 'string' && json.error
@@ -128,7 +138,7 @@ export function useMaterialStyleTransfer(onGenerate: (config: StyleTransferConfi
         );
       }
     } catch (error) {
-      console.error('[MaterialStyleTransfer] analysis request failed:', error);
+      logger.error('[MaterialStyleTransfer] analysis request failed', error);
       setAnalyzeError(
         error instanceof Error && error.message
           ? error.message

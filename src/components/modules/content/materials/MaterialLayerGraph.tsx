@@ -1,11 +1,10 @@
 'use client';
 
 import { useCallback, useMemo } from 'react';
-import { Brush, Crown, Paintbrush, SunDim, Lock, Check, ChevronDown } from 'lucide-react';
+import { Brush, Crown, Globe, Paintbrush, Lock, Check } from 'lucide-react';
 import { useModuleStore } from '@/stores/moduleStore';
+import { getModuleChecklist } from '@/lib/module-registry';
 import type { LucideIcon } from 'lucide-react';
-import { MODULE_COLORS } from '@/lib/constants';
-import { STATUS_SUCCESS } from '@/lib/chart-colors';
 
 interface MaterialNode {
   id: string;
@@ -14,51 +13,60 @@ interface MaterialNode {
   description: string;
   icon: LucideIcon;
   prompt: string;
-  /** Tier in the hierarchy: 0 = root, 1 = surface switches, 2 = instances */
+  /** Tier in the hierarchy: 0 = root master material, 1 = what builds on it */
+  tier: number;
+  dependencies: string[];
+  /** True when `id` resolves to no registry checklist item — surfaced, not hidden. */
+  missing: boolean;
+}
+
+/**
+ * The shape of the graph: which REAL `materials` checklist items it draws and how
+ * they depend on each other. Labels, descriptions and — critically — prompts come
+ * from `module-registry` (`mat-1`…`mat-6`), never from a parallel copy here.
+ *
+ * These ids used to be `mt-1`/`mt-2`/`mt-3`, which are the module's QUICK-ACTION
+ * ids and belong to no checklist item: the two child nodes could never unlock on a
+ * fresh install (`DEP_MISSING: mt-3` forever) and every run wrote a progress key
+ * nothing reads. `POST /api/checklist/complete` now refuses ids like that outright.
+ *
+ * The UE5 workflow this draws: Master Material → Material Instances (dynamic) and
+ * the shared Material Parameter Collections both depend on it. Post-process is NOT
+ * a materials checklist item — it has its own Post-Process tab in this module.
+ */
+interface MaterialNodeSpec {
+  id: string;
+  subtitle: string;
+  icon: LucideIcon;
   tier: number;
   dependencies: string[];
 }
 
-/**
- * Material hierarchy:
- * - mt-3: Master Material (root) — the base shader with switches
- * - mt-1: Dynamic Materials (tier 1) — material parameter collections & runtime changes
- * - mt-2: Post-Process (tier 2) — post-process materials layered on top
- *
- * The UE5 workflow: Master Material → Material Instances (dynamic) → Post-Process chain
- */
-const NODES: MaterialNode[] = [
-  {
-    id: 'mt-3',
-    label: 'Master Material',
-    subtitle: 'Root Shader',
-    description: 'Surface switches for Metal, Cloth, Skin',
-    icon: Crown,
-    prompt: 'Design a master material with switches for different surface types (metal, cloth, skin, etc.).',
-    tier: 0,
-    dependencies: [],
-  },
-  {
-    id: 'mt-1',
-    label: 'Dynamic Materials',
-    subtitle: 'Instances',
-    description: 'Runtime parameter collections & material instances',
-    icon: Paintbrush,
-    prompt: 'Create a dynamic material system for runtime color/texture changes with material parameter collections.',
-    tier: 1,
-    dependencies: ['mt-3'],
-  },
-  {
-    id: 'mt-2',
-    label: 'Post-Process',
-    subtitle: 'Effects Chain',
-    description: 'Bloom, color grading, custom post-process effects',
-    icon: SunDim,
-    prompt: 'Set up post-process effects chain with bloom, color grading, and custom effects.',
-    tier: 1,
-    dependencies: ['mt-3'],
-  },
+const HIERARCHY: MaterialNodeSpec[] = [
+  { id: 'mat-1', subtitle: 'Root Shader', icon: Crown, tier: 0, dependencies: [] },
+  { id: 'mat-2', subtitle: 'Instances', icon: Paintbrush, tier: 1, dependencies: ['mat-1'] },
+  { id: 'mat-3', subtitle: 'Shared Params', icon: Globe, tier: 1, dependencies: ['mat-1'] },
 ];
+
+/**
+ * Resolve a node against the registry. A spec whose id no longer exists renders as
+ * a loud, undispatchable drift marker rather than vanishing from the graph — a
+ * silently-dropped node is exactly how the `mt-*` divergence survived.
+ */
+function nodeFrom(spec: MaterialNodeSpec): MaterialNode {
+  const item = getModuleChecklist('materials').find((i) => i.id === spec.id);
+  return {
+    ...spec,
+    label: item?.label ?? spec.id,
+    description:
+      item?.description ??
+      `No "${spec.id}" item exists in the materials checklist — this graph and the registry have drifted.`,
+    prompt: item?.prompt ?? '',
+    missing: !item,
+  };
+}
+
+const NODES: MaterialNode[] = HIERARCHY.map(nodeFrom);
 
 interface MaterialLayerGraphProps {
   onRunPrompt: (itemId: string, prompt: string) => void;
@@ -72,13 +80,22 @@ export function MaterialLayerGraph({ onRunPrompt, isRunning, activeItemId }: Mat
   const progress = useModuleStore((s) => s.checklistProgress['materials'] ?? EMPTY_PROGRESS);
 
   const nodeStates = useMemo(() => {
+    const labelOf = new Map(NODES.map((n) => [n.id, n.label]));
     return NODES.map((node) => {
       const completed = !!progress[node.id];
-      const prerequisitesMet = node.dependencies.every((d) => !!progress[d]);
-      const locked = !prerequisitesMet && !completed;
+      const unmetDeps = node.dependencies.filter((d) => !progress[d]);
+      const locked = node.missing || (unmetDeps.length > 0 && !completed);
       const isActive = activeItemId === node.id;
       const isRoot = node.tier === 0;
-      return { ...node, completed, locked, isActive, isRoot };
+      return {
+        ...node,
+        completed,
+        locked,
+        isActive,
+        isRoot,
+        // Name what is actually missing instead of a hard-coded id.
+        unmetDeps: unmetDeps.map((d) => labelOf.get(d) ?? d),
+      };
     });
   }, [progress, activeItemId]);
 
@@ -87,7 +104,9 @@ export function MaterialLayerGraph({ onRunPrompt, isRunning, activeItemId }: Mat
 
   const handleClick = useCallback(
     (node: MaterialNode, locked: boolean) => {
-      if (locked || isRunning) return;
+      // An unresolved node has no registry prompt — dispatching an empty task
+      // would look like a run and produce nothing.
+      if (locked || isRunning || !node.prompt) return;
       onRunPrompt(node.id, node.prompt);
     },
     [onRunPrompt, isRunning],
@@ -114,7 +133,7 @@ export function MaterialLayerGraph({ onRunPrompt, isRunning, activeItemId }: Mat
           <div>
             <h3 className="text-sm font-bold tracking-widest uppercase text-violet-100">Shader Tree Compiler</h3>
             <p className="text-xs text-violet-400/80 uppercase tracking-wider mt-0.5">
-              GRAPH_STATUS: {completedCount}/3 NODES_COMPILED
+              GRAPH_STATUS: {completedCount}/{nodeStates.length} NODES_COMPILED
             </p>
           </div>
         </div>
@@ -176,6 +195,8 @@ interface NodeState extends MaterialNode {
   locked: boolean;
   isActive: boolean;
   isRoot: boolean;
+  /** Labels of the prerequisites still outstanding, in graph order. */
+  unmetDeps: string[];
 }
 
 interface NodeCardProps {
@@ -249,7 +270,10 @@ function NodeCard({ node, onClick, isRunning }: NodeCardProps) {
           <div className="mt-3">
             {isLocked && (
               <div className="flex items-center gap-1 text-[11px] text-amber-500/80 uppercase font-bold">
-                <Lock className="w-3 h-3" /> DEP_MISSING: mt-3
+                <Lock className="w-3 h-3" />{' '}
+                {node.missing
+                  ? `REGISTRY_DRIFT: ${node.id}`
+                  : `DEP_MISSING: ${node.unmetDeps.join(', ')}`}
               </div>
             )}
             {isActive && (

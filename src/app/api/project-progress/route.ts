@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server';
 import crypto from 'crypto';
 import { getDb } from '@/lib/db';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { migrateProgressBlob, describeMigrations } from '@/lib/checklist-progress-keys';
+import { logger } from '@/lib/logger';
 
 interface ProgressRow {
   project_id: string;
@@ -43,8 +45,22 @@ export async function GET(req: NextRequest) {
       });
     }
 
+    // Orphan progress keys (ids that belong to no declared checklist item — e.g.
+    // the materials graph's retired `mt-*` node ids) are projected onto the real
+    // checklist id on the way out, so the UI counts progress that was previously
+    // written where nothing could read it. Read-only: the migration is PERSISTED
+    // by /api/checklist/complete on the next write, not by this GET.
+    const { progress: checklistProgress, migrations } = migrateProgressBlob(
+      JSON.parse(row.checklist_json),
+    );
+    if (migrations.length > 0) {
+      logger.warn(
+        `project-progress: projected orphan progress keys — ${describeMigrations(migrations).join('; ')}`,
+      );
+    }
+
     return apiSuccess({
-      checklistProgress: JSON.parse(row.checklist_json),
+      checklistProgress,
       moduleHealth: JSON.parse(row.health_json),
       checklistVerification: JSON.parse(row.verification_json),
       moduleHistory: JSON.parse(row.history_json),

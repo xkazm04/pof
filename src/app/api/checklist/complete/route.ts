@@ -5,6 +5,11 @@ import { apiSuccess, apiError, withRoute } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
 import { recordTrialForServedVariant } from '@/lib/prompt-evolution/engine';
 import { STATIC_VARIANT_ID } from '@/lib/prompt-evolution/dispatch-resolve';
+import {
+  resolveProgressKey,
+  migrateProgressBlob,
+  describeMigrations,
+} from '@/lib/checklist-progress-keys';
 import type { SubModuleId } from '@/types/modules';
 
 function projectId(projectPath: string): string {
@@ -21,6 +26,14 @@ function projectId(projectPath: string): string {
  * Called by the CLI via curl after finishing a checklist task.
  * Writes directly to the project_progress DB so the UI can pick it up.
  *
+ * `itemId` is VALIDATED against what the module actually declares
+ * (`resolveProgressKey`): an id no checklist item and no registered auxiliary
+ * surface owns is refused with 400 and a reason, because writing it would record
+ * progress in a key nothing can ever read. Recorded historical orphans (e.g. the
+ * materials graph's old `mt-*` node ids) are written under the real checklist id
+ * instead, and any orphan already sitting in the stored blob is migrated on the
+ * same write — never silently left.
+ *
  * This is also where the prompt-evolution A/B loop closes: the dispatch path
  * stamps `promptVariantId` (the variant it was actually served) into the
  * callback's static fields, so a completion reports the outcome of a real run
@@ -35,6 +48,19 @@ export const POST = withRoute(async (req: NextRequest) => {
     return apiError('moduleId, itemId, and projectPath are required', 400);
   }
 
+  // ── Validate the id against what the module actually declares ─────────────
+  const verdict = resolveProgressKey(moduleId, itemId);
+  if (verdict.kind === 'unknown') {
+    logger.warn(`checklist/complete: refused ${moduleId}/${itemId} — ${verdict.reason}`);
+    return apiError(verdict.reason, 400);
+  }
+  const storedItemId = verdict.kind === 'migrate' ? verdict.to : itemId;
+  if (verdict.kind === 'migrate') logger.warn(`checklist/complete: ${verdict.note}`);
+  if (verdict.kind === 'aux' && verdict.gap) {
+    logger.warn(`checklist/complete: ${moduleId}/${itemId} is owned by ${verdict.owner} — ${verdict.gap}`);
+  }
+  if (verdict.kind === 'ungoverned') logger.warn(`checklist/complete: ${verdict.note}`);
+
   const db = getDb();
   const id = projectId(projectPath);
 
@@ -43,13 +69,22 @@ export const POST = withRoute(async (req: NextRequest) => {
     .prepare('SELECT checklist_json FROM project_progress WHERE project_id = ?')
     .get(id) as { checklist_json: string } | undefined;
 
-  const progress: Record<string, Record<string, boolean>> = row
+  const stored: Record<string, Record<string, boolean>> = row
     ? JSON.parse(row.checklist_json)
     : {};
 
+  // Any orphan key already in the blob moves to its real checklist id on this
+  // write — a key nothing reads is not left sitting there just because it was
+  // written before the route validated anything.
+  const { progress, migrations } = migrateProgressBlob(stored);
+  const migratedKeys = describeMigrations(migrations);
+  if (migratedKeys.length > 0) {
+    logger.warn(`checklist/complete: migrated orphan progress keys — ${migratedKeys.join('; ')}`);
+  }
+
   // Mark item complete
   if (!progress[moduleId]) progress[moduleId] = {};
-  progress[moduleId][itemId] = true;
+  progress[moduleId][storedItemId] = true;
 
   // Upsert
   db.prepare(`
@@ -68,7 +103,7 @@ export const POST = withRoute(async (req: NextRequest) => {
     try {
       const trial = recordTrialForServedVariant(
         moduleId as SubModuleId,
-        itemId,
+        storedItemId,
         promptVariantId,
         completed !== false,
         typeof durationMs === 'number' ? durationMs : 0,
@@ -79,5 +114,14 @@ export const POST = withRoute(async (req: NextRequest) => {
     }
   }
 
-  return apiSuccess({ moduleId, itemId, completed: true, trialRecorded });
+  return apiSuccess({
+    moduleId,
+    // The id actually written. Differs from `requestedItemId` only for a
+    // recorded orphan, and the caller is told so rather than left guessing.
+    itemId: storedItemId,
+    requestedItemId: itemId,
+    completed: true,
+    trialRecorded,
+    migratedKeys,
+  });
 }, 'Failed to mark checklist item');
