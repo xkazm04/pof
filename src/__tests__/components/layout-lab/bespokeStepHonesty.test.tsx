@@ -7,6 +7,7 @@ import { useLabPipelineStore } from '@/components/layout-lab/labPipelineStore';
 import { clearJudgeVerdictCache } from '@/components/layout-lab/hooks/useStepJudgeVerdicts';
 import { LAB_THEMES } from '@/components/layout-lab/theme';
 import { RUBRIC_VERSION } from '@/lib/judge/rubrics';
+import { appendBatch, emptyHistory, historyData, makeBatch } from '@/components/layout-lab/steps/shared/genHistory';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 
 /**
@@ -34,6 +35,31 @@ function seedAll(extra?: Record<string, { status?: string; tier?: string; reason
     };
   }
   useLabPipelineStore.setState({ byEntity: { [entity.id]: byStep } });
+}
+
+/**
+ * The same artifact with a one-candidate history whose selected candidate carries a REAL
+ * generated image, so the step's checker reads `pass`. A swatch-only history is `deferred`
+ * (see itemsGalleryAssetHonesty.test.tsx), and `bridgeJudgeVerdict` deliberately down-grades
+ * only a shape-PASS — so any test about a judge FLIPPING a generative step must start from a
+ * step that actually owns art.
+ */
+function withRealArt(data: Record<string, unknown>): Record<string, unknown> {
+  const payload = { ...data };
+  delete payload.genHistory;
+  const batch = makeBatch({
+    seq: 0, at: '2026-01-01T00:00:00.000Z', direction: 'gen', prompt: 'gen',
+    candidates: [{ swatch: 'linear-gradient(135deg, #444, #888)', imageUrl: '/api/visual-gen/icon/real.png', payload }],
+  });
+  return historyData(appendBatch(emptyHistory(), batch), data);
+}
+
+/** Replace one seeded step's data in place (the store is already seeded by `seedAll`). */
+function reseed(step: string, data: Record<string, unknown>) {
+  const state = useLabPipelineStore.getState().byEntity[entity.id];
+  useLabPipelineStore.setState({
+    byEntity: { [entity.id]: { ...state, [step]: { ...state[step], data } } },
+  });
 }
 
 function verdictFetch(rows: unknown[]) {
@@ -96,7 +122,10 @@ describe('bespoke Items steps ride the fleet honesty rails', () => {
       catalogId: 'items', entityId: entity.id, step: 'Icon 2D Art', judge: 'vlm', verdict: 'fail',
       score: 44, findings: 'silhouette unreadable at 64px', model: 'qwen-vl', rubricVersion: RUBRIC_VERSION,
     }]));
+    // The step must own a REAL generated image for the checker to pass — a swatch-only
+    // history defers, and `bridgeJudgeVerdict` deliberately down-grades only a shape-PASS.
     seedAll();
+    reseed('Icon 2D Art', withRealArt({ selected: 0 }));
     const Step = getStepComponent('items', 'Icon 2D Art')!;
     render(<Step t={t} entity={entity} step="Icon 2D Art" />);
     expect(screen.getByTestId('acceptance-banner').getAttribute('data-status')).toBe('pass');
@@ -119,11 +148,13 @@ describe('bespoke Items steps ride the fleet honesty rails', () => {
   });
 
   it('a bespoke step grades through the unified context — the Test Gate reads real siblings', () => {
-    // Every sibling produced + passing → the derived gate passes.
+    // Every sibling produced → the derived gate reads them. The three generative upstreams own
+    // no generated asset from a produce stub, so they defer, and a gate blocked only by
+    // deferred upstreams defers too (nothing failed; nothing local can make it pass).
     seedAll();
     const Step = getStepComponent('items', 'Test Gate')!;
     const { unmount } = render(<Step t={t} entity={entity} step="Test Gate" />);
-    expect(screen.getByTestId('acceptance-banner').getAttribute('data-status')).toBe('pass');
+    expect(screen.getByTestId('acceptance-banner').getAttribute('data-status')).toBe('deferred');
     unmount();
 
     // Break one upstream step (Animations loses its clips) → the gate must fail.

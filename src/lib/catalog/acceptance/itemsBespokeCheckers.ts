@@ -1,4 +1,6 @@
-import type { Checker } from './types';
+import { readHistory, selectedCandidate } from '@/components/layout-lab/steps/shared/genHistory';
+import { candidateAsset } from './galleryArtifact';
+import type { AcceptanceResult, Checker } from './types';
 
 /**
  * Server-importable checkers for the BESPOKE Items step labels — the seven steps whose
@@ -24,9 +26,14 @@ import type { Checker } from './types';
  * server's re-grade cannot drift apart. This module is pure — no React, no store, no DB —
  * so it imports cleanly on the server.
  *
- * Every checker here grades DATA SHAPE only (tier L0). None of them observes a rendered
+ * Every SHAPE checker here grades DATA SHAPE only (tier L0). None of them observes a rendered
  * mesh, an audible cue, or a running game; claiming a higher tier would be the shape-only
  * overclaim `/status` exists to expose.
+ *
+ * The two GENERATIVE bespoke labels (`3D Generation`, `Material / Texture`) are the exception,
+ * and deliberately so — see {@link withGeneratedAsset}. Their shape check still grades L0, but
+ * once the shape is satisfied the verdict is the gallery's: a selected candidate that is only a
+ * deterministic swatch defers at L4 instead of passing on a hardcoded constant.
  */
 
 /** One row of the Weapon attribute schema: the key, its display unit, its produce default. */
@@ -182,14 +189,96 @@ export const itemsInventoryWired: Checker = (data) => {
 };
 
 /**
+ * Grade the GENERATED ASSET behind a bespoke Items generative step: the selected candidate of
+ * the step's own `data.genHistory`.
+ *
+ * Same rules, same tiers and the same wording as {@link gradeGallerySelection} — a real asset
+ * passes at L1, a deterministic swatch defers at L4, an unresolvable selection fails. It is a
+ * separate entry point only because `gradeGallerySelection` grades a NUMERIC selection index
+ * field, and two of the three bespoke generative steps have none: the mesh step's artifact
+ * carries `{tris, cap}` and the material step's carries `{maps}` — the candidate payloads that
+ * `historyData` projects. `Icon 2D Art` DOES carry an index (`selected`), so it delegates to
+ * `gradeGallerySelection` directly (see `itemsSteps.ts`) and stays byte-identical to the
+ * registered `Icon 2D Art` / `3D Mesh` checkers.
+ */
+export function gradeGeneratedAsset(data: Record<string, unknown>, label: string): AcceptanceResult {
+  const history = readHistory(data);
+  if (history.batches.length === 0) {
+    return {
+      label,
+      tier: 'L4',
+      status: 'deferred',
+      detail: 'no generation history',
+      reason:
+        'the artifact holds no generation history — nothing proves any candidate was ever ' +
+        'generated for this step, so the values it grades are the produce stub\'s constants. ' +
+        'Run the gallery\'s Produce so the batch (and its candidates) are recorded, then re-grade.',
+    };
+  }
+  const cand = selectedCandidate(history);
+  const kept = history.batches.reduce((n, b) => n + b.candidates.length, 0);
+  if (!cand) {
+    return {
+      label,
+      tier: 'L1',
+      status: 'fail',
+      detail: `selection ${JSON.stringify(history.selectedId)} unresolved`,
+      reason:
+        `the artifact selects candidate id ${JSON.stringify(history.selectedId)}, which is not among the ` +
+        `${kept} candidate(s) in the ${history.batches.length} kept batch(es) — the graded selection points at nothing.`,
+    };
+  }
+  const asset = candidateAsset(cand);
+  const named = cand.caption ?? cand.id;
+  if (asset) {
+    return { label, tier: 'L1', status: 'pass', detail: `${named} → ${asset}` };
+  }
+  return {
+    label,
+    tier: 'L4',
+    status: 'deferred',
+    detail: `${named} — swatch placeholder`,
+    reason:
+      `the selected candidate (${named}) is a deterministic swatch preview, not a generated asset — no image ` +
+      'or mesh was produced for this step, so the selection cannot be visually verified. Run the generator ' +
+      '(gap-loop / the provider script) so the step owns real art, then re-roll the gallery and select it.',
+  };
+}
+
+/**
+ * Compose a bespoke GENERATIVE step's verdict: its SHAPE check first, then the generated-asset
+ * check on the gallery's selected candidate.
+ *
+ * Why the shape check keeps priority: a mesh over its LOD0 budget or a material missing ORM is
+ * an actionable, locally-fixable defect, and reporting "swatch placeholder" instead would bury
+ * it. Only once the shape is satisfied does the honest question become "did a generator ever
+ * run?", and that is what {@link gradeGeneratedAsset} answers.
+ *
+ * Why this exists at all: `itemsMeshWithinTriBudget` grades `data.tris`, and `data.tris` is a
+ * CONSTANT — one of `[4200, 5200, 5900]` hardcoded in `steps/shared/itemGenCandidates.ts`. So
+ * the step passed on the existence of a number the app itself wrote, which is exactly the
+ * integer-not-asset gate the fleet deleted from all 47 registered gallery steps
+ * (`galleryArtifact.ts` header). Measured on the live DB 2026-08-19: `item-1`'s `3D Generation`
+ * and `Material / Texture` each held 12 batches / 36 candidates with ZERO carrying any
+ * generated asset, and both rows read `pass / L0`.
+ */
+export function withGeneratedAsset(shape: Checker): Checker {
+  return (data, ctx) => {
+    const s = shape(data, ctx);
+    if (s.status !== 'pass') return s;
+    return gradeGeneratedAsset(data, s.label);
+  };
+}
+
+/**
  * The bespoke Items step labels the registered pipeline does not declare, mapped to the
  * checker that grades each. Keys are the LIVE DB step labels — never rename one here
  * without migrating `pipeline_artifacts` rows for the same `(catalog_id, entity_id, step)`.
  */
 export const ITEMS_BESPOKE_CHECKERS: Readonly<Record<string, Checker>> = {
   'Attributes': itemsAttributesPopulated,
-  '3D Generation': itemsMeshWithinTriBudget,
-  'Material / Texture': itemsPbrMapsPresent,
+  '3D Generation': withGeneratedAsset(itemsMeshWithinTriBudget),
+  'Material / Texture': withGeneratedAsset(itemsPbrMapsPresent),
   'Animations': itemsAnimClipsPresent,
   'VFX': itemsVfxWithinBudget,
   'SFX': itemsSfxCuesCovered,

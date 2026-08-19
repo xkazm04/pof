@@ -7,24 +7,45 @@ import { useEntitySteps } from '../labPipelineStore';
 import type { LabTheme } from '../theme';
 import type { StepProps } from './stepProps';
 
+/**
+ * A gate check has THREE readings, not two. `deferred` is the one that was missing: every
+ * upstream step still blocking the check is itself deferred (a generator or runtime that has
+ * not run), so the check has not failed — it cannot be observed yet. Printing FAIL there sent
+ * the operator hunting for a defect that does not exist; printing PASS (the older bug) claimed
+ * a verification nobody performed.
+ */
+function verdictOf(check: GateCheckResult, ran: boolean): 'pass' | 'defer' | 'fail' | 'idle' {
+  if (!ran) return 'idle';
+  if (check.ok) return 'pass';
+  return check.deferred ? 'defer' : 'fail';
+}
+
+const GLYPH = { pass: '✓', defer: '◐', fail: '✕', idle: '' } as const;
+const WORD = { pass: 'PASS', defer: 'DEFER', fail: 'FAIL', idle: 'not run' } as const;
+
 function Check({ t, check, ran }: { t: LabTheme; check: GateCheckResult; ran: boolean }) {
-  const ok = ran && check.ok;
-  const blocked = ran && !check.ok;
+  const v = verdictOf(check, ran);
+  const tone = v === 'pass' ? t.ok : v === 'fail' ? t.bad : v === 'defer' ? t.warn : t.muted;
+  const filled = v === 'pass' || v === 'fail' || v === 'defer';
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderTop: `1px solid ${t.line}`, fontSize: 15 }}>
-      <span style={{ width: 20, height: 20, borderRadius: t.glass ? 6 : 0, flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, background: ok ? t.ok : blocked ? t.bad : 'transparent', color: t.onAccent, border: ok || blocked ? 'none' : `2px solid ${t.line}` }}>{ok ? '✓' : blocked ? '✕' : ''}</span>
-      <span style={{ color: ok ? t.text : t.muted }}>
+      <span style={{ width: 20, height: 20, borderRadius: t.glass ? 6 : 0, flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, background: filled ? tone : 'transparent', color: t.onAccent, border: filled ? 'none' : `2px solid ${t.line}` }}>{GLYPH[v]}</span>
+      <span style={{ color: v === 'pass' ? t.text : t.muted }}>
         {check.name}
-        {blocked && <span style={{ display: 'block', fontSize: 13, color: t.muted, marginTop: 2 }}>blocked by {check.blockedBy.join(', ')}</span>}
+        {(v === 'fail' || v === 'defer') && (
+          <span style={{ display: 'block', fontSize: 13, color: t.muted, marginTop: 2 }}>
+            {v === 'defer' ? 'awaiting ' : 'blocked by '}{check.blockedBy.join(', ')}
+          </span>
+        )}
       </span>
-      <span className={t.fontMono} style={{ marginLeft: 'auto', fontSize: 14, color: ok ? t.ok : blocked ? t.bad : t.muted, flexShrink: 0 }}>{ok ? 'PASS' : blocked ? 'FAIL' : 'not run'}</span>
+      <span className={t.fontMono} style={{ marginLeft: 'auto', fontSize: 14, color: tone, flexShrink: 0 }}>{WORD[v]}</span>
     </div>
   );
 }
 
 /** Fixed-width dotted log label, mirroring the UE -abslog visual convention. */
-function logLine(name: string, ok: boolean): string {
-  return `[gate] ${name} ${'.'.repeat(Math.max(2, 20 - name.length))} ${ok ? 'PASS' : 'FAIL'}`;
+function logLine(name: string, verdict: 'pass' | 'defer' | 'fail' | 'idle'): string {
+  return `[gate] ${name} ${'.'.repeat(Math.max(2, 20 - name.length))} ${WORD[verdict]}`;
 }
 
 /** Items · Test Gate. View: checks + log — DERIVED from sibling-step acceptance
@@ -38,12 +59,16 @@ export function ItemTestGate({ t, entity, step }: StepProps) {
       for (const [s, a] of Object.entries(entitySteps ?? {})) siblings[s] = a.data;
       const results = deriveGateChecks(siblings);
       const allOk = results.every((r) => r.ok);
+      // Same three-state reading the derived Acceptance uses, so the log can never print
+      // `Result={Success}` next to a banner that says otherwise (it did: an upstream step the
+      // SERVER had already condemned still printed PASS here).
+      const outcome = allOk ? 'Success' : results.every((r) => r.ok || r.deferred) ? 'Deferred' : 'Failure';
       return [
         { label: 'Checks', node: <div>{results.map((c) => <Check key={c.name} t={t} check={c} ran={ran} />)}</div> },
         { label: 'Log', node: (
           <pre className={t.fontMono} style={{ fontSize: 14, color: t.muted, whiteSpace: 'pre-wrap', margin: 0, lineHeight: 1.6 }}>
             {ran
-              ? `[gate] ${entity.name}\n${results.map((r) => logLine(r.name, r.ok)).join('\n')}\nResult={${allOk ? 'Success' : 'Failure'}}`
+              ? `[gate] ${entity.name}\n${results.map((r) => logLine(r.name, verdictOf(r, ran))).join('\n')}\nResult={${outcome}}`
               : '> awaiting run …'}
           </pre>
         ) },

@@ -21,14 +21,17 @@ describe('ItemArt persistent candidate gallery', () => {
   beforeEach(() => { useLabPipelineStore.setState({ byEntity: {} }); localStorage.clear(); });
   afterEach(cleanup);
 
-  it('Icon 2D: Produce appends a kept batch, flips Acceptance to pass, and shows the gallery', () => {
+  // NOTE on the expected status: a locally-generated batch carries DETERMINISTIC SWATCHES, not
+  // generated art, so Acceptance is `deferred` (L4) — the honest reading. It used to be `pass`
+  // on the existence of the projected integer, which claimed art nobody produced.
+  it('Icon 2D: Produce appends a kept batch, flips Acceptance to deferred, and shows the gallery', () => {
     render(<ItemIcon2D t={LIGHT} entity={entity} step="Icon 2D Art" />);
     // Before producing: pending + empty gallery hint.
     expect(status()).toBe('pending');
     expect(screen.getByTestId('candidate-gallery-empty')).toBeTruthy();
 
     generate(/Produce via Leonardo/);
-    expect(status()).toBe('pass');                       // derived from the projected `selected`
+    expect(status()).toBe('deferred');                   // a swatch candidate is not an asset
     expect(screen.getByTestId('candidate-gallery').textContent).toContain('4 candidates · 1 re-roll kept');
     expect((screen.getByTestId('candidate-b0-c0') as HTMLButtonElement).getAttribute('aria-pressed')).toBe('true');
   });
@@ -46,7 +49,7 @@ describe('ItemArt persistent candidate gallery', () => {
     fireEvent.click(screen.getByTestId('candidate-b0-c2'));
     expect((screen.getByTestId('candidate-b0-c2') as HTMLButtonElement).getAttribute('aria-pressed')).toBe('true');
     expect((screen.getByTestId('candidate-b1-c0') as HTMLButtonElement).getAttribute('aria-pressed')).toBe('false');
-    expect(status()).toBe('pass'); // still selected → still passing
+    expect(status()).toBe('deferred'); // still a swatch candidate → still unverifiable
 
     // Selection survives in the persisted store (not just local component state).
     const persisted = useLabPipelineStore.getState().byEntity['item-test']['Icon 2D Art'];
@@ -57,7 +60,9 @@ describe('ItemArt persistent candidate gallery', () => {
     render(<Item3DGen t={LIGHT} entity={entity} step="3D Generation" />);
     expect(status()).toBe('pending');
     generate(/Produce mesh/);
-    expect(status()).toBe('pass');
+    // The tri budget (the L0 SHAPE half) is satisfied — but the candidate is a swatch, so the
+    // verdict is `deferred`, not a pass on the hardcoded 4200.
+    expect(status()).toBe('deferred');
     // "4200 tris" appears both as the LOD0 budget and the candidate caption — scope to the tile.
     expect(within(screen.getByTestId('candidate-b0-c0')).getByText('4200 tris')).toBeTruthy();
     expect(screen.getByTestId('candidate-gallery').textContent).toContain('3 candidates · 1 re-roll kept');
@@ -67,7 +72,7 @@ describe('ItemArt persistent candidate gallery', () => {
     render(<ItemMaterial t={LIGHT} entity={entity} step="Material / Texture" />);
     expect(status()).toBe('pending');
     generate(/Produce PBR maps/);
-    expect(status()).toBe('pass');
+    expect(status()).toBe('deferred'); // maps present (shape ok), but no generated texture set
     expect(screen.getByText('worn iron')).toBeTruthy();      // candidate caption (look name)
     expect(screen.getByTestId('candidate-gallery').textContent).toContain('3 candidates · 1 re-roll kept');
   });

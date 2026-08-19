@@ -80,12 +80,17 @@ describe('items — every persisted step label resolves to a server checker', ()
     }
   });
 
-  it('grades a bespoke step\'s real Produce output to `pass` on the server', () => {
+  // Rule 5: a clean Produce reaches a config-complete TERMINAL status. `pass` for the shape
+  // steps; `deferred` (with a reason) for the two GENERATIVE labels — their produce stub
+  // writes constants, not a generated asset, and since `withGeneratedAsset` they say so
+  // instead of passing on a hardcoded triangle count.
+  it('grades a bespoke step\'s real Produce output to a terminal status on the server', () => {
     for (const label of BESPOKE_ITEMS_LABELS) {
       const data = (ITEM_STEP_SPECS[label].produce(E).data ?? {}) as Record<string, unknown>;
       const g = gradeArtifact('items', label, data);
       expect(g.graded, label).toBe(true);
-      expect(g.raw?.status, label).toBe('pass');
+      expect(['pass', 'deferred'], label).toContain(g.raw?.status);
+      if (g.raw?.status === 'deferred') expect(g.raw?.reason, label).toBeTruthy();
     }
   });
 

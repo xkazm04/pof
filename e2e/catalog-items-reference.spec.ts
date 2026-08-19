@@ -50,16 +50,24 @@ test.describe('catalog pipeline: items (reference)', () => {
     }
   });
 
-  test('Test Gate renders its functional-test breakdown and reaches pass', async ({ page }) => {
+  test('Test Gate renders its functional-test breakdown and reaches a terminal status', async ({ page }) => {
     await gotoLab(page);
     await openCatalog(page, 'items');
-    // Test Gate is the 12th step (index 11) in ITEM_STEP_NAMES order. Unlike the generic
-    // registry items.ts (runtimeDeferred), the bespoke reference ItemTestGate simulates a
-    // green gate (data.pass === true) so the full reference pipeline reads end-to-end pass.
+    // Test Gate is the 12th step (index 11) in ITEM_STEP_NAMES order. Its verdict is DERIVED
+    // from sibling acceptance, so what it reaches depends on what the upstream steps own:
+    //  • every upstream passing → `pass` / `Result={Success}`;
+    //  • blocked only by upstream steps that are themselves DEFERRED (the stub-mode reality —
+    //    the generative steps hold deterministic swatches, not generated art) → `deferred` /
+    //    `Result={Deferred}`. Both are config-complete under Rule 5; a `fail` here would mean
+    //    a real upstream defect, which this walk must still catch.
     await selectStep(page, 11);
     await produceStep(page, false);
-    expect(await acceptanceStatus(page)).toBe('pass');
-    // The bespoke gate surfaces its per-check breakdown + the functional-test log.
-    await expect(page.locator('#lab-canvas')).toContainText('Result={Success}');
+    const status = await acceptanceStatus(page);
+    expect(CONFIG_COMPLETE.has(status), `Test Gate reached "${status}"`).toBe(true);
+    // The bespoke gate surfaces its per-check breakdown + the functional-test log, and the log
+    // outcome must agree with the banner (it used to print Success beside a condemned upstream).
+    await expect(page.locator('#lab-canvas')).toContainText(
+      status === 'pass' ? 'Result={Success}' : 'Result={Deferred}',
+    );
   });
 });

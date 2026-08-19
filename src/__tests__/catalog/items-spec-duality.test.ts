@@ -6,6 +6,7 @@ import {
 } from '@/components/layout-lab/catalogManifest';
 import { ITEM_STEP_SPECS, ITEM_STEP_NAMES } from '@/components/layout-lab/steps/itemsSteps';
 import { getStepFact } from '@/lib/status/statusModel';
+import { appendBatch, emptyHistory, historyData, makeBatch } from '@/components/layout-lab/steps/shared/genHistory';
 import { WALKER_SKIP } from '../../../e2e/helpers/pipeline-coverage';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import type { CheckerContext } from '@/lib/catalog/acceptance/types';
@@ -43,6 +44,21 @@ const STEPS: Step[] = ITEM_STEP_NAMES.map((label) => ({
   data: (ITEM_STEP_SPECS[label].produce(E).data ?? {}) as Record<string, unknown>,
 }));
 
+/**
+ * The same artifact, but with a one-candidate generation history whose selected candidate
+ * carries a REAL generated image and projects the artifact's own fields. This is what a step
+ * looks like after a generator has actually run — the shape `candidateAsset` accepts.
+ */
+function withRealAsset(data: Record<string, unknown>): Record<string, unknown> {
+  const payload = { ...data };
+  delete payload.genHistory;
+  const batch = makeBatch({
+    seq: 0, at: '2026-01-01T00:00:00.000Z', direction: 'gen', prompt: 'gen',
+    candidates: [{ swatch: 'linear-gradient(135deg, #444, #888)', imageUrl: '/api/visual-gen/icon/real.png', payload }],
+  });
+  return historyData(appendBatch(emptyHistory(), batch), data);
+}
+
 /** Record every top-level key a bespoke checker touches (same Proxy probe as the fleet linter). */
 function acceptFields(label: string, data: Record<string, unknown>): { read: Set<string>; status: string } {
   const read = new Set<string>();
@@ -65,7 +81,7 @@ describe('Items spec duality — declared, not implied', () => {
       expect.arrayContaining([...itemsRegistrySteps(), ...ITEMS_ON_SCREEN_STEPS]),
     );
     // The declaration itself must say what happens to the registry-only half, because
-    // 'declared' silently coexisted with 'invisible' for three weeks.
+    // "declared" silently coexisted with "invisible" for three weeks.
     expect(ITEMS_SPEC_DUALITY.reason).toMatch(/union/i);
   });
 

@@ -4,6 +4,8 @@ import {
   ITEM_ATTR_KEYS,
   ITEMS_BESPOKE_CHECKERS,
 } from '@/lib/catalog/acceptance/itemsBespokeCheckers';
+import { gradeGallerySelection } from '@/lib/catalog/acceptance/galleryArtifact';
+import { readHistory } from './shared/genHistory';
 import { useCatalogStore } from '@/stores/catalogStore';
 import type { Acceptance } from './StepFrame';
 import type { CheckerContext } from '@/lib/catalog/acceptance/types';
@@ -136,7 +138,32 @@ export const GATE_CHECK_DEPS: Record<string, string[]> = {
   'Performance budget': ['3D Generation', 'VFX'],
 };
 
-export interface GateCheckResult { name: string; ok: boolean; blockedBy: string[] }
+/** One upstream step standing between a gate check and PASS, and its verdict. */
+export interface GateBlocker {
+  step: string;
+  /** The upstream step's resolved status, or `missing` when it has no artifact at all. */
+  status: string;
+}
+
+export interface GateCheckResult {
+  name: string;
+  ok: boolean;
+  /**
+   * The check is blocked ONLY by upstream steps that are themselves `deferred` — a
+   * generator or runtime that has not run, which no local edit can resolve. It is not a
+   * failure, and the gate must not report one: a `deferred` upstream makes the gate's own
+   * verdict unobservable, exactly the L3 reading `GATE_DEFERRED_COPY` describes.
+   */
+  deferred: boolean;
+  /** Human-readable blockers (`"Icon 2D Art (deferred)"`), for the log + banner detail. */
+  blockedBy: string[];
+  blockers: GateBlocker[];
+}
+
+/** Render one blocker for the checklist row / log / banner detail. */
+function blockerLabel(b: GateBlocker): string {
+  return `${b.step} (${b.status === 'missing' ? 'not produced' : b.status})`;
+}
 
 /**
  * Evaluate every gate check against the entity's sibling step artifacts
@@ -148,12 +175,20 @@ export interface GateCheckResult { name: string; ok: boolean; blockedBy: string[
 export function deriveGateChecks(siblings: Record<string, Record<string, unknown>>): GateCheckResult[] {
   return DEFAULT_GATE_CHECKS.map((name) => {
     const deps = GATE_CHECK_DEPS[name] ?? [];
-    const blockedBy = deps.filter((step) => {
+    const blockers: GateBlocker[] = [];
+    for (const step of deps) {
       const data = siblings[step];
-      if (!data) return true; // never produced
-      return ITEM_STEP_SPECS[step]?.accept(data).status !== 'pass';
-    });
-    return { name, ok: blockedBy.length === 0, blockedBy };
+      if (!data) { blockers.push({ step, status: 'missing' }); continue; }
+      const status = ITEM_STEP_SPECS[step]?.accept(data).status ?? 'pending';
+      if (status !== 'pass') blockers.push({ step, status });
+    }
+    return {
+      name,
+      ok: blockers.length === 0,
+      deferred: blockers.length > 0 && blockers.every((b) => b.status === 'deferred'),
+      blockedBy: blockers.map(blockerLabel),
+      blockers,
+    };
   });
 }
 
@@ -236,11 +271,35 @@ function economyCopy(data: Record<string, unknown>): AcceptanceCopy {
   return { why: 'Power and price both land in their bands — this item fits the loot curve.', suggestion: '' };
 }
 
+/**
+ * Copy for a generative step whose SHAPE is satisfied but which owns no generated asset —
+ * the `deferred` reading {@link gradeGeneratedAsset} / {@link gradeGallerySelection} produce.
+ *
+ * It exists because the old per-step copy said "nothing has been picked yet", which is a
+ * different (and now wrong) failure: a candidate IS selected, it is just a deterministic
+ * swatch the app drew itself. Saying "pick one" for a state no click can fix sends the
+ * operator in a circle.
+ */
+function generatedAssetCopy(data: Record<string, unknown>, noun: string, generator: string): AcceptanceCopy {
+  if (readHistory(data).batches.length === 0) {
+    return {
+      why: `No generation history is recorded for this step — nothing proves ${noun} was ever generated for this item.`,
+      suggestion: 'Run Produce so the batch and its candidates are recorded, then re-grade.',
+    };
+  }
+  return {
+    why: `The selected candidate is a deterministic swatch preview, not ${noun} — there is no generated asset here to verify.`,
+    suggestion: `Run the ${generator} so this step owns real art, then re-roll the gallery and select the produced candidate.`,
+    fixDirection: `generate ${noun} for this item with the real generator, then select the produced candidate`,
+  };
+}
+
 function iconCopy(data: Record<string, unknown>): AcceptanceCopy {
-  return data.selected != null
-    ? { why: 'An icon is selected.', suggestion: '' }
-    : { why: 'No icon candidate has been picked yet — the item has nothing to render in the inventory grid.',
-        suggestion: 'Click one of the gallery tiles, or run Produce to generate fresh candidates.' };
+  if (data.selected == null) {
+    return { why: 'No icon candidate has been picked yet — the item has nothing to render in the inventory grid.',
+      suggestion: 'Click one of the gallery tiles, or run Produce to generate fresh candidates.' };
+  }
+  return generatedAssetCopy(data, 'an icon image', 'icon generator (gap-loop / the 2D provider script)');
 }
 
 function meshCopy(data: Record<string, unknown>): AcceptanceCopy {
@@ -249,8 +308,11 @@ function meshCopy(data: Record<string, unknown>): AcceptanceCopy {
     return { why: 'No mesh has been generated yet — the inventory preview will fall back to an icon-only state.',
       suggestion: 'Run Produce to generate a base mesh and auto-LODs.' };
   }
-  return { why: `Mesh exceeds the LOD0 budget (${tris} > ${cap} tris) — load times and draw cost will suffer.`,
-    suggestion: 'Re-run Produce with a tighter retopo target.', fixDirection: `retopo under ${cap} triangles for LOD0` };
+  if (tris > cap) {
+    return { why: `Mesh exceeds the LOD0 budget (${tris} > ${cap} tris) — load times and draw cost will suffer.`,
+      suggestion: 'Re-run Produce with a tighter retopo target.', fixDirection: `retopo under ${cap} triangles for LOD0` };
+  }
+  return generatedAssetCopy(data, 'a mesh', 'mesh generator (Tripo / gap-loop)');
 }
 
 function materialCopy(data: Record<string, unknown>): AcceptanceCopy {
@@ -261,8 +323,11 @@ function materialCopy(data: Record<string, unknown>): AcceptanceCopy {
     return { why: 'No PBR maps yet — the mesh has no surface to render.',
       suggestion: 'Run Produce to author the Albedo / Normal / ORM set.' };
   }
-  return { why: `${missing.length === 1 ? 'The' : ''} ${missing.join(', ')} map${missing.length === 1 ? ' is' : 's are'} missing.`,
-    suggestion: 'Re-run Produce to fill the missing PBR channels.' };
+  if (missing.length > 0) {
+    return { why: `${missing.length === 1 ? 'The' : ''} ${missing.join(', ')} map${missing.length === 1 ? ' is' : 's are'} missing.`,
+      suggestion: 'Re-run Produce to fill the missing PBR channels.' };
+  }
+  return generatedAssetCopy(data, 'a texture set', 'texture generator (gap-loop / the material provider script)');
 }
 
 function animationsCopy(data: Record<string, unknown>): AcceptanceCopy {
@@ -414,10 +479,13 @@ export const ITEM_STEP_SPECS: Record<string, ItemStepSpec> = {
   },
   'Icon 2D Art': {
     produce: (e) => ({ data: { selected: 0, prompt: 'weathered steel longsword, leather grip, guild sigil, 3/4 view, game icon' }, ueAssets: [itemAsset(e, 'T_', '_Icon')] }),
-    accept: (data) => {
-      const sel = data.selected;
-      return withCopy('Icon 2D Art', data, { label: 'A main icon is selected', status: sel != null ? 'pass' : 'pending', detail: sel != null ? 'candidate · 256px' : 'none selected' });
-    },
+    // Grades the SELECTED CANDIDATE, not the existence of an integer. The old gate was
+    // `sel != null ? 'pass' : 'pending'` with the detail `"candidate · 256px"` — a resolution
+    // claim about an image that need not exist; it is the exact integer-not-asset checker the
+    // fleet deleted from all 47 registered gallery steps (see galleryArtifact.ts). This is
+    // byte-identical to the REGISTERED `Icon 2D Art` checker (`selected('selected', …)`), so
+    // the bespoke banner and the server re-grade can no longer disagree.
+    accept: (data) => withCopy('Icon 2D Art', data, gradeGallerySelection(data, 'selected', 'A main icon is selected')),
   },
   '3D Generation': {
     produce: (e) => ({ data: { tris: 4200, cap: 6000 }, ueAssets: [itemAsset(e, 'SM_')] }),
@@ -498,10 +566,33 @@ export const ITEM_STEP_SPECS: Record<string, ItemStepSpec> = {
         const passing = results.filter((r) => r.ok).length;
         const blocked = [...new Set(results.flatMap((r) => r.blockedBy))];
         const ok = passing === results.length;
+        const blockedList = `${blocked.slice(0, 3).join(', ')}${blocked.length > 3 ? '…' : ''}`;
+        if (ok) {
+          return withCopy('Test Gate', data, {
+            label: 'All gate checks pass in the UE project', status: 'pass', detail: `${passing}/${results.length} pass`,
+          });
+        }
+        // Every remaining blocker is itself DEFERRED — a generator/runtime that has not run.
+        // Nothing here failed, and nothing local can make it pass, so the gate's own verdict
+        // is unobservable: `deferred` (L3) with a reason, not a `fail` the operator can't act
+        // on. Rule 5 keeps holding — this is still a config-complete terminal status.
+        if (results.every((r) => r.ok || r.deferred)) {
+          return {
+            label: 'All gate checks pass in the UE project',
+            status: 'deferred',
+            tier: 'L3',
+            detail: `${passing}/${results.length} pass · awaiting ${blockedList}`,
+            reason:
+              `${results.length - passing} gate check(s) cannot be observed: every upstream step still ` +
+              `blocking them is itself deferred (${blockedList}). Nothing failed — a generator or a ` +
+              'runtime gate has to run before this gate can report.',
+            ...GATE_DEFERRED_COPY,
+          };
+        }
         return withCopy('Test Gate', data, {
           label: 'All gate checks pass in the UE project',
-          status: ok ? 'pass' : 'fail',
-          detail: ok ? `${passing}/${results.length} pass` : `${passing}/${results.length} pass · blocked by ${blocked.slice(0, 3).join(', ')}${blocked.length > 3 ? '…' : ''}`,
+          status: 'fail',
+          detail: `${passing}/${results.length} pass · blocked by ${blockedList}`,
         });
       }
       const checks = (data.checks ?? DEFAULT_GATE_CHECKS) as unknown[];
