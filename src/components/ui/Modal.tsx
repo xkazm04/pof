@@ -77,19 +77,32 @@ export function Modal({
   const triggerRef = useRef<HTMLElement | null>(null);
   const titleId = useId();
 
-  // Capture the trigger on open; restore focus to it on close.
-  useEffect(() => {
-    if (open) {
-      triggerRef.current = (document.activeElement as HTMLElement | null) ?? null;
-      return;
-    }
+  // Restoring is idempotent: it clears the captured trigger, so whichever of
+  // the two paths below fires first, the other is a no-op.
+  const restoreFocus = useCallback(() => {
     const trigger = triggerRef.current;
     triggerRef.current = null;
     // Only restore if the trigger is still in the document and focusable.
     if (trigger && typeof trigger.focus === 'function' && document.contains(trigger)) {
       trigger.focus();
     }
-  }, [open]);
+  }, []);
+
+  // Capture the trigger on open; restore focus to it on close.
+  useEffect(() => {
+    if (open) {
+      triggerRef.current = (document.activeElement as HTMLElement | null) ?? null;
+      return;
+    }
+    restoreFocus();
+  }, [open, restoreFocus]);
+
+  // Restore on unmount too. Many dialogs are conditionally MOUNTED by their
+  // parent (`{show && <Editor/>}`) rather than held open through a flag, so
+  // `open` never transitions to false — without this the keyboard user is
+  // dropped back at document start, which is the exact failure the shell exists
+  // to prevent.
+  useEffect(() => () => restoreFocus(), [restoreFocus]);
 
   // Move focus into the dialog once it has mounted/animated in.
   useEffect(() => {

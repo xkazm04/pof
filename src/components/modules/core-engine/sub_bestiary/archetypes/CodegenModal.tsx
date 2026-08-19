@@ -1,9 +1,9 @@
 'use client';
 
-import { motion, AnimatePresence } from 'framer-motion';
-import { Copy, Code, X } from 'lucide-react';
+import { Copy, Code } from 'lucide-react';
 import type { EliteModifier } from '../_shared/data';
 import { generateModifierGE } from '../_shared/data';
+import { Modal } from '@/components/ui/Modal';
 
 import { withOpacity, OPACITY_10, OPACITY_25 } from '@/lib/chart-colors';
 interface CodegenModalProps {
@@ -11,61 +11,49 @@ interface CodegenModalProps {
   onClose: () => void;
 }
 
+/**
+ * Held mounted by the bestiary shell with `mod` toggling null/non-null, so the
+ * shared Modal sees a real open → closed transition and restores focus to the
+ * row that opened it. The tier badge and Copy action moved out of the header
+ * (Modal owns that) into a toolbar above the generated code.
+ */
 export function CodegenModal({ mod, onClose }: CodegenModalProps) {
   const codeText = mod ? generateModifierGE(mod) : '';
   return (
-    <AnimatePresence>
+    <Modal
+      open={mod !== null}
+      onClose={onClose}
+      title={mod ? `UE5 GameplayEffect — ${mod.name}` : 'UE5 GameplayEffect'}
+      icon={<Code className="w-4 h-4" style={{ color: mod?.color }} />}
+      className="max-w-2xl"
+    >
       {mod && (
-        <motion.div
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-          onClick={onClose}
-        >
-          <motion.div
-            initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
-            className="w-full max-w-2xl mx-4 bg-surface border border-border rounded-xl shadow-2xl overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between px-4 py-3 border-b border-border/40">
-              <div className="flex items-center gap-2">
-                <Code className="w-4 h-4" style={{ color: mod.color }} />
-                <span className="text-sm font-bold text-text">
-                  UE5 GameplayEffect — {mod.name}
-                </span>
-                <span
-                  className="text-xs font-bold px-1.5 py-0.5 rounded-full border"
-                  style={{
-                    backgroundColor: `${withOpacity(mod.color, OPACITY_10)}`,
-                    borderColor: `${withOpacity(mod.color, OPACITY_25)}`,
-                    color: mod.color,
-                  }}
-                >
-                  {mod.icon} {mod.tier}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => navigator.clipboard.writeText(codeText)}
-                  className="text-xs font-bold px-2 py-1 rounded border border-border/40 bg-surface-deep hover:bg-surface-hover transition-colors text-text-muted hover:text-text flex items-center gap-1 cursor-pointer"
-                >
-                  <Copy className="w-3 h-3" /> Copy
-                </button>
-                <button
-                  onClick={onClose}
-                  className="text-text-muted hover:text-text transition-colors p-1 cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-            <div className="p-4 max-h-[60vh] overflow-y-auto custom-scrollbar">
-              <pre className="text-xs font-mono text-text-muted leading-relaxed whitespace-pre-wrap">
-                {codeText}
-              </pre>
-            </div>
-          </motion.div>
-        </motion.div>
+        <>
+          <div className="flex items-center justify-between gap-2 pb-3 border-b border-border/40">
+            <span
+              className="text-xs font-bold px-1.5 py-0.5 rounded-full border"
+              style={{
+                backgroundColor: `${withOpacity(mod.color, OPACITY_10)}`,
+                borderColor: `${withOpacity(mod.color, OPACITY_25)}`,
+                color: mod.color,
+              }}
+            >
+              {mod.icon} {mod.tier}
+            </span>
+            <button
+              onClick={() => navigator.clipboard.writeText(codeText)}
+              className="text-xs font-bold px-2 py-1 rounded border border-border/40 bg-surface-deep hover:bg-surface-hover transition-colors text-text-muted hover:text-text flex items-center gap-1 cursor-pointer focus-ring"
+            >
+              <Copy className="w-3 h-3" /> Copy
+            </button>
+          </div>
+          <div className="pt-3 max-h-[60vh] overflow-y-auto custom-scrollbar">
+            <pre className="text-xs font-mono text-text-muted leading-relaxed whitespace-pre-wrap">
+              {codeText}
+            </pre>
+          </div>
+        </>
       )}
-    </AnimatePresence>
+    </Modal>
   );
 }

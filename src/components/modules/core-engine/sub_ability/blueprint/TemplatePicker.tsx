@@ -1,13 +1,20 @@
 'use client';
 
-import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutTemplate, X, Check } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { LayoutTemplate, Check } from 'lucide-react';
 import { STATUS_ERROR,
   withOpacity, OPACITY_15, OPACITY_8, OPACITY_80, OPACITY_12, OPACITY_5, OPACITY_25, OPACITY_50, OPACITY_20, OPACITY_37,
 } from '@/lib/chart-colors';
+import { Modal } from '@/components/ui/Modal';
 import type { GASTemplate } from './templates';
 import { ACCENT } from './data';
 
+/**
+ * Rendered only while open (`{showTemplatePicker && <TemplatePicker … />}`), so
+ * `open` is fixed — Modal restores focus to the trigger on unmount. The old
+ * bespoke backdrop painted its scrim with an inline `rgba(0,0,0,0.6)` rather
+ * than `bg-black/60`, which is why the scrim guard matches both spellings.
+ */
 export function TemplatePicker({
   templates, activeTemplateName, onSelect, onClose,
 }: {
@@ -17,36 +24,19 @@ export function TemplatePicker({
   onClose: () => void;
 }) {
   return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center p-4"
-        style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
-        onClick={onClose}
-      >
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 12 }} transition={{ duration: 0.2 }}
-          className="w-full max-w-3xl max-h-[80vh] overflow-y-auto custom-scrollbar rounded-xl border border-border/40 bg-surface shadow-2xl"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="sticky top-0 z-10 flex items-center justify-between p-4 border-b border-border/40 bg-surface/95 backdrop-blur-sm">
-            <div>
-              <div className="text-sm font-bold text-text flex items-center gap-2">
-                <LayoutTemplate className="w-4 h-4" style={{ color: ACCENT }} />
-                Archetype Templates
-              </div>
-              <div className="text-2xs text-text-muted mt-0.5">
-                Pre-built GAS configurations for common ARPG ability archetypes
-              </div>
-            </div>
-            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-deep transition-colors text-text-muted hover:text-text">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
+    <Modal
+      open
+      onClose={onClose}
+      title="Archetype Templates"
+      icon={<LayoutTemplate className="w-4 h-4" style={{ color: ACCENT }} />}
+      className="max-w-3xl"
+    >
+      <div className="text-2xs text-text-muted -mt-2 mb-3">
+        Pre-built GAS configurations for common ARPG ability archetypes
+      </div>
 
-          <div className="p-4 grid grid-cols-2 gap-3">
-            {templates.map((tpl, i) => {
+      <div className="grid grid-cols-2 gap-3">
+        {templates.map((tpl, i) => {
               const isActive = activeTemplateName === tpl.name;
               return (
                 <motion.button key={tpl.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
@@ -104,9 +94,7 @@ export function TemplatePicker({
                 </motion.button>
               );
             })}
-          </div>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
+      </div>
+    </Modal>
   );
 }

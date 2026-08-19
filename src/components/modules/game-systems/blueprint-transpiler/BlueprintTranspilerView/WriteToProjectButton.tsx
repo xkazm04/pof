@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import { CheckCircle2, XCircle, Loader2, Save, AlertTriangle, RefreshCw } from 'lucide-react';
 import { apiFetch } from '@/lib/api-utils';
+import { Modal } from '@/components/ui/Modal';
 import { PromptDiffView } from '@/components/modules/evaluator/PromptDiffView';
 import type { WritePlan } from '@/lib/blueprint-transpiler-write';
 import {
@@ -118,22 +119,25 @@ export function WriteToProjectButton({ className, header, source, projectPath, d
         </span>
       )}
 
-      {plan && snapshot && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6" onClick={closeModal}>
-          <div
-            className="w-full max-w-3xl max-h-[85vh] overflow-y-auto rounded-xl border border-border bg-surface p-4 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-text flex items-center gap-2">
-                <Save className="w-4 h-4" style={{ color: ACCENT }} /> Write {snapshot.className} to project — dry run
-              </h3>
+      {/* Destructive write-to-disk confirm — it runs through the shared Modal
+          shell so a keyboard user gets aria-modal, Escape, a focus trap and
+          focus restore instead of being able to Tab out behind the backdrop. */}
+      <Modal
+        open={plan !== null && snapshot !== null}
+        onClose={closeModal}
+        title={snapshot ? `Write ${snapshot.className} to project — dry run` : 'Write to project — dry run'}
+        icon={<Save className="w-4 h-4" style={{ color: ACCENT }} />}
+        className="max-w-3xl"
+      >
+        {plan && snapshot && (
+          <>
+            <div className="flex items-center justify-end mb-3">
               <label className="text-2xs text-text-muted flex items-center gap-1.5">
                 Module
                 <input
                   value={moduleName}
                   onChange={(e) => setModuleName(e.target.value)}
-                  className="w-28 bg-surface-deep border border-border rounded px-1.5 py-0.5 text-xs text-text font-mono"
+                  className="w-28 bg-surface-deep border border-border rounded px-1.5 py-0.5 text-xs text-text font-mono focus-ring"
                 />
               </label>
             </div>
@@ -224,9 +228,9 @@ export function WriteToProjectButton({ className, header, source, projectPath, d
                 </button>
               )}
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </Modal>
     </>
   );
 }

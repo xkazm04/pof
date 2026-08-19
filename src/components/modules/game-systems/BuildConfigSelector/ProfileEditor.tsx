@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Settings, X, Save } from 'lucide-react';
+import { Settings, Save } from 'lucide-react';
+import { Modal } from '@/components/ui/Modal';
 import {
   type BuildProfile, type PlatformId,
   SUPPORTED_PLATFORMS,
@@ -12,6 +12,12 @@ import { CookSettingsPanel } from '../CookSettingsPanel';
 import { MODULE_COLORS } from '@/lib/chart-colors';
 import { CONFIG_OPTIONS } from './constants';
 
+/**
+ * Rendered only while open by BuildConfigSelector (`{showEditor && editingProfile
+ * && <ProfileEditor … />}`), so `open` is fixed — the shared Modal restores
+ * focus to the trigger on unmount. Modal owns the header, backdrop, Escape,
+ * focus trap and focus restore; this file supplies the form only.
+ */
 export function ProfileEditor({ profile, onSave, onClose }: {
   profile: Partial<BuildProfile>;
   onSave: (p: Partial<BuildProfile>) => void;
@@ -27,38 +33,21 @@ export function ProfileEditor({ profile, onSave, onClose }: {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  const selectClass = 'bg-background border border-border-bright rounded px-2 py-1 text-xs text-text-muted outline-none focus:border-[var(--systems)]/50 w-full';
-  const inputClass = 'bg-background border border-border-bright rounded px-2 py-1 text-xs text-text-muted font-mono outline-none focus:border-[var(--systems)]/50 w-full';
+  // `.focus-ring` is the shared keyboard focus indicator; the old
+  // `focus:border-…/50` only tinted a border, which is not a focus ring.
+  const selectClass = 'bg-background border border-border-bright rounded px-2 py-1 text-xs text-text-muted outline-none focus-ring w-full';
+  const inputClass = 'bg-background border border-border-bright rounded px-2 py-1 text-xs text-text-muted font-mono outline-none focus-ring w-full';
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-      onClick={onClose}
+    <Modal
+      open
+      onClose={onClose}
+      title={profile.id ? 'Edit Profile' : 'New Profile'}
+      icon={<Settings className="w-4 h-4" style={{ color: MODULE_COLORS.systems }} />}
+      className="max-w-lg"
     >
-      <motion.div
-        initial={{ scale: 0.95, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.95, opacity: 0 }}
-        className="w-full max-w-lg max-h-[80vh] overflow-y-auto bg-surface-deep border border-border-bright rounded-lg shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-          <div className="flex items-center gap-2">
-            <Settings className="w-4 h-4" style={{ color: MODULE_COLORS.systems }} />
-            <span className="text-sm font-semibold text-text">
-              {profile.id ? 'Edit Profile' : 'New Profile'}
-            </span>
-          </div>
-          <button onClick={onClose} className="p-1 rounded text-text-muted hover:text-text hover:bg-surface-hover transition-colors">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="px-4 py-3 space-y-4">
+      <>
+        <div className="py-1 space-y-4">
           {/* Basic settings */}
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -180,22 +169,22 @@ export function ProfileEditor({ profile, onSave, onClose }: {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-border">
+        <div className="flex items-center justify-end gap-2 mt-4 pt-3 border-t border-border">
           <button
             onClick={onClose}
-            className="px-3 py-1.5 rounded text-xs text-text-muted hover:text-text hover:bg-surface-hover transition-colors"
+            className="px-3 py-1.5 rounded text-xs text-text-muted hover:text-text hover:bg-surface-hover transition-colors focus-ring"
           >
             Cancel
           </button>
           <button
             onClick={() => onSave(form)}
-            className="flex items-center gap-1 px-3 py-1.5 rounded text-xs font-medium text-white bg-[var(--systems)]/80 hover:bg-[var(--systems)] transition-colors"
+            className="flex items-center gap-1 px-3 py-1.5 rounded text-xs font-medium text-white bg-[var(--systems)]/80 hover:bg-[var(--systems)] transition-colors focus-ring"
           >
             <Save className="w-3 h-3" />
             Save Profile
           </button>
         </div>
-      </motion.div>
-    </motion.div>
+      </>
+    </Modal>
   );
 }
