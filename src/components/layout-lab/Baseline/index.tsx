@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import '@/lib/catalog/pipelines/registry.generated';
 import { getStepComponent } from '../steps';
 import { ArchetypeStep } from '../steps/ArchetypeStep';
@@ -22,6 +22,7 @@ import { Rail } from '../ui/Rail';
 import { Stat } from '../ui/Stat';
 import { LabDrawer, DrawerToggle } from '../LabDrawer';
 import { statusAriaLabel } from '../statusLanguage';
+import { stepSourceMap } from '../catalogManifest';
 import { summarizeDoneProvenance } from '../coachProvenance';
 import { getStepFact } from '@/lib/status/statusModel';
 import { summarizeEntity } from '@/lib/catalog/rollup';
@@ -72,6 +73,13 @@ export function Baseline(props: Props) {
   // via a drained L3/L4 gate (`deriveEntityLifecycle`).
   const derivedLifecycle = useDerivedLifecycle(detail?.catalog.catalogId ?? null);
   const entityLifecycle = (entity && derivedLifecycle.get(entity.id)) || null;
+
+  // Which spec declared each step, for a catalog whose rendered list draws on two of them.
+  // `items` renders the UNION (13 bespoke labels + 5 registry-only ones that key 31 of its
+  // 90 persisted artifact rows and had no screen at all before 2026-08-19); the tag keeps
+  // that duality VISIBLE rather than merging it into one undifferentiated list. `null` for
+  // every single-spec catalog, so nothing else in the lab gains a redundant tag.
+  const stepSources = useMemo(() => stepSourceMap(detail?.catalog.catalogId), [detail?.catalog.catalogId]);
 
   /**
    * The crash card's "adopt server truth" escape, and the ONE thing `adoptServerStep`
@@ -155,12 +163,16 @@ export function Baseline(props: Props) {
         syncFailedReason={(step) => entitySteps?.[step]?.syncError}
         produceFailed={(step) => !!entitySteps?.[step]?.error}
         isLive={(step) => !!(detail && getStepComponent(detail.catalog.catalogId, step))}
+        sourceFor={(step) => stepSources?.get(step) ?? null}
         tooltipFor={(step, i) => {
           const a = artifactByStep.get(step);
           const status = displayStatus(step, i);
           const live = !!(detail && getStepComponent(detail.catalog.catalogId, step));
+          // A registry-declared step in a mixed catalog IS built — it renders through the
+          // generic ArchetypeStep — so it must not read as an unbuilt placeholder.
+          const generic = stepSources?.get(step) === 'registry';
           return [
-            live ? 'Prototyped step' : 'Placeholder (not yet built)',
+            live ? 'Prototyped step' : generic ? 'Generic registry step (ArchetypeStep)' : 'Placeholder (not yet built)',
             status !== 'pending' || a
               ? `status: ${status}${a?.tier ? ` · ${a.tier}` : ''}${a?.reason ? ` — ${a.reason}` : ''}`
               : null,

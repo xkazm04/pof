@@ -3,8 +3,35 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useRovingFocus } from './hooks/useRovingFocus';
 import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
+import type { StepSource } from './catalogManifest';
 
 type NodeStatus = 'pass' | 'fail' | 'deferred' | 'pending' | 'unproduced';
+
+/**
+ * How a per-step spec-source tag READS — a word, never a hue (the rail's colour budget is
+ * already spent on status, and a second colour code would be unreadable to a colourblind
+ * operator). Only rendered for a catalog whose rendered list genuinely draws on two specs
+ * (`stepSourceMap` returns `null` otherwise), so a single-spec pipeline stays untagged.
+ */
+const SOURCE_TAG: Record<StepSource, { text: string; title: string }> = {
+  bespoke: {
+    text: 'BESPOKE',
+    title:
+      'Declared by the bespoke step spec — this step has its own hand-built View / Produce / '
+      + 'Acceptance UI, and is the list the reference e2e walk covers.',
+  },
+  registry: {
+    text: 'REGISTRY',
+    title:
+      'Declared by the registered StepSpec pipeline — rendered by the generic ArchetypeStep. '
+      + 'These labels key persisted pipeline_artifacts rows, judge verdicts and the headless '
+      + 'drains; they are shown here so produced work cannot be hidden by the other spec.',
+  },
+  fallback: {
+    text: 'TRACK',
+    title: 'A generic track label — no registered pipeline declares this step, so nothing grades it.',
+  },
+};
 /** What a dot reads as when the server fetch FAILED and nothing local covers the step. */
 const UNKNOWN_TOOLTIP = 'Server status unknown — the artifact fetch failed, so this step is not necessarily unproduced';
 /** What a shimmering dot reads as: the caller's `tooltipFor` can only see the pre-fetch
@@ -43,6 +70,13 @@ interface PipelineRailProps {
    *  instead of living only in the Produce panel's inline message. */
   produceFailed?: (step: string, i: number) => boolean;
   isLive: (step: string) => boolean;
+  /**
+   * Which spec declared this step, for a catalog whose rendered list draws on more than
+   * one (Items: 13 bespoke labels + 5 registry-only ones). Return `null` — or omit the prop
+   * — for a single-spec catalog, where every step would carry the same redundant tag.
+   * The duality is real and stays VISIBLE here rather than being merged away.
+   */
+  sourceFor?: (step: string, i: number) => StepSource | null;
   tooltipFor: (step: string, i: number) => string;
   ariaFor: (step: string, i: number) => string;
   onSelectStep: (i: number) => void;
@@ -60,6 +94,7 @@ export function PipelineRail({
   syncFailedReason,
   produceFailed,
   isLive,
+  sourceFor,
   tooltipFor,
   ariaFor,
   onSelectStep,
@@ -170,6 +205,8 @@ export function PipelineRail({
         const notSynced = syncFailed?.(step, i) ?? false;
         const notSyncedWhy = (notSynced && syncFailedReason?.(step, i)) || null;
         const produceBroke = produceFailed?.(step, i) ?? false;
+        const source = sourceFor?.(step, i) ?? null;
+        const sourceTag = source ? SOURCE_TAG[source] : null;
         const filled = status === 'pass' || status === 'fail';
         const fill = filled
           ? `var(--lab-${status === 'pass' ? 'ok' : 'bad'})`
@@ -200,6 +237,8 @@ export function PipelineRail({
         const label = [
           unknown ? `${step}: server status unknown` : ariaFor(step, i),
           isLoading ? 'status loading' : null,
+          // The tag is a <span aria-hidden> below, so it is silent unless folded in here.
+          sourceTag ? `${sourceTag.text.toLowerCase()} spec` : null,
           live ? 'prototyped' : null,
           drifted ? 'server verdict differs' : null,
           notSynced ? 'not synced to server' : null,
@@ -304,6 +343,25 @@ export function PipelineRail({
                 {pad2(i + 1)}
               </span>
               {step}
+              {sourceTag && (
+                <span
+                  data-step-source={source ?? undefined}
+                  aria-hidden="true"
+                  title={sourceTag.title}
+                  style={{
+                    flexShrink: 0,
+                    fontFamily: 'var(--lab-font-mono)',
+                    fontSize: 'var(--lab-fs-xs)',
+                    letterSpacing: '0.08em',
+                    lineHeight: 1,
+                    padding: '2px 4px',
+                    color: 'var(--lab-muted)',
+                    border: '1px solid var(--lab-line)',
+                  }}
+                >
+                  {sourceTag.text}
+                </span>
+              )}
               {live && (
                 <span
                   aria-hidden="true"

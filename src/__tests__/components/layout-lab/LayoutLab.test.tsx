@@ -80,7 +80,7 @@ describe('UI identity lab (Blueprint baseline · Items example)', () => {
     expect(screen.getAllByText('PASS').length).toBeGreaterThan(0);
   });
 
-  it('"Populate demo" drives one item through all 13 steps with real persisted data', async () => {
+  it('"Populate demo" drives one item through all 13 BESPOKE steps with real persisted data', async () => {
     // Reset now deletes the SERVER artifacts too (add-only hydration would otherwise
     // re-adopt them), so the round-trip has to resolve for the reset to land.
     vi.stubGlobal('fetch', vi.fn().mockImplementation((_url: string, init?: RequestInit) => Promise.resolve({
@@ -90,9 +90,12 @@ describe('UI identity lab (Blueprint baseline · Items example)', () => {
       json: async () => ({ success: true, data: init?.method === 'DELETE' ? { deleted: 13 } : [] }),
     })));
     render(<LayoutLab />);
-    fireEvent.click(screen.getByText('Populate demo')); // runs every Items step for Iron Longsword (item-1)
-    // pipeline progress is derived from the store, not faked.
-    expect(screen.getAllByText('13/13').length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByText('Populate demo')); // runs every BESPOKE Items step for Iron Longsword (item-1)
+    // Pipeline progress is derived from the store, not faked — and the denominator is the
+    // full rendered UNION (13 bespoke + 5 registry-only labels, see ITEMS_SPEC_DUALITY).
+    // "Populate demo" only drives the 13 bespoke specs, so 13/18 is the honest reading: the
+    // registry-only steps are produced from their own StepSpec, not by this button.
+    expect(screen.getAllByText('13/18').length).toBeGreaterThan(0);
     // persisted attribute data renders in the Attributes View.
     const pipeline = screen.getByRole('list', { name: /pipeline/i });
     fireEvent.click(within(pipeline).getByRole('button', { name: /Attributes/ }));
@@ -104,7 +107,7 @@ describe('UI identity lab (Blueprint baseline · Items example)', () => {
     // it is destructive on both sides (local store + persisted server artifacts).
     fireEvent.click(screen.getByTestId('entity-reset'));
     fireEvent.click(screen.getByRole('button', { name: 'Reset everywhere' }));
-    await waitFor(() => expect(screen.getAllByText('0/13').length).toBeGreaterThan(0));
+    await waitFor(() => expect(screen.getAllByText('0/18').length).toBeGreaterThan(0));
     vi.unstubAllGlobals();
   });
 });

@@ -10,11 +10,13 @@
 /** catalogId -> reason it is excluded from the generic walker. */
 export const WALKER_SKIP: Record<string, string> = {
   // items has TWO specs (see ITEMS_SPEC_DUALITY in src/components/layout-lab/catalogManifest.ts):
-  // the lab renders the bespoke 13-step UI, never the 11-label registry pipeline the generic
-  // walker would enumerate. Walking it generically would grade steps nobody can see, so the
-  // 13 on-screen steps are walked in depth by the reference spec instead, and the bespoke
-  // produce/accept pair is linted by src/__tests__/catalog/items-spec-duality.test.ts.
-  items: 'the lab renders the bespoke 13-step UI (not the 11-label registry pipeline); walked in depth by catalog-items-reference.spec.ts + linted by src/__tests__/catalog/items-spec-duality.test.ts',
+  // the lab renders the ORDERED UNION — the 13 bespoke step UIs first, then the 5 registry-only
+  // labels routed to the generic ArchetypeStep (2026-08-19: those five carried 31 of the
+  // catalog's 90 persisted rows while having no screen at all). The generic walker enumerates
+  // the 11-label registry spec only, which would MISS the 7 bespoke-only steps, so the union is
+  // walked in depth by the reference spec instead and the bespoke produce/accept pair is linted
+  // by src/__tests__/catalog/items-spec-duality.test.ts.
+  items: 'the lab renders the UNION of both items specs (13 bespoke step UIs + the 5 registry-only labels), which the generic 11-label walk would not cover; walked in depth by catalog-items-reference.spec.ts + linted by src/__tests__/catalog/items-spec-duality.test.ts',
   // player-movement is no longer skipped (2026-06-21): it now has a NEW_CATALOGS section +
   // starter (Manny Locomotion), and its bridge steps are L3/L4-deferred-to-the-bridge in
   // stub mode (config-complete), so the generic walker covers it like any other pipeline.

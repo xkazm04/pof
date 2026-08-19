@@ -26,11 +26,21 @@ function acceptIndexFor(pipeline: CatalogPipeline): Map<string, Checker> {
   return idx;
 }
 
-/** Resolve the acceptance checker for a (catalog, step): bespoke Items specs, else a registered StepSpec pipeline. */
+/**
+ * Resolve the acceptance checker for a (catalog, step): a bespoke Items spec takes
+ * precedence, and ANY step it does not define falls through to the registered `StepSpec`
+ * pipeline of the same id.
+ *
+ * The fallthrough is the point. Until 2026-08-19 the `items` branch returned `null` for
+ * every label outside `ITEM_STEP_SPECS`, which is precedence AND a dead end: the 5
+ * registry-only items labels (affix tier tables, base-type/GE wiring, DPS derivation,
+ * material, 3D mesh) had no on-screen grader at all, so the 31 persisted rows they carry
+ * could not be graded even once the lab started rendering them. Precedence never required
+ * the dead end — bespoke still wins every shared label, byte-identically.
+ */
 export function resolveAccept(catalogId: string, step: string): Checker | null {
-  if (catalogId === 'items') {
-    const spec = ITEM_STEP_SPECS[step];
-    if (!spec) return null;
+  const spec = catalogId === 'items' ? ITEM_STEP_SPECS[step] : undefined;
+  if (spec) {
     // ItemStepSpec.accept now shares the Checker signature (data, ctx?); normalize its
     // optional tier/reason to the AcceptanceResult shape the rollup expects, forwarding
     // the optional CheckerContext so a bespoke Items checker can read siblings / links too.
