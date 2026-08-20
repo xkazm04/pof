@@ -3,7 +3,9 @@
 import { useState } from 'react';
 import { Boxes, Loader2, Dice5 } from 'lucide-react';
 import { MODULE_COLORS } from '@/lib/constants';
-import { validateSeed, SEED_ROLL_MAX } from '@/lib/level-design/run-params';
+import { validateSeed, SEED_ROLL_MAX, UE_ROOMS_MIN, UE_ROOMS_MAX } from '@/lib/level-design/run-params';
+import type { ProcgenSpec } from '@/lib/level-design/procgen-spec';
+import { ProcgenSpecHandoff } from './ProcgenSpecHandoff';
 import { RunHistoryList } from './RunHistoryList';
 import { useRunHistory } from './useRunHistory';
 import type { ProcgenRun } from '@/types/procgen';
@@ -17,10 +19,14 @@ interface ProcGenDungeonPanelProps {
   onGenerate: (roomCount: number, seed: number) => void;
   /** True while a generation task is running. */
   isGenerating: boolean;
+  /** The spec the wizard currently holds, or null when it has published none. */
+  handoffSpec?: ProcgenSpec | null;
 }
 
-export const ROOMS_MIN = 2;
-export const ROOMS_MAX = 20;
+// Single-sourced in run-params so `procgen-spec` clamps a handed-off spec to
+// exactly the bounds this panel validates against.
+export const ROOMS_MIN = UE_ROOMS_MIN;
+export const ROOMS_MAX = UE_ROOMS_MAX;
 
 /**
  * Pure validator for the room-count field. Returns an error string when the raw
@@ -36,7 +42,7 @@ export function validateRoomCount(raw: string): string | null {
   return null;
 }
 
-export function ProcGenDungeonPanel({ onGenerate, isGenerating }: ProcGenDungeonPanelProps) {
+export function ProcGenDungeonPanel({ onGenerate, isGenerating, handoffSpec }: ProcGenDungeonPanelProps) {
   // Inputs are kept as raw strings so cleared (NaN) / out-of-range values can be
   // validated and surfaced inline, rather than silently clamped at generate time.
   const [roomsInput, setRoomsInput] = useState('6');
@@ -67,6 +73,22 @@ export function ProcGenDungeonPanel({ onGenerate, isGenerating }: ProcGenDungeon
           <p className="text-xs text-violet-400/60 uppercase tracking-wider mt-0.5">Drive ARPGLevelGenerator → /Game/Maps/ProcGenDungeon</p>
         </div>
       </div>
+
+      {/*
+        The wizard and this panel now speak one ProcgenSpec. Adoption fills only
+        the two fields ARPGLevelGenerator actually reads, and the block states
+        what it dropped and that the UE bake will not reproduce the preview.
+      */}
+      {handoffSpec && (
+        <ProcgenSpecHandoff
+          spec={handoffSpec}
+          disabled={isGenerating}
+          onAdopt={(rooms, seed) => {
+            setRoomsInput(String(rooms));
+            setSeedInput(String(seed));
+          }}
+        />
+      )}
 
       <div className="grid grid-cols-2 gap-4">
         <label className="space-y-1.5">

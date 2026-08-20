@@ -21,6 +21,7 @@ import {
 import type { RoomNode, SyncDivergence, LevelDesignDocument } from '@/types/level-design';
 import type { StreamingZonePlannerConfig } from '../StreamingZonePlanner';
 import type { ProceduralLevelConfig } from '../ProceduralLevelWizard';
+import type { ProcgenSpec } from '@/lib/level-design/procgen-spec';
 import { MODULE_COLORS, getAppOrigin } from '@/lib/constants';
 import type { TabId } from './types';
 import type { EditCommitMode } from '@/hooks/useEntityCommitBuffer';
@@ -134,6 +135,12 @@ export function useLevelDesignView() {
     label: 'Procedural Gen',
     accentColor: MODULE_COLORS.content,
   });
+
+  // The wizard publishes its settled ProcgenSpec here so the UE dungeon tab can
+  // adopt it. Held at the view level because the two panels are sibling tabs;
+  // null until the wizard tab has been opened at least once, which is why the
+  // dungeon tab must render perfectly well without it.
+  const [procgenSpec, setProcgenSpec] = useState<ProcgenSpec | null>(null);
 
   const handleGenerateProcgen = useCallback((config: ProceduralLevelConfig) => {
     const prompt = buildProceduralLevelPrompt(config, { projectName, projectPath, ueVersion });
@@ -351,6 +358,8 @@ export function useLevelDesignView() {
     handleGenerateProcgen,
     handleGenerateDungeon,
     handleScatter,
+    procgenSpec,
+    setProcgenSpec,
     MODULE_ID,
     rvRefetch,
     rvLastCompletedId,

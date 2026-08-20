@@ -9,6 +9,7 @@ import { SizeParameters } from './SizeParameters';
 import { ConstraintsPanel } from './ConstraintsPanel';
 import { LivePreview } from './LivePreview';
 import { GenerateActions } from './GenerateActions';
+import type { ProcgenSpec } from '@/lib/level-design/procgen-spec';
 import type { ProceduralLevelConfig } from './types';
 
 export type {
@@ -20,9 +21,15 @@ export type {
 interface ProceduralLevelWizardProps {
   onGenerate: (config: ProceduralLevelConfig) => void;
   isGenerating: boolean;
+  /**
+   * Publish the configured {@link ProcgenSpec} so the UE dungeon tab can adopt
+   * it. The wizard state is the spec's producer; adopting surfaces are expected
+   * to disclose which of its fields their engine ignores.
+   */
+  onSpecChange?: (spec: ProcgenSpec) => void;
 }
 
-export function ProceduralLevelWizard({ onGenerate, isGenerating }: ProceduralLevelWizardProps) {
+export function ProceduralLevelWizard({ onGenerate, isGenerating, onSpecChange }: ProceduralLevelWizardProps) {
   const {
     algorithm, setAlgorithm,
     levelType,
@@ -47,7 +54,7 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating }: ProceduralLe
     ltNav,
     algDef,
     ltDef,
-  } = useProceduralLevelWizard({ onGenerate });
+  } = useProceduralLevelWizard({ onGenerate, onSpecChange });
 
   return (
     <div

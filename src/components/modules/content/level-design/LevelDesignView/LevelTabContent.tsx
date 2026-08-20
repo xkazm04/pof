@@ -35,6 +35,8 @@ export function LevelTabContent({ vm }: { vm: LevelDesignVM }) {
     handleGenerateProcgen,
     handleGenerateDungeon,
     handleScatter,
+    procgenSpec,
+    setProcgenSpec,
     MODULE_ID,
     rvRefetch,
     rvLastCompletedId,
@@ -132,6 +134,7 @@ export function LevelTabContent({ vm }: { vm: LevelDesignVM }) {
         <ProceduralLevelWizard
           onGenerate={handleGenerateProcgen}
           isGenerating={procgenCli.isRunning}
+          onSpecChange={setProcgenSpec}
         />
       )}
 
@@ -139,6 +142,7 @@ export function LevelTabContent({ vm }: { vm: LevelDesignVM }) {
         <ProcGenDungeonPanel
           onGenerate={handleGenerateDungeon}
           isGenerating={dungeonCli.isRunning}
+          handoffSpec={procgenSpec}
         />
       )}
 

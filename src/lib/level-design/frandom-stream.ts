@@ -2,8 +2,12 @@
  * A faithful TypeScript port of Unreal Engine's `FRandomStream` — the exact
  * seeded RNG the procedural-level C++ codegen targets (see
  * `buildProceduralLevelPrompt`, which instructs "Use FRandomStream with seed
- * for all random operations"). Running the same RNG client-side means the live
- * in-browser preview is faithful to what UE will produce for a given seed.
+ * for all random operations"). Running the same RNG client-side means a seed
+ * means the same thing on both sides — it does NOT mean the preview shows the
+ * level UE will bake. `ARPGLevelGenerator` places room-template actors from a
+ * pool and takes no algorithm parameter, and the codegen path is authored
+ * freehand by the CLI; `layoutAgreement` in `procgen-spec` is the tested
+ * statement of what does and does not reproduce.
  *
  * UE's implementation (Engine/Source/Runtime/Core/Public/Math/RandomStream.h):
  *   void  MutateSeed()  { Seed = (Seed * 196314165) + 907633515; }

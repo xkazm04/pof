@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef, useMemo, useDeferredValue } from 'react';
+import { useState, useCallback, useRef, useMemo, useEffect, useDeferredValue } from 'react';
 import type { KeyboardEvent } from 'react';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
 import { tryApiFetch } from '@/lib/api-utils';
@@ -8,7 +8,10 @@ import { dungeonToGeometryScript, type CellType } from '@/lib/blender-mcp/script
 import { levelMetadataScript } from '@/lib/blender-mcp/scripts/level-metadata';
 import type { ExecuteOutput } from '@/lib/blender-mcp/types';
 import { logger } from '@/lib/logger';
-import { generatePreview, type PreviewConfig } from '@/lib/level-design/procgen-preview';
+import { generatePreview } from '@/lib/level-design/procgen-preview';
+import {
+  buildProcgenSpec, previewConfigFromSpec, type ProcgenSpec,
+} from '@/lib/level-design/procgen-spec';
 import { ALGORITHMS, LEVEL_TYPES, DEFAULT_SIZE } from './constants';
 import {
   MAX_EXPORT_SIZE, EXPORT_CELL_SIZE, EXPORT_WALL_HEIGHT,
@@ -66,9 +69,11 @@ export function useRovingRadioGroup(count: number, onSelectIndex: (i: number) =>
 
 interface UseProceduralLevelWizardArgs {
   onGenerate: (config: ProceduralLevelConfig) => void;
+  /** Publish the configured spec so another surface can adopt it. */
+  onSpecChange?: (spec: ProcgenSpec) => void;
 }
 
-export function useProceduralLevelWizard({ onGenerate }: UseProceduralLevelWizardArgs) {
+export function useProceduralLevelWizard({ onGenerate, onSpecChange }: UseProceduralLevelWizardArgs) {
   const [algorithm, setAlgorithm] = useState<GenAlgorithm>('bsp');
   const [levelType, setLevelType] = useState<LevelType>('dungeon');
   const [size, setSize] = useState<SizeParams>(DEFAULT_SIZE.dungeon);
@@ -85,21 +90,32 @@ export function useProceduralLevelWizard({ onGenerate }: UseProceduralLevelWizar
   const [pendingExport, setPendingExport] = useState<PendingBlenderExport | null>(null);
   const blenderConnected = useBlenderMCPStore((s) => s.connection.connected);
 
-  // ── Live preview ──
-  // Runs the chosen algorithm purely in TypeScript with the same FRandomStream
-  // seed the UE codegen targets, so the layout the designer sees here matches
-  // what UE will produce. Deferred so dragging sliders / typing stays smooth.
-  const previewConfig = useMemo<PreviewConfig>(() => ({
+  // ── Spec → live preview ──
+  // The wizard's state IS a ProcgenSpec; the preview config is derived from it
+  // rather than assembled beside it, so the spec is load-bearing and one seed is
+  // resolved once. The preview runs the chosen algorithm purely in TypeScript
+  // against FRandomStream — it judges the PARAMETERS. It is NOT a picture of the
+  // level UE will bake: `ARPGLevelGenerator` places room-template actors from a
+  // pool and has no algorithm parameter, and the C++ codegen path is authored
+  // freehand by the CLI (see `layoutAgreement` in procgen-spec).
+  // Deferred so dragging sliders / typing stays smooth.
+  const spec = useMemo<ProcgenSpec>(() => buildProcgenSpec({
     algorithm,
+    levelType,
     gridWidth: size.gridWidth,
     gridHeight: size.gridHeight,
     roomCountMin: size.roomCountMin,
     roomCountMax: size.roomCountMax,
     corridorWidth: size.corridorWidth,
     seed,
-  }), [algorithm, size, seed]);
-  const deferredConfig = useDeferredValue(previewConfig);
-  const preview = useMemo(() => generatePreview(deferredConfig), [deferredConfig]);
+    constraints,
+  }), [algorithm, levelType, size, seed, constraints]);
+  const deferredSpec = useDeferredValue(spec);
+  const preview = useMemo(() => generatePreview(previewConfigFromSpec(deferredSpec)), [deferredSpec]);
+
+  // Publish the settled spec, not the per-keystroke one, so adopting surfaces
+  // re-render on a pause rather than on every drag frame.
+  useEffect(() => { onSpecChange?.(deferredSpec); }, [deferredSpec, onSpecChange]);
 
   const selectLevelType = useCallback((lt: LevelType) => {
     setLevelType(lt);
@@ -127,18 +143,18 @@ export function useProceduralLevelWizard({ onGenerate }: UseProceduralLevelWizar
   // the settings currently on screen.
   const prepareBlenderExport = useCallback(() => {
     setBlenderResult(null);
-    const full = generatePreview({ ...previewConfig, maxPreviewSize: MAX_EXPORT_SIZE });
+    const full = generatePreview(previewConfigFromSpec(spec, MAX_EXPORT_SIZE));
     const plan = buildExportPlan({
-      algorithm: previewConfig.algorithm,
-      requestedWidth: previewConfig.gridWidth,
-      requestedHeight: previewConfig.gridHeight,
+      algorithm: spec.algorithm,
+      requestedWidth: spec.gridWidth,
+      requestedHeight: spec.gridHeight,
       grid: full.grid,
       scale: full.scale,
-      seedLabel: previewConfig.seed,
+      seedLabel: spec.seedLabel,
       seedValue: full.seedValue,
     });
     setPendingExport({ plan, placement: planSpawns(full.grid, constraints, EXPORT_CELL_SIZE), grid: full.grid });
-  }, [previewConfig, constraints]);
+  }, [spec, constraints]);
 
   const cancelBlenderExport = useCallback(() => setPendingExport(null), []);
 
@@ -208,6 +224,7 @@ export function useProceduralLevelWizard({ onGenerate }: UseProceduralLevelWizar
     exportPlanSummary: pendingExport ? describeExportPlan(pendingExport.plan) : null,
     spawnPlacementSummary: pendingExport ? describeSpawnPlacement(pendingExport.placement) : null,
     preview,
+    spec,
     selectLevelType,
     toggleConstraint,
     updateSize,
