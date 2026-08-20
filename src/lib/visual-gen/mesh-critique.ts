@@ -11,6 +11,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { gradeFaceBudget, type BudgetGrade, type BudgetRequest } from './face-budget';
 import { gradeWorldScale, type ScaleGrade, type SizeRequest } from './world-scale';
+import { assessStage, type MeshStage } from './critique-stage';
 
 export interface MeshMetrics {
   verts: number;
@@ -158,10 +159,55 @@ const DEFAULT_THRESHOLDS: CritiqueThresholds = {
   minVerts: 100, maxComponentsFail: 8, maxFacesWarn: 200_000, minExtent: 1e-4, maxFloatersFail: 4,
 };
 
+/**
+ * What a single scorecard line is ABOUT, as a stable code rather than prose.
+ *
+ * Every consumer that needed to reason about *which kind* of defect a mesh has was
+ * previously reduced to sniffing the reason strings — `failureShape` in `best-of-n.ts`
+ * had to blank out digits and compare only the first line, and it still took two
+ * live-only corrections to stop mis-matching. A code says the same thing exactly.
+ *
+ * The split matters because the defect classes have genuinely different remedies:
+ * `face-count` / `budget-over` / `parts-over-budget` are resolved by the retopo stage,
+ * `floaters` is not (measured — see `critique-stage.ts`), and `empty-mesh` is the only
+ * class where paying for another provider roll is a rational act.
+ */
+export type FindingCode =
+  | 'empty-mesh'
+  | 'degenerate-bbox'
+  | 'floaters'
+  | 'parts-over-budget'
+  | 'components-over-budget'
+  | 'not-watertight'
+  | 'winding'
+  | 'degenerate-faces'
+  | 'face-count'
+  | 'budget-over'
+  | 'scale-off';
+
+export interface Finding {
+  code: FindingCode;
+  severity: 'fail' | 'warn';
+  /** The human line — byte-identical to the matching entry in `reasons`. */
+  reason: string;
+}
+
 export interface Scorecard {
   verdict: 'pass' | 'warn' | 'fail';
   score: number;
   reasons: string[];
+  /**
+   * The same lines as `reasons`, each tagged with its defect class and severity, in the
+   * same order. `reasons` is kept as the display/compat surface; nothing should branch on
+   * its prose.
+   *
+   * Optional because this scorecard shape is also borrowed by `input-gate.ts`, a VLM
+   * IMAGE gate whose free-text defects have no mesh defect class — inventing codes there
+   * would be exactly the kind of fabricated precision this field exists to remove.
+   * `scoreMesh` always sets it (its return type makes that a guarantee), so a geometry
+   * verdict never arrives without one.
+   */
+  findings?: Finding[];
   /**
    * How the delivered mesh compared to the face budget that was REQUESTED for it.
    * Distinct from `maxFacesWarn`, which is the class CEILING: a 55k-triangle character
@@ -195,13 +241,14 @@ export function scoreMesh(
   thresholds: Partial<CritiqueThresholds> = {},
   budget?: BudgetRequest,
   size?: SizeRequest,
-): Scorecard {
+): Scorecard & { findings: Finding[] } {
   const t = { ...DEFAULT_THRESHOLDS, ...thresholds };
-  const fails: string[] = [];
-  const warns: string[] = [];
+  const found: Finding[] = [];
+  const fail = (code: FindingCode, reason: string) => { found.push({ code, severity: 'fail', reason }); };
+  const warn = (code: FindingCode, reason: string) => { found.push({ code, severity: 'warn', reason }); };
 
-  if (m.verts < t.minVerts || m.faces < 1) fails.push(`empty/degenerate mesh (${m.verts} verts, ${m.faces} faces)`);
-  if (m.bbox.some((e) => e < t.minExtent)) fails.push(`degenerate bounding box (flat: ${m.bbox.map((e) => e.toFixed(2)).join('×')})`);
+  if (m.verts < t.minVerts || m.faces < 1) fail('empty-mesh', `empty/degenerate mesh (${m.verts} verts, ${m.faces} faces)`);
+  if (m.bbox.some((e) => e < t.minExtent)) fail('degenerate-bbox', `degenerate bounding box (flat: ${m.bbox.map((e) => e.toFixed(2)).join('×')})`);
   // Component health. With a per-component face histogram we can tell a body part from
   // a speck, so an assembled character (head + lashes + brows + eye layers + mouth
   // interior + teeth + tongue + body + hands + hair + cape + accessories) is judged on
@@ -210,38 +257,50 @@ export function scoreMesh(
   const split = classifyComponents(m.componentFaces, m.componentFacesOmitted);
   if (split.measured) {
     if (split.floaters > t.maxFloatersFail) {
-      fails.push(`${split.floaters} floater fragments (${split.floaterFaces} faces of specks)`);
+      fail('floaters', `${split.floaters} floater fragments (${split.floaterFaces} faces of specks)`);
     }
     if (split.parts > t.maxComponentsFail) {
-      fails.push(`${split.parts} substantial disconnected parts (above the ${t.maxComponentsFail} budget for this class)`);
+      fail('parts-over-budget', `${split.parts} substantial disconnected parts (above the ${t.maxComponentsFail} budget for this class)`);
     }
     if (split.floaters > 0 && split.floaters <= t.maxFloatersFail) {
-      warns.push(`${split.floaters} floater fragments (${split.floaterFaces} faces of specks)`);
+      warn('floaters', `${split.floaters} floater fragments (${split.floaterFaces} faces of specks)`);
     }
   } else if (m.components > t.maxComponentsFail) {
-    fails.push(`${m.components} disconnected components (fragmented / floaters)`);
+    fail('components-over-budget', `${m.components} disconnected components (fragmented / floaters)`);
   }
 
-  if (!m.watertight) warns.push('not watertight (open boundary / holes)');
+  if (!m.watertight) warn('not-watertight', 'not watertight (open boundary / holes)');
   if (!split.measured && m.components > 1 && m.components <= t.maxComponentsFail) {
-    warns.push(`${m.components} disconnected components (possible floaters)`);
+    warn('components-over-budget', `${m.components} disconnected components (possible floaters)`);
   }
-  if (!m.windingConsistent) warns.push('inconsistent face winding (normals may flip)');
-  if (m.degenerateFaces > 0) warns.push(`${m.degenerateFaces} degenerate faces`);
-  if (m.faces > t.maxFacesWarn) warns.push(`high face count (${m.faces}) — needs decimation for game use`);
+  if (!m.windingConsistent) warn('winding', 'inconsistent face winding (normals may flip)');
+  if (m.degenerateFaces > 0) warn('degenerate-faces', `${m.degenerateFaces} degenerate faces`);
+  if (m.faces > t.maxFacesWarn) warn('face-count', `high face count (${m.faces}) — needs decimation for game use`);
 
   // Budget honoured? trimesh triangulates on load, so `m.faces` is a triangle count.
   const budgetGrade = budget ? gradeFaceBudget(m.faces, budget) : undefined;
-  if (budgetGrade?.verdict === 'over' && budgetGrade.reason) warns.push(budgetGrade.reason);
+  if (budgetGrade?.verdict === 'over' && budgetGrade.reason) warn('budget-over', budgetGrade.reason);
 
   // Right size? bbox is trimesh extents in glTF metres. Always graded so the card can
   // say "generator-normalised, size unknown" even when no target was requested.
   const scaleGrade = gradeWorldScale(m.bbox, size);
-  if (scaleGrade.verdict === 'off' && scaleGrade.reason) warns.push(scaleGrade.reason);
+  if (scaleGrade.verdict === 'off' && scaleGrade.reason) warn('scale-off', scaleGrade.reason);
 
+  // `reasons` stays fails-then-warns — the exact order every existing consumer reads,
+  // and the order `failureShape` depends on to pick the verdict-driving defect.
+  const fails = found.filter((f) => f.severity === 'fail');
+  const warns = found.filter((f) => f.severity === 'warn');
+  const findings = [...fails, ...warns];
   const verdict = fails.length ? 'fail' : warns.length ? 'warn' : 'pass';
   const score = Math.max(0, Math.min(100, 100 - fails.length * 50 - warns.length * 15));
-  return { verdict, score, reasons: [...fails, ...warns], budget: budgetGrade, scale: scaleGrade };
+  return {
+    verdict,
+    score,
+    reasons: findings.map((f) => f.reason),
+    findings,
+    budget: budgetGrade,
+    scale: scaleGrade,
+  };
 }
 
 export interface CritiqueResult extends Partial<Scorecard> {
@@ -258,18 +317,29 @@ export interface CritiqueResult extends Partial<Scorecard> {
    * reason blamed the mesh. `error` carries WHAT is missing in this state.
    */
   unavailable?: boolean;
+  /**
+   * The pipeline stage the graded mesh was at, as DECLARED by the caller. Never inferred
+   * — an absent stage stays absent, and `assessStage` reports it as undeclared rather
+   * than guessing that dense output must be raw.
+   */
+  stage?: MeshStage;
 }
 
 /**
- * The one honest caveat that belongs beside any FAILING Tier-1 verdict.
+ * The FALLBACK caveat beside a failing Tier-1 verdict — used only when the verdict
+ * carries no `findings` to derive a specific one from (a `CritiqueResult` assembled by an
+ * older path). Prefer `assessStage(critique, stage).caveat`, which names this verdict's
+ * actual defect classes.
  *
- * On record from the smart-low-poly arena: the gate reads RAW pre-retopo generator
- * output against thresholds authored for finished, game-ready meshes, so it fails near
- * 100% of raw deliveries on face count alone regardless of how good the mesh is.
- * Recalibrating the thresholds is a separate tuning decision; saying so is not.
+ * The previous text — *"raw provider output may fail on face count alone"* — was
+ * measurably FALSE and shipped beside every failing verdict. `scoreMesh` files
+ * `face-count` as a WARN and has no fail rule for it at any threshold: a 1,492,072-face
+ * mesh graded against the 12,000-face `modular-part` ceiling scores warn/85. Re-measured
+ * 2026-08-20 over all 52 `.glb` under `generated/` — 10 fails, and all 10 were `floaters`.
+ * See `critique-stage.ts` for the full measurement.
  */
 export const CRITIQUE_CALIBRATION_CAVEAT =
-  'gate calibrated for finished meshes; raw provider output may fail on face count alone';
+  'gate thresholds are authored for FINISHED game-tier meshes; the pipeline stage of this mesh was not declared, so the verdict cannot say whether it is a defect or an un-finished input';
 
 /** Build the distinct "the critic could not run" outcome. Pure. */
 export function critiqueUnavailable(reason: string): CritiqueResult {
@@ -297,7 +367,7 @@ export interface GateSummary {
  * Single-shot stores (TripoSR / Hunyuan) have no retry loop to derive these from, and
  * without them a job that was never graded looked exactly like one that passed.
  */
-export function summarizeGate(critique: CritiqueResult | undefined): GateSummary {
+export function summarizeGate(critique: CritiqueResult | undefined, stage: MeshStage = 'unknown'): GateSummary {
   if (!critique) {
     return { accepted: false, ungated: true, reason: 'no mesh was produced, so nothing was graded' };
   }
@@ -315,7 +385,9 @@ export function summarizeGate(critique: CritiqueResult | undefined): GateSummary
       accepted: false,
       ungated: false,
       reason: `Tier-1 gate FAIL (score ${critique.score ?? 0}): ${critique.reasons?.[0] ?? 'no reason reported'}`,
-      note: CRITIQUE_CALIBRATION_CAVEAT,
+      // Derived from THIS verdict's own defect classes where possible. The blanket
+      // constant is the fallback for a card with no findings — never the default.
+      note: assessStage(critique, stage).caveat ?? CRITIQUE_CALIBRATION_CAVEAT,
     };
   }
   return { accepted: true, ungated: false, reason: `Tier-1 gate ${critique.verdict} (score ${critique.score ?? 0})` };
@@ -334,6 +406,11 @@ export interface CritiqueDeps {
   budget?: BudgetRequest;
   /** The real-world size (longest extent, m) this mesh should have. */
   size?: SizeRequest;
+  /**
+   * Which pipeline stage this mesh is at. Supplying it is what lets a failing verdict say
+   * whether it is condemning a defect or an un-finished input (see `critique-stage.ts`).
+   */
+  stage?: MeshStage;
 }
 
 /**
@@ -357,7 +434,12 @@ export async function critiqueMesh(glbPath: string, deps: CritiqueDeps = {}): Pr
   const { stdout } = await run(py, [script, '--mesh', glbPath], 60_000);
   const parsed = parseCritiqueMetrics(stdout);
   if (!parsed.ok || !parsed.metrics) return { ok: false, error: parsed.error ?? 'critique produced no metrics' };
-  return { ok: true, metrics: parsed.metrics, ...scoreMesh(parsed.metrics, deps.thresholds, deps.budget, deps.size) };
+  return {
+    ok: true,
+    metrics: parsed.metrics,
+    ...(deps.stage ? { stage: deps.stage } : {}),
+    ...scoreMesh(parsed.metrics, deps.thresholds, deps.budget, deps.size),
+  };
 }
 
 const defaultRun: RunFn = async (cmd, args, timeoutMs) => {
