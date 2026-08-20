@@ -327,6 +327,7 @@ registerCatalogPipeline({
     // ── 8. Encounter Balance ──────────────────────────────────────────────────
     {
       archetype: 'balance', label: 'Encounter Balance',
+      engine: 'Code', // pure function of author-typed constants; 'balance' is not CLI-eligible (labProduceMode.ts)
       // Threat budget bar: the encounter's threat against the canon tier ceiling (max 130
       // gives headroom around the ~100 ±10% target).
       view: { kind: 'chart', variant: 'bars', field: 'balance', rows: [{ key: 'threat', label: 'Threat' }], highlightKey: 'threat', max: 130 },
@@ -343,6 +344,7 @@ registerCatalogPipeline({
     // ── 9. Concept 2D Art ─────────────────────────────────────────────────────
     {
       archetype: 'gallery', label: 'Concept 2D Art',
+      engine: 'Leonardo',
       view: { kind: 'gallery', field: 'selected', candidates: 4 },
       produce: (e: LabEntity) => ({
         data: { ...gallerySeed('selected', 4) },
@@ -354,6 +356,7 @@ registerCatalogPipeline({
     // ── 10. 3D & Rig ──────────────────────────────────────────────────────────
     {
       archetype: 'gallery', label: '3D & Rig',
+      engine: 'Tripo',
       view: { kind: 'gallery', field: 'mesh', candidates: 3 },
       produce: (e: LabEntity) => ({
         data: { ...gallerySeed('mesh', 3) },

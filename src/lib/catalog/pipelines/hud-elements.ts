@@ -237,6 +237,7 @@ registerCatalogPipeline({
     {
       archetype: 'gallery',
       label: 'Wireframe',
+      engine: 'Leonardo',
       view: { kind: 'gallery', field: 'selected', candidates: 3 },
       produce: (e: LabEntity) => ({
         data: { ...gallerySeed('selected', 3) },
@@ -255,6 +256,7 @@ registerCatalogPipeline({
     {
       archetype: 'gallery',
       label: 'Icon 2D Art',
+      engine: 'Leonardo',
       view: { kind: 'gallery', field: 'selected', candidates: 4 },
       produce: (e: LabEntity) => ({
         data: { ...gallerySeed('selected', 4) },

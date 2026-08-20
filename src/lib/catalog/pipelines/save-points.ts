@@ -523,6 +523,7 @@ registerCatalogPipeline({
     {
       archetype: 'balance',
       label: 'Load-Time Budget',
+      engine: 'Code', // pure function of author-typed constants; 'balance' is not CLI-eligible (labProduceMode.ts)
       // Load-time budget bars: measured synchronous load against the target ceiling.
       view: {
         kind: 'chart',
@@ -581,6 +582,7 @@ registerCatalogPipeline({
     {
       archetype: 'gallery',
       label: 'Icon 2D Art',
+      engine: 'Leonardo',
       view: { kind: 'gallery', field: 'selected', candidates: 4 },
       produce: (e: LabEntity) => ({
         data: { ...gallerySeed('selected', 4) },

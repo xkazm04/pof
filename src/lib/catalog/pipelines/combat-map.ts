@@ -466,6 +466,7 @@ registerCatalogPipeline({
     {
       archetype: 'balance',
       label: 'Balance',
+      engine: 'Code', // pure function of author-typed constants; 'balance' is not CLI-eligible (labProduceMode.ts)
       // Threat distribution histogram: the encounter's raw threat is composed of two
       // enemy waves + the hazard zone — a distribution reads better as a histogram than a
       // table (which also carried a `threatBudget` column the produce never wrote). The
@@ -649,6 +650,7 @@ registerCatalogPipeline({
     {
       archetype: 'gallery',
       label: 'Icon 2D Art',
+      engine: 'Leonardo',
       view: { kind: 'gallery', field: 'selected', candidates: 4 },
       produce: (e: LabEntity) => ({
         data: { ...gallerySeed('selected', 4) },

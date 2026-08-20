@@ -317,6 +317,7 @@ registerCatalogPipeline({
     {
       archetype: 'balance',
       label: 'Balance',
+      engine: 'Code', // pure function of author-typed constants; 'balance' is not CLI-eligible (labProduceMode.ts)
       // DPS budget bars: sustained DPS (the checked metric) against the tier target,
       // with the raw hit-DPS component for context. (The old table listed a `burstDPS`
       // column the produce never wrote — a permanently-null cell; the chart uses the
@@ -529,6 +530,7 @@ registerCatalogPipeline({
     {
       archetype: 'gallery',
       label: 'Icon 2D Art',
+      engine: 'Leonardo',
       view: { kind: 'gallery', field: 'selected', candidates: 4 },
       produce: (e: LabEntity) => {
         const s = slug(e.name);

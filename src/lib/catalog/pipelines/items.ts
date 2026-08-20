@@ -489,6 +489,7 @@ registerCatalogPipeline({
     {
       archetype: 'balance',
       label: 'Economy',
+      engine: 'Code', // pure function of author-typed constants; 'balance' is not CLI-eligible (labProduceMode.ts)
       // Price-vs-power budget bars: vendor anchor value against the derived power score
       // (the pair the ±20% band checks) reads clearer than a table.
       view: {
@@ -603,6 +604,7 @@ registerCatalogPipeline({
     {
       archetype: 'gallery',
       label: 'Icon 2D Art',
+      engine: 'Leonardo',
       view: { kind: 'gallery', field: 'selected', candidates: 4 },
       produce: (e: LabEntity) => ({
         data: { ...gallerySeed('selected', 4) },
@@ -626,6 +628,7 @@ registerCatalogPipeline({
     {
       archetype: 'gallery',
       label: '3D Mesh',
+      engine: 'Tripo',
       view: { kind: 'gallery', field: 'mesh3dSelected', candidates: 3 },
       produce: (e: LabEntity) => ({
         data: { ...gallerySeed('mesh3dSelected', 3) },

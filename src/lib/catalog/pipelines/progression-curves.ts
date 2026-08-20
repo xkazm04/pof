@@ -496,6 +496,7 @@ registerCatalogPipeline({
     {
       archetype: 'balance',
       label: 'Balance',
+      engine: 'Code', // pure function of author-typed constants; 'balance' is not CLI-eligible (labProduceMode.ts)
       // Pacing budget bars: minutes-to-next-level against the target pace.
       view: {
         kind: 'chart',
@@ -699,6 +700,7 @@ registerCatalogPipeline({
     {
       archetype: 'gallery',
       label: 'Icon 2D Art',
+      engine: 'Leonardo',
       view: { kind: 'gallery', field: 'selected', candidates: 4 },
       produce: (e: LabEntity) => ({
         data: {

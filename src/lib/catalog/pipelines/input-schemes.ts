@@ -332,6 +332,7 @@ registerCatalogPipeline({
     {
       archetype: 'gallery',
       label: 'Input Glyphs',
+      engine: 'Leonardo',
       view: { kind: 'gallery', field: 'glyphSet', candidates: 4 },
       produce: (e: LabEntity) => ({
         data: {

@@ -506,6 +506,7 @@ registerCatalogPipeline({
     {
       archetype: 'gallery',
       label: 'Heraldry Icon',
+      engine: 'Leonardo',
       view: { kind: 'gallery', field: 'selected', candidates: 4 },
       produce: (e: LabEntity) => ({
         data: { ...gallerySeed('selected', 4) },

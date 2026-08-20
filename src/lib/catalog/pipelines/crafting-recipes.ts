@@ -249,6 +249,7 @@ registerCatalogPipeline({
     {
       archetype: 'balance',
       label: 'Cost & Yield',
+      engine: 'Code', // pure function of author-typed constants; 'balance' is not CLI-eligible (labProduceMode.ts)
       // Cost-vs-yield budget bars: gold cost against output value (the ratio the checker
       // derives) is a clearer bar pair than a table.
       view: {
@@ -531,6 +532,7 @@ registerCatalogPipeline({
     {
       archetype: 'gallery',
       label: 'Icon 2D Art',
+      engine: 'Leonardo',
       view: { kind: 'gallery', field: 'selected', candidates: 4 },
       produce: (e: LabEntity) => ({
         data: { ...gallerySeed('selected', 4) },

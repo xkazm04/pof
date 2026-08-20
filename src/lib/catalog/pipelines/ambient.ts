@@ -553,6 +553,7 @@ registerCatalogPipeline({
     {
       archetype: 'balance',
       label: 'Memory Budget',
+      engine: 'Code', // pure function of author-typed constants; 'balance' is not CLI-eligible (labProduceMode.ts)
       // Budget bars (shared ChartPanel): decoded footprint against target + hard cap
       // reads far clearer as a bar trio than a key/value table.
       view: {
@@ -712,6 +713,7 @@ registerCatalogPipeline({
     {
       archetype: 'gallery',
       label: 'Icon 2D Art',
+      engine: 'Leonardo',
       view: { kind: 'gallery', field: 'selected', candidates: 4 },
       produce: (e: LabEntity) => ({
         data: { ...gallerySeed('selected', 4) },

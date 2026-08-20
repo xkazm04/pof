@@ -534,7 +534,31 @@ describe('fleet spec linter', () => {
    * engine values must not also edit its own audit). Shrink-only — resolve entries, never add
    * one to make a change pass.
    */
+  /**
+   * The whole `balance` archetype disputes `trueEngine: 'Claude'`. Shared evidence, quoted
+   * once: `produce()` is a pure deterministic function of author-typed literals (13 of the
+   * 16 balance steps take no `entity` argument at all, and the 3 that do use it only for
+   * naming strings), and `'balance'` is absent from `CLI_ELIGIBLE_ARCHETYPES`
+   * (`layout-lab/labProduceMode.ts`), so the LIVE branch of `ArchetypeStep.dispatchProduce`
+   * is unreachable for these steps and no model can ever write the artifact. The audit
+   * appears to be attributing who WROTE the constants rather than what runs Produce — and
+   * the audit's own `note` on each of these steps says the numbers are hardcoded.
+   */
+  const BALANCE_DISPUTE = (evidence: string) =>
+    'audit records Claude, spec authors Code: produce() is a pure function of author-typed ' +
+    "literals and 'balance' is not in CLI_ELIGIBLE_ARCHETYPES, so no model can write this " +
+    `artifact. The audit's own note concedes it — ${evidence}`;
+
   const ENGINE_ATTRIBUTION_DISPUTES: { catalogId: string; label: string; reason: string }[] = [
+    { catalogId: 'ambient', label: 'Memory Budget', reason: BALANCE_DISPUTE('"the 5.8 MB figure itself is a hand-typed estimate from code-comment arithmetic".') },
+    { catalogId: 'bestiary', label: 'Encounter Balance', reason: BALANCE_DISPUTE('"the threat=103 value is hardcoded rather than computed by a real combat simulator".') },
+    { catalogId: 'combat-map', label: 'Balance', reason: BALANCE_DISPUTE('"derivedThreatScore is hardcoded … not output of an independent balance simulator".') },
+    { catalogId: 'crafting-recipes', label: 'Cost & Yield', reason: BALANCE_DISPUTE('"goldCost/outputValue/ingredientOpportunityCost are all hand-picked".') },
+    { catalogId: 'currencies', label: 'Balance', reason: BALANCE_DISPUTE('"faucetPerHour=110/sinkPerHour=105 are hand-picked normalized relative units invented to land at 4.8% imbalance".') },
+    { catalogId: 'music', label: 'Mix & Loudness', reason: BALANCE_DISPUTE('"integratedLUFS is hardcoded … no real mix was ever measured".') },
+    { catalogId: 'spellbook', label: 'Balance', reason: BALANCE_DISPUTE('the DPS chain is derived in-body from the literals baseDamage=35, cooldown=3.0, igniteDPS=7.875.') },
+    { catalogId: 'status-effects', label: 'Balance', reason: BALANCE_DISPUTE('"verifies the derived 7.875 DPS against the 7.875 tier target" — both sides are the same literal.') },
+    { catalogId: 'vendors', label: 'Economy Sim', reason: BALANCE_DISPUTE('the 28% margin is computed in-body from author-typed buy/sell literals, not from pof_economy_simulate.') },
     {
       catalogId: 'character-pipeline',
       label: 'Face Gate 2D',
@@ -598,15 +622,17 @@ describe('fleet spec linter', () => {
    * never raise one to make a change pass. Each entry says why that bucket is still open —
    * an admitted gap is honest; a blanket exemption is not.
    *
-   * Measured 2026-08-20 (pre-sweep): 12 of 344 steps authored, all in character-pipeline.
+   * Measured 2026-08-20: 12 of 344 authored before the gallery+balance sweep (all in
+   * character-pipeline), 65 of 344 after it — 279 steps still unauthored, and the ceilings
+   * below are where they live.
    */
   const UNAUTHORED_ENGINE_CEILING: Record<string, { max: number; why: string }> = {
     brief: { max: 34, why: 'CLI-eligible text steps: a real Claude dispatch OR the local produce stub writes them, and which one ran is per-artifact, not per-spec' },
     rules: { max: 126, why: 'largest bucket, same CLI-eligible ambiguity as brief; needs its own pass' },
-    gallery: { max: 44, why: 'phase-1 target: the deliverable is declared in the step\'s own ueAssets (T_* texture vs SK_/SM_ mesh)' },
+    gallery: { max: 6, why: 'the 6 left are genuinely ambiguous from their own code: MI_ material instances (2), an NS_ Niagara variant set, an SM_ "sprite", and two SM_ terrain/biome sets that may be procedural UE geometry rather than a generated mesh' },
     checklist: { max: 61, why: 'a checklist enumerates work items; several have no producing engine at all and must NOT be given one' },
     manifest: { max: 33, why: 'mixed — some are UE Python import manifests, some are hand-listed asset paths' },
-    balance: { max: 15, why: 'phase-1 target: produce() is a pure function of author-typed constants' },
+    balance: { max: 0, why: 'fully authored: every balance produce() is a pure function of author-typed constants, and the archetype is not CLI-eligible' },
     schema: { max: 12, why: 'data-shape declarations (struct/table field lists); this slice did not read them individually and will not guess an engine from a label' },
     custom: { max: 1, why: 'one-off bespoke bodies with no shared pattern — each needs reading on its own terms, and this slice did not reach it' },
     graph: { max: 6, why: 'CLI-eligible node/edge graphs: same dispatch ambiguity as brief/rules — a live Claude run and the local stub both write them' },

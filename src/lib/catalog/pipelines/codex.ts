@@ -384,6 +384,7 @@ registerCatalogPipeline({
     {
       archetype: 'gallery',
       label: 'Illustration',
+      engine: 'Leonardo',
       view: { kind: 'gallery', field: 'selected', candidates: 4 },
       produce: (e: LabEntity) => ({
         data: { ...gallerySeed('selected', 4) },

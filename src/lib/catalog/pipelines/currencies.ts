@@ -166,6 +166,7 @@ registerCatalogPipeline({
     {
       archetype: 'balance',
       label: 'Balance',
+      engine: 'Code', // pure function of author-typed constants; 'balance' is not CLI-eligible (labProduceMode.ts)
       // Faucet-vs-sink budget bars: the two flows side by side make the imbalance visible.
       view: {
         kind: 'chart',
@@ -222,6 +223,7 @@ registerCatalogPipeline({
     {
       archetype: 'gallery',
       label: 'Icon 2D Art',
+      engine: 'Leonardo',
       view: { kind: 'gallery', field: 'selected', candidates: 4 },
       produce: (e: LabEntity) => ({
         data: { ...gallerySeed('selected', 4) },

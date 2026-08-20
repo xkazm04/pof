@@ -53,6 +53,7 @@ registerCatalogPipeline({
     // ── 2. Concept 2D Art ────────────────────────────────────────────────────
     {
       archetype: 'gallery', label: 'Concept 2D Art',
+      engine: 'Leonardo',
       view: { kind: 'gallery', field: 'selected', candidates: 4 },
       produce: (e: LabEntity) => ({ data: { ...gallerySeed('selected', 4) }, ueAssets: [`/Game/Characters/${slug(e.name)}/T_${slug(e.name)}_Concept`] }),
       accept: selected('selected', 'A concept is selected'),
@@ -140,6 +141,7 @@ registerCatalogPipeline({
     // ── 4. 3D & Rig ──────────────────────────────────────────────────────────
     {
       archetype: 'gallery', label: '3D & Rig',
+      engine: 'Tripo',
       view: { kind: 'gallery', field: 'mesh', candidates: 3 },
       produce: (e: LabEntity) => ({ data: { ...gallerySeed('mesh', 3) }, ueAssets: [`/Game/Characters/${slug(e.name)}/SK_${slug(e.name)}`] }),
       accept: selected('mesh', 'A rigged mesh candidate is selected'),
@@ -233,6 +235,7 @@ registerCatalogPipeline({
     // ── 10. Icon 2D Art (portrait) ───────────────────────────────────────────
     {
       archetype: 'gallery', label: 'Icon 2D Art (portrait)',
+      engine: 'Leonardo',
       view: { kind: 'gallery', field: 'portrait', candidates: 4 },
       produce: (e: LabEntity) => ({ data: { ...gallerySeed('portrait', 4) }, ueAssets: [`/Game/Characters/${slug(e.name)}/T_${slug(e.name)}_Portrait`] }),
       accept: selected('portrait', 'A portrait is selected'),

@@ -150,6 +150,7 @@ registerCatalogPipeline({
     // which is 40% headroom — the label used to say "60% headroom" and was inverted.
     {
       archetype: 'balance', label: 'GPU / LOD Budget',
+      engine: 'Code', // pure function of author-typed constants; 'balance' is not CLI-eligible (labProduceMode.ts)
       // GPU cost budget bars: peak emission ms against the per-class budget ceiling
       // (same unit) is the real story — a table buried it next to unrelated counts.
       view: {
@@ -232,6 +233,7 @@ registerCatalogPipeline({
     // ── 8. Icon 2D Art ────────────────────────────────────────────────────────
     {
       archetype: 'gallery', label: 'Icon 2D Art',
+      engine: 'Leonardo',
       view: { kind: 'gallery', field: 'selectedIcon', candidates: 4 },
       produce: (e: LabEntity) => ({
         data: { ...gallerySeed('selectedIcon', 4) },

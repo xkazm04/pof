@@ -156,6 +156,7 @@ registerCatalogPipeline({
     {
       archetype: 'gallery',
       label: 'Icon 2D Art',
+      engine: 'Leonardo',
       view: { kind: 'gallery', field: 'selected', candidates: 4 },
       // Pluggable generator: surfaces REAL generated thumbnails when any exist on disk
       // (served via /api/visual-gen/asset/…), and falls back to the honest deterministic

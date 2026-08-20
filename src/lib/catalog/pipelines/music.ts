@@ -415,6 +415,7 @@ registerCatalogPipeline({
     {
       archetype: 'balance',
       label: 'Mix & Loudness',
+      engine: 'Code', // pure function of author-typed constants; 'balance' is not CLI-eligible (labProduceMode.ts)
       // Loudness band bars: the true `integratedLUFS` is a SIGNED negative dBLUFS value
       // (−16), which the checker now gates on directly. A bar chart can't render a negative
       // value honestly, so the bars read the positive `displayMagnitude` (16) + band edges —
@@ -618,6 +619,7 @@ registerCatalogPipeline({
     {
       archetype: 'gallery',
       label: 'Icon 2D Art',
+      engine: 'Leonardo',
       view: { kind: 'gallery', field: 'selected', candidates: 4 },
       produce: (e: LabEntity) => ({
         data: { ...gallerySeed('selected', 4) },

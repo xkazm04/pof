@@ -295,6 +295,7 @@ registerCatalogPipeline({
     {
       archetype: 'balance',
       label: 'Economy Sim',
+      engine: 'Code', // pure function of author-typed constants; 'balance' is not CLI-eligible (labProduceMode.ts)
       // Economy percentages as budget bars: margin (the checked metric) against markup
       // and buyback reads clearer than a key/value table.
       view: {
@@ -381,6 +382,7 @@ registerCatalogPipeline({
     {
       archetype: 'gallery',
       label: 'Icon 2D Art',
+      engine: 'Leonardo',
       view: { kind: 'gallery', field: 'selected', candidates: 4 },
       produce: (e: LabEntity) => ({
         data: { ...gallerySeed('selected', 4) },
