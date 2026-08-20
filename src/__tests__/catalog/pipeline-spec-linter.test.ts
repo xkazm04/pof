@@ -573,7 +573,14 @@ describe('fleet spec linter', () => {
    * rule makes that take effect immediately (a step may claim LESS credit than its audit gave
    * it, never more), so these disputes are LIVE on the map rather than silently discarded —
    * but they are still disputes: `step-facts.json` is Class C and only the Director can move
-   * `trueEngine` to `Hand-authored`. Delete each entry as its fact lands.
+   * `trueEngine` to `Hand-authored`.
+   *
+   * DIRECTOR: applying those 80 fact edits makes all 80 entries below STALE, and the
+   * "every recorded dispute is REAL" guard will fail until they are deleted — so delete
+   * `HAND_AUTHORED_BY_CATALOG` (and its spread) in the SAME change as the fact edits. Once
+   * the facts land, `resolveEngine` returns these engines with source `audited` instead of
+   * `authored-demotion`; the grades do not move again, only the provenance mark changes
+   * from ↓ to ✓. A partial application is fine — delete only the entries whose facts landed.
    */
   const HAND_AUTHORED_DISPUTE = (catalogId: string) =>
     `audit records Code, spec authors Hand-authored: this step's produce() returns author-typed ` +
