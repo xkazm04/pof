@@ -21,8 +21,25 @@ import argparse
 import math
 import os
 import sys
+from array import array
 
 import bpy
+
+
+# Above this face count the interior cull is REFUSED outright rather than attempted.
+#
+# The cull runs before decimation, i.e. on the full-density generated mesh — 1.5M faces
+# is a normal input here (`FACES_IN=1500000` is the shape of a real run). Two costs scale
+# with that count and only one of them is ours to bound: `loose_shell_count` below is now
+# fixed-width and cheap, but `bpy.ops.mesh.select_interior_faces` builds a BMesh of the
+# whole undecimated mesh inside Blender's own allocator, which this script cannot cap.
+#
+# Refusing costs nothing measurable: `select_interior_faces` sees only WELDED interior,
+# and generated assets arrive as SEPARATE shells (measured Blender 4.2, 2026-08-09: an
+# enclosed separate shell selects 0 of 12 faces), so on exactly the meshes that are large
+# enough to hit this ceiling the cull's yield has been zero. Saying so beats spending the
+# memory to rediscover it.
+CULL_FACE_CEILING = 200_000
 
 
 def marker(key, value):
@@ -102,27 +119,65 @@ def apply_mirror(obj, axis):
 
 
 def loose_shell_count(obj):
-    """How many disconnected shells the object holds (parts of an assembled character)."""
+    """How many disconnected shells the object holds (parts of an assembled character).
+
+    Vertex-connected components: two polygons are in the same shell when they share a
+    vertex, directly or transitively. That is the same relation the previous version
+    computed, so the number this returns is unchanged.
+
+    What changed is the memory. This used to build `poly_of_vert` — a Python dict mapping
+    EVERY vertex to a Python list of EVERY polygon touching it — and then BFS from each
+    polygon with a `seen` set and a `stack` list. On a 1.5M-face mesh (the ordinary input
+    here: the caller runs this on the undecimated high-poly copy) that materialises
+    ~750k dict entries, ~750k list objects and several million boxed ints: hundreds of MB
+    to GBs, growing with how tangled the mesh is. It is the same unbounded per-element
+    materialisation as the `trimesh.Trimesh.split()` call that reached 211 GB and crashed
+    the host on 2026-08-18.
+
+    Now it is union-find over two arrays sized ONCE, before the walk, from counts that are
+    already known: one signed 32-bit slot per vertex and one per polygon. At 1.5M faces /
+    ~750k verts that is ~9 MB total, and it does not grow with connectivity — no dict, no
+    per-vertex list, no BFS stack, no recursion. Worst case is a mesh where every polygon
+    touches every other; the arrays are the same size.
+    """
     mesh = obj.data
-    seen = set()
-    shells = 0
-    poly_of_vert = {}
+    n_faces = len(mesh.polygons)
+    n_verts = len(mesh.vertices)
+    if n_faces == 0:
+        return 0
+
+    # parent[f] = f  (each polygon starts as its own shell)
+    parent = array("i", range(n_faces))
+    # -1 = no polygon has claimed this vertex yet. `array * n` repeats at C level.
+    first_face_of_vert = array("i", [-1]) * n_verts
+
+    def find(x):
+        # Path halving: iterative (no recursion depth to blow), no extra allocation.
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
     for poly in mesh.polygons:
+        idx = poly.index
         for v in poly.vertices:
-            poly_of_vert.setdefault(v, []).append(poly.index)
-    for poly in mesh.polygons:
-        if poly.index in seen:
-            continue
-        shells += 1
-        stack = [poly.index]
-        seen.add(poly.index)
-        while stack:
-            cur = mesh.polygons[stack.pop()]
-            for v in cur.vertices:
-                for nb in poly_of_vert.get(v, ()):
-                    if nb not in seen:
-                        seen.add(nb)
-                        stack.append(nb)
+            claimed = first_face_of_vert[v]
+            if claimed < 0:
+                first_face_of_vert[v] = idx
+                continue
+            a = find(idx)
+            b = find(claimed)
+            if a != b:
+                # Union by index keeps the result deterministic run to run.
+                if a < b:
+                    parent[b] = a
+                else:
+                    parent[a] = b
+
+    shells = 0
+    for i in range(n_faces):
+        if find(i) == i:
+            shells += 1
     return shells
 
 
@@ -362,9 +417,25 @@ def main():
     # Cull before decimating so the face budget is spent on visible surfaces only.
     # The high-poly keeps its interior faces — it is only ever the bake source.
     if args.cull_interior:
-        shells = loose_shell_count(low)
-        marker("FACES_CULLED", cull_interior(low))
-        marker("CULL_UNEVALUATED_SHELLS", shells)
+        # `low` is still `high.data.copy()` here — the FULL-DENSITY mesh. Check its size
+        # before touching it; a refusal that says why is the contract, never a silent skip
+        # and never an attempt that the host has to survive.
+        cull_faces = face_count(low)
+        if cull_faces > CULL_FACE_CEILING:
+            marker(
+                "CULL_REFUSED",
+                "interior cull refused at %d faces (ceiling %d): the cull runs before "
+                "decimation, so select_interior_faces would build a BMesh of the whole "
+                "undecimated mesh — memory this script cannot bound. It would also almost "
+                "certainly remove nothing: it selects only WELDED interior and generated "
+                "meshes this large arrive as separate shells. Nothing was culled and no "
+                "shell count was computed."
+                % (cull_faces, CULL_FACE_CEILING),
+            )
+        else:
+            shells = loose_shell_count(low)
+            marker("FACES_CULLED", cull_interior(low))
+            marker("CULL_UNEVALUATED_SHELLS", shells)
 
     faces_out = decimate(low, args.target_faces) if args.target_faces else face_count(low)
     marker("FACES_OUT", faces_out)

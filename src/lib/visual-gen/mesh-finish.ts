@@ -77,6 +77,12 @@ export interface MeshFinishSpec {
    * body under a chest plate, the scalp under a helmet) is invisible to this operator,
    * so on an assembled character this often removes nothing; `cullLimitReason` then says
    * so rather than letting a `facesCulled: 0` read as "nothing is hidden".
+   *
+   * The cull runs on the FULL-DENSITY mesh (before decimation), so the script refuses it
+   * above its own `CULL_FACE_CEILING` (200k faces) and reports `cullRefusedReason` — the
+   * memory-bounded shell walk is cheap, but the Blender operator it feeds is not ours to
+   * bound. `POST /api/visual-gen/mesh-finish` refuses the flag outright; this field is
+   * reachable only from in-process callers that have measured their own input.
    */
   cullInterior?: boolean;
   /**
@@ -119,6 +125,13 @@ export interface MeshFinishResult {
   cullUnevaluatedShells?: number;
   /** Why a `facesCulled: 0` does not mean "nothing was hidden". */
   cullLimitReason?: string;
+  /**
+   * Set when the script REFUSED the interior cull outright — the mesh was above its
+   * `CULL_FACE_CEILING` and the cull runs before decimation, so nothing was culled and
+   * no shell count was computed. Distinct from `cullLimitReason` (the cull ran and found
+   * nothing); an absent `facesCulled` must never read as "the cull found nothing".
+   */
+  cullRefusedReason?: string;
   sizeMB?: number;
   uvUnwrapped?: boolean;
   /** The layout Blender actually used — not necessarily the one requested. */
@@ -268,6 +281,8 @@ export interface ParsedMeshFinish {
   cullUnevaluatedShells?: number;
   /** Set when the cull removed nothing but the mesh had shells it cannot see into. */
   cullLimitReason?: string;
+  /** Set when the script refused to attempt the cull at all (mesh above its ceiling). */
+  cullRefusedReason?: string;
   error?: string;
 }
 
@@ -297,6 +312,7 @@ export function parseMeshFinishOutput(stdout: string): ParsedMeshFinish {
   return {
     cullUnevaluatedShells,
     cullLimitReason: cullLimitReasonFor(facesCulled, cullUnevaluatedShells),
+    cullRefusedReason: get('CULL_REFUSED'),
     ok: done !== undefined && error === undefined,
     meshPath: done,
     error,
@@ -360,6 +376,7 @@ export async function runMeshFinish(spec: MeshFinishSpec, deps: MeshFinishDeps =
     facesCulled: parsed.facesCulled,
     cullUnevaluatedShells: parsed.cullUnevaluatedShells,
     cullLimitReason: parsed.cullLimitReason,
+    cullRefusedReason: parsed.cullRefusedReason,
     sizeMB: parsed.sizeMB,
     uvUnwrapped: parsed.uvUnwrapped,
     uvMode: parsed.uvMode,
