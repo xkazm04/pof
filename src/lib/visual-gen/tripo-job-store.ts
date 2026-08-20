@@ -83,7 +83,10 @@ export function critiqueDepsForSpec(spec: TripoSpec): CritiqueDeps {
       : undefined;
   const targetExtentM = spec.targetExtentM ?? nominalExtentFor(spec.assetClass);
   const size: SizeRequest | undefined = targetExtentM !== undefined ? { targetExtentM } : undefined;
-  return { thresholds, budget, size };
+  // What this store grades is provider output straight off the API — pre-retopo,
+  // pre-unwrap, pre-bake. Stating it is what lets a failing verdict say whether it is
+  // condemning a defect or an un-finished input (`critique-stage.ts`).
+  return { thresholds, budget, size, stage: 'raw' };
 }
 
 /**

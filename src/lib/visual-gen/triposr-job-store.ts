@@ -66,7 +66,7 @@ export function startTriposrJob(spec: TriposrJobSpec, runner: Runner = runTripos
       }
       // A produced mesh always reports HOW it was gated — including "nothing gated it".
       if (result.ok) {
-        const summary = summarizeGate(job.critique);
+        const summary = summarizeGate(job.critique, 'raw');
         job.accepted = summary.accepted;
         job.ungated = summary.ungated;
         job.gateReason = summary.note ? `${summary.reason} — note: ${summary.note}` : summary.reason;

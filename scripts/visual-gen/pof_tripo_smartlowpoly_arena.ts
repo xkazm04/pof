@@ -5,10 +5,21 @@
  * `smart_low_poly: true` on the SAME model_version, for the three budgeted classes
  * that have no production caller yet: weapon, prop, modular-part.
  *
- * Deliberately does NOT trust `scoreMesh`'s pass/fail verdict as the arena's grade —
- * docs/research/impact-map.md (2026-08-14) already found the Tier-1 gate reads raw,
- * pre-retopo provider output against FINISHED game-tier thresholds and fails it near
- * 100% of the time regardless of quality. This script reports the underlying signals
+ * Deliberately does NOT trust `scoreMesh`'s pass/fail verdict as the arena's grade.
+ *
+ * ⚠ THE REASON RECORDED HERE WAS RE-MEASURED 2026-08-20 AND IS WRONG IN ITS MECHANISM.
+ * This header (following docs/research/impact-map.md, 2026-08-14) said the gate "fails
+ * raw output near 100% of the time on face count alone". Measured over all 52 `.glb`
+ * under `generated/` — metrics re-derived in Node from the glTF buffers, graded by this
+ * repo's own `scoreMesh` at per-class thresholds — the gate fails **10 of 52 (19.2%)**,
+ * ALL TEN on `floaters`, and **face count cannot fail a mesh at all**: `scoreMesh` files
+ * it as a WARN, so 1,492,072 faces against the 12,000-face `modular-part` ceiling grades
+ * warn/85. See `src/lib/visual-gen/critique-stage.ts` for the full measurement.
+ *
+ * The standing reason to distrust the verdict here is narrower and still sound: nothing
+ * in the corpus has ever scored a `pass`, and a raw delivery is graded against thresholds
+ * authored for finished meshes without saying so — which `assessStage` now states rather
+ * than leaving to a header comment. This script reports the underlying signals
  * instead: does the delivery honour the requested face budget (gradeFaceBudget), what
  * does its raw component/floater shape look like (classifyComponents), and how does a
  * Qwen-VL judge score the provider's own preview render against the reference image

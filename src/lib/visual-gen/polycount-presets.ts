@@ -196,5 +196,8 @@ export function localCritiqueDeps(
   const thresholds = resolved.assetClass ? critiqueThresholdsFor(resolved.assetClass) : {};
   const extent = targetExtentM ?? nominalExtentFor(resolved.assetClass);
   const size: SizeRequest | undefined = extent !== undefined ? { targetExtentM: extent } : undefined;
-  return { deps: { thresholds, size }, gradedAs: resolved.gradedAs };
+  // These are GENERATORS, so what they hand this gate is pre-retopo output. Declaring the
+  // stage is a statement of fact about the producer, not a guess about the mesh — and it
+  // is what stops a failing verdict reading as a defect when it is an un-finished input.
+  return { deps: { thresholds, size, stage: 'raw' }, gradedAs: resolved.gradedAs };
 }
