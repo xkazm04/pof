@@ -16,7 +16,7 @@ import { DimensionScoreBars } from '@/components/ui/DimensionScoreBars';
 import { tryApiFetch } from '@/lib/api-utils';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
-import type { StepCell } from '@/lib/status/statusModel';
+import { engineSourceMark, type StepCell } from '@/lib/status/statusModel';
 import { readProvenance } from '@/lib/provenance';
 
 const GlbViewer = dynamic(() => import('@/components/layout-lab/steps/shared/GlbViewer').then((m) => m.GlbViewer), {
@@ -201,7 +201,14 @@ export function EvidenceModal({ catalogId, step, cell, onClose }: { catalogId: s
         {/* Badges */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: SECTION_GAP }}>
           <Badge>grade: {cell.grade}</Badge>
-          <Badge>engine: {cell.engine}</Badge>
+          {/* The engine name and WHERE IT CAME FROM, together — this modal exists so a gate
+              is not blind-trusted, and an engine attribution nobody audited is exactly the
+              kind of claim it must not launder. */}
+          <Badge>
+            <span data-testid="evidence-engine-source" title={engineSourceMark(cell.engineSource).note}>
+              engine: {cell.engine} [{engineSourceMark(cell.engineSource).word}]
+            </span>
+          </Badge>
           {cell.tier && <Badge>{cell.tier}</Badge>}
           {proofKind && <Badge>proof: {proofKind}</Badge>}
         </div>

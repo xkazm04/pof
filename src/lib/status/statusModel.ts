@@ -241,6 +241,49 @@ export function inferEngine(catalogId: string, step: StepMeta): string {
  *  GUESS. Nothing marked which was which, so an inferred label read as established fact. */
 export type EngineSource = 'audited' | 'authored' | 'inferred';
 
+/**
+ * How an engine name must READ on the map, per source.
+ *
+ * `resolveEngine` has distinguished the three sources since the audit landed, and
+ * `buildSwimlane` stamps the answer onto every cell — but nothing rendered it, so a
+ * heuristic guess and an audited fact printed the same string in the same weight. This is
+ * the single vocabulary both render sites (`StatusCell`, `EvidenceModal`) use.
+ *
+ * `glyph` + `word` carry the distinction, never hue (WCAG 1.4.1) — the same discipline as
+ * `readinessCode` and `ProvenanceStrip`.
+ *
+ * `undefined` is deliberately a state of its own and is NOT silently treated as known: a
+ * cell built without recording its provenance has proven nothing, and letting the omission
+ * render like an audited fact is exactly the class of lie this map exists to expose.
+ */
+export const ENGINE_SOURCE_MARK: Record<EngineSource | 'unsourced', { glyph: string; word: string; note: string }> = {
+  audited: {
+    glyph: '✓',
+    word: 'AUDITED',
+    note: 'named by the fleet gap audit (step-facts.json trueEngine) — an agent read this step and recorded what powers it',
+  },
+  authored: {
+    glyph: '✎',
+    word: 'AUTHORED',
+    note: 'declared by the step itself (StepSpec.engine); no audit fact covers this step',
+  },
+  inferred: {
+    glyph: '?',
+    word: 'UNAUTHORED',
+    note: 'nothing authored or audited names this engine — the label is a HEURISTIC GUESS over catalog + archetype + label, not a fact',
+  },
+  unsourced: {
+    glyph: '?',
+    word: 'UNSOURCED',
+    note: 'this cell was built without recording where its engine name came from — treat the name as unverified',
+  },
+};
+
+/** The provenance mark for a cell's `engineSource`, with the missing case handled loudly. */
+export function engineSourceMark(source?: EngineSource) {
+  return ENGINE_SOURCE_MARK[source ?? 'unsourced'];
+}
+
 /** Resolve a step's engine AND how confidently it is known. The audited fleet fact
  *  (`StepFact.trueEngine`) outranks the authored spec, which outranks the heuristic. Pure. */
 export function resolveEngine(catalogId: string, step: StepMeta, fact?: StepFact): { engine: string; source: EngineSource } {

@@ -11,7 +11,7 @@
  *  gone; the acceptance tier survives as evidence-class metadata in the tooltip, and the
  *  code on the engine line now reads the readiness rung so it never rests on hue alone
  *  (WCAG 1.4.1). `dimmed` supports the highlight chips: non-matching cells drop opacity. */
-import type { StepCell } from '@/lib/status/statusModel';
+import { engineSourceMark, type StepCell } from '@/lib/status/statusModel';
 import {
   readinessOf,
   readinessCode,
@@ -37,10 +37,16 @@ export function StatusCell({
 }) {
   const { counts } = cell;
   const readiness = readinessOf(cell);
+  // Where the engine NAME came from. The map's whole premise is that a cell says what is
+  // behind it, and until now an audited fact, a step-authored declaration and a heuristic
+  // guess all printed the same string in the same weight.
+  const src = engineSourceMark(cell.engineSource);
+  const known = cell.engineSource === 'audited' || cell.engineSource === 'authored';
   const title = [
     `${cell.label} — ${readinessLabel(readiness)}`,
     craft ? `craft: ${craftLabel(craft.craft)} · lens ${craft.lens} · roof ${craft.ceiling}` : '',
-    `engine: ${cell.engine}${cell.tier ? ` · evidence class ${cell.tier}` : ''} · internal grade ${cell.grade}`,
+    `engine: ${cell.engine} [${src.word}] — ${src.note}`,
+    `${cell.tier ? `evidence class ${cell.tier} · ` : ''}internal grade ${cell.grade}`,
     cell.judged
       ? `JUDGED ${cell.judged.verdict.toUpperCase()} ${cell.judged.score}/100 by ${cell.judged.model}: ${cell.judged.findings}`
       : cell.judge ? `judge needed: ${cell.judge}${cell.checkerMeaningful === false ? ' · checker is shape-only' : ''}` : '',
@@ -54,6 +60,10 @@ export function StatusCell({
   ].filter(Boolean).join('\n');
 
   const unwired = cell.grade === 'unwired';
+  // Only mark provenance when the cell actually prints an engine NAME — `—` (unwired) and
+  // `no engine` (unpowered) are statements about absence, and stamping them ✓/? would
+  // attach a confidence to a claim nobody made.
+  const namesEngine = !unwired && cell.grade !== 'unpowered';
   const blocked = readiness.state === 'blocked';
   const waiting = readiness.state === 'waiting';
   const step = RAMP[readiness.level];
@@ -145,8 +155,46 @@ export function StatusCell({
             })}
           </span>
         )}
-        <span style={{ flex: 1, minWidth: 0, opacity: 0.75, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {unwired ? '—' : cell.grade === 'unpowered' ? 'no engine' : cell.engine}
+        <span style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'baseline', gap: 2, overflow: 'hidden' }}>
+          {namesEngine && (
+            // Engine PROVENANCE, as a glyph and never as hue (WCAG 1.4.1): ✓ audited fact,
+            // ✎ authored by the step, ? nobody knows. An unauthored name is additionally
+            // set in italics under a dotted underline, so a guess cannot be mistaken for a
+            // fact at a glance the way it was when all three printed identically.
+            <span
+              data-testid="engine-source-glyph"
+              data-engine-source={cell.engineSource ?? 'unsourced'}
+              title={`${src.word} — ${src.note}`}
+              aria-hidden
+              style={{
+                flexShrink: 0,
+                fontFamily: 'var(--lab-font-mono)',
+                fontSize: 9,
+                lineHeight: '11px',
+                fontWeight: 700,
+                opacity: known ? 0.55 : 1,
+                color: known ? 'var(--lab-muted)' : 'var(--lab-warn)',
+              }}
+            >
+              {src.glyph}
+            </span>
+          )}
+          <span
+            data-testid="engine-name"
+            style={{
+              flex: 1,
+              minWidth: 0,
+              opacity: 0.75,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              ...(namesEngine && !known
+                ? { fontStyle: 'italic', textDecoration: 'underline dotted', textUnderlineOffset: 2 }
+                : null),
+            }}
+          >
+            {unwired ? '—' : cell.grade === 'unpowered' ? 'no engine' : cell.engine}
+          </span>
         </span>
         {/* The rung ALSO as text, never hue alone (WCAG 1.4.1) — the fill is the fast
             scan cue, this is the ground truth. `⋯` marks waiting, `✕` blocked, so the
