@@ -1,4 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
+import { render, cleanup } from '@testing-library/react';
+import { StatusCell } from '@/components/status/StatusCell';
 import '@/lib/catalog/pipelines/registry.generated'; // side-effect: register all pipelines
 import { allCatalogPipelines } from '@/lib/catalog/pipeline-registry';
 import { isPackagingStep } from '@/lib/catalog/acceptance/packagingVerify';
@@ -13,7 +15,9 @@ import {
   ENGINE_CLASS_NOTE,
   HAND_AUTHORED_ENGINE,
   getStepFact,
+  type CellGrade,
   type EngineClass,
+  type StepCell,
   type StepFact,
 } from '@/lib/status/statusModel';
 import { readinessOf } from '@/lib/status/readiness';
@@ -196,5 +200,43 @@ describe('fleet: the trusted `code` class is claimed only by code that computes'
       return engineClass(engine) === 'hand-authored';
     });
     expect(handAuthored.length, `only ${handAuthored.length} steps resolve to hand-authored`).toBeGreaterThanOrEqual(80);
+  });
+});
+
+describe('render: the cell and the evidence modal both SAY the credibility, not just the colour', () => {
+  // This suite has no auto-cleanup (see src/__tests__/setup.ts).
+  afterEach(cleanup);
+
+  const cell = (extra: Partial<StepCell> = {}, grade: CellGrade = 'ungated'): StepCell => ({
+    label: 'Memory Budget',
+    engine: HAND_AUTHORED_ENGINE,
+    grade,
+    counts: { pass: 1, deferred: 0, fail: 0, pending: 0 },
+    ...extra,
+  });
+
+  const ariaLabel = (c: HTMLElement) => (c.querySelector('[data-readiness]') as HTMLElement).getAttribute('aria-label') ?? '';
+
+  it("the cell's accessible label carries the credibility sentence, so the demotion is READABLE", () => {
+    const { container } = render(<StatusCell cell={cell({ engineSource: 'authored-demotion' })} />);
+    const text = ariaLabel(container);
+    expect(text).toContain(`engine: ${HAND_AUTHORED_ENGINE} [AUTHORED ↓]`);
+    expect(text).toContain('credibility:');
+    expect(text.toLowerCase()).toContain('constants a person typed');
+  });
+
+  it('a self-demoted cell is marked KNOWN, not styled as a guess', () => {
+    // The step named its own engine deliberately — it is a fact about the step, not the
+    // heuristic. Rendering it in the "nobody knows" treatment would misreport a correction.
+    const { container } = render(<StatusCell cell={cell({ engineSource: 'authored-demotion' })} />);
+    const g = container.querySelector('[data-testid="engine-source-glyph"]') as HTMLElement;
+    expect(g.getAttribute('data-engine-source')).toBe('authored-demotion');
+    const nameEl = container.querySelector('[data-testid="engine-name"]') as HTMLElement;
+    expect(nameEl.style.fontStyle).not.toBe('italic');
+  });
+
+  it("a trusted-class cell says its credibility too — the sentence is not a demotion-only badge", () => {
+    const { container } = render(<StatusCell cell={cell({ engine: 'Code', engineSource: 'audited' }, 'trusted')} />);
+    expect(ariaLabel(container).toLowerCase()).toContain('computes');
   });
 });

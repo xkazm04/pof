@@ -66,9 +66,12 @@ describe('engineSourceMark — one vocabulary for engine provenance', () => {
     expect(m.word).not.toBe(engineSourceMark('audited').word);
   });
 
-  it('the four words are mutually distinct (no two sources read the same)', () => {
-    const words = (['audited', 'authored', 'inferred', 'unsourced'] as const).map((s) => ENGINE_SOURCE_MARK[s].word);
+  it('every source word is mutually distinct (no two sources read the same)', () => {
+    // Covers EVERY member rather than a hand-listed four, so a source added later (as
+    // `authored-demotion` was on 2026-08-20) cannot slip in wearing another one's word.
+    const words = Object.values(ENGINE_SOURCE_MARK).map((m) => m.word);
     expect(new Set(words).size).toBe(words.length);
+    expect(words.length).toBeGreaterThanOrEqual(5);
   });
 });
 
