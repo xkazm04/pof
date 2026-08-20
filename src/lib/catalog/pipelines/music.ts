@@ -415,7 +415,7 @@ registerCatalogPipeline({
     {
       archetype: 'balance',
       label: 'Mix & Loudness',
-      engine: 'Code', // pure function of author-typed constants; 'balance' is not CLI-eligible (labProduceMode.ts)
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       // Loudness band bars: the true `integratedLUFS` is a SIGNED negative dBLUFS value
       // (−16), which the checker now gates on directly. A bar chart can't render a negative
       // value honestly, so the bars read the positive `displayMagnitude` (16) + band edges —

@@ -53,6 +53,7 @@ registerCatalogPipeline({
     {
       archetype: 'brief',
       label: 'Concept Brief',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: { kind: 'prose', field: 'brief', emptyText: 'No brief yet' },
       produce: (e: LabEntity) => ({
         data: {
@@ -83,6 +84,7 @@ registerCatalogPipeline({
     {
       archetype: 'rules',
       label: 'Macro Layout & POIs',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: {
         kind: 'table',
         field: 'layout',
@@ -157,6 +159,7 @@ registerCatalogPipeline({
     {
       archetype: 'rules',
       label: 'Area Level & Density',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: {
         kind: 'table',
         field: 'density',
@@ -237,6 +240,7 @@ registerCatalogPipeline({
     {
       archetype: 'rules',
       label: 'Encounter Placement',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: {
         kind: 'table',
         field: 'encounters',
@@ -331,6 +335,7 @@ registerCatalogPipeline({
     {
       archetype: 'rules',
       label: 'Streaming / LOD',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: {
         kind: 'table',
         field: 'streaming',
@@ -394,6 +399,7 @@ registerCatalogPipeline({
     {
       archetype: 'rules',
       label: 'Material',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: {
         kind: 'table',
         field: 'materials',
@@ -478,6 +484,7 @@ registerCatalogPipeline({
     {
       archetype: 'rules',
       label: 'Ambient & Music',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: {
         kind: 'table',
         field: 'audio',
@@ -564,6 +571,7 @@ registerCatalogPipeline({
     {
       archetype: 'rules',
       label: 'Minimap UI',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: {
         kind: 'table',
         field: 'minimap',
@@ -665,6 +673,7 @@ registerCatalogPipeline({
     {
       archetype: 'checklist',
       label: 'Test Gate',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: { kind: 'checklist', field: 'checks' },
       produce: (e: LabEntity) => ({
         data: {

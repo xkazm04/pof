@@ -1,4 +1,7 @@
 import { describe, it, expect } from 'vitest';
+import '@/lib/catalog/pipelines/registry.generated'; // side-effect: register all pipelines
+import { allCatalogPipelines } from '@/lib/catalog/pipeline-registry';
+import { isPackagingStep } from '@/lib/catalog/acceptance/packagingVerify';
 import {
   deriveCell,
   engineClass,
@@ -9,6 +12,7 @@ import {
   ENGINE_CLASS,
   ENGINE_CLASS_NOTE,
   HAND_AUTHORED_ENGINE,
+  getStepFact,
   type EngineClass,
   type StepFact,
 } from '@/lib/status/statusModel';
@@ -143,5 +147,54 @@ describe('resolveEngine — a step may demote itself, never promote itself', () 
 
   it('an audit and a spec that AGREE still read as audited (family-equal, no demotion path)', () => {
     expect(resolveEngine('c', { label: 'S', engine: HAND_AUTHORED_ENGINE }, fact(HAND_AUTHORED_ENGINE)).source).toBe('audited');
+  });
+});
+
+describe('fleet: the trusted `code` class is claimed only by code that computes', () => {
+  const steps = allCatalogPipelines().flatMap((p) =>
+    p.steps.map((spec) => ({ catalogId: p.catalogId, spec })),
+  );
+
+  /**
+   * After this split, the ONLY non-hand-authored code engine in the fleet is the packaging
+   * verifier — `verifyPackagingAll` rebuilds each package from the row's sibling artifacts,
+   * hashes referenced files in place and disk-checks every `/Game/` declaration against the
+   * UE root's `Content/`, then re-grades the row. That verdict is computed from disk truth,
+   * so it is sense 1 by measurement, not by label.
+   *
+   * A genuinely-computing non-packaging step may absolutely join this list — but it has to
+   * be added HERE, deliberately, with the evidence for why its artifact is derived rather
+   * than transcribed. That is the whole guard: `Code` must never again be a name a step can
+   * pick up credibility from by default.
+   */
+  const NON_PACKAGING_COMPUTING_STEPS: { catalogId: string; label: string; why: string }[] = [];
+
+  it('every step resolving to the trusted `code` class is a packaging step (or a listed exception)', () => {
+    const listed = new Set(NON_PACKAGING_COMPUTING_STEPS.map((s) => `${s.catalogId}/${s.label}`));
+    const offenders = steps
+      .filter(({ catalogId, spec }) => {
+        const { engine } = resolveEngine(catalogId, { label: spec.label, archetype: spec.archetype, engine: spec.engine }, getStepFact(catalogId, spec.label));
+        return engineClass(engine) === 'code';
+      })
+      .filter(({ spec }) => !isPackagingStep(spec))
+      .filter(({ catalogId, spec }) => !listed.has(`${catalogId}/${spec.label}`))
+      .map(({ catalogId, spec }) =>
+        `${catalogId} / "${spec.label}": resolves to the TRUSTED \`code\` class but nothing outside its own `
+        + `source file determines or verifies its artifact — produce() returns literals and every checker `
+        + `re-reads them. Declare \`engine: '${HAND_AUTHORED_ENGINE}'\` on the step, or add it to `
+        + `NON_PACKAGING_COMPUTING_STEPS with the evidence that it computes.`,
+      );
+    expect(offenders).toEqual([]);
+  });
+
+  it('the hand-authored population is measured, not asserted (grow-only floor)', () => {
+    // Measured 2026-08-20: 80 of 344 steps. A floor, not an equality — re-pointing more
+    // literal steps is the direction of travel; a DROP means a step quietly took its
+    // credibility back and should be read as a regression.
+    const handAuthored = steps.filter(({ catalogId, spec }) => {
+      const { engine } = resolveEngine(catalogId, { label: spec.label, archetype: spec.archetype, engine: spec.engine }, getStepFact(catalogId, spec.label));
+      return engineClass(engine) === 'hand-authored';
+    });
+    expect(handAuthored.length, `only ${handAuthored.length} steps resolve to hand-authored`).toBeGreaterThanOrEqual(80);
   });
 });

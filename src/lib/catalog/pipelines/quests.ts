@@ -42,6 +42,7 @@ registerCatalogPipeline({
     {
       archetype: 'brief',
       label: 'Concept Brief',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: { kind: 'prose', field: 'brief', emptyText: 'No brief yet' },
       produce: (e: LabEntity) => ({
         data: {
@@ -68,6 +69,7 @@ registerCatalogPipeline({
     {
       archetype: 'graph',
       label: 'Objective Graph',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: { kind: 'graph', field: 'graph' },
       produce: (e: LabEntity) => ({
         data: {
@@ -104,6 +106,7 @@ registerCatalogPipeline({
     {
       archetype: 'rules',
       label: 'Triggers & World-State',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: {
         kind: 'table',
         field: 'triggers',
@@ -145,6 +148,7 @@ registerCatalogPipeline({
     {
       archetype: 'rules',
       label: 'Rewards',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: { kind: 'manifest', field: 'rewards' },
       produce: (e: LabEntity) => ({
         data: {
@@ -244,6 +248,7 @@ registerCatalogPipeline({
     {
       archetype: 'rules',
       label: 'NPC & Dialog Binding',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: { kind: 'manifest', field: 'npcs' },
       produce: (e: LabEntity) => ({
         data: {
@@ -312,6 +317,7 @@ registerCatalogPipeline({
     {
       archetype: 'rules',
       label: 'Marker / Tracker UI',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: {
         kind: 'table',
         field: 'tracker',
@@ -334,6 +340,7 @@ registerCatalogPipeline({
     {
       archetype: 'brief',
       label: 'Journal / Lore',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: { kind: 'prose', field: 'journal', emptyText: 'No journal entry yet' },
       produce: (e: LabEntity) => ({
         data: {
@@ -369,6 +376,7 @@ registerCatalogPipeline({
     {
       archetype: 'checklist',
       label: 'Localization',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: { kind: 'checklist', field: 'keys' },
       produce: (e: LabEntity) => {
         const K = `QUEST_${questKey(e.name).toUpperCase()}`;
@@ -399,6 +407,7 @@ registerCatalogPipeline({
     {
       archetype: 'checklist',
       label: 'Test Gate',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: { kind: 'checklist', field: 'checks' },
       produce: () => ({
         data: {

@@ -544,12 +544,70 @@ describe('fleet spec linter', () => {
    * appears to be attributing who WROTE the constants rather than what runs Produce — and
    * the audit's own `note` on each of these steps says the numbers are hardcoded.
    */
-  const BALANCE_DISPUTE = (evidence: string) =>
-    'audit records Claude, spec authors Code: produce() is a pure function of author-typed ' +
-    "literals and 'balance' is not in CLI_ELIGIBLE_ARCHETYPES, so no model can write this " +
-    `artifact. The audit's own note concedes it — ${evidence}`;
+  /**
+   * Wave 26 (Lot NB) — the `Code` naming collision, and the 80 steps it covered.
+   *
+   * `ENGINE_CLASS` mapped `Code` / `Code (deterministic)` to the trusted `code` class, but
+   * `Code` was carrying two meanings: deterministic code that COMPUTES a result from inputs
+   * outside its own source (the packaging verifier, which rebuilds a package from sibling
+   * artifacts and grades it against files on disk), and a `produce()` body that returns
+   * LITERALS a person typed. Only the first has earned credibility.
+   *
+   * Measured over the 344 registered steps on 2026-08-20: 110 resolve to a code-class engine
+   * — 80 audited `Code`/`Code (deterministic)` and 30 audited `Packaging engine`. All 80 are
+   * the literals case, and the evidence is from each step's own code, not its label:
+   *   · 106 of the 110 produce a BYTE-IDENTICAL artifact for two different entities; the
+   *     other four interpolate the entity NAME into otherwise fixed prose;
+   *   · `produce` is a pure synchronous `(entity) => StepOutput`, so it cannot read disk, DB
+   *     or UE — an artifact it writes is determined entirely by literals in its own file;
+   *   · `balance` / `schema` / `checklist` / `manifest` are absent from
+   *     `CLI_ELIGIBLE_ARCHETYPES`, so for those steps no model can ever replace the stub;
+   *   · the audit's own notes concede it — "hand-authored constants", "hand-picked constants
+   *     engineered to land exactly at 1.0", "a hardcoded stub, not a measured shader-compile
+   *     output", "produce() takes no entity/direction parameter at all".
+   *
+   * The 30 `Packaging engine` steps are deliberately NOT here: their verdict is re-graded
+   * from disk truth by `verifyPackagingAll`, which is sense 1 by measurement.
+   *
+   * Each spec now declares `engine: 'Hand-authored'`. `resolveEngine`'s one-way self-demotion
+   * rule makes that take effect immediately (a step may claim LESS credit than its audit gave
+   * it, never more), so these disputes are LIVE on the map rather than silently discarded —
+   * but they are still disputes: `step-facts.json` is Class C and only the Director can move
+   * `trueEngine` to `Hand-authored`. Delete each entry as its fact lands.
+   */
+  const HAND_AUTHORED_DISPUTE = (catalogId: string) =>
+    `audit records Code, spec authors Hand-authored: this step's produce() returns author-typed ` +
+    `literals (measured — the artifact is byte-identical across two different entities, and produce ` +
+    `is a pure sync function that cannot read disk, DB or UE), and every checker that grades it ` +
+    `re-reads those same literals, so nothing outside ${catalogId}.ts can make it fail. \`Code\` is ` +
+    `in TRUSTED_CLASSES and this has not earned that. Director: move trueEngine to 'Hand-authored'.`;
+
+  const HAND_AUTHORED_BY_CATALOG: Record<string, string[]> = {
+    "ambient": ["Spatialization", "Occlusion", "Memory Budget"],
+    "bestiary": ["Encounter Balance"],
+    "combat-map": ["Balance"],
+    "crafting-recipes": ["Cost & Yield"],
+    "currencies": ["Balance"],
+    "items": ["Base Type & Rarity", "Affixes", "Damage / Implicit", "Economy"],
+    "loot-tables": ["Drop Generation", "Rarity Odds", "Balance / Drop Sim"],
+    "materials": ["Parameters", "LOD/Perf Budget"],
+    "music": ["Mix & Loudness"],
+    "progression-curves": ["Concept Brief", "Curve Formula", "XP Sources", "Reward Schedule", "Caps & Catch-up", "Death Penalty", "Balance", "Telemetry", "XP Bar UI", "Test Gate"],
+    "props": ["Concept Brief", "Interaction", "Collision & Physics", "Material", "Destruction States", "Loot on Destroy", "VFX / Audio", "Test Gate"],
+    "quests": ["Concept Brief", "Objective Graph", "Triggers & World-State", "Rewards", "NPC & Dialog Binding", "Marker / Tracker UI", "Journal / Lore", "Localization", "Test Gate"],
+    "save-points": ["Concept Brief", "State Schema", "Versioning & Migration", "Save Triggers", "Cloud / Local Storage", "Conflict Resolution", "Corruption Recovery", "Slots UI", "Load-Time Budget", "Test Gate"],
+    "screen-flow": ["Concept Brief", "Navigation Graph", "Input Mapping", "Component Inventory", "Transitions / Animation", "VFX / SFX Juice", "Accessibility", "Localization", "Test Gate"],
+    "spellbook": ["Balance"],
+    "status-effects": ["Balance"],
+    "vendors": ["Economy Sim"],
+    "vfx": ["Concept Brief", "Behavior", "Sound Hook", "GPU / LOD Budget", "Test Gate"],
+    "zone-map": ["Concept Brief", "Macro Layout & POIs", "Area Level & Density", "Encounter Placement", "Streaming / LOD", "Material", "Ambient & Music", "Minimap UI", "Test Gate"],
+  };
 
   const ENGINE_ATTRIBUTION_DISPUTES: { catalogId: string; label: string; reason: string }[] = [
+    ...Object.entries(HAND_AUTHORED_BY_CATALOG).flatMap(([catalogId, labels]) =>
+      labels.map((label) => ({ catalogId, label, reason: HAND_AUTHORED_DISPUTE(catalogId) })),
+    ),
     // EMPTY — and it must stay that way by resolution, never by deletion.
     //
     // Wave 25 (Lot MC) raised 11 disputes; the Director resolved all 11 on 2026-08-20 by correcting
@@ -619,15 +677,15 @@ describe('fleet spec linter', () => {
    * below are where they live.
    */
   const UNAUTHORED_ENGINE_CEILING: Record<string, { max: number; why: string }> = {
-    brief: { max: 34, why: 'CLI-eligible text steps: a real Claude dispatch OR the local produce stub writes them, and which one ran is per-artifact, not per-spec' },
-    rules: { max: 126, why: 'largest bucket, same CLI-eligible ambiguity as brief; needs its own pass' },
+    brief: { max: 26, why: 'CLI-eligible text steps: a real Claude dispatch OR the local produce stub writes them, and which one ran is per-artifact, not per-spec. 34 -> 26 on 2026-08-20 (the Hand-authored sweep authored the 8 whose audit already recorded Code)' },
+    rules: { max: 86, why: 'largest bucket, same CLI-eligible ambiguity as brief; needs its own pass. 126 -> 86 on 2026-08-20 (Hand-authored sweep)' },
     gallery: { max: 6, why: 'the 6 left are genuinely ambiguous from their own code: MI_ material instances (2), an NS_ Niagara variant set, an SM_ "sprite", and two SM_ terrain/biome sets that may be procedural UE geometry rather than a generated mesh' },
-    checklist: { max: 61, why: 'a checklist enumerates work items; several have no producing engine at all and must NOT be given one' },
+    checklist: { max: 50, why: '61 -> 50 on 2026-08-20 (Hand-authored sweep). A checklist enumerates work items; several have no producing engine at all and must NOT be given one' },
     manifest: { max: 33, why: 'mixed — some are UE Python import manifests, some are hand-listed asset paths' },
     balance: { max: 0, why: 'fully authored: every balance produce() is a pure function of author-typed constants, and the archetype is not CLI-eligible' },
-    schema: { max: 13, why: 'data-shape declarations (struct/table field lists); this slice did not read them individually and will not guess an engine from a label. RAISED 12 -> 13 on 2026-08-20 by the Director, deliberately and against the ratchet\'s direction: `character-pipeline / Face Gate 2D` declared `engine: Blender` while the audit said `Leonardo`, and NEITHER was defensible — produce() records a crop-review verdict and invokes no generator. Removing the false declaration is an improvement that this counter registers as a regression, which is the one case where the ceiling should move up. It is the ONLY such entry; do not use it as precedent for parking a step you simply did not read.' },
+    schema: { max: 9, why: '13 -> 9 on 2026-08-20 (Hand-authored sweep). Data-shape declarations (struct/table field lists); this slice did not read them individually and will not guess an engine from a label. RAISED 12 -> 13 on 2026-08-20 by the Director, deliberately and against the ratchet\'s direction: `character-pipeline / Face Gate 2D` declared `engine: Blender` while the audit said `Leonardo`, and NEITHER was defensible — produce() records a crop-review verdict and invokes no generator. Removing the false declaration is an improvement that this counter registers as a regression, which is the one case where the ceiling should move up. It is the ONLY such entry; do not use it as precedent for parking a step you simply did not read.' },
     custom: { max: 1, why: 'one-off bespoke bodies with no shared pattern — each needs reading on its own terms, and this slice did not reach it' },
-    graph: { max: 6, why: 'CLI-eligible node/edge graphs: same dispatch ambiguity as brief/rules — a live Claude run and the local stub both write them' },
+    graph: { max: 4, why: '6 -> 4 on 2026-08-20 (Hand-authored sweep). CLI-eligible node/edge graphs: same dispatch ambiguity as brief/rules — a live Claude run and the local stub both write them' },
   };
 
   it('the unauthored-engine count does not grow, per archetype', () => {

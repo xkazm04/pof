@@ -40,6 +40,7 @@ registerCatalogPipeline({
     {
       archetype: 'brief',
       label: 'Concept Brief',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: { kind: 'prose', field: 'brief', emptyText: 'No brief yet' },
       produce: (e: LabEntity) => ({
         data: {
@@ -74,6 +75,7 @@ registerCatalogPipeline({
     {
       archetype: 'schema',
       label: 'State Schema',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: {
         kind: 'table',
         field: 'stateSchema',
@@ -176,6 +178,7 @@ registerCatalogPipeline({
     {
       archetype: 'rules',
       label: 'Versioning & Migration',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: {
         kind: 'table',
         field: 'versioning',
@@ -229,6 +232,7 @@ registerCatalogPipeline({
     {
       archetype: 'rules',
       label: 'Save Triggers',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: {
         kind: 'table',
         field: 'triggers',
@@ -317,6 +321,7 @@ registerCatalogPipeline({
     {
       archetype: 'rules',
       label: 'Cloud / Local Storage',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: {
         kind: 'table',
         field: 'storage',
@@ -367,6 +372,7 @@ registerCatalogPipeline({
     {
       archetype: 'rules',
       label: 'Conflict Resolution',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: {
         kind: 'table',
         field: 'conflict',
@@ -411,6 +417,7 @@ registerCatalogPipeline({
     {
       archetype: 'rules',
       label: 'Corruption Recovery',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: {
         kind: 'table',
         field: 'corruption',
@@ -463,6 +470,7 @@ registerCatalogPipeline({
     {
       archetype: 'rules',
       label: 'Slots UI',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: {
         kind: 'table',
         field: 'slotsUI',
@@ -523,7 +531,7 @@ registerCatalogPipeline({
     {
       archetype: 'balance',
       label: 'Load-Time Budget',
-      engine: 'Code', // pure function of author-typed constants; 'balance' is not CLI-eligible (labProduceMode.ts)
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       // Load-time budget bars: measured synchronous load against the target ceiling.
       view: {
         kind: 'chart',
@@ -599,6 +607,7 @@ registerCatalogPipeline({
     {
       archetype: 'checklist',
       label: 'Test Gate',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: { kind: 'checklist', field: 'checks' },
       produce: (e: LabEntity) => ({
         data: {

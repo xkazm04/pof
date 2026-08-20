@@ -466,7 +466,7 @@ registerCatalogPipeline({
     {
       archetype: 'balance',
       label: 'Balance',
-      engine: 'Code', // pure function of author-typed constants; 'balance' is not CLI-eligible (labProduceMode.ts)
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       // Threat distribution histogram: the encounter's raw threat is composed of two
       // enemy waves + the hazard zone — a distribution reads better as a histogram than a
       // table (which also carried a `threatBudget` column the produce never wrote). The

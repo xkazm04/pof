@@ -164,6 +164,7 @@ registerCatalogPipeline({
     {
       archetype: 'schema',
       label: 'Parameters',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: {
         kind: 'table',
         field: 'params',
@@ -257,7 +258,7 @@ registerCatalogPipeline({
     {
       archetype: 'balance',
       label: 'LOD/Perf Budget',
-      engine: 'Code', // pure function of author-typed constants; 'balance' is not CLI-eligible (labProduceMode.ts)
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       // Budget bars via the shared ChartPanel: the authored instruction count against
       // its target cap reads far clearer as a bar pair than a key/value table.
       view: {

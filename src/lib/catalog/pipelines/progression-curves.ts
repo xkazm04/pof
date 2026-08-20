@@ -47,6 +47,7 @@ registerCatalogPipeline({
     {
       archetype: 'brief',
       label: 'Concept Brief',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: { kind: 'prose', field: 'brief', emptyText: 'No brief yet' },
       produce: (e: LabEntity) => ({
         data: {
@@ -75,6 +76,7 @@ registerCatalogPipeline({
     {
       archetype: 'schema',
       label: 'Curve Formula',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: {
         kind: 'table',
         field: 'curveFormula',
@@ -178,6 +180,7 @@ registerCatalogPipeline({
     {
       archetype: 'rules',
       label: 'XP Sources',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: {
         kind: 'table',
         field: 'xpSources',
@@ -267,6 +270,7 @@ registerCatalogPipeline({
     {
       archetype: 'rules',
       label: 'Reward Schedule',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: {
         kind: 'table',
         field: 'rewards',
@@ -343,6 +347,7 @@ registerCatalogPipeline({
     {
       archetype: 'rules',
       label: 'Caps & Catch-up',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: {
         kind: 'table',
         field: 'capsAndCatchup',
@@ -410,6 +415,7 @@ registerCatalogPipeline({
     {
       archetype: 'rules',
       label: 'Death Penalty',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: {
         kind: 'table',
         field: 'deathPenalty',
@@ -496,7 +502,7 @@ registerCatalogPipeline({
     {
       archetype: 'balance',
       label: 'Balance',
-      engine: 'Code', // pure function of author-typed constants; 'balance' is not CLI-eligible (labProduceMode.ts)
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       // Pacing budget bars: minutes-to-next-level against the target pace.
       view: {
         kind: 'chart',
@@ -582,6 +588,7 @@ registerCatalogPipeline({
     {
       archetype: 'rules',
       label: 'Telemetry',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: {
         kind: 'table',
         field: 'telemetry',
@@ -644,6 +651,7 @@ registerCatalogPipeline({
     {
       archetype: 'rules',
       label: 'XP Bar UI',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: {
         kind: 'table',
         field: 'xpBarUI',
@@ -725,6 +733,7 @@ registerCatalogPipeline({
     {
       archetype: 'checklist',
       label: 'Test Gate',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: { kind: 'checklist', field: 'checks' },
       produce: () => ({
         data: {

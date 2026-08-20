@@ -29,6 +29,7 @@ registerCatalogPipeline({
     // ── 1. Concept Brief ──────────────────────────────────────────────────────
     {
       archetype: 'brief', label: 'Concept Brief',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: { kind: 'prose', field: 'brief', emptyText: 'No brief yet' },
       produce: (e: LabEntity) => ({
         data: {
@@ -55,6 +56,7 @@ registerCatalogPipeline({
     // ── 2. Behavior ──────────────────────────────────────────────────────────
     {
       archetype: 'rules', label: 'Behavior',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: {
         kind: 'table', field: 'behavior',
         columns: [{ key: 'emitters' }, { key: 'lifetime', unit: 's' }, { key: 'spawnRate', unit: '/s' }],
@@ -120,6 +122,7 @@ registerCatalogPipeline({
     // is emitted so there is no dangling audio:: reference.
     {
       archetype: 'rules', label: 'Sound Hook',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: {
         kind: 'table', field: 'soundHook',
         columns: [{ key: 'cues' }, { key: 'animNotifyBinding' }],
@@ -150,7 +153,7 @@ registerCatalogPipeline({
     // which is 40% headroom — the label used to say "60% headroom" and was inverted.
     {
       archetype: 'balance', label: 'GPU / LOD Budget',
-      engine: 'Code', // pure function of author-typed constants; 'balance' is not CLI-eligible (labProduceMode.ts)
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       // GPU cost budget bars: peak emission ms against the per-class budget ceiling
       // (same unit) is the real story — a table buried it next to unrelated counts.
       view: {
@@ -245,6 +248,7 @@ registerCatalogPipeline({
     // ── 9. Test Gate ──────────────────────────────────────────────────────────
     {
       archetype: 'checklist', label: 'Test Gate',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: { kind: 'checklist', field: 'checks' },
       produce: (e: LabEntity) => {
         const s = slug(e.name);

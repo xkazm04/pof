@@ -295,7 +295,7 @@ registerCatalogPipeline({
     {
       archetype: 'balance',
       label: 'Economy Sim',
-      engine: 'Code', // pure function of author-typed constants; 'balance' is not CLI-eligible (labProduceMode.ts)
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       // Economy percentages as budget bars: margin (the checked metric) against markup
       // and buyback reads clearer than a key/value table.
       view: {

@@ -281,7 +281,7 @@ registerCatalogPipeline({
     {
       archetype: 'balance',
       label: 'Balance',
-      engine: 'Code', // pure function of author-typed constants; 'balance' is not CLI-eligible (labProduceMode.ts)
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       // Damage-profile bars: sustained DPS (the checked metric) next to total ignite
       // damage and the reference hit that drives it.
       view: {

@@ -43,6 +43,7 @@ registerCatalogPipeline({
     {
       archetype: 'brief',
       label: 'Concept Brief',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: { kind: 'prose', field: 'brief', emptyText: 'No brief yet' },
       produce: (e: LabEntity) => ({
         data: {
@@ -71,6 +72,7 @@ registerCatalogPipeline({
     {
       archetype: 'rules',
       label: 'Interaction',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: {
         kind: 'table',
         field: 'interaction',
@@ -182,6 +184,7 @@ registerCatalogPipeline({
     {
       archetype: 'rules',
       label: 'Collision & Physics',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: {
         kind: 'table',
         field: 'physics',
@@ -249,6 +252,7 @@ registerCatalogPipeline({
     {
       archetype: 'rules',
       label: 'Material',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: {
         kind: 'table',
         field: 'material',
@@ -315,6 +319,7 @@ registerCatalogPipeline({
     {
       archetype: 'rules',
       label: 'Destruction States',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: {
         kind: 'table',
         field: 'destructionStates',
@@ -394,6 +399,7 @@ registerCatalogPipeline({
     {
       archetype: 'rules',
       label: 'Loot on Destroy',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: {
         kind: 'table',
         field: 'lootOnDestroy',
@@ -467,6 +473,7 @@ registerCatalogPipeline({
     {
       archetype: 'rules',
       label: 'VFX / Audio',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: {
         kind: 'table',
         field: 'vfxAudio',
@@ -558,6 +565,7 @@ registerCatalogPipeline({
     {
       archetype: 'checklist',
       label: 'Test Gate',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: { kind: 'checklist', field: 'checks' },
       produce: (e: LabEntity) => ({
         data: {

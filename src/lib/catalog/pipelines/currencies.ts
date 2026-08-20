@@ -166,7 +166,7 @@ registerCatalogPipeline({
     {
       archetype: 'balance',
       label: 'Balance',
-      engine: 'Code', // pure function of author-typed constants; 'balance' is not CLI-eligible (labProduceMode.ts)
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       // Faucet-vs-sink budget bars: the two flows side by side make the imbalance visible.
       view: {
         kind: 'chart',

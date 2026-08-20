@@ -317,7 +317,7 @@ registerCatalogPipeline({
     {
       archetype: 'balance',
       label: 'Balance',
-      engine: 'Code', // pure function of author-typed constants; 'balance' is not CLI-eligible (labProduceMode.ts)
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       // DPS budget bars: sustained DPS (the checked metric) against the tier target,
       // with the raw hit-DPS component for context. (The old table listed a `burstDPS`
       // column the produce never wrote — a permanently-null cell; the chart uses the

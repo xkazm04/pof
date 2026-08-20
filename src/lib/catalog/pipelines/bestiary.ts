@@ -327,7 +327,7 @@ registerCatalogPipeline({
     // ── 8. Encounter Balance ──────────────────────────────────────────────────
     {
       archetype: 'balance', label: 'Encounter Balance',
-      engine: 'Code', // pure function of author-typed constants; 'balance' is not CLI-eligible (labProduceMode.ts)
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       // Threat budget bar: the encounter's threat against the canon tier ceiling (max 130
       // gives headroom around the ~100 ±10% target).
       view: { kind: 'chart', variant: 'bars', field: 'balance', rows: [{ key: 'threat', label: 'Threat' }], highlightKey: 'threat', max: 130 },

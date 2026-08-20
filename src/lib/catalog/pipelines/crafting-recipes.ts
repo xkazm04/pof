@@ -249,7 +249,7 @@ registerCatalogPipeline({
     {
       archetype: 'balance',
       label: 'Cost & Yield',
-      engine: 'Code', // pure function of author-typed constants; 'balance' is not CLI-eligible (labProduceMode.ts)
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       // Cost-vs-yield budget bars: gold cost against output value (the ratio the checker
       // derives) is a clearer bar pair than a table.
       view: {

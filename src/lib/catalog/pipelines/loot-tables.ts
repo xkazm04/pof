@@ -58,6 +58,7 @@ registerCatalogPipeline({
     {
       archetype: 'rules',
       label: 'Drop Generation',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: {
         kind: 'table',
         field: 'dropGen',
@@ -117,6 +118,7 @@ registerCatalogPipeline({
     {
       archetype: 'rules',
       label: 'Rarity Odds',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: {
         kind: 'table',
         field: 'rarityOdds',
@@ -396,7 +398,7 @@ registerCatalogPipeline({
     {
       archetype: 'balance',
       label: 'Balance / Drop Sim',
-      engine: 'Code', // pure function of author-typed constants; 'balance' is not CLI-eligible (labProduceMode.ts)
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       // Drop-rate budget bars: simulated rares/hour against the tier target.
       view: {
         kind: 'chart',

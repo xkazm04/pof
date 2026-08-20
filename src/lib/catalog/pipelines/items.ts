@@ -70,6 +70,7 @@ registerCatalogPipeline({
     {
       archetype: 'schema',
       label: 'Base Type & Rarity',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: {
         kind: 'table',
         field: 'baseType',
@@ -161,6 +162,7 @@ registerCatalogPipeline({
     {
       archetype: 'rules',
       label: 'Affixes',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: {
         kind: 'table',
         field: 'affixes',
@@ -408,6 +410,7 @@ registerCatalogPipeline({
     {
       archetype: 'rules',
       label: 'Damage / Implicit',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: {
         kind: 'table',
         field: 'damage',
@@ -489,7 +492,7 @@ registerCatalogPipeline({
     {
       archetype: 'balance',
       label: 'Economy',
-      engine: 'Code', // pure function of author-typed constants; 'balance' is not CLI-eligible (labProduceMode.ts)
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       // Price-vs-power budget bars: vendor anchor value against the derived power score
       // (the pair the ±20% band checks) reads clearer than a table.
       view: {

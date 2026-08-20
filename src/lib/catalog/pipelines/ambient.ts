@@ -257,6 +257,7 @@ registerCatalogPipeline({
     {
       archetype: 'rules',
       label: 'Spatialization',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: {
         kind: 'table',
         field: 'spatialization',
@@ -454,6 +455,7 @@ registerCatalogPipeline({
     {
       archetype: 'rules',
       label: 'Occlusion',
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: {
         kind: 'table',
         field: 'occlusion',
@@ -553,7 +555,7 @@ registerCatalogPipeline({
     {
       archetype: 'balance',
       label: 'Memory Budget',
-      engine: 'Code', // pure function of author-typed constants; 'balance' is not CLI-eligible (labProduceMode.ts)
+      engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       // Budget bars (shared ChartPanel): decoded footprint against target + hard cap
       // reads far clearer as a bar trio than a key/value table.
       view: {
