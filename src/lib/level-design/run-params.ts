@@ -10,6 +10,14 @@
 export const SEED_ROLL_MAX = 100000;
 
 /**
+ * The room-count range the UE dungeon panel accepts. Lives here rather than in
+ * the panel because `procgen-spec` has to clamp a handed-off spec to the same
+ * bounds, and a second copy of a bound is a bound that will drift.
+ */
+export const UE_ROOMS_MIN = 2;
+export const UE_ROOMS_MAX = 20;
+
+/**
  * Pure validator for a seed field. Returns an error string when the raw input is
  * empty, non-numeric (NaN), non-integer, or negative; null when acceptable.
  */
