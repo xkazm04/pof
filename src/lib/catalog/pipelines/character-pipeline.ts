@@ -70,7 +70,12 @@ registerCatalogPipeline({
     {
       archetype: 'schema',
       label: 'Face Gate 2D',
-      engine: 'Blender',
+      // NO `engine` DELIBERATELY (2026-08-20, wave 25). This step used to declare `Blender` while
+      // step-facts audited it as `Leonardo (Lucid Origin)`. Neither is defensible: produce() records a
+      // close-up crop review verdict over an existing PNG strip and invokes no Blender and no generator
+      // (Leonardo powered the PREVIOUS step; this one is a review gate). Both sides were corrected —
+      // the audit to `None`, and this declaration removed — so the step reads UNAUTHORED rather than
+      // naming an engine nobody can point at. Author one only when the code runs it.
       view: { kind: 'table', field: 'gate', columns: [{ key: 'verdict' }, { key: 'method' }, { key: 'criteria' }, { key: 'evidence' }] },
       produce: () => ({
         data: {

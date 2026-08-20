@@ -550,33 +550,25 @@ describe('fleet spec linter', () => {
     `artifact. The audit's own note concedes it — ${evidence}`;
 
   const ENGINE_ATTRIBUTION_DISPUTES: { catalogId: string; label: string; reason: string }[] = [
-    { catalogId: 'ambient', label: 'Memory Budget', reason: BALANCE_DISPUTE('"the 5.8 MB figure itself is a hand-typed estimate from code-comment arithmetic".') },
-    { catalogId: 'bestiary', label: 'Encounter Balance', reason: BALANCE_DISPUTE('"the threat=103 value is hardcoded rather than computed by a real combat simulator".') },
-    { catalogId: 'combat-map', label: 'Balance', reason: BALANCE_DISPUTE('"derivedThreatScore is hardcoded … not output of an independent balance simulator".') },
-    { catalogId: 'crafting-recipes', label: 'Cost & Yield', reason: BALANCE_DISPUTE('"goldCost/outputValue/ingredientOpportunityCost are all hand-picked".') },
-    { catalogId: 'currencies', label: 'Balance', reason: BALANCE_DISPUTE('"faucetPerHour=110/sinkPerHour=105 are hand-picked normalized relative units invented to land at 4.8% imbalance".') },
-    { catalogId: 'music', label: 'Mix & Loudness', reason: BALANCE_DISPUTE('"integratedLUFS is hardcoded … no real mix was ever measured".') },
-    { catalogId: 'spellbook', label: 'Balance', reason: BALANCE_DISPUTE('the DPS chain is derived in-body from the literals baseDamage=35, cooldown=3.0, igniteDPS=7.875.') },
-    { catalogId: 'status-effects', label: 'Balance', reason: BALANCE_DISPUTE('"verifies the derived 7.875 DPS against the 7.875 tier target" — both sides are the same literal.') },
-    { catalogId: 'vendors', label: 'Economy Sim', reason: BALANCE_DISPUTE('the 28% margin is computed in-body from author-typed buy/sell literals, not from pof_economy_simulate.') },
-    {
-      catalogId: 'character-pipeline',
-      label: 'Face Gate 2D',
-      reason:
-        'spec says Blender, audit says Leonardo (Lucid Origin) — NEITHER is defensible from the ' +
-        "step's own code: produce() records a close-up crop review verdict over a PNG strip and " +
-        'invokes no Blender and no generator. Leonardo generated the PREVIOUS step; this one is a ' +
-        'review gate. Both sides need correcting.',
-    },
-    {
-      catalogId: 'character-pipeline',
-      label: 'UE Import',
-      reason:
-        'spec says UE Python, audit says Code (deterministic) — the spec is right: the step\'s own ' +
-        'produceNote names the commandlet ("-run=pythonscript with a PRE-QUOTED arg string"). This ' +
-        'one MATTERS on screen: `Code` is in TRUSTED_CLASSES and `UE Python` (runtime) is not, so ' +
-        'the audit currently grants this cell credibility the step has not earned.',
-    },
+    // EMPTY — and it must stay that way by resolution, never by deletion.
+    //
+    // Wave 25 (Lot MC) raised 11 disputes; the Director resolved all 11 on 2026-08-20 by correcting
+    // `step-facts.json` (Class C — a lot authoring engine values must not edit its own audit):
+    //   · 9 balance steps  `Claude` -> `Code`      — 'balance' is absent from CLI_ELIGIBLE_ARCHETYPES,
+    //                                                  so no model can ever author these artifacts, and
+    //                                                  the audit already recorded Code on 6 identical steps.
+    //   · UE Import        `Code (deterministic)` -> `UE Python`
+    //                                                — THIS MOVED A GRADE: `Code` is in TRUSTED_CLASSES
+    //                                                  and `UE Python` is not, so the old value granted
+    //                                                  credibility the step had not earned.
+    //   · Face Gate 2D     `Leonardo (Lucid Origin)` -> `None`, and the spec's `engine: 'Blender'`
+    //                                                  REMOVED — neither side was defensible, so the step
+    //                                                  now reads UNAUTHORED rather than naming an engine
+    //                                                  nobody can point at. Deliberately not re-guessed.
+    //
+    // The guard below ("every recorded dispute is REAL") is what forced this cleanup: it fired the moment
+    // the facts were corrected and the entries went stale. Add an entry ONLY for a live disagreement you
+    // can evidence from the step's own code — never to make a change pass.
   ];
 
   it('no authored engine silently contradicts the audited fact (disputes are listed, with reasons)', () => {
@@ -633,7 +625,7 @@ describe('fleet spec linter', () => {
     checklist: { max: 61, why: 'a checklist enumerates work items; several have no producing engine at all and must NOT be given one' },
     manifest: { max: 33, why: 'mixed — some are UE Python import manifests, some are hand-listed asset paths' },
     balance: { max: 0, why: 'fully authored: every balance produce() is a pure function of author-typed constants, and the archetype is not CLI-eligible' },
-    schema: { max: 12, why: 'data-shape declarations (struct/table field lists); this slice did not read them individually and will not guess an engine from a label' },
+    schema: { max: 13, why: 'data-shape declarations (struct/table field lists); this slice did not read them individually and will not guess an engine from a label. RAISED 12 -> 13 on 2026-08-20 by the Director, deliberately and against the ratchet\'s direction: `character-pipeline / Face Gate 2D` declared `engine: Blender` while the audit said `Leonardo`, and NEITHER was defensible — produce() records a crop-review verdict and invokes no generator. Removing the false declaration is an improvement that this counter registers as a regression, which is the one case where the ceiling should move up. It is the ONLY such entry; do not use it as precedent for parking a step you simply did not read.' },
     custom: { max: 1, why: 'one-off bespoke bodies with no shared pattern — each needs reading on its own terms, and this slice did not reach it' },
     graph: { max: 6, why: 'CLI-eligible node/edge graphs: same dispatch ambiguity as brief/rules — a live Claude run and the local stub both write them' },
   };
