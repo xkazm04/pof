@@ -124,7 +124,11 @@ test('quality: economy simulation returns sane numbers', { skip }, async () => {
 
 // ── 2d. Design-truth invariants ─────────────────────────────────────────────────
 test('quality: gdd compliance score is bounded [0,100]', { skip }, async () => {
-  const r = (await mcp.call('pof_gdd_compliance')).json;
+  // Both project-scoped design tools now answer `{ result, scope }` so an unscoped read
+  // can SAY it is the legacy/unattributed view (the raw payload survives unchanged inside
+  // `result`). Read through either shape rather than pinning one.
+  const raw = (await mcp.call('pof_gdd_compliance')).json;
+  const r = raw?.result ?? raw;
   assert.ok(isNum(r.overallScore) && r.overallScore >= 0 && r.overallScore <= 100, `overallScore out of [0,100]: ${r.overallScore}`);
   assert.ok(isNum(r.totalGaps) && r.totalGaps >= 0, `totalGaps not a non-negative number: ${r.totalGaps}`);
   assert.ok(isNum(r.criticalGaps) && r.criticalGaps >= 0 && r.criticalGaps <= r.totalGaps, `criticalGaps invalid vs totalGaps: ${r.criticalGaps}/${r.totalGaps}`);
@@ -132,7 +136,7 @@ test('quality: gdd compliance score is bounded [0,100]', { skip }, async () => {
 
 test('quality: feature-matrix counts are internally consistent', { skip }, async () => {
   const all = (await mcp.call('pof_feature_matrix_all')).json;
-  const statuses = all.statuses ?? all;
+  const statuses = all?.result?.statuses ?? all.statuses ?? all;
   for (const [moduleId, s] of Object.entries<any>(statuses)) {
     if (s && isNum(s.total)) {
       const parts = (s.implemented ?? 0) + (s.missing ?? 0) + (s.unknown ?? 0) + (s.inProgress ?? 0) + (s.partial ?? 0);
