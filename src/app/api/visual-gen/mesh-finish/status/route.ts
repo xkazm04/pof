@@ -42,8 +42,18 @@ export async function GET(req: NextRequest) {
             reasons: job.critique.reasons,
             metrics: job.critique.metrics,
             budget: job.critique.budget,
+            /** Graded at stage `finished` — this mesh HAS been through retopo. */
+            stage: job.critique.stage,
+            failCodes: (job.critique.findings ?? []).filter((f) => f.severity === 'fail').map((f) => f.code),
           }
         : undefined,
+      // Present only for a run ROUTED here by a failing verdict
+      // (POST /api/visual-gen/mesh-finish/remediate). `remediation.improved` is strict:
+      // a finish that ran and left the mesh failing reports exactly that.
+      routedFrom: job.beforeCritique
+        ? { verdict: job.beforeCritique.verdict, score: job.beforeCritique.score, planNote: job.planNote }
+        : undefined,
+      remediation: job.remediation,
       error: job.error,
     });
   } catch (e) {

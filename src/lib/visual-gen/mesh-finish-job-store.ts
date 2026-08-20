@@ -21,6 +21,7 @@ import { critiqueMesh, type CritiqueDeps, type CritiqueResult } from './mesh-cri
 import { critiqueThresholdsFor } from './polycount-presets';
 import type { BudgetRequest } from './face-budget';
 import { nominalExtentFor, type SizeRequest } from './world-scale';
+import { summarizeRemediation, type RemediationOutcome } from './finish-routing';
 
 export interface MeshFinishJob {
   id: string;
@@ -29,8 +30,19 @@ export interface MeshFinishJob {
   /** Asset class the finished mesh is graded as (character/prop/…), when declared. */
   assetClass?: string;
   result?: MeshFinishResult;
-  /** Tier-1 geometry gate, auto-run on the finished low-poly. */
+  /** Tier-1 geometry gate, auto-run on the finished low-poly (graded at stage `finished`). */
   critique?: CritiqueResult;
+  /**
+   * The verdict that CAUSED this run, when it was routed here by
+   * `planFinishFromCritique` rather than started by hand. Without it a remediation run is
+   * indistinguishable from a first-time finish, and "the finish ran" would be the only
+   * thing anyone could report.
+   */
+  beforeCritique?: CritiqueResult;
+  /** before → after, computed once the finished mesh is re-graded. */
+  remediation?: RemediationOutcome;
+  /** What the plan said this run would and would NOT address, recorded before it ran. */
+  planNote?: string;
   error?: string;
   startedAt: number;
 }
@@ -57,7 +69,10 @@ export function critiqueDepsForFinish(spec: MeshFinishSpec, assetClass?: string)
       : undefined;
   const targetExtentM = spec.targetExtentM ?? nominalExtentFor(assetClass);
   const size: SizeRequest | undefined = targetExtentM !== undefined ? { targetExtentM } : undefined;
-  return { thresholds, budget, size };
+  // The output of this store IS the post-finish mesh, so `finished` is a statement of
+  // fact about what is being graded — not an inference. It is what stops the finished
+  // low-poly inheriting the "pre-finish geometry" caveat that belongs to its input.
+  return { thresholds, budget, size, stage: 'finished' };
 }
 
 /**
@@ -69,9 +84,18 @@ export function startMeshFinishJob(
   assetClass?: string,
   runner: Runner = runMeshFinish,
   critic: Critic = critiqueMesh,
+  /** Set when this run was ROUTED here by a failing verdict (see `finish-routing.ts`). */
+  routed?: { before: CritiqueResult; planNote: string },
 ): string {
   const id = `meshfinish-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  const job: MeshFinishJob = { id, status: 'running', spec, assetClass, startedAt: Date.now() };
+  const job: MeshFinishJob = {
+    id,
+    status: 'running',
+    spec,
+    assetClass,
+    startedAt: Date.now(),
+    ...(routed ? { beforeCritique: routed.before, planNote: routed.planNote } : {}),
+  };
   jobs.set(id, job);
   runner(spec)
     .then(async (result) => {
@@ -81,6 +105,9 @@ export function startMeshFinishJob(
           job.critique = await critic(result.meshPath, critiqueDepsForFinish(spec, assetClass));
         } catch { /* critique is best-effort — never fails the finish itself */ }
       }
+      // A routed run always reports before → after, including the case where the finish
+      // completed and the mesh still fails. "The finish ran" is not a result.
+      if (routed) job.remediation = summarizeRemediation(routed.before, job.critique);
       job.status = result.ok ? 'done' : 'error';
       if (!result.ok) job.error = result.error;
     })

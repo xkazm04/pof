@@ -9,6 +9,7 @@
  */
 import { runTriposr, type TriposrSpec, type TriposrResult } from './triposr-runner';
 import { critiqueMesh, ungatedReason, CRITIQUE_CALIBRATION_CAVEAT, type CritiqueResult } from './mesh-critique';
+import { assessStage, type MeshStage } from './critique-stage';
 
 export interface Variant {
   label: string;
@@ -184,6 +185,20 @@ export interface RetryOutcome<R> {
   reason: string;
   /** The calibration caveat, present only when a real failing verdict is being reported. */
   note?: string;
+  /**
+   * Set when the loop stopped after ONE roll because the verdict's failing criteria are
+   * determined by the generation STAGE rather than by the draw. Names what would actually
+   * move the outcome (a `mesh-finish` pass), so a caller cannot read "stopped early" as
+   * "we gave up".
+   */
+  stageStop?: {
+    /** Fail codes a `mesh-finish` pass would resolve. */
+    finishResolvable: string[];
+    /** Fail codes nothing in this pipeline is known to fix. */
+    unaddressed: string[];
+    /** Paid rolls this refusal did NOT buy. */
+    rollsAvoided: number;
+  };
 }
 
 /**
@@ -208,9 +223,16 @@ export async function generateUntilAcceptable<R extends MeshRoll>(
     critic?: Critic;
     maxAttempts?: number;
     isAcceptable?: (critique: CritiqueResult | undefined) => boolean;
+    /**
+     * The pipeline stage the rolled meshes are at. `raw` is the factual default for a
+     * GENERATOR loop — every mesh it grades comes straight off a provider, pre-retopo —
+     * not an inference about any particular mesh.
+     */
+    stage?: MeshStage;
   } = {},
 ): Promise<RetryOutcome<R>> {
   const critic = deps.critic ?? critiqueMesh;
+  const stage: MeshStage = deps.stage ?? 'raw';
   const maxAttempts = Math.max(1, deps.maxAttempts ?? DEFAULT_MAX_ATTEMPTS);
   const isAcceptable = deps.isAcceptable ?? ((c) => c?.ok === true && c.verdict !== undefined && c.verdict !== 'fail');
 
@@ -247,6 +269,34 @@ export async function generateUntilAcceptable<R extends MeshRoll>(
       };
     }
 
+    // The failure is determined by the STAGE, not by the draw — knowable on roll ONE.
+    //
+    // The `failureShape` guard below already stops a blind loop, but only AFTER a second
+    // paid task has proved the first verdict repeated: 2 Tripo generations, 40 credits,
+    // to learn something the first verdict's own defect classes already said. Where every
+    // failing criterion is one a fresh roll cannot influence — a density/part-budget
+    // overrun that the retopo stage exists to fix, or the speck shrapnel that reproduced
+    // on all 4 of the recorded independent rolls of one prompt — the honest stop is here,
+    // at one roll.
+    //
+    // Deliberately conditional on the card carrying `findings`: a critique with no defect
+    // codes gets the original reproduce-then-stop behaviour rather than a guess.
+    const assessment = assessStage(critique, stage);
+    if (n === 1 && critique?.findings?.length && !assessment.rerollWorthwhile && (assessment.finishResolvable.length || assessment.unaddressed.length)) {
+      return {
+        attempts,
+        best: result.ok ? entry : undefined,
+        accepted: false,
+        reason: `stopped after 1 attempt — every failing criterion is determined by the generation stage, not by the roll, so a second paid generation would return the same verdict: ${critique.reasons?.[0] ?? 'unknown'}`,
+        note: assessment.caveat ?? CRITIQUE_CALIBRATION_CAVEAT,
+        stageStop: {
+          finishResolvable: assessment.finishResolvable,
+          unaddressed: assessment.unaddressed,
+          rollsAvoided: maxAttempts - 1,
+        },
+      };
+    }
+
     // Re-rolling only buys anything when the failure is a dice roll. Measured against the
     // live Tripo API: raw generator output fails the same way every time (500k faces, the
     // same disconnected-part budget), so a blind loop paid the full cap for an outcome it
@@ -260,7 +310,7 @@ export async function generateUntilAcceptable<R extends MeshRoll>(
         best,
         accepted: false,
         reason: `stopped after ${n} attempts — the same failure reproduced, so it is systematic rather than a bad roll: ${critique?.reasons?.[0] ?? 'unknown'}`,
-        note: CRITIQUE_CALIBRATION_CAVEAT,
+        note: assessment.caveat ?? CRITIQUE_CALIBRATION_CAVEAT,
       };
     }
     previousFailure = failure;
@@ -274,6 +324,6 @@ export async function generateUntilAcceptable<R extends MeshRoll>(
     reason: best
       ? `no roll cleared the gate in ${maxAttempts} attempts — best was attempt ${best.attempt} (${best.scoreLabel})`
       : `no roll produced a mesh in ${maxAttempts} attempts`,
-    ...(best ? { note: CRITIQUE_CALIBRATION_CAVEAT } : {}),
+    ...(best ? { note: assessStage(best.critique, stage).caveat ?? CRITIQUE_CALIBRATION_CAVEAT } : {}),
   };
 }
