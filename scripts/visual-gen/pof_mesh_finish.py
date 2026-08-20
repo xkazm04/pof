@@ -146,7 +146,10 @@ def loose_shell_count(obj):
     if n_faces == 0:
         return 0
 
-    # parent[f] = f  (each polygon starts as its own shell)
+    # parent[f] = f  (each polygon starts as its own shell). The "~9 MB" above assumes
+    # array("i") is 4 bytes, which it is on every CPython build Blender ships; the module
+    # only guarantees >= 2. On a hypothetical 2-byte build an index past 32767 raises
+    # OverflowError on assignment — the walk fails loudly, it does not corrupt or grow.
     parent = array("i", range(n_faces))
     # -1 = no polygon has claimed this vertex yet. `array * n` repeats at C level.
     first_face_of_vert = array("i", [-1]) * n_verts
