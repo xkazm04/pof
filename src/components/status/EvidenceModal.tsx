@@ -16,7 +16,7 @@ import { DimensionScoreBars } from '@/components/ui/DimensionScoreBars';
 import { tryApiFetch } from '@/lib/api-utils';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
-import { engineSourceMark, type StepCell } from '@/lib/status/statusModel';
+import { engineClass, engineClassNote, engineSourceMark, isTrustedClass, type StepCell } from '@/lib/status/statusModel';
 import { readProvenance } from '@/lib/provenance';
 
 const GlbViewer = dynamic(() => import('@/components/layout-lab/steps/shared/GlbViewer').then((m) => m.GlbViewer), {
@@ -207,6 +207,15 @@ export function EvidenceModal({ catalogId, step, cell, onClose }: { catalogId: s
           <Badge>
             <span data-testid="evidence-engine-source" title={engineSourceMark(cell.engineSource).note}>
               engine: {cell.engine} [{engineSourceMark(cell.engineSource).word}]
+            </span>
+          </Badge>
+          {/* WHAT THAT ENGINE'S PASS PROVES. The trusted/ungated split has always been decided
+              by the engine's credibility class, but nothing ever said so — a cell demoted for
+              its class simply came back a different colour. Display-only. */}
+          <Badge>
+            <span data-testid="evidence-engine-credibility" title={engineClassNote(cell.engine)}>
+              credibility: {engineClass(cell.engine)}
+              {isTrustedClass(engineClass(cell.engine)) ? '' : ' · NEEDS A GATE'}
             </span>
           </Badge>
           {cell.tier && <Badge>{cell.tier}</Badge>}

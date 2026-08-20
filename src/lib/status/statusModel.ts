@@ -7,9 +7,10 @@
  * ENGINE's credibility class instead of jumping to green —
  *   verified  — a real gate passed (L3 runtime / L4 visual): professional-grade proof
  *   trusted   — L0–L2 pass from an engine class that scales to quality without a
- *               gate (LLM text, deterministic code, human selection)
- *   ungated   — L0–L2 pass from generative media (3D/audio/2D) or unproven runtime
- *               claims: output exists, professional quality NOT yet provable
+ *               gate (LLM text, computing code, human selection)
+ *   ungated   — L0–L2 pass from generative media (3D/audio/2D), unproven runtime
+ *               claims, or HAND-AUTHORED constants: output exists, professional
+ *               quality NOT yet provable
  *   deferred  — honest L3/L4 wait (gate declared, not run)
  *   attention — a produced artifact fails
  *   pending   — produced but not yet passing
@@ -152,19 +153,65 @@ export function gateHeadless(
  *  hand-typed placeholder data must NOT read as produced capability). */
 const MEDIA_DELIVERABLES = new Set(['2d-art', '3d-mesh', 'audio', 'vfx-particles', 'animation']);
 
-export type EngineClass = 'llm' | 'gen2d' | 'gen3d' | 'audio' | 'runtime' | 'tooling' | 'code' | 'human' | 'unaudited';
+export type EngineClass =
+  | 'llm'
+  | 'gen2d'
+  | 'gen3d'
+  | 'audio'
+  | 'runtime'
+  | 'tooling'
+  | 'code'
+  | 'hand-authored'
+  | 'human'
+  | 'unaudited';
 
 /** The engine name a step gets when NOTHING identifies its engine: no `StepSpec.engine`, no
  *  audited `StepFact.trueEngine`, and no heuristic match. It is a real name (not a guess at a
  *  real engine) so the cell can SAY the engine is unknown. */
 export const UNAUDITED_ENGINE = 'Unaudited';
 
+/**
+ * The engine name for a step whose artifact is CONSTANTS A PERSON TYPED into the pipeline
+ * file — as distinct from `Code`, which means deterministic code that COMPUTES a result
+ * from inputs.
+ *
+ * Why the split exists (measured 2026-08-20). `ENGINE_CLASS` mapped `Code` and
+ * `Code (deterministic)` to the trusted `code` class on the reasoning that code scales to
+ * quality without a gate. But `Code` was carrying two different meanings at once:
+ *
+ *   1. code that DERIVES the artifact or its verdict from something outside its own source
+ *      — the packaging verifier rebuilds a package from sibling artifacts and grades it
+ *      against files on disk. A pass there is earned against reality.
+ *   2. a `produce()` body that RETURNS LITERALS. 106 of the 110 code-class steps emit a
+ *      byte-identical artifact for two different entities (the other 4 interpolate the
+ *      entity's NAME into otherwise fixed prose), 'balance' / 'schema' / 'checklist' are
+ *      absent from `CLI_ELIGIBLE_ARCHETYPES` so no model can ever author those artifacts,
+ *      and the audit's own notes concede it: "hand-authored constants", "hand-picked
+ *      constants engineered to land exactly at 1.0", "a hardcoded stub, not a measured
+ *      shader-compile output".
+ *
+ * Sense 2 has not earned sense 1's credibility. Nothing computed the number and nothing
+ * outside the file can make it fail, so an L0 pass proves only that the author's own
+ * literals satisfy a checker written against them. That is the overclaim /status exists to
+ * expose, so this class is deliberately absent from {@link TRUSTED_CLASSES}.
+ *
+ * NOT called `Human`: `human` is in `TRUSTED_CLASSES` for human SELECTION — a person looked
+ * at real candidates and chose one, which is a judgment act with an artifact under it. A
+ * designer typing a balance number is human work too, so "who wrote it" cannot be the
+ * distinction; the distinction is whether anything VERIFIED it. `Hand-authored` names the
+ * production method without borrowing the credit human selection earned.
+ */
+export const HAND_AUTHORED_ENGINE = 'Hand-authored';
+
 /** Engine-name → credibility class. LLM text/code/human-selection scale to quality;
  *  generative media and unproven runtime claims need a real gate. */
 export const ENGINE_CLASS: Record<string, EngineClass> = {
   Claude: 'llm',
   [UNAUDITED_ENGINE]: 'unaudited',
+  // `Code` keeps sense 1 ONLY: deterministic code that computes a result from inputs. A step
+  // whose produce body returns author-typed literals declares `Hand-authored` instead.
   Code: 'code',
+  [HAND_AUTHORED_ENGINE]: 'hand-authored',
   Human: 'human',
   Leonardo: 'gen2d',
   Tripo: 'gen3d',
@@ -194,6 +241,41 @@ export const ENGINE_CLASS: Record<string, EngineClass> = {
  *  a step nobody has identified an engine for has earned no credibility, and putting the
  *  unknown case in the trusted bucket is how uncertainty gets read as quality. */
 const TRUSTED_CLASSES: ReadonlySet<EngineClass> = new Set(['llm', 'code', 'human']);
+
+/** Does this class's L0–L2 pass stand on its own, or does it need a gate? The single
+ *  predicate over {@link TRUSTED_CLASSES}, so no caller re-states the membership. Pure. */
+export function isTrustedClass(cls: EngineClass): boolean {
+  return TRUSTED_CLASSES.has(cls);
+}
+
+/**
+ * What an L0–L2 pass from each engine class DOES and DOES NOT prove — one sentence per
+ * class, rendered beside the engine name on the cell and in the evidence modal.
+ *
+ * `deriveCell` has always split `trusted` from `ungated` on {@link TRUSTED_CLASSES}, but the
+ * split was invisible: a demoted cell just came back a different colour with no statement of
+ * what it lost or why. That is the silent re-colour this map must not do — the whole premise
+ * is that a cell SAYS what is behind it. This is the sentence; it is display-only and cannot
+ * move a grade.
+ */
+export const ENGINE_CLASS_NOTE: Record<EngineClass, string> = {
+  llm: 'LLM-authored text: a model wrote the artifact, and text quality scales with the model — credible without a gate, provable only by a judge.',
+  code: 'Deterministic code that COMPUTES the artifact or its verdict from inputs outside its own source (e.g. the packaging verifier rebuilds from siblings and grades against files on disk) — a pass is earned against something real.',
+  'hand-authored': 'CONSTANTS A PERSON TYPED into the pipeline file. Nothing computed them from an input, and every check that grades them re-reads the same literals — so a pass proves the author is self-consistent, not that the values are right. Needs a judge or a runtime gate.',
+  human: 'A person chose this from real candidates — a judgment act with an artifact under it, so the choice carries their taste.',
+  gen2d: 'Generative 2D: pixels exist, but nothing here has looked at them — professional quality needs a VLM or human gate.',
+  gen3d: 'Generative 3D: a mesh exists, but topology/silhouette quality needs a real mesh gate.',
+  audio: 'Generated audio: a waveform exists; whether it sounds shippable needs a listening gate.',
+  runtime: 'A UE runtime/tooling claim: credible only once the gate has actually RUN — a declared gate is not a passed one.',
+  tooling: 'Produced by an external tool: the output is real, but nothing in PoF has graded its quality.',
+  unaudited: 'Nobody has identified what powers this step, so it has earned no credibility — the unknown case is deliberately not in the trusted bucket.',
+};
+
+/** The credibility sentence for an engine NAME (unrecognised names read as `unaudited`,
+ *  the same conservative default {@link engineClass} applies). Pure, display-only. */
+export function engineClassNote(engine: string): string {
+  return ENGINE_CLASS_NOTE[engineClass(engine)];
+}
 
 /** Entities created by test/smoke harnesses (`src/__tests__/catalog/headless.test.ts`, the MCP
  *  smoke check) that POST into the same DB as real content. They are fixtures, not deliverables:
@@ -239,7 +321,7 @@ export function inferEngine(catalogId: string, step: StepMeta): string {
 
 /** Where a cell's engine name came from — an AUDITED fact, an AUTHORED spec, or a heuristic
  *  GUESS. Nothing marked which was which, so an inferred label read as established fact. */
-export type EngineSource = 'audited' | 'authored' | 'inferred';
+export type EngineSource = 'audited' | 'authored' | 'authored-demotion' | 'inferred';
 
 /**
  * How an engine name must READ on the map, per source.
@@ -267,6 +349,15 @@ export const ENGINE_SOURCE_MARK: Record<EngineSource | 'unsourced', { glyph: str
     word: 'AUTHORED',
     note: 'declared by the step itself (StepSpec.engine); no audit fact covers this step',
   },
+  'authored-demotion': {
+    glyph: '↓',
+    word: 'AUTHORED ↓',
+    note:
+      'the step declares a LOWER-credibility engine than its audit fact does, and the map takes'
+      + ' the step\'s word: a self-demotion can never be an overclaim, so it applies immediately'
+      + ' while the audit catches up. The audited name is still on record (the spec linter lists'
+      + ' the disagreement) — this cell is graded on the LESS flattering of the two.',
+  },
   inferred: {
     glyph: '?',
     word: 'UNAUTHORED',
@@ -288,7 +379,28 @@ export function engineSourceMark(source?: EngineSource) {
  *  (`StepFact.trueEngine`) outranks the authored spec, which outranks the heuristic. Pure. */
 export function resolveEngine(catalogId: string, step: StepMeta, fact?: StepFact): { engine: string; source: EngineSource } {
   if (fact?.trueEngine && fact.trueEngine !== 'None') {
-    return { engine: fact.trueEngine.replace(' (deterministic)', ''), source: 'audited' };
+    const audited = fact.trueEngine.replace(' (deterministic)', '');
+    // ── the one-way self-demotion rule ────────────────────────────────────────────────
+    // A step may always tell the map it has earned LESS than its audit credited it with; it
+    // may never tell it more. Preferring the audit unconditionally is right against an
+    // OVERCLAIM (a step cannot promote itself past the agent that read it), but it also
+    // silences a step CORRECTING itself downward — and that correction is the one direction
+    // that carries no risk, because nobody games a map by looking worse on it.
+    //
+    // It matters because `step-facts.json` is Director-only (a lot authoring engine values
+    // must not edit its own audit), so without this rule an established over-attribution
+    // keeps grading cells credible until a separate hand lands the audit edit. Bounded on
+    // purpose: it fires ONLY when the authored class is untrusted and the audited class is
+    // trusted, so it can strictly lower a grade and never raise one.
+    if (
+      step.engine
+      && engineFamily(step.engine) !== engineFamily(audited)
+      && isTrustedClass(engineClass(audited))
+      && !isTrustedClass(engineClass(step.engine))
+    ) {
+      return { engine: step.engine, source: 'authored-demotion' };
+    }
+    return { engine: audited, source: 'audited' };
   }
   if (step.engine) return { engine: step.engine, source: 'authored' };
   return { engine: inferEngine(catalogId, step), source: 'inferred' };

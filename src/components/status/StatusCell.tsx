@@ -11,7 +11,7 @@
  *  gone; the acceptance tier survives as evidence-class metadata in the tooltip, and the
  *  code on the engine line now reads the readiness rung so it never rests on hue alone
  *  (WCAG 1.4.1). `dimmed` supports the highlight chips: non-matching cells drop opacity. */
-import { engineSourceMark, type StepCell } from '@/lib/status/statusModel';
+import { engineClassNote, engineSourceMark, type StepCell } from '@/lib/status/statusModel';
 import {
   readinessOf,
   readinessCode,
@@ -41,11 +41,18 @@ export function StatusCell({
   // behind it, and until now an audited fact, a step-authored declaration and a heuristic
   // guess all printed the same string in the same weight.
   const src = engineSourceMark(cell.engineSource);
-  const known = cell.engineSource === 'audited' || cell.engineSource === 'authored';
+  const known =
+    cell.engineSource === 'audited'
+    || cell.engineSource === 'authored'
+    || cell.engineSource === 'authored-demotion';
   const title = [
     `${cell.label} — ${readinessLabel(readiness)}`,
     craft ? `craft: ${craftLabel(craft.craft)} · lens ${craft.lens} · roof ${craft.ceiling}` : '',
     `engine: ${cell.engine} [${src.word}] — ${src.note}`,
+    // WHY that engine's pass reads the way it does. Without it a cell demoted for its engine
+    // class just came back a different colour — a silent re-colour on the map whose premise
+    // is that a cell says what is behind it.
+    `credibility: ${engineClassNote(cell.engine)}`,
     `${cell.tier ? `evidence class ${cell.tier} · ` : ''}internal grade ${cell.grade}`,
     cell.judged
       ? `JUDGED ${cell.judged.verdict.toUpperCase()} ${cell.judged.score}/100 by ${cell.judged.model}: ${cell.judged.findings}`
