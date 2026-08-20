@@ -114,8 +114,14 @@ describe('PipelinesView — a failed read is not a grade', () => {
     // than two fabricated R0 ones.
     const cells = container.querySelectorAll('[title="Show the stored output this evaluation was based on"]');
     expect(cells.length).toBe(2);
-    // Both landed on a real rung (R3 TRUSTED: an L0 pass from an LLM-class engine).
-    expect(chip(container, 'R3')!.textContent).toContain('(2)');
+    // RE-BASELINED 2026-08-20 (wave 26, Lot NB): this used to assert R3(2) on the premise that
+    // both cells were "an L0 pass from an LLM-class engine". Only one of them was. `Concept Brief`
+    // is a CLI-eligible `brief` step and stays R3; `Economy`'s produce() is a zero-arity body over
+    // hand-picked constants, so it now audits as `Hand-authored` — not in TRUSTED_CLASSES — and
+    // drops to R2. Asserting the SPLIT is strictly stronger than the old lump: it pins that the two
+    // cells landed on DIFFERENT rungs for a reason, which the single (2) could never have caught.
+    expect(chip(container, 'R3')!.textContent).toContain('(1)');
+    expect(chip(container, 'R2')!.textContent).toContain('(1)');
     // The whole map did not collapse into the all-or-nothing LOAD FAILED alert.
     expect(container.querySelector('[role="alert"]')).toBeNull();
   });

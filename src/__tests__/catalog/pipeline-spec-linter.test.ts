@@ -590,25 +590,15 @@ describe('fleet spec linter', () => {
     `in TRUSTED_CLASSES and this has not earned that. Director: move trueEngine to 'Hand-authored'.`;
 
   const HAND_AUTHORED_BY_CATALOG: Record<string, string[]> = {
-    "ambient": ["Spatialization", "Occlusion", "Memory Budget"],
-    "bestiary": ["Encounter Balance"],
-    "combat-map": ["Balance"],
-    "crafting-recipes": ["Cost & Yield"],
-    "currencies": ["Balance"],
-    "items": ["Base Type & Rarity", "Affixes", "Damage / Implicit", "Economy"],
-    "loot-tables": ["Drop Generation", "Rarity Odds", "Balance / Drop Sim"],
-    "materials": ["Parameters", "LOD/Perf Budget"],
-    "music": ["Mix & Loudness"],
-    "progression-curves": ["Concept Brief", "Curve Formula", "XP Sources", "Reward Schedule", "Caps & Catch-up", "Death Penalty", "Balance", "Telemetry", "XP Bar UI", "Test Gate"],
-    "props": ["Concept Brief", "Interaction", "Collision & Physics", "Material", "Destruction States", "Loot on Destroy", "VFX / Audio", "Test Gate"],
-    "quests": ["Concept Brief", "Objective Graph", "Triggers & World-State", "Rewards", "NPC & Dialog Binding", "Marker / Tracker UI", "Journal / Lore", "Localization", "Test Gate"],
-    "save-points": ["Concept Brief", "State Schema", "Versioning & Migration", "Save Triggers", "Cloud / Local Storage", "Conflict Resolution", "Corruption Recovery", "Slots UI", "Load-Time Budget", "Test Gate"],
-    "screen-flow": ["Concept Brief", "Navigation Graph", "Input Mapping", "Component Inventory", "Transitions / Animation", "VFX / SFX Juice", "Accessibility", "Localization", "Test Gate"],
-    "spellbook": ["Balance"],
-    "status-effects": ["Balance"],
-    "vendors": ["Economy Sim"],
-    "vfx": ["Concept Brief", "Behavior", "Sound Hook", "GPU / LOD Budget", "Test Gate"],
-    "zone-map": ["Concept Brief", "Macro Layout & POIs", "Area Level & Density", "Encounter Placement", "Streaming / LOD", "Material", "Ambient & Music", "Minimap UI", "Test Gate"],
+    // EMPTY — RETIRED 2026-08-20 by the Director, in the same change as the fact edits, exactly as this
+    // lot's handover required. All 80 steps below now carry `trueEngine: 'Hand-authored'` in
+    // step-facts.json, so the spec and the audit AGREE and there is no dispute left to record.
+    //
+    // Retiring these did NOT move a grade a second time: the demotion already happened via
+    // `resolveEngine`'s one-way self-demotion (a step may tell the map it earned LESS than its audit
+    // credited it with, never more). All this flips is the provenance mark, `AUTHORED ↓` -> `AUDITED ✓`.
+    //
+    // Add an entry ONLY for a live spec-vs-audit disagreement you can evidence from the step's own code.
   };
 
   const ENGINE_ATTRIBUTION_DISPUTES: { catalogId: string; label: string; reason: string }[] = [

@@ -143,12 +143,12 @@
     {
       "catalogId": "ambient",
       "step": "Spatialization",
-      "trueEngine": "Code (deterministic)",
+      "trueEngine": "Hand-authored",
       "deliverable": "audio",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": true,
-      "note": "Deterministic config/manifest produced by code (produce()); content verified by an LLM panel judge (90/100) — gap-loop 2026-07-08. Real config the game/UE consumes, not a placeholder."
+      "note": "Deterministic config/manifest produced by code (produce()); content verified by an LLM panel judge (90/100) — gap-loop 2026-07-08. Real config the game/UE consumes, not a placeholder. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "ambient",
@@ -163,22 +163,22 @@
     {
       "catalogId": "ambient",
       "step": "Occlusion",
-      "trueEngine": "Code (deterministic)",
+      "trueEngine": "Hand-authored",
       "deliverable": "audio",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": true,
-      "note": "Deterministic config/manifest produced by code (produce()); content verified by an LLM panel judge (90/100) — gap-loop 2026-07-08. Real config the game/UE consumes, not a placeholder."
+      "note": "Deterministic config/manifest produced by code (produce()); content verified by an LLM panel judge (90/100) — gap-loop 2026-07-08. Real config the game/UE consumes, not a placeholder. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "ambient",
       "step": "Memory Budget",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": false,
       "judge": "none",
       "checkerMeaningful": true,
-      "note": "withinPercent(totalDecodedMb, 6.0, 33%) does perform a real numeric consistency check — but the 5.8 MB figure itself is a hand-typed estimate from code-comment arithmetic, not measured from real audio assets. 2026-07-29: acceptance now also composes budgetWithinCap(memoryBudget.totalDecodedMb <= budgetCapMb) - the decoded footprint is graded against the cap the artifact itself declares, so a produce can no longer blow its own hard cap and pass. 2026-08-20 (wave 25, Lot MC audit dispute): trueEngine corrected `Claude` -> `Code`. `balance` is absent from labProduceMode.CLI_ELIGIBLE_ARCHETYPES (= brief|graph|rules), so NO model can ever author this artifact; the produce body writes literals. The audit already records `Code`/`Code (deterministic)` on 6 structurally identical balance steps, so the inconsistency was inside the audit. Note the standing caveat: `Code` here means \"a function returning numbers a human typed\", which TRUSTED_CLASSES still treats as trustworthy."
+      "note": "withinPercent(totalDecodedMb, 6.0, 33%) does perform a real numeric consistency check — but the 5.8 MB figure itself is a hand-typed estimate from code-comment arithmetic, not measured from real audio assets. 2026-07-29: acceptance now also composes budgetWithinCap(memoryBudget.totalDecodedMb <= budgetCapMb) - the decoded footprint is graded against the cap the artifact itself declares, so a produce can no longer blow its own hard cap and pass. 2026-08-20 (wave 25, Lot MC audit dispute): trueEngine corrected `Claude` -> `Code`. `balance` is absent from labProduceMode.CLI_ELIGIBLE_ARCHETYPES (= brief|graph|rules), so NO model can ever author this artifact; the produce body writes literals. The audit already records `Code`/`Code (deterministic)` on 6 structurally identical balance steps, so the inconsistency was inside the audit. Note the standing caveat: `Code` here means \"a function returning numbers a human typed\", which TRUSTED_CLASSES still treats as trustworthy. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "ambient",
@@ -293,12 +293,12 @@
     {
       "catalogId": "bestiary",
       "step": "Encounter Balance",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": false,
       "judge": "none",
       "checkerMeaningful": true,
-      "note": "withinPercent(threat,100,10) is a genuine numeric-consistency check, but the threat=103 value is hardcoded rather than computed by a real combat simulator. 2026-08-20 (wave 25, Lot MC audit dispute): trueEngine corrected `Claude` -> `Code`. `balance` is absent from labProduceMode.CLI_ELIGIBLE_ARCHETYPES (= brief|graph|rules), so NO model can ever author this artifact; the produce body writes literals. The audit already records `Code`/`Code (deterministic)` on 6 structurally identical balance steps, so the inconsistency was inside the audit. Note the standing caveat: `Code` here means \"a function returning numbers a human typed\", which TRUSTED_CLASSES still treats as trustworthy."
+      "note": "withinPercent(threat,100,10) is a genuine numeric-consistency check, but the threat=103 value is hardcoded rather than computed by a real combat simulator. 2026-08-20 (wave 25, Lot MC audit dispute): trueEngine corrected `Claude` -> `Code`. `balance` is absent from labProduceMode.CLI_ELIGIBLE_ARCHETYPES (= brief|graph|rules), so NO model can ever author this artifact; the produce body writes literals. The audit already records `Code`/`Code (deterministic)` on 6 structurally identical balance steps, so the inconsistency was inside the audit. Note the standing caveat: `Code` here means \"a function returning numbers a human typed\", which TRUSTED_CLASSES still treats as trustworthy. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "bestiary",
@@ -743,12 +743,12 @@
     {
       "catalogId": "combat-map",
       "step": "Balance",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": true,
-      "note": "withinPercent mechanically compares derivedThreatScore to a target, but derivedThreatScore is hardcoded to exactly 100 with a scaleFactor engineered backward to hit it — not output of an independent balance simulator (pof_economy_simulate/pof_combat_simulate are unused here). 2026-07-29: acceptance now composes the canon-parsed powerWithinTierTarget plus arithmeticReconciles(derivedThreatScore = rawThreat / tierThreatNorm) - the headline threat must reconcile with the wave/hazard components it claims to derive from. 2026-08-20 (wave 25, Lot MC audit dispute): trueEngine corrected `Claude` -> `Code`. `balance` is absent from labProduceMode.CLI_ELIGIBLE_ARCHETYPES (= brief|graph|rules), so NO model can ever author this artifact; the produce body writes literals. The audit already records `Code`/`Code (deterministic)` on 6 structurally identical balance steps, so the inconsistency was inside the audit. Note the standing caveat: `Code` here means \"a function returning numbers a human typed\", which TRUSTED_CLASSES still treats as trustworthy."
+      "note": "withinPercent mechanically compares derivedThreatScore to a target, but derivedThreatScore is hardcoded to exactly 100 with a scaleFactor engineered backward to hit it — not output of an independent balance simulator (pof_economy_simulate/pof_combat_simulate are unused here). 2026-07-29: acceptance now composes the canon-parsed powerWithinTierTarget plus arithmeticReconciles(derivedThreatScore = rawThreat / tierThreatNorm) - the headline threat must reconcile with the wave/hazard components it claims to derive from. 2026-08-20 (wave 25, Lot MC audit dispute): trueEngine corrected `Claude` -> `Code`. `balance` is absent from labProduceMode.CLI_ELIGIBLE_ARCHETYPES (= brief|graph|rules), so NO model can ever author this artifact; the produce body writes literals. The audit already records `Code`/`Code (deterministic)` on 6 structurally identical balance steps, so the inconsistency was inside the audit. Note the standing caveat: `Code` here means \"a function returning numbers a human typed\", which TRUSTED_CLASSES still treats as trustworthy. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "combat-map",
@@ -843,12 +843,12 @@
     {
       "catalogId": "crafting-recipes",
       "step": "Cost & Yield",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": true,
-      "note": "withinPercent checks costRatio against a target, but goldCost/outputValue/ingredientOpportunityCost are all hand-picked so the ratio lands in-band by construction, not derived from a real economy sim. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified. 2026-08-20 (wave 25, Lot MC audit dispute): trueEngine corrected `Claude` -> `Code`. `balance` is absent from labProduceMode.CLI_ELIGIBLE_ARCHETYPES (= brief|graph|rules), so NO model can ever author this artifact; the produce body writes literals. The audit already records `Code`/`Code (deterministic)` on 6 structurally identical balance steps, so the inconsistency was inside the audit. Note the standing caveat: `Code` here means \"a function returning numbers a human typed\", which TRUSTED_CLASSES still treats as trustworthy."
+      "note": "withinPercent checks costRatio against a target, but goldCost/outputValue/ingredientOpportunityCost are all hand-picked so the ratio lands in-band by construction, not derived from a real economy sim. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified. 2026-08-20 (wave 25, Lot MC audit dispute): trueEngine corrected `Claude` -> `Code`. `balance` is absent from labProduceMode.CLI_ELIGIBLE_ARCHETYPES (= brief|graph|rules), so NO model can ever author this artifact; the produce body writes literals. The audit already records `Code`/`Code (deterministic)` on 6 structurally identical balance steps, so the inconsistency was inside the audit. Note the standing caveat: `Code` here means \"a function returning numbers a human typed\", which TRUSTED_CLASSES still treats as trustworthy. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "crafting-recipes",
@@ -943,12 +943,12 @@
     {
       "catalogId": "currencies",
       "step": "Balance",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": true,
-      "note": "withinPercent checks ratio vs target 100, but faucetPerHour=110/sinkPerHour=105 are hand-picked normalized 'relative units' invented to land at 4.8% imbalance — no real economy simulation (pof_economy_simulate) backs these numbers. 2026-08-20 (wave 25, Lot MC audit dispute): trueEngine corrected `Claude` -> `Code`. `balance` is absent from labProduceMode.CLI_ELIGIBLE_ARCHETYPES (= brief|graph|rules), so NO model can ever author this artifact; the produce body writes literals. The audit already records `Code`/`Code (deterministic)` on 6 structurally identical balance steps, so the inconsistency was inside the audit. Note the standing caveat: `Code` here means \"a function returning numbers a human typed\", which TRUSTED_CLASSES still treats as trustworthy."
+      "note": "withinPercent checks ratio vs target 100, but faucetPerHour=110/sinkPerHour=105 are hand-picked normalized 'relative units' invented to land at 4.8% imbalance — no real economy simulation (pof_economy_simulate) backs these numbers. 2026-08-20 (wave 25, Lot MC audit dispute): trueEngine corrected `Claude` -> `Code`. `balance` is absent from labProduceMode.CLI_ELIGIBLE_ARCHETYPES (= brief|graph|rules), so NO model can ever author this artifact; the produce body writes literals. The audit already records `Code`/`Code (deterministic)` on 6 structurally identical balance steps, so the inconsistency was inside the audit. Note the standing caveat: `Code` here means \"a function returning numbers a human typed\", which TRUSTED_CLASSES still treats as trustworthy. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "currencies",
@@ -1653,42 +1653,42 @@
     {
       "catalogId": "items",
       "step": "Base Type & Rarity",
-      "trueEngine": "Code (deterministic)",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Real deterministic lookup tables (rarity→ilvl/reqLevel), so the config is internally consistent, but fieldsPopulated only checks the keys are non-null, not that the values are balanced."
+      "note": "Real deterministic lookup tables (rarity→ilvl/reqLevel), so the config is internally consistent, but fieldsPopulated only checks the keys are non-null, not that the values are balanced. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "items",
       "step": "Affixes",
-      "trueEngine": "Code (deterministic)",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Hand-authored tier tables + one illustrative roll; fieldsPopulated is shape-only (checks budget/tierTable/illustrativeRareRoll exist, not that the tiers are balanced)."
+      "note": "Hand-authored tier tables + one illustrative roll; fieldsPopulated is shape-only (checks budget/tierTable/illustrativeRareRoll exist, not that the tiers are balanced). 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "items",
       "step": "Damage / Implicit",
-      "trueEngine": "Code (deterministic)",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": true,
-      "note": "dpsConsistent recomputes baseDPS = avgDamage×APS and fails if the stored value diverges >12% — a real internal-math check, not just a shape check."
+      "note": "dpsConsistent recomputes baseDPS = avgDamage×APS and fails if the stored value diverges >12% — a real internal-math check, not just a shape check. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "items",
       "step": "Economy",
-      "trueEngine": "Code (deterministic)",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": true,
-      "note": "withinPercent checks pricePowerRatio against a real 0.8-1.2x band, though baseValue(12)/powerScore(12) are hand-picked constants engineered to land exactly at 1.0 — the mechanism is real but the inputs are not measured. 2026-07-29: acceptance now composes the canon-parsed priceRatioWithinBand plus sumReconciles(economy.powerScore = sum of powerBreakdown) - a headline power score that contradicts its own breakdown now FAILS."
+      "note": "withinPercent checks pricePowerRatio against a real 0.8-1.2x band, though baseValue(12)/powerScore(12) are hand-picked constants engineered to land exactly at 1.0 — the mechanism is real but the inputs are not measured. 2026-07-29: acceptance now composes the canon-parsed priceRatioWithinBand plus sumReconciles(economy.powerScore = sum of powerBreakdown) - a headline power score that contradicts its own breakdown now FAILS. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "items",
@@ -1753,12 +1753,12 @@
     {
       "catalogId": "items",
       "step": "Attributes",
-      "trueEngine": "Code (deterministic)",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Bespoke on-screen step (ITEM_STEP_SPECS; see ITEMS_SPEC_DUALITY). Produce writes the 8-key ITEM_ATTR_SCHEMA; accept only counts non-null keys, so any NUMBER is accepted - shape-only."
+      "note": "Bespoke on-screen step (ITEM_STEP_SPECS; see ITEMS_SPEC_DUALITY). Produce writes the 8-key ITEM_ATTR_SCHEMA; accept only counts non-null keys, so any NUMBER is accepted - shape-only. 2026-08-20 (wave 26, Director): trueEngine corrected to Hand-authored, completing Lot NB sweep. Verified by reading the body: produce is zero-arity and maps ITEM_ATTR_SCHEMA literals (a.value) — the same transcription case as the 80 registered steps. NOTE THE GAP: this is a BESPOKE ITEM_STEP_SPECS step, outside allCatalogPipelines(), so Lot NB fleet guard cannot reach it and NO TEST HOLDS THIS VALUE. If a future lot extends the guard across both spec sources, this row is the one it should catch."
     },
     {
       "catalogId": "items",
@@ -1833,22 +1833,22 @@
     {
       "catalogId": "loot-tables",
       "step": "Drop Generation",
-      "trueEngine": "Code (deterministic)",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": true,
-      "note": "Acceptance composes a CONTENT INVARIANT (2026-07-29 derivation audit): the drop weights/counts are graded as values, so a wrong number FAILS. The tables are still hand-authored constants, not measured from play."
+      "note": "Acceptance composes a CONTENT INVARIANT (2026-07-29 derivation audit): the drop weights/counts are graded as values, so a wrong number FAILS. The tables are still hand-authored constants, not measured from play. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "loot-tables",
       "step": "Rarity Odds",
-      "trueEngine": "Code (deterministic)",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": true,
-      "note": "Acceptance composes a CONTENT INVARIANT (2026-07-29 derivation audit): the rarity percentages are graded as values (a wrong odds row FAILS), not merely present. The percentages themselves are hand-authored."
+      "note": "Acceptance composes a CONTENT INVARIANT (2026-07-29 derivation audit): the rarity percentages are graded as values (a wrong odds row FAILS), not merely present. The percentages themselves are hand-authored. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "loot-tables",
@@ -1883,12 +1883,12 @@
     {
       "catalogId": "loot-tables",
       "step": "Balance / Drop Sim",
-      "trueEngine": "Code (deterministic)",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": true,
-      "note": "withinPercent checks raresPerHour against a real target with real arithmetic shown, but rareItemsPerKill(0.02) is a rounded constant hand-tuned to land in-band rather than derived independently — real mechanism, curated input."
+      "note": "withinPercent checks raresPerHour against a real target with real arithmetic shown, but rareItemsPerKill(0.02) is a rounded constant hand-tuned to land in-band rather than derived independently — real mechanism, curated input. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "loot-tables",
@@ -1953,12 +1953,12 @@
     {
       "catalogId": "materials",
       "step": "Parameters",
-      "trueEngine": "Code (deterministic)",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Concrete but hand-picked scalar values (tint/wear/roughness); fieldsPopulated just checks the 5 keys are set, not that the surface would actually look right rendered."
+      "note": "Concrete but hand-picked scalar values (tint/wear/roughness); fieldsPopulated just checks the 5 keys are set, not that the surface would actually look right rendered. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "materials",
@@ -1973,12 +1973,12 @@
     {
       "catalogId": "materials",
       "step": "LOD/Perf Budget",
-      "trueEngine": "Code (deterministic)",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": true,
-      "note": "instructionCount(180) is a hardcoded stub, not a measured shader-compile output (the step's own note admits real GPU perf 'requires an RHI build — deferred'). withinPercent(200,20%) is checking a fabricated constant against itself, not a real budget. 2026-07-29: acceptance now also composes budgetWithinCap(perfBudget.instructionCount <= target) - the declared shader budget is enforced (240 instructions against a 200 target now FAILS), though the count itself is still an authored figure, not a compile output."
+      "note": "instructionCount(180) is a hardcoded stub, not a measured shader-compile output (the step's own note admits real GPU perf 'requires an RHI build — deferred'). withinPercent(200,20%) is checking a fabricated constant against itself, not a real budget. 2026-07-29: acceptance now also composes budgetWithinCap(perfBudget.instructionCount <= target) - the declared shader budget is enforced (240 instructions against a 200 target now FAILS), though the count itself is still an authored figure, not a compile output. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "materials",
@@ -2063,12 +2063,12 @@
     {
       "catalogId": "music",
       "step": "Mix & Loudness",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "audio",
       "generatorWired": false,
       "judge": "human",
       "checkerMeaningful": true,
-      "note": "integratedLUFS is hardcoded to 16.0 and the checker's target is also 16.0 — withinPercent(16.0±12.5%) passes trivially by construction since no real mix was ever measured. This is the audit's clearest false-precision example. 2026-07-29: acceptance now also composes valueWithinDeclaredBand(loudness.displayMagnitude within lufsBandFloor..Ceil) - the charted magnitude is graded against the band the artifact declares, so bars and verdict cannot disagree. 2026-08-20 (wave 25, Lot MC audit dispute): trueEngine corrected `Claude` -> `Code`. `balance` is absent from labProduceMode.CLI_ELIGIBLE_ARCHETYPES (= brief|graph|rules), so NO model can ever author this artifact; the produce body writes literals. The audit already records `Code`/`Code (deterministic)` on 6 structurally identical balance steps, so the inconsistency was inside the audit. Note the standing caveat: `Code` here means \"a function returning numbers a human typed\", which TRUSTED_CLASSES still treats as trustworthy."
+      "note": "integratedLUFS is hardcoded to 16.0 and the checker's target is also 16.0 — withinPercent(16.0±12.5%) passes trivially by construction since no real mix was ever measured. This is the audit's clearest false-precision example. 2026-07-29: acceptance now also composes valueWithinDeclaredBand(loudness.displayMagnitude within lufsBandFloor..Ceil) - the charted magnitude is graded against the band the artifact declares, so bars and verdict cannot disagree. 2026-08-20 (wave 25, Lot MC audit dispute): trueEngine corrected `Claude` -> `Code`. `balance` is absent from labProduceMode.CLI_ELIGIBLE_ARCHETYPES (= brief|graph|rules), so NO model can ever author this artifact; the produce body writes literals. The audit already records `Code`/`Code (deterministic)` on 6 structurally identical balance steps, so the inconsistency was inside the audit. Note the standing caveat: `Code` here means \"a function returning numbers a human typed\", which TRUSTED_CLASSES still treats as trustworthy. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "music",
@@ -2223,92 +2223,92 @@
     {
       "catalogId": "progression-curves",
       "step": "Concept Brief",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "produce() returns a hardcoded template string baked into the pipeline file; the CliProduce CLI dispatch is shown to the user but its output is discarded — ArchetypeStep's onComplete calls spec.produce(entity) regardless of what Claude returns."
+      "note": "produce() returns a hardcoded template string baked into the pipeline file; the CliProduce CLI dispatch is shown to the user but its output is discarded — ArchetypeStep's onComplete calls spec.produce(entity) regardless of what Claude returns. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "progression-curves",
       "step": "Curve Formula",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": true,
-      "note": "Acceptance composes a CONTENT INVARIANT (2026-07-29 derivation audit): the curve's own numbers are re-derived and a value that contradicts the declared formula FAILS. The formula/base/growth choice is still hand-authored constants, not fitted to live balance data."
+      "note": "Acceptance composes a CONTENT INVARIANT (2026-07-29 derivation audit): the curve's own numbers are re-derived and a value that contradicts the declared formula FAILS. The formula/base/growth choice is still hand-authored constants, not fitted to live balance data. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "progression-curves",
       "step": "XP Sources",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Hardcoded XP-source table; fieldsPopulated only checks the four keys exist, not that the contribution percentages sum correctly or match the formula."
+      "note": "Hardcoded XP-source table; fieldsPopulated only checks the four keys exist, not that the contribution percentages sum correctly or match the formula. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "progression-curves",
       "step": "Reward Schedule",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Static milestone/passive-point table; accept only checks the three top-level keys are non-null."
+      "note": "Static milestone/passive-point table; accept only checks the three top-level keys are non-null. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "progression-curves",
       "step": "Caps & Catch-up",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Static rules object; fieldsPopulated shape check, no validation that mentor/streak numbers are internally consistent."
+      "note": "Static rules object; fieldsPopulated shape check, no validation that mentor/streak numbers are internally consistent. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "progression-curves",
       "step": "Death Penalty",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Static death-penalty bands; fieldsPopulated shape check only."
+      "note": "Static death-penalty bands; fieldsPopulated shape check only. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "progression-curves",
       "step": "Balance",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": true,
-      "note": "withinPercent genuinely checks minutesToNextLevel against the 45 min target, but the xpPerMinute=104 input is an invented calibration constant, not a measured or simulated value — no ue-test/telemetry exists to prove the underlying assumption."
+      "note": "withinPercent genuinely checks minutesToNextLevel against the 45 min target, but the xpPerMinute=104 input is an invented calibration constant, not a measured or simulated value — no ue-test/telemetry exists to prove the underlying assumption. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "progression-curves",
       "step": "Telemetry",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Static event-schema list; fieldsPopulated shape check only, no telemetry pipeline actually wired to emit these events."
+      "note": "Static event-schema list; fieldsPopulated shape check only, no telemetry pipeline actually wired to emit these events. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "progression-curves",
       "step": "XP Bar UI",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Static widget-binding description; fieldsPopulated shape check only."
+      "note": "Static widget-binding description; fieldsPopulated shape check only. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "progression-curves",
@@ -2323,12 +2323,12 @@
     {
       "catalogId": "progression-curves",
       "step": "Test Gate",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "ue-test",
       "checkerMeaningful": false,
-      "note": "runtimeDeferred() unconditionally returns status:'deferred', reason:'live-UE runner not yet run' — it names VSProgressionCurveTest but never runs or reads any real test result."
+      "note": "runtimeDeferred() unconditionally returns status:'deferred', reason:'live-UE runner not yet run' — it names VSProgressionCurveTest but never runs or reads any real test result. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "progression-curves",
@@ -2343,22 +2343,22 @@
     {
       "catalogId": "props",
       "step": "Concept Brief",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Hardcoded template string; CLI dispatch cosmetic, output discarded in favor of spec.produce()."
+      "note": "Hardcoded template string; CLI dispatch cosmetic, output discarded in favor of spec.produce(). 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "props",
       "step": "Interaction",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Static interaction rules table; fieldsPopulated shape check only."
+      "note": "Static interaction rules table; fieldsPopulated shape check only. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "props",
@@ -2373,52 +2373,52 @@
     {
       "catalogId": "props",
       "step": "Collision & Physics",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Static Chaos/physics parameter table; fieldsPopulated shape check only."
+      "note": "Static Chaos/physics parameter table; fieldsPopulated shape check only. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "props",
       "step": "Material",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Static material-instance parameter block; fieldsPopulated shape check only, no material actually compiled. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
+      "note": "Static material-instance parameter block; fieldsPopulated shape check only, no material actually compiled. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "props",
       "step": "Destruction States",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Static intact/damaged/destroyed state table; fieldsPopulated shape check only."
+      "note": "Static intact/damaged/destroyed state table; fieldsPopulated shape check only. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "props",
       "step": "Loot on Destroy",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": true,
-      "note": "Static loot-table link description; accept=minCount('links',1) only checks a link array is non-empty, not that lt-Brute actually resolves or the ilvl math is sound. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
+      "note": "Static loot-table link description; accept=minCount('links',1) only checks a link array is non-empty, not that lt-Brute actually resolves or the ilvl math is sound. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "props",
       "step": "VFX / Audio",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "vfx-particles",
       "generatorWired": false,
       "judge": "none",
       "checkerMeaningful": false,
-      "note": "Claims NS_FireImpactBurst Niagara VFX + SoundCue audio, but only text descriptions are produced; Niagara particle generation is not wired at all in this app, and no audio file is generated here (ElevenLabs is SFX/voice-only and isn't invoked by this step). Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
+      "note": "Claims NS_FireImpactBurst Niagara VFX + SoundCue audio, but only text descriptions are produced; Niagara particle generation is not wired at all in this app, and no audio file is generated here (ElevenLabs is SFX/voice-only and isn't invoked by this step). Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "props",
@@ -2433,12 +2433,12 @@
     {
       "catalogId": "props",
       "step": "Test Gate",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "ue-test",
       "checkerMeaningful": false,
-      "note": "runtimeDeferred('VSPropInteractTest', ...) is a static constant deferred result, never actually executed or checked against a live PIE run."
+      "note": "runtimeDeferred('VSPropInteractTest', ...) is a static constant deferred result, never actually executed or checked against a live PIE run. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "props",
@@ -2453,72 +2453,72 @@
     {
       "catalogId": "quests",
       "step": "Concept Brief",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Hardcoded quest-brief template string; CLI output is discarded in favor of the static spec.produce() text."
+      "note": "Hardcoded quest-brief template string; CLI output is discarded in favor of the static spec.produce() text. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "quests",
       "step": "Objective Graph",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "graph-data",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": true,
-      "note": "graphValid() genuinely walks the hardcoded node/edge graph for dangling edges, reachability, and a terminal — real structural verification, but the graph itself is a fixed hand-authored quest layout, not generated from any design input."
+      "note": "graphValid() genuinely walks the hardcoded node/edge graph for dangling edges, reachability, and a terminal — real structural verification, but the graph itself is a fixed hand-authored quest layout, not generated from any design input. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "quests",
       "step": "Triggers & World-State",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Static trigger/world-mutation table; fieldsPopulated shape check only."
+      "note": "Static trigger/world-mutation table; fieldsPopulated shape check only. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "quests",
       "step": "Rewards",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Static reward-path detail object; accept=minCount('rewards',1) only checks the 2-element path array length, not that gold/rep amounts are balanced or that lt-EliteKnight substitution note is resolved. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
+      "note": "Static reward-path detail object; accept=minCount('rewards',1) only checks the 2-element path array length, not that gold/rep amounts are balanced or that lt-EliteKnight substitution note is resolved. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "quests",
       "step": "NPC & Dialog Binding",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Static NPC/dialog-link list; minCount(1) shape check only — note explicitly documents a pending dialog-tree stand-in (dialog-gatekeeper) never actually authored. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
+      "note": "Static NPC/dialog-link list; minCount(1) shape check only — note explicitly documents a pending dialog-tree stand-in (dialog-gatekeeper) never actually authored. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "quests",
       "step": "Marker / Tracker UI",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Static tracker widget spec; fieldsPopulated shape check only."
+      "note": "Static tracker widget spec; fieldsPopulated shape check only. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "quests",
       "step": "Journal / Lore",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Hardcoded lore paragraph; minLength(200) only checks character count, not narrative quality or consistency with the objective graph."
+      "note": "Hardcoded lore paragraph; minLength(200) only checks character count, not narrative quality or consistency with the objective graph. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "quests",
@@ -2533,22 +2533,22 @@
     {
       "catalogId": "quests",
       "step": "Localization",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Only produces uppercased key NAMES (QUEST_..._TITLE etc.), no actual translated strings; minCount(1) shape check only."
+      "note": "Only produces uppercased key NAMES (QUEST_..._TITLE etc.), no actual translated strings; minCount(1) shape check only. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "quests",
       "step": "Test Gate",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "ue-test",
       "checkerMeaningful": false,
-      "note": "runtimeDeferred('VSQuestFlowTest', ...) is a static constant deferred marker, never executed against a live PIE run."
+      "note": "runtimeDeferred('VSQuestFlowTest', ...) is a static constant deferred marker, never executed against a live PIE run. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "quests",
@@ -2563,92 +2563,92 @@
     {
       "catalogId": "save-points",
       "step": "Concept Brief",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Hardcoded brief text; CLI output discarded in favor of static spec.produce()."
+      "note": "Hardcoded brief text; CLI output discarded in favor of static spec.produce(). 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "save-points",
       "step": "State Schema",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Static persisted/ephemeral field-list description; fieldsPopulated shape check only, no actual UARPGSaveGame class is generated."
+      "note": "Static persisted/ephemeral field-list description; fieldsPopulated shape check only, no actual UARPGSaveGame class is generated. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "save-points",
       "step": "Versioning & Migration",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Static migration-policy prose; fieldsPopulated shape check only."
+      "note": "Static migration-policy prose; fieldsPopulated shape check only. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "save-points",
       "step": "Save Triggers",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Static trigger/cooldown table; fieldsPopulated shape check only."
+      "note": "Static trigger/cooldown table; fieldsPopulated shape check only. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "save-points",
       "step": "Cloud / Local Storage",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Static storage-strategy description including an invented fileSizeKB derivation; fieldsPopulated shape check only, nothing measures an actual save file."
+      "note": "Static storage-strategy description including an invented fileSizeKB derivation; fieldsPopulated shape check only, nothing measures an actual save file. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "save-points",
       "step": "Conflict Resolution",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Static policy prose; fieldsPopulated shape check only."
+      "note": "Static policy prose; fieldsPopulated shape check only. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "save-points",
       "step": "Corruption Recovery",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Static recovery-path description; fieldsPopulated shape check only."
+      "note": "Static recovery-path description; fieldsPopulated shape check only. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "save-points",
       "step": "Slots UI",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Static widget-binding description; fieldsPopulated shape check only."
+      "note": "Static widget-binding description; fieldsPopulated shape check only. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "save-points",
       "step": "Load-Time Budget",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": true,
-      "note": "withinPercent genuinely checks measuredMs(15) against the 30ms target, but measuredMs is an invented sum of guessed per-field costs, never measured from an actual save/load in UE — no ue-test exists to substantiate it. 2026-07-29: acceptance now also composes budgetWithinCap(loadBudget.measuredMs <= targetMs) - the declared budget is enforced rather than a literal; measuredMs remains an estimate until a live load trace lands."
+      "note": "withinPercent genuinely checks measuredMs(15) against the 30ms target, but measuredMs is an invented sum of guessed per-field costs, never measured from an actual save/load in UE — no ue-test exists to substantiate it. 2026-07-29: acceptance now also composes budgetWithinCap(loadBudget.measuredMs <= targetMs) - the declared budget is enforced rather than a literal; measuredMs remains an estimate until a live load trace lands. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "save-points",
@@ -2663,12 +2663,12 @@
     {
       "catalogId": "save-points",
       "step": "Test Gate",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "ue-test",
       "checkerMeaningful": false,
-      "note": "runtimeDeferred('VSSaveLoadTest', ...) is a static constant deferred marker, never executed against a live PIE run."
+      "note": "runtimeDeferred('VSSaveLoadTest', ...) is a static constant deferred marker, never executed against a live PIE run. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "save-points",
@@ -2683,82 +2683,82 @@
     {
       "catalogId": "screen-flow",
       "step": "Concept Brief",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Hardcoded brief text; CLI output discarded in favor of static spec.produce()."
+      "note": "Hardcoded brief text; CLI output discarded in favor of static spec.produce(). 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "screen-flow",
       "step": "Navigation Graph",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "graph-data",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": true,
-      "note": "graphValid() genuinely validates the hardcoded 13-node/22-edge screen graph for dangling edges, reachability, and a terminal — real structural check, but the graph is fixed hand-authored content, not generated. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
+      "note": "graphValid() genuinely validates the hardcoded 13-node/22-edge screen graph for dangling edges, reachability, and a terminal — real structural check, but the graph is fixed hand-authored content, not generated. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "screen-flow",
       "step": "Input Mapping",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Static Enhanced Input binding table; minCount(1) shape check only, no IMC_Navigation asset is actually created. Acceptance now also asserts every entry of the graded array carries its required fields (entriesHaveFields) — a per-entry shape floor above the old length-only count, still not semantic verification."
+      "note": "Static Enhanced Input binding table; minCount(1) shape check only, no IMC_Navigation asset is actually created. Acceptance now also asserts every entry of the graded array carries its required fields (entriesHaveFields) — a per-entry shape floor above the old length-only count, still not semantic verification. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "screen-flow",
       "step": "Component Inventory",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Static widget/z-depth table; minCount(1) shape check only, no WBP_ widgets are actually created. Acceptance now also asserts every entry of the graded array carries its required fields (entriesHaveFields) — a per-entry shape floor above the old length-only count, still not semantic verification."
+      "note": "Static widget/z-depth table; minCount(1) shape check only, no WBP_ widgets are actually created. Acceptance now also asserts every entry of the graded array carries its required fields (entriesHaveFields) — a per-entry shape floor above the old length-only count, still not semantic verification. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "screen-flow",
       "step": "Transitions / Animation",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Claims WidgetAnimation (WA_*) specs but only text descriptions of durations/eases are produced, no animation asset is authored; minCount(1) checklist-length check only."
+      "note": "Claims WidgetAnimation (WA_*) specs but only text descriptions of durations/eases are produced, no animation asset is authored; minCount(1) checklist-length check only. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "screen-flow",
       "step": "VFX / SFX Juice",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "vfx-particles",
       "generatorWired": false,
       "judge": "none",
       "checkerMeaningful": false,
-      "note": "Static UI-juice description referencing SoundCues and PostProcess params; no VFX/audio generation is wired (Niagara gen unwired, ElevenLabs not invoked here); minCount(1) shape check only. Acceptance now also asserts every entry of the graded array carries its required fields (entriesHaveFields) — a per-entry shape floor above the old length-only count, still not semantic verification."
+      "note": "Static UI-juice description referencing SoundCues and PostProcess params; no VFX/audio generation is wired (Niagara gen unwired, ElevenLabs not invoked here); minCount(1) shape check only. Acceptance now also asserts every entry of the graded array carries its required fields (entriesHaveFields) — a per-entry shape floor above the old length-only count, still not semantic verification. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "screen-flow",
       "step": "Accessibility",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Static checklist of a11y intentions; minCount(1) only checks the list is non-empty, does not verify any screen actually satisfies these rules."
+      "note": "Static checklist of a11y intentions; minCount(1) only checks the list is non-empty, does not verify any screen actually satisfies these rules. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "screen-flow",
       "step": "Localization",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Only produces uppercased key NAMES with English display text, no actual translations; minCount(1) shape check only."
+      "note": "Only produces uppercased key NAMES with English display text, no actual translations; minCount(1) shape check only. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "screen-flow",
@@ -2773,12 +2773,12 @@
     {
       "catalogId": "screen-flow",
       "step": "Test Gate",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "ue-test",
       "checkerMeaningful": false,
-      "note": "runtimeDeferred('VSScreenFlowTest', ...) is a static constant deferred marker, never executed against a live PIE run."
+      "note": "runtimeDeferred('VSScreenFlowTest', ...) is a static constant deferred marker, never executed against a live PIE run. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "screen-flow",
@@ -2823,12 +2823,12 @@
     {
       "catalogId": "spellbook",
       "step": "Balance",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": true,
-      "note": "withinPercent compares a genuinely derived sustainedDPS (35/3s + ignite) against the 19.5 tier target — a real content check, not a shape check. 2026-07-29: acceptance now also composes sumReconciles(sustainedDPS = hitDPS + igniteDPS), arithmeticReconciles(hitDPS = baseDamage / cooldown) and powerWithinTierTarget against the DECLARED tierTarget - the DPS chain must be internally consistent. 2026-08-20 (wave 25, Lot MC audit dispute): trueEngine corrected `Claude` -> `Code`. `balance` is absent from labProduceMode.CLI_ELIGIBLE_ARCHETYPES (= brief|graph|rules), so NO model can ever author this artifact; the produce body writes literals. The audit already records `Code`/`Code (deterministic)` on 6 structurally identical balance steps, so the inconsistency was inside the audit. Note the standing caveat: `Code` here means \"a function returning numbers a human typed\", which TRUSTED_CLASSES still treats as trustworthy."
+      "note": "withinPercent compares a genuinely derived sustainedDPS (35/3s + ignite) against the 19.5 tier target — a real content check, not a shape check. 2026-07-29: acceptance now also composes sumReconciles(sustainedDPS = hitDPS + igniteDPS), arithmeticReconciles(hitDPS = baseDamage / cooldown) and powerWithinTierTarget against the DECLARED tierTarget - the DPS chain must be internally consistent. 2026-08-20 (wave 25, Lot MC audit dispute): trueEngine corrected `Claude` -> `Code`. `balance` is absent from labProduceMode.CLI_ELIGIBLE_ARCHETYPES (= brief|graph|rules), so NO model can ever author this artifact; the produce body writes literals. The audit already records `Code`/`Code (deterministic)` on 6 structurally identical balance steps, so the inconsistency was inside the audit. Note the standing caveat: `Code` here means \"a function returning numbers a human typed\", which TRUSTED_CLASSES still treats as trustworthy. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "spellbook",
@@ -3013,12 +3013,12 @@
     {
       "catalogId": "status-effects",
       "step": "Balance",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": true,
-      "note": "withinPercent verifies the derived 7.875 DPS against the 7.875 tier target (±20%) — genuine content check on a real computed budget. 2026-08-20 (wave 25, Lot MC audit dispute): trueEngine corrected `Claude` -> `Code`. `balance` is absent from labProduceMode.CLI_ELIGIBLE_ARCHETYPES (= brief|graph|rules), so NO model can ever author this artifact; the produce body writes literals. The audit already records `Code`/`Code (deterministic)` on 6 structurally identical balance steps, so the inconsistency was inside the audit. Note the standing caveat: `Code` here means \"a function returning numbers a human typed\", which TRUSTED_CLASSES still treats as trustworthy."
+      "note": "withinPercent verifies the derived 7.875 DPS against the 7.875 tier target (±20%) — genuine content check on a real computed budget. 2026-08-20 (wave 25, Lot MC audit dispute): trueEngine corrected `Claude` -> `Code`. `balance` is absent from labProduceMode.CLI_ELIGIBLE_ARCHETYPES (= brief|graph|rules), so NO model can ever author this artifact; the produce body writes literals. The audit already records `Code`/`Code (deterministic)` on 6 structurally identical balance steps, so the inconsistency was inside the audit. Note the standing caveat: `Code` here means \"a function returning numbers a human typed\", which TRUSTED_CLASSES still treats as trustworthy. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "status-effects",
@@ -3233,12 +3233,12 @@
     {
       "catalogId": "vendors",
       "step": "Economy Sim",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": true,
-      "note": "withinPercent checks the derived 28% margin against the real 30% vendor-laws target (±20%) — a genuine budget check, not a shape check. 2026-07-29: the target is now DECLARED on the artifact (economySim.marginTargetPct) and graded by powerWithinTierTarget with the canon tolerance, so the prose target and the checked target are one number. 2026-08-20 (wave 25, Lot MC audit dispute): trueEngine corrected `Claude` -> `Code`. `balance` is absent from labProduceMode.CLI_ELIGIBLE_ARCHETYPES (= brief|graph|rules), so NO model can ever author this artifact; the produce body writes literals. The audit already records `Code`/`Code (deterministic)` on 6 structurally identical balance steps, so the inconsistency was inside the audit. Note the standing caveat: `Code` here means \"a function returning numbers a human typed\", which TRUSTED_CLASSES still treats as trustworthy."
+      "note": "withinPercent checks the derived 28% margin against the real 30% vendor-laws target (±20%) — a genuine budget check, not a shape check. 2026-07-29: the target is now DECLARED on the artifact (economySim.marginTargetPct) and graded by powerWithinTierTarget with the canon tolerance, so the prose target and the checked target are one number. 2026-08-20 (wave 25, Lot MC audit dispute): trueEngine corrected `Claude` -> `Code`. `balance` is absent from labProduceMode.CLI_ELIGIBLE_ARCHETYPES (= brief|graph|rules), so NO model can ever author this artifact; the produce body writes literals. The audit already records `Code`/`Code (deterministic)` on 6 structurally identical balance steps, so the inconsistency was inside the audit. Note the standing caveat: `Code` here means \"a function returning numbers a human typed\", which TRUSTED_CLASSES still treats as trustworthy. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "vendors",
@@ -3293,22 +3293,22 @@
     {
       "catalogId": "vfx",
       "step": "Concept Brief",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "produce() returns a fixed template string built by simple interpolation of e.name; CliProduce shows an LLM-built prompt but onComplete writes this hardcoded template verbatim regardless of typed direction or model output; accept is minLength(300), a character-count check only."
+      "note": "produce() returns a fixed template string built by simple interpolation of e.name; CliProduce shows an LLM-built prompt but onComplete writes this hardcoded template verbatim regardless of typed direction or model output; accept is minLength(300), a character-count check only. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "vfx",
       "step": "Behavior",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Emitters/lifetime(0.6)/spawnRate(80)/AnimNotify are hardcoded constants templated only by slug, no per-entity variation. accept is fieldsPopulated, which only checks 3 keys are non-null."
+      "note": "Emitters/lifetime(0.6)/spawnRate(80)/AnimNotify are hardcoded constants templated only by slug, no per-entity variation. accept is fieldsPopulated, which only checks 3 keys are non-null. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "vfx",
@@ -3333,22 +3333,22 @@
     {
       "catalogId": "vfx",
       "step": "Sound Hook",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Hardcoded cue-name/binding description; code comments explicitly say this is descriptive-only pending audio catalog seeding, and deliberately emit no cross-catalog link. No ElevenLabs call happens (and it wouldn't apply anyway since audio catalog is unseeded). accept is fieldsPopulated, shape-only."
+      "note": "Hardcoded cue-name/binding description; code comments explicitly say this is descriptive-only pending audio catalog seeding, and deliberately emit no cross-catalog link. No ElevenLabs call happens (and it wouldn't apply anyway since audio catalog is unseeded). accept is fieldsPopulated, shape-only. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "vfx",
       "step": "GPU / LOD Budget",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": true,
-      "note": "gpuPct is computed in the same function as classBudgetMs*headroomPct = 0.48ms exactly, then accept checks withinPercent(gpuPct, 0.48, 15%) against that self-derived value — tautologically guaranteed to pass regardless of any real GPU cost; no profiling ever runs. Real verification is only named (VSVFXPerfTest) as a deferred reason on a later step, not executed here. 2026-07-29: acceptance now also composes budgetWithinCap(gpuBudget.gpuMs <= classBudgetMs) plus descendingSeries over the LOD ladder - a ladder whose tiers do not get cheaper, or a cost above the declared class budget, now FAILS."
+      "note": "gpuPct is computed in the same function as classBudgetMs*headroomPct = 0.48ms exactly, then accept checks withinPercent(gpuPct, 0.48, 15%) against that self-derived value — tautologically guaranteed to pass regardless of any real GPU cost; no profiling ever runs. Real verification is only named (VSVFXPerfTest) as a deferred reason on a later step, not executed here. 2026-07-29: acceptance now also composes budgetWithinCap(gpuBudget.gpuMs <= classBudgetMs) plus descendingSeries over the LOD ladder - a ladder whose tiers do not get cheaper, or a cost above the declared class budget, now FAILS. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "vfx",
@@ -3373,12 +3373,12 @@
     {
       "catalogId": "vfx",
       "step": "Test Gate",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "ue-test",
       "checkerMeaningful": false,
-      "note": "Checklist text is hardcoded. accept is runtimeDeferred('VSVFXPerfTest', ...) which always returns status:'deferred' with a canned 'live-UE runner not yet run' reason — it names a real test but never executes or checks anything; it cannot fail or meaningfully pass."
+      "note": "Checklist text is hardcoded. accept is runtimeDeferred('VSVFXPerfTest', ...) which always returns status:'deferred' with a canned 'live-UE runner not yet run' reason — it names a real test but never executes or checks anything; it cannot fail or meaningfully pass. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "vfx",
@@ -3393,52 +3393,52 @@
     {
       "catalogId": "zone-map",
       "step": "Concept Brief",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Hand-written narrative text (Ashen Forest lore) hardcoded in produce(); CliProduce's prompt/direction input is discarded by onComplete. accept is minLength(300), a character count only."
+      "note": "Hand-written narrative text (Ashen Forest lore) hardcoded in produce(); CliProduce's prompt/direction input is discarded by onComplete. accept is minLength(300), a character count only. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "zone-map",
       "step": "Macro Layout & POIs",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "graph-data",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Sector list, POI counts, and navigation edges are hardcoded literals specific to 'Ashen Forest' (produce() takes no entity/direction parameter at all). accept is fieldsPopulated across 3 keys — does not check the nav graph is actually valid/reachable or that navMeshBaked is true (it is explicitly false per the data itself)."
+      "note": "Sector list, POI counts, and navigation edges are hardcoded literals specific to 'Ashen Forest' (produce() takes no entity/direction parameter at all). accept is fieldsPopulated across 3 keys — does not check the nav graph is actually valid/reachable or that navMeshBaked is true (it is explicitly false per the data itself). 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "zone-map",
       "step": "Area Level & Density",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": true,
-      "note": "Acceptance composes a CONTENT INVARIANT (2026-07-29 derivation audit): the area-level/density numbers are graded against their own declared relationship (ARPG-LAWS 11), so a sector breakdown that contradicts the totals FAILS. The literals are still hardcoded by produce() and no judge grades the design."
+      "note": "Acceptance composes a CONTENT INVARIANT (2026-07-29 derivation audit): the area-level/density numbers are graded against their own declared relationship (ARPG-LAWS 11), so a sector breakdown that contradicts the totals FAILS. The literals are still hardcoded by produce() and no judge grades the design. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "zone-map",
       "step": "Encounter Placement",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "graph-data",
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": false,
-      "note": "Hosted-arena and pack-placement data are hardcoded literals naming a specific arena and bestiary archetype. accept is fieldsPopulated across 3 keys — does not verify pack counts sum to the zone's totalEnemies (38) or that the linked catalog entities actually resolve (that's a separate linkTargetsExist mechanism in the UI shell, not this step's accept). Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
+      "note": "Hosted-arena and pack-placement data are hardcoded literals naming a specific arena and bestiary archetype. accept is fieldsPopulated across 3 keys — does not verify pack counts sum to the zone's totalEnemies (38) or that the linked catalog entities actually resolve (that's a separate linkTargetsExist mechanism in the UI shell, not this step's accept). Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "zone-map",
       "step": "Streaming / LOD",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": false,
-      "note": "Streaming budget numbers and LOD strategy are hardcoded literals; gaps list itself admits World Partition/HLOD/NavMesh/HISM are all unwired. accept is fieldsPopulated across 2 keys, shape-only."
+      "note": "Streaming budget numbers and LOD strategy are hardcoded literals; gaps list itself admits World Partition/HLOD/NavMesh/HISM are all unwired. accept is fieldsPopulated across 2 keys, shape-only. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "zone-map",
@@ -3453,32 +3453,32 @@
     {
       "catalogId": "zone-map",
       "step": "Material",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Material instance params (tint/wear/soot) are hardcoded literals referencing an already-seeded master material (mat-weathered-stone); no texture is generated, this is descriptive config. accept is fieldsPopulated across 3 keys, shape-only. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
+      "note": "Material instance params (tint/wear/soot) are hardcoded literals referencing an already-seeded master material (mat-weathered-stone); no texture is generated, this is descriptive config. accept is fieldsPopulated across 3 keys, shape-only. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "zone-map",
       "step": "Ambient & Music",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": false,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Ambient/music descriptions are hardcoded literals referencing pre-seeded ambient/music catalog rows; no audio is generated here, and even if it were, ElevenLabs is wired for SFX/voice only — not ambient beds or adaptive music stems, so no wired engine covers this deliverable class at all. accept is fieldsPopulated across 3 keys, shape-only. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
+      "note": "Ambient/music descriptions are hardcoded literals referencing pre-seeded ambient/music catalog rows; no audio is generated here, and even if it were, ElevenLabs is wired for SFX/voice only — not ambient beds or adaptive music stems, so no wired engine covers this deliverable class at all. accept is fieldsPopulated across 3 keys, shape-only. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "zone-map",
       "step": "Minimap UI",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Discovery%/fast-travel/HUD-binding data is hardcoded; note explicitly defers the actual widget implementation to the hud-elements catalog. accept is fieldsPopulated across 3 keys, shape-only."
+      "note": "Discovery%/fast-travel/HUD-binding data is hardcoded; note explicitly defers the actual widget implementation to the hud-elements catalog. accept is fieldsPopulated across 3 keys, shape-only. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "zone-map",
@@ -3493,12 +3493,12 @@
     {
       "catalogId": "zone-map",
       "step": "Test Gate",
-      "trueEngine": "Code",
+      "trueEngine": "Hand-authored",
       "deliverable": "text-config",
       "generatorWired": true,
       "judge": "ue-test",
       "checkerMeaningful": false,
-      "note": "Checklist text is hardcoded. accept is runtimeDeferred('AshenForestSetupTest', ...) which always returns status:'deferred' with a canned reason — it names a real UE functional test but never runs or checks it."
+      "note": "Checklist text is hardcoded. accept is runtimeDeferred('AshenForestSetupTest', ...) which always returns status:'deferred' with a canned reason — it names a real UE functional test but never runs or checks it. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "zone-map",

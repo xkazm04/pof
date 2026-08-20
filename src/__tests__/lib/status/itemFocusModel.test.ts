@@ -87,7 +87,14 @@ describe('resolveItemFocus', () => {
     const cells = focus.swimlane.cells;
     const economy = cells.find((c) => c.label === 'Economy')!;
     const mesh = cells.find((c) => c.label === '3D-Mesh')!;
-    expect(economy.grade).toBe('trusted'); // produced (Claude → trusted)
+    // RE-BASELINED 2026-08-20 (wave 26, Lot NB): `trusted` -> `ungated`, and the old comment
+    // "(Claude → trusted)" was already wrong — `items / Economy` was never Claude-powered. Its
+    // produce() is a zero-arity body over hand-picked baseValue/rarity constants, so it now audits
+    // as `Hand-authored`, which is deliberately NOT in TRUSTED_CLASSES. The assertion is re-pointed,
+    // not loosened: this step still PRODUCED, so it is `ungated` (produced but nothing verified the
+    // numbers) rather than `unwired` (never produced) — which is exactly the distinction the next
+    // line pins, and it still holds.
+    expect(economy.grade).toBe('ungated');
     expect(mesh.grade).toBe('unwired');    // never produced → the "didn't make it through" signal
   });
 
