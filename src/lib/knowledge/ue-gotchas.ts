@@ -66,6 +66,15 @@ export const UE_GOTCHAS: Gotcha[] = [
     source: 'vertical-slice: characters',
   },
   {
+    id: 'plugin-content-not-in-registry-headless',
+    modules: ['character', 'animation'],
+    summary: 'engine-PLUGIN content (/MoverTests, /MoverExamples) is missing from the asset registry under -run=pythonscript until the paths are scanned — does_asset_exist lies',
+    detail:
+      'In a `-run=pythonscript -nullrhi` commandlet, `EditorAssetLibrary.does_asset_exist("/MoverTests/Characters/Mannequins/Meshes/SKM_Manny")` returns False even though the .uasset is plainly on disk under Engine/Plugins/Experimental/MoverTests/Content/ AND the plugin is enabled in the .uproject. The asset registry simply has not scanned engine-plugin mount points yet, so an existence check over plugin content reports absence rather than "not indexed" — a retarget script then fails with a misleading "no Manny mesh found" while the mesh is right there. Fix (proven 2026-08-20): call `unreal.AssetRegistryHelpers.get_asset_registry().scan_paths_synchronous(["/MoverTests", "/MoverExamples"], True)` first, then `load_asset(path)` DIRECTLY and test the returned object — never gate plugin content on does_asset_exist. Project content under /Game is unaffected; this only bites paths that live in a plugin mount.',
+    appliesTo: ['ue-python'],
+    source: 'ardy verify-retarget: fresh clips onto Manny',
+  },
+  {
     id: 'runtime-module-editor-api',
     summary: 'a Runtime module touching FEditorDelegates/GEditor/FAssetTools must be #if WITH_EDITOR-guarded',
     detail:
