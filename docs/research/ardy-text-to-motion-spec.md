@@ -67,6 +67,32 @@
 > the PoF repo — and a resolver that checks the caller's cwd first will then "find" the stray
 > and report success. Resolve reported relative paths against the checkout, never the caller.
 >
+> ### FULL CHAIN RE-PROVEN 2026-08-20 on freshly generated clips
+>
+> The UE side never broke — 25 assets plus `IK_ArdyCore` / `IK_Manny` / `RTG_ArdyToManny` all
+> survived; only the model install was lost. What was unproven was whether clips from the
+> REINSTALLED model still traverse the chain. They do, end to end:
+>
+> `text prompt → npz → BVH (FK round-trip 0.000 mm ×4) → skinned FBX ×4 → UE 5.8 AnimSequence
+> 4/4 → IK-retarget onto SKM_Manny 4/4` (slash 2.45 s, run 3.95 s, roll 2.95 s, idle 3.95 s —
+> play lengths match the requested durations).
+>
+> **The July rig was REUSED, not rebuilt** — that is the actual test, and it passed. This closes
+> the "IK-retarget to Manny" item the July sessions listed as remaining.
+>
+> Scripts: `Content/Python/ardy_verify_import.py` + `ardy_verify_retarget.py` (pof-exp
+> `109a0cf`). Both write to `/Game/Generated/ArdyVerify`, NOT `/Game/Generated/Ardy` — the
+> latter holds the clips `AM_Dodge_Forward` / `AM_MeleeCombo` reference and that were verified
+> in live gameplay, and re-importing over them to prove a pipeline works would risk regressing
+> the playable build with un-play-tested motion. The verify assets are deliberately left
+> untracked; only the scripts are committed.
+>
+> **New gotcha (shipped as `plugin-content-not-in-registry-headless`):** engine-PLUGIN content
+> (`/MoverTests`, `/MoverExamples`) is absent from the asset registry under
+> `-run=pythonscript -nullrhi` until scanned, so `does_asset_exist` returns False for a mesh
+> that is on disk with its plugin enabled — surfacing as a misleading "no Manny mesh found".
+> `scan_paths_synchronous([...], True)` then `load_asset` directly.
+>
 > ### Lineage correction — ARDY is the NEWER model, Kimodo is the earlier one
 >
 > A 2026-08-19 `/research` run initially proposed adopting **NVIDIA Kimodo** as an ARDY
