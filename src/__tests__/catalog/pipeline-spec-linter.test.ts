@@ -7,6 +7,7 @@ import { readLinks } from '@/lib/catalog/acceptance/linkCheckers';
 import { resolveTableView } from '@/lib/catalog/tableView';
 import { isContentInvariant } from '@/lib/catalog/acceptance/contentInvariant';
 import { seedAllCatalogs } from '@/lib/catalog/sections';
+import { ENGINE_CLASS, engineFamily, getStepFact } from '@/lib/status/statusModel';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 
 /**
@@ -501,6 +502,150 @@ describe('fleet spec linter', () => {
           `which is applied inside the checker where the base verdict is in scope.`,
       ),
     ).toEqual([]);
+  });
+
+  // ── (m) the engine a step declares is a name the map can class ─────────────
+  it('every authored StepSpec.engine is a name ENGINE_CLASS knows', () => {
+    // `engineClass` returns `unaudited` for any string it does not recognise — the LOWEST
+    // credibility bucket. That is the right default for an unknown engine, but it means a
+    // TYPO in an authored value silently demotes the cell instead of reporting itself.
+    const bad = steps
+      .filter((s) => s.spec.engine != null && ENGINE_CLASS[s.spec.engine] == null)
+      .map(
+        (s) =>
+          `${at(s)}: engine "${s.spec.engine}" is not a key of ENGINE_CLASS (statusModel.ts), so /status ` +
+          `classes it as \`unaudited\` without saying why — add the engine to ENGINE_CLASS deliberately, ` +
+          `or fix the spelling`,
+      );
+    expect(bad).toEqual([]);
+  });
+
+  // ── (n) spec and audit must not name different engines silently ────────────
+  /**
+   * Steps where the AUTHORED `StepSpec.engine` and the AUDITED `StepFact.trueEngine` name
+   * different engines.
+   *
+   * `resolveEngine` prefers the audit, so today the spec's answer is silently discarded and
+   * /status shows the audit's — a disagreement between the two things that know what powers
+   * a step was invisible on the map whose job is to say what powers a step.
+   *
+   * This is a WORK QUEUE, not a suppression list: each entry names the code evidence for the
+   * spec's side and needs a Director decision on `step-facts.json` (Class C — a lot authoring
+   * engine values must not also edit its own audit). Shrink-only — resolve entries, never add
+   * one to make a change pass.
+   */
+  const ENGINE_ATTRIBUTION_DISPUTES: { catalogId: string; label: string; reason: string }[] = [
+    {
+      catalogId: 'character-pipeline',
+      label: 'Face Gate 2D',
+      reason:
+        'spec says Blender, audit says Leonardo (Lucid Origin) — NEITHER is defensible from the ' +
+        "step's own code: produce() records a close-up crop review verdict over a PNG strip and " +
+        'invokes no Blender and no generator. Leonardo generated the PREVIOUS step; this one is a ' +
+        'review gate. Both sides need correcting.',
+    },
+    {
+      catalogId: 'character-pipeline',
+      label: 'UE Import',
+      reason:
+        'spec says UE Python, audit says Code (deterministic) — the spec is right: the step\'s own ' +
+        'produceNote names the commandlet ("-run=pythonscript with a PRE-QUOTED arg string"). This ' +
+        'one MATTERS on screen: `Code` is in TRUSTED_CLASSES and `UE Python` (runtime) is not, so ' +
+        'the audit currently grants this cell credibility the step has not earned.',
+    },
+  ];
+
+  it('no authored engine silently contradicts the audited fact (disputes are listed, with reasons)', () => {
+    const disputed = new Set(ENGINE_ATTRIBUTION_DISPUTES.map((d) => `${d.catalogId}/${d.label}`));
+    const found: string[] = [];
+    for (const s of steps) {
+      if (s.spec.engine == null) continue;
+      const trueEngine = getStepFact(s.catalogId, s.label)?.trueEngine;
+      if (trueEngine == null || trueEngine === 'None') continue;
+      if (engineFamily(trueEngine) === engineFamily(s.spec.engine)) continue;
+      const key = `${s.catalogId}/${s.label}`;
+      if (disputed.has(key)) continue;
+      found.push(
+        `${at(s)}: spec authors engine "${s.spec.engine}" but the fleet audit records trueEngine ` +
+          `"${trueEngine}". resolveEngine prefers the audit, so the spec's answer is DISCARDED with no ` +
+          `trace on /status. Fix one side, or record the disagreement in ENGINE_ATTRIBUTION_DISPUTES ` +
+          `with the code evidence for the spec's side.`,
+      );
+    }
+    expect(found).toEqual([]);
+  });
+
+  it('every recorded dispute is REAL (a resolved entry must be deleted, not left parked)', () => {
+    const stale = ENGINE_ATTRIBUTION_DISPUTES.filter((d) => {
+      const spec = steps.find((s) => s.catalogId === d.catalogId && s.label === d.label);
+      if (!spec?.spec.engine) return true;
+      const trueEngine = getStepFact(d.catalogId, d.label)?.trueEngine;
+      if (trueEngine == null || trueEngine === 'None') return true;
+      return engineFamily(trueEngine) === engineFamily(spec.spec.engine);
+    }).map((d) => `${d.catalogId} / "${d.label}": recorded as a dispute but spec and audit no longer disagree — delete the entry`);
+    expect(stale).toEqual([]);
+    const thin = ENGINE_ATTRIBUTION_DISPUTES.filter((d) => d.reason.trim().length < 60)
+      .map((d) => `${d.catalogId} / "${d.label}": dispute reason is too thin to be a reason`);
+    expect(thin).toEqual([]);
+  });
+
+  // ── (o) the unauthored-engine ratchet ──────────────────────────────────────
+  /**
+   * How many steps of each archetype still declare NO `StepSpec.engine`.
+   *
+   * A ceiling per archetype, not one fleet total, so authoring a cheap bucket cannot hide a
+   * regression in an expensive one. SHRINK-ONLY: lower a number when you author engines,
+   * never raise one to make a change pass. Each entry says why that bucket is still open —
+   * an admitted gap is honest; a blanket exemption is not.
+   *
+   * Measured 2026-08-20 (pre-sweep): 12 of 344 steps authored, all in character-pipeline.
+   */
+  const UNAUTHORED_ENGINE_CEILING: Record<string, { max: number; why: string }> = {
+    brief: { max: 34, why: 'CLI-eligible text steps: a real Claude dispatch OR the local produce stub writes them, and which one ran is per-artifact, not per-spec' },
+    rules: { max: 126, why: 'largest bucket, same CLI-eligible ambiguity as brief; needs its own pass' },
+    gallery: { max: 44, why: 'phase-1 target: the deliverable is declared in the step\'s own ueAssets (T_* texture vs SK_/SM_ mesh)' },
+    checklist: { max: 61, why: 'a checklist enumerates work items; several have no producing engine at all and must NOT be given one' },
+    manifest: { max: 33, why: 'mixed — some are UE Python import manifests, some are hand-listed asset paths' },
+    balance: { max: 15, why: 'phase-1 target: produce() is a pure function of author-typed constants' },
+    schema: { max: 12, why: 'data-shape declarations (struct/table field lists); this slice did not read them individually and will not guess an engine from a label' },
+    custom: { max: 1, why: 'one-off bespoke bodies with no shared pattern — each needs reading on its own terms, and this slice did not reach it' },
+    graph: { max: 6, why: 'CLI-eligible node/edge graphs: same dispatch ambiguity as brief/rules — a live Claude run and the local stub both write them' },
+  };
+
+  it('the unauthored-engine count does not grow, per archetype', () => {
+    const over: string[] = [];
+    for (const [archetype, { max }] of Object.entries(UNAUTHORED_ENGINE_CEILING)) {
+      const n = steps.filter((s) => s.spec.archetype === archetype && s.spec.engine == null).length;
+      if (n > max) {
+        over.push(
+          `${archetype}: ${n} steps declare no engine, ceiling is ${max} — author \`engine\` on the new ` +
+            `step(s) (defensible from the step's OWN code, never guessed from its label), or leave it ` +
+            `unauthored and LOWER nothing: the ceiling only ever moves down`,
+        );
+      }
+    }
+    expect(over).toEqual([]);
+  });
+
+  it('every archetype in the fleet has a declared ceiling (a new archetype cannot slip in unmeasured)', () => {
+    const missing = [...new Set(steps.map((s) => s.spec.archetype))]
+      .filter((a) => UNAUTHORED_ENGINE_CEILING[a] == null)
+      .map((a) => `archetype "${a}" has no UNAUTHORED_ENGINE_CEILING entry — add one with its count and a reason`);
+    expect(missing).toEqual([]);
+    const thin = Object.entries(UNAUTHORED_ENGINE_CEILING)
+      .filter(([, v]) => v.why.trim().length < 30)
+      .map(([a]) => `archetype "${a}": ceiling reason is too thin to be a reason`);
+    expect(thin).toEqual([]);
+  });
+
+  it('no ceiling is SLACK — a ceiling above the real count is a licence to regress', () => {
+    // The ratchet only works if every number is the measured truth. A ceiling left above the
+    // actual count silently re-opens room for exactly the regression it was set to stop.
+    const slack = Object.entries(UNAUTHORED_ENGINE_CEILING)
+      .map(([a, { max }]) => ({ a, max, n: steps.filter((s) => s.spec.archetype === a && s.spec.engine == null).length }))
+      .filter((r) => r.max > r.n)
+      .map((r) => `${r.a}: ceiling ${r.max} but only ${r.n} steps are unauthored — lower it to ${r.n}`);
+    expect(slack).toEqual([]);
   });
 
   // ── (g′) gallery: view field = selection field = candidate payload key ─────

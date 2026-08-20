@@ -294,6 +294,20 @@ export function resolveEngine(catalogId: string, step: StepMeta, fact?: StepFact
   return { engine: inferEngine(catalogId, step), source: 'inferred' };
 }
 
+/**
+ * The engine FAMILY a name belongs to — the name with any trailing model/variant
+ * qualifier dropped: `Leonardo (Lucid Origin)` → `Leonardo`, `Code (deterministic)` →
+ * `Code`.
+ *
+ * Comparison only. It deliberately does NOT feed `resolveEngine`'s display value: the
+ * fuller audited string names the actual model and is worth reading on the map. This
+ * exists so the spec linter can ask "do the AUTHORED spec and the AUDITED fact name the
+ * same engine?" without a variant qualifier reading as a disagreement.
+ */
+export function engineFamily(engine: string): string {
+  return engine.replace(/\s*\([^)]*\)\s*$/, '').trim();
+}
+
 export function engineClass(engine: string): EngineClass {
   // An engine name we do not recognise is UNKNOWN, not trusted. The old `?? 'llm'` put every
   // unrecognised string into `TRUSTED_CLASSES`, so uncertainty was biased toward the highest

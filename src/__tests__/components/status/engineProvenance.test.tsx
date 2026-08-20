@@ -3,6 +3,8 @@ import { render, cleanup } from '@testing-library/react';
 import { StatusCell } from '@/components/status/StatusCell';
 import {
   engineSourceMark,
+  engineFamily,
+  resolveEngine,
   ENGINE_SOURCE_MARK,
   buildSwimlane,
   UNAUDITED_ENGINE,
@@ -67,6 +69,25 @@ describe('engineSourceMark — one vocabulary for engine provenance', () => {
   it('the four words are mutually distinct (no two sources read the same)', () => {
     const words = (['audited', 'authored', 'inferred', 'unsourced'] as const).map((s) => ENGINE_SOURCE_MARK[s].word);
     expect(new Set(words).size).toBe(words.length);
+  });
+});
+
+describe('engineFamily — comparison only, never display', () => {
+  it('drops a trailing model/variant qualifier so a variant is not read as a disagreement', () => {
+    expect(engineFamily('Leonardo (Lucid Origin)')).toBe('Leonardo');
+    expect(engineFamily('Code (deterministic)')).toBe('Code');
+    expect(engineFamily('Tripo')).toBe('Tripo');
+    expect(engineFamily('UE C++')).toBe('UE C++');
+  });
+
+  it('does NOT change what the map displays — the fuller audited name still reaches the cell', () => {
+    // The audited string names the actual model and is worth reading; the family is a
+    // linting concept. If this ever collapses, 43 cells silently lose their model name.
+    const r = resolveEngine('achievements', { label: 'Icon 2D Art', archetype: 'gallery' }, {
+      catalogId: 'achievements', step: 'Icon 2D Art', trueEngine: 'Leonardo (Lucid Origin)',
+      deliverable: '2d-art', generatorWired: true, judge: 'vlm', checkerMeaningful: false, note: 'fixture',
+    });
+    expect(r).toEqual({ engine: 'Leonardo (Lucid Origin)', source: 'audited' });
   });
 });
 
