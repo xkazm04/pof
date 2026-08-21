@@ -26,6 +26,30 @@ export interface GenerationProvider {
   official?: boolean;
 }
 
+/**
+ * ── Licence-chain survey, measured 2026-08-21 (read before adding a "MIT" provider) ──
+ *
+ * PoF's licensing posture is load-bearing, and in this space a permissive LICENSE file on
+ * the generator says almost nothing: the encumbrance is one layer down, in the image
+ * encoder or the background remover the pipeline pulls at runtime. Measured, not read
+ * off badges:
+ *
+ *   TRELLIS.2  MIT code+weights, but EVERY gen config conditions on the GATED
+ *              `facebook/dinov3-vitl16-pretrain-lvd1689m` (Meta's custom "DINOv3
+ *              License"). Unauthenticated runs die at pipeline load with a 401.
+ *   TripoSG    MIT LICENSE, but its own NOTICE discloses code derived from HunyuanDiT +
+ *              FlashVDM under two Tencent Hunyuan *Community* Licenses, and the default
+ *              pipeline pulls `briaai/RMBG-1.4` for background removal — Creative Commons
+ *              NON-COMMERCIAL, paid agreement required for commercial use. EVALUATED AND
+ *              DELIBERATELY NOT ADDED: it is shape-only, so against the Hunyuan3D entry
+ *              below it would add no capability, only a second encumbered shape model.
+ *   Hunyuan3D  non-commercial (stated on its entry).
+ *   Tripo3D    free-tier output is CC BY 4.0 (stated on its entry).
+ *   TripoSR    MIT, and clean all the way down — still the ONLY commercial-safe local route.
+ *
+ * So: when a new "open-source, MIT" image-to-3D model appears, the question that decides
+ * it is not the LICENSE file — it is which encoder/matting weights the pipeline fetches.
+ */
 export const GENERATION_PROVIDERS: GenerationProvider[] = [
   {
     id: 'triposr',
