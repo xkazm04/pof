@@ -41,6 +41,7 @@ export const ASSET_DIRS: readonly AssetDirSpec[] = [
   { dir: 'triposr', label: 'TripoSR (local)' },
   { dir: 'tripo3d', label: 'Tripo3D (cloud)' },
   { dir: 'hunyuan3d', label: 'Hunyuan3D (local)' },
+  { dir: 'trellis2', label: 'TRELLIS.2 (local, textured)' },
   { dir: 'mesh-finish', label: 'Mesh finish (retopo/decimate)' },
   { dir: 'meshes', label: 'Pipeline meshes' },
 ];

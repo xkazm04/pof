@@ -41,10 +41,17 @@ export const GENERATION_PROVIDERS: GenerationProvider[] = [
     id: 'trellis2',
     name: 'TRELLIS.2',
     status: 'free',
-    modes: ['text-to-3d', 'image-to-3d'],
-    description: 'Open-source text/image-to-3D (MIT license). High quality but requires ~16GB VRAM.',
-    vramGb: 16,
+    // IMAGE ONLY. The old entry also claimed text-to-3d; microsoft/TRELLIS.2-4B ships
+    // `Trellis2ImageTo3DPipeline` and no text pipeline, so the claim made this the
+    // default pick for text-to-3d (`defaultProviderForMode`) on a mode it cannot serve.
+    modes: ['image-to-3d'],
+    description: 'Open-source image-to-3D (MIT — Microsoft). The ONLY local provider that emits GEOMETRY **AND** PBR TEXTURE in one pass; Hunyuan3D and TripoSR are shape-only, so their texturing is a separate Leonardo-PBR/rasterizer stage. Also the only COMMERCIAL-SAFE high-quality route: Hunyuan3D is non-commercial and Tripo3D free-tier output is CC BY 4.0, leaving MIT-but-lower-detail TripoSR as the previous only safe option. Accepts a NATIVE face budget (o_voxel `decimation_target`), so an asset class steers generation instead of being enforced by a later decimate pass. src/lib/visual-gen/trellis-runner.ts drives scripts/visual-gen/pof_trellis.py. Linux-only upstream (5 CUDA extensions) — on Windows set POF_TRELLIS_WSL to run it in WSL against the same GPU.',
+    // 24GB at fp16 (Microsoft state >=24GB, verified on A100/H100), NOT the 16 the old
+    // entry claimed. A 24GB card is exactly at the line once the desktop takes its cut,
+    // so the texture bake is the stage that OOMs first — drop `textureSize` before VRAM.
+    vramGb: 24,
     isLocal: true,
+    runnerBacked: true,
   },
   {
     id: 'hunyuan3d',

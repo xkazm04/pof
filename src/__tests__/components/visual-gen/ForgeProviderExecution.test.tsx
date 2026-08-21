@@ -51,12 +51,30 @@ beforeEach(() => {
 });
 
 describe('providerExecution — registry membership is not capability', () => {
+  /**
+   * `trellis2` was this invariant's example until it gained a runner
+   * (src/lib/visual-gen/trellis-runner.ts). The RULE is what matters, not which entry
+   * illustrates it, so the example moved to the still-runnerless `meshy` rather than
+   * being deleted — a registry entry with no execution path must still be refusable.
+   */
   it('refuses a metadata-only provider with a reason', () => {
-    const exec = providerExecution(provider('trellis2'), 'text-to-3d');
+    const exec = providerExecution(provider('meshy'), 'text-to-3d');
     expect(exec.executable).toBe(false);
     expect(exec.reason).toContain('No runner configured for this provider on this machine');
-    expect(exec.reason).toContain('TRELLIS.2');
+    expect(exec.reason).toContain('Meshy');
     expect(exec.path).toBeUndefined();
+  });
+
+  it('now names a runner for trellis2, which stopped being metadata-only', () => {
+    expect(providerExecution(provider('trellis2'), 'image-to-3d')).toEqual({ executable: true, path: 'runner' });
+  });
+
+  /** TRELLIS.2-4B ships an image pipeline only; the registry used to claim text-to-3d,
+   *  which made it the default pick for a mode it cannot serve. */
+  it('refuses trellis2 for text-to-3d, the mode it never supported', () => {
+    const exec = providerExecution(provider('trellis2'), 'text-to-3d');
+    expect(exec.executable).toBe(false);
+    expect(exec.reason).toContain('does not support text-to-3d');
   });
 
   it('marks a coming-soon provider unrunnable and says it is not implemented', () => {
@@ -127,7 +145,7 @@ describe('GenerationPanel — the default first click cannot mint a phantom job'
 
   it('refuses a provider with no execution path and states why', () => {
     const fetchMock = mockGenerate();
-    useForgeStore.setState({ activeProviderId: 'trellis2' });
+    useForgeStore.setState({ activeProviderId: 'meshy' });
     render(<GenerationPanel />);
 
     fireEvent.change(screen.getByPlaceholderText(/a medieval sword/i), { target: { value: 'a battle axe' } });
@@ -144,10 +162,10 @@ describe('GenerationPanel — the default first click cannot mint a phantom job'
 
   it('marks the unrunnable providers in the picker instead of offering them as Free', () => {
     render(<GenerationPanel />);
-    const trellis = screen.getByTestId('forge-provider-trellis2');
-    expect(trellis.getAttribute('data-executable')).toBe('false');
-    expect(trellis.hasAttribute('disabled')).toBe(true);
-    expect(trellis.textContent).toContain('NO RUNNER');
+    const meshy = screen.getByTestId('forge-provider-meshy');
+    expect(meshy.getAttribute('data-executable')).toBe('false');
+    expect(meshy.hasAttribute('disabled')).toBe(true);
+    expect(meshy.textContent).toContain('NO RUNNER');
 
     const tripo = screen.getByTestId('forge-provider-tripo3d');
     expect(tripo.getAttribute('data-executable')).toBe('true');
@@ -164,7 +182,7 @@ describe('GenerationPanel — the default first click cannot mint a phantom job'
 
 describe('retryJob — a retry that cannot run says so instead of re-queuing', () => {
   it('does not mint a fresh pending job for a provider with no execution path', () => {
-    const id = useForgeStore.getState().addJob({ mode: 'text-to-3d', prompt: 'A sword', providerId: 'trellis2' });
+    const id = useForgeStore.getState().addJob({ mode: 'text-to-3d', prompt: 'A sword', providerId: 'meshy' });
     useForgeStore.getState().updateJob(id, { status: 'failed', error: 'Generation failed.' });
 
     useForgeStore.getState().retryJob(id);
