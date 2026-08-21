@@ -4,9 +4,13 @@
  * microsoft/TRELLIS.2-4B). Two things make it structurally different from the Hunyuan /
  * TripoSR runners rather than just another entry:
  *
- *  1. **MIT licensed** (Microsoft) — Hunyuan3D is non-commercial and Tripo3D's free tier
- *     is CC BY 4.0, so this is the first commercial-safe HIGH-QUALITY local route.
- *     TripoSR is the only other MIT option and is explicitly the lower-detail fallback.
+ *  1. **Textured output, with a licence chain that is NOT MIT end-to-end.** Microsoft's
+ *     code and weights are MIT, which reads as the commercial-safe high-quality route PoF
+ *     lacks (Hunyuan3D is non-commercial, Tripo3D free-tier output is CC BY 4.0). It is
+ *     not one: every generation config conditions on `facebook/dinov3-vitl16-pretrain-lvd1689m`,
+ *     a GATED repo under Meta's custom "DINOv3 License". Measured 2026-08-21 — a run with
+ *     no accepted licence dies at pipeline load with a 401 on that repo. TripoSR stays the
+ *     only local option that is unencumbered all the way down.
  *  2. **Native face budget.** `--decimation-target` is honoured by the generator's own
  *     export (o_voxel.postprocess.to_glb), so an asset class can STEER generation.
  *     Hunyuan3D emits ~360K faces and accepts no budget input, so its class only decides
@@ -43,6 +47,8 @@ export interface TrellisSpec {
   decimationTarget?: number;
   /** PBR texture resolution (default 4096). The first lever to drop when VRAM is tight. */
   textureSize?: number;
+  /** Attention backend. Upstream falls back to xformers where flash-attn is unavailable. */
+  attnBackend?: 'flash-attn' | 'xformers' | 'sdpa';
   /** WSL distro to run inside; else POF_TRELLIS_WSL. Absent ⇒ run the python directly. */
   wslDistro?: string;
   timeoutMs?: number;
@@ -96,6 +102,7 @@ export function buildTrellisArgs(script: string, spec: TrellisSpec, root: string
   if (spec.model) args.push('--model', spec.model);
   if (spec.decimationTarget !== undefined) args.push('--decimation-target', String(spec.decimationTarget));
   if (spec.textureSize !== undefined) args.push('--texture-size', String(spec.textureSize));
+  if (spec.attnBackend) args.push('--attn-backend', spec.attnBackend);
   return args;
 }
 
@@ -120,7 +127,27 @@ export function parseTrellisOutput(stdout: string): Omit<TrellisResult, 'duratio
   };
 }
 
-type RunFn = (cmd: string, args: string[], timeoutMs: number) => Promise<{ stdout: string; code: number | null }>;
+type RunFn = (
+  cmd: string,
+  args: string[],
+  timeoutMs: number,
+  /** Extra environment for the child. Optional so existing seams stay call-compatible. */
+  envOverlay?: Record<string, string | undefined>,
+) => Promise<{ stdout: string; code: number | null }>;
+
+/**
+ * Add `name` to a WSLENV list without duplicating it.
+ *
+ * A Windows env var does NOT cross into a distro unless WSLENV names it, so HF_TOKEN has
+ * to be declared here rather than passed as an argument — an argv token would be readable
+ * in any process listing on both sides of the boundary. `/u` marks it as
+ * Windows-to-WSL-only (no path translation). Pure.
+ */
+export function withWslenv(existing: string | undefined, name: string): string {
+  const parts = (existing ?? '').split(':').filter(Boolean);
+  if (parts.some((p) => p.split('/')[0] === name)) return parts.join(':');
+  return [...parts, `${name}/u`].join(':');
+}
 
 export interface TrellisDeps {
   run?: RunFn;
@@ -156,10 +183,16 @@ export async function runTrellis(spec: TrellisSpec, deps: TrellisDeps = {}): Pro
   const args = buildTrellisArgs(script, spec, root, !!distro);
   const [cmd, argv] = distro ? ['wsl.exe', ['-d', distro, '--', py, ...args]] : [py, args];
 
+  // TRELLIS.2 conditions on the GATED facebook/dinov3-* repo, so an unauthenticated run
+  // dies at pipeline load with a 401. Forward the token INTO the distro when one exists.
+  const overlay = distro && env.HF_TOKEN
+    ? { HF_TOKEN: env.HF_TOKEN, WSLENV: withWslenv(env.WSLENV, 'HF_TOKEN') }
+    : undefined;
+
   const start = now();
   // 4B params + a 4096 PBR bake, and the first run also downloads the ~16GB model.
   // Default to a 40-min ceiling — well above Hunyuan's 15.
-  const { stdout } = await run(cmd, argv, spec.timeoutMs ?? 2_400_000);
+  const { stdout } = await run(cmd, argv, spec.timeoutMs ?? 2_400_000, overlay);
   const parsed = parseTrellisOutput(stdout);
 
   const back = (p?: string) => (p && distro ? fromWslPath(p) : p);
@@ -180,10 +213,13 @@ export async function runTrellis(spec: TrellisSpec, deps: TrellisDeps = {}): Pro
 }
 
 // ── default spawn seam (not unit-tested; exercised by the live smoke run) ──────
-const defaultRun: RunFn = async (cmd, args, timeoutMs) => {
+const defaultRun: RunFn = async (cmd, args, timeoutMs, envOverlay) => {
   const { spawn } = await import('node:child_process');
   return new Promise((resolve) => {
-    const child = spawn(cmd, args, { windowsHide: true });
+    const child = spawn(cmd, args, {
+      windowsHide: true,
+      ...(envOverlay ? { env: { ...process.env, ...envOverlay } } : {}),
+    });
     let stdout = '';
     child.stdout?.on('data', (d) => { stdout += d.toString(); });
     child.stderr?.on('data', (d) => { stdout += d.toString(); });

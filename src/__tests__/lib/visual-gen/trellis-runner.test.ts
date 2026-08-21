@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  buildTrellisArgs, parseTrellisOutput, runTrellis, toWslPath, fromWslPath,
+  buildTrellisArgs, parseTrellisOutput, runTrellis, toWslPath, fromWslPath, withWslenv,
 } from '@/lib/visual-gen/trellis-runner';
 import { trellisFaceLimit, trellisGateDeps } from '@/lib/visual-gen/trellis-job-store';
 
@@ -153,5 +153,50 @@ describe('trellis budget wiring', () => {
       triangleBudget: 40_000, topology: 'triangles',
     });
     expect(trellisGateDeps('character', undefined, undefined).deps.budget).toBeUndefined();
+  });
+});
+
+describe('attention backend passthrough', () => {
+  it('omits the flag by default and forwards it when pinned', () => {
+    expect(buildTrellisArgs('s', SPEC, 'r')).not.toContain('--attn-backend');
+    const a = buildTrellisArgs('s', { ...SPEC, attnBackend: 'xformers' }, 'r');
+    expect(a[a.indexOf('--attn-backend') + 1]).toBe('xformers');
+  });
+});
+
+describe('HF_TOKEN forwarding (the gated DINOv3 dependency)', () => {
+  /** TRELLIS.2 conditions on the GATED facebook/dinov3-* repo, so an unauthenticated run
+   *  dies at pipeline load with a 401. A Windows env var does not cross into a distro
+   *  unless WSLENV names it. */
+  it('declares HF_TOKEN in WSLENV without duplicating an existing entry', () => {
+    expect(withWslenv(undefined, 'HF_TOKEN')).toBe('HF_TOKEN/u');
+    expect(withWslenv('FOO/p', 'HF_TOKEN')).toBe('FOO/p:HF_TOKEN/u');
+    expect(withWslenv('HF_TOKEN/u', 'HF_TOKEN')).toBe('HF_TOKEN/u');
+  });
+
+  it('passes the token through the env overlay, never through argv', async () => {
+    let seenArgs: string[] = [];
+    let seenEnv: Record<string, string | undefined> | undefined;
+    const run = async (_c: string, a: string[], _t: number, e?: Record<string, string | undefined>) => {
+      seenArgs = a; seenEnv = e;
+      return { stdout: 'POF_T2_DONE=/mnt/c/pof/out.glb', code: 0 };
+    };
+    await runTrellis(
+      { imagePath: 'C:/pof/in.png', outputPath: 'C:/pof/out.glb', scriptPath: 'C:/pof/s.py' },
+      { run, fileExists: () => true, now: () => 1,
+        env: { ...ENV, POF_TRELLIS_WSL: 'Ubuntu', HF_TOKEN: 'hf_secret' } },
+    );
+    expect(seenEnv?.HF_TOKEN).toBe('hf_secret');
+    expect(seenEnv?.WSLENV).toContain('HF_TOKEN/u');
+    expect(seenArgs.join(' ')).not.toContain('hf_secret');
+  });
+
+  it('sends no overlay when there is no token to forward', async () => {
+    let seenEnv: Record<string, string | undefined> | undefined = { sentinel: 'x' };
+    const run = async (_c: string, _a: string[], _t: number, e?: Record<string, string | undefined>) => {
+      seenEnv = e; return { stdout: 'POF_T2_DONE=out/mesh.glb', code: 0 };
+    };
+    await runTrellis(SPEC, { run, fileExists: () => true, env: ENV, now: () => 1 });
+    expect(seenEnv).toBeUndefined();
   });
 });

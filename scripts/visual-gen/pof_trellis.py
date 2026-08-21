@@ -68,8 +68,16 @@ def main() -> int:
                     help="native face budget handed to o_voxel.postprocess.to_glb")
     ap.add_argument("--texture-size", type=int, default=4096,
                     help="PBR texture resolution; the first lever to drop when VRAM is tight")
+    ap.add_argument("--attn-backend", choices=["flash-attn", "xformers", "sdpa"],
+                    help="TRELLIS.2 attention backend; upstream falls back to xformers on "
+                         "GPUs without flash-attn support. MUST be set before trellis2 imports.")
     ap.add_argument("--no-preview", action="store_true")
     args = ap.parse_args()
+
+    # trellis2 reads ATTN_BACKEND at IMPORT time, so this has to precede the import
+    # below — setting it afterwards silently has no effect.
+    if args.attn_backend:
+        os.environ["ATTN_BACKEND"] = args.attn_backend
 
     sys.path.insert(0, args.trellis_root)
     try:
