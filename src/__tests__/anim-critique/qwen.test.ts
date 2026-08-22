@@ -101,3 +101,40 @@ describe('QWEN_CRITIQUE_FALLBACKS env override', () => {
     vi.unstubAllEnvs();
   });
 });
+
+describe('measured default chain (2026-08-22 input-gate benchmark)', () => {
+  const chainOf = (fetchMock: ReturnType<typeof vi.fn>) =>
+    fetchMock.mock.calls.map((c) => bodyModel(c));
+
+  it('leads with qwen3.8-27b and walks the measured ranking', async () => {
+    // Every model quota-fails, so the mock records the whole default chain in order.
+    const fetchMock = vi.fn().mockResolvedValue(err(429, 'quota exceeded'));
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(makeQwenVision({ apiKey: 'k' })(imgs, 'p')).rejects.toThrow(/exhausted/i);
+    expect(chainOf(fetchMock)).toEqual([
+      'qwen3.8-27b',
+      'qwen3.7-flash',
+      'qwen3.6-flash',
+      'qwen3.8-max',
+      'qwen3.6-plus',
+      'qwen3.7-plus',
+    ]);
+  });
+
+  it('never includes qwen3.7-max — it is text-only and HTTP 400s on image input', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(err(429, 'quota exceeded'));
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(makeQwenVision({ apiKey: 'k' })(imgs, 'p')).rejects.toThrow(/exhausted/i);
+    expect(chainOf(fetchMock)).not.toContain('qwen3.7-max');
+  });
+
+  it('demotes the previous default qwen3.7-plus below every better-measured model', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(err(429, 'quota exceeded'));
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(makeQwenVision({ apiKey: 'k' })(imgs, 'p')).rejects.toThrow(/exhausted/i);
+    const chain = chainOf(fetchMock);
+    // It stays in the chain (extra free-tier quota beats an ungated pass-through)
+    // but must never answer before a model with a lower measured false-pass count.
+    expect(chain.indexOf('qwen3.7-plus')).toBe(chain.length - 1);
+  });
+});

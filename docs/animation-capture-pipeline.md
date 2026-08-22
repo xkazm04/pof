@@ -114,8 +114,21 @@ The vision seam is injectable (`src/lib/anim-critique/gemini.ts: (images, prompt
 ```
 node scripts/anim-critique.mjs --dir <frames> --intent "…" --provider qwen
 ```
-- **Model:** `qwen3.7-plus` (a **thinking** VL model — returns its chain-of-thought in `reasoning_content`, the answer in `content`; we parse `content`).
-- **Quota fallback chain (the 1M-tokens / 90-day free cap):** on a quota/throttle error (HTTP 429 or quota markers) the seam transparently falls back **`qwen3.7-plus` → `qwen3.6-flash` → `qwen3.6-plus`** (separate quota per model, so the loop keeps running). A real (non-quota) error throws immediately without burning the fallbacks. Configurable via `fallbackModels`. (4 unit tests in `qwen.test.ts`.)
+- **Model:** `qwen3.8-27b` (several models in the chain are **thinking** VL models — they return chain-of-thought in `reasoning_content`, the answer in `content`; we parse `content`). Promoted from `qwen3.7-plus` on 2026-08-22 by measurement — see below.
+- **Quota fallback chain (the 1M-tokens / 90-day free cap):** on a quota/throttle error (HTTP 429 or quota markers) the seam transparently falls back **`qwen3.8-27b` → `qwen3.7-flash` → `qwen3.6-flash` → `qwen3.8-max` → `qwen3.6-plus` → `qwen3.7-plus`** (separate quota per model, so a longer chain buys more total free capacity and the loop keeps running). A real (non-quota) error throws immediately without burning the fallbacks. Configurable via `fallbackModels` / `QWEN_CRITIQUE_FALLBACKS`. (7 unit tests in `qwen.test.ts`, three of which pin this exact order.)
+- **The order is MEASURED, not assumed (2026-08-22).** Benchmarked on the real `input-gate` prompt over 13 ground-truthed image→3D concepts (5 good / 8 bad, 2 repeats = 26 scored calls per model), judged at the gate's own `passAt: 7` line:
+
+  | model | accuracy | false PASS | avg ms | avg tokens |
+  |---|---|---|---|---|
+  | `qwen3.8-27b` | 0.96 | 1 | 19349 | 2767 |
+  | `qwen3.7-flash` | 1.00 | 0 | 43670 | 7108 |
+  | `qwen3.6-flash` | 0.85 | 4 | 14135 | 3177 |
+  | `qwen3.8-max` | 0.85 | 4 | 32644 | 3261 |
+  | `qwen3.6-plus` | 0.81 | 5 | 30647 | 3116 |
+  | `qwen3.7-plus` (old default) | 0.77 | 6 | 17619 | 2366 |
+
+  **Every** error on **every** model was a false PASS — never a false fail — so false-pass count, not raw accuracy, is the metric that matters: the gate's only real failure mode is letting a bad concept through and paying for the image→3D job. The old default `qwen3.7-plus` ranked **last**, scoring a confident 10/10 on a concept whose arms are buried in drapery and 10/10 on one engulfed in hair — blind to exactly the heavy-occlusion defect the gate exists to catch. `qwen3.7-flash` was the only perfect scorer but sits **second**: ~2.3× latency, ~2.6× token burn, and the only model with reproducible hard failures (one concept every other model graded fine failed on it 5/5 attempts across two runs).
+- **⛔ `qwen3.7-max` is TEXT-ONLY** — it rejects image content with HTTP 400. Never add it to this chain despite its text-benchmark standing. (Pinned by a test.)
 - **Endpoint:** Alibaba Model Studio **DashScope intl**, OpenAI-compatible: `https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions`, `Authorization: Bearer $QWEN_API_KEY`. Images sent as OpenAI `image_url` data-URI blocks. ~17s/call (10 frames). Env: `QWEN_API_KEY` (or `DASHSCOPE_API_KEY`), optional `QWEN_CRITIQUE_MODEL` / `QWEN_BASE_URL`.
 - **Confirmed equivalent to Gemini** — A/B on the same Veo-strike filmstrip:
 
@@ -139,7 +152,7 @@ node scripts/anim-critique.mjs --dir <frames> --intent "…" --provider qwen
 | `shots/veo_gen.mjs` | Veo generation (legacy; superseded by Leonardo below) |
 | `shots/leo_video_gen.mjs` | **Leonardo Hailuo 2.3 video gen** (t2v / i2v), download-then-delete — the Gemini-free generator |
 | `src/lib/leonardo.ts` | `generateVideo` (hailuo-2_3 T2V) + `generateVideoFromImage` (hailuo-2_3-fast I2V) + cleanup |
-| `src/lib/anim-critique/qwen.ts` | Qwen vision seam + quota fallback chain (qwen3.7-plus→3.6-flash→3.6-plus) |
+| `src/lib/anim-critique/qwen.ts` | Qwen vision seam + measured quota fallback chain (qwen3.8-27b→3.7-flash→3.6-flash→3.8-max→3.6-plus→3.7-plus) |
 | `shots/mha_capture.py` | ingest + body-only solve + export (the 5 fixes #1–3 here) |
 | `shots/mha_retarget.py` | IK rig + retargeter (op stack) + batch retarget (fix #4) |
 | `shots/veo_manny.json` | render scenario (`play_anim`) |

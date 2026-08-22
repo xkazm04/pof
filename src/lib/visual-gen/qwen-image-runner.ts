@@ -30,10 +30,26 @@ import { isQuotaError } from '@/lib/anim-critique/qwen';
 
 export const QWEN_IMAGE_BASE = 'https://dashscope-intl.aliyuncs.com/api/v1';
 export const QWEN_IMAGE_ENDPOINT = `${QWEN_IMAGE_BASE}/services/aigc/multimodal-generation/generation`;
-/** Strongest text-rendering / semantic-adherence tier of the Qwen-Image family. */
-export const DEFAULT_QWEN_IMAGE_MODEL = 'qwen-image-2.0-pro';
-/** Each model carries its own quota — same separate-quota assumption as the VL chain. */
-export const DEFAULT_QWEN_IMAGE_FALLBACKS = ['qwen-image-max', 'qwen-image-plus'];
+/**
+ * Strongest text-rendering / semantic-adherence tier of the Qwen-Image family.
+ * Promoted 2.0-pro -> 3.0-pro on 2026-08-22 after verifying 3.0-pro live on this
+ * account: 4/4 prompts returned a usable 1328x1328 PNG in ~10s each, including
+ * clean isolated-subject-on-white concepts good enough to feed straight into the
+ * image->3D front. Both 3.0 ids are listed for this key alongside the 2.0 tier.
+ */
+export const DEFAULT_QWEN_IMAGE_MODEL = 'qwen-image-3.0-pro';
+/**
+ * Each model carries its own quota — same separate-quota assumption as the VL chain.
+ * Ordered newest-strongest first, then the previous default, so a quota wall
+ * degrades one generation tier at a time rather than falling straight to the floor.
+ * All four ids verified present on the account's model list (2026-08-22).
+ */
+export const DEFAULT_QWEN_IMAGE_FALLBACKS = [
+  'qwen-image-3.0',
+  'qwen-image-2.0-pro',
+  'qwen-image-max',
+  'qwen-image-plus',
+];
 
 export interface QwenImageSpec {
   prompt: string;

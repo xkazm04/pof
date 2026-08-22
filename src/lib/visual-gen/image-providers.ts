@@ -59,7 +59,7 @@ export const IMAGE_PROVIDERS: readonly ImageProvider[] = [
     id: 'qwen-image',
     name: 'Qwen-Image',
     description:
-      'Cloud text-to-image (DashScope qwen-image-2.0-pro → max → plus quota chain) via src/lib/visual-gen/qwen-image-runner.ts. Strongest of the two at READABLE TEXT IN THE IMAGE and multi-layer UI/infographic layouts — pick it for icon sheets, HUD mockups and labelled plates. Reuses the DashScope account (QWEN_API_KEY) on a separate per-model quota from the Qwen-VL critique seam.',
+      'Cloud text-to-image (DashScope qwen-image-3.0-pro → 3.0 → 2.0-pro → max → plus quota chain) via src/lib/visual-gen/qwen-image-runner.ts. Strongest of the two at READABLE TEXT IN THE IMAGE and multi-layer UI/infographic layouts — pick it for icon sheets, HUD mockups and labelled plates. Reuses the DashScope account (QWEN_API_KEY) on a separate per-model quota from the Qwen-VL critique seam.',
     keyEnv: ['QWEN_API_KEY', 'DASHSCOPE_API_KEY'],
     runnerBacked: true,
   },
