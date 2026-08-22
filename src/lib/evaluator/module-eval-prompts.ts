@@ -178,7 +178,9 @@ Output the numbered call graph first, then the JSON findings array.`,
 - AI should lose interest after a timeout (not chase forever)
 - Perception should have proper sight radius, angle, and age
 - Spawn system should respect player proximity limits
-- State Tree: use Re-Enter State behavior for looping states, Output Properties for live binding`,
+- State Tree: use Re-Enter State behavior for looping states, Output Properties for live binding
+- Difficulty scaling on enemies should not be stat multiplication alone: raising health, damage or spawn count is the cheap lever and it buys resistance, not engagement. Prefer scaling SKILL — traits that introduce a mechanic the player must actually answer (adds to kill, zones to leave, a counterable telegraph), better navigation and target selection, tighter precision. Power scaling is legitimate and often mandatory; the check is that a harder tier adds at least one new decision for the player, not just a longer fight
+- An AI advantage that comes from machine speed (inhuman reaction time, actions per second, perfect tracking) is not difficulty, it is a different game. Cap those axes explicitly and tune within the cap — the same reason RTS AI is capped on actions per minute rather than left to run at machine rate`,
     performanceChecks: `- BT tick interval should be > 0.1s for non-combat AI
 - EQS queries should have reasonable item count limits
 - Perception should use event-driven, not polling where possible
@@ -249,7 +251,9 @@ Output the numbered call graph first, then the JSON findings array.`,
 - Attribute point allocation should be reversible (respec)
 - Ability unlock prerequisites should be validated
 - Hotbar assignment should persist across sessions
-- Trait systems should keep a point-symmetric economy: advantages COST build points, disadvantages/drawbacks GRANT them back (opt-in difficulty is paid for), and quirks are 1-point flavor traits hooked into only one or two gameplay checks — high flavor per implementation cost. Faction standing should be modeled as paired ± reputation traits per faction (with spare capacity for factions added later), not one global karma scalar`,
+- Trait systems should keep a point-symmetric economy: advantages COST build points, disadvantages/drawbacks GRANT them back (opt-in difficulty is paid for), and quirks are 1-point flavor traits hooked into only one or two gameplay checks — high flavor per implementation cost. Faction standing should be modeled as paired ± reputation traits per faction (with spare capacity for factions added later), not one global karma scalar
+- Perceived difficulty has four terms — player power (stats, gear, abilities), player skill (game knowledge plus raw mechanical skill), enemy power, and enemy skill — and only three of them are authorable. Player raw skill cannot be set, only estimated, so a curve that raises player power on a fixed schedule is assuming a skill-growth rate it never measures. A progression design should say which term each lever moves, and should offer a POWER route for players whose skill lags (repeatable content, catch-up gear) instead of assuming everyone tracks the intended line
+- Progression should keep the player inside a flow CHANNEL, not on a flow line: below it the player is bored, above it frustrated, and both exit the game. Leave troughs between peaks — consecutive escalating challenges with no breathing room are exhausting even when every individual step is tuned correctly`,
     performanceChecks: `- Level-up effects should not recalculate all attributes from scratch
 - XP award should be batched if multiple enemies die simultaneously
 - Ability UI refresh should be targeted, not full rebuild`,
@@ -270,7 +274,9 @@ Output the numbered call graph first, then the JSON findings array.`,
 - Hazard damage should respect invulnerability (dodge, etc.)
 - Spawn density should scale with zone difficulty
 - Set dressing should be believable, not just non-intersecting: props must rest ON a surface large enough to hold them (no large prop balanced on a small or thin one), nothing balanced on a prop with no flat top (cans, cables, handled containers), stack runs bounded (~3 unless the prop is a pallet/crate designed to tower), and props should carry small rotation variation — perfectly axis-aligned clutter reads as machine-placed
-- Placed props should sit flush on their support (no floating gap, no interpenetration); piles and container fills should be physics-settled and baked rather than analytically positioned`,
+- Placed props should sit flush on their support (no floating gap, no interpenetration); piles and container fills should be physics-settled and baked rather than analytically positioned
+- Dynamic difficulty adjustment must not tax competence: if live performance raises the challenge, the harder path has to pay better too, or the player is being penalised for playing well. And it must be either genuinely imperceptible or openly declared — a DDA the player half-notices becomes a system to game (dying deliberately to soften a fight), which is worse than either extreme
+- Prefer PLAYER-CHOSEN challenge to system-imposed challenge: opt-in modifiers the player selects (harder affixes, self-applied debuffs) work even without extra reward, because the player authored the difficulty. The strongest shape is a hybrid — grade live performance on a scale, let the chosen difficulty setting lock a BAND on that scale with margin rather than a single value, and let bands OVERLAP across settings so a player doing well on a lower setting can meet the same live difficulty as one struggling on a higher one`,
     performanceChecks: `- Level streaming should pre-load before player reaches transition
 - Distant actors should be dormant
 - Environmental VFX should use pooling
