@@ -165,3 +165,10 @@ Run the catalog e2e with `npm run test:e2e` (Playwright, real dev server + SQLit
 ## Testing
 
 Vitest with setup file at `src/__tests__/setup.ts`. Tests live in `src/__tests__/`. Path alias `@` resolves to `src` in vitest config.
+
+## AI registry (knowledge + skills)
+
+This repo is wired to the organization's AI registry (github:xkazm04/ai-registry; local sibling checkout `../ai-registry`).
+
+- **Knowledge**: this repo consumes the `game-production` and `software-engineering` bundle(s). Before a product, architecture or domain decision in those areas, run `/consult <topic>` - it reads the relevant subjects (golden path + techniques) and logs the consult to `.ai/consults.jsonl` (gitignored).
+- **Skills**: shared skills come from the `ai-registry` plugin marketplace, declared in `.claude/settings.json` (`enabledPlugins`). Do not copy a registry skill into `.claude/skills/` - only project-specific skills live there. Update with `claude plugin update <skill>@ai-registry`. Project-specific configuration for a registry skill lives in its committed overlay (e.g. `.claude/perfect/config.md`).

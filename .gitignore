@@ -103,3 +103,6 @@ docs/index.bleve/
 /.tmp-measure/
 /ab-results.json
 /.benchmark-tripo/
+
+# /consult skill log (counts reach the ai-registry signals lane; the log itself stays local)
+.ai/consults.jsonl
