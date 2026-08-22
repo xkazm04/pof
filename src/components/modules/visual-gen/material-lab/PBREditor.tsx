@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { motion, useAnimationControls } from 'framer-motion';
 import { Upload, X } from 'lucide-react';
 import {
@@ -53,13 +53,17 @@ function TextureSlot({
   const setTexture = useMaterialStore((s) => s.setTexture);
   const highlightTick = useMaterialStore((s) => s.textureHighlightTick[channel]);
   const controls = useAnimationControls();
-  const [seenTick, setSeenTick] = useState(highlightTick);
+  // Which tick we have already flashed for. A REF, not state: nothing renders
+  // from it, so making it state only forced an extra render per flash and put a
+  // setState inside the effect. Read and written only inside the effect below.
+  const flashedTickRef = useRef(highlightTick);
 
   // Flash the slot whenever the channel's tick advances (e.g. piped in from
-  // the Advanced panel). Skip the initial mount so we don't animate cold.
+  // the Advanced panel). Seeding the ref with the mount-time tick is what skips
+  // the initial mount, so we don't animate cold.
   useEffect(() => {
-    if (highlightTick === seenTick) return;
-    setSeenTick(highlightTick);
+    if (flashedTickRef.current === highlightTick) return;
+    flashedTickRef.current = highlightTick;
     controls.start({
       boxShadow: [
         '0 0 0 0 rgba(var(--visual-gen-rgb, 6, 182, 212), 0)',
@@ -69,7 +73,7 @@ function TextureSlot({
       scale: [1, 1.08, 1],
       transition: { duration: 0.9, ease: 'easeOut' },
     });
-  }, [highlightTick, seenTick, controls]);
+  }, [highlightTick, controls]);
 
   const handleUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

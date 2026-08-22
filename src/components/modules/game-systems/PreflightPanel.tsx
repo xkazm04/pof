@@ -58,18 +58,30 @@ export function PreflightPanel({ projectPath, projectName, ueVersion, mapName, o
   const onStatusChangeRef = useRef(onStatusChange);
   useEffect(() => { onStatusChangeRef.current = onStatusChange; }, [onStatusChange]);
 
-  // Project-scoped generation token. Bumped whenever the active project
-  // changes so an in-flight check dispatched for the previous project cannot
-  // apply its (now stale) result to the new project's gate.
-  const projectGenRef = useRef(0);
+  // Project-scoped generation token: the project identity ITSELF, so an in-flight
+  // check dispatched for the previous project cannot apply its (now stale) result
+  // to the new project's gate. This replaced a hand-bumped counter — the counter
+  // had to be incremented during render to stay in step with the reset below,
+  // which is a ref write during render. The key is derived from props, so it needs
+  // no bumping and cannot drift out of step with the reset.
+  const projectKey = `${projectPath ?? ''}|${projectName ?? ''}`;
+  const projectKeyRef = useRef(projectKey);
   useEffect(() => {
-    projectGenRef.current += 1;
-    // Reset the gate to idle for the new project — results/spinners from the
-    // previous project must not leak across the switch.
+    projectKeyRef.current = projectKey;
+  }, [projectKey]);
+
+  // Reset the gate to idle for the new project — results/spinners from the
+  // previous project must not leak across the switch. Adjusted DURING render
+  // (React's derive-from-props idiom): an effect would paint one frame of the
+  // PREVIOUS project's verdicts under the new project's name, which is precisely
+  // the cross-project leak this reset exists to prevent.
+  const [prevProjectKey, setPrevProjectKey] = useState(projectKey);
+  if (prevProjectKey !== projectKey) {
+    setPrevProjectKey(projectKey);
     setResults([]);
     setRunning(new Set());
     setError(null);
-  }, [projectPath, projectName]);
+  }
 
   // Notify the parent gate whenever the result set changes.
   useEffect(() => {
@@ -78,10 +90,10 @@ export function PreflightPanel({ projectPath, projectName, ueVersion, mapName, o
   }, [results]);
 
   const runCheck = useCallback(async (kind: CheckKind) => {
-    // Capture the project generation at dispatch. Concurrent checks of
-    // different kinds share the same generation, so this scopes by project
+    // Capture the project identity at dispatch. Concurrent checks of
+    // different kinds share the same key, so this scopes by project
     // (not per-call) — legitimately parallel checks are never cancelled.
-    const gen = projectGenRef.current;
+    const gen = projectKey;
     setRunning((prev) => new Set(prev).add(kind));
     setError(null);
     const res = await tryApiFetch<PreflightResponse>('/api/packaging/preflight', {
@@ -91,7 +103,7 @@ export function PreflightPanel({ projectPath, projectName, ueVersion, mapName, o
     });
     // Drop the response if the active project changed while it was in flight —
     // a stale project's result must not touch this project's ready-to-cook gate.
-    if (gen !== projectGenRef.current) return;
+    if (gen !== projectKeyRef.current) return;
     setRunning((prev) => {
       const next = new Set(prev);
       next.delete(kind);
@@ -106,7 +118,7 @@ export function PreflightPanel({ projectPath, projectName, ueVersion, mapName, o
       const kept = prev.filter((r) => !ownedIds.has(r.id));
       return [...kept, ...res.data.results].sort((a, b) => a.id.localeCompare(b.id));
     });
-  }, [projectPath, projectName, ueVersion, mapName]);
+  }, [projectKey, projectPath, projectName, ueVersion, mapName]);
 
   // Auto-run the cheap config + audit checks on mount / when the project changes.
   // Deferred to a macrotask so the running-state update isn't a synchronous

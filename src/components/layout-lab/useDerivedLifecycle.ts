@@ -37,11 +37,19 @@ interface ViewRow {
 export function useDerivedLifecycle(catalogId: string | null | undefined): DerivedLifecycleMap {
   const [map, setMap] = useState<DerivedLifecycleMap>(() => new Map());
 
+  // Drop the previous catalog's rows the moment the catalog changes — including
+  // the change to "no catalog". Done DURING render (React's derive-from-props
+  // idiom) rather than in the effect: an effect clear renders one frame of the
+  // OLD catalog's lifecycle badges under the NEW catalog's name, which is exactly
+  // the cross-catalog bleed this hook's contract forbids.
+  const [prevCatalogId, setPrevCatalogId] = useState(catalogId);
+  if (prevCatalogId !== catalogId) {
+    setPrevCatalogId(catalogId);
+    setMap(new Map());
+  }
+
   useEffect(() => {
-    if (!catalogId) {
-      setMap(new Map());
-      return;
-    }
+    if (!catalogId) return;
     let live = true;
     void (async () => {
       const res = await tryApiFetch<ViewRow[]>(

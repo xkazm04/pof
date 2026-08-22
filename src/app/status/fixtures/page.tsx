@@ -59,6 +59,7 @@ export default function FixturesPage() {
   const [armed, setArmed] = useState(false);
   const [busy, setBusy] = useState(false);
 
+  // User-triggered reload (Retry, and after a purge): re-arm the spinner, refetch.
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -68,7 +69,22 @@ export default function FixturesPage() {
     else setError(r.error);
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  // The initial load is inlined rather than calling `load()`: `loading` already
+  // initialises to true, so the mount path must not re-set it, and writing the
+  // await out here keeps every state write demonstrably AFTER the fetch resolves
+  // instead of hidden behind a callback the linter cannot see through.
+  // `live` drops a late response so an unmounted page is never written to.
+  useEffect(() => {
+    let live = true;
+    void (async () => {
+      const r = await tryApiFetch<FixtureInventory>(ENDPOINT);
+      if (!live) return;
+      setLoading(false);
+      if (r.ok) setInventory(r.data);
+      else setError(r.error);
+    })();
+    return () => { live = false; };
+  }, []);
 
   const purge = useCallback(async () => {
     if (!inventory) return;

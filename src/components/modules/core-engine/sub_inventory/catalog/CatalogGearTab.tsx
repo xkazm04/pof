@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
+import { useMemo, useState, useCallback, useRef } from 'react';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
 import { useViewportAtLeast } from '@/hooks/useViewportWidth';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -71,11 +71,12 @@ export function CatalogGearTab({ moduleId, featureMap }: CatalogGearTabProps) {
 
   // Invalidate the open detail drawer if its backing entry disappears from the
   // store (reset/delete/re-seed elsewhere), so it can't keep showing a ghost item.
-  useEffect(() => {
-    if (selectedItem && !entries.some(e => e.data.id === selectedItem.id)) {
-      setSelectedItem(null);
-    }
-  }, [entries, selectedItem]);
+  // Done DURING render, not in an effect: an effect would paint one frame of the
+  // ghost item before clearing it, which is exactly the state this guard exists
+  // to prevent from ever being shown.
+  if (selectedItem && !entries.some(e => e.data.id === selectedItem.id)) {
+    setSelectedItem(null);
+  }
 
   const availableSubtypes = useMemo(() => {
     const pool = categoryFilter !== 'all' ? entries.filter(e => e.data.type === categoryFilter) : entries;

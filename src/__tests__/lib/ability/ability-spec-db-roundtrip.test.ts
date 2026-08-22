@@ -2,8 +2,8 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 // Real better-sqlite3 against an in-memory DB — exercises the provenance column
 // migration + upsert/read round-trip (not just the pure rowToSpec).
-vi.mock('@/lib/db', () => {
-  const Database = require('better-sqlite3');
+vi.mock('@/lib/db', async () => {
+  const { default: Database } = await import('better-sqlite3');
   const db = new Database(':memory:');
   return { getDb: () => db };
 });

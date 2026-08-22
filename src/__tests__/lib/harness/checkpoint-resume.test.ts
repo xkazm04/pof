@@ -9,6 +9,16 @@
  * -B`'d the branch and recorded a NEW baseline at the resume-time tree — so
  * `rollbackToLastGreen` hard-reset to the WRONG commit while the UI kept
  * rendering the stale `checkpoints.json` ledger the rollback ignored.
+ *
+ * TIMEOUT (2026-08-22): every test here shells out to real `git` several times
+ * (init, commit, checkout, reset), so it is subprocess-bound, not CPU-bound. In
+ * isolation the file runs ~2.2s per test — comfortably under Vitest's 5s default
+ * — but under a full-suite run (~1000 files across parallel workers) the git
+ * child processes get starved and 5 of 6 tests failed with `Test timed out in
+ * 5000ms`. The assertions never failed; only the clock did. `SUBPROCESS_TIMEOUT`
+ * gives the whole suite headroom that reflects what it actually does. If these
+ * start failing again, read the message first: a real regression here fails an
+ * EXPECTATION (wrong commit / wrong ledger), never a timeout.
  */
 
 import { describe, it, expect, afterEach, vi } from 'vitest';
@@ -45,6 +55,9 @@ import {
   BASELINE_AREA_ID,
   type CheckpointState,
 } from '@/lib/harness/checkpoint';
+
+/** Generous ceiling for a real-git, subprocess-bound suite under parallel load. */
+const SUBPROCESS_TIMEOUT = 60_000;
 
 const repos: string[] = [];
 
@@ -181,7 +194,7 @@ describe('checkpointer resume — rehydrated ledger', () => {
     expect(cp.getState().branch).toBe(checkpointBranch('run-6'));
     expect(cp.getState().checkpoints).toHaveLength(1);
   });
-});
+}, SUBPROCESS_TIMEOUT);
 
 // ── orchestrator wiring ──────────────────────────────────────────────────────
 
@@ -233,4 +246,4 @@ describe('orchestrator rehydrates the ledger from checkpoints.json', () => {
 
     fs.rmSync(statePath, { recursive: true, force: true });
   });
-});
+}, SUBPROCESS_TIMEOUT);

@@ -52,10 +52,18 @@ export function BlenderConnectionBar() {
   // uses the saved value, not the stale default. host/port only change via
   // hydration or setSettings, never from user typing (that mutates editHost), so
   // this can't clobber an in-progress edit.
-  useEffect(() => {
+  //
+  // Adjusted DURING render (React's derive-from-props idiom) instead of in an
+  // effect: rehydration otherwise paints one frame with the DEFAULT host/port in
+  // the fields, and a fast click on Connect in that frame dials the default
+  // instead of the user's saved server — the precise bug this sync exists to fix.
+  const settingsKey = `${host}|${port}`;
+  const [prevSettingsKey, setPrevSettingsKey] = useState(settingsKey);
+  if (prevSettingsKey !== settingsKey) {
+    setPrevSettingsKey(settingsKey);
     setEditHost(host);
     setEditPort(String(port));
-  }, [host, port]);
+  }
 
   // Honor the persisted autoConnect flag once on mount (idempotent in store).
   useEffect(() => {

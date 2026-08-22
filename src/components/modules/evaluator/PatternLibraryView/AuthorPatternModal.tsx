@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { Plus, CheckCircle2 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { usePatternLibraryStore } from '@/stores/patternLibraryStore';
@@ -38,32 +38,32 @@ export function AuthorPatternModal({
   const [pitfallsText, setPitfallsText] = useState('');
   const [classesText, setClassesText] = useState('');
   const titleInputRef = useRef<HTMLInputElement>(null);
-  const prevOpenRef = useRef(open);
-  // Snapshot the default module without making it a reset trigger — a background
-  // refresh of `moduleIds` must not wipe an in-progress form (only the open→ edge does).
-  const moduleIdsRef = useRef(moduleIds);
-  moduleIdsRef.current = moduleIds;
 
-  // Reset form only on the closed→open transition, not on every moduleIds change.
-  useEffect(() => {
-    const justOpened = open && !prevOpenRef.current;
-    prevOpenRef.current = open;
-    if (!justOpened) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset on open edge
-    setForm({
-      title: '',
-      moduleId: (moduleIdsRef.current[0] ?? 'arpg-character') as SubModuleId,
-      category: 'general',
-      description: '',
-      approach: '',
-      tags: [],
-      pitfalls: [],
-      involvedClasses: [],
-    });
-    setTagsText('');
-    setPitfallsText('');
-    setClassesText('');
-  }, [open]);
+  // Reset the form only on the closed→open edge, never on a background refresh of
+  // `moduleIds` (that must not wipe an in-progress form). Done DURING render with
+  // React's derive-from-props idiom, which replaced a ref-mirror + effect + an
+  // eslint-disable: only `open` is compared, so `moduleIds` can be read directly
+  // here and is snapshotted at exactly the open edge — the behaviour the mirror ref
+  // existed to emulate, now without writing a ref during render.
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+    if (open) {
+      setForm({
+        title: '',
+        moduleId: (moduleIds[0] ?? 'arpg-character') as SubModuleId,
+        category: 'general',
+        description: '',
+        approach: '',
+        tags: [],
+        pitfalls: [],
+        involvedClasses: [],
+      });
+      setTagsText('');
+      setPitfallsText('');
+      setClassesText('');
+    }
+  }
 
   const handleSubmit = useCallback(async () => {
     if (!form.title.trim() || !form.description.trim()) return;

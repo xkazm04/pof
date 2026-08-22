@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   Bot, Plus, Trash2, Loader2,
   FlaskConical,
@@ -80,9 +80,16 @@ export function SandboxTab({
 
   // Reset a pending confirmation whenever the active suite changes, or when a
   // run starts — deleting mid-run would orphan the bulk status update.
-  useEffect(() => {
+  // Adjusted DURING render (React's documented derive-from-props idiom) rather
+  // than in an effect: an effect reset renders the stale `true` for one frame
+  // first, briefly showing a delete confirmation that belongs to the previous
+  // suite. This way the confirmation never survives the switch, not even visibly.
+  const resetKey = `${activeSuiteId ?? ''}|${isAnyRunning}`;
+  const [prevResetKey, setPrevResetKey] = useState(resetKey);
+  if (prevResetKey !== resetKey) {
+    setPrevResetKey(resetKey);
     setConfirmingDelete(false);
-  }, [activeSuiteId, isAnyRunning]);
+  }
 
   if (isLoading) {
     return (
