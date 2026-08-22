@@ -102,20 +102,20 @@ describe('QWEN_CRITIQUE_FALLBACKS env override', () => {
   });
 });
 
-describe('measured default chain (2026-08-22 input-gate benchmark)', () => {
+describe('measured default chain (2026-08-22 input-gate benchmark, 40 calls/model)', () => {
   const chainOf = (fetchMock: ReturnType<typeof vi.fn>) =>
     fetchMock.mock.calls.map((c) => bodyModel(c));
 
-  it('leads with qwen3.8-27b and walks the measured ranking', async () => {
+  it('leads with qwen3.7-flash and walks the measured ranking', async () => {
     // Every model quota-fails, so the mock records the whole default chain in order.
     const fetchMock = vi.fn().mockResolvedValue(err(429, 'quota exceeded'));
     vi.stubGlobal('fetch', fetchMock);
     await expect(makeQwenVision({ apiKey: 'k' })(imgs, 'p')).rejects.toThrow(/exhausted/i);
     expect(chainOf(fetchMock)).toEqual([
-      'qwen3.8-27b',
       'qwen3.7-flash',
-      'qwen3.6-flash',
+      'qwen3.8-27b',
       'qwen3.8-max',
+      'qwen3.6-flash',
       'qwen3.6-plus',
       'qwen3.7-plus',
     ]);
@@ -136,5 +136,43 @@ describe('measured default chain (2026-08-22 input-gate benchmark)', () => {
     // It stays in the chain (extra free-tier quota beats an ungated pass-through)
     // but must never answer before a model with a lower measured false-pass count.
     expect(chain.indexOf('qwen3.7-plus')).toBe(chain.length - 1);
+  });
+});
+
+describe('transport failures fall through instead of escaping the chain', () => {
+  it('tries the next model when the primary throws a network error', async () => {
+    // Not an HTTP status — fetch itself rejects (DNS, socket reset, TLS).
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(new TypeError('fetch failed'))
+      .mockResolvedValueOnce(ok('{"recovered":1}'));
+    vi.stubGlobal('fetch', fetchMock);
+    const call = makeQwenVision({ apiKey: 'k', model: 'a', fallbackModels: ['b'] });
+    expect(await call(imgs, 'p')).toBe('{"recovered":1}');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('reports the transport reason when every model is unreachable', async () => {
+    // The gate must never silently wave an image through: an all-transport-failure
+    // chain still throws, so gateInputImage reports "unavailable" with the reason.
+    const fetchMock = vi.fn().mockRejectedValue(new TypeError('fetch failed'));
+    vi.stubGlobal('fetch', fetchMock);
+    const call = makeQwenVision({ apiKey: 'k', model: 'a', fallbackModels: ['b', 'c'] });
+    await expect(call(imgs, 'p')).rejects.toThrow(/transport failure/i);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it('a transport failure does not consume the quota-error path', async () => {
+    // A transport blip on the BEST model must still leave the rest of the chain
+    // available — the bug this guards is one flaky model defeating five healthy ones.
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(new TypeError('fetch failed'))
+      .mockResolvedValueOnce(err(429, 'quota exceeded'))
+      .mockResolvedValueOnce(ok('{"third":1}'));
+    vi.stubGlobal('fetch', fetchMock);
+    const call = makeQwenVision({ apiKey: 'k', model: 'a', fallbackModels: ['b', 'c'] });
+    expect(await call(imgs, 'p')).toBe('{"third":1}');
+    expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 });

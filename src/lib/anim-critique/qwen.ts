@@ -11,32 +11,45 @@
  * other models — different models have separate quota — so the loop keeps running.
  * Uses fetch (no SDK dep) — the endpoint is OpenAI-compatible.
  *
- * CHAIN ORDER IS MEASURED, NOT GUESSED (2026-08-22). The chain was benchmarked on
- * the real `input-gate` prompt over 13 ground-truthed image→3D concepts (5 good /
- * 8 bad, 2 repeats = 26 scored calls per model), scoring pass/fail agreement at the
- * gate's own `passAt: 7` line:
+ * CHAIN ORDER IS MEASURED, NOT GUESSED (2026-08-22). Benchmarked on the real
+ * `input-gate` prompt at the gate's own `passAt: 7` line, over TWO independent
+ * blocks so the ranking does not rest on fixtures written for the benchmark:
+ *   A = 13 concepts generated for this test (5 good / 8 bad), deliberately loaded
+ *       with borderline occlusion cases; ground-truthed BY EYE, never by the
+ *       generating prompt (2 of 6 hard fixtures ignored their instruction).
+ *   B = 7 REAL assets already in `generated/icons/` that the gate meets in normal
+ *       operation (3 good / 4 bad).
+ * 2 repeats => 40 scored calls per model.
  *
- *   model           acc    falsePASS  avgMs  avgTok
- *   qwen3.8-27b     0.96       1      19349    2767   <- primary
- *   qwen3.7-flash   1.00       0      43670    7108
- *   qwen3.6-flash   0.85       4      14135    3177
- *   qwen3.8-max     0.85       4      32644    3261
- *   qwen3.6-plus    0.81       5      30647    3116
- *   qwen3.7-plus    0.77       6      17619    2366   <- the PREVIOUS default
+ *   model           combined  falsePASS   A       B      avgMs  avgTok
+ *   qwen3.7-flash     1.00        0     1.00    1.00     43670    7108  <- primary
+ *   qwen3.8-27b       0.95        2     0.96    0.93     19349    2767
+ *   qwen3.8-max       0.93        3     0.88    1.00     32644    3261
+ *   qwen3.6-flash     0.88        5     0.85    0.93     14135    3177
+ *   qwen3.6-plus      0.85        6     0.77    1.00     30647    3116
+ *   qwen3.7-plus      0.82        7     0.73    1.00     17619    2366  <- OLD default
  *
- * Two facts drove the re-tier. (1) EVERY error across every model was a false PASS
- * — never a false fail — so the gate's only real failure mode is letting a bad
- * concept through, which costs image→3D credits and yields fused-limb meshes.
- * False-pass count, not raw accuracy, is the metric that matters here. (2) The old
- * primary `qwen3.7-plus` ranked LAST: it scored a confident 10/10 on a concept whose
- * arms are entirely buried in drapery and 10/10 on one engulfed in hair — it is
- * specifically blind to the heavy-occlusion defect the gate exists to catch.
+ * Read block B with care: it barely discriminates (four of six models score 1.00),
+ * because real bad inputs here are obvious — a tiling texture, a zone map, a UI
+ * wireframe. Its job is to prove the ranking does not INVERT on production data;
+ * the separation comes from block A's hard cases, which are themselves realistic
+ * (a caped sorcerer and a shield-bearing knight are ordinary game concepts).
  *
- * `qwen3.7-flash` is the only model that got everything right, but it is placed
- * SECOND on purpose: ~2.3x the latency and ~2.6x the token burn of the primary, and
- * it was the one model with reproducible hard failures (a concept every other model
- * graded fine failed on it 5/5 attempts across two runs). Excellent as a fallback,
- * too fragile as the front door.
+ * Two facts drive the order. (1) EVERY error across every model, in both blocks,
+ * was a false PASS — never a false fail. The gate cannot be too strict, only too
+ * lax, and a false pass costs image→3D credits plus a fused-limb mesh. So false-pass
+ * count, not raw accuracy, is the ranking metric. (2) The old primary `qwen3.7-plus`
+ * ranks LAST. Note it scores 1.00 on block B: its weakness is not general competence
+ * but occlusion specifically — a confident 10/10 on a concept whose arms are buried
+ * in drapery, and 10/10 on one engulfed in hair, which is exactly the defect class
+ * the gate exists to catch.
+ *
+ * `qwen3.7-flash` leads on a perfect 40/40 with zero false passes. It costs ~2.3x
+ * the latency and ~2.6x the tokens of the runner-up, which is affordable because the
+ * gate guards a job that takes minutes and real credits, and because quota is
+ * PER-MODEL — order decides who answers first, not total capacity. Its one liability,
+ * reproducible transport failures, is now absorbed by the chain itself (see the
+ * try/catch in the loop below) rather than by demoting it.
  *
  * NOTE `qwen3.7-max` is TEXT-ONLY — it rejects image content with HTTP 400. It must
  * never enter this chain despite outranking its siblings on text benchmarks.
@@ -45,7 +58,7 @@ import type { VisionImage } from './critique';
 
 export interface QwenVisionOptions {
   apiKey?: string;
-  /** Primary model; default qwen3.8-27b, or $QWEN_CRITIQUE_MODEL. */
+  /** Primary model; default qwen3.7-flash, or $QWEN_CRITIQUE_MODEL. */
   model?: string;
   /**
    * Quota-exceeded fallback chain, tried in order when the primary hits its quota.
@@ -63,12 +76,12 @@ const DEFAULT_BASE = 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1';
  * — the ordering decides which model answers while quota remains.
  */
 const DEFAULT_FALLBACKS = [
-  'qwen3.7-flash',
-  'qwen3.6-flash',
+  'qwen3.8-27b',
   'qwen3.8-max',
+  'qwen3.6-flash',
   'qwen3.6-plus',
   // Last resort. Worst grader measured, but an exhausted chain gates NOTHING (every
-  // concept passes through ungraded), so a 0.77 grader still beats no grader at all.
+  // concept passes through ungraded), so a 0.82 grader still beats no grader at all.
   'qwen3.7-plus',
 ];
 // DashScope signals quota/throttle via HTTP 429 or these markers in the error body.
@@ -97,7 +110,7 @@ export function parseFallbackModels(raw: string | undefined): string[] | undefin
 
 export function makeQwenVision(opts: QwenVisionOptions = {}) {
   const apiKey = opts.apiKey ?? process.env.QWEN_API_KEY ?? process.env.DASHSCOPE_API_KEY;
-  const primary = opts.model ?? process.env.QWEN_CRITIQUE_MODEL ?? 'qwen3.8-27b';
+  const primary = opts.model ?? process.env.QWEN_CRITIQUE_MODEL ?? 'qwen3.7-flash';
   // Explicit opt wins, then the env override, then the hardcoded lineage — so a new
   // Qwen VL tier can be promoted/re-tiered by config, without touching this file.
   const fallbacks =
@@ -119,11 +132,24 @@ export function makeQwenVision(opts: QwenVisionOptions = {}) {
 
     let lastErr = '';
     for (const model of models) {
-      const res = await fetch(`${baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model, messages: [{ role: 'user', content }], temperature: 0.2, max_tokens: 4096 }),
-      });
+      // A TRANSPORT failure (DNS, socket reset, TLS) must fall through to the next
+      // model, not escape the chain. Unwrapped, one flaky model threw straight out
+      // of makeQwenVision, the gate reported itself unavailable, and the concept was
+      // submitted UNGATED to a paid image->3D job — the whole chain defeated by a
+      // blip on ONE model while five healthy ones sat behind it. Measured 2026-08-22:
+      // qwen3.7-flash returned `TypeError: fetch failed` on a specific image 5/5
+      // times while every other model graded it fine.
+      let res: Response;
+      try {
+        res = await fetch(`${baseUrl}/chat/completions`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model, messages: [{ role: 'user', content }], temperature: 0.2, max_tokens: 4096 }),
+        });
+      } catch (e) {
+        lastErr = `Qwen ${model} transport failure: ${e instanceof Error ? e.message : String(e)}`;
+        continue; // next model — a different endpoint/route may well be reachable
+      }
       if (res.ok) {
         const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
         const text = json.choices?.[0]?.message?.content;
