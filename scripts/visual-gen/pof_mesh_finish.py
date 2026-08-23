@@ -58,6 +58,7 @@ def parse_args():
     p.add_argument("--input", required=True)
     p.add_argument("--output", required=True)
     p.add_argument("--target-faces", type=int, default=None)
+    p.add_argument("--retopo", choices=["collapse", "quadriflow"], default="collapse")
     p.add_argument("--mirror", choices=["x", "y", "z"], default=None)
     p.add_argument("--cull-interior", action="store_true")
     p.add_argument("--smooth-angle", type=float, default=0.0)
@@ -220,6 +221,111 @@ def decimate(obj, target_faces):
     mod.ratio = max(0.0001, float(target_faces) / float(current))
     bpy.ops.object.modifier_apply(modifier=mod.name)
     return face_count(obj)
+
+
+def quad_count(obj):
+    """Quads in the mesh RIGHT NOW. Only meaningful before the GLB export, which
+    triangulates (glTF 2.0 has no quad primitive)."""
+    return sum(1 for p in obj.data.polygons if len(p.vertices) == 4)
+
+
+def nonmanifold_edge_count(obj):
+    """Edges not shared by exactly two faces. QuadriFlow's hard precondition."""
+    import bmesh
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    n = sum(1 for e in bm.edges if not e.is_manifold)
+    bm.free()
+    return n
+
+
+def prepare_for_quadriflow(obj):
+    """Make an imported mesh eligible for QuadriFlow -> residual non-manifold edges.
+
+    Measured on Blender 4.2.1: a mesh imported from GLB is ALWAYS non-manifold on
+    arrival, even when its author was watertight, because glTF stores attributes
+    per-vertex and therefore SPLITS every vertex on a UV/normal seam. A clean displaced
+    ico-sphere exported to GLB and re-imported showed 61,434 non-manifold edges. Welding
+    those seam duplicates took it back to 0 and QuadriFlow then produced an all-quad
+    mesh; without the weld it silently did nothing.
+
+    Custom split normals are cleared first for the same reason `apply_shading` reasons
+    about them — but here it costs nothing: QuadriFlow REPLACES the topology, so normals
+    authored against vertices that are about to be deleted carry no information forward.
+    (That is the opposite of the re-shading case, where clearing them destroys the
+    source's better normals — hence `shadingSkippedReason`.)
+    """
+    if obj.data.has_custom_normals:
+        bpy.ops.mesh.customdata_custom_splitnormals_clear()
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_all(action="SELECT")
+    bpy.ops.mesh.remove_doubles(threshold=1e-5)      # re-weld glTF's seam-split verts
+    bpy.ops.mesh.normals_make_consistent(inside=False)
+    bpy.ops.object.mode_set(mode="OBJECT")
+    return nonmanifold_edge_count(obj)
+
+
+def quad_retopo(obj, target_faces):
+    """Field-aligned QuadriFlow remesh -> (faces, quads_authored, fallback_reason).
+
+    Returns a fallback_reason (leaving the caller to collapse-decimate instead) when
+    QuadriFlow cannot run. It is far less robust than edge-collapse: it requires a
+    manifold surface with consistent normals, so a shattered multi-shell generator mesh
+    is exactly the input it fails on. A silent downgrade to collapse would be the same
+    lie class SHADING_SKIPPED and UV_MODE_FALLBACK exist to prevent, so the reason is
+    always reported — with the measured non-manifold edge count, which is the actionable
+    number (and the same defect the Tier-1 gate already reports as `not-watertight`).
+
+    NOTE: the repair pass mutates the mesh before the attempt, so a run that falls back
+    collapse-decimates a WELDED mesh rather than the raw import. That is a better input
+    for decimation, not a worse one, but it does mean `--retopo quadriflow` is not
+    byte-identical to `--retopo collapse` even when it falls back.
+    """
+    bpy.context.view_layer.objects.active = obj
+    obj.select_set(True)
+    before = face_count(obj)
+    residual = prepare_for_quadriflow(obj)
+    if residual:
+        return (
+            None,
+            0,
+            "mesh is genuinely non-manifold after repair (%d non-manifold edges remain; "
+            "seam-weld and normal-consistency passes already ran) — QuadriFlow requires a "
+            "manifold surface and silently no-ops without one; fell back to collapse" % residual,
+        )
+    try:
+        result = bpy.ops.object.quadriflow_remesh(
+            mode="FACES",
+            target_faces=int(target_faces),
+            use_preserve_sharp=True,
+            use_preserve_boundary=True,
+            use_mesh_symmetry=False,
+        )
+    except Exception as exc:  # operator raised (zero-area, cancelled)
+        return None, 0, "quadriflow raised on this input (%s); fell back to collapse" % exc
+    if "FINISHED" not in result:
+        return None, 0, "quadriflow returned %s on this input; fell back to collapse" % ("/".join(result) or "nothing")
+
+    # DO NOT TRUST THE RETURN VALUE. Measured on Blender 4.2.1 against real Tripo output
+    # (generated/tripo3d/jinx_hd_idle.glb, 1,492,072 faces): on a NON-MANIFOLD mesh the
+    # operator logs "QuadriFlow: The mesh needs to be manifold and have face normals that
+    # point in a consistent direction", changes nothing at all, and STILL returns
+    # {'FINISHED'}. Reporting that as a quadriflow run delivered a 43MB unreduced mesh
+    # labelled as retopologized — a silent no-op wearing a success marker. The artifact is
+    # the only honest signal, so success is judged by what the mesh actually became.
+    after = face_count(obj)
+    quads = quad_count(obj)
+    if quads == 0 or after == before:
+        return (
+            None,
+            0,
+            "quadriflow reported success but did not alter the mesh (%d faces, %d quads) — "
+            "the operator silently no-ops on non-manifold input with inconsistent normals, "
+            "which most raw generator output is; fell back to collapse" % (after, quads),
+        )
+    if after == 0:
+        return None, 0, "quadriflow produced an empty mesh; fell back to collapse"
+    return after, quads, None
 
 
 def apply_shading(obj, angle_deg):
@@ -440,7 +546,29 @@ def main():
             marker("FACES_CULLED", cull_interior(low))
             marker("CULL_UNEVALUATED_SHELLS", shells)
 
-    faces_out = decimate(low, args.target_faces) if args.target_faces else face_count(low)
+    # Retopo. `collapse` (default) is the original edge-collapse decimate; `quadriflow`
+    # authors regular, curvature-aligned topology first and falls back to collapse — out
+    # loud — when the operator cannot handle the input. The mode ACTUALLY applied is
+    # reported, never the mode requested.
+    if args.target_faces:
+        quads_authored = 0
+        mode_used = "collapse"
+        if args.retopo == "quadriflow":
+            qf_faces, quads_authored, fallback = quad_retopo(low, args.target_faces)
+            if fallback:
+                marker("RETOPO_FALLBACK", fallback)
+            else:
+                mode_used = "quadriflow"
+                faces_out = qf_faces
+        if mode_used == "collapse":
+            faces_out = decimate(low, args.target_faces)
+        marker("RETOPO", mode_used)
+        if mode_used == "quadriflow":
+            # Counted here, before the export triangulates it — afterwards it is 0 and
+            # the number would be a lie about what the remesher produced.
+            marker("QUADS_AUTHORED", quads_authored)
+    else:
+        faces_out = face_count(low)
     marker("FACES_OUT", faces_out)
 
     # After decimation (which destroys the source normals) and before the bake, whose

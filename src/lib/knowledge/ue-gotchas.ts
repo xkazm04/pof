@@ -411,6 +411,26 @@ export const UE_GOTCHAS: Gotcha[] = [
     appliesTo: ['ue-python'],
     source: 'research: Souls-like in 3 days (Stefan 3D AI) — arena built from primitives + tiles + array/curve wall kits',
   },
+  {
+    id: 'hard-surface-garment-subassembly-gen',
+    modules: ['3d', 'character'],
+    summary:
+      'Complex HARD-SURFACE objects and realistic GARMENTS fail single-shot image-to-3D — generate them as named sub-assemblies and combine, the same rule characters already follow',
+    detail:
+      "The part-by-part rule (`ai-lowpoly-generation-not-final`, `ai-mesh-segment-before-rig`) is usually stated for characters and for environments (`arena-kit-composition`), which leaves the two classes that break the current generation frontier hardest completely uncovered. (1) HARD SURFACE — a rifle, a mechanism, a full armour set, a vehicle: single-shot generation resolves the silhouette but wrecks the wireframe exactly where hard-surface reads, on the panel breaks, bolts, barrels and hinges, and no face budget fixes it because the generator spends the budget on the blob rather than the break. Generate each rigid sub-assembly separately (barrel / receiver / stock / magazine; pauldron / cuirass / greave), each with its own reference view, then combine — every part keeps its own sharp local detail and its own clean topology, and the parts are separately swappable and separately budgetable afterwards. (2) REALISTIC GARMENTS are the same failure with a softer surface: a layered coat, a belted robe or a cape generated as one mesh produces fused, non-manifold folds that neither retopologise nor skin, and a single-shot character wearing them fuses the garment INTO the body. Generate the garment as its OWN mesh, separate from the body it covers (which also gives the Chaos-Cloth and weight-transfer paths something to bind to; see `metahuman-body-weight-transfer-garments`). Stylised/simple props are the exception and remain fine single-shot — the rule is triggered by INTERNAL STRUCTURE (distinct rigid parts or layered cloth), not by size or by how detailed the concept art looks.",
+    appliesTo: ['ue-python'],
+    source: 'research: 3D AI News #18 (Stefan 3D AI) — top-tier model still fails realistic garments/hard-surface wireframes; "splitting into the parts you\'re gonna get far"',
+  },
+  {
+    id: 'gltf-roundtrip-nonmanifold-blocks-remesh',
+    modules: ['3d', 'character', 'world'],
+    summary:
+      'Every mesh imported from .glb arrives NON-MANIFOLD (glTF splits vertices at UV/normal seams) — weld and re-normal before any remesher, and never trust a remesh operator that returns FINISHED',
+    detail:
+      "Measured live on Blender 4.2.1 (2026-08-23). glTF 2.0 stores attributes per-vertex, so the exporter SPLITS every vertex lying on a UV or normal seam. A watertight, manifold mesh therefore comes back non-manifold purely from the round trip: a clean displaced ico-sphere exported to .glb and re-imported showed 61,434 non-manifold edges — an artefact of the format, not a defect in the model. Two consequences. (1) PREPARE BEFORE ANY REMESH: clear custom split normals, weld by distance (~1e-5), and make normals consistent. That took the sphere to 0 non-manifold edges and Blender's QuadriFlow then produced an all-quad mesh; without it QuadriFlow did nothing at all. Clearing custom normals is safe HERE specifically because a remesher replaces the topology, so normals authored against doomed vertices carry nothing forward — this is the opposite of the re-shading case, where clearing them destroys better information (`shadingSkippedReason`). (2) NEVER TRUST THE RETURN VALUE: `bpy.ops.object.quadriflow_remesh` logs a warning, changes nothing, and STILL returns {'FINISHED'} on non-manifold input. Judged by its return code it 'succeeded' while delivering a 43 MB unreduced mesh labelled as retopologised. Judge a remesh by the ARTIFACT — face count changed and quad count > 0 — never by the operator's status. Residual non-manifold edges AFTER the repair are a real defect in the model rather than a format artefact (real Tripo character output kept 198, and correctly could not be quad-remeshed); that is the same condition the Tier-1 gate reports as `not-watertight`, so a mesh failing that gate cannot be quad-retopologised until it is repaired.",
+    appliesTo: ['ue-python'],
+    source: 'research: 3D AI News #18 (Stefan 3D AI) — live Blender 4.2.1 A/B while wiring mesh-finish --retopo quadriflow',
+  },
 ];
 
 /**

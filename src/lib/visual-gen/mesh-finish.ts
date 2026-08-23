@@ -56,6 +56,43 @@ export const DEFAULT_SMOOTH_ANGLE = 30;
  */
 export type UvMode = 'smart' | 'pack-existing';
 
+/**
+ * How the low-poly is built from the dense input.
+ *
+ *  - `collapse` (default, unchanged): a Blender DECIMATE modifier in COLLAPSE mode.
+ *    Edge-collapse — fast, robust on any input, and triangle soup by construction:
+ *    irregular, density-varying, with no edge flow.
+ *  - `quadriflow`: Blender's built-in QuadriFlow field-aligned remesher
+ *    (`bpy.ops.object.quadriflow_remesh`, present in the Blender 4.2 this repo already
+ *    drives headlessly — no new dependency). Authors a regular, even-density quad mesh
+ *    that follows the surface's principal curvature.
+ *
+ * WHAT `quadriflow` DOES NOT GIVE YOU: quads in the delivered artifact. glTF 2.0 has no
+ * quad primitive mode, so Blender triangulates on GLB export and `mesh-finish` writes
+ * GLB. The win is the TOPOLOGY the triangles are derived from — even density and real
+ * edge flow, which is what skinning/deformation, UV island quality, and the high→low
+ * bake actually care about — not the primitive type on disk. `quadDeliveryNote` states
+ * this on every quadriflow run so the mode name can never be read as "the .glb has
+ * quads". Genuine quads on disk would need an FBX output branch; that is a separate,
+ * larger change.
+ *
+ * Note this is the practice `ue-gotchas` `ai-lowpoly-generation-not-final` already
+ * prescribes ("RETOPOLOGIZE deterministically — algorithmic quad-remesh for small
+ * objects"): until now PoF injected that advice into prompts without being able to
+ * execute it.
+ */
+export type RetopoMode = 'collapse' | 'quadriflow';
+
+/**
+ * The standing truth about a quadriflow delivery. Returned for `quadriflow` runs only —
+ * a collapse run never authored quads, so a note claiming they were triangulated would
+ * be noise, not honesty.
+ */
+export function quadDeliveryNote(mode: RetopoMode | undefined): string | undefined {
+  if (mode !== 'quadriflow') return undefined;
+  return 'Topology was AUTHORED as quads by QuadriFlow and DELIVERED triangulated: glTF 2.0 defines no quad primitive, so the GLB export triangulates it. The gain is even-density, curvature-aligned edge flow (better skinning, UV islands and high→low bakes), not quad primitives in the file.';
+}
+
 export interface MeshFinishSpec {
   /** Dense input mesh from a generator (.glb / .obj / .fbx). */
   highPolyPath: string;
@@ -63,6 +100,12 @@ export interface MeshFinishSpec {
   outputPath: string;
   /** Decimate to roughly this many faces. Omit to skip retopo (and unwrap). */
   targetFaces?: number;
+  /**
+   * How to reach `targetFaces` — see `RetopoMode`. Defaults to `collapse`, so every
+   * existing caller keeps its exact behaviour and argv. Ignored without `targetFaces`
+   * (a remesher with no target has nothing to aim at).
+   */
+  retopo?: RetopoMode;
   /**
    * Real-world size the finished asset should have — longest extent in METRES. Not
    * applied by the script (the low-poly keeps the generator's ~1 m box); the Tier-1
@@ -142,6 +185,17 @@ export interface MeshFinishResult {
   shading?: string;
   /** Why the re-shade was refused — the source's own normals are better information. */
   shadingSkippedReason?: string;
+  /**
+   * The retopo mode the script actually applied. Absent for output produced before the
+   * mode existed — which must not be read as `collapse` by a caller that cares.
+   */
+  retopo?: RetopoMode;
+  /** Why a requested `quadriflow` could not run and the script fell back to collapse. */
+  retopoFallbackReason?: string;
+  /** Quads QuadriFlow authored, measured Blender-side BEFORE the triangulating export. */
+  quadsAuthored?: number;
+  /** States that authored quads ship triangulated — see `quadDeliveryNote`. */
+  quadDeliveryNote?: string;
   normalMapPath?: string;
   aoMapPath?: string;
   diffuseMapPath?: string;
@@ -244,6 +298,10 @@ export function buildMeshFinishArgs(scriptPath: string, spec: MeshFinishSpec): s
     '--output', spec.outputPath,
   ];
   if (spec.targetFaces !== undefined) args.push('--target-faces', String(spec.targetFaces));
+  // Only the non-default mode is emitted, so existing callers produce a byte-identical
+  // argv. Gated on a budget: quadriflow targets a face count and has nothing to aim at
+  // without one — matching how `unwrapPlan` already refuses an unwrap with no retopo.
+  if (spec.retopo === 'quadriflow' && spec.targetFaces !== undefined) args.push('--retopo', 'quadriflow');
   const smoothAngle = spec.smoothAngle ?? DEFAULT_SMOOTH_ANGLE;
   if (smoothAngle > 0) args.push('--smooth-angle', String(smoothAngle));
   if (spec.mirror) args.push('--mirror', spec.mirror);
@@ -273,6 +331,17 @@ export interface ParsedMeshFinish {
   shading?: string;
   /** Why the re-shade was refused (the source's own normals win) — never a silent skip. */
   shadingSkippedReason?: string;
+  /**
+   * The retopo mode the script actually applied. Absent for output produced before the
+   * mode existed — which must not be read as `collapse` by a caller that cares.
+   */
+  retopo?: RetopoMode;
+  /** Why a requested `quadriflow` could not run and the script fell back to collapse. */
+  retopoFallbackReason?: string;
+  /** Quads QuadriFlow authored, measured Blender-side BEFORE the triangulating export. */
+  quadsAuthored?: number;
+  /** States that authored quads ship triangulated — see `quadDeliveryNote`. */
+  quadDeliveryNote?: string;
   normalMapPath?: string;
   aoMapPath?: string;
   diffuseMapPath?: string;
@@ -309,7 +378,14 @@ export function parseMeshFinishOutput(stdout: string): ParsedMeshFinish {
   const error = get('ERROR');
   const facesCulled = num('FACES_CULLED');
   const cullUnevaluatedShells = num('CULL_UNEVALUATED_SHELLS');
+  const retopo = get('RETOPO') as RetopoMode | undefined;
   return {
+    retopo,
+    retopoFallbackReason: get('RETOPO_FALLBACK'),
+    quadsAuthored: num('QUADS_AUTHORED'),
+    // Derived from the mode the script REPORTS, not the mode requested — a run that
+    // fell back to collapse must not carry a note about quads it never authored.
+    quadDeliveryNote: quadDeliveryNote(retopo),
     cullUnevaluatedShells,
     cullLimitReason: cullLimitReasonFor(facesCulled, cullUnevaluatedShells),
     cullRefusedReason: get('CULL_REFUSED'),

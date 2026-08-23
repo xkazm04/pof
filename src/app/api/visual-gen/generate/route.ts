@@ -10,6 +10,7 @@ import { startTripoJob } from '@/lib/visual-gen/tripo-job-store';
 import { polycountFor, resolveAssetClass } from '@/lib/visual-gen/polycount-presets';
 import { providerFaceLimit } from '@/lib/visual-gen/face-budget';
 import { tripoModelFor } from '@/lib/visual-gen/tripo-models';
+import { hunyuanModelFor } from '@/lib/visual-gen/hunyuan-models';
 import {
   gateInputImage,
   parseVisionImage,
@@ -143,8 +144,13 @@ export async function POST(request: NextRequest) {
       // a missing class to a "typical" one would fail an assembled character against a
       // prop's component budget. Until this arrived, the local stores graded every mesh
       // against the class-blind 200k ceiling with nothing anywhere admitting it.
+      // Never leave the Hunyuan model unstated either: without this the model was
+      // decided by an argparse default inside pof_hunyuan.py and no mesh was ever
+      // attributable to a tier. `hunyuanModelFor` states the model that has actually
+      // been running — and reports `audited: false`, because unlike Tripo's pin no PoF
+      // arena has ever graded a Hunyuan mesh (`generated/hunyuan3d/` is empty).
       const jobId = providerId === 'hunyuan3d'
-        ? startHunyuanJob({ imagePath: inPath, outputPath, assetClass })
+        ? startHunyuanJob({ imagePath: inPath, outputPath, assetClass, model: hunyuanModelFor(assetClass).model })
         : startTriposrJob({ imagePath: inPath, outputPath, mcResolution, fidelity: true, assetClass });
       return apiSuccess({ jobId, provider: providerId, mode, gradedAs: resolveAssetClass(assetClass).gradedAs, inputGate }, 202);
     }
