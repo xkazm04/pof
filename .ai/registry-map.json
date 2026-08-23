@@ -20,7 +20,9 @@
     "weaklyGoverned": 5,
     "medianTopScore": 581.1,
     "carriedVerdicts": 0,
-    "restoredPairs": 0
+    "restoredPairs": 0,
+    "judged": 2,
+    "deviations": 2
   },
   "subjectIndex": {
     "generated-mesh-acceptance": [
@@ -319,7 +321,10 @@
             "face"
           ],
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "Asset-forge wire type keeps prose reasons and drops coded findings; CritiqueBadge prints m.components as 'parts'. findings DO cross on the mesh-finish lane.",
+          "evaluatedAt": "2026-08-23",
+          "evaluatedAgainst": "sha256:eafd96a53a8801fe"
         },
         {
           "subject": "generated-asset-world-scale",
@@ -1611,7 +1616,10 @@
             "verdicts"
           ],
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "contentHash excludes 2 keys, payload.ts 4: the digest covers produceDirection no judge reads. verdictRollup counts 'unknown'-provenance passes toward current quality.",
+          "evaluatedAt": "2026-08-23",
+          "evaluatedAgainst": "sha256:eafd96a53a8801fe"
         }
       ],
       "governance": "governed"
