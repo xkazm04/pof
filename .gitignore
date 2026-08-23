@@ -117,6 +117,7 @@ docs/index.bleve/
 
 # BEGIN ai-registry linked skills (managed by ai-registry/scripts/link-registry.mjs)
 # Links are machine state; the declarations live in .ai/manifest.yaml (`skills:` and `knowledge.domains`).
+/.claude/skills/conform
 /.claude/skills/consult
 /.claude/skills/npm-updates
 /.claude/skills/perfect
