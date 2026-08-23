@@ -118,3 +118,8 @@
   Three strikes = the rename to `research-pof` is now warranted; not done here because renaming the
   slash command is the user's call. Recommend it explicitly.
 
+
+## 2.1 — 2026-08-23 — pof
+- **An OPERATOR's return value is a claim; only the artifact is evidence.** Phase 7 already demands an A/B artifact diff, and it caught a shipped no-op this run: `bpy.ops.object.quadriflow_remesh` returns `{'FINISHED'}` while changing nothing, so a green 10-test suite + clean tsc/eslint accompanied a 43 MB unreduced mesh labelled as retopologised. Worth stating explicitly in the method: when a finding WRAPS a third-party operator/CLI (Blender ops, UE Python, ffmpeg, any exit-0 tool) rather than authoring a pure function, the success check must read the object the operator was supposed to change. This is narrower and more actionable than the existing "prove it with an artifact diff" line, which a reader can satisfy with "the command ran".
+- **Cheap sequential probes beat one clever hypothesis.** Four ~30s probes (params -> in-memory vs imported -> custom normals -> weld+normals) each killed exactly one hypothesis and surfaced a fact I could not have guessed (glTF splits seam vertices, so a watertight mesh re-imports with 61k non-manifold edges). Generalizes the 08-19 "clone before proposing" lesson from source-reading to runtime behaviour.
+- **Dispatch verification agents in IMPLEMENTATION order, not candidate order.** Parallel agents roughly halved wall-clock, but the report for the candidate I implemented first arrived last, and I nearly duplicated its file reads.
