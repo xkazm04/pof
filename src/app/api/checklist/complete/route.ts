@@ -64,36 +64,43 @@ export const POST = withRoute(async (req: NextRequest) => {
   const db = getDb();
   const id = projectId(projectPath);
 
-  // Read current checklist progress
-  const row = db
-    .prepare('SELECT checklist_json FROM project_progress WHERE project_id = ?')
-    .get(id) as { checklist_json: string } | undefined;
+  // Read + merge + upsert run in one transaction so the read-modify-write can't
+  // race a concurrent writer (same pattern as project-progress/route.ts).
+  const save = db.transaction((): string[] => {
+    // Read current checklist progress
+    const row = db
+      .prepare('SELECT checklist_json FROM project_progress WHERE project_id = ?')
+      .get(id) as { checklist_json: string } | undefined;
 
-  const stored: Record<string, Record<string, boolean>> = row
-    ? JSON.parse(row.checklist_json)
-    : {};
+    const stored: Record<string, Record<string, boolean>> = row
+      ? JSON.parse(row.checklist_json)
+      : {};
 
-  // Any orphan key already in the blob moves to its real checklist id on this
-  // write — a key nothing reads is not left sitting there just because it was
-  // written before the route validated anything.
-  const { progress, migrations } = migrateProgressBlob(stored);
-  const migratedKeys = describeMigrations(migrations);
-  if (migratedKeys.length > 0) {
-    logger.warn(`checklist/complete: migrated orphan progress keys — ${migratedKeys.join('; ')}`);
-  }
+    // Any orphan key already in the blob moves to its real checklist id on this
+    // write — a key nothing reads is not left sitting there just because it was
+    // written before the route validated anything.
+    const { progress, migrations } = migrateProgressBlob(stored);
+    const keys = describeMigrations(migrations);
+    if (keys.length > 0) {
+      logger.warn(`checklist/complete: migrated orphan progress keys — ${keys.join('; ')}`);
+    }
 
-  // Mark item complete
-  if (!progress[moduleId]) progress[moduleId] = {};
-  progress[moduleId][storedItemId] = true;
+    // Mark item complete
+    if (!progress[moduleId]) progress[moduleId] = {};
+    progress[moduleId][storedItemId] = true;
 
-  // Upsert
-  db.prepare(`
-    INSERT INTO project_progress (project_id, checklist_json, health_json, verification_json, history_json, updated_at)
-    VALUES (?, ?, '{}', '{}', '{}', datetime('now'))
-    ON CONFLICT(project_id) DO UPDATE SET
-      checklist_json = excluded.checklist_json,
-      updated_at = datetime('now')
-  `).run(id, JSON.stringify(progress));
+    // Upsert
+    db.prepare(`
+      INSERT INTO project_progress (project_id, checklist_json, health_json, verification_json, history_json, updated_at)
+      VALUES (?, ?, '{}', '{}', '{}', datetime('now'))
+      ON CONFLICT(project_id) DO UPDATE SET
+        checklist_json = excluded.checklist_json,
+        updated_at = datetime('now')
+    `).run(id, JSON.stringify(progress));
+
+    return keys;
+  });
+  const migratedKeys = save();
 
   // ── Close the A/B loop ────────────────────────────────────────────────────
   // A run served the static registry prompt (or no variant at all) is not a
