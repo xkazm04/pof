@@ -37,6 +37,9 @@ import {
   nominalExtentFor,
   type ScaleGrade,
   type SizeRequest,
+  gradeOrientation,
+  expectsUprightFor,
+  type OrientationGrade,
 } from '@/lib/visual-gen/world-scale';
 import type { AssetStats } from './assetStats';
 
@@ -69,6 +72,14 @@ export interface ViewerAssetGrade {
   scale: ScaleGrade;
   /** One sentence on the size verdict. Always set. */
   scaleLine: string;
+  /**
+   * Which way up the asset sits. Every TripoSR asset measured on 2026-08-31 was authored
+   * lying down, and the scale line above compares the LONGEST extent to the target — so
+   * for a mis-oriented asset it holds the sideways length to the intended height.
+   */
+  orientation: OrientationGrade;
+  /** The orientation grade as one sentence. */
+  orientationLine: string;
   /** Longest measured bbox extent, in the glTF file's own units (metres). */
   longestExtentM: number;
   /** True when the bbox is raw generator output — a ~1 m box regardless of the asset. */
@@ -98,6 +109,14 @@ function budgetSentence(grade: BudgetGrade, preset: PolycountPreset | undefined)
     return `${int(measured)} triangles against the ${int(ceiling)}-triangle ${preset.label} ceiling (${ratio.toFixed(1)}x) — the generation target for this class is ${int(preset.faceLimit)}; decimate before shipping. ${CEILING_NOTE}`;
   }
   return `${int(measured)} triangles, inside the ${int(ceiling)}-triangle ${preset.label} ceiling (generation target ${int(preset.faceLimit)}). ${CEILING_NOTE}`;
+}
+
+function orientationSentence(grade: OrientationGrade): string {
+  if (grade.reason) return grade.reason;
+  if (grade.verdict === 'upright') {
+    return `stands on its up axis (${(grade.upExtentM ?? 0).toFixed(2)} m tall against a ${(grade.longestExtentM ?? 0).toFixed(2)} m longest extent)`;
+  }
+  return 'no orientation verdict available';
 }
 
 function scaleSentence(grade: ScaleGrade, normalized: boolean): string {
@@ -139,6 +158,14 @@ export function gradeViewerAsset(
   const target = usable(targetExtentM) ? targetExtentM : nominalExtentFor(resolved.assetClass);
   const request: SizeRequest | undefined = usable(target) ? { targetExtentM: target } : undefined;
   const scale = gradeWorldScale(bbox, request);
+  // Only classes whose subject genuinely stands taller than it is wide get an expectation
+  // — `expectsUprightFor` gives a character one and a prop none, the same discipline that
+  // gives a character a nominal height and a prop none.
+  const uprightExpected = expectsUprightFor(resolved.assetClass);
+  const orientation = gradeOrientation(
+    bbox,
+    uprightExpected === undefined ? undefined : { expectUpright: uprightExpected },
+  );
   const generatorNormalized = isGeneratorNormalized(bbox);
 
   return {
@@ -150,6 +177,8 @@ export function gradeViewerAsset(
     budgetLine: budgetSentence(budget, preset),
     scale,
     scaleLine: scaleSentence(scale, generatorNormalized),
+    orientation,
+    orientationLine: orientationSentence(orientation),
     longestExtentM: longestExtent(bbox),
     generatorNormalized,
     targetExtentM: request?.targetExtentM,

@@ -10,7 +10,10 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { gradeFaceBudget, type BudgetGrade, type BudgetRequest } from './face-budget';
-import { gradeWorldScale, type ScaleGrade, type SizeRequest } from './world-scale';
+import {
+  gradeWorldScale, gradeOrientation,
+  type ScaleGrade, type SizeRequest, type OrientationGrade, type OrientationRequest,
+} from './world-scale';
 import { assessStage, type MeshStage } from './critique-stage';
 
 export interface MeshMetrics {
@@ -183,7 +186,8 @@ export type FindingCode =
   | 'degenerate-faces'
   | 'face-count'
   | 'budget-over'
-  | 'scale-off';
+  | 'scale-off'
+  | 'orientation-lying';
 
 export interface Finding {
   code: FindingCode;
@@ -222,6 +226,13 @@ export interface Scorecard {
    * next to a 1.8 m Mannequin. Absent when no size was supplied — same silence rule.
    */
   scale?: ScaleGrade;
+  /**
+   * Which way up the mesh sits. Every TripoSR asset measured on 2026-08-31 was authored
+   * LYING DOWN, which nothing caught — and which quietly corrupts `scale` above, since
+   * that compares the LONGEST extent to the intended height. Always present; `unmeasured`
+   * until a caller states that the subject should stand.
+   */
+  orientation?: OrientationGrade;
 }
 
 /** A scorecard plus the metrics behind it — the shape surfaced to the UI / job result. */
@@ -241,6 +252,7 @@ export function scoreMesh(
   thresholds: Partial<CritiqueThresholds> = {},
   budget?: BudgetRequest,
   size?: SizeRequest,
+  orientation?: OrientationRequest,
 ): Scorecard & { findings: Finding[] } {
   const t = { ...DEFAULT_THRESHOLDS, ...thresholds };
   const found: Finding[] = [];
@@ -286,6 +298,14 @@ export function scoreMesh(
   const scaleGrade = gradeWorldScale(m.bbox, size);
   if (scaleGrade.verdict === 'off' && scaleGrade.reason) warn('scale-off', scaleGrade.reason);
 
+  // Right way up? Same shape as scale: always graded so the card can report the axes even
+  // when nothing claimed the subject should stand, and a warn (not a fail) because it is
+  // fixable at import with a rotation, exactly as a scale miss is with ImportUniformScale.
+  const orientationGrade = gradeOrientation(m.bbox, orientation);
+  if (orientationGrade.verdict === 'lying' && orientationGrade.reason) {
+    warn('orientation-lying', orientationGrade.reason);
+  }
+
   // `reasons` stays fails-then-warns — the exact order every existing consumer reads,
   // and the order `failureShape` depends on to pick the verdict-driving defect.
   const fails = found.filter((f) => f.severity === 'fail');
@@ -300,6 +320,7 @@ export function scoreMesh(
     findings,
     budget: budgetGrade,
     scale: scaleGrade,
+    orientation: orientationGrade,
   };
 }
 
