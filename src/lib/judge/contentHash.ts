@@ -10,11 +10,14 @@
  * Must run identically on the server (the API route stamps the hash) and in the browser (the
  * lab compares it against what is on screen), so it is plain TS — no `node:crypto`.
  */
+import { NON_CONTENT_KEYS } from './payload';
 
 /**
  * Bookkeeping keys that are NOT the judged content. THE single exclusion rule — the write path
  * (`POST /api/judge-verdicts`), the verdict bridge (`judgeBridge`) and the lab's drift
- * comparator (`labContentDrift`) all hash through here, so no second stripping rule exists.
+ * comparator (`labContentDrift`) all hash through here, and since v3 the rule itself is
+ * `NON_CONTENT_KEYS` — the same list the judge strips by — so there is genuinely one authority
+ * rather than two that agreed by inspection.
  *
  * `genHistory` is the gallery's kept re-roll log (`shared/genHistory.ts`). The SELECTED
  * candidate's payload is projected to the artifact's top level — that projection is what the
@@ -32,7 +35,20 @@
  * so those rows agreed by accident. Excluding the stamp makes both paths hash the same produced
  * content, which is the only thing a judge ever read.
  */
-const VOLATILE_KEYS = new Set(['genHistory', '_provenance']);
+/**
+ * v3 (2026-08-31): DERIVED from {@link NON_CONTENT_KEYS} rather than restated.
+ *
+ * The two lists had drifted apart, which is the defect the comment above already forbids in
+ * principle: `payload.ts` strips four keys before the judge ever sees a config, while this
+ * hash excluded only two. So `audioAssets` and `produceDirection` — content the judge is
+ * structurally incapable of reading — still bound the verdict. Editing either one marked a
+ * standing verdict `stale` and quietly stopped it condemning, which is exactly the
+ * `_provenance` failure documented above, arriving through the other door.
+ *
+ * A verdict must be bound to what the judge READ. That set has one owner, and it is the
+ * strip list the judge runs through — never a copy of it kept in sync by hand.
+ */
+const VOLATILE_KEYS: ReadonlySet<string> = NON_CONTENT_KEYS;
 
 /**
  * The hashing scheme in force. Bump it with ANY change to {@link VOLATILE_KEYS} or the
@@ -43,8 +59,12 @@ const VOLATILE_KEYS = new Set(['genHistory', '_provenance']);
  * v1 — `genHistory` excluded only. Its hashes are unbindable under v2 (they include the
  *      server's `_provenance` stamp or not, depending on which write path produced the row).
  * v2 — `_provenance` excluded too (see above).
+ * v3 — the rule is now DERIVED from `NON_CONTENT_KEYS`, adding `audioAssets` and
+ *      `produceDirection`. v2 hashes bound content the judge never read, so a metadata-only
+ *      edit invalidated a live verdict; they are not comparable under v3 and
+ *      `isComparableHash` will say so rather than compare across the change.
  */
-export const CONTENT_HASH_SCHEME = 'v2';
+export const CONTENT_HASH_SCHEME = 'v3';
 
 /** The scheme prefix a stored hash was computed under (`undefined` for an unparseable value). */
 export function hashScheme(hash: string | undefined): string | undefined {

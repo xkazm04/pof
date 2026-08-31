@@ -176,3 +176,36 @@ describe('resolveStepAcceptance — end-to-end binding', () => {
     expect(after.judge?.provenance).toBe('stale');
   });
 });
+
+describe('the hash binds exactly what the judge read (v3)', () => {
+  // Regression for the 2026-08-31 conform finding: `VOLATILE_KEYS` restated a subset of
+  // `NON_CONTENT_KEYS` instead of deriving from it, so `audioAssets` and `produceDirection`
+  // — stripped before the judge ever sees a config — still bound the verdict. A
+  // metadata-only edit marked a live verdict stale and quietly stopped it condemning.
+  const base = {
+    title: 'Ability: Cleave',
+    body: 'A wide arc strike.',
+    audioAssets: ['swing.wav'],
+    produceDirection: { prompt: 'You are a senior systems designer at a AAA studio' },
+  };
+
+  it('editing a key the judge never reads does not restale the verdict', () => {
+    const edited = { ...base, produceDirection: { prompt: 'a completely different instruction' } };
+    expect(stepContentHash(edited)).toBe(stepContentHash(base));
+    expect(stepContentHash({ ...base, audioAssets: ['other.wav', 'third.wav'] })).toBe(stepContentHash(base));
+  });
+
+  it('editing content the judge DID read still restales it', () => {
+    expect(stepContentHash({ ...base, body: 'A narrow thrust.' })).not.toBe(stepContentHash(base));
+  });
+
+  it('a verdict survives a metadata edit and still condemns', () => {
+    const v = verdict({ contentHash: stepContentHash(base) });
+    const after = resolveStepAcceptance({
+      catalogId: 'abilities', step: 'Design', local: pass, verdicts: [v],
+      data: { ...base, audioAssets: ['replaced.wav'] },
+    });
+    expect(after.status).toBe('fail');
+    expect(after.judge?.provenance).not.toBe('stale');
+  });
+});
