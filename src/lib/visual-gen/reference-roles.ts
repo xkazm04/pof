@@ -139,6 +139,33 @@ export const GEN_PROMPTING_PRACTICES: GenPromptingPractice[] = [
 ];
 
 /**
+ * Where {@link GEN_PROMPTING_PRACTICES} actually reaches — asserted, not assumed, the
+ * same discipline as `style-dna.ts`'s `STYLE_DNA_REACH`.
+ *
+ * As of 2026-08-31 the answer is NOWHERE. A grep for `GEN_PROMPTING_PRACTICES` across
+ * `src/` returns this module, its own test, and one comment in `input-gate.ts`; no
+ * prompt builder imports it and no generation path injects it. Thirteen practices,
+ * deposited by successive research runs, are read only by the test that checks they are
+ * non-empty — so each new one has felt like shipping knowledge while changing nothing a
+ * generator ever sees.
+ *
+ * This constant exists so the next run finds that out in one read instead of adding a
+ * fourteenth. Knowledge that must reach a dispatched prompt today belongs in
+ * `ue-gotchas.ts` (injected via `prompt-context.ts`, pinned by the golden rail) or in
+ * `module-eval-prompts.ts`; this list is a UI/authoring reference until something wires
+ * it. Wiring it is the fix — see docs/research/impact-map.md.
+ */
+export const GEN_PROMPTING_REACH = {
+  /** Source files that inject these practices into a submitted prompt. */
+  senders: [] as string[],
+  /** The full sentence to show beside the list — reach AND what it does not cover. */
+  note:
+    'These practices reach NO generation prompt today — nothing in src/ imports the list. ' +
+    'They are authoring reference only. Prompt-reaching knowledge belongs in ue-gotchas.ts ' +
+    '(injected by prompt-context.ts) or module-eval-prompts.ts.',
+} as const;
+
+/**
  * Assemble an ordered, role-tagged reference directive from supplied references
  * + a task line — the structured prompt scaffold the pro workflow uses. Unknown
  * roles are skipped.

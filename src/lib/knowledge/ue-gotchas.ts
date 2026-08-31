@@ -412,6 +412,16 @@ export const UE_GOTCHAS: Gotcha[] = [
     source: 'research: Souls-like in 3 days (Stefan 3D AI) — arena built from primitives + tiles + array/curve wall kits',
   },
   {
+    id: 'kit-from-one-concept-split',
+    modules: ['world', '3d'],
+    summary:
+      'Cut an asset kit OUT of one concept image (crop the regions you need, extract each as its own clean plate) — never prompt each prop independently',
+    detail:
+      "`arena-kit-composition` says build the space from a modular KIT; this is how the kit is made to match. Prompting each prop on its own — one call for the crate, one for the barrel, one for the rope coil — produces props that are individually fine and collectively wrong: different palettes, different light directions, different wear levels and different stylisation, because nothing constrains them to each other. Style DNA (`style-dna.ts`) narrows the drift but cannot remove it; the prompts are still independent samples. The pro workflow inverts the order: generate ONE concept image of the whole scene first, then go back into it and extract the kit from that single image — circle or crop each region ('I need this stone, this pier section, this barrel') and have the image model re-emit it as an isolated plate on a plain background. Every member is then a crop of one lighting setup and one palette, so the kit is coherent BY CONSTRUCTION rather than by luck, and each plate is already the clean single-subject input image-to-3D wants. Practical rules: (1) group small repeated objects (planks, stones, coins) into ONE plate and mesh them together — it saves calls and they are placed as a cluster anyway; (2) choose the crop granularity by how much placement control you want, since a region extracted as one piece can only be placed as one piece; (3) do not try to predict the full list up front — circle back to the same concept image for anything missing, which stays coherent because the source image has not changed; (4) generate the tiling material plates (fishnet, rope, rock) from that same concept too, so surfaces match the props standing on them.",
+    appliesTo: ['ue-python'],
+    source: 'research: AI environment asset-kit workflow (Stefan 3D AI, youtube wknRD5g-vvk) — concept image split into circled building blocks',
+  },
+  {
     id: 'hard-surface-garment-subassembly-gen',
     modules: ['3d', 'character'],
     summary:

@@ -106,6 +106,15 @@ describe('formatGotchas', () => {
     expect(formatGotchas('ue-python', 'arpg-ui')).not.toContain('never the whole space as one AI mesh');
   });
 
+  it('tells world sessions to cut a kit out of ONE concept image, not prompt each prop alone', () => {
+    const out = formatGotchas('ue-python', 'level-design');
+    expect(out).toMatch(/one concept|single concept/i);
+    expect(out).toMatch(/crop|region|circle/i);
+    // The failure the rule prevents: independently-prompted props that do not match.
+    expect(out).toMatch(/drift|consisten|match/i);
+    expect(formatGotchas('ue-python', 'arpg-ui')).not.toMatch(/one concept image/i);
+  });
+
   it('carries MetaHuman conform INPUT-PREP guidance for ue-python', () => {
     const out = formatGotchas('ue-python');
     expect(out).toMatch(/MetaHuman/);

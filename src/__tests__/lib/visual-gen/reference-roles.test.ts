@@ -1,8 +1,11 @@
 import { describe, it, expect } from 'vitest';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import {
   REFERENCE_ROLES,
   ROLE_IDS,
   GEN_PROMPTING_PRACTICES,
+  GEN_PROMPTING_REACH,
   getReferenceRole,
   assembleReferenceDirective,
 } from '@/lib/visual-gen/reference-roles';
@@ -115,5 +118,26 @@ describe('assembleReferenceDirective', () => {
   it('ignores unknown roles gracefully', () => {
     const out = assembleReferenceDirective([{ role: 'bogus', label: 'x.png' }], 'task');
     expect(out).toMatch(/task/);
+  });
+});
+
+describe('GEN_PROMPTING_REACH', () => {
+  it('states, in the module, which prompts these practices actually reach', () => {
+    expect(Array.isArray(GEN_PROMPTING_REACH.senders)).toBe(true);
+    expect(GEN_PROMPTING_REACH.note).toBeTruthy();
+  });
+
+  it('does not claim a sender that no longer imports the list', () => {
+    // The claim is asserted, not assumed — the same discipline as STYLE_DNA_REACH,
+    // which exists because a reach claim drifted from the code once already.
+    for (const f of GEN_PROMPTING_REACH.senders) {
+      expect(existsSync(join(process.cwd(), f)), `${f} is listed as a sender`).toBe(true);
+    }
+  });
+
+  it('says so plainly when the reach is nothing, rather than implying injection', () => {
+    if (GEN_PROMPTING_REACH.senders.length === 0) {
+      expect(GEN_PROMPTING_REACH.note).toMatch(/no |nothing|not injected|reaches no/i);
+    }
   });
 });

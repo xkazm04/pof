@@ -89,4 +89,4 @@ it. The decisive check is an A/B against a control:
 - Blender: `scripts/visual-gen/pof_mesh_finish.py` (`unwrap`, `bake_high_to_low`, `join_meshes`)
 - Node seam: `src/lib/visual-gen/mesh-finish.ts` (`MeshFinishSpec`, `buildMeshFinishArgs`)
 - Budgets: `face-budget.ts` (triangles), `polycount-presets.ts` (per class)
-- Knowledge it makes measurable: `ue-gotchas.ts` → `ai-generated-environment-assembly`
+- Knowledge it makes measurable: `ue-gotchas.ts` → `arena-kit-composition`, `kit-from-one-concept-split`
