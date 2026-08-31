@@ -674,7 +674,10 @@
           ],
           "grounding": "use_when",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "this module is game sound-effect/ambience generation and spatial placement (SoundForgePanel.tsx, SpatialAudioGeneratorPanel/, AudioScenePainter/), not speech capture or synthesis; src/lib/audio-gen/providers/elevenlabs.ts:26 states outright 'PoF does not claim text-to-speech.'",
+          "evaluatedAt": "2026-08-31",
+          "evaluatedAgainst": "sha256:5215e21162717d59"
         }
       ],
       "governance": "governed"
@@ -1771,7 +1774,10 @@
           ],
           "grounding": "use_when",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "judge-stability is strongly realized (src/lib/judge/calibration.ts:170-245 pins RUBRIC_VERSION, distinguishes stale/provisional/enforced standings, never fakes a pass), but scenario-design's identity mechanism disagrees with what the judge reads: contentHash.ts:35 excludes only 2 keys while payload.ts:12-17 strips 4 (produceDirection, audioAssets) — the same key-divergence already flagged as a deviation on this context's sibling pair quality-verdict-integrity (2026-08-23) and still unresolved.",
+          "evaluatedAt": "2026-08-31",
+          "evaluatedAgainst": "sha256:5215e21162717d59"
         }
       ],
       "governance": "governed"
@@ -2218,7 +2224,10 @@
           ],
           "grounding": "use_when",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/layout-lab/steps/shared/CliProduce.tsx's 'dispatching' in-flight state is a mutual-exclusion guard against double-click, which the golden path explicitly names as NOT a rate limit; no per-key/window limiter, refusal-contract or key-design exists anywhere behind this model-spend-causing dispatch door (checked src/lib/cli-spend/* — spend/budget estimation only, no bucket or window construct in the repo).",
+          "evaluatedAt": "2026-08-31",
+          "evaluatedAgainst": "sha256:5215e21162717d59"
         },
         {
           "subject": "wizard-flows",
@@ -2301,7 +2310,10 @@
           ],
           "grounding": "use_when",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/prompt-context.ts:103-152 formatDynamicContext() inlines the FULL scanned class/plugin/build-dependency lists with no cap, floor/elastic split or truncation notice, so a large UE project floods the prompt; the layered-composition assembler itself (src/lib/prompts/prompt-builder.ts:49-272) is otherwise well realized.",
+          "evaluatedAt": "2026-08-31",
+          "evaluatedAgainst": "sha256:5215e21162717d59"
         },
         {
           "subject": "prompt-fitness-and-evolution",
@@ -2651,7 +2663,10 @@
           ],
           "grounding": "use_when",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "cross-language-token-parity is broken: src/app/globals.css:63 --glow-success is rgb(34,197,94)=#22c55e while src/lib/chart-colors.ts:9 STATUS_SUCCESS is #4ade80 — two independently hand-maintained 'success' greens that have already drifted apart, and no lint/gate anywhere in the repo bans a raw color literal with a semantic equivalent.",
+          "evaluatedAt": "2026-08-31",
+          "evaluatedAgainst": "sha256:5215e21162717d59"
         },
         {
           "subject": "data-viz",

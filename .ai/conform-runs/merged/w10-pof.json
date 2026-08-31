@@ -1,0 +1,76 @@
+{
+  "worker": "w10-gravitone-pof",
+  "evaluatedAt": "2026-08-31",
+  "pairs": [
+    {
+      "context": "099d3014-5d1c-47d0-9d2c-e4b078222cb7",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/lib/prompt-context.ts:103-152 formatDynamicContext() inlines the FULL scanned class/plugin/build-dependency lists with no cap, floor/elastic split or truncation notice, so a large UE project floods the prompt; the layered-composition assembler itself (src/lib/prompts/prompt-builder.ts:49-272) is otherwise well realized.",
+      "techniques": [
+        { "technique": "layered-composition", "verdict": "conformant",
+          "evidence": "src/lib/prompts/prompt-builder.ts:49-272 — one PromptBuilder class per prompt family, fixed section order enforced in build(), no post-return string concatenation found anywhere .build() is called" },
+        { "technique": "context-budgeting", "verdict": "deviation",
+          "evidence": "src/lib/prompt-context.ts:103-152 — formatDynamicContext() joins every scanned class/plugin/dependency name with no cap and no '...N more' notice; there is no degradation ladder anywhere in this module" },
+        { "technique": "variable-interpolation", "verdict": "conformant",
+          "evidence": "src/lib/prompts/prompt-builder.ts:232-237 — build() throws loudly on missing required sections (projectContext, taskInstructions) rather than silently rendering a gap" }
+      ]
+    },
+    {
+      "context": "f9a4a5bc-b02a-4085-83f0-32492b13c805",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "this module is game sound-effect/ambience generation and spatial placement (SoundForgePanel.tsx, SpatialAudioGeneratorPanel/, AudioScenePainter/), not speech capture or synthesis; src/lib/audio-gen/providers/elevenlabs.ts:26 states outright 'PoF does not claim text-to-speech.'",
+      "techniques": [
+        { "technique": "stt-pipeline", "verdict": "not-applicable", "evidence": "no microphone capture or transcription code exists anywhere under src/components/modules/content/audio/ or src/lib/audio-*" },
+        { "technique": "tts-pipeline", "verdict": "not-applicable", "evidence": "src/lib/audio-gen/providers/elevenlabs.ts:24-26 — the ElevenLabs provider is wired for sound-effect generation only; the file's own comment says the app does not claim TTS" }
+      ],
+      "registryProposal": "matcher scored this 'probable' on why:['voice','audio','provider'] — those terms mean game sound-design/spatial-placement here, not product speech I/O. The correctly-governing subject (spatial-audio-scene-authoring, game-production) already scored higher in this same context (1086.7 vs 720.9); voice-io's use_when could name 'game audio asset generation' as an explicit negative example."
+    },
+    {
+      "context": "c3c80a76-7cb9-481e-9030-bdd3d9e13046",
+      "subject": "rate-limiting",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/components/layout-lab/steps/shared/CliProduce.tsx's 'dispatching' in-flight state is a mutual-exclusion guard against double-click, which the golden path explicitly names as NOT a rate limit; no per-key/window limiter, refusal-contract or key-design exists anywhere behind this model-spend-causing dispatch door (checked src/lib/cli-spend/* — spend/budget estimation only, no bucket or window construct in the repo).",
+      "techniques": [
+        { "technique": "refusal-contract", "verdict": "deviation",
+          "evidence": "CliProduce.tsx has no time-windowed refusal at all — rapid sequential (non-overlapping) dispatches are unbounded once the prior call resolves; the only guard is the in-flight 'dispatching' mutex, not a rate limit" }
+      ]
+    },
+    {
+      "context": "ac4cee9e-1527-46e9-8b16-f0f49affbe37",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "judge-stability is strongly realized (src/lib/judge/calibration.ts:170-245 pins RUBRIC_VERSION, distinguishes stale/provisional/enforced standings, never fakes a pass), but scenario-design's identity mechanism disagrees with what the judge reads: contentHash.ts:35 excludes only 2 keys while payload.ts:12-17 strips 4 (produceDirection, audioAssets) — the same key-divergence already flagged as a deviation on this context's sibling pair quality-verdict-integrity (2026-08-23) and still unresolved.",
+      "techniques": [
+        { "technique": "judge-stability", "verdict": "conformant",
+          "evidence": "src/lib/judge/calibration.ts:170-245 — RUBRIC_VERSION pinned and stamped per verdict, standings distinguish unrun/stale/unscored/provisional/enforced-{pass,fail}, drift measured between persisted runs (calibrationDrift)" },
+        { "technique": "scenario-design", "verdict": "deviation",
+          "evidence": "src/lib/judge/contentHash.ts:35 VOLATILE_KEYS (2 keys) vs src/lib/judge/payload.ts:12-17 NON_CONTENT_KEYS (4 keys) — the verdict-identity hash and the judge's actual read set disagree, so metadata-only edits (produceDirection, audioAssets) falsely mark a verdict stale; corroborates the same-context sibling verdict on quality-verdict-integrity" },
+        { "technique": "metric-role-contract", "verdict": "conformant",
+          "evidence": "src/lib/judge/rubrics.ts:61-66,98 — one BANDS threshold table, verdict='pass' only over the shippable band, dimensions scored separately from the pass/fail decision" }
+      ]
+    },
+    {
+      "context": "16a83659-7ed1-4ae2-a1b1-a9e01b034917",
+      "subject": "design-tokens",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "cross-language-token-parity is broken: src/app/globals.css:63 --glow-success is rgb(34,197,94)=#22c55e while src/lib/chart-colors.ts:9 STATUS_SUCCESS is #4ade80 — two independently hand-maintained 'success' greens that have already drifted apart, and no lint/gate anywhere in the repo bans a raw color literal with a semantic equivalent.",
+      "techniques": [
+        { "technique": "cross-language-token-parity", "verdict": "deviation",
+          "evidence": "src/app/globals.css:63 vs src/lib/chart-colors.ts:9-15 — the CSS custom-property layer and the TS constant layer each define 'success'/'warning' independently, and they disagree today, not just hypothetically" },
+        { "technique": "token-enforcement", "verdict": "deviation",
+          "evidence": "no eslint rule, gate script or CI job found anywhere in the repo that flags a raw hex/color literal where a semantic token exists; discipline is by convention only" },
+        { "technique": "motion-tokens", "verdict": "conformant",
+          "evidence": "src/lib/motion.ts:9-33 — DURATION ladder (fast/base/slow) + EASE_OUT/EASE_FILL + SPRING as the stated canonical taxonomy, deprecated aliases explicitly pointed back at it" },
+        { "technique": "theme-architecture", "verdict": "not-applicable",
+          "evidence": "the app ships one fixed dark palette with no [data-theme] block or prefers-color-scheme handling in src/app/globals.css — there is no second theme's bindings to keep complete" }
+      ]
+    }
+  ]
+}
