@@ -1,7 +1,7 @@
 ---
 name: research
 description: "Use when the user shares a YouTube/article URL or raw text about Claude/AI game-dev automation, MCP/Unreal tooling, agent harnesses, or a dev-tool showcase and wants ideas PoF can adopt into its headless tooling or UI workflows. Triggers: '/research <url>', 'can we use this for PoF', 'research this video/technique', 'any ideas from this'."
-version: 1.7
+version: 1.8
 ---
 
 # Research — mine external showcases into PoF improvements
@@ -49,6 +49,7 @@ Classify the source up front; it changes the shape of every finding.
 - **Tooling source** (a tool / feature / automation demo): findings are code/feature changes (buckets A/B/C). The default.
 - **Knowledge / best-practice source** (a "how to build X *well*" talk — lighting, environment, combat feel, optimization): the value is **raising the quality of automated outputs**, not adding tooling. Route each best practice to one of **three homes** (D/B) and present candidates mapped to the home, not just the topic:
   1. **Knowledge base** → `ue-gotchas.ts` (`UE_GOTCHAS`, prompt-injected) or evaluator criteria (`module-eval-prompts.ts`). Cheapest + highest-leverage: the practice reaches every relevant dispatch prompt.
+     **Prove the destination is WIRED before you deposit into it — one grep, every time.** A knowledge store is only leverage if something imports it, and a list that reaches nothing looks identical to one that reaches everything from the inside: same shape, same passing test, same satisfying commit. 2026-08-31: the obvious home for a generation-side practice was `reference-roles.ts`'s `GEN_PROMPTING_PRACTICES` — 13 entries deposited by successive `/research` runs, imported by **no production file**. Each of those runs shipped knowledge no generator ever saw. Before routing a finding to a knowledge home, `grep -rn '<EXPORT_NAME>' src/ --include=*.ts --include=*.tsx` and require a non-test consumer; if there is none, route the finding to a store you verified reaches a prompt (in PoF: `UE_GOTCHAS`, pinned by the golden rail) and record the dead store as a backlog delta. Where the codebase states its own reach (`STYLE_DNA_REACH`), read that first — and when you find a store with no such marker and no consumers, adding one is a cheap, permanent fix for every future run.
   2. **Preset** → a data-driven best-practice config (e.g. `visual-gen/lighting-presets.ts`, `rig-presets.ts`) that prompts/pipelines target.
   3. **Pipeline** → a new/extended catalog StepSpec pipeline (usually L/XL → spec it, don't half-build).
 

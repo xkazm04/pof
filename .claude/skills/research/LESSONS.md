@@ -123,3 +123,32 @@
 - **An OPERATOR's return value is a claim; only the artifact is evidence.** Phase 7 already demands an A/B artifact diff, and it caught a shipped no-op this run: `bpy.ops.object.quadriflow_remesh` returns `{'FINISHED'}` while changing nothing, so a green 10-test suite + clean tsc/eslint accompanied a 43 MB unreduced mesh labelled as retopologised. Worth stating explicitly in the method: when a finding WRAPS a third-party operator/CLI (Blender ops, UE Python, ffmpeg, any exit-0 tool) rather than authoring a pure function, the success check must read the object the operator was supposed to change. This is narrower and more actionable than the existing "prove it with an artifact diff" line, which a reader can satisfy with "the command ran".
 - **Cheap sequential probes beat one clever hypothesis.** Four ~30s probes (params -> in-memory vs imported -> custom normals -> weld+normals) each killed exactly one hypothesis and surfaced a fact I could not have guessed (glTF splits seam vertices, so a watertight mesh re-imports with 61k non-manifold edges). Generalizes the 08-19 "clone before proposing" lesson from source-reading to runtime behaviour.
 - **Dispatch verification agents in IMPLEMENTATION order, not candidate order.** Parallel agents roughly halved wall-clock, but the report for the candidate I implemented first arrived last, and I nearly duplicated its file reads.
+
+## 1.7 — 2026-08-31 — pof
+
+- **Prove a knowledge destination is wired before depositing into it (APPLIED in 1.8).** The
+  run's finding-5 home looked obvious: `reference-roles.ts`'s `GEN_PROMPTING_PRACTICES`, a
+  curated list of generation-prompting best practices, several of them deposited by earlier
+  `/research` runs of this same skill. One grep showed it is imported by **no production
+  file** — only its own test and a comment. Those earlier runs each shipped a practice no
+  generator ever saw, and this run would have added a fourteenth. A dead knowledge store is
+  indistinguishable from a live one from the inside: same shape, same green test, same
+  satisfying commit. The method now requires one grep for a non-test consumer before routing
+  a knowledge finding, and Phase 7 says to record a dead store as a backlog delta.
+- **The artifact check catches defects that are invisible to a correct-looking suite — and it
+  is worth running even when the artifact is something you just computed.** The skill already
+  demands an artifact diff when the claim is "the output is better". This run applied it to a
+  freshly written pure generator, where it felt redundant: 20 green tests, no external
+  dependency, deterministic output. Running the emitted mesh through the project's own gate
+  found two real defects anyway — an open-ended tube (manifold with boundary), and then a
+  version that was watertight, consistently wound, and inside out (signed volume −0.037). No
+  assertion in the suite could see either, because both are properties of the *whole* mesh
+  that only a mesh-aware tool computes. Generalisation: when a finding emits a structured
+  artifact, run it through whatever validator the project already owns for that artifact type
+  — the validator knows invariants your unit tests will not think to assert.
+- **A title/content mismatch on the source is worth stating loudly in the note.** The video's
+  title (and its oEmbed title) advertised a completely different subject from its transcript,
+  and a `descoped-reopenable` entry existed for the advertised subject. Ingesting on the title
+  would have "re-checked" a descope trigger that never fired. Trust the transcript; record the
+  mismatch in the research note's frontmatter so a future run does not treat the run as a
+  re-check of the titled topic.
