@@ -1,101 +1,159 @@
-# Kit render gate — multi-view critique + kit colour coherence (spec)
+# Kit render gate — multi-view critique + kit colour coherence
 
-> **Status: SPEC ONLY — not built.** Both findings need the same missing piece (a static
-> mesh renderer), so they are specced together rather than as two half-harnesses.
+> **Status: BUILT 2026-08-31.** Specced and built in the same day; this document is now
+> the reference for what exists, not a proposal.
 > Source: Stefan 3D AI, youtube `wknRD5g-vvk` — [07:59] *"the other side of the coin is
 > completely broken"* and [11:19] *"they are not consistent by colour"*.
 
-## Why one spec
+## Why one gate
 
 Finding 4 (a generated mesh's unseen side is broken) and finding 3 (kit members do not
-match each other) are the same missing capability wearing two hats: **PoF never LOOKS at
-a generated asset.** Add one renderer and both gates become cheap.
+match each other) were the same missing capability wearing two hats: **PoF never LOOKED
+at a generated asset.** `mesh-critique.ts` measures verts, faces, watertightness,
+components, euler and bbox through trimesh — all structural, none of it visual.
 
-## What PoF has, exactly
+## What was built
 
-| Piece | State |
+| Piece | File | Tests |
+|---|---|---|
+| Multi-view renderer | `scripts/visual-gen/pof_mesh_views.py` | live-proven |
+| Renderer seam (pure cores + spawn) | `src/lib/visual-gen/mesh-views.ts` | 16 |
+| Unseen-side gate | `src/lib/visual-gen/view-critique.ts` | 26 |
+| Kit colour coherence | `src/lib/visual-gen/kit-coherence.ts` | 17 |
+
+### Part 1 — the shared harness
+
+`pof_mesh_views.py` forks `pof_anim_filmstrip.py`'s framing block (bounds → centre →
+camera distance) and replaces the frame loop with a camera orbit at N yaws.
+`mesh-views.ts` mirrors `mesh-finish.ts`: `viewsPlan` / `buildMeshViewsArgs` /
+`parseMeshViewsOutput` are pure, the spawn is injectable, and **a marker without a file
+on disk is not a view** — `runMeshViews` re-checks every emitted path.
+
+**The palette comes from a second, unlit pass, and that was not the first design.**
+Measured on `props__crate.glb` under the three-point rig: the front yaws quantised to
+`#c7b7b7` and the shadowed yaws to `#585858`. The same crate, the same texture, a palette
+that swung with the lighting. That bias is only systematic across members while their
+SHAPES match — a tall plank and a cube catch the key light differently — so a lit palette
+would report two same-textured props as drifting. A Workbench flat/texture pass removed
+the light from the measurement: after the change all four yaws agree
+(`#c7b7b7,#c7b7a7,#c7c7b7,#d7d7d7`). The flat pass is deleted after measurement so no
+caller can grade the wrong image.
+
+### Part 2 — the unseen-side gate
+
+One VLM call per view over the seam `style-dna.ts` already uses. Three rules carry it:
+
+1. **The worst view decides — for severe damage.** A mean lets three clean views average
+   away a broken back, which is the defect the gate exists for.
+2. **Moderate damage needs corroboration.** A severe view condemns alone; one moderate
+   view warns and names itself; two condemn. This rule exists because of the control run
+   below — without it the gate failed a known-good mesh.
+3. **A view that could not be judged is not a clean view.** An unparseable reply or a
+   thrown call yields `unmeasured`, never `pass`. The one deliberate exception: a defect
+   that WAS seen outranks a coverage gap, because the mesh is already condemned.
+
+The prompt rules the RENDER out of scope — lighting, background, camera and the missing
+ground plane are declared deliberate — so the model reports mesh defects, not our rig.
+
+### Part 3 — kit colour coherence
+
+CIELAB palettes, CIE76 ΔE, mean nearest-neighbour distance symmetrised in both
+directions. Reports the worst PAIR and the single `outlier` member — the one to
+re-generate — plus `meanDeltaE`.
+
+**Calibrated on captured data, and honest about where the calibration stops.** Measured
+over four meshes in `generated/`:
+
+| | ΔE |
 |---|---|
-| `scripts/visual-gen/pof_mesh_critique.py` | 78 lines, **trimesh only** — verts, faces, watertight, components, euler, bbox, area, degenerates. No render, no pixels. Its own header says a render→CLIP tier "can stack on top later". |
-| `scripts/visual-gen/pof_anim_filmstrip.py` | **A working Blender renderer** — imports a `.glb`, computes combined mesh bounds, frames a camera, renders N 512×512 PNGs. Written for animation frames; a turntable is this minus the animation. |
-| `src/lib/anim-critique/` + `qwen.ts` | A live VLM seam (`makeQwenVision`) already used by `style-dna.ts` and `input-gate.ts`. |
-| `src/lib/visual-gen/style-dna.ts` | Distils a mood board into a palette — but **prompt-side only** (`STYLE_DNA_REACH`). It shapes what is asked for; it never checks what came back. |
-| `src/lib/visual-gen/best-of-n.ts` | Scores K variants — geometry health plus a CLIP fidelity slot. The consumer a view-based score would feed. |
+| the same asset, re-rendered | 0.0 – 1.8 |
+| independently generated assets | 8.0 – 21.5 |
+| ONE asset's own four colours, internal spread | up to 15.1 |
 
-So the renderer is 80% written and the critic is live. What is missing is a **static
-multi-view render of one mesh**, and the two graders on top.
+`DRIFT_DELTA_E = 6` sits in the measured gap between the first two bands. The third
+number is the limit: a single prop's palette spans more than the gap between some asset
+pairs, so *"these two props differ"* is not the same claim as *"this kit is
+incoherent"* — a crate and a barrel are allowed to differ. Separating varied-but-coherent
+from drifting needs a known-good kit, which PoF does not have. So every grade carries
+`advisory: true` and `KIT_COHERENCE_CALIBRATION_CAVEAT`, following the
+`CRITIQUE_CALIBRATION_CAVEAT` precedent: **show the number, do not gate a pipeline on the
+verdict until it is calibrated on a real kit.**
 
-## Part 1 — `pof_mesh_views.py` (the shared harness)
+## Verification — run over the real library, with a control
 
-Fork `pof_anim_filmstrip.py`'s framing block; drop the frame loop.
+**Structural triage of all 52 `.glb` under `generated/`: 6 pass or warn, 46 fail.** Five
+of the six score a perfect **100/100** (TripoSR: watertight, one component, zero
+degenerate faces). Those five are the population the view gate has to justify itself on.
 
-```
-blender --background --python pof_mesh_views.py -- <glb> <outdir> [--views 6] [--res 512]
-```
+`generated/triposr/chair.glb` scores 100/100 and renders as a **featureless melted blob
+from one yaw** while showing a well-formed chair with a detailed backrest from another —
+one mesh, one side reconstructed, the other invented. Structural perfection is
+uncorrelated with visual usability, which is the whole case for this gate.
 
-- import, join bounds, frame the camera to the bbox (existing code);
-- orbit the camera to N evenly-spaced yaws at a fixed pitch, render each;
-- emit `POF_VIEWS_<i>=<path>` markers plus `POF_VIEWS_DONE=ok`, matching the marker
-  protocol every other PoF script uses (`POF_CRITIQUE_*`, `BAKE_*`).
+### The first live run failed everything, including a known-good control
 
-Node seam `src/lib/visual-gen/mesh-views.ts`: pure `buildMeshViewsArgs` + `parseMeshViews`
-over an injectable spawn seam — the exact shape of `mesh-finish.ts`. This part is fully
-unit-testable without Blender.
+Three structurally-clean meshes went through the gate and all three failed at severity 3
+on every view. That looks like success and is not: a gate that condemns everything is as
+useless as one that passes everything. The control settles it — a clean, subdivided,
+smooth-shaded Blender Suzanne, exported to glb, also failed **3/3 at severity 3**.
 
-## Part 2 — the unseen-side gate (finding 4)
+Both causes were in our prompt, not in the model or the meshes:
 
-The defect: single-image→3D reconstructs the side it was shown and invents the rest. The
-video's coin is "completely broken" on its back. PoF's Tier-1 gate cannot see this —
-a back-face blob is watertight, single-component and zero-degenerate, so it **passes**.
+- it listed **"flat untextured or blank areas"** as a defect, and most generator output
+  (all TripoSR output here) legitimately arrives untextured;
+- it asked whether the shape **"reads as the subject from this angle"** — which the back
+  of a chair, or the underside of a head, never does.
 
-Grader (`mesh-critique.ts`, a new tier beside the structural one):
+The model was answering the question it was asked. With those removed and an explicit
+"if unsure, score lower", the same control scored **[2, 0, 0]**.
 
-1. render N views via Part 1;
-2. ask the existing Qwen seam, per view, for defects on a fixed marker line
-   (`DEFECTS=<comma list or none>; SEVERITY=<0-3>`);
-3. score the **worst** view, not the mean — a mesh is as good as its worst side, and a
-   mean lets five good views hide the broken one. This is the whole point of the gate.
+### Final measured discrimination
 
-Report the failing view's index and image path so the defect is inspectable, and route a
-failure into the existing `finish-routing.ts` decision layer, which already refuses to
-finish what finishing cannot fix.
+| mesh | structural | view severities | verdict |
+|---|---|---|---|
+| Suzanne control (known good) | 5 components, not watertight | `[2, 0, 0]` | **warn** |
+| `chair.glb` | **100/100 pass** | `[2, 3, 0]` | **fail** |
+| `saber_hilt.glb` | 85/100 warn | `[2, 2, 2]` | **fail** |
 
-## Part 3 — kit colour coherence (finding 3)
+The remaining false positive is a single moderate view on the control — one orbit angle
+foreshortened Suzanne into what reads as fused parts. That is why moderate damage now
+requires **corroboration**: a severe view condemns alone, one moderate view *warns and
+names itself*, two condemn. Note the inversion in that table — the control is
+structurally the WORST of the three and visually the best.
 
-The defect: kit members generated by independent prompts do not match — different
-palettes, different light direction, different wear. `kit-from-one-concept-split`
-(`ue-gotchas.ts`, shipped 2026-08-31) prevents this at generation time; nothing measures
-whether it worked.
+**Calibrated on three meshes (one good, two bad).** Enough to fix the observed
+false-positive mode; not enough to call the thresholds settled. Widen the control set
+before letting this gate a pipeline unattended.
 
-Grader (`src/lib/visual-gen/kit-coherence.ts`, pure + a seam):
+### Kit coherence was not meaningfully exercised live
 
-1. one render per kit member (Part 1, a single front view is enough);
-2. extract a dominant palette per member — k-means in **CIELAB**, not RGB, so distance
-   is perceptual;
-3. grade the kit on pairwise ΔE between member palettes: the honest headline is the
-   **worst pair**, with the offending member named;
-4. verdicts on the project's own ladder — `coherent` / `drifting` / `unmeasured`, and
-   `unmeasured` whenever a member failed to render. Never let a missing member read as
-   coherence.
+Run over the same three meshes it returned `coherent, mean dE 0.0` — correct but vacuous:
+the structurally-clean meshes are all untextured TripoSR output, so every palette is the
+same near-white. The real evidence for that grader is the four-asset capture in its test
+fixtures (dE 8.0–21.5 across textured assets), not this run.
 
-The correction the video performs by hand (a gamma/contrast/RGB-curve node, then bake)
-maps onto the existing bake path: once a member is named as the outlier, the fix is a
-per-member colour transform baked into its texture — which is `pof_mesh_finish.py`'s
-`bake_high_to_low(kind='diffuse')` with a correction node inserted. Specify the transform
-as data (gain/gamma/lift per channel) so it is reviewable and testable.
+## A defect found while verifying, NOT fixed here
 
-## Verification (do not skip)
-
-Both graders claim "the output is better", so unit tests cannot settle them. Required:
-
-- **Unseen-side gate:** run it over the `.glb` files already in `generated/`. The 2026-08-20
-  sweep measured 10 of 52 failing on floaters; the useful number here is how many *pass*
-  the structural gate and *fail* on a view. If that number is zero, the gate is not
-  earning its cost — say so rather than shipping it.
-- **Coherence:** build the fixture from **captured** palettes of real generated kit
-  members, never invented ones. A guard written against invented data passes its test and
-  never fires in production — the 2026-08-14 lesson, twice paid for.
+**Every TripoSR asset checked is authored lying on its side.** `bestof_fg070.glb` has
+bbox `0.95 × 0.50 × 0.52` — the longest axis is X, not the vertical. The renders show it
+plainly. Nothing catches this: the structural gate only rejects a *degenerate* bbox, and
+`world-scale.ts` grades the **longest extent** against a target, so for a mis-oriented
+chair it compares the sideways length as though it were the height. An orientation gate
+(dominant axis vs expected up-axis, per asset class) is a small pure addition to
+`world-scale.ts` and is the obvious next build. Recorded, not built — it is not this
+spec's scope.
 
 ## Cost note
 
-Part 1 is local and free. Part 2 costs one VLM call per view per mesh; run it only on
-meshes that already passed the structural gate, so the cheap gate keeps filtering first.
+Part 1 is local and free. Part 2 costs one VLM call per view; `qwen3.7-flash` averages
+~43 s per call (the benchmark in `qwen.ts`), so a 6-view gate is ~4 minutes of wall clock.
+Run it only on meshes that already passed the structural gate, so the free gate keeps
+filtering first, and keep `MAX_VIEWS` (16) in mind as the cost ceiling.
+
+## Anchors
+
+- Renderer: `scripts/visual-gen/pof_mesh_views.py`; seam `src/lib/visual-gen/mesh-views.ts`
+- Gate: `src/lib/visual-gen/view-critique.ts` (`scoreViewGate`, `critiqueMeshViews`)
+- Coherence: `src/lib/visual-gen/kit-coherence.ts` (`gradeKitCoherence`, `paletteDistance`)
+- Vision seam: `src/lib/anim-critique/qwen.ts` (`makeQwenVision`)
+- Structural tier it stacks on: `src/lib/visual-gen/mesh-critique.ts`
