@@ -14,6 +14,7 @@
  */
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { bakeSizeForExtent } from './texel-density';
 
 /** Above this face count an auto-unwrap explodes into unusable island counts
  *  (and routinely hangs/crashes the unwrapper) — the high-poly is never the
@@ -107,9 +108,14 @@ export interface MeshFinishSpec {
    */
   retopo?: RetopoMode;
   /**
-   * Real-world size the finished asset should have — longest extent in METRES. Not
-   * applied by the script (the low-poly keeps the generator's ~1 m box); the Tier-1
-   * gate grades the delivery against it and reports the import scale that fixes it.
+   * Real-world size the finished asset should have — longest extent in METRES.
+   *
+   * The script still does not RESCALE (the low-poly keeps the generator's ~1 m box);
+   * the Tier-1 gate grades the delivery against it and reports the import scale that
+   * fixes it. It does now size the BAKE: a map covers a real-world surface, so the
+   * resolution a mesh earns follows from its metres (`texel-density.ts`). Before this,
+   * the intended size reached mesh-finish and the bake ignored it — a 10 cm coin and a
+   * 12 m cave chunk both received the same flat 1024 map.
    */
   targetExtentM?: number;
   /** Author one half and mirror it across this axis (symmetric characters). */
@@ -147,7 +153,7 @@ export interface MeshFinishSpec {
   uvMode?: UvMode;
   /** High→low bakes to render (needs `unwrap`). */
   bake?: BakeMap[];
-  /** Baked map resolution (default 1024). */
+  /** Baked map resolution. Defaults to what `targetExtentM` earns, else 1024. */
   bakeSize?: number;
   /** Blender executable; else POF_BLENDER; else a known install. */
   blenderPath?: string;
@@ -286,6 +292,17 @@ export function bakePlan(requested: BakeMap[] | undefined): BakePlan {
 }
 
 /** Build the blender argv. Pure. */
+/**
+ * The bake resolution a spec earns. An explicit `bakeSize` always wins — the caller
+ * stays in charge. Otherwise a known real-world extent sizes the map (`texel-density.ts`),
+ * and with neither the historic flat 1024 stands, so silence changes nothing.
+ */
+export function resolveBakeSize(spec: Pick<MeshFinishSpec, 'bakeSize' | 'targetExtentM'>): number {
+  if (spec.bakeSize !== undefined) return spec.bakeSize;
+  if (spec.targetExtentM !== undefined) return bakeSizeForExtent(spec.targetExtentM);
+  return 1024;
+}
+
 export function buildMeshFinishArgs(scriptPath: string, spec: MeshFinishSpec): string[] {
   const plan = unwrapPlan(spec.unwrap, spec.targetFaces);
   const bakes = bakePlan(spec.bake).run;
@@ -312,7 +329,7 @@ export function buildMeshFinishArgs(scriptPath: string, spec: MeshFinishSpec): s
   }
   if (plan.unwrap && bakes.length) {
     args.push('--bake', bakes.join(','));
-    args.push('--bake-size', String(spec.bakeSize ?? 1024));
+    args.push('--bake-size', String(resolveBakeSize(spec)));
   }
   return args;
 }

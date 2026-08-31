@@ -111,6 +111,24 @@ describe('buildMeshFinishArgs', () => {
     expect(args[args.indexOf('--bake-size') + 1]).toBe('2048');
   });
 
+  it('sizes the bake from the real-world extent when one is known', () => {
+    // A 12 m cave chunk earns the ceiling, not the flat 1024 default that blurs it.
+    const args = buildMeshFinishArgs('s.py', { ...SPEC, unwrap: true, bake: ['normal'], targetExtentM: 12 });
+    expect(args[args.indexOf('--bake-size') + 1]).toBe('4096');
+  });
+
+  it('lets an explicit bakeSize win over the extent — the caller stays in charge', () => {
+    const args = buildMeshFinishArgs('s.py', {
+      ...SPEC, unwrap: true, bake: ['normal'], targetExtentM: 12, bakeSize: 1024,
+    });
+    expect(args[args.indexOf('--bake-size') + 1]).toBe('1024');
+  });
+
+  it('keeps the flat 1024 default when no extent is known — silence changes nothing', () => {
+    const args = buildMeshFinishArgs('s.py', { ...SPEC, unwrap: true, bake: ['normal'] });
+    expect(args[args.indexOf('--bake-size') + 1]).toBe('1024');
+  });
+
   it('drops the bake when the unwrap was refused — a bake with no UVs is meaningless', () => {
     const args = buildMeshFinishArgs('s.py', { ...SPEC, targetFaces: undefined, unwrap: true, bake: ['normal'] });
     expect(args).not.toContain('--bake');
