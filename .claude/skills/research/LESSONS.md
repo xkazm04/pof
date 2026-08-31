@@ -152,3 +152,17 @@
   would have "re-checked" a descope trigger that never fired. Trust the transcript; record the
   mismatch in the research note's frontmatter so a future run does not treat the run as a
   re-check of the titled topic.
+
+## 1.8 — 2026-08-31 — pof
+
+- **A source can arrive twice under two different URLs.** The same 31-min transcript came
+  back as a second video id hours after being fully mined. The cheapest tell was the prior
+  Research note's one-line summary matching the transcript — so Phase 1 should skim the
+  recent Research notes' SUMMARIES, not only `Patterns/`. Cost of missing it: a full
+  re-mine of an exhausted source.
+- **When a source turns out to be exhausted, audit the previous run's deliveries instead
+  of padding a candidate table.** That produced the only real finding of the run.
+- **APPLIED (v1.9): the consumer census.** The previous run diagnosed a dead knowledge
+  store and then shipped three dead modules — tested, green, imported by nothing,
+  including the render gate it called its headline. One grep per shipped export closes
+  the whole class. Added to Phase 7.
