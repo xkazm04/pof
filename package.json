@@ -22,7 +22,8 @@
     "gen:pipelines": "node scripts/gen-pipeline-registry.mjs",
     "check:scoped": "node scripts/scoped-check.mjs",
     "snapshot:ue-schema": "node scripts/snapshot-ue-schema.mjs",
-    "ledger": "node scripts/animation-ledger.mjs"
+    "ledger": "node scripts/animation-ledger.mjs",
+    "check:tokens": "node scripts/token-parity.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.6.0",
