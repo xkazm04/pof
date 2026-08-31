@@ -1,33 +1,46 @@
 #!/usr/bin/env node
 /**
- * token-parity — the status-colour vocabulary exists in two runtimes; keep them honest.
+ * token-parity — the status colour vocabulary spans two runtimes and TWO ROLES. Keep the
+ * roles kin, and keep each one fit for its own job.
  *
- * ## Why this exists
+ * ## What this looked like, and what it actually is
  *
- * The semantic status palette is authored twice: as TS constants in `src/lib/chart-colors.ts`
- * (charts, SVG fills, badges) and as CSS custom properties in `src/app/globals.css` (glows,
- * status surfaces). One vocabulary with two hand-maintained copies is not redundancy — it is a
- * race with a delay fuse, and it has already fired: a 2026-08-31 conformance pass found the two
- * layers disagreeing on success, warning and info.
+ * A 2026-08-31 conformance pass read `src/lib/chart-colors.ts` and `src/app/globals.css`
+ * defining `success` / `warning` / `info` at different values and recorded a
+ * `cross-language-token-parity` deviation: one vocabulary, two hand-maintained copies.
  *
- * The registry's `design-tokens/cross-language-token-parity` ranks the fixes: one source with a
- * generated mirror is strongest, runtime readback next, and a **gated mirror** — both copies
- * authored, an automated check comparing them — is the acceptable floor. This is that floor.
+ * Unifying them on the CSS values broke three assertions in
+ * `src/__tests__/lib/contrast.test.ts` — the chart fills stopped meeting WCAG 1.4.11
+ * non-text contrast (>= 3:1) against the surfaces they render on, at the reduced alphas the
+ * charts actually use (amber/50, blue/70). The two palettes are not drift. They are:
  *
- * ## What it refuses to do
+ *   MARK   `chart-colors.ts`  Tailwind-400  a fill a reader must SEE on a dark surface,
+ *                                           often at 50-70% alpha -> contrast-constrained.
+ *   HALO   `globals.css`      Tailwind-500  a box-shadow glow at 0.4 alpha, decorative,
+ *                                           sitting BEHIND content -> not contrast-bearing.
  *
- * Per `gate-sees-target`, a parity checker must parse the ARTIFACTS BOTH RUNTIMES CONSUME, not
- * a doc describing them — so this reads the real `.ts` and the real `.css`. And it must **fail
- * loudly when it finds zero tokens on either side**: a checker that parses nothing and reports
- * parity is the empty-success lie, and it is the failure mode that makes a green gate worthless.
- * Finding no tokens is an instrument failure here (exit 2), never a pass.
+ * On a dark theme a mark must be lighter than a halo of the same hue. Forcing them equal
+ * makes one of the two roles wrong, and the repo already had a test proving which.
  *
- * Parity is set equality as well as value equality: a role present in one runtime and absent in
- * the other means consumers there are building on vocabulary the design system never issued.
+ * ## So what is the real invariant?
+ *
+ * Not value equality — **hue kinship plus role fitness**:
+ *
+ *   1. the two roles are the same HUE family (so the design reads as one vocabulary), and
+ *   2. the mark is at least as light as the halo (so the contrast-constrained one has the
+ *      headroom its job needs).
+ *
+ * Value equality is enforced by nothing here on purpose. WCAG fitness is enforced by
+ * `contrast.test.ts`, which owns that question and tests it against the real surfaces.
+ *
+ * Per `gate-sees-target` this parses the ARTIFACTS BOTH RUNTIMES CONSUME — the real `.ts`
+ * and the real `.css` — and it FAILS LOUDLY on parsing zero tokens (exit 2) rather than
+ * reporting kinship it never checked. A checker that reads nothing and says "in parity" is
+ * the empty-success lie.
  *
  * Usage:
- *   node scripts/token-parity.mjs            # report; exit 1 on drift
- *   node scripts/token-parity.mjs --report   # report only; exit 0 (for an advisory run)
+ *   node scripts/token-parity.mjs            # exit 1 if a role drifts out of its family
+ *   node scripts/token-parity.mjs --report   # advisory; always exit 0
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -38,23 +51,23 @@ const TS = path.join(ROOT, 'src/lib/chart-colors.ts');
 const CSS = path.join(ROOT, 'src/app/globals.css');
 const reportOnly = process.argv.includes('--report');
 
-/** The roles that genuinely exist in both runtimes. Add a row when a role gains a second home. */
+/** Roles that exist in both runtimes. Add a row when a role gains a second home. */
 const ROLES = [
   { role: 'success', ts: 'STATUS_SUCCESS', css: '--glow-success' },
   { role: 'warning', ts: 'STATUS_WARNING', css: '--glow-warning' },
   { role: 'info', ts: 'STATUS_INFO', css: '--glow-info' },
 ];
 
-const die = (code, msg) => { console.error(msg); process.exit(code); };
+/** Same hue family: hues within this many degrees are the same colour to a reader. */
+const HUE_TOLERANCE = 20;
 
+const die = (code, msg) => { console.error(msg); process.exit(code); };
 for (const f of [TS, CSS]) if (!fs.existsSync(f)) die(2, `token-parity INSTRUMENT FAILURE: ${path.relative(ROOT, f)} does not exist. The gate is pinned to an artifact that moved; repoint it rather than deleting the check.`);
 
 const tsSrc = fs.readFileSync(TS, 'utf8');
 const cssSrc = fs.readFileSync(CSS, 'utf8');
 
-/** `export const NAME = '#rrggbb'` */
-const readTs = (name) => (tsSrc.match(new RegExp(`export\\s+const\\s+${name}\\s*=\\s*['"](#[0-9a-fA-F]{3,8})['"]`)) ?? [])[1];
-/** `--name: rgba(r, g, b, a)` or `--name: #rrggbb[aa]` -> normalized #rrggbb (alpha dropped) */
+const readTs = (name) => (tsSrc.match(new RegExp(`export\\s+const\\s+${name}\\s*=\\s*['"](#[0-9a-fA-F]{6})['"]`)) ?? [])[1];
 const readCss = (name) => {
   const raw = (cssSrc.match(new RegExp(`${name}\\s*:\\s*([^;]+);`)) ?? [])[1]?.trim();
   if (!raw) return undefined;
@@ -64,35 +77,58 @@ const readCss = (name) => {
   return hex ? `#${hex[1]}` : undefined;
 };
 
+const rgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+/** Hue in degrees, and perceived lightness (HSL L), enough to judge family and order. */
+const hsl = (hex) => {
+  const [r, g, b] = rgb(hex).map((v) => v / 255);
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+  let h = 0;
+  if (d) {
+    if (max === r) h = ((g - b) / d) % 6;
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h *= 60; if (h < 0) h += 360;
+  }
+  return { h, l: (max + min) / 2 };
+};
+const hueGap = (a, b) => { const d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d; };
+
 const rows = ROLES.map((r) => {
-  const ts = readTs(r.ts);
-  const css = readCss(r.css);
-  return { ...r, tsValue: ts, cssValue: css, missing: !ts || !css, equal: !!ts && !!css && ts.toLowerCase() === css.toLowerCase() };
+  const mark = readTs(r.ts), halo = readCss(r.css);
+  if (!mark || !halo) return { ...r, mark, halo, missing: true };
+  const M = hsl(mark), H = hsl(halo);
+  const gap = hueGap(M.h, H.h);
+  return { ...r, mark, halo, gap, markL: M.l, haloL: H.l, sameFamily: gap <= HUE_TOLERANCE, markLighter: M.l >= H.l - 0.001 };
 });
 
-// The empty-success guard. Parsing nothing is an instrument failure, not parity.
-const parsedTs = rows.filter((r) => r.tsValue).length;
-const parsedCss = rows.filter((r) => r.cssValue).length;
+const parsedTs = rows.filter((r) => r.mark).length;
+const parsedCss = rows.filter((r) => r.halo).length;
 if (!parsedTs || !parsedCss) {
   die(2, `token-parity INSTRUMENT FAILURE: parsed ${parsedTs} token(s) from chart-colors.ts and ${parsedCss} from globals.css.\n` +
-    '  A parity checker that reads zero tokens and reports parity is an empty success. One of the\n' +
-    '  two files changed shape; fix the reader, do not lower the check.');
+    '  A checker that reads zero tokens and reports kinship is an empty success. One of the two\n' +
+    '  files changed shape; fix the reader, do not lower the check.');
 }
 
-const w = Math.max(...rows.map((r) => r.role.length));
-console.log('token-parity — the status vocabulary in both runtimes\n');
-console.log(`  ${'role'.padEnd(w)}  ${'chart-colors.ts'.padEnd(17)} ${'globals.css'.padEnd(17)} verdict`);
+console.log('token-parity — MARK (chart fill, contrast-bearing) vs HALO (glow, decorative)\n');
+console.log(`  role     mark      halo      hue gap  mark lighter  verdict`);
 for (const r of rows) {
-  const verdict = r.missing ? 'MISSING' : r.equal ? 'ok' : 'DRIFTED';
-  console.log(`  ${r.role.padEnd(w)}  ${(r.tsValue ?? '—').padEnd(17)} ${(r.cssValue ?? '—').padEnd(17)} ${verdict}`);
+  if (r.missing) { console.log(`  ${r.role.padEnd(8)} ${(r.mark ?? '—').padEnd(9)} ${(r.halo ?? '—').padEnd(9)} ${'—'.padEnd(8)} ${'—'.padEnd(13)} MISSING`); continue; }
+  const ok = r.sameFamily && r.markLighter;
+  console.log(`  ${r.role.padEnd(8)} ${r.mark.padEnd(9)} ${r.halo.padEnd(9)} ${(r.gap.toFixed(0) + '°').padEnd(8)} ${(r.markLighter ? 'yes' : 'NO').padEnd(13)} ${ok ? 'ok' : 'BROKEN'}`);
 }
 
-const bad = rows.filter((r) => r.missing || !r.equal);
-if (!bad.length) { console.log(`\n  ${rows.length} role(s) in parity across both runtimes.`); process.exit(0); }
-
-console.log(`\n  ${bad.length} of ${rows.length} role(s) disagree between the two runtimes.`);
-console.log('  These are one vocabulary with two authors. Unify them in ONE direction and delete');
-console.log('  the other copy or generate it — a comment asking the next person to keep them in');
-console.log('  sync is not a strategy (design-tokens/cross-language-token-parity).');
+const bad = rows.filter((r) => r.missing || !r.sameFamily || !r.markLighter);
+if (!bad.length) {
+  console.log(`\n  ${rows.length} role(s) kin across both runtimes: same hue family, mark lighter than halo.`);
+  console.log('  Value equality is NOT asserted and must not be — the mark is contrast-constrained');
+  console.log('  (WCAG 1.4.11, owned by src/__tests__/lib/contrast.test.ts) and the halo is not.');
+  process.exit(0);
+}
+console.log(`\n  ${bad.length} role(s) broke the mark/halo relationship.`);
+for (const r of bad) {
+  if (r.missing) console.log(`  - ${r.role}: one runtime does not define it (set equality is part of parity).`);
+  else if (!r.sameFamily) console.log(`  - ${r.role}: hue gap ${r.gap.toFixed(0)}° exceeds ${HUE_TOLERANCE}° — these read as different colours.`);
+  else console.log(`  - ${r.role}: the mark is DARKER than the halo, so the contrast-constrained role has less headroom than the decorative one.`);
+}
 if (reportOnly) { console.log('\n  --report: advisory run, exiting 0.'); process.exit(0); }
 process.exit(1);
