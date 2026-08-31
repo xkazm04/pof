@@ -12,6 +12,12 @@ import { providerFaceLimit } from '@/lib/visual-gen/face-budget';
 import { tripoModelFor } from '@/lib/visual-gen/tripo-models';
 import { hunyuanModelFor } from '@/lib/visual-gen/hunyuan-models';
 import {
+  routePromptShape,
+  linearPropRefusal,
+  linearPropOverridden,
+  type PromptShapeRoute,
+} from '@/lib/visual-gen/linear-prop-routing';
+import {
   gateInputImage,
   parseVisionImage,
   summarizeInputGate,
@@ -34,6 +40,12 @@ import {
  * Both start a job (poll GET /api/visual-gen/generate/status?jobId=...). MCP-backed
  * providers (rodin) go through /api/blender-mcp/generate, not here.
  *
+ * Before either route, the SHAPE route refuses a subject whose geometry is fully
+ * determined by its anchors (rope/cable/chain/wire) and points at
+ * POST /api/visual-gen/linear-prop, which computes it for nothing;
+ * `overrideShapeRoute: true` generates anyway. A prompt that merely mentions one still
+ * generates, carrying an advisory on the 202 as `shapeRoute`.
+ *
  * Every `image-to-3d` submit passes the Tier-0 INPUT gate before a provider job starts
  * (`gateInput: false` opts out, `overrideInputGate: true` generates through a fail). The
  * outcome rides on the 202 as `inputGate` — including when the gate could not run.
@@ -53,10 +65,12 @@ export async function POST(request: NextRequest) {
       gateInput?: boolean;
       /** Generate anyway despite a `fail` verdict. The outcome is still reported. */
       overrideInputGate?: boolean;
+      /** Generate a linear prop (rope/cable/chain) anyway. The route is still reported. */
+      overrideShapeRoute?: boolean;
     };
     const {
       mode, providerId, imageDataUrl, prompt, mcResolution, assetClass, maxAttempts, topology,
-      gateInput, overrideInputGate,
+      gateInput, overrideInputGate, overrideShapeRoute,
     } = body;
 
     // Quad topology is REACHABLE but refused, rather than silently unavailable. Tripo
@@ -85,6 +99,29 @@ export async function POST(request: NextRequest) {
       : undefined;
 
     if (!mode || !providerId) return apiError('Missing required fields: mode, providerId', 400);
+
+    /**
+     * SHAPE route — the cheapest gate on this endpoint, and the place `routeShape`'s
+     * credit-saving decision is finally cashed. It runs before the Tier-0 input gate on
+     * purpose: a rope needs no vision call to be recognised as a rope, so a refusal here
+     * costs nothing at all, not even the gate's own model call.
+     *
+     * Three outcomes, and only one refuses:
+     *  - `procedural` → 400 naming /api/visual-gen/linear-prop (or, with
+     *    `overrideShapeRoute`, generate and stamp the 202 as overridden);
+     *  - `advise` → generate, with the advisory on the 202 — "a pirate holding a coiled
+     *    rope" is a character, and refusing it over one word is the failure mode that
+     *    gets a gate switched off;
+     *  - `generate` → nothing is attached at all, so the happy path stays silent.
+     */
+    const promptRoute = routePromptShape(prompt);
+    let shapeRoute: PromptShapeRoute | undefined =
+      promptRoute.route === 'generate' ? undefined : promptRoute;
+    const shapeRefusal = linearPropRefusal(promptRoute);
+    if (shapeRefusal) {
+      if (overrideShapeRoute !== true) return apiError(shapeRefusal, 400);
+      shapeRoute = linearPropOverridden(promptRoute);
+    }
 
     /**
      * Tier-0 INPUT gate — the symmetric twin of the Tier-1 mesh critique, and the ONE
@@ -152,7 +189,7 @@ export async function POST(request: NextRequest) {
       const jobId = providerId === 'hunyuan3d'
         ? startHunyuanJob({ imagePath: inPath, outputPath, assetClass, model: hunyuanModelFor(assetClass).model })
         : startTriposrJob({ imagePath: inPath, outputPath, mcResolution, fidelity: true, assetClass });
-      return apiSuccess({ jobId, provider: providerId, mode, gradedAs: resolveAssetClass(assetClass).gradedAs, inputGate }, 202);
+      return apiSuccess({ jobId, provider: providerId, mode, gradedAs: resolveAssetClass(assetClass).gradedAs, inputGate, shapeRoute }, 202);
     }
 
     if (providerId === 'tripo3d') {
@@ -166,14 +203,14 @@ export async function POST(request: NextRequest) {
         if (!prompt?.trim()) return apiError('Missing prompt for text-to-3d', 400);
         const jobId = startTripoJob({ mode: 'text-to-3d', prompt, outputPath, pbr: true, faceLimit, assetClass, maxAttempts, ...tripoPin });
         // No `inputGate` here on purpose: a text-to-3d submit has no input image to gate.
-        return apiSuccess({ jobId, provider: 'tripo3d', mode, gradedAs }, 202);
+        return apiSuccess({ jobId, provider: 'tripo3d', mode, gradedAs, shapeRoute }, 202);
       }
       if (mode === 'image-to-3d') {
         if (!imageDataUrl) return apiError('Missing imageDataUrl for image-to-3d', 400);
         const inPath = imageToFile('tripo3d', stamp);
         if (!inPath) return apiError('imageDataUrl must be a base64 PNG/JPG/WebP data URL', 400);
         const jobId = startTripoJob({ mode: 'image-to-3d', imagePath: inPath, outputPath, pbr: true, faceLimit, assetClass, maxAttempts, ...tripoPin });
-        return apiSuccess({ jobId, provider: 'tripo3d', mode, gradedAs, inputGate }, 202);
+        return apiSuccess({ jobId, provider: 'tripo3d', mode, gradedAs, inputGate, shapeRoute }, 202);
       }
       return apiError('tripo3d supports text-to-3d and image-to-3d', 400);
     }
