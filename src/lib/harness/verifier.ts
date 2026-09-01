@@ -386,12 +386,17 @@ export async function verify(
         errors: vResult.errors,
       });
     } else if (gate.type === 'visual') {
-      // Skip visual gate if no statePath provided
+      // No statePath → nowhere to write screenshots, so NOTHING ran. This used to
+      // answer `passed:true` "skipped" — the one remaining self-certifying door
+      // after commandless gates and `ue-visual` were made honest. Same rule as
+      // its `ue-visual` sibling below: unverifiable, never a pass.
       results.push({
         gate: gate.name,
-        passed: true,
-        output: 'Visual gate skipped (no statePath)',
+        passed: false,
+        unverifiable: true,
+        output: 'Visual gate UNVERIFIABLE — no statePath to store screenshots, so nothing was run. The area is NOT self-certified.',
         durationMs: 0,
+        errors: [{ message: 'no statePath for the visual gate' }],
       });
     } else if (gate.type === 'ue-compile') {
       results.push(await runUeCompileGate(gate, projectPath));
