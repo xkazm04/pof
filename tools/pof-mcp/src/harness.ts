@@ -35,7 +35,7 @@ export interface ToolCallResult {
 
 export interface McpHandle {
   call(name: string, args?: Record<string, unknown>): Promise<ToolCallResult>;
-  listTools(): Promise<Array<{ name: string; description?: string; inputSchema: any }>>;
+  listTools(): Promise<Array<{ name: string; description?: string; inputSchema: any; annotations?: any }>>;
   close(): Promise<void>;
 }
 

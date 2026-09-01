@@ -34,6 +34,37 @@ export const EXAMPLE_SKIP: Record<string, string> = {
   pof_package_preflight: 'spawns UBT/editor — recorded by the growth suite',
 };
 
+/**
+ * route path (no query) -> why a tool annotated `readOnlyHint: true` may POST to it.
+ *
+ * A POST is a write until proven otherwise. Each entry names a route whose handler was
+ * READ and found to only read disk or compute over the posted body — it imports no DB
+ * module, writes no file, spawns no process. annotations.test.ts cross-checks the route
+ * source for those primitives so this map cannot lie in the dangerous direction, and
+ * fails on a stale entry no read-only tool reaches any more.
+ */
+export const READ_ONLY_POST: Record<string, string> = {
+  '/api/combat-simulator': 'runCombatSimulationBatched over the posted scenario — pure Monte-Carlo, nothing persisted',
+  '/api/economy-simulator/sweep': 'runSensitivitySweep over the posted config — pure compute (the plain /economy-simulator simulate DOES saveRun, and its tool is annotated as a write)',
+  '/api/project-health': 'computeProjectHealth fuses the posted checklist/perf/crash inputs — reads no table, writes none',
+  '/api/asset-code-oracle': 'analyzeConsistency over the posted classes/assets/dependencies — pure analysis',
+  '/api/filesystem/scan-project': 'walks Source/ + .uproject on disk with fs reads only; the result is returned, not stored',
+  '/api/filesystem/scan-assets': 'walks Content/ on disk with fs reads only; the result is returned, not stored',
+  '/api/filesystem/verify-semantic': 'parses headers on disk and checks them against code-defined expectations; nothing persisted',
+  '/api/ue5-source/parse': 'parseUE5AbilitySystem reads the Source/ tree; nothing persisted',
+};
+
+/**
+ * tool name -> why a tool annotated as a WRITE still carries a static `example`.
+ *
+ * `example` is contractually a safe, read-only invocation (see ToolDef). A write tool may
+ * keep one only when the example exercises a read action of a multi-action tool, and it
+ * says so here. Kept honest by annotations.test.ts (no stale entries, no read-only tools).
+ */
+export const WRITE_TOOL_SAFE_EXAMPLE: Record<string, string> = {
+  pof_gdd_compliance: 'the example runs the default `audit` action (a read); `resolve-gap` / `unresolve-gap` on the same tool write gap triage',
+};
+
 /** catalogId -> why the MCP pipeline quality walker skips it. */
 export const MCP_WALKER_SKIP: Record<string, string> = {
   'player-movement':

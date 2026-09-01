@@ -1,9 +1,10 @@
-import { type ToolDef, reqStr, optStr, optNum, qs, obj, STR } from './shared.js';
+import { type ToolDef, reqStr, optStr, optNum, qs, obj, STR, readOnly, writes } from './shared.js';
 
 /** Pipeline loop: discover → recipe → submit → accept → drain. */
 export const PIPELINE_TOOLS: ToolDef[] = [
   {
     name: 'pof_list_catalogs',
+    annotations: readOnly('List catalogs'),
     description:
       'List every PoF catalog (items, currency, bestiary, quests, …) with its ordered Produce steps and seeded entity count. Start here to see what can be built.',
     inputSchema: obj({}),
@@ -12,6 +13,7 @@ export const PIPELINE_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_list_entities',
+    annotations: readOnly('List entities'),
     description:
       'List the seeded entities of one catalog with their current lifecycle state. Pick an entity to drive through its pipeline.',
     inputSchema: obj({ catalogId: STR }, ['catalogId']),
@@ -20,6 +22,7 @@ export const PIPELINE_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_get_pipeline',
+    annotations: readOnly('Get pipeline'),
     description:
       "One catalog's ordered steps plus its entities — the 'what is left to build' map. Steps are annotated with dual-execution info (`browserMirror`: 'direct'/'partial' when the step class also runs in the browser preview runtime; `browserHydratable` on the catalog when the preview can hydrate it today), so generation can plan a browser path alongside UE.",
     inputSchema: obj({ catalogId: STR }, ['catalogId']),
@@ -55,6 +58,7 @@ export const PIPELINE_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_preview_hydrate',
+    annotations: readOnly('Preview hydrate'),
     description:
       "Dual-execution browser path: fetch a catalog's aggregated mechanics artifacts exactly as the browser preview runtime hydrates them (read-only; tuning goes through the graded artifact write paths). Use when a PoF project also targets a browser realization of the same SOR.",
     inputSchema: obj({ catalogId: STR }, ['catalogId']),
@@ -63,6 +67,7 @@ export const PIPELINE_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_get_step',
+    annotations: readOnly('Get step recipe'),
     description:
       "A step's RECIPE — the structure + truth you fulfil yourself: canon-prefixed prompt, View shape, UE asset targets, an example of passing data, the Acceptance contract, and any already-persisted artifact. Do the work (generate data, edit UE via mcp-unreal), then call pof_submit_artifact.",
     inputSchema: obj(
@@ -82,6 +87,7 @@ export const PIPELINE_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_submit_artifact',
+    annotations: writes('Submit artifact'),
     description:
       'Submit the work you produced for a step (data object + UE asset paths). The SERVER derives the acceptance verdict from the step\'s own checker — you never self-grade. On fail, read the reason and retry; L3/L4 "deferred" is upgraded later by pof_drain_gates.',
     inputSchema: obj(
@@ -109,6 +115,7 @@ export const PIPELINE_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_get_acceptance',
+    annotations: readOnly('Get acceptance'),
     description:
       "Persisted acceptance for a catalog (or one entity): every step's status/tier/reason plus a pass/pending/fail/deferred summary — the config-complete rollup.",
     inputSchema: obj({ catalogId: STR, entityId: STR }, ['catalogId']),
@@ -124,6 +131,7 @@ export const PIPELINE_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_gate_evidence',
+    annotations: readOnly('Gate evidence'),
     description:
       'The PROOF behind drained L3/L4 gate verdicts: which abslog markers matched, the observed scenario stats + sampled observations, and the frame a visual verdict was judged from. Audit a pass/fail (or a whole catalog) WITHOUT re-running the gate — and see which gate rows carry no proof at all (`missing`), since an un-auditable verdict is itself a finding.',
     inputSchema: obj(
@@ -148,6 +156,7 @@ export const PIPELINE_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_drain_gates',
+    annotations: writes('Drain gates', { destructive: true }),
     description:
       'Run deferred L3/L4 Test Gates, turning "deferred" into pass/fail. SCOPE is yours to choose: no catalogId/entityId drains EVERYTHING (the global sweep — the only way a real entity\'s gate gets a verdict when its test name was only ever proven on a fixture), catalogId alone drains one catalog, entityIds is a multi-entity batch within a catalog, entityId is one entity. Use `limit` to cap cost (it bounds the batch BEFORE any editor boots). L3 runs on the live editor (bridge) or headless (allowSpawn — the UE editor must be CLOSED). For L4 VISUAL gates, pass projectPath + autoCapture:true to RENDER a real frame headlessly — the result\'s `screenshots` array holds PNG paths you MUST Read and judge with your own eyes: the automated visual judge catches only gross errors (T-pose, black scene, missing humanoid), not "the attack has no swing" or debug cruft. One drain at a time per scope (concurrent → 409; a global drain is exclusive with everything).',
     inputSchema: obj({

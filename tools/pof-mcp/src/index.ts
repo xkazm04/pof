@@ -18,7 +18,14 @@ const pof = createPofClient();
 const server = new Server({ name: 'pof-mcp', version: '0.1.0' }, { capabilities: { tools: {} } });
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
-  tools: TOOLS.map((t) => ({ name: t.name, description: t.description, inputSchema: t.inputSchema })),
+  tools: TOOLS.map((t) => ({
+    name: t.name,
+    description: t.description,
+    inputSchema: t.inputSchema,
+    // Blast-radius hints (read-only / destructive / idempotent / open-world) so a host can
+    // tier consent per tool instead of confirming every call. See tools/shared.ts.
+    annotations: t.annotations,
+  })),
 }));
 
 server.setRequestHandler(CallToolRequestSchema, async (req) => {

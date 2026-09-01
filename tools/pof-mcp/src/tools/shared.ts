@@ -1,10 +1,53 @@
 import type { PofClient } from '../pofClient.js';
 
+/**
+ * MCP tool annotations (spec 2025-03-26 `ToolAnnotations`): the blast radius a host uses
+ * to sort tools into consent tiers — auto-approve the harmless, always confirm the
+ * irreversible. They are CLAIMS this server makes about itself, not a security property:
+ * a host may relax friction on a trusted server's read-only tools; it must never treat
+ * the hint as proof. Published honestly and pinned to behaviour by annotations.test.ts,
+ * which drives every read-only tool against a recording client and refuses a POST to
+ * any route not allow-listed (with a reason) in `coverage.ts` → READ_ONLY_POST.
+ */
+export interface ToolAnnotations {
+  title: string;
+  readOnlyHint: boolean;
+  destructiveHint: boolean;
+  idempotentHint: boolean;
+  openWorldHint: boolean;
+}
+
+/** A tool that changes nothing on the backend, the editor, or disk — safe to repeat. */
+export function readOnly(title: string): ToolAnnotations {
+  return { title, readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
+}
+
+/**
+ * A tool that writes, spawns, or spends. `destructive` = it can overwrite or flip state
+ * that is not additive (verdicts, a UE project's code); `idempotent` = repeating the same
+ * call with the same arguments has no further effect; `openWorld` = it reaches beyond the
+ * local backend/editor (an autonomous Claude session that spends API budget).
+ */
+export function writes(
+  title: string,
+  opts: { destructive?: boolean; idempotent?: boolean; openWorld?: boolean } = {},
+): ToolAnnotations {
+  return {
+    title,
+    readOnlyHint: false,
+    destructiveHint: opts.destructive ?? false,
+    idempotentHint: opts.idempotent ?? false,
+    openWorldHint: opts.openWorld ?? false,
+  };
+}
+
 export interface ToolDef {
   name: string;
   description: string;
   /** JSON Schema for the tool's arguments. */
   inputSchema: Record<string, unknown>;
+  /** Behaviour hints advertised on `tools/list`. Required: a tool without a verdict on its own blast radius cannot register. */
+  annotations: ToolAnnotations;
   handler: (args: Record<string, unknown>, pof: PofClient) => Promise<unknown>;
   /**
    * A safe, read-only example invocation. The contract test records it to

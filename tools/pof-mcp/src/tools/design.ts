@@ -1,7 +1,6 @@
 import {
   type ToolDef,
-  reqStr, optStr, optNum, qs, obj, scopedRead, backendScope, PROJECT_PATH, STR, NUM, OBJ,
-} from './shared.js';
+  reqStr, optStr, optNum, qs, obj, scopedRead, backendScope, PROJECT_PATH, STR, NUM, OBJ, readOnly, writes } from './shared.js';
 import type { PofClient } from '../pofClient.js';
 
 /**
@@ -40,6 +39,7 @@ const FEATURES = 'features';
 export const DESIGN_TOOLS: ToolDef[] = [
   {
     name: 'pof_feature_matrix',
+    annotations: readOnly('Feature matrix'),
     description:
       "One module's tracked features (status + quality score) plus an implemented/missing/unknown summary. SCOPE IT with `projectPath`: feature rows carry the project that produced them, and WITHOUT a projectPath this reads ONLY the unattributed legacy rows — which on a backfilled database is NOTHING. The response always states which view you got.",
     inputSchema: obj({ moduleId: STR, projectPath: PROJECT_PATH }, ['moduleId']),
@@ -54,6 +54,7 @@ export const DESIGN_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_feature_matrix_all',
+    annotations: readOnly('Feature matrix (all)'),
     description:
       'Feature-count summary for every module — the project-wide implemented/missing/unknown rollup. SCOPE IT with `projectPath`: without one this reads ONLY the unattributed legacy rows, never every module of every project. The response always states which view you got.',
     inputSchema: obj({ projectPath: PROJECT_PATH }),
@@ -66,6 +67,7 @@ export const DESIGN_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_feature_matrix_aggregate',
+    annotations: readOnly('Feature matrix aggregate'),
     description:
       'Aggregated per-module summaries with quality scores — a cross-module quality signal. SCOPE IT with `projectPath`: without one this reads ONLY the unattributed legacy rows, so an empty rollup means "another project owns these rows", not "nothing is built". The response always states which view you got.',
     inputSchema: obj({ projectPath: PROJECT_PATH }),
@@ -78,6 +80,7 @@ export const DESIGN_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_gdd_compliance',
+    annotations: writes('GDD compliance', { idempotent: true }),
     description:
       'Audit the GDD against the code: an overall compliance score (0–100) + gaps ranked by severity and direction (design-ahead vs code-ahead) — or triage those gaps (`resolve-gap` / `unresolve-gap` / `resolutions`). A top-level quality signal. SCOPE IT with `projectPath`: the audit reads the SAME project-scoped feature rows as pof_feature_matrix, so without a projectPath it scores every module against ZERO evidence — and gap resolutions are stored per project, so an unscoped remediation lands where no scoped reader will ever see it. The response always states which view you got.',
     inputSchema: obj({
@@ -111,6 +114,7 @@ export const DESIGN_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_gdd',
+    annotations: readOnly('Game design document'),
     description:
       'The synthesized Game Design Document (title + sections) assembled from all project data. SCOPE IT with `projectPath`: the synthesis reads project-scoped feature and review rows. Unlike the other feature-matrix reads, an UNSCOPED call here is deliberately GLOBAL (it spans every project, so a feature two projects both hold is counted twice) — the document declares that itself, and so does the `scope` block below.',
     inputSchema: obj({ projectName: STR, projectPath: PROJECT_PATH }),
@@ -137,6 +141,7 @@ export const DESIGN_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_project_health',
+    annotations: readOnly('Project health'),
     description: 'Fused project health: overall completion, current quality score, performance score, quality trend, per-module health, and burn/velocity history.',
     inputSchema: obj({ checklistProgress: OBJ, perfInput: OBJ, crashInput: OBJ }),
     example: { args: {} },
@@ -149,6 +154,7 @@ export const DESIGN_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_project_rules',
+    annotations: readOnly('Project rules'),
     description: 'The project design canon (ProjectRule[]) — the same rules that prefix Produce prompts. Read this to understand the constraints your work must follow.',
     inputSchema: obj({}),
     example: { args: {} },
@@ -156,6 +162,7 @@ export const DESIGN_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_crash_analyze',
+    annotations: readOnly('Crash analysis'),
     description: 'Full crash analysis: reports, diagnoses, recurring patterns, and stats (total, systemic issues, most-common type, per-crash severity).',
     inputSchema: obj({}),
     example: { args: {} },
@@ -163,6 +170,7 @@ export const DESIGN_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_regression',
+    annotations: readOnly('Regression tracker'),
     description: 'Regression-tracker query: stats (regression rate, active alerts, peak severity), or fingerprints/alerts/occurrences/sessions.',
     inputSchema: obj({ action: { type: 'string', enum: ['stats', 'fingerprints', 'alerts', 'active-alerts', 'occurrences', 'sessions'] }, fpId: STR }),
     example: { args: { action: 'stats' } },
@@ -170,6 +178,7 @@ export const DESIGN_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_ai_testing',
+    annotations: readOnly('AI testing'),
     description: 'AI/behavior-tree test suites + aggregated pass-rate summary (or a single suite by id).',
     inputSchema: obj({ suiteId: NUM }),
     example: { args: {} },
