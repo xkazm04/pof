@@ -21,6 +21,8 @@ import type {
   HarnessEvent,
   ModuleArea,
   ProgressEntry,
+  VerificationGate,
+  VerificationReport,
 } from './types';
 import type { GameBuildGuide } from './types';
 import { buildGamePlan, updatePlanStats, planRatePct } from './plan-builder';
@@ -502,6 +504,55 @@ export function formatHealSpendLine(totals: HarnessCostTotals): string {
   return `Self-heal spend: $${healUsd.toFixed(2)} across ${healSessions} heal session${healSessions === 1 ? '' : 's'}${share}${caveat}.`;
 }
 
+// ── Gate verdict coverage (the reviewer's agenda) ─────────────────────────────
+
+/** How many times a gate returned each verdict over the run. */
+export interface GateVerdictTally { pass: number; fail: number; unverifiable: number }
+
+/** Fold one verification report into the per-gate tally (mutates and returns it). */
+export function tallyGateVerdicts(
+  tally: Record<string, GateVerdictTally>,
+  report: Pick<VerificationReport, 'gates'>,
+): Record<string, GateVerdictTally> {
+  for (const r of report.gates) {
+    const t = tally[r.gate] ?? (tally[r.gate] = { pass: 0, fail: 0, unverifiable: 0 });
+    if (r.unverifiable) t.unverifiable += 1;
+    else if (r.passed) t.pass += 1;
+    else t.fail += 1;
+  }
+  return tally;
+}
+
+/**
+ * One line per configured gate: how many verdicts it actually returned over the
+ * run. A gate with ZERO real verdicts (never ran, or only ever `unverifiable`) is
+ * named LOUDLY — every feature it was meant to judge inherited its "verified"
+ * status from the gates that did run, so those features are the reviewer's
+ * agenda, not the run's success. The static preflight (`checkSuccessReachable`)
+ * deliberately excludes runtime-determined gates (`visual`, `ue-visual`), so the
+ * run end is the only place their absence can surface. Making such a gate
+ * `required` is NOT the fix — that is how success becomes unreachable.
+ */
+export function formatGateCoverageLines(
+  tally: Record<string, GateVerdictTally>,
+  gates: ReadonlyArray<Pick<VerificationGate, 'name' | 'required'>>,
+): string[] {
+  return gates.map((g) => {
+    const t = tally[g.name] ?? { pass: 0, fail: 0, unverifiable: 0 };
+    const judged = t.pass + t.fail;
+    const kind = g.required ? 'required' : 'advisory';
+    if (judged === 0) {
+      const why = t.unverifiable > 0
+        ? `${t.unverifiable} unverifiable, 0 real verdicts`
+        : 'never ran';
+      return `Gate coverage: ${g.name} (${kind}) returned NO verdict this run (${why}) — `
+        + 'nothing it was meant to judge has been judged; review those features by hand rather than reading them as verified';
+    }
+    return `Gate coverage: ${g.name} (${kind}) — ${t.pass} pass / ${t.fail} fail`
+      + (t.unverifiable > 0 ? ` / ${t.unverifiable} unverifiable` : '');
+  });
+}
+
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 /**
@@ -689,6 +740,10 @@ export function createHarnessOrchestrator(
   // once a runId exists, since the branch name is derived from it.
   const checkpointEnabled = config.checkpoint === true;
   let checkpointer: Checkpointer | null = null;
+
+  // Per-gate verdict tally for THIS process's segment of the run (memory only,
+  // like the in-flight reservation): the run-end coverage agenda reads it.
+  const gateTally: Record<string, GateVerdictTally> = {};
 
   /** Fallback per-session spend (USD) used when the CLI reports no cost, so the budget
    *  governor keeps advancing toward the cap instead of being silently disabled when the
@@ -890,6 +945,10 @@ export function createHarnessOrchestrator(
         });
       }
     }
+
+    // The verdicts this area session finally settled on (post-heal when one ran)
+    // feed the run-end coverage agenda: which gates ever judged anything.
+    tallyGateVerdicts(gateTally, verification);
 
     const verifySummary = formatVerificationSummary(verification);
 
@@ -1382,6 +1441,17 @@ export function createHarnessOrchestrator(
     guide.cost = { ...cost, byArea: { ...cost.byArea } };
     if (!guide.learnings.includes(healLine)) guide.learnings.push(healLine);
     emit({ type: 'harness:learning', learning: healLine });
+
+    // Gate coverage agenda: per gate, how many verdicts it actually returned.
+    // A gate with none is named here because nowhere else can — the static
+    // preflight skips runtime-determined gates on purpose. Emitted only when a
+    // session ran this segment, so a resume that did nothing adds no lines.
+    if (Object.keys(gateTally).length > 0) {
+      for (const line of formatGateCoverageLines(gateTally, gates)) {
+        if (!guide.learnings.includes(line)) guide.learnings.push(line);
+        emit({ type: 'harness:learning', learning: line });
+      }
+    }
 
     // Cleanup (dev server teardown happens in runLoopWithErrorCapture's
     // `finally` so it also covers every error/crash/early-return path).
