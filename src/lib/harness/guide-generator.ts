@@ -64,8 +64,11 @@ export function appendGuideStep(
       rationale: f.notes || 'Standard implementation',
     })),
     gotchas: result.learnings ?? [],
+    // Same three-way vocabulary as formatVerificationSummary: a gate that could
+    // not be evaluated is UNVERIFIABLE, never "FAIL" — an advisory ue-visual /
+    // ue-tests gate with no env used to reach the guide as a failure.
     verification: verification.gates
-      .map(g => `${g.passed ? 'PASS' : 'FAIL'} ${g.gate}`)
+      .map(g => `${g.unverifiable ? 'UNVERIFIABLE' : g.passed ? 'PASS' : 'FAIL'} ${g.gate}`)
       .join(', '),
     durationMs: progress.durationMs,
   };
