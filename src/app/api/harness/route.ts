@@ -280,12 +280,22 @@ export async function POST(request: NextRequest) {
     // run (same runId) rather than silently minting a new one and fragmenting
     // history. A prior TERMINAL run at the statePath forks with recorded
     // provenance; `fork: true` forces a fork even from a resumable run.
-    const identity = resolveRunIdentity(config.statePath, {
-      forceFork: body.fork === true,
-      // Guard: a start with a different projectPath than this statePath's run
-      // refuses (400 via the catch below) instead of resuming a mismatched run.
-      projectPath: config.projectPath,
-    });
+    //
+    // `resolveRunIdentity` REFUSES BY THROWING when the statePath belongs to a
+    // different projectPath, and its message names both projects plus the two
+    // remedies (new statePath, or `fork: true`). That refusal is a caller error,
+    // so it must arrive as a 400 carrying that message — this handler has no
+    // outer catch, so an uncaught throw would surface as a framework 500 and the
+    // guidance would never reach the caller.
+    let identity;
+    try {
+      identity = resolveRunIdentity(config.statePath, {
+        forceFork: body.fork === true,
+        projectPath: config.projectPath,
+      });
+    } catch (err) {
+      return apiError(err instanceof Error ? err.message : String(err), 400);
+    }
     const orchestrator = createHarnessOrchestrator(config, {
       ...(identity.resumeRunId ? { resumeRunId: identity.resumeRunId } : {}),
       ...(identity.parentRunId ? { parentRunId: identity.parentRunId } : {}),
