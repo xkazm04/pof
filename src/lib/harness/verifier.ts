@@ -1,11 +1,15 @@
 /**
  * Verifier — runs quality gates after each executor session.
  *
- * Gates are configurable and include:
- * - TypeScript/ESLint validation (npm run validate)
- * - UE5 headless builds
- * - Git status checks (clean state)
- * - Custom commands
+ * Gate types `verify()` actually dispatches on (see the branch chain there):
+ * - command gates: typecheck / lint / test / build / playtest / custom
+ * - UE5: `ue-compile` (UBT), `ue-test` (abslog-judged), `ue-visual` (game-runs)
+ * - `visual`: the Playwright webapp capture
+ *
+ * A working-tree cleanliness gate was described here and implemented as
+ * `runGitCleanCheck`, but no gate `type` ever routed to it, so it was reachable
+ * by nothing; it has been removed rather than left as a claim the code does not
+ * keep. Reinstating it means adding a `type` and a branch, not just a function.
  *
  * The verifier produces a VerificationReport that the orchestrator
  * uses to decide whether to advance or retry.
@@ -89,25 +93,6 @@ function parseErrors(output: string): Array<{ file?: string; line?: number; mess
 }
 
 // ── Built-in Gates ──────────────────────────────────────────────────────────
-
-async function runGitCleanCheck(cwd: string): Promise<VerificationResult> {
-  const start = Date.now();
-  const result = await runCommand('git status --porcelain', cwd);
-
-  // We expect no untracked/unstaged files (clean working tree)
-  const untracked = result.stdout.split('\n').filter(l => l.startsWith('??')).length;
-  const modified = result.stdout.split('\n').filter(l => l.startsWith(' M') || l.startsWith('M ')).length;
-
-  return {
-    gate: 'git-clean',
-    passed: untracked === 0 && modified === 0,
-    output: result.stdout || 'Working tree clean',
-    durationMs: Date.now() - start,
-    errors: untracked + modified > 0
-      ? [{ message: `${untracked} untracked, ${modified} modified files — commit or discard before proceeding` }]
-      : undefined,
-  };
-}
 
 async function runGate(
   gate: VerificationGate,
