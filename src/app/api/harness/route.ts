@@ -25,8 +25,9 @@ import {
 } from '@/lib/harness';
 import { renderGuideMarkdown } from '@/lib/harness/guide-generator';
 import { SCENARIOS, scenarioNames } from '@/lib/harness/scenarios';
+import { readJsonFileState } from '@/lib/harness/state-io';
+import type { ProgressEntry } from '@/lib/harness/types';
 import { reapStrandedRuns } from '@/lib/harness-runs-db';
-import * as fs from 'fs';
 import * as path from 'path';
 
 // ── Singleton State ─────────────────────────────────────────────────────────
@@ -97,14 +98,14 @@ export async function GET(request: NextRequest) {
   }
 
   if (action === 'progress' && config) {
-    const progressFile = path.join(config.statePath, 'progress.json');
-    if (!fs.existsSync(progressFile)) return apiSuccess([]);
-    try {
-      const entries = JSON.parse(fs.readFileSync(progressFile, 'utf-8'));
-      return apiSuccess(entries);
-    } catch {
-      return apiSuccess([]);
+    // `missing` is a legitimate empty log (first run). `corrupt` is NOT — it is
+    // the state-io contract ("corruption is never silent"): a truncated
+    // progress.json read as `[]` would tell the UI / MCP that nothing ever ran.
+    const read = readJsonFileState<ProgressEntry[]>(path.join(config.statePath, 'progress.json'), []);
+    if (read.state === 'corrupt') {
+      return apiError(`Harness progress log is CORRUPT at ${config.statePath}/progress.json — ${read.error ?? 'unparseable'}`, 500);
     }
+    return apiSuccess(read.value);
   }
 
   if (action === 'events') {
