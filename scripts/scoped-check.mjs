@@ -35,4 +35,14 @@ try {
   console.error('scoped-check: lint or test failed');
   process.exit(1);
 }
+
+// Artifact-level cap on the shared fleet memory. CLAUDE.md caps each session's append
+// at 2 lines AND the file at ~200 lines; only the first was ever visible per commit, and
+// the file sat over cap for 13 days of compliant appends. The check reads the file, not
+// the edit; a red here names the one-command remedy.
+try {
+  execSync('node scripts/fleet-memory-cap.mjs', { stdio: 'inherit' });
+} catch {
+  process.exit(1);
+}
 console.log('scoped-check: OK');

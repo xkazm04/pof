@@ -21,6 +21,7 @@
     "test:e2e:headed": "npx playwright test --headed",
     "gen:pipelines": "node scripts/gen-pipeline-registry.mjs",
     "check:scoped": "node scripts/scoped-check.mjs",
+    "check:fleet-memory": "node scripts/fleet-memory-cap.mjs",
     "snapshot:ue-schema": "node scripts/snapshot-ue-schema.mjs",
     "ledger": "node scripts/animation-ledger.mjs",
     "check:tokens": "node scripts/token-parity.mjs"
