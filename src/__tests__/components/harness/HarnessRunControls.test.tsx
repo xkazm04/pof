@@ -128,6 +128,21 @@ describe('HarnessRunControls', () => {
     expect(text).not.toContain('Raise the budget and resume');
   });
 
+  it('shows the checkpoint ledger the status route already returns (last green, count, branch)', async () => {
+    // The route computed `checkpoints` and the wire type declared it, but the
+    // panel read plan / cost / events only — the rollback target was invisible.
+    installFetch(statusPayload({
+      status: 'running', runId: 'run-42',
+      checkpoints: { branch: 'harness/run-42', count: 3, lastGreenSha: 'abcdef1234567890' },
+    }));
+    const { container } = render(<HarnessRunControls />);
+    await waitFor(() => expect(container.querySelector('[data-testid="harness-checkpoints"]')).toBeTruthy());
+    const text = container.querySelector('[data-testid="harness-checkpoints"]')?.textContent ?? '';
+    expect(text).toContain('abcdef12');
+    expect(text).toContain('3');
+    expect(text).toContain('harness/run-42');
+  });
+
   it('dispatches a pause POST to /api/harness', async () => {
     installFetch(RUNNING, { ok: true, data: { status: 'pausing', message: 'Will pause after current iteration completes' } });
     const { container } = render(<HarnessRunControls />);
