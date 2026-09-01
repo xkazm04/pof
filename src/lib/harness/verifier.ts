@@ -386,11 +386,17 @@ export async function verify(
         errors: vResult.errors,
       });
     } else if (gate.type === 'visual') {
-      // Skip visual gate if no statePath provided
+      // No statePath → nowhere to write the captures, so NOTHING RAN. This used
+      // to report `passed: true` ("Visual gate skipped"), which is the one
+      // self-certifying branch left in this file after every other gate was made
+      // honest — and the sibling `ue-visual` branch below already reports the
+      // same situation as `unverifiable`. Absence of a check is not a passing
+      // check; report the third state so the area is never silently certified.
       results.push({
         gate: gate.name,
-        passed: true,
-        output: 'Visual gate skipped (no statePath)',
+        passed: false,
+        unverifiable: true,
+        output: 'Visual gate UNVERIFIABLE — no statePath to store the captures, so nothing was run.',
         durationMs: 0,
       });
     } else if (gate.type === 'ue-compile') {
