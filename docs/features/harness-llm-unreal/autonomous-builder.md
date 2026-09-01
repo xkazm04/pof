@@ -83,12 +83,13 @@ It's a **streaming pool**, not lock-step waves: an area that finishes early free
   - `start` resolves DURABLE IDENTITY from the `statePath`: it RESUMES the prior run (same runId) rather than fragmenting history, FORKS with provenance from a terminal run, or starts fresh (`fork:true` forces a fork; the response carries `mode` + `resumedRunId`/`parentRunId`).
   - `resume` after a server restart REHYDRATES the orchestrator from disk (`run-meta.json` + `harness-config.json`) so the same run continues — pass `statePath` when the in-memory singleton is gone; the response carries `rehydrated` + `runId`.
 - `GET /api/harness[?action=plan|guide|progress|events]` — status snapshot or the full plan/guide/progress/events
+  - `?statePath=<dir>` (or, with no in-memory run, the last config's statePath) serves the same reads from the **durable sidecars on disk** — `run-meta.json`, `game-plan.json`, `cost.json`, `checkpoints.json`, `guide.json`, `progress.json`. The response carries `source: 'disk' | 'memory'`, and the disk read adds `runMeta`, `runStatus` (the history row's word) and `resumable` (whether `action:'resume'` with this statePath would continue the run — `resolveRunIdentity`'s rule). Before this, a status read after a server restart answered `idle` with no plan while a resumable run sat on disk. `?action=progress` reports a CORRUPT log as a 500 naming the file, never as `[]`.
 - `GET /api/harness/runs`, `/runs/[id]`, `/runs/diff?a=&b=` — run history & comparison
 - `GET /api/harness/screenshot`, `/screenshots` — visual-gate captures
 
 **MCP** (`tools/pof-mcp/`, for a Claude Code CLI to drive it):
 - `pof_harness_start` — launch (returns immediately; poll status). Every HTTP start lever, including `statePath`, `fork` and `ueVisual` (the game-runs gate — previously UNREACHABLE from MCP)
-- `pof_harness_status` — run state, plan progress (both `verifiedPassRate` + `selfReportedPassRate`), cost, checkpoints, recent events; `feed: 'events' | 'progress'` swaps in the raw event ring / the full progress log (`GET ?action=events|progress`)
+- `pof_harness_status` — run state, plan progress (both `verifiedPassRate` + `selfReportedPassRate`), cost, checkpoints, recent events; `feed: 'events' | 'progress'` swaps in the raw event ring / the full progress log (`GET ?action=events|progress`); `statePath` reads the run bound to that dir from disk (`source:'disk'`, `resumable`) so a post-restart status is never a false `idle`
 - `pof_harness_plan` — the full `GamePlan` (every area, feature, dependency)
 - `pof_harness_control` — pause (after the current iteration) / resume; pass `statePath` so a resume AFTER A SERVER RESTART rehydrates the same run from disk instead of 409ing
 - `pof_harness_guide` — the accumulated build guide + learnings

@@ -276,6 +276,11 @@ export function readHarnessCost(statePath: string): HarnessCostTotals | null {
   return readJsonFile<HarnessCostTotals | null>(costPath(statePath), null);
 }
 
+/** Public read accessor for the API + UI: the durable plan, or null when none is on disk. */
+export function readHarnessPlan(statePath: string): GamePlan | null {
+  return readJsonFile<GamePlan | null>(planPath(statePath), null);
+}
+
 function loadPlan(sp: string): GamePlan | null {
   return readJsonFile<GamePlan | null>(planPath(sp), null);
 }
