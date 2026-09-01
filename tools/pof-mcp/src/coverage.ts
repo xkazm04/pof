@@ -34,6 +34,20 @@ export const EXAMPLE_SKIP: Record<string, string> = {
   pof_package_preflight: 'spawns UBT/editor — recorded by the growth suite',
 };
 
+/**
+ * tool name -> why it reaches NO app route, so the project-scope guard cannot probe it.
+ *
+ * The guard's premise is that a tool is a caller of the app's API, and an unprobeable
+ * caller is a blind spot in the scope audit. A tool that answers entirely from the MCP
+ * server's own process reads no project-scoped table at all, so there is nothing for the
+ * scope rule to get wrong — but that has to be DECLARED here, per tool, or the next
+ * routeless tool slips in behind this one and the guard quietly narrows.
+ */
+export const LOCAL_ONLY: Record<string, string> = {
+  pof_tool_groups:
+    'answers from the server process only (the group table + POF_MCP_TOOL_GROUPS) — reads no project-scoped table, so there is no scope to get wrong',
+};
+
 /** catalogId -> why the MCP pipeline quality walker skips it. */
 export const MCP_WALKER_SKIP: Record<string, string> = {
   'player-movement':
