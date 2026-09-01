@@ -129,7 +129,9 @@ export function RunStatePanel({ status }: { status: HarnessStatusResponse }) {
           )}
           {cost.paused && (
             <p role="status" className="text-xs" style={{ color: STATUS_WARNING }}>
-              The budget governor paused this run — it spent its cap. Raise the budget and resume, or leave it stopped.
+              The budget governor paused this run — it spent its cap. Resume alone re-trips the same cap: to continue,
+              start again at this run&apos;s state path with a higher budget (a start over a resumable state path continues
+              the same run), or leave it stopped.
             </p>
           )}
         </div>
