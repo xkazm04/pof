@@ -403,6 +403,13 @@ export function pickHealVerifyCommand(
  * `verifyCommand` is derived from the failing gate so this works on UE5 trees
  * (no tsc), TypeScript trees (tsc), or any custom gate configured by the user.
  */
+/**
+ * stdout+stderr budget for the self-heal's post-fix re-run. Mirrors the
+ * verifier's own `runCommand` (10 MB) so the confirmation of a repair is never
+ * stricter than the gate that demanded it.
+ */
+export const HEAL_VERIFY_MAX_BUFFER_BYTES = 10 * 1024 * 1024;
+
 export interface SelfHealResult {
   healed: boolean;
   reason?: string;
@@ -466,7 +473,15 @@ ${wrapHarnessResult('{"areaId":"self-heal","completed":true,"features":[],"files
   const costUsd = typeof session.costUsd === 'number' ? session.costUsd : undefined;
 
   return new Promise<SelfHealResult>((resolve) => {
-    exec(verifyCommand, { cwd: projectPath, timeout: 60_000 }, (err) => {
+    // Same output budget the verifier gives every gate (`runCommand`'s 10 MB).
+    // Node's `exec` defaults to 1 MB and, on overflow, KILLS the child and hands
+    // back an ENOBUFS error — indistinguishable here from a failing command. A
+    // typecheck or UBT re-run that prints more than 1 MB therefore reported
+    // "verify command still failing after the fix session" for a repair that had
+    // actually landed, burning the area's next retry (another full session) on a
+    // measurement artefact. The gate that judges the area already tolerates 10 MB;
+    // the re-run of that same command must not be stricter than the gate.
+    exec(verifyCommand, { cwd: projectPath, timeout: 60_000, maxBuffer: HEAL_VERIFY_MAX_BUFFER_BYTES }, (err) => {
       resolve(err === null
         ? { healed: true, sessionSpawned: true, ...(costUsd != null ? { costUsd } : {}) }
         : {
