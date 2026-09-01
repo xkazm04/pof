@@ -38,10 +38,10 @@ deferred verdict — Claude never self-grades.
 - `pof_drain_gates {catalogId, entityId, tier?, allowSpawn?}` — run deferred L3/L4 gates on the live editor
 
 **Harness loop**
-- `pof_harness_start {projectPath, projectName, ueVersion, …}` — start plan→execute→verify→checkpoint. Steering levers: `targetPassRate`, `passRateBasis` (`verified` default | `self-reported`), `sessionTimeoutMs`, `areaPassThreshold`, `themeDirective` (creative direction, ≤2000 chars), `budgetUsd`/`unlimited`, `maxConcurrent`, `scenario`, `checkpoint`, `ueTests`/`ueTestFilter`
-- `pof_harness_status` — run state, progress (incl. `verifiedPassRate` + `selfReportedPassRate`), cost, events
+- `pof_harness_start {projectPath, projectName, ueVersion, …}` — start plan→execute→verify→checkpoint. Steering levers: `statePath` (a start over an existing state path RESUMES that run), `fork`, `targetPassRate`, `passRateBasis` (`verified` default | `self-reported`), `sessionTimeoutMs`, `areaPassThreshold`, `themeDirective` (creative direction, ≤2000 chars), `budgetUsd`/`unlimited`, `maxConcurrent`, `scenario`, `checkpoint`, `ueTests`/`ueTestFilter`, `ueVisual` (the game-runs gate)
+- `pof_harness_status {feed?, statePath?}` — run state, progress (incl. `verifiedPassRate` + `selfReportedPassRate`), cost, checkpoints, events; `feed: events|progress` swaps in the raw feeds; `statePath` reads the run bound to that dir from disk (`source:'disk'`, `resumable`) so a post-restart status is never a false `idle`
 - `pof_harness_plan` — full game plan
-- `pof_harness_control {action: pause|resume}`
+- `pof_harness_control {action: pause|resume, statePath?}` — pass `statePath` so a resume AFTER A SERVER RESTART rehydrates the same run from disk instead of 409ing
 - `pof_harness_guide` — generated build guide / learnings
 - `pof_harness_runs {limit?, project?}` — run history (newest first)
 - `pof_harness_run {runId}` — full plan/progress/guide/cost snapshot of one run
