@@ -553,6 +553,18 @@ export function formatGateCoverageLines(
   });
 }
 
+/**
+ * The cap-hit pause reason. The governor stops LAUNCHES and DRAINS what is in
+ * flight rather than killing it (a killed session is spent and unmeasured), so
+ * settled spend can legitimately end above the cap — say by how much, instead
+ * of implying the ceiling held.
+ */
+export function formatCapReason(totals: HarnessCostTotals, budgetUsd: number | null): string {
+  const base = `Cost cap reached: spent $${totals.spentUsd.toFixed(2)} of $${budgetUsd?.toFixed(2)} cap (${totals.sessions} sessions)`;
+  if (budgetUsd == null || totals.spentUsd <= budgetUsd) return base;
+  return `${base} — overshoot $${(totals.spentUsd - budgetUsd).toFixed(2)} (in-flight sessions were drained to completion, not killed)`;
+}
+
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 /**
@@ -1103,7 +1115,7 @@ export function createHarnessOrchestrator(
             cost.paused = true;
             saveCost(config.statePath, cost);
             paused = true;
-            const reason = `Cost cap reached: spent $${cost.spentUsd.toFixed(2)} of $${budgetUsd?.toFixed(2)} cap (${cost.sessions} sessions)`;
+            const reason = formatCapReason(cost, budgetUsd);
             emit({ type: 'harness:paused', reason });
           }
           return;
@@ -1357,7 +1369,7 @@ export function createHarnessOrchestrator(
         emit({
           type: 'harness:paused',
           reason: cost.paused
-            ? `Cost cap reached: spent $${cost.spentUsd.toFixed(2)} of $${budgetUsd?.toFixed(2)} cap (${cost.sessions} sessions)`
+            ? formatCapReason(cost, budgetUsd)
             : 'User requested pause',
         });
         persistTerminal('paused');

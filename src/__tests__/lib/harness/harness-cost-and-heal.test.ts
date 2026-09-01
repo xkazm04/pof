@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   emptyCost, projectedSpend, avgSessionCost, budgetWouldOverflow,
   budgetWouldOverflowReserved, sessionCostEstimate,
-  pickHealVerifyCommand,
+  pickHealVerifyCommand, formatCapReason,
 } from '@/lib/harness/orchestrator';
 
 describe('cost governor helpers', () => {
@@ -111,5 +111,18 @@ describe('pickHealVerifyCommand', () => {
     const cmd = pickHealVerifyCommand(failing, ue5Gates);
     expect(cmd).toBe('ls Source/');
     expect(cmd).not.toContain('tsc');
+  });
+});
+
+describe('formatCapReason — the cap-hit reason states the overshoot width', () => {
+  it('under or at the cap: no overshoot clause', () => {
+    const r = formatCapReason({ spentUsd: 25, byArea: {}, sessions: 4, budgetUsd: 25, paused: true }, 25);
+    expect(r).toBe('Cost cap reached: spent $25.00 of $25.00 cap (4 sessions)');
+  });
+  it('drained in-flight sessions that settled past the cap are reported as an overshoot, not hidden', () => {
+    const r = formatCapReason({ spentUsd: 27.1, byArea: {}, sessions: 5, budgetUsd: 25, paused: true }, 25);
+    expect(r).toContain('spent $27.10 of $25.00 cap');
+    expect(r).toContain('overshoot $2.10');
+    expect(r).toContain('drained');
   });
 });
