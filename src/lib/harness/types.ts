@@ -215,12 +215,6 @@ export interface ExecutorResult {
   durationMs: number;
   /** Full text output from the assistant */
   assistantOutput: string;
-  /** Whether C++ files were touched */
-  touchedCpp: boolean;
-  /** Whether gameplay-related files were changed */
-  touchedGameplay: boolean;
-  /** Whether PoF UI files were changed */
-  touchedUI: boolean;
   /** Exit code of the claude process */
   exitCode: number | null;
   /** Cost in USD if reported */
