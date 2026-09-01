@@ -32,6 +32,99 @@ async function settleGates(
 
 const HISTORY_PATH = '/api/packaging/history';
 
+// ── build wait ───────────────────────────────────────────────────────────────
+
+/**
+ * The build queue's terminal states (`BuildStatus` in `src/types/ue5-bridge.ts`).
+ * `queued` and `running` are the only two a wait can usefully sit on.
+ */
+const BUILD_TERMINAL = new Set(['success', 'failed', 'aborted']);
+
+/** Ceiling on a caller-requested wait. A tool that can hang a session forever is a hazard. */
+export const BUILD_WAIT_MAX_S = 300;
+/** How often the wait re-reads. Local HTTP to the app — cheap next to a UBT build. */
+export const BUILD_WAIT_POLL_MS = 2000;
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+function statusOf(payload: unknown): string | null {
+  if (payload && typeof payload === 'object' && 'status' in payload) {
+    const s = (payload as { status: unknown }).status;
+    if (typeof s === 'string') return s;
+  }
+  return null;
+}
+
+/**
+ * Poll `read` until the build settles or the budget runs out.
+ *
+ * `pof_ue_build` hands back a buildId and says "poll pof_ue_build_status", which costs the
+ * agent one assistant turn per read for the whole length of a UBT build. MCP for Unity hit
+ * the same shape with `run_tests` → `get_test_job` and added a `wait_timeout` for the same
+ * two reasons: fewer round trips, and no client-side loop detection tripping on a run of
+ * identical calls.
+ *
+ * Two honesty rules the rest of pof-mcp already holds to apply here:
+ *  - a wait that runs out returns the LAST REAL status and `settled: false` — never a
+ *    verdict the queue did not give;
+ *  - a read that fails (a 404 for an unknown buildId) is returned at once, not retried
+ *    until the budget expires: it will not become terminal by waiting.
+ */
+export async function waitForBuild(
+  read: () => Promise<unknown>,
+  requestedSeconds: number,
+  opts: { pollMs?: number; now?: () => number } = {},
+): Promise<unknown> {
+  const pollMs = opts.pollMs ?? BUILD_WAIT_POLL_MS;
+  const now = opts.now ?? Date.now;
+  const budgetS = Math.min(requestedSeconds, BUILD_WAIT_MAX_S);
+  const deadline = now() + budgetS * 1000;
+  const startedAt = now();
+  let polls = 0;
+  let last: unknown;
+  let status: string | null = null;
+
+  for (;;) {
+    polls += 1;
+    try {
+      last = await read();
+    } catch (e) {
+      return {
+        result: last ?? null,
+        wait: {
+          requestedSeconds,
+          budgetSeconds: budgetS,
+          polls,
+          settled: false,
+          error: e instanceof Error ? e.message : String(e),
+          note: 'the status read FAILED — returned immediately rather than waiting out the budget on a build that will never settle',
+        },
+      };
+    }
+    status = statusOf(last);
+    if (status != null && BUILD_TERMINAL.has(status)) break;
+    if (now() >= deadline) break;
+    await sleep(Math.min(pollMs, Math.max(0, deadline - now())));
+  }
+
+  const settled = status != null && BUILD_TERMINAL.has(status);
+  return {
+    result: last,
+    wait: {
+      requestedSeconds,
+      budgetSeconds: budgetS,
+      ...(budgetS < requestedSeconds ? { clamped: `waitSeconds was capped at ${BUILD_WAIT_MAX_S}` } : {}),
+      waitedMs: now() - startedAt,
+      polls,
+      settled,
+      status,
+      note: settled
+        ? `build reached the terminal state "${status}"`
+        : `build is still "${status ?? 'unknown'}" after ${budgetS}s — this is NOT a verdict; call again with waitSeconds to keep waiting`,
+    },
+  };
+}
+
 /**
  * What a build-history read could and could NOT see, in the agent's own response.
  *
@@ -181,10 +274,30 @@ export const UE_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_ue_build_status',
-    description: 'Build status by id, or the queue + history for a project path.',
-    inputSchema: obj({ buildId: STR, projectPath: STR }),
-    handler: (args, pof) =>
-      pof.get(`/api/ue5-bridge/build${qs({ ...(optStr(args, 'buildId') ? { buildId: optStr(args, 'buildId') } : {}), ...(optStr(args, 'projectPath') ? { projectPath: optStr(args, 'projectPath') } : {}) })}`),
+    description:
+      'Build status by id, or the queue + history for a project path. Pass `waitSeconds` with a `buildId` to WAIT for the build to reach a terminal state (success/failed/aborted) instead of returning a "running" you then have to poll for by hand — one call that blocks is cheaper than twenty that do not, and it keeps a long UBT build from filling the transcript with identical status reads. The wait always reports whether it actually settled; a build still running when the budget runs out comes back non-terminal and says so, never as a verdict.',
+    inputSchema: obj({
+      buildId: STR,
+      projectPath: STR,
+      waitSeconds: {
+        type: 'number',
+        description: `Wait up to this many seconds (capped at ${BUILD_WAIT_MAX_S}) for the build to finish before returning. Requires buildId. Returns as soon as it settles. Omit for an immediate read.`,
+      },
+    }),
+    handler: async (args, pof) => {
+      const buildId = optStr(args, 'buildId');
+      const read = () =>
+        pof.get<unknown>(`/api/ue5-bridge/build${qs({ ...(buildId ? { buildId } : {}), ...(optStr(args, 'projectPath') ? { projectPath: optStr(args, 'projectPath') } : {}) })}`);
+
+      const requested = optNum(args, 'waitSeconds');
+      if (requested == null || requested <= 0) return read();
+      if (!buildId) {
+        // A queue/history read has no terminal state to wait for — say so rather than
+        // sleeping for nothing and returning the same list a moment later.
+        return { result: await read(), wait: { skipped: 'waitSeconds needs a buildId — a queue/history read never settles' } };
+      }
+      return waitForBuild(read, requested);
+    },
   },
   {
     name: 'pof_ue_build_health',
