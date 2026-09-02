@@ -1,5 +1,5 @@
 import type { PofClient } from '../pofClient.js';
-import { type ToolDef, reqStr, optStr, optNum, reqObj, qs, obj, STR, NUM, BOOL } from './shared.js';
+import { type ToolDef, reqStr, optStr, optNum, reqObj, qs, obj, STR, NUM, BOOL, readOnly, writes } from './shared.js';
 
 const PORTQ = (args: Record<string, unknown>) => (optNum(args, 'port') != null ? { port: optNum(args, 'port') } : {});
 
@@ -72,6 +72,7 @@ async function historyScope(pof: PofClient, projectPath: string | undefined): Pr
 export const UE_TOOLS: ToolDef[] = [
   {
     name: 'pof_ue_status',
+    annotations: readOnly('UE status'),
     description: 'PoF bridge plugin status: connection, engine/plugin version, editor state (idle/pie/compiling), manifest asset count. Returns { connected:false } when the editor is offline.',
     inputSchema: obj({ port: NUM }),
     example: { args: {}, note: 'Returns connected:false when the UE editor is not running.' },
@@ -79,12 +80,14 @@ export const UE_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_ue_manifest',
+    annotations: readOnly('UE manifest'),
     description: 'The UE project asset manifest (blueprints, materials, anim assets, data tables) + a content checksum. Asset count is a growth metric. Needs a live editor.',
     inputSchema: obj({ port: NUM, checksumOnly: BOOL }),
     handler: (args, pof) => pof.get(`/api/pof-bridge/manifest${qs({ ...PORTQ(args), ...(args.checksumOnly === true ? { 'checksum-only': 'true' } : {}) })}`),
   },
   {
     name: 'pof_ue_compile',
+    annotations: writes('UE compile'),
     description: 'Trigger a live-coding compile of the UE C++ and wait for the result (status + diagnostics with file/line/severity). Needs a live editor.',
     inputSchema: obj({ waitForComplete: BOOL, timeoutSeconds: NUM, port: NUM }),
     handler: (args, pof) =>
@@ -95,6 +98,7 @@ export const UE_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_ue_run_tests',
+    annotations: writes('UE run tests'),
     description:
       'Run UE automation tests matching a filter and SETTLE the deferred L3 gates waiting on that test — running the test a gate waits on now closes the loop instead of leaving it deferred for a drain. Set settle:false for a raw run. Settling reuses the drain\'s own truth (same verdict semantics, same "planned, not registered in UE" deferral) and respects the drain lease: if a drain holds the scope the settle is refused rather than clobbering it. Results matching no gate change nothing and say so. Needs a live editor with PIE.',
     inputSchema: obj({
@@ -118,6 +122,7 @@ export const UE_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_ue_test_results',
+    annotations: writes('UE test results', { idempotent: true }),
     description:
       'Fetch UE automation test results (status, assertions, logs) and, when `testName` is given, SETTLE the deferred L3 gates waiting on that test from the fetched payload — the poll-then-close-the-loop half of pof_ue_run_tests (use it when a run came back non-terminal). Without `testName` it is a plain read that changes nothing. Omit testId for all recent results.',
     inputSchema: obj({
@@ -136,6 +141,7 @@ export const UE_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_ue_scan_project',
+    annotations: readOnly('UE scan project'),
     description: "Scan the UE project's Source/ on disk: C++ classes, plugins, build deps, file count. Works WITHOUT a live editor. Class count is a growth metric.",
     inputSchema: obj({ projectPath: STR, moduleName: STR }, ['projectPath']),
     handler: (args, pof) =>
@@ -143,12 +149,14 @@ export const UE_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_ue_scan_assets',
+    annotations: readOnly('UE scan assets'),
     description: 'Inventory the UE project Content/ on disk: all .uasset/.umap files, sizes, inferred dependencies. Works WITHOUT a live editor. Asset count/size are growth metrics.',
     inputSchema: obj({ projectPath: STR }, ['projectPath']),
     handler: (args, pof) => pof.post('/api/filesystem/scan-assets', { projectPath: reqStr(args, 'projectPath') }),
   },
   {
     name: 'pof_ue_verify_semantic',
+    annotations: readOnly('UE verify semantic'),
     description: 'Verify C++ classes match design expectations (members/functions/components present): per-item status (full|partial|stub|missing) + completeness %. Works WITHOUT a live editor.',
     inputSchema: obj({ projectPath: STR, items: { type: 'array', items: { type: 'object' } } }, ['projectPath', 'items']),
     handler: (args, pof) => {
@@ -158,12 +166,14 @@ export const UE_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_ue_source_parse',
+    annotations: readOnly('UE source parse'),
     description: 'Offline parse of the UE C++ ability-system source (classes, functions, properties). Works WITHOUT a live editor.',
     inputSchema: obj({ projectPath: STR }, ['projectPath']),
     handler: (args, pof) => pof.post('/api/ue5-source/parse', { projectPath: reqStr(args, 'projectPath') }),
   },
   {
     name: 'pof_ue_build',
+    annotations: writes('UE build'),
     description: 'Enqueue a local C++ build (UBT) of the UE project. Returns a buildId; poll pof_ue_build_status. Runs locally — does NOT need a live editor.',
     inputSchema: obj(
       { projectPath: STR, targetName: STR, ueVersion: STR, platform: STR, configuration: STR },
@@ -181,6 +191,7 @@ export const UE_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_ue_build_status',
+    annotations: readOnly('UE build status'),
     description: 'Build status by id, or the queue + history for a project path.',
     inputSchema: obj({ buildId: STR, projectPath: STR }),
     handler: (args, pof) =>
@@ -188,6 +199,7 @@ export const UE_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_ue_build_health',
+    annotations: readOnly('UE build health'),
     description: 'Build reliability report for a project: success rate, duration trend, slowest targets, recurring error fingerprints, regression alerts. Reads the build-history DB.',
     inputSchema: obj({ projectPath: STR, limit: NUM }, ['projectPath']),
     handler: (args, pof) =>
@@ -195,6 +207,7 @@ export const UE_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_asset_code_oracle',
+    annotations: readOnly('Asset-code oracle'),
     description: 'Analyze C++ ↔ asset consistency from pre-scanned data (classes + assets + dependencies → mismatches, missing refs, broken deps). Pure analysis.',
     inputSchema: obj({ classes: { type: 'array' }, assets: { type: 'array' }, dependencies: { type: 'array' } }, ['classes', 'assets', 'dependencies']),
     example: { args: { classes: [], assets: [], dependencies: [] }, note: 'Empty inputs document the result shape; feed real scans for a true audit.' },
@@ -203,6 +216,7 @@ export const UE_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_package_preflight',
+    annotations: writes('Package preflight'),
     description: 'Validate the UE project before a cook (fast lint / build-verify / asset-validation): per-check results + overall pass|fail. Runs locally.',
     inputSchema: obj(
       { projectPath: STR, projectName: STR, ueVersion: STR, mapName: STR, check: { type: 'string', enum: ['fast', 'build-verify-editor', 'build-verify-shipping', 'asset-validation'] } },
@@ -219,6 +233,7 @@ export const UE_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_package_history',
+    annotations: readOnly('Package history'),
     description:
       'Query the persistent build/cook history: list builds, stats, size trend, platforms, or version. Final .exe sizes are a growth/shipping metric. SCOPE IT with `projectPath`: build rows carry the project that cooked them, and WITHOUT a projectPath this reads ONLY the unattributed legacy rows recorded before builds carried a project — never every build. The response always states which view you got and what it could not see.',
     inputSchema: obj({

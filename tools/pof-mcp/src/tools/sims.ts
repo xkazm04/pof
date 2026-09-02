@@ -1,9 +1,10 @@
-import { type ToolDef, reqStr, reqObj, optStr, optNum, qs, obj, STR, NUM, OBJ } from './shared.js';
+import { type ToolDef, reqStr, reqObj, optStr, optNum, qs, obj, STR, NUM, OBJ, readOnly, writes } from './shared.js';
 
 /** Simulation & balance: Monte-Carlo combat, economy agent-sim, sensitivity sweep, GAS/stat specs. */
 export const SIM_TOOLS: ToolDef[] = [
   {
     name: 'pof_combat_catalog',
+    annotations: readOnly('Combat catalog'),
     description:
       'Combat-sim inputs: enemy archetypes, player ability templates, gear loadouts, and the default tuning + sim config. Use this to build a scenario for pof_combat_simulate.',
     inputSchema: obj({}),
@@ -12,6 +13,7 @@ export const SIM_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_combat_simulate',
+    annotations: readOnly('Combat simulate'),
     description:
       'Run a Monte-Carlo combat simulation. Returns per-fight results, an aggregated summary (survival rate, durations, ability heatmap, threat breakdown), and balance alerts. Pass a fixed config.seed for reproducible results.',
     inputSchema: obj(
@@ -32,6 +34,7 @@ export const SIM_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_economy_catalog',
+    annotations: readOnly('Economy catalog'),
     description:
       'Economy-sim inputs: faucet/sink flows, items (categories + prices), the XP curve, and the default simulation config. Use this to build a config for pof_economy_simulate.',
     inputSchema: obj({}),
@@ -40,6 +43,7 @@ export const SIM_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_economy_simulate',
+    annotations: writes('Economy simulate'),
     description:
       'Run the economy agent-simulation. Returns per-level metrics (gold, gini, inflow/outflow, velocity), supply/demand curves, and inflation alerts. Pass a fixed config.seed for reproducibility.',
     inputSchema: obj({ config: { type: 'object', description: 'SimulationConfig (agentCount, maxLevel, maxPlayHours, philosophy, seed, overrides).' } }, ['config']),
@@ -47,6 +51,7 @@ export const SIM_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_economy_sweep',
+    annotations: readOnly('Economy sweep'),
     description:
       'One-at-a-time sensitivity sweep: perturbs each economy parameter and ranks them by impact on the chosen output (tornado chart). config must include a seed.',
     inputSchema: obj(
@@ -66,6 +71,7 @@ export const SIM_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_balance_baseline',
+    annotations: readOnly('Balance baseline'),
     description: 'Read the stored balance baseline (threat score + stat snapshot) for an entity — the reference for regression diffs. Returns null if none stored.',
     inputSchema: obj({ catalogId: STR, entityId: STR }, ['catalogId', 'entityId']),
     example: { args: { catalogId: 'bestiary', entityId: 'brute' } },
@@ -74,6 +80,7 @@ export const SIM_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_ability_spec',
+    annotations: readOnly('Ability spec'),
     description: 'Read the stored GAS ability spec (effects + tag rules) for an entity — drives round-trip UE codegen. Returns null if none stored.',
     inputSchema: obj({ catalogId: STR, entityId: STR }, ['catalogId', 'entityId']),
     example: { args: { catalogId: 'spellbook', entityId: 'off-fire-01' } },

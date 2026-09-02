@@ -12,6 +12,7 @@ Validate that PoF can **converge its raw-UE control surface onto UE 5.8's first-
 - **Do NOT remove `PillarsOfFortuneBridge` (`:30040`).** It stays as the auth'd verification/orchestration layer.
 - **Do NOT remove the verification spine** (`src/lib/test-gate-runner/`, observation.json L3, Gemini visual L4) or `execute_script`. These are the moat.
 - **Do NOT expose any control plane beyond loopback.** The official MCP has no auth.
+  - *2026-09-01 (research run, unity-mcp):* this doctrine is currently honored by the CLIENTS only — `pof-mcp` dials `127.0.0.1`, `getAppOrigin()` builds `localhost` — while the app SERVER itself (`npm run dev` = `next dev`, hostname default `0.0.0.0`) listens on every interface, and its routes (`/api/blender-mcp/execute`, `/api/filesystem/*`, the autonomous spawns) carry no request gate. Fix is `next dev -H 127.0.0.1` (or an origin check in one middleware); left to the operator because the dev command is shared by the fleet and by Playwright's `webServer`, and a `localhost` client resolving to `::1` first would need the dual-stack fallback. Decision recorded in `.claude/ship-loop/config.md` ("no auth boundary") stands until then.
 - **Do NOT rip out `MCPUnreal` until 5.8 parity + verification are proven.** Phase 3 is a *decision* gate, not a foregone migration.
 
 ## Current state (grounded)

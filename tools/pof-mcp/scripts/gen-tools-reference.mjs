@@ -40,6 +40,12 @@ function redact(v, depth = 0) {
   return v;
 }
 
+function annotationLine(a) {
+  if (!a) return '';
+  const tags = [a.readOnlyHint ? 'read-only' : 'write', a.destructiveHint ? 'destructive' : null, a.idempotentHint ? 'idempotent' : null, a.openWorldHint ? 'open-world' : null].filter(Boolean);
+  return `**Annotations:** ${tags.join(' · ')}`;
+}
+
 function schemaLines(schema) {
   const props = schema.properties ?? {};
   const req = new Set(schema.required ?? []);
@@ -63,7 +69,7 @@ async function main() {
   for (const [family, tools] of FAMILIES) {
     parts.push(`## ${family}`, '');
     for (const tool of tools) {
-      parts.push(`### \`${tool.name}\``, '', tool.description, '', '**Arguments:**', schemaLines(tool.inputSchema), '');
+      parts.push(`### \`${tool.name}\``, '', tool.description, '', annotationLine(tool.annotations), '', '**Arguments:**', schemaLines(tool.inputSchema), '');
       if (tool.example) {
         const res = await mcp.call(tool.name, tool.example.args);
         parts.push('**Example call:**', '```json', JSON.stringify(tool.example.args, null, 2), '```');

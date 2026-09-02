@@ -47,6 +47,18 @@ deferred verdict — Claude never self-grades.
 - `pof_harness_run {runId}` — full plan/progress/guide/cost snapshot of one run
 - `pof_harness_run_diff {a, b}` — compare two runs (pass-rate/cost/duration deltas + per-area changes)
 
+### Annotations (blast radius)
+
+Every tool advertises MCP `ToolAnnotations` on `tools/list` — `readOnlyHint`,
+`destructiveHint`, `idempotentHint`, `openWorldHint` — so a host can tier consent instead
+of confirming every call: the reads (`pof_get_*`, `pof_list_*`, status/history/evidence)
+are read-only; `pof_submit_artifact`, `pof_ue_compile`/`_run_tests`/`_build`,
+`pof_package_preflight`, `pof_economy_simulate` and `pof_gdd_compliance` write; `pof_drain_gates`
+and `pof_harness_start` are destructive (verdict flips, editor boots, an autonomous session
+that spends budget). The hints are claims, pinned to behaviour by `annotations.test.ts`: a
+read-only tool may POST only to a route allow-listed in `src/coverage.ts` → `READ_ONLY_POST`,
+whose source is checked for write primitives.
+
 ## Build & test
 
 ```bash

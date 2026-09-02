@@ -1,9 +1,10 @@
-import { type ToolDef, reqStr, optStr, optNum, obj, qs, STR } from './shared.js';
+import { type ToolDef, reqStr, optStr, optNum, obj, qs, STR, readOnly, writes } from './shared.js';
 
 /** Harness loop: autonomous plan → execute → verify → checkpoint. */
 export const HARNESS_TOOLS: ToolDef[] = [
   {
     name: 'pof_harness_start',
+    annotations: writes('Start harness', { destructive: true, openWorld: true }),
     description:
       'Start the autonomous harness loop (plan → execute → verify → checkpoint) for a UE project. Returns immediately; poll pof_harness_status. Use this to push a whole game forward, not a single step.',
     inputSchema: obj(
@@ -107,6 +108,7 @@ export const HARNESS_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_harness_status',
+    annotations: readOnly('Harness status'),
     description:
       'Current harness status: run state, plan progress (areas/features, verifiedPassRate + selfReportedPassRate), cost tally, checkpoints, and recent events. Poll after pof_harness_start. `feed` swaps the summary for the raw event ring or the full progress log.',
     inputSchema: obj({
@@ -128,12 +130,14 @@ export const HARNESS_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_harness_plan',
+    annotations: readOnly('Harness plan'),
     description: 'The full current harness game plan — every module area, its features, and dependency order.',
     inputSchema: obj({}),
     handler: (_args, pof) => pof.get('/api/harness?action=plan'),
   },
   {
     name: 'pof_harness_control',
+    annotations: writes('Control harness', { idempotent: true }),
     description:
       'Steer the running harness: pause (after the current iteration) or resume. After a SERVER RESTART the in-memory orchestrator is gone — pass `statePath` so resume rehydrates the same run from disk (run-meta.json + harness-config.json) instead of 409ing.',
     inputSchema: obj(
@@ -156,12 +160,14 @@ export const HARNESS_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_harness_guide',
+    annotations: readOnly('Harness guide'),
     description: 'The generated build guide + learnings (steps, decisions, gotchas) accumulated by the harness, as markdown.',
     inputSchema: obj({}),
     handler: (_args, pof) => pof.get('/api/harness?action=guide'),
   },
   {
     name: 'pof_harness_runs',
+    annotations: readOnly('Harness runs'),
     description:
       'Recent harness runs (history) — each row: runId, project, status, pass-rate, cost, timing. Newest first. Use to pick runs to inspect or diff.',
     inputSchema: obj({
@@ -174,6 +180,7 @@ export const HARNESS_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_harness_run',
+    annotations: readOnly('Harness run'),
     description:
       'Full snapshot of a single harness run by id: plan, progress log, guide, and cost. Get the id from pof_harness_runs.',
     inputSchema: obj({ runId: { type: 'string', description: 'The run id (from pof_harness_runs).' } }, ['runId']),
@@ -181,6 +188,7 @@ export const HARNESS_TOOLS: ToolDef[] = [
   },
   {
     name: 'pof_harness_run_diff',
+    annotations: readOnly('Harness run diff'),
     description:
       'Compare two harness runs (base `a` vs head `b`): aggregate pass-rate/cost/duration/session deltas + per-area improvements & regressions.',
     inputSchema: obj(
