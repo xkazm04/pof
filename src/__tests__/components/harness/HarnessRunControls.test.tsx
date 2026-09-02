@@ -111,6 +111,38 @@ describe('HarnessRunControls', () => {
     expect(container.querySelector('[data-testid="harness-spend"]')?.textContent).toContain('$7.50 of $25.00');
   });
 
+  it('a budget-paused run tells the operator the path that actually raises the cap (not "resume")', async () => {
+    // resume() keeps the run's config, so wouldOverflowNow() re-trips the same
+    // cap on the first launch; the cap is raised by a START at the same state
+    // path with a bigger budgetUsd (resolveRunIdentity resumes the run, loadCost
+    // refreshes the cap). The copy used to say "raise the budget and resume".
+    installFetch(statusPayload({
+      status: 'paused', runId: 'run-42',
+      cost: { spentUsd: 25.4, budgetUsd: 25, sessions: 6, paused: true, byArea: {}, remainingUsd: -0.4 },
+    }));
+    const { container } = render(<HarnessRunControls />);
+    await waitFor(() => expect(container.querySelector('[data-testid="harness-run-state"]')).toBeTruthy());
+    const text = container.textContent ?? '';
+    expect(text).toContain('Resume alone re-trips the same cap');
+    expect(text).toContain('start again at this run');
+    expect(text).not.toContain('Raise the budget and resume');
+  });
+
+  it('shows the checkpoint ledger the status route already returns (last green, count, branch)', async () => {
+    // The route computed `checkpoints` and the wire type declared it, but the
+    // panel read plan / cost / events only — the rollback target was invisible.
+    installFetch(statusPayload({
+      status: 'running', runId: 'run-42',
+      checkpoints: { branch: 'harness/run-42', count: 3, lastGreenSha: 'abcdef1234567890' },
+    }));
+    const { container } = render(<HarnessRunControls />);
+    await waitFor(() => expect(container.querySelector('[data-testid="harness-checkpoints"]')).toBeTruthy());
+    const text = container.querySelector('[data-testid="harness-checkpoints"]')?.textContent ?? '';
+    expect(text).toContain('abcdef12');
+    expect(text).toContain('3');
+    expect(text).toContain('harness/run-42');
+  });
+
   it('dispatches a pause POST to /api/harness', async () => {
     installFetch(RUNNING, { ok: true, data: { status: 'pausing', message: 'Will pause after current iteration completes' } });
     const { container } = render(<HarnessRunControls />);

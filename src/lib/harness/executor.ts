@@ -216,21 +216,11 @@ export async function executeArea(
     onOutput,
   });
 
-  // Detect what was touched by scanning the extracted assistant text
-  const combinedOutput = session.output;
-  const touchedCpp = /\.(h|cpp|hpp|cc)/.test(combinedOutput);
-  const touchedGameplay = /(UGameplayAbility|UAbilitySystemComponent|ACharacter|APlayerController|APawn)/
-    .test(combinedOutput);
-  const touchedUI = /\.(tsx|jsx|css)/.test(combinedOutput) || /Widget|HUD|UMG/.test(combinedOutput);
-
   return {
     completed: session.exitCode === 0,
     sessionId: session.sessionId,
     durationMs: Date.now() - startTime,
     assistantOutput: session.output,
-    touchedCpp,
-    touchedGameplay,
-    touchedUI,
     exitCode: session.exitCode,
     costUsd: session.costUsd,
     errors: session.errors.length > 0 ? session.errors : undefined,

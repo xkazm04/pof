@@ -189,3 +189,18 @@ test('pof_harness_status feed reaches the events + progress GET actions', async 
 
   await assert.rejects(async () => tool('pof_harness_status').handler({ feed: 'bogus' }, pof), /feed/);
 });
+
+test('pof_harness_status threads statePath so a post-restart read comes from the durable sidecars', async () => {
+  const { pof, calls } = recorder();
+  await tool('pof_harness_status').handler({ statePath: 'C:/proj/.harness' }, pof);
+  assert.equal(calls[0].path, '/api/harness?statePath=C%3A%2Fproj%2F.harness');
+
+  calls.length = 0;
+  await tool('pof_harness_status').handler({ feed: 'progress', statePath: 'C:/proj/.harness' }, pof);
+  assert.match(calls[0].path, /^\/api\/harness\?/);
+  assert.match(calls[0].path, /action=progress/);
+  assert.match(calls[0].path, /statePath=C%3A%2Fproj%2F\.harness/);
+
+  // The schema must advertise it — the model only knows what the schema says.
+  assert.ok('statePath' in (tool('pof_harness_status').inputSchema as any).properties);
+});

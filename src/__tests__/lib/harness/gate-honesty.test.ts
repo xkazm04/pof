@@ -42,6 +42,25 @@ describe('commandless gates are UNVERIFIABLE', () => {
     expect(report.allPassed).toBe(false);
   });
 
+  it('the visual gate with no statePath is UNVERIFIABLE, not a "skipped" pass (the ue-visual rule)', async () => {
+    // Both screenshot gates are commandless by design; without a statePath
+    // neither can run. `ue-visual` already answered unverifiable — `visual`
+    // answered passed:true "skipped", which flipped allPassed green and wrote
+    // "PASS visual-check" into the guide for a check that never happened.
+    const gates: VerificationGate[] = [
+      { name: 'visual-check', type: 'visual', required: false },
+      { name: 'ue-visual', type: 'ue-visual', required: false },
+    ];
+    const report = await verify(area(), 1, 'C:/proj', gates, undefined);
+    for (const r of report.gates) {
+      expect(r.passed).toBe(false);
+      expect(r.unverifiable).toBe(true);
+      expect(r.output).toContain('UNVERIFIABLE');
+    }
+    expect(report.allPassed).toBe(false);
+    expect(report.requiredFailures).toBe(0); // advisory — never blocks
+  });
+
   it('an ADVISORY commandless gate is still unverifiable but does not block', async () => {
     const gates: VerificationGate[] = [{ name: 'advisory', type: 'custom', required: false }];
     const report = await verify(area(), 1, 'C:/proj', gates, undefined);

@@ -65,6 +65,30 @@ describe('POST /api/harness — control-surface mapping', () => {
     expect((capturedConfig as Cfg).areas).toBe(SCENARIOS['ui-overhaul'].areas);
   });
 
+  it('a start whose projectPath differs from the statePath\'s run is refused with a 400, not a 500', async () => {
+    // resolveRunIdentity THROWS on the mismatch (the right refusal); the route
+    // used to let that throw escape — an unhandled 500 with no body, so neither
+    // the UI nor pof_harness_start learned which run owns the path.
+    const fs = await import('fs');
+    const os = await import('os');
+    const path = await import('path');
+    const statePath = fs.mkdtempSync(path.join(os.tmpdir(), 'harness-state-'));
+    fs.writeFileSync(path.join(statePath, 'run-meta.json'), JSON.stringify({
+      runId: 'run_other', projectPath: 'C:/some-other-project', statePath, startedAt: '2026-01-01T00:00:00.000Z',
+    }));
+    try {
+      const res = await POST(startReq({ ...REQUIRED, statePath }));
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.success).toBe(false);
+      expect(body.error).toContain('belongs to project');
+      expect(body.error).toContain('run_other');
+      expect(capturedConfig).toBeNull(); // no orchestrator was built
+    } finally {
+      fs.rmSync(statePath, { recursive: true, force: true });
+    }
+  });
+
   it('1c: an unknown scenario is rejected loudly (400), not silently ignored', async () => {
     const res = await POST(startReq({ ...REQUIRED, scenario: 'does-not-exist' }));
     expect(res.status).toBe(400);

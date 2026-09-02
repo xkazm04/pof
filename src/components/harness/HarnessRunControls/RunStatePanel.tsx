@@ -129,9 +129,23 @@ export function RunStatePanel({ status }: { status: HarnessStatusResponse }) {
           )}
           {cost.paused && (
             <p role="status" className="text-xs" style={{ color: STATUS_WARNING }}>
-              The budget governor paused this run — it spent its cap. Raise the budget and resume, or leave it stopped.
+              The budget governor paused this run — it spent its cap. Resume alone re-trips the same cap: to continue,
+              start again at this run&apos;s state path with a higher budget (a start over a resumable state path continues
+              the same run), or leave it stopped.
             </p>
           )}
+        </div>
+      )}
+
+      {status.checkpoints && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3" data-testid="harness-checkpoints">
+          <Stat
+            label="Last green"
+            value={status.checkpoints.lastGreenSha ? status.checkpoints.lastGreenSha.slice(0, 8) : '—'}
+            title={status.checkpoints.lastGreenSha ?? 'No green checkpoint yet — a rollback has nowhere to go'}
+          />
+          <Stat label="Checkpoints" value={String(status.checkpoints.count)} title="Green snapshots on the harness branch (baseline included)" />
+          <Stat label="Branch" value={status.checkpoints.branch} title={status.checkpoints.branch} />
         </div>
       )}
 

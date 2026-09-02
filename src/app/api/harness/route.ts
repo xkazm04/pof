@@ -5,6 +5,8 @@
  * GET  /api/harness?action=plan              → full game plan
  * GET  /api/harness?action=guide             → full guide markdown
  * GET  /api/harness?action=progress          → progress log
+ * GET  /api/harness?statePath=<dir>[&action] → the same reads from the DURABLE sidecars on
+ *                                              disk (also the default when no in-memory run exists)
  * POST /api/harness  { action: 'start', ... } → start harness
  * POST /api/harness  { action: 'pause' }     → pause harness
  * POST /api/harness  { action: 'resume' }    → resume harness
@@ -23,10 +25,19 @@ import {
   type GamePlan,
   type GameBuildGuide,
 } from '@/lib/harness';
-import { renderGuideMarkdown } from '@/lib/harness/guide-generator';
+import { renderGuideMarkdown, loadGuide } from '@/lib/harness/guide-generator';
+import {
+  readHarnessPlan,
+  readHarnessCost,
+  readCheckpoints,
+  readRunMeta,
+  isResumableStatus,
+} from '@/lib/harness/orchestrator';
+import type { CheckpointState } from '@/lib/harness/checkpoint';
 import { SCENARIOS, scenarioNames } from '@/lib/harness/scenarios';
-import { reapStrandedRuns } from '@/lib/harness-runs-db';
-import * as fs from 'fs';
+import { readJsonFileState } from '@/lib/harness/state-io';
+import type { HarnessCostTotals, ProgressEntry } from '@/lib/harness/types';
+import { reapStrandedRuns, getRun } from '@/lib/harness-runs-db';
 import * as path from 'path';
 
 // ── Singleton State ─────────────────────────────────────────────────────────
@@ -73,6 +84,129 @@ function wireOrchestratorEvents(orchestrator: HarnessOrchestrator): void {
 
 // ── GET ─────────────────────────────────────────────────────────────────────
 
+/** The plan block of the status summary — one shape for the in-memory and the on-disk read. */
+function summarizePlan(plan: GamePlan) {
+  return {
+    game: plan.game,
+    iteration: plan.iteration,
+    totalFeatures: plan.totalFeatures,
+    passingFeatures: plan.passingFeatures,
+    verifiedFeatures: plan.verifiedFeatures ?? 0,
+    // `passRate` kept for backward compat = self-reported. Both bases are also
+    // reported explicitly and clearly labeled so a consumer (UI / MCP) can show
+    // the honest verified number vs the executor's self-report.
+    passRate: plan.totalFeatures > 0
+      ? Math.round((plan.passingFeatures / plan.totalFeatures) * 100)
+      : 0,
+    selfReportedPassRate: plan.totalFeatures > 0
+      ? Math.round((plan.passingFeatures / plan.totalFeatures) * 100)
+      : 0,
+    verifiedPassRate: plan.totalFeatures > 0
+      ? Math.round(((plan.verifiedFeatures ?? 0) / plan.totalFeatures) * 100)
+      : 0,
+    totalAreas: plan.areas.length,
+    completedAreas: plan.areas.filter(a => a.status === 'completed').length,
+    failedAreas: plan.areas.filter(a => a.status === 'failed').length,
+    gappedAreas: plan.areas.filter(a => a.status === 'completed-with-gaps').length,
+    currentArea: plan.areas.find(a => a.status === 'in-progress')?.label ?? null,
+  };
+}
+
+function summarizeGuide(guide: GameBuildGuide) {
+  return {
+    totalSteps: guide.steps.length,
+    totalDurationMs: guide.totalDurationMs,
+    lastStep: guide.steps[guide.steps.length - 1]?.label ?? null,
+  };
+}
+
+function summarizeCost(cost: HarnessCostTotals) {
+  return {
+    spentUsd: Number(cost.spentUsd.toFixed(4)),
+    budgetUsd: cost.budgetUsd,
+    sessions: cost.sessions,
+    paused: cost.paused,
+    byArea: cost.byArea,
+    remainingUsd: cost.budgetUsd != null ? Number((cost.budgetUsd - cost.spentUsd).toFixed(4)) : null,
+  };
+}
+
+function summarizeCheckpoints(checkpoints: CheckpointState) {
+  return {
+    branch: checkpoints.branch,
+    count: checkpoints.checkpoints.length,
+    lastGreenSha: checkpoints.checkpoints.length > 0
+      ? checkpoints.checkpoints[checkpoints.checkpoints.length - 1].sha
+      : null,
+    areas: checkpoints.checkpoints.map(c => ({ areaId: c.areaId, sha: c.sha, tag: c.tag, iteration: c.iteration })),
+  };
+}
+
+/**
+ * Read the progress log honouring the state-io contract: `missing` is a
+ * legitimate empty log (first run); `corrupt` is NOT — a truncated
+ * progress.json read as `[]` would tell the UI / MCP that nothing ever ran.
+ */
+function progressResponse(statePath: string) {
+  const read = readJsonFileState<ProgressEntry[]>(path.join(statePath, 'progress.json'), []);
+  if (read.state === 'corrupt') {
+    return apiError(`Harness progress log is CORRUPT at ${statePath}/progress.json — ${read.error ?? 'unparseable'}`, 500);
+  }
+  return apiSuccess(read.value);
+}
+
+/**
+ * The DISK read of the control surface. After a server restart the in-memory
+ * orchestrator is gone, but every run leaves durable sidecars under its
+ * statePath (`run-meta.json`, `game-plan.json`, `cost.json`,
+ * `checkpoints.json`, `guide.json`, `progress.json`). Serving the same
+ * summary shape from those files is what lets a status read after a restart
+ * report "a resumable run is bound to this path" instead of `idle` — the
+ * same information `action:'resume'` rehydrates from, exposed READ-only.
+ * `source:'disk'` says which read the caller got; `resumable` mirrors
+ * `resolveRunIdentity` (a run-meta whose DB row is gone still resumes).
+ */
+function respondFromDisk(action: string | null, statePath: string) {
+  if (action === 'plan') {
+    const plan = readHarnessPlan(statePath);
+    if (!plan) return apiError(`No plan on disk at ${statePath}`, 404);
+    return apiSuccess(plan);
+  }
+  if (action === 'guide') {
+    const guide = loadGuide(statePath);
+    if (!guide) return apiError(`No guide on disk at ${statePath}`, 404);
+    return apiSuccess({ guide, markdown: renderGuideMarkdown(guide) });
+  }
+  if (action === 'progress') return progressResponse(statePath);
+  if (action === 'events') {
+    // Events are process-local (never persisted) — the buffer, whatever run it holds.
+    return apiSuccess(globalForHarness.harnessEvents.slice(-50));
+  }
+
+  const meta = readRunMeta(statePath);
+  const row = meta ? getRun(meta.runId) : null;
+  const plan = readHarnessPlan(statePath);
+  const guide = loadGuide(statePath);
+  const cost = readHarnessCost(statePath);
+  const checkpoints = readCheckpoints(statePath);
+  return apiSuccess({
+    status: globalForHarness.harnessStatus,
+    source: 'disk' as const,
+    statePath,
+    runId: meta?.runId ?? null,
+    runMeta: meta,
+    /** The `harness_runs` row's own word for the run, or null when the row is gone. */
+    runStatus: row?.status ?? null,
+    /** True when `action:'resume'` with this statePath would continue this run (same rule as resolveRunIdentity). */
+    resumable: !!meta && (!row || isResumableStatus(row.status)),
+    plan: plan ? summarizePlan(plan) : null,
+    guide: guide ? summarizeGuide(guide) : null,
+    cost: cost ? summarizeCost(cost) : null,
+    checkpoints: checkpoints ? summarizeCheckpoints(checkpoints) : null,
+    recentEvents: globalForHarness.harnessEvents.slice(-10),
+  });
+}
+
 export async function GET(request: NextRequest) {
   const action = request.nextUrl.searchParams.get('action');
   const config = globalForHarness.harnessConfig;
@@ -82,6 +216,14 @@ export async function GET(request: NextRequest) {
   // stranded in 'running' (see reapStrandedRuns — excludes runs still live in
   // this process). Best-effort; never blocks the status response.
   try { reapStrandedRuns(); } catch { /* reaping is best-effort */ }
+
+  // An explicit `?statePath=` always reads the durable sidecars (the screenshot
+  // routes take the same override); with no in-memory orchestrator, the last
+  // config's statePath is read from disk too. Only a live in-memory run with no
+  // override answers from memory.
+  const override = request.nextUrl.searchParams.get('statePath');
+  const diskPath = override || (!orchestrator ? config?.statePath ?? null : null);
+  if (diskPath) return respondFromDisk(action, diskPath);
 
   if (action === 'plan' && orchestrator) {
     const plan = orchestrator.getPlan();
@@ -96,22 +238,13 @@ export async function GET(request: NextRequest) {
     return apiSuccess({ guide, markdown });
   }
 
-  if (action === 'progress' && config) {
-    const progressFile = path.join(config.statePath, 'progress.json');
-    if (!fs.existsSync(progressFile)) return apiSuccess([]);
-    try {
-      const entries = JSON.parse(fs.readFileSync(progressFile, 'utf-8'));
-      return apiSuccess(entries);
-    } catch {
-      return apiSuccess([]);
-    }
-  }
+  if (action === 'progress' && config) return progressResponse(config.statePath);
 
   if (action === 'events') {
     return apiSuccess(globalForHarness.harnessEvents.slice(-50));
   }
 
-  // Default: status summary
+  // Default: status summary from the live orchestrator
   const plan = orchestrator?.getPlan();
   const guide = orchestrator?.getGuide();
   const cost = orchestrator?.getCost?.() ?? null;
@@ -120,52 +253,12 @@ export async function GET(request: NextRequest) {
 
   return apiSuccess({
     status: globalForHarness.harnessStatus,
+    source: 'memory' as const,
     runId,
-    plan: plan ? {
-      game: plan.game,
-      iteration: plan.iteration,
-      totalFeatures: plan.totalFeatures,
-      passingFeatures: plan.passingFeatures,
-      verifiedFeatures: plan.verifiedFeatures ?? 0,
-      // `passRate` kept for backward compat = self-reported. Both bases are also
-      // reported explicitly and clearly labeled so a consumer (UI / MCP) can show
-      // the honest verified number vs the executor's self-report.
-      passRate: plan.totalFeatures > 0
-        ? Math.round((plan.passingFeatures / plan.totalFeatures) * 100)
-        : 0,
-      selfReportedPassRate: plan.totalFeatures > 0
-        ? Math.round((plan.passingFeatures / plan.totalFeatures) * 100)
-        : 0,
-      verifiedPassRate: plan.totalFeatures > 0
-        ? Math.round(((plan.verifiedFeatures ?? 0) / plan.totalFeatures) * 100)
-        : 0,
-      totalAreas: plan.areas.length,
-      completedAreas: plan.areas.filter(a => a.status === 'completed').length,
-      failedAreas: plan.areas.filter(a => a.status === 'failed').length,
-      gappedAreas: plan.areas.filter(a => a.status === 'completed-with-gaps').length,
-      currentArea: plan.areas.find(a => a.status === 'in-progress')?.label ?? null,
-    } : null,
-    guide: guide ? {
-      totalSteps: guide.steps.length,
-      totalDurationMs: guide.totalDurationMs,
-      lastStep: guide.steps[guide.steps.length - 1]?.label ?? null,
-    } : null,
-    cost: cost ? {
-      spentUsd: Number(cost.spentUsd.toFixed(4)),
-      budgetUsd: cost.budgetUsd,
-      sessions: cost.sessions,
-      paused: cost.paused,
-      byArea: cost.byArea,
-      remainingUsd: cost.budgetUsd != null ? Number((cost.budgetUsd - cost.spentUsd).toFixed(4)) : null,
-    } : null,
-    checkpoints: checkpoints ? {
-      branch: checkpoints.branch,
-      count: checkpoints.checkpoints.length,
-      lastGreenSha: checkpoints.checkpoints.length > 0
-        ? checkpoints.checkpoints[checkpoints.checkpoints.length - 1].sha
-        : null,
-      areas: checkpoints.checkpoints.map(c => ({ areaId: c.areaId, sha: c.sha, tag: c.tag, iteration: c.iteration })),
-    } : null,
+    plan: plan ? summarizePlan(plan) : null,
+    guide: guide ? summarizeGuide(guide) : null,
+    cost: cost ? summarizeCost(cost) : null,
+    checkpoints: checkpoints ? summarizeCheckpoints(checkpoints) : null,
     recentEvents: globalForHarness.harnessEvents.slice(-10),
   });
 }
@@ -280,12 +373,19 @@ export async function POST(request: NextRequest) {
     // run (same runId) rather than silently minting a new one and fragmenting
     // history. A prior TERMINAL run at the statePath forks with recorded
     // provenance; `fork: true` forces a fork even from a resumable run.
-    const identity = resolveRunIdentity(config.statePath, {
-      forceFork: body.fork === true,
-      // Guard: a start with a different projectPath than this statePath's run
-      // refuses (400 via the catch below) instead of resuming a mismatched run.
-      projectPath: config.projectPath,
-    });
+    // Guard: a start with a different projectPath than this statePath's run
+    // REFUSES (resolveRunIdentity throws) instead of resuming a mismatched run.
+    // The throw must become a 400 — uncaught it is a 500 with no body, and the
+    // caller (UI / pof_harness_start) never learns which run owns the path.
+    let identity: ReturnType<typeof resolveRunIdentity>;
+    try {
+      identity = resolveRunIdentity(config.statePath, {
+        forceFork: body.fork === true,
+        projectPath: config.projectPath,
+      });
+    } catch (err) {
+      return apiError(err instanceof Error ? err.message : String(err), 400);
+    }
     const orchestrator = createHarnessOrchestrator(config, {
       ...(identity.resumeRunId ? { resumeRunId: identity.resumeRunId } : {}),
       ...(identity.parentRunId ? { parentRunId: identity.parentRunId } : {}),

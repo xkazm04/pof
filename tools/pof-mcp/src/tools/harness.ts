@@ -118,6 +118,11 @@ export const HARNESS_TOOLS: ToolDef[] = [
         description:
           '"status" (default) = the summary snapshot; "events" = the last 50 harness events; "progress" = the full per-area progress log from disk.',
       },
+      statePath: {
+        type: 'string',
+        description:
+          'Read the run bound to this state dir from its DURABLE sidecars on disk instead of the server\'s in-memory run. After a SERVER RESTART the in-memory run is gone and a plain status read says "idle"; with statePath the response carries `source:"disk"`, the run-meta, `runStatus` (the history row\'s word) and `resumable` — whether pof_harness_control resume with this statePath would continue it.',
+      },
     }),
     example: { args: {} },
     handler: (args, pof) => {
@@ -125,7 +130,7 @@ export const HARNESS_TOOLS: ToolDef[] = [
       if (feed !== 'status' && feed !== 'events' && feed !== 'progress') {
         throw new Error('feed must be "status", "events" or "progress"');
       }
-      return pof.get(feed === 'status' ? '/api/harness' : `/api/harness?action=${feed}`);
+      return pof.get(`/api/harness${qs({ action: feed === 'status' ? undefined : feed, statePath: optStr(args, 'statePath') })}`);
     },
   },
   {
