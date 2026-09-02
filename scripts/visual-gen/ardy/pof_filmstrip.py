@@ -15,7 +15,7 @@ IDX = {n: i for i, n in enumerate(NAMES)}
 
 
 def render(npz_path: str, out_path: str, n_frames: int = 8) -> None:
-    d = np.load(npz_path, allow_pickle=True)
+    d = np.load(npz_path, allow_pickle=False)
     joints = d["posed_joints"]  # [T, 27, 3]
     contacts = d["foot_contacts"]  # [T, 4]
     T = joints.shape[0]

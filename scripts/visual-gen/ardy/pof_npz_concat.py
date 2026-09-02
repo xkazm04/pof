@@ -8,7 +8,7 @@ import numpy as np
 out = sys.argv[1]
 ins = sys.argv[2:]
 
-parts = [dict(np.load(p, allow_pickle=True)) for p in ins]
+parts = [dict(np.load(p, allow_pickle=False)) for p in ins]
 fps = float(parts[0]["fps"])
 keys = ["local_rot_mats", "global_rot_mats", "posed_joints", "root_positions", "smooth_root_pos", "foot_contacts", "global_root_heading"]
 

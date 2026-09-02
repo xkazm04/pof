@@ -38,7 +38,7 @@ def fk_check(d, skel) -> float:
 
 
 def write_bvh(npz_path: str, out_path: str) -> None:
-    d = dict(np.load(npz_path, allow_pickle=True))
+    d = dict(np.load(npz_path, allow_pickle=False))
     skel, names, parents, neutral = load_skeleton()
 
     err = fk_check(d, skel)
