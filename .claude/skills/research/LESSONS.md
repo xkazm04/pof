@@ -166,3 +166,30 @@
   store and then shipped three dead modules — tested, green, imported by nothing,
   including the render gate it called its headline. One grep per shipped export closes
   the whole class. Added to Phase 7.
+
+## 1.9 — 2026-09-02 — pof (source: a curated link directory; output: an external knowledge bundle)
+
+- **A link-directory source has an inverted payload.** The run was pointed at an
+  "awesome-list" of ~500 game-dev links, mostly to dead or obsolete tools. Extracting
+  candidates from the LINKS would have produced nothing. The payload was (a) the **book
+  canon** the list points at, and (b) the **section taxonomy itself, read as a coverage
+  checklist** against the destination corpus. That diff — their sections against our
+  subjects — produced twelve units of real work in one pass, four of them whole
+  territories with zero prior coverage. Generalizes: for an index-shaped source, do not
+  extract from the entries; diff the source's implied taxonomy against your own.
+- **The destination is not always this repo.** Phases 5-8 assume findings land as code
+  here. This run's destination was a separate knowledge registry with its own authoring
+  contract, and the correct move was to route the whole run through THAT repo's brief
+  (director + one worker per subject folder) while keeping this skill's discipline —
+  draft-before-reconcile, re-open every line before citing it, deviations recorded
+  without lowering the standard. Not proposing a method change on one occurrence, but a
+  future run with an external destination should look for the destination's own contract
+  before assuming the in-repo TDD-and-commit shape.
+- **The consumer census (v1.9) generalized past code, and it earned a law.** Five of the
+  twelve units independently found the same defect class in the consuming repo —
+  a declared input that nothing reads (a gate condition as free text no linter parses, a
+  locked flag ignored by the only traversal consuming it, an economy pool written and
+  never read, no code reading a delivered image's dimensions, a numerator with no
+  denominator). It is the same shape as this skill's own dead-knowledge-store lesson, and
+  the destination corpus promoted it to a cross-cutting law. The census is not a
+  code-review trick; it is a general question to ask of any declared field.
