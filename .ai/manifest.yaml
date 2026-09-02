@@ -26,3 +26,23 @@ skills:
   - npm-updates
   - perfect
   - ship-loop
+
+# Scope - what this project does and deliberately does not do. Read by the registry's
+# scripts/build-fleet-map.mjs to classify subjects this project has NO context for: an
+# absence inside an out-of-scope category or subject is never proposed as a new direction;
+# every other in-domain absence is a `candidate` for the intake direction pass. Keys are
+# `<bundle>/<category>[/<subcategory>]` and `<bundle>/<subject>`. Decisions on proposed
+# directions live in .ai/directions/ledger.jsonl. DRAFT written by the registry on
+# 2026-09-02 from the purpose line and the project note - the owner edits this block, the
+# registry only reads it.
+scope:
+  does:
+    - an AI companion for building UE5 C++ games: headless engine tooling, MCP wiring, UI workflows
+  does_not:
+    - a hosted service
+    - recruiting, civic, advertising domains
+  out_of_scope_categories:
+    - software-engineering/ui-surfaces/published-surfaces
+    - software-engineering/engineering-assessment
+  out_of_scope_subjects:
+  directions_ledger: .ai/directions/ledger.jsonl
