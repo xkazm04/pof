@@ -57,7 +57,22 @@ are read-only; `pof_submit_artifact`, `pof_ue_compile`/`_run_tests`/`_build`,
 and `pof_harness_start` are destructive (verdict flips, editor boots, an autonomous session
 that spends budget). The hints are claims, pinned to behaviour by `annotations.test.ts`: a
 read-only tool may POST only to a route allow-listed in `src/coverage.ts` → `READ_ONLY_POST`,
-whose source is checked for write primitives.
+whose source is checked for write primitives. A tool that reaches no route at all must say so
+in `LOCAL_ONLY` with a reason, or the probe refuses its hint as unverified.
+
+### Tool groups (advertised surface)
+
+The surface is partitioned into five families — `pipeline`, `harness`, `sims`, `ue`, `design`
+(`src/tools/groups.ts`) — and an operator may trim what a given client sees by setting
+`POF_MCP_TOOL_GROUPS` in that client's `.mcp.json` (`"env": { "POF_MCP_TOOL_GROUPS": "pipeline,ue" }`).
+
+Gating is **opt-in and static**: unset, blank or `all` advertises everything, so an
+autonomous harness run cannot silently lose a capability it had yesterday. There is no
+in-session `activate` — that needs `tools/listChanged`, which clients honour unevenly.
+A gated-out tool is REFUSED at `CallTool` with a message naming its group, never silently
+run, so "listed" and "callable" stay the same set. `pof_tool_groups` is never gated: it
+reports every group, which are hidden, and the tool names inside them, so a trimmed session
+can say what it is missing instead of concluding the capability does not exist.
 
 ## Build & test
 
