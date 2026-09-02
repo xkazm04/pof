@@ -373,10 +373,14 @@ export async function POST(request: NextRequest) {
     // run (same runId) rather than silently minting a new one and fragmenting
     // history. A prior TERMINAL run at the statePath forks with recorded
     // provenance; `fork: true` forces a fork even from a resumable run.
-    // Guard: a start with a different projectPath than this statePath's run
-    // REFUSES (resolveRunIdentity throws) instead of resuming a mismatched run.
-    // The throw must become a 400 — uncaught it is a 500 with no body, and the
-    // caller (UI / pof_harness_start) never learns which run owns the path.
+    //
+    // `resolveRunIdentity` REFUSES BY THROWING when the statePath belongs to a
+    // different projectPath, and its message names both projects plus the two
+    // remedies (new statePath, or `fork: true`). That refusal is a caller error,
+    // so it must arrive as a 400 carrying that message — this handler has no
+    // outer catch, so an uncaught throw would surface as a framework 500 with no
+    // body, and neither the UI nor pof_harness_start would ever learn which run
+    // owns the path.
     let identity: ReturnType<typeof resolveRunIdentity>;
     try {
       identity = resolveRunIdentity(config.statePath, {

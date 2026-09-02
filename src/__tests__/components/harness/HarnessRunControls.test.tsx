@@ -209,6 +209,29 @@ describe('HarnessRunControls', () => {
     ]));
   });
 
+  // The "required" marker beside each mandatory label is aria-hidden, and the
+  // hints sit in sibling spans — so the obligation and the guidance were both
+  // visual-only. `aria-required` carries the first; `aria-describedby` carries
+  // the second without swelling the accessible name.
+  it('announces which start fields are mandatory and links their hints', async () => {
+    installFetch(statusPayload());
+    render(<HarnessRunControls />);
+
+    const path = await screen.findByLabelText(/project path/i);
+    expect(path.getAttribute('aria-required')).toBe('true');
+    for (const label of [/project name/i, /ue version/i]) {
+      expect(screen.getByLabelText(label).getAttribute('aria-required')).toBe('true');
+    }
+    // An optional field must NOT claim to be required.
+    expect(screen.getByLabelText(/max iterations/i).getAttribute('aria-required')).toBeNull();
+
+    // A hinted field points at its hint, and the hint element exists.
+    const statePath = screen.getByLabelText(/state path/i);
+    const describedBy = statePath.getAttribute('aria-describedby');
+    expect(describedBy).toBeTruthy();
+    expect(document.getElementById(describedBy!)?.textContent).toContain('resumes the same run');
+  });
+
   it('disables every control when the status read itself fails', async () => {
     global.fetch = vi.fn(async () =>
       new Response(JSON.stringify({ success: false, error: 'boom' }), { status: 500 })) as unknown as typeof fetch;

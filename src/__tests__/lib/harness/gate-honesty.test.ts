@@ -25,6 +25,52 @@ function area(): ModuleArea {
 
 // ── (a) commandless gates are unverifiable, never a pass ─────────────────────
 
+/**
+ * Every gate type, derived from the union rather than hand-listed.
+ *
+ * The hand-written list this replaces named six of the ten types, and the honest
+ * ones were exactly the six it named — `visual` was outside the population and
+ * was the branch still answering `passed: true` ("Visual gate skipped") when it
+ * had nowhere to write its captures. A `Record<union, ...>` is the cheapest
+ * derivation available for a type-level population: adding a member to
+ * `VerificationGate['type']` fails to compile here until it is classified, so the
+ * exhaustiveness claim cannot silently rot again.
+ *
+ * `runtimeUnverifiable` marks the types whose "nothing ran" case is triggered by
+ * a missing runtime input (no statePath / no UE env) rather than by a missing
+ * command — they still must never report a pass.
+ */
+const GATE_TYPES: Record<VerificationGate['type'], { runtimeUnverifiable: boolean }> = {
+  typecheck: { runtimeUnverifiable: false },
+  lint: { runtimeUnverifiable: false },
+  test: { runtimeUnverifiable: false },
+  build: { runtimeUnverifiable: false },
+  playtest: { runtimeUnverifiable: false },
+  visual: { runtimeUnverifiable: true },
+  custom: { runtimeUnverifiable: false },
+  'ue-compile': { runtimeUnverifiable: false },
+  'ue-test': { runtimeUnverifiable: true },
+  'ue-visual': { runtimeUnverifiable: true },
+};
+
+describe('NO gate type self-certifies when nothing ran', () => {
+  const everyType = Object.keys(GATE_TYPES) as Array<VerificationGate['type']>;
+
+  it.each(everyType)(
+    'a commandless %s gate with no statePath reports unverifiable, never a pass',
+    async (type) => {
+      const gates: VerificationGate[] = [{ name: `bare-${type}`, type, required: false }];
+      const report = await verify(area(), 1, 'C:/proj', gates, undefined);
+
+      const result = report.gates[0];
+      expect(result.passed).toBe(false);
+      expect(result.unverifiable).toBe(true);
+      expect(result.output).toContain('UNVERIFIABLE');
+      expect(report.allPassed).toBe(false);
+    },
+  );
+});
+
 describe('commandless gates are UNVERIFIABLE', () => {
   const kinds: Array<VerificationGate['type']> = ['custom', 'build', 'test', 'lint', 'typecheck', 'playtest'];
 

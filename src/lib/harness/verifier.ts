@@ -1,11 +1,15 @@
 /**
  * Verifier — runs quality gates after each executor session.
  *
- * Gates are configurable and include:
- * - TypeScript/ESLint validation (npm run validate)
- * - UE5 headless builds
- * - Git status checks (clean state)
- * - Custom commands
+ * Gate types `verify()` actually dispatches on (see the branch chain there):
+ * - command gates: typecheck / lint / test / build / playtest / custom
+ * - UE5: `ue-compile` (UBT), `ue-test` (abslog-judged), `ue-visual` (game-runs)
+ * - `visual`: the Playwright webapp capture
+ *
+ * A working-tree cleanliness gate was described here and implemented as
+ * `runGitCleanCheck`, but no gate `type` ever routed to it, so it was reachable
+ * by nothing; it has been removed rather than left as a claim the code does not
+ * keep. Reinstating it means adding a `type` and a branch, not just a function.
  *
  * The verifier produces a VerificationReport that the orchestrator
  * uses to decide whether to advance or retry.
@@ -89,25 +93,6 @@ function parseErrors(output: string): Array<{ file?: string; line?: number; mess
 }
 
 // ── Built-in Gates ──────────────────────────────────────────────────────────
-
-async function runGitCleanCheck(cwd: string): Promise<VerificationResult> {
-  const start = Date.now();
-  const result = await runCommand('git status --porcelain', cwd);
-
-  // We expect no untracked/unstaged files (clean working tree)
-  const untracked = result.stdout.split('\n').filter(l => l.startsWith('??')).length;
-  const modified = result.stdout.split('\n').filter(l => l.startsWith(' M') || l.startsWith('M ')).length;
-
-  return {
-    gate: 'git-clean',
-    passed: untracked === 0 && modified === 0,
-    output: result.stdout || 'Working tree clean',
-    durationMs: Date.now() - start,
-    errors: untracked + modified > 0
-      ? [{ message: `${untracked} untracked, ${modified} modified files — commit or discard before proceeding` }]
-      : undefined,
-  };
-}
 
 async function runGate(
   gate: VerificationGate,
@@ -386,15 +371,17 @@ export async function verify(
         errors: vResult.errors,
       });
     } else if (gate.type === 'visual') {
-      // No statePath → nowhere to write screenshots, so NOTHING ran. This used to
-      // answer `passed:true` "skipped" — the one remaining self-certifying door
-      // after commandless gates and `ue-visual` were made honest. Same rule as
-      // its `ue-visual` sibling below: unverifiable, never a pass.
+      // No statePath → nowhere to write the captures, so NOTHING RAN. This used to
+      // report `passed: true` ("Visual gate skipped") — the one self-certifying door
+      // left in this file after commandless gates and `ue-visual` were made honest,
+      // and the sibling `ue-visual` branch below already reports this exact situation
+      // as `unverifiable`. Absence of a check is not a passing check: report the third
+      // state so the area is never silently certified.
       results.push({
         gate: gate.name,
         passed: false,
         unverifiable: true,
-        output: 'Visual gate UNVERIFIABLE — no statePath to store screenshots, so nothing was run. The area is NOT self-certified.',
+        output: 'Visual gate UNVERIFIABLE — no statePath to store the captures, so nothing was run. The area is NOT self-certified.',
         durationMs: 0,
         errors: [{ message: 'no statePath for the visual gate' }],
       });

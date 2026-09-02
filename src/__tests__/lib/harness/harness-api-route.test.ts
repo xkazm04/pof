@@ -1,4 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import type { NextRequest } from 'next/server';
 
 // Capture the config the route hands to the orchestrator, and stub the loop so
@@ -149,5 +152,35 @@ describe('POST /api/harness — Direction 3 control-surface parity', () => {
     const res = await POST(startReq({ ...REQUIRED, passRateBasis: 'wishful' }));
     expect(res.status).toBe(400);
     expect(capturedConfig).toBeNull();
+  });
+
+  // `resolveRunIdentity` refuses a statePath that belongs to a different project
+  // by THROWING, and its message names both projects plus the two remedies. The
+  // route has no outer catch, so before this the throw escaped the handler and the
+  // caller got a framework 500 with none of that text — a caller error reported as
+  // a server error, with the guidance dropped on the floor.
+  it('refuses a statePath owned by ANOTHER project with a 400 that carries the reason', async () => {
+    const statePath = fs.mkdtempSync(path.join(os.tmpdir(), 'harness-route-state-'));
+    fs.writeFileSync(
+      path.join(statePath, 'run-meta.json'),
+      JSON.stringify({
+        runId: 'run_other',
+        projectPath: 'C:/some/other/project',
+        statePath,
+        startedAt: '2026-01-01T00:00:00.000Z',
+      }),
+    );
+
+    const res = await POST(startReq({ ...REQUIRED, statePath }));
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { success: boolean; error: string };
+    expect(body.success).toBe(false);
+    expect(body.error).toMatch(/belongs to project/);
+    // The remedies survive the boundary — that is the whole point of the 400.
+    expect(body.error).toMatch(/fork:true/);
+    expect(capturedConfig).toBeNull();
+
+    fs.rmSync(statePath, { recursive: true, force: true });
   });
 });

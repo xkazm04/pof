@@ -18,6 +18,13 @@ interface FieldProps {
 }
 
 function Field({ id, label, value, onChange, placeholder, hint, required }: FieldProps) {
+  // The "required" marker beside the label is `aria-hidden`, and the hint sits in
+  // a sibling span — so without these two attributes a screen-reader user learned
+  // neither that the field is mandatory (the visual-only marker) nor what the
+  // sighted hint says. `aria-required` carries the obligation and
+  // `aria-describedby` attaches the hint as a description rather than swelling
+  // the accessible NAME, which is what putting it inside the <label> does.
+  const hintId = hint ? `${id}-hint` : undefined;
   return (
     <label htmlFor={id} className="block space-y-1">
       <span className="flex items-baseline gap-1">
@@ -30,8 +37,12 @@ function Field({ id, label, value, onChange, placeholder, hint, required }: Fiel
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
         className={INPUT}
+        {...(required ? { required: true, 'aria-required': true } : {})}
+        {...(hintId ? { 'aria-describedby': hintId } : {})}
       />
-      {hint && <MicroLabel as="span" tone="muted">{hint}</MicroLabel>}
+      {/* `id` lives on a wrapper: MicroLabel is a shared primitive outside this
+          context and takes no id prop, and widening it is not this round's edit. */}
+      {hint && <span id={hintId}><MicroLabel as="span" tone="muted">{hint}</MicroLabel></span>}
     </label>
   );
 }
