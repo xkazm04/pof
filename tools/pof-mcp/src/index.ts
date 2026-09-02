@@ -11,24 +11,39 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { ListToolsRequestSchema, CallToolRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { createPofClient, PofApiError, originFromEnv } from './pofClient.js';
-import { TOOLS } from './tools/index.js';
+import { TOOLS, advertisedTools, toolVisibility, GROUPS_ENV } from './tools/index.js';
 
 const pof = createPofClient();
 
 const server = new Server({ name: 'pof-mcp', version: '0.1.0' }, { capabilities: { tools: {} } });
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
-  tools: TOOLS.map((t) => ({
+  // Groups gate WHICH tools are advertised; annotations describe the blast radius of each
+  // one that is. Both survive: a host tiers consent per tool (tools/shared.ts) over the
+  // surface an operator left enabled (tools/groups.ts).
+  tools: advertisedTools().map((t) => ({
     name: t.name,
     description: t.description,
     inputSchema: t.inputSchema,
-    // Blast-radius hints (read-only / destructive / idempotent / open-world) so a host can
-    // tier consent per tool instead of confirming every call. See tools/shared.ts.
     annotations: t.annotations,
   })),
 }));
 
 server.setRequestHandler(CallToolRequestSchema, async (req) => {
+  const vis = toolVisibility(req.params.name);
+  if (!vis.known) {
+    return { content: [{ type: 'text', text: `Unknown tool: ${req.params.name}` }], isError: true };
+  }
+  if (!vis.visible) {
+    // Refused, not silently run: the advertised list must stay the truth about what is callable.
+    return {
+      content: [{
+        type: 'text',
+        text: `Tool "${req.params.name}" is in the "${vis.group}" group, which is not enabled this session (${GROUPS_ENV}). Call pof_tool_groups to see every group and what it holds; enabling it needs a change to this server's MCP client config and a reconnect.`,
+      }],
+      isError: true,
+    };
+  }
   const tool = TOOLS.find((t) => t.name === req.params.name);
   if (!tool) {
     return { content: [{ type: 'text', text: `Unknown tool: ${req.params.name}` }], isError: true };
@@ -48,7 +63,9 @@ async function main(): Promise<void> {
   const transport = new StdioServerTransport();
   await server.connect(transport);
   // stdout is the JSON-RPC channel — only ever log to stderr.
-  console.error(`pof-mcp connected · backend ${originFromEnv()} · ${TOOLS.length} tools`);
+  const shown = advertisedTools().length;
+  const trim = shown < TOOLS.length ? ` (${TOOLS.length - shown} hidden by ${GROUPS_ENV})` : '';
+  console.error(`pof-mcp connected · backend ${originFromEnv()} · ${shown} tools${trim}`);
 }
 
 main().catch((e) => {

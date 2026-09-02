@@ -14,6 +14,7 @@ import { HARNESS_TOOLS } from '../dist/tools/harness.js';
 import { SIM_TOOLS } from '../dist/tools/sims.js';
 import { UE_TOOLS } from '../dist/tools/ue.js';
 import { DESIGN_TOOLS } from '../dist/tools/design.js';
+import { GROUPS_TOOL } from '../dist/tools/groups.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const OUT = join(here, '..', 'TOOLS-REFERENCE.md');
@@ -24,6 +25,8 @@ const FAMILIES = [
   ['Simulation & balance', SIM_TOOLS],
   ['UE truth & growth', UE_TOOLS],
   ['Design truth & quality signals', DESIGN_TOOLS],
+  // Never gated (groups.ts): the discovery tool a trimmed session needs to name what it lost.
+  ['Meta', [GROUPS_TOOL]],
 ];
 
 const VOLATILE = /(updatedAt|createdAt|generatedAt|completedAt|lastRunAt|timestamp|durationMs|_ms|checksum|sha256|sha)/i;

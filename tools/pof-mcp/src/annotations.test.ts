@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { TOOLS } from './tools/index.js';
 import type { ToolDef } from './tools/shared.js';
 import type { PofClient } from './pofClient.js';
-import { READ_ONLY_POST, WRITE_TOOL_SAFE_EXAMPLE } from './coverage.js';
+import { READ_ONLY_POST, WRITE_TOOL_SAFE_EXAMPLE, LOCAL_ONLY } from './coverage.js';
 import { connectMcp } from './harness.js';
 
 /**
@@ -123,7 +123,15 @@ test('a read-only tool never POSTs, except to a route allow-listed with a reason
   for (const t of TOOLS) {
     if (!t.annotations.readOnlyHint) continue;
     const calls = await probe(t);
-    assert.ok(calls.length > 0, `${t.name}: read-only tool reached no route — unprobeable, so its hint is unverified`);
+    if (typeof LOCAL_ONLY[t.name] === 'string') {
+      // Declared routeless in coverage.ts (and kept honest there by the scope guard): it
+      // answers inside this process, so there is no POST for the hint to be lying about.
+      // The declaration must still be true in the dangerous direction — a "local-only"
+      // tool that reaches a route is exactly the unverified read-only hint this guards.
+      assert.deepEqual(calls, [], `${t.name}: declared LOCAL_ONLY but reached ${calls.map((c) => `${c.method} ${c.path}`).join(', ')}`);
+      continue;
+    }
+    assert.ok(calls.length > 0, `${t.name}: read-only tool reached no route — unprobeable, so its hint is unverified (declare it in coverage.ts → LOCAL_ONLY with a reason if it genuinely calls none)`);
     for (const c of calls) {
       if (c.method !== 'POST') continue;
       const route = stripQuery(c.path);

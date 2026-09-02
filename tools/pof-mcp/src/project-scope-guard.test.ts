@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { TOOLS } from './tools/index.js';
 import type { ToolDef } from './tools/shared.js';
 import type { PofClient } from './pofClient.js';
+import { LOCAL_ONLY } from './coverage.js';
 
 /**
  * ── The guard that makes an EIGHTH scope regression impossible to land silently ──
@@ -234,12 +235,25 @@ test('the app route tree is where this guard thinks it is', () => {
 
 test('every registered tool reaches at least one route without throwing', () => {
   const blind = PROBED
-    .filter((p) => p.error || p.calls.length === 0)
+    // A tool declared LOCAL_ONLY answers from the server process and reads no
+    // project-scoped table — exempt, but only with a written reason (see coverage.ts).
+    .filter((p) => p.error || (p.calls.length === 0 && typeof LOCAL_ONLY[p.tool.name] !== 'string'))
     .map((p) => `${p.tool.name}: ${p.error ?? 'made no route call at all'}`);
   assert.deepEqual(
     blind, [],
-    'these handlers could not be probed, so the scope guard below is BLIND to them — give the probe a response shape it can read, or explain the tool:\n  ' + blind.join('\n  '),
+    'these handlers could not be probed, so the scope guard below is BLIND to them — give the probe a response shape it can read, or explain the tool in LOCAL_ONLY:\n  ' + blind.join('\n  '),
   );
+});
+
+test('LOCAL_ONLY stays honest: every exempt tool exists and genuinely calls no route', () => {
+  const names = new Set(TOOLS.map((t) => t.name));
+  const stale = Object.keys(LOCAL_ONLY).filter((n) => !names.has(n));
+  assert.deepEqual(stale, [], `LOCAL_ONLY references unknown tools: ${stale.join(', ')}`);
+  // The dangerous direction: a tool that DOES hit a route must never sit behind the exemption.
+  const cheating = PROBED
+    .filter((p) => typeof LOCAL_ONLY[p.tool.name] === 'string' && p.calls.length > 0)
+    .map((p) => p.tool.name);
+  assert.deepEqual(cheating, [], `these tools are exempt from the scope probe but DO call routes: ${cheating.join(', ')}`);
 });
 
 test('every route a tool calls resolves to a real app route.ts', () => {
