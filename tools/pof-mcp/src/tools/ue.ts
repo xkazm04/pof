@@ -217,7 +217,7 @@ export const UE_TOOLS: ToolDef[] = [
     name: 'pof_ue_test_results',
     annotations: writes('UE test results', { idempotent: true }),
     description:
-      'Fetch UE automation test results (status, assertions, logs) and, when `testName` is given, SETTLE the deferred L3 gates waiting on that test from the fetched payload — the poll-then-close-the-loop half of pof_ue_run_tests (use it when a run came back non-terminal). Without `testName` it is a plain read that changes nothing. Omit testId for all recent results.',
+      'Fetch UE automation test results (status, assertions, logs) and, when `testName` is given, SETTLE the deferred L3 gates waiting on that test from the fetched payload — the poll-then-close-the-loop half of pof_ue_run_tests (use it when a run came back non-terminal). Without `testName` it is a plain read that changes nothing. Omit testId for all recent results. Reads through pof-bridge — needs a live editor.',
     inputSchema: obj({
       testId: STR,
       port: NUM,

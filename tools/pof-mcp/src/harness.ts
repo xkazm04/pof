@@ -39,15 +39,26 @@ export interface McpHandle {
   close(): Promise<void>;
 }
 
-/** Spawn the built server and return a connected client. POF_APP_ORIGIN is threaded through. */
-export async function connectMcp(env: Record<string, string | undefined> = {}): Promise<McpHandle> {
+/**
+ * Spawn the built server and return a connected client. POF_APP_ORIGIN is threaded through.
+ * `clientInfo` overrides what the session declares about itself in the `initialize`
+ * handshake (name, and the `topology` pof-mcp resolves its surface from) — that is the
+ * session-scoped input, deliberately separate from `env`, which is the process-scoped one.
+ */
+export async function connectMcp(
+  env: Record<string, string | undefined> = {},
+  clientInfo: Record<string, unknown> = {},
+): Promise<McpHandle> {
   const transport = new StdioClientTransport({
     command: process.execPath,
     args: [SERVER_ENTRY],
     env: { ...process.env, POF_APP_ORIGIN: ORIGIN, ...env } as Record<string, string>,
     stderr: 'ignore',
   });
-  const client = new Client({ name: 'pof-mcp-test', version: '0.1.0' }, { capabilities: {} });
+  const client = new Client(
+    { name: 'pof-mcp-test', version: '0.1.0', ...clientInfo } as { name: string; version: string },
+    { capabilities: {} },
+  );
   await client.connect(transport);
 
   return {
