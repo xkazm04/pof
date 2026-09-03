@@ -10,13 +10,23 @@ import type {
   SimulationTick,
   XPCurvePoint,
   ItemCategory,
+  EconomyAudit,
+  EconomyLedger,
+  BalanceBandResult,
+  StarvedNode,
+  UndeclaredSource,
 } from '@/types/economy-simulator';
-import { DEFAULT_FAUCETS, DEFAULT_SINKS, DEFAULT_ITEMS, generateXPCurve } from './definitions';
+import { DEFAULT_FAUCETS, DEFAULT_SINKS, DEFAULT_ITEMS, DECLARED_LOOPS, generateXPCurve } from './definitions';
+import {
+  auditEconomyNodes, evaluateBalanceBand, nodeKindOf, STARVATION_TOLERANCE,
+} from './node-audit';
 import { createRNG } from '@/lib/seeded-rng';
+import { logger } from '@/lib/logger';
 import {
   readCanonThresholds,
   checkFaucetSinkBalance,
   checkXpCurveShape,
+  type CanonThresholds,
   type CanonViolation,
 } from '@/lib/balance/canon-conformance';
 
@@ -27,6 +37,59 @@ const PHILOSOPHY_MODS: Record<string, { faucetMul: number; sinkMul: number; drop
   'scarcity-based': { faucetMul: 0.7, sinkMul: 1.3, dropMul: 0.6 },
   'balanced': { faucetMul: 1.0, sinkMul: 1.0, dropMul: 1.0 },
 };
+
+// ── Run accounting (closing the books) ──────────────────────────────────────
+
+/**
+ * What the run actually moved, per resource, plus the per-node occurrence counts a
+ * structural finding is computed from. Mutated in the hot loop; read once at the end.
+ * Without it the model cannot answer "where did this gold come from", which is the
+ * whole reason an unfunded faucet survived here for as long as it did.
+ */
+interface RunAccounting {
+  ledger: EconomyLedger;
+  /** Occurrences a node's declared frequency scheduled, by flow id. */
+  scheduled: Record<string, number>;
+  /** Occurrences that actually fired (input pool had stock), by flow id. */
+  fired: Record<string, number>;
+}
+
+function createAccounting(): RunAccounting {
+  return {
+    ledger: { itemsProduced: 0, itemsConsumed: 0, goldFromConversions: 0, mintedByClamp: 0 },
+    scheduled: {},
+    fired: {},
+  };
+}
+
+/**
+ * Take `units` out of an agent's item stock, cheapest first (a player vendors junk
+ * before treasure). ALL-OR-NOTHING: a conversion either has its full input leg or it
+ * does not fire at all — "if the pool is empty the conversion does not occur".
+ * Returns the units actually taken (0 or `units`).
+ */
+function takeFromStock(inventory: Record<string, number>, sellOrder: string[], units: number): number {
+  if (units <= 0) return 0;
+  let available = 0;
+  for (const id of sellOrder) {
+    available += inventory[id] ?? 0;
+    if (available >= units) break;
+  }
+  if (available < units) return 0;
+
+  let remaining = units;
+  for (const id of sellOrder) {
+    if (remaining <= 0) break;
+    const held = inventory[id] ?? 0;
+    if (held <= 0) continue;
+    const take = Math.min(held, remaining);
+    const left = held - take;
+    if (left === 0) delete inventory[id];
+    else inventory[id] = left;
+    remaining -= take;
+  }
+  return units;
+}
 
 // ── Simulation Engine ───────────────────────────────────────────────────────
 
@@ -75,12 +138,20 @@ export function runSimulation(config: SimulationConfig): SimulationResult {
   // then reads these instead of recomputing dropMul math + the category test 2M+ times.
   const supplyDemandItems = precomputeSupplyDemandItems(items, mods);
 
+  // Vendor sell order: cheapest stock goes first, so a converter draws on junk before
+  // treasure. Stable (ties broken by id) so the run stays reproducible for a seed.
+  const sellOrder = [...items]
+    .sort((a, b) => (a.sellPrice - b.sellPrice) || a.id.localeCompare(b.id))
+    .map((it) => it.id);
+
+  const acc = createAccounting();
+
   for (let hour = 0; hour < config.maxPlayHours; hour++) {
     for (let a = 0; a < agents.length; a++) {
       const agent = agents[a];
       if (agent.level >= config.maxLevel && hour > config.maxPlayHours * 0.9) continue;
 
-      const tick = simulateAgentHour(agent, hour, faucets, sinks, items, xpCurve, config, rng, mods);
+      const tick = simulateAgentHour(agent, hour, faucets, sinks, items, xpCurve, config, rng, mods, acc, sellOrder);
       allTicks[a].push(tick);
 
       // Track supply/demand
@@ -98,8 +169,24 @@ export function runSimulation(config: SimulationConfig): SimulationResult {
   // Build metrics array (sample every level transition + every 5 hours)
   const metrics = buildMetricsArray(metricsMap, config.maxPlayHours);
 
+  // ── Close the books BEFORE any verdict is computed ──────────────────────
+  const allFlows = [...faucets, ...sinks];
+  const audit = auditEconomyNodes(allFlows, {
+    ledger: acc.ledger,
+    starved: collectStarvedNodes(allFlows, acc),
+    undeclaredSources: collectUndeclaredSources(acc.ledger),
+  });
+  const thresholds = readCanonThresholds();
+  const balance = evaluateBalanceBand(metrics, audit, thresholds.faucetSinkTolerance);
+
+  if (acc.ledger.mintedByClamp > 0) {
+    logger.warn(
+      `[economy-sim] negative-balance clamp minted ${acc.ledger.mintedByClamp} gold — an unnamed source; balance verdict downgraded to "${balance.verdict}"`,
+    );
+  }
+
   // Detect alerts
-  const alerts = detectAlerts(metrics, items, config);
+  const alerts = detectAlerts(metrics, items, config, audit, balance, thresholds);
 
   // Build supply/demand curves
   const supplyDemand = buildSupplyDemand(supplyDemandAccum, agents, config);
@@ -120,9 +207,46 @@ export function runSimulation(config: SimulationConfig): SimulationResult {
     alerts,
     supplyDemand,
     finalSnapshots,
+    audit,
+    balance,
+    loops: DECLARED_LOOPS,
     durationMs: Date.now() - startTime,
     completedAt: new Date().toISOString(),
   };
+}
+
+/**
+ * A node whose declared frequency the structure could not supply. Reported per
+ * converter, with its scheduled-vs-fired counts, so the finding carries its basis.
+ */
+function collectStarvedNodes(flows: EconomyFlow[], acc: RunAccounting): StarvedNode[] {
+  const starved: StarvedNode[] = [];
+  for (const flow of flows) {
+    if (nodeKindOf(flow.type) !== 'converter') continue;
+    const scheduled = acc.scheduled[flow.id] ?? 0;
+    if (scheduled === 0) continue;
+    const fired = acc.fired[flow.id] ?? 0;
+    starved.push({
+      id: flow.id,
+      name: flow.name,
+      scheduled,
+      fired,
+      starvedFraction: 1 - fired / scheduled,
+      resource: flow.input?.resource ?? 'unknown',
+    });
+  }
+  return starved;
+}
+
+/** Any quantity the model created that no declared node accounts for. */
+function collectUndeclaredSources(ledger: EconomyLedger): UndeclaredSource[] {
+  if (ledger.mintedByClamp <= 0) return [];
+  return [{
+    id: 'negative-balance-clamp',
+    name: 'Negative-balance clamp',
+    resource: 'gold',
+    units: ledger.mintedByClamp,
+  }];
 }
 
 // ── Agent State ─────────────────────────────────────────────────────────────
@@ -152,21 +276,40 @@ function simulateAgentHour(
   config: SimulationConfig,
   rng: () => number,
   mods: { faucetMul: number; sinkMul: number; dropMul: number },
+  acc: RunAccounting,
+  sellOrder: string[],
 ): SimulationTick {
   let goldEarned = 0;
   let goldSpent = 0;
 
-  // Gold faucets
+  // Gold-producing nodes: plain sources, and converters that must pay for their output
+  // out of an input pool.
   for (const flow of faucets) {
     if (agent.level < flow.minLevel) continue;
     if (flow.maxLevel > 0 && agent.level > flow.maxLevel) continue;
 
+    const isConverter = nodeKindOf(flow.type) === 'converter';
+    const inputUnits = flow.input?.unitsPerOccurrence ?? 0;
     const amount = flow.baseAmount + flow.levelScaling * agent.level;
     const occurrences = Math.floor(flow.frequencyPerHour * agent.efficiencyMul + rng());
 
     for (let i = 0; i < occurrences; i++) {
+      // The variance draw happens for every SCHEDULED occurrence, fired or not, so the
+      // rng stream depends on the schedule alone: whether a conversion fires is decided
+      // by the input pool, never by a shifted random sequence.
       const variance = 0.7 + rng() * 0.6; // ±30% variance
       const earned = Math.round(amount * variance);
+
+      if (isConverter) {
+        acc.scheduled[flow.id] = (acc.scheduled[flow.id] ?? 0) + 1;
+        // No stock, no sale. This is the whole point of naming the node a converter:
+        // its gold is funded by items leaving the world, not conjured beside them.
+        if (takeFromStock(agent.inventory, sellOrder, inputUnits) < inputUnits) continue;
+        acc.fired[flow.id] = (acc.fired[flow.id] ?? 0) + 1;
+        acc.ledger.itemsConsumed += inputUnits;
+        acc.ledger.goldFromConversions += earned;
+      }
+
       goldEarned += earned;
     }
   }
@@ -176,11 +319,15 @@ function simulateAgentHour(
     if (agent.level < flow.minLevel) continue;
     if (flow.maxLevel > 0 && agent.level > flow.maxLevel) continue;
 
-    // Death penalty is special: percentage of held gold
-    if (flow.id === 'death-penalty') {
+    // A percent-of-balance drain (the death penalty) — declared on the node, not an
+    // id special case. It is taken from the balance AS IT STANDS, not from the
+    // start-of-hour balance: the old form could exceed what was left after the hour's
+    // spending and push the agent negative, which the clamp then silently re-minted.
+    if (flow.mechanism === 'percent-of-balance') {
       const deathChance = 0.15 - agent.level * 0.003; // Decreases with level
       if (rng() < Math.max(deathChance, 0.02) * agent.efficiencyMul) {
-        const penalty = Math.round(agent.gold * 0.05); // 5% gold loss
+        const available = Math.max(0, agent.gold + goldEarned - goldSpent);
+        const penalty = Math.round(available * (flow.percentOfBalance ?? 0));
         goldSpent += penalty;
       }
       continue;
@@ -210,6 +357,7 @@ function simulateAgentHour(
       roll -= item.dropWeight * mods.dropMul;
       if (roll <= 0) {
         agent.inventory[item.id] = (agent.inventory[item.id] ?? 0) + 1;
+        acc.ledger.itemsProduced++;
         break;
       }
     }
@@ -231,7 +379,15 @@ function simulateAgentHour(
 
   // Apply gold changes
   agent.gold += goldEarned - goldSpent;
-  if (agent.gold < 0) agent.gold = 0;
+  if (agent.gold < 0) {
+    // Underflow is now prevented at the point of spend: every flat sink checks
+    // affordability, and the percent-of-balance drain is taken from what is left. So
+    // this branch must never fire. If it does, it is an UNNAMED SOURCE minting gold —
+    // it is recorded in the ledger and the balance verdict is downgraded to
+    // `unclassified`, never silently absorbed into a passing band.
+    acc.ledger.mintedByClamp += -agent.gold;
+    agent.gold = 0;
+  }
   agent.totalGoldEarned += goldEarned;
   agent.totalGoldSpent += goldSpent;
   agent.playTimeHours = hour + 1;
@@ -421,6 +577,9 @@ function detectAlerts(
   metrics: EconomyMetrics[],
   items: EconomyItem[],
   config: SimulationConfig,
+  audit: EconomyAudit,
+  balance: BalanceBandResult,
+  thresholds: CanonThresholds,
 ): InflationAlert[] {
   const alerts: InflationAlert[] = [];
 
@@ -523,8 +682,37 @@ function detectAlerts(
   // default breaks this) and a non-geometric XP curve. Thresholds are read from
   // the canon seed, never hardcoded. Surfaced through the same alert channel.
   const lastMetric = metrics[metrics.length - 1];
+
+  // Structural findings outrank every rate check: an unclassified node, an unfunded
+  // converter or a node the structure cannot supply makes the band's answer
+  // uninterpretable, so it is surfaced through the same alert channel rather than
+  // being absorbed into a passing number.
+  if (lastMetric && balance.verdict !== 'pass' && balance.verdict !== 'fail') {
+    alerts.push({
+      level: lastMetric.level,
+      hour: lastMetric.hour,
+      severity: 'critical',
+      type: 'structural',
+      message: `Economy reported as "${balance.verdict}", not balanced — ${balance.reason ?? 'the node map has not been audited'}`,
+      metric: 'balanceVerdict',
+      value: balance.imbalance ?? 0,
+      threshold: balance.tolerance,
+    });
+  }
+  for (const starved of audit.starved) {
+    alerts.push({
+      level: lastMetric?.level ?? 0,
+      hour: lastMetric?.hour ?? 0,
+      severity: 'warning',
+      type: 'structural',
+      message: `${starved.name} fired ${starved.fired} of ${starved.scheduled} scheduled occurrences — its declared frequency outruns the ${starved.resource} pool that funds it`,
+      metric: 'starvedFraction',
+      value: Math.round(starved.starvedFraction * 1000) / 1000,
+      threshold: STARVATION_TOLERANCE,
+    });
+  }
+
   if (lastMetric) {
-    const thresholds = readCanonThresholds();
     const xpCurve = generateXPCurve(config.maxLevel);
     const canonViolations: CanonViolation[] = [
       ...checkFaucetSinkBalance(metrics, thresholds),
@@ -558,9 +746,16 @@ function deduplicateAlerts(alerts: InflationAlert[]): InflationAlert[] {
     // distinct per law, not per level bucket — key them by lawId so two different
     // law breaches at the same level don't collapse into one.
     const bucket = Math.floor(alert.level / 5);
-    const key = alert.type === 'canon-violation'
-      ? `${alert.type}-${alert.lawId}`
-      : `${alert.type}-${bucket}`;
+    let key: string;
+    if (alert.type === 'canon-violation') {
+      key = `${alert.type}-${alert.lawId}`;
+    } else if (alert.type === 'structural') {
+      // Structural findings are distinct per node, not per level bucket — a starved
+      // converter and an unaudited map are two findings, not one.
+      key = `${alert.type}-${alert.metric}-${alert.message}`;
+    } else {
+      key = `${alert.type}-${bucket}`;
+    }
     const existing = seen.get(key);
     if (!existing || severityRank[alert.severity] > severityRank[existing.severity]) {
       seen.set(key, alert);

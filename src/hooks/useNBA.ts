@@ -5,6 +5,7 @@ import { computeNBA, type NBARecommendation } from '@/lib/nba-engine';
 import { useModuleStore } from '@/stores/moduleStore';
 import { useFeatureStatuses } from '@/hooks/useFeatureStatuses';
 import { useModuleRunEvidence } from '@/hooks/useModuleRunEvidence';
+import { useMilestoneDeadlines } from '@/hooks/useMilestoneDeadlines';
 import { invalidateFeatureData } from '@/hooks/useModuleAggregates';
 import { countModuleRows } from '@/components/modules/shared/FeatureMatrix/matrixScope';
 import type { ProjectScopeReport } from '@/lib/feature-matrix-db';
@@ -52,6 +53,11 @@ export function useNBA(
   // the engine then scores no success odds instead of the old 0.5 constant.
   const { evidence: runEvidence } = useModuleRunEvidence(moduleId);
 
+  // Declared milestone commitments (`milestone_deadlines`). `null` while
+  // unsettled or failed, which the engine treats as "no deadline term" — the
+  // ranking is then exactly what it was before deadlines were consumed at all.
+  const { deadlines } = useMilestoneDeadlines();
+
   // Subscribe to progress so a checklist toggle re-scores (computeNBA reads
   // checklist state from the store; `progress` is the recompute trigger).
   const progress = useModuleStore((s) => s.checklistProgress[moduleId]);
@@ -63,9 +69,9 @@ export function useNBA(
     if (!loaded) return [];
     void progress;
     return failed
-      ? computeNBA(moduleId, undefined, modulePatterns, runEvidence)
-      : computeNBA(moduleId, statusMap, modulePatterns, runEvidence);
-  }, [moduleId, statusMap, loaded, failed, progress, modulePatterns, runEvidence]);
+      ? computeNBA(moduleId, undefined, modulePatterns, runEvidence, deadlines)
+      : computeNBA(moduleId, statusMap, modulePatterns, runEvidence, deadlines);
+  }, [moduleId, statusMap, loaded, failed, progress, modulePatterns, runEvidence, deadlines]);
 
   // Force a refetch of the shared status map; the memo recomputes when it
   // updates. NBA itself reads only the statuses, but a user-driven refresh means

@@ -4,6 +4,7 @@ import { Dispatch, SetStateAction } from 'react';
 import { Target, AlertTriangle, X, Check } from 'lucide-react';
 import type { Milestone } from '@/types/project-health';
 import { parseDateInput, formatDateInput } from '@/lib/roadmap-dates';
+import { milestoneProgressDisplay } from '@/lib/roadmap/milestone-progress';
 import type { DeadlineMap } from './types';
 
 interface MilestoneCardsProps {
@@ -33,6 +34,9 @@ export function MilestoneCards({
         const dl = deadlines[ms.id];
         const variance = getVariance(ms);
         const isEditing = editingId === ms.id;
+        // Unmeasured (`null`) progress prints its words and draws no bar; an
+        // empty bar and a "0%" are both readings this card has not taken.
+        const progress = milestoneProgressDisplay(ms.currentProgress, ms.progressNote);
 
         return (
           <div
@@ -47,17 +51,22 @@ export function MilestoneCards({
               <span className="text-xs font-medium text-text truncate">{ms.name}</span>
             </div>
 
-            {/* Progress bar */}
-            <div className="h-1.5 rounded-full bg-surface-hover overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all"
-                style={{
-                  width: `${ms.currentProgress}%`,
-                  backgroundColor: ms.color,
-                  opacity: 0.8,
-                }}
-              />
-            </div>
+            {/* Progress bar — drawn only when progress was actually measured */}
+            {progress.measured ? (
+              <div className="h-1.5 rounded-full bg-surface-hover overflow-hidden">
+                <div
+                  data-testid="milestone-progress-bar"
+                  className="h-full rounded-full transition-all"
+                  style={{
+                    width: `${progress.pct}%`,
+                    backgroundColor: ms.color,
+                    opacity: 0.8,
+                  }}
+                />
+              </div>
+            ) : progress.note ? (
+              <p className="text-2xs text-text-muted leading-snug">{progress.note}</p>
+            ) : null}
 
             <div className="flex items-center justify-between text-xs">
               <span className="text-text-muted">
@@ -65,7 +74,7 @@ export function MilestoneCards({
                   ? `Predicted: ${new Date(ms.predictedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}`
                   : 'No velocity data'}
               </span>
-              <span className="text-text-muted">{ms.currentProgress}%</span>
+              <span className="text-text-muted">{progress.label}</span>
             </div>
 
             {/* Deadline */}

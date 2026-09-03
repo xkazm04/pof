@@ -1,4 +1,6 @@
 import { getDb } from './db';
+import { logger } from '@/lib/logger';
+import { resolveConfidence } from '@/lib/game-director-styles';
 import { getFindings, isTriageExcluded } from './game-director-db';
 import type { PlaytestConfig, PlaytestFinding, PlaytestSession } from '@/types/game-director';
 import type {
@@ -14,6 +16,75 @@ import type {
 // ─── Schema bootstrap ────────────────────────────────────────────────────────
 
 let initialized = false;
+
+/**
+ * One source of truth for the occurrences schema, parameterised by table name so
+ * the rebuild below produces the identical shape it renames into place.
+ */
+const OCCURRENCES_TABLE_SQL = (table: string) => `
+  CREATE TABLE IF NOT EXISTS ${table} (
+    fingerprint_id TEXT NOT NULL,
+    session_id TEXT NOT NULL,
+    finding_id TEXT NOT NULL,
+    severity TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    suggested_fix TEXT NOT NULL DEFAULT '',
+    -- NULL means the finding was never scored. Not 80.
+    confidence INTEGER,
+    confidence_basis TEXT
+      CHECK(confidence_basis IS NULL OR confidence_basis IN ('observer','unattributed')),
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (fingerprint_id, session_id, finding_id)
+  )
+`;
+
+const OCCURRENCE_COPY_COLUMNS = [
+  'fingerprint_id', 'session_id', 'finding_id', 'severity', 'title',
+  'description', 'suggested_fix', 'created_at',
+] as const;
+
+/**
+ * Drop `NOT NULL DEFAULT 80` from `regression_occurrences.confidence`, which
+ * SQLite can only do by rebuilding the table.
+ *
+ * Data safety: rows are copied into the new shape and counted against the
+ * original inside one transaction before the old table is dropped — a mismatch
+ * throws and rolls everything back. Existing numbers are preserved and stamped
+ * `'unattributed'`, because a column that stored the default and the measurement
+ * identically cannot now say which is which. The table carries no foreign keys
+ * and nothing references it. Idempotent: the probe fails to match afterwards.
+ */
+function migrateOccurrencesTable(db: ReturnType<typeof getDb>) {
+  const ddl = db.prepare(
+    "SELECT sql FROM sqlite_master WHERE type='table' AND name='regression_occurrences'"
+  ).get() as { sql: string | null } | undefined;
+  const sql = ddl?.sql;
+  if (!sql) return;
+  if (!/[(,]\s*confidence\s+INTEGER\s+NOT\s+NULL/i.test(sql)) return;
+
+  logger.info('[regression-tracker] rebuilding regression_occurrences (nullable confidence)');
+
+  const copy = OCCURRENCE_COPY_COLUMNS.join(', ');
+  const rebuild = db.transaction(() => {
+    const before = (db.prepare('SELECT COUNT(*) AS c FROM regression_occurrences').get() as { c: number }).c;
+    db.exec('DROP TABLE IF EXISTS regression_occurrences__rebuild');
+    db.exec(OCCURRENCES_TABLE_SQL('regression_occurrences__rebuild'));
+    db.exec(`
+      INSERT INTO regression_occurrences__rebuild (${copy}, confidence, confidence_basis)
+      SELECT ${copy}, confidence,
+             CASE WHEN confidence IS NULL THEN NULL ELSE 'unattributed' END
+      FROM regression_occurrences
+    `);
+    const after = (db.prepare('SELECT COUNT(*) AS c FROM regression_occurrences__rebuild').get() as { c: number }).c;
+    if (before !== after) {
+      throw new Error(`occurrence rebuild would lose rows (${before} -> ${after}) — aborted`);
+    }
+    db.exec('DROP TABLE regression_occurrences');
+    db.exec('ALTER TABLE regression_occurrences__rebuild RENAME TO regression_occurrences');
+  });
+  rebuild();
+}
 
 function ensureTables() {
   if (initialized) return;
@@ -36,20 +107,11 @@ function ensureTables() {
     )
   `);
 
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS regression_occurrences (
-      fingerprint_id TEXT NOT NULL,
-      session_id TEXT NOT NULL,
-      finding_id TEXT NOT NULL,
-      severity TEXT NOT NULL,
-      title TEXT NOT NULL,
-      description TEXT NOT NULL DEFAULT '',
-      suggested_fix TEXT NOT NULL DEFAULT '',
-      confidence INTEGER NOT NULL DEFAULT 80,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      PRIMARY KEY (fingerprint_id, session_id, finding_id)
-    )
-  `);
+  db.exec(OCCURRENCES_TABLE_SQL('regression_occurrences'));
+  // An occurrence copies the finding's confidence, so it inherited the same
+  // defect: `NOT NULL DEFAULT 80` made an unscored occurrence look measured.
+  // SQLite cannot drop NOT NULL in place — rebuild, preserving every row.
+  migrateOccurrencesTable(db);
 
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_reg_occ_session
@@ -469,11 +531,20 @@ export function processSession(session: PlaytestSession): RegressionReport {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function insertOccurrence(db: ReturnType<typeof getDb>, fpId: string, sessionId: string, finding: PlaytestFinding) {
+  // Copy the reading, not a number: an unscored finding produces an unscored
+  // occurrence, and a number with no stated basis stays unattributed.
+  const reading = resolveConfidence(finding);
   db.prepare(`
     INSERT OR IGNORE INTO regression_occurrences
-      (fingerprint_id, session_id, finding_id, severity, title, description, suggested_fix, confidence)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(fpId, sessionId, finding.id, finding.severity, finding.title, finding.description, finding.suggestedFix, finding.confidence);
+      (fingerprint_id, session_id, finding_id, severity, title, description, suggested_fix,
+       confidence, confidence_basis)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    fpId, sessionId, finding.id, finding.severity, finding.title, finding.description,
+    finding.suggestedFix,
+    reading.kind === 'unscored' ? null : reading.value,
+    reading.kind === 'unscored' ? null : reading.kind === 'scored' ? 'observer' : 'unattributed',
+  );
 }
 
 function findLastFixedSession(
@@ -594,7 +665,10 @@ function rowToOccurrence(row: Record<string, unknown>): FingerprintOccurrence {
     title: row.title as string,
     description: row.description as string,
     suggestedFix: row.suggested_fix as string,
-    confidence: row.confidence as number,
+    confidence: typeof row.confidence === 'number' ? row.confidence : null,
+    confidenceBasis: row.confidence == null
+      ? null
+      : (row.confidence_basis === 'observer' ? 'observer' : 'unattributed'),
     createdAt: row.created_at as string,
   };
 }

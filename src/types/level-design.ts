@@ -23,6 +23,16 @@ export interface RoomNode {
   spawnEntries: SpawnEntry[];
   /** Tags for filtering/searching */
   tags: string[];
+  /**
+   * Machine-readable key/flag identifiers the player permanently acquires by
+   * clearing this room (e.g. `['brass-key']`, `['guardian-defeated']`).
+   *
+   * Optional so documents written before gates existed keep parsing; a room
+   * that omits it simply grants nothing. These identifiers are the satisfiers
+   * for `RoomConnection.requires` and are consumed by the gate-and-key
+   * solvability closure in `@/lib/level-design/pacing-linter`.
+   */
+  grants?: string[];
 }
 
 export interface SpawnEntry {
@@ -39,8 +49,20 @@ export interface RoomConnection {
   toId: string;
   /** Whether traversal is one-way or bidirectional */
   bidirectional: boolean;
-  /** Condition for unlock (e.g., "defeat boss", "collect key") */
+  /** Condition for unlock (e.g., "defeat boss", "collect key") — authored prose, for display */
   condition: string;
+  /**
+   * Machine-readable gate: key/flag identifiers (see `RoomNode.grants`) that
+   * must ALL be held before this connection can be traversed.
+   *
+   * Optional, so existing documents keep parsing — a connection with no
+   * `requires` (or an empty one) is **ungated** and walked as an open door.
+   * A connection that carries free-text `condition` but no `requires` is a
+   * gate no checker can read: the linter reports it as an *undeclared gate*
+   * and marks the reachability result unproven rather than silently treating
+   * the lock as open.
+   */
+  requires?: string[];
 }
 
 // ── Design Document (the "living doc") ──

@@ -140,6 +140,17 @@ is module-scoped (`let db: Database.Database | null`). On first call it: creates
 directory if missing, opens the database, sets `PRAGMA journal_mode = WAL`, then runs all `CREATE
 TABLE IF NOT EXISTS` DDL (plus inline column-migration `ALTER TABLE` guards for schema evolution).
 
+**Two migration shapes, in this order.** Prefer **additive**: a `PRAGMA table_info(...)` probe plus
+`ALTER TABLE ... ADD COLUMN` for a new nullable column (the pattern used throughout `*-db.ts`).
+SQLite cannot alter a `CHECK` constraint or drop `NOT NULL` in place, so widening either needs a
+**table rebuild** — create the new shape under a `__rebuild` suffix, copy every row, count the copy
+against the original *inside the same transaction* (a mismatch throws and rolls back, leaving the old
+table untouched), then drop and rename. Gate it on the stored DDL from `sqlite_master` so a second
+run is a no-op, and suspend `PRAGMA foreign_keys` around it (never inside the transaction — SQLite
+ignores the change there). `migrateFindingsTable` in `game-director-db.ts` and
+`migrateOccurrencesTable` in `regression-tracker.ts` are the reference implementations; both keep one
+parameterised `CREATE TABLE` string so the rebuild cannot drift from the bootstrap DDL.
+
 **`better-sqlite3` is externalized** in `next.config.ts:4`:
 ```ts
 serverExternalPackages: ['better-sqlite3']

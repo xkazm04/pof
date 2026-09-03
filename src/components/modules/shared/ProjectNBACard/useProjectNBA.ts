@@ -5,6 +5,7 @@ import { computeProjectNBA, type NBARecommendation } from '@/lib/nba-engine';
 import { useModuleStore } from '@/stores/moduleStore';
 import { useFeatureStatuses } from '@/hooks/useFeatureStatuses';
 import { useProjectRunEvidence } from '@/hooks/useModuleRunEvidence';
+import { useMilestoneDeadlines } from '@/hooks/useMilestoneDeadlines';
 import type { ProjectScopeReport } from '@/lib/feature-matrix-db';
 
 export interface UseProjectNBAResult {
@@ -39,6 +40,8 @@ export interface UseProjectNBAResult {
 export function useProjectNBA(limit = 4): UseProjectNBAResult {
   const { statusMap, isLoading: statusesLoading, loaded, failed, scope } = useFeatureStatuses();
   const { byModule } = useProjectRunEvidence();
+  // Declared milestone commitments — see useNBA. `null` ⇒ no deadline term.
+  const { deadlines } = useMilestoneDeadlines();
 
   // Any checklist toggle in any module changes the candidate set, so the whole
   // progress map is the recompute trigger (the engine reads it from the store).
@@ -47,8 +50,8 @@ export function useProjectNBA(limit = 4): UseProjectNBAResult {
   const recommendations = useMemo<NBARecommendation[]>(() => {
     if (!loaded) return [];
     void progress;
-    return computeProjectNBA(failed ? undefined : statusMap, limit, byModule);
-  }, [statusMap, loaded, failed, progress, limit, byModule]);
+    return computeProjectNBA(failed ? undefined : statusMap, limit, byModule, deadlines);
+  }, [statusMap, loaded, failed, progress, limit, byModule, deadlines]);
 
   return {
     recommendations,

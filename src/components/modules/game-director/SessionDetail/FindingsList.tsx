@@ -1,7 +1,10 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, ChevronRight, Wrench, Sparkles } from 'lucide-react';
 import type { PlaytestFinding } from '@/types/game-director';
-import { SEVERITY_TOKENS, CATEGORY_LABELS, severitySurface } from '@/lib/game-director-styles';
+import {
+  SEVERITY_TOKENS, CATEGORY_LABELS, severitySurface,
+  resolveConfidence, confidenceLabel, confidenceTitle,
+} from '@/lib/game-director-styles';
 import { SeverityLegend } from '@/components/modules/game-director/SeverityLegend';
 import { FindingFixButton } from '@/components/modules/game-director/FindingFixButton';
 
@@ -29,6 +32,9 @@ export function FindingsList({ findings, expandedId, onToggle, onFixDispatched }
         const Icon = token.icon;
         const isExpanded = expandedId === finding.id;
         const catLabel = CATEGORY_LABELS[finding.category] ?? finding.category;
+        // Never a bare number: an unscored finding says so rather than borrowing
+        // the old 80% default, and a number with no recorded basis says that too.
+        const confidence = resolveConfidence(finding);
 
         return (
           <motion.div
@@ -57,7 +63,9 @@ export function FindingsList({ findings, expandedId, onToggle, onFixDispatched }
                   <p className="text-sm text-text-muted-hover leading-relaxed line-clamp-2">{finding.description}</p>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  <span className="text-2xs text-text-muted">{finding.confidence}%</span>
+                  <span className="text-2xs text-text-muted" title={confidenceTitle(confidence)}>
+                    {confidenceLabel(confidence)}
+                  </span>
                   {isExpanded ? (
                     <ChevronDown className="w-3 h-3 text-text-muted" />
                   ) : (
@@ -96,7 +104,7 @@ export function FindingsList({ findings, expandedId, onToggle, onFixDispatched }
                       {finding.gameTimestamp != null && (
                         <span>Game time: {finding.gameTimestamp}s</span>
                       )}
-                      <span>Confidence: {finding.confidence}%</span>
+                      <span title={confidenceTitle(confidence)}>Confidence: {confidenceLabel(confidence)}</span>
                       <span className="capitalize">{finding.severity}</span>
                     </div>
                   </div>

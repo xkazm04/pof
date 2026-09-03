@@ -6,6 +6,7 @@ import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { apiFetch } from '@/lib/api-utils';
 import type { SimulationConfig } from '@/types/economy-simulator';
 import type { SweepResult, SweepOutput } from '@/lib/economy/sensitivity-sweep';
+import { nodeKindOf } from '@/lib/economy/node-audit';
 import { ACCENT_EMERALD_DARK, ACCENT_PURPLE_BOLD } from '@/lib/chart-colors';
 import { SWEEP_OUTPUT_LABELS } from './constants';
 import { formatGold } from './helpers';
@@ -97,7 +98,7 @@ export function TornadoSection({ config }: { config: SimulationConfig }) {
             return (
               <div key={e.paramId} className="flex items-center gap-2 group">
                 <span className="w-40 shrink-0 truncate text-2xs text-text-muted" title={e.label}>
-                  <span className="inline-block w-1.5 h-1.5 rounded-full mr-1" style={{ backgroundColor: e.kind === 'faucet' ? ACCENT_EMERALD_DARK : ACCENT_PURPLE_BOLD }} />
+                  <span className="inline-block w-1.5 h-1.5 rounded-full mr-1" style={{ backgroundColor: nodeKindOf(e.kind) === 'drain' ? ACCENT_PURPLE_BOLD : ACCENT_EMERALD_DARK }} />
                   {e.label}
                 </span>
                 <div className="relative flex-1 h-4 rounded bg-surface-deep">

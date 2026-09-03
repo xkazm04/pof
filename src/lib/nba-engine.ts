@@ -26,6 +26,11 @@ import {
   NO_RUN_EVIDENCE,
   type ModuleRunEvidence,
 } from '@/lib/nba-run-evidence';
+import {
+  deadlinePressure,
+  type DeadlinePressure,
+  type MilestoneDeadlineMap,
+} from '@/lib/nba-deadline';
 import { useModuleStore } from '@/stores/moduleStore';
 import { usePatternLibraryStore } from '@/stores/patternLibraryStore';
 import { useEvaluatorStore } from '@/stores/evaluatorStore';
@@ -70,6 +75,19 @@ export interface NBARecommendation {
    * WITH the score instead of being re-derived by whoever renders it.
    */
   featureMatch: ItemFeatureMatch;
+  /**
+   * The declared milestone deadline that shaped this score, and what it
+   * contributed.
+   *
+   * ABSENT whenever no deadline is declared — no store supplied, an empty
+   * store, or a store holding nothing that parses. That is deliberate: with no
+   * commitment on file the payload is byte-identical to one computed before
+   * this term existed, so a deadline that does not exist cannot invent urgency
+   * and cannot even leave a trace pretending it was considered. Present with
+   * `points: 0` for a real deadline beyond the horizon — declared, weighed,
+   * and found not yet pressing.
+   */
+  deadline?: DeadlinePressure;
 }
 
 /** Provenance of a recommendation's success odds — never a bare percentage. */
@@ -159,6 +177,16 @@ export function computeNBA(
    * honest result of omitting it is "no evidence", never a neutral constant.
    */
   runEvidence?: ModuleRunEvidence | null,
+  /**
+   * The declared milestone deadlines (`milestone_deadlines`, fetched by
+   * {@link useMilestoneDeadlines}). Omitted ⇒ no deadline term at all, and the
+   * ranking is byte-identical to one computed without this parameter. A store
+   * that exists but is empty is treated the same way: absence of a commitment
+   * is never a reason to manufacture urgency.
+   */
+  deadlines?: MilestoneDeadlineMap | null,
+  /** Injected clock — keeps the deadline ramp deterministic for callers/tests. */
+  now: Date = new Date(),
 ): NBARecommendation[] {
   const mod = SUB_MODULE_MAP[moduleId as keyof typeof SUB_MODULE_MAP];
   if (!mod?.checklist?.length) return [];
@@ -184,6 +212,13 @@ export function computeNBA(
 
   // Every item in this module's checklist — used to resolve `dependsOn` refs.
   const checklist = mod.checklist;
+
+  // Declared deadline pressure — ONE read for the whole module, since the
+  // commitment is a project-level fact, not a per-item one. `null` whenever
+  // nothing is declared, which is the case that must change no score at all.
+  const pressure: DeadlinePressure | null = deadlines === undefined
+    ? null
+    : deadlinePressure(deadlines, now);
 
   // Evaluator recommendations for this module
   const evalRecs: Recommendation[] = lastScan?.recommendations?.filter(
@@ -300,6 +335,18 @@ export function computeNBA(
       }
     }
 
+    // ── Deadline pressure (bounded, folded into urgency) ────────────────────
+    // A declared deadline raises the urgency of work that can actually be
+    // STARTED. It deliberately does not touch blocked or prerequisite-waiting
+    // items (`readiness === 0`): accelerating work that cannot begin is
+    // urgency about nothing, and it would push unstartable items up the list
+    // exactly when the schedule can least afford the detour. Capped at
+    // `W.urgency` so the factor keeps its published ceiling.
+    if (pressure && pressure.points > 0 && breakdown.readiness > 0) {
+      breakdown.urgency = Math.min(W.urgency, breakdown.urgency + pressure.points);
+      reasons.push(pressure.note);
+    }
+
     // ── 2. Success probability (0–25): Pattern match + module track record ──
     const matchingPatterns = patterns.filter((p) =>
       p.moduleId === moduleId && (
@@ -407,6 +454,7 @@ export function computeNBA(
         dependentCount,
         note: resolved.note,
       },
+      ...(pressure ? { deadline: pressure } : {}),
     };
   });
 
@@ -451,10 +499,16 @@ export function computeProjectNBA(
    * project-wide card must not manufacture odds it does not have either.
    */
   runEvidence?: ReadonlyMap<string, ModuleRunEvidence> | null,
+  /** Declared milestone deadlines — see {@link computeNBA}. */
+  deadlines?: MilestoneDeadlineMap | null,
+  /** Injected clock, so all ~40 module passes ramp against ONE instant. */
+  now: Date = new Date(),
 ): NBARecommendation[] {
   const all: NBARecommendation[] = [];
   for (const moduleId of Object.keys(SUB_MODULE_MAP) as SubModuleId[]) {
-    all.push(...computeNBA(moduleId, featureStatusMap, undefined, runEvidence?.get(moduleId)));
+    all.push(...computeNBA(
+      moduleId, featureStatusMap, undefined, runEvidence?.get(moduleId), deadlines, now,
+    ));
   }
   return all.sort((a, b) => b.score - a.score).slice(0, Math.max(0, limit));
 }

@@ -48,8 +48,27 @@ export interface Milestone {
   predictedDate: string | null;
   /** Predicted weeks from now */
   predictedWeeks: number | null;
-  /** Current progress toward this milestone (0-100) */
-  currentProgress: number;
+  /**
+   * Current progress toward this milestone (0-100), or `null` when the
+   * milestone's progress has NOT been measured.
+   *
+   * `null` is not zero and must never be rendered as one — no 0%, no empty
+   * bar, no dash. Consumers project it through `milestoneProgressDisplay()`
+   * (`@/lib/roadmap/milestone-progress`), which is the single owner of the
+   * "not measured" wording.
+   *
+   * The vertical slice is `null` by construction: a slice is a DEPTH property
+   * (one complete path through every layer, ending in something a player
+   * experiences) and the only completion metric this app holds is a
+   * project-wide BREADTH percentage. Reporting one on the other made "100%
+   * vertical slice" reachable with no playable path anywhere in the game.
+   */
+  currentProgress: number | null;
+  /**
+   * Why `currentProgress` is null, when it is. Rendered beside the
+   * "not measured" label so the absence is explained, never merely blank.
+   */
+  progressNote?: string | null;
   /** Color for chart rendering */
   color: string;
 }

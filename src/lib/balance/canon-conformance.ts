@@ -207,7 +207,27 @@ export function checkPricePower(items: { name: string; price: number; power: num
 export function lintCanonConformance(input: CanonLintInput, rules: ProjectRule[] = CANON_SEED): CanonViolation[] {
   const t = readCanonThresholds(rules);
   const violations: CanonViolation[] = [];
-  if (input.economyResult) violations.push(...checkFaucetSinkBalance(input.economyResult.metrics, t));
+  if (input.economyResult) {
+    // The band is arithmetic over a node map. When the sim reports the map as
+    // unaudited (`unclassified`) or a declared rate as unsupplied (`unspecified`),
+    // the law was NOT measured — and an unmeasured law must not return silently, or
+    // the absence of a violation reads as a pass. See the sim's own `balance` verdict.
+    const balance = input.economyResult.balance;
+    const verdict = balance?.verdict;
+    if (verdict && verdict !== 'pass' && verdict !== 'fail') {
+      violations.push({
+        lawId: 'proj-economy',
+        law: 'Faucet/sink balance',
+        metric: 'balance verdict',
+        actual: balance.imbalance ?? 0,
+        allowed: `a measured band (±${pct(t.faucetSinkTolerance)}) over an audited node map`,
+        severity: 'critical',
+        message: `Faucet/sink balance is "${verdict}", not measured — ${balance.reason ?? 'the node map has not been audited'}`,
+      });
+    } else {
+      violations.push(...checkFaucetSinkBalance(input.economyResult.metrics, t));
+    }
+  }
   if (input.resists) violations.push(...checkResistCap(input.resists, t));
   if (input.defense) violations.push(...checkOneShot(input.defense, t));
   if (input.xpCurve) violations.push(...checkXpCurveShape(input.xpCurve, t));

@@ -394,7 +394,14 @@ export const MODULE_FEATURE_DEFINITIONS: PartialModuleMap<FeatureDefinition[]> =
   ],
   'ai-behavior': [
     { featureName: 'AI Controller base', category: 'Controller', description: 'AAIController subclass with blackboard initialization and possession logic' },
-    { featureName: 'Behavior Tree system', category: 'BehaviorTree', description: 'UBehaviorTree with BTTask, BTService, BTDecorator custom nodes', dependsOn: ['AI Controller base'] },
+    // Perception before decision: a behaviour tree is the DECISION layer and it
+    // is a function of what the agent can sense, so it cannot be authored — let
+    // alone marked complete — against an unspecified knowledge model. Declaring
+    // these as siblings let a tree be "done" with no perception wired, which is
+    // an agent that decides without sensing. `arpg-enemy-ai` already models it
+    // correctly ('Behavior Tree' dependsOn ['AARPGAIController', 'AI Perception']);
+    // this follows that local precedent.
+    { featureName: 'Behavior Tree system', category: 'BehaviorTree', description: 'UBehaviorTree with BTTask, BTService, BTDecorator custom nodes', dependsOn: ['AI Controller base', 'AI Perception setup'] },
     { featureName: 'AI Perception setup', category: 'Perception', description: 'UAIPerceptionComponent with sight, hearing, damage senses', dependsOn: ['AI Controller base'] },
     { featureName: 'EQS queries', category: 'EQS', description: 'UEnvQueryManager with custom generators, tests, contexts', dependsOn: ['Behavior Tree system'] },
     { featureName: 'Group AI coordination', category: 'Coordination', description: 'Squad manager for flanking, surround, focus-fire, retreat behaviors', dependsOn: ['Behavior Tree system', 'AI Perception setup'] },
@@ -483,7 +490,7 @@ export const MODULE_FEATURE_DEFINITIONS: PartialModuleMap<FeatureDefinition[]> =
     { featureName: 'Blender armature creation', category: 'Rigging', description: 'presetToBones + createArmatureScript executed through /api/blender-mcp/execute, reporting per-preset success or error', dependsOn: ['Rig preset library'] },
   ],
   'procedural-engine': [
-    { featureName: 'Terrain heightmap generator', category: 'Generators', description: 'generateDiamondSquare over a TerrainConfig (size, roughness, height range, seed) plus heightmapToUint16 for 16-bit export' },
+    { featureName: 'Terrain heightmap generator', category: 'Generators', description: 'generateDiamondSquare over a TerrainConfig (sample size, roughness, height range, seed) carrying a declared metric basis (cellSizeM, verticalRangeM) so spacing is derived rather than accidental, plus heightmapToUint16 for 16-bit export' },
     { featureName: 'Dungeon layout generator', category: 'Generators', description: 'generateDungeon BSP room/corridor/door placement producing a typed DungeonResult cell grid' },
     { featureName: 'Vegetation scatter generator', category: 'Generators', description: 'generateVegetation Poisson-disk scatter over DEFAULT_SPECIES with per-species radius, slope and height constraints' },
     { featureName: 'Generator parameter editors', category: 'UI', description: 'ParameterEditors controls bound to the terrain / dungeon / vegetation configs in useProceduralStore' },

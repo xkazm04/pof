@@ -1,4 +1,5 @@
 import { getDb, prepareCached } from './db';
+import { logger } from '@/lib/logger';
 import type {
   PlaytestSession,
   PlaytestFinding,
@@ -8,9 +9,19 @@ import type {
   PlaytestStatus,
   TriageStatus,
   SessionSource,
+  ReproRecord,
+  ConfidenceBasis,
 } from '@/types/game-director';
+import { TRIAGE_STATUSES, validateTriageRepro } from '@/types/game-director';
 
-/** Triage states that suppress a finding from regression tracking and health scoring. */
+/**
+ * Triage states that suppress a finding from regression tracking and health scoring.
+ *
+ * `unreproducible` is deliberately NOT here. Failing to reproduce is weak evidence
+ * against a defect while reproducing is strong evidence for one, so an attempt
+ * series that came up empty bounds the finding's frequency — it does not retire
+ * the finding. Excluding it would be the silent close this state exists to prevent.
+ */
 export const TRIAGE_EXCLUDED: readonly TriageStatus[] = ['false-positive', 'ignore'] as const;
 
 export function isTriageExcluded(status: TriageStatus): boolean {
@@ -29,6 +40,123 @@ export const TRIAGE_EXCLUDED_SQL = `triage_status NOT IN (${TRIAGE_EXCLUDED.map(
 // ─── Schema bootstrap ────────────────────────────────────────────────────────
 
 let initialized = false;
+
+/**
+ * The findings table, parameterised by name so the rebuild below creates the
+ * *identical* shape it will rename into place. One source of truth for the
+ * schema — a rebuild that drifts from the CREATE is how a half-migrated database
+ * happens.
+ */
+const FINDINGS_TABLE_SQL = (table: string) => `
+  CREATE TABLE IF NOT EXISTS ${table} (
+    id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL,
+    category TEXT NOT NULL,
+    severity TEXT NOT NULL DEFAULT 'medium'
+      CHECK(severity IN ('critical','high','medium','low','positive')),
+    title TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    related_module TEXT,
+    screenshot_ref TEXT,
+    game_timestamp REAL,
+    suggested_fix TEXT NOT NULL DEFAULT '',
+    -- NULLABLE and undefaulted on purpose: NULL means nobody scored this finding.
+    -- It used to be 'INTEGER NOT NULL DEFAULT 80', which made an unscored finding
+    -- byte-identical to one an observer rated 80.
+    confidence INTEGER,
+    confidence_basis TEXT
+      CHECK(confidence_basis IS NULL OR confidence_basis IN ('observer','unattributed')),
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    triage_status TEXT NOT NULL DEFAULT 'active'
+      CHECK(triage_status IN ('active','confirmed','false-positive','ignore','snooze','unreproducible')),
+    triage_note TEXT NOT NULL DEFAULT '',
+    snoozed_until TEXT,
+    fix_dispatched_at TEXT,
+    -- The attempt series behind an 'unreproducible' verdict. NULL = not attempted.
+    repro_attempts INTEGER CHECK(repro_attempts IS NULL OR repro_attempts >= 1),
+    repro_build_id TEXT,
+    repro_last_attempted_at TEXT,
+    FOREIGN KEY (session_id) REFERENCES game_director_sessions(id) ON DELETE CASCADE
+  )
+`;
+
+/** Columns copied verbatim by the rebuild, in table order. */
+const FINDINGS_COPY_COLUMNS = [
+  'id', 'session_id', 'category', 'severity', 'title', 'description',
+  'related_module', 'screenshot_ref', 'game_timestamp', 'suggested_fix',
+  'created_at', 'triage_status', 'triage_note', 'snoozed_until',
+  'fix_dispatched_at', 'repro_attempts', 'repro_build_id', 'repro_last_attempted_at',
+] as const;
+
+/**
+ * Rebuild `game_director_findings` when its stored DDL still carries either of
+ * the two constraints SQLite cannot alter in place:
+ *
+ *   - `CHECK(triage_status IN (...))` without `'unreproducible'` — every write of
+ *     the new state would be rejected on a pre-existing database.
+ *   - `confidence INTEGER NOT NULL DEFAULT 80` — an unscored finding cannot say so.
+ *
+ * Data safety: every row is copied before the old table is dropped, the copy is
+ * counted against the original inside the same transaction (a mismatch throws and
+ * rolls the whole thing back), and nothing is deleted or coerced. Legacy
+ * confidence numbers are PRESERVED and stamped `'unattributed'` rather than
+ * discarded — we cannot know which of them an observer actually scored, and
+ * "unknown basis" is the only honest label for a column that stored the default
+ * and the measurement identically.
+ *
+ * Idempotent: after the rebuild the stored DDL satisfies both probes, so a second
+ * run is a no-op. Foreign keys are suspended around it (SQLite's documented
+ * table-rebuild procedure) and restored afterwards, so an orphaned row from an
+ * older FK-off era is carried across instead of aborting the migration.
+ */
+function migrateFindingsTable(db: ReturnType<typeof getDb>) {
+  const ddl = db.prepare(
+    "SELECT sql FROM sqlite_master WHERE type='table' AND name='game_director_findings'"
+  ).get() as { sql: string | null } | undefined;
+  const sql = ddl?.sql;
+  if (!sql) return;
+
+  const checkIsStale = /CHECK\s*\(\s*triage_status/i.test(sql) && !sql.includes("'unreproducible'");
+  const confidenceIsNotNull = /[(,]\s*confidence\s+INTEGER\s+NOT\s+NULL/i.test(sql);
+  if (!checkIsStale && !confidenceIsNotNull) return;
+
+  logger.info('[game-director-db] rebuilding game_director_findings (unreproducible triage state + nullable confidence)');
+
+  const fkWasOn = db.pragma('foreign_keys', { simple: true }) === 1;
+  if (fkWasOn) db.pragma('foreign_keys = OFF');
+  try {
+    const copy = FINDINGS_COPY_COLUMNS.join(', ');
+    const rebuild = db.transaction(() => {
+      const before = (db.prepare('SELECT COUNT(*) AS c FROM game_director_findings').get() as { c: number }).c;
+
+      // A previous interrupted attempt may have left the scratch table behind.
+      db.exec('DROP TABLE IF EXISTS game_director_findings__rebuild');
+      db.exec(FINDINGS_TABLE_SQL('game_director_findings__rebuild'));
+      db.exec(`
+        INSERT INTO game_director_findings__rebuild
+          (${copy}, confidence, confidence_basis)
+        SELECT ${copy},
+               confidence,
+               CASE WHEN confidence IS NULL THEN NULL
+                    ELSE COALESCE(confidence_basis, 'unattributed') END
+        FROM game_director_findings
+      `);
+
+      const after = (db.prepare('SELECT COUNT(*) AS c FROM game_director_findings__rebuild').get() as { c: number }).c;
+      if (before !== after) {
+        // Throwing inside the transaction rolls it back: the original table is
+        // untouched and the app keeps running on the old schema.
+        throw new Error(`findings rebuild would lose rows (${before} -> ${after}) — aborted`);
+      }
+
+      db.exec('DROP TABLE game_director_findings');
+      db.exec('ALTER TABLE game_director_findings__rebuild RENAME TO game_director_findings');
+    });
+    rebuild();
+  } finally {
+    if (fkWasOn) db.pragma('foreign_keys = ON');
+  }
+}
 
 function ensureTables() {
   if (initialized) return;
@@ -64,29 +192,7 @@ function ensureTables() {
     db.exec(`ALTER TABLE game_director_sessions ADD COLUMN source TEXT NOT NULL DEFAULT 'simulated'`);
   }
 
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS game_director_findings (
-      id TEXT PRIMARY KEY,
-      session_id TEXT NOT NULL,
-      category TEXT NOT NULL,
-      severity TEXT NOT NULL DEFAULT 'medium'
-        CHECK(severity IN ('critical','high','medium','low','positive')),
-      title TEXT NOT NULL,
-      description TEXT NOT NULL DEFAULT '',
-      related_module TEXT,
-      screenshot_ref TEXT,
-      game_timestamp REAL,
-      suggested_fix TEXT NOT NULL DEFAULT '',
-      confidence INTEGER NOT NULL DEFAULT 80,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      triage_status TEXT NOT NULL DEFAULT 'active'
-        CHECK(triage_status IN ('active','confirmed','false-positive','ignore','snooze')),
-      triage_note TEXT NOT NULL DEFAULT '',
-      snoozed_until TEXT,
-      fix_dispatched_at TEXT,
-      FOREIGN KEY (session_id) REFERENCES game_director_sessions(id) ON DELETE CASCADE
-    )
-  `);
+  db.exec(FINDINGS_TABLE_SQL('game_director_findings'));
 
   // Backfill triage columns for pre-existing databases (CREATE TABLE IF NOT EXISTS
   // is a no-op once the table has been created without these columns).
@@ -104,6 +210,25 @@ function ensureTables() {
   if (!colSet.has('fix_dispatched_at')) {
     db.exec(`ALTER TABLE game_director_findings ADD COLUMN fix_dispatched_at TEXT`);
   }
+  // Additive first, exactly as above: the repro record and the confidence basis
+  // are new NULLABLE columns, so they need no rebuild on their own.
+  if (!colSet.has('confidence_basis')) {
+    db.exec(`ALTER TABLE game_director_findings ADD COLUMN confidence_basis TEXT`);
+  }
+  if (!colSet.has('repro_attempts')) {
+    db.exec(`ALTER TABLE game_director_findings ADD COLUMN repro_attempts INTEGER`);
+  }
+  if (!colSet.has('repro_build_id')) {
+    db.exec(`ALTER TABLE game_director_findings ADD COLUMN repro_build_id TEXT`);
+  }
+  if (!colSet.has('repro_last_attempted_at')) {
+    db.exec(`ALTER TABLE game_director_findings ADD COLUMN repro_last_attempted_at TEXT`);
+  }
+
+  // The two things SQLite cannot alter in place: widening the `triage_status`
+  // CHECK to admit 'unreproducible', and dropping `NOT NULL DEFAULT 80` from
+  // `confidence` so an unscored finding can say so. Both need a table rebuild.
+  migrateFindingsTable(db);
 
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_gd_findings_session
@@ -241,20 +366,35 @@ export function addFinding(finding: PlaytestFinding) {
   ensureTables();
   const db = getDb();
   const insertAndUpdate = db.transaction(() => {
+    // Confidence and its basis are written as a PAIR — a number with no stated
+    // basis is stamped 'unattributed', never promoted to a measurement, and an
+    // absent number stays absent instead of falling back to the old 80 default.
+    const confidence = typeof finding.confidence === 'number' && Number.isFinite(finding.confidence)
+      ? finding.confidence
+      : null;
+    const confidenceBasis: ConfidenceBasis | null = confidence == null
+      ? null
+      : (finding.confidenceBasis === 'observer' ? 'observer' : 'unattributed');
+
     db.prepare(`
       INSERT INTO game_director_findings
         (id, session_id, category, severity, title, description,
-         related_module, screenshot_ref, game_timestamp, suggested_fix, confidence,
-         triage_status, triage_note, snoozed_until)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         related_module, screenshot_ref, game_timestamp, suggested_fix,
+         confidence, confidence_basis,
+         triage_status, triage_note, snoozed_until,
+         repro_attempts, repro_build_id, repro_last_attempted_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       finding.id, finding.sessionId, finding.category, finding.severity,
       finding.title, finding.description, finding.relatedModule,
       finding.screenshotRef, finding.gameTimestamp, finding.suggestedFix,
-      finding.confidence,
+      confidence, confidenceBasis,
       finding.triageStatus ?? 'active',
       finding.triageNote ?? '',
       finding.snoozedUntil ?? null,
+      finding.reproAttempts ?? null,
+      finding.reproBuildId ?? null,
+      finding.reproLastAttemptedAt ?? null,
     );
 
     // Update count on session — excludes findings the user marked as
@@ -271,14 +411,34 @@ export function addFinding(finding: PlaytestFinding) {
   insertAndUpdate();
 }
 
+/**
+ * Apply a triage decision.
+ *
+ * `repro` is the attempt series behind an `unreproducible` verdict and is
+ * REQUIRED for that state — an instrument reports a verdict only after proving it
+ * had input, and "could not reproduce" with no attempt count is a conclusion over
+ * an unstated scope. Every other state must pass `null`, and doing so clears any
+ * series already on the row: reopening a finding makes it unattempted again
+ * rather than leaving a stale denominator attached to a fresh state.
+ */
 export function updateFindingTriage(
   findingId: string,
   triageStatus: TriageStatus,
   triageNote: string,
   snoozedUntil: string | null,
+  repro: ReproRecord | null = null,
 ): PlaytestFinding | null {
   ensureTables();
   const db = getDb();
+
+  if (!(TRIAGE_STATUSES as readonly string[]).includes(triageStatus)) {
+    throw new Error(`Unknown triage status: ${triageStatus}`);
+  }
+  // Re-validated here and not only at the API seam: the DB module is the single
+  // choke point every writer passes through, so the rule cannot be routed around.
+  const gate = validateTriageRepro(triageStatus, repro?.attempts ?? null, repro?.buildId ?? null);
+  if (!gate.ok) throw new Error(gate.error);
+  const record = gate.data;
 
   const existing = db.prepare('SELECT session_id FROM game_director_findings WHERE id = ?')
     .get(findingId) as { session_id: string } | undefined;
@@ -287,9 +447,16 @@ export function updateFindingTriage(
   const updateAndRecount = db.transaction(() => {
     db.prepare(`
       UPDATE game_director_findings
-      SET triage_status = ?, triage_note = ?, snoozed_until = ?
+      SET triage_status = ?, triage_note = ?, snoozed_until = ?,
+          repro_attempts = ?, repro_build_id = ?, repro_last_attempted_at = ?
       WHERE id = ?
-    `).run(triageStatus, triageNote, snoozedUntil, findingId);
+    `).run(
+      triageStatus, triageNote, snoozedUntil,
+      record?.attempts ?? null,
+      record?.buildId ?? null,
+      record ? new Date().toISOString() : null,
+      findingId,
+    );
 
     db.prepare(`
       UPDATE game_director_sessions
@@ -596,12 +763,16 @@ interface FindingRow {
   screenshot_ref: string | null;
   game_timestamp: number | null;
   suggested_fix: string;
-  confidence: number;
+  confidence: number | null;
+  confidence_basis: string | null;
   created_at: string;
   triage_status: string | null;
   triage_note: string | null;
   snoozed_until: string | null;
   fix_dispatched_at: string | null;
+  repro_attempts: number | null;
+  repro_build_id: string | null;
+  repro_last_attempted_at: string | null;
 }
 
 interface EventRow {
@@ -660,12 +831,20 @@ function rowToFinding(row: FindingRow): PlaytestFinding {
     screenshotRef: row.screenshot_ref,
     gameTimestamp: row.game_timestamp,
     suggestedFix: row.suggested_fix || '',
-    confidence: row.confidence || 80,
+    // `row.confidence || 80` used to sit here: it turned a stored 0 into 80 and
+    // an absent score into a fabricated one. NULL now travels as null.
+    confidence: typeof row.confidence === 'number' ? row.confidence : null,
+    confidenceBasis: row.confidence == null
+      ? null
+      : (row.confidence_basis === 'observer' ? 'observer' : 'unattributed'),
     createdAt: row.created_at,
     triageStatus,
     triageNote: row.triage_note || '',
     snoozedUntil,
     fixDispatchedAt: row.fix_dispatched_at,
+    reproAttempts: typeof row.repro_attempts === 'number' ? row.repro_attempts : null,
+    reproBuildId: row.repro_build_id,
+    reproLastAttemptedAt: row.repro_last_attempted_at,
   };
 }
 

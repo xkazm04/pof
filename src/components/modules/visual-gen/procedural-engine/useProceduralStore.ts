@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import type { TerrainConfig } from '@/lib/visual-gen/generators/terrain';
 import type { DungeonConfig, DungeonResult } from '@/lib/visual-gen/generators/dungeon';
 import type { VegetationConfig, ScatterPoint } from '@/lib/visual-gen/generators/vegetation';
-import { DEFAULT_TERRAIN_CONFIG } from '@/lib/visual-gen/generators/terrain';
+import { DEFAULT_TERRAIN_CONFIG, resolveTerrainBasis } from '@/lib/visual-gen/generators/terrain';
 import { DEFAULT_DUNGEON_CONFIG } from '@/lib/visual-gen/generators/dungeon';
 import { DEFAULT_VEGETATION_CONFIG } from '@/lib/visual-gen/generators/vegetation';
 import { tryApiFetch } from '@/lib/api-utils';
@@ -110,12 +110,28 @@ export const useProceduralStore = create<ProceduralState>((set, get) => ({
     const { terrainHeightmap, terrainConfig } = get();
     if (!terrainHeightmap) return;
 
+    // The vertical scale has ONE authority: the config's declared `verticalRangeM`. The
+    // store used to hand-type `heightScale: 10` here — a second, undeclared copy of the
+    // same quantity, applied at the far end of the pipeline where nothing that reasons
+    // about the terrain could see it.
+    const basis = resolveTerrainBasis(terrainConfig);
+    if (!basis.ok) {
+      logger.warn('[procedural-engine] Terrain basis unresolved:', basis.error);
+      set({ exportState: { isExporting: false, exportResult: null, exportError: basis.error } });
+      return;
+    }
+    if (!basis.data.declared) {
+      logger.warn(
+        '[procedural-engine] Terrain config carries no declared basis; exporting with the ' +
+          'legacy fallback — the result is not gradeable for slope.',
+      );
+    }
+
     set({ exportState: { isExporting: true, exportResult: null, exportError: null } });
 
     const code = terrainToMeshScript({
       heightmap: terrainHeightmap,
-      gridSize: terrainConfig.size,
-      heightScale: 10,
+      basis: basis.data,
     });
 
     const { result, error } = await executeBlenderScript(code);

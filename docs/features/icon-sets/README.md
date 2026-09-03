@@ -14,13 +14,13 @@
 | 2 | Taxonomy | rules | — | L0 · `fieldsPopulated(members/naming/count)` |
 | 3 | Icon 2D Art | gallery | `T_<slug>_Atlas` | L1 · `selected` |
 | 4 | Accessibility | checklist | — | L0 · `minCount(checks, 3)` |
-| 5 | Atlas | rules | `T_<slug>_Atlas` | L0 · `fieldsPopulated(texture/packing/slots)` |
+| 5 | Atlas | rules | `T_<slug>_Atlas` | L0 · `fieldsPopulated(texture/packing/gutter/slots)` — presence only, no image is read |
 | 6 | Test Gate | checklist | — | L3 deferred · `runtimeDeferred(VSIconSetAtlasTest)` |
 | 7 | UE Packaging | manifest | `T_<slug>_Atlas`, `MI_HUDIconSheet_<slug>`, `DT_IconSets::<slug>` | L0 + L2 · `minCount(assets, 3)`; `cppSymbolExists(FIconSetRow)` + `seedRowPresent(seed_icon_sets.py)` |
 
 ## UE wiring
 - **C++ symbol** (`cppSymbolExists`): `FIconSetRow` (icon-set row struct, holds `AtlasU`/`AtlasV` cell indices).
-- **Assets:** `T_<Slug>_Atlas` (4096×4096, 256 px cells, 16×16 grid, BC7), `MI_HUDIconSheet` master-material instance, `DT_IconSets` DataTable. Widget UV = `vec2(AtlasU, AtlasV)/16.0 + uv_in_cell/16.0`.
+- **Assets:** `T_<Slug>_Atlas` (4096×4096, 16×16 grid of 256 px cells, BC7, mip count = 3), `MI_HUDIconSheet` master-material instance, `DT_IconSets` DataTable. Each cell holds a **248 px artwork square inside a 4 px extruded bleed gutter** (248 + 2×4 = 256), so the widget addresses the ARTWORK rect, not the cell: Widget UV = `vec2(AtlasU, AtlasV)/16.0 + (4.0 + uv_in_artwork * 248.0)/4096.0`. The gutter is derived (1 bilinear texel × the deepest mip’s 4× reduction) and it is what caps the chain at 3 mips — a 4th needs an 8 px gutter and leaves the artwork at 30 px, under the 32 px display floor.
 - **Seed script** (`seedRowPresent`): `seed_icon_sets.py` (row count ≥224).
 - **Runtime test:** `VSIconSetAtlasTest` (all widget slots resolve valid UVs, no missing-row logs in PIE; contrast + 32 px legibility).
 - **Cross-catalog dependencies:** `hud-elements` (UHUDWidget/UW_SpellBar/UW_StatusRow declare the icon material slot), `items` (`DT_Items.IconKey`), `spellbook` (`DT_GeneratedAbilities.IconKey`), `status-effects` (`State.*` tag), `currencies` (`DT_Currencies.IconKey`).

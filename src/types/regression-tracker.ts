@@ -1,4 +1,4 @@
-import type { FindingSeverity, FindingCategory, PlaytestFinding, PlaytestSession } from './game-director';
+import type { FindingSeverity, FindingCategory, PlaytestFinding, PlaytestSession, ConfidenceBasis } from './game-director';
 
 /** Lifecycle of a tracked regression across builds */
 export type RegressionStatus = 'open' | 'fixed' | 'regressed' | 'resolved';
@@ -33,7 +33,10 @@ export interface FingerprintOccurrence {
   title: string;
   description: string;
   suggestedFix: string;
-  confidence: number;
+  /** The finding's confidence at the time, or `null` when nobody scored it. */
+  confidence: number | null;
+  /** Provenance of {@link confidence}; absent/`null` reads as unattributed. */
+  confidenceBasis?: ConfidenceBasis | null;
   createdAt: string;
 }
 

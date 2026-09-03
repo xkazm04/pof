@@ -1,7 +1,7 @@
 import {
   AlertOctagon, AlertTriangle, Info, ArrowDown, CheckCircle2,
   Settings, Play, Activity, Search,
-  ShieldCheck, BellOff, EyeOff, Clock, FlaskConical, Satellite, type LucideIcon,
+  ShieldCheck, BellOff, EyeOff, Clock, SearchX, FlaskConical, Satellite, type LucideIcon,
 } from 'lucide-react';
 import type {
   FindingSeverity, FindingCategory, PlaytestStatus, TriageStatus, SessionSource,
@@ -86,7 +86,24 @@ export const TRIAGE_TOKENS: Record<TriageStatus, SemanticToken> = {
   'false-positive': { icon: BellOff, color: STATUS_INFO, label: 'False positive' },
   ignore: { icon: EyeOff, color: 'var(--text-muted)', label: 'Ignored' },
   snooze: { icon: Clock, color: ACCENT_PURPLE, label: 'Snoozed' },
+  // Its own icon and its own hue: an unreproducible finding is still open, and
+  // reading it as a dismissal is the exact confusion the state exists to prevent.
+  unreproducible: { icon: SearchX, color: STATUS_WARNING, label: 'Unreproducible' },
 };
+
+// Confidence readings live in `@/types/game-director` (pure, no UI deps) so
+// server modules can resolve them without pulling lucide-react in. Re-exported
+// here because every UI surface already reaches for this module.
+export {
+  resolveConfidence, confidenceLabel, confidenceTitle, type ConfidenceReading,
+} from '@/types/game-director';
+
+/** Triage states that dismiss a finding — dimmed in lists. `unreproducible` is NOT one. */
+export const TRIAGE_DISMISSED: readonly TriageStatus[] = ['false-positive', 'ignore'] as const;
+
+export function isTriageDismissed(status: TriageStatus): boolean {
+  return (TRIAGE_DISMISSED as readonly string[]).includes(status);
+}
 
 // ─── Provenance ──────────────────────────────────────────────────────────────
 

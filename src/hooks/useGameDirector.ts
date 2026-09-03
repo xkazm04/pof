@@ -5,6 +5,7 @@ import type {
   DirectorEvent,
   CreateSessionPayload,
   TriageStatus,
+  ReproRecord,
 } from '@/types/game-director';
 import type { DirectorStats, HealthTrendPoint } from '@/lib/game-director-db';
 import { tryApiFetch } from '@/lib/api-utils';
@@ -50,6 +51,8 @@ export interface UseGameDirectorResult {
     triageStatus: TriageStatus,
     triageNote?: string,
     snoozedUntil?: string | null,
+    /** Attempt series behind an `unreproducible` verdict; rejected without it. */
+    repro?: ReproRecord | null,
   ) => Promise<PlaytestFinding>;
   markFixDispatched: (findingId: string) => Promise<PlaytestFinding>;
 }
@@ -117,11 +120,16 @@ export function useGameDirector(): UseGameDirectorResult {
     triageStatus: TriageStatus,
     triageNote?: string,
     snoozedUntil?: string | null,
+    repro?: ReproRecord | null,
   ): Promise<PlaytestFinding> => {
     const result = await tryApiFetch<PlaytestFinding>('/api/game-director', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'update-triage', findingId, triageStatus, triageNote, snoozedUntil }),
+      body: JSON.stringify({
+        action: 'update-triage', findingId, triageStatus, triageNote, snoozedUntil,
+        reproAttempts: repro?.attempts ?? null,
+        reproBuildId: repro?.buildId ?? null,
+      }),
     });
     if (!result.ok) throw new Error(result.error);
     // Health stats and session findings_count depend on triage; refresh to sync.

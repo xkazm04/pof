@@ -1,4 +1,4 @@
-import type { EconomyFlow, EconomyItem, XPCurvePoint, SimulationConfig } from '@/types/economy-simulator';
+import type { EconomyFlow, EconomyItem, EconomyLoop, XPCurvePoint, SimulationConfig } from '@/types/economy-simulator';
 import {
   ACCENT_EMERALD, ACCENT_VIOLET,
   STATUS_INFO, STATUS_MUTED, STATUS_WARNING,
@@ -84,9 +84,17 @@ export const DEFAULT_FAUCETS: EconomyFlow[] = [
     category: 'quest',
   },
   {
+    // NOT a source. A vendor sale that turns loot into currency is a CONVERTER whose
+    // input leg is the item economy; filing it as a plain faucet funds a gold source
+    // from a pool nobody meters (ai-registry `source-drain-converter-trader-vocabulary`).
+    // Its declared 25 sales/hr is well above the ~12 items/hr the drop model supplies,
+    // so the shipped rate is a finding the audit reports — it is deliberately NOT
+    // re-tuned here: the standard says point the check at the shipped configuration
+    // and treat the failure as a finding about the product.
     id: 'loot-vendor-sell',
     name: 'Vendor Loot Sales',
-    type: 'faucet',
+    type: 'converter',
+    input: { resource: 'items', unitsPerOccurrence: 1 },
     baseAmount: 8,
     levelScaling: 3,
     frequencyPerHour: 25,
@@ -199,15 +207,60 @@ export const DEFAULT_SINKS: EconomyFlow[] = [
     category: 'travel',
   },
   {
+    // A drain whose magnitude is a fraction of the holder's CURRENT balance, declared
+    // on the node so the engine has no anonymous `if (flow.id === 'death-penalty')`
+    // branch. It closes a balancing loop through the gold pool — see DECLARED_LOOPS.
     id: 'death-penalty',
     name: 'Death Gold Penalty',
     type: 'sink',
+    mechanism: 'percent-of-balance',
+    percentOfBalance: 0.05,
     baseAmount: 0,
     levelScaling: 0,
     frequencyPerHour: 1.5,
     minLevel: 1,
     maxLevel: 0,
     category: 'penalty',
+  },
+];
+
+// ── Declared feedback-loop topology ─────────────────────────────────────────
+
+/**
+ * The closed paths this model actually contains, declared rather than left as engine
+ * special cases (ai-registry `feedback-loop-topology-and-polarity`). Both are
+ * balancing: neither is praise nor blame, and a topology with no reinforcing loop is
+ * itself a finding — the gold pool here has no path by which wealth raises income, so
+ * accumulation never compounds. Gain is `'uncharacterised'` for both because nobody
+ * has estimated it; that is the honest value, never "weak" and never "benign".
+ */
+export const DECLARED_LOOPS: EconomyLoop[] = [
+  {
+    id: 'death-penalty-drag',
+    name: 'Death penalty drag',
+    polarity: 'balancing',
+    gain: 'uncharacterised',
+    latencyHours: 1,
+    path: ['gold-pool', 'death-penalty', 'gold-pool'],
+    job: 'Scale the cost of dying with what the player is carrying, so a large purse is worth protecting.',
+  },
+  {
+    id: 'affordability-guard',
+    name: 'Affordability guard',
+    polarity: 'balancing',
+    gain: 'uncharacterised',
+    latencyHours: 1,
+    path: ['gold-pool', 'gold-sinks', 'gold-pool'],
+    job: 'Skip a purchase the player cannot afford, so spending throttles itself instead of driving the balance negative.',
+  },
+  {
+    id: 'vendor-supply-limit',
+    name: 'Vendor supply limit',
+    polarity: 'balancing',
+    gain: 'uncharacterised',
+    latencyHours: 1,
+    path: ['item-pool', 'loot-vendor-sell', 'item-pool'],
+    job: 'Gate vendor income on stock the player actually looted, so gold income cannot outrun the drop rate.',
   },
 ];
 

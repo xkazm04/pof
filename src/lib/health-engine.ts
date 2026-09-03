@@ -16,6 +16,7 @@ import type {
 } from '@/types/project-health';
 import type { EvaluatorReport, ModuleScore } from '@/types/evaluator';
 import { ALL_MODULE_DEFS, ALL_CHECKLIST_TOTAL } from './module-registry';
+import { SLICE_UNMEASURED_NOTE } from './roadmap/milestone-progress';
 
 /* ---- Module definitions ------------------------------------------ */
 // "Overall completion" must span EVERY module, not just core-engine — otherwise
@@ -173,7 +174,22 @@ function predictMilestones(
       targetCompletion: 30,
       predictedDate: null,
       predictedWeeks: null,
-      currentProgress: Math.min(100, Math.round((completionPct / 30) * 100)),
+      // NOT `completionPct / 30`. A vertical slice is a DEPTH property — one
+      // complete path through every layer, ending in something a player
+      // actually experiences — and `completionPct` is the share of the
+      // all-module checklist, a BREADTH measure. Reported that way, "100%
+      // vertical slice" was reachable with no playable path anywhere in the
+      // game: every system at eighty percent and nothing to walk through.
+      //
+      // The governing standard states the rule literally (game-production ▸
+      // production-work-prioritization ▸ vertical-slice-as-the-first-milestone):
+      // "when the only available completion metric is a percentage across
+      // systems, do not report the slice on it at all". Nothing in this repo
+      // declares a slice path (an ordered list of steps with a named terminal
+      // observation), so there is nothing to measure — and unmeasured is not a
+      // pass. It reports null, with the reason attached.
+      currentProgress: null,
+      progressNote: SLICE_UNMEASURED_NOTE,
       color: '#34d399',
     },
     {
@@ -183,6 +199,7 @@ function predictMilestones(
       predictedDate: null,
       predictedWeeks: null,
       currentProgress: Math.min(100, Math.round((completionPct / 75) * 100)),
+      progressNote: null,
       color: '#60a5fa',
     },
     {
@@ -192,6 +209,7 @@ function predictMilestones(
       predictedDate: null,
       predictedWeeks: null,
       currentProgress: Math.min(100, Math.round((completionPct / 90) * 100)),
+      progressNote: null,
       color: '#a78bfa',
     },
     {
@@ -201,6 +219,7 @@ function predictMilestones(
       predictedDate: null,
       predictedWeeks: null,
       currentProgress: Math.min(100, Math.round(completionPct)),
+      progressNote: null,
       color: '#f472b6',
     },
   ];

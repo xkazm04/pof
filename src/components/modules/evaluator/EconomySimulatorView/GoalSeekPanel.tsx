@@ -7,6 +7,7 @@ import { apiFetch } from '@/lib/api-utils';
 import { useEconomySimulatorStore } from '@/stores/economySimulatorStore';
 import type { SimulationConfig } from '@/types/economy-simulator';
 import type { EconomyGoalSeekResult } from '@/lib/economy/goal-seek';
+import { nodeKindOf } from '@/lib/economy/node-audit';
 import { STATUS_SUCCESS, STATUS_WARNING } from '@/lib/chart-colors';
 import { formatGold } from './helpers';
 
@@ -83,11 +84,17 @@ export function GoalSeekPanel({ config }: { config: SimulationConfig }) {
             onChange={(e) => setFlowId(e.target.value)}
             className="px-2 py-1.5 rounded-lg bg-surface border border-border text-xs text-text min-w-44"
           >
-            <optgroup label="Faucets">
-              {flows.filter((f) => f.type === 'faucet').map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+            {/* Grouped by functional node kind, not by the two-word vocabulary —
+                a converter (vendor sale) is neither a plain faucet nor a sink and
+                would silently vanish from both lists if filtered on `type`. */}
+            <optgroup label="Sources">
+              {flows.filter((f) => nodeKindOf(f.type) === 'source').map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
             </optgroup>
-            <optgroup label="Sinks">
-              {flows.filter((f) => f.type === 'sink').map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+            <optgroup label="Converters">
+              {flows.filter((f) => nodeKindOf(f.type) === 'converter').map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+            </optgroup>
+            <optgroup label="Drains">
+              {flows.filter((f) => nodeKindOf(f.type) === 'drain').map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
             </optgroup>
           </select>
         </label>

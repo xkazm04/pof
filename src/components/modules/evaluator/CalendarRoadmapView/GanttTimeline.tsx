@@ -12,6 +12,7 @@ import {
   BAR_HEIGHT, BAR_Y_OFFSET, TODAY_COLOR,
 } from './constants';
 import { formatWeekLabel } from './helpers';
+import { milestoneProgressDisplay } from '@/lib/roadmap/milestone-progress';
 import type { DeadlineMap } from './types';
 
 interface GanttTimelineProps {
@@ -112,6 +113,9 @@ export function GanttTimeline({
         {/* Row labels (left gutter) */}
         {milestones.map((ms, i) => {
           const y = HEADER_HEIGHT + i * ROW_HEIGHT + ROW_HEIGHT / 2;
+          // Unmeasured progress is spelled out in the gutter. Printing "0%"
+          // here would state a reading nobody took.
+          const progress = milestoneProgressDisplay(ms.currentProgress, ms.progressNote);
           return (
             <g key={`label-${ms.id}`}>
               <circle cx={16} cy={y} r={4} fill={ms.color} />
@@ -131,7 +135,8 @@ export function GanttTimeline({
                 fill="var(--color-text-muted, #888)"
                 fontSize={10}
               >
-                {ms.currentProgress}%
+                {progress.label}
+                {progress.note ? <title>{progress.note}</title> : null}
               </text>
             </g>
           );
@@ -143,10 +148,14 @@ export function GanttTimeline({
           const y = HEADER_HEIGHT + i * ROW_HEIGHT + BAR_Y_OFFSET;
           const nowX = todayX;
           const endX = dateToX(ms.predictedDate);
+          const progress = milestoneProgressDisplay(ms.currentProgress, ms.progressNote);
+          // Unmeasured ⇒ the bright "completed portion" is not drawn at all.
+          // Filling it to 0 would render the same shape as "no progress yet".
+          const pct = progress.pct ?? 0;
 
           // Bar starts at the earlier of today or LEFT_GUTTER
-          const barStart = Math.max(LEFT_GUTTER, nowX - (nowX - LEFT_GUTTER) * (ms.currentProgress / 100));
-          const filledEnd = barStart + (endX - barStart) * (ms.currentProgress / 100);
+          const barStart = Math.max(LEFT_GUTTER, nowX - (nowX - LEFT_GUTTER) * (pct / 100));
+          const filledEnd = barStart + (endX - barStart) * (pct / 100);
 
           return (
             <g key={`bar-${ms.id}`}>
@@ -160,16 +169,19 @@ export function GanttTimeline({
                 fill={ms.color}
                 opacity={0.15}
               />
-              {/* Completed portion (bright) */}
-              <rect
-                x={Math.max(LEFT_GUTTER, barStart)}
-                y={y}
-                width={Math.max(0, filledEnd - Math.max(LEFT_GUTTER, barStart))}
-                height={BAR_HEIGHT}
-                rx={6}
-                fill={ms.color}
-                opacity={0.5}
-              />
+              {/* Completed portion (bright) — only when progress was measured */}
+              {progress.measured && (
+                <rect
+                  data-testid={`gantt-progress-fill-${ms.id}`}
+                  x={Math.max(LEFT_GUTTER, barStart)}
+                  y={y}
+                  width={Math.max(0, filledEnd - Math.max(LEFT_GUTTER, barStart))}
+                  height={BAR_HEIGHT}
+                  rx={6}
+                  fill={ms.color}
+                  opacity={0.5}
+                />
+              )}
               {/* End date label */}
               <text
                 x={endX + 6} y={y + BAR_HEIGHT / 2 + 1}

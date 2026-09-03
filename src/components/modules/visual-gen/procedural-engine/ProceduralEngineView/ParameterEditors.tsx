@@ -1,6 +1,7 @@
 'use client';
 
 import type { TerrainConfig } from '@/lib/visual-gen/generators/terrain';
+import { LEGACY_TERRAIN_BASIS } from '@/lib/visual-gen/generators/terrain';
 import type { DungeonConfig } from '@/lib/visual-gen/generators/dungeon';
 import type { VegetationConfig } from '@/lib/visual-gen/generators/vegetation';
 
@@ -40,6 +41,39 @@ export function TerrainParams({ terrainConfig, setTerrainConfig }: {
           type="number"
           value={terrainConfig.seed}
           onChange={(e) => setTerrainConfig({ seed: Number(e.target.value) })}
+          className="w-full bg-surface border border-border rounded-lg px-2 py-1 text-sm text-text"
+        />
+      </label>
+      {/*
+        Size is a sample COUNT, so these two are the only quantities that say what the
+        field actually is: without them a 129x129 grid of values in [0,1] is equally a
+        mountain range and a gravel pile, and no slope can be computed over it.
+      */}
+      <label className="space-y-1">
+        <span className="text-xs text-text-muted">
+          Cell size (m) — {terrainConfig.cellSizeM ?? LEGACY_TERRAIN_BASIS.cellSizeM} m/sample,{' '}
+          {(terrainConfig.size - 1) * (terrainConfig.cellSizeM ?? LEGACY_TERRAIN_BASIS.cellSizeM)} m
+          across
+        </span>
+        <input
+          type="number"
+          min="0.05"
+          step="0.05"
+          value={terrainConfig.cellSizeM ?? LEGACY_TERRAIN_BASIS.cellSizeM}
+          onChange={(e) => setTerrainConfig({ cellSizeM: Number(e.target.value) })}
+          className="w-full bg-surface border border-border rounded-lg px-2 py-1 text-sm text-text"
+        />
+      </label>
+      <label className="space-y-1">
+        <span className="text-xs text-text-muted">
+          Vertical range (m) — exaggeration folded in
+        </span>
+        <input
+          type="number"
+          min="0.1"
+          step="0.5"
+          value={terrainConfig.verticalRangeM ?? LEGACY_TERRAIN_BASIS.verticalRangeM}
+          onChange={(e) => setTerrainConfig({ verticalRangeM: Number(e.target.value) })}
           className="w-full bg-surface border border-border rounded-lg px-2 py-1 text-sm text-text"
         />
       </label>

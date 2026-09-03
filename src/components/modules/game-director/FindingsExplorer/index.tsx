@@ -5,7 +5,7 @@ import {
   Filter, FilterX, Search, Loader2, Target, FileSearch, Plus,
 } from 'lucide-react';
 import type {
-  PlaytestSession, PlaytestFinding, FindingSeverity, TriageStatus,
+  PlaytestSession, PlaytestFinding, FindingSeverity, TriageStatus, ReproRecord,
 } from '@/types/game-director';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { SEVERITY_TOKENS, TRIAGE_TOKENS } from '@/lib/game-director-styles';
@@ -23,6 +23,7 @@ interface FailedTriage {
   triageStatus: TriageStatus;
   note?: string;
   snoozedUntil?: string | null;
+  repro?: ReproRecord | null;
 }
 
 const SEVERITY_FILTERS = ['all', 'critical', 'high', 'medium', 'low', 'positive'] as const;
@@ -36,6 +37,7 @@ interface FindingsExplorerProps {
     triageStatus: TriageStatus,
     triageNote?: string,
     snoozedUntil?: string | null,
+    repro?: ReproRecord | null,
   ) => Promise<PlaytestFinding>;
   markFixDispatched: (findingId: string) => Promise<PlaytestFinding>;
   onNewSession?: () => void;
@@ -77,11 +79,12 @@ export function FindingsExplorer({ sessions, getAllFindings, updateTriage, markF
     triageStatus: TriageStatus,
     note?: string,
     snoozedUntil?: string | null,
+    repro?: ReproRecord | null,
   ): Promise<boolean> => {
     setBusyId(finding.id);
     setTriageError(null);
     try {
-      const updated = await updateTriage(finding.id, triageStatus, note ?? finding.triageNote, snoozedUntil);
+      const updated = await updateTriage(finding.id, triageStatus, note ?? finding.triageNote, snoozedUntil, repro);
       setAllFindings(prev => prev.map(f => (f.id === updated.id ? updated : f)));
       setAnnouncement(`"${updated.title}" marked ${TRIAGE_TOKENS[triageStatus].label}.`);
       return true;
@@ -92,6 +95,7 @@ export function FindingsExplorer({ sessions, getAllFindings, updateTriage, markF
         triageStatus,
         note,
         snoozedUntil,
+        repro,
       });
       return false;
     } finally {
@@ -128,7 +132,10 @@ export function FindingsExplorer({ sessions, getAllFindings, updateTriage, markF
   const preSeverity = useMemo(() => {
     let result = visibleFindings;
     if (triageFilter === 'open') {
-      result = result.filter(f => f.triageStatus === 'active' || f.triageStatus === 'confirmed');
+      // 'unreproducible' counts as OPEN: it was attempted and not found, which
+      // bounds the finding's frequency without closing it. Only the dismissals
+      // (false-positive / ignore) and a live snooze leave the open queue.
+      result = result.filter(f => f.triageStatus === 'active' || f.triageStatus === 'confirmed' || f.triageStatus === 'unreproducible');
     } else if (triageFilter === 'triaged') {
       result = result.filter(f => f.triageStatus !== 'active');
     }
@@ -169,7 +176,7 @@ export function FindingsExplorer({ sessions, getAllFindings, updateTriage, markF
     let open = 0;
     let triaged = 0;
     for (const f of visibleFindings) {
-      if (f.triageStatus === 'active' || f.triageStatus === 'confirmed') open += 1;
+      if (f.triageStatus === 'active' || f.triageStatus === 'confirmed' || f.triageStatus === 'unreproducible') open += 1;
       if (f.triageStatus !== 'active') triaged += 1;
     }
     return { open, all: visibleFindings.length, triaged };
@@ -264,6 +271,7 @@ export function FindingsExplorer({ sessions, getAllFindings, updateTriage, markF
               triageError.triageStatus,
               triageError.note,
               triageError.snoozedUntil,
+              triageError.repro,
             );
           }}
           onDismiss={() => setTriageError(null)}

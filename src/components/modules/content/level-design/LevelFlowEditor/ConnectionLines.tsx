@@ -64,7 +64,9 @@ export function ConnectionLines({
               x2={to.x} y2={to.y}
               stroke={isArmed ? STATUS_ERROR : isTarget ? accentColor : "rgba(139,92,246,0.2)"}
               strokeWidth={isArmed ? 3 : 2}
-              strokeDasharray={conn.condition ? '8,4' : undefined}
+              strokeDasharray={
+                conn.condition || (conn.requires?.length ?? 0) > 0 ? '8,4' : undefined
+              }
               className="transition-colors duration-300"
             />
 

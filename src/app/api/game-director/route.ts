@@ -25,6 +25,7 @@ import type {
   UpdateTriagePayload,
   SessionSource,
 } from '@/types/game-director';
+import { isTriageStatus, validateTriageRepro } from '@/types/game-director';
 import { simulatePlaytest } from '@/lib/game-director-sim';
 import { logger } from '@/lib/logger';
 
@@ -138,13 +139,23 @@ export async function POST(req: Request) {
       }
 
       case 'update-triage': {
-        const { findingId, triageStatus, triageNote, snoozedUntil } = body as UpdateTriagePayload & { action: string };
+        const {
+          findingId, triageStatus, triageNote, snoozedUntil, reproAttempts, reproBuildId,
+        } = body as UpdateTriagePayload & { action: string };
         if (!findingId || !triageStatus) return apiError('findingId and triageStatus required', 400);
+        if (!isTriageStatus(triageStatus)) return apiError(`Unknown triage status: ${triageStatus}`, 400);
+        // An 'unreproducible' verdict must state how many attempts it is speaking
+        // for before it is allowed to be written — a verdict with no denominator
+        // is a conclusion over an unstated scope, and it would be indistinguishable
+        // from a dismissal the moment it landed in the queue.
+        const repro = validateTriageRepro(triageStatus, reproAttempts, reproBuildId);
+        if (!repro.ok) return apiError(repro.error, 400);
         const updated = updateFindingTriage(
           findingId,
           triageStatus,
           triageNote ?? '',
           snoozedUntil ?? null,
+          repro.data,
         );
         if (!updated) return apiError('Finding not found', 404);
         return apiSuccess(updated);

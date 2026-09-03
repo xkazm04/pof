@@ -11,6 +11,48 @@ import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
 /**
+ * ATLAS GEOMETRY — the ONE source for every number this pipeline's prose quotes.
+ *
+ * A mipped atlas cannot also be packed edge-to-edge: a bilinear/trilinear fetch near a cell
+ * boundary blends the texels AROUND the sample point, and at a cell edge some of those texels
+ * belong to the neighbouring icon — progressively more of them at each mip level. So the cell
+ * budget is artwork + gutter, and the gutter is derived, never picked:
+ *
+ *   gutter   = filter reach (1 texel, bilinear) × the deepest mip's reduction factor
+ *   artwork  = cell − 2 × gutter
+ *   floor    = artwork at the deepest mip must stay ≥ MIN_DISPLAY_PX (the HUD's smallest size)
+ *
+ * Solving that for a 256 px cell and a 32 px display floor:
+ *   MIP_COUNT 3 → gutter 4, artwork 248, deepest artwork 248/4 = 62 px ✓
+ *   MIP_COUNT 4 → gutter 8, artwork 240, deepest artwork 240/8 = 30 px ✗ (below the floor)
+ * so 3 is the deepest chain this cell size supports. The gutter is taken from INSIDE the cell,
+ * so the 16×16 grid, the 256-slot page budget and the UV cell pitch are all unchanged.
+ */
+const ATLAS_PX = 4096;
+const GRID = 16;
+const CELL_PX = ATLAS_PX / GRID; // 256
+const MIN_DISPLAY_PX = 32; // accessibility step's `criteria.minDisplaySize`
+const MIP_COUNT = 3; // mip levels 0..2 — deepest reduction 4×
+const GUTTER_PX = 2 ** (MIP_COUNT - 1); // 4 px at mip 0 (1 bilinear texel at mip 2)
+const ARTWORK_PX = CELL_PX - 2 * GUTTER_PX; // 248
+const DEEPEST_ARTWORK_PX = ARTWORK_PX / 2 ** (MIP_COUNT - 1); // 62 ≥ MIN_DISPLAY_PX
+/** What a 4th mip would cost, quoted in the spec so the choice is falsifiable. */
+const NEXT_GUTTER_PX = 2 ** MIP_COUNT; // 8
+const NEXT_ARTWORK_PX = CELL_PX - 2 * NEXT_GUTTER_PX; // 240
+const NEXT_DEEPEST_PX = NEXT_ARTWORK_PX / 2 ** MIP_COUNT; // 30 — below the floor
+
+/** Machine-readable atlas geometry, written into the Atlas step's artifact. */
+export const ICON_ATLAS_GEOMETRY = {
+  atlasPx: ATLAS_PX,
+  grid: GRID,
+  cellPx: CELL_PX,
+  artworkPx: ARTWORK_PX,
+  gutterPx: GUTTER_PX,
+  mipCount: MIP_COUNT,
+  minDisplayPx: MIN_DISPLAY_PX,
+} as const;
+
+/**
  * Icon Sets pipeline (catalogId: 'icon-sets').
  *
  * Defines the multi-stage authoring process for a coherent ARPG icon family:
@@ -36,7 +78,10 @@ registerCatalogPipeline({
         data: {
           brief:
             `The ${e.name} icon family establishes one coherent visual language across all members ` +
-            `rendered at 256 px and packed to a 4096×4096 atlas with 256 px cells (256 icon slots). ` +
+            `authored at ${CELL_PX} px and packed to a ${ATLAS_PX}×${ATLAS_PX} atlas with ${CELL_PX} px cells ` +
+            `(${GRID}×${GRID} = ${GRID * GRID} icon slots) — each cell holds a ${ARTWORK_PX} px artwork square ` +
+            `inside a ${GUTTER_PX} px extruded bleed gutter, because a mipped atlas packed edge-to-edge lets a ` +
+            `filtered fetch sample its neighbour. ` +
             `Every icon shares a 3/4 top-down perspective, a consistent upper-left key light at ` +
             `roughly 45° elevation, and a 2 px outline stroke that holds weight at the HUD's smallest ` +
             `display size of 32 px. The palette is rooted in muted earthen tones — desaturated ochres, ` +
@@ -141,7 +186,10 @@ registerCatalogPipeline({
             ],
             naming: 'IconCategory_Name — PascalCase after the prefix, no spaces, no version suffixes',
             count: 224,
-            atlasBudget: '256 cells total in the 4096×4096 atlas (16×16 grid); 224 allocated, 32 reserved',
+            atlasBudget:
+              `${GRID * GRID} cells total on ONE ${ATLAS_PX}×${ATLAS_PX} page (${GRID}×${GRID} grid); 224 allocated, 32 reserved. ` +
+              `The ${GUTTER_PX} px bleed gutter is taken from INSIDE each ${CELL_PX} px cell ` +
+              `(${ARTWORK_PX} px artwork + 2×${GUTTER_PX} px = ${CELL_PX} px), so the page count and the slot count are unchanged by it.`,
             note:
               'All names match their DataTable row key in DT_IconSets so widget UV lookup is a single ' +
               'DataTable::FindRow call keyed on the IconCategory_Name string. ' +
@@ -188,8 +236,10 @@ registerCatalogPipeline({
             contrastTarget: '≥4.5:1 (WCAG AA)',
             hudCanvasLuma: 0.06,
             colorblindHueSeparation: '≥60° on color wheel + ≥2× brightness delta between damage-type accents',
-            minDisplaySize: 32,
-            outlineWeight: '2 px at 256 px source; maps to ~0.25 px at 32 px — must be anti-aliased, not dropped',
+            minDisplaySize: MIN_DISPLAY_PX,
+            outlineWeight:
+              `2 px at ${CELL_PX} px source; maps to ~0.25 px at ${MIN_DISPLAY_PX} px — must be anti-aliased, not dropped. ` +
+              `This ${MIN_DISPLAY_PX} px floor is what caps the atlas mip chain at ${MIP_COUNT} levels (see the Atlas step's format line).`,
           },
         },
       }),
@@ -211,20 +261,49 @@ registerCatalogPipeline({
         data: {
           atlas: {
             texture: `T_${s}_Atlas`,
-            textureSize: '4096×4096 px',
-            cellSize: '256×256 px',
-            gridLayout: '16×16 grid',
-            packing: '4096×4096 atlas — 256 px cells, 16×16 grid, no padding (UV boundary = cell boundary)',
-            slots: 256,
+            textureSize: `${ATLAS_PX}×${ATLAS_PX} px`,
+            cellSize: `${CELL_PX}×${CELL_PX} px`,
+            artworkSize: `${ARTWORK_PX}×${ARTWORK_PX} px`,
+            gutter:
+              `${GUTTER_PX} px per side, EXTRUDED (not empty). Basis: bilinear/trilinear reach = 1 texel at the ` +
+              `level being sampled × the deepest mip's reduction factor (${2 ** (MIP_COUNT - 1)}× at mip ${MIP_COUNT - 1}) ` +
+              `= ${GUTTER_PX} px at mip 0. It survives the whole chain (${GUTTER_PX}→${GUTTER_PX / 2}→${GUTTER_PX / 4} px, ` +
+              `≥1 texel at every level). Taken from INSIDE the cell: ${ARTWORK_PX} + 2×${GUTTER_PX} = ${CELL_PX} px.`,
+            gridLayout: `${GRID}×${GRID} grid`,
+            packing:
+              `${ATLAS_PX}×${ATLAS_PX} atlas, ONE page — ${GRID}×${GRID} grid of ${CELL_PX} px cells. ` +
+              `Each cell = a ${ARTWORK_PX}×${ARTWORK_PX} px artwork square centred in a ${GUTTER_PX} px gutter on every side ` +
+              `(${ARTWORK_PX} + 2×${GUTTER_PX} = ${CELL_PX}, so cell pitch, the ${GRID}×${GRID} grid and the ` +
+              `${GRID * GRID}-slot page budget are all unchanged). The gutter is filled by EXTRUDING each icon's ` +
+              'outermost row and column outward — colour channels extruded UNDERNEATH transparent texels, so a sampler ' +
+              'that interpolates RGB and alpha independently cannot pull background colour into the visible edge. ' +
+              'The UV boundary is therefore the ARTWORK boundary, not the cell boundary: a filtered fetch that strays ' +
+              "outside reads the icon's own edge colour instead of its neighbour's.",
+            gutterPx: GUTTER_PX,
+            artworkPx: ARTWORK_PX,
+            cellPx: CELL_PX,
+            mipCount: MIP_COUNT,
+            slots: GRID * GRID,
             slotsAllocated: 224,
             slotsReserved: 32,
             format:
-              'BC7 (DXT5-equivalent, full alpha for transparency) — mip chain floored where a CELL reaches 32 px: ' +
-              'atlas mips 4096→2048→1024→512 (cells 256→128→64→32), mip count = 4. ' +
-              '(Judge-fleet fix 2026-07-07: the old line claimed a 32 px floor AND mip count 7 — 7 mips would run cells down to 4 px.)',
+              'BC7 (DXT5-equivalent, full alpha for transparency) — mip chain floored where the ARTWORK reaches the ' +
+              `${MIN_DISPLAY_PX} px minimum display size: atlas mips ${ATLAS_PX}→${ATLAS_PX / 2}→${ATLAS_PX / 4} ` +
+              `(cells ${CELL_PX}→${CELL_PX / 2}→${CELL_PX / 4}, artwork ${ARTWORK_PX}→${ARTWORK_PX / 2}→${DEEPEST_ARTWORK_PX}), ` +
+              `mip count = ${MIP_COUNT}. A 4th mip is not solvable at this cell size: it would demand a ` +
+              `${NEXT_GUTTER_PX} px gutter (1 texel × ${2 ** MIP_COUNT}× reduction), leaving ${NEXT_ARTWORK_PX} px of ` +
+              `artwork and ${NEXT_DEEPEST_PX} px at the deepest level — below the ${MIN_DISPLAY_PX} px floor. ` +
+              '(Judge-fleet fix 2026-07-07: the old line claimed a 32 px floor AND mip count 7 — 7 mips would run cells ' +
+              'down to 4 px. Fix 2026-09-03: the corrected line still asked for a mip chain AND "no padding ' +
+              '(UV boundary = cell boundary)" — mutually exclusive, since a filtered fetch at a cell edge samples the ' +
+              'neighbouring icon and does so twice as far, in source texels, at every level down. The extruded gutter ' +
+              'above resolves it, and it costs the 4th mip.)',
             uvLookupMethod:
-              'FIconSetRow.AtlasU + FIconSetRow.AtlasV (cell indices 0–15) stored in DT_IconSets; ' +
-              `MI_HUDIconSheet_${s} UV = vec2(AtlasU, AtlasV) / 16.0 + uv_in_cell / 16.0`,
+              `FIconSetRow.AtlasU + FIconSetRow.AtlasV (cell indices 0–${GRID - 1}) stored in DT_IconSets; ` +
+              `MI_HUDIconSheet_${s} addresses the ARTWORK rect, not the whole cell: ` +
+              `UV = vec2(AtlasU, AtlasV) / ${GRID}.0 + (${GUTTER_PX}.0 + uv_in_artwork * ${ARTWORK_PX}.0) / ${ATLAS_PX}.0 ` +
+              `— the inner ${ARTWORK_PX}/${CELL_PX} of each cell. The ${GUTTER_PX} px extruded ring is what the filter ` +
+              'reads when it strays; nothing ever addresses it directly.',
             wiringContract: {
               grantedBy:
                 `MI_HUDIconSheet_${s} (a master-material instance) samples T_${s}_Atlas; ` +
@@ -242,7 +321,9 @@ registerCatalogPipeline({
               ],
               verification:
                 `L2: T_${s}_Atlas imported in Content/UI/Icons/; DT_IconSets seeded via seed_icon_sets.py; ` +
-                `MI_HUDIconSheet_${s} compiled with T_${s}_Atlas slot; ` +
+                `MI_HUDIconSheet_${s} compiled with T_${s}_Atlas slot; texture import settings declare ` +
+                `mip count = ${MIP_COUNT} and every cell carries a ${GUTTER_PX} px extruded gutter around its ` +
+                `${ARTWORK_PX} px artwork (measured on the imported texture, not asserted); ` +
                 'L3: VSIconSetAtlasTest (runtime-deferred) — widget instantiation resolves all 224 UV ' +
                 'lookups without missing-row warnings in PIE log; contrast + 32 px legibility verified in editor',
             },
@@ -252,7 +333,12 @@ registerCatalogPipeline({
       });
       },
       accept: allOf(
-        fieldsPopulated('atlas', 'Texture + packing + slots', ['texture', 'packing', 'slots']),
+        // NOTE (shape-only): `fieldsPopulated` asserts these keys are non-null — it does not read
+        // the atlas bytes, measure a gutter, or check the arithmetic. `gutter` is required here so
+        // an atlas spec cannot silently omit the bleed contract again; the numeric self-consistency
+        // is pinned by src/__tests__/lib/catalog/pipelines/icon-sets.test.ts, and a real measurement
+        // would need an image-reading checker this pipeline does not have.
+        fieldsPopulated('atlas', 'Texture + packing + gutter + slots', ['texture', 'packing', 'gutter', 'slots']),
         wiringContractSound('atlas'),
       ),
     },
@@ -265,7 +351,12 @@ registerCatalogPipeline({
       produce: (e: LabEntity) => ({
         data: {
           checks: [
-            `T_${slug(e.name)}_Atlas imports without compression artefacts (BC7, no mip below 32 px)`,
+            `T_${slug(e.name)}_Atlas imports without compression artefacts (BC7, mip count = ${MIP_COUNT} — ` +
+              `no mip puts the ${ARTWORK_PX} px artwork below the ${MIN_DISPLAY_PX} px display floor; deepest is ${DEEPEST_ARTWORK_PX} px)`,
+            `${GUTTER_PX} px gutter present AND extruded on every cell: sample the ${GUTTER_PX} px ring around each ` +
+              `${ARTWORK_PX} px artwork square — it must repeat that icon's own edge colour (colour channels extruded ` +
+              "under transparent texels), never the neighbour's colour and never empty. Spot-check ≥8 cells including " +
+              'the grid corners, and re-check at the deepest mip where the ring is 1 texel wide',
             'all 224 allocated icon slots present (DT_IconSets row count = 224)',
             'contrast verified in editor: every icon edge ≥4.5:1 against HUD canvas luma 0.06',
             '32 px legibility bake review — 2 px outline preserved on all members',
@@ -307,8 +398,8 @@ registerCatalogPipeline({
               ],
               verification:
                 `L2: T_${s}_Atlas present in Content/UI/Icons/Sets/; ` +
-                `MI_HUDIconSheet_${s} compiled with correct texture slot; ` +
-                `DT_IconSets seeded via seed_icon_sets.py (row count ≥224); ` +
+                `MI_HUDIconSheet_${s} compiled with correct texture slot and sampling the ${ARTWORK_PX} px artwork rect ` +
+                `(not the full ${CELL_PX} px cell); DT_IconSets seeded via seed_icon_sets.py (row count ≥224); ` +
                 'L3: VSIconSetAtlasTest in PIE — all widget slots resolve valid UVs with no ' +
                 'missing-row logs; contrast + 32 px legibility confirmed',
             },

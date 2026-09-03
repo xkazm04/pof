@@ -65,7 +65,13 @@ function plainFor(key: NBAFactorKey, rec: NBARecommendation): string {
   const b = rec.breakdown;
   switch (key) {
     case 'urgency':
-      return 'Clears a path for blocked or critical work';
+      // A declared milestone deadline can raise urgency for startable work.
+      // When it did, the sentence has to say so — the points are otherwise
+      // indistinguishable from dependency fan-out, and the two are argued
+      // very differently.
+      return rec.deadline && rec.deadline.points > 0
+        ? `Clears a path for blocked or critical work · ${rec.deadline.note}`
+        : 'Clears a path for blocked or critical work';
     case 'successProb':
       // The engine's own evidence sentence, verbatim — it names the sample size
       // ("2 of 3 past runs succeeded"). A bare percentage hid whether the number

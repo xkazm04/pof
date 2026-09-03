@@ -1498,7 +1498,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "fieldsPopulated on texture/packing/slots; describes a 4096×4096 atlas that is never actually packed or rendered by this step."
+      "note": "fieldsPopulated on texture/packing/gutter/slots — presence only; describes a 4096×4096 atlas that is never actually packed or rendered by this step. The declared 4 px extruded bleed gutter and mip count = 3 are pinned for ARITHMETIC self-consistency by a unit test, not measured on any image: no checker here reads a delivered atlas byte or dimension."
     },
     {
       "catalogId": "icon-sets",

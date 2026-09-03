@@ -3,12 +3,13 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Loader2, ShieldCheck, BellOff, EyeOff, Clock, RotateCcw, Check, X,
+  Loader2, ShieldCheck, BellOff, EyeOff, Clock, SearchX, RotateCcw, Check, X,
 } from 'lucide-react';
 import { STATUS_BLOCKER, STATUS_INFO, OPACITY_12, OPACITY_20 } from '@/lib/chart-colors';
-import type { PlaytestFinding, TriageStatus } from '@/types/game-director';
+import type { PlaytestFinding, TriageStatus, ReproRecord } from '@/types/game-director';
 import {
-  SEVERITY_TOKENS, CATEGORY_LABELS, TRIAGE_TOKENS, severitySurface,
+  SEVERITY_TOKENS, CATEGORY_LABELS, TRIAGE_TOKENS, severitySurface, isTriageDismissed,
+  resolveConfidence, confidenceLabel, confidenceTitle,
 } from '@/lib/game-director-styles';
 
 export function FindingCard({
@@ -27,22 +28,37 @@ export function FindingCard({
     triageStatus: TriageStatus,
     note?: string,
     snoozedUntil?: string | null,
+    /** Required for `unreproducible`; null for every other state. */
+    repro?: ReproRecord | null,
   ) => Promise<boolean>;
   onFixDispatched: (finding: PlaytestFinding) => void;
 }) {
   const [showNote, setShowNote] = useState(false);
   const [draftNote, setDraftNote] = useState(finding.triageNote);
   const [pendingStatus, setPendingStatus] = useState<TriageStatus | null>(null);
+  // The attempt count behind an "unreproducible" verdict. Starts EMPTY and never
+  // at a default — the number has to be typed by whoever ran the attempts.
+  const [draftAttempts, setDraftAttempts] = useState('');
+  const [draftBuildId, setDraftBuildId] = useState('');
 
   const token = SEVERITY_TOKENS[finding.severity];
   const Icon = token.icon;
   const catLabel = CATEGORY_LABELS[finding.category] ?? finding.category;
   const triageToken = TRIAGE_TOKENS[finding.triageStatus];
   const TriageIcon = triageToken.icon;
-  const dimmed = finding.triageStatus === 'false-positive' || finding.triageStatus === 'ignore';
+  // Only dismissals are dimmed. An unreproducible finding is still open: it was
+  // attempted and not found, which is weak evidence against it, not a closure.
+  const dimmed = isTriageDismissed(finding.triageStatus);
+  const confidence = resolveConfidence(finding);
+  const attempts = Number.parseInt(draftAttempts, 10);
+  const attemptsValid = Number.isInteger(attempts) && attempts >= 1;
+  const needsAttempts = pendingStatus === 'unreproducible';
 
   const submit = async () => {
     if (!pendingStatus) return;
+    // "Could not reproduce" may only be recorded once it can say how many times
+    // it tried — a verdict without its denominator states nothing at all.
+    if (needsAttempts && !attemptsValid) return;
     let snoozedUntil: string | null | undefined;
     if (pendingStatus === 'snooze') {
       // Snooze for 7 days by default. The note field can be used to track intent.
@@ -50,12 +66,17 @@ export function FindingCard({
     } else {
       snoozedUntil = null;
     }
-    const saved = await onApply(finding, pendingStatus, draftNote, snoozedUntil);
+    const repro: ReproRecord | null = needsAttempts
+      ? { attempts, buildId: draftBuildId.trim() || null }
+      : null;
+    const saved = await onApply(finding, pendingStatus, draftNote, snoozedUntil, repro);
     // Keep the editor (and the typed note) in place if the save failed — the
     // explorer's error banner offers the retry.
     if (!saved) return;
     setShowNote(false);
     setPendingStatus(null);
+    setDraftAttempts('');
+    setDraftBuildId('');
   };
 
   const requestTriage = (status: TriageStatus) => {
@@ -67,11 +88,16 @@ export function FindingCard({
       return;
     }
     if (status === 'active') {
-      void onApply(finding, status, '', null);
+      // Reopening clears any attempt series: the finding is unattempted again.
+      void onApply(finding, status, '', null, null);
       return;
     }
     setPendingStatus(status);
     setDraftNote(finding.triageNote);
+    setDraftAttempts(
+      status === 'unreproducible' && finding.reproAttempts ? String(finding.reproAttempts) : '',
+    );
+    setDraftBuildId(status === 'unreproducible' ? (finding.reproBuildId ?? '') : '');
     setShowNote(true);
   };
 
@@ -98,7 +124,17 @@ export function FindingCard({
                 style={{ color: triageToken.color, backgroundColor: `${triageToken.color}${OPACITY_12}`, border: `1px solid ${triageToken.color}${OPACITY_20}` }}
               >
                 <TriageIcon className="w-2.5 h-2.5" aria-hidden="true" />
-                {triageToken.label}
+                {/* The attempt count rides WITH the state, never separately — it
+                    is what turns "could not reproduce" from a dismissal into a
+                    bounded statement about the defect's frequency. */}
+                {finding.triageStatus === 'unreproducible' && finding.reproAttempts
+                  ? `${triageToken.label} after ${finding.reproAttempts} attempt${finding.reproAttempts === 1 ? '' : 's'}`
+                  : triageToken.label}
+              </span>
+            )}
+            {finding.triageStatus === 'unreproducible' && finding.reproBuildId && (
+              <span className="text-2xs px-1.5 py-0.5 rounded bg-border text-text-muted font-mono">
+                on {finding.reproBuildId}
               </span>
             )}
           </div>
@@ -114,7 +150,9 @@ export function FindingCard({
             </p>
           )}
         </div>
-        <span className="text-2xs text-text-muted flex-shrink-0">{finding.confidence}%</span>
+        <span className="text-2xs text-text-muted flex-shrink-0" title={confidenceTitle(confidence)}>
+          {confidenceLabel(confidence)}
+        </span>
       </div>
 
       {showNote ? (
@@ -126,15 +164,54 @@ export function FindingCard({
             <textarea
               value={draftNote}
               onChange={(e) => setDraftNote(e.target.value)}
-              placeholder="Why is this triaged? (optional)"
+              placeholder={needsAttempts
+                ? 'Which conditions were varied while trying? (difficulties, input devices, buffs…)'
+                : 'Why is this triaged? (optional)'}
               rows={2}
               className="focus-ring-inset w-full bg-background border border-border rounded-md px-2 py-1.5 text-xs text-text outline-none focus:border-border-bright resize-none"
             />
           </label>
+          {needsAttempts && (
+            <div className="flex flex-col gap-1 flex-shrink-0">
+              <label className="block">
+                <span className="block text-2xs font-semibold uppercase tracking-wider text-text-muted mb-1">
+                  Attempts
+                </span>
+                <input
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={draftAttempts}
+                  onChange={(e) => setDraftAttempts(e.target.value)}
+                  aria-label="Reproduction attempts"
+                  aria-describedby={`repro-hint-${finding.id}`}
+                  placeholder="0"
+                  className="focus-ring-inset w-20 bg-background border border-border rounded-md px-2 py-1.5 text-xs text-text outline-none focus:border-border-bright"
+                />
+              </label>
+              <label className="block">
+                <span className="block text-2xs font-semibold uppercase tracking-wider text-text-muted mb-1">
+                  Build
+                </span>
+                <input
+                  type="text"
+                  value={draftBuildId}
+                  onChange={(e) => setDraftBuildId(e.target.value)}
+                  aria-label="Build attempted on"
+                  placeholder="optional"
+                  className="focus-ring-inset w-32 bg-background border border-border rounded-md px-2 py-1.5 text-xs text-text outline-none focus:border-border-bright"
+                />
+              </label>
+              <span id={`repro-hint-${finding.id}`} className="text-2xs text-text-muted max-w-[13rem]">
+                At least one attempt. Zero attempts is “not attempted”, which is a
+                different state — leave the finding active instead.
+              </span>
+            </div>
+          )}
           <div className="flex flex-col gap-1">
             <button
               onClick={() => { void submit(); }}
-              disabled={busy}
+              disabled={busy || (needsAttempts && !attemptsValid)}
               aria-label="Save triage"
               className="focus-ring flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors disabled:opacity-40"
               style={{ backgroundColor: `${STATUS_BLOCKER}${OPACITY_12}`, color: STATUS_BLOCKER, border: `1px solid ${STATUS_BLOCKER}${OPACITY_20}` }}
@@ -143,7 +220,12 @@ export function FindingCard({
               Save
             </button>
             <button
-              onClick={() => { setShowNote(false); setPendingStatus(null); }}
+              onClick={() => {
+                setShowNote(false);
+                setPendingStatus(null);
+                setDraftAttempts('');
+                setDraftBuildId('');
+              }}
               disabled={busy}
               aria-label="Cancel triage"
               className="focus-ring flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-text-muted hover:bg-surface transition-colors disabled:opacity-40"
@@ -170,6 +252,16 @@ export function FindingCard({
             color={STATUS_INFO}
             disabled={busy}
             onClick={() => requestTriage('false-positive')}
+          />
+          {/* Its own action, deliberately NOT folded into "False positive": a
+              finding nobody could reproduce has not been shown to be wrong. */}
+          <TriageButton
+            label="Could not reproduce"
+            icon={SearchX}
+            active={finding.triageStatus === 'unreproducible'}
+            color={TRIAGE_TOKENS.unreproducible.color}
+            disabled={busy}
+            onClick={() => requestTriage('unreproducible')}
           />
           <TriageButton
             label="Ignore"
