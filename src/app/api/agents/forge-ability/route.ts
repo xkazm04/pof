@@ -21,10 +21,21 @@ import type { ForgedAbility } from '@/lib/prompts/ability-forge';
 /* ── Model config ─────────────────────────────────────────────────────── */
 
 /**
- * gemini-2.0-flash was decommissioned (404 NOT_FOUND) — 2.5-flash is the
- * current flash model, same as the visual-verify and anim-critique seams.
+ * gemini-2.0-flash was decommissioned (404 NOT_FOUND). 2.5-flash replaced it and
+ * 2026-09-02 moves this seam again, to gemini-3.8-flash.
+ *
+ * This seam and the two visual ones have DIVERGED, so the "same as" above no longer
+ * holds and the comment must not be copied back. verify/visual and anim-critique post
+ * images; on 2026-09-02 the provider listed gemini-3.8-flash as stable while the spec
+ * table carrying input modalities was still unpublished, so its image support was
+ * undocumented and those two seams deliberately stay on 2.5-flash. This one is
+ * text-in/JSON-out, so nothing about it is waiting on that.
+ *
+ * Cost note: 3.8 is the same per-token price as 3.7 but the vendor states it spends
+ * more reasoning and tool tokens per call, so a forge turn can get dearer even though
+ * the rate did not move. GEMINI_FORGE_MODEL still overrides if that matters here.
  */
-const DEFAULT_MODEL = 'gemini-2.5-flash';
+const DEFAULT_MODEL = 'gemini-3.8-flash';
 
 function forgeModel(): string {
   return process.env.GEMINI_FORGE_MODEL || DEFAULT_MODEL;

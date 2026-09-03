@@ -63,7 +63,7 @@ describe('POST /api/agents/forge-ability', () => {
     expect(json.data.className).toBe('GA_FrostNova');
 
     const call = mockGenerate.mock.calls[0][0];
-    expect(call.model).toBe('gemini-2.5-flash');
+    expect(call.model).toBe('gemini-3.8-flash');
     expect(call.model).not.toBe('gemini-2.0-flash');
     expect(call.config.maxOutputTokens).toBeGreaterThan(4096);
   });
