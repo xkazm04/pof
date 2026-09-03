@@ -5,7 +5,7 @@ raised_by: intake intake-hermes-0902
 source: librarian/sources/2026-09-02-hermes-agent.md (design record entries C1, C3, F1)
 stage: the MCP server the app ships (tools/pof-mcp) and the harness-mode gate the e2e lane keys on (e2e/helpers/ci-harness.ts resolveHarnessMode)
 size: 3 files / ~120 lines / M
-status: proposed
+status: accepted
 ---
 
 ## Why the scope implies it
