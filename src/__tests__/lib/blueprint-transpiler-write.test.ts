@@ -45,6 +45,7 @@ describe('planWrite (dry-run)', () => {
 
 describe('applyWrite', () => {
   it('writes header + source and returns their paths', async () => {
+    await makeUeProject(root);
     const res = await applyWrite(base());
     expect(res.written).toHaveLength(2);
     const h = await fs.readFile(path.join(root, 'Source', 'PoF', 'AARPGFireball.h'), 'utf8');
@@ -52,6 +53,7 @@ describe('applyWrite', () => {
   });
 
   it('a later planWrite against changed content shows a real before/after diff', async () => {
+    await makeUeProject(root);
     await applyWrite(base());
     const plan = await planWrite(base({ header: '#pragma once\nclass AARPGFireball { int hp; };\n' }));
     const header = plan.files.find((f) => f.relPath.endsWith('.h'))!;
@@ -61,6 +63,7 @@ describe('applyWrite', () => {
   });
 
   it('rejects a confirm whose approved plan was diffed for a different module', async () => {
+    await makeUeProject(root);
     // Dry-run approved for module PoF…
     const plan = await planWrite(base());
     const approved = plan.files.map((f) => ({ relPath: f.relPath, before: f.before }));
@@ -71,6 +74,7 @@ describe('applyWrite', () => {
   });
 
   it('rejects a confirm when the file changed on disk since the dry-run', async () => {
+    await makeUeProject(root);
     await applyWrite(base()); // existing content on disk
     const plan = await planWrite(base({ header: '#pragma once\nclass AARPGFireball { int hp; };\n' }));
     const approved = plan.files.map((f) => ({ relPath: f.relPath, before: f.before }));
@@ -82,9 +86,71 @@ describe('applyWrite', () => {
   });
 
   it('accepts a confirm whose approved plan still matches', async () => {
+    await makeUeProject(root);
     const plan = await planWrite(base());
     const approved = plan.files.map((f) => ({ relPath: f.relPath, before: f.before }));
     const res = await applyWrite(base(), approved);
     expect(res.written).toHaveLength(2);
+  });
+});
+
+// ── Reality checks: is this even a UE project, and is the module built? ─────
+//
+// Standard: visual-script-to-code-transpilation / the fidelity ladder. A write
+// reaches only the "written" rung. `mkdir -p Source/<Module>` will happily
+// manufacture a source tree inside a directory that is not a UE project, and a
+// module with no `<Module>.Build.cs` is not part of the build at all — neither
+// can be reported as a green receipt.
+
+async function makeUeProject(dir: string, moduleName = 'PoF') {
+  await fs.writeFile(path.join(dir, 'MyGame.uproject'), '{"FileVersion":3}', 'utf8');
+  const modDir = path.join(dir, 'Source', moduleName);
+  await fs.mkdir(modDir, { recursive: true });
+  await fs.writeFile(path.join(modDir, `${moduleName}.Build.cs`), '// build rules', 'utf8');
+}
+
+describe('planWrite — project reality', () => {
+  it('reports the .uproject and the module Build.cs when both are present', async () => {
+    await makeUeProject(root);
+    const plan = await planWrite(base());
+    expect(plan.project.isUeProject).toBe(true);
+    expect(plan.project.uprojectFile).toBe('MyGame.uproject');
+    expect(plan.project.moduleInBuild).toBe(true);
+    expect(plan.project.buildCsRelPath).toBe('Source/PoF/PoF.Build.cs');
+  });
+
+  it('reports a module with no Build.cs as not part of the build', async () => {
+    await makeUeProject(root);
+    const plan = await planWrite(base({ moduleName: 'Ghost' }));
+    expect(plan.project.isUeProject).toBe(true);
+    expect(plan.project.moduleInBuild).toBe(false);
+    expect(plan.project.buildCsRelPath).toBe('Source/Ghost/Ghost.Build.cs');
+  });
+
+  it('reports a directory with no .uproject as not a UE project', async () => {
+    const plan = await planWrite(base());
+    expect(plan.project.isUeProject).toBe(false);
+    expect(plan.project.uprojectFile).toBe(null);
+  });
+});
+
+describe('applyWrite — refuses a non-UE-project target', () => {
+  it('throws instead of manufacturing Source/ under a directory with no .uproject', async () => {
+    await expect(applyWrite(base())).rejects.toThrow(/\.uproject/i);
+    await expect(fs.access(path.join(root, 'Source'))).rejects.toBeTruthy();
+  });
+
+  it('writes into a real project and reports whether the module is in the build', async () => {
+    await makeUeProject(root);
+    const res = await applyWrite(base());
+    expect(res.written).toHaveLength(2);
+    expect(res.moduleInBuild).toBe(true);
+  });
+
+  it('writes into a build-less module but says so in the receipt', async () => {
+    await makeUeProject(root);
+    const res = await applyWrite(base({ moduleName: 'Ghost' }));
+    expect(res.written).toHaveLength(2);
+    expect(res.moduleInBuild).toBe(false);
   });
 });

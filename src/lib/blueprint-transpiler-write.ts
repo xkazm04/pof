@@ -23,8 +23,28 @@ export interface FileWritePlan {
   diff: PromptDiff;
 }
 
+/**
+ * What the target directory actually IS, established before anything is
+ * written. `fs.mkdir(..., { recursive: true })` will happily manufacture
+ * `Source/<Module>/` inside a directory that is not a UE project at all, and a
+ * module with no `<Module>.Build.cs` is not part of the build — the compiler
+ * will never see the files. Both are reported so the receipt can never read as
+ * a green "wrote 2 files".
+ */
+export interface ProjectReality {
+  /** True when a `*.uproject` sits at the root of `projectPath`. */
+  isUeProject: boolean;
+  /** The `.uproject` file name, or null when there is none. */
+  uprojectFile: string | null;
+  /** True when `Source/<Module>/<Module>.Build.cs` exists. */
+  moduleInBuild: boolean;
+  /** Where that Build.cs was looked for (project-relative, forward slashes). */
+  buildCsRelPath: string;
+}
+
 export interface WritePlan {
   files: FileWritePlan[];
+  project: ProjectReality;
 }
 
 function assertIdent(name: string, label: string): void {
@@ -56,11 +76,35 @@ async function readIfExists(p: string): Promise<string | null> {
   try { return await fs.readFile(p, 'utf8'); } catch { return null; }
 }
 
+async function fileExists(p: string): Promise<boolean> {
+  try { await fs.stat(p); return true; } catch { return false; }
+}
+
+/**
+ * Inspect the target before touching it: is there a `*.uproject` at the root,
+ * and does the module have the `<Module>.Build.cs` that puts it in the build?
+ * Mirrors the locator `/api/filesystem/scan-project` already uses.
+ */
+export async function inspectProject(input: WriteInput): Promise<ProjectReality> {
+  assertIdent(input.moduleName, 'module name');
+  const buildCsRelPath = `Source/${input.moduleName}/${input.moduleName}.Build.cs`;
+  let uprojectFile: string | null = null;
+  try {
+    const entries = await fs.readdir(input.projectPath, { withFileTypes: true });
+    uprojectFile = entries.find((e) => e.isFile() && e.name.endsWith('.uproject'))?.name ?? null;
+  } catch { /* unreadable directory — not a UE project as far as we can tell */ }
+  const moduleInBuild = await fileExists(path.join(input.projectPath, ...buildCsRelPath.split('/')));
+  return { isUeProject: uprojectFile !== null, uprojectFile, moduleInBuild, buildCsRelPath };
+}
+
 /** Dry-run: diff the generated content against whatever is on disk. No writes. */
 export async function planWrite(input: WriteInput): Promise<WritePlan> {
   const { headerPath, sourcePath, relHeader, relSource } = resolveTargetPaths(input);
-  const [hOld, cOld] = await Promise.all([readIfExists(headerPath), readIfExists(sourcePath)]);
+  const [hOld, cOld, project] = await Promise.all([
+    readIfExists(headerPath), readIfExists(sourcePath), inspectProject(input),
+  ]);
   return {
+    project,
     files: [
       { path: headerPath, relPath: relHeader, exists: hOld !== null, before: hOld ?? '', after: input.header, diff: diffPrompts(hOld ?? '', input.header) },
       { path: sourcePath, relPath: relSource, exists: cOld !== null, before: cOld ?? '', after: input.source, diff: diffPrompts(cOld ?? '', input.source) },
@@ -88,7 +132,7 @@ export interface ApprovedFile {
 export async function applyWrite(
   input: WriteInput,
   approved?: ApprovedFile[],
-): Promise<{ written: string[] }> {
+): Promise<{ written: string[]; moduleInBuild: boolean; uprojectFile: string }> {
   const { sourceDir, headerPath, sourcePath, relHeader, relSource } = resolveTargetPaths(input);
 
   if (approved) {
@@ -112,8 +156,24 @@ export async function applyWrite(
     }
   }
 
+  // Reality check BEFORE the recursive mkdir: without a `.uproject` this is not
+  // a UE project and `Source/<Module>/` would be conjured out of nothing.
+  const project = await inspectProject(input);
+  if (!project.isUeProject) {
+    throw new Error(
+      `"${input.projectPath}" contains no .uproject file, so it is not a UE project — refusing to create Source/${input.moduleName}/ inside it.`,
+    );
+  }
+
   await fs.mkdir(sourceDir, { recursive: true });
   await fs.writeFile(headerPath, input.header, 'utf8');
   await fs.writeFile(sourcePath, input.source, 'utf8');
-  return { written: [headerPath, sourcePath] };
+  // The receipt carries the rung it was earned at: the files are WRITTEN. Only
+  // a compile can raise that, and `moduleInBuild === false` means no compiler
+  // will ever look at them.
+  return {
+    written: [headerPath, sourcePath],
+    moduleInBuild: project.moduleInBuild,
+    uprojectFile: project.uprojectFile as string,
+  };
 }

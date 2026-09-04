@@ -65,6 +65,14 @@ const MOD: EliteModifier = {
 };
 
 const WRITE_PLAN = {
+  // planWrite now reports what the target directory actually is; a real UE
+  // project with the module in the build is the case these dialog tests cover.
+  project: {
+    isUeProject: true,
+    uprojectFile: 'MyGame.uproject',
+    moduleInBuild: true,
+    buildCsRelPath: 'Source/PoF/PoF.Build.cs',
+  },
   files: [
     {
       path: 'C:/proj/Source/PoF/Foo.h',
@@ -336,7 +344,7 @@ describe('dialog shell convergence — the five hand-rolled dialogs use ui/Modal
       renderButton();
       await openDryRun();
 
-      apiFetchMock.mockResolvedValueOnce({ written: ['Source/PoF/Foo.h'] });
+      apiFetchMock.mockResolvedValueOnce({ written: ['Source/PoF/Foo.h'], moduleInBuild: true, uprojectFile: 'MyGame.uproject' });
       fireEvent.click(screen.getByRole('button', { name: /confirm write/i }));
 
       await waitFor(() => expect(apiFetchMock).toHaveBeenCalledTimes(2));
