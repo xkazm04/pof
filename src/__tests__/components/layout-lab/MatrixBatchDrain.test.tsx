@@ -138,7 +138,9 @@ describe('MatrixBatchDrain — cancel tells the truth', () => {
   it('states in the OPEN (not only in a hover title) what cancel can and cannot stop', () => {
     renderDrain(runningState(false));
     const scope = screen.getByTestId('batch-drain-cancel-scope').textContent ?? '';
-    expect(scope).toContain("can't interrupt the running editor boot");
+    // The drain is bridge-only: it never boots an editor, so the copy names what it CAN'T
+    // do in the terms of the mechanism that actually runs (the request already in the editor).
+    expect(scope).toContain("can't recall the request already running in the editor");
     expect(scope).toContain('skips the automatic retry');
   });
 
@@ -150,8 +152,8 @@ describe('MatrixBatchDrain — cancel tells the truth', () => {
     expect(btn.disabled).toBe(true);
     const scope = screen.getByTestId('batch-drain-cancel-scope').textContent ?? '';
     expect(scope).toContain('Cancel requested');
-    // …but it must NOT imply the boot was aborted — the run is still in flight.
-    expect(scope).toContain('cannot be interrupted');
+    // …but it must NOT imply the run was aborted — it is still in flight.
+    expect(scope).toContain('cannot be recalled');
     expect(screen.getByTestId('batch-drain-progress').textContent).toContain('Draining');
     // No outcome claim while running.
     expect(screen.queryByTestId('batch-drain-cancel-outcome')).toBeNull();

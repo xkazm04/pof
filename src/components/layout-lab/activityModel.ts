@@ -115,7 +115,9 @@ export interface ActivityInput {
 
 const DRAIN_BLIND_SPOT =
   'Reads the server lease, so it sees other sessions too — but only once a drain has TAKEN the lease. ' +
-  'A batch drain’s per-entity progress lives in the matrix and does not survive a reload; the lease does.';
+  'A batch drain’s per-entity progress lives in the matrix and does not survive a reload; the lease does. ' +
+  'Executor mode: the lab drains through the UE BRIDGE (an already-running editor) and never spawns one, ' +
+  'so a free lease means the runner is available — never that an editor is.';
 
 const ONE_SHOT_BLIND_SPOT =
   'Client-side, THIS browser only: a one-shot running in another session or another tab is invisible here, ' +
@@ -128,7 +130,10 @@ const FORGE_BLIND_SPOT =
 export function drainLane(d: DrainInput): ActivityLane {
   const base = { id: 'drain' as const, title: 'UE drain', short: 'drain', blindSpot: DRAIN_BLIND_SPOT };
   if (d.localDrain) {
-    return { ...base, state: 'running-here', label: `draining ${d.localDrain} (one editor boot)` };
+    // Not "one editor boot": the lab's drain is bridge-only and boots nothing. The label now
+    // names the mechanism it actually uses, so the chip cannot promise a capability the
+    // button does not have.
+    return { ...base, state: 'running-here', label: `draining ${d.localDrain} (via the UE bridge)` };
   }
   if (d.leaseProbe === 'unpolled') {
     return { ...base, state: 'unknown', label: 'lease not checked yet — a drain started now could be refused' };
