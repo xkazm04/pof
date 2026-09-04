@@ -22,6 +22,7 @@ import { EffectTimelineEditor } from './EffectTimelineEditor';
 import { TagRulesEditor } from './TagRulesEditor';
 import { LoadoutEditor } from './LoadoutEditor';
 import { CodePreview } from './CodePreview';
+import { GeneratedFilesPanel } from './GeneratedFilesPanel';
 import { TemplatePicker } from './TemplatePicker';
 import { SimulationSandbox } from './SimulationSandbox';
 import { SpecEntityBar } from './SpecEntityBar';
@@ -77,8 +78,11 @@ export function GASBlueprintEditor({ moduleId = 'arpg-gas' }: { moduleId?: SubMo
   const generatedCode = useMemo(() => ({
     attrs: generateAttributeSetHeader(attributes),
     tags: generateTagsHeader(tagRules, loadout),
-    effects: generateEffectsCode(effects),
-  }), [attributes, tagRules, loadout, effects]);
+    // The bound ability's name is part of the generated class identity
+    // (UGE_Gen_<AbilityName>_<EffectName>) — without it the preview cannot name
+    // a class the generator would actually write.
+    effects: generateEffectsCode(effects, specBinding.ability?.name),
+  }), [attributes, tagRules, loadout, effects, specBinding.ability]);
 
   const snapshotCode = useCallback(() => { setPrevCode({ ...generatedCode }); }, [generatedCode]);
 
@@ -178,7 +182,7 @@ export function GASBlueprintEditor({ moduleId = 'arpg-gas' }: { moduleId?: SubMo
             {activePanel === 'tags' && (<><SectionHeader icon={Tag} label="Tag Dependency Rules" color={STATUS_WARNING} /><p className="text-2xs text-text-muted mt-1 mb-2">Define blocking, cancellation, and requirement rules between gameplay tags. Supports wildcard patterns (e.g. Ability.*).</p><TagRulesEditor rules={tagRules} onChange={setTagRules} effects={effects} loadout={loadout} /></>)}
             {activePanel === 'loadout' && (<><SectionHeader icon={Shield} label="Loadout Hotbar" color={ACCENT_VIOLET} /><p className="text-2xs text-text-muted mt-1 mb-2">Configure ability loadout slots with names and cooldown tags. Add/remove slots to match your hotbar design.</p><LoadoutEditor loadout={loadout} onChange={setLoadout} /></>)}
             {activePanel === 'simulate' && (<><SectionHeader icon={FlaskConical} label="Live Simulation Sandbox" color={STATUS_SUCCESS} /><p className="text-2xs text-text-muted mt-1 mb-2">Queue effects at specific times and watch attribute values change in real-time.</p><SimulationSandbox attributes={attributes} effects={effects} relationships={relationships} accent={ACCENT} /></>)}
-            {activePanel === 'codegen' && (<><SectionHeader icon={Code} label="Generated C++ Code" color={ACCENT_CYAN} /><p className="text-2xs text-text-muted mt-1 mb-2">Auto-generated C++ from your visual design. Toggle diff mode to see what changed since last visit.</p>
+            {activePanel === 'codegen' && (<><SectionHeader icon={Code} label="Generated C++ Code" color={ACCENT_CYAN} /><p className="text-2xs text-text-muted mt-1 mb-2">Preview of the C++ the generator would write from your visual design — rendered here, not read from disk. Toggle diff mode to see what changed since last visit. What actually exists in the UE project is listed below.</p>
               <div className="flex gap-1 mb-2">
                 {([{ id: 'attrs' as const, label: 'AttributeSet.h', count: stats.attrs }, { id: 'tags' as const, label: 'GameplayTags.h', count: stats.rules }, { id: 'effects' as const, label: 'Effects.cpp', count: stats.effects }]).map((tab) => (
                   <button key={tab.id} onClick={() => setCodeTab(tab.id)} className="flex items-center gap-1.5 px-2.5 py-1 rounded text-2xs font-mono transition-all"
@@ -188,6 +192,7 @@ export function GASBlueprintEditor({ moduleId = 'arpg-gas' }: { moduleId?: SubMo
                 ))}
               </div>
               <CodePreview code={generatedCode[codeTab]} prevCode={prevCode[codeTab]} />
+              <GeneratedFilesPanel report={specBinding.codegen.report} />
             </>)}
           </BlueprintPanel>
         </motion.div>
