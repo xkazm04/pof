@@ -9,8 +9,21 @@ out = sys.argv[1]
 ins = sys.argv[2:]
 
 parts = [dict(np.load(p, allow_pickle=False)) for p in ins]
-fps = float(parts[0]["fps"])
 keys = ["local_rot_mats", "global_rot_mats", "posed_joints", "root_positions", "smooth_root_pos", "foot_contacts", "global_root_heading"]
+
+# Archive contract (task 2026-09-02-motion-archive-contract, step 1): every part must agree on the
+# frame rate and the joint count before anything is concatenated. A mixed-fps montage used to be
+# accepted silently, with the first clip's fps stamped over all of them.
+fps = float(parts[0]["fps"])
+joints = int(parts[0]["posed_joints"].shape[1])
+for p, d in zip(ins, parts):
+    if float(d["fps"]) != fps:
+        sys.exit(f"refusing to concatenate {p}: fps {float(d['fps'])} != {fps} (first clip)")
+    if int(d["posed_joints"].shape[1]) != joints:
+        sys.exit(f"refusing to concatenate {p}: {int(d['posed_joints'].shape[1])} joints != {joints} (first clip)")
+    missing = [k for k in keys if k not in d]
+    if missing:
+        sys.exit(f"refusing to concatenate {p}: missing members {missing}")
 
 merged = {k: [] for k in keys}
 offset = np.zeros(3, dtype=np.float32)
@@ -32,6 +45,11 @@ for d in parts:
 arrays = {k: np.concatenate(v, axis=0) for k, v in merged.items()}
 arrays["fps"] = np.asarray(int(fps))
 arrays["text"] = np.asarray(" + ".join(str(d["text"]) for d in parts))
+# Provenance members: which clips were joined, what was done to them, and the skeleton they share.
+# Readers that know these members can verify them; readers that do not are unaffected (extra members).
+arrays["skeleton"] = np.asarray(f"core-{joints}")
+arrays["sources"] = np.asarray([str(p) for p in ins])
+arrays["applied_ops"] = np.asarray(["concat:reanchor-root-xz"])
 np.savez(out, **arrays)
 total = arrays["local_rot_mats"].shape[0] / fps
 print(f"wrote {out}: {arrays['local_rot_mats'].shape[0]} frames, {total:.2f}s")
