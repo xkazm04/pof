@@ -24,5 +24,14 @@ export {
   type CritiqueDeps,
   type VisionImage,
 } from './critique';
-export { makeGeminiVision, type GeminiVisionOptions } from './gemini';
-export { makeQwenVision, type QwenVisionOptions } from './qwen';
+export { makeGeminiVision, makeGeminiVisionAttributed, type GeminiVisionOptions } from './gemini';
+export { makeQwenVision, makeQwenVisionAttributed, type QwenVisionOptions } from './qwen';
+export {
+  UNREPORTED_MODEL,
+  unattributedAnswer,
+  normalizeVisionAnswer,
+  usedFallback,
+  describeVisionAnswer,
+  type VisionAnswer,
+  type VisionAttribution,
+} from './vision';

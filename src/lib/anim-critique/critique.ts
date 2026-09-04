@@ -7,6 +7,7 @@
 import { readFileSync } from 'node:fs';
 import { buildCritiquePrompt, type AnimationContext } from './prompt';
 import { parseCritique } from './parse';
+import { normalizeVisionAnswer, type VisionAnswer } from './vision';
 import { scoreCard, type CritiqueDimensions, type ScoreThresholds, type Scorecard } from './score';
 
 export interface VisionImage {
@@ -31,11 +32,17 @@ export interface CritiqueResult {
   error?: string;
   /** Raw model text, for debugging / surfacing the frame the verdict came from. */
   raw?: string;
+  /**
+   * WHO wrote this score: the model that actually answered plus the models it fell back
+   * from. A chain-walking seam re-routes on any quota signal, so the provider family is
+   * not an attribution. `unreported` where the injected seam cannot know.
+   */
+  vision?: VisionAnswer;
 }
 
 export interface CritiqueDeps {
   /** The model seam: judge the filmstrip against the prompt, return its raw text. */
-  callVision?: (images: VisionImage[], prompt: string) => Promise<string>;
+  callVision?: (images: VisionImage[], prompt: string) => Promise<string | VisionAnswer>;
   /** Read a frame file to bytes (default node fs). */
   readFile?: (path: string) => Buffer | Promise<Buffer>;
   thresholds?: Partial<ScoreThresholds>;
@@ -67,21 +74,23 @@ export async function critiqueAnimation(
   // The prompt reflects the ACTUAL frame count, not whatever ctx claimed.
   const prompt = buildCritiquePrompt({ ...ctx, frameCount: framePaths.length });
 
-  let raw: string;
+  let answer: VisionAnswer;
   try {
-    raw = await callVision(images, prompt);
+    answer = normalizeVisionAnswer(await callVision(images, prompt));
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'vision model call failed' };
   }
+  const raw = answer.text;
 
   const parsed = parseCritique(raw);
   if (!parsed.ok || !parsed.dimensions) {
-    return { ok: false, error: parsed.error ?? 'could not parse critique', raw };
+    return { ok: false, error: parsed.error ?? 'could not parse critique', raw, vision: answer };
   }
   const scored = scoreCard(parsed.dimensions, deps.thresholds);
   return {
     ok: true,
     raw,
+    vision: answer,
     card: {
       ...scored,
       dimensions: parsed.dimensions,

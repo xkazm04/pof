@@ -55,6 +55,7 @@
  * never enter this chain despite outranking its siblings on text benchmarks.
  */
 import type { VisionImage } from './critique';
+import type { VisionAnswer } from './vision';
 
 export interface QwenVisionOptions {
   apiKey?: string;
@@ -108,7 +109,16 @@ export function parseFallbackModels(raw: string | undefined): string[] | undefin
   return models.length > 0 ? models : undefined;
 }
 
-export function makeQwenVision(opts: QwenVisionOptions = {}) {
+/**
+ * The chain-walking seam, ATTRIBUTED: it returns the answer together with the model that
+ * actually produced it and the models it fell back from. Because the chain silently
+ * re-routes on any quota/throttle signal, "qwen" names a family, not a writer — a score
+ * from the last-resort 0.82 grader used to be indistinguishable from one from the primary.
+ *
+ * `makeQwenVision` below is the same call with the attribution dropped, kept for the four
+ * gates that only want the text.
+ */
+export function makeQwenVisionAttributed(opts: QwenVisionOptions = {}) {
   const apiKey = opts.apiKey ?? process.env.QWEN_API_KEY ?? process.env.DASHSCOPE_API_KEY;
   const primary = opts.model ?? process.env.QWEN_CRITIQUE_MODEL ?? 'qwen3.7-flash';
   // Explicit opt wins, then the env override, then the hardcoded lineage — so a new
@@ -119,7 +129,7 @@ export function makeQwenVision(opts: QwenVisionOptions = {}) {
   const models = [primary, ...fallbacks.filter((m) => m !== primary)];
   const baseUrl = (opts.baseUrl ?? process.env.QWEN_BASE_URL ?? DEFAULT_BASE).replace(/\/+$/, '');
 
-  return async (images: VisionImage[], prompt: string): Promise<string> => {
+  return async (images: VisionImage[], prompt: string): Promise<VisionAnswer> => {
     if (!apiKey) throw new Error('QWEN_API_KEY (or DASHSCOPE_API_KEY) not set');
     // OpenAI vision format: data-URI image_url blocks + one text block.
     const content = [
@@ -131,6 +141,8 @@ export function makeQwenVision(opts: QwenVisionOptions = {}) {
     ];
 
     let lastErr = '';
+    // Every model that failed before the answer, in order — the fallback trail.
+    const fellBackFrom: string[] = [];
     for (const model of models) {
       // A TRANSPORT failure (DNS, socket reset, TLS) must fall through to the next
       // model, not escape the chain. Unwrapped, one flaky model threw straight out
@@ -148,20 +160,32 @@ export function makeQwenVision(opts: QwenVisionOptions = {}) {
         });
       } catch (e) {
         lastErr = `Qwen ${model} transport failure: ${e instanceof Error ? e.message : String(e)}`;
+        fellBackFrom.push(model);
         continue; // next model — a different endpoint/route may well be reachable
       }
       if (res.ok) {
         const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
         const text = json.choices?.[0]?.message?.content;
-        if (text) return text;
+        if (text) return { text, model, attribution: 'answered', fellBackFrom };
         lastErr = `empty response from ${model}`;
+        fellBackFrom.push(model);
         continue; // empty -> try the next model
       }
       const body = await res.text().catch(() => '');
       lastErr = `Qwen ${model} HTTP ${res.status}: ${body.slice(0, 200)}`;
       if (!isQuotaError(res.status, body)) throw new Error(lastErr); // real error -> don't burn the fallbacks
+      fellBackFrom.push(model);
       // quota/throttle -> fall through to the next model (separate quota)
     }
     throw new Error(`all Qwen models exhausted. last: ${lastErr}`);
   };
+}
+
+/**
+ * The same chain, returning only the model text. Kept as the seam the input/footage/style/view
+ * gates already inject; use `makeQwenVisionAttributed` where the score must name its writer.
+ */
+export function makeQwenVision(opts: QwenVisionOptions = {}) {
+  const attributed = makeQwenVisionAttributed(opts);
+  return async (images: VisionImage[], prompt: string): Promise<string> => (await attributed(images, prompt)).text;
 }

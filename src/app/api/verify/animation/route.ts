@@ -11,8 +11,8 @@ import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { critiqueAnimation } from '@/lib/anim-critique/critique';
-import { makeGeminiVision } from '@/lib/anim-critique/gemini';
-import { makeQwenVision } from '@/lib/anim-critique/qwen';
+import { makeGeminiVisionAttributed } from '@/lib/anim-critique/gemini';
+import { makeQwenVisionAttributed } from '@/lib/anim-critique/qwen';
 import { resolveFilmstrip } from '@/lib/anim-critique/filmstrip';
 
 export async function POST(request: NextRequest) {
@@ -60,8 +60,8 @@ export async function POST(request: NextRequest) {
   const provider = body.provider === 'qwen' ? 'qwen' : 'gemini';
   const callVision =
     provider === 'qwen'
-      ? makeQwenVision({ ...(model ? { model } : {}) })
-      : makeGeminiVision({ ...(model ? { model } : {}) });
+      ? makeQwenVisionAttributed({ ...(model ? { model } : {}) })
+      : makeGeminiVisionAttributed({ ...(model ? { model } : {}) });
 
   const result = await critiqueAnimation(
     frames,
@@ -72,5 +72,7 @@ export async function POST(request: NextRequest) {
   if (!result.ok || !result.card) {
     return apiError(result.error ?? 'critique failed', 502);
   }
-  return apiSuccess({ ...result.card, frames, provider });
+  // `provider` is what was REQUESTED; `vision` is who actually answered (the Qwen chain
+  // silently re-routes on quota, so the family is not an attribution).
+  return apiSuccess({ ...result.card, frames, provider, vision: result.vision });
 }

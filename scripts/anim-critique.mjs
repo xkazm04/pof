@@ -44,7 +44,15 @@ if (!res.ok || !env?.success) {
 
 const c = env.data;
 const bar = (n) => '#'.repeat(Math.round(n / 10)).padEnd(10, '.');
-console.log(`\n  ${name} — ${c.verdict.toUpperCase()} (${c.score}/100)   [${c.frames.length} frames · ${c.provider ?? 'gemini'}]\n`);
+// Name the WRITER, not the family: the Qwen chain re-routes on quota, so a card can come
+// from a fallback model. `unreported` means the seam could not know — never a guess.
+const v = c.vision;
+const writer = !v
+  ? (c.provider ?? 'gemini')
+  : v.attribution === 'unreported'
+    ? `${c.provider ?? 'gemini'} · model unreported`
+    : `${v.model}${v.fellBackFrom?.length ? ` (fallback from ${v.fellBackFrom.join(', ')})` : ''}`;
+console.log(`\n  ${name} — ${c.verdict.toUpperCase()} (${c.score}/100)   [${c.frames.length} frames · ${writer}]\n`);
 for (const [k, v] of Object.entries(c.dimensions)) {
   console.log(`  ${k.padEnd(14)} ${bar(v)} ${String(v).padStart(3)}`);
 }
