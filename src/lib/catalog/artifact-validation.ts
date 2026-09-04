@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { CLIENT_DECLARABLE_ENGINES } from '@/lib/provenance';
 
 export const artifactUpsertSchema = z.object({
   catalogId: z.string().min(1),
@@ -16,6 +17,16 @@ export const artifactUpsertSchema = z.object({
    * aggregates verdict scores on.
    */
   promptVersion: z.string().min(1).optional(),
+  /**
+   * Who produced this artifact, DECLARED by the client — recorded as
+   * `data._provenance.engine`. Restricted to {@link CLIENT_DECLARABLE_ENGINES}: a client
+   * may only assert about itself (`Code` = a deterministic produce body in this app).
+   * `Claude` / `Leonardo` / `Tripo` / `ElevenLabs` assert that a remote engine RAN and are
+   * refused here — only the server that ran the dispatch may stamp those (see
+   * `POST /api/one-shot/step`). Absent → the route resolves the engine from the payload,
+   * degrading to `unknown` rather than guessing.
+   */
+  engine: z.enum(CLIENT_DECLARABLE_ENGINES).optional(),
 });
 
 export type ArtifactUpsert = z.infer<typeof artifactUpsertSchema>;

@@ -213,13 +213,21 @@ export function listModelPolicy(): PolicyEntry[] {
  * Server-only (touches the DB via getModelPolicy); the produce path / scripts call this,
  * never a client component. `at` is caller-supplied to stay replay-stable.
  */
-export function claudeProvenance(taskClass: TaskClass, opts: { promptVersion?: string; at?: string } = {}): Provenance {
-  const { model, effort } = getModelPolicy(taskClass);
+export function claudeProvenance(
+  source: TaskClass | Partial<ModelChoice>,
+  opts: { promptVersion?: string; at?: string } = {},
+): Provenance {
+  // A caller that has ALREADY resolved the dispatch choice (the produce routes call
+  // `resolveDispatchModelChoice` two lines before spawning) passes it straight in, so the
+  // stamp records the model that actually ran rather than re-reading the policy and
+  // possibly recording a different one. A task class still resolves through the policy.
+  const { model, effort } = typeof source === 'string' ? getModelPolicy(source) : source;
   return {
     engine: 'Claude',
-    model,
-    modelId: MODEL_IDS[model],
-    effort,
+    // An UNPINNED dispatch (no task class mapped) genuinely ran on the CLI's own default:
+    // omitting the fields says so, where naming a model would invent a pin that never was.
+    ...(model ? { model, modelId: MODEL_IDS[model] } : {}),
+    ...(effort ? { effort } : {}),
     ...(opts.promptVersion ? { promptVersion: opts.promptVersion } : {}),
     ...(opts.at ? { at: opts.at } : {}),
   };

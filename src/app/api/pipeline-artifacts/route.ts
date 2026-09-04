@@ -7,6 +7,7 @@ import { artifactUpsertSchema } from '@/lib/catalog/artifact-validation';
 import { gradeArtifact, hasRegisteredChecker } from '@/lib/catalog/headless';
 import { describeUngraded } from '@/lib/catalog/acceptance/stepGradability';
 import { stampPromptVersion } from '@/lib/prompt-evolution/judge-fitness';
+import { readProvenance, resolvePersistedEngine, withProvenance } from '@/lib/provenance';
 
 /** Max issues named in the error string — enough to fix the payload, short enough to render. */
 const MAX_REPORTED_ISSUES = 5;
@@ -48,6 +49,14 @@ export async function GET(req: NextRequest) {
  * never be mistaken for a verified one. This matches the headless MCP path
  * (`submitStepArtifact`), so both write paths grade identically.
  *
+ * Provenance rule (2026-09-04): every persisted row records WHO produced it in
+ * `data._provenance.engine`. A client may DECLARE only an engine it can honestly assert
+ * about itself (`engine: 'Code'`, the allow-list in `@/lib/provenance`); an unverifiable
+ * claim — top-level or smuggled inside `data._provenance` — is refused and the row records
+ * `unknown`, EXCEPT when the server already recorded that same engine for that row (the
+ * lab's write-through re-POSTs what `POST /api/one-shot/step` persisted). `_provenance` is
+ * a NON-CONTENT key, so none of this can move a verdict or trip the drift banner.
+ *
  * The PERSISTED status is the PURE checker verdict (`graded.raw`), NOT the judge-bridged one —
  * the artifact row holds the checker's own truth and judge state lives apart in
  * `judge_verdicts` (bridged only on read). Persisting the bridge here would diverge from the
@@ -88,11 +97,31 @@ export async function POST(req: NextRequest) {
       ? (raw?.reason ?? (raw ? undefined : 'unverified: acceptance check did not resolve'))
       : describeUngraded(p.catalogId, p.step, hasRegisteredChecker, p.reason);
 
+    // WHO produced this. A client may declare only an engine it can honestly assert about
+    // itself (`Code`); an unverifiable claim — including one smuggled inside
+    // `data._provenance` — is refused and the row records `unknown` instead, because a
+    // fabricated producer is the same class of hole as a fabricated `pass`. The one
+    // exception is a claim the SERVER already recorded for this exact row: the lab
+    // re-POSTs what `POST /api/one-shot/step` persisted after a live CLI produce, and
+    // sanitising that round trip would destroy real provenance.
+    const attested = readProvenance(
+      listArtifacts(p.catalogId, p.entityId).find((a) => a.step === p.step)?.data as Record<string, unknown> | undefined,
+    )?.engine;
+    const engine = resolvePersistedEngine({
+      declared: p.engine,
+      claimed: readProvenance(p.data)?.engine,
+      attested,
+    });
+
     return apiSuccess(upsertArtifact({
       catalogId: p.catalogId,
       entityId: p.entityId,
       step: p.step,
-      data: stampPromptVersion(p.data, p.promptVersion, promptVariantId),
+      data: stampPromptVersion(
+        withProvenance(p.data, { engine }),
+        p.promptVersion,
+        promptVariantId,
+      ),
       ueAssets: p.ueAssets,
       status,
       tier,

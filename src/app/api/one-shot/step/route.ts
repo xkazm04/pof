@@ -7,8 +7,9 @@ import { describeUngraded } from '@/lib/catalog/acceptance/stepGradability';
 import { stampPromptVersion } from '@/lib/prompt-evolution/judge-fitness';
 import { seededEntities } from '@/lib/catalog/seed';
 import { withProduceDirection } from '@/lib/catalog/produceDirection';
+import { engineProvenance, withProvenance, LAB_PRODUCE_ENGINE } from '@/lib/provenance';
 import { startExecution, awaitCallback } from '@/lib/claude-terminal/cli-service';
-import { resolveDispatchModelChoice } from '@/lib/model-policy';
+import { resolveDispatchModelChoice, claudeProvenance } from '@/lib/model-policy';
 import { ONE_SHOT_STEP_TASK_TYPE } from '@/lib/cli-spend/dispatchPlan';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
@@ -150,7 +151,14 @@ export async function POST(req: NextRequest) {
       // persisted (the additive-key pattern `/api/pipeline-artifacts` uses), so acceptance
       // can never shift because of it — and a live-produced artifact stops being invisible
       // to the prompt-fitness join.
-      const stamped = stampPromptVersion(data);
+      //
+      // A deterministic step body IS an author. Leaving it at the `unknown` placeholder
+      // `stampPromptVersion` writes made the proof surface answer "how was this made?" with
+      // nothing for every row it wrote — and it is precisely the `Code` stamp that makes a
+      // stored-but-never-sent prompt legible instead of implying a model session.
+      const stamped = stampPromptVersion(
+        withProvenance(data, engineProvenance(LAB_PRODUCE_ENGINE, { at: new Date().toISOString() })),
+      );
 
       upsertArtifact({
         catalogId,
@@ -196,7 +204,13 @@ export async function POST(req: NextRequest) {
     const mergedData = (withProduceDirection({ data: { ...(payload ?? {}) } }, { direction, prompt: promptText }).data
       ?? {}) as Record<string, unknown>;
     const grade = gradeStep(catalogId, entityId, stepLabel, mergedData);
-    const stamped = stampPromptVersion(mergedData);
+    // This is the ONE write path in the app that can PROVE a Claude dispatch produced the
+    // payload: the choice below is the same object handed to `startExecution`, so the stamp
+    // records the model/effort that actually ran (an unpinned dispatch omits them rather
+    // than naming a pin that never existed).
+    const stamped = stampPromptVersion(
+      withProvenance(mergedData, claudeProvenance({ model, effort }, { at: new Date().toISOString() })),
+    );
 
     const cliAssets = Array.isArray(payload.ueAssets) ? (payload.ueAssets as string[]) : [];
     upsertArtifact({

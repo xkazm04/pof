@@ -17,7 +17,7 @@ import { tryApiFetch } from '@/lib/api-utils';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
 import { engineClass, engineClassNote, engineSourceMark, isTrustedClass, type StepCell } from '@/lib/status/statusModel';
-import { readProvenance } from '@/lib/provenance';
+import { readProvenance, describeProducer } from '@/lib/provenance';
 
 const GlbViewer = dynamic(() => import('@/components/layout-lab/steps/shared/GlbViewer').then((m) => m.GlbViewer), {
   ssr: false,
@@ -256,13 +256,17 @@ export function EvidenceModal({ catalogId, step, cell, onClose }: { catalogId: s
           </label>
         )}
 
-        {/* Provenance — who/how produced this output (Quality Program WS0) */}
-        {art && (() => {
-          const p = readProvenance(art.data as Data);
-          if (!p) return null;
-          const parts = [p.engine, p.model, p.effort, p.promptVersion ? `prompt ${p.promptVersion}` : null].filter(Boolean);
-          return <div style={{ fontSize: 12, fontFamily: mono, color: 'var(--lab-muted)', marginBottom: SECTION_GAP }}>produced by: {parts.join(' · ')}</div>;
-        })()}
+        {/* Provenance — who/how produced this output (Quality Program WS0).
+            An artifact with NO stamp, or the legacy `engine:'unknown'` placeholder, is not a
+            producer called "unknown": it is an absence of measurement, and rendering it in the
+            slot where a producer name goes made it read as an answer. `describeProducer` owns
+            both wordings so no surface can re-invent the placeholder. */}
+        {art && (
+          <div data-testid="evidence-producer"
+            style={{ fontSize: 12, fontFamily: mono, color: 'var(--lab-muted)', marginBottom: SECTION_GAP }}>
+            {describeProducer(readProvenance(art.data as Data))}
+          </div>
+        )}
 
         {/* The stored output the gate evaluated — headed so the proof reads as evidence, not decoration */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10, marginBottom: 6 }}>

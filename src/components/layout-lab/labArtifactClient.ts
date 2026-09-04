@@ -1,6 +1,7 @@
 'use client';
 
 import { tryApiFetch } from '@/lib/api-utils';
+import { readProvenance, LAB_PRODUCE_ENGINE, type ClientDeclarableEngine } from '@/lib/provenance';
 import type { ApiResponse } from '@/types/api';
 import type { Result } from '@/types/result';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
@@ -18,6 +19,12 @@ export interface ArtifactUpsertBody {
   status: AcceptanceStatus;
   tier?: AcceptanceTier;
   reason?: string;
+  /**
+   * Producer DECLARED to the server (recorded as `data._provenance.engine`). Optional —
+   * {@link postArtifact} fills in the lab's deterministic-produce engine when the payload
+   * does not already name one. Restricted server-side to the client allow-list.
+   */
+  engine?: ClientDeclarableEngine;
 }
 
 /**
@@ -72,10 +79,18 @@ export async function fetchArtifacts(catalogId: string, entityId?: string): Prom
  * both directions of the write-through report failures the same way.
  */
 export async function postArtifact(body: ArtifactUpsertBody): Promise<Result<PipelineArtifact, string>> {
+  // Declare the producer. Everything this write-through carries was authored by a
+  // deterministic produce body running in the browser — which is a real author, and used to
+  // persist as `engine:'unknown'` (805 of 817 rows on 2026-09-04). It is declared only when
+  // the payload does not ALREADY name a producer: a live-CLI produce round-trips the
+  // server's own `Claude` stamp through here, and overwriting that with `Code` would replace
+  // true provenance with a weaker truth. The server still refuses any engine a client
+  // cannot honestly assert.
+  const declared = readProvenance(body.data)?.engine ? undefined : LAB_PRODUCE_ENGINE;
   const r = await tryApiFetch<PipelineArtifact>('/api/pipeline-artifacts', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ ...body, ...(declared ? { engine: declared } : {}) }),
   });
   return r.ok ? { ok: true, data: r.data } : { ok: false, error: r.error };
 }
