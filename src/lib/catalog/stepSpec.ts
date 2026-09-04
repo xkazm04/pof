@@ -151,6 +151,17 @@ export interface StepSpec {
    * (`@/lib/catalog/produceDirection`), so a produced step always records what drove it.
    */
   produce: (entity: LabEntity, direction?: string) => StepOutput;
+  /**
+   * Does {@link produce} actually READ the direction? Optional override for
+   * {@link readsDirection}, which otherwise probes the body's arity.
+   *
+   * Author it ONLY where the arity probe is wrong — a body that takes `(entity, ...args)`,
+   * `(entity, direction = '…')` or reads `arguments` has an arity below 2 while genuinely
+   * consuming the direction, and a body that declares `direction` and never uses it is the
+   * mirror lie. This is a claim about code the linter cannot see; do not author it to
+   * silence a warning.
+   */
+  readsDirection?: boolean;
   /** Derives the acceptance result from the persisted artifact data. */
   accept: Checker;
   /**
@@ -234,4 +245,24 @@ export interface CatalogPipeline {
    * `src/__tests__/catalog/packaging-coverage.test.ts` enforces the two-state rule.
    */
   packagingExempt?: string;
+}
+
+/**
+ * Does this step's Produce actually consume the operator's direction?
+ *
+ * Measured over the 33 registered pipeline files on 2026-09-04: **344 `produce:` literals,
+ * 0 declaring a second (`direction`) parameter, 0 containing `Math.random`/`Date.now`**.
+ * So today every registered produce body is direction-BLIND and deterministic: re-running
+ * one on an already-produced step re-writes byte-identical data, and any verdict derived
+ * from that data cannot move. A UI that offers a "fix" there is offering a no-op.
+ *
+ * The default is an ARITY PROBE of the body itself, deliberately: the alternative — a flag
+ * on all 344 specs — is a claim ABOUT the body that can rot out of step with it, and the
+ * probe reads the code. Arity has one real blind spot (rest params, defaulted parameters,
+ * `arguments`), which is exactly what the explicit {@link StepSpec.readsDirection} override
+ * is for; the fleet spec linter ratchets the blind count so it can only shrink.
+ */
+export function readsDirection(spec: Pick<StepSpec, 'produce' | 'readsDirection'>): boolean {
+  if (typeof spec.readsDirection === 'boolean') return spec.readsDirection;
+  return spec.produce.length >= 2;
 }

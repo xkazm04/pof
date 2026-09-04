@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import '@/lib/catalog/pipelines/registry.generated'; // side-effect: register all pipelines
 import { allCatalogPipelines } from '@/lib/catalog/pipeline-registry';
-import { SUPPORTED_VIEW_KINDS, SUPPORTED_CHART_VARIANTS, ARCHETYPE_VIEW_KINDS } from '@/lib/catalog/stepSpec';
+import { SUPPORTED_VIEW_KINDS, SUPPORTED_CHART_VARIANTS, ARCHETYPE_VIEW_KINDS, readsDirection } from '@/lib/catalog/stepSpec';
 import type { ViewDescriptor, StepSpec } from '@/lib/catalog/stepSpec';
 import { readLinks } from '@/lib/catalog/acceptance/linkCheckers';
 import { resolveTableView } from '@/lib/catalog/tableView';
@@ -718,6 +718,66 @@ describe('fleet spec linter', () => {
       .map(([a, { max }]) => ({ a, max, n: steps.filter((s) => s.spec.archetype === a && s.spec.engine == null).length }))
       .filter((r) => r.max > r.n)
       .map((r) => `${r.a}: ceiling ${r.max} but only ${r.n} steps are unauthored — lower it to ${r.n}`);
+    expect(slack).toEqual([]);
+  });
+
+  // ── (p) the direction-blind produce ratchet ────────────────────────────────
+  /**
+   * How many steps of each archetype have a produce body that IGNORES the operator's
+   * direction (`readsDirection` — the arity probe, or an explicit `StepSpec.readsDirection`).
+   *
+   * Not a style nit: a direction-blind body is also deterministic here (0 of the 33 pipeline
+   * files contain `Math.random`/`Date.now`), so re-producing an ALREADY-PRODUCED step
+   * re-writes byte-identical data and its verdict cannot move. `ArchetypeStep` therefore
+   * offers no one-click "Produce fix" on those steps and states what would change them
+   * instead. Every step counted here is a step whose only corrective path is a live CLI
+   * produce or an authoring pass.
+   *
+   * SHRINK-ONLY, same contract as the engine ratchet above: lower a number when you make a
+   * produce body read its direction; never raise one to make a change pass.
+   *
+   * Measured 2026-09-04: 344 `produce:` literals across the 33 pipeline files, 0 declaring a
+   * second parameter — so ALL 344 are direction-blind today and every ceiling below is the
+   * whole bucket. That is the honest starting line, not an exemption: the numbers exist so
+   * the next per-catalog produce pass can only drive them down.
+   */
+  const DIRECTION_BLIND_CEILING: Record<string, { max: number; why: string }> = {
+    brief: { max: 34, why: 'CLI-eligible prose: the live one-shot route authors it from the direction, and the local stub body should too' },
+    rules: { max: 126, why: 'CLI-eligible rule bodies — the largest bucket and the one where a corrective direction has the most to say' },
+    graph: { max: 6, why: 'CLI-eligible node/edge graphs' },
+    gallery: { max: 47, why: 'the gallery re-roll already consumes the direction through genCandidates; the produce stub seeds the base artifact only' },
+    schema: { max: 14, why: 'data-shape declarations' },
+    balance: { max: 16, why: 'balance figures are pure functions of author-typed constants' },
+    checklist: { max: 61, why: 'checklists enumerate work items' },
+    manifest: { max: 35, why: 'asset/import manifests' },
+    custom: { max: 5, why: 'bespoke bodies' },
+  };
+
+  it('the direction-blind produce count does not grow, per archetype', () => {
+    const over: string[] = [];
+    for (const [archetype, { max }] of Object.entries(DIRECTION_BLIND_CEILING)) {
+      const n = steps.filter((s) => s.spec.archetype === archetype && !readsDirection(s.spec)).length;
+      if (n > max) {
+        over.push(
+          `${archetype}: ${n} produce bodies ignore the direction, ceiling is ${max} — take ` +
+            `(entity, direction) and USE it in the new body (or set \`readsDirection\` where arity ` +
+            `lies), and never raise the ceiling: it only ever moves down`,
+        );
+      }
+    }
+    expect(over).toEqual([]);
+  });
+
+  it('every archetype has a direction-blind ceiling, and none is slack', () => {
+    const count = (a: string) => steps.filter((s) => s.spec.archetype === a && !readsDirection(s.spec)).length;
+    const missing = [...new Set(steps.map((s) => s.spec.archetype))]
+      .filter((a) => DIRECTION_BLIND_CEILING[a] == null)
+      .map((a) => `archetype "${a}" has no DIRECTION_BLIND_CEILING entry — add one with its count and a reason`);
+    expect(missing).toEqual([]);
+    const slack = Object.entries(DIRECTION_BLIND_CEILING)
+      .map(([a, { max }]) => ({ a, max, n: count(a) }))
+      .filter((r) => r.max > r.n)
+      .map((r) => `${r.a}: ceiling ${r.max} but only ${r.n} bodies are direction-blind — lower it to ${r.n}`);
     expect(slack).toEqual([]);
   });
 

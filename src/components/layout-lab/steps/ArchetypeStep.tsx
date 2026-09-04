@@ -25,12 +25,13 @@ import { qualityPack } from '@/lib/prompts/quality';
 import { deliverableClassOf } from '@/lib/judge/dimensions';
 import { getStepFact } from '@/lib/status/statusModel';
 import { withProduceDirection } from '@/lib/catalog/produceDirection';
-import { isCliEligible, isLiveProduceEnabled, type OneShotStepResult } from '../labProduceMode';
+import { isCliEligible, isLiveProduceEnabled, useLiveProduceMode, type OneShotStepResult } from '../labProduceMode';
 import { apiFetch } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
 import { useCatalogStore } from '@/stores/catalogStore';
 import { linkTargetsExist, readLinks } from '@/lib/catalog/acceptance/linkCheckers';
 import { resolveTableView } from '@/lib/catalog/tableView';
+import { readsDirection } from '@/lib/catalog/stepSpec';
 import { collectStepEvidence, evidenceBlock } from './shared/stepEvidence';
 import { StepLibraryPicker } from './shared/StepLibraryPicker';
 import { libraryBlock, libraryAttachmentLines, addReference, removeReference } from './shared/libraryReference';
@@ -205,6 +206,46 @@ export function ViewPanel({ t, view, data }: { t: LabTheme; view: ViewDescriptor
   return <span style={{ fontSize: 14, color: t.warn }}>Unsupported view kind: {(view as { kind: string }).kind}</span>;
 }
 
+/**
+ * What a one-click "Produce fix" can actually achieve on this step. Pure, so the rule is
+ * testable without a render.
+ *
+ * - `reroll` — a gallery step: the fix appends a corrective candidate batch, which really
+ *   is new content and really can move the L1 selection gate.
+ * - `first-produce` — nothing has been produced yet: producing from nothing is a change
+ *   whatever the body reads (this is the only case the old fix test covered).
+ * - `live-produce` — the dispatch goes through `POST /api/one-shot/step` in `cli` mode,
+ *   where a model authors the payload from the direction.
+ * - `no-op` — an already-produced step whose produce body ignores the direction and is
+ *   deterministic. Re-running it writes the same bytes; offering a fix there is offering
+ *   a button that cannot work.
+ */
+export type FixEffect = 'reroll' | 'first-produce' | 'live-produce' | 'no-op';
+
+export function fixEffectOf(input: {
+  isGallery: boolean;
+  produced: boolean;
+  readsDir: boolean;
+  liveDispatch: boolean;
+}): FixEffect {
+  if (input.isGallery) return 'reroll';
+  if (!input.produced) return 'first-produce';
+  if (input.liveDispatch) return 'live-produce';
+  return input.readsDir ? 'first-produce' : 'no-op';
+}
+
+/**
+ * The banner text for a `no-op` fix: what this step is, why the button is absent, and the
+ * concrete thing that WOULD change it — never a bare "not available".
+ */
+export function noopFixSuggestion(spec: StepSpec, fixDirection?: string): string {
+  const remedy = isCliEligible(spec.archetype)
+    ? 'A LIVE CLI produce would: turn on live produce in the Produce panel below and dispatch it with the direction — a model authors the payload from the direction, where this step body cannot.'
+    : `This archetype (${spec.archetype}) has no live-produce path, so the only thing that changes it is authoring the produce body to read its \`direction\` argument.`;
+  const carry = fixDirection ? ` Direction to use: “${fixDirection}”` : '';
+  return `No Produce fix is offered: this step's produce body ignores the direction and is deterministic, so re-producing would write byte-identical data and the verdict could not move. ${remedy}${carry}`;
+}
+
 /** Hybrid generic renderer: drives any common-archetype StepSpec from persisted artifacts. */
 export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabTheme; entity: LabEntity; step: string; spec: StepSpec; catalogId?: string }) {
   const produce = useLabPipelineStore((s) => s.produce);
@@ -263,9 +304,32 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
     [spec],
   );
   const judged = useStepAcceptance({ catalogId: catalogId ?? '', entityId: entity.id, step, art, accept });
+  // The REACTIVE read of the produce mode (hydration-safe, and re-renders when the operator
+  // flips the switch in the Produce panel). The dispatch path still re-reads it at click
+  // time, so the decision to spend budget is never a stale render copy.
+  const [liveMode] = useLiveProduceMode();
+  // Can a one-click "Produce fix" here change anything at all? On a static step it calls
+  // `spec.produce(entity, dir)` — and measured over the 33 registered pipeline files on
+  // 2026-09-04, 0 of 344 produce bodies read the direction and 0 are nondeterministic. So on
+  // an ALREADY-PRODUCED direction-blind static step the button re-writes byte-identical data
+  // and the verdict cannot move, forever, while the banner previews a carefully derived
+  // corrective direction as if it were about to be acted on. See `fixEffectOf`.
+  const fixEffect = fixEffectOf({
+    isGallery,
+    produced: !!art,
+    readsDir: readsDirection(spec),
+    liveDispatch: !!catalogId && isCliEligible(spec.archetype) && liveMode,
+  });
   const acceptance = useMemo(
-    () => withGenericFixCopy(spec, judged as AcceptanceResult, art?.data ?? {}),
-    [spec, judged, art],
+    () => {
+      const base = withGenericFixCopy(spec, judged as AcceptanceResult, art?.data ?? {});
+      if (fixEffect !== 'no-op' || base.status === 'pass') return base;
+      // Say what WOULD move it, in place of a dispatch preview that will not happen. The
+      // derived direction is still shown — it is the instruction a live produce needs — but
+      // it is presented as an input to carry elsewhere, not as an imminent action.
+      return { ...base, suggestion: noopFixSuggestion(spec, base.fixDirection) };
+    },
+    [spec, judged, art, fixEffect],
   );
   const links = readLinks(data);
   const linkRes = links.length ? linkTargetsExist(links, (c, e) => !!entitiesByCatalog[c]?.[e]) : null;
@@ -462,7 +526,10 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
         // A gallery step's `selected(...)` gate is an L1 HUMAN-selection claim, but
         // `appendBatch` auto-picks the first candidate — so the strip says which it was.
         selection={spec.view.kind === 'gallery' ? selectionSource(history) : undefined}
-        onFix={acceptance.status === 'deferred' ? undefined : runFix} />
+        // No fix button where a fix provably cannot move the step: `deferred` (a runtime /
+        // visual gate is not locally fixable) and `no-op` (a direction-blind deterministic
+        // re-produce of content that already exists). The banner says what would.
+        onFix={acceptance.status === 'deferred' || fixEffect === 'no-op' ? undefined : runFix} />
     </>
   );
 }
