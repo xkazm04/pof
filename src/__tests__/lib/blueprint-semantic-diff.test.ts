@@ -60,7 +60,9 @@ describe('computeSemanticDiff', () => {
 
   it('flags a type mismatch as a conflict-level modify change', () => {
     const result = computeSemanticDiff(
-      asset({ variables: [variable({ name: 'Health', type: 'float' })] }),
+            // Health is EditAnywhere in the header, so the fixture says so too —
+      // the diff now compares editor exposure as well as type.
+      asset({ variables: [variable({ name: 'Health', type: 'float', isExposedToEditor: true })] }),
       existingCpp,
       'P',
     );
@@ -107,7 +109,7 @@ describe('computeSemanticDiff', () => {
 
   it('produces no changes and a none overall conflict for a matching pair', () => {
     const result = computeSemanticDiff(
-      asset({ variables: [variable({ name: 'Health', type: 'int' })], functions: [fnGraph('DoStuff')] }),
+      asset({ variables: [variable({ name: 'Health', type: 'int', isExposedToEditor: true })], functions: [fnGraph('DoStuff')] }),
       existingCpp,
       'P',
     );
@@ -174,5 +176,148 @@ describe('computeSemanticDiff', () => {
     expect(change?.type).toBe('add');
     expect(change?.scope).toBe('function');
     expect(result.cppSummary).toBe('0 functions, 0 properties detected');
+  });
+});
+
+// ── Fidelity: the diff must SEE the divergences it claims to check ──────────
+//
+// Standard: ai-registry game-production/visual-script-to-code-transpilation,
+// technique "the fidelity ladder". This comparison can prove the
+// DECLARED-AND-DEFINED rung only — names, signatures and declared flags on
+// both sides. It says nothing about structural or behavioural equivalence, so
+// the empty state must not read as "in sync".
+
+describe('computeSemanticDiff — signature and flag fidelity', () => {
+  function entryGraph(name: string, params: { name: string; type: string }[], returnType?: string): BlueprintGraph {
+    const nodes: BlueprintGraph['nodes'] = [
+      {
+        id: 'entry',
+        type: 'K2Node_FunctionEntry',
+        name: 'Entry',
+        posX: 0,
+        posY: 0,
+        pins: [
+          { name: 'exec', type: 'exec', direction: 'output' },
+          ...params.map((p) => ({ name: p.name, type: p.type, direction: 'output' as const })),
+        ],
+      },
+    ];
+    if (returnType) {
+      nodes.push({
+        id: 'result',
+        type: 'K2Node_FunctionResult',
+        name: 'Return',
+        posX: 0,
+        posY: 0,
+        pins: [
+          { name: 'exec', type: 'exec', direction: 'input' },
+          { name: 'ReturnValue', type: returnType, direction: 'input' },
+        ],
+      });
+    }
+    return { name, graphType: 'function', nodes };
+  }
+
+  const takeDamageCpp = [
+    'UCLASS()',
+    'class MYGAME_API ABP_Player : public ACharacter',
+    '{',
+    '  GENERATED_BODY()',
+    '  UFUNCTION(BlueprintCallable)',
+    '  void TakeDamage();',
+    '};',
+  ].join('\n');
+
+  it('flags an arity mismatch between a Blueprint function and its C++ declaration', () => {
+    const result = computeSemanticDiff(
+      asset({ functions: [entryGraph('TakeDamage', [{ name: 'DamageAmount', type: 'float' }])] }),
+      takeDamageCpp,
+      'P',
+    );
+    const change = result.changes.find((c) => c.name === 'TakeDamage');
+    expect(change?.type).toBe('modify');
+    expect(change?.scope).toBe('function');
+    expect(change?.conflictLevel).toBe('conflict');
+    expect(change?.description).toContain('1 parameter');
+    expect(result.overallConflict).toBe('conflict');
+  });
+
+  it('flags a parameter type mismatch at the same arity', () => {
+    const cpp = takeDamageCpp.replace('void TakeDamage();', 'void TakeDamage(int32 DamageAmount);');
+    const result = computeSemanticDiff(
+      asset({ functions: [entryGraph('TakeDamage', [{ name: 'DamageAmount', type: 'float' }])] }),
+      cpp,
+      'P',
+    );
+    const change = result.changes.find((c) => c.name === 'TakeDamage');
+    expect(change?.conflictLevel).toBe('conflict');
+    expect(change?.description).toContain('DamageAmount');
+    expect(change?.description).toContain('int32');
+  });
+
+  it('flags a return-type mismatch', () => {
+    const cpp = takeDamageCpp.replace('void TakeDamage();', 'float TakeDamage();');
+    const result = computeSemanticDiff(
+      asset({ functions: [entryGraph('TakeDamage', [])] }),
+      cpp,
+      'P',
+    );
+    const change = result.changes.find((c) => c.name === 'TakeDamage');
+    expect(change?.conflictLevel).toBe('conflict');
+    expect(change?.description).toContain('float');
+  });
+
+  it('reports a C++ UFUNCTION absent from the Blueprint (symmetry with variables)', () => {
+    const result = computeSemanticDiff(asset(), takeDamageCpp, 'P');
+    const change = result.changes.find((c) => c.scope === 'function' && c.name === 'TakeDamage');
+    expect(change?.type).toBe('remove');
+    expect(change?.conflictLevel).toBe('compatible');
+    expect(change?.cppSide).toContain('void TakeDamage()');
+  });
+
+  it('reports a replicated Blueprint variable whose UPROPERTY has no Replicated specifier', () => {
+    const cpp = [
+      'UCLASS()',
+      'class MYGAME_API ABP_Player : public ACharacter',
+      '{',
+      '  GENERATED_BODY()',
+      '  UPROPERTY(EditAnywhere)',
+      '  float Health;',
+      '};',
+    ].join('\n');
+    const result = computeSemanticDiff(
+      asset({ variables: [variable({ name: 'Health', type: 'float', isReplicated: true })] }),
+      cpp,
+      'P',
+    );
+    const change = result.changes.find((c) => c.name === 'Health' && /replicat/i.test(c.description));
+    expect(change?.conflictLevel).toBe('conflict');
+    expect(change?.scope).toBe('variable');
+    expect(result.overallConflict).toBe('conflict');
+  });
+
+  it('accepts a replicated variable declared ReplicatedUsing for a RepNotify Blueprint variable', () => {
+    const cpp = [
+      'UCLASS()',
+      'class MYGAME_API ABP_Player : public ACharacter',
+      '{',
+      '  GENERATED_BODY()',
+      '  UPROPERTY(EditAnywhere, ReplicatedUsing = OnRep_Health)',
+      '  float Health;',
+      '};',
+    ].join('\n');
+    const result = computeSemanticDiff(
+      asset({ variables: [variable({ name: 'Health', type: 'float', isReplicated: true, isRepNotify: true })] }),
+      cpp,
+      'P',
+    );
+    expect(result.changes.filter((c) => /replicat/i.test(c.description))).toHaveLength(0);
+  });
+
+  it('names the fidelity rung and the dimensions it did NOT compare', () => {
+    const result = computeSemanticDiff(asset(), '', 'P');
+    expect(result.fidelityRung).toBe('declared-and-defined');
+    expect(result.notCompared.join(' ')).toMatch(/event graph/i);
+    expect(result.comparedDimensions.length).toBeGreaterThan(0);
   });
 });

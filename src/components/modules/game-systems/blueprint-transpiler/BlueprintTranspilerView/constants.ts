@@ -15,7 +15,10 @@ export const TAB_CONFIG: { id: TranspilerTab; label: string; icon: typeof Code }
 ];
 
 export const CONFLICT_STYLES: Record<DiffConflictLevel, { color: string; bg: string; label: string; icon: typeof CheckCircle2 }> = {
-  none: { color: STATUS_SUCCESS, bg: `${STATUS_SUCCESS}${OPACITY_15}`, label: 'No Conflicts', icon: CheckCircle2 },
+  // 'none' is scoped to what the diff actually inspects (declarations and
+  // declared flags) — it is NOT a claim that the two sides behave the same.
+  // Standard: visual-script-to-code-transpilation / the fidelity ladder.
+  none: { color: STATUS_SUCCESS, bg: `${STATUS_SUCCESS}${OPACITY_15}`, label: 'No Conflicts (in compared dimensions)', icon: CheckCircle2 },
   compatible: { color: STATUS_WARNING, bg: `${STATUS_WARNING}${OPACITY_15}`, label: 'Compatible Changes', icon: AlertTriangle },
   conflict: { color: STATUS_ERROR, bg: `${STATUS_ERROR}${OPACITY_15}`, label: 'Conflicts Detected', icon: XCircle },
 };

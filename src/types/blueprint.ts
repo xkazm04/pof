@@ -124,6 +124,18 @@ export interface SemanticChange {
   resolution?: string;     // AI-suggested resolution
 }
 
+/**
+ * Rung of the transpilation fidelity ladder a surface has actually proven.
+ * (ai-registry `game-production/visual-script-to-code-transpilation`.) A claim
+ * is only ever stated at the rung it was proven at — never above.
+ */
+export type FidelityRung =
+  | 'parsed'
+  | 'compiles'
+  | 'declared-and-defined'
+  | 'structurally-equivalent'
+  | 'behaviourally-equivalent';
+
 /** Full result of a semantic diff between Blueprint and C++. */
 export interface SemanticDiffResult {
   changes: SemanticChange[];
@@ -131,6 +143,16 @@ export interface SemanticDiffResult {
   cppSummary: string;
   overallConflict: DiffConflictLevel;
   timestamp: number;
+  /**
+   * The highest rung this comparison can support. A declaration-level diff can
+   * never reach structural or behavioural equivalence, so a change-free result
+   * means "nothing diverged in what was inspected", not "in sync".
+   */
+  fidelityRung: FidelityRung;
+  /** Dimensions this diff actually inspected. */
+  comparedDimensions: string[];
+  /** Dimensions it did NOT inspect — surfaced so the empty state stays honest. */
+  notCompared: string[];
 }
 
 // ─── Session State ───────────────────────────────────────────────────────────

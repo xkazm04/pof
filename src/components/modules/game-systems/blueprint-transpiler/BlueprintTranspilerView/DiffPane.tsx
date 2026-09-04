@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { useBlueprintTranspiler } from '@/hooks/useBlueprintTranspiler';
 import { StaggerContainer, StaggerItem } from '@/components/ui/Stagger';
-import { OPACITY_20, OPACITY_30 } from '@/lib/chart-colors';
+import { OPACITY_20, OPACITY_30, STATUS_SUCCESS, STATUS_WARNING } from '@/lib/chart-colors';
 import { ACCENT, CONFLICT_STYLES } from './constants';
 import { ChangeCard } from './ChangeCard';
 
@@ -114,6 +114,34 @@ export function DiffPane({
             <span className="text-2xs text-text-muted">{result.blueprintSummary}</span>
           </div>
 
+          {/* Fidelity rung — what this comparison can and cannot prove.
+              Standard: visual-script-to-code-transpilation / the fidelity ladder. */}
+          <details className="px-4 py-2 border-b border-border">
+            <summary className="text-2xs text-text-muted cursor-pointer focus-ring rounded">
+              Rung: <span className="font-mono text-text">{result.fidelityRung}</span>
+              {' · '}
+              {result.notCompared.length} dimensions NOT compared
+            </summary>
+            <div className="mt-2 grid gap-2 md:grid-cols-2">
+              <div>
+                <div className="text-2xs font-medium text-text mb-1">Compared</div>
+                <ul className="space-y-0.5">
+                  {result.comparedDimensions.map((d) => (
+                    <li key={d} className="text-2xs text-text-muted">· {d}</li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <div className="text-2xs font-medium text-text mb-1">Not compared</div>
+                <ul className="space-y-0.5">
+                  {result.notCompared.map((d) => (
+                    <li key={d} className="text-2xs" style={{ color: STATUS_WARNING }}>· {d}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </details>
+
           {/* Change list */}
           {result.changes.length > 0 ? (
             <StaggerContainer className="p-2 space-y-1">
@@ -124,9 +152,15 @@ export function DiffPane({
               ))}
             </StaggerContainer>
           ) : (
-            <div className="flex items-center justify-center py-8 text-text-muted">
-              <CheckCircle2 className="w-5 h-5 mr-2 text-green-400" />
-              <span className="text-xs">Blueprint and C++ are in sync</span>
+            <div className="flex flex-col items-center gap-1.5 py-8 px-6 text-text-muted text-center">
+              <span className="flex items-center gap-2 text-xs text-text">
+                <CheckCircle2 className="w-5 h-5" style={{ color: STATUS_SUCCESS }} />
+                No divergence in the {result.comparedDimensions.length} dimensions compared
+              </span>
+              <span className="text-2xs">
+                This is the <span className="font-mono">{result.fidelityRung}</span> rung: declarations match.
+                It is not proof the two sides behave the same.
+              </span>
             </div>
           )}
         </div>
