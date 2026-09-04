@@ -55,6 +55,7 @@ nul
 # Regenerable test / capture / scenario run outputs (not source; keep out of the repo).
 # shots/*.py + *.mjs tooling scripts stay tracked; only the capture OUTPUTS are ignored.
 /test-results/
+/playwright-report/
 /sword-run/
 /scn-*
 /*.log
