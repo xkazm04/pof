@@ -237,7 +237,7 @@ export const K2NODE_LABELS: Record<string, JargonEntry> = {
 export const CONFLICT_LEVEL_LABELS: Record<string, JargonEntry> = {
   none: {
     term: 'No Conflicts',
-    plain: 'The Blueprint and the C++ class are in sync — nothing to fix.',
+    plain: 'Nothing diverged in the dimensions the diff compares (names, types, signatures, replication, editor exposure). It does not compare graph logic or function bodies, so this is not proof the two sides behave the same.',
   },
   compatible: {
     term: 'Compatible Changes',
