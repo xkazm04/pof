@@ -5,6 +5,8 @@
  * scores low even though it "technically functions". The model returns a strict JSON card.
  */
 
+import type { FilmstripSampling } from './filmstrip';
+
 export interface AnimationContext {
   /** Asset / clip name, for the model's reference (e.g. "AM_SwordSlashC"). */
   name: string;
@@ -14,6 +16,13 @@ export interface AnimationContext {
   frameCount: number;
   /** Optional total motion duration in seconds. */
   durationSeconds?: number;
+  /**
+   * How this strip was sampled from the capture. When frames were dropped, the prompt SAYS
+   * so — the judge is asked to score timing, and the sampler's own uneven spacing (and the
+   * in-betweens it removed) must not be read as a defect in the motion. Omitted, or with
+   * kept === available, the prompt is byte-identical to the unsampled one.
+   */
+  sampling?: FilmstripSampling;
 }
 
 const DIMENSION_GUIDE = `- anticipation: is there a clear windup/preparation that telegraphs the action before it happens? (a weighty strike pulls back first)
@@ -23,12 +32,26 @@ const DIMENSION_GUIDE = `- anticipation: is there a clear windup/preparation tha
 - silhouette: at the key poses, is the action readable from the body's outline alone, or is it a cramped/ambiguous shape?
 - believability: overall — does this read as motion from a trained human/skilled fighter (or a AAA game), or as stiff, robotic, keyframe-interpolated, or T-pose-adjacent?`;
 
+/**
+ * State the sampling, or say nothing. Empty when the judge is seeing the whole capture —
+ * so a full-strip prompt is byte-identical to the one this ruler has always sent.
+ */
+function samplingBlock(s: FilmstripSampling | undefined): string {
+  if (!s || s.kept >= s.available) return '';
+  const spacing = s.uniform
+    ? `every ${s.stride}${s.stride === 2 ? 'nd' : s.stride === 3 ? 'rd' : 'th'} captured frame (a uniform stride of ${s.stride})`
+    : `NOT uniform — consecutive frames you see are ${s.gaps.join('-')} captured frames apart`;
+  return `
+SAMPLING (read this before you judge timing): you are seeing ${s.kept} of the ${s.available} frames that were captured. Their spacing is ${spacing}. The frames in between were removed by the sampler, not missing from the motion: do NOT lower the timing score, and do NOT cite a "jump with no in-between", for a gap the sampling can explain. Judge timing only on rhythm that survives this sampling — a pose that has clearly not moved, or an abrupt change far larger than the neighbouring steps.
+`;
+}
+
 export function buildCritiquePrompt(ctx: AnimationContext): string {
   const dur = ctx.durationSeconds ? ` over ~${ctx.durationSeconds}s` : '';
   return `You are a senior game animation director reviewing a character animation for SHIP quality.
 
 You are looking at ${ctx.frameCount} frames sampled in time order${dur} from a single motion — read them as a filmstrip / flipbook of one continuous action, left-to-right, top-to-bottom.
-
+${samplingBlock(ctx.sampling)}
 The motion is: ${ctx.intent}
 (asset: ${ctx.name})
 

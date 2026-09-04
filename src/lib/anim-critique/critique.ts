@@ -48,6 +48,15 @@ export interface CritiqueDeps {
   thresholds?: Partial<ScoreThresholds>;
 }
 
+/** Frame MIME from the path. Captures are PNG, but a caller-supplied JPEG must not be
+ *  announced to the provider as `image/png` — some vision APIs reject the mismatch. */
+function mimeOf(path: string): string {
+  const ext = path.slice(path.lastIndexOf('.') + 1).toLowerCase();
+  if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg';
+  if (ext === 'webp') return 'image/webp';
+  return 'image/png';
+}
+
 export async function critiqueAnimation(
   framePaths: string[],
   ctx: AnimationContext,
@@ -65,14 +74,21 @@ export async function critiqueAnimation(
   let images: VisionImage[];
   try {
     images = await Promise.all(
-      framePaths.map(async (p) => ({ base64: (await readFile(p)).toString('base64'), mime: 'image/png' })),
+      framePaths.map(async (p) => ({ base64: (await readFile(p)).toString('base64'), mime: mimeOf(p) })),
     );
   } catch (e) {
     return { ok: false, error: `failed to read a frame: ${e instanceof Error ? e.message : 'unknown'}` };
   }
 
-  // The prompt reflects the ACTUAL frame count, not whatever ctx claimed.
-  const prompt = buildCritiquePrompt({ ...ctx, frameCount: framePaths.length });
+  // The prompt reflects the ACTUAL frame count, not whatever ctx claimed — and a sampling
+  // claim that does not match the frames we are actually sending is dropped rather than
+  // repeated to the judge (an honest instrument states only what it can stand behind).
+  const sampling = ctx.sampling && ctx.sampling.kept === framePaths.length ? ctx.sampling : undefined;
+  const prompt = buildCritiquePrompt({
+    ...ctx,
+    frameCount: framePaths.length,
+    ...(sampling ? { sampling } : { sampling: undefined }),
+  });
 
   let answer: VisionAnswer;
   try {

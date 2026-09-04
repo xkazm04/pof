@@ -13,7 +13,7 @@ import { apiSuccess, apiError } from '@/lib/api-utils';
 import { critiqueAnimation } from '@/lib/anim-critique/critique';
 import { makeGeminiVisionAttributed } from '@/lib/anim-critique/gemini';
 import { makeQwenVisionAttributed } from '@/lib/anim-critique/qwen';
-import { resolveFilmstrip } from '@/lib/anim-critique/filmstrip';
+import { sampleFilmstrip, type FilmstripSampling } from '@/lib/anim-critique/filmstrip';
 
 export async function POST(request: NextRequest) {
   let body: {
@@ -38,15 +38,26 @@ export async function POST(request: NextRequest) {
     return apiError('Missing "name" or "intent"', 400);
   }
 
-  // Resolve the ordered filmstrip from explicit paths or a directory.
+  // Resolve the ordered filmstrip from explicit paths or a directory, and REPORT the
+  // sampling: how many of the captured frames the judge actually saw, and whether their
+  // spacing is uniform. A subsampled strip is not an evenly-spaced filmstrip, and the
+  // judge scores timing — "the sampling is part of the instrument".
   let frames: string[];
+  let sampling: FilmstripSampling | undefined;
+  // `available`/`uniform` are null, never guessed, when the caller chose the paths: this
+  // route cannot know what capture they came from or what was left out.
+  let sampled: { kept: number; available: number | null; uniform: boolean | null; stride: number | null; source: 'framePaths' | 'frameDir' };
   if (Array.isArray(framePaths) && framePaths.length > 0) {
     frames = framePaths;
+    sampled = { kept: frames.length, available: null, uniform: null, stride: null, source: 'framePaths' };
   } else if (frameDir) {
     if (!existsSync(frameDir)) return apiError(`frameDir not found: ${frameDir}`, 404);
     const cam = body.cam === 'side' ? 'side' : 'main';
     const maxFrames = typeof body.maxFrames === 'number' && body.maxFrames > 0 ? body.maxFrames : 10;
-    frames = resolveFilmstrip(readdirSync(frameDir), { cam, maxFrames }).map((f) => join(frameDir, f));
+    const strip = sampleFilmstrip(readdirSync(frameDir), { cam, maxFrames });
+    frames = strip.frames.map((f) => join(frameDir, f));
+    sampling = { kept: strip.kept, available: strip.available, uniform: strip.uniform, stride: strip.stride, gaps: strip.gaps };
+    sampled = { kept: strip.kept, available: strip.available, uniform: strip.uniform, stride: strip.stride, source: 'frameDir' };
   } else {
     return apiError('Provide "frameDir" or "framePaths"', 400);
   }
@@ -65,7 +76,13 @@ export async function POST(request: NextRequest) {
 
   const result = await critiqueAnimation(
     frames,
-    { name, intent, frameCount: frames.length, ...(durationSeconds ? { durationSeconds } : {}) },
+    {
+      name,
+      intent,
+      frameCount: frames.length,
+      ...(durationSeconds ? { durationSeconds } : {}),
+      ...(sampling ? { sampling } : {}),
+    },
     { callVision },
   );
 
@@ -74,5 +91,5 @@ export async function POST(request: NextRequest) {
   }
   // `provider` is what was REQUESTED; `vision` is who actually answered (the Qwen chain
   // silently re-routes on quota, so the family is not an attribution).
-  return apiSuccess({ ...result.card, frames, provider, vision: result.vision });
+  return apiSuccess({ ...result.card, frames, sampled, provider, vision: result.vision });
 }

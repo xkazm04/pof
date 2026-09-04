@@ -52,7 +52,18 @@ const writer = !v
   : v.attribution === 'unreported'
     ? `${c.provider ?? 'gemini'} · model unreported`
     : `${v.model}${v.fellBackFrom?.length ? ` (fallback from ${v.fellBackFrom.join(', ')})` : ''}`;
-console.log(`\n  ${name} — ${c.verdict.toUpperCase()} (${c.score}/100)   [${c.frames.length} frames · ${writer}]\n`);
+// State the sampling beside the score: a bare frame count hides that the judge saw 10 of 14
+// captured frames, on a spacing the sampler made uneven.
+const s = c.sampled;
+const strip = !s
+  ? `${c.frames.length} frames`
+  : s.available === null
+    ? `${s.kept} frames (caller-supplied; captured total unknown)`
+    : s.kept >= s.available
+      ? `all ${s.available} frames`
+      : `${s.kept} of ${s.available} frames · ${s.uniform ? `every ${s.stride}` : 'UNEVEN spacing'}`;
+const header = `\n  ${name} — ${c.verdict.toUpperCase()} (${c.score}/100 mean)   [${strip} · ${writer}]`;
+console.log(c.reason ? `${header}\n  ${c.reason}\n` : `${header}\n`);
 for (const [k, v] of Object.entries(c.dimensions)) {
   console.log(`  ${k.padEnd(14)} ${bar(v)} ${String(v).padStart(3)}`);
 }

@@ -16,7 +16,13 @@ export {
   type Scorecard,
   type AnimVerdict,
 } from './score';
-export { resolveFilmstrip, type FilmstripOptions } from './filmstrip';
+export {
+  resolveFilmstrip,
+  sampleFilmstrip,
+  type FilmstripOptions,
+  type FilmstripSample,
+  type FilmstripSampling,
+} from './filmstrip';
 export {
   critiqueAnimation,
   type AnimationCritiqueCard,
