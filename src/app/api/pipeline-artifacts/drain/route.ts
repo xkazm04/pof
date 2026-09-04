@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { getOriginFromRequest } from '@/lib/constants';
 import { buildExecutors, collectDeferred, drainAll, parseDrainFilter, type DrainFilter } from '@/lib/test-gate-runner';
 import { parseDrainRequest } from '@/lib/test-gate-runner/drainRequest';
@@ -39,6 +40,8 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
+    const denied = requireOperator(req);
+    if (denied) return denied;
     // The accepted body surface is declared ONCE in `drainRequest.ts` (DRAIN_REQUEST_KEYS) and
     // shared with the headless caller (`pof_drain_gates`), so an agent can reach every scope
     // this route supports — global, catalog-wide, a multi-entity batch, or one entity.

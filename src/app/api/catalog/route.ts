@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { listLifecycle, getLifecycle, upsertLifecycle } from '@/lib/catalog-db';
 import { generationCallbackSchema, lifecycleStateSchema } from '@/lib/catalog/validation';
 import { resolveTransition } from '@/lib/catalog/lifecycle';
@@ -26,6 +27,8 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
+    const denied = requireOperator(req);
+    if (denied) return denied;
     const body = await req.json();
     if (body.action !== 'transition') return apiError(`Unknown action: ${body.action}`, 400);
 

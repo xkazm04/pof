@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { listArtifacts, upsertArtifact } from '@/lib/pipeline-artifacts-db';
 import { purgeEntity } from '@/lib/catalog/artifact-purge';
 import { artifactUpsertSchema } from '@/lib/catalog/artifact-validation';
@@ -54,6 +55,8 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
+    const denied = requireOperator(req);
+    if (denied) return denied;
     const body = (await req.json()) as unknown;
     const parsed = artifactUpsertSchema.safeParse(body);
     // The validation DETAIL goes in the `error` STRING, not only in `details`: the standard
@@ -122,6 +125,8 @@ export async function POST(req: NextRequest) {
  */
 export async function DELETE(req: NextRequest) {
   try {
+    const denied = requireOperator(req);
+    if (denied) return denied;
     const catalogId = req.nextUrl.searchParams.get('catalogId');
     const entityId = req.nextUrl.searchParams.get('entityId');
     const step = req.nextUrl.searchParams.get('step') ?? undefined;

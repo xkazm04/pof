@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { getOriginFromRequest } from '@/lib/constants';
 import {
   startDrainWorker, stopDrainWorker, getWorkerStatus, parseDrainFilter, MIN_WORKER_INTERVAL_MS,
@@ -17,6 +18,8 @@ export async function GET() {
  */
 export async function POST(req: NextRequest) {
   try {
+    const denied = requireOperator(req);
+    if (denied) return denied;
     const body = (await req.json().catch(() => ({}))) as {
       action?: 'start' | 'stop'; intervalMs?: number; cooldownMs?: number;
       executor?: 'bridge' | 'spawn'; port?: number;
