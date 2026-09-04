@@ -51,7 +51,10 @@ All UE steps run headless via `UnrealEditor-Cmd.exe <PoF.uproject> -run=pythonsc
 - Scenario fields: `{ play_anim, disable_ai, total_seconds, num_samples, settle, out_dir }`.
 
 ### ⑥ Grade — the VLM critique tier
-- `scripts/anim-critique.mjs --dir <frames> --intent "<expected motion>"` → `POST /api/verify/animation` → vision model scores **anticipation / weight / timing / followThrough / silhouette / believability** (0-100) + reasons + a top-fix. Code: `src/lib/anim-critique/` (pure cores + an **injectable vision seam** `gemini.ts`).
+- `scripts/anim-critique.mjs --dir <frames> --intent "<expected motion>"` → `POST /api/verify/animation` → vision model scores **anticipation / weight / timing / followThrough / silhouette / believability** (0-100) + reasons + a top-fix. Code: `src/lib/anim-critique/` (pure cores + an **injectable vision seam** `gemini.ts`/`qwen.ts`).
+  - **Verdict = the WORST dimension's band, never the mean** (wave 26, `score.ts`): the card names `worstDimension`/`worstScore`/`reason`; `score` is the mean and is trend-only. `passAt` is `BANDS.placeholder` (70) — the divergence from the strict judge's 90 is stated in the type doc.
+  - **The response names the model that answered** (`vision: { model, attribution, fellBackFrom }`, `vision.ts`) — `provider` is only what was requested; a seam that cannot know says `unreported`, never a defaulted name.
+  - **The response states the sampling** (`sampled: { kept, available, uniform, stride }`): the strip is capped at 10 frames and a 14-frame capture is kept at gaps 1,2,1,2,…; the prompt tells the judge not to read dropped in-betweens as a timing defect, and the CLI prints `10 of 14 frames · UNEVEN spacing`.
 - **This is the only place Gemini is load-bearing for judgement.** It is being replaced — see *Removing Gemini* below.
 
 ### ⑦ Editor preview (manual check)
@@ -110,7 +113,7 @@ Priority for *this* pipeline is **mocap-trackability**: one coherent full-body h
 > Caveat: no public benchmark scores "clean limbs for a solver" — validate candidates by running their clips through MetaHuman Animator and measuring **solve success**, not cinematic Elo.
 
 ### B. Recognition (the VLM critique) — **DONE: Qwen wired + confirmed (2026-06-23)**
-The vision seam is injectable (`src/lib/anim-critique/gemini.ts: (images, prompt) => Promise<string>`), so the Qwen swap is a drop-in: **`src/lib/anim-critique/qwen.ts` (`makeQwenVision`)**. Select it per-call via the route/CLI **`provider`** field (`'qwen' | 'gemini'`, default gemini):
+The vision seam is injectable (`src/lib/anim-critique/vision.ts`: `(images, prompt) => Promise<string | VisionAnswer>` — the attributed form carries the answering model), so the Qwen swap is a drop-in: **`src/lib/anim-critique/qwen.ts` (`makeQwenVision`)**. Select it per-call via the route/CLI **`provider`** field (`'qwen' | 'gemini'`, default gemini):
 ```
 node scripts/anim-critique.mjs --dir <frames> --intent "…" --provider qwen
 ```
