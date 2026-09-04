@@ -28,3 +28,37 @@ describe('scoreCard', () => {
     expect(r.verdict).toBe('warn'); // 80 < 90 pass, but >= 45 warn
   });
 });
+
+describe('scoreCard does not average away a broken dimension', () => {
+  it('refuses to pass a card that is excellent on five dimensions and broken on one', () => {
+    const r = scoreCard({
+      anticipation: 90, weight: 90, timing: 90, followThrough: 90, silhouette: 90, believability: 10,
+    });
+    expect(r.verdict).not.toBe('pass');
+    expect(r.verdict).toBe('fail');
+  });
+
+  it('names the dimension that capped the verdict', () => {
+    const r = scoreCard({
+      anticipation: 90, weight: 90, timing: 90, followThrough: 90, silhouette: 90, believability: 10,
+    });
+    expect(r.worstDimension).toBe('believability');
+    expect(r.worstScore).toBe(10);
+    expect(r.reason).toContain('believability');
+  });
+
+  it('caps a five-strong card to warn when the weak dimension only warns', () => {
+    const r = scoreCard({
+      anticipation: 95, weight: 95, timing: 95, followThrough: 95, silhouette: 95, believability: 50,
+    });
+    expect(r.verdict).toBe('warn');
+    expect(r.worstDimension).toBe('believability');
+  });
+
+  it('still reports the mean as the score, so trend telemetry is unchanged', () => {
+    const r = scoreCard({
+      anticipation: 90, weight: 90, timing: 90, followThrough: 90, silhouette: 90, believability: 10,
+    });
+    expect(r.score).toBe(77); // (90*5+10)/6 = 76.67 -> 77
+  });
+});

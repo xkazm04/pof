@@ -8,7 +8,14 @@
  */
 export { buildCritiquePrompt, type AnimationContext } from './prompt';
 export { parseCritique, type ParsedCritique } from './parse';
-export { scoreCard, DEFAULT_THRESHOLDS, type CritiqueDimensions, type ScoreThresholds, type Scorecard } from './score';
+export {
+  scoreCard,
+  DEFAULT_THRESHOLDS,
+  type CritiqueDimensions,
+  type ScoreThresholds,
+  type Scorecard,
+  type AnimVerdict,
+} from './score';
 export { resolveFilmstrip, type FilmstripOptions } from './filmstrip';
 export {
   critiqueAnimation,

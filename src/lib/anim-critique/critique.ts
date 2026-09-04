@@ -7,17 +7,19 @@
 import { readFileSync } from 'node:fs';
 import { buildCritiquePrompt, type AnimationContext } from './prompt';
 import { parseCritique } from './parse';
-import { scoreCard, type CritiqueDimensions, type ScoreThresholds } from './score';
+import { scoreCard, type CritiqueDimensions, type ScoreThresholds, type Scorecard } from './score';
 
 export interface VisionImage {
   base64: string;
   mime: string;
 }
 
-/** The full critique surfaced to the loop: verdict + score + dimensions + actionable text. */
-export interface AnimationCritiqueCard {
-  verdict: 'pass' | 'warn' | 'fail';
-  score: number;
+/**
+ * The full critique surfaced to the loop: verdict + score + dimensions + actionable text.
+ * Carries the whole `Scorecard`, so the dimension that CAPPED the verdict travels with it
+ * (`worstDimension` / `reason`) — the verdict is the worst dimension's band, never the mean.
+ */
+export interface AnimationCritiqueCard extends Scorecard {
   dimensions: CritiqueDimensions;
   reasons: string[];
   topFix: string;
@@ -76,13 +78,12 @@ export async function critiqueAnimation(
   if (!parsed.ok || !parsed.dimensions) {
     return { ok: false, error: parsed.error ?? 'could not parse critique', raw };
   }
-  const { verdict, score } = scoreCard(parsed.dimensions, deps.thresholds);
+  const scored = scoreCard(parsed.dimensions, deps.thresholds);
   return {
     ok: true,
     raw,
     card: {
-      verdict,
-      score,
+      ...scored,
       dimensions: parsed.dimensions,
       reasons: parsed.reasons ?? [],
       topFix: parsed.topFix ?? '',
