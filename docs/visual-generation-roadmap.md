@@ -379,3 +379,45 @@ All 10 directions follow PoF's existing patterns:
 - **DB layer**: Asset metadata, generation history, and provider credentials stored in SQLite
 
 No fundamental architectural changes required. The existing module system, API pattern, store pattern, and PoF Bridge all extend naturally to support visual generation.
+
+---
+
+## Blender-MCP mesh download + grading (built 2026-09-05, wave 29, lot W29-C)
+
+The Blender-MCP generation path was **structurally ungradeable**: `critiqueMesh(glbPath)` reads a
+file on this server's disk, and nothing on the MCP path put one there — provider jobs run
+remotely, `poll_*_job_status` returns the provider's own `resultUrl`, and `import_generated_asset`
+is executed by the Blender addon, which returns only `{ objectName }`. Wave 13 shipped the honest
+"delivered, ungated, reason named" card; grading needed a new download-and-trust surface.
+
+**The seam** — `src/lib/visual-gen/mesh-fetch.ts`, `fetchMeshForGrading(resultUrl, jobId, deps)`.
+It is written as a list of refusals, each of which returns its reason in words:
+
+| Check | Rule |
+|---|---|
+| Scheme | `https` only |
+| Host | `MESH_HOST_ALLOWLIST` — `deemos.com`, `hyper3d.ai`, `hunyuan.tencent.com`, `myqcloud.com` (the two providers the MCP path uses: Rodin/Hyper3D and Tencent Hunyuan). Exact host or subdomain; never a substring, so `deemos.com.evil.io` cannot pass |
+| Redirect | the FINAL URL is re-checked against the same list; a redirect that left it writes nothing |
+| Content-type | `model/gltf-binary` / `model/gltf+json`, or `application/octet-stream` only when the URL path ends `.glb`/`.gltf` |
+| Size | `MESH_FETCH_MAX_BYTES` = 96 MB, checked against `content-length` first and the received body second |
+| Filename | `<jobId>.glb`, refused unless the job id is already a safe basename |
+
+**Where it lands:** `generated/mcp/<jobId>.glb`. `mcp` is appended to `ASSET_DIRS`
+(`generated-assets.ts`) so a graded file is servable via `assetUrl(name, 'mcp')` →
+`/api/visual-gen/asset/<name>?dir=mcp`. That list is an allow-list, not a scan: a refused fetch
+writes no file and the dir therefore lists nothing for that job.
+
+**What it changes in the verdict:** `mcpGateForJob` (`blender-mcp/mcp-gate.ts`, used by
+`GET /api/blender-mcp/generate/status`) stops projecting "ungated" once a file exists — it runs
+`critiqueMesh` and reports through the SAME `summarizeGate` vocabulary the runner stores use, so
+an MCP job and a runner job speak one language. When the download is refused it stays
+**delivered, ungated, `<the specific refusal>`**; when the job never had a URL at all (the addon
+imported straight into the Blender scene — the explicit non-goal) it keeps the original structural
+reason. Verdicts are memoised per job so the queue's poll loop never re-downloads a paid result.
+
+**Stated plainly: no live provider download happened in this session.** Both the fetch and the
+critique are injected in tests (`src/__tests__/lib/visual-gen/mesh-fetch.test.ts`,
+`src/__tests__/lib/blender-mcp/mcp-gate-download.test.ts`). The allow-list is therefore derived
+from the providers' own domains, not from an observed redirect — if a provider hands back a
+third-party CDN URL, the seam refuses it BY NAME with the host printed, so widening the list is a
+deliberate one-line edit after an operator has seen the real host.

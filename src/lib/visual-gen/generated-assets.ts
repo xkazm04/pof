@@ -44,6 +44,11 @@ export const ASSET_DIRS: readonly AssetDirSpec[] = [
   { dir: 'trellis2', label: 'TRELLIS.2 (local, textured)' },
   { dir: 'mesh-finish', label: 'Mesh finish (retopo/decimate)' },
   { dir: 'meshes', label: 'Pipeline meshes' },
+  // Provider meshes downloaded off the Blender-MCP path so the Tier-1 gate has a file to
+  // read (`visual-gen/mesh-fetch.ts`). Nothing writes here except a download that cleared
+  // the host allow-list, the mesh content-type check and the size cap — a refused fetch
+  // writes no file, and this list is an allow-list, not a scan, so it lists nothing.
+  { dir: 'mcp', label: 'Blender MCP (provider download)' },
 ];
 
 /**
