@@ -76,6 +76,8 @@ function standardRoutes(overrides: Partial<Record<string, RouteHandler>> = {}): 
     '/api/one-shot/propose': () => PROPOSAL,
     '/api/one-shot/refine':  () => PROPOSAL,
     '/api/one-shot/step':    stepHandler,
+    // 1895977e: the draft is persisted server-side BEFORE the first step runs.
+    '/api/catalog-entities': () => ({ persisted: true }),
     ...overrides,
   };
 }
@@ -200,10 +202,13 @@ describe('one-shot E2E (mocked CLI)', () => {
 
   it('cancel() mid-run ends with phase=failed, failureReason=cancelled, and emits oneshot.failed', async () => {
     let resolveStep: (v: unknown) => void;
+    let markStepReached!: () => void;
+    /** Resolves when the step fetch is PENDING - `approveAndRun()` awaits the entity persist first. */
+    const stepReached = new Promise<void>((r) => { markStepReached = r; });
     /** The step mock pauses on the first call until `resolveStep` is invoked. */
     const blockedStepFetch = (async (url: string, init?: RequestInit) => {
       if (url === '/api/one-shot/step') {
-        await new Promise((res) => { resolveStep = res; });
+        await new Promise((res) => { resolveStep = res; markStepReached(); });
         return { ok: true, status: 200, json: async () => ({ success: true, data: { outcome: 'pass' } }) };
       }
       // All other routes resolve immediately
@@ -231,7 +236,9 @@ describe('one-shot E2E (mocked CLI)', () => {
 
     // Start run, then cancel before the blocked step resolves
     const runPromise = orch.approveAndRun();
-    // Cancel synchronously — sets _cancelled flag and phase=failed
+    // The run persists the draft entity before its first step; cancel once the step fetch is pending
+    await stepReached;
+    // Cancel — sets _cancelled flag and phase=failed
     orch.cancel();
     // Unblock the pending step fetch so the loop can exit
     resolveStep!(undefined);
