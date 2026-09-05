@@ -13,7 +13,6 @@ import { useProjectStore } from '@/stores/projectStore';
 import { TaskFactory } from '@/lib/cli-task';
 import { buildMaterialPatternPrompt } from '@/lib/prompts/material-patterns';
 import { buildPostProcessPrompt } from '@/lib/prompts/post-process';
-import { buildMaterialConfiguratorPrompt } from '@/lib/prompts/material-configurator';
 import { buildStyleTransferPrompt } from '@/lib/prompts/style-transfer';
 import { MaterialLayerGraph } from './MaterialLayerGraph';
 import { MaterialPatternCatalog } from './MaterialPatternCatalog';
@@ -54,10 +53,14 @@ export function MaterialsView() {
     accentColor: MODULE_COLORS.content,
   });
 
+  // On the CLITask rail (phase 1 of the standalone-builder migration): the prompt
+  // is composed by `buildTaskPrompt` inside `execute`, so prompt-evolution can
+  // resolve a variant for it, an A/B can test it, and the inspector previews the
+  // exact string that dispatches. Never `sendPrompt` with a hand-built prompt.
   const handleGenerateConfigured = useCallback((config: MaterialConfiguratorConfig) => {
-    const prompt = buildMaterialConfiguratorPrompt(config, { projectName, projectPath, ueVersion });
-    configuratorCli.sendPrompt(prompt);
-  }, [configuratorCli, projectName, projectPath, ueVersion]);
+    const task = TaskFactory.materialConfigurator('materials', config, 'Material Config');
+    void configuratorCli.execute(task);
+  }, [configuratorCli]);
 
   // ── Catalog CLI session ──
 

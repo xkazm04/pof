@@ -21,6 +21,8 @@ import {
   type ChecklistTask,
   type GenerateTask,
   type EvaluateTrackTask,
+  type MaterialConfiguratorTask,
+  materialConfiguratorVariantKey,
 } from '@/lib/cli-task';
 import { taskVariantBody } from '@/lib/cli-task-handlers';
 import type { ProjectContext } from '@/lib/prompt-context';
@@ -67,6 +69,13 @@ export function variantKeyForTask(
   if (task.type === 'evaluate-track') {
     const et = task as EvaluateTrackTask;
     return { moduleId: task.moduleId, checklistItemId: `${et.entity.catalogId}::track:${et.trackId}::${et.entity.id}` };
+  }
+  // Standalone-builder migration, phase 1: the material configurator. Its prompt
+  // embeds the whole configuration, so the key digests that configuration — see
+  // `materialConfiguratorVariantKey`.
+  if (task.type === 'material-configurator') {
+    const mt = task as MaterialConfiguratorTask;
+    return { moduleId: task.moduleId, checklistItemId: materialConfiguratorVariantKey(mt.config) };
   }
   return null;
 }

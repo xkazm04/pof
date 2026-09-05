@@ -16,7 +16,7 @@ import type { AbilityRef } from '@/lib/ability/logic-prompts';
 import type { TestSuite } from '@/types/ai-testing';
 import { logger } from '@/lib/logger';
 import { expectGolden } from './golden';
-import { STANDALONE_BUILDERS, GOLDEN_LEVEL_DOC } from './builder-fixtures';
+import { STANDALONE_BUILDERS, GOLDEN_LEVEL_DOC, GOLDEN_MATERIAL_CONFIG } from './builder-fixtures';
 
 /**
  * The golden rail — byte-level regression armour for EVERY composed prompt.
@@ -195,6 +195,12 @@ const TASK_CASES: Record<CLITaskType, () => CLITask> = {
       'GAS Effects',
     ),
   'run-ai-tests': () => TaskFactory.runAITests('ai-behavior', SUITE, ORIGIN, 'AI Tests'),
+  // Phase 1 of the standalone-builder migration. The same fixture the STANDALONE
+  // builder golden uses, so `task-material-configurator` and
+  // `builder-material-configurator` must stay byte-identical — the pin that says
+  // routing through the rail did not change the prompt.
+  'material-configurator': () =>
+    TaskFactory.materialConfigurator('materials', GOLDEN_MATERIAL_CONFIG, 'Material Config'),
   'detect-stimuli': () =>
     TaskFactory.detectStimuli(
       'ai-behavior',

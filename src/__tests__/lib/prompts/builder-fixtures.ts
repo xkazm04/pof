@@ -88,6 +88,12 @@ const MATERIAL_CONFIG: MaterialConfiguratorConfig = {
   },
 };
 
+/**
+ * Shared with the `material-configurator` TASK golden: routing the builder through
+ * the CLITask rail must not change one byte of the composed prompt.
+ */
+export { MATERIAL_CONFIG as GOLDEN_MATERIAL_CONFIG };
+
 const MATERIAL_PATTERN: MaterialPattern = {
   id: 'dissolve',
   name: 'Dissolve',

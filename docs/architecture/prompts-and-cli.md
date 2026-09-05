@@ -192,6 +192,31 @@ both (with a golden per surface):
   composition at all, and now dispatches `TaskFactory.quickAction` (prompt text
   unchanged, full header + domain + knowledge gained).
 
+**Two composition engines, and the migration off the second one.** Knowledge
+routing closed the *content* gap, but a standalone builder dispatched by a raw
+`sendPrompt` is still outside the `CLITask` rail, and that is a **visibility**
+gap: `dispatch-resolve.variantKeyForTask` only sees tasks, so no prompt-evolution
+variant can be adopted for such a prompt, no A/B test can be run on it, and
+`TaskPromptInspector` cannot preview the string that ships. Phase 1 of the
+migration converted the **material configurator**: `TaskFactory.materialConfigurator`
++ the `material-configurator` handler (which returns
+`buildMaterialConfiguratorPrompt` VERBATIM — the builder already emits its own
+header, so the handler adds no second header, no wiring block, no callback
+section) + a `variantKeyForTask` branch keyed by
+`materialConfiguratorVariantKey(config)`. That key digests the WHOLE configuration
+because the prompt embeds it — same reasoning as the `generate` key ending in the
+entity id. `MaterialsView` dispatches it via `useModuleCLI.execute`, never
+`sendPrompt`. Pinned by `__golden__/task-material-configurator.md` (byte-identical
+to `builder-material-configurator.md`) and
+`__tests__/lib/prompt-evolution/material-configurator-rail.test.ts`.
+
+**Remaining gap: 9 standalone builders still dispatch through raw `sendPrompt`**
+and stay invisible to prompt evolution — `material-patterns`, `post-process`,
+`style-transfer` (`MaterialsView`), `audio-scene`, `audio-events`
+(`AudioView/useAudioView`), `inventory`, `menu-flow` (`UIHudView`), `level-design`
+(`useLevelDesignView`, three dispatch sites), and `ai-testing`
+(`AIBehaviorView`). Converting each is the same three-part move as above.
+
 Deliberate **exemptions** are recorded in that same rail: `project-setup/prompts.ts`
 (the create prompt builds the very project a header would describe; the
 build-verify prompt is a terse diagnostic carrying its own engine/project paths and
@@ -319,7 +344,7 @@ sessions edit prompt text constantly and drift is otherwise invisible.
 |---|---|
 | `golden.ts` | `expectGolden(name, actual)` — file-backed pin; on mismatch names the drifted markdown **section** before showing the line diff (via `lib/text-diff.ts`) |
 | `__golden__/*.md` | The recorded prompts — reviewable in a normal diff, not an opaque `.snap` |
-| `task-prompt-golden.test.ts` | One pin per `CLITaskType` (**all 18**, with a coverage guard against `taskPromptHandlers`) + one per standalone builder, + the loud-fallback suite |
+| `task-prompt-golden.test.ts` | One pin per `CLITaskType` (**all 20**, with a coverage guard against `taskPromptHandlers`) + one per standalone builder, + the loud-fallback suite |
 | `builder-fixtures.ts` | The shared standalone-builder fixture table (also drives the knowledge rail) |
 
 Re-record an intentional change with:

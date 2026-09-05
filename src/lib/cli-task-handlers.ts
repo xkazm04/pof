@@ -29,6 +29,7 @@ import { buildGenerateAbilityBundlePrompt } from '@/lib/ability/effect-codegen-p
 import { buildRunTestsPrompt, buildMockStimuliPrompt } from '@/lib/prompts/ai-testing';
 import { MIXAMO_DOWNLOAD_CONTRACT, MIXAMO_DOWNLOAD_CONTRACT_HEADING } from '@/lib/prompts/_shared';
 import { buildSyncCheckPrompt } from '@/lib/prompts/level-design';
+import { buildMaterialConfiguratorPrompt } from '@/lib/prompts/material-configurator';
 import {
   buildAnimationChecklistPrompt,
   findAnimationChecklistStep,
@@ -59,6 +60,7 @@ import {
   type GenerateGasEffectsTask,
   type RunAITestsTask,
   type DetectStimuliTask,
+  type MaterialConfiguratorTask,
 } from '@/lib/cli-task';
 
 /**
@@ -691,8 +693,27 @@ function evaluateTrackBody(et: EvaluateTrackTask): string {
 export function taskVariantBody(task: CLITask, ctx: ProjectContext): string {
   if (task.type === 'generate') return recipeStepBody(task as GenerateTask, ctx);
   if (task.type === 'evaluate-track') return evaluateTrackBody(task as EvaluateTrackTask);
+  if (task.type === 'material-configurator') {
+    return buildMaterialConfiguratorPrompt((task as MaterialConfiguratorTask).config, ctx);
+  }
   return task.prompt;
 }
+
+/**
+ * Material-configurator handler — the standalone builder, brought onto the rail.
+ *
+ * `buildMaterialConfiguratorPrompt` composes its OWN project-context header (via
+ * `PromptBuilder.withProjectContext`), so this handler deliberately adds nothing:
+ * no second header, no wiring block, no callback section. With no variant served
+ * the returned string is byte-identical to what the old raw `sendPrompt` sent.
+ */
+const materialConfigurator: TaskPromptHandler = (task, ctx) => {
+  const mt = task as MaterialConfiguratorTask;
+  // A served prompt-evolution variant (or the pre-materialized body from
+  // `taskVariantBody`) arrives on `task.prompt`; recompute only when the dispatch
+  // path resolved nothing, so the static path stays byte-identical.
+  return mt.prompt.trim() ? mt.prompt : buildMaterialConfiguratorPrompt(mt.config, ctx);
+};
 
 const generate: TaskPromptHandler = (task, ctx) => {
   const gt = task as GenerateTask;
@@ -859,4 +880,5 @@ export const taskPromptHandlers: Record<CLITaskType, TaskPromptHandler> = {
   'generate-gas-effects': generateGasEffects,
   'run-ai-tests': runAITests,
   'detect-stimuli': detectStimuli,
+  'material-configurator': materialConfigurator,
 };

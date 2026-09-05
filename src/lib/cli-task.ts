@@ -19,6 +19,7 @@ import type { AbilityRef } from '@/lib/ability/logic-prompts';
 import type { EditorEffect, TagRule } from '@/lib/ability/spec';
 import type { TestSuite } from '@/types/ai-testing';
 import type { LevelDesignDocument } from '@/types/level-design';
+import type { MaterialConfiguratorConfig } from '@/components/modules/content/materials/MaterialParameterConfigurator';
 import { taskPromptHandlers } from '@/lib/cli-task-handlers';
 import { logger } from '@/lib/logger';
 
@@ -263,7 +264,8 @@ export type CLITaskType =
   | 'draft-ability-spec'
   | 'generate-gas-effects'
   | 'run-ai-tests'
-  | 'detect-stimuli';
+  | 'detect-stimuli'
+  | 'material-configurator';
 
 /** Task types that generate or modify UE code and therefore get a Wiring Requirements section. */
 const WIRING_TASK_TYPES = new Set<CLITaskType>(['checklist', 'quick-action', 'feature-fix']);
@@ -517,6 +519,58 @@ export interface CharacterSetupTask extends CLITask {
   animBlueprint: string;
   enemyMaterial: string;
   appOrigin: string;
+}
+
+/**
+ * Material-configurator task — the Materials module's "Generate" button.
+ *
+ * The configurator used to build its prompt with `buildMaterialConfiguratorPrompt`
+ * and hand the finished string to a raw `sendPrompt`, which put it OUTSIDE the
+ * `CLITask` rail: prompt-evolution could not resolve a variant for it, the A/B
+ * machinery could never test it, and `TaskPromptInspector` could not preview it.
+ * As a task it composes through the one path (`buildTaskPrompt` → the handler),
+ * so what the preview shows is what dispatches.
+ *
+ * The handler returns the builder's output VERBATIM (no callback section, no
+ * wiring block): the builder already emits its own project-context header, so
+ * the static dispatch is byte-identical to the pre-task one.
+ */
+export interface MaterialConfiguratorTask extends CLITask {
+  type: 'material-configurator';
+  config: MaterialConfiguratorConfig;
+}
+
+/** FNV-1a (32-bit), hex. Deterministic and dependency-free — used only to key a
+ *  configuration, never for security. */
+function fnv1a(text: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h.toString(16).padStart(8, '0');
+}
+
+/**
+ * The prompt-evolution variant key for a material-configurator dispatch.
+ *
+ * The composed prompt EMBEDS the configuration (surface, output type, selected
+ * features, every parameter's default/min/max/step), so a variant seeded for one
+ * configuration must never be served to another — that would dispatch the wrong
+ * material's specification under a right-looking key. Same reasoning as the
+ * `generate` key ending in the entity id. The readable prefix keeps the key
+ * greppable; the digest is what makes it exact.
+ */
+export function materialConfiguratorVariantKey(config: MaterialConfiguratorConfig): string {
+  const params = Object.keys(config.params)
+    .sort()
+    .map((k) => {
+      const p = config.params[k];
+      return `${k}=${p.name}:${p.defaultValue}:${p.min}:${p.max}:${p.step}`;
+    })
+    .join('|');
+  const shape = `${config.outputType}|${config.surfaceType}|${[...config.features].sort().join(',')}|${params}`;
+  return `material-configurator::${config.outputType}::${config.surfaceType}::${fnv1a(shape)}`;
 }
 
 /**
@@ -813,6 +867,19 @@ export const TaskFactory = {
       assets: params.assets,
       appOrigin,
     };
+  },
+
+  /**
+   * Create a material-configurator task (Materials → Configure → Generate).
+   * `prompt: ''` — the body is composed by the handler from `config`, exactly
+   * like the recipe-driven types, so a served variant can replace it.
+   */
+  materialConfigurator(
+    moduleId: SubModuleId,
+    config: MaterialConfiguratorConfig,
+    label: string,
+  ): MaterialConfiguratorTask {
+    return { type: 'material-configurator', moduleId, prompt: '', label, config };
   },
 
   /** Create a generation task for one recipe step of a catalog entity (folder-09). */
