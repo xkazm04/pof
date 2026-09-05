@@ -1,6 +1,18 @@
 import type { GenAssetRef, RawGenCandidate } from '@/lib/catalog/stepSpec';
+import { parseIconFileName } from '@/lib/visual-gen/generated-icons';
 import { genericGalleryCandidates } from './genericGalleryCandidates';
 import { fnv1a } from './hash';
+
+/**
+ * What this slot's art was generated FOR, read from the filename's own structure — art made
+ * for THIS ENTITY, or the catalog-wide per-step icon standing in for it. The manifest is
+ * already resolved with that precedence server-side (`/api/visual-gen/icons`), so this only
+ * has to SAY which one arrived; a step icon shown against an entity must never read as art
+ * made for that entity.
+ */
+function scopeNote(name: string): string {
+  return parseIconFileName(name).scope === 'entity' ? ' · art for this entity' : '';
+}
 
 /**
  * Candidate generator for a generic gallery step that can surface REAL generated
@@ -35,7 +47,7 @@ export function imageGalleryCandidates(
     return {
       swatch: `linear-gradient(135deg, hsl(${hue} 20% 40%), hsl(${(hue + 24) % 360} 22% 26%))`,
       imageUrl: asset.url,
-      caption: asset.name,
+      caption: `${asset.name}${scopeNote(asset.name)}`,
       payload: { [field]: i },
     };
   });

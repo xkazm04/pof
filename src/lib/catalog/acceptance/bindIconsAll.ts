@@ -7,10 +7,16 @@
  * `gradeArtifact` the produce POST uses — so a bind can only move a verdict by making the
  * artifact genuinely own a real asset, never by asserting one.
  *
+ * The library is keyed on the ARTIFACT IDENTITY `(catalog, entity, step)`: an entity's own
+ * icon wins for that entity, the per-step icon is the fallback, and every bound row records
+ * `scope` so a step icon standing in for an entity is a declared substitution rather than a
+ * silent one.
+ *
  * Pure orchestration over injected deps (no fs / db / clock here), mirroring
  * `staticVerify.ts`, so it is unit-testable without a generated library or SQLite.
  */
 import { bindGeneratedIcon } from './bindGeneratedIcons';
+import type { IconScope } from '@/lib/visual-gen/generated-icons';
 import type { AcceptanceResult } from './types';
 
 export interface BindIconsFilter {
@@ -26,6 +32,12 @@ export interface BindIconsRow {
   to: string;
   /** The bound image url, or the reason nothing was bound. */
   detail: string;
+  /**
+   * WHICH scope of the library served this row — `entity` (art generated for this exact
+   * entity) or `step` (the catalog-wide per-step icon standing in). Absent when nothing
+   * bound. A step icon on an entity row is a declared substitution, never silent.
+   */
+  scope?: IconScope;
   changed: boolean;
 }
 
@@ -46,8 +58,12 @@ export interface BindIconsSummary {
 export interface BindIconsDeps {
   /** Persisted artifacts to consider. */
   listArtifacts: (filter: BindIconsFilter) => { catalogId: string; entityId: string; step: string; status: string; data: Record<string, unknown> }[];
-  /** The served url of the art generated FOR this step, or null when the library has none. */
-  iconUrlFor: (catalogId: string, step: string) => string | null;
+  /**
+   * The art this artifact may show, resolved with the library's own precedence: the
+   * ENTITY's own icon when it has one, else the per-step icon, else null. The returned
+   * `scope` names which of the two answered, so the runner can report it per row.
+   */
+  iconFor: (catalogId: string, step: string, entityId: string) => { url: string; scope: IconScope } | null;
   /** Re-grade the bound data with the step's own server checker (null when unregistered). */
   grade: (catalogId: string, step: string, data: Record<string, unknown>, entityId: string) => AcceptanceResult | null;
   /** Persist the bound data + its re-graded verdict. */
@@ -66,8 +82,9 @@ export function bindIconsAll(
   let examined = 0, bound = 0, changed = 0, skipped = 0;
 
   for (const a of deps.listArtifacts(filter)) {
-    const url = deps.iconUrlFor(a.catalogId, a.step);
-    if (!url) { skipped++; continue; }
+    const hit = deps.iconFor(a.catalogId, a.step, a.entityId);
+    if (!hit) { skipped++; continue; }
+    const { url, scope } = hit;
     examined++;
     const outcome = bindGeneratedIcon(a.data ?? {}, url, deps.now());
     if ('skipped' in outcome) {
@@ -85,7 +102,7 @@ export function bindIconsAll(
     const moved = verdict.status !== a.status;
     if (moved) changed++;
     if (apply) deps.save(a.catalogId, a.entityId, a.step, outcome.data, verdict);
-    results.push({ catalogId: a.catalogId, entityId: a.entityId, step: a.step, from: a.status, to: verdict.status, detail: url, changed: moved });
+    results.push({ catalogId: a.catalogId, entityId: a.entityId, step: a.step, from: a.status, to: verdict.status, detail: url, scope, changed: moved });
   }
 
   return { library: opts?.library ?? 0, examined, bound, changed, skipped, results };

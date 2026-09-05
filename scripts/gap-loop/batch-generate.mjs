@@ -8,11 +8,14 @@
  * active style profile. Set POF_STYLE_DNA=off for a style-neutral batch.
  *
  *   node scripts/gap-loop/batch-generate.mjs <targets.json> [gate-manifest.json]
- * targets.json = [{catalogId, entityId, step}, ...]
+ * targets.json = [{catalogId, entityId, step, scope?}, ...]
+ *   scope: 'entity' names the output for THAT entity (catalog__entity__step); omitted /
+ *   'step' keeps the catalog-wide per-step name.
  * env: POF_ORIGIN (default http://localhost:3001), POF_STYLE_DNA=off
  */
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
+import { iconFileBase } from './power-icon-payload.mjs';
 
 const ORIGIN = process.env.POF_ORIGIN || 'http://localhost:3001';
 const APPLY_STYLE = process.env.POF_STYLE_DNA !== 'off';
@@ -81,7 +84,11 @@ const manifest = [];
 for (const t of targets) {
   const key = `${t.catalogId}|${t.step}`;
   const s = SPECIAL[key] || ICON(WHAT[t.catalogId] || `${t.catalogId} ${t.step}`);
-  const id = `${t.catalogId}__${t.step}`.replace(/[^a-z0-9]+/gi, '_');
+  // Named by the SHARED helper, never a hand-built string — the id a consumer matches on
+  // lives in ONE place (power-icon-payload.mjs, pinned byte-identical to the app's
+  // `iconFileBase`). `scope: 'entity'` on a target names the file for THAT entity;
+  // everything else keeps the catalog-wide per-step name the whole library already uses.
+  const id = iconFileBase(t.catalogId, t.step, t.scope === 'entity' ? t.entityId : undefined);
   const isMap = /Maps|Material|Wireframe|Concept 2D/.test(t.step);
   try {
     const b64 = await gen(s.prompt, isMap ? 768 : 512, isMap ? 768 : 512);

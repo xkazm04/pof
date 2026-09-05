@@ -24,7 +24,9 @@
  *     can match (reported, never deleted).
  *
  *   node scripts/gap-loop/power-icon.mjs '<json spec>'
- * spec = {catalogId, entityId, step, name, prompt, subject, width?, height?, tier?}
+ * spec = {catalogId, entityId, step, name, prompt, subject, width?, height?, tier?, scope?}
+ *        scope: 'entity' names the file for THIS entity (catalog__entity__step); default
+ *        'step' keeps the catalog-wide per-step name every existing library file uses.
  * env: POF_ORIGIN (default http://localhost:3001), POF_TRIPOSR_ROOT (venv for the gate),
  *      POF_STYLE_DNA=off (skip style injection)
  */
@@ -136,9 +138,13 @@ async function main() {
 
   // The winner — and ONLY the winner — enters the served library, under the name the
   // consumer matches on (iconSlug), so this step can actually show what it generated.
-  const iconPath = join(OUTDIR, iconFileName(catalogId, step));
+  // Entity-scoped output is OPT-IN (`scope: 'entity'` in the spec) and named by the SHARED
+  // helper, never a hand-built string — that hand-built `${catalogId}__${entityId}__t${i}`
+  // is precisely what left three real images structurally unaddressable.
+  const scopedEntityId = spec.scope === 'entity' ? entityId : undefined;
+  const iconPath = join(OUTDIR, iconFileName(catalogId, step, 'jpg', scopedEntityId));
   writeFileSync(iconPath, Buffer.from(best.b64, 'base64'));
-  console.log(`ICON written → ${iconPath}`);
+  console.log(`ICON written → ${iconPath} (scope: ${scopedEntityId ? 'entity' : 'step'})`);
 
   const gate = gateOutcome(best.score, PASS_AT, best.gateError);
 

@@ -59,7 +59,7 @@ describe('bindIconsAll', () => {
     return {
       saved,
       listArtifacts: () => [artifact('Icon 2D Art', 'deferred', gallerySeed('selected', 4))],
-      iconUrlFor: () => URL,
+      iconFor: () => ({ url: URL, scope: 'step' as const }),
       grade: (_c, step, data) => gradeGallerySelection(data, 'selected', step),
       save: (catalogId, entityId, step, data, res) => { saved.push({ catalogId, entityId, step, data, res }); },
       now: () => AT,
@@ -82,7 +82,7 @@ describe('bindIconsAll', () => {
   });
 
   it('skips a step the library has no art for — it can never borrow a sibling’s image', () => {
-    const d = deps({ iconUrlFor: () => null });
+    const d = deps({ iconFor: () => null });
     const s = bindIconsAll({}, d);
     expect(s).toMatchObject({ examined: 0, bound: 0, changed: 0, skipped: 1 });
     expect(d.saved).toHaveLength(0);

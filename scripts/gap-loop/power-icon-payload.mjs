@@ -25,12 +25,24 @@ function normalizeIconId(s) {
 }
 
 /**
- * The on-disk id a generated icon for `(catalogId, step)` carries. Byte-identical to
- * `iconSlug` in `src/lib/visual-gen/generated-icons.ts` — the rule EVERY consumer
- * (`useGeneratedImageAssets`, the `/api/visual-gen/icons` filter, `bind-icons`) matches on.
+ * The on-disk id a generated icon for `(catalogId, step[, entityId])` carries.
+ * Byte-identical to `iconSlug` in `src/lib/visual-gen/generated-icons.ts` — the rule EVERY
+ * consumer (`useGeneratedImageAssets`, the `/api/visual-gen/icons` filter, `bind-icons`)
+ * matches on. Two arguments = the per-step id; three = the per-entity id.
  */
-export function iconSlug(catalogId, step) {
-  return normalizeIconId(`${catalogId}__${step}`);
+export function iconSlug(catalogId, step, entityId) {
+  return normalizeIconId(entityId ? `${catalogId}__${entityId}__${step}` : `${catalogId}__${step}`);
+}
+
+/**
+ * The filename BASE a generator MUST write so the icon is addressable. Byte-identical to
+ * `iconFileBase` in `src/lib/visual-gen/generated-icons.ts`: entity-scoped names keep the
+ * literal `__` separators (the structural marker the parser reads), while the per-step form
+ * stays the flat collapsed slug every existing file in the library already uses.
+ */
+export function iconFileBase(catalogId, step, entityId) {
+  if (!entityId) return iconSlug(catalogId, step);
+  return [catalogId, entityId, step].map(normalizeIconId).join('__');
 }
 
 /** The `(catalog, step)` slug encoded in an icon filename (extension stripped). */
@@ -44,8 +56,8 @@ export function slugOfIconFile(name) {
  * artifact belongs in the served library, so every file in `generated/icons/` is one a step
  * can show.
  */
-export function iconFileName(catalogId, step, ext = 'jpg') {
-  return `${iconSlug(catalogId, step)}.${ext}`;
+export function iconFileName(catalogId, step, ext = 'jpg', entityId) {
+  return `${iconFileBase(catalogId, step, entityId)}.${ext}`;
 }
 
 /**
@@ -140,10 +152,33 @@ export function reachableIconSlugs(catalogs) {
 }
 
 /**
+ * The structural identity of an icon filename. Mirrors `parseIconFileName` in
+ * `src/lib/visual-gen/generated-icons.ts`: an exact three-segment `__` split is
+ * entity-scoped, everything else is a per-step file identified by its flat slug alone.
+ */
+export function parseIconFileName(name) {
+  const base = name.replace(/\.[^.]+$/, '');
+  const seg = base.split('__');
+  if (seg.length === 3 && seg.every((s) => s.length > 0)) {
+    return { slug: normalizeIconId(base), scope: 'entity', catalogId: seg[0], entityId: seg[1], step: seg[2] };
+  }
+  return { slug: normalizeIconId(base), scope: 'step' };
+}
+
+/**
  * Icon filenames that no registered step can ever match — listed by
  * `/api/visual-gen/icons` and dead to every consumer. Reported, never deleted: renaming to
- * `iconFileName(catalogId, step)` is the reversible fix and it is the operator's call.
+ * `iconFileName(catalogId, step[, ext, entityId])` is the reversible fix and it is the
+ * operator's call.
+ *
+ * An ENTITY-scoped file is reachable when its own `(catalog, step)` segments re-encode to a
+ * registered step — `bind-icons` resolves it for that entity. Reporting those as dead was
+ * exactly the "unaddressable" reading the entity dimension exists to remove.
  */
 export function unreachableIconNames(iconNames, reachable) {
-  return (iconNames ?? []).filter((n) => !reachable.has(slugOfIconFile(n)));
+  return (iconNames ?? []).filter((n) => {
+    const id = parseIconFileName(n);
+    if (id.scope === 'entity') return !reachable.has(iconSlug(id.catalogId, id.step));
+    return !reachable.has(id.slug);
+  });
 }

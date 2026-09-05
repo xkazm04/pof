@@ -3,7 +3,7 @@ import { readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { bindIconsAll, type BindIconsFilter, type BindIconsDeps } from '@/lib/catalog/acceptance/bindIconsAll';
-import { buildIconList, iconSlug, type GeneratedIcon } from '@/lib/visual-gen/generated-icons';
+import { buildIconList, resolveIconFor, type GeneratedIcon } from '@/lib/visual-gen/generated-icons';
 import { listAllArtifacts, getArtifact, upsertArtifact } from '@/lib/pipeline-artifacts-db';
 import { gradeArtifact } from '@/lib/catalog/headless';
 import '@/lib/catalog/pipelines/registry.generated';
@@ -17,9 +17,10 @@ import '@/lib/catalog/pipelines/registry.generated';
  * asset") even though the art exists. This route binds the library art onto each such
  * artifact's selected candidate and RE-GRADES through the normal server checker.
  *
- * It cannot manufacture a pass: the file must exist and match `iconSlug(catalogId, step)`,
- * an artifact with no generation history is skipped, and the bind is disclosed in the
- * artifact data (`iconBinding`).
+ * It cannot manufacture a pass: the file must exist and match the artifact's own identity
+ * — `iconSlug(catalogId, step, entityId)` for the entity's own art, `iconSlug(catalogId,
+ * step)` for the per-step fallback — an artifact with no generation history is skipped, and
+ * the bind is disclosed in the artifact data (`iconBinding`) with the scope that served it.
  */
 function listLibrary(): GeneratedIcon[] {
   const dir = join(process.cwd(), 'generated', 'icons');
@@ -41,8 +42,6 @@ function listLibrary(): GeneratedIcon[] {
 }
 
 function makeDeps(icons: GeneratedIcon[]): BindIconsDeps {
-  const bySlug = new Map<string, string>();
-  for (const i of icons) if (!bySlug.has(i.slug)) bySlug.set(i.slug, i.url); // newest first wins
   return {
     listArtifacts: (filter) =>
       listAllArtifacts(filter).map((a) => ({
@@ -52,7 +51,12 @@ function makeDeps(icons: GeneratedIcon[]): BindIconsDeps {
         status: a.status,
         data: a.data ?? {},
       })),
-    iconUrlFor: (catalogId, step) => bySlug.get(iconSlug(catalogId, step)) ?? null,
+    // The library's own precedence — the entity's icon first, the per-step icon as the
+    // fallback (`resolveIconFor` picks the newest of whichever scope answered).
+    iconFor: (catalogId, step, entityId) => {
+      const hit = resolveIconFor(icons, catalogId, step, entityId);
+      return hit ? { url: hit.url, scope: hit.scope } : null;
+    },
     grade: (catalogId, step, data, entityId) => {
       const { graded, raw } = gradeArtifact(catalogId, step, data, entityId);
       return graded ? raw : null;

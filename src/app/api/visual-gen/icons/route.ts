@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { readdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { apiSuccess, apiError } from '@/lib/api-utils';
-import { buildIconList, iconSlug, type GeneratedIcon } from '@/lib/visual-gen/generated-icons';
+import { buildIconList, iconsFor, type GeneratedIcon } from '@/lib/visual-gen/generated-icons';
 import { readListingCache, writeListingCache } from '@/lib/visual-gen/generated-assets';
 
 /**
@@ -12,8 +12,11 @@ import { readListingCache, writeListingCache } from '@/lib/visual-gen/generated-
  * (an empty gallery, not an error), so a step with no generated art falls back to the
  * honest deterministic swatch.
  *
- * Optional filter — `?catalogId=…&step=…` (or the pre-computed `?slug=…`) returns only
- * the art generated FOR that pipeline step, matched on the generator's own filename id.
+ * Optional filter — `?catalogId=…&step=…[&entityId=…]` (or the pre-computed `?slug=…`)
+ * returns only the art generated FOR that pipeline artifact, matched on the generator's own
+ * filename id. With an `entityId` the entity's own art wins and the per-step icon is the
+ * fallback; without one, only step-scoped art is returned (one entity's art must never
+ * answer for the whole catalog). Every entry declares the `scope` it was matched at.
  *
  * Every gallery mount used to pay a `readdir` plus one `stat` PER FILE to filter down to
  * (typically) one match. The shaped list is now cached in-process against the directory's
@@ -29,11 +32,17 @@ export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams;
   const catalogId = q.get('catalogId');
   const step = q.get('step');
-  const want = q.get('slug') ?? (catalogId && step ? iconSlug(catalogId, step) : null);
+  const entityId = q.get('entityId');
+  const slug = q.get('slug');
   try {
     const all = await listIcons(dir);
     if (all === null) return apiSuccess({ icons: [] }); // dir absent → empty gallery, not an error
-    return apiSuccess({ icons: want ? all.filter((i) => i.slug === want) : all });
+    // An explicit `?slug=` is an exact lookup and stays exact. `(catalogId, step[, entityId])`
+    // goes through the library's precedence: the entity's own art wins, the per-step icon is
+    // the fallback, and each entry carries the `scope` that answered.
+    if (slug) return apiSuccess({ icons: all.filter((i) => i.slug === slug) });
+    if (catalogId && step) return apiSuccess({ icons: iconsFor(all, catalogId, step, entityId ?? undefined) });
+    return apiSuccess({ icons: all });
   } catch (e) {
     return apiError(e instanceof Error ? e.message : 'failed to list icons', 500);
   }

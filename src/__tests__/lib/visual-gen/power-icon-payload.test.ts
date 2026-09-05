@@ -1,9 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import { iconSlug as libIconSlug } from '@/lib/visual-gen/generated-icons';
+import {
+  buildIconList as libBuildIconList,
+  iconFileBase as libIconFileBase,
+  iconSlug as libIconSlug,
+  resolveIconFor as libResolveIconFor,
+} from '@/lib/visual-gen/generated-icons';
 import {
   PASS_AT,
   iconSlug,
   slugOfIconFile,
+  iconFileBase,
   iconFileName,
   gateOutcome,
   buildArtifactPayload,
@@ -148,5 +154,47 @@ describe('power-icon reachability report — dead files are named, never silentl
   it('tolerates an empty or absent pipeline list without claiming everything is fine', () => {
     expect(unreachableIconNames(['x.jpg'], reachableIconSlugs([]))).toEqual(['x.jpg']);
     expect(unreachableIconNames(undefined, reachableIconSlugs(undefined))).toEqual([]);
+  });
+});
+
+/**
+ * D1 — the entity dimension. The library key is the ARTIFACT identity
+ * `(catalog, entity, step)`, so the script's naming helper must stay byte-identical to the
+ * app's, and an entity-scoped file for a REGISTERED step must stop reading as dead art.
+ */
+describe('power-icon naming — the entity dimension stays byte-identical to the app', () => {
+  const CASES: [string, string, string][] = [
+    ['items', 'Icon 2D Art', 'item-1'],
+    ['props', 'Icon 2D Art', 'prop-reinforced-crate'],
+    ['character-pipeline', 'Concept 2D', 'char-captain-vael'],
+  ];
+
+  it('re-encodes the same slug as the app for every entity-scoped case', () => {
+    for (const [catalogId, step, entityId] of CASES) {
+      expect(iconSlug(catalogId, step, entityId)).toBe(libIconSlug(catalogId, step, entityId));
+      expect(iconFileBase(catalogId, step, entityId)).toBe(libIconFileBase(catalogId, step, entityId));
+    }
+  });
+
+  it('writes a name the app resolves back to that entity, with entity scope', () => {
+    for (const [catalogId, step, entityId] of CASES) {
+      const file = iconFileName(catalogId, step, 'jpg', entityId);
+      const icons = libBuildIconList([{ name: file, mtimeMs: 1 }]);
+      const hit = libResolveIconFor(icons, catalogId, step, entityId);
+      expect(hit?.scope).toBe('entity');
+      expect(hit?.name).toBe(file);
+    }
+  });
+
+  it('leaves the per-step name untouched when no entity scope is asked for', () => {
+    expect(iconFileName('items', 'Icon 2D Art')).toBe('items_icon_2d_art.jpg');
+  });
+
+  it('stops reporting entity-scoped art for a REGISTERED step as unreachable', () => {
+    const reachable = reachableIconSlugs([{ catalogId: 'items', steps: ['Icon 2D Art'] }]);
+    const live = iconFileName('items', 'Icon 2D Art', 'jpg', 'item-1');
+    expect(unreachableIconNames([live], reachable)).toEqual([]);
+    // …but an entity file whose STEP is not registered is still named as dead.
+    expect(unreachableIconNames(['items__item-1__nope.jpg'], reachable)).toEqual(['items__item-1__nope.jpg']);
   });
 });
