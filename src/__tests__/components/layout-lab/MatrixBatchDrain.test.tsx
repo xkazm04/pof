@@ -50,12 +50,28 @@ describe('MatrixBatchDrain — summary is dismissible', () => {
     expect(screen.queryByTestId('batch-drain-dismiss')).toBeNull();
   });
 
-  it('renders nothing at all with no deferred entities and no run to report', () => {
-    const { container } = render(
+  it('renders no drain control with no deferred entities and no run to report', () => {
+    render(
       <MatrixBatchDrain t={LIGHT} deferredEntities={[]} state={idleState(null, 0)}
         onStart={vi.fn()} onCancel={vi.fn()} onDismiss={vi.fn()} />,
     );
-    expect(container.firstChild).toBeNull();
+    expect(screen.queryByTestId('batch-drain')).toBeNull();
+    expect(screen.queryByTestId('batch-drain-start')).toBeNull();
+    expect(screen.queryByTestId('batch-drain-summary')).toBeNull();
+  });
+
+  /**
+   * …but the SIBLING disk-truth pass stays reachable. A catalog with nothing left to drain
+   * is exactly the state after a generation campaign, which is when the icon bind is needed —
+   * hiding it there is what kept it a hand-run curl.
+   */
+  it('keeps the icon-bind affordance reachable when there is nothing to drain', () => {
+    render(
+      <MatrixBatchDrain t={LIGHT} deferredEntities={[]} state={idleState(null, 0)}
+        onStart={vi.fn()} onCancel={vi.fn()} onDismiss={vi.fn()} />,
+    );
+    expect(screen.queryByTestId('bind-icons-run')).not.toBeNull();
+    expect(screen.queryByTestId('bind-icons-needs')).not.toBeNull();
   });
 });
 

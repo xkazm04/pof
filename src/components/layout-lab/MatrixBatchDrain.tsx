@@ -6,6 +6,7 @@ import type { LabTheme } from './theme';
 import { Button } from './ui/Button';
 import type { BatchGateNote } from './batchDrainModel';
 import type { BatchDrainState, BatchEntity } from './hooks/useBatchDrain';
+import { MatrixBindIcons } from './MatrixBindIcons';
 
 interface Props {
   t: LabTheme;
@@ -64,8 +65,10 @@ export function MatrixBatchDrain({ t, deferredEntities, state, onStart, onCancel
   // can never disagree about whether an editor is there to drain through.
   const connectionStatus = usePofBridgeStore((s) => s.connectionStatus);
   const editorConnected = connectionStatus === 'connected';
-  // Hide entirely when there's nothing to drain and no run to report.
-  if (deferredEntities.length === 0 && !running && !summary) return null;
+  // The icon-bind pass is the drain's sibling — both are idempotent disk-truth passes over
+  // this catalog's artifacts — so it lives beside this button and stays reachable even when
+  // there is nothing left to drain (which is exactly when a campaign needs it).
+  if (deferredEntities.length === 0 && !running && !summary) return <MatrixBindIcons t={t} />;
 
   return (
     <div
@@ -224,6 +227,9 @@ export function MatrixBatchDrain({ t, deferredEntities, state, onStart, onCancel
           </ul>
         </div>
       )}
+
+      {/* Sibling pass: bind already-generated 2D art onto stub artifacts and re-grade. */}
+      <MatrixBindIcons t={t} />
     </div>
   );
 }
