@@ -32,6 +32,7 @@ const SPEC_INPUT = {
   seed: 'dark-keep',
   constraints: {
     spawnPoints: true, lootPlacement: true, bossRoom: true, secretRooms: false, safeZones: false,
+    ensureConnected: false,
   },
 } as const;
 

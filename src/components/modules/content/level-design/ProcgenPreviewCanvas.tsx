@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { Boxes, Share2, Grid3X3, Hash, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import type { CellType } from '@/lib/blender-mcp/scripts/dungeon-to-geometry';
 import type { PreviewResult } from '@/lib/level-design/procgen-preview';
+import { describeConnectPass } from '@/lib/level-design/procgen-connect';
 import {
   OVERLAY_BLACK, STATUS_LOCKED, ACCENT_VIOLET, ACCENT_INDIGO, STATUS_WARNING,
   STATUS_SUCCESS, STATUS_ERROR,
@@ -119,6 +120,21 @@ export function ProcgenPreviewCanvas({ result, seedLabel }: ProcgenPreviewCanvas
             : `${stats.regions} disconnected regions — largest holds ${connPct}% of floor. Tweak params or reseed.`}
         </span>
       </div>
+
+      {/*
+        A repaired connectivity must never read as a naturally connected one.
+        Whenever the pass was requested this line states what it did — regions
+        culled, tunnels carved, cells changed — or why it did not run.
+      */}
+      {stats.connectPass && (
+        <p
+          data-testid="procgen-connect-pass"
+          data-applied={String(stats.connectPass.applied)}
+          className="px-3 py-2 rounded-lg border border-violet-900/40 bg-violet-950/20 text-xs font-mono text-violet-300/70 leading-relaxed"
+        >
+          {describeConnectPass(stats.connectPass)}
+        </p>
+      )}
 
       {/* Legend */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5" data-testid="procgen-preview-legend">

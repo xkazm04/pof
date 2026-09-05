@@ -26,6 +26,7 @@ const ALL_ON: GameplayConstraints = {
   bossRoom: true,
   secretRooms: false,
   safeZones: false,
+  ensureConnected: false,
 };
 
 /** Parse a compact ASCII grid: `#` wall, `.` floor, ` ` empty, `+` door, `-` corridor. */

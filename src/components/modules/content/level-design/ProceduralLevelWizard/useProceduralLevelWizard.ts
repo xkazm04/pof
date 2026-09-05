@@ -83,6 +83,9 @@ export function useProceduralLevelWizard({ onGenerate, onSpecChange }: UseProced
     bossRoom: true,
     secretRooms: false,
     safeZones: false,
+    // OFF by default on purpose: a spec without it reproduces the exact grid the
+    // generators produced before the repair pass existed.
+    ensureConnected: false,
   });
   const [seed, setSeed] = useState('');
   const [blenderExporting, setBlenderExporting] = useState(false);
@@ -131,7 +134,12 @@ export function useProceduralLevelWizard({ onGenerate, onSpecChange }: UseProced
   }, []);
 
   const handleGenerate = useCallback(() => {
-    onGenerate({ algorithm, levelType, size, constraints, seed });
+    // `ensureConnected` repairs the BROWSER preview grid; `llm-codegen` is
+    // declared not to read it (`PROCGEN_ENGINES` in procgen-spec). Passing it on
+    // would leak a bullet into the C++ prompt for behaviour the generated
+    // generator does not implement, so the CLI config drops it rather than
+    // quietly contradicting the engine matrix.
+    onGenerate({ algorithm, levelType, size, seed, constraints: { ...constraints, ensureConnected: false } });
   }, [algorithm, levelType, size, constraints, seed, onGenerate]);
 
   // ── Blender export: prepare → state the real numbers → confirm ──

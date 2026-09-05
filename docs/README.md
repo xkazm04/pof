@@ -16,6 +16,7 @@ The whole-app architecture, one doc per subsystem:
 | [architecture/prompts-and-cli.md](architecture/prompts-and-cli.md) | The 6-section prompt builder, the `CLITask`/`TaskFactory` abstraction, the `@@CALLBACK` result-capture flow, skills packs |
 | [architecture/state-and-persistence.md](architecture/state-and-persistence.md) | Zustand v5 stores (+ persist gotchas), the SQLite `*-db.ts` layer, the `{success,data}` API envelope |
 | [architecture/runtime-patterns.md](architecture/runtime-patterns.md) | The typed event bus, the `Lifecycle` protocol, the suspend/LRU pattern, and the enforced coding conventions |
+| [architecture/procgen-contract.md](architecture/procgen-contract.md) | The `ProcgenSpec` model: the per-engine ignored-field matrix, the seed/RNG determinism contract, the connectivity repair pass, and the rung each cross-engine parity claim is made at |
 
 ## Catalog pipeline
 

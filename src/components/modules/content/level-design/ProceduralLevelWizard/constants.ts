@@ -1,6 +1,6 @@
 import {
   Grid3X3, Waves, Hexagon, Mountain,
-  Castle, Sword, Trophy, MapPin, Package, Gem,
+  Castle, Sword, Trophy, MapPin, Package, Gem, Share2,
 } from 'lucide-react';
 import { MODULE_COLORS } from '@/lib/constants';
 import { STATUS_IMPROVED, ACCENT_VIOLET, STATUS_SUCCESS, ACCENT_ORANGE } from '@/lib/chart-colors';
@@ -97,6 +97,9 @@ export const CONSTRAINTS: ConstraintDef[] = [
   { key: 'bossRoom', label: 'Boss Room', icon: Trophy, description: 'Dedicated boss encounter area' },
   { key: 'secretRooms', label: 'Secret Rooms', icon: Gem, description: 'Hidden rooms with bonus loot' },
   { key: 'safeZones', label: 'Safe Zones', icon: Castle, description: 'Rest areas, shops, save points' },
+  // The only toggle that changes the GRID rather than the prompt — cellular
+  // caves only, and the preview says so for every other algorithm.
+  { key: 'ensureConnected', label: 'Ensure Connected', icon: Share2, description: 'Repair a fragmented cave: cull noise pockets, carve tunnels until every passable cell is reachable (cellular only)' },
 ];
 
 export const DEFAULT_SIZE: Record<LevelType, SizeParams> = {

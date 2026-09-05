@@ -21,7 +21,7 @@
 import type { CellType } from '@/lib/blender-mcp/scripts/dungeon-to-geometry';
 import type { ProcgenRun } from '@/types/procgen';
 import { hashSeed } from './frandom-stream';
-import { normalizeRoomBand, ignoresRoomParams, type PreviewAlgorithm } from './algo-params';
+import { normalizeRoomBand, ignoresRoomParams, ensureConnectedSupport, type PreviewAlgorithm } from './algo-params';
 import type { PreviewConfig, PreviewResult } from './procgen-preview';
 import { UE_ROOMS_MIN, UE_ROOMS_MAX } from './run-params';
 
@@ -34,7 +34,19 @@ export interface ProcgenConstraints {
   bossRoom: boolean;
   secretRooms: boolean;
   safeZones: boolean;
+  /**
+   * Repair the layout so every passable cell is reachable (region-cull +
+   * tunnel-carve). Unlike its five neighbours this one CHANGES THE GRID rather
+   * than shaping a prompt, which is why it is a spec field of its own
+   * ('ensureConnected') and is excluded from the "N on" count of the others.
+   */
+  ensureConnected: boolean;
 }
+
+/** The constraints that shape the prompt only — the "N on" count reads these. */
+export const GAMEPLAY_CONSTRAINT_KEYS = [
+  'spawnPoints', 'lootPlacement', 'bossRoom', 'secretRooms', 'safeZones',
+] as const satisfies readonly (keyof ProcgenConstraints)[];
 
 /** Everything a procgen run is asked for. Every field is explicit, seed included. */
 export interface ProcgenSpec {
@@ -55,10 +67,12 @@ export interface ProcgenSpec {
 export type ProcgenEngine = 'browser-preview' | 'ue-arpg-generator' | 'llm-codegen';
 
 export type ProcgenSpecField =
-  | 'algorithm' | 'levelType' | 'gridSize' | 'roomBand' | 'corridorWidth' | 'seed' | 'constraints';
+  | 'algorithm' | 'levelType' | 'gridSize' | 'roomBand' | 'corridorWidth' | 'seed' | 'constraints'
+  | 'ensureConnected';
 
 export const PROCGEN_SPEC_FIELDS: readonly ProcgenSpecField[] = [
   'algorithm', 'levelType', 'gridSize', 'roomBand', 'corridorWidth', 'seed', 'constraints',
+  'ensureConnected',
 ] as const;
 
 export const SPEC_FIELD_LABELS: Record<ProcgenSpecField, string> = {
@@ -69,6 +83,7 @@ export const SPEC_FIELD_LABELS: Record<ProcgenSpecField, string> = {
   corridorWidth: 'Corridor width',
   seed: 'Seed',
   constraints: 'Gameplay constraints',
+  ensureConnected: 'Ensure connected',
 };
 
 interface EngineFacts {
@@ -86,7 +101,7 @@ export const PROCGEN_ENGINES: Record<ProcgenEngine, EngineFacts> = {
     label: 'Browser preview',
     implementation: 'generatePreview() — BSP / WFC / cellular / Perlin over a CellType grid, FRandomStream-seeded',
     determinism: 'deterministic',
-    reads: ['algorithm', 'gridSize', 'roomBand', 'corridorWidth', 'seed'],
+    reads: ['algorithm', 'gridSize', 'roomBand', 'corridorWidth', 'seed', 'ensureConnected'],
   },
   'ue-arpg-generator': {
     label: 'UE ARPGLevelGenerator',
@@ -109,9 +124,14 @@ export const PROCGEN_ENGINES: Record<ProcgenEngine, EngineFacts> = {
  */
 export function specFieldsIgnoredBy(engine: ProcgenEngine, spec: ProcgenSpec): ProcgenSpecField[] {
   const reads = new Set<ProcgenSpecField>(PROCGEN_ENGINES[engine].reads);
-  if (engine === 'browser-preview' && ignoresRoomParams(spec.algorithm)) {
-    reads.delete('roomBand');
-    reads.delete('corridorWidth');
+  if (engine === 'browser-preview') {
+    if (ignoresRoomParams(spec.algorithm)) {
+      reads.delete('roomBand');
+      reads.delete('corridorWidth');
+    }
+    // The repair pass is implemented for cellular caves only; every other
+    // algorithm declares the toggle DROPPED rather than rendering a dead switch.
+    if (ensureConnectedSupport(spec.algorithm) !== null) reads.delete('ensureConnected');
   }
   return PROCGEN_SPEC_FIELDS.filter((f) => !reads.has(f));
 }
@@ -126,10 +146,10 @@ export function specFieldValue(spec: ProcgenSpec, field: ProcgenSpecField): stri
     case 'corridorWidth': return `${spec.corridorWidth}`;
     case 'seed': return spec.seedLabel.trim() === '' ? `(default) ${spec.seedValue}` : spec.seedLabel;
     case 'constraints': {
-      const on = (Object.keys(spec.constraints) as (keyof ProcgenConstraints)[])
-        .filter((k) => spec.constraints[k]);
+      const on = GAMEPLAY_CONSTRAINT_KEYS.filter((k) => spec.constraints[k]);
       return on.length > 0 ? `${on.length} on` : 'none on';
     }
+    case 'ensureConnected': return spec.constraints.ensureConnected ? 'on' : 'off';
   }
 }
 
@@ -205,6 +225,7 @@ export function previewConfigFromSpec(spec: ProcgenSpec, maxPreviewSize?: number
     roomCountMax: spec.roomCountMax,
     corridorWidth: spec.corridorWidth,
     seed: spec.seedLabel,
+    ensureConnected: spec.constraints.ensureConnected,
     ...(maxPreviewSize === undefined ? {} : { maxPreviewSize }),
   };
 }

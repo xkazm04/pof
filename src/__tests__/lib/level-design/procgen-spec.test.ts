@@ -30,6 +30,7 @@ const BASE = {
   seed: 'dark-keep',
   constraints: {
     spawnPoints: true, lootPlacement: true, bossRoom: true, secretRooms: false, safeZones: false,
+    ensureConnected: false,
   },
 } as const;
 
@@ -63,6 +64,7 @@ describe('ProcgenSpec — one shape, with an explicit seed', () => {
     expect(cfg).toEqual({
       algorithm: 'bsp', gridWidth: 64, gridHeight: 64,
       roomCountMin: 6, roomCountMax: 12, corridorWidth: 2, seed: 'dark-keep',
+      ensureConnected: false,
     });
     expect(previewConfigFromSpec(s, 256).maxPreviewSize).toBe(256);
     // And it really generates: a spec is a runnable request, not a label.
@@ -114,7 +116,7 @@ describe('what each engine ignores is stated, never implied', () => {
   it('names every declared input ARPGLevelGenerator drops', () => {
     const dropped = specFieldsIgnoredBy('ue-arpg-generator', spec());
     expect(dropped.sort()).toEqual(
-      ['algorithm', 'levelType', 'gridSize', 'corridorWidth', 'constraints'].sort(),
+      ['algorithm', 'levelType', 'gridSize', 'corridorWidth', 'constraints', 'ensureConnected'].sort(),
     );
     const lines = describeIgnoredFields('ue-arpg-generator', spec());
     expect(lines.some((l) => l.includes('Algorithm (BSP)'))).toBe(true);
@@ -123,11 +125,31 @@ describe('what each engine ignores is stated, never implied', () => {
   });
 
   it('narrows the browser preview per algorithm, reusing the algo-params source', () => {
+    // BSP reads the room band and the corridor width, but the connectivity
+    // repair pass is implemented for cellular only — so BSP drops that toggle.
     expect(specFieldsIgnoredBy('browser-preview', spec({ algorithm: 'bsp' })).sort())
-      .toEqual(['levelType', 'constraints'].sort());
-    // Cellular has no room list and no corridors — the preview drops both.
+      .toEqual(['levelType', 'constraints', 'ensureConnected'].sort());
+    // Cellular has no room list and no corridors — the preview drops both —
+    // and it is the ONE algorithm that honours ensureConnected, so that stays.
     expect(specFieldsIgnoredBy('browser-preview', spec({ algorithm: 'cellular' })).sort())
       .toEqual(['levelType', 'constraints', 'roomBand', 'corridorWidth'].sort());
+  });
+
+  it('names the repair toggle as dropped by the two engines that do not run it', () => {
+    for (const engine of ['ue-arpg-generator', 'llm-codegen'] as const) {
+      expect(specFieldsIgnoredBy(engine, spec({ algorithm: 'cellular' }))).toContain('ensureConnected');
+      expect(describeIgnoredFields(engine, spec({ algorithm: 'cellular' })))
+        .toContain('Ensure connected (off)');
+    }
+  });
+
+  it('keeps the repair toggle out of the prose-constraint count', () => {
+    const on = spec({ constraints: { ...BASE.constraints, ensureConnected: true } });
+    // Three prose constraints are on; ensureConnected is reported separately.
+    expect(describeIgnoredFields('ue-arpg-generator', on))
+      .toContain('Gameplay constraints (3 on)');
+    expect(describeIgnoredFields('ue-arpg-generator', on))
+      .toContain('Ensure connected (on)');
   });
 
   it('every engine declares only fields the spec actually has', () => {

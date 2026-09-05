@@ -17,6 +17,8 @@ export interface GameplayConstraints {
   bossRoom: boolean;
   secretRooms: boolean;
   safeZones: boolean;
+  /** Repair the preview grid so every passable cell is reachable (cellular only). */
+  ensureConnected: boolean;
 }
 
 export interface ProceduralLevelConfig {

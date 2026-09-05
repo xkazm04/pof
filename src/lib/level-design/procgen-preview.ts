@@ -15,7 +15,11 @@
 import type { CellType } from '@/lib/blender-mcp/scripts/dungeon-to-geometry';
 import { FRandomStream, hashSeed } from './frandom-stream';
 import { bspGrid, cellularGrid, wfcGrid, perlinGrid, type PreviewRoom } from './procgen-algorithms';
-import { normalizeRoomBand, type PreviewAlgorithm } from './algo-params';
+import { normalizeRoomBand, ensureConnectedSupport, type PreviewAlgorithm } from './algo-params';
+import {
+  ensureConnectedPass, skippedConnectPass, labelRegions,
+  type ConnectPassReport,
+} from './procgen-connect';
 
 export type { PreviewAlgorithm };
 export type { PreviewRoom };
@@ -31,6 +35,11 @@ export interface PreviewConfig {
   seed: string;
   /** Cap on the longest preview side; keeps generation in the millisecond range. */
   maxPreviewSize?: number;
+  /**
+   * Run the region-cull + tunnel-carve pass so every passable cell is
+   * reachable. Opt-in: omitted / false reproduces the pre-pass grid exactly.
+   */
+  ensureConnected?: boolean;
 }
 
 export interface PreviewStats {
@@ -43,6 +52,11 @@ export interface PreviewStats {
   connectivity: number;
   /** Number of disconnected passable regions. */
   regions: number;
+  /**
+   * What the connectivity pass did, or null when it was never requested. A
+   * connectivity of 1 that the pass produced ALWAYS carries this beside it.
+   */
+  connectPass: ConnectPassReport | null;
 }
 
 export interface PreviewResult {
@@ -58,7 +72,6 @@ export interface PreviewResult {
 }
 
 export const DEFAULT_MAX_PREVIEW_SIZE = 96;
-const PASSABLE: ReadonlySet<CellType> = new Set<CellType>(['floor', 'corridor', 'door']);
 
 /** Downscale the requested grid so its longest side fits the preview cap. */
 function fitToPreview(gridWidth: number, gridHeight: number, cap: number): { w: number; h: number; scale: number } {
@@ -72,34 +85,19 @@ function fitToPreview(gridWidth: number, gridHeight: number, cap: number): { w: 
   };
 }
 
-/** Flood-fill the passable cells into connected regions (4-connectivity). */
+/**
+ * Flood-fill the passable cells into connected regions (4-connectivity).
+ * Delegates the labelling to `procgen-connect` so the stats and the repair pass
+ * can never disagree about what "one region" means.
+ */
 function analyzeConnectivity(grid: CellType[][], w: number, h: number): { floorCells: number; regions: number; largest: number } {
-  const seen = Array.from({ length: h }, () => new Array<boolean>(w).fill(false));
-  let floorCells = 0, regions = 0, largest = 0;
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      if (!PASSABLE.has(grid[y][x])) continue;
-      floorCells++;
-      if (seen[y][x]) continue;
-      regions++;
-      let size = 0;
-      const stack: Array<[number, number]> = [[x, y]];
-      seen[y][x] = true;
-      while (stack.length > 0) {
-        const [cx, cy] = stack.pop()!;
-        size++;
-        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
-          const nx = cx + dx, ny = cy + dy;
-          if (nx >= 0 && ny >= 0 && nx < w && ny < h && !seen[ny][nx] && PASSABLE.has(grid[ny][nx])) {
-            seen[ny][nx] = true;
-            stack.push([nx, ny]);
-          }
-        }
-      }
-      if (size > largest) largest = size;
-    }
+  const { sizes } = labelRegions(grid, w, h);
+  let floorCells = 0, largest = 0;
+  for (const size of sizes) {
+    floorCells += size;
+    if (size > largest) largest = size;
   }
-  return { floorCells, regions, largest };
+  return { floorCells, regions: sizes.length, largest };
 }
 
 const GENERATORS = { bsp: bspGrid, cellular: cellularGrid, wfc: wfcGrid, perlin: perlinGrid } as const;
@@ -120,6 +118,21 @@ export function generatePreview(config: PreviewConfig): PreviewResult {
   };
 
   const { grid, rooms } = GENERATORS[config.algorithm](w, h, params, rng);
+
+  // The connectivity repair pass, opt-in via the spec's `ensureConnected`
+  // constraint. It runs on the SAME FRandomStream, continuing after the
+  // generator's draws, so its RNG consumption is appended rather than
+  // interleaved: a spec without the toggle produces the identical grid it did
+  // before this pass existed, and one with it produces the same repaired grid
+  // on every run of the same seed.
+  let connectPass: ConnectPassReport | null = null;
+  if (config.ensureConnected === true) {
+    const unsupported = ensureConnectedSupport(config.algorithm);
+    connectPass = unsupported
+      ? skippedConnectPass(unsupported, labelRegions(grid, w, h).sizes.length)
+      : ensureConnectedPass(grid, w, h, rng);
+  }
+
   const { floorCells, regions, largest } = analyzeConnectivity(grid, w, h);
 
   return {
@@ -135,6 +148,7 @@ export function generatePreview(config: PreviewConfig): PreviewResult {
       floorRatio: floorCells / (w * h),
       connectivity: floorCells > 0 ? largest / floorCells : 0,
       regions,
+      connectPass,
     },
   };
 }

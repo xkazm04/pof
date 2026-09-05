@@ -33,6 +33,35 @@ export const ALGO_PARAM_SUPPORT: Record<PreviewAlgorithm, Record<AlgoParamKey, s
   perlin: { roomCountMin: PERLIN_REASON, roomCountMax: PERLIN_REASON, corridorWidth: PERLIN_REASON },
 };
 
+/**
+ * The reason the `ensureConnected` constraint is inert for an algorithm, or
+ * null when the preview really runs the region-cull + tunnel-carve pass for it.
+ *
+ * Phase 1 implements the pass for cellular caves — the one generator that
+ * routinely emits fragments and, until now, the one the preview could only
+ * COMPLAIN about. The room-based generators carve their own corridors and are
+ * not repaired here, which this table says out loud rather than leaving a
+ * toggle that silently does nothing on three of four algorithms.
+ */
+const CONNECT_PASS_UNSUPPORTED =
+  'Connectivity repair is implemented for cellular caves only. This algorithm carves its own connections, so the preview does not run the region-cull / tunnel-carve pass for it.';
+
+export const ENSURE_CONNECTED_SUPPORT: Record<PreviewAlgorithm, string | null> = {
+  bsp: CONNECT_PASS_UNSUPPORTED,
+  wfc: CONNECT_PASS_UNSUPPORTED,
+  cellular: null,
+  perlin: CONNECT_PASS_UNSUPPORTED,
+};
+
+/** The reason `ensureConnected` is inert for `algorithm`, or null when it runs. */
+export function ensureConnectedSupport(algorithm: PreviewAlgorithm): string | null {
+  // NOT `??` — a supported algorithm's entry IS null, and `??` would fall
+  // through to the unsupported reason and silently disable the pass everywhere.
+  return algorithm in ENSURE_CONNECTED_SUPPORT
+    ? ENSURE_CONNECTED_SUPPORT[algorithm]
+    : CONNECT_PASS_UNSUPPORTED;
+}
+
 /** The reason `key` is inert for `algorithm`, or null when the generator reads it. */
 export function paramDisabledReason(algorithm: PreviewAlgorithm, key: AlgoParamKey): string | null {
   return ALGO_PARAM_SUPPORT[algorithm]?.[key] ?? null;
