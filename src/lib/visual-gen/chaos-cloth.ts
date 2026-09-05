@@ -30,8 +30,8 @@
  */
 import { runExperiment, type ExperimentResult, type ExperimentSpec, type RunnerDeps } from '@/lib/ue-experiment/runner';
 
-import type { ClothResult } from './chaos-cloth-contract';
-export { CHAOS_CLOTH_NOT_RUN, CHAOS_CLOTH_PLUGINS } from './chaos-cloth-contract';
+import { CHAOS_CLOTH_NOT_RUN, CHAOS_CLOTH_PLUGINS, type ClothResult } from './chaos-cloth-contract';
+export { CHAOS_CLOTH_NOT_RUN, CHAOS_CLOTH_PLUGINS };
 export type { ClothResult } from './chaos-cloth-contract';
 
 export interface ClothOptions {
