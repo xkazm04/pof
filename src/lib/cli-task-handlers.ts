@@ -177,8 +177,67 @@ const checklist: TaskPromptHandler = (task, ctx, { isUE5, knownAssetDomains, wir
     ? buildAnimationChecklistPrompt(animStep, ctx)
     : `${header}${domainBlock}\n\n## Task\n${task.prompt}`;
 
-  return `${body}${wiringBlock}\n\n${buildCallbackSection(getCallback(cbId)!)}${visualBlock}${lightingBlock}${characterBlock}`;
+  const artifactBlock = checklistArtifactBlock(ct, ctx);
+
+  return `${body}${wiringBlock}\n\n${buildCallbackSection(getCallback(cbId)!)}${visualBlock}${lightingBlock}${characterBlock}${artifactBlock}`;
 };
+
+/**
+ * The synthetic catalog a checklist run's work product is filed under, so the
+ * judge fleet has something to score. `entityId` is the module, `step` the
+ * checklist item id.
+ *
+ * Checklist dispatches are the most common thing a user runs, and until now they
+ * were scored ONLY by a boolean the run wrote about itself: the callback flips
+ * `completed` and `/api/checklist/complete` books the trial with
+ * `success = completed !== false`. A checklist writes no artifact, and the judge
+ * fleet enumerates catalogs from `step-facts.json`, so no verdict could ever
+ * exist for one — the A/B rail was optimising a self-report
+ * (ai-registry `software-engineering/quality-gates`).
+ */
+export const CHECKLIST_RUNS_CATALOG_ID = 'checklist-runs';
+
+/**
+ * The SECOND `@@CALLBACK` a checklist run emits — the run's work product, filed
+ * as a `checklist-runs` pipeline artifact so a judge verdict can exist for it.
+ *
+ * Emitted ONLY when the run was served a real prompt-evolution variant (the
+ * `generate` handler gates its variant stamp the same way): a static-prompt run
+ * is not a trial of anything, so the static path stays byte-identical and spends
+ * nothing. `status`/`tier` ride in `staticFields` — which take precedence over
+ * the model's JSON — so a run cannot mark its own work `pass`; the server
+ * records it UNGRADED (no checker is registered for this catalog) and the judge
+ * fleet supplies the verdict.
+ */
+function checklistArtifactBlock(ct: ChecklistTask, ctx: ProjectContext): string {
+  if (!ct.promptVariantId || ct.promptVariantId === STATIC_VARIANT_ID) return '';
+
+  const cbId = registerCallback({
+    url: `${ct.appOrigin}/api/pipeline-artifacts`,
+    method: 'POST',
+    staticFields: {
+      catalogId: CHECKLIST_RUNS_CATALOG_ID,
+      entityId: ct.moduleId,
+      step: ct.itemId,
+      // Never the run's own verdict on itself.
+      status: 'pending',
+      tier: 'L0',
+      promptVersion: PROMPT_VERSION,
+      promptVariantId: ct.promptVariantId,
+    },
+    schemaHint:
+      '  "data": {\n' +
+      '    "summary": "<what you actually changed, in one or two sentences>",\n' +
+      '    "filesTouched": ["<repo-relative path>", "..."],\n' +
+      `    "buildOk": true,          // did ${getModuleName(ctx.projectName)} build after your change (judged from the newest Saved/Logs/*.log, NOT the exit code)\n` +
+      '    "verification": "<the command or observation that proves it works — say \'none\' if you did not run one>",\n' +
+      '    "gaps": "<what you did NOT do, or left unverified>"\n' +
+      '  },\n' +
+      '  "ueAssets": ["<UE asset path(s) you created/modified>"]',
+  });
+
+  return `\n\n${buildCallbackSection(getCallback(cbId)!)}`;
+}
 
 const quickActionOrAskClaude: TaskPromptHandler = (task, ctx, { isUE5, knownAssetDomains, wiringBlock, touchesBinaryAssets }) => {
   const header = buildProjectContextHeader(ctx, {

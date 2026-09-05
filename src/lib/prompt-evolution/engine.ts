@@ -19,7 +19,15 @@ import type {
 import type { SessionRecord, ModuleStats } from '@/types/session-analytics';
 import { applyMutation, classifyStyle } from './mutations';
 import { clusterPrompts, getBestCluster } from './clustering';
-import { createABTest, evaluateTest, forceConclude, pickVariant } from './ab-testing';
+import {
+  createABTest,
+  evaluateTestWithBasis,
+  forceConclude,
+  pickVariant,
+  type JudgeScores,
+} from './ab-testing';
+import { getPromptVariantFitness } from './judge-fitness';
+import { logger } from '@/lib/logger';
 import { type Result, err } from '@/types/result';
 import {
   insertVariant,
@@ -270,16 +278,58 @@ export function getAllTests(): ABTest[] {
   return getAllABTests();
 }
 
+/**
+ * What the judge fleet independently found about each variant, keyed by variant
+ * id — the evidence that lets an A/B be settled by something better than the
+ * run's own report of itself.
+ *
+ * Reads through `computeVariantFitness`, so it covers every catalog the judge
+ * fleet scores, including the synthetic `checklist-runs` catalog a checklist run
+ * writes its work product to. Returns `undefined` when nothing has been judged,
+ * which is what makes the fall back to self-reported completions automatic.
+ * Never throws: the experiment layer must not be able to fail a real run.
+ */
+export function judgeScoresByVariant(): JudgeScores | undefined {
+  try {
+    const rows = getPromptVariantFitness();
+    if (rows.length === 0) return undefined;
+    const out: JudgeScores = {};
+    for (const r of rows) {
+      out[r.variantId] = {
+        avgScore: r.avgScore,
+        passRate: r.passRate,
+        verdicts: r.verdicts,
+        judgedArtifacts: r.judgedArtifacts,
+      };
+    }
+    return out;
+  } catch (e) {
+    logger.warn('[prompt-evolution] judge fitness unavailable — falling back to self-reported trials', e);
+    return undefined;
+  }
+}
+
 export function recordTestTrial(
   testId: string,
   variantSlot: 'A' | 'B',
   success: boolean,
   durationMs: number,
 ): ABTest | null {
+  const judged = judgeScoresByVariant();
   // Atomic SQL increment + evaluate inside a single transaction (see evolution-db) —
   // replaces the lost-update-prone read-modify-write that overwrote the whole row from a
   // stale JS snapshot, silently dropping concurrent trials and skewing the A/B verdict.
-  return recordTrialAndEvaluate(testId, variantSlot, success, durationMs, evaluateTest);
+  return recordTrialAndEvaluate(testId, variantSlot, success, durationMs, (t) => {
+    const { test, reading } = evaluateTestWithBasis(t, judged);
+    // Say which evidence decided it — a winner crowned on a self-report and one
+    // crowned on judge verdicts are not the same claim.
+    if (test.status === 'concluded' && t.status !== 'concluded') {
+      logger.info(
+        `[prompt-evolution] test ${t.id} concluded on ${reading.basis} basis — ${reading.note}`,
+      );
+    }
+    return test;
+  });
 }
 
 /**
@@ -317,7 +367,9 @@ export function resolveDispatchVariant(
   const running = getABTestsForItem(moduleId, checklistItemId).filter((t) => t.status === 'running');
   const test = running[running.length - 1];
   if (test) {
-    const slot = pickVariant(test);
+    // The arm is chosen on judge verdicts where both arms have enough of them,
+    // and on the runs' self-reported completions otherwise.
+    const slot = pickVariant(test, undefined, judgeScoresByVariant());
     const served = getVariantById(slot === 'A' ? test.variantAId : test.variantBId);
     // A dangling arm (variant row deleted) must not block the run — fall through
     // to the adopted version rather than serving a prompt that no longer exists.

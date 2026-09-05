@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   TaskFactory,
   buildTaskPrompt,
+  getCallback,
   UNKNOWN_TASK_TYPE_MARKER,
   UNKNOWN_TASK_TYPE_NOTE,
   type CLITask,
@@ -220,6 +221,43 @@ describe('golden rail — CLI task prompts', () => {
       expectGolden(`task-${type}`, normalize(buildTaskPrompt(make(), CTX)));
     });
   }
+});
+
+describe('golden rail — checklist run under an A/B variant', () => {
+  /** The same checklist task, but dispatched having been served a real variant. */
+  const experimental = (): CLITask => ({
+    ...TASK_CASES['checklist'](),
+    promptVariantId: 'var-experimental-1',
+  });
+
+  it('a STATIC-variant checklist task is byte-identical to the plain one', () => {
+    const plain = normalize(buildTaskPrompt(TASK_CASES['checklist'](), CTX));
+    const staticStamped = normalize(
+      buildTaskPrompt({ ...TASK_CASES['checklist'](), promptVariantId: 'static' }, CTX),
+    );
+    expect(staticStamped).toBe(plain);
+    // …and it costs the judge fleet nothing, because it files no artifact.
+    expect(plain).not.toContain('checklist-runs');
+  });
+
+  it('an experimental checklist run carries a SECOND callback filing its work product', () => {
+    const raw = buildTaskPrompt(experimental(), CTX);
+    const ids = [...raw.matchAll(/@@CALLBACK:(\S+)/g)].map((m) => m[1]);
+    expect(ids).toHaveLength(2);
+    // The second callback POSTs the work product to the artifacts endpoint (the
+    // URL lives in the registry, not in the prompt text).
+    expect(getCallback(ids[1])?.url).toBe('http://localhost:3000/api/pipeline-artifacts');
+
+    const prompt = normalize(raw);
+    expect(prompt).toContain('checklist-runs');
+    // The run may never grade its own work: status rides in the static fields.
+    expect(prompt).toContain('`status`: `"pending"`');
+    expect(prompt).toContain('`promptVariantId`: `"var-experimental-1"`');
+  });
+
+  it('pins the experimental prompt', () => {
+    expectGolden('task-checklist-variant', normalize(buildTaskPrompt(experimental(), CTX)));
+  });
 });
 
 describe('golden rail — standalone builders', () => {

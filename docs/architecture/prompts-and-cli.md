@@ -217,6 +217,34 @@ and stay invisible to prompt evolution — `material-patterns`, `post-process`,
 (`useLevelDesignView`, three dispatch sites), and `ai-testing`
 (`AIBehaviorView`). Converting each is the same three-part move as above.
 
+**Checklist runs are scored by the judge fleet, not by their own report
+(phase 1).** A checklist callback POSTs `{ completed }` to
+`/api/checklist/complete`, which books the A/B trial with
+`success = completed !== false` — the run grading itself. A checklist wrote no
+artifact and the judge fleet enumerates catalogs from `step-facts.json`, so no
+verdict could ever exist for one. An **experimental** checklist run (one served a
+real prompt-evolution variant — never the static path) now emits a SECOND
+`@@CALLBACK`, to `/api/pipeline-artifacts`, filing its work product under
+`catalogId: 'checklist-runs'`, `entityId: <moduleId>`, `step: <itemId>`, with
+`promptVersion` + `promptVariantId` in `staticFields`. `status: 'pending'` and
+`tier: 'L0'` also ride in the static fields (which take precedence over the
+model's JSON), so a run can never grade its own work; the route records the row
+UNGRADED — no checker is registered for this catalog — and the judge fleet
+supplies the verdict. A static-variant run emits nothing extra and is
+byte-identical to before, so it costs the judge fleet nothing.
+
+`computeVariantFitness` already joins artifacts to verdicts by
+`(catalogId, entityId, step)`, so a `checklist-runs` verdict resolves a checklist
+variant's fitness with no change. `ab-testing.readFitness(test, judged)` is the
+new seam: it uses judged pass rates when BOTH arms clear
+`MIN_JUDGED_VERDICTS_PER_VARIANT`, otherwise falls back to the self-reported
+completions and SAYS which basis it used (`FitnessReading.basis` + `.note`).
+`pickVariant` exploits on that reading and `evaluateTestWithBasis` runs the same
+proportion z-test over it; `engine.judgeScoresByVariant()` supplies the scores and
+returns `undefined` (never throws) when nothing has been judged, which is what
+makes the fall back automatic. **Not yet done:** `step-facts.json` has no
+`checklist-runs` rows, so the judge fleet does not yet enumerate the catalog.
+
 Deliberate **exemptions** are recorded in that same rail: `project-setup/prompts.ts`
 (the create prompt builds the very project a header would describe; the
 build-verify prompt is a terse diagnostic carrying its own engine/project paths and
