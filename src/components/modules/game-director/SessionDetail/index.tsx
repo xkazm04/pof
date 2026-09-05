@@ -74,8 +74,12 @@ export function SessionDetail({
   }, [markFixDispatched]);
 
   const isComplete = session.status === 'complete';
-  const canSimulate = session.status === 'configuring' || session.status === 'complete';
   const source = resolveSessionSource(session);
+  // A session written by a real harness must never be offered the simulator:
+  // re-simulating it would overwrite measured findings with canned ones and
+  // restamp the row `simulated`, i.e. relabel provenance by clicking a button.
+  const canSimulate =
+    source === 'simulated' && (session.status === 'configuring' || session.status === 'complete');
 
   // Group findings by severity
   const criticals = findings.filter(f => f.severity === 'critical');

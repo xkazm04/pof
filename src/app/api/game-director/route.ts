@@ -27,6 +27,8 @@ import type {
 } from '@/types/game-director';
 import { isTriageStatus, validateTriageRepro } from '@/types/game-director';
 import { simulatePlaytest } from '@/lib/game-director-sim';
+import { ingestExternalPlaytest } from '@/lib/game-director/external-ingest';
+import { createDbDirectorWriter } from '@/lib/game-director/db-writer';
 import { logger } from '@/lib/logger';
 
 /**
@@ -185,6 +187,28 @@ export async function POST(req: Request) {
         await simulatePlaytest(sessionId, session.config);
         const updatedSession = getSession(sessionId);
         return apiSuccess(updatedSession);
+      }
+
+      case 'ingest-external': {
+        // The REAL-run door. A harness run record (the `game-plan.json` +
+        // `progress.json` state pair the harness already writes) becomes a
+        // session stamped `source: 'external'` end to end. A record that does
+        // not satisfy the session contract is REFUSED with its reason — an
+        // empty session stamped 'external' would read as a build that was
+        // measured and found clean.
+        const { run, sessionName, projectId } = body as {
+          action: string;
+          run: unknown;
+          sessionName?: string;
+          projectId?: string;
+        };
+        const outcome = await ingestExternalPlaytest(run, {
+          writer: createDbDirectorWriter(),
+          sessionName,
+          projectId,
+        });
+        if (!outcome.ok) return apiError(outcome.error, 400);
+        return apiSuccess(outcome.data);
       }
 
       default:

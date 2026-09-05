@@ -144,6 +144,13 @@ export interface PlaytestConfig {
   aggressiveMode: boolean;
   /** Specific systems to prioritize from feature matrix */
   prioritySystems: string[];
+  /**
+   * The project these systems and this write-back are scoped to (the project
+   * path the rest of the app passes around). Optional so hand-built configs stay
+   * valid, but an ABSENT project is not a wildcard: a matrix read or write with
+   * no project is refused rather than silently scoped to the legacy bucket.
+   */
+  projectId?: string;
 }
 
 export interface PlaytestSummary {
