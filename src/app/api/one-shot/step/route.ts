@@ -7,16 +7,64 @@ import { describeUngraded } from '@/lib/catalog/acceptance/stepGradability';
 import { stampPromptVersion } from '@/lib/prompt-evolution/judge-fitness';
 import { seededEntities } from '@/lib/catalog/seed';
 import { withProduceDirection } from '@/lib/catalog/produceDirection';
+import { buildStepProducePrompt } from '@/lib/catalog/stepPrompt';
+import { listRules } from '@/lib/project-rules-db';
 import { engineProvenance, withProvenance, LAB_PRODUCE_ENGINE } from '@/lib/provenance';
 import { startExecution, awaitCallback } from '@/lib/claude-terminal/cli-service';
 import { resolveDispatchModelChoice, claudeProvenance } from '@/lib/model-policy';
 import { ONE_SHOT_STEP_TASK_TYPE } from '@/lib/cli-spend/dispatchPlan';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
+import type { StepEvidence } from '@/components/layout-lab/steps/shared/stepEvidence';
+import type { LibraryAsset } from '@/types/asset-library';
 import type { AcceptanceStatus, AcceptanceTier } from '@/lib/catalog/acceptance/types';
 import type { StoredCatalogEntity } from '@/lib/catalog/types';
 
 const PROJECT_PATH = process.env.POF_UE_UPROJECT ?? process.cwd();
+
+/** Cap on any single client-supplied prompt string, so an input cannot bloat a dispatch. */
+const MAX_INPUT_CHARS = 400;
+
+const str = (v: unknown): string => (typeof v === 'string' ? v.trim().slice(0, MAX_INPUT_CHARS) : '');
+
+/**
+ * The on-screen evidence the panel cited (`collectStepEvidence`). Client-only knowledge —
+ * only the lab knows which gallery candidate is selected — so it arrives as INPUT and the
+ * server renders the prompt section itself. Malformed entries are dropped, never rendered
+ * half-formed: a prompt that cites a blank URL is worse than one that cites nothing.
+ */
+function readEvidence(v: unknown): StepEvidence[] {
+  if (!Array.isArray(v)) return [];
+  return v.flatMap((raw) => {
+    const e = (raw ?? {}) as Record<string, unknown>;
+    const url = str(e.url);
+    const kind = e.kind === 'mesh' ? 'mesh' : 'image';
+    return url ? [{ kind, url, label: str(e.label) || 'cited artifact' } as StepEvidence] : [];
+  });
+}
+
+/**
+ * Asset-library picks for this produce. The license is load-bearing (it decides whether an
+ * asset can ship), so it is carried verbatim — `libraryBlock` is what flags a missing one,
+ * and defaulting it here would silently invent "unrestricted".
+ */
+function readLibrary(v: unknown): LibraryAsset[] {
+  if (!Array.isArray(v)) return [];
+  return v.flatMap((raw) => {
+    const a = (raw ?? {}) as Record<string, unknown>;
+    const name = str(a.name);
+    if (!name) return [];
+    const asset = a as unknown as LibraryAsset;
+    return [{
+      ...asset,
+      name,
+      source: str(a.source) as LibraryAsset['source'],
+      category: str(a.category) as LibraryAsset['category'],
+      license: typeof a.license === 'string' ? a.license.slice(0, MAX_INPUT_CHARS) : '',
+      downloadUrl: str(a.downloadUrl),
+    }];
+  });
+}
 
 /** Used only when the caller supplies no direction of its own. */
 export const DEFAULT_DIRECTION = 'derive from approved design; minimal commentary';
@@ -182,12 +230,24 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // CLI mode
-    const entitySummary = JSON.stringify({ id: entity.id, name: entity.name, data: entity.data }, null, 2);
-    const promptText =
-      `# PIPELINE STEP: ${stepLabel}\n\nCatalog: ${catalogId}\n\nEntity:\n${entitySummary}\n\n` +
-      `Direction: ${direction}\n\nProduce the step output as a JSON @@CALLBACK block:\n` +
-      `@@CALLBACK:step-${Date.now()}\n{}\n@@END_CALLBACK`;
+    // CLI mode — the ONE produce path that spends money, so it dispatches the step's REAL
+    // prompt. This used to be a third, thinnest builder (entity JSON + direction), which
+    // meant the panel listed a quality pack, the canon, the step's wiring contract, the
+    // cited evidence and the library licenses as "📎 Attached to this prompt" and then sent
+    // none of them. `buildStepProducePrompt` is now the single source the panel preview, the
+    // headless recipe and this route all read.
+    //
+    // The client sends INPUTS, never a prompt string: a prompt is not client input, and
+    // accepting one would let the preview and the persisted row disagree forever. Only the
+    // panel knows which candidate is on screen and which library assets were picked, so
+    // those two ride along as data and the server composes.
+    const promptText = buildStepProducePrompt(step, entity, direction, {
+      catalogId,
+      rules: listRules(),
+      evidence: readEvidence(body.evidence),
+      library: readLibrary(body.library),
+      callback: true,
+    });
 
     // Quality Program: this dispatch is governed by model policy like every other one.
     // It was previously the sole CLI produce in the app that spawned unpinned, because

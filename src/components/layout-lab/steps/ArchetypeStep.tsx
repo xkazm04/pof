@@ -19,11 +19,7 @@ import { PanelCrashBoundary } from '../StepCrashBoundary';
 import { useLabPipelineStore } from '../labPipelineStore';
 import { useStepAcceptance } from './shared/useStepAcceptance';
 import { useCanonStore } from '../canonStore';
-import { canonContextFor } from '@/lib/catalog/canon/canonContext';
-import { stepContractBlock, canonCategoriesForStep } from '@/lib/catalog/contractPrompt';
-import { qualityPack } from '@/lib/prompts/quality';
-import { deliverableClassOf } from '@/lib/judge/dimensions';
-import { getStepFact } from '@/lib/status/statusModel';
+import { buildStepProducePrompt } from '@/lib/catalog/stepPrompt';
 import { withProduceDirection } from '@/lib/catalog/produceDirection';
 import { isCliEligible, isLiveProduceEnabled, useLiveProduceMode, describeProduceOutcome, type OneShotStepResult, type ProduceOutcome } from '../labProduceMode';
 import { apiFetch } from '@/lib/api-utils';
@@ -32,9 +28,9 @@ import { useCatalogStore } from '@/stores/catalogStore';
 import { linkTargetsExist, readLinks } from '@/lib/catalog/acceptance/linkCheckers';
 import { resolveTableView } from '@/lib/catalog/tableView';
 import { readsDirection } from '@/lib/catalog/stepSpec';
-import { collectStepEvidence, evidenceBlock } from './shared/stepEvidence';
+import { collectStepEvidence } from './shared/stepEvidence';
 import { StepLibraryPicker } from './shared/StepLibraryPicker';
-import { libraryBlock, libraryAttachmentLines, addReference, removeReference } from './shared/libraryReference';
+import { libraryAttachmentLines, addReference, removeReference } from './shared/libraryReference';
 import type { LibraryAsset } from '@/types/asset-library';
 import type { AcceptanceResult, CheckerContext } from '@/lib/catalog/acceptance/types';
 import type { LabTheme } from '../theme';
@@ -339,34 +335,30 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
   // it look like something the step produced (and could drift into acceptance).
   const [referenced, setReferenced] = useState<LibraryAsset[]>([]);
 
-  const buildPrompt = (dir: string) => {
-    // Canon scope: a content-invariant step (a wrong NUMBER fails it) gets the FULL in-scope
-    // canon so the threshold it will be graded by is visible; shape-only steps keep their
-    // archetype slice. Single-sourced with the headless recipe via `canonCategoriesForStep`.
-    const canon = canonContextFor(canonRules, catalogId, canonCategoriesForStep(spec));
-    // Quality Program WS1: prepend the professional-grade quality pack for this deliverable
-    // class (shares the judge's craft checklist), so production aims at the bar the judge enforces.
-    const cls = catalogId ? deliverableClassOf(getStepFact(catalogId, step)?.deliverable ?? '', catalogId) : null;
-    const pack = cls && catalogId ? qualityPack(cls, catalogId) : '';
-    // The step's OWN authored wiring contract + criteria — the thing its L2 checker grades.
-    // Until this, ~330 generic steps were asked to produce an artifact without being told the
-    // contract it would be measured against. Injection only; nothing here changes acceptance.
-    const contract = stepContractBlock(spec, entity);
-    // The REAL artifacts this step is currently showing, cited by served URL so a
-    // corrective produce is feedback ON the output rather than a re-description of it.
-    // Empty (and absent from the prompt) whenever nothing real exists to point at — a
-    // deterministic swatch is never cited as if it were a produced asset.
-    const evidence = evidenceBlock(collectStepEvidence(data));
-    // Assets the project ALREADY holds, picked from its own library — so the step reuses
-    // what exists (with its license carried through) instead of describing assets in prose.
-    const library = libraryBlock(referenced);
-    return [pack, canon, contract, evidence, library, `Produce ${spec.label} for ${entity.name}. ${dir}`]
-      .filter(Boolean).join('\n\n');
-  };
-
   // Surfaced beside the dispatch button: attached evidence must never ride invisibly into
   // a prompt (the same rule the Style DNA indicator follows).
   const evidence = collectStepEvidence(data);
+
+  // Exactly the condition `dispatchProduce` tests before taking the live branch — so the
+  // switch only appears where flipping it actually changes what the next click does, and
+  // so `buildPrompt` knows whether to preview the dispatch envelope.
+  const liveEligible = !!catalogId && isCliEligible(spec.archetype);
+
+  /**
+   * The step's produce prompt — built by the SHARED `buildStepProducePrompt`, which the
+   * one-shot route and the headless recipe read too. This function used to be the prompt's
+   * only home, so the live dispatch (which POSTed just the direction) sent none of what the
+   * panel had listed as attached. Everything here is now an INPUT handed to the one builder.
+   *
+   * `callback` follows the mode: only a live dispatch consumes a `@@CALLBACK` envelope, so a
+   * stub preview does not show one — and in live mode the previewed string is byte-identical
+   * to what the server rebuilds and dispatches.
+   */
+  const buildPrompt = (dir: string) =>
+    buildStepProducePrompt(spec, entity, dir, {
+      catalogId, rules: canonRules, evidence, library: referenced,
+      callback: liveEligible && liveMode,
+    });
 
   /**
    * The ONE dispatch path for a non-gallery step. The operator's typed direction is a real
@@ -392,6 +384,10 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
         body: JSON.stringify({
           catalogId, entityId: entity.id, stepLabel: step, mode: 'cli', direction: dir,
           proposal: { name: entity.name, data: entity.data },
+          // INPUTS, not a prompt. The server rebuilds the prompt from the same module the
+          // preview used; these two are the only parts only the panel can know (what is
+          // selected on screen, and which library assets the operator picked).
+          evidence, library: referenced,
         }),
       });
       // Adopt what the server PERSISTED either way — a graded `fail`/`deferred` still wrote
@@ -421,10 +417,6 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
     else void dispatchProduce({ direction: dir, prompt: buildPrompt(dir) })
       .catch((e: unknown) => logger.error('[ArchetypeStep] produce fix failed', e));
   };
-
-  // Exactly the condition `dispatchProduce` tests before taking the live branch — so the
-  // switch only appears where flipping it actually changes what the next click does.
-  const liveEligible = !!catalogId && isCliEligible(spec.archetype);
 
   const cli = (onComplete: CliProduceProps['onComplete']) => (
     <CliProduce t={t} label={`Produce ${spec.label}`} rows={3}

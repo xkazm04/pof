@@ -399,3 +399,40 @@ offered a retry that would spawn a second one. It now calls `abortExecution` (ki
 process tree, stamping the spend row `aborted`) **before** rejecting, and says so in the
 error. Tests: `src/__tests__/lib/claude-terminal/callback-timeout-abort.test.ts`,
 `src/__tests__/components/layout-lab/liveProduceOutcome.test.tsx`.
+
+## 8. ONE produce prompt — `buildStepProducePrompt` (2026-09-05)
+
+§6 gave three seams one contract block. Three seams still built three different **prompts**:
+
+| Builder | Carried |
+|---|---|
+| `ArchetypeStep.buildPrompt` (what the operator READS under "view prompt", and what the 📎 attachment list describes) | quality pack · canon · contract · cited evidence · library licenses |
+| `headless.ts buildStepRecipe` | canon · contract — while claiming the headless step "receives the IDENTICAL prompt" |
+| `POST /api/one-shot/step` (`mode:'cli'`) — **the one that spends money** | entity JSON · direction |
+
+So the live dispatch sent none of what the panel had just listed as attached.
+
+`src/lib/catalog/stepPrompt.ts` is now the single source all three read:
+
+```
+buildStepProducePrompt(spec, entity, direction, { catalogId, rules, evidence, library, callback })
+→ quality pack · canon · acceptance contract · what is on screen · referenced assets
+  · "Produce <label> for <entity>. <direction>" · output contract
+```
+
+- **The client never POSTs a prompt string.** A prompt is not client input; accepting one
+  would let the preview and the persisted row disagree forever. The panel posts the two
+  inputs only it holds — the on-screen `evidence` and the `library` picks — and the server
+  rebuilds the identical string. A `prompt` field in the request body is ignored.
+- **The callback id is deterministic** (`stepCallbackId`, `step-<catalog>-<entity>-<step>`).
+  The route minted `step-${Date.now()}`, which alone made preview and dispatch impossible to
+  compare; `awaitCallback` keys on the execution id, so nothing needed the timestamp.
+  `callback` is off for a stub-mode preview — no envelope is shown that nobody reads.
+- **The direction falls back** to `spec.defaultDirection` (what the panel seeds the textarea
+  with) — an empty steer produces the step's own default, never a dangling "Produce X for Y. ".
+- Headless still cannot carry asset-library picks (live operator selections with no headless
+  equivalent); it cites the PERSISTED artifact's evidence instead of the on-screen selection.
+  That gap is now named in the code rather than papered over with "IDENTICAL".
+- Test: `src/__tests__/api/one-shot/step-prompt.test.ts` pins the DISPATCHED string —
+  contract, canon, evidence, license — and asserts it is byte-identical to what the shared
+  builder produces from the same inputs.

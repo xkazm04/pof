@@ -22,8 +22,9 @@ import { listVerdicts } from '@/lib/status/judge-verdicts-db';
 import { logger } from '@/lib/logger';
 import { resolveStepAcceptance, verdictsForStep } from '@/lib/catalog/acceptance/resolveStepAcceptance';
 import { bespokeCheckerFor } from '@/lib/catalog/acceptance/stepGradability';
-import { canonContextFor } from '@/lib/catalog/canon/canonContext';
-import { stepContractBlock, canonCategoriesForStep } from '@/lib/catalog/contractPrompt';
+import { canonCategoriesForStep } from '@/lib/catalog/contractPrompt';
+import { buildStepProducePrompt } from '@/lib/catalog/stepPrompt';
+import { collectStepEvidence } from '@/components/layout-lab/steps/shared/stepEvidence';
 import type { ProjectRule, RuleCategory } from '@/lib/catalog/canon/types';
 import type { AcceptanceResult, Checker, CheckerContext } from '@/lib/catalog/acceptance/types';
 import type { ViewDescriptor, StepSpec } from '@/lib/catalog/stepSpec';
@@ -390,19 +391,22 @@ export function buildStepRecipe(
   }
   const labEntity = toLabEntity(entity);
 
-  // Same canon scoping + contract injection the `/layout` lab uses (ArchetypeStep), so a
-  // step driven headlessly receives the IDENTICAL prompt — including the step's own
-  // authored wiring contract, the thing its L2 checker grades it against.
+  // The SAME builder the `/layout` panel previews and the one-shot route dispatches
+  // (`buildStepProducePrompt`) — quality pack, canon scoping, and the step's own authored
+  // wiring contract, the thing its L2 checker grades it against.
+  //
+  // The old comment here claimed a headless step "receives the IDENTICAL prompt" while this
+  // builder omitted the quality pack and the evidence — a claim about single-sourcing that
+  // was the argument FOR single-sourcing. It is true of everything derivable from the step
+  // now; two lab-session inputs remain out of reach and are named rather than implied:
+  //  - evidence is collected from the PERSISTED artifact below (the headless equivalent of
+  //    "what is on screen"), so a re-produce is feedback on the row that exists,
+  //  - asset-library picks are live operator selections with no headless equivalent, so a
+  //    headless recipe carries none.
   const cats = canonCategoriesForStep(spec);
   // A content-invariant step takes the FULL in-scope canon (no filter) — report that
   // honestly rather than the archetype slice it no longer uses.
   const canonCategories: RuleCategory[] = cats ?? ['art', 'game', 'project'];
-  const canon = canonContextFor(rules, catalogId, cats);
-  const contract = stepContractBlock(spec, labEntity);
-  const dir = (direction ?? '').trim() || spec.defaultDirection || '';
-  const prompt = [canon, contract, `Produce ${spec.label} for ${entity.name}. ${dir}`.trim()]
-    .filter(Boolean)
-    .join('\n\n');
 
   let example: StepRecipe['example'] = null;
   try {
@@ -436,6 +440,13 @@ export function buildStepRecipe(
         ...(cur.reason ? { reason: cur.reason } : {}),
       })
     : null;
+  // Built here (not above) because the evidence it cites comes from the persisted row.
+  const prompt = buildStepProducePrompt(spec, labEntity, direction, {
+    catalogId,
+    rules,
+    evidence: collectStepEvidence(cur?.data as Record<string, unknown> | undefined),
+  });
+
   const acceptance: StepRecipe['acceptance'] = {
     label: exampleRes?.label ?? pendingRes?.label ?? spec.label,
     tier: exampleRes?.tier ?? pendingRes?.tier ?? 'L0',
