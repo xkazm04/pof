@@ -8,6 +8,7 @@ import {
   PROCGEN_ENGINES,
   type ProcgenSpec,
 } from '@/lib/level-design/procgen-spec';
+import { ProcgenGridReplayExport } from './ProcgenGridReplayExport';
 
 interface ProcgenSpecHandoffProps {
   /** The spec the wizard published. */
@@ -88,6 +89,13 @@ export function ProcgenSpecHandoff({ spec, onAdopt, disabled }: ProcgenSpecHando
       <p className="text-xs text-violet-300/60 leading-relaxed" data-testid="dungeon-handoff-parity">
         <strong className="text-violet-200/80">Independent previews.</strong> {parity.reason}
       </p>
+
+      {/*
+        …and the one path where that is NOT true. Adopting the spec above hands
+        ARPGLevelGenerator two numbers and it regenerates its own layout; the
+        export below hands UE the preview's actual cells to replay.
+      */}
+      <ProcgenGridReplayExport spec={spec} disabled={disabled} />
     </div>
   );
 }

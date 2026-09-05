@@ -64,7 +64,7 @@ export interface ProcgenSpec {
   constraints: ProcgenConstraints;
 }
 
-export type ProcgenEngine = 'browser-preview' | 'ue-arpg-generator' | 'llm-codegen';
+export type ProcgenEngine = 'browser-preview' | 'ue-arpg-generator' | 'llm-codegen' | 'grid-replay';
 
 export type ProcgenSpecField =
   | 'algorithm' | 'levelType' | 'gridSize' | 'roomBand' | 'corridorWidth' | 'seed' | 'constraints'
@@ -114,6 +114,17 @@ export const PROCGEN_ENGINES: Record<ProcgenEngine, EngineFacts> = {
     implementation: 'buildProceduralLevelPrompt() — the CLI authors a generator freehand from the spec',
     determinism: 'unenforced',
     reads: ['algorithm', 'levelType', 'gridSize', 'roomBand', 'corridorWidth', 'seed', 'constraints'],
+  },
+  // The determinism inversion: instead of regenerating a layout from the seed,
+  // this engine REPLAYS the browser preview's own cells (exportProcgenGrid →
+  // scripts/ue/procgen_replay.py). It reads no spec field at all, because the
+  // spec's influence is already baked into the exported grid — which is exactly
+  // why its layout agreement with browser-preview is exact BY CONSTRUCTION.
+  'grid-replay': {
+    label: 'UE grid replay',
+    implementation: 'exportProcgenGrid() → scripts/ue/procgen_replay.py — places actors from the exported cells; regenerates nothing',
+    determinism: 'deterministic',
+    reads: [],
   },
 };
 
@@ -177,6 +188,16 @@ export function layoutAgreement(a: ProcgenEngine, b: ProcgenEngine): LayoutAgree
       : { agree: false, reason: `${PROCGEN_ENGINES[a].label} authors the generator freehand, so two runs of one spec need not match.` };
   }
   const pair = [a, b].sort().join('|');
+  if (pair === 'browser-preview|grid-replay') {
+    // The ONE agreeing cross-engine pair, and the rung is stated in the reason:
+    // the DATA is identical because the replay consumes the preview's own
+    // cells. Runtime placement in UE has not been observed in this session, and
+    // the reason says so rather than letting "agree" be read as "verified".
+    return {
+      agree: true,
+      reason: 'The grid replay consumes the browser preview\'s exported cells verbatim instead of regenerating from the seed, so the LAYOUT DATA is identical by construction. Runtime placement in Unreal is UNVERIFIED — no live replay has been observed.',
+    };
+  }
   if (pair === 'browser-preview|ue-arpg-generator') {
     return {
       agree: false,

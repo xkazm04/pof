@@ -162,15 +162,24 @@ describe('what each engine ignores is stated, never implied', () => {
 describe('layoutAgreement — the model may not imply an agreement the code lacks', () => {
   const engines = Object.keys(PROCGEN_ENGINES) as ProcgenEngine[];
 
-  it('NO cross-engine pair ever agrees on a layout', () => {
+  it('NO REGENERATING cross-engine pair agrees on a layout', () => {
+    // grid-replay is the single exception and it is not a regenerating engine:
+    // it consumes the browser preview's exported cells verbatim, so the pair is
+    // exact by construction on the DATA. Every other pair must stay false.
     const agreeing: string[] = [];
     for (const a of engines) {
       for (const b of engines) {
         if (a === b) continue;
-        if (layoutAgreement(a, b).agree) agreeing.push(`${a}->${b}`);
+        if (layoutAgreement(a, b).agree) agreeing.push([a, b].sort().join('|'));
       }
     }
-    expect(agreeing).toEqual([]);
+    expect([...new Set(agreeing)]).toEqual(['browser-preview|grid-replay']);
+  });
+
+  it('states the UNVERIFIED half in the one agreeing pair, never a bare true', () => {
+    const r = layoutAgreement('browser-preview', 'grid-replay');
+    expect(r.agree).toBe(true);
+    expect(r.reason).toMatch(/UNVERIFIED/);
   });
 
   it('gives the structural reason for the preview vs UE pair', () => {
