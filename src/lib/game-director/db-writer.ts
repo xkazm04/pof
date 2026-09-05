@@ -15,7 +15,9 @@ import {
   addFinding,
   addEvent,
 } from '@/lib/game-director-db';
+import { getFeaturesByModule, upsertFeatures } from '@/lib/feature-matrix-db';
 import type { DirectorWriter } from './external-ingest';
+import type { MatrixRoutingDeps } from './matrix-routing';
 
 /** Session ids match the route's `create` action so nothing downstream can tell
  *  an ingested session apart by its id shape — only by its `source`. */
@@ -43,6 +45,27 @@ export function createDbDirectorWriter(): DirectorWriter {
     },
     async complete({ sessionId, summary, durationMs, systemsTestedCount, findingsCount }) {
       updateSessionSummary(sessionId, summary, durationMs, systemsTestedCount, findingsCount, 'external');
+    },
+  };
+}
+
+/**
+ * {@link MatrixRoutingDeps} bound to the feature-matrix tables. Both calls take
+ * the project explicitly and pass it straight through — this module never
+ * infers a scope, because a matrix read that guessed its own scope is the
+ * silent mis-attribution the scoping exists to remove.
+ *
+ * The write goes through `upsertFeatures` with `source: 'review'` deliberately
+ * NOT claimed: a routed queue line is not a review, so the write path declares
+ * itself `unknown` rather than dressing up as one.
+ */
+export function createDbMatrixRoutingDeps(): MatrixRoutingDeps {
+  return {
+    async readModule(moduleId, projectId) {
+      return getFeaturesByModule(moduleId, projectId);
+    },
+    async writeModule(moduleId, projectId, rows) {
+      upsertFeatures(moduleId, rows, { projectId, source: 'unknown' });
     },
   };
 }

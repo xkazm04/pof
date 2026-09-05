@@ -28,7 +28,8 @@ import type {
 import { isTriageStatus, validateTriageRepro } from '@/types/game-director';
 import { simulatePlaytest } from '@/lib/game-director-sim';
 import { ingestExternalPlaytest } from '@/lib/game-director/external-ingest';
-import { createDbDirectorWriter } from '@/lib/game-director/db-writer';
+import { createDbDirectorWriter, createDbMatrixRoutingDeps } from '@/lib/game-director/db-writer';
+import { routeFindingsToMatrix } from '@/lib/game-director/matrix-routing';
 import { logger } from '@/lib/logger';
 
 /**
@@ -39,6 +40,62 @@ import { logger } from '@/lib/logger';
  */
 function normalizeSource(value: unknown, fallback: SessionSource): SessionSource {
   return value === 'external' || value === 'simulated' ? value : fallback;
+}
+
+/**
+ * On completion, route the session's findings to the feature matrix — the step
+ * that turns a finding into work somebody owns. Best-effort by design: the
+ * session is already written, so a routing failure is DISCLOSED on the timeline
+ * rather than failing the completion. Every outcome, including "nothing was
+ * written and here is why", lands as an event so the session detail can state
+ * it instead of leaving the reader to assume a write happened.
+ */
+async function routeSessionFindings(sessionId: string, source: SessionSource, projectIdOverride?: string) {
+  const session = getSession(sessionId);
+  if (!session) return;
+  const projectId = projectIdOverride?.trim() || session.config?.projectId?.trim() || '';
+  const findings = getFindings(sessionId);
+
+  const stampEvent = (message: string, data?: Record<string, unknown>) => {
+    addEvent({
+      id: `ev-${Date.now()}-matrix-${Math.random().toString(36).slice(2, 7)}`,
+      sessionId,
+      timestamp: new Date().toISOString(),
+      type: 'action',
+      message,
+      data,
+    });
+  };
+
+  if (findings.length === 0) {
+    stampEvent('Matrix routing: this session recorded no findings, so no feature-matrix row was updated.', {
+      matrixRowsUpdated: 0,
+    });
+    return;
+  }
+
+  try {
+    const result = await routeFindingsToMatrix(
+      { sessionId, sessionName: session.name, source, findings, projectId },
+      createDbMatrixRoutingDeps(),
+    );
+    if (!result.ok) {
+      stampEvent(`Matrix routing SKIPPED — ${result.error}`, { matrixRowsUpdated: 0, skipped: true });
+      return;
+    }
+    stampEvent(`Matrix routing: ${result.data.disclosure}.`, {
+      matrixRowsUpdated: result.data.updated.length,
+      alreadyPresent: result.data.alreadyPresent.length,
+      unrouted: result.data.unrouted,
+      rows: result.data.updated,
+    });
+  } catch (routingError) {
+    logger.error('[game-director] matrix routing failed:', routingError);
+    stampEvent(`Matrix routing FAILED — ${String(routingError)}. No row is known to have been updated.`, {
+      matrixRowsUpdated: 0,
+      failed: true,
+    });
+  }
 }
 
 // ─── GET: list sessions, get single session, get findings, get events, get stats
@@ -185,6 +242,10 @@ export async function POST(req: Request) {
         if (!session) return apiError('Session not found', 404);
 
         await simulatePlaytest(sessionId, session.config);
+        // The simulated path routes its findings the same way a real one does —
+        // and the line it writes SAYS it is simulated, so a canned finding can
+        // never read as an observed gap on the module's own work queue.
+        await routeSessionFindings(sessionId, 'simulated');
         const updatedSession = getSession(sessionId);
         return apiSuccess(updatedSession);
       }
@@ -208,6 +269,7 @@ export async function POST(req: Request) {
           projectId,
         });
         if (!outcome.ok) return apiError(outcome.error, 400);
+        await routeSessionFindings(outcome.data.sessionId, 'external', projectId);
         return apiSuccess(outcome.data);
       }
 

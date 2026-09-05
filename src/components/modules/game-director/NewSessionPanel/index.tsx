@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useState } from 'react';
+import { useId, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Loader2, Sparkles, Timer, Camera,
@@ -11,6 +11,10 @@ import type { PlaytestSession } from '@/types/game-director';
 import { OPACITY_8, OPACITY_15, OPACITY_20 } from '@/lib/chart-colors';
 import { RangeSlider } from '@/components/ui/RangeSlider';
 import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
+import { tryApiFetch } from '@/lib/api-utils';
+import { useProjectStore } from '@/stores/projectStore';
+import { derivePrioritySystems, type AggregateRow, type PrioritySuggestion } from '@/lib/game-director/matrix-routing';
+import { PrioritySystems } from './PrioritySystems';
 import { SettingTooltip } from './SettingTooltip';
 import {
   ACCENT,
@@ -37,6 +41,54 @@ export function NewSessionPanel({ onCreated, createSession }: NewSessionPanelPro
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
+  // Priority systems come from the feature matrix, not from memory. The matrix
+  // is project-scoped and an unscoped read returns only the legacy rows, so the
+  // project is passed on every read and its absence is stated, never widened.
+  const projectPath = useProjectStore((s) => s.projectPath);
+  const [suggestions, setSuggestions] = useState<PrioritySuggestion[]>([]);
+  const [selectedSystems, setSelectedSystems] = useState<Set<string>>(new Set());
+  const [matrixNote, setMatrixNote] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!projectPath) {
+      setSuggestions([]);
+      setSelectedSystems(new Set());
+      setMatrixNote('No active project — a feature-matrix read with no project returns only unattributed legacy rows, so nothing was pre-filled.');
+      return;
+    }
+    (async () => {
+      const result = await tryApiFetch<{ modules: AggregateRow[] }>(
+        `/api/feature-matrix/aggregate?projectId=${encodeURIComponent(projectPath)}`,
+      );
+      if (cancelled) return;
+      if (!result.ok) {
+        setSuggestions([]);
+        setSelectedSystems(new Set());
+        setMatrixNote(`Could not read the feature matrix (${result.error}) — nothing was pre-filled.`);
+        return;
+      }
+      const derived = derivePrioritySystems(result.data.modules ?? []);
+      setSuggestions(derived);
+      setSelectedSystems(new Set(derived.map((s) => s.moduleId)));
+      setMatrixNote(
+        derived.length > 0
+          ? null
+          : 'No module under this project has missing or low-quality rows. Modules with no rows at all are not offered — an unreviewed module is not a weak one.',
+      );
+    })();
+    return () => { cancelled = true; };
+  }, [projectPath]);
+
+  const toggleSystem = (moduleId: string) => {
+    setSelectedSystems(prev => {
+      const next = new Set(prev);
+      if (next.has(moduleId)) next.delete(moduleId);
+      else next.add(moduleId);
+      return next;
+    });
+  };
+
   // Ids tie every visible label to the control it names (click-to-focus + a
   // screen-reader accessible name), and the submit button to its blocking reason.
   const uid = useId();
@@ -46,6 +98,7 @@ export function NewSessionPanel({ onCreated, createSession }: NewSessionPanelPro
   const playtimeId = `${uid}-playtime`;
   const screenshotId = `${uid}-screenshot`;
   const aggressiveLabelId = `${uid}-aggressive`;
+  const prioritiesLabelId = `${uid}-priorities`;
   const blockedHintId = `${uid}-blocked`;
 
   // Why the Create button is disabled, stated instead of left for the user to guess.
@@ -74,7 +127,8 @@ export function NewSessionPanel({ onCreated, createSession }: NewSessionPanelPro
         maxPlaytimeMinutes: maxPlaytime,
         screenshotIntervalSeconds: screenshotInterval,
         aggressiveMode,
-        prioritySystems: [],
+        prioritySystems: Array.from(selectedSystems),
+        projectId: projectPath || undefined,
       };
       await createSession({ name: name.trim(), buildPath, config });
       onCreated();
@@ -183,6 +237,21 @@ export function NewSessionPanel({ onCreated, createSession }: NewSessionPanelPro
             );
           })}
         </div>
+      </motion.div>
+
+      {/* Priority systems — seeded from the feature matrix, editable */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.22, delay: 0.125 }}
+      >
+        <PrioritySystems
+          suggestions={suggestions}
+          selected={selectedSystems}
+          onToggle={toggleSystem}
+          note={matrixNote}
+          labelId={prioritiesLabelId}
+        />
       </motion.div>
 
       {/* Settings row */}

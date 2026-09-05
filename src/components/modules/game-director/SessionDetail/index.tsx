@@ -81,6 +81,12 @@ export function SessionDetail({
   const canSimulate =
     source === 'simulated' && (session.status === 'configuring' || session.status === 'complete');
 
+  // What this session's completion actually did to the feature matrix. Read off
+  // the timeline the write-back stamped — a write-back nobody can see is a
+  // write-back nobody can check, and "no row was updated" is disclosed the same
+  // way a successful one is.
+  const matrixEvent = [...events].reverse().find(e => e.message.startsWith('Matrix routing'));
+
   // Group findings by severity
   const criticals = findings.filter(f => f.severity === 'critical');
   const highs = findings.filter(f => f.severity === 'high');
@@ -166,6 +172,13 @@ export function SessionDetail({
             findingsCount={source === 'simulated' ? session.findingsCount : undefined}
             className="mb-3"
           />
+        )}
+
+        {/* What the completion routed into the feature matrix. */}
+        {matrixEvent && (
+          <p className="text-2xs text-text-muted-hover mb-3 leading-relaxed">
+            {matrixEvent.message}
+          </p>
         )}
 
         {/* Summary strip */}

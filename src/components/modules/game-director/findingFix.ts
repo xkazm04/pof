@@ -102,3 +102,23 @@ export function buildFindingFixFeature(finding: PlaytestFinding): FindingFixFeat
 export function findingFixSessionKey(findingId: string): string {
   return `gd-fix-${findingId}`;
 }
+
+/**
+ * Route a finding to the sub-module that OWNS the defect class — with no
+ * default bucket.
+ *
+ * {@link findingFixModuleId} always answers, because a dispatched repair task
+ * must land somewhere; that is correct for dispatch and wrong for routing. "A
+ * router with a default bucket sends everything to the default", so this
+ * variant returns `null` when nothing owns the finding, and the caller reports
+ * the miss as a named state rather than filing it under the polish catch-all.
+ */
+export function findingRouteModuleId(
+  finding: Pick<PlaytestFinding, 'relatedModule' | 'category'>,
+): SubModuleId | null {
+  const related = finding.relatedModule;
+  if (related && SUB_MODULE_SET.has(related)) {
+    return related as SubModuleId;
+  }
+  return CATEGORY_TO_MODULE[finding.category] ?? null;
+}
