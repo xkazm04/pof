@@ -14,6 +14,7 @@ import { critiqueAnimation } from '@/lib/anim-critique/critique';
 import { makeGeminiVisionAttributed } from '@/lib/anim-critique/gemini';
 import { makeQwenVisionAttributed } from '@/lib/anim-critique/qwen';
 import { sampleFilmstrip, type FilmstripSampling } from '@/lib/anim-critique/filmstrip';
+import type { LoopIntent } from '@/lib/motion-gate';
 
 export async function POST(request: NextRequest) {
   let body: {
@@ -26,6 +27,15 @@ export async function POST(request: NextRequest) {
     provider?: string;
     cam?: string;
     maxFrames?: number;
+    /**
+     * Tier-1 integrity input: the raw stdout of `scripts/visual-gen/ardy/pof_loop_closure.py`.
+     * MARKER TEXT, not a pre-parsed verdict — the same seam shape as mesh-critique, because
+     * that text is the extractor's only transport and because a JSON verdict field would let
+     * a caller assert a `pass` no measurement produced.
+     */
+    loopMarkers?: string;
+    /** 'oneshot' for a clip never meant to loop; it is graded `n/a`, never `pass`. */
+    loopIntent?: string;
   };
   try {
     body = await request.json();
@@ -83,13 +93,49 @@ export async function POST(request: NextRequest) {
       ...(durationSeconds ? { durationSeconds } : {}),
       ...(sampling ? { sampling } : {}),
     },
-    { callVision },
+    {
+      callVision,
+      ...(typeof body.loopMarkers === 'string'
+        ? {
+            tier1: {
+              markers: body.loopMarkers,
+              intent: (body.loopIntent === 'oneshot' ? 'oneshot' : 'loop') as LoopIntent,
+            },
+          }
+        : {}),
+    },
   );
+
+  // A gated clip is a SUCCESSFUL measurement, not a server failure: Tier-1 answered in
+  // millimetres and the paid craft pass was correctly skipped. Report both tiers with their
+  // own basis — no Tier-2 verdict is invented to fill the hole ("never manufacture a number
+  // to complete a report"), so `verdict`/`dimensions` are simply absent.
+  if (result.gated) {
+    return apiSuccess({
+      gated: true,
+      frames,
+      sampled,
+      provider,
+      tier1: result.tier1,
+      tier2: result.tier2,
+    });
+  }
 
   if (!result.ok || !result.card) {
     return apiError(result.error ?? 'critique failed', 502);
   }
   // `provider` is what was REQUESTED; `vision` is who actually answered (the Qwen chain
   // silently re-routes on quota, so the family is not an attribution).
-  return apiSuccess({ ...result.card, frames, sampled, provider, vision: result.vision });
+  // The Tier-2 card stays exactly where it was (flat), with the Tier-1 integrity verdict
+  // beside it. `tier1.status === 'not-run'` when the caller supplied no markers — an omitted
+  // gate reads as a passed one, so it is stated rather than dropped.
+  return apiSuccess({
+    ...result.card,
+    frames,
+    sampled,
+    provider,
+    vision: result.vision,
+    tier1: result.tier1,
+    tier2: result.tier2,
+  });
 }

@@ -117,3 +117,58 @@ describe('POST /api/verify/animation — sampling honesty', () => {
     expect(missing.status).toBe(404);
   });
 });
+
+/**
+ * Tier-1 composed into the route: the numeric loop gate runs BEFORE the paid vision call,
+ * and its verdict is reported BESIDE the Tier-2 craft card — each with its own basis,
+ * never merged into one number ("three questions, and they do not average").
+ */
+function loopMarkers(over: Record<string, number | string> = {}): string {
+  const base: Record<string, number | string> = {
+    POSE_GAP_MM: 3.2, WORST_JOINT_MM: 8.1, VEL_JUMP_MM: 4.0, ROOT_TRAVEL_MM: 2100, FRAMES: 90,
+  };
+  return Object.entries({ ...base, ...over }).map(([k, v]) => `POF_LOOP_${k}=${v}`).join('\n');
+}
+
+describe('POST /api/verify/animation — Tier-1 integrity gate', () => {
+  it('reports Tier-1 as NOT RUN when the caller supplied no loop markers', async () => {
+    const d = await data({ ...BASE, frameDir: dir });
+    expect(d.tier1.status).toBe('not-run');
+    expect(d.tier1.basis).toMatch(/integrity/i);
+    expect(d.tier2.status).toBe('ran');
+    expect(d.verdict).toBe('pass'); // the Tier-2 card is untouched
+  });
+
+  it('a clip that does not loop is gated: no vision call, and craft reads NOT RUN', async () => {
+    seen.prompts.length = 0;
+    const d = await data({
+      ...BASE, frameDir: dir,
+      loopMarkers: loopMarkers({ POSE_GAP_MM: 141.8, WORST_JOINT_MM: 260, VEL_JUMP_MM: 90 }),
+    });
+    expect(seen.prompts).toHaveLength(0); // the paid pass never happened
+    expect(d.gated).toBe(true);
+    expect(d.tier1.status).toBe('fail');
+    expect(d.tier1.card.metrics.poseGapMm).toBe(141.8);
+    expect(d.tier2.status).toBe('not-run');
+    expect(d.verdict).toBeUndefined(); // no craft verdict was measured, so none is reported
+  });
+
+  it('a one-shot clip reports Tier-1 n/a and still gets the craft card', async () => {
+    seen.prompts.length = 0;
+    const d = await data({
+      ...BASE, frameDir: dir, loopIntent: 'oneshot', loopMarkers: loopMarkers({ POSE_GAP_MM: 900 }),
+    });
+    expect(d.tier1.status).toBe('n/a');
+    expect(seen.prompts).toHaveLength(1);
+    expect(d.verdict).toBe('pass');
+  });
+
+  it('a broken extractor run is reported verbatim as `error`, never as a pass', async () => {
+    const d = await data({
+      ...BASE, frameDir: dir, loopMarkers: "POF_LOOP_ERROR=missing key 'posed_joints' (have: a,b)",
+    });
+    expect(d.tier1.status).toBe('error');
+    expect(d.tier1.error).toBe("missing key 'posed_joints' (have: a,b)");
+    expect(d.tier2.status).toBe('ran');
+  });
+});

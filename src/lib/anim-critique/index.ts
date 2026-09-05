@@ -30,6 +30,19 @@ export {
   type CritiqueDeps,
   type VisionImage,
 } from './critique';
+export {
+  resolveTier1,
+  tier1Blocks,
+  tier2NotRun,
+  TIER1_BASIS,
+  TIER2_BASIS,
+  TIER1_NOT_RUN,
+  TIER2_RAN,
+  type Tier1Status,
+  type Tier1Input,
+  type Tier1Report,
+  type Tier2Report,
+} from './tier1';
 export { makeGeminiVision, makeGeminiVisionAttributed, type GeminiVisionOptions } from './gemini';
 export { makeQwenVision, makeQwenVisionAttributed, type QwenVisionOptions } from './qwen';
 export {

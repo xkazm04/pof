@@ -180,6 +180,14 @@ const NUMERIC_KEYS: Record<string, keyof LoopMetrics> = {
 export function parseLoopMetrics(stdout: string): ParsedLoopMetrics {
   const found = new Map<keyof LoopMetrics, number>();
 
+  // The extractor's OWN diagnosis wins. It emits `POF_LOOP_ERROR=missing key 'posed_joints'
+  // (have: …)` when it cannot read the motion data at all; `ERROR` is not a numeric key, so
+  // this used to be skipped and the caller was told the generic "missing loop marker(s)"
+  // instead of the precise cause. Same order as the sibling parser
+  // (`visual-gen/mesh-critique.parseCritiqueMetrics`): check ERROR before completeness.
+  const errorLine = stdout.match(new RegExp(`^${MARKER}ERROR=(.*)$`, 'm'));
+  if (errorLine) return { ok: false, error: errorLine[1].trim() };
+
   for (const rawLine of stdout.split(/\r?\n/)) {
     const line = rawLine.trim();
     if (!line.startsWith(MARKER)) continue;
