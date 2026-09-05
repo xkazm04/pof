@@ -3,6 +3,7 @@
 import { useOneShotJobStore } from '@/stores/oneShotJobStore';
 import { useCatalogStore } from '@/stores/catalogStore';
 import { eventBus } from '@/lib/event-bus';
+import { logger } from '@/lib/logger';
 import { decide } from './skip-policy';
 import type { ArchetypeId, ViewDescriptor, AcceptanceTier } from './types';
 import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
@@ -113,6 +114,33 @@ export function createOrchestrator(opts: OrchestratorOptions = {}): Orchestrator
         lifecycle: 'planned',
         data: store.proposal.data as unknown,
       });
+
+      // Make the entity RESOLVABLE BY THE SERVER before a single artifact is written for it.
+      // Until this route existed, the draft lived only in `localStorage` while its ~11
+      // pipeline artifacts went to SQLite: `seededEntities` missed it, so `listEntitySummaries`
+      // omitted it, the server `CheckerContext.has()` said false and the static-verify resolver
+      // returned `null` — the entity silently exempted itself from every gate. The browser
+      // store is now the cache; `catalog_entities` is the record.
+      //
+      // A failed persist is NOT swallowed: the draft is flagged `browserOnly` with the reason,
+      // which the catalog tree renders as "gates cannot run". The run still proceeds, because
+      // stopping it would destroy work the user already approved — but nothing pretends the
+      // entity is durable.
+      try {
+        await postJson('/api/catalog-entities', {
+          catalogId: store.catalogId,
+          entityId: draftId,
+          name: store.proposal.name,
+          source: 'one-shot',
+          tags: ['one-shot'],
+          data: store.proposal.data,
+        });
+      } catch (e) {
+        const reason = e instanceof Error ? e.message : String(e);
+        logger.warn(`one-shot: could not persist ${store.catalogId}/${draftId} server-side — ${reason}`);
+        useCatalogStore.getState().markDraftBrowserOnly(store.catalogId, draftId, reason);
+      }
+
       store.setPhase('running', { draftEntityId: draftId });
 
       const steps = stepsFor(store.catalogId);

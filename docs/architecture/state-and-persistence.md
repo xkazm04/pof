@@ -15,7 +15,7 @@ server and client through a uniform API envelope.
 | `src/components/cli/store/cliPanelStore.ts` | Terminal sessions, tab order, inline-height preference |
 | `src/services/ProjectModuleBridge.ts` | Runtime bridge that breaks the project↔module circular dep |
 | `src/lib/db.ts` | `getDb()` singleton — creates `~/.pof/pof.db`, WAL, all DDL |
-| `src/lib/catalog-db.ts` | `catalog_lifecycle` table helpers (pattern representative) |
+| `src/lib/catalog-db.ts` | `catalog_lifecycle` + `catalog_entities` table helpers (pattern representative) |
 | `src/lib/pipeline-artifacts-db.ts` | `pipeline_artifacts` + `pipeline_artifact_revisions` table helpers |
 | `src/lib/visual-verification-db.ts` | `visual_verifications` table helpers |
 | `src/types/api.ts` | `ApiResponse<T>` discriminated-union envelope type |
@@ -187,6 +187,25 @@ the browser or edge runtime).
 `visual-verification-db.ts`) call `getDb()` and run `CREATE TABLE IF NOT EXISTS` in a local
 `ensureTable()` guard before every operation. They own row mapping (`rowToArtifact`, `rowToLifecycle`,
 etc.) and expose typed CRUD functions. No ORM — raw prepared statements throughout.
+
+**`catalog_entities`** (`src/lib/catalog-db.ts`, same `ensureTable()` guard) is the durable record
+of a **user-created** catalog entity — keyed `(catalog_id, entity_id)` with `data` (the whole
+`StoredCatalogEntity` as JSON), `source` (`'user' | 'one-shot'`), `created_at` and `updated_at`.
+Before it, the one-shot flow created a `draft-<catalog>-<ts>` entity in the browser store
+(`catalogStore.addDraft`, persisted to `localStorage`) while writing its ~11 pipeline artifacts to
+SQLite, so the server could never resolve the entity again: `seededEntities` missed it,
+`listEntitySummaries` omitted it, the server `CheckerContext.has()` said false, and the
+static-verify resolver returned `null` — **an L2 static gate could never run for user-created
+content, so absence read as exemption.** `seededEntities` (`src/lib/catalog/seed.ts`) now returns
+the **union** of the code seeds and these rows, with one-directional precedence: a persisted row
+can never shadow a code seed (the walker, the drain and the judge all resolve the reviewed,
+version-controlled definition), and a colliding id is reported by `entityCollisions` + a one-time
+`logger.warn` rather than silently merged. Writes go through `POST /api/catalog-entities` (never a
+direct client DB write, and a code-seed id is refused 409); the browser store is the cache, and a
+draft the server did not accept is flagged `browserOnly` and rendered `BROWSER-ONLY` in the catalog
+tree. `deleteEntity` returns the real `changes()` count, and the lab's discard calls
+`DELETE /api/pipeline-artifacts` first so a discarded entity leaves no orphaned artifact rows.
+Reads use an explicit column list (never `SELECT *`).
 
 **`pipeline_artifact_revisions`** (`src/lib/pipeline-artifacts-db.ts`, same guard pattern) is the
 version history behind `pipeline_artifacts`. The live table is keyed

@@ -7,6 +7,8 @@ import type { LabGroup, LabCatalog, LabEntity } from './useLabCatalogData';
 import type { LifecycleState } from '@/lib/catalog/types';
 import { STATUS_GLYPH, lifecycleStatus, statusAriaLabel, type StatusKind } from './statusLanguage';
 import { useCatalogStore } from '@/stores/catalogStore';
+import { tryApiFetch } from '@/lib/api-utils';
+import { toast } from 'sonner';
 import { useRovingFocus } from './hooks/useRovingFocus';
 import type { DerivedLifecycleMap } from './useDerivedLifecycle';
 
@@ -44,6 +46,55 @@ const verifiedTitle = (n: number, total: number) =>
   `${n} of ${total} entities derive as verified — config-complete AND a drained L3/L4 gate `
   + 'passes. Derived from persisted pipeline artifacts; display only.';
 
+/** What a discard actually removed. Every number is a real server `changes()` count. */
+export interface DiscardResult {
+  /** `pipeline_artifacts` rows removed (its revisions/verdicts go with them — see the route). */
+  artifacts: number;
+  /** `catalog_entities` rows removed — 0 for a draft that never persisted (browser-only). */
+  entityRows: number;
+  /** Non-empty when a delete failed; the discard reports it instead of claiming success. */
+  errors: string[];
+}
+
+/**
+ * Discard a user-created entity: its artifacts, then its entity row.
+ *
+ * Discarding used to call `removeDraft` alone — deleting the browser record and ORPHANING
+ * every `pipeline_artifacts` row the run had written, while `DELETE /api/pipeline-artifacts`
+ * existed for exactly this. Both deletes report their real `changes()` count, so the toast
+ * states what was removed rather than what was attempted; a failure is named, never swallowed.
+ *
+ * Exported for unit test — the component only wires it to the × button.
+ */
+export async function discardDraftEntity(catalogId: string, entityId: string): Promise<DiscardResult> {
+  const q = `catalogId=${encodeURIComponent(catalogId)}&entityId=${encodeURIComponent(entityId)}`;
+  const errors: string[] = [];
+
+  const arts = await tryApiFetch<{ deleted: number }>(`/api/pipeline-artifacts?${q}`, { method: 'DELETE' });
+  if (!arts.ok) errors.push(`artifacts: ${arts.error}`);
+
+  const row = await tryApiFetch<{ deleted: number }>(`/api/catalog-entities?${q}`, { method: 'DELETE' });
+  if (!row.ok) errors.push(`entity row: ${row.error}`);
+
+  return {
+    artifacts: arts.ok ? arts.data.deleted : 0,
+    entityRows: row.ok ? row.data.deleted : 0,
+    errors,
+  };
+}
+
+/** The one-line report the discard toast shows. Pure (exported for unit test). */
+export function describeDiscard(name: string, r: DiscardResult): string {
+  const counts = `${r.artifacts} artifact row(s) and ${r.entityRows} entity row(s) removed`;
+  return r.errors.length
+    ? `Discarded “${name}” incompletely — ${counts}; ${r.errors.join('; ')}`
+    : `Discarded “${name}” — ${counts}.`;
+}
+
+const BROWSER_ONLY_TITLE =
+  'This entity exists only in this browser — the server never accepted it, so nothing on the '
+  + 'server can resolve it and NONE of its gates can run. Its acceptance is unknown, not passing.';
+
 function lifecycleColor(status: StatusKind, t: LabTheme, isDraft: boolean): string {
   if (isDraft) return t.warn;
   if (status === 'pass') return t.ok;
@@ -78,6 +129,10 @@ function CatalogRow({
   /** Entities derived as `verified`, or `null` when nothing has been derived for this catalog. */
   verified: number | null;
 }) {
+  // The draft cache for THIS catalog — read for the browser-only disclosure only. The tree
+  // renders `entities` (which already includes drafts, see `useLabCatalogData`); this adds
+  // the one fact `LabEntity` does not carry.
+  const drafts = useCatalogStore((s) => s.draftEntitiesByCatalog[catalog.catalogId]) ?? {};
   return (
     <>
       <button
@@ -113,6 +168,11 @@ function CatalogRow({
       </button>
       {isSelected && entities.map((entity) => {
         const isDraft = entity.id.startsWith('draft-');
+        // A draft whose server persist failed is BROWSER-ONLY: nothing on the server can
+        // resolve it, so none of its gates can run. Say so on the row rather than letting it
+        // sit in the tree indistinguishable from a durable entity.
+        const draft = drafts[entity.id];
+        const browserOnly = draft?.browserOnly === true;
         const isEntitySelected = entity.id === selectedEntityId;
         // Derived-from-artifacts state wins over the seed's hardcoded `planned`.
         const derived = derivedLifecycle?.get(entity.id);
@@ -164,12 +224,31 @@ function CatalogRow({
                 {entity.name}
               </span>
             </button>
+            {browserOnly && (
+              <span
+                data-testid={`entity-browser-only-${entity.id}`}
+                title={draft?.persistError ? `${BROWSER_ONLY_TITLE} (${draft.persistError})` : BROWSER_ONLY_TITLE}
+                className={t.fontMono}
+                style={{
+                  flexShrink: 0, fontSize: 12, fontWeight: 700, letterSpacing: 0.4,
+                  color: t.bad, border: `1px solid ${t.bad}`, borderRadius: 3, padding: '0 3px',
+                }}
+              >
+                BROWSER-ONLY
+              </span>
+            )}
             {isDraft && (
               <button
                 aria-label="discard draft"
                 onClick={(e) => {
                   e.stopPropagation();
-                  useCatalogStore.getState().removeDraft(catalog.catalogId, entity.id);
+                  // Remove the SERVER rows first, then the local cache: the counts come back
+                  // from the deletes themselves, so the report can never be a guess.
+                  void discardDraftEntity(catalog.catalogId, entity.id).then((r) => {
+                    useCatalogStore.getState().removeDraft(catalog.catalogId, entity.id);
+                    const msg = describeDiscard(entity.name, r);
+                    if (r.errors.length) toast.error(msg); else toast.success(msg);
+                  });
                 }}
                 style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: t.muted, fontSize: 14, padding: '0 4px' }}
               >

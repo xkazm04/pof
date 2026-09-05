@@ -1,18 +1,28 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { createOrchestrator } from '@/lib/one-shot/orchestrator';
+import { createOrchestrator, type OrchestratorStepRef } from '@/lib/one-shot/orchestrator';
 import { useOneShotJobStore } from '@/stores/oneShotJobStore';
 import { useCatalogStore } from '@/stores/catalogStore';
 import { eventBus } from '@/lib/event-bus';
 
 function mockFetch(routes: Record<string, (body?: unknown) => unknown>) {
+  // `approveAndRun` now persists the draft server-side FIRST (durable catalog entities), so
+  // every run reaches this route. It is answered by default and overridable per test, which
+  // keeps the pre-existing cases exercising the SUCCESSFUL persist path rather than silently
+  // drifting onto the browser-only fallback.
+  const all: Record<string, (body?: unknown) => unknown> = {
+    '/api/catalog-entities': (b) => ({ ...(b as object), source: 'one-shot' }),
+    ...routes,
+  };
   return vi.fn(async (url: string, init?: RequestInit) => {
-    const fn = routes[url];
+    const fn = all[url];
     if (!fn) return { ok: false, status: 404, json: async () => ({ success: false, error: 'no route' }) };
     const body = init?.body ? JSON.parse(init.body as string) : undefined;
     const data = fn(body);
     return { ok: true, status: 200, json: async () => ({ success: true, data }) };
   });
 }
+
+const ONE_STEP: OrchestratorStepRef[] = [{ label: 'Attributes', archetype: 'schema', tier: 'L0', view: { kind: 'table' } }];
 
 describe('orchestrator', () => {
   beforeEach(() => {
@@ -86,6 +96,53 @@ describe('orchestrator', () => {
     });
     await orch.approveAndRun();
     expect(useOneShotJobStore.getState().lastSummary).toEqual({ ran: 2, passed: 1, failed: 1, skipped: 0, deferred: 0 });
+  });
+
+  it('persists the draft server-side BEFORE any artifact is produced for it', async () => {
+    useOneShotJobStore.getState().setPhase('proposing', { catalogId: 'items' });
+    useOneShotJobStore.getState().setProposal({ name: 'Iron Hatchet', data: { type: 'Weapon' }, rationale: 'r' });
+    const calls: string[] = [];
+    const fetchImpl = mockFetch({
+      '/api/catalog-entities': (b) => { calls.push('persist'); return b; },
+      '/api/one-shot/step': () => { calls.push('step'); return { outcome: 'pass' }; },
+    });
+    const orch = createOrchestrator({
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      stepsFor: () => ONE_STEP,
+    });
+    await orch.approveAndRun();
+
+    expect(calls).toEqual(['persist', 'step']);
+    const body = JSON.parse((fetchImpl.mock.calls[0][1] as RequestInit).body as string);
+    expect(body).toMatchObject({ catalogId: 'items', name: 'Iron Hatchet', source: 'one-shot' });
+    expect(body.entityId).toMatch(/^draft-items-/);
+
+    // A successful persist leaves NO browser-only flag: the store is a cache of the server row.
+    const id = useOneShotJobStore.getState().draftEntityId!;
+    expect(useCatalogStore.getState().draftEntitiesByCatalog.items?.[id]?.browserOnly).toBeUndefined();
+  });
+
+  it('a failed persist flags the draft browser-only WITH the reason — never a silent fallback', async () => {
+    useOneShotJobStore.getState().setPhase('proposing', { catalogId: 'items' });
+    useOneShotJobStore.getState().setProposal({ name: 'X', data: { type: 'Weapon' }, rationale: 'r' });
+    const fetchImpl = vi.fn(async (url: string) => {
+      if (url === '/api/catalog-entities') {
+        return { ok: false, status: 500, json: async () => ({ success: false, error: 'catalog_entities unwritable' }) };
+      }
+      return { ok: true, status: 200, json: async () => ({ success: true, data: { outcome: 'pass' } }) };
+    });
+    const orch = createOrchestrator({
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      stepsFor: () => ONE_STEP,
+    });
+    await orch.approveAndRun();
+
+    const id = useOneShotJobStore.getState().draftEntityId!;
+    const draft = useCatalogStore.getState().draftEntitiesByCatalog.items?.[id];
+    expect(draft?.browserOnly).toBe(true);
+    expect(draft?.persistError).toContain('catalog_entities unwritable');
+    // The approved run still completes — the flag is the disclosure, not a silent abort.
+    expect(useOneShotJobStore.getState().phase).toBe('completed');
   });
 
   it('refuses to start when not in idle/completed/failed', async () => {

@@ -8,6 +8,18 @@ import type {
 } from '@/lib/catalog/types';
 import { seedAllCatalogs } from '@/lib/catalog/sections';
 
+/**
+ * A one-shot draft in the browser store. `browserOnly` is set when the server-side persist
+ * (`POST /api/catalog-entities`) did NOT succeed: the entity then exists here and nowhere
+ * else, so `seededEntities` cannot resolve it and none of its gates can run. That is
+ * surfaced in the catalog tree rather than swallowed — a silent local fallback is exactly
+ * the "absence reads as exemption" defect the durable-entities work removes.
+ */
+export type DraftCatalogEntity = StoredCatalogEntity & {
+  browserOnly?: boolean;
+  persistError?: string;
+};
+
 interface CatalogState {
   /** entitiesByCatalog[catalogId][entityId] */
   entitiesByCatalog: Record<string, Record<string, CatalogEntityBase>>;
@@ -28,9 +40,18 @@ interface CatalogState {
    */
   /** Merge server-side lifecycle records over seeded entities (called on load). */
   loadLifecycle: (records: LifecycleRecord[]) => void;
-  /** Draft entities staged for a one-shot produce step, keyed by catalogId then entityId. */
-  draftEntitiesByCatalog: Record<string, Record<string, StoredCatalogEntity>>;
-  addDraft: (catalogId: string, entity: StoredCatalogEntity) => void;
+  /**
+   * Draft entities staged for a one-shot produce step, keyed by catalogId then entityId.
+   *
+   * This map is a CACHE of the `catalog_entities` rows (`/api/catalog-entities`), not the
+   * record. It used to be the only place a user-created entity existed — while its ~11
+   * pipeline artifacts went to SQLite — so the server could never resolve the entity again
+   * and every gate silently exempted it.
+   */
+  draftEntitiesByCatalog: Record<string, Record<string, DraftCatalogEntity>>;
+  addDraft: (catalogId: string, entity: DraftCatalogEntity) => void;
+  /** Mark a draft browser-only — the server refused it or never received it. Never silent. */
+  markDraftBrowserOnly: (catalogId: string, entityId: string, reason: string) => void;
   removeDraft: (catalogId: string, entityId: string) => void;
 }
 
@@ -93,6 +114,22 @@ export const useCatalogStore = create<CatalogState>()(
             [catalogId]: { ...(s.draftEntitiesByCatalog[catalogId] ?? {}), [entity.id]: entity },
           },
         })),
+
+      markDraftBrowserOnly: (catalogId, entityId, reason) =>
+        set((s) => {
+          const cur = s.draftEntitiesByCatalog[catalogId]?.[entityId];
+          // Zustand v5: return the SAME state on a no-op so subscribers do not re-render.
+          if (!cur || (cur.browserOnly === true && cur.persistError === reason)) return s;
+          return {
+            draftEntitiesByCatalog: {
+              ...s.draftEntitiesByCatalog,
+              [catalogId]: {
+                ...(s.draftEntitiesByCatalog[catalogId] ?? {}),
+                [entityId]: { ...cur, browserOnly: true, persistError: reason },
+              },
+            },
+          };
+        }),
 
       removeDraft: (catalogId, entityId) =>
         set((s) => {
