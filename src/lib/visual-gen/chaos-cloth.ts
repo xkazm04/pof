@@ -30,6 +30,13 @@
  */
 import { runExperiment, type ExperimentResult, type ExperimentSpec, type RunnerDeps } from '@/lib/ue-experiment/runner';
 
+/**
+ * The one phrase every surface uses for "nothing was observed". Lives here, beside the
+ * `notRun` field it describes, so the route, the panel and their tests cannot drift into
+ * three different ways of saying the editor never started.
+ */
+export const CHAOS_CLOTH_NOT_RUN = 'not run — no UE editor/runner available';
+
 /** Engine plugins this seam needs (beyond PythonScriptPlugin), enabled per-run. */
 export const CHAOS_CLOTH_PLUGINS = ['ChaosClothAsset', 'ChaosClothAssetEditor', 'ChaosClothAssetDataflowNodes'];
 
@@ -144,6 +151,15 @@ export interface ClothResult {
   regenerated: boolean;
   /** Whether the graph evaluated — the skin-weight transfer bound (a fitted-garment signal). */
   bound: boolean;
+  /**
+   * The attach NEVER RAN — no editor was booted and nothing was observed. Either a
+   * precondition refused it (a live editor holds the machine, or the gate drain holds the
+   * editor lease) or there is no runner at all (`POF_UE_UPROJECT` unset / editor binary
+   * missing). It is deliberately distinct from `ok: false`: a failed run condemns the
+   * garment, a not-run reports the machine — and a surface that showed them alike would
+   * let "no UE on this box" read as "this cape does not work".
+   */
+  notRun: boolean;
   error?: string;
   logs: string[];
 }
@@ -158,7 +174,7 @@ export interface ClothResult {
 export async function attachClothToCharacter(opts: ClothOptions): Promise<ClothResult> {
   if (!opts.garmentMeshPath && !opts.garmentGlbPath) {
     return {
-      ok: false, nodesAdded: 0, connected: false, regenerated: false, bound: false,
+      ok: false, nodesAdded: 0, connected: false, regenerated: false, bound: false, notRun: true,
       error: 'no garment source: provide garmentMeshPath (an existing /Game static mesh) or garmentGlbPath (a .glb to import)',
       logs: [],
     };
@@ -181,6 +197,11 @@ export async function attachClothToCharacter(opts: ClothOptions): Promise<ClothR
   const regenerated = res.markers['POF_CLOTH_REGEN'] === 'True';
   const bound = res.markers['POF_CLOTH_EVAL'] === 'True';
 
+  // Never observed anything: the runner refused before launch, or it failed before the
+  // editor produced a single log line or marker (no uproject, no binary). Both are the
+  // machine's state, not the garment's — see `notRun` on ClothResult.
+  const notRun = res.refused === true || (!res.ok && res.logs.length === 0 && Object.keys(res.markers).length === 0);
+
   const error = res.error
     ?? (!hasGarment ? 'garment import produced no asset'
       : nodesAdded < 4 ? `graph authoring incomplete (${nodesAdded}/4 cloth nodes added)`
@@ -199,6 +220,7 @@ export async function attachClothToCharacter(opts: ClothOptions): Promise<ClothR
     connected,
     regenerated,
     bound,
+    notRun,
     error,
     logs: res.logs,
   };

@@ -187,3 +187,39 @@ full graph recipe).
 - Chaos Cloth — Updates 5.8 (tutorial): https://dev.epicgames.com/community/learning/tutorials/Wb2V/unreal-engine-chaos-cloth-updates-5-8
 - Precedent seams: `src/lib/visual-gen/metahuman-conform.ts`, `src/lib/visual-gen/ue-import.ts`,
   `docs/research/ardy-text-to-motion-spec.md`.
+
+## Surface — built 2026-09-05 (wave 29, lot W29-C)
+
+The capability had no caller: no API route, no control, one comment in `character-pipeline.ts`
+naming it as a rung the pipeline could not reach. Under the repo's dual-bridge law that made a
+proven capability script-only. It now has both halves of a surface:
+
+- **`POST /api/visual-gen/chaos-cloth`** (`src/app/api/visual-gen/chaos-cloth/route.ts`) — body
+  `{ targetSkeletalMesh, physicsAsset, garmentMeshPath? | garmentGlbPath?, destPath?,
+  clothAssetName?, dataflowName?, garmentMeshName?, transferMethod? }`; returns the real
+  `ClothResult` in the standard envelope. It is privileged (`requireOperator`, like every other
+  editor-spawning route) and adds NO editor machinery of its own: the Experiment Lab runner
+  already owns the live-editor probe (refuse, never kill) and the gate-runner's global drain
+  lease, so the route only reports what the runner decided. A run is synchronous — one editor,
+  one lease, so a job store would queue nothing the lease does not already serialise.
+- **`ChaosClothPanel`** in the Asset Forge "Generate" tab, mounted beside `GenerationQueue`
+  (`AssetForgeView.tsx`) because a garment is attached to a mesh that queue produced. It
+  discloses `CHAOS_CLOTH_PLUGINS` + the headless-editor precondition BEFORE the click (never a
+  disabled button — the same shape as `MatrixBatchDrain`'s executor note).
+
+**The not-run state is first-class.** `ClothResult.notRun` is true when the runner refused (a
+live editor, or the drain holding the lease) or when there is no runner at all (`POF_UE_UPROJECT`
+unset / no editor binary) — the route answers 503 with `CHAOS_CLOTH_NOT_RUN`
+(`"not run — no UE editor/runner available"`) plus the runner's own reason, and the panel renders
+it WARN, apart from the red an actually-unbound transfer earns. A paid/expensive run that cannot
+be graded must never read as a pass (`game-production/regeneration-vs-repair-economics`).
+
+**No live UE run happened in the session that built this surface.** Everything above is proven
+with the runner injected (`src/__tests__/lib/visual-gen/chaos-cloth-route.test.ts`) and the fetch
+injected (`src/__tests__/components/visual-gen/ChaosClothPanel.test.tsx`). Item 1 of "Remaining"
+above — the live end-to-end run against a fitted garment — is still open, and is now a click
+rather than a code edit.
+
+Follow-up outside this lot's write set: `character-pipeline.ts:198-202` still describes the seam
+as code-only. The one line it now deserves is —
+`// Reachable from the app since 2026-09-05: POST /api/visual-gen/chaos-cloth (Asset Forge → Generate → Attach cloth).`
