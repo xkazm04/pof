@@ -140,6 +140,26 @@ On completion — both the `simulate` and `ingest-external` actions call `routeS
 
 **`knowledgeTips` reach both the UI and dispatch prompts.** They are rendered as dismissable banners in `ModuleShell.tsx` for modules with `feasibilityRating === 'moderate'` (line 124), **and** — since the knowledge-tips recovery — injected into dispatch prompts as a `## Project Knowledge Tips` block by `formatKnowledgeTips(module, promptKind)` (`src/lib/knowledge/knowledge-tips.ts`), fired from `buildProjectContextHeader()` whenever a `module` is in context. That block sits alongside the other knowledge injections: `UE_GOTCHAS` (`src/lib/knowledge/ue-gotchas.ts`) filtered by `appliesTo: PromptKind[]` + module domains, the binary-content tripwire, and `formatKnownAssets(domains)` — all injected by `buildProjectContextHeader()` in `src/lib/prompt-context.ts`.
 
+**A tab body owns the CLI session it dispatches through.** `ReviewableModuleView`
+(`src/components/modules/shared/ReviewableModuleView/`) renders exactly ONE tab
+body at a time — `extraTabs.find(active).render(moduleId)` — so a `useModuleCLI` /
+`useChecklistCLI` hook declared inside a tab component exists only while that tab
+is open, while one declared on the module view exists always. MaterialsView used
+to declare all six on the view and paid for six store subscriptions from the
+moment the module mounted, on a default tab (Overview) that uses none of them; its
+tab bodies now live in `content/materials/tabs/*` and each owns its own session
+(pinned at 0-at-mount by
+`__tests__/components/modules/MaterialsViewSessionCost.test.tsx`). Unmounting the
+hook never destroys the CLI panel session it created — that lives in
+`cliPanelStore` and outlives the tab. Tab-local UI state (a draft input) belongs in
+the tab component too: on the view it re-renders every sibling hook on every
+keystroke. `ExtraTab[]` should be module-level and referentially stable where the
+tabs take no props; `allTabIds` inside the shell is memoized on the tab IDS rather
+than the array identity, so a host that rebuilds its descriptors each render no
+longer churns the `pof-navigate-tab` listener. The 19 files that render the shell
+are pinned by `__tests__/components/modules/ReviewableModuleViewConsumers.test.tsx`
+(census + render/tab-count guard).
+
 **Two separate dependency graphs coexist.** `MODULE_PREREQUISITES` is module-to-module (coarse, drives `RoadmapChecklist` and `getRecommendedNextModules`). `MODULE_FEATURE_DEFINITIONS[moduleId][].dependsOn` is feature-to-feature (fine, drives the NBA engine via `buildDependencyMap` / `computeBlockers`). They are maintained independently and can disagree.
 
 **`MODULE_FEATURE_DEFINITIONS` is `PartialModuleMap`.** Many modules — including all content modules except `animations` and `materials` — have feature definitions; some (e.g., `audio`, `physics`) do not. `computeNBA` returns an empty array for modules with no checklist or no feature entries.
