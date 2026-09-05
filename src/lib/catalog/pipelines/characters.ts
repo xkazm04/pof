@@ -166,6 +166,9 @@ registerCatalogPipeline({
     // ── 7. Combat Anim ───────────────────────────────────────────────────────
     {
       archetype: 'checklist', label: 'Combat Anim',
+      // engine: `produce()` takes no entity and returns two literal montage names; the
+      // checker (minCount) re-reads those same literals. No generator is wired.
+      engine: 'Hand-authored',
       view: { kind: 'checklist', field: 'clips' },
       produce: () => ({ data: { clips: ['MeleeAttack_Montage', 'HeavyAttack_Montage'] } }),
       accept: minCount('clips', '≥2 combat animation clips', 2),
@@ -244,6 +247,10 @@ registerCatalogPipeline({
     // ── 11. Test Gate ────────────────────────────────────────────────────────
     {
       archetype: 'checklist', label: 'Test Gate',
+      // engine: `produce()` returns an author-typed checklist and the verdict is DEFERRED to a
+      // UE automation test (`accept: entityRuntimeDeferred(...)`), so nothing has run here yet —
+      // the same call the fleet already made on 7 identically-shaped Test Gate steps.
+      engine: 'Hand-authored',
       view: { kind: 'checklist', field: 'checks' },
       produce: (e: LabEntity) => ({
         data: {
@@ -265,6 +272,9 @@ registerCatalogPipeline({
     // ── 12. UE Packaging ─────────────────────────────────────────────────────
     {
       archetype: 'manifest', label: 'UE Packaging',
+      // engine: re-graded from DISK TRUTH by the packaging drain — `isPackagingStep`
+      // matches this label and `verifyPackagingAll` rebuilds the package (packagingVerify.ts).
+      engine: 'Packaging engine',
       view: { kind: 'manifest', field: 'assets' },
       produce: (e: LabEntity) => {
         const s = slug(e.name);

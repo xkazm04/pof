@@ -211,6 +211,9 @@ registerCatalogPipeline({
     {
       archetype: 'checklist',
       label: 'Blocking / Body Anim',
+      // engine: `produce()` returns author-typed checklist prose (entity name only), and
+      // `checklist` is absent from CLI_ELIGIBLE_ARCHETYPES, so no model can write it.
+      engine: 'Hand-authored',
       view: { kind: 'checklist', field: 'blockingChecks' },
       produce: (e: LabEntity) => {
         const s = slug(e.name);
@@ -243,6 +246,9 @@ registerCatalogPipeline({
     {
       archetype: 'checklist',
       label: 'Facial / Lipsync',
+      // engine: `produce()` takes no entity at all — the checks are literals declaring a
+      // GAP; nothing generates them (`checklist` is not CLI-eligible).
+      engine: 'Hand-authored',
       view: { kind: 'checklist', field: 'facialChecks' },
       produce: () => ({
         data: {
@@ -480,6 +486,9 @@ registerCatalogPipeline({
     {
       archetype: 'checklist',
       label: 'VO',
+      // engine: `produce()` takes no entity; the list literally records that this
+      // sequence has no VO. No audio generator is invoked.
+      engine: 'Hand-authored',
       view: { kind: 'checklist', field: 'voChecks' },
       produce: () => ({
         data: {
@@ -617,6 +626,10 @@ registerCatalogPipeline({
     {
       archetype: 'checklist',
       label: 'Test Gate',
+      // engine: `produce()` returns an author-typed checklist and the verdict is DEFERRED to a
+      // UE automation test (`accept: entityRuntimeDeferred(...)`), so nothing has run here yet —
+      // the same call the fleet already made on 7 identically-shaped Test Gate steps.
+      engine: 'Hand-authored',
       view: { kind: 'checklist', field: 'checks' },
       produce: (e: LabEntity) => {
         const s = slug(e.name);
@@ -651,6 +664,9 @@ registerCatalogPipeline({
     {
       archetype: 'manifest',
       label: 'UE Packaging',
+      // engine: re-graded from DISK TRUTH by the packaging drain — `isPackagingStep`
+      // matches this label and `verifyPackagingAll` rebuilds the package (packagingVerify.ts).
+      engine: 'Packaging engine',
       view: { kind: 'manifest', field: 'assets' },
       produce: (e: LabEntity) => {
         const s = slug(e.name);

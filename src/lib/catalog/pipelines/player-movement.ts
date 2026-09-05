@@ -41,6 +41,9 @@ registerCatalogPipeline({
     {
       archetype: 'checklist',
       label: 'Mixamo Source',
+      // engine: `accept: humanConfirmed(...)` — a person drops the FBX files in and marks
+      // the step; no python module and no generator runs here.
+      engine: 'Human',
       view: { kind: 'checklist', field: 'confirmed' },
       produce: () => ({ data: { confirmed: false } }),
       accept: humanConfirmed('10 Mixamo FBX files in Raw/', 'confirmed'),
@@ -92,6 +95,9 @@ registerCatalogPipeline({
     {
       archetype: 'rules',
       label: 'PoFEditor Build',
+      // engine: a human rebuilds PoFEditor in the IDE (see produceNote); the python call
+      // only PROBES for the resulting symbol, it does not perform the build.
+      engine: 'Human',
       view: { kind: 'manifest', field: 'lib_present' },
       produce: () => ({
         data: {

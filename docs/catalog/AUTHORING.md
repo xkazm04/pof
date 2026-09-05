@@ -71,6 +71,30 @@ Read alongside (don't duplicate these — they're the source of truth for their 
 
 **5b. Packaging: own a step, or declare the exemption — there is no third state.** Your pipeline must either end on a packaging step (the canonical `UE Packaging` label, or any label plus `packaging: true` — this is what `isPackagingStep` matches and what the packaging-truth drain, `/api/pipeline-artifacts/verify-packaging`, rebuilds from the row's siblings and re-grades from disk), **or** set `packagingExempt: '<why one would be meaningless here>'` on the `registerCatalogPipeline({ … })` call. Declare the exemption only where nothing the pipeline produces passes through PoF's package staging — `player-movement` writes its `.uasset`s straight into the Content tree from the UE editor thread, `character-pipeline` is a cross-project workflow recipe — **never** to dodge the rule; do not add an empty packaging step either. The drain reports declared exemptions as `summary.exempt` (catalog + reason), so an exempt catalog reads as a decision rather than as silence, and `src/__tests__/catalog/packaging-coverage.test.ts` fails any pipeline that has neither.
 
+**5c. Declare `engine` when — and only when — the step's own code says what powers it.** `StepSpec.engine` is what /status prints for the cell and what `engineClass` grades its credibility on. Read the step, don't guess from its label:
+
+| The step's own code shows | Author |
+|---|---|
+| `produce()` returns author-typed literals (byte-identical across entities, or only the name interpolated) and every checker re-reads them | `Hand-authored` |
+| deterministic code that DERIVES the artifact/verdict from something outside its own source (the packaging drain rebuilds from siblings and grades against disk) | `Code` / `Packaging engine` |
+| a person performs the act and a `humanConfirmed`/selection checker records it | `Human` |
+| a named generator is invoked (2D/3D/audio) | `Leonardo` / `Tripo` / `ElevenLabs` … |
+| you cannot read it from the code | **leave it unauthored** — never guess |
+
+The value must be a key of `ENGINE_CLASS` (linter rule (m)), and if it disagrees with the audited `StepFact.trueEngine` you must record the disagreement in `ENGINE_ATTRIBUTION_DISPUTES` with the code evidence (rule (n)) — `step-facts.json` is Director-only. The per-archetype `UNAUTHORED_ENGINE_CEILING` ratchet is shrink-only.
+
+**How much the heuristic actually decides — measured 2026-09-05 over all 344 registered steps** (the question phase 2 of this campaign existed to answer: *is `inferEngine` wrong often enough to be worth 300+ judgement calls?*):
+
+| Engine source on /status | Before this pass | After |
+|---|---|---|
+| `audited` (a `StepFact.trueEngine` exists) | 335 | 321 |
+| `authored` (spec declares it, no fact) | 3 | 8 |
+| `authored-demotion` (spec claims LESS than the audit) | 0 | 14 |
+| **`inferred` (a heuristic GUESS is what the map shows)** | **6** | **1** |
+| authored `StepSpec.engine` (any source) | 129 | 189 |
+
+**The heuristic decides almost nothing, and it names nothing.** 338 of 344 steps carry an audit fact, which outranks it; on all 6 fall-through cells `inferEngine` returned its explicit unknown (`Unaudited`), so **no cell on /status has ever displayed a guessed engine name**. Where the heuristic *would* have ventured a name over an audited step it was right 11 times and wrong 30 (**27%**, far under the 95% that would make an inferred label trustworthy) — 21 of the 30 misses are `Test Gate` steps it guesses `UE Runtime` for, and 3 are gallery steps it guesses `Tripo` for against an audited `Leonardo`. **Conclusion: a fleet-wide 300-step authoring campaign is NOT warranted by the heuristic** — its blast radius is one step (`character-pipeline / Face Gate 2D`, deliberately left unauthored AND unaudited). What the pass authored instead is the population where the code reads unambiguously: the 30 `Test Gate` steps, every `UE Packaging` step, and 7 individually-read steps.
+
 **6. Pass the quality gate (blocking).** Tests passing is necessary, not sufficient. A reviewer subagent scores the row on **content fidelity + wiring** ([`QUALITY-GATE.md`](QUALITY-GATE.md)) and returns APPROVE / REVISE; the row is **not done** until it's APPROVE.
 
 **7. Add a test** mirroring an exemplar's `src/__tests__/lib/catalog/pipelines/<id>.test.ts`: assert it registers under the right catalogId, key step labels exist, a couple of `accept(produce(entity).data)` results, and that the Test Gate is `{ tier:'L3', status:'deferred' }`.

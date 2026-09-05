@@ -341,6 +341,10 @@ registerCatalogPipeline({
     {
       archetype: 'checklist',
       label: 'Test Gate',
+      // engine: `produce()` returns an author-typed checklist and the verdict is DEFERRED to a
+      // UE automation test (`accept: entityRuntimeDeferred(...)`), so nothing has run here yet —
+      // the same call the fleet already made on 7 identically-shaped Test Gate steps.
+      engine: 'Hand-authored',
       view: { kind: 'checklist', field: 'testChecks' },
       produce: (e: LabEntity) => ({
         data: {
@@ -367,6 +371,9 @@ registerCatalogPipeline({
     {
       archetype: 'manifest',
       label: 'UE Packaging',
+      // engine: re-graded from DISK TRUTH by the packaging drain — `isPackagingStep`
+      // matches this label and `verifyPackagingAll` rebuilds the package (packagingVerify.ts).
+      engine: 'Packaging engine',
       view: { kind: 'manifest', field: 'assets' },
       produce: (e: LabEntity) => {
         const s = slug(e.name);

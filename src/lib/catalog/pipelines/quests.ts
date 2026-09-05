@@ -428,6 +428,9 @@ registerCatalogPipeline({
     {
       archetype: 'manifest',
       label: 'UE Packaging',
+      // engine: re-graded from DISK TRUTH by the packaging drain — `isPackagingStep`
+      // matches this label and `verifyPackagingAll` rebuilds the package (packagingVerify.ts).
+      engine: 'Packaging engine',
       view: { kind: 'manifest', field: 'assets' },
       produce: (e: LabEntity) => {
         const s = questKey(e.name);

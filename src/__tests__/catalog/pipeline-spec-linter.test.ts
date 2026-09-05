@@ -601,10 +601,52 @@ describe('fleet spec linter', () => {
     // Add an entry ONLY for a live spec-vs-audit disagreement you can evidence from the step's own code.
   };
 
+  /**
+   * Wave 27 (Lot W27-C) — the 23 remaining `Test Gate` steps.
+   *
+   * All 30 registered `Test Gate` steps are the SAME shape, measured from their own code:
+   * `produce()` returns an author-typed checklist of literals, and `accept` is
+   * `entityRuntimeDeferred(<TestClass>, …)`, so the verdict is deferred to a UE automation
+   * test that has not run. Seven of them (progression-curves, props, quests, save-points,
+   * screen-flow, vfx, zone-map) already declare `engine: 'Hand-authored'` and their audit
+   * facts were moved to match by the Director in the wave-25/26 cleanup — so the fleet has
+   * already made this call for this exact step shape.
+   *
+   * The audit's remaining 23 rows are internally inconsistent for that one shape: 14 record
+   * `Claude` and 9 record `UE test`. `Claude` is in TRUSTED_CLASSES, so those 14 cells were
+   * being credited as LLM work for an artifact a person typed — the overclaim /status exists
+   * to expose. Authoring `Hand-authored` makes `resolveEngine`'s one-way self-demotion fire
+   * on those 14 (a step may claim LESS than its audit credited it, never more) and leaves the
+   * 9 `UE test` cells reading as audited, with the disagreement recorded here.
+   *
+   * DIRECTOR: moving these 23 `trueEngine` values to `Hand-authored` (as with the previous 80)
+   * makes every entry below STALE — delete `TEST_GATE_BY_CATALOG` in the SAME change.
+   */
+  const TEST_GATE_DISPUTE = (catalogId: string) =>
+    `audit records Claude/UE test, spec authors Hand-authored: this Test Gate's produce() returns an `
+    + `author-typed checklist of literals and its accept is entityRuntimeDeferred(<TestClass>, …), so `
+    + `NOTHING has run — no model wrote the artifact ('checklist' is absent from `
+    + `CLI_ELIGIBLE_ARCHETYPES) and no UE test has graded it. Seven identically-shaped Test Gate `
+    + `steps already declare Hand-authored with matching audit facts, and the audit splits `
+    + `14 Claude / 9 UE test across the same shape. Director: move ${catalogId}'s Test Gate `
+    + `trueEngine to 'Hand-authored'.`;
+
+  const TEST_GATE_BY_CATALOG = [
+    'achievements', 'ambient', 'bestiary', 'characters', 'codex', 'combat-map', 'crafting-recipes',
+    'currencies', 'cutscenes', 'dialog-trees', 'factions', 'hud-elements', 'icon-sets',
+    'input-schemes', 'items', 'loot-tables', 'materials', 'music', 'spellbook', 'state-graph',
+    'status-effects', 'tutorial-beats', 'vendors',
+  ];
+
   const ENGINE_ATTRIBUTION_DISPUTES: { catalogId: string; label: string; reason: string }[] = [
     ...Object.entries(HAND_AUTHORED_BY_CATALOG).flatMap(([catalogId, labels]) =>
       labels.map((label) => ({ catalogId, label, reason: HAND_AUTHORED_DISPUTE(catalogId) })),
     ),
+    ...TEST_GATE_BY_CATALOG.map((catalogId) => ({
+      catalogId,
+      label: 'Test Gate',
+      reason: TEST_GATE_DISPUTE(catalogId),
+    })),
     // EMPTY — and it must stay that way by resolution, never by deletion.
     //
     // Wave 25 (Lot MC) raised 11 disputes; the Director resolved all 11 on 2026-08-20 by correcting
@@ -675,10 +717,10 @@ describe('fleet spec linter', () => {
    */
   const UNAUTHORED_ENGINE_CEILING: Record<string, { max: number; why: string }> = {
     brief: { max: 26, why: 'CLI-eligible text steps: a real Claude dispatch OR the local produce stub writes them, and which one ran is per-artifact, not per-spec. 34 -> 26 on 2026-08-20 (the Hand-authored sweep authored the 8 whose audit already recorded Code)' },
-    rules: { max: 86, why: 'largest bucket, same CLI-eligible ambiguity as brief; needs its own pass. 126 -> 86 on 2026-08-20 (Hand-authored sweep)' },
+    rules: { max: 85, why: 'largest bucket, same CLI-eligible ambiguity as brief; needs its own pass. 126 -> 86 on 2026-08-20 (Hand-authored sweep), 86 -> 85 on 2026-09-05 (player-movement PoFEditor Build: a human rebuilds PoFEditor in the IDE; the python call only probes for the symbol)' },
     gallery: { max: 6, why: 'the 6 left are genuinely ambiguous from their own code: MI_ material instances (2), an NS_ Niagara variant set, an SM_ "sprite", and two SM_ terrain/biome sets that may be procedural UE geometry rather than a generated mesh' },
-    checklist: { max: 50, why: '61 -> 50 on 2026-08-20 (Hand-authored sweep). A checklist enumerates work items; several have no producing engine at all and must NOT be given one' },
-    manifest: { max: 33, why: 'mixed — some are UE Python import manifests, some are hand-listed asset paths' },
+    checklist: { max: 21, why: '61 -> 50 on 2026-08-20 (Hand-authored sweep), 50 -> 21 on 2026-09-05: the 23 remaining Test Gate steps (produce returns literals, verdict deferred to a UE test) plus 6 read individually. The 21 left enumerate work items with no producing engine at all and must NOT be given one' },
+    manifest: { max: 3, why: '33 -> 3 on 2026-09-05: every UE Packaging step is re-graded from DISK TRUTH by the packaging drain (isPackagingStep matches the label, verifyPackagingAll rebuilds the package), so `Packaging engine` is legible from code and agrees with the audit. The 3 left are UE Python import manifests read individually and not resolved' },
     balance: { max: 0, why: 'fully authored: every balance produce() is a pure function of author-typed constants, and the archetype is not CLI-eligible' },
     schema: { max: 9, why: '13 -> 9 on 2026-08-20 (Hand-authored sweep). Data-shape declarations (struct/table field lists); this slice did not read them individually and will not guess an engine from a label. RAISED 12 -> 13 on 2026-08-20 by the Director, deliberately and against the ratchet\'s direction: `character-pipeline / Face Gate 2D` declared `engine: Blender` while the audit said `Leonardo`, and NEITHER was defensible — produce() records a crop-review verdict and invokes no generator. Removing the false declaration is an improvement that this counter registers as a regression, which is the one case where the ceiling should move up. It is the ONLY such entry; do not use it as precedent for parking a step you simply did not read.' },
     custom: { max: 1, why: 'one-off bespoke bodies with no shared pattern — each needs reading on its own terms, and this slice did not reach it' },
