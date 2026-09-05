@@ -55,6 +55,7 @@ export function EditorCanvas({ editor }: { editor: StateMachineEditorApi }) {
       <DesktopCanvasNotice className="mb-2" />
       <SchematicPanel
       ref={canvasRef}
+      data-testid="pof-anim-sm-editor-canvas"
       tone="well"
       accent={EDITOR_ACCENT}
       className="select-none touch-none-canvas"

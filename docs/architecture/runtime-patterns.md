@@ -190,6 +190,14 @@ While suspended, the store subscription is replaced with a no-op (no re-renders)
 
 ---
 
+## Unsaved canvas state across an LRU eviction (session drafts)
+
+Suspension keeps a module mounted; **eviction unmounts it**, and any state living only in `useState` is gone. Surfaces that hold unsaved operator work therefore flush to a session-scoped draft store — the first is the visual AnimBP editor (`StateMachineEditor/draftStore.ts`): a module-scope `Map` keyed per project, written on every edit and read back on mount, with the editor reporting `draftRestored` so a restored draft is stated, never silently assumed. It is in-memory by design (a stale on-disk graph would quietly contradict a fresh scan).
+
+The same file's seeding rule: `seedFromScan` / `seedFromBridge` (`StateMachineEditor/seed.ts`) turn the AnimBP scan or the live bridge manifest into editable states, reusing the read-only graph's `layoutStates` / `classifyState`; the editor's provenance strip says whether the canvas is the project's machine or a template. A seed is compared by CONTENT (`seedSignature`) because callers rebuild it each render, and it is adopted only while the canvas is untouched.
+
+---
+
 ## Packaging pre-flight: a verdict states its own coverage
 
 `PreflightPanel` runs four cook-relevant checks (config sanity, WITH_EDITOR audit, Build verify (Shipping), Asset validation) plus a diagnostic Editor build-verify — but only the two *fast* ones auto-run. The gate therefore never reports a bare status word:

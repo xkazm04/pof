@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
-import { Send, ListChecks, Workflow, Sparkles, Download } from 'lucide-react';
+import { Send, ListChecks, Workflow, Sparkles, Download, PencilRuler } from 'lucide-react';
 import { ReviewableModuleView } from '../../shared/ReviewableModuleView';
 import type { ExtraTab } from '../../shared/ReviewableModuleView';
 import { ChecklistUnconfirmedBanner } from '../../shared/ChecklistUnconfirmedBanner';
@@ -15,6 +15,7 @@ import { getAppOrigin } from '@/lib/constants';
 import { AnimationStateMachine } from './AnimationStateMachine';
 import { EMPTY_PROGRESS } from './AnimationStateMachine/constants';
 import { AnimationChecklist } from './AnimationChecklist';
+import { StateMachineEditorTab } from './StateMachineEditor/EditorTab';
 import { AIComboChoreographer } from './AIComboChoreographer';
 import { MixamoImport } from './MixamoImport';
 import type { ChecklistStep } from './AnimationChecklist';
@@ -148,6 +149,16 @@ export function AnimationsView() {
             isRunning={smCli.isRunning}
             activeStateId={smCli.activeItemId}
           />
+        </div>
+      ),
+    },
+    {
+      id: 'sm-editor',
+      label: 'SM Editor',
+      icon: PencilRuler,
+      render: () => (
+        <div data-testid="pof-module-arpg-animation-tab-sm-editor">
+          <StateMachineEditorTab />
         </div>
       ),
     },

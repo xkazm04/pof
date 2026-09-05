@@ -1,6 +1,6 @@
 'use client';
 
-import { Diff, Zap } from 'lucide-react';
+import { Diff, Zap, Info, Workflow } from 'lucide-react';
 import {
   ACCENT_ORANGE,
   STATUS_SUCCESS, STATUS_ERROR, STATUS_WARNING,
@@ -12,15 +12,25 @@ import { EditorCanvas } from './EditorCanvas';
 import { PropertyPanel } from './PropertyPanel';
 import { WarningsPanel } from './WarningsPanel';
 import { CodeOutputPanel } from './CodeOutputPanel';
+import type { EditorSeed } from './seed';
 
 export type { EditorState, EditorTransition } from './types';
+export type { EditorSeed } from './seed';
+
+export interface StateMachineEditorProps {
+  /** Real states/transitions to open on (AnimBP scan or live bridge). */
+  seed?: EditorSeed | null;
+  /** Session draft key — unsaved canvas edits survive an LRU eviction. */
+  draftKey?: string;
+}
 export { generateFullCppOutput } from './codegen';
 
 // ── Component ──
 
-export function StateMachineEditor() {
-  const editor = useStateMachineEditor();
+export function StateMachineEditor({ seed = null, draftKey }: StateMachineEditorProps = {}) {
+  const editor = useStateMachineEditor({ seed, draftKey });
   const {
+    seedSource, seedOrigin, draftRestored,
     drawingTransition,
     stateMap,
     showDiff, diff, setShowDiff, diffTotal,
@@ -32,6 +42,30 @@ export function StateMachineEditor() {
 
   return (
     <div className="flex flex-col gap-4">
+      {/* ── Provenance: whose state machine is on the canvas ── */}
+      <div
+        data-testid="pof-anim-sm-editor-provenance"
+        data-source={seedSource}
+        className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs"
+        style={{
+          backgroundColor: `${seedSource === 'template' ? STATUS_WARNING : STATUS_SUCCESS}08`,
+          border: `1px solid ${seedSource === 'template' ? STATUS_WARNING : STATUS_SUCCESS}${OPACITY_30}`,
+          color: seedSource === 'template' ? STATUS_WARNING : STATUS_SUCCESS,
+        }}
+      >
+        {seedSource === 'template' ? (
+          <Info className="w-3.5 h-3.5 shrink-0" aria-hidden />
+        ) : (
+          <Workflow className="w-3.5 h-3.5 shrink-0" aria-hidden />
+        )}
+        <span>
+          {seedSource === 'template'
+            ? 'These states are a starting template, not your project’s — scan an AnimBP (or connect the UE bridge) to edit the real machine.'
+            : `Seeded from ${seedSource === 'scan' ? 'the AnimBP scan of' : ''} ${seedOrigin ?? 'your project'} — edits below are yours, not the project’s until you apply them.`}
+          {draftRestored && ' Unsaved edits from this session were restored.'}
+        </span>
+      </div>
+
       {/* ── Header bar ── */}
       <EditorToolbar editor={editor} />
 

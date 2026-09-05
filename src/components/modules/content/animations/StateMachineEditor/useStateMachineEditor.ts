@@ -9,6 +9,8 @@ import {
 import type { EditorState, EditorTransition, DiffResult } from './types';
 import { DEFAULT_STATES, DEFAULT_TRANSITIONS, KNOWN_FLAGS } from './constants';
 import { computeDiff, genId } from './helpers';
+import { loadDraft, saveDraft, clearDraft } from './draftStore';
+import { seedSignature, type EditorSeed } from './seed';
 import {
   generateEnumCode,
   generateComputeAnimState,
@@ -22,9 +24,75 @@ import {
  */
 const clampPct = (v: number) => Math.max(5, Math.min(95, v));
 
-export function useStateMachineEditor() {
-  const [states, setStates] = useState<EditorState[]>(DEFAULT_STATES);
-  const [transitions, setTransitions] = useState<EditorTransition[]>(DEFAULT_TRANSITIONS);
+export interface StateMachineEditorOptions {
+  /**
+   * States/transitions from a real source (AnimBP scan or the live bridge).
+   * With one, the editor opens on the PROJECT's machine; without one it opens
+   * on `DEFAULT_STATES`, which the UI must call a template.
+   */
+  seed?: EditorSeed | null;
+  /**
+   * Draft key for the session-scoped flush target. Set it and unsaved canvas
+   * edits survive an LRU eviction (unmount) of the module.
+   */
+  draftKey?: string;
+}
+
+export function useStateMachineEditor(options: StateMachineEditorOptions = {}) {
+  const { seed = null, draftKey } = options;
+
+  // Initial graph, in precedence order: a restored draft (the operator's own
+  // unsaved edits) → the seed (what the project really has) → the template.
+  const [initial] = useState(() => {
+    const draft = draftKey ? loadDraft(draftKey) : null;
+    if (draft) return { states: draft.states, transitions: draft.transitions, restored: true };
+    if (seed) return { states: seed.states, transitions: seed.transitions, restored: false };
+    return { states: DEFAULT_STATES, transitions: DEFAULT_TRANSITIONS, restored: false };
+  });
+  const draftRestored = initial.restored;
+  const [states, setStates] = useState<EditorState[]>(initial.states);
+  const [transitions, setTransitions] = useState<EditorTransition[]>(initial.transitions);
+
+  /**
+   * "Untouched" is array identity against the baseline the graph was last
+   * loaded from — every mutation below replaces the array, so no mutation flag
+   * has to be threaded through a dozen callbacks (and none can be forgotten).
+   */
+  const [baseline, setBaseline] = useState<{ states: EditorState[]; transitions: EditorTransition[] }>({
+    states: initial.states,
+    transitions: initial.transitions,
+  });
+  const touched = draftRestored || states !== baseline.states || transitions !== baseline.transitions;
+
+  /**
+   * Adopt a seed that arrives AFTER mount (the scan is asynchronous) — but only
+   * while the canvas is still untouched and no draft was restored. Overwriting
+   * the operator's edits with a late scan would be exactly the silent data loss
+   * this hook exists to prevent.
+   */
+  //
+   // Adjusted DURING render (React's derive-from-props idiom, as in
+   // `PreflightPanel`): an effect would paint one frame of the previous graph
+   // and trips `react-hooks/set-state-in-effect`. The seed is compared by
+   // CONTENT — callers rebuild the object every render, and an identity check
+   // would re-adopt (and re-render) forever.
+  const seedSig = seedSignature(seed);
+  const [adoptedSig, setAdoptedSig] = useState<string | null>(seedSig);
+  if (seed && adoptedSig !== seedSig) {
+    setAdoptedSig(seedSig);
+    if (!touched) {
+      setBaseline({ states: seed.states, transitions: seed.transitions });
+      setStates(seed.states);
+      setTransitions(seed.transitions);
+    }
+  }
+
+  // Flush every edit to the session draft store so an LRU eviction (unmount)
+  // cannot silently drop unsaved canvas work.
+  useEffect(() => {
+    if (!draftKey || !touched) return;
+    saveDraft(draftKey, { states, transitions }, Date.now());
+  }, [draftKey, touched, states, transitions]);
 
   // Snapshot for diff
   const [snapshot, setSnapshot] = useState<{ states: EditorState[]; transitions: EditorTransition[] } | null>(null);
@@ -203,6 +271,10 @@ export function useStateMachineEditor() {
   // ── Reset to defaults ──
 
   const handleReset = useCallback(() => {
+    // Reset drops the session draft too — otherwise the next mount would
+    // restore the very edits the operator just discarded.
+    if (draftKey) clearDraft(draftKey);
+    setBaseline({ states: DEFAULT_STATES, transitions: DEFAULT_TRANSITIONS });
     setStates(DEFAULT_STATES);
     setTransitions(DEFAULT_TRANSITIONS);
     setSelectedStateId(null);
@@ -210,7 +282,7 @@ export function useStateMachineEditor() {
     setEditingPanel(null);
     setSnapshot(null);
     setDiff(null);
-  }, []);
+  }, [draftKey]);
 
   // cleanup mouse listener
   useEffect(() => {
@@ -254,6 +326,14 @@ export function useStateMachineEditor() {
   return {
     states,
     transitions,
+    /** Where the on-screen graph came from — 'template' when nothing real seeded it. */
+    seedSource: seed?.source ?? ('template' as const),
+    /** Sentence naming that source (AnimInstance class, bridge asset). */
+    seedOrigin: seed?.origin ?? null,
+    /** True when this mount restored unsaved edits from the session draft. */
+    draftRestored,
+    /** True when the graph differs from what it was loaded with. */
+    touched,
     snapshot,
     diff,
     selectedStateId, setSelectedStateId,
