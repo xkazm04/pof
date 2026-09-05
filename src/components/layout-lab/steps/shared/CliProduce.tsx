@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Lbl, LabButton, LabTextarea, LabToggle } from '../controls';
-import { useLiveProduceMode } from '@/components/layout-lab/labProduceMode';
+import { useLiveProduceMode, type ProduceOutcome } from '@/components/layout-lab/labProduceMode';
 import { useDispatchPlan } from './useDispatchPlan';
 import { describeDispatchPlan, ONE_SHOT_STEP_TASK_TYPE } from '@/lib/cli-spend/dispatchPlan';
 import type { LabTheme } from '../../theme';
@@ -36,8 +36,15 @@ export interface CliProduceProps {
    * Receives the user's typed `direction` + the built `prompt` so generative steps
    * can stamp the batch they produce with the art direction (optional — zero-arg
    * handlers stay valid).
+   *
+   * Returning nothing (or a promise of nothing) means "recorded" — the long-standing
+   * behaviour every stub step relies on. A handler that reaches a SERVER verdict returns a
+   * {@link ProduceOutcome} instead: `{ ok: false, msg }` renders the server's own reason in
+   * `cli-produce-result` rather than `✓ Recorded`, which is the only way a graded
+   * `fail`/`deferred` can stop reading as a success (Rule 4 / "absence must never read as
+   * exemption"). A THROW still means the dispatch itself failed, and only that offers retry.
    */
-  onComplete: (ctx?: { direction: string; prompt: string }) => void | Promise<void>;
+  onComplete: (ctx?: { direction: string; prompt: string }) => void | ProduceOutcome | Promise<void | ProduceOutcome>;
   /** What the production writes (UE row / asset / DB). Shown on success. */
   note?: string;
   placeholder?: string;
@@ -78,6 +85,18 @@ export interface CliProduceProps {
   attachments?: readonly string[];
 }
 
+/**
+ * Fold a handler's return value into the inline result line. Anything that is not an
+ * explicit `{ ok: false }` stays the long-standing success message, so every zero-arg /
+ * void handler in the lab behaves byte-identically.
+ */
+function resultOf(outcome: ProduceOutcome | void, successMsg: string): { ok: boolean; msg: string } {
+  if (outcome && typeof outcome === 'object' && 'ok' in outcome && outcome.ok === false) {
+    return { ok: false, msg: outcome.msg?.trim() || 'Dispatch did not succeed' };
+  }
+  return { ok: true, msg: successMsg };
+}
+
 export function CliProduce({ t, label, buildPrompt, onComplete, note, placeholder, defaultDirection, rows = 4, fields, validate, sync, minDispatchMs, liveEligible, attachments }: CliProduceProps) {
   const [direction, setDirection] = useState(defaultDirection ?? '');
   const [showPrompt, setShowPrompt] = useState(false);
@@ -86,6 +105,10 @@ export function CliProduce({ t, label, buildPrompt, onComplete, note, placeholde
   // The last dispatched context, so "Retry with same prompt" re-runs the EXACT prompt
   // that failed (not a rebuild from the — possibly since-edited — direction field).
   const [lastCtx, setLastCtx] = useState<{ direction: string; prompt: string } | null>(null);
+  // Is the CURRENT failure one a retry could fix? A throw (transport/route error) is; a
+  // server VERDICT is not — re-running the identical prompt would spawn a second billed
+  // session and come back with the same grade.
+  const [retryable, setRetryable] = useState(false);
   // Display-only mirror of the produce mode; the dispatch path re-reads it at click time.
   const [liveMode, setLiveMode] = useLiveProduceMode();
   const live = !!liveEligible && liveMode;
@@ -99,14 +122,17 @@ export function CliProduce({ t, label, buildPrompt, onComplete, note, placeholde
   async function runAsync(ctx: { direction: string; prompt: string }) {
     setDispatching(true);
     setResult(null);
+    setRetryable(false);
     const started = Date.now();
     try {
-      await Promise.resolve(onComplete(ctx));
+      const outcome = await Promise.resolve(onComplete(ctx));
       const remaining = (minDispatchMs ?? 0) - (Date.now() - started);
       if (remaining > 0) await new Promise((r) => setTimeout(r, remaining));
-      setResult({ ok: true, msg: successMsg });
+      setResult(resultOf(outcome, successMsg));
+      setRetryable(!!outcome && outcome.ok === false && outcome.retryable === true);
     } catch (e) {
       setResult({ ok: false, msg: e instanceof Error ? e.message : 'Dispatch failed' });
+      setRetryable(true); // the dispatch itself failed — the same prompt is worth re-running
     } finally {
       setDispatching(false);
     }
@@ -121,11 +147,13 @@ export function CliProduce({ t, label, buildPrompt, onComplete, note, placeholde
 
     if (sync) {
       // Legacy synchronous opt-out: still catches a throw so it never dies silently.
+      setRetryable(false);
       try {
-        onComplete(ctx);
-        setResult({ ok: true, msg: successMsg });
+        const outcome = onComplete(ctx);
+        setResult(resultOf(outcome as ProduceOutcome | void, successMsg));
       } catch (e) {
         setResult({ ok: false, msg: e instanceof Error ? e.message : 'Dispatch failed' });
+        setRetryable(true);
       }
       return;
     }
@@ -235,8 +263,10 @@ export function CliProduce({ t, label, buildPrompt, onComplete, note, placeholde
           </motion.span>
         ) : null}
       </AnimatePresence>
-      {/* Rule 4 — a failed dispatch can be retried with the EXACT prompt that failed. */}
-      {result && !result.ok && lastCtx && (
+      {/* Rule 4 — a failed DISPATCH can be retried with the EXACT prompt that failed.
+          A server VERDICT is not a failed dispatch: the session already ran and was billed,
+          and the same prompt would be graded the same way, so no retry is offered there. */}
+      {result && !result.ok && retryable && lastCtx && (
         <button
           data-testid="cli-produce-retry"
           onClick={retry}

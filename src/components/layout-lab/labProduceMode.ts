@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore } from 'react';
 import type { ArchetypeId } from '@/lib/catalog/stepSpec';
+import type { AcceptanceStatus, AcceptanceTier } from '@/lib/catalog/acceptance/types';
 
 /**
  * Lab produce mode — STUB (the default) vs LIVE CLI.
@@ -87,10 +88,56 @@ export function useLiveProduceMode(): [boolean, (on: boolean) => void] {
 
 /** Response payload of `POST /api/one-shot/step` (inside the `{ success, data }` envelope). */
 export interface OneShotStepResult {
-  outcome: 'pass' | 'fail';
+  /**
+   * The server's own verdict vocabulary. `deferred` is a Rule-5-LEGAL terminal state for an
+   * L3/L4 gate and the route has returned it since 2026-08-19 — this type said `'pass' | 'fail'`,
+   * so the one value the client had to treat specially was the one it could not name.
+   */
+  outcome: 'pass' | 'fail' | 'deferred';
+  /** The full four-state acceptance status behind `outcome` (`pending` has no outcome of its own). */
+  status?: AcceptanceStatus;
+  /** The tier the checker graded at (L0…L4). */
+  tier?: AcceptanceTier;
   stepName: string;
   reason?: string;
   /** The artifact data the server persisted for this step. */
   artifactData: Record<string, unknown>;
   ueAssets: string[];
+}
+
+/**
+ * What a Produce dispatch reports back to `CliProduce`.
+ *
+ * A dispatch has TWO independent axes and the panel used to collapse them: did the call
+ * complete (no throw), and did the server ACCEPT what came back. Returning `void` meant
+ * "completed", and the panel rendered `✓ Recorded` — so a server-graded `fail`/`deferred`
+ * was indistinguishable from a recorded success, which is exactly the "absence must never
+ * read as exemption" failure the standard names.
+ *
+ * `retryable` guards the money: "Retry with same prompt" exists for a dispatch that never
+ * landed. A verdict is not a transport failure — re-running the identical prompt spawns a
+ * SECOND billed session and cannot change the grade — so a graded non-pass returns false.
+ */
+export interface ProduceOutcome {
+  ok: boolean;
+  /** Operator-facing reason, rendered verbatim in `cli-produce-result`. */
+  msg?: string;
+  /** May the panel offer "Retry with same prompt"? Default false for a non-ok outcome. */
+  retryable?: boolean;
+}
+
+/**
+ * Project the server's response onto the panel's outcome. Pure — the ONE place the client
+ * decides whether a live produce reads as recorded, so the decision is testable without a
+ * DOM and can never drift between the Produce button and the one-click "Produce fix".
+ */
+export function describeProduceOutcome(res: OneShotStepResult): ProduceOutcome {
+  if (res.outcome === 'pass') return { ok: true };
+  const what = res.outcome === 'deferred' ? 'deferred' : 'not accepted';
+  const grade = res.status
+    ? ` (${res.status}${res.tier ? ` · ${res.tier}` : ''})`
+    : '';
+  // Never a blank tail: silence about WHY would read as "no problem found".
+  const why = res.reason?.trim() || 'the server recorded no reason';
+  return { ok: false, msg: `Server graded this produce ${what}${grade} — ${why}`, retryable: false };
 }

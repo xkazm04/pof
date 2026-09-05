@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { StepFrame, type StepPanel } from './StepFrame';
-import { CliProduce } from './shared/CliProduce';
+import { CliProduce, type CliProduceProps } from './shared/CliProduce';
 import { CandidateGallery } from './shared/CandidateGallery';
 import { DataTable } from './shared/DataTable';
 import { ChartPanel, type BarsRow, type ScatterPoint } from './shared/ChartPanel';
@@ -25,7 +25,7 @@ import { qualityPack } from '@/lib/prompts/quality';
 import { deliverableClassOf } from '@/lib/judge/dimensions';
 import { getStepFact } from '@/lib/status/statusModel';
 import { withProduceDirection } from '@/lib/catalog/produceDirection';
-import { isCliEligible, isLiveProduceEnabled, useLiveProduceMode, type OneShotStepResult } from '../labProduceMode';
+import { isCliEligible, isLiveProduceEnabled, useLiveProduceMode, describeProduceOutcome, type OneShotStepResult, type ProduceOutcome } from '../labProduceMode';
 import { apiFetch } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
 import { useCatalogStore } from '@/stores/catalogStore';
@@ -376,12 +376,14 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
    *
    * When live-CLI produce is enabled (opt-in, off by default) AND the archetype is a text
    * deliverable a CLI session can author, the dispatch goes through the real
-   * `POST /api/one-shot/step` seam and the store adopts what the SERVER persisted. A failure
-   * rejects, so `CliProduce` reports the reason and offers "Retry with same prompt" (Rule 4).
+   * `POST /api/one-shot/step` seam and the store adopts what the SERVER persisted. A rejected
+   * call (transport/route error) surfaces its reason with "Retry with same prompt"; a call
+   * that LANDED on a `fail`/`deferred` verdict returns that verdict, so the panel reports the
+   * server's own reason instead of `✓ Recorded` (Rule 4).
    * Stub mode writes synchronously inside the click (no await before the store write), which
    * is what keeps the Rule 5 walker green.
    */
-  const dispatchProduce = async (pctx?: { direction: string; prompt: string }) => {
+  const dispatchProduce = async (pctx?: { direction: string; prompt: string }): Promise<ProduceOutcome | void> => {
     const dir = pctx?.direction ?? '';
     if (catalogId && isCliEligible(spec.archetype) && isLiveProduceEnabled()) {
       const res = await apiFetch<OneShotStepResult>('/api/one-shot/step', {
@@ -392,8 +394,13 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
           proposal: { name: entity.name, data: entity.data },
         }),
       });
+      // Adopt what the server PERSISTED either way — a graded `fail`/`deferred` still wrote
+      // a row, and hiding it would leave the panel showing stale data.
       produce(entity.id, step, { data: res.artifactData ?? {}, ueAssets: res.ueAssets ?? [] });
-      return;
+      // …but the server's verdict is the answer, not the fact that the call returned 200.
+      // Discarding `outcome`/`status`/`reason` here is what made a graded fail render
+      // `✓ Recorded`; `describeProduceOutcome` is the one place that projection lives.
+      return describeProduceOutcome(res);
     }
     produce(entity.id, step, withProduceDirection(spec.produce(entity, dir), pctx));
   };
@@ -419,7 +426,7 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
   // switch only appears where flipping it actually changes what the next click does.
   const liveEligible = !!catalogId && isCliEligible(spec.archetype);
 
-  const cli = (onComplete: (ctx?: { direction: string; prompt: string }) => void | Promise<void>) => (
+  const cli = (onComplete: CliProduceProps['onComplete']) => (
     <CliProduce t={t} label={`Produce ${spec.label}`} rows={3}
       defaultDirection={spec.defaultDirection} note={spec.produceNote}
       liveEligible={liveEligible}

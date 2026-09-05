@@ -539,7 +539,20 @@ export function awaitCallback(
 
     const timer = setTimeout(() => {
       execution.listeners.delete(listener);
-      reject(new Error(`callback timeout after ${timeoutMs}ms for execution ${executionId}`));
+      // Drop the resolver too: nothing is waiting for it any more, and leaving it in the
+      // registry keeps a reference to a settled promise for the life of the process.
+      callbackRegistry.delete(executionId);
+      // ABORT BEFORE REJECTING. The timeout only ever ended the WAIT — the spawned Claude
+      // session kept running, kept editing files and kept billing tokens, with no operator
+      // affordance left that points at it. The caller (`/api/one-shot/step`) then reports a
+      // failure and the Produce panel offers "Retry with same prompt", so the orphan was
+      // about to be joined by a second billed session. Killing the process tree first means
+      // the error the caller sees is the whole truth about what is still running: nothing.
+      const aborted = abortExecution(executionId);
+      reject(new Error(
+        `callback timeout after ${timeoutMs}ms for execution ${executionId}` +
+        `${aborted ? ' (execution aborted)' : ' (no process to abort)'}`,
+      ));
     }, timeoutMs);
 
     registerCallbackResolver(executionId, (payload) => {

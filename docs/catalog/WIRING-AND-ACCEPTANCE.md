@@ -365,3 +365,37 @@ threshold the step will be graded by (tier power ≈100 ±10%, resists capped 75
 acceptance verdict moves. Measured on the live registry: **137 contract-bearing steps across
 30 catalogs** (140 steps receive a block once criteria-only steps are counted), largest block
 1 920 chars against a 2 400 cap — guarded by `src/__tests__/lib/catalog/contractPrompt.test.ts`.
+
+## 7. The LIVE produce path reports the server's verdict (2026-09-05)
+
+`/layout` → Produce in **live** mode (`labProduceMode`, opt-in, off by default) is the one
+produce path that spends real money: it POSTs `/api/one-shot/step` with `mode:'cli'`, which
+spawns a Claude session and awaits its `@@CALLBACK`. Two honesty defects lived on that path.
+
+**The client discarded the verdict.** `ArchetypeStep` read only `artifactData`/`ueAssets`
+from the response and called `produce(...)`, so `CliProduce` rendered `✓ Recorded` — even
+when the server had graded the row `fail`, and even for `deferred`, which the client's
+`OneShotStepResult` type could not name at all although the route has returned it since
+2026-08-19. That is "absence must never read as exemption": a step nobody accepted looked
+accepted, at the moment the operator had just paid for a session.
+
+- `OneShotStepResult` now carries `outcome: 'pass' | 'fail' | 'deferred'` plus `status`/`tier`.
+- `describeProduceOutcome(res)` (pure, in `labProduceMode.ts`) is the ONE projection from the
+  server response to what the panel says. Non-pass ⇒ `{ ok:false, msg }` naming the outcome,
+  the status/tier and the server's own `reason` (never a blank tail — silence would read as
+  "no problem found").
+- `CliProduce.onComplete` may now return a `ProduceOutcome`; `{ok:false}` renders the reason
+  in `cli-produce-result` instead of the success note. Returning nothing still means
+  "recorded", so every stub/zero-arg handler in the lab is byte-identically unchanged.
+- The artifact the server persisted is still adopted on a non-pass — the row exists, and
+  hiding it would be a second lie.
+- **Retry is a transport affordance.** "Retry with same prompt" now appears only when the
+  dispatch itself threw. A verdict is not a failed dispatch: the session already ran and was
+  billed, and the identical prompt would be graded identically.
+
+**A callback timeout orphaned a billed session.** `awaitCallback` rejected on timeout and did
+nothing else — the spawned process kept running, editing files and billing, while the panel
+offered a retry that would spawn a second one. It now calls `abortExecution` (killing the
+process tree, stamping the spend row `aborted`) **before** rejecting, and says so in the
+error. Tests: `src/__tests__/lib/claude-terminal/callback-timeout-abort.test.ts`,
+`src/__tests__/components/layout-lab/liveProduceOutcome.test.tsx`.
