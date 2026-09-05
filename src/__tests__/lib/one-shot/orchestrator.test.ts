@@ -22,7 +22,7 @@ function mockFetch(routes: Record<string, (body?: unknown) => unknown>) {
   });
 }
 
-const ONE_STEP: OrchestratorStepRef[] = [{ label: 'Attributes', archetype: 'schema', tier: 'L0', view: { kind: 'table' } }];
+const ONE_STEP: OrchestratorStepRef[] = [{ label: 'Attributes', archetype: 'schema', tier: 'L0', view: { kind: 'table', field: 'rows', columns: [{ key: 'name' }] } }];
 
 describe('orchestrator', () => {
   beforeEach(() => {
