@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Loader2, Shirt } from 'lucide-react';
 import { tryApiFetch } from '@/lib/api-utils';
 import { StatusTag } from '@/components/ui/StatusTag';
-import { CHAOS_CLOTH_NOT_RUN, CHAOS_CLOTH_PLUGINS, type ClothResult } from '@/lib/visual-gen/chaos-cloth';
+import { CHAOS_CLOTH_NOT_RUN, CHAOS_CLOTH_PLUGINS, type ClothResult } from '@/lib/visual-gen/chaos-cloth-contract';
 
 /**
  * Chaos Cloth attach — the forge-side face of `POST /api/visual-gen/chaos-cloth`.
