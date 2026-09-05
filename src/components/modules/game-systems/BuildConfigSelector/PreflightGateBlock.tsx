@@ -2,8 +2,10 @@
 
 import { STATUS_ERROR } from '@/lib/chart-colors';
 
-export function PreflightGateBlock({ visible, onCancel, onOverride }: {
+export function PreflightGateBlock({ visible, notRunLabels = [], onCancel, onOverride }: {
   visible: boolean;
+  /** Cook-relevant checks that produced no verdict — never measured, never a pass. */
+  notRunLabels?: string[];
   onCancel: () => void;
   onOverride: () => void;
 }) {
@@ -20,6 +22,11 @@ export function PreflightGateBlock({ visible, onCancel, onOverride }: {
       <div className="text-text-muted">
         Fix the red checks above and re-run, or package anyway if you know what you&apos;re doing.
       </div>
+      {notRunLabels.length > 0 && (
+        <div data-testid="pof-preflight-gate-block-not-run" className="text-text-muted">
+          Also never measured (no verdict either way): {notRunLabels.join(', ')}.
+        </div>
+      )}
       <div className="flex items-center gap-2">
         <button
           onClick={onCancel}

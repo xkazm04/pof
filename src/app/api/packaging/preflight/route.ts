@@ -18,8 +18,12 @@ interface PreflightRequest {
   projectPath: string;
   projectName: string;
   ueVersion: string;
-  /** Optional level the operator selected to cook (e.g. `/Game/Maps/VerticalSlice`). */
-  mapName?: string;
+  /**
+   * The maps the selected build profile will cook (`cookSettings.mapsToInclude`)
+   * — the same list UAT receives as `-map=A+B`. Empty/absent means the profile
+   * cooks all maps, and the map-exists check falls back to `GameDefaultMap`.
+   */
+  mapsToInclude?: string[];
   check?: CheckKind;
 }
 
@@ -28,7 +32,8 @@ function isPreflightRequest(v: unknown): v is PreflightRequest {
   const o = v as Record<string, unknown>;
   return typeof o.projectPath === 'string'
     && typeof o.projectName === 'string'
-    && typeof o.ueVersion === 'string';
+    && typeof o.ueVersion === 'string'
+    && (o.mapsToInclude === undefined || (Array.isArray(o.mapsToInclude) && o.mapsToInclude.every((m) => typeof m === 'string')));
 }
 
 const UBT_TIMEOUT_MS = 10 * 60 * 1000;
@@ -85,7 +90,7 @@ export async function POST(req: Request): Promise<Response> {
     let results: PreflightCheckResult[];
 
     if (check === 'fast') {
-      results = (await runFastPreflight(request.projectPath, request.projectName)).results;
+      results = (await runFastPreflight(request.projectPath, request.projectName, request.mapsToInclude)).results;
     } else if (check === 'asset-validation') {
       const { output, spawnError } = await runAssetValidation(request, req.signal);
       if (spawnError) {

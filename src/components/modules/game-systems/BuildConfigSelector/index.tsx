@@ -54,8 +54,22 @@ export function BuildConfigSelector() {
   // Pre-flight gate: a failing check blocks the cook until the operator fixes
   // it or explicitly overrides. Catches the build-config defect class before a
   // long cook starts rather than 20 minutes in.
-  const [preflight, setPreflight] = useState<PreflightStatusSummary>({ canCook: true, overall: 'idle' });
+  const [preflight, setPreflight] = useState<PreflightStatusSummary>({
+    canCook: true,
+    overall: 'idle',
+    fullyCovered: false,
+    notRunLabels: [],
+    coverage: { ran: 0, total: 0 },
+  });
   const [gateBlock, setGateBlock] = useState<BuildProfile | null>(null);
+
+  // The pre-flight panel is project-wide, but the map-exists check has to look
+  // at the maps a cook will actually ship. The default profile (else the first)
+  // supplies that list, and the panel names which profile it took them from.
+  const gateProfile = useMemo(
+    () => profiles.find((p) => p.isDefault) ?? profiles[0] ?? null,
+    [profiles],
+  );
 
   // After a successful Win64 cook, auto-run the runnable-exe smoke-test.
   const [smokeRequest, setSmokeRequest] = useState<SmokeTestRequest | null>(null);
@@ -216,6 +230,8 @@ export function BuildConfigSelector() {
           projectPath={projectPath}
           projectName={projectName}
           ueVersion={ueVersion}
+          cookMaps={gateProfile?.cookSettings.mapsToInclude ?? []}
+          cookProfileName={gateProfile?.name}
           onStatusChange={setPreflight}
         />
       )}
@@ -261,6 +277,7 @@ export function BuildConfigSelector() {
       {/* Pre-flight gate block notice */}
       <PreflightGateBlock
         visible={!!gateBlock}
+        notRunLabels={preflight.notRunLabels}
         onCancel={() => setGateBlock(null)}
         onOverride={handleOverridePackage}
       />

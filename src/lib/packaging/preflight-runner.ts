@@ -15,6 +15,7 @@ import {
   type PreflightCheckResult,
   type PreflightStatus,
   type SourceFile,
+  type CookMapCheck,
 } from './preflight';
 
 async function readIfExists(p: string): Promise<string | null> {
@@ -105,35 +106,69 @@ async function gatherRuntimeSources(projectPath: string, projectName: string): P
   return files;
 }
 
-async function resolveMapExists(projectPath: string, defaultEngineIni: string | null): Promise<boolean | null> {
-  if (!defaultEngineIni) return null;
-  const m = /GameDefaultMap=(.+)/.exec(defaultEngineIni);
-  if (!m) return null;
-  const contentPath = m[1].trim();
-  if (!contentPath || !contentPath.startsWith('/Game/')) return null;
-  const rel = contentPath.replace(/^\/Game\//, '').replace(/\..*$/, '');
-  const umap = path.join(projectPath, 'Content', `${rel}.umap`);
+/** Does the `.umap` behind a `/Game/...` content path exist on disk? */
+async function umapExists(projectPath: string, contentPath: string): Promise<boolean> {
+  const rel = contentPath.trim().replace(/^\/Game\//, '').replace(/\..*$/, '');
   try {
-    await stat(umap);
+    await stat(path.join(projectPath, 'Content', `${rel}.umap`));
     return true;
   } catch {
     return false;
   }
 }
 
-/** Run the fast (no-spawn) pre-flight checks and return results + overall status. */
+/**
+ * Resolve the maps the cook will actually ship.
+ *
+ * `mapsToInclude` from the selected build profile is the authority — that is
+ * the list UAT receives as `-map=A+B`. Only when the profile cooks "all maps"
+ * (an empty list) is `GameDefaultMap` the concrete level worth checking, and
+ * the result records which of the two it looked at.
+ */
+export async function resolveCookMaps(
+  projectPath: string,
+  defaultEngineIni: string | null,
+  mapsToInclude: string[] | undefined,
+): Promise<CookMapCheck> {
+  const fromProfile = (mapsToInclude ?? []).map((m) => m.trim()).filter(Boolean);
+  let source: CookMapCheck['source'] = 'profile';
+  let candidates = fromProfile;
+
+  if (candidates.length === 0) {
+    source = 'game-default-map';
+    const m = defaultEngineIni ? /GameDefaultMap=(.+)/.exec(defaultEngineIni) : null;
+    const contentPath = m ? m[1].trim() : '';
+    candidates = contentPath.startsWith('/Game/') ? [contentPath] : [];
+  }
+  if (candidates.length === 0) return { source: 'none', checked: [], missing: [] };
+
+  const checked = candidates.filter((c) => c.startsWith('/Game/'));
+  const missing: string[] = [];
+  for (const c of checked) {
+    if (!(await umapExists(projectPath, c))) missing.push(c);
+  }
+  return { source, checked, missing };
+}
+
+/**
+ * Run the fast (no-spawn) pre-flight checks and return results + overall status.
+ *
+ * `mapsToInclude` is the selected profile's cook set; omitting it falls the map
+ * check back to `GameDefaultMap` and the result says so.
+ */
 export async function runFastPreflight(
   projectPath: string,
   projectName: string,
+  mapsToInclude?: string[],
 ): Promise<{ results: PreflightCheckResult[]; overall: PreflightStatus }> {
   const configDir = path.join(projectPath, 'Config');
   const [defaultGameIni, defaultEngineIni] = await Promise.all([
     readIfExists(path.join(configDir, 'DefaultGame.ini')),
     readIfExists(path.join(configDir, 'DefaultEngine.ini')),
   ]);
-  const defaultMapExists = await resolveMapExists(projectPath, defaultEngineIni);
+  const cookMaps = await resolveCookMaps(projectPath, defaultEngineIni, mapsToInclude);
 
-  const config = checkConfigSanity({ defaultGameIni, defaultEngineIni, defaultMapExists });
+  const config = checkConfigSanity({ defaultGameIni, defaultEngineIni, cookMaps });
   const sources = await gatherRuntimeSources(projectPath, projectName);
   const audit = withEditorCheckResult(auditWithEditor(sources));
 

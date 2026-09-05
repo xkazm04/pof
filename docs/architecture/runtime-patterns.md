@@ -190,6 +190,18 @@ While suspended, the store subscription is replaced with a no-op (no re-renders)
 
 ---
 
+## Packaging pre-flight: a verdict states its own coverage
+
+`PreflightPanel` runs four cook-relevant checks (config sanity, WITH_EDITOR audit, Build verify (Shipping), Asset validation) plus a diagnostic Editor build-verify — but only the two *fast* ones auto-run. The gate therefore never reports a bare status word:
+
+- `KNOWN_CHECKS` in `PreflightPanel.tsx` enumerates every check the panel can produce. A check with no result renders an explicit **not-run** tile (`data-status="not-run"`, `ui/StatusChip`) instead of being absent, and the header word is qualified by its coverage (`ready — 2 of 4 checks run, 2 not run`, `data-coverage="2/4"`).
+- `PreflightStatusSummary` carries `canCook` (nothing that RAN failed — unchanged; an unrun check qualifies the verdict, it never vetoes the build) alongside `fullyCovered`, `notRunLabels` and `coverage`. `BuildConfigSelector` shows the unrun labels in the gate-block copy.
+- The **map-exists** check validates the maps the cook will ship. `resolveCookMaps()` (`preflight-runner.ts`) prefers the selected profile's `cookSettings.mapsToInclude` (the list UAT receives as `-map=A+B`), falls back to `GameDefaultMap` only when that list is empty, and returns a `CookMapCheck { source, checked, missing }` so `checkConfigSanity` can name which set it looked at. `POST /api/packaging/preflight` takes `mapsToInclude`; the old `mapName` field drove nothing and is gone.
+
+Standard: ai-registry `game-production/ship-pipeline-gating` — absence of measurement is its own status, never a pass.
+
+---
+
 ## Server-side scheduler (cron)
 
 `src/instrumentation.ts` is the one place the app runs work on a wall-clock interval **without a browser**. Next.js calls its exported `register()` once per server start; guarded to `NEXT_RUNTIME === 'nodejs'` (better-sqlite3 is node-only) and to a `globalThis.__pofSchedulerStarted` flag (no double-register on dev HMR). It starts a 1-minute `setInterval` (`UI_TIMEOUTS.scheduleTick`, `.unref()`'d) that calls `tickScheduler()` and `tickPurgeExpiredKeys()`.

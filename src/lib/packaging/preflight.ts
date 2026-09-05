@@ -58,16 +58,37 @@ export function iniValue(
 
 // ── Config sanity ───────────────────────────────────────────────────────────
 
+/**
+ * Which maps the map-exists check actually resolved, and where that list came
+ * from. The cook ships `profile.cookSettings.mapsToInclude`; validating only
+ * `GameDefaultMap` checks a level the cook may never touch, so the result has
+ * to say WHICH set it looked at.
+ */
+export interface CookMapCheck {
+  /**
+   * `profile` — the maps the selected build profile will cook.
+   * `game-default-map` — the profile cooks "all maps", so the launch map from
+   *   `DefaultEngine.ini` is the only concrete level available to check.
+   * `none` — no map could be resolved at all (nothing was checked).
+   */
+  source: 'profile' | 'game-default-map' | 'none';
+  /** The `/Game/...` paths that were resolved against disk. */
+  checked: string[];
+  /** Of `checked`, the ones with no matching `.umap` on disk. */
+  missing: string[];
+}
+
 export interface ConfigSanityInput {
   /** Contents of `Config/DefaultGame.ini`, or null if the file is missing. */
   defaultGameIni: string | null;
   /** Contents of `Config/DefaultEngine.ini`, or null if missing. */
   defaultEngineIni: string | null;
   /**
-   * Whether the configured `GameDefaultMap` `.umap` resolves on disk. The
-   * caller resolves the path; null means "not checked / no map configured".
+   * The map-exists resolution the caller performed (it owns the filesystem).
+   * Omitted/null means no map check ran at all — which the result SAYS rather
+   * than folding into a pass.
    */
-  defaultMapExists?: boolean | null;
+  cookMaps?: CookMapCheck | null;
 }
 
 const GENERAL_SETTINGS = '/Script/EngineSettings.GeneralProjectSettings';
@@ -103,8 +124,20 @@ export function checkConfigSanity(input: ConfigSanityInput): PreflightCheckResul
   if (gameDefaultMap === null || gameDefaultMap === '') {
     issues.push('GameDefaultMap is not set — the packaged build will not load a level on launch.');
     if (status !== 'fail') status = 'warn';
-  } else if (input.defaultMapExists === false) {
-    issues.push(`GameDefaultMap is set to "${gameDefaultMap}" but no matching .umap was found on disk.`);
+  }
+
+  // Map-exists — over the maps the COOK will ship, not the launch map by
+  // default. A missing level in the cook set is a hard fail; a set nothing
+  // could resolve says so instead of passing silently.
+  const maps = input.cookMaps ?? null;
+  if (maps === null || maps.source === 'none' || maps.checked.length === 0) {
+    issues.push('Cook maps were not checked — no map list reached the pre-flight, so no level was resolved on disk.');
+    if (status !== 'fail') status = 'warn';
+  } else if (maps.missing.length > 0) {
+    const where = maps.source === 'profile' ? 'the build profile\'s cook set' : 'GameDefaultMap';
+    issues.push(
+      `${maps.missing.length} of ${maps.checked.length} map(s) from ${where} have no .umap on disk: ${maps.missing.join(', ')}.`,
+    );
     status = 'fail';
   }
 
@@ -114,14 +147,20 @@ export function checkConfigSanity(input: ConfigSanityInput): PreflightCheckResul
     if (status !== 'fail') status = 'warn';
   }
 
+  const mapScope = maps && maps.source !== 'none' && maps.checked.length > 0
+    ? maps.source === 'profile'
+      ? `${maps.checked.length} profile cook map(s) checked`
+      : 'GameDefaultMap checked (profile cooks all maps)'
+    : 'no map checked';
+
   return {
     id: 'config-sanity',
     label: 'Config sanity',
     status,
     detail:
       status === 'pass'
-        ? 'ProjectID, default map, and game mode are configured.'
-        : `${issues.length} config issue${issues.length === 1 ? '' : 's'}.`,
+        ? `ProjectID and game mode configured; ${mapScope}.`
+        : `${issues.length} config issue${issues.length === 1 ? '' : 's'} (${mapScope}).`,
     issues,
   };
 }

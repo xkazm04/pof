@@ -51,7 +51,7 @@ describe('checkConfigSanity', () => {
   ].join('\n');
 
   it('passes a fully-configured project', () => {
-    const r = checkConfigSanity({ defaultGameIni: goodGame, defaultEngineIni: goodEngine, defaultMapExists: true });
+    const r = checkConfigSanity({ defaultGameIni: goodGame, defaultEngineIni: goodEngine, cookMaps: { source: 'game-default-map' as const, checked: ['/Game/Maps/VerticalSlice'], missing: [] } });
     expect(r.status).toBe('pass');
     expect(r.issues).toHaveLength(0);
   });
@@ -60,23 +60,40 @@ describe('checkConfigSanity', () => {
     const r = checkConfigSanity({
       defaultGameIni: '[/Script/EngineSettings.GeneralProjectSettings]\nProjectID=',
       defaultEngineIni: goodEngine,
-      defaultMapExists: true,
+      cookMaps: { source: 'game-default-map', checked: ['/Game/Maps/VerticalSlice'], missing: [] },
     });
     expect(r.status).toBe('fail');
     expect(r.issues.join(' ')).toMatch(/ProjectID is empty/);
   });
 
   it('warns when GameDefaultMap / GlobalDefaultGameMode are unset', () => {
-    const r = checkConfigSanity({ defaultGameIni: goodGame, defaultEngineIni: '[/Script/EngineSettings.GameMapsSettings]', defaultMapExists: null });
+    const r = checkConfigSanity({ defaultGameIni: goodGame, defaultEngineIni: '[/Script/EngineSettings.GameMapsSettings]', cookMaps: { source: 'none' as const, checked: [], missing: [] } });
     expect(r.status).toBe('warn');
     expect(r.issues.join(' ')).toMatch(/GameDefaultMap is not set/);
     expect(r.issues.join(' ')).toMatch(/GlobalDefaultGameMode is not set/);
   });
 
-  it('fails when the configured map is missing on disk', () => {
-    const r = checkConfigSanity({ defaultGameIni: goodGame, defaultEngineIni: goodEngine, defaultMapExists: false });
+  it('fails when a map the cook will ship is missing on disk, and names the set it checked', () => {
+    const r = checkConfigSanity({
+      defaultGameIni: goodGame,
+      defaultEngineIni: goodEngine,
+      cookMaps: { source: 'profile', checked: ['/Game/Maps/Arena', '/Game/Maps/Gone'], missing: ['/Game/Maps/Gone'] },
+    });
     expect(r.status).toBe('fail');
-    expect(r.issues.join(' ')).toMatch(/no matching \.umap was found/);
+    expect(r.issues.join(' ')).toMatch(/build profile's cook set/);
+    expect(r.issues.join(' ')).toContain('/Game/Maps/Gone');
+    expect(r.detail).toContain('2 profile cook map(s) checked');
+  });
+
+  it('says so when no map was checked at all rather than passing silently', () => {
+    const r = checkConfigSanity({
+      defaultGameIni: goodGame,
+      defaultEngineIni: goodEngine,
+      cookMaps: { source: 'none', checked: [], missing: [] },
+    });
+    expect(r.status).toBe('warn');
+    expect(r.issues.join(' ')).toMatch(/Cook maps were not checked/);
+    expect(r.detail).toContain('no map checked');
   });
 });
 

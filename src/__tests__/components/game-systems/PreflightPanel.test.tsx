@@ -44,7 +44,11 @@ describe('PreflightPanel — asset-validation check', () => {
   it('labels the per-check status icon so it is not color-only', async () => {
     mockPreflightByCheck();
     render(<PreflightPanel {...props} />);
-    await waitFor(() => expect(screen.getByTestId('pof-preflight-check-config-sanity')).toBeTruthy());
+    // The tile exists from the first paint in its `not-run` state; wait for the
+    // fast check's verdict to land before asserting on the status icon.
+    await waitFor(() =>
+      expect(screen.getByTestId('pof-preflight-check-config-sanity').getAttribute('data-status')).toBe('pass'),
+    );
     // The config-sanity check passes — its status icon carries an accessible label.
     expect(screen.getByRole('img', { name: 'Passed' })).toBeTruthy();
   });
