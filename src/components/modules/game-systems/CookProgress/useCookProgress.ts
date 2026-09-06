@@ -62,6 +62,14 @@ export function useCookProgress({ request, onComplete }: CookProgressProps) {
       // Phase active as lines arrive — captured locally so each log is tagged
       // synchronously (state updates are async and would lag the stream).
       let currentPhase: CookPhase | null = null;
+      // The response status was committed at 200 before the first byte, so once
+      // the stream is open the transport can no longer report the outcome. The
+      // `done`/`error` event is the only channel left, and its ABSENCE is the
+      // failure: every log line can be well formed and complete while the
+      // sequence is short. Without this flag a stream that just stops leaves the
+      // cook with no verdict at all, which the UI renders as "still running"
+      // forever.
+      let settled = false;
       try {
         const res = await fetch('/api/packaging/execute', {
           method: 'POST',
@@ -121,14 +129,24 @@ export function useCookProgress({ request, onComplete }: CookProgressProps) {
               setCounts(nextCounts);
             } else if (ev.type === 'done') {
               const final = { status: 'success' as const, exePath: ev.exePath };
+              settled = true;
               setResult(final);
               onComplete?.(final);
             } else if (ev.type === 'error') {
               const final = { status: 'failed' as const, error: ev.message };
+              settled = true;
               setResult(final);
               onComplete?.(final);
             }
           }
+        }
+        if (!settled && !ctrl.signal.aborted) {
+          const final = {
+            status: 'failed' as const,
+            error: 'Cook stream ended without a result — the build may still be running.',
+          };
+          setResult(final);
+          onComplete?.(final);
         }
       } catch (err) {
         if (ctrl.signal.aborted) return;
