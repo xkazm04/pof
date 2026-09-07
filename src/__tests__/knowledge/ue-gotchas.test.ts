@@ -384,3 +384,20 @@ describe('generated-mesh collision delivery', () => {
     expect(out).toMatch(/body_setup|add_simple_collisions|convex_decomposition/i);
   });
 });
+
+// ── glTF import shape (live UE 5.8 run, 2026-09-07) ──────────────────────────
+// Two defects found by actually running an import, neither visible to any fixture.
+describe('glTF import returns many assets', () => {
+  it('warns that imported_object_paths is not mesh-first', () => {
+    const out = formatGotchas('ue-python');
+    expect(out).toMatch(/imported_object_paths/);
+    expect(out).toMatch(/Texture2D/);
+    expect(out).toMatch(/isinstance|StaticMesh/);
+  });
+
+  it('warns that suppressing task.save requires saving every imported asset', () => {
+    const out = formatGotchas('ue-python');
+    expect(out).toMatch(/task\.save/);
+    expect(out).toMatch(/save_loaded_asset/);
+  });
+});

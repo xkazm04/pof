@@ -156,7 +156,46 @@ AssetForgeView -> UeImportPanel -> POST /api/visual-gen/ue-import
 
 38 tests across the store, the routes and the panel.
 
-**Still not proven:** no live UE run has happened. Every state above is driven by the route's
-own envelope and by injected fakes, and the `body_setup` property chain is still
-un-introspected (it fails safe — see the limits under #1). The first real run is what turns
-this from wired to working.
+**PROVEN LIVE (2026-09-07).** Three real imports of `generated/meshes/props__crate.glb`
+through the running route on `:3001`, driving UE 5.8. The final run:
+
+```
+status             done
+assetPath          /Game/Generated/ResearchImport2/props__crate/StaticMeshes/ResearchCrate2
+collisionElements  2      (read back from body_setup, not assumed)
+```
+
+and five `.uasset` files on disk — the mesh, its material, and Color / NormalGL / ORM
+textures. The `body_setup` -> `agg_geom` -> `*_elems` property chain, flagged in this doc as
+un-introspected, **is correct**; it is no longer an assumption.
+
+**The live run found two defects nothing else could have.** Both are now `ue-python`
+gotchas (`gltf-import-returns-many-assets`), because they are general UE truths rather than
+route trivia:
+
+1. **`imported_object_paths` is not mesh-first.** Run 1 died with
+   `TypeError: NativizeObject: Cannot nativize 'Texture2D' as 'StaticMesh'` — a glTF import
+   yields textures and materials too, and `paths[0]` was a **Texture2D**. The reported
+   `assetPath` was a texture as well, which is a defect that predates this work. The mesh
+   must be selected with `isinstance(o, unreal.StaticMesh)`, and a distinct marker has to
+   say "imported, but nothing was a StaticMesh" — that state shares its import marker with
+   success and has an entirely different cause.
+2. **Suppressing `task.save` means nothing is saved.** Run 2 succeeded (collision observed,
+   2 elements) and wrote exactly **one** `.uasset`: the glTF's textures and materials had
+   imported into memory and never reached disk, leaving the saved mesh referencing assets
+   that would not survive an editor restart. The fix loops `imported_object_paths` and
+   saves every object. **Artifact diff: 1 -> 5 `.uasset`** — the only evidence that counts
+   here, since both runs had a green test suite and a success marker.
+
+**The honesty machinery held under real failure.** Run 1 reported `status: error` with the
+engine's own TypeError and **refused to claim collision**; nothing was left half-saved,
+because `task.save = False` and the explicit save never ran.
+
+**What is still NOT proven:** the `measured` plan basis. The Tier-1 critic could not run on
+this machine (`POF_TRIPOSR_ROOT is not set (the TripoSR venv is where trimesh lives)`), so
+all three runs planned on basis `assumed` and the route said so — the designed fallback,
+exercised live. Measuring the crate out-of-band with the system `trimesh` shows this is not
+cosmetic: **451 components, 59 real parts after the floater rule, 392 specks**, so a measured
+plan would have chosen **convex hulls**, where the assumed plan chose a **BOX**. The basis
+field is reporting a real difference in outcome, not a formality. Installing the TripoSR venv
+is what closes this last gap.

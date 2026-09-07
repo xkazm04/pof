@@ -488,6 +488,16 @@ export const UE_GOTCHAS: Gotcha[] = [
     appliesTo: ['ue-python'],
     source: 'research: game-ready cleanup standards (strayspark 2026) + repo audit — no UCX_/collision handling outside a template view',
   },
+  {
+    id: 'gltf-import-returns-many-assets',
+    modules: ['3d', 'character', 'world'],
+    summary:
+      'a glTF import yields textures and materials too, and imported_object_paths is NOT mesh-first — select the StaticMesh by isinstance, and save every asset if you suppressed task.save',
+    detail:
+      "Measured on a live UE 5.8 import of a generated .glb (2026-09-07). Two defects, both invisible to any test that does not actually run the editor. (1) ORDERING: AssetImportTask.imported_object_paths returned the TEXTURE first, so load_asset(paths[0]) handed a Texture2D to EditorStaticMeshLibrary.add_simple_collisions and the run died on \"TypeError: NativizeObject: Cannot nativize 'Texture2D' as 'Object' (allowed Class type: 'StaticMesh')\" — and any asset path reported from paths[0] names a texture, not the mesh. Never index into imported_object_paths: loop it, load_asset each entry, and take the first isinstance(o, unreal.StaticMesh) (mind that a multi-mesh glTF yields several — pick deliberately). Log a separate marker for 'assets imported but none was a StaticMesh', because that state has the same import marker as success and a completely different cause. (2) SAVING: any post-import edit (collision, LODs, material assignment) has to run BEFORE the asset is written, so task.save must be False — and then NOTHING is saved automatically. Saving only the mesh persists a .uasset that references textures and materials still living in memory: the first live run wrote exactly one .uasset and the whole material set vanished. After the edit, loop imported_object_paths and save_loaded_asset EVERY object, not just the one you edited.",
+    appliesTo: ['ue-python'],
+    source: 'research: live UE 5.8 glTF import of props__crate.glb through /api/visual-gen/ue-import',
+  },
 ];
 
 /**

@@ -157,3 +157,90 @@ describe('importGlbToUE — collision is observed, not assumed', () => {
     expect(res.collisionElements).toBeUndefined();
   });
 });
+
+// ── The glTF importer returns MANY assets (live run, 2026-09-07) ─────────────
+// A real import of props__crate.glb returned `imported_object_paths` whose FIRST entry
+// was a Texture2D, so `load_asset(paths[0])` handed a texture to add_simple_collisions:
+//   TypeError: NativizeObject: Cannot nativize 'Texture2D' as 'Object'
+//            (allowed Class type: 'StaticMesh')
+// and the reported assetPath was a texture too. The mesh must be SELECTED by type.
+describe('buildGlbImportPython — selecting the static mesh among the imported assets', () => {
+  it('scans imported_object_paths for a StaticMesh instead of taking paths[0]', () => {
+    const py = buildGlbImportPython('C:/gen/chair.glb');
+    expect(py).toContain('unreal.StaticMesh');
+    expect(py).toMatch(/isinstance\(/);
+    // The old bug in one line: collision (or the marker) reading index 0 blindly.
+    expect(py).not.toMatch(/load_asset\(paths\[0\]\)/);
+  });
+
+  it('reports the STATIC MESH path in the import marker, not the first asset', () => {
+    const py = buildGlbImportPython('C:/gen/chair.glb');
+    const marker = py.indexOf("POF_UE_IMPORT=");
+    expect(marker).toBeGreaterThan(-1);
+    // Selection must happen before the marker is logged, or it reports the wrong asset.
+    expect(py.indexOf('unreal.StaticMesh')).toBeLessThan(marker);
+  });
+
+  it('emits a distinct marker for "imported, but nothing was a StaticMesh"', () => {
+    const py = buildGlbImportPython('C:/gen/chair.glb');
+    expect(py).toContain('POF_UE_MESH=');
+  });
+
+  it('runs the collision call against the SELECTED mesh', () => {
+    const py = buildGlbImportPython('C:/gen/chair.glb', '/Game/Generated', 'Chair', {
+      collision: collisionPlan({ use: 'blocking', components: 1 }),
+    });
+    expect(py.indexOf('unreal.StaticMesh')).toBeLessThan(py.indexOf('add_simple_collisions'));
+  });
+});
+
+describe('importGlbToUE — no StaticMesh among the imported assets', () => {
+  it('fails a requested collision when the import produced no static mesh', async () => {
+    const res = await importGlbToUE('C:/gen/chair.glb', {
+      collision: collisionPlan({ use: 'blocking', components: 1 }),
+      runExperimentFn: async () => RES({ POF_UE_IMPORT: '/Game/T.T', POF_UE_MESH: 'NO' }),
+    });
+    expect(res.ok).toBe(false);
+    expect(res.error).toMatch(/static ?mesh/i);
+  });
+
+  it('does not invent that failure when no collision was asked for', async () => {
+    const res = await importGlbToUE('C:/gen/chair.glb', {
+      runExperimentFn: async () => RES({ POF_UE_IMPORT: '/Game/T.T', POF_UE_MESH: 'NO' }),
+    });
+    expect(res.ok).toBe(true);
+  });
+});
+
+// ── Saving (live run, 2026-09-07) ────────────────────────────────────────────
+// A collision plan sets `task.save = False` so the mesh is not persisted before collision
+// is applied. The first live run then saved ONLY the mesh: the glTF import's textures and
+// materials existed in memory and never reached disk, leaving the saved mesh referencing
+// assets that would not survive an editor restart. Everything imported must be saved.
+describe('buildGlbImportPython — persisting the whole import', () => {
+  it('saves EVERY imported asset after collision, not only the mesh', () => {
+    const py = buildGlbImportPython('C:/gen/chair.glb', '/Game/G', 'Chair', {
+      collision: collisionPlan({ use: 'blocking', components: 1 }),
+    });
+    // NOT `/for .* in paths:[\s\S]*save_loaded_asset/` — the mesh-SELECTION loop already
+    // iterates paths, so that regex passes on the very script it was meant to catch.
+    // Assert the save takes the loop variable, and never the single mesh.
+    expect(py).toContain('save_loaded_asset(a)');
+    expect(py).not.toContain('save_loaded_asset(mesh)');
+    // Two separate passes over paths: select the mesh, then save everything.
+    expect(py.split('for p in paths:').length - 1).toBe(2);
+  });
+
+  it('saves only AFTER the collision call, so the mesh persists with its collision', () => {
+    const py = buildGlbImportPython('C:/gen/chair.glb', '/Game/G', 'Chair', {
+      collision: collisionPlan({ use: 'blocking', components: 1 }),
+    });
+    expect(py.indexOf('add_simple_collisions')).toBeLessThan(py.lastIndexOf('save_loaded_asset'));
+  });
+
+  it('leaves the plain import saving through the task, with no explicit save loop', () => {
+    const py = buildGlbImportPython('C:/gen/chair.glb');
+    expect(py).toContain('task.save = True');
+    expect(py).not.toContain('save_loaded_asset');
+  });
+});

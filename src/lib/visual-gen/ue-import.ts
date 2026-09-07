@@ -85,7 +85,6 @@ function collisionPython(plan: CollisionPlan | undefined): string[] {
       ? `unreal.EditorStaticMeshLibrary.add_simple_collisions(mesh, unreal.ScriptingCollisionShapeType.${plan.shape ?? 'BOX'})`
       : `unreal.EditorStaticMeshLibrary.set_convex_decomposition_collisions(mesh, ${plan.hullCount ?? DEFAULT_HULL_COUNT}, ${plan.maxHullVerts ?? DEFAULT_MAX_HULL_VERTS}, 100000)`;
   return [
-    'mesh = unreal.load_asset(paths[0]) if paths else None',
     'if mesh:',
     `    ${call}`,
     // The observation. A collision call that runs and produces nothing is indistinguishable
@@ -94,7 +93,14 @@ function collisionPython(plan: CollisionPlan | undefined): string[] {
     '    agg = bs.get_editor_property(\'agg_geom\') if bs else None',
     '    n = (len(agg.get_editor_property(\'convex_elems\')) + len(agg.get_editor_property(\'box_elems\')) + len(agg.get_editor_property(\'sphere_elems\')) + len(agg.get_editor_property(\'sphyl_elems\'))) if agg else 0',
     "    unreal.log('POF_UE_COLLISION=' + str(n))",
-    '    unreal.EditorAssetLibrary.save_loaded_asset(mesh)',
+    // Save EVERYTHING the import produced, not just the mesh. `task.save` is False
+    // whenever a plan is present (the mesh must not persist before collision is applied),
+    // which on the first live run left the glTF's textures and materials in memory only:
+    // one .uasset on disk, referencing assets that would not survive an editor restart.
+    'for p in paths:',
+    '    a = unreal.load_asset(p)',
+    '    if a:',
+    '        unreal.EditorAssetLibrary.save_loaded_asset(a)',
   ];
 }
 
@@ -122,7 +128,23 @@ export function buildGlbImportPython(
     `task.save = ${wantsCollision ? 'False' : 'True'}`,
     'unreal.AssetToolsHelpers.get_asset_tools().import_asset_tasks([task])',
     'paths = list(task.imported_object_paths)',
-    "unreal.log('POF_UE_IMPORT=' + (paths[0] if paths else 'NONE'))",
+    // A glTF import produces SEVERAL assets — textures and materials among them — and
+    // `imported_object_paths` is not ordered mesh-first. Measured on a live run: paths[0]
+    // was a Texture2D, so the old `load_asset(paths[0])` handed a texture to
+    // add_simple_collisions ("Cannot nativize 'Texture2D' as 'StaticMesh'") and the
+    // reported asset path was a texture. Select by TYPE, before anything uses it.
+    'mesh = None',
+    "mesh_path = ''",
+    'for p in paths:',
+    '    o = unreal.load_asset(p)',
+    '    if isinstance(o, unreal.StaticMesh):',
+    '        mesh = o',
+    '        mesh_path = p',
+    '        break',
+    "unreal.log('POF_UE_IMPORT=' + (mesh_path if mesh_path else (paths[0] if paths else 'NONE')))",
+    // Distinguishes "imported something, but no mesh" from "imported nothing" — the two
+    // have identical import markers and completely different causes.
+    "unreal.log('POF_UE_MESH=' + ('YES' if mesh else 'NO'))",
     ...collisionPython(opts.collision),
   ].join('\n');
 }
@@ -169,13 +191,20 @@ export async function importGlbToUE(
   const wantsCollision = !!opts.collision && opts.collision.kind !== 'none';
   const raw = res.markers['POF_UE_COLLISION'];
   const collisionElements = raw === undefined ? undefined : Number(raw);
+  // `NO` means assets imported but none of them was a StaticMesh — a texture-only or
+  // material-only result. Collision cannot be built on that, and saying so names the real
+  // cause instead of reporting an absent body_setup count.
+  const noStaticMesh = res.markers['POF_UE_MESH'] === 'NO';
   const collisionOk =
-    !wantsCollision || (collisionElements !== undefined && Number.isFinite(collisionElements) && collisionElements > 0);
+    !wantsCollision ||
+    (!noStaticMesh && collisionElements !== undefined && Number.isFinite(collisionElements) && collisionElements > 0);
   const collisionError = collisionOk
     ? undefined
-    : collisionElements === undefined
-      ? `collision was requested (${opts.collision!.kind}) but the mesh reported no body_setup count — nothing observed it, so it is not claimed`
-      : `collision was requested (${opts.collision!.kind}) but body_setup holds 0 elements — the mesh would fall through the world`;
+    : noStaticMesh
+      ? `collision was requested (${opts.collision!.kind}) but no StaticMesh was among the imported assets — a glTF import also yields textures and materials, and collision can only be built on the mesh`
+      : collisionElements === undefined
+        ? `collision was requested (${opts.collision!.kind}) but the mesh reported no body_setup count — nothing observed it, so it is not claimed`
+        : `collision was requested (${opts.collision!.kind}) but body_setup holds 0 elements — the mesh would fall through the world`;
 
   return {
     ok: res.ok && imported && collisionOk,
