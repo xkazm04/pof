@@ -1,6 +1,8 @@
 # Agentic World Composition — prompt → populated scene (spec)
 
-> **Status: SPEC ONLY — not built. No external dependency to adopt.**
+> **Status: PARTLY BUILT (2026-09-07). Step 2 (the planner) shipped, via an IMAGE input.**
+> See the update at the end of this file. Steps 1 (UE spawn script), 3 (source from library)
+> and 4 (render → critique → re-plan) remain unbuilt.
 > Source: *"One Prompt to 3D World…"* (Stefan 3D AI, 3D AI News #18, youtube `7W1Am-ry0DM`,
 > [02:11]) — "Tencent releases Hunyuan World Claw … an agentic 3D that combines different
 > models and some knowledge about how to build 3D worlds into a tool that can turn a prompt
@@ -92,3 +94,46 @@ model access.**
 `powers-engine` on the world/level-design catalog steps, which today have no engine for
 "populate this space" — and `raises-tier` on the set-dressing path, which currently cannot
 reach L3 because the manifest never reaches UE.
+
+
+---
+
+## Update 2026-09-07 — step 2 shipped, reached from an image
+
+Run `2026-09-07-rodin-worldgen` (Rodin WorldGen, Stefan 3D AI, youtube `KlzzBa1sZX0`) built the
+planner this spec asked for, with one substitution: the input is a scene **image**, not a
+sentence. The source's mechanism — "it detected one object and started to generate a 3D
+model, then it creates another" — is scene decomposition, and PoF already had the VLM seam
+to do it.
+
+**Shipped** (all with a production consumer, census-checked):
+- `src/lib/visual-gen/generators/scene-decompose.ts` — image → prop rows (name, normalized
+  box, size estimate, count, material) over the injectable Qwen vision seam.
+- `src/lib/visual-gen/generators/physical-tags.ts` — the physical half of a spawnable prop
+  (`MATERIAL_DENSITIES`, `massForSize`, `physicalForSize`, `phys_`/`sim_`/`mass_kg_` tags).
+  This is what a **physics settle** needs, and the settle is what this spec's own "honest
+  limits" section and the `prop-placement-affordances-not-bounds` gotcha both call for.
+- `src/lib/visual-gen/scene-crop.ts` — real sharp bbox crops, which is what makes the
+  existing Tier-0 `gateInputImage` usable per prop (its "one subject, plain background"
+  premise cannot hold on a whole scene).
+- `POST /api/visual-gen/scene-decompose` — the wiring. **This is the load-bearing part:**
+  `generateComposition` and `placement-tags` had zero importers in `src/` before it.
+
+**The spec was right about the blocker and slightly wrong about the order.** It said step 1
+(the UE spawn script) was "required by every later step". In practice step 2 could ship
+first and independently, because the manifest is verifiable on its own; step 1 remains the
+gap between this manifest and an L3, and it is external (`ue/PoFToolset/**`).
+
+**What the live runs added that no fixture could.** Three defects surfaced only by running
+real images through real Qwen calls: the route passed no material so every prop was
+`phys_default` (the density table was inert in the only wired path); `readMaterial`
+depluralized `glass` into `glas`; and the first prompt classified **stairs and a bush** as
+extractable props, after which the solver stacked the bush on the stairs. The prompt now
+excludes architecture and vegetation and states that returning no rows is a valid answer —
+and on the ravaged-courtyard arena art it correctly returns nothing at all.
+
+**New honest limit, inherited from this spec's own warning.** Affordances remain
+size-class-only. The decomposer now knows each prop's NAME and material, but nothing uses
+the name to place it, so the bush-on-stairs *class* of error survives anywhere the exclusion
+list misses. A name/semantics-aware affordance pass is the natural next step and is cheaper
+than it looks — the judgement is already a Claude call with a schema.
