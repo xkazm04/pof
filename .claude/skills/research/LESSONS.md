@@ -349,3 +349,24 @@
   both the weights' licence and the reference sample's provenance), not the per-model licence list,
   which would rot. No method change — the existing rule already points here; recording that it
   keeps paying.
+
+## 1.16 — 2026-09-07 — pof
+
+- **Check `Research/` for the same QUESTION, not the same URL.** Two runs the same day
+  hit the GPT-6-Astra-vs-Fable Blender claim from different directions: a web round that
+  fetched the benchmark literature and refuted it, then the video that made it. Reading
+  the earlier note first retired half the source before the pick gate and let the run
+  spend zero web budget. Phase 1 only told me to read `Patterns/` and the three most
+  recent `Lessons/`; the adjudicated CLAIM lived in a `Research/` note. Applied in 1.17.
+- **A knowledge-entry test that passes on its first run is a false green.** Asserting the
+  rendered gotcha block matches the practice's vocabulary tests the CORPUS — a mature one
+  already contains `primitive`, `procedural`, `organic`. Pin the entry by `id` and match a
+  phrase only it carries. Applied in 1.17.
+- **An "already-have" catch can be a ROUTING gap one notch sideways.** The skill teaches
+  "when the practice is already in the knowledge store, ask whether the code OBEYS it".
+  This run needed the neighbouring question: the capability existed (`level-blockout.ts`,
+  `generators/*`) AND the knowledge existed (`arena-kit-composition`) — what was missing
+  was any way for an asset class to REACH the capability. Both stores were individually
+  fine; nothing connected them. Not applied as a method edit: it is the same "check the
+  neighbours" muscle, and a third variant of the rule would add words without adding a
+  new move.
