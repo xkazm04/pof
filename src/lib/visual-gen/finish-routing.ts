@@ -33,7 +33,7 @@ import { join } from 'node:path';
 import type { CritiqueResult, FindingCode } from './mesh-critique';
 import { assessStage, type MeshStage } from './critique-stage';
 import type { MeshFinishSpec } from './mesh-finish';
-import { polycountFor } from './polycount-presets';
+import { polycountFor, generationPlanFor } from './polycount-presets';
 import { ASSET_DIRS, safeAssetDir, safeAssetName } from './generated-assets';
 
 /** The one dir a routed finish may write into. Must be a member of `ASSET_DIRS`. */
@@ -97,8 +97,53 @@ export function planFinishFromCritique(args: PlanFinishArgs): FinishPlan | Finis
   if (!critique) return { ok: false, reason: 'no critique — nothing graded this mesh, so there is no verdict to route' };
   if (critique.unavailable) return { ok: false, reason: `the critic could not run (${critique.error ?? 'reason not reported'}) — an absent gate is not a finish request` };
   if (!critique.ok || critique.verdict === undefined) return { ok: false, reason: `critique did not complete: ${critique.error ?? 'no verdict'}` };
-  if (critique.verdict !== 'fail') return { ok: false, reason: `verdict is "${critique.verdict}", not a failure — nothing to remediate` };
   if (stage === 'finished') return { ok: false, reason: 'this mesh has already been through the finish stage; running it again would not change the criteria it failed' };
+
+  // ── The DEFERRED-BUDGET route ────────────────────────────────────────────────────
+  //
+  // A `max-then-finish` class is generated with no `face_limit` on purpose, so its raw
+  // delivery is over budget BY DESIGN. Nothing but this branch would ever finish it:
+  // `scoreMesh` files face count as a WARN and has no fail rule for it at any threshold,
+  // so a clean 1.8M-face building grades warn and the failure-only route below refuses
+  // it — which would ship the un-finished mesh as if the budget had been honoured. The
+  // strategy is what makes the finish mandatory rather than remedial.
+  const genPlan = assetClass ? generationPlanFor(assetClass) : undefined;
+  const budgetDeferred = genPlan?.strategy === 'max-then-finish' && stage === 'raw';
+
+  if (critique.verdict !== 'fail') {
+    if (!genPlan || !budgetDeferred) {
+      return { ok: false, reason: `verdict is "${critique.verdict}", not a failure — nothing to remediate` };
+    }
+    const faces = critique.metrics?.faces;
+    if (faces === undefined) {
+      return {
+        ok: false,
+        reason: `${genPlan.assetClass} defers its face budget to this stage, but this mesh was never face-counted — whether it is over that budget is unknown, and routing on the strategy alone would be a guess`,
+      };
+    }
+    if (faces <= genPlan.finishTargetFaces) {
+      return {
+        ok: false,
+        reason: `the unbudgeted generation is already ${faces} faces, inside the ${genPlan.finishTargetFaces}-face ${genPlan.assetClass} budget — the deferred budget needs no finish run`,
+      };
+    }
+    const deferredOut = finishOutputPath(safeName, args.now ?? Date.now(), args.cwd ?? process.cwd());
+    if (!deferredOut) return { ok: false, reason: `could not build a safe output path for "${safeName}"` };
+    return {
+      ok: true,
+      spec: {
+        highPolyPath: join(args.cwd ?? process.cwd(), 'generated', dir.dir, safeName).replace(/\\/g, '/'),
+        outputPath: deferredOut,
+        targetFaces: genPlan.finishTargetFaces,
+        unwrap: true,
+        bake: ['normal', 'ao'],
+      },
+      addresses: ['face-count'],
+      unaddressed: [],
+      note: `budget was DEFERRED at generation (${genPlan.assetClass}: ${genPlan.strategy}), so this finish is the stage that enforces it — ${faces} faces down to ${genPlan.finishTargetFaces}, with the high-poly detail baked to normal + AO; the re-grade decides whether it held`,
+    };
+  }
+
   if (!critique.findings?.length) {
     return { ok: false, reason: 'the verdict carries no defect codes, so which stage could resolve it is unknown — routing on prose would be a guess' };
   }

@@ -7,7 +7,7 @@ import { parseImageDataUrl } from '@/lib/visual-gen/triposr-runner';
 import { startTriposrJob } from '@/lib/visual-gen/triposr-job-store';
 import { startHunyuanJob } from '@/lib/visual-gen/hunyuan-job-store';
 import { startTripoJob } from '@/lib/visual-gen/tripo-job-store';
-import { polycountFor, resolveAssetClass } from '@/lib/visual-gen/polycount-presets';
+import { generationPlanFor, resolveAssetClass } from '@/lib/visual-gen/polycount-presets';
 import { providerFaceLimit } from '@/lib/visual-gen/face-budget';
 import { tripoModelFor } from '@/lib/visual-gen/tripo-models';
 import { TRIPO_VIEW_ORDER, type TripoView } from '@/lib/visual-gen/tripo-runner';
@@ -103,7 +103,14 @@ export async function POST(request: NextRequest) {
     // The preset budget is authored in TRIANGLES; `providerFaceLimit` converts it to the
     // number the provider's `face_limit` actually counts (halved for quad topology).
     const gradedAs = resolveAssetClass(assetClass).gradedAs;
-    const triangleBudget = assetClass ? polycountFor(assetClass)?.faceLimit : undefined;
+    // WHERE the budget is enforced is a per-class decision (`generationPlanFor`), not a
+    // constant. A `max-then-finish` class deliberately sends NO `face_limit`: the
+    // generator's own low-poly mode drops the detail the high->low bake exists to
+    // recover, so the budget is enforced by mesh-finish instead. Passing the class budget
+    // here anyway — which this route did for every class — is exactly the request the
+    // `ai-lowpoly-generation-not-final` rule says not to make.
+    const generationPlan = assetClass ? generationPlanFor(assetClass) : undefined;
+    const triangleBudget = generationPlan?.faceLimit;
     const faceLimit = triangleBudget !== undefined
       ? providerFaceLimit({ triangleBudget, topology: 'triangles' })
       : undefined;
@@ -216,14 +223,14 @@ export async function POST(request: NextRequest) {
         if (!prompt?.trim()) return apiError('Missing prompt for text-to-3d', 400);
         const jobId = startTripoJob({ mode: 'text-to-3d', prompt, outputPath, pbr: true, faceLimit, assetClass, maxAttempts, ...tripoPin });
         // No `inputGate` here on purpose: a text-to-3d submit has no input image to gate.
-        return apiSuccess({ jobId, provider: 'tripo3d', mode, gradedAs, shapeRoute }, 202);
+        return apiSuccess({ jobId, provider: 'tripo3d', mode, gradedAs, generationPlan, shapeRoute }, 202);
       }
       if (mode === 'image-to-3d') {
         if (!imageDataUrl) return apiError('Missing imageDataUrl for image-to-3d', 400);
         const inPath = imageToFile('tripo3d', stamp);
         if (!inPath) return apiError('imageDataUrl must be a base64 PNG/JPG/WebP data URL', 400);
         const jobId = startTripoJob({ mode: 'image-to-3d', imagePath: inPath, outputPath, pbr: true, faceLimit, assetClass, maxAttempts, ...tripoPin });
-        return apiSuccess({ jobId, provider: 'tripo3d', mode, gradedAs, inputGate, shapeRoute }, 202);
+        return apiSuccess({ jobId, provider: 'tripo3d', mode, gradedAs, generationPlan, inputGate, shapeRoute }, 202);
       }
       if (mode === 'multiview-to-3d') {
         if (!viewDataUrls?.front) return apiError('multiview-to-3d needs at least a front view (viewDataUrls.front)', 400);
@@ -242,7 +249,7 @@ export async function POST(request: NextRequest) {
         const jobId = startTripoJob({ mode: 'multiview-to-3d', views, outputPath, pbr: true, faceLimit, assetClass, maxAttempts, ...tripoPin });
         // `inputGate` rides along unchanged: the Tier-0 gate above still runs on the
         // single `imageDataUrl` when one was supplied, and is simply absent otherwise.
-        return apiSuccess({ jobId, provider: 'tripo3d', mode, views: Object.keys(views), gradedAs, inputGate, shapeRoute }, 202);
+        return apiSuccess({ jobId, provider: 'tripo3d', mode, views: Object.keys(views), gradedAs, generationPlan, inputGate, shapeRoute }, 202);
       }
       return apiError('tripo3d supports text-to-3d, image-to-3d and multiview-to-3d', 400);
     }
