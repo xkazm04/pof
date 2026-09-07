@@ -10,6 +10,7 @@ import { GenerationQueue } from './GenerationQueue';
 import { StyleDnaPanel } from './StyleDnaPanel';
 import { Image2DPanel } from './Image2DPanel';
 import { ChaosClothPanel } from './ChaosClothPanel';
+import { UeImportPanel } from './UeImportPanel';
 
 /**
  * The 2D face of the forge. Separate tab, not a mode of the 3D one: the two share
@@ -41,6 +42,8 @@ function ForgeTab() {
       <GenerationQueue />
       {/* The cloth attach lives beside the mesh queue: its input is a mesh this queue produced. */}
       <ChaosClothPanel />
+      {/* The last link: a finished mesh only becomes an asset once it is IN the project. */}
+      <UeImportPanel />
     </div>
   );
 }

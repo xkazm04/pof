@@ -112,7 +112,7 @@ only an external corroboration of the parameter choice.
 
 ---
 
-## 3. The bigger finding underneath #1: the UE import path is an orphan
+## 3. The bigger finding underneath #1: the UE import path was an orphan — RESOLVED
 
 `visual-gen/ue-import.ts` is the module that actually brings a generated `.glb` into `/Game` as
 a Static Mesh (AssetImportTask, driven through the Experiment Lab editor runner because the
@@ -128,7 +128,35 @@ That reframes the collision work honestly: it hardened the import path so that w
 calls it, the asset arrives blocking and the claim is observed. It did not make the pipeline
 import anything.
 
-**Reconsider trigger:** this is the same trigger as #1 — the next time a generated asset needs
-to be *in* UE for a gameplay purpose. The wiring is small (a route or a pipeline step calling
-`importGlbToUE` with a `collisionPlan`); what it needs is a real caller with a real use, not
-another module.
+**WIRED (2026-09-07).** The chain now runs end to end and every link has a non-test consumer:
+
+```
+AssetForgeView -> UeImportPanel -> POST /api/visual-gen/ue-import
+                                -> startUeImportJob (ue-import-job-store)
+                                -> critiqueMesh -> collisionPlanFor -> collisionPlan
+                                -> importGlbToUE -> the editor
+   (poll) GET /api/visual-gen/ue-import/status
+```
+
+- **`ue-import-job-store.ts`** — job-based because the editor launch runs for minutes, the
+  same reason `mesh-finish-job-store.ts` exists. It adds what a route could not do by hand:
+  `collisionPlanFor(critique, use, declared?)` **derives** the shell count from the Tier-1
+  critic and records the BASIS (`measured` / `declared` / `assumed` / `not-needed`). Shells
+  come from `classifyComponents`, not the raw `components` field — a mesh with 40 two-face
+  specks and 3 real parts must plan hulls for 3, not 43.
+- **The critic is best-effort on purpose.** A missing trimesh costs the plan its evidence,
+  never the import; the job then reports `assumed` and the panel renders that as a warning.
+- **The route requires `use` and has no default** — the one fact the mesh cannot supply and
+  the one collision depends on. It also refuses a non-`.glb` path and a missing file up
+  front, rather than after a multi-minute launch that could only fail.
+- **`collisionElements` is `null`, never absent, in the status payload.** JSON drops
+  `undefined`, which on this field would make "nothing counted it" indistinguishable from
+  "this API doesn't report collision" — on the one field whose absence IS the failure. A
+  panel test pins that the requested plan and the observed count render as separate lines.
+
+38 tests across the store, the routes and the panel.
+
+**Still not proven:** no live UE run has happened. Every state above is driven by the route's
+own envelope and by injected fakes, and the `body_setup` property chain is still
+un-introspected (it fails safe — see the limits under #1). The first real run is what turns
+this from wired to working.
