@@ -208,6 +208,36 @@ export const UE_GOTCHAS: Gotcha[] = [
     source: 'research: Roblox CubePart 3D part-segmentation (Stefan 3D AI)',
   },
   {
+    id: 'known-geometry-beats-generated-landmarks',
+    modules: ['character', '3d'],
+    summary: 'Insert the mouth interior (teeth/tongue) as AUTHORED geometry instead of generating it — a generated one is inconsistent and leaves the auto-rigger nothing to measure against',
+    detail:
+      "Image-to-3D generators produce a mouth interior whose topology AND placement vary from one character to the next, so every downstream script that needs to find the mouth has to re-infer it from the surface, per character, and fails silently when it infers wrong. Authoring teeth and a tongue ONCE and inserting them at a known local transform inverts the problem: they become predictable geometry that gives the auto-rigger a fixed landmark for the mouth line, the jaw pivot and the lip corners, and gives a deform check a known object to test lip/teeth intersection against. The general rule this instances is the load-bearing one for any automated asset pipeline: REMOVE THE THINGS THE PIPELINE MUST GUESS. A generated detail that a later step must locate is a per-asset inference with a silent failure mode; the same detail supplied as a known asset is a constant, and constants are what make an automated chain reliable rather than merely lucky. Apply it wherever a script must find a feature on generated geometry — eye sockets, weapon grips, attachment sockets, the ground plane. It composes with `ai-mesh-segment-before-rig`: segment what the generator made, and INSERT what it makes unreliably.",
+    appliesTo: ['ue-python'],
+    source: 'research: Can GPT-6 Astra Make AI Characters Game Ready? (Building Aeon)',
+  },
+  {
+    id: 'separated-shell-exposes-baked-artifacts',
+    // NOT tagged 'materials', though it is a texture defect: 'materials' also routes to the
+    // world modules, and the golden rail caught this landing in the biome-scatter and
+    // procgen-dungeon prompts, where a rule about hair shells is noise.
+    modules: ['character', '3d'],
+    summary: 'Splitting hair/brows off a fused AI mesh EXPOSES skin texture that was baked as occluded — inpaint the revealed region or it ships as visible dirt',
+    detail:
+      "An image-to-3D generator textures the body surface as it appeared at generation time, which means the skin UNDER hair, eyebrows, a collar or a strap is never a clean surface: it carries baked shadow, colour bleed from the covering piece, and outright garbage, because nothing was ever going to look at it. Separating those pieces into their own objects is the right move (it is what makes a character riggable and its parts swappable — see `ai-mesh-segment-before-rig`), and on a well-organised mesh it is nearly free: the shells come out as connected components, so a single linked-geometry selection lifts the whole hairstyle without taking the scalp with it. But separation is exactly what makes the dirty region VISIBLE. This is the inverse of the usual occlusion worry — the concern is not hidden geometry wasting budget, it is hidden TEXTURE becoming visible — and it is invisible to every mesh statistic: poly counts, watertightness and UV checks all pass on a scalp covered in baked shadow. It surfaces only in a render from an angle that sees the newly exposed skin, and in production the moment the hair is swapped, removed, or animated away from the head. After separating a shell, either inpaint the exposed region (clone/heal from adjacent clean skin) or re-run texturing with the shells hidden, and verify with a render of the base mesh alone, not of the assembled character.",
+    appliesTo: ['ue-python'],
+    source: 'research: Can GPT-6 Astra Make AI Characters Game Ready? (Building Aeon)',
+  },
+  {
+    id: 'retarget-refpose-inherits-open-jaw',
+    modules: ['character', 'animation'],
+    summary: 'A head whose jaw bone RESTS open bakes an open mouth into the retarget reference pose — the character then idles slack-jawed in clips that never touch the jaw',
+    detail:
+      "When a facial rig is built on a mesh whose jaw bone's rest position is not the closed neutral, humanoid retargeting takes that rest pose to BE the character's neutral and applies every clip as a delta from it — so the character stands around with its mouth hanging open, in animations that contain no jaw animation at all. What makes this expensive is that it is invisible at all three places you would look: the source asset is fine in bind pose, the source clip is correct relative to its own neutral, and the import succeeds. It appears only in the retargeted RESULT, and reads as a character-art problem rather than a rig-configuration one. Fix at the source — close the jaw (and the eyelids, which fail the same way) in the rest/bind pose before export. When the rig must be authored open, re-anchor the reference instead: import with `use_t0_as_ref_pose` so frame 0 of a chosen animation becomes the reference pose rather than the authored bind. Verify by rendering the retargeted IDLE and looking at the mouth — never by inspecting the source asset, which is where this defect is not. Observed in Unity humanoid retargeting; the mechanism is the retarget reference pose rather than any one engine, and UE's IK Retargeter reads the same thing.",
+    appliesTo: ['ue-python'],
+    source: 'research: Can GPT-6 Astra Make AI Characters Game Ready? (Building Aeon)',
+  },
+  {
     id: 'ai-3d-model-tier-and-budget-shaping',
     modules: ['character', '3d'],
     summary: 'Pick an image-to-3D model by TIER, not by date — and treat the face budget as a SHAPING parameter, not a ceiling; text never survives as geometry at any budget',
