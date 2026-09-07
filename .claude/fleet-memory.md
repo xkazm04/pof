@@ -206,3 +206,4 @@ KIND is one of:
 - [2026-09-07] [research] CONVENTION: a live run is the only thing that catches a shipped-but-unreached data table — three defects (phys_default everywhere, glass→glas, stairs/bush as props) were green through every unit test.
 - [2026-09-07] [knowledge] DELIVERED: GameEngineBench failure taxonomy shipped as 3 universal ue-cpp gotchas + a generated-mesh collision gotcha (3c871928); reach measured at 35 drifted goldens.
 - [2026-09-07] [research] CONVENTION: a `modules`-tagged gotcha can be UNREACHABLE — MODULE_GOTCHA_DOMAINS maps multiplayer/physics/save-load/dialogue-quests to EMPTY arrays, so leave cross-cutting UE C++ rules untagged.
+- [2026-09-07] [verification] DELIVERED: calibration threshold no longer enforceable below 10 confirmed labels (was: passable on 1); collision planned+emitted+read-back in ue-import (b87c5aac, 12e5ae7c).
