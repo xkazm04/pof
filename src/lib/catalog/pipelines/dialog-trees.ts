@@ -1,6 +1,6 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
-import { minLength, fieldsPopulated, selected, minCount, entriesHaveFields } from '../acceptance/dataCheckers';
+import { minLength, fieldsPopulated, selected, minCount, entriesHaveFields, maxWordsPerEntry } from '../acceptance/dataCheckers';
 import { graphValid } from '../acceptance/graphCheckers';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
@@ -376,7 +376,15 @@ registerCatalogPipeline({
           `/Game/Audio/VO/Dialog/SC_${slug(e.name)}_VaelSkillFail`,
         ],
       }),
-      accept: minCount('voLines', '≥1 VO line script entry present', 1),
+      // The step DECLARES `voDirection.maxLineLength: 10` ("≤10 words per VO
+      // line" — a VO timing constraint) and used to accept on the count alone,
+      // so a single over-long line passed the step that states the rule. The
+      // cap is now enforced against the lines actually produced; live-mode LLM
+      // authoring is where it bites, which is exactly where it is needed.
+      accept: allOf(
+        minCount('voLines', '≥1 VO line script entry present', 1),
+        maxWordsPerEntry('voLines', 'Every VO line ≤ 10 spoken words', 10),
+      ),
     },
 
     // ── 6. Camera ─────────────────────────────────────────────────────────────

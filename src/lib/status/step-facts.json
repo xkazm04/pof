@@ -1065,10 +1065,10 @@
       "step": "VO",
       "trueEngine": "None",
       "deliverable": "audio",
-      "generatorWired": true,
+      "generatorWired": false,
       "judge": "none",
       "checkerMeaningful": false,
-      "note": "Honestly documents that this cutscene has no dialogue, sidestepping the fact no VO/lipsync pipeline exists; ElevenLabs voice is wired app-wide but unused/inapplicable here. minCount(1) shape check."
+      "note": "Honestly documents that this cutscene has no dialogue, sidestepping the fact no VO/lipsync pipeline exists. CORRECTED 2026-09-07: ElevenLabs is NOT wired for voice app-wide — the provider declares capabilities [sfx, ambient] and refuses tts with a written reason, so no provider in AUDIO_PROVIDERS serves the tts kind at all. minCount(1) shape check."
     },
     {
       "catalogId": "cutscenes",
@@ -1168,7 +1168,7 @@
       "generatorWired": false,
       "judge": "llm-panel",
       "checkerMeaningful": false,
-      "note": "Produces text VO lines only, not audio; ueAssets reference SoundCue paths that no generator (ElevenLabs or otherwise) actually creates here — claimed VO deliverable is text, not recorded voice."
+      "note": "Produces text VO lines only, not audio; ueAssets reference SoundCue paths that no generator (ElevenLabs or otherwise) actually creates here — claimed VO deliverable is text, not recorded voice. 2026-09-07: the checker is no longer purely shape-only — acceptance now also enforces the ≤10-word cap the step declares in voDirection.maxLineLength (allOf(minCount, maxWordsPerEntry)). The AUDIO half stays unpowered: the tts AudioKind has no provider (see docs/research/local-tts-provider-spec.md)."
     },
     {
       "catalogId": "dialog-trees",

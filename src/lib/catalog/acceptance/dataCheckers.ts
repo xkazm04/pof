@@ -178,6 +178,49 @@ export function entriesHaveFields(field: string, label: string, keys: string[]):
   };
 }
 
+/**
+ * Every entry's SPOKEN text is at most `max` words.
+ *
+ * Built for steps that state a line-length rule in their own produced data and
+ * then accept with a count check that cannot see it: the dialog-trees VO Script
+ * step declares `voDirection.maxLineLength: 10` ("≤10 words per VO line — a VO
+ * timing constraint") while accepting on `minCount('voLines', 1)`, so a single
+ * over-long line passed the step that declares the cap. A rule a step writes
+ * down and never enforces is indistinguishable from no rule at all.
+ *
+ * Entries are `KEY: "spoken text"` — only the quoted half is counted, because
+ * the localization key is not spoken and is deliberately long. An entry with no
+ * quoted section is counted whole (a bare line is still a line). An absent or
+ * empty array is `pending`, never a false pass.
+ */
+export function maxWordsPerEntry(field: string, label: string, max: number): Checker {
+  return (data) => {
+    const arr = Array.isArray(data[field]) ? (data[field] as unknown[]) : null;
+    if (arr == null) return { label, tier: 'L0', status: 'pending', detail: 'not an array', reason: `field "${field}" is not an array of entries` };
+    if (arr.length === 0) return { label, tier: 'L0', status: 'pending', detail: '0 entries', reason: `field "${field}" is empty — nothing to check` };
+
+    let worst = 0;
+    for (let i = 0; i < arr.length; i++) {
+      const raw = typeof arr[i] === 'string' ? (arr[i] as string) : String(arr[i] ?? '');
+      // Prefer the quoted spoken half; fall back to the whole entry.
+      const quoted = raw.match(/"([^"]*)"/);
+      const spoken = quoted ? quoted[1] : raw;
+      const words = spoken.trim().split(/\s+/).filter(Boolean);
+      if (words.length > worst) worst = words.length;
+      if (words.length > max) {
+        return {
+          label,
+          tier: 'L0',
+          status: 'fail',
+          detail: `entry ${i}: ${words.length} words > ${max}`,
+          reason: `field "${field}"[${i}] speaks ${words.length} words, over the ${max}-word cap this step declares: "${spoken.slice(0, 80)}"`,
+        };
+      }
+    }
+    return { label, tier: 'L0', status: 'pass', detail: `${arr.length} entr${arr.length === 1 ? 'y' : 'ies'}, longest ${worst} / ${max} words` };
+  };
+}
+
 export function minCount(field: string, label: string, n: number): Checker {
   return (data) => {
     const arr = Array.isArray(data[field]) ? (data[field] as unknown[]) : [];
