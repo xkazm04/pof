@@ -26,6 +26,15 @@
  * cannot be retargeted at all, because both the IK Retargeter and every third-party clip
  * library match bones BY NAME.
  *
+ * 2026-09-07 (second pass) — the same blindness, one channel over. A skeleton moves a
+ * character's BODY; a character's FACE is moved by morph targets (glTF's name for blend
+ * shapes), which live in `meshes[].primitives[].targets` and were never read either. So a
+ * head that cannot blink, speak or change expression — because the mesh declares no morph
+ * channel at all — scored exactly the same 100/pass as one that can. Measured across every
+ * GLB PoF has ever produced: **52 of 52 carry zero morph targets**, so the asset side of
+ * the `Facial / Lipsync` pipeline gap is not merely unbuilt, it is unmeasured. `morphTargetCount`
+ * now records it on every gate, and a {@link RigExpectation} can require the channel.
+ *
  * Baseline captured from real `skin-tokens.cpp` output on 2026-09-07 (see
  * docs/research/skintokens-rigging-spec.md):
  *
@@ -72,6 +81,20 @@ export interface RigFacts {
   weightSumMin: number;
   weightSumMax: number;
   weightSumMean: number;
+  /**
+   * Morph-target (blend-shape) channels the mesh declares — the ONLY way a glTF character
+   * deforms its face. Counted as the maximum over every mesh's primitives, not summed:
+   * glTF requires all primitives of one mesh to declare the same targets, and a
+   * face-capable character arrives as SEPARATED shells (head, teeth, tongue, brows), so
+   * summing would multiply one channel set by the number of pieces it is split across.
+   *
+   * `undefined` means NOT READ — a facts record captured before this field existed — and
+   * is deliberately distinct from `0` (read, and the mesh has no facial channel at all).
+   * An expectation cannot be graded against `undefined` and must not silently pass.
+   */
+  morphTargetCount?: number;
+  /** Names from `meshes[].extras.targetNames`, deduped. Empty means declared-but-unnamed. */
+  morphTargetNames?: string[];
 }
 
 export interface RigVerdict {
@@ -109,7 +132,10 @@ const COMPONENT = {
 const NCOMP: Record<string, number> = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4, MAT4: 16 };
 
 interface Gltf {
-  meshes?: { primitives: { attributes: Record<string, number> }[] }[];
+  meshes?: {
+    primitives: { attributes: Record<string, number>; targets?: Record<string, number>[] }[];
+    extras?: { targetNames?: unknown };
+  }[];
   nodes?: { name?: string }[];
   skins?: { joints: number[]; inverseBindMatrices?: number }[];
   accessors?: { bufferView: number; byteOffset?: number; componentType: number; count: number; type: string; normalized?: boolean }[];
@@ -140,10 +166,24 @@ export function parseGlbRig(buffer: Buffer): RigFacts {
   }
   if (!json) throw new Error('not a binary glTF (.glb): no JSON chunk');
 
+  // Read across EVERY mesh, before the single-primitive skin read below: the facial
+  // channel of a character built from separated shells need not live on `meshes[0]`.
+  let morphTargetCount = 0;
+  const morphNames = new Set<string>();
+  for (const mesh of json.meshes ?? []) {
+    for (const p of mesh.primitives ?? []) {
+      if (p.targets) morphTargetCount = Math.max(morphTargetCount, p.targets.length);
+    }
+    const names = mesh.extras?.targetNames;
+    if (Array.isArray(names)) for (const n of names) morphNames.add(String(n));
+  }
+  const morphTargetNames = [...morphNames];
+
   const empty: RigFacts = {
     hasSkin: false, jointCount: 0, jointNames: [], referencedJoints: 0, hasInverseBindMatrices: false,
     vertexCount: 0, zeroWeightVertices: 0, negativeWeights: 0, nonFiniteWeights: 0,
     maxInfluences: 0, weightSumMin: 0, weightSumMax: 0, weightSumMean: 0,
+    morphTargetCount, morphTargetNames,
   };
 
   const prim = json.meshes?.[0]?.primitives?.[0];
@@ -227,6 +267,8 @@ export function parseGlbRig(buffer: Buffer): RigFacts {
     weightSumMin: Number.isFinite(sumMin) ? sumMin : 0,
     weightSumMax: Number.isFinite(sumMax) ? sumMax : 0,
     weightSumMean: sumTotal / n,
+    morphTargetCount,
+    morphTargetNames,
   };
 }
 
@@ -319,6 +361,24 @@ export function scoreRig(facts: RigFacts, expect?: RigExpectation): RigVerdict {
         );
       } else {
         for (const reason of groups.reasons) failures.push(reason);
+      }
+    }
+
+    // ── Facial channel ──────────────────────────────────────────────────────────
+    // Same doctrine as the names above: `undefined` is "not read", which cannot pass.
+    if (expect.facialDeformation) {
+      if (facts.morphTargetCount === undefined) {
+        failures.push(
+          'facial deformation was required but no morph-target count was captured for this ' +
+            'mesh, so the requirement could not be checked — re-read the GLB with a parser ' +
+            'that records morph targets rather than accepting an unverified pass',
+        );
+      } else if (facts.morphTargetCount === 0) {
+        failures.push(
+          'facial deformation was required but the mesh declares 0 morph targets — no ' +
+            'skeleton can blink, speak or change expression, so this character cannot ' +
+            'deliver a facial performance no matter how clean its skin weights are',
+        );
       }
     }
   }

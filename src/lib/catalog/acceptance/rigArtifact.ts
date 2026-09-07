@@ -46,6 +46,13 @@ export interface RigCandidateRecord {
   referencedJoints: number;
   vertexCount: number;
   zeroWeightVertices: number;
+  /**
+   * Morph-target channels the mesh declares — whether the character can move its FACE at
+   * all. Recorded because a skeleton says nothing about it: a rig can score 100/100 on
+   * every weight and still be unable to blink or speak. `undefined` on records written
+   * before the gate read this, which must not be read as "no face".
+   */
+  morphTargetCount?: number;
   failures: string[];
   warnings: string[];
 }
@@ -73,6 +80,7 @@ export function rigCandidatePayload(result: {
     referencedJoints: facts.referencedJoints,
     vertexCount: facts.vertexCount,
     zeroWeightVertices: facts.zeroWeightVertices,
+    morphTargetCount: facts.morphTargetCount,
     failures: rig.failures,
     warnings: rig.warnings,
   };
@@ -92,6 +100,7 @@ function readRigRecord(payload: Record<string, unknown> | undefined): RigCandida
     referencedJoints: typeof r.referencedJoints === 'number' ? r.referencedJoints : 0,
     vertexCount: typeof r.vertexCount === 'number' ? r.vertexCount : 0,
     zeroWeightVertices: typeof r.zeroWeightVertices === 'number' ? r.zeroWeightVertices : 0,
+    morphTargetCount: typeof r.morphTargetCount === 'number' ? r.morphTargetCount : undefined,
     failures: Array.isArray(r.failures) ? r.failures.map(String) : [],
     warnings: Array.isArray(r.warnings) ? r.warnings.map(String) : [],
   };
@@ -145,11 +154,19 @@ export function gradeRiggedSelection(
   }
 
   const warn = rig.warnings.length ? ` · ${rig.warnings.join('; ')}` : '';
+  // State the facial channel where it is known. A reader looking at "28 joints, 100/100"
+  // has no way to tell a character that can speak from one that can only ever be silent.
+  const face =
+    rig.morphTargetCount === undefined
+      ? ''
+      : rig.morphTargetCount === 0
+        ? ' · no facial channel (0 morph targets)'
+        : ` · ${rig.morphTargetCount} morph targets`;
   return {
     label,
     tier: 'L2',
     status: 'pass',
-    detail: `${named} — ${rig.jointCount} joints / ${rig.vertexCount} verts, rig gate ${rig.score}/100${warn}`,
+    detail: `${named} — ${rig.jointCount} joints / ${rig.vertexCount} verts, rig gate ${rig.score}/100${face}${warn}`,
   };
 }
 

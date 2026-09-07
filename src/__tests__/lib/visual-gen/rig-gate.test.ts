@@ -42,6 +42,41 @@ const GRUNT_FACTS: RigFacts = {
   weightSumMean: 1,
 };
 
+/**
+ * Splice a morph-target declaration into a REAL GLB's JSON chunk, preserving its binary
+ * chunk verbatim. Not a hand-written glTF: every accessor, buffer view and skin stays
+ * exactly as skin-tokens.cpp emitted it, so the parser meets a real file's structure.
+ * `meshCopies` repeats the mesh to model a character split into separated shells.
+ */
+function withMorphTargets(glb: Buffer, names: string[], meshCopies = 1): Buffer {
+  const view = new DataView(glb.buffer, glb.byteOffset, glb.byteLength);
+  const jsonLen = view.getUint32(12, true);
+  const json = JSON.parse(glb.subarray(20, 20 + jsonLen).toString('utf8'));
+
+  const mesh = json.meshes[0];
+  // Target accessor indices are never dereferenced by a COUNT, so they point at the
+  // mesh's own POSITION accessor rather than at fabricated buffer data.
+  const targets = names.map(() => ({ POSITION: mesh.primitives[0].attributes.POSITION }));
+  for (const p of mesh.primitives) p.targets = targets;
+  mesh.extras = { ...(mesh.extras ?? {}), targetNames: names };
+  json.meshes = Array.from({ length: meshCopies }, () => mesh);
+
+  const jsonBytes = Buffer.from(JSON.stringify(json), 'utf8');
+  const padding = jsonBytes.length % 4 === 0 ? 0 : 4 - (jsonBytes.length % 4);
+  const jsonChunk = Buffer.concat([jsonBytes, Buffer.alloc(padding, 0x20)]);
+
+  const header = Buffer.alloc(12);
+  header.writeUInt32LE(0x46546c67, 0);
+  header.writeUInt32LE(2, 4);
+  const chunkHeader = Buffer.alloc(8);
+  chunkHeader.writeUInt32LE(jsonChunk.length, 0);
+  chunkHeader.writeUInt32LE(0x4e4f534a, 4);
+
+  const out = Buffer.concat([header, chunkHeader, jsonChunk, glb.subarray(20 + jsonLen)]);
+  out.writeUInt32LE(out.length, 8);
+  return out;
+}
+
 describe('parseGlbRig — against real skin-tokens.cpp output', () => {
   it('reads the rig facts of a real rigged GLB', () => {
     const f = parseGlbRig(rigged());
@@ -69,6 +104,37 @@ describe('parseGlbRig — against real skin-tokens.cpp output', () => {
 
   it('rejects bytes that are not a GLB at all', () => {
     expect(() => parseGlbRig(Buffer.from('not a glb'))).toThrow(/glTF/i);
+  });
+
+  /**
+   * The facial channel. `0` here is not a fixture convenience — it is the measured state
+   * of the whole corpus: a sweep of every `.glb` under `generated/` on 2026-09-07 found
+   * **52 of 52 declaring zero morph targets**, rigged and unrigged alike. So the negative
+   * case is real captured output, and the positive case cannot be: PoF has never produced
+   * a mesh with a facial channel. It is therefore DERIVED from the real rigged fixture —
+   * the same bytes, with a morph declaration spliced into its JSON chunk — rather than
+   * invented whole, so the parser is exercised against a real GLB's actual structure.
+   */
+  it('reports zero morph targets on the real fixtures — the measured corpus state', () => {
+    expect(parseGlbRig(rigged()).morphTargetCount).toBe(0);
+    expect(parseGlbRig(unrigged()).morphTargetCount).toBe(0);
+    expect(parseGlbRig(rigged()).morphTargetNames).toEqual([]);
+  });
+
+  it('counts morph targets and reads their names when a mesh declares them', () => {
+    const f = parseGlbRig(withMorphTargets(rigged(), ['jawOpen', 'mouthClose', 'eyeBlinkLeft']));
+    expect(f.morphTargetCount).toBe(3);
+    expect(f.morphTargetNames).toEqual(['jawOpen', 'mouthClose', 'eyeBlinkLeft']);
+    // The skin facts must survive untouched — this is the same rig, plus a face.
+    expect(f.jointCount).toBe(6);
+    expect(f.vertexCount).toBe(24);
+  });
+
+  it('takes the MAX over meshes, not the sum — separated shells share one channel set', () => {
+    // A face-capable character arrives as head + teeth + tongue + brows. Each shell
+    // declares the same channels; summing would report 4x the channels that exist.
+    const f = parseGlbRig(withMorphTargets(rigged(), ['jawOpen', 'mouthClose'], 4));
+    expect(f.morphTargetCount).toBe(2);
   });
 });
 
@@ -254,6 +320,50 @@ describe('scoreRig — bone groups', () => {
     const v = scoreRig(named(MIXAMO_BIPED), { morphology: 'quadruped', require: ['tail'] });
     expect(v.pass).toBe(false);
     expect(v.failures.join(' ')).toMatch(/tail/i);
+  });
+});
+
+describe('scoreRig — the facial channel', () => {
+  const facial = { morphology: 'biped' as const, facialDeformation: true };
+  // A named biped, so the anatomy check passes and the face is the only thing under test.
+  const MIXAMO_BIPED = [
+    'mixamorig:Hips', 'mixamorig:Spine', 'mixamorig:Neck', 'mixamorig:Head',
+    'mixamorig:LeftShoulder', 'mixamorig:LeftArm', 'mixamorig:LeftForeArm', 'mixamorig:LeftHand',
+    'mixamorig:RightShoulder', 'mixamorig:RightArm', 'mixamorig:RightForeArm', 'mixamorig:RightHand',
+    'mixamorig:LeftUpLeg', 'mixamorig:LeftLeg', 'mixamorig:LeftFoot',
+    'mixamorig:RightUpLeg', 'mixamorig:RightLeg', 'mixamorig:RightFoot',
+  ];
+
+  it('fails a speaking character whose mesh declares no morph targets', () => {
+    // The whole corpus is this case: clean weights, zero facial channel.
+    const v = scoreRig({ ...GRUNT_FACTS, jointNames: MIXAMO_BIPED, morphTargetCount: 0 }, facial);
+    expect(v.pass).toBe(false);
+    expect(v.failures.join(' ')).toMatch(/0 morph targets/);
+    expect(v.failures.join(' ')).toMatch(/blink, speak or change expression/);
+  });
+
+  it('passes the same rig once it carries a facial channel', () => {
+    const v = scoreRig(
+      { ...GRUNT_FACTS, jointNames: MIXAMO_BIPED, morphTargetCount: 52 },
+      facial,
+    );
+    expect(v.pass).toBe(true);
+  });
+
+  it('refuses to pass an UNREAD morph count rather than assuming a face', () => {
+    // `undefined` is a facts record captured before the field existed — not "no face".
+    const v = scoreRig({ ...GRUNT_FACTS, jointNames: MIXAMO_BIPED }, facial);
+    expect(v.pass).toBe(false);
+    expect(v.failures.join(' ')).toMatch(/could not be checked/);
+  });
+
+  it('says nothing about faces when no facial expectation was set', () => {
+    // A crate, a mount and a silent creature all legitimately have no morph targets.
+    const v = scoreRig({ ...GRUNT_FACTS, jointNames: MIXAMO_BIPED, morphTargetCount: 0 }, {
+      morphology: 'biped',
+    });
+    expect(v.pass).toBe(true);
+    expect([...v.failures, ...v.warnings].join(' ')).not.toMatch(/morph/i);
   });
 });
 

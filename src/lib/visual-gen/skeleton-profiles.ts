@@ -131,6 +131,14 @@ export interface RigExpectation {
    * the case worth naming: a character that must hold a weapon, a tool or a broom.
    */
   require?: readonly BoneGroup[];
+  /**
+   * Whether this asset must be able to deform its FACE — i.e. declare morph targets
+   * (blend shapes). Bones move the body; nothing in a skeleton can blink or speak, so a
+   * character asked to deliver dialogue and graded only on joints is graded on the wrong
+   * channel entirely. Set it for a speaking/expressive character; leave it unset for a
+   * prop, a mount or a silent creature, whose faces legitimately never move.
+   */
+  facialDeformation?: boolean;
 }
 
 /** The verdict on a skeleton's anatomy. `verifiable: false` is neither pass nor fail. */
