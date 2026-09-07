@@ -47,6 +47,13 @@ export interface GeneratedIcon {
   /** Served URL under `/api/visual-gen/icon/…`. */
   url: string;
   mtimeMs: number;
+  /**
+   * Absolute path of the MESH this icon is a render of — present only for an icon
+   * written by `icon-from-mesh.ts`, which leaves a `<base>.render.json` sidecar beside
+   * it. Absent means "no provenance recorded", never "generated art": the library
+   * predates the sidecar and an older file's origin genuinely is not known.
+   */
+  renderedFrom?: string;
 }
 
 /** The structural identity encoded in an icon filename. */
@@ -122,7 +129,9 @@ export function parseIconFileName(name: string): IconIdentity {
 }
 
 /** Shape the icon manifest: served url + its identity + scope, newest first. Pure. */
-export function buildIconList(files: { name: string; mtimeMs: number }[]): GeneratedIcon[] {
+export function buildIconList(
+  files: { name: string; mtimeMs: number; renderedFrom?: string }[],
+): GeneratedIcon[] {
   return files
     .filter((f) => safeIconName(f.name) != null)
     .map((f) => {
@@ -134,6 +143,7 @@ export function buildIconList(files: { name: string; mtimeMs: number }[]): Gener
         ...(id.entityId ? { entityId: id.entityId } : {}),
         url: `/api/visual-gen/icon/${encodeURIComponent(f.name)}`,
         mtimeMs: f.mtimeMs,
+        ...(f.renderedFrom ? { renderedFrom: f.renderedFrom } : {}),
       };
     })
     .sort((a, b) => b.mtimeMs - a.mtimeMs);

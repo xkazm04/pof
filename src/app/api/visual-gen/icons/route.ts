@@ -1,8 +1,9 @@
 import { NextRequest } from 'next/server';
-import { readdir, stat } from 'node:fs/promises';
+import { readdir, readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { buildIconList, iconsFor, type GeneratedIcon } from '@/lib/visual-gen/generated-icons';
+import { iconSidecarName, parseIconSidecar } from '@/lib/visual-gen/icon-from-mesh';
 import { readListingCache, writeListingCache } from '@/lib/visual-gen/generated-assets';
 
 /**
@@ -17,6 +18,12 @@ import { readListingCache, writeListingCache } from '@/lib/visual-gen/generated-
  * filename id. With an `entityId` the entity's own art wins and the per-step icon is the
  * fallback; without one, only step-scoped art is returned (one entity's art must never
  * answer for the whole catalog). Every entry declares the `scope` it was matched at.
+ *
+ * An icon RENDERED from a mesh (`icon-from-mesh.ts`) carries a `<base>.render.json`
+ * sidecar; where one is present and readable the entry declares `renderedFrom`, so a
+ * gallery can tell art that depicts the shipped asset from art that merely illustrates
+ * it. The sidecar is not an image, so it never enters the manifest as art of its own,
+ * and an unreadable one leaves the field ABSENT rather than asserting an origin.
  *
  * Every gallery mount used to pay a `readdir` plus one `stat` PER FILE to filter down to
  * (typically) one match. The shaped list is now cached in-process against the directory's
@@ -68,6 +75,9 @@ async function listIcons(dir: string): Promise<GeneratedIcon[] | null> {
   } catch {
     return null;
   }
+  // The sidecar names come out of the SAME readdir — no extra directory scan — and only
+  // an icon that actually has one costs a read.
+  const present = new Set(files);
   const stated = await Promise.all(
     files.map(async (name) => {
       try {
@@ -76,13 +86,19 @@ async function listIcons(dir: string): Promise<GeneratedIcon[] | null> {
         // real subdirectory of art no registered step can address, and it must never
         // reach the manifest. Caching a shaped list keeps that filter upstream of the
         // cache, so a warm read cannot reintroduce it.
-        return s.isFile() ? { name, mtimeMs: s.mtimeMs } : null;
+        if (!s.isFile()) return null;
+        const sidecar = iconSidecarName(name);
+        if (!present.has(sidecar)) return { name, mtimeMs: s.mtimeMs };
+        const prov = parseIconSidecar(await readFile(join(dir, sidecar), 'utf-8').catch(() => ''));
+        return prov ? { name, mtimeMs: s.mtimeMs, renderedFrom: prov.renderedFrom } : { name, mtimeMs: s.mtimeMs };
       } catch {
         return null;
       }
     }),
   );
-  const all = buildIconList(stated.filter((f): f is { name: string; mtimeMs: number } => f != null));
+  const all = buildIconList(
+    stated.filter((f): f is { name: string; mtimeMs: number; renderedFrom?: string } => f != null),
+  );
   writeListingCache(CACHE_KEY, all, stamp);
   return all;
 }
