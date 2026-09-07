@@ -209,3 +209,4 @@ KIND is one of:
 - [2026-09-07] [verification] DELIVERED: calibration threshold no longer enforceable below 10 confirmed labels (was: passable on 1); collision planned+emitted+read-back in ue-import (b87c5aac, 12e5ae7c).
 - [2026-09-07] [visual-gen] DELIVERED: skin-tokens.cpp creature auto-rig on GPU + Tier-1 rig-gate.ts — PoF's first real rigged creature (28 joints, gate 100/100).
 - [2026-09-07] [visual-gen] DELIVERED: UE import chain wired end-to-end (AssetForge panel -> /api/visual-gen/ue-import -> job store -> importGlbToUE) with collision DERIVED from the Tier-1 critic and read back from body_setup; no live UE run yet.
+- [2026-09-07] [visual-gen] DELIVERED: UE import PROVEN LIVE (UE 5.8, collisionElements=2 from body_setup, 5 uassets on disk); live run found paths[0]=Texture2D and task.save=False losing textures — both now ue-python gotchas.
