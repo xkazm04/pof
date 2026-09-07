@@ -21,6 +21,8 @@ import {
   appendCalibrationRun,
   bandOf,
   buildCalibrationRun,
+  CALIBRATION_MIN_CONFIRMED,
+  CALIBRATION_HUMAN_CEILING_NOTE,
   calibrationDrift,
   calibrationHistoryPath,
   calibrationKey,
@@ -55,6 +57,36 @@ const TARGETS: CalibrationTarget[] = [
 ];
 
 const key = (i: number) => calibrationKey(TARGETS[i]);
+
+/**
+ * A set wide enough to ENFORCE — `CALIBRATION_MIN_CONFIRMED` confirmed labels plus one
+ * provisional. Below that width a single disagreement moves the rate by more than the whole
+ * margin the threshold is trying to resolve, so a pass/fail is noise (see the undersampled
+ * tests). `wideScores` agrees on every confirmed target and disagrees on the provisional one.
+ */
+const WIDE_TARGETS: CalibrationTarget[] = [
+  ...Array.from({ length: CALIBRATION_MIN_CONFIRMED }, (_, i) => ({
+    catalogId: 'items', entityId: `item-${i}`, step: 'Economy', label: 'shippable' as const,
+  })),
+  { catalogId: 'characters', entityId: 'character-1', step: '3D Mesh', label: 'fail', provisional: true },
+];
+
+const wideScores = (over: Record<string, number>): Record<string, number> => ({
+  ...Object.fromEntries(WIDE_TARGETS.filter((t) => !t.provisional).map((t) => [calibrationKey(t), 95])),
+  [calibrationKey(WIDE_TARGETS[WIDE_TARGETS.length - 1])]: 95, // provisional labelled 'fail' → disagrees
+  ...over,
+});
+
+const wideRun = (scores: Record<string, number>) =>
+  buildCalibrationRun({
+    targets: WIDE_TARGETS,
+    scores,
+    rubricVersion: RUBRIC_VERSION,
+    model: 'claude-opus-4',
+    effort: 'high',
+    spend: { costUsd: 1.5, spawns: 4, unknownCost: 1 },
+    ranAt: '2026-08-18T00:00:00.000Z',
+  });
 
 const run = (scores: Record<string, number>, over: Partial<Parameters<typeof buildCalibrationRun>[0]> = {}) =>
   buildCalibrationRun({
@@ -138,23 +170,31 @@ describe('evaluateCalibration — what is actually guaranteed', () => {
   });
 
   it('a confirmed rate under the threshold is enforced-fail and says so', () => {
-    const v = evaluateCalibration(run({ [key(0)]: 95, [key(1)]: 95 }), RUBRIC_VERSION);
+    // Half the confirmed labels disagree. Needs CALIBRATION_MIN_CONFIRMED of them to be
+    // enforceable at all — at two, 50% is indistinguishable from one unlucky flip.
+    const confirmed = WIDE_TARGETS.filter((t) => !t.provisional);
+    const half = Object.fromEntries(
+      confirmed.slice(0, CALIBRATION_MIN_CONFIRMED / 2).map((t) => [calibrationKey(t), 10]),
+    );
+    const v = evaluateCalibration(wideRun(wideScores(half)), RUBRIC_VERSION);
     expect(v.standing).toBe('enforced-fail');
     expect(v.confirmedRate).toBe(0.5);
-    expect(v.confirmedScored).toBe(2);
+    expect(v.confirmedScored).toBe(CALIBRATION_MIN_CONFIRMED);
     expect(v.belowThreshold).toBe(true);
     expect(v.message).toContain('DRIFTED');
   });
 
   it('a confirmed rate at or above the threshold passes, and states how many labels back it', () => {
-    const v = evaluateCalibration(run({ [key(0)]: 95, [key(1)]: 80, [key(2)]: 10 }), RUBRIC_VERSION);
+    // Needs CALIBRATION_MIN_CONFIRMED labels to be enforceable at all — see the
+    // undersampled block below for why two is not a measurement.
+    const v = evaluateCalibration(wideRun(wideScores({})), RUBRIC_VERSION);
     expect(v.standing).toBe('enforced-pass');
     expect(v.confirmedRate).toBe(1);
-    expect(v.confirmedScored).toBe(2);
+    expect(v.confirmedScored).toBe(CALIBRATION_MIN_CONFIRMED);
     expect(v.belowThreshold).toBe(false);
     // The provisional disagreement is still reported in the overall rate, never hidden.
-    expect(v.rate).toBeCloseTo(2 / 3, 5);
-    expect(v.message).toContain('2 confirmed target(s)');
+    expect(v.rate).toBeCloseTo(CALIBRATION_MIN_CONFIRMED / (CALIBRATION_MIN_CONFIRMED + 1), 5);
+    expect(v.message).toContain(`${CALIBRATION_MIN_CONFIRMED} confirmed target(s)`);
   });
 
   it('exactly at the threshold is a pass, one disagreement below it is not', () => {
@@ -254,5 +294,71 @@ describe('GUARD — the judge may not drift past the threshold', () => {
     expect(r.scored).toBe(2);
     expect(r.agreed).toBe(2);
     expect(r.rate).toBe(1);
+  });
+});
+
+// ── Sample-size floor + the human ceiling (research 2026-09-07) ───────────────
+// The threshold could previously be DECLARED MET off a single confirmed label: one agreeing
+// label gave `enforced-pass` with "100% agreement over 1 confirmed target(s)". At that width
+// the measurement cannot resolve the thing it claims to — one disagreement in a set of n moves
+// the rate by 100/n points, so under ten labels a single flip swings it by more than the entire
+// margin between the 85% threshold and the ~79% inter-human alignment BlenderGym measured
+// (arXiv 2504.01786) as an indicative human ceiling.
+describe('calibration sample-size floor', () => {
+  it('refuses to enforce a threshold on fewer confirmed labels than can resolve it', () => {
+    // Two confirmed labels, both agreeing — the exact shape that used to read CALIBRATED.
+    const v = evaluateCalibration(run({ [key(0)]: 95, [key(1)]: 80, [key(2)]: 10 }), RUBRIC_VERSION);
+    expect(v.standing).toBe('undersampled');
+    expect(v.standing).not.toBe('enforced-pass');
+  });
+
+  it('still reports the rate it measured — undersampled is "not proven", not "hidden"', () => {
+    const v = evaluateCalibration(run({ [key(0)]: 95, [key(1)]: 80, [key(2)]: 10 }), RUBRIC_VERSION);
+    expect(v.confirmedRate).toBe(1);
+    expect(v.confirmedScored).toBe(2);
+    expect(v.message).toMatch(/UNDERSAMPLED/);
+    expect(v.message).toContain(String(CALIBRATION_MIN_CONFIRMED));
+  });
+
+  it('an undersampled run whose rate is already under the threshold says so', () => {
+    // Confirmed: one agrees, one disagrees → 50%, under the threshold AND undersampled.
+    const v = evaluateCalibration(run({ [key(0)]: 95, [key(1)]: 20 }), RUBRIC_VERSION);
+    expect(v.standing).toBe('undersampled');
+    expect(v.belowThreshold).toBe(true);
+    expect(v.message).toMatch(/already under it/);
+  });
+
+  it('the floor is at least ten — below that one flip outweighs the threshold margin', () => {
+    expect(CALIBRATION_MIN_CONFIRMED).toBeGreaterThanOrEqual(10);
+  });
+
+  it('a wide enough set with a failing rate is enforced-fail, not undersampled', () => {
+    const confirmed = WIDE_TARGETS.filter((t) => !t.provisional);
+    // Half the confirmed labels disagree → 50%, well under the threshold.
+    const busted = Object.fromEntries(
+      confirmed.slice(0, Math.floor(CALIBRATION_MIN_CONFIRMED / 2)).map((t) => [calibrationKey(t), 10]),
+    );
+    const v = evaluateCalibration(wideRun(wideScores(busted)), RUBRIC_VERSION);
+    expect(v.standing).toBe('enforced-fail');
+    expect(v.belowThreshold).toBe(true);
+  });
+});
+
+describe('the human ceiling is stated, not assumed away', () => {
+  it('names an inter-human baseline that PoF has never measured for itself', () => {
+    expect(CALIBRATION_HUMAN_CEILING_NOTE).toMatch(/inter-human/i);
+    expect(CALIBRATION_HUMAN_CEILING_NOTE).toMatch(/0\.79|79%/);
+    // It must not overclaim: BlenderGym's number is a different task shape.
+    expect(CALIBRATION_HUMAN_CEILING_NOTE).toMatch(/not measured for PoF|indicative|different task/i);
+  });
+
+  it('rides along with an enforced verdict, where the threshold is actually being applied', () => {
+    const v = evaluateCalibration(wideRun(wideScores({})), RUBRIC_VERSION);
+    expect(v.standing).toBe('enforced-pass');
+    expect(v.ceilingNote).toBe(CALIBRATION_HUMAN_CEILING_NOTE);
+  });
+
+  it('is absent where no threshold is being enforced', () => {
+    expect(evaluateCalibration(null, RUBRIC_VERSION).ceilingNote).toBeUndefined();
   });
 });

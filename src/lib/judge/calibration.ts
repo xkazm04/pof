@@ -34,6 +34,37 @@ export type Band = 'fail' | 'placeholder' | 'shippable';
 /** Agreement the judge must reach with CONFIRMED human labels. Never lower this to pass. */
 export const CALIBRATION_THRESHOLD = 0.85;
 
+/**
+ * Confirmed labels required before the threshold is ENFORCED rather than merely reported.
+ *
+ * Below this width the measurement cannot resolve the thing it claims to. One disagreement in a
+ * set of n moves the rate by 100/n points, so at n < 10 a single flip swings the rate by more
+ * than the entire margin between this threshold (85%) and the ~79% inter-human alignment that is
+ * the only published indication of a human ceiling (see {@link CALIBRATION_HUMAN_CEILING_NOTE}).
+ * A pass or fail declared at that width is noise wearing a percentage.
+ *
+ * Ten is the floor for enforcement, not the target: `CALIBRATION`'s own docstring asks for ~20
+ * spanning the map, which is what it takes to make DRIFT between runs legible as well.
+ */
+export const CALIBRATION_MIN_CONFIRMED = 10;
+
+/**
+ * What "85% agreement" is being compared against — stated, because it has never been measured
+ * for PoF and the number is easy to read as though it had.
+ *
+ * Judge-vs-human agreement is scored as if the human label were ground truth. It is not: two
+ * humans grading the same artifact disagree at some rate, and that rate is the ceiling any judge
+ * can reach. PoF has never measured its own. The nearest published figure is BlenderGym's
+ * (arXiv 2504.01786) 0.79 inter-human alignment with the best VLM at 0.66 — a DIFFERENT task
+ * (pairwise edit preference, not band agreement on an artifact), so it is indicative rather than
+ * a bound on this threshold. It is enough to stop treating 85% as self-evidently achievable:
+ * a threshold set above the human ceiling can only be met by a judge that has learned one
+ * labeller's idiosyncrasies. Measuring PoF's own inter-human agreement on `CALIBRATION` is a
+ * one-session experiment and would replace this note with a real number.
+ */
+export const CALIBRATION_HUMAN_CEILING_NOTE =
+  'Agreement is scored against human labels as if they were ground truth; PoF\u2019s own inter-human agreement is NOT measured, so the ceiling this threshold sits under is unknown. The nearest indicative figure is 0.79 inter-human alignment (BlenderGym, arXiv 2504.01786; best VLM 0.66) \u2014 a different task shape, so a signpost rather than a bound.';
+
 export interface CalibrationTarget {
   catalogId: string;
   entityId: string;
@@ -172,6 +203,7 @@ export type CalibrationStanding =
   | 'stale'          // the run scored a different RUBRIC_VERSION — proves nothing about this rubric
   | 'unscored'       // a run happened but scored no target (no artifact / no judgeable payload)
   | 'provisional'    // scored only provisional targets — a rate exists, no human backs it
+  | 'undersampled'    // confirmed labels exist but too few to resolve the threshold
   | 'enforced-pass'
   | 'enforced-fail';
 
@@ -187,6 +219,11 @@ export interface CalibrationVerdict {
   threshold: number;
   /** True when the rate the run DID produce sits under the threshold, confirmed or not. */
   belowThreshold: boolean;
+  /**
+   * The human-ceiling caveat, present only on an ENFORCED verdict — the one place a threshold is
+   * actually being applied to a number. See {@link CALIBRATION_HUMAN_CEILING_NOTE}.
+   */
+  ceilingNote?: string;
   /** One line an operator (or a failing test) can read without decoding the standing. */
   message: string;
 }
@@ -232,6 +269,25 @@ export function evaluateCalibration(run: CalibrationRun | null | undefined, rubr
     };
   }
   const below = run.confirmed.rate < CALIBRATION_THRESHOLD;
+
+  // Too few confirmed labels to resolve the threshold. The rate is REPORTED — this is an
+  // honest "not proven", the same shape as `provisional`, never a hidden number. Before this
+  // branch existed a single agreeing label read "CALIBRATED — 100% agreement over 1 confirmed
+  // target(s)", which is a green manufactured from one coin flip.
+  if (run.confirmed.scored < CALIBRATION_MIN_CONFIRMED) {
+    const swing = 100 / run.confirmed.scored;
+    return {
+      standing: 'undersampled',
+      rate: run.overall.rate,
+      confirmedRate: run.confirmed.rate,
+      confirmedScored: run.confirmed.scored,
+      scored: run.overall.scored,
+      threshold: CALIBRATION_THRESHOLD,
+      belowThreshold: below,
+      message: `UNDERSAMPLED — ${pct(run.confirmed.rate)} agreement over ${run.confirmed.scored} confirmed target(s), below the ${CALIBRATION_MIN_CONFIRMED} needed to enforce the ${pct(CALIBRATION_THRESHOLD)} threshold: one disagreement here moves the rate by ${swing.toFixed(0)}pp, so neither a pass nor a fail is measurable${below ? ' (the rate is already under it)' : ''}. Confirm more labels in CALIBRATION (~20 spanning the map).`,
+    };
+  }
+
   return {
     standing: below ? 'enforced-fail' : 'enforced-pass',
     rate: run.overall.rate,
@@ -240,6 +296,7 @@ export function evaluateCalibration(run: CalibrationRun | null | undefined, rubr
     scored: run.overall.scored,
     threshold: CALIBRATION_THRESHOLD,
     belowThreshold: below,
+    ceilingNote: CALIBRATION_HUMAN_CEILING_NOTE,
     message: `${below ? 'DRIFTED' : 'CALIBRATED'} — ${pct(run.confirmed.rate)} agreement over ${run.confirmed.scored} confirmed target(s) (threshold ${pct(CALIBRATION_THRESHOLD)}); ${pct(run.overall.rate)} over all ${run.overall.scored} scored.`,
   };
 }
