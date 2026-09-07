@@ -472,6 +472,17 @@ export const UE_GOTCHAS: Gotcha[] = [
     source: 'research: creature/monster 3D AI workflow (Stefan 3D AI, youtube URjhE8QEhJU) — Mixamo failed the spider hybrid; verified against pof_tripo_animate.mjs:75 + rig-presets.ts',
   },
   {
+    id: 'construct-hard-surface-dont-generate',
+    modules: ['3d', 'world'],
+    summary:
+      'A hard-surface or architectural asset whose form IS primitives should be CONSTRUCTED by script, not generated — an agent that can drive Blender has a third option the part-split rule never names',
+    detail:
+      "`arena-kit-composition` and `hard-surface-and-garment-part-split` both end in 'ask a generator' — for a whole space, or for one sub-assembly at a time — and `polycount-presets.ts` encodes only WHERE the face budget is spent (`budgeted` vs `max-then-finish`), never whether to spend a generation at all. Before dispatching one, ask whether the form decomposes into primitives: boxes, cylinders, arcs, extrusions, revolves and arrayed repeats. Crates, doors, shrines, walls, stairs, pillars, furniture, signage, mechanisms, vehicles and most modular kit pieces do; that is exactly the class whose wireframe a generator wrecks, and it is unfixable by budget because the generator spends the budget on the blob rather than on the panel break. Constructing it instead buys five things a generation cannot: (1) topology that lands ON the hard edges, because the edges are where the primitives meet; (2) polygon economy an order of magnitude below a generated equivalent — one demonstration built an entire shrine location, animated flames included, in the tens of thousands of faces, less than a single generated hero prop; (3) determinism — the script is re-runnable, diffable and parameterizable, so the asset becomes a FUNCTION with presets rather than N provider rolls, and a variant costs nothing; (4) no retopo/bake/UV stage and no credits at all; (5) LEGIBLE lettering and numerals — a generator smears text into gibberish on signage, dials, panels and book spines, while constructed geometry (or real text projected onto a primitive) reads correctly, which also makes a glance at the lettering the cheapest way to tell which path produced a surface. The boundary is sharp and must not be crossed: ORGANIC form — characters, creatures, faces, foliage, cloth, terrain detail — does not survive primitive construction. An agent asked for one anyway returns a blocky proxy that reads as a placeholder, so those stay on the generate → retopo → bake path. Build in the same order a blockout does: coarse proxy at correct world scale first, then refine per part, rendering between passes so each refinement is judged rather than assumed. PoF's existing construct path is `src/lib/blender-mcp/scripts/level-blockout.ts` plus `src/lib/visual-gen/generators/*`; nothing currently routes an asset class to it.",
+    appliesTo: ['ue-python'],
+    source:
+      'research: GPT-6 Astra Blender test (Stefan 3D AI, youtube 8MUk-tQTiwE) — a shrine location and a car built from primitives in one prompt, legible signage, while "building characters from primitives is not really working well"',
+  },
+  {
     id: 'gltf-roundtrip-nonmanifold-blocks-remesh',
     modules: ['3d', 'character', 'world'],
     summary:

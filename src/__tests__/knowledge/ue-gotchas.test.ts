@@ -401,3 +401,38 @@ describe('glTF import returns many assets', () => {
     expect(out).toMatch(/save_loaded_asset/);
   });
 });
+
+// ── construct-vs-generate (Stefan 3D AI, `8MUk-tQTiwE`) ──────────────────────
+// The two shipped hard-surface rules (`arena-kit-composition`,
+// `hard-surface-and-garment-part-split`) both end in "ask a generator" — for a
+// whole space, or for one sub-assembly at a time. Neither names the option an
+// agent that can script Blender actually has: build the thing out of primitives
+// and never spend a generation on it at all.
+describe('construct-vs-generate routing', () => {
+  const entry = () => UE_GOTCHAS.find((g) => g.id === 'construct-hard-surface-dont-generate');
+
+  it('is registered for python sessions', () => {
+    expect(entry()?.appliesTo).toContain('ue-python');
+  });
+
+  it('names the legible-text discriminator that separates constructed from generated geometry', () => {
+    const out = formatGotchas('ue-python');
+    // Lettering/numerals are the cheapest observable test of which path produced a
+    // surface: a generator smears them, constructed geometry and projected text do not.
+    expect(out).toMatch(/gibberish|legible|lettering/i);
+  });
+
+  it('states where constructing LOSES, so the rule cannot be applied to characters', () => {
+    const d = entry()?.detail ?? '';
+    expect(d).toMatch(/organic/i);
+    expect(d).toMatch(/character|creature/i);
+  });
+
+  it('reaches a 3D-domain module and a world-domain module', () => {
+    // MODULE_GOTCHA_DOMAINS: models -> ['3d', ...], level-design -> ['world', ...].
+    // A rule tagged for neither would be invisible to the two modules that build assets.
+    for (const mod of ['models', 'level-design']) {
+      expect(formatGotchas('ue-python', mod)).toMatch(/gibberish|legible|lettering/i);
+    }
+  });
+});
