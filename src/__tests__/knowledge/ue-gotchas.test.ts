@@ -342,3 +342,45 @@ describe('warning-vs-error policy gotcha (T. Cain code standards)', () => {
     expect(out).toMatch(/fabricat/i);
   });
 });
+
+// ── GameEngineBench failure taxonomy (research 2026-09-07) ────────────────────
+// 110 real UE5 C++ tasks, built and Play-in-Editor verified. The best agent
+// configuration reached 55.5% pass@1 and 31 tasks went unsolved by EVERY model;
+// the failures were structural, not syntactic, and clustered into these classes.
+// They are UNIVERSAL for generated UE C++ (no `modules` tag), so every ue-cpp
+// prompt carries them regardless of module domain.
+describe('generated-C++ structural failure classes', () => {
+  it('warns that an OnRep hook is useless without the replicated source state', () => {
+    const out = formatGotchas('ue-cpp');
+    expect(out).toMatch(/OnRep/);
+    expect(out).toMatch(/DOREPLIFETIME|replicated source|GetLifetimeReplicatedProps/i);
+  });
+
+  it('warns that controller-local state needs an IsLocalController guard', () => {
+    const out = formatGotchas('ue-cpp');
+    expect(out).toMatch(/IsLocalController|IsLocallyControlled/);
+  });
+
+  it('warns about constructor-vs-BeginPlay ordering and teardown symmetry', () => {
+    const out = formatGotchas('ue-cpp');
+    expect(out).toMatch(/EndPlay|teardown/i);
+    expect(out).toMatch(/constructor/i);
+  });
+
+  it('reaches the multiplayer module, whose domain tag list is empty', () => {
+    // MODULE_GOTCHA_DOMAINS['multiplayer'] is [], so a `modules`-tagged gotcha
+    // could never match it. These must stay universal to arrive at all.
+    const out = formatGotchas('ue-cpp', 'multiplayer');
+    expect(out).toMatch(/IsLocalController|IsLocallyControlled/);
+  });
+});
+
+describe('generated-mesh collision delivery', () => {
+  it('tells a python session a generated GLB arrives with no collision', () => {
+    const out = formatGotchas('ue-python');
+    expect(out).toMatch(/collision/i);
+    // UCX_ is an FBX-importer convention; the executing pipeline writes GLB.
+    expect(out).toMatch(/UCX_/);
+    expect(out).toMatch(/body_setup|add_simple_collisions|convex_decomposition/i);
+  });
+});

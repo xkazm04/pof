@@ -451,6 +451,43 @@ export const UE_GOTCHAS: Gotcha[] = [
     appliesTo: ['ue-python'],
     source: 'research: 3D AI News #18 (Stefan 3D AI) — live Blender 4.2.1 A/B while wiring mesh-finish --retopo quadriflow',
   },
+  {
+    id: 'replication-authority-completeness',
+    summary:
+      'a client-visible change needs BOTH a replicated source property (DOREPLIFETIME) and an OnRep — an OnRep alone updates nothing, and controller-local state needs an IsLocalController guard',
+    detail:
+      "The single largest class of structurally-plausible-but-wrong generated UE C++. Two halves, and generated code reliably writes one without the other. (1) SOURCE STATE: adding UFUNCTION() OnRep_X and marking a property ReplicatedUsing=OnRep_X does nothing unless the property is ALSO registered in GetLifetimeReplicatedProps with DOREPLIFETIME(AClass, X) and the actor/component actually replicates (bReplicates, plus SetIsReplicated(true) on a component). It compiles, the server mutates the value, the HUD never moves, and nothing errors — so a build-only gate passes it. Mutate replicated state on the SERVER only (HasAuthority()); a client-side write is overwritten on the next update. (2) LOCALITY: state belonging to ONE player — an open menu, a browsing index, local playback, an input-mode change, a camera shake — must be guarded by IsLocalController() (controller) / IsLocallyControlled() (pawn), or it runs on the wrong controller instance. RPC direction is the same check: a Server RPC needs WithValidation and runs on the server, a Client RPC targets one owning connection, a Multicast reaches everyone — a cosmetic cue is Multicast, never a replicated gameplay property. VERIFY BY RUNNING: a listen-server PIE session with 2 clients is what exposes this, which is why a build-green replication change is unproven.",
+    appliesTo: ['ue-cpp'],
+    source: 'research: GameEngineBench (arXiv 2607.03525) — recurring authority/replication failure class across 110 runtime-verified UE5 tasks',
+  },
+  {
+    id: 'actor-lifecycle-init-and-teardown',
+    summary:
+      'the constructor runs at CDO time (no world, no other actors) — defaults there, wiring in BeginPlay, and every BeginPlay acquisition needs its EndPlay release',
+    detail:
+      "The second recurring structural failure class in generated UE C++, and it is an ORDERING bug rather than a syntax one. The constructor executes when the Class Default Object is built — during cook and editor load, before any world exists — so it may only set defaults, create subobjects (CreateDefaultSubobject) and attach components. Anything touching the world, other actors, the game mode, a subsystem, replicated data or an asset load belongs in BeginPlay (or PostInitializeComponents / OnRegister for component wiring); in the constructor it either crashes the cook or silently bakes a stale value into the CDO that every instance shares. Activation timing is the same trap from the other side: a component created but never activated (bAutoActivate false with no Activate()), a timer set before the subsystem it calls exists, or a delegate bound in the constructor to an actor that has not spawned — all compile, all do nothing. TEARDOWN MUST BE SYMMETRIC: every BeginPlay acquisition — AddDynamic bindings, SetTimer handles, spawned actors, registrations with a subsystem or manager — needs its release in EndPlay (and call Super::EndPlay), or a PIE session leaks it into the NEXT one and the second run of the same test behaves differently from the first. That is exactly the shared-world hazard the functional-test rule names: state surviving EndPlay is state the next test inherits.",
+    appliesTo: ['ue-cpp'],
+    source: 'research: GameEngineBench (arXiv 2607.03525) — constructor-default / activation-timing / teardown failure cluster',
+  },
+  {
+    id: 'cross-system-persistence-consistency',
+    summary:
+      'save/load, streaming and spawning are ONE contract — a persistence change that touches only the save struct silently loses destroyed actors and streamed-in state',
+    detail:
+      "The hardest unsolved class in the runtime-verified benchmark: the tasks no agent configuration solved needed coordination BETWEEN runtime systems rather than any single API call, and persistence is the canonical case. A correct save/load pass keeps five things consistent at once. (1) STABLE ACTOR IDENTITY across sessions — a name or GUID that survives a reload, never a pointer, an array index or spawn order. (2) DESTROYED actors recorded EXPLICITLY, because a level reload respawns everything the map placed and an absent entry reads as 'still alive'. (3) The serialized property set matching the class as it is TODAY — add a SaveGame-tagged field and old saves must still load, so version the struct and handle the missing field rather than invalidating every existing save. (4) LEVEL STREAMING order — an actor in a sublevel that has not streamed in yet cannot be restored when the save is applied; restore on the level-loaded callback, not on BeginPlay of the persistent level. (5) The SAVE/LOAD LIFECYCLE itself — an async AsyncSaveGameToSlot completing after the actor that requested it was torn down. Write the change against all five or the feature is correct in a single fresh session and wrong on the second load, which is precisely the shape a one-shot smoke test cannot see. The same 'several systems must agree' warning applies to inventory-to-UI, ability-to-animation and streaming-to-AI changes.",
+    appliesTo: ['ue-cpp'],
+    source: 'research: GameEngineBench (arXiv 2607.03525) — 31/110 tasks unsolved by every configuration, clustered on cross-system coordination',
+  },
+  {
+    id: 'generated-mesh-arrives-without-collision',
+    modules: ['3d', 'character', 'world'],
+    summary:
+      'a generated .glb carries NO collision and glTF has no UCX_ convention — set collision AFTER import in python, or the asset is non-blocking geometry',
+    detail:
+      "Every AI-generated mesh PoF delivers is render geometry only, and two facts have to be held together. (1) THE UCX_ CONVENTION IS FBX-ONLY: the classic pipeline names a collision hull UCX_<MeshName>_01 as a sibling object in the FBX and the FBX importer consumes it. PoF's executing path writes GLB (mesh-finish, every generator, GlbViewer, the trimesh Tier-1 gate) and the glTF importer has no such convention — a UCX_ object exported into a .glb imports as a second VISIBLE mesh, not as collision. Do not emit UCX_ unless the delivery format is genuinely FBX. (2) SET IT POST-IMPORT INSTEAD, which is fully headless: on the imported UStaticMesh call unreal.EditorStaticMeshLibrary.add_simple_collisions(mesh, unreal.ScriptingCollisionShapeType.BOX / SPHERE / CAPSULE / NDOP10_X) for a primitive fit, or set_convex_decomposition_collisions(mesh, hull_count, max_hull_verts, hull_precision) for a concave shape — then read mesh.get_editor_property('body_setup') to verify aggregate geometry actually exists, and save the asset. Choose by USE: a prop the player collides with wants ONE primitive or a handful of hulls (start around 4–8 hulls / 16 verts and raise only if the silhouette blocks wrongly); a weapon or a wall decoration wants NO collision rather than a bad one; complex-as-simple (the render mesh as collision) is a last resort and is forbidden for anything that moves. bAutoGenerateCollision on the import UI is a coarse one-box fallback and is NOT a substitute. VERIFY BY OBSERVATION: an asset whose body_setup has zero aggregate elements passes every import check and falls through the world.",
+    appliesTo: ['ue-python'],
+    source: 'research: game-ready cleanup standards (strayspark 2026) + repo audit — no UCX_/collision handling outside a template view',
+  },
 ];
 
 /**
