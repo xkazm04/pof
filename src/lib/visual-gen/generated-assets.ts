@@ -43,6 +43,7 @@ export const ASSET_DIRS: readonly AssetDirSpec[] = [
   { dir: 'hunyuan3d', label: 'Hunyuan3D (local)' },
   { dir: 'trellis2', label: 'TRELLIS.2 (local, textured)' },
   { dir: 'mesh-finish', label: 'Mesh finish (retopo/decimate)' },
+  { dir: 'mesh-split', label: 'Mesh split (one group GLB -> one asset per object)' },
   { dir: 'meshes', label: 'Pipeline meshes' },
   // Provider meshes downloaded off the Blender-MCP path so the Tier-1 gate has a file to
   // read (`visual-gen/mesh-fetch.ts`). Nothing writes here except a download that cleared
