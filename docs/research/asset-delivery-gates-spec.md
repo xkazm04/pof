@@ -19,17 +19,32 @@ except `visual-gen/ue5-import-templates.ts`, which exposes a `generateCollision`
 executing pipeline has no collision step at all**, and every generated asset therefore imports
 as non-blocking geometry.
 
-The `generated-mesh-arrives-without-collision` gotcha (shipped `3c871928`) now carries the
-technique into every `ue-python` prompt. What remains is execution:
+The `generated-mesh-arrives-without-collision` gotcha (shipped `3c871928`) carries the technique
+into every `ue-python` prompt, and the execution shipped in the follow-up:
 
-- A pure `collisionPlan(metrics, use)` in `visual-gen/` deciding primitive-vs-convex and hull
-  budget from the Tier-1 metrics already computed (`mesh-critique.ts` has extents, component
-  counts and watertightness in hand). Pure → gateable in-session.
-- The UE-python emit: `add_simple_collisions` / `set_convex_decomposition_collisions`, then
-  **read back `body_setup` aggregate geometry** — that read-back is the observation that turns
-  this from a config change into a verified one.
-- **Do not build the planner alone.** A planner with no caller is the orphan-module defect; it
-  ships with the emit or not at all.
+**BUILT** — `visual-gen/ue-import.ts` (`collisionPlan` + `buildGlbImportPython({ collision })` +
+`importGlbToUE`, 18 tests):
+
+- `collisionPlan({ use, components })` is pure: `decorative` → **none** (a wrong hull blocks
+  the player worse than nothing), single-shell `blocking` → one BOX primitive, multi-shell
+  `blocking` → convex decomposition at 6 hulls / 16 verts. `complex` (the render mesh as
+  collision) is deliberately **not representable in the type**, so no plan can select it.
+- The emit runs `add_simple_collisions` / `set_convex_decomposition_collisions`, **reads back
+  `body_setup` and logs the element count**, and saves the asset *after* the collision call
+  (`task.save = False` when a plan is present — saving at import time would persist the mesh
+  without it).
+- `importGlbToUE` **fails the import** when collision was requested and the read-back is 0 or
+  absent. Collision is claimed from the observation, never from the call having been emitted.
+
+**Two honest limits, both stated in the code:**
+
+1. The `body_setup` → `agg_geom` → `*_elems` property chain is **not introspected against a
+   live editor**. The emitted python is syntax-checked (`ast.parse`) and the call names come
+   from the documented `EditorStaticMeshLibrary` surface, but per `python-api-introspect-first`
+   the first live run should `dir()` these objects. A wrong name here **fails safe**: the
+   read-back throws or yields 0, and the import then refuses to claim collision.
+2. **`ue-import.ts` itself has no production caller** — see below. The collision work improves
+   the real import path; it does not yet run on any real generation.
 
 **Reconsider trigger:** when a generated asset is next imported to UE for a gameplay purpose
 (anything the player collides with, as opposed to a gallery render).
@@ -94,3 +109,26 @@ finding: it is already recorded as the named candidate under the 2026-08-23
 *"Quad-remeshing PoF's own generator output"* descope, whose blocker is residual non-manifold
 geometry that QuadriFlow correctly refuses. That entry is where the work belongs; this run adds
 only an external corroboration of the parameter choice.
+
+---
+
+## 3. The bigger finding underneath #1: the UE import path is an orphan
+
+`visual-gen/ue-import.ts` is the module that actually brings a generated `.glb` into `/Game` as
+a Static Mesh (AssetImportTask, driven through the Experiment Lab editor runner because the
+glTF/Interchange importer is unreliable under `-run=pythonscript`). A consumer census on
+2026-09-07 returned **only its own test file**.
+
+So the shape of the gap is worse than "generated assets have no collision". It is: **nothing in
+the app imports a generated mesh into UE at all** — the pipeline produces `.glb` files under
+`generated/`, grades them, and stops. Every UE import to date has been a session driving the
+editor by hand or through a probe script.
+
+That reframes the collision work honestly: it hardened the import path so that when something
+calls it, the asset arrives blocking and the claim is observed. It did not make the pipeline
+import anything.
+
+**Reconsider trigger:** this is the same trigger as #1 — the next time a generated asset needs
+to be *in* UE for a gameplay purpose. The wiring is small (a route or a pipeline step calling
+`importGlbToUE` with a `collisionPlan`); what it needs is a real caller with a real use, not
+another module.

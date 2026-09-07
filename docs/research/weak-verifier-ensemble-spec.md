@@ -62,6 +62,30 @@ own inter-human agreement on the calibration set before defending the threshold*
 set above the human ceiling can only ever be met by a judge that agrees with one labeler's
 idiosyncrasies. This is a one-session experiment, not a build.
 
+**SHIPPED (follow-up, 2026-09-07) — and it found a sharper defect than the ceiling caveat.**
+Chasing the ceiling question surfaced that `evaluateCalibration` would declare `enforced-pass`
+off **a single confirmed label**: one agreeing label read *"CALIBRATED — 100% agreement over 1
+confirmed target(s)"*, and `judge-run.ts --calibrate` exits 0 on it. A green manufactured from
+one coin flip, in the module whose entire purpose is refusing unearned greens.
+
+Two changes, 8 tests:
+
+- **`CALIBRATION_MIN_CONFIRMED = 10`** and a new `undersampled` standing. Below the floor the
+  rate is still *reported* (an honest "not proven", the same shape as `provisional`) but the
+  threshold is not enforced. The floor has an argument behind it rather than a preference: one
+  disagreement in a set of n moves the rate by 100/n points, so under ten labels a single flip
+  swings it by more than the whole margin between the 85% threshold and the ~79% indicative
+  human ceiling. Ten is the floor for *enforcement*; `CALIBRATION`'s own docstring still asks
+  for ~20, which is what makes DRIFT between runs legible too.
+- **`CALIBRATION_HUMAN_CEILING_NOTE`**, attached to enforced verdicts only — the one place a
+  threshold is actually applied to a number. It states plainly that agreement is scored as if
+  the human label were ground truth, that PoF's own inter-human agreement is **not measured**,
+  and that 0.79 is a signpost from a different task rather than a bound.
+
+Two existing tests had to widen from 2 confirmed labels to 10. Their *intent* was right and is
+preserved; the fixtures encoded the defect. **The ceiling experiment is still open** — the floor
+makes an unearned pass impossible, it does not tell us what the reachable rate is.
+
 ## Build order (when this is picked up)
 
 1. **Measure.** For each existing checker, compute its agreement with the calibration labels on
