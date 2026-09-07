@@ -204,3 +204,122 @@
 - **Verifying the source's own factual claims is the highest-yield use of the web budget, and the first thing squeezed out of it.** The video said SQuadGen's code was "already released"; the project page says *Code (coming soon)* — no repo, no licence, no weights. That one fetch inverted the finding (build → the standing descope holds). Roundup/demo sources make confident claims about releases, licences and availability precisely where the speaker has the least stake in being right. APPLIED in 1.11.
 - **The consumer census earned its place a second consecutive run, and it fired on a NEW shape.** Prior instances were knowledge stores with no importer. This time it was a *mode on an already-consumed seam*: `runTripo` gained `multiview-to-3d` with green tests while the only production caller hardcoded `mode:'image-to-3d'`. The census generalizes past "does anything import this module?" to "can any caller actually REQUEST this branch?" — worth keeping in mind when a finding extends an enum or union rather than adding a file. Not a method edit yet; noting the second data point.
 - **A candidate's stated subject can be a decoy for a gap the repo already owns.** The pick was "add multi-view input (Pixel3D)"; Pixel3D turned out to have zero repo anchors and freshly-dropped code. The real, shippable finding was that PoF had *described* multi-view reference sets since August (`reference-roles.ts`) while every generator consumed one image. This is the "read the gap's NEIGHBOURS" rule paying off on the INPUT side rather than the output side — the skill's existing wording is about sibling behaviour of a half-built feature; the same instinct applies to knowledge the repo already holds but cannot spend.
+
+## 1.11 — 2026-09-07 — pof
+- **The consumer census has a blind spot: defaulted parameters.** The run shipped a
+  material-density table, ran the census, and every symbol passed — the wired route imported
+  all of them. The live output still came back `phys_default` for every single prop, because
+  the route called `physicalForSize(size)` and never passed a material. Imported, exercised,
+  and inert. The census asks "does a production file import this symbol"; it cannot ask
+  "does the wired path reach this data". Applied in 1.12: after the import check, name the
+  argument that selects into each shipped data structure and grep the CALL SITE for it.
+- **Live runs kept paying long after the tests went green.** Three Qwen calls surfaced four
+  distinct issues, none reachable by fixture: the inert table above; a depluralizing helper
+  that turned `glass` into `glas` (a material whose own name ends in s); a prompt that
+  classified stairs and a bush as extractable props, after which the solver stacked the bush
+  on the stairs; and a *design* flaw where "no props found" returned 502, conflating an
+  honest empty scene with a vision outage. Reinforces the existing artifact-diff rule from
+  a new angle — it is not only "did the output change", it is "print the output and read
+  every field", because a defaulted field looks identical to a computed one.
+- **The codebase had already written the principle I needed.** The 502 flaw was solved
+  elsewhere in the same package (`input-gate.ts`: "an unavailable gate has measured nothing
+  and cannot condemn"). I had read that file during deep-verify and still had to see the bad
+  status code to apply it. Worth a future consideration: when a run adds a new failure path,
+  check whether a SIBLING in the same subsystem already names the states, and copy its
+  vocabulary rather than inventing one. Not proposing a method change on one instance.
+- **Reading the gap's neighbour reshaped the whole run.** The candidate was "add a decomposer
+  feeding `generateComposition`". One grep showed `generateComposition` had zero importers
+  anywhere — so the honest finding was the wiring, not the decomposer, and shipping the
+  decomposer alone would have produced a well-tested second orphan. The existing
+  read-the-neighbours rule earned its place again; no change needed.
+
+## 1.12 — 2026-09-07 — pof (web-discovery: LLMs + Blender in game pipelines)
+
+- **An empty row in a scope table silently excludes a tagged item — check the row before
+  tagging.** Applied to SKILL.md this run. The corpus convention said to tag new gotchas with
+  `modules`, and `MODULE_GOTCHA_DOMAINS` maps `multiplayer`/`physics`/`save-load`/
+  `dialogue-quests` to `[]`. A filter of the shape "universal + tag-intersecting" then admits a
+  tagged item to those modules never, and it is invisible from the inside: the entry renders
+  correctly everywhere else, its test passes, the diff looks right. This is the defaulted-parameter
+  lesson one step earlier in the pipeline — the earlier lesson asks whether the wired caller passes
+  the selector, this one asks whether the routing table has a row to select INTO.
+- **Per-file golden drift counts are a free routing check.** The skill already treats the drifted
+  golden list as the consumer census. The COUNTS carry more: 3 lines into each `ue-cpp` prompt and
+  exactly 1 into each of the four `ue-python` prompts confirmed each entry reached the right
+  prompts. "35 files changed" alone would have been compatible with every entry landing in every
+  prompt, which is a different (and wrong) outcome.
+- **Verifying the source's release claims paid again, in the opposite direction from last time.**
+  LL3M's paper cites a project page; the page's "Code" link is a placeholder with no repo and no
+  license. One fetch turned a plausible "adopt this multi-agent bpy system" candidate into a
+  standing descope. The 2026-09-07 rodin run learned the same thing from a "code already released"
+  claim. Two runs, two sources, same defect class — the citation is not the artifact.
+- **A user asking for "deep research, 20 URLs" overrides the phase-5 budget, and should.** The
+  budget exists to stop a feature-rich single source triggering a wholesale scan. It is not a cap
+  on an explicitly-requested discovery round. Say which budget you are on at the gate (this run:
+  5 searches, 11 fetches) so the spend is legible rather than silently exceeded.
+- **The most useful finding was a NEGATIVE answer to the user's framing question.** The requested
+  comparison (two frontier models in Blender) had no independent evidence behind it — one
+  vendor-reported CAD number and social-media demos. Saying so plainly, and then redirecting to the
+  runtime-verified benchmark that DOES exist, was worth more than any finding in the table. A
+  web-discovery run should be willing to answer "the thing you asked about is not measured" before
+  it starts mining.
+
+### Follow-up half of the same run (both open findings addressed)
+
+- **A test that pins a threshold's current behaviour is not evidence the threshold is
+  well-formed.** Two calibration tests asserted `enforced-pass` off two confirmed labels; they
+  read as coverage and were actually encoding the defect (a threshold declarable from a sample
+  too small to resolve it). When a fix forces an existing FIXTURE to widen, ask whether the
+  fixture was the bug rather than treating the widening as collateral. Generalizes: any test
+  whose fixture size is below the size the assertion's claim requires is pinning noise.
+- **The neighbours rule made both findings BIGGER, not just verified.** "Add collision to the
+  import path" became "the import path has no production caller, so nothing imports a generated
+  mesh into UE at all"; "the threshold may sit above the human ceiling" became "the threshold
+  can be met by one coin flip". Both times the candidate pointed at the half that was missing
+  and the defect was in the half that existed. This is now three runs in a row.
+- **Syntax-check emitted code — it is a real gate that string-matching tests cannot be.** The
+  collision work generates Python; `ast.parse` on every emitted variant costs one command and
+  checks something no `expect(py).toContain(...)` can. It found nothing this time, which is the
+  point: it is a standing check rather than a hope, and it is the closest thing to an artifact
+  diff available when the artifact only executes inside an editor you cannot launch.
+- **Say when red is not yours, and prove it.** Two failures in an unrelated component test were
+  pre-existing; stashing the run's changes and re-running the file took seconds and turned "I
+  think that's flaky" into a fact worth putting in the commit message.
+
+### Live-run half (user asked for proof against the real engine)
+
+- **A green suite plus a success marker plus a real artifact can STILL be wrong — diff the
+  artifact SET, not just the one you were looking at.** The import returned
+  `collisionElements: 2`, wrote a real `.uasset`, and passed every test — and had silently
+  dropped the material and three textures, because suppressing `task.save` (needed so the
+  mesh is not persisted before the edit) means nothing saves automatically. `1 -> 5 uassets`
+  was the only signal. The existing lesson says "prove it with an artifact diff"; the
+  refinement is that the diff must cover everything the operation was supposed to produce,
+  not the single output the finding names.
+- **Failures teach faster than passes, so run the thing that can fail early.** Two live runs
+  produced two defects. The first died with the engine's own TypeError (`paths[0]` was a
+  Texture2D — a glTF import yields textures and materials and the array is not mesh-first),
+  which no fixture would ever have modelled because a fixture author picks index 0 for the
+  same reason the code did.
+- **Execute emitted code against a stub before spending a slow real run.** Between the two
+  live imports I ran the generated python against a fake `unreal` whose import returns the
+  texture FIRST, and asserted which object got collided and which got saved. Seconds, and it
+  tested BEHAVIOUR where the unit tests could only test the string. For any skill that
+  generates code for a slow or unavailable runtime, this belongs between "tests pass" and
+  "run it for real".
+- **Watch for the test that passes because of a NEIGHBOURING construct.** My first save-loop
+  assertion was `/for .* in paths:[\s\S]*save_loaded_asset/`, which the broken script already
+  satisfied — the mesh-SELECTION loop also iterates `paths`. A regex spanning `[\s\S]*` over
+  a whole generated file will find its two halves in unrelated places. Assert on the
+  distinctive token (the loop variable) and on counts.
+- **Do not set an env var to make a gate report a better basis.** The Tier-1 critic could not
+  run (no `POF_TRIPOSR_ROOT`), so every run planned on basis `assumed` and said so. Pointing
+  the var at any python with trimesh would have produced a `measured` reading that no
+  measurement backed. Instead I measured out-of-band and reported the DIFFERENCE it would
+  have made (451 components / 59 real parts -> convex hulls, where assumed chose a BOX),
+  which is more useful than a manufactured green and keeps the gap visible.
+
+## 1.13 — 2026-09-07 — pof
+- **A knowledge entry and the code it governs drift apart, and an "already-have" catch is where that hides.** The run's source taught a rule PoF already ships as a gotcha; the reflex is to log a catch and move on. One extra grep at the governed code path found the wired route doing the opposite of the rule it renders into every prompt. Applied to SKILL.md Phase 5.2 as an explicit step (v1.14): on an already-have catch against a KNOWLEDGE store, go check compliance.
+- **The load-bearing guard in a new pipeline stage came from the first LIVE run, not from design.** A multi-object mesh split looked complete with a speck filter; running it on a real asset showed that one shattered object is indistinguishable from a group of props by component count, and the guard that separates them (face coverage) was invented only after seeing 24 junk assets. The existing "artifact diff, not a passing test" rule already covers this — this run is a second, independent confirmation that it applies to NEW stages, not only to "the output is better" claims.
+- **Shadowing note (project-specific but recurring):** the ACTIVE skill was the user-level `~/.claude/skills/research` at v1.13, while the in-repo `.claude/skills/research` sat at v1.11. Editing the repo copy would have been inert. Check which copy the invocation names as its base directory before editing.
