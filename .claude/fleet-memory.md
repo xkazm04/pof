@@ -204,3 +204,5 @@ KIND is one of:
 - [2026-09-07] [research] CONVENTION: when a vendor's API docs are JS-rendered and unfetchable, pin the request schema by probing the live endpoint with junk-but-structured bodies and reading the error code (schema-reject vs reached-processing) — never build the body from imagination.
 - [2026-09-07] [visual-gen] DELIVERED: POST /api/visual-gen/scene-decompose wires image→VLM prop decomposition→generateComposition→UE tag manifest; the solver had ZERO importers before it (2d54fdc6).
 - [2026-09-07] [research] CONVENTION: a live run is the only thing that catches a shipped-but-unreached data table — three defects (phys_default everywhere, glass→glas, stairs/bush as props) were green through every unit test.
+- [2026-09-07] [knowledge] DELIVERED: GameEngineBench failure taxonomy shipped as 3 universal ue-cpp gotchas + a generated-mesh collision gotcha (3c871928); reach measured at 35 drifted goldens.
+- [2026-09-07] [research] CONVENTION: a `modules`-tagged gotcha can be UNREACHABLE — MODULE_GOTCHA_DOMAINS maps multiplayer/physics/save-load/dialogue-quests to EMPTY arrays, so leave cross-cutting UE C++ rules untagged.
