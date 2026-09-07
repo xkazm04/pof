@@ -15,7 +15,30 @@ export interface ThreatContribution {
   contribution: number;
 }
 
-/** Keyword → weight. Offense weighted highest; unknown stats get a small default. */
+/**
+ * Keyword → weight. Offense weighted highest; unknown stats get a small default.
+ *
+ * PROVENANCE: these weights are **unestimated**, not measured — authored from a
+ * description of the game by an author who never played it. That is a specific
+ * epistemic state, not a rough number: an estimate taken by someone who plays
+ * errs in a known direction (toward "the player is good at this") and can be
+ * corrected on sight, while an unplayed one has no direction at all. So do not
+ * "correct" these toward harder or easier; read which way the ranking is wrong
+ * from one session first, then move them.
+ *
+ * What they are load-bearing for, measured by swapping in an equally defensible
+ * vector (defense level with offense, on a 12-archetype 3-tier roster): the
+ * CROSS-tier ordering does not move at all — tier separation dominates, so
+ * "boss vs grunt" is safe. The WITHIN-tier ordering flips in every tier, always
+ * on the same pair. Since the peer-band checks in bestiary-guardrails.ts and
+ * encounter budgeting both read the within-tier order, that ordering is pinned
+ * by characterization tests, so a retune is a decision somebody made rather than
+ * a silent edit.
+ *
+ * Those tests were calibrated, and their reach is narrower than "any change":
+ * swapping in the full defensible vector above turns them red, while nudging one
+ * weight by 0.05 leaves them green. They guard a change of STANCE, not drift.
+ */
 const WEIGHTS: Array<{ keywords: string[]; weight: number }> = [
   { keywords: ['damage', 'dmg', 'atk', 'attack', 'power'], weight: 0.5 },
   { keywords: ['health', 'hp'], weight: 0.3 },
