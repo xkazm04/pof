@@ -20,8 +20,24 @@ import { existsSync } from 'node:fs';
 
 export const TRIPO_BASE = 'https://api.tripo3d.ai/v2/openapi';
 
+/** Slot names of Tripo's multiview input, in the POSITIONAL order the API expects. */
+export const TRIPO_VIEW_ORDER = ['front', 'left', 'back', 'right'] as const;
+export type TripoView = (typeof TRIPO_VIEW_ORDER)[number];
+
+/** One view of a multiview set. Supply exactly one of path / token / url. */
+export interface TripoViewImage {
+  /** Local image file (uploaded to get a token, like `imagePath`). */
+  path?: string;
+  /** Pre-uploaded Tripo image token. */
+  token?: string;
+  /** Public image URL. */
+  url?: string;
+  /** Image MIME sub-type; derived from `path`/`url` when unset. */
+  type?: string;
+}
+
 export interface TripoSpec {
-  mode: 'text-to-3d' | 'image-to-3d';
+  mode: 'text-to-3d' | 'image-to-3d' | 'multiview-to-3d';
   /** Full output mesh path; Tripo returns a .glb. */
   outputPath: string;
   /** text-to-3d: the natural-language prompt. */
@@ -34,6 +50,16 @@ export interface TripoSpec {
   imageUrl?: string;
   /** Image MIME sub-type Tripo expects (png/jpg/webp); derived from imagePath if unset. */
   imageType?: string;
+  /**
+   * multiview-to-3d: the view set. `front` is REQUIRED; the other slots are optional and
+   * a skipped slot is sent as `{}` so the supplied views keep their position.
+   *
+   * PoF has described a multi-view master reference set since `reference-roles.ts`
+   * (role `multiview-master`, practice #7) but every 3D runner accepted exactly ONE
+   * image, so the extra views were generated and then discarded. This is the seam that
+   * lets them reach the generator.
+   */
+  views?: Partial<Record<TripoView, TripoViewImage>>;
   /** Tripo model version, e.g. 'v2.5-20250123'. Omitted → account default. */
   modelVersion?: string;
   /**
@@ -159,6 +185,17 @@ export function imageTypeFromPath(path: string): string {
   return ext === 'jpeg' ? 'jpg' : ext || 'png';
 }
 
+/**
+ * One entry of a `multiview_to_model` `files` array. A skipped slot is `{}` — the live
+ * API accepts both `{}` and `null` there (probed 2026-09-07), and `{}` is Tripo's
+ * documented form. Pure.
+ */
+export function viewFileEntry(view: TripoViewImage | undefined): Record<string, unknown> {
+  if (!view || (!view.token && !view.url)) return {};
+  const type = view.type ?? imageTypeFromPath(view.path ?? view.url ?? '');
+  return view.token ? { type, file_token: view.token } : { type, url: view.url };
+}
+
 /** Build the POST /task JSON body. Pure. */
 export function buildCreateTaskBody(spec: TripoSpec): Record<string, unknown> {
   const opt: Record<string, unknown> = {};
@@ -172,6 +209,10 @@ export function buildCreateTaskBody(spec: TripoSpec): Record<string, unknown> {
 
   if (spec.mode === 'text-to-3d') {
     return { type: 'text_to_model', prompt: spec.prompt ?? '', ...opt };
+  }
+  if (spec.mode === 'multiview-to-3d') {
+    const files = TRIPO_VIEW_ORDER.map((v) => viewFileEntry(spec.views?.[v]));
+    return { type: 'multiview_to_model', files, ...opt };
   }
   const type = spec.imageType ?? (spec.imagePath ? imageTypeFromPath(spec.imagePath) : 'png');
   const file = spec.imageToken
@@ -366,9 +407,28 @@ export async function runTripo(spec: TripoSpec, deps: TripoDeps = {}): Promise<T
   if (spec.mode === 'image-to-3d' && !spec.imagePath && !spec.imageToken && !spec.imageUrl) {
     return terr('image-to-3d needs imagePath, imageToken, or imageUrl', start, now);
   }
+  if (spec.mode === 'multiview-to-3d') {
+    const front = spec.views?.front;
+    if (!front || (!front.path && !front.token && !front.url)) {
+      return terr('multiview-to-3d needs at least a front view (views.front)', start, now);
+    }
+  }
 
   // Upload a local image → token (skipped when a token or public URL is supplied).
   let resolved = spec;
+  if (spec.mode === 'multiview-to-3d') {
+    const views: Partial<Record<TripoView, TripoViewImage>> = { ...spec.views };
+    for (const slot of TRIPO_VIEW_ORDER) {
+      const v = views[slot];
+      if (!v?.path || v.token || v.url) continue;
+      if (!fileExists(v.path)) return terr(`image not found: ${v.path}`, start, now);
+      const up = await http.uploadImage(`${TRIPO_BASE}/upload`, auth, v.path);
+      const pu = parseUpload(up.json);
+      if (!pu.ok) return terr(`upload failed (${slot} view): ${pu.error}`, start, now);
+      views[slot] = { ...v, token: pu.imageToken, type: v.type ?? imageTypeFromPath(v.path) };
+    }
+    resolved = { ...spec, views };
+  }
   if (spec.mode === 'image-to-3d' && spec.imagePath && !spec.imageToken && !spec.imageUrl) {
     if (!fileExists(spec.imagePath)) return terr(`image not found: ${spec.imagePath}`, start, now);
     const up = await http.uploadImage(`${TRIPO_BASE}/upload`, auth, spec.imagePath);

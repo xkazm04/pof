@@ -368,3 +368,122 @@ describe('v3 groundwork (mesh segmentation only — generation stays on v2)', ()
     });
   });
 });
+
+// ── multiview_to_model ────────────────────────────────────────────────────────
+// Body shape ground-truthed against the LIVE Tripo API on 2026-09-07: a bogus
+// file_token under `multiview_to_model` returns 2003 ("The image file is empty"),
+// i.e. it clears schema validation and reaches file resolution, whereas an absent
+// or empty `files` array returns 1004 ("parameter is invalid"). `{}` and `null`
+// are both accepted for a skipped slot; we emit `{}` (Tripo's documented form).
+describe('buildCreateTaskBody — multiview', () => {
+  it('builds a multiview_to_model body with the four positional slots', () => {
+    const b = buildCreateTaskBody({
+      mode: 'multiview-to-3d',
+      outputPath: 'o.glb',
+      views: {
+        front: { token: 'f1', type: 'png' },
+        left: { token: 'l1', type: 'png' },
+        back: { token: 'b1', type: 'png' },
+        right: { token: 'r1', type: 'png' },
+      },
+    });
+    expect(b.type).toBe('multiview_to_model');
+    expect(b.files).toEqual([
+      { type: 'png', file_token: 'f1' },
+      { type: 'png', file_token: 'l1' },
+      { type: 'png', file_token: 'b1' },
+      { type: 'png', file_token: 'r1' },
+    ]);
+  });
+
+  it('emits {} for skipped slots so the remaining views keep their position', () => {
+    const b = buildCreateTaskBody({
+      mode: 'multiview-to-3d',
+      outputPath: 'o.glb',
+      views: { front: { token: 'f1', type: 'png' }, back: { token: 'b1', type: 'png' } },
+    });
+    expect(b.files).toEqual([{ type: 'png', file_token: 'f1' }, {}, { type: 'png', file_token: 'b1' }, {}]);
+  });
+
+  it('accepts a public url per view and derives the image type from the path', () => {
+    const b = buildCreateTaskBody({
+      mode: 'multiview-to-3d',
+      outputPath: 'o.glb',
+      views: { front: { url: 'https://x/f.jpeg' }, left: { token: 't', path: 'c:/a/l.webp' } },
+    });
+    const files = b.files as Record<string, unknown>[];
+    expect(files[0]).toEqual({ type: 'jpg', url: 'https://x/f.jpeg' });
+    expect(files[1]).toEqual({ type: 'webp', file_token: 't' });
+  });
+
+  it('passes the generation params through on multiview too', () => {
+    const b = buildCreateTaskBody({
+      mode: 'multiview-to-3d',
+      outputPath: 'o.glb',
+      views: { front: { token: 'f1' } },
+      textureQuality: 'detailed',
+      pbr: true,
+      faceLimit: 40000,
+    });
+    expect(b.texture_quality).toBe('detailed');
+    expect(b.pbr).toBe(true);
+    expect(b.face_limit).toBe(40000);
+  });
+});
+
+describe('runTripo — multiview', () => {
+  const okHttp = (calls: unknown[]): TripoHttp => ({
+    postJson: async (_u, _h, body) => {
+      calls.push(body);
+      return { status: 200, json: { code: 0, data: { task_id: 'mv1' } } };
+    },
+    getJson: async () => ({
+      status: 200,
+      json: { code: 0, data: { status: 'success', output: { pbr_model: 'https://x/m.glb' } } },
+    }),
+    uploadImage: async (_u, _h, path) => ({
+      status: 200,
+      json: { code: 0, data: { image_token: `tok:${path}` } },
+    }),
+    download: async () => true,
+  });
+
+  it('rejects a multiview run with no front view', async () => {
+    const r = await runTripo(
+      { mode: 'multiview-to-3d', outputPath: 'o.glb', views: { left: { token: 'l' } } },
+      { env: { TRIPO_API_KEY: 'k' }, http: okHttp([]), fileExists: () => true },
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/front/i);
+  });
+
+  it('uploads every local view path and sends the resulting tokens', async () => {
+    const calls: unknown[] = [];
+    const r = await runTripo(
+      {
+        mode: 'multiview-to-3d',
+        outputPath: 'o.glb',
+        views: { front: { path: 'c:/f.png' }, right: { path: 'c:/r.png' } },
+      },
+      { env: { TRIPO_API_KEY: 'k' }, http: okHttp(calls), fileExists: () => true },
+    );
+    expect(r.ok).toBe(true);
+    const body = calls[0] as Record<string, unknown>;
+    expect(body.type).toBe('multiview_to_model');
+    expect(body.files).toEqual([
+      { type: 'png', file_token: 'tok:c:/f.png' },
+      {},
+      {},
+      { type: 'png', file_token: 'tok:c:/r.png' },
+    ]);
+  });
+
+  it('fails with the missing path when a view file is absent', async () => {
+    const r = await runTripo(
+      { mode: 'multiview-to-3d', outputPath: 'o.glb', views: { front: { path: 'c:/nope.png' } } },
+      { env: { TRIPO_API_KEY: 'k' }, http: okHttp([]), fileExists: () => false },
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/nope\.png/);
+  });
+});

@@ -1,10 +1,45 @@
 # SkinTokens / TokenRig — local arbitrary-creature auto-rig (spec, not built)
 
-> Status: **SPECCED 2026-08-12** — install is user-gated (venv + flash-attn + multi-GB
-> weights). Source run: Obsidian `Research/2026-08-12-complete-ai-3d-workflow.md`
+> Status: **INSTALL BLOCKER REMOVED 2026-09-07 — the PyTorch route below is superseded
+> by a C++/GGML port.** Source run: Obsidian `Research/2026-09-07-3d-ai-news-19.md`
+> (PixelArtistry "3D AI News #19", [06:00]). Original spec 2026-08-12
 > (Stefan 3D AI, [13:26]). Follow the ARDY precedent
 > (`ardy-text-to-motion-spec.md`): spec first, build the runner against a real
 > local install, never blind.
+
+## ⚠ READ FIRST — build against `skin-tokens.cpp`, not the PyTorch repo
+
+The 2026-08-12 descope reason was **flash-attn on Windows + 14 GB VRAM** — the exact
+dependency pair that made TRELLIS Windows-hostile. **Both are gone.**
+
+[`localai-org/skin-tokens.cpp`](https://github.com/localai-org/skin-tokens.cpp) is a
+C++/GGML conversion of VAST-AI SkinTokens (verified 2026-09-07):
+
+| | PyTorch repo (original spec) | `skin-tokens.cpp` (build this) |
+|---|---|---|
+| Licence | MIT | **Apache-2.0** (NOTICE carries the upstream MIT attribution) |
+| Compute | CUDA ≥ 12.1, **flash-attn**, ≥ 14 GB VRAM | **CPU or Vulkan** — `--device vulkan\|cpu\|auto`. **No CUDA, no flash-attn.** |
+| Toolchain | Python 3.11 + torch 2.7 + `uv` | C++23, CMake ≥ 3.25, Ninja, `nlohmann-json`; Vulkan optional (`-DSKINTOKENS_ENABLE_VULKAN=OFF`) |
+| Weights | HF `articulation_xl_quantization_256_token_4` + `skin_vae_2_10_32768` | `hf download LocalAI-io/SkinTokens-GGUF --include "F16/*" --local-dir models/SkinTokens-GGUF` (F32 is for numerical-parity checks only) |
+| Entry point | `python demo.py --input x.glb --output y.glb` | `rig` (skeleton + weights from a static mesh), `skin` (weights for an existing skeleton), plus flags `--fit global\|none\|articulated`, `--postprocess`, `--beams` |
+| I/O | GLB in → rigged GLB out | **same** — GLB in, rigged GLB out with a one-frame rest pose so it opens as a conventional skinned glTF. Also reads TRELLIS.2 `.t2mesh`. |
+
+**Bonus capability, unasked-for and load-bearing:** the binary ships
+`retarget-soma-to-mixamo52`. That dissolves the *other* half of the 2026-08-19 Kimodo
+descope — whose stated blocker was that Kimodo's SOMA-77 skeleton "would strand PoF's
+Core-27 rig (`IK_ArdyCore` auto-matched Mixamo names with zero manual chains)". A
+SOMA→Mixamo retargeter in the same toolchain removes that objection; the sibling
+[`localai-org/kimodo.cpp`](https://github.com/localai-org/kimodo.cpp) runs Kimodo's five
+motion checkpoints from GGUF on **CPU or Vulkan**, which also removes the ~17 GB
+CUDA-install objection. Evaluate the two together — and note that with ARDY's install
+still absent from this machine (2026-08-19 regression), a CPU-only motion engine is no
+longer merely a second option.
+
+**Two things the ported route does NOT change:** the model's *quality* on PoF's actual
+creature meshes is still unmeasured, and building the binary + downloading GGUF weights
+is still a **user action**. The reconsider trigger has fired; the smoke run has not.
+
+## (superseded) Original PyTorch install route
 
 ## What it is
 
@@ -56,7 +91,9 @@ candidates**.
 
 ## Build plan (after install proves live)
 
-1. **Smoke by hand:** `demo.py` on one Tripo/Hunyuan-generated creature GLB
+1. **Smoke by hand:** `skintokens rig --input <mesh>.glb --output <rigged>.glb
+   --device auto` (or, on the superseded PyTorch route, `demo.py`) on one
+   Tripo/Hunyuan-generated creature GLB
    (post `mesh-finish` — feed the CLEAN low-poly, not the 375-component raw
    gen). Inspect bones + weights in Blender.
 2. **Runner seam:** `src/lib/visual-gen/skintokens-runner.ts` — pure
@@ -75,8 +112,13 @@ candidates**.
 
 ## Open questions (answer at install time)
 
-- Does `demo.py` accept a weights/model path flag, or expect the repo-relative
-  `download.py` layout? (Determines runner args.)
+- Does the `rig` subcommand accept a weights/model path flag, or expect the
+  `models/SkinTokens-GGUF` layout the README's `hf download` produces?
+  (Determines runner args.)
+- `--fit global|none|articulated` and `--beams` are undocumented in the summary —
+  measure their effect on one creature before picking a default.
+- CPU-vs-Vulkan wall-clock on a real creature mesh: is CPU-only fast enough to run
+  in the pipeline, or is Vulkan required in practice?
 - Output GLB bone naming — Mixamo-compatible? (Determines whether ARDY's
   `mixamo_retarget.py` chains apply for animation reuse.)
 - VRAM headroom beside a resident Qwen3-VL critic (8.9 GB) — sequential, not

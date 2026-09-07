@@ -10,6 +10,7 @@ import { startTripoJob } from '@/lib/visual-gen/tripo-job-store';
 import { polycountFor, resolveAssetClass } from '@/lib/visual-gen/polycount-presets';
 import { providerFaceLimit } from '@/lib/visual-gen/face-budget';
 import { tripoModelFor } from '@/lib/visual-gen/tripo-models';
+import { TRIPO_VIEW_ORDER, type TripoView } from '@/lib/visual-gen/tripo-runner';
 import { hunyuanModelFor } from '@/lib/visual-gen/hunyuan-models';
 import {
   routePromptShape,
@@ -67,10 +68,19 @@ export async function POST(request: NextRequest) {
       overrideInputGate?: boolean;
       /** Generate a linear prop (rope/cable/chain) anyway. The route is still reported. */
       overrideShapeRoute?: boolean;
+      /**
+       * `multiview-to-3d`: one base64 data URL per view slot. `front` is required.
+       *
+       * PoF has described a multi-view master reference set since `reference-roles.ts`
+       * (role `multiview-master`; practice #7 on grid-combined views), but every 3D
+       * dispatch path accepted exactly ONE image, so the side and back views were
+       * generated and then thrown away and the provider went on guessing them.
+       */
+      viewDataUrls?: Partial<Record<'front' | 'left' | 'back' | 'right', string>>;
     };
     const {
       mode, providerId, imageDataUrl, prompt, mcResolution, assetClass, maxAttempts, topology,
-      gateInput, overrideInputGate, overrideShapeRoute,
+      gateInput, overrideInputGate, overrideShapeRoute, viewDataUrls,
     } = body;
 
     // Quad topology is REACHABLE but refused, rather than silently unavailable. Tripo
@@ -170,6 +180,9 @@ export async function POST(request: NextRequest) {
     };
 
     if (providerId === 'hunyuan3d' || providerId === 'triposr') {
+      // `multiview-to-3d` lands here too and must be refused rather than silently
+      // downgraded: Hunyuan3D/TripoSR take a single `imagePath`, so accepting the set and
+      // meshing only the front view would report a multiview run that never happened.
       if (mode !== 'image-to-3d') return apiError(`${providerId} supports image-to-3d only`, 400);
       if (!imageDataUrl) return apiError('Missing imageDataUrl for image-to-3d', 400);
       const { stamp, outputPath } = outFor(providerId);
@@ -212,7 +225,26 @@ export async function POST(request: NextRequest) {
         const jobId = startTripoJob({ mode: 'image-to-3d', imagePath: inPath, outputPath, pbr: true, faceLimit, assetClass, maxAttempts, ...tripoPin });
         return apiSuccess({ jobId, provider: 'tripo3d', mode, gradedAs, inputGate, shapeRoute }, 202);
       }
-      return apiError('tripo3d supports text-to-3d and image-to-3d', 400);
+      if (mode === 'multiview-to-3d') {
+        if (!viewDataUrls?.front) return apiError('multiview-to-3d needs at least a front view (viewDataUrls.front)', 400);
+        const views: Partial<Record<TripoView, { path: string }>> = {};
+        for (const slot of TRIPO_VIEW_ORDER) {
+          const dataUrl = viewDataUrls[slot];
+          if (!dataUrl) continue;
+          const img = parseImageDataUrl(dataUrl);
+          if (!img) return apiError(`${slot} view must be a base64 PNG/JPG/WebP data URL`, 400);
+          // One temp file PER SLOT. Reusing `imageToFile`'s single-stamp name would write
+          // all four views to the same path and mesh the last one four times.
+          const viewPath = join(tmpdir(), `pof_tripo_mv_${slot}_${stamp}.${img.ext}`).replace(/\\/g, '/');
+          writeFileSync(viewPath, img.buffer);
+          views[slot] = { path: viewPath };
+        }
+        const jobId = startTripoJob({ mode: 'multiview-to-3d', views, outputPath, pbr: true, faceLimit, assetClass, maxAttempts, ...tripoPin });
+        // `inputGate` rides along unchanged: the Tier-0 gate above still runs on the
+        // single `imageDataUrl` when one was supplied, and is simply absent otherwise.
+        return apiSuccess({ jobId, provider: 'tripo3d', mode, views: Object.keys(views), gradedAs, inputGate, shapeRoute }, 202);
+      }
+      return apiError('tripo3d supports text-to-3d, image-to-3d and multiview-to-3d', 400);
     }
 
     return apiError(`Provider "${providerId}" is not wired for local generation (MCP providers use /api/blender-mcp/generate)`, 400);
