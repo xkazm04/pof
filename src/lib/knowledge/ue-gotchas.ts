@@ -432,6 +432,16 @@ export const UE_GOTCHAS: Gotcha[] = [
     source: 'research: 3D AI News #18 (Stefan 3D AI) — top-tier model still fails realistic garments/hard-surface wireframes; "splitting into the parts you\'re gonna get far"',
   },
   {
+    id: 'creature-rig-not-biped',
+    modules: ['3d', 'character'],
+    summary:
+      'A humanoid auto-rigger RETURNS A RIG for a non-humanoid creature instead of failing — check the anatomy BEFORE rigging, and rig a hybrid in two halves',
+    detail:
+      "Every auto-rig path PoF drives assumes a biped and none of them refuse a creature. `scripts/visual-gen/pof_tripo_animate.mjs` sends `rig_type: 'biped'` as its default (its own docstring lists `check_riggable` in parentheses — the prerigcheck step was never implemented), `RIG_PRESETS` in `rig-presets.ts` is three entries and all three are humanoid (ue5-mannequin / metahuman / minimal-humanoid), and Mixamo's uploader is humanoid-only by construction. The failure mode is the dangerous one: a biped rigger handed a spider, a quadruped or a winged creature does not error — it fits a human skeleton to whatever silhouette it was given and returns a rig, so the task succeeds, a skeletal mesh imports, and the defect only appears as limbs that follow the wrong bones once a clip plays. Three rules. (1) GATE ON ANATOMY FIRST: call the provider's prerigcheck (Tripo `animate_prerigcheck` → `riggable` + `rig_type`) and refuse when the returned type is not the type you asked for, rather than reading a returned rig as success. (2) A HYBRID CREATURE RIGS IN TWO HALVES: cut the mesh at a clean seam, close the hole so neither half is hollow, rig the humanoid half with the humanoid path and the non-humanoid half against an animal/insect template, then join the skeletons in Blender — the join itself is cheap, and the real cost is re-weighting the transition band across the seam, which is manual and must be budgeted rather than assumed away. (3) A HUMANOID SKELETON CAN STILL BE THE ANSWER WITHOUT THE AUTO-RIGGER: exporting a Mixamo skeleton in T-pose, positioning its bones onto the creature by hand and using Blender's parent-with-automatic-weights succeeds on shapes the same vendor's automatic uploader rejects outright, and costs nothing. Rigid accessories (hair, ornaments, shells) are weighted to a single parent bone rather than skinned — see `ai-mesh-segment-before-rig` for the segmentation that makes that possible.",
+    appliesTo: ['ue-python'],
+    source: 'research: creature/monster 3D AI workflow (Stefan 3D AI, youtube URjhE8QEhJU) — Mixamo failed the spider hybrid; verified against pof_tripo_animate.mjs:75 + rig-presets.ts',
+  },
+  {
     id: 'gltf-roundtrip-nonmanifold-blocks-remesh',
     modules: ['3d', 'character', 'world'],
     summary:

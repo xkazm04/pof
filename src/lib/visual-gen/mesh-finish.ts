@@ -82,6 +82,97 @@ export type UvMode = 'smart' | 'pack-existing';
  * objects"): until now PoF injected that advice into prompts without being able to
  * execute it.
  */
+/**
+ * UV-layout quality — the number `UV=1` never was.
+ *
+ * `UV=1` says a UV LAYER EXISTS. Every bake this module runs — normal, AO, diffuse,
+ * roughness — writes into that layout, so a layout that squashes a face into a sliver
+ * degrades all four maps at once and the run still reports a finished mesh with four map
+ * paths. Nothing downstream could tell that apart from a good one.
+ *
+ * `pof_mesh_finish.py` measures per-triangle texel density (sqrt(uv area / world area))
+ * relative to the mesh median, so the number is unit-free and an asset is judged only on
+ * being INCONSISTENT WITH ITSELF — the one thing a single square atlas cannot compensate
+ * for. `p95` is the 95th-percentile distortion factor; `badFraction` is the share of the
+ * surface off the median by more than 2x; `degenerate` counts faces with zero UV area.
+ *
+ * ── Calibration, measured not assumed ────────────────────────────────────────────────
+ * Blender 4.2.1 headless, 2026-09-07, over two real Tripo characters in `generated/`:
+ *
+ *   jinx_hd.glb        40000  smart          p95 1.1206  bad 0.0000
+ *   jinx_v32_idle.glb  40000  smart          p95 1.1262  bad 0.0000
+ *   jinx_hd.glb        40000  pack-existing  p95 1.7202  bad 0.0266
+ *   jinx_v32_idle.glb  40000  pack-existing  p95 1.6591  bad 0.0232
+ *   jinx_hd.glb         3000  pack-existing  p95 1.7303  bad 0.0240
+ *
+ * Two non-overlapping bands, and a 13x change in the face budget barely moves either —
+ * the metric tracks the LAYOUT, not the density, which is what makes it worth recording.
+ *
+ * **It contradicts this file's own standing assumption.** {@link UvMode} argues
+ * `pack-existing` wins because authored seams beat an angle limit. On density it
+ * measurably loses on both assets. Both can be true — authored seams are placed where a
+ * cut is least VISIBLE, `smart_project` optimises for even area — so this does not make
+ * `pack-existing` wrong, it makes the trade-off visible for the first time. Nothing here
+ * changes the default; the grade is reported, not enforced.
+ */
+export type UvStretchVerdict = 'clean' | 'uneven' | 'poor' | 'unmeasured';
+
+/** Widest observed clean p95 is 1.1262; tightest observed pack p95 is 1.6591. */
+export const UV_STRETCH_CLEAN_P95 = 1.3;
+
+/** Both clean runs measured exactly 0; the tightest uneven run measured 0.0232. */
+export const UV_STRETCH_CLEAN_BAD_FRAC = 0.005;
+
+/**
+ * ARGUED, NOT MEASURED — say so rather than imply a calibration that does not exist.
+ * The worst layout observed here is 2.7% of faces, so no sample sits above this line.
+ * It is placed where the DAMAGE argument is decisive instead: a tenth of the surface
+ * rendering at under half the texel density of the rest is visible as blur on the asset,
+ * not as a statistic. Move it when a genuinely bad layout has been measured.
+ */
+export const UV_STRETCH_POOR_BAD_FRAC = 0.1;
+
+export interface UvStretchGrade {
+  verdict: UvStretchVerdict;
+  reason?: string;
+}
+
+/**
+ * Grade a measured layout. Pure. Returns `undefined` when the run produced no numbers —
+ * a missing measurement must read as absent, never as a pass.
+ */
+export function gradeUvStretch(
+  p95: number | undefined,
+  badFraction: number | undefined,
+  degenerate: number | undefined,
+): UvStretchGrade | undefined {
+  if (p95 === undefined || badFraction === undefined || degenerate === undefined) return undefined;
+  const pct = (badFraction * 100).toFixed(1);
+
+  if (degenerate > 0) {
+    return {
+      verdict: 'poor',
+      reason: `${degenerate} face(s) have zero UV area — collapsed islands bake to garbage rather than to a stretched result, so every map written into this layout is wrong there`,
+    };
+  }
+  if (badFraction > UV_STRETCH_POOR_BAD_FRAC) {
+    return {
+      verdict: 'poor',
+      reason: `${pct}% of faces sit more than 2x off the median texel density (p95 distortion ${p95.toFixed(2)}x) — that much of the surface bakes visibly blurrier than the rest`,
+    };
+  }
+  if (p95 <= UV_STRETCH_CLEAN_P95 && badFraction <= UV_STRETCH_CLEAN_BAD_FRAC) {
+    return {
+      verdict: 'clean',
+      reason: `texel density is even across the surface (p95 distortion ${p95.toFixed(2)}x, ${pct}% of faces off-median)`,
+    };
+  }
+  return {
+    verdict: 'uneven',
+    reason: `${pct}% of faces sit more than 2x off the median texel density and the p95 face is ${p95.toFixed(2)}x off — the bakes are usable but resolution is not spent evenly`,
+  };
+}
+
 export type RetopoMode = 'collapse' | 'quadriflow';
 
 /**
@@ -187,6 +278,20 @@ export interface MeshFinishResult {
   uvMode?: UvMode;
   /** Why the requested layout could not run (e.g. no authored UVs to pack). */
   uvModeFallbackReason?: string;
+  /**
+   * How evenly the final layout spends texels over the surface. `uvUnwrapped` only ever
+   * said a layer EXISTS; every bake writes into this layout, so a bad one degrades all
+   * four maps while the run still reports four map paths. See {@link gradeUvStretch}.
+   */
+  uvStretch?: UvStretchVerdict;
+  /** Why that grade, in the unit measured — or the script's reason for not measuring. */
+  uvStretchReason?: string;
+  /** 95th-percentile per-face texel-density distortion factor (1.0 = perfectly even). */
+  uvStretchP95?: number;
+  /** Share of faces more than 2x off the median texel density. */
+  uvStretchBadFraction?: number;
+  /** Faces with zero UV area — unbakeable, counted apart so an average cannot hide them. */
+  uvStretchDegenerate?: number;
   /** Shading actually applied (e.g. `auto_smooth@30`); absent when none ran. */
   shading?: string;
   /** Why the re-shade was refused — the source's own normals are better information. */
@@ -359,6 +464,16 @@ export interface ParsedMeshFinish {
   quadsAuthored?: number;
   /** States that authored quads ship triangulated — see `quadDeliveryNote`. */
   quadDeliveryNote?: string;
+  /** 95th-percentile per-face texel-density distortion factor (1.0 = perfectly even). */
+  uvStretchP95?: number;
+  /** Share of faces more than 2x off the median texel density. */
+  uvStretchBadFraction?: number;
+  /** Faces with zero UV area — unbakeable, counted apart so an average cannot hide them. */
+  uvStretchDegenerate?: number;
+  /** Layout grade derived from the three numbers above. Absent when nothing unwrapped. */
+  uvStretch?: UvStretchVerdict;
+  /** Why that grade, in the unit measured — or the script's own reason for not measuring. */
+  uvStretchReason?: string;
   normalMapPath?: string;
   aoMapPath?: string;
   diffuseMapPath?: string;
@@ -396,6 +511,15 @@ export function parseMeshFinishOutput(stdout: string): ParsedMeshFinish {
   const facesCulled = num('FACES_CULLED');
   const cullUnevaluatedShells = num('CULL_UNEVALUATED_SHELLS');
   const retopo = get('RETOPO') as RetopoMode | undefined;
+  const uvStretchP95 = num('UV_STRETCH_P95');
+  const uvStretchBadFraction = num('UV_STRETCH_BAD_FRAC');
+  const uvStretchDegenerate = num('UV_STRETCH_DEGENERATE');
+  const uvStretchUnmeasured = get('UV_STRETCH_UNMEASURED');
+  // The script says why it could not measure; that reason outranks a silent absence, and
+  // an absent measurement must never be graded.
+  const stretchGrade: UvStretchGrade | undefined = uvStretchUnmeasured
+    ? { verdict: 'unmeasured', reason: uvStretchUnmeasured }
+    : gradeUvStretch(uvStretchP95, uvStretchBadFraction, uvStretchDegenerate);
   return {
     retopo,
     retopoFallbackReason: get('RETOPO_FALLBACK'),
@@ -418,6 +542,11 @@ export function parseMeshFinishOutput(stdout: string): ParsedMeshFinish {
     uvModeFallbackReason: get('UV_MODE_FALLBACK'),
     shading: get('SHADING'),
     shadingSkippedReason: get('SHADING_SKIPPED'),
+    uvStretchP95,
+    uvStretchBadFraction,
+    uvStretchDegenerate,
+    uvStretch: stretchGrade?.verdict,
+    uvStretchReason: stretchGrade?.reason,
     normalMapPath: get('BAKE_NORMAL'),
     aoMapPath: get('BAKE_AO'),
     diffuseMapPath: get('BAKE_DIFFUSE'),
@@ -474,6 +603,11 @@ export async function runMeshFinish(spec: MeshFinishSpec, deps: MeshFinishDeps =
     uvUnwrapped: parsed.uvUnwrapped,
     uvMode: parsed.uvMode,
     uvModeFallbackReason: parsed.uvModeFallbackReason,
+    uvStretch: parsed.uvStretch,
+    uvStretchReason: parsed.uvStretchReason,
+    uvStretchP95: parsed.uvStretchP95,
+    uvStretchBadFraction: parsed.uvStretchBadFraction,
+    uvStretchDegenerate: parsed.uvStretchDegenerate,
     shading: parsed.shading,
     shadingSkippedReason: parsed.shadingSkippedReason,
     normalMapPath: parsed.normalMapPath,

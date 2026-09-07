@@ -396,6 +396,93 @@ def unwrap(obj, mode):
     marker("UV_MODE", mode)
 
 
+# A face whose texel density differs from the mesh median by more than this FACTOR is
+# counted as stretched. The unit is deliberately a ratio, not an angle: what a bake
+# actually loses to a bad unwrap is resolution, and resolution scales with UV area per
+# unit of surface area. 2.0 = the face receives half (or twice) the texels of a typical
+# face, which is the band Blender's own "UV stretch (area)" view starts painting red.
+UV_STRETCH_BAD_FACTOR = 2.0
+
+
+def uv_stretch_stats(obj):
+    """Measure how evenly the UV layout distributes texels over the surface.
+
+    `UV=1` only ever said a UV LAYER EXISTS. Every bake this script then runs -- normal,
+    AO, diffuse, roughness -- writes into that layout, so a layout that squashes a face
+    into a sliver silently degrades all four maps at once, and the run still reports a
+    finished mesh with four map paths. This is the number that distinguishes them.
+
+    Per triangle, scale = sqrt(uv_area / world_area) is its texel density. Dividing by
+    the mesh MEDIAN makes it relative and unit-free, so the result is comparable across
+    assets of any size and any bake resolution -- a mesh is not penalised for being small,
+    only for being INCONSISTENT with itself, which is the thing a single square atlas
+    cannot compensate for.
+
+    Distortion is reported as max(r, 1/r) so squashed and blown-up faces are equally bad,
+    and degenerate faces (zero UV area) are counted separately rather than folded into a
+    percentile: they are not "stretched", they are unbakeable, and an average would hide
+    them.
+    """
+    mesh = obj.data
+    uv_layer = mesh.uv_layers.active
+    if uv_layer is None:
+        return None
+
+    mesh.calc_loop_triangles()
+    tris = mesh.loop_triangles
+    if not tris:
+        return None
+
+    verts = mesh.vertices
+    uvs = uv_layer.data
+    scales = []
+    degenerate = 0
+
+    for tri in tris:
+        a, b, c = (verts[i].co for i in tri.vertices)
+        world = (b - a).cross(c - a).length * 0.5
+        l0, l1, l2 = tri.loops
+        ua, ub, uc = uvs[l0].uv, uvs[l1].uv, uvs[l2].uv
+        uv_area = abs((ub.x - ua.x) * (uc.y - ua.y) - (uc.x - ua.x) * (ub.y - ua.y)) * 0.5
+        # A world-degenerate triangle carries no surface to texture; it is a decimation
+        # artefact, not a UV defect, so it is excluded rather than blamed on the unwrap.
+        if world <= 0.0:
+            continue
+        if uv_area <= 0.0:
+            degenerate += 1
+            continue
+        scales.append(math.sqrt(uv_area / world))
+
+    if not scales:
+        return None
+
+    scales.sort()
+    median = scales[len(scales) // 2]
+    if median <= 0.0:
+        return None
+
+    distortion = sorted(max(s / median, median / s) for s in scales)
+    p95 = distortion[min(len(distortion) - 1, int(len(distortion) * 0.95))]
+    bad = sum(1 for d in distortion if d > UV_STRETCH_BAD_FACTOR)
+    total = len(distortion) + degenerate
+    return {
+        "p95": p95,
+        "bad_frac": bad / float(total),
+        "degenerate": degenerate,
+    }
+
+
+def emit_uv_stretch(obj):
+    """Report the layout quality, or say why there is no number -- never stay silent."""
+    stats = uv_stretch_stats(obj)
+    if stats is None:
+        marker("UV_STRETCH_UNMEASURED", "no active UV layer or no triangles to measure")
+        return
+    marker("UV_STRETCH_P95", "%.4f" % stats["p95"])
+    marker("UV_STRETCH_BAD_FRAC", "%.4f" % stats["bad_frac"])
+    marker("UV_STRETCH_DEGENERATE", stats["degenerate"])
+
+
 def new_bake_image(name, size, non_color):
     img = bpy.data.images.new(name, width=size, height=size, alpha=False)
     if non_color:
@@ -580,6 +667,8 @@ def main():
     if args.unwrap:
         unwrap(low, args.uv_mode)
         marker("UV", 1 if low.data.uv_layers else 0)
+        if low.data.uv_layers:
+            emit_uv_stretch(low)
     else:
         marker("UV", 0)
 
