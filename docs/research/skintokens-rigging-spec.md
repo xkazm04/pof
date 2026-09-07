@@ -1,9 +1,10 @@
 # SkinTokens / TokenRig — local arbitrary-creature auto-rig (spec, not built)
 
-> Status: **BUILT + INSTALLED + SMOKE-RUN 2026-09-07 — and BLOCKED ON A VULKAN BUILD.**
-> The binary compiles and runs natively on Windows, the weights are on disk, and the
-> runner seam is committed. The CPU device is NOT viable (measured below), so the
-> remaining work is a Vulkan-enabled rebuild, which needs the Vulkan SDK installed.
+> Status: **WORKING ON GPU 2026-09-07 — first real rigged creature produced.**
+> Vulkan build done, and `bestiary_grunt.glb` came back with a valid 28-joint skin
+> (all 26,788 vertices weighted, weight sums exactly 1.0, no dead joints). The runner
+> seam drives it end-to-end. **Caveat: the Vulkan backend crashes nondeterministically
+> (~60-80% of invocations); the runner retries, which is cheap and works.**
 >
 > (Earlier status: **INSTALL BLOCKER REMOVED — the PyTorch route below is superseded
 > by a C++/GGML port.**) Source run: Obsidian `Research/2026-09-07-3d-ai-news-19.md`
@@ -72,6 +73,63 @@ is a **flag on `skin`**, not a subcommand; and there is a `bind` subcommand that
 Success is stdout `... written to <path>` with exit 0; exit 2 is a usage error (our argv
 is wrong); errors go to stderr with exit 1.
 
+## ✅ GPU RESULT — the CPU/GPU comparison, measured
+
+Vulkan build: add `-DSKINTOKENS_ENABLE_VULKAN=ON` and append the SDK to
+`CMAKE_PREFIX_PATH` (`...;C:\VulkanSDK\1.4.357.0`), with the SDK's `Bin` on PATH so CMake
+finds `glslc`. The SDK is needed only at **build** time — the Vulkan *runtime* ships with
+the NVIDIA driver and was already present (`vulkaninfo` reported Vulkan 1.4.325 on the
+4090 before anything was installed). Backend selected:
+`NVIDIA GeForce RTX 4090 | fp16: 1 | bf16: 1 | matrix cores: NV_coopmat2`.
+
+**Use a current `glslc`** (SDK 1.4.357 ships shaderc v2026.3). An older one — e.g. the
+Android NDK r23c copy already on this machine — fails ggml's extension probes and
+silently compiles the cooperative-matrix fast paths out, so a benchmark taken with it
+would understate the GPU without saying so.
+
+Same mesh (`bestiary_grunt.glb`, 26,788 verts / 39,735 faces), same command:
+
+| | CPU device | **GPU (Vulkan)** |
+|---|---|---|
+| Wall clock | 24 m 01 s | **44 s** (including 5 crashed retries) |
+| **CPU time consumed** | ~11,650 s | **10.89 s** |
+| **Average cores busy** | ~5.5 of 8 | **0.25** |
+| Peak RSS | 2.6 GB | negligible host-side |
+| Output | **none** | **valid 28-joint rig** |
+
+~**1,000× less CPU time** and a **22× drop in core contention**. That was the whole point:
+the GPU sits idle during development while the CPU is contended, so this moves the work
+off the resource that was blocking the machine — the win is the freed CPU at least as
+much as the wall clock.
+
+**Rig quality verified structurally** (not just "a file appeared"): 28 joints with
+`inverseBindMatrices`, all 26,788 vertices skinned, weight sums `min = max = mean =
+1.0000`, **0** zero-weight vertices, **0** unreferenced joints.
+
+## ⚠ THE VULKAN BACKEND IS NONDETERMINISTICALLY UNSTABLE
+
+It segfaults (`0xC0000005` / SIGSEGV) on **identical input, run to run**. This is not
+input-dependent and not a size ceiling: a 20,480-face mesh succeeded once and then crashed
+three times in a row, a 5,120-face mesh succeeded twice then crashed, and a 12-face cube
+always worked. Measured over 10 identical runs each:
+
+| config | ok / 10 |
+|---|---|
+| baseline | 2 |
+| `GGML_VK_DISABLE_COOPMAT2=1` | 2 |
+| `GGML_VK_DISABLE_COOPMAT2=1 GGML_VK_DISABLE_COOPMAT=1` | 5 |
+| `GGML_VK_DISABLE_ASYNC=1` | 4 |
+| all three | 4 |
+
+No knob makes it stable, and the rate is roughly flat across kernel paths — which points
+at skin-tokens.cpp's own Vulkan usage rather than a specific ggml kernel.
+
+**Mitigation, which works:** a crash costs ~0.4 s against ~10 s for a success, so
+`skintokens-runner.ts` retries **crashes only** (`maxAttempts`, default 8). A usage error
+(exit 2) or a real error (exit 1) is deterministic and is never retried — repeating those
+would just run our own bug eight times and bury the message. Observed successes on
+attempt 3/3, 6/6 and 3/3. Worth reporting upstream with the table above.
+
 ## ⛔ THE CPU DEVICE IS NOT VIABLE — measured, not estimated
 
 `rig` on `generated/meshes/bestiary_grunt.glb` (26,788 verts / 39,735 faces),
@@ -91,18 +149,21 @@ pipeline step. `skintokens-runner.ts` therefore defaults `device` to `vulkan` an
 quoting this measurement. That is deliberate: the failure mode being prevented is a
 catalog step silently freezing the machine for half an hour per creature.
 
-## ▶ NEXT STEP (one user action, then a rebuild)
+## ▶ NEXT STEPS
 
-1. Install the **Vulkan SDK** (LunarG) — the only missing piece; the GPU is present and
-   the build system already supports it.
-2. Rebuild with `-DSKINTOKENS_ENABLE_VULKAN=ON` (same recipe otherwise), re-install to
-   `dist/`.
-3. Re-run the same smoke command with `--device vulkan` and record the wall clock. If it
-   lands in seconds-to-a-minute the runner works as committed with **no code change** —
-   `vulkan` is already its default.
-4. Only then: the Tier-1 rig gate (bone count > 0, every skinned vertex carries ≥1
-   weight, weights normalized, no detached bones). Deliberately NOT written yet: a gate
-   must be built against a real captured rig, and no rig has been produced.
+1. **Tier-1 rig gate** — now buildable, because a real rig exists to build it against:
+   joints > 0, every vertex carries ≥1 weight, weight sums ≈ 1, no unreferenced joints.
+   The captured baseline is the grunt rig above (28 joints, sums exactly 1.0000, 0
+   orphans). Build the fixture from that captured output, not from imagination.
+2. **Wire to the bestiary rig step** — the target that motivated all of this
+   ("3D & Rig" A1, zero real rigs across 94 entities).
+3. **Rig QUALITY is still unmeasured.** The rig is structurally valid; whether those 28
+   joints are *anatomically* sensible for a given creature is a separate judgement
+   (posed render + mesh critique). Structural validity is not rig quality, and this
+   spec should not be read as claiming it.
+4. **Report the Vulkan crash upstream** with the 10-run tables above.
+5. Optional levers, both unexplored: `--postprocess` (surface-locality heuristic) and
+   `--beams`.
 
 ## ⚠ READ FIRST — build against `skin-tokens.cpp`, not the PyTorch repo
 

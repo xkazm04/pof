@@ -67,6 +67,19 @@ export interface SkintokensSpec {
   /** Upstream surface-locality heuristic; omit to keep the raw learned weights. */
   postprocess?: boolean;
   beams?: number;
+  /**
+   * How many times to run the CLI when it CRASHES (never when it reports a real error).
+   * Default 8.
+   *
+   * MEASURED 2026-09-07 on an RTX 4090 (Vulkan 1.4.325, NV_coopmat2): the Vulkan
+   * backend crashes nondeterministically on identical input — 10 identical runs of one
+   * mesh gave 2 successes / 8 crashes; `GGML_VK_DISABLE_COOPMAT`+`COOPMAT2` moved it to
+   * 5/5 and `GGML_VK_DISABLE_ASYNC` to 4/6, so no knob makes it stable and this is a bug
+   * in the Vulkan path rather than a tunable. A crash costs ~0.4 s against ~10 s for a
+   * success, so retrying is much cheaper than giving up: the real bestiary creature
+   * rigged on attempt 3 of 3 in one measurement and 6 of 6 in another.
+   */
+  maxAttempts?: number;
   /** Install root holding `dist/bin/` + `models/`; else POF_SKINTOKENS_ROOT. */
   skintokensRoot?: string;
   /** Override the CLI path outright. */
@@ -81,7 +94,22 @@ export interface SkintokensResult {
   error?: string;
   /** The skinned GLB, only when it is actually on disk. */
   riggedPath?: string;
+  /** How many CLI invocations it took — >1 means the Vulkan backend crashed and retried. */
+  attempts?: number;
   durationMs: number;
+}
+
+/**
+ * Exit codes that mean the process DIED rather than reported a problem: POSIX
+ * 128+SIGSEGV, and Windows' 0xC0000005 access violation in both its signed and unsigned
+ * spellings (Node reports one or the other depending on how the child was launched).
+ */
+export const SKINTOKENS_CRASH_EXIT_CODES = [139, -1073741819, 3221225477] as const;
+
+/** True when the exit code means a crash worth retrying. `null` = spawn error/killed. Pure. */
+export function isCrashExit(code: number | null): boolean {
+  if (code === null) return true;
+  return (SKINTOKENS_CRASH_EXIT_CODES as readonly number[]).includes(code);
 }
 
 /** Installed CLI path, or null when it cannot be located. Pure. */
@@ -208,15 +236,30 @@ export async function runSkintokens(
   }
 
   const args = buildSkintokensArgs(spec, modelDir);
-  // CPU rigging is minutes, not seconds, on a ~40k-face mesh — a 5-minute default (the
-  // other runners' figure) would kill a healthy run.
-  const { stdout, code } = await run(bin, args, spec.timeoutMs ?? 3_600_000);
-  const parsed = parseSkintokensOutput(stdout, code);
-  if (!parsed.ok) return fail(parsed.error ?? 'skintokens-cli failed');
-  if (!fileExists(spec.outputPath)) {
-    return fail(`skintokens-cli reported a write but no file was written at ${spec.outputPath}`);
+  const maxAttempts = Math.max(1, spec.maxAttempts ?? 8);
+  let attempts = 0;
+  let lastError = 'skintokens-cli failed';
+
+  // Retry ONLY crashes. A usage error (exit 2) or a real error (exit 1) is deterministic:
+  // repeating it just runs our own bug N times and buries the message.
+  for (let i = 0; i < maxAttempts; i++) {
+    attempts += 1;
+    const { stdout, code } = await run(bin, args, spec.timeoutMs ?? 3_600_000);
+    if (isCrashExit(code)) {
+      lastError = `skintokens-cli crashed (exit ${code})`;
+      continue;
+    }
+    const parsed = parseSkintokensOutput(stdout, code);
+    if (!parsed.ok) return { ...fail(parsed.error ?? lastError), attempts };
+    if (!fileExists(spec.outputPath)) {
+      return { ...fail(`skintokens-cli reported a write but no file was written at ${spec.outputPath}`), attempts };
+    }
+    return { ok: true, riggedPath: spec.outputPath, attempts, durationMs: now() - start };
   }
-  return { ok: true, riggedPath: spec.outputPath, durationMs: now() - start };
+  return {
+    ...fail(`skintokens-cli crashed ${attempts} time(s) in a row — the Vulkan backend is nondeterministically unstable (last: ${lastError})`),
+    attempts,
+  };
 }
 
 // ── default spawn seam (not unit-tested; exercised by the live smoke run) ──────

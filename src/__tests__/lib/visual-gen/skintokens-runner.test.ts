@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
+  SKINTOKENS_CRASH_EXIT_CODES,
+  isCrashExit,
   buildSkintokensArgs,
   parseSkintokensOutput,
   resolveSkintokensBin,
@@ -172,5 +174,79 @@ describe('runSkintokens — the CPU device is refused by default', () => {
   it('lets vulkan through without an opt-in', async () => {
     const r = await runSkintokens({ meshPath: 'm.glb', outputPath: 'o.glb' }, deps());
     expect(r.ok).toBe(true);
+  });
+});
+
+describe('crash retry — the Vulkan backend is flaky, so a crash is retried and an error is not', () => {
+  // MEASURED 2026-09-07 on an RTX 4090 (Vulkan 1.4.325, NV_coopmat2): the SAME input
+  // crashes nondeterministically. 10 identical runs of one mesh gave ok=2/fail=8; with
+  // GGML_VK_DISABLE_COOPMAT+COOPMAT2, ok=5/fail=5; with DISABLE_ASYNC, ok=4/fail=6. No
+  // knob makes it stable, so this is a bug in the Vulkan path, not a tunable. A crash
+  // costs ~0.4s while a success takes ~10s, so retrying is far cheaper than failing:
+  // the real bestiary creature rigged on attempt 3 of 3, and later on attempt 6 of 6.
+  it('recognizes the platform crash signatures', () => {
+    expect(isCrashExit(139)).toBe(true);           // POSIX 128+SIGSEGV
+    expect(isCrashExit(-1073741819)).toBe(true);   // Windows 0xC0000005, signed
+    expect(isCrashExit(3221225477)).toBe(true);    // Windows 0xC0000005, unsigned
+    expect(isCrashExit(null)).toBe(true);          // spawn error / killed
+    expect(SKINTOKENS_CRASH_EXIT_CODES.length).toBeGreaterThan(0);
+  });
+
+  it('does not treat ordinary failures as crashes', () => {
+    expect(isCrashExit(0)).toBe(false);
+    expect(isCrashExit(1)).toBe(false);            // real error (bad mesh)
+    expect(isCrashExit(2)).toBe(false);            // usage error — OUR argv is wrong
+  });
+
+  it('retries past crashes and reports how many attempts it took', async () => {
+    let n = 0;
+    const r = await runSkintokens(
+      { meshPath: 'm.glb', outputPath: 'o.glb' },
+      {
+        env: { POF_SKINTOKENS_ROOT: ROOT },
+        fileExists: () => true,
+        now: () => 0,
+        run: async () => {
+          n += 1;
+          return n < 3
+            ? { stdout: '', code: -1073741819 }
+            : { stdout: `${SKINTOKENS_SUCCESS_MARKER} o.glb`, code: 0 };
+        },
+      },
+    );
+    expect(r.ok).toBe(true);
+    expect(r.attempts).toBe(3);
+  });
+
+  it('never retries a usage error — that would just repeat our own bug 8 times', async () => {
+    let n = 0;
+    const r = await runSkintokens(
+      { meshPath: 'm.glb', outputPath: 'o.glb' },
+      {
+        env: { POF_SKINTOKENS_ROOT: ROOT },
+        fileExists: () => true,
+        now: () => 0,
+        run: async () => { n += 1; return { stdout: 'usage:', code: 2 }; },
+      },
+    );
+    expect(r.ok).toBe(false);
+    expect(n).toBe(1);
+  });
+
+  it('gives up after maxAttempts and says the crash was the reason', async () => {
+    let n = 0;
+    const r = await runSkintokens(
+      { meshPath: 'm.glb', outputPath: 'o.glb', maxAttempts: 4 },
+      {
+        env: { POF_SKINTOKENS_ROOT: ROOT },
+        fileExists: () => true,
+        now: () => 0,
+        run: async () => { n += 1; return { stdout: '', code: 139 }; },
+      },
+    );
+    expect(r.ok).toBe(false);
+    expect(n).toBe(4);
+    expect(r.attempts).toBe(4);
+    expect(r.error).toMatch(/crashed 4/i);
   });
 });
