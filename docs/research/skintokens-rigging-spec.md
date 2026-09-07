@@ -149,12 +149,45 @@ pipeline step. `skintokens-runner.ts` therefore defaults `device` to `vulkan` an
 quoting this measurement. That is deliberate: the failure mode being prevented is a
 catalog step silently freezing the machine for half an hour per creature.
 
+## ✅ TIER-1 RIG GATE — built against the captured rig (`rig-gate.ts`)
+
+`parseGlbRig(buffer) → RigFacts` + pure `scoreRig(facts) → RigVerdict` + `gateRig(path)`.
+Parsing is done in TypeScript straight off the GLB (container → JSON chunk → the
+`WEIGHTS_0`/`JOINTS_0` accessors) rather than through Blender or trimesh: a rig lives
+entirely in the JSON chunk plus two accessors, so a spawn would cost seconds and a
+dependency to read a few hundred bytes.
+
+**The fixtures are real output, not hand-written glTF** — `skintokens_cube_rigged.glb`
+(5 KB, an actual `rig` result) and `unrigged_sphere.glb` (an actual static input), both
+committed under `src/__tests__/fixtures/rig/`. A guard written against imagined data
+passes its own test and never fires in production.
+
+**FAIL (the rig cannot deform the mesh — definitional, not tuned):** no skin · no joints
+declared · no joint referenced by any weighted vertex · any vertex whose weights sum to 0
+· weights not normalized · negative or non-finite weights.
+**WARN (real defect, still usable, −10 score each):** orphan joints (declared, deforming
+nothing) · missing inverse bind matrices · a suspiciously thin skeleton (≤2 joints).
+
+**Wired, not merely available:** `runSkintokens` gates its own output and returns
+`rig` + `facts`; a failed gate fails the run (the path is still reported so the caller can
+look at what was rejected), and an UNREADABLE output fails too — ungated is not passed.
+`skipGate: true` opts out and then makes **no** rig claim at all, rather than an
+assumed-good one.
+
+**Live proof, full chain on the GPU:**
+`ok: true, attempts: 1, durationMs: 36982, rig: { pass: true, score: 100, failures: [],
+warnings: [] }, facts: { jointCount: 28, referencedJoints: 28, vertexCount: 26788,
+zeroWeightVertices: 0, maxInfluences: 4, ... }`.
+
+**Tolerance lesson worth keeping:** the earlier Python capture reported weight sums of
+"exactly 1.0" because it rounded to 6 decimals. Read at full float32 precision the real
+rig sums to `0.99999982–1.00000018` — ~1.8e-7 of drift. A gate asserting `== 1.0` would
+have rejected every genuine rig; the shipped tolerance is 1e-3, loose enough to survive
+8/16-bit weight quantization too.
+
 ## ▶ NEXT STEPS
 
-1. **Tier-1 rig gate** — now buildable, because a real rig exists to build it against:
-   joints > 0, every vertex carries ≥1 weight, weight sums ≈ 1, no unreferenced joints.
-   The captured baseline is the grunt rig above (28 joints, sums exactly 1.0000, 0
-   orphans). Build the fixture from that captured output, not from imagination.
+1. ~~**Tier-1 rig gate**~~ — **DONE** (`src/lib/visual-gen/rig-gate.ts`, 17 tests). See below.
 2. **Wire to the bestiary rig step** — the target that motivated all of this
    ("3D & Rig" A1, zero real rigs across 94 entities).
 3. **Rig QUALITY is still unmeasured.** The rig is structurally valid; whether those 28

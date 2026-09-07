@@ -10,6 +10,16 @@ import {
   SKINTOKENS_SUCCESS_MARKER,
 } from '@/lib/visual-gen/skintokens-runner';
 
+const PASSING_GATE = {
+  ok: true as const,
+  facts: {
+    hasSkin: true, jointCount: 28, referencedJoints: 28, hasInverseBindMatrices: true,
+    vertexCount: 26788, zeroWeightVertices: 0, negativeWeights: 0, nonFiniteWeights: 0,
+    maxInfluences: 4, weightSumMin: 1, weightSumMax: 1, weightSumMean: 1,
+  },
+  verdict: { pass: true, score: 100, failures: [] as string[], warnings: [] as string[] },
+};
+
 const ROOT = 'C:/k/skintokens';
 const BIN = `${ROOT}/dist/bin/skintokens-cli.exe`;
 const MODELS = `${ROOT}/models/SkinTokens-GGUF/F16`;
@@ -93,6 +103,7 @@ describe('runSkintokens', () => {
     fileExists: () => true,
     now: () => 0,
     run: async () => ({ stdout: `${SKINTOKENS_SUCCESS_MARKER} o.glb\n`, code: 0 }),
+    gate: () => PASSING_GATE,
     ...over,
   });
 
@@ -145,8 +156,8 @@ describe('runSkintokens — the CPU device is refused by default', () => {
     env: { POF_SKINTOKENS_ROOT: ROOT },
     fileExists: () => true,
     now: () => 0,
-    run: async () => ({ stdout: `${SKINTOKENS_SUCCESS_MARKER} o.glb
-`, code: 0 }),
+    run: async () => ({ stdout: `${SKINTOKENS_SUCCESS_MARKER} o.glb`, code: 0 }),
+    gate: () => PASSING_GATE,
     ...over,
   });
 
@@ -206,6 +217,7 @@ describe('crash retry — the Vulkan backend is flaky, so a crash is retried and
         env: { POF_SKINTOKENS_ROOT: ROOT },
         fileExists: () => true,
         now: () => 0,
+        gate: () => PASSING_GATE,
         run: async () => {
           n += 1;
           return n < 3
@@ -248,5 +260,68 @@ describe('crash retry — the Vulkan backend is flaky, so a crash is retried and
     expect(n).toBe(4);
     expect(r.attempts).toBe(4);
     expect(r.error).toMatch(/crashed 4/i);
+  });
+});
+
+describe('runSkintokens — the Tier-1 rig gate is wired in, not just available', () => {
+  // A gate nothing calls is a module, not a gate. The runner therefore gates its own
+  // output: a rig that cannot deform the mesh is not a successful run, however cleanly
+  // the CLI exited.
+  const base = (over: Record<string, unknown> = {}) => ({
+    env: { POF_SKINTOKENS_ROOT: ROOT },
+    fileExists: () => true,
+    now: () => 0,
+    run: async () => ({ stdout: `${SKINTOKENS_SUCCESS_MARKER} o.glb`, code: 0 }),
+    gate: () => PASSING_GATE,
+    ...over,
+  });
+
+  it('reports the gate verdict alongside a successful rig', async () => {
+    const r = await runSkintokens({ meshPath: 'm.glb', outputPath: 'o.glb' }, base({ gate: () => PASSING_GATE }));
+    expect(r.ok).toBe(true);
+    expect(r.rig?.pass).toBe(true);
+    expect(r.rig?.score).toBe(100);
+    expect(r.facts?.jointCount).toBe(28);
+  });
+
+  it('FAILS the run when the produced rig cannot deform the mesh', async () => {
+    const failing = {
+      ok: true as const,
+      facts: { ...PASSING_GATE.facts, zeroWeightVertices: 900 },
+      verdict: { pass: false, score: 0, failures: ['900 of 26788 vertices carry no weight'], warnings: [] },
+    };
+    const r = await runSkintokens({ meshPath: 'm.glb', outputPath: 'o.glb' }, base({ gate: () => failing }));
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/carry no weight/);
+    // The path is still reported: the caller may want to look at what was rejected.
+    expect(r.riggedPath).toBe('o.glb');
+    expect(r.rig?.pass).toBe(false);
+  });
+
+  it('surfaces gate warnings without failing the run', async () => {
+    const warned = {
+      ok: true as const,
+      facts: { ...PASSING_GATE.facts, referencedJoints: 25 },
+      verdict: { pass: true, score: 90, failures: [], warnings: ['3 orphan joint(s)'] },
+    };
+    const r = await runSkintokens({ meshPath: 'm.glb', outputPath: 'o.glb' }, base({ gate: () => warned }));
+    expect(r.ok).toBe(true);
+    expect(r.rig?.warnings).toEqual(['3 orphan joint(s)']);
+  });
+
+  it('treats an UNREADABLE output as a failure — ungated is not passed', async () => {
+    const unreadable = { ok: false as const, error: 'not a binary glTF (.glb): no JSON chunk' };
+    const r = await runSkintokens({ meshPath: 'm.glb', outputPath: 'o.glb' }, base({ gate: () => unreadable }));
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/glTF/);
+  });
+
+  it('can be told to skip the gate, and then makes no rig claim at all', async () => {
+    const r = await runSkintokens(
+      { meshPath: 'm.glb', outputPath: 'o.glb', skipGate: true },
+      base({ gate: () => { throw new Error('gate must not run'); } }),
+    );
+    expect(r.ok).toBe(true);
+    expect(r.rig).toBeUndefined();
   });
 });

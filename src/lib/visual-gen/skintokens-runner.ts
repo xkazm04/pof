@@ -31,6 +31,7 @@
  */
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { gateRig, type RigFacts, type RigGateResult, type RigVerdict } from './rig-gate';
 
 /** What the CLI prints to stdout after a successful rig/skin write. */
 export const SKINTOKENS_SUCCESS_MARKER = 'written to';
@@ -80,6 +81,12 @@ export interface SkintokensSpec {
    * rigged on attempt 3 of 3 in one measurement and 6 of 6 in another.
    */
   maxAttempts?: number;
+  /**
+   * Skip the Tier-1 rig gate. Off by default: a rig that cannot deform the mesh is not a
+   * successful run, however cleanly the CLI exited. When skipped, the result carries NO
+   * rig claim at all rather than an assumed-good one.
+   */
+  skipGate?: boolean;
   /** Install root holding `dist/bin/` + `models/`; else POF_SKINTOKENS_ROOT. */
   skintokensRoot?: string;
   /** Override the CLI path outright. */
@@ -96,6 +103,10 @@ export interface SkintokensResult {
   riggedPath?: string;
   /** How many CLI invocations it took — >1 means the Vulkan backend crashed and retried. */
   attempts?: number;
+  /** Tier-1 rig verdict. Absent when `skipGate` was set — absent means UNJUDGED, not fine. */
+  rig?: RigVerdict;
+  /** Structural facts behind {@link rig}. */
+  facts?: RigFacts;
   durationMs: number;
 }
 
@@ -198,6 +209,8 @@ export interface SkintokensDeps {
   fileExists?: (p: string) => boolean;
   now?: () => number;
   env?: Record<string, string | undefined>;
+  /** Injectable Tier-1 gate, so the orchestration is testable without a real GLB. */
+  gate?: (path: string) => RigGateResult;
 }
 
 /** Run skintokens-cli and report only what is observable on disk. */
@@ -209,6 +222,7 @@ export async function runSkintokens(
   const fileExists = deps.fileExists ?? existsSync;
   const now = deps.now ?? (() => Date.now());
   const run = deps.run ?? defaultRun;
+  const gate = deps.gate ?? gateRig;
   const start = now();
   const fail = (error: string): SkintokensResult => ({ ok: false, error, durationMs: now() - start });
 
@@ -254,7 +268,32 @@ export async function runSkintokens(
     if (!fileExists(spec.outputPath)) {
       return { ...fail(`skintokens-cli reported a write but no file was written at ${spec.outputPath}`), attempts };
     }
-    return { ok: true, riggedPath: spec.outputPath, attempts, durationMs: now() - start };
+    if (spec.skipGate) {
+      return { ok: true, riggedPath: spec.outputPath, attempts, durationMs: now() - start };
+    }
+    // Tier-1 gate. An UNREADABLE output is a failure too: ungated is not the same as
+    // passed, and a file we cannot parse is not a rig we can claim.
+    const gated = gate(spec.outputPath);
+    if (!gated.ok || !gated.verdict) {
+      return { ...fail(gated.error ?? 'rig gate could not read the produced GLB'), attempts, riggedPath: spec.outputPath };
+    }
+    if (!gated.verdict.pass) {
+      return {
+        ...fail(`produced rig failed the Tier-1 gate: ${gated.verdict.failures.join('; ')}`),
+        attempts,
+        riggedPath: spec.outputPath,
+        rig: gated.verdict,
+        facts: gated.facts,
+      };
+    }
+    return {
+      ok: true,
+      riggedPath: spec.outputPath,
+      attempts,
+      rig: gated.verdict,
+      facts: gated.facts,
+      durationMs: now() - start,
+    };
   }
   return {
     ...fail(`skintokens-cli crashed ${attempts} time(s) in a row — the Vulkan backend is nondeterministically unstable (last: ${lastError})`),
