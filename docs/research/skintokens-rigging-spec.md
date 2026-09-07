@@ -188,8 +188,18 @@ have rejected every genuine rig; the shipped tolerance is 1e-3, loose enough to 
 ## ▶ NEXT STEPS
 
 1. ~~**Tier-1 rig gate**~~ — **DONE** (`src/lib/visual-gen/rig-gate.ts`, 17 tests). See below.
-2. **Wire to the bestiary rig step** — the target that motivated all of this
-   ("3D & Rig" A1, zero real rigs across 94 entities).
+2. ~~**Wire to the bestiary rig step**~~ — **ACCEPTANCE DONE**
+   (`src/lib/catalog/acceptance/rigArtifact.ts`). The step graded with `selected('mesh')`,
+   i.e. asset PRESENCE, so a STATIC `.glb` passed a step whose label claims a rigged mesh.
+   It now demands a Tier-1 rig record: ungated → **deferred** with a reason (an ungated
+   mesh is unjudged, not broken), gate failed → **fail** quoting the gate, gate passed →
+   **pass** naming the skeleton. Round-trip proven with the real gate + real fixture.
+   **The engine field deliberately stays `Tripo`:** no producer calls SkinTokens yet, so
+   naming it would claim a power the step lacks. **REMAINING — the producer:** a script
+   (the `scripts/gap-loop/*` pattern, which already writes artifacts directly) that walks
+   creature meshes → `runSkintokens` → `rigCandidatePayload` → stamps the candidate. That
+   is a campaign run over 94 entities, not missing plumbing; move `engine` to a SkinTokens
+   name in the same change.
 3. **Rig QUALITY is still unmeasured.** The rig is structurally valid; whether those 28
    joints are *anatomically* sensible for a given creature is a separate judgement
    (posed render + mesh critique). Structural validity is not rig quality, and this
