@@ -11,8 +11,15 @@ import { startViewGateJob, type ViewGateMemberSpec } from '@/lib/visual-gen/view
  * image→3D reconstructs the side it was shown and invents the rest, so a smeared back
  * face is watertight, single-component and passes. This route is where that stops.
  *
- * Body: { meshPath, subject? } or { members: [{ meshPath, name?, subject? }], … },
+ * Body: { meshPath, subject?, referencePath? } or
+ *       { members: [{ meshPath, name?, subject?, referencePath? }], … },
  *       views?, resolution?, outDir?
+ *
+ * A member that supplies `referencePath` — the image the asset was generated FROM — is
+ * additionally asked whether it DEPICTS that reference (`reference-conformance.ts`).
+ * That answer is reported beside the damage verdict and never folded into it: the
+ * comparison has not been calibrated on a known-good control, and this gate's own
+ * history is that an uncalibrated vision prompt condemns everything.
  *
  * Starts a job (poll GET /api/visual-gen/view-gate/status?jobId=...). Two or more
  * members additionally get an ADVISORY colour-coherence grade — a number to read, never
@@ -31,6 +38,7 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as {
       meshPath?: string;
       subject?: string;
+      referencePath?: string;
       members?: ViewGateMemberSpec[];
       views?: number;
       resolution?: number;
@@ -40,7 +48,11 @@ export async function POST(request: NextRequest) {
     const members: ViewGateMemberSpec[] = body.members?.length
       ? body.members
       : body.meshPath?.trim()
-        ? [{ meshPath: body.meshPath.trim(), ...(body.subject ? { subject: body.subject } : {}) }]
+        ? [{
+            meshPath: body.meshPath.trim(),
+            ...(body.subject ? { subject: body.subject } : {}),
+            ...(body.referencePath ? { referencePath: body.referencePath.trim() } : {}),
+          }]
         : [];
 
     if (members.length === 0) return apiError('meshPath (or a non-empty members array) is required', 400);
@@ -56,6 +68,14 @@ export async function POST(request: NextRequest) {
     if (bad) {
       // Named, not merely counted — a caller with a 12-member kit needs to know which one.
       return apiError(`mesh not found at ${bad.meshPath || '(empty meshPath)'}`, 400);
+    }
+
+    // A reference that is not on disk is refused UP FRONT rather than degrading to an
+    // `unmeasured` conformance an hour later: the caller asked a question, and silently
+    // returning "could not see" for a typo'd path reads as a defect in the asset.
+    const badRef = members.find((m) => m.referencePath?.trim() && !existsSync(m.referencePath));
+    if (badRef) {
+      return apiError(`reference image not found at ${badRef.referencePath}`, 400);
     }
 
     const jobId = startViewGateJob({

@@ -28,6 +28,12 @@ import { join } from 'node:path';
 import { runMeshViews, type MeshViewsSpec, type MeshViewsResult, type RenderedView } from './mesh-views';
 import { critiqueMeshViews, type ViewCritiqueDeps, type ViewGateResult } from './view-critique';
 import { gradeKitCoherence, type KitCoherenceGrade } from './kit-coherence';
+import {
+  critiqueReferenceConformance,
+  type ConformanceDeps,
+  type ConformanceResult,
+  type ConformanceVerdict,
+} from './reference-conformance';
 
 export interface ViewGateMemberSpec {
   /** Mesh to look at — a `.glb` from the generation path. */
@@ -36,6 +42,12 @@ export interface ViewGateMemberSpec {
   name?: string;
   /** What the asset is meant to be, so "wrong shape" is judgeable. */
   subject?: string;
+  /**
+   * The reference image this asset was generated FROM. Supplying it asks the second,
+   * separate question the damage gate cannot: is this the object we asked for?
+   * Omitted → the question is not asked, and the member reports `not-requested`.
+   */
+  referencePath?: string;
 }
 
 export interface ViewGateSpec {
@@ -54,6 +66,8 @@ export interface ViewGateMemberResult {
   render?: MeshViewsResult;
   /** Absent whenever the member could not be rendered or judged — never defaulted. */
   gate?: ViewGateResult;
+  /** Present only when a `referencePath` was supplied AND the member rendered. */
+  conformance?: ConformanceResult;
   error?: string;
 }
 
@@ -66,6 +80,11 @@ export interface ViewGateJob {
   members: ViewGateMemberResult[];
   /** Aggregate over the members — see {@link worstMemberVerdict}. */
   verdict: ViewGateVerdict;
+  /**
+   * Aggregate reference-conformance over the members that supplied a reference — see
+   * {@link worstConformance}. Reported BESIDE `verdict`, never folded into it.
+   */
+  conformance: ConformanceVerdict;
   /** Advisory colour-coherence grade; present only for a 2+ member kit. */
   kit?: KitCoherenceGrade;
   error?: string;
@@ -135,12 +154,44 @@ export function worstMemberVerdict(verdicts: ViewGateVerdict[]): ViewGateVerdict
   return verdicts.reduce((worst, v) => (VERDICT_RANK[v] > VERDICT_RANK[worst] ? v : worst), 'pass');
 }
 
+/** Severity order for the conformance aggregate. Higher wins. */
+const CONFORMANCE_RANK: Record<ConformanceVerdict, number> = {
+  'not-requested': -1,
+  match: 0,
+  drift: 1,
+  unmeasured: 2,
+  mismatch: 3,
+};
+
+/**
+ * Aggregate the members' conformance answers into one. Pure.
+ *
+ * `mismatch` > `unmeasured` > `drift` > `match`, on the same reasoning as
+ * {@link worstMemberVerdict}: a seen divergence outranks a coverage gap, and a member
+ * nobody could compare is not a member that matched. An EMPTY set is `not-requested` —
+ * no reference was supplied anywhere, so the question was never asked, which is a
+ * different fact from asking and failing to see.
+ */
+export function worstConformance(verdicts: ConformanceVerdict[]): ConformanceVerdict {
+  if (!verdicts?.length) return 'not-requested';
+  return verdicts.reduce(
+    (worst, v) => (CONFORMANCE_RANK[v] > CONFORMANCE_RANK[worst] ? v : worst),
+    'not-requested' as ConformanceVerdict,
+  );
+}
+
 type RenderFn = (spec: MeshViewsSpec) => Promise<MeshViewsResult>;
 type CritiqueFn = (views: RenderedView[], deps?: ViewCritiqueDeps) => Promise<ViewGateResult>;
+type ConformFn = (
+  referencePath: string,
+  views: RenderedView[],
+  deps?: ConformanceDeps,
+) => Promise<ConformanceResult>;
 
 export interface ViewGateJobDeps {
   render?: RenderFn;
   critique?: CritiqueFn;
+  conform?: ConformFn;
 }
 
 const defaultOutRoot = () => join(process.cwd(), 'generated', 'view-gate').replace(/\\/g, '/');
@@ -155,6 +206,7 @@ const defaultOutRoot = () => join(process.cwd(), 'generated', 'view-gate').repla
 export function startViewGateJob(spec: ViewGateSpec, deps: ViewGateJobDeps = {}): string {
   const render = deps.render ?? ((s: MeshViewsSpec) => runMeshViews(s));
   const critique = deps.critique ?? critiqueMeshViews;
+  const conform = deps.conform ?? critiqueReferenceConformance;
 
   const id = `viewgate-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const names = memberNames(spec.members);
@@ -166,6 +218,7 @@ export function startViewGateJob(spec: ViewGateSpec, deps: ViewGateJobDeps = {})
     spec,
     members: spec.members.map((m, i) => ({ name: names[i], meshPath: m.meshPath })),
     verdict: 'unmeasured',
+    conformance: 'not-requested',
     startedAt: Date.now(),
   };
   jobs.set(id, job);
@@ -190,6 +243,16 @@ export function startViewGateJob(spec: ViewGateSpec, deps: ViewGateJobDeps = {})
           continue;
         }
         slot.gate = await critique(result.views, m.subject ? { subject: m.subject } : {});
+        if (m.referencePath) {
+          // A second question on the SAME renders — one extra vision call, on the front
+          // view only. Never asked for a member that produced no pixels: there would be
+          // nothing to compare, and `unmeasured` already says the render failed.
+          slot.conformance = await conform(
+            m.referencePath,
+            result.views,
+            m.subject ? { subject: m.subject } : {},
+          );
+        }
       } catch (e) {
         slot.error = e instanceof Error ? e.message : String(e);
       }
@@ -197,6 +260,14 @@ export function startViewGateJob(spec: ViewGateSpec, deps: ViewGateJobDeps = {})
 
     job.verdict = worstMemberVerdict(
       job.members.map((m) => m.gate?.verdict ?? ('unmeasured' as ViewGateVerdict)),
+    );
+
+    // Only the members that ASKED contribute. A member with a reference that never got
+    // an answer (its render failed) counts as `unmeasured`, not as a member that matched.
+    job.conformance = worstConformance(
+      spec.members
+        .map((m, i) => (m.referencePath ? (job.members[i].conformance?.verdict ?? 'unmeasured') : undefined))
+        .filter((v): v is ConformanceVerdict => v !== undefined),
     );
 
     if (spec.members.length >= 2) {

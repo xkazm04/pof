@@ -7,7 +7,13 @@ import {
   memberNames,
   kitPaletteOf,
   worstMemberVerdict,
+  worstConformance,
 } from '@/lib/visual-gen/view-gate-job-store';
+import type {
+  ConformanceDeps,
+  ConformanceResult,
+  ConformanceVerdict,
+} from '@/lib/visual-gen/reference-conformance';
 import type { MeshViewsResult, MeshViewsSpec, RenderedView } from '@/lib/visual-gen/mesh-views';
 import type { ViewCritiqueDeps, ViewGateResult } from '@/lib/visual-gen/view-critique';
 
@@ -204,5 +210,142 @@ describe('startViewGateJob', () => {
 
   it('reports an unknown job as undefined rather than an empty one', () => {
     expect(getViewGateJob('nope')).toBeUndefined();
+  });
+});
+
+// ── reference conformance ────────────────────────────────────────────────────
+// The damage gate is blind to identity by design. A member that supplies the
+// reference it was generated from gets a second, separate question asked of it.
+describe('reference conformance in the job', () => {
+  const conformance = (verdict: ConformanceVerdict): ConformanceResult => ({
+    verdict,
+    divergences: [],
+    reason: `stub ${verdict}`,
+    viewReason: 'stub view',
+  });
+
+  it('does not ask the question when no reference was supplied', async () => {
+    const conform = vi.fn();
+    const id = startViewGateJob(
+      { members: [{ meshPath: '/m.glb' }] },
+      { render: async () => rendered([view(0)]), critique: async () => gate('pass'), conform },
+    );
+    await settle();
+    const job = getViewGateJob(id)!;
+    expect(conform).not.toHaveBeenCalled();
+    // Not-requested, never "unmeasured" — nothing was asked, so nothing failed.
+    expect(job.members[0].conformance).toBeUndefined();
+    expect(job.conformance).toBe('not-requested');
+  });
+
+  it('compares against the reference when one is supplied', async () => {
+    const conform = vi.fn(async (_ref: string, _v: RenderedView[], _d?: ConformanceDeps) =>
+      conformance('match'),
+    );
+    const id = startViewGateJob(
+      { members: [{ meshPath: '/m.glb', referencePath: '/ref.png', subject: 'a crate' }] },
+      { render: async () => rendered([view(0)]), critique: async () => gate('pass'), conform },
+    );
+    await settle();
+    const job = getViewGateJob(id)!;
+    expect(conform).toHaveBeenCalledTimes(1);
+    expect(conform.mock.calls[0][0]).toBe('/ref.png');
+    expect(job.members[0].conformance?.verdict).toBe('match');
+    expect(job.conformance).toBe('match');
+  });
+
+  it('passes the member subject through, so "a different object" is judgeable', async () => {
+    const conform = vi.fn(async (_ref: string, _v: RenderedView[], _d?: ConformanceDeps) =>
+      conformance('match'),
+    );
+    startViewGateJob(
+      { members: [{ meshPath: '/m.glb', referencePath: '/ref.png', subject: 'a stone shrine' }] },
+      { render: async () => rendered([view(0)]), critique: async () => gate('pass'), conform },
+    );
+    await settle();
+    expect(conform.mock.calls[0][2]).toMatchObject({ subject: 'a stone shrine' });
+  });
+
+  it('does NOT fold a mismatch into the damage verdict', async () => {
+    // Conformance has not been run against a known-good control yet — the view gate's
+    // own first control failed everything. It reports; it does not condemn.
+    const id = startViewGateJob(
+      { members: [{ meshPath: '/m.glb', referencePath: '/ref.png' }] },
+      {
+        render: async () => rendered([view(0)]),
+        critique: async () => gate('pass'),
+        conform: async () => conformance('mismatch'),
+      },
+    );
+    await settle();
+    const job = getViewGateJob(id)!;
+    expect(job.verdict).toBe('pass');
+    expect(job.conformance).toBe('mismatch');
+  });
+
+  it('never asks about a member that could not be rendered', async () => {
+    const conform = vi.fn(async () => conformance('match'));
+    const id = startViewGateJob(
+      { members: [{ meshPath: '/m.glb', referencePath: '/ref.png' }] },
+      { render: async () => ({ ok: false, error: 'blender missing', views: [] }), conform },
+    );
+    await settle();
+    expect(conform).not.toHaveBeenCalled();
+    expect(getViewGateJob(id)!.conformance).toBe('unmeasured');
+  });
+
+  it('aggregates a kit on the worst answer, and a silent member is not a match', async () => {
+    const verdicts: ConformanceVerdict[] = ['match', 'unmeasured', 'drift'];
+    let i = 0;
+    const id = startViewGateJob(
+      { members: [{ meshPath: '/a.glb', referencePath: '/r.png' }, { meshPath: '/b.glb', referencePath: '/r.png' }, { meshPath: '/c.glb', referencePath: '/r.png' }] },
+      {
+        render: async () => rendered([view(0)]),
+        critique: async () => gate('pass'),
+        conform: async () => conformance(verdicts[i++]),
+      },
+    );
+    await settle();
+    expect(getViewGateJob(id)!.conformance).toBe('unmeasured');
+  });
+
+  it('a mismatch outranks an unmeasured member', async () => {
+    const verdicts: ConformanceVerdict[] = ['unmeasured', 'mismatch'];
+    let i = 0;
+    const id = startViewGateJob(
+      { members: [{ meshPath: '/a.glb', referencePath: '/r.png' }, { meshPath: '/b.glb', referencePath: '/r.png' }] },
+      {
+        render: async () => rendered([view(0)]),
+        critique: async () => gate('pass'),
+        conform: async () => conformance(verdicts[i++]),
+      },
+    );
+    await settle();
+    expect(getViewGateJob(id)!.conformance).toBe('mismatch');
+  });
+
+  it('a partly-referenced kit reports the answers it has, not not-requested', async () => {
+    const id = startViewGateJob(
+      { members: [{ meshPath: '/a.glb' }, { meshPath: '/b.glb', referencePath: '/r.png' }] },
+      {
+        render: async () => rendered([view(0)]),
+        critique: async () => gate('pass'),
+        conform: async () => conformance('drift'),
+      },
+    );
+    await settle();
+    expect(getViewGateJob(id)!.conformance).toBe('drift');
+  });
+});
+
+describe('worstConformance', () => {
+  it('ranks mismatch > unmeasured > drift > match', () => {
+    expect(worstConformance(['match', 'drift'])).toBe('drift');
+    expect(worstConformance(['drift', 'unmeasured'])).toBe('unmeasured');
+    expect(worstConformance(['unmeasured', 'mismatch'])).toBe('mismatch');
+  });
+
+  it('an empty set is not-requested — nobody asked', () => {
+    expect(worstConformance([])).toBe('not-requested');
   });
 });
