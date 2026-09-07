@@ -20,7 +20,30 @@ import { existsSync } from 'node:fs';
 
 export const TRIPO_BASE = 'https://api.tripo3d.ai/v2/openapi';
 
-/** Slot names of Tripo's multiview input, in the POSITIONAL order the API expects. */
+/**
+ * Slot names of Tripo's multiview input, in the POSITIONAL order the API expects.
+ *
+ * PROVEN LIVE 2026-09-07 (task 7f08effe, model v3.1-20260211), not read off the docs —
+ * whose pages are JS-rendered and could not be fetched. A neutral grey cube was
+ * generated from four views identical but for one large digit each (slot 0 -> "1" …
+ * slot 3 -> "4"), then rendered from four yaws:
+ *
+ *     yaw   0 (+X) -> "1"   slot 0  front
+ *     yaw  90 (+Y) -> "2"   slot 1  left
+ *     yaw 180 (-X) -> "3"   slot 2  back
+ *     yaw 270 (-Y) -> "4"   slot 3  right
+ *
+ * So the array is STRICTLY POSITIONAL: each slot lands on its own side, advancing one
+ * quarter-turn per index, with 0/2 opposite and 1/3 opposite. With the front at +X and
+ * up at +Z the object's OWN left is +Y — where slot 1 landed — so `left` here means the
+ * subject's left (the side that appears on the viewer's right when facing the front),
+ * the standard convention. Reorder this and every view lands on the wrong face.
+ *
+ * A first probe using a different COLOUR per side proved nothing and is not worth
+ * repeating: the texture prior averaged the four colours across the whole mesh
+ * (green 81% / blue 15% / yellow 4% / red 0%) instead of placing them. Localized marks
+ * survive; global colour does not.
+ */
 export const TRIPO_VIEW_ORDER = ['front', 'left', 'back', 'right'] as const;
 export type TripoView = (typeof TRIPO_VIEW_ORDER)[number];
 
@@ -230,7 +253,14 @@ export function parseTaskCreate(json: unknown): ParsedCreate {
   return { ok: false, error: tripoErr(json) };
 }
 
-export type TripoState = 'pending' | 'success' | 'failed';
+/**
+ * `transient` is the state a POLL RESPONSE could not be read in — distinct from
+ * `failed`, which is a verdict Tripo actually reported. Conflating them abandoned a
+ * live paid job on 2026-09-07 (task 7f08effe: given up after ~29 polls with
+ * "unexpected Tripo response" while the task was still running, and still at 76% when
+ * checked afterwards). A read error is not a build failure.
+ */
+export type TripoState = 'pending' | 'success' | 'failed' | 'transient';
 export interface ParsedStatus {
   state: TripoState;
   status?: string;
@@ -246,7 +276,10 @@ const TERMINAL_FAIL = new Set(['failed', 'cancelled', 'banned', 'expired', 'unkn
 /** Parse GET /task/{id} → normalized state + the download URL. Pure. */
 export function parseTaskStatus(json: unknown): ParsedStatus {
   const j = json as { code?: number; data?: { status?: string; progress?: number; output?: Record<string, string> } } | undefined;
-  if (!j || j.code !== 0 || !j.data) return { state: 'failed', error: tripoErr(json) };
+  // Unreadable — a body that never parsed (defaultHttp turns a non-JSON response into
+  // `undefined`), a rate-limit or 5xx envelope, a gateway HTML page. The task itself is
+  // unaffected; only our view of it failed, so the caller must retry, not give up.
+  if (!j || j.code !== 0 || !j.data) return { state: 'transient', error: tripoErr(json) };
   const status = String(j.data.status ?? '').toLowerCase();
   const out = j.data.output ?? {};
   const modelUrl = out.pbr_model || out.model || out.base_model;
@@ -446,6 +479,8 @@ export async function runTripo(spec: TripoSpec, deps: TripoDeps = {}): Promise<T
   const pollInterval = spec.pollIntervalMs ?? 4000;
   const maxPoll = spec.maxPollMs ?? 300_000;
   const maxPolls = spec.maxPolls ?? Math.max(1, Math.ceil(maxPoll / pollInterval));
+  let unreadable = 0;
+  let lastUnreadable: string | undefined;
   for (let i = 0; i < maxPolls; i++) {
     const s = await http.getJson(`${TRIPO_BASE}/task/${taskId}`, auth);
     const ps = parseTaskStatus(s.json);
@@ -465,7 +500,19 @@ export async function runTripo(spec: TripoSpec, deps: TripoDeps = {}): Promise<T
       };
     }
     if (ps.state === 'failed') return terr(ps.error ?? 'task failed', start, now, taskId);
+    if (ps.state === 'transient') {
+      lastUnreadable = ps.error;
+      unreadable++;
+    }
     if (i < maxPolls - 1) await sleep(pollInterval);
+  }
+  if (unreadable > 0) {
+    // Say how many reads failed and keep the task id: the job may still be running and
+    // is already paid for, so the caller needs the handle to recover the mesh.
+    return terr(
+      `gave up after ${maxPolls} polls — ${unreadable} unreadable response(s), last: ${lastUnreadable ?? 'unknown'}. The task may still be running; recover it by task id.`,
+      start, now, taskId,
+    );
   }
   return terr(`timed out after ${maxPolls} polls (~${maxPoll}ms)`, start, now, taskId);
 }

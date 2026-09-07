@@ -12,6 +12,7 @@ import {
   createMeshSegmentTask,
   TRIPO_V3_BASE,
   TRIPO_V3_SEGMENT_MODEL,
+  TRIPO_VIEW_ORDER,
   type TripoHttp,
   type TripoV3Http,
 } from '@/lib/visual-gen/tripo-runner';
@@ -485,5 +486,118 @@ describe('runTripo — multiview', () => {
     );
     expect(r.ok).toBe(false);
     expect(r.error).toMatch(/nope\.png/);
+  });
+});
+
+// ── transient poll responses must not abandon a paid job ──────────────────────
+// Observed live 2026-09-07 on task 7f08effe: a multiview generation was abandoned
+// after ~29 polls with "unexpected Tripo response" while the task was still RUNNING
+// server-side (it was at 76% when checked afterwards). `parseTaskStatus` mapped any
+// unreadable body — `undefined` from defaultHttp's `.catch(() => undefined)`, a 429,
+// a 5xx, a gateway HTML page — onto a TERMINAL failure, so one bad read threw away
+// work that was already paid for. A status the API never sent is not a failure the
+// API reported.
+describe('parseTaskStatus — unreadable vs terminal', () => {
+  it('reports an unreadable body as transient, not failed', () => {
+    for (const body of [undefined, null, '<html>502 Bad Gateway</html>', {}, { code: 2000 }]) {
+      const s = parseTaskStatus(body);
+      expect(s.state, `body: ${JSON.stringify(body)}`).toBe('transient');
+    }
+  });
+
+  it('still reports the states Tripo actually calls terminal', () => {
+    for (const status of ['failed', 'cancelled', 'banned', 'expired', 'unknown']) {
+      expect(parseTaskStatus({ code: 0, data: { status } }).state).toBe('failed');
+    }
+  });
+
+  it('still parses running and success normally', () => {
+    expect(parseTaskStatus({ code: 0, data: { status: 'running', progress: 76 } }).state).toBe('pending');
+    expect(parseTaskStatus({ code: 0, data: { status: 'success', output: { pbr_model: 'u' } } }).state).toBe('success');
+  });
+});
+
+describe('runTripo — survives a transient poll', () => {
+  const http = (statuses: unknown[]): TripoHttp => {
+    let i = 0;
+    return {
+      postJson: async () => ({ status: 200, json: { code: 0, data: { task_id: 't1' } } }),
+      getJson: async () => ({ status: 200, json: statuses[Math.min(i++, statuses.length - 1)] }),
+      uploadImage: async () => ({ status: 200, json: { code: 0, data: { image_token: 'tok' } } }),
+      download: async () => true,
+    };
+  };
+  const running = { code: 0, data: { status: 'running', progress: 50 } };
+  const done = { code: 0, data: { status: 'success', output: { pbr_model: 'https://x/m.glb' } } };
+
+  it('keeps polling through unreadable responses and still succeeds', async () => {
+    const r = await runTripo(
+      { mode: 'text-to-3d', prompt: 'x', outputPath: 'o.glb', pollIntervalMs: 1, maxPolls: 20 },
+      {
+        env: { TRIPO_API_KEY: 'k' },
+        http: http([running, undefined, undefined, running, undefined, done]),
+        fileExists: () => true,
+        sleep: async () => {},
+      },
+    );
+    expect(r.ok).toBe(true);
+    expect(r.taskId).toBe('t1');
+  });
+
+  it('gives up — naming the task id — when the reads never become readable', async () => {
+    const r = await runTripo(
+      { mode: 'text-to-3d', prompt: 'x', outputPath: 'o.glb', pollIntervalMs: 1, maxPolls: 6 },
+      {
+        env: { TRIPO_API_KEY: 'k' },
+        http: http([undefined]),
+        fileExists: () => true,
+        sleep: async () => {},
+      },
+    );
+    expect(r.ok).toBe(false);
+    // The task id must survive the failure: the job may still be running and paid for,
+    // so the caller needs the handle to recover it.
+    expect(r.taskId).toBe('t1');
+    expect(r.error).toMatch(/unreadable/i);
+  });
+
+  it('still aborts immediately on a genuine terminal failure', async () => {
+    const r = await runTripo(
+      { mode: 'text-to-3d', prompt: 'x', outputPath: 'o.glb', pollIntervalMs: 1, maxPolls: 20 },
+      {
+        env: { TRIPO_API_KEY: 'k' },
+        http: http([{ code: 0, data: { status: 'banned' } }]),
+        fileExists: () => true,
+        sleep: async () => {},
+      },
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/banned/);
+  });
+});
+
+describe('TRIPO_VIEW_ORDER — the live-proven slot order', () => {
+  // Guards the ordering measured on Tripo task 7f08effe (2026-09-07): a cube generated
+  // from four views bearing digits 1-4 rendered "1" at +X, "2" at +Y, "3" at -X and
+  // "4" at -Y — each slot on its own side, one quarter-turn apart, 0/2 and 1/3 opposite.
+  // Reordering this array silently puts every view on the wrong face, which no other
+  // test in this file would notice.
+  it('is front, left, back, right — positionally', () => {
+    expect([...TRIPO_VIEW_ORDER]).toEqual(['front', 'left', 'back', 'right']);
+  });
+
+  it('places each named view at its proven index', () => {
+    const b = buildCreateTaskBody({
+      mode: 'multiview-to-3d',
+      outputPath: 'o.glb',
+      views: {
+        front: { token: 'one', type: 'png' },
+        left: { token: 'two', type: 'png' },
+        back: { token: 'three', type: 'png' },
+        right: { token: 'four', type: 'png' },
+      },
+    });
+    expect((b.files as { file_token: string }[]).map((f) => f.file_token))
+      .toEqual(['one', 'two', 'three', 'four']);
   });
 });
