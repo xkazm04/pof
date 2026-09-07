@@ -63,6 +63,25 @@ export interface PackageInputs {
 
 /** Extensions that mark a string as a produced-file reference (not prose). */
 const FILE_EXT = /\.(glb|gltf|fbx|obj|png|jpe?g|webp|gif|wav|mp3|ogg|csv|json|py|umap|uasset)$/i;
+/**
+ * A string SHAPED like a produced artifact whose extension `FILE_EXT` does not enumerate.
+ * Reported as unresolved rather than dropped, because downstream the two are
+ * indistinguishable and only one of them is safe: `FILE_EXT` lists the formats that
+ * existed when it was last edited, so every new format a step learns to emit — a
+ * physics-carrying `.usdz`, a splat `.ply`/`.spz` — is silently absent from the package
+ * until somebody remembers to add it above. Per-case tests cannot cover this, because a
+ * format nobody enumerated has no case; the floor is that an unenumerated extension under
+ * `generated/` is a finding rather than prose.
+ */
+const looksLikeUnenumeratedArtifact = (s: string): boolean => {
+  if (s.length > 512 || /\s/.test(s)) return false;
+  if (FILE_EXT.test(s)) return false;
+  const n = s.replace(/\\/g, '/');
+  if (n.startsWith('/Game/')) return false;
+  if (!/\.[A-Za-z0-9]{2,5}$/.test(n)) return false;
+  return n.includes('generated/');
+};
+
 /** A file reference is either under generated/ or an absolute path. UE object paths (/Game/...) are declarations, not files. */
 const looksLikeFile = (s: string): boolean => {
   if (s.length > 512 || /\s/.test(s)) return false;
@@ -224,6 +243,17 @@ export function collectPackageInputs(siblings: SiblingArtifact[]): PackageInputs
         if (seenFiles.has(key)) return;
         seenFiles.add(key);
         files.push({ kind: 'file', sourceStep: sib.step, path: candidate });
+        return;
+      }
+      if (looksLikeUnenumeratedArtifact(candidate)) {
+        if (seenUnresolved.has(candidate)) return;
+        seenUnresolved.add(candidate);
+        unresolved.push({
+          kind: 'unresolved',
+          sourceStep: sib.step,
+          reference: candidate,
+          reason: 'reference is shaped like a produced artifact but its extension is not in the packageable set',
+        });
       }
     });
 

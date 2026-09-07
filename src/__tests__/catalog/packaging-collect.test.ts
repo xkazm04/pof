@@ -100,6 +100,39 @@ describe('collectPackageInputs', () => {
     expect(unresolved[0].reason).toMatch(/refuse/i);
   });
 
+  it('reports a produced artifact whose extension the packageable set does not enumerate', () => {
+    // The evidence floor. Per-case coverage cannot catch a format nobody enumerated, so
+    // without this the collector's denominator is derived from FILE_EXT and a step that
+    // emits a new format contributes nothing to files, nothing to unresolved, and is
+    // indistinguishable from a step that produced nothing at all.
+    const { files, unresolved } = collectPackageInputs([
+      sib('Sim Export', { out: 'generated/meshes/gate.usdz', collision: 'generated/meshes/gate.usd' }),
+      sib('Splat Env', { env: 'generated/splats/post.ply' }),
+    ]);
+    expect(files).toEqual([]);
+    expect(unresolved.map((u) => u.reference).sort()).toEqual([
+      'generated/meshes/gate.usd',
+      'generated/meshes/gate.usdz',
+      'generated/splats/post.ply',
+    ]);
+    for (const u of unresolved) expect(u.reason).toMatch(/not in the packageable set/i);
+  });
+
+  it('does not report prose or directory references as unenumerated artifacts', () => {
+    // The negative control: the floor must not turn every string mentioning a path into a
+    // finding, or the manifest's missing[] becomes noise and gets ignored.
+    const { files, unresolved } = collectPackageInputs([
+      sib('Notes', {
+        prose: 'the mesh landed in generated/meshes/ and looks correct',
+        dir: 'generated/meshes',
+        ueRef: '/Game/Props/SM_Barrel.SM_Barrel',
+        good: 'generated/meshes/ok.glb',
+      }),
+    ]);
+    expect(files.map((f) => f.path)).toEqual(['generated/meshes/ok.glb']);
+    expect(unresolved).toEqual([]);
+  });
+
   it('deduplicates repeated references and aggregates ueAssets declarations', () => {
     const { files, ueDeclarations } = collectPackageInputs([
       sib('3D Model', { meshPath: 'generated/a.glb', preview: { source: 'generated/a.glb' } }, ['/Game/Items/SM_A']),
