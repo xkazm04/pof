@@ -1,11 +1,108 @@
 # SkinTokens / TokenRig — local arbitrary-creature auto-rig (spec, not built)
 
-> Status: **INSTALL BLOCKER REMOVED 2026-09-07 — the PyTorch route below is superseded
-> by a C++/GGML port.** Source run: Obsidian `Research/2026-09-07-3d-ai-news-19.md`
+> Status: **BUILT + INSTALLED + SMOKE-RUN 2026-09-07 — and BLOCKED ON A VULKAN BUILD.**
+> The binary compiles and runs natively on Windows, the weights are on disk, and the
+> runner seam is committed. The CPU device is NOT viable (measured below), so the
+> remaining work is a Vulkan-enabled rebuild, which needs the Vulkan SDK installed.
+>
+> (Earlier status: **INSTALL BLOCKER REMOVED — the PyTorch route below is superseded
+> by a C++/GGML port.**) Source run: Obsidian `Research/2026-09-07-3d-ai-news-19.md`
 > (PixelArtistry "3D AI News #19", [06:00]). Original spec 2026-08-12
 > (Stefan 3D AI, [13:26]). Follow the ARDY precedent
 > (`ardy-text-to-motion-spec.md`): spec first, build the runner against a real
 > local install, never blind.
+
+## ✅ WINDOWS BUILD RECIPE (proven 2026-09-07) — use Clang, not MSVC
+
+Installed at `C:/Users/kazda/kiro/skintokens`. The README documents Linux only; this is
+what actually works on this machine. **Four things bite, in this order:**
+
+1. **MSVC CANNOT BUILD THIS.** `src/model.cpp:425` hard-`#error`s on
+   `#if defined(__SIZEOF_INT128__)` — the NumPy-compatible PCG64 sampler needs 128-bit
+   integers and MSVC has none. Not patchable without forking the sampler.
+   **Use the Clang that ships with VS 2022:**
+   `VC/Tools/Llvm/x64/bin/clang++.exe` (19.1.5, target `x86_64-pc-windows-msvc`) —
+   verified to define `__SIZEOF_INT128__` and give `sizeof(unsigned __int128) == 16`.
+   (An earlier MSVC attempt also tripped `/sdl` promoting C4996 on `getenv` in
+   `src/internal.hpp:33` to an error; `_CRT_SECURE_NO_WARNINGS` clears that one, but the
+   128-bit `#error` behind it is fatal, so the whole MSVC lane is a dead end.)
+2. **`-DGGML_OPENMP=OFF` is required.** Otherwise `ggml-base.dll` fails to link with
+   `lld-link: error: undefined symbol: __kmpc_dispatch_deinit` (clang's OpenMP runtime
+   isn't on the link line). ggml's own thread pool still runs.
+3. **`nlohmann_json` is a `find_package(... REQUIRED)`.** No vcpkg here, so build and
+   install v3.11.3 to a prefix and point `CMAKE_PREFIX_PATH` at it.
+4. **Run from `dist/`, not `build/`.** `skintokens.dll` is emitted to the build root, not
+   beside the CLI, so `build/clang/bin/skintokens-cli.exe` dies with `0xc0000135`
+   (STATUS_DLL_NOT_FOUND) — which also makes 2 of the 4 ctest cases *spuriously* fail.
+   `cmake --install <build> --prefix ./dist` puts the DLLs beside the exe; **all 4 ctest
+   cases pass** once they can find them.
+
+```bat
+call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
+set "LLVM=C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\Llvm\x64\bin"
+REM flip SKINTOKENS_ENABLE_VULKAN to ON once the Vulkan SDK is installed
+cmake -S . -B build\clang -G Ninja ^
+  -DCMAKE_C_COMPILER="%LLVM%\clang.exe" -DCMAKE_CXX_COMPILER="%LLVM%\clang++.exe" ^
+  -DCMAKE_BUILD_TYPE=Release -DGGML_OPENMP=OFF ^
+  -DSKINTOKENS_ENABLE_VULKAN=OFF ^
+  -DCMAKE_PREFIX_PATH=C:\Users\kazda\kiro\deps
+cmake --build build\clang -j 12
+cmake --install build\clang --prefix ./dist
+hf download LocalAI-io/SkinTokens-GGUF --include "F16/*" --local-dir models/SkinTokens-GGUF
+dist\bin\skintokens-cli.exe inspect models\SkinTokens-GGUF\F16
+```
+
+Weights are 1.25 GB (`mesh-encoder.gguf` 58 MB, `skin-vae.gguf` 244 MB,
+`tokenrig.gguf` 949 MB). `inspect` reports `backend: AMD Ryzen 7 7800X3D`.
+
+**CLI contract, read from `src/cli.cpp`'s own `usage()` — not the README:**
+
+```
+skintokens-cli rig   MODEL_DIR MESH.{glb,t2mesh} OUTPUT.glb [--device auto|cpu|vulkan]
+                     [--postprocess] [--beams N] [--temperature F] [--max-tokens N]
+skintokens-cli skin  MODEL_DIR MESH SKELETON.glb OUTPUT.glb [--fit none|global|articulated]
+                     [--retarget-soma-to-mixamo52] ...
+skintokens-cli bind  MODEL_DIR MESH MOTION.glb OUTPUT.glb [--target-rig soma30|mixamo52] ...
+skintokens-cli inspect MODEL_DIR | glb-info FILE.glb | retarget-check | prepare-mixamo | ...
+```
+
+Two corrections to the secondary source that prompted this: `--retarget-soma-to-mixamo52`
+is a **flag on `skin`**, not a subcommand; and there is a `bind` subcommand that takes a
+**Kimodo motion GLB** directly — the Kimodo bridge is in this binary, not a separate tool.
+Success is stdout `... written to <path>` with exit 0; exit 2 is a usage error (our argv
+is wrong); errors go to stderr with exit 1.
+
+## ⛔ THE CPU DEVICE IS NOT VIABLE — measured, not estimated
+
+`rig` on `generated/meshes/bestiary_grunt.glb` (26,788 verts / 39,735 faces),
+`--device cpu`:
+
+| | |
+|---|---|
+| Wall clock | **24 min 01 s** |
+| CPU time | ~11,650 s (≈5.5 of 8 cores held) |
+| Working set | 2.6 GB |
+| Output | **none — no file was ever written** |
+| Side effect | the workstation was unusable for the duration |
+
+So the "runs on CPU" headline is technically true and practically worthless for a
+pipeline step. `skintokens-runner.ts` therefore defaults `device` to `vulkan` and
+**refuses `cpu` and `auto`** unless the caller passes `allowCpu: true`, with the refusal
+quoting this measurement. That is deliberate: the failure mode being prevented is a
+catalog step silently freezing the machine for half an hour per creature.
+
+## ▶ NEXT STEP (one user action, then a rebuild)
+
+1. Install the **Vulkan SDK** (LunarG) — the only missing piece; the GPU is present and
+   the build system already supports it.
+2. Rebuild with `-DSKINTOKENS_ENABLE_VULKAN=ON` (same recipe otherwise), re-install to
+   `dist/`.
+3. Re-run the same smoke command with `--device vulkan` and record the wall clock. If it
+   lands in seconds-to-a-minute the runner works as committed with **no code change** —
+   `vulkan` is already its default.
+4. Only then: the Tier-1 rig gate (bone count > 0, every skinned vertex carries ≥1
+   weight, weights normalized, no detached bones). Deliberately NOT written yet: a gate
+   must be built against a real captured rig, and no rig has been produced.
 
 ## ⚠ READ FIRST — build against `skin-tokens.cpp`, not the PyTorch repo
 
