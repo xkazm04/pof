@@ -70,6 +70,18 @@ export function optNum(args: Record<string, unknown>, key: string): number | und
   const v = args[key];
   return typeof v === 'number' ? v : undefined;
 }
+/**
+ * An explicitly STATED boolean, or undefined when the caller said nothing.
+ *
+ * Deliberately three-valued: several PoF routes default a boolean to `true` (the
+ * Tier-0 input gate runs unless opted out), so forwarding a missing flag as `false`
+ * would silently disable a credit-saving default for every agent that never set it.
+ */
+export function optBool(args: Record<string, unknown>, key: string): boolean | undefined {
+  const v = args[key];
+  return typeof v === 'boolean' ? v : undefined;
+}
+
 export function reqObj(args: Record<string, unknown>, key: string): Record<string, unknown> {
   const v = args[key];
   if (v == null || typeof v !== 'object' || Array.isArray(v)) throw new Error(`"${key}" (object) is required`);

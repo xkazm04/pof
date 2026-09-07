@@ -27,6 +27,7 @@ import { HARNESS_TOOLS } from './harness.js';
 import { SIM_TOOLS } from './sims.js';
 import { UE_TOOLS } from './ue.js';
 import { DESIGN_TOOLS } from './design.js';
+import { ASSET_TOOLS } from './assets.js';
 
 /** The env var an operator sets per client to trim the advertised surface. */
 export const GROUPS_ENV = 'POF_MCP_TOOL_GROUPS';
@@ -39,8 +40,8 @@ export interface ToolGroup {
 }
 
 /**
- * The five families, in the order `TOOLS` has always listed them. `meta` is not here: the
- * group tool itself is always visible, which is the whole point of it.
+ * The families, in the order `TOOLS` lists them. `meta` is not here: the group tool
+ * itself is always visible, which is the whole point of it.
  */
 export const TOOL_GROUPS: ToolGroup[] = [
   { name: 'pipeline', description: 'Catalog pipeline loop — list catalogs/entities, read a step, submit an artifact, read acceptance, drain gates.', tools: PIPELINE_TOOLS },
@@ -48,6 +49,7 @@ export const TOOL_GROUPS: ToolGroup[] = [
   { name: 'sims', description: 'Simulation & balance — combat and economy simulation, sweeps, baselines, ability specs. No editor needed.', tools: SIM_TOOLS },
   { name: 'ue', description: 'UE truth & growth — bridge status, automation tests, disk scans, builds, packaging. Several need a live editor.', tools: UE_TOOLS },
   { name: 'design', description: 'Design truth & quality signals — feature matrix, GDD compliance, project health, crash/regression reads.', tools: DESIGN_TOOLS },
+  { name: 'assets', description: 'Produce & inspect generated assets — image/text-to-3D generation, the render gate that LOOKS at a mesh, icons rendered from a mesh, the asset library. Three of these SPEND credits, GPU or vision quota.', tools: ASSET_TOOLS },
 ];
 
 export const GROUP_NAMES: string[] = TOOL_GROUPS.map((g) => g.name);

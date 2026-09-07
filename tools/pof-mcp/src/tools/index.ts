@@ -4,6 +4,7 @@ import { HARNESS_TOOLS } from './harness.js';
 import { SIM_TOOLS } from './sims.js';
 import { UE_TOOLS } from './ue.js';
 import { DESIGN_TOOLS } from './design.js';
+import { ASSET_TOOLS } from './assets.js';
 import { GROUPS_TOOL, TOOL_GROUPS, resolveEnabledGroups, groupOf, GROUPS_ENV } from './groups.js';
 import { topologyFilter, topologyHolds, UNRESOLVED_TOPOLOGY, type TopologyResolution } from './topology.js';
 
@@ -26,6 +27,7 @@ export const TOOLS: ToolDef[] = [
   ...SIM_TOOLS,
   ...UE_TOOLS,
   ...DESIGN_TOOLS,
+  ...ASSET_TOOLS,
   GROUPS_TOOL,
 ];
 

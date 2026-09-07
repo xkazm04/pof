@@ -31,6 +31,9 @@ export const EXAMPLE_SKIP: Record<string, string> = {
   pof_ue_build: 'enqueues a real build — recorded by the growth suite',
   pof_ue_build_status: 'needs a buildId / project path — recorded by the growth suite',
   pof_ue_build_health: 'needs a project path with build history — recorded by the UE suite',
+  pof_asset_generate: 'spends provider credits / GPU time on every call — recorded by a bespoke case, never by the contract walker',
+  pof_asset_view_gate: 'spawns Blender and spends one vision call per yaw — recorded by a bespoke case',
+  pof_asset_icon: 'spawns Blender and writes into the icon library — recorded by a bespoke case',
   pof_package_preflight: 'spawns UBT/editor — recorded by the growth suite',
 };
 

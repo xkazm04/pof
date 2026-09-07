@@ -95,6 +95,18 @@ const ROUTE_SCOPE: Record<string, { scoped: boolean; why: string }> = {
   'ue5-bridge/build-health': { scoped: false, why: 'projectPath selects the build queue to report on — required' },
   'packaging/preflight': { scoped: false, why: 'projectPath is the project to preflight on disk — required' },
 
+  // ── generated-asset routes: keyed by FILE, not by project ──────────────────
+  // These read and write `generated/<provider>/` and `generated/icons/` plus in-process
+  // job maps. There is no project column to filter on, and the asset that comes back is
+  // identified by its path on disk. If assets ever gain a project dimension, these four
+  // flip to `scoped: true` and this comment is the record of when they did not.
+  'visual-gen/generate': { scoped: false, why: 'starts a provider job that writes generated/<providerId>/; no project column' },
+  'visual-gen/generate/status': { scoped: false, why: 'reads an in-process job by its own id' },
+  'visual-gen/view-gate': { scoped: false, why: 'renders and judges a mesh at a stated path; no project column' },
+  'visual-gen/view-gate/status': { scoped: false, why: 'reads an in-process job by its own id' },
+  'visual-gen/icon-from-mesh': { scoped: false, why: 'renders a mesh at a stated path into generated/icons/, keyed (catalogId, entityId, step)' },
+  'visual-gen/assets': { scoped: false, why: 'lists generated meshes on disk across provider dirs; no project column' },
+
   // ── genuinely project-free routes ──────────────────────────────────────────
   'ability-spec': { scoped: false, why: 'catalog data keyed by catalogId/entityId; no project column' },
   'ai-testing': { scoped: false, why: 'AI test suites carry no project column' },
