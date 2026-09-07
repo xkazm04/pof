@@ -328,3 +328,24 @@
 - **A pure module has no artifact to diff, so it needs a GROUND TRUTH that predates it — and the repo often already contains one.** This run shipped a bone-name conform planner: nothing on disk changes, so the artifact-diff rule does not apply and the honest fallback looked like a pile of self-written cases. `rig-presets.ts` turned out to hold a hand-authored 20-bone Mixamo→UE5 mapping, i.e. the correct answer written down by a human years before the module existed. Deriving that mapping from names alone (20/20) is evidence self-written cases cannot produce, and it immediately caught a matching pass that *looked* like the confident one — equal chain indices — but shifts a whole bone chain by one, because the two conventions disagree on where a chain starts. Applied to SKILL.md Phase 7 (v1.15).
 - **Two runs against the same file on the same day: the second one's job is to read SIDEWAYS.** An earlier run today shipped an anatomy-mismatch refusal to the exact script this run touched. The refusal was correct and inert: the same script never pinned `model_version`, and the API default is biped-only, so the check it gates could only ever return one answer. Neither run's own candidate list contained this — it came from the existing "read the gap's NEIGHBOURS" rule, and it is the strongest confirmation of that rule so far, because the neighbour was *another agent's fresh, correct work*. A gate can be real, tested, and unreachable; when a run finds a gate already shipped, verify it can FIRE before logging an already-have catch.
 - **When a test asserts something the source docs do not actually say, fix the TEST.** A generated case assumed every non-biped morphology has a stock animation preset; the docs name one for five morphologies and none for `avian`. Correcting the assertion (rather than padding the data table to make it pass) turned a wrong assumption into a genuinely useful fact — a bird can be rigged but has no clip, so it needs an external library — which then went into the module's own refusal reason.
+
+## 1.15 — 2026-09-07 — pof
+- **Zero golden drift is only evidence of a dead store if the rail covers your prompt FAMILY.** A
+  new `MODULE_CONTEXTS` entry drifted 0/159 goldens and was briefly read as the dead-store defect
+  the method warns about — but `__golden__` pins TASK prompts while that store feeds the EVAL
+  family, so zero drift was the correct result. The census rule needed a qualifier plus a fallback
+  (prove reach at the call site) rather than a flat "0 drift = re-route". Applied in 1.16.
+- **Distinguish DERIVED from HAND-MAINTAINED routing tables before worrying about reach.** The
+  scope-table rule (added the same day) is about hand-maintained tables with empty rows. Its
+  inverse is just as useful: `getEvaluableModuleIds()` is `Object.keys(MODULE_CONTEXTS)`, so a
+  correct entry is reachable by construction — and an ABSENT entry does not merely get judged
+  generically, it drops the subject from the offered list entirely. That inversion turned a
+  routine "add criteria" finding into "this module could not be evaluated at all", which was the
+  run's headline. Applied in 1.16.
+- **Checking the source's own confident claim remains the highest-yield web spend** (3rd run
+  running). One search on the video's "they're all Apache licensed, distribution is totally fine"
+  showed the TTS field is licence-mixed AND that the demo violated its own claim by baking a voice
+  from a commercial-service sample. The durable finding was the STRUCTURE (a cloned voice carries
+  both the weights' licence and the reference sample's provenance), not the per-model licence list,
+  which would rot. No method change — the existing rule already points here; recording that it
+  keeps paying.
