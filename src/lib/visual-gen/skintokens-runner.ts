@@ -32,6 +32,7 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { gateRig, type RigFacts, type RigGateResult, type RigVerdict } from './rig-gate';
+import type { RigExpectation } from './skeleton-profiles';
 
 /** What the CLI prints to stdout after a successful rig/skin write. */
 export const SKINTOKENS_SUCCESS_MARKER = 'written to';
@@ -63,6 +64,19 @@ export interface SkintokensSpec {
    * from a pipeline step.
    */
   allowCpu?: boolean;
+  /**
+   * Anatomy this rig must evidence, checked by the Tier-1 gate against the produced
+   * skeleton's BONE NAMES (`skeleton-profiles.ts`).
+   *
+   * Worth knowing before you set it: skin-tokens.cpp names its joints `bone_0…bone_N`
+   * (measured 2026-09-07), so on this engine ANY expectation currently resolves to
+   * "cannot be verified" and fails — correctly, because a positional skeleton genuinely
+   * cannot be checked or retargeted. Set it when you need that stated as a defect rather
+   * than passing silently; leave it unset for the existing structural-only verdict. A
+   * cloud rigger that names semantically (Tripo's `spec: tripo|mixamo`) is the path on
+   * which this check turns green.
+   */
+  expect?: RigExpectation;
   /** `skin`/`bind` only — the CLI rejects `--fit` on `rig`. */
   fit?: SkintokensFit;
   /** Upstream surface-locality heuristic; omit to keep the raw learned weights. */
@@ -210,7 +224,7 @@ export interface SkintokensDeps {
   now?: () => number;
   env?: Record<string, string | undefined>;
   /** Injectable Tier-1 gate, so the orchestration is testable without a real GLB. */
-  gate?: (path: string) => RigGateResult;
+  gate?: (path: string, expect?: RigExpectation) => RigGateResult;
 }
 
 /** Run skintokens-cli and report only what is observable on disk. */
@@ -273,7 +287,7 @@ export async function runSkintokens(
     }
     // Tier-1 gate. An UNREADABLE output is a failure too: ungated is not the same as
     // passed, and a file we cannot parse is not a rig we can claim.
-    const gated = gate(spec.outputPath);
+    const gated = gate(spec.outputPath, spec.expect);
     if (!gated.ok || !gated.verdict) {
       return { ...fail(gated.error ?? 'rig gate could not read the produced GLB'), attempts, riggedPath: spec.outputPath };
     }

@@ -169,3 +169,105 @@ describe('gateRig', () => {
     expect(r.verdict).toBeUndefined();
   });
 });
+
+/**
+ * Bone-group awareness — added 2026-09-07 after a research run found the gate scored a
+ * finger-less rig 100/pass. See `skeleton-profiles.ts` for the vocabulary and for the
+ * measurement that shaped it: real SkinTokens output names its joints `bone_0…bone_N`,
+ * so on PoF's own local rig engine the honest answer is UNVERIFIABLE, not "no fingers".
+ */
+describe('parseGlbRig — joint names', () => {
+  it('reads the real fixture joint names off the glTF nodes', () => {
+    const f = parseGlbRig(rigged());
+    expect(f.jointNames).toEqual(['bone_0', 'bone_1', 'bone_2', 'bone_3', 'bone_4', 'bone_5']);
+  });
+
+  it('reports no joint names for an unrigged mesh', () => {
+    expect(parseGlbRig(unrigged()).jointNames).toEqual([]);
+  });
+});
+
+describe('scoreRig — bone groups', () => {
+  /** The captured grunt facts plus the naming its engine actually produces. */
+  const named = (names: string[]): RigFacts => ({ ...GRUNT_FACTS, jointNames: names });
+
+  const MIXAMO_BIPED = [
+    'mixamorig:Hips', 'mixamorig:Spine', 'mixamorig:Neck', 'mixamorig:Head',
+    'mixamorig:LeftShoulder', 'mixamorig:LeftArm', 'mixamorig:LeftForeArm', 'mixamorig:LeftHand',
+    'mixamorig:RightShoulder', 'mixamorig:RightArm', 'mixamorig:RightForeArm', 'mixamorig:RightHand',
+    'mixamorig:LeftUpLeg', 'mixamorig:LeftLeg', 'mixamorig:LeftFoot',
+    'mixamorig:RightUpLeg', 'mixamorig:RightLeg', 'mixamorig:RightFoot',
+  ];
+
+  it('leaves the existing verdict untouched when no expectation is given', () => {
+    // Backwards compatibility is load-bearing: every current caller passes one argument.
+    const before = scoreRig(GRUNT_FACTS);
+    expect(before.pass).toBe(true);
+    expect(before.score).toBe(100);
+  });
+
+  it('WARNS on an anonymous skeleton even with no expectation — the wired SkinTokens path', () => {
+    const v = scoreRig(named(['bone_0', 'bone_1', 'bone_2', 'bone_3']));
+    expect(v.pass).toBe(true);
+    expect(v.warnings.join(' ')).toMatch(/positional|anonymous/i);
+    expect(v.warnings.join(' ')).toMatch(/retarget/i);
+    expect(v.score).toBeLessThan(100);
+  });
+
+  it('does not warn about naming when the names are semantic', () => {
+    const v = scoreRig(named(MIXAMO_BIPED));
+    expect(v.warnings.join(' ')).not.toMatch(/positional/i);
+    expect(v.pass).toBe(true);
+  });
+
+  it('FAILS when a required bone group is absent from a readable skeleton', () => {
+    const v = scoreRig(named(MIXAMO_BIPED), { morphology: 'biped', require: ['fingers'] });
+    expect(v.pass).toBe(false);
+    expect(v.failures.join(' ')).toMatch(/finger/i);
+    expect(v.failures.join(' ')).toMatch(/grip|hold|prop/i);
+  });
+
+  it('PASSES when the required groups are all evidenced', () => {
+    const v = scoreRig(named([...MIXAMO_BIPED, 'mixamorig:LeftHandThumb1']), {
+      morphology: 'biped',
+      require: ['fingers'],
+    });
+    expect(v.pass).toBe(true);
+  });
+
+  it('FAILS an expectation it cannot verify rather than fabricating a pass', () => {
+    const v = scoreRig(named(['bone_0', 'bone_1', 'bone_2']), { morphology: 'quadruped' });
+    expect(v.pass).toBe(false);
+    expect(v.failures.join(' ')).toMatch(/cannot be verified|unverifiable/i);
+  });
+
+  it('FAILS an expectation when joint names were never captured', () => {
+    // `jointNames: undefined` means the facts predate name reading — not "no names".
+    const v = scoreRig(GRUNT_FACTS, { morphology: 'biped' });
+    expect(v.pass).toBe(false);
+    expect(v.failures.join(' ')).toMatch(/not captured|no joint names/i);
+  });
+
+  it('catches a biped rigger applied to a quadruped — the silent Tripo failure', () => {
+    // A human skeleton fitted to a dog returns a rig and imports fine; the only local
+    // evidence is that a quadruped expectation finds no tail and nothing four-legged.
+    const v = scoreRig(named(MIXAMO_BIPED), { morphology: 'quadruped', require: ['tail'] });
+    expect(v.pass).toBe(false);
+    expect(v.failures.join(' ')).toMatch(/tail/i);
+  });
+});
+
+describe('gateRig — with an expectation', () => {
+  it('threads the expectation through to the verdict', () => {
+    const r = gateRig(join(FIXTURES, 'skintokens_cube_rigged.glb'), { morphology: 'biped' });
+    expect(r.ok).toBe(true);
+    // Real SkinTokens output: anonymous, so a biped claim is unverifiable and must not pass.
+    expect(r.verdict?.pass).toBe(false);
+    expect(r.verdict?.failures.join(' ')).toMatch(/cannot be verified/i);
+  });
+
+  it('still passes the same file with no expectation', () => {
+    const r = gateRig(join(FIXTURES, 'skintokens_cube_rigged.glb'));
+    expect(r.verdict?.pass).toBe(true);
+  });
+});

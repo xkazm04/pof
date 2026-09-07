@@ -14,6 +14,18 @@
  * structurally-valid rig a "good rig" would be exactly the overclaim this gate exists to
  * avoid.
  *
+ * 2026-09-07 — one half of that WAS free after all, and its absence was a real defect.
+ * Judging where a joint SITS needs a render; establishing whether it EXISTS needs only
+ * its name, which lives in the same glTF JSON chunk this file already decodes. Until now
+ * the parser never read `nodes`, so a rig with perfect weights and no finger bones scored
+ * 100/pass — and a character with no finger bones cannot close a hand around a prop.
+ * `jointNames` now carries the names and {@link scoreRig} takes an optional
+ * {@link RigExpectation}; the vocabulary and the morphology tables live in
+ * `skeleton-profiles.ts`. Note what the naming buys beyond the group check: real
+ * SkinTokens output names its joints `bone_0…bone_N`, and an anonymously-named skeleton
+ * cannot be retargeted at all, because both the IK Retargeter and every third-party clip
+ * library match bones BY NAME.
+ *
  * Baseline captured from real `skin-tokens.cpp` output on 2026-09-07 (see
  * docs/research/skintokens-rigging-spec.md):
  *
@@ -25,12 +37,27 @@
  * for something that is a few hundred bytes of buffer reading.
  */
 import { readFileSync } from 'node:fs';
+import {
+  checkBoneGroups,
+  classifyNaming,
+  type RigExpectation,
+} from './skeleton-profiles';
+
+export type { RigExpectation } from './skeleton-profiles';
 
 /** Structural facts read off a GLB. No judgement — {@link scoreRig} does that. */
 export interface RigFacts {
   hasSkin: boolean;
   /** Joints the skin DECLARES. */
   jointCount: number;
+  /**
+   * The declared joints' names, in `skins[0].joints` order.
+   *
+   * `undefined` means the names were NOT READ — a facts record captured before this field
+   * existed — which is deliberately distinct from `[]` (read, and there are no joints).
+   * An expectation cannot be graded against `undefined` and must not silently pass.
+   */
+  jointNames?: string[];
   /** Distinct joints any vertex actually has a non-zero weight for. */
   referencedJoints: number;
   hasInverseBindMatrices: boolean;
@@ -83,6 +110,7 @@ const NCOMP: Record<string, number> = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4, MA
 
 interface Gltf {
   meshes?: { primitives: { attributes: Record<string, number> }[] }[];
+  nodes?: { name?: string }[];
   skins?: { joints: number[]; inverseBindMatrices?: number }[];
   accessors?: { bufferView: number; byteOffset?: number; componentType: number; count: number; type: string; normalized?: boolean }[];
   bufferViews?: { byteOffset?: number; byteLength: number; byteStride?: number }[];
@@ -113,7 +141,7 @@ export function parseGlbRig(buffer: Buffer): RigFacts {
   if (!json) throw new Error('not a binary glTF (.glb): no JSON chunk');
 
   const empty: RigFacts = {
-    hasSkin: false, jointCount: 0, referencedJoints: 0, hasInverseBindMatrices: false,
+    hasSkin: false, jointCount: 0, jointNames: [], referencedJoints: 0, hasInverseBindMatrices: false,
     vertexCount: 0, zeroWeightVertices: 0, negativeWeights: 0, nonFiniteWeights: 0,
     maxInfluences: 0, weightSumMin: 0, weightSumMax: 0, weightSumMean: 0,
   };
@@ -186,6 +214,9 @@ export function parseGlbRig(buffer: Buffer): RigFacts {
   return {
     hasSkin: true,
     jointCount: skin.joints.length,
+    // An unnamed node yields '' rather than being dropped, so the names stay index-aligned
+    // with `skins[0].joints` and a partially-named skeleton is still readable.
+    jointNames: skin.joints.map((j) => json!.nodes?.[j]?.name ?? ''),
     referencedJoints: referenced.size,
     hasInverseBindMatrices: skin.inverseBindMatrices !== undefined,
     vertexCount: vertexCount || weights.length,
@@ -209,8 +240,18 @@ const WEIGHT_SUM_TOLERANCE = 1e-3;
 /** A skeleton this thin is more likely a degenerate prediction than a real rig. */
 const THIN_SKELETON_JOINTS = 2;
 
-/** Grade the facts. Pure. */
-export function scoreRig(facts: RigFacts): RigVerdict {
+/**
+ * Grade the facts. Pure.
+ *
+ * `expect` is OPTIONAL and additive: called with one argument the verdict is exactly what
+ * it has always been, plus one new warning when the skeleton is anonymously named — which
+ * fires today on PoF's only local rig engine, so this is live behaviour and not a table
+ * waiting for a caller. Supply `expect` and the anatomy becomes a gated question: a
+ * required group with no matching bone FAILS, and an expectation that cannot be READ
+ * (anonymous names, or names never captured) also fails, because the alternative is
+ * reporting a pass on a question the gate could not answer.
+ */
+export function scoreRig(facts: RigFacts, expect?: RigExpectation): RigVerdict {
   const failures: string[] = [];
   const warnings: string[] = [];
 
@@ -251,12 +292,51 @@ export function scoreRig(facts: RigFacts): RigVerdict {
     warnings.push(`only ${facts.jointCount} joint(s) — likely a degenerate prediction rather than a usable skeleton`);
   }
 
+  // ── Bone names ────────────────────────────────────────────────────────────────
+  // Warn on an unmappable skeleton whether or not an expectation was supplied: it is a
+  // real, consequential defect on its own (nothing can be retargeted onto it), and it is
+  // the state of every rig SkinTokens produces.
+  if (facts.jointNames && classifyNaming(facts.jointNames) === 'anonymous') {
+    warnings.push(
+      `joints carry positional names only (e.g. "${facts.jointNames[0]}") — no bone can be ` +
+        'identified, so this rig cannot be retargeted (the IK Retargeter and every clip ' +
+        'library match bones by NAME) and its anatomy cannot be checked',
+    );
+  }
+
+  if (expect) {
+    if (!facts.jointNames) {
+      failures.push(
+        `a ${expect.morphology} anatomy was required but no joint names were captured for this ` +
+          'rig, so the requirement could not be checked — re-read the GLB with a parser that ' +
+          'records joint names rather than accepting an unverified pass',
+      );
+    } else {
+      const groups = checkBoneGroups(facts.jointNames, expect);
+      if (!groups.verifiable) {
+        failures.push(
+          `a ${expect.morphology} anatomy was required but cannot be verified: ${groups.reasons.join(' ')}`,
+        );
+      } else {
+        for (const reason of groups.reasons) failures.push(reason);
+      }
+    }
+  }
+
   const score = failures.length > 0 ? 0 : Math.max(0, 100 - warnings.length * 10);
   return { pass: failures.length === 0, score, failures, warnings };
 }
 
-/** Read a GLB from disk and gate it. `ok:false` means unreadable, NOT "failed the gate". */
-export function gateRig(path: string, read: (p: string) => Buffer = readFileSync): RigGateResult {
+/**
+ * Read a GLB from disk and gate it. `ok:false` means unreadable, NOT "failed the gate".
+ *
+ * Pass `expect` to additionally require an anatomy (see {@link scoreRig}).
+ */
+export function gateRig(
+  path: string,
+  expect?: RigExpectation,
+  read: (p: string) => Buffer = readFileSync,
+): RigGateResult {
   let buffer: Buffer;
   try {
     buffer = read(path);
@@ -265,7 +345,7 @@ export function gateRig(path: string, read: (p: string) => Buffer = readFileSync
   }
   try {
     const facts = parseGlbRig(buffer);
-    return { ok: true, facts, verdict: scoreRig(facts) };
+    return { ok: true, facts, verdict: scoreRig(facts, expect) };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }

@@ -11,7 +11,20 @@
  *   # optional: --spec tripo|mixamo  --rig-type biped  --rig-task <id> (skip rigging)
  *   #           --no-geometry (anim only)  --format fbx|glb
  *   #           --force-rig (skip the anatomy gate — a wrong rig SUCCEEDS, so opt in only)
+ *   #           --rig-model <version> (override the pin; normally leave it to the pin)
+ *
+ * THE RIG MODEL IS PINNED, NOT INHERITED. This script used to send `animate_rig` with no
+ * `model_version`, which the API resolves to `v1.0-20240301` — a **biped-only** rigger.
+ * That did more than limit the feature set: it disabled the anatomy gate below. A
+ * biped-only model has no vocabulary for "quadruped", so `animate_prerigcheck` can only
+ * ever answer `biped`, the mismatch refusal compares biped to biped and passes, and a
+ * human skeleton gets fitted to a dog — exactly the silent failure the gate exists to
+ * stop. `tripoRigModelFor` now pins v1.0 for a biped (explicitly, the proven path) and
+ * `v2.5-20260210` for any non-humanoid, and `validateRigRequest` refuses an impossible
+ * pairing BEFORE credits are spent. Node strips the types on import, so the table has one
+ * home shared with the app rather than a copy here.
  */
+import { tripoRigModelFor, validateRigRequest } from '../../src/lib/visual-gen/tripo-rig-models.ts';
 import { writeFileSync, mkdirSync, statSync } from 'fs';
 import { dirname, resolve } from 'path';
 
@@ -75,6 +88,19 @@ async function main() {
     let rigTaskId = a['rig-task'];
     if (!rigTaskId) {
       const wantRig = a['rig-type'] || 'biped';
+      // FREE LOCAL PRE-FLIGHT, ahead of every paid task. Pin the rig model for this
+      // morphology and refuse a pairing the API would accept and answer wrongly — there
+      // is no reason to spend a prerigcheck, let alone a rig, on a request that is
+      // already known to be impossible.
+      const rigModel = a['rig-model'] || tripoRigModelFor(wantRig).modelVersion;
+      const check = validateRigRequest({ rigType: wantRig, modelVersion: rigModel, animation });
+      if (!check.ok) {
+        console.log(`POF_TRIPO_ERROR=${check.error}`);
+        process.exitCode = 1;
+        return;
+      }
+      if (check.warning) console.log(`POF_TRIPO_WARN=${check.warning}`);
+      console.log(`POF_TRIPO_RIG_MODEL=${rigModel} rig_type=${wantRig}`);
       // GATE ON ANATOMY BEFORE RIGGING. This step was listed in this file's own docstring
       // and never implemented, so every model went to the biped rigger unconditionally.
       // That matters because the failure is silent: handed a spider, a quadruped or any
@@ -102,7 +128,14 @@ async function main() {
           return;
         }
       }
-      const rigBody = { type: 'animate_rig', original_model_task_id: a['model-task'], out_format: format, rig_type: wantRig, spec: a.spec || 'tripo' };
+      const rigBody = {
+        type: 'animate_rig',
+        original_model_task_id: a['model-task'],
+        out_format: format,
+        model_version: rigModel,
+        rig_type: wantRig,
+        spec: a.spec || 'tripo',
+      };
       const rig = await runTask('rig', rigBody);
       rigTaskId = rig.id;
     }
