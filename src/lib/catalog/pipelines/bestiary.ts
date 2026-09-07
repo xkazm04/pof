@@ -8,6 +8,7 @@ import { cppSymbolExists } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import { linksResolve } from '../acceptance/linkCheckers';
 import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
+import { riggedMeshSelected } from '@/lib/catalog/acceptance/rigArtifact';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -356,13 +357,26 @@ registerCatalogPipeline({
     // ── 10. 3D & Rig ──────────────────────────────────────────────────────────
     {
       archetype: 'gallery', label: '3D & Rig',
+      // engine stays `Tripo` DELIBERATELY. SkinTokens now exists as a real rig engine
+      // (`src/lib/visual-gen/skintokens-runner.ts`, local GPU/Vulkan, gated by
+      // `rig-gate.ts`), but nothing in this pipeline's produce path calls it yet — no
+      // producer stamps `rigCandidatePayload` onto a candidate. Naming it here would claim
+      // a power the step does not have, which is the overclaim /status exists to expose.
+      // What changed is the ACCEPTANCE: the rig half is now honestly reported as ungated
+      // (deferred with a reason) instead of passing on a mesh that may have no skeleton.
+      // Move this to a SkinTokens engine name in the same change that wires the producer.
       engine: 'Tripo',
       view: { kind: 'gallery', field: 'mesh', candidates: 3 },
       produce: (e: LabEntity) => ({
         data: { ...gallerySeed('mesh', 3) },
         ueAssets: [`/Game/Bestiary/${slug(e.name)}/SK_${slug(e.name)}`],
       }),
-      accept: selected('mesh', 'A rigged mesh candidate is selected'),
+      // Was `selected('mesh', …)`, which grades ASSET PRESENCE: any real `.glb` passed,
+      // so a STATIC mesh satisfied a step whose own label claims a rigged one and nothing
+      // ever checked for a skeleton. `riggedMeshSelected` keeps the whole gallery contract
+      // (stub/unresolved/swatch verdicts unchanged) and adds the Tier-1 rig gate on top —
+      // an ungated mesh now DEFERS with a reason instead of passing.
+      accept: riggedMeshSelected('mesh', 'A rigged mesh candidate is selected'),
     },
 
     // ── 11. Test Gate ─────────────────────────────────────────────────────────
