@@ -1,18 +1,24 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { getDb } from '@/lib/db';
-import { distillStyleDna } from '@/lib/visual-gen/style-dna';
 import { parseVisionImage } from '@/lib/visual-gen/input-gate';
-import { saveStyleDna, getActiveStyleDna, listStyleDna, setActiveStyleDna } from '@/lib/visual-gen/style-dna-db';
+import { getActiveStyleDna, listStyleDna, setActiveStyleDna } from '@/lib/visual-gen/style-dna-db';
+import { startStyleDnaJob } from '@/lib/visual-gen/style-dna-job-store';
 
 /**
  * Style DNA — distill a mood board once, inject everywhere.
  *
- * POST { images: dataUrl[], name? } → VLM-distill the board into a StyleDna profile,
- *   save it as the active one. A distiller that cannot run is an error with the
- *   reason, never a silently empty profile.
+ * POST { images: dataUrl[], name? } → STARTS a distillation and returns 202 { jobId };
+ *   poll GET /api/visual-gen/style-dna/status?jobId=... A distiller that cannot run is an
+ *   error with the reason, never a silently empty profile.
  * GET → { active, profiles }.
  * PATCH { id } → make that profile active.
+ *
+ * Distilling is a job because it is a vision call over N board images, and the chokepoint's
+ * ceiling is deliberately 15 minutes (one machine, one operator, waiting beats racing). The
+ * panel therefore cannot await it — a fifteen-minute spinner with no cancel is worse than the
+ * timeout it replaced. `view-gate` is the in-family precedent for this shape. The two fast
+ * operations below stay synchronous: they touch SQLite and nothing else.
  *
  * Generation routes read the active profile (e.g. /api/leonardo `applyStyleDna`).
  */
@@ -23,17 +29,15 @@ export async function POST(request: NextRequest) {
     const parsed = body.images.map(parseVisionImage);
     if (parsed.some((p) => p === null)) return apiError('every image must be a base64 image data URL', 400);
 
-    const result = await distillStyleDna(parsed.map((p) => p!));
-    if (!result.ok) return apiError(`style distillation failed: ${result.error}`, 502);
-
-    const profile = saveStyleDna(getDb(), {
-      name: body.name?.trim() || `Style ${new Date().toISOString().slice(0, 10)}`,
-      dna: result.dna,
-      sourceImageCount: parsed.length,
+    // Validation happens BEFORE the job starts, so a typo comes back as a 400 the caller can
+    // act on rather than as a job that fails a minute later.
+    const jobId = startStyleDnaJob({
+      images: parsed.map((p) => p!),
+      ...(body.name?.trim() ? { name: body.name.trim() } : {}),
     });
-    return apiSuccess({ profile, raw: result.raw });
+    return apiSuccess({ jobId, images: parsed.length }, 202);
   } catch (e) {
-    return apiError(e instanceof Error ? e.message : 'style-dna distillation failed', 500);
+    return apiError(e instanceof Error ? e.message : 'failed to start style-dna distillation', 500);
   }
 }
 

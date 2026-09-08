@@ -83,6 +83,10 @@ export const UI_TIMEOUTS = {
   batchWatchdog: 3000,
   /** Polling interval for CLI-driven checklist completions. */
   pollInterval: 3000,
+  /** Interval the forge polls a style-DNA distillation job. Distilling is N vision calls in
+   *  series behind a deliberately generous ceiling, so this is a minutes-long watch, not a
+   *  seconds-long one — a tight poll would only add load to the GPU doing the work. */
+  styleDnaPoll: 4000,
   /** TTL of the shared /api/feature-matrix/all-statuses cache (useFeatureStatuses). */
   featureStatusTtl: 5000,
   /** TTL of the shared /api/feature-matrix/aggregate cache (useModuleAggregates). */

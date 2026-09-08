@@ -74,10 +74,16 @@ describe('StyleDnaPanel', () => {
     fireEvent.change(screen.getByTestId('mood-board-input'), { target: { files: [file] } });
     await screen.findByAltText('mood board image 1'); // FileReader finished
 
-    fetchMock.mockResolvedValueOnce(envelope({ profile: PROFILE }));
+    // Distilling is a JOB now: POST returns 202 { jobId } and the panel polls the status
+    // route. The panel must never await the distillation itself — the vision ceiling is 15
+    // minutes and that would be a spinner with no cancel.
+    fetchMock.mockResolvedValueOnce(envelope({ jobId: 'styledna-1', images: 1 }));
+    fetchMock.mockResolvedValueOnce(envelope({ status: 'done', imageCount: 1, profile: PROFILE }));
     fireEvent.click(screen.getByRole('button', { name: /distill style from 1 image/i }));
 
     await waitFor(() => expect(useForgeStore.getState().activeStyleDna?.name).toBe('Alice gothic'));
+    const polled = fetchMock.mock.calls.find((c) => String(c[0]).includes('/style-dna/status?jobId=styledna-1'));
+    expect(polled).toBeTruthy();
     const post = fetchMock.mock.calls.find((c) => (c[1] as RequestInit | undefined)?.method === 'POST');
     expect(post).toBeTruthy();
     const body = JSON.parse((post![1] as RequestInit).body as string) as { images: string[] };
@@ -92,14 +98,55 @@ describe('StyleDnaPanel', () => {
     fireEvent.change(screen.getByTestId('mood-board-input'), { target: { files: [file] } });
     await screen.findByAltText('mood board image 1');
 
-    fetchMock.mockResolvedValueOnce({
-      ok: false,
-      status: 502,
-      json: async () => ({ success: false, error: 'style distillation failed: QWEN_API_KEY not set' }),
-    });
+    // The failure now arrives on the POLL, not the POST — the job started fine and the
+    // distiller failed a minute later. The reason must still reach the panel.
+    fetchMock.mockResolvedValueOnce(envelope({ jobId: 'styledna-2', images: 1 }));
+    fetchMock.mockResolvedValueOnce(
+      envelope({ status: 'error', imageCount: 1, error: 'style distillation failed: QWEN_API_KEY not set' }),
+    );
     fireEvent.click(screen.getByRole('button', { name: /distill style from 1 image/i }));
 
     const alert = await screen.findByRole('alert');
     expect(alert.textContent).toContain('QWEN_API_KEY');
+  });
+
+  it('a running job offers a STOP, and says plainly that the server keeps working', async () => {
+    // The whole point of the job rail: the operator is never trapped watching a spinner they
+    // cannot leave. Stopping ends the POLL — it cannot reach into the server and cancel the
+    // work, and the copy must not pretend otherwise.
+    render(<StyleDnaPanel />);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    const file = new File(['img-bytes'], 'board.png', { type: 'image/png' });
+    fireEvent.change(screen.getByTestId('mood-board-input'), { target: { files: [file] } });
+    await screen.findByAltText('mood board image 1');
+
+    fetchMock.mockResolvedValueOnce(envelope({ jobId: 'styledna-3', images: 1 }));
+    fetchMock.mockResolvedValue(envelope({ status: 'running', imageCount: 1, elapsedMs: 4000 }));
+    fireEvent.click(screen.getByRole('button', { name: /distill style from 1 image/i }));
+
+    const stop = await screen.findByRole('button', { name: /stop watching/i });
+    expect(document.body.textContent).toMatch(/keeps running on the server/i);
+
+    fireEvent.click(stop);
+    await waitFor(() => expect(screen.queryByRole('button', { name: /stop watching/i })).toBeNull());
+  });
+
+  it('a job the server has forgotten stops the poll instead of spinning forever', async () => {
+    render(<StyleDnaPanel />);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    const file = new File(['img-bytes'], 'board.png', { type: 'image/png' });
+    fireEvent.change(screen.getByTestId('mood-board-input'), { target: { files: [file] } });
+    await screen.findByAltText('mood board image 1');
+
+    fetchMock.mockResolvedValueOnce(envelope({ jobId: 'styledna-4', images: 1 }));
+    fetchMock.mockResolvedValueOnce({
+      ok: false, status: 404,
+      json: async () => ({ success: false, error: 'style-dna job not found' }),
+    });
+    fireEvent.click(screen.getByRole('button', { name: /distill style from 1 image/i }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toMatch(/not found/i);
+    expect(screen.queryByRole('button', { name: /stop watching/i })).toBeNull();
   });
 });

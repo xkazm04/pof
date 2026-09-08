@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, ChevronDown, ChevronRight, Dna, ImagePlus, Loader2, X } from 'lucide-react';
 import { tryApiFetch } from '@/lib/api-utils';
-import { formatBytes } from '@/lib/format';
+import { formatBytes, formatDuration } from '@/lib/format';
+import { UI_TIMEOUTS } from '@/lib/constants';
 import type { StyleDnaProfile } from '@/lib/visual-gen/style-dna-db';
 import { STYLE_DNA_REACH, type StyleDna } from '@/lib/visual-gen/style-dna';
 import { InlineErrorRetry } from '../../shared/InlineErrorRetry';
@@ -68,6 +69,10 @@ export function StyleDnaPanel() {
   const [board, setBoard] = useState<string[]>([]);
   const [name, setName] = useState('');
   const [distilling, setDistilling] = useState(false);
+  /** The job being watched, and how long it has been going — a minutes-long wait must SHOW
+   *  that it is progressing, or it is indistinguishable from a hang. */
+  const [watching, setWatching] = useState<{ jobId: string; elapsedMs: number } | null>(null);
+  const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const [error, setError] = useState<{ message: string; target: RetryTarget } | null>(null);
   /** Intake refusals (unreadable / oversize / over-cap files). No retry — nothing to repeat. */
   const [notice, setNotice] = useState<string | null>(null);
@@ -76,8 +81,22 @@ export function StyleDnaPanel() {
   const mounted = useRef(true);
   useEffect(() => {
     mounted.current = true;
-    return () => { mounted.current = false; };
+    return () => {
+      mounted.current = false;
+      // The poll must not outlive the panel. Unlike the forge's generation queue — where a
+      // poller deliberately survives the module so a long render is not lost — a distillation
+      // writes its profile server-side regardless, so there is nothing here to keep alive.
+      if (pollTimer.current) clearInterval(pollTimer.current);
+    };
   }, []);
+
+  /** Stop WATCHING. The distillation itself keeps running on the server; this cannot reach in
+   *  and cancel it, and the button's copy says so rather than implying otherwise. */
+  const stopWatching = () => {
+    if (pollTimer.current) { clearInterval(pollTimer.current); pollTimer.current = null; }
+    setWatching(null);
+    setDistilling(false);
+  };
 
   const load = async () => {
     const res = await tryApiFetch<{ active: StyleDnaProfile | null; profiles: StyleDnaProfile[] }>(
@@ -138,21 +157,70 @@ export function StyleDnaPanel() {
     setNotice(refused.length ? refused.join(' ') : null);
   };
 
+  /** One poll of a running job. Returns true when the job reached a terminal state. */
+  const pollOnce = async (jobId: string): Promise<boolean> => {
+    const res = await tryApiFetch<{
+      status: 'running' | 'done' | 'error';
+      imageCount: number;
+      elapsedMs?: number;
+      profile?: StyleDnaProfile;
+      error?: string;
+    }>(`/api/visual-gen/style-dna/status?jobId=${encodeURIComponent(jobId)}`);
+    if (!mounted.current) return true;
+
+    // A poll that cannot reach the job is terminal, not transient. A 404 here means the
+    // server forgot the job (a restart), and retrying forever would be the spinner-with-no-end
+    // this whole rail exists to remove.
+    if (!res.ok) {
+      stopWatching();
+      setError({ message: `Lost track of the distillation: ${res.error}`, target: { kind: 'distill' } });
+      return true;
+    }
+    if (res.data.status === 'running') {
+      setWatching({ jobId, elapsedMs: res.data.elapsedMs ?? 0 });
+      return false;
+    }
+    stopWatching();
+    if (res.data.status === 'error' || !res.data.profile) {
+      setError({ message: res.data.error ?? 'the distillation ended with no profile and no reason', target: { kind: 'distill' } });
+      return true;
+    }
+    const profile = res.data.profile;
+    setBoard([]);
+    setName('');
+    setActiveProfile(profile);
+    setProfiles((p) => [profile, ...p.map((x) => ({ ...x, active: false }))]);
+    return true;
+  };
+
+  /**
+   * Start a distillation and WATCH it. The panel never awaits the work: it is a vision call
+   * over every board image behind a deliberately generous ceiling (15 min), so awaiting it
+   * would be a spinner nobody can leave. This is the same 202+jobId rail `view-gate` and the
+   * generation queue already run on.
+   */
   const distill = async () => {
     setDistilling(true);
     setError(null);
-    const res = await tryApiFetch<{ profile: StyleDnaProfile }>('/api/visual-gen/style-dna', {
+    const res = await tryApiFetch<{ jobId: string; images: number }>('/api/visual-gen/style-dna', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ images: board, name: name.trim() || undefined }),
     });
     if (!mounted.current) return;
-    setDistilling(false);
-    if (!res.ok) { setError({ message: res.error, target: { kind: 'distill' } }); return; }
-    setBoard([]);
-    setName('');
-    setActiveProfile(res.data.profile);
-    setProfiles((p) => [res.data.profile, ...p.map((x) => ({ ...x, active: false }))]);
+    if (!res.ok) { setDistilling(false); setError({ message: res.error, target: { kind: 'distill' } }); return; }
+
+    const { jobId } = res.data;
+    setWatching({ jobId, elapsedMs: 0 });
+    // Poll IMMEDIATELY, then on the interval — a first tick delayed by the full interval
+    // reads as nothing having happened.
+    if (await pollOnce(jobId)) return;
+    if (!mounted.current) return;
+    pollTimer.current = setInterval(() => {
+      void pollOnce(jobId).then((done) => {
+        if (done && pollTimer.current) { clearInterval(pollTimer.current); pollTimer.current = null; }
+      });
+    }, UI_TIMEOUTS.styleDnaPoll);
   };
 
   const activate = async (id: string) => {
@@ -329,6 +397,28 @@ export function StyleDnaPanel() {
               {distilling ? 'Distilling…' : `Distill style${board.length ? ` from ${board.length} image${board.length > 1 ? 's' : ''}` : ''}`}
             </button>
           </div>
+
+          {/* A minutes-long wait must show that it is PROGRESSING and must be leaveable.
+              Without the elapsed clock a slow distillation is indistinguishable from a hang,
+              and without the stop the operator is trapped watching it. */}
+          {watching && (
+            <div
+              className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-[var(--visual-gen)]/30 bg-[var(--visual-gen)]/5"
+              data-testid="style-dna-watch"
+            >
+              <span className="text-2xs text-text-muted">
+                Reading {board.length || 'the'} board image{board.length === 1 ? '' : 's'} —{' '}
+                {formatDuration(watching.elapsedMs)} so far. This keeps running on the server if you look away.
+              </span>
+              <button
+                type="button"
+                onClick={stopWatching}
+                className="shrink-0 px-2 py-1 rounded-md text-2xs border border-border text-text-muted hover:text-text hover:border-[var(--visual-gen)]/50 transition-colors"
+              >
+                Stop watching
+              </button>
+            </div>
+          )}
         </div>
       )}
     </section>
