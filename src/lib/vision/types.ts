@@ -15,9 +15,30 @@ export type VisionCapability = 'recognize';
 /** Every provider the router can reach. A caller may steer among these; it may not add one. */
 export type VisionProviderId = 'ollama' | 'qwen-cloud' | 'gemini';
 
+/**
+ * How hard the provider should think before answering.
+ *
+ * These three are the vocabulary because they are what the live API actually accepts —
+ * probed against `gemini-3.8-flash` on 2026-09-08, where `none` / `minimal` / `max` are all
+ * rejected with `Invalid value at generation_config.thinking_config.thinking_level`. Thought
+ * spend scales monotonically across them (48 / 115 / 176 thought tokens on a fixed task), so
+ * this is a real cost axis, not a label.
+ *
+ * It is deliberately a SHARED vocabulary rather than a per-vendor passthrough: a caller says
+ * how hard the question is, and each provider maps that onto whatever knob it has. A provider
+ * that cannot serve the level asked for does not silently serve a cheaper one — the answer
+ * reports what was actually served (see `RoutedVisionAnswer.effortDowngraded`).
+ */
+export type VisionEffort = 'low' | 'medium' | 'high';
+
+/** Ascending — the single source of effort order. */
+export const EFFORT_ORDER: readonly VisionEffort[] = ['low', 'medium', 'high'] as const;
+
 export interface VisionRequest {
   images: VisionImage[];
   prompt: string;
+  /** How hard to think. Omitted ⇒ the provider's own default. */
+  effort?: VisionEffort;
 }
 
 /**
@@ -45,6 +66,10 @@ export interface Elimination {
 export interface RoutedVisionAnswer extends VisionAnswer {
   provider: VisionProviderId;
   trail: Elimination[];
+  /** The effort level actually served; undefined when the caller asked for none. */
+  effortServed?: VisionEffort;
+  /** True when the served effort differs from the one requested. Never silent. */
+  effortDowngraded: boolean;
 }
 
 export interface VisionProvider {
@@ -60,5 +85,11 @@ export interface VisionProvider {
    * different question, with nothing anywhere reporting a problem.
    */
   cannotHonour?(req: VisionRequest): string | null;
+  /**
+   * The effort levels this provider can actually serve, ascending. Omitted ⇒ it has no
+   * effort knob at all, and an effort request against it is reported as a downgrade rather
+   * than quietly ignored — an ignored field is a routing constraint, not a preference.
+   */
+  effortLevels?: readonly VisionEffort[];
   recognize(req: VisionRequest): Promise<VisionAnswer>;
 }

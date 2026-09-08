@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { ollamaProvider } from '@/lib/vision/providers/ollama';
+import { geminiProvider, geminiThinkingConfig } from '@/lib/vision/providers/gemini';
 import { makeRoutedVision, makeRoutedVisionText } from '@/lib/vision/seam';
 import type { VisionProvider } from '@/lib/vision/types';
 
@@ -82,5 +83,39 @@ describe('makeRoutedVisionText — the text-only drop-in for makeQwenVision()', 
     const vision = makeRoutedVisionText({ providers, plan: ['ollama'] });
     const text = await vision(req.images, req.prompt);
     expect(text).toBe('{"score":8}');
+  });
+});
+
+describe('effort maps onto each provider\'s real knob, and the map is declared not assumed', () => {
+  it('gemini declares the three levels its API actually accepts', () => {
+    // Probed live against gemini-3.8-flash on 2026-09-08: `none` / `minimal` / `max` are
+    // rejected with "Invalid value at generation_config.thinking_config.thinking_level".
+    expect(geminiProvider().effortLevels).toEqual(['low', 'medium', 'high']);
+  });
+
+  it('translates an effort level into the thinkingConfig the API takes', () => {
+    expect(geminiThinkingConfig('high')).toEqual({ thinkingLevel: 'high' });
+    expect(geminiThinkingConfig('low')).toEqual({ thinkingLevel: 'low' });
+    expect(geminiThinkingConfig(undefined)).toBeUndefined();
+  });
+
+  it('ollama declares only the two its boolean `think` knob can express', () => {
+    // The daemon has no three-level dial — `think` is a boolean. Declaring low+high is the
+    // honest shape: a caller asking for `medium` gets `low` and is TOLD it was downgraded,
+    // rather than having the request quietly ignored.
+    expect(ollamaProvider({ host: 'http://x' }).effortLevels).toEqual(['low', 'high']);
+  });
+
+  it('sends think:true only when the served effort is high', async () => {
+    const bodies: Record<string, unknown>[] = [];
+    const fetchImpl = (async (_u: string, init: { body: string }) => {
+      bodies.push(JSON.parse(init.body));
+      return { ok: true, json: async () => ({ model: 'm', message: { content: 'x' } }) };
+    }) as unknown as typeof fetch;
+    const p = ollamaProvider({ host: 'http://x', fetchImpl });
+    await p.recognize({ ...req, effort: 'high' });
+    await p.recognize({ ...req, effort: 'low' });
+    expect(bodies[0].think).toBe(true);
+    expect(bodies[1].think).toBe(false);
   });
 });

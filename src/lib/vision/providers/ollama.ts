@@ -40,6 +40,11 @@ export function ollamaProvider(opts: OllamaOptions = {}): VisionProvider {
   return {
     id: 'ollama',
     capabilities: ['recognize'],
+    // The daemon's dial is a BOOLEAN (`think`), not a three-step level, so only two of the
+    // shared vocabulary's levels are honestly expressible here. Declaring both — rather than
+    // claiming all three or none — is what lets the router TELL a caller who asked for
+    // `medium` that it was served `low`, instead of the request being quietly ignored.
+    effortLevels: ['low', 'high'],
     isConfigured: () => host !== '',
 
     async recognize(req: VisionRequest): Promise<VisionAnswer> {
@@ -49,7 +54,9 @@ export function ollamaProvider(opts: OllamaOptions = {}): VisionProvider {
         body: JSON.stringify({
           model,
           stream: false,
-          think: false,
+          // Reasoning VL models otherwise spend minutes thinking about a frame description,
+          // so OFF is the default and `high` is the opt-in.
+          think: req.effort === 'high',
           messages: [{ role: 'user', content: req.prompt, images: req.images.map((i) => i.base64) }],
         }),
       });

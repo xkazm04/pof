@@ -16,14 +16,17 @@ import { writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
-const { mockGenerate, mockRecord, mockEmit } = vi.hoisted(() => ({
-  mockGenerate: vi.fn(),
+const { mockRecognize, mockRecord, mockEmit } = vi.hoisted(() => ({
+  mockRecognize: vi.fn(),
   mockRecord: vi.fn(),
   mockEmit: vi.fn(),
 }));
 
-vi.mock('@google/genai', () => ({
-  GoogleGenAI: class { models = { generateContent: mockGenerate }; },
+// Mocked at the CHOKEPOINT: the route asks `@/lib/vision` for the `recognize` capability
+// and the plan picks the eye, so a vendor-SDK mock no longer intercepts anything.
+vi.mock('@/lib/vision/router', async (orig) => ({
+  ...(await orig<typeof import('@/lib/vision/router')>()),
+  recognize: mockRecognize,
 }));
 vi.mock('@/lib/visual-verification-db', () => ({ recordVisualVerification: mockRecord }));
 vi.mock('@/lib/event-bus', () => ({ eventBus: { emit: mockEmit } }));
@@ -44,7 +47,10 @@ const routeFetch: typeof fetch = async (url, init) =>
 const ENV = { POF_APP_ORIGIN: 'http://127.0.0.1:3001' };
 
 function geminiReturns(verdict: unknown) {
-  mockGenerate.mockResolvedValueOnce({ candidates: [{ content: { parts: [{ text: JSON.stringify(verdict) }] } }] });
+  mockRecognize.mockResolvedValueOnce({
+    text: JSON.stringify(verdict), model: 'gemini-3.8-flash', attribution: 'answered',
+    fellBackFrom: [], provider: 'gemini', trail: [], effortDowngraded: false,
+  });
 }
 
 beforeEach(() => {
@@ -60,7 +66,7 @@ describe('postVerifyVisual ↔ /api/verify/visual (the joint)', () => {
   it('a passing judge produces a pass — the call actually reaches the model', async () => {
     geminiReturns({ humanoidVisible: true, tPosed: false, distinct: true, verdict: 'pass', notes: 'idle pose' });
     const verdict = await postVerifyVisual(ENV, 'exp-1', routeFetch)(shot, 'character');
-    expect(mockGenerate).toHaveBeenCalledTimes(1);
+    expect(mockRecognize).toHaveBeenCalledTimes(1);
     expect(verdict.status).toBe('pass');
     expect(verdict.detail).toMatch(/idle pose/);
   });
@@ -84,29 +90,38 @@ describe('postVerifyVisual ↔ /api/verify/visual (the joint)', () => {
   it('honours the chosen mode end-to-end — the route runs THAT check, not always character', async () => {
     geminiReturns({ lit: true, shadowed: true, verdict: 'pass', notes: 'scene lit' });
     const verdict = await postVerifyVisual(ENV, 'exp-3', routeFetch)(shot, 'lighting');
-    const promptText = JSON.stringify(mockGenerate.mock.calls[0][0]).toLowerCase();
+    const promptText = JSON.stringify(mockRecognize.mock.calls[0][0].prompt).toLowerCase();
     expect(promptText).toContain('un-lit');
     expect(promptText).not.toContain('t-pose');
     expect(verdict.detail).toMatch(/^visual lighting:/);
   });
 
-  it('a missing judge key is DEFERRED with the reason, never a fail', async () => {
-    delete process.env.GEMINI_API_KEY;
+  it('NO CONFIGURED EYE is DEFERRED naming every eye that dropped out, never a fail', async () => {
+    // Was "a missing judge key ... /GEMINI_API_KEY/". Since the route went through the
+    // vision chokepoint the unavailability is the ROUTER's finding, so the reason names the
+    // whole trail rather than one env var — strictly more actionable, and it no longer
+    // implies Gemini is the only eye that could have served.
+    mockRecognize.mockRejectedValueOnce(
+      new Error('no vision provider could serve this request — ollama: not-configured; gemini: not-configured'),
+    );
     const verdict = await postVerifyVisual(ENV, 'exp-4', routeFetch)(shot, 'character');
     expect(verdict.status).toBe('deferred');
-    expect(verdict.detail).toMatch(/GEMINI_API_KEY/);
+    expect(verdict.detail).toMatch(/ollama: not-configured; gemini: not-configured/);
     expect(verdict.detail).toContain(shot);
   });
 
   it('a judge API error is DEFERRED with the reason', async () => {
-    mockGenerate.mockRejectedValueOnce(new Error('502 upstream exploded'));
+    mockRecognize.mockRejectedValueOnce(new Error('502 upstream exploded'));
     const verdict = await postVerifyVisual(ENV, 'exp-5', routeFetch)(shot, 'character');
     expect(verdict.status).toBe('deferred');
     expect(verdict.detail).toMatch(/upstream exploded/);
   });
 
   it('an unparseable judge reply is DEFERRED, not a fail', async () => {
-    mockGenerate.mockResolvedValueOnce({ candidates: [{ content: { parts: [{ text: 'not json at all' }] } }] });
+    mockRecognize.mockResolvedValueOnce({
+    text: 'not json at all', model: 'm', attribution: 'answered', fellBackFrom: [],
+    provider: 'gemini', trail: [], effortDowngraded: false,
+  });
     const verdict = await postVerifyVisual(ENV, 'exp-6', routeFetch)(shot, 'character');
     expect(verdict.status).toBe('deferred');
   });
@@ -115,7 +130,7 @@ describe('postVerifyVisual ↔ /api/verify/visual (the joint)', () => {
     const verdict = await postVerifyVisual(ENV, 'exp-7', routeFetch)(missingShot, 'character');
     expect(verdict.status).toBe('deferred');
     expect(verdict.detail).toMatch(/Screenshot not found/);
-    expect(mockGenerate).not.toHaveBeenCalled();
+    expect(mockRecognize).not.toHaveBeenCalled();
   });
 
   it('a transport failure is DEFERRED with the reason', async () => {

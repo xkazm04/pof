@@ -146,3 +146,52 @@ describe('vision router — a provider that cannot honour THIS request is elimin
     ]);
   });
 });
+
+describe('vision router — effort is requested, and what was SERVED is reported', () => {
+  it('passes the requested effort to the provider', async () => {
+    let seen: string | undefined;
+    const provider: VisionProvider = {
+      id: 'gemini', capabilities: ['recognize'], isConfigured: () => true,
+      effortLevels: ['low', 'medium', 'high'],
+      recognize: async (r) => { seen = r.effort; return answer('ok', 'gemini-3.8-flash'); },
+    };
+    const res = await recognize({ ...req, effort: 'high' }, { providers: [provider], plan: ['gemini'] });
+    expect(seen).toBe('high');
+    expect(res.effortServed).toBe('high');
+  });
+
+  it('reports the DOWNGRADE when a provider cannot serve the requested effort', async () => {
+    // The silent near-miss this prevents: a caller asks for high effort because the task is
+    // hard, the provider quietly serves its only level, and the answer looks fine while
+    // being the cheap answer to a question that needed the expensive one.
+    const provider: VisionProvider = {
+      id: 'ollama', capabilities: ['recognize'], isConfigured: () => true,
+      effortLevels: ['low'],
+      recognize: async () => answer('ok', 'qwen3.8:27b'),
+    };
+    const res = await recognize({ ...req, effort: 'high' }, { providers: [provider], plan: ['ollama'] });
+    expect(res.effortServed).toBe('low');
+    expect(res.effortDowngraded).toBe(true);
+  });
+
+  it('does not report a downgrade when the effort was served as asked', async () => {
+    const provider: VisionProvider = {
+      id: 'gemini', capabilities: ['recognize'], isConfigured: () => true,
+      effortLevels: ['low', 'medium', 'high'],
+      recognize: async () => answer('ok', 'gemini-3.8-flash'),
+    };
+    const res = await recognize({ ...req, effort: 'medium' }, { providers: [provider], plan: ['gemini'] });
+    expect(res.effortDowngraded).toBe(false);
+  });
+
+  it('serves the provider default when no effort is requested', async () => {
+    const provider: VisionProvider = {
+      id: 'gemini', capabilities: ['recognize'], isConfigured: () => true,
+      effortLevels: ['low', 'medium', 'high'],
+      recognize: async () => answer('ok', 'gemini-3.8-flash'),
+    };
+    const res = await recognize(req, { providers: [provider], plan: ['gemini'] });
+    expect(res.effortServed).toBeUndefined();
+    expect(res.effortDowngraded).toBe(false);
+  });
+});

@@ -196,3 +196,73 @@ unless `OLLAMA_HOST` is set, so on a machine that has not opted in the plan skip
 skip lands in the trail, and behaviour is byte-identical to today. That is what makes the
 policy safe to land before the arena has run: setting the env var is the experiment, and
 nothing silently changes underneath a gate that has not been measured.
+
+---
+
+## Step 2, use case 1: `api/verify/visual` — MIGRATED, and the effort axis MEASURED
+
+### Vendor facts (probed live, 2026-09-08, project key)
+
+- The account can see **`gemini-3.8-flash`** (1M in / 65k out, thinking supported). The app's
+  standing pin was **`gemini-2.5-flash`**, several generations behind — a stale pin is the
+  registry's named failure mode ("a pin has a lifetime… so 'this pin is three years old' is a
+  visible state rather than a discovery made when the endpoint starts returning errors").
+  The RUNTIME pin is deliberately NOT bumped here: moving it is an arena decision, not a probe
+  decision. The **authoring** role does use the newest Flash, per the operator's method.
+- `thinkingLevel` accepts exactly `low` | `medium` | `high`. `none`, `minimal`, `max` and
+  `unspecified` are all rejected by the endpoint. **The SDK's `ThinkingLevel` enum is BROADER
+  than the endpoint** — it also declares `MINIMAL` and `THINKING_LEVEL_UNSPECIFIED`, neither of
+  which the API accepts. A textbook instance of the registry's rule that enforcement is a
+  property of the ENDPOINT and must never be inherited from a type or a model name.
+- `thinkingBudget` (an integer cap) is also accepted but produced **zero** thought tokens where
+  `thinkingLevel` produced 77 on the same probe. A cap is not an instruction; we send the level.
+
+### The measurement, and it splits cleanly in two
+
+**Verdict tasks: effort is INERT.** 18 calls (2 modes x 3 levels x 3 repeats), temperature 0,
+on a real dark-arena frame chosen because "dim but lit" vs "black, unlit failure" is genuinely
+ambiguous. Every level produced an IDENTICAL verdict, every arm was deterministic across its
+repeats, and latency did not rise monotonically — while high burned 4.4–6.2x the thought tokens.
+Paying for thinking on a four-boolean verdict buys nothing measurable.
+
+**Authoring tasks: effort PAYS.** Same frame, one goal, one run per level. Low spent 0 thought
+tokens and produced a generic 342-char prompt. High spent 1106 and produced one that names the
+concrete discriminator (flat `#000000`), tests it RELATIVE to adjacent surfaces instead of
+against an absolute darkness threshold, adds a location field so a FAIL is actionable, states
+both branches of the decision rule inside the prompt, and carves out black materials that still
+hold specular highlights. Low found none of that. **Sample: 3 calls — indicative, not settled,
+and labelled so in the code.**
+
+This is the registry's `effort-calibration` reproduced in the field ("more reasoning effort is
+not automatically better… under a hard output cap, effort buys nothing at all") — a verdict of
+four booleans IS output-capped; authoring a prompt is not.
+
+**The operational rule, and it happens to be the cheap direction:** think HARD once at design
+time (a few calls per use case, authoring the prompt), think LOW at runtime (a call per asset,
+forever). Buying the rare call to avoid the frequent one is exactly the trade this whole
+direction exists to make.
+
+### What shipped
+
+- `api/verify/visual` goes through the chokepoint; it names no vendor. `effort` is a validated
+  request parameter (an unknown level is a 400, never a silent default), and the response now
+  carries `provenance` — which eye answered, at which effort, whether that effort was
+  downgraded, and the elimination trail.
+- The no-eye case is now a 503 naming **every** eye that dropped out, instead of one env var
+  that may not even belong to the eye the plan wanted.
+- Effort is a routed, first-class field: providers DECLARE the levels they can serve
+  (`gemini` all three; `ollama` only `low`/`high`, because its knob is a boolean `think`), and a
+  request the provider cannot honour is reported as `effortDowngraded`, never quietly ignored.
+- The check prompts moved to `src/lib/vision/check-prompts.ts` so the route and the arena
+  import the SAME string — "one prompt, every candidate" is only enforceable if both sides read
+  one artifact.
+- Two arena harnesses, both declaring spend, both writing nothing production reads and pinning
+  nothing: `scripts/vision-arena/effort-probe.ts` (grade arms on the frozen prompt) and
+  `scripts/vision-arena/author-prompt.ts` (stage 0 — have Flash author the prompt).
+
+### Still open on this use case
+
+The eyes have NOT yet been raced against each other on these frames — only the effort axis was
+measured, all arms Gemini. Racing `ollama` (once `OLLAMA_HOST` is set) against `qwen-cloud` and
+`gemini` on the frozen prompt is the next run, and it is what would justify moving the plan's
+first entry from a permission to a measurement.

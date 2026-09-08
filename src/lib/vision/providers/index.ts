@@ -8,21 +8,10 @@
  * has been MEASURED for these providers yet. Declaring one on suspicion would be an opinion
  * dressed as evidence, which is exactly what the arena exists to replace.
  */
-import { makeGeminiVisionAttributed } from '@/lib/anim-critique/gemini';
 import { makeQwenVisionAttributed } from '@/lib/anim-critique/qwen';
 import type { VisionProvider } from '../types';
 import { ollamaProvider } from './ollama';
-
-/** Gemini — a metered eye. Configured when a Google key is present. */
-export function geminiProvider(): VisionProvider {
-  const call = makeGeminiVisionAttributed();
-  return {
-    id: 'gemini',
-    capabilities: ['recognize'],
-    isConfigured: () => Boolean(process.env.GEMINI_API_KEY ?? process.env.GOOGLE_AI_API_KEY),
-    recognize: (req) => call(req.images, req.prompt),
-  };
-}
+import { geminiProvider } from './gemini';
 
 /**
  * Qwen via Alibaba DashScope — a metered CLOUD eye, not a local one. Named `qwen-cloud`
@@ -44,4 +33,4 @@ export function defaultProviders(): VisionProvider[] {
   return [ollamaProvider(), qwenCloudProvider(), geminiProvider()];
 }
 
-export { ollamaProvider };
+export { ollamaProvider, geminiProvider };

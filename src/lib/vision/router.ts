@@ -12,8 +12,10 @@
  * the caller two ways: on the answer when a later provider served, and in the thrown error
  * when the whole chain came up empty.
  */
+import { EFFORT_ORDER } from './types';
 import type {
   Elimination,
+  VisionEffort,
   VisionCapability,
   VisionProvider,
   VisionProviderId,
@@ -117,9 +119,10 @@ export async function recognize(
       trail.push(eliminate(id, 'unsupported-request', blocked));
       continue;
     }
+    const effortServed = resolveEffort(req.effort, provider.effortLevels);
     let answer;
     try {
-      answer = await provider.recognize(req);
+      answer = await provider.recognize({ ...req, ...(effortServed ? { effort: effortServed } : {}) });
     } catch (e) {
       trail.push(eliminate(id, 'call-failed', e instanceof Error ? e.message : String(e)));
       continue;
@@ -131,10 +134,39 @@ export async function recognize(
       trail.push(eliminate(id, 'call-failed', 'returned an empty answer (read as a refusal)'));
       continue;
     }
-    return { ...answer, provider: id, trail };
+    return {
+      ...answer,
+      provider: id,
+      trail,
+      ...(effortServed ? { effortServed } : {}),
+      effortDowngraded: req.effort !== undefined && effortServed !== req.effort,
+    };
   }
 
   throw new Error(`no vision provider could serve this request — ${describeTrail(trail)}`);
+}
+
+/**
+ * The effort a provider will actually serve for a requested level. Pure.
+ *
+ * Picks the highest level the provider supports that does not EXCEED the request (asking for
+ * `high` on a provider that only has `low` gets `low`, not a surprise bill); if the provider
+ * cannot go that low either, it serves its cheapest. Returns undefined when the caller asked
+ * for nothing, or when the provider has no effort knob at all — in which case the router
+ * still reports the mismatch rather than letting an ignored field pass for an honoured one.
+ */
+export function resolveEffort(
+  requested: VisionEffort | undefined,
+  supported: readonly VisionEffort[] | undefined,
+): VisionEffort | undefined {
+  if (!requested || !supported || supported.length === 0) return undefined;
+  const wanted = EFFORT_ORDER.indexOf(requested);
+  const atOrBelow = supported.filter((l) => EFFORT_ORDER.indexOf(l) <= wanted);
+  const pool = atOrBelow.length > 0 ? atOrBelow : supported;
+  return pool.reduce((best, l) =>
+    EFFORT_ORDER.indexOf(l) > EFFORT_ORDER.indexOf(best) ? l : best,
+    pool[0],
+  );
 }
 
 /** The trail as one line, for the error a caller actually reads. */

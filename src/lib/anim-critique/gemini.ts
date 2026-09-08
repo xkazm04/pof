@@ -4,14 +4,30 @@
  * the I/O seam `critiqueAnimation` injects — not unit-tested (live API), same as
  * mesh-critique's spawn seam. Reuses the @google/genai client the visual-verify route uses.
  */
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 import type { VisionImage } from './critique';
 import type { VisionAnswer } from './vision';
+
+/** Gemini's thinking dial. `low` | `medium` | `high` are the ONLY values the ENDPOINT
+ *  accepts — probed 2026-09-08; see `@/lib/vision/providers/gemini` for the measurements.
+ *  Note the SDK's own `ThinkingLevel` enum is BROADER than the endpoint: it also declares
+ *  `MINIMAL` and `THINKING_LEVEL_UNSPECIFIED`, both of which the API rejects with
+ *  `Invalid value at generation_config.thinking_config.thinking_level`. Enforcement is a
+ *  property of the endpoint, never inherited from the type. */
+export type GeminiThinkingLevel = 'low' | 'medium' | 'high';
+
+const THINKING: Record<GeminiThinkingLevel, ThinkingLevel> = {
+  low: ThinkingLevel.LOW,
+  medium: ThinkingLevel.MEDIUM,
+  high: ThinkingLevel.HIGH,
+};
 
 export interface GeminiVisionOptions {
   apiKey?: string;
   /** Override the model; default gemini-2.5-flash (proven with this key), or $GEMINI_CRITIQUE_MODEL. */
   model?: string;
+  /** How hard to think. Omitted ⇒ the model's own default thinking behaviour. */
+  effort?: GeminiThinkingLevel;
 }
 
 /**
@@ -35,7 +51,12 @@ export function makeGeminiVisionAttributed(opts: GeminiVisionOptions = {}) {
     const res = await client.models.generateContent({
       model,
       contents: [{ role: 'user', parts }],
-      config: { temperature: 0.2, maxOutputTokens: 4096, responseMimeType: 'application/json' },
+      config: {
+        temperature: 0.2,
+        maxOutputTokens: 4096,
+        responseMimeType: 'application/json',
+        ...(opts.effort ? { thinkingConfig: { thinkingLevel: THINKING[opts.effort] } } : {}),
+      },
     });
     const text = res.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!text) throw new Error('empty response from Gemini');
