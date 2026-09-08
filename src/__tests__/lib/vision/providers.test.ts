@@ -119,3 +119,56 @@ describe('effort maps onto each provider\'s real knob, and the map is declared n
     expect(bodies[1].think).toBe(false);
   });
 });
+
+describe('ollama call shape — the fields gravitone learned by failure', () => {
+  function capture(responses: unknown[] = [{ ok: true, json: async () => ({ model: 'm', message: { content: 'x' } }) }]) {
+    const bodies: Record<string, unknown>[] = [];
+    let n = 0;
+    const fetchImpl = (async (_u: string, init: { body: string }) => {
+      bodies.push(JSON.parse(init.body));
+      return responses[Math.min(n++, responses.length - 1)];
+    }) as unknown as typeof fetch;
+    return { bodies, fetchImpl };
+  }
+
+  it('pins temperature 0 and a context window — determinism is the whole mechanism', async () => {
+    const { bodies, fetchImpl } = capture();
+    await ollamaProvider({ host: 'http://x', fetchImpl }).recognize(req);
+    expect((bodies[0].options as Record<string, unknown>).temperature).toBe(0);
+    expect((bodies[0].options as Record<string, unknown>).num_ctx).toBe(8192);
+  });
+
+  it('RETRIES WITHOUT `think` on a 400 — a model with no thinking mode rejects the key outright', async () => {
+    // Measured in gravitone's probe.py: the 400 IS the model refusing an unknown key, so the
+    // one honest recovery is to drop it and ask again. Retrying on any other status would be
+    // guessing; a 500 is retried by the transport, and a 401 will fail identically forever.
+    const { bodies, fetchImpl } = capture([
+      { ok: false, status: 400, text: async () => 'unknown key: think' },
+      { ok: true, json: async () => ({ model: 'm', message: { content: 'ok' } }) },
+    ]);
+    const answer = await ollamaProvider({ host: 'http://x', fetchImpl }).recognize({ ...req, effort: 'high' });
+    expect(bodies).toHaveLength(2);
+    expect(bodies[0].think).toBe(true);
+    expect('think' in bodies[1]).toBe(false);
+    expect(answer.text).toBe('ok');
+  });
+
+  it('does NOT retry a non-400 failure — that is the transport\'s job, not a shape problem', async () => {
+    const { bodies, fetchImpl } = capture([{ ok: false, status: 500, text: async () => 'boom' }]);
+    await expect(ollamaProvider({ host: 'http://x', fetchImpl }).recognize(req)).rejects.toThrow(/500/);
+    expect(bodies).toHaveLength(1);
+  });
+
+  it('forwards a JSON schema as `format`, which the local daemon enforces natively', async () => {
+    const { bodies, fetchImpl } = capture();
+    const schema = { type: 'object', properties: { verdict: { type: 'string' } }, required: ['verdict'] };
+    await ollamaProvider({ host: 'http://x', fetchImpl }).recognize({ ...req, schema });
+    expect(bodies[0].format).toEqual(schema);
+  });
+
+  it('omits `format` entirely when no schema was asked for', async () => {
+    const { bodies, fetchImpl } = capture();
+    await ollamaProvider({ host: 'http://x', fetchImpl }).recognize(req);
+    expect('format' in bodies[0]).toBe(false);
+  });
+});

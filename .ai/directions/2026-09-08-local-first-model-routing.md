@@ -266,3 +266,86 @@ The eyes have NOT yet been raced against each other on these frames — only the
 measured, all arms Gemini. Racing `ollama` (once `OLLAMA_HOST` is set) against `qwen-cloud` and
 `gemini` on the frozen prompt is the next run, and it is what would justify moving the plan's
 first entry from a permission to a measurement.
+
+---
+
+## gravitone-gcloud sync (2026-09-08) — config adopted, lessons harvested, one blocker found
+
+### Adopted as-is (nothing new pulled, nothing new configured)
+
+`OLLAMA_HOST=http://127.0.0.1:11434` and `OLLAMA_VISION_MODEL=qwen3.8:27b`, copied verbatim
+from `gravitone-gcloud/.env.local` into PoF's gitignored `.env`. The model was **already
+downloaded** (`ollama list`: qwen3.8:27b, 17.7 GB) — no pull. Env var NAMES already matched on
+both sides, so there was nothing to reconcile: `OLLAMA_HOST` doubles as the provider's "key",
+which is the design PoF had already copied.
+
+**Verified live end to end.** PoF's chokepoint served a real UE frame from the local eye —
+`provider: ollama, model: qwen3.8:27b, trail: []` — and its answer was CORRECT against my own
+reading of the frame (two humanoids, natural poses, distinct by colour).
+
+### THE BLOCKER: the local eye and the game engine cannot share this card
+
+| | gravitone (film frames, no engine) | PoF (this session, UE editor open) |
+|---|---|---|
+| s/frame, qwen3.8:27b | **7.0** | **42–118** |
+
+The model is fully resident (22.3 GB in VRAM, nothing spilled), but the card reads
+**24108 / 24564 MiB — 98% full**, and `UnrealEditor.exe` is running. Generation crawls at
+**1.27 s/token** (73.6 s of eval for 58 output tokens), which is not GPU speed.
+
+This is the registry's coexistence rule landing exactly where it warned it would: *"the
+decisive property is often that it can COEXIST with the generator it grades… A benchmark that
+measures only quality will confidently pick the model you cannot run."* Gravitone never meets
+this because it has no engine; **PoF's entire purpose is driving UE**, and the editor must be
+OPEN for python drains. So local-first for PoF is conditional on the editor's state in a way it
+is not for the sibling repo, and that condition belongs in the plan, not in a footnote.
+
+Not yet measured: the same call with the editor CLOSED. That is the next number to get, and it
+decides whether the local eye is a first-class rung or an editor-closed-only one.
+
+### Fixed in PoF as a direct result
+
+- **A bug this session introduced.** PoF sent `think` on every ollama call. Gravitone's
+  `probe.py` splices it onto the FIRST attempt only and retries WITHOUT it on HTTP 400,
+  because *"models without a thinking mode reject the key outright"*. PoF now does the same,
+  and deliberately does not retry any other status (a 5xx is the transport's problem; a 401
+  fails identically forever).
+- **`options: { temperature: 0, num_ctx: 8192 }`** — PoF set neither. Temperature 0 is the
+  whole determinism mechanism in gravitone (no seed anywhere), measured at 100% enum stability.
+- **`format` (JSON Schema) threaded through `VisionRequest.schema`** and forwarded by the
+  ollama adapter, which enforces it natively. Ranked the single highest-value transplant.
+
+### The measured result that most supports the operator's direction
+
+Gravitone's own bake-off, 5 models x 2 ground-truth frames x 3 repeats: **`qwen3.8:27b` scored
+94% against known truth where `gemini-3.7-flash` scored 81%, at the same seconds per frame** —
+and qwen had the LOWEST agreement with the frontier yardstick of any model that scored well.
+Their methodological punchline: *"Truth and agreement stay in separate columns — the yardstick
+scored 81%, not 100%, so ranking by agreement would have mis-ranked the winner."*
+
+Two cautions that come with it, both recorded by them: the n is **2 truth frames**, and the
+local eye has a measured ceiling — *"prompt adjustments do help the local eye, but it cannot
+carry fidelity grouping; keep the cloud eye for extraction, use qwen at most as a free
+pre-filter."*
+
+### Queued from the harvest, not yet done (ranked)
+
+1. HTTP timeout + bounded retry. **PoF's vision path has no timeout anywhere** — and calls now
+   measured at 118 s, so a hung daemon hangs a route handler indefinitely and the re-route
+   never fires because the call never settles.
+2. An error taxonomy with `dispatched`, so a 401 (fix your key), a dead daemon (start it) and a
+   refusal (try another eye) stop being one `call-failed` string — and so `reroutable` can be
+   narrowed to `refused | rate-limited | no-key` instead of re-routing everything.
+3. `CHECK_SCHEMAS` beside `CHECK_PROMPTS` + one parse door, deleting the three hand-rolled
+   fence-strippers (`verify/visual`, `anim-critique/parse.ts`, and each visual-gen gate).
+4. Spend gate **denominated in metered calls, not dollars** — gravitone's own router disables
+   its dollar estimate for `recognize` because both cloud eyes bill per token; copying the
+   dollar gate would reproduce the bug the comment exists to prevent. PoF already has the
+   durable half (`cli-spend-db.ts`); it needs a `vision` task type, not a new ledger.
+5. `unreachedPlanTops()` — sharper here than in gravitone, because PoF's plan-top is the FREE
+   local eye: it silently going uncalled means every judgement that window left the box.
+6. Two-eye disagreement for anything that gates. Gravitone measured the two eyes disagreeing on
+   the same plate with identical colour readings: *"a single vision model is an opinion, not a
+   measurement."* PoF's `/status` treats single-VLM verdicts as ground truth.
+7. `api/verify/animation` still names vendors in an inline ternary — the last hole in the
+   chokepoint, and it is the route that runs the aesthetic gate.

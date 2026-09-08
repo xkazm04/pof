@@ -39,6 +39,16 @@ export interface VisionRequest {
   prompt: string;
   /** How hard to think. Omitted ⇒ the provider's own default. */
   effort?: VisionEffort;
+  /**
+   * A JSON Schema the answer must satisfy. Where the provider can ENFORCE it (ollama's
+   * `format` constrains decoding natively) the answer cannot be malformed; elsewhere it is
+   * still the honest declaration of the shape the caller needs.
+   *
+   * Worth threading rather than leaving to each caller's regex: PoF currently strips fences
+   * and hand-parses in at least three places, and every one of them is a chance for a model
+   * that answered in prose to reach a checker as a shape error instead of a refusal.
+   */
+  schema?: Record<string, unknown>;
 }
 
 /**

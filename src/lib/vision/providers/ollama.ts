@@ -48,18 +48,33 @@ export function ollamaProvider(opts: OllamaOptions = {}): VisionProvider {
     isConfigured: () => host !== '',
 
     async recognize(req: VisionRequest): Promise<VisionAnswer> {
-      const res = await doFetch(`${host}/api/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model,
-          stream: false,
-          // Reasoning VL models otherwise spend minutes thinking about a frame description,
-          // so OFF is the default and `high` is the opt-in.
-          think: req.effort === 'high',
-          messages: [{ role: 'user', content: req.prompt, images: req.images.map((i) => i.base64) }],
-        }),
-      });
+      const base: Record<string, unknown> = {
+        model,
+        stream: false,
+        // temperature 0 IS the determinism mechanism here — no seed is set, and gravitone
+        // measured 100% enum stability across repeats on that alone. num_ctx is raised only
+        // where the image count demands it; 8192 covers a single frame.
+        options: { temperature: 0, num_ctx: 8192 },
+        // Ollama enforces structured output natively, so a schema request is not advice.
+        ...(req.schema ? { format: req.schema } : {}),
+        messages: [{ role: 'user', content: req.prompt, images: req.images.map((i) => i.base64) }],
+      };
+
+      // `think` is spliced onto the FIRST attempt only. Reasoning VL models otherwise spend
+      // minutes thinking about a frame description, so OFF is the default and `high` is the
+      // opt-in — but a model with no thinking mode REJECTS the key outright with a 400, and
+      // the only honest recovery is to drop it and ask again. Measured in gravitone's
+      // probe.py; retrying on any other status would be guessing (a 5xx is the transport's
+      // problem, a 401 will fail identically forever).
+      const send = (body: Record<string, unknown>) =>
+        doFetch(`${host}/api/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+
+      let res = await send({ ...base, think: req.effort === 'high' });
+      if (!res.ok && res.status === 400) res = await send(base);
       if (!res.ok) {
         const detail = await res.text().catch(() => '');
         throw new Error(`ollama ${res.status}${detail ? `: ${detail.slice(0, 200)}` : ''}`);
