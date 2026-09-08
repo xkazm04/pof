@@ -349,3 +349,70 @@ pre-filter."*
    measurement."* PoF's `/status` treats single-VLM verdicts as ground truth.
 7. `api/verify/animation` still names vendors in an inline ternary — the last hole in the
    chokepoint, and it is the route that runs the aesthetic gate.
+
+---
+
+## The eye race, editor CLOSED (2026-09-08) — the local eye is a first-class rung
+
+### First: the editor was the whole problem
+
+| | UE editor OPEN | UE editor CLOSED |
+|---|---|---|
+| eval speed | **1270 ms/token** | **67–191 ms/token** |
+| a 58-token verdict | 42–118 s | 4.4–7.2 s warm (30.8 s cold; 22.1 s of that is model load) |
+
+GPU with the editor closed: 1051 / 24564 MiB before the model loads, 22.3 GB resident after.
+With the editor open the card sat at 24108 / 24564 — 98% — and generation ran ~7–19x slower.
+Nothing was spilled to CPU in either case; the contention alone did it.
+
+**So the coexistence constraint is real but conditional, not fatal.** Local-first is viable for
+PoF; it is simply not viable *while the editor is open*, which matters because `/drain-python`
+requires the editor open and `/drain` requires it closed. Those two are already mutually
+exclusive, so the honest statement is: the local eye belongs to the editor-CLOSED half of PoF's
+work, and the plan should say so rather than implying it is unconditionally first.
+
+### The race — one frozen prompt, three arms, scored against hand-labelled truth
+
+Truth set: 3 cases, labelled by eye, **including a negative control** (a pure `#000000` frame —
+the unlit-geometry failure in unambiguous form). A truth set of only passes cannot tell a
+working eye from one that always says pass, which is the error this class of gate exists to
+prevent and the only one that is silent.
+
+| arm | model | truth | falsePASS | falseFAIL | structural | determinism | ms/frame |
+|---|---|---|---|---|---|---|---|
+| **ollama (local)** | qwen3.8:27b | **6/6** | **0** | 0 | 0 | **3/3** | ~5–20 (variable) |
+| qwen-cloud | qwen3.7-flash | 5/6 | 0 | 1 | 0 | **2/3** | ~32–50 s |
+| gemini | gemini-2.5-flash | **6/6** | **0** | 0 | 0 | **3/3** | **~3.1 s** |
+
+**The local eye matched the best cloud eye exactly** — same truth score, zero false passes, zero
+structural faults, fully deterministic — at $0, with no pixel leaving the machine. On this
+evidence the plan's local-first ordering stops being only a permission and becomes a
+measurement, for THIS use case, with the editor closed.
+
+**qwen-cloud is the arm to reconsider.** It scored 5/6 with a false FAIL (called a natural
+standing pose T-posed and failed the frame), and it was the only **non-deterministic** arm —
+2/3 stable, and it disagreed with itself between two runs of the identical request at
+temperature 0. That is expected once you read `anim-critique/qwen.ts`: it walks a five-model
+fallback chain on quota signals, so "qwen-cloud" is not one model and repeat calls are not
+guaranteed to reach the same weights. It is a metered rung that is both slower and less
+reproducible than the free local one. Gravitone reached the same conclusion independently and
+removed its Qwen cloud rung on 2026-09-01: *"a cloud rung nobody wants billed is not a
+fallback, it is a surprise."*
+
+### Open question, recorded rather than guessed
+
+Local latency is VARIABLE in a way Gemini's is not: 67, 69, 119, 120, 160, 191 ms/token across
+runs with the model resident and the editor closed — a ~3x spread on identical requests. Schema
+enforcement is not the cause (`format` on vs off: 19.9 s vs 15.5 s, both 96 output tokens), and
+neither is model load (measured separately at 22.1 s, and these runs were warm). Not chased
+further this session. It matters because a p50 of ~5 s and a p95 of ~20 s are different products
+when a gap-loop batch judges hundreds of frames, so the next measurement worth taking is a
+distribution rather than another mean.
+
+### What this does NOT license
+
+One truth set of three cases, two of them from one capture session, on two of the four check
+modes. It says the local eye is not disqualified and is worth routing first with the editor
+closed. It does not say it equals Gemini in general — gravitone measured a real ceiling on a
+harder task (*"it cannot carry fidelity grouping; keep the cloud eye for extraction, use qwen
+at most as a free pre-filter"*), and `hud` and `texture` modes have not been raced at all.

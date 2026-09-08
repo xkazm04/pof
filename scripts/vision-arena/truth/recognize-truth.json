@@ -1,0 +1,31 @@
+[
+ {
+  "frame": "C:/Users/kazda/Documents/Unreal Projects/PoF/Saved/Observations/calib_bad/frame_00.png",
+  "mode": "character",
+  "expect": {
+   "humanoidVisible": true,
+   "tPosed": false,
+   "distinct": true,
+   "verdict": "pass"
+  },
+  "why": "hand-labelled by eye: a red humanoid and a black humanoid, both in relaxed standing poses, trivially distinct by colour"
+ },
+ {
+  "frame": "C:/Users/kazda/Documents/Unreal Projects/PoF/Saved/Observations/arena_jedi/frame_00.png",
+  "mode": "lighting",
+  "expect": {
+   "lit": true,
+   "verdict": "pass"
+  },
+  "why": "hand-labelled: dim night-lit colosseum, but sky, sand and saber glow all render - dark by art direction, not unlit"
+ },
+ {
+  "frame": "scripts/vision-arena/truth/black_unlit.png",
+  "mode": "lighting",
+  "expect": {
+   "lit": false,
+   "verdict": "fail"
+  },
+  "why": "NEGATIVE CONTROL: a pure #000000 frame is the unlit-geometry failure in unambiguous form; an eye that calls this lit is disqualified"
+ }
+]
