@@ -10,7 +10,7 @@
  * structure as input-gate.ts. Persistence lives in style-dna-db.ts.
  */
 import type { VisionImage } from '@/lib/anim-critique/critique';
-import { makeQwenVision } from '@/lib/anim-critique/qwen';
+import { makeRoutedVisionText } from '@/lib/vision/seam';
 
 export interface StyleDna {
   palette: string[];
@@ -145,7 +145,7 @@ export interface StyleDnaDeps {
 /** Distill a mood board into StyleDna. A vision/parse failure carries the reason — never fake DNA. */
 export async function distillStyleDna(images: VisionImage[], deps: StyleDnaDeps = {}): Promise<StyleDnaResult> {
   if (!images.length) return { ok: false, error: 'mood board is empty — provide at least one image' };
-  const vision = deps.vision ?? makeQwenVision();
+  const vision = deps.vision ?? makeRoutedVisionText();
   let raw: string;
   try {
     raw = await vision(images, buildStyleDnaPrompt(images.length));

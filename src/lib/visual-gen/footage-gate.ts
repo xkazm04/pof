@@ -13,7 +13,7 @@
  * A gate that cannot run reports why — never a silent pass.
  */
 import type { VisionImage } from '@/lib/anim-critique/critique';
-import { makeQwenVision } from '@/lib/anim-critique/qwen';
+import { makeRoutedVisionText } from '@/lib/vision/seam';
 import { parseGateReply, scoreInputGate, type GateThresholds } from './input-gate';
 import type { Scorecard } from './mesh-critique';
 
@@ -126,7 +126,7 @@ export async function gateFootage(
   videoPath: string,
   deps: FootageGateDeps = {},
 ): Promise<FootageGateCard | FootageGateFailure> {
-  const vision = deps.vision ?? makeQwenVision();
+  const vision = deps.vision ?? makeRoutedVisionText();
   const sample = deps.sample ?? sampleFootageFrames;
   let frames: VisionImage[];
   try {

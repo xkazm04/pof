@@ -15,7 +15,7 @@
  * (library hit, else the 2D→3D chain) is a separate step and stays that way.
  */
 import type { VisionImage } from '@/lib/anim-critique/critique';
-import { makeQwenVision } from '@/lib/anim-critique/qwen';
+import { makeRoutedVisionText } from '@/lib/vision/seam';
 import type { CompositionAsset } from './composition';
 import { affordanceForSize } from './placement-tags';
 import { MATERIAL_DENSITIES, DEFAULT_PHYSICAL, type PhysicsMaterial } from './physical-tags';
@@ -215,7 +215,7 @@ export async function decomposeScene(
   image: VisionImage,
   deps: DecomposeDeps = {},
 ): Promise<DecomposeReply> {
-  const vision = deps.vision ?? makeQwenVision();
+  const vision = deps.vision ?? makeRoutedVisionText();
   let raw: string;
   try {
     raw = await vision([image], buildSceneDecomposePrompt(deps.hint));

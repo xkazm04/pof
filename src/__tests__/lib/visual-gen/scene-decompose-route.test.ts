@@ -17,7 +17,11 @@ import { NextRequest } from 'next/server';
 import sharp from 'sharp';
 
 const vision = vi.fn();
-vi.mock('@/lib/anim-critique/qwen', () => ({ makeQwenVision: () => vision }));
+// Mocked at the CHOKEPOINT, not at a vendor module. The gate no longer names an eye — it
+// asks `@/lib/vision` for the `recognize` capability and the plan decides who answers —
+// so the seam is the honest injection point and this stub stays valid whichever provider
+// the plan puts first.
+vi.mock('@/lib/vision/seam', () => ({ makeRoutedVisionText: () => vision }));
 
 const { POST } = await import('@/app/api/visual-gen/scene-decompose/route');
 

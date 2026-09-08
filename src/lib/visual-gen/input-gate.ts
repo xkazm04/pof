@@ -18,7 +18,7 @@
  * PoF's pattern, rather than the image-EDIT step other tools use.
  */
 import type { VisionImage } from '@/lib/anim-critique/critique';
-import { makeQwenVision } from '@/lib/anim-critique/qwen';
+import { makeRoutedVisionText } from '@/lib/vision/seam';
 import type { Scorecard } from './mesh-critique';
 
 /** One-line reply protocol shared with pof_vlm_critique.py: SCORE / DEFECTS / VERDICT. */
@@ -156,7 +156,7 @@ export function inputGateOverridden(outcome: InputGateOutcome): InputGateOutcome
 
 /** Gate one concept image. A vision/parse failure is ok:false with the reason — never a fake verdict. */
 export async function gateInputImage(image: VisionImage, deps: InputGateDeps = {}): Promise<GateCard | GateFailure> {
-  const vision = deps.vision ?? makeQwenVision();
+  const vision = deps.vision ?? makeRoutedVisionText();
   let raw: string;
   try {
     raw = await vision([image], buildInputGatePrompt(deps.subject));

@@ -40,7 +40,7 @@
  */
 import { readFile } from 'node:fs/promises';
 import type { VisionImage } from '@/lib/anim-critique/critique';
-import { makeQwenVision } from '@/lib/anim-critique/qwen';
+import { makeRoutedVisionText } from '@/lib/vision/seam';
 import type { RenderedView } from './mesh-views';
 
 /** Top of the severity scale the prompt defines. */
@@ -236,7 +236,7 @@ export async function critiqueReferenceConformance(
     };
   }
 
-  const vision = deps.vision ?? makeQwenVision();
+  const vision = deps.vision ?? makeRoutedVisionText();
   const readImage = deps.readImage ?? defaultReadImage;
 
   try {
