@@ -23,6 +23,57 @@ import type {
   RoutedVisionAnswer,
 } from './types';
 
+/**
+ * How long to wait for ONE eye before giving up on it, in ms.
+ *
+ * DELIBERATELY GENEROUS (operator policy, 2026-09-08). This app runs on one machine for one
+ * person, latency is a secondary factor, and waiting for a correct answer beats racing for a
+ * fast one. The local eye was measured at 4.4-7.2 s warm and 42-118 s while the UE editor held
+ * the GPU, so anything in the tens of seconds would cut off answers that were about to arrive.
+ *
+ * The asymmetry that sets the floor: a timeout here does not merely lose a call — it is an
+ * elimination, so the router RE-ROUTES to the next eye, which is metered. Cutting the free
+ * local eye short therefore converts a slow $0 answer into a paid one, silently. The ceiling
+ * exists to catch a HUNG daemon and nothing faster than that.
+ *
+ * `POF_VISION_TIMEOUT_MS` overrides it for an operator who wants a tighter leash.
+ */
+export const DEFAULT_VISION_TIMEOUT_MS = 900_000; // 15 minutes
+
+function timeoutFor(provider: VisionProvider): number {
+  const env = Number(process.env.POF_VISION_TIMEOUT_MS);
+  if (Number.isFinite(env) && env > 0) return env;
+  return provider.timeoutMs ?? DEFAULT_VISION_TIMEOUT_MS;
+}
+
+/**
+ * Race a call against its ceiling. The rejection carries the budget so the trail says what was
+ * waited for, not merely that something did not arrive.
+ *
+ * The limitation, stated rather than hidden: this abandons the promise, it does not cancel the
+ * work. Providers that own their transport (see `providers/ollama.ts`) also receive an
+ * AbortSignal and really do stop; a provider calling through a vendor SDK may keep running to
+ * completion in the background. Abandoning is still correct — the alternative is a route
+ * handler that never returns — but nobody should read this as cancellation.
+ */
+async function withTimeout<T>(work: (signal: AbortSignal) => Promise<T>, ms: number): Promise<T> {
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      work(controller.signal),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+          controller.abort();
+          reject(new Error(`timed out after ${ms}ms`));
+        }, ms);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 /** Which environment's plan applies. */
 export type VisionEnv = 'dev' | 'prod';
 
@@ -122,7 +173,10 @@ export async function recognize(
     const effortServed = resolveEffort(req.effort, provider.effortLevels);
     let answer;
     try {
-      answer = await provider.recognize({ ...req, ...(effortServed ? { effort: effortServed } : {}) });
+      answer = await withTimeout(
+        (signal) => provider.recognize({ ...req, ...(effortServed ? { effort: effortServed } : {}) }, signal),
+        timeoutFor(provider),
+      );
     } catch (e) {
       trail.push(eliminate(id, 'call-failed', e instanceof Error ? e.message : String(e)));
       continue;

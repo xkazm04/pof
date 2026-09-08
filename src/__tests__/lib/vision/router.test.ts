@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { recognize, planFor } from '@/lib/vision/router';
+import { recognize, planFor, DEFAULT_VISION_TIMEOUT_MS } from '@/lib/vision/router';
 import type { VisionProvider } from '@/lib/vision/types';
 import type { VisionAnswer } from '@/lib/anim-critique/vision';
 
@@ -193,5 +193,41 @@ describe('vision router — effort is requested, and what was SERVED is reported
     const res = await recognize(req, { providers: [provider], plan: ['gemini'] });
     expect(res.effortServed).toBeUndefined();
     expect(res.effortDowngraded).toBe(false);
+  });
+});
+
+describe('vision router — a call that never settles is eliminated, not waited on forever', () => {
+  const never: VisionProvider = {
+    id: 'ollama', capabilities: ['recognize'], isConfigured: () => true,
+    timeoutMs: 20,
+    recognize: () => new Promise(() => { /* never settles — a hung daemon */ }),
+  };
+
+  it('times out a hung provider and RE-ROUTES to the next arm', async () => {
+    const res = await recognize(req, { providers: [never, stub('gemini')], plan: ['ollama', 'gemini'] });
+    expect(res.provider).toBe('gemini');
+    expect(res.trail[0]?.kind).toBe('call-failed');
+    expect(res.trail[0]?.detail).toMatch(/timed out after 20ms/);
+  });
+
+  it('reports the timeout in the thrown error when it was the last arm', async () => {
+    await expect(recognize(req, { providers: [never], plan: ['ollama'] }))
+      .rejects.toThrow(/ollama: call-failed \(timed out after 20ms\)/);
+  });
+
+  it('leaves a provider that answers in time completely alone', async () => {
+    const quick: VisionProvider = { ...stub('ollama'), timeoutMs: 5000 };
+    const res = await recognize(req, { providers: [quick], plan: ['ollama'] });
+    expect(res.text).toBe('ollama says ok');
+    expect(res.trail).toEqual([]);
+  });
+
+  it('defaults GENEROUSLY — this app waits for a correct answer rather than racing', () => {
+    // Operator policy 2026-09-08: single-machine app, latency is a secondary factor. A local
+    // eye measured at up to 118s under GPU contention must not be cut off mid-answer, because
+    // a timeout here does not just lose the call — it re-routes to a METERED eye, turning a
+    // slow free answer into a paid one. The ceiling exists to catch a HUNG daemon, nothing
+    // faster.
+    expect(DEFAULT_VISION_TIMEOUT_MS).toBeGreaterThanOrEqual(600_000);
   });
 });

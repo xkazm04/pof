@@ -47,7 +47,7 @@ export function ollamaProvider(opts: OllamaOptions = {}): VisionProvider {
     effortLevels: ['low', 'high'],
     isConfigured: () => host !== '',
 
-    async recognize(req: VisionRequest): Promise<VisionAnswer> {
+    async recognize(req: VisionRequest, signal?: AbortSignal): Promise<VisionAnswer> {
       const base: Record<string, unknown> = {
         model,
         stream: false,
@@ -66,11 +66,15 @@ export function ollamaProvider(opts: OllamaOptions = {}): VisionProvider {
       // the only honest recovery is to drop it and ask again. Measured in gravitone's
       // probe.py; retrying on any other status would be guessing (a 5xx is the transport's
       // problem, a 401 will fail identically forever).
+      // The signal is forwarded so the router's ceiling really STOPS the work rather than
+      // merely abandoning the promise — a 27B model left generating in the background holds
+      // 22 GB of VRAM that the next call, or the game engine, is waiting for.
       const send = (body: Record<string, unknown>) =>
         doFetch(`${host}/api/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
+          ...(signal ? { signal } : {}),
         });
 
       let res = await send({ ...base, think: req.effort === 'high' });

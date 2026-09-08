@@ -172,3 +172,22 @@ describe('ollama call shape — the fields gravitone learned by failure', () => 
     expect('format' in bodies[0]).toBe(false);
   });
 });
+
+describe('ollama honours the router\'s abort signal — abandoning is not cancelling', () => {
+  it('forwards the signal to fetch so a timed-out call really stops', async () => {
+    let seenSignal: AbortSignal | undefined;
+    const fetchImpl = (async (_u: string, init: { signal?: AbortSignal }) => {
+      seenSignal = init.signal;
+      return { ok: true, json: async () => ({ model: 'm', message: { content: 'x' } }) };
+    }) as unknown as typeof fetch;
+    const controller = new AbortController();
+    await ollamaProvider({ host: 'http://x', fetchImpl }).recognize(req, controller.signal);
+    expect(seenSignal).toBe(controller.signal);
+  });
+
+  it('works with no signal at all — the parameter is optional, not required plumbing', async () => {
+    const fetchImpl = (async () => ({ ok: true, json: async () => ({ model: 'm', message: { content: 'ok' } }) })) as unknown as typeof fetch;
+    const answer = await ollamaProvider({ host: 'http://x', fetchImpl }).recognize(req);
+    expect(answer.text).toBe('ok');
+  });
+});

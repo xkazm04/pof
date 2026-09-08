@@ -101,5 +101,16 @@ export interface VisionProvider {
    * than quietly ignored — an ignored field is a routing constraint, not a preference.
    */
   effortLevels?: readonly VisionEffort[];
-  recognize(req: VisionRequest): Promise<VisionAnswer>;
+  /**
+   * This provider's own ceiling in ms, overriding the generous default. Worth setting only
+   * where a provider is known to fail differently — a metered eye that hangs is a stuck bill,
+   * where a local one that hangs costs only time.
+   */
+  timeoutMs?: number;
+  /**
+   * `signal` aborts when the router's ceiling fires. A provider that owns its transport should
+   * forward it so the work really stops; one calling through a vendor SDK may not be able to,
+   * and the router abandons the promise either way.
+   */
+  recognize(req: VisionRequest, signal?: AbortSignal): Promise<VisionAnswer>;
 }

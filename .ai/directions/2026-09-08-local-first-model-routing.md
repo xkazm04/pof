@@ -416,3 +416,75 @@ modes. It says the local eye is not disqualified and is worth routing first with
 closed. It does not say it equals Gemini in general — gravitone measured a real ceiling on a
 harder task (*"it cannot carry fidelity grouping; keep the cloud eye for extraction, use qwen
 at most as a free pre-filter"*), and `hud` and `texture` modes have not been raced at all.
+
+---
+
+## Latency is demoted to an observation (operator, 2026-09-08)
+
+**The decision:** this app runs on one machine for one person for the foreseeable future, so
+waiting for a correct answer beats racing for a fast one. Timeouts are generous; latency stays
+MEASURED and REPORTED but is no longer a ranking axis in the arena. Where waiting is genuinely
+unacceptable — a person watching a panel — the answer is an async/background experience, not a
+tighter clock.
+
+This is a permission, not a calibration (the `model-routing` distinction again), and it
+resolves the open question the eye race left. The eye race's `ms/frame` column stands as
+evidence and stops being a tiebreaker: on truth, false-passes, structural faults and
+determinism the local eye tied the best cloud eye, and those are now the axes that decide.
+
+### What shipped: a ceiling that re-routes instead of hanging
+
+`DEFAULT_VISION_TIMEOUT_MS = 900_000` (15 minutes), overridable per provider
+(`VisionProvider.timeoutMs`) and per machine (`POF_VISION_TIMEOUT_MS`).
+
+The asymmetry that sets the floor is worth keeping in view: **a timeout here is an elimination,
+so it re-routes to the NEXT eye, which is metered.** Cutting the free local eye short does not
+merely lose a call — it silently converts a slow $0 answer into a paid one. The ceiling exists
+to catch a hung daemon and nothing faster than that; 15 minutes is ~7x the worst latency ever
+observed here (118 s under GPU contention).
+
+The router races every call against the ceiling AND hands the provider an `AbortSignal`. The
+ollama adapter forwards it to `fetch`, so a timed-out local call really stops — which matters
+more than it sounds: a 27B model left generating in the background holds 22 GB of VRAM that the
+next call, or the game engine, is waiting for. Providers reaching through a vendor SDK may not
+be able to honour the signal; the router abandons the promise either way, and that limitation is
+written at the function rather than implied.
+
+### The UI direction: ride the rail that already exists
+
+PoF already has the async experience this calls for, and it is good. `/api/visual-gen/generate`
+returns **202 + jobId**; `useForgeStore` polls `/api/visual-gen/generate/status`, keeps its
+background pollers deliberately alive past the module unmounting, exposes WHICH polls are
+running so a phantom poller is visible rather than silent, and offers per-job stop plus a
+queue-wide stop. It also keeps job `status` orthogonal to quality `verdict` — *"a job can be
+`done` and the asset still never cleared the Tier-1 gate"* — which is exactly the separation a
+long-running judge needs.
+
+**So the direction is not to design an async experience; it is to move the remaining vision
+surfaces onto the one already built.** `view-gate` is already there, in the same route family,
+which makes it the in-house precedent to copy rather than a new pattern to invent.
+
+### Known risk introduced by the generous ceiling, recorded not deferred
+
+| route | shape | UI caller |
+|---|---|---|
+| `visual-gen/view-gate` | **job-based (202 + jobId)** | — the precedent |
+| `visual-gen/style-dna` | synchronous | **`StyleDnaPanel.tsx:144` awaits it directly** |
+| `visual-gen/input-gate` | synchronous | scripts / server-side |
+| `visual-gen/footage-gate` | synchronous | scripts / server-side |
+| `visual-gen/scene-decompose` | synchronous | scripts / server-side |
+| `verify/visual` | synchronous | harness / CLI (`postVerifyVisual`) |
+
+Only ONE of these is awaited from a client component, and it is the one that matters:
+**`StyleDnaPanel` distils a style profile from a mood board — N images through the vision seam —
+and with the local eye at 5–20 s per image that is minutes, now behind a ceiling of fifteen.**
+A 15-minute spinner with no cancel is a worse experience than the timeout it replaced, so the
+honest statement is that the generous ceiling is not yet safe behind that panel.
+
+The fix is not a shorter clock for the UI — that treats the symptom and re-introduces the
+"cut the free eye short, re-route to a paid one" trap. It is to put style-dna's distil on the
+202+jobId rail beside `view-gate`, with the forge's existing poller and its stop button.
+
+The synchronous rows below it are correct as they are: their callers are scripts, the harness
+and the CLI, which want the answer and can afford to wait — which is precisely the case this
+policy was written for.
