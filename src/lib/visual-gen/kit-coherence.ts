@@ -41,11 +41,46 @@ export const DELTA_E_UNIT = 'dE76' as const;
  */
 export const DRIFT_DELTA_E = 6;
 
+/**
+ * The first KNOWN-COHERENT kit this module has ever been measured against — the thing
+ * the header says it lacked.
+ *
+ * A single-pass contact sheet (`contact-sheet.ts`) is coherent by construction: one
+ * model pass renders every member, so shared lighting and brushwork are structural
+ * rather than requested. Sixteen bestiary portraits from one call measure a mean pair
+ * distance of 3.31 — and a WORST pair of 8.81, which is above {@link DRIFT_DELTA_E}.
+ *
+ * So the reference does not confirm the current rule, it indicts it: `verdict` is
+ * decided by the worst pair alone, and on any real roster the two most different
+ * subjects (here a masked assassin against a green orc) are legitimate variety. The
+ * mean is what separates — 3.31 here against 22.31 across the per-call icon library.
+ * That is one measurement, not a calibration set, so nothing is re-thresholded on it;
+ * the grade now SAYS when only the extremes breach, and a reader decides.
+ */
+export const KIT_COHERENCE_REFERENCE = {
+  meanDeltaE: 3.31,
+  worstPairDeltaE: 8.81,
+  members: 16,
+  source:
+    'the 16 cells of a single-pass contact sheet, generated/images/qwen-image_1788892296725.png ' +
+    '(qwen-image-3.0-pro, one call, 2026-09-08)',
+  instrument: 'a 2x2 downsample of each member into four hex swatches, compared with CIE76',
+  perCallControl: {
+    meanDeltaE: 22.31,
+    members: 45,
+    source: "generated/icons/ — PoF's per-call icon library, one separate generation per file",
+    confound:
+      'the control varies in SUBJECT as well as in call (a stone texture against a HUD heart), ' +
+      'so 22.31 is an upper bound on per-call drift rather than an isolated measurement of it',
+  },
+} as const;
+
 export const KIT_COHERENCE_CALIBRATION_CAVEAT =
   'the drift threshold is provisional: it separates a re-render of the same asset (dE 0-1.8) from ' +
   'independently generated assets (dE 8.0-21.5), but a single prop’s own palette spans up to dE 15.1 ' +
-  'internally, so a large distance may be legitimate variety rather than drift. Calibrate on a ' +
-  'known-coherent kit before gating a pipeline on this verdict — report the number, not a pass/fail';
+  'internally, so a large distance may be legitimate variety rather than drift. ONE known-coherent ' +
+  'kit has now been measured (KIT_COHERENCE_REFERENCE) and the worst-pair rule already calls it ' +
+  'drifting — one reference is not a calibration set, so still report the number, not a pass/fail';
 
 export interface Lab {
   L: number;
@@ -186,7 +221,16 @@ export function gradeKitCoherence(
     reason: drifting
       ? `${worstPair!.a} and ${worstPair!.b} are ${worstPair!.deltaE.toFixed(1)} ${DELTA_E_UNIT} apart ` +
         `(threshold ${driftThreshold}); ${outlier} sits furthest from the rest, so it is the one to ` +
-        `re-generate from the kit's concept image or colour-correct before baking.${note}`
+        `re-generate from the kit's concept image or colour-correct before baking.${note}` +
+        (meanDeltaE !== undefined && meanDeltaE < driftThreshold
+          ? ` But only the EXTREMES breach: the kit's mean pair distance is ` +
+            `${meanDeltaE.toFixed(2)} ${DELTA_E_UNIT}, inside the threshold. A single-pass ` +
+            `reference sheet — coherent by construction — measures mean ` +
+            `${KIT_COHERENCE_REFERENCE.meanDeltaE} with a worst pair of ` +
+            `${KIT_COHERENCE_REFERENCE.worstPairDeltaE} on the same instrument, so a worst-pair ` +
+            `breach over a low mean reads as legitimate subject variety rather than drift. ` +
+            `Look at the pair before re-generating anything.`
+          : '')
       : `worst pair ${worstPair!.deltaE.toFixed(1)} ${DELTA_E_UNIT}, below the ${driftThreshold} ` +
         `threshold — the kit reads as one palette.${note}`,
   };
