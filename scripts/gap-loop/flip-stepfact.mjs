@@ -22,5 +22,14 @@ if (!s) { console.log('NOT FOUND', catalogId, step); process.exit(1); }
 s.trueEngine = engine;
 s.generatorWired = true;
 s.note = note;
+// A step that just gained a REAL generator also gained something a judge can LOOK at.
+// Run 9 (2026-09-08) found 16 visual steps left at the pre-generator audit's `judge: 'none'`
+// by exactly this script: `deriveCell` filters verdicts by the audited judge, so those steps
+// silently DISCARDED every VLM verdict and their shape pass became unfalsifiable. Setting it
+// here means the recipe can never reopen the hole; `step-facts-derived.test.ts` guards it.
+if ((s.deliverable === '2d-art' || s.deliverable === '3d-mesh') && s.judge !== 'vlm' && s.judge !== 'human') {
+  s.judge = 'vlm';
+  console.log('  judge none -> vlm (a visual deliverable is always judgeable)');
+}
 fs.writeFileSync(F, JSON.stringify(j, null, 2) + '\n');
 console.log('FLIPPED', catalogId, '::', step, '-> trueEngine', engine);

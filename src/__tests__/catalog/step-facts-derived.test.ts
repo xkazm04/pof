@@ -273,3 +273,38 @@ describe('checkerMeaningful derives from the code', () => {
     }
   });
 });
+
+/**
+ * A VISUAL DELIVERABLE IS ALWAYS JUDGEABLE.
+ *
+ * gap-loop run 9 (2026-09-08) found 16 steps audited `judge: 'none'` whose deliverable is
+ * `2d-art` or `3d-mesh` — every one of them powered by a REAL generator (Leonardo / Tripo)
+ * in the July batches. The batches flipped `trueEngine` + `generatorWired` (the documented
+ * recipe) and never touched `judge`, so the map kept the audit's original "nothing can
+ * judge this" answer from back when the step held a swatch.
+ *
+ * That is a laundering class, not a preference: `deriveCell` filters verdicts by the
+ * step's audited judge, so a `judge: 'none'` visual step DISCARDS any VLM verdict posted
+ * against it. Its shape-check pass could never be challenged by anything, which pinned it
+ * at R2 DRAFTED forever and — worse — made the pass unfalsifiable.
+ *
+ * Pixels can always be looked at. So a visual deliverable must name a judge that can SEE
+ * them (`vlm`, or `human` for a step a person signs off). `ue-test` and `llm-panel` do not
+ * qualify: neither reads an image.
+ */
+describe('a visual deliverable declares a judge that can see pixels', () => {
+  const VISUAL = new Set(['2d-art', '3d-mesh']);
+  const CAN_SEE = new Set(['vlm', 'human']);
+
+  it('no 2d-art / 3d-mesh step is audited unjudgeable', () => {
+    const blind = FACTS.filter((f) => VISUAL.has(String(f.deliverable)) && !CAN_SEE.has(String(f.judge)));
+    expect(
+      blind.map((f) => `${f.catalogId}::${f.step} (${f.deliverable}, judge=${f.judge})`),
+      'a visual step whose judge cannot see pixels can never be challenged — see the block comment',
+    ).toEqual([]);
+  });
+
+  it('the rule has real subjects (it is not vacuously green)', () => {
+    expect(FACTS.filter((f) => VISUAL.has(String(f.deliverable))).length).toBeGreaterThan(30);
+  });
+});

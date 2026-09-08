@@ -56,9 +56,9 @@
       "trueEngine": "Leonardo (Lucid Origin)",
       "deliverable": "2d-art",
       "generatorWired": true,
-      "judge": "none",
+      "judge": "vlm",
       "checkerMeaningful": true,
-      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified. 2026-07-29: the selection gate now grades the SELECTED CANDIDATE (real asset -> pass; deterministic swatch -> deferred with a reason; an unresolved or mismatched selection -> fail), so a wrong index or a lost candidate no longer passes."
+      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified. 2026-07-29: the selection gate now grades the SELECTED CANDIDATE (real asset -> pass; deterministic swatch -> deferred with a reason; an unresolved or mismatched selection -> fail), so a wrong index or a lost candidate no longer passes. judge class corrected none->vlm by gap-loop run 9 (2026-09-08): the July batch that powered this step with a real generator flipped trueEngine/generatorWired but left the pre-generator audit's judge:none, so the step discarded every VLM verdict and its shape pass could not be challenged."
     },
     {
       "catalogId": "achievements",
@@ -196,9 +196,9 @@
       "trueEngine": "Leonardo (Lucid Origin)",
       "deliverable": "2d-art",
       "generatorWired": true,
-      "judge": "none",
+      "judge": "vlm",
       "checkerMeaningful": true,
-      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified. 2026-07-29: the selection gate now grades the SELECTED CANDIDATE (real asset -> pass; deterministic swatch -> deferred with a reason; an unresolved or mismatched selection -> fail), so a wrong index or a lost candidate no longer passes."
+      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified. 2026-07-29: the selection gate now grades the SELECTED CANDIDATE (real asset -> pass; deterministic swatch -> deferred with a reason; an unresolved or mismatched selection -> fail), so a wrong index or a lost candidate no longer passes. judge class corrected none->vlm by gap-loop run 9 (2026-09-08): the July batch that powered this step with a real generator flipped trueEngine/generatorWired but left the pre-generator audit's judge:none, so the step discarded every VLM verdict and its shape pass could not be challenged."
     },
     {
       "catalogId": "ambient",
@@ -306,9 +306,9 @@
       "trueEngine": "Leonardo (Lucid Origin)",
       "deliverable": "2d-art",
       "generatorWired": true,
-      "judge": "none",
+      "judge": "vlm",
       "checkerMeaningful": true,
-      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders. 2026-07-29: the selection gate now grades the SELECTED CANDIDATE (real asset -> pass; deterministic swatch -> deferred with a reason; an unresolved or mismatched selection -> fail), so a wrong index or a lost candidate no longer passes."
+      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders. 2026-07-29: the selection gate now grades the SELECTED CANDIDATE (real asset -> pass; deterministic swatch -> deferred with a reason; an unresolved or mismatched selection -> fail), so a wrong index or a lost candidate no longer passes. judge class corrected none->vlm by gap-loop run 9 (2026-09-08): the July batch that powered this step with a real generator flipped trueEngine/generatorWired but left the pre-generator audit's judge:none, so the step discarded every VLM verdict and its shape pass could not be challenged."
     },
     {
       "catalogId": "bestiary",
@@ -316,9 +316,9 @@
       "trueEngine": "Tripo",
       "deliverable": "3d-mesh",
       "generatorWired": true,
-      "judge": "none",
+      "judge": "vlm",
       "checkerMeaningful": true,
-      "note": "Powered by gap-loop batch 10 (2026-07-08): real Tripo image→model game-tier mesh (hero-render input), Qwen3-VL-4B gated (>=7), ref injected. Static mesh (game-tier 40k). Rig/anim clips are a documented follow-up. 2026-07-29: the selection gate now grades the SELECTED CANDIDATE (real asset -> pass; deterministic swatch -> deferred with a reason; an unresolved or mismatched selection -> fail), so a wrong index or a lost candidate no longer passes."
+      "note": "Powered by gap-loop batch 10 (2026-07-08): real Tripo image→model game-tier mesh (hero-render input), Qwen3-VL-4B gated (>=7), ref injected. Static mesh (game-tier 40k). Rig/anim clips are a documented follow-up. 2026-07-29: the selection gate now grades the SELECTED CANDIDATE (real asset -> pass; deterministic swatch -> deferred with a reason; an unresolved or mismatched selection -> fail), so a wrong index or a lost candidate no longer passes. judge class corrected none->vlm by gap-loop run 9 (2026-09-08): the July batch that powered this step with a real generator flipped trueEngine/generatorWired but left the pre-generator audit's judge:none, so the step discarded every VLM verdict and its shape pass could not be challenged."
     },
     {
       "catalogId": "bestiary",
@@ -416,9 +416,9 @@
       "trueEngine": "Tripo",
       "deliverable": "3d-mesh",
       "generatorWired": true,
-      "judge": "none",
+      "judge": "vlm",
       "checkerMeaningful": true,
-      "note": "Powered by gap-loop batch 10 (2026-07-08): real Tripo image→model game-tier mesh (hero-render input), Qwen3-VL-4B gated (>=7), ref injected. Game-tier mesh (40k faces / 2K tex) produced by Tripo at generation face-limit; this is the converted deliverable. 2026-07-29: acceptance now composes budgetWithinCap(gameTier.sizeMB <= sizeCapMB, cap declared on the artifact) on top of the shape check - a 'converted' tier that is still 40 MB now FAILS instead of passing on field presence."
+      "note": "Powered by gap-loop batch 10 (2026-07-08): real Tripo image→model game-tier mesh (hero-render input), Qwen3-VL-4B gated (>=7), ref injected. Game-tier mesh (40k faces / 2K tex) produced by Tripo at generation face-limit; this is the converted deliverable. 2026-07-29: acceptance now composes budgetWithinCap(gameTier.sizeMB <= sizeCapMB, cap declared on the artifact) on top of the shape check - a 'converted' tier that is still 40 MB now FAILS instead of passing on field presence. judge class corrected none->vlm by gap-loop run 9 (2026-09-08): the July batch that powered this step with a real generator flipped trueEngine/generatorWired but left the pre-generator audit's judge:none, so the step discarded every VLM verdict and its shape pass could not be challenged."
     },
     {
       "catalogId": "character-pipeline",
@@ -426,9 +426,9 @@
       "trueEngine": "Leonardo (Lucid Origin)",
       "deliverable": "2d-art",
       "generatorWired": true,
-      "judge": "none",
+      "judge": "vlm",
       "checkerMeaningful": true,
-      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders. 2026-07-29: the selection gate now grades the SELECTED CANDIDATE (real asset -> pass; deterministic swatch -> deferred with a reason; an unresolved or mismatched selection -> fail), so a wrong index or a lost candidate no longer passes."
+      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders. 2026-07-29: the selection gate now grades the SELECTED CANDIDATE (real asset -> pass; deterministic swatch -> deferred with a reason; an unresolved or mismatched selection -> fail), so a wrong index or a lost candidate no longer passes. judge class corrected none->vlm by gap-loop run 9 (2026-09-08): the July batch that powered this step with a real generator flipped trueEngine/generatorWired but left the pre-generator audit's judge:none, so the step discarded every VLM verdict and its shape pass could not be challenged."
     },
     {
       "catalogId": "character-pipeline",
@@ -476,9 +476,9 @@
       "trueEngine": "Leonardo (Lucid Origin)",
       "deliverable": "2d-art",
       "generatorWired": true,
-      "judge": "none",
+      "judge": "vlm",
       "checkerMeaningful": true,
-      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders. 2026-07-29: the selection gate now grades the SELECTED CANDIDATE (real asset -> pass; deterministic swatch -> deferred with a reason; an unresolved or mismatched selection -> fail), so a wrong index or a lost candidate no longer passes."
+      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders. 2026-07-29: the selection gate now grades the SELECTED CANDIDATE (real asset -> pass; deterministic swatch -> deferred with a reason; an unresolved or mismatched selection -> fail), so a wrong index or a lost candidate no longer passes. judge class corrected none->vlm by gap-loop run 9 (2026-09-08): the July batch that powered this step with a real generator flipped trueEngine/generatorWired but left the pre-generator audit's judge:none, so the step discarded every VLM verdict and its shape pass could not be challenged."
     },
     {
       "catalogId": "characters",
@@ -496,9 +496,9 @@
       "trueEngine": "Tripo",
       "deliverable": "3d-mesh",
       "generatorWired": true,
-      "judge": "none",
+      "judge": "vlm",
       "checkerMeaningful": true,
-      "note": "Powered by gap-loop batch 9 (2026-07-08): real Tripo asset generated (Leonardo hero/Tripo image→model), Qwen3-VL-4B gated (>=7), ref injected into artifact data.genHistory; VLM verdict recorded; trueEngine reflects the real producing engine. Static mesh — rig/anim clips are a documented follow-up. 2026-07-29: the selection gate now grades the SELECTED CANDIDATE (real asset -> pass; deterministic swatch -> deferred with a reason; an unresolved or mismatched selection -> fail), so a wrong index or a lost candidate no longer passes."
+      "note": "Powered by gap-loop batch 9 (2026-07-08): real Tripo asset generated (Leonardo hero/Tripo image→model), Qwen3-VL-4B gated (>=7), ref injected into artifact data.genHistory; VLM verdict recorded; trueEngine reflects the real producing engine. Static mesh — rig/anim clips are a documented follow-up. 2026-07-29: the selection gate now grades the SELECTED CANDIDATE (real asset -> pass; deterministic swatch -> deferred with a reason; an unresolved or mismatched selection -> fail), so a wrong index or a lost candidate no longer passes. judge class corrected none->vlm by gap-loop run 9 (2026-09-08): the July batch that powered this step with a real generator flipped trueEngine/generatorWired but left the pre-generator audit's judge:none, so the step discarded every VLM verdict and its shape pass could not be challenged."
     },
     {
       "catalogId": "characters",
@@ -506,9 +506,9 @@
       "trueEngine": "Leonardo (Lucid Origin)",
       "deliverable": "2d-art",
       "generatorWired": true,
-      "judge": "none",
+      "judge": "vlm",
       "checkerMeaningful": true,
-      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders. 2026-07-29: the selection gate now grades the SELECTED CANDIDATE (real asset -> pass; deterministic swatch -> deferred with a reason; an unresolved or mismatched selection -> fail), so a wrong index or a lost candidate no longer passes."
+      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders. 2026-07-29: the selection gate now grades the SELECTED CANDIDATE (real asset -> pass; deterministic swatch -> deferred with a reason; an unresolved or mismatched selection -> fail), so a wrong index or a lost candidate no longer passes. judge class corrected none->vlm by gap-loop run 9 (2026-09-08): the July batch that powered this step with a real generator flipped trueEngine/generatorWired but left the pre-generator audit's judge:none, so the step discarded every VLM verdict and its shape pass could not be challenged."
     },
     {
       "catalogId": "characters",
@@ -556,9 +556,9 @@
       "trueEngine": "Leonardo (Lucid Origin)",
       "deliverable": "2d-art",
       "generatorWired": true,
-      "judge": "none",
+      "judge": "vlm",
       "checkerMeaningful": true,
-      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders. 2026-07-29: the selection gate now grades the SELECTED CANDIDATE (real asset -> pass; deterministic swatch -> deferred with a reason; an unresolved or mismatched selection -> fail), so a wrong index or a lost candidate no longer passes."
+      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders. 2026-07-29: the selection gate now grades the SELECTED CANDIDATE (real asset -> pass; deterministic swatch -> deferred with a reason; an unresolved or mismatched selection -> fail), so a wrong index or a lost candidate no longer passes. judge class corrected none->vlm by gap-loop run 9 (2026-09-08): the July batch that powered this step with a real generator flipped trueEngine/generatorWired but left the pre-generator audit's judge:none, so the step discarded every VLM verdict and its shape pass could not be challenged."
     },
     {
       "catalogId": "characters",
@@ -636,9 +636,9 @@
       "trueEngine": "Leonardo (Lucid Origin)",
       "deliverable": "2d-art",
       "generatorWired": true,
-      "judge": "none",
+      "judge": "vlm",
       "checkerMeaningful": true,
-      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified. 2026-07-29: the selection gate now grades the SELECTED CANDIDATE (real asset -> pass; deterministic swatch -> deferred with a reason; an unresolved or mismatched selection -> fail), so a wrong index or a lost candidate no longer passes."
+      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified. 2026-07-29: the selection gate now grades the SELECTED CANDIDATE (real asset -> pass; deterministic swatch -> deferred with a reason; an unresolved or mismatched selection -> fail), so a wrong index or a lost candidate no longer passes. judge class corrected none->vlm by gap-loop run 9 (2026-09-08): the July batch that powered this step with a real generator flipped trueEngine/generatorWired but left the pre-generator audit's judge:none, so the step discarded every VLM verdict and its shape pass could not be challenged."
     },
     {
       "catalogId": "codex",
@@ -756,9 +756,9 @@
       "trueEngine": "Leonardo (Lucid Origin)",
       "deliverable": "3d-mesh",
       "generatorWired": true,
-      "judge": "none",
+      "judge": "vlm",
       "checkerMeaningful": true,
-      "note": "Powered by gap-loop batch 10 (2026-07-08): real Leonardo Lucid Origin 2D design map (3D terrain build deferred — no terrain mesh engine) generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory; VLM verdict recorded. 2026-07-29: the selection gate now grades the SELECTED CANDIDATE (real asset -> pass; deterministic swatch -> deferred with a reason; an unresolved or mismatched selection -> fail), so a wrong index or a lost candidate no longer passes."
+      "note": "Powered by gap-loop batch 10 (2026-07-08): real Leonardo Lucid Origin 2D design map (3D terrain build deferred — no terrain mesh engine) generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory; VLM verdict recorded. 2026-07-29: the selection gate now grades the SELECTED CANDIDATE (real asset -> pass; deterministic swatch -> deferred with a reason; an unresolved or mismatched selection -> fail), so a wrong index or a lost candidate no longer passes. judge class corrected none->vlm by gap-loop run 9 (2026-09-08): the July batch that powered this step with a real generator flipped trueEngine/generatorWired but left the pre-generator audit's judge:none, so the step discarded every VLM verdict and its shape pass could not be challenged."
     },
     {
       "catalogId": "combat-map",
@@ -786,9 +786,9 @@
       "trueEngine": "Leonardo (Lucid Origin)",
       "deliverable": "2d-art",
       "generatorWired": true,
-      "judge": "none",
+      "judge": "vlm",
       "checkerMeaningful": true,
-      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified. 2026-07-29: the selection gate now grades the SELECTED CANDIDATE (real asset -> pass; deterministic swatch -> deferred with a reason; an unresolved or mismatched selection -> fail), so a wrong index or a lost candidate no longer passes."
+      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified. 2026-07-29: the selection gate now grades the SELECTED CANDIDATE (real asset -> pass; deterministic swatch -> deferred with a reason; an unresolved or mismatched selection -> fail), so a wrong index or a lost candidate no longer passes. judge class corrected none->vlm by gap-loop run 9 (2026-09-08): the July batch that powered this step with a real generator flipped trueEngine/generatorWired but left the pre-generator audit's judge:none, so the step discarded every VLM verdict and its shape pass could not be challenged."
     },
     {
       "catalogId": "combat-map",
@@ -886,9 +886,9 @@
       "trueEngine": "Leonardo (Lucid Origin)",
       "deliverable": "2d-art",
       "generatorWired": true,
-      "judge": "none",
+      "judge": "vlm",
       "checkerMeaningful": true,
-      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified. 2026-07-29: the selection gate now grades the SELECTED CANDIDATE (real asset -> pass; deterministic swatch -> deferred with a reason; an unresolved or mismatched selection -> fail), so a wrong index or a lost candidate no longer passes."
+      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified. 2026-07-29: the selection gate now grades the SELECTED CANDIDATE (real asset -> pass; deterministic swatch -> deferred with a reason; an unresolved or mismatched selection -> fail), so a wrong index or a lost candidate no longer passes. judge class corrected none->vlm by gap-loop run 9 (2026-09-08): the July batch that powered this step with a real generator flipped trueEngine/generatorWired but left the pre-generator audit's judge:none, so the step discarded every VLM verdict and its shape pass could not be challenged."
     },
     {
       "catalogId": "crafting-recipes",
@@ -956,9 +956,9 @@
       "trueEngine": "Leonardo (Lucid Origin)",
       "deliverable": "2d-art",
       "generatorWired": true,
-      "judge": "none",
+      "judge": "vlm",
       "checkerMeaningful": true,
-      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders. 2026-07-29: the selection gate now grades the SELECTED CANDIDATE (real asset -> pass; deterministic swatch -> deferred with a reason; an unresolved or mismatched selection -> fail), so a wrong index or a lost candidate no longer passes."
+      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders. 2026-07-29: the selection gate now grades the SELECTED CANDIDATE (real asset -> pass; deterministic swatch -> deferred with a reason; an unresolved or mismatched selection -> fail), so a wrong index or a lost candidate no longer passes. judge class corrected none->vlm by gap-loop run 9 (2026-09-08): the July batch that powered this step with a real generator flipped trueEngine/generatorWired but left the pre-generator audit's judge:none, so the step discarded every VLM verdict and its shape pass could not be challenged."
     },
     {
       "catalogId": "currencies",
@@ -1096,9 +1096,9 @@
       "trueEngine": "Leonardo (Lucid Origin)",
       "deliverable": "2d-art",
       "generatorWired": true,
-      "judge": "none",
+      "judge": "vlm",
       "checkerMeaningful": true,
-      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified. 2026-07-29: the selection gate now grades the SELECTED CANDIDATE (real asset -> pass; deterministic swatch -> deferred with a reason; an unresolved or mismatched selection -> fail), so a wrong index or a lost candidate no longer passes."
+      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified. 2026-07-29: the selection gate now grades the SELECTED CANDIDATE (real asset -> pass; deterministic swatch -> deferred with a reason; an unresolved or mismatched selection -> fail), so a wrong index or a lost candidate no longer passes. judge class corrected none->vlm by gap-loop run 9 (2026-09-08): the July batch that powered this step with a real generator flipped trueEngine/generatorWired but left the pre-generator audit's judge:none, so the step discarded every VLM verdict and its shape pass could not be challenged."
     },
     {
       "catalogId": "cutscenes",
