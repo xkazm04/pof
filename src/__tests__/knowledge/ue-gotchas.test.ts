@@ -449,6 +449,42 @@ describe('construct-vs-generate routing', () => {
   });
 });
 
+// ── rigging a generated mesh (registry render proof, 2026-09-14) ─────────────
+// A rigging agent on a generated character: the weight solve failed on the seam-split mesh,
+// a fused fist-to-thigh strip tore, and a post-hoc split moved the damage into the weapon.
+describe('generated-mesh rigging preconditions', () => {
+  const entry = () => UE_GOTCHAS.find((g) => g.id === 'generated-mesh-rig-weld-and-separate-parts');
+
+  it('is registered for python sessions and reaches 3D and character modules', () => {
+    expect(entry()?.appliesTo).toContain('ue-python');
+    expect(formatGotchas('ue-python', 'models')).toMatch(/automatic weights/i);
+    expect(formatGotchas('ue-python', 'arpg-character')).toMatch(/automatic weights/i);
+  });
+
+  it('names the failed weight solve and the weld-then-transfer workaround', () => {
+    const d = entry()?.detail ?? '';
+    expect(d).toMatch(/failed to find solution/i);
+    expect(d).toMatch(/weld/i);
+    expect(d).toMatch(/transfer/i);
+  });
+
+  it('warns that fused parts tear and that a post-hoc split moves the damage', () => {
+    const d = entry()?.detail ?? '';
+    expect(d).toMatch(/fused|welded to/i);
+    expect(d).toMatch(/tear/i);
+    expect(d).toMatch(/moved the damage|moves the damage/i);
+  });
+
+  it('says a rig report\'s rigidity claim is verified per vertex, not trusted', () => {
+    expect(entry()?.detail ?? '').toMatch(/per-vertex|per vertex/i);
+  });
+
+  it('stays out of the ue-cpp block and a UI module', () => {
+    expect(formatGotchas('ue-cpp')).not.toMatch(/failed to find solution/i);
+    expect(formatGotchas('ue-python', 'arpg-ui')).not.toMatch(/failed to find solution/i);
+  });
+});
+
 // ── editor-session capture (live UE 5.8 GUI editor, 2026-09-14) ──────────────
 // Found by driving a real editor session to screenshot imported assets. Each defect
 // resolved cleanly at the call site and failed only in its effect.

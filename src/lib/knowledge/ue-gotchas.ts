@@ -550,6 +550,17 @@ export const UE_GOTCHAS: Gotcha[] = [
     source:
       'research: registry render proof over a Blender-scripting agent (youtube 3yXYIXczKXI) - live UE 5.8 GUI editor session importing generated FBX beside SKM_Manny_Simple',
   },
+  {
+    id: 'generated-mesh-rig-weld-and-separate-parts',
+    modules: ['3d', 'character'],
+    summary:
+      'Rigging a generated mesh: automatic weights FAIL on the seam-split import (weld a copy, transfer weights back), and parts fused across bones TEAR - separate them at generation, because fixing after the fact moves the damage',
+    detail:
+      "Measured on Blender 4.2.1 (2026-09-14) by an agent rigging generated/meshes/bestiary_grunt_v2.glb (a brute with axe and shield) on the bundled basic-human metarig. Three findings, in the order a rigging pass meets them. (1) THE WEIGHT SOLVE FAILS OUTRIGHT: parent-with-automatic-weights on the imported mesh reported failed to find solution and left 27,001 of 27,001 vertices unweighted - the import is split along its seams into 571 pieces (the same glTF seam split as gltf-roundtrip-nonmanifold-blocks-remesh), and bone heat cannot solve disconnected islands. What worked: weld a COPY within 1 mm (19,645 vertices, 6 unweighted), solve automatic weights on the copy, and transfer the weights back to the untouched mesh by vertex position (max match distance 0.99 mm), which keeps the original topology and UVs. Then set rigid parts explicitly (axe 100% on hand.R, shield 100% on forearm.L) and strip arm weight that bone heat spread down the legs. (2) PARTS FUSED ACROSS BONES TEAR, AND NO WEIGHTING FIXES IT: the source mesh has the right fist welded to the thigh armour by a strip of faces, so raising the arm stretched ~500 edges past twice their length into a sheet from forearm to hip, visible at the top of every overhead action. (3) A POST-HOC SPLIT MOVED THE DAMAGE: splitting the 396 joining faces thinned the tear only (507 -> 475 stretched edges), renumbered the vertices, and left a few dozen axe-haft vertices weighted ~0.6 to thigh.R, so the axe now drags a spike to the leg instead. The durable fix is upstream: generate the character in parts with weapons and hands as separable objects (see creature-rig-not-biped and the part-split entries) rather than repairing a fused mesh. VERIFY RIGIDITY PER VERTEX, NOT BY REPORT: the rigger's written report said the attempt-3 axe was 100% on the hand, and a per-vertex probe of the saved file at a raised pose found 733 of 765 axe vertices below 95% hand weight and 718 displaced more than 5 cm from the rigid hand transform. Measure each weapon vertex's weight share and its distance from where the bone transform puts it; never accept a rigidity claim from the pass that made it.",
+    appliesTo: ['ue-python'],
+    source:
+      'research: registry render proof over an agent creature-animation workflow (Stefan 3D AI, youtube h_mR2BRibZ8) - live Blender 4.2.1 rigging of bestiary_grunt_v2.glb, four attempts, per-vertex axe probe',
+  },
 ];
 
 /**
