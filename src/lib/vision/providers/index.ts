@@ -18,19 +18,35 @@ import { geminiProvider } from './gemini';
  * rather than `qwen` on purpose: the id is the one place a reader learns that this rung
  * bills and ships pixels off the box, and `qwen` alone reads as the local option.
  */
-export function qwenCloudProvider(): VisionProvider {
-  const call = makeQwenVisionAttributed();
+export interface RosterOptions {
+  /**
+   * A caller's model pin, applied to every provider that takes one.
+   *
+   * A model name is VENDOR-SPECIFIC by nature, so a pin is implicitly a vendor choice: hand
+   * `gemini-3.8-flash` to the DashScope chain and every model in it fails, which lands in the
+   * trail as `call-failed` rather than silently serving something else. That is the honest
+   * shape — the alternative, letting each provider ignore a pin it does not recognise, is an
+   * answer from a model the caller did not ask for and cannot tell apart.
+   */
+  model?: string;
+}
+
+export function qwenCloudProvider(opts: RosterOptions = {}): VisionProvider {
+  const call = makeQwenVisionAttributed({ ...(opts.model ? { model: opts.model } : {}) });
   return {
     id: 'qwen-cloud',
-    capabilities: ['recognize'],
+    // MULTI-FRAME IS DECLARED because it is what already shipped: `critiqueAnimation` has been
+    // sending N-frame filmstrips down this seam since before the chokepoint existed. This
+    // records a fact, it does not claim a measurement.
+    capabilities: ['recognize', 'recognize-multiframe'],
     isConfigured: () => Boolean(process.env.QWEN_API_KEY ?? process.env.DASHSCOPE_API_KEY),
     recognize: (req) => call(req.images, req.prompt),
   };
 }
 
 /** Every provider the router can reach, in no particular order — the PLAN decides order. */
-export function defaultProviders(): VisionProvider[] {
-  return [ollamaProvider(), qwenCloudProvider(), geminiProvider()];
+export function defaultProviders(opts: RosterOptions = {}): VisionProvider[] {
+  return [ollamaProvider(opts), qwenCloudProvider(opts), geminiProvider(opts)];
 }
 
 export { ollamaProvider, geminiProvider };

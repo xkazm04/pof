@@ -164,7 +164,9 @@ export interface UeVisualGateOptions {
 export interface UeVisualVlmOptions {
   /** Absolute origin where `/api/verify/visual` lives (server-side runner). */
   appOrigin: string;
-  /** Gemini check mode. Default 'lighting' (is the scene lit / rendering?). */
+  /** Which visual check to ask for. Default 'lighting' (is the scene lit / rendering?).
+   *  Names the CHECK, never the eye: `/api/verify/visual` routes that through the vision
+   *  chokepoint, so which provider answers is its plan's business and not this gate's. */
   mode?: 'hud' | 'texture' | 'lighting' | 'character';
   /** Logical module id recorded with the verification. Default 'harness-game'. */
   moduleId?: string;

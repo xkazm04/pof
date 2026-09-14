@@ -2,9 +2,9 @@
  * The drop-in that replaces a NAMED VENDOR at a call site.
  *
  * PoF's gates take an injectable vision seam, `(images, prompt) => Promise<VisionAnswer>`,
- * and today seven of them default to `makeQwenVision()` — a call site naming a vendor,
+ * and every one of them used to default to `makeQwenVision()` — a call site naming a vendor,
  * which is exactly what the chokepoint exists to remove. `makeRoutedVision()` has the same
- * shape, so the migration at each gate is one line:
+ * shape, so the migration at each gate was one line:
  *
  *     const vision = deps.vision ?? makeQwenVision();   // before: names a vendor
  *     const vision = deps.vision ?? makeRoutedVision(); // after:  names a capability

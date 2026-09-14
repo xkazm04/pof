@@ -17,11 +17,17 @@ function answer(text: string, model: string): VisionAnswer {
 /** A stub provider. `configured` and `fail` make each elimination kind reachable. */
 function stub(
   id: string,
-  opts: { configured?: boolean; fail?: string; text?: string; cannotHonour?: string } = {},
+  opts: {
+    configured?: boolean;
+    fail?: string;
+    text?: string;
+    cannotHonour?: string;
+    capabilities?: VisionProvider['capabilities'];
+  } = {},
 ): VisionProvider {
   return {
     id: id as VisionProvider['id'],
-    capabilities: ['recognize'],
+    capabilities: opts.capabilities ?? ['recognize'],
     isConfigured: () => opts.configured !== false,
     cannotHonour: () => opts.cannotHonour ?? null,
     recognize: async () => {
@@ -52,6 +58,51 @@ describe('vision router — the plan decides, never the call site', () => {
 
   it('exposes the plan so a diagnostics surface reports the truth the router acts on', () => {
     expect(planFor('recognize', 'dev')).toEqual(['ollama', 'qwen-cloud', 'gemini']);
+  });
+});
+
+describe('vision router — the CAPABILITY is routed, not assumed', () => {
+  it('multi-frame has its own plan: the SAME two cloud eyes, in the SAME order the ternary used', () => {
+    // `api/verify/animation` picked `body.provider === 'qwen' ? qwen : gemini` inline. Moving
+    // that here must not change who answers, so the plan's order IS the ternary's order:
+    // gemini by default, and the DashScope eye reachable — now via a `prefer` steer instead of
+    // a vendor name at the call site.
+    for (const env of ['dev', 'prod'] as const) {
+      expect(planFor('recognize-multiframe', env)).toEqual(['gemini', 'qwen-cloud']);
+    }
+  });
+
+  it('leaves the LOCAL eye out of the multi-frame plan — it has not been measured there', () => {
+    // The proposal (2026-09-08) flags multi-frame as "needs measurement": multi-image-in-one-call
+    // support varies per ollama vision model, and "a model that accepts N images and reads one is
+    // the worst failure this layer makes". No arena has run, so the local arm is absent rather
+    // than optimistically first. This assertion is the thing that fails if someone adds it
+    // without the measurement.
+    expect(planFor('recognize-multiframe', 'dev')).not.toContain('ollama');
+  });
+
+  it('eliminates a provider that does not DECLARE the requested capability, and re-routes', async () => {
+    // The single-frame roster is not automatically a multi-frame roster. A provider that never
+    // declared the capability must drop out with a reason rather than be handed N images on the
+    // assumption that recognizing one frame generalises.
+    const providers = [
+      stub('ollama', { capabilities: ['recognize'] }),
+      stub('gemini', { capabilities: ['recognize', 'recognize-multiframe'] }),
+    ];
+    const res = await recognize(req, {
+      providers,
+      plan: ['ollama', 'gemini'],
+      capability: 'recognize-multiframe',
+    });
+    expect(res.provider).toBe('gemini');
+    expect(res.trail).toEqual([
+      { provider: 'ollama', kind: 'no-capability', detail: 'ollama does not serve recognize-multiframe' },
+    ]);
+  });
+
+  it('defaults to single-frame `recognize` when no capability is named', async () => {
+    const res = await recognize(req, { providers: [stub('ollama')], plan: ['ollama'] });
+    expect(res.provider).toBe('ollama');
   });
 });
 

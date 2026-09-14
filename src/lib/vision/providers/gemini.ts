@@ -84,7 +84,10 @@ export interface GeminiProviderOptions {
 export function geminiProvider(opts: GeminiProviderOptions = {}): VisionProvider {
   return {
     id: 'gemini',
-    capabilities: ['recognize'],
+    // Multi-frame is DECLARED, not assumed: `api/verify/animation` has been sending whole
+    // filmstrips through `makeGeminiVisionAttributed` in one call since long before this
+    // router existed, so the capability is a record of what ships.
+    capabilities: ['recognize', 'recognize-multiframe'],
     // All three, and only these three — see the probe above.
     effortLevels: ['low', 'medium', 'high'],
     isConfigured: () => Boolean(process.env.GEMINI_API_KEY ?? process.env.GOOGLE_AI_API_KEY),
