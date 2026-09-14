@@ -435,4 +435,55 @@ describe('construct-vs-generate routing', () => {
       expect(formatGotchas('ue-python', mod)).toMatch(/gibberish|legible|lettering/i);
     }
   });
+
+  // Registry render proof, 2026-09-14: four independent agents scripted the same two
+  // briefs. Unbriefed construction interpenetrated (33-235 shells) at invented sizes;
+  // the commissioning contract produced one closed shell at the commissioned size.
+  it('states that construction alone does not buy clean topology - the constructing agent needs the numbers', () => {
+    const d = entry()?.detail ?? '';
+    expect(d).toMatch(/interpenetrat/i);
+    expect(d).toMatch(/target extent/i);
+    expect(d).toMatch(/TRIANGLE/);
+    expect(d).toMatch(/closed surface|boolean-union/i);
+    expect(d).toMatch(/structural only/i);
+  });
+});
+
+// ── editor-session capture (live UE 5.8 GUI editor, 2026-09-14) ──────────────
+// Found by driving a real editor session to screenshot imported assets. Each defect
+// resolved cleanly at the call site and failed only in its effect.
+describe('editor-session python capture', () => {
+  const entry = () => UE_GOTCHAS.find((g) => g.id === 'editor-python-capture-needs-frames');
+
+  it('is registered for python sessions', () => {
+    expect(entry()?.appliesTo).toContain('ue-python');
+  });
+
+  it('warns that a high-res screenshot is asynchronous and needs frames plus a file check', () => {
+    const out = formatGotchas('ue-python', 'models');
+    expect(out).toMatch(/take_high_res_screenshot/);
+    expect(out).toMatch(/asynchronous|later frame/i);
+    expect(out).toMatch(/seconds/i);
+  });
+
+  it('warns that an asset import re-enters a post-tick callback', () => {
+    const d = entry()?.detail ?? '';
+    expect(d).toMatch(/register_slate_post_tick_callback/);
+    expect(d).toMatch(/re-?enter/i);
+    expect(d).toMatch(/guard/i);
+  });
+
+  it('warns that -ExecutePythonScript exits the editor after the script returns', () => {
+    expect(entry()?.detail ?? '').toMatch(/ExecutePythonScript/);
+    expect(entry()?.detail ?? '').toMatch(/init_unreal/);
+  });
+
+  it('records the capture drop rate it did NOT solve', () => {
+    expect(entry()?.detail ?? '').toMatch(/7 of 16/);
+  });
+
+  it('stays out of the ue-cpp block and out of a UI module', () => {
+    expect(formatGotchas('ue-cpp')).not.toMatch(/take_high_res_screenshot/);
+    expect(formatGotchas('ue-python', 'arpg-ui')).not.toMatch(/take_high_res_screenshot/);
+  });
 });
