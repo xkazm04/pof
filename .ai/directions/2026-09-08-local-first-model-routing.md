@@ -5,7 +5,7 @@ raised_by: consult 2026-09-08 (operator directive: minimise Gemini, prefer local
 source: ai-registry @ eb014a00 — model-routing, generative-provider-auditing, generative-provider-routing
 stage: the vision/judge seam (src/lib/anim-critique/, src/lib/visual-gen/, src/app/api/verify/*, src/app/api/agents/*)
 size: 1 new chokepoint module + ~8 call-site edits / M
-status: proposed
+status: accepted
 ---
 
 ## The operator directive is a PERMISSION, not a calibration — and that matters
