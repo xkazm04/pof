@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { ollamaProvider } from '@/lib/vision/providers/ollama';
 import { geminiProvider, geminiThinkingConfig } from '@/lib/vision/providers/gemini';
+import { defaultProviders, qwenCloudProvider } from '@/lib/vision/providers';
 import { makeRoutedVision, makeRoutedVisionText } from '@/lib/vision/seam';
 import type { VisionProvider } from '@/lib/vision/types';
 
@@ -50,6 +51,42 @@ describe('ollama provider — the local eye', () => {
     const fetchImpl = (async () => ({ ok: false, status: 500, text: async () => 'boom' })) as unknown as typeof fetch;
     const p = ollamaProvider({ host: 'http://localhost:11434', fetchImpl });
     await expect(p.recognize(req)).rejects.toThrow(/500/);
+  });
+});
+
+describe('multi-frame is DECLARED per provider, never inferred from single-frame support', () => {
+  it('the two cloud eyes declare it — they are the pair `verify/animation` has always used', () => {
+    // Not a guess: `critiqueAnimation` has shipped N-frame filmstrips to both of these through
+    // the inline ternary this migration removes. Declaring it is recording what already runs.
+    expect(geminiProvider().capabilities).toContain('recognize-multiframe');
+    expect(qwenCloudProvider().capabilities).toContain('recognize-multiframe');
+  });
+
+  it('the LOCAL eye does not declare it — multi-image-in-one-call is unmeasured here', () => {
+    // Direction 2026-09-08: "multi-image-in-one-call support varies per ollama vision model;
+    // that is a request-level constraint, not a preference". An undeclared capability is an
+    // honest absence that lands in the trail as `no-capability`; declaring it on the strength
+    // of single-frame success would be exactly the silent N-images-read-one failure the
+    // chokepoint exists to prevent.
+    expect(ollamaProvider({ host: 'http://x' }).capabilities).not.toContain('recognize-multiframe');
+    expect(ollamaProvider({ host: 'http://x' }).capabilities).toContain('recognize');
+  });
+});
+
+describe('the roster carries a caller model pin without the caller naming a vendor', () => {
+  it('applies the pin to every provider that has one, and keeps the roster complete', () => {
+    const ids = defaultProviders({ model: 'some-model' }).map((p) => p.id);
+    expect(ids).toEqual(['ollama', 'qwen-cloud', 'gemini']);
+  });
+
+  it('reaches the local eye as its model, proving the pin is threaded and not dropped', async () => {
+    const bodies: Record<string, unknown>[] = [];
+    const fetchImpl = (async (_u: string, init: { body: string }) => {
+      bodies.push(JSON.parse(init.body));
+      return { ok: true, json: async () => ({ model: 'm', message: { content: 'x' } }) };
+    }) as unknown as typeof fetch;
+    await ollamaProvider({ host: 'http://x', model: 'pinned-vl:7b', fetchImpl }).recognize(req);
+    expect(bodies[0].model).toBe('pinned-vl:7b');
   });
 });
 

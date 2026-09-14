@@ -1,7 +1,7 @@
 /**
  * UE Experiment runner — execute an ad-hoc concept (Python) on the connected
  * UE 5.8 project headless, capture the observed output (screenshot + log markers
- * + optional Gemini visual verdict), and return it. The "theory → output" engine
+ * + an optional visual verdict from the routed eye), and return it. The "theory → output" engine
  * behind the Experiment Lab.
  *
  * Thin orchestration over `@/lib/ue-launch` (buildLaunchArgs / buildPythonExecFile

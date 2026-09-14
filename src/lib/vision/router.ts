@@ -91,9 +91,24 @@ export type VisionEnv = 'dev' | 'prod';
  * whether the local eye CAN serve each use case — that is the arena, and until a capability
  * has been through it, the ordering here is a stated preference and nothing more.
  */
+/**
+ * MULTI-FRAME IS DELIBERATELY CLOUD-ONLY, and that is a finding rather than an oversight.
+ *
+ * The direction's capability map (2026-09-08) rates the single UE frame "strong" for the local
+ * eye and the filmstrip **"needs measurement — multi-image-in-one-call support varies per
+ * ollama vision model; that is a request-level constraint, not a preference"**. No arena has
+ * run for this capability, so putting the local eye first here would be a preference dressed
+ * as a measurement — the exact move the proposal says not to make.
+ *
+ * The order is the one `api/verify/animation`'s inline ternary used before this plan existed
+ * (gemini by default, the DashScope eye when the caller asked), so migrating that route changed
+ * who answers for nobody. When the arena runs, this line is the edit.
+ */
+const MULTIFRAME: VisionProviderId[] = ['gemini', 'qwen-cloud'];
+
 const PLAN: Record<VisionEnv, Record<VisionCapability, VisionProviderId[]>> = {
-  dev: { recognize: ['ollama', 'qwen-cloud', 'gemini'] },
-  prod: { recognize: ['ollama', 'qwen-cloud', 'gemini'] },
+  dev: { recognize: ['ollama', 'qwen-cloud', 'gemini'], 'recognize-multiframe': MULTIFRAME },
+  prod: { recognize: ['ollama', 'qwen-cloud', 'gemini'], 'recognize-multiframe': MULTIFRAME },
 };
 
 /** Who would answer this capability right now, in order. Exported so a diagnostics surface
@@ -116,6 +131,14 @@ export interface VisionSteer {
 }
 
 export interface RecognizeOptions {
+  /**
+   * Which capability is being asked for. Defaults to single-frame `recognize`, so every
+   * caller that predates the split keeps its plan.
+   *
+   * This is the ONLY vendor-shaped decision a call site is allowed to make, and it is not
+   * vendor-shaped: a caller says what KIND of looking it needs, and the plan answers with who.
+   */
+  capability?: VisionCapability;
   /** Explicit provider set (tests, and any caller assembling its own roster). */
   providers?: VisionProvider[];
   /** Explicit plan order, overriding the table (tests, diagnostics). */
@@ -144,7 +167,8 @@ export async function recognize(
   req: VisionRequest,
   opts: RecognizeOptions = {},
 ): Promise<RoutedVisionAnswer> {
-  const planned = opts.plan ?? planFor('recognize', opts.env ?? 'dev');
+  const capability = opts.capability ?? 'recognize';
+  const planned = opts.plan ?? planFor(capability, opts.env ?? 'dev');
   const order = steerPlan(planned, opts.steer);
   if (order.length === 0) {
     throw new Error(
@@ -157,8 +181,8 @@ export async function recognize(
   for (const id of order) {
     const provider = byId.get(id);
     if (!provider) continue;
-    if (!provider.capabilities.includes('recognize')) {
-      trail.push(eliminate(id, 'no-capability', `${id} does not serve recognize`));
+    if (!provider.capabilities.includes(capability)) {
+      trail.push(eliminate(id, 'no-capability', `${id} does not serve ${capability}`));
       continue;
     }
     if (!provider.isConfigured()) {

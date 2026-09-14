@@ -19,19 +19,54 @@ const CARD = JSON.stringify({
   topFix: 'nothing major',
 });
 
-const seen = vi.hoisted(() => ({ prompts: [] as string[], images: [] as number[] }));
+/**
+ * The mocks sit at the VENDOR BOUNDARY (`anim-critique/{qwen,gemini}`), which is where they
+ * already sat and is the only place they can still sit: the route no longer imports either
+ * module — it asks `@/lib/vision` for the `recognize-multiframe` capability, and the provider
+ * adapters are what reach for a vendor. Nothing here touches the network, and neither metered
+ * endpoint is called.
+ */
+const seen = vi.hoisted(() => ({
+  prompts: [] as string[],
+  images: [] as number[],
+  /** Which vendor seam actually ANSWERED, in order — the discriminator the ternary used to be. */
+  served: [] as string[],
+  /** Factory options per construction, so a caller's `model` pin can be followed to the vendor. */
+  qwenOpts: [] as Record<string, unknown>[],
+  geminiOpts: [] as Record<string, unknown>[],
+}));
 
-const stubSeam = () => async (images: { base64: string; mime: string }[], prompt: string) => {
-  seen.prompts.push(prompt);
-  seen.images.push(images.length);
-  return { text: CARD, model: 'qwen3.8-27b', attribution: 'answered' as const, fellBackFrom: ['qwen3.7-flash'] };
-};
+const stubSeam = (tag: string, model: string, fellBackFrom: string[]) =>
+  async (images: { base64: string; mime: string }[], prompt: string) => {
+    seen.prompts.push(prompt);
+    seen.images.push(images.length);
+    seen.served.push(tag);
+    return { text: CARD, model, attribution: 'answered' as const, fellBackFrom };
+  };
 
-vi.mock('@/lib/anim-critique/qwen', () => ({ makeQwenVisionAttributed: () => stubSeam() }));
-vi.mock('@/lib/anim-critique/gemini', () => ({ makeGeminiVisionAttributed: () => stubSeam() }));
+vi.mock('@/lib/anim-critique/qwen', () => ({
+  makeQwenVisionAttributed: (opts: Record<string, unknown> = {}) => {
+    seen.qwenOpts.push(opts);
+    return stubSeam('qwen', 'qwen3.8-27b', ['qwen3.7-flash']);
+  },
+}));
+vi.mock('@/lib/anim-critique/gemini', () => ({
+  makeGeminiVisionAttributed: (opts: Record<string, unknown> = {}) => {
+    seen.geminiOpts.push(opts);
+    return stubSeam('gemini', 'gemini-2.5-flash', []);
+  },
+}));
 
 const { POST } = await import('@/app/api/verify/animation/route');
 const { buildCritiquePrompt } = await import('@/lib/anim-critique/prompt');
+
+function reset() {
+  seen.prompts.length = 0;
+  seen.images.length = 0;
+  seen.served.length = 0;
+  seen.qwenOpts.length = 0;
+  seen.geminiOpts.length = 0;
+}
 
 let dir: string;
 
@@ -58,8 +93,29 @@ async function data(body: unknown) {
   return env.data;
 }
 
-beforeAll(() => { dir = makeDir(14); });
-afterAll(() => { rmSync(dir, { recursive: true, force: true }); });
+/**
+ * A machine with BOTH cloud eyes configured — which is what makes "who answers by default"
+ * a routing question rather than a key question. The keys are never used: the vendor seams
+ * are mocked above, so `isConfigured()` is the only thing that reads them.
+ */
+const ENV_KEYS = ['GEMINI_API_KEY', 'QWEN_API_KEY', 'DASHSCOPE_API_KEY', 'OLLAMA_HOST'] as const;
+const savedEnv: Record<string, string | undefined> = {};
+
+beforeAll(() => {
+  dir = makeDir(14);
+  for (const k of ENV_KEYS) savedEnv[k] = process.env[k];
+  process.env.GEMINI_API_KEY = 'test-gemini-key';
+  process.env.QWEN_API_KEY = 'test-qwen-key';
+  delete process.env.DASHSCOPE_API_KEY;
+  delete process.env.OLLAMA_HOST;
+});
+afterAll(() => {
+  rmSync(dir, { recursive: true, force: true });
+  for (const k of ENV_KEYS) {
+    if (savedEnv[k] === undefined) delete process.env[k];
+    else process.env[k] = savedEnv[k];
+  }
+});
 
 const BASE = { name: 'AM_SwordSlashC', intent: 'overhead two-handed sword slash', provider: 'qwen' };
 
@@ -115,6 +171,96 @@ describe('POST /api/verify/animation — sampling honesty', () => {
     expect(bad.status).toBe(400);
     const missing = await POST(post({ ...BASE, frameDir: join(dir, 'nope') }));
     expect(missing.status).toBe(404);
+  });
+});
+
+/**
+ * D1 — "no surface outside the routing layer may name a vendor and get it".
+ *
+ * This route used to choose its eye with an inline ternary
+ * (`body.provider === 'qwen' ? makeQwenVisionAttributed(...) : makeGeminiVisionAttributed(...)`).
+ * These tests pin what must NOT change when that becomes a capability request, and the one
+ * thing that does.
+ */
+describe('POST /api/verify/animation — the eye is routed, and the default is unchanged', () => {
+  it('a request naming NO provider is served by the same eye the ternary defaulted to', async () => {
+    reset();
+    const d = await data({ name: BASE.name, intent: BASE.intent, frameDir: dir });
+    expect(seen.served).toEqual(['gemini']);
+    expect(d.provenance.provider).toBe('gemini');
+    expect(d.provenance.trail).toEqual([]);
+  });
+
+  it('a request asking for the DashScope eye still gets it — as a `prefer` steer, not a vendor name', async () => {
+    reset();
+    const d = await data({ ...BASE, frameDir: dir });
+    expect(seen.served).toEqual(['qwen']);
+    expect(d.provenance.provider).toBe('qwen-cloud');
+  });
+
+  it('still echoes the REQUESTED family in `provider`, unchanged — it was never an attribution', async () => {
+    reset();
+    expect((await data({ ...BASE, frameDir: dir })).provider).toBe('qwen');
+    expect((await data({ name: BASE.name, intent: BASE.intent, frameDir: dir })).provider).toBe('gemini');
+  });
+
+  it('does NOT reach for the local eye even when one is configured on this machine', async () => {
+    // The direction flags multi-frame as "needs measurement" and the arena has not run, so the
+    // local arm is absent from this capability's plan. Setting OLLAMA_HOST is the opt-in for
+    // the SINGLE-frame capability and must not silently enrol the filmstrip judge too.
+    reset();
+    process.env.OLLAMA_HOST = 'http://127.0.0.1:59999';
+    try {
+      const d = await data({ name: BASE.name, intent: BASE.intent, frameDir: dir });
+      expect(seen.served).toEqual(['gemini']);
+      expect(d.provenance.trail).toEqual([]);
+      expect(JSON.stringify(d.provenance)).not.toContain('ollama');
+    } finally {
+      delete process.env.OLLAMA_HOST;
+    }
+  });
+
+  it('forwards a caller model pin to the vendor that serves', async () => {
+    reset();
+    await data({ name: BASE.name, intent: BASE.intent, frameDir: dir, model: 'gemini-3.8-flash' });
+    expect(seen.geminiOpts.at(-1)).toMatchObject({ model: 'gemini-3.8-flash' });
+  });
+
+  it('RE-ROUTES when the default eye is not configured, and says so in the trail', async () => {
+    // The one behaviour that is NOT byte-identical, pinned here so it is a decision rather
+    // than a discovery. Before: no GEMINI_API_KEY and no `provider` meant a 502. Now the
+    // chain continues to the next eye in the plan and the skip is recorded — the same
+    // semantics `/api/verify/visual` has had since the chokepoint landed. The rung reached is
+    // METERED, which is why the elimination must be visible on the answer rather than implied.
+    reset();
+    delete process.env.GEMINI_API_KEY;
+    try {
+      const d = await data({ name: BASE.name, intent: BASE.intent, frameDir: dir });
+      expect(seen.served).toEqual(['qwen']);
+      expect(d.provenance.provider).toBe('qwen-cloud');
+      expect(d.provenance.trail).toEqual([
+        { provider: 'gemini', kind: 'not-configured', detail: 'gemini is not configured on this machine' },
+      ]);
+    } finally {
+      process.env.GEMINI_API_KEY = 'test-gemini-key';
+    }
+  });
+
+  it('502s with the WHOLE trail when no eye in the plan could serve', async () => {
+    reset();
+    delete process.env.GEMINI_API_KEY;
+    delete process.env.QWEN_API_KEY;
+    try {
+      const res = await POST(post({ name: BASE.name, intent: BASE.intent, frameDir: dir }));
+      expect(res.status).toBe(502);
+      const env = await res.json();
+      expect(env.error).toMatch(/gemini: not-configured/);
+      expect(env.error).toMatch(/qwen-cloud: not-configured/);
+      expect(seen.served).toEqual([]);
+    } finally {
+      process.env.GEMINI_API_KEY = 'test-gemini-key';
+      process.env.QWEN_API_KEY = 'test-qwen-key';
+    }
   });
 });
 

@@ -39,6 +39,13 @@ export function ollamaProvider(opts: OllamaOptions = {}): VisionProvider {
 
   return {
     id: 'ollama',
+    // SINGLE-FRAME ONLY, deliberately. `recognize-multiframe` is NOT declared here because
+    // multi-image-in-one-call support varies per resident vision model and nothing has been
+    // measured (direction 2026-09-08: the filmstrip capability "needs measurement"). An
+    // undeclared capability drops this provider out of a multi-frame chain with a reason in
+    // the trail; a declared one would risk the failure the chokepoint exists to prevent — a
+    // model handed ten frames that reads one and answers confidently about the motion.
+    // Declare it when the arena says so, not before.
     capabilities: ['recognize'],
     // The daemon's dial is a BOOLEAN (`think`), not a three-step level, so only two of the
     // shared vocabulary's levels are honestly expressible here. Declaring both — rather than

@@ -87,9 +87,9 @@ export interface GateVerdict {
   /**
    * L4: the rendered frame this verdict was judged from. Surfaced as a first-class field so
    * the loop CLOSES — the agent is handed a frame to READ with its own eyes, not trusted to
-   * remember to look. The automated (Gemini) judge catches only gross errors (T-pose, black
-   * scene, missing humanoid); it will pass a mannequin standing in a non-attack or miss debug
-   * cruft. Reviewing this PNG is what catches those.
+   * remember to look. The automated judge — whichever eye the vision plan reached — catches
+   * only gross errors (T-pose, black scene, missing humanoid); it will pass a mannequin
+   * standing in a non-attack or miss debug cruft. Reviewing this PNG is what catches those.
    */
   screenshot?: string;
   /**
@@ -132,7 +132,7 @@ export type ScreenshotResolution = string | null | CaptureResolution;
 
 /**
  * Runs gates of a single tier. The seam: the bridge (running editor), spawn
- * (headless UnrealEditor-Cmd), and visual-bridge (RHI + Gemini) executors all
+ * (headless UnrealEditor-Cmd), and visual-bridge (RHI + the routed eye) executors all
  * satisfy this, so the run mode is chosen at call time, not baked in.
  */
 export interface GateExecutor {

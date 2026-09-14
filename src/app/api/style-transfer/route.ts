@@ -39,11 +39,14 @@ export async function POST(req: NextRequest) {
 // reference image." — a confidence number and two sentences asserting a
 // measurement that never happened.
 //
-// The repo does have a real vision seam (`makeQwenVision`, used by style-dna.ts
-// and input-gate.ts). Wiring it here is a deliberate NON-goal for now: it is a
-// paid remote call on what is currently a free, synchronous, keystroke-cheap
-// analyze button, and there is no opt-in on the caller. Until that call is
-// actually made, the honest report is that only the words were read.
+// The repo does have a real vision seam — the chokepoint at `@/lib/vision`
+// (`makeRoutedVisionText()`, which style-dna.ts and input-gate.ts already use).
+// Wiring it here is a deliberate NON-goal for now: on a machine with no local
+// eye configured the plan reaches a metered one, so this would put a paid remote
+// call behind what is currently a free, synchronous, keystroke-cheap analyze
+// button, with no opt-in on the caller. Named as a capability rather than a
+// vendor because that is what the call would be if it were ever made. Until it
+// is, the honest report is that only the words were read.
 
 /** Said whenever an image is attached, so the attachment can never read as evidence. */
 const IMAGE_NOT_EXAMINED =

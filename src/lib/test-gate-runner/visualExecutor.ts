@@ -29,7 +29,7 @@ export interface VisualExecutorOptions {
   appOrigin: string;
   fetchImpl?: FetchImpl;
   projectPath?: string;
-  /** Force the Gemini check mode; else derived from the catalogId. */
+  /** Force the visual check mode; else derived from the catalogId. */
   mode?: VisualMode;
   /**
    * Resolve a screenshot for a job. Returns a bare path (`string | null`, legacy/operator
@@ -40,7 +40,7 @@ export interface VisualExecutorOptions {
   screenshotResolver?: (job: GateJob) => Promise<ScreenshotResolution>;
 }
 
-/** Map a catalog to the closest Gemini visual-check prompt mode. Pure (tested). */
+/** Map a catalog to the closest visual-check prompt mode. Pure (tested). */
 export function visualModeFor(catalogId: string): VisualMode {
   if (catalogId === 'materials') return 'texture';
   if (catalogId === 'zone-map' || catalogId === 'combat-map') return 'lighting';
@@ -50,7 +50,9 @@ export function visualModeFor(catalogId: string): VisualMode {
 
 /**
  * L4 executor: obtain a screenshot, run it through the existing /api/verify/visual
- * Gemini check (which also records to `visual_verifications`), map to a verdict.
+ * check (which also records to `visual_verifications`), map to a verdict. This executor
+ * names no vendor: that route goes through the vision chokepoint, so which eye judges is a
+ * plan entry and the answer carries its own `provenance`.
  * Honestly throws (→ the job stays deferred) when no screenshot source is reachable.
  */
 export function makeVisualExecutor(opts: VisualExecutorOptions): GateExecutor {
@@ -111,7 +113,7 @@ export function makeVisualExecutor(opts: VisualExecutorOptions): GateExecutor {
         };
       }
       const verdict = env.data?.verdict === 'pass' ? 'pass' : 'fail';
-      // Surface the frame the verdict was judged from so the agent can READ it — Gemini's
+      // Surface the frame the verdict was judged from so the agent can READ it — the
       // single-frame check is the gross-error floor, not the final word on quality. Evidence
       // carries the frame + the judge's notes so the flip keeps its proof.
       return {

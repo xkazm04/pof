@@ -9,8 +9,21 @@
 import type { VisionImage } from '@/lib/anim-critique/critique';
 import type { VisionAnswer } from '@/lib/anim-critique/vision';
 
-/** The closed capability vocabulary. `recognize` = read/judge pixels that already exist. */
-export type VisionCapability = 'recognize';
+/**
+ * The closed capability vocabulary.
+ *
+ * - `recognize` — read/judge the pixels of ONE image that already exists.
+ * - `recognize-multiframe` — read/judge an ordered FILMSTRIP in a single call, where the
+ *   answer is about the relationship BETWEEN the frames (timing, weight, follow-through).
+ *
+ * These are two capabilities and not one parameter of the same capability, because the way
+ * they fail is different. A provider that serves single frames well may accept N images and
+ * read one — on time, on budget, with nothing reporting a problem — which is the worst
+ * failure this layer can make. Splitting them means such a provider is simply absent from
+ * the multi-frame plan and its absence is a `no-capability` elimination in the trail,
+ * instead of a silent wrong answer.
+ */
+export type VisionCapability = 'recognize' | 'recognize-multiframe';
 
 /** Every provider the router can reach. A caller may steer among these; it may not add one. */
 export type VisionProviderId = 'ollama' | 'qwen-cloud' | 'gemini';
