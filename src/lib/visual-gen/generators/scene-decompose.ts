@@ -51,6 +51,12 @@ export interface DecomposeReply {
   /** Rows that looked like a prop row but failed validation. */
   skipped: number;
   /**
+   * Names of rows that validated but name something the prompt told the model to exclude
+   * (architecture, vegetation, background). Dropped here, deterministically, and listed so
+   * a caller can see what the model offered and the parser refused.
+   */
+  excluded: string[];
+  /**
    * Whether the vision call itself completed. This is the distinction `input-gate.ts`
    * already draws and it matters just as much here: a scene that HONESTLY contains no
    * movable props (terrain, architecture and foliage only) is a valid answer, not a
@@ -62,6 +68,22 @@ export interface DecomposeReply {
 }
 
 const MATERIALS = Object.keys(MATERIAL_DENSITIES) as PhysicsMaterial[];
+
+/**
+ * The prompt's own exclusion nouns, re-applied to the reply. The prompt asks the model not
+ * to list these; this is the check that does not depend on the model having listened. A
+ * word in a prop name that STARTS with one of these stems excludes the row.
+ */
+const NOT_A_PROP_STEMS = [
+  'stair', 'step', 'column', 'arch', 'doorway', 'railing', 'platform', 'roof',
+  'bush', 'grass', 'tree', 'vine', 'ground', 'terrain', 'sky', 'wall', 'ceiling', 'water',
+];
+
+/** Does this prop name name something the prompt excludes? Pure. */
+export function namesExcludedScenery(name: string): boolean {
+  const words = name.toLowerCase().split(/[^a-z]+/).filter(Boolean);
+  return words.some((w) => NOT_A_PROP_STEMS.some((stem) => w.startsWith(stem)));
+}
 
 /** Beyond this a "count" is a texture, not a prop set worth spawning individually. */
 const MAX_COUNT = 24;
@@ -134,6 +156,7 @@ export function parseSceneDecomposeReply(text: string): DecomposeReply {
   const props: DecomposedProp[] = [];
   const seen = new Map<string, number>();
   let skipped = 0;
+  const excluded: string[] = [];
   let sawRow = false;
 
   for (const line of text.split(/\r?\n/)) {
@@ -149,6 +172,11 @@ export function parseSceneDecomposeReply(text: string): DecomposeReply {
 
     if (nums.length !== 4 || !validBox(box) || !(longestCm > 0) || count < 1 || count > MAX_COUNT || !name) {
       skipped++;
+      continue;
+    }
+
+    if (namesExcludedScenery(name)) {
+      excluded.push(name);
       continue;
     }
 
@@ -170,13 +198,16 @@ export function parseSceneDecomposeReply(text: string): DecomposeReply {
       ok: false,
       props: [],
       skipped,
+      excluded,
       ran: true,
-      error: sawRow
-        ? `no PROP row survived validation (${skipped} rejected as out-of-range)`
-        : 'the model returned no prop rows — the scene may contain no movable props',
+      error: excluded.length
+        ? `no PROP row survived: ${excluded.length} named excluded scenery (${excluded.join(', ')}), ${skipped} out-of-range`
+        : sawRow
+          ? `no PROP row survived validation (${skipped} rejected as out-of-range)`
+          : 'the model returned no prop rows — the scene may contain no movable props',
     };
   }
-  return { ok: true, props, skipped, ran: true };
+  return { ok: true, props, skipped, excluded, ran: true };
 }
 
 /**
@@ -220,7 +251,7 @@ export async function decomposeScene(
   try {
     raw = await vision([image], buildSceneDecomposePrompt(deps.hint));
   } catch (e) {
-    return { ok: false, props: [], skipped: 0, ran: false, error: e instanceof Error ? e.message : String(e) };
+    return { ok: false, props: [], skipped: 0, excluded: [], ran: false, error: e instanceof Error ? e.message : String(e) };
   }
   return parseSceneDecomposeReply(raw);
 }
