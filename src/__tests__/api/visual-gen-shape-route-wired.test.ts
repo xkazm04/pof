@@ -102,4 +102,26 @@ describe('shape route on /api/visual-gen/generate', () => {
     expect(res.status).toBe(400);
     expect(started()).toBe(0);
   });
+
+  /**
+   * The asymmetry this test closes: every outcome that SPENDS a credit leaves a
+   * structured record (`data.shapeRoute` on the 202 - overridden, advise, and the
+   * silent generate), and the one outcome that SAVES a credit left only prose in
+   * `error`. A refusal string is for the caller; it is not a record, so nothing
+   * downstream can count how often the paid capability was deliberately dropped,
+   * or tell that diversion apart from a malformed request. The decision rides on
+   * `details` in the same shape the 202 carries.
+   */
+  it('records the credit-saving diversion as structured data, not only as a refusal string', async () => {
+    const res = await POST(req({ mode: 'text-to-3d', providerId: 'tripo3d', prompt: 'a coiled rope' }));
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(started()).toBe(0);
+    expect(body.details).toBeDefined();
+    expect(body.details.route).toBe('procedural');
+    expect(body.details.keyword).toBe('rope');
+    // Same field name and shape the spending outcomes report, so one reader serves both.
+    expect(body.details.reason).toEqual(expect.any(String));
+  });
 });

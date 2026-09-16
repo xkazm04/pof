@@ -136,7 +136,12 @@ export async function POST(request: NextRequest) {
       promptRoute.route === 'generate' ? undefined : promptRoute;
     const shapeRefusal = linearPropRefusal(promptRoute);
     if (shapeRefusal) {
-      if (overrideShapeRoute !== true) return apiError(shapeRefusal, 400);
+      // The refusal string is for the caller; `details` is the RECORD. This is the one
+      // outcome of the four that saves a credit, and it was the only one leaving no
+      // structured trace - so nothing downstream could count deliberate diversions, or
+      // tell one apart from a malformed request. Same shape the 202 carries in
+      // `shapeRoute`, so one reader serves both.
+      if (overrideShapeRoute !== true) return apiError(shapeRefusal, 400, promptRoute);
       shapeRoute = linearPropOverridden(promptRoute);
     }
 
