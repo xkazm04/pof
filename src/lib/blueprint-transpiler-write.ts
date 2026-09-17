@@ -1,6 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { diffPrompts, type PromptDiff } from './text-diff';
+import { claimSelfWrite } from './self-write-ledger';
 
 const IDENT = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
@@ -166,6 +167,11 @@ export async function applyWrite(
   }
 
   await fs.mkdir(sourceDir, { recursive: true });
+  // The record precedes the effect: the watcher on this same Source/ tree turns
+  // every change event into progress the user did not make, so the bytes are
+  // claimed before they exist. Claiming after the write races the notification.
+  claimSelfWrite(headerPath, input.header);
+  claimSelfWrite(sourcePath, input.source);
   await fs.writeFile(headerPath, input.header, 'utf8');
   await fs.writeFile(sourcePath, input.source, 'utf8');
   // The receipt carries the rung it was earned at: the files are WRITTEN. Only
