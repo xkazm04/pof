@@ -114,6 +114,27 @@ export type UvMode = 'smart' | 'pack-existing';
  * cut is least VISIBLE, `smart_project` optimises for even area — so this does not make
  * `pack-existing` wrong, it makes the trade-off visible for the first time. Nothing here
  * changes the default; the grade is reported, not enforced.
+ *
+ * ── Where the pack loss comes from, and whether anyone can see it (2026-09-18) ──────
+ * Re-run over seven generated meshes (the two above plus warrior, vael, grunt, crate,
+ * item-1), measuring the provider's layout AS IMPORTED, before any reduction:
+ *
+ *   incoming provider layout      p95 1.42-1.58  bad 0.0005-0.0064
+ *   smart after reduction         p95 1.12-1.17  bad 0.0000
+ *   pack-existing after reduction p95 1.54-1.80  bad 0.0043-0.0316
+ *   pack + average_islands_scale  p95 1.58-1.60  bad 0.0219-0.0233   (the two jinx only)
+ *
+ * So the loss has two sources: the provider's own atlas is already less even than a
+ * fresh projection, and edge-collapse reduction distorts the carried coordinates, which
+ * is where most of `badFraction` comes from (4-10x the incoming share). Averaging island
+ * scale before the pack recovers little, so this is not per-island scale.
+ *
+ * Then a blind render A/B (warrior 310k->20k, crate 40k->20k, 1024 diffuse bake, workbench
+ * flat stills, full view plus close-ups): the operator called both pairs identical, and
+ * the crate unusable on both arms. At this bake size the band between `clean` and
+ * `uneven` is not visible, which is evidence for keeping the grade report-only. It does
+ * not show that the band never matters: a higher bake size or a texel-scale close-up could
+ * still separate the arms.
  */
 export type UvStretchVerdict = 'clean' | 'uneven' | 'poor' | 'unmeasured';
 
