@@ -8,10 +8,29 @@ export interface BoneMapping {
   targetBone: string;
 }
 
+/**
+ * How the asset reaches this skeleton — and therefore what the preset owes.
+ *
+ * - `remap`: the generated mesh is bound and a source skeleton's bone names are mapped
+ *   onto the target's. The mapping table must be TOTAL over the target's declared IK
+ *   chains; an unmapped chain endpoint is a limb that will not animate.
+ * - `conform`: an already-rigged template is deformed to the generated mesh's
+ *   proportions and the TEMPLATE ships — its topology, UVs, skeleton and skin weights.
+ *   There is no source skeleton, so there is no mapping table to be total over, and an
+ *   empty `mixamoMapping` is the correct final state rather than unfinished work.
+ *
+ * The field exists because the two are indistinguishable from the data otherwise: both
+ * present as a preset row, and `mixamoMapping: []` means "not authored yet" on one and
+ * "not applicable, by construction" on the other.
+ */
+export type RigTargetKind = 'remap' | 'conform';
+
 export interface RigPreset {
   id: string;
   name: string;
   description: string;
+  /** Which operation reaches this skeleton. Decides which verification the row owes. */
+  kind: RigTargetKind;
   boneCount: number;
   hasFingers: boolean;
   hasFaceRig: boolean;
@@ -30,6 +49,7 @@ export const RIG_PRESETS: RigPreset[] = [
     id: 'ue5-mannequin',
     name: 'UE5 Mannequin',
     description: 'Standard UE5 skeleton. Compatible with Marketplace animations and Mannequin animation set.',
+    kind: 'remap',
     boneCount: 67,
     hasFingers: true,
     hasFaceRig: false,
@@ -68,6 +88,7 @@ export const RIG_PRESETS: RigPreset[] = [
     id: 'metahuman',
     name: 'MetaHuman',
     description: 'Full MetaHuman rig with face bones. For high-fidelity characters with facial animation.',
+    kind: 'conform',
     boneCount: 584,
     hasFingers: true,
     hasFaceRig: true,
@@ -85,6 +106,7 @@ export const RIG_PRESETS: RigPreset[] = [
     id: 'minimal-humanoid',
     name: 'Minimal Humanoid',
     description: 'Simplified 25-bone skeleton for indie games. Lower overhead, easier to animate.',
+    kind: 'remap',
     boneCount: 25,
     hasFingers: false,
     hasFaceRig: false,
@@ -121,4 +143,61 @@ export const RIG_PRESETS: RigPreset[] = [
 
 export function getRigPreset(id: string): RigPreset | undefined {
   return RIG_PRESETS.find((p) => p.id === id);
+}
+
+export interface PresetBindingCheck {
+  presetId: string;
+  kind: RigTargetKind;
+  /** Chain endpoints the target requires. Same for both kinds — the chains are declared. */
+  requiredChainBones: string[];
+  /**
+   * Required chain bones with no mapping row. Meaningful ONLY on a `remap` preset.
+   * On a `conform` preset it is null, because there is no source skeleton to map from
+   * and an empty table is the correct state, not an incomplete one.
+   */
+  unmappedChainBones: string[] | null;
+  ok: boolean;
+  /** Safe to print verbatim. Never says "complete" about a check that did not run. */
+  reason: string;
+}
+
+/**
+ * State what a preset row owes and whether it has it. Pure.
+ *
+ * The whole point is the branch. Running a mapping-totality check against a `conform`
+ * target reports ten unmapped bones for a path that has no mapping step, and the obvious
+ * "fix" is to invent a mapping table for a source skeleton that does not exist. Running
+ * no check at all — which is what happened here until 2026-09-20 — lets a `remap` row
+ * ship with an empty table that nothing reads.
+ */
+export function checkPresetBinding(preset: RigPreset): PresetBindingCheck {
+  const required = [...new Set(preset.ikChains.flatMap((c) => [c.startBone, c.endBone]))];
+
+  if (preset.kind === 'conform') {
+    // Not a pass by default: a pass on a check that does not apply, stated as such.
+    return {
+      presetId: preset.id,
+      kind: 'conform',
+      requiredChainBones: required,
+      unmappedChainBones: null,
+      ok: preset.mixamoMapping.length === 0,
+      reason:
+        preset.mixamoMapping.length === 0
+          ? `conform target — the rigged template supplies the skeleton and skin weights, so there is no source skeleton to map from and no mapping totality to verify; what this row owes instead is the joint-inheritance mode that produced the rig (inherited from the template, not estimated from the source mesh), which is what keeps it compatible with the template's animation library`
+          : `conform target carrying ${preset.mixamoMapping.length} mapping row(s) — a conform path has no source skeleton, so these rows map from nothing; either the row is really a remap target or the table is left over`,
+    };
+  }
+
+  const mapped = new Set(preset.mixamoMapping.map((m) => m.targetBone));
+  const unmapped = required.filter((b) => !mapped.has(b));
+  return {
+    presetId: preset.id,
+    kind: 'remap',
+    requiredChainBones: required,
+    unmappedChainBones: unmapped,
+    ok: unmapped.length === 0,
+    reason: unmapped.length
+      ? `remap target is missing ${unmapped.length} of ${required.length} required chain endpoint(s): ${unmapped.join(', ')} — each is a chain that will not animate`
+      : `remap target: all ${required.length} required chain endpoint(s) are mapped`,
+  };
 }
