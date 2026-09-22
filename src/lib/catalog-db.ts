@@ -1,5 +1,6 @@
 import { getDb } from '@/lib/db';
 import { logger } from '@/lib/logger';
+import { jsonUnsafeKeys } from '@/lib/catalog/entityPayload';
 import type { LifecycleRecord, LifecycleState, StoredCatalogEntity, TestResult } from '@/lib/catalog/types';
 
 // The DB connection is a process-level singleton (see getDb), so the DDL only
@@ -102,7 +103,7 @@ function ensureEntityTable() {
 }
 
 /** Who created the entity. `'one-shot'` = the autonomous flow; `'user'` = a direct create. */
-export type CatalogEntitySource = 'user' | 'one-shot';
+export type CatalogEntitySource = 'user' | 'one-shot' | 'ingest';
 
 /** A catalog entity persisted server-side — the durable counterpart of a browser draft. */
 export interface PersistedCatalogEntity {
@@ -168,6 +169,17 @@ export function upsertEntity(rec: {
   entity: StoredCatalogEntity;
 }): PersistedCatalogEntity {
   ensureEntityTable();
+  // A payload key JSON cannot carry is destroyed HERE, and the worst of them survive as
+  // `{}` (a React component, a Map) so every later presence check still passes. Name them
+  // at the write instead of letting a hollow value read as a present one.
+  // (`ArchetypeConfig.icon` is exactly this — measured 2026-09-22: 13 keys in, 13 out, one
+  // hollow. See `src/lib/catalog/entityPayload.ts`.)
+  const unsafe = jsonUnsafeKeys(rec.entity);
+  if (unsafe.length > 0) {
+    logger.error(
+      `catalog_entities: ${rec.catalogId}/${rec.entityId} — ${unsafe.length} key(s) will not survive persistence and are being stored hollow: ${unsafe.join(', ')}`,
+    );
+  }
   getDb().prepare(`
     INSERT INTO catalog_entities (catalog_id, entity_id, data, source, created_at, updated_at)
     VALUES (@catalog_id, @entity_id, @data, @source, datetime('now'), datetime('now'))

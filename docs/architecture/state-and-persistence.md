@@ -190,7 +190,14 @@ etc.) and expose typed CRUD functions. No ORM — raw prepared statements throug
 
 **`catalog_entities`** (`src/lib/catalog-db.ts`, same `ensureTable()` guard) is the durable record
 of a **user-created** catalog entity — keyed `(catalog_id, entity_id)` with `data` (the whole
-`StoredCatalogEntity` as JSON), `source` (`'user' | 'one-shot'`), `created_at` and `updated_at`.
+`StoredCatalogEntity` as JSON), `source` (`'user' | 'one-shot' | 'ingest'`), `created_at` and `updated_at`.
+An `'ingest'` row carries `entity.provenance` (`EntityProvenance`: source game, project, file, row and a
+**per-row licence note**) — written by the legacy-game ingest chassis (`src/lib/catalog/ingest/`, see
+`docs/research/legacy-game-ingest-spec.md`). **The payload must be JSON-safe:** `upsertEntity` stringifies it,
+and a React component or `Map` survives as a hollow `{}` that still passes every presence check
+(`ArchetypeConfig.icon` does exactly this). `jsonUnsafeKeys` (`src/lib/catalog/entityPayload.ts`) names such
+keys in a `logger.error` at the write. The route's accepted-source list is DERIVED from the union
+(an exhaustive `Record<CatalogEntitySource, …>`), so widening the type cannot leave the API rejecting it.
 Before it, the one-shot flow created a `draft-<catalog>-<ts>` entity in the browser store
 (`catalogStore.addDraft`, persisted to `localStorage`) while writing its ~11 pipeline artifacts to
 SQLite, so the server could never resolve the entity again: `seededEntities` missed it,

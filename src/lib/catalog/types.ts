@@ -22,6 +22,33 @@ export interface CatalogLink {
   role: string;
 }
 
+/**
+ * Where an entity's VALUES came from, when they were not authored in this repo.
+ *
+ * An ingested entity that cannot say which game, file and row it came from is
+ * indistinguishable from one a designer wrote — which is both a provenance failure and a
+ * licensing one, because the numbers in a reverse-engineered data table are another
+ * studio's design work. So the licence rides on every row rather than in a README that the
+ * row can be separated from.
+ */
+export interface EntityProvenance {
+  kind: 'ingest';
+  /** Human name of the originating game, with its year: 'Diablo I (1996)'. */
+  sourceGame: string;
+  /** The project the tables were read from (NOT the game's own binaries). */
+  sourceProject: string;
+  /** File within that project: 'assets/txtdata/monsters/monstdat.tsv'. */
+  sourceFile: string;
+  /** Which row — the source's own key, so a value can be traced back and re-read. */
+  sourceRow: string;
+  /**
+   * Redistribution status of these VALUES, in plain words. Carried per-row on purpose:
+   * a permissive licence on the reading code says nothing about the data it reads.
+   */
+  licenceNote: string;
+  ingestedAt: string;
+}
+
 /** The shared envelope every catalog entity carries. */
 export interface CatalogEntityBase {
   id: string;
@@ -40,6 +67,8 @@ export interface CatalogEntityBase {
   lastVerifiedAt?: string;
   /** Cross-catalog references (e.g. Bestiary → Abilities + Loot). */
   links?: CatalogLink[];
+  /** Set only on ingested entities; absent means "authored here". */
+  provenance?: EntityProvenance;
 }
 
 /** Ability catalog entity — payload reuses the existing UI shape, rendered unchanged. */

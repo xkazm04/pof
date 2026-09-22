@@ -22,7 +22,19 @@ import { listEntities, getEntity, upsertEntity, deleteEntity, type CatalogEntity
 import { codeSeededEntities, entityCollisions } from '@/lib/catalog/seed';
 import type { StoredCatalogEntity } from '@/lib/catalog/types';
 
-const SOURCES: CatalogEntitySource[] = ['user', 'one-shot'];
+/**
+ * DERIVED from the union, not listed beside it. A hand-written `['user','one-shot']` is a
+ * valid `CatalogEntitySource[]` even when the union has grown, so widening the type left
+ * this route rejecting the new member with a 400 and TypeScript saw nothing. A
+ * `Record<CatalogEntitySource, …>` is exhaustive, so the next member breaks the build here
+ * instead of failing at runtime.
+ */
+const SOURCE_DESCRIPTIONS: Record<CatalogEntitySource, string> = {
+  user: 'authored in the app by an operator',
+  'one-shot': 'created by the one-shot draft flow',
+  ingest: 'parsed from an external game’s data tables; carries `entity.provenance`',
+};
+const SOURCES = Object.keys(SOURCE_DESCRIPTIONS) as CatalogEntitySource[];
 
 /** GET /api/catalog-entities?catalogId=bestiary → the persisted rows + any id collisions. */
 export async function GET(req: NextRequest) {
