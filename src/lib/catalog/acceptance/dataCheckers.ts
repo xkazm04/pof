@@ -1,5 +1,6 @@
 import { gradeGallerySelection } from './galleryArtifact';
 import type { Checker } from './types';
+import { tagRequiredFields } from './requiredFields';
 
 /**
  * Resolve a field reference against a step's artifact data. A plain name (`gpuPct`) reads a
@@ -27,12 +28,13 @@ export function minLength(field: string, label: string, n: number): Checker {
 }
 
 export function fieldsPopulated(field: string, label: string, keys: string[]): Checker {
-  return (data) => {
+  // Tagged so the produce prompt can NAME the keys it will be graded on (`requiredFields.ts`).
+  return tagRequiredFields((data) => {
     const obj = (data[field] ?? {}) as Record<string, unknown>;
     const missing = keys.filter((k) => obj[k] == null);
     const ok = missing.length === 0;
     return { label, tier: 'L0', status: ok ? 'pass' : 'pending', detail: `${keys.length - missing.length} / ${keys.length} populated`, ...(ok ? {} : { reason: `field "${field}" missing: ${missing.join(', ')}` }) };
-  };
+  }, { field, keys });
 }
 
 /** Numeric ±% band. `field` may be a dot-path (see `pickField`) so a step can grade the very
@@ -125,7 +127,8 @@ export function selected(field: string, label: string): Checker {
  * missing field FAILS naming the offending index; the single-master path is unchanged.
  */
 export function materialShape(field: string, label: string): Checker {
-  return (data) => {
+  // Tagged with the single-master (default) shape's keys — a producer following them passes.
+  return tagRequiredFields((data) => {
     const obj = (data[field] ?? {}) as Record<string, unknown>;
     const masters = obj.parentMaterials;
     if (Array.isArray(masters)) {
@@ -147,7 +150,7 @@ export function materialShape(field: string, label: string): Checker {
     const missing = req.filter((k) => obj[k] == null);
     const ok = missing.length === 0;
     return { label, tier: 'L0', status: ok ? 'pass' : 'pending', detail: `${req.length - missing.length} / ${req.length} populated`, ...(ok ? {} : { reason: `field "${field}" missing: ${missing.join(', ')}` }) };
-  };
+  }, { field, keys: ['parentMaterial', 'textures'] });
 }
 
 /**

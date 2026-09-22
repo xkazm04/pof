@@ -1,5 +1,8 @@
 # ACCEPTANCE CONTRACT FOR THIS STEP (you are graded against it)
 
+## Required fields (graded — use these exact keys)
+- `baseType`: an object with keys `slot`, `rarity`, `ilvl`, `requiredLevel`, `implicit`
+
 ## Wiring contract — Base Type & Rarity · baseType
 - **Granted by**: UARPGInventoryComponent equips the item and activates the equip GE bundle
 - **Activated by**: On-equip (slot assignment in UARPGInventoryComponent)

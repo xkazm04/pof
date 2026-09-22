@@ -1,5 +1,8 @@
 # ACCEPTANCE CONTRACT FOR THIS STEP (you are graded against it)
 
+## Required fields (graded — use these exact keys)
+- `effect`: an object with keys `damageType`, `baseDamage`, `manaCost`, `cooldown`, `critChancePct`, `critMulti`, `onHitIgnite`
+
 ## Wiring contract — Effect Logic · effect
 - **Granted by**: ASC GiveAbility — UAbilitySystemComponent::GiveAbility(GA_AshenBlade) called at character initialisation (AARPGCharacterBase::InitAbilitySystemComponent). Slot bound at initialisation; not dynamically acquired.
 - **Activated by**: Input action IA_Ability1 (player) → UARPGAbilityInputComponent triggers TryActivateAbilityByTag(Ability.Fire.AshenBlade); AI behaviour-tree task BTTask_UseAbility passes the GA class directly.

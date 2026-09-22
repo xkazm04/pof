@@ -15,7 +15,7 @@
  * repo's so it can run tests. The overseer reads the diff, resumes with instructions or lands it,
  * and commits with a pathspec itself. Codex never commits (it is told so in every brief).
  */
-import { spawn, spawnSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { routeTask } from '../../src/lib/codex-exec/routing';
@@ -23,11 +23,11 @@ import { buildCodexExecArgs, buildCodexResumeArgs, PROMPT_FROM_STDIN } from '../
 import { parseCodexEvents } from '../../src/lib/codex-exec/events';
 import { CODEX_REPORT_SCHEMA, renderBrief, type CodexTask } from '../../src/lib/codex-exec/brief';
 import { parseLedger, summarizeLedger, type CodexVerdict, type LedgerEntry } from '../../src/lib/codex-exec/ledger';
+import { runCodex, stallMinutes, type RunEnd } from './runner';
 
 const REPO = resolve(dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), '..', '..');
 const HOME = process.env.POF_CODEX_HOME ?? resolve(REPO, '..', 'pof-codex');
 const LEDGER = process.env.POF_CODEX_LEDGER ?? 'C:/Users/kazda/Documents/Obsidian/pof/Diablo/Codex/ledger.jsonl';
-const CODEX_JS = process.env.POF_CODEX_JS ?? 'C:/nvm4w/nodejs/node_modules/@openai/codex/bin/codex.js';
 
 const runDir = (id: string) => join(HOME, 'runs', id);
 const wtDir = (id: string) => join(HOME, 'wt', id);
@@ -41,62 +41,6 @@ interface RunState {
 }
 const loadState = (id: string): RunState => JSON.parse(readFileSync(join(runDir(id), 'state.json'), 'utf8')) as RunState;
 const saveState = (id: string, s: RunState) => writeFileSync(join(runDir(id), 'state.json'), JSON.stringify(s, null, 2));
-
-/** How a run ended — never collapsed into "succeeded" (registry: subprocess-lifecycle). */
-interface RunEnd { code: number; ended: 'exited' | 'timeout' | 'stalled'; rung?: 'polite' | 'forced' }
-
-/**
- * Minutes of event SILENCE before a run counts as stalled. The `--json` stream carries no
- * reasoning events (verified on cx-001's stream: only messages, commands and file changes), so a
- * long high-effort composition is silent until its final message — a flat 10 min would kill a
- * working xhigh run. Tolerance therefore scales with the reasoning effort.
- */
-function stallMinutes(effort: string): number {
-  const env = process.env.POF_CODEX_STALL_MIN;
-  if (env) return Number(env);
-  return effort === 'low' || effort === 'medium' ? 10 : effort === 'high' ? 25 : 40;
-}
-
-/**
- * Kill THIS child's process TREE — `child.kill()` on Windows ends only the node wrapper and
- * orphans codex's native binary and the shells it spawned. Scoped to our own PID (`/T`), never
- * a broad kill by image name. Ladder: polite (`taskkill /T`) → forced (`/T /F`) after 15 s.
- */
-function reapTree(pid: number, onRung: (r: 'polite' | 'forced') => void) {
-  onRung('polite');
-  spawnSync('taskkill', ['/PID', String(pid), '/T'], { encoding: 'utf8' });
-  setTimeout(() => {
-    const alive = spawnSync('tasklist', ['/FI', `PID eq ${pid}`, '/NH'], { encoding: 'utf8' }).stdout.includes(String(pid));
-    if (alive) { onRung('forced'); spawnSync('taskkill', ['/PID', String(pid), '/T', '/F'], { encoding: 'utf8' }); }
-  }, 15_000).unref();
-}
-
-/**
- * Spawn codex (node + codex.js, no shell) with the prompt on stdin; stream events to a file.
- * Liveness is THIS run's event activity: no output for STALL_MIN minutes is `stalled`, distinct
- * from the wall-clock `timeout`.
- */
-function runCodex(args: string[], cwd: string, prompt: string, eventsPath: string, timeoutMin: number, stallMin: number, onPid: (pid: number) => void): Promise<RunEnd> {
-  return new Promise((done) => {
-    const child = spawn(process.execPath, [CODEX_JS, ...args], { cwd, stdio: ['pipe', 'pipe', 'pipe'] });
-    if (child.pid) onPid(child.pid);
-    let ended: RunEnd['ended'] = 'exited';
-    let rung: RunEnd['rung'];
-    let last = Date.now();
-    const stop = (why: RunEnd['ended']) => {
-      if (ended !== 'exited' || !child.pid) return;
-      ended = why;
-      console.error(`${why} — reaping codex process tree ${child.pid}`);
-      reapTree(child.pid, (r) => { rung = r; });
-    };
-    const wall = setTimeout(() => stop('timeout'), timeoutMin * 60_000);
-    const watch = setInterval(() => { if (Date.now() - last > stallMin * 60_000) stop('stalled'); }, 30_000);
-    child.stdout.on('data', (d) => { last = Date.now(); appendFileSync(eventsPath, d); });
-    child.stderr.on('data', (d) => appendFileSync(`${eventsPath}.stderr`, d));
-    child.stdin.end(prompt); // closes stdin: exec never waits for EOF (trap 1)
-    child.on('close', (code) => { clearTimeout(wall); clearInterval(watch); done({ code: code ?? -1, ended, rung }); });
-  });
-}
 
 function changes(cwd: string): string[] {
   return git(cwd, 'status', '--porcelain').stdout.split('\n').filter(Boolean);

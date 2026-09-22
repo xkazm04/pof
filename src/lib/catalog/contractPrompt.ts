@@ -1,6 +1,7 @@
 import { ARCHETYPE_CANON } from '@/lib/catalog/canon/archetypeCanon';
 import { isContentInvariant } from '@/lib/catalog/acceptance/contentInvariant';
 import { MIN_PROSE } from '@/lib/catalog/acceptance/wiringCheckers';
+import { requiredFieldsOf } from '@/lib/catalog/acceptance/requiredFields';
 import type { WiringRequirement } from '@/lib/knowledge/wiring-requirements';
 import type { RuleCategory } from '@/lib/catalog/canon/types';
 import type { CatalogPipeline, StepSpec } from '@/lib/catalog/stepSpec';
@@ -142,10 +143,19 @@ export const CONTRACT_RULE =
 export function stepContractBlock(spec: StepSpec, entity: LabEntity): string {
   const reqs = stepContractRequirements(spec, entity);
   const criteria = stepCriteriaLines(spec, entity).slice(0, MAX_CRITERIA_LINES);
-  if (!reqs.length && !criteria.length) return '';
+  const graded = requiredFieldsOf(spec.accept);
+  if (!reqs.length && !criteria.length && !graded.length) return '';
 
   const head = '# ACCEPTANCE CONTRACT FOR THIS STEP (you are graded against it)';
   const blocks: string[] = [];
+  // FIRST, so the size cap below can never drop it: the exact keys the checker grades. Without this
+  // a producer nests correct values under its own keys and fails (/diablo W02c: 102 of 114 steps).
+  if (graded.length) {
+    blocks.push([
+      '## Required fields (graded — use these exact keys)',
+      ...graded.map((g) => `- \`${g.field}\`: an object with keys ${g.keys.map((k) => `\`${k}\``).join(', ')}`),
+    ].join('\n'));
+  }
   for (const r of reqs) {
     const lines = [
       `## Wiring contract — ${r.artifact}`,
