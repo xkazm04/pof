@@ -45,7 +45,17 @@ const saveState = (id: string, s: RunState) => writeFileSync(join(runDir(id), 's
 /** How a run ended — never collapsed into "succeeded" (registry: subprocess-lifecycle). */
 interface RunEnd { code: number; ended: 'exited' | 'timeout' | 'stalled'; rung?: 'polite' | 'forced' }
 
-const STALL_MIN = Number(process.env.POF_CODEX_STALL_MIN ?? 10);
+/**
+ * Minutes of event SILENCE before a run counts as stalled. The `--json` stream carries no
+ * reasoning events (verified on cx-001's stream: only messages, commands and file changes), so a
+ * long high-effort composition is silent until its final message — a flat 10 min would kill a
+ * working xhigh run. Tolerance therefore scales with the reasoning effort.
+ */
+function stallMinutes(effort: string): number {
+  const env = process.env.POF_CODEX_STALL_MIN;
+  if (env) return Number(env);
+  return effort === 'low' || effort === 'medium' ? 10 : effort === 'high' ? 25 : 40;
+}
 
 /**
  * Kill THIS child's process TREE — `child.kill()` on Windows ends only the node wrapper and
@@ -66,7 +76,7 @@ function reapTree(pid: number, onRung: (r: 'polite' | 'forced') => void) {
  * Liveness is THIS run's event activity: no output for STALL_MIN minutes is `stalled`, distinct
  * from the wall-clock `timeout`.
  */
-function runCodex(args: string[], cwd: string, prompt: string, eventsPath: string, timeoutMin: number, onPid: (pid: number) => void): Promise<RunEnd> {
+function runCodex(args: string[], cwd: string, prompt: string, eventsPath: string, timeoutMin: number, stallMin: number, onPid: (pid: number) => void): Promise<RunEnd> {
   return new Promise((done) => {
     const child = spawn(process.execPath, [CODEX_JS, ...args], { cwd, stdio: ['pipe', 'pipe', 'pipe'] });
     if (child.pid) onPid(child.pid);
@@ -80,7 +90,7 @@ function runCodex(args: string[], cwd: string, prompt: string, eventsPath: strin
       reapTree(child.pid, (r) => { rung = r; });
     };
     const wall = setTimeout(() => stop('timeout'), timeoutMin * 60_000);
-    const watch = setInterval(() => { if (Date.now() - last > STALL_MIN * 60_000) stop('stalled'); }, 30_000);
+    const watch = setInterval(() => { if (Date.now() - last > stallMin * 60_000) stop('stalled'); }, 30_000);
     child.stdout.on('data', (d) => { last = Date.now(); appendFileSync(eventsPath, d); });
     child.stderr.on('data', (d) => appendFileSync(`${eventsPath}.stderr`, d));
     child.stdin.end(prompt); // closes stdin: exec never waits for EOF (trap 1)
@@ -136,11 +146,12 @@ async function run(taskPath: string, timeoutMin: number) {
   const args = buildCodexExecArgs({
     route, access: task.access, prompt: PROMPT_FROM_STDIN, cwd, lastMessagePath: last,
     outputSchemaPath: join(dir, 'schema.json'), images: task.images?.map((p) => resolve(REPO, p)),
-    ephemeral: task.access === 'read-only',
+    // Never ephemeral: a run the watchdog had to stop must stay resumable, read-only or not.
+    ephemeral: false,
   });
   console.log(`dispatching ${task.id} → ${route.model} (${route.effort}, ${route.why}) in ${cwd}`);
   const t0 = Date.now();
-  const end = await runCodex(args, cwd, brief, join(dir, 'events-1.jsonl'), timeoutMin, (pid) => { const st = loadState(task.id); st.pid = pid; saveState(task.id, st); });
+  const end = await runCodex(args, cwd, brief, join(dir, 'events-1.jsonl'), timeoutMin, stallMinutes(route.effort), (pid) => { const st = loadState(task.id); st.pid = pid; saveState(task.id, st); });
   if (end.code !== 0) console.error(`codex exited ${end.code} (${end.ended})`);
   report(task.id, join(dir, 'events-1.jsonl'), last, Math.round((Date.now() - t0) / 1000), end);
 }
@@ -153,7 +164,7 @@ async function resume(id: string, instructions: string, timeoutMin: number) {
   const last = join(runDir(id), `report-${n}.json`);
   const prompt = `Reviewer follow-up (round ${n}). Apply it, re-run the acceptance commands, and report again with the same JSON schema.\n\n${instructions}`;
   const t0 = Date.now();
-  const end = await runCodex(buildCodexResumeArgs({ threadId: st.threadId, prompt: PROMPT_FROM_STDIN, lastMessagePath: last, outputSchemaPath: join(runDir(id), 'schema.json') }), st.cwd, prompt, join(runDir(id), `events-${n}.jsonl`), timeoutMin, (pid) => { const s2 = loadState(id); s2.pid = pid; saveState(id, s2); });
+  const end = await runCodex(buildCodexResumeArgs({ threadId: st.threadId, prompt: PROMPT_FROM_STDIN, lastMessagePath: last, outputSchemaPath: join(runDir(id), 'schema.json') }), st.cwd, prompt, join(runDir(id), `events-${n}.jsonl`), timeoutMin, stallMinutes(st.effort), (pid) => { const s2 = loadState(id); s2.pid = pid; saveState(id, s2); });
   report(id, join(runDir(id), `events-${n}.jsonl`), last, Math.round((Date.now() - t0) / 1000), end);
 }
 
