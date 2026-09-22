@@ -1,7 +1,7 @@
 ---
 name: diablo
 description: Long-running LEARNING loop that breaks Diablo I (1996) down through PoF's catalog pipelines and replicates it toward UE — not to ship a game, but because every place PoF cannot hold, derive or produce what a complete shipped ARPG needed is an adjustment worth making. Phase A resolves the ingest backlog; Phase B replicates the game in dependency-ordered WAVES, each ending at a HUMAN GATE (never auto-proceeds). The dependency chronology ("we cannot create X without Y"), the adjustment ledger and all wave state live in the Obsidian vault (Diablo/). Invoke with /diablo [next | status | backlog | path | gate | ingest].
-version: 1.0
+version: 1.1
 ---
 
 # /diablo — replicate a shipped ARPG to find out what PoF is missing
@@ -116,6 +116,12 @@ PoF actually needed things in is recoverable later — that sequence is a findin
 - **Schema flows down from UE** (canon `proj-sot`). If an ingested field has no home, first check
   whether UE already has it (it usually does: slots, resistances, affixes, difficulty scaling) —
   then the adjustment is aligning the app to UE, and that choice goes to the gate.
+- **Consult the registry BEFORE a design decision, not after.** Resolve the governing subjects
+  through `.ai/registry-map.json` / `knowledge/<domain>/index.json` (for this loop at least
+  `import-normalization` and `reference-parity-gating`). Where the chassis falls short, record a
+  deviation in `Backlog.md` § registry deviations — never lower the standard to fit the code.
+  Parity law for Phase B: a step SEEDED from the reference is never graded `pass` for matching the
+  reference; parity is measured by a tool that reads both sides through the same pipeline.
 - **Never weaken a checker or a mapping to make a number move.** Coverage rises by mapping a
   column correctly, never by reclassifying a gap as a drop.
 - **Commit with a pathspec**, never push (repo law). One `diablo:` commit per backlog item or wave.
