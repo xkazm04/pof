@@ -35,3 +35,9 @@
 - **Verify imports from DISK, not the asset registry** — the registry listed a Skeleton that was never written.
 - **When a render is black, run a known-good control first** (the same capture in a map that is known to render): it separated "my map" from "my capture code" in one run.
 - UE headless traps (also in the wave note): commandlets are null-RHI; `unreal.Rotator` is (roll, pitch, yaw); Git-Bash rewrites `/Game/...` args (MSYS_NO_PATHCONV=1); UBT needs DOTNET_ROOT = the engine's bundled .NET; the -game exit can hang on DDC maintenance — judge by the files and the log.
+
+## 1.7 — 2026-09-22 — pof (W06)
+- **Measure the thing the camera sees.** A monster that fought correctly rendered as nothing: its POSED mesh was 1/100 scale. Observing the mesh bounds per sample found it in one run, after three rounds of guessing at import flags.
+- **Prefer the importer that carries everything in one task.** The FBX hop mangled units twice and dropped animations; `.glb` through Interchange brought mesh + skeleton + animation + PBR textures at once. Apply SIZE as a component scale (it scales the mesh and its animation together) instead of baking scale into assets.
+- **A shared model is the content multiplier.** One rigged mesh + per-member tint produced three monsters; the pipeline records `sharedWith` so a family cannot drift apart.
+- **Going up to gameplay finds what asset checks cannot:** an enemy on a foreign skeleton attacked exactly once (a montage that can never complete), and a monster with no stat row inherits the engine's defaults.
