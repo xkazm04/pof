@@ -80,14 +80,39 @@ function ensureTable() {
   // still gets it. An EMPTY seed never sets its marker, or its rules could never arrive later.
   for (const profile of Object.values(CANON_PROFILES)) {
     if (profile.id === DEFAULT_CANON_PROFILE || profile.seed.length === 0) continue;
-    const marker = `${SEED_MARKER}.${profile.id}`;
-    if (getSetting(marker)) continue;
-    for (const rule of profile.seed) upsertRuleRaw(rule);
-    setSetting(marker, new Date().toISOString());
-    logger.info(`[project-rules] seeded canon profile "${profile.id}": ${profile.seed.length} rule(s).`);
+    syncProfileSeed(profile.id, profile.seed);
   }
 
   tableEnsured = true;
+}
+
+/**
+ * Seed a canon profile, then keep it ADDITIVELY in sync with what ships.
+ *
+ * A profile's canon grows as the /diablo loop derives laws, so "seed once" is not enough: a rule
+ * shipped after the first seeding must reach an existing DB. But a rule the operator DELETED must
+ * never come back (the same promise the PoF seed keeps). So the DB records every rule id it has
+ * ever been OFFERED (`<marker>.ids`): a shipped id not in that set is inserted and recorded; an id in
+ * it is left alone whether it is present, edited or deleted. Edits to an already-offered rule's
+ * shipped TEXT are not synced here (that needs to tell an operator's edit from a stale seed).
+ */
+function syncProfileSeed(profileId: string, seed: readonly ProjectRule[]): void {
+  const marker = `${SEED_MARKER}.${profileId}`;
+  const idsKey = `${marker}.ids`;
+  let offered: Set<string>;
+  if (!getSetting(marker)) {
+    offered = new Set();
+    setSetting(marker, new Date().toISOString());
+  } else {
+    const recorded = getSetting(idsKey);
+    // A marker from before ids were recorded (W01): every rule it seeded is still present.
+    offered = new Set(recorded ? (JSON.parse(recorded) as string[]) : (getDb()
+      .prepare('SELECT id FROM project_rules WHERE profile = ?').all(profileId) as { id: string }[]).map((r) => r.id));
+  }
+  const fresh = seed.filter((r) => !offered.has(r.id));
+  for (const rule of fresh) { upsertRuleRaw(rule); offered.add(rule.id); }
+  setSetting(idsKey, JSON.stringify([...offered].sort()));
+  if (fresh.length) logger.info(`[project-rules] canon profile "${profileId}": offered ${fresh.length} newly shipped rule(s).`);
 }
 
 /** Column row → ProjectRule. Pure (exported for unit test). */

@@ -8,6 +8,7 @@
  *   npx tsx scripts/diablo/ingest.ts --root <…> --promote items --ids d1-IDI_WARRIOR,d1-IDI_ROGUE
  *   npx tsx scripts/diablo/ingest.ts --root <…> --json        # machine-readable summary
  *   npx tsx scripts/diablo/ingest.ts --demote bestiary --ids d1-MT_NZOMBIE   # un-promote (re-do a wave)
+ *   npx tsx scripts/diablo/ingest.ts --seed-steps bestiary --ids d1-MT_NZOMBIE   # SOURCED step artifacts (graded by the server)
  *
  * Writes the LOCAL PoF database (~/.pof/pof.db, or POF_DB_PATH). Never the repo.
  */
@@ -17,6 +18,9 @@ import { ingestSourceFromDir } from '../../src/lib/catalog/reference/ingestSourc
 import { listWrappers } from '../../src/lib/catalog/reference/wrappers-db';
 import { codeSeededEntities } from '../../src/lib/catalog/seed';
 import { promoteWrappers, selectForPromotion } from '../../src/lib/catalog/reference/promote';
+import { seedBestiarySteps } from '../../src/lib/catalog/reference/stepSeeds';
+import { submitStepArtifact } from '../../src/lib/catalog/headless';
+import '../../src/lib/catalog/pipelines/registry.generated';
 
 function arg(name: string): string | undefined {
   const i = process.argv.indexOf(`--${name}`);
@@ -37,6 +41,25 @@ if (demoteCatalog) {
   console.log(`demoted ${removed.filter((r) => r.n > 0).length} from ${demoteCatalog}: ${removed.map((r) => r.id).join(', ') || '(none)'}`);
   if (skipped.length) console.log(`   not demoted (absent or not source 'ingest'): ${skipped.join(', ')}`);
   console.log('   their pipeline artifacts are NOT removed — purge with DELETE /api/pipeline-artifacts if the wave is re-done from scratch.');
+  process.exit(0);
+}
+
+// Seed step artifacts from the reference (D3: graded by the SERVER through the same door as any
+// submission, never pass). Requires the entities to be promoted first — a step belongs to an entity.
+const seedCatalog = arg('seed-steps');
+if (seedCatalog) {
+  const ids = arg('ids')?.split(',').map((x) => x.trim()).filter(Boolean);
+  const promoted = new Set(listEntities(seedCatalog).filter((r) => r.source === 'ingest').map((r) => r.entityId));
+  const wrappers = listWrappers(getDb(), { sourceId, catalogId: seedCatalog }).filter((w) => !ids || ids.includes(w.entity.id));
+  for (const w of wrappers) {
+    if (!promoted.has(w.entity.id)) { console.log(`SKIP ${w.entity.id}: not promoted (promote it first)`); continue; }
+    for (const seed of seedBestiarySteps(w)) {
+      const r = submitStepArtifact(seed.catalogId, seed.entityId, seed.step, seed.data, []);
+      const a = r.acceptance;
+      console.log(`${seed.entityId} · ${seed.step}: ${a?.status ?? '?'}${a?.reason ? ` — ${a.reason.slice(0, 150)}` : ''}`);
+      for (const g of seed.gaps) console.log(`    gap: ${g}`);
+    }
+  }
   process.exit(0);
 }
 

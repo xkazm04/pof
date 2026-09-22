@@ -32,6 +32,11 @@ export const DIABLO1_INHERITS_POF: readonly string[] = [
 ];
 
 export const DIABLO1_CANON: readonly ProjectRule[] = [
+  // ── LAWS derived from the reference (W02 onward). Balance numbers come from the engine or the tables,
+  //    never from PoF's canon; a checker or seeder PARSES them from these bodies (one statement per law).
+  { id: 'd1-resistance-law', profile: 'diablo1', category: 'game', scope: 'bestiary', title: 'Monster resistance law (engine-derived)',
+    body: "Monster resistance, derived from the engine: a RESIST flag for an element cuts that element's damage to one quarter, a 75% reduction; an IMMUNE flag means the hit does not land, a 100% reduction. Elements are magic, fire and lightning; the base game has no cold or chaos damage. There is no scale between: a monster is normal (0%), resistant (75%) or immune (100%) to each element.",
+    refs: ["https://github.com/diasurgical/devilutionX/blob/4138a82/Source/missiles.cpp (MonsterMHit: resist -> dam >>= 2; isImmune -> no hit)", "https://github.com/diasurgical/devilutionX/blob/4138a82/Source/monster.cpp (Monster::isResistant / isImmune)"] },
   { id: "d1-world", profile: 'diablo1', category: "game", scope: "global", title: "Tristram and the corruption below",
     body: "Depict the medieval town of Tristram in Khanduras and the demonic corruption beneath its cathedral: church masonry, graves, hand tools, blades, books and occult shrines. Exclude firearms, machinery and later-series locations.",
     refs: ["https://hoffmeister.li/downloads/games/diablo_1/D1_manual_en.pdf"], },
