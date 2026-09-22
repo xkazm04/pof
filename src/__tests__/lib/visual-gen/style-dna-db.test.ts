@@ -10,7 +10,8 @@ import {
   styleDnaForProfile,
 } from '@/lib/visual-gen/style-dna-db';
 import type { StyleDna } from '@/lib/visual-gen/style-dna';
-import { DIABLO1_STYLE_DNA } from '@/lib/catalog/canon/profiles/diablo1Style';
+import { DIABLO1_CREATURE_STYLE_DNA, DIABLO1_STYLE_DNA } from '@/lib/catalog/canon/profiles/diablo1Style';
+import { subjectClassOf } from '@/lib/catalog/canon/subjectClass';
 
 const DNA: StyleDna = {
   palette: ['teal'],
@@ -92,6 +93,21 @@ describe('style per canon profile', () => {
     expect(text).not.toMatch(/diablo|blizzard|tristram|lazarus|©/i);
     expect(text).not.toMatch(/\b(zombie|skeleton|goat|demon|ghoul|succubus|butcher|knight|warrior|rogue|sorcer)/i);
     for (const list of Object.values(DIABLO1_STYLE_DNA)) expect(list.length).toBeLessThanOrEqual(4);
+  });
+
+  it('a creature gets the profile’s CREATURE variant; other classes fall back to the base style (D15)', () => {
+    expect(subjectClassOf('bestiary')).toBe('creature');
+    expect(styleDnaForProfile(db, 'diablo1', subjectClassOf('bestiary'))?.dna).toEqual(DIABLO1_CREATURE_STYLE_DNA);
+    expect(styleDnaForProfile(db, 'diablo1', subjectClassOf('bestiary'))?.id).toBe('shipped:diablo1:creature');
+    expect(styleDnaForProfile(db, 'diablo1', subjectClassOf('zone-map'))?.dna).toEqual(DIABLO1_STYLE_DNA);
+    expect(styleDnaForProfile(db, 'diablo1', subjectClassOf('no-such-catalog'))?.dna).toEqual(DIABLO1_STYLE_DNA);
+  });
+
+  it('the creature variant carries no anatomy-pushing cue (W03/W04: skeletons) and keeps the laws', () => {
+    const text = Object.values(DIABLO1_CREATURE_STYLE_DNA).flat().join(' | ');
+    expect(text).not.toMatch(/bone|mineral|crack|decay|angular|exaggerat|diablo|blizzard|tristram|©/i);
+    for (const list of Object.values(DIABLO1_CREATURE_STYLE_DNA)) expect(list.length).toBeLessThanOrEqual(4);
+    expect(DIABLO1_CREATURE_STYLE_DNA.render).toEqual(DIABLO1_STYLE_DNA.render); // the look is kept
   });
 
   it('binding to the default profile is the same as an unbound save', () => {

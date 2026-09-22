@@ -47,3 +47,41 @@ export const DIABLO1_STYLE_DNA: StyleDna = {
     "sparse angular surface breaks",
   ],
 };
+
+/**
+ * The CREATURE-class variant (/diablo W04, decision D15) — appended to bestiary/character subjects
+ * instead of {@link DIABLO1_STYLE_DNA}. With the base DNA, W03's zombie rendered as a bare skeleton
+ * 4 of 5 times (blind family check, 0.95-0.98): its environment cues (mineral surfaces, cracks, grim
+ * decay, exaggerated masses, angular breaks) out-weighed the subject's anatomy. Codex cx-007 (Astra)
+ * removed every anatomy-pushing cue and kept palette, light and render. Same laws as the base DNA.
+ */
+export const DIABLO1_CREATURE_STYLE_DNA: StyleDna = {
+  palette: [
+    "charcoal blacks and desaturated slate blue-gray",
+    "muted umber and neutral gray",
+    "selective saturated red, blue, green and gold",
+    "predominantly sub-midgray non-emissive values",
+  ],
+  materials: [
+    "predominantly matte finishes",
+    "subtle surface roughness",
+    "restrained specular highlights",
+  ],
+  mood: [
+    "oppressive darkness",
+    "bounded pools of light falling in steps to black",
+    "legible volume under localized illumination",
+    "restrained glow and deep unlifted blacks",
+  ],
+  render: [
+    "modeled volume reduced to coarse sprite pixels",
+    "compact highlight clusters and stepped shadow ramps",
+    "for gameplay, elevated parallel projection with a 2:1 ground diamond",
+    "crisp unoutlined forms, sharp focus and unblurred edges",
+  ],
+  motifs: [
+    "bold readable silhouettes",
+    "clear value separation",
+    "sparse interior detail",
+  ],
+};

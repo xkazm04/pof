@@ -24,9 +24,13 @@ import { labIdentityOf } from '../../src/lib/catalog/canon/profiles';
 import { listArtifacts } from '../../src/lib/pipeline-artifacts-db';
 import { submitStepArtifact } from '../../src/lib/catalog/headless';
 import { styleDnaForProfile } from '../../src/lib/visual-gen/style-dna-db';
+import { subjectClassOf } from '../../src/lib/catalog/canon/subjectClass';
 import { applyStyleFragment, styleDnaToPromptFragment, type StyleDna } from '../../src/lib/visual-gen/style-dna';
 import { generateImage, MAX_PROMPT_LENGTH } from '../../src/lib/leonardo';
 import { getDb } from '../../src/lib/db';
+import { checkFamily } from '../../src/lib/visual-gen/family-check';
+import { upsertVerdict } from '../../src/lib/status/judge-verdicts-db';
+import { stepContentHash } from '../../src/lib/judge/contentHash';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore — plain .mjs helper shared with the gap-loop scripts (the one naming rule).
 import { iconFileName } from '../gap-loop/power-icon-payload.mjs';
@@ -51,16 +55,29 @@ mkdirSync(runDir, { recursive: true });
 mkdirSync(ICONS, { recursive: true });
 const manifestPath = join(runDir, 'concept-2d.json');
 const RUN = opt('run') ?? new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
+// The family the figure must read as, and the blind alternatives (D15). Supplied by the operator from the
+// data (Diablo groups monsters by shared art set) — reference values never enter the repo.
+const FAMILY = opt('family');
+const FAMILIES = (opt('families') ?? '').split(',').map((s) => s.trim()).filter(Boolean);
 
-interface Candidate { id: string; file: string; prompt: string; style: string | null; darkShare: { figure: number; darkOfFigure: number } }
+interface Candidate {
+  id: string; file: string; prompt: string; style: string | null;
+  darkShare: { figure: number; darkOfFigure: number };
+  family?: { expected: string; seen: string | null; pass: boolean | null; note: string };
+}
 
-/** The subject: the `anatomy:` line of this entity's own Concept & Role brief. */
+/**
+ * The subject: this entity's own Concept & Role `visualBrief` (the figure only, written for an image
+ * model — the step's criteria ask for it since W04), else the legacy `anatomy:` line of its brief.
+ */
 function subjectOf(): string {
   const role = listArtifacts(catalogId, entityId!).find((a) => a.step === 'Concept & Role');
+  const visual = typeof role?.data.visualBrief === 'string' ? role.data.visualBrief.trim() : '';
+  if (visual) return visual;
   const brief = typeof role?.data.brief === 'string' ? role.data.brief : '';
   const m = /anatomy:\s*(.+)/.exec(brief);
   if (!m) {
-    console.error(`REFUSED: ${entityId} has no Concept & Role anatomy — Concept 2D Art depends on it (produce Concept & Role first)`);
+    console.error(`REFUSED: ${entityId} has no Concept & Role visualBrief (or anatomy line) — Concept 2D Art depends on it (produce Concept & Role first)`);
     process.exit(1);
   }
   return m[1].trim();
@@ -92,12 +109,13 @@ async function darkShare(buf: Buffer): Promise<{ figure: number; darkOfFigure: n
 }
 
 async function generate(): Promise<void> {
-  const subject = subjectOf();
+  // --subject: an ABLATION override (does the subject's wording cause the failure?), never a production run.
+  const subject = opt('subject') ?? subjectOf();
   // Framing: NOT "concept art" and no "no text …" sentence — run 1 showed both invite an ArtStation
   // presentation-sheet footer with invented branding (Lucid Origin has no negative prompt).
   const base = `A single standing figure, full body, uncropped: ${entity.name}. ${subject} Isolated on a plain dark ground.`;
   // --no-style: an ABLATION (is a failure the subject's or the style's?), never a production run.
-  const style = process.argv.includes('--no-style') ? null : styleDnaForProfile(getDb(), entity.canonProfile);
+  const style = process.argv.includes('--no-style') ? null : styleDnaForProfile(getDb(), entity.canonProfile, subjectClassOf(catalogId));
   // --drop materials,motifs: ablate DNA lists (which list moves the subject?), never a production run.
   const drop = (opt('drop') ?? '').split(',').filter(Boolean) as (keyof StyleDna)[];
   const dna = style ? { ...style.dna, ...Object.fromEntries(drop.map((k) => [k, []])) } : null;
@@ -112,9 +130,16 @@ async function generate(): Promise<void> {
     const buf = Buffer.from(r.imageBase64, 'base64');
     const file = join(runDir, `${RUN}-c${i}.jpg`);
     writeFileSync(file, buf);
-    const c = { id: `b0-c${i}`, file, prompt, style: style?.name ?? null, darkShare: await darkShare(buf) };
+    const c: Candidate = { id: `b0-c${i}`, file, prompt, style: style?.name ?? null, darkShare: await darkShare(buf) };
+    if (FAMILY) {
+      const v = await checkFamily({ base64: buf.toString('base64'), mime: 'image/jpeg' }, FAMILY, FAMILIES.length ? FAMILIES : [FAMILY]);
+      c.family = v.ok
+        ? { expected: v.expected, seen: v.seen.family, pass: v.pass, note: v.reason }
+        : { expected: v.expected, seen: null, pass: null, note: `family check did not run: ${v.error}` };
+    }
     out.push(c);
-    console.log(`candidate ${c.id} → ${file}  figure=${c.darkShare.figure} of frame, below-mid-gray share of figure=${c.darkShare.darkOfFigure}`);
+    const fam = c.family ? `  family: ${c.family.pass === null ? 'UNCHECKED' : c.family.pass ? 'PASS' : 'FAIL'} (${c.family.note.slice(0, 90)})` : '';
+    console.log(`candidate ${c.id} → ${file}  figure=${c.darkShare.figure} of frame, below-mid-gray share of figure=${c.darkShare.darkOfFigure}${fam}`);
   }
   writeFileSync(manifestPath, JSON.stringify({ entityId, catalogId, step: STEP, canonProfile: entity.canonProfile, candidates: out }, null, 2));
   console.log(`manifest → ${manifestPath}. Review, then re-run with --submit <candidateId>.`);
@@ -148,6 +173,21 @@ function submit(id: string): void {
   };
   const r = submitStepArtifact(catalogId, entityId!, STEP, data, [`/Game/Bestiary/${entity.name.replace(/[^a-z0-9]+/gi, '')}/T_${entity.name.replace(/[^a-z0-9]+/gi, '')}_Concept`]);
   console.log(`SUBMITTED ${chosen.id} → icon ${icon}; server verdict ${r.acceptance?.status ?? r.artifact.status} ${r.acceptance?.reason ?? ''}`);
+  // The checker grades only the SELECTION; the family check is the instrument that judged the image.
+  // Recorded as a vision verdict bound to the content on record, so /status shows what actually looked.
+  if (chosen.family && chosen.family.pass !== null) {
+    upsertVerdict({
+      catalogId, entityId: entityId!, step: STEP, judge: 'vlm',
+      verdict: chosen.family.pass ? 'pass' : 'fail',
+      score: chosen.family.pass ? 100 : 0,
+      findings: `Blind creature-family check: ${chosen.family.note}`,
+      model: 'routed-vision/family-check',
+      contentHash: stepContentHash(r.artifact.data),
+    });
+    console.log(`VERDICT vlm ${chosen.family.pass ? 'pass' : 'fail'} recorded (family check)`);
+  } else {
+    console.log('VERDICT none — no family check ran for this candidate (nothing measured, nothing recorded)');
+  }
 }
 
 if (submitId) submit(submitId);

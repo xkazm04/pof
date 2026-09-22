@@ -140,8 +140,14 @@ describe('POST /api/leonardo', () => {
     resolve.mockReturnValueOnce(null);
     const res = await POST(req({ mode: 'image', prompt: 'a zombie', applyStyleDna: true, canonProfile: 'diablo1' }));
     const json = await res.json();
-    expect(resolve).toHaveBeenLastCalledWith(expect.anything(), 'diablo1');
+    expect(resolve).toHaveBeenLastCalledWith(expect.anything(), 'diablo1', undefined);
     expect(leo.generateImage).toHaveBeenCalledWith('a zombie', {});
     expect(json.data.styleDnaWithheld).toMatch(/no Style DNA is bound to canon profile "diablo1"/);
+  });
+
+  it('passes the subject class of the catalog, so a creature gets its canon’s creature style (D15)', async () => {
+    const { styleDnaForProfile } = await import('@/lib/visual-gen/style-dna-db');
+    await POST(req({ mode: 'image', prompt: 'a zombie', applyStyleDna: true, canonProfile: 'diablo1', catalogId: 'bestiary' }));
+    expect(styleDnaForProfile).toHaveBeenLastCalledWith(expect.anything(), 'diablo1', 'creature');
   });
 });

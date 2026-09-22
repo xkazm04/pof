@@ -2,6 +2,7 @@ import { apiSuccess, apiError } from '@/lib/api-utils';
 import { generateImage, upscaleImage, unzoomImage, generateTextureOn3DModel, MAX_PROMPT_LENGTH, type GenerateImageOptions } from '@/lib/leonardo';
 import { applyStyleFragment, styleDnaToPromptFragment } from '@/lib/visual-gen/style-dna';
 import { styleDnaForProfile } from '@/lib/visual-gen/style-dna-db';
+import { subjectClassOf } from '@/lib/catalog/canon/subjectClass';
 import { getDb } from '@/lib/db';
 import { logger } from '@/lib/logger';
 
@@ -51,7 +52,9 @@ export async function POST(request: Request) {
       let finalPrompt = prompt;
       if (body?.applyStyleDna === true) {
         const canonProfile = typeof body?.canonProfile === 'string' ? body.canonProfile : null;
-        const style = styleDnaForProfile(getDb(), canonProfile);
+        // The subject's class picks the profile's per-class style variant (D15) — from the catalog.
+        const subjectClass = subjectClassOf(typeof body?.catalogId === 'string' ? body.catalogId : null);
+        const style = styleDnaForProfile(getDb(), canonProfile, subjectClass);
         if (style) {
           finalPrompt = applyStyleFragment(prompt, styleDnaToPromptFragment(style.dna), MAX_PROMPT_LENGTH);
           styleDnaApplied = style.name;

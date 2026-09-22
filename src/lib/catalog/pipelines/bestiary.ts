@@ -54,6 +54,14 @@ registerCatalogPipeline({
             `BP child with one DT_AttributeDefaults stat row; no new C++ per canon char-config-not-cpp.`,
         },
       }),
+      // The anatomy is what the image steps draw from (/diablo W04, D15): W03/W04 measured that an
+      // anatomy written around a category noun ("a corpse defined by slack flesh") renders as a bare
+      // skeleton 10 of 12 times with any style, while a positive visual statement rendered 3 of 3.
+      criteria: [
+        'Write the anatomy as a VISUAL brief an image model can draw: state positively what is visible — body bulk, skin or hide coverage and colour, posture, limbs, clothing — and say explicitly whether any bone is exposed.',
+        'Never let a category noun (corpse, undead, demon, beast) carry the look; describe what such a creature LOOKS like instead.',
+        'Also write that visual description alone as a separate field `visualBrief` (at most 500 characters): the figure only — no combat role, no staging or setting, no place, franchise or character names. The image steps draw from it verbatim.',
+      ],
       accept: minLength('brief', 'Brief ≥ 300 characters', 300),
     },
 

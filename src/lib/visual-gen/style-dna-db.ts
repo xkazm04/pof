@@ -7,6 +7,7 @@
 import type Database from 'better-sqlite3';
 import type { StyleDna } from './style-dna';
 import { CANON_PROFILES, DEFAULT_CANON_PROFILE } from '@/lib/catalog/canon/profiles';
+import type { SubjectClass } from '@/lib/catalog/canon/subjectClass';
 
 export interface StyleDnaProfile {
   id: string;
@@ -102,10 +103,15 @@ export function getActiveStyleDna(db: Database.Database): StyleDnaProfile | null
 /**
  * The style for an entity of `canonProfile` (/diablo W03, D13). The project's own profile (or none)
  * gets the ACTIVE style, exactly as before. Any other canon profile gets ONLY its own — a Style DNA
- * bound to it in the DB, else the profile's shipped `styleDna` — never the project's: a Diablo entity rendered in PoF's style is the defect this exists to stop,
+ * bound to it in the DB, else the profile's shipped `styleDna` (its `subjectClass` variant when it ships
+ * one) — never the project's: a Diablo entity rendered in PoF's style is the defect this exists to stop,
  * and "no style" is the honest answer until one is bound.
  */
-export function styleDnaForProfile(db: Database.Database, canonProfile?: string | null): StyleDnaProfile | null {
+export function styleDnaForProfile(
+  db: Database.Database,
+  canonProfile?: string | null,
+  subjectClass?: SubjectClass,
+): StyleDnaProfile | null {
   const bound = boundProfile(canonProfile);
   if (!bound) return getActiveStyleDna(db);
   createStyleDnaDb(db);
@@ -113,11 +119,15 @@ export function styleDnaForProfile(db: Database.Database, canonProfile?: string 
     .prepare('SELECT * FROM style_dna WHERE canon_profile = ? ORDER BY created_at DESC, id DESC LIMIT 1')
     .get(bound) as Row | undefined;
   if (row) return toProfile(row);
-  // No DB binding: the profile's SHIPPED generation-ready style, if it has one (D13b).
-  const shipped = CANON_PROFILES[bound]?.styleDna;
-  return shipped
-    ? { id: `shipped:${bound}`, name: `${CANON_PROFILES[bound].title} — shipped style`, dna: shipped, sourceImageCount: 0, active: false, canonProfile: bound, createdAt: '' }
-    : null;
+  // No DB binding: the profile's SHIPPED generation-ready style (D13b), in the variant for the
+  // subject's class when it ships one (D15), else its base style.
+  const profile = CANON_PROFILES[bound];
+  const classed = subjectClass ? profile?.styleDnaByClass?.[subjectClass] : undefined;
+  const shipped = classed ?? profile?.styleDna;
+  if (!shipped) return null;
+  const id = classed ? `shipped:${bound}:${subjectClass}` : `shipped:${bound}`;
+  const name = `${profile.title} — shipped style${classed ? ` (${subjectClass})` : ''}`;
+  return { id, name, dna: shipped, sourceImageCount: 0, active: false, canonProfile: bound, createdAt: '' };
 }
 
 export function listStyleDna(db: Database.Database): StyleDnaProfile[] {

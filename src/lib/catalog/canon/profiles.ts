@@ -18,8 +18,9 @@
  */
 import type { ProjectRule } from './types';
 import { DIABLO1_CANON, DIABLO1_INHERITS_POF } from './profiles/diablo1';
-import { DIABLO1_STYLE_DNA } from '@/lib/catalog/canon/profiles/diablo1Style';
+import { DIABLO1_CREATURE_STYLE_DNA, DIABLO1_STYLE_DNA } from '@/lib/catalog/canon/profiles/diablo1Style';
 import type { StyleDna } from '@/lib/visual-gen/style-dna';
+import type { SubjectClass } from '@/lib/catalog/canon/subjectClass';
 
 export const DEFAULT_CANON_PROFILE = 'pof';
 
@@ -36,6 +37,11 @@ export interface CanonProfile {
    * has none here: its style is the DB's active Style DNA, as before.
    */
   styleDna?: StyleDna;
+  /**
+   * Per-subject-class variants of `styleDna` (/diablo W04, D15) — a class not listed falls back to
+   * `styleDna`. A universal style carrying environment cues turned a creature's anatomy (W03).
+   */
+  styleDnaByClass?: Partial<Record<SubjectClass, StyleDna>>;
 }
 
 export const CANON_PROFILES: Readonly<Record<string, CanonProfile>> = {
@@ -43,6 +49,7 @@ export const CANON_PROFILES: Readonly<Record<string, CanonProfile>> = {
   diablo1: {
     id: 'diablo1', title: 'Diablo I (1996) — reference replication', inheritsPof: DIABLO1_INHERITS_POF, seed: DIABLO1_CANON,
     styleDna: DIABLO1_STYLE_DNA,
+    styleDnaByClass: { creature: DIABLO1_CREATURE_STYLE_DNA },
   },
 };
 
