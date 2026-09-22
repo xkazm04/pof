@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { summarizeEntityData } from '@/lib/ecw/entity-summary';
 import { useLabPipelineStore, useEntitySteps, setLabSync } from '../labPipelineStore';
+import { stepLabelsForProfile } from '@/lib/catalog/stepScope';
 import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 import { catalogManifest } from '../catalogManifest';
 import { postArtifact, drainGates, deleteEntityArtifacts } from '../labArtifactClient';
@@ -100,9 +101,15 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
   // (useEntityArtifacts keys its memo on this array). The manifest's `bespoke` flag
   // replaces the `catalogId === 'items'` special-case.
   const manifest = useMemo(() => (catalogId ? catalogManifest(catalogId) : null), [catalogId]);
-  const steps = detail?.steps ?? [];
   // The generic ArchetypeStep still needs the raw StepSpec (for its `spec` prop).
   const pipeline = detail ? getCatalogPipeline(detail.catalog.catalogId) : null;
+  // Only the steps this ENTITY has (profile-scoped steps, D18) — memoised so consumers keyed on the array stay stable.
+  const catalogSteps = detail?.steps;
+  const entityProfile = entity?.canonProfile;
+  const steps = useMemo(
+    () => (catalogSteps ? stepLabelsForProfile(pipeline, catalogSteps, entityProfile) : []),
+    [catalogSteps, pipeline, entityProfile],
+  );
 
   const fields = summarizeEntityData(entity?.data);
 

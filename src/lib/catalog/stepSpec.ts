@@ -193,6 +193,14 @@ export interface StepSpec {
   /** Step acceptance criteria stated in the produce prompt — world-neutral, like `contract` (never read from the stub). */
   criteria?: string[];
   /**
+   * The canon profiles this step applies to (/diablo W05, decision D18); omitted = every profile.
+   * A presentation step such as a prerendered-sprite render means nothing for a 3D game's entities,
+   * and the chassis has no "not applicable" status — so the step is simply not part of their
+   * pipeline. Resolved in ONE place (`stepScope.ts`): the lab rail, lifecycle totals, the e2e walker
+   * and the server's submit all go through it, and a submit to an inapplicable step is refused.
+   */
+  profiles?: readonly string[];
+  /**
    * RETIRED — do not author. Enforced by spec-linter rule (l).
    *
    * Zero of the registered steps ever used it, and the SIGNATURE is why: `copy` is handed

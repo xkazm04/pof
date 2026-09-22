@@ -4,12 +4,18 @@ import type { LabEntity } from './useLabCatalogData';
 import type { LabStepArtifact } from './labPipelineStore';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
+import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
+import { stepLabelsForProfile } from '@/lib/catalog/stepScope';
 
 export interface MatrixBlocker { step: string; reason: string }
 export interface MatrixRow {
   id: string;
   name: string;
   statusByStep: (s: string) => StepDisplayStatus;
+  /** Whether the step is part of THIS entity's pipeline (profile-scoped steps, /diablo W05 D18). */
+  applies: (s: string) => boolean;
+  /** The step's index in this entity's own step list (what the rail opens), or -1. */
+  stepIndex: (s: string) => number;
   rollup: EntityRollup;
   blockers: MatrixBlocker[];
 }
@@ -41,7 +47,11 @@ export function buildMatrixRows(
    *  step banner applies. Absent → no judge overlay (never a fabricated verdict). */
   verdicts: JudgeVerdict[] = [],
 ): MatrixRow[] {
+  const pipeline = getCatalogPipeline(catalogId);
   return entities.map((e) => {
+    // This entity's own steps: a step scoped to other canon profiles is not part of its pipeline.
+    const own = stepLabelsForProfile(pipeline, steps, e.canonProfile);
+    const ownSet = new Set(own);
     const serverRow = serverByEntity.get(e.id);
     const serverArts: Record<string, PipelineArtifact> = {};
     const serverAsLocal: Record<string, LabStepArtifact> = {};
@@ -50,9 +60,9 @@ export function buildMatrixRows(
     }
     const effective = { ...serverAsLocal, ...(localByEntity[e.id] ?? {}) }; // add-only: local wins
 
-    const { artifacts, displayStatus } = deriveEntityArtifacts(catalogId, e, steps, effective, serverArts, {}, verdicts);
+    const { artifacts, displayStatus } = deriveEntityArtifacts(catalogId, e, own, effective, serverArts, {}, verdicts);
     // Precompute per-step status once (O(steps)) instead of re-deriving per cell (O(steps²)).
-    const statusMap = new Map<string, StepDisplayStatus>(steps.map((s, i) => [s, displayStatus(s, i)]));
+    const statusMap = new Map<string, StepDisplayStatus>(own.map((s, i) => [s, displayStatus(s, i)]));
 
     // The concrete checker reason is already carried on each derived artifact
     // (deriveEntityArtifacts records `res.reason`), so blockers read it directly —
@@ -65,7 +75,9 @@ export function buildMatrixRows(
       id: e.id,
       name: e.name,
       statusByStep: (s: string) => statusMap.get(s) ?? 'pending',
-      rollup: summarizeEntity(artifacts, steps.length),
+      applies: (s: string) => ownSet.has(s),
+      stepIndex: (s: string) => own.indexOf(s),
+      rollup: summarizeEntity(artifacts, own.length),
       blockers,
     };
   });

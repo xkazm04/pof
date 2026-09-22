@@ -7,6 +7,7 @@ import { logger } from '@/lib/logger';
 import { decide } from './skip-policy';
 import type { ArchetypeId, ViewDescriptor, AcceptanceTier } from './types';
 import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
+import { stepsForProfile } from '@/lib/catalog/stepScope';
 
 export interface OrchestratorStepRef {
   label: string;
@@ -36,7 +37,8 @@ function mkJobId(): string {
 function defaultStepsFor(catalogId: string): OrchestratorStepRef[] {
   const pipeline = getCatalogPipeline(catalogId);
   if (!pipeline) return [];
-  return pipeline.steps.map((s) => {
+  // One-shot drafts are the project's own entities: steps scoped to other canon profiles are not theirs (D18).
+  return stepsForProfile(pipeline).map((s) => {
     const res = s.accept ? s.accept({}) : { tier: 'L0' as const };
     return {
       label: s.label,

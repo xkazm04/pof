@@ -9,6 +9,7 @@ import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import { linksResolve } from '../acceptance/linkCheckers';
 import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 import { riggedMeshSelected } from '@/lib/catalog/acceptance/rigArtifact';
+import { SPRITE_PROJECTION, spriteSetRendered } from '@/lib/catalog/acceptance/spriteCheckers';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -424,6 +425,34 @@ registerCatalogPipeline({
       // (stub/unresolved/swatch verdicts unchanged) and adds the Tier-1 rig gate on top —
       // an ungated mesh now DEFERS with a reason instead of passing.
       accept: riggedMeshSelected('mesh', 'A rigged mesh candidate is selected'),
+    },
+
+    // ── 10b. Sprite Render (diablo1 only) ─────────────────────────────────────
+    // A PRERENDERED-sprite game renders its rigged model from one fixed camera into 8 directions
+    // (/diablo W05, D16). Meaningless for PoF's in-engine 3D monsters, so it is scoped to the canon
+    // profiles whose presentation is sprites (D18) — PoF entities do not have this step at all.
+    {
+      archetype: 'manifest', label: 'Sprite Render',
+      engine: 'Blender',
+      profiles: ['diablo1'],
+      view: { kind: 'manifest', field: 'sprites' },
+      // The direction is the render REQUEST: a frame size ("64px") and the pose/frame to render
+      // ("walk frame 12"); scripts/diablo/render.ts reads both back off this artifact. The render
+      // itself runs outside the lab (Blender headless), so the stub's empty set grades DEFERRED.
+      produce: (_e: LabEntity, direction?: string) => {
+        const px = /(\d{2,3})\s*px/i.exec(direction ?? '');
+        return {
+          data: {
+            sprites: {
+              directions: [],
+              camera: { ...SPRITE_PROJECTION },
+              frameSize: px ? Number(px[1]) : 96,
+              requestedPose: direction?.trim() || 'rest pose',
+            },
+          },
+        };
+      },
+      accept: spriteSetRendered('sprites', 'An 8-direction sprite set rendered from the fixed camera'),
     },
 
     // ── 11. Test Gate ─────────────────────────────────────────────────────────

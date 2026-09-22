@@ -19,6 +19,7 @@ import { listRuns, listWrappers, summarizeWrappers } from '../../src/lib/catalog
 import { projectionHash } from '../../src/lib/catalog/reference/wrapper';
 import type { IngestedEntity } from '../../src/lib/catalog/ingest/run';
 import type { IngestRunSummary } from '../../src/lib/catalog/reference/ingestSource';
+import { stepsForProfile } from '../../src/lib/catalog/stepScope';
 
 const i = process.argv.indexOf('--source');
 const source = getReferenceSource(i >= 0 ? process.argv[i + 1] : 'diablo1');
@@ -33,7 +34,9 @@ const rows = catalogs.map((catalogId) => {
   // adjustment re-projects the wrapper but not the copy. Stale = the copy no longer matches.
   const current = new Map(listWrappers(db, { sourceId: source.id, catalogId }).map((w) => [w.entity.id, projectionHash(w.entity)]));
   const stale = promoted.filter((e) => current.get(e.entityId) !== projectionHash(e.entity as unknown as IngestedEntity)).map((e) => e.entityId);
-  const steps = getCatalogPipeline(catalogId)?.steps.length ?? 0;
+  // A promoted Diablo entity has the diablo1 steps (profile-scoped steps included, /diablo W05 D18).
+  const pipeline = getCatalogPipeline(catalogId);
+  const steps = pipeline ? stepsForProfile(pipeline, 'diablo1').length : 0;
   const byStatus: Record<string, number> = {};
   let ueAssets = 0;
   let entitiesWithArtifacts = 0;

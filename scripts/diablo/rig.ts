@@ -29,7 +29,7 @@ const provider = opt('provider') ?? 'tripo3d';
 if (!entityId || !glb) { console.error('usage: rig.ts --catalog <id> --id <entityId> --glb <file> [--morphology biped] [--provider tripo3d]'); process.exit(2); }
 
 const g = gateRig(resolve(glb), { morphology });
-if (!g.ok) { console.error(`REFUSED: ${g.error}`); process.exit(1); }
+if (!g.ok || !g.facts || !g.verdict) { console.error(`REFUSED: ${g.error ?? 'the rig gate returned no verdict'}`); process.exit(1); }
 const { facts, verdict } = g;
 console.log(`rig gate: ${verdict.pass ? 'PASS' : 'FAIL'} score=${verdict.score} joints=${facts.jointCount} (referenced ${facts.referencedJoints}) vertices=${facts.vertexCount} zero-weight=${facts.zeroWeightVertices}`);
 for (const f of verdict.failures) console.log(`  failure: ${f}`);

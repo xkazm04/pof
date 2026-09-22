@@ -322,6 +322,16 @@
     },
     {
       "catalogId": "bestiary",
+      "step": "Sprite Render",
+      "trueEngine": "Blender",
+      "deliverable": "2d-art",
+      "generatorWired": false,
+      "judge": "vlm",
+      "checkerMeaningful": false,
+      "note": "Added /diablo W05 (2026-09-22), scoped to canon profile diablo1 (D18): a prerendered-sprite game renders its rigged model from one fixed camera (orthographic 30°/45°) into 8 directions. The render runs OUTSIDE the lab via scripts/diablo/render.ts (Blender headless) — nothing in the UI produce path renders, so generatorWired=false. The blind creature-family check (vlm) is run by render.ts on the rendered sprite and recorded as a content-bound verdict. The checker grades what the render RECORDS (8 directions, the projection, a frame size), not the pixels, so it is shape-only; an unrendered request defers with the command that runs it."
+    },
+    {
+      "catalogId": "bestiary",
       "step": "Test Gate",
       "trueEngine": "UE test",
       "deliverable": "ue-runtime",
