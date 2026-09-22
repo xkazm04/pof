@@ -18,3 +18,10 @@
 - **Fix the prompt before judging the producer.** Every W02 produce failure was a prompt defect (unnamed keys, text fields, lists, wiring structure), found in three rounds, each a new checker kind. When a delegate fails, read its artifact against the prompt it was given before blaming the model.
 - **A pass needs the same scrutiny as a fail.** Stat Block passed on a declared gap; Abilities passed on an invention injected by PoF's own stub contract. The grader cannot see parity — the overseer checks parity by hand against the wrapper until an instrument exists.
 - **Measure a defect across the fleet, then pin the census at zero.** 102/114 turned a zombie's Stat Block into a PoF-wide fix with a regression guard.
+
+## 1.4 — 2026-09-22 — pof (W03)
+- **Ablate before you theorize about a generator.** One style-off candidate turned "the model can't draw a zombie" into "our style fragment makes it a skeleton" — a finding PoF owns. Keep ablations to n=1 per arm and stop when the direction is clear; say the n.
+- **An instrument that cannot fail is not an instrument.** The whole-frame value share read 0.99 on every image (the ground dominated). Before trusting a measurement, check it can produce a failing number on a plausible bad input.
+- **Do not submit to a selection-only checker what you would not accept.** Concept 2D Art grades only that a candidate is selected; submitting a skeleton "zombie" would have been a false pass the loop created itself.
+- **Commit the type (and any guard codex runs) BEFORE dispatching**, so worktrees branched from HEAD typecheck and can self-verify; land the reader after.
+- **Before calling a failure pre-existing, run it on a clean HEAD worktree** (junction node_modules, remove the junction with rmdir) — 3 were; 2 others were mine from an earlier commit whose test dir I had not run.
