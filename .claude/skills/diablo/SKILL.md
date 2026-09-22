@@ -1,7 +1,7 @@
 ---
 name: diablo
 description: Long-running LEARNING loop that breaks Diablo I (1996) down through PoF's catalog pipelines and replicates it toward UE — not to ship a game, but because every place PoF cannot hold, derive or produce what a complete shipped ARPG needed is an adjustment worth making. Phase A resolves the ingest backlog; Phase B replicates the game in dependency-ordered WAVES, each ending at a HUMAN GATE (never auto-proceeds). The dependency chronology ("we cannot create X without Y"), the adjustment ledger and all wave state live in the Obsidian vault (Diablo/). Invoke with /diablo [next | status | backlog | path | gate | ingest].
-version: 1.1
+version: 1.2
 ---
 
 # /diablo — replicate a shipped ARPG to find out what PoF is missing
@@ -91,6 +91,60 @@ family of entities through their pipelines, one system. Never "all 112 monsters"
    recommendation), and the proposed next wave. Options: continue as proposed · continue with
    changes · re-do this wave · stop. **Never emit `FLEET:NEXT` at a gate** — the orchestrator may
    auto-answer it, which is exactly what a human gate exists to prevent.
+
+## Delegating to Codex (executor) — Claude oversees
+
+Large volumes of well-specified work go to codex-cli; judgment stays here.
+
+```bash
+npx tsx scripts/codex/dispatch.ts run <task.json>          # own worktree + branch codex/<id>
+npx tsx scripts/codex/dispatch.ts diff <id>                # review
+npx tsx scripts/codex/dispatch.ts resume <id> "<precise follow-up>"   # same session, full context
+npx tsx scripts/codex/dispatch.ts land <id>                # apply to main tree (NOT committed)
+npx tsx scripts/codex/dispatch.ts record <id> --verdict … --class <taskClass> --notes "…"
+npx tsx scripts/codex/dispatch.ts discard <id> · stats · list
+```
+
+Task files live in the vault (`Diablo/Codex/tasks/<id>.json`, shape = `CodexTask` in
+`src/lib/codex-exec/brief.ts`); the ledger is `Diablo/Codex/ledger.jsonl`.
+
+**Routing (operator policy, `src/lib/codex-exec/routing.ts`):** `bulk` → `gpt-5.6-sol` low/medium ·
+`complex` → `gpt-5.6-sol` high (xhigh when hardest) · `visual` (2D/3D understanding & design) →
+`gpt-6-astra` medium/high. The visual tier is a HYPOTHESIS: Astra's "best at 3D" claim rests on one
+vendor number that GameEngineBench inverts. Grade its output with PoF's own gates (vision critique,
+mesh/rig gates), never its self-report.
+
+| Delegate | Keep with the overseer |
+|---|---|
+| a table's mapping AFTER its census has been read and the destinations decided | gate decisions, Path evidence, `State.md`, the backlog's status |
+| decoders, lib hardening, tests, script plumbing with acceptance commands | canon/law choices, D-decisions, registry deviations |
+| N independent tables/entities in parallel — one task each | promote/demote (writes the operator's DB), anything in the UE project |
+| image critique / art-direction review (`visual`, read-only) | commits (always pathspec), fleet memory |
+| 2D/3D prompt or spec DRAFTS (`visual`, design) — returned as proposals | deciding a wave is done |
+
+**Oversight protocol (every task):**
+1. Brief = goal + read-first + SCOPE + acceptance commands (+ images). Codex reads no CLAUDE.md, no
+   vault — every law it must obey travels in the brief (`REPO_LAWS`).
+2. Review the diff: any REMOVED line in an existing test is a red flag; `land` warns on out-of-scope
+   files; a disclosed, justified deviation is fine, an undisclosed one is a revision.
+3. Re-run the acceptance commands YOURSELF — its report is a claim. Then check real-data behaviour
+   (re-ingest: `unchanged` means nothing moved that should not have).
+4. Accept → `land`, commit with a pathspec (name the task id + model in the message). Otherwise
+   `resume` with a precise instruction; after 2 follow-ups, take it over or re-tier it.
+5. `record` the verdict with a task CLASS, then `discard`.
+
+**Calibration (the "independent vs needs instructions" answer):** `dispatch.ts stats` gives first-pass
+and accepted rates per tier · model · class. ≥ 80 % first-pass over ≥ 5 tasks → shorter briefs and
+parallel batches are fine for that class; < 50 % → longer brief with a worked example, a higher
+tier, or keep it in-house. Up to ~3 write tasks in parallel (shared `node_modules`, CPU).
+
+**Environment facts (probed 2026-09-22, codex-cli 0.155.1 — encoded in `src/lib/codex-exec/args.ts`):**
+stdin must be closed or `exec` hangs; `-i` is variadic so the prompt is fenced by `--`; long briefs go
+via stdin (`-- -`); Windows `workspace-write` refuses child processes (vitest `spawn EPERM`), so write
+tasks use `--approve-for-me` (sandbox kept, escalations auto-reviewed) — never the bypass flag;
+`--approve-for-me` excludes `-s`; `resume` inherits the session's access and accepts `--output-schema`;
+a fresh worktree needs the `node_modules` junction and the generated pipeline registry (the dispatcher
+does both); remove the junction with `rmdir`, never recursively.
 
 ## Forging the Path (the chronology of game making)
 
