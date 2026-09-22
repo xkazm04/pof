@@ -17,6 +17,13 @@ import Database from 'better-sqlite3';
 import fs from 'fs';
 import path from 'path';
 import { CANON_SEED } from '@/lib/catalog/canon/canon-seed';
+import { allShippedRules } from '@/lib/catalog/canon/profiles';
+import { DIABLO1_CANON } from '@/lib/catalog/canon/profiles/diablo1';
+
+// Every profile's shipped rules (PoF's CANON_SEED + each canon profile's seed, /diablo W01).
+const SHIPPED = allShippedRules(CANON_SEED).length;
+/** PoF's own rules only — the corpus the adoption tests below are about. */
+const pofOnly = <T extends { profile?: string }>(rs: T[]) => rs.filter((r) => !r.profile);
 
 const TMP = process.env.TEMP || process.env.TMPDIR || '/tmp';
 const madeFiles: string[] = [];
@@ -61,9 +68,9 @@ afterEach(() => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('a fresh database still gets the canon', () => {
-  it('seeds CANON_SEED on first use', async () => {
+  it('seeds every shipped rule (PoF + canon profiles) on first use', async () => {
     const { rules } = await loadRules(newDbFile('fresh'));
-    expect(rules.listRules()).toHaveLength(CANON_SEED.length);
+    expect(rules.listRules()).toHaveLength(SHIPPED);
   });
 });
 
@@ -108,7 +115,10 @@ describe('a database that predates the seed marker is adopted, never re-seeded',
     raw.close();
 
     const { rules } = await loadRules(file);
-    expect(rules.listRules().map((r) => r.id)).toEqual(['mine-1']);
+    // PoF's curated corpus is adopted untouched…
+    expect(pofOnly(rules.listRules()).map((r) => r.id)).toEqual(['mine-1']);
+    // …while a canon PROFILE the user never had (so cannot have curated) arrives once.
+    expect(rules.listRules().filter((r) => r.profile === 'diablo1')).toHaveLength(DIABLO1_CANON.length);
   });
 
   it('leaves an existing EMPTIED table empty — the curated-to-zero user is not overruled', async () => {
@@ -119,7 +129,7 @@ describe('a database that predates the seed marker is adopted, never re-seeded',
 
     // RED before the fix: 66 rules the user had already deleted came back.
     const { rules } = await loadRules(file);
-    expect(rules.listRules()).toEqual([]);
+    expect(pofOnly(rules.listRules())).toEqual([]);
   });
 });
 
@@ -130,9 +140,9 @@ describe('restoring the defaults is an explicit, named act', () => {
     expect(rules.listRules()).toEqual([]);
 
     const result = rules.restoreCanonSeed();
-    expect(result.restored).toBe(CANON_SEED.length);
-    expect(result.total).toBe(CANON_SEED.length);
-    expect(rules.listRules()).toHaveLength(CANON_SEED.length);
+    expect(result.restored).toBe(SHIPPED);
+    expect(result.total).toBe(SHIPPED);
+    expect(rules.listRules()).toHaveLength(SHIPPED);
   });
 
   it('does not clobber a rule the user edited under a seeded id', async () => {
@@ -141,7 +151,7 @@ describe('restoring the defaults is an explicit, named act', () => {
     rules.upsertRule(mine);
 
     const result = rules.restoreCanonSeed();
-    expect(result.total).toBe(CANON_SEED.length + 1);
+    expect(result.total).toBe(SHIPPED + 1);
     expect(rules.listRules().find((r) => r.id === 'my-own-rule')?.body).toBe('Kept.');
   });
 });
@@ -160,7 +170,7 @@ describe('through the API route the user actually reaches', () => {
     };
 
     const seeded = await read();
-    expect(seeded).toHaveLength(CANON_SEED.length);
+    expect(seeded).toHaveLength(SHIPPED);
 
     for (const rule of seeded) {
       const res = await route.DELETE(
@@ -176,8 +186,8 @@ describe('through the API route the user actually reaches', () => {
     const restored = await route.POST(
       new NextRequest('http://localhost/api/project-rules?action=restore-defaults', { method: 'POST' }),
     );
-    expect((await restored.json()).data.restored).toBe(CANON_SEED.length);
-    expect(await read()).toHaveLength(CANON_SEED.length);
+    expect((await restored.json()).data.restored).toBe(SHIPPED);
+    expect(await read()).toHaveLength(SHIPPED);
   });
 });
 

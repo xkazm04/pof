@@ -69,3 +69,31 @@ describe('reach at the prompt chokepoint (buildStepProducePrompt)', () => {
     expect(withProfiles).toContain('Post-Sundering');
   });
 });
+
+describe('the shipped diablo1 profile (drafted by gpt-6-astra, cx-002)', () => {
+  // Imported lazily-by-name so the mechanism tests above stay independent of the content.
+  it('every rule is tagged, prefixed, bounded and scoped to a real catalog', async () => {
+    const { DIABLO1_CANON } = await import('@/lib/catalog/canon/profiles/diablo1');
+    const { allCatalogPipelines } = await import('@/lib/catalog/pipeline-registry');
+    const catalogs = new Set(['global', ...allCatalogPipelines().map((p) => p.catalogId)]);
+    expect(DIABLO1_CANON.length).toBeGreaterThan(15);
+    for (const r of DIABLO1_CANON) {
+      expect(r.id).toMatch(/^d1-[a-z0-9-]+$/);
+      expect(r.profile).toBe('diablo1');
+      expect(r.body.length).toBeLessThanOrEqual(450);
+      expect(catalogs.has(r.scope)).toBe(true);
+    }
+    expect(new Set(DIABLO1_CANON.map((r) => r.id)).size).toBe(DIABLO1_CANON.length);
+  });
+
+  it('names nothing from PoF\u2019s own world — not even as an exclusion', async () => {
+    const { DIABLO1_CANON } = await import('@/lib/catalog/canon/profiles/diablo1');
+    const pofLore = /sundering|ashen|captain vael|whisper woods|ashrock/i;
+    expect(DIABLO1_CANON.filter((r) => pofLore.test(r.body)).map((r) => r.id)).toEqual([]);
+  });
+
+  it('inherits no PoF balance law — this profile is world + style only', () => {
+    const balanceLaws = ['proj-balance', 'proj-economy', 'arpg-resists', 'arpg-leveling', 'arpg-item-rarity', 'arpg-defenses'];
+    expect(CANON_PROFILES.diablo1.inheritsPof.filter((id) => balanceLaws.includes(id))).toEqual([]);
+  });
+});
