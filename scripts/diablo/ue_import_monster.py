@@ -81,6 +81,31 @@ if sk is None:
         if isinstance(a, unreal.SkeletalMesh):
             sk = a
 
+# 1b. Animations — a REimport of an existing mesh never creates them (W06: 0 AnimSequence), so import the
+# same FBX again as animation-only against the mesh's skeleton, at the mesh's own uniform scale.
+sk_cur = lib.load_asset(f"{DEST}/SK_{NAME}")
+if sk_cur is not None and not any(isinstance(lib.load_asset(p), unreal.AnimSequence) for p in lib.list_assets(DEST, recursive=False)):
+    mesh_scale = sk_cur.get_editor_property("asset_import_data").get_editor_property("import_uniform_scale")
+    aui = unreal.FbxImportUI()
+    aui.import_mesh = False
+    aui.import_animations = True
+    aui.import_materials = False
+    aui.import_textures = False
+    aui.skeleton = sk_cur.get_editor_property("skeleton")
+    aui.mesh_type_to_import = unreal.FBXImportType.FBXIT_ANIMATION
+    aui.anim_sequence_import_data.set_editor_property("import_uniform_scale", mesh_scale)
+    anim_paths = run_task(spec["fbx"], f"A_{NAME}_Walk", aui)
+    unreal.log(f"POF_DIABLO_UE_IMPORT_ANIM={anim_paths} scale={mesh_scale}")
+
+# An FBXIT_ANIMATION import still emits a duplicate SkeletalMesh + PhysicsAsset named after the task (W06):
+# the entity has exactly ONE mesh, SK_<Name> — remove the strays.
+for p in lib.list_assets(DEST, recursive=False):
+    a = lib.load_asset(p)
+    base = p.split("/")[-1].split(".")[0]
+    if isinstance(a, (unreal.SkeletalMesh, unreal.PhysicsAsset)) and not base.startswith(f"SK_{NAME}"):
+        lib.delete_asset(p.split(".")[0])
+        unreal.log(f"POF_DIABLO_UE_REMOVED_STRAY={base}")
+
 # 2. Concept texture.
 if spec.get("concept"):
     tex_paths = run_task(spec["concept"], f"T_{NAME}_Concept")
@@ -124,6 +149,17 @@ for m in [lib.load_asset(p) for p in lib.list_assets(DEST, recursive=False)]:
         met = mel.get_material_property_input_node(m, unreal.MaterialProperty.MP_METALLIC)
         base = mel.get_material_property_input_node(m, unreal.MaterialProperty.MP_BASE_COLOR)
         unreal.log(f"POF_DIABLO_UE_MATERIAL={m.get_name()} metallic={met.get_class().get_name() if met else None} basecolor={base.get_class().get_name() if base else None}")
+# Locomotion: a Diablo zombie only shambles — loop its walk as a single-node animation (no AnimBP yet).
+walks = [lib.load_asset(p) for p in lib.list_assets(DEST, recursive=False)]
+walks = [w for w in walks if isinstance(w, unreal.AnimSequence)]
+if walks and mesh_comp is not None:
+    mesh_comp.set_editor_property("animation_mode", unreal.AnimationMode.ANIMATION_SINGLE_NODE)
+    data = mesh_comp.get_editor_property("animation_data")
+    data.set_editor_property("anim_to_play", walks[0])
+    data.set_editor_property("saved_looping", True)
+    data.set_editor_property("saved_playing", True)
+    mesh_comp.set_editor_property("animation_data", data)
+unreal.log(f"POF_DIABLO_UE_ANIM={[w.get_name() for w in walks]}")
 granted = [c for c in (unreal.load_class(None, "/Script/PoF.GA_Death"), unreal.load_class(None, "/Script/PoF.GA_HitReact")) if c]
 cdo.set_editor_property("GrantedAbilities", granted)
 unreal.BlueprintEditorLibrary.compile_blueprint(bp)

@@ -32,8 +32,18 @@ for img in bpy.data.images:
     written += 1
 arm = [o for o in bpy.context.scene.objects if o.type == "ARMATURE"]
 meshes = [o for o in bpy.context.scene.objects if o.type == "MESH"]
+# The walk arrived as the active action AND an NLA strip named "preset:walk_Armature"; the default
+# NLA-strip export wrote NO animation into the FBX (W05: 0 AnimSequence in UE). Give the actions clean
+# names (a ':' is not a safe take name) and export every action directly.
+for act in bpy.data.actions:
+    act.name = act.name.split(":")[-1].replace("_Armature", "") or "Anim"
+for a in arm:
+    if a.animation_data:
+        for t in list(a.animation_data.nla_tracks):
+            a.animation_data.nla_tracks.remove(t)
 bpy.ops.export_scene.fbx(
     filepath=argv[1], use_selection=False, object_types={"ARMATURE", "MESH"},
-    add_leaf_bones=False, bake_anim=True, bake_anim_use_all_actions=False, path_mode="COPY", embed_textures=True,
+    add_leaf_bones=False, bake_anim=True, bake_anim_use_all_actions=True, bake_anim_use_nla_strips=False,
+    path_mode="COPY", embed_textures=True,
 )
-print(f"POF_FBX_DONE={argv[1]} armatures={len(arm)} meshes={len(meshes)} bones={sum(len(a.data.bones) for a in arm)} textures={written}")
+print(f"POF_FBX_DONE={argv[1]} armatures={len(arm)} meshes={len(meshes)} bones={sum(len(a.data.bones) for a in arm)} textures={written} actions={[a.name for a in bpy.data.actions]}")
