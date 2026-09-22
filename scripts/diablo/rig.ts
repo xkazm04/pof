@@ -3,7 +3,7 @@
  * 3D & Rig for an ingested entity (/diablo W04) — gate a rigged .glb and submit it, in-process.
  *
  *   npx tsx scripts/diablo/rig.ts --catalog bestiary --id d1-MT_NZOMBIE \
- *     --glb generated/tripo3d/d1_mt_nzombie_rigged.glb --morphology biped [--provider tripo3d]
+ *     --glb generated/tripo3d/d1_mt_nzombie_rigged.glb --morphology biped [--provider tripo3d] [--budget 40000]
  *
  * The .glb is produced upstream (e.g. scripts/visual-gen/pof_tripo.mjs from the entity's accepted
  * Concept 2D Art, then pof_tripo_animate.mjs). This script only JUDGES and records: the Tier-1 rig
@@ -18,6 +18,9 @@ import type { Morphology } from '../../src/lib/visual-gen/skeleton-profiles';
 import { rigCandidatePayload } from '../../src/lib/catalog/acceptance/rigArtifact';
 import { assetUrl } from '../../src/lib/visual-gen/generated-assets';
 import { submitStepArtifact } from '../../src/lib/catalog/headless';
+import { declaredGlbTriangles } from '../../src/lib/visual-gen/mesh-fetch';
+import { gradeFaceBudget } from '../../src/lib/visual-gen/face-budget';
+import { readFileSync } from 'node:fs';
 
 const STEP = '3D & Rig';
 const opt = (n: string) => { const i = process.argv.indexOf(`--${n}`); return i >= 0 ? process.argv[i + 1] : undefined; };
@@ -26,6 +29,8 @@ const entityId = opt('id');
 const glb = opt('glb');
 const morphology = (opt('morphology') ?? 'biped') as Morphology;
 const provider = opt('provider') ?? 'tripo3d';
+// The triangle budget the mesh was COMMISSIONED at (asset-class-poly-budgeting): graded delivered-vs-requested.
+const budget = opt('budget') ? Number(opt('budget')) : undefined;
 if (!entityId || !glb) { console.error('usage: rig.ts --catalog <id> --id <entityId> --glb <file> [--morphology biped] [--provider tripo3d]'); process.exit(2); }
 
 const g = gateRig(resolve(glb), { morphology });
@@ -34,6 +39,11 @@ const { facts, verdict } = g;
 console.log(`rig gate: ${verdict.pass ? 'PASS' : 'FAIL'} score=${verdict.score} joints=${facts.jointCount} (referenced ${facts.referencedJoints}) vertices=${facts.vertexCount} zero-weight=${facts.zeroWeightVertices}`);
 for (const f of verdict.failures) console.log(`  failure: ${f}`);
 for (const w of verdict.warnings) console.log(`  warning: ${w}`);
+
+// Measured independently of whatever produced the file: triangles declared by the glb's own index buffers.
+const measured = declaredGlbTriangles(readFileSync(resolve(glb))) ?? undefined;
+const faceBudget = gradeFaceBudget(measured, budget ? { triangleBudget: budget, topology: 'triangles' } : undefined);
+console.log(`face budget: ${faceBudget.verdict} — measured ${measured ?? '?'} triangles vs requested ${budget ?? 'none'}${faceBudget.reason ? ` (${faceBudget.reason})` : ''}`);
 
 const name = basename(glb);
 const data = {
@@ -46,7 +56,7 @@ const data = {
       prompt: `${provider} image_to_model + animate_rig (${morphology})`,
       candidates: [{
         id: 'b0-c0', swatch: 'linear-gradient(#333,#111)',
-        payload: { mesh: 0, glbUrl: assetUrl(name, provider), provider, ...rigCandidatePayload({ rig: verdict, facts }) },
+        payload: { mesh: 0, glbUrl: assetUrl(name, provider), provider, faceBudget, ...rigCandidatePayload({ rig: verdict, facts }) },
       }],
     }],
     selectedId: 'b0-c0',
