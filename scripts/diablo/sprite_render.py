@@ -1,0 +1,104 @@
+"""
+Prerendered-sprite render of a rigged .glb (/diablo W04, decision D16) — Blender headless.
+
+  blender -b -P scripts/diablo/sprite_render.py -- <in.glb> <out_dir> [--size 96] [--frame 1] [--render 384]
+
+Diablo I's look is PRERENDERED: 3D models rendered from ONE fixed diagonal camera and reduced to
+sprite resolution. A text-to-image prompt cannot reach it (W03: 0/5). This renders the model the
+way the originals were made: an orthographic camera at 30 deg elevation / 45 deg azimuth (a 2:1
+ground diamond), the MODEL rotated through 8 directions under the fixed camera, one bounded key
+light from the upper left over near-black ambient, transparent background. Each direction is
+rendered at --render px and box-downsampled to --size px (the coarse-pixel step), plus a 4x
+nearest-neighbour enlargement sheet for review. Prints POF_SPRITE_* markers.
+"""
+import math
+import os
+import sys
+
+import bpy
+from mathutils import Vector
+
+argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
+if len(argv) < 2:
+    print("POF_SPRITE_ERROR=usage: -- <in.glb> <out_dir> [--size N] [--frame N] [--render N]")
+    sys.exit(2)
+src, out_dir = argv[0], argv[1]
+opt = {argv[i][2:]: argv[i + 1] for i in range(2, len(argv) - 1) if argv[i].startswith("--")}
+SIZE = int(opt.get("size", 96))
+FRAME = int(opt.get("frame", 1))
+RENDER = int(opt.get("render", 384))
+os.makedirs(out_dir, exist_ok=True)
+
+bpy.ops.wm.read_factory_settings(use_empty=True)
+bpy.ops.import_scene.gltf(filepath=src)
+scene = bpy.context.scene
+scene.frame_set(FRAME)
+
+# Everything imported is parented under one pivot so the model (not the camera) turns.
+pivot = bpy.data.objects.new("pivot", None)
+scene.collection.objects.link(pivot)
+for ob in list(scene.objects):
+    if ob is not pivot and ob.parent is None:
+        ob.parent = pivot
+
+meshes = [o for o in scene.objects if o.type == "MESH"]
+if not meshes:
+    print("POF_SPRITE_ERROR=no mesh in the glb")
+    sys.exit(1)
+bpy.context.view_layer.update()
+pts = [o.matrix_world @ Vector(c) for o in meshes for c in o.bound_box]
+lo = Vector((min(p.x for p in pts), min(p.y for p in pts), min(p.z for p in pts)))
+hi = Vector((max(p.x for p in pts), max(p.y for p in pts), max(p.z for p in pts)))
+center = (lo + hi) / 2
+height = hi.z - lo.z
+extent = max(hi.x - lo.x, hi.y - lo.y, height)
+
+# Fixed camera: orthographic, 30 deg elevation, 45 deg azimuth -> 2:1 ground diamond.
+cam_data = bpy.data.cameras.new("cam")
+cam_data.type = "ORTHO"
+cam_data.ortho_scale = height * 1.25  # frame the FIGURE: the full extent left it a quarter of the frame (r1)
+cam = bpy.data.objects.new("cam", cam_data)
+scene.collection.objects.link(cam)
+elev, azim, dist = math.radians(30), math.radians(45), extent * 4
+cam.location = center + Vector((math.cos(elev) * math.sin(azim), -math.cos(elev) * math.cos(azim), math.sin(elev))) * dist
+cam.rotation_euler = (center - cam.location).to_track_quat("-Z", "Y").to_euler()
+scene.camera = cam
+
+# One bounded key light from the upper left; near-black world (d1-lighting).
+key = bpy.data.objects.new("key", bpy.data.lights.new("key", "SUN"))
+key.data.energy = 7.0
+key.rotation_euler = (math.radians(50), 0, math.radians(-135))
+scene.collection.objects.link(key)
+# Weak cool fill from the opposite side so the dark side keeps a readable edge (r1 was near-black).
+fill = bpy.data.objects.new("fill", bpy.data.lights.new("fill", "SUN"))
+fill.data.energy = 1.2
+fill.rotation_euler = (math.radians(60), 0, math.radians(45))
+scene.collection.objects.link(fill)
+world = bpy.data.worlds.new("w")
+world.use_nodes = True
+world.node_tree.nodes["Background"].inputs[0].default_value = (0.01, 0.01, 0.012, 1)
+world.node_tree.nodes["Background"].inputs[1].default_value = 0.3
+scene.world = world
+
+scene.render.engine = "BLENDER_EEVEE_NEXT" if "BLENDER_EEVEE_NEXT" in [e.identifier for e in bpy.types.RenderSettings.bl_rna.properties["engine"].enum_items] else "BLENDER_EEVEE"
+scene.render.film_transparent = True
+scene.render.resolution_x = scene.render.resolution_y = RENDER
+scene.render.image_settings.file_format = "PNG"
+scene.render.image_settings.color_mode = "RGBA"
+
+full = []
+for d in range(8):
+    pivot.rotation_euler = (0, 0, math.radians(-45 * d))
+    path = os.path.join(out_dir, f"dir{d}_full.png")
+    scene.render.filepath = path
+    bpy.ops.render.render(write_still=True)
+    full.append(path)
+
+# Downsample (box) to sprite size, then a 4x nearest-neighbour review sheet.
+for d, path in enumerate(full):
+    img = bpy.data.images.load(path)
+    img.scale(SIZE, SIZE)
+    img.filepath_raw = os.path.join(out_dir, f"dir{d}.png")
+    img.file_format = "PNG"
+    img.save()
+print(f"POF_SPRITE_DONE={out_dir} directions=8 size={SIZE} render={RENDER} frame={FRAME} height={height:.3f} verts={sum(len(o.data.vertices) for o in meshes)}")
