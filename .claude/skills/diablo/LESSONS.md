@@ -29,3 +29,9 @@
 ## 1.5 — 2026-09-22 — pof (W04)
 - **Never write a Path node on an n=1 ablation arm.** W03 blamed the style on one style-off image; n=3 showed the subject text was the cause. Get n≥3 per arm before the diagnosis becomes a node, and measure with a blind instrument, not by eye.
 - **Look at what a render produced before judging it** — the first sprite sheet was black and tiny (lighting + framing), not a failure of the approach.
+
+## 1.6 — 2026-09-22 — pof (W05)
+- **Going to UE is where the real defects are.** One monster's first import surfaced six PoF defects no app-side test could (no ChaosResistance in UE, AttackPower dealing 0, every enemy a Sith, unit-normalised meshes, an import that saved only primary objects, a damage test that had never run). Take ONE entity all the way before widening.
+- **Verify imports from DISK, not the asset registry** — the registry listed a Skeleton that was never written.
+- **When a render is black, run a known-good control first** (the same capture in a map that is known to render): it separated "my map" from "my capture code" in one run.
+- UE headless traps (also in the wave note): commandlets are null-RHI; `unreal.Rotator` is (roll, pitch, yaw); Git-Bash rewrites `/Game/...` args (MSYS_NO_PATHCONV=1); UBT needs DOTNET_ROOT = the engine's bundled .NET; the -game exit can hang on DDC maintenance — judge by the files and the log.
