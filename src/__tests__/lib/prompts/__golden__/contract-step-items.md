@@ -2,6 +2,7 @@
 
 ## Required fields (graded — use these exact keys)
 - `baseType`: an object with keys `slot`, `rarity`, `ilvl`, `requiredLevel`, `implicit`
+- `baseType.wiringContract` (only if you declare it): an object { grantedBy: string, activatedBy: string, dependencies: string[] (a JSON ARRAY of strings, may be empty), verification: string naming its L0–L4 tier }
 
 ## Wiring contract — Base Type & Rarity · baseType
 - **Granted by**: UARPGInventoryComponent equips the item and activates the equip GE bundle

@@ -1,6 +1,7 @@
 import { gradeGallerySelection } from './galleryArtifact';
 import type { Checker } from './types';
 import { tagRequiredFields } from './requiredFields';
+import { REFERENCE_GAP, isDeclaredGap } from './markers';
 
 /**
  * Resolve a field reference against a step's artifact data. A plain name (`gpuPct`) reads a
@@ -20,20 +21,24 @@ export function pickField(data: Record<string, unknown>, field: string): unknown
 }
 
 export function minLength(field: string, label: string, n: number): Checker {
-  return (data) => {
+  // Tagged so the produce prompt NAMES the text field it grades (`requiredFields.ts`).
+  return tagRequiredFields((data) => {
     const len = String(data[field] ?? '').length;
     const ok = len >= n;
     return { label, tier: 'L0', status: ok ? 'pass' : 'pending', detail: `${len} / ${n} chars`, ...(ok ? {} : { reason: `field "${field}" is ${len} characters, needs ≥ ${n}` }) };
-  };
+  }, { field, minChars: n });
 }
 
 export function fieldsPopulated(field: string, label: string, keys: string[]): Checker {
   // Tagged so the produce prompt can NAME the keys it will be graded on (`requiredFields.ts`).
   return tagRequiredFields((data) => {
     const obj = (data[field] ?? {}) as Record<string, unknown>;
-    const missing = keys.filter((k) => obj[k] == null);
+    // A DECLARED gap ("not in the reference") is not a value — it must not read as populated.
+    const missing = keys.filter((k) => obj[k] == null || isDeclaredGap(obj[k]));
+    const gaps = missing.filter((k) => obj[k] != null);
     const ok = missing.length === 0;
-    return { label, tier: 'L0', status: ok ? 'pass' : 'pending', detail: `${keys.length - missing.length} / ${keys.length} populated`, ...(ok ? {} : { reason: `field "${field}" missing: ${missing.join(', ')}` }) };
+    const note = gaps.length ? ` (declared gap: ${gaps.join(', ')} — "${REFERENCE_GAP}")` : '';
+    return { label, tier: 'L0', status: ok ? 'pass' : 'pending', detail: `${keys.length - missing.length} / ${keys.length} populated`, ...(ok ? {} : { reason: `field "${field}" missing: ${missing.join(', ')}${note}` }) };
   }, { field, keys });
 }
 

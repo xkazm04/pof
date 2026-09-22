@@ -2,6 +2,7 @@
 
 ## Required fields (graded — use these exact keys)
 - `effect`: an object with keys `damageType`, `baseDamage`, `manaCost`, `cooldown`, `critChancePct`, `critMulti`, `onHitIgnite`
+- `effect.wiringContract` (only if you declare it): an object { grantedBy: string, activatedBy: string, dependencies: string[] (a JSON ARRAY of strings, may be empty), verification: string naming its L0–L4 tier }
 
 ## Wiring contract — Effect Logic · effect
 - **Granted by**: ASC GiveAbility — UAbilitySystemComponent::GiveAbility(GA_AshenBlade) called at character initialisation (AARPGCharacterBase::InitAbilitySystemComponent). Slot bound at initialisation; not dynamically acquired.

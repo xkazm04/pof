@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import '@/lib/catalog/pipelines/registry.generated'; // side-effect: register all pipelines
 import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
-import { stepContractBlock } from '@/lib/catalog/contractPrompt';
+import { stepContractBlock, stepContractRequirements } from '@/lib/catalog/contractPrompt';
 import { SPELLBOOK_RECIPE, ITEMS_RECIPE } from '@/lib/catalog/recipe';
 import { expectGolden } from './golden';
 import type { AbilityEntry, ItemEntry } from '@/lib/catalog/types';
@@ -42,11 +42,16 @@ const blade = {
   data: { id: 'itm-blade', name: 'Ashen Blade', slot: 'weapon', rarity: 'rare' },
 } as unknown as ItemEntry;
 
-/** The first contract-bearing step of a catalog (the generic-seam sample). */
+/**
+ * The first step of a catalog that injects an authored WIRING contract (the generic-seam sample).
+ * Selected by wiring contract, not by "any contract block": once text-field requirements joined the
+ * block (/diablo W02c), a brief-only step became "first" and this golden silently stopped pinning a
+ * wiring contract at all — the thing it exists to pin.
+ */
 function firstContractStep(catalogId: string) {
   const p = getCatalogPipeline(catalogId);
   if (!p) throw new Error(`no pipeline for ${catalogId}`);
-  const spec = p.steps.find((s) => stepContractBlock(s, LAB_ENTITY).length > 0);
+  const spec = p.steps.find((s) => stepContractRequirements(s, LAB_ENTITY).length > 0);
   if (!spec) throw new Error(`no contract-bearing step in ${catalogId}`);
   return spec;
 }

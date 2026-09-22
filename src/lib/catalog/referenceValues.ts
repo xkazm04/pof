@@ -11,6 +11,7 @@
  * reference gets no section at all, so PoF's own prompts are byte-identical.
  */
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
+import { REFERENCE_GAP } from '@/lib/catalog/acceptance/markers';
 
 const MAX_CHARS = 2000;
 
@@ -43,7 +44,7 @@ export function referenceValuesBlock(entity: LabEntity): string {
     `# REFERENCE VALUES — ${ref.sourceGame} · ${ref.sourceFile} (${ref.sourceRow})`,
     `This entity replicates a shipped game: "${entity.name}". Where a field of this step corresponds to a value below,`,
     'REPRODUCE the value exactly — do not rebalance it or invent a replacement. Where the step needs something the reference',
-    'does not state, write an explicit gap (e.g. "not in the reference") instead of a plausible number.',
+    `does not state, write exactly "${REFERENCE_GAP}" as its value instead of a plausible number (a declared gap is graded as missing, never as filled).`,
     body || '- (no values recorded)',
   ].join('\n');
 }

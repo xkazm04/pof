@@ -1,7 +1,7 @@
 import { ARCHETYPE_CANON } from '@/lib/catalog/canon/archetypeCanon';
 import { isContentInvariant } from '@/lib/catalog/acceptance/contentInvariant';
 import { MIN_PROSE } from '@/lib/catalog/acceptance/wiringCheckers';
-import { requiredFieldsOf } from '@/lib/catalog/acceptance/requiredFields';
+import { requiredFieldLine, requiredFieldsOf } from '@/lib/catalog/acceptance/requiredFields';
 import type { WiringRequirement } from '@/lib/knowledge/wiring-requirements';
 import type { RuleCategory } from '@/lib/catalog/canon/types';
 import type { CatalogPipeline, StepSpec } from '@/lib/catalog/stepSpec';
@@ -153,7 +153,7 @@ export function stepContractBlock(spec: StepSpec, entity: LabEntity): string {
   if (graded.length) {
     blocks.push([
       '## Required fields (graded — use these exact keys)',
-      ...graded.map((g) => `- \`${g.field}\`: an object with keys ${g.keys.map((k) => `\`${k}\``).join(', ')}`),
+      ...graded.map(requiredFieldLine),
     ].join('\n'));
   }
   for (const r of reqs) {

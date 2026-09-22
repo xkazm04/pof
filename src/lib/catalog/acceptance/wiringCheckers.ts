@@ -1,3 +1,4 @@
+import { tagRequiredFields } from './requiredFields';
 import type { AcceptanceResult, Checker } from './types';
 
 /**
@@ -90,7 +91,9 @@ export function checkWiringContract(wc: unknown, label: string, where: string): 
  * never turn a clean Produce into a failure or mask the base checker's own pending message.
  */
 export function wiringContractSound(field?: string, label = 'Wiring contract (granted · activated · verified)'): Checker {
-  return (data) => {
+  // Tagged with its STRUCTURE: a declared contract is graded on format (dependencies is an ARRAY),
+  // which the prompt's prose rendering of the contract never said (/diablo W02c: 3 of 3 Abilities failed).
+  return tagRequiredFields((data) => {
     const container = field
       ? field.split('.').reduce<unknown>(
           (acc, k) => (acc && typeof acc === 'object' ? (acc as Record<string, unknown>)[k] : undefined),
@@ -103,5 +106,9 @@ export function wiringContractSound(field?: string, label = 'Wiring contract (gr
     const wc = (container as Record<string, unknown>).wiringContract;
     if (wc === undefined) return res('pass', label, 'no wiring contract declared');
     return checkWiringContract(wc, label, field ? `${field}.wiringContract` : 'wiringContract');
-  };
+  }, {
+    field: field ? `${field}.wiringContract` : 'wiringContract',
+    shape: 'an object { grantedBy: string, activatedBy: string, dependencies: string[] (a JSON ARRAY of strings, may be empty), verification: string naming its L0–L4 tier }',
+    optional: true,
+  });
 }
