@@ -230,9 +230,10 @@ export function maxWordsPerEntry(field: string, label: string, max: number): Che
 }
 
 export function minCount(field: string, label: string, n: number): Checker {
-  return (data) => {
+  // Tagged so the produce prompt NAMES the list it counts (`requiredFields.ts`).
+  return tagRequiredFields((data) => {
     const arr = Array.isArray(data[field]) ? (data[field] as unknown[]) : [];
     const ok = arr.length >= n;
     return { label, tier: 'L0', status: ok ? 'pass' : 'pending', detail: `${arr.length} / ${n}`, ...(ok ? {} : { reason: `field "${field}" has ${arr.length} item(s), needs ≥ ${n}` }) };
-  };
+  }, { field, minItems: n });
 }

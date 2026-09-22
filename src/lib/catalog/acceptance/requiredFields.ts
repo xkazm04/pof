@@ -20,6 +20,8 @@ export interface RequiredFields {
   keys?: string[];
   /** A text field graded by length. */
   minChars?: number;
+  /** A LIST graded by item count. */
+  minItems?: number;
   /** A structural shape, stated in prose, for a field whose FORMAT is graded. */
   shape?: string;
   /** Graded only when present (e.g. a wiring contract is optional, but must be well-formed). */
@@ -40,6 +42,7 @@ export function requiredFieldsOf(checker: Checker): RequiredFields[] {
       const cur = byField.get(own.field) ?? { field: own.field };
       if (own.keys) cur.keys = [...new Set([...(cur.keys ?? []), ...own.keys])];
       if (own.minChars != null) cur.minChars = Math.max(cur.minChars ?? 0, own.minChars);
+      if (own.minItems != null) cur.minItems = Math.max(cur.minItems ?? 0, own.minItems);
       if (own.shape && !cur.shape) cur.shape = own.shape;
       cur.optional = (cur.optional ?? true) && !!own.optional;
       byField.set(own.field, cur);
@@ -56,6 +59,7 @@ export function requiredFieldLine(r: RequiredFields): string {
   const parts: string[] = [];
   if (r.keys?.length) parts.push(`an object with keys ${r.keys.map((k) => `\`${k}\``).join(', ')}`);
   if (r.minChars != null) parts.push(`text of at least ${r.minChars} characters`);
+  if (r.minItems != null) parts.push(`a JSON array with at least ${r.minItems} item(s)`);
   if (r.shape) parts.push(r.shape);
   return `- ${name}${r.optional ? ' (only if you declare it)' : ''}: ${parts.join('; ')}`;
 }

@@ -46,6 +46,19 @@ describe('required fields reach the produce prompt', () => {
     expect(blind).toEqual([]);
   });
 
+  it('every LIST a checker counts is named in that step’s prompt (Abilities wrote `abilityLoadout`)', () => {
+    const blind: string[] = [];
+    let graded = 0;
+    for (const p of allCatalogPipelines()) for (const s of p.steps) {
+      const m = /field "([\w.]+)" has \d+ item\(s\), needs/.exec(s.accept({}, ctx(p.catalogId)).reason ?? '');
+      if (!m) continue;
+      graded++;
+      if (!promptFor(p.catalogId, s).includes(`\`${m[1]}\``)) blind.push(`${p.catalogId} · ${s.label}: ${m[1]}`);
+    }
+    expect(graded).toBeGreaterThan(10);
+    expect(blind).toEqual([]);
+  });
+
   it('requiredFieldsOf reads through allOf compositions (and the SOURCED registration wrap)', () => {
     const stat = allCatalogPipelines().find((p) => p.catalogId === 'bestiary')!.steps.find((s) => s.label === 'Stat Block')!;
     const req = requiredFieldsOf(stat.accept);
