@@ -145,6 +145,13 @@ registerCatalogPipeline({
         },
         };
       },
+      contract: {
+        field: 'layout',
+        grantedBy: 'AARPGEncounterVolume actors and THIS zone’s edge and POI data declare its sectors and navigation graph',
+        activatedBy: 'loading THIS zone activates its declared seamless, door, or travel edges and makes its POIs reachable',
+        dependencies: ['zone edge for EACH adjacent zone connected to THIS zone', 'zone POI row for EACH point of interest THIS zone declares', 'fast-travel node for THIS zone when declared'],
+        verification: 'L0: every declared edge, POI, and fast-travel row for THIS zone exists; L2: AARPGEncounterVolume compiles in Source/PoF/; L3: VSZoneTest verifies THIS zone loads and each required POI is reachable',
+      },
       accept: allOf(
         fieldsPopulated('layout', 'Sectors / POIs / navigation contract populated', [
           'sectors',
@@ -221,6 +228,13 @@ registerCatalogPipeline({
       },
       // Content invariant: the stated totalEnemies must reconcile with the per-sector
       // breakdown (no hand-set headline that disagrees with the sector packs).
+      contract: {
+        field: 'density',
+        grantedBy: 'AARPGEncounterVolume on THIS zone declares its area level for ASpawnVolume and UARPGLootDropComponent',
+        activatedBy: 'wave start reads THIS zone’s authored area level to configure monster level and loot item level',
+        dependencies: ['AARPGEncounterVolume area-level source', 'ASpawnVolume for EACH encounter in THIS zone', 'UARPGLootDropComponent for EACH enemy that drops loot', 'bestiary::<id> for EACH enemy archetype placed in THIS zone'],
+        verification: 'L2: AARPGEncounterVolume and ASpawnVolume compile in Source/PoF/; L3: VSZoneTest verifies THIS zone’s spawned enemies and loot use its declared levels',
+      },
       accept: allOf(
         fieldsPopulated('density', 'areaLevel / monsterLevel / lootIlvl / totalEnemies populated', [
           'areaLevel',
@@ -317,6 +331,13 @@ registerCatalogPipeline({
       // combat-map / bestiary targets must exist. Satisfied → pass; a broken link → deferred
       // with the unresolved target named (the catalog-context path supplies `has`; a ctx-free
       // rollup degrades to pass rather than regressing this step).
+      contract: {
+        field: 'encounters',
+        grantedBy: 'ASpawnVolume actors placed in THIS zone reference its AARPGEncounterVolume and declare every authored pack or arena encounter',
+        activatedBy: 'level startup and each declared aggro or arena-entry trigger start the matching encounter waves',
+        dependencies: ['combat-map::<id> for EACH arena hosted by THIS zone', 'bestiary::<id> for EACH enemy archetype placed here', 'AARPGEncounterVolume area-level source', 'ASpawnVolume for EACH declared encounter'],
+        verification: 'L2: AARPGEncounterVolume and ASpawnVolume compile in Source/PoF/; L3: VSZoneTest verifies every declared pack and arena spawns at the authored location and level',
+      },
       accept: allOf(
         fieldsPopulated('encounters', 'Hosted arena + pack placements + wiring contract declared', [
           'hostedArena',
@@ -469,6 +490,13 @@ registerCatalogPipeline({
           { catalogId: 'materials', entityId: 'mat-weathered-stone', role: 'surface-family' },
         ],
       }),
+      contract: {
+        field: 'materials',
+        grantedBy: 'THIS zone’s MI_{slug}_ material instances derive from the declared master material and are assigned to its static meshes',
+        activatedBy: 'material-slot assignments in /Game/Maps/{slug}.umap activate the authored instances when THIS zone renders',
+        dependencies: ['materials::<id> for EACH master material used by THIS zone', 'art-material texture maps and parameters declared by THIS zone'],
+        verification: 'L0: every declared master-material row exists; L2: THIS zone’s map contains meshes using its MI_{slug}_ instances; L4: the deferred render check verifies the authored surface read',
+      },
       accept: allOf(
         fieldsPopulated('materials', 'Surface family + instances + wiring contract populated', [
         'surfaceFamily',
@@ -556,6 +584,13 @@ registerCatalogPipeline({
         ],
         };
       },
+      contract: {
+        field: 'audio',
+        grantedBy: 'audio components placed in THIS zone play its declared ambient bed and music assets',
+        activatedBy: 'level startup activates THIS zone’s ambient audio and its declared combat or exploration events switch music',
+        dependencies: ['ambient::<id> for EACH ambient bed or one-shot THIS zone uses', 'music::<id> for EACH music track THIS zone uses', 'UARPGAbilitySystemComponent event used for each authored music transition'],
+        verification: 'L0: every declared ambient and music row exists; L3: VSZoneTest verifies THIS zone starts its ambient bed and performs each authored music transition',
+      },
       accept: allOf(
         fieldsPopulated('audio', 'Ambient + music + wiring contract populated', [
         'ambient',
@@ -631,6 +666,13 @@ registerCatalogPipeline({
           },
         },
         };
+      },
+      contract: {
+        field: 'minimap',
+        grantedBy: 'WBP_MinimapZone reads THIS zone’s POIs and fast-travel nodes while the exploration event system writes its discovery state',
+        activatedBy: 'loading THIS zone mounts its minimap; first visits update discovery and interaction enables each declared travel node',
+        dependencies: ['zone POI row for EACH minimap marker THIS zone declares', 'fast-travel node for EACH travel point in THIS zone', 'hud-elements::<id> for the HUD shell hosting THIS zone’s minimap'],
+        verification: 'L0: every declared POI and fast-travel row exists; L3: VSZoneTest verifies THIS zone’s minimap mounts, its icons appear, and discovery updates',
       },
       accept: allOf(
         fieldsPopulated('minimap', 'Discovery / fast-travel / HUD binding declared', [
@@ -763,6 +805,12 @@ registerCatalogPipeline({
           ],
           ueAssets: assets,
         };
+      },
+      contract: {
+        grantedBy: '/Game/Maps/{slug}.umap and THIS zone’s DT_ZoneMap row declare its map asset, area level, encounters, presentation, and travel wiring',
+        activatedBy: 'level load starts AARPGEncounterVolume and ASpawnVolume behavior, while declared events activate THIS zone’s loot, audio, minimap, and travel systems',
+        dependencies: ['combat-map::<id> for EACH hosted arena', 'bestiary::<id> for EACH enemy archetype', 'materials::<id> for EACH master material', 'ambient::<id> and music::<id> for THIS zone’s soundscape', 'icon-sets::<id> for THIS zone’s icon family', 'AARPGEncounterVolume, ASpawnVolume, and UARPGLootDropComponent'],
+        verification: 'L2: all framework symbols compile in Source/PoF/ and THIS zone’s map and DT_ZoneMap row are seeded; L3: VSZoneTest verifies its encounters, levels, loot, travel, minimap, and audio wiring',
       },
       accept: allOf(
         minCount('assets', '≥3 UE assets packaged', 3),

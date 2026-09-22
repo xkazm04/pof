@@ -190,6 +190,15 @@ registerCatalogPipeline({
           { catalogId: 'quests',     entityId: 'quest-ember-pact',  role: 'advances' },
         ],
       }),
+      contract: {
+        grantedBy: 'UARPGDialogComponent on this tree’s host character reads its FARPGDialogTreeRow from DT_DialogTrees and evaluates every declared FARPGDialogCondition',
+        activatedBy: 'player interaction with the declared host opens THIS dialog tree and evaluates its edge conditions until a declared terminal is reached',
+        dependencies: [
+          'characters::<id> for THIS dialog tree’s host',
+          'quests::<id>, factions::<id>, or other catalog entities affected by THIS tree’s terminals',
+        ],
+        verification: 'L2: FARPGDialogTreeRow and UARPGDialogComponent compile in Source/PoF/ and this tree’s DT_DialogTrees row is seeded; L3: VSDialogBranchTest — every terminal declared by {name} is reachable, its conditions are enforced, and its declared events fire',
+      },
       accept: allOf(
         graphValid('graph', 'Dialog branches reachable + have terminals'),
         linksResolve(),
@@ -267,6 +276,16 @@ registerCatalogPipeline({
         ueAssets: [`/Game/Dialog/DA_${s}_Effects`],
         };
       },
+      contract: {
+        grantedBy: 'THIS dialog tree’s FARPGDialogCondition records and DA_{slug}_Effects name one GameplayEvent or GameplayEffect for EACH non-empty node effect',
+        activatedBy: 'UARPGDialogComponent reaches a node or terminal and fires exactly the event or GameplayEffect declared for that path',
+        dependencies: [
+          'characters::<id> for EACH character state changed by this tree',
+          'quests::<id> for EACH quest changed by this tree',
+          'factions::<id> for EACH faction changed by this tree',
+        ],
+        verification: 'L2: DA_{slug}_Effects exists, FARPGDialogCondition compiles, and every GameplayEffect declared by {name} compiles; L3: VSDialogBranchTest — each terminal path applies exactly its declared effects',
+      },
       accept: allOf(
         fieldsPopulated('conditionsEffects', 'skill-check, ember-pact, hostile, dismissed nodes defined', [
           'skillCheck',
@@ -330,6 +349,14 @@ registerCatalogPipeline({
         },
         ueAssets: [`/Game/Dialog/DA_${s}_Effects`],
         };
+      },
+      contract: {
+        grantedBy: 'one FARPGDialogCondition in this tree’s DT_DialogTrees row for EACH skill check names its attribute, operator, threshold, pass edge, and fail edge',
+        activatedBy: 'UARPGDialogComponent evaluates the declared condition when the player selects the corresponding choice node',
+        dependencies: [
+          'characters (UARPGAttributeSet and every attribute THIS dialog tree checks)',
+        ],
+        verification: 'L2: UARPGAttributeSet declares every checked attribute and DA_{slug}_Effects stores every declared threshold; L3: VSDialogBranchTest — values immediately below and at each threshold in {name} route to its declared fail and pass edges',
       },
       accept: allOf(
         minCount('skillChecks', '≥1 skill-check rule defined', 1),
@@ -494,6 +521,14 @@ registerCatalogPipeline({
           },
         },
       }),
+      contract: {
+        grantedBy: 'UARPGDialogComponent owns WBP_DialogSubtitle and WBP_DialogChoiceList through the project dialog-widget class references',
+        activatedBy: 'OpenTree creates and adds the declared dialog widgets to the HUD viewport, updates them for each node, and removes them at a terminal',
+        dependencies: [
+          'hud-elements::<id> for EACH subtitle or choice presentation binding THIS dialog tree uses',
+        ],
+        verification: 'L2: WBP_DialogSubtitle and WBP_DialogChoiceList exist under /Game/UI/Dialog/; L3: VSDialogBranchTest — {name} displays the current speaker and line and renders every available choice with its declared condition state',
+      },
       accept: allOf(
         fieldsPopulated('subtitleUI', 'subtitle widget / choice widget / anchors defined', [
           'subtitleWidget',
@@ -653,6 +688,16 @@ registerCatalogPipeline({
           },
           ueAssets: assets.map((a) => `/Game/Dialog/${s}/${a}`),
         };
+      },
+      contract: {
+        grantedBy: 'UARPGDialogComponent on this tree’s host reads its FARPGDialogTreeRow from DT_DialogTrees; DA_{slug}_Effects owns its declared conditions and effect references; BP_DialogCameraRig_{slug} and the dialog widgets provide presentation',
+        activatedBy: 'player interaction with the declared host opens THIS dialog tree, evaluates its nodes and conditions, fires each terminal’s declared effects, and closes its widgets and camera rig',
+        dependencies: [
+          'characters::<id> for THIS dialog tree’s host',
+          'quests::<id>, factions::<id>, or other catalog entities changed by THIS tree',
+          'icon-sets::<id> for THIS dialog tree’s icon family when declared',
+        ],
+        verification: 'L2: FARPGDialogTreeRow and UARPGDialogComponent compile in Source/PoF/, this tree’s row and DA_{slug}_Effects are seeded, and its widgets exist; L3: VSDialogBranchTest — every path, condition, effect, and presentation transition declared by {name} works in PIE',
       },
       accept: allOf(
         minCount('assets', '≥3 UE dialog assets packaged', 3),

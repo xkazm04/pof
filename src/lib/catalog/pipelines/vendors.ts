@@ -119,6 +119,15 @@ registerCatalogPipeline({
         ueAssets: ['/Game/Economy/Vendors/DT_VendorInventory'],
         };
       },
+      contract: {
+        grantedBy: 'UARPGVendorComponent on BP_Vendor_{slug} reads THIS vendor’s FARPGVendorInventoryRow from DT_VendorInventory',
+        activatedBy: 'player interaction with THIS vendor opens the shop and calls UARPGVendorComponent.PopulateInventory for its DT_VendorInventory row',
+        dependencies: [
+          'items::<id> for EACH item THIS vendor stocks',
+          'currencies::<id> used to settle transactions with THIS vendor',
+        ],
+        verification: 'L2: FARPGVendorInventoryRow and UARPGVendorComponent compile in Source/PoF/ and THIS vendor’s inventory row is seeded with every declared item; L3: VSVendorTransactionTest verifies a purchase settles the declared currency and transfers stock',
+      },
       accept: allOf(
         minCount('stock', '≥1 item linked from the items catalog', 1),
         linksResolve(),
@@ -217,6 +226,13 @@ registerCatalogPipeline({
           { catalogId: 'factions', entityId: 'faction-ashen-order', role: 'rep-source' },
         ],
       }),
+      contract: {
+        field: 'repMods',
+        grantedBy: 'UARPGVendorComponent reads the player’s reputation tier from UARPGFactionSubsystem for THIS vendor’s declared faction and applies the authored discount table at purchase confirmation',
+        activatedBy: 'player purchase confirmation calls UARPGVendorComponent.ComputeFinalPrice, queries the factions subsystem, and applies THIS vendor’s declared tier modifier',
+        dependencies: ['factions::<id> for EACH faction that modifies THIS vendor’s prices'],
+        verification: 'L2: UARPGFactionSubsystem::GetRepTier compiles and every declared faction row is seeded; L3: VSVendorTransactionTest verifies THIS vendor’s price changes according to its authored reputation tiers',
+      },
       accept: allOf(
         fieldsPopulated('repMods', 'repTier + discountCurve defined', ['repTier', 'discountCurve']),
         linksResolve(),
@@ -279,6 +295,16 @@ registerCatalogPipeline({
         ],
         ueAssets: ['/Game/Economy/DT_Currencies'],
         };
+      },
+      contract: {
+        field: 'services',
+        grantedBy: 'UARPGVendorComponent on AARPGNPCActor BP_Vendor_{slug} exposes THIS vendor’s declared Buy, Sell, and Repair operations through UARPGCurrencySubsystem',
+        activatedBy: 'player confirmation in WBP_VendorShop delegates the selected service to UARPGVendorComponent and settles the declared currency through UARPGCurrencySubsystem',
+        dependencies: [
+          'currencies::<id> used to settle THIS vendor’s services',
+          'items::<id> or DT_Items rows used for THIS vendor’s price, durability, and transfer operations',
+        ],
+        verification: 'L2: UARPGVendorComponent and UARPGCurrencySubsystem compile and every declared currency row exists; L3: VSVendorTransactionTest verifies THIS vendor’s authored buy, sell, and repair operations',
       },
       accept: allOf(
         fieldsPopulated('services', 'buy + sell + repair flags set', ['buy', 'sell', 'repair']),
@@ -487,6 +513,16 @@ registerCatalogPipeline({
           },
           ueAssets: assets.map((a) => `/Game/Economy/Vendors/${a}`),
         };
+      },
+      contract: {
+        grantedBy: 'UARPGVendorComponent on AARPGNPCActor BP_Vendor_{slug} reads THIS vendor’s FARPGVendorInventoryRow from DT_VendorInventory and settles transactions through UARPGCurrencySubsystem',
+        activatedBy: 'player interaction opens WBP_VendorShop, populates THIS vendor’s inventory, computes its prices, and applies any declared reputation modifier at confirmation',
+        dependencies: [
+          'items::<id> for EACH item THIS vendor stocks',
+          'currencies::<id> used to settle THIS vendor’s transactions',
+          'factions::<id> for EACH faction that modifies THIS vendor’s prices',
+        ],
+        verification: 'L2: UARPGVendorComponent and FARPGVendorInventoryRow compile in Source/PoF/ and THIS vendor’s inventory row is seeded; L3: VSVendorTransactionTest verifies its declared buy, sell, repair, currency, and reputation wiring',
       },
       accept: allOf(
         minCount('assets', 'All assets packaged', 3),

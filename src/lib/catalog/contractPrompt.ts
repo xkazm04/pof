@@ -16,9 +16,11 @@ import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
  * produce prompt asked a CLI to author an artifact WITHOUT telling it the contract the
  * artifact would then be graded against.
  *
- * This module is the pure, unit-testable extraction that closes that gap. It reads a
- * step's own authored payload (the produce stub — the contract as the fleet WROTE it),
- * pulls out the wiring contracts + criteria, and renders them as prompt sections.
+ * This module is the pure, unit-testable seam that closes that gap. It reads each step's
+ * world-neutral contract DECLARATION (`StepSpec.contract`) and renders it as prompt sections.
+ * It used to extract the contract by running the step's produce stub, which injected one PoF
+ * entity's content into every entity's prompt (/diablo W03, D12). `findWiringContracts` /
+ * `findCriteria` remain as pure payload readers for audits; no prompt path calls them.
  *
  * Three consumers share it, so the prompt is identical wherever a step is driven:
  *  - `ArchetypeStep.buildPrompt`  — the ~330 generic lab steps (highest leverage),
@@ -102,40 +104,46 @@ export function findCriteria(data: unknown): { path: string; text: string }[] {
   return out;
 }
 
-/** Run a step's produce body for its AUTHORED payload. Never throws into a prompt. */
-function producedData(spec: StepSpec, entity: LabEntity): Record<string, unknown> {
-  try {
-    const out = spec.produce(entity);
-    return isPlainObject(out?.data) ? out.data : {};
-  } catch {
-    return {};
-  }
-}
-
 const claim = (v: unknown): string | undefined =>
   typeof v === 'string' && v.trim() ? clamp(v.trim()) : undefined;
 
-/** A step's contracts as `WiringRequirement` rows (the shared prompt-table shape). */
-export function stepContractRequirements(spec: StepSpec, entity: LabEntity): WiringRequirement[] {
-  return findWiringContracts(producedData(spec, entity)).map(({ path, contract }) => ({
-    artifact: path ? `${spec.label} · ${path}` : spec.label,
-    grantedBy: claim(contract.grantedBy),
-    activatedBy: claim(contract.activatedBy),
-    verification: claim(contract.verification),
-    dependencies: Array.isArray(contract.dependencies)
-      ? contract.dependencies.filter((d): d is string => typeof d === 'string' && !!d.trim()).map(clamp)
-      : undefined,
-  }));
+/** Fill a declaration's `{slug}` / `{name}` tokens for the entity in hand. */
+function fill(text: string, entity: LabEntity): string {
+  return text.split('{slug}').join(entity.name.replace(/[^a-z0-9]+/gi, '')).split('{name}').join(entity.name);
 }
 
-/** A step's authored criteria as success-criteria lines. */
+/**
+ * A step's contract as `WiringRequirement` rows (the shared prompt-table shape) — read from its
+ * DECLARATION (`StepSpec.contract`), never from its produce stub. The stub is one PoF entity's
+ * answer; extracting the contract from it injected that entity's content into every entity's
+ * live prompt (/diablo W02: three Diablo zombies produced PoF's Ground Slam). A step with no
+ * declaration injects no contract; its graded STRUCTURE still reaches the prompt through the
+ * Required fields section.
+ */
+export function stepContractRequirements(spec: StepSpec, entity: LabEntity): WiringRequirement[] {
+  const c = spec.contract;
+  if (!c) return [];
+  return [{
+    artifact: c.field ? `${spec.label} · ${c.field}` : spec.label,
+    grantedBy: claim(fill(c.grantedBy, entity)),
+    activatedBy: claim(fill(c.activatedBy, entity)),
+    verification: claim(fill(c.verification, entity)),
+    dependencies: c.dependencies.map((d) => clamp(fill(d, entity).trim())).filter(Boolean),
+  }];
+}
+
+/** A step's declared criteria as success-criteria lines. */
 export function stepCriteriaLines(spec: StepSpec, entity: LabEntity): string[] {
-  return findCriteria(producedData(spec, entity)).map((c) => `${spec.label} — \`${c.path}\`: ${c.text}`);
+  return (spec.criteria ?? [])
+    .map((c) => clamp(fill(c, entity).trim()))
+    .filter(Boolean)
+    .map((c) => `${spec.label} — ${c}`);
 }
 
 /** The rule every injected contract is graded by — stated once, so the CLI can meet it. */
 export const CONTRACT_RULE =
-  `Reproduce these four wiring fields on the artifact you write (\`wiringContract\`). The L2 checker rejects a ` +
+  `Write these four wiring fields on the artifact you write (\`wiringContract\`) for THIS entity: the contract above ` +
+  `says what each must name — where it says "each" or "<id>", list this entity's own, never another's. The L2 checker rejects a ` +
   `placeholder ("TBD"/"TODO"/"n/a"), any claim under ${MIN_PROSE} characters, and a \`verification\` line that ` +
   `names no acceptance tier (L0–L4). Name the REAL registration + trigger site.`;
 
@@ -143,7 +151,7 @@ export const CONTRACT_RULE =
 export function stepContractBlock(spec: StepSpec, entity: LabEntity): string {
   const reqs = stepContractRequirements(spec, entity);
   const criteria = stepCriteriaLines(spec, entity).slice(0, MAX_CRITERIA_LINES);
-  const graded = requiredFieldsOf(spec.accept);
+  const graded = requiredFieldsOf(spec.accept, entity.canonProfile);
   if (!reqs.length && !criteria.length && !graded.length) return '';
 
   const head = '# ACCEPTANCE CONTRACT FOR THIS STEP (you are graded against it)';

@@ -1,11 +1,10 @@
-// /diablo W02c-1. A produce prompt used to cite an entity by NAME only — a replicated monster's real
-// stats never reached the producer. An INGESTED entity now carries a REFERENCE VALUES section; every
-// other entity's prompt is byte-identical.
+// /diablo W02c-1 + W03 (D11). A produce prompt used to cite an entity by NAME only. An INGESTED entity
+// carries a REFERENCE VALUES section (reproduce); an AUTHORED one an ENTITY VALUES section (stay consistent).
 import { describe, it, expect } from 'vitest';
 import '@/lib/catalog/pipelines/registry.generated';
 import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 import { buildStepProducePrompt } from '@/lib/catalog/stepPrompt';
-import { referenceValuesBlock } from '@/lib/catalog/referenceValues';
+import { entityValuesBlock, referenceValuesBlock } from '@/lib/catalog/referenceValues';
 import { labIdentityOf } from '@/lib/catalog/canon/profiles';
 import { CANON_SEED } from '@/lib/catalog/canon/canon-seed';
 
@@ -40,10 +39,18 @@ describe('reach at the chokepoint', () => {
     expect(p).toContain('HP Max: 7');
   });
 
-  it('an authored entity’s prompt is byte-identical to one built with no reference in play', () => {
-    const withIdentity = buildStepProducePrompt(spec, authored, undefined, { catalogId: 'bestiary', rules: CANON_SEED });
-    const bare = buildStepProducePrompt(spec, { id: 'bestiary-brute', name: 'Brute', lifecycle: 'planned', data }, undefined, { catalogId: 'bestiary', rules: CANON_SEED });
-    expect(withIdentity).toBe(bare);
-    expect(withIdentity).not.toContain('REFERENCE VALUES');
+  it('an authored entity’s prompt carries its values as ENTITY VALUES — consistent, not reproduced (W03, D11)', () => {
+    const p = buildStepProducePrompt(spec, authored, undefined, { catalogId: 'bestiary', rules: CANON_SEED });
+    expect(p).not.toContain('REFERENCE VALUES');
+    expect(p).toContain('# ENTITY VALUES — Brute');
+    expect(p).toContain('HP Max: 7');
+    expect(p).toMatch(/keep it CONSISTENT/);
+    expect(p).not.toMatch(/REPRODUCE the value exactly/);
+  });
+
+  it('an entity that records nothing gets no values section', () => {
+    const bare = { id: 'b', name: 'Bare', lifecycle: 'planned' as const, data: {} };
+    expect(entityValuesBlock(bare)).toBe('');
+    expect(buildStepProducePrompt(spec, bare, undefined, { catalogId: 'bestiary', rules: CANON_SEED })).not.toMatch(/ENTITY VALUES|REFERENCE VALUES/);
   });
 });

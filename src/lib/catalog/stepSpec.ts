@@ -156,8 +156,6 @@ export interface StepContractDecl {
   /** Dependency KINDS to name for this entity (`spellbook::<id> for each ability it uses`), never another entity's ids. */
   dependencies: string[];
   verification: string;
-  /** Step-level acceptance criteria to state in the prompt (world-neutral, like the rest). */
-  criteria?: string[];
 }
 
 export interface StepSpec {
@@ -192,6 +190,8 @@ export interface StepSpec {
   accept: Checker;
   /** The step's wiring contract as a world-neutral declaration — the ONLY contract a produce prompt injects. */
   contract?: StepContractDecl;
+  /** Step acceptance criteria stated in the produce prompt — world-neutral, like `contract` (never read from the stub). */
+  criteria?: string[];
   /**
    * RETIRED — do not author. Enforced by spec-linter rule (l).
    *

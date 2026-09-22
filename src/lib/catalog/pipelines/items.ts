@@ -143,6 +143,13 @@ registerCatalogPipeline({
         ueAssets: [`/Game/Data/Items/DA_${slug(e.name)}`],
       });
       },
+      contract: {
+        field: 'baseType',
+        grantedBy: 'UARPGInventoryComponent equips THIS item and activates the GameplayEffect bundle its base definition declares',
+        activatedBy: 'the item is assigned to its declared equipment slot in UARPGInventoryComponent',
+        dependencies: ['UARPGAttributeSet (the stat targets THIS item modifies)', 'UARPGItemDefinition (schema)', 'DT_Items row "{slug}"'],
+        verification: 'L2: UARPGItemDefinition compiles and DA_{slug} is seeded; L3: VSItemsDefinitionsTest — DA_{slug} loads and its base-type fields match THIS item’s declaration',
+      },
       accept: allOf(
         fieldsPopulated('baseType', 'slot / rarity / ilvl / requiredLevel / implicit populated', [
           'slot',
@@ -395,6 +402,17 @@ registerCatalogPipeline({
           },
         },
       });
+      },
+      contract: {
+        field: 'affixes',
+        grantedBy: 'UARPGInventoryComponent::EquipItem creates one Infinite GameplayEffect handle per explicit affix THIS item rolls and one for its implicit, stores the handles on the slot, and removes them on unequip',
+        activatedBy: 'THIS item is assigned to its equipment slot in UARPGInventoryComponent',
+        dependencies: [
+          'UARPGAttributeSet (the target attribute for EACH affix THIS item declares)',
+          'one GameplayEffect per affix THIS item declares (name each)',
+          'one GameplayEffect for THIS item’s implicit',
+        ],
+        verification: 'L2: UARPGItemDefinition and every declared affix or implicit GameplayEffect compile in Source/PoF/; L3: VSItemsDefinitionsTest — equipping {name} activates every declared handle and changes exactly the declared attributes',
       },
       accept: allOf(
         fieldsPopulated('affixes', 'budget / tierTable / illustrativeRareRoll populated', [
@@ -733,6 +751,17 @@ registerCatalogPipeline({
         },
       });
       },
+      contract: {
+        grantedBy: 'UARPGInventoryComponent::EquipItem binds one Infinite GameplayEffect handle per affix THIS item declares and stores the handles by equipment slot',
+        activatedBy: 'equip-slot assignment activates the handles; unequip removes every active handle created for THIS item',
+        dependencies: [
+          'UARPGAttributeSet (the target attributes THIS item modifies)',
+          'UARPGItemDefinition (DataAsset schema)',
+          'DT_Items row "{slug}"',
+          'the item-authoring seed script',
+        ],
+        verification: 'L2: UARPGItemDefinition compiles and DA_{slug} is seeded; L3: VSItemsDefinitionsTest — {name} loads, equips on a test ability-system component, activates every declared GameplayEffect handle, and applies the declared attribute deltas',
+      },
       accept: allOf(
         entityRuntimeDeferred(
           'VSItemsDefinitionsTest',
@@ -811,6 +840,18 @@ registerCatalogPipeline({
             return `/Game/Items/${a}`;
           }),
         };
+      },
+      contract: {
+        grantedBy: 'UARPGItemDefinition DA_{slug} is represented by DT_Items row "{slug}"; UARPGInventoryComponent applies every GameplayEffect THIS item declares and binds its declared mesh to the appropriate socket',
+        activatedBy: 'UARPGInventoryComponent loads DA_{slug}, assigns THIS item to its slot, and activates its GameplayEffect handles on the ability-system component',
+        dependencies: [
+          'UARPGItemDefinition DA_{slug}',
+          'DT_Items row "{slug}"',
+          'UARPGInventoryComponent (equip logic)',
+          'UARPGAttributeSet (the target attributes THIS item modifies)',
+          'the item-authoring seed script',
+        ],
+        verification: 'L2: UARPGItemDefinition and every GameplayEffect THIS item declares compile in Source/PoF/ and DA_{slug} is seeded; L3: VSItemsDefinitionsTest — {name} loads, equips, activates its declared handles, and applies its declared attribute deltas',
       },
       accept: allOf(
         minCount('assets', '≥3 UE assets packaged', 3),

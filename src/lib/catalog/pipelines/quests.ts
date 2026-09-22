@@ -237,6 +237,17 @@ registerCatalogPipeline({
         ],
         ueAssets: [`/Game/Quests/${questKey(e.name)}/DA_${questKey(e.name)}_Rewards`],
       }),
+      contract: {
+        field: 'rewardDetail',
+        grantedBy: 'one GameplayEffect for each reward THIS quest grants, applied by UGameplayAbility_QuestAdvance when the corresponding terminal node activates',
+        activatedBy: 'AARPGQuestComponent fires this quest’s completion event, then UGameplayAbility_QuestAdvance activates the reward GameplayEffects for the selected terminal path',
+        dependencies: [
+          'loot-tables::<id> for each loot table THIS quest rewards from',
+          'currencies::<id> for each currency THIS quest grants',
+          'factions::<id> for each faction whose reputation THIS quest changes',
+        ],
+        verification: 'L2: every declared reward GameplayEffect compiles and DA_{slug}_Rewards is seeded; L3: VSQuestFlowTest verifies each terminal path grants THIS quest’s declared rewards',
+      },
       accept: allOf(
         minCount('rewards', '≥1 reward path defined', 1),
         linksResolve(),
@@ -306,6 +317,15 @@ registerCatalogPipeline({
           },
         },
       }),
+      contract: {
+        grantedBy: 'the AARPGNPCActor and UARPGDialogComponent for THIS quest giver bind the quest start and read THIS quest’s dialog tree row from DT_DialogTrees',
+        activatedBy: 'player interaction with THIS quest giver plays the accept node and fires THIS quest’s start GameplayEvent when its declared gates pass',
+        dependencies: [
+          'characters::<id> for THIS quest’s giver NPC',
+          'dialog-trees::<id> for THIS quest’s acceptance dialog',
+        ],
+        verification: 'L2: the quest-giver actor is configured with the declared dialog tree and the {slug} topic branch is present; L3: VSQuestFlowTest verifies interaction fires THIS quest’s start event',
+      },
       accept: allOf(
         minCount('npcs', '≥1 NPC or dialog tree bound', 1),
         linksResolve(),
@@ -470,6 +490,18 @@ registerCatalogPipeline({
           },
           ueAssets: assets.map((a) => `/Game/Quests/${s}/${a}`),
         };
+      },
+      contract: {
+        grantedBy: 'AARPGQuestComponent reads THIS quest’s FARPGQuestStageRow from DT_QuestStages_{slug}; DA_{slug}_Conditions names its gates and DA_{slug}_Rewards names each terminal reward GameplayEffect',
+        activatedBy: 'THIS quest’s GameplayEvents drive UGameplayAbility_QuestAdvance, which advances the matching stage row and applies the declared reward GameplayEffects on terminal nodes',
+        dependencies: [
+          'characters::<id> for THIS quest’s giver NPC',
+          'dialog-trees::<id> for THIS quest’s acceptance dialog',
+          'loot-tables::<id> for each terminal-path loot reward',
+          'currencies::<id> for each currency reward',
+          'factions::<id> for each reputation change',
+        ],
+        verification: 'L2: FARPGQuestStageRow compiles in Source/PoF/ and DT_QuestStages_{slug}, DA_{slug}_Conditions, and DA_{slug}_Rewards are seeded with every dependency; L3: VSQuestFlowTest verifies THIS quest’s stages, terminal rewards, and world-state outcomes',
       },
       accept: allOf(
         minCount('assets', 'All quest assets packaged', 3),

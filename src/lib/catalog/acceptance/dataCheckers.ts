@@ -2,6 +2,7 @@ import { gradeGallerySelection } from './galleryArtifact';
 import type { Checker } from './types';
 import { tagRequiredFields } from './requiredFields';
 import { REFERENCE_GAP, isDeclaredGap } from './markers';
+import { ELEMENTS_BY_PROFILE, elementsOf, resistanceKey } from '@/lib/catalog/canon/elements';
 
 /**
  * Resolve a field reference against a step's artifact data. A plain name (`gpuPct`) reads a
@@ -40,6 +41,20 @@ export function fieldsPopulated(field: string, label: string, keys: string[]): C
     const note = gaps.length ? ` (declared gap: ${gaps.join(', ')} — "${REFERENCE_GAP}")` : '';
     return { label, tier: 'L0', status: ok ? 'pass' : 'pending', detail: `${keys.length - missing.length} / ${keys.length} populated`, ...(ok ? {} : { reason: `field "${field}" missing: ${missing.join(', ')}${note}` }) };
   }, { field, keys });
+}
+
+/**
+ * A per-element resistance profile, graded against the ELEMENT SET of the entity's canon profile
+ * (/diablo W03, D14): PoF's fire/ice/lightning/chaos, Diablo I's magic/fire/lightning. The keys are
+ * `<element>Res`; everything else behaves exactly like {@link fieldsPopulated}.
+ */
+export function resistancesPopulated(field: string, label: string): Checker {
+  const keysByProfile = Object.fromEntries(
+    Object.entries(ELEMENTS_BY_PROFILE).map(([p, els]) => [p, els.map(resistanceKey)]),
+  );
+  const checker: Checker = (data, ctx) =>
+    fieldsPopulated(field, label, elementsOf(ctx?.canonProfile).map(resistanceKey))(data, ctx);
+  return tagRequiredFields(checker, { field, keys: elementsOf().map(resistanceKey), keysByProfile });
 }
 
 /** Numeric ±% band. `field` may be a dot-path (see `pickField`) so a step can grade the very

@@ -27,7 +27,7 @@
 
 import { canonContextFor } from '@/lib/catalog/canon/canonContext';
 import { DEFAULT_CANON_PROFILE, rulesForProfile } from '@/lib/catalog/canon/profiles';
-import { referenceValuesBlock } from '@/lib/catalog/referenceValues';
+import { entityValuesBlock } from '@/lib/catalog/referenceValues';
 import { stepContractBlock, canonCategoriesForStep } from '@/lib/catalog/contractPrompt';
 import { qualityPack } from '@/lib/prompts/quality';
 import { deliverableClassOf } from '@/lib/judge/dimensions';
@@ -128,7 +128,8 @@ export function buildStepProducePrompt(
   const task = `Produce ${spec.label} for ${entity.name}. ${dir}`.trim();
   const out = callback && catalogId ? callbackBlock(stepCallbackId(catalogId, entity.id, spec.label)) : '';
 
-  // An INGESTED entity's own values (empty for PoF's entities, so their prompts are unchanged).
-  const reference = referenceValuesBlock(entity);
+  // The entity's own values: REFERENCE VALUES for an ingested entity (reproduce), ENTITY VALUES for an
+  // authored one (stay consistent) — /diablo W02c-1 + W03 (D11). Empty when the entity records nothing.
+  const reference = entityValuesBlock(entity);
   return [pack, canon, reference, contract, cited, picked, task, out].filter(Boolean).join('\n\n');
 }

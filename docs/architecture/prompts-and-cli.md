@@ -728,18 +728,29 @@ artifact never grades `pass`). Markers live in `acceptance/markers.ts`.
 through `allOf`, and rendered FIRST in the step contract (`## Required fields`) so the size cap cannot drop them.
 Before this, 102 of 114 key-graded steps hid at least one graded key from the producer. A value equal to
 `REFERENCE_GAP` ("not in the reference") is graded as missing. An INGESTED entity also gets a `# REFERENCE VALUES`
-section (`referenceValues.ts`) with its source row; `labIdentityOf` gives every `LabEntity` constructor its canon
-profile and reference in one place. Known open defect: the injected wiring contract is extracted by running the
-step's produce STUB, so stub content (PoF's world) reaches live prompts for every entity.
+section (`referenceValues.ts`) with its source row (REPRODUCE); since W03 (D11) an AUTHORED entity gets the same
+section as `# ENTITY VALUES` (`entityValuesBlock` — stay CONSISTENT, state any change), so every entity's own design
+data reaches its produce prompts. `labIdentityOf` gives every `LabEntity` constructor its canon profile and reference
+in one place. Profile-dependent keys (D14): a canon profile declares its damage-element set
+(`canon/elements.ts`: pof fire/ice/lightning/chaos, diablo1 magic/fire/lightning); `resistancesPopulated` grades
+`<element>Res` for the entity's profile and `requiredFieldsOf(checker, canonProfile)` names those keys in the prompt.
 
 **Wiring contracts reach prompts** (`src/lib/catalog/contractPrompt.ts`). Pipelines author
 137 `wiringContract` blocks + per-step `criteria` inside their produce bodies; for a long
 time the ONLY consumer was the acceptance checker, so a CLI was asked to author an artifact
 without being told the contract it would be graded against. `stepContractBlock(spec, entity)`
-is the pure extraction that closes the gap — it runs the step's own produce stub, pulls out
-every `wiringContract` / `criteria` (depth-bounded walk), and renders a capped
-`# ACCEPTANCE CONTRACT FOR THIS STEP` block. Three seams share it so the prompt is identical
-wherever a step is driven:
+closes the gap: it renders the step's **declared** contract — `StepSpec.contract` (a
+`StepContractDecl`: granted/activated/dependencies/verification, world-neutral, `{slug}`/`{name}`
+filled for the entity) and `StepSpec.criteria` — as a capped `# ACCEPTANCE CONTRACT FOR THIS
+STEP` block. It used to extract the contract by RUNNING the produce stub, which injected one PoF
+entity's content (a specific ability, loot table, item, tuned number) into every entity's live
+prompt; /diablo W02 produced three Diablo zombies with PoF's Ground Slam and the shape-only checker
+passed them. Since W03 (D12) a stub never reaches a prompt: a step with no declaration injects no
+contract (its graded structure still reaches the prompt via `## Required fields`). Declarations
+are guarded by `src/__tests__/catalog/contract-declarations-neutral.test.ts` (no seeded entity id
+or name of any catalog; the declaration sits where the checker grades the contract) and counted by
+`npx tsx scripts/diablo/contract-coverage.ts`. Three seams share the block so the prompt is
+identical wherever a step is driven:
 
 | Seam | File | What it injects |
 |------|------|-----------------|

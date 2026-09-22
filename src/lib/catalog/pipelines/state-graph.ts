@@ -236,6 +236,12 @@ registerCatalogPipeline({
         },
         };
       },
+      contract: {
+        grantedBy: 'UStateTreeComponent on AARPGEnemyCharacter owns ST_EnemyAI_{slug} and evaluates its guards from BB_EnemyAI_{slug}',
+        activatedBy: 'AARPGEnemyCharacter::BeginPlay starts THIS graph; perception, health, and timer services update the blackboard values that drive transitions',
+        dependencies: ['bestiary::<id> for EACH actor archetype that hosts THIS state graph', 'loot-tables::<id> for EACH loot action fired by THIS graph’s terminal states'],
+        verification: 'L2: UStateTreeComponent compiles in Source/PoF/ and ST_EnemyAI_{slug} is seeded; L3: VSStateGraphTest verifies every declared state is reachable without deadlock and each terminal action fires',
+      },
       accept: allOf(
         graphValid('graph', 'States reachable + ≥1 terminal'),
         wiringContractSound(),
@@ -327,6 +333,12 @@ registerCatalogPipeline({
           },
         },
         };
+      },
+      contract: {
+        grantedBy: 'BB_EnemyAI_{slug} declares every typed blackboard key THIS graph uses and initializes them when UStateTreeComponent starts',
+        activatedBy: 'UStateTreeComponent reads THIS graph’s blackboard while perception, attribute, and timer delegates write the declared keys',
+        dependencies: ['bestiary::<id> for EACH actor and attribute source that hosts THIS graph'],
+        verification: 'L2: BB_EnemyAI_{slug} and every declared service are seeded or compiled; L3: VSStateGraphTest verifies every required key is written before THIS graph’s first transition',
       },
       accept: allOf(
         minCount('blackboard', '≥7 blackboard keys declared', 7),
@@ -461,6 +473,12 @@ registerCatalogPipeline({
           },
         },
       }),
+      contract: {
+        grantedBy: 'FARPGStateGraphRow.Transitions in DT_StateGraphs maps every transition THIS graph declares to its UStateTreeCondition and typed blackboard key',
+        activatedBy: 'UStateTreeComponent evaluates the declared guards, including attribute-change delegates for health-driven transitions',
+        dependencies: ['bestiary::<id> for EACH actor and attribute set that owns THIS graph'],
+        verification: 'L2: FARPGStateGraphRow compiles in Source/PoF/ and THIS graph’s transition row is seeded; L3: VSStateGraphTest exercises every declared transition',
+      },
       accept: allOf(
         minCount('transitions', '≥6 transition rules declared', 6),
         entriesHaveFields('transitions', 'every transition carries from + to + guard + priority', ['from', 'to', 'guard', 'priority']),
@@ -579,6 +597,12 @@ registerCatalogPipeline({
         },
         };
       },
+      contract: {
+        grantedBy: 'UStateTreeComponent applies THIS graph’s declared state tags through USTTask_ApplyStateTag; UARPGVFXComponent and UARPGAudioComponent listen for them',
+        activatedBy: 'entering or exiting each declared state adds or removes its tag and activates or deactivates the named hook assets',
+        dependencies: ['bestiary::<id> for EACH actor archetype that hosts THIS graph', 'vfx::<id> for EACH visual effect THIS graph’s state hooks activate'],
+        verification: 'L2: USTTask_ApplyStateTag and the listener components compile in Source/PoF/; L3: VSStateGraphTest verifies every declared state tag and hook is active only in its matching state',
+      },
       accept: allOf(
         minCount('hooks', '≥5 hook points declared', 5),
         entriesHaveFields('hooks', 'every hook carries state + event + type + binding', ['state', 'event', 'type', 'binding']),
@@ -658,6 +682,12 @@ registerCatalogPipeline({
           },
         },
         };
+      },
+      contract: {
+        grantedBy: 'AARPGWorldStateComponent.ApplyMutation writes THIS graph’s declared persistent tags into ARPGWorldStateSave',
+        activatedBy: 'THIS graph’s declared terminal task fires its gameplay event and applies the matching world-state mutation',
+        dependencies: ['bestiary::<id> for EACH spawned actor whose presence THIS graph’s persistent state controls'],
+        verification: 'L2: AARPGWorldStateComponent and ARPGWorldStateSave compile in Source/PoF/; L3: VSStateGraphTest verifies saving and loading THIS graph’s declared mutation preserves the intended world state',
       },
       accept: allOf(
         fieldsPopulated('persistence', 'currentState / patrolIndex / defeatedTag fields present', [
@@ -773,6 +803,12 @@ registerCatalogPipeline({
           },
           ueAssets: assets.map((a) => `/Game/AI/StateGraph/${s}/${a}`),
         };
+      },
+      contract: {
+        grantedBy: 'UStateTreeComponent on AARPGEnemyCharacter owns ST_EnemyAI_{slug}; BB_EnemyAI_{slug} holds its typed keys and DT_StateGraphs declares THIS graph’s asset and persistence wiring',
+        activatedBy: 'AARPGEnemyCharacter::BeginPlay starts THIS graph; perception and attributes update it, and each declared terminal event triggers its loot or world-state action',
+        dependencies: ['bestiary::<id> for EACH actor archetype that hosts THIS graph', 'loot-tables::<id> for EACH loot action fired by THIS graph', 'icon-sets::<id> for THIS graph’s presentation icon family'],
+        verification: 'L2: FARPGStateGraphRow and all framework symbols compile in Source/PoF/ and THIS graph’s assets and DT_StateGraphs row are seeded; L3: VSStateGraphTest verifies states, transitions, hooks, loot, and persistence',
       },
       accept: allOf(
         minCount('assets', '≥4 UE state-graph assets packaged', 4),

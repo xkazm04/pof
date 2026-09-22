@@ -1,6 +1,6 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
-import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
+import { minLength, fieldsPopulated, selected, minCount, resistancesPopulated } from '../acceptance/dataCheckers';
 import { powerWithinTierTarget, monsterRarityWithinBands } from '../acceptance/invariants';
 import { allOf } from '../acceptance/combinators';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
@@ -190,9 +190,8 @@ registerCatalogPipeline({
         verification: 'L2: UARPGAttributeSet declares the per-element resistance attributes and GE_InitResistances compiles; L3: VSBestiarySpawnTest — a hit of one element on {name} is mitigated by exactly its declared resistance',
       },
       accept: allOf(
-        fieldsPopulated('resists', 'Per-type resistance profile populated', [
-          'fireRes', 'iceRes', 'lightningRes', 'chaosRes',
-        ]),
+        // Keys follow the entity's canon-profile element set (fire/ice/lightning/chaos for PoF).
+        resistancesPopulated('resists', 'Per-type resistance profile populated'),
         wiringContractSound('resists'),
       ),
     },

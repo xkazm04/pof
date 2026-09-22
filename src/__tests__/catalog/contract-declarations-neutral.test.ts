@@ -9,8 +9,8 @@ import { seedAllCatalogs } from '@/lib/catalog/sections';
 import { requiredFieldsOf } from '@/lib/catalog/acceptance/requiredFields';
 import type { StepContractDecl } from '@/lib/catalog/stepSpec';
 
-const declText = (c: StepContractDecl) =>
-  [c.grantedBy, c.activatedBy, c.verification, ...c.dependencies, ...(c.criteria ?? [])].join('\n');
+const declText = (c: StepContractDecl | undefined, criteria: string[] = []) =>
+  [...(c ? [c.grantedBy, c.activatedBy, c.verification, ...c.dependencies] : []), ...criteria].join('\n');
 
 /** Every seeded entity's id and name, as whole-token patterns (short/generic tokens skipped). */
 function seededTokens(): { token: string; re: RegExp; where: string }[] {
@@ -37,11 +37,23 @@ describe('contract declarations are world-neutral', () => {
     expect(tokens.length).toBeGreaterThan(100); // the census is real
     const leaks: string[] = [];
     for (const p of allCatalogPipelines()) for (const s of p.steps) {
-      if (!s.contract) continue;
-      const text = declText(s.contract);
+      if (!s.contract && !s.criteria) continue;
+      const text = declText(s.contract, s.criteria);
       for (const t of tokens) if (t.re.test(text)) leaks.push(`${p.catalogId} · ${s.label}: "${t.token}" (${t.where})`);
     }
     expect(leaks).toEqual([]);
+  });
+
+  it('every step whose checker grades a wiring contract DECLARES one (137/137 at W03)', () => {
+    const undeclared: string[] = [];
+    let graded = 0;
+    for (const p of allCatalogPipelines()) for (const s of p.steps) {
+      if (!requiredFieldsOf(s.accept).some((r) => r.field.endsWith('wiringContract'))) continue;
+      graded++;
+      if (!s.contract) undeclared.push(`${p.catalogId} · ${s.label}`);
+    }
+    expect(graded).toBeGreaterThan(100);
+    expect(undeclared).toEqual([]);
   });
 
   it('a declaration sits where its checker grades the contract', () => {

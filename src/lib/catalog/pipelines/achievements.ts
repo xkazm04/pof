@@ -127,6 +127,16 @@ registerCatalogPipeline({
         },
         });
       },
+      contract: {
+        field: 'triggerProgress',
+        grantedBy: 'UARPGAchievementSubsystem registers this achievement’s gameplay-event listener on the GameState in BeginPlay, server-only behind HasAuthority()',
+        activatedBy: 'the authoritative gameplay event THIS achievement declares fires and the subsystem increments its declared progress metric',
+        dependencies: [
+          'the catalog entity or engine system that emits THIS achievement’s gameplay event',
+          'characters (the player ability/tag component that stores progress and the unlock guard)',
+        ],
+        verification: 'L2: UARPGAchievementSubsystem and this achievement’s event handler compile in Source/PoF/; L3: VSAchievementTest — the declared event increments progress and unlocks at this achievement’s threshold',
+      },
       accept: allOf(
         fieldsPopulated(
           'triggerProgress',
@@ -243,6 +253,16 @@ registerCatalogPipeline({
         ],
         ueAssets: [`/Game/Abilities/Achievements/GE_Achievement_${slug(e.name)}`],
       }),
+      contract: {
+        field: 'reward',
+        grantedBy: 'UARPGAchievementSubsystem::GrantReward applies GE_Achievement_{slug} to the player’s ability system component',
+        activatedBy: 'this achievement’s unlock path fires immediately after its persistent unlocked tag is written',
+        dependencies: [
+          'the currency, item, or other reward THIS achievement grants (name each catalog id)',
+          'the execution used to deliver each declared reward type',
+        ],
+        verification: 'L2: GE_Achievement_{slug} and its declared reward executions compile in Source/PoF/ or exist under Content/Abilities/; L3: VSAchievementTest — unlocking {name} grants exactly its declared rewards once',
+      },
       accept: allOf(
         minCount('links', '≥1 reward link (gold or item) declared', 1),
         linksResolve(),
@@ -314,6 +334,15 @@ registerCatalogPipeline({
           },
         },
         });
+      },
+      contract: {
+        field: 'platform',
+        grantedBy: 'UARPGAchievementSubsystem::NotifyPlatform reads this achievement’s platform id after the in-game unlock and delegates to UAchievementOnlineSubsystem',
+        activatedBy: 'the confirmed in-game unlock completes its reward grant and calls NotifyPlatform with this achievement’s canonical platform id',
+        dependencies: [
+          'Online Subsystem integrations for every platform THIS achievement targets',
+        ],
+        verification: 'L2: this achievement’s platform id is populated in DT_Achievements and UAchievementOnlineSubsystem compiles; L3: VSAchievementTest — the platform write call uses this achievement’s declared id',
       },
       accept: allOf(
         fieldsPopulated('platform', 'steam + psn + xbox platform entries defined', [
@@ -405,6 +434,16 @@ registerCatalogPipeline({
           },
         },
       }),
+      contract: {
+        field: 'toast',
+        grantedBy: 'APlayerController::Client_ShowAchievementToast is called by UARPGAchievementSubsystem on the owning controller after this achievement’s reward is granted',
+        activatedBy: 'the server confirms this achievement’s unlock, fires the client RPC, and invokes WBP_AchievementToast::PlayToast with this achievement’s data',
+        dependencies: [
+          'hud-elements (the WBP_HUD slot used for achievement toasts)',
+          'the icon source THIS achievement declares for its badge and toast',
+        ],
+        verification: 'L2: WBP_AchievementToast exists and WBP_HUD exposes AchievementToastAnchor; L3: VSAchievementTest — {name}’s toast appears in PIE after its unlock RPC',
+      },
       accept: allOf(
         fieldsPopulated('toast', 'widget + format + anchor + duration defined', [
           'widget',
@@ -465,6 +504,16 @@ registerCatalogPipeline({
           },
         },
         });
+      },
+      contract: {
+        field: 'antiCheat',
+        grantedBy: 'UARPGAchievementSubsystem owns all progress and unlock logic on the server behind HasAuthority()',
+        activatedBy: 'the authoritative server-side event THIS achievement listens for is forwarded to the subsystem; clients cannot directly report progress',
+        dependencies: [
+          'characters (the server-side ability/tag component used for this achievement’s state)',
+          'the save row that persists this achievement’s idempotency guard',
+        ],
+        verification: 'L2: UARPGAchievementSubsystem contains the authority guard in Source/PoF/; L3: VSAchievementTest — a client cannot directly unlock {name} and repeated events do not duplicate its grant',
       },
       accept: allOf(
         fieldsPopulated('antiCheat', 'authorityModel + idempotencyGuard + auditLog defined', [
@@ -535,6 +584,15 @@ registerCatalogPipeline({
           },
         },
       }),
+      contract: {
+        field: 'telemetry',
+        grantedBy: 'UARPGTelemetrySubsystem::RecordAchievementEvent is called by UARPGAchievementSubsystem at each telemetry point THIS achievement declares',
+        activatedBy: 'this achievement’s progress, unlock, and reward paths emit their respective declared event names and payloads',
+        dependencies: [
+          'characters (player and session identifiers from player state)',
+        ],
+        verification: 'L2: UARPGTelemetrySubsystem::RecordAchievementEvent compiles in Source/PoF/; L3: VSAchievementTest — every telemetry event declared for {name} appears in the analytics log with its declared payload fields',
+      },
       accept: allOf(
         fieldsPopulated('telemetry', 'events + metric defined', ['events', 'metric']),
         wiringContractSound('telemetry'),
@@ -658,6 +716,17 @@ registerCatalogPipeline({
             `/Game/Audio/UI/SC_AchievementUnlock`,
           ],
         };
+      },
+      contract: {
+        grantedBy: 'UARPGAchievementSubsystem reads this achievement’s FARPGAchievementRow from DT_Achievements and owns its generated GE_Achievement_{slug}',
+        activatedBy: 'this achievement’s declared authoritative event advances progress, confirms unlock, grants its reward GameplayEffect, notifies its platform target, and shows its HUD toast',
+        dependencies: [
+          'the emitter of THIS achievement’s gameplay event',
+          'every currency, item, or other reward catalog id THIS achievement grants',
+          'the icon source and HUD slot THIS achievement uses',
+          'Online Subsystem support for every platform THIS achievement targets',
+        ],
+        verification: 'L2: UARPGAchievementSubsystem and FARPGAchievementRow compile in Source/PoF/, the DT_Achievements row is seeded, and GE_Achievement_{slug} exists; L3: VSAchievementTest — {name}’s complete progress-to-unlock, reward, platform, toast, and telemetry cycle passes in PIE',
       },
       accept: allOf(
         minCount('assets', '≥2 UE assets packaged', 2),

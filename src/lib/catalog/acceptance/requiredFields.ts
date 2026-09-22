@@ -18,6 +18,8 @@ export interface RequiredFields {
   field: string;
   /** Keys the checker requires inside an object field. */
   keys?: string[];
+  /** Keys that depend on the entity's canon profile (/diablo W03, D14) — replace `keys` for that profile. */
+  keysByProfile?: Readonly<Record<string, readonly string[]>>;
   /** A text field graded by length. */
   minChars?: number;
   /** A LIST graded by item count. */
@@ -33,14 +35,19 @@ export function tagRequiredFields<T extends Checker>(checker: T, req: RequiredFi
   return checker;
 }
 
-/** Every requirement a checker grades, through `allOf` compositions, merged per field. */
-export function requiredFieldsOf(checker: Checker): RequiredFields[] {
+/**
+ * Every requirement a checker grades, through `allOf` compositions, merged per field. Pass the
+ * entity's canon profile to resolve profile-dependent keys (a Diablo monster's resistances are
+ * magic/fire/lightning, PoF's fire/ice/lightning/chaos); without one, the project's keys.
+ */
+export function requiredFieldsOf(checker: Checker, canonProfile?: string | null): RequiredFields[] {
   const byField = new Map<string, RequiredFields>();
   const visit = (c: Checker) => {
     const own = (c as unknown as Record<symbol, RequiredFields | undefined>)[REQUIRED_FIELDS];
     if (own) {
       const cur = byField.get(own.field) ?? { field: own.field };
-      if (own.keys) cur.keys = [...new Set([...(cur.keys ?? []), ...own.keys])];
+      const keys = (canonProfile && own.keysByProfile?.[canonProfile]) || own.keys;
+      if (keys) cur.keys = [...new Set([...(cur.keys ?? []), ...keys])];
       if (own.minChars != null) cur.minChars = Math.max(cur.minChars ?? 0, own.minChars);
       if (own.minItems != null) cur.minItems = Math.max(cur.minItems ?? 0, own.minItems);
       if (own.shape && !cur.shape) cur.shape = own.shape;

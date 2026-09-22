@@ -68,15 +68,28 @@ describe('contractPrompt — pure extraction', () => {
 
   it('clamps an over-long claim instead of dumping it into the prompt', () => {
     const long = 'x'.repeat(MAX_CLAIM_CHARS * 3);
-    const reqs = stepContractRequirements(spec(() => ({ data: { wiringContract: { ...CONTRACT, grantedBy: long } } })), ENTITY);
+    const reqs = stepContractRequirements(spec(() => ({ data: {} }), { contract: { ...CONTRACT, grantedBy: long } }), ENTITY);
     expect(reqs[0].grantedBy!.length).toBeLessThanOrEqual(MAX_CLAIM_CHARS);
     expect(reqs[0].grantedBy!.endsWith('…')).toBe(true);
   });
 
-  it('never throws a produce error into a prompt', () => {
-    const boom = spec(() => { throw new Error('produce exploded'); });
-    expect(stepContractBlock(boom, ENTITY)).toBe('');
-    expect(stepContractRequirements(boom, ENTITY)).toEqual([]);
+  it('never runs the produce stub — a throwing body cannot reach a prompt', () => {
+    const boom = spec(() => { throw new Error('produce exploded'); }, { contract: CONTRACT });
+    expect(stepContractRequirements(boom, ENTITY)).toHaveLength(1);
+  });
+
+  it('injects the DECLARATION, never the stub’s contract (/diablo W03, D12)', () => {
+    const stubOnly = spec(() => ({ data: { wiringContract: { ...CONTRACT, grantedBy: 'GE_GrantAbility_GroundSlam on BeginPlay' } } }));
+    expect(stepContractRequirements(stubOnly, ENTITY)).toEqual([]);
+    expect(stepContractBlock(stubOnly, ENTITY)).not.toContain('GroundSlam');
+  });
+
+  it('fills {slug} and {name} from the entity in hand', () => {
+    const [r] = stepContractRequirements(
+      spec(() => ({ data: {} }), { contract: { ...CONTRACT, grantedBy: 'BP_{slug} grants it for {name} at BeginPlay' } }),
+      ENTITY,
+    );
+    expect(r.grantedBy).toBe('BP_TestEntity grants it for Test Entity at BeginPlay');
   });
 
   it('returns an empty block for a step that declares no contract and no criteria', () => {
@@ -87,7 +100,7 @@ describe('contractPrompt — pure extraction', () => {
 describe('contractPrompt — rendered block (golden)', () => {
   it('pins the exact block a contract-bearing step injects', () => {
     const block = stepContractBlock(
-      spec(() => ({ data: { wiringContract: CONTRACT, gate: { criteria: 'eyes survive meshing' } } })),
+      spec(() => ({ data: {} }), { contract: CONTRACT, criteria: ['eyes survive meshing'] }),
       ENTITY,
     );
     expect(block).toBe(
@@ -101,7 +114,7 @@ describe('contractPrompt — rendered block (golden)', () => {
         '- **Verification**: L3 functional test VSAbility09Test asserts target Health drops',
         '',
         '## Authored criteria',
-        '- Wiring — `gate.criteria`: eyes survive meshing',
+        '- Wiring — eyes survive meshing',
         '',
         CONTRACT_RULE,
       ].join('\n'),
@@ -110,7 +123,7 @@ describe('contractPrompt — rendered block (golden)', () => {
 
   it('pins a nested contract path in the artifact heading', () => {
     const block = stepContractBlock(
-      spec(() => ({ data: { triggerProgress: { wiringContract: CONTRACT } } }), { label: 'Triggers' }),
+      spec(() => ({ data: {} }), { label: 'Triggers', contract: { ...CONTRACT, field: 'triggerProgress' } }),
       ENTITY,
     );
     expect(block).toContain('## Wiring contract — Triggers · triggerProgress');

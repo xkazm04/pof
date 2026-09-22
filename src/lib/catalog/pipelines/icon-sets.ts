@@ -243,6 +243,11 @@ registerCatalogPipeline({
           },
         },
       }),
+      criteria: [
+        `contrast ≥4.5:1 (WCAG AA) against the HUD canvas; minimum display size ${MIN_DISPLAY_PX} px`,
+        'colorblind-safe: ≥60° hue separation plus ≥2× brightness delta between damage-type accents',
+        `outline survives at ${MIN_DISPLAY_PX} px (anti-aliased, never dropped)`,
+      ],
       accept: minCount('checks', 'All 3 accessibility checks covered', 3),
     },
 
@@ -332,6 +337,16 @@ registerCatalogPipeline({
         ueAssets: [`/Game/UI/Icons/Sets/T_${s}_Atlas`],
       });
       },
+      contract: {
+        field: 'atlas',
+        grantedBy: 'MI_HUDIconSheet_{slug} samples T_{slug}_Atlas; each consuming widget sets UV parameters from this icon set’s FIconSetRow in DT_IconSets',
+        activatedBy: 'widget construction and every slot-content refresh resolve the icon key and update its atlas UV',
+        dependencies: [
+          'hud-elements::<id> for EACH widget family that consumes this icon set',
+          '<catalog>::<id> for EACH entity whose icon key occupies a slot in this atlas',
+        ],
+        verification: 'L2: T_{slug}_Atlas is imported, DT_IconSets contains every declared slot, and MI_HUDIconSheet_{slug} compiles with the atlas bound and declared packing settings; L3: VSIconSetAtlasTest — every declared UV lookup resolves without missing-row warnings and meets the declared legibility checks',
+      },
       accept: allOf(
         // NOTE (shape-only): `fieldsPopulated` asserts these keys are non-null — it does not read
         // the atlas bytes, measure a gutter, or check the arithmetic. `gutter` is required here so
@@ -413,6 +428,15 @@ registerCatalogPipeline({
           },
           ueAssets: assets.map((a) => `/Game/UI/Icons/Sets/${a}`),
         };
+      },
+      contract: {
+        grantedBy: 'the widgets THIS icon set serves read FIconSetRow from DT_IconSets and set UV parameters on MI_HUDIconSheet_{slug}, whose texture is T_{slug}_Atlas',
+        activatedBy: 'widget construction and every content-change event declared by a consumer resolve its icon key and refresh the atlas UV',
+        dependencies: [
+          'hud-elements::<id> for EACH widget family that consumes this icon set',
+          '<catalog>::<id> for EACH entity whose icon key occupies a slot in this atlas',
+        ],
+        verification: 'L2: T_{slug}_Atlas and MI_HUDIconSheet_{slug} are packaged with the declared packing settings, DT_IconSets contains every slot, and all consumer links resolve; L3: VSIconSetAtlasTest — all declared widget slots resolve valid UVs and meet the declared contrast and legibility checks',
       },
       accept: allOf(
         minCount('assets', 'All 3 assets packaged', 3),

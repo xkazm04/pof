@@ -35,18 +35,19 @@ describe('seedBestiarySteps on a real zombie row', () => {
     for (const s of seeds) expect((s.data.sourced as { sourceRow: string }).sourceRow).toBe('_monster_id=MT_NZOMBIE');
   });
 
-  it('writes only what the source states — no ice, no chaos, magic carried aside', () => {
+  it('writes the diablo1 element set — magic, fire, lightning — and nothing PoF-only (D14)', () => {
     const r = seeds[0].data;
-    expect(r.resists).toEqual({ fireRes: 0, lightningRes: 0 });
-    expect(r.magicRes).toBe(100);
-    expect(seeds[0].gaps.join(' ')).toMatch(/iceRes.*no cold damage/);
+    expect(r.resists).toEqual({ magicRes: 100, fireRes: 0, lightningRes: 0 });
+    expect(seeds[0].gaps.join(' ')).not.toMatch(/iceRes|chaosRes|magicRes/);
   });
 
-  it('the real Resistances step does NOT pass it: the PoF element set cannot be completed from Diablo', () => {
+  it('the real Resistances step is satisfied by Diablo’s own element set — and still held at SOURCED, never pass', () => {
     const v = grade('Resistances', seeds[0].data);
     expect(v.status).toBe('pending');
-    expect(v.reason).toMatch(/iceRes/);
-    expect(v.reason).toMatch(/chaosRes/);
+    expect(v.reason).toMatch(/^SOURCED:/);
+    const unsourced = { ...seeds[0].data };
+    delete unsourced.sourced;
+    expect(grade('Resistances', unsourced).status).toBe('pass');
   });
 
   it('the real Monster Rarity step never passes it either', () => {

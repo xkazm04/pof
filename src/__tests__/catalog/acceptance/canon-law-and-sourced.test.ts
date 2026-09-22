@@ -80,7 +80,8 @@ describe('SOURCED (D3) — registration-wrapped, so every grading path sees it',
   });
 
   it('the same data carrying a sourced stamp is held at pending with a SOURCED reason — never pass', () => {
-    const r = s.accept({ ...data, sourced: STAMP }, ctx('diablo1'));
+    // The stub's data holds PoF's element set, so it is graded under pof — the guard is profile-blind.
+    const r = s.accept({ ...data, sourced: STAMP }, ctx('pof'));
     expect(r.status).toBe('pending');
     expect(r.reason).toMatch(/^SOURCED: seeded from Diablo I \(1996\) monsters\/monstdat\.tsv/);
     expect(r.reason).toContain('_monster_id=MT_NZOMBIE');

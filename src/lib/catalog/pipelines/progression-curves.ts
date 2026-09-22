@@ -161,6 +161,13 @@ registerCatalogPipeline({
       },
       // Content invariant (arpg-leveling): the growth exponent must be the ~1.08 geometric
       // rate from canon, not an arbitrary curve that passes a mere field-populated check.
+      contract: {
+        field: 'curveFormula',
+        grantedBy: 'the XP-award GameplayEffect THIS curve declares modifies UARPGAttributeSet.XP, and UARPGProgressionComponent::OnXPChanged evaluates CT_XPRequirements row "{slug}"',
+        activatedBy: 'EACH XP source THIS curve supports applies the declared XP-award GameplayEffect through its named gameplay event path',
+        dependencies: ['characters (XP and CharacterLevel attributes)', 'spellbook (any skill gates that consume CharacterLevel)'],
+        verification: 'L2: FARPGXPCurveRow and the declared XP-award GameplayEffect compile in Source/PoF/ and CT_XPRequirements row "{slug}" is seeded; L3: VSProgressionCurveTest — an award crosses THIS curve’s threshold and increments CharacterLevel',
+      },
       accept: allOf(
         fieldsPopulated('curveFormula', 'formula / base / exponent / softCap populated', [
           'formula',
@@ -255,6 +262,13 @@ registerCatalogPipeline({
           },
         },
       }),
+      contract: {
+        field: 'xpSources',
+        grantedBy: 'the XP-award GameplayEffect THIS curve declares is applied to the player through UARPGProgressionComponent with the magnitude computed for each source',
+        activatedBy: 'the event path named for EACH XP source THIS curve declares applies the award',
+        dependencies: ['characters (UARPGAttributeSet.XP and CharacterLevel)', '<catalog>::<id> for EACH entity type whose data drives an XP-source formula'],
+        verification: 'L2: the declared XP-award GameplayEffect and UARPGProgressionComponent::OnXPChanged compile; L3: VSProgressionCurveTest — EACH declared source event increases XP by its computed award',
+      },
       accept: allOf(
         fieldsPopulated('xpSources', 'kills / quests / exploration / scalingNote populated', [
           'kills',
@@ -333,6 +347,13 @@ registerCatalogPipeline({
           },
         },
       }),
+      contract: {
+        field: 'rewards.ascendancyGates',
+        grantedBy: 'UARPGProgressionComponent::GrantLevelUpRewards grants EACH level reward THIS curve declares; each gated reward names the subsystem or quest terminal that grants it',
+        activatedBy: 'CharacterLevel changes broadcast OnLevelUp; each non-level reward is activated by its declared milestone or quest event',
+        dependencies: ['characters (the progression trees or attributes consumed by declared rewards)', 'quests::<id> for EACH quest-gated reward THIS curve declares'],
+        verification: 'L2: UARPGProgressionComponent::GrantLevelUpRewards and every declared reward grant path compile; L3: VSProgressionCurveTest — EACH declared level or gate event grants exactly its named reward',
+      },
       accept: allOf(
         fieldsPopulated('rewards', 'passivePoints / milestoneUnlocks / ascendancyGates populated', [
           'passivePoints',
@@ -484,6 +505,13 @@ registerCatalogPipeline({
           },
         },
       }),
+      contract: {
+        field: 'deathPenalty',
+        grantedBy: 'the negative-XP GameplayEffect THIS curve declares is applied by UARPGProgressionComponent::ApplyDeathPenalty',
+        activatedBy: 'AARPGPlayerCharacter::OnDeath calls ApplyDeathPenalty, which computes the loss from THIS curve’s declared band and floor rules',
+        dependencies: ['characters (UARPGAttributeSet.XP, CharacterLevel, and the player death event)'],
+        verification: 'L2: the declared death-penalty GameplayEffect and UARPGProgressionComponent::ApplyDeathPenalty compile; L3: VSProgressionCurveTest — death applies THIS curve’s declared loss while respecting its floors and caps',
+      },
       accept: allOf(
         fieldsPopulated('deathPenalty', 'levelBand / xpLoss / floorsAndCaps / sinkRationale populated', [
           'levelBand',
@@ -693,6 +721,13 @@ registerCatalogPipeline({
         },
         ueAssets: ['/Game/UI/HUD/WBP_XPBar', '/Game/UI/HUD/WBP_LevelUpNotification'],
       }),
+      contract: {
+        field: 'xpBarUI',
+        grantedBy: 'AARPGHUD creates the XP widget THIS curve declares when the player pawn is possessed',
+        activatedBy: 'UARPGProgressionComponent::OnXPChanged and OnLevelUp update that widget after every XP change',
+        dependencies: ['hud-elements::<id> for this curve’s declared HUD anchor or slot', 'icon-sets::<id> for any icon family THIS curve’s UI uses'],
+        verification: 'L2: the declared widget exists, AARPGHUD creates it, and UARPGProgressionComponent delegates compile; L3: VSProgressionCurveTest — an XP award updates {name}’s declared display fields',
+      },
       accept: allOf(
         fieldsPopulated('xpBarUI', 'widget / format / position / hudBinding populated', [
           'widget',
@@ -809,6 +844,17 @@ registerCatalogPipeline({
           ],
           ueAssets: assets.map((a) => `/Game/Progression/${a}`),
         };
+      },
+      contract: {
+        grantedBy: 'UARPGProgressionComponent uses CT_XPRequirements row "{slug}" and the GameplayEffects THIS curve declares to apply XP awards, level changes, rewards, and penalties',
+        activatedBy: 'EACH XP-source, death, level-up, or gated-reward event THIS curve declares calls its named UARPGProgressionComponent path',
+        dependencies: [
+          'characters (XP and CharacterLevel attributes plus any declared progression tree)',
+          'quests::<id> for EACH quest event or gate THIS curve declares',
+          '<catalog>::<id> for EACH entity type whose data drives an XP formula',
+          'icon-sets::<id> for any icon family THIS curve’s UI uses',
+        ],
+        verification: 'L2: FARPGXPCurveRow, UARPGProgressionComponent, every declared GameplayEffect, and CT_XPRequirements row "{slug}" compile or are seeded; L3: VSProgressionCurveTest — {name} passes its declared award, level-up, reward, penalty, and UI-update checks',
       },
       accept: allOf(
         minCount('assets', '≥4 UE assets packaged', 4),

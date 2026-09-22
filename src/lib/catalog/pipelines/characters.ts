@@ -128,6 +128,14 @@ registerCatalogPipeline({
           ueAssets: [`/Game/Characters/${s}/DT_AttributeDefaults_${s}`],
         };
       },
+      contract: {
+        grantedBy: 'AARPGNPCActor reads this character’s FARPGAttributeInitRow from DT_AttributeDefaults at BeginPlay, keyed by NPCID={slug}',
+        activatedBy: 'AARPGNPCActor::BeginPlay initializes UARPGAbilitySystemComponent actor info and applies this character’s DT_AttributeDefaults row',
+        dependencies: [
+          'spellbook::<id> for EACH ability THIS character uses',
+        ],
+        verification: 'L2: FARPGAttributeInitRow compiles in Source/PoF/ and the {slug} row exists in DT_AttributeDefaults; L3: the character runtime test — {name} spawns and its initialized attributes match its row',
+      },
       accept: allOf(
         fieldsPopulated('stats', 'Stat block populated', ['health', 'damage', 'armor', 'moveSpeed']),
         wiringContractSound(),
@@ -228,6 +236,16 @@ registerCatalogPipeline({
           },
         };
       },
+      contract: {
+        grantedBy: 'AARPGNPCActor binds UARPGDialogueComponent using this character’s NPCID and routes its declared completion events through AARPGQuestSubsystem',
+        activatedBy: 'player interaction resolves this character’s dialogue binding, starts the dialogue, and fires each completion effect THIS character declares',
+        dependencies: [
+          'dialog-trees::<id> for THIS character’s bound dialogue',
+          'quests::<id> for EACH quest THIS character grants or advances',
+          'spellbook::<id> for EACH ability THIS character uses',
+        ],
+        verification: 'L2: AARPGNPCActor compiles and every dialogue, quest, and spellbook id declared by {name} resolves; L3: the character runtime test — interaction starts this character’s dialogue and applies its declared completion effects',
+      },
       accept: allOf(
         fieldsPopulated('behavior', 'Role + npcId + dialogueBinding', ['role', 'npcId', 'dialogueBinding']),
         linksResolve(),
@@ -308,6 +326,16 @@ registerCatalogPipeline({
           },
           ueAssets: assets.map((a) => `/Game/Characters/${s}/${a}`),
         };
+      },
+      contract: {
+        grantedBy: 'BP_{slug}, a child of AARPGNPCActor, reads this character’s role defaults, DT_AttributeDefaults row, and UARPGAbilitySystemComponent StartupAbilities',
+        activatedBy: 'AARPGNPCActor::BeginPlay initializes this character’s attributes, grants every declared startup ability, and activates its role behavior',
+        dependencies: [
+          'spellbook::<id> for EACH startup ability THIS character uses',
+          'dialog-trees::<id> for THIS character’s bound dialogue',
+          'quests::<id> for EACH quest THIS character grants or advances',
+        ],
+        verification: 'L2: AARPGNPCActor and FARPGAttributeInitRow compile in Source/PoF/, and this character’s DT_AttributeDefaults and DT_Characters rows are seeded; L3: the character runtime test — {name} spawns with its declared identity, role, abilities, and interaction wiring',
       },
       accept: allOf(
         minCount('assets', 'All assets packaged', 4),

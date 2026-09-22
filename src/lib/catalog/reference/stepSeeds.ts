@@ -11,6 +11,7 @@
 import { DIABLO1_CANON } from '@/lib/catalog/canon/profiles/diablo1';
 import { SOURCED_FIELD, type SourcedStamp } from '@/lib/catalog/acceptance/sourced';
 import type { ReferenceWrapper } from './wrapper';
+import { resistanceKey } from '@/lib/catalog/canon/elements';
 
 export interface StepSeed {
   catalogId: string;
@@ -30,6 +31,7 @@ export function resistanceLaw(): { normal: number; resist: number; immune: numbe
   return { normal: Number(m[1]), resist: Number(m[2]), immune: Number(m[3]) };
 }
 
+/** Diablo I's element set, from the diablo1 profile's vocabulary (D14) — upper-cased like the monstdat flags. */
 const ELEMENTS = ['MAGIC', 'FIRE', 'LIGHTNING'] as const;
 
 /** Per-element reduction from a monstdat `resistance` flag list (`IMMUNE_MAGIC,RESIST_FIRE`). */
@@ -60,15 +62,15 @@ export function seedBestiarySteps(w: ReferenceWrapper): StepSeed[] {
     {
       catalogId: 'bestiary', entityId: w.entity.id, step: 'Resistances',
       data: {
-        resists: { fireRes: res.FIRE, lightningRes: res.LIGHTNING },
-        // Diablo's third element has no PoF column; carried so it is not lost.
-        magicRes: res.MAGIC,
+        // Keys follow the diablo1 element set (D14): magic / fire / lightning.
+        resists: {
+          [resistanceKey('magic')]: res.MAGIC,
+          [resistanceKey('fire')]: res.FIRE,
+          [resistanceKey('lightning')]: res.LIGHTNING,
+        },
         [SOURCED_FIELD]: stamp(w, ['resistance']),
       },
       gaps: [
-        'iceRes: Diablo I (base game) has no cold damage — there is no source value, and 0 would claim a measurement',
-        'chaosRes: Diablo I has no chaos element — same',
-        'magicRes: Diablo’s magic element has no PoF resistance column (carried as an extra field)',
         'resistanceHell: per-difficulty resistances are not seeded — PoF entities are difficulty-flat',
       ],
     },

@@ -262,6 +262,17 @@ registerCatalogPipeline({
           ],
         };
       },
+      contract: {
+        field: 'effect',
+        grantedBy: 'each ability that applies THIS status names its on-hit GameplayEffect, which calls ApplyGameplayEffectToTarget with GE_Gen_{slug}',
+        activatedBy: 'the declared hit or gameplay event from an applying ability activates THIS status on its target',
+        dependencies: [
+          'UARPGAttributeSet attributes read or modified by THIS status',
+          'ARPGDamageExecution when THIS status deals damage',
+          'spellbook::<id> for EACH ability that applies THIS status',
+        ],
+        verification: 'L2: GE_Gen_{slug} compiles and its generated data row is seeded; L3: THIS status’s functional test verifies its declared timing, tags, expiry or cleanse behavior, and stacking law',
+      },
       // fieldsPopulated checks that all named keys exist (non-null) on data.effect
       accept: allOf(
         fieldsPopulated(
@@ -417,6 +428,16 @@ registerCatalogPipeline({
           },
           ueAssets: assets.map((a) => `/Game/Abilities/Generated/${a}`),
         };
+      },
+      contract: {
+        grantedBy: 'each ability that applies THIS status names its application GameplayEffect; GE_Gen_{slug} grants THIS status’s tag and executes its declared periodic or control behavior',
+        activatedBy: 'the declared hit or gameplay event from an applying ability activates THIS status, with its authored stacking rule evaluated before application',
+        dependencies: [
+          'UARPGAttributeSet attributes read or modified by THIS status',
+          'ARPGDamageExecution when THIS status deals damage',
+          'spellbook::<id> for EACH ability that applies THIS status',
+        ],
+        verification: 'L2: GE_Gen_{slug} compiles in Source/PoF/Abilities/Generated/ and its data row is seeded; L3: THIS status’s functional test verifies application, tags, duration, removal, stacking, and every declared source ability',
       },
       accept: allOf(
         minCount('assets', 'All produced assets packaged', 3),

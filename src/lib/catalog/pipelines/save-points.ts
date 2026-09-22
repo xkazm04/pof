@@ -160,6 +160,19 @@ registerCatalogPipeline({
           },
         },
       }),
+      contract: {
+        field: 'stateSchema',
+        grantedBy: 'UARPGSaveSubsystem::SaveToSlot serializes THIS save point’s declared persistent player, world, inventory, and wallet state into UARPGSaveGame through UGameplayStatics::SaveGameToSlot',
+        activatedBy: 'BP_{slug} interaction through AARPGInteractableBase::OnInteracted or a declared autosave event calls UARPGSaveSubsystem::SaveToSlot',
+        dependencies: [
+          'characters data required to restore the player’s attribute baseline',
+          'quests save entries for each quest state THIS save schema persists',
+          'factions::<id> for each reputation standing persisted here',
+          'items::<id> for each saved inventory entry',
+          'currencies::<id> for each wallet balance persisted here',
+        ],
+        verification: 'L2: UARPGSaveGame and UARPGSaveSubsystem migration and validation symbols compile in Source/PoF/; L3: VSSaveLoadTest verifies THIS save point restores every declared persistent field and discards ephemeral state',
+      },
       accept: allOf(
         fieldsPopulated('stateSchema', 'persisted / ephemeral / schemaVersion / fieldsNote populated', [
           'persisted',
@@ -306,6 +319,17 @@ registerCatalogPipeline({
           },
         },
       }),
+      contract: {
+        field: 'triggers',
+        grantedBy: 'BP_{slug}, a child of AARPGInteractableBase, and each autosave event THIS save point declares call UARPGSaveSubsystem::SaveToSlot or TriggerAutoSave',
+        activatedBy: 'Enhanced Input IA_Interact on BP_{slug}, plus THIS save point’s declared quest or zone events, trigger a save commit',
+        dependencies: [
+          'quests event for each quest-stage autosave trigger THIS save point declares',
+          'zone-map event for each zone-transition autosave trigger THIS save point declares',
+          'hud-elements::<id> for THIS save point’s save indicator',
+        ],
+        verification: 'L2: AARPGInteractableBase and UARPGSaveSubsystem::SaveToSlot compile in Source/PoF/; L3: VSSaveLoadTest verifies BP_{slug} interaction commits a save and activates THIS checkpoint’s state tag',
+      },
       accept: allOf(
         fieldsPopulated('triggers', 'manualTrigger / autosaveTriggers / triggerDebounce / cooldownMs populated', [
           'manualTrigger',
@@ -516,6 +540,13 @@ registerCatalogPipeline({
         },
         ueAssets: ['/Game/UI/HUD/WBP_SaveSlots', '/Game/UI/HUD/WBP_SaveIndicator'],
       }),
+      contract: {
+        field: 'slotsUI',
+        grantedBy: 'AARPGHUD::ShowSaveSlots pushes WBP_SaveSlots onto the HUD context stack and owns WBP_SaveIndicator hidden by default',
+        activatedBy: 'save or load UI actions open WBP_SaveSlots; UARPGSaveSubsystem::OnSaveCompleted makes WBP_SaveIndicator flash',
+        dependencies: ['hud-elements::<id> for THIS save flow’s indicator widget and HUD anchor'],
+        verification: 'L2: WBP_SaveSlots, WBP_SaveIndicator, and AARPGHUD::ShowSaveSlots exist; L3: VSSaveLoadTest verifies THIS save point’s slot UI displays the saved level and zone',
+      },
       accept: allOf(
         fieldsPopulated('slotsUI', 'widget / format / position / hudBinding populated', [
           'widget',
@@ -688,6 +719,19 @@ registerCatalogPipeline({
             `/Game/UI/HUD/WBP_SaveIndicator`,
           ],
         };
+      },
+      contract: {
+        grantedBy: 'BP_{slug}, a child of AARPGInteractableBase, calls UARPGSaveSubsystem::SaveToSlot to serialize UARPGSaveGame through UGameplayStatics',
+        activatedBy: 'Enhanced Input IA_Interact on BP_{slug}, plus every autosave event THIS save point declares, triggers the save subsystem',
+        dependencies: [
+          'characters data required to restore the player’s attribute baseline',
+          'quests save entries for each persisted quest state',
+          'currencies::<id> for every persisted wallet balance',
+          'items::<id> for every persisted inventory entry',
+          'hud-elements::<id> for THIS save point’s save indicator',
+          'zone-map event for each declared zone-transition autosave trigger',
+        ],
+        verification: 'L2: UARPGSaveGame, AARPGInteractableBase, and UARPGSaveSubsystem compile in Source/PoF/ and THIS save-point row is seeded; L3: VSSaveLoadTest verifies BP_{slug} saves and restores every declared dependency',
       },
       accept: allOf(
         minCount('assets', '≥4 UE assets packaged', 4),

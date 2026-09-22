@@ -225,6 +225,14 @@ registerCatalogPipeline({
           { catalogId: 'characters',  entityId: 'char-captain-vael',   role: 'cross-reference' },
         ],
       }),
+      contract: {
+        grantedBy: 'UARPGCodexComponent on the PlayerController stores this entry’s unlocked id and exposes its declared cross-reference graph to the Codex UI',
+        activatedBy: 'unlocking THIS codex entry exposes each declared cross-reference and routes catalog-entity links to their respective UI panels',
+        dependencies: [
+          '<catalog>::<id> for EACH world entity THIS codex entry cross-references',
+        ],
+        verification: 'L0: every node declared by this entry is reachable and its graph has a terminal; L3: VSCodexUnlockTest — {name} unlocks and every declared catalog cross-reference resolves in PIE',
+      },
       accept: allOf(
         graphValid('graph', 'Cross-refs reachable + terminal'),
         linksResolve(),
@@ -298,6 +306,16 @@ registerCatalogPipeline({
         },
         };
       },
+      contract: {
+        field: 'unlockRules',
+        grantedBy: 'GE_Codex_Unlock_{slug} grants this entry’s State.Codex.Unlocked tag through every primary or fallback path THIS entry declares',
+        activatedBy: 'each quest stage, trigger volume, or other unlock event declared for THIS entry applies GE_Codex_Unlock_{slug} behind its idempotency guard',
+        dependencies: [
+          'quests::<id> for EACH quest-based unlock trigger THIS entry declares',
+          'zone-map::<id> for EACH zone-based unlock trigger THIS entry declares',
+        ],
+        verification: 'L2: GE_Codex_Unlock_{slug} compiles, its tag is registered, and this entry’s DT_Codex row is seeded; L3: VSCodexUnlockTest — every declared unlock path reveals {name} without duplicate grants',
+      },
       accept: allOf(
         fieldsPopulated('unlockRules', 'primary + fallback unlock rules defined', [
           'primary',
@@ -369,6 +387,16 @@ registerCatalogPipeline({
           },
         },
         };
+      },
+      contract: {
+        field: 'spoilerRules',
+        grantedBy: 'one GE_Codex_Spoiler_{slug}_<gate> GameplayEffect for EACH spoiler gate THIS entry declares grants its corresponding spoiler tag',
+        activatedBy: 'the quest stage, key item, or other reveal event declared by each spoiler gate applies its named GameplayEffect',
+        dependencies: [
+          'quests::<id> for EACH quest progression event used by this entry’s spoiler gates',
+          'items::<id> for EACH key item used by this entry’s spoiler gates',
+        ],
+        verification: 'L2: every spoiler GameplayEffect declared for {name} compiles and every spoiler tag is registered; L3: VSCodexUnlockTest — each gated section is hidden before its declared reveal event and visible afterward',
       },
       accept: allOf(
         fieldsPopulated('spoilerRules', 'spoiler fields + gate conditions defined', [
@@ -455,6 +483,13 @@ registerCatalogPipeline({
           `/Game/Audio/Codex/SC_Codex_SpoilerReveal_${slug(e.name)}`,
         ],
       }),
+      contract: {
+        field: 'audioSting',
+        grantedBy: 'one SoundCue under /Game/Audio/Codex/ for EACH audio sting THIS codex entry declares',
+        activatedBy: 'UARPGCodexComponent calls PlaySoundAtLocation on each corresponding unlock or spoiler-tag grant event',
+        dependencies: [],
+        verification: 'L2: every SoundCue declared by {name} exists under /Game/Audio/Codex/; L3: VSCodexUnlockTest — each sting plays exactly on its declared event',
+      },
       accept: allOf(
         fieldsPopulated('audioSting', 'unlock sting + spoiler sting defined', [
           'unlockSting',
@@ -610,6 +645,16 @@ registerCatalogPipeline({
             `/Game/Audio/Codex/SC_Codex_SpoilerReveal_${s}`,
           ],
         };
+      },
+      contract: {
+        grantedBy: 'UARPGCodexComponent reads this entry’s FARPGCodexRow from DT_Codex; GE_Codex_Unlock_{slug} and one GE_Codex_Spoiler_{slug}_<gate> per declared gate grant its tags',
+        activatedBy: 'every quest, zone, item, or other event THIS entry declares applies its corresponding unlock or spoiler GameplayEffect, and UARPGCodexComponent persists the resulting state',
+        dependencies: [
+          '<catalog>::<id> for EACH world entity THIS codex entry cross-references',
+          'quests::<id>, zone-map::<id>, or items::<id> for EACH declared unlock and spoiler trigger',
+          'icon-sets::<id> for this entry’s illustration family when declared',
+        ],
+        verification: 'L2: FARPGCodexRow compiles in Source/PoF/, this entry’s DT_Codex row and generated GameplayEffects, icons, and SoundCues exist; L3: VSCodexUnlockTest — {name}’s unlock paths, spoiler gates, audio, and cross-references work in PIE',
       },
       accept: allOf(
         minCount('assets', '≥3 UE codex assets packaged', 3),

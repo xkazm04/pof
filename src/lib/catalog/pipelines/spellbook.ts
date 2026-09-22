@@ -260,6 +260,18 @@ registerCatalogPipeline({
           ],
         };
       },
+      contract: {
+        field: 'effect',
+        grantedBy: 'UAbilitySystemComponent::GiveAbility grants GA_{slug} during AARPGCharacterBase::InitAbilitySystemComponent, with its slot assigned from DT_GeneratedAbilities',
+        activatedBy: 'THIS ability’s declared Enhanced Input action calls UARPGAbilityInputComponent::TryActivateAbilityByTag; AI users pass GA_{slug} through BTTask_UseAbility',
+        dependencies: [
+          'UARPGAttributeSet attributes consumed or modified by THIS ability',
+          'ARPGDamageExecution when THIS ability deals damage',
+          'status-effects::<id> for each status THIS ability applies',
+          'vfx::<id> for each effect THIS ability triggers',
+        ],
+        verification: 'L2: GA_{slug} compiles in Source/PoF/Abilities/ and its DT_GeneratedAbilities row is seeded; L3: THIS ability’s functional test verifies activation, costs, effects, cooldown, and every declared dependency',
+      },
       accept: allOf(
         fieldsPopulated(
         'effect',
@@ -681,6 +693,18 @@ registerCatalogPipeline({
           },
           ueAssets: assets.map((a) => `/Game/Abilities/Generated/${a}`),
         };
+      },
+      contract: {
+        grantedBy: 'UAbilitySystemComponent::GiveAbility grants GA_{slug} during AARPGCharacterBase::InitAbilitySystemComponent, with data-driven slot assignment from DT_GeneratedAbilities',
+        activatedBy: 'THIS ability’s declared input action or AI BTTask_UseAbility activates GA_{slug} when its declared targeting, resource, and cooldown conditions pass',
+        dependencies: [
+          'UARPGAttributeSet attributes consumed or modified by THIS ability',
+          'ARPGDamageExecution when THIS ability deals damage',
+          'status-effects::<id> for each status THIS ability applies',
+          'vfx::<id> for each effect THIS ability triggers',
+          'icon-sets::<id> for THIS ability’s icon family',
+        ],
+        verification: 'L2: GA_{slug}, FARPGAbilityCatalogRow, and the Source/PoF/ ability framework compile and the DT_GeneratedAbilities row is seeded; L3: THIS ability’s functional test verifies its declared activation path, costs, effects, cooldown, and dependencies',
       },
       accept: allOf(
         minCount('assets', '≥4 UE assets packaged (GA + GEs + icon + DT row)', 4),

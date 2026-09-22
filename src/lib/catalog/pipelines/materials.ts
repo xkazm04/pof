@@ -150,6 +150,13 @@ registerCatalogPipeline({
         ueAssets: ['/Game/Materials/M_ARPG_Surface_Master'],
         };
       },
+      contract: {
+        field: 'shaderGraph',
+        grantedBy: 'the consuming actor’s StaticMeshComponent material slot references MI_{slug}',
+        activatedBy: 'the UE render pipeline resolves that material slot at the render-thread draw',
+        dependencies: ['M_ARPG_Surface_Master (the shared master graph)'],
+        verification: 'L2: FARPGSurfaceMaterialDef compiles in Source/PoF/; L3: VSMasterMaterialInstanceTest — MI_{slug} compiles and samples every map THIS material declares',
+      },
       accept: allOf(
         fieldsPopulated('shaderGraph', 'masterPath / exposedPins / restrictions present', [
           'masterPath',
@@ -247,6 +254,12 @@ registerCatalogPipeline({
           `/Game/ArenaBuild/Textures/T_${s}_orm`,
         ],
         };
+      },
+      contract: {
+        grantedBy: 'MI_{slug} binds each texture map THIS material declares to its matching MaterialInstanceConstant parameter slot',
+        activatedBy: 'the UE render thread resolves those texture samples when MI_{slug} is applied to a mesh',
+        dependencies: ['M_ARPG_Surface_Master (owns the texture sampler slots)'],
+        verification: 'L2: FARPGSurfaceMaterialDef compiles in Source/PoF/; L3: VSMasterMaterialInstanceTest — every texture slot THIS material declares samples a non-null texture',
       },
       accept: allOf(
         wiringContractSound(),
@@ -371,6 +384,16 @@ registerCatalogPipeline({
         ueAssets: [`/Game/Materials/MI_${s}`],
         };
       },
+      contract: {
+        field: 'instanceLibrary',
+        grantedBy: 'StaticMeshComponent.OverrideMaterials or a Blueprint ConstructionScript assigns MI_{slug} to each consumer that uses THIS surface',
+        activatedBy: 'actor load, placement, or BeginPlay resolves the assigned material slot',
+        dependencies: [
+          'M_ARPG_Surface_Master (the compiled parent material)',
+          'T_{slug}_<map> for EACH texture map THIS material declares',
+        ],
+        verification: 'L2: FARPGSurfaceMaterialDef compiles in Source/PoF/; L3: VSMasterMaterialInstanceTest — MI_{slug} exists, inherits M_ARPG_Surface_Master, and every declared texture slot is non-null',
+      },
       accept: allOf(
         fieldsPopulated('instanceLibrary', 'instancePath / parentMaterial / recipe populated', [
           'instancePath',
@@ -475,6 +498,16 @@ registerCatalogPipeline({
             `/Game/ArenaBuild/Textures/T_${s}_orm`,
           ],
         };
+      },
+      contract: {
+        grantedBy: 'the StaticMeshComponent material slot of each declared consumer references /Game/Materials/MI_{slug}',
+        activatedBy: 'the UE render pipeline resolves the material at each draw; any interactable consumer also assigns it through its declared Blueprint construction path',
+        dependencies: [
+          'M_ARPG_Surface_Master (the compiled parent material)',
+          'T_{slug}_<map> for EACH texture map THIS material declares',
+          '<catalog>::<id> for EACH consumer entity that references this material',
+        ],
+        verification: 'L2: FARPGSurfaceMaterialDef compiles in Source/PoF/ and MI_{slug} plus every declared texture is packaged; L3: VSMasterMaterialInstanceTest — MI_{slug} compiles, every required texture slot is non-null, and its declared physical-material slot is set',
       },
       accept: allOf(
         (data) => {
