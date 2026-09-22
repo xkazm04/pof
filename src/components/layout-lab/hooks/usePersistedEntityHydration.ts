@@ -25,7 +25,15 @@ export function usePersistedEntityHydration(): void {
         logger.warn(`catalog-entities hydration failed: ${res.error}`);
         return;
       }
-      const { shadowed } = hydrate(res.data.entities);
+      // A SUCCESS envelope can still carry the wrong shape (another server on the port, an older
+      // API, a test double). Trusting it threw an unhandled rejection from the merge; the contract
+      // above is "log and leave the cache as it was", so the shape is checked, not assumed.
+      const rows = (res.data as { entities?: unknown } | null)?.entities;
+      if (!Array.isArray(rows)) {
+        logger.warn(`catalog-entities hydration: expected { entities: [] }, got ${JSON.stringify(res.data)?.slice(0, 120)} — cache left unchanged`);
+        return;
+      }
+      const { shadowed } = hydrate(rows as PersistedRow[]);
       if (shadowed.length) {
         logger.warn(`catalog-entities: ${shadowed.length} persisted row(s) collide with code seeds and are not shown: ${shadowed.join(', ')}`);
       }

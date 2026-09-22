@@ -88,3 +88,20 @@ describe('CatalogTree — ingested entities', () => {
     expect(screen.queryByTestId('entity-ingested-draft-bestiary-9')).toBeNull();
   });
 });
+
+describe('usePersistedEntityHydration — a malformed success is logged, never thrown', () => {
+  it('leaves the cache unchanged when the envelope carries no entities array', async () => {
+    const { renderHook, waitFor } = await import('@testing-library/react');
+    const { usePersistedEntityHydration } = await import('@/components/layout-lab/hooks/usePersistedEntityHydration');
+    const { logger } = await import('@/lib/logger');
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    // The exact shape that threw "rows is not iterable" in LayoutLab.test.tsx: a generic success.
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ success: true, data: {} }) }) as unknown as Response));
+    useCatalogStore.setState({ draftEntitiesByCatalog: { bestiary: { keep: { id: 'keep', catalogId: 'bestiary', name: 'k', categoryPath: [], tags: [], lifecycle: 'planned' } } } });
+    renderHook(() => usePersistedEntityHydration());
+    await waitFor(() => expect(warn).toHaveBeenCalled());
+    expect(Object.keys(useCatalogStore.getState().draftEntitiesByCatalog.bestiary)).toEqual(['keep']);
+    vi.unstubAllGlobals();
+    warn.mockRestore();
+  });
+});
