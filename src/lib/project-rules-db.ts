@@ -19,6 +19,7 @@ import { getDb, getSetting, setSetting } from '@/lib/db';
 import { logger } from '@/lib/logger';
 import type { ProjectRule } from '@/lib/catalog/canon/types';
 import { CANON_SEED } from '@/lib/catalog/canon/canon-seed';
+import { CANON_PROFILES, DEFAULT_CANON_PROFILE, allShippedRules } from '@/lib/catalog/canon/profiles';
 
 /** Records that this DB has had its one seeding. Presence is the whole contract. */
 const SEED_MARKER = 'project-rules.canon-seeded';
@@ -44,9 +45,19 @@ function ensureTable() {
       title TEXT NOT NULL,
       body TEXT NOT NULL,
       refs TEXT NOT NULL DEFAULT '[]',
+      profile TEXT NOT NULL DEFAULT '${DEFAULT_CANON_PROFILE}',
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `);
+
+  // Additive migration for a table that predates profiles — BEFORE any seeding, which writes the
+  // column (a fresh DB seeded first and crashed on the missing column). Existing rows are PoF's
+  // own canon, which is exactly what the default says.
+  const cols = getDb().prepare('PRAGMA table_info(project_rules)').all() as { name: string }[];
+  if (!cols.some((c) => c.name === 'profile')) {
+    getDb().exec(`ALTER TABLE project_rules ADD COLUMN profile TEXT NOT NULL DEFAULT '${DEFAULT_CANON_PROFILE}'`);
+  }
+
 
   if (!getSetting(SEED_MARKER)) {
     if (!existed) {
@@ -64,6 +75,18 @@ function ensureTable() {
     setSetting(SEED_MARKER, new Date().toISOString());
   }
 
+  // Each non-default profile is seeded ONCE, under its own recorded marker — the same discipline as
+  // the PoF seed. A profile that did not exist before cannot have been curated, so an existing table
+  // still gets it. An EMPTY seed never sets its marker, or its rules could never arrive later.
+  for (const profile of Object.values(CANON_PROFILES)) {
+    if (profile.id === DEFAULT_CANON_PROFILE || profile.seed.length === 0) continue;
+    const marker = `${SEED_MARKER}.${profile.id}`;
+    if (getSetting(marker)) continue;
+    for (const rule of profile.seed) upsertRuleRaw(rule);
+    setSetting(marker, new Date().toISOString());
+    logger.info(`[project-rules] seeded canon profile "${profile.id}": ${profile.seed.length} rule(s).`);
+  }
+
   tableEnsured = true;
 }
 
@@ -77,6 +100,9 @@ export function rowToRule(row: Record<string, unknown>): ProjectRule {
     body: row.body as string,
     refs: JSON.parse((row.refs as string) || '[]'),
   };
+  // Only a NON-default profile is carried, so a PoF rule reads back exactly as it always did.
+  const profile = row.profile as string | null | undefined;
+  if (profile && profile !== DEFAULT_CANON_PROFILE) rule.profile = profile;
   const updatedAt = row.updated_at as string | null;
   if (updatedAt) rule.updatedAt = updatedAt;
   return rule;
@@ -85,11 +111,11 @@ export function rowToRule(row: Record<string, unknown>): ProjectRule {
 function upsertRuleRaw(rule: ProjectRule): void {
   getDb()
     .prepare(
-      `INSERT INTO project_rules (id, category, scope, title, body, refs, updated_at)
-       VALUES (@id, @category, @scope, @title, @body, @refs, datetime('now'))
+      `INSERT INTO project_rules (id, category, scope, title, body, refs, profile, updated_at)
+       VALUES (@id, @category, @scope, @title, @body, @refs, @profile, datetime('now'))
        ON CONFLICT(id) DO UPDATE SET
          category=@category, scope=@scope, title=@title, body=@body,
-         refs=@refs, updated_at=datetime('now')`,
+         refs=@refs, profile=@profile, updated_at=datetime('now')`,
     )
     .run({
       id: rule.id,
@@ -98,6 +124,7 @@ function upsertRuleRaw(rule: ProjectRule): void {
       title: rule.title,
       body: rule.body,
       refs: JSON.stringify(rule.refs ?? []),
+      profile: rule.profile ?? DEFAULT_CANON_PROFILE,
     });
 }
 
@@ -132,13 +159,15 @@ export function deleteRule(id: string): void {
  */
 export function restoreCanonSeed(): { restored: number; total: number } {
   ensureTable();
+  // Every profile's shipped rules, not only PoF's: "restore the defaults" means all of them.
+  const shipped = allShippedRules(CANON_SEED);
   const write = getDb().transaction(() => {
-    for (const rule of CANON_SEED) upsertRuleRaw(rule);
+    for (const rule of shipped) upsertRuleRaw(rule);
   });
   write();
   const total = (
     getDb().prepare('SELECT COUNT(*) as cnt FROM project_rules').get() as { cnt: number }
   ).cnt;
-  logger.info(`[project-rules] canon defaults restored on request: ${CANON_SEED.length} rule(s), ${total} total.`);
-  return { restored: CANON_SEED.length, total };
+  logger.info(`[project-rules] canon defaults restored on request: ${shipped.length} rule(s), ${total} total.`);
+  return { restored: shipped.length, total };
 }

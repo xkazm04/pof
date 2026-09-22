@@ -1,5 +1,6 @@
 'use client';
 
+import { canonProfileOf } from '@/lib/catalog/canon/profiles';
 import { useMemo } from 'react';
 import { CATALOG_SECTIONS } from '@/lib/catalog/sections';
 import { useCatalogStore } from '@/stores/catalogStore';
@@ -59,6 +60,12 @@ export interface LabEntity {
   name: string;
   lifecycle: LifecycleState;
   data: unknown;
+  /**
+   * Canon profile its prompts are written for (`canonProfileOf`). Set by EVERY constructor —
+   * a LabEntity is where provenance used to be dropped, so an ingested entity's prompts fell
+   * back to PoF's world.
+   */
+  canonProfile?: string;
 }
 
 export interface LabDetail {
@@ -88,6 +95,7 @@ export function useLabDetail(catalogId: string | null): LabDetail | null {
       },
       entities: all.map((e) => ({
         id: e.id, name: e.name, lifecycle: e.lifecycle, data: (e as { data?: unknown }).data,
+        canonProfile: canonProfileOf(e as { provenance?: { canonProfile?: string } }),
       })),
       steps: resolveCatalogSteps(catalogId),
     };

@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import { tryApiFetch } from '@/lib/api-utils';
 import type { ProjectRule } from '@/lib/catalog/canon/types';
 import { CANON_SEED } from '@/lib/catalog/canon/canon-seed';
+import { allShippedRules } from '@/lib/catalog/canon/profiles';
 
 interface CanonState {
   rules: ProjectRule[];
@@ -16,7 +17,8 @@ interface CanonState {
 /** Client cache of the project_rules table. Initialised with the seed so canon is available
  *  (and injectable) offline; hydrate() replaces it from the server when reachable. */
 export const useCanonStore = create<CanonState>((set) => ({
-  rules: CANON_SEED,
+  // Every profile's shipped rules, so an ingested entity's canon is available offline too.
+  rules: allShippedRules(CANON_SEED),
   hydrated: false,
   hydrate: async () => {
     const r = await tryApiFetch<ProjectRule[]>('/api/project-rules');

@@ -47,6 +47,8 @@ export interface EntityProvenance {
    */
   licenceNote: string;
   ingestedAt: string;
+  /** Canon profile the entity's prompts are written for (`canon/profiles.ts`), stamped from its source. */
+  canonProfile?: string;
 }
 
 /** The shared envelope every catalog entity carries. */

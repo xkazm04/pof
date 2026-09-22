@@ -26,6 +26,7 @@
  */
 
 import { canonContextFor } from '@/lib/catalog/canon/canonContext';
+import { DEFAULT_CANON_PROFILE, rulesForProfile } from '@/lib/catalog/canon/profiles';
 import { stepContractBlock, canonCategoriesForStep } from '@/lib/catalog/contractPrompt';
 import { qualityPack } from '@/lib/prompts/quality';
 import { deliverableClassOf } from '@/lib/judge/dimensions';
@@ -107,7 +108,10 @@ export function buildStepProducePrompt(
   // Canon scope: a content-invariant step (a wrong NUMBER fails it) gets the FULL in-scope
   // canon so the threshold it will be graded by is visible; shape-only steps keep their
   // archetype slice.
-  const canon = canonContextFor([...(rules ?? [])], catalogId, canonCategoriesForStep(spec));
+  // Canon PROFILE first: an ingested Diablo entity gets Diablo's world and art direction, never
+  // PoF's — and a PoF entity's canon is exactly what it was (`rulesForProfile('pof')`).
+  const inForce = rulesForProfile([...(rules ?? [])], entity.canonProfile ?? DEFAULT_CANON_PROFILE);
+  const canon = canonContextFor(inForce, catalogId, canonCategoriesForStep(spec));
   // Quality Program WS1: the professional-grade pack for this deliverable class (the judge's
   // own craft checklist), so production aims at the bar the judge enforces.
   const cls = catalogId ? deliverableClassOf(getStepFact(catalogId, spec.label)?.deliverable ?? '', catalogId) : null;

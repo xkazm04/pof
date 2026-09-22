@@ -11,6 +11,7 @@
  *
  * (Distinct from `recipe.ts`, which holds the legacy generation-engine recipes.)
  */
+import { canonProfileOf } from '@/lib/catalog/canon/profiles';
 import '@/lib/catalog/pipelines/registry.generated'; // side-effect: register all pipelines
 import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 import { CATALOG_SECTIONS } from '@/lib/catalog/sections';
@@ -205,7 +206,7 @@ export function gradeArtifact(
 
 /** Map a seeded entity to the `LabEntity` shape the step `produce`/`accept` expect. */
 function toLabEntity(e: StoredCatalogEntity) {
-  return { id: e.id, name: e.name, lifecycle: e.lifecycle, data: e.data };
+  return { id: e.id, name: e.name, lifecycle: e.lifecycle, data: e.data, canonProfile: canonProfileOf(e) };
 }
 
 /** Every catalog the lab shows, with its ordered steps + seeded entity count. */

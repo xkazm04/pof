@@ -39,6 +39,7 @@ export function provenanceFor(sourceFile: string, sourceRow: string): EntityProv
     sourceRow,
     licenceNote: DIABLO1_SOURCE.licenceNote,
     ingestedAt: new Date().toISOString(),
+    canonProfile: 'diablo1',
   };
 }
 

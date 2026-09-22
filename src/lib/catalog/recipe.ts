@@ -11,6 +11,7 @@ import '@/lib/catalog/pipelines/registry.generated'; // side-effect: register al
 import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 import { catalogContractRequirements, catalogCriteriaLines } from '@/lib/catalog/contractPrompt';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
+import { canonProfileOf } from '@/lib/catalog/canon/profiles';
 
 export type GenerationStep = 'scaffold-cpp' | 'author-python' | 'wire' | 'verify';
 
@@ -103,6 +104,7 @@ function recipeBuilder(
     name: entity.name,
     lifecycle: entity.lifecycle,
     data: entity.data,
+    canonProfile: canonProfileOf(entity),
   };
   return new PromptBuilder()
     .withProjectContext(ctx, {

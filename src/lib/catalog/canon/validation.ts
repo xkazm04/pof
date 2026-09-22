@@ -7,5 +7,7 @@ export const ruleUpsertSchema = z.object({
   title: z.string().min(1),
   body: z.string().min(1),
   refs: z.array(z.string()).default([]),
+  /** Canon profile (`canon/profiles.ts`); absent = PoF's own. */
+  profile: z.string().min(1).optional(),
 });
 export type RuleUpsert = z.infer<typeof ruleUpsertSchema>;

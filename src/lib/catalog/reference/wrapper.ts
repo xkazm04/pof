@@ -71,6 +71,7 @@ export function wrapTable(source: ReferenceSource, spec: ReferenceTableSpec, tex
   const provenanceFor = (sourceFile: string, sourceRow: string): EntityProvenance => ({
     kind: 'ingest', sourceGame: source.game, sourceProject: source.project,
     sourceFile, sourceRow, licenceNote: source.licenceNote, ingestedAt: now,
+    canonProfile: source.canonProfile,
   });
   const result = ingestRecords(table, {
     catalogId: spec.catalogId, sourceFile: spec.file, keyColumn: spec.keyColumn,

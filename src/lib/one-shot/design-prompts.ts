@@ -2,6 +2,7 @@ import type { CatalogDistribution } from '@/lib/catalog/gap-analysis';
 import { pluginFor } from '@/lib/catalog/gap-analysis/plugins';
 import { arpgLawsRelevantTo } from './arpg-laws-map';
 import { canonContextFor } from '@/lib/catalog/canon/canonContext';
+import { DEFAULT_CANON_PROFILE, rulesForProfile } from '@/lib/catalog/canon/profiles';
 import { useCanonStore } from '@/components/layout-lab/canonStore';
 import type { OneShotProposal } from '@/stores/oneShotJobStore';
 
@@ -42,7 +43,9 @@ export function buildProposalPrompt(
   userHint?: string,
 ): string {
   const callbackId = nextCallbackId();
-  const canon = canonContextFor(useCanonStore.getState().rules, catalogId, ['game', 'project', 'art']);
+  // A NEW entity designed here is PoF's own, so its canon is the `pof` profile — never another
+  // profile's world (the store holds every profile's rules).
+  const canon = canonContextFor(rulesForProfile(useCanonStore.getState().rules, DEFAULT_CANON_PROFILE), catalogId, ['game', 'project', 'art']);
   const laws = arpgLawsRelevantTo(catalogId).join(', ');
   const schema = dataSchemaFor(catalogId);
   return `# DESIGN PROPOSAL — Catalog '${catalogId}'

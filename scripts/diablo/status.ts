@@ -15,7 +15,9 @@ import { listEntities } from '../../src/lib/catalog-db';
 import { listAllArtifacts } from '../../src/lib/pipeline-artifacts-db';
 import { getCatalogPipeline } from '../../src/lib/catalog/pipeline-registry';
 import { getReferenceSource } from '../../src/lib/catalog/reference/sources';
-import { listRuns, summarizeWrappers } from '../../src/lib/catalog/reference/wrappers-db';
+import { listRuns, listWrappers, summarizeWrappers } from '../../src/lib/catalog/reference/wrappers-db';
+import { projectionHash } from '../../src/lib/catalog/reference/wrapper';
+import type { IngestedEntity } from '../../src/lib/catalog/ingest/run';
 import type { IngestRunSummary } from '../../src/lib/catalog/reference/ingestSource';
 
 const i = process.argv.indexOf('--source');
@@ -27,6 +29,10 @@ const catalogs = [...new Set(source.tables.map((t) => t.catalogId))];
 
 const rows = catalogs.map((catalogId) => {
   const promoted = listEntities(catalogId).filter((e) => e.source === 'ingest' && e.entityId.startsWith(`${source.idPrefix}-`));
+  // A promoted entity is a COPY of its wrapper's projection at promotion time; a later mapping
+  // adjustment re-projects the wrapper but not the copy. Stale = the copy no longer matches.
+  const current = new Map(listWrappers(db, { sourceId: source.id, catalogId }).map((w) => [w.entity.id, projectionHash(w.entity)]));
+  const stale = promoted.filter((e) => current.get(e.entityId) !== projectionHash(e.entity as unknown as IngestedEntity)).map((e) => e.entityId);
   const steps = getCatalogPipeline(catalogId)?.steps.length ?? 0;
   const byStatus: Record<string, number> = {};
   let ueAssets = 0;
@@ -43,6 +49,7 @@ const rows = catalogs.map((catalogId) => {
     catalogId,
     wrapped: wrapped.filter((w) => w.catalogId === catalogId).reduce((n, w) => n + w.wrappers, 0),
     promoted: promoted.length,
+    stalePromoted: stale,
     pipelineSteps: steps,
     entitiesWithArtifacts,
     artifactSlots: promoted.length * steps,
@@ -72,6 +79,7 @@ for (const r of rows) {
   const s = r.artifactsByStatus;
   const arts = `${s.pass ?? 0}/${s.deferred ?? 0}/${s.fail ?? 0}/${s.pending ?? 0} of ${r.artifactSlots}`;
   console.log(`${r.catalogId.padEnd(14)} ${String(r.wrapped).padStart(7)}  ${String(r.promoted).padStart(8)}  ${String(r.pipelineSteps).padStart(5)}  ${String(r.entitiesWithArtifacts).padStart(11)}  ${arts.padEnd(38)} ${r.ueAssets}`);
+  if (r.stalePromoted.length) console.log(`   STALE promoted (wrapper re-projected since promotion — re-promote): ${r.stalePromoted.join(', ')}`);
 }
 console.log('\ncoverage trend (newest first):');
 for (const t of trend) console.log(`  run #${t.run} ${t.at}  ${JSON.stringify(t.coverage)}  unresolved links ${t.unresolvedLinks}  reprojected ${t.reprojected}`);

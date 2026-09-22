@@ -29,6 +29,8 @@ export interface ReferenceSource {
   idPrefix: string;
   /** Where an operator gets the data — this repo never carries it. */
   obtain: string;
+  /** Canon profile its entities' prompts are written for (`canon/profiles.ts`). */
+  canonProfile: string;
   tables: ReferenceTableSpec[];
 }
 
@@ -38,6 +40,7 @@ export const DIABLO1: ReferenceSource = {
   project: DIABLO1_SOURCE.sourceProject,
   licenceNote: DIABLO1_SOURCE.licenceNote,
   idPrefix: 'd1',
+  canonProfile: 'diablo1',
   obtain: 'git clone https://github.com/diasurgical/devilutionX — the data root is assets/txtdata',
   tables: [
     { file: 'monsters/monstdat.tsv', catalogId: 'bestiary', technique: 'tsv', keyColumn: '_monster_id', map: MONSTER_MAP },
