@@ -718,7 +718,19 @@ The one-shot DESIGN prompt (a new entity is PoF's) filters to `pof`. `project_ru
 (additive migration runs before seeding); each profile seeds ONCE under its own marker, so an edit to a
 shipped profile rule does not reach an already-seeded DB (sync is open work). Threshold checkers
 (`acceptance/invariants.ts`, `balance/canon-conformance.ts`) still read PoF's `CANON_SEED` and are NOT
-profile-aware yet.
+profile-aware yet — **superseded (W02):** the 8 law-backed invariants are wrapped by
+`canonLawChecker(lawId)` and return `pending` + `UNGRADED:` where the entity's profile (`CheckerContext.canonProfile`)
+has no such law; every step's `accept` is wrapped once at `registerCatalogPipeline` by the SOURCED guard (a seeded
+artifact never grades `pass`). Markers live in `acceptance/markers.ts`.
+
+**A produce prompt names everything its checker grades** (`acceptance/requiredFields.ts`): `fieldsPopulated` keys,
+`minLength` text fields, `minCount` lists and the `wiringContract` STRUCTURE are tagged on the checker, collected
+through `allOf`, and rendered FIRST in the step contract (`## Required fields`) so the size cap cannot drop them.
+Before this, 102 of 114 key-graded steps hid at least one graded key from the producer. A value equal to
+`REFERENCE_GAP` ("not in the reference") is graded as missing. An INGESTED entity also gets a `# REFERENCE VALUES`
+section (`referenceValues.ts`) with its source row; `labIdentityOf` gives every `LabEntity` constructor its canon
+profile and reference in one place. Known open defect: the injected wiring contract is extracted by running the
+step's produce STUB, so stub content (PoF's world) reaches live prompts for every entity.
 
 **Wiring contracts reach prompts** (`src/lib/catalog/contractPrompt.ts`). Pipelines author
 137 `wiringContract` blocks + per-step `criteria` inside their produce bodies; for a long

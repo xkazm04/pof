@@ -13,3 +13,8 @@
 - **Vitest has two failure channels.** An unhandled rejection is reported as a run `Errors` line while every test file passes; grepping `FAIL` missed a real defect of the overseer's own for a whole wave. A delegate (cx-003) surfaced it and filed it as "unrelated". Applied in v1.3 (oversight step 3).
 - **A keyword probe can be fooled by the canon itself.** "The Diablo prompt still says Sundering" was the Diablo rule's own exclusion list. Look at WHERE a hit comes from (section header) before calling it a leak — then decide whether the rule should mention it at all.
 - **Ask the delegate for open questions and verify them.** Astra's open question "pipelines embed PoF text" became the wave's most important finding (62 stub bodies) once measured.
+
+## 1.3 — 2026-09-22 — pof (W02)
+- **Fix the prompt before judging the producer.** Every W02 produce failure was a prompt defect (unnamed keys, text fields, lists, wiring structure), found in three rounds, each a new checker kind. When a delegate fails, read its artifact against the prompt it was given before blaming the model.
+- **A pass needs the same scrutiny as a fail.** Stat Block passed on a declared gap; Abilities passed on an invention injected by PoF's own stub contract. The grader cannot see parity — the overseer checks parity by hand against the wrapper until an instrument exists.
+- **Measure a defect across the fleet, then pin the census at zero.** 102/114 turned a zombie's Stat Block into a PoF-wide fix with a regression guard.
