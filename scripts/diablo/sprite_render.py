@@ -25,6 +25,10 @@ if len(argv) < 2:
 src, out_dir = argv[0], argv[1]
 opt = {argv[i][2:]: argv[i + 1] for i in range(2, len(argv) - 1) if argv[i].startswith("--")}
 SIZE = int(opt.get("size", 96))
+# --tint r,g,b: a family RECOLOUR (Diablo's trn palette swap: Zombie/Ghoul/Rotting Carcass share one
+# model and differ by palette). Multiplies every material's base colour, so one rigged mesh renders as
+# the whole family (/diablo W06).
+TINT = [float(x) for x in opt["tint"].split(",")] if opt.get("tint") else None
 FRAME = int(opt.get("frame", 1))
 RENDER = int(opt.get("render", 384))
 os.makedirs(out_dir, exist_ok=True)
@@ -42,6 +46,25 @@ for ob in list(scene.objects):
         ob.parent = pivot
 
 meshes = [o for o in scene.objects if o.type == "MESH"]
+if TINT:
+    for mat in bpy.data.materials:
+        if not mat.use_nodes:
+            continue
+        for node in mat.node_tree.nodes:
+            if node.type != "BSDF_PRINCIPLED":
+                continue
+            base = node.inputs["Base Color"]
+            if base.is_linked:
+                src = base.links[0].from_socket
+                mix = mat.node_tree.nodes.new("ShaderNodeMixRGB")
+                mix.blend_type = "MULTIPLY"
+                mix.inputs[0].default_value = 1.0
+                mix.inputs[2].default_value = (TINT[0], TINT[1], TINT[2], 1.0)
+                mat.node_tree.links.new(src, mix.inputs[1])
+                mat.node_tree.links.new(mix.outputs[0], base)
+            else:
+                c = base.default_value
+                base.default_value = (c[0] * TINT[0], c[1] * TINT[1], c[2] * TINT[2], c[3])
 if not meshes:
     print("POF_SPRITE_ERROR=no mesh in the glb")
     sys.exit(1)

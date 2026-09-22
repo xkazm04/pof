@@ -27,12 +27,28 @@ const entity = seededEntities(catalogId).find((e) => e.id === entityId);
 if (!entity) { console.error(`REFUSED: ${catalogId}/${entityId} is not a seeded/promoted entity`); process.exit(1); }
 
 const { root, slug } = diabloUeRoot(entity.name);
+const arts = listArtifacts(catalogId, entityId);
+
+// A family member shares its family head's mesh (Diablo recolours one model): its 3D & Rig candidate
+// carries `sharedWith`, so the mesh is declared at the HEAD's root and only the member's own
+// Blueprint + tinted material live under its own.
+const rigCand = ((arts.find((a) => a.step === '3D & Rig')?.data.genHistory ?? {}) as { selectedId?: string; batches?: { candidates?: { id: string; payload?: Record<string, unknown> }[] }[] });
+const cand = rigCand.batches?.flatMap((b) => b.candidates ?? []).find((c) => c.id === rigCand.selectedId);
+const sharedWith = typeof cand?.payload?.sharedWith === 'string' ? cand.payload.sharedWith : undefined;
+const headEntity = sharedWith ? seededEntities(catalogId).find((e) => e.id === sharedWith) : undefined;
+const meshRoot = headEntity ? diabloUeRoot(headEntity.name) : { root, slug };
+// Interchange nests a .glb import under <file>/SkeletalMeshes/; the import script reports the real
+// path, so the mesh declaration is read from the UE content on disk rather than guessed.
+const meshDir = `${meshRoot.root}`;
+
+// The mesh's real UE path: Interchange nests a .glb import under <root>/<glb basename>/SkeletalMeshes/.
+const glbUrl = typeof cand?.payload?.glbUrl === 'string' ? cand.payload.glbUrl : '';
+const glbBase = (/asset\/([^?]+)\.glb/.exec(glbUrl)?.[1] ?? '').replace(/%20/g, ' ');
+const meshDirFull = glbBase ? `${meshRoot.root}/${glbBase}/SkeletalMeshes` : meshRoot.root;
 const DECLARED: Record<string, string[]> = {
   'Concept 2D Art': [`${root}/T_${slug}_Concept`],
-  '3D & Rig': [`${root}/SK_${slug}`, `${root}/SK_${slug}_Skeleton`, `${root}/SK_${slug}_PhysicsAsset`],
+  '3D & Rig': [`${meshDirFull}/SK_${meshRoot.slug}`, `${meshDirFull}/SK_${meshRoot.slug}_Skeleton`, `${meshDirFull}/SK_${meshRoot.slug}_PhysicsAsset`],
 };
-
-const arts = listArtifacts(catalogId, entityId);
 for (const [step, paths] of Object.entries(DECLARED)) {
   const a = arts.find((x) => x.step === step);
   if (!a) { console.log(`skip ${step}: not produced`); continue; }
@@ -40,14 +56,18 @@ for (const [step, paths] of Object.entries(DECLARED)) {
   console.log(`re-declared ${step} → ${paths.join(', ')} (${r.acceptance.status})`);
 }
 
-const assets = [`BP_${slug}`, `SK_${slug}`, `SK_${slug}_Skeleton`, `SK_${slug}_PhysicsAsset`, `T_${slug}_Concept`];
+const assets = sharedWith
+  ? [`BP_${slug}`, `MI_${slug}`, `GA_${slug}_Melee`, `T_${slug}_Concept`]
+  : [`BP_${slug}`, `GA_${slug}_Melee`, `T_${slug}_Concept`];
 const pkg = submitStepArtifact(catalogId, entityId, 'UE Packaging', {
   assets,
   wiringContract: {
-    grantedBy: `BP_${slug} (child of AARPGEnemyCharacter, ${root}) with SK_${slug} on its Mesh; GA_Death + GA_HitReact granted`,
+    grantedBy: sharedWith
+      ? `BP_${slug} (child of AARPGEnemyCharacter, ${root}) with ${headEntity!.name}'s shared SkeletalMesh under ${meshDir} and MI_${slug} recolouring it`
+      : `BP_${slug} (child of AARPGEnemyCharacter, ${root}) with its own SkeletalMesh under ${meshDir}; GA_Death + GA_HitReact granted`,
     activatedBy: `spawning BP_${slug} (AARPGEnemyCharacter::BeginPlay grants its abilities; bEquipSithLightsaber off — it carries no weapon)`,
     dependencies: ['AARPGEnemyCharacter (C++ base class)', 'UARPGAttributeSet (incl. MagicResistance, /diablo D17)', 'GA_Death', 'GA_HitReact'],
-    verification: `L2: every declared ${root} asset exists as a .uasset; L3: -game scenario spawn_actor ${root}/BP_${slug} + canon_ortho capture, blind family check`,
+    verification: `L2: every declared ${root} asset exists as a .uasset${sharedWith ? ` (the mesh lives with ${headEntity!.name}, shared)` : ''}; L3: -game scenario spawn_actor ${root}/BP_${slug} + canon_ortho capture, blind family check`,
   },
 }, assets.map((a) => `${root}/${a}`));
 console.log(`UE Packaging submitted (${pkg.acceptance.status}) declaring ${assets.length} assets`);
