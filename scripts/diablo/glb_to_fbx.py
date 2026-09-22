@@ -1,7 +1,7 @@
 """
 Convert a rigged .glb to a UE-importable FBX (/diablo W05) — Blender headless.
 
-  blender -b -P scripts/diablo/glb_to_fbx.py -- <in.glb> <out.fbx>
+  blender -b -P scripts/diablo/glb_to_fbx.py -- <in.glb> <out.fbx> [target_height_units]
 
 UE's proven skeletal import in this project is the FBX importer (ardy_import.py). Armature, skin
 weights and the baked animation are exported; no leaf bones (UE rejects the extra joints).
@@ -16,6 +16,27 @@ if len(argv) < 2:
     sys.exit(2)
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.gltf(filepath=argv[0])
+
+# Optional third arg: make the model this many Blender units tall BEFORE export, so the FBX carries
+# the entity's real size. UE's animation import ignores `import_uniform_scale` (W06: a 180 cm mesh with
+# a walk whose translations stayed in the source's units posed the skeleton at 1/100 and the figure
+# vanished), so mesh and animation must already agree in the file.
+if len(argv) > 2:
+    target = float(argv[2])
+    import mathutils
+    objs = [o for o in bpy.context.scene.objects]
+    pts = [o.matrix_world @ mathutils.Vector(c) for o in objs if o.type == "MESH" for c in o.bound_box]
+    height = max(p.z for p in pts) - min(p.z for p in pts)
+    factor = target / height if height else 1.0
+    for o in objs:
+        if o.parent is None:
+            o.scale = (o.scale[0] * factor, o.scale[1] * factor, o.scale[2] * factor)
+    bpy.context.view_layer.update()
+    for o in objs:
+        o.select_set(True)
+    bpy.context.view_layer.objects.active = objs[0]
+    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+    print(f"POF_FBX_SCALE height={height:.3f} -> {target} (x{factor:.3f})")
 # The glb's textures are PACKED images; an FBX export only references files, so without this the
 # FBX points at textures that were never written and UE imports the material without its maps
 # (W05: "Unable to find Texture file ...fbm"). Write each image next to the FBX first.

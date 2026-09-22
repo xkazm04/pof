@@ -41,70 +41,35 @@ def run_task(filename, name, options=None):
     return list(task.imported_object_paths)
 
 
-# 1. Skeletal mesh (+ skeleton + animation) from the rigged, budgeted FBX.
-ui = unreal.FbxImportUI()
-ui.import_mesh = True
-ui.import_as_skeletal = True
-ui.import_animations = True
-ui.import_materials = True
-ui.import_textures = True
-ui.mesh_type_to_import = unreal.FBXImportType.FBX_IT_SKELETAL_MESH if hasattr(unreal.FBXImportType, "FBX_IT_SKELETAL_MESH") else unreal.FBXImportType.FBXIT_SKELETAL_MESH
-ui.skeletal_mesh_import_data.set_editor_property("import_morph_targets", False)
-ui.skeletal_mesh_import_data.set_editor_property("import_meshes_in_bone_hierarchy", True)
-mesh_paths = run_task(spec["fbx"], f"SK_{NAME}", ui)
+# 1. Skeletal mesh + skeleton + animation + materials.
+#
+# A .glb goes through Interchange in ONE task (mesh, skeleton, animation, PBR textures) — the FBX
+# hop mangled units twice (W06: an animation-only import ignores `import_uniform_scale` and a
+# pre-scaled FBX still posed the skeleton at 1/100, so the figure rendered 1.8 cm tall while the
+# actor fought correctly). SIZE is then applied as a component scale on the Blueprint, which scales
+# the mesh AND its posed animation together, instead of trying to bake a scale into the assets.
+is_glb = spec["fbx"].lower().endswith(".glb")
+if is_glb:
+    mesh_paths = run_task(spec["fbx"], f"SK_{NAME}")
+else:
+    ui = unreal.FbxImportUI()
+    ui.import_mesh = True
+    ui.import_as_skeletal = True
+    ui.import_animations = True
+    ui.import_materials = True
+    ui.import_textures = True
+    ui.mesh_type_to_import = unreal.FBXImportType.FBXIT_SKELETAL_MESH
+    ui.skeletal_mesh_import_data.set_editor_property("import_morph_targets", False)
+    ui.skeletal_mesh_import_data.set_editor_property("import_meshes_in_bone_hierarchy", True)
+    mesh_paths = run_task(spec["fbx"], f"SK_{NAME}", ui)
 unreal.log(f"POF_DIABLO_UE_IMPORT_MESH={mesh_paths}")
 
-# WORLD SCALE from the entity's declared size (registry: generated-asset-world-scale). Generators
-# deliver unit-normalised meshes; the Zombie arrived 100 cm tall (W05) — a "human-sized" monster at
-# knee height. Measure the imported height, then re-import once at heightCm / measured.
-if spec.get("heightCm"):
-    sk_now = lib.load_asset(f"{DEST}/SK_{NAME}")
-    measured = sk_now.get_bounds().box_extent.z * 2.0 if sk_now else 0.0
-    if measured > 0 and abs(measured - spec["heightCm"]) / spec["heightCm"] > 0.05:
-        scale = spec["heightCm"] / measured
-        ui.skeletal_mesh_import_data.set_editor_property("import_uniform_scale", scale)
-        run_task(spec["fbx"], f"SK_{NAME}", ui)
-        after = lib.load_asset(f"{DEST}/SK_{NAME}").get_bounds().box_extent.z * 2.0
-        unreal.log(f"POF_DIABLO_UE_SCALE=measured {measured:.1f}cm -> x{scale:.3f} -> {after:.1f}cm (declared {spec['heightCm']}cm)")
-    else:
-        unreal.log(f"POF_DIABLO_UE_SCALE=measured {measured:.1f}cm matches declared {spec['heightCm']}cm")
-
 sk = None
-for p in mesh_paths:
+for p in list(mesh_paths) + list(lib.list_assets(DEST, recursive=True)):
     a = lib.load_asset(p)
     if isinstance(a, unreal.SkeletalMesh):
         sk = a
-if sk is None:
-    # A re-import may report nothing new; find the mesh on disk.
-    for p in lib.list_assets(DEST, recursive=False):
-        a = lib.load_asset(p)
-        if isinstance(a, unreal.SkeletalMesh):
-            sk = a
-
-# 1b. Animations — a REimport of an existing mesh never creates them (W06: 0 AnimSequence), so import the
-# same FBX again as animation-only against the mesh's skeleton, at the mesh's own uniform scale.
-sk_cur = lib.load_asset(f"{DEST}/SK_{NAME}")
-if sk_cur is not None and not any(isinstance(lib.load_asset(p), unreal.AnimSequence) for p in lib.list_assets(DEST, recursive=False)):
-    mesh_scale = sk_cur.get_editor_property("asset_import_data").get_editor_property("import_uniform_scale")
-    aui = unreal.FbxImportUI()
-    aui.import_mesh = False
-    aui.import_animations = True
-    aui.import_materials = False
-    aui.import_textures = False
-    aui.skeleton = sk_cur.get_editor_property("skeleton")
-    aui.mesh_type_to_import = unreal.FBXImportType.FBXIT_ANIMATION
-    aui.anim_sequence_import_data.set_editor_property("import_uniform_scale", mesh_scale)
-    anim_paths = run_task(spec["fbx"], f"A_{NAME}_Walk", aui)
-    unreal.log(f"POF_DIABLO_UE_IMPORT_ANIM={anim_paths} scale={mesh_scale}")
-
-# An FBXIT_ANIMATION import still emits a duplicate SkeletalMesh + PhysicsAsset named after the task (W06):
-# the entity has exactly ONE mesh, SK_<Name> — remove the strays.
-for p in lib.list_assets(DEST, recursive=False):
-    a = lib.load_asset(p)
-    base = p.split("/")[-1].split(".")[0]
-    if isinstance(a, (unreal.SkeletalMesh, unreal.PhysicsAsset)) and not base.startswith(f"SK_{NAME}"):
-        lib.delete_asset(p.split(".")[0])
-        unreal.log(f"POF_DIABLO_UE_REMOVED_STRAY={base}")
+        break
 
 # 2. Concept texture.
 if spec.get("concept"):
@@ -124,6 +89,12 @@ cdo = unreal.get_default_object(bp.generated_class())
 mesh_comp = cdo.get_editor_property("mesh")
 if sk is not None and mesh_comp is not None:
     mesh_comp.set_editor_property("skeletal_mesh_asset", sk)
+    # SIZE: a component scale from the entity's declared height — scales the mesh and its posed
+    # animation together (generators deliver unit-normalised meshes; the Zombie imports at 100 cm).
+    native = sk.get_bounds().box_extent.z * 2.0
+    factor = (spec["heightCm"] / native) if spec.get("heightCm") and native > 0 else 1.0
+    mesh_comp.set_editor_property("relative_scale3d", unreal.Vector(factor, factor, factor))
+    unreal.log(f"POF_DIABLO_UE_SCALE=native {native:.1f}cm -> component x{factor:.3f} = {native * factor:.1f}cm")
     # Capsule-centred character: feet to the capsule bottom, facing +X.
     half = cdo.get_editor_property("capsule_component").get_editor_property("capsule_half_height")
     mesh_comp.set_editor_property("relative_location", unreal.Vector(0.0, 0.0, -half))
@@ -143,14 +114,14 @@ cdo.set_editor_property("bEquipSithLightsaber", False)
 unreal.log(f"POF_DIABLO_UE_WEAPON={'cleared' if weapon is not None else 'NOT REACHABLE from Python'}; sith saber off")
 # Material probe: what drives Metallic / BaseColor on the imported material (a metallic surface renders
 # black in an isolated capture that has no sky reflections).
-for m in [lib.load_asset(p) for p in lib.list_assets(DEST, recursive=False)]:
+for m in [lib.load_asset(p) for p in lib.list_assets(DEST, recursive=True)]:
     if isinstance(m, unreal.Material):
         mel = unreal.MaterialEditingLibrary
         met = mel.get_material_property_input_node(m, unreal.MaterialProperty.MP_METALLIC)
         base = mel.get_material_property_input_node(m, unreal.MaterialProperty.MP_BASE_COLOR)
         unreal.log(f"POF_DIABLO_UE_MATERIAL={m.get_name()} metallic={met.get_class().get_name() if met else None} basecolor={base.get_class().get_name() if base else None}")
 # Locomotion: a Diablo zombie only shambles — loop its walk as a single-node animation (no AnimBP yet).
-walks = [lib.load_asset(p) for p in lib.list_assets(DEST, recursive=False)]
+walks = [lib.load_asset(p) for p in lib.list_assets(DEST, recursive=True)]
 walks = [w for w in walks if isinstance(w, unreal.AnimSequence)]
 if walks and mesh_comp is not None:
     mesh_comp.set_editor_property("animation_mode", unreal.AnimationMode.ANIMATION_SINGLE_NODE)
@@ -161,6 +132,25 @@ if walks and mesh_comp is not None:
     mesh_comp.set_editor_property("animation_data", data)
 unreal.log(f"POF_DIABLO_UE_ANIM={[w.get_name() for w in walks]}")
 granted = [c for c in (unreal.load_class(None, "/Script/PoF.GA_Death"), unreal.load_class(None, "/Script/PoF.GA_HitReact")) if c]
+# Its attack: the AI fires Ability.Enemy.Melee — without an ability carrying that tag a monster chases and
+# never hits (W06 r1: 10 s in melee range, player at 100 HP). A per-entity Blueprint subclass of
+# UGA_EnemyMeleeAttack carries THIS entity's damage (from its Stat Block, passed in — never in a repo).
+melee_parent = unreal.load_class(None, "/Script/PoF.GA_EnemyMeleeAttack")
+if melee_parent is not None:
+    ga_path = f"{DEST}/GA_{NAME}_Melee"
+    if lib.does_asset_exist(ga_path):
+        ga_bp = lib.load_asset(ga_path)
+    else:
+        gf = unreal.BlueprintFactory()
+        gf.set_editor_property("parent_class", melee_parent)
+        ga_bp = asset_tools.create_asset(f"GA_{NAME}_Melee", DEST, unreal.Blueprint, gf)
+    unreal.BlueprintEditorLibrary.compile_blueprint(ga_bp)
+    ga_cdo = unreal.get_default_object(ga_bp.generated_class())
+    if spec.get("meleeDamage") is not None:
+        ga_cdo.set_editor_property("BaseDamage", float(spec["meleeDamage"]))
+    lib.save_asset(ga_path)
+    granted.append(ga_bp.generated_class())
+    unreal.log(f"POF_DIABLO_UE_MELEE={ga_path} BaseDamage={ga_cdo.get_editor_property('BaseDamage')}")
 cdo.set_editor_property("GrantedAbilities", granted)
 unreal.BlueprintEditorLibrary.compile_blueprint(bp)
 lib.save_asset(bp_path)
@@ -178,7 +168,7 @@ for root, _dirs, files in os.walk(os.path.join(content_dir, DEST.replace("/Game/
 unreal.log(f"POF_DIABLO_UE_ON_DISK={json.dumps(on_disk)}")
 assets = sorted(lib.list_assets(DEST, recursive=True))
 unreal.log(f"POF_DIABLO_UE_ASSETS={json.dumps(assets)}")
-sk_back = lib.load_asset(f"{DEST}/SK_{NAME}") if lib.does_asset_exist(f"{DEST}/SK_{NAME}") else None
+sk_back = next((a for a in (lib.load_asset(p) for p in lib.list_assets(DEST, recursive=True)) if isinstance(a, unreal.SkeletalMesh)), None)
 bones = len(sk_back.get_editor_property("skeleton").get_editor_property("bone_tree")) if sk_back and sk_back.get_editor_property("skeleton") else 0
 cdo_back = unreal.get_default_object(lib.load_asset(bp_path).generated_class())
 mesh_back = cdo_back.get_editor_property("mesh").get_editor_property("skeletal_mesh_asset")
@@ -188,8 +178,9 @@ unreal.log(f"POF_DIABLO_UE_VERIFY=" + json.dumps({
     "bpMesh": mesh_back.get_path_name() if mesh_back else None,
     "bpIsEnemyCharacter": isinstance(cdo_back, unreal.ARPGEnemyCharacter),
     "grantedAbilities": [c.get_name() for c in cdo_back.get_editor_property("GrantedAbilities")],
-    "skeletonOnDisk": f"SK_{NAME}_Skeleton.uasset" in on_disk,
-    "heightCm": round(sk_back.get_bounds().box_extent.z * 2.0, 1) if sk_back else None,
+    "skeletonOnDisk": any(f.endswith("_Skeleton.uasset") for f in on_disk),
+    "nativeHeightCm": round(sk_back.get_bounds().box_extent.z * 2.0, 1) if sk_back else None,
+    "meshScale": str(cdo_back.get_editor_property("mesh").get_editor_property("relative_scale3d")),
     "animations": [a for a in assets if isinstance(lib.load_asset(a), unreal.AnimSequence)],
     "materials": [a for a in assets if isinstance(lib.load_asset(a), unreal.MaterialInterface)],
     "textures": [a for a in assets if isinstance(lib.load_asset(a), unreal.Texture)],
