@@ -13,7 +13,8 @@
  * operator makes explicitly, not a side effect of looking.
  */
 import { auditColumns, type ColumnAudit, type FieldMap } from './fieldMap';
-import { parseTsv, type MalformedRow } from './tsv';
+import { parseTsv, type MalformedRow, type TsvTable } from './tsv';
+import { applyDecode } from './decode';
 import type { CatalogEntityBase, CatalogLink, EntityProvenance } from '../types';
 
 /**
@@ -51,7 +52,10 @@ export interface TableIngestResult {
 const ROLE_CATALOG: Record<string, string> = {
   loot: 'loot-tables',
   ability: 'spellbook',
+  'unique-drop': 'items',
 };
+
+const LIST_PATH = /^data\.([A-Za-z0-9_]+)\[\]$/;
 
 const STATS_PATH = /^data\.stats\[(.+)\]$/;
 const LINK_PATH = /^links\[role=(.+)\]$/;
@@ -83,6 +87,13 @@ function applyTo(entity: IngestedEntity, path: string, value: string): void {
     // PoF entity id is a later pass that needs both catalogs ingested. Recording the raw
     // reference is honest; inventing an id that resolves nowhere is not.
     links.push({ catalogId: ROLE_CATALOG[role] ?? 'unknown', entityId: value, role });
+    return;
+  }
+
+  const list = LIST_PATH.exec(path);
+  if (list) {
+    const arr = (entity.data[list[1]] ??= []) as string[];
+    if (!arr.includes(value)) arr.push(value);
     return;
   }
 
@@ -120,7 +131,16 @@ export interface IngestTableOptions {
 
 /** Pure: text in, entities and report out. No database, no filesystem. */
 export function ingestTable(tsvText: string, opts: IngestTableOptions): TableIngestResult {
-  const table = parseTsv(tsvText);
+  return ingestRecords(parseTsv(tsvText), opts);
+}
+
+/**
+ * Pure: already-read records in, entities and report out. Separate from `ingestTable` so a
+ * reading TECHNIQUE other than TSV (gamedata text, C arrays, a binary archive) can hand its
+ * records to the same projection. `entities[i]` is always the projection of `table.rows[i]` —
+ * no row is skipped — which is what lets a wrapper pair a raw record with its entity.
+ */
+export function ingestRecords(table: TsvTable, opts: IngestTableOptions): TableIngestResult {
   const audit = auditColumns(table.columns, opts.map);
   const entities: IngestedEntity[] = [];
   let positionalIds = 0;
@@ -147,7 +167,8 @@ export function ingestTable(tsvText: string, opts: IngestTableOptions): TableIng
 
     for (const column of audit.mapped) {
       const rule = opts.map[column];
-      if (rule.kind === 'mapped') applyTo(entity, rule.to, row[column]);
+      if (rule.kind !== 'mapped') continue;
+      for (const value of applyDecode(row[column], rule.decode)) applyTo(entity, rule.to, value);
     }
 
     // The source key stays the identity even when a `name` column overwrote the label —

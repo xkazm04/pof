@@ -11,7 +11,8 @@
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { DIABLO1_TABLES, TARGET_GAPS, provenanceFor } from '../../src/lib/catalog/ingest/diablo1';
+import { TARGET_GAPS, provenanceFor } from '../../src/lib/catalog/ingest/diablo1';
+import { DIABLO1 } from '../../src/lib/catalog/reference/sources';
 import { ingestTable, type TableIngestResult } from '../../src/lib/catalog/ingest/run';
 
 const root = process.argv[2];
@@ -23,7 +24,7 @@ if (!root) {
 const pct = (n: number) => `${(n * 100).toFixed(1)}%`;
 const results: TableIngestResult[] = [];
 
-for (const table of DIABLO1_TABLES) {
+for (const table of DIABLO1.tables) {
   let text: string;
   try {
     text = readFileSync(join(root, table.file), 'utf8');
@@ -34,7 +35,7 @@ for (const table of DIABLO1_TABLES) {
   results.push(ingestTable(text, {
     catalogId: table.catalogId,
     sourceFile: table.file,
-    keyColumn: table.key,
+    keyColumn: table.keyColumn,
     map: table.map,
     provenanceFor,
     idPrefix: 'd1',

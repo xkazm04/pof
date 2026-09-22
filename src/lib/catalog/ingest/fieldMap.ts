@@ -19,15 +19,19 @@
  * calls a defect, so it gets its own bucket and is reported separately.
  */
 
+import type { DecodeStep } from './decode';
+
 export type FieldRule =
-  | { kind: 'mapped'; to: string }
+  | { kind: 'mapped'; to: string; decode?: DecodeStep[] }
   | { kind: 'dropped'; why: string }
   | { kind: 'gap'; why: string };
 
 /** Source column name → what happens to it. */
 export type FieldMap = Record<string, FieldRule>;
 
-export const mapped = (to: string): FieldRule => ({ kind: 'mapped', to });
+/** `decode` turns one raw cell into zero or more values — see `decode.ts` for why it is data. */
+export const mapped = (to: string, ...decode: DecodeStep[]): FieldRule =>
+  (decode.length ? { kind: 'mapped', to, decode } : { kind: 'mapped', to });
 export const dropped = (why: string): FieldRule => ({ kind: 'dropped', why });
 export const gap = (why: string): FieldRule => ({ kind: 'gap', why });
 

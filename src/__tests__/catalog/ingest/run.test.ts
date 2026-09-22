@@ -15,7 +15,7 @@ function row(over: Record<string, string>): string {
 const TSV = [
   HEADER.join('\t'),
   row({ _monster_id: 'MT_NZOMBIE', name: 'Zombie', level: '1', hitPointsMinimum: '2', hitPointsMaximum: '4', ai: 'Zombie', armorClass: '5', monsterClass: 'Undead', exp: '54', minDamage: '2', maxDamage: '5' }),
-  row({ _monster_id: 'MT_BZOMBIE', name: 'Ghoul', level: '2', hitPointsMinimum: '3', hitPointsMaximum: '7', ai: 'Zombie', armorClass: '10', monsterClass: 'Undead', exp: '58', treasure: 'GoldSmall' }),
+  row({ _monster_id: 'MT_BZOMBIE', name: 'Ghoul', level: '2', hitPointsMinimum: '3', hitPointsMaximum: '7', ai: 'Zombie', armorClass: '10', monsterClass: 'Undead', exp: '58', treasure: 'Uniq(CLEAVER)' }),
 ].join('\n');
 
 const OPTS = {
@@ -47,7 +47,8 @@ describe('ingestTable', () => {
     // empty stat row would render as a real, wrong number in the bestiary UI.
     const [zombie, ghoul] = ingestTable(TSV, OPTS).entities;
     expect(zombie.links).toBeUndefined();
-    expect(ghoul.links).toEqual([{ catalogId: 'loot-tables', entityId: 'GoldSmall', role: 'loot' }]);
+    // Real vocabulary (the first fixture invented `GoldSmall`, which never occurs in monstdat).
+    expect(ghoul.links).toEqual([{ catalogId: 'items', entityId: 'CLEAVER', role: 'unique-drop' }]);
     const stats = zombie.data.stats as { label: string }[];
     expect(stats.map((s) => s.label)).not.toContain('Special Damage Min');
   });

@@ -1,8 +1,30 @@
 # Legacy-game ingest — reading a 90s RPG into PoF's catalogs
 
-> **Status:** chassis BUILT + dry-run PROVEN on real data (2026-09-22). App wiring, the
-> affix catalog and the schema adjustments below are NOT built — they are the backlog.
+> **Status:** chassis BUILT + dry-run PROVEN on real data (2026-09-22). **Superseded as a
+> backlog by the `/diablo` loop** (same day): the backlog, its decisions and the replication
+> waves now live in the Obsidian vault `Diablo/` and are driven by `.claude/skills/diablo/`.
 > Written from `/research` on *"ingest older PC games … populate a new pof project"*.
+
+## Follow-up (2026-09-22): the `/diablo` loop and backlog wave W00
+
+The operator descoped licensing (B1: a reference-only learning exercise, deleted at the end) and
+turned this into a long-running loop whose product is the adjustments. W00 landed:
+
+- **Wrapper store** — `src/lib/catalog/reference/`: a wrapper keeps the raw source row apart from its
+  projection (`mapping_version`), so each mapping adjustment is a counted re-projection
+  (`created / rawChanged / reprojected / unchanged`), with run history and a coverage trend. Reading
+  techniques are registered by asset kind (`tsv@1` today), sources are data (`reference/sources.ts`).
+  Scripts: `scripts/diablo/ingest.ts` (wrap, `--promote`, `--demote`) and `scripts/diablo/status.ts` (gate snapshot).
+- **G1** fixed (`iconKey` + `ARCHETYPE_ICONS`), **B2** promotion, **B3** INGEST tag, **B4** link
+  resolution (24 resolved, 4 genuine source dangles), plus three new: **B6** the lab never read
+  `catalog_entities` back (hydration), **B7** value decoders (`spell=Null` on 142/168 items would have
+  become 142 links to a spell called "Null"), **B9** demote.
+- **Reclassified:** G2-G6 are not missing from PoF's GAME — UE already has `EEquipmentSlot`,
+  resistances, `GE_DifficultyScaling` and `FAffixTableRow`. They are gaps between the app's catalog
+  payloads and UE, and the schema-down snapshot that should close them is `{}` with no consumer (D6).
+  The bestiary pipeline also already has `Resistances` / `Monster Rarity` STEPS — so the right target
+  for those columns is a step artifact (decision D3), and PoF's canon injects its own world into every
+  produce prompt, which a Diablo replication needs a profile for (D5).
 
 ## The question, and the answer
 

@@ -60,10 +60,9 @@ describe('Diablo I mapping tables vs. the real upstream headers', () => {
 });
 
 describe('target-side gaps (PoF fields no source can fill)', () => {
-  it('names the unpersistable one explicitly — it is a defect, not a limitation', () => {
-    const unpersistable = TARGET_GAPS.filter((g) => g.kind === 'unpersistable');
-    expect(unpersistable).toHaveLength(1);
-    expect(unpersistable[0]).toMatchObject({ catalogId: 'bestiary', field: 'icon' });
+  it('no target field is unpersistable any more (G1 fixed: icon → iconKey)', () => {
+    expect(TARGET_GAPS.filter((g) => g.kind === 'unpersistable')).toEqual([]);
+    expect(TARGET_GAPS.find((g) => g.field === 'iconKey')).toMatchObject({ catalogId: 'bestiary', kind: 'presentation' });
   });
 
   it('separates a GENRE ASSUMPTION from a merely-derived field', () => {

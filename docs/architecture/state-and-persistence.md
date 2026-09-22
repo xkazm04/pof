@@ -195,8 +195,8 @@ An `'ingest'` row carries `entity.provenance` (`EntityProvenance`: source game, 
 **per-row licence note**) — written by the legacy-game ingest chassis (`src/lib/catalog/ingest/`, see
 `docs/research/legacy-game-ingest-spec.md`). **The payload must be JSON-safe:** `upsertEntity` stringifies it,
 and a React component or `Map` survives as a hollow `{}` that still passes every presence check
-(`ArchetypeConfig.icon` does exactly this). `jsonUnsafeKeys` (`src/lib/catalog/entityPayload.ts`) names such
-keys in a `logger.error` at the write. The route's accepted-source list is DERIVED from the union
+(`ArchetypeConfig.icon` did exactly this until it became `iconKey` + `ARCHETYPE_ICONS`, 2026-09-22). `jsonUnsafeKeys`
+(`src/lib/catalog/entityPayload.ts`) names such keys in a `logger.error` at the write. The route's accepted-source list is DERIVED from the union
 (an exhaustive `Record<CatalogEntitySource, …>`), so widening the type cannot leave the API rejecting it.
 Before it, the one-shot flow created a `draft-<catalog>-<ts>` entity in the browser store
 (`catalogStore.addDraft`, persisted to `localStorage`) while writing its ~11 pipeline artifacts to
@@ -213,6 +213,24 @@ draft the server did not accept is flagged `browserOnly` and rendered `BROWSER-O
 tree. `deleteEntity` returns the real `changes()` count, and the lab's discard calls
 `DELETE /api/pipeline-artifacts` first so a discarded entity leaves no orphaned artifact rows.
 Reads use an explicit column list (never `SELECT *`).
+**The lab reads these rows back.** `usePersistedEntityHydration` (mounted in `LayoutLab`) calls
+`GET /api/catalog-entities?all=1` once and merges the rows into the draft cache through the pure
+`mergePersistedDrafts` (`src/lib/catalog/persistedHydration.ts`): a row never shadows a code seed,
+a server row replaces a stale cached copy, and a browser-only draft the server does not know is kept.
+Before it, the store's "cache of `catalog_entities`" was filled only by the same browser session's
+`addDraft`, so a persisted entity from anywhere else was gate-resolvable and invisible. An `ingest`
+row renders an **INGEST** tag in the tree with its provenance and licence note in the tooltip.
+
+**`reference_wrappers` + `reference_ingest_runs`** (`src/lib/catalog/reference/wrappers-db.ts`,
+injected `db` handle) hold ingested reference-game rows for the `/diablo` loop: each wrapper keeps
+the RAW source record (`raw`, `raw_hash`, the reading `technique`) apart from its current projection
+into a catalog entity (`projection`, `projection_hash`, `mapping_version`), so a mapping adjustment is
+a counted re-projection rather than a re-read. `upsertWrappers` reports `created / rawChanged /
+reprojected / unchanged` (the projection hash ignores `provenance.ingestedAt`, so an identical re-run
+is `unchanged`); every run's summary (coverage, gaps, undecoded sentinels, unresolved links) is kept in
+`reference_ingest_runs`. Promotion into `catalog_entities` (`source: 'ingest'`) is selective and refuses a
+JSON-unsafe payload. The raw values are another studio's design data and live only in the local DB,
+never in the repo.
 
 **`pipeline_artifact_revisions`** (`src/lib/pipeline-artifacts-db.ts`, same guard pattern) is the
 version history behind `pipeline_artifacts`. The live table is keyed

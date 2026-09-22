@@ -18,6 +18,7 @@
  * becomes a visible defect instead of a silent loss.
  */
 import { dropped, gap, mapped, type FieldMap } from './fieldMap';
+import { dropValues, split, unwrap } from './decode';
 import type { EntityProvenance } from '../types';
 
 export const DIABLO1_SOURCE = {
@@ -68,7 +69,8 @@ export const MONSTER_MAP: FieldMap = {
   hitPointsMinimum: mapped('data.stats[HP Min]'),
   hitPointsMaximum: mapped('data.stats[HP Max]'),
   ai: mapped('tags'),
-  abilityFlags: mapped('data.abilities'),
+  // AI TRAITS (`SEARCH,CAN_OPEN_DOOR`), not abilities — and a list, so it is split.
+  abilityFlags: mapped('data.behaviorFlags[]', split(',')),
   intelligence: gap('no AI-intelligence scalar; `btSummary` is hand-written prose with no numeric dimension'),
   toHit: mapped('data.stats[To Hit]'),
   animFrameNum: dropped('attack-frame index into the sprite animation'),
@@ -89,7 +91,10 @@ export const MONSTER_MAP: FieldMap = {
   resistance: gap(NO_RESIST),
   resistanceHell: gap('no per-difficulty variant of ANY stat — a PoF entity is difficulty-flat, so a game with per-difficulty balance cannot round-trip'),
   selectionRegion: dropped('mouse-picking hitbox'),
-  treasure: mapped('links[role=loot]'),
+  // 106 blank, 4 `None` (a sentinel, not an entity), 2 `Uniq(<id>)` — a UNIQUE ITEM the
+  // monster always drops. Diablo has no per-monster loot table: drops are driven by monster
+  // level, which is why this never maps to `loot-tables` (backlog G13).
+  treasure: mapped('links[role=unique-drop]', dropValues('None'), unwrap('^Uniq\\((.+)\\)$')),
   exp: mapped('data.stats[XP]'),
 };
 
@@ -118,7 +123,7 @@ export const ITEM_MAP: FieldMap = {
   minDexterity: gap(NO_REQ),
   specialEffects: mapped('data.effect'),
   miscId: gap('no consumable-behaviour discriminator (potion/scroll/book/rune)'),
-  spell: mapped('links[role=ability]'),
+  spell: mapped('links[role=ability]', dropValues('Null')), // `Null` on 142 of 168 rows
   usable: mapped('data.usable'),  // boolean — a flag, not a tag (see hasSpecial)
   value: mapped('data.stats[Value]'),
 };
@@ -135,11 +140,12 @@ export const SPELL_MAP: FieldMap = {
   bookCost10: gap(NO_PRICE),
   staffCost10: gap(NO_PRICE),
   manaCost: mapped('data.manaCost'),
-  flags: gap('no ability-trait flag vocabulary (targeted / self / channelled) — `category` is a coarse enum'),
-  bookLevel: mapped('data.tier'),
+  // `Fire,Targeted` — the ELEMENT lives here, alongside targeting traits.
+  flags: mapped('data.traits[]', split(',')),
+  bookLevel: mapped('data.tier', dropValues('-1')), // -1 = never found in a book
   staffLevel: gap('no per-delivery-vehicle availability (learned vs. staff-charged)'),
   minIntelligence: gap('no attribute requirement to cast'),
-  missiles: mapped('data.tag'),
+  missiles: mapped('data.missiles[]', split(',')), // `FlashBottom,FlashTop`
   manaMultiplier: gap(NO_SCALING),
   minMana: gap(NO_SCALING),
   staffMin: gap('no finite-charge model: an ability in PoF is always available once known, so a staff carrying 3-10 casts has nowhere to record its remaining uses'),
@@ -163,8 +169,8 @@ export interface TargetGap {
 
 export const TARGET_GAPS: TargetGap[] = [
   {
-    catalogId: 'bestiary', field: 'icon', kind: 'unpersistable',
-    why: 'typed `typeof Skull` — a React component. JSON.stringify reduces it to `{}`, so an ingested (or one-shot) entity is stored hollow and every presence check still passes. An ingest CANNOT produce a valid ArchetypeConfig.',
+    catalogId: 'bestiary', field: 'iconKey', kind: 'presentation',
+    why: 'a glyph key chosen per archetype (`ARCHETYPE_ICONS`); derivable from role once role is derived. (Was `icon`, a React component that JSON reduced to `{}` — fixed 2026-09-22, G1.)',
   },
   { catalogId: 'bestiary', field: 'color', kind: 'presentation', why: 'a hex swatch chosen for the UI, not design data' },
   { catalogId: 'bestiary', field: 'btSummary', kind: 'derived', why: 'hand-written behaviour prose; the source has an `ai` enum and an `intelligence` scalar, neither of which is a sentence' },
@@ -178,13 +184,8 @@ export const TARGET_GAPS: TargetGap[] = [
     why: 'PoF’s ability schema assumes cooldown-gated design. Diablo I gates casting with MANA and cast speed and has no cooldown at all, so every ingested ability must invent one or store a lie.',
   },
   { catalogId: 'spellbook', field: 'radar', kind: 'derived', why: 'a normalized 5-tuple [Damage,Range,AoE,Speed,Efficiency] with no source; must be computed from the mapped stats or left unset' },
-  { catalogId: 'spellbook', field: 'element', kind: 'derived', why: 'inferrable from the missile type, but the source has no element column' },
+  { catalogId: 'spellbook', field: 'element', kind: 'derived', why: 'carried inside `flags` (`Fire,Targeted`) as one of several traits — derivable, but only by knowing which trait words are elements' },
   { catalogId: 'spellbook', field: 'damage', kind: 'derived', why: 'Diablo spell damage lives on the MISSILE, not the spell — a join PoF’s flat ability schema has no shape for' },
 ];
 
-/** Every mapping table in this ingest, with the file it reads. */
-export const DIABLO1_TABLES = [
-  { catalogId: 'bestiary', file: 'monsters/monstdat.tsv', key: '_monster_id', map: MONSTER_MAP },
-  { catalogId: 'items', file: 'items/itemdat.tsv', key: 'id', map: ITEM_MAP },
-  { catalogId: 'spellbook', file: 'spells/spelldat.tsv', key: 'id', map: SPELL_MAP },
-] as const;
+// The table list (file → catalog → key → map) lives in ONE place: `reference/sources.ts` → `DIABLO1.tables`.
