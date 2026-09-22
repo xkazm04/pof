@@ -62,7 +62,7 @@ describe('Sprite Render grades what the render records', () => {
   const eight = Array.from({ length: 8 }, (_, i) => `dir${i}`);
 
   it('a requested-but-unrendered set defers with the command that runs it (never pending, never pass)', () => {
-    const r = accept(sprite.produce({ id: 'd1-z', name: 'Zombie', lifecycle: 'planned', data: {} }, 'walk frame 12, 64px').data, ctx);
+    const r = accept(sprite.produce({ id: 'd1-z', name: 'Zombie', lifecycle: 'planned', data: {} }, 'walk frame 12, 64px').data!, ctx);
     expect(r.status).toBe('deferred');
     expect(r.reason).toMatch(/scripts\/diablo\/render\.ts/);
   });

@@ -7,6 +7,7 @@ import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import { allOf } from '../acceptance/combinators';
 import { linksResolve } from '../acceptance/linkCheckers';
 import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
+import { VISUAL_BRIEF_CRITERIA, visualBriefWritten } from '@/lib/catalog/acceptance/visualBrief';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 /** Entity-id stem per this catalog's id convention: 'char-captain-vael' → 'captain-vael'. */
@@ -45,9 +46,14 @@ registerCatalogPipeline({
             `pipeline exists yet); a captain-specific texture/material pass is a gap pending the ` +
             `MetaHuman/Blender character pipeline. Stats live in DT_AttributeDefaults (one ` +
             `FARPGAttributeInitRow row, canon char-stat-source) — no per-character C++ class.`,
+          visualBrief:
+            'A broad-shouldered human officer in battered steel plate armour over a dark red tabard. Short cropped ' +
+            'grey hair and beard, a weathered face, standing upright with one gloved hand resting on a sheathed ' +
+            'longsword at the hip. No bone is exposed.',
         },
       }),
-      accept: minLength('brief', 'Brief ≥ 300 characters', 300),
+      criteria: VISUAL_BRIEF_CRITERIA, // the image steps draw from `visualBrief` (/diablo D15/D19)
+      accept: allOf(minLength('brief', 'Brief ≥ 300 characters', 300), visualBriefWritten()),
     },
 
     // ── 2. Concept 2D Art ────────────────────────────────────────────────────

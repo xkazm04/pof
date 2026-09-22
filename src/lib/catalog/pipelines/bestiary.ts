@@ -9,6 +9,7 @@ import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import { linksResolve } from '../acceptance/linkCheckers';
 import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 import { riggedMeshSelected } from '@/lib/catalog/acceptance/rigArtifact';
+import { VISUAL_BRIEF_CRITERIA, visualBriefWritten } from '@/lib/catalog/acceptance/visualBrief';
 import { SPRITE_PROJECTION, spriteSetRendered } from '@/lib/catalog/acceptance/spriteCheckers';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
@@ -53,17 +54,14 @@ registerCatalogPipeline({
             `Role in the encounter flow: front-line pressure unit, pair with Ranged Casters to force ` +
             `the player into melee range against their will. Archetype anchor: AARPGEnemyCharacter ` +
             `BP child with one DT_AttributeDefaults stat row; no new C++ per canon char-config-not-cpp.`,
+          visualBrief:
+            'A hulking, broad-shouldered brute stooped forward under its own weight. Grey stone-like hide covers ' +
+            'the whole body; thick arms end in heavy fists, legs are short and heavy, and the small head sits sunk ' +
+            'between the shoulders. A ragged hide loincloth. No bone is exposed.',
         },
       }),
-      // The anatomy is what the image steps draw from (/diablo W04, D15): W03/W04 measured that an
-      // anatomy written around a category noun ("a corpse defined by slack flesh") renders as a bare
-      // skeleton 10 of 12 times with any style, while a positive visual statement rendered 3 of 3.
-      criteria: [
-        'Write the anatomy as a VISUAL brief an image model can draw: state positively what is visible — body bulk, skin or hide coverage and colour, posture, limbs, clothing — and say explicitly whether any bone is exposed.',
-        'Never let a category noun (corpse, undead, demon, beast) carry the look; describe what such a creature LOOKS like instead.',
-        'Also write that visual description alone as a separate field `visualBrief` (at most 500 characters): the figure only — no combat role, no staging or setting, no place, franchise or character names. The image steps draw from it verbatim.',
-      ],
-      accept: minLength('brief', 'Brief ≥ 300 characters', 300),
+      criteria: VISUAL_BRIEF_CRITERIA, // the image steps draw from `visualBrief` (D15/D19)
+      accept: allOf(minLength('brief', 'Brief ≥ 300 characters', 300), visualBriefWritten()),
     },
 
     // ── 2. Lore / Codex ───────────────────────────────────────────────────────
