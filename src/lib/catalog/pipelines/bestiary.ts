@@ -121,6 +121,16 @@ registerCatalogPipeline({
         },
         });
       },
+      contract: {
+        field: 'stats',
+        grantedBy: 'DT_AttributeDefaults row "{slug}" (keyed by the archetype slug), read by UARPGAttributeSet on BeginPlay',
+        activatedBy: 'BP_{slug} inherits AARPGEnemyCharacter; this entity’s stats are applied via GE_InitStats at spawn',
+        dependencies: [
+          'AARPGEnemyCharacter (C++ base class)',
+          'UARPGAttributeSet (the attributes THIS stat block writes — name each one)',
+        ],
+        verification: 'L2: AARPGEnemyCharacter compiled in Source/PoF/; L3: VSBestiarySpawnTest — {name} spawns and its attributes match its DT_AttributeDefaults row',
+      },
       accept: allOf(
         fieldsPopulated('stats', 'Stat block populated', ['health', 'damage', 'armor', 'moveSpeed']),
         wiringContractSound('stats'),
@@ -169,6 +179,16 @@ registerCatalogPipeline({
           },
         },
       }),
+      contract: {
+        field: 'resists',
+        grantedBy: 'GE_InitResistances on BP_{slug} (child of AARPGEnemyCharacter), applied at spawn from DT_AttributeDefaults',
+        activatedBy: 'BeginPlay spawn initialisation',
+        dependencies: [
+          'UARPGAttributeSet (one resistance attribute per element of this project’s element set)',
+          'ARPGDamageExecution (reads the resistance attributes for elemental mitigation)',
+        ],
+        verification: 'L2: UARPGAttributeSet declares the per-element resistance attributes and GE_InitResistances compiles; L3: VSBestiarySpawnTest — a hit of one element on {name} is mitigated by exactly its declared resistance',
+      },
       accept: allOf(
         fieldsPopulated('resists', 'Per-type resistance profile populated', [
           'fireRes', 'iceRes', 'lightningRes', 'chaosRes',
@@ -233,6 +253,17 @@ registerCatalogPipeline({
       }),
       // Content invariant (arpg-monster-rarity): per-tier life multipliers must sit within
       // the canon ×bands (Magic 1.5–2, Rare 4–6, Unique 6–10), not just be present.
+      contract: {
+        field: 'rarity',
+        grantedBy: 'AARPGEnemyCharacter::BeginPlay reads the rarity tier from the spawn context and grants the modifier GameplayEffects THIS entity declares, as self-applied auras',
+        activatedBy: 'BeginPlay spawn — the spawner passes the rolled rarity tier via FARPGSpawnRequest',
+        dependencies: [
+          'FARPGSpawnRequest (rarity field on the spawn request)',
+          'one GameplayEffect per modifier this entity declares (name each)',
+          'UARPGAttributeSet (the attributes those modifiers change)',
+        ],
+        verification: 'L2: each declared modifier GameplayEffect compiled in Source/PoF/; L3: VSBestiarySpawnTest — spawning {name} at a non-Normal tier grants its declared modifiers and moves the modified attribute by the declared delta',
+      },
       accept: allOf(
         fieldsPopulated('rarity', 'Rarity tier + multipliers + at least one modifier declared', [
           'rarityTier', 'lifeMultiplier', 'modifiers',
@@ -291,6 +322,15 @@ registerCatalogPipeline({
           { catalogId: 'spellbook', entityId: 'off-phy-04', role: 'situational-aoe' },
         ],
       }),
+      contract: {
+        grantedBy: 'UARPGAbilitySystemComponent on AARPGEnemyCharacter; one ability grant per ability THIS entity uses, on BeginPlay',
+        activatedBy: 'the BehaviorTree tasks that use each of this entity’s abilities; abilities fire through UGameplayAbility::ActivateAbility',
+        dependencies: [
+          'spellbook::<id> for EACH ability this entity uses — only abilities it really has (a monster with a single attack lists one)',
+          'UARPGAbilitySystemComponent (GAS component on AARPGEnemyCharacter)',
+        ],
+        verification: 'L2: every listed spellbook id resolves in the spellbook catalog; L3: VSBestiarySpawnTest — {name}’s ability fires and GE_Damage applies on the hit target',
+      },
       accept: allOf(
         minCount('abilities', '≥1 ability linked from the abilities catalog', 1),
         linksResolve(),
@@ -449,6 +489,17 @@ registerCatalogPipeline({
           ],
           ueAssets: assets.map((a) => `/Game/Bestiary/${s}/${a}`),
         };
+      },
+      contract: {
+        grantedBy: 'BP_{slug} (child of AARPGEnemyCharacter) + DT_AttributeDefaults row "{slug}", with the GameplayEffects this entity’s earlier steps declared, compiled in Source/PoF/',
+        activatedBy: 'AARPGEnemyCharacter::BeginPlay → GE_InitStats + GE_InitResistances; rarity modifier GEs granted from the spawn-context rarity tier',
+        dependencies: [
+          'spellbook::<id> for each ability from THIS entity’s Abilities step',
+          'loot-tables::<id> of the table THIS entity drops from',
+          'UARPGAttributeSet (stat + resistance attributes)',
+          'ARPGDamageExecution (resistance + armour mitigation)',
+        ],
+        verification: 'L2: AARPGEnemyCharacter and the declared GameplayEffects compiled, the DT_Bestiary row seeded, every linked spellbook/loot-tables id present; L3: VSBestiarySpawnTest — {name} spawns, uses its abilities, dies, and drops from its loot table',
       },
       accept: allOf(
         minCount('assets', 'All assets packaged', 3),

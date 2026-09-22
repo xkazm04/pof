@@ -134,6 +134,32 @@ export interface StepFixCopy {
   fixDirection?: string;
 }
 
+/**
+ * A step's WIRING CONTRACT as a world-neutral declaration (/diablo W03, decision D12).
+ *
+ * The produce prompt used to extract the contract by RUNNING the step's produce stub, so one PoF
+ * entity's content (e.g. a bestiary stub's `spellbook::off-phy-04 Ground Slam`) was injected into
+ * EVERY entity's live prompt — three Diablo zombies were produced with an ability they do not have,
+ * and the checker (shape-only) passed it. A declaration says WHAT the producer must name, never
+ * which entity's answer: engine framework symbols shared by every entity are fine
+ * (`AARPGEnemyCharacter`, `UARPGAttributeSet`); another entity's ids, names or tuned numbers are not
+ * (guarded by `src/__tests__/catalog/contract-declarations-neutral.test.ts`).
+ *
+ * `{slug}` is replaced by the entity's name with non-alphanumerics removed (the `BP_<slug>` rule the
+ * produce bodies use) and `{name}` by its display name. Prompt INPUT only — grading is unchanged.
+ */
+export interface StepContractDecl {
+  /** Where the graded `wiringContract` sits (`'stats'` → `data.stats.wiringContract`); omit for the root. */
+  field?: string;
+  grantedBy: string;
+  activatedBy: string;
+  /** Dependency KINDS to name for this entity (`spellbook::<id> for each ability it uses`), never another entity's ids. */
+  dependencies: string[];
+  verification: string;
+  /** Step-level acceptance criteria to state in the prompt (world-neutral, like the rest). */
+  criteria?: string[];
+}
+
 export interface StepSpec {
   archetype: ArchetypeId;
   label: string;
@@ -164,6 +190,8 @@ export interface StepSpec {
   readsDirection?: boolean;
   /** Derives the acceptance result from the persisted artifact data. */
   accept: Checker;
+  /** The step's wiring contract as a world-neutral declaration — the ONLY contract a produce prompt injects. */
+  contract?: StepContractDecl;
   /**
    * RETIRED — do not author. Enforced by spec-linter rule (l).
    *
