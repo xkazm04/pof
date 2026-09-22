@@ -5,6 +5,8 @@ import {
   scoreInputGate,
   parseVisionImage,
   gateInputImage,
+  thresholdsFor,
+  GRADER_THRESHOLDS,
 } from '@/lib/visual-gen/input-gate';
 
 const PNG_URL = `data:image/png;base64,${Buffer.from('fake-png').toString('base64')}`;
@@ -96,5 +98,47 @@ describe('gateInputImage (injected vision seam)', () => {
     );
     if (card.ok) throw new Error('expected a failure card');
     expect(card.raw).toBe('gibberish');
+  });
+});
+
+describe('thresholdsFor (a threshold is fitted to its grader)', () => {
+  it("uses the answering model's refitted row when one exists", () => {
+    const { thresholds, source } = thresholdsFor('qwen3.8:27b');
+    expect(source).toBe('grader');
+    expect(thresholds).toEqual(GRADER_THRESHOLDS['qwen3.8:27b']);
+  });
+
+  it('falls back to the default line for an unmeasured or unreported model', () => {
+    expect(thresholdsFor('some-new-vl:7b')).toEqual({ thresholds: { passAt: 7, failBelow: 5 }, source: 'default' });
+    expect(thresholdsFor(undefined).source).toBe('default');
+  });
+
+  it('lets an explicit caller override win, layered over the grader row', () => {
+    const { thresholds, source } = thresholdsFor('qwen3.8:27b', { passAt: 10 });
+    expect(source).toBe('caller');
+    expect(thresholds).toEqual({ ...GRADER_THRESHOLDS['qwen3.8:27b'], passAt: 10 });
+  });
+});
+
+describe("gateInputImage grades on the answering model's line", () => {
+  const answer = (text: string, model: string) => async () => ({ text, model, attribution: 'answered' as const, fellBackFrom: [] });
+
+  it('refuses a local-27B score that the default line would only warn on', async () => {
+    const reply = 'SCORE=6; DEFECTS=dark gradient backdrop; VERDICT=Emblem on a dark field.';
+    const local = await gateInputImage({ mime: 'image/png', base64: 'x' }, { vision: answer(reply, 'qwen3.8:27b') });
+    const unattributed = await gateInputImage({ mime: 'image/png', base64: 'x' }, { vision: async () => reply });
+    if (!local.ok || !unattributed.ok) throw new Error('expected ok cards');
+    expect(local.verdict).toBe('fail');
+    expect(local.model).toBe('qwen3.8:27b');
+    expect(local.thresholdsFrom).toBe('grader');
+    expect(unattributed.verdict).toBe('warn');
+    expect(unattributed.thresholdsFrom).toBe('default');
+  });
+
+  it('still passes a clean input from the same model', async () => {
+    const card = await gateInputImage({ mime: 'image/png', base64: 'x' },
+      { vision: answer('SCORE=10; DEFECTS=none; VERDICT=Ideal.', 'qwen3.8:27b') });
+    if (!card.ok) throw new Error('expected ok card');
+    expect(card.verdict).toBe('pass');
   });
 });

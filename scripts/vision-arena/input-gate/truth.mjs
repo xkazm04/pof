@@ -1,9 +1,39 @@
 // Arena V truth set: pof's input-gate criteria, labelled by eye (2026-09-22, by eye; the zombie concept later moved to EXCLUDED for a dark gradient backdrop, to match criterion 2).
 // Only unambiguous cases are scored; ambiguous ones are listed so a reviewer can see what was left out.
 // expect: 'pass' = a good image->3D input; 'fail' = violates at least one criterion unambiguously.
-const G = 'generated/'; // relative to the pof root
+const G = 'generated/'; // relative to the pof root. generated/ is gitignored: these 60 exist on the dev box only
 const I = G + 'icons/';
+const F = 'scripts/vision-arena/input-gate/fixtures/'; // tracked: original subjects generated 2026-09-22 (Flux 2 x2, Wan 2.2 TI2V 5B x26)
 export const CASES = [
+  // --- grown set, labelled by eye from the pixels, never from the generating prompt
+  [F + 's00-good.jpg', 'pass', 'full body, arms out, white backdrop (Flux 2)'],
+  [F + 'wan-s00-good.jpg', 'pass', 'full body, arms clear, white backdrop'],
+  [F + 'wan-s01-good.jpg', 'pass', 'full body, arms down clear of torso, white'],
+  [F + 'wan-s03-good.jpg', 'pass', 'armored full body, near A-pose, white'],
+  [F + 'wan-s04-good.jpg', 'pass', 'T-pose, white backdrop'],
+  [F + 'wan-s06-good.jpg', 'pass', 'single robot, arms out, white'],
+  [F + 'wan-s07-good.jpg', 'pass', 'full body, arms slightly out, white'],
+  [F + 'wan-s10-good.jpg', 'pass', 'full body, arms down, white'],
+  [F + 'wan-s11-good.jpg', 'pass', 'arms out, full body, white'],
+  [F + 'wan-s12-good.jpg', 'pass', 'robot, full body, white'],
+  [F + 'wan-s13-good.jpg', 'pass', 'full body, arms down, white (greyscale)'],
+  [F + 'wan-s14-good.jpg', 'pass', 'creature, arms out, full body, white'],
+  [F + 'wan-s15-good.jpg', 'pass', 'armored A-pose, white'],
+  [F + 's00-cropped.jpg', 'fail', 'cropped at the waist'],
+  [F + 'wan-s00-cropped.jpg', 'fail', 'head-and-shoulders crop'],
+  [F + 'wan-s01-scene.jpg', 'fail', 'full figure inside a cluttered tavern scene'],
+  [F + 'wan-s02-occluded.jpg', 'fail', 'crouched, arms crossed over a shield'],
+  [F + 'wan-s03-companions.jpg', 'fail', 'three smaller figures beside the subject'],
+  [F + 'wan-s05-scene.jpg', 'fail', 'tavern scene with patrons'],
+  [F + 'wan-s06-occluded.jpg', 'fail', 'crouched, arms crossed over the torso'],
+  [F + 'wan-s07-companions.jpg', 'fail', 'three characters'],
+  [F + 'wan-s08-cropped.jpg', 'fail', 'bust crop'],
+  [F + 'wan-s09-scene.jpg', 'fail', 'tavern scene with patrons'],
+  [F + 'wan-s10-occluded.jpg', 'fail', 'combat stance behind a round shield'],
+  [F + 'wan-s11-companions.jpg', 'fail', 'three extra figures'],
+  [F + 'wan-s12-cropped.jpg', 'fail', 'head crop'],
+  [F + 'wan-s13-scene.jpg', 'fail', 'tavern scene with patrons'],
+  [F + 'wan-s14-occluded.jpg', 'fail', 'arms crossed, shield behind, crouch'],
   // --- true PASS: single full subject, plain background, near-canonical pose, in frame
   [G + 'jinx-leo/jinx_gptimg2.png', 'pass', 'full body A-pose, plain light backdrop'],
   [G + 'jinx-leo/jinx_hd_concept.png', 'pass', 'full body A-pose, white backdrop'],
@@ -58,6 +88,7 @@ export const CASES = [
 ].map(([file, expect, why]) => ({ file, expect, why }));
 
 export const EXCLUDED_AMBIGUOUS = [
+  'fixtures not kept: wan-s02/s05/s08/s09 good (hands clasped or gesturing across the chest), wan-s04 cropped (prompt ignored: came out full body, arms hidden under a shawl)',
   'bestiary__d1_mt_nzombie__concept_2d_art.jpg (A-pose, but on a dark gradient: fails criterion 2 as literally as the emblems do)',
   'characters_Concept_2D_Art.jpg (full body, arms down but sword and cape against the legs)',
   'character_pipeline_Concept_2D.jpg (T-pose with pistols and a long coat)',
