@@ -734,6 +734,29 @@ See [../catalog/index.md](../catalog/index.md) for the full pipeline program.
 
 ---
 
+### Codex CLI as a reviewed executor (`src/lib/codex-exec/`, `scripts/codex/dispatch.ts`)
+
+A second CLI, OpenAI's `codex` (0.155.1), is driven headlessly as an EXECUTOR under Claude's review —
+used by the `/diablo` loop for large volumes of well-specified work. It is not an app subsystem: no
+route or UI spawns it; the overseer runs the dispatcher from a session.
+
+- **Pure core:** `routing.ts` (tier → model/effort: `bulk` → `gpt-5.6-sol` low/medium, `complex` →
+  Sol high/xhigh, `visual` → `gpt-6-astra`), `args.ts` (argv with the probed traps encoded — stdin
+  closed / brief via `-- -`, `--` fencing the variadic `-i`, `--approve-for-me` instead of `-s` for
+  tasks that run tests because Windows `workspace-write` refuses child processes), `events.ts`
+  (`--json` stream → thread id, commands with exit codes, usage, completed-or-cut-off), `brief.ts`
+  (repo laws travel IN the brief; schema-enforced report with `deviations` + `openQuestions`),
+  `ledger.ts` (first-pass / accepted rates per tier · model · task class).
+- **Dispatcher lifecycle:** `run` (own worktree `../pof-codex/wt/<id>` + branch `codex/<id>`, a
+  `node_modules` junction, the generated pipeline registry) → `diff` → `resume` (same session,
+  schema-enforced) → `land` (patch into the WORKING TREE only — never the shared index; refuses files
+  with foreign WIP; warns on out-of-scope files) → `record` → `discard` (junction removed with
+  `rmdir`, never recursively). Codex never commits; the overseer commits with a pathspec.
+- **Process hygiene** (registry `subprocess-lifecycle`): wall-clock timeout and a stall watchdog
+  (no events from THIS run for `POF_CODEX_STALL_MIN`, default 10 min) reap the child's process TREE
+  with a polite → forced `taskkill /T` ladder scoped to its own PID, and the run status records which
+  rung was needed (`timeout (forced kill)`). `list` flags a run whose host died mid-flight.
+
 ## Conventions / gotchas
 
 - **Never hand-build prompts in caller code.** Use `TaskFactory` + `buildTaskPrompt`,
