@@ -45,6 +45,29 @@ export function canonProfileOf(entity: { provenance?: { canonProfile?: string } 
   return entity?.provenance?.canonProfile ?? DEFAULT_CANON_PROFILE;
 }
 
+/** The provenance fields a produce prompt cites for an ingested entity. */
+export interface LabReference {
+  sourceGame: string;
+  sourceFile: string;
+  sourceRow: string;
+}
+
+/**
+ * Everything a `LabEntity` must carry from a stored entity beyond id/name/lifecycle/data — ONE helper
+ * for all four constructors, so a new field cannot be dropped by one path (the LabEntity is exactly
+ * where provenance used to be lost).
+ */
+export function labIdentityOf(entity: { provenance?: Partial<LabReference> & { canonProfile?: string } } | null | undefined): {
+  canonProfile: string;
+  reference?: LabReference;
+} {
+  const p = entity?.provenance;
+  const reference = p?.sourceGame && p.sourceFile && p.sourceRow
+    ? { sourceGame: p.sourceGame, sourceFile: p.sourceFile, sourceRow: p.sourceRow }
+    : undefined;
+  return { canonProfile: canonProfileOf(entity), ...(reference ? { reference } : {}) };
+}
+
 /**
  * The rules in force for a profile: its own, plus the `pof` rules it inherits by id.
  * An UNKNOWN profile throws — silently resolving it to no canon (or to PoF's) would put the

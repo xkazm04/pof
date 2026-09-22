@@ -15,7 +15,7 @@ import { resolveDispatchModelChoice, claudeProvenance } from '@/lib/model-policy
 import { ONE_SHOT_STEP_TASK_TYPE } from '@/lib/cli-spend/dispatchPlan';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
-import { canonProfileOf } from '@/lib/catalog/canon/profiles';
+import { labIdentityOf } from '@/lib/catalog/canon/profiles';
 import type { StepEvidence } from '@/components/layout-lab/steps/shared/stepEvidence';
 import type { LibraryAsset } from '@/types/asset-library';
 import type { AcceptanceStatus, AcceptanceTier } from '@/lib/catalog/acceptance/types';
@@ -70,8 +70,10 @@ function readLibrary(v: unknown): LibraryAsset[] {
 /** Used only when the caller supplies no direction of its own. */
 export const DEFAULT_DIRECTION = 'derive from approved design; minimal commentary';
 
-function entityToLab(e: { id: string; name: string; lifecycle: string; data?: unknown; provenance?: { canonProfile?: string } }): LabEntity {
-  return { id: e.id, name: e.name, lifecycle: e.lifecycle as LabEntity['lifecycle'], data: e.data, canonProfile: canonProfileOf(e) };
+type StoredLike = { id: string; name: string; lifecycle: string; data?: unknown } & Parameters<typeof labIdentityOf>[0];
+
+function entityToLab(e: NonNullable<StoredLike>): LabEntity {
+  return { id: e.id, name: e.name, lifecycle: e.lifecycle as LabEntity['lifecycle'], data: e.data, ...labIdentityOf(e) };
 }
 
 interface StepGrade {

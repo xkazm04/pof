@@ -1,6 +1,6 @@
 'use client';
 
-import { canonProfileOf } from '@/lib/catalog/canon/profiles';
+import { labIdentityOf, type LabReference } from '@/lib/catalog/canon/profiles';
 import { useMemo } from 'react';
 import { CATALOG_SECTIONS } from '@/lib/catalog/sections';
 import { useCatalogStore } from '@/stores/catalogStore';
@@ -66,6 +66,8 @@ export interface LabEntity {
    * back to PoF's world.
    */
   canonProfile?: string;
+  /** Where an INGESTED entity's values came from — cited in its produce prompt (`referenceValuesBlock`). */
+  reference?: LabReference;
 }
 
 export interface LabDetail {
@@ -95,7 +97,7 @@ export function useLabDetail(catalogId: string | null): LabDetail | null {
       },
       entities: all.map((e) => ({
         id: e.id, name: e.name, lifecycle: e.lifecycle, data: (e as { data?: unknown }).data,
-        canonProfile: canonProfileOf(e as { provenance?: { canonProfile?: string } }),
+        ...labIdentityOf(e as Parameters<typeof labIdentityOf>[0]),
       })),
       steps: resolveCatalogSteps(catalogId),
     };
