@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import '@/lib/catalog/pipelines/registry.generated'; // side-effect: register all pipelines
 import { allCatalogPipelines } from '@/lib/catalog/pipeline-registry';
 import { SUPPORTED_VIEW_KINDS, SUPPORTED_CHART_VARIANTS, ARCHETYPE_VIEW_KINDS, readsDirection } from '@/lib/catalog/stepSpec';
+import { SOURCED_FIELD } from '@/lib/catalog/acceptance/sourced';
 import type { ViewDescriptor, StepSpec } from '@/lib/catalog/stepSpec';
 import { readLinks } from '@/lib/catalog/acceptance/linkCheckers';
 import { resolveTableView } from '@/lib/catalog/tableView';
@@ -125,9 +126,12 @@ function produceData(s: Step): Record<string, unknown> | Error {
  */
 function acceptFields(s: Step, data: Record<string, unknown>): { read: Set<string>; status: string } | Error {
   const read = new Set<string>();
+  // `SOURCED_FIELD` is provenance read by the registration guard (`acceptance/sourced.ts`) on EVERY
+  // step after a pass — not content any step's checker grades — so it is not a "graded field".
+  const graded = (k: string | symbol): k is string => typeof k === 'string' && k !== SOURCED_FIELD;
   const proxy = new Proxy({ ...data }, {
-    get(t, k) { if (typeof k === 'string') read.add(k); return Reflect.get(t, k); },
-    has(t, k) { if (typeof k === 'string') read.add(k); return Reflect.has(t, k); },
+    get(t, k) { if (graded(k)) read.add(k); return Reflect.get(t, k); },
+    has(t, k) { if (graded(k)) read.add(k); return Reflect.has(t, k); },
   });
   try {
     return { read, status: s.spec.accept(proxy as Record<string, unknown>).status };

@@ -183,7 +183,7 @@ export function deriveEntityArtifacts(
   // (labCheckerContext.ts): sibling artifacts (step → data) let derived checkers (e.g. the
   // Items Test Gate) read upstream acceptance, and `has` resolves cross-catalog links
   // against the live entity index instead of the old pessimistic `() => false`.
-  const checkerCtx = catalogId ? buildLabCheckerContext(catalogId, entitySteps, entitiesByCatalog) : undefined;
+  const checkerCtx = catalogId ? buildLabCheckerContext(catalogId, entitySteps, entitiesByCatalog, undefined, entity?.canonProfile) : undefined;
   const artifacts: PipelineArtifact[] = catalogId
     ? steps.filter((s) => entitySteps?.[s]).map((s) => {
         const art = entitySteps![s];

@@ -15,6 +15,7 @@
  */
 import { CANON_SEED } from '@/lib/catalog/canon/canon-seed';
 import { markContentInvariant } from './contentInvariant';
+import { canonLawChecker } from './canonLaw';
 import type { AcceptanceResult, Checker } from './types';
 
 /* ── Canon threshold parsing (single source of truth = CANON_SEED) ─────────── */
@@ -97,7 +98,7 @@ const fail = (label: string, detail: string, reason: string, tier: AcceptanceRes
 
 /** proj-balance: a power value sits within ±POWER_TOL_PCT of its tier target (default 100). */
 export function powerWithinTierTarget(field: string, label: string, targetField?: string): Checker {
-  return markContentInvariant((data) => {
+  return canonLawChecker('proj-balance', label, (data) => {
     const power = numOf(pick(data, field));
     if (power == null) return pending(label, `${field} not set`);
     const target = (targetField != null ? numOf(pick(data, targetField)) : null) ?? POWER_TARGET;
@@ -111,7 +112,7 @@ export function powerWithinTierTarget(field: string, label: string, targetField?
 
 /** proj-balance: a precomputed price/power ratio sits within the 0.8–1.2× band. */
 export function priceRatioWithinBand(field: string, label: string): Checker {
-  return markContentInvariant((data) => {
+  return canonLawChecker('proj-balance', label, (data) => {
     const r = numOf(pick(data, field));
     if (r == null) return pending(label, `${field} not set`);
     return r >= PRICE_RATIO.min && r <= PRICE_RATIO.max
@@ -123,7 +124,7 @@ export function priceRatioWithinBand(field: string, label: string): Checker {
 
 /** proj-economy: per-hour faucet vs sink stay balanced within ±FAUCET_SINK_TOL_PCT. */
 export function faucetSinkBalanced(objField: string, faucetKey: string, sinkKey: string, label: string): Checker {
-  return markContentInvariant((data) => {
+  return canonLawChecker('proj-economy', label, (data) => {
     const f = numOf(pick(data, `${objField}.${faucetKey}`));
     const s = numOf(pick(data, `${objField}.${sinkKey}`));
     if (f == null || s == null) return pending(label, `${objField}.${faucetKey}/${sinkKey} not set`);
@@ -138,7 +139,7 @@ export function faucetSinkBalanced(objField: string, faucetKey: string, sinkKey:
 
 /** arpg-item-level: requiredLevel is ~5..15 BELOW itemLevel (never above, never equal-high). */
 export function requiredLevelBand(objField: string, ilvlKey: string, reqKey: string, label: string): Checker {
-  return markContentInvariant((data) => {
+  return canonLawChecker('arpg-item-level', label, (data) => {
     const ilvl = numOf(pick(data, `${objField}.${ilvlKey}`));
     const req = numOf(pick(data, `${objField}.${reqKey}`));
     if (ilvl == null || req == null) return pending(label, `${objField}.${ilvlKey}/${reqKey} not set`);
@@ -152,7 +153,7 @@ export function requiredLevelBand(objField: string, ilvlKey: string, reqKey: str
 
 /** arpg-item-rarity: prefix/suffix counts stay within the rarity's affix budget. */
 export function rarityAffixBudget(objField: string, rarityKey: string, prefixKey: string, suffixKey: string, label: string): Checker {
-  return markContentInvariant((data) => {
+  return canonLawChecker('arpg-item-rarity', label, (data) => {
     const rarity = String(pick(data, `${objField}.${rarityKey}`) ?? '');
     const budget = AFFIX_BUDGET[rarity];
     const pfx = numOf(pick(data, `${objField}.${prefixKey}`));
@@ -167,7 +168,7 @@ export function rarityAffixBudget(objField: string, rarityKey: string, prefixKey
 
 /** arpg-monster-rarity: per-tier life multipliers sit within the canon bands. */
 export function monsterRarityWithinBands(objField: string, label: string): Checker {
-  return markContentInvariant((data) => {
+  return canonLawChecker('arpg-monster-rarity', label, (data) => {
     const scale = pick(data, `${objField}.rarityScale`);
     if (!scale || typeof scale !== 'object') return pending(label, `${objField}.rarityScale not set`);
     const s = scale as Record<string, { lifeMulti?: unknown }>;
@@ -186,7 +187,7 @@ export function monsterRarityWithinBands(objField: string, label: string): Check
 
 /** arpg-leveling: the XP curve growth exponent is ~XP_GROWTH (geometric), within tolPct. */
 export function xpGrowthWithinBand(objField: string, exponentKey: string, label: string, tolPct = 10): Checker {
-  return markContentInvariant((data) => {
+  return canonLawChecker('arpg-leveling', label, (data) => {
     const e = numOf(pick(data, `${objField}.${exponentKey}`));
     if (e == null) return pending(label, `${objField}.${exponentKey} not set`);
     const lo = XP_GROWTH * (1 - tolPct / 100), hi = XP_GROWTH * (1 + tolPct / 100);
@@ -218,7 +219,7 @@ export function xpGrowthWithinBand(objField: string, exponentKey: string, label:
  * and a DoT can never pass on an empty control budget. Every non-pass carries a specific reason.
  */
 export function statusBalanceEnvelope(dotTarget: number, tolPct: number, label: string): Checker {
-  return markContentInvariant((data) => {
+  return canonLawChecker('arpg-ailments', label, (data) => {
     const balance = pick(data, 'balance');
     const cb = balance && typeof balance === 'object' ? (balance as Record<string, unknown>).controlBudget : undefined;
 

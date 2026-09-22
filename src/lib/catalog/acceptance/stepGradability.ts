@@ -105,7 +105,8 @@ export function stepGradability(
 }
 
 /** Marker every ungraded row's `reason` starts with, so the gap is greppable in the DB. */
-export const UNGRADED_MARKER = 'UNGRADED';
+export { UNGRADED_MARKER } from './markers';
+import { UNGRADED_MARKER } from './markers';
 
 /**
  * The `reason` to persist on a row the server could NOT re-grade.

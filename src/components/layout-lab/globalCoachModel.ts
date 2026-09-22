@@ -222,6 +222,8 @@ export function deriveEntityFromSummary(
   localSteps: Record<string, LabStepArtifact> | undefined,
   summaryByStep: Map<string, StepSummary> | undefined,
   verdicts: JudgeVerdict[] = [],
+  /** The entity's canon profile — keeps the coach's verdict on the same spine as the banner. */
+  canonProfile?: string,
 ): EntitySummaryDerivation {
   // Siblings come from the local artifacts only — the server's blobs are exactly what this
   // path does not fetch. For any entity that has been OPENED this is lossless: hydration
@@ -229,7 +231,7 @@ export function deriveEntityFromSummary(
   // opened has no local steps at all, so no sibling-reading checker runs here in the first
   // place. `has` matches the artifact path's own cross-catalog resolution for this surface
   // (`buildCatalogCandidates` passes `{}` too).
-  const ctx = buildLabCheckerContext(catalogId, localSteps, {});
+  const ctx = buildLabCheckerContext(catalogId, localSteps, {}, undefined, canonProfile);
   const driftByStep = new Map<string, StepDrift>();
   const statusByStep = new Map<string, StepDisplayStatus>();
   const reasonByStep = new Map<string, string>();
@@ -328,7 +330,7 @@ export function buildCatalogCandidatesFromSummary(cin: CoachSummaryInput, verdic
   const candidates: CoachCandidate[] = [];
   for (const e of cin.entities) {
     const derived = deriveEntityFromSummary(
-      cin.catalogId, e.id, cin.steps, cin.localByEntity[e.id], cin.summaryByEntity.get(e.id), verdicts,
+      cin.catalogId, e.id, cin.steps, cin.localByEntity[e.id], cin.summaryByEntity.get(e.id), verdicts, e.canonProfile,
     );
     const candidate = assembleCandidate(
       cin.catalogId, cin.catalogLabel, e, cin.steps,

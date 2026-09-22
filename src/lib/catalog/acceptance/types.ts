@@ -86,6 +86,12 @@ export interface CheckerContext {
    * regress a satisfied step.
    */
   siblingVerdict?: (step: string) => SiblingVerdict | undefined;
+  /**
+   * The canon profile the ENTITY is written for (`canon/profiles.ts`). Canon-LAW invariants grade
+   * only where their law is in force for it (`canonLawChecker`). Absent = `pof`, so every existing
+   * caller grades exactly as before.
+   */
+  canonProfile?: string;
 }
 
 /** A checker reads a step's produced data (+ optional context) and derives a result. */

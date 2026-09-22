@@ -60,7 +60,7 @@ export function ItemTestGate({ t, entity, step }: StepProps) {
   // The SAME context the banner grades through (`useStepAcceptance` → `buildLabCheckerContext`),
   // so the Checks panel and the acceptance banner cannot disagree — this panel used to rebuild
   // its own lossy `step → data` map, dropping the server verdict every artifact carries.
-  const ctx = buildLabCheckerContext('items', entitySteps, entitiesByCatalog, { entityId: entity.id, verdicts });
+  const ctx = buildLabCheckerContext('items', entitySteps, entitiesByCatalog, { entityId: entity.id, verdicts }, entity.canonProfile);
   return (
     <StaticStepFrame t={t} entity={entity} step={step} panels={({ art, runProduce }) => {
       const ran = art?.data?.ran === true || art?.data?.pass === true; // `pass` = legacy artifacts

@@ -142,10 +142,13 @@ function serverCheckerContext(catalogId: string, entityId?: string): CheckerCont
   if (entityId) {
     for (const a of listArtifacts(catalogId, entityId)) siblings[a.step] = a.data;
   }
+  // The entity's canon profile: canon-law invariants grade only where their law is in force.
+  const entity = entityId ? seededEntities(catalogId).find((x) => x.id === entityId) : undefined;
   return {
     catalog: catalogId,
     siblings,
     has: (c, e) => seededEntities(c).some((x) => x.id === e),
+    canonProfile: canonProfileOf(entity),
   };
 }
 
