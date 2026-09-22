@@ -1,7 +1,7 @@
 ---
 name: diablo
 description: Long-running LEARNING loop that breaks Diablo I (1996) down through PoF's catalog pipelines and replicates it toward UE — not to ship a game, but because every place PoF cannot hold, derive or produce what a complete shipped ARPG needed is an adjustment worth making. Phase A resolves the ingest backlog; Phase B replicates the game in dependency-ordered WAVES, each ending at a HUMAN GATE (never auto-proceeds). The dependency chronology ("we cannot create X without Y"), the adjustment ledger and all wave state live in the Obsidian vault (Diablo/). Invoke with /diablo [next | status | backlog | path | gate | ingest].
-version: 1.2
+version: 1.3
 ---
 
 # /diablo — replicate a shipped ARPG to find out what PoF is missing
@@ -129,6 +129,8 @@ mesh/rig gates), never its self-report.
    files; a disclosed, justified deviation is fine, an undisclosed one is a revision.
 3. Re-run the acceptance commands YOURSELF — its report is a claim. Then check real-data behaviour
    (re-ingest: `unchanged` means nothing moved that should not have).
+   Read vitest's `Errors` line, not only `FAIL`: an unhandled rejection fails the RUN while every
+   file passes. A delegate's "unrelated" / "pre-existing" is a claim too — reproduce it on master.
 4. Accept → `land`, commit with a pathspec (name the task id + model in the message). Otherwise
    `resume` with a precise instruction; after 2 follow-ups, take it over or re-tier it.
 5. `record` the verdict with a task CLASS, then `discard`.
