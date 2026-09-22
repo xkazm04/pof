@@ -707,6 +707,19 @@ free-text direction — the catalog pipeline's equivalent of the module system's
 threshold it will be graded by is visible; a shape-only step keeps its narrower
 `ARCHETYPE_CANON` slice (`brief → ['game']`, `schema → ['project','game']`).
 
+**Canon profiles select the WORLD before categories** (`@/lib/catalog/canon/profiles.ts`, 2026-09-22).
+A rule belongs to one profile (`ProjectRule.profile`, absent = `pof`, PoF's own world); a profile may
+inherit named `pof` rules explicitly by id (engineering conventions — never category-wide, because
+`project` mixes engineering law with design law). The profile is resolved PER ENTITY, never by a global
+switch: an ingested entity's `provenance.canonProfile` (stamped from its `ReferenceSource`) travels on
+`LabEntity.canonProfile` — set by every constructor through `canonProfileOf` — and
+`buildStepProducePrompt` calls `rulesForProfile` before `canonContextFor`. An unknown profile throws.
+The one-shot DESIGN prompt (a new entity is PoF's) filters to `pof`. `project_rules.profile` stores it
+(additive migration runs before seeding); each profile seeds ONCE under its own marker, so an edit to a
+shipped profile rule does not reach an already-seeded DB (sync is open work). Threshold checkers
+(`acceptance/invariants.ts`, `balance/canon-conformance.ts`) still read PoF's `CANON_SEED` and are NOT
+profile-aware yet.
+
 **Wiring contracts reach prompts** (`src/lib/catalog/contractPrompt.ts`). Pipelines author
 137 `wiringContract` blocks + per-step `criteria` inside their produce bodies; for a long
 time the ONLY consumer was the acceptance checker, so a CLI was asked to author an artifact
