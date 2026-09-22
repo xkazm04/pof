@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { Moon, Sun } from 'lucide-react';
 import { useLabCatalogData, useLabDetail } from './useLabCatalogData';
+import { usePersistedEntityHydration } from './hooks/usePersistedEntityHydration';
 import { Baseline } from './Baseline';
 import { CanonView } from './CanonView';
 import { CatalogMatrix } from './CatalogMatrix';
@@ -32,6 +33,8 @@ import { IconButton } from './ui/IconButton';
 export function LayoutLab() {
   const reduce = useReducedMotion();
   const groups = useLabCatalogData();
+  // Persisted entities (other sessions' one-shots, /diablo ingests) join the tree.
+  usePersistedEntityHydration();
   const { prefs, setPrefs, hydrated } = useLabPrefs();
   const themeId = prefs.themeId;
   const [catalogId, setCatalogId] = useState('items');

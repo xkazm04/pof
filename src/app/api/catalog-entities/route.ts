@@ -18,7 +18,7 @@
 import type { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { requireOperator } from '@/lib/api-auth';
-import { listEntities, getEntity, upsertEntity, deleteEntity, type CatalogEntitySource } from '@/lib/catalog-db';
+import { listEntities, listAllEntities, getEntity, upsertEntity, deleteEntity, type CatalogEntitySource } from '@/lib/catalog-db';
 import { codeSeededEntities, entityCollisions } from '@/lib/catalog/seed';
 import type { StoredCatalogEntity } from '@/lib/catalog/types';
 
@@ -36,11 +36,15 @@ const SOURCE_DESCRIPTIONS: Record<CatalogEntitySource, string> = {
 };
 const SOURCES = Object.keys(SOURCE_DESCRIPTIONS) as CatalogEntitySource[];
 
-/** GET /api/catalog-entities?catalogId=bestiary → the persisted rows + any id collisions. */
+/** GET /api/catalog-entities?catalogId=bestiary → the persisted rows + any id collisions; `?all=1` → every row. */
 export async function GET(req: NextRequest) {
   try {
     const catalogId = req.nextUrl.searchParams.get('catalogId');
-    if (!catalogId) return apiError('catalogId is required', 400);
+    // `?all=1` — every persisted row, for the lab's one-shot hydration of its draft cache.
+    if (!catalogId && req.nextUrl.searchParams.get('all') === '1') {
+      return apiSuccess({ entities: listAllEntities() });
+    }
+    if (!catalogId) return apiError('catalogId is required (or all=1)', 400);
     const entityId = req.nextUrl.searchParams.get('entityId');
     if (entityId) {
       const row = getEntity(catalogId, entityId);

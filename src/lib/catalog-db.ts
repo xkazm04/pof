@@ -150,6 +150,15 @@ export function listEntities(catalogId: string): PersistedCatalogEntity[] {
   return rows.map(rowToEntity);
 }
 
+/** Every persisted entity across catalogs — the lab hydrates its draft cache from this. */
+export function listAllEntities(): PersistedCatalogEntity[] {
+  ensureEntityTable();
+  const rows = getDb()
+    .prepare(`SELECT ${ENTITY_COLUMNS} FROM catalog_entities ORDER BY catalog_id, created_at, entity_id`)
+    .all() as Record<string, unknown>[];
+  return rows.map(rowToEntity);
+}
+
 export function getEntity(catalogId: string, entityId: string): PersistedCatalogEntity | null {
   ensureEntityTable();
   const row = getDb()

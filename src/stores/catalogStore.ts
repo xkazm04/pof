@@ -7,6 +7,7 @@ import type {
   CatalogEntityBase, AbilityEntry, ItemEntry, LifecycleRecord, StoredCatalogEntity,
 } from '@/lib/catalog/types';
 import { seedAllCatalogs } from '@/lib/catalog/sections';
+import { mergePersistedDrafts, type PersistedRow } from '@/lib/catalog/persistedHydration';
 
 /**
  * A one-shot draft in the browser store. `browserOnly` is set when the server-side persist
@@ -53,6 +54,12 @@ interface CatalogState {
   /** Mark a draft browser-only — the server refused it or never received it. Never silent. */
   markDraftBrowserOnly: (catalogId: string, entityId: string, reason: string) => void;
   removeDraft: (catalogId: string, entityId: string) => void;
+  /**
+   * Fill the draft cache from the server's `catalog_entities` rows (see
+   * `mergePersistedDrafts`). Without it a persisted entity — another session's one-shot, an
+   * ingest — resolved for every server gate and was invisible in the lab.
+   */
+  hydratePersisted: (rows: PersistedRow[]) => { added: number; shadowed: string[] };
 }
 
 function indexById(entities: CatalogEntityBase[]): Record<string, CatalogEntityBase> {
@@ -130,6 +137,16 @@ export const useCatalogStore = create<CatalogState>()(
             },
           };
         }),
+
+      hydratePersisted: (rows) => {
+        let result = { added: 0, shadowed: [] as string[] };
+        set((s) => {
+          const merged = mergePersistedDrafts(s.draftEntitiesByCatalog, s.entitiesByCatalog, rows);
+          result = { added: merged.added, shadowed: merged.shadowed };
+          return { draftEntitiesByCatalog: merged.drafts };
+        });
+        return result;
+      },
 
       removeDraft: (catalogId, entityId) =>
         set((s) => {
