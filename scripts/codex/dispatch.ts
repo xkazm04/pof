@@ -162,7 +162,13 @@ async function resume(id: string, instructions: string, timeoutMin: number) {
   st.rounds += 1; saveState(id, st);
   const n = st.rounds;
   const last = join(runDir(id), `report-${n}.json`);
-  const prompt = `Reviewer follow-up (round ${n}). Apply it, re-run the acceptance commands, and report again with the same JSON schema.\n\n${instructions}`;
+  // `exec resume` accepts no `--approve-for-me` (its only escalation flag is the sandbox bypass,
+  // never used), so a follow-up round cannot start vitest on Windows (`spawn EPERM`). cx-003's
+  // round 2 spent 4 attempts learning that; say it up front — the overseer runs the tests.
+  const prompt = `Reviewer follow-up (round ${n}). Apply it and report again with the same JSON schema.\n`
+    + 'NOTE: in a follow-up round the sandbox cannot start test runners (spawn EPERM; no escalation is available). '
+    + 'Do not retry them: report each test command as not run; the reviewer runs them. Typecheck and eslint still work.\n\n'
+    + instructions;
   const t0 = Date.now();
   const end = await runCodex(buildCodexResumeArgs({ threadId: st.threadId, prompt: PROMPT_FROM_STDIN, lastMessagePath: last, outputSchemaPath: join(runDir(id), 'schema.json') }), st.cwd, prompt, join(runDir(id), `events-${n}.jsonl`), timeoutMin, stallMinutes(st.effort), (pid) => { const s2 = loadState(id); s2.pid = pid; saveState(id, s2); });
   report(id, join(runDir(id), `events-${n}.jsonl`), last, Math.round((Date.now() - t0) / 1000), end);
