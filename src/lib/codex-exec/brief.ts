@@ -26,6 +26,11 @@ export interface CodexTask {
   constraints?: string[];
   outOfScope?: string[];
   images?: string[];
+  /**
+   * A task-specific result shape (a proposal, a critique) in place of `CODEX_REPORT_SCHEMA`.
+   * Must be a strict JSON Schema object (additionalProperties false, every property required).
+   */
+  outputSchema?: Record<string, unknown>;
 }
 
 export const REPO_LAWS = [
@@ -98,5 +103,5 @@ ${list(t.outOfScope)}
 
 ## How to finish
 ${verify}
-Report with the required JSON schema. Put every place you had to GUESS (an unclear requirement, an assumption about intent) in \`openQuestions\` — a precise question is more useful than a confident guess.`;
+Report with the required JSON schema${t.outputSchema ? ' (this task defines its own result shape — fill every field)' : ''}. Put every place you had to GUESS (an unclear requirement, an assumption about intent) in \`openQuestions\` — a precise question is more useful than a confident guess.`;
 }

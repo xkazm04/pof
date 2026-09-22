@@ -118,6 +118,11 @@ describe('renderBrief', () => {
     expect(b).toMatch(/never report a test as passed that you did not see pass/);
   });
 
+  it('a task with its own result shape is told to fill it', () => {
+    expect(renderBrief({ ...task, outputSchema: { type: 'object' } })).toContain('defines its own result shape');
+    expect(renderBrief(task)).not.toContain('defines its own result shape');
+  });
+
   it('a read-only brief forbids modification', () => {
     expect(renderBrief({ ...task, access: 'read-only' })).toContain('READ-ONLY');
   });

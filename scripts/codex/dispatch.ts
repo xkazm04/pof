@@ -130,7 +130,7 @@ async function run(taskPath: string, timeoutMin: number) {
   }
   const brief = renderBrief(task);
   writeFileSync(join(dir, 'brief.md'), brief);
-  writeFileSync(join(dir, 'schema.json'), JSON.stringify(CODEX_REPORT_SCHEMA));
+  writeFileSync(join(dir, 'schema.json'), JSON.stringify(task.outputSchema ?? CODEX_REPORT_SCHEMA));
   saveState(task.id, { task, model: route.model, effort: route.effort, cwd, threadId: null, rounds: 1, secs: 0, outputTokens: 0, status: 'running' });
   const last = join(dir, 'report-1.json');
   const args = buildCodexExecArgs({
