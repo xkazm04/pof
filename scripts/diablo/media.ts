@@ -34,6 +34,7 @@ import { stepContentHash } from '../../src/lib/judge/contentHash';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore — plain .mjs helper shared with the gap-loop scripts (the one naming rule).
 import { iconFileName } from '../gap-loop/power-icon-payload.mjs';
+import { diabloUeRoot } from './ueRoot';
 
 const REPO = resolve(dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), '..', '..');
 const ICONS = join(REPO, 'generated', 'icons');
@@ -171,7 +172,7 @@ function submit(id: string): void {
       selectedId: chosen.id,
     },
   };
-  const r = submitStepArtifact(catalogId, entityId!, STEP, data, [`/Game/Bestiary/${entity.name.replace(/[^a-z0-9]+/gi, '')}/T_${entity.name.replace(/[^a-z0-9]+/gi, '')}_Concept`]);
+  const r = submitStepArtifact(catalogId, entityId!, STEP, data, [`${diabloUeRoot(entity.name).root}/T_${diabloUeRoot(entity.name).slug}_Concept`]);
   console.log(`SUBMITTED ${chosen.id} → icon ${icon}; server verdict ${r.acceptance?.status ?? r.artifact.status} ${r.acceptance?.reason ?? ''}`);
   // The checker grades only the SELECTION; the family check is the instrument that judged the image.
   // Recorded as a vision verdict bound to the content on record, so /status shows what actually looked.

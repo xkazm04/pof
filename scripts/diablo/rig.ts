@@ -21,8 +21,11 @@ import { submitStepArtifact } from '../../src/lib/catalog/headless';
 import { declaredGlbTriangles } from '../../src/lib/visual-gen/mesh-fetch';
 import { gradeFaceBudget } from '../../src/lib/visual-gen/face-budget';
 import { readFileSync } from 'node:fs';
+import { diabloUeRoot } from './ueRoot';
+import { seededEntities } from '../../src/lib/catalog/seed';
 
 const STEP = '3D & Rig';
+
 const opt = (n: string) => { const i = process.argv.indexOf(`--${n}`); return i >= 0 ? process.argv[i + 1] : undefined; };
 const catalogId = opt('catalog') ?? 'bestiary';
 const entityId = opt('id');
@@ -32,6 +35,10 @@ const provider = opt('provider') ?? 'tripo3d';
 // The triangle budget the mesh was COMMISSIONED at (asset-class-poly-budgeting): graded delivered-vs-requested.
 const budget = opt('budget') ? Number(opt('budget')) : undefined;
 if (!entityId || !glb) { console.error('usage: rig.ts --catalog <id> --id <entityId> --glb <file> [--morphology biped] [--provider tripo3d]'); process.exit(2); }
+
+// Declared UE paths live at the entity's real content root (ueRoot.ts) — never a guessed one.
+const stored = seededEntities(catalogId).find((e) => e.id === entityId);
+const { root: ueRoot, slug: ueSlug } = diabloUeRoot(stored?.name ?? entityId);
 
 const g = gateRig(resolve(glb), { morphology });
 if (!g.ok || !g.facts || !g.verdict) { console.error(`REFUSED: ${g.error ?? 'the rig gate returned no verdict'}`); process.exit(1); }
@@ -62,5 +69,5 @@ const data = {
     selectedId: 'b0-c0',
   },
 };
-const r = submitStepArtifact(catalogId, entityId, STEP, data, [`/Game/Bestiary/${entityId}/SK_${entityId}`]);
+const r = submitStepArtifact(catalogId, entityId, STEP, data, [`${ueRoot}/SK_${ueSlug}`]);
 console.log(`SUBMITTED ${STEP} → server verdict ${r.acceptance.status} (${r.acceptance.tier}) ${r.acceptance.reason ?? r.acceptance.detail ?? ''}`);
