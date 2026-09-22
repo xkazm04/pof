@@ -6,6 +6,7 @@ import { BlueprintPanel, SectionHeader, NeonBar } from '../../unique-tabs/_desig
 import { RadarChart } from '../../unique-tabs/_shared';
 import type { ArchetypeConfig } from '../_shared/data';
 import { RADAR_DATA } from '../_shared/data';
+import { ArchetypeIconGlyph } from './ArchetypeIconGlyph';
 
 import { ACCENT_EMERALD, ACCENT_RED, withOpacity, OPACITY_12, OPACITY_25 } from '@/lib/chart-colors';
 
@@ -34,7 +35,7 @@ export function ComparisonPanel({ enemies, accent }: ComparisonPanelProps) {
                 className="w-6 h-6 rounded flex items-center justify-center"
                 style={{ backgroundColor: withOpacity(arch.color, OPACITY_12) }}
               >
-                <arch.icon className="w-3.5 h-3.5" style={{ color: arch.color }} />
+                <ArchetypeIconGlyph archetype={arch} className="w-3.5 h-3.5" style={{ color: arch.color }} />
               </div>
               <div className="min-w-0">
                 <span className="text-sm font-bold block truncate" style={{ color: arch.color }}>

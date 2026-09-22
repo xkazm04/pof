@@ -12,6 +12,7 @@ import { STATUS_COLORS } from '../../unique-tabs/_shared';
 import type { ArchetypeConfig, EliteModifier } from '../_shared/data';
 import { ARCHETYPES, ELITE_MODIFIERS, applyModifiers, TIER_GLOW_COLORS, STAT_AVERAGES } from '../_shared/data';
 import { ExpandedDetails } from './ExpandedDetails';
+import { ArchetypeIconGlyph } from './ArchetypeIconGlyph';
 
 /**
  * The roster merges archetypes authored on different stat scales (combat-derived
@@ -49,7 +50,6 @@ export function ArchetypeCard({
   archetype, featureMap, expanded, onToggle,
   activeModifiers, onToggleModifier, onViewCodegen,
 }: ArchetypeCardProps) {
-  const ArchIcon = archetype.icon;
   const row = featureMap.get(archetype.featureName);
   const status: FeatureStatus = row?.status ?? 'unknown';
   const sc = STATUS_COLORS[status];
@@ -89,7 +89,7 @@ export function ArchetypeCard({
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 border shadow-inner"
                 style={{ backgroundColor: `${withOpacity(archetype.color, OPACITY_12)}`, borderColor: `${withOpacity(archetype.color, OPACITY_25)}` }}>
-                <ArchIcon className="w-4 h-4" style={{ color: archetype.color }} />
+                <ArchetypeIconGlyph archetype={archetype} className="w-4 h-4" style={{ color: archetype.color }} />
               </div>
               <div>
                 <div className="text-sm font-bold text-text leading-tight">{archetype.label}</div>
