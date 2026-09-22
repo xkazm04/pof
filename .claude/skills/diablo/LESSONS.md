@@ -25,3 +25,7 @@
 - **Do not submit to a selection-only checker what you would not accept.** Concept 2D Art grades only that a candidate is selected; submitting a skeleton "zombie" would have been a false pass the loop created itself.
 - **Commit the type (and any guard codex runs) BEFORE dispatching**, so worktrees branched from HEAD typecheck and can self-verify; land the reader after.
 - **Before calling a failure pre-existing, run it on a clean HEAD worktree** (junction node_modules, remove the junction with rmdir) — 3 were; 2 others were mine from an earlier commit whose test dir I had not run.
+
+## 1.5 — 2026-09-22 — pof (W04)
+- **Never write a Path node on an n=1 ablation arm.** W03 blamed the style on one style-off image; n=3 showed the subject text was the cause. Get n≥3 per arm before the diagnosis becomes a node, and measure with a blind instrument, not by eye.
+- **Look at what a render produced before judging it** — the first sprite sheet was black and tiny (lighting + framing), not a failure of the approach.
