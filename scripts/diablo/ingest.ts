@@ -73,6 +73,7 @@ const pct = (n: number) => `${(n * 100).toFixed(1)}%`;
 console.log(`\n=== INGEST ${sourceId} (run #${summary.runId}) from ${root} ===\n`);
 for (const t of summary.tables) {
   if (t.status === 'missing') { console.log(`MISSING  ${t.file} → ${t.catalogId}`); continue; }
+  if (t.status === 'refused') { console.log(`REFUSED  ${t.file} → ${t.catalogId}: ${t.refusal?.message ?? 'no reason recorded'}`); continue; }
   console.log(`${t.catalogId.padEnd(12)} ${String(t.rows).padStart(4)} rows  coverage ${pct(t.coverage).padStart(6)}  gaps ${t.gaps}  positional ${t.positionalIds}  dupes ${t.duplicateKeys}  malformed ${t.malformed}  map ${t.mappingVersion}`);
   if (t.unclassified.length) console.log(`   UNCLASSIFIED (defect): ${t.unclassified.join(', ')}`);
   if (t.declaredButAbsent.length) console.log(`   UPSTREAM DRIFT: ${t.declaredButAbsent.join(', ')}`);

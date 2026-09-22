@@ -38,6 +38,24 @@ describe('parseTsv', () => {
     expect(t.malformed[0].line).toBe(2);
     expect(t.rows).toHaveLength(0);
   });
+
+  it.each([
+    ['maxBytes', 'a\n1', { maxBytes: 2 }, 3],
+    ['maxRows', 'a\n1\n2', { maxRows: 1 }, 2],
+    ['maxColumns', 'a\tb\tc\n1\t2\t3', { maxColumns: 2 }, 3],
+  ] as const)('refuses input exceeding %s and reports its limit and observed value', (limit, text, limits, observed) => {
+    const t = parseTsv(text, limits);
+    expect(t.refusal).toMatchObject({ limit, observed });
+    expect(t.refusal!.message).toContain(limit);
+    expect(t.refusal!.message).toContain(String(observed));
+    expect(t.rows).toEqual([]);
+  });
+
+  it('accepts an override that raises a limit', () => {
+    const text = 'a\n1\n2';
+    expect(parseTsv(text, { maxRows: 1 }).refusal?.limit).toBe('maxRows');
+    expect(parseTsv(text, { maxRows: 2 }).rows).toEqual([{ a: '1' }, { a: '2' }]);
+  });
 });
 
 describe('auditColumns — the derived gap report', () => {

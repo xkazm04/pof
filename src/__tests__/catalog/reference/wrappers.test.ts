@@ -151,4 +151,18 @@ describe('ingestSourceFromDir', () => {
     const unknown: Partial<ReferenceSource> = { id: 'nope' };
     expect(() => ingestSourceFromDir(unknown.id!, '/data', { db })).toThrow(/Unknown reference source/);
   });
+
+  it('reports a table refused by its parser distinctly from ingested and missing tables', () => {
+    const oversized = 'id\tname\n' + 'x'.repeat(1024 * 1024);
+    const readFile = (p: string) => {
+      if (p.replace(/\\/g, '/').endsWith('spells/spelldat.tsv')) return oversized;
+      throw new Error('ENOENT');
+    };
+    const s = ingestSourceFromDir('diablo1', '/data', { db, readFile, now: 't0' });
+    const spells = s.tables.find((t) => t.catalogId === 'spellbook')!;
+    expect(spells.status).toBe('refused');
+    expect(spells.refusal).toMatchObject({ limit: 'maxBytes', observed: oversized.length });
+    expect(spells.refusal!.message).toContain('maxBytes');
+    expect(s.store.created).toBe(0);
+  });
 });

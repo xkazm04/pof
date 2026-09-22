@@ -14,7 +14,7 @@
  */
 import { ingestRecords, type IngestedEntity } from '@/lib/catalog/ingest/run';
 import type { ColumnAudit, FieldMap } from '@/lib/catalog/ingest/fieldMap';
-import type { MalformedRow } from '@/lib/catalog/ingest/tsv';
+import type { MalformedRow, TsvRefusal } from '@/lib/catalog/ingest/tsv';
 import type { EntityProvenance } from '@/lib/catalog/types';
 import { censusTable, type ColumnCensus } from './census';
 import { contentHash } from './hash';
@@ -47,6 +47,7 @@ export interface TableWrapResult {
   positionalIds: number;
   duplicateKeys: { key: string; rows: number[] }[];
   mappingVersion: string;
+  refusal?: TsvRefusal;
 }
 
 /** A map's identity. Decoders are data (see `decode.ts`), so a changed decoder moves it. */
@@ -97,6 +98,6 @@ export function wrapTable(source: ReferenceSource, spec: ReferenceTableSpec, tex
     file: spec.file, catalogId: spec.catalogId, wrappers,
     audit: result.audit, census: censusTable(table.rows, table.columns),
     malformed: result.malformed, positionalIds: result.positionalIds,
-    duplicateKeys: result.duplicateKeys, mappingVersion: version,
+    duplicateKeys: result.duplicateKeys, mappingVersion: version, refusal: table.refusal,
   };
 }

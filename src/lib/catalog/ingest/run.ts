@@ -13,7 +13,7 @@
  * operator makes explicitly, not a side effect of looking.
  */
 import { auditColumns, type ColumnAudit, type FieldMap } from './fieldMap';
-import { parseTsv, type MalformedRow, type TsvTable } from './tsv';
+import { parseTsv, type MalformedRow, type TsvRefusal, type TsvTable } from './tsv';
 import { applyDecode } from './decode';
 import type { CatalogEntityBase, CatalogLink, EntityProvenance } from '../types';
 
@@ -46,6 +46,7 @@ export interface TableIngestResult {
    * last one is how an ingest loses balance data nobody notices is gone.
    */
   duplicateKeys: { key: string; rows: number[] }[];
+  refusal?: TsvRefusal;
 }
 
 /** Which catalog a `links[role=…]` target belongs to. */
@@ -187,5 +188,6 @@ export function ingestRecords(table: TsvTable, opts: IngestTableOptions): TableI
     duplicateKeys: [...seen.entries()]
       .filter(([, rows]) => rows.length > 1)
       .map(([key, rows]) => ({ key, rows })),
+    refusal: table.refusal,
   };
 }

@@ -10,6 +10,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type Database from 'better-sqlite3';
 import type { FieldMap } from '@/lib/catalog/ingest/fieldMap';
+import type { TsvRefusal } from '@/lib/catalog/ingest/tsv';
 import { resolveLinks, type LinkReport } from './links';
 import { getReferenceSource } from './sources';
 import { wrapTable, type ReferenceWrapper, type TableWrapResult } from './wrapper';
@@ -18,7 +19,7 @@ import { recordRun, upsertWrappers, type StoreReport } from './wrappers-db';
 export interface TableRunSummary {
   file: string;
   catalogId: string;
-  status: 'ingested' | 'missing';
+  status: 'ingested' | 'missing' | 'refused';
   rows: number;
   coverage: number;
   mapped: number;
@@ -31,6 +32,7 @@ export interface TableRunSummary {
   /** Mapped columns holding sentinel-looking values their mapping does NOT drop — decode them or explain. */
   sentinelColumns: { column: string; values: string[] }[];
   mappingVersion: string;
+  refusal?: TsvRefusal;
 }
 
 export interface IngestRunSummary {
@@ -56,6 +58,14 @@ function droppedBy(map: FieldMap, column: string): Set<string> {
 }
 
 function summarizeTable(r: TableWrapResult, map: FieldMap): TableRunSummary {
+  if (r.refusal) {
+    return {
+      file: r.file, catalogId: r.catalogId, status: 'refused', rows: 0, coverage: 0,
+      mapped: 0, gaps: 0, unclassified: [], declaredButAbsent: [], malformed: 0,
+      positionalIds: 0, duplicateKeys: 0, sentinelColumns: [], mappingVersion: r.mappingVersion,
+      refusal: r.refusal,
+    };
+  }
   const mappedCols = new Set(r.audit.mapped);
   return {
     file: r.file, catalogId: r.catalogId, status: 'ingested', rows: r.wrappers.length,
