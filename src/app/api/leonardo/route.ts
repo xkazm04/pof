@@ -1,7 +1,7 @@
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { generateImage, upscaleImage, unzoomImage, generateTextureOn3DModel, MAX_PROMPT_LENGTH, type GenerateImageOptions } from '@/lib/leonardo';
 import { applyStyleFragment, styleDnaToPromptFragment } from '@/lib/visual-gen/style-dna';
-import { getActiveStyleDna } from '@/lib/visual-gen/style-dna-db';
+import { styleDnaForProfile } from '@/lib/visual-gen/style-dna-db';
 import { getDb } from '@/lib/db';
 import { logger } from '@/lib/logger';
 
@@ -42,13 +42,21 @@ export async function POST(request: Request) {
       // NOTE ON REACH: nothing in `src/` sends `applyStyleDna` — only the gap-loop batch
       // scripts do. The forge's Style DNA panel now STATES that (`STYLE_DNA_REACH`)
       // instead of implying this path with a label that just says "prompts".
+      //
+      // `canonProfile` (the entity's canon profile, /diablo W03 D13) picks WHICH style: the project's
+      // active one for PoF's own entities, only a style bound to that profile for any other — and a
+      // withheld style says why instead of silently rendering a Diablo entity in PoF's look.
       let styleDnaApplied: string | null = null;
+      let styleDnaWithheld: string | null = null;
       let finalPrompt = prompt;
       if (body?.applyStyleDna === true) {
-        const active = getActiveStyleDna(getDb());
-        if (active) {
-          finalPrompt = applyStyleFragment(prompt, styleDnaToPromptFragment(active.dna), MAX_PROMPT_LENGTH);
-          styleDnaApplied = active.name;
+        const canonProfile = typeof body?.canonProfile === 'string' ? body.canonProfile : null;
+        const style = styleDnaForProfile(getDb(), canonProfile);
+        if (style) {
+          finalPrompt = applyStyleFragment(prompt, styleDnaToPromptFragment(style.dna), MAX_PROMPT_LENGTH);
+          styleDnaApplied = style.name;
+        } else if (canonProfile) {
+          styleDnaWithheld = `no Style DNA is bound to canon profile "${canonProfile}" — the project's style is never applied to another canon`;
         }
       }
       const result = await generateImage(finalPrompt, opts);
@@ -62,7 +70,7 @@ export async function POST(request: Request) {
       // the material lab renders in BOTH directions (seam found / checked and clean).
       // To bring it back, add a caller that actually requests a seamless tile from
       // Leonardo and restore the branch with it — not before.
-      return apiSuccess({ ...result, styleDnaApplied });
+      return apiSuccess({ ...result, styleDnaApplied, styleDnaWithheld });
     }
 
     if (mode === 'upscale') {
