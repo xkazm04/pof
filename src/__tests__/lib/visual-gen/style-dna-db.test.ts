@@ -10,6 +10,7 @@ import {
   styleDnaForProfile,
 } from '@/lib/visual-gen/style-dna-db';
 import type { StyleDna } from '@/lib/visual-gen/style-dna';
+import { DIABLO1_STYLE_DNA } from '@/lib/catalog/canon/profiles/diablo1Style';
 
 const DNA: StyleDna = {
   palette: ['teal'],
@@ -72,11 +73,25 @@ describe('style per canon profile', () => {
 
   it('resolves the project’s style for pof / no profile, and ONLY the bound style for another canon', () => {
     saveStyleDna(db, { name: 'PoF', dna: DNA, sourceImageCount: 3 });
-    expect(styleDnaForProfile(db, 'diablo1')).toBeNull(); // never PoF's style on a Diablo entity
+    // Never PoF's style on a Diablo entity: with no DB binding it gets the profile's SHIPPED style.
+    expect(styleDnaForProfile(db, 'diablo1')?.id).toBe('shipped:diablo1');
+    expect(styleDnaForProfile(db, 'diablo1')?.dna).toEqual(DIABLO1_STYLE_DNA);
     saveStyleDna(db, { name: 'Diablo I', dna: DNA, sourceImageCount: 0, canonProfile: 'diablo1' });
     expect(styleDnaForProfile(db, 'diablo1')?.name).toBe('Diablo I');
     expect(styleDnaForProfile(db, 'pof')?.name).toBe('PoF');
     expect(styleDnaForProfile(db, null)?.name).toBe('PoF');
+  });
+
+  it('a profile with neither a binding nor a shipped style gets NO style', () => {
+    saveStyleDna(db, { name: 'PoF', dna: DNA, sourceImageCount: 3 });
+    expect(styleDnaForProfile(db, 'some-other-canon')).toBeNull();
+  });
+
+  it('the shipped diablo1 style is style only — no names to watermark, no subject to contaminate (W02d)', () => {
+    const text = Object.values(DIABLO1_STYLE_DNA).flat().join(' | ');
+    expect(text).not.toMatch(/diablo|blizzard|tristram|lazarus|©/i);
+    expect(text).not.toMatch(/\b(zombie|skeleton|goat|demon|ghoul|succubus|butcher|knight|warrior|rogue|sorcer)/i);
+    for (const list of Object.values(DIABLO1_STYLE_DNA)) expect(list.length).toBeLessThanOrEqual(4);
   });
 
   it('binding to the default profile is the same as an unbound save', () => {
@@ -92,6 +107,6 @@ describe('style per canon profile', () => {
       created_at TEXT NOT NULL DEFAULT (datetime('now')))`);
     old.prepare("INSERT INTO style_dna (id, name, dna, active) VALUES ('a', 'legacy', ?, 1)").run(JSON.stringify(DNA));
     expect(styleDnaForProfile(old, null)?.name).toBe('legacy');
-    expect(styleDnaForProfile(old, 'diablo1')).toBeNull();
+    expect(styleDnaForProfile(old, 'diablo1')?.id).toBe('shipped:diablo1');
   });
 });

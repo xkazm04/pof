@@ -18,6 +18,8 @@
  */
 import type { ProjectRule } from './types';
 import { DIABLO1_CANON, DIABLO1_INHERITS_POF } from './profiles/diablo1';
+import { DIABLO1_STYLE_DNA } from '@/lib/catalog/canon/profiles/diablo1Style';
+import type { StyleDna } from '@/lib/visual-gen/style-dna';
 
 export const DEFAULT_CANON_PROFILE = 'pof';
 
@@ -28,11 +30,20 @@ export interface CanonProfile {
   inheritsPof: readonly string[];
   /** The profile's own shipped rules (seeded once per DB, like `CANON_SEED`). */
   seed: readonly ProjectRule[];
+  /**
+   * The profile's generation-ready style (/diablo W03, D13b) — used for its entities' images when
+   * no Style DNA is bound to the profile in the DB (`styleDnaForProfile`). The project's own profile
+   * has none here: its style is the DB's active Style DNA, as before.
+   */
+  styleDna?: StyleDna;
 }
 
 export const CANON_PROFILES: Readonly<Record<string, CanonProfile>> = {
   pof: { id: 'pof', title: 'Pillars of Fortune (own game)', inheritsPof: [], seed: [] },
-  diablo1: { id: 'diablo1', title: 'Diablo I (1996) — reference replication', inheritsPof: DIABLO1_INHERITS_POF, seed: DIABLO1_CANON },
+  diablo1: {
+    id: 'diablo1', title: 'Diablo I (1996) — reference replication', inheritsPof: DIABLO1_INHERITS_POF, seed: DIABLO1_CANON,
+    styleDna: DIABLO1_STYLE_DNA,
+  },
 };
 
 export const profileOfRule = (r: Pick<ProjectRule, 'profile'>): string => r.profile ?? DEFAULT_CANON_PROFILE;

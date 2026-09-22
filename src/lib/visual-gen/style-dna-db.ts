@@ -6,7 +6,7 @@
  */
 import type Database from 'better-sqlite3';
 import type { StyleDna } from './style-dna';
-import { DEFAULT_CANON_PROFILE } from '@/lib/catalog/canon/profiles';
+import { CANON_PROFILES, DEFAULT_CANON_PROFILE } from '@/lib/catalog/canon/profiles';
 
 export interface StyleDnaProfile {
   id: string;
@@ -101,8 +101,8 @@ export function getActiveStyleDna(db: Database.Database): StyleDnaProfile | null
 
 /**
  * The style for an entity of `canonProfile` (/diablo W03, D13). The project's own profile (or none)
- * gets the ACTIVE style, exactly as before. Any other canon profile gets ONLY a style bound to it —
- * never the project's: a Diablo entity rendered in PoF's style is the defect this exists to stop,
+ * gets the ACTIVE style, exactly as before. Any other canon profile gets ONLY its own — a Style DNA
+ * bound to it in the DB, else the profile's shipped `styleDna` — never the project's: a Diablo entity rendered in PoF's style is the defect this exists to stop,
  * and "no style" is the honest answer until one is bound.
  */
 export function styleDnaForProfile(db: Database.Database, canonProfile?: string | null): StyleDnaProfile | null {
@@ -112,7 +112,12 @@ export function styleDnaForProfile(db: Database.Database, canonProfile?: string 
   const row = db
     .prepare('SELECT * FROM style_dna WHERE canon_profile = ? ORDER BY created_at DESC, id DESC LIMIT 1')
     .get(bound) as Row | undefined;
-  return row ? toProfile(row) : null;
+  if (row) return toProfile(row);
+  // No DB binding: the profile's SHIPPED generation-ready style, if it has one (D13b).
+  const shipped = CANON_PROFILES[bound]?.styleDna;
+  return shipped
+    ? { id: `shipped:${bound}`, name: `${CANON_PROFILES[bound].title} — shipped style`, dna: shipped, sourceImageCount: 0, active: false, canonProfile: bound, createdAt: '' }
+    : null;
 }
 
 export function listStyleDna(db: Database.Database): StyleDnaProfile[] {
