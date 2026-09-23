@@ -67,6 +67,60 @@ function ShapeMismatch({ t, field, expected, actual }: { t: LabTheme; field: str
   );
 }
 
+type ChartView = Extract<ViewDescriptor, { kind: 'chart' }>;
+
+/** Same numeric coercion the chart variants (and the spec linter) use. */
+function chartNum(v: unknown): number | null {
+  if (typeof v === 'number' && Number.isFinite(v)) return v;
+  const n = Number(v);
+  return v != null && v !== '' && Number.isFinite(n) ? n : null;
+}
+
+/** Keys written by the store / server / runner on every artifact, not by the produce body. */
+const PAYLOAD_BOOKKEEPING = new Set(['_provenance', 'sourced', 'links', 'python']);
+
+const listKeys = (keys: string[]) =>
+  keys.length > 6 ? `${keys.slice(0, 6).join(', ')}, … (${keys.length} keys)` : keys.join(', ');
+
+/**
+ * Can the chart branch read this payload? Emptiness is asserted only for a payload that is
+ * genuinely absent (nothing produced) or genuinely zero-length. A payload that ARRIVED but
+ * does not decode — the field moved or was renamed, a record became a list, the rows the
+ * descriptor names are not there — is a shape mismatch, not "No data yet": a defaulted
+ * decode turned 9 stored Balance payloads into a false "run Produce" (lib-0923 A/B).
+ */
+export function decodeChartPayload(view: ChartView, data: Record<string, unknown>):
+  | { state: 'absent' } | { state: 'empty' } | { state: 'mismatch'; expected: string; actual: string } | { state: 'ok'; rec: Record<string, unknown> } {
+  const declared = view.variant === 'bars' ? view.rows.map((r) => r.key)
+    : view.variant === 'histogram' ? view.keys
+    : view.variant === 'scatter' ? [view.referenceKey, view.pointsKey].filter((k): k is string => !!k)
+    : [view.samplesKey];
+  const expected = `a “${view.field}” record with ${listKeys(declared)}`;
+  const raw = data[view.field];
+  if (raw == null) {
+    const content = Object.keys(data).filter((k) => !PAYLOAD_BOOKKEEPING.has(k));
+    return content.length
+      ? { state: 'mismatch', expected, actual: `no “${view.field}” field (it holds ${listKeys(content)})` }
+      : { state: 'absent' };
+  }
+  if (Array.isArray(raw) || typeof raw !== 'object') return { state: 'mismatch', expected, actual: describeShape(raw) };
+  const rec = raw as Record<string, unknown>;
+  const keys = Object.keys(rec);
+  if (keys.length === 0) return { state: 'empty' };
+  const present = declared.filter((k) => rec[k] != null);
+  if (present.length === 0) {
+    return declared.some((k) => k in rec)
+      ? { state: 'empty' } // the named rows exist and are all null: produced, no numbers yet
+      : { state: 'mismatch', expected, actual: `a record with ${listKeys(keys)}` };
+  }
+  const decodes = (v: unknown) => (view.variant === 'bars' || view.variant === 'histogram' ? chartNum(v) != null : Array.isArray(v));
+  if (!present.some((k) => decodes(rec[k]))) {
+    const wanted = view.variant === 'bars' || view.variant === 'histogram' ? 'numbers' : 'lists';
+    return { state: 'mismatch', expected: `${listKeys(present)} as ${wanted}`, actual: present.map((k) => `${k}: ${describeShape(rec[k])}`).join(', ') };
+  }
+  return { state: 'ok', rec };
+}
+
 export function ViewPanel({ t, view, data }: { t: LabTheme; view: ViewDescriptor; data: Record<string, unknown> }) {
   if (view.kind === 'prose') {
     const txt = String(data[view.field] ?? '');
@@ -91,17 +145,15 @@ export function ViewPanel({ t, view, data }: { t: LabTheme; view: ViewDescriptor
       : <DataTable t={t} columns={view.columns} values={res.values} />;
   }
   if (view.kind === 'chart') {
-    const raw = data[view.field];
-    if (raw == null || typeof raw !== 'object') {
-      return <span style={{ fontSize: 15, color: t.muted }}>No data yet — run Produce.</span>;
-    }
-    const rec = raw as Record<string, unknown>;
-    const num = (v: unknown): number | null => {
-      if (typeof v === 'number' && Number.isFinite(v)) return v;
-      const n = Number(v);
-      return v != null && v !== '' && Number.isFinite(n) ? n : null;
-    };
     const noData = <span style={{ fontSize: 15, color: t.muted }}>No numeric data yet — run Produce.</span>;
+    const decoded = decodeChartPayload(view, data);
+    if (decoded.state === 'absent') return <span style={{ fontSize: 15, color: t.muted }}>No data yet — run Produce.</span>;
+    if (decoded.state === 'empty') return noData;
+    if (decoded.state === 'mismatch') {
+      return <ShapeMismatch t={t} field={view.field} expected={decoded.expected} actual={decoded.actual} />;
+    }
+    const rec = decoded.rec;
+    const num = chartNum;
     if (view.variant === 'bars') {
       const rows: BarsRow[] = view.rows.flatMap((r) => {
         const value = num(rec[r.key]);
