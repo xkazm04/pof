@@ -49,6 +49,8 @@ for r in spec["rows"]:
     cdo = unreal.get_default_object(bp.generated_class())
     cdo.set_editor_property("AttributeInitTable", dt)
     cdo.set_editor_property("AttributeInitRowName", r["entityId"])
+    # The actor's level: it sets the item level of what this monster drops (D7, W10) — it stayed 1 before.
+    cdo.set_editor_property("CharacterLevel", int(r["ueRow"].get("CharacterLevel", 1)))
     # Behaviour (W08): per-entity timing that survives ApplyArchetypeDefaults() at possession.
     beh = r.get("behaviour") or {}
     if "MoveSpeedOverride" in beh:
@@ -88,6 +90,7 @@ for r in spec["rows"]:
         "neverApproach": cdo.get_editor_property("bNeverApproach"),
         "retreat": round(cdo.get_editor_property("RetreatDistanceOverride"), 1),
         "moveSpeedOverride": round(cdo.get_editor_property("MoveSpeedOverride"), 1),
+        "level": cdo.get_editor_property("CharacterLevel"),
         "attackCooldownOverride": round(cdo.get_editor_property("AttackCooldownOverride"), 3),
     }
 unreal.log(f"POF_DIABLO_STATS_ROWS={json.dumps(back_rows)}")
