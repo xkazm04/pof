@@ -11,6 +11,7 @@ import { seedMaterialEntries } from './seed-materials';
 import { seedAudioEntries } from './seed-audio';
 import { seedAnimationAssetEntries } from './seed-animation-assets';
 import { seedCharacterEntries } from './seed-characters';
+import { seedAffixEntries } from './seed-affixes';
 import { NEW_CATALOGS, newCatalogStarters } from './new-catalogs';
 
 /** A catalog section: its id, label, spreadsheet category (for grouping), and seed. */
@@ -41,11 +42,15 @@ export const CATALOG_SECTIONS: CatalogSection[] = [
   // Deliberately carries no count: the previous comment said "the 21 new catalogs" while
   // NEW_CATALOGS had grown to 23. `NEW_CATALOG_COUNT` (new-catalogs.ts) is the computed
   // figure if you need one — a hand-written number here can only ever go stale again.
-  // `characters` uses its dedicated designed seed (the Captain Vael target asset);
-  // the rest fall back to the generic planned starter.
+  // `characters` and `affixes` use dedicated designed seeds; the rest fall back to the
+  // generic planned starter.
   ...NEW_CATALOGS.map((c) => ({
     catalogId: c.catalogId, label: c.label, category: c.category, description: c.description,
-    seed: c.catalogId === 'characters' ? seedCharacterEntries : () => newCatalogStarters(c),
+    seed: c.catalogId === 'characters'
+      ? seedCharacterEntries
+      : c.catalogId === 'affixes'
+        ? seedAffixEntries
+        : () => newCatalogStarters(c),
   })),
 ];
 

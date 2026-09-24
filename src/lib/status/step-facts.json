@@ -1,6 +1,66 @@
 {
   "steps": [
     {
+      "catalogId": "affixes",
+      "step": "Concept Brief",
+      "trueEngine": "Claude",
+      "deliverable": "text-config",
+      "generatorWired": true,
+      "judge": "llm-panel",
+      "checkerMeaningful": false,
+      "note": "minLength(300) checks the brief's size, not whether the prefix/suffix identity is correct."
+    },
+    {
+      "catalogId": "affixes",
+      "step": "Affix Definition",
+      "trueEngine": "Hand-authored",
+      "deliverable": "text-config",
+      "generatorWired": false,
+      "judge": "none",
+      "checkerMeaningful": true,
+      "note": "Shape checks cover the FAffixTableRow-facing fields, and wiringContractSound rejects a hollow grant/activation contract."
+    },
+    {
+      "catalogId": "affixes",
+      "step": "Tiers & Item Level",
+      "trueEngine": "Claude",
+      "deliverable": "text-config",
+      "generatorWired": true,
+      "judge": "llm-panel",
+      "checkerMeaningful": true,
+      "note": "tiersAscend is a content invariant: decreasing a later minItemLevel or valueMax makes acceptance fail."
+    },
+    {
+      "catalogId": "affixes",
+      "step": "Spawn Rules",
+      "trueEngine": "Hand-authored",
+      "deliverable": "text-config",
+      "generatorWired": false,
+      "judge": "none",
+      "checkerMeaningful": false,
+      "note": "fieldsPopulated checks that itemTypes exists; it does not prove the eligibility design is correct."
+    },
+    {
+      "catalogId": "affixes",
+      "step": "Test Gate",
+      "trueEngine": "Hand-authored",
+      "deliverable": "ue-runtime",
+      "generatorWired": false,
+      "judge": "ue-test",
+      "checkerMeaningful": false,
+      "note": "The produce stub authors a checklist and entityRuntimeDeferred names the UE test that must supply the runtime verdict."
+    },
+    {
+      "catalogId": "affixes",
+      "step": "UE Packaging",
+      "trueEngine": "Packaging engine",
+      "deliverable": "ue-runtime",
+      "generatorWired": true,
+      "judge": "none",
+      "checkerMeaningful": true,
+      "note": "The packaging drain re-grades disk truth; local acceptance also rejects a hollow wiring contract."
+    },
+    {
       "catalogId": "achievements",
       "step": "Concept Brief",
       "trueEngine": "Claude",

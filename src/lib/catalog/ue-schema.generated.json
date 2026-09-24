@@ -76,6 +76,8 @@
     "MaxValue",
     "Weight",
     "MinRarity",
+    "AffixGroup",
+    "MinItemLevel",
     "Effect"
   ],
   "FCombatSoundEntry": [
