@@ -11,7 +11,13 @@
 import type { AcceptanceResult } from './types';
 import type { UeChecker } from './ueStaticCheckers';
 import { resolveUeRoot } from './ueStaticCheckers';
+import { isPackagingStep } from './packagingStep';
+import { worstOf } from './combineVerdicts';
+import { gradeArtifact } from '../headless';
 import { getCatalogPipeline } from '../pipeline-registry';
+// Side-effect: register all pipelines. Without it a cold server grades NOTHING — getCatalogPipeline
+// returns null for every step and the sweep reports an empty success (verify-static: verified 0).
+import '@/lib/catalog/pipelines/registry.generated';
 import { seededEntities } from '../seed';
 import { listAllArtifacts, getArtifact, upsertArtifact } from '@/lib/pipeline-artifacts-db';
 
@@ -38,6 +44,9 @@ export interface StaticVerifySummary {
   deferred: number;
   failed: number;
   skipped: number;
+  /** Packaging steps left to the packaging sweep, which folds their static checks into ITS
+   *  verdict. Counted apart from `skipped` so the hand-off reads as a decision, not a gap. */
+  delegated: number;
   changed: number;
   results: StaticVerifyRow[];
 }
@@ -70,6 +79,12 @@ export interface StaticVerifyDeps {
   getStaticChecks: (catalogId: string, entityId: string, step: string) => UeChecker[] | null;
   /** Write the re-graded L2 verdict back to the artifact (preserving its data/assets). */
   upsertStatus: (catalogId: string, entityId: string, step: string, res: AcceptanceResult) => void;
+  /** Steps whose status the packaging sweep owns. Optional so a hand-built dep set needs no
+   *  change; absent → nothing is delegated. */
+  isPackaging?: (catalogId: string, step: string) => boolean;
+  /** The step's own content checker, re-run on the stored data (raw — no judge overlay).
+   *  Optional so a hand-built dep set needs no change; absent → the static verdict stands. */
+  getContentVerdict?: (catalogId: string, entityId: string, step: string) => AcceptanceResult | null;
 }
 
 /**
@@ -86,13 +101,24 @@ export function verifyStaticAll(
   const ueRoot = deps.resolveUeRoot();
   const apply = opts?.apply !== false;
   const results: StaticVerifyRow[] = [];
-  let verified = 0, passed = 0, deferred = 0, failed = 0, skipped = 0, changed = 0;
+  let verified = 0, passed = 0, deferred = 0, failed = 0, skipped = 0, delegated = 0, changed = 0;
 
   for (const a of deps.listArtifacts(filter)) {
+    // A packaging step answers to BOTH its static checks and its package's disk truth; if each
+    // sweep wrote the status alone, whichever ran last would launder the other's missing half
+    // (bestiary-melee-grunt: static pass over six unrealized /Game declarations).
+    if (deps.isPackaging?.(a.catalogId, a.step)) { delegated++; continue; }
     const checks = deps.getStaticChecks(a.catalogId, a.entityId, a.step);
     if (!checks || !checks.length) { skipped++; continue; }
-    const verdict = aggregateStatic(checks.map((c) => c(ueRoot)), a.step);
-    if (!verdict) { skipped++; continue; }
+    const staticVerdict = aggregateStatic(checks.map((c) => c(ueRoot)), a.step);
+    if (!staticVerdict) { skipped++; continue; }
+    // A symbol existing in UE says nothing about the content: static may never lift a row its
+    // own checker holds at pending/fail (the d1 Stat Blocks' declared `moveSpeed` gap). A
+    // content `deferred`/`pass` leaves the static verdict standing, so L3-gated steps are untouched.
+    const content = deps.getContentVerdict?.(a.catalogId, a.entityId, a.step) ?? null;
+    const verdict = content && (content.status === 'pending' || content.status === 'fail')
+      ? worstOf(staticVerdict, content)
+      : staticVerdict;
 
     verified++;
     if (verdict.status === 'pass') passed++;
@@ -110,11 +136,12 @@ export function verifyStaticAll(
     });
   }
 
-  return { ueRoot, verified, passed, deferred, failed, skipped, changed, results };
+  return { ueRoot, verified, passed, deferred, failed, skipped, delegated, changed, results };
 }
 
 // ── default (server) deps — wire the real registry / seed / UE root / artifacts db ──
-function defaultGetStaticChecks(catalogId: string, entityId: string, step: string): UeChecker[] | null {
+/** The step's declared `staticChecks` for one seeded entity, or null when it has none. */
+export function staticChecksFor(catalogId: string, entityId: string, step: string): UeChecker[] | null {
   const pipeline = getCatalogPipeline(catalogId);
   const spec = pipeline?.steps.find((s) => s.label === step);
   if (!spec?.staticChecks) return null;
@@ -138,6 +165,25 @@ function defaultUpsertStatus(catalogId: string, entityId: string, step: string, 
 export const defaultStaticVerifyDeps: StaticVerifyDeps = {
   resolveUeRoot,
   listArtifacts: (filter) => listAllArtifacts(filter),
-  getStaticChecks: defaultGetStaticChecks,
+  getStaticChecks: staticChecksFor,
   upsertStatus: defaultUpsertStatus,
+  getContentVerdict: (catalogId, entityId, step) => {
+    const art = getArtifact(catalogId, entityId, step);
+    if (!art) return null;
+    const g = gradeArtifact(catalogId, step, art.data, entityId);
+    return g.graded ? g.raw : null;
+  },
+  isPackaging: (catalogId, step) => {
+    const spec = getCatalogPipeline(catalogId)?.steps.find((s) => s.label === step);
+    return spec ? isPackagingStep(spec) : step === 'UE Packaging';
+  },
 };
+
+/** One step's aggregated L2 static verdict against the resolved UE root, or null when the
+ *  step declares no checks — what the packaging sweep folds into a packaging step's grade. */
+export function staticVerdictFor(catalogId: string, entityId: string, step: string): AcceptanceResult | null {
+  const checks = staticChecksFor(catalogId, entityId, step);
+  if (!checks?.length) return null;
+  const root = resolveUeRoot();
+  return aggregateStatic(checks.map((c) => c(root)), step);
+}

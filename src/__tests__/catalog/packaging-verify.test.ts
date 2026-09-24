@@ -3,9 +3,11 @@ import {
   aggregatePackaging,
   verifyPackagingAll,
   isPackagingStep,
+  combinePackagingVerdict,
   type PackagingVerifyDeps,
 } from '@/lib/catalog/acceptance/packagingVerify';
 import type { PackageManifest } from '@/lib/catalog/packaging/packageArtifacts';
+import type { AcceptanceResult } from '@/lib/catalog/acceptance/types';
 
 const manifest = (over: Partial<PackageManifest>): PackageManifest => ({
   catalogId: 'items',
@@ -129,5 +131,49 @@ describe('verifyPackagingAll', () => {
     expect(summary.changed).toBe(0);
     expect(deps.upserts).toHaveLength(0);
     expect(summary.results[0].to).toBe('deferred');
+  });
+});
+
+describe('combinePackagingVerdict — one writer, both halves', () => {
+  const pkgPass: AcceptanceResult = { label: 'UE Packaging', tier: 'L2', status: 'pass', detail: '3/3 UE declarations realized on disk' };
+  const pkgDefer: AcceptanceResult = { label: 'UE Packaging', tier: 'L2', status: 'deferred', detail: '0/6 realized', reason: '6 UE declaration(s) not realized in Content/: /Game/X' };
+  const statPass: AcceptanceResult = { label: 'UE Packaging', tier: 'L2', status: 'pass', detail: '1/1 UE static checks present' };
+  const statDefer: AcceptanceResult = { label: 'UE Packaging', tier: 'L2', status: 'deferred', detail: '0/1', reason: 'FARPGRow not found in UE Source' };
+
+  it('a static pass cannot launder unrealized declarations (the bestiary-melee-grunt case)', () => {
+    const r = combinePackagingVerdict(pkgDefer, statPass);
+    expect(r.status).toBe('deferred');
+    expect(r.reason).toContain('/Game/X');
+  });
+
+  it('a realized package cannot launder a missing C++ symbol', () => {
+    const r = combinePackagingVerdict(pkgPass, statDefer);
+    expect(r.status).toBe('deferred');
+    expect(r.reason).toContain('FARPGRow');
+  });
+
+  it('passes only when both halves pass, naming both', () => {
+    const r = combinePackagingVerdict(pkgPass, statPass);
+    expect(r.status).toBe('pass');
+    expect(r.reason).toBeUndefined();
+    expect(r.detail).toMatch(/realized.*static checks/);
+  });
+
+  it('no static checks declared → the package verdict alone', () => {
+    expect(combinePackagingVerdict(pkgDefer, null)).toBe(pkgDefer);
+  });
+
+  it('verifyPackagingAll writes the combined verdict and counts a static fail as failed', () => {
+    const upserts: AcceptanceResult[] = [];
+    const s = verifyPackagingAll({}, {
+      listArtifacts: () => [{ catalogId: 'items', entityId: 'e', step: 'UE Packaging', status: 'pass' }],
+      isPackaging: () => true,
+      getSiblings: () => [],
+      build: () => manifest({ ueDeclarations: [realized('/Game/A')] }),
+      upsertStatus: (_c, _e, _s, res) => { upserts.push(res); },
+      getStaticVerdict: () => ({ label: 'UE Packaging', tier: 'L2', status: 'fail', detail: '0/1', reason: 'check threw' }),
+    });
+    expect(s).toMatchObject({ failed: 1, passed: 0, deferred: 0, changed: 1 });
+    expect(upserts[0].status).toBe('fail');
   });
 });

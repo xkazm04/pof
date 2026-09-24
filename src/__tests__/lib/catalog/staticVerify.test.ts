@@ -71,3 +71,55 @@ describe('verifyStaticAll', () => {
     expect(s.results.find((r) => r.catalogId === 'crafting-recipes')?.changed).toBe(true);
   });
 });
+
+describe('verifyStaticAll — packaging steps belong to the packaging sweep', () => {
+  it('delegates a packaging step instead of writing its status (no last-writer-wins)', () => {
+    const upsertStatus = vi.fn();
+    const s = verifyStaticAll({}, {
+      resolveUeRoot: () => 'C:/ue',
+      listArtifacts: () => [
+        { catalogId: 'bestiary', entityId: 'g', step: 'UE Packaging', status: 'deferred' },
+        { catalogId: 'bestiary', entityId: 'g', step: 'Stat Block', status: 'deferred' },
+      ],
+      getStaticChecks: () => [() => pass('Row')],
+      upsertStatus,
+      isPackaging: (_c, step) => step === 'UE Packaging',
+    });
+    expect(s).toMatchObject({ delegated: 1, verified: 1, changed: 1 });
+    expect(upsertStatus).toHaveBeenCalledTimes(1);
+    expect(upsertStatus.mock.calls[0][2]).toBe('Stat Block');
+  });
+});
+
+describe('verifyStaticAll — a symbol in UE never lifts incomplete content', () => {
+  const run = (contentStatus: AcceptanceResult['status'] | null, stat: AcceptanceResult) => {
+    const upsertStatus = vi.fn();
+    const s = verifyStaticAll({}, {
+      resolveUeRoot: () => 'C:/ue',
+      listArtifacts: () => [{ catalogId: 'bestiary', entityId: 'd1', step: 'Stat Block', status: 'pending' }],
+      getStaticChecks: () => [() => stat],
+      upsertStatus,
+      getContentVerdict: () => (contentStatus
+        ? { label: 'Stat Block', tier: 'L0', status: contentStatus, detail: 'checker', reason: 'declared gap: moveSpeed' }
+        : null),
+    });
+    return { s, written: upsertStatus.mock.calls[0]?.[3] as AcceptanceResult | undefined };
+  };
+
+  it('content pending + static pass stays pending, naming the content gap (no write: unchanged)', () => {
+    const { s } = run('pending', pass('FARPGMonsterRow'));
+    expect(s.results[0]).toMatchObject({ from: 'pending', to: 'pending', changed: false });
+    expect(s.results[0].reason).toContain('moveSpeed');
+  });
+
+  it('content fail + static pass stays fail', () => {
+    const { written } = run('fail', pass('FARPGMonsterRow'));
+    expect(written?.status).toBe('fail');
+  });
+
+  it('content pass or deferred leaves the static verdict standing (L3-gated steps untouched)', () => {
+    expect(run('pass', pass('Row')).written?.status).toBe('pass');
+    expect(run('deferred', pass('Row')).written?.status).toBe('pass');
+    expect(run(null, defer('Row')).written?.status).toBe('deferred');
+  });
+});

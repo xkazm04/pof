@@ -7,25 +7,29 @@
  * from disk truth: real staged+hashed files → L2 pass; missing references → deferred
  * with reasons; nothing packageable → deferred "declarations only". Same drain shape as
  * staticVerify (its L2 sibling); operator-triggered via
- * /api/pipeline-artifacts/verify-packaging. A clean produce can defer here, never fail.
+ * /api/pipeline-artifacts/verify-packaging. The package half can defer, never fail; the step's
+ * own `staticChecks` are folded in (the static sweep delegates packaging steps here), and only
+ * that half can fail.
  */
 import type { AcceptanceResult } from './types';
 import type { SiblingArtifact } from '../packaging/collect';
 import type { PackageManifest, PackagingFsDeps } from '../packaging/packageArtifacts';
 import { buildPackage, defaultPackagingFsDeps } from '../packaging/packageArtifacts';
 import { allCatalogPipelines, getCatalogPipeline } from '../pipeline-registry';
+// Side-effect: register all pipelines. Without it a cold server grades NOTHING — getCatalogPipeline
+// returns null for every step and the sweep reports an empty success (verify-static: verified 0).
+import '@/lib/catalog/pipelines/registry.generated';
 import { listAllArtifacts, getArtifact, upsertArtifact } from '@/lib/pipeline-artifacts-db';
+import { isPackagingStep } from './packagingStep';
+import { staticVerdictFor } from './staticVerify';
+import { worstOf } from './combineVerdicts';
 
 export interface PackagingVerifyFilter {
   catalogId?: string;
   entityId?: string;
 }
 
-/** A step is a packaging step via the explicit StepSpec flag, or the canonical
- *  "UE Packaging" label every catalog pipeline ends with (no 30-file rollout needed). */
-export function isPackagingStep(spec: { packaging?: boolean; label: string }): boolean {
-  return spec.packaging === true || spec.label === 'UE Packaging';
-}
+export { isPackagingStep };
 
 /** A pipeline that declares WHY it owns no packaging step, so the drain can report
  *  "exempt by declaration" instead of silently re-grading nothing. */
@@ -106,6 +110,12 @@ export function aggregatePackaging(manifest: PackageManifest, label: string): Ac
   };
 }
 
+/** A packaging step's ONE verdict: its package's disk truth AND its declared static checks,
+ *  the worse of the two, naming both halves. Pure. Null static = the step declares none. */
+export function combinePackagingVerdict(pkg: AcceptanceResult, stat: AcceptanceResult | null): AcceptanceResult {
+  return worstOf(pkg, stat);
+}
+
 export interface PackagingVerifyRow {
   catalogId: string;
   entityId: string;
@@ -121,6 +131,8 @@ export interface PackagingVerifySummary {
   verified: number;
   passed: number;
   deferred: number;
+  /** Only the folded-in static half can fail (a check that errored, not an absent symbol). */
+  failed: number;
   skipped: number;
   changed: number;
   results: PackagingVerifyRow[];
@@ -140,6 +152,10 @@ export interface PackagingVerifyDeps {
   getSiblings: (catalogId: string, entityId: string, packagingStep: string) => SiblingArtifact[];
   build: (catalogId: string, entityId: string, siblings: SiblingArtifact[]) => PackageManifest;
   upsertStatus: (catalogId: string, entityId: string, step: string, res: AcceptanceResult) => void;
+  /** The step's aggregated L2 static verdict, or null when it declares no static checks.
+   *  Folded into the packaging verdict because the static sweep leaves packaging steps to this
+   *  one — a single writer per status. Optional so a hand-built dep set needs no change. */
+  getStaticVerdict?: (catalogId: string, entityId: string, step: string) => AcceptanceResult | null;
 }
 
 /** Rebuild + grade every persisted packaging artifact. `apply: false` = dry-run preview.
@@ -151,16 +167,20 @@ export function verifyPackagingAll(
 ): PackagingVerifySummary {
   const apply = opts?.apply !== false;
   const results: PackagingVerifyRow[] = [];
-  let verified = 0, passed = 0, deferred = 0, skipped = 0, changed = 0;
+  let verified = 0, passed = 0, deferred = 0, failed = 0, skipped = 0, changed = 0;
 
   for (const a of deps.listArtifacts(filter)) {
     if (!deps.isPackaging(a.catalogId, a.step)) { skipped++; continue; }
     const siblings = deps.getSiblings(a.catalogId, a.entityId, a.step);
     const manifest = deps.build(a.catalogId, a.entityId, siblings);
-    const verdict = aggregatePackaging(manifest, a.step);
+    const verdict = combinePackagingVerdict(
+      aggregatePackaging(manifest, a.step),
+      deps.getStaticVerdict?.(a.catalogId, a.entityId, a.step) ?? null,
+    );
 
     verified++;
     if (verdict.status === 'pass') passed++;
+    else if (verdict.status === 'fail') failed++;
     else deferred++;
 
     const moved = verdict.status !== a.status;
@@ -174,7 +194,7 @@ export function verifyPackagingAll(
     });
   }
 
-  return { verified, passed, deferred, skipped, changed, results, exempt: deps.listExemptions?.(filter) ?? [] };
+  return { verified, passed, deferred, failed, skipped, changed, results, exempt: deps.listExemptions?.(filter) ?? [] };
 }
 
 // ── default (server) deps — real registry / artifacts db / filesystem ──
@@ -235,5 +255,6 @@ export function defaultPackagingVerifyDeps(fsDeps: PackagingFsDeps = defaultPack
     getSiblings: defaultGetSiblings,
     build: (catalogId, entityId, siblings) => buildPackage(catalogId, entityId, siblings, fsDeps),
     upsertStatus: defaultUpsertStatus,
+    getStaticVerdict: staticVerdictFor,
   };
 }
