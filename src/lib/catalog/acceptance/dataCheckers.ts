@@ -69,6 +69,27 @@ export function keysNumeric(field: string, label: string, keys: string[], canoni
 }
 
 /**
+ * Each present value in `field` names its UNIT in `field.units` (/diablo D30): an ingested monster's moveSpeed is
+ * 2.22 (tiles/s) and PoF's own is 300 (cm/s) — both bare numbers under one key until the unit travels with them.
+ * A declared gap or an absent value needs none. Composes with {@link keysNumeric} (shape) and fieldsPopulated.
+ */
+export function unitsDeclared(field: string, label: string, allowed: Record<string, readonly string[]>): Checker {
+  const keys = Object.keys(allowed);
+  const shape = `beside the values, "${field}.units" names each value's unit — ${keys.map((k) => `${k}: ${allowed[k].join(' | ')}`).join('; ')} (a value written "${REFERENCE_GAP}" needs no unit)`;
+  return tagRequiredFields((data) => {
+    const obj = (data[field] ?? {}) as Record<string, unknown>;
+    const units = (obj.units && typeof obj.units === 'object' ? obj.units : {}) as Record<string, unknown>;
+    const bad = keys.filter((k) => obj[k] != null && !isDeclaredGap(obj[k]) && !(typeof units[k] === 'string' && allowed[k].includes(units[k] as string)));
+    const ok = bad.length === 0;
+    return {
+      label, tier: 'L0', status: ok ? 'pass' : 'pending',
+      detail: `${keys.length - bad.length} / ${keys.length} units`,
+      ...(ok ? {} : { reason: `field "${field}": ${bad.map((k) => `${k} has ${units[k] == null ? 'no unit' : `unit "${String(units[k])}"`} (allowed: ${allowed[k].join(', ')})`).join('; ')} — ${shape}` }),
+    };
+  }, { field, keys, shape });
+}
+
+/**
  * The ONE reader for a stat value (D27): a finite number, or the mean of a `{minimum, maximum}` range with no other
  * keys. Anything else is `undefined` — a consumer must not guess a producer's invented nesting.
  */

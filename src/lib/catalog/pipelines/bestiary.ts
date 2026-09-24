@@ -1,6 +1,6 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
-import { minLength, fieldsPopulated, selected, minCount, resistancesPopulated, keysNumeric } from '../acceptance/dataCheckers';
+import { minLength, fieldsPopulated, selected, minCount, resistancesPopulated, keysNumeric, unitsDeclared } from '../acceptance/dataCheckers';
 import { powerWithinTierTarget, monsterRarityWithinBands } from '../acceptance/invariants';
 import { allOf } from '../acceptance/combinators';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
@@ -111,6 +111,8 @@ registerCatalogPipeline({
             monsterLevel: 20,
             // dangerRank: legibility metric (telegraph clarity × burst potential), not a raw stat.
             dangerRank: 3,
+            // D30 (/diablo W10): each value names its unit — an ingested monster's speed is in tiles/s.
+            units: { health: 'points', damage: 'points', armor: 'points', moveSpeed: 'cm/s' },
             wiringContract: {
               grantedBy:
                 `DT_AttributeDefaults row "${s}" (keyed by archetype slug); read by UARPGAttributeSet on BeginPlay`,
@@ -142,6 +144,8 @@ registerCatalogPipeline({
         fieldsPopulated('stats', 'Stat block populated', ['health', 'damage', 'armor', 'moveSpeed']),
         // D27 (/diablo W08): the SHAPE of each value — one number or a {minimum, maximum} range; XP named `experience`.
         keysNumeric('stats', 'Stat values are numbers', ['health', 'damage', 'armor', 'moveSpeed'], { experience: /^(xp|exp\w*|experience\w+)$/i }),
+        // D30: the unit travels with the value (PoF's moveSpeed is cm/s, an ingested monster's tiles/s).
+        unitsDeclared('stats', 'Stat units declared', { health: ['points'], damage: ['points'], armor: ['points'], moveSpeed: ['cm/s', 'tiles/s'] }),
         wiringContractSound('stats'),
       ),
       staticChecks: () => [cppSymbolExists('AARPGEnemyCharacter', 'Enemy actor class present in UE Source')],

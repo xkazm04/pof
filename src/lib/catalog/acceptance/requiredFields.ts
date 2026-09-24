@@ -50,7 +50,9 @@ export function requiredFieldsOf(checker: Checker, canonProfile?: string | null)
       if (keys) cur.keys = [...new Set([...(cur.keys ?? []), ...keys])];
       if (own.minChars != null) cur.minChars = Math.max(cur.minChars ?? 0, own.minChars);
       if (own.minItems != null) cur.minItems = Math.max(cur.minItems ?? 0, own.minItems);
-      if (own.shape && !cur.shape) cur.shape = own.shape;
+      // Every shape rule on a field reaches the prompt: keeping only the first dropped the Stat Block's second rule
+      // (its units, /diablo D30) — a producer graded on a rule it was never shown.
+      if (own.shape && !(cur.shape ?? '').includes(own.shape)) cur.shape = cur.shape ? `${cur.shape}; ${own.shape}` : own.shape;
       cur.optional = (cur.optional ?? true) && !!own.optional;
       byField.set(own.field, cur);
     }
