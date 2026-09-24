@@ -121,7 +121,8 @@ export function seedItemSteps(w: ReferenceWrapper): StepSeed[] {
         slot,
         twoHanded: r.equipType === 'Two-handed',
         subType: r.itemType,
-        rarity: REFERENCE_GAP,
+        // D4 (W11): a base type's rarity is rolled per drop — declared, not a gap.
+        rarityRolled: true,
         ilvl: REFERENCE_GAP,
         requiredLevel: REFERENCE_GAP,
         implicit: REFERENCE_GAP,
@@ -133,7 +134,6 @@ export function seedItemSteps(w: ReferenceWrapper): StepSeed[] {
       [SOURCED_FIELD]: stamp(w, ['equipType', 'itemType', 'minStrength', 'minMagic', 'minDexterity', 'durability', 'minArmor', 'maxArmor', 'minMonsterLevel']),
     },
     gaps: [
-      'rarity: rolled per DROP, not a property of the base type (D4 — W11)',
       'ilvl: a base type has no item level; the drop is rolled at the monster\'s level (D7)',
       'requiredLevel: Diablo gates an item by attributes, never by character level',
       'implicit: Diablo base types carry no implicit modifier',

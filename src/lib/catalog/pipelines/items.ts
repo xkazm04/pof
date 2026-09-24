@@ -1,4 +1,5 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
+import { rarityOrRolled } from '../acceptance/rarityCheckers';
 import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
 import {
   minLength,
@@ -161,13 +162,14 @@ registerCatalogPipeline({
         verification: 'L2: UARPGItemDefinition compiles and DA_{slug} is seeded; L3: VSItemsDefinitionsTest — DA_{slug} loads and its base-type fields match THIS item’s declaration',
       },
       accept: allOf(
-        fieldsPopulated('baseType', 'slot / rarity / ilvl / requiredLevel / implicit populated', [
+        fieldsPopulated('baseType', 'slot / ilvl / requiredLevel / implicit populated', [
           'slot',
-          'rarity',
           'ilvl',
           'requiredLevel',
           'implicit',
         ]),
+        // D4 (/diablo W11): rarity is fixed for an authored item, rolled per drop for a base type.
+        rarityOrRolled('baseType', 'Rarity fixed, or rolled per drop'),
         wiringContractSound('baseType'),
       ),
       staticChecks: () => [

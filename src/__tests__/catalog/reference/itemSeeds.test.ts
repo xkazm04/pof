@@ -35,7 +35,9 @@ describe('seedItemSteps', () => {
 
   it('declares, never invents, what the reference cannot state', () => {
     const b = seedItemSteps(sword)[0].data.baseType as Record<string, unknown>;
-    for (const k of ['rarity', 'ilvl', 'requiredLevel', 'implicit']) expect(b[k]).toBe(REFERENCE_GAP);
+    for (const k of ['ilvl', 'requiredLevel', 'implicit']) expect(b[k]).toBe(REFERENCE_GAP);
+    expect(b.rarityRolled).toBe(true); // D4: rarity is rolled per drop, not a gap
+    expect(b.rarity).toBeUndefined();
     const d = seedItemSteps(sword)[1].data.damage as Record<string, unknown>;
     expect(d).toMatchObject({ damageMin: 3, damageMax: 11 });
     expect(d.attackSpeed).toBe(REFERENCE_GAP);
