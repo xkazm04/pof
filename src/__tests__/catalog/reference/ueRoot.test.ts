@@ -27,3 +27,10 @@ describe('diabloUeRoot', () => {
     expect([...sharedNames([{ name: 'A' }, { name: 'B' }, { name: 'A' }])]).toEqual(['A']);
   });
 });
+
+describe('diabloUeRoot per catalog folder (W10)', () => {
+  it('places items under /Game/Diablo/Items and keeps the bestiary default', () => {
+    expect(diabloUeRoot('Walker', 'd1-x').root).toBe('/Game/Diablo/Bestiary/Walker');
+    expect(diabloUeRoot('Long Sword', 'd1-row125', new Set(), 'Items').root).toBe('/Game/Diablo/Items/LongSword');
+  });
+});

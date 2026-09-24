@@ -10,6 +10,7 @@
  */
 import { DIABLO1_CANON } from '@/lib/catalog/canon/profiles/diablo1';
 import { SOURCED_FIELD, type SourcedStamp } from '@/lib/catalog/acceptance/sourced';
+import { REFERENCE_GAP } from '@/lib/catalog/acceptance/markers';
 import type { ReferenceWrapper } from './wrapper';
 import { resistanceKey } from '@/lib/catalog/canon/elements';
 
@@ -86,4 +87,82 @@ export function seedBestiarySteps(w: ReferenceWrapper): StepSeed[] {
       ],
     },
   ];
+}
+
+/**
+ * Where a Diablo item is worn, in UE's `EEquipmentSlot` vocabulary (/diablo W10, D2). `equipType` is the slot family and
+ * `itemType` refines it: a Shield is "One-handed" but goes in the off hand. Unequippable → none.
+ */
+export function slotOf(equipType: string, itemType: string): string | null {
+  if (equipType === 'One-handed' || equipType === 'Two-handed') return itemType === 'Shield' ? 'OffHand' : 'Weapon';
+  const bySlot: Record<string, string> = { Armor: 'Chest', Helm: 'Helm', Ring: 'Ring', Amulet: 'Amulet' };
+  return bySlot[equipType] ?? null;
+}
+
+const num = (v: string | undefined) => (v != null && v.trim() !== '' && Number.isFinite(Number(v)) ? Number(v) : null);
+
+/**
+ * Items seeds for one itemdat wrapper (/diablo W10, D2): `Base Type & Rarity` for anything wearable, plus
+ * `Damage / Implicit` for a weapon — in the shape UE's UARPGItemDefinition declares (slot, damage/armour range,
+ * durability, attribute requirements). What the reference cannot state is a declared gap, never a number.
+ */
+export function seedItemSteps(w: ReferenceWrapper): StepSeed[] {
+  if (w.catalogId !== 'items' || w.file !== 'items/itemdat.tsv') return [];
+  const r = w.raw;
+  const slot = slotOf(r.equipType ?? '', r.itemType ?? '');
+  if (!slot) return [];
+  const armorMin = num(r.minArmor);
+  const armorMax = num(r.maxArmor);
+  const seeds: StepSeed[] = [{
+    catalogId: 'items', entityId: w.entity.id, step: 'Base Type & Rarity',
+    data: {
+      baseType: {
+        baseType: r.name,
+        slot,
+        twoHanded: r.equipType === 'Two-handed',
+        subType: r.itemType,
+        rarity: REFERENCE_GAP,
+        ilvl: REFERENCE_GAP,
+        requiredLevel: REFERENCE_GAP,
+        implicit: REFERENCE_GAP,
+        requirements: { strength: num(r.minStrength) ?? 0, dexterity: num(r.minDexterity) ?? 0, intelligence: num(r.minMagic) ?? 0 },
+        durability: num(r.durability) ?? 0,
+        ...(armorMax ? { armor: { minimum: armorMin ?? 0, maximum: armorMax } } : {}),
+        dropLevel: num(r.minMonsterLevel) ?? 0,
+      },
+      [SOURCED_FIELD]: stamp(w, ['equipType', 'itemType', 'minStrength', 'minMagic', 'minDexterity', 'durability', 'minArmor', 'maxArmor', 'minMonsterLevel']),
+    },
+    gaps: [
+      'rarity: rolled per DROP, not a property of the base type (D4 — W11)',
+      'ilvl: a base type has no item level; the drop is rolled at the monster\'s level (D7)',
+      'requiredLevel: Diablo gates an item by attributes, never by character level',
+      'implicit: Diablo base types carry no implicit modifier',
+      'requirements.intelligence: Diablo\'s Magic requirement read as PoF\'s Intelligence (approximate)',
+    ],
+  }];
+  const dmgMin = num(r.minDamage);
+  const dmgMax = num(r.maxDamage);
+  if (slot === 'Weapon' && dmgMax) {
+    seeds.push({
+      catalogId: 'items', entityId: w.entity.id, step: 'Damage / Implicit',
+      data: {
+        damage: {
+          damageType: 'Physical',
+          damageMin: dmgMin ?? 0,
+          damageMax: dmgMax,
+          attackSpeed: REFERENCE_GAP,
+          critChance: REFERENCE_GAP,
+          critMulti: REFERENCE_GAP,
+          baseDPS: REFERENCE_GAP,
+        },
+        [SOURCED_FIELD]: stamp(w, ['minDamage', 'maxDamage']),
+      },
+      gaps: [
+        'attackSpeed: Diablo\'s swing speed belongs to the wielder\'s CLASS (its animation frames), not to the weapon',
+        'critChance / critMulti: critical strikes are a Warrior class trait in Diablo, not a weapon stat',
+        'baseDPS: needs an attack speed the weapon does not carry',
+      ],
+    });
+  }
+  return seeds;
 }

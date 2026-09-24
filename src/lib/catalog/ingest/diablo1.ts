@@ -108,27 +108,29 @@ export const MONSTER_MAP: FieldMap = {
 
 /* ── items ← itemdat.tsv (23 columns) ──────────────────────────────────── */
 
-const NO_REQ = 'no attribute REQUIREMENT on an item — `ItemData.stats` describes what an item gives, never what it demands of the wearer';
-
 export const ITEM_MAP: FieldMap = {
   id: mapped('id'),
   dropRate: gap('drop weight lives on the item in Diablo; in PoF it lives only in `loot-tables`, keyed by archetype, so an item cannot state its own rarity of appearance'),
   class: mapped('data.type'),
-  equipType: gap('NO EQUIPMENT SLOT: `ItemData` has `type`/`subtype` but nothing that says where the item is worn'),
+  // The SLOT vocabulary (One-handed, Two-handed, Armor, Helm, Ring, Amulet, Unequippable) — UE's AllowedSlots is its home;
+  // the items seed translates it with `itemType` (a Shield is One-handed but goes in the off hand) (W10, D2).
+  equipType: mapped('data.equipType'),
   cursorGraphic: dropped('inventory sprite id'),
   itemType: mapped('data.subtype'),
   uniqueBaseItem: gap('no base-item → unique-item derivation link; PoF `items` entities are flat'),
   name: mapped('name'),
   shortName: dropped('narrow-UI label'),
-  minMonsterLevel: gap('no item level / required character level'),
+  // The base type's minimum DROP level (qlvl): the level-driven loot (D7) gates which bases can drop at a monster's level.
+  minMonsterLevel: mapped('data.dropLevel'),
   durability: mapped('data.stats[Durability]'),
   minDamage: mapped('data.stats[Damage Min]'),
   maxDamage: mapped('data.stats[Damage Max]'),
   minArmor: mapped('data.stats[Armor Min]'),
   maxArmor: mapped('data.stats[Armor Max]'),
-  minStrength: gap(NO_REQ),
-  minMagic: gap(NO_REQ),
-  minDexterity: gap(NO_REQ),
+  // Attribute requirements — UE's RequiredStrength/Dexterity/Intelligence (W10, D2). Diablo's Magic ≈ PoF's Intelligence.
+  minStrength: mapped('data.requiredStrength'),
+  minMagic: mapped('data.requiredMagic'),
+  minDexterity: mapped('data.requiredDexterity'),
   specialEffects: mapped('data.effect'),
   miscId: gap('no consumable-behaviour discriminator (potion/scroll/book/rune)'),
   spell: mapped('links[role=ability]', dropValues('Null')), // `Null` on 142 of 168 rows

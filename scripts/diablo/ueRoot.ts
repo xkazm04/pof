@@ -15,6 +15,11 @@ function shared(catalogId: string): Set<string> {
   return cache.get(catalogId)!;
 }
 
+/** The /Game/Diablo folder each catalog's content lives under (W10: items beside the bestiary). */
+const FOLDER: Record<string, string> = { bestiary: 'Bestiary', items: 'Items' };
+
 export function diabloUeRoot(entity: { id: string; name: string }, catalogId = 'bestiary'): { root: string; slug: string } {
-  return rootFor(entity.name, entity.id, shared(catalogId));
+  const folder = FOLDER[catalogId];
+  if (!folder) throw new Error(`no /Game/Diablo folder declared for catalog "${catalogId}"`);
+  return rootFor(entity.name, entity.id, shared(catalogId), folder);
 }

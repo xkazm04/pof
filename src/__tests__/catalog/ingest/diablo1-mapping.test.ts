@@ -116,3 +116,19 @@ describe('provenance', () => {
     expect(Date.parse(p.ingestedAt)).not.toBeNaN();
   });
 });
+
+describe('items: slot, drop level and attribute requirements have homes (W10, D2)', () => {
+  // UE's UARPGItemDefinition gained RequiredStrength/Dexterity/Intelligence and has AllowedSlots; the base type's
+  // minimum drop level (qlvl) is carried for the level-driven loot (D7). Pinned so a gap cannot quietly come back.
+  it('maps equipType, minMonsterLevel and the three requirements', () => {
+    for (const col of ['equipType', 'minMonsterLevel', 'minStrength', 'minMagic', 'minDexterity']) {
+      expect(ITEM_MAP[col].kind).toBe('mapped');
+    }
+  });
+  it('reports the items coverage the mapping implies', () => {
+    const a = auditColumns(REAL_HEADERS.itemdat, ITEM_MAP);
+    expect(a.mapped).toHaveLength(18);
+    expect(a.gap).toHaveLength(3);
+    expect(a.mapped.length + a.dropped.length + a.gap.length).toBe(23);
+  });
+});
