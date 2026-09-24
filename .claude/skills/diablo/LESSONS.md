@@ -54,3 +54,15 @@
 - **When runtime and design disagree because of a known defect, record the gap — do not re-anchor on the bug.**
 - **Save every hand-run command (scenario JSON, Tripo task ids, Blender calls) as a driver or a note**: W07 spent real time
   reconstructing W06's chain, and two drivers had never existed.
+
+## 1.9 — 2026-09-24 — pof (W08)
+- **When the data holds the parameters but not the mechanism, read the reference's CODE at the pinned commit** (learning only)
+  and state what you learned as an engine-derived canon LAW the tool parses. The census gave frame counts; only the AI routine
+  explained the cadence, and the prediction then matched the runtime to ±1%.
+- **A visual verdict on COLOUR is the eye's prior until two eyes agree.** Always run the negative control on a second eye too:
+  both eyes separated zombie from skeleton 12/12 and still split 0/6 vs 15/15 on recolours. And parse every eye's answer shape —
+  the second eye had been answering all along and its answers were thrown away.
+- **"Asset exists + sprite passes" is not "renders in the game".** Grep the play log for engine warnings about YOUR assets
+  (`missing usage flag … Default Material will be used`): two waves of member tints had never drawn once.
+- **A wave can change the game and move no pipeline number.** When that happens the missing number is the finding (no step
+  grades behaviour) — say so rather than let a flat snapshot read as no progress.
