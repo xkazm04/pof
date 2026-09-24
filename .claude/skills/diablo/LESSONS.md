@@ -101,3 +101,10 @@
   rebuild, rerun, restore) — "it touches a different controller" is an argument; the identical failure on the baseline is proof.
 - **Every reader of an aggregate must apply the same aggregation.** Promotion aggregated affix families, status.ts did not —
   so all 50 read STALE forever and the flag stopped meaning anything.
+- **Run the FULL functional suite (every map) after an engine-wide behaviour change.** W12 checked 36 PoF tests plus 3 maps
+  and called it clean; the map suite held the one test it broke (a placed enemy that now moves). Predicting "outcomes may
+  change — measured" is only honest if the measurement covers where they change.
+- **A pre-change baseline must COMPILE the pre-change code.** Rolling back modified files while leaving that commit's new
+  files in place failed the build, and the tests ran the stale binary. Check `Result: Succeeded` before reading a baseline.
+- **Screenshot-heavy scenarios step the clock in big frames**: 50 samples meant up to 0.4 s per frame, and a 0.1 s input
+  never fired. Keep samples low when timing matters, and inputs wider than the worst frame.
