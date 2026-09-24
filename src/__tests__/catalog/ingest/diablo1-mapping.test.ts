@@ -53,9 +53,9 @@ describe('Diablo I mapping tables vs. the real upstream headers', () => {
   it('reports real, non-trivial coverage on the genre-matched bestiary table', () => {
     const a = auditColumns(REAL_HEADERS.monstdat, MONSTER_MAP);
     // Pinned so a future edit that quietly reclassifies gaps as drops is visible.
-    expect(a.mapped).toHaveLength(19);
-    expect(a.dropped).toHaveLength(8);
-    expect(a.gap).toHaveLength(14);
+    expect(a.mapped).toHaveLength(23);
+    expect(a.dropped).toHaveLength(7);
+    expect(a.gap).toHaveLength(11);
     expect(a.mapped.length + a.dropped.length + a.gap.length).toBe(41);
   });
 });
@@ -72,6 +72,23 @@ describe('the art-set FAMILY key (W07)', () => {
     const decode = rule.kind === 'mapped' ? rule.decode : undefined;
     expect(applyDecode('famdir\\fileprefix', decode)).toEqual(['famdir']);
     expect(applyDecode('', decode)).toEqual([]);
+  });
+});
+
+describe('animation timing columns (W08/W09, D29)', () => {
+  // Positional lists (`frames[6]` = stand,walk,attack,hit,death,special) are kept as ONE raw string: the list path
+  // de-duplicates values, and `rate[6]` = "4,1,1,1,1,1" would silently become [4, 1].
+  it('maps frames/rate as raw positional strings, never through the de-duplicating list path', () => {
+    for (const col of ['frames[6]', 'rate[6]']) {
+      const r = MONSTER_MAP[col];
+      expect(r.kind).toBe('mapped');
+      expect(r.kind === 'mapped' && r.to.endsWith('[]')).toBe(false);
+      expect(r.kind === 'mapped' && r.decode).toBeUndefined();
+    }
+  });
+  it('maps the action frame and the AI intelligence (inputs of the derived timing)', () => {
+    expect(MONSTER_MAP.animFrameNum.kind).toBe('mapped');
+    expect(MONSTER_MAP.intelligence.kind).toBe('mapped');
   });
 });
 

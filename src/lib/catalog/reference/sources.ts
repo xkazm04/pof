@@ -8,6 +8,7 @@
  */
 import type { FieldMap } from '@/lib/catalog/ingest/fieldMap';
 import { DIABLO1_SOURCE, ITEM_MAP, MONSTER_MAP, SPELL_MAP } from '@/lib/catalog/ingest/diablo1';
+import { MONSTER_DERIVE, type DeriveSpec } from './derive';
 
 export interface ReferenceTableSpec {
   /** Path relative to the source's data root: `monsters/monstdat.tsv`. */
@@ -18,6 +19,8 @@ export interface ReferenceTableSpec {
   /** Omitted or blank → positional identity (see `ingestRecords`). */
   keyColumn?: string;
   map: FieldMap;
+  /** Values computed from the mapped fields + canon laws into `data.derived` (D29); versioned with the map. */
+  derive?: DeriveSpec;
 }
 
 export interface ReferenceSource {
@@ -43,7 +46,7 @@ export const DIABLO1: ReferenceSource = {
   canonProfile: 'diablo1',
   obtain: 'git clone https://github.com/diasurgical/devilutionX — the data root is assets/txtdata',
   tables: [
-    { file: 'monsters/monstdat.tsv', catalogId: 'bestiary', technique: 'tsv', keyColumn: '_monster_id', map: MONSTER_MAP },
+    { file: 'monsters/monstdat.tsv', catalogId: 'bestiary', technique: 'tsv', keyColumn: '_monster_id', map: MONSTER_MAP, derive: MONSTER_DERIVE },
     { file: 'items/itemdat.tsv', catalogId: 'items', technique: 'tsv', keyColumn: 'id', map: ITEM_MAP },
     { file: 'spells/spelldat.tsv', catalogId: 'spellbook', technique: 'tsv', keyColumn: 'id', map: SPELL_MAP },
   ],

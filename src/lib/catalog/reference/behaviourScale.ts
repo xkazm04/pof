@@ -43,6 +43,14 @@ export type AiRoutineLaw =
 const pct = (m: RegExpExecArray, i: number): Pct => ({ a: Number(m[i]), b: Number(m[i + 1]) });
 const pause = (m: RegExpExecArray, i: number): Pause => ({ c: Number(m[i]), d: Number(m[i + 1]), spread: Number(m[i + 2]) });
 
+/** The canon rule ids each modelled routine is read from (a derived value names its basis). */
+export const AI_LAW_IDS: Record<string, string> = { Zombie: 'd1-ai-zombie-law', SkeletonMelee: 'd1-ai-skeleton-melee-law' };
+
+/** The rule texts the behaviour model reads — hashed into the ingest version so a law edit re-projects. */
+export function behaviourLawTexts(): string[] {
+  return ['d1-timing-law', ...Object.values(AI_LAW_IDS)].map((id) => DIABLO1_CANON.find((r) => r.id === id)?.body ?? `missing:${id}`);
+}
+
 export function aiRoutineLaw(ai: string): AiRoutineLaw {
   if (ai === 'Zombie') {
     return { routine: 'Zombie', act: pct(need('d1-ai-zombie-law', /acts on only \((\d+) x intelligence \+ (\d+)\)% of ticks/), 1) };
@@ -77,7 +85,7 @@ const meanPause = (q: Pause, int: number) => Math.max(0, q.c - q.d * int) + q.sp
  * Expected ticks per tile stepped and per attack, for one monster under its routine. After a pause the routines
  * act unconditionally (DevilutionX: `var1 == Delay` → attack / walk), so each cycle carries at most one pause.
  */
-function expectedTicks(m: BehaviourInput, walkExtra: number): { step: number; attack: number } {
+export function expectedTicks(m: BehaviourInput, walkExtra: number): { step: number; attack: number } {
   const walk = m.walkFrames * (m.walkRate ?? 1) + walkExtra;
   const attack = m.attackFrames * (m.attackRate ?? 1);
   const law = aiRoutineLaw(m.ai);

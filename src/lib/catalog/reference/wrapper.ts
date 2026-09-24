@@ -67,7 +67,9 @@ export function projectionHash(entity: IngestedEntity): string {
 export function wrapTable(source: ReferenceSource, spec: ReferenceTableSpec, text: string, now = new Date().toISOString()): TableWrapResult {
   const technique = getTechnique(spec.technique);
   const table = technique.read(text);
-  const version = mappingVersion(spec.map);
+  // A derivation is code: its version (code revision + the laws it reads) is part of the mapping version, or an edit to
+  // it would leave every row "unchanged" and never re-project (D29).
+  const version = spec.derive ? `${mappingVersion(spec.map)}+${spec.derive.version()}` : mappingVersion(spec.map);
   const provenanceFor = (sourceFile: string, sourceRow: string): EntityProvenance => ({
     kind: 'ingest', sourceGame: source.game, sourceProject: source.project,
     sourceFile, sourceRow, licenceNote: source.licenceNote, ingestedAt: now,
@@ -77,6 +79,10 @@ export function wrapTable(source: ReferenceSource, spec: ReferenceTableSpec, tex
     catalogId: spec.catalogId, sourceFile: spec.file, keyColumn: spec.keyColumn,
     map: spec.map, provenanceFor, idPrefix: source.idPrefix,
   });
+
+  if (spec.derive) {
+    for (const e of result.entities) e.data.derived = spec.derive.derive(e as { tags?: string[]; data: Record<string, unknown> });
+  }
 
   const seen = new Set<string>();
   const wrappers = table.rows.map((raw, i): ReferenceWrapper => {

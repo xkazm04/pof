@@ -65,8 +65,10 @@ export const MONSTER_MAP: FieldMap = {
   // Booleans become flags; only `abilityFlags` names abilities.
   hasSpecial: mapped('data.hasSpecialAttack'),
   hasSpecialSound: dropped('audio flag'),
-  'frames[6]': gap('per-state animation frame budget has no home on an archetype — PoF keeps montages in the `state-graph` catalog with NO link back to the bestiary entry'),
-  'rate[6]': gap('per-state animation rate — same missing archetype→state-graph link'),
+  // Positional lists (stand, walk, attack, hit, death, special) kept as ONE raw string: the list path de-duplicates
+  // values, and "4,1,1,1,1,1" would become [4, 1]. They feed the DERIVED timing (walk/attack ticks, D29 — W09).
+  'frames[6]': mapped('data.animFrames'),
+  'rate[6]': mapped('data.animRates'),
   minDunLvl: gap('no spawn depth range; PoF has a single free-text `area: string`'),
   maxDunLvl: gap('no spawn depth range (see minDunLvl)'),
   level: mapped('data.stats[Level]'),
@@ -75,9 +77,11 @@ export const MONSTER_MAP: FieldMap = {
   ai: mapped('tags'),
   // AI TRAITS (`SEARCH,CAN_OPEN_DOOR`), not abilities — and a list, so it is split.
   abilityFlags: mapped('data.behaviorFlags[]', split(',')),
-  intelligence: gap('no AI-intelligence scalar; `btSummary` is hand-written prose with no numeric dimension'),
+  // The AI routine's own parameter (its laws read it: act/attack chances, pause lengths) — an input of the derived timing.
+  intelligence: mapped('data.intelligence'),
   toHit: mapped('data.stats[To Hit]'),
-  animFrameNum: dropped('attack-frame index into the sprite animation'),
+  // The attack's ACTION frame — when the hit lands (the melee hit window, W08).
+  animFrameNum: mapped('data.attackActionFrame'),
   minDamage: mapped('data.stats[Damage Min]'),
   maxDamage: mapped('data.stats[Damage Max]'),
   toHitSpecial: mapped('data.stats[To Hit (special)]'),
