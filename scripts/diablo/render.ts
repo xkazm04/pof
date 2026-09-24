@@ -56,6 +56,8 @@ const log = execFileSync(BLENDER, ['-b', '-P', resolve('scripts/diablo/sprite_re
   '--size', String(size), '--frame', String(frame), '--render', String(size * 4)], { encoding: 'utf8', maxBuffer: 1 << 26, timeout: 600000 });
 const done = /POF_SPRITE_DONE=.*/.exec(log)?.[0];
 if (!done) { console.error(`REFUSED: the render reported no POF_SPRITE_DONE marker\n${log.slice(-800)}`); process.exit(1); }
+// Framing evidence (what was framed, what was excluded) travels with the run, not only the verdict.
+for (const m of log.match(/POF_SPRITE_(BOUNDS|EXCLUDED)=.*/g) ?? []) console.log(m);
 console.log(done);
 
 (async () => {

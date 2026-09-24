@@ -69,12 +69,39 @@ if not meshes:
     print("POF_SPRITE_ERROR=no mesh in the glb")
     sys.exit(1)
 bpy.context.view_layer.update()
-pts = [o.matrix_world @ Vector(c) for o in meshes for c in o.bound_box]
-lo = Vector((min(p.x for p in pts), min(p.y for p in pts), min(p.z for p in pts)))
-hi = Vector((max(p.x for p in pts), max(p.y for p in pts), max(p.z for p in pts)))
+
+
+def box(points):
+    lo = Vector((min(p.x for p in points), min(p.y for p in points), min(p.z for p in points)))
+    hi = Vector((max(p.x for p in points), max(p.y for p in points), max(p.z for p in points)))
+    return lo, hi
+
+
+# The FIGURE is what the rig deforms. W07: Tripo's rigged export carries a stray, unparented 2.0-unit
+# `Icosphere` beside a 1.0-tall figure (in the zombie's glb too); framing on every mesh fit the sphere,
+# the skeleton filled a third of the frame, its bones smeared at 96 px and the blind family check read
+# it as a zombie. Other meshes are hidden from the render and named, never silently framed.
+skinned = [o for o in meshes if any(m.type == "ARMATURE" for m in o.modifiers)]
+if skinned:
+    for o in meshes:
+        if o not in skinned:
+            o.hide_render = True
+            print(f"POF_SPRITE_EXCLUDED={o.name} (not deformed by the rig)")
+    meshes = skinned
+# ...and frame it POSED, from its evaluated vertices — `bound_box` is the rest pose.
+rest_lo, rest_hi = box([o.matrix_world @ Vector(c) for o in meshes for c in o.bound_box])
+dg = bpy.context.evaluated_depsgraph_get()
+pts = []
+for o in meshes:
+    ev = o.evaluated_get(dg)
+    me = ev.to_mesh()
+    pts += [ev.matrix_world @ v.co for v in me.vertices]
+    ev.to_mesh_clear()
+lo, hi = box(pts)
 center = (lo + hi) / 2
 height = hi.z - lo.z
 extent = max(hi.x - lo.x, hi.y - lo.y, height)
+print(f"POF_SPRITE_BOUNDS=rest_height={rest_hi.z - rest_lo.z:.3f} posed_height={height:.3f} posed_extent={extent:.3f}")
 
 # Fixed camera: orthographic, 30 deg elevation, 45 deg azimuth -> 2:1 ground diamond.
 cam_data = bpy.data.cameras.new("cam")
