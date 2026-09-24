@@ -166,3 +166,39 @@ export function seedItemSteps(w: ReferenceWrapper): StepSeed[] {
   }
   return seeds;
 }
+
+/**
+ * Spellbook seed for one spelldat wrapper (/diablo W12, D4): `Effect Logic`. Diablo I has NO cooldowns — mana (and the
+ * cast animation) limit casting — so the seed declares `gatedBy: "resource"` beside the mana cost instead of inventing a
+ * cooldown. The element is the spell's one element trait (`Fire,Targeted`); damage lives on the MISSILE, a gap.
+ */
+export function seedSpellSteps(w: ReferenceWrapper): StepSeed[] {
+  if (w.catalogId !== 'spellbook' || w.file !== 'spells/spelldat.tsv') return [];
+  const r = w.raw;
+  const traits = (r.flags ?? '').split(',').map((f) => f.trim());
+  const element = traits.find((t) => (ELEMENTS as readonly string[]).includes(t.toUpperCase()));
+  const manaCost = num(r.manaCost);
+  if (manaCost == null) return [];
+  return [{
+    catalogId: 'spellbook', entityId: w.entity.id, step: 'Effect Logic',
+    data: {
+      effect: {
+        damageType: element ?? REFERENCE_GAP,
+        manaCost,
+        // D4 (W12): a resource gates casting — declared, never an invented cooldown.
+        gatedBy: 'resource',
+        baseDamage: REFERENCE_GAP,
+        critChancePct: REFERENCE_GAP,
+        critMulti: REFERENCE_GAP,
+        onHitIgnite: REFERENCE_GAP,
+      },
+      [SOURCED_FIELD]: stamp(w, ['flags', 'manaCost']),
+    },
+    gaps: [
+      'baseDamage: a Diablo spell\'s damage lives on its MISSILE (missiledat), a join the flat ability schema has no shape for',
+      'critChancePct / critMulti: spells do not crit in Diablo I',
+      'onHitIgnite: Diablo I has no ignite — fire damage has no burning follow-up',
+      ...(element ? [] : ['damageType: the spell carries no element trait (a utility spell)']),
+    ],
+  }];
+}

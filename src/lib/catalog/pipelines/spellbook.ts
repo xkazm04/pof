@@ -5,7 +5,8 @@ import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import { allOf } from '../acceptance/combinators';
-import { powerWithinTierTarget, sumReconciles, arithmeticReconciles } from '../acceptance/invariants';
+import { powerWithinTierTarget, sumReconciles } from '../acceptance/invariants';
+import { cooldownOrResourceGate, hitRateFromLimiter } from '../acceptance/cadenceCheckers';
 import { linksResolve } from '../acceptance/linkCheckers';
 import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 
@@ -275,9 +276,11 @@ registerCatalogPipeline({
       accept: allOf(
         fieldsPopulated(
         'effect',
-        'Effect rules complete (damageType / baseDamage / manaCost / cooldown / critChancePct / critMulti / onHitIgnite)',
-        ['damageType', 'baseDamage', 'manaCost', 'cooldown', 'critChancePct', 'critMulti', 'onHitIgnite'],
+        'Effect rules complete (damageType / baseDamage / manaCost / critChancePct / critMulti / onHitIgnite)',
+        ['damageType', 'baseDamage', 'manaCost', 'critChancePct', 'critMulti', 'onHitIgnite'],
       ),
+        // /diablo W12 (D4): a cooldown, or a DECLARED resource gate (Diablo I has no cooldowns — mana gates casting).
+        cooldownOrResourceGate('effect', 'Cast gate stated (cooldown, or gatedBy "resource" with a mana cost)'),
         linksResolve(),
         wiringContractSound('effect'),
       ),
@@ -395,7 +398,8 @@ registerCatalogPipeline({
       // tier target the artifact declares (canon ±10%) — not just near a literal.
       accept: allOf(
         sumReconciles('balance.sustainedDPS', 'balance', ['hitDPS', 'igniteDPS'], 'sustainedDPS = hitDPS + igniteDPS'),
-        arithmeticReconciles('balance', { result: 'hitDPS', op: 'quotient', operands: ['baseDamage', 'cooldown'] }, 'hitDPS = baseDamage / cooldown'),
+        // /diablo W12 (D4): the binding limiter (longest of cooldown / castTime / manaCost÷regen) — cooldown-only is unchanged.
+        hitRateFromLimiter('balance', 'hitDPS = baseDamage / the binding cast interval'),
         powerWithinTierTarget('balance.sustainedDPS', 'Sustained DPS within canon ±10% of the declared tier target', 'balance.tierTarget'),
         withinPercent('sustainedDPS', 'Combined fire DPS within ±20% of tier target (19.5)', 19.5, 20),
       ),

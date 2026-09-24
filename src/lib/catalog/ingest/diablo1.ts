@@ -191,7 +191,7 @@ export const TARGET_GAPS: TargetGap[] = [
   { catalogId: 'items', field: 'description', kind: 'derived', why: 'flavour text; the source has none for base items' },
   {
     catalogId: 'spellbook', field: 'cooldown', kind: 'genre-assumption',
-    why: 'PoF’s ability schema assumes cooldown-gated design. Diablo I gates casting with MANA and cast speed and has no cooldown at all, so every ingested ability must invent one or store a lie.',
+    why: 'PoF’s ability schema assumes cooldown-gated design. Diablo I gates casting with MANA and cast speed and has no cooldown at all, so every ingested ability must invent one or store a lie. RESOLVED W12 (D4, adapt): an ability with no cooldown declares `gatedBy: "resource"` beside its mana cost, and Balance divides by the binding limiter (acceptance/cadenceCheckers.ts).',
   },
   { catalogId: 'spellbook', field: 'radar', kind: 'derived', why: 'a normalized 5-tuple [Damage,Range,AoE,Speed,Efficiency] with no source; must be computed from the mapped stats or left unset' },
   { catalogId: 'spellbook', field: 'element', kind: 'derived', why: 'carried inside `flags` (`Fire,Targeted`) as one of several traits — derivable, but only by knowing which trait words are elements' },

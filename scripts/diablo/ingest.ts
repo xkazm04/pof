@@ -20,7 +20,7 @@ import { codeSeededEntities } from '../../src/lib/catalog/seed';
 import { promoteWrappers, selectForPromotion } from '../../src/lib/catalog/reference/promote';
 import { affixFamilies, seedAffixSteps } from '../../src/lib/catalog/reference/affixFamilies';
 import type { ReferenceWrapper } from '../../src/lib/catalog/reference/wrapper';
-import { seedBestiarySteps, seedItemSteps } from '../../src/lib/catalog/reference/stepSeeds';
+import { seedBestiarySteps, seedItemSteps, seedSpellSteps } from '../../src/lib/catalog/reference/stepSeeds';
 import { submitStepArtifact } from '../../src/lib/catalog/headless';
 import { seededEntities } from '../../src/lib/catalog/seed';
 import '../../src/lib/catalog/pipelines/registry.generated';
@@ -67,7 +67,7 @@ if (seedCatalog) {
   const wrappers = listWrappers(getDb(), { sourceId, catalogId: seedCatalog }).filter((w) => !ids || ids.includes(w.entity.id));
   for (const w of wrappers) {
     if (!promoted.has(w.entity.id)) { console.log(`SKIP ${w.entity.id}: not promoted (promote it first)`); continue; }
-    for (const seed of [...seedBestiarySteps(w), ...seedItemSteps(w)]) {
+    for (const seed of [...seedBestiarySteps(w), ...seedItemSteps(w), ...seedSpellSteps(w)]) {
       const r = submitStepArtifact(seed.catalogId, seed.entityId, seed.step, seed.data, []);
       const a = r.acceptance;
       console.log(`${seed.entityId} · ${seed.step}: ${a?.status ?? '?'}${a?.reason ? ` — ${a.reason.slice(0, 150)}` : ''}`);
