@@ -49,12 +49,19 @@ for r in spec["rows"]:
     cdo = unreal.get_default_object(bp.generated_class())
     cdo.set_editor_property("AttributeInitTable", dt)
     cdo.set_editor_property("AttributeInitRowName", r["entityId"])
+    # Behaviour (W08): per-entity timing that survives ApplyArchetypeDefaults() at possession.
+    beh = r.get("behaviour") or {}
+    if "MoveSpeedOverride" in beh:
+        cdo.set_editor_property("MoveSpeedOverride", float(beh["MoveSpeedOverride"]))
+        cdo.set_editor_property("AttackCooldownOverride", float(beh["AttackCooldownOverride"]))
     unreal.BlueprintEditorLibrary.compile_blueprint(bp)
     lib.save_asset(bp_path)
     if lib.does_asset_exist(ga_path):
         ga_bp = lib.load_asset(ga_path)
         ga_cdo = unreal.get_default_object(ga_bp.generated_class())
         ga_cdo.set_editor_property("BaseDamage", float(r["baseDamage"]))
+        if "hitDelay" in beh:
+            ga_cdo.set_editor_property("FallbackAttackWindow", float(beh["hitDelay"]))
         unreal.BlueprintEditorLibrary.compile_blueprint(ga_bp)
         lib.save_asset(ga_path)
     applied.append(r["entityId"])
@@ -73,7 +80,15 @@ for r in spec["rows"]:
         "row": str(cdo.get_editor_property("AttributeInitRowName")),
         "rowInTable": r["entityId"] in back_rows,
         "meleeBaseDamage": round(unreal.get_default_object(ga.generated_class()).get_editor_property("BaseDamage"), 3) if ga else None,
+        "hitWindow": round(unreal.get_default_object(ga.generated_class()).get_editor_property("FallbackAttackWindow"), 3) if ga else None,
+        "moveSpeedOverride": round(cdo.get_editor_property("MoveSpeedOverride"), 1),
+        "attackCooldownOverride": round(cdo.get_editor_property("AttackCooldownOverride"), 3),
     }
 unreal.log(f"POF_DIABLO_STATS_ROWS={json.dumps(back_rows)}")
 unreal.log(f"POF_DIABLO_STATS_VERIFY={json.dumps(verify)}")
 unreal.log(f"POF_DIABLO_STATS_SKIPPED={json.dumps(skipped)}")
+# The speed anchor assumed PoF's player walks at the C++ WalkSpeed default; report what the player Blueprints hold.
+for pbp in ("/Game/Characters/Jedi/BP_JediPlayer", "/Game/VerticalSlice/BP_VSPlayer"):
+    if lib.does_asset_exist(pbp):
+        pc = unreal.get_default_object(lib.load_asset(pbp).generated_class())
+        unreal.log(f"POF_DIABLO_STATS_PLAYER_WALK={pbp} WalkSpeed={pc.get_editor_property('WalkSpeed')} anchor={spec['basis'].get('playerWalkSpeed')}")

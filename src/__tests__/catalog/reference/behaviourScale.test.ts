@@ -1,0 +1,67 @@
+// /diablo W08: a monster's speed and attack cadence, derived from its animation data + its AI routine (both
+// engine-derived LAWS parsed from the diablo1 canon), converted to PoF: time in real seconds, distance by the
+// monster/player speed ratio. Monster numbers here are synthetic; the laws come from the canon's own text.
+import { describe, it, expect } from 'vitest';
+import {
+  aiRoutineLaw,
+  convertBehaviour,
+  timingLaw,
+  type BehaviourInput,
+} from '@/lib/catalog/reference/behaviourScale';
+
+const HERO = { walkFrames: 6 };
+const TARGET = { walkSpeed: 500 };
+const base: Omit<BehaviourInput, 'ai' | 'intelligence'> = { walkFrames: 10, attackFrames: 9, actionFrame: 5 };
+
+describe('the laws are read from the canon, not remembered', () => {
+  it('timing: ticks per second and the walk tick overhead', () => {
+    const t = timingLaw();
+    expect(t.ticksPerSecond).toBeGreaterThan(0);
+    expect(t.walkExtraTicks).toBeGreaterThanOrEqual(0);
+  });
+  it('an unmodelled AI routine is a refusal naming it', () => {
+    expect(() => aiRoutineLaw('Succubus')).toThrow(/Succubus.*not modelled/);
+  });
+});
+
+describe('convertBehaviour', () => {
+  const t = timingLaw();
+  const tick = 1 / t.ticksPerSecond;
+  const cmPerTile = TARGET.walkSpeed * (HERO.walkFrames + t.walkExtraTicks) * tick;
+
+  it('a smarter member of a family is quicker to act (both routines)', () => {
+    for (const ai of ['Zombie', 'SkeletonMelee']) {
+      const dull = convertBehaviour({ ...base, ai, intelligence: 0 }, HERO, TARGET);
+      const sharp = convertBehaviour({ ...base, ai, intelligence: 3 }, HERO, TARGET);
+      expect(sharp.attackCycleSeconds).toBeLessThan(dull.attackCycleSeconds);
+      expect(sharp.walkSpeed).toBeGreaterThan(dull.walkSpeed);
+    }
+  });
+
+  it('never moves faster than its bare walk animation allows, and never swings faster than its attack animation', () => {
+    for (const ai of ['Zombie', 'SkeletonMelee']) {
+      const b = convertBehaviour({ ...base, ai, intelligence: 3 }, HERO, TARGET);
+      const bareTicksPerTile = base.walkFrames + t.walkExtraTicks;
+      expect(b.walkSpeed).toBeLessThanOrEqual(cmPerTile / (bareTicksPerTile * tick) + 1e-9);
+      expect(b.attackCycleSeconds).toBeGreaterThanOrEqual(base.attackFrames * tick - 1e-9);
+    }
+  });
+
+  it('keeps the monster/player speed ratio: a monster as fast as the hero walks at the target player speed', () => {
+    const b = convertBehaviour({ walkFrames: HERO.walkFrames, attackFrames: 9, actionFrame: 5, ai: 'Zombie', intelligence: 45 }, HERO, TARGET);
+    // intelligence 45 makes the Zombie act on every tick (2·45+10 = 100%), so it walks back-to-back like the hero.
+    expect(b.walkSpeed).toBeCloseTo(TARGET.walkSpeed, 6);
+  });
+
+  it('lands its hit on the action frame, in real seconds', () => {
+    const b = convertBehaviour({ ...base, ai: 'SkeletonMelee', intelligence: 0 }, HERO, TARGET);
+    expect(b.hitDelaySeconds).toBeCloseTo(base.actionFrame * tick, 10);
+  });
+
+  it('grades every field and names both anchors', () => {
+    const b = convertBehaviour({ ...base, ai: 'Zombie', intelligence: 1 }, HERO, TARGET);
+    expect(b.ledger.map((l) => l.field)).toEqual(expect.arrayContaining(['walkSpeed', 'attackCycle', 'hitDelay']));
+    for (const l of b.ledger) expect(['full', 'approximate', 'data-only', 'dropped']).toContain(l.grade);
+    expect(b.basis).toMatch(/Zombie/);
+  });
+});
