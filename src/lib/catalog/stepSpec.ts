@@ -190,6 +190,12 @@ export interface StepSpec {
   accept: Checker;
   /** The step's wiring contract as a world-neutral declaration — the ONLY contract a produce prompt injects. */
   contract?: StepContractDecl;
+  /**
+   * The UE type and fields this step's data realizes (/diablo W10, D6): `{ type, fields: { '<data dot-path>': '<UE field>' } }`.
+   * Checked against the schema-down snapshot (`ue-schema.generated.json`) by `ue-schema-parity.test.ts`, so an app field
+   * that claims a UE home which does not exist is a failing test, not a comment. Schema flows down from UE.
+   */
+  ue?: { type: string; fields: Readonly<Record<string, string>> };
   /** Step acceptance criteria stated in the produce prompt — world-neutral, like `contract` (never read from the stub). */
   criteria?: string[];
   /**

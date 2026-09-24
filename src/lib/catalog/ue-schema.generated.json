@@ -1,1 +1,236 @@
-{}
+{
+  "FARPGAbilityCatalogRow": [
+    "Name",
+    "Category",
+    "Tier",
+    "BaseDamage",
+    "Description",
+    "GameplayTag"
+  ],
+  "FARPGAttributeInitRow": [
+    "Health",
+    "MaxHealth",
+    "Mana",
+    "MaxMana",
+    "Strength",
+    "Dexterity",
+    "Intelligence",
+    "Armor",
+    "AttackPower",
+    "CriticalChance",
+    "CriticalDamage",
+    "FireResistance",
+    "IceResistance",
+    "LightningResistance",
+    "MagicResistance",
+    "ChaosResistance",
+    "CurrentXP",
+    "CharacterLevel"
+  ],
+  "FARPGCurrencyDef": [
+    "CurrencyId",
+    "DisplayName",
+    "DisplayNamePlural",
+    "Category",
+    "Cap",
+    "DecayPerDay",
+    "BaseUnitValue"
+  ],
+  "FARPGGeneratedAbilityRow": [
+    "Name",
+    "GameplayTag",
+    "AbilityClass",
+    "EffectClasses"
+  ],
+  "FARPGMeshRegistryRow": [
+    "DisplayName",
+    "StaticMesh",
+    "SkeletalMesh",
+    "Category",
+    "bNaniteEnabled",
+    "LODCount",
+    "TriangleCount",
+    "BoundsExtent",
+    "ImportConfig"
+  ],
+  "FARPGVendorInventoryRow": [
+    "ItemId",
+    "BaseCost",
+    "Stock"
+  ],
+  "FAbilityUnlockRow": [
+    "AbilityClass",
+    "RequiredLevel",
+    "SkillPointCost",
+    "MaxRank",
+    "UpgradeSkillPointCost",
+    "PerRankBonus",
+    "DisplayName",
+    "Description"
+  ],
+  "FAffixTableRow": [
+    "AffixTag",
+    "DisplayName",
+    "bIsPrefix",
+    "MinValue",
+    "MaxValue",
+    "Weight",
+    "MinRarity",
+    "Effect"
+  ],
+  "FCombatSoundEntry": [
+    "SoundType",
+    "SoundVariations",
+    "VolumeMultiplier",
+    "PitchVariation",
+    "AttachSocket"
+  ],
+  "UARPGBiomeDefinition": [
+    "BiomeID",
+    "BiomeDisplayName",
+    "Vegetation",
+    "ScatterLayers",
+    "GlobalDensityMultiplier"
+  ],
+  "UARPGDialogueTree": [
+    "DialogueID",
+    "DialogueName",
+    "Nodes",
+    "StartNodeIndex",
+    "bOneShot"
+  ],
+  "UARPGEnvironmentMaterialSet": [
+    "BaseMasterMaterial",
+    "SetName",
+    "Surfaces"
+  ],
+  "UARPGItemDefinition": [
+    "DisplayName",
+    "Description",
+    "Icon",
+    "Type",
+    "Rarity",
+    "MaxStackSize",
+    "BaseValue",
+    "ItemTags",
+    "OnEquipEffect",
+    "OnUseEffect",
+    "WorldMesh",
+    "AffixPool",
+    "Weight",
+    "RequiredLevel",
+    "AllowedSlots",
+    "MinDamage",
+    "MaxDamage",
+    "MinArmor",
+    "MaxArmor",
+    "MaxDurability",
+    "RequiredStrength",
+    "RequiredDexterity",
+    "RequiredIntelligence"
+  ],
+  "UARPGLootTable": [
+    "Entries",
+    "NothingWeight"
+  ],
+  "UARPGMasterMaterialConfig": [
+    "MasterMaterial",
+    "MaterialName",
+    "ScalarParameters",
+    "VectorParameters",
+    "TextureParameters"
+  ],
+  "UARPGMaterialLayer": [
+    "LayerName",
+    "BaseColor",
+    "Normal",
+    "ORM",
+    "HeightMap",
+    "Roughness",
+    "Metallic",
+    "Specular",
+    "UVScale",
+    "NormalIntensity",
+    "Tint"
+  ],
+  "UARPGMaterialLayerStack": [
+    "StackName",
+    "MasterMaterial",
+    "BaseLayer",
+    "BlendLayers",
+    "MaxLayers"
+  ],
+  "UARPGMeshImportSettings": [
+    "CategoryDefaults",
+    "SkeletalDefaults"
+  ],
+  "UARPGMotionMatchingConfig": [
+    "Entries",
+    "CostWeights",
+    "TrajectorySampleCount",
+    "TrajectoryInterval",
+    "MinResidenceTime",
+    "BlendTime"
+  ],
+  "UARPGNaniteFoliageSettings": [
+    "FoliagePresets"
+  ],
+  "UARPGPhysicsConstraintPreset": [
+    "ConstraintType",
+    "Swing1LimitAngle",
+    "Swing2LimitAngle",
+    "TwistLimitAngle",
+    "LinearLimitSize",
+    "AngularDamping",
+    "LinearDamping"
+  ],
+  "UARPGQuestDefinition": [
+    "QuestID",
+    "QuestName",
+    "Description",
+    "Category",
+    "RequiredLevel",
+    "PrerequisiteQuestID",
+    "Objectives",
+    "Rewards",
+    "bAutoComplete",
+    "bAbandonable"
+  ],
+  "UARPGRoomTemplate": [
+    "TemplateID",
+    "RoomSize",
+    "RoomPurpose",
+    "ConnectionSlots",
+    "CoverPoints",
+    "Props",
+    "bAllowEnemySpawns",
+    "MaxEnemies",
+    "SelectionWeight",
+    "MinCount",
+    "MaxCount"
+  ],
+  "UARPGSoundConcurrencyConfig": [
+    "WeaponConcurrency",
+    "FootstepConcurrency",
+    "AmbientConcurrency",
+    "UIConcurrency",
+    "AbilityConcurrency",
+    "ImpactConcurrency"
+  ],
+  "UARPGZoneDefinition": [
+    "ZoneID",
+    "ZoneDisplayName",
+    "Difficulty",
+    "RecommendedLevelMin",
+    "RecommendedLevelMax",
+    "BaseEnemyLevel",
+    "ZoneDifficultyMultiplier",
+    "EncounterGroups",
+    "MaxConcurrentEnemies",
+    "Connections",
+    "StreamingLevelName",
+    "ZoneTag",
+    "bIsSafeZone",
+    "bAllowFastTravel"
+  ]
+}

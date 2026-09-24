@@ -71,6 +71,16 @@ registerCatalogPipeline({
       archetype: 'schema',
       label: 'Base Type & Rarity',
       engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
+      // D2/D6 (/diablo W10): the UE fields this step's data realizes, checked against the schema-down snapshot.
+      ue: {
+        type: 'UARPGItemDefinition',
+        fields: {
+          'baseType.slot': 'AllowedSlots', 'baseType.rarity': 'Rarity', 'baseType.requiredLevel': 'RequiredLevel',
+          'baseType.requirements.strength': 'RequiredStrength', 'baseType.requirements.dexterity': 'RequiredDexterity',
+          'baseType.requirements.intelligence': 'RequiredIntelligence', 'baseType.durability': 'MaxDurability',
+          'baseType.armor.minimum': 'MinArmor', 'baseType.armor.maximum': 'MaxArmor',
+        },
+      },
       view: {
         kind: 'table',
         field: 'baseType',
@@ -429,6 +439,7 @@ registerCatalogPipeline({
       archetype: 'rules',
       label: 'Damage / Implicit',
       engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
+      ue: { type: 'UARPGItemDefinition', fields: { 'damage.damageMin': 'MinDamage', 'damage.damageMax': 'MaxDamage' } },
       view: {
         kind: 'table',
         field: 'damage',
