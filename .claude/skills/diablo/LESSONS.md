@@ -75,3 +75,12 @@
   that is what doubled the grants. Know what your harness does to the thing it measures.
 - **The verifier deferring is usually the verifier being right.** Packaging deferred because a script declared an asset the
   monster could never have; fix the declaration, never the verifier.
+
+## 2.1 — 2026-09-24 — pof (W10)
+- **Write the wave note before running, even when the wave starts with decisions.** W10 began with research + questions and
+  the note was written after four items had run — the predictions for them are reconstructions. The note is the first
+  act after the gate, not after the first result.
+- **A research agent can overturn your own finding — re-ask the decision it fed.** The W09 "no AI outside the scenario"
+  claim was wrong; the operator had decided on it. Correct the record everywhere it was written and put the decision back.
+- **A dead mechanism usually fails silently at its edges.** The schema snapshot was `{}` because the script reported
+  success when its input was missing; make every generator REFUSE a missing input.
