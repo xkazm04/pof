@@ -23,7 +23,7 @@ export interface FamilyReply {
 }
 
 export type FamilyVerdict =
-  | { ok: true; pass: boolean; expected: string; seen: FamilyReply; raw: string; reason: string }
+  | { ok: true; pass: boolean; expected: string; seen: FamilyReply; raw: string; reason: string; eye: string }
   | { ok: false; expected: string; error: string; raw?: string };
 
 const norm = (s: string) => s.trim().toLowerCase();
@@ -70,6 +70,14 @@ function fieldsFromJson(text: string): { family?: string; confidence?: unknown; 
   }
 }
 
+/**
+ * The eye that judges the family check (operator decision D28, /diablo W08): gemini ONLY. The two eyes agreed on the
+ * zombie/skeleton negative control 12/12 but split on recoloured skeletons (local model: zombie 0/6, gemini: skeleton
+ * 15/15), so the local model's colour prior was deciding verdicts. No fallback: an outage is UNCHECKED, never a
+ * verdict from the eye that was ruled out.
+ */
+export const FAMILY_CHECK_PLAN = ['gemini'] as const;
+
 export interface FamilyCheckDeps {
   vision?: (images: VisionImage[], prompt: string) => Promise<string>;
 }
@@ -85,7 +93,8 @@ export async function checkFamily(
   if (!families.map(norm).includes(exp)) {
     return { ok: false, expected: exp, error: `expected family "${exp}" is not in the offered list — the check would be rigged` };
   }
-  const vision = deps.vision ?? makeRoutedVisionText();
+  const eye = deps.vision ? 'injected' : FAMILY_CHECK_PLAN.join('+');
+  const vision = deps.vision ?? makeRoutedVisionText({ plan: [...FAMILY_CHECK_PLAN] });
   let raw: string;
   try {
     raw = await vision([image], buildFamilyPrompt(families));
@@ -101,6 +110,7 @@ export async function checkFamily(
     expected: exp,
     seen,
     raw,
+    eye,
     reason: pass
       ? `reads as "${seen.family}" as intended (${seen.cues || 'no cues given'})`
       : `generated as "${exp}" but reads as "${seen.family}" (${seen.cues || 'no cues given'})`,
