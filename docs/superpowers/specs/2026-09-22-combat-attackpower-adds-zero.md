@@ -37,3 +37,21 @@ and any gameplay buff that edits base AttackPower are affected; the fix is the i
 test raising AttackPower through a GE), not the execution.
 
 Related: fleet-memory 2026-09-22 [ue]; vault `Diablo/Backlog.md` D21.
+
+## New evidence (/diablo W07, 2026-09-24)
+
+- **The hypothesis above is disproved.** `GE_InitAttributes` is never applied to anyone: no
+  `DT_AttributeDefaults` asset exists in the project, so every character logs
+  `InitializeAttributes: missing ASC or AttributeInitTable` (BP_JediPlayer, BP_VSPlayer, BP_VSEnemy) and runs on
+  `UARPGAttributeSet`'s constructor defaults. No Override-mod GE is pinning AttackPower.
+- **It happens in real gameplay, for the PLAYER.** Headless VerticalSlice scenario (player fires
+  `Ability.Melee.LightAttack` at a Diablo zombie with MaxHealth 44.34, Armor 0): the log says
+  `Applied damage to BP_Zombie_C_0: Base=20.0 x Combo=1.00`, and the zombie's GAS Health reads
+  44.34 → 24.34 → 4.34 — **exactly 20 per hit**, where the documented formula with the player's default
+  AttackPower 10 gives 30.
+- **An ENEMY's AttackPower does contribute:** in W06 the zombie (constructor-default AttackPower 10, BaseDamage
+  3.5) hit the player for 13.5. So the loss is on the player's side of the execution (source capture of the
+  player's ASC / attribute set), not in the formula.
+- Separate defect found in the same runs, fixed in UE `25812c2`: `GA_EnemyMeleeAttack` applied every swing
+  twice (one overlap result per component). `GA_EnemyChargeAttack`, `GA_ForcePush`, `GA_GroundSlam` and
+  `GA_VS09Smite` iterate `OverlapMultiByChannel` the same way with no per-actor dedupe — not fixed, not measured.
