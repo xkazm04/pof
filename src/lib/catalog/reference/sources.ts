@@ -8,7 +8,8 @@
  */
 import type { FieldMap } from '@/lib/catalog/ingest/fieldMap';
 import { DIABLO1_SOURCE, ITEM_MAP, MONSTER_MAP, SPELL_MAP } from '@/lib/catalog/ingest/diablo1';
-import { MONSTER_DERIVE, type DeriveSpec } from './derive';
+import { MONSTER_DERIVE, affixDerive, type DeriveSpec } from './derive';
+import { AFFIX_MAP } from '@/lib/catalog/ingest/diablo1Affixes';
 
 export interface ReferenceTableSpec {
   /** Path relative to the source's data root: `monsters/monstdat.tsv`. */
@@ -21,6 +22,8 @@ export interface ReferenceTableSpec {
   map: FieldMap;
   /** Values computed from the mapped fields + canon laws into `data.derived` (D29); versioned with the map. */
   derive?: DeriveSpec;
+  /** Scopes this table's positional entity ids (`d1-<tag>row<N>`) when another positional table shares its catalog. */
+  positionalTag?: string;
 }
 
 export interface ReferenceSource {
@@ -49,6 +52,9 @@ export const DIABLO1: ReferenceSource = {
     { file: 'monsters/monstdat.tsv', catalogId: 'bestiary', technique: 'tsv', keyColumn: '_monster_id', map: MONSTER_MAP, derive: MONSTER_DERIVE },
     { file: 'items/itemdat.tsv', catalogId: 'items', technique: 'tsv', keyColumn: 'id', map: ITEM_MAP },
     { file: 'spells/spelldat.tsv', catalogId: 'spellbook', technique: 'tsv', keyColumn: 'id', map: SPELL_MAP },
+    // Affix TIERS (W11): names repeat across powers, so identity is positional; the side is the table (derive).
+    { file: 'items/item_prefixes.tsv', catalogId: 'affixes', technique: 'tsv', map: AFFIX_MAP, derive: affixDerive('prefix'), positionalTag: 'pre-' },
+    { file: 'items/item_suffixes.tsv', catalogId: 'affixes', technique: 'tsv', map: AFFIX_MAP, derive: affixDerive('suffix'), positionalTag: 'suf-' },
   ],
 };
 

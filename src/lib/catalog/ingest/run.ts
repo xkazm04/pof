@@ -128,6 +128,11 @@ export interface IngestTableOptions {
   provenanceFor: (sourceFile: string, sourceRow: string) => EntityProvenance;
   /** Prefix for generated entity ids, so ingested ids cannot collide with code seeds. */
   idPrefix: string;
+  /**
+   * Scopes a POSITIONAL key to its table (/diablo W11): two positional tables projected into one catalog (Diablo's affix
+   * prefixes and suffixes) both produced `d1-row5`. A declared key is unaffected.
+   */
+  positionalTag?: string;
 }
 
 /** Pure: text in, entities and report out. No database, no filesystem. */
@@ -151,7 +156,7 @@ export function ingestRecords(table: TsvTable, opts: IngestTableOptions): TableI
     const declared = opts.keyColumn ? row[opts.keyColumn] : '';
     const positional = !declared;
     if (positional) positionalIds++;
-    const key = declared || `row${index}`;
+    const key = declared || `${opts.positionalTag ?? ''}row${index}`;
     const keyLabel = opts.keyColumn && declared ? `${opts.keyColumn}=${declared}` : `row=${index}`;
     seen.set(key, [...(seen.get(key) ?? []), index]);
 

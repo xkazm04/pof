@@ -77,7 +77,7 @@ export function wrapTable(source: ReferenceSource, spec: ReferenceTableSpec, tex
   });
   const result = ingestRecords(table, {
     catalogId: spec.catalogId, sourceFile: spec.file, keyColumn: spec.keyColumn,
-    map: spec.map, provenanceFor, idPrefix: source.idPrefix,
+    map: spec.map, provenanceFor, idPrefix: source.idPrefix, positionalTag: spec.positionalTag,
   });
 
   if (spec.derive) {

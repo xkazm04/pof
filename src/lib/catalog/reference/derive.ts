@@ -10,6 +10,7 @@
  */
 import { contentHash } from './hash';
 import { AI_LAW_IDS, behaviourLawTexts, expectedTicks, timingLaw } from './behaviourScale';
+import { AFFIX_POWERS, affixTargetsOf } from '@/lib/catalog/ingest/diablo1Affixes';
 
 export interface DeriveSpec {
   /** Changes whenever the derivation's code or the laws it reads change. */
@@ -57,3 +58,20 @@ export const MONSTER_DERIVE: DeriveSpec = {
     }
   },
 };
+
+/**
+ * An affix tier's derived facts (/diablo W11, D1): its SIDE — the table it comes from (prefix or suffix), which is not a
+ * column — and what its power modifies in PoF, from the power vocabulary (`diablo1Affixes.AFFIX_POWERS`). An unknown power
+ * is a declared gap naming it (an upstream addition must surface, never map silently).
+ */
+export function affixDerive(side: 'prefix' | 'suffix'): DeriveSpec {
+  return {
+    version: () => contentHash({ code: 'affix-tier@1', side, powers: AFFIX_POWERS }),
+    derive: (e) => {
+      const power = typeof e.data.power === 'string' ? e.data.power : '';
+      const t = affixTargetsOf(power);
+      if (!t) return { side, gap: `power "${power}" is not in the affix power vocabulary (diablo1Affixes.AFFIX_POWERS)` };
+      return { side, targets: t.targets, sign: t.sign, grade: t.grade, reason: t.reason };
+    },
+  };
+}

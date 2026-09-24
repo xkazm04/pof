@@ -121,3 +121,12 @@ describe('ingestTable', () => {
     expect(r.entities).toHaveLength(0);
   });
 });
+
+describe('positional identity is scoped by a table tag (W11)', () => {
+  // Two positional tables projected into ONE catalog (Diablo's affix prefixes and suffixes) both produced `d1-row5`.
+  it('prefixes a positional key with the table tag; a declared key is unchanged', () => {
+    const tsv = ['_monster_id\tname', '\tNameless', 'MT_X\tKeyed'].join('\n');
+    const r = ingestTable(tsv, { ...OPTS, positionalTag: 'pre-' });
+    expect(r.entities.map((e) => e.id)).toEqual(['d1-pre-row0', 'd1-MT_X']);
+  });
+});
