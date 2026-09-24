@@ -51,7 +51,10 @@ const NO_DRAIN = 'on-hit stat-drain has no representation: `status-effects` is a
 export const MONSTER_MAP: FieldMap = {
   _monster_id: mapped('id'),
   name: mapped('name'),
-  assetsSuffix: dropped('sprite atlas path — a 1996 renderer detail'),
+  // The FAMILY key, not a renderer detail (W07): every member of a family shares one asset set
+  // (`<set folder>\<file prefix>`) and differs only by a `trnFile` palette swap. The folder names
+  // the family; W06 had to type the family head by hand because this column was dropped.
+  assetsSuffix: mapped('data.artSet', unwrap('^([^\\\\]+)')),
   soundSuffix: dropped('audio bank path'),
   trnFile: dropped('palette-swap table; PoF re-skins through materials, not colour LUTs'),
   availability: gap('no spawn-availability/rarity field on an archetype (Always | Retail | Never)'),

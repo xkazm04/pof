@@ -8,6 +8,7 @@
 // licence note in `diablo1.ts`).
 import { describe, it, expect } from 'vitest';
 import { auditColumns } from '@/lib/catalog/ingest/fieldMap';
+import { applyDecode } from '@/lib/catalog/ingest/decode';
 import { MONSTER_MAP, ITEM_MAP, SPELL_MAP, TARGET_GAPS, provenanceFor } from '@/lib/catalog/ingest/diablo1';
 
 const REAL_HEADERS: Record<string, string[]> = {
@@ -52,10 +53,25 @@ describe('Diablo I mapping tables vs. the real upstream headers', () => {
   it('reports real, non-trivial coverage on the genre-matched bestiary table', () => {
     const a = auditColumns(REAL_HEADERS.monstdat, MONSTER_MAP);
     // Pinned so a future edit that quietly reclassifies gaps as drops is visible.
-    expect(a.mapped).toHaveLength(18);
-    expect(a.dropped).toHaveLength(9);
+    expect(a.mapped).toHaveLength(19);
+    expect(a.dropped).toHaveLength(8);
     expect(a.gap).toHaveLength(14);
     expect(a.mapped.length + a.dropped.length + a.gap.length).toBe(41);
+  });
+});
+
+describe('the art-set FAMILY key (W07)', () => {
+  // `assetsSuffix` was first dropped as "a 1996 renderer detail". It is the family key: every
+  // member of a family shares one asset set (`<set folder>\<file prefix>`) and differs by a
+  // palette swap, so W06 had to type the family head on the command line. The FOLDER is the key.
+  const rule = MONSTER_MAP.assetsSuffix;
+  it('is mapped, not dropped', () => {
+    expect(rule.kind).toBe('mapped');
+  });
+  it('keeps the set folder, not the file prefix', () => {
+    const decode = rule.kind === 'mapped' ? rule.decode : undefined;
+    expect(applyDecode('famdir\\fileprefix', decode)).toEqual(['famdir']);
+    expect(applyDecode('', decode)).toEqual([]);
   });
 });
 
