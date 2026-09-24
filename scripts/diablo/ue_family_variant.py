@@ -82,14 +82,15 @@ lib.save_asset(mi_path)
 
 # 2b. The variant's own concept texture (its Concept 2D Art declares it).
 if spec.get("concept"):
-    t = unreal.AssetImportTask()
-    t.filename = spec["concept"]
-    t.destination_path = DEST
-    t.destination_name = f"T_{NAME}_Concept"
-    t.automated = True
-    t.replace_existing = True
-    t.save = True
-    asset_tools.import_asset_tasks([t])
+    # `ct`, not `t`: `t` is the tint, and reusing the name put an import task into the VERIFY json (W07 crash).
+    ct = unreal.AssetImportTask()
+    ct.filename = spec["concept"]
+    ct.destination_path = DEST
+    ct.destination_name = f"T_{NAME}_Concept"
+    ct.automated = True
+    ct.replace_existing = True
+    ct.save = True
+    asset_tools.import_asset_tasks([ct])
     unreal.log(f"POF_DIABLO_VARIANT_CONCEPT={DEST}/T_{NAME}_Concept")
 
 # 3. The variant Blueprint: the family's SHARED mesh + animation, its own material, size and damage.
