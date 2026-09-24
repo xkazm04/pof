@@ -172,7 +172,7 @@ function submit(id: string): void {
       selectedId: chosen.id,
     },
   };
-  const r = submitStepArtifact(catalogId, entityId!, STEP, data, [`${diabloUeRoot(entity.name).root}/T_${diabloUeRoot(entity.name).slug}_Concept`]);
+  const r = submitStepArtifact(catalogId, entityId!, STEP, data, [`${diabloUeRoot(entity).root}/T_${diabloUeRoot(entity).slug}_Concept`]);
   console.log(`SUBMITTED ${chosen.id} → icon ${icon}; server verdict ${r.acceptance?.status ?? r.artifact.status} ${r.acceptance?.reason ?? ''}`);
   // The checker grades only the SELECTION; the family check is the instrument that judged the image.
   // Recorded as a vision verdict bound to the content on record, so /status shows what actually looked.

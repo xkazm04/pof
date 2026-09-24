@@ -40,7 +40,7 @@ else console.log('melee damage: no Stat Block damage range — the ability keeps
 
 const concept = resolve('generated', 'icons', iconFileName(catalogId, 'Concept 2D Art', 'jpg', entityId));
 const spec = {
-  name: diabloUeRoot(entity.name).slug,
+  name: diabloUeRoot(entity).slug,
   ...(fbx ? { fbx: resolve(fbx) } : {}),
   ...(existsSync(concept) ? { concept } : {}),
   heightCm: Number(opt('height-cm') ?? 180),

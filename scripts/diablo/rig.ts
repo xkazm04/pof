@@ -38,7 +38,7 @@ if (!entityId || !glb) { console.error('usage: rig.ts --catalog <id> --id <entit
 
 // Declared UE paths live at the entity's real content root (ueRoot.ts) — never a guessed one.
 const stored = seededEntities(catalogId).find((e) => e.id === entityId);
-const { root: ueRoot, slug: ueSlug } = diabloUeRoot(stored?.name ?? entityId);
+const { root: ueRoot, slug: ueSlug } = diabloUeRoot({ id: entityId, name: stored?.name ?? entityId });
 
 const g = gateRig(resolve(glb), { morphology });
 if (!g.ok || !g.facts || !g.verdict) { console.error(`REFUSED: ${g.error ?? 'the rig gate returned no verdict'}`); process.exit(1); }

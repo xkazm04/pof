@@ -26,7 +26,7 @@ if (!entityId) { console.error('usage: package.ts --catalog <id> --id <entityId>
 const entity = seededEntities(catalogId).find((e) => e.id === entityId);
 if (!entity) { console.error(`REFUSED: ${catalogId}/${entityId} is not a seeded/promoted entity`); process.exit(1); }
 
-const { root, slug } = diabloUeRoot(entity.name);
+const { root, slug } = diabloUeRoot(entity);
 const arts = listArtifacts(catalogId, entityId);
 
 // A family member shares its family head's mesh (Diablo recolours one model): its 3D & Rig candidate
@@ -36,7 +36,7 @@ const rigCand = ((arts.find((a) => a.step === '3D & Rig')?.data.genHistory ?? {}
 const cand = rigCand.batches?.flatMap((b) => b.candidates ?? []).find((c) => c.id === rigCand.selectedId);
 const sharedWith = typeof cand?.payload?.sharedWith === 'string' ? cand.payload.sharedWith : undefined;
 const headEntity = sharedWith ? seededEntities(catalogId).find((e) => e.id === sharedWith) : undefined;
-const meshRoot = headEntity ? diabloUeRoot(headEntity.name) : { root, slug };
+const meshRoot = headEntity ? diabloUeRoot(headEntity) : { root, slug };
 // Interchange nests a .glb import under <file>/SkeletalMeshes/; the import script reports the real
 // path, so the mesh declaration is read from the UE content on disk rather than guessed.
 const meshDir = `${meshRoot.root}`;
