@@ -84,3 +84,13 @@
   claim was wrong; the operator had decided on it. Correct the record everywhere it was written and put the decision back.
 - **A dead mechanism usually fails silently at its edges.** The schema snapshot was `{}` because the script reported
   success when its input was missing; make every generator REFUSE a missing input.
+
+## 2.2 — 2026-09-24 — pof (W11)
+- **Negative-control every new gate on the code it replaces.** Reverting only the roller to HEAD turned a passing test into a
+  finding (Legendaries with 5 prefixes) — the test's value was proven and a defect was measured at once.
+- **When the reference's unit differs from PoF's design unit, aggregate at promotion, not in the mapping.** Wrappers stay one
+  per source row (the raw truth); a family pseudo-wrapper goes through the same promotion door.
+- **Commit derived snapshots in the same step you regenerate them** — an uncommitted `ue-schema.generated.json` was silently
+  reverted by a later checkout.
+- **Codex landing on a file another session has uncommitted:** back the file up, land, diff against the backup — the only
+  change must be the task's own.
