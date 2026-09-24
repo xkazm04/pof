@@ -66,3 +66,12 @@
   (`missing usage flag … Default Material will be used`): two waves of member tints had never drawn once.
 - **A wave can change the game and move no pipeline number.** When that happens the missing number is the finding (no step
   grades behaviour) — say so rather than let a flat snapshot read as no progress.
+
+## 2.0 — 2026-09-24 — pof (W09)
+- **A new MECHANISM finds engine defects content never will.** The third family reused the whole content chain unchanged;
+  every defect came from the ranged path (abilities granted per possession, no line of fire, a retreat that never yields).
+  When a wave's content goes smoothly, the next wave should change the mechanism, not add more of the same content.
+- **A re-possessing test harness is itself a condition.** The scenario swaps the controller, so possession runs twice —
+  that is what doubled the grants. Know what your harness does to the thing it measures.
+- **The verifier deferring is usually the verifier being right.** Packaging deferred because a script declared an asset the
+  monster could never have; fix the declaration, never the verifier.
