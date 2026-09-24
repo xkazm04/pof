@@ -195,7 +195,7 @@ export const TARGET_GAPS: TargetGap[] = [
   },
   { catalogId: 'spellbook', field: 'radar', kind: 'derived', why: 'a normalized 5-tuple [Damage,Range,AoE,Speed,Efficiency] with no source; must be computed from the mapped stats or left unset' },
   { catalogId: 'spellbook', field: 'element', kind: 'derived', why: 'carried inside `flags` (`Fire,Targeted`) as one of several traits — derivable, but only by knowing which trait words are elements' },
-  { catalogId: 'spellbook', field: 'damage', kind: 'derived', why: 'Diablo spell damage lives on the MISSILE, not the spell — a join PoF’s flat ability schema has no shape for' },
+  { catalogId: 'spellbook', field: 'damage', kind: 'derived', why: 'Diablo spell damage is not DATA at all — misdat has no damage column; each missile\'s add function computes it (engine code). W13 (D33): an engine-derived canon law per spell (reference/spellLaw.ts), evaluated for a named reference caster' },
 ];
 
 // The table list (file → catalog → key → map) lives in ONE place: `reference/sources.ts` → `DIABLO1.tables`.

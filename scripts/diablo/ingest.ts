@@ -24,6 +24,10 @@ import { seedBestiarySteps, seedItemSteps, seedSpellSteps } from '../../src/lib/
 import { submitStepArtifact } from '../../src/lib/catalog/headless';
 import { seededEntities } from '../../src/lib/catalog/seed';
 import '../../src/lib/catalog/pipelines/registry.generated';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { parseTsv } from '../../src/lib/catalog/ingest/tsv';
+import { referenceCaster, type ReferenceCaster } from '../../src/lib/catalog/reference/spellLaw';
 
 function arg(name: string): string | undefined {
   const i = process.argv.indexOf(`--${name}`);
@@ -64,10 +68,29 @@ if (seedCatalog) {
     }
     process.exit(0);
   }
+  // Spell Balance (W13, D33) needs a named reference caster, read from the class tables under --root (values never
+  // enter the repo). Without --root the spell seeds stop at Effect Logic.
+  let caster: ReferenceCaster | undefined;
+  const seedRoot = arg('root');
+  if (seedCatalog === 'spellbook' && seedRoot) {
+    const cls = arg('class') ?? 'sorcerer';
+    const kv = (rel: string, k: string, v: string) => {
+      const t = parseTsv(readFileSync(join(seedRoot, rel), 'utf8'));
+      if (t.refusal) throw new Error(`${rel}: ${t.refusal.message}`);
+      return Object.fromEntries(t.rows.map((r) => [r[k], r[v]]));
+    };
+    const className = kv('classes/classdat.tsv', 'folderName', 'className')[cls] ?? cls;
+    caster = referenceCaster({
+      className,
+      attributes: kv(`classes/${cls}/attributes.tsv`, 'Attribute', 'Value'),
+      animations: kv(`classes/${cls}/animations.tsv`, 'Variable', 'Value'),
+    });
+    console.log(`reference caster: ${caster.basis} — Magic ${caster.magic}, to-hit ${caster.magicToHit}, cast ${caster.castingFrames} frames (release ${caster.castingActionFrame}), mana ${caster.maxMana}`);
+  }
   const wrappers = listWrappers(getDb(), { sourceId, catalogId: seedCatalog }).filter((w) => !ids || ids.includes(w.entity.id));
   for (const w of wrappers) {
     if (!promoted.has(w.entity.id)) { console.log(`SKIP ${w.entity.id}: not promoted (promote it first)`); continue; }
-    for (const seed of [...seedBestiarySteps(w), ...seedItemSteps(w), ...seedSpellSteps(w)]) {
+    for (const seed of [...seedBestiarySteps(w), ...seedItemSteps(w), ...seedSpellSteps(w, caster)]) {
       const r = submitStepArtifact(seed.catalogId, seed.entityId, seed.step, seed.data, []);
       const a = r.acceptance;
       console.log(`${seed.entityId} · ${seed.step}: ${a?.status ?? '?'}${a?.reason ? ` — ${a.reason.slice(0, 150)}` : ''}`);

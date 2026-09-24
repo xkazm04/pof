@@ -13,6 +13,7 @@ import { SOURCED_FIELD, type SourcedStamp } from '@/lib/catalog/acceptance/sourc
 import { REFERENCE_GAP } from '@/lib/catalog/acceptance/markers';
 import type { ReferenceWrapper } from './wrapper';
 import { resistanceKey } from '@/lib/catalog/canon/elements';
+import { CAST_LAW_ID, SPELL_LAW_IDS, fireboltAt, type ReferenceCaster } from './spellLaw';
 
 export interface StepSeed {
   catalogId: string;
@@ -172,14 +173,16 @@ export function seedItemSteps(w: ReferenceWrapper): StepSeed[] {
  * cast animation) limit casting — so the seed declares `gatedBy: "resource"` beside the mana cost instead of inventing a
  * cooldown. The element is the spell's one element trait (`Fire,Targeted`); damage lives on the MISSILE, a gap.
  */
-export function seedSpellSteps(w: ReferenceWrapper): StepSeed[] {
+export function seedSpellSteps(w: ReferenceWrapper, caster?: ReferenceCaster): StepSeed[] {
   if (w.catalogId !== 'spellbook' || w.file !== 'spells/spelldat.tsv') return [];
   const r = w.raw;
   const traits = (r.flags ?? '').split(',').map((f) => f.trim());
   const element = traits.find((t) => (ELEMENTS as readonly string[]).includes(t.toUpperCase()));
   const manaCost = num(r.manaCost);
   if (manaCost == null) return [];
-  return [{
+  // The damage is ENGINE CODE (W13, D33): known only for a spell with a law, and only for a named caster.
+  const n = caster && r.id in SPELL_LAW_IDS ? fireboltAt(caster, 1, manaCost) : null;
+  const seeds: StepSeed[] = [{
     catalogId: 'spellbook', entityId: w.entity.id, step: 'Effect Logic',
     data: {
       effect: {
@@ -187,7 +190,7 @@ export function seedSpellSteps(w: ReferenceWrapper): StepSeed[] {
         manaCost,
         // D4 (W12): a resource gates casting — declared, never an invented cooldown.
         gatedBy: 'resource',
-        baseDamage: REFERENCE_GAP,
+        baseDamage: n ? n.damage.mean : REFERENCE_GAP,
         critChancePct: REFERENCE_GAP,
         critMulti: REFERENCE_GAP,
         onHitIgnite: REFERENCE_GAP,
@@ -195,10 +198,44 @@ export function seedSpellSteps(w: ReferenceWrapper): StepSeed[] {
       [SOURCED_FIELD]: stamp(w, ['flags', 'manaCost']),
     },
     gaps: [
-      'baseDamage: a Diablo spell\'s damage lives on its MISSILE (missiledat), a join the flat ability schema has no shape for',
+      n
+        ? `baseDamage: the mean of ${n.damage.minimum}-${n.damage.maximum} (Diablo hit points) for ${caster!.basis} — the law's roll, not one value`
+        : 'baseDamage: a Diablo spell\'s damage is ENGINE CODE (misdat has no damage column) — no engine-derived law for this spell yet, or no reference caster named',
       'critChancePct / critMulti: spells do not crit in Diablo I',
       'onHitIgnite: Diablo I has no ignite — fire damage has no burning follow-up',
       ...(element ? [] : ['damageType: the spell carries no element trait (a utility spell)']),
     ],
   }];
+  // Balance (W13, D33): only for a spell whose engine-derived law exists, and only with a named reference caster.
+  if (n && caster) {
+    const hitDPS = Number((n.damage.mean / n.castTime).toFixed(3));
+    seeds.push({
+      catalogId: 'spellbook', entityId: w.entity.id, step: 'Balance',
+      data: {
+        balance: {
+          baseDamage: n.damage.mean,
+          damageRange: { minimum: n.damage.minimum, maximum: n.damage.maximum },
+          castTime: n.castTime,
+          releaseTime: n.releaseTime,
+          manaCost,
+          manaRegenPerSec: n.manaRegenPerSec,
+          limiter: 'castTime',
+          hitDPS,
+          igniteDPS: 0,
+          sustainedDPS: hitDPS,
+          castsPerPool: n.castsPerPool,
+          tierTarget: REFERENCE_GAP,
+          units: { baseDamage: 'Diablo hit points', castTime: 's', manaCost: 'Diablo mana' },
+          basis: `${caster.basis}; spell level 1; laws ${SPELL_LAW_IDS[r.id]} + ${CAST_LAW_ID} + d1-timing-law`,
+        },
+        [SOURCED_FIELD]: stamp(w, ['manaCost', `(laws ${SPELL_LAW_IDS[r.id]}, ${CAST_LAW_ID})`, '(class tables: attributes, animations)']),
+      },
+      gaps: [
+        'tierTarget: the tier-100 power line is PoF design; a 1996 spell has no place on it until converted (D23 anchors, in UE)',
+        `toHit: rolled per target (${Math.round(n.toHit(1, 0) * 100)}% against a level-1 monster beside the caster) — not part of hitDPS`,
+        'sustain: Diablo I has no mana regeneration — the pool (castsPerPool) and potions sustain casting, not a rate',
+      ],
+    });
+  }
+  return seeds;
 }
