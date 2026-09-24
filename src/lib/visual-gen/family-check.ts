@@ -41,14 +41,33 @@ export function buildFamilyPrompt(families: readonly string[]): string {
 
 export function parseFamilyReply(text: string, families: readonly string[]): FamilyReply | { error: string } {
   const offered = new Set([...families.map(norm), 'other']);
-  const fam = /FAMILY\s*=\s*([^;\n]+)/i.exec(text)?.[1];
+  // Some eyes answer the same three fields as a JSON object instead of the marker line (gemini, /diablo W08) —
+  // read both, or a second eye can never cross-examine the first.
+  const json = fieldsFromJson(text);
+  const fam = json?.family ?? /FAMILY\s*=\s*([^;\n]+)/i.exec(text)?.[1];
   if (!fam) return { error: 'no FAMILY= marker in the vision reply' };
   const family = norm(fam);
   if (!offered.has(family)) return { error: `FAMILY="${family}" is not one of the offered families` };
-  const c = /CONFIDENCE\s*=\s*([0-9.]+)/i.exec(text)?.[1];
+  const c = json ? json.confidence : /CONFIDENCE\s*=\s*([0-9.]+)/i.exec(text)?.[1];
   const confidence = c != null && Number.isFinite(Number(c)) ? Math.max(0, Math.min(1, Number(c))) : null;
-  const cues = /CUES\s*=\s*(.+)$/im.exec(text)?.[1]?.trim() ?? '';
+  const cues = json ? (json.cues ?? '') : /CUES\s*=\s*(.+)$/im.exec(text)?.[1]?.trim() ?? '';
   return { family, confidence, cues };
+}
+
+/** The {FAMILY, CONFIDENCE, CUES} object an eye may answer with, fenced or bare; keys are case-insensitive. */
+function fieldsFromJson(text: string): { family?: string; confidence?: unknown; cues?: string } | null {
+  const body = /\{[\s\S]*\}/.exec(text)?.[0];
+  if (!body) return null;
+  try {
+    const o = JSON.parse(body) as Record<string, unknown>;
+    const get = (k: string) => Object.entries(o).find(([key]) => key.toLowerCase() === k)?.[1];
+    const family = get('family');
+    if (typeof family !== 'string') return null;
+    const cues = get('cues');
+    return { family, confidence: get('confidence'), cues: typeof cues === 'string' ? cues.trim() : undefined };
+  } catch {
+    return null;
+  }
 }
 
 export interface FamilyCheckDeps {

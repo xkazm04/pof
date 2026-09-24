@@ -22,6 +22,15 @@ describe('family check — pure cores', () => {
     expect(parseFamilyReply('FAMILY=ghoul; CONFIDENCE=0.8; CUES=x', FAMILIES)).toEqual({ error: 'FAMILY="ghoul" is not one of the offered families' });
     expect(parseFamilyReply('it is a zombie', FAMILIES)).toEqual({ error: 'no FAMILY= marker in the vision reply' });
   });
+
+  // /diablo W08: a second eye (gemini) answers the same three fields as JSON; every answer was thrown away as
+  // "no FAMILY= marker", so the check could never be cross-examined by an independent model.
+  it('reads the same fields when the eye answers as JSON (fenced or bare)', () => {
+    const json = '```json\n{\n  "FAMILY": "Skeleton",\n  "CONFIDENCE": 1.0,\n  "CUES": "rib cage, bare skull"\n}\n```';
+    expect(parseFamilyReply(json, FAMILIES)).toEqual({ family: 'skeleton', confidence: 1, cues: 'rib cage, bare skull' });
+    expect(parseFamilyReply('{"family":"zombie","confidence":0.4,"cues":"flesh"}', FAMILIES)).toEqual({ family: 'zombie', confidence: 0.4, cues: 'flesh' });
+    expect(parseFamilyReply('{"FAMILY":"ghoul"}', FAMILIES)).toEqual({ error: 'FAMILY="ghoul" is not one of the offered families' });
+  });
 });
 
 describe('checkFamily verdicts', () => {
