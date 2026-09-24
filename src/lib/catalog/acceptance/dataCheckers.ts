@@ -44,6 +44,45 @@ export function fieldsPopulated(field: string, label: string, keys: string[]): C
 }
 
 /**
+ * Each of `keys` inside `field` holds ONE number (/diablo W08, D27). Presence stays with {@link fieldsPopulated};
+ * this grades SHAPE only, so an absent key or a declared gap is left to it (one verdict per defect). Measured: five
+ * produced Stat Blocks held `damage` in three shapes (`damage.minimum`, `damage.standard.minimum`, …) and a
+ * consumer guessing the shape silently fell back to a C++ default.
+ */
+export function keysNumeric(field: string, label: string, keys: string[], canonical: Record<string, RegExp> = {}): Checker {
+  const names = Object.keys(canonical);
+  const shape = `each of ${keys.join(', ')} holds ONE number, or a range written exactly {minimum, maximum} (two numbers, minimum <= maximum) — no other object and no string; a value the source does not state is written "${REFERENCE_GAP}"`
+    + (names.length ? `; ${names.map((n) => `a ${n} value is named exactly "${n}" (one number)`).join('; ')}` : '');
+  return tagRequiredFields((data) => {
+    const obj = (data[field] ?? {}) as Record<string, unknown>;
+    const bad = keys.filter((k) => obj[k] != null && !isDeclaredGap(obj[k]) && statNumber(obj[k]) === undefined);
+    const misnamed = Object.keys(obj).flatMap((k) => names.filter((n) => k !== n && canonical[n].test(k)).map((n) => `${k} should be named "${n}"`));
+    const ok = bad.length === 0 && misnamed.length === 0;
+    const what = (v: unknown) => (Array.isArray(v) ? 'a list' : typeof v === 'object' ? 'an object' : `a ${typeof v}`);
+    const problems = [...bad.map((k) => `${k} is ${what(obj[k])}`), ...misnamed];
+    return {
+      label, tier: 'L0', status: ok ? 'pass' : 'pending',
+      detail: `${keys.length - bad.length} / ${keys.length} numeric${misnamed.length ? `, ${misnamed.length} misnamed` : ''}`,
+      ...(ok ? {} : { reason: `field "${field}": ${problems.join(', ')} — ${shape}` }),
+    };
+  }, { field, keys, shape });
+}
+
+/**
+ * The ONE reader for a stat value (D27): a finite number, or the mean of a `{minimum, maximum}` range with no other
+ * keys. Anything else is `undefined` — a consumer must not guess a producer's invented nesting.
+ */
+export function statNumber(v: unknown): number | undefined {
+  if (typeof v === 'number') return Number.isFinite(v) ? v : undefined;
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return undefined;
+  const o = v as Record<string, unknown>;
+  const keys = Object.keys(o);
+  if (keys.length !== 2 || typeof o.minimum !== 'number' || typeof o.maximum !== 'number') return undefined;
+  if (!Number.isFinite(o.minimum) || !Number.isFinite(o.maximum) || o.minimum > o.maximum) return undefined;
+  return (o.minimum + o.maximum) / 2;
+}
+
+/**
  * A per-element resistance profile, graded against the ELEMENT SET of the entity's canon profile
  * (/diablo W03, D14): PoF's fire/ice/lightning/chaos, Diablo I's magic/fire/lightning. The keys are
  * `<element>Res`; everything else behaves exactly like {@link fieldsPopulated}.

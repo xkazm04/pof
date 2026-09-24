@@ -6,16 +6,15 @@
  *     [--height-cm 180] [--tint "0.55,0.62,0.45"] [--share-mesh /Game/Diablo/Bestiary/Zombie/SK_Zombie]
  *
  * Builds the POF_DIABLO_MONSTER spec for scripts/diablo/ue_import_monster.py from the entity's artifacts
- * — name, accepted Concept 2D Art (the icon file), Stat Block melee damage — and runs the UE commandlet.
+ * — name and accepted Concept 2D Art (the icon file) — and runs the UE commandlet.
  * Values travel on the command line / environment only and land in the gitignored /Game/Diablo content;
- * none enters a repo. PoF's enemy melee ability takes ONE BaseDamage: a reference damage RANGE is reduced
- * to its mean, and the log says so (a finding, not a silent choice).
+ * none enters a repo. The monster's numbers (HP, damage, speed, cadence) are NOT set here — its converted
+ * stat row owns them (scripts/diablo/stats.ts --apply, D23/W08).
  */
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import '../../src/lib/catalog/pipelines/registry.generated';
-import { listArtifacts } from '../../src/lib/pipeline-artifacts-db';
 import { seededEntities } from '../../src/lib/catalog/seed';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore — plain .mjs helper shared with the gap-loop scripts (the one naming rule).
@@ -32,11 +31,11 @@ if (!entityId) { console.error('usage: ue_import.ts --catalog <id> --id <entityI
 const entity = seededEntities(catalogId).find((e) => e.id === entityId);
 if (!entity) { console.error(`REFUSED: ${catalogId}/${entityId} is not a seeded/promoted entity`); process.exit(1); }
 
-const arts = listArtifacts(catalogId, entityId);
-const dmg = ((arts.find((a) => a.step === 'Stat Block')?.data.stats ?? {}) as { damage?: { minimum?: number; maximum?: number } }).damage;
-const meleeDamage = dmg && typeof dmg.minimum === 'number' && typeof dmg.maximum === 'number' ? (dmg.minimum + dmg.maximum) / 2 : undefined;
-if (meleeDamage !== undefined) console.log(`melee damage: reference range ${dmg!.minimum}-${dmg!.maximum} -> BaseDamage ${meleeDamage} (PoF's enemy melee takes ONE value — the range is reduced to its mean)`);
-else console.log('melee damage: no Stat Block damage range — the ability keeps its C++ default');
+
+// Damage is NOT set here: this import used to write the Stat Block's REFERENCE-scale damage onto the ability (and
+// guessed the Stat Block's shape to find it). Since D23 the monster's converted stat row owns it — run
+// scripts/diablo/stats.ts --apply after an import (W08).
+console.log('melee damage: owned by the stat row (scripts/diablo/stats.ts --apply) — not set by the import');
 
 const concept = resolve('generated', 'icons', iconFileName(catalogId, 'Concept 2D Art', 'jpg', entityId));
 const spec = {
@@ -44,7 +43,6 @@ const spec = {
   ...(fbx ? { fbx: resolve(fbx) } : {}),
   ...(existsSync(concept) ? { concept } : {}),
   heightCm: Number(opt('height-cm') ?? 180),
-  ...(meleeDamage !== undefined ? { meleeDamage } : {}),
   ...(opt('tint') ? { tint: opt('tint')!.split(',').map(Number) } : {}),
   ...(opt('share-mesh') ? { shareMesh: opt('share-mesh') } : {}),
 };

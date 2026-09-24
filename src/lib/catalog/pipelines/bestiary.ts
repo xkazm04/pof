@@ -1,6 +1,6 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
-import { minLength, fieldsPopulated, selected, minCount, resistancesPopulated } from '../acceptance/dataCheckers';
+import { minLength, fieldsPopulated, selected, minCount, resistancesPopulated, keysNumeric } from '../acceptance/dataCheckers';
 import { powerWithinTierTarget, monsterRarityWithinBands } from '../acceptance/invariants';
 import { allOf } from '../acceptance/combinators';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
@@ -140,6 +140,8 @@ registerCatalogPipeline({
       },
       accept: allOf(
         fieldsPopulated('stats', 'Stat block populated', ['health', 'damage', 'armor', 'moveSpeed']),
+        // D27 (/diablo W08): the SHAPE of each value — one number or a {minimum, maximum} range; XP named `experience`.
+        keysNumeric('stats', 'Stat values are numbers', ['health', 'damage', 'armor', 'moveSpeed'], { experience: /^(xp|exp\w*|experience\w+)$/i }),
         wiringContractSound('stats'),
       ),
       staticChecks: () => [cppSymbolExists('AARPGEnemyCharacter', 'Enemy actor class present in UE Source')],
