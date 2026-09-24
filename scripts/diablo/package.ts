@@ -18,6 +18,7 @@ import { submitStepArtifact } from '../../src/lib/catalog/headless';
 import { seededEntities } from '../../src/lib/catalog/seed';
 import { defaultPackagingVerifyDeps, verifyPackagingAll } from '../../src/lib/catalog/acceptance/packagingVerify';
 import { diabloUeRoot } from './ueRoot';
+import { attackKindOf } from '../../src/lib/catalog/reference/behaviourScale';
 
 const opt = (n: string) => { const i = process.argv.indexOf(`--${n}`); return i >= 0 ? process.argv[i + 1] : undefined; };
 const catalogId = opt('catalog') ?? 'bestiary';
@@ -56,9 +57,11 @@ for (const [step, paths] of Object.entries(DECLARED)) {
   console.log(`re-declared ${step} → ${paths.join(', ')} (${r.acceptance.status})`);
 }
 
+// The attack ability's asset follows the monster's AI routine (W09: an archer's is GA_<slug>_Ranged).
+const attackSuffix = attackKindOf(entity.tags?.[0] ?? '') === 'ranged' ? 'Ranged' : 'Melee';
 const assets = sharedWith
-  ? [`BP_${slug}`, `MI_${slug}`, `GA_${slug}_Melee`, `T_${slug}_Concept`]
-  : [`BP_${slug}`, `GA_${slug}_Melee`, `T_${slug}_Concept`];
+  ? [`BP_${slug}`, `MI_${slug}`, `GA_${slug}_${attackSuffix}`, `T_${slug}_Concept`]
+  : [`BP_${slug}`, `GA_${slug}_${attackSuffix}`, `T_${slug}_Concept`];
 const pkg = submitStepArtifact(catalogId, entityId, 'UE Packaging', {
   assets,
   wiringContract: {
