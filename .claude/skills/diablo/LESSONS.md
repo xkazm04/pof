@@ -94,3 +94,10 @@
   reverted by a later checkout.
 - **Codex landing on a file another session has uncommitted:** back the file up, land, diff against the backup — the only
   change must be the task's own.
+- **Measure cadence in GAME time, never from log stamps.** Wall-clock stamps on a headless run jittered ±0.1 s and first
+  read the archer at 2.60 s against a 2.42 law; logging `GetWorld()->GetTimeSeconds()` on the attack made the residue visible
+  and attributable (a 0.25 s re-probe, then a 0.1 s hold), each a real defect.
+- **Before attributing a failing UE test, rebuild the baseline.** Set aside only your own changed sources (back up, revert,
+  rebuild, rerun, restore) — "it touches a different controller" is an argument; the identical failure on the baseline is proof.
+- **Every reader of an aggregate must apply the same aggregation.** Promotion aggregated affix families, status.ts did not —
+  so all 50 read STALE forever and the flag stopped meaning anything.
