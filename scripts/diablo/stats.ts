@@ -113,7 +113,7 @@ const rows = wrappers.map((w) => {
       ...c.ledger,
       { field: 'criticalChance', grade: 'full', reason: 'zeroed: a reference monster never lands a critical hit (Critical Strike is a Warrior class flag)' },
       { field: 'armor', grade: 'dropped', reason: 'the reference armour class only lowers the PLAYER\'s chance to hit; PoF Armor reduces damage, which would break hits-to-kill' },
-      { field: 'characterLevel', grade: 'data-only', reason: 'carried, but no level-scaling curve table is assigned, so it moves no number yet' },
+      { field: 'characterLevel', grade: 'full', reason: 'the monster level sets the item level of its drops (D7); no level-scaling curve table is assigned, so it scales no attribute' },
     ],
     invariants: c.invariants,
     behaviour: 'error' in behaviour ? behaviour : {
