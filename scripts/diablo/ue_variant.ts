@@ -21,6 +21,7 @@ import { seededEntities } from '../../src/lib/catalog/seed';
 // @ts-ignore — plain .mjs helper shared with the gap-loop scripts (the one naming rule).
 import { iconFileName } from '../gap-loop/power-icon-payload.mjs';
 import { diabloUeRoot } from './ueRoot';
+import { attackKindOf } from '../../src/lib/catalog/reference/behaviourScale';
 
 const UE_CMD = process.env.POF_UE_CMD ?? 'C:/Program Files/Epic Games/UE_5.8/Engine/Binaries/Win64/UnrealEditor-Cmd.exe';
 const UPROJECT = process.env.POF_UPROJECT ?? 'C:/Users/kazda/Documents/Unreal Projects/PoF/PoF.uproject';
@@ -46,6 +47,7 @@ const concept = resolve('generated', 'icons', iconFileName(catalogId, 'Concept 2
 const spec = {
   name: diabloUeRoot(member).slug,
   sourceName: diabloUeRoot(head).slug,
+  attack: attackKindOf(member.tags?.[0] ?? ''),
   ...(recolour ? { recolour } : tint ? { tint } : {}),
   heightCm: Number(opt('height-cm') ?? 180),
   ...(existsSync(concept) ? { concept } : {}),

@@ -65,3 +65,38 @@ describe('convertBehaviour', () => {
     expect(b.basis).toMatch(/Zombie/);
   });
 });
+
+describe('SkeletonRanged (W09): an archer never approaches, shoots on a per-tick chance, and keeps its distance', () => {
+  const t = timingLaw();
+  it('reads the ranged law from the canon', () => {
+    const law = aiRoutineLaw('SkeletonRanged');
+    expect(law.routine).toBe('SkeletonRanged');
+    expect(law.routine === 'SkeletonRanged' && law.keepAwayTiles).toBeGreaterThan(0);
+  });
+  it('shoots no faster than its attack animation, and a smarter archer shoots sooner', () => {
+    const dull = convertBehaviour({ ...base, ai: 'SkeletonRanged', intelligence: 0 }, HERO, TARGET);
+    const sharp = convertBehaviour({ ...base, ai: 'SkeletonRanged', intelligence: 3 }, HERO, TARGET);
+    expect(dull.attackCycleSeconds).toBeGreaterThanOrEqual(base.attackFrames / t.ticksPerSecond);
+    expect(sharp.attackCycleSeconds).toBeLessThan(dull.attackCycleSeconds);
+  });
+  it('holds position and converts its keep-away distance through the same tile the speed uses', () => {
+    const b = convertBehaviour({ ...base, ai: 'SkeletonRanged', intelligence: 0 }, HERO, TARGET);
+    const cmPerTile = TARGET.walkSpeed * (HERO.walkFrames + t.walkExtraTicks) / t.ticksPerSecond;
+    expect(b.approaches).toBe(false);
+    expect(b.retreatDistance).toBeCloseTo(aiRoutineLaw('SkeletonRanged').routine === 'SkeletonRanged' ? (aiRoutineLaw('SkeletonRanged') as { keepAwayTiles: number }).keepAwayTiles * cmPerTile : 0, 6);
+  });
+  it('melee routines approach and keep no distance', () => {
+    const b = convertBehaviour({ ...base, ai: 'Zombie', intelligence: 0 }, HERO, TARGET);
+    expect(b.approaches).toBe(true);
+    expect(b.retreatDistance).toBe(0);
+  });
+});
+
+describe('attackKindOf', () => {
+  it('derives the attack kind from the routine, and refuses an unmodelled one', async () => {
+    const { attackKindOf } = await import('@/lib/catalog/reference/behaviourScale');
+    expect(attackKindOf('SkeletonRanged')).toBe('ranged');
+    expect(attackKindOf('Zombie')).toBe('melee');
+    expect(() => attackKindOf('Succubus')).toThrow(/not modelled/);
+  });
+});

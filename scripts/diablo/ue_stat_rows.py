@@ -54,13 +54,17 @@ for r in spec["rows"]:
     if "MoveSpeedOverride" in beh:
         cdo.set_editor_property("MoveSpeedOverride", float(beh["MoveSpeedOverride"]))
         cdo.set_editor_property("AttackCooldownOverride", float(beh["AttackCooldownOverride"]))
+    if beh.get("bNeverApproach"):
+        cdo.set_editor_property("bNeverApproach", True)
+        cdo.set_editor_property("RetreatDistanceOverride", float(beh["RetreatDistanceOverride"]))
+        cdo.set_editor_property("AttackRangeOverride", float(beh["AttackRangeOverride"]))
     unreal.BlueprintEditorLibrary.compile_blueprint(bp)
     lib.save_asset(bp_path)
     if lib.does_asset_exist(ga_path):
         ga_bp = lib.load_asset(ga_path)
         ga_cdo = unreal.get_default_object(ga_bp.generated_class())
         ga_cdo.set_editor_property("BaseDamage", float(r["baseDamage"]))
-        if "hitDelay" in beh:
+        if "hitDelay" in beh and r.get("attackKind", "melee") == "melee":
             ga_cdo.set_editor_property("FallbackAttackWindow", float(beh["hitDelay"]))
         unreal.BlueprintEditorLibrary.compile_blueprint(ga_bp)
         lib.save_asset(ga_path)
@@ -80,7 +84,9 @@ for r in spec["rows"]:
         "row": str(cdo.get_editor_property("AttributeInitRowName")),
         "rowInTable": r["entityId"] in back_rows,
         "meleeBaseDamage": round(unreal.get_default_object(ga.generated_class()).get_editor_property("BaseDamage"), 3) if ga else None,
-        "hitWindow": round(unreal.get_default_object(ga.generated_class()).get_editor_property("FallbackAttackWindow"), 3) if ga else None,
+        "hitWindow": round(unreal.get_default_object(ga.generated_class()).get_editor_property("FallbackAttackWindow"), 3) if ga and r.get("attackKind", "melee") == "melee" else None,
+        "neverApproach": cdo.get_editor_property("bNeverApproach"),
+        "retreat": round(cdo.get_editor_property("RetreatDistanceOverride"), 1),
         "moveSpeedOverride": round(cdo.get_editor_property("MoveSpeedOverride"), 1),
         "attackCooldownOverride": round(cdo.get_editor_property("AttackCooldownOverride"), 3),
     }

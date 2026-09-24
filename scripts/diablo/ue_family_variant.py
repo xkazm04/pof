@@ -187,21 +187,13 @@ if src_anims:
 cdo.set_editor_property("bEquipSithLightsaber", False)
 
 granted = [c for c in (unreal.load_class(None, "/Script/PoF.GA_Death"), unreal.load_class(None, "/Script/PoF.GA_HitReact")) if c]
-melee_parent = unreal.load_class(None, "/Script/PoF.GA_EnemyMeleeAttack")
-if melee_parent is not None:
-    ga_path = f"{DEST}/GA_{NAME}_Melee"
-    if lib.does_asset_exist(ga_path):
-        ga_bp = lib.load_asset(ga_path)
-    else:
-        gf = unreal.BlueprintFactory()
-        gf.set_editor_property("parent_class", melee_parent)
-        ga_bp = asset_tools.create_asset(f"GA_{NAME}_Melee", DEST, unreal.Blueprint, gf)
-    unreal.BlueprintEditorLibrary.compile_blueprint(ga_bp)
-    ga_cdo = unreal.get_default_object(ga_bp.generated_class())
-    if spec.get("meleeDamage") is not None:
-        ga_cdo.set_editor_property("BaseDamage", float(spec["meleeDamage"]))
-    lib.save_asset(ga_path)
-    granted.append(ga_bp.generated_class())
+# The attack (melee or ranged, from the monster's AI routine) — one shared builder (scripts/diablo/ue_attack.py).
+import sys as _sys
+_sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from ue_attack import build_attack  # noqa: E402
+_attack = build_attack(DEST, NAME, spec.get("attack", "melee"), spec.get("meleeDamage"))
+if _attack is not None:
+    granted.append(_attack)
 cdo.set_editor_property("GrantedAbilities", granted)
 unreal.BlueprintEditorLibrary.compile_blueprint(bp)
 lib.save_asset(bp_path)

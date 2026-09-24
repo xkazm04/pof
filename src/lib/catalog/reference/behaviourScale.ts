@@ -38,13 +38,16 @@ type Pct = { a: number; b: number };
 type Pause = { c: number; d: number; spread: number };
 export type AiRoutineLaw =
   | { routine: 'Zombie'; act: Pct }
-  | { routine: 'SkeletonMelee'; attack: Pct; attackPause: Pause; step: Pct; stepPause: Pause };
+  | { routine: 'SkeletonMelee'; attack: Pct; attackPause: Pause; step: Pct; stepPause: Pause }
+  | { routine: 'SkeletonRanged'; shoot: Pct; keepAwayTiles: number };
 
 const pct = (m: RegExpExecArray, i: number): Pct => ({ a: Number(m[i]), b: Number(m[i + 1]) });
 const pause = (m: RegExpExecArray, i: number): Pause => ({ c: Number(m[i]), d: Number(m[i + 1]), spread: Number(m[i + 2]) });
 
 /** The canon rule ids each modelled routine is read from (a derived value names its basis). */
-export const AI_LAW_IDS: Record<string, string> = { Zombie: 'd1-ai-zombie-law', SkeletonMelee: 'd1-ai-skeleton-melee-law' };
+export const AI_LAW_IDS: Record<string, string> = {
+  Zombie: 'd1-ai-zombie-law', SkeletonMelee: 'd1-ai-skeleton-melee-law', SkeletonRanged: 'd1-ai-skeleton-ranged-law',
+};
 
 /** The rule texts the behaviour model reads — hashed into the ingest version so a law edit re-projects. */
 export function behaviourLawTexts(): string[] {
@@ -63,6 +66,10 @@ export function aiRoutineLaw(ai: string): AiRoutineLaw {
       attack: pct(m, 1), attackPause: pause(m, 3),
       step: { a: Number(m[7]), b: Number(m[6]) }, stepPause: pause(m, 8),
     };
+  }
+  if (ai === 'SkeletonRanged') {
+    const m = need('d1-ai-skeleton-ranged-law', /within (\d+) tiles it may walk away[\s\S]*shoots an arrow on \((\d+) x intelligence \+ (\d+)\)% of ticks/);
+    return { routine: 'SkeletonRanged', keepAwayTiles: Number(m[1]), shoot: pct(m, 2) };
   }
   throw new Error(`AI routine "${ai}" is not modelled yet — add its engine-derived law to the diablo1 canon first`);
 }
@@ -95,6 +102,13 @@ export function expectedTicks(m: BehaviourInput, walkExtra: number): { step: num
     const idle = (1 - p) / p;
     return { step: walk + idle, attack: attack + idle };
   }
+  if (law.routine === 'SkeletonRanged') {
+    // It only ever walks AWAY (its retreat hesitation is not modelled: the bare walk is its step), and shoots on a
+    // per-tick chance while it stands.
+    const p = prob(law.shoot, m.intelligence);
+    if (p <= 0) throw new Error(`a SkeletonRanged with intelligence ${m.intelligence} never shoots — no cadence exists`);
+    return { step: walk, attack: attack + (1 - p) / p };
+  }
   return {
     step: walk + (1 - prob(law.step, m.intelligence)) * meanPause(law.stepPause, m.intelligence),
     attack: attack + (1 - prob(law.attack, m.intelligence)) * meanPause(law.attackPause, m.intelligence),
@@ -110,7 +124,19 @@ export function convertBehaviour(m: BehaviourInput, hero: { walkFrames: number }
     { field: 'attackCycle', grade: 'approximate', reason: 'the reference re-rolls its decision every tick; the cooldown is the EXPECTED time from one swing to the next' },
     { field: 'hitDelay', grade: 'full', reason: 'the action frame at one tick per frame, in real seconds' },
   ];
+  const law = aiRoutineLaw(m.ai);
+  const cmPerTile = target.walkSpeed * heroTicksPerTile / t.ticksPerSecond;
+  const ranged = law.routine === 'SkeletonRanged';
+  if (ranged) {
+    ledger.push(
+      { field: 'approaches', grade: 'full', reason: 'the routine never walks toward its target: it holds position' },
+      { field: 'retreatDistance', grade: 'approximate', reason: `walks away when the target is within ${law.keepAwayTiles} tiles; the retreat's own chances are not modelled (it always retreats)` },
+      { field: 'projectileSpeed', grade: 'dropped', reason: 'the arrow moves 32 screen pixels per tick in the 2:1 projection — a direction-dependent speed with no single world value; the PoF projectile default is kept' },
+    );
+  }
   return {
+    approaches: !ranged,
+    retreatDistance: ranged ? law.keepAwayTiles * cmPerTile : 0,
     walkSpeed: target.walkSpeed * heroTicksPerTile / ticks.step,
     attackCycleSeconds: ticks.attack / t.ticksPerSecond,
     hitDelaySeconds: m.actionFrame * (m.attackRate ?? 1) / t.ticksPerSecond,
@@ -118,4 +144,9 @@ export function convertBehaviour(m: BehaviourInput, hero: { walkFrames: number }
     ledger,
     basis: `${m.ai} routine at intelligence ${m.intelligence}; speed ratio to a hero stepping every ${heroTicksPerTile} ticks ↔ PoF player ${target.walkSpeed} cm/s`,
   };
+}
+
+/** How a monster attacks, from its AI routine (/diablo W09): an archer's routine shoots, the others strike. */
+export function attackKindOf(ai: string): 'melee' | 'ranged' {
+  return aiRoutineLaw(ai).routine === 'SkeletonRanged' ? 'ranged' : 'melee';
 }

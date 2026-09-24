@@ -23,7 +23,7 @@ import { listWrappers } from '../../src/lib/catalog/reference/wrappers-db';
 import { parseTsv } from '../../src/lib/catalog/ingest/tsv';
 import { resistanceByElement } from '../../src/lib/catalog/reference/stepSeeds';
 import { convertMonsterScale, diabloReferencePlayer, uePlayerAnchor } from '../../src/lib/catalog/reference/playerScale';
-import { convertBehaviour } from '../../src/lib/catalog/reference/behaviourScale';
+import { attackKindOf, convertBehaviour } from '../../src/lib/catalog/reference/behaviourScale';
 import { seededEntities } from '../../src/lib/catalog/seed';
 import { diabloUeRoot } from './ueRoot';
 
@@ -32,6 +32,8 @@ const UPROJECT = process.env.POF_UPROJECT ?? 'C:/Users/kazda/Documents/Unreal Pr
 const UE_SRC = resolve(UPROJECT, '..', 'Source', 'PoF', 'AbilitySystem');
 const OUT = resolve('generated', 'diablo', 'stat-rows.json');
 export const STAT_TABLE = '/Game/Diablo/DT_D1MonsterStats';
+/** "Shoots whenever its line is clear" — no line-of-sight gate exists in PoF's simple controller; beyond any arena. */
+const UNBOUNDED_RANGE_CM = 5000;
 
 const opt = (n: string) => { const i = process.argv.indexOf(`--${n}`); return i >= 0 ? process.argv[i + 1] : undefined; };
 const root = opt('root');
@@ -88,11 +90,14 @@ const rows = wrappers.map((w) => {
       actionFrame: Number(r.animFrameNum), ai: r.ai, intelligence: Number(r.intelligence) }, { walkFrames: heroWalkFrames }, { walkSpeed: targetWalk });
   } catch (e) { behaviour = { error: (e as Error).message }; }
   const { root: ueRoot, slug } = diabloUeRoot(w.entity);
+  let kind: 'melee' | 'ranged' = 'melee';
+  try { kind = attackKindOf(r.ai); } catch { /* unmodelled routine: behaviour already reports it */ }
   return {
     entityId: w.entity.id,
     name: w.entity.name,
     blueprint: `${ueRoot}/BP_${slug}`,
-    melee: `${ueRoot}/GA_${slug}_Melee`,
+    attackKind: kind,
+    melee: `${ueRoot}/GA_${slug}_${kind === 'ranged' ? 'Ranged' : 'Melee'}`,
     baseDamage: c.row.baseDamage,
     // FARPGAttributeInitRow — property names exactly as the UE struct declares them.
     ueRow: {
@@ -113,6 +118,9 @@ const rows = wrappers.map((w) => {
     invariants: c.invariants,
     behaviour: 'error' in behaviour ? behaviour : {
       MoveSpeedOverride: behaviour.walkSpeed, AttackCooldownOverride: behaviour.attackCycleSeconds,
+      // A position-holding archer (W09): keep-away from its routine's law; it shoots whenever its line is clear, and PoF
+      // has no line-of-sight gate here, so its range is unbounded within the arena (declared in the ledger).
+      ...(behaviour.approaches ? {} : { bNeverApproach: true, RetreatDistanceOverride: behaviour.retreatDistance, AttackRangeOverride: UNBOUNDED_RANGE_CM }),
       hitDelay: behaviour.hitDelaySeconds, ledger: behaviour.ledger, basis: behaviour.basis,
     },
     source: `${w.file} ${r._monster_id}`,
