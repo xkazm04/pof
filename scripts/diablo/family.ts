@@ -30,6 +30,10 @@ const opt = (n: string) => { const i = process.argv.indexOf(`--${n}`); return i 
 const catalogId = opt('catalog') ?? 'bestiary';
 const entityId = opt('id');
 const tint = (opt('tint') ?? '').split(',').map(Number).filter((n) => Number.isFinite(n));
+// --recolour r,g,b,amount,gain: the value-preserving family recolour (D25, W08) — render the sprites with the same
+// flag (sprite_render.py) so the judged sprite is the recolour UE will draw.
+const recolour = (opt('recolour') ?? '').split(',').map(Number).filter((n) => Number.isFinite(n));
+const colourNote = recolour.length === 5 ? { recolour } : tint.length === 3 ? { tint } : {};
 const spritesDir = opt('sprites');
 // The member's recolour is judged like the head's render (render.ts): does it still read as its creature
 // at sprite scale? W07: every darkened Burning Dead tint read as a zombie while the step graded pass unseen.
@@ -64,9 +68,9 @@ const rig = submitStepArtifact(catalogId, entityId, '3D & Rig', {
   genHistory: {
     batches: [{
       id: 'fam', createdAt: new Date().toISOString(),
-      direction: `family art set: shares ${head.name}'s rigged mesh, recoloured${tint.length === 3 ? ` (tint ${tint.join(', ')})` : ''}`,
+      direction: `family art set: shares ${head.name}'s rigged mesh, recoloured${recolour.length === 5 ? ` (recolour ${recolour.join(', ')})` : tint.length === 3 ? ` (tint ${tint.join(', ')})` : ''}`,
       prompt: `shared with ${sourceId} — Diablo builds art per family, not per monster`,
-      candidates: [{ id: 'fam-0', swatch: 'linear-gradient(#333,#111)', payload: { ...srcCand.payload, mesh: 0, sharedWith: sourceId, ...(tint.length === 3 ? { tint } : {}) } }],
+      candidates: [{ id: 'fam-0', swatch: 'linear-gradient(#333,#111)', payload: { ...srcCand.payload, mesh: 0, sharedWith: sourceId, ...colourNote } }],
     }],
     selectedId: 'fam-0',
   },
@@ -83,7 +87,7 @@ if (spritesDir) {
       frameSize: 96,
       requestedPose: 'family recolour of the shared mesh',
       sharedWith: sourceId,
-      ...(tint.length === 3 ? { tint } : {}),
+      ...colourNote,
     },
   }, []);
   console.log(`Sprite Render (tinted): ${sprite.acceptance.status} — ${sprite.acceptance.detail ?? sprite.acceptance.reason ?? ''}`);

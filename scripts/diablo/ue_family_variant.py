@@ -68,12 +68,76 @@ else:
     mel.recompile_material(master)
     lib.save_asset(master_path)
 
-# 2. The variant's tinted instance.
+# 1b. The VALUE-PRESERVING recolour master (/diablo W08, D25) — the same formula as sprite_render.py --recolour:
+#     out = Gain * lerp(base, luminance(base) * C, Amount), C normalised to luminance 1 (Rec.709 weights, as Blender's
+#     RGB-to-BW). A multiply tint can only darken; this keeps the texture's light/dark structure and moves its hue.
+rc = spec.get("recolour")
+if rc:
+    rmaster_path = f"{ROOT}/M_DiabloRecolour"
+    if lib.does_asset_exist(rmaster_path):
+        master = lib.load_asset(rmaster_path)
+    else:
+        master = asset_tools.create_asset("M_DiabloRecolour", ROOT, unreal.Material, unreal.MaterialFactoryNew())
+        tex = mel.create_material_expression(master, unreal.MaterialExpressionTextureSampleParameter2D, -900, 0)
+        tex.set_editor_property("parameter_name", "BaseColorTex")
+        if base_tex:
+            tex.set_editor_property("texture", base_tex)
+        desat = mel.create_material_expression(master, unreal.MaterialExpressionDesaturation, -650, 150)
+        desat.set_editor_property("luminance_factors", unreal.LinearColor(0.2126, 0.7152, 0.0722, 0.0))
+        mel.connect_material_expressions(tex, "RGB", desat, "")
+        cpar = mel.create_material_expression(master, unreal.MaterialExpressionVectorParameter, -650, 300)
+        cpar.set_editor_property("parameter_name", "RecolourC")
+        cpar.set_editor_property("default_value", unreal.LinearColor(1, 1, 1, 1))
+        col = mel.create_material_expression(master, unreal.MaterialExpressionMultiply, -450, 200)
+        mel.connect_material_expressions(desat, "", col, "A")
+        mel.connect_material_expressions(cpar, "", col, "B")
+        amt = mel.create_material_expression(master, unreal.MaterialExpressionScalarParameter, -450, 350)
+        amt.set_editor_property("parameter_name", "Amount")
+        lerp = mel.create_material_expression(master, unreal.MaterialExpressionLinearInterpolate, -250, 100)
+        mel.connect_material_expressions(tex, "RGB", lerp, "A")
+        mel.connect_material_expressions(col, "", lerp, "B")
+        mel.connect_material_expressions(amt, "", lerp, "Alpha")
+        gpar = mel.create_material_expression(master, unreal.MaterialExpressionScalarParameter, -250, 300)
+        gpar.set_editor_property("parameter_name", "Gain")
+        gpar.set_editor_property("default_value", 1.0)
+        out = mel.create_material_expression(master, unreal.MaterialExpressionMultiply, -80, 150)
+        mel.connect_material_expressions(lerp, "", out, "A")
+        mel.connect_material_expressions(gpar, "", out, "B")
+        mel.connect_material_property(out, "", unreal.MaterialProperty.MP_BASE_COLOR)
+        ntex = mel.create_material_expression(master, unreal.MaterialExpressionTextureSampleParameter2D, -900, 500)
+        ntex.set_editor_property("parameter_name", "NormalTex")
+        if normal_tex:
+            normal_tex.set_editor_property("srgb", False)
+            ntex.set_editor_property("texture", normal_tex)
+            ntex.set_editor_property("sampler_type", unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL)
+            mel.connect_material_property(ntex, "RGB", unreal.MaterialProperty.MP_NORMAL)
+        mel.recompile_material(master)
+        lib.save_asset(rmaster_path)
+
+# Both masters must declare skeletal-mesh usage. A material created from Python has none, and a -game run cannot
+# add it, so every family member drew with the DEFAULT material in play — the W06/W07 tints never rendered in UE
+# ("missing usage flag SkeletalMesh! Default Material will be used in game", found W08). Set it on whichever master
+# the variant uses, including one that already exists.
+if not master.get_editor_property("used_with_skeletal_mesh"):
+    master.set_editor_property("used_with_skeletal_mesh", True)
+    mel.recompile_material(master)
+    lib.save_asset(master.get_path_name().split(".")[0])
+unreal.log(f"POF_DIABLO_VARIANT_USAGE={master.get_name()} used_with_skeletal_mesh={master.get_editor_property('used_with_skeletal_mesh')}")
+
+# 2. The variant's recoloured (or legacy tinted) instance.
 mi_path = f"{DEST}/MI_{NAME}"
 mi = lib.load_asset(mi_path) if lib.does_asset_exist(mi_path) else asset_tools.create_asset(f"MI_{NAME}", DEST, unreal.MaterialInstanceConstant, unreal.MaterialInstanceConstantFactoryNew())
 mel.set_material_instance_parent(mi, master)
-t = spec.get("tint") or [1, 1, 1]
-mel.set_material_instance_vector_parameter_value(mi, "Tint", unreal.LinearColor(t[0], t[1], t[2], 1.0))
+if rc:
+    lum = 0.2126 * rc[0] + 0.7152 * rc[1] + 0.0722 * rc[2]
+    c = [x / lum for x in rc[:3]] if lum > 0 else [1.0, 1.0, 1.0]
+    mel.set_material_instance_vector_parameter_value(mi, "RecolourC", unreal.LinearColor(c[0], c[1], c[2], 1.0))
+    mel.set_material_instance_scalar_parameter_value(mi, "Amount", float(rc[3]))
+    mel.set_material_instance_scalar_parameter_value(mi, "Gain", float(rc[4]))
+    t = rc
+else:
+    t = spec.get("tint") or [1, 1, 1]
+    mel.set_material_instance_vector_parameter_value(mi, "Tint", unreal.LinearColor(t[0], t[1], t[2], 1.0))
 if base_tex:
     mel.set_material_instance_texture_parameter_value(mi, "BaseColorTex", base_tex)
 if normal_tex:
@@ -151,6 +215,7 @@ unreal.log("POF_DIABLO_VARIANT_VERIFY=" + json.dumps({
     "sharesWith": SOURCE,
     "material": mc.get_material(0).get_path_name() if mc.get_material(0) else None,
     "tint": t,
+    "master": master.get_path_name(),
     "heightCm": round(native * factor, 1),
     "animation": src_anims[0].get_name() if src_anims else None,
     "abilities": [c.get_name() for c in cdo_back.get_editor_property("GrantedAbilities")],

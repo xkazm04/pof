@@ -39,12 +39,14 @@ const headId = typeof cand?.payload?.sharedWith === 'string' ? cand.payload.shar
 const head = headId ? all.find((e) => e.id === headId) : undefined;
 if (!head) { console.error(`REFUSED: ${entityId}'s 3D & Rig does not share a family head's mesh — run family.ts first`); process.exit(1); }
 const tint = Array.isArray(cand?.payload?.tint) ? cand.payload.tint as number[] : undefined;
+// D25 (W08): the value-preserving recolour wins over the legacy multiply tint when the member carries one.
+const recolour = Array.isArray(cand?.payload?.recolour) ? cand.payload.recolour as number[] : undefined;
 
 const concept = resolve('generated', 'icons', iconFileName(catalogId, 'Concept 2D Art', 'jpg', entityId));
 const spec = {
   name: diabloUeRoot(member).slug,
   sourceName: diabloUeRoot(head).slug,
-  ...(tint ? { tint } : {}),
+  ...(recolour ? { recolour } : tint ? { tint } : {}),
   heightCm: Number(opt('height-cm') ?? 180),
   ...(existsSync(concept) ? { concept } : {}),
 };

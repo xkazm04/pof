@@ -29,6 +29,11 @@ SIZE = int(opt.get("size", 96))
 # model and differ by palette). Multiplies every material's base colour, so one rigged mesh renders as
 # the whole family (/diablo W06).
 TINT = [float(x) for x in opt["tint"].split(",")] if opt.get("tint") else None
+# --recolour r,g,b,amount,gain: the VALUE-PRESERVING family recolour (/diablo W08, D25). A multiply tint can only
+# darken, and a darkened skeleton stopped reading as one at 96 px (W07: Burning Dead 0/8). This keeps the texture's
+# light/dark structure and moves its hue: out = gain * lerp(base, luminance(base) * C, amount), C normalised to
+# luminance 1. The same formula drives the UE material (M_DiabloRecolour), so the sprite verifies the game.
+RECOLOUR = [float(x) for x in opt["recolour"].split(",")] if opt.get("recolour") else None
 FRAME = int(opt.get("frame", 1))
 RENDER = int(opt.get("render", 384))
 os.makedirs(out_dir, exist_ok=True)
@@ -65,6 +70,31 @@ if TINT:
             else:
                 c = base.default_value
                 base.default_value = (c[0] * TINT[0], c[1] * TINT[1], c[2] * TINT[2], c[3])
+if RECOLOUR:
+    cr, cg, cb, amount, gain = RECOLOUR
+    lum = 0.2126 * cr + 0.7152 * cg + 0.0722 * cb
+    c = (cr / lum, cg / lum, cb / lum) if lum > 0 else (1.0, 1.0, 1.0)
+    for mat in bpy.data.materials:
+        if not mat.use_nodes:
+            continue
+        nt = mat.node_tree
+        for node in list(nt.nodes):
+            if node.type != "BSDF_PRINCIPLED" or not node.inputs["Base Color"].is_linked:
+                continue
+            src = node.inputs["Base Color"].links[0].from_socket
+            bw = nt.nodes.new("ShaderNodeRGBToBW")
+            nt.links.new(src, bw.inputs[0])
+            col = nt.nodes.new("ShaderNodeMix"); col.data_type = "RGBA"; col.blend_type = "MULTIPLY"
+            col.inputs["Factor"].default_value = 1.0
+            nt.links.new(bw.outputs[0], col.inputs[6]); col.inputs[7].default_value = (c[0], c[1], c[2], 1.0)
+            mix = nt.nodes.new("ShaderNodeMix"); mix.data_type = "RGBA"; mix.blend_type = "MIX"
+            mix.inputs["Factor"].default_value = amount
+            nt.links.new(src, mix.inputs[6]); nt.links.new(col.outputs[2], mix.inputs[7])
+            g = nt.nodes.new("ShaderNodeMix"); g.data_type = "RGBA"; g.blend_type = "MULTIPLY"
+            g.inputs["Factor"].default_value = 1.0
+            nt.links.new(mix.outputs[2], g.inputs[6]); g.inputs[7].default_value = (gain, gain, gain, 1.0)
+            nt.links.new(g.outputs[2], node.inputs["Base Color"])
+    print(f"POF_SPRITE_RECOLOUR=C={tuple(round(x, 3) for x in c)} amount={amount} gain={gain}")
 if not meshes:
     print("POF_SPRITE_ERROR=no mesh in the glb")
     sys.exit(1)
