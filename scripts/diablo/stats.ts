@@ -22,7 +22,8 @@ import { getDb } from '../../src/lib/db';
 import { listWrappers } from '../../src/lib/catalog/reference/wrappers-db';
 import { parseTsv } from '../../src/lib/catalog/ingest/tsv';
 import { resistanceByElement } from '../../src/lib/catalog/reference/stepSeeds';
-import { convertMonsterScale, diabloReferencePlayer, uePlayerAnchor } from '../../src/lib/catalog/reference/playerScale';
+import { convertMonsterScale } from '../../src/lib/catalog/reference/playerScale';
+import { loadHitAnchors } from './anchors';
 import { attackKindOf, convertBehaviour } from '../../src/lib/catalog/reference/behaviourScale';
 import { seededEntities } from '../../src/lib/catalog/seed';
 import { diabloUeRoot } from './ueRoot';
@@ -45,22 +46,11 @@ const tsv = (rel: string) => {
   return t.rows;
 };
 
-// Reference anchor: the class table is Attribute/Value rows; the starting weapon is loadout item0 in itemdat.
+// Reference + target anchors (D23): one loader shared with the spell conversion (anchors.ts).
 const kv = (rows: Record<string, string>[], k: string, v: string) => Object.fromEntries(rows.map((r) => [r[k], r[v]]));
-const attributes = kv(tsv(`classes/${cls}/attributes.tsv`), 'Attribute', 'Value');
-const item0 = kv(tsv(`classes/${cls}/starting_loadout.tsv`), 'Variable', 'Value').item0;
-const weaponRow = tsv('items/itemdat.tsv').find((r) => r.id === item0);
-if (!weaponRow) { console.error(`REFUSED: starting weapon ${item0} is not in itemdat`); process.exit(1); }
-const className = kv(tsv('classes/classdat.tsv'), 'folderName', 'className')[cls] ?? cls;
-const from = diabloReferencePlayer({
-  className, attributes,
-  weapon: { name: weaponRow.name, minDamage: Number(weaponRow.minDamage), maxDamage: Number(weaponRow.maxDamage) },
-});
-// Target anchor: PoF's player from the UE source defaults.
-const to = uePlayerAnchor({
-  attributeSetCpp: readFileSync(join(UE_SRC, 'ARPGAttributeSet.cpp'), 'utf8'),
-  meleeHeader: readFileSync(join(UE_SRC, 'GA_MeleeAttack.h'), 'utf8'),
-});
+let anchors: ReturnType<typeof loadHitAnchors>;
+try { anchors = loadHitAnchors(root, cls); } catch (e) { console.error((e as Error).message); process.exit(1); }
+const { from, to } = anchors;
 // Behaviour anchors (W08): the hero's walk frames ↔ PoF's player walk speed (ARPGCharacterBase default).
 const heroWalkFrames = Number(kv(tsv(`classes/${cls}/animations.tsv`), 'Variable', 'Value').walkingFrames);
 const walkM = /float\s+WalkSpeed\s*=\s*([\d.]+)f?\s*;/.exec(readFileSync(resolve(UE_SRC, '..', 'Character', 'ARPGCharacterBase.h'), 'utf8'));
