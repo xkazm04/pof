@@ -18,8 +18,11 @@ import { ingestSourceFromDir } from '../../src/lib/catalog/reference/ingestSourc
 import { listWrappers } from '../../src/lib/catalog/reference/wrappers-db';
 import { codeSeededEntities } from '../../src/lib/catalog/seed';
 import { promoteWrappers, selectForPromotion } from '../../src/lib/catalog/reference/promote';
+import { affixFamilies, seedAffixSteps } from '../../src/lib/catalog/reference/affixFamilies';
+import type { ReferenceWrapper } from '../../src/lib/catalog/reference/wrapper';
 import { seedBestiarySteps, seedItemSteps } from '../../src/lib/catalog/reference/stepSeeds';
 import { submitStepArtifact } from '../../src/lib/catalog/headless';
+import { seededEntities } from '../../src/lib/catalog/seed';
 import '../../src/lib/catalog/pipelines/registry.generated';
 
 function arg(name: string): string | undefined {
@@ -50,6 +53,17 @@ const seedCatalog = arg('seed-steps');
 if (seedCatalog) {
   const ids = arg('ids')?.split(',').map((x) => x.trim()).filter(Boolean);
   const promoted = new Set(listEntities(seedCatalog).filter((r) => r.source === 'ingest').map((r) => r.entityId));
+  // Affix families are promoted aggregates (W11): seed from the family entity itself.
+  if (seedCatalog === 'affixes') {
+    for (const e of seededEntities('affixes').filter((x) => x.id.startsWith('d1-affix-') && (!ids || ids.includes(x.id)))) {
+      for (const seed of seedAffixSteps(e as unknown as ReferenceWrapper['entity'])) {
+        const r = submitStepArtifact(seed.catalogId, seed.entityId, seed.step, seed.data, []);
+        console.log(`${seed.entityId} · ${seed.step}: ${r.acceptance?.status ?? '?'}${r.acceptance?.reason ? ` — ${r.acceptance.reason.slice(0, 150)}` : ''}`);
+        for (const g of seed.gaps) console.log(`    gap: ${g}`);
+      }
+    }
+    process.exit(0);
+  }
   const wrappers = listWrappers(getDb(), { sourceId, catalogId: seedCatalog }).filter((w) => !ids || ids.includes(w.entity.id));
   for (const w of wrappers) {
     if (!promoted.has(w.entity.id)) { console.log(`SKIP ${w.entity.id}: not promoted (promote it first)`); continue; }
@@ -77,7 +91,11 @@ const promoteCatalog = arg('promote');
 if (promoteCatalog) {
   const limit = arg('limit');
   const ids = arg('ids')?.split(',').map((s) => s.trim()).filter(Boolean);
-  const picked = selectForPromotion(listWrappers(db, { sourceId, catalogId: promoteCatalog }), {
+  // Affixes promote as FAMILIES (W11): a Diablo row is one tier, PoF's entity is the family — aggregated pseudo-wrappers.
+  const pool = promoteCatalog === 'affixes'
+    ? affixFamilies(listWrappers(db, { sourceId, catalogId: 'affixes' })) as unknown as ReferenceWrapper[]
+    : listWrappers(db, { sourceId, catalogId: promoteCatalog });
+  const picked = selectForPromotion(pool, {
     catalogId: promoteCatalog, entityIds: ids, limit: limit ? Number(limit) : undefined,
   });
   // Same door as the hand-made path: a code seed's id is refused, never overwritten.
