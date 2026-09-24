@@ -41,3 +41,16 @@
 - **Prefer the importer that carries everything in one task.** The FBX hop mangled units twice and dropped animations; `.glb` through Interchange brought mesh + skeleton + animation + PBR textures at once. Apply SIZE as a component scale (it scales the mesh and its animation together) instead of baking scale into assets.
 - **A shared model is the content multiplier.** One rigged mesh + per-member tint produced three monsters; the pipeline records `sharedWith` so a family cannot drift apart.
 - **Going up to gameplay finds what asset checks cannot:** an enemy on a foreign skeleton attacked exactly once (a montage that can never complete), and a monster with no stat row inherits the engine's defaults.
+
+## 1.8 — 2026-09-24 — pof (W07)
+- **A second family is the cheapest defect finder.** The zombie chain ran on skeletons with 8 of 13 tools unchanged, but
+  the other 5 each hid a defect the first family's SHAPE masked (a stray mesh only a thin subject exposes, names only a
+  second family repeats, a gap only a different producer phrasing reveals). Plan a second instance before widening.
+- **Measure a conversion at runtime, per hit, from the log.** Health sampled every 2 s showed the right total at the wrong
+  cadence; only the per-swing "Hit" lines separated "attacks faster" from "hits twice" — and the W06 "kills in 8 s" had
+  been the same double hit, misread.
+- **Read reference NUMBERS from the wrapper's raw row, never from a produced artifact.** A produced step's inner shape is
+  unconstrained (3 damage shapes in 5 rows); a consumer that guesses the shape falls back silently.
+- **When runtime and design disagree because of a known defect, record the gap — do not re-anchor on the bug.**
+- **Save every hand-run command (scenario JSON, Tripo task ids, Blender calls) as a driver or a note**: W07 spent real time
+  reconstructing W06's chain, and two drivers had never existed.
