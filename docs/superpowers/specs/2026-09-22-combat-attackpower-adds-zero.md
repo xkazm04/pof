@@ -1,6 +1,6 @@
 # Combat defect: attacker AttackPower adds 0 damage (handoff from /diablo W05–W06)
 
-**Status:** open · **Owner:** PoF combat track (handed off by the /diablo loop, operator decision D21, 2026-09-22) ·
+**Status:** open — **priority raised by the operator 2026-09-24 (/diablo D26: converted monster HP is ~1.5x too high in play until this is fixed)** · **Owner:** PoF combat track (handed off by the /diablo loop, operator decision D21, 2026-09-22) ·
 **Not fixed by /diablo** — this is PoF's damage formula, not a replication item.
 
 ## Symptom
