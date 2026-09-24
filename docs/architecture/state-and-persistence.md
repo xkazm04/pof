@@ -230,7 +230,13 @@ reprojected / unchanged` (the projection hash ignores `provenance.ingestedAt`, s
 is `unchanged`); every run's summary (coverage, gaps, undecoded sentinels, unresolved links) is kept in
 `reference_ingest_runs`. Promotion into `catalog_entities` (`source: 'ingest'`) is selective and refuses a
 JSON-unsafe payload. The raw values are another studio's design data and live only in the local DB,
-never in the repo.
+never in the repo. Consumers that need the reference's NUMBERS read the wrapper's `raw` row, not a
+produced step artifact (a produced Stat Block's inner shape is unconstrained — /diablo W07 found 3
+`damage` shapes in 5 rows): `reference/playerScale.ts` converts a monster's raw HP/damage/resistance to
+PoF's scale through two named player anchors (hits-to-kill preserved both ways, a loss grade per field)
+for the UE stat rows `scripts/diablo/stats.ts` writes; `reference/familyHead.ts` derives a family head from
+the mapped `data.artSet`; `reference/ueRoot.ts` gives each entity its gitignored `/Game/Diablo` folder,
+disambiguating display names another source row also carries.
 
 **`pipeline_artifact_revisions`** (`src/lib/pipeline-artifacts-db.ts`, same guard pattern) is the
 version history behind `pipeline_artifacts`. The live table is keyed
