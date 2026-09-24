@@ -13,22 +13,42 @@
  *   Sprite Render — the member's own tinted render of that shared mesh.
  * Both go through the server grader; nothing here decides a verdict.
  */
-import { readdirSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
+import sharp from 'sharp';
 import { join } from 'node:path';
 import '../../src/lib/catalog/pipelines/registry.generated';
 import { listArtifacts } from '../../src/lib/pipeline-artifacts-db';
 import { submitStepArtifact } from '../../src/lib/catalog/headless';
 import { seededEntities } from '../../src/lib/catalog/seed';
 import { SPRITE_DIRECTIONS, SPRITE_PROJECTION } from '../../src/lib/catalog/acceptance/spriteCheckers';
+import { familyHeadOf } from '../../src/lib/catalog/reference/familyHead';
+import { checkFamily } from '../../src/lib/visual-gen/family-check';
+import { upsertVerdict } from '../../src/lib/status/judge-verdicts-db';
+import { stepContentHash } from '../../src/lib/judge/contentHash';
 
 const opt = (n: string) => { const i = process.argv.indexOf(`--${n}`); return i >= 0 ? process.argv[i + 1] : undefined; };
 const catalogId = opt('catalog') ?? 'bestiary';
 const entityId = opt('id');
-const sourceId = opt('source');
 const tint = (opt('tint') ?? '').split(',').map(Number).filter((n) => Number.isFinite(n));
 const spritesDir = opt('sprites');
-if (!entityId || !sourceId) { console.error('usage: family.ts --catalog <id> --id <member> --source <family head> [--tint r,g,b] [--sprites <dir>]'); process.exit(2); }
+// The member's recolour is judged like the head's render (render.ts): does it still read as its creature
+// at sprite scale? W07: every darkened Burning Dead tint read as a zombie while the step graded pass unseen.
+const FAMILY = opt('family');
+const FAMILIES = (opt('families') ?? '').split(',').map((x) => x.trim()).filter(Boolean);
+if (!entityId) { console.error('usage: family.ts --catalog <id> --id <member> [--source <family head>] [--tint r,g,b] [--sprites <dir>]'); process.exit(2); }
 const member = seededEntities(catalogId).find((e) => e.id === entityId);
+if (!member) { console.error(`REFUSED: ${entityId} is not seeded/promoted`); process.exit(1); }
+// The head is DERIVED from the art set (W07: monstdat assetsSuffix → data.artSet) — the member of the same
+// set that owns its rigged mesh. --source stays as an explicit override.
+const ownsRig = (id: string) => {
+  const h = listArtifacts(catalogId, id).find((a) => a.step === '3D & Rig')?.data.genHistory as { selectedId?: string; batches?: { candidates?: { id: string; payload?: Record<string, unknown> }[] }[] } | undefined;
+  const c = h?.batches?.flatMap((b) => b.candidates ?? []).find((x) => x.id === h.selectedId);
+  return c?.payload?.glbUrl ? { owned: !c.payload.sharedWith } : null;
+};
+const derived = opt('source') ? null : familyHeadOf(member, seededEntities(catalogId), ownsRig);
+if (derived && !derived.ok) { console.error(`REFUSED: ${derived.reason}`); process.exit(1); }
+const sourceId = opt('source') ?? (derived as { headId: string }).headId;
+if (derived?.ok) console.log(`family head (derived from art set "${derived.artSet}"): ${sourceId}`);
 const head = seededEntities(catalogId).find((e) => e.id === sourceId);
 if (!member || !head) { console.error('REFUSED: member or source entity is not seeded/promoted'); process.exit(1); }
 
@@ -67,4 +87,19 @@ if (spritesDir) {
     },
   }, []);
   console.log(`Sprite Render (tinted): ${sprite.acceptance.status} — ${sprite.acceptance.detail ?? sprite.acceptance.reason ?? ''}`);
+  if (FAMILY && files.length) {
+    void (async () => {
+      const view = await sharp(readFileSync(join(spritesDir, files[0]))).resize(384, 384, { kernel: 'nearest' })
+        .flatten({ background: { r: 14, g: 12, b: 12 } }).jpeg().toBuffer();
+      const v = await checkFamily({ base64: view.toString('base64'), mime: 'image/jpeg' }, FAMILY, FAMILIES.length ? FAMILIES : [FAMILY]);
+      if (!v.ok) { console.log(`family at sprite scale: UNCHECKED — ${v.error}`); return; }
+      console.log(`family at sprite scale: ${v.pass ? 'PASS' : 'FAIL'} — ${v.reason}`);
+      upsertVerdict({
+        catalogId, entityId, step: 'Sprite Render', judge: 'vlm', verdict: v.pass ? 'pass' : 'fail', score: v.pass ? 100 : 0,
+        findings: `Blind creature-family check of the RECOLOURED member at sprite scale (96px, 4x nearest): ${v.reason}`,
+        model: 'routed-vision/family-check', contentHash: stepContentHash(sprite.artifact.data),
+      });
+      console.log(`VERDICT vlm ${v.pass ? 'pass' : 'fail'} recorded`);
+    })().catch((e) => { console.error('FATAL', e); process.exit(1); });
+  }
 }
