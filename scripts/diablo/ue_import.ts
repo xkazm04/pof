@@ -57,7 +57,8 @@ try {
 } catch { /* UE's headless shutdown can exit non-zero; the log is the verdict */ }
 const out = existsSync(log) ? readFileSync(log, 'utf8') : '';
 if (!out) console.log(`no UE log at ${log} — the commandlet did not run`);
-for (const line of out.split('\n')) {
+// UE writes CRLF: split on it, or `.*$` cannot pass the trailing \r and NO marker is echoed (W07).
+for (const line of out.split(/\r?\n/)) {
   const m = /(POF_DIABLO_UE_\w+=.*)$/.exec(line);
   if (m) console.log(m[1].slice(0, 600));
   if (/LogPython: Error/.test(line)) console.log(line.slice(0, 300));
