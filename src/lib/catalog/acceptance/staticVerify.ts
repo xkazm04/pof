@@ -71,6 +71,13 @@ export function aggregateStatic(results: AcceptanceResult[], label: string): Acc
   return { label, tier: 'L2', status: 'pass', detail: `${results.length}/${results.length} UE static checks present` };
 }
 
+/** True when the content checker withholds a pass for a reason in the DATA (not a runtime gate
+ *  still to run) — the only content verdicts the static sweep must not paper over. Pure. */
+export function holdsBackAtDataTier(content: AcceptanceResult): boolean {
+  if (content.status === 'pending' || content.status === 'fail') return true;
+  return content.status === 'deferred' && content.tier !== 'L3' && content.tier !== 'L4';
+}
+
 export interface StaticVerifyDeps {
   resolveUeRoot: () => string | null;
   /** The artifacts to grade (persisted steps). */
@@ -113,12 +120,11 @@ export function verifyStaticAll(
     const staticVerdict = aggregateStatic(checks.map((c) => c(ueRoot)), a.step);
     if (!staticVerdict) { skipped++; continue; }
     // A symbol existing in UE says nothing about the content: static may never lift a row its
-    // own checker holds at pending/fail (the d1 Stat Blocks' declared `moveSpeed` gap). A
-    // content `deferred`/`pass` leaves the static verdict standing, so L3-gated steps are untouched.
+    // own checker holds back at the data tiers — pending/fail (the d1 Stat Blocks' declared
+    // `moveSpeed` gap) or deferred at L0-L2 (off-arc-fp's unresolved vfx link). A deferral at
+    // L3/L4 belongs to a runtime gate the drain resolves, so it leaves the static verdict standing.
     const content = deps.getContentVerdict?.(a.catalogId, a.entityId, a.step) ?? null;
-    const verdict = content && (content.status === 'pending' || content.status === 'fail')
-      ? worstOf(staticVerdict, content)
-      : staticVerdict;
+    const verdict = content && holdsBackAtDataTier(content) ? worstOf(staticVerdict, content) : staticVerdict;
 
     verified++;
     if (verdict.status === 'pass') passed++;

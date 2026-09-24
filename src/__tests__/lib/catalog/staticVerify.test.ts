@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { aggregateStatic, verifyStaticAll, type StaticVerifyDeps } from '@/lib/catalog/acceptance/staticVerify';
+import { aggregateStatic, verifyStaticAll, holdsBackAtDataTier, type StaticVerifyDeps } from '@/lib/catalog/acceptance/staticVerify';
 import type { AcceptanceResult } from '@/lib/catalog/acceptance/types';
 import type { UeChecker } from '@/lib/catalog/acceptance/ueStaticCheckers';
 
@@ -117,9 +117,23 @@ describe('verifyStaticAll — a symbol in UE never lifts incomplete content', ()
     expect(written?.status).toBe('fail');
   });
 
-  it('content pass or deferred leaves the static verdict standing (L3-gated steps untouched)', () => {
+  it('content pass leaves the static verdict standing', () => {
     expect(run('pass', pass('Row')).written?.status).toBe('pass');
-    expect(run('deferred', pass('Row')).written?.status).toBe('pass');
     expect(run(null, defer('Row')).written?.status).toBe('deferred');
+  });
+});
+
+describe('holdsBackAtDataTier', () => {
+  const at = (status: AcceptanceResult['status'], tier: AcceptanceResult['tier']): AcceptanceResult =>
+    ({ label: 'S', tier, status, detail: 'd' });
+  it('a data-tier deferral (unresolved link, L2) holds the row back — the off-arc-fp Effect Logic case', () => {
+    expect(holdsBackAtDataTier(at('deferred', 'L2'))).toBe(true);
+    expect(holdsBackAtDataTier(at('pending', 'L0'))).toBe(true);
+    expect(holdsBackAtDataTier(at('fail', 'L1'))).toBe(true);
+  });
+  it('a runtime-gate deferral (L3/L4) does not — the drain owns it, so drained passes survive', () => {
+    expect(holdsBackAtDataTier(at('deferred', 'L3'))).toBe(false);
+    expect(holdsBackAtDataTier(at('deferred', 'L4'))).toBe(false);
+    expect(holdsBackAtDataTier(at('pass', 'L2'))).toBe(false);
   });
 });
