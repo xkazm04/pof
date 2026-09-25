@@ -78,6 +78,7 @@
     "MinRarity",
     "AffixGroup",
     "MinItemLevel",
+    "bScaleWithItemLevel",
     "Effect"
   ],
   "FCombatSoundEntry": [
