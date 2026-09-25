@@ -108,3 +108,9 @@
   files in place failed the build, and the tests ran the stale binary. Check `Result: Succeeded` before reading a baseline.
 - **Screenshot-heavy scenarios step the clock in big frames**: 50 samples meant up to 0.4 s per frame, and a 0.1 s input
   never fired. Keep samples low when timing matters, and inputs wider than the worst frame.
+- **Make the prediction precise enough to fail.** "Every rolled value sits in its tier's range" is what exposed the roller's
+  second item-level scaling (295/297 out of range at ilvl 30). "Affixes roll" would have passed.
+- **Before blaming the system, check the checker's key.** The first roll check flagged 15 level-gate breaks, and all of
+  them came from a name collision in the reference ("Crimson" twice) that my lookup assumed unique.
+- **An npm script is only real once it has run.** `snapshot:ue-schema` called a binary that isn't a local dependency and
+  had never executed; the loop had always used `npx tsx` by hand.
