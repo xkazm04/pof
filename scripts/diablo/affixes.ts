@@ -8,9 +8,11 @@
  * family per item). Magnitudes: resistances %→fraction; LIFE × (PoF life / reference life); MANA × (PoF pool / reference
  * caster pool, W13); flat damage × the hit ratio; attributes raw (approximate); a curse is negative. The tier already
  * encodes the item level, so rows set bScaleWithItemLevel = false. A tier whose power has no flat PoF attribute + effect is
- * EXCLUDED with its reason — never forced. --apply writes DT_D1Affixes_Weapon (the weapon-legal rows; Diablo's itemTypes)
- * under /Game/Diablo/Items (gitignored: reference values stay local), sets it as the AffixPool of every Diablo weapon
- * asset, rolls it through the real UARPGAffixRoller and reports what the rolls obey.
+ * EXCLUDED with its reason — never forced. Legality is Diablo's `itemTypes`, so there is ONE POOL PER ITEM CLASS (W15):
+ * Weapon, Armor (body + helm), Shield, Misc (rings, amulets). --apply writes Config/Tags/DiabloAffixes.ini (one
+ * Affix.D1.<side>.<power> tag per family — names, not values), then DT_D1Affixes_<Class> under /Game/Diablo/Items
+ * (gitignored: reference values stay local), sets each Diablo item's AffixPool to its class's table, rolls every pool
+ * through the real UARPGAffixRoller and reports what the rolls obey.
  */
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -24,7 +26,9 @@ import { getDb } from '../../src/lib/db';
 const UE_CMD = process.env.POF_UE_CMD ?? 'C:/Program Files/Epic Games/UE_5.8/Engine/Binaries/Win64/UnrealEditor-Cmd.exe';
 const OUT = resolve('generated', 'diablo', 'affixes.json');
 const ITEMS = resolve('generated', 'diablo', 'items.json');
-const TABLE = '/Game/Diablo/Items/DT_D1Affixes_Weapon';
+/** A Diablo item's slot (UE vocabulary, W10 slotOf) → the affix class whose tiers may roll on it. */
+const CLASS_OF_SLOT: Record<string, string> = { Weapon: 'Weapon', Chest: 'Armor', Helm: 'Armor', OffHand: 'Shield', Ring: 'Misc', Amulet: 'Misc' };
+const TAGS_INI = join(UPROJECT, '..', 'Config', 'Tags', 'DiabloAffixes.ini');
 const opt = (n: string) => { const i = process.argv.indexOf(`--${n}`); return i >= 0 ? process.argv[i + 1] : undefined; };
 const root = opt('root');
 if (!root) { console.error('usage: affixes.ts --root <txtdata> [--apply]'); process.exit(2); }
@@ -76,27 +80,37 @@ for (const f of families) {
     const lo = Number(t.valueMin) * c.scale * sign;
     const hi = Number(t.valueMax) * c.scale * sign;
     rows.push({
-      Name: `${f.entity.id}-t${i + 1}`, family: f.entity.id, power: d.power, itemTypes: t.itemTypes,
+      Name: `${f.entity.id}-t${i + 1}`, family: f.entity.id, AffixTag: `Affix.D1.${d.side}.${d.power}`, power: d.power, itemTypes: t.itemTypes,
       DisplayName: t.name, bIsPrefix: d.side === 'prefix', MinValue: round(Math.min(lo, hi)), MaxValue: round(Math.max(lo, hi)),
       Weight: Number(t.weight) || 1, MinRarity: 'Uncommon', AffixGroup: f.entity.id, MinItemLevel: Number(t.minItemLevel) || 0,
       Effect: c.effect, bScaleWithItemLevel: false, reference: { min: Number(t.valueMin), max: Number(t.valueMax) }, basis: c.basis, grade: c.grade,
     });
   });
 }
-const weapon = rows.filter((r) => (r.itemTypes as string[]).includes('Weapon'));
+const items = existsSync(ITEMS) ? (JSON.parse(readFileSync(ITEMS, 'utf8')).items as { asset: string; slot: string }[]) : [];
+const pools = [...new Set(Object.values(CLASS_OF_SLOT))].map((cls) => {
+  const legal = rows.filter((r) => (r.itemTypes as string[]).includes(cls));
+  const assets = items.filter((i) => CLASS_OF_SLOT[i.slot] === cls).map((i) => i.asset);
+  return { cls, table: `/Game/Diablo/Items/DT_D1Affixes_${cls}`, rows: legal, assets };
+}).filter((p) => p.assets.length > 0);
 console.log(`anchors: life ${from.life}→${to.life}, hit ${from.hit}→${to.hit}, mana pool ${caster.maxMana}→${pofPool}`);
-console.log(`${rows.length} convertible tiers in ${new Set(rows.map((r) => r.family)).size} families; weapon-legal ${weapon.length} in ${new Set(weapon.map((r) => r.family)).size}`);
+console.log(`${rows.length} convertible tiers in ${new Set(rows.map((r) => r.family)).size} families`);
 for (const [why, n] of Object.entries(excluded)) console.log(`  excluded ${String(n).padStart(3)} tiers: ${why.slice(0, 110)}`);
-for (const r of weapon.slice(0, 4)) console.log(`  e.g. ${String(r.Name).padEnd(34)} ${JSON.stringify(r.reference)} → ${r.MinValue}..${r.MaxValue} (${r.basis}), ilvl ≥ ${r.MinItemLevel}`);
+for (const p of pools) console.log(`  pool ${p.cls.padEnd(7)} ${p.rows.length} tiers / ${new Set(p.rows.map((r) => r.family)).size} families → ${p.assets.length} item(s)`);
+const unpooled = items.filter((i) => !CLASS_OF_SLOT[i.slot]);
+if (unpooled.length) console.log(`  items with no affix class: ${unpooled.map((i) => i.asset).join(', ')}`);
 
 mkdirSync(resolve('generated', 'diablo'), { recursive: true });
-const weaponAssets = existsSync(ITEMS)
-  ? (JSON.parse(readFileSync(ITEMS, 'utf8')).items as { asset: string; slot: string }[]).filter((i) => i.slot === 'Weapon').map((i) => i.asset)
-  : [];
-writeFileSync(OUT, JSON.stringify({ table: TABLE, rows: weapon, allConvertible: rows.length, excluded, weaponAssets }, null, 2));
-console.log(`→ ${OUT} (${weaponAssets.length} weapon assets to take the pool)`);
+writeFileSync(OUT, JSON.stringify({ pools, allConvertible: rows.length, excluded }, null, 2));
+console.log(`→ ${OUT}`);
 
 if (process.argv.includes('--apply')) {
+  // Tags first: the editor reads Config/Tags/*.ini at startup, so they must exist before the commandlet launches.
+  const tags = [...new Set(rows.map((r) => String(r.AffixTag)))].sort();
+  mkdirSync(join(UPROJECT, '..', 'Config', 'Tags'), { recursive: true });
+  writeFileSync(TAGS_INI, ['[/Script/GameplayTags.GameplayTagsList]',
+    ...tags.map((t) => `GameplayTagList=(Tag="${t}",DevComment="Diablo I affix family (scripts/diablo/affixes.ts, /diablo W15)")`), ''].join('\r\n'));
+  console.log(`${tags.length} tag(s) → ${TAGS_INI}`);
   const log = resolve(process.env.TEMP ?? '.', 'ue-affixes.log');
   try {
     execFileSync(UE_CMD, [UPROJECT, '-run=pythonscript', `-script=${resolve('scripts/diablo/ue_affixes.py')}`, '-unattended', '-nopause', '-nullrhi', `-abslog=${log}`],
