@@ -35,6 +35,10 @@ import { seedQuestSteps } from '@/lib/catalog/reference/questSpecs';
 import { experienceCurve } from '@/lib/catalog/reference/experienceCurve';
 import { seedCharacterCombatSteps, seedProgressionCurveSteps } from '@/lib/catalog/reference/combatSeeds';
 import { loreBooks, seedLoreSteps } from '@/lib/catalog/reference/loreBooks';
+import {
+  effectiveUniqueItemsForPromotion,
+  type EffectiveUniqueItemsResult,
+} from '@/lib/catalog/reference/uniqueItems';
 import { seedStatusSteps, statusEntities } from '@/lib/catalog/reference/statusSpecs';
 
 function arg(name: string): string | undefined {
@@ -215,6 +219,7 @@ const summary = ingestSourceFromDir(sourceId, root, { db });
 let promotion: ReturnType<typeof promoteWrappers> | null = null;
 let dialogueReport: DialogueTreesResult | null = null;
 let monsterTalkReport: MonsterTalkTreesResult | null = null;
+let uniqueItemReport: EffectiveUniqueItemsResult | null = null;
 const promoteCatalog = arg('promote');
 if (promoteCatalog) {
   const limit = arg('limit');
@@ -237,9 +242,17 @@ if (promoteCatalog) {
   } else {
     pool = listWrappers(db, { sourceId, catalogId: promoteCatalog });
   }
-  const picked = selectForPromotion(pool, {
+  let picked = selectForPromotion(pool, {
     catalogId: promoteCatalog, entityIds: ids, limit: limit ? Number(limit) : undefined,
   });
+  // A unique is an itemdat base initialized first, followed by its ordered unique powers
+  // (.reference/devilutionX/Source/items.cpp:3131-3154,1452-1460). Aggregate that runtime
+  // state only for the selected promotion rows; unresolved engine-first base selection is
+  // reported and withheld rather than promoted without data.effective.
+  if (promoteCatalog === 'items') {
+    uniqueItemReport = effectiveUniqueItemsForPromotion(picked, pool);
+    picked = uniqueItemReport.wrappers;
+  }
   // Same door as the hand-made path: a code seed's id is refused, never overwritten.
   promotion = promoteWrappers(picked, upsertEntity, (catalogId, entityId) => {
     const seed = codeSeededEntities(catalogId).find((e) => e.id === entityId);
@@ -248,7 +261,7 @@ if (promoteCatalog) {
 }
 
 if (process.argv.includes('--json')) {
-  console.log(JSON.stringify({ summary, promotion, dialogueReport, monsterTalkReport }, null, 2));
+  console.log(JSON.stringify({ summary, promotion, dialogueReport, monsterTalkReport, uniqueItemReport }, null, 2));
   process.exit(0);
 }
 
@@ -290,4 +303,7 @@ if (dialogueReport) {
 if (monsterTalkReport) {
   for (const item of monsterTalkReport.skipped) console.log(`   SKIPPED ${item.monster}: ${item.reason}`);
   for (const item of monsterTalkReport.unresolved) console.log(`   UNRESOLVED ${item.monster}: line ${item.line}`);
+}
+if (uniqueItemReport) {
+  for (const item of uniqueItemReport.unresolved) console.log(`   UNRESOLVED ${item.entityId}: ${item.reason}`);
 }
