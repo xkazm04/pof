@@ -48,3 +48,9 @@ export type D1AiRoutineId = keyof typeof D1_AI_ROUTINES;
 export function isD1AiRoutineId(ai: string): ai is D1AiRoutineId {
   return Object.hasOwn(D1_AI_ROUTINES, ai);
 }
+
+/** Every attack category used by a routine, without collapsing mixed or non-combat routines. */
+export function attackKindsOf(ai: string): AiAttackKind[] {
+  if (!isD1AiRoutineId(ai)) throw new Error(`AI routine "${ai}" is not in the engine-derived routine table`);
+  return [...new Set(D1_AI_ROUTINES[ai].attacks.map((entry) => entry.kind))];
+}

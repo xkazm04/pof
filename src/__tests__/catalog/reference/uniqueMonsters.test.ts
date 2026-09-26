@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { effectiveUnique } from '@/lib/catalog/reference/uniqueMonsters';
+import {
+  effectiveUnique,
+  effectiveUniqueMonstersForPromotion,
+} from '@/lib/catalog/reference/uniqueMonsters';
 import type { ReferenceWrapper } from '@/lib/catalog/reference/wrapper';
 
 const provenance = {
@@ -7,16 +10,83 @@ const provenance = {
   sourceRow: 'row=1', licenceNote: 'invented test values', ingestedAt: 't0', canonProfile: 'diablo1',
 };
 
-function wrapper(id: string, file: string, raw: Record<string, string>, data: Record<string, unknown> = {}): ReferenceWrapper {
+function wrapper(
+  id: string,
+  file: string,
+  raw: Record<string, string>,
+  data: Record<string, unknown> = {},
+  links?: ReferenceWrapper['entity']['links'],
+): ReferenceWrapper {
   return {
     wrapperId: `test:${id}`, sourceId: 'test', file, technique: 'test', key: id, keyKind: 'column',
     raw, rawHash: 'raw', catalogId: 'bestiary', mappingVersion: 'test',
-    entity: { id, catalogId: 'bestiary', name: id, categoryPath: [], lifecycle: 'planned', tags: [], data, provenance },
+    entity: { id, catalogId: 'bestiary', name: id, categoryPath: [], lifecycle: 'planned', tags: [], data, links, provenance },
   };
 }
 
 const base = wrapper('d1-MT_SYNTH', 'monsters/monstdat.tsv', {
   _monster_id: 'MT_SYNTH', level: '4', toHit: '27', armorClass: '13', resistance: 'RESIST_FIRE', resistanceHell: 'IMMUNE_FIRE',
+});
+
+describe('effectiveUniqueMonstersForPromotion', () => {
+  it('adds single-player effective stats and inherits base timing with the unique AI attack kinds', () => {
+    const baseWithTiming = wrapper('d1-MT_SYNTH', 'monsters/monstdat.tsv', base.raw, {
+      derived: {
+        byDifficulty: { normal: { level: 4 } },
+        laws: ['d1-timing-law', 'd1-ai-zombie-law'],
+        locomotion: { laws: ['d1-timing-law'], walkTicksPerStep: 21, tilesPerSecondWhileWalking: 0.95 },
+        walkTicksPerStep: 42,
+        tilesPerSecond: 0.48,
+        attackCycleTicks: 60,
+        attackCycleSeconds: 3,
+        hitDelaySeconds: 0.4,
+      },
+    });
+    const named = wrapper('d1-uniq-synthetic', 'monsters/unique_monstdat.tsv', {
+      ...unique({ ai: 'Bat' }).raw,
+    }, {}, [{ catalogId: 'bestiary', entityId: baseWithTiming.entity.id, role: 'base' }]);
+
+    const result = effectiveUniqueMonstersForPromotion([named], [named, baseWithTiming]);
+    expect(result.unresolved).toEqual([]);
+    const data = result.wrappers[0].entity.data;
+    expect(data.effective).toMatchObject({
+      gameMode: 'single',
+      byDifficulty: {
+        normal: { armorClass: { value: 13, source: 'base' } },
+        nightmare: { armorClass: { value: 63, source: 'base' } },
+        hell: { armorClass: { value: 93, source: 'base' } },
+      },
+    });
+    expect(data.derived).toEqual({
+      inheritedFrom: {
+        entityId: 'd1-MT_SYNTH',
+        role: 'base type',
+        reason: 'unique monsters use their base type animations',
+      },
+      laws: ['d1-timing-law', 'd1-ai-zombie-law'],
+      attackKinds: ['melee', 'special', 'missile'],
+      locomotion: { laws: ['d1-timing-law'], walkTicksPerStep: 21, tilesPerSecondWhileWalking: 0.95 },
+      walkTicksPerStep: 42,
+      tilesPerSecond: 0.48,
+      attackCycleTicks: 60,
+      attackCycleSeconds: 3,
+      hitDelaySeconds: 0.4,
+    });
+    expect((data.derived as Record<string, unknown>).byDifficulty).toBeUndefined();
+  });
+
+  it('reports a missing base and keeps the orphan promotable without effective data', () => {
+    const orphan = unique({ type: 'MT_MISSING', ai: 'Bat' });
+    orphan.entity.links = [{ catalogId: 'bestiary', entityId: 'd1-MT_MISSING', role: 'base' }];
+
+    const result = effectiveUniqueMonstersForPromotion([orphan], [orphan]);
+    expect(result.unresolved).toEqual([{
+      entityId: orphan.entity.id,
+      reason: 'base-type link d1-MT_MISSING does not resolve to an available wrapper',
+    }]);
+    expect(result.wrappers).toEqual([orphan]);
+    expect(result.wrappers[0].entity.data.effective).toBeUndefined();
+  });
 });
 
 function unique(overrides: Record<string, string> = {}): ReferenceWrapper {

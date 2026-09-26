@@ -1,5 +1,6 @@
 import { applyDecode } from '@/lib/catalog/ingest/decode';
 import { UNIQUE_RESISTANCE_DECODE } from '@/lib/catalog/ingest/diablo1Uniques';
+import { attackKindsOf, type AiAttackKind } from '@/lib/catalog/reference/aiRoutines';
 import { monsterHitPoints, type Difficulty, type GameMode } from '@/lib/catalog/reference/combatMath';
 import type { ReferenceWrapper } from '@/lib/catalog/reference/wrapper';
 
@@ -21,6 +22,39 @@ export interface UniqueGameOptions {
   gameMode?: GameMode;
   /** Select Hellfire's smaller single-player difficulty bonus (.reference/devilutionX/Source/monster.cpp:3365-3381). */
   hellfire?: boolean;
+}
+
+export interface EffectiveUniqueByDifficulty {
+  /** Promotion uses the resolver's default vanilla single-player rules. */
+  gameMode: 'single';
+  byDifficulty: Record<Difficulty, EffectiveUniqueStats>;
+}
+
+export interface InheritedUniqueDerived {
+  inheritedFrom: {
+    entityId: string;
+    role: 'base type';
+    reason: 'unique monsters use their base type animations';
+  };
+  laws: string[];
+  attackKinds: AiAttackKind[];
+  locomotion?: unknown;
+  walkTicksPerStep?: unknown;
+  tilesPerSecond?: unknown;
+  attackCycleTicks?: unknown;
+  attackCycleSeconds?: unknown;
+  hitDelaySeconds?: unknown;
+  gap?: unknown;
+}
+
+export interface EffectiveUniqueMonsterIssue {
+  entityId: string;
+  reason: string;
+}
+
+export interface EffectiveUniqueMonstersResult {
+  wrappers: ReferenceWrapper[];
+  unresolved: EffectiveUniqueMonsterIssue[];
 }
 
 function numberFrom(raw: Record<string, string>, key: string, owner: string): number {
@@ -111,4 +145,102 @@ export function effectiveUnique(
     ai: { value: unique.raw.ai, source: 'unique override' },
     intelligence: { value: numberFrom(unique.raw, 'intelligence', unique.entity.id), source: 'unique override' },
   };
+}
+
+const UNIQUE_FILE = 'monsters/unique_monstdat.tsv';
+const BASE_FILE = 'monsters/monstdat.tsv';
+
+function inheritedDerived(unique: ReferenceWrapper, base: ReferenceWrapper): InheritedUniqueDerived {
+  const source = base.entity.data.derived;
+  const derived = source != null && typeof source === 'object'
+    ? source as Record<string, unknown>
+    : {};
+  const timingKeys = [
+    'locomotion',
+    'walkTicksPerStep',
+    'tilesPerSecond',
+    'attackCycleTicks',
+    'attackCycleSeconds',
+    'hitDelaySeconds',
+    'gap',
+  ] as const;
+  const inheritedTiming = Object.fromEntries(
+    timingKeys.filter((key) => Object.hasOwn(derived, key)).map((key) => [key, derived[key]]),
+  );
+  const sourceLaws = Array.isArray(derived.laws)
+    ? derived.laws.filter((law): law is string => typeof law === 'string')
+    : [];
+
+  return {
+    ...inheritedTiming,
+    inheritedFrom: {
+      entityId: base.entity.id,
+      role: 'base type',
+      reason: 'unique monsters use their base type animations',
+    },
+    laws: [...new Set(['d1-timing-law', ...sourceLaws])],
+    attackKinds: attackKindsOf(unique.raw.ai),
+  };
+}
+
+/**
+ * Enrich selected named monsters immediately before promotion. PrepareUniqueMonst starts
+ * from the linked base type, while named monsters continue to use that type's animation
+ * timing. Missing bases are reported but deliberately remain promotable (the known Hellfire
+ * orphan rows must not disappear from the catalog).
+ */
+export function effectiveUniqueMonstersForPromotion(
+  selected: readonly ReferenceWrapper[],
+  available: readonly ReferenceWrapper[],
+): EffectiveUniqueMonstersResult {
+  const byId = new Map(available.map((wrapper) => [wrapper.entity.id, wrapper]));
+  const baseRows = available.filter((wrapper) => wrapper.catalogId === 'bestiary' && wrapper.file === BASE_FILE);
+  const wrappers: ReferenceWrapper[] = [];
+  const unresolved: EffectiveUniqueMonsterIssue[] = [];
+
+  for (const wrapper of selected) {
+    if (wrapper.catalogId !== 'bestiary' || wrapper.file !== UNIQUE_FILE || !wrapper.entity.id.startsWith('d1-uniq-')) {
+      wrappers.push(wrapper);
+      continue;
+    }
+
+    const linkedId = wrapper.entity.links?.find(
+      (link) => link.role === 'base' && link.catalogId === 'bestiary',
+    )?.entityId;
+    const base = linkedId
+      ? byId.get(linkedId)
+      : baseRows.find((candidate) => candidate.raw._monster_id === wrapper.raw.type);
+    if (!base) {
+      unresolved.push({
+        entityId: wrapper.entity.id,
+        reason: linkedId
+          ? `base-type link ${linkedId} does not resolve to an available wrapper`
+          : `base type ${wrapper.raw.type} has no monstdat wrapper`,
+      });
+      wrappers.push(wrapper);
+      continue;
+    }
+
+    const effective: EffectiveUniqueByDifficulty = {
+      gameMode: 'single',
+      byDifficulty: {
+        normal: effectiveUnique(wrapper, base, 'normal'),
+        nightmare: effectiveUnique(wrapper, base, 'nightmare'),
+        hell: effectiveUnique(wrapper, base, 'hell'),
+      },
+    };
+    wrappers.push({
+      ...wrapper,
+      entity: {
+        ...wrapper.entity,
+        data: {
+          ...wrapper.entity.data,
+          effective,
+          derived: inheritedDerived(wrapper, base),
+        },
+      },
+    });
+  }
+
+  return { wrappers, unresolved };
 }

@@ -1,5 +1,6 @@
 import type { CatalogHandler } from './types';
 import { affixesHandler } from './affixes';
+import { bestiaryHandler } from './bestiary';
 import { charactersHandler } from './characters';
 import { codexHandler } from './codex';
 import { combatMapHandler } from './combat-map';
@@ -15,6 +16,7 @@ import { zoneMapHandler } from './zone-map';
 
 const handlers: CatalogHandler[] = [
   affixesHandler,
+  bestiaryHandler,
   charactersHandler,
   codexHandler,
   combatMapHandler,

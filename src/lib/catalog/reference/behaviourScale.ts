@@ -13,7 +13,7 @@
  * steps as often as the reference hero walks as fast as PoF's player.
  */
 import { DIABLO1_CANON } from '@/lib/catalog/canon/profiles/diablo1';
-import { D1_AI_ROUTINES, isD1AiRoutineId, type AiAttackKind, type AiRoutineRoll } from '@/lib/catalog/reference/aiRoutines';
+import { attackKindsOf, D1_AI_ROUTINES, isD1AiRoutineId, type AiRoutineRoll } from '@/lib/catalog/reference/aiRoutines';
 import { stableStringify } from '@/lib/catalog/reference/hash';
 import type { ConversionLoss } from './playerScale';
 
@@ -175,11 +175,7 @@ export function convertBehaviour(m: BehaviourInput, hero: { walkFrames: number }
   };
 }
 
-/** Every attack category used by a routine, without collapsing mixed or non-combat routines. */
-export function attackKindsOf(ai: string): AiAttackKind[] {
-  if (!isD1AiRoutineId(ai)) throw new Error(`AI routine "${ai}" is not in the engine-derived routine table`);
-  return [...new Set(D1_AI_ROUTINES[ai].attacks.map((entry) => entry.kind))];
-}
+export { attackKindsOf } from '@/lib/catalog/reference/aiRoutines';
 
 /** Back-compatible binary view for older projection callers. */
 export function attackKindOf(ai: string): 'melee' | 'ranged' {
