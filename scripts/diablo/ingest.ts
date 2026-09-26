@@ -30,6 +30,7 @@ import { parseTsv } from '../../src/lib/catalog/ingest/tsv';
 import { referenceCaster, type ReferenceCaster } from '../../src/lib/catalog/reference/spellLaw';
 import { unresolvedQuestTalk } from '../../src/lib/catalog/reference/questTalk';
 import { dialogueTrees, seedDialogSteps, type DialogueTreesResult } from '@/lib/catalog/reference/dialogueTrees';
+import { monsterTalkTrees, seedMonsterTalkSteps, type MonsterTalkTreesResult } from '@/lib/catalog/reference/monsterTalk';
 import { seedQuestSteps } from '@/lib/catalog/reference/questSpecs';
 import { experienceCurve } from '@/lib/catalog/reference/experienceCurve';
 import { seedCharacterCombatSteps, seedProgressionCurveSteps } from '@/lib/catalog/reference/combatSeeds';
@@ -77,7 +78,9 @@ if (seedCatalog) {
   // Dialog trees are promoted conversations (W16), not the individual text and quest-talk rows.
   if (seedCatalog === 'dialog-trees') {
     for (const e of seededEntities('dialog-trees').filter((x) => x.id.startsWith('d1-dialog-') && (!ids || ids.includes(x.id)))) {
-      for (const seed of seedDialogSteps(e as unknown as ReferenceWrapper['entity'])) {
+      const entity = e as unknown as ReferenceWrapper['entity'];
+      const seeds = entity.data.talker === 'monster' ? seedMonsterTalkSteps(entity) : seedDialogSteps(entity);
+      for (const seed of seeds) {
         const r = submitStepArtifact(seed.catalogId, seed.entityId, seed.step, seed.data, []);
         console.log(`${seed.entityId} · ${seed.step}: ${r.acceptance?.status ?? '?'}${r.acceptance?.reason ? ` — ${r.acceptance.reason.slice(0, 150)}` : ''}`);
         for (const g of seed.gaps) console.log(`    gap: ${g}`);
@@ -177,6 +180,7 @@ const summary = ingestSourceFromDir(sourceId, root, { db });
 
 let promotion: ReturnType<typeof promoteWrappers> | null = null;
 let dialogueReport: DialogueTreesResult | null = null;
+let monsterTalkReport: MonsterTalkTreesResult | null = null;
 const promoteCatalog = arg('promote');
 if (promoteCatalog) {
   const limit = arg('limit');
@@ -186,8 +190,10 @@ if (promoteCatalog) {
   if (promoteCatalog === 'affixes') {
     pool = affixFamilies(listWrappers(db, { sourceId, catalogId: 'affixes' })) as unknown as ReferenceWrapper[];
   } else if (promoteCatalog === 'dialog-trees') {
-    dialogueReport = dialogueTrees(listWrappers(db, { sourceId }));
-    pool = dialogueReport.wrappers as unknown as ReferenceWrapper[];
+    const wrappers = listWrappers(db, { sourceId });
+    dialogueReport = dialogueTrees(wrappers);
+    monsterTalkReport = monsterTalkTrees(wrappers);
+    pool = [...dialogueReport.wrappers, ...monsterTalkReport.wrappers] as unknown as ReferenceWrapper[];
   } else if (promoteCatalog === 'codex') {
     const report = loreBooks(listWrappers(db, { sourceId }));
     pool = report.wrappers as unknown as ReferenceWrapper[];
@@ -208,7 +214,7 @@ if (promoteCatalog) {
 }
 
 if (process.argv.includes('--json')) {
-  console.log(JSON.stringify({ summary, promotion, dialogueReport }, null, 2));
+  console.log(JSON.stringify({ summary, promotion, dialogueReport, monsterTalkReport }, null, 2));
   process.exit(0);
 }
 
@@ -246,4 +252,8 @@ if (promotion) {
 if (dialogueReport) {
   for (const item of dialogueReport.skipped) console.log(`   SKIPPED ${item.towner}: ${item.reason}`);
   for (const item of dialogueReport.unresolved) console.log(`   UNRESOLVED ${item.towner}: line ${item.line}`);
+}
+if (monsterTalkReport) {
+  for (const item of monsterTalkReport.skipped) console.log(`   SKIPPED ${item.monster}: ${item.reason}`);
+  for (const item of monsterTalkReport.unresolved) console.log(`   UNRESOLVED ${item.monster}: line ${item.line}`);
 }

@@ -49,7 +49,8 @@ export function dialogueTrees(wrappers: readonly ReferenceWrapper[]): DialogueTr
   const towners = new Map<string, ReferenceWrapper[]>();
 
   for (const wrapper of wrappers) {
-    if (wrapper.catalogId === 'characters') {
+    // Only townspeople (towners.tsv) hold conversations — the player classes share the catalog since W18.
+    if (wrapper.catalogId === 'characters' && wrapper.file === 'towners/towners.tsv') {
       const group = towners.get(wrapper.key) ?? [];
       group.push(wrapper);
       towners.set(wrapper.key, group);
