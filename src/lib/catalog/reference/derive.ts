@@ -12,7 +12,7 @@
  * fields as a declared gap — never a guessed number.
  */
 import { contentHash } from '@/lib/catalog/reference/hash';
-import { AI_LAW_IDS, attackKindsOf, behaviourLawTexts, expectedTicks, timingLaw, walkTicksPerStep } from '@/lib/catalog/reference/behaviourScale';
+import { AI_LAW_IDS, aiRoutineLaw, attackKindsOf, behaviourLawTexts, expectedTicks, timingLaw, walkTicksPerStep } from '@/lib/catalog/reference/behaviourScale';
 import { AFFIX_POWERS, affixTargetsOf } from '@/lib/catalog/ingest/diablo1Affixes';
 import { DIABLO1_CANON } from '@/lib/catalog/canon/profiles/diablo1';
 import { monsterHitPoints, type Difficulty, type IntegerRange } from '@/lib/catalog/reference/combatMath';
@@ -24,7 +24,7 @@ export interface DeriveSpec {
   derive: (entity: { id: string; tags?: string[]; data: Record<string, unknown> }, raw?: Record<string, string>) => Record<string, unknown>;
 }
 
-const CODE_REVISION = 'monster-timing+difficulty@3';
+const CODE_REVISION = 'monster-timing+difficulty@4';
 
 const DIFFICULTY_LAW_IDS = [
   'd1-difficulty-law',
@@ -95,6 +95,88 @@ const csv = (v: unknown): number[] | null => {
   return n.every(Number.isFinite) ? n : null;
 };
 
+/** Timing-only projection, also used when a named monster overrides its base type's AI/intelligence but keeps its animations. */
+export function deriveMonsterTiming(data: Record<string, unknown>, ai: string, intelligenceOverride?: number): Record<string, unknown> {
+  const frames = csv(data.animFrames);
+  const rates = csv(data.animRates);
+  const locomotionMissing = [
+    !frames || frames.length < 2 ? 'animFrames' : '',
+    !rates || rates.length < 2 ? 'animRates' : '',
+  ].filter(Boolean);
+  if (locomotionMissing.length) return { gap: `no derived locomotion: missing ${locomotionMissing.join(', ')}` };
+
+  const t = timingLaw();
+  const walkTicks = walkTicksPerStep({ walkFrames: frames![1], walkRate: rates![1] }, t.walkExtraTicks);
+  const locomotion = {
+    laws: ['d1-timing-law'],
+    walkTicksPerStep: walkTicks,
+    tilesPerSecondWhileWalking: t.ticksPerSecond / walkTicks,
+  };
+  let attackKinds: ReturnType<typeof attackKindsOf>;
+  try {
+    attackKinds = attackKindsOf(ai);
+  } catch (err) {
+    return {
+      locomotion,
+      gap: `${(err as Error).message}; only the while-walking upper bound is known — effective tilesPerSecond needs the routine's cadence model`,
+    };
+  }
+
+  const base = {
+    laws: ['d1-timing-law', AI_LAW_IDS[ai]],
+    attackKinds,
+    locomotion,
+  };
+  const action = Number(data.attackActionFrame);
+  const intelligence = intelligenceOverride ?? Number(data.intelligence);
+  const cadenceMissing = [
+    frames!.length < 3 ? 'animFrames' : '',
+    rates!.length < 3 ? 'animRates' : '',
+    !Number.isFinite(action) ? 'attackActionFrame' : '',
+    !Number.isFinite(intelligence) ? 'intelligence' : '',
+  ].filter(Boolean);
+  if (cadenceMissing.length) {
+    return {
+      ...base,
+      gap: `no derived cadence: missing ${cadenceMissing.join(', ')}; only the while-walking upper bound is known — effective tilesPerSecond needs the routine's cadence model`,
+    };
+  }
+
+  const hitDelaySeconds = (action * rates![2]) / t.ticksPerSecond;
+  try {
+    const routineLaw = aiRoutineLaw(ai);
+    const ticks = expectedTicks({
+      walkFrames: frames![1], walkRate: rates![1],
+      attackFrames: frames![2], attackRate: rates![2],
+      specialAttackFrames: frames![5], specialAttackRate: rates![5],
+      actionFrame: action, ai, intelligence,
+    }, t.walkExtraTicks);
+    return {
+      ...base,
+      walkTicksPerStep: ticks.step,
+      tilesPerSecond: t.ticksPerSecond / ticks.step,
+      attackCycleTicks: ticks.attack,
+      attackCycleSeconds: ticks.attack / t.ticksPerSecond,
+      ...(ticks.shoot === undefined ? {} : {
+        shootCycleTicks: ticks.shoot,
+        shootCycleSeconds: ticks.shoot / t.ticksPerSecond,
+      }),
+      ...(routineLaw.phaseGap === undefined ? {} : {
+        cadencePhase: routineLaw.phase,
+        cadenceStateGap: routineLaw.phaseGap,
+      }),
+      hitDelaySeconds,
+    };
+  } catch (err) {
+    // The gap applies only to routine cadence. Locomotion, attack kinds and animation hit timing remain valid.
+    return {
+      ...base,
+      hitDelaySeconds,
+      gap: `${(err as Error).message}; only the while-walking upper bound is known — effective tilesPerSecond needs the routine's cadence model`,
+    };
+  }
+}
+
 export const MONSTER_DERIVE: DeriveSpec = {
   version: () => contentHash({
     code: CODE_REVISION,
@@ -103,73 +185,10 @@ export const MONSTER_DERIVE: DeriveSpec = {
   }),
   derive: (e, raw) => {
     const difficulty = difficultyStats(e.data, raw);
-    const frames = csv(e.data.animFrames);
-    const rates = csv(e.data.animRates);
-    const ai = e.tags?.[0] ?? '';
-    const locomotionMissing = [
-      !frames || frames.length < 2 ? 'animFrames' : '',
-      !rates || rates.length < 2 ? 'animRates' : '',
-    ].filter(Boolean);
-    if (locomotionMissing.length) return { ...difficulty, gap: `no derived locomotion: missing ${locomotionMissing.join(', ')}` };
-
-    const t = timingLaw();
-    const walkTicks = walkTicksPerStep({ walkFrames: frames![1], walkRate: rates![1] }, t.walkExtraTicks);
-    const locomotion = {
-      laws: ['d1-timing-law'],
-      walkTicksPerStep: walkTicks,
-      tilesPerSecondWhileWalking: t.ticksPerSecond / walkTicks,
-    };
-    let attackKinds: ReturnType<typeof attackKindsOf>;
-    try {
-      attackKinds = attackKindsOf(ai);
-    } catch (err) {
-      return {
-        ...difficulty,
-        locomotion,
-        gap: `${(err as Error).message}; only the while-walking upper bound is known — effective tilesPerSecond needs the routine's cadence model`,
-      };
-    }
-
-    const base = {
+    return {
       ...difficulty,
-      laws: ['d1-timing-law', AI_LAW_IDS[ai]],
-      attackKinds,
-      locomotion,
+      ...deriveMonsterTiming(e.data, e.tags?.[0] ?? ''),
     };
-    const action = Number(e.data.attackActionFrame);
-    const intelligence = Number(e.data.intelligence);
-    const cadenceMissing = [
-      frames!.length < 3 ? 'animFrames' : '',
-      rates!.length < 3 ? 'animRates' : '',
-      !Number.isFinite(action) ? 'attackActionFrame' : '',
-      !Number.isFinite(intelligence) ? 'intelligence' : '',
-    ].filter(Boolean);
-    if (cadenceMissing.length) {
-      return {
-        ...base,
-        gap: `no derived cadence: missing ${cadenceMissing.join(', ')}; only the while-walking upper bound is known — effective tilesPerSecond needs the routine's cadence model`,
-      };
-    }
-
-    const hitDelaySeconds = (action * rates![2]) / t.ticksPerSecond;
-    try {
-      const ticks = expectedTicks({ walkFrames: frames![1], walkRate: rates![1], attackFrames: frames![2], attackRate: rates![2], actionFrame: action, ai, intelligence }, t.walkExtraTicks);
-      return {
-        ...base,
-        walkTicksPerStep: ticks.step,
-        tilesPerSecond: t.ticksPerSecond / ticks.step,
-        attackCycleTicks: ticks.attack,
-        attackCycleSeconds: ticks.attack / t.ticksPerSecond,
-        hitDelaySeconds,
-      };
-    } catch (err) {
-      // The gap applies only to routine cadence. Locomotion, attack kinds and animation hit timing remain valid.
-      return {
-        ...base,
-        hitDelaySeconds,
-        gap: `${(err as Error).message}; only the while-walking upper bound is known — effective tilesPerSecond needs the routine's cadence model`,
-      };
-    }
   },
 };
 

@@ -73,8 +73,20 @@ describe('MONSTER_DERIVE', () => {
     expect(d.attackKinds).toEqual(['melee']);
   });
 
-  it('reports unmodelled cadence or missing locomotion input as a declared gap', () => {
-    expect(MONSTER_DERIVE.derive(monster({}, ['Succubus']))).toMatchObject({ gap: expect.stringMatching(/Succubus.*not modelled/) });
+  it('derives a formerly-gapped ranged cadence and reports only genuinely state-dependent routines as gaps', () => {
+    expect(MONSTER_DERIVE.derive(monster({}, ['Succubus']))).toMatchObject({
+      walkTicksPerStep: 21,
+      attackCycleTicks: 21.5,
+      shootCycleTicks: 21.5,
+    });
+    expect(MONSTER_DERIVE.derive(monster({}, ['Counselor']))).toMatchObject({
+      gap: expect.stringMatching(/Counselor.*not modelled.*fade.*circle.*retreat/),
+    });
+    expect(MONSTER_DERIVE.derive(monster({}, ['Gharbad']))).toMatchObject({
+      tilesPerSecond: expect.any(Number),
+      cadencePhase: 'hostile healthy Normal goal',
+      cadenceStateGap: expect.stringMatching(/quest dialogue.*no movement or attack cadence/),
+    });
     expect(MONSTER_DERIVE.derive(monster({ animFrames: '' }))).toMatchObject({ gap: expect.stringMatching(/animFrames/) });
   });
 

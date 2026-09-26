@@ -4,6 +4,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   aiRoutineLaw,
+  aiRoutineCadenceStatus,
   attackKindsOf,
   behaviourLawTexts,
   convertBehaviour,
@@ -12,6 +13,7 @@ import {
   walkTicksPerStep,
   type BehaviourInput,
 } from '@/lib/catalog/reference/behaviourScale';
+import { D1_AI_ROUTINES } from '@/lib/catalog/reference/aiRoutines';
 
 const HERO = { walkFrames: 6 };
 const TARGET = { walkSpeed: 500 };
@@ -24,10 +26,32 @@ describe('the laws are read from the canon, not remembered', () => {
     expect(t.walkExtraTicks).toBeGreaterThanOrEqual(0);
   });
   it('an unmodelled AI routine is a refusal naming it', () => {
-    expect(() => aiRoutineLaw('Succubus')).toThrow(/Succubus.*not modelled/);
+    expect(() => aiRoutineLaw('Counselor')).toThrow(/Counselor.*not modelled.*fade.*circle.*retreat/);
   });
   it('includes the structured routine table in the derivation-version material', () => {
     expect(behaviourLawTexts().at(-1)).toMatch(/"SkeletonRanged".*"rolls"/);
+  });
+});
+
+describe('every table routine has either a model or a precise refusal', () => {
+  it('classifies all 33 routines without a generic reference-only gap', () => {
+    const statuses = Object.keys(D1_AI_ROUTINES).map((ai) => [ai, aiRoutineCadenceStatus(ai)] as const);
+    expect(statuses).toHaveLength(33);
+    expect(statuses.filter(([, status]) => status.modelled).map(([ai]) => ai)).toHaveLength(22);
+    expect(statuses.filter(([, status]) => !status.modelled).map(([ai]) => ai)).toEqual([
+      'Scavenger', 'Fallen', 'SkeletonKing', 'Gargoyle', 'FireMan', 'Zhar', 'Snotspill',
+      'Counselor', 'Mega', 'Lazarus', 'Lachdanan',
+    ]);
+    for (const [ai, status] of statuses) {
+      if (status.modelled) expect(() => aiRoutineLaw(ai)).not.toThrow();
+      else expect(status.reason).toMatch(/health|death|summon|statue|dispatch|talk|fade|distance|dialogue/);
+    }
+  });
+
+  it('marks quest-gated models as combat-phase expectations', () => {
+    expect(aiRoutineLaw('Gharbad').phaseGap).toMatch(/quest dialogue.*no movement or attack cadence/);
+    expect(aiRoutineLaw('LazarusSuccubus').phaseGap).toMatch(/before.*quest.*no combat cadence/);
+    expect(aiRoutineLaw('Warlord').phaseGap).toMatch(/speech.*no movement or attack cadence/);
   });
 });
 
@@ -94,6 +118,54 @@ describe('locomotion and routine cadence stay separate', () => {
       step: 11,
       attack: 27.999999999999996,
     });
+  });
+
+  it('hand-computes a settle gate and a shared normal/special attack roll (Fat, invented animations)', () => {
+    const ticks = expectedTicks({
+      ...base, ai: 'Fat', intelligence: 0, specialAttackFrames: 5, specialAttackRate: 2,
+    }, t.walkExtraTicks);
+    // Step: 11 + (1-.70) * (21 ticks to var2>20 + (.80/.20) failures) = 18.5.
+    // Attack: conditional animation (.15*9 + .05*10)/.20 + .80/.20 idle failures = 13.25.
+    expect(ticks.step).toBe(18.5);
+    expect(ticks.attack).toBeCloseTo(13.25, 12);
+  });
+
+  it('hand-computes repeated pauses after the post-move chance (Rhino, invented animations)', () => {
+    const ticks = expectedTicks({ ...base, ai: 'Rhino', intelligence: 0 }, t.walkExtraTicks);
+    // Step: 11 + (1-.83) * 14.5 / .33. Attack: 9 + .72/.28 idle decisions.
+    expect(ticks.step).toBeCloseTo(11 + 0.17 * 14.5 / 0.33, 12);
+    expect(ticks.attack).toBeCloseTo(9 + 0.72 / 0.28, 12);
+  });
+
+  it('hand-computes a forced post-pause action (Snake, invented animations)', () => {
+    const ticks = expectedTicks({ ...base, ai: 'Snake', intelligence: 0 }, t.walkExtraTicks);
+    expect(ticks).toEqual({
+      step: 11 + 0.35 * 19.5,
+      attack: 9 + 0.8 * 14.5,
+    });
+  });
+
+  it('hand-computes post-shot delay for a ranged-only routine (Succubus, invented animations)', () => {
+    expect(expectedTicks({ ...base, ai: 'Succubus', intelligence: 0 }, t.walkExtraTicks)).toEqual({
+      step: 11,
+      attack: 18.5,
+      shoot: 18.5,
+    });
+  });
+
+  it('hand-computes competing approach, adjacent attacks and far shots (Magma, invented animations)', () => {
+    const ticks = expectedTicks({
+      ...base, ai: 'Magma', intelligence: 0, specialAttackFrames: 5, specialAttackRate: 2,
+    }, t.walkExtraTicks);
+    // At d=2: 5% special shots precede each otherwise-certain step. At d>=3: shots have 10% chance.
+    expect(ticks.step).toBeCloseTo(11 + 0.05 / 0.95 * 10, 12);
+    expect(ticks.shoot).toBe(10 + 0.9 / 0.1 * 11);
+    // Adjacent shared roll: 5% special, next 55% melee, 40% repeated 9.5-tick pauses.
+    expect(ticks.attack).toBeCloseTo((0.05 * 10 + 0.55 * 9) / 0.6 + 0.4 / 0.6 * 9.5, 12);
+  });
+
+  it('uses bare action animations for deterministic routines (Butcher, invented animations)', () => {
+    expect(expectedTicks({ ...base, ai: 'Butcher', intelligence: 0 }, t.walkExtraTicks)).toEqual({ step: 11, attack: 9 });
   });
 });
 

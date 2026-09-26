@@ -2,6 +2,7 @@ import { applyDecode } from '@/lib/catalog/ingest/decode';
 import { UNIQUE_RESISTANCE_DECODE } from '@/lib/catalog/ingest/diablo1Uniques';
 import { attackKindsOf, type AiAttackKind } from '@/lib/catalog/reference/aiRoutines';
 import { monsterHitPoints, type Difficulty, type GameMode } from '@/lib/catalog/reference/combatMath';
+import { deriveMonsterTiming } from '@/lib/catalog/reference/derive';
 import type { ReferenceWrapper } from '@/lib/catalog/reference/wrapper';
 
 export type EffectiveStatSource = 'unique override' | 'base' | 'engine rule';
@@ -43,6 +44,10 @@ export interface InheritedUniqueDerived {
   tilesPerSecond?: unknown;
   attackCycleTicks?: unknown;
   attackCycleSeconds?: unknown;
+  shootCycleTicks?: unknown;
+  shootCycleSeconds?: unknown;
+  cadencePhase?: unknown;
+  cadenceStateGap?: unknown;
   hitDelaySeconds?: unknown;
   gap?: unknown;
 }
@@ -151,16 +156,19 @@ const UNIQUE_FILE = 'monsters/unique_monstdat.tsv';
 const BASE_FILE = 'monsters/monstdat.tsv';
 
 function inheritedDerived(unique: ReferenceWrapper, base: ReferenceWrapper): InheritedUniqueDerived {
-  const source = base.entity.data.derived;
-  const derived = source != null && typeof source === 'object'
-    ? source as Record<string, unknown>
-    : {};
+  // PrepareUniqueMonst keeps the base animation set but replaces both AI and intelligence
+  // (.reference/devilutionX/Source/monster.cpp:3325-3342), so cadence must be re-run rather than copied from the base.
+  const derived = deriveMonsterTiming(base.entity.data, unique.raw.ai, numberFrom(unique.raw, 'intelligence', unique.entity.id));
   const timingKeys = [
     'locomotion',
     'walkTicksPerStep',
     'tilesPerSecond',
     'attackCycleTicks',
     'attackCycleSeconds',
+    'shootCycleTicks',
+    'shootCycleSeconds',
+    'cadencePhase',
+    'cadenceStateGap',
     'hitDelaySeconds',
     'gap',
   ] as const;

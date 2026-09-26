@@ -29,8 +29,12 @@ const base = wrapper('d1-MT_SYNTH', 'monsters/monstdat.tsv', {
 });
 
 describe('effectiveUniqueMonstersForPromotion', () => {
-  it('adds single-player effective stats and inherits base timing with the unique AI attack kinds', () => {
+  it('adds effective stats and reprojects base animations with the unique AI and intelligence', () => {
     const baseWithTiming = wrapper('d1-MT_SYNTH', 'monsters/monstdat.tsv', base.raw, {
+      animFrames: '10,20,12,6,16,8',
+      animRates: '3,1,1,1,1,1',
+      attackActionFrame: '8',
+      intelligence: '0',
       derived: {
         byDifficulty: { normal: { level: 4 } },
         laws: ['d1-timing-law', 'd1-ai-zombie-law'],
@@ -57,21 +61,22 @@ describe('effectiveUniqueMonstersForPromotion', () => {
         hell: { armorClass: { value: 93, source: 'base' } },
       },
     });
-    expect(data.derived).toEqual({
+    expect(data.derived).toMatchObject({
       inheritedFrom: {
         entityId: 'd1-MT_SYNTH',
         role: 'base type',
         reason: 'unique monsters use their base type animations',
       },
-      laws: ['d1-timing-law', 'd1-ai-zombie-law'],
+      laws: ['d1-timing-law', 'd1-ai-bat-law'],
       attackKinds: ['melee', 'special', 'missile'],
-      locomotion: { laws: ['d1-timing-law'], walkTicksPerStep: 21, tilesPerSecondWhileWalking: 0.95 },
-      walkTicksPerStep: 42,
-      tilesPerSecond: 0.48,
-      attackCycleTicks: 60,
-      attackCycleSeconds: 3,
+      locomotion: { laws: ['d1-timing-law'], walkTicksPerStep: 21, tilesPerSecondWhileWalking: 20 / 21 },
+      attackCycleTicks: 16,
+      attackCycleSeconds: 0.8,
       hitDelaySeconds: 0.4,
     });
+    expect((data.derived as Record<string, number>).walkTicksPerStep).toBeCloseTo(29.925, 12);
+    expect((data.derived as Record<string, number>).tilesPerSecond).toBeCloseTo(20 / 29.925, 12);
+    expect((data.derived as Record<string, unknown>).walkTicksPerStep).not.toBe(42);
     expect((data.derived as Record<string, unknown>).byDifficulty).toBeUndefined();
   });
 
