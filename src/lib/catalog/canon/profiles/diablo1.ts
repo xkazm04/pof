@@ -13,6 +13,7 @@
  * This file is part of the reference-replication exercise and is deleted with it.
  */
 import type { ProjectRule } from '../types';
+import { DIABLO1_SPELL_LAWS } from '@/lib/catalog/reference/spellSpecsData';
 
 /** PoF rules that are world-neutral ENGINEERING contracts, adopted unchanged under this profile. */
 export const DIABLO1_INHERITS_POF: readonly string[] = [
@@ -124,12 +125,13 @@ export const DIABLO1_CANON: readonly ProjectRule[] = [
   { id: 'd1-ai-hork-demon-law', profile: 'diablo1', category: 'game', scope: 'bestiary', title: 'HorkDemon AI law (engine-derived) (Hellfire)',
     body: 'HorkDemon AI, derived from the engine: from 5 or more tiles it usually circles; from 3 or more tiles it spawns a monster ahead on (2 x intelligence + 43)% when space and capacity permit, otherwise it approaches on (2 x intelligence + 33)% or the post-move (2 x intelligence + 83)% threshold and pauses 10-19 ticks on failure; adjacent attacks use (2 x intelligence + 28)%.',
     refs: ['https://github.com/diasurgical/devilutionX/blob/4138a82/Source/monster.cpp (HorkDemonAi)'] },
-  { id: 'd1-spell-firebolt-law', profile: 'diablo1', category: 'game', scope: 'spellbook', title: 'Firebolt law (engine-derived)',
-    body: "Firebolt, derived from the engine: a hero's bolt deals Magic / 8 + spell level + 1 plus 0-9 damage in whole hit points, and a resistant monster takes 1/4 of it.",
-    refs: ['https://github.com/diasurgical/devilutionX/blob/4138a82/Source/missiles.cpp (AddFirebolt; MonsterMHit: dam <<= 6, resist >>= 2)'] },
+  ...DIABLO1_SPELL_LAWS,
   { id: 'd1-spell-cast-law', profile: 'diablo1', category: 'game', scope: 'spellbook', title: 'Spell casting law (engine-derived)',
-    body: "Spell casting, derived from the engine: a spell hits on (Magic + class magic to-hit - 2 x monster level - distance)%, clamped to 5-95. A cast lasts the class's casting frames at 1 tick per frame and releases on its casting action frame; the next cast may begin when it ends, and there is no cooldown. A spell costs the table's mana at spell level 1. Mana does not regenerate over time.",
+    body: "Spell casting, derived from the engine: ordinary spell missiles hit on clamp(Magic+class magic-to-hit-2*monster level,5,95)%; their distance counter remains 0, and every collision check rerolls. A cast uses one tick per class casting frame, releases on its action frame, and has no cooldown or passive mana regeneration. Mana is GetManaAmount's spell-level, class, minimum, Healing, and Resurrect result, not simply the table value.",
     refs: ['https://github.com/diasurgical/devilutionX/blob/4138a82/Source/missiles.cpp (MonsterMHit: GetMagicToHit - 2 x level - dist, clamp 5-95)', 'https://github.com/diasurgical/devilutionX/blob/4138a82/Source/player.cpp (getAnimationFramesAndTicksPerFrame: spell 1 tick/frame; DoSpell casts at _pSFNum; ProcessPlayers: no mana regeneration)', 'https://github.com/diasurgical/devilutionX/blob/4138a82/Source/spells.cpp (GetManaAmount)'] },
+  { id: 'd1-monster-missile-hit-law', profile: 'diablo1', category: 'game', scope: 'bestiary', title: 'Monster missile hit law (engine-derived)',
+    body: 'Monster missiles, derived from the engine: non-arrows hit when R(100) is below max(40+2*monster level-2*player level-2*distance,dungeon floor); arrows instead use monster to-hit, player armour, and distance. The floor is 10, or 20/25/30 on dungeon levels 14/15/16. Elemental resistance reduces damage; a standing or attacking player may block eligible missiles.',
+    refs: ['.reference/devilutionX/Source/missiles.cpp:1067-1207'] },
   { id: 'd1-combat-melee-to-hit-law', profile: 'diablo1', category: 'game', scope: 'characters', title: 'Player melee to-hit law (engine-derived)',
     body: 'Player melee to-hit, derived from the engine: (Dexterity / 2 + level + class melee to-hit + item to-hit + armour-piercing - monster armour)%, clamped to 5-95; division truncates. An unhittable target cannot be hit, while petrification makes the attack roll zero and therefore succeeds against the positive minimum.',
     refs: ['https://github.com/diasurgical/devilutionX/blob/4138a82/Source/player.cpp (PlrHitMonst)', 'https://github.com/diasurgical/devilutionX/blob/4138a82/Source/player.h (GetMeleeToHit)'] },

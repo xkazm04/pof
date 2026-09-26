@@ -44,6 +44,7 @@ describe('fireboltAt', () => {
   });
   it('clamps to-hit', () => {
     expect(n.toHit(1, 0)).toBeCloseTo(0.68);
+    expect(n.toHit(1, 99)).toBeCloseTo(0.68); // Ordinary spell missiles leave _midist at zero.
     expect(n.toHit(60, 0)).toBeCloseTo(0.05);
   });
   it('refuses a spell level the law does not state a cost for', () => {
