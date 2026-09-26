@@ -9,6 +9,7 @@ import {
   blockProbability,
   experienceAward,
   experienceCurveLaw,
+  expectedHitsToKill,
   hitRecovery,
   hitRecoveryTiming,
   lifeAndMana,
@@ -263,25 +264,55 @@ describe('Diablo I experience laws', () => {
 });
 
 describe('duel and canon contract', () => {
+  it('computes exact hits from fixed-point HP and damage distributions', () => {
+    expect(expectedHitsToKill([{ hitPoints: 10, weight: 1 }], [{ damage: 10, weight: 1 }])).toBe(1);
+    // E(1)=1, E(2)=1.5, and E(3)=1+(E(2)+E(1))/2=2.25.
+    expect(expectedHitsToKill([{ hitPoints: 3, weight: 1 }], [
+      { damage: 1, weight: 1 },
+      { damage: 2, weight: 1 },
+    ])).toBe(2.25);
+    // Immunity is a zero-damage distribution, so its tail probability never converges to zero.
+    expect(expectedHitsToKill([{ hitPoints: 10, weight: 1 }], [{ damage: 0, weight: 1 }])).toBe(Infinity);
+  });
+
   it('composes the laws end to end', () => {
     const build = { ...BUILD, tripleDemonDamage: true };
-    // Player: hit .21; landed mean 1337.6 fixed; per swing 280.896; mean monster HP 35*64=2240.
+    // Player: hit .21; the exact damage/HP convolution needs 2.201587... landed hits on average.
     // Monster: hit .36; mean damage 160; block .22 => 124.8 per hit and 44.928 per swing.
-    // Player life is 2464 fixed, so hits-to-kill = 2464/124.8.
+    // The exact player-life convolution includes block as a zero-damage landed hit.
     const result = duel(build, COEFFICIENTS, MONSTER, { playerAttack: 'melee', monsterAttack: 'melee', dungeonLevel: 1 });
     expect(result.gameMode).toBe('single');
     expect(duel(build, COEFFICIENTS, MONSTER, { gameMode: 'multi', playerAttack: 'melee', monsterAttack: 'melee', dungeonLevel: 1 }).gameMode).toBe('multi');
     expect(result.playerHitChance).toBe(0.21);
     expect(result.expectedPlayerDamagePerSwing).toBeCloseTo(280.896);
-    expect(result.expectedPlayerSwingsToKill).toBeCloseTo(2240 / 280.896);
+    expect(result.expectedPlayerHitsToKill).toBeCloseTo(2.2015873015873018);
+    expect(result.expectedPlayerSwingsToKill).toBeCloseTo(2.2015873015873018 / 0.21);
     expect(result.playerSwingSeconds).toBeNull();
     expect(result.monsterHitChance).toBe(0.36);
     expect(result.expectedMonsterDamagePerHit).toBeCloseTo(124.8);
-    expect(result.expectedMonsterHitsToKillPlayer).toBeCloseTo(2464 / 124.8);
+    expect(result.expectedMonsterHitsToKillPlayer).toBeCloseTo(20.393757917755167);
     expect(result.expectedMonsterDamagePerSwing).toBeCloseTo(44.928);
     const timed = duel({ ...build, swingSeconds: 0.6 }, COEFFICIENTS, MONSTER, { playerAttack: 'melee', monsterAttack: 'melee', dungeonLevel: 1 });
     // Time to kill = expected swings * the invented 0.6-second class swing.
-    expect(timed.expectedPlayerSecondsToKill).toBeCloseTo((2240 / 280.896) * 0.6);
+    expect(timed.expectedPlayerSecondsToKill).toBeCloseTo((2.2015873015873018 / 0.21) * 0.6);
+  });
+
+  it('never reports fewer than one swing for a one-hit-kill damage distribution', () => {
+    const oneShot = duel({ ...BUILD, weaponDamage: { min: 100, max: 100 } }, { ...COEFFICIENTS, classFlags: [] }, {
+      ...MONSTER,
+      hitPoints: monsterHitPoints({ min: 1, max: 2 }, 'normal', 'single'),
+    }, { playerAttack: 'melee', monsterAttack: 'melee', dungeonLevel: 1 });
+    expect(oneShot.expectedPlayerHitsToKill).toBe(1);
+    expect(oneShot.expectedPlayerSwingsToKill).toBe(1 / oneShot.playerHitChance);
+    expect(oneShot.expectedPlayerSwingsToKill).toBeGreaterThanOrEqual(1);
+  });
+
+  it('reports an unhittable target and its time-to-kill as unbounded', () => {
+    const result = duel({ ...BUILD, swingSeconds: 0.6 }, COEFFICIENTS, { ...MONSTER, possibleToHit: false }, {
+      playerAttack: 'melee', monsterAttack: 'melee', dungeonLevel: 1,
+    });
+    expect(result.expectedPlayerSwingsToKill).toBe(Infinity);
+    expect(result.expectedPlayerSecondsToKill).toBe(Infinity);
   });
 
   it('ships every new bounded canon law', () => {

@@ -53,9 +53,12 @@ export interface DamageDistribution {
   min: number; max: number; mean: number; expectedNumerator: number; expectedDenominator: number;
   outcomes: readonly { damage: number; weight: number }[];
 }
+export interface HitPointOutcome { hitPoints: number; weight: number }
 
 export const FIXED_POINT = 64;
 const UINT32_MAX = 2 ** 32 - 1;
+const EXPECTED_HITS_CAP = 100_000;
+const monsterHitPointOutcomes = new WeakMap<IntegerRange, readonly HitPointOutcome[]>();
 const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
 const div = (n: number, d: number) => Math.trunc(n / d);
 const monsterLevel = (m: MonsterProfile) => m.level + (m.difficultyAdjusted ? 0 : m.difficulty === 'nightmare' ? 15 : m.difficulty === 'hell' ? 30 : 0);
@@ -129,14 +132,83 @@ export function monsterHitPoints(
   gameMode: GameMode = 'single',
   options: { hellfire?: boolean } = {},
 ): IntegerRange {
-  const modeBounds = gameMode === 'single'
-    ? { min: Math.max(base.min / 2, 1), max: Math.max(base.max / 2, 1) }
-    : { ...base };
-  if (difficulty === 'normal') return modeBounds;
-  const scale = difficulty === 'nightmare' ? 3 : 4;
-  const multiplayerBonus = difficulty === 'nightmare' ? 100 : 200;
-  const bonus = options.hellfire && gameMode === 'single' ? multiplayerBonus / 2 : multiplayerBonus;
-  return { min: scale * modeBounds.min + bonus, max: scale * modeBounds.max + bonus };
+  const modeValue = (value: number) => gameMode === 'single' ? Math.max(value / 2, 1) : value;
+  const difficultyValue = (value: number) => {
+    if (difficulty === 'normal') return value;
+    const scale = difficulty === 'nightmare' ? 3 : 4;
+    const multiplayerBonus = difficulty === 'nightmare' ? 100 : 200;
+    const bonus = options.hellfire && gameMode === 'single' ? multiplayerBonus / 2 : multiplayerBonus;
+    return scale * value + bonus;
+  };
+  const result = { min: difficultyValue(modeValue(base.min)), max: difficultyValue(modeValue(base.max)) };
+  if (Number.isInteger(base.min) && Number.isInteger(base.max) && base.min <= base.max) {
+    const weights = new Map<number, number>();
+    for (let roll = base.min; roll <= base.max; roll++) {
+      const hitPoints = difficultyValue(modeValue(roll)) * FIXED_POINT;
+      weights.set(hitPoints, (weights.get(hitPoints) ?? 0) + 1);
+    }
+    monsterHitPointOutcomes.set(result, [...weights].map(([hitPoints, weight]) => ({ hitPoints, weight })));
+  }
+  return result;
+}
+
+/** Exact fixed-point HP support retained by `monsterHitPoints`, with a uniform-range fallback for synthetic profiles. */
+export function monsterHitPointDistribution(
+  bounds: IntegerRange,
+  difficulty: Difficulty,
+  gameMode: GameMode = 'single',
+): readonly HitPointOutcome[] {
+  const retained = monsterHitPointOutcomes.get(bounds);
+  if (retained) return retained;
+  const unit = monsterHitPoints({ min: 2, max: 3 }, difficulty, gameMode);
+  const step = Math.round((unit.max - unit.min) * FIXED_POINT);
+  const min = Math.round(bounds.min * FIXED_POINT);
+  const max = Math.round(bounds.max * FIXED_POINT);
+  if (step <= 0 || min > max || Math.abs(bounds.min * FIXED_POINT - min) > Number.EPSILON || Math.abs(bounds.max * FIXED_POINT - max) > Number.EPSILON) {
+    return [];
+  }
+  const outcomes: HitPointOutcome[] = [];
+  for (let hitPoints = min; hitPoints <= max; hitPoints += step) outcomes.push({ hitPoints, weight: 1 });
+  if (outcomes.at(-1)?.hitPoints !== max) outcomes.push({ hitPoints: max, weight: 1 });
+  return outcomes;
+}
+
+/**
+ * Exact expectation from the tail-sum identity P(hits >= k) = P(damage after k - 1 hits < HP).
+ * The equivalent remaining-HP recurrence terminates after at most HP/min-positive-damage progress hits;
+ * zero-damage outcomes are solved algebraically. Infinity denotes no convergence within the safety cap.
+ */
+export function expectedHitsToKill(
+  hitPoints: readonly HitPointOutcome[],
+  damage: readonly { damage: number; weight: number }[],
+  maxHits = EXPECTED_HITS_CAP,
+): number {
+  const hp = hitPoints.filter((outcome) => outcome.weight > 0 && outcome.hitPoints > 0);
+  const hpWeight = hp.reduce((sum, outcome) => sum + outcome.weight, 0);
+  if (hpWeight === 0) return 0;
+  const damageWeights = new Map<number, number>();
+  let totalDamageWeight = 0;
+  for (const outcome of damage) {
+    if (!(outcome.weight > 0)) continue;
+    const dealt = Math.max(0, Math.trunc(outcome.damage));
+    damageWeights.set(dealt, (damageWeights.get(dealt) ?? 0) + outcome.weight);
+    totalDamageWeight += outcome.weight;
+  }
+  const positive = [...damageWeights].filter(([dealt]) => dealt > 0);
+  const positiveWeight = positive.reduce((sum, [, weight]) => sum + weight, 0);
+  if (totalDamageWeight === 0 || positiveWeight === 0) return Infinity;
+  const maxHp = Math.max(...hp.map((outcome) => Math.ceil(outcome.hitPoints)));
+  const minDamage = Math.min(...positive.map(([dealt]) => dealt));
+  if (Math.ceil(maxHp / minDamage) > maxHits) return Infinity;
+
+  const expected = new Float64Array(maxHp + 1);
+  for (let remaining = 1; remaining <= maxHp; remaining++) {
+    let continuation = 0;
+    for (const [dealt, weight] of positive) continuation += weight * expected[Math.max(0, remaining - dealt)];
+    expected[remaining] = (totalDamageWeight + continuation) / positiveWeight;
+  }
+  const result = hp.reduce((sum, outcome) => sum + expected[Math.ceil(outcome.hitPoints)] * outcome.weight, 0) / hpWeight;
+  return result <= maxHits ? result : Infinity;
 }
 
 function distribution(entries: readonly (readonly [damage: number, weight: number])[]): DamageDistribution {

@@ -1,8 +1,9 @@
 import {
-  FIXED_POINT,
   blockProbability,
+  expectedHitsToKill,
   lifeAndMana,
   monsterDamageByDifficulty,
+  monsterHitPointDistribution,
   monsterMeleeHitChance,
   monsterRangedHitChance,
   playerMeleeDamage,
@@ -42,8 +43,9 @@ export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monste
     ? playerMeleeDamage(build, coefficients, monster)
     : playerRangedDamage(build, monster);
   const expectedPlayerDamagePerSwing = playerHitChance * playerDamage.mean;
-  const meanMonsterHitPoints = (monster.hitPoints.min + monster.hitPoints.max) * FIXED_POINT / 2;
-  const expectedPlayerSwingsToKill = expectedPlayerDamagePerSwing > 0 ? meanMonsterHitPoints / expectedPlayerDamagePerSwing : Infinity;
+  const monsterHitPoints = monsterHitPointDistribution(monster.hitPoints, monster.difficulty, gameMode);
+  const expectedPlayerHitsToKill = expectedHitsToKill(monsterHitPoints, playerDamage.outcomes);
+  const expectedPlayerSwingsToKill = playerHitChance > 0 ? expectedPlayerHitsToKill / playerHitChance : Infinity;
   const playerSwingSeconds = build.swingSeconds ?? null;
   const expectedPlayerSecondsToKill = playerSwingSeconds === null
     ? null
@@ -74,18 +76,30 @@ export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monste
   const expectedMonsterDamagePerHit = resistedDamageMean * (1 - block.conditionalBlockChance);
   const expectedMonsterDamagePerSwing = resistedDamageMean * block.damagingHitChance;
   const playerLife = lifeAndMana(build, coefficients).maximumLife;
+  const monsterDamageAfterDefence = [
+    ...monsterDamage.outcomes.map((outcome) => ({
+      damage: playerResistance(build, outcome.damage, monsterElement).damage,
+      weight: outcome.weight * (1 - block.conditionalBlockChance),
+    })),
+    { damage: 0, weight: monsterDamage.expectedDenominator * block.conditionalBlockChance },
+  ];
+  const expectedMonsterHitsToKillPlayer = expectedHitsToKill(
+    [{ hitPoints: playerLife, weight: 1 }],
+    monsterDamageAfterDefence,
+  );
 
   return {
     gameMode,
     playerHitChance,
     expectedPlayerDamagePerSwing,
+    expectedPlayerHitsToKill,
     expectedPlayerSwingsToKill,
     playerSwingSeconds,
     expectedPlayerSecondsToKill,
     monsterHitChance,
     expectedMonsterDamagePerHit,
-    expectedMonsterHitsToKillPlayer: expectedMonsterDamagePerHit > 0 ? playerLife / expectedMonsterDamagePerHit : Infinity,
+    expectedMonsterHitsToKillPlayer,
     expectedMonsterDamagePerSwing,
-    expectedMonsterSwingsToKillPlayer: expectedMonsterDamagePerSwing > 0 ? playerLife / expectedMonsterDamagePerSwing : Infinity,
+    expectedMonsterSwingsToKillPlayer: monsterHitChance > 0 ? expectedMonsterHitsToKillPlayer / monsterHitChance : Infinity,
   };
 }
