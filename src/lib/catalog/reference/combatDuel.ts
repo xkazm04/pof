@@ -43,6 +43,11 @@ export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monste
     : playerRangedDamage(build, monster);
   const expectedPlayerDamagePerSwing = playerHitChance * playerDamage.mean;
   const meanMonsterHitPoints = (monster.hitPoints.min + monster.hitPoints.max) * FIXED_POINT / 2;
+  const expectedPlayerSwingsToKill = expectedPlayerDamagePerSwing > 0 ? meanMonsterHitPoints / expectedPlayerDamagePerSwing : Infinity;
+  const playerSwingSeconds = build.swingSeconds ?? null;
+  const expectedPlayerSecondsToKill = playerSwingSeconds === null
+    ? null
+    : expectedPlayerSwingsToKill * playerSwingSeconds;
 
   const monsterHitChance = opts.monsterAttack === 'melee'
     ? monsterMeleeHitChance(build, monster, opts.dungeonLevel)
@@ -74,7 +79,9 @@ export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monste
     gameMode,
     playerHitChance,
     expectedPlayerDamagePerSwing,
-    expectedPlayerSwingsToKill: expectedPlayerDamagePerSwing > 0 ? meanMonsterHitPoints / expectedPlayerDamagePerSwing : Infinity,
+    expectedPlayerSwingsToKill,
+    playerSwingSeconds,
+    expectedPlayerSecondsToKill,
     monsterHitChance,
     expectedMonsterDamagePerHit,
     expectedMonsterHitsToKillPlayer: expectedMonsterDamagePerHit > 0 ? playerLife / expectedMonsterDamagePerHit : Infinity,

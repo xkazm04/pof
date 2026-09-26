@@ -14,6 +14,7 @@ import { submitStepArtifact } from '@/lib/catalog/headless';
 import '@/lib/catalog/pipelines/registry.generated';
 import { duel } from '@/lib/catalog/reference/combatDuel';
 import { classCoefficients, combatGameMode, monsterProfile, referenceBuild } from '@/lib/catalog/reference/combatInputs';
+import { aggregateClassWrappers } from '@/lib/catalog/reference/classHeroes';
 import { seedBestiaryCombatSteps } from '@/lib/catalog/reference/combatSeeds';
 import { experienceAward, experienceCurveLaw, FIXED_POINT, type Difficulty } from '@/lib/catalog/reference/combatMath';
 import { listWrappers } from '@/lib/catalog/reference/wrappers-db';
@@ -42,8 +43,8 @@ function stat(wrapper: ReferenceWrapper, label: string): number {
   return number;
 }
 
-function finite(value: number): number | null {
-  return Number.isFinite(value) ? value : null;
+function finite(value: number | null): number | null {
+  return value !== null && Number.isFinite(value) ? value : null;
 }
 
 const requestedClass = arg('class')?.toLowerCase();
@@ -69,7 +70,7 @@ if (!(['normal', 'nightmare', 'hell'] as const).includes(difficulty)) {
 const gameMode = combatGameMode(process.argv);
 
 const db = getDb();
-const characterWrappers = listWrappers(db, { sourceId: 'diablo1', catalogId: 'characters' });
+const characterWrappers = aggregateClassWrappers(listWrappers(db, { sourceId: 'diablo1', catalogId: 'characters' }));
 const itemWrappers = listWrappers(db, { sourceId: 'diablo1', catalogId: 'items' });
 const bestiaryWrappers = listWrappers(db, { sourceId: 'diablo1', catalogId: 'bestiary' })
   .filter((wrapper) => wrapper.file === 'monsters/monstdat.tsv' || wrapper.file === 'monsters/unique_monstdat.tsv');
@@ -106,7 +107,9 @@ interface DuelRow {
   monster: string;
   monsterId: string;
   playerHitPct: number;
+  playerSwingSeconds: number | null;
   expectedSwingsToKill: number | null;
+  expectedSecondsToKill: number | null;
   monsterHitPct: number;
   expectedMonsterDamagePerHit: number;
   expectedHitsToKillPlayer: number | null;
@@ -147,7 +150,9 @@ for (const folder of classes) {
       monster: wrapper.entity.name,
       monsterId: wrapper.entity.id,
       playerHitPct: result.playerHitChance * 100,
+      playerSwingSeconds: result.playerSwingSeconds,
       expectedSwingsToKill: finite(result.expectedPlayerSwingsToKill),
+      expectedSecondsToKill: finite(result.expectedPlayerSecondsToKill),
       monsterHitPct: result.monsterHitChance * 100,
       expectedMonsterDamagePerHit: result.expectedMonsterDamagePerHit / FIXED_POINT,
       expectedHitsToKillPlayer: finite(result.expectedMonsterHitsToKillPlayer),
@@ -159,7 +164,9 @@ for (const folder of classes) {
   console.table(rows.map((row) => ({
     monster: row.monster,
     'player hit %': Number(row.playerHitPct.toFixed(2)),
+    'swing seconds': row.playerSwingSeconds == null ? null : Number(row.playerSwingSeconds.toFixed(3)),
     'swings to kill': row.expectedSwingsToKill == null ? null : Number(row.expectedSwingsToKill.toFixed(2)),
+    'seconds to kill': row.expectedSecondsToKill == null ? null : Number(row.expectedSecondsToKill.toFixed(2)),
     'monster hit %': Number(row.monsterHitPct.toFixed(2)),
     'monster damage/hit': Number(row.expectedMonsterDamagePerHit.toFixed(2)),
     'hits to kill player': row.expectedHitsToKillPlayer == null ? null : Number(row.expectedHitsToKillPlayer.toFixed(2)),

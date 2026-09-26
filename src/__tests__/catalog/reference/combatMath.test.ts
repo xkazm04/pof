@@ -3,10 +3,14 @@ import { DIABLO1_CANON } from '@/lib/catalog/canon/profiles/diablo1';
 import { duel } from '@/lib/catalog/reference/combatDuel';
 import {
   FIXED_POINT,
+  attackTiming,
+  blockTiming,
+  castTiming,
   blockProbability,
   experienceAward,
   experienceCurveLaw,
   hitRecovery,
+  hitRecoveryTiming,
   lifeAndMana,
   monsterDamageByDifficulty,
   monsterHitPoints,
@@ -20,6 +24,7 @@ import {
   playerResistance,
   playerSpellHitChance,
   type ClassCoefficients,
+  type ClassAnimations,
   type MonsterProfile,
   type PlayerBuild,
 } from '@/lib/catalog/reference/combatMath';
@@ -45,6 +50,35 @@ const MONSTER: MonsterProfile = {
   level: 8, hitPoints: { min: 30, max: 40 }, armourClass: 15, toHit: 20,
   damage: { min: 2, max: 3 }, monsterClass: 'demon', resist: {}, immune: {}, difficulty: 'normal',
 };
+
+const ANIMATIONS: ClassAnimations = {
+  attack: Object.fromEntries([
+    'unarmed', 'unarmedShield', 'sword', 'swordShield', 'bow', 'axe', 'mace', 'maceShield', 'staff',
+  ].map((graphic) => [graphic, graphic === 'bow' ? { frames: 13, actionFrame: 8 } : { frames: 12, actionFrame: 7 }])) as ClassAnimations['attack'],
+  cast: { frames: 10, actionFrame: 6 },
+  block: { frames: 5 },
+  hitRecovery: { frames: 8 },
+};
+
+describe('Diablo I hero animation timing', () => {
+  it('derives attack ticks and seconds, including the distinct vanilla bow skips', () => {
+    // Faster sword: 12 declared frames - 3 skipped = 9 ticks; 9 / 20 = 0.45 seconds.
+    expect(attackTiming(ANIMATIONS, 'sword', 'faster')).toEqual({ frames: 12, actionFrame: 7, ticks: 9, seconds: 0.45 });
+    // Faster does not skip vanilla bow frames: 13 / 20 = 0.65 seconds. Fast skips 2: 11 / 20 = 0.55.
+    expect(attackTiming(ANIMATIONS, 'bow', 'faster').seconds).toBe(0.65);
+    expect(attackTiming(ANIMATIONS, 'bow', 'fast').seconds).toBe(0.55);
+  });
+
+  it('derives cast, block, and hit-recovery timing by hand', () => {
+    // Cast: 10 one-tick frames = 0.5 s; release marker 6 = 0.3 s.
+    expect(castTiming(ANIMATIONS)).toMatchObject({ frames: 10, actionFrame: 6, ticks: 10, seconds: 0.5, releaseSeconds: 0.3 });
+    // Block: 5*3-(3-1)=13 ticks; Fast Block keeps 2*3-2=4 ticks.
+    expect(blockTiming(ANIMATIONS)).toEqual({ frames: 5, ticks: 13, seconds: 0.65 });
+    expect(blockTiming(ANIMATIONS, true)).toEqual({ frames: 5, ticks: 4, seconds: 0.2 });
+    // Faster recovery: 8-2=6 one-tick frames; 6/20=0.3 s.
+    expect(hitRecoveryTiming(ANIMATIONS, 'faster')).toEqual({ frames: 8, ticks: 6, seconds: 0.3 });
+  });
+});
 
 describe('Diablo I hit probabilities', () => {
   it('computes player melee chance, both clamps, impossible targets and petrification', () => {
@@ -240,10 +274,14 @@ describe('duel and canon contract', () => {
     expect(result.playerHitChance).toBe(0.21);
     expect(result.expectedPlayerDamagePerSwing).toBeCloseTo(280.896);
     expect(result.expectedPlayerSwingsToKill).toBeCloseTo(2240 / 280.896);
+    expect(result.playerSwingSeconds).toBeNull();
     expect(result.monsterHitChance).toBe(0.36);
     expect(result.expectedMonsterDamagePerHit).toBeCloseTo(124.8);
     expect(result.expectedMonsterHitsToKillPlayer).toBeCloseTo(2464 / 124.8);
     expect(result.expectedMonsterDamagePerSwing).toBeCloseTo(44.928);
+    const timed = duel({ ...build, swingSeconds: 0.6 }, COEFFICIENTS, MONSTER, { playerAttack: 'melee', monsterAttack: 'melee', dungeonLevel: 1 });
+    // Time to kill = expected swings * the invented 0.6-second class swing.
+    expect(timed.expectedPlayerSecondsToKill).toBeCloseTo((2240 / 280.896) * 0.6);
   });
 
   it('ships every new bounded canon law', () => {
@@ -252,6 +290,8 @@ describe('duel and canon contract', () => {
       'd1-combat-monster-ranged-to-hit-law', 'd1-combat-player-melee-damage-law', 'd1-combat-player-ranged-damage-law',
       'd1-combat-monster-damage-law', 'd1-combat-monster-hp-law', 'd1-combat-monster-armour-law', 'd1-combat-block-law', 'd1-combat-player-resistance-law',
       'd1-combat-hit-recovery-law', 'd1-combat-life-mana-law', 'd1-xp-award-law', 'd1-xp-curve-law',
+      'd1-hero-attack-timing-law', 'd1-hero-casting-timing-law', 'd1-hero-block-timing-law',
+      'd1-class-skills-law', 'd1-hero-speech-trigger-law',
     ];
     for (const id of ids) {
       const law = DIABLO1_CANON.find((rule) => rule.id === id);

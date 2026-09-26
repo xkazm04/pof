@@ -10,14 +10,16 @@
  */
 import { parseTsv, type TsvTable } from '@/lib/catalog/ingest/tsv';
 
-/** Transpose an Attribute/Value table into the single record consumed by FieldMap. */
+/** Transpose an Attribute-or-Variable/Value table into the single record consumed by FieldMap. */
 export function parseTsvKv(text: string): TsvTable {
   const table = parseTsv(text);
   if (table.refusal) return table;
 
-  const attributeColumn = table.columns.indexOf('Attribute');
+  const keyColumn = table.columns.includes('Attribute') ? 'Attribute'
+    : table.columns.includes('Variable') ? 'Variable'
+      : undefined;
   const valueColumn = table.columns.indexOf('Value');
-  if (attributeColumn === -1 || valueColumn === -1 || table.columns.length !== 2) {
+  if (!keyColumn || valueColumn === -1 || table.columns.length !== 2) {
     return {
       columns: [], rows: [],
       malformed: [...table.malformed, {
@@ -41,7 +43,7 @@ export function parseTsvKv(text: string): TsvTable {
   const firstLine = new Map<string, number>();
   const malformed = [...table.malformed];
   table.rows.forEach((row, index) => {
-    const attribute = row.Attribute.trim();
+    const attribute = row[keyColumn].trim();
     const line = validLineNumbers[index] ?? index + 2;
     if (!attribute) {
       malformed.push({ line, expected: 1, actual: 0, raw: `\t${row.Value}` });
@@ -85,9 +87,9 @@ export const TECHNIQUES: Record<string, ReadingTechnique> = {
   },
   'tsv-kv': {
     id: 'tsv-kv',
-    version: 1,
+    version: 2,
     assetKind: 'table',
-    describe: 'Transposed Attribute/Value TSV projected as one record whose attributes are columns.',
+    describe: 'Transposed Attribute-or-Variable/Value TSV projected as one record whose keys are columns.',
     read: parseTsvKv,
   },
 };

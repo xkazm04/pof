@@ -6,7 +6,7 @@
  * pool) come from the class tables, never from this file.
  */
 import { DIABLO1_CANON } from '@/lib/catalog/canon/profiles/diablo1';
-import { timingLaw } from '@/lib/catalog/reference/behaviourScale';
+import { castTiming } from '@/lib/catalog/reference/combatMath';
 import { damage } from '@/lib/catalog/reference/spellMath';
 import { SPELL_SPECS, spellSpec } from '@/lib/catalog/reference/spellSpecs';
 
@@ -107,14 +107,14 @@ export function fireboltAt(caster: ReferenceCaster, spellLevel: number, tableMan
   const law = fireboltLaw();
   if (law.regenerates) throw new Error('d1-spell-cast-law no longer says mana does not regenerate, and states no rate — refusing to guess one');
   if (spellLevel !== 1) throw new Error(`the law states Firebolt's mana cost at spell level 1 only (asked for ${spellLevel}) — refusing to extrapolate`);
-  const tps = timingLaw().ticksPerSecond;
+  const timing = castTiming({ cast: { frames: caster.castingFrames, actionFrame: caster.castingActionFrame } });
   const evaluated = damage('Firebolt', { spellLevel, characterLevel: caster.level, magic: caster.magic });
   const minimum = evaluated.min;
   const maximum = evaluated.max;
   return {
     damage: { minimum, maximum, mean: evaluated.mean },
-    castTime: (caster.castingFrames * law.ticksPerFrame) / tps,
-    releaseTime: (caster.castingActionFrame * law.ticksPerFrame) / tps,
+    castTime: timing.seconds,
+    releaseTime: timing.releaseSeconds,
     manaCost: tableManaCost,
     manaRegenPerSec: 0,
     castsPerPool: Math.floor(caster.maxMana / tableManaCost),

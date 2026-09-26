@@ -41,6 +41,8 @@ import {
 } from '@/lib/catalog/reference/uniqueItems';
 import { seedStatusSteps, statusEntities } from '@/lib/catalog/reference/statusSpecs';
 import { locationEntities, seedLocationSteps } from '@/lib/catalog/reference/locationSpecs';
+import { aggregateClassWrappers } from '@/lib/catalog/reference/classHeroes';
+import { withClassSwingTimes } from '@/lib/catalog/reference/combatInputs';
 import {
   seedCharacterVendorSteps,
   seedVendorSteps,
@@ -208,7 +210,9 @@ if (seedCatalog) {
     });
     console.log(`reference caster: ${caster.basis} — Magic ${caster.magic}, to-hit ${caster.magicToHit}, cast ${caster.castingFrames} frames (release ${caster.castingActionFrame}), mana ${caster.maxMana}`);
   }
-  const wrappers = listWrappers(getDb(), { sourceId, catalogId: seedCatalog }).filter((w) => !ids || ids.includes(w.entity.id));
+  const storedWrappers = listWrappers(getDb(), { sourceId, catalogId: seedCatalog });
+  const wrappers = (seedCatalog === 'characters' ? aggregateClassWrappers(storedWrappers) : storedWrappers)
+    .filter((w) => !ids || ids.includes(w.entity.id));
   for (const w of wrappers) {
     if (!promoted.has(w.entity.id)) { console.log(`SKIP ${w.entity.id}: not promoted (promote it first)`); continue; }
     for (const seed of [...seedBestiarySteps(w), ...seedItemSteps(w), ...seedSpellSteps(w, caster), ...seedCharacterCombatSteps(w), ...seedCharacterVendorSteps(w.entity)]) {
@@ -295,6 +299,8 @@ if (promoteCatalog) {
     pool = experienceCurve(listWrappers(db, { sourceId, catalogId: 'progression-curves' })) as unknown as ReferenceWrapper[];
   } else if (promoteCatalog === 'zone-map') {
     pool = locationEntities(listWrappers(db, { sourceId })) as unknown as ReferenceWrapper[];
+  } else if (promoteCatalog === 'characters') {
+    pool = aggregateClassWrappers(listWrappers(db, { sourceId, catalogId: 'characters' }));
   } else {
     pool = listWrappers(db, { sourceId, catalogId: promoteCatalog });
   }
@@ -307,7 +313,9 @@ if (promoteCatalog) {
   // reported and withheld rather than promoted without data.effective.
   if (promoteCatalog === 'items') {
     uniqueItemReport = effectiveUniqueItemsForPromotion(picked, pool);
-    picked = uniqueItemReport.wrappers;
+    const classes = aggregateClassWrappers(listWrappers(db, { sourceId, catalogId: 'characters' }));
+    picked = withClassSwingTimes(uniqueItemReport.wrappers, classes);
+    uniqueItemReport = { ...uniqueItemReport, wrappers: picked };
   }
   // Same door as the hand-made path: a code seed's id is refused, never overwritten.
   promotion = promoteWrappers(picked, upsertEntity, (catalogId, entityId) => {

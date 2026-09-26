@@ -26,7 +26,13 @@ describe('tsv-kv reading technique', () => {
     expect(table.malformed).toEqual([{ line: 4, expected: 1, actual: 2, raw: 'alpha\t202' }]);
   });
 
+  it('accepts the Variable/Value spelling used by class animation tables', () => {
+    const table = parseTsvKv('Variable\tValue\nframes\t17\nactionFrame\t8');
+    expect(table.columns).toEqual(['frames', 'actionFrame']);
+    expect(table.rows).toEqual([{ frames: '17', actionFrame: '8' }]);
+  });
+
   it('is registered and version-labelled independently from ordinary TSV', () => {
-    expect(techniqueLabel(getTechnique('tsv-kv'))).toBe('tsv-kv@1');
+    expect(techniqueLabel(getTechnique('tsv-kv'))).toBe('tsv-kv@2');
   });
 });

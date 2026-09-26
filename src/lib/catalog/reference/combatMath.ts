@@ -1,11 +1,25 @@
+import { timingLaw } from '@/lib/catalog/reference/behaviourScale';
+
 export type Difficulty = 'normal' | 'nightmare' | 'hell';
 export type GameMode = 'single' | 'multi';
 export type Element = 'physical' | 'magic' | 'fire' | 'lightning' | 'acid';
 export type PlayerClass = 'Warrior' | 'Rogue' | 'Sorcerer';
-export type WeaponType = 'sword' | 'mace' | 'bow' | 'other';
+export type WeaponType = 'sword' | 'mace' | 'bow' | 'axe' | 'staff' | 'other';
+export type WeaponGraphic = 'unarmed' | 'unarmedShield' | 'sword' | 'swordShield' | 'bow' | 'axe' | 'mace' | 'maceShield' | 'staff';
+export type FastAttackTier = 'none' | 'quick' | 'fast' | 'faster' | 'fastest';
+export type HitRecoveryTier = 'none' | 'fast' | 'faster' | 'fastest';
 export interface IntegerRange { min: number; max: number }
 export interface ElementFlags { magic?: boolean; fire?: boolean; lightning?: boolean; acid?: boolean }
 export interface Resistances { magic: number; fire: number; lightning: number }
+export interface ActionAnimation { frames: number; actionFrame: number }
+export interface ClassAnimations {
+  attack: Record<WeaponGraphic, ActionAnimation>;
+  cast: ActionAnimation;
+  block: { frames: number };
+  hitRecovery: { frames: number };
+}
+export interface ActionTiming { frames: number; actionFrame: number; ticks: number; seconds: number }
+export interface DurationTiming { frames: number; ticks: number; seconds: number }
 export interface ClassCoefficients {
   classFlags: readonly string[];
   baseStrength: number; baseMagic: number; baseDexterity: number; baseVitality: number;
@@ -23,6 +37,7 @@ export interface PlayerBuild {
   /** Equipment armour and magical armour bonus; Dexterity / 5 is derived by the combat law. */
   armourClass: number; toHitBonusPercent: number; damageBonusPercent: number; flatDamage: number;
   hasShield: boolean; blockEnabled: boolean; resistances: Resistances; armourPiercing: number;
+  weaponGraphic?: WeaponGraphic; swingSeconds?: number;
   tripleDemonDamage?: boolean; zeroResistance?: boolean;
 }
 export interface MonsterProfile {
@@ -49,6 +64,63 @@ const monsterArmourClass = (m: MonsterProfile) => m.armourClass + (m.difficultyA
 const playerArmour = (p: PlayerBuild) => p.armourClass + div(p.dexterity, 5);
 const flag = (flags: ElementFlags, element: Element) => element === 'physical' ? false : flags[element] === true;
 const floorChance = (dungeonLevel: number, fallback: number) => dungeonLevel === 16 ? 30 : dungeonLevel === 15 ? 25 : dungeonLevel === 14 ? 20 : fallback;
+
+function checkedFrames(frames: number, owner: string): number {
+  if (!Number.isInteger(frames) || frames < 1) throw new Error(`${owner} frames must be a positive integer (got ${frames})`);
+  return frames;
+}
+
+function checkedAction(animation: ActionAnimation, owner: string): ActionAnimation {
+  const frames = checkedFrames(animation.frames, owner);
+  if (!Number.isInteger(animation.actionFrame) || animation.actionFrame < 1 || animation.actionFrame > frames) {
+    throw new Error(`${owner} action frame must be within 1..${frames} (got ${animation.actionFrame})`);
+  }
+  return { frames, actionFrame: animation.actionFrame };
+}
+
+/** Implements canon law `d1-hero-attack-timing-law` for an attack that includes its first frame. */
+export function attackTiming(
+  classAnimations: Pick<ClassAnimations, 'attack'>,
+  weaponGraphic: WeaponGraphic,
+  fastAttackTier: FastAttackTier = 'none',
+): ActionTiming {
+  const animation = checkedAction(classAnimations.attack[weaponGraphic], `${weaponGraphic} attack`);
+  const ordinarySkips: Record<FastAttackTier, number> = { none: 0, quick: 1, fast: 2, faster: 3, fastest: 4 };
+  const bowSkips: Record<FastAttackTier, number> = { none: 0, quick: 1, fast: 2, faster: 0, fastest: 0 };
+  const skipped = (weaponGraphic === 'bow' ? bowSkips : ordinarySkips)[fastAttackTier];
+  const ticks = checkedFrames(animation.frames - skipped, `${weaponGraphic} attack after ${fastAttackTier} skipping`);
+  return { ...animation, ticks, seconds: ticks / timingLaw().ticksPerSecond };
+}
+
+/** Implements canon law `d1-hero-casting-timing-law`. */
+export function castTiming(classAnimations: Pick<ClassAnimations, 'cast'>): ActionTiming & { releaseTicks: number; releaseSeconds: number } {
+  const animation = checkedAction(classAnimations.cast, 'cast');
+  const ticks = animation.frames;
+  const ticksPerSecond = timingLaw().ticksPerSecond;
+  return {
+    ...animation,
+    ticks,
+    seconds: ticks / ticksPerSecond,
+    releaseTicks: animation.actionFrame,
+    releaseSeconds: animation.actionFrame / ticksPerSecond,
+  };
+}
+
+/** Implements canon law `d1-hero-block-timing-law`. */
+export function blockTiming(classAnimations: Pick<ClassAnimations, 'block'>, fastBlock = false): DurationTiming {
+  const declaredFrames = checkedFrames(classAnimations.block.frames, 'block');
+  const frames = fastBlock ? Math.min(2, declaredFrames) : declaredFrames;
+  const ticks = frames * 3 - 2;
+  return { frames: declaredFrames, ticks, seconds: ticks / timingLaw().ticksPerSecond };
+}
+
+/** Implements the hero portion of canon law `d1-combat-hit-recovery-law`. */
+export function hitRecoveryTiming(classAnimations: Pick<ClassAnimations, 'hitRecovery'>, tier: HitRecoveryTier = 'none'): DurationTiming {
+  const frames = checkedFrames(classAnimations.hitRecovery.frames, 'hit recovery');
+  const skipped: Record<HitRecoveryTier, number> = { none: 0, fast: 1, faster: 2, fastest: 3 };
+  const ticks = checkedFrames(frames - skipped[tier], `hit recovery after ${tier} skipping`);
+  return { frames, ticks, seconds: ticks / timingLaw().ticksPerSecond };
+}
 
 /** Implements canon law `d1-combat-monster-hp-law`; returned bounds are in whole-point units. */
 export function monsterHitPoints(

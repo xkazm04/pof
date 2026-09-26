@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { classCoefficients, combatGameMode, monsterProfile, referenceBuild } from '@/lib/catalog/reference/combatInputs';
+import {
+  classAnimations,
+  classCoefficients,
+  combatGameMode,
+  monsterProfile,
+  referenceBuild,
+  withClassSwingTimes,
+} from '@/lib/catalog/reference/combatInputs';
 import type { ReferenceWrapper } from '@/lib/catalog/reference/wrapper';
 
 const provenance = {
@@ -30,6 +37,14 @@ const classData = {
   baseMagicToHit: '7', baseMeleeToHit: '8', baseRangedToHit: '9',
 };
 const warrior = wrapper('d1-class-warrior', 'characters', classData);
+const animationData = {
+  attack: Object.fromEntries([
+    'unarmed', 'unarmedShield', 'sword', 'swordShield', 'bow', 'axe', 'mace', 'maceShield', 'staff',
+  ].map((graphic) => [graphic, { frames: '12', actionFrame: '7' }])),
+  cast: { frames: '10', actionFrame: '6' },
+  block: { frames: '5' },
+  hitRecovery: { frames: '8' },
+};
 
 describe('combat wrapper adapters', () => {
   it('reads every class coefficient from the projected wrapper', () => {
@@ -49,6 +64,40 @@ describe('combat wrapper adapters', () => {
       subtype: 'Sword', stats: [{ label: 'Damage Min', value: '6' }, { label: 'Damage Max', value: '10' }],
     });
     expect(referenceBuild(warrior, 4, sword)).toMatchObject({ weaponDamage: { min: 6, max: 10 }, weaponType: 'sword' });
+  });
+
+  it('reads merged class animation data and gives a reference build its class-owned swing time', () => {
+    const animated = wrapper('d1-class-warrior', 'characters', { ...classData, animations: animationData });
+    expect(classAnimations(animated)).toMatchObject({
+      attack: { sword: { frames: 12, actionFrame: 7 } },
+      cast: { frames: 10, actionFrame: 6 }, block: { frames: 5 }, hitRecovery: { frames: 8 },
+    });
+    const sword = wrapper('d1-test-sword', 'items', {
+      subtype: 'Sword', stats: [{ label: 'Damage Min', value: '6' }, { label: 'Damage Max', value: '10' }],
+    });
+    // 12 one-tick attack frames / 20 ticks per second = 0.6 seconds.
+    expect(referenceBuild(animated, 4, sword)).toMatchObject({ weaponGraphic: 'sword', swingSeconds: 0.6 });
+  });
+
+  it('puts per-class, weapon-graphic swing seconds in promoted item reference data', () => {
+    const classWrapper = (id: string, frames: string) => wrapper(id, 'characters', {
+      ...classData,
+      animations: {
+        ...animationData,
+        attack: Object.fromEntries(Object.entries(animationData.attack).map(([graphic, timing]) => [graphic, { ...timing, frames }])),
+      },
+    });
+    const sword = wrapper('d1-test-sword', 'items', { subtype: 'Sword' });
+    const [derived] = withClassSwingTimes([sword], [
+      classWrapper('d1-class-warrior', '12'),
+      classWrapper('d1-class-rogue', '14'),
+      classWrapper('d1-class-sorcerer', '16'),
+    ]);
+    // Frames / 20: 12/20=.6, 14/20=.7, 16/20=.8 seconds.
+    expect(derived.entity.data.derived).toMatchObject({
+      swingSecondsByClass: { warrior: 0.6, rogue: 0.7, sorcerer: 0.8 },
+      swingSecondsBasis: expect.stringContaining('sword class animation'),
+    });
   });
 
   it('translates projected monster stats and raw resistance flags', () => {

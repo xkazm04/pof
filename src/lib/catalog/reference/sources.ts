@@ -22,8 +22,12 @@ import {
   TOWNER_MAP,
 } from '@/lib/catalog/ingest/diablo1Dialogue';
 import {
+  CLASS_ANIMATIONS_MAP,
   CLASS_ATTRIBUTES_MAP,
   CLASS_DERIVE,
+  CLASS_SOUNDS_MAP,
+  CLASS_SPRITES_MAP,
+  CLASS_STARTING_LOADOUT_MAP,
   CLASSDAT_MAP,
   DIABLO1_CLASSES,
   EXPERIENCE_MAP,
@@ -98,10 +102,29 @@ export const DIABLO1: ReferenceSource = {
     { file: 'text/textdat.tsv', catalogId: 'dialog-trees', technique: 'tsv', keyColumn: 'txtstrid', map: TEXT_LINE_MAP },
     { file: 'towners/quest_dialog.tsv', catalogId: 'dialog-trees', technique: 'tsv', keyColumn: 'towner_type', map: QUEST_DIALOG_MAP },
     { file: 'quests/questdat.tsv', catalogId: 'quests', technique: 'tsv', map: QUEST_MAP, rowIds: QUEST_ROW_IDS, derive: QUEST_DERIVE },
-    ...DIABLO1_CLASSES.map(({ folder, name }) => ({
-      file: `classes/${folder}/attributes.tsv`, catalogId: 'characters', technique: 'tsv-kv',
-      map: CLASS_ATTRIBUTES_MAP, rowIds: [`class-${folder}`], displayName: name, derive: CLASS_DERIVE,
-    })),
+    ...DIABLO1_CLASSES.flatMap(({ folder, name }) => [
+      {
+        file: `classes/${folder}/attributes.tsv`, catalogId: 'characters', technique: 'tsv-kv',
+        map: CLASS_ATTRIBUTES_MAP, rowIds: [`class-${folder}`], displayName: name, derive: CLASS_DERIVE,
+      },
+      {
+        file: `classes/${folder}/animations.tsv`, catalogId: 'characters', technique: 'tsv-kv',
+        map: CLASS_ANIMATIONS_MAP, rowIds: [`class-${folder}`], displayName: name,
+      },
+      {
+        file: `classes/${folder}/starting_loadout.tsv`, catalogId: 'characters', technique: 'tsv-kv',
+        map: CLASS_STARTING_LOADOUT_MAP, rowIds: [`class-${folder}`], displayName: name,
+      },
+      {
+        file: `classes/${folder}/sounds.tsv`, catalogId: 'characters', technique: 'tsv',
+        keyColumn: 'speech', keyPrefix: `class-${folder}-speech-`, keyDecode: [slug()],
+        map: CLASS_SOUNDS_MAP, displayName: name,
+      },
+      {
+        file: `classes/${folder}/sprites.tsv`, catalogId: 'characters', technique: 'tsv-kv',
+        map: CLASS_SPRITES_MAP, rowIds: [`class-${folder}`], displayName: name,
+      },
+    ]),
     { file: 'Experience.tsv', catalogId: 'progression-curves', technique: 'tsv', keyColumn: 'Level', keyPrefix: 'xp-', map: EXPERIENCE_MAP },
   ],
   manifests: [{

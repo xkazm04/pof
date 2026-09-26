@@ -2,7 +2,9 @@ import type { ReferenceWrapper } from '@/lib/catalog/reference/wrapper';
 import { effectiveUnique } from '@/lib/catalog/reference/uniqueMonsters';
 import {
   FIXED_POINT,
+  attackTiming,
   monsterHitPoints,
+  type ClassAnimations,
   type ClassCoefficients,
   type Difficulty,
   type ElementFlags,
@@ -10,6 +12,7 @@ import {
   type MonsterProfile,
   type PlayerBuild,
   type PlayerClass,
+  type WeaponGraphic,
   type WeaponType,
 } from '@/lib/catalog/reference/combatMath';
 /*
@@ -39,6 +42,17 @@ function numberAt(data: Record<string, unknown>, key: string, owner: string): nu
   const value = Number(data[key]);
   if (!Number.isFinite(value)) throw new Error(`${owner} has no numeric data.${key}`);
   return value;
+}
+
+function recordAt(data: Record<string, unknown>, key: string, owner: string): Record<string, unknown> {
+  const value = data[key];
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(`${owner} has no object data.${key}`);
+  return value as Record<string, unknown>;
+}
+
+function animationAt(data: Record<string, unknown>, key: string, owner: string): { frames: number; actionFrame: number } {
+  const animation = recordAt(data, key, owner);
+  return { frames: numberAt(animation, 'frames', `${owner}.${key}`), actionFrame: numberAt(animation, 'actionFrame', `${owner}.${key}`) };
 }
 
 function statAt(wrapper: ReferenceWrapper, label: string): number {
@@ -96,12 +110,43 @@ export function classCoefficients(classWrapper: ReferenceWrapper): ClassCoeffici
   };
 }
 
+/** Translate the merged class wrapper's animation tables without retaining source values in code. */
+export function classAnimations(classWrapper: ReferenceWrapper): ClassAnimations {
+  if (classWrapper.catalogId !== 'characters') throw new Error(`${classWrapper.entity.id} is not a characters wrapper`);
+  classOf(classWrapper);
+  const owner = classWrapper.entity.id;
+  const animations = recordAt(classWrapper.entity.data, 'animations', owner);
+  const attackData = recordAt(animations, 'attack', `${owner}.animations`);
+  const graphics: WeaponGraphic[] = [
+    'unarmed', 'unarmedShield', 'sword', 'swordShield', 'bow', 'axe', 'mace', 'maceShield', 'staff',
+  ];
+  const attack = Object.fromEntries(graphics.map((graphic) => [
+    graphic,
+    animationAt(attackData, graphic, `${owner}.animations.attack`),
+  ])) as Record<WeaponGraphic, { frames: number; actionFrame: number }>;
+  return {
+    attack,
+    cast: animationAt(animations, 'cast', `${owner}.animations`),
+    block: { frames: numberAt(recordAt(animations, 'block', `${owner}.animations`), 'frames', `${owner}.animations.block`) },
+    hitRecovery: { frames: numberAt(recordAt(animations, 'hitRecovery', `${owner}.animations`), 'frames', `${owner}.animations.hitRecovery`) },
+  };
+}
+
 function weaponTypeOf(wrapper: ReferenceWrapper): WeaponType {
   const subtype = String(wrapper.entity.data.subtype ?? '').toLowerCase();
   if (subtype.includes('sword')) return 'sword';
   if (subtype.includes('mace') || subtype.includes('club')) return 'mace';
   if (subtype.includes('bow')) return 'bow';
+  if (subtype.includes('axe')) return 'axe';
+  if (subtype.includes('staff')) return 'staff';
   return 'other';
+}
+
+function weaponGraphicOf(type: WeaponType, hasShield: boolean): WeaponGraphic {
+  if (type === 'sword') return hasShield ? 'swordShield' : 'sword';
+  if (type === 'mace') return hasShield ? 'maceShield' : 'mace';
+  if (type === 'bow' || type === 'axe' || type === 'staff') return type;
+  return hasShield ? 'unarmedShield' : 'unarmed';
 }
 
 /**
@@ -117,6 +162,9 @@ export function referenceBuild(classWrapper: ReferenceWrapper, level: number, we
     ? { min: statAt(weapon, 'Damage Min'), max: statAt(weapon, 'Damage Max') }
     : { min: 1, max: 1 };
   if (weaponDamage.min > weaponDamage.max) throw new Error(`${weapon?.entity.id ?? 'bare hands'} has an inverted damage range`);
+  const weaponType = weapon ? weaponTypeOf(weapon) : 'other';
+  const weaponGraphic = weaponGraphicOf(weaponType, false);
+  const animations = classWrapper.entity.data.animations === undefined ? undefined : classAnimations(classWrapper);
   return {
     class: classOf(classWrapper),
     level,
@@ -125,7 +173,9 @@ export function referenceBuild(classWrapper: ReferenceWrapper, level: number, we
     dexterity: coefficients.baseDexterity,
     vitality: coefficients.baseVitality,
     weaponDamage,
-    weaponType: weapon ? weaponTypeOf(weapon) : 'other',
+    weaponType,
+    weaponGraphic,
+    ...(animations ? { swingSeconds: attackTiming(animations, weaponGraphic, 'none').seconds } : {}),
     armourClass: 0,
     toHitBonusPercent: 0,
     damageBonusPercent: 0,
@@ -135,6 +185,61 @@ export function referenceBuild(classWrapper: ReferenceWrapper, level: number, we
     resistances: { magic: 0, fire: 0, lightning: 0 },
     armourPiercing: 0,
   };
+}
+
+function itemWeaponGraphic(wrapper: ReferenceWrapper): WeaponGraphic | null {
+  const effective = wrapper.entity.data.effective;
+  const effectiveType = effective && typeof effective === 'object'
+    ? (effective as { itemType?: { value?: unknown } }).itemType?.value
+    : undefined;
+  const itemType = String(effectiveType ?? wrapper.entity.data.subtype ?? wrapper.raw.itemType ?? '').toLowerCase();
+  if (itemType.includes('sword')) return 'sword';
+  if (itemType.includes('mace') || itemType.includes('club')) return 'mace';
+  if (itemType.includes('bow')) return 'bow';
+  if (itemType.includes('axe')) return 'axe';
+  if (itemType.includes('staff')) return 'staff';
+  return null;
+}
+
+/**
+ * Put class-owned base swing times on weapon entities for their produce-prompt reference values.
+ * One-handed weapons use their unshielded graphic; shield variants remain explicit in class data.
+ */
+export function withClassSwingTimes(
+  itemWrappers: readonly ReferenceWrapper[],
+  classWrappers: readonly ReferenceWrapper[],
+): ReferenceWrapper[] {
+  const classByFolder = new Map(classWrappers.flatMap((wrapper) => {
+    const match = /^d1-class-(warrior|rogue|sorcerer)$/.exec(wrapper.entity.id);
+    return match ? [[match[1], wrapper] as const] : [];
+  }));
+  return itemWrappers.map((wrapper) => {
+    const graphic = itemWeaponGraphic(wrapper);
+    if (!graphic) return wrapper;
+    const swingSecondsByClass = Object.fromEntries([...classByFolder].map(([folder, classWrapper]) => [
+      folder,
+      attackTiming(classAnimations(classWrapper), graphic, 'none').seconds,
+    ]));
+    if (Object.keys(swingSecondsByClass).length === 0) return wrapper;
+    const currentDerived = wrapper.entity.data.derived;
+    const derived = currentDerived && typeof currentDerived === 'object' && !Array.isArray(currentDerived)
+      ? currentDerived as Record<string, unknown>
+      : {};
+    return {
+      ...wrapper,
+      entity: {
+        ...wrapper.entity,
+        data: {
+          ...wrapper.entity.data,
+          derived: {
+            ...derived,
+            swingSecondsByClass,
+            swingSecondsBasis: `${graphic} class animation, no fast-attack modifier; one-handed weapons are unshielded`,
+          },
+        },
+      },
+    };
+  });
 }
 
 function resistanceFlags(raw: string, prefix: 'RESIST' | 'IMMUNE'): ElementFlags {
