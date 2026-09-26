@@ -6,6 +6,7 @@
  *     [--policy none|all-strength|balanced] [--tiles-per-level N]
  *     [--difficulty normal|nightmare|hell] [--multiplayer]
  *     [--gear none|expected] [--weapon d1-<item>]
+ * Rogue and Sorcerer default to expected gear; Warrior and explicit --weapon runs default to none.
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -43,7 +44,7 @@ if (!(['normal', 'nightmare', 'hell'] as const).includes(difficulty)) {
   console.error('--difficulty must be normal|nightmare|hell');
   process.exit(2);
 }
-const gear = (arg('gear') ?? 'none') as DescentGear;
+const gear = (arg('gear') ?? (className === 'warrior' || arg('weapon') ? 'none' : 'expected')) as DescentGear;
 if (!(['none', 'expected'] as const).includes(gear)) {
   console.error('--gear must be none|expected');
   process.exit(2);
@@ -78,33 +79,45 @@ console.log('ASSUMPTIONS (the tile count is not a reference-table value):');
 for (const assumption of result.assumptions) {
   console.log(`- ${assumption.id}: ${assumption.value} — ${assumption.detail} [${assumption.source}]`);
 }
-console.table(result.levels.map((level) => ({
-  depth: level.depth,
-  pool: level.poolSize,
-  kills: level.expectedMonstersKilled,
-  XP: Number(level.expectedXpGained.toFixed(2)),
-  'hero before': level.heroLevelBefore,
-  'hero after': level.heroLevelAfter,
-  'clear seconds': level.expectedSecondsToClear == null ? null : Number(level.expectedSecondsToClear.toFixed(2)),
-  'damage taken': level.expectedDamageTaken == null ? null : Number(level.expectedDamageTaken.toFixed(2)),
-  'hardest to hit': level.hardestMonster.byLowestHeroHitChance.monster,
-  'highest damage': level.hardestMonster.byHighestExpectedDamageTaken.monster,
-  note: level.note,
-  ...(gear === 'expected' ? {
-    weapon: level.weaponAssumed?.weaponId ?? 'unarmed',
-    'weapon damage': level.weaponAssumed
-      ? `${level.weaponAssumed.damage.min}-${level.weaponAssumed.damage.max} +${level.weaponAssumed.damageBonusPercent}%`
-      : null,
-    armour: level.armourAssumed?.totalArmourClass ?? 0,
-    'block %': level.expectedBlockChance == null ? null : Number((level.expectedBlockChance * 100).toFixed(2)),
-    potions: level.sustain == null
+console.table(result.levels.map((level) => {
+  const mode = level.attackMode ?? 'melee';
+  return {
+    depth: level.depth,
+    mode,
+    spell: level.spellAssumed ? `${level.spellAssumed.spell} L${level.spellAssumed.spellLevel}` : null,
+    weapon: mode === 'spell' ? null : level.weaponAssumed?.weaponId ?? result.weaponId ?? 'unarmed',
+    pool: level.poolSize,
+    kills: level.expectedMonstersKilled,
+    XP: Number(level.expectedXpGained.toFixed(2)),
+    'hero before': level.heroLevelBefore,
+    'hero after': level.heroLevelAfter,
+    'clear seconds': level.expectedSecondsToClear == null ? null : Number(level.expectedSecondsToClear.toFixed(2)),
+    'damage taken': level.expectedDamageTaken == null ? null : Number(level.expectedDamageTaken.toFixed(2)),
+    'mana spent': level.mana?.expectedManaSpent == null ? null : Number(level.mana.expectedManaSpent.toFixed(2)),
+    'mana pool': level.mana == null ? null : Number(level.mana.manaPool.toFixed(2)),
+    'mana available': level.mana == null ? null : Number(level.mana.totalManaAvailable.toFixed(2)),
+    'mana potions': level.mana == null
       ? null
-      : Number((level.sustain.healingPotionsAvailable + level.sustain.fullHealingPotionsAvailable).toFixed(2)),
-    sustainable: level.sustain == null
-      ? null
-      : level.sustain.sustainable ? 'yes' : `no (deficit ${level.sustain.deficit.toFixed(2)})`,
-  } : {}),
-})));
+      : Number((level.mana.manaPotionsAvailable + level.mana.fullManaPotionsAvailable).toFixed(2)),
+    'mana sustainable': level.mana == null ? null : level.mana.sustainable ? 'yes' : 'no',
+    'hardest to hit': level.hardestMonster.byLowestHeroHitChance.monster,
+    'highest damage': level.hardestMonster.byHighestExpectedDamageTaken.monster,
+    note: level.note,
+    ...(gear === 'expected' ? {
+      'weapon damage': level.weaponAssumed
+        ? `${level.weaponAssumed.damage.min}-${level.weaponAssumed.damage.max} +${level.weaponAssumed.damageBonusPercent}%`
+        : null,
+      armour: level.armourAssumed?.totalArmourClass ?? 0,
+      'block %': level.expectedBlockChance == null ? null : Number((level.expectedBlockChance * 100).toFixed(2)),
+      potions: level.sustain == null
+        ? null
+        : Number((level.sustain.healingPotionsAvailable + level.sustain.fullHealingPotionsAvailable).toFixed(2)),
+      sustainable: level.sustain == null
+        ? null
+        : level.sustain.sustainable ? 'yes' : `no (life deficit ${level.sustain.deficit.toFixed(2)})`,
+    } : {}),
+  };
+}));
 
 const path = join(
   homedir(),

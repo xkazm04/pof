@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { damage, manaCost, scaleSpellEffect } from '@/lib/catalog/reference/spellMath';
+import { damage, damageOutcomes, manaCost, scaleSpellEffect } from '@/lib/catalog/reference/spellMath';
 
 const inputs = { spellLevel: 1, characterLevel: 3, magic: 20 };
 
@@ -26,6 +26,7 @@ describe('damage', () => {
     });
     // Elemental halves each already-scaled outcome: 100 two-R(10) outcomes total 1530 HP.
     expect(damage('Elemental', inputs)).toEqual({ min: 5, max: 25, mean: 15.3 });
+    expect(damageOutcomes('Fireball', inputs).reduce((sum, outcome) => sum + outcome.weight, 0)).toBe(100);
   });
 
   it('converts fixed-point per-tick damage to displayed HP', () => {

@@ -13,6 +13,11 @@ export interface DamageRange {
   mean: number;
 }
 
+export interface DamageOutcome {
+  damage: number;
+  weight: number;
+}
+
 type Distribution = Map<number, bigint>;
 
 const point = (value: number): Distribution => new Map([[value, BigInt(1)]]);
@@ -66,8 +71,7 @@ function requireInteger(name: string, value: number, minimum = 0): number {
   return value;
 }
 
-/** One missile collision or damaging tick, never total cast damage. */
-export function damage(spell: string, input: DamageInputs): DamageRange {
+function damageDistribution(spell: string, input: DamageInputs): Distribution {
   const spec = spellSpec(spell);
   if (!spec) throw new Error(`unknown vanilla spell ${spell}`);
   if (spec.damage.kind === 'none') throw new Error(`${spell} does not deal damage`);
@@ -113,7 +117,17 @@ export function damage(spell: string, input: DamageInputs): DamageRange {
     }
     default: throw new Error(`${spell} has damage in the spec but no exact evaluator`);
   }
-  return stats(distribution);
+  return distribution;
+}
+
+/** One missile collision or damaging tick, never total cast damage. */
+export function damage(spell: string, input: DamageInputs): DamageRange {
+  return stats(damageDistribution(spell, input));
+}
+
+/** Exact nominal-bin support for one collision/tick, consumed by combatDuel's kill DP. */
+export function damageOutcomes(spell: string, input: DamageInputs): DamageOutcome[] {
+  return [...damageDistribution(spell, input)].map(([damage, count]) => ({ damage, weight: Number(count) }));
 }
 
 export type HeroClass = 'Warrior' | 'Rogue' | 'Sorcerer' | 'Monk' | 'Barbarian' | 'Bard';

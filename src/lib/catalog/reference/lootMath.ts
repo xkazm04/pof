@@ -620,9 +620,11 @@ export interface ExpectedLootBudget {
   expectedGold: number;
   expectedHealingPotions: number;
   expectedFullHealingPotions: number;
+  expectedManaPotions: number;
+  expectedFullManaPotions: number;
 }
 
-/** Sum monster-drop gold and healing consumables over already weighted kill profiles. */
+/** Sum monster-drop gold and life/mana consumables over already weighted kill profiles. */
 export function expectedLootBudget(input: ExpectedLootBudgetInput): ExpectedLootBudget {
   const bases = new Map(input.itemWrappers
     .filter((wrapper) => wrapper.file === 'items/itemdat.tsv')
@@ -630,6 +632,8 @@ export function expectedLootBudget(input: ExpectedLootBudgetInput): ExpectedLoot
   let expectedGold = 0;
   let expectedHealingPotions = 0;
   let expectedFullHealingPotions = 0;
+  let expectedManaPotions = 0;
+  let expectedFullManaPotions = 0;
   for (const row of input.monsterProfiles) {
     if (!Number.isFinite(row.weight) || row.weight < 0) throw new Error(`loot-profile weight must be non-negative (got ${row.weight})`);
     if (row.weight === 0) continue;
@@ -646,9 +650,17 @@ export function expectedLootBudget(input: ExpectedLootBudgetInput): ExpectedLoot
       const healingKind = base ? miscId(base) : '';
       if (healingKind === 'HEAL') expectedHealingPotions += row.weight * baseOutcome.p;
       if (healingKind === 'FULLHEAL') expectedFullHealingPotions += row.weight * baseOutcome.p;
+      if (healingKind === 'MANA') expectedManaPotions += row.weight * baseOutcome.p;
+      if (healingKind === 'FULLMANA') expectedFullManaPotions += row.weight * baseOutcome.p;
     }
   }
-  return { expectedGold, expectedHealingPotions, expectedFullHealingPotions };
+  return {
+    expectedGold,
+    expectedHealingPotions,
+    expectedFullHealingPotions,
+    expectedManaPotions,
+    expectedFullManaPotions,
+  };
 }
 
 export interface BestWeaponExpectationInput {
@@ -666,12 +678,12 @@ export interface BestWeaponExpectationInput {
 }
 
 export interface BestWeaponExpectation {
-  model: 'conservative-expected-best-melee-base';
+  model: 'conservative-expected-best-melee-base' | 'conservative-expected-best-ranged-base';
   class: BestWeaponExpectationInput['class'];
   depth: number;
   killsSoFar: number;
   weaponId: string | null;
-  weaponType: Exclude<WeaponType, 'bow' | 'other'> | 'other';
+  weaponType: WeaponType;
   damage: { min: number; max: number };
   damageBonusPercent: number;
   pWeaponFound: number;
@@ -684,8 +696,12 @@ function requirement(base: ReferenceWrapper, rawKey: string, dataKey: string): n
   return finiteNumber(base.raw[rawKey] ?? base.entity.data[dataKey] ?? 0, `${base.entity.id}.${rawKey}`);
 }
 
-function meleeType(base: ReferenceWrapper): BestWeaponExpectation['weaponType'] | null {
+function weaponTypeForClass(
+  base: ReferenceWrapper,
+  playerClass: BestWeaponExpectationInput['class'],
+): BestWeaponExpectation['weaponType'] | null {
   const type = itemType(base).toLowerCase();
+  if (String(playerClass).toLowerCase() === 'rogue') return type === 'bow' ? 'bow' : null;
   return ['sword', 'mace', 'axe', 'staff'].includes(type) ? type as BestWeaponExpectation['weaponType'] : null;
 }
 
@@ -705,8 +721,9 @@ function baseDamage(base: ReferenceWrapper): { min: number; max: number } {
 export function bestWeaponExpectation(input: BestWeaponExpectationInput): BestWeaponExpectation {
   if (!Number.isInteger(input.depth) || input.depth < 1) throw new Error(`depth must be a positive integer (got ${input.depth})`);
   if (!Number.isInteger(input.killsSoFar) || input.killsSoFar < 0) throw new Error(`killsSoFar must be a non-negative integer (got ${input.killsSoFar})`);
+  const ranged = String(input.class).toLowerCase() === 'rogue';
   const bare = (approximation: string): BestWeaponExpectation => ({
-    model: 'conservative-expected-best-melee-base',
+    model: ranged ? 'conservative-expected-best-ranged-base' : 'conservative-expected-best-melee-base',
     class: input.class,
     depth: input.depth,
     killsSoFar: input.killsSoFar,
@@ -747,14 +764,16 @@ export function bestWeaponExpectation(input: BestWeaponExpectationInput): BestWe
   const candidates = [...perKillBase].flatMap(([baseId, p]) => {
     const base = bases.get(baseId);
     if (!base || p <= 0) return [];
-    const type = meleeType(base);
+    const type = weaponTypeForClass(base, input.class);
     if (!type) return [];
     if (input.strength != null && requirement(base, 'minStrength', 'requiredStrength') > input.strength) return [];
     if (input.magic != null && requirement(base, 'minMagic', 'requiredMagic') > input.magic) return [];
     if (input.dexterity != null && requirement(base, 'minDexterity', 'requiredDexterity') > input.dexterity) return [];
     return [{ base, type, p, damage: baseDamage(base) }];
   });
-  if (candidates.length === 0) return bare('No dropped melee base satisfies the supplied attribute requirements; the hero remains unarmed.');
+  if (candidates.length === 0) {
+    return bare(`No dropped ${ranged ? 'bow' : 'melee base'} satisfies the supplied attribute requirements; the hero remains unarmed.`);
+  }
   const candidateIds = new Set(candidates.map((candidate) => candidate.base.entity.id));
   const damageAffixPerKill = [...damageAffixByBase]
     .filter(([baseId]) => candidateIds.has(baseId))
@@ -796,7 +815,7 @@ export function bestWeaponExpectation(input: BestWeaponExpectationInput): BestWe
   const conditionalDamagePercent = damageAffixPerKill > 0 ? expectedDamagePercentPerKill / damageAffixPerKill : 0;
   const damageBonusPercent = Math.floor(pAnyMagicDamageAffix * conditionalDamagePercent);
   return {
-    model: 'conservative-expected-best-melee-base',
+    model: ranged ? 'conservative-expected-best-ranged-base' : 'conservative-expected-best-melee-base',
     class: input.class,
     depth: input.depth,
     killsSoFar: input.killsSoFar,

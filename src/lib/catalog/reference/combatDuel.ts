@@ -6,22 +6,51 @@ import {
   monsterHitPointDistribution,
   monsterMeleeHitChance,
   monsterRangedHitChance,
+  monsterResistance,
   playerMeleeDamage,
   playerMeleeHitChance,
   playerRangedDamage,
   playerRangedHitChance,
   playerResistance,
+  playerSpellHitChance,
+  FIXED_POINT,
   type ClassCoefficients,
   type Element,
   type GameMode,
   type MonsterProfile,
   type PlayerBuild,
 } from '@/lib/catalog/reference/combatMath';
+import { damageOutcomes, manaCost } from '@/lib/catalog/reference/spellMath';
+import { spellSpec } from '@/lib/catalog/reference/spellSpecs';
+
+export type PlayerAttackMode = 'melee' | 'ranged' | 'spell';
+
+export interface DuelSpellAttack {
+  spell: string;
+  spellLevel: number;
+  baseMana: number;
+  manaAdj: number;
+  minMana: number;
+  maxManaBaseInternal?: number;
+}
+
+/**
+ * Ranged shots use this fixed separation unless a caller supplies `engagementDistance`.
+ * The monster is assumed to close the gap before its ordinary melee counterattack; travel
+ * time and shots during that movement are deliberately outside this exchange model.
+ */
+export const DEFAULT_RANGED_ENGAGEMENT_DISTANCE = 4;
 
 export interface DuelOptions {
   gameMode?: GameMode;
-  playerAttack: 'melee' | 'ranged';
+  playerAttack: PlayerAttackMode;
+  /** Fixed firing separation for a ranged duel. Defaults to four tiles. */
+  engagementDistance?: number;
+  /** Backwards-compatible alias for engagementDistance. */
   playerDistance?: number;
+  spell?: DuelSpellAttack;
+  /** Class cast animation duration from combatMath.castTiming. */
+  playerCastSeconds?: number;
   monsterAttack: 'melee' | 'ranged-arrow' | 'ranged-magic';
   monsterDistance?: number;
   dungeonLevel: number;
@@ -36,20 +65,66 @@ export interface DuelOptions {
  */
 export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monster: MonsterProfile, opts: DuelOptions) {
   const gameMode = opts.gameMode ?? monster.gameMode ?? 'single';
+  const engagementDistance = opts.engagementDistance ?? opts.playerDistance ?? DEFAULT_RANGED_ENGAGEMENT_DISTANCE;
+  if (!Number.isFinite(engagementDistance) || engagementDistance < 0) {
+    throw new Error(`engagementDistance must be a non-negative finite number (got ${engagementDistance})`);
+  }
+  const selectedSpell = opts.playerAttack === 'spell' ? opts.spell : undefined;
+  if (opts.playerAttack === 'spell' && !selectedSpell) throw new Error('spell attack mode requires spell inputs');
+  const selectedSpellSpec = selectedSpell ? spellSpec(selectedSpell.spell) : undefined;
+  if (selectedSpell && (!selectedSpellSpec || selectedSpellSpec.damage.kind === 'none' || selectedSpellSpec.element === 'none')) {
+    throw new Error(`${selectedSpell.spell} is not a damaging vanilla spell`);
+  }
+  const spellElement = selectedSpellSpec?.element as Element | undefined;
   const playerHitChance = opts.playerAttack === 'melee'
     ? playerMeleeHitChance(build, coefficients, monster)
-    : playerRangedHitChance(build, coefficients, monster, opts.playerDistance ?? 0);
+    : opts.playerAttack === 'ranged'
+      ? playerRangedHitChance(build, coefficients, monster, engagementDistance)
+      : playerSpellHitChance(build, coefficients, monster, 0, spellElement);
   const playerDamage = opts.playerAttack === 'melee'
     ? playerMeleeDamage(build, coefficients, monster)
-    : playerRangedDamage(build, monster);
+    : opts.playerAttack === 'ranged'
+      ? playerRangedDamage(build, monster)
+      : (() => {
+          const outcomes = damageOutcomes(selectedSpell!.spell, {
+            spellLevel: selectedSpell!.spellLevel,
+            characterLevel: build.level,
+            magic: build.magic,
+          }).map((outcome) => ({
+            damage: monsterResistance(monster, Math.trunc(outcome.damage * FIXED_POINT), spellElement!).damage,
+            weight: outcome.weight,
+          }));
+          const expectedDenominator = outcomes.reduce((sum, outcome) => sum + outcome.weight, 0);
+          const expectedNumerator = outcomes.reduce((sum, outcome) => sum + outcome.damage * outcome.weight, 0);
+          return {
+            min: Math.min(...outcomes.map((outcome) => outcome.damage)),
+            max: Math.max(...outcomes.map((outcome) => outcome.damage)),
+            mean: expectedNumerator / expectedDenominator,
+            expectedNumerator,
+            expectedDenominator,
+            outcomes,
+          };
+        })();
   const expectedPlayerDamagePerSwing = playerHitChance * playerDamage.mean;
   const monsterHitPoints = monsterHitPointDistribution(monster.hitPoints, monster.difficulty, gameMode);
   const expectedPlayerHitsToKill = expectedHitsToKill(monsterHitPoints, playerDamage.outcomes);
   const expectedPlayerSwingsToKill = playerHitChance > 0 ? expectedPlayerHitsToKill / playerHitChance : Infinity;
-  const playerSwingSeconds = build.swingSeconds ?? null;
+  const playerSwingSeconds = opts.playerAttack === 'spell'
+    ? opts.playerCastSeconds ?? null
+    : build.swingSeconds ?? null;
   const expectedPlayerSecondsToKill = playerSwingSeconds === null
     ? null
     : expectedPlayerSwingsToKill * playerSwingSeconds;
+  const manaPerCast = selectedSpell
+    ? manaCost(selectedSpell.spell, {
+        spellLevel: selectedSpell.spellLevel,
+        baseMana: selectedSpell.baseMana,
+        manaAdj: selectedSpell.manaAdj,
+        minMana: selectedSpell.minMana,
+        characterLevel: build.level,
+        maxManaBaseInternal: selectedSpell.maxManaBaseInternal ?? lifeAndMana(build, coefficients).baseMana,
+      }, build.class)
+    : undefined;
 
   const monsterHitChance = opts.monsterAttack === 'melee'
     ? monsterMeleeHitChance(build, monster, opts.dungeonLevel)
@@ -101,5 +176,14 @@ export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monste
     expectedMonsterHitsToKillPlayer,
     expectedMonsterDamagePerSwing,
     expectedMonsterSwingsToKillPlayer: monsterHitChance > 0 ? expectedMonsterHitsToKillPlayer / monsterHitChance : Infinity,
+    ...(opts.playerAttack === 'ranged' ? { attackMode: 'ranged' as const, engagementDistance } : {}),
+    ...(selectedSpell && manaPerCast !== undefined ? {
+      attackMode: 'spell' as const,
+      spell: selectedSpell.spell,
+      spellLevel: selectedSpell.spellLevel,
+      playerCastSeconds: playerSwingSeconds,
+      manaPerCast,
+      expectedManaSpentPerKill: expectedPlayerSwingsToKill * manaPerCast,
+    } : {}),
   };
 }

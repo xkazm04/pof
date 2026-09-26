@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_TILES_PER_LEVEL_ASSUMPTION,
   expectedHealingPotionLife,
+  expectedManaPotionMana,
+  manaSustainArithmetic,
   simulateDescent,
   sustainArithmetic,
 } from '@/lib/catalog/reference/descentSim';
@@ -83,6 +85,55 @@ const warrior = wrapper('d1-class-warrior', 'characters', 'classes/warrior', {
   animations,
 });
 
+const sorcerer = wrapper('d1-class-sorcerer', 'characters', 'classes/sorcerer', {
+  baseStrength: 0,
+  baseMagic: 10,
+  baseDexterity: 0,
+  baseVitality: 10,
+  maxStrength: 250,
+  maxMagic: 250,
+  maxDexterity: 250,
+  maxVitality: 250,
+  blockBonus: 0,
+  lifeAdjustment: 0,
+  manaAdjustment: 0,
+  lifePerLevel: 1,
+  manaPerLevel: 0,
+  lifePerBaseVitality: 1,
+  manaPerBaseMagic: 1,
+  lifePerItemVitality: 1,
+  manaPerItemMagic: 1,
+  baseMagicToHit: 87,
+  baseMeleeToHit: 0,
+  baseRangedToHit: 0,
+  animations,
+});
+
+const rogue = wrapper('d1-class-rogue', 'characters', 'classes/rogue', {
+  classFlags: [],
+  baseStrength: 0,
+  baseMagic: 0,
+  baseDexterity: 0,
+  baseVitality: 10,
+  maxStrength: 250,
+  maxMagic: 250,
+  maxDexterity: 250,
+  maxVitality: 250,
+  blockBonus: 0,
+  lifeAdjustment: 0,
+  manaAdjustment: 0,
+  lifePerLevel: 1,
+  manaPerLevel: 0,
+  lifePerBaseVitality: 1,
+  manaPerBaseMagic: 0,
+  lifePerItemVitality: 1,
+  manaPerItemMagic: 0,
+  baseMagicToHit: 0,
+  baseMeleeToHit: 0,
+  baseRangedToHit: 95,
+  animations,
+});
+
 const monster = wrapper('d1-test-monster', 'bestiary', 'monsters/monstdat.tsv', {
   category: 'demon',
   spawnDepth: { min: 1, max: 16 },
@@ -133,6 +184,29 @@ const expectedSword = wrapper('d1-expected-sword', 'items', 'items/itemdat.tsv',
   uniqueBaseItem: 'EXPECTED_SWORD',
 });
 
+const expectedBow = wrapper('d1-expected-bow', 'items', 'items/itemdat.tsv', {
+  subtype: 'Bow',
+  requiredStrength: 0,
+  requiredMagic: 0,
+  requiredDexterity: 0,
+  stats: [
+    { label: 'Damage Min', value: 3 },
+    { label: 'Damage Max', value: 6 },
+  ],
+}, {
+  dropRate: '1',
+  itemType: 'Bow',
+  miscId: 'NONE',
+  spell: 'Null',
+  minMonsterLevel: '1',
+  minDamage: '3',
+  maxDamage: '6',
+  minStrength: '0',
+  minMagic: '0',
+  minDexterity: '0',
+  uniqueBaseItem: 'EXPECTED_BOW',
+});
+
 const expectedDamagePrefix = wrapper('d1-expected-damage-prefix', 'affixes', 'items/item_prefixes.tsv', {}, {
   power: 'DAMP',
   'power.value1': '100',
@@ -153,6 +227,31 @@ const healingPotion = wrapper('d1-healing-potion', 'items', 'items/itemdat.tsv',
   miscId: 'HEAL',
   spell: 'Null',
   minMonsterLevel: '0',
+});
+
+const manaPotion = wrapper('d1-mana-potion', 'items', 'items/itemdat.tsv', {
+  subtype: 'Misc',
+  stats: [{ label: 'Value', value: 5 }],
+}, {
+  dropRate: '0',
+  itemType: 'Misc',
+  miscId: 'MANA',
+  spell: 'Null',
+  minMonsterLevel: '0',
+});
+
+const firebolt = wrapper('d1-spell-firebolt', 'spellbook', 'spells/spelldat.tsv', {}, {
+  id: 'Firebolt',
+  manaCost: '2',
+  manaMultiplier: '1',
+  minMana: '1',
+});
+
+const fireball = wrapper('d1-spell-fireball', 'spellbook', 'spells/spelldat.tsv', {}, {
+  id: 'Fireball',
+  manaCost: '4',
+  manaMultiplier: '1',
+  minMana: '1',
 });
 
 const locations: LocationEntityWrapper[] = Array.from({ length: 16 }, (_, index) => {
@@ -302,6 +401,75 @@ describe('simulateDescent', () => {
       deficit: 0,
     });
   });
+
+  it('uses ranged mode and the expected best bow for the Rogue', () => {
+    const result = simulateDescent({
+      className: 'rogue',
+      policy: 'none',
+      tilesPerLevel: 600,
+      gameMode: 'single',
+      difficulty: 'normal',
+      wrappers: [rogue, monster, expectedBow, healingPotion, ...curve],
+      locations,
+    });
+
+    expect(result.gear).toBe('expected');
+    expect(result.attackMode).toBe('ranged');
+    expect(result.levels[0].attackMode).toBe('ranged');
+    expect(result.levels[1].weaponAssumed).toMatchObject({
+      model: 'conservative-expected-best-ranged-base',
+      weaponId: expectedBow.entity.id,
+      weaponType: 'bow',
+    });
+    expect(result.assumptions.find((assumption) => assumption.id === 'ranged-engagement-distance')).toMatchObject({ value: 4 });
+  });
+
+  it('uses Sorcerer spell bands and carries mana without passive regeneration', () => {
+    const result = simulateDescent({
+      className: 'sorcerer',
+      policy: 'none',
+      tilesPerLevel: 60,
+      gameMode: 'single',
+      difficulty: 'normal',
+      gear: 'none',
+      wrappers: [sorcerer, monster, firebolt, fireball, ...curve],
+      locations,
+    });
+
+    expect(result.attackMode).toBe('spell');
+    expect(result.levels[0].attackMode).toBe('spell');
+    expect(result.levels[0].spellAssumed).toMatchObject({ spell: 'Firebolt', spellLevel: 1, manaPerCast: 2 });
+    expect(result.levels[0].mana).toMatchObject({ currentManaAtStart: 10, manaPool: 10, sustainable: true });
+    expect(result.levels[0].mana!.expectedManaSpent).toBeCloseTo(2 * 2 / 0.95, 12);
+    // The depth-1 level-up refills before depth 2; no later level-up occurs, so depth 3 carries the remainder.
+    expect(result.levels[1].mana!.currentManaAtStart).toBe(10);
+    expect(result.levels[2].mana!.currentManaAtStart).toBeCloseTo(10 - 2 * 2 / 0.95, 12);
+    expect(result.levels[8].spellAssumed).toMatchObject({ spell: 'Fireball', spellLevel: 1 });
+    expect(result.assumptions.find((assumption) => assumption.id === 'mana-recovery')?.detail).toContain('Shrines are ignored');
+  });
+
+  it('splits prior-depth gold for mana potions and makes overall sustain require mana', () => {
+    const expensiveFirebolt = wrapper('d1-spell-firebolt-expensive', 'spellbook', 'spells/spelldat.tsv', {}, {
+      id: 'Firebolt', manaCost: '100', manaMultiplier: '1', minMana: '1',
+    });
+    const result = simulateDescent({
+      className: 'sorcerer',
+      policy: 'none',
+      tilesPerLevel: 60,
+      gameMode: 'single',
+      difficulty: 'normal',
+      wrappers: [
+        sorcerer, monster, expensiveFirebolt, fireball, expectedSword, expectedDamagePrefix,
+        healingPotion, manaPotion, ...curve,
+      ],
+      locations,
+    });
+
+    expect(result.levels[0].sustain).toMatchObject({ deficit: 0, sustainable: false });
+    expect(result.levels[0].mana).toMatchObject({ manaPotionPrice: 5, sustainable: false });
+    expect(result.levels[1].mana!.expectedGoldAllocated).toBeCloseTo(result.levels[0].sustain!.expectedGoldDropped * 0.5, 12);
+    expect(result.levels[1].mana!.manaPotionsBought).toBeCloseTo(result.levels[1].mana!.expectedGoldAllocated / 5, 12);
+  });
 });
 
 describe('sustain arithmetic', () => {
@@ -314,5 +482,17 @@ describe('sustain arithmetic', () => {
       fullHealingPotions: 0.5,
       lifeRestoredPerHealingPotion: 10,
     })).toEqual({ healingSupply: 40, sustainable: false, deficit: 21 });
+  });
+
+  it('adds carried mana and both mana potion supplies, then reports the exact deficit', () => {
+    expect(expectedManaPotionMana('sorcerer', 40)).toBe(19);
+    expect(manaSustainArithmetic({
+      expectedManaSpent: 101,
+      currentMana: 40,
+      manaPool: 40,
+      manaPotions: 2,
+      fullManaPotions: 0.5,
+      manaRestoredPerPotion: 10,
+    })).toEqual({ potionManaSupply: 40, totalManaAvailable: 80, sustainable: false, deficit: 21 });
   });
 });

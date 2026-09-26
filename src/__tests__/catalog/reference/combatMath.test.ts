@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DIABLO1_CANON } from '@/lib/catalog/canon/profiles/diablo1';
-import { duel } from '@/lib/catalog/reference/combatDuel';
+import { DEFAULT_RANGED_ENGAGEMENT_DISTANCE, duel } from '@/lib/catalog/reference/combatDuel';
 import {
   FIXED_POINT,
   attackTiming,
@@ -313,6 +313,91 @@ describe('duel and canon contract', () => {
     });
     expect(result.expectedPlayerSwingsToKill).toBe(Infinity);
     expect(result.expectedPlayerSecondsToKill).toBe(Infinity);
+  });
+
+  it('computes a ranged bow duel at the documented fixed engagement distance', () => {
+    const build: PlayerBuild = {
+      ...BUILD,
+      class: 'Rogue',
+      level: 1,
+      strength: 0,
+      dexterity: 0,
+      weaponDamage: { min: 1, max: 1 },
+      weaponType: 'bow',
+      toHitBonusPercent: 0,
+      armourPiercing: 0,
+      damageBonusPercent: 0,
+      flatDamage: 0,
+      swingSeconds: 0.5,
+    };
+    const monster: MonsterProfile = {
+      ...MONSTER,
+      level: 1,
+      hitPoints: { min: 1, max: 1 },
+      armourClass: 0,
+      resist: {},
+      immune: {},
+    };
+    const result = duel(build, { ...COEFFICIENTS, classFlags: [], baseRangedToHit: 95 }, monster, {
+      playerAttack: 'ranged',
+      monsterAttack: 'melee',
+      dungeonLevel: 1,
+    });
+
+    // 1 level + 95 class to-hit - trunc(4^2/2) = 88%; one landed 1-HP arrow kills.
+    expect(result.attackMode).toBe('ranged');
+    expect(result.engagementDistance).toBe(DEFAULT_RANGED_ENGAGEMENT_DISTANCE);
+    expect(result.playerHitChance).toBe(0.88);
+    expect(result.expectedPlayerHitsToKill).toBe(1);
+    expect(result.expectedPlayerSwingsToKill).toBeCloseTo(1 / 0.88, 12);
+    expect(result.expectedPlayerSecondsToKill).toBeCloseTo(0.5 / 0.88, 12);
+  });
+
+  it('computes spell casts, exact mana per kill, and an immune target as unbounded', () => {
+    const build: PlayerBuild = {
+      ...BUILD,
+      class: 'Sorcerer',
+      level: 1,
+      magic: 0,
+      hasShield: false,
+      blockEnabled: false,
+    };
+    const coefficients = { ...COEFFICIENTS, classFlags: [], baseMagicToHit: 97 };
+    const monster: MonsterProfile = {
+      ...MONSTER,
+      level: 1,
+      hitPoints: { min: 1, max: 1 },
+      armourClass: 0,
+      resist: {},
+      immune: {},
+    };
+    const options = {
+      playerAttack: 'spell' as const,
+      spell: { spell: 'Firebolt', spellLevel: 1, baseMana: 6, manaAdj: 1, minMana: 3 },
+      playerCastSeconds: 0.4,
+      monsterAttack: 'melee' as const,
+      dungeonLevel: 1,
+    };
+    const result = duel(build, coefficients, monster, options);
+
+    // 0 Magic + 97 class to-hit - 2*level 1 = 95%; Firebolt 2..11 always kills 1 HP.
+    expect(result.attackMode).toBe('spell');
+    expect(result.playerHitChance).toBe(0.95);
+    expect(result.expectedPlayerHitsToKill).toBe(1);
+    expect(result.expectedPlayerSwingsToKill).toBeCloseTo(1 / 0.95, 12);
+    expect(result.playerCastSeconds).toBe(0.4);
+    expect(result.expectedPlayerSecondsToKill).toBeCloseTo(0.4 / 0.95, 12);
+    expect(result.manaPerCast).toBe(6);
+    expect(result.expectedManaSpentPerKill).toBeCloseTo(6 / 0.95, 12);
+
+    const resistant = duel(build, coefficients, { ...monster, resist: { fire: true } }, options);
+    expect(resistant.expectedPlayerDamagePerSwing).toBeCloseTo(0.95 * 104, 12); // Mean 6.5 HP / 4 * 64.
+
+    const immune = duel(build, coefficients, { ...monster, immune: { fire: true } }, options);
+    expect(immune.playerHitChance).toBe(0);
+    expect(immune.expectedPlayerHitsToKill).toBe(Infinity);
+    expect(immune.expectedPlayerSwingsToKill).toBe(Infinity);
+    expect(immune.expectedManaSpentPerKill).toBe(Infinity);
   });
 
   it('ships every new bounded canon law', () => {

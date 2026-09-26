@@ -3,6 +3,7 @@ import { DIABLO1_CANON } from '@/lib/catalog/canon/profiles/diablo1';
 import {
   MAGIC_AFFIX_ALLOCATION,
   bestArmourExpectation,
+  bestWeaponExpectation,
   expectedDrop,
   type LootMonsterProfile,
 } from '@/lib/catalog/reference/lootMath';
@@ -70,6 +71,10 @@ const gatedAxe = wrapper('d1-gated-axe', 'items', 'items/itemdat.tsv', {
   dropRate: '4', itemType: 'Axe', minMonsterLevel: '6', miscId: 'NONE', spell: 'Null',
   uniqueBaseItem: 'TEST_AXE', minDamage: '4', maxDamage: '8', minStrength: '0', minMagic: '0', minDexterity: '0',
 }, { subtype: 'Axe' });
+const bow = wrapper('d1-test-bow', 'items', 'items/itemdat.tsv', {
+  dropRate: '2', itemType: 'Bow', minMonsterLevel: '1', miscId: 'NONE', spell: 'Null',
+  uniqueBaseItem: 'TEST_BOW', minDamage: '3', maxDamage: '6', minStrength: '0', minMagic: '0', minDexterity: '0',
+}, { subtype: 'Bow' });
 const prefix = wrapper('d1-prefix', 'affixes', 'items/item_prefixes.tsv', {
   power: 'DAMP', 'power.value1': '10', 'power.value2': '20', minLevel: '2', itemTypes: 'Weapon',
   alignment: 'Any', chance: '1', useful: 'true',
@@ -162,6 +167,29 @@ describe('bestArmourExpectation', () => {
     expect(result.slots.shield.armourClass).toBe(Math.floor(3 * 7 / 16));
     expect(result.totalArmourClass).toBe(6);
     expect(result.hasShield).toBe(true);
+  });
+});
+
+describe('bestWeaponExpectation', () => {
+  it('restricts the Rogue expected weapon pool to bows', () => {
+    const result = bestWeaponExpectation({
+      class: 'Rogue',
+      depth: 2,
+      killsSoFar: 10,
+      monsterProfiles: [{ profile: { ...profile, unique: true }, weight: 10 }],
+      itemWrappers: [sword, bow],
+      affixWrappers: [],
+      uniqueItemWrappers: [],
+      difficulty: 'normal',
+      strength: 100,
+      magic: 100,
+      dexterity: 100,
+    });
+
+    expect(result.model).toBe('conservative-expected-best-ranged-base');
+    expect(result.weaponId).toBe(bow.entity.id);
+    expect(result.weaponType).toBe('bow');
+    expect(result.maxBaseDamageDistribution.flatMap((row) => row.baseIds)).toEqual([bow.entity.id]);
   });
 });
 
