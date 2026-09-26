@@ -79,7 +79,8 @@ describe('seedLoreSteps', () => {
       const accept = pipeline.steps.find((step) => step.label === seed.step)!.accept;
       const verdict = accept(seed.data, context);
       expect(verdict.status).toBe('pending');
-      expect(verdict.reason).toMatch(/^SOURCED:/);
+      // Held by the SOURCED stamp, or by a PoF style law not in force under diablo1 (codex-lore-depth, W22) — never passed.
+      expect(verdict.reason).toMatch(/^(SOURCED|UNGRADED):/);
     }
   });
 });

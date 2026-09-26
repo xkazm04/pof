@@ -1,4 +1,7 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
+import { canonLawShapeChecker } from '@/lib/catalog/acceptance/canonLaw';
+import { CANON_SEED } from '@/lib/catalog/canon/canon-seed';
+
 import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
 import { minLength, fieldsPopulated, selected, minCount, entriesHaveFields } from '../acceptance/dataCheckers';
 import { graphValid } from '../acceptance/graphCheckers';
@@ -7,6 +10,10 @@ import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import { allOf } from '../acceptance/combinators';
 import { linksResolve } from '../acceptance/linkCheckers';
 import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
+
+/** codex-lore-depth: parsed from the law's own text, so editing the law moves the floor. */
+const LORE_DEPTH_CHARS = Number(/at least (\d+) characters/.exec(CANON_SEED.find((r) => r.id === 'codex-lore-depth')?.body ?? '')?.[1] ?? NaN);
+if (!Number.isFinite(LORE_DEPTH_CHARS)) throw new Error('canon rule codex-lore-depth no longer states "at least N characters"');
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -110,7 +117,8 @@ registerCatalogPipeline({
             '(dialog-trees: weathered, precise, suspicious). No magic presented as wondrous.',
         },
       }),
-      accept: minLength('loreBody', 'Lore body ≥ 400 characters', 400),
+      // The floor is PoF style law `codex-lore-depth` — UNGRADED under a profile without it (/diablo W22, D-B9).
+      accept: canonLawShapeChecker('codex-lore-depth', 'Lore body ≥ 400 characters', minLength('loreBody', 'Lore body ≥ 400 characters', LORE_DEPTH_CHARS)),
     },
 
     // ── 3. Cross-References ───────────────────────────────────────────────────

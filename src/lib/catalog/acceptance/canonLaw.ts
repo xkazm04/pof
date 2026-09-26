@@ -51,3 +51,21 @@ export function canonLawChecker(lawId: string, label: string, checker: Checker):
   Object.defineProperty(wrapped, CANON_LAW, { value: lawId, enumerable: false });
   return markContentInvariant(wrapped);
 }
+
+/**
+ * A SHAPE rule that is still PoF's own style law (a length floor, a word cap): graded only where its law is in force, like
+ * `canonLawChecker`, but NOT marked a content invariant — it checks form, not truth (/diablo W22: Diablo's shipped lore
+ * entries of 181-370 characters failed PoF's 400-character codex floor for being Diablo, not for being thin).
+ */
+export function canonLawShapeChecker(lawId: string, label: string, checker: Checker): Checker {
+  const wrapped: Checker = (data, ctx) => {
+    const profile = ctx?.canonProfile ?? DEFAULT_CANON_PROFILE;
+    return lawInForce(profile, lawId) ? checker(data, ctx) : ungradedByProfile(label, lawId, profile);
+  };
+  Object.defineProperty(wrapped, CANON_LAW, { value: lawId, enumerable: false });
+  // Keep the wrapped checker's required-field metadata (the produce prompt names the field it grades).
+  for (const sym of Object.getOwnPropertySymbols(checker)) {
+    if (sym !== CANON_LAW) Object.defineProperty(wrapped, sym, { value: (checker as unknown as Record<symbol, unknown>)[sym], enumerable: false });
+  }
+  return wrapped;
+}
