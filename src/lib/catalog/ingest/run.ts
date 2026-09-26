@@ -55,6 +55,7 @@ export interface TableIngestResult {
 const ROLE_CATALOG: Record<string, string> = {
   loot: 'loot-tables',
   ability: 'spellbook',
+  quest: 'quests',
   'unique-drop': 'items',
   'base-item': 'items',
   gossip: 'dialog-trees',

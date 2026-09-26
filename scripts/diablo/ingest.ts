@@ -40,6 +40,7 @@ import {
   type EffectiveUniqueItemsResult,
 } from '@/lib/catalog/reference/uniqueItems';
 import { seedStatusSteps, statusEntities } from '@/lib/catalog/reference/statusSpecs';
+import { seedObjectSteps, withObjectSpecs } from '@/lib/catalog/reference/objectSpecs';
 import { locationEntities, seedLocationSteps } from '@/lib/catalog/reference/locationSpecs';
 import { aggregateClassWrappers } from '@/lib/catalog/reference/classHeroes';
 import { combatGameMode, withClassSwingTimes } from '@/lib/catalog/reference/combatInputs';
@@ -140,6 +141,22 @@ if (seedCatalog) {
       const e = wrapper.entity;
       if (!promoted.has(e.id)) { console.log(`SKIP ${e.id}: not promoted (promote it first)`); continue; }
       for (const seed of seedStatusSteps(e)) {
+        const r = submitStepArtifact(seed.catalogId, seed.entityId, seed.step, seed.data, []);
+        console.log(`${seed.entityId} · ${seed.step}: ${r.acceptance?.status ?? '?'}${r.acceptance?.reason ? ` — ${r.acceptance.reason.slice(0, 150)}` : ''}`);
+        for (const g of seed.gaps) console.log(`    gap: ${g}`);
+      }
+    }
+    process.exit(0);
+  }
+  // Props keep one wrapper per objdat row, enriched at promotion/seeding with the shared
+  // engine-derived kind specification rather than duplicating behaviour on every row.
+  if (seedCatalog === 'props') {
+    const wrappers = withObjectSpecs(listWrappers(getDb(), { sourceId, catalogId: 'props' }))
+      .filter((item) => !ids || ids.includes(item.entity.id));
+    for (const wrapper of wrappers) {
+      const e = wrapper.entity;
+      if (!promoted.has(e.id)) { console.log(`SKIP ${e.id}: not promoted (promote it first)`); continue; }
+      for (const seed of seedObjectSteps(wrapper)) {
         const r = submitStepArtifact(seed.catalogId, seed.entityId, seed.step, seed.data, []);
         console.log(`${seed.entityId} · ${seed.step}: ${r.acceptance?.status ?? '?'}${r.acceptance?.reason ? ` — ${r.acceptance.reason.slice(0, 150)}` : ''}`);
         for (const g of seed.gaps) console.log(`    gap: ${g}`);
@@ -317,6 +334,8 @@ if (promoteCatalog) {
     pool = experienceCurve(listWrappers(db, { sourceId, catalogId: 'progression-curves' })) as unknown as ReferenceWrapper[];
   } else if (promoteCatalog === 'zone-map') {
     pool = locationEntities(listWrappers(db, { sourceId })) as unknown as ReferenceWrapper[];
+  } else if (promoteCatalog === 'props') {
+    pool = withObjectSpecs(listWrappers(db, { sourceId, catalogId: 'props' }));
   } else if (promoteCatalog === 'combat-map') {
     const allWrappers = listWrappers(db, { sourceId });
     const classFromId = ids?.map((id) => /^d1-descent-(warrior|rogue|sorcerer)$/.exec(id)?.[1]).find(Boolean);
