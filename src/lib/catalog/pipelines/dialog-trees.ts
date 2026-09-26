@@ -298,6 +298,8 @@ registerCatalogPipeline({
     {
       archetype: 'rules',
       label: 'Skill Checks',
+      // Not a step of a Diablo I conversation (/diablo W16): a skill check gates a player REPLY; under d1-dialogue-hub-law the hero never picks a reply, so a Diablo conversation has no node to gate. Its produced artifacts were all gap markers.
+      profiles: ['pof'],
       view: {
         kind: 'table',
         field: 'skillChecks',
@@ -416,6 +418,8 @@ registerCatalogPipeline({
     {
       archetype: 'rules',
       label: 'Camera',
+      // Not a step of a Diablo I conversation (/diablo W16): a dialogue camera frames a conversation scene; under d1-camera Diablo keeps its fixed diagonal gameplay view while people talk. Its produced artifacts were all gap markers.
+      profiles: ['pof'],
       view: {
         kind: 'table',
         field: 'camera',
