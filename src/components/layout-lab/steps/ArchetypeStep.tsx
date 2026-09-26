@@ -297,6 +297,7 @@ export function noopFixSuggestion(spec: StepSpec, fixDirection?: string): string
 /** Hybrid generic renderer: drives any common-archetype StepSpec from persisted artifacts. */
 export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabTheme; entity: LabEntity; step: string; spec: StepSpec; catalogId?: string }) {
   const produce = useLabPipelineStore((s) => s.produce);
+  const entityArtifacts = useLabPipelineStore((s) => s.byEntity[entity.id]);
   const canonRules = useCanonStore((s) => s.rules);
   const entitiesByCatalog = useCatalogStore((s) => s.entitiesByCatalog);
 
@@ -390,6 +391,10 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
   // Surfaced beside the dispatch button: attached evidence must never ride invisibly into
   // a prompt (the same rule the Style DNA indicator follows).
   const evidence = collectStepEvidence(data);
+  const siblings = useMemo(
+    () => Object.fromEntries(Object.entries(entityArtifacts ?? {}).map(([label, artifact]) => [label, artifact.data])),
+    [entityArtifacts],
+  );
 
   // Exactly the condition `dispatchProduce` tests before taking the live branch — so the
   // switch only appears where flipping it actually changes what the next click does, and
@@ -408,7 +413,7 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
    */
   const buildPrompt = (dir: string) =>
     buildStepProducePrompt(spec, entity, dir, {
-      catalogId, rules: canonRules, evidence, library: referenced,
+      catalogId, rules: canonRules, evidence, library: referenced, siblings,
       callback: liveEligible && liveMode,
     });
 

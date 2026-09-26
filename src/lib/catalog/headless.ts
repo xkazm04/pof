@@ -401,8 +401,8 @@ export function buildStepRecipe(
   const labEntity = toLabEntity(entity);
 
   // The SAME builder the `/layout` panel previews and the one-shot route dispatches
-  // (`buildStepProducePrompt`) — quality pack, canon scoping, and the step's own authored
-  // wiring contract, the thing its L2 checker grades it against.
+  // (`buildStepProducePrompt`) — quality pack, canon scoping, persisted sibling artifacts,
+  // and the step's own authored wiring contract, the thing its L2 checker grades it against.
   //
   // The old comment here claimed a headless step "receives the IDENTICAL prompt" while this
   // builder omitted the quality pack and the evidence — a claim about single-sourcing that
@@ -453,6 +453,7 @@ export function buildStepRecipe(
   const prompt = buildStepProducePrompt(spec, labEntity, direction, {
     catalogId,
     rules,
+    siblings: ctx.siblings,
     evidence: collectStepEvidence(cur?.data as Record<string, unknown> | undefined),
   });
 

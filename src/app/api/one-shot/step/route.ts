@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
-import { upsertArtifact } from '@/lib/pipeline-artifacts-db';
+import { listArtifacts, upsertArtifact } from '@/lib/pipeline-artifacts-db';
 import { gradeArtifact, hasRegisteredChecker } from '@/lib/catalog/headless';
 import { describeUngraded } from '@/lib/catalog/acceptance/stepGradability';
 import { stampPromptVersion } from '@/lib/prompt-evolution/judge-fitness';
@@ -236,9 +236,9 @@ export async function POST(req: NextRequest) {
     // CLI mode — the ONE produce path that spends money, so it dispatches the step's REAL
     // prompt. This used to be a third, thinnest builder (entity JSON + direction), which
     // meant the panel listed a quality pack, the canon, the step's wiring contract, the
-    // cited evidence and the library licenses as "📎 Attached to this prompt" and then sent
-    // none of them. `buildStepProducePrompt` is now the single source the panel preview, the
-    // headless recipe and this route all read.
+    // cited evidence, sibling artifacts and the library licenses as "📎 Attached to this
+    // prompt" and then sent none of them. `buildStepProducePrompt` is now the single source
+    // the panel preview, the headless recipe and this route all read.
     //
     // The client sends INPUTS, never a prompt string: a prompt is not client input, and
     // accepting one would let the preview and the persisted row disagree forever. Only the
@@ -247,6 +247,7 @@ export async function POST(req: NextRequest) {
     const promptText = buildStepProducePrompt(step, entity, direction, {
       catalogId,
       rules: listRules(),
+      siblings: Object.fromEntries(listArtifacts(catalogId, entityId).map((artifact) => [artifact.step, artifact.data])),
       evidence: readEvidence(body.evidence),
       library: readLibrary(body.library),
       callback: true,
