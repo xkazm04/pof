@@ -16,6 +16,7 @@
 import { CANON_SEED } from '@/lib/catalog/canon/canon-seed';
 import { markContentInvariant } from './contentInvariant';
 import { canonLawChecker } from './canonLaw';
+import { maxWordsPerEntry } from './dataCheckers';
 import type { AcceptanceResult, Checker } from './types';
 
 /* ── Canon threshold parsing (single source of truth = CANON_SEED) ─────────── */
@@ -135,6 +136,16 @@ export function faucetSinkBalanced(objField: string, faucetKey: string, sinkKey:
       : fail(label, `${imbalance.toFixed(1)}% > ±${FAUCET_SINK_TOL_PCT}%`,
           `proj-economy faucet/sink: faucet ${f} vs sink ${s} = ${imbalance.toFixed(1)}% imbalance, exceeds ±${FAUCET_SINK_TOL_PCT}%`);
   });
+}
+
+// dialog-vo-line-length: "A spoken VO line is at most 10 words" — PoF's bark-length VO law. Diablo I's town speech is
+// scrolling monologue (15–54 words a line), so under the diablo1 profile this grades UNGRADED, not fail (/diablo W16).
+const _vo = parseCanon('dialog-vo-line-length', /at most (\d+) words/);
+export const VO_LINE_MAX_WORDS = Number(_vo[1]); // 10
+
+/** dialog-vo-line-length: every entry of `field` speaks at most the law's word count. */
+export function voLineLength(field: string, label: string): Checker {
+  return canonLawChecker('dialog-vo-line-length', label, maxWordsPerEntry(field, label, VO_LINE_MAX_WORDS));
 }
 
 /** arpg-item-level: requiredLevel is ~5..15 BELOW itemLevel (never above, never equal-high). */

@@ -1237,7 +1237,7 @@
       "deliverable": "text-config",
       "generatorWired": false,
       "judge": "llm-panel",
-      "checkerMeaningful": false,
+      "checkerMeaningful": true,
       "note": "Produces text VO lines only, not audio; ueAssets reference SoundCue paths that no generator (ElevenLabs or otherwise) actually creates here — claimed VO deliverable is text, not recorded voice. 2026-09-07: the checker is no longer purely shape-only — acceptance now also enforces the ≤10-word cap the step declares in voDirection.maxLineLength (allOf(minCount, maxWordsPerEntry)). The AUDIO half stays unpowered: the tts AudioKind has no provider (see docs/research/local-tts-provider-spec.md)."
     },
     {

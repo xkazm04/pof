@@ -1,6 +1,7 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
-import { minLength, fieldsPopulated, selected, minCount, entriesHaveFields, maxWordsPerEntry } from '../acceptance/dataCheckers';
+import { minLength, fieldsPopulated, selected, minCount, entriesHaveFields } from '../acceptance/dataCheckers';
+import { voLineLength } from '../acceptance/invariants';
 import { graphValid } from '../acceptance/graphCheckers';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
@@ -406,7 +407,8 @@ registerCatalogPipeline({
       // authoring is where it bites, which is exactly where it is needed.
       accept: allOf(
         minCount('voLines', '≥1 VO line script entry present', 1),
-        maxWordsPerEntry('voLines', 'Every VO line ≤ 10 spoken words', 10),
+        // The cap is canon law `dialog-vo-line-length` (PoF), graded only where that law is in force (/diablo W16).
+        voLineLength('voLines', 'Every VO line ≤ 10 spoken words'),
       ),
     },
 
