@@ -144,6 +144,16 @@ describe('promotion', () => {
     expect(written).toEqual(['d1-Fireball']);
     expect(r.refused).toEqual([{ entityId: 'd1-Firebolt', reason: 'is a code seed' }]);
   });
+
+  it('promotes one of several rows that share a key and reports the rest, never overwriting silently (W16: three TOWN_COW rows)', () => {
+    const ws = wrapTable(DIABLO1, spellSpec, SPELLS, 't0').wrappers;
+    const twin = { ...ws[0], wrapperId: `${ws[0].wrapperId}@row9` };
+    const written: string[] = [];
+    const r = promoteWrappers([ws[0], twin], (rec) => written.push(rec.entityId));
+    expect(written).toEqual([ws[0].entity.id]);
+    expect(r.refused).toHaveLength(1);
+    expect(r.refused[0].reason).toContain('duplicate entity id');
+  });
 });
 
 describe('ingestSourceFromDir', () => {
