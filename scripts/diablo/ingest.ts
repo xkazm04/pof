@@ -40,6 +40,7 @@ import {
   type EffectiveUniqueItemsResult,
 } from '@/lib/catalog/reference/uniqueItems';
 import { seedStatusSteps, statusEntities } from '@/lib/catalog/reference/statusSpecs';
+import { locationEntities, seedLocationSteps } from '@/lib/catalog/reference/locationSpecs';
 
 function arg(name: string): string | undefined {
   const i = process.argv.indexOf(`--${name}`);
@@ -114,6 +115,20 @@ if (seedCatalog) {
       const e = wrapper.entity;
       if (!promoted.has(e.id)) { console.log(`SKIP ${e.id}: not promoted (promote it first)`); continue; }
       for (const seed of seedStatusSteps(e)) {
+        const r = submitStepArtifact(seed.catalogId, seed.entityId, seed.step, seed.data, []);
+        console.log(`${seed.entityId} · ${seed.step}: ${r.acceptance?.status ?? '?'}${r.acceptance?.reason ? ` — ${r.acceptance.reason.slice(0, 150)}` : ''}`);
+        for (const g of seed.gaps) console.log(`    gap: ${g}`);
+      }
+    }
+    process.exit(0);
+  }
+  // Locations are engine-derived pseudo-wrappers whose pools and set-level parents are
+  // resolved from the external monster and quest wrappers already held in the local store.
+  if (seedCatalog === 'zone-map') {
+    for (const wrapper of locationEntities(listWrappers(getDb(), { sourceId })).filter((item) => !ids || ids.includes(item.entity.id))) {
+      const e = wrapper.entity;
+      if (!promoted.has(e.id)) { console.log(`SKIP ${e.id}: not promoted (promote it first)`); continue; }
+      for (const seed of seedLocationSteps(e)) {
         const r = submitStepArtifact(seed.catalogId, seed.entityId, seed.step, seed.data, []);
         console.log(`${seed.entityId} · ${seed.step}: ${r.acceptance?.status ?? '?'}${r.acceptance?.reason ? ` — ${r.acceptance.reason.slice(0, 150)}` : ''}`);
         for (const g of seed.gaps) console.log(`    gap: ${g}`);
@@ -239,6 +254,8 @@ if (promoteCatalog) {
     for (const item of report.unresolved) console.log(`UNRESOLVED ${item.entry}: line ${item.line}`);
   } else if (promoteCatalog === 'progression-curves') {
     pool = experienceCurve(listWrappers(db, { sourceId, catalogId: 'progression-curves' })) as unknown as ReferenceWrapper[];
+  } else if (promoteCatalog === 'zone-map') {
+    pool = locationEntities(listWrappers(db, { sourceId })) as unknown as ReferenceWrapper[];
   } else {
     pool = listWrappers(db, { sourceId, catalogId: promoteCatalog });
   }

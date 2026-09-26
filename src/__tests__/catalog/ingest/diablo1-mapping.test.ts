@@ -53,9 +53,9 @@ describe('Diablo I mapping tables vs. the real upstream headers', () => {
   it('reports real, non-trivial coverage on the genre-matched bestiary table', () => {
     const a = auditColumns(REAL_HEADERS.monstdat, MONSTER_MAP);
     // Pinned so a future edit that quietly reclassifies gaps as drops is visible.
-    expect(a.mapped).toHaveLength(23);
+    expect(a.mapped).toHaveLength(25);
     expect(a.dropped).toHaveLength(7);
-    expect(a.gap).toHaveLength(11);
+    expect(a.gap).toHaveLength(9);
     expect(a.mapped.length + a.dropped.length + a.gap.length).toBe(41);
   });
 });
@@ -89,6 +89,13 @@ describe('animation timing columns (W08/W09, D29)', () => {
   it('maps the action frame and the AI intelligence (inputs of the derived timing)', () => {
     expect(MONSTER_MAP.animFrameNum.kind).toBe('mapped');
     expect(MONSTER_MAP.intelligence.kind).toBe('mapped');
+  });
+});
+
+describe('monster spawn depth (W25)', () => {
+  it('maps the inclusive bounds into one labelled list', () => {
+    expect(MONSTER_MAP.minDunLvl).toMatchObject({ kind: 'mapped', to: 'data.spawnDepth[min]' });
+    expect(MONSTER_MAP.maxDunLvl).toMatchObject({ kind: 'mapped', to: 'data.spawnDepth[max]' });
   });
 });
 

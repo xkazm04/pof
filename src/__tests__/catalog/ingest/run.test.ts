@@ -80,8 +80,8 @@ describe('ingestTable', () => {
 
   it('reports the same audit the mapping implies, alongside the entities', () => {
     const r = ingestTable(TSV, OPTS);
-    expect(r.audit.mapped).toHaveLength(23);
-    expect(r.audit.gap).toHaveLength(11);
+    expect(r.audit.mapped).toHaveLength(25);
+    expect(r.audit.gap).toHaveLength(9);
     expect(r.audit.unclassified).toEqual([]);
   });
 

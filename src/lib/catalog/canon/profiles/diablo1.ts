@@ -13,6 +13,7 @@
  * This file is part of the reference-replication exercise and is deleted with it.
  */
 import type { ProjectRule } from '../types';
+import { DIABLO1_LOCATION_LAWS } from '@/lib/catalog/reference/locationSpecs';
 import { DIABLO1_SPELL_LAWS } from '@/lib/catalog/reference/spellSpecsData';
 import { DIABLO1_STATUS_LAWS } from '@/lib/catalog/reference/statusSpecs';
 
@@ -126,6 +127,7 @@ export const DIABLO1_CANON: readonly ProjectRule[] = [
   { id: 'd1-ai-hork-demon-law', profile: 'diablo1', category: 'game', scope: 'bestiary', title: 'HorkDemon AI law (engine-derived) (Hellfire)',
     body: 'HorkDemon AI, derived from the engine: from 5 or more tiles it usually circles; from 3 or more tiles it spawns a monster ahead on (2 x intelligence + 43)% when space and capacity permit, otherwise it approaches on (2 x intelligence + 33)% or the post-move (2 x intelligence + 83)% threshold and pauses 10-19 ticks on failure; adjacent attacks use (2 x intelligence + 28)%.',
     refs: ['https://github.com/diasurgical/devilutionX/blob/4138a82/Source/monster.cpp (HorkDemonAi)'] },
+  ...DIABLO1_LOCATION_LAWS,
   ...DIABLO1_SPELL_LAWS,
   ...DIABLO1_STATUS_LAWS,
   { id: 'd1-spell-cast-law', profile: 'diablo1', category: 'game', scope: 'spellbook', title: 'Spell casting law (engine-derived)',

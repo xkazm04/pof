@@ -71,8 +71,8 @@ export const MONSTER_MAP: FieldMap = {
   // values, and "4,1,1,1,1,1" would become [4, 1]. They feed the DERIVED timing (walk/attack ticks, D29 — W09).
   'frames[6]': mapped('data.animFrames'),
   'rate[6]': mapped('data.animRates'),
-  minDunLvl: gap('no spawn depth range; PoF has a single free-text `area: string`'),
-  maxDunLvl: gap('no spawn depth range (see minDunLvl)'),
+  minDunLvl: mapped('data.spawnDepth[min]'),
+  maxDunLvl: mapped('data.spawnDepth[max]'),
   level: mapped('data.stats[Level]'),
   hitPointsMinimum: mapped('data.stats[HP Min]'),
   hitPointsMaximum: mapped('data.stats[HP Max]'),
