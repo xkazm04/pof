@@ -10,6 +10,14 @@ import type { FieldMap } from '@/lib/catalog/ingest/fieldMap';
 import { DIABLO1_SOURCE, ITEM_MAP, MONSTER_MAP, SPELL_MAP } from '@/lib/catalog/ingest/diablo1';
 import { MONSTER_DERIVE, affixDerive, type DeriveSpec } from './derive';
 import { AFFIX_MAP } from '@/lib/catalog/ingest/diablo1Affixes';
+import {
+  QUEST_DERIVE,
+  QUEST_DIALOG_MAP,
+  QUEST_MAP,
+  QUEST_ROW_IDS,
+  TEXT_LINE_MAP,
+  TOWNER_MAP,
+} from '@/lib/catalog/ingest/diablo1Dialogue';
 
 export interface ReferenceTableSpec {
   /** Path relative to the source's data root: `monsters/monstdat.tsv`. */
@@ -24,6 +32,8 @@ export interface ReferenceTableSpec {
   derive?: DeriveSpec;
   /** Scopes this table's positional entity ids (`d1-<tag>row<N>`) when another positional table shares its catalog. */
   positionalTag?: string;
+  /** Enum identifiers by row position for a table that has no key column. */
+  rowIds?: readonly string[];
 }
 
 export interface ReferenceSource {
@@ -55,6 +65,10 @@ export const DIABLO1: ReferenceSource = {
     // Affix TIERS (W11): names repeat across powers, so identity is positional; the side is the table (derive).
     { file: 'items/item_prefixes.tsv', catalogId: 'affixes', technique: 'tsv', map: AFFIX_MAP, derive: affixDerive('prefix'), positionalTag: 'pre-' },
     { file: 'items/item_suffixes.tsv', catalogId: 'affixes', technique: 'tsv', map: AFFIX_MAP, derive: affixDerive('suffix'), positionalTag: 'suf-' },
+    { file: 'towners/towners.tsv', catalogId: 'characters', technique: 'tsv', keyColumn: 'type', map: TOWNER_MAP },
+    { file: 'text/textdat.tsv', catalogId: 'dialog-trees', technique: 'tsv', keyColumn: 'txtstrid', map: TEXT_LINE_MAP },
+    { file: 'towners/quest_dialog.tsv', catalogId: 'dialog-trees', technique: 'tsv', keyColumn: 'towner_type', map: QUEST_DIALOG_MAP },
+    { file: 'quests/questdat.tsv', catalogId: 'quests', technique: 'tsv', map: QUEST_MAP, rowIds: QUEST_ROW_IDS, derive: QUEST_DERIVE },
   ],
 };
 

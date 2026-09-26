@@ -29,6 +29,7 @@ export interface TableRunSummary {
   malformed: number;
   positionalIds: number;
   duplicateKeys: number;
+  rowIdMismatch?: { expected: number; actual: number };
   /** Mapped columns holding sentinel-looking values their mapping does NOT drop — decode them or explain. */
   sentinelColumns: { column: string; values: string[] }[];
   mappingVersion: string;
@@ -72,6 +73,7 @@ function summarizeTable(r: TableWrapResult, map: FieldMap): TableRunSummary {
     coverage: r.audit.coverage, mapped: r.audit.mapped.length, gaps: r.audit.gap.length,
     unclassified: r.audit.unclassified, declaredButAbsent: r.audit.declaredButAbsent,
     malformed: r.malformed.length, positionalIds: r.positionalIds, duplicateKeys: r.duplicateKeys.length,
+    ...(r.rowIdMismatch ? { rowIdMismatch: r.rowIdMismatch } : {}),
     sentinelColumns: r.census
       .filter((c) => mappedCols.has(c.column))
       .map((c) => ({ column: c.column, open: c.sentinels.filter((s) => !droppedBy(map, c.column).has(s.value)) }))

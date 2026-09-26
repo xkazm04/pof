@@ -5,6 +5,7 @@ import { describe, it, expect } from 'vitest';
 import { ingestTable } from '@/lib/catalog/ingest/run';
 import { MONSTER_MAP, provenanceFor } from '@/lib/catalog/ingest/diablo1';
 import { jsonUnsafeKeys } from '@/lib/catalog/entityPayload';
+import { mapped } from '@/lib/catalog/ingest/fieldMap';
 
 const HEADER = '_monster_id name assetsSuffix soundSuffix trnFile availability width image hasSpecial hasSpecialSound frames[6] rate[6] minDunLvl maxDunLvl level hitPointsMinimum hitPointsMaximum ai abilityFlags intelligence toHit animFrameNum minDamage maxDamage toHitSpecial animFrameNumSpecial minDamageSpecial maxDamageSpecial reducePlayerStrength reducePlayerMagic reducePlayerDexterity reducePlayerVitality reducePlayerMaxHP reducePlayerMaxMana armorClass monsterClass resistance resistanceHell selectionRegion treasure exp'.split(' ');
 
@@ -128,5 +129,43 @@ describe('positional identity is scoped by a table tag (W11)', () => {
     const tsv = ['_monster_id\tname', '\tNameless', 'MT_X\tKeyed'].join('\n');
     const r = ingestTable(tsv, { ...OPTS, positionalTag: 'pre-' });
     expect(r.entities.map((e) => e.id)).toEqual(['d1-pre-row0', 'd1-MT_X']);
+  });
+});
+
+describe('generic labelled destinations', () => {
+  const labelledOpts = {
+    catalogId: 'synthetic', sourceFile: 'synthetic.tsv', keyColumn: 'id', idPrefix: 'x', provenanceFor,
+    map: {
+      id: mapped('id'),
+      stat: mapped('data.stats[Level]'),
+      talk: mapped('data.questTalk[Q_SYNTH]'),
+    },
+  };
+
+  it('supports data.<field>[<label>] while preserving stats output exactly', () => {
+    const result = ingestTable('id\tstat\ttalk\nROW\t7\tTEXT_SYNTH', labelledOpts).entities[0];
+    expect(result.data.stats).toEqual([{ label: 'Level', value: '7' }]);
+    expect(result.data.questTalk).toEqual([{ label: 'Q_SYNTH', value: 'TEXT_SYNTH' }]);
+  });
+});
+
+describe('enum-backed positional identity', () => {
+  const rowIdOpts = {
+    catalogId: 'synthetic', sourceFile: 'synthetic.tsv', idPrefix: 'x', provenanceFor,
+    map: { value: mapped('data.value') },
+    rowIds: ['ROW_ALPHA', 'ROW_BETA'] as const,
+  };
+
+  it('uses declared row ids while keeping their identity positional', () => {
+    const result = ingestTable('value\nalpha\nbeta', rowIdOpts);
+    expect(result.entities.map((entity) => entity.id)).toEqual(['x-ROW_ALPHA', 'x-ROW_BETA']);
+    expect(result.positionalIds).toBe(2);
+    expect(result.rowIdMismatch).toBeUndefined();
+  });
+
+  it('keeps every source row and reports a row-count mismatch', () => {
+    const result = ingestTable('value\nalpha\nbeta\ngamma', rowIdOpts);
+    expect(result.entities.map((entity) => entity.id)).toEqual(['x-ROW_ALPHA', 'x-ROW_BETA', 'x-row2']);
+    expect(result.rowIdMismatch).toEqual({ expected: 2, actual: 3 });
   });
 });

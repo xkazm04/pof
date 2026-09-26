@@ -46,6 +46,7 @@ export interface TableWrapResult {
   malformed: MalformedRow[];
   positionalIds: number;
   duplicateKeys: { key: string; rows: number[] }[];
+  rowIdMismatch?: { expected: number; actual: number };
   mappingVersion: string;
   refusal?: TsvRefusal;
 }
@@ -69,7 +70,10 @@ export function wrapTable(source: ReferenceSource, spec: ReferenceTableSpec, tex
   const table = technique.read(text);
   // A derivation is code: its version (code revision + the laws it reads) is part of the mapping version, or an edit to
   // it would leave every row "unchanged" and never re-project (D29).
-  const version = spec.derive ? `${mappingVersion(spec.map)}+${spec.derive.version()}` : mappingVersion(spec.map);
+  const baseVersion = spec.rowIds
+    ? contentHash({ map: spec.map, rowIds: spec.rowIds })
+    : mappingVersion(spec.map);
+  const version = spec.derive ? `${baseVersion}+${spec.derive.version()}` : baseVersion;
   const provenanceFor = (sourceFile: string, sourceRow: string): EntityProvenance => ({
     kind: 'ingest', sourceGame: source.game, sourceProject: source.project,
     sourceFile, sourceRow, licenceNote: source.licenceNote, ingestedAt: now,
@@ -78,16 +82,18 @@ export function wrapTable(source: ReferenceSource, spec: ReferenceTableSpec, tex
   const result = ingestRecords(table, {
     catalogId: spec.catalogId, sourceFile: spec.file, keyColumn: spec.keyColumn,
     map: spec.map, provenanceFor, idPrefix: source.idPrefix, positionalTag: spec.positionalTag,
+    rowIds: spec.rowIds,
   });
 
   if (spec.derive) {
-    for (const e of result.entities) e.data.derived = spec.derive.derive(e as { tags?: string[]; data: Record<string, unknown> });
+    for (const e of result.entities) e.data.derived = spec.derive.derive(e);
   }
 
   const seen = new Set<string>();
   const wrappers = table.rows.map((raw, i): ReferenceWrapper => {
     const declared = spec.keyColumn ? (raw[spec.keyColumn] ?? '').trim() : '';
-    const key = declared || `row${i}`;
+    const rowId = spec.rowIds?.[i];
+    const key = rowId || declared || `row${i}`;
     // A duplicate key is REPORTED by ingestRecords; for storage the later row still needs
     // its own identity, or the upsert would silently keep only one of them.
     let wrapperId = `${source.id}:${spec.file}:${key}`;
@@ -95,7 +101,7 @@ export function wrapTable(source: ReferenceSource, spec: ReferenceTableSpec, tex
     seen.add(wrapperId);
     return {
       wrapperId, sourceId: source.id, file: spec.file, technique: techniqueLabel(technique),
-      key, keyKind: declared ? 'column' : 'positional',
+      key, keyKind: rowId ? 'positional' : declared ? 'column' : 'positional',
       raw, rawHash: contentHash(raw),
       catalogId: spec.catalogId, entity: result.entities[i], mappingVersion: version,
     };
@@ -105,6 +111,8 @@ export function wrapTable(source: ReferenceSource, spec: ReferenceTableSpec, tex
     file: spec.file, catalogId: spec.catalogId, wrappers,
     audit: result.audit, census: censusTable(table.rows, table.columns),
     malformed: result.malformed, positionalIds: result.positionalIds,
-    duplicateKeys: result.duplicateKeys, mappingVersion: version, refusal: table.refusal,
+    duplicateKeys: result.duplicateKeys, mappingVersion: version,
+    ...(result.rowIdMismatch ? { rowIdMismatch: result.rowIdMismatch } : {}),
+    refusal: table.refusal,
   };
 }

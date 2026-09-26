@@ -46,6 +46,8 @@ export interface TableIngestResult {
    * last one is how an ingest loses balance data nobody notices is gone.
    */
   duplicateKeys: { key: string; rows: number[] }[];
+  /** Present when an enum-backed positional table no longer matches its declared ids. */
+  rowIdMismatch?: { expected: number; actual: number };
   refusal?: TsvRefusal;
 }
 
@@ -54,11 +56,13 @@ const ROLE_CATALOG: Record<string, string> = {
   loot: 'loot-tables',
   ability: 'spellbook',
   'unique-drop': 'items',
+  gossip: 'dialog-trees',
+  'quest-log-line': 'dialog-trees',
 };
 
 const LIST_PATH = /^data\.([A-Za-z0-9_]+)\[\]$/;
 
-const STATS_PATH = /^data\.stats\[(.+)\]$/;
+const LABELLED_PATH = /^data\.([A-Za-z0-9_]+)\[(.+)\]$/;
 const LINK_PATH = /^links\[role=(.+)\]$/;
 
 /** Apply one `mapped(...)` destination path to the entity under construction. */
@@ -73,10 +77,10 @@ function applyTo(entity: IngestedEntity, path: string, value: string): void {
     return;
   }
 
-  const stat = STATS_PATH.exec(path);
-  if (stat) {
-    const stats = (entity.data.stats ??= []) as { label: string; value: string }[];
-    stats.push({ label: stat[1], value });
+  const labelled = LABELLED_PATH.exec(path);
+  if (labelled) {
+    const values = (entity.data[labelled[1]] ??= []) as { label: string; value: string }[];
+    values.push({ label: labelled[2], value });
     return;
   }
 
@@ -133,6 +137,8 @@ export interface IngestTableOptions {
    * prefixes and suffixes) both produced `d1-row5`. A declared key is unaffected.
    */
   positionalTag?: string;
+  /** Symbolic ids for an enum-backed table whose source file has no key column. */
+  rowIds?: readonly string[];
 }
 
 /** Pure: text in, entities and report out. No database, no filesystem. */
@@ -151,13 +157,19 @@ export function ingestRecords(table: TsvTable, opts: IngestTableOptions): TableI
   const entities: IngestedEntity[] = [];
   let positionalIds = 0;
   const seen = new Map<string, number[]>();
+  const rowIdMismatch = opts.rowIds && opts.rowIds.length !== table.rows.length
+    ? { expected: opts.rowIds.length, actual: table.rows.length }
+    : undefined;
 
   table.rows.forEach((row, index) => {
     const declared = opts.keyColumn ? row[opts.keyColumn] : '';
-    const positional = !declared;
+    const rowId = opts.rowIds?.[index];
+    const positional = opts.rowIds !== undefined || !declared;
     if (positional) positionalIds++;
-    const key = declared || `${opts.positionalTag ?? ''}row${index}`;
-    const keyLabel = opts.keyColumn && declared ? `${opts.keyColumn}=${declared}` : `row=${index}`;
+    const key = rowId || declared || `${opts.positionalTag ?? ''}row${index}`;
+    const keyLabel = rowId
+      ? `row=${index} (${rowId})`
+      : opts.keyColumn && declared ? `${opts.keyColumn}=${declared}` : `row=${index}`;
     seen.set(key, [...(seen.get(key) ?? []), index]);
 
     const entity: IngestedEntity = {
@@ -193,6 +205,7 @@ export function ingestRecords(table: TsvTable, opts: IngestTableOptions): TableI
     duplicateKeys: [...seen.entries()]
       .filter(([, rows]) => rows.length > 1)
       .map(([key, rows]) => ({ key, rows })),
+    ...(rowIdMismatch ? { rowIdMismatch } : {}),
     refusal: table.refusal,
   };
 }

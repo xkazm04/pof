@@ -15,7 +15,7 @@ import { AFFIX_POWERS, affixTargetsOf } from '@/lib/catalog/ingest/diablo1Affixe
 export interface DeriveSpec {
   /** Changes whenever the derivation's code or the laws it reads change. */
   version: () => string;
-  derive: (entity: { tags?: string[]; data: Record<string, unknown> }) => Record<string, unknown>;
+  derive: (entity: { id: string; tags?: string[]; data: Record<string, unknown> }) => Record<string, unknown>;
 }
 
 const CODE_REVISION = 'monster-timing@1';

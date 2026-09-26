@@ -28,6 +28,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseTsv } from '../../src/lib/catalog/ingest/tsv';
 import { referenceCaster, type ReferenceCaster } from '../../src/lib/catalog/reference/spellLaw';
+import { unresolvedQuestTalk } from '../../src/lib/catalog/reference/questTalk';
 
 function arg(name: string): string | undefined {
   const i = process.argv.indexOf(`--${name}`);
@@ -142,11 +143,15 @@ for (const t of summary.tables) {
   if (t.unclassified.length) console.log(`   UNCLASSIFIED (defect): ${t.unclassified.join(', ')}`);
   if (t.declaredButAbsent.length) console.log(`   UPSTREAM DRIFT: ${t.declaredButAbsent.join(', ')}`);
   for (const s of t.sentinelColumns) console.log(`   sentinel in mapped column ${s.column}: ${s.values.join(', ')} — is it decoded?`);
+  if (t.rowIdMismatch) console.log(`   ROW-ID MISMATCH (the engine enum moved): expected ${t.rowIdMismatch.expected} rows, file has ${t.rowIdMismatch.actual}`);
 }
 console.log(`\nlinks: ${summary.links.resolved} resolved, ${summary.links.unresolved.length} unresolved`);
 const byRef = new Map<string, number>();
 for (const u of summary.links.unresolved) byRef.set(`${u.role}→${u.catalogId}:${u.ref}`, (byRef.get(`${u.role}→${u.catalogId}:${u.ref}`) ?? 0) + 1);
 for (const [k, n] of [...byRef].slice(0, 12)) console.log(`   unresolved ${k} ×${n}`);
+// Quest talk is a LABELLED list, not a link (it must keep which quest each line is about), so link resolution does not see it (W16).
+const questTalkMissing = unresolvedQuestTalk(listWrappers(db, { sourceId }));
+console.log(`quest talk: ${questTalkMissing.length} line id(s) with no wrapped line${questTalkMissing.length ? `: ${questTalkMissing.slice(0, 12).join(', ')}` : ''}`);
 const s = summary.store;
 console.log(`store: created ${s.created} · rawChanged ${s.rawChanged} · reprojected ${s.reprojected} · unchanged ${s.unchanged}`);
 if (promotion) {
