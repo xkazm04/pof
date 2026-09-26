@@ -9,6 +9,7 @@ import {
   hitRecovery,
   lifeAndMana,
   monsterDamageByDifficulty,
+  monsterHitPoints,
   monsterMeleeHitChance,
   monsterRangedHitChance,
   monsterResistance,
@@ -55,6 +56,16 @@ describe('Diablo I hit probabilities', () => {
     expect(playerMeleeHitChance(BUILD, COEFFICIENTS, { ...MONSTER, petrified: true })).toBe(1);
   });
 
+  it('applies difficulty armour once to player melee and ranged to-hit', () => {
+    const accurate = { ...BUILD, toHitBonusPercent: 100 };
+    // Nightmare melee: 10 + trunc(11/2) + 100 + 13 + 3 - (15 + 50) = 66%.
+    expect(playerMeleeHitChance(accurate, COEFFICIENTS, { ...MONSTER, difficulty: 'nightmare' })).toBe(0.66);
+    // Hell arrow at distance 3: 10 + 11 + 100 + 9 + 3 - (15 + 80) - trunc(3^2/2) = 34%.
+    expect(playerRangedHitChance(accurate, COEFFICIENTS, { ...MONSTER, difficulty: 'hell' }, 3)).toBe(0.34);
+    // effectiveUnique has already applied Nightmare's +50, so difficultyAdjusted prevents a second bonus.
+    expect(playerMeleeHitChance(accurate, COEFFICIENTS, { ...MONSTER, armourClass: 65, difficulty: 'nightmare', difficultyAdjusted: true })).toBe(0.66);
+  });
+
   it('computes ranged and spell chance with distance and difficulty-adjusted level', () => {
     // Arrow: 10 + 11 + 5 + 9 + 3 - 15 - trunc(3^2/2) = 19%.
     expect(playerRangedHitChance(BUILD, COEFFICIENTS, MONSTER, 3)).toBe(0.19);
@@ -84,6 +95,19 @@ describe('Diablo I hit probabilities', () => {
 });
 
 describe('Diablo I damage distributions', () => {
+  it('applies monster HP mode and difficulty scaling in engine order', () => {
+    const base = { min: 1, max: 5 };
+    // Multiplayer keeps 1..5. Single-player halves to .5..2.5 fixed-point HP, then floors only .5 to 1.
+    expect(monsterHitPoints(base, 'normal', 'multi')).toEqual({ min: 1, max: 5 });
+    expect(monsterHitPoints(base, 'normal', 'single')).toEqual({ min: 1, max: 2.5 });
+    // Nightmare is 3x then +100: SP 103..107.5, MP 103..115.
+    expect(monsterHitPoints(base, 'nightmare', 'single')).toEqual({ min: 103, max: 107.5 });
+    expect(monsterHitPoints(base, 'nightmare', 'multi')).toEqual({ min: 103, max: 115 });
+    // Hell is 4x then +200: SP 204..210, MP 204..220.
+    expect(monsterHitPoints(base, 'hell', 'single')).toEqual({ min: 204, max: 210 });
+    expect(monsterHitPoints(base, 'hell', 'multi')).toEqual({ min: 204, max: 220 });
+  });
+
   it('gates the data-driven critical and applies triple demon damage', () => {
     const triple = { ...BUILD, tripleDemonDamage: true };
     // Class damage = trunc(10*21/100)=2. Rolls become 5,6,8; a 10% crit doubles them,
@@ -211,6 +235,8 @@ describe('duel and canon contract', () => {
     // Monster: hit .36; mean damage 160; block .22 => 124.8 per hit and 44.928 per swing.
     // Player life is 2464 fixed, so hits-to-kill = 2464/124.8.
     const result = duel(build, COEFFICIENTS, MONSTER, { playerAttack: 'melee', monsterAttack: 'melee', dungeonLevel: 1 });
+    expect(result.gameMode).toBe('single');
+    expect(duel(build, COEFFICIENTS, MONSTER, { gameMode: 'multi', playerAttack: 'melee', monsterAttack: 'melee', dungeonLevel: 1 }).gameMode).toBe('multi');
     expect(result.playerHitChance).toBe(0.21);
     expect(result.expectedPlayerDamagePerSwing).toBeCloseTo(280.896);
     expect(result.expectedPlayerSwingsToKill).toBeCloseTo(2240 / 280.896);
@@ -224,7 +250,7 @@ describe('duel and canon contract', () => {
     const ids = [
       'd1-combat-melee-to-hit-law', 'd1-combat-ranged-to-hit-law', 'd1-combat-monster-melee-to-hit-law',
       'd1-combat-monster-ranged-to-hit-law', 'd1-combat-player-melee-damage-law', 'd1-combat-player-ranged-damage-law',
-      'd1-combat-monster-damage-law', 'd1-combat-block-law', 'd1-combat-player-resistance-law',
+      'd1-combat-monster-damage-law', 'd1-combat-monster-hp-law', 'd1-combat-monster-armour-law', 'd1-combat-block-law', 'd1-combat-player-resistance-law',
       'd1-combat-hit-recovery-law', 'd1-combat-life-mana-law', 'd1-xp-award-law', 'd1-xp-curve-law',
     ];
     for (const id of ids) {

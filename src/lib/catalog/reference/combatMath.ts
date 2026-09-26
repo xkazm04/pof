@@ -1,4 +1,5 @@
 export type Difficulty = 'normal' | 'nightmare' | 'hell';
+export type GameMode = 'single' | 'multi';
 export type Element = 'physical' | 'magic' | 'fire' | 'lightning' | 'acid';
 export type PlayerClass = 'Warrior' | 'Rogue' | 'Sorcerer';
 export type WeaponType = 'sword' | 'mace' | 'bow' | 'other';
@@ -25,10 +26,10 @@ export interface PlayerBuild {
   tripleDemonDamage?: boolean; zeroResistance?: boolean;
 }
 export interface MonsterProfile {
-  /** Hit-point bounds for this encounter; the verified laws do not specify an HP difficulty transform. */
+  /** Hit-point bounds after the game-mode and difficulty transform, in whole-point units. */
   level: number; hitPoints: IntegerRange; armourClass: number; toHit: number; damage: IntegerRange;
   monsterClass: 'undead' | 'demon' | 'animal'; resist: ElementFlags; immune: ElementFlags;
-  difficulty: Difficulty; possibleToHit?: boolean; petrified?: boolean;
+  difficulty: Difficulty; gameMode?: GameMode; possibleToHit?: boolean; petrified?: boolean;
   /** True when an adapter has already applied the engine difficulty transforms. */
   difficultyAdjusted?: boolean;
 }
@@ -44,9 +45,27 @@ const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(mi
 const div = (n: number, d: number) => Math.trunc(n / d);
 const monsterLevel = (m: MonsterProfile) => m.level + (m.difficultyAdjusted ? 0 : m.difficulty === 'nightmare' ? 15 : m.difficulty === 'hell' ? 30 : 0);
 const monsterToHit = (m: MonsterProfile) => m.toHit + (m.difficultyAdjusted ? 0 : m.difficulty === 'nightmare' ? 85 : m.difficulty === 'hell' ? 120 : 0);
+const monsterArmourClass = (m: MonsterProfile) => m.armourClass + (m.difficultyAdjusted ? 0 : m.difficulty === 'nightmare' ? 50 : m.difficulty === 'hell' ? 80 : 0);
 const playerArmour = (p: PlayerBuild) => p.armourClass + div(p.dexterity, 5);
 const flag = (flags: ElementFlags, element: Element) => element === 'physical' ? false : flags[element] === true;
 const floorChance = (dungeonLevel: number, fallback: number) => dungeonLevel === 16 ? 30 : dungeonLevel === 15 ? 25 : dungeonLevel === 14 ? 20 : fallback;
+
+/** Implements canon law `d1-combat-monster-hp-law`; returned bounds are in whole-point units. */
+export function monsterHitPoints(
+  base: IntegerRange,
+  difficulty: Difficulty,
+  gameMode: GameMode = 'single',
+  options: { hellfire?: boolean } = {},
+): IntegerRange {
+  const modeBounds = gameMode === 'single'
+    ? { min: Math.max(base.min / 2, 1), max: Math.max(base.max / 2, 1) }
+    : { ...base };
+  if (difficulty === 'normal') return modeBounds;
+  const scale = difficulty === 'nightmare' ? 3 : 4;
+  const multiplayerBonus = difficulty === 'nightmare' ? 100 : 200;
+  const bonus = options.hellfire && gameMode === 'single' ? multiplayerBonus / 2 : multiplayerBonus;
+  return { min: scale * modeBounds.min + bonus, max: scale * modeBounds.max + bonus };
+}
 
 function distribution(entries: readonly (readonly [damage: number, weight: number])[]): DamageDistribution {
   const active = entries.filter(([, weight]) => weight > 0);
@@ -71,14 +90,14 @@ function targetWeaponModifier(damage: number, weapon: WeaponType, target: Monste
 /** Implements canon law `d1-combat-melee-to-hit-law`. */
 export function playerMeleeHitChance(p: PlayerBuild, c: ClassCoefficients, m: MonsterProfile): number {
   if (m.possibleToHit === false) return 0;
-  const percent = clamp(p.level + div(p.dexterity, 2) + p.toHitBonusPercent + c.baseMeleeToHit + p.armourPiercing - m.armourClass, 5, 95);
+  const percent = clamp(p.level + div(p.dexterity, 2) + p.toHitBonusPercent + c.baseMeleeToHit + p.armourPiercing - monsterArmourClass(m), 5, 95);
   return m.petrified ? 1 : percent / 100;
 }
 
 /** Implements canon law `d1-combat-ranged-to-hit-law`. */
 export function playerRangedHitChance(p: PlayerBuild, c: ClassCoefficients, m: MonsterProfile, distance: number, element: Element = 'physical'): number {
   if (m.possibleToHit === false || flag(m.immune, element)) return 0;
-  const percent = clamp(p.level + p.dexterity + p.toHitBonusPercent + c.baseRangedToHit + p.armourPiercing - m.armourClass - div(distance * distance, 2), 5, 95);
+  const percent = clamp(p.level + p.dexterity + p.toHitBonusPercent + c.baseRangedToHit + p.armourPiercing - monsterArmourClass(m) - div(distance * distance, 2), 5, 95);
   return m.petrified ? 1 : percent / 100;
 }
 

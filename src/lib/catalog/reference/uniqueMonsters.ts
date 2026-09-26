@@ -1,6 +1,6 @@
 import { applyDecode } from '@/lib/catalog/ingest/decode';
 import { UNIQUE_RESISTANCE_DECODE } from '@/lib/catalog/ingest/diablo1Uniques';
-import type { Difficulty } from '@/lib/catalog/reference/combatMath';
+import { monsterHitPoints, type Difficulty, type GameMode } from '@/lib/catalog/reference/combatMath';
 import type { ReferenceWrapper } from '@/lib/catalog/reference/wrapper';
 
 export type EffectiveStatSource = 'unique override' | 'base' | 'engine rule';
@@ -18,8 +18,7 @@ export interface EffectiveUniqueStats {
 }
 
 export interface UniqueGameOptions {
-  /** Existing combat profiles use the unhalved multiplayer convention. */
-  multiplayer?: boolean;
+  gameMode?: GameMode;
   /** Select Hellfire's smaller single-player difficulty bonus (.reference/devilutionX/Source/monster.cpp:3365-3381). */
   hellfire?: boolean;
 }
@@ -48,8 +47,8 @@ const difficultyBonus = (difficulty: Difficulty, nightmare: number, hell: number
 /**
  * Resolve a named monster over its base type using the engine preparation rules
  * (.reference/devilutionX/Source/monster.cpp:3325-3403).
- * Defaults to vanilla multiplayer to match the existing combat adapter's unhalved
- * `monstdat` convention; callers can select single-player and Hellfire HP rules.
+ * Defaults to vanilla single-player, matching the canon profile; callers can select
+ * multiplayer and Hellfire HP rules explicitly.
  */
 export function effectiveUnique(
   unique: ReferenceWrapper,
@@ -68,15 +67,7 @@ export function effectiveUnique(
     + difficultyBonus(difficulty, 15, 30);
 
   const rawHp = numberFrom(unique.raw, 'maxHp', unique.entity.id);
-  const multiplayer = options.multiplayer ?? true;
-  const hellfire = options.hellfire ?? false;
-  const difficultyHpBonus = hellfire && !multiplayer
-    ? difficultyBonus(difficulty, 50, 100)
-    : difficultyBonus(difficulty, 100, 200);
-  const normalHp = multiplayer ? rawHp : Math.max(rawHp / 2, 1);
-  const effectiveHp = difficulty === 'nightmare'
-    ? 3 * normalHp + difficultyHpBonus
-    : difficulty === 'hell' ? 4 * normalHp + difficultyHpBonus : normalHp;
+  const hitPoints = monsterHitPoints({ min: rawHp, max: rawHp }, difficulty, options.gameMode, options);
   // Storage is six-bit fixed point; SP halves (minimum 1 HP), then vanilla Nightmare/Hell
   // add 100/200 HP; Hellfire SP adds 50/100 instead
   // (.reference/devilutionX/Source/monster.cpp:3328-3333,3365-3382).
@@ -107,7 +98,7 @@ export function effectiveUnique(
 
   return {
     level: { value: level, source: uniqueLevel === 0 ? 'engine rule' : 'unique override' },
-    hitPoints: { value: { min: effectiveHp, max: effectiveHp }, source: 'unique override' },
+    hitPoints: { value: hitPoints, source: 'unique override' },
     toHit: { value: toHit, source: customToHit === 0 ? 'base' : 'unique override' },
     armorClass: { value: armorClass, source: customArmorClass === 0 ? 'base' : 'unique override' },
     damage: { value: damage, source: 'unique override' },

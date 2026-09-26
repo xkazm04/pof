@@ -9,6 +9,7 @@ import {
   playerMeleeDamage,
   playerMeleeHitChance,
   type Difficulty,
+  type GameMode,
   type MonsterProfile,
 } from '@/lib/catalog/reference/combatMath';
 import { classCoefficients, monsterProfile, referenceBuild } from '@/lib/catalog/reference/combatInputs';
@@ -132,13 +133,15 @@ export function seedBestiaryCombatSteps(
   bestiaryWrapper: ReferenceWrapper,
   warriorWrapper: ReferenceWrapper,
   difficulty: Difficulty = 'normal',
+  gameMode: GameMode = 'single',
 ): StepSeed[] {
   if (bestiaryWrapper.catalogId !== 'bestiary' || bestiaryWrapper.file !== 'monsters/monstdat.tsv') return [];
   if (warriorWrapper.entity.id !== 'd1-class-warrior') throw new Error('bestiary combat seeds require d1-class-warrior');
-  const monster = monsterProfile(bestiaryWrapper, difficulty);
+  const monster = monsterProfile(bestiaryWrapper, difficulty, gameMode);
   const coefficients = classCoefficients(warriorWrapper);
   const build = referenceBuild(warriorWrapper, monster.level);
   const result = duel(build, coefficients, monster, {
+    gameMode,
     playerAttack: 'melee',
     monsterAttack: 'melee',
     dungeonLevel: Math.min(16, Math.max(1, monster.level)),
@@ -156,12 +159,13 @@ export function seedBestiaryCombatSteps(
           expectedMonsterDamagePerHit: 'fixed-point (64 = one hit point)',
           expectedMonsterDamagePerSwing: 'fixed-point (64 = one hit point)',
         },
-        basis: `${difficulty}; level-${monster.level} reference Warrior; base attributes; no stat points spent; no items`,
+        basis: `${difficulty}; ${gameMode}-player; level-${monster.level} reference Warrior; base attributes; no stat points spent; no items`,
       },
       threat: REFERENCE_GAP,
       [SOURCED_FIELD]: stamp(bestiaryWrapper, [
         'level', 'hitPointsMinimum', 'hitPointsMaximum', 'armorClass', 'toHit', 'minDamage', 'maxDamage',
         'monsterClass', 'resistance',
+        `(gameMode ${gameMode})`,
         '(combat laws via duel; class inputs from d1-class-warrior)',
       ]),
     },

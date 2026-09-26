@@ -4,7 +4,7 @@
  *
  *   npx tsx scripts/diablo/combat.ts [--class warrior|rogue|sorcerer] [--level N]
  *     [--difficulty normal|nightmare|hell] [--weapon d1-<item>] [--monsters id,id]
- *     [--out file.json] [--seed id,id]
+ *     [--multiplayer] [--out file.json] [--seed id,id]
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -13,7 +13,7 @@ import { listEntities } from '@/lib/catalog-db';
 import { submitStepArtifact } from '@/lib/catalog/headless';
 import '@/lib/catalog/pipelines/registry.generated';
 import { duel } from '@/lib/catalog/reference/combatDuel';
-import { classCoefficients, monsterProfile, referenceBuild } from '@/lib/catalog/reference/combatInputs';
+import { classCoefficients, combatGameMode, monsterProfile, referenceBuild } from '@/lib/catalog/reference/combatInputs';
 import { seedBestiaryCombatSteps } from '@/lib/catalog/reference/combatSeeds';
 import { experienceAward, experienceCurveLaw, FIXED_POINT, type Difficulty } from '@/lib/catalog/reference/combatMath';
 import { listWrappers } from '@/lib/catalog/reference/wrappers-db';
@@ -66,6 +66,7 @@ if (!(['normal', 'nightmare', 'hell'] as const).includes(difficulty)) {
   console.error('--difficulty must be normal|nightmare|hell');
   process.exit(2);
 }
+const gameMode = combatGameMode(process.argv);
 
 const db = getDb();
 const characterWrappers = listWrappers(db, { sourceId: 'diablo1', catalogId: 'characters' });
@@ -85,7 +86,7 @@ const seedIds = csv(arg('seed'));
 const requestedMonsters = csv(arg('monsters')) ?? seedIds;
 const monsters = requestedMonsters
   ? bestiaryWrappers.filter((wrapper) => requestedMonsters.includes(wrapper.entity.id))
-  : bestiaryWrappers.filter((wrapper) => monsterProfile(wrapper, difficulty, baseFor(wrapper)).level <= level + 10);
+  : bestiaryWrappers.filter((wrapper) => monsterProfile(wrapper, difficulty, baseFor(wrapper), gameMode).level <= level + 10);
 const missingMonsters = (requestedMonsters ?? []).filter((id) => !monsters.some((wrapper) => wrapper.entity.id === id));
 if (missingMonsters.length) console.log(`no monstdat wrapper for: ${missingMonsters.join(', ')}`);
 
@@ -117,8 +118,9 @@ for (const folder of classes) {
   const playerAttack = build.weaponType === 'bow' ? 'ranged' : 'melee';
   const rows = monsters.map((wrapper): DuelRow => {
     const base = baseFor(wrapper);
-    const monster = monsterProfile(wrapper, difficulty, base);
+    const monster = monsterProfile(wrapper, difficulty, base, gameMode);
     const result = duel(build, coefficients, monster, {
+      gameMode,
       playerAttack,
       monsterAttack: 'melee',
       dungeonLevel: Math.min(16, Math.max(1, monster.level)),
@@ -149,7 +151,7 @@ for (const folder of classes) {
     };
   });
   tables[folder] = rows;
-  console.log(`\n=== ${folder} · level ${level} · ${difficulty}${weapon ? ` · ${weapon.entity.name}` : ' · bare-handed'} ===`);
+  console.log(`\n=== ${folder} · level ${level} · ${difficulty} · ${gameMode === 'single' ? 'single-player' : 'multiplayer'}${weapon ? ` · ${weapon.entity.name}` : ' · bare-handed'} ===`);
   console.table(rows.map((row) => ({
     monster: row.monster,
     'player hit %': Number(row.playerHitPct.toFixed(2)),
@@ -187,7 +189,7 @@ if (seedIds) {
       console.log(`SKIP ${id}: not promoted (promote it first)`);
       continue;
     }
-    for (const seed of seedBestiaryCombatSteps(wrapper, warrior, difficulty)) {
+    for (const seed of seedBestiaryCombatSteps(wrapper, warrior, difficulty, gameMode)) {
       const result = submitStepArtifact(seed.catalogId, seed.entityId, seed.step, seed.data, []);
       console.log(`${seed.entityId} · ${seed.step}: ${result.acceptance?.status ?? '?'}`);
       for (const gap of seed.gaps) console.log(`    gap: ${gap}`);

@@ -70,6 +70,8 @@ describe('combat-derived SOURCED seeds', () => {
     expect(seed.data.sourced).toBeDefined();
     expect(balance.playerHitChance).toEqual(expect.any(Number));
     expect(balance.expectedPlayerSwingsToKill).toEqual(expect.any(Number));
+    expect(balance.gameMode).toBe('single');
+    expect((seed.data.sourced as { columns: string[] }).columns).toContain('(gameMode single)');
     expect(seed.data.threat).toBe(REFERENCE_GAP);
     expect(seed.gaps.join(' ')).toMatch(/threat.*duel/);
   });

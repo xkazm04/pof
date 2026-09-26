@@ -29,24 +29,26 @@ function unique(overrides: Record<string, string> = {}): ReferenceWrapper {
 
 describe('effectiveUnique', () => {
   it('uses base + 5 for level zero and inherits zero custom combat stats', () => {
-    const effective = effectiveUnique(unique(), base, 'normal');
+    const effective = effectiveUnique(unique(), base, 'normal', { gameMode: 'multi' });
     expect(effective.level).toEqual({ value: 9, source: 'engine rule' });
     expect(effective.toHit).toEqual({ value: 27, source: 'base' });
     expect(effective.armorClass).toEqual({ value: 13, source: 'base' });
     expect(effective.hitPoints).toEqual({ value: { min: 201, max: 201 }, source: 'unique override' });
-    expect(effectiveUnique(unique(), base, 'normal', { multiplayer: false }).hitPoints.value)
+    expect(effectiveUnique(unique(), base, 'normal').hitPoints.value)
       .toEqual({ min: 100.5, max: 100.5 });
     expect(effective.resistances.value).toEqual(['IMMUNE_MAGIC', 'RESIST_LIGHTNING']);
   });
 
   it('applies nonzero overrides and the engine difficulty transforms', () => {
-    const effective = effectiveUnique(unique({ level: '6', customToHit: '44', customArmorClass: '21' }), base, 'nightmare');
+    const effective = effectiveUnique(unique({ level: '6', customToHit: '44', customArmorClass: '21' }), base, 'nightmare', { gameMode: 'multi' });
     expect(effective.level).toEqual({ value: 27, source: 'unique override' });
     expect(effective.toHit).toEqual({ value: 129, source: 'unique override' });
     expect(effective.armorClass).toEqual({ value: 71, source: 'unique override' });
     expect(effective.damage.value).toEqual({ min: 18, max: 28 });
     expect(effective.hitPoints.value).toEqual({ min: 703, max: 703 });
-    expect(effectiveUnique(unique(), base, 'nightmare', { multiplayer: false, hellfire: true }).hitPoints.value)
+    expect(effectiveUnique(unique(), base, 'nightmare').hitPoints.value)
+      .toEqual({ min: 401.5, max: 401.5 });
+    expect(effectiveUnique(unique(), base, 'nightmare', { gameMode: 'single', hellfire: true }).hitPoints.value)
       .toEqual({ min: 351.5, max: 351.5 });
     expect(effective.ai).toEqual({ value: 'SyntheticAI', source: 'unique override' });
     expect(effective.intelligence).toEqual({ value: 3, source: 'unique override' });

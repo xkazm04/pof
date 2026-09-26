@@ -12,11 +12,13 @@ import {
   playerResistance,
   type ClassCoefficients,
   type Element,
+  type GameMode,
   type MonsterProfile,
   type PlayerBuild,
 } from '@/lib/catalog/reference/combatMath';
 
 export interface DuelOptions {
+  gameMode?: GameMode;
   playerAttack: 'melee' | 'ranged';
   playerDistance?: number;
   monsterAttack: 'melee' | 'ranged-arrow' | 'ranged-magic';
@@ -32,6 +34,7 @@ export interface DuelOptions {
  * Damage remains in the engine's fixed-point units (64 = one hit point).
  */
 export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monster: MonsterProfile, opts: DuelOptions) {
+  const gameMode = opts.gameMode ?? monster.gameMode ?? 'single';
   const playerHitChance = opts.playerAttack === 'melee'
     ? playerMeleeHitChance(build, coefficients, monster)
     : playerRangedHitChance(build, coefficients, monster, opts.playerDistance ?? 0);
@@ -68,6 +71,7 @@ export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monste
   const playerLife = lifeAndMana(build, coefficients).maximumLife;
 
   return {
+    gameMode,
     playerHitChance,
     expectedPlayerDamagePerSwing,
     expectedPlayerSwingsToKill: expectedPlayerDamagePerSwing > 0 ? meanMonsterHitPoints / expectedPlayerDamagePerSwing : Infinity,

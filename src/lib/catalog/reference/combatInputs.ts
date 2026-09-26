@@ -2,9 +2,11 @@ import type { ReferenceWrapper } from '@/lib/catalog/reference/wrapper';
 import { effectiveUnique } from '@/lib/catalog/reference/uniqueMonsters';
 import {
   FIXED_POINT,
+  monsterHitPoints,
   type ClassCoefficients,
   type Difficulty,
   type ElementFlags,
+  type GameMode,
   type MonsterProfile,
   type PlayerBuild,
   type PlayerClass,
@@ -27,6 +29,11 @@ const VANILLA_CLASSES: Record<string, PlayerClass> = {
   rogue: 'Rogue',
   sorcerer: 'Sorcerer',
 };
+
+/** Resolve the combat CLI's opt-in multiplayer flag; vanilla single-player is the default. */
+export function combatGameMode(args: readonly string[]): GameMode {
+  return args.includes('--multiplayer') ? 'multi' : 'single';
+}
 
 function numberAt(data: Record<string, unknown>, key: string, owner: string): number {
   const value = Number(data[key]);
@@ -141,7 +148,14 @@ function resistanceFlags(raw: string, prefix: 'RESIST' | 'IMMUNE'): ElementFlags
 }
 
 /** Translate an ordinary or unique Diablo monster wrapper into the profile consumed by the combat laws. */
-export function monsterProfile(bestiaryWrapper: ReferenceWrapper, difficulty: Difficulty, baseWrapper?: ReferenceWrapper): MonsterProfile {
+export function monsterProfile(
+  bestiaryWrapper: ReferenceWrapper,
+  difficulty: Difficulty,
+  baseWrapperOrMode?: ReferenceWrapper | GameMode,
+  gameMode: GameMode = 'single',
+): MonsterProfile {
+  const baseWrapper = typeof baseWrapperOrMode === 'string' ? undefined : baseWrapperOrMode;
+  const selectedMode = typeof baseWrapperOrMode === 'string' ? baseWrapperOrMode : gameMode;
   const isUnique = bestiaryWrapper.catalogId === 'bestiary' && bestiaryWrapper.file === 'monsters/unique_monstdat.tsv';
   if (bestiaryWrapper.catalogId !== 'bestiary' || (!isUnique && bestiaryWrapper.file !== 'monsters/monstdat.tsv')) {
     throw new Error(`${bestiaryWrapper.entity.id} is not a Diablo monster bestiary wrapper`);
@@ -154,7 +168,7 @@ export function monsterProfile(bestiaryWrapper: ReferenceWrapper, difficulty: Di
     throw new Error(`${bestiaryWrapper.entity.id} has unknown monster class ${String(categoryOwner.entity.data.category)}`);
   }
   if (isUnique) {
-    const effective = effectiveUnique(bestiaryWrapper, baseWrapper!, difficulty);
+    const effective = effectiveUnique(bestiaryWrapper, baseWrapper!, difficulty, { gameMode: selectedMode });
     const resistance = effective.resistances.value.join(',');
     return {
       level: effective.level.value,
@@ -166,13 +180,18 @@ export function monsterProfile(bestiaryWrapper: ReferenceWrapper, difficulty: Di
       resist: resistanceFlags(resistance, 'RESIST'),
       immune: resistanceFlags(resistance, 'IMMUNE'),
       difficulty,
+      gameMode: selectedMode,
       difficultyAdjusted: true,
     };
   }
   const resistance = bestiaryWrapper.raw.resistance ?? '';
   return {
     level: statAt(bestiaryWrapper, 'Level'),
-    hitPoints: { min: statAt(bestiaryWrapper, 'HP Min'), max: statAt(bestiaryWrapper, 'HP Max') },
+    hitPoints: monsterHitPoints(
+      { min: statAt(bestiaryWrapper, 'HP Min'), max: statAt(bestiaryWrapper, 'HP Max') },
+      difficulty,
+      selectedMode,
+    ),
     armourClass: statAt(bestiaryWrapper, 'Armor Class'),
     toHit: statAt(bestiaryWrapper, 'To Hit'),
     damage: { min: statAt(bestiaryWrapper, 'Damage Min'), max: statAt(bestiaryWrapper, 'Damage Max') },
@@ -180,5 +199,6 @@ export function monsterProfile(bestiaryWrapper: ReferenceWrapper, difficulty: Di
     resist: resistanceFlags(resistance, 'RESIST'),
     immune: resistanceFlags(resistance, 'IMMUNE'),
     difficulty,
+    gameMode: selectedMode,
   };
 }
