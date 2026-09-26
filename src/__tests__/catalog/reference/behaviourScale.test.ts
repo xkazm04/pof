@@ -7,7 +7,9 @@ import {
   attackKindsOf,
   behaviourLawTexts,
   convertBehaviour,
+  expectedTicks,
   timingLaw,
+  walkTicksPerStep,
   type BehaviourInput,
 } from '@/lib/catalog/reference/behaviourScale';
 
@@ -68,6 +70,30 @@ describe('convertBehaviour', () => {
     expect(b.ledger.map((l) => l.field)).toEqual(expect.arrayContaining(['walkSpeed', 'attackCycle', 'hitDelay']));
     for (const l of b.ledger) expect(['full', 'approximate', 'data-only', 'dropped']).toContain(l.grade);
     expect(b.basis).toMatch(/Zombie/);
+  });
+});
+
+describe('locomotion and routine cadence stay separate', () => {
+  const t = timingLaw();
+
+  it('computes the one-tile walking time from animation data alone', () => {
+    expect(walkTicksPerStep({ walkFrames: 10, walkRate: 2 }, t.walkExtraTicks)).toBe(21);
+  });
+
+  it('preserves the previously modelled routine cadence numbers', () => {
+    const input = { ...base, intelligence: 1 };
+    expect(expectedTicks({ ...input, ai: 'Zombie' }, t.walkExtraTicks)).toEqual({
+      step: 18.333333333333336,
+      attack: 16.333333333333336,
+    });
+    expect(expectedTicks({ ...input, ai: 'SkeletonMelee' }, t.walkExtraTicks)).toEqual({
+      step: 16.425,
+      attack: 18.75,
+    });
+    expect(expectedTicks({ ...input, ai: 'SkeletonRanged' }, t.walkExtraTicks)).toEqual({
+      step: 11,
+      attack: 27.999999999999996,
+    });
   });
 });
 

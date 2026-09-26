@@ -1,10 +1,12 @@
 /**
- * A monster's speed and attack cadence, converted to PoF (/diablo W08).
+ * A monster's locomotion and attack/decision cadence, converted to PoF (/diablo W08).
  *
  * Diablo I keeps a monster's feel in two places: its animation data (`frames[6]`/`rate[6]`, `animFrameNum` in
- * monstdat) and its AI ROUTINE (code: how often it acts, how long it hesitates). Both are read here — the data from
- * the monster, the routine and the engine's timing from engine-derived laws plus the structured routine table.
- * The routine's randomness is reduced to its expectation.
+ * monstdat) determines its speed WHILE WALKING, while its AI ROUTINE determines how often it decides to step or
+ * attack and how long it hesitates. Both are read here — the data from the monster, the routine and the engine's
+ * timing from engine-derived laws plus the structured routine table. The routine's randomness is reduced to its
+ * expectation for effective continuous speed; the separate animation-only locomotion projection remains its upper
+ * bound while walking.
  *
  * Conversion: time is carried in real seconds (both games run in real time). Distance has no shared unit, so the
  * monster/player SPEED RATIO is preserved against a named player anchor on each side (the D23 idea): a monster that
@@ -105,15 +107,22 @@ export interface BehaviourInput {
   intelligence: number;
 }
 
+export type LocomotionInput = Pick<BehaviourInput, 'walkFrames' | 'walkRate'>;
+
+/** One tile's animation time, independent of the AI routine that decides when to start walking. */
+export function walkTicksPerStep(m: LocomotionInput, walkExtra: number): number {
+  return m.walkFrames * (m.walkRate ?? 1) + walkExtra;
+}
+
 const prob = (p: Pct, int: number) => Math.min(1, Math.max(0, (p.a * int + p.b) / 100));
 const meanPause = (q: Pause, int: number) => Math.max(0, q.c - q.d * int) + q.spread / 2;
 
 /**
- * Expected ticks per tile stepped and per attack, for one monster under its routine. After a pause the routines
- * act unconditionally (DevilutionX: `var1 == Delay` → attack / walk), so each cycle carries at most one pause.
+ * Expected routine-cadence ticks per started step and per attack. After a pause the routines act unconditionally
+ * (DevilutionX: `var1 == Delay` → attack / walk), so each cycle carries at most one pause.
  */
 export function expectedTicks(m: BehaviourInput, walkExtra: number): { step: number; attack: number } {
-  const walk = m.walkFrames * (m.walkRate ?? 1) + walkExtra;
+  const walk = walkTicksPerStep(m, walkExtra);
   const attack = m.attackFrames * (m.attackRate ?? 1);
   const law = aiRoutineLaw(m.ai);
   if (law.routine === 'Zombie') {

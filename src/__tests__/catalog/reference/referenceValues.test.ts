@@ -7,6 +7,7 @@ import { buildStepProducePrompt } from '@/lib/catalog/stepPrompt';
 import { REFERENCE_MAX_CHARS, entityValuesBlock, referenceValuesBlock } from '@/lib/catalog/referenceValues';
 import { labIdentityOf } from '@/lib/catalog/canon/profiles';
 import { CANON_SEED } from '@/lib/catalog/canon/canon-seed';
+import { MONSTER_DERIVE } from '@/lib/catalog/reference/derive';
 
 const spec = getCatalogPipeline('bestiary')!.steps.find((s) => s.label === 'Stat Block')!;
 const data = { stats: [{ label: 'HP Min', value: '4' }, { label: 'HP Max', value: '7' }, { label: 'Armor Class', value: '5' }], category: 'Undead', sourced: { x: 1 } };
@@ -52,6 +53,19 @@ describe('reach at the chokepoint', () => {
   it('an ingested entity’s Stat Block prompt carries its real stats', () => {
     const p = buildStepProducePrompt(spec, ingested, undefined, { catalogId: 'bestiary', rules: CANON_SEED });
     expect(p).toContain('HP Max: 7');
+  });
+
+  it('an unmodelled routine’s animation-only walking speed reaches its Stat Block prompt', () => {
+    const derived = MONSTER_DERIVE.derive({
+      id: 'd1-MT_FALLEN', tags: ['Fallen'],
+      data: { animFrames: '10,20,12,6,16,0', animRates: '3,2,1,1,1,1', attackActionFrame: '8', intelligence: '1' },
+    });
+    const fallen = { ...ingested, id: 'd1-MT_FALLEN', name: 'Fallen', data: { ...data, derived } };
+    const p = buildStepProducePrompt(spec, fallen, undefined, { catalogId: 'bestiary', rules: CANON_SEED });
+    expect(p).toContain('"locomotion":');
+    expect(p).toContain('"tilesPerSecondWhileWalking":');
+    expect(p).toContain('only the while-walking upper bound is known');
+    expect(p).toContain('"attackKinds":["melee","heal"]');
   });
 
   it('an authored entity’s prompt carries its values as ENTITY VALUES — consistent, not reproduced (W03, D11)', () => {
