@@ -42,7 +42,14 @@ import {
 import { seedStatusSteps, statusEntities } from '@/lib/catalog/reference/statusSpecs';
 import { locationEntities, seedLocationSteps } from '@/lib/catalog/reference/locationSpecs';
 import { aggregateClassWrappers } from '@/lib/catalog/reference/classHeroes';
-import { withClassSwingTimes } from '@/lib/catalog/reference/combatInputs';
+import { combatGameMode, withClassSwingTimes } from '@/lib/catalog/reference/combatInputs';
+import type { Difficulty } from '@/lib/catalog/reference/combatMath';
+import {
+  DEFAULT_TILES_PER_LEVEL_ASSUMPTION,
+  descentEntity,
+  type DescentClassName,
+  type StatPointPolicy,
+} from '@/lib/catalog/reference/descentSim';
 import {
   seedCharacterVendorSteps,
   seedVendorSteps,
@@ -77,6 +84,17 @@ const seedCatalog = arg('seed-steps');
 if (seedCatalog) {
   const ids = arg('ids')?.split(',').map((x) => x.trim()).filter(Boolean);
   const promoted = new Set(listEntities(seedCatalog).filter((r) => r.source === 'ingest').map((r) => r.entityId));
+  // A descent is a 16-point depth curve. combat-map's Balance view is a fixed three-bin
+  // histogram (wave1Threat/wave2Threat/hazardPressure), so seeding it would persist hidden data
+  // the step cannot render or grade. Report the shape mismatch instead of inventing a scalar.
+  if (seedCatalog === 'combat-map') {
+    const requested = (ids ?? [...promoted]).filter((id) => id.startsWith('d1-descent-'));
+    for (const id of requested) {
+      if (!promoted.has(id)) { console.log(`SKIP ${id}: not promoted (promote it first)`); continue; }
+      console.log(`MISFIT ${id}: combat-map Balance is a fixed three-bin histogram, not a per-depth curve; no SOURCED step artifact was written`);
+    }
+    process.exit(0);
+  }
   // Affix families are promoted aggregates (W11): seed from the family entity itself.
   if (seedCatalog === 'affixes') {
     for (const e of seededEntities('affixes').filter((x) => x.id.startsWith('d1-affix-') && (!ids || ids.includes(x.id)))) {
@@ -299,6 +317,27 @@ if (promoteCatalog) {
     pool = experienceCurve(listWrappers(db, { sourceId, catalogId: 'progression-curves' })) as unknown as ReferenceWrapper[];
   } else if (promoteCatalog === 'zone-map') {
     pool = locationEntities(listWrappers(db, { sourceId })) as unknown as ReferenceWrapper[];
+  } else if (promoteCatalog === 'combat-map') {
+    const allWrappers = listWrappers(db, { sourceId });
+    const classFromId = ids?.map((id) => /^d1-descent-(warrior|rogue|sorcerer)$/.exec(id)?.[1]).find(Boolean);
+    const className = (arg('class') ?? classFromId ?? 'warrior') as DescentClassName;
+    const policy = (arg('policy') ?? 'none') as StatPointPolicy;
+    const difficulty = (arg('difficulty') ?? 'normal') as Difficulty;
+    const tilesPerLevel = Number(arg('tiles-per-level') ?? DEFAULT_TILES_PER_LEVEL_ASSUMPTION);
+    const weaponId = arg('weapon');
+    const weapon = weaponId
+      ? allWrappers.find((wrapper) => wrapper.catalogId === 'items' && wrapper.entity.id === weaponId)
+      : undefined;
+    if (weaponId && !weapon) throw new Error(`no items wrapper ${weaponId}`);
+    pool = [descentEntity({
+      className,
+      policy,
+      tilesPerLevel,
+      gameMode: combatGameMode(process.argv),
+      difficulty,
+      weapon,
+      wrappers: allWrappers,
+    })];
   } else if (promoteCatalog === 'characters') {
     pool = aggregateClassWrappers(listWrappers(db, { sourceId, catalogId: 'characters' }));
   } else {
