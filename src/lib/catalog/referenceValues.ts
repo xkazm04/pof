@@ -14,6 +14,12 @@ import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import { REFERENCE_GAP } from '@/lib/catalog/acceptance/markers';
 
 const MAX_CHARS = 2000;
+/**
+ * A REFERENCE entity's values are what the producer must reproduce, so they get a far larger budget (/diablo W16: all 8
+ * Diablo town conversations, 4-12 KB each, were cut at 2000 characters — producers saw 4 of Adria's 11 gossip lines and
+ * none of her quest topics, and honestly wrote the rest as gaps). Past it, the block NAMES what was left out.
+ */
+export const REFERENCE_MAX_CHARS = 16000;
 
 function renderValue(v: unknown): string | null {
   if (v == null || v === '') return null;
@@ -28,7 +34,7 @@ function renderValue(v: unknown): string | null {
 }
 
 /** The entity's recorded values as bounded `- key: value` lines ('' when it records none). */
-function valueLines(entity: LabEntity): string {
+function valueLines(entity: LabEntity, max = MAX_CHARS): string {
   const data = (entity.data ?? {}) as Record<string, unknown>;
   const lines = Object.entries(data)
     .filter(([k]) => k !== 'sourced')
@@ -38,13 +44,19 @@ function valueLines(entity: LabEntity): string {
     })
     .filter((l): l is string => !!l);
   const body = lines.join('\n');
-  return body.length > MAX_CHARS ? `${body.slice(0, MAX_CHARS)}\n- … (truncated at ${MAX_CHARS} characters)` : body;
+  if (body.length <= max) return body;
+  // Keep whole lines while they fit, and name every key that did not, so a cut is never mistaken for the whole record.
+  const kept: string[] = [];
+  let used = 0;
+  for (const l of lines) { if (used + l.length + 1 > max) break; kept.push(l); used += l.length + 1; }
+  const cut = lines.slice(kept.length).map((l) => l.slice(2, l.indexOf(':')));
+  return `${kept.join('\n')}\n- … (truncated at ${max} characters — NOT shown: ${cut.join(', ')})`;
 }
 
 export function referenceValuesBlock(entity: LabEntity): string {
   const ref = entity.reference;
   if (!ref) return '';
-  const body = valueLines(entity);
+  const body = valueLines(entity, REFERENCE_MAX_CHARS);
   return [
     `# REFERENCE VALUES — ${ref.sourceGame} · ${ref.sourceFile} (${ref.sourceRow})`,
     `This entity replicates a shipped game: "${entity.name}". Where a field of this step corresponds to a value below,`,
