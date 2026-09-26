@@ -84,9 +84,13 @@ if (weaponId && !weapon) throw new Error(`no items wrapper ${weaponId}`);
 
 const seedIds = csv(arg('seed'));
 const requestedMonsters = csv(arg('monsters')) ?? seedIds;
+// A unique whose base type is not in monstdat (Hellfire's HorkDemon, Defiler, Na-Krul at 4138a82) has no profile: reported, not fatal.
+const orphans = bestiaryWrappers.filter((wrapper) => wrapper.file === 'monsters/unique_monstdat.tsv' && !baseFor(wrapper));
+if (orphans.length) console.log(`skipped (base type not in monstdat): ${orphans.map((w) => w.entity.id).join(', ')}`);
+const profiled = bestiaryWrappers.filter((wrapper) => !orphans.includes(wrapper));
 const monsters = requestedMonsters
-  ? bestiaryWrappers.filter((wrapper) => requestedMonsters.includes(wrapper.entity.id))
-  : bestiaryWrappers.filter((wrapper) => monsterProfile(wrapper, difficulty, baseFor(wrapper), gameMode).level <= level + 10);
+  ? profiled.filter((wrapper) => requestedMonsters.includes(wrapper.entity.id))
+  : profiled.filter((wrapper) => monsterProfile(wrapper, difficulty, baseFor(wrapper), gameMode).level <= level + 10);
 const missingMonsters = (requestedMonsters ?? []).filter((id) => !monsters.some((wrapper) => wrapper.entity.id === id));
 if (missingMonsters.length) console.log(`no monstdat wrapper for: ${missingMonsters.join(', ')}`);
 
