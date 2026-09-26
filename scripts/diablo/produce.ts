@@ -65,7 +65,15 @@ async function produceOne(entityId: string, step: string): Promise<Outcome> {
   const events = join(dir, 'events.jsonl');
   const args = buildCodexExecArgs({ route, access: 'read-only', prompt: PROMPT_FROM_STDIN, cwd: REPO, lastMessagePath: last, ephemeral: false });
   const t0 = Date.now();
-  const end = await runCodex(args, REPO, prompt, events, timeoutMin, stallMinutes(route.effort), () => {});
+  let end = await runCodex(args, REPO, prompt, events, timeoutMin, stallMinutes(route.effort), () => {});
+  // A model-capacity refusal is not the producer's answer: re-run the one-shot after a backoff (read-only, nothing to resume).
+  for (const wait of [1, 2, 4, 8]) {
+    const errs = parseCodexEvents(existsSync(events) ? readFileSync(events, 'utf8') : '').errors;
+    if (!errs.some((e) => /at capacity/i.test(e)) || existsSync(last) && readFileSync(last, 'utf8').includes('@@CALLBACK')) break;
+    await new Promise((r) => setTimeout(r, wait * 60_000));
+    writeFileSync(events, '');
+    end = await runCodex(args, REPO, prompt, events, timeoutMin, stallMinutes(route.effort), () => {});
+  }
   const secs = Math.round((Date.now() - t0) / 1000);
   const usage = parseCodexEvents(existsSync(events) ? readFileSync(events, 'utf8') : '').usage;
   const base = { entityId, step, secs, tokensOut: usage?.outputTokens ?? 0 };
