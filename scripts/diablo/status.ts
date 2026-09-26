@@ -18,6 +18,8 @@ import { getReferenceSource } from '../../src/lib/catalog/reference/sources';
 import { listRuns, listWrappers, summarizeWrappers } from '../../src/lib/catalog/reference/wrappers-db';
 import { projectionHash } from '../../src/lib/catalog/reference/wrapper';
 import { affixFamilies } from '../../src/lib/catalog/reference/affixFamilies';
+import { dialogueTrees } from '../../src/lib/catalog/reference/dialogueTrees';
+import { experienceCurve } from '../../src/lib/catalog/reference/experienceCurve';
 import type { IngestedEntity } from '../../src/lib/catalog/ingest/run';
 import type { IngestRunSummary } from '../../src/lib/catalog/reference/ingestSource';
 import { stepsForProfile } from '../../src/lib/catalog/stepScope';
@@ -36,7 +38,11 @@ const rows = catalogs.map((catalogId) => {
   // Affixes promote as FAMILIES (W11) — compare against the same aggregation promotion used; a tier row's id is never a
   // family id, so a wrapper-id lookup read all 50 families as stale forever (/diablo W12).
   const wrappers = listWrappers(db, { sourceId: source.id, catalogId });
-  const pool = catalogId === 'affixes' ? affixFamilies(wrappers) : wrappers;
+  // W16/W18: conversations and the XP curve are aggregates too — every reader applies the same aggregation promotion used.
+  const pool = catalogId === 'affixes' ? affixFamilies(wrappers)
+    : catalogId === 'dialog-trees' ? dialogueTrees(listWrappers(db, { sourceId: source.id })).wrappers
+    : catalogId === 'progression-curves' ? experienceCurve(wrappers)
+    : wrappers;
   const current = new Map(pool.map((w) => [w.entity.id, projectionHash(w.entity as unknown as IngestedEntity)]));
   const stale = promoted.filter((e) => current.get(e.entityId) !== projectionHash(e.entity as unknown as IngestedEntity)).map((e) => e.entityId);
   // A promoted Diablo entity has the diablo1 steps (profile-scoped steps included, /diablo W05 D18).
