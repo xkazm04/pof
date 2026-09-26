@@ -78,6 +78,9 @@ async function run(taskPath: string, timeoutMin: number) {
     if (add.status !== 0) throw new Error(`worktree add failed: ${add.stderr}`);
     const j = spawnSync('cmd', ['/c', 'mklink', '/J', join(cwd, 'node_modules'), join(REPO, 'node_modules')], { encoding: 'utf8' });
     if (j.status !== 0) throw new Error(`node_modules junction failed: ${j.stderr || j.stdout}`);
+    // The pinned reference clone is a git-EXCLUDED junction in the main tree (/diablo W16), so a fresh worktree lacks it and a
+    // delegate cannot check the engine source (cx-b13 had to skip its spot-checks). Mirror it; remove it with rmdir, never recursively.
+    if (existsSync(join(REPO, '.reference'))) spawnSync('cmd', ['/c', 'mklink', '/J', join(cwd, '.reference'), join(REPO, '.reference')], { encoding: 'utf8' });
     // Gitignored GENERATED files are absent from a fresh worktree, and typecheck needs them
     // (cx-001 had to discover this and run the generator itself).
     const gen = spawnSync(process.execPath, ['scripts/gen-pipeline-registry.mjs'], { cwd, encoding: 'utf8' });
@@ -189,6 +192,8 @@ function discard(id: string) {
     // rmdir removes the JUNCTION only; a recursive delete would follow it into the real node_modules.
     const nm = join(st.cwd, 'node_modules');
     if (existsSync(nm)) spawnSync('cmd', ['/c', 'rmdir', nm]);
+    const ref = join(st.cwd, '.reference');
+    if (existsSync(ref)) spawnSync('cmd', ['/c', 'rmdir', ref]);
     git(REPO, 'worktree', 'remove', '--force', st.cwd);
     git(REPO, 'branch', '-D', `codex/${id}`);
   }
