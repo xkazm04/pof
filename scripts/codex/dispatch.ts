@@ -96,12 +96,46 @@ async function run(taskPath: string, timeoutMin: number) {
   });
   console.log(`dispatching ${task.id} → ${route.model} (${route.effort}, ${route.why}) in ${cwd}`);
   const t0 = Date.now();
-  const end = await runCodex(args, cwd, brief, join(dir, 'events-1.jsonl'), timeoutMin, stallMinutes(route.effort), (pid) => { const st = loadState(task.id); st.pid = pid; saveState(task.id, st); });
+  const events1 = join(dir, 'events-1.jsonl');
+  let end = await runCodex(args, cwd, brief, events1, timeoutMin, stallMinutes(route.effort), (pid) => { const st = loadState(task.id); st.pid = pid; saveState(task.id, st); });
+  // Refused at capacity before a session existed: nothing to resume, so the first round is simply re-run.
+  for (const wait of CAPACITY_BACKOFF_MIN) {
+    const s = parseCodexEvents(existsSync(events1) ? readFileSync(events1, 'utf8') : '');
+    if (s.threadId || !s.errors.some((e) => CAPACITY.test(e))) break;
+    console.error(`${task.id}: model at capacity before the session started — re-running in ${wait} min`);
+    await new Promise((r) => setTimeout(r, wait * 60_000));
+    writeFileSync(events1, '');
+    end = await runCodex(args, cwd, brief, events1, timeoutMin, stallMinutes(route.effort), (pid) => { const st = loadState(task.id); st.pid = pid; saveState(task.id, st); });
+  }
   if (end.code !== 0) console.error(`codex exited ${end.code} (${end.ended})`);
   report(task.id, join(dir, 'events-1.jsonl'), last, Math.round((Date.now() - t0) / 1000), end);
+  await retryOnCapacity(task.id, join(dir, 'events-1.jsonl'), timeoutMin);
+}
+
+/**
+ * "Selected model is at capacity" ends a round mid-task (seen 2026-09-26 on gpt-5.6-sol with 6 runs in flight): the
+ * session is intact, so the run is resumed after a backoff instead of being reported as a failed task. Bounded — a
+ * capacity outage longer than the ladder is reported as it is.
+ */
+const CAPACITY = /at capacity/i;
+const CAPACITY_BACKOFF_MIN = [1, 2, 4, 8, 10, 10];
+async function retryOnCapacity(id: string, eventsPath: string, timeoutMin: number) {
+  for (const wait of CAPACITY_BACKOFF_MIN) {
+    const s = parseCodexEvents(existsSync(eventsPath) ? readFileSync(eventsPath, 'utf8') : '');
+    if (s.completed || !s.errors.some((e) => CAPACITY.test(e))) return;
+    if (!loadState(id).threadId) { console.error(`${id}: capacity error before a session existed — re-run it`); return; }
+    console.error(`${id}: model at capacity — resuming in ${wait} min`);
+    await new Promise((r) => setTimeout(r, wait * 60_000));
+    eventsPath = await resumeRound(id, 'You were interrupted by a model-capacity error, not by the reviewer. Continue the task exactly where you stopped, then report.', timeoutMin);
+  }
 }
 
 async function resume(id: string, instructions: string, timeoutMin: number) {
+  await retryOnCapacity(id, await resumeRound(id, instructions, timeoutMin), timeoutMin);
+}
+
+/** One follow-up round; returns its events path. */
+async function resumeRound(id: string, instructions: string, timeoutMin: number): Promise<string> {
   const st = loadState(id);
   if (!st.threadId) throw new Error(`${id} has no session id (read-only runs are ephemeral and cannot be resumed)`);
   st.rounds += 1; saveState(id, st);
@@ -117,6 +151,7 @@ async function resume(id: string, instructions: string, timeoutMin: number) {
   const t0 = Date.now();
   const end = await runCodex(buildCodexResumeArgs({ threadId: st.threadId, prompt: PROMPT_FROM_STDIN, lastMessagePath: last, outputSchemaPath: join(runDir(id), 'schema.json') }), st.cwd, prompt, join(runDir(id), `events-${n}.jsonl`), timeoutMin, stallMinutes(st.effort), (pid) => { const s2 = loadState(id); s2.pid = pid; saveState(id, s2); });
   report(id, join(runDir(id), `events-${n}.jsonl`), last, Math.round((Date.now() - t0) / 1000), end);
+  return join(runDir(id), `events-${n}.jsonl`);
 }
 
 function diff(id: string) {
