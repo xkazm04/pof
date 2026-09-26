@@ -4,7 +4,8 @@
  *
  *   npx tsx scripts/diablo/descent.ts [--class warrior|rogue|sorcerer]
  *     [--policy none|all-strength|balanced] [--tiles-per-level N]
- *     [--difficulty normal|nightmare|hell] [--multiplayer] [--weapon d1-<item>]
+ *     [--difficulty normal|nightmare|hell] [--multiplayer]
+ *     [--gear none|expected] [--weapon d1-<item>]
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -16,6 +17,7 @@ import {
   DESCENT_CLASSES,
   simulateDescent,
   type DescentClassName,
+  type DescentGear,
   type StatPointPolicy,
 } from '@/lib/catalog/reference/descentSim';
 import { listWrappers } from '@/lib/catalog/reference/wrappers-db';
@@ -41,6 +43,11 @@ if (!(['normal', 'nightmare', 'hell'] as const).includes(difficulty)) {
   console.error('--difficulty must be normal|nightmare|hell');
   process.exit(2);
 }
+const gear = (arg('gear') ?? 'none') as DescentGear;
+if (!(['none', 'expected'] as const).includes(gear)) {
+  console.error('--gear must be none|expected');
+  process.exit(2);
+}
 const tilesPerLevel = Number(arg('tiles-per-level') ?? DEFAULT_TILES_PER_LEVEL_ASSUMPTION);
 if (!Number.isInteger(tilesPerLevel) || tilesPerLevel < 0) {
   console.error('--tiles-per-level must be a non-negative integer');
@@ -53,6 +60,7 @@ const weapon = weaponId
   ? wrappers.find((wrapper) => wrapper.catalogId === 'items' && wrapper.entity.id === weaponId)
   : undefined;
 if (weaponId && !weapon) throw new Error(`no items wrapper ${weaponId}`);
+if (weapon && gear === 'expected') throw new Error('--gear expected cannot be combined with --weapon');
 
 const result = simulateDescent({
   className,
@@ -61,6 +69,7 @@ const result = simulateDescent({
   gameMode: combatGameMode(process.argv),
   difficulty,
   weapon,
+  gear,
   wrappers,
 });
 
@@ -81,6 +90,12 @@ console.table(result.levels.map((level) => ({
   'hardest to hit': level.hardestMonster.byLowestHeroHitChance.monster,
   'highest damage': level.hardestMonster.byHighestExpectedDamageTaken.monster,
   note: level.note,
+  ...(gear === 'expected' ? {
+    weapon: level.weaponAssumed?.weaponId ?? 'unarmed',
+    'weapon damage': level.weaponAssumed
+      ? `${level.weaponAssumed.damage.min}-${level.weaponAssumed.damage.max} +${level.weaponAssumed.damageBonusPercent}%`
+      : null,
+  } : {}),
 })));
 
 const path = join(
@@ -90,7 +105,7 @@ const path = join(
   'pof',
   'Diablo',
   'Combat',
-  `descent-${className}-${policy}.json`,
+  `descent-${className}-${policy}${gear === 'expected' ? '-expected-gear' : ''}.json`,
 );
 mkdirSync(dirname(path), { recursive: true });
 writeFileSync(path, JSON.stringify(result, null, 2));

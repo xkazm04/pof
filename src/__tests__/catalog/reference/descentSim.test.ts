@@ -108,6 +108,40 @@ const curve = [
   wrapper('curve-3', 'progression-curves', 'classes/Experience.tsv', { level: 3, experienceToReach: 10_000 }),
 ];
 
+const expectedSword = wrapper('d1-expected-sword', 'items', 'items/itemdat.tsv', {
+  subtype: 'Sword',
+  requiredStrength: 0,
+  requiredMagic: 0,
+  requiredDexterity: 0,
+  stats: [
+    { label: 'Damage Min', value: 5 },
+    { label: 'Damage Max', value: 8 },
+  ],
+}, {
+  dropRate: '1',
+  itemType: 'Sword',
+  miscId: 'NONE',
+  spell: 'Null',
+  minMonsterLevel: '1',
+  minDamage: '5',
+  maxDamage: '8',
+  minStrength: '0',
+  minMagic: '0',
+  minDexterity: '0',
+  uniqueBaseItem: 'EXPECTED_SWORD',
+});
+
+const expectedDamagePrefix = wrapper('d1-expected-damage-prefix', 'affixes', 'items/item_prefixes.tsv', {}, {
+  power: 'DAMP',
+  'power.value1': '100',
+  'power.value2': '100',
+  minLevel: '1',
+  itemTypes: 'Weapon',
+  alignment: 'Any',
+  chance: '1',
+  useful: 'true',
+});
+
 const locations: LocationEntityWrapper[] = Array.from({ length: 16 }, (_, index) => {
   const depth = index + 1;
   return {
@@ -191,5 +225,33 @@ describe('simulateDescent', () => {
       source: expect.stringContaining('explicit caller assumption'),
     });
     expect(result.assumptions.find((item) => item.id === 'stat-point-policy')?.detail).toContain('round-robin');
+  });
+
+  it('uses accumulated first-depth kills to report and wield expected gear on the second depth', () => {
+    const result = simulateDescent({
+      className: 'warrior',
+      policy: 'none',
+      tilesPerLevel: 600,
+      gameMode: 'single',
+      difficulty: 'normal',
+      gear: 'expected',
+      wrappers: [warrior, monster, expectedSword, expectedDamagePrefix, ...curve],
+      locations,
+    });
+
+    expect(result.gear).toBe('expected');
+    expect(result.levels[0].weaponAssumed).toMatchObject({
+      killsSoFar: 0,
+      weaponId: null,
+      damage: { min: 1, max: 1 },
+      damageBonusPercent: 0,
+    });
+    expect(result.levels[1].weaponAssumed).toMatchObject({
+      killsSoFar: 20,
+      weaponId: expectedSword.entity.id,
+      damage: { min: 4, max: 7 },
+      damageBonusPercent: 9,
+    });
+    expect(result.assumptions.some((assumption) => assumption.id === 'expected-loot-weapon')).toBe(true);
   });
 });

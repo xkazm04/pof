@@ -14,11 +14,18 @@ import {
 import { aggregateClassWrappers } from '@/lib/catalog/reference/classHeroes';
 import { contentHash } from '@/lib/catalog/reference/hash';
 import { locationEntities, type LocationEntityWrapper } from '@/lib/catalog/reference/locationSpecs';
+import {
+  bestWeaponExpectation,
+  monsterLootProfile,
+  type BestWeaponExpectation,
+  type WeightedLootMonsterProfile,
+} from '@/lib/catalog/reference/lootMath';
 import type { ReferenceWrapper } from '@/lib/catalog/reference/wrapper';
 
 export const DESCENT_CLASSES = ['warrior', 'rogue', 'sorcerer'] as const;
 export type DescentClassName = typeof DESCENT_CLASSES[number];
 export type StatPointPolicy = 'none' | 'all-strength' | 'balanced';
+export type DescentGear = 'none' | 'expected';
 
 /** Explicit non-solid-tile assumption used only when a caller does not provide one. */
 export const DEFAULT_TILES_PER_LEVEL_ASSUMPTION = 3_000;
@@ -52,6 +59,8 @@ export interface DescentLevelResult {
   expectedDamageTaken: number | null;
   hardestMonster: DescentHardestMonster;
   note: string;
+  /** Present only when expected gear is enabled, preserving the gear:none result shape. */
+  weaponAssumed?: BestWeaponExpectation;
 }
 
 export interface DescentSimulation {
@@ -61,6 +70,8 @@ export interface DescentSimulation {
   gameMode: GameMode;
   difficulty: Difficulty;
   weaponId: string | null;
+  /** Present only for the opt-in expected-loot model. */
+  gear?: 'expected';
   assumptions: DescentAssumption[];
   levels: DescentLevelResult[];
 }
@@ -72,6 +83,7 @@ export interface SimulateDescentInput {
   gameMode: GameMode;
   difficulty: Difficulty;
   weapon?: ReferenceWrapper;
+  gear?: DescentGear;
   /** Source rows are passed in; the simulator never reads a database or filesystem. */
   wrappers: readonly ReferenceWrapper[];
   /** Tests and other pure callers may pass already-projected location entities. */
@@ -172,7 +184,7 @@ function hardest(
   };
 }
 
-function assumptions(tilesPerLevel: number, policy: StatPointPolicy): DescentAssumption[] {
+function assumptions(tilesPerLevel: number, policy: StatPointPolicy, gear: DescentGear): DescentAssumption[] {
   return [
     {
       id: 'non-solid-tiles-per-level',
@@ -214,6 +226,12 @@ function assumptions(tilesPerLevel: number, policy: StatPointPolicy): DescentAss
       source: 'combatDuel.duel expectedPlayerSecondsToKill',
       detail: 'Every ambient kill is fought sequentially; navigation, doors, loot, recovery, and downtime add no seconds.',
     },
+    ...(gear === 'expected' ? [{
+      id: 'expected-loot-weapon',
+      value: 'conservative expected best melee weapon before each depth',
+      source: 'pinned monster-drop, base-selection, quality, and affix procedures',
+      detail: 'Prior kills form a weighted monster mixture. The model floors the expected maximum base-damage range and expected positive percentage-damage bonus; unique powers, flat damage, and base/affix correlation are omitted.',
+    }] : []),
   ];
 }
 
@@ -226,6 +244,9 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
   if (!(DESCENT_CLASSES as readonly string[]).includes(input.className)) throw new Error(`unknown Diablo I class ${input.className}`);
   if (!(['none', 'all-strength', 'balanced'] as const).includes(input.policy)) throw new Error(`unknown stat-point policy ${input.policy}`);
   if (!(['normal', 'nightmare', 'hell'] as const).includes(input.difficulty)) throw new Error(`unknown difficulty ${input.difficulty}`);
+  const gear = input.gear ?? 'none';
+  if (!(['none', 'expected'] as const).includes(gear)) throw new Error(`unknown gear policy ${gear}`);
+  if (gear === 'expected' && input.weapon) throw new Error('gear:expected cannot be combined with a fixed weapon');
   const tilesPerLevel = input.tilesPerLevel ?? DEFAULT_TILES_PER_LEVEL_ASSUMPTION;
   if (!Number.isInteger(tilesPerLevel) || tilesPerLevel < 0) throw new Error(`tilesPerLevel must be a non-negative integer (got ${tilesPerLevel})`);
 
@@ -248,6 +269,8 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
   const maximumExperience = curve.threshold(curve.maxLevel) ?? Number.MAX_SAFE_INTEGER;
   let heroLevel = 1;
   let totalExperience = 0;
+  let killsSoFar = 0;
+  const lootHistory: WeightedLootMonsterProfile[] = [];
   const levels: DescentLevelResult[] = [];
 
   for (let depth = 1; depth <= 16; depth++) {
@@ -263,7 +286,40 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
     if (pool.length === 0) throw new Error(`depth ${depth} has no eligible ordinary monster pool`);
 
     const heroLevelBefore = heroLevel;
-    const build = allocateStats(referenceBuild(classWrapper, heroLevelBefore, input.weapon), input.policy, maxima);
+    let build = allocateStats(referenceBuild(classWrapper, heroLevelBefore, input.weapon), input.policy, maxima);
+    let weaponAssumed: BestWeaponExpectation | undefined;
+    if (gear === 'expected') {
+      weaponAssumed = bestWeaponExpectation({
+        class: build.class,
+        depth,
+        killsSoFar,
+        monsterProfiles: lootHistory,
+        itemWrappers: input.wrappers,
+        affixWrappers: input.wrappers,
+        uniqueItemWrappers: input.wrappers,
+        difficulty: input.difficulty,
+        strength: build.strength,
+        magic: build.magic,
+        dexterity: build.dexterity,
+      });
+      const representative = weaponAssumed.weaponId == null
+        ? undefined
+        : input.wrappers.find((wrapper) => wrapper.file === 'items/itemdat.tsv' && wrapper.entity.id === weaponAssumed!.weaponId);
+      if (weaponAssumed.weaponId != null && !representative) {
+        throw new Error(`expected weapon base ${weaponAssumed.weaponId} is not supplied`);
+      }
+      if (representative) {
+        const equipped = referenceBuild(classWrapper, heroLevelBefore, representative);
+        build = {
+          ...build,
+          weaponDamage: weaponAssumed.damage,
+          weaponType: equipped.weaponType,
+          weaponGraphic: equipped.weaponGraphic,
+          swingSeconds: equipped.swingSeconds,
+          damageBonusPercent: weaponAssumed.damageBonusPercent,
+        };
+      }
+    }
     const playerAttack = build.weaponType === 'bow' ? 'ranged' : 'melee';
     const rows = pool.map((wrapper) => {
       const unique = wrapper.file === 'monsters/unique_monstdat.tsv';
@@ -327,7 +383,22 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       expectedDamageTaken: finiteOrNull(expectedDamage),
       hardestMonster: hardest(rows),
       note: notes.join(' '),
+      ...(weaponAssumed ? { weaponAssumed } : {}),
     });
+    if (gear === 'expected' && ambientPopulation > 0) {
+      const dungeonType = String(location.entity.data.dungeonType);
+      for (const wrapper of pool) {
+        lootHistory.push({
+          profile: monsterLootProfile(wrapper, {
+            dungeonLevel: depth,
+            dungeonType,
+            gameMode: input.gameMode,
+          }),
+          weight: ambientPopulation / pool.length,
+        });
+      }
+      killsSoFar += ambientPopulation;
+    }
   }
 
   return {
@@ -337,7 +408,8 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
     gameMode: input.gameMode,
     difficulty: input.difficulty,
     weaponId: input.weapon?.entity.id ?? null,
-    assumptions: assumptions(tilesPerLevel, input.policy),
+    ...(gear === 'expected' ? { gear } : {}),
+    assumptions: assumptions(tilesPerLevel, input.policy, gear),
     levels,
   };
 }
@@ -347,12 +419,16 @@ export function descentEntity(input: SimulateDescentInput): ReferenceWrapper {
   const simulation = simulateDescent(input);
   const classWrapper = classWrapperFrom(input.wrappers, input.className);
   const id = `d1-descent-${input.className}`;
+  const relevantCatalogs = input.gear === 'expected'
+    ? ['characters', 'bestiary', 'progression-curves', 'items', 'affixes']
+    : ['characters', 'bestiary', 'progression-curves'];
   const relevantFiles = [...new Set(input.wrappers
-    .filter((wrapper) => ['characters', 'bestiary', 'progression-curves'].includes(wrapper.catalogId))
+    .filter((wrapper) => relevantCatalogs.includes(wrapper.catalogId))
     .map((wrapper) => wrapper.entity.provenance.sourceFile))];
   const mappingVersion = contentHash([
     'd1-monster-type-selection', 'd1-unique-placement', 'd1-xp-award-law', 'd1-xp-curve-law',
     'combatMath', 'combatDuel', simulation.policy, simulation.gameMode, simulation.difficulty,
+    ...(simulation.gear === 'expected' ? ['expected-loot-gear'] : []),
   ]);
   return {
     wrapperId: `${classWrapper.sourceId}:combat-map:${id}`,
@@ -386,6 +462,7 @@ export function descentEntity(input: SimulateDescentInput): ReferenceWrapper {
         gameMode: simulation.gameMode,
         difficulty: simulation.difficulty,
         weaponId: simulation.weaponId,
+        ...(simulation.gear === 'expected' ? { gear: simulation.gear } : {}),
       },
       provenance: {
         kind: 'ingest',
