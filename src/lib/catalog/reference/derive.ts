@@ -5,8 +5,9 @@
  * "not in the reference", AI Behavior had nowhere to put it, and the columns they come from stayed mapped as gaps.
  *
  * A derivation is code, so its VERSION is part of the mapping version (`wrapTable`): the code revision plus the text of
- * every law it reads — edit a law and the rows re-project, instead of being skipped as "unchanged" (the W00 decoder
- * trap). An input that is missing, or a routine with no law yet, is a declared gap — never a number.
+ * every law and structured routine entry it reads — edit either and the rows re-project, instead of being skipped as
+ * "unchanged" (the W00 decoder trap). An input that is missing, or a routine with no cadence model yet, is a declared
+ * gap — never a number.
  */
 import { contentHash } from './hash';
 import { AI_LAW_IDS, behaviourLawTexts, expectedTicks, timingLaw } from './behaviourScale';

@@ -4,6 +4,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   aiRoutineLaw,
+  attackKindsOf,
+  behaviourLawTexts,
   convertBehaviour,
   timingLaw,
   type BehaviourInput,
@@ -21,6 +23,9 @@ describe('the laws are read from the canon, not remembered', () => {
   });
   it('an unmodelled AI routine is a refusal naming it', () => {
     expect(() => aiRoutineLaw('Succubus')).toThrow(/Succubus.*not modelled/);
+  });
+  it('includes the structured routine table in the derivation-version material', () => {
+    expect(behaviourLawTexts().at(-1)).toMatch(/"SkeletonRanged".*"rolls"/);
   });
 });
 
@@ -93,10 +98,13 @@ describe('SkeletonRanged (W09): an archer never approaches, shoots on a per-tick
 });
 
 describe('attackKindOf', () => {
-  it('derives the attack kind from the routine, and refuses an unmodelled one', async () => {
+  it('derives both structured and legacy attack kinds from the routine table', async () => {
     const { attackKindOf } = await import('@/lib/catalog/reference/behaviourScale');
+    expect(attackKindsOf('Bat')).toEqual(['melee', 'special', 'missile']);
+    expect(attackKindsOf('Lachdanan')).toEqual(['none']);
     expect(attackKindOf('SkeletonRanged')).toBe('ranged');
     expect(attackKindOf('Zombie')).toBe('melee');
-    expect(() => attackKindOf('Succubus')).toThrow(/not modelled/);
+    expect(attackKindOf('Succubus')).toBe('ranged');
+    expect(() => attackKindsOf('Unknown')).toThrow(/not in the engine-derived routine table/);
   });
 });

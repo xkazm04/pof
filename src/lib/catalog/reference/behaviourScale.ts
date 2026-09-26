@@ -3,15 +3,16 @@
  *
  * Diablo I keeps a monster's feel in two places: its animation data (`frames[6]`/`rate[6]`, `animFrameNum` in
  * monstdat) and its AI ROUTINE (code: how often it acts, how long it hesitates). Both are read here — the data from
- * the monster, the routine and the engine's timing from engine-derived LAWS in the diablo1 canon, parsed from the
- * rule text (registry: design-canon-as-executable-law; edit the prose and the number moves, lose the sentence and
- * this refuses). The routine's randomness is reduced to its EXPECTATION.
+ * the monster, the routine and the engine's timing from engine-derived laws plus the structured routine table.
+ * The routine's randomness is reduced to its expectation.
  *
  * Conversion: time is carried in real seconds (both games run in real time). Distance has no shared unit, so the
  * monster/player SPEED RATIO is preserved against a named player anchor on each side (the D23 idea): a monster that
  * steps as often as the reference hero walks as fast as PoF's player.
  */
 import { DIABLO1_CANON } from '@/lib/catalog/canon/profiles/diablo1';
+import { D1_AI_ROUTINES, isD1AiRoutineId, type AiAttackKind, type AiRoutineRoll } from '@/lib/catalog/reference/aiRoutines';
+import { stableStringify } from '@/lib/catalog/reference/hash';
 import type { ConversionLoss } from './playerScale';
 
 const lawBody = (id: string): string => {
@@ -41,37 +42,56 @@ export type AiRoutineLaw =
   | { routine: 'SkeletonMelee'; attack: Pct; attackPause: Pause; step: Pct; stepPause: Pause }
   | { routine: 'SkeletonRanged'; shoot: Pct; keepAwayTiles: number };
 
-const pct = (m: RegExpExecArray, i: number): Pct => ({ a: Number(m[i]), b: Number(m[i + 1]) });
-const pause = (m: RegExpExecArray, i: number): Pause => ({ c: Number(m[i]), d: Number(m[i + 1]), spread: Number(m[i + 2]) });
+const linearChance = (ai: string, roll: AiRoutineRoll): Pct => {
+  if (!('linear' in roll.chance)) throw new Error(`AI routine "${ai}" has no linear chance for ${roll.when}`);
+  return { a: roll.chance.linear.perIntelligence, b: roll.chance.linear.base };
+};
+
+const pauseOf = (ai: string, roll: AiRoutineRoll): Pause => {
+  if (!roll.pause) throw new Error(`AI routine "${ai}" has no structured pause for ${roll.when}`);
+  return { c: roll.pause.base, d: roll.pause.perIntelligence, spread: roll.pause.randomMax };
+};
+
+const rollAt = (ai: string, rolls: readonly AiRoutineRoll[], index: number): AiRoutineRoll => {
+  const roll = rolls[index];
+  if (!roll) throw new Error(`AI routine "${ai}" is missing structured roll ${index}`);
+  return roll;
+};
 
 /** The canon rule ids each modelled routine is read from (a derived value names its basis). */
-export const AI_LAW_IDS: Record<string, string> = {
-  Zombie: 'd1-ai-zombie-law', SkeletonMelee: 'd1-ai-skeleton-melee-law', SkeletonRanged: 'd1-ai-skeleton-ranged-law',
-};
+export const AI_LAW_IDS: Record<string, string> = Object.fromEntries(
+  Object.entries(D1_AI_ROUTINES).map(([ai, routine]) => [ai, routine.lawId]),
+);
 
 /** The rule texts the behaviour model reads — hashed into the ingest version so a law edit re-projects. */
 export function behaviourLawTexts(): string[] {
-  return ['d1-timing-law', ...Object.values(AI_LAW_IDS)].map((id) => DIABLO1_CANON.find((r) => r.id === id)?.body ?? `missing:${id}`);
+  const ids = ['d1-timing-law', ...new Set(Object.values(AI_LAW_IDS))];
+  return [
+    ...ids.map((id) => DIABLO1_CANON.find((r) => r.id === id)?.body ?? `missing:${id}`),
+    stableStringify(D1_AI_ROUTINES),
+  ];
 }
 
 export function aiRoutineLaw(ai: string): AiRoutineLaw {
+  if (!isD1AiRoutineId(ai) || !['Zombie', 'SkeletonMelee', 'SkeletonRanged'].includes(ai)) {
+    throw new Error(`AI routine "${ai}" is not modelled for cadence — its engine-derived structure is reference-only`);
+  }
+  const routine = D1_AI_ROUTINES[ai];
   if (ai === 'Zombie') {
-    return { routine: 'Zombie', act: pct(need('d1-ai-zombie-law', /acts on only \((\d+) x intelligence \+ (\d+)\)% of ticks/), 1) };
+    return { routine: 'Zombie', act: linearChance(ai, rollAt(ai, routine.rolls, 0)) };
   }
   if (ai === 'SkeletonMelee') {
-    const m = need('d1-ai-skeleton-melee-law',
-      /attacks on \((\d+) x intelligence \+ (\d+)\)% of decisions and otherwise pauses \((\d+) - (\d+) x intelligence\) plus 0-(\d+) ticks, then attacks; away from its target it steps on \((\d+) \+ (\d+) x intelligence\)% of decisions and otherwise pauses \((\d+) - (\d+) x intelligence\) plus 0-(\d+) ticks/);
+    const stepRoll = rollAt(ai, routine.rolls, 0);
+    const attackRoll = rollAt(ai, routine.rolls, 1);
     return {
       routine: 'SkeletonMelee',
-      attack: pct(m, 1), attackPause: pause(m, 3),
-      step: { a: Number(m[7]), b: Number(m[6]) }, stepPause: pause(m, 8),
+      attack: linearChance(ai, attackRoll), attackPause: pauseOf(ai, attackRoll),
+      step: linearChance(ai, stepRoll), stepPause: pauseOf(ai, stepRoll),
     };
   }
-  if (ai === 'SkeletonRanged') {
-    const m = need('d1-ai-skeleton-ranged-law', /within (\d+) tiles it may walk away[\s\S]*shoots an arrow on \((\d+) x intelligence \+ (\d+)\)% of ticks/);
-    return { routine: 'SkeletonRanged', keepAwayTiles: Number(m[1]), shoot: pct(m, 2) };
-  }
-  throw new Error(`AI routine "${ai}" is not modelled yet — add its engine-derived law to the diablo1 canon first`);
+  const keepAwayTiles = routine.distances.find((d) => d.name === 'retreat band')?.threshold;
+  if (keepAwayTiles === undefined) throw new Error('AI routine "SkeletonRanged" has no structured retreat threshold');
+  return { routine: 'SkeletonRanged', keepAwayTiles, shoot: linearChance(ai, rollAt(ai, routine.rolls, 2)) };
 }
 
 export interface BehaviourInput {
@@ -146,7 +166,14 @@ export function convertBehaviour(m: BehaviourInput, hero: { walkFrames: number }
   };
 }
 
-/** How a monster attacks, from its AI routine (/diablo W09): an archer's routine shoots, the others strike. */
+/** Every attack category used by a routine, without collapsing mixed or non-combat routines. */
+export function attackKindsOf(ai: string): AiAttackKind[] {
+  if (!isD1AiRoutineId(ai)) throw new Error(`AI routine "${ai}" is not in the engine-derived routine table`);
+  return [...new Set(D1_AI_ROUTINES[ai].attacks.map((entry) => entry.kind))];
+}
+
+/** Back-compatible binary view for older projection callers. */
 export function attackKindOf(ai: string): 'melee' | 'ranged' {
-  return aiRoutineLaw(ai).routine === 'SkeletonRanged' ? 'ranged' : 'melee';
+  const kinds = attackKindsOf(ai);
+  return kinds.includes('missile') || kinds.includes('summon') ? 'ranged' : 'melee';
 }
