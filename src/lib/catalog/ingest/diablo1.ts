@@ -119,7 +119,10 @@ export const ITEM_MAP: FieldMap = {
   equipType: mapped('data.equipType'),
   cursorGraphic: dropped('inventory sprite id'),
   itemType: mapped('data.subtype'),
-  uniqueBaseItem: gap('no base-item → unique-item derivation link; PoF `items` entities are flat'),
+  // Shared enum key used by the unique-item loader and runtime base-type match
+  // (.reference/devilutionX/Source/tables/itemdat.cpp:583,647;
+  // .reference/devilutionX/Source/items.cpp:1417-1427).
+  uniqueBaseItem: mapped('data.uniqueBase'),
   name: mapped('name'),
   shortName: dropped('narrow-UI label'),
   // The base type's minimum DROP level (qlvl): the level-driven loot (D7) gates which bases can drop at a monster's level.

@@ -22,21 +22,74 @@ export interface LinkReport {
   unresolved: UnresolvedLink[];
 }
 
-/** Pure. Returns new wrappers; the inputs are not mutated. */
-export function resolveLinks(wrappers: ReferenceWrapper[], idPrefix: string): { wrappers: ReferenceWrapper[]; report: LinkReport } {
-  const ids = new Map<string, Set<string>>();
-  for (const w of wrappers) {
-    (ids.get(w.catalogId) ?? ids.set(w.catalogId, new Set()).get(w.catalogId)!).add(w.entity.id);
+const BASE_ITEM_FILE = 'items/itemdat.tsv';
+const UNIQUE_ITEM_FILE = 'items/unique_itemdat.tsv';
+
+// Uniq(X) is not a unique_base_item value. The monster parser turns the two supported
+// tokens into _unique_items enum values (.reference/devilutionX/Source/tables/monstdat.cpp:299-306),
+// whose declarations are positions 0 and 1 (.reference/devilutionX/Source/items.h:47-50);
+// the unique loader appends table rows in that same order
+// (.reference/devilutionX/Source/tables/itemdat.cpp:642-665).
+// SpawnItem masks that enum index back out and passes it to SpawnUnique
+// (.reference/devilutionX/Source/items.cpp:3427-3432).
+const UNIQUE_DROP_ENUMS = ['CLEAVER', 'SKCROWN'] as const;
+
+function addBaseItemLinks(wrappers: ReferenceWrapper[]): ReferenceWrapper[] {
+  const bases = new Map<string, ReferenceWrapper[]>();
+  for (const wrapper of wrappers) {
+    if (wrapper.file !== BASE_ITEM_FILE) continue;
+    const base = wrapper.entity.data.uniqueBase;
+    if (typeof base !== 'string' || base === '') continue;
+    bases.set(base, [...(bases.get(base) ?? []), wrapper]);
   }
 
+  return wrappers.map((wrapper) => {
+    if (wrapper.file !== UNIQUE_ITEM_FILE) return wrapper;
+    const base = wrapper.entity.data.uniqueBase;
+    if (typeof base !== 'string' || base === '') return wrapper;
+
+    // Runtime selection joins the base row and every eligible unique by this enum
+    // (.reference/devilutionX/Source/items.cpp:1417-1436). Several itemdat rows can carry
+    // one enum, so preserve every target; forced unique spawning chooses the first match
+    // (.reference/devilutionX/Source/items.cpp:3210-3216), it does not redefine the join.
+    const targets = bases.get(base) ?? [];
+    const links = (wrapper.entity.links ?? []).filter((link) => link.role !== 'base-item');
+    if (targets.length === 0) {
+      links.push({ catalogId: 'items', entityId: base, role: 'base-item' });
+    } else {
+      links.push(...targets.map((target) => ({
+        catalogId: 'items', entityId: target.entity.id, role: 'base-item',
+      })));
+    }
+    return { ...wrapper, entity: { ...wrapper.entity, links } };
+  });
+}
+
+/** Pure. Returns new wrappers; the inputs are not mutated. */
+export function resolveLinks(wrappers: ReferenceWrapper[], idPrefix: string): { wrappers: ReferenceWrapper[]; report: LinkReport } {
+  const linkedWrappers = addBaseItemLinks(wrappers);
+  const ids = new Map<string, Set<string>>();
+  for (const w of linkedWrappers) {
+    (ids.get(w.catalogId) ?? ids.set(w.catalogId, new Set()).get(w.catalogId)!).add(w.entity.id);
+  }
+  const uniqueItems = linkedWrappers.filter((wrapper) => wrapper.file === UNIQUE_ITEM_FILE);
+
   const report: LinkReport = { resolved: 0, unresolved: [] };
-  const out = wrappers.map((w) => {
+  const out = linkedWrappers.map((w) => {
     if (!w.entity.links?.length) return w;
     const links = w.entity.links.map((l): CatalogLink => {
       const target = `${idPrefix}-${l.entityId}`;
       if (l.entityId.startsWith(`${idPrefix}-`) && ids.get(l.catalogId)?.has(l.entityId)) {
         report.resolved++;
         return l; // already resolved (a re-run over resolved wrappers is a no-op)
+      }
+      if (l.role === 'unique-drop') {
+        const uniqueIndex = UNIQUE_DROP_ENUMS.indexOf(l.entityId as typeof UNIQUE_DROP_ENUMS[number]);
+        const unique = uniqueIndex === -1 ? undefined : uniqueItems[uniqueIndex];
+        if (unique) {
+          report.resolved++;
+          return { ...l, entityId: unique.entity.id };
+        }
       }
       if (ids.get(l.catalogId)?.has(target)) {
         report.resolved++;

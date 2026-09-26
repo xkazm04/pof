@@ -8,6 +8,7 @@
  */
 import type { FieldMap } from '@/lib/catalog/ingest/fieldMap';
 import { DIABLO1_SOURCE, ITEM_MAP, MONSTER_MAP, SPELL_MAP } from '@/lib/catalog/ingest/diablo1';
+import { UNIQUE_ITEM_MAP } from '@/lib/catalog/ingest/diablo1UniqueItems';
 import { UNIQUE_MAP } from '@/lib/catalog/ingest/diablo1Uniques';
 import { slug, type DecodeStep } from '@/lib/catalog/ingest/decode';
 import { MONSTER_DERIVE, affixDerive, type DeriveSpec } from './derive';
@@ -88,6 +89,7 @@ export const DIABLO1: ReferenceSource = {
     { file: 'monsters/monstdat.tsv', catalogId: 'bestiary', technique: 'tsv', keyColumn: '_monster_id', map: MONSTER_MAP, derive: MONSTER_DERIVE },
     { file: 'monsters/unique_monstdat.tsv', catalogId: 'bestiary', technique: 'tsv', keyColumn: 'name', keyPrefix: 'uniq-', keyDecode: [slug()], map: UNIQUE_MAP },
     { file: 'items/itemdat.tsv', catalogId: 'items', technique: 'tsv', keyColumn: 'id', map: ITEM_MAP },
+    { file: 'items/unique_itemdat.tsv', catalogId: 'items', technique: 'tsv', keyColumn: 'name', keyPrefix: 'uitem-', keyDecode: [slug()], map: UNIQUE_ITEM_MAP },
     { file: 'spells/spelldat.tsv', catalogId: 'spellbook', technique: 'tsv', keyColumn: 'id', map: SPELL_MAP },
     // Affix TIERS (W11): names repeat across powers, so identity is positional; the side is the table (derive).
     { file: 'items/item_prefixes.tsv', catalogId: 'affixes', technique: 'tsv', map: AFFIX_MAP, derive: affixDerive('prefix'), positionalTag: 'pre-' },

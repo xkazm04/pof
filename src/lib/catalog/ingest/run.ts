@@ -56,6 +56,7 @@ const ROLE_CATALOG: Record<string, string> = {
   loot: 'loot-tables',
   ability: 'spellbook',
   'unique-drop': 'items',
+  'base-item': 'items',
   gossip: 'dialog-trees',
   'quest-log-line': 'dialog-trees',
   base: 'bestiary',
@@ -64,6 +65,7 @@ const ROLE_CATALOG: Record<string, string> = {
 
 const LIST_PATH = /^data\.([A-Za-z0-9_]+)\[\]$/;
 
+const STRUCTURED_LIST_PATH = /^data\.([A-Za-z0-9_]+)\[(\d+)\]\.([A-Za-z0-9_]+)$/;
 const LABELLED_PATH = /^data\.([A-Za-z0-9_]+)\[(.+)\]$/;
 const LINK_PATH = /^links\[role=(.+)\]$/;
 
@@ -76,6 +78,14 @@ function applyTo(entity: IngestedEntity, path: string, value: string): void {
 
   if (path === 'tags') {
     if (!entity.tags.includes(value)) entity.tags.push(value);
+    return;
+  }
+
+  const structured = STRUCTURED_LIST_PATH.exec(path);
+  if (structured) {
+    const values = (entity.data[structured[1]] ??= []) as Record<string, string>[];
+    const index = Number(structured[2]);
+    (values[index] ??= {})[structured[3]] = value;
     return;
   }
 
@@ -197,6 +207,13 @@ export function ingestRecords(table: TsvTable, opts: IngestTableOptions): TableI
       const rule = opts.map[column];
       if (rule.kind !== 'mapped') continue;
       for (const value of applyDecode(row[column], rule.decode)) applyTo(entity, rule.to, value);
+    }
+
+    // Indexed power slots are sparse when an upstream row leaves an earlier slot empty.
+    // The entity contract is an ordered list of actual powers, never JSON holes or value-only slots.
+    if (Array.isArray(entity.data.powers)) {
+      entity.data.powers = (entity.data.powers as ({ power?: string } | undefined)[])
+        .filter((power): power is { power: string } => Boolean(power?.power));
     }
 
     // The source key stays the identity even when a `name` column overwrote the label —

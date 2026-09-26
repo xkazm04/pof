@@ -127,8 +127,8 @@ describe('items: slot, drop level and attribute requirements have homes (W10, D2
   });
   it('reports the items coverage the mapping implies', () => {
     const a = auditColumns(REAL_HEADERS.itemdat, ITEM_MAP);
-    expect(a.mapped).toHaveLength(18);
-    expect(a.gap).toHaveLength(3);
+    expect(a.mapped).toHaveLength(19);
+    expect(a.gap).toHaveLength(2);
     expect(a.mapped.length + a.dropped.length + a.gap.length).toBe(23);
   });
 });
