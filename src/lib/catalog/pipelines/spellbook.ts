@@ -421,7 +421,9 @@ registerCatalogPipeline({
       // the burst component must equal baseDamage/cooldown, and the total must land on the
       // tier target the artifact declares (canon ±10%) — not just near a literal.
       accept: allOf(
-        fieldsPopulated('balance', 'Normalized balance score and declared target populated', ['kind', 'normalizedPower', 'tierTarget']),
+        // tierTarget is proj-balance LAW (powerWithinTierTarget below falls back to the canon target): it is required only where
+        // that law is in force — a Diablo spell has no tier target and grades UNGRADED there, not pending (/diablo W20, D-B7).
+        fieldsPopulated('balance', 'Normalized balance score populated', ['kind', 'normalizedPower']),
         fieldsRequiredWhen('balance', 'Damaging abilities declare their component equation', 'kind', ['damage'], ['components']),
         whenFieldIs(
           'balance',

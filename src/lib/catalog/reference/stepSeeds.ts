@@ -197,13 +197,19 @@ export function seedSpellSteps(w: ReferenceWrapper, caster?: ReferenceCaster): S
   const legacyFirebolt = caster && r.id === 'Firebolt' ? fireboltAt(caster, 1, manaCost) : null;
   const meanDamage = legacyFirebolt?.damage.mean ?? evaluated?.mean ?? null;
   const damageType = spec ? (spec.element === 'none' ? null : spec.element[0].toUpperCase() + spec.element.slice(1)) : element;
+  // A zero-cost row is a free class skill: only its cast animation limits it (W20, D-B8). Its cast time needs the named
+  // reference caster's casting frames (d1-timing-law ticks); without a caster the cast time is a gap, never invented.
+  const free = manaCost === 0;
+  const gate = free
+    ? { gatedBy: 'cast-time', castTime: caster ? Number((caster.castingFrames / timingLaw().ticksPerSecond).toFixed(3)) : REFERENCE_GAP }
+    : { gatedBy: 'resource' };
   const effect = spec
     ? {
         abilityId: r.id,
         activation: 'active cast from the reference spell row',
         kind: spec.effectKind,
         manaCost,
-        gatedBy: 'resource',
+        ...gate,
         ...(hasDamage ? {
           damageType,
           baseDamage: meanDamage ?? REFERENCE_GAP,
@@ -218,7 +224,7 @@ export function seedSpellSteps(w: ReferenceWrapper, caster?: ReferenceCaster): S
         kind: 'unclassified',
         damageType: element ?? REFERENCE_GAP,
         manaCost,
-        gatedBy: 'resource',
+        ...gate,
         baseDamage: REFERENCE_GAP,
         critChancePct: REFERENCE_GAP,
         critMulti: REFERENCE_GAP,
@@ -249,7 +255,7 @@ export function seedSpellSteps(w: ReferenceWrapper, caster?: ReferenceCaster): S
         : spec ? [] : ['damageType/baseDamage: no structured engine law for this row']),
       ...(spec || element ? [] : ['damageType: the spell carries no element trait']),
       'wiringContract: the reference engine does not define PoF grants, input bindings, dependencies, or verification',
-      ...(manaCost > 0 ? [] : ['cast gate: the spellbook checker has no zero-cost Skill gate shape']),
+      ...(manaCost > 0 || caster ? [] : ['castTime: a free skill cast time needs a named reference caster (--root)']),
     ],
   }];
   // Balance is conditional on damage; utility effects deliberately carry no damage fields.
