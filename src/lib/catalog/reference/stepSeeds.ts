@@ -17,6 +17,7 @@ import { CAST_LAW_ID, SPELL_LAW_IDS, fireboltAt, type ReferenceCaster } from './
 import { timingLaw } from '@/lib/catalog/reference/behaviourScale';
 import { damage } from '@/lib/catalog/reference/spellMath';
 import { spellSpec } from '@/lib/catalog/reference/spellSpecs';
+import { SPELL_STATUS_ENTITY_IDS } from '@/lib/catalog/reference/statusSpecs';
 
 export interface StepSeed {
   catalogId: string;
@@ -296,5 +297,29 @@ export function seedSpellSteps(w: ReferenceWrapper, caster?: ReferenceCaster): S
       ],
     });
   }
+  const statusEntityId = SPELL_STATUS_ENTITY_IDS[r.id];
+  const statusLink = statusEntityId
+    ? { catalogId: 'status-effects', entityId: statusEntityId, role: 'applies' }
+    : null;
+  seeds.push({
+    catalogId: 'spellbook', entityId: w.entity.id, step: 'Applies Status',
+    data: {
+      appliedStatus: statusLink ? {
+        statusId: `status-effects::${statusEntityId}`,
+        role: 'applies',
+        trigger: `${r.id} creates or activates the engine-owned state described by ${statusEntityId}-law.`,
+        reason: `${statusEntityId}-law`,
+        links: [statusLink],
+      } : {
+        statusId: 'none',
+        role: 'does-not-apply',
+        trigger: 'The cast creates no cataloged actor status; any missile, damage, healing, item, or world operation owns its own lifetime.',
+        reason: 'd1-status-overview-law',
+      },
+      links: statusLink ? [statusLink] : [],
+      [SOURCED_FIELD]: stamp(w, [statusLink ? `(law ${statusEntityId}-law)` : '(law d1-status-overview-law)']),
+    },
+    gaps: [],
+  });
   return seeds;
 }

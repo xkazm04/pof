@@ -24,10 +24,12 @@ function wrapper(spell: string, element: string) {
 }
 
 describe('seedSpellSteps coverage', () => {
-  it('gives every vanilla spell Effect Logic and every damaging spell Balance', () => {
+  it('gives every vanilla spell Effect Logic and Applies Status, plus Balance for damaging spells', () => {
     for (const spec of SPELL_SPECS) {
       const seeds = seedSpellSteps(wrapper(spec.spell, spec.element), caster);
-      const expected = spec.damage.kind === 'none' ? ['Effect Logic'] : ['Effect Logic', 'Balance'];
+      const expected = spec.damage.kind === 'none'
+        ? ['Effect Logic', 'Applies Status']
+        : ['Effect Logic', 'Balance', 'Applies Status'];
       expect(seeds.map((seed) => seed.step), spec.spell).toEqual(expected);
     }
   });

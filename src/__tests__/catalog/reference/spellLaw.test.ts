@@ -61,9 +61,9 @@ describe('seedSpellSteps — Balance', () => {
   const other = row({ id: 'TestNova', name: 'Test Nova', manaCost: '5', flags: 'Lightning' });
 
   it('seeds Balance only for a spell with a law, and only with a named caster', () => {
-    expect(seedSpellSteps(bolt).map((s) => s.step)).toEqual(['Effect Logic']);
-    expect(seedSpellSteps(other, caster).map((s) => s.step)).toEqual(['Effect Logic']);
-    expect(seedSpellSteps(bolt, caster).map((s) => s.step)).toEqual(['Effect Logic', 'Balance']);
+    expect(seedSpellSteps(bolt).map((s) => s.step)).toEqual(['Effect Logic', 'Applies Status']);
+    expect(seedSpellSteps(other, caster).map((s) => s.step)).toEqual(['Effect Logic', 'Applies Status']);
+    expect(seedSpellSteps(bolt, caster).map((s) => s.step)).toEqual(['Effect Logic', 'Balance', 'Applies Status']);
   });
 
   it('fills Effect Logic\'s baseDamage from the law only when it can', () => {

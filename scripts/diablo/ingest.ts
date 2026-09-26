@@ -35,6 +35,7 @@ import { seedQuestSteps } from '@/lib/catalog/reference/questSpecs';
 import { experienceCurve } from '@/lib/catalog/reference/experienceCurve';
 import { seedCharacterCombatSteps, seedProgressionCurveSteps } from '@/lib/catalog/reference/combatSeeds';
 import { loreBooks, seedLoreSteps } from '@/lib/catalog/reference/loreBooks';
+import { seedStatusSteps, statusEntities } from '@/lib/catalog/reference/statusSpecs';
 
 function arg(name: string): string | undefined {
   const i = process.argv.indexOf(`--${name}`);
@@ -96,6 +97,19 @@ if (seedCatalog) {
       const e = wrapper.entity;
       if (!promoted.has(e.id)) { console.log(`SKIP ${e.id}: not promoted (promote it first)`); continue; }
       for (const seed of seedLoreSteps(e)) {
+        const r = submitStepArtifact(seed.catalogId, seed.entityId, seed.step, seed.data, []);
+        console.log(`${seed.entityId} · ${seed.step}: ${r.acceptance?.status ?? '?'}${r.acceptance?.reason ? ` — ${r.acceptance.reason.slice(0, 150)}` : ''}`);
+        for (const g of seed.gaps) console.log(`    gap: ${g}`);
+      }
+    }
+    process.exit(0);
+  }
+  // Status effects are engine-derived pseudo-wrappers, not rows in the wrapper database.
+  if (seedCatalog === 'status-effects') {
+    for (const wrapper of statusEntities().filter((item) => !ids || ids.includes(item.entity.id))) {
+      const e = wrapper.entity;
+      if (!promoted.has(e.id)) { console.log(`SKIP ${e.id}: not promoted (promote it first)`); continue; }
+      for (const seed of seedStatusSteps(e)) {
         const r = submitStepArtifact(seed.catalogId, seed.entityId, seed.step, seed.data, []);
         console.log(`${seed.entityId} · ${seed.step}: ${r.acceptance?.status ?? '?'}${r.acceptance?.reason ? ` — ${r.acceptance.reason.slice(0, 150)}` : ''}`);
         for (const g of seed.gaps) console.log(`    gap: ${g}`);
@@ -169,9 +183,29 @@ if (seedCatalog) {
   process.exit(0);
 }
 
+// Engine-derived status rows need no --root: their pinned Source citations and projections are
+// code-owned pseudo-wrappers, while promotion still uses the same guarded persistence door.
+if (arg('promote') === 'status-effects') {
+  const limit = arg('limit');
+  const ids = arg('ids')?.split(',').map((s) => s.trim()).filter(Boolean);
+  const picked = selectForPromotion(statusEntities() as unknown as ReferenceWrapper[], {
+    catalogId: 'status-effects', entityIds: ids, limit: limit ? Number(limit) : undefined,
+  });
+  const promotion = promoteWrappers(picked, upsertEntity, (catalogId, entityId) => {
+    const seed = codeSeededEntities(catalogId).find((e) => e.id === entityId);
+    return seed ? `id is already the code seed "${seed.name}" in ${catalogId} — the seed always wins` : null;
+  });
+  if (process.argv.includes('--json')) console.log(JSON.stringify({ promotion }, null, 2));
+  else {
+    console.log(`promoted ${promotion.promoted.length} → catalog_entities (source ingest): ${promotion.promoted.join(', ') || '(none)'}`);
+    for (const r of promotion.refused) console.log(`   REFUSED ${r.entityId}: ${r.reason}${r.unsafeKeys ? ` (${r.unsafeKeys.join(', ')})` : ''}`);
+  }
+  process.exit(0);
+}
+
 const root = arg('root');
 if (!root) {
-  console.error('usage: ingest.ts --root <data root> [--source diablo1] [--promote <catalogId> [--limit N] [--ids a,b]] [--json]');
+  console.error('usage: ingest.ts --root <data root> [--source diablo1] [--promote <catalogId> [--limit N] [--ids a,b]] [--json]; status-effects promotion needs no --root');
   process.exit(2);
 }
 

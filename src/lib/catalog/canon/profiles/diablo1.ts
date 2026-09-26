@@ -14,6 +14,7 @@
  */
 import type { ProjectRule } from '../types';
 import { DIABLO1_SPELL_LAWS } from '@/lib/catalog/reference/spellSpecsData';
+import { DIABLO1_STATUS_LAWS } from '@/lib/catalog/reference/statusSpecs';
 
 /** PoF rules that are world-neutral ENGINEERING contracts, adopted unchanged under this profile. */
 export const DIABLO1_INHERITS_POF: readonly string[] = [
@@ -126,6 +127,7 @@ export const DIABLO1_CANON: readonly ProjectRule[] = [
     body: 'HorkDemon AI, derived from the engine: from 5 or more tiles it usually circles; from 3 or more tiles it spawns a monster ahead on (2 x intelligence + 43)% when space and capacity permit, otherwise it approaches on (2 x intelligence + 33)% or the post-move (2 x intelligence + 83)% threshold and pauses 10-19 ticks on failure; adjacent attacks use (2 x intelligence + 28)%.',
     refs: ['https://github.com/diasurgical/devilutionX/blob/4138a82/Source/monster.cpp (HorkDemonAi)'] },
   ...DIABLO1_SPELL_LAWS,
+  ...DIABLO1_STATUS_LAWS,
   { id: 'd1-spell-cast-law', profile: 'diablo1', category: 'game', scope: 'spellbook', title: 'Spell casting law (engine-derived)',
     body: "Spell casting, derived from the engine: ordinary spell missiles hit on clamp(Magic+class magic-to-hit-2*monster level,5,95)%; their distance counter remains 0, and every collision check rerolls. A cast uses one tick per class casting frame, releases on its action frame, and has no cooldown or passive mana regeneration. Mana is GetManaAmount's spell-level, class, minimum, Healing, and Resurrect result, not simply the table value.",
     refs: ['https://github.com/diasurgical/devilutionX/blob/4138a82/Source/missiles.cpp (MonsterMHit: GetMagicToHit - 2 x level - dist, clamp 5-95)', 'https://github.com/diasurgical/devilutionX/blob/4138a82/Source/player.cpp (getAnimationFramesAndTicksPerFrame: spell 1 tick/frame; DoSpell casts at _pSFNum; ProcessPlayers: no mana regeneration)', 'https://github.com/diasurgical/devilutionX/blob/4138a82/Source/spells.cpp (GetManaAmount)'] },
