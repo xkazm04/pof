@@ -24,6 +24,7 @@ import { routeTask, type CodexTier } from '../../src/lib/codex-exec/routing';
 import { buildCodexExecArgs, PROMPT_FROM_STDIN } from '../../src/lib/codex-exec/args';
 import { parseCodexEvents } from '../../src/lib/codex-exec/events';
 import { runCodex, stallMinutes } from '../codex/runner';
+import { getArtifact } from '../../src/lib/pipeline-artifacts-db';
 
 const REPO = resolve(dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), '..', '..');
 const HOME = process.env.POF_CODEX_HOME ?? resolve(REPO, '..', 'pof-codex');
@@ -37,6 +38,8 @@ if (!catalogId || !ids.length || !steps.length) {
   console.error('usage: produce.ts --catalog <id> --ids a,b --steps "Step A,Step B" [--concurrency 3] [--tier bulk] [--timeout-min 15]');
   process.exit(2);
 }
+const direction = opt('direction');
+const fix = process.argv.includes('--fix');
 const concurrency = Number(opt('concurrency') ?? 3);
 const timeoutMin = Number(opt('timeout-min') ?? 15);
 const route = routeTask((opt('tier') ?? 'bulk') as CodexTier);
@@ -59,7 +62,14 @@ async function produceOne(entityId: string, step: string): Promise<Outcome> {
   const dir = join(HOME, 'produce', stamp, `${entityId}__${step.replace(/[^A-Za-z0-9]+/g, '-')}`);
   mkdirSync(dir, { recursive: true });
   const cbId = stepCallbackId(catalogId!, entityId, step);
-  const prompt = `${buildStepRecipe(catalogId!, entityId, step, undefined, listRules()).prompt}\n\n${outputContract(cbId)}`;
+  // A re-produce without a direction re-emits the persisted artifact (it is cited as evidence). --fix turns the stored verdict's
+  // own reason into the direction, like the lab's "Produce fix" (/diablo W25: 9 lore graphs were re-emitted unchanged).
+  const prior = fix ? getArtifact(catalogId!, entityId, step) : null;
+  const priorNote = prior && prior.status !== 'pass' && prior.reason
+    ? `The current artifact is graded ${prior.status}: ${prior.reason}. Produce a corrected artifact that resolves exactly this.`
+    : '';
+  const produceDirection = [direction, priorNote].filter(Boolean).join('\n') || undefined;
+  const prompt = `${buildStepRecipe(catalogId!, entityId, step, produceDirection, listRules()).prompt}\n\n${outputContract(cbId)}`;
   writeFileSync(join(dir, 'prompt.md'), prompt);
   const last = join(dir, 'last.txt');
   const events = join(dir, 'events.jsonl');
