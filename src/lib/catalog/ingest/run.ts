@@ -14,7 +14,7 @@
  */
 import { auditColumns, type ColumnAudit, type FieldMap } from './fieldMap';
 import { parseTsv, type MalformedRow, type TsvRefusal, type TsvTable } from './tsv';
-import { applyDecode } from './decode';
+import { applyDecode, type DecodeStep } from './decode';
 import type { CatalogEntityBase, CatalogLink, EntityProvenance } from '../types';
 
 /**
@@ -58,6 +58,8 @@ const ROLE_CATALOG: Record<string, string> = {
   'unique-drop': 'items',
   gossip: 'dialog-trees',
   'quest-log-line': 'dialog-trees',
+  base: 'bestiary',
+  'talk-line': 'dialog-trees',
 };
 
 const LIST_PATH = /^data\.([A-Za-z0-9_]+)\[\]$/;
@@ -143,6 +145,8 @@ export interface IngestTableOptions {
   displayName?: string;
   /** Prefix added to declared and positional keys in the projected entity id. */
   keyPrefix?: string;
+  /** Serializable decoder applied to a declared key before duplicate checks and id construction. */
+  keyDecode?: DecodeStep[];
 }
 
 /** Pure: text in, entities and report out. No database, no filesystem. */
@@ -166,7 +170,8 @@ export function ingestRecords(table: TsvTable, opts: IngestTableOptions): TableI
     : undefined;
 
   table.rows.forEach((row, index) => {
-    const declared = opts.keyColumn ? row[opts.keyColumn] : '';
+    const declaredRaw = opts.keyColumn ? row[opts.keyColumn] : '';
+    const declared = declaredRaw ? (applyDecode(declaredRaw, opts.keyDecode)[0] ?? '') : '';
     const rowId = opts.rowIds?.[index];
     const positional = opts.rowIds !== undefined || !declared;
     if (positional) positionalIds++;

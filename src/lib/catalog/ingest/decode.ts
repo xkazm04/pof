@@ -21,11 +21,17 @@ export type DecodeStep =
   | { op: 'split'; sep: string }
   /** Values that mean "none" in the source vocabulary; they produce nothing. */
   | { op: 'drop'; values: string[] }
+  /** Add a stable namespace to a source identifier. */
+  | { op: 'prefix'; value: string }
+  /** Convert a human label to the lower-kebab identity used by catalog ids. */
+  | { op: 'slug' }
   /** Keep only the capture group of `pattern`; a value that does not match produces nothing. */
   | { op: 'unwrap'; pattern: string };
 
 export const split = (sep: string): DecodeStep => ({ op: 'split', sep });
 export const dropValues = (...values: string[]): DecodeStep => ({ op: 'drop', values });
+export const prefix = (value: string): DecodeStep => ({ op: 'prefix', value });
+export const slug = (): DecodeStep => ({ op: 'slug' });
 export const unwrap = (pattern: string): DecodeStep => ({ op: 'unwrap', pattern });
 
 /**
@@ -39,6 +45,12 @@ export function applyDecode(raw: string, steps: readonly DecodeStep[] = []): str
       values = values.flatMap((v) => v.split(step.sep).map((p) => p.trim()).filter((p) => p !== ''));
     } else if (step.op === 'drop') {
       values = values.filter((v) => !step.values.includes(v));
+    } else if (step.op === 'prefix') {
+      values = values.map((v) => `${step.value}${v}`);
+    } else if (step.op === 'slug') {
+      values = values
+        .map((v) => v.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''))
+        .filter(Boolean);
     } else {
       const re = new RegExp(step.pattern);
       values = values.flatMap((v) => {

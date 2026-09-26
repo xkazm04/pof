@@ -29,6 +29,8 @@ export interface MonsterProfile {
   level: number; hitPoints: IntegerRange; armourClass: number; toHit: number; damage: IntegerRange;
   monsterClass: 'undead' | 'demon' | 'animal'; resist: ElementFlags; immune: ElementFlags;
   difficulty: Difficulty; possibleToHit?: boolean; petrified?: boolean;
+  /** True when an adapter has already applied the engine difficulty transforms. */
+  difficultyAdjusted?: boolean;
 }
 export interface DamageDistribution {
   /** All damage fields use the engine's six-fractional-bit unit: 64 = one hit point. */
@@ -40,8 +42,8 @@ export const FIXED_POINT = 64;
 const UINT32_MAX = 2 ** 32 - 1;
 const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
 const div = (n: number, d: number) => Math.trunc(n / d);
-const monsterLevel = (m: MonsterProfile) => m.level + (m.difficulty === 'nightmare' ? 15 : m.difficulty === 'hell' ? 30 : 0);
-const monsterToHit = (m: MonsterProfile) => m.toHit + (m.difficulty === 'nightmare' ? 85 : m.difficulty === 'hell' ? 120 : 0);
+const monsterLevel = (m: MonsterProfile) => m.level + (m.difficultyAdjusted ? 0 : m.difficulty === 'nightmare' ? 15 : m.difficulty === 'hell' ? 30 : 0);
+const monsterToHit = (m: MonsterProfile) => m.toHit + (m.difficultyAdjusted ? 0 : m.difficulty === 'nightmare' ? 85 : m.difficulty === 'hell' ? 120 : 0);
 const playerArmour = (p: PlayerBuild) => p.armourClass + div(p.dexterity, 5);
 const flag = (flags: ElementFlags, element: Element) => element === 'physical' ? false : flags[element] === true;
 const floorChance = (dungeonLevel: number, fallback: number) => dungeonLevel === 16 ? 30 : dungeonLevel === 15 ? 25 : dungeonLevel === 14 ? 20 : fallback;
@@ -136,7 +138,7 @@ export function monsterDamageByDifficulty(m: MonsterProfile, input: number | { p
   const family = typeof input === 'number' ? 'ordinary' : input.family ?? 'ordinary';
   const attack = typeof input === 'number' ? 'melee' : input.attack ?? 'melee';
   const baseBounds = typeof input === 'number' ? m.damage : input.baseBounds ?? m.damage;
-  const transform = (bound: number) => m.difficulty === 'nightmare' ? 2 * (bound + 2) : m.difficulty === 'hell' ? 4 * bound + 6 : bound;
+  const transform = (bound: number) => m.difficultyAdjusted ? bound : m.difficulty === 'nightmare' ? 2 * (bound + 2) : m.difficulty === 'hell' ? 4 * bound + 6 : bound;
   const adjustment = family === 'magma' ? -2 : family === 'storm' ? 4 : 0;
   const bounds = { min: transform(baseBounds.min) + adjustment, max: transform(baseBounds.max) + adjustment };
   const entries: Array<readonly [number, number]> = [];

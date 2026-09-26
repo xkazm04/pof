@@ -47,6 +47,8 @@ export function provenanceFor(sourceFile: string, sourceRow: string): EntityProv
 
 const NO_RESIST = 'PoF bestiary has no per-element resistance field — `stats` is an untyped {label,value}[] with no damage-type vocabulary';
 const NO_DRAIN = 'on-hit stat-drain has no representation: `status-effects` is a catalog but no archetype→status-effect link `role` exists';
+/** Both loaders parse the same resistance enum list (.reference/devilutionX/Source/tables/monstdat.cpp:396,447). */
+export const MONSTER_RESISTANCE_DECODE = [split(',')] as const;
 
 export const MONSTER_MAP: FieldMap = {
   _monster_id: mapped('id'),

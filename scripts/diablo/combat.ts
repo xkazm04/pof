@@ -71,7 +71,11 @@ const db = getDb();
 const characterWrappers = listWrappers(db, { sourceId: 'diablo1', catalogId: 'characters' });
 const itemWrappers = listWrappers(db, { sourceId: 'diablo1', catalogId: 'items' });
 const bestiaryWrappers = listWrappers(db, { sourceId: 'diablo1', catalogId: 'bestiary' })
-  .filter((wrapper) => wrapper.file === 'monsters/monstdat.tsv');
+  .filter((wrapper) => wrapper.file === 'monsters/monstdat.tsv' || wrapper.file === 'monsters/unique_monstdat.tsv');
+const baseWrappers = bestiaryWrappers.filter((wrapper) => wrapper.file === 'monsters/monstdat.tsv');
+const baseFor = (wrapper: ReferenceWrapper) => wrapper.file === 'monsters/unique_monstdat.tsv'
+  ? baseWrappers.find((base) => base.raw._monster_id === wrapper.raw.type)
+  : undefined;
 const progressionWrappers = listWrappers(db, { sourceId: 'diablo1', catalogId: 'progression-curves' });
 const weaponId = arg('weapon');
 const weapon = weaponId ? itemWrappers.find((wrapper) => wrapper.entity.id === weaponId) : undefined;
@@ -81,7 +85,7 @@ const seedIds = csv(arg('seed'));
 const requestedMonsters = csv(arg('monsters')) ?? seedIds;
 const monsters = requestedMonsters
   ? bestiaryWrappers.filter((wrapper) => requestedMonsters.includes(wrapper.entity.id))
-  : bestiaryWrappers.filter((wrapper) => stat(wrapper, 'Level') <= level + 10);
+  : bestiaryWrappers.filter((wrapper) => monsterProfile(wrapper, difficulty, baseFor(wrapper)).level <= level + 10);
 const missingMonsters = (requestedMonsters ?? []).filter((id) => !monsters.some((wrapper) => wrapper.entity.id === id));
 if (missingMonsters.length) console.log(`no monstdat wrapper for: ${missingMonsters.join(', ')}`);
 
@@ -112,7 +116,8 @@ for (const folder of classes) {
   const build = referenceBuild(classWrapper, level, weapon);
   const playerAttack = build.weaponType === 'bow' ? 'ranged' : 'melee';
   const rows = monsters.map((wrapper): DuelRow => {
-    const monster = monsterProfile(wrapper, difficulty);
+    const base = baseFor(wrapper);
+    const monster = monsterProfile(wrapper, difficulty, base);
     const result = duel(build, coefficients, monster, {
       playerAttack,
       monsterAttack: 'melee',
@@ -120,12 +125,15 @@ for (const folder of classes) {
     });
     const currentTotal = level <= 1 ? 0 : curve.threshold(level - 1) ?? 0;
     const xp = experienceAward({
-      baseExperience: stat(wrapper, 'XP'),
+      baseExperience: stat(base ?? wrapper, 'XP'),
       difficulty,
+      unique: wrapper.file === 'monsters/unique_monstdat.tsv',
       whoHitMask: 1,
       localPlayerBit: 1,
       playerLevel: level,
-      monsterLevel: monster.level,
+      monsterLevel: monster.level - (wrapper.file === 'monsters/unique_monstdat.tsv'
+        ? difficulty === 'nightmare' ? 15 : difficulty === 'hell' ? 30 : 0
+        : 0),
       totalExperience: currentTotal,
       curve,
     });

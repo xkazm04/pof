@@ -67,6 +67,26 @@ describe('combat wrapper adapters', () => {
     });
   });
 
+  it('resolves a unique monster over its base wrapper', () => {
+    const base = wrapper('d1-MT_SYNTH', 'bestiary', {
+      category: 'Demon',
+      stats: [
+        { label: 'Level', value: '2' }, { label: 'HP Min', value: '10' }, { label: 'HP Max', value: '12' },
+        { label: 'Armor Class', value: '8' }, { label: 'To Hit', value: '19' },
+        { label: 'Damage Min', value: '2' }, { label: 'Damage Max', value: '4' },
+      ],
+    }, { _monster_id: 'MT_SYNTH', level: '2', armorClass: '8', toHit: '19' }, 'monsters/monstdat.tsv');
+    const unique = wrapper('d1-uniq-synthetic', 'bestiary', {}, {
+      type: 'MT_SYNTH', level: '0', maxHp: '150', ai: 'SyntheticAI', intelligence: '2',
+      minDamage: '5', maxDamage: '9', resistance: 'IMMUNE_FIRE', customToHit: '0', customArmorClass: '0',
+    }, 'monsters/unique_monstdat.tsv');
+    expect(monsterProfile(unique, 'normal', base)).toEqual({
+      level: 7, hitPoints: { min: 150, max: 150 }, armourClass: 8, toHit: 19,
+      damage: { min: 5, max: 9 }, monsterClass: 'demon', resist: {}, immune: { fire: true },
+      difficulty: 'normal', difficultyAdjusted: true,
+    });
+  });
+
   it('refuses Hellfire class wrappers', () => {
     expect(() => classCoefficients(wrapper('d1-class-monk', 'characters', classData))).toThrow(/Hellfire/);
   });

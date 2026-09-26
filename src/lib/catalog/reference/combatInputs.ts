@@ -1,4 +1,5 @@
 import type { ReferenceWrapper } from '@/lib/catalog/reference/wrapper';
+import { effectiveUnique } from '@/lib/catalog/reference/uniqueMonsters';
 import {
   FIXED_POINT,
   type ClassCoefficients,
@@ -139,15 +140,34 @@ function resistanceFlags(raw: string, prefix: 'RESIST' | 'IMMUNE'): ElementFlags
   };
 }
 
-/** Translate a monstdat wrapper into the exact profile consumed by the combat laws. */
-export function monsterProfile(bestiaryWrapper: ReferenceWrapper, difficulty: Difficulty): MonsterProfile {
-  if (bestiaryWrapper.catalogId !== 'bestiary' || bestiaryWrapper.file !== 'monsters/monstdat.tsv') {
-    throw new Error(`${bestiaryWrapper.entity.id} is not a monstdat bestiary wrapper`);
+/** Translate an ordinary or unique Diablo monster wrapper into the profile consumed by the combat laws. */
+export function monsterProfile(bestiaryWrapper: ReferenceWrapper, difficulty: Difficulty, baseWrapper?: ReferenceWrapper): MonsterProfile {
+  const isUnique = bestiaryWrapper.catalogId === 'bestiary' && bestiaryWrapper.file === 'monsters/unique_monstdat.tsv';
+  if (bestiaryWrapper.catalogId !== 'bestiary' || (!isUnique && bestiaryWrapper.file !== 'monsters/monstdat.tsv')) {
+    throw new Error(`${bestiaryWrapper.entity.id} is not a Diablo monster bestiary wrapper`);
   }
   if (!(['normal', 'nightmare', 'hell'] as const).includes(difficulty)) throw new Error(`unknown difficulty ${difficulty}`);
-  const category = String(bestiaryWrapper.entity.data.category ?? '').toLowerCase();
+  if (isUnique && !baseWrapper) throw new Error(`${bestiaryWrapper.entity.id} requires its monstdat base wrapper`);
+  const categoryOwner = isUnique ? baseWrapper! : bestiaryWrapper;
+  const category = String(categoryOwner.entity.data.category ?? '').toLowerCase();
   if (!['undead', 'demon', 'animal'].includes(category)) {
-    throw new Error(`${bestiaryWrapper.entity.id} has unknown monster class ${String(bestiaryWrapper.entity.data.category)}`);
+    throw new Error(`${bestiaryWrapper.entity.id} has unknown monster class ${String(categoryOwner.entity.data.category)}`);
+  }
+  if (isUnique) {
+    const effective = effectiveUnique(bestiaryWrapper, baseWrapper!, difficulty);
+    const resistance = effective.resistances.value.join(',');
+    return {
+      level: effective.level.value,
+      hitPoints: effective.hitPoints.value,
+      armourClass: effective.armorClass.value,
+      toHit: effective.toHit.value,
+      damage: effective.damage.value,
+      monsterClass: category as MonsterProfile['monsterClass'],
+      resist: resistanceFlags(resistance, 'RESIST'),
+      immune: resistanceFlags(resistance, 'IMMUNE'),
+      difficulty,
+      difficultyAdjusted: true,
+    };
   }
   const resistance = bestiaryWrapper.raw.resistance ?? '';
   return {

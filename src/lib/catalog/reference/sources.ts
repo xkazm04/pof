@@ -8,6 +8,8 @@
  */
 import type { FieldMap } from '@/lib/catalog/ingest/fieldMap';
 import { DIABLO1_SOURCE, ITEM_MAP, MONSTER_MAP, SPELL_MAP } from '@/lib/catalog/ingest/diablo1';
+import { UNIQUE_MAP } from '@/lib/catalog/ingest/diablo1Uniques';
+import { slug, type DecodeStep } from '@/lib/catalog/ingest/decode';
 import { MONSTER_DERIVE, affixDerive, type DeriveSpec } from './derive';
 import { AFFIX_MAP } from '@/lib/catalog/ingest/diablo1Affixes';
 import {
@@ -45,6 +47,8 @@ export interface ReferenceTableSpec {
   displayName?: string;
   /** Prefix added to a declared key when constructing the projected entity id. */
   keyPrefix?: string;
+  /** Serializable decoder applied to the key column before identity is constructed. */
+  keyDecode?: DecodeStep[];
 }
 
 export interface ReferenceManifestSpec {
@@ -82,6 +86,7 @@ export const DIABLO1: ReferenceSource = {
   obtain: 'git clone https://github.com/diasurgical/devilutionX — the data root is assets/txtdata',
   tables: [
     { file: 'monsters/monstdat.tsv', catalogId: 'bestiary', technique: 'tsv', keyColumn: '_monster_id', map: MONSTER_MAP, derive: MONSTER_DERIVE },
+    { file: 'monsters/unique_monstdat.tsv', catalogId: 'bestiary', technique: 'tsv', keyColumn: 'name', keyPrefix: 'uniq-', keyDecode: [slug()], map: UNIQUE_MAP },
     { file: 'items/itemdat.tsv', catalogId: 'items', technique: 'tsv', keyColumn: 'id', map: ITEM_MAP },
     { file: 'spells/spelldat.tsv', catalogId: 'spellbook', technique: 'tsv', keyColumn: 'id', map: SPELL_MAP },
     // Affix TIERS (W11): names repeat across powers, so identity is positional; the side is the table (derive).

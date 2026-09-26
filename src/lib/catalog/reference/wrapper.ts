@@ -13,6 +13,7 @@
  * wrapper; the raw record and its identity do not.
  */
 import { ingestRecords, type IngestedEntity } from '@/lib/catalog/ingest/run';
+import { applyDecode } from '@/lib/catalog/ingest/decode';
 import type { ColumnAudit, FieldMap } from '@/lib/catalog/ingest/fieldMap';
 import type { MalformedRow, TsvRefusal } from '@/lib/catalog/ingest/tsv';
 import type { EntityProvenance } from '@/lib/catalog/types';
@@ -70,9 +71,9 @@ export function wrapTable(source: ReferenceSource, spec: ReferenceTableSpec, tex
   const table = technique.read(text);
   // A derivation is code: its version (code revision + the laws it reads) is part of the mapping version, or an edit to
   // it would leave every row "unchanged" and never re-project (D29).
-  const hasProjectionOptions = spec.displayName !== undefined || spec.keyPrefix !== undefined;
+  const hasProjectionOptions = spec.displayName !== undefined || spec.keyPrefix !== undefined || spec.keyDecode !== undefined;
   const baseVersion = hasProjectionOptions
-    ? contentHash({ map: spec.map, rowIds: spec.rowIds, displayName: spec.displayName, keyPrefix: spec.keyPrefix })
+    ? contentHash({ map: spec.map, rowIds: spec.rowIds, displayName: spec.displayName, keyPrefix: spec.keyPrefix, keyDecode: spec.keyDecode })
     : spec.rowIds ? contentHash({ map: spec.map, rowIds: spec.rowIds }) : mappingVersion(spec.map);
   const version = spec.derive ? `${baseVersion}+${spec.derive.version()}` : baseVersion;
   const provenanceFor = (sourceFile: string, sourceRow: string): EntityProvenance => ({
@@ -83,7 +84,7 @@ export function wrapTable(source: ReferenceSource, spec: ReferenceTableSpec, tex
   const result = ingestRecords(table, {
     catalogId: spec.catalogId, sourceFile: spec.file, keyColumn: spec.keyColumn,
     map: spec.map, provenanceFor, idPrefix: source.idPrefix, positionalTag: spec.positionalTag,
-    rowIds: spec.rowIds, displayName: spec.displayName, keyPrefix: spec.keyPrefix,
+    rowIds: spec.rowIds, displayName: spec.displayName, keyPrefix: spec.keyPrefix, keyDecode: spec.keyDecode,
   });
 
   if (spec.derive) {
@@ -92,7 +93,8 @@ export function wrapTable(source: ReferenceSource, spec: ReferenceTableSpec, tex
 
   const seen = new Set<string>();
   const wrappers = table.rows.map((raw, i): ReferenceWrapper => {
-    const declared = spec.keyColumn ? (raw[spec.keyColumn] ?? '').trim() : '';
+    const declaredRaw = spec.keyColumn ? (raw[spec.keyColumn] ?? '').trim() : '';
+    const declared = declaredRaw ? (applyDecode(declaredRaw, spec.keyDecode)[0] ?? '') : '';
     const rowId = spec.rowIds?.[i];
     const key = rowId || declared || `row${i}`;
     // A duplicate key is REPORTED by ingestRecords; for storage the later row still needs
