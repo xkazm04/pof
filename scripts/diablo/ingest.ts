@@ -30,6 +30,7 @@ import { parseTsv } from '../../src/lib/catalog/ingest/tsv';
 import { referenceCaster, type ReferenceCaster } from '../../src/lib/catalog/reference/spellLaw';
 import { unresolvedQuestTalk } from '../../src/lib/catalog/reference/questTalk';
 import { dialogueTrees, seedDialogSteps, type DialogueTreesResult } from '@/lib/catalog/reference/dialogueTrees';
+import { seedQuestSteps } from '@/lib/catalog/reference/questSpecs';
 import { experienceCurve } from '@/lib/catalog/reference/experienceCurve';
 
 function arg(name: string): string | undefined {
@@ -75,6 +76,25 @@ if (seedCatalog) {
   if (seedCatalog === 'dialog-trees') {
     for (const e of seededEntities('dialog-trees').filter((x) => x.id.startsWith('d1-dialog-') && (!ids || ids.includes(x.id)))) {
       for (const seed of seedDialogSteps(e as unknown as ReferenceWrapper['entity'])) {
+        const r = submitStepArtifact(seed.catalogId, seed.entityId, seed.step, seed.data, []);
+        console.log(`${seed.entityId} · ${seed.step}: ${r.acceptance?.status ?? '?'}${r.acceptance?.reason ? ` — ${r.acceptance.reason.slice(0, 150)}` : ''}`);
+        for (const g of seed.gaps) console.log(`    gap: ${g}`);
+      }
+    }
+    process.exit(0);
+  }
+  // Quest behaviour is engine-derived. Town conversations are already promoted W16
+  // entities, so bind topics from those entities rather than rebuilding the table rows.
+  if (seedCatalog === 'quests') {
+    const conversations = seededEntities('dialog-trees').filter((e) => e.id.startsWith('d1-dialog-TOWN_'));
+    for (const e of seededEntities('quests').filter((x) => x.id.startsWith('d1-Q_') && (!ids || ids.includes(x.id)))) {
+      if (!promoted.has(e.id)) { console.log(`SKIP ${e.id}: not promoted (promote it first)`); continue; }
+      const expansion = (e.data as { derived?: { expansion?: unknown } } | undefined)?.derived?.expansion;
+      if (expansion === 'hellfire') {
+        console.log(`OUT OF SCOPE ${e.id}: d1-quest-scope-law limits engine-derived quest specs to vanilla Diablo I`);
+        continue;
+      }
+      for (const seed of seedQuestSteps(e, conversations)) {
         const r = submitStepArtifact(seed.catalogId, seed.entityId, seed.step, seed.data, []);
         console.log(`${seed.entityId} · ${seed.step}: ${r.acceptance?.status ?? '?'}${r.acceptance?.reason ? ` — ${r.acceptance.reason.slice(0, 150)}` : ''}`);
         for (const g of seed.gaps) console.log(`    gap: ${g}`);
