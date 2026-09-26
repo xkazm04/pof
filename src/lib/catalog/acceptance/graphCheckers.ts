@@ -31,3 +31,27 @@ export function graphValid(field: string, label: string): Checker {
     return { label, tier: 'L0', status: 'pass', detail: `${nodes.length} nodes · ${edges.length} edges · reachable` };
   }, { field, shape: 'a node/edge graph { nodes: [{ id, label, terminal? }], edges: [{ from, to, label? }] } — every node reachable from the FIRST node, at least one node terminal: true' });
 }
+
+/**
+ * Nodes written as `<catalog>::<id>` are CLAIMS that an entity exists (/diablo W22: 21 Diablo lore graphs passed while naming
+ * factions::horadrim and locations::high-heavens — an entity that does not exist and a catalog that does not exist). A node in a
+ * catalog PoF does not have fails; a node naming a missing entity defers, like a declared link (the target may be authored
+ * later). Plain nodes without `::` are concepts and are not checked. No context (a rollup path) → not graded here.
+ */
+export function graphNodesResolve(field: string, label: string, knownCatalogs: () => ReadonlySet<string>): Checker {
+  return tagRequiredFields((data, ctx) => {
+    const nodes = ((data[field] ?? {}) as GraphData).nodes ?? [];
+    const refs = nodes.map((n) => /^([a-z0-9-]+)::(.+)$/.exec(n.id)).filter((m): m is RegExpExecArray => !!m);
+    if (!refs.length) return { label, tier: 'L2', status: 'pass', detail: 'no catalog nodes' };
+    const catalogs = knownCatalogs();
+    const foreign = refs.filter((m) => !catalogs.has(m[1]));
+    if (foreign.length) {
+      return { label, tier: 'L2', status: 'fail', detail: `${foreign.length} node(s) in no catalog`, reason: `graph nodes name catalogs PoF does not have: ${foreign.map((m) => m[0]).join(', ')} — use a registered catalog id, or write the node as a plain concept (no "::")` };
+    }
+    if (!ctx) return { label, tier: 'L2', status: 'pass', detail: `${refs.length} catalog node(s) — resolution needs catalog context` };
+    const missing = refs.filter((m) => !ctx.has(m[1], m[2]));
+    return missing.length
+      ? { label, tier: 'L2', status: 'deferred', detail: `${refs.length - missing.length}/${refs.length} resolve`, reason: `graph nodes name entities that do not exist: ${missing.map((m) => m[0]).join(', ')} — seed them, or write them as plain concepts (no "::")` }
+      : { label, tier: 'L2', status: 'pass', detail: `${refs.length}/${refs.length} catalog nodes resolve` };
+  }, { field, shape: 'a node id written "<catalog>::<entity id>" must name a REAL entity of a registered PoF catalog (it is checked); anything else — a place, a faction, an idea the entity only mentions — is a plain node id without "::"' });
+}

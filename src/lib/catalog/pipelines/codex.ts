@@ -1,10 +1,10 @@
-import { registerCatalogPipeline } from '../pipeline-registry';
+import { allCatalogPipelines, registerCatalogPipeline } from '../pipeline-registry';
 import { canonLawShapeChecker } from '@/lib/catalog/acceptance/canonLaw';
 import { CANON_SEED } from '@/lib/catalog/canon/canon-seed';
 
 import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
 import { minLength, fieldsPopulated, selected, minCount, entriesHaveFields } from '../acceptance/dataCheckers';
-import { graphValid } from '../acceptance/graphCheckers';
+import { graphNodesResolve, graphValid } from '../acceptance/graphCheckers';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import { allOf } from '../acceptance/combinators';
@@ -243,6 +243,7 @@ registerCatalogPipeline({
       },
       accept: allOf(
         graphValid('graph', 'Cross-refs reachable + terminal'),
+        graphNodesResolve('graph', 'Cross-referenced entities exist', () => new Set(allCatalogPipelines().map((p) => p.catalogId))),
         linksResolve(),
         wiringContractSound(),
       ),
