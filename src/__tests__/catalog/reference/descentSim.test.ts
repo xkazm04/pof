@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_TILES_PER_LEVEL_ASSUMPTION,
+  expectedHealingPotionLife,
   simulateDescent,
+  sustainArithmetic,
 } from '@/lib/catalog/reference/descentSim';
 import type { LocationEntityWrapper } from '@/lib/catalog/reference/locationSpecs';
 import type { ReferenceWrapper } from '@/lib/catalog/reference/wrapper';
@@ -142,6 +144,17 @@ const expectedDamagePrefix = wrapper('d1-expected-damage-prefix', 'affixes', 'it
   useful: 'true',
 });
 
+const healingPotion = wrapper('d1-healing-potion', 'items', 'items/itemdat.tsv', {
+  subtype: 'Misc',
+  stats: [{ label: 'Value', value: 7 }],
+}, {
+  dropRate: '0',
+  itemType: 'Misc',
+  miscId: 'HEAL',
+  spell: 'Null',
+  minMonsterLevel: '0',
+});
+
 const locations: LocationEntityWrapper[] = Array.from({ length: 16 }, (_, index) => {
   const depth = index + 1;
   return {
@@ -227,6 +240,34 @@ describe('simulateDescent', () => {
     expect(result.assumptions.find((item) => item.id === 'stat-point-policy')?.detail).toContain('round-robin');
   });
 
+  it('keeps explicit gear:none byte-identical to the legacy omitted-gear path', () => {
+    const input = {
+      className: 'warrior' as const,
+      policy: 'none' as const,
+      tilesPerLevel: 60,
+      gameMode: 'single' as const,
+      difficulty: 'normal' as const,
+      wrappers: [warrior, monster, ...curve],
+      locations,
+    };
+    const omitted = simulateDescent(input);
+    const explicit = simulateDescent({ ...input, gear: 'none' });
+
+    expect(JSON.stringify(explicit)).toBe(JSON.stringify(omitted));
+    expect(Object.keys(explicit.levels[0])).toEqual([
+      'depth',
+      'poolSize',
+      'expectedMonstersKilled',
+      'expectedXpGained',
+      'heroLevelBefore',
+      'heroLevelAfter',
+      'expectedSecondsToClear',
+      'expectedDamageTaken',
+      'hardestMonster',
+      'note',
+    ]);
+  });
+
   it('uses accumulated first-depth kills to report and wield expected gear on the second depth', () => {
     const result = simulateDescent({
       className: 'warrior',
@@ -235,7 +276,7 @@ describe('simulateDescent', () => {
       gameMode: 'single',
       difficulty: 'normal',
       gear: 'expected',
-      wrappers: [warrior, monster, expectedSword, expectedDamagePrefix, ...curve],
+      wrappers: [warrior, monster, expectedSword, expectedDamagePrefix, healingPotion, ...curve],
       locations,
     });
 
@@ -253,5 +294,25 @@ describe('simulateDescent', () => {
       damageBonusPercent: 9,
     });
     expect(result.assumptions.some((assumption) => assumption.id === 'expected-loot-weapon')).toBe(true);
+    expect(result.levels[0].armourAssumed).toMatchObject({ totalArmourClass: 0, hasShield: false });
+    expect(result.levels[0].sustain).toMatchObject({
+      healingPotionPrice: 7,
+      healingPotionsBought: 0,
+      sustainable: true,
+      deficit: 0,
+    });
+  });
+});
+
+describe('sustain arithmetic', () => {
+  it('adds life and both potion supplies, then reports the exact deficit', () => {
+    expect(expectedHealingPotionLife('warrior', 40)).toBe(19);
+    expect(sustainArithmetic({
+      expectedDamageTaken: 101,
+      lifePool: 40,
+      healingPotions: 2,
+      fullHealingPotions: 0.5,
+      lifeRestoredPerHealingPotion: 10,
+    })).toEqual({ healingSupply: 40, sustainable: false, deficit: 21 });
   });
 });

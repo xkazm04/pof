@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DIABLO1_CANON } from '@/lib/catalog/canon/profiles/diablo1';
 import {
   MAGIC_AFFIX_ALLOCATION,
+  bestArmourExpectation,
   expectedDrop,
   type LootMonsterProfile,
 } from '@/lib/catalog/reference/lootMath';
@@ -120,9 +121,53 @@ describe('expectedDrop', () => {
   });
 });
 
+describe('bestArmourExpectation', () => {
+  it('selects each armour slot by hand-computed maximum probabilities and rejects a requirement-gated body', () => {
+    const body = wrapper('d1-test-body', 'items', 'items/itemdat.tsv', {
+      dropRate: '1', itemType: 'LightArmor', minMonsterLevel: '1', miscId: 'NONE', spell: 'Null',
+      uniqueBaseItem: 'TEST_BODY', minArmor: '9', maxArmor: '9', minStrength: '10', minMagic: '0', minDexterity: '0',
+    });
+    const gatedBody = wrapper('d1-gated-body', 'items', 'items/itemdat.tsv', {
+      dropRate: '1', itemType: 'HeavyArmor', minMonsterLevel: '1', miscId: 'NONE', spell: 'Null',
+      uniqueBaseItem: 'GATED_BODY', minArmor: '50', maxArmor: '50', minStrength: '11', minMagic: '0', minDexterity: '0',
+    });
+    const helm = wrapper('d1-test-helm', 'items', 'items/itemdat.tsv', {
+      dropRate: '1', itemType: 'Helm', minMonsterLevel: '1', miscId: 'NONE', spell: 'Null',
+      uniqueBaseItem: 'TEST_HELM', minArmor: '6', maxArmor: '6', minStrength: '0', minMagic: '0', minDexterity: '0',
+    });
+    const shield = wrapper('d1-test-shield', 'items', 'items/itemdat.tsv', {
+      dropRate: '1', itemType: 'Shield', minMonsterLevel: '1', miscId: 'NONE', spell: 'Null',
+      uniqueBaseItem: 'TEST_SHIELD', minArmor: '3', maxArmor: '3', minStrength: '0', minMagic: '0', minDexterity: '0',
+    });
+    const result = bestArmourExpectation({
+      className: 'Warrior',
+      depth: 2,
+      killsSoFar: 2,
+      monsterProfiles: [{ profile: { ...profile, unique: true }, weight: 2 }],
+      itemWrappers: [body, gatedBody, helm, shield],
+      affixWrappers: [],
+      uniqueItemWrappers: [],
+      difficulty: 'normal',
+      strength: 10,
+      magic: 0,
+      dexterity: 0,
+      shieldAllowed: true,
+    });
+
+    // Each usable slot base has p=1/4 per named-monster kill, hence P(found by two kills)=7/16.
+    expect(result.slots.body).toMatchObject({ itemId: body.entity.id, armourRange: { min: 3, max: 3 }, armourClass: 3 });
+    expect(result.slots.body.maxBaseArmourDistribution[0].p).toBeCloseTo(7 / 16, 12);
+    expect(result.slots.body.maxBaseArmourDistribution.flatMap((row) => row.baseIds)).not.toContain(gatedBody.entity.id);
+    expect(result.slots.helm.armourClass).toBe(Math.floor(6 * 7 / 16));
+    expect(result.slots.shield.armourClass).toBe(Math.floor(3 * 7 / 16));
+    expect(result.totalArmourClass).toBe(6);
+    expect(result.hasShield).toBe(true);
+  });
+});
+
 describe('loot canon generation', () => {
-  it('generates five concise laws with pinned source links and includes them in the Diablo canon', () => {
-    expect(DIABLO1_LOOT_LAWS).toHaveLength(5);
+  it('generates concise laws with pinned source links and includes them in the Diablo canon', () => {
+    expect(DIABLO1_LOOT_LAWS).toHaveLength(6);
     for (const law of DIABLO1_LOOT_LAWS) {
       expect(law.body.length).toBeLessThanOrEqual(450);
       expect(law.refs?.every((ref) => ref.startsWith('https://github.com/diasurgical/devilutionX/blob/4138a82/Source/'))).toBe(true);

@@ -95,6 +95,14 @@ console.table(result.levels.map((level) => ({
     'weapon damage': level.weaponAssumed
       ? `${level.weaponAssumed.damage.min}-${level.weaponAssumed.damage.max} +${level.weaponAssumed.damageBonusPercent}%`
       : null,
+    armour: level.armourAssumed?.totalArmourClass ?? 0,
+    'block %': level.expectedBlockChance == null ? null : Number((level.expectedBlockChance * 100).toFixed(2)),
+    potions: level.sustain == null
+      ? null
+      : Number((level.sustain.healingPotionsAvailable + level.sustain.fullHealingPotionsAvailable).toFixed(2)),
+    sustainable: level.sustain == null
+      ? null
+      : level.sustain.sustainable ? 'yes' : `no (deficit ${level.sustain.deficit.toFixed(2)})`,
   } : {}),
 })));
 

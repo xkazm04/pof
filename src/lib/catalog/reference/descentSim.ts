@@ -1,22 +1,29 @@
 /** Deterministic Diablo I descent expectations assembled from reference wrappers and combat laws. */
 import { DIABLO1_SOURCE } from '@/lib/catalog/ingest/diablo1';
 import { duel } from '@/lib/catalog/reference/combatDuel';
-import { classCoefficients, monsterProfile, referenceBuild } from '@/lib/catalog/reference/combatInputs';
+import { classAnimations, classCoefficients, monsterProfile, referenceBuild } from '@/lib/catalog/reference/combatInputs';
 import {
+  attackTiming,
+  blockProbability,
   experienceAward,
   experienceCurveLaw,
   FIXED_POINT,
+  lifeAndMana,
   type Difficulty,
   type ExperienceCurveLaw,
   type GameMode,
   type PlayerBuild,
+  type WeaponGraphic,
 } from '@/lib/catalog/reference/combatMath';
 import { aggregateClassWrappers } from '@/lib/catalog/reference/classHeroes';
 import { contentHash } from '@/lib/catalog/reference/hash';
 import { locationEntities, type LocationEntityWrapper } from '@/lib/catalog/reference/locationSpecs';
 import {
+  bestArmourExpectation,
   bestWeaponExpectation,
+  expectedLootBudget,
   monsterLootProfile,
+  type BestArmourExpectation,
   type BestWeaponExpectation,
   type WeightedLootMonsterProfile,
 } from '@/lib/catalog/reference/lootMath';
@@ -61,6 +68,39 @@ export interface DescentLevelResult {
   note: string;
   /** Present only when expected gear is enabled, preserving the gear:none result shape. */
   weaponAssumed?: BestWeaponExpectation;
+  /** Present only when expected gear is enabled, preserving the gear:none result shape. */
+  armourAssumed?: BestArmourExpectation;
+  /** Mean conditional block chance across this depth's eligible monster types. */
+  expectedBlockChance?: number;
+  /** Present only for expected gear because sustain is funded by expected loot. */
+  sustain?: DescentSustainExpectation;
+}
+
+export interface SustainArithmeticInput {
+  expectedDamageTaken: number;
+  lifePool: number;
+  healingPotions: number;
+  fullHealingPotions: number;
+  lifeRestoredPerHealingPotion: number;
+}
+
+export interface SustainArithmetic {
+  healingSupply: number;
+  sustainable: boolean;
+  deficit: number;
+}
+
+export interface DescentSustainExpectation extends SustainArithmetic {
+  expectedGoldDropped: number;
+  healingPotionPrice: number;
+  healingPotionsDropped: number;
+  fullHealingPotionsDropped: number;
+  healingPotionsBought: number;
+  healingPotionsAvailable: number;
+  fullHealingPotionsAvailable: number;
+  lifePool: number;
+  lifeRestoredPerHealingPotion: number;
+  lifeRestoredPerFullHealingPotion: number;
 }
 
 export interface DescentSimulation {
@@ -161,6 +201,77 @@ function finiteOrNull(value: number): number | null {
   return Number.isFinite(value) ? value : null;
 }
 
+/** Nominal-bin mean of Player::RestorePartialLife, expressed in whole life points. */
+export function expectedHealingPotionLife(className: DescentClassName, maximumLife: number): number {
+  if (!Number.isFinite(maximumLife) || maximumLife < 0) throw new Error(`maximumLife must be non-negative (got ${maximumLife})`);
+  const wholeLife = Math.floor(maximumLife);
+  const randomOutcomes = Math.floor(wholeLife / 4);
+  const baseMean = Math.floor(wholeLife / 8) + (randomOutcomes > 0 ? (randomOutcomes - 1) / 2 : 0);
+  if (className === 'warrior') return baseMean * 2;
+  if (className === 'rogue') return baseMean * 1.5;
+  return baseMean;
+}
+
+/** Pure life-plus-potions budget used by each expected-gear depth. */
+export function sustainArithmetic(input: SustainArithmeticInput): SustainArithmetic {
+  for (const [name, value] of Object.entries(input)) {
+    if (!Number.isFinite(value) || value < 0) throw new Error(`${name} must be a non-negative finite number (got ${value})`);
+  }
+  const healingSupply = input.healingPotions * input.lifeRestoredPerHealingPotion
+    + input.fullHealingPotions * input.lifePool;
+  const deficit = Math.max(0, input.expectedDamageTaken - input.lifePool - healingSupply);
+  return {
+    healingSupply,
+    sustainable: input.expectedDamageTaken <= input.lifePool + healingSupply,
+    deficit,
+  };
+}
+
+function healingPotionPrice(wrappers: readonly ReferenceWrapper[]): number {
+  const candidates = wrappers.filter((wrapper) =>
+    wrapper.file === 'items/itemdat.tsv' && String(wrapper.raw.miscId).toUpperCase() === 'HEAL');
+  const base = candidates.find((wrapper) => Number(wrapper.raw.dropRate) <= 0) ?? candidates[0];
+  if (!base) throw new Error('the supplied item wrappers have no Healing potion base');
+  const price = numericStat(base, 'Value');
+  if (!(price > 0)) throw new Error(`${base.entity.id} has a non-positive Healing potion value`);
+  return price;
+}
+
+function shieldGraphic(build: PlayerBuild): WeaponGraphic {
+  if (build.weaponType === 'sword') return 'swordShield';
+  if (build.weaponType === 'mace') return 'maceShield';
+  return 'unarmedShield';
+}
+
+function weaponPermitsShield(build: PlayerBuild, weapon: ReferenceWrapper | undefined): boolean {
+  if (!weapon) return true;
+  const equipType = String(weapon.raw.equipType ?? weapon.entity.data.equipType ?? '').toLowerCase();
+  if (equipType === 'two-handed') return false;
+  return build.weaponType !== 'bow' && build.weaponType !== 'axe' && build.weaponType !== 'staff';
+}
+
+function consumeHealing(
+  healingPotions: number,
+  fullHealingPotions: number,
+  needed: number,
+  healingPotionLife: number,
+  fullHealingPotionLife: number,
+): { healingPotions: number; fullHealingPotions: number } {
+  let remaining = needed;
+  let partial = healingPotions;
+  let full = fullHealingPotions;
+  if (remaining > 0 && healingPotionLife > 0) {
+    const consumed = Math.min(partial, remaining / healingPotionLife);
+    partial -= consumed;
+    remaining -= consumed * healingPotionLife;
+  }
+  if (remaining > 0 && fullHealingPotionLife > 0) {
+    const consumed = Math.min(full, remaining / fullHealingPotionLife);
+    full -= consumed;
+  }
+  return { healingPotions: Math.max(0, partial), fullHealingPotions: Math.max(0, full) };
+}
+
 function hardest(
   rows: readonly { wrapper: ReferenceWrapper; playerHitChance: number; expectedDamageTaken: number }[],
 ): DescentHardestMonster {
@@ -226,12 +337,38 @@ function assumptions(tilesPerLevel: number, policy: StatPointPolicy, gear: Desce
       source: 'combatDuel.duel expectedPlayerSecondsToKill',
       detail: 'Every ambient kill is fought sequentially; navigation, doors, loot, recovery, and downtime add no seconds.',
     },
-    ...(gear === 'expected' ? [{
-      id: 'expected-loot-weapon',
-      value: 'conservative expected best melee weapon before each depth',
-      source: 'pinned monster-drop, base-selection, quality, and affix procedures',
-      detail: 'Prior kills form a weighted monster mixture. The model floors the expected maximum base-damage range and expected positive percentage-damage bonus; unique powers, flat damage, and base/affix correlation are omitted.',
-    }] : []),
+    ...(gear === 'expected' ? [
+      {
+        id: 'expected-loot-weapon',
+        value: 'conservative expected best melee weapon before each depth',
+        source: 'pinned monster-drop, base-selection, quality, and affix procedures',
+        detail: 'Prior kills form a weighted monster mixture. The model gates bases by the hero\'s current Strength, Magic, and Dexterity, then floors the expected maximum base-damage range and expected positive percentage-damage bonus; unique powers, flat damage, and base/affix correlation are omitted.',
+      },
+      {
+        id: 'expected-loot-armour',
+        value: 'conservative expected best body armour, helm, and compatible shield before each depth',
+        source: 'pinned monster-drop, base-selection, quality, affix, and equipment procedures',
+        detail: 'Each slot independently gates bases by current attributes and floors its expected best base-AC range. The lower bound plus a floored positive percentage-AC bonus enters combat. A shield is carried only with a one-handed or unarmed loadout and a positive conservative shield AC.',
+      },
+      {
+        id: 'sustain-income',
+        value: 'monster gold drops only; no sale value',
+        source: 'd1-loot-drop-outcome and d1-loot-gold-consumables',
+        detail: 'Expected gold and Healing/Full Healing potion drops come only from the ambient monsters modelled here. Sale value, containers, useful-object drops, quests, and starting inventory are excluded.',
+      },
+      {
+        id: 'sustain-purchases',
+        value: 'spend all expected gold on Healing potions between depths',
+        source: 'd1-store-pricing-law and the supplied Healing potion item wrapper',
+        detail: 'Gold earned on one depth is divided by Pepin\'s wrapper-derived Healing potion price before the next depth; fractional potion counts are retained as deterministic expectations. Pepin restores the hero to full life between depths at no charge.',
+      },
+      {
+        id: 'sustain-consumption',
+        value: 'full life plus carried and same-depth expected potion drops',
+        source: 'd1-loot-healing-potions and deterministic budget arithmetic',
+        detail: 'Expected drops are treated as available on their floor, so within-floor drop order is omitted. Damage spends the fresh life pool first, then partial potions, then full potions; unused expected potions carry forward.',
+      },
+    ] : []),
   ];
 }
 
@@ -272,6 +409,10 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
   let killsSoFar = 0;
   const lootHistory: WeightedLootMonsterProfile[] = [];
   const levels: DescentLevelResult[] = [];
+  const potionPrice = gear === 'expected' ? healingPotionPrice(input.wrappers) : 0;
+  let goldForNextDepth = 0;
+  let carriedHealingPotions = 0;
+  let carriedFullHealingPotions = 0;
 
   for (let depth = 1; depth <= 16; depth++) {
     const location = locations.find((candidate) => candidate.entity.data.depth === depth);
@@ -284,10 +425,23 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       throw new Error(`depth ${depth} references missing bestiary wrappers: ${missing.join(', ')}`);
     }
     if (pool.length === 0) throw new Error(`depth ${depth} has no eligible ordinary monster pool`);
+    const dungeonType = String(location.entity.data.dungeonType);
+    const depthLootProfiles: WeightedLootMonsterProfile[] = gear === 'expected'
+      ? pool.map((wrapper) => ({
+          profile: monsterLootProfile(wrapper, {
+            dungeonLevel: depth,
+            dungeonType,
+            gameMode: input.gameMode,
+          }),
+          weight: ambientPopulation / pool.length,
+        }))
+      : [];
 
     const heroLevelBefore = heroLevel;
     let build = allocateStats(referenceBuild(classWrapper, heroLevelBefore, input.weapon), input.policy, maxima);
     let weaponAssumed: BestWeaponExpectation | undefined;
+    let armourAssumed: BestArmourExpectation | undefined;
+    let expectedWeaponBase: ReferenceWrapper | undefined;
     if (gear === 'expected') {
       weaponAssumed = bestWeaponExpectation({
         class: build.class,
@@ -302,14 +456,14 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
         magic: build.magic,
         dexterity: build.dexterity,
       });
-      const representative = weaponAssumed.weaponId == null
+      expectedWeaponBase = weaponAssumed.weaponId == null
         ? undefined
         : input.wrappers.find((wrapper) => wrapper.file === 'items/itemdat.tsv' && wrapper.entity.id === weaponAssumed!.weaponId);
-      if (weaponAssumed.weaponId != null && !representative) {
+      if (weaponAssumed.weaponId != null && !expectedWeaponBase) {
         throw new Error(`expected weapon base ${weaponAssumed.weaponId} is not supplied`);
       }
-      if (representative) {
-        const equipped = referenceBuild(classWrapper, heroLevelBefore, representative);
+      if (expectedWeaponBase) {
+        const equipped = referenceBuild(classWrapper, heroLevelBefore, expectedWeaponBase);
         build = {
           ...build,
           weaponDamage: weaponAssumed.damage,
@@ -317,6 +471,35 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
           weaponGraphic: equipped.weaponGraphic,
           swingSeconds: equipped.swingSeconds,
           damageBonusPercent: weaponAssumed.damageBonusPercent,
+        };
+      }
+      const shieldAllowed = weaponPermitsShield(build, expectedWeaponBase);
+      armourAssumed = bestArmourExpectation({
+        className: build.class,
+        depth,
+        killsSoFar,
+        monsterProfiles: lootHistory,
+        itemWrappers: input.wrappers,
+        affixWrappers: input.wrappers,
+        uniqueItemWrappers: input.wrappers,
+        difficulty: input.difficulty,
+        strength: build.strength,
+        magic: build.magic,
+        dexterity: build.dexterity,
+        shieldAllowed,
+      });
+      build = {
+        ...build,
+        armourClass: armourAssumed.totalArmourClass,
+        hasShield: armourAssumed.hasShield,
+        blockEnabled: armourAssumed.hasShield,
+      };
+      if (armourAssumed.hasShield) {
+        const weaponGraphic = shieldGraphic(build);
+        build = {
+          ...build,
+          weaponGraphic,
+          swingSeconds: attackTiming(classAnimations(classWrapper), weaponGraphic).seconds,
         };
       }
     }
@@ -351,12 +534,16 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       });
       const expectedDamageTaken = Math.max(0, result.expectedPlayerSwingsToKill - 1)
         * result.expectedMonsterDamagePerSwing / FIXED_POINT;
+      const conditionalBlockChance = gear === 'expected'
+        ? blockProbability(build, coefficients, monster, result.monsterHitChance, { kind: 'melee' }).conditionalBlockChance
+        : 0;
       return {
         wrapper,
         xp: xp.granted,
         seconds: result.expectedPlayerSecondsToKill,
         playerHitChance: result.playerHitChance,
         expectedDamageTaken,
+        conditionalBlockChance,
       };
     });
     const divisor = rows.length;
@@ -365,6 +552,52 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
     const expectedXpGained = Math.min(uncappedXp, Math.max(0, maximumExperience - totalExperience));
     const expectedSeconds = rows.reduce((sum, row) => sum + row.seconds, 0) / divisor * ambientPopulation;
     const expectedDamage = rows.reduce((sum, row) => sum + row.expectedDamageTaken, 0) / divisor * ambientPopulation;
+    const expectedBlockChance = rows.reduce((sum, row) => sum + row.conditionalBlockChance, 0) / divisor;
+    let sustain: DescentSustainExpectation | undefined;
+    if (gear === 'expected') {
+      const loot = expectedLootBudget({
+        monsterProfiles: depthLootProfiles,
+        itemWrappers: input.wrappers,
+        affixWrappers: input.wrappers,
+        uniqueItemWrappers: input.wrappers,
+        difficulty: input.difficulty,
+      });
+      const healingPotionsBought = goldForNextDepth / potionPrice;
+      const healingPotionsAvailable = carriedHealingPotions + healingPotionsBought + loot.expectedHealingPotions;
+      const fullHealingPotionsAvailable = carriedFullHealingPotions + loot.expectedFullHealingPotions;
+      const lifePool = lifeAndMana(build, coefficients).maximumLife / FIXED_POINT;
+      const lifeRestoredPerHealingPotion = expectedHealingPotionLife(input.className, lifePool);
+      const arithmetic = sustainArithmetic({
+        expectedDamageTaken: expectedDamage,
+        lifePool,
+        healingPotions: healingPotionsAvailable,
+        fullHealingPotions: fullHealingPotionsAvailable,
+        lifeRestoredPerHealingPotion,
+      });
+      sustain = {
+        ...arithmetic,
+        expectedGoldDropped: loot.expectedGold,
+        healingPotionPrice: potionPrice,
+        healingPotionsDropped: loot.expectedHealingPotions,
+        fullHealingPotionsDropped: loot.expectedFullHealingPotions,
+        healingPotionsBought,
+        healingPotionsAvailable,
+        fullHealingPotionsAvailable,
+        lifePool,
+        lifeRestoredPerHealingPotion,
+        lifeRestoredPerFullHealingPotion: lifePool,
+      };
+      const remaining = consumeHealing(
+        healingPotionsAvailable,
+        fullHealingPotionsAvailable,
+        Math.max(0, expectedDamage - lifePool),
+        lifeRestoredPerHealingPotion,
+        lifePool,
+      );
+      carriedHealingPotions = remaining.healingPotions;
+      carriedFullHealingPotions = remaining.fullHealingPotions;
+      goldForNextDepth = loot.expectedGold;
+    }
     totalExperience += expectedXpGained;
     heroLevel = levelAt(totalExperience, heroLevelBefore, curve);
     const notes = [
@@ -384,19 +617,10 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       hardestMonster: hardest(rows),
       note: notes.join(' '),
       ...(weaponAssumed ? { weaponAssumed } : {}),
+      ...(armourAssumed && sustain ? { armourAssumed, expectedBlockChance, sustain } : {}),
     });
     if (gear === 'expected' && ambientPopulation > 0) {
-      const dungeonType = String(location.entity.data.dungeonType);
-      for (const wrapper of pool) {
-        lootHistory.push({
-          profile: monsterLootProfile(wrapper, {
-            dungeonLevel: depth,
-            dungeonType,
-            gameMode: input.gameMode,
-          }),
-          weight: ambientPopulation / pool.length,
-        });
-      }
+      lootHistory.push(...depthLootProfiles);
       killsSoFar += ambientPopulation;
     }
   }

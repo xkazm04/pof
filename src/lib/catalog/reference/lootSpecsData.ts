@@ -41,6 +41,12 @@ export const LOOT_LAW_DATA = [
     body: 'A gold pile is uniform from five times through one less than fifteen times dungeon level plus its difficulty offset; Hell-themed floors add a truncated eighth before the cap. Potions, scrolls, books, and elixirs otherwise obey base-row gates and weights. Useful object drops choose Mana or Healing equally on the first floor, then Mana, Healing, or Town Portal equally below it.',
     refs: ['items.cpp#L613-L663', 'items.cpp#L1517-L1557', 'items.cpp#L3166-L3186'],
   },
+  {
+    id: 'd1-loot-healing-potions',
+    title: 'Healing-potion restoration',
+    body: 'Using a Healing potion restores floor(maximum whole life / 8) plus a uniform integer from zero through floor(maximum whole life / 4) - 1, then Warriors double it, Rogues add one half, and Sorcerers keep it. Restoration is capped at maximum life. A Full Healing potion instead restores life directly to maximum.',
+    refs: ['items.cpp#L4206-L4223', 'player.cpp#L1744-L1756', 'player.h#L719-L724'],
+  },
 ] as const satisfies readonly LootLawData[];
 
 export const DIABLO1_LOOT_LAWS: readonly ProjectRule[] = LOOT_LAW_DATA.map((law) => ({

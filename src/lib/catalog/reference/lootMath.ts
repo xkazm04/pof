@@ -101,6 +101,8 @@ interface AffixRow {
 interface InternalAffixOutcome extends AffixOutcomeProbabilities {
   pPositiveDamage: number;
   expectedPositiveDamagePercent: number;
+  pPositiveArmour: number;
+  expectedPositiveArmourPercent: number;
 }
 
 interface AffixChoice {
@@ -288,8 +290,28 @@ function positiveDamageMean(row: AffixRow | null): number {
   return Math.max(0, mean);
 }
 
+function isPositiveArmourPercent(row: AffixRow | null): boolean {
+  return row != null && row.power.toUpperCase() === 'ACP' && row.valueMax > 0;
+}
+
+function positiveArmourMean(row: AffixRow | null): number {
+  if (!isPositiveArmourPercent(row)) return 0;
+  const mean = row!.valueMax >= row!.valueMin ? (row!.valueMin + row!.valueMax) / 2 : row!.valueMin;
+  return Math.max(0, mean);
+}
+
 function emptyAffixOutcome(): InternalAffixOutcome {
-  return { none: 0, prefixOnly: 0, suffixOnly: 0, both: 0, expectedCount: 0, pPositiveDamage: 0, expectedPositiveDamagePercent: 0 };
+  return {
+    none: 0,
+    prefixOnly: 0,
+    suffixOnly: 0,
+    both: 0,
+    expectedCount: 0,
+    pPositiveDamage: 0,
+    expectedPositiveDamagePercent: 0,
+    pPositiveArmour: 0,
+    expectedPositiveArmourPercent: 0,
+  };
 }
 
 function addOutcome(target: InternalAffixOutcome, prefix: AffixRow | null, suffix: AffixRow | null, p: number): void {
@@ -303,6 +325,11 @@ function addOutcome(target: InternalAffixOutcome, prefix: AffixRow | null, suffi
   if (damage > 0) {
     target.pPositiveDamage += p;
     target.expectedPositiveDamagePercent += p * damage;
+  }
+  const armour = positiveArmourMean(prefix) + positiveArmourMean(suffix);
+  if (armour > 0) {
+    target.pPositiveArmour += p;
+    target.expectedPositiveArmourPercent += p * armour;
   }
 }
 
@@ -336,6 +363,8 @@ function scaledOutcome(target: InternalAffixOutcome, source: InternalAffixOutcom
   target.expectedCount += source.expectedCount * scale;
   target.pPositiveDamage += source.pPositiveDamage * scale;
   target.expectedPositiveDamagePercent += source.expectedPositiveDamagePercent * scale;
+  target.pPositiveArmour += source.pPositiveArmour * scale;
+  target.expectedPositiveArmourPercent += source.expectedPositiveArmourPercent * scale;
 }
 
 function genericAffixOutcome(
@@ -523,6 +552,8 @@ export function expectedDrop(
       expectedCount: pAffixProcedure * outcome.expectedCount,
       pPositiveDamage: pAffixProcedure * outcome.pPositiveDamage,
       expectedPositiveDamagePercent: pAffixProcedure * outcome.expectedPositiveDamagePercent,
+      pPositiveArmour: pAffixProcedure * outcome.pPositiveArmour,
+      expectedPositiveArmourPercent: pAffixProcedure * outcome.expectedPositiveArmourPercent,
     };
     scaledOutcome(perKillInternal, applied, p);
     return {
@@ -574,6 +605,50 @@ export function expectedDrop(
 export interface WeightedLootMonsterProfile {
   profile: LootMonsterProfile;
   weight: number;
+}
+
+export interface ExpectedLootBudgetInput {
+  monsterProfiles: readonly WeightedLootMonsterProfile[];
+  itemWrappers: readonly ReferenceWrapper[];
+  affixWrappers: readonly ReferenceWrapper[];
+  uniqueItemWrappers: readonly ReferenceWrapper[];
+  difficulty: Difficulty;
+}
+
+export interface ExpectedLootBudget {
+  /** Direct and pool-selected monster gold only; sale value and object drops are excluded. */
+  expectedGold: number;
+  expectedHealingPotions: number;
+  expectedFullHealingPotions: number;
+}
+
+/** Sum monster-drop gold and healing consumables over already weighted kill profiles. */
+export function expectedLootBudget(input: ExpectedLootBudgetInput): ExpectedLootBudget {
+  const bases = new Map(input.itemWrappers
+    .filter((wrapper) => wrapper.file === 'items/itemdat.tsv')
+    .map((wrapper) => [wrapper.entity.id, wrapper]));
+  let expectedGold = 0;
+  let expectedHealingPotions = 0;
+  let expectedFullHealingPotions = 0;
+  for (const row of input.monsterProfiles) {
+    if (!Number.isFinite(row.weight) || row.weight < 0) throw new Error(`loot-profile weight must be non-negative (got ${row.weight})`);
+    if (row.weight === 0) continue;
+    const drop = expectedDrop(
+      row.profile,
+      input.itemWrappers,
+      input.affixWrappers,
+      input.uniqueItemWrappers,
+      input.difficulty,
+    );
+    expectedGold += row.weight * drop.expectedGold;
+    for (const baseOutcome of drop.basePool) {
+      const base = bases.get(baseOutcome.baseId);
+      const healingKind = base ? miscId(base) : '';
+      if (healingKind === 'HEAL') expectedHealingPotions += row.weight * baseOutcome.p;
+      if (healingKind === 'FULLHEAL') expectedFullHealingPotions += row.weight * baseOutcome.p;
+    }
+  }
+  return { expectedGold, expectedHealingPotions, expectedFullHealingPotions };
 }
 
 export interface BestWeaponExpectationInput {
@@ -734,4 +809,211 @@ export function bestWeaponExpectation(input: BestWeaponExpectationInput): BestWe
     maxBaseDamageDistribution: distribution,
     approximation: 'Independent prior kills are represented by their weighted monster mixture. The weapon range is the floored expectation of the maximum base max-damage distribution (including bare hands); one modal base supplies type and animation. Unique powers, flat damage, requirements not explicitly supplied, and correlations between the best base and a damage affix are omitted. The positive percentage bonus is floored, keeping the combat input conservative.',
   };
+}
+
+export type ArmourSlot = 'body' | 'helm' | 'shield';
+
+export interface BestArmourExpectationInput {
+  className: PlayerClass | 'warrior' | 'rogue' | 'sorcerer';
+  depth: number;
+  killsSoFar: number;
+  monsterProfiles: readonly WeightedLootMonsterProfile[];
+  itemWrappers: readonly ReferenceWrapper[];
+  affixWrappers: readonly ReferenceWrapper[];
+  uniqueItemWrappers: readonly ReferenceWrapper[];
+  difficulty: Difficulty;
+  strength?: number;
+  magic?: number;
+  dexterity?: number;
+  /** False when the selected weapon occupies both hands. */
+  shieldAllowed?: boolean;
+}
+
+export interface BestArmourSlotExpectation {
+  slot: ArmourSlot;
+  itemId: string | null;
+  armourRange: { min: number; max: number };
+  /** Conservative combat value: the floored expected lower bound plus its floored positive AC bonus. */
+  armourClass: number;
+  armourBonusPercent: number;
+  pArmourFound: number;
+  pAnyMagicArmourAffix: number;
+  maxBaseArmourDistribution: { maxArmour: number; p: number; baseIds: string[] }[];
+}
+
+export interface BestArmourExpectation {
+  model: 'conservative-expected-best-armour-bases';
+  className: BestArmourExpectationInput['className'];
+  depth: number;
+  killsSoFar: number;
+  slots: Record<ArmourSlot, BestArmourSlotExpectation>;
+  totalArmourClass: number;
+  hasShield: boolean;
+  approximation: string;
+}
+
+function armourSlot(base: ReferenceWrapper): ArmourSlot | null {
+  const type = itemType(base).toLowerCase();
+  if (type === 'helm') return 'helm';
+  if (type === 'shield') return 'shield';
+  return ['lightarmor', 'mediumarmor', 'heavyarmor', 'armor'].includes(type) ? 'body' : null;
+}
+
+function baseArmour(base: ReferenceWrapper): { min: number; max: number } {
+  return {
+    min: finiteNumber(base.raw.minArmor ?? stat(base, 'Armor Min'), `${base.entity.id}.minArmor`),
+    max: finiteNumber(base.raw.maxArmor ?? stat(base, 'Armor Max'), `${base.entity.id}.maxArmor`),
+  };
+}
+
+function emptyArmourSlot(slot: ArmourSlot): BestArmourSlotExpectation {
+  return {
+    slot,
+    itemId: null,
+    armourRange: { min: 0, max: 0 },
+    armourClass: 0,
+    armourBonusPercent: 0,
+    pArmourFound: 0,
+    pAnyMagicArmourAffix: 0,
+    maxBaseArmourDistribution: [],
+  };
+}
+
+/**
+ * Conservative expected body, helm, and compatible shield loadout. Each slot independently takes
+ * the maximum base-max-AC distribution over prior kills, floors its expected range, and contributes
+ * the lower bound to combat. Positive percentage-AC affixes are independently expected and floored.
+ * Unique powers, flat/set AC, exact AC rolls, and base/affix or cross-slot correlations are omitted.
+ */
+export function bestArmourExpectation(input: BestArmourExpectationInput): BestArmourExpectation {
+  if (!Number.isInteger(input.depth) || input.depth < 1) throw new Error(`depth must be a positive integer (got ${input.depth})`);
+  if (!Number.isInteger(input.killsSoFar) || input.killsSoFar < 0) throw new Error(`killsSoFar must be a non-negative integer (got ${input.killsSoFar})`);
+  const slots: Record<ArmourSlot, BestArmourSlotExpectation> = {
+    body: emptyArmourSlot('body'),
+    helm: emptyArmourSlot('helm'),
+    shield: emptyArmourSlot('shield'),
+  };
+  const result = (): BestArmourExpectation => ({
+    model: 'conservative-expected-best-armour-bases',
+    className: input.className,
+    depth: input.depth,
+    killsSoFar: input.killsSoFar,
+    slots,
+    totalArmourClass: slots.body.armourClass + slots.helm.armourClass + slots.shield.armourClass,
+    hasShield: input.shieldAllowed !== false && slots.shield.armourClass > 0,
+    approximation: input.killsSoFar === 0
+      ? 'No prior kills: the hero has no body armour, helm, or shield.'
+      : 'Independent prior kills are represented by their weighted monster mixture. Body, helm, and compatible shield independently use the floored expectation of their maximum base max-AC distribution; the floored expected lower bound enters combat. A modal base supplies identity. Positive percentage AC is independently floored. Unique powers, flat or set AC, exact AC rolls, requirements not explicitly supplied, and base/affix or cross-slot correlations are omitted.',
+  });
+  if (input.killsSoFar === 0) return result();
+
+  const positiveProfiles = input.monsterProfiles.filter((row) => row.weight > 0);
+  const totalProfileWeight = positiveProfiles.reduce((sum, row) => sum + row.weight, 0);
+  if (totalProfileWeight <= 0) throw new Error('positive kills require at least one positive-weight monster loot profile');
+  const bases = new Map(input.itemWrappers
+    .filter((wrapper) => wrapper.file === 'items/itemdat.tsv')
+    .map((wrapper) => [wrapper.entity.id, wrapper]));
+  const armourAffixes = affixRows(input.affixWrappers);
+  const perKillBase = new Map<string, number>();
+  const armourAffixByBase = new Map<string, number>();
+  const expectedArmourPercentByBase = new Map<string, number>();
+  for (const row of positiveProfiles) {
+    const sourceWeight = row.weight / totalProfileWeight;
+    const drop = expectedDrop(row.profile, input.itemWrappers, input.affixWrappers, input.uniqueItemWrappers, input.difficulty);
+    for (const base of drop.basePool) perKillBase.set(base.baseId, (perKillBase.get(base.baseId) ?? 0) + sourceWeight * base.p);
+    for (const quality of drop.baseQuality) {
+      const base = bases.get(quality.baseId);
+      if (!base) continue;
+      const outcome = itemAffixOutcome(
+        base,
+        quality.bonusLevel,
+        row.profile.unique === true,
+        armourAffixes,
+        row.profile.hellfire === true,
+      );
+      const appliedScale = outcome.none < 1 ? quality.pMagic / (1 - outcome.none) : 0;
+      armourAffixByBase.set(
+        quality.baseId,
+        (armourAffixByBase.get(quality.baseId) ?? 0)
+          + sourceWeight * quality.pSelected * appliedScale * outcome.pPositiveArmour,
+      );
+      expectedArmourPercentByBase.set(
+        quality.baseId,
+        (expectedArmourPercentByBase.get(quality.baseId) ?? 0)
+          + sourceWeight * quality.pSelected * appliedScale * outcome.expectedPositiveArmourPercent,
+      );
+    }
+  }
+  const candidates = [...perKillBase].flatMap(([baseId, p]) => {
+    const base = bases.get(baseId);
+    if (!base || p <= 0) return [];
+    const slot = armourSlot(base);
+    if (!slot || (slot === 'shield' && input.shieldAllowed === false)) return [];
+    if (input.strength != null && requirement(base, 'minStrength', 'requiredStrength') > input.strength) return [];
+    if (input.magic != null && requirement(base, 'minMagic', 'requiredMagic') > input.magic) return [];
+    if (input.dexterity != null && requirement(base, 'minDexterity', 'requiredDexterity') > input.dexterity) return [];
+    const armour = baseArmour(base);
+    if (armour.max <= 0 || armour.min > armour.max) return [];
+    return [{ base, slot, p, armour }];
+  });
+
+  for (const slot of ['body', 'helm', 'shield'] as const) {
+    const slotCandidates = candidates.filter((candidate) => candidate.slot === slot);
+    if (slotCandidates.length === 0) continue;
+    const candidateIds = new Set(slotCandidates.map((candidate) => candidate.base.entity.id));
+    const armourAffixPerKill = [...armourAffixByBase]
+      .filter(([baseId]) => candidateIds.has(baseId))
+      .reduce((sum, [, p]) => sum + p, 0);
+    const expectedArmourPercentPerKill = [...expectedArmourPercentByBase]
+      .filter(([baseId]) => candidateIds.has(baseId))
+      .reduce((sum, [, value]) => sum + value, 0);
+    const groups = new Map<number, typeof slotCandidates>();
+    for (const candidate of slotCandidates) {
+      groups.set(candidate.armour.max, [...(groups.get(candidate.armour.max) ?? []), candidate]);
+    }
+    const ordered = [...groups].sort(([a], [b]) => b - a);
+    let higher = 0;
+    let expectedMin = 0;
+    let expectedMax = 0;
+    let representative: typeof slotCandidates[number] | null = null;
+    let representativeContribution = -1;
+    const distribution: BestArmourSlotExpectation['maxBaseArmourDistribution'] = [];
+    for (const [maxArmour, group] of ordered) {
+      const groupP = group.reduce((sum, candidate) => sum + candidate.p, 0);
+      const pMaximum = (1 - higher) ** input.killsSoFar - (1 - higher - groupP) ** input.killsSoFar;
+      const groupMin = group.reduce((sum, candidate) => sum + candidate.armour.min * candidate.p, 0) / groupP;
+      expectedMin += pMaximum * groupMin;
+      expectedMax += pMaximum * maxArmour;
+      distribution.push({ maxArmour, p: pMaximum, baseIds: group.map((candidate) => candidate.base.entity.id) });
+      for (const candidate of group) {
+        const contribution = pMaximum * candidate.p / groupP;
+        if (contribution > representativeContribution) {
+          representative = candidate;
+          representativeContribution = contribution;
+        }
+      }
+      higher += groupP;
+    }
+    const pArmourFound = 1 - (1 - higher) ** input.killsSoFar;
+    const pAnyMagicArmourAffix = 1 - (1 - clamp01(armourAffixPerKill)) ** input.killsSoFar;
+    const conditionalArmourPercent = armourAffixPerKill > 0
+      ? expectedArmourPercentPerKill / armourAffixPerKill
+      : 0;
+    const armourBonusPercent = Math.floor(pAnyMagicArmourAffix * conditionalArmourPercent);
+    const armourRange = { min: Math.max(0, Math.floor(expectedMin)), max: Math.max(0, Math.floor(expectedMax)) };
+    const bonusArmour = armourRange.min > 0 && armourBonusPercent > 0
+      ? Math.max(1, Math.trunc(armourRange.min * armourBonusPercent / 100))
+      : 0;
+    slots[slot] = {
+      slot,
+      itemId: representative?.base.entity.id ?? null,
+      armourRange,
+      armourClass: armourRange.min + bonusArmour,
+      armourBonusPercent,
+      pArmourFound,
+      pAnyMagicArmourAffix,
+      maxBaseArmourDistribution: distribution,
+    };
+  }
+  return result();
 }
