@@ -1,5 +1,6 @@
 import { buildRuntimeDeferredReason } from '@/types/observation';
-import type { AcceptanceResult } from './types';
+import type { AcceptanceResult, Checker } from './types';
+import { tagRequiredFields } from './requiredFields';
 
 /** L3 runtime check, pending the live-UE runner. `testName` is the functional test to run later.
  *  The reason string is built by the shared `@/types/observation` contract so the runner's
@@ -25,6 +26,25 @@ export function entityRuntimeDeferred(
         : fallbackTestName,
       label,
     )();
+}
+
+/**
+ * Schema guard for entity-specific runtime gates. `entityRuntimeDeferred` deliberately retains
+ * its fallback for legacy callers; pipelines that promise per-entity evidence compose this first
+ * so a missing or mistyped declaration fails instead of borrowing any fallback test.
+ */
+export function automationNameDeclared(label = 'Per-entity automation test declared'): Checker {
+  return tagRequiredFields((data) => {
+    const value = data.automationName;
+    const ok = typeof value === 'string' && value.trim().length > 0;
+    return {
+      label,
+      tier: 'L0',
+      status: ok ? 'pass' : 'fail',
+      detail: ok ? String(value) : 'missing or invalid',
+      ...(ok ? {} : { reason: 'field "automationName" must be a non-empty string naming this entity’s runtime test' }),
+    };
+  }, { field: 'automationName', shape: 'a non-empty string naming this entity’s runtime test' });
 }
 
 /** L4 visual check, pending RHI + Gemini. */

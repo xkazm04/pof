@@ -1,6 +1,6 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
-import { minLength, fieldsPopulated, selected, minCount, entriesHaveFields } from '../acceptance/dataCheckers';
+import { minLength, selected, minCount, entriesHaveFields } from '../acceptance/dataCheckers';
 import { graphValid } from '../acceptance/graphCheckers';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists } from '../acceptance/ueStaticCheckers';
@@ -624,8 +624,8 @@ registerCatalogPipeline({
         const s = slug(e.name);
         return {
         data: {
-          persistence: {
-            currentState: {
+          persistence: [
+            {
               field: 'CurrentState (enum: IDLE/PATROL/CHASE/ATTACK/FLEE/DEAD)',
               saved: false,
               rationale:
@@ -633,21 +633,21 @@ registerCatalogPipeline({
                 'Saving transient AI state would cause unexpected post-load combat behavior ' +
                 '(canon: session-transient data is discarded, only discrete world-state mutations persist).',
             },
-            patrolIndex: {
+            {
               field: 'CurrentPatrolIndex (int)',
               saved: false,
               rationale:
                 'Patrol waypoint index is ephemeral — patrol restarts from waypoint 0 on reload. ' +
                 'Consistent with PoE-style checkpoint design: enemy positions reset on area re-entry.',
             },
-            blackboardKeys: {
+            {
               field: 'All BB keys (TargetActor, HealthPct, etc.)',
               saved: false,
               rationale:
                 'All blackboard keys are runtime-derived (perception + health callbacks) — ' +
                 'they are re-populated from attributes + AI sense config on BeginPlay. No serialization needed.',
             },
-            defeatedTag: {
+            {
               field: `State.Enemy.Defeated.${s} gameplay tag (world-state mutation)`,
               saved: true,
               rationale:
@@ -657,7 +657,7 @@ registerCatalogPipeline({
                 `(or spawned as a corpse prop for narrative clarity). ` +
                 `This is the only saved field — consistent with arpg-wiring-contract canon (only world-state mutations persist).`,
             },
-            migrationNote: {
+            {
               field: 'Save migration',
               saved: 'N/A',
               rationale:
@@ -665,7 +665,7 @@ registerCatalogPipeline({
                 'new tags added in future patches are simply absent on old saves (not a blocker). ' +
                 'If the slug changes (entity rename), a save-migration map in ARPGWorldStateSave handles tag renames.',
             },
-          },
+          ],
           wiringContract: {
             grantedBy:
               'AARPGWorldStateComponent.ApplyMutation() writes the defeated tag on DEAD terminal. ' +
@@ -690,11 +690,8 @@ registerCatalogPipeline({
         verification: 'L2: AARPGWorldStateComponent and ARPGWorldStateSave compile in Source/PoF/; L3: VSStateGraphTest verifies saving and loading THIS graph’s declared mutation preserves the intended world state',
       },
       accept: allOf(
-        fieldsPopulated('persistence', 'currentState / patrolIndex / defeatedTag fields present', [
-          'currentState',
-          'patrolIndex',
-          'defeatedTag',
-        ]),
+        minCount('persistence', '≥1 persistence decision defined', 1),
+        entriesHaveFields('persistence', 'every persistence decision carries field + saved + rationale', ['field', 'saved', 'rationale']),
         wiringContractSound(),
       ),
     },

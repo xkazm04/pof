@@ -67,7 +67,9 @@ describe('characters pipeline', () => {
 
     // Test Gate: deferred L3
     const gate = p!.steps.find((s) => s.label === 'Test Gate')!;
-    expect(gate.accept({})).toMatchObject({ tier: 'L3', status: 'deferred' });
+    // An empty gate names no per-entity runtime test, so it fails (/diablo W16, cx-b07); a produced one defers to UE.
+    expect(gate.accept({})).toMatchObject({ status: 'fail' });
+    expect(gate.accept(gate.produce(entity).data ?? {})).toMatchObject({ tier: 'L3', status: 'deferred' });
 
     // UE Packaging static checks: 2 checks (cppSymbolExists + seedRowPresent), both L2
     const packaging = p!.steps.find((s) => s.label === 'UE Packaging')!;

@@ -3,7 +3,7 @@ import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
 import { minLength, fieldsPopulated, selected, minCount, resistancesPopulated, keysNumeric, unitsDeclared } from '../acceptance/dataCheckers';
 import { powerWithinTierTarget, monsterRarityWithinBands } from '../acceptance/invariants';
 import { allOf } from '../acceptance/combinators';
-import { entityRuntimeDeferred } from '../acceptance/deferred';
+import { automationNameDeclared, entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import { linksResolve } from '../acceptance/linkCheckers';
@@ -13,6 +13,33 @@ import { VISUAL_BRIEF_CRITERIA, visualBriefWritten } from '@/lib/catalog/accepta
 import { SPRITE_PROJECTION, spriteSetRendered } from '@/lib/catalog/acceptance/spriteCheckers';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
+
+const BESTIARY_GATE_TEST_BY_ENTITY: Record<string, string> = {
+  'bestiary-brute': 'PoF.Bestiary.BruteArchetypeConfig',
+};
+
+function bestiaryGateTestName(entityId: string, s: string): string {
+  return BESTIARY_GATE_TEST_BY_ENTITY[entityId] ?? `PoF.Bestiary.${s}.ArchetypeConfig`;
+}
+
+function bestiaryGateChecks(entityId: string): string[] {
+  if (entityId === 'bestiary-brute') {
+    return [
+      'spawns + possesses',
+      'ability fires (Ground Slam shockwave + Heavy Attack)',
+      'dies + drops loot (lt-Brute table)',
+      'rarity modifier GE applied on Magic/Rare spawn',
+      'resistance profile reduces elemental hits correctly',
+    ];
+  }
+  return [
+    'archetype spawns and is possessed by its declared controller',
+    'each declared ability fires with its configured targeting behavior',
+    'death resolves every declared loot binding',
+    'each declared rarity modifier GE is applied on the matching rarity',
+    'the declared resistance profile modifies elemental hits correctly',
+  ];
+}
 
 /**
  * Bestiary pipeline (catalogId: 'bestiary').
@@ -467,19 +494,21 @@ registerCatalogPipeline({
       // the same call the fleet already made on 7 identically-shaped Test Gate steps.
       engine: 'Hand-authored',
       view: { kind: 'checklist', field: 'checks' },
-      produce: () => ({
-        data: {
-          checks: [
-            'spawns + possesses',
-            'ability fires (Ground Slam shockwave + Heavy Attack)',
-            'dies + drops loot (lt-Brute table)',
-            'rarity modifier GE applied on Magic/Rare spawn',
-            'resistance profile reduces elemental hits correctly',
-          ],
-        },
-      }),
-      // Registered automation name (enumerated from UE): the bestiary archetype gate.
-      accept: entityRuntimeDeferred('PoF.Bestiary.BruteArchetypeConfig', 'Brute archetype config validated in UE'),
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return {
+          data: {
+            checks: bestiaryGateChecks(e.id),
+            automationName: bestiaryGateTestName(e.id, s),
+          },
+        };
+      },
+      // The artifact's per-entity name wins. The neutral fallback is deliberately unregistered,
+      // so an artifact that declares no name can never borrow the Brute's proof.
+      accept: allOf(
+        automationNameDeclared(),
+        entityRuntimeDeferred('PoF.Bestiary.Unspecified.ArchetypeConfig', 'Bestiary archetype config validated in UE'),
+      ),
     },
 
     // ── 12. UE Packaging ──────────────────────────────────────────────────────
