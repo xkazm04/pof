@@ -4,7 +4,7 @@
  * GRADER (/diablo W02c-2).
  *
  *   npx tsx scripts/diablo/produce.ts --catalog bestiary --ids d1-MT_NZOMBIE,d1-MT_BZOMBIE \
- *     --steps "Concept & Role,Stat Block" [--concurrency 3] [--tier bulk] [--timeout-min 15]
+ *     --steps "Concept & Role,Stat Block" [--concurrency 3] [--tier bulk] [--timeout-min 15] [--direction "…"] [--fix]
  *
  * Each (entity, step) gets the REAL headless recipe (`buildStepRecipe` — canon for its profile,
  * reference values, acceptance contract) plus the app's callback output contract; codex answers
