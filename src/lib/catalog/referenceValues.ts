@@ -62,6 +62,11 @@ export function referenceValuesBlock(entity: LabEntity): string {
     `This entity replicates a shipped game: "${entity.name}". Where a field of this step corresponds to a value below,`,
     'REPRODUCE the value exactly — do not rebalance it or invent a replacement. Where the step needs something the reference',
     `does not state, write exactly "${REFERENCE_GAP}" as its value instead of a plausible number (a declared gap is graded as missing, never as filled).`,
+    // /diablo W21: a unique carries its raw row AND the engine-resolved instance (`effective`); producers reproduced the raw row.
+    ...((entity.data as Record<string, unknown> | undefined)?.effective
+      ? ['`effective` below is what the ENGINE actually spawns (raw row + engine rules, per difficulty, single-player unless stated): for',
+        'gameplay values (level, hit points, armour, to-hit, damage, resistances) reproduce `effective` (Normal difficulty), not the raw row.']
+      : []),
     body || '- (no values recorded)',
   ].join('\n');
 }
