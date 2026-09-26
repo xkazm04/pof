@@ -1,4 +1,5 @@
 import type { Checker } from './types';
+import { tagRequiredFields } from './requiredFields';
 
 export interface GraphNode { id: string; label?: string; terminal?: boolean }
 export interface GraphEdge { from: string; to: string; label?: string }
@@ -8,7 +9,9 @@ export interface GraphData { nodes?: GraphNode[]; edges?: GraphEdge[] }
  *  reachable from the first node, and at least one node is terminal. Dangling edge / unreachable
  *  node → fail; missing terminal → pending; empty → pending. */
 export function graphValid(field: string, label: string): Checker {
-  return (data) => {
+  // Tagged so the produce prompt NAMES the graph field and its shape (/diablo W22: all 21 codex Cross-References were written
+  // under 'crossReferences' because the prompt listed only wiringContract, and graded "no nodes").
+  return tagRequiredFields((data) => {
     const g = (data[field] ?? {}) as GraphData;
     const nodes = g.nodes ?? [];
     const edges = g.edges ?? [];
@@ -26,5 +29,5 @@ export function graphValid(field: string, label: string): Checker {
     if (unreachable.length) return { label, tier: 'L0', status: 'fail', detail: `${unreachable.length} unreachable`, reason: `unreachable from start: ${unreachable.map((n) => n.id).join(', ')}` };
     if (!nodes.some((n) => n.terminal)) return { label, tier: 'L0', status: 'pending', detail: 'no terminal node', reason: 'mark at least one node terminal' };
     return { label, tier: 'L0', status: 'pass', detail: `${nodes.length} nodes · ${edges.length} edges · reachable` };
-  };
+  }, { field, shape: 'a node/edge graph { nodes: [{ id, label, terminal? }], edges: [{ from, to, label? }] } — every node reachable from the FIRST node, at least one node terminal: true' });
 }
