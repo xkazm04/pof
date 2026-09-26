@@ -29,6 +29,7 @@ import { join } from 'node:path';
 import { parseTsv } from '../../src/lib/catalog/ingest/tsv';
 import { referenceCaster, type ReferenceCaster } from '../../src/lib/catalog/reference/spellLaw';
 import { unresolvedQuestTalk } from '../../src/lib/catalog/reference/questTalk';
+import { dialogueTrees, seedDialogSteps, type DialogueTreesResult } from '@/lib/catalog/reference/dialogueTrees';
 
 function arg(name: string): string | undefined {
   const i = process.argv.indexOf(`--${name}`);
@@ -62,6 +63,17 @@ if (seedCatalog) {
   if (seedCatalog === 'affixes') {
     for (const e of seededEntities('affixes').filter((x) => x.id.startsWith('d1-affix-') && (!ids || ids.includes(x.id)))) {
       for (const seed of seedAffixSteps(e as unknown as ReferenceWrapper['entity'])) {
+        const r = submitStepArtifact(seed.catalogId, seed.entityId, seed.step, seed.data, []);
+        console.log(`${seed.entityId} · ${seed.step}: ${r.acceptance?.status ?? '?'}${r.acceptance?.reason ? ` — ${r.acceptance.reason.slice(0, 150)}` : ''}`);
+        for (const g of seed.gaps) console.log(`    gap: ${g}`);
+      }
+    }
+    process.exit(0);
+  }
+  // Dialog trees are promoted conversations (W16), not the individual text and quest-talk rows.
+  if (seedCatalog === 'dialog-trees') {
+    for (const e of seededEntities('dialog-trees').filter((x) => x.id.startsWith('d1-dialog-') && (!ids || ids.includes(x.id)))) {
+      for (const seed of seedDialogSteps(e as unknown as ReferenceWrapper['entity'])) {
         const r = submitStepArtifact(seed.catalogId, seed.entityId, seed.step, seed.data, []);
         console.log(`${seed.entityId} · ${seed.step}: ${r.acceptance?.status ?? '?'}${r.acceptance?.reason ? ` — ${r.acceptance.reason.slice(0, 150)}` : ''}`);
         for (const g of seed.gaps) console.log(`    gap: ${g}`);
@@ -111,14 +123,21 @@ const db = getDb();
 const summary = ingestSourceFromDir(sourceId, root, { db });
 
 let promotion: ReturnType<typeof promoteWrappers> | null = null;
+let dialogueReport: DialogueTreesResult | null = null;
 const promoteCatalog = arg('promote');
 if (promoteCatalog) {
   const limit = arg('limit');
   const ids = arg('ids')?.split(',').map((s) => s.trim()).filter(Boolean);
   // Affixes promote as FAMILIES (W11): a Diablo row is one tier, PoF's entity is the family — aggregated pseudo-wrappers.
-  const pool = promoteCatalog === 'affixes'
-    ? affixFamilies(listWrappers(db, { sourceId, catalogId: 'affixes' })) as unknown as ReferenceWrapper[]
-    : listWrappers(db, { sourceId, catalogId: promoteCatalog });
+  let pool: ReferenceWrapper[];
+  if (promoteCatalog === 'affixes') {
+    pool = affixFamilies(listWrappers(db, { sourceId, catalogId: 'affixes' })) as unknown as ReferenceWrapper[];
+  } else if (promoteCatalog === 'dialog-trees') {
+    dialogueReport = dialogueTrees(listWrappers(db, { sourceId }));
+    pool = dialogueReport.wrappers as unknown as ReferenceWrapper[];
+  } else {
+    pool = listWrappers(db, { sourceId, catalogId: promoteCatalog });
+  }
   const picked = selectForPromotion(pool, {
     catalogId: promoteCatalog, entityIds: ids, limit: limit ? Number(limit) : undefined,
   });
@@ -130,7 +149,7 @@ if (promoteCatalog) {
 }
 
 if (process.argv.includes('--json')) {
-  console.log(JSON.stringify({ summary, promotion }, null, 2));
+  console.log(JSON.stringify({ summary, promotion, dialogueReport }, null, 2));
   process.exit(0);
 }
 
@@ -157,4 +176,8 @@ console.log(`store: created ${s.created} · rawChanged ${s.rawChanged} · reproj
 if (promotion) {
   console.log(`\npromoted ${promotion.promoted.length} → catalog_entities (source ingest): ${promotion.promoted.slice(0, 10).join(', ')}${promotion.promoted.length > 10 ? ' …' : ''}`);
   for (const r of promotion.refused) console.log(`   REFUSED ${r.entityId}: ${r.reason}${r.unsafeKeys ? ` (${r.unsafeKeys.join(', ')})` : ''}`);
+}
+if (dialogueReport) {
+  for (const item of dialogueReport.skipped) console.log(`   SKIPPED ${item.towner}: ${item.reason}`);
+  for (const item of dialogueReport.unresolved) console.log(`   UNRESOLVED ${item.towner}: line ${item.line}`);
 }
