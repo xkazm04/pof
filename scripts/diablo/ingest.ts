@@ -41,6 +41,11 @@ import {
 } from '@/lib/catalog/reference/uniqueItems';
 import { seedStatusSteps, statusEntities } from '@/lib/catalog/reference/statusSpecs';
 import { locationEntities, seedLocationSteps } from '@/lib/catalog/reference/locationSpecs';
+import {
+  seedCharacterVendorSteps,
+  seedVendorSteps,
+  vendorEntities,
+} from '@/lib/catalog/reference/storeSpecs';
 
 function arg(name: string): string | undefined {
   const i = process.argv.indexOf(`--${name}`);
@@ -122,6 +127,20 @@ if (seedCatalog) {
     }
     process.exit(0);
   }
+  // Town stores are engine-derived pseudo-wrappers. Cain is intentionally included as a
+  // service-only vendor so identification has the same resolvable interaction binding.
+  if (seedCatalog === 'vendors') {
+    for (const wrapper of vendorEntities().filter((item) => !ids || ids.includes(item.entity.id))) {
+      const e = wrapper.entity;
+      if (!promoted.has(e.id)) { console.log(`SKIP ${e.id}: not promoted (promote it first)`); continue; }
+      for (const seed of seedVendorSteps(e)) {
+        const r = submitStepArtifact(seed.catalogId, seed.entityId, seed.step, seed.data, []);
+        console.log(`${seed.entityId} · ${seed.step}: ${r.acceptance?.status ?? '?'}${r.acceptance?.reason ? ` — ${r.acceptance.reason.slice(0, 150)}` : ''}`);
+        for (const g of seed.gaps) console.log(`    gap: ${g}`);
+      }
+    }
+    process.exit(0);
+  }
   // Locations are engine-derived pseudo-wrappers whose pools and set-level parents are
   // resolved from the external monster and quest wrappers already held in the local store.
   if (seedCatalog === 'zone-map') {
@@ -192,12 +211,32 @@ if (seedCatalog) {
   const wrappers = listWrappers(getDb(), { sourceId, catalogId: seedCatalog }).filter((w) => !ids || ids.includes(w.entity.id));
   for (const w of wrappers) {
     if (!promoted.has(w.entity.id)) { console.log(`SKIP ${w.entity.id}: not promoted (promote it first)`); continue; }
-    for (const seed of [...seedBestiarySteps(w), ...seedItemSteps(w), ...seedSpellSteps(w, caster), ...seedCharacterCombatSteps(w)]) {
+    for (const seed of [...seedBestiarySteps(w), ...seedItemSteps(w), ...seedSpellSteps(w, caster), ...seedCharacterCombatSteps(w), ...seedCharacterVendorSteps(w.entity)]) {
       const r = submitStepArtifact(seed.catalogId, seed.entityId, seed.step, seed.data, []);
       const a = r.acceptance;
       console.log(`${seed.entityId} · ${seed.step}: ${a?.status ?? '?'}${a?.reason ? ` — ${a.reason.slice(0, 150)}` : ''}`);
       for (const g of seed.gaps) console.log(`    gap: ${g}`);
     }
+  }
+  process.exit(0);
+}
+
+// Engine-derived town services need no --root; their pinned Source citations and projections are
+// code-owned pseudo-wrappers, while promotion still uses the guarded persistence door.
+if (arg('promote') === 'vendors') {
+  const limit = arg('limit');
+  const ids = arg('ids')?.split(',').map((s) => s.trim()).filter(Boolean);
+  const picked = selectForPromotion(vendorEntities() as unknown as ReferenceWrapper[], {
+    catalogId: 'vendors', entityIds: ids, limit: limit ? Number(limit) : undefined,
+  });
+  const promotion = promoteWrappers(picked, upsertEntity, (catalogId, entityId) => {
+    const seed = codeSeededEntities(catalogId).find((e) => e.id === entityId);
+    return seed ? `id is already the code seed "${seed.name}" in ${catalogId} — the seed always wins` : null;
+  });
+  if (process.argv.includes('--json')) console.log(JSON.stringify({ promotion }, null, 2));
+  else {
+    console.log(`promoted ${promotion.promoted.length} → catalog_entities (source ingest): ${promotion.promoted.join(', ') || '(none)'}`);
+    for (const r of promotion.refused) console.log(`   REFUSED ${r.entityId}: ${r.reason}${r.unsafeKeys ? ` (${r.unsafeKeys.join(', ')})` : ''}`);
   }
   process.exit(0);
 }
@@ -224,7 +263,7 @@ if (arg('promote') === 'status-effects') {
 
 const root = arg('root');
 if (!root) {
-  console.error('usage: ingest.ts --root <data root> [--source diablo1] [--promote <catalogId> [--limit N] [--ids a,b]] [--json]; status-effects promotion needs no --root');
+  console.error('usage: ingest.ts --root <data root> [--source diablo1] [--promote <catalogId> [--limit N] [--ids a,b]] [--json]; vendors and status-effects promotion need no --root');
   process.exit(2);
 }
 
