@@ -14,14 +14,80 @@
 import { contentHash } from '@/lib/catalog/reference/hash';
 import { AI_LAW_IDS, attackKindsOf, behaviourLawTexts, expectedTicks, timingLaw, walkTicksPerStep } from '@/lib/catalog/reference/behaviourScale';
 import { AFFIX_POWERS, affixTargetsOf } from '@/lib/catalog/ingest/diablo1Affixes';
+import { DIABLO1_CANON } from '@/lib/catalog/canon/profiles/diablo1';
+import { monsterHitPoints, type Difficulty, type IntegerRange } from '@/lib/catalog/reference/combatMath';
+import { resistanceByElement } from '@/lib/catalog/reference/stepSeeds';
 
 export interface DeriveSpec {
   /** Changes whenever the derivation's code or the laws it reads change. */
   version: () => string;
-  derive: (entity: { id: string; tags?: string[]; data: Record<string, unknown> }) => Record<string, unknown>;
+  derive: (entity: { id: string; tags?: string[]; data: Record<string, unknown> }, raw?: Record<string, string>) => Record<string, unknown>;
 }
 
-const CODE_REVISION = 'monster-timing@2';
+const CODE_REVISION = 'monster-timing+difficulty@3';
+
+const DIFFICULTY_LAW_IDS = [
+  'd1-difficulty-law',
+  'd1-combat-monster-hp-law',
+  'd1-combat-monster-armour-law',
+  'd1-combat-monster-damage-law',
+  'd1-combat-monster-melee-to-hit-law',
+  'd1-xp-award-law',
+] as const;
+
+const numericStat = (data: Record<string, unknown>, label: string): number | null => {
+  const stats = data.stats;
+  if (!Array.isArray(stats)) return null;
+  const entry = stats.find((candidate) => candidate != null && typeof candidate === 'object'
+    && (candidate as { label?: unknown }).label === label) as { value?: unknown } | undefined;
+  const value = Number(entry?.value);
+  return Number.isFinite(value) ? value : null;
+};
+
+function difficultyStats(data: Record<string, unknown>, raw: Record<string, string> = {}): Record<string, unknown> {
+  const base = {
+    level: numericStat(data, 'Level'),
+    hpMin: numericStat(data, 'HP Min'),
+    hpMax: numericStat(data, 'HP Max'),
+    armourClass: numericStat(data, 'Armor Class'),
+    damageMin: numericStat(data, 'Damage Min'),
+    damageMax: numericStat(data, 'Damage Max'),
+    toHit: numericStat(data, 'To Hit'),
+    xp: numericStat(data, 'XP'),
+  };
+  const missing = Object.entries(base).filter(([, value]) => value == null).map(([key]) => key);
+  if (missing.length) return { difficultyGap: `no per-difficulty stats: missing ${missing.join(', ')}` };
+
+  const hp = { min: base.hpMin!, max: base.hpMax! };
+  const damage = { min: base.damageMin!, max: base.damageMax! };
+  const normalResistance = resistanceByElement(raw.resistance ?? '');
+  const mappedHellResistance = Array.isArray(data.resistanceHell)
+    ? data.resistanceHell.filter((flag): flag is string => typeof flag === 'string').join(',')
+    : '';
+  const hellResistance = resistanceByElement(raw.resistanceHell ?? mappedHellResistance);
+  const deriveOne = (difficulty: Difficulty) => {
+    const nightmare = difficulty === 'nightmare';
+    const hell = difficulty === 'hell';
+    const damageTransform = (value: number) => nightmare ? 2 * (value + 2) : hell ? 4 * value + 6 : value;
+    return {
+      level: base.level! + (nightmare ? 15 : hell ? 30 : 0),
+      // PoF's flat Stat Block cannot hold difficulty variants; expose the vanilla single-player columns here.
+      hitPoints: monsterHitPoints(hp as IntegerRange, difficulty),
+      armourClass: base.armourClass! + (nightmare ? 50 : hell ? 80 : 0),
+      damage: { min: damageTransform(damage.min), max: damageTransform(damage.max) },
+      toHit: base.toHit! + (nightmare ? 85 : hell ? 120 : 0),
+      resistances: hell ? hellResistance : normalResistance,
+      xp: nightmare ? 2 * (base.xp! + 1000) : hell ? 4 * (base.xp! + 1000) : base.xp!,
+    };
+  };
+  return {
+    byDifficulty: {
+      normal: deriveOne('normal'),
+      nightmare: deriveOne('nightmare'),
+      hell: deriveOne('hell'),
+    },
+  };
+}
 
 const csv = (v: unknown): number[] | null => {
   if (typeof v !== 'string' || v.trim() === '') return null;
@@ -30,8 +96,13 @@ const csv = (v: unknown): number[] | null => {
 };
 
 export const MONSTER_DERIVE: DeriveSpec = {
-  version: () => contentHash({ code: CODE_REVISION, laws: behaviourLawTexts() }),
-  derive: (e) => {
+  version: () => contentHash({
+    code: CODE_REVISION,
+    laws: behaviourLawTexts(),
+    difficultyLaws: DIFFICULTY_LAW_IDS.map((id) => DIABLO1_CANON.find((law) => law.id === id)?.body ?? `missing:${id}`),
+  }),
+  derive: (e, raw) => {
+    const difficulty = difficultyStats(e.data, raw);
     const frames = csv(e.data.animFrames);
     const rates = csv(e.data.animRates);
     const ai = e.tags?.[0] ?? '';
@@ -39,7 +110,7 @@ export const MONSTER_DERIVE: DeriveSpec = {
       !frames || frames.length < 2 ? 'animFrames' : '',
       !rates || rates.length < 2 ? 'animRates' : '',
     ].filter(Boolean);
-    if (locomotionMissing.length) return { gap: `no derived locomotion: missing ${locomotionMissing.join(', ')}` };
+    if (locomotionMissing.length) return { ...difficulty, gap: `no derived locomotion: missing ${locomotionMissing.join(', ')}` };
 
     const t = timingLaw();
     const walkTicks = walkTicksPerStep({ walkFrames: frames![1], walkRate: rates![1] }, t.walkExtraTicks);
@@ -53,12 +124,14 @@ export const MONSTER_DERIVE: DeriveSpec = {
       attackKinds = attackKindsOf(ai);
     } catch (err) {
       return {
+        ...difficulty,
         locomotion,
         gap: `${(err as Error).message}; only the while-walking upper bound is known — effective tilesPerSecond needs the routine's cadence model`,
       };
     }
 
     const base = {
+      ...difficulty,
       laws: ['d1-timing-law', AI_LAW_IDS[ai]],
       attackKinds,
       locomotion,

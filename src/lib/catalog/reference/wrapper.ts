@@ -88,7 +88,7 @@ export function wrapTable(source: ReferenceSource, spec: ReferenceTableSpec, tex
   });
 
   if (spec.derive) {
-    for (const e of result.entities) e.data.derived = spec.derive.derive(e);
+    for (const [i, e] of result.entities.entries()) e.data.derived = spec.derive.derive(e, table.rows[i]);
   }
 
   const seen = new Set<string>();

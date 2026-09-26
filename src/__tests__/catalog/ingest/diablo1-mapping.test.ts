@@ -53,10 +53,19 @@ describe('Diablo I mapping tables vs. the real upstream headers', () => {
   it('reports real, non-trivial coverage on the genre-matched bestiary table', () => {
     const a = auditColumns(REAL_HEADERS.monstdat, MONSTER_MAP);
     // Pinned so a future edit that quietly reclassifies gaps as drops is visible.
-    expect(a.mapped).toHaveLength(25);
+    expect(a.mapped).toHaveLength(26);
     expect(a.dropped).toHaveLength(7);
-    expect(a.gap).toHaveLength(9);
+    expect(a.gap).toHaveLength(8);
     expect(a.mapped.length + a.dropped.length + a.gap.length).toBe(41);
+  });
+});
+
+describe('Hell resistance mapping (W28)', () => {
+  it('maps and decodes resistanceHell while leaving the ordinary resistance path unchanged', () => {
+    expect(MONSTER_MAP.resistance.kind).toBe('gap');
+    expect(MONSTER_MAP.resistanceHell).toMatchObject({ kind: 'mapped', to: 'data.resistanceHell[]' });
+    const decode = MONSTER_MAP.resistanceHell.kind === 'mapped' ? MONSTER_MAP.resistanceHell.decode : undefined;
+    expect(applyDecode('IMMUNE_MAGIC, RESIST_FIRE', decode)).toEqual(['IMMUNE_MAGIC', 'RESIST_FIRE']);
   });
 });
 

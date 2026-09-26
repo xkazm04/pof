@@ -289,7 +289,11 @@ export function monsterProfile(
       difficultyAdjusted: true,
     };
   }
-  const resistance = bestiaryWrapper.raw.resistance ?? '';
+  // InitMonster keeps the ordinary resistance column on Normal/Nightmare and selects
+  // resistanceHell only on Hell (.reference/devilutionX/Source/monster.cpp:241,278).
+  const resistance = difficulty === 'hell'
+    ? bestiaryWrapper.raw.resistanceHell ?? ''
+    : bestiaryWrapper.raw.resistance ?? '';
   return {
     level: statAt(bestiaryWrapper, 'Level'),
     hitPoints: monsterHitPoints(

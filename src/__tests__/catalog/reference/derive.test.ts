@@ -12,6 +12,31 @@ const monster = (over: Record<string, unknown> = {}, tags = ['Zombie']) => ({
 });
 
 describe('MONSTER_DERIVE', () => {
+  it('derives hand-computed vanilla single-player columns for all three difficulties', () => {
+    const stats = [
+      ['Level', '4'], ['HP Min', '20'], ['HP Max', '30'], ['Armor Class', '13'],
+      ['Damage Min', '7'], ['Damage Max', '12'], ['To Hit', '27'], ['XP', '50'],
+    ].map(([label, value]) => ({ label, value }));
+    const d = MONSTER_DERIVE.derive(
+      monster({ stats }),
+      { resistance: 'IMMUNE_MAGIC,RESIST_FIRE', resistanceHell: 'IMMUNE_FIRE,RESIST_LIGHTNING' },
+    ) as { byDifficulty: Record<string, unknown> };
+    expect(d.byDifficulty).toEqual({
+      normal: {
+        level: 4, hitPoints: { min: 10, max: 15 }, armourClass: 13, damage: { min: 7, max: 12 }, toHit: 27,
+        resistances: { MAGIC: 100, FIRE: 75, LIGHTNING: 0 }, xp: 50,
+      },
+      nightmare: {
+        level: 19, hitPoints: { min: 130, max: 145 }, armourClass: 63, damage: { min: 18, max: 28 }, toHit: 112,
+        resistances: { MAGIC: 100, FIRE: 75, LIGHTNING: 0 }, xp: 2100,
+      },
+      hell: {
+        level: 34, hitPoints: { min: 240, max: 260 }, armourClass: 93, damage: { min: 34, max: 54 }, toHit: 147,
+        resistances: { MAGIC: 0, FIRE: 100, LIGHTNING: 75 }, xp: 4200,
+      },
+    });
+  });
+
   it('derives walk and attack timing in the reference units (ticks, tiles, seconds)', () => {
     const d = MONSTER_DERIVE.derive(monster()) as Record<string, number> & { locomotion: Record<string, number> };
     const t = timingLaw();
@@ -56,6 +81,6 @@ describe('MONSTER_DERIVE', () => {
   it('versions itself by the law texts it reads, so a law edit re-projects', () => {
     expect(MONSTER_DERIVE.version()).toMatch(/^[0-9a-f]{8,}$/);
     expect(MONSTER_DERIVE.version()).toBe(MONSTER_DERIVE.version());
-    expect(MONSTER_DERIVE.version()).not.toBe(contentHash({ code: 'monster-timing@1', laws: behaviourLawTexts() }));
+    expect(MONSTER_DERIVE.version()).not.toBe(contentHash({ code: 'monster-timing@2', laws: behaviourLawTexts() }));
   });
 });

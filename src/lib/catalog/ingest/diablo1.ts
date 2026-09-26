@@ -99,7 +99,7 @@ export const MONSTER_MAP: FieldMap = {
   armorClass: mapped('data.stats[Armor Class]'),
   monsterClass: mapped('data.category'),
   resistance: gap(NO_RESIST),
-  resistanceHell: gap('no per-difficulty variant of ANY stat — a PoF entity is difficulty-flat, so a game with per-difficulty balance cannot round-trip'),
+  resistanceHell: mapped('data.resistanceHell[]', ...MONSTER_RESISTANCE_DECODE),
   selectionRegion: dropped('mouse-picking hitbox'),
   // 106 blank, 4 `None` (a sentinel, not an entity), 2 `Uniq(<id>)` — a UNIQUE ITEM the
   // monster always drops. Diablo has no per-monster loot table: drops are driven by monster

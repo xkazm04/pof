@@ -102,6 +102,8 @@ export function effectiveUnique(
     toHit: { value: toHit, source: customToHit === 0 ? 'base' : 'unique override' },
     armorClass: { value: armorClass, source: customArmorClass === 0 ? 'base' : 'unique override' },
     damage: { value: damage, source: 'unique override' },
+    // PrepareUniqueMonst runs after InitMonster and overwrites even Hell's base
+    // resistanceHell selection with the unique row's one resistance list.
     resistances: {
       value: applyDecode(unique.raw.resistance ?? '', UNIQUE_RESISTANCE_DECODE),
       source: 'unique override',

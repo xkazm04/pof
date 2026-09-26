@@ -108,7 +108,7 @@ describe('combat wrapper adapters', () => {
         { label: 'Armor Class', value: '7' }, { label: 'To Hit', value: '17' },
         { label: 'Damage Min', value: '2' }, { label: 'Damage Max', value: '5' },
       ],
-    }, { resistance: 'IMMUNE_MAGIC,RESIST_FIRE' }, 'monsters/monstdat.tsv');
+    }, { resistance: 'IMMUNE_MAGIC,RESIST_FIRE', resistanceHell: 'RESIST_LIGHTNING,IMMUNE_FIRE' }, 'monsters/monstdat.tsv');
     expect(monsterProfile(monster, 'normal', 'multi')).toEqual({
       level: 3, hitPoints: { min: 20, max: 30 }, armourClass: 7, toHit: 17,
       damage: { min: 2, max: 5 }, monsterClass: 'undead',
@@ -118,6 +118,8 @@ describe('combat wrapper adapters', () => {
     expect(monsterProfile(monster, 'normal').hitPoints).toEqual({ min: 10, max: 15 });
     expect(monsterProfile(monster, 'nightmare').hitPoints).toEqual({ min: 130, max: 145 });
     expect(monsterProfile(monster, 'hell').hitPoints).toEqual({ min: 240, max: 260 });
+    expect(monsterProfile(monster, 'nightmare')).toMatchObject({ resist: { fire: true }, immune: { magic: true } });
+    expect(monsterProfile(monster, 'hell')).toMatchObject({ resist: { lightning: true }, immune: { fire: true } });
     // Multiplayer skips halving before applying the same vanilla bonuses.
     expect(monsterProfile(monster, 'nightmare', 'multi').hitPoints).toEqual({ min: 160, max: 190 });
     expect(monsterProfile(monster, 'hell', 'multi').hitPoints).toEqual({ min: 280, max: 320 });
@@ -142,6 +144,7 @@ describe('combat wrapper adapters', () => {
       difficulty: 'normal', gameMode: 'multi', difficultyAdjusted: true,
     });
     expect(monsterProfile(unique, 'normal', base).hitPoints).toEqual({ min: 75, max: 75 });
+    expect(monsterProfile(unique, 'hell', base)).toMatchObject({ resist: {}, immune: { fire: true } });
   });
 
   it('defaults the combat CLI mode to single-player and makes multiplayer opt-in', () => {

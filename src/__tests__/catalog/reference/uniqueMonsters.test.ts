@@ -16,7 +16,7 @@ function wrapper(id: string, file: string, raw: Record<string, string>, data: Re
 }
 
 const base = wrapper('d1-MT_SYNTH', 'monsters/monstdat.tsv', {
-  _monster_id: 'MT_SYNTH', level: '4', toHit: '27', armorClass: '13', resistance: 'RESIST_FIRE',
+  _monster_id: 'MT_SYNTH', level: '4', toHit: '27', armorClass: '13', resistance: 'RESIST_FIRE', resistanceHell: 'IMMUNE_FIRE',
 });
 
 function unique(overrides: Record<string, string> = {}): ReferenceWrapper {
@@ -52,5 +52,7 @@ describe('effectiveUnique', () => {
       .toEqual({ min: 351.5, max: 351.5 });
     expect(effective.ai).toEqual({ value: 'SyntheticAI', source: 'unique override' });
     expect(effective.intelligence).toEqual({ value: 3, source: 'unique override' });
+    expect(effectiveUnique(unique(), base, 'hell').resistances)
+      .toEqual({ value: ['IMMUNE_MAGIC', 'RESIST_LIGHTNING'], source: 'unique override' });
   });
 });

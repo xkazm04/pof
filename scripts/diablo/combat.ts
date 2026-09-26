@@ -3,7 +3,7 @@
  * Runtime-only Diablo I duel matrix. Every balance value comes from wrappers in the local DB.
  *
  *   npx tsx scripts/diablo/combat.ts [--class warrior|rogue|sorcerer] [--level N]
- *     [--difficulty normal|nightmare|hell] [--weapon d1-<item>] [--monsters id,id]
+ *     [--difficulty normal|nightmare|hell | --all-difficulties] [--weapon d1-<item>] [--monsters id,id]
  *     [--multiplayer] [--out file.json] [--seed id,id]
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -67,6 +67,8 @@ if (!(['normal', 'nightmare', 'hell'] as const).includes(difficulty)) {
   console.error('--difficulty must be normal|nightmare|hell');
   process.exit(2);
 }
+const allDifficulties = process.argv.includes('--all-difficulties');
+const difficulties: Difficulty[] = allDifficulties ? ['normal', 'nightmare', 'hell'] : [difficulty];
 const gameMode = combatGameMode(process.argv);
 
 const db = getDb();
@@ -91,7 +93,7 @@ if (orphans.length) console.log(`skipped (base type not in monstdat): ${orphans.
 const profiled = bestiaryWrappers.filter((wrapper) => !orphans.includes(wrapper));
 const monsters = requestedMonsters
   ? profiled.filter((wrapper) => requestedMonsters.includes(wrapper.entity.id))
-  : profiled.filter((wrapper) => monsterProfile(wrapper, difficulty, baseFor(wrapper), gameMode).level <= level + 10);
+  : profiled.filter((wrapper) => monsterProfile(wrapper, allDifficulties ? 'normal' : difficulty, baseFor(wrapper), gameMode).level <= level + 10);
 const missingMonsters = (requestedMonsters ?? []).filter((id) => !monsters.some((wrapper) => wrapper.entity.id === id));
 if (missingMonsters.length) console.log(`no monstdat wrapper for: ${missingMonsters.join(', ')}`);
 
@@ -116,75 +118,84 @@ interface DuelRow {
   xpAward: number;
 }
 
-const tables: Record<string, DuelRow[]> = {};
-for (const folder of classes) {
-  const classWrapper = characterWrappers.find((wrapper) => wrapper.entity.id === `d1-class-${folder}`);
-  if (!classWrapper) throw new Error(`the local DB has no d1-class-${folder} wrapper`);
-  const coefficients = classCoefficients(classWrapper);
-  const build = referenceBuild(classWrapper, level, weapon);
-  const playerAttack = build.weaponType === 'bow' ? 'ranged' : 'melee';
-  const rows = monsters.map((wrapper): DuelRow => {
-    const base = baseFor(wrapper);
-    const monster = monsterProfile(wrapper, difficulty, base, gameMode);
-    const result = duel(build, coefficients, monster, {
-      gameMode,
-      playerAttack,
-      monsterAttack: 'melee',
-      dungeonLevel: Math.min(16, Math.max(1, monster.level)),
+const tables: Partial<Record<Difficulty, Record<string, DuelRow[]>>> = {};
+for (const selectedDifficulty of difficulties) {
+  const difficultyTables: Record<string, DuelRow[]> = {};
+  tables[selectedDifficulty] = difficultyTables;
+  for (const folder of classes) {
+    const classWrapper = characterWrappers.find((wrapper) => wrapper.entity.id === `d1-class-${folder}`);
+    if (!classWrapper) throw new Error(`the local DB has no d1-class-${folder} wrapper`);
+    const coefficients = classCoefficients(classWrapper);
+    const build = referenceBuild(classWrapper, level, weapon);
+    const playerAttack = build.weaponType === 'bow' ? 'ranged' : 'melee';
+    const rows = monsters.map((wrapper): DuelRow => {
+      const base = baseFor(wrapper);
+      const monster = monsterProfile(wrapper, selectedDifficulty, base, gameMode);
+      const result = duel(build, coefficients, monster, {
+        gameMode,
+        playerAttack,
+        monsterAttack: 'melee',
+        dungeonLevel: Math.min(16, Math.max(1, monster.level)),
+      });
+      const currentTotal = level <= 1 ? 0 : curve.threshold(level - 1) ?? 0;
+      const xp = experienceAward({
+        baseExperience: stat(base ?? wrapper, 'XP'),
+        difficulty: selectedDifficulty,
+        unique: wrapper.file === 'monsters/unique_monstdat.tsv',
+        whoHitMask: 1,
+        localPlayerBit: 1,
+        playerLevel: level,
+        monsterLevel: monster.level - (wrapper.file === 'monsters/unique_monstdat.tsv'
+          ? selectedDifficulty === 'nightmare' ? 15 : selectedDifficulty === 'hell' ? 30 : 0
+          : 0),
+        totalExperience: currentTotal,
+        curve,
+      });
+      return {
+        monster: wrapper.entity.name,
+        monsterId: wrapper.entity.id,
+        playerHitPct: result.playerHitChance * 100,
+        playerSwingSeconds: result.playerSwingSeconds,
+        expectedSwingsToKill: finite(result.expectedPlayerSwingsToKill),
+        expectedSecondsToKill: finite(result.expectedPlayerSecondsToKill),
+        monsterHitPct: result.monsterHitChance * 100,
+        expectedMonsterDamagePerHit: result.expectedMonsterDamagePerHit / FIXED_POINT,
+        expectedHitsToKillPlayer: finite(result.expectedMonsterHitsToKillPlayer),
+        xpAward: xp.granted,
+      };
     });
-    const currentTotal = level <= 1 ? 0 : curve.threshold(level - 1) ?? 0;
-    const xp = experienceAward({
-      baseExperience: stat(base ?? wrapper, 'XP'),
-      difficulty,
-      unique: wrapper.file === 'monsters/unique_monstdat.tsv',
-      whoHitMask: 1,
-      localPlayerBit: 1,
-      playerLevel: level,
-      monsterLevel: monster.level - (wrapper.file === 'monsters/unique_monstdat.tsv'
-        ? difficulty === 'nightmare' ? 15 : difficulty === 'hell' ? 30 : 0
-        : 0),
-      totalExperience: currentTotal,
-      curve,
-    });
-    return {
-      monster: wrapper.entity.name,
-      monsterId: wrapper.entity.id,
-      playerHitPct: result.playerHitChance * 100,
-      playerSwingSeconds: result.playerSwingSeconds,
-      expectedSwingsToKill: finite(result.expectedPlayerSwingsToKill),
-      expectedSecondsToKill: finite(result.expectedPlayerSecondsToKill),
-      monsterHitPct: result.monsterHitChance * 100,
-      expectedMonsterDamagePerHit: result.expectedMonsterDamagePerHit / FIXED_POINT,
-      expectedHitsToKillPlayer: finite(result.expectedMonsterHitsToKillPlayer),
-      xpAward: xp.granted,
-    };
-  });
-  tables[folder] = rows;
-  console.log(`\n=== ${folder} · level ${level} · ${difficulty} · ${gameMode === 'single' ? 'single-player' : 'multiplayer'}${weapon ? ` · ${weapon.entity.name}` : ' · bare-handed'} ===`);
-  console.table(rows.map((row) => ({
-    monster: row.monster,
-    'player hit %': Number(row.playerHitPct.toFixed(2)),
-    'swing seconds': row.playerSwingSeconds == null ? null : Number(row.playerSwingSeconds.toFixed(3)),
-    'swings to kill': row.expectedSwingsToKill == null ? null : Number(row.expectedSwingsToKill.toFixed(2)),
-    'seconds to kill': row.expectedSecondsToKill == null ? null : Number(row.expectedSecondsToKill.toFixed(2)),
-    'monster hit %': Number(row.monsterHitPct.toFixed(2)),
-    'monster damage/hit': Number(row.expectedMonsterDamagePerHit.toFixed(2)),
-    'hits to kill player': row.expectedHitsToKillPlayer == null ? null : Number(row.expectedHitsToKillPlayer.toFixed(2)),
-    XP: row.xpAward,
-  })));
+    difficultyTables[folder] = rows;
+    console.log(`\n=== ${folder} · level ${level} · ${selectedDifficulty} · ${gameMode === 'single' ? 'single-player' : 'multiplayer'}${weapon ? ` · ${weapon.entity.name}` : ' · bare-handed'} ===`);
+    console.table(rows.map((row) => ({
+      monster: row.monster,
+      'player hit %': Number(row.playerHitPct.toFixed(2)),
+      'swing seconds': row.playerSwingSeconds == null ? null : Number(row.playerSwingSeconds.toFixed(3)),
+      'swings to kill': row.expectedSwingsToKill == null ? null : Number(row.expectedSwingsToKill.toFixed(2)),
+      'seconds to kill': row.expectedSecondsToKill == null ? null : Number(row.expectedSecondsToKill.toFixed(2)),
+      'monster hit %': Number(row.monsterHitPct.toFixed(2)),
+      'monster damage/hit': Number(row.expectedMonsterDamagePerHit.toFixed(2)),
+      'hits to kill player': row.expectedHitsToKillPlayer == null ? null : Number(row.expectedHitsToKillPlayer.toFixed(2)),
+      XP: row.xpAward,
+    })));
+  }
 }
 
 const out = arg('out');
 if (out) {
   const path = resolve(out);
   mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, JSON.stringify(classes.length === 1 ? tables[classes[0]] : tables, null, 2));
+  const selectedTables = tables[difficulty]!;
+  const payload = allDifficulties ? tables : classes.length === 1 ? selectedTables[classes[0]] : selectedTables;
+  writeFileSync(path, JSON.stringify(payload, null, 2));
   console.log(`JSON → ${path}`);
 } else {
   for (const folder of classes) {
     const path = join(homedir(), 'Documents', 'Obsidian', 'pof', 'Diablo', 'Combat', `${folder}-L${level}.json`);
     mkdirSync(dirname(path), { recursive: true });
-    writeFileSync(path, JSON.stringify(tables[folder], null, 2));
+    const payload = allDifficulties
+      ? Object.fromEntries(difficulties.map((selectedDifficulty) => [selectedDifficulty, tables[selectedDifficulty]![folder]]))
+      : tables[difficulty]![folder];
+    writeFileSync(path, JSON.stringify(payload, null, 2));
     console.log(`JSON → ${path}`);
   }
 }
