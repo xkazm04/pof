@@ -18,6 +18,13 @@ import {
   TEXT_LINE_MAP,
   TOWNER_MAP,
 } from '@/lib/catalog/ingest/diablo1Dialogue';
+import {
+  CLASS_ATTRIBUTES_MAP,
+  CLASS_DERIVE,
+  CLASSDAT_MAP,
+  DIABLO1_CLASSES,
+  EXPERIENCE_MAP,
+} from '@/lib/catalog/ingest/diablo1Classes';
 
 export interface ReferenceTableSpec {
   /** Path relative to the source's data root: `monsters/monstdat.tsv`. */
@@ -34,6 +41,19 @@ export interface ReferenceTableSpec {
   positionalTag?: string;
   /** Enum identifiers by row position for a table that has no key column. */
   rowIds?: readonly string[];
+  /** Fixed display name for a table whose record carries no name field. */
+  displayName?: string;
+  /** Prefix added to a declared key when constructing the projected entity id. */
+  keyPrefix?: string;
+}
+
+export interface ReferenceManifestSpec {
+  file: string;
+  technique: string;
+  keyColumn: string;
+  map: FieldMap;
+  /** Registered table paths use this token where the manifest key belongs. */
+  registeredFilePattern: string;
 }
 
 export interface ReferenceSource {
@@ -48,6 +68,8 @@ export interface ReferenceSource {
   /** Canon profile its entities' prompts are written for (`canon/profiles.ts`). */
   canonProfile: string;
   tables: ReferenceTableSpec[];
+  /** Metadata-only registries checked for upstream entries with no registered table. */
+  manifests?: ReferenceManifestSpec[];
 }
 
 export const DIABLO1: ReferenceSource = {
@@ -69,7 +91,16 @@ export const DIABLO1: ReferenceSource = {
     { file: 'text/textdat.tsv', catalogId: 'dialog-trees', technique: 'tsv', keyColumn: 'txtstrid', map: TEXT_LINE_MAP },
     { file: 'towners/quest_dialog.tsv', catalogId: 'dialog-trees', technique: 'tsv', keyColumn: 'towner_type', map: QUEST_DIALOG_MAP },
     { file: 'quests/questdat.tsv', catalogId: 'quests', technique: 'tsv', map: QUEST_MAP, rowIds: QUEST_ROW_IDS, derive: QUEST_DERIVE },
+    ...DIABLO1_CLASSES.map(({ folder, name }) => ({
+      file: `classes/${folder}/attributes.tsv`, catalogId: 'characters', technique: 'tsv-kv',
+      map: CLASS_ATTRIBUTES_MAP, rowIds: [`class-${folder}`], displayName: name, derive: CLASS_DERIVE,
+    })),
+    { file: 'Experience.tsv', catalogId: 'progression-curves', technique: 'tsv', keyColumn: 'Level', keyPrefix: 'xp-', map: EXPERIENCE_MAP },
   ],
+  manifests: [{
+    file: 'classes/classdat.tsv', technique: 'tsv', keyColumn: 'folderName', map: CLASSDAT_MAP,
+    registeredFilePattern: 'classes/{key}/attributes.tsv',
+  }],
 };
 
 export const REFERENCE_SOURCES: Record<string, ReferenceSource> = { [DIABLO1.id]: DIABLO1 };

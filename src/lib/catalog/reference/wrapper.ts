@@ -70,9 +70,10 @@ export function wrapTable(source: ReferenceSource, spec: ReferenceTableSpec, tex
   const table = technique.read(text);
   // A derivation is code: its version (code revision + the laws it reads) is part of the mapping version, or an edit to
   // it would leave every row "unchanged" and never re-project (D29).
-  const baseVersion = spec.rowIds
-    ? contentHash({ map: spec.map, rowIds: spec.rowIds })
-    : mappingVersion(spec.map);
+  const hasProjectionOptions = spec.displayName !== undefined || spec.keyPrefix !== undefined;
+  const baseVersion = hasProjectionOptions
+    ? contentHash({ map: spec.map, rowIds: spec.rowIds, displayName: spec.displayName, keyPrefix: spec.keyPrefix })
+    : spec.rowIds ? contentHash({ map: spec.map, rowIds: spec.rowIds }) : mappingVersion(spec.map);
   const version = spec.derive ? `${baseVersion}+${spec.derive.version()}` : baseVersion;
   const provenanceFor = (sourceFile: string, sourceRow: string): EntityProvenance => ({
     kind: 'ingest', sourceGame: source.game, sourceProject: source.project,
@@ -82,7 +83,7 @@ export function wrapTable(source: ReferenceSource, spec: ReferenceTableSpec, tex
   const result = ingestRecords(table, {
     catalogId: spec.catalogId, sourceFile: spec.file, keyColumn: spec.keyColumn,
     map: spec.map, provenanceFor, idPrefix: source.idPrefix, positionalTag: spec.positionalTag,
-    rowIds: spec.rowIds,
+    rowIds: spec.rowIds, displayName: spec.displayName, keyPrefix: spec.keyPrefix,
   });
 
   if (spec.derive) {

@@ -30,6 +30,7 @@ import { parseTsv } from '../../src/lib/catalog/ingest/tsv';
 import { referenceCaster, type ReferenceCaster } from '../../src/lib/catalog/reference/spellLaw';
 import { unresolvedQuestTalk } from '../../src/lib/catalog/reference/questTalk';
 import { dialogueTrees, seedDialogSteps, type DialogueTreesResult } from '@/lib/catalog/reference/dialogueTrees';
+import { experienceCurve } from '@/lib/catalog/reference/experienceCurve';
 
 function arg(name: string): string | undefined {
   const i = process.argv.indexOf(`--${name}`);
@@ -135,6 +136,8 @@ if (promoteCatalog) {
   } else if (promoteCatalog === 'dialog-trees') {
     dialogueReport = dialogueTrees(listWrappers(db, { sourceId }));
     pool = dialogueReport.wrappers as unknown as ReferenceWrapper[];
+  } else if (promoteCatalog === 'progression-curves') {
+    pool = experienceCurve(listWrappers(db, { sourceId, catalogId: 'progression-curves' })) as unknown as ReferenceWrapper[];
   } else {
     pool = listWrappers(db, { sourceId, catalogId: promoteCatalog });
   }
@@ -163,6 +166,13 @@ for (const t of summary.tables) {
   if (t.declaredButAbsent.length) console.log(`   UPSTREAM DRIFT: ${t.declaredButAbsent.join(', ')}`);
   for (const s of t.sentinelColumns) console.log(`   sentinel in mapped column ${s.column}: ${s.values.join(', ')} — is it decoded?`);
   if (t.rowIdMismatch) console.log(`   ROW-ID MISMATCH (the engine enum moved): expected ${t.rowIdMismatch.expected} rows, file has ${t.rowIdMismatch.actual}`);
+}
+for (const manifest of summary.manifests) {
+  if (manifest.status === 'missing') { console.log(`MISSING  ${manifest.file} (manifest)`); continue; }
+  if (manifest.status === 'refused') { console.log(`REFUSED  ${manifest.file} (manifest): ${manifest.refusal?.message ?? 'no reason recorded'}`); continue; }
+  if (manifest.unclassified.length) console.log(`   UNCLASSIFIED manifest columns in ${manifest.file}: ${manifest.unclassified.join(', ')}`);
+  if (manifest.declaredButAbsent.length) console.log(`   UPSTREAM DRIFT manifest columns in ${manifest.file}: ${manifest.declaredButAbsent.join(', ')}`);
+  if (manifest.unregisteredKeys.length) console.log(`   UPSTREAM DRIFT unregistered keys in ${manifest.file}: ${manifest.unregisteredKeys.join(', ')}`);
 }
 console.log(`\nlinks: ${summary.links.resolved} resolved, ${summary.links.unresolved.length} unresolved`);
 const byRef = new Map<string, number>();

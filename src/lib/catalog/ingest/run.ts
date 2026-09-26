@@ -139,6 +139,10 @@ export interface IngestTableOptions {
   positionalTag?: string;
   /** Symbolic ids for an enum-backed table whose source file has no key column. */
   rowIds?: readonly string[];
+  /** Fixed display name for a record whose source carries no name field. */
+  displayName?: string;
+  /** Prefix added to declared and positional keys in the projected entity id. */
+  keyPrefix?: string;
 }
 
 /** Pure: text in, entities and report out. No database, no filesystem. */
@@ -172,10 +176,11 @@ export function ingestRecords(table: TsvTable, opts: IngestTableOptions): TableI
       : opts.keyColumn && declared ? `${opts.keyColumn}=${declared}` : `row=${index}`;
     seen.set(key, [...(seen.get(key) ?? []), index]);
 
+    const entityKey = `${opts.keyPrefix ?? ''}${key}`;
     const entity: IngestedEntity = {
-      id: `${opts.idPrefix}-${key}`,
+      id: `${opts.idPrefix}-${entityKey}`,
       catalogId: opts.catalogId,
-      name: key,
+      name: opts.displayName ?? key,
       categoryPath: [],
       tags: [],
       lifecycle: 'planned',
@@ -191,7 +196,7 @@ export function ingestRecords(table: TsvTable, opts: IngestTableOptions): TableI
 
     // The source key stays the identity even when a `name` column overwrote the label —
     // an ingested entity must remain traceable to its row.
-    entity.id = `${opts.idPrefix}-${key}`;
+    entity.id = `${opts.idPrefix}-${entityKey}`;
     entities.push(entity);
   });
 
