@@ -257,6 +257,14 @@ export function entriesHaveFields(field: string, label: string, keys: string[]):
         return { label, tier: 'L0', status: 'fail', detail: `entry ${i} incomplete`, reason: `field "${field}"[${i}] missing: ${missing.join(', ')}` };
       }
     }
+    // A DECLARED gap ("not in the reference") is not a value — as in fieldsPopulated, it grades pending, never pass
+    // (/diablo W16: eight Skill Checks steps passed with every entry field written as the gap marker).
+    for (let i = 0; i < arr.length; i++) {
+      const gaps = keys.filter((k) => isDeclaredGap((arr[i] as Record<string, unknown>)[k]));
+      if (gaps.length) {
+        return { label, tier: 'L0', status: 'pending', detail: `entry ${i} declares gaps`, reason: `field "${field}"[${i}] missing: ${gaps.join(', ')} (declared gap — "${REFERENCE_GAP}")` };
+      }
+    }
     return { label, tier: 'L0', status: 'pass', detail: `${arr.length} entr${arr.length === 1 ? 'y' : 'ies'} × ${keys.length} field(s)` };
   }, { field, shape: `every entry is an object with ${keys.join(', ')}` });
 }
