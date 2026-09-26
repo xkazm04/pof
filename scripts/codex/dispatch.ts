@@ -18,6 +18,7 @@
 import { spawnSync } from 'node:child_process';
 import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
+import { homedir } from 'node:os';
 import { routeTask } from '../../src/lib/codex-exec/routing';
 import { buildCodexExecArgs, buildCodexResumeArgs, PROMPT_FROM_STDIN } from '../../src/lib/codex-exec/args';
 import { parseCodexEvents } from '../../src/lib/codex-exec/events';
@@ -27,7 +28,7 @@ import { runCodex, stallMinutes, type RunEnd } from './runner';
 
 const REPO = resolve(dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), '..', '..');
 const HOME = process.env.POF_CODEX_HOME ?? resolve(REPO, '..', 'pof-codex');
-const LEDGER = process.env.POF_CODEX_LEDGER ?? 'C:/Users/kazda/Documents/Obsidian/pof/Diablo/Codex/ledger.jsonl';
+const LEDGER = process.env.POF_CODEX_LEDGER ?? join(homedir(), 'Documents/Obsidian/pof/Diablo/Codex/ledger.jsonl');
 
 const runDir = (id: string) => join(HOME, 'runs', id);
 const wtDir = (id: string) => join(HOME, 'wt', id);

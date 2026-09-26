@@ -14,6 +14,7 @@
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
+import { homedir } from 'node:os';
 import '../../src/lib/catalog/pipelines/registry.generated';
 import { listRules } from '../../src/lib/project-rules-db';
 import { buildStepRecipe, submitStepArtifact } from '../../src/lib/catalog/headless';
@@ -26,7 +27,7 @@ import { runCodex, stallMinutes } from '../codex/runner';
 
 const REPO = resolve(dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), '..', '..');
 const HOME = process.env.POF_CODEX_HOME ?? resolve(REPO, '..', 'pof-codex');
-const REPORTS = process.env.POF_DIABLO_PRODUCE_REPORTS ?? 'C:/Users/kazda/Documents/Obsidian/pof/Diablo/Codex/produce';
+const REPORTS = process.env.POF_DIABLO_PRODUCE_REPORTS ?? join(homedir(), 'Documents/Obsidian/pof/Diablo/Codex/produce');
 
 const opt = (n: string) => { const i = process.argv.indexOf(`--${n}`); return i >= 0 ? process.argv[i + 1] : undefined; };
 const catalogId = opt('catalog');

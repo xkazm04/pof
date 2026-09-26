@@ -4,9 +4,15 @@
  * stdin contract exist once.
  */
 import { spawn, spawnSync } from 'node:child_process';
-import { appendFileSync } from 'node:fs';
+import { appendFileSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
 
-export const CODEX_JS = process.env.POF_CODEX_JS ?? 'C:/nvm4w/nodejs/node_modules/@openai/codex/bin/codex.js';
+/** codex-cli's entry script: nvm4w's global root (machine A) or npm's default global root (machine B). */
+const CODEX_JS_CANDIDATES = [
+  'C:/nvm4w/nodejs/node_modules/@openai/codex/bin/codex.js',
+  join(process.env.APPDATA ?? '', 'npm/node_modules/@openai/codex/bin/codex.js'),
+];
+export const CODEX_JS = process.env.POF_CODEX_JS ?? CODEX_JS_CANDIDATES.find((p) => existsSync(p)) ?? CODEX_JS_CANDIDATES[0];
 
 /** How a run ended — never collapsed into "succeeded" (registry: subprocess-lifecycle). */
 export interface RunEnd { code: number; ended: 'exited' | 'timeout' | 'stalled'; rung?: 'polite' | 'forced' }
