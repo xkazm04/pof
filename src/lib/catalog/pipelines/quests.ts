@@ -2,7 +2,7 @@ import { registerCatalogPipeline } from '../pipeline-registry';
 import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
 import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
 import { graphValid } from '../acceptance/graphCheckers';
-import { entityRuntimeDeferred } from '../acceptance/deferred';
+import { automationNameDeclared, entityRuntimeDeferred } from '../acceptance/deferred';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import { allOf } from '../acceptance/combinators';
 import { linksResolve } from '../acceptance/linkCheckers';
@@ -429,8 +429,10 @@ registerCatalogPipeline({
       label: 'Test Gate',
       engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: { kind: 'checklist', field: 'checks' },
-      produce: () => ({
+      produce: (e: LabEntity) => ({
         data: {
+          // Per-entity runtime test (/diablo W16, like characters): another entity's gate is never 'proven' by the exemplar's test.
+          automationName: e.id === 'quest-ember-pact' ? 'PoF.Quests.StageFlow' : `PoF.Quests.${slug(e.name)}.StageFlow`,
           checks: [
             'quest starts on Vael interact + level ≥ 10 gate',
             'BETRAY terminal fires when Vael killed before stage-3',
@@ -441,7 +443,7 @@ registerCatalogPipeline({
           ],
         },
       }),
-      accept: entityRuntimeDeferred('PoF.Quests.StageFlow', 'Quest completes stage→reward in PIE'),
+      accept: allOf(automationNameDeclared(), entityRuntimeDeferred('PoF.Quests.StageFlow', 'Quest completes stage→reward in PIE')),
     },
 
     // ── 11. UE Packaging ───────────────────────────────────────────────────────

@@ -3,7 +3,7 @@ import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
 import { minLength, fieldsPopulated, selected, minCount, entriesHaveFields } from '../acceptance/dataCheckers';
 import { voLineLength } from '../acceptance/invariants';
 import { graphValid } from '../acceptance/graphCheckers';
-import { entityRuntimeDeferred } from '../acceptance/deferred';
+import { automationNameDeclared, entityRuntimeDeferred } from '../acceptance/deferred';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import { allOf } from '../acceptance/combinators';
 import { linksResolve } from '../acceptance/linkCheckers';
@@ -620,8 +620,10 @@ registerCatalogPipeline({
       // the same call the fleet already made on 7 identically-shaped Test Gate steps.
       engine: 'Hand-authored',
       view: { kind: 'checklist', field: 'checks' },
-      produce: () => ({
+      produce: (e: LabEntity) => ({
         data: {
+          // Per-entity runtime test (/diablo W16, like characters): another entity's gate is never 'proven' by the exemplar's test.
+          automationName: e.id === 'dialog-gatekeeper' ? 'PoF.DialogTrees.BranchIntegrity' : `PoF.DialogTrees.${slug(e.name)}.BranchIntegrity`,
           checks: [
             'dialog opens on player interact with Vael',
             'root node presents all 3 choices (ask / threaten / persuade)',
@@ -636,7 +638,7 @@ registerCatalogPipeline({
           ],
         },
       }),
-      accept: entityRuntimeDeferred('PoF.DialogTrees.BranchIntegrity', 'All branches reachable + skill-check gates resolve in PIE'),
+      accept: allOf(automationNameDeclared(), entityRuntimeDeferred('PoF.DialogTrees.BranchIntegrity', 'All branches reachable + skill-check gates resolve in PIE')),
     },
 
     // ── 12. UE Packaging ──────────────────────────────────────────────────────

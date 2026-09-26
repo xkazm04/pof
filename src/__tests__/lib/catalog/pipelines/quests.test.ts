@@ -66,7 +66,9 @@ describe('quests pipeline', () => {
 
     // Test Gate: deferred L3
     const gate = p!.steps.find((s) => s.label === 'Test Gate')!;
-    expect(gate.accept({})).toMatchObject({ tier: 'L3', status: 'deferred' });
+    // An empty gate names no per-entity runtime test, so it fails (/diablo W16); a produced one defers to UE.
+    expect(gate.accept({})).toMatchObject({ status: 'fail' });
+    expect(gate.accept(gate.produce(entity).data ?? {})).toMatchObject({ tier: 'L3', status: 'deferred' });
 
     // No staticChecks on any step (no C++ struct found in UE source for quests)
     p!.steps.forEach((s) => {

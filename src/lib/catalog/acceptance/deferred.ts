@@ -1,6 +1,7 @@
 import { buildRuntimeDeferredReason } from '@/types/observation';
 import type { AcceptanceResult, Checker } from './types';
 import { tagRequiredFields } from './requiredFields';
+import { isDeclaredGap } from './markers';
 
 /** L3 runtime check, pending the live-UE runner. `testName` is the functional test to run later.
  *  The reason string is built by the shared `@/types/observation` contract so the runner's
@@ -36,7 +37,8 @@ export function entityRuntimeDeferred(
 export function automationNameDeclared(label = 'Per-entity automation test declared'): Checker {
   return tagRequiredFields((data) => {
     const value = data.automationName;
-    const ok = typeof value === 'string' && value.trim().length > 0;
+    // The declared-gap marker is not a test name (/diablo W16: three Diablo gates named their test "not in the reference").
+    const ok = typeof value === 'string' && value.trim().length > 0 && !isDeclaredGap(value);
     return {
       label,
       tier: 'L0',
