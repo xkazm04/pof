@@ -69,9 +69,8 @@ describe('progression-curves pipeline', () => {
     const xpSources = p!.steps.find((s) => s.label === 'XP Sources')!;
     const xpOut = xpSources.produce(entity);
     expect(xpSources.accept(xpOut.data ?? {}).status).toBe('pass');
-    const xs = xpOut.data!.xpSources as Record<string, unknown>;
     // Wiring contract present
-    const xsWiring = xs.wiringContract as Record<string, unknown>;
+    const xsWiring = xpOut.data!.wiringContract as Record<string, unknown>;
     expect(xsWiring).toBeDefined();
     expect(typeof xsWiring.grantedBy).toBe('string');
 
@@ -102,11 +101,12 @@ describe('progression-curves pipeline', () => {
     expect(typeof dpWiring.grantedBy).toBe('string');
     expect(dpWiring.grantedBy).toContain('GE_DeathPenaltyXP');
 
-    // ── Balance: minutesToNextLevel within ±20% of 45 ────────────────────────
+    // ── Balance: declared checkpoint's elapsed minutes remain within the exemplar band
     const balance = p!.steps.find((s) => s.label === 'Balance')!;
     const balOut = balance.produce(entity);
     expect(balance.accept(balOut.data ?? {}).status).toBe('pass');
-    const minutesToNextLevel = balOut.data!.minutesToNextLevel as number;
+    const balanceData = balOut.data!.balance as Record<string, unknown>;
+    const minutesToNextLevel = balanceData.elapsedMinutes as number;
     // Must sit within 36–54 (45 ±20%)
     expect(minutesToNextLevel).toBeGreaterThanOrEqual(36);
     expect(minutesToNextLevel).toBeLessThanOrEqual(54);

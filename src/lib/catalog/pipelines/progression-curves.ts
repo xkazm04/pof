@@ -1,7 +1,8 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
-import { minLength, fieldsPopulated, withinPercent, selected, minCount } from '../acceptance/dataCheckers';
-import { xpGrowthWithinBand, arithmeticReconciles } from '../acceptance/invariants';
+import { minLength, fieldsPopulated, selected, minCount, entriesHaveFields } from '../acceptance/dataCheckers';
+import { xpGrowthWithinBand, arithmeticReconciles, powerWithinTierTarget } from '../acceptance/invariants';
+import { fieldsRequiredWhen } from '@/lib/catalog/acceptance/conditionalCheckers';
 import { allOf } from '../acceptance/combinators';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
@@ -191,17 +192,13 @@ registerCatalogPipeline({
       view: {
         kind: 'table',
         field: 'xpSources',
-        columns: [
-          { key: 'kills' },
-          { key: 'quests' },
-          { key: 'exploration' },
-          { key: 'scalingNote' },
-        ],
+        columns: [{ key: 'source' }, { key: 'formula' }, { key: 'contribution' }],
       },
       produce: () => ({
         data: {
-          xpSources: {
-            kills: {
+          xpSources: [
+            {
+              source: 'kills',
               contribution: '~70% of total XP',
               formula: 'killXP = baseMonsterXP × (monsterLevel / playerLevel)^0.5',
               // At parity (monsterLevel = playerLevel): full XP.  Under-levelled monsters give less.
@@ -216,8 +213,10 @@ registerCatalogPipeline({
                 'Monsters > 10 levels below the player grant scaled-down XP (min 10% of base). ' +
                 'Monsters ≥5 levels above the player grant up to 150% XP — risk/reward. ',
             },
-            quests: {
+            {
+              source: 'quests',
               contribution: '~20% of total XP',
+              formula: 'questXP = xpToNext(L) × questTierFraction',
               tiers: [
                 { tier: 1, reward: 'xpToNext(L) × 0.15', note: 'Short fetch quest' },
                 { tier: 2, reward: 'xpToNext(L) × 0.30', note: 'Multi-stage kill quest' },
@@ -229,8 +228,10 @@ registerCatalogPipeline({
                 '(not quest issuance level) — late completion still rewards, but at a diminished ' +
                 'fraction per tier (×0.5 if the player is ≥10 levels above the quest level). ',
             },
-            exploration: {
+            {
+              source: 'exploration',
               contribution: '~10% of total XP',
+              formula: 'explorationXP = xpToNext(L) × discoveryFraction',
               sources: [
                 { event: 'First-time zone discovery', grant: 'xpToNext(L) × 0.05' },
                 { event: 'Secret area revealed', grant: 'xpToNext(L) × 0.08' },
@@ -240,11 +241,12 @@ registerCatalogPipeline({
                 'Exploration grants fire once per trigger per save. They are never a primary source — ' +
                 'just a texture reward for thorough players. ',
             },
-            scalingNote:
-              'All grants use the "relative contribution" model: xpToNext(L) is the denominator so ' +
-              'the economy stays proportional regardless of absolute level. ' +
-              'Under-levelled kills diminish quickly so farming old content doesn\'t bypass the curve. ',
-            wiringContract: {
+          ],
+          scalingNote:
+            'All grants use the "relative contribution" model: xpToNext(L) is the denominator so ' +
+            'the economy stays proportional regardless of absolute level. ' +
+            'Under-levelled kills diminish quickly so farming old content doesn\'t bypass the curve. ',
+          wiringContract: {
               grantedBy:
                 'GE_AwardXP (magnitude = computed XP grant) applied to the player pawn via ' +
                 'UARPGProgressionComponent',
@@ -258,25 +260,19 @@ registerCatalogPipeline({
               verification:
                 'L2: GE_AwardXP compiled + UARPGProgressionComponent::OnXPChanged present; ' +
                 'L3: VSProgressionCurveTest — kill, quest, and exploration all increase XP correctly',
-            },
           },
         },
       }),
       contract: {
-        field: 'xpSources',
         grantedBy: 'the XP-award GameplayEffect THIS curve declares is applied to the player through UARPGProgressionComponent with the magnitude computed for each source',
         activatedBy: 'the event path named for EACH XP source THIS curve declares applies the award',
         dependencies: ['characters (UARPGAttributeSet.XP and CharacterLevel)', '<catalog>::<id> for EACH entity type whose data drives an XP-source formula'],
         verification: 'L2: the declared XP-award GameplayEffect and UARPGProgressionComponent::OnXPChanged compile; L3: VSProgressionCurveTest — EACH declared source event increases XP by its computed award',
       },
       accept: allOf(
-        fieldsPopulated('xpSources', 'kills / quests / exploration / scalingNote populated', [
-          'kills',
-          'quests',
-          'exploration',
-          'scalingNote',
-        ]),
-        wiringContractSound('xpSources'),
+        minCount('xpSources', 'At least one progression source is declared', 1),
+        entriesHaveFields('xpSources', 'Every source carries source / formula / contribution', ['source', 'formula', 'contribution']),
+        wiringContractSound(),
       ),
     },
 
@@ -288,79 +284,83 @@ registerCatalogPipeline({
       view: {
         kind: 'table',
         field: 'rewards',
-        columns: [
-          { key: 'passivePoints' },
-          { key: 'milestoneUnlocks' },
-          { key: 'ascendancyGates' },
-        ],
+        columns: [{ key: 'kind' }, { key: 'grant' }, { key: 'trigger' }],
       },
       produce: () => ({
         data: {
-          rewards: {
-            passivePoints: {
-              rate: '1 passive point per level (L1–L100)',
-              questGrants: [
-                { questTier: 'each chapter boss', grant: '+2 passive points' },
-                { questTier: 'ascendancy trial', grant: '+4 ascendancy points (separate pool)' },
-              ],
-              total:
-                '100 base + ~12 chapter-boss quest grants = 112 regular points; ' +
-                '8 ascendancy points (2 × 4 ascendancy trials) in the ascendancy tree.',
-              note:
-                'Per ARPG-LAWS §9 the passive tree allocates ~1 point/level plus quest grants. ' +
-                'Allocating into the shared tree is deliberate — never auto-granted. ',
-            },
-            milestoneUnlocks: {
-              L10: 'Second active-skill slot unlocked',
-              L20: 'Support gem socket 1 unlocked; Stash tabs increased',
-              L30: 'Third active-skill slot; Flask belt slot 2 activated',
-              L40: 'Ascendancy Trial 1 becomes available',
-              L50: 'Ascendancy Trial 2; Fourth active-skill slot',
-              L60: 'Second ascendancy choice; Endgame maps gate unlocked',
-              L70: 'Death-penalty band begins (see Caps & Catch-up); Tier-2 endgame areas',
-              L80: 'Master crafting bench tier 2 unlocked',
-              L90: 'Soft-cap milestone cosmetic reward; Tier-3 endgame areas',
-              L100: 'Hard-cap achievement: "Pinnacle" title, no further milestones',
-            },
-            ascendancyGates: {
-              description:
-                'Ascendancy trees are unlocked via trial quests, not automatically at a fixed level. ' +
-                'Two trial quests are available: Trial I (unlocks at L40, grants 4 asc points) and ' +
-                'Trial II (unlocks at L50, grants 4 more). Ascendancy nodes are much stronger than ' +
-                'passive tree notables; a bare ascendancy unlock provides a keystone choice per ARPG-LAWS §9. ',
-              wiringContract: {
-                grantedBy:
-                  'UARPGProgressionComponent::GrantLevelUpRewards → calls GrantPassivePoint; ' +
-                  'quest terminal → AARPGQuestManager::GrantAscendancyPoints',
-                activatedBy:
-                  'CharacterLevel attribute change → OnLevelUp broadcast; ' +
-                  'ascendancy trial quest terminal reached',
-                dependencies: [
-                  'characters (passive tree + ascendancy tree nodes in DT_PassiveTree)',
-                  'quests (chapter boss / ascendancy trial quest entries)',
+          rewards: [
+            {
+              kind: 'passive-points',
+              trigger: 'level-up, chapter-boss quest, or ascendancy trial completion',
+              grant: {
+                rate: '1 passive point per level (L1–L100)',
+                questGrants: [
+                  { questTier: 'each chapter boss', grant: '+2 passive points' },
+                  { questTier: 'ascendancy trial', grant: '+4 ascendancy points (separate pool)' },
                 ],
-                verification:
-                  'L2: UARPGProgressionComponent::GrantLevelUpRewards compiled; ' +
-                  'L3: VSProgressionCurveTest — level-up fires GrantPassivePoint, ascendancy trial quest grants 4 ascendancy points',
+                total:
+                  '100 base + ~12 chapter-boss quest grants = 112 regular points; ' +
+                  '8 ascendancy points (2 × 4 ascendancy trials) in the ascendancy tree.',
+                note:
+                  'Per ARPG-LAWS §9 the passive tree allocates ~1 point/level plus quest grants. ' +
+                  'Allocating into the shared tree is deliberate — never auto-granted. ',
               },
             },
+            {
+              kind: 'milestone-unlocks',
+              trigger: 'reaching the declared character level',
+              grant: {
+                L10: 'Second active-skill slot unlocked',
+                L20: 'Support gem socket 1 unlocked; Stash tabs increased',
+                L30: 'Third active-skill slot; Flask belt slot 2 activated',
+                L40: 'Ascendancy Trial 1 becomes available',
+                L50: 'Ascendancy Trial 2; Fourth active-skill slot',
+                L60: 'Second ascendancy choice; Endgame maps gate unlocked',
+                L70: 'Death-penalty band begins (see Caps & Catch-up); Tier-2 endgame areas',
+                L80: 'Master crafting bench tier 2 unlocked',
+                L90: 'Soft-cap milestone cosmetic reward; Tier-3 endgame areas',
+                L100: 'Hard-cap achievement: "Pinnacle" title, no further milestones',
+              },
+            },
+            {
+              kind: 'ascendancy-gates',
+              trigger: 'completing Trial I or Trial II after its level gate',
+              grant: {
+                description:
+                  'Ascendancy trees are unlocked via trial quests, not automatically at a fixed level. ' +
+                  'Two trial quests are available: Trial I (unlocks at L40, grants 4 asc points) and ' +
+                  'Trial II (unlocks at L50, grants 4 more). Ascendancy nodes are much stronger than ' +
+                  'passive tree notables; a bare ascendancy unlock provides a keystone choice per ARPG-LAWS §9. ',
+              },
+            },
+          ],
+          wiringContract: {
+            grantedBy:
+              'UARPGProgressionComponent::GrantLevelUpRewards → calls GrantPassivePoint; ' +
+              'quest terminal → AARPGQuestManager::GrantAscendancyPoints',
+            activatedBy:
+              'CharacterLevel attribute change → OnLevelUp broadcast; ' +
+              'ascendancy trial quest terminal reached',
+            dependencies: [
+              'characters (passive tree + ascendancy tree nodes in DT_PassiveTree)',
+              'quests (chapter boss / ascendancy trial quest entries)',
+            ],
+            verification:
+              'L2: UARPGProgressionComponent::GrantLevelUpRewards compiled; ' +
+              'L3: VSProgressionCurveTest — level-up fires GrantPassivePoint, ascendancy trial quest grants 4 ascendancy points',
           },
         },
       }),
       contract: {
-        field: 'rewards.ascendancyGates',
         grantedBy: 'UARPGProgressionComponent::GrantLevelUpRewards grants EACH level reward THIS curve declares; each gated reward names the subsystem or quest terminal that grants it',
         activatedBy: 'CharacterLevel changes broadcast OnLevelUp; each non-level reward is activated by its declared milestone or quest event',
         dependencies: ['characters (the progression trees or attributes consumed by declared rewards)', 'quests::<id> for EACH quest-gated reward THIS curve declares'],
         verification: 'L2: UARPGProgressionComponent::GrantLevelUpRewards and every declared reward grant path compile; L3: VSProgressionCurveTest — EACH declared level or gate event grants exactly its named reward',
       },
       accept: allOf(
-        fieldsPopulated('rewards', 'passivePoints / milestoneUnlocks / ascendancyGates populated', [
-          'passivePoints',
-          'milestoneUnlocks',
-          'ascendancyGates',
-        ]),
-        wiringContractSound('rewards.ascendancyGates'),
+        minCount('rewards', 'At least one reward is declared', 1),
+        entriesHaveFields('rewards', 'Every reward carries kind / grant / trigger', ['kind', 'grant', 'trigger']),
+        wiringContractSound(),
       ),
     },
 
@@ -537,10 +537,10 @@ registerCatalogPipeline({
         variant: 'bars',
         field: 'balance',
         rows: [
-          { key: 'minutesToNextLevel', label: 'L50→L51', unit: ' min' },
+          { key: 'elapsedMinutes', label: 'Checkpoint pace', unit: ' min' },
           { key: 'targetMinutes', label: 'Target', unit: ' min' },
         ],
-        highlightKey: 'minutesToNextLevel',
+        highlightKey: 'elapsedMinutes',
         max: 56,
       },
       produce: () => {
@@ -580,10 +580,12 @@ registerCatalogPipeline({
         return {
           data: {
             balance: {
-              minutesToNextLevel,
+              kind: 'checkpoint',
+              checkpoint: 'L50→L51',
+              elapsedMinutes: minutesToNextLevel,
               targetMinutes,
-              xpToNextL50,
-              xpPerMinute,
+              requiredAmount: xpToNextL50,
+              ratePerMinute: xpPerMinute,
               derivation:
                 `L50→L51 pacing check. xpToNext(50) = 100 × 1.08^50 ≈ ${xpToNextL50} XP. ` +
                 `Calibrated XP/min: ${xpPerMinute} (≈42 measured kill-XP kills/min at areaLevel 50, ` +
@@ -595,20 +597,22 @@ registerCatalogPipeline({
                 `Late levels (L90 = 101 890 XP → ≈16 hours per level at the same rate) create the ` +
                 `intentional prestige grind at the soft cap.`,
             },
-            minutesToNextLevel,
           },
         };
       },
-      // Content invariant: minutesToNextLevel must actually equal xpToNextL50 / xpPerMinute
-      // (no reverse-engineered headline), AND land within the ±20% pacing target.
+      // Content invariant: the declared checkpoint pace must reconcile with its own amount/rate
+      // and land near the same artifact's declared target.
       accept: allOf(
-        arithmeticReconciles('balance', { result: 'minutesToNextLevel', op: 'quotient', operands: ['xpToNextL50', 'xpPerMinute'] }, 'minutesToNextLevel = xpToNextL50 / xpPerMinute'),
-        withinPercent(
-          'minutesToNextLevel',
-          'L50→L51 minutes-to-level within ±20% of 45-minute target',
-          45,
-          20,
+        fieldsPopulated('balance', 'Curve balance checkpoint and kind declared', ['kind', 'checkpoint']),
+        fieldsRequiredWhen(
+          'balance',
+          'Checkpoint balance declares amount / rate / elapsed / target',
+          'kind',
+          ['checkpoint'],
+          ['requiredAmount', 'ratePerMinute', 'elapsedMinutes', 'targetMinutes'],
         ),
+        arithmeticReconciles('balance', { result: 'elapsedMinutes', op: 'quotient', operands: ['requiredAmount', 'ratePerMinute'] }, 'elapsedMinutes = requiredAmount / ratePerMinute'),
+        powerWithinTierTarget('balance.elapsedMinutes', 'Checkpoint pace within canon ±10% of its declared target', 'balance.targetMinutes'),
       ),
     },
 

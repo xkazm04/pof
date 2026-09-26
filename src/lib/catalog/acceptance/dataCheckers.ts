@@ -243,7 +243,7 @@ export function materialShape(field: string, label: string): Checker {
  * `pending` (nothing produced yet), never a false pass.
  */
 export function entriesHaveFields(field: string, label: string, keys: string[]): Checker {
-  return (data) => {
+  return tagRequiredFields((data) => {
     const arr = Array.isArray(data[field]) ? (data[field] as unknown[]) : null;
     if (arr == null) return { label, tier: 'L0', status: 'pending', detail: 'not an array', reason: `field "${field}" is not an array of entries` };
     if (arr.length === 0) return { label, tier: 'L0', status: 'pending', detail: '0 entries', reason: `field "${field}" is empty — nothing to check` };
@@ -258,7 +258,7 @@ export function entriesHaveFields(field: string, label: string, keys: string[]):
       }
     }
     return { label, tier: 'L0', status: 'pass', detail: `${arr.length} entr${arr.length === 1 ? 'y' : 'ies'} × ${keys.length} field(s)` };
-  };
+  }, { field, shape: `every entry is an object with ${keys.join(', ')}` });
 }
 
 /**

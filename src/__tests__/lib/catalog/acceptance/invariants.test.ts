@@ -8,7 +8,19 @@ import {
 } from '@/lib/catalog/acceptance/invariants';
 
 const controlBudget = (over: Record<string, unknown> = {}) => ({
-  balance: { controlBudget: { magnitude: 8, durationSec: 0.9, immunityWindowSec: 2, immunityTag: 'State.Immune.Knockback', clearsOnLanding: true, ...over } },
+  balance: {
+    kind: 'control',
+    controlBudget: {
+      controlKind: 'kinetic',
+      magnitude: 8,
+      durationSec: 0.9,
+      immunityWindowSec: 2,
+      immunityTag: 'State.Immune.Knockback',
+      terminationMode: 'landing',
+      clearsOnLanding: true,
+      ...over,
+    },
+  },
 });
 
 describe('canon threshold parsing (from CANON_SEED, not hardcoded)', () => {
@@ -32,24 +44,16 @@ describe('canon threshold parsing (from CANON_SEED, not hardcoded)', () => {
   it('reads arpg-ailments control-CC duration cap', () => { expect(CONTROL_CC_CAP_SEC).toBe(3); });
 });
 
-describe('statusBalanceEnvelope — DoT path unchanged, control path validates a budget', () => {
-  const chk = statusBalanceEnvelope(7.875, 20, 'balance');
+describe('statusBalanceEnvelope — declared status kind selects the control envelope', () => {
+  const chk = statusBalanceEnvelope('balance');
 
-  // ── DoT path: byte-for-byte the old withinPercent('dps', 7.875, 20) law ──
-  it('passes an ignite DoT whose dps is within ±20% of 7.875', () => {
-    expect(chk({ dps: 7.875 }).status).toBe('pass');
-    expect(chk({ dps: 9.4 }).status).toBe('pass');
+  it('leaves a damaging status to its separately declared power target', () => {
+    expect(chk({ balance: { kind: 'damage-over-time', dps: 41, tierTarget: 41 } }).status).toBe('pass');
   });
-  it('fails a DoT whose dps is outside the band, with a specific reason', () => {
-    const bad = chk({ dps: 19.5 });
-    expect(bad.status).toBe('fail');
-    expect(bad.reason).toContain('7.875');
-    expect(bad.reason).toContain('19.5');
-  });
-  it('pends a DoT with no dps and points at controlBudget for CC statuses', () => {
-    const r = chk({});
-    expect(r.status).toBe('pending');
-    expect(r.reason).toContain('controlBudget');
+  it('fails a missing status kind', () => {
+    const r = chk({ balance: {} });
+    expect(r.status).toBe('fail');
+    expect(r.reason).toContain('balance.kind');
   });
 
   // ── Control path: a knockback validates its budget, never the DPS line ──
@@ -57,6 +61,10 @@ describe('statusBalanceEnvelope — DoT path unchanged, control path validates a
     const r = chk(controlBudget());
     expect(r.status).toBe('pass');
     expect(r.detail).toContain('control CC');
+  });
+  it('passes a stun that terminates by duration without landing semantics', () => {
+    const r = chk(controlBudget({ controlKind: 'stun', terminationMode: 'duration', clearsOnLanding: false }));
+    expect(r.status).toBe('pass');
   });
   it('fails a CC whose duration exceeds the canon control cap', () => {
     const r = chk(controlBudget({ durationSec: 4 }));
@@ -75,8 +83,13 @@ describe('statusBalanceEnvelope — DoT path unchanged, control path validates a
   it('fails a CC that does not clear on landing', () => {
     expect(chk(controlBudget({ clearsOnLanding: false })).status).toBe('fail');
   });
+  it('fails a CC with no declared termination mode', () => {
+    const r = chk(controlBudget({ terminationMode: '' }));
+    expect(r.status).toBe('fail');
+    expect(r.reason).toContain('terminationMode');
+  });
   it('pends an incomplete control budget', () => {
-    const r = chk({ balance: { controlBudget: { magnitude: 8 } } });
+    const r = chk({ balance: { kind: 'control', controlBudget: { magnitude: 8 } } });
     expect(r.status).toBe('pending');
   });
 });

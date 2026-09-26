@@ -1,7 +1,8 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
 import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
-import { statusBalanceEnvelope } from '../acceptance/invariants';
+import { powerWithinTierTarget, statusBalanceEnvelope } from '../acceptance/invariants';
+import { fieldsRequiredWhen, whenFieldIs } from '@/lib/catalog/acceptance/conditionalCheckers';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
@@ -205,6 +206,7 @@ registerCatalogPipeline({
               // Per §5b shape: tag / magnitude (per-tick signed, negative = damage) / period / duration /
               //   stacking / sourceDamageType / dispellable
               tag: `State.${s}`,            // State.Burning — the identity tag
+              kind: 'damage-over-time',
               magnitude,                    // ≈ -3.94 fire damage / 0.5 s tick
               period,                       // 0.5 s
               duration,                     // 4 s
@@ -212,6 +214,10 @@ registerCatalogPipeline({
               maxStacks: 1,                 // only one ignite instance at a time
               sourceDamageType: 'Fire',     // Fire DoT (matches code enum Fire/Ice/Lightning)
               dispellable: true,            // cleanse removes State.Burning + cancels GE
+              removal: {
+                mode: 'duration-or-cleanse',
+                onRemove: `remove State.${s} and cancel the periodic GameplayEffect`,
+              },
               // Wiring contract per ARPG-LAWS §12
               wiringContract: {
                 grantedBy:
@@ -242,7 +248,7 @@ registerCatalogPipeline({
                 dpsFormula: 'dps = |magnitude| / period = referenceHit × igniteRatio / duration',
               },
             },
-            // top-level dps for the withinPercent balance checker
+            // top-level DPS retained for consumers of the produced status artifact
             dps,
             // cross-catalog links: real seeded fire ability ids
             links: [
@@ -277,9 +283,16 @@ registerCatalogPipeline({
       accept: allOf(
         fieldsPopulated(
         'effect',
-        'Effect rules complete (tag/magnitude/period/duration/stacking/sourceDamageType/dispellable)',
-        ['tag', 'magnitude', 'period', 'duration', 'stacking', 'sourceDamageType', 'dispellable'],
+        'Universal status rules complete (tag / kind / stacking / removal)',
+        ['tag', 'kind', 'stacking', 'removal'],
       ),
+        fieldsRequiredWhen(
+          'effect',
+          'Periodic damaging statuses declare magnitude / period / duration / sourceDamageType',
+          'kind',
+          ['damage-over-time'],
+          ['magnitude', 'period', 'duration', 'sourceDamageType'],
+        ),
         linksResolve(),
         wiringContractSound('effect'),
       ),
@@ -320,7 +333,9 @@ registerCatalogPipeline({
         return {
           data: {
             balance: {
+              kind: 'damage-over-time',
               dps,
+              tierTarget: dps,
               totalDamage,
               referenceHit,
               note:
@@ -335,11 +350,21 @@ registerCatalogPipeline({
           },
         };
       },
-      // DoT ailments (ignite/bleed/poison) still gate `dps` within ±20% of the tier target
-      // (Burning: 7.875, band 6.3–9.45). A CONTROL/CC status (knockback) has no damage line, so
-      // it instead validates a control budget (magnitude / duration ≤ canon cap / immunity window /
-      // landing-clear) declared under balance.controlBudget — see statusBalanceEnvelope.
-      accept: statusBalanceEnvelope(7.875, 20, 'DoT ignite DPS within ±20% of tier target (7.875), or a valid control budget for a CC status'),
+      // Damaging ailments compare against their OWN declared tier target. A control status instead
+      // validates its declared control budget and termination mode; only kinetic control is landing-clear.
+      accept: allOf(
+        fieldsPopulated('balance', 'Status balance kind declared', ['kind']),
+        fieldsRequiredWhen('balance', 'Damaging statuses declare dps / tierTarget', 'kind', ['damage-over-time'], ['dps', 'tierTarget']),
+        fieldsRequiredWhen('balance', 'Control statuses declare a control budget', 'kind', ['control'], ['controlBudget']),
+        whenFieldIs(
+          'balance',
+          'kind',
+          ['damage-over-time'],
+          powerWithinTierTarget('balance.dps', 'DoT power within canon ±10% of its declared target', 'balance.tierTarget'),
+          'DoT declared-target balance',
+        ),
+        statusBalanceEnvelope('Control budget and declared termination mode are valid'),
+      ),
     },
 
     // ── 4. Icon 2D Art ────────────────────────────────────────────────────────

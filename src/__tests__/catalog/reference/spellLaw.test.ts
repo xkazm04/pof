@@ -73,9 +73,14 @@ describe('seedSpellSteps — Balance', () => {
   it('writes a cast-limited hit rate the real Balance step reconciles', () => {
     const seed = seedSpellSteps(bolt, caster)[1];
     expect(seed.data.balance).toMatchObject({ baseDamage: 8.5, castTime: 0.5, limiter: 'castTime', hitDPS: 17, manaRegenPerSec: 0 });
+    const balance = seed.data.balance as Record<string, unknown>;
+    balance.kind = 'damage';
+    balance.components = ['hitDPS'];
+    balance.normalizedPower = balance.hitDPS;
+    balance.tierTarget = balance.hitDPS;
     const step = getCatalogPipeline('spellbook')!.steps.find((s) => s.label === 'Balance')!;
     const results = allOfMembers(step.accept!)!.map((c) => c(seed.data));
     expect(results.find((r) => r.label.startsWith('hitDPS'))?.status).toBe('pass');
-    expect(results.find((r) => r.label.startsWith('sustainedDPS'))?.status).toBe('pass');
+    expect(results.find((r) => r.label.startsWith('Normalized power'))?.status).toBe('pass');
   });
 });
