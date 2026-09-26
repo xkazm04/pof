@@ -33,6 +33,7 @@ import { dialogueTrees, seedDialogSteps, type DialogueTreesResult } from '@/lib/
 import { seedQuestSteps } from '@/lib/catalog/reference/questSpecs';
 import { experienceCurve } from '@/lib/catalog/reference/experienceCurve';
 import { seedCharacterCombatSteps, seedProgressionCurveSteps } from '@/lib/catalog/reference/combatSeeds';
+import { loreBooks, seedLoreSteps } from '@/lib/catalog/reference/loreBooks';
 
 function arg(name: string): string | undefined {
   const i = process.argv.indexOf(`--${name}`);
@@ -77,6 +78,21 @@ if (seedCatalog) {
   if (seedCatalog === 'dialog-trees') {
     for (const e of seededEntities('dialog-trees').filter((x) => x.id.startsWith('d1-dialog-') && (!ids || ids.includes(x.id)))) {
       for (const seed of seedDialogSteps(e as unknown as ReferenceWrapper['entity'])) {
+        const r = submitStepArtifact(seed.catalogId, seed.entityId, seed.step, seed.data, []);
+        console.log(`${seed.entityId} · ${seed.step}: ${r.acceptance?.status ?? '?'}${r.acceptance?.reason ? ` — ${r.acceptance.reason.slice(0, 150)}` : ''}`);
+        for (const g of seed.gaps) console.log(`    gap: ${g}`);
+      }
+    }
+    process.exit(0);
+  }
+  // Codex rows are lore-book aggregates: rebuild them from their text-line wrappers before seeding.
+  if (seedCatalog === 'codex') {
+    const report = loreBooks(listWrappers(getDb(), { sourceId }));
+    for (const item of report.unresolved) console.log(`UNRESOLVED ${item.entry}: line ${item.line}`);
+    for (const wrapper of report.wrappers.filter((item) => !ids || ids.includes(item.entity.id))) {
+      const e = wrapper.entity;
+      if (!promoted.has(e.id)) { console.log(`SKIP ${e.id}: not promoted (promote it first)`); continue; }
+      for (const seed of seedLoreSteps(e)) {
         const r = submitStepArtifact(seed.catalogId, seed.entityId, seed.step, seed.data, []);
         console.log(`${seed.entityId} · ${seed.step}: ${r.acceptance?.status ?? '?'}${r.acceptance?.reason ? ` — ${r.acceptance.reason.slice(0, 150)}` : ''}`);
         for (const g of seed.gaps) console.log(`    gap: ${g}`);
@@ -172,6 +188,10 @@ if (promoteCatalog) {
   } else if (promoteCatalog === 'dialog-trees') {
     dialogueReport = dialogueTrees(listWrappers(db, { sourceId }));
     pool = dialogueReport.wrappers as unknown as ReferenceWrapper[];
+  } else if (promoteCatalog === 'codex') {
+    const report = loreBooks(listWrappers(db, { sourceId }));
+    pool = report.wrappers as unknown as ReferenceWrapper[];
+    for (const item of report.unresolved) console.log(`UNRESOLVED ${item.entry}: line ${item.line}`);
   } else if (promoteCatalog === 'progression-curves') {
     pool = experienceCurve(listWrappers(db, { sourceId, catalogId: 'progression-curves' })) as unknown as ReferenceWrapper[];
   } else {
