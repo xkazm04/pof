@@ -32,6 +32,7 @@ import { unresolvedQuestTalk } from '../../src/lib/catalog/reference/questTalk';
 import { dialogueTrees, seedDialogSteps, type DialogueTreesResult } from '@/lib/catalog/reference/dialogueTrees';
 import { seedQuestSteps } from '@/lib/catalog/reference/questSpecs';
 import { experienceCurve } from '@/lib/catalog/reference/experienceCurve';
+import { seedCharacterCombatSteps, seedProgressionCurveSteps } from '@/lib/catalog/reference/combatSeeds';
 
 function arg(name: string): string | undefined {
   const i = process.argv.indexOf(`--${name}`);
@@ -102,6 +103,21 @@ if (seedCatalog) {
     }
     process.exit(0);
   }
+  // The XP curve is a promoted aggregate, not an individual Experience.tsv row.
+  if (seedCatalog === 'progression-curves') {
+    const [curve] = experienceCurve(listWrappers(getDb(), { sourceId, catalogId: 'progression-curves' }));
+    if (curve && (!ids || ids.includes(curve.entity.id))) {
+      if (!promoted.has(curve.entity.id)) console.log(`SKIP ${curve.entity.id}: not promoted (promote it first)`);
+      else {
+        for (const seed of seedProgressionCurveSteps(curve)) {
+          const r = submitStepArtifact(seed.catalogId, seed.entityId, seed.step, seed.data, []);
+          console.log(`${seed.entityId} · ${seed.step}: ${r.acceptance?.status ?? '?'}${r.acceptance?.reason ? ` — ${r.acceptance.reason.slice(0, 150)}` : ''}`);
+          for (const g of seed.gaps) console.log(`    gap: ${g}`);
+        }
+      }
+    }
+    process.exit(0);
+  }
   // Spell Balance (W13, D33) needs a named reference caster, read from the class tables under --root (values never
   // enter the repo). Without --root the spell seeds stop at Effect Logic.
   let caster: ReferenceCaster | undefined;
@@ -124,7 +140,7 @@ if (seedCatalog) {
   const wrappers = listWrappers(getDb(), { sourceId, catalogId: seedCatalog }).filter((w) => !ids || ids.includes(w.entity.id));
   for (const w of wrappers) {
     if (!promoted.has(w.entity.id)) { console.log(`SKIP ${w.entity.id}: not promoted (promote it first)`); continue; }
-    for (const seed of [...seedBestiarySteps(w), ...seedItemSteps(w), ...seedSpellSteps(w, caster)]) {
+    for (const seed of [...seedBestiarySteps(w), ...seedItemSteps(w), ...seedSpellSteps(w, caster), ...seedCharacterCombatSteps(w)]) {
       const r = submitStepArtifact(seed.catalogId, seed.entityId, seed.step, seed.data, []);
       const a = r.acceptance;
       console.log(`${seed.entityId} · ${seed.step}: ${a?.status ?? '?'}${a?.reason ? ` — ${a.reason.slice(0, 150)}` : ''}`);
