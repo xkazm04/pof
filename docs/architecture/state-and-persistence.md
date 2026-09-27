@@ -106,7 +106,16 @@ Persisted keys (via `partialize` at line 271):
 **Custom `merge` resets transient session fields on rehydration** (line 278–289): after each page
 reload, every persisted session has `isRunning`, `lastTaskSuccess`, `currentExecutionId`, and
 `currentTaskId` reset to `false`/`null`. Sessions cannot be running after a page refresh — without
-this, a session stuck in `isRunning: true` would prevent any new dispatches.
+this, a session stuck in `isRunning: true` would prevent any new dispatches. The transient
+run-door fields `runPhase`/`runSeq` are reset to `'idle'`/`0` there too.
+
+**Run lifecycle is written through one door** (`beginRun` / `settleRun` / `endRun`, wired by
+`store/sessionRun.ts` `bindSessionRun`): `beginRun` clears the previous run's
+`lastTaskSuccess`/`lastCallbackStatus` and bumps `runSeq`; `runPhase` is
+`'running' → 'settling'` (stream ended, callback still settling — `isRunning` stays true) →
+`'idle'`; `endRun(id, seq, outcome)` flips `isRunning` false and records the outcome in ONE
+`set()`, ignoring a stale `seq`. `isRunning` stays a stored field kept in lockstep, so
+selectors reading it are unchanged. See `prompts-and-cli.md` § callback truth.
 
 `createSession` (line 77) enforces a soft cap of `MAX_SESSIONS = 8`. At cap, the least-recently-
 active **idle** session is reused. Running sessions are never clobbered (`!s.isRunning` filter at

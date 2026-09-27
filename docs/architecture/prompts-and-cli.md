@@ -478,9 +478,10 @@ from the one-shot routes — so the prefix is intentionally unconstrained.
 **Callback truth (additive completion status).** The run's completion signal carries a
 `callbackStatus` — `confirmed` (every marker's POST succeeded), `failed` (a marker was
 emitted but its POST was rejected), or `missing` (no marker at all). It is resolved inside
-the existing `callbackSettleMax` race, so it **never blocks or delays** the `isRunning`
-release — it is purely additive truth. It flows `useTaskQueue.onTaskComplete(id, success,
-{ callbackStatus })` → `cliPanelStore.setSessionRunning(…, callbackStatus)` (stored as
+the existing `callbackSettleMax` race, so the `isRunning` release is **bounded, never
+indefinite** — the session stays running (`runPhase: 'settling'`) only until the race ends.
+It flows `useTaskQueue.onTaskComplete(id, success, { callbackStatus })` → `bindSessionRun`
+→ `cliPanelStore.endRun(id, seq, { success, callbackStatus })` (stored as
 `lastCallbackStatus`) → `useModuleCLI.onComplete(success, callbackStatus)`. `useChecklistCLI`
 flips a checklist item to done **only on `confirmed`**; a completed-but-unconfirmed run
 (missing/failed callback → the `/api/checklist/complete` POST never landed) leaves the item
@@ -492,7 +493,22 @@ stream `onerror`, abort, and the stuck-task poller — share one `completedRef` 
 run completes exactly once. The `result` path latches synchronously on arrival (before its
 bounded callback-settle race), and the poller re-checks the latch after its async
 `getTaskStatus`, closing the narrow window in which it could otherwise double-fire
-`onTaskComplete`.
+`onTaskComplete`. Every one of those paths then ends through ONE `finishRun(success,
+{ callbackStatus })`, which releases `dispatchingRef`, records the registry completion and
+fires `onTaskComplete` — no terminal path can skip one of them (the stuck-poller paths used
+to leave `dispatchingRef` set and silently drop every later dispatch).
+
+**One run-lifecycle door.** A run's session state is written ONLY through the sequenced
+door in `cliPanelStore`: `beginRun(id) → seq` (isRunning=true, clears the previous run's
+`lastTaskSuccess`/`lastCallbackStatus`, bumps `runSeq`), `settleRun(id, seq)` (stream
+ended → `runPhase: 'settling'`, still isRunning), and `endRun(id, seq, outcome)`
+(isRunning=false AND the outcome in one store write; a stale `seq` is a no-op).
+`InlineTerminal` wires the terminal through `bindSessionRun(sessionId)`
+(`store/sessionRun.ts`): `onTaskStart` (fired synchronously by `useTaskQueue` for queued AND
+interactive runs) begins, `onStreamingChange(false)` settles, `onTaskComplete` ends. So every
+consumer of the isRunning edge — `useModuleCLI`, `event-bus-bridge` (`cli.task.completed`),
+the SidebarL2 badge — reads THIS run's outcome, and module buttons stay disabled through the
+settle window instead of re-enabling while the terminal would still drop the dispatch.
 
 ---
 
@@ -521,10 +537,13 @@ const { execute, sendPrompt, isRunning } = useModuleCLI({
 3. Calls `dispatchPromptWhenReady(tabId, prompt)` — waits for the terminal's
    readiness handshake rather than a fixed delay.
 
-Running-state transitions are detected via `prevRunningRef` + `isRunning` diff.
-On `running → stopped`, a `setTimeout` with `UI_TIMEOUTS.raceConditionBuffer` reads
-`lastTaskSuccess` from the settled store, records analytics via `recordSessionOutcome`,
-and fires `onComplete(success)`. (`useModuleCLI.ts:70`)
+Completion is detected by a `useCLIPanelStore.subscribe` listener on the session's
+`endRun` transition (isRunning true → false). The outcome (`lastTaskSuccess`,
+`lastCallbackStatus`) is captured from that same state — the run door writes both in one
+update — then analytics (`recordSessionOutcome`) and `onComplete(success, callbackStatus)` are
+delivered in a microtask, so a re-dispatching `onComplete` never re-enters the store
+mid-notification. (There is no timed read: the old 50 ms `raceConditionBuffer` read raced a
+callback settle of up to `callbackSettleMax` and returned the previous run's outcome.)
 
 ---
 
