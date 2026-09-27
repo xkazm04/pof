@@ -876,6 +876,8 @@ describe('simulateDescent', () => {
 
     expect(JSON.stringify(simulateDescent({ ...input, sustainIncome: 'monster-gold' })))
       .toBe(JSON.stringify(simulateDescent(input)));
+    expect(JSON.stringify(simulateDescent({ ...input, saleIdentify: 'never' })))
+      .toBe(JSON.stringify(simulateDescent(input)));
   });
 
   it('adds unidentified sales to next-depth sustain and reports derived faucet/sink rates', () => {
@@ -914,6 +916,44 @@ describe('simulateDescent', () => {
     );
     expect(result.assumptions.find((assumption) => assumption.id === 'sale-carry-capacity')?.value)
       .toBe('2 items per depth');
+  });
+
+  it('changes sale income when profitable Magic drops are identified', () => {
+    const profitablePrefix = wrapper('invented-profitable-prefix', 'affixes', 'items/item_prefixes.tsv', {}, {
+      power: 'DAMP',
+      'power.value1': '1',
+      'power.value2': '1',
+      minLevel: '1',
+      itemTypes: 'Weapon',
+      alignment: 'Any',
+      chance: '1',
+      useful: 'true',
+      minVal: '0',
+      maxVal: '0',
+      multVal: '20',
+    });
+    const input = {
+      className: 'warrior' as const,
+      policy: 'none' as const,
+      tilesPerLevel: 600,
+      gameMode: 'single' as const,
+      difficulty: 'normal' as const,
+      gear: 'expected' as const,
+      sustainIncome: 'gold-and-sales' as const,
+      saleItemsPerTrip: 2,
+      wrappers: [warrior, monster, expectedSword, profitablePrefix, healingPotion, ...curve],
+      locations,
+    };
+    const unidentified = simulateDescent(input);
+    const identified = simulateDescent({ ...input, saleIdentify: 'when-profitable' });
+    const first = identified.goldFlow!.levels[0];
+
+    expect(first.sales.expectedItemsIdentified).toBeGreaterThan(0);
+    expect(first.sinks.identify).toBe(first.sales.expectedIdentifyFees);
+    expect(first.sales.unidentifiedPolicyExpectedGold)
+      .toBeCloseTo(unidentified.goldFlow!.levels[0].faucets.sales, 12);
+    expect(first.faucets.sales).toBeGreaterThan(unidentified.goldFlow!.levels[0].faucets.sales);
+    expect(first.sales.expectedNetGoldGainVsUnidentified).toBeGreaterThan(0);
   });
 
   it('uses accumulated first-depth kills to report and wield expected gear on the second depth', () => {

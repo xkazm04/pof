@@ -9,6 +9,7 @@
  *     [--defense none|expected]
  *     [--sorcerer-combat mixed|pure-spell]
  *     [--income monster-gold|gold-and-sales] [--items-per-trip N]
+ *     [--identify never|when-profitable]
  *     [--encounter duel|packs] [--slots N]
  *     [--buy none|defence]
  *     [--chain]
@@ -30,6 +31,7 @@ import {
   type DescentGear,
   type DescentPurchases,
   type DefensiveAffixes,
+  type SaleIdentify,
   type SorcererCombatPolicy,
   type StatPointPolicy,
   type SustainIncome,
@@ -83,6 +85,15 @@ if (!(['monster-gold', 'gold-and-sales'] as const).includes(sustainIncome)) {
   console.error('--income must be monster-gold|gold-and-sales');
   process.exit(2);
 }
+const saleIdentify = (arg('identify') ?? 'never') as SaleIdentify;
+if (!(['never', 'when-profitable'] as const).includes(saleIdentify)) {
+  console.error('--identify must be never|when-profitable');
+  process.exit(2);
+}
+if (saleIdentify === 'when-profitable' && sustainIncome !== 'gold-and-sales') {
+  console.error('--identify when-profitable requires --income gold-and-sales');
+  process.exit(2);
+}
 const saleItemsPerTrip = Number(arg('items-per-trip') ?? DEFAULT_SALE_ITEMS_PER_TRIP_ASSUMPTION);
 if (!Number.isInteger(saleItemsPerTrip) || saleItemsPerTrip < 0) {
   console.error('--items-per-trip must be a non-negative integer');
@@ -125,6 +136,7 @@ const simulationInput = {
   sorcererCombatPolicy,
   sustainIncome,
   saleItemsPerTrip,
+  saleIdentify,
   encounter,
   adjacentSlots,
   wrappers,
@@ -231,6 +243,11 @@ if (result.goldFlow) {
     depth: level.depth,
     'monster gold': Number(level.faucets.monsterGold.toFixed(2)),
     sales: Number(level.faucets.sales.toFixed(2)),
+    ...(saleIdentify === 'when-profitable' ? {
+      'sales unidentified': Number((level.sales.unidentifiedPolicyExpectedGold ?? 0).toFixed(2)),
+      identified: Number((level.sales.expectedItemsIdentified ?? 0).toFixed(2)),
+      'sale net gain': Number((level.sales.expectedNetGoldGainVsUnidentified ?? 0).toFixed(2)),
+    } : {}),
     'faucets total': Number(level.faucets.total.toFixed(2)),
     'potions bought': Number(level.sinks.potionsBought.toFixed(2)),
     ...(purchases === 'defence' ? { 'defence bought': Number((level.sinks.defenceBought ?? 0).toFixed(2)) } : {}),
@@ -271,7 +288,7 @@ const path = join(
   'pof',
   'Diablo',
   'Combat',
-  `descent-${className}-${policy}${gear === 'expected' ? '-expected-gear' : ''}${className === 'sorcerer' && sorcererCombatPolicy === 'mixed' ? '-mixed' : ''}${sustainIncome === 'gold-and-sales' ? '-gold-and-sales' : ''}${encounter === 'packs' ? `-packs-${adjacentSlots}-slots` : ''}${defensiveAffixes === 'expected' ? '-expected-defense' : ''}${purchases === 'defence' ? '-buy-defence' : ''}${chain ? '-chain' : ''}.json`,
+  `descent-${className}-${policy}${gear === 'expected' ? '-expected-gear' : ''}${className === 'sorcerer' && sorcererCombatPolicy === 'mixed' ? '-mixed' : ''}${sustainIncome === 'gold-and-sales' ? '-gold-and-sales' : ''}${saleIdentify === 'when-profitable' ? '-identify-profitable' : ''}${encounter === 'packs' ? `-packs-${adjacentSlots}-slots` : ''}${defensiveAffixes === 'expected' ? '-expected-defense' : ''}${purchases === 'defence' ? '-buy-defence' : ''}${chain ? '-chain' : ''}.json`,
 );
 mkdirSync(dirname(path), { recursive: true });
 writeFileSync(path, JSON.stringify(result, null, 2));

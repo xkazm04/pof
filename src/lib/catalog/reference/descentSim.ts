@@ -41,6 +41,7 @@ import {
   type BestDefensiveAffixExpectation,
   type BestWeaponExpectation,
   type ExpectedSaleValue,
+  type SaleIdentifyPolicy,
   type WeightedLootMonsterProfile,
 } from '@/lib/catalog/reference/lootMath';
 import {
@@ -71,6 +72,7 @@ export type DescentGear = 'none' | 'expected';
 export type DefensiveAffixes = 'none' | 'expected';
 export type SorcererCombatPolicy = 'mixed' | 'pure-spell';
 export type SustainIncome = 'monster-gold' | 'gold-and-sales';
+export type SaleIdentify = SaleIdentifyPolicy;
 export type DescentEncounter = 'duel' | 'packs';
 export type DescentPurchases = 'none' | 'defence';
 
@@ -426,6 +428,8 @@ export interface DescentSimulation {
   adjacentSlots?: number;
   /** Omitted for the byte-compatible default. */
   purchases?: 'defence';
+  /** Omitted for the byte-compatible unidentified-sale default. */
+  saleIdentify?: 'when-profitable';
   assumptions: DescentAssumption[];
   levels: DescentLevelResult[];
   /** Opt-in derived measurement; omitted by the byte-compatible monster-gold policy. */
@@ -450,6 +454,8 @@ export interface SimulateDescentInput {
   sustainIncome?: SustainIncome;
   /** Abstract carried item count for the single town return after each depth. */
   saleItemsPerTrip?: number;
+  /** Defaults to selling every drop unidentified. */
+  saleIdentify?: SaleIdentify;
   /** Defaults to the legacy one-monster duel model. */
   encounter?: DescentEncounter;
   /** Simultaneous melee capacity; eight open tiles, or two for the documented corridor scenario. */
@@ -1190,6 +1196,7 @@ function assumptions(
   sorcererCombatPolicy: SorcererCombatPolicy,
   sustainIncome: SustainIncome,
   saleItemsPerTrip: number,
+  saleIdentify: SaleIdentify,
   encounter: DescentEncounter,
   adjacentSlots: number,
   defensiveAffixes: DefensiveAffixes,
@@ -1338,7 +1345,9 @@ function assumptions(
       id: 'sustain-income',
       value: 'monster gold plus carried item sales; no sustain purchases under gear:none',
       source: 'd1-loot-drop-outcome and d1-store-pricing-law',
-      detail: 'All eligible non-consumable item drops are sold to Griswold or Adria at max(floor(base value / 4), 1). Magic and Unique items are sold unidentified at base value; Cain is not paid, so identify is a zero sink.',
+      detail: saleIdentify === 'when-profitable'
+        ? 'All eligible non-consumable item drops are sold to Griswold or Adria. A carried Magic or Unique outcome is identified for 100 gold exactly when its identified quarter-value sale price exceeds its unidentified base quarter-value sale price by more than that fee.'
+        : 'All eligible non-consumable item drops are sold to Griswold or Adria at max(floor(base value / 4), 1). Magic and Unique items are sold unidentified at base value; Cain is not paid, so identify is a zero sink.',
     }, {
       id: 'sale-carry-capacity',
       value: `${saleItemsPerTrip} items per depth`,
@@ -1348,8 +1357,15 @@ function assumptions(
       id: 'gold-flow-measurement',
       value: 'derived gold and gold per clear-hour',
       source: 'descent faucets and combat-only clear time',
-      detail: 'This is a PoF-derived faucet/sink measurement, not an engine economy or equilibrium. Potion purchases and repair are not modelled under gear:none and identify is zero under the unidentified-sale policy.',
-    }] : []),
+      detail: saleIdentify === 'when-profitable'
+        ? 'This is a PoF-derived faucet/sink measurement, not an engine economy or equilibrium. Potion purchases and repair are not modelled under gear:none; profitable Cain identification is reported as a sink.'
+        : 'This is a PoF-derived faucet/sink measurement, not an engine economy or equilibrium. Potion purchases and repair are not modelled under gear:none and identify is zero under the unidentified-sale policy.',
+    }, ...(saleIdentify === 'when-profitable' ? [{
+      id: 'sale-identification',
+      value: 'identify Magic and Unique drops only when profitable',
+      source: 'CalcItemValue, GetUniqueItem, Griswold/Adria sale pricing, and Cain identify fee',
+      detail: 'Magic identified values apply the generated affixes’ engine value additions and multipliers to base value; Unique outcomes use their unique value. Expected fees do not impose a separate within-trip liquidity constraint. Each depth reports the unidentified-policy comparison.',
+    }] : [])] : []),
     ...(gear === 'expected' ? [
       {
         id: 'expected-loot-weapon',
@@ -1388,7 +1404,9 @@ function assumptions(
           ? 'd1-loot-drop-outcome, d1-loot-gold-consumables, and d1-store-pricing-law'
           : 'd1-loot-drop-outcome and d1-loot-gold-consumables',
         detail: sustainIncome === 'gold-and-sales'
-          ? 'Expected saleable drops not reserved by the expected-gear policy are sold to Griswold or Adria at max(floor(base value / 4), 1). Magic and Unique items are sold unidentified at base value; Cain is not paid, so identify is a zero sink. Containers, useful-object drops, quests, and starting inventory are excluded.'
+          ? saleIdentify === 'when-profitable'
+            ? 'Expected saleable drops not reserved by the expected-gear policy are sold to Griswold or Adria. Carried Magic and Unique outcomes are identified only when their identified sale premium exceeds Cain’s fee. Containers, useful-object drops, quests, and starting inventory are excluded.'
+            : 'Expected saleable drops not reserved by the expected-gear policy are sold to Griswold or Adria at max(floor(base value / 4), 1). Magic and Unique items are sold unidentified at base value; Cain is not paid, so identify is a zero sink. Containers, useful-object drops, quests, and starting inventory are excluded.'
           : className === 'sorcerer'
             ? 'Expected gold and Healing, Full Healing, Mana, and Full Mana potion drops come only from the ambient monsters modelled here. Sale value, containers, useful-object drops, quests, and starting inventory are excluded.'
             : 'Expected gold and Healing/Full Healing potion drops come only from the ambient monsters modelled here. Sale value, containers, useful-object drops, quests, and starting inventory are excluded.',
@@ -1402,8 +1420,15 @@ function assumptions(
         id: 'gold-flow-measurement',
         value: 'derived gold and gold per clear-hour',
         source: 'descent faucets, purchases, and combat-only clear time',
-        detail: 'This is a PoF-derived faucet/sink measurement, not an engine economy or equilibrium. Repair is not modelled and is reported as zero; identify is zero under the unidentified-sale policy. Travel, looting, town, and recovery time are excluded from the denominator.',
-      }] : []),
+        detail: saleIdentify === 'when-profitable'
+          ? 'This is a PoF-derived faucet/sink measurement, not an engine economy or equilibrium. Repair is not modelled and is reported as zero; profitable Cain identification is a sink. Travel, looting, town, and recovery time are excluded from the denominator.'
+          : 'This is a PoF-derived faucet/sink measurement, not an engine economy or equilibrium. Repair is not modelled and is reported as zero; identify is zero under the unidentified-sale policy. Travel, looting, town, and recovery time are excluded from the denominator.',
+      }, ...(saleIdentify === 'when-profitable' ? [{
+        id: 'sale-identification',
+        value: 'identify Magic and Unique drops only when profitable',
+        source: 'CalcItemValue, GetUniqueItem, Griswold/Adria sale pricing, and Cain identify fee',
+        detail: 'Magic identified values apply the generated affixes’ engine value additions and multipliers to base value; Unique outcomes use their unique value. Expected fees do not impose a separate within-trip liquidity constraint. Per-depth sale reporting includes the unidentified-policy comparison.',
+      }] : [])] : []),
       {
         id: 'sustain-purchases',
         value: className === 'sorcerer'
@@ -1521,6 +1546,13 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
   const sustainIncome = input.sustainIncome ?? 'monster-gold';
   if (!(['monster-gold', 'gold-and-sales'] as const).includes(sustainIncome)) {
     throw new Error(`unknown sustain income policy ${input.sustainIncome}`);
+  }
+  const saleIdentify = input.saleIdentify ?? 'never';
+  if (!(['never', 'when-profitable'] as const).includes(saleIdentify)) {
+    throw new Error(`unknown sale identify policy ${input.saleIdentify}`);
+  }
+  if (saleIdentify === 'when-profitable' && sustainIncome !== 'gold-and-sales') {
+    throw new Error('saleIdentify:when-profitable requires sustainIncome:gold-and-sales');
   }
   const saleItemsPerTrip = input.saleItemsPerTrip ?? DEFAULT_SALE_ITEMS_PER_TRIP_ASSUMPTION;
   if (!Number.isInteger(saleItemsPerTrip) || saleItemsPerTrip < 0) {
@@ -2455,17 +2487,19 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
         itemsPerTrip: saleItemsPerTrip,
         keptBaseCounts,
         excludedBaseIds: sustainBaseIds,
+        saleIdentify,
       });
       if (sustain) {
         sustain.expectedGoldFromSales = sale.expectedGold;
-        sustain.expectedGoldIncome = loot.expectedGold + sale.expectedGold;
+        sustain.expectedGoldIncome = loot.expectedGold + sale.expectedGold - (sale.expectedIdentifyFees ?? 0);
       }
     }
     const goldIncome = loot ? loot.expectedGold + (sale?.expectedGold ?? 0) : 0;
+    const identifyGoldSpent = sale?.expectedIdentifyFees ?? 0;
     const potionGoldSpent = (sustain?.healingPotionsBought ?? 0) * healingPotionPrice
       + (mana?.manaPotionsBought ?? 0) * manaPotionPrice;
-    goldBalance = Math.max(0, goldBalance + goldIncome - potionGoldSpent - defenceGoldSpent);
-    if (loot) goldForNextDepth = purchases === 'defence' ? goldBalance : goldIncome;
+    goldBalance = Math.max(0, goldBalance + goldIncome - potionGoldSpent - defenceGoldSpent - identifyGoldSpent);
+    if (loot) goldForNextDepth = purchases === 'defence' ? goldBalance : goldIncome - identifyGoldSpent;
     if (loot && sale) {
       const faucets: DescentGoldFaucets = {
         monsterGold: loot.expectedGold,
@@ -2476,8 +2510,8 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
         potionsBought: potionGoldSpent,
         ...(purchases === 'defence' ? { defenceBought: defenceGoldSpent } : {}),
         repair: 0,
-        identify: 0,
-        total: potionGoldSpent + defenceGoldSpent,
+        identify: identifyGoldSpent,
+        total: potionGoldSpent + defenceGoldSpent + identifyGoldSpent,
       };
       const clearHours = Number.isFinite(expectedSeconds) ? expectedSeconds / 3_600 : null;
       const perHour = clearHours != null && clearHours > 0 ? {
@@ -2490,7 +2524,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
           potionsBought: sinks.potionsBought / clearHours,
           ...(purchases === 'defence' ? { defenceBought: defenceGoldSpent / clearHours } : {}),
           repair: 0,
-          identify: 0,
+          identify: identifyGoldSpent / clearHours,
           total: sinks.total / clearHours,
         },
         net: (faucets.total - sinks.total) / clearHours,
@@ -2715,6 +2749,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
     ...(defensiveAffixes === 'expected' ? { defensiveAffixes } : {}),
     ...(encounter === 'packs' ? { encounter, adjacentSlots } : {}),
     ...(purchases === 'defence' ? { purchases } : {}),
+    ...(saleIdentify === 'when-profitable' ? { saleIdentify } : {}),
     assumptions: assumptions(
       tilesPerLevel,
       input.policy,
@@ -2723,6 +2758,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       sorcererCombatPolicy,
       sustainIncome,
       saleItemsPerTrip,
+      saleIdentify,
       encounter,
       adjacentSlots,
       defensiveAffixes,

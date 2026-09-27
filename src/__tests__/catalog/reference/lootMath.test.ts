@@ -6,6 +6,7 @@ import {
   bestDefensiveAffixExpectation,
   bestWeaponExpectation,
   expectedDrop,
+  expectedSaleIncome,
   expectedSaleValue,
   type LootMonsterProfile,
 } from '@/lib/catalog/reference/lootMath';
@@ -146,6 +147,61 @@ describe('expectedSaleValue', () => {
     expect(expectedSaleValue([
       { baseId: 'worthless', expectedCount: 1.25, baseValue: 0 },
     ], 2).expectedGold).toBe(1.25);
+  });
+
+  it('identifies only when the invented sale premium strictly exceeds Cain\'s fee', () => {
+    expect(expectedSaleValue([
+      { baseId: 'profitable-magic', expectedCount: 1, baseValue: 400, identifiedValue: 1_200 },
+      { baseId: 'break-even-magic', expectedCount: 1, baseValue: 0, identifiedValue: 404 },
+    ], 2, 'when-profitable')).toEqual({
+      expectedItemsDropped: 2,
+      expectedItemsKept: 0,
+      expectedItemsCarried: 2,
+      expectedItemsLeftBehind: 0,
+      expectedGold: 301,
+      expectedItemsIdentified: 1,
+      expectedIdentifyFees: 100,
+      unidentifiedPolicyExpectedGold: 101,
+      expectedNetGoldGainVsUnidentified: 100,
+    });
+  });
+});
+
+describe('expectedSaleIncome identification', () => {
+  it('hand-computes invented affix-multiplied Magic and fixed-value Unique sales', () => {
+    const saleSword = wrapper('invented-sale-sword', 'items', 'items/itemdat.tsv', {
+      dropRate: '1', itemType: 'Sword', minMonsterLevel: '1', miscId: 'NONE', spell: 'Null',
+      uniqueBaseItem: 'SALE_SWORD', class: 'Weapon', value: '400',
+    }, { subtype: 'Sword' });
+    const valuablePrefix = wrapper('invented-valuable-prefix', 'affixes', 'items/item_prefixes.tsv', {
+      power: 'DAMP', 'power.value1': '1', 'power.value2': '1', minLevel: '2', itemTypes: 'Weapon',
+      alignment: 'Any', chance: '1', useful: 'true', minVal: '0', maxVal: '0', multVal: '4',
+    });
+    const unique = wrapper('invented-sale-unique', 'items', 'items/unique_itemdat.tsv', {
+      uniqueBaseItem: 'SALE_SWORD', minLevel: '4', value: '2000',
+    });
+    const result = expectedSaleIncome({
+      monsterProfiles: [{ profile, weight: 1 }],
+      itemWrappers: [saleSword],
+      affixWrappers: [valuablePrefix],
+      uniqueItemWrappers: [unique],
+      difficulty: 'normal',
+      itemsPerTrip: 1,
+      saleIdentify: 'when-profitable',
+    });
+    const pSelected = 0.1066;
+    const pBonus = 0.11 + 0.89 * 0.05;
+    const pUnique = pBonus * 0.02;
+    const pMagic = pBonus * 0.98 * (3 / 8);
+    const expectedGross = pSelected * ((1 - pUnique - pMagic) * 100 + pMagic * 400 + pUnique * 500);
+    const expectedIdentified = pSelected * (pMagic + pUnique);
+
+    expect(result.expectedItemsIdentified).toBeCloseTo(expectedIdentified, 12);
+    expect(result.expectedIdentifyFees).toBeCloseTo(expectedIdentified * 100, 12);
+    expect(result.expectedGold).toBeCloseTo(expectedGross, 12);
+    expect(result.unidentifiedPolicyExpectedGold).toBeCloseTo(pSelected * 100, 12);
+    expect(result.expectedNetGoldGainVsUnidentified)
+      .toBeCloseTo(expectedGross - expectedIdentified * 100 - pSelected * 100, 12);
   });
 });
 

@@ -12,6 +12,9 @@ const ORDINARY_NOTHING = 0.59;
 const ORDINARY_DIRECT_GOLD = 0.3034;
 const ORDINARY_POOL = 0.1066;
 
+export const CAIN_IDENTIFY_FEE = 100;
+export type SaleIdentifyPolicy = 'never' | 'when-profitable';
+
 export const MAGIC_AFFIX_ALLOCATION = {
   prefixOnly: 5 / 24,
   suffixOnly: 5 / 8,
@@ -817,6 +820,8 @@ export interface SaleDropMixItem {
   baseValue: number;
   /** Expected copies retained by the caller's gear/consumable policy before the carry limit. */
   keptCount?: number;
+  /** Magic/Unique engine value; omitted for Normal items and legacy aggregate rows. */
+  identifiedValue?: number;
 }
 
 export interface ExpectedSaleValue {
@@ -825,6 +830,14 @@ export interface ExpectedSaleValue {
   expectedItemsCarried: number;
   expectedItemsLeftBehind: number;
   expectedGold: number;
+  /** Present only for the opt-in identify-then-sell policy. */
+  expectedItemsIdentified?: number;
+  /** Present only for the opt-in identify-then-sell policy. */
+  expectedIdentifyFees?: number;
+  /** Gross sale gold produced by the legacy unidentified policy under the same carry cap. */
+  unidentifiedPolicyExpectedGold?: number;
+  /** Actual sale gold less Cain fees, minus legacy unidentified sale gold. */
+  expectedNetGoldGainVsUnidentified?: number;
 }
 
 export interface ExpectedSaleIncomeInput extends ExpectedLootBudgetInput {
@@ -834,6 +847,8 @@ export interface ExpectedSaleIncomeInput extends ExpectedLootBudgetInput {
   keptBaseCounts?: ReadonlyMap<string, number>;
   /** Drops consumed by another policy, such as sustain potions, are not sold. */
   excludedBaseIds?: ReadonlySet<string>;
+  /** Defaults to the legacy unidentified sale policy. */
+  saleIdentify?: SaleIdentifyPolicy;
 }
 
 /**
@@ -845,9 +860,13 @@ export interface ExpectedSaleIncomeInput extends ExpectedLootBudgetInput {
 export function expectedSaleValue(
   dropMix: readonly SaleDropMixItem[],
   itemsPerTrip: number,
+  saleIdentify: SaleIdentifyPolicy = 'never',
 ): ExpectedSaleValue {
   if (!Number.isInteger(itemsPerTrip) || itemsPerTrip < 0) {
     throw new Error(`itemsPerTrip must be a non-negative integer (got ${itemsPerTrip})`);
+  }
+  if (!(['never', 'when-profitable'] as const).includes(saleIdentify)) {
+    throw new Error(`unknown sale identify policy ${saleIdentify}`);
   }
   let expectedItemsDropped = 0;
   let expectedItemsKept = 0;
@@ -858,6 +877,9 @@ export function expectedSaleValue(
     if (!Number.isFinite(item.baseValue) || item.baseValue < 0) {
       throw new Error(`${item.baseId}.baseValue must be a non-negative finite number`);
     }
+    if (item.identifiedValue != null && (!Number.isFinite(item.identifiedValue) || item.identifiedValue < 0)) {
+      throw new Error(`${item.baseId}.identifiedValue must be a non-negative finite number`);
+    }
     const requestedKeep = item.keptCount ?? 0;
     if (!Number.isFinite(requestedKeep) || requestedKeep < 0) {
       throw new Error(`${item.baseId}.keptCount must be a non-negative finite number`);
@@ -865,37 +887,201 @@ export function expectedSaleValue(
     const kept = Math.min(item.expectedCount, requestedKeep);
     expectedItemsDropped += item.expectedCount;
     expectedItemsKept += kept;
+    const unidentifiedSaleValue = Math.max(Math.trunc(item.baseValue / 4), 1);
+    const identifiedSaleValue = item.identifiedValue == null
+      ? unidentifiedSaleValue
+      : Math.max(Math.trunc(item.identifiedValue / 4), 1);
+    const identify = saleIdentify === 'when-profitable'
+      && identifiedSaleValue - unidentifiedSaleValue > CAIN_IDENTIFY_FEE;
     return {
       ...item,
       expectedCount: item.expectedCount - kept,
-      saleValue: Math.max(Math.trunc(item.baseValue / 4), 1),
+      saleValue: identify ? identifiedSaleValue : unidentifiedSaleValue,
+      identify,
     };
   }).sort((left, right) => right.saleValue - left.saleValue || left.baseId.localeCompare(right.baseId));
 
   let capacity = itemsPerTrip;
   let expectedItemsCarried = 0;
+  let expectedItemsIdentified = 0;
   let expectedGold = 0;
   for (const item of saleable) {
     const carried = Math.min(item.expectedCount, capacity);
     expectedItemsCarried += carried;
+    if (item.identify) expectedItemsIdentified += carried;
     expectedGold += carried * item.saleValue;
     capacity -= carried;
     if (capacity <= 0) break;
   }
-  return {
+  const result: ExpectedSaleValue = {
     expectedItemsDropped,
     expectedItemsKept,
     expectedItemsCarried,
     expectedItemsLeftBehind: Math.max(0, expectedItemsDropped - expectedItemsKept - expectedItemsCarried),
     expectedGold,
   };
+  if (saleIdentify === 'never') return result;
+  const unidentifiedPolicyExpectedGold = expectedSaleValue(dropMix, itemsPerTrip).expectedGold;
+  const expectedIdentifyFees = expectedItemsIdentified * CAIN_IDENTIFY_FEE;
+  return {
+    ...result,
+    expectedItemsIdentified,
+    expectedIdentifyFees,
+    unidentifiedPolicyExpectedGold,
+    expectedNetGoldGainVsUnidentified:
+      expectedGold - expectedIdentifyFees - unidentifiedPolicyExpectedGold,
+  };
 }
 
-/** Project sale income from weighted monster drops, selling magic/Unique items unidentified. */
+function magicAffixChoices(
+  base: ReferenceWrapper,
+  level: number,
+  onlyGood: boolean,
+  rows: readonly AffixRow[],
+  hellfire: boolean,
+): AffixPairChoice[] {
+  if (itemType(base).toLowerCase() !== 'staff') return genericAffixChoices(base, level, onlyGood, rows);
+  const result: AffixPairChoice[] = [];
+  if (!hellfire) {
+    result.push(...genericAffixChoices(base, level, onlyGood, rows)
+      .map((choice) => ({ ...choice, p: choice.p / 4 })));
+  }
+  const chargedScale = hellfire ? 1 : 3 / 4;
+  const attempt = onlyGood ? 1 : 1 / 10;
+  const prefixPool = eligibleAffixes(rows, 'prefix', 'Staff', 0, level, onlyGood, 'any', false);
+  if (prefixPool.length === 0) {
+    result.push({ prefix: null, suffix: null, p: chargedScale });
+  } else {
+    result.push(...choices(prefixPool).map((choice) => ({
+      prefix: choice.row,
+      suffix: null,
+      p: choice.p * chargedScale * attempt,
+    })));
+    result.push({ prefix: null, suffix: null, p: chargedScale * (1 - attempt) });
+  }
+  return result;
+}
+
+function identifiedMagicValueOutcomes(
+  base: ReferenceWrapper,
+  level: number,
+  onlyGood: boolean,
+  rows: readonly AffixRow[],
+  hellfire: boolean,
+): { identifiedValue: number; p: number }[] {
+  const baseValue = finiteNumber(base.raw.value ?? stat(base, 'Value'), `${base.entity.id}.value`);
+  const values = new Map<number, number>();
+  for (const pair of magicAffixChoices(base, level, onlyGood, rows, hellfire)) {
+    const selected = [pair.prefix, pair.suffix].filter((row): row is AffixRow => row != null);
+    if (selected.length === 0) continue;
+    let rolls = [{ addition: 0, multiplier: 0, p: pair.p }];
+    for (const affix of selected) {
+      rolls = rolls.flatMap((outcome) => rolledValues(affix).map((roll) => ({
+        addition: outcome.addition + affixPriceValue(affix, roll.value),
+        multiplier: outcome.multiplier + affix.priceMultiplier,
+        p: outcome.p * roll.p,
+      })));
+    }
+    for (const roll of rolls) {
+      let multiplied = roll.multiplier;
+      if (multiplied > 0) multiplied *= baseValue;
+      else if (multiplied < 0) multiplied = Math.trunc(baseValue / multiplied);
+      const identifiedValue = Math.max(1, roll.addition + multiplied);
+      values.set(identifiedValue, (values.get(identifiedValue) ?? 0) + roll.p);
+    }
+  }
+  return [...values].map(([identifiedValue, p]) => ({ identifiedValue, p }));
+}
+
+/** Project sale income from weighted monster drops under the selected identification policy. */
 export function expectedSaleIncome(input: ExpectedSaleIncomeInput): ExpectedSaleValue {
+  const saleIdentify = input.saleIdentify ?? 'never';
+  if (!(['never', 'when-profitable'] as const).includes(saleIdentify)) {
+    throw new Error(`unknown sale identify policy ${input.saleIdentify}`);
+  }
   const bases = new Map(input.itemWrappers
     .filter((wrapper) => wrapper.file === 'items/itemdat.tsv')
     .map((wrapper) => [wrapper.entity.id, wrapper]));
+  if (saleIdentify === 'when-profitable') {
+    const affixes = affixRows(input.affixWrappers);
+    const uniques = new Map(input.uniqueItemWrappers
+      .filter((wrapper) => wrapper.file === 'items/unique_itemdat.tsv')
+      .map((wrapper) => [wrapper.entity.id, wrapper]));
+    const mix: SaleDropMixItem[] = [];
+    for (const row of input.monsterProfiles) {
+      if (!Number.isFinite(row.weight) || row.weight < 0) {
+        throw new Error(`loot-profile weight must be non-negative (got ${row.weight})`);
+      }
+      if (row.weight === 0) continue;
+      const drop = row.drop ?? expectedDrop(
+        row.profile,
+        input.itemWrappers,
+        input.affixWrappers,
+        input.uniqueItemWrappers,
+        row.difficulty ?? input.difficulty,
+      );
+      for (const quality of drop.baseQuality) {
+        if (input.excludedBaseIds?.has(quality.baseId)) continue;
+        const base = bases.get(quality.baseId);
+        if (!base || String(base.raw.class).toLowerCase() === 'quest') continue;
+        const baseValue = finiteNumber(base.raw.value ?? stat(base, 'Value'), `${quality.baseId}.value`);
+        const selectedCount = row.weight * quality.pSelected;
+        if (quality.pNormal > 0) {
+          mix.push({ baseId: quality.baseId, expectedCount: selectedCount * quality.pNormal, baseValue });
+        }
+        if (quality.pMagic > 0) {
+          const magicValues = identifiedMagicValueOutcomes(
+            base,
+            quality.bonusLevel,
+            row.profile.unique === true,
+            affixes,
+            row.profile.hellfire === true,
+          );
+          const magicProbability = magicValues.reduce((sum, outcome) => sum + outcome.p, 0);
+          if (magicProbability <= 0) throw new Error(`${quality.baseId} has positive magic probability without a magic value outcome`);
+          for (const outcome of magicValues) {
+            mix.push({
+              baseId: quality.baseId,
+              expectedCount: selectedCount * quality.pMagic * outcome.p / magicProbability,
+              baseValue,
+              identifiedValue: outcome.identifiedValue,
+            });
+          }
+        }
+        if (quality.pUnique > 0) {
+          const obtained = new Set(row.profile.obtainedUniqueIds ?? []);
+          const candidates = eligibleUniqueIds(base, quality.bonusLevel, input.uniqueItemWrappers)
+            .filter((id) => row.profile.gameMode === 'multi' || !obtained.has(id));
+          if (candidates.length === 0) throw new Error(`${quality.baseId} has positive Unique probability without an available identity`);
+          for (const id of candidates) {
+            const unique = uniques.get(id);
+            if (!unique) throw new Error(`missing Unique wrapper ${id}`);
+            mix.push({
+              baseId: quality.baseId,
+              expectedCount: selectedCount * quality.pUnique / candidates.length,
+              baseValue,
+              identifiedValue: finiteNumber(unique.raw.value ?? stat(unique, 'Value'), `${id}.value`),
+            });
+          }
+        }
+      }
+    }
+    const totals = new Map<string, number>();
+    for (const item of mix) totals.set(item.baseId, (totals.get(item.baseId) ?? 0) + item.expectedCount);
+    const withKeeps = mix.map((item) => {
+      const total = totals.get(item.baseId)!;
+      const kept = Math.min(total, input.keptBaseCounts?.get(item.baseId) ?? 0);
+      return { ...item, keptCount: total > 0 ? kept * item.expectedCount / total : 0 };
+    });
+    const result = expectedSaleValue(withKeeps, input.itemsPerTrip, saleIdentify);
+    const unidentifiedPolicyExpectedGold = expectedSaleIncome({ ...input, saleIdentify: 'never' }).expectedGold;
+    return {
+      ...result,
+      unidentifiedPolicyExpectedGold,
+      expectedNetGoldGainVsUnidentified:
+        result.expectedGold - (result.expectedIdentifyFees ?? 0) - unidentifiedPolicyExpectedGold,
+    };
+  }
   const counts = new Map<string, number>();
   for (const row of input.monsterProfiles) {
     if (!Number.isFinite(row.weight) || row.weight < 0) throw new Error(`loot-profile weight must be non-negative (got ${row.weight})`);
