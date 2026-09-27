@@ -436,11 +436,49 @@ describe('simulateDescent', () => {
       value: 0.95,
     });
     expect(result.levels[0].note).toContain('1 eligible unique row');
+    expect(result).toMatchObject({ exchangeModel: 'cadence' });
+    expect(result.assumptions.find((item) => item.id === 'monster-cadence-fallback')?.value)
+      .toContain(`${monster.entity.name} (${monster.entity.id})`);
     expect(result.levels[1]).toMatchObject({
       expectedXpGained: 18,
       heroLevelBefore: 2,
       heroLevelAfter: 2,
     });
+  });
+
+  it('uses derived monster cadence by default and keeps per-hero-action as the byte-compatible option', () => {
+    const cadenceMonster = {
+      ...monster,
+      entity: {
+        ...monster.entity,
+        data: {
+          ...monster.entity.data,
+          derived: {
+            ...(monster.entity.data.derived as Record<string, unknown>),
+            attackCycleSeconds: 0.5,
+          },
+        },
+      },
+    } satisfies ReferenceWrapper;
+    const input = {
+      className: 'warrior' as const,
+      policy: 'none' as const,
+      tilesPerLevel: 60,
+      gameMode: 'single' as const,
+      difficulty: 'normal' as const,
+      wrappers: [warrior, cadenceMonster, ...curve],
+      locations: locationsFor(cadenceMonster),
+    };
+    const cadence = simulateDescent(input);
+    const legacy = simulateDescent({ ...input, exchangeModel: 'per-hero-action' });
+
+    expect(cadence.levels[0].expectedDamageTaken)
+      .toBeCloseTo(2 * (0.05 / 0.95 / 0.5) * 0.15, 10);
+    expect(legacy.levels[0].expectedDamageTaken)
+      .toBeCloseTo(2 * ((1 / 0.95) - 1) * 0.15, 10);
+    expect(Object.hasOwn(legacy, 'exchangeModel')).toBe(false);
+    expect(legacy.assumptions.find((item) => item.id === 'duel-exchange')?.value)
+      .toBe('hero attacks first; one adjacent counterattack between hero swings');
   });
 
   it('uses and reports the named tile-count default instead of hiding it', () => {

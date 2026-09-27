@@ -345,6 +345,35 @@ describe('duel and canon contract', () => {
     );
   });
 
+  it('integrates monster attacks over kill time at the supplied cadence and preserves the legacy branch', () => {
+    const build = { ...BUILD, swingSeconds: 0.5 };
+    const common = {
+      playerAttack: 'melee' as const,
+      monsterAttack: 'melee' as const,
+      dungeonLevel: 1,
+    };
+    const legacy = duel(build, COEFFICIENTS, MONSTER, { ...common, exchangeModel: 'per-hero-action' });
+    const legacyWithUnusedCadence = duel(build, COEFFICIENTS, MONSTER, {
+      ...common,
+      exchangeModel: 'per-hero-action',
+      monsterAttackCycleSeconds: 2,
+    });
+    const cadence = duel(build, COEFFICIENTS, MONSTER, {
+      ...common,
+      monsterAttackCycleSeconds: 2,
+    });
+
+    expect(JSON.stringify(legacyWithUnusedCadence)).toBe(JSON.stringify(legacy));
+    expect(cadence).toMatchObject({
+      exchangeModel: 'cadence',
+      monsterAttackCycleSeconds: 2,
+      monsterAttackExposureSeconds: cadence.expectedPlayerSecondsToKill,
+    });
+    // The hero begins at t=0; mean first arrival is one cycle later and fractional final exposure is retained.
+    expect(cadence.expectedMonsterAttacksBeforeKill)
+      .toBeCloseTo(cadence.expectedPlayerSecondsToKill! / 2, 12);
+  });
+
   it('applies the supplied monster element and independent projectile count', () => {
     const build = {
       ...BUILD,
@@ -523,6 +552,36 @@ describe('duel and canon contract', () => {
     expect(result.expectedPlayerSwingsToKill).toBe(6);
     expect(result.expectedMonsterAttacksBeforeKill).toBe(3);
     expect(result.expectedPlayerSecondsToKill).toBeCloseTo(4 / 3 + 4 * 0.5, 12);
+
+    const cadence = duel({
+      ...BUILD,
+      class: 'Rogue',
+      level: 1,
+      strength: 0,
+      dexterity: 0,
+      weaponDamage: { min: 1, max: 1 },
+      weaponType: 'bow',
+      damageBonusPercent: 0,
+      flatDamage: 0,
+      swingSeconds: 0.5,
+    }, { ...COEFFICIENTS, classFlags: [] }, {
+      ...MONSTER,
+      level: 1,
+      hitPoints: { min: 6, max: 6 },
+      armourClass: 0,
+      resist: {},
+      immune: {},
+      petrified: true,
+    }, {
+      playerAttack: 'ranged',
+      engagementDistance: 5,
+      monsterApproachTilesPerSecond: 3,
+      monsterAttackCycleSeconds: 0.5,
+      monsterAttack: 'melee',
+      dungeonLevel: 1,
+    });
+    expect(cadence.monsterAttackExposureSeconds).toBeCloseTo(2, 12);
+    expect(cadence.expectedMonsterAttacksBeforeKill).toBeCloseTo(4, 12);
   });
 
   it('computes spell casts, exact mana per kill, and an immune target as unbounded', () => {

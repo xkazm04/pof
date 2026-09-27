@@ -26,6 +26,7 @@ import { damageOutcomes, manaCost } from '@/lib/catalog/reference/spellMath';
 import { spellSpec } from '@/lib/catalog/reference/spellSpecs';
 
 export type PlayerAttackMode = 'melee' | 'ranged' | 'spell';
+export type DuelExchangeModel = 'per-hero-action' | 'cadence';
 
 export interface DuelSpellAttack {
   spell: string;
@@ -50,12 +51,16 @@ export const DEFAULT_RANGED_ENGAGEMENT_DISTANCE = 4;
 export interface DuelOptions {
   gameMode?: GameMode;
   playerAttack: PlayerAttackMode;
+  /** Cadence is the default; omit its timing to fall back to the legacy per-hero-action exchange. */
+  exchangeModel?: DuelExchangeModel;
   /** Fixed firing separation for a ranged duel. Defaults to four tiles. */
   engagementDistance?: number;
   /** Backwards-compatible alias for engagementDistance. */
   playerDistance?: number;
   /** Effective monster locomotion; omit only when no approach model is requested. */
   monsterApproachTilesPerSecond?: number;
+  /** Expected interval between attacks in the monster's current adjacent/at-range routine phase. */
+  monsterAttackCycleSeconds?: number;
   spell?: DuelSpellAttack;
   /** Class cast animation duration from combatMath.castTiming. */
   playerCastSeconds?: number;
@@ -88,6 +93,10 @@ export interface DuelOptions {
  */
 export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monster: MonsterProfile, opts: DuelOptions) {
   const gameMode = opts.gameMode ?? monster.gameMode ?? 'single';
+  const requestedExchangeModel = opts.exchangeModel ?? 'cadence';
+  if (!(['per-hero-action', 'cadence'] as const).includes(requestedExchangeModel)) {
+    throw new Error(`unknown duel exchange model ${opts.exchangeModel}`);
+  }
   const engagementDistance = opts.engagementDistance ?? opts.playerDistance ?? DEFAULT_RANGED_ENGAGEMENT_DISTANCE;
   if (!Number.isFinite(engagementDistance) || engagementDistance < 0) {
     throw new Error(`engagementDistance must be a non-negative finite number (got ${engagementDistance})`);
@@ -95,6 +104,10 @@ export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monste
   if (opts.monsterApproachTilesPerSecond !== undefined
     && (!Number.isFinite(opts.monsterApproachTilesPerSecond) || opts.monsterApproachTilesPerSecond <= 0)) {
     throw new Error(`monsterApproachTilesPerSecond must be a positive finite number (got ${opts.monsterApproachTilesPerSecond})`);
+  }
+  if (opts.monsterAttackCycleSeconds !== undefined
+    && (!Number.isFinite(opts.monsterAttackCycleSeconds) || opts.monsterAttackCycleSeconds <= 0)) {
+    throw new Error(`monsterAttackCycleSeconds must be a positive finite number (got ${opts.monsterAttackCycleSeconds})`);
   }
   if (opts.playerHitRecoverySeconds !== undefined
     && (!Number.isFinite(opts.playerHitRecoverySeconds) || opts.playerHitRecoverySeconds < 0)) {
@@ -241,12 +254,28 @@ export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monste
     [{ hitPoints: playerLife, weight: 1 }],
     monsterDamageAfterDefence,
   );
-  const expectedMonsterAttacksBeforeKill = Math.max(
+  const perHeroActionMonsterAttacksBeforeKill = Math.max(
     0,
     expectedPlayerSwingsToKill
       - (opts.monsterAttack === 'melee' ? freePlayerActionCapacity : 0)
       - 1,
   );
+  const cadenceAvailable = requestedExchangeModel === 'cadence'
+    && opts.monsterAttackCycleSeconds !== undefined
+    && expectedPlayerSecondsToKill !== null;
+  const exchangeModel: DuelExchangeModel = cadenceAvailable ? 'cadence' : 'per-hero-action';
+  // The hero starts its first action at t=0. A cadence-model monster accrues attacks only while able to attack:
+  // ranged attackers are in range immediately, while melee approach time remains attack-free. The stationary
+  // expected rate starts at engagement, so the mean first arrival is one full cycle later; a fractional final
+  // cycle is retained as expected exposure instead of being rounded to a discrete attack.
+  const monsterAttackExposureSeconds = expectedPlayerSecondsToKill === null
+    ? null
+    : opts.monsterAttack === 'melee'
+      ? Math.max(0, expectedPlayerSecondsToKill - approachSeconds)
+      : expectedPlayerSecondsToKill;
+  const expectedMonsterAttacksBeforeKill = cadenceAvailable
+    ? monsterAttackExposureSeconds! / opts.monsterAttackCycleSeconds!
+    : perHeroActionMonsterAttacksBeforeKill;
   const noGotHitChancePerMonsterAttack = resolvedDamageEvents.reduce((product, event) => {
     const qualifyingDamageChance = event.damage.outcomes.reduce((sum, outcome) => {
       const damage = playerResistance(build, outcome.damage, monsterElement).damage;
@@ -267,6 +296,11 @@ export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monste
 
   return {
     gameMode,
+    ...(exchangeModel === 'cadence' ? {
+      exchangeModel,
+      monsterAttackCycleSeconds: opts.monsterAttackCycleSeconds!,
+      monsterAttackExposureSeconds: monsterAttackExposureSeconds!,
+    } : {}),
     playerHitChance,
     expectedPlayerDamagePerSwing,
     expectedPlayerHitsToKill,

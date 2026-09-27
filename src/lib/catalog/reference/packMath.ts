@@ -94,7 +94,8 @@ export function requestedUniquePackSize(pack: unknown): number {
 /**
  * Integrate one homogeneous pack over the hero's one-at-a-time kill phases. For phase k, melee
  * exposure is min(k, adjacentSlots), while every ranged survivor remains engaged. The duel's
- * damage and qualifying-hit expectation are divided by its kill time to preserve hero-first duel
+ * damage and qualifying-hit expectation are divided by its kill time; cadence-model duels thereby
+ * bound both rates by each monster's own attack cycle, while the legacy model preserves hero-first
  * initiative. If lambda is the combined qualifying-hit rate and h is recovery duration, recovery
  * can itself be interrupted, so T = T0 + lambda*T*h and T = T0/(1-lambda*h). A load >= 1 is a
  * deterministic stun-lock (unbounded time and damage). With one slot, every phase is exactly one

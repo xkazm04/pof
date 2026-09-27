@@ -3,6 +3,7 @@ import { DIABLO1_SOURCE } from '@/lib/catalog/ingest/diablo1';
 import {
   DEFAULT_RANGED_ENGAGEMENT_DISTANCE,
   duel,
+  type DuelExchangeModel,
   type DuelMonsterDamageEvent,
   type DuelSpellAttack,
   type PlayerAttackMode,
@@ -425,6 +426,8 @@ export interface DescentSimulation {
   defensiveAffixes?: 'expected';
   /** Omitted for the byte-compatible duel default. */
   encounter?: 'packs';
+  /** Omitted only by the byte-compatible legacy per-hero-action exchange. */
+  exchangeModel?: 'cadence';
   /** Omitted for the byte-compatible duel default. */
   adjacentSlots?: number;
   /** Omitted for the byte-compatible default. */
@@ -459,6 +462,8 @@ export interface SimulateDescentInput {
   saleIdentify?: SaleIdentify;
   /** Defaults to the legacy one-monster duel model. */
   encounter?: DescentEncounter;
+  /** Defaults to cadence; per-hero-action preserves the legacy exchange byte-for-byte. */
+  exchangeModel?: DuelExchangeModel;
   /** Simultaneous melee capacity; eight open tiles, or two for the documented corridor scenario. */
   adjacentSlots?: number;
   /** Town purchases are opt-in; the default spends no gold on equipment. */
@@ -1017,6 +1022,22 @@ function monsterType(wrapper: ReferenceWrapper): string | undefined {
     : wrapper.raw._monster_id;
 }
 
+function monsterDerived(wrapper: ReferenceWrapper): Record<string, unknown> {
+  const derived = wrapper.entity.data.derived;
+  return derived && typeof derived === 'object' && !Array.isArray(derived)
+    ? derived as Record<string, unknown>
+    : {};
+}
+
+/** Select the routine's actual combat slice: adjacent cadence, or its distinct in-range shot cadence. */
+function monsterAttackCycleSeconds(wrapper: ReferenceWrapper, attacksAtRange: boolean): number | undefined {
+  const derived = monsterDerived(wrapper);
+  const atRange = Number(derived.shootCycleSeconds);
+  const adjacent = Number(derived.attackCycleSeconds);
+  if (attacksAtRange && Number.isFinite(atRange) && atRange > 0) return atRange;
+  return Number.isFinite(adjacent) && adjacent > 0 ? adjacent : undefined;
+}
+
 function monsterUsesMissileWhenAdjacent(wrapper: ReferenceWrapper): boolean {
   const ai = monsterRoutine(wrapper);
   if (ai === undefined || !isD1AiRoutineId(ai)) return false;
@@ -1032,10 +1053,7 @@ function monsterExchangeModel(
   wrappers: readonly ReferenceWrapper[],
   targetDistance: number,
 ): MonsterExchangeModel {
-  const rawDerived = wrapper.entity.data.derived;
-  const derived = rawDerived && typeof rawDerived === 'object' && !Array.isArray(rawDerived)
-    ? rawDerived as Record<string, unknown>
-    : {};
+  const derived = monsterDerived(wrapper);
   const ai = monsterRoutine(wrapper);
   const selected = ai && isD1AiRoutineId(ai)
     ? selectMonsterMissileAttack(ai, monsterIntelligence(wrapper), monsterType(wrapper))
@@ -1208,6 +1226,8 @@ function assumptions(
   saleItemsPerTrip: number,
   saleIdentify: SaleIdentify,
   encounter: DescentEncounter,
+  exchangeModel: DuelExchangeModel,
+  cadenceFallbackMonsters: readonly string[],
   adjacentSlots: number,
   defensiveAffixes: DefensiveAffixes,
   purchases: DescentPurchases,
@@ -1243,18 +1263,24 @@ function assumptions(
     },
     ...(encounter === 'duel' ? [{
       id: 'duel-exchange',
-      value: className === 'warrior'
+      value: exchangeModel === 'cadence'
+        ? 'hero acts first at t=0; monsters attack at their derived adjacent or in-range cadence'
+        : className === 'warrior'
         ? 'hero attacks first; one adjacent counterattack between hero swings'
         : 'hero attacks first; one melee counterattack between hero actions',
       source: 'combatDuel.duel expectations',
-      detail: className === 'warrior'
+      detail: exchangeModel === 'cadence'
+        ? 'The monster attack process starts when it can attack: immediately for an in-range missile routine, or after melee approach. Its mean first attack is one full derived cycle after that point, and fractional final-cycle exposure is retained. Healing and simultaneous packs are outside this duel model.'
+        : className === 'warrior'
         ? 'Expected damage per kill is (expected hero swings - 1) × expected monster damage per swing. At distance 1, routines without a melee attack use their selected missile and monster ranged to-hit law; other routines use melee. Monster travel, AI delays, healing, and simultaneous packs are outside this duel model.'
         : 'Melee monsters do no damage during their approach, then counter between adjacent hero actions. Missile-capable routines counter at the engagement distance. Healing and simultaneous packs are outside this duel model.',
     }] : [{
       id: 'pack-exchange',
       value: 'simultaneous homogeneous placement groups; hero focuses one target at a time',
       source: '.reference/devilutionX/Source/monster.cpp PlaceGroup and combatDuel.duel expectations',
-      detail: 'Each exact integer pack-size branch is evaluated before probability averaging. Per-kill duel time and hero-first damage are time-normalized; all living ranged attackers contribute, while living melee attackers are capped by adjacent slots.',
+      detail: exchangeModel === 'cadence'
+        ? 'Each exact integer pack-size branch is evaluated before probability averaging. Per-kill damage and PM_GOTHIT events use the monster cadence as their rate bound; all living ranged attackers contribute, while living melee attackers are capped by adjacent slots.'
+        : 'Each exact integer pack-size branch is evaluated before probability averaging. Per-kill duel time and hero-first damage are time-normalized; all living ranged attackers contribute, while living melee attackers are capped by adjacent slots.',
     }, {
       id: 'adjacent-slots',
       value: adjacentSlots,
@@ -1271,6 +1297,12 @@ function assumptions(
       source: '.reference/devilutionX/Source/monster.cpp PlaceGroup caller branches',
       detail: 'The expected pack count is ambient population divided by expected requested size. Placement retries, occupied-tile failures, and final population-cap truncation need a dungeon seed and are excluded. Eligible uniques remain outside totals, but their unique-plus-eight-minion requested packs are reported together.',
     }]),
+    ...(exchangeModel === 'cadence' && cadenceFallbackMonsters.length > 0 ? [{
+      id: 'monster-cadence-fallback',
+      value: cadenceFallbackMonsters.join('; '),
+      source: 'missing bestiary data.derived attack cadence',
+      detail: 'Each named monster has no cadence for the combat slice used here, so only that monster falls back to the legacy one-counterattack-per-hero-action exchange.',
+    }] : []),
     ...(className === 'rogue' ? [
       {
         id: 'class-attack-mode',
@@ -1525,6 +1557,10 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
   if (!(['normal', 'nightmare', 'hell'] as const).includes(input.difficulty)) throw new Error(`unknown difficulty ${input.difficulty}`);
   const encounter = input.encounter ?? 'duel';
   if (!(['duel', 'packs'] as const).includes(encounter)) throw new Error(`unknown encounter policy ${input.encounter}`);
+  const exchangeModel = input.exchangeModel ?? 'cadence';
+  if (!(['per-hero-action', 'cadence'] as const).includes(exchangeModel)) {
+    throw new Error(`unknown duel exchange model ${input.exchangeModel}`);
+  }
   const adjacentSlots = input.adjacentSlots ?? DEFAULT_ADJACENT_SLOTS;
   if (!Number.isInteger(adjacentSlots) || adjacentSlots < 1 || adjacentSlots > DEFAULT_ADJACENT_SLOTS) {
     throw new Error(`adjacentSlots must be an integer from 1 to ${DEFAULT_ADJACENT_SLOTS} (got ${adjacentSlots})`);
@@ -1616,6 +1652,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
   let killsSoFar = initialState.expectedGear?.killsSoFar ?? 0;
   const lootHistory: WeightedLootMonsterProfile[] = [...(initialState.expectedGear?.dropHistory ?? [])];
   const levels: DescentLevelResult[] = [];
+  const cadenceFallbackMonsters = new Map<string, string>();
   const goldFlowLevels: DescentGoldFlowLevel[] = [];
   const healingPotionPrice = gear === 'expected' ? consumablePrice(input.wrappers, 'HEAL', 'Healing') : 0;
   const manaPotionPrice = gear === 'expected' && input.className === 'sorcerer'
@@ -1834,30 +1871,42 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
           ? monsterExchangeModel(wrapper, monster, base, input.wrappers, 1)
           : undefined
         : monsterExchangeModel(wrapper, monster, base, input.wrappers, DEFAULT_RANGED_ENGAGEMENT_DISTANCE);
-      const runDuel = (attack: PlayerAttackMode, spell?: DuelSpellAttack) => duel(combatBuild, coefficients, monster, {
-        gameMode: input.gameMode,
-        playerAttack: attack,
-        engagementDistance: DEFAULT_RANGED_ENGAGEMENT_DISTANCE,
-        monsterApproachTilesPerSecond: attack === 'melee' ? undefined : exchange?.approachTilesPerSecond,
-        spell,
-        playerCastSeconds,
-        monsterAttack: exchange?.monsterAttack ?? 'melee',
-        monsterElement: exchange?.monsterElement,
-        monsterDamage: exchange?.monsterDamage,
-        monsterProjectilesPerAttack: exchange?.monsterProjectilesPerAttack,
-        monsterHitChecksPerAttack: exchange?.monsterHitChecksPerAttack,
-        monsterDamageEvents: exchange?.monsterDamageEvents,
-        monsterDamageAlreadyShifted: exchange?.monsterDamageAlreadyShifted,
-        // A hero in melee is adjacent to the monster it fights, whatever that monster's attack kind (W43 overseer: the
-        // delivered version put a ranged target at 4 tiles even in duels, silently moving the mixed Sorcerer's default).
-        // Only in packs do OTHER ranged members hold range; packMath carries that, not this per-target duel.
-        monsterDistance: encounter === 'packs' && attack !== 'melee'
-          && (exchange?.monsterAttack === 'ranged-arrow' || exchange?.monsterAttack === 'ranged-magic')
-          ? DEFAULT_RANGED_ENGAGEMENT_DISTANCE
-          : attack === 'melee' ? 1 : DEFAULT_RANGED_ENGAGEMENT_DISTANCE,
-        dungeonLevel: depth,
-        playerHitRecoverySeconds: encounter === 'packs' ? playerHitRecoverySeconds : undefined,
-      });
+      const runDuel = (attack: PlayerAttackMode, spell?: DuelSpellAttack) => {
+        const attacksAtRange = attack !== 'melee'
+          && (exchange?.monsterAttack === 'ranged-arrow' || exchange?.monsterAttack === 'ranged-magic');
+        const attackCycleSeconds = exchangeModel === 'cadence'
+          ? monsterAttackCycleSeconds(wrapper, attacksAtRange)
+          : undefined;
+        if (exchangeModel === 'cadence' && attackCycleSeconds === undefined) {
+          cadenceFallbackMonsters.set(wrapper.entity.id, `${wrapper.entity.name} (${wrapper.entity.id})`);
+        }
+        return duel(combatBuild, coefficients, monster, {
+          gameMode: input.gameMode,
+          playerAttack: attack,
+          exchangeModel,
+          engagementDistance: DEFAULT_RANGED_ENGAGEMENT_DISTANCE,
+          monsterApproachTilesPerSecond: attack === 'melee' ? undefined : exchange?.approachTilesPerSecond,
+          monsterAttackCycleSeconds: attackCycleSeconds,
+          spell,
+          playerCastSeconds,
+          monsterAttack: exchange?.monsterAttack ?? 'melee',
+          monsterElement: exchange?.monsterElement,
+          monsterDamage: exchange?.monsterDamage,
+          monsterProjectilesPerAttack: exchange?.monsterProjectilesPerAttack,
+          monsterHitChecksPerAttack: exchange?.monsterHitChecksPerAttack,
+          monsterDamageEvents: exchange?.monsterDamageEvents,
+          monsterDamageAlreadyShifted: exchange?.monsterDamageAlreadyShifted,
+          // A hero in melee is adjacent to the monster it fights, whatever that monster's attack kind (W43 overseer: the
+          // delivered version put a ranged target at 4 tiles even in duels, silently moving the mixed Sorcerer's default).
+          // Only in packs do OTHER ranged members hold range; packMath carries that, not this per-target duel.
+          monsterDistance: encounter === 'packs' && attack !== 'melee'
+            && (exchange?.monsterAttack === 'ranged-arrow' || exchange?.monsterAttack === 'ranged-magic')
+            ? DEFAULT_RANGED_ENGAGEMENT_DISTANCE
+            : attack === 'melee' ? 1 : DEFAULT_RANGED_ENGAGEMENT_DISTANCE,
+          dungeonLevel: depth,
+          playerHitRecoverySeconds: encounter === 'packs' ? playerHitRecoverySeconds : undefined,
+        });
+      };
       const damageTaken = (result: ReturnType<typeof runDuel>) => result.expectedMonsterAttacksBeforeKill
         * result.expectedMonsterDamagePerSwing / FIXED_POINT;
       const meleeResult = mixedSorcerer ? runDuel('melee') : undefined;
@@ -2760,6 +2809,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
     ...(gear === 'expected' ? { gear } : {}),
     ...(defensiveAffixes === 'expected' ? { defensiveAffixes } : {}),
     ...(encounter === 'packs' ? { encounter, adjacentSlots } : {}),
+    ...(exchangeModel === 'cadence' ? { exchangeModel } : {}),
     ...(purchases === 'defence' ? { purchases } : {}),
     ...(saleIdentify === 'when-profitable' ? { saleIdentify } : {}),
     assumptions: assumptions(
@@ -2772,6 +2822,8 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       saleItemsPerTrip,
       saleIdentify,
       encounter,
+      exchangeModel,
+      [...cadenceFallbackMonsters.values()],
       adjacentSlots,
       defensiveAffixes,
       purchases,
