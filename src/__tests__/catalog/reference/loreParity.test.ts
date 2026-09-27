@@ -90,8 +90,10 @@ describe('loreParity', () => {
       producedEdges: 4,
       supported: 2,
       unsupported: 1,
+      statedElsewhere: 1,
       unresolvedNodes: 1,
       precision: 0.5,
+      globalPrecision: 0.75,
       recall: 1,
     });
   });

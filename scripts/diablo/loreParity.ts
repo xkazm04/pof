@@ -56,7 +56,7 @@ if (process.argv.includes('--json')) {
   console.log(json);
 } else {
   const percent = (value: number | null): string => (value === null ? 'n/a' : `${(value * 100).toFixed(1)}%`);
-  console.log('entry'.padEnd(36), 'facts'.padStart(5), 'pairs'.padStart(5), 'edges'.padStart(5), 'supp'.padStart(5), 'unsup'.padStart(5), 'unres'.padStart(5), 'precision'.padStart(10), 'recall'.padStart(8));
+  console.log('entry'.padEnd(36), 'facts'.padStart(5), 'pairs'.padStart(5), 'edges'.padStart(5), 'supp'.padStart(5), 'unsup'.padStart(5), 'elsew'.padStart(5), 'unres'.padStart(5), 'precision'.padStart(10), 'global'.padStart(8), 'recall'.padStart(8));
   for (const entry of report.entries) {
     console.log(
       entry.name.slice(0, 36).padEnd(36),
@@ -65,8 +65,10 @@ if (process.argv.includes('--json')) {
       String(entry.producedEdges.length).padStart(5),
       String(entry.supported.length).padStart(5),
       String(entry.unsupported.length).padStart(5),
+      String(entry.statedElsewhere.length).padStart(5),
       String(entry.unresolvedNodes.length).padStart(5),
       percent(entry.precision).padStart(10),
+      percent(entry.globalPrecision).padStart(8),
       percent(entry.recall).padStart(8),
     );
   }
@@ -78,8 +80,10 @@ if (process.argv.includes('--json')) {
     String(totals.producedEdges).padStart(5),
     String(totals.supported).padStart(5),
     String(totals.unsupported).padStart(5),
+    String(totals.statedElsewhere).padStart(5),
     String(totals.unresolvedNodes).padStart(5),
     percent(totals.precision).padStart(10),
+    percent(totals.globalPrecision).padStart(8),
     percent(totals.recall).padStart(8),
   );
 }

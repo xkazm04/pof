@@ -53,8 +53,12 @@ export interface LoreParityEntryResult {
   producedEdges: GraphEdge[];
   supported: ResolvedLoreEdge[];
   unsupported: ResolvedLoreEdge[];
+  /** Unsupported by this entry's own text, but the linked pair is stated elsewhere in the graph. */
+  statedElsewhere: ResolvedLoreEdge[];
   unresolvedNodes: GraphNode[];
   precision: number | null;
+  /** (supported + statedElsewhere) / produced edges: the edge is true of the world, if not of this entry. */
+  globalPrecision: number | null;
   recall: number | null;
 }
 
@@ -66,8 +70,10 @@ export interface LoreParityTotals {
   producedEdges: number;
   supported: number;
   unsupported: number;
+  statedElsewhere: number;
   unresolvedNodes: number;
   precision: number | null;
+  globalPrecision: number | null;
   recall: number | null;
 }
 
@@ -148,6 +154,8 @@ export function loreParity({
     return [...matches].sort();
   };
 
+  const graphPairKeys = new Set(graph.facts.map((fact) => pairKey(fact.subject, fact.object)));
+
   const results = entries.map((entry): LoreParityEntryResult => {
     const textIds = new Set(entry.textIds);
     const ownEntities = new Set(resolve(entry.name));
@@ -177,6 +185,7 @@ export function loreParity({
 
     const supported: ResolvedLoreEdge[] = [];
     const unsupported: ResolvedLoreEdge[] = [];
+    const statedElsewhere: ResolvedLoreEdge[] = [];
     const coveredPairs = new Set<string>();
     for (const edge of producedEdges) {
       const fromEntities = resolveNode(edge.from);
@@ -190,6 +199,7 @@ export function loreParity({
         for (const pair of supportedPairs) coveredPairs.add(pair);
       } else {
         unsupported.push(resolvedEdge);
+        if (linkedPairs.some((pair) => graphPairKeys.has(pair))) statedElsewhere.push(resolvedEdge);
       }
     }
 
@@ -203,8 +213,10 @@ export function loreParity({
       producedEdges,
       supported,
       unsupported,
+      statedElsewhere,
       unresolvedNodes,
       precision: producedEdges.length ? supported.length / producedEdges.length : null,
+      globalPrecision: producedEdges.length ? (supported.length + statedElsewhere.length) / producedEdges.length : null,
       recall: referencePairKeys.size ? coveredPairs.size / referencePairKeys.size : null,
     };
   });
@@ -217,8 +229,10 @@ export function loreParity({
     producedEdges: sum.producedEdges + entry.producedEdges.length,
     supported: sum.supported + entry.supported.length,
     unsupported: sum.unsupported + entry.unsupported.length,
+    statedElsewhere: sum.statedElsewhere + entry.statedElsewhere.length,
     unresolvedNodes: sum.unresolvedNodes + entry.unresolvedNodes.length,
     precision: 0,
+    globalPrecision: 0,
     recall: 0,
   }), {
     entries: 0,
@@ -228,11 +242,14 @@ export function loreParity({
     producedEdges: 0,
     supported: 0,
     unsupported: 0,
+    statedElsewhere: 0,
     unresolvedNodes: 0,
     precision: 0,
+    globalPrecision: 0,
     recall: 0,
   });
   totals.precision = totals.producedEdges ? totals.supported / totals.producedEdges : null;
+  totals.globalPrecision = totals.producedEdges ? (totals.supported + totals.statedElsewhere) / totals.producedEdges : null;
   totals.recall = totals.referencePairs ? totals.coveredReferencePairs / totals.referencePairs : null;
 
   return { entries: results, totals };
