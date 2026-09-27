@@ -1,5 +1,11 @@
 /** Pure Diablo I loot expectations over caller-supplied reference wrappers. */
-import type { Difficulty, PlayerClass, WeaponType } from '@/lib/catalog/reference/combatMath';
+import type {
+  Difficulty,
+  HitRecoveryTier,
+  PlayerClass,
+  Resistances,
+  WeaponType,
+} from '@/lib/catalog/reference/combatMath';
 import type { ReferenceWrapper } from '@/lib/catalog/reference/wrapper';
 
 const ORDINARY_NOTHING = 0.59;
@@ -107,6 +113,12 @@ interface InternalAffixOutcome extends AffixOutcomeProbabilities {
 
 interface AffixChoice {
   row: AffixRow | null;
+  p: number;
+}
+
+interface AffixPairChoice {
+  prefix: AffixRow | null;
+  suffix: AffixRow | null;
   p: number;
 }
 
@@ -351,6 +363,67 @@ function allocationOutcome(
       ? choices(eligibleAffixes(rows, 'suffix', type, minLevel, maxLevel, onlyGood, prefix.row?.alignment ?? 'any', true))
       : [{ row: null, p: 1 }];
     for (const suffix of suffixes) addOutcome(result, prefix.row, suffix.row, prefix.p * suffix.p);
+  }
+  return result;
+}
+
+function allocationChoices(
+  rows: readonly AffixRow[],
+  type: string,
+  minLevel: number,
+  maxLevel: number,
+  onlyGood: boolean,
+  requestPrefix: boolean,
+  requestSuffix: boolean,
+): AffixPairChoice[] {
+  const result: AffixPairChoice[] = [];
+  const prefixes = requestPrefix
+    ? choices(eligibleAffixes(rows, 'prefix', type, minLevel, maxLevel, onlyGood, 'any', true))
+    : [{ row: null, p: 1 }];
+  for (const prefix of prefixes) {
+    const suffixes = requestSuffix
+      ? choices(eligibleAffixes(rows, 'suffix', type, minLevel, maxLevel, onlyGood, prefix.row?.alignment ?? 'any', true))
+      : [{ row: null, p: 1 }];
+    for (const suffix of suffixes) {
+      result.push({ prefix: prefix.row, suffix: suffix.row, p: prefix.p * suffix.p });
+    }
+  }
+  return result;
+}
+
+function genericAffixChoices(
+  base: ReferenceWrapper,
+  level: number,
+  onlyGood: boolean,
+  rows: readonly AffixRow[],
+): AffixPairChoice[] {
+  const type = affixItemType(base);
+  if (!type) return [{ prefix: null, suffix: null, p: 1 }];
+  const result: AffixPairChoice[] = [];
+  const minLevel = Math.min(Math.trunc(level / 2), 25);
+  const usefulness = onlyGood ? [{ onlyGood: true, p: 1 }] : [
+    { onlyGood: true, p: 2 / 3 },
+    { onlyGood: false, p: 1 / 3 },
+  ];
+  const allocation = [
+    { prefix: true, suffix: false, p: MAGIC_AFFIX_ALLOCATION.prefixOnly },
+    { prefix: false, suffix: true, p: MAGIC_AFFIX_ALLOCATION.suffixOnly },
+    { prefix: true, suffix: true, p: MAGIC_AFFIX_ALLOCATION.both },
+  ];
+  for (const useful of usefulness) {
+    for (const request of allocation) {
+      for (const pair of allocationChoices(
+        rows,
+        type,
+        minLevel,
+        level,
+        useful.onlyGood,
+        request.prefix,
+        request.suffix,
+      )) {
+        result.push({ ...pair, p: pair.p * useful.p * request.p });
+      }
+    }
   }
   return result;
 }
@@ -1171,4 +1244,240 @@ export function bestArmourExpectation(input: BestArmourExpectationInput): BestAr
     };
   }
   return result();
+}
+
+export type DefensiveAffixSlot = ArmourSlot | 'ring1' | 'ring2' | 'amulet';
+
+export interface BestDefensiveAffixExpectationInput {
+  depth: number;
+  killsSoFar: number;
+  monsterProfiles: readonly WeightedLootMonsterProfile[];
+  itemWrappers: readonly ReferenceWrapper[];
+  affixWrappers: readonly ReferenceWrapper[];
+  uniqueItemWrappers: readonly ReferenceWrapper[];
+  difficulty: Difficulty;
+  strength?: number;
+  magic?: number;
+  dexterity?: number;
+  /** False when the selected weapon occupies both hands. */
+  shieldAllowed?: boolean;
+}
+
+export interface BestDefensiveAffixExpectation {
+  model: 'conservative-expected-best-defensive-affixes';
+  depth: number;
+  killsSoFar: number;
+  /** Each value is floored per equipment slot; totals are then clamped to the player-law cap. */
+  slotResistances: Record<DefensiveAffixSlot, Resistances>;
+  resistances: Resistances;
+  /** Floored expectation of the best FASTRECOVER value available to the equipped slot set. */
+  expectedHitRecoverySkippedFrames: number;
+  hitRecoveryTier: HitRecoveryTier;
+  approximation: string;
+}
+
+type DefensiveBaseSlot = Exclude<DefensiveAffixSlot, 'ring1' | 'ring2'> | 'ring';
+type ElementalResistance = keyof Resistances;
+
+function defensiveBaseSlot(base: ReferenceWrapper): DefensiveBaseSlot | null {
+  const type = itemType(base).toLowerCase();
+  if (type === 'helm') return 'helm';
+  if (type === 'shield') return 'shield';
+  if (['lightarmor', 'mediumarmor', 'heavyarmor', 'armor'].includes(type)) return 'body';
+  if (type === 'ring') return 'ring';
+  if (type === 'amulet') return 'amulet';
+  return null;
+}
+
+function rolledValues(row: AffixRow): { value: number; p: number }[] {
+  const first = Math.trunc(row.valueMin);
+  const last = Math.trunc(row.valueMax);
+  if (last < first) return [{ value: first, p: 1 }];
+  const count = last - first + 1;
+  return Array.from({ length: count }, (_, index) => ({ value: first + index, p: 1 / count }));
+}
+
+function affixPairScores(
+  pair: Pick<AffixPairChoice, 'prefix' | 'suffix'>,
+  applies: (row: AffixRow) => boolean,
+  combine: (left: number, right: number) => number,
+): { value: number; p: number }[] {
+  let outcomes = [{ value: 0, p: 1 }];
+  for (const row of [pair.prefix, pair.suffix]) {
+    if (!row || !applies(row)) continue;
+    const rolls = rolledValues(row);
+    outcomes = outcomes.flatMap((left) => rolls.map((right) => ({
+      value: combine(left.value, right.value),
+      p: left.p * right.p,
+    })));
+  }
+  return outcomes;
+}
+
+function addScore(target: Map<number, number>, score: number, p: number): void {
+  if (score <= 0 || p <= 0) return;
+  target.set(score, (target.get(score) ?? 0) + p);
+}
+
+function probabilityAtLeastRank(success: number, trials: number, rank: 1 | 2): number {
+  const p = clamp01(success);
+  if (trials < rank || p === 0) return 0;
+  const none = (1 - p) ** trials;
+  if (rank === 1) return 1 - none;
+  const exactlyOne = trials * p * (1 - p) ** (trials - 1);
+  return Math.max(0, 1 - none - exactlyOne);
+}
+
+function expectedRankedScore(perKill: ReadonlyMap<number, number>, kills: number, rank: 1 | 2): number {
+  const values = [...perKill.keys()].filter((value) => value > 0).sort((left, right) => left - right);
+  let previous = 0;
+  let result = 0;
+  for (const value of values) {
+    const pAtLeastValue = [...perKill].reduce(
+      (sum, [candidate, p]) => sum + (candidate >= value ? p : 0),
+      0,
+    );
+    result += (value - previous) * probabilityAtLeastRank(pAtLeastValue, kills, rank);
+    previous = value;
+  }
+  return result;
+}
+
+const emptyResistances = (): Resistances => ({ magic: 0, fire: 0, lightning: 0 });
+
+function recoveryTier(skippedFrames: number): HitRecoveryTier {
+  if (skippedFrames >= 3) return 'fastest';
+  if (skippedFrames >= 2) return 'faster';
+  if (skippedFrames >= 1) return 'fast';
+  return 'none';
+}
+
+/**
+ * Conservative expected resistance and hit-recovery affixes from prior monster drops. Resistance
+ * is optimized independently per element and equipment slot; the two ring slots use first- and
+ * second-order statistics rather than duplicating one ring. Each slot expectation is floored before
+ * summing and applying the player resistance cap. Hit recovery does not stack, so its best equipped
+ * FASTRECOVER value is expected globally, floored, and translated to the combat-law tier.
+ */
+export function bestDefensiveAffixExpectation(
+  input: BestDefensiveAffixExpectationInput,
+): BestDefensiveAffixExpectation {
+  if (!Number.isInteger(input.depth) || input.depth < 1) throw new Error(`depth must be a positive integer (got ${input.depth})`);
+  if (!Number.isInteger(input.killsSoFar) || input.killsSoFar < 0) throw new Error(`killsSoFar must be a non-negative integer (got ${input.killsSoFar})`);
+  const slots: DefensiveBaseSlot[] = ['body', 'helm', 'shield', 'ring', 'amulet'];
+  const resistanceScores = new Map<DefensiveBaseSlot, Record<ElementalResistance, Map<number, number>>>(slots.map((slot) => [
+    slot,
+    { magic: new Map(), fire: new Map(), lightning: new Map() },
+  ]));
+  const recoveryScores = new Map<number, number>();
+  const slotResistances: BestDefensiveAffixExpectation['slotResistances'] = {
+    body: emptyResistances(),
+    helm: emptyResistances(),
+    shield: emptyResistances(),
+    ring1: emptyResistances(),
+    ring2: emptyResistances(),
+    amulet: emptyResistances(),
+  };
+  const finish = (): BestDefensiveAffixExpectation => {
+    for (const element of ['magic', 'fire', 'lightning'] as const) {
+      for (const slot of ['body', 'helm', 'shield', 'amulet'] as const) {
+        slotResistances[slot][element] = Math.floor(expectedRankedScore(
+          resistanceScores.get(slot)![element],
+          input.killsSoFar,
+          1,
+        ));
+      }
+      slotResistances.ring1[element] = Math.floor(expectedRankedScore(
+        resistanceScores.get('ring')![element],
+        input.killsSoFar,
+        1,
+      ));
+      slotResistances.ring2[element] = Math.floor(expectedRankedScore(
+        resistanceScores.get('ring')![element],
+        input.killsSoFar,
+        2,
+      ));
+    }
+    const resistances = (['magic', 'fire', 'lightning'] as const).reduce<Resistances>((total, element) => {
+      total[element] = Math.min(75, Object.values(slotResistances)
+        .reduce((sum, resistance) => sum + resistance[element], 0));
+      return total;
+    }, emptyResistances());
+    const expectedHitRecoverySkippedFrames = Math.floor(expectedRankedScore(
+      recoveryScores,
+      input.killsSoFar,
+      1,
+    ));
+    return {
+      model: 'conservative-expected-best-defensive-affixes',
+      depth: input.depth,
+      killsSoFar: input.killsSoFar,
+      slotResistances,
+      resistances,
+      expectedHitRecoverySkippedFrames,
+      hitRecoveryTier: recoveryTier(expectedHitRecoverySkippedFrames),
+      approximation: input.killsSoFar === 0
+        ? 'No prior kills: the hero has no resistance or hit-recovery affixes.'
+        : 'Independent prior kills are represented by their weighted monster mixture. Each element is optimized independently; body, helm, compatible shield, and amulet use a floored expected maximum, while rings use floored first- and second-best expectations. Their sum is capped at 75%. Hit recovery uses the floored expected best FASTRECOVER value because tiers do not stack. Unique powers, cross-element loadout correlation, and correlation with the selected weapon/armour bases are omitted.',
+    };
+  };
+  if (input.killsSoFar === 0) return finish();
+
+  const positiveProfiles = input.monsterProfiles.filter((row) => row.weight > 0);
+  const totalProfileWeight = positiveProfiles.reduce((sum, row) => sum + row.weight, 0);
+  if (totalProfileWeight <= 0) throw new Error('positive kills require at least one positive-weight monster loot profile');
+  const bases = new Map(input.itemWrappers
+    .filter((wrapper) => wrapper.file === 'items/itemdat.tsv')
+    .map((wrapper) => [wrapper.entity.id, wrapper]));
+  const affixes = affixRows(input.affixWrappers);
+  for (const row of positiveProfiles) {
+    const sourceWeight = row.weight / totalProfileWeight;
+    const drop = expectedDrop(
+      row.profile,
+      input.itemWrappers,
+      input.affixWrappers,
+      input.uniqueItemWrappers,
+      input.difficulty,
+    );
+    for (const quality of drop.baseQuality) {
+      const base = bases.get(quality.baseId);
+      if (!base) continue;
+      const slot = defensiveBaseSlot(base);
+      if (!slot || (slot === 'shield' && input.shieldAllowed === false)) continue;
+      if (input.strength != null && requirement(base, 'minStrength', 'requiredStrength') > input.strength) continue;
+      if (input.magic != null && requirement(base, 'minMagic', 'requiredMagic') > input.magic) continue;
+      if (input.dexterity != null && requirement(base, 'minDexterity', 'requiredDexterity') > input.dexterity) continue;
+      const outcome = itemAffixOutcome(
+        base,
+        quality.bonusLevel,
+        row.profile.unique === true,
+        affixes,
+        row.profile.hellfire === true,
+      );
+      const appliedScale = outcome.none < 1 ? quality.pMagic / (1 - outcome.none) : 0;
+      if (appliedScale === 0) continue;
+      const pairs = genericAffixChoices(base, quality.bonusLevel, row.profile.unique === true, affixes);
+      const baseScale = sourceWeight * quality.pSelected * appliedScale;
+      for (const pair of pairs) {
+        for (const element of ['magic', 'fire', 'lightning'] as const) {
+          const power = element === 'magic' ? 'MAGICRES' : element === 'fire' ? 'FIRERES' : 'LIGHTRES';
+          for (const score of affixPairScores(
+            pair,
+            (candidate) => [power, 'ALLRES'].includes(candidate.power.toUpperCase()),
+            (left, right) => left + right,
+          )) {
+            addScore(resistanceScores.get(slot)![element], score.value, baseScale * pair.p * score.p);
+          }
+        }
+        for (const score of affixPairScores(
+          pair,
+          (candidate) => candidate.power.toUpperCase() === 'FASTRECOVER',
+          Math.max,
+        )) {
+          addScore(recoveryScores, score.value, baseScale * pair.p * score.p);
+        }
+      }
+    }
+  }
+  return finish();
 }

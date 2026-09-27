@@ -18,6 +18,7 @@ import {
   type Difficulty,
   type ExperienceCurveLaw,
   type GameMode,
+  type HitRecoveryTier,
   type PlayerBuild,
   type WeaponGraphic,
 } from '@/lib/catalog/reference/combatMath';
@@ -27,11 +28,13 @@ import { D1_AI_ROUTINES, isD1AiRoutineId } from '@/lib/catalog/reference/aiRouti
 import { locationEntities, type LocationEntityWrapper } from '@/lib/catalog/reference/locationSpecs';
 import {
   bestArmourExpectation,
+  bestDefensiveAffixExpectation,
   bestWeaponExpectation,
   expectedLootBudget,
   expectedSaleIncome,
   monsterLootProfile,
   type BestArmourExpectation,
+  type BestDefensiveAffixExpectation,
   type BestWeaponExpectation,
   type ExpectedSaleValue,
   type WeightedLootMonsterProfile,
@@ -50,6 +53,7 @@ export const DESCENT_CLASSES = ['warrior', 'rogue', 'sorcerer'] as const;
 export type DescentClassName = typeof DESCENT_CLASSES[number];
 export type StatPointPolicy = 'none' | 'all-strength' | 'balanced';
 export type DescentGear = 'none' | 'expected';
+export type DefensiveAffixes = 'none' | 'expected';
 export type SorcererCombatPolicy = 'mixed' | 'pure-spell';
 export type SustainIncome = 'monster-gold' | 'gold-and-sales';
 export type DescentEncounter = 'duel' | 'packs';
@@ -142,6 +146,8 @@ export interface DescentLevelResult {
   weaponAssumed?: BestWeaponExpectation;
   /** Present only when expected gear is enabled, preserving the gear:none result shape. */
   armourAssumed?: BestArmourExpectation;
+  /** Present only for the opt-in expected defensive-affix policy. */
+  defensiveAffixesAssumed?: BestDefensiveAffixExpectation;
   /** Mean conditional block chance across this depth's eligible monster types. */
   expectedBlockChance?: number;
   /** Present only for expected gear because sustain is funded by expected loot. */
@@ -303,6 +309,8 @@ export interface DescentSimulation {
   sorcererCombatPolicy?: 'mixed';
   /** Present for the expected-loot model (the Rogue/Sorcerer default unless gear:none is explicit). */
   gear?: 'expected';
+  /** Omitted for the byte-compatible default. */
+  defensiveAffixes?: 'expected';
   /** Omitted for the byte-compatible duel default. */
   encounter?: 'packs';
   /** Omitted for the byte-compatible duel default. */
@@ -321,6 +329,8 @@ export interface SimulateDescentInput {
   difficulty: Difficulty;
   weapon?: ReferenceWrapper;
   gear?: DescentGear;
+  /** Adds expected resistance and hit-recovery affixes to expected gear; defaults to none. */
+  defensiveAffixes?: DefensiveAffixes;
   /** Sorcerer defaults to finite-mana mixed combat; pure-spell preserves the comparison model. */
   sorcererCombatPolicy?: SorcererCombatPolicy;
   /** Defaults to the legacy monster-drop-only sustain income. */
@@ -769,6 +779,7 @@ function assumptions(
   saleItemsPerTrip: number,
   encounter: DescentEncounter,
   adjacentSlots: number,
+  defensiveAffixes: DefensiveAffixes,
 ): DescentAssumption[] {
   return [
     {
@@ -936,6 +947,12 @@ function assumptions(
         source: 'pinned monster-drop, base-selection, quality, affix, and equipment procedures',
         detail: 'Each slot independently gates bases by current attributes and floors its expected best base-AC range. The lower bound plus a floored positive percentage-AC bonus enters combat. A shield is carried only with a one-handed or unarmed loadout and a positive conservative shield AC.',
       },
+      ...(defensiveAffixes === 'expected' ? [{
+        id: 'expected-loot-defensive-affixes',
+        value: 'conservative expected resistance and hit-recovery affixes before each depth',
+        source: 'pinned monster-drop, quality, affix, equipment, player-resistance, and hit-recovery procedures',
+        detail: 'Body armour, helm, compatible shield, amulet, and two distinct ring order statistics contribute floored per-slot resistance expectations, summed and capped at 75%. Each element is optimized independently. The floored expected best non-stacking FASTRECOVER value selects Fast, Faster, or Fastest Hit Recovery. Unique powers and cross-stat/loadout correlations are omitted.',
+      }] : []),
       {
         id: 'sustain-income',
         value: sustainIncome === 'gold-and-sales'
@@ -1050,6 +1067,13 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
   }
   const gear = input.gear ?? (input.className === 'warrior' || input.weapon ? 'none' : 'expected');
   if (!(['none', 'expected'] as const).includes(gear)) throw new Error(`unknown gear policy ${gear}`);
+  const defensiveAffixes = input.defensiveAffixes ?? 'none';
+  if (!(['none', 'expected'] as const).includes(defensiveAffixes)) {
+    throw new Error(`unknown defensive-affix policy ${input.defensiveAffixes}`);
+  }
+  if (defensiveAffixes === 'expected' && gear !== 'expected') {
+    throw new Error('defensiveAffixes:expected requires gear:expected');
+  }
   const sorcererCombatPolicy = input.sorcererCombatPolicy ?? 'mixed';
   if (!(['mixed', 'pure-spell'] as const).includes(sorcererCombatPolicy)) {
     throw new Error(`unknown Sorcerer combat policy ${input.sorcererCombatPolicy}`);
@@ -1072,7 +1096,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
     ? startingWeaponFrom(classWrapper, input.wrappers)
     : undefined;
   const coefficients = classCoefficients(classWrapper);
-  const playerHitRecoverySeconds = hitRecoveryTiming(classAnimations(classWrapper)).seconds;
+  const animations = classAnimations(classWrapper);
   const maxima = {
     strength: coefficients.maxStrength,
     magic: coefficients.maxMagic,
@@ -1139,6 +1163,8 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
     let build = allocateStats(referenceBuild(classWrapper, heroLevelBefore, input.weapon ?? startingWeapon), input.policy, maxima);
     let weaponAssumed: BestWeaponExpectation | undefined;
     let armourAssumed: BestArmourExpectation | undefined;
+    let defensiveAffixesAssumed: BestDefensiveAffixExpectation | undefined;
+    let hitRecoveryTier: HitRecoveryTier = 'none';
     let expectedWeaponBase: ReferenceWrapper | undefined;
     if (gear === 'expected') {
       weaponAssumed = bestWeaponExpectation({
@@ -1193,15 +1219,33 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
         hasShield: armourAssumed.hasShield,
         blockEnabled: armourAssumed.hasShield,
       };
+      if (defensiveAffixes === 'expected') {
+        defensiveAffixesAssumed = bestDefensiveAffixExpectation({
+          depth,
+          killsSoFar,
+          monsterProfiles: lootHistory,
+          itemWrappers: input.wrappers,
+          affixWrappers: input.wrappers,
+          uniqueItemWrappers: input.wrappers,
+          difficulty: input.difficulty,
+          strength: build.strength,
+          magic: build.magic,
+          dexterity: build.dexterity,
+          shieldAllowed,
+        });
+        build = { ...build, resistances: defensiveAffixesAssumed.resistances };
+        hitRecoveryTier = defensiveAffixesAssumed.hitRecoveryTier;
+      }
       if (armourAssumed.hasShield) {
         const weaponGraphic = shieldGraphic(build);
         build = {
           ...build,
           weaponGraphic,
-          swingSeconds: attackTiming(classAnimations(classWrapper), weaponGraphic).seconds,
+          swingSeconds: attackTiming(animations, weaponGraphic).seconds,
         };
       }
     }
+    const playerHitRecoverySeconds = hitRecoveryTiming(animations, hitRecoveryTier).seconds;
     const loot = lootEnabled ? expectedLootBudget({
       monsterProfiles: depthLootProfiles,
       itemWrappers: input.wrappers,
@@ -1777,6 +1821,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       ...(mana ? { mana } : {}),
       ...(weaponAssumed ? { weaponAssumed } : {}),
       ...(armourAssumed && sustain ? { armourAssumed, expectedBlockChance, sustain } : {}),
+      ...(defensiveAffixesAssumed ? { defensiveAffixesAssumed } : {}),
       ...(packExpectation ? { pack: packExpectation } : {}),
     });
     if (gear === 'expected' && ambientPopulation > 0) {
@@ -1798,6 +1843,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       ? { sorcererCombatPolicy: 'mixed' as const }
       : {}),
     ...(gear === 'expected' ? { gear } : {}),
+    ...(defensiveAffixes === 'expected' ? { defensiveAffixes } : {}),
     ...(encounter === 'packs' ? { encounter, adjacentSlots } : {}),
     assumptions: assumptions(
       tilesPerLevel,
@@ -1809,6 +1855,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       saleItemsPerTrip,
       encounter,
       adjacentSlots,
+      defensiveAffixes,
     ),
     levels,
     ...(sustainIncome === 'gold-and-sales' ? { goldFlow: summarizeGoldFlow(goldFlowLevels, saleItemsPerTrip) } : {}),
@@ -1832,6 +1879,7 @@ export function descentEntity(input: SimulateDescentInput): ReferenceWrapper {
     'combatMath', 'combatDuel', simulation.policy, simulation.gameMode, simulation.difficulty,
     ...(simulation.attackMode ? [simulation.attackMode, 'class-attack-mode'] : []),
     ...(simulation.gear === 'expected' ? ['expected-loot-gear'] : []),
+    ...(simulation.defensiveAffixes === 'expected' ? ['expected-defensive-affixes'] : []),
   ]);
   return {
     wrapperId: `${classWrapper.sourceId}:combat-map:${id}`,
@@ -1867,6 +1915,9 @@ export function descentEntity(input: SimulateDescentInput): ReferenceWrapper {
         weaponId: simulation.weaponId,
         ...(simulation.attackMode ? { attackMode: simulation.attackMode } : {}),
         ...(simulation.gear === 'expected' ? { gear: simulation.gear } : {}),
+        ...(simulation.defensiveAffixes === 'expected'
+          ? { defensiveAffixes: simulation.defensiveAffixes }
+          : {}),
       },
       provenance: {
         kind: 'ingest',

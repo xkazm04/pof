@@ -255,6 +255,49 @@ const expectedDamagePrefix = wrapper('d1-expected-damage-prefix', 'affixes', 'it
   useful: 'true',
 });
 
+const expectedRing = wrapper('d1-expected-ring', 'items', 'items/itemdat.tsv', {
+  subtype: 'Ring',
+  requiredStrength: 0,
+  requiredMagic: 0,
+  requiredDexterity: 0,
+  stats: [{ label: 'Value', value: 20 }],
+}, {
+  dropRate: '1',
+  itemType: 'Ring',
+  equipType: 'Ring',
+  miscId: 'RING',
+  spell: 'Null',
+  minMonsterLevel: '1',
+  minStrength: '0',
+  minMagic: '0',
+  minDexterity: '0',
+  uniqueBaseItem: 'EXPECTED_RING',
+  class: 'Misc',
+  value: '20',
+});
+
+const expectedAllResistance = wrapper('d1-expected-all-resistance', 'affixes', 'items/item_prefixes.tsv', {}, {
+  power: 'ALLRES',
+  'power.value1': '50',
+  'power.value2': '50',
+  minLevel: '1',
+  itemTypes: 'Misc',
+  alignment: 'Any',
+  chance: '1',
+  useful: 'true',
+});
+
+const expectedFastRecovery = wrapper('d1-expected-fast-recovery', 'affixes', 'items/item_suffixes.tsv', {}, {
+  power: 'FASTRECOVER',
+  'power.value1': '3',
+  'power.value2': '3',
+  minLevel: '1',
+  itemTypes: 'Misc',
+  alignment: 'Any',
+  chance: '1',
+  useful: 'true',
+});
+
 const healingPotion = wrapper('d1-healing-potion', 'items', 'items/itemdat.tsv', {
   subtype: 'Misc',
   stats: [{ label: 'Value', value: 7 }],
@@ -416,9 +459,11 @@ describe('simulateDescent', () => {
     const omitted = simulateDescent(input);
     const explicit = simulateDescent({ ...input, gear: 'none' });
     const explicitDuel = simulateDescent({ ...input, encounter: 'duel', adjacentSlots: 2 });
+    const explicitNoDefence = simulateDescent({ ...input, defensiveAffixes: 'none' });
 
     expect(JSON.stringify(explicit)).toBe(JSON.stringify(omitted));
     expect(JSON.stringify(explicitDuel)).toBe(JSON.stringify(omitted));
+    expect(JSON.stringify(explicitNoDefence)).toBe(JSON.stringify(omitted));
     expect(Object.keys(explicit.levels[0])).toEqual([
       'depth',
       'poolSize',
@@ -459,6 +504,83 @@ describe('simulateDescent', () => {
     expect(result.levels[0].pack!.expectedGotHitInterruptions).toBeGreaterThan(0);
     expect(result.levels[1].pack).toMatchObject({ expectedPackSize: 1.75, expectedPacks: 2 / 1.75 });
     expect(result.assumptions.find((item) => item.id === 'adjacent-slots')).toMatchObject({ value: 8 });
+  });
+
+  it('applies invented expected resistance and hit recovery to pack combat from the next depth', () => {
+    const defensiveWarrior = {
+      ...warrior,
+      entity: {
+        ...warrior.entity,
+        data: {
+          ...warrior.entity.data,
+          animations: {
+            ...animations,
+            attack: Object.fromEntries(graphics.map((graphic) => [graphic, { frames: 10, actionFrame: 1 }])),
+            hitRecovery: { frames: 4 },
+          },
+        },
+      },
+    } satisfies ReferenceWrapper;
+    const magicMonster = {
+      ...monster,
+      wrapperId: 'test:monsters/monstdat.tsv:MAGIC',
+      key: 'MAGIC',
+      rawHash: 'MAGIC',
+      raw: { ...monster.raw, _monster_id: 'MAGIC' },
+      entity: {
+        ...monster.entity,
+        id: 'd1-magic-monster',
+        name: 'Magic Monster',
+        tags: ['Magma'],
+        data: {
+          ...monster.entity.data,
+          derived: {
+            attackKinds: ['missile'],
+            tilesPerSecond: 2,
+            locomotion: { tilesPerSecondWhileWalking: 3 },
+          },
+          stats: (monster.entity.data.stats as { label: string; value: number }[]).map((stat) =>
+            stat.label === 'HP Min' || stat.label === 'HP Max'
+              ? { ...stat, value: 40 }
+              : stat.label === 'Damage Min' || stat.label === 'Damage Max'
+                ? { ...stat, value: 20 }
+                : stat),
+        },
+      },
+    } satisfies ReferenceWrapper;
+    const input = {
+      className: 'warrior' as const,
+      policy: 'none' as const,
+      tilesPerLevel: 3_000,
+      gameMode: 'single' as const,
+      difficulty: 'normal' as const,
+      gear: 'expected' as const,
+      encounter: 'packs' as const,
+      adjacentSlots: 8,
+      wrappers: [
+        defensiveWarrior, magicMonster, expectedSword, expectedRing, expectedDamagePrefix,
+        expectedAllResistance, expectedFastRecovery, healingPotion, ...curve,
+      ],
+      locations: locationsFor(magicMonster),
+    };
+    const none = simulateDescent(input);
+    const explicitNone = simulateDescent({ ...input, defensiveAffixes: 'none' });
+    const result = simulateDescent({ ...input, defensiveAffixes: 'expected' });
+
+    expect(JSON.stringify(explicitNone)).toBe(JSON.stringify(none));
+    expect(result.defensiveAffixes).toBe('expected');
+    expect(result.levels[0].defensiveAffixesAssumed).toMatchObject({
+      resistances: { magic: 0, fire: 0, lightning: 0 },
+      hitRecoveryTier: 'none',
+    });
+    expect(result.levels[1].defensiveAffixesAssumed).toMatchObject({
+      resistances: { magic: 72, fire: 72, lightning: 72 },
+      expectedHitRecoverySkippedFrames: 2,
+      hitRecoveryTier: 'faster',
+    });
+    expect(result.levels[1].expectedDamageTaken!).toBeLessThan(none.levels[1].expectedDamageTaken!);
+    expect(result.levels[1].expectedSecondsToClear!).toBeLessThan(none.levels[1].expectedSecondsToClear!);
+    expect(result.assumptions.some((assumption) => assumption.id === 'expected-loot-defensive-affixes')).toBe(true);
   });
 
   it('keeps explicit monster-gold byte-identical to the omitted income policy', () => {

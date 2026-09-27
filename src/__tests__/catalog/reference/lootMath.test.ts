@@ -3,6 +3,7 @@ import { DIABLO1_CANON } from '@/lib/catalog/canon/profiles/diablo1';
 import {
   MAGIC_AFFIX_ALLOCATION,
   bestArmourExpectation,
+  bestDefensiveAffixExpectation,
   bestWeaponExpectation,
   expectedDrop,
   expectedSaleValue,
@@ -189,6 +190,41 @@ describe('bestArmourExpectation', () => {
     expect(result.slots.shield.armourClass).toBe(Math.floor(3 * 7 / 16));
     expect(result.totalArmourClass).toBe(6);
     expect(result.hasShield).toBe(true);
+  });
+});
+
+describe('bestDefensiveAffixExpectation', () => {
+  it('floors invented per-ring resistance order statistics and the expected best recovery tier', () => {
+    const ring = wrapper('invented-ring', 'items', 'items/itemdat.tsv', {
+      dropRate: '1', itemType: 'Ring', minMonsterLevel: '1', miscId: 'RING', spell: 'Null',
+      minStrength: '0', minMagic: '0', minDexterity: '0',
+    });
+    const allResistance = wrapper('invented-all-resistance', 'affixes', 'items/item_prefixes.tsv', {
+      power: 'ALLRES', 'power.value1': '10', 'power.value2': '10', minLevel: '4', itemTypes: 'Misc',
+      alignment: 'Any', chance: '1', useful: 'true',
+    });
+    const recovery = wrapper('invented-recovery', 'affixes', 'items/item_suffixes.tsv', {
+      power: 'FASTRECOVER', 'power.value1': '2', 'power.value2': '2', minLevel: '4', itemTypes: 'Misc',
+      alignment: 'Any', chance: '1', useful: 'true',
+    });
+    const result = bestDefensiveAffixExpectation({
+      depth: 2,
+      killsSoFar: 2,
+      monsterProfiles: [{ profile: { ...profile, unique: true }, weight: 2 }],
+      itemWrappers: [ring],
+      affixWrappers: [allResistance, recovery],
+      uniqueItemWrappers: [],
+      difficulty: 'normal',
+    });
+
+    // A prefix is requested with probability 5/24 + 1/6 = 3/8 on each independent kill.
+    expect(result.slotResistances.ring1).toEqual({ magic: 6, fire: 6, lightning: 6 });
+    expect(result.slotResistances.ring2).toEqual({ magic: 1, fire: 1, lightning: 1 });
+    expect(result.resistances).toEqual({ magic: 7, fire: 7, lightning: 7 });
+    // Recovery appears with probability 5/8 + 1/6 = 19/24. Its two-frame expected maximum
+    // over two kills is still below two after flooring, so the conservative tier is Fast.
+    expect(result.expectedHitRecoverySkippedFrames).toBe(1);
+    expect(result.hitRecoveryTier).toBe('fast');
   });
 });
 

@@ -6,6 +6,7 @@
  *     [--policy none|all-strength|balanced] [--tiles-per-level N]
  *     [--difficulty normal|nightmare|hell] [--multiplayer]
  *     [--gear none|expected] [--weapon d1-<item>]
+ *     [--defense none|expected]
  *     [--sorcerer-combat mixed|pure-spell]
  *     [--income monster-gold|gold-and-sales] [--items-per-trip N]
  *     [--encounter duel|packs] [--slots N]
@@ -24,6 +25,7 @@ import {
   type DescentClassName,
   type DescentEncounter,
   type DescentGear,
+  type DefensiveAffixes,
   type SorcererCombatPolicy,
   type StatPointPolicy,
   type SustainIncome,
@@ -55,6 +57,11 @@ if (!(['normal', 'nightmare', 'hell'] as const).includes(difficulty)) {
 const gear = (arg('gear') ?? (className === 'warrior' || arg('weapon') ? 'none' : 'expected')) as DescentGear;
 if (!(['none', 'expected'] as const).includes(gear)) {
   console.error('--gear must be none|expected');
+  process.exit(2);
+}
+const defensiveAffixes = (arg('defense') ?? 'none') as DefensiveAffixes;
+if (!(['none', 'expected'] as const).includes(defensiveAffixes)) {
+  console.error('--defense must be none|expected');
   process.exit(2);
 }
 const sorcererCombatPolicy = (arg('sorcerer-combat') ?? 'mixed') as SorcererCombatPolicy;
@@ -104,6 +111,7 @@ const result = simulateDescent({
   difficulty,
   weapon,
   gear,
+  defensiveAffixes,
   sorcererCombatPolicy,
   sustainIncome,
   saleItemsPerTrip,
@@ -169,6 +177,12 @@ console.table(result.levels.map((level) => {
         ? null
         : level.sustain.sustainable ? 'yes' : `no (life deficit ${level.sustain.deficit.toFixed(2)})`,
     } : {}),
+    ...(defensiveAffixes === 'expected' ? {
+      'magic resist %': level.defensiveAffixesAssumed?.resistances.magic ?? 0,
+      'fire resist %': level.defensiveAffixesAssumed?.resistances.fire ?? 0,
+      'lightning resist %': level.defensiveAffixesAssumed?.resistances.lightning ?? 0,
+      'hit recovery': level.defensiveAffixesAssumed?.hitRecoveryTier ?? 'none',
+    } : {}),
   };
 }));
 
@@ -213,7 +227,7 @@ const path = join(
   'pof',
   'Diablo',
   'Combat',
-  `descent-${className}-${policy}${gear === 'expected' ? '-expected-gear' : ''}${className === 'sorcerer' && sorcererCombatPolicy === 'mixed' ? '-mixed' : ''}${sustainIncome === 'gold-and-sales' ? '-gold-and-sales' : ''}${encounter === 'packs' ? `-packs-${adjacentSlots}-slots` : ''}.json`,
+  `descent-${className}-${policy}${gear === 'expected' ? '-expected-gear' : ''}${className === 'sorcerer' && sorcererCombatPolicy === 'mixed' ? '-mixed' : ''}${sustainIncome === 'gold-and-sales' ? '-gold-and-sales' : ''}${encounter === 'packs' ? `-packs-${adjacentSlots}-slots` : ''}${defensiveAffixes === 'expected' ? '-expected-defense' : ''}.json`,
 );
 mkdirSync(dirname(path), { recursive: true });
 writeFileSync(path, JSON.stringify(result, null, 2));
