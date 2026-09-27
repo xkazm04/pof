@@ -10,6 +10,7 @@ import {
 import { motionSafe, EASE_OUT, STAGGER } from '@/lib/motion';
 import { BlueprintPanel, SectionHeader, NeonBar } from '../../unique-tabs/_design';
 import type { ItemEconomyConfig, ItemEconomyResult } from '@/lib/economy/item-economy-engine';
+import type { EconomyVerdict } from '@/lib/economy/item-economy-verdicts';
 import { ACCENT, STAT_LABELS } from './constants';
 import { AffixHeatmap } from './AffixHeatmap';
 import { AlertCard } from './AlertCard';
@@ -86,42 +87,30 @@ export function AffixTab({ result }: { result: ItemEconomyResult }) {
   );
 }
 
-/* ── Balance Alerts Tab ───────────────────────────────────────────────── */
+/* ── Balance Verdicts Tab ─ five decay detectors, unmeasured never green ── */
 
-export function AlertsTab({ result, config }: {
-  result: ItemEconomyResult; config: ItemEconomyConfig;
+const STATE_ORDER: Record<EconomyVerdict['state'], number> = { critical: 0, warn: 1, unmeasured: 2, pass: 3 };
+
+export function AlertsTab({ verdicts, config }: {
+  verdicts: EconomyVerdict[]; config: ItemEconomyConfig;
 }) {
+  const findings = verdicts.filter((v) => v.state === 'warn' || v.state === 'critical').length;
+  const unmeasured = verdicts.filter((v) => v.state === 'unmeasured').length;
   return (
     <div className="space-y-3">
       <StaggerItem index={0}>
         <BlueprintPanel color={STATUS_WARNING} className="p-3 space-y-3">
           <div className="flex items-center justify-between">
-            <SectionHeader icon={AlertTriangle} label="Balance Alerts" color={STATUS_WARNING} />
+            <SectionHeader icon={AlertTriangle} label="Balance Verdicts" color={STATUS_WARNING} />
             <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
-              {result.alerts.length} alert{result.alerts.length !== 1 ? 's' : ''} detected
+              {findings} finding{findings !== 1 ? 's' : ''} &middot; {unmeasured} unmeasured
             </span>
           </div>
-          {result.alerts.length === 0 ? (
-            <div className="text-center py-6">
-              <span
-                className="text-xs font-mono uppercase tracking-[0.15em]"
-                style={{ color: STATUS_SUCCESS }}
-              >
-                No balance issues detected
-              </span>
-            </div>
-          ) : (
-            <div className="space-y-1.5">
-              {result.alerts
-                .sort((a, b) => {
-                  const order: Record<string, number> = { critical: 0, warning: 1, info: 2 };
-                  return (order[a.severity] ?? 2) - (order[b.severity] ?? 2);
-                })
-                .map((alert, i) => (
-                  <AlertCard key={`${alert.type}-${alert.level}-${i}`} alert={alert} />
-                ))}
-            </div>
-          )}
+          <div className="space-y-1.5">
+            {[...verdicts]
+              .sort((a, b) => STATE_ORDER[a.state] - STATE_ORDER[b.state])
+              .map((v) => <AlertCard key={v.family} verdict={v} />)}
+          </div>
         </BlueprintPanel>
       </StaggerItem>
 
@@ -137,7 +126,7 @@ export function AlertsTab({ result, config }: {
             { step: '4. Item Drops', desc: `${config.dropsPerHour}/hr, UE5 rarity-gated rolling`, color: ACCENT_CYAN },
             { step: '5. Affix Rolling', desc: 'Weighted selection, magnitude * (1+0.1*level)', color: ACCENT_VIOLET },
             { step: '6. Equip Logic', desc: 'Replace if new totalPower > equipped', color: STATUS_SUCCESS },
-            { step: '7. Alert Detection', desc: 'Power plateaus, rarity inflation, saturation', color: STATUS_WARNING },
+            { step: '7. Verdicts', desc: 'Five decay detectors; unsampled endgame = unmeasured', color: STATUS_WARNING },
           ].map((s, i) => (
             <div
               key={i}
