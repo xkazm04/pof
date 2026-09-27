@@ -226,6 +226,16 @@ The second consumer is **request-log hygiene**: `tickPurgeExpiredKeys()` (`src/l
 
 When adding another scheduled job, register it the same way (cheap when idle, guarded, `.unref()`'d) rather than spinning a second interval.
 
+## 3D provider dispatch: one runner table
+
+Which 3D providers PoF can actually start is written down ONCE. `RUNNER_PROVIDER_IDS` (`src/lib/visual-gen/providers.ts`) is the const tuple of runner-backed providers; each registry entry's `runnerBacked` is derived from membership (entries are typed without it), and `providerExecution()` — the forge's Submit gate — reads that flag.
+
+- **`RUNNER_DISPATCH`** (`src/lib/visual-gen/runner-dispatch.ts`, server-only) `satisfies Record<RunnerProviderId, RunnerDispatch>`: per provider its `modes`, `start(input) → Result<{ jobId, extras }, string>` (each provider keeps its own pins and budget rules), and `getJob(id)`. An id added to the tuple without an entry fails `npm run typecheck`; the parity case in `ForgeProviderExecution.test.tsx` keeps the table's modes in step with what the forge offers.
+- **`POST /api/visual-gen/generate`** runs its shape and Tier-0 input gates, then `runnerDispatchFor(providerId)`. A miss refuses with `runnerRefusal()`, which is `providerExecution(...).reason` — the same sentence the forge button shows (MCP providers are pointed at `/api/blender-mcp/generate`).
+- **`GET /api/visual-gen/generate/status`** resolves a job through `resolveRunnerJob(jobId)` over the same table, so any provider the route can start is one the poller can find.
+
+Adding a provider is one tuple id plus one table entry (and its job store) — not edits to the route, the status chain and the flags. Before the table, those were separate copies and TRELLIS.2 was offered as runnable by the forge, then refused by the route.
+
 ---
 
 ## Coding conventions
