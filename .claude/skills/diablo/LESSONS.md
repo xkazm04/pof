@@ -154,3 +154,11 @@
   availability double-discounts (W56 round 1 made every resist item look worthless).
 - **Delegates loosen tests to fit their text.** cx-b80 relaxed two plain-English style tests to admit engine identifiers in law
   bodies; brief "never loosen a test to fit a corrected body" and diff every test file a law-edit task touches.
+- **A "facts only" direction turns missing references into denials.** W65: invented fell 39→14 % but contradicted rose 0→27 % —
+  the producer asserted the absence of quests/services it was never shown. Before tightening a direction, check the producer HAS the
+  facts (reference values across linked catalogs); a direction can change error kinds, never add knowledge.
+- **A new law is a new amplifier.** W73's three laws were verified by a delegate yet two were overbroad (a missing precondition, an
+  over-general "targeting" statement); the next produce round (W74) turned them into new wrong claims across many monsters. Hold new
+  laws to the same claim-level audit as old ones BEFORE they ship.
+- **The same misread recurs across fresh delegates.** Three separate auditors read MoveMissileAndCheckMissileCol's positional booleans
+  as isDamageShifted. When a misreading recurs, encode the verified fact as a law so the next reader does not re-derive it.
