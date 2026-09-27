@@ -11,6 +11,34 @@ import {
   type AiDecisionGraph,
 } from '@/lib/catalog/reference/aiDecisionGraphs';
 import { D1_AI_ROUTINES } from '@/lib/catalog/reference/aiRoutines';
+import { collectLinkedReferences, linkedReferencesBlock } from '@/lib/catalog/reference/linkedReferences';
+import type { ReferenceWrapper } from '@/lib/catalog/reference/wrapper';
+
+const monster = (id: string, file: string, ai: string): ReferenceWrapper => ({
+  wrapperId: `synthetic:${id}`,
+  sourceId: 'synthetic',
+  file,
+  technique: 'synthetic',
+  key: id,
+  keyKind: 'column',
+  raw: { ai },
+  rawHash: 'synthetic',
+  catalogId: 'bestiary',
+  entity: {
+    id,
+    catalogId: 'bestiary',
+    name: id,
+    categoryPath: [],
+    tags: [],
+    lifecycle: 'planned',
+    data: {},
+    provenance: {
+      kind: 'ingest', sourceGame: 'Synthetic', sourceProject: 'Synthetic', sourceFile: file,
+      sourceRow: id, licenceNote: 'test fixture', ingestedAt: 'test-time',
+    },
+  },
+  mappingVersion: 'synthetic',
+});
 
 describe('Diablo I per-routine AI decision graphs', () => {
   it('defines one Stand-rooted graph for every routine and terminal action leaves', () => {
@@ -55,6 +83,34 @@ describe('Diablo I per-routine AI decision graphs', () => {
         'Blackboard Schema', 'Hook Points', 'Icon 2D Art', 'Persistence', 'Test Gate', 'UE Packaging',
       ].sort());
     }
+  });
+
+  it('links ordinary and unique monsters to the graph for their resolved routine', () => {
+    const ordinary = monster('d1-MT_COUNSLR', 'monsters/monstdat.tsv', 'Counselor');
+    const unique = monster('d1-uniq-counselor', 'monsters/unique_monstdat.tsv', 'Counselor');
+    const other = monster('d1-MT_ZOMBIE', 'monsters/monstdat.tsv', 'Zombie');
+    const graphs = aiDecisionGraphEntities([ordinary, unique, other]);
+    const counselor = graphs.find((wrapper) => wrapper.entity.id === 'd1-ai-counselor')!.entity;
+
+    expect(counselor.links).toEqual([
+      { catalogId: 'bestiary', entityId: ordinary.entity.id, role: 'host' },
+      { catalogId: 'bestiary', entityId: unique.entity.id, role: 'host' },
+    ]);
+    expect(counselor.data).not.toHaveProperty('monsters');
+  });
+
+  it('puts the Counselor graph in d1-MT_COUNSLR linked references within the character budget', () => {
+    const counselor = monster('d1-MT_COUNSLR', 'monsters/monstdat.tsv', 'Counselor').entity;
+    const graph = aiDecisionGraphEntities([
+      monster('d1-MT_COUNSLR', 'monsters/monstdat.tsv', 'Counselor'),
+    ]).find((wrapper) => wrapper.entity.id === 'd1-ai-counselor')!.entity;
+    const linked = collectLinkedReferences(counselor, [counselor, graph]);
+    const block = linkedReferencesBlock(counselor, [counselor, graph]);
+
+    expect(linked.map((entity) => entity.id)).toEqual(['d1-ai-counselor']);
+    expect(block).toContain('## Linked reference: state-graph d1-ai-counselor');
+    expect(block).toContain('"routine":"Counselor"');
+    expect(block).not.toContain('TRUNCATED');
   });
 });
 

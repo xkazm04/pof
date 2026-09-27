@@ -19,6 +19,7 @@ import {
 } from '@/lib/catalog/reference/aiRoutines';
 import type { StepSeed } from '@/lib/catalog/reference/stepSeeds';
 import { DIABLO1 } from '@/lib/catalog/reference/sources';
+import type { ReferenceWrapper } from '@/lib/catalog/reference/wrapper';
 
 export type AiDecisionKind = 'distance' | 'roll' | 'roll-bands' | 'previous-mode' | 'condition';
 
@@ -455,7 +456,18 @@ const sourceFiles = (graph: AiDecisionGraph): string => [...new Set(graph.source
   return match ? `engine: ${match[1]}` : reference;
 }))].join(', ');
 
-export function aiDecisionGraphEntities(): AiDecisionGraphEntityWrapper[] {
+const MONSTER_FILES = new Set(['monsters/monstdat.tsv', 'monsters/unique_monstdat.tsv']);
+
+/** Graph-owned host links let each bestiary entity discover the routine it runs via an incoming first hop. */
+export function aiDecisionGraphEntities(wrappers: readonly ReferenceWrapper[] = []): AiDecisionGraphEntityWrapper[] {
+  const monstersByRoutine = new Map<D1AiRoutineId, ReferenceWrapper[]>();
+  for (const wrapper of wrappers) {
+    if (wrapper.catalogId !== 'bestiary' || !MONSTER_FILES.has(wrapper.file)) continue;
+    const routine = wrapper.raw.ai;
+    if (!isD1AiRoutineId(routine)) continue;
+    monstersByRoutine.set(routine, [...(monstersByRoutine.get(routine) ?? []), wrapper]);
+  }
+
   return Object.values(D1_AI_DECISION_GRAPHS).map((graph) => ({
     catalogId: 'state-graph',
     entity: {
@@ -465,6 +477,11 @@ export function aiDecisionGraphEntities(): AiDecisionGraphEntityWrapper[] {
       categoryPath: ['Diablo I', 'AI decision routines'],
       tags: ['diablo-state-graph', 'monster-ai', 'engine-derived', ...(D1_AI_ROUTINES[graph.routine].hellfire ? ['hellfire'] : [])],
       lifecycle: 'planned',
+      links: (monstersByRoutine.get(graph.routine) ?? []).map((monster) => ({
+        catalogId: 'bestiary',
+        entityId: monster.entity.id,
+        role: 'host',
+      })),
       data: {
         routine: graph.routine,
         lawId: graph.lawId,

@@ -1,14 +1,20 @@
 import { aiDecisionGraphEntities, seedAiDecisionGraphSteps } from '@/lib/catalog/reference/aiDecisionGraphs';
 import { seedStateGraphSteps, stateGraphEntities } from '@/lib/catalog/reference/stateGraphSpecs';
 import type { ReferenceWrapper } from '@/lib/catalog/reference/wrapper';
+import { listWrappers } from '@/lib/catalog/reference/wrappers-db';
 import type { CatalogHandler } from './types';
 
-const allStateGraphEntities = () => [...stateGraphEntities(), ...aiDecisionGraphEntities()];
+const allStateGraphEntities = (wrappers: readonly ReferenceWrapper[] = []) => [
+  ...stateGraphEntities(),
+  ...aiDecisionGraphEntities(wrappers),
+];
 
 export const stateGraphHandler: CatalogHandler = {
   catalogId: 'state-graph',
   standalonePromotion: true,
-  pool: () => allStateGraphEntities() as unknown as ReferenceWrapper[],
+  pool: (db, sourceId, wrappers) => allStateGraphEntities(
+    wrappers.length ? wrappers : listWrappers(db, { sourceId, catalogId: 'bestiary' }),
+  ) as unknown as ReferenceWrapper[],
   seed: (ctx) => {
     for (const wrapper of allStateGraphEntities().filter((item) => !ctx.ids || ctx.ids.includes(item.entity.id))) {
       if (!ctx.promoted.has(wrapper.entity.id)) {
