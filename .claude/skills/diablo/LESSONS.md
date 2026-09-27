@@ -114,3 +114,29 @@
   them came from a name collision in the reference ("Crimson" twice) that my lookup assumed unique.
 - **An npm script is only real once it has run.** `snapshot:ue-schema` called a binary that isn't a local dependency and
   had never executed; the loop had always used `npx tsx` by hand.
+
+## 2.3 — 2026-09-26 — pof (W16, machine B, unattended)
+- **A new machine is a new environment: probe the harness before the wave.** Three machine-A assumptions (codex.js path, vault path,
+  data root) broke silently or loudly; a "model at capacity" refusal ended tasks as NOT COMPLETED until the dispatcher learned to back off.
+- **A read-only codex sandbox cannot read outside its working directory on Windows** — two research runs silently fell back to upstream
+  master via the network. A git-excluded junction inside the repo (`.reference` → the clone) made the pinned tree readable; brief it by that
+  relative path and tell the delegate to STOP if unreadable.
+- **Never build a brief with `node -e "..."` in bash** — backticks inside it are command substitutions and silently corrupt the goal.
+  Write the generator to a .mjs file.
+- **A pass needs scrutiny at FLEET scale too.** 56/64 first-pass passes hid 16 false passes (gap markers in list entries) and a prompt that
+  had truncated every conversation — both found only by reading artifacts and grepping all of them for the marker.
+- **A delegate's acceptance scope is a claim about coverage.** Two tasks ran `src/__tests__/catalog` only and missed 5 failing tests under
+  `src/__tests__/lib/catalog`. Brief both directories.
+- **An unattended loop needs the machine awake.** Windows idle-sleep does not see background CLI work: a 5-hour freeze looked like
+  two "stalled" codex runs. Hold a SetThreadExecutionState(ES_CONTINUOUS|ES_SYSTEM_REQUIRED) process for the session (no admin, no setting changed).
+- **A delegate may answer with its PLAN as the final message** (cx-b24 round 2, "partial" + a plan, then the host slept). Resume with "implement it now".
+- **Parallel delegates all editing one CLI file (scripts/diablo/ingest.ts) collided 5 times**: land the rest with git apply --exclude, then GNU `patch -p1 --fuzz=3` for that file and READ where fuzzy hunks landed. Better: split the CLI per catalog so tasks stop sharing one file.
+- **A delegate's 'changed assertions' list can hide a law violation** (cx-b50 moved spell to-hit 0.95→0.91 by applying a range penalty the canon says spells never have). Check every changed expectation against the canon laws before landing.
+- **A delegate's synthetic fixtures pass where real ids differ.** cx-b53 matched loadout items by the `id` column; the real Sorcerer staff's
+  itemdat row has a BLANK id (the engine resolves by enum ordinal). Run the real-data CLI before landing every model change, not only vitest.
+- **Write task generators with the Write tool, not a bash heredoc**: apostrophes/backticks in a long goal broke the shell and the dispatch
+  then ran against a missing task file.
+- **Two canon imports crashed for weeks unseen** (statusSpecs/storeSpecs imported first → TDZ). vitest's loader and the CLI's import order
+  both hid it; a one-line `tsx` import of each module found it. A cheap static guard beats a behavioural test for load-order bugs.
+- **A snapshot tool that disagrees with promotion lies at scale**: status compared raw wrappers while promotion used handler pools → 82
+  false "stale". When a new promotion path is added, the snapshot must read the same path.
