@@ -8,8 +8,10 @@ import {
   type AiGraphActionCategory,
   type AiGraphActionMode,
   type AiGraphBandRole,
+  type AiGraphImmediateReturn,
   type AiGraphRollRef,
   type AiGraphTree,
+  type AiGraphWalkAttemptData,
 } from '@/lib/catalog/reference/aiDecisionGraphsData';
 import {
   D1_AI_ROUTINES,
@@ -32,13 +34,15 @@ export interface AiDecisionNode {
 
 export interface AiActionNode {
   id: string;
-  kind: 'action';
+  kind: 'action' | 'walk-attempt';
   label: string;
   action: AiGraphActionMode;
   category: AiGraphActionCategory;
   terminal: true;
+  walkAttempt?: AiGraphWalkAttemptData;
   pause?: { readonly base: number; readonly perIntelligence: number; readonly randomMax: number };
   pauseSource?: { routine: D1AiRoutineId; rollIndex: number };
+  immediateReturn?: AiGraphImmediateReturn;
 }
 
 export type AiDecisionGraphNode = AiDecisionNode | AiActionNode;
@@ -115,12 +119,35 @@ function compileGraph(routine: D1AiRoutineId, data: AiDecisionGraphData): AiDeci
       nodes.push({
         id,
         kind: 'action',
-        label: tree.note ? `${tree.mode} — ${tree.note}` : tree.mode,
+        label: tree.note
+          ? `${tree.mode} — ${tree.note}`
+          : tree.immediateReturn
+            ? `${tree.mode} — zero ticks returns immediately`
+            : tree.mode,
         action: tree.mode,
         category: tree.category,
         terminal: true,
         ...(pauseSource?.entry.pause ? { pause: pauseSource.entry.pause } : {}),
         ...(pauseSource ? { pauseSource: { routine: pauseSource.routine, rollIndex: pauseSource.index } } : {}),
+        ...(tree.immediateReturn ? { immediateReturn: tree.immediateReturn } : {}),
+      });
+      return id;
+    }
+
+    if (tree.kind === 'walk-attempt') {
+      const walkAttempt = data.walkAttempts?.[tree.attempt];
+      if (!walkAttempt) throw new Error(`AI graph ${routine} references missing walk attempt ${tree.attempt}`);
+      const id = nextId('walk-attempt');
+      nodes.push({
+        id,
+        kind: 'walk-attempt',
+        label: tree.note
+          ? `Walk attempt (${walkAttempt.helper}) — ${tree.note}`
+          : `Walk attempt (${walkAttempt.helper}) — on failure: ${walkAttempt.failure.outcome}`,
+        action: 'Walk',
+        category: tree.category,
+        terminal: true,
+        walkAttempt,
       });
       return id;
     }
@@ -263,8 +290,9 @@ export interface AiDistancePersonality {
   context: string;
   role: AiGraphBandRole;
   primary: boolean;
+  /** Terminal decision-attempt mix. A Walk entry counts selection of its step helper, not a successfully started movement mode. */
   actionMix: { status: 'evaluated'; value: AiActionMix } | { status: 'unevaluated'; expressions: readonly string[] };
-  /** Normal and special offensive actions; tactical/healing `special` actions are excluded. */
+  /** Attack-attempt probability per Stand decision; tactical/healing `special` actions are excluded. */
   attackProbability: EvaluatedValue;
   expectedPauseTicks: EvaluatedValue;
 }
@@ -273,6 +301,11 @@ export interface AiPersonalityProfile {
   routine: D1AiRoutineId;
   intelligence: number;
   bands: readonly AiDistancePersonality[];
+  /** Adjacent attack-attempt probability per Stand decision. Alias of `aggression`, named to make the attempt basis explicit. */
+  attackAttemptRate: EvaluatedValue;
+  /** Range approach-attempt probability per Stand decision. Alias of `approachRate`, not a successful-step rate. */
+  approachAttemptRate: EvaluatedValue;
+  rateBasis: 'attempts per Stand decision; movement blockage and zero-delay continuation are not assigned probabilities';
   aggression: EvaluatedValue;
   approachRate: EvaluatedValue;
   patienceTicks: EvaluatedValue;
@@ -333,7 +366,7 @@ export function evaluateAiDecisionGraph(graph: AiDecisionGraph, intelligence: nu
     if (active.has(nodeId)) throw new Error(`AI graph ${graph.routine} contains a cycle at ${nodeId}`);
     const node = nodeById.get(nodeId);
     if (!node) throw new Error(`AI graph ${graph.routine} references missing node ${nodeId}`);
-    if (node.kind === 'action') {
+    if (node.kind !== 'decision') {
       const mix = emptyMix();
       mix[node.category] = 1;
       const offensive = OFFENSIVE_ACTIONS.has(node.action) ? 1 : 0;
@@ -424,7 +457,7 @@ const unknownMetric = (reason: string): EvaluatedValue => ({ status: 'unevaluate
 const primaryBand = (bands: readonly AiDistancePersonality[], role: AiGraphBandRole): AiDistancePersonality | undefined =>
   bands.find((band) => band.role === role && band.primary) ?? bands.find((band) => band.role === role);
 
-/** Designer-facing expected action mix, conditional on each graph distance/context entrypoint. */
+/** Designer-facing expected attempt mix, conditional on each graph distance/context entrypoint. */
 export function aiPersonality(routine: D1AiRoutineId | string, intelligence: number): AiPersonalityProfile {
   if (!isD1AiRoutineId(routine)) throw new Error(`AI routine "${routine}" is not in the engine-derived routine table`);
   if (!Number.isInteger(intelligence) || intelligence < 0 || intelligence > 3) throw new Error('AI intelligence must be an integer from 0 through 3');
@@ -436,7 +469,17 @@ export function aiPersonality(routine: D1AiRoutineId | string, intelligence: num
     ? { status: 'evaluated' as const, value: range.actionMix.value.approach }
     : range?.actionMix ?? unknownMetric('no range action band');
   const patienceTicks = range?.expectedPauseTicks ?? adjacent?.expectedPauseTicks ?? unknownMetric('no combat distance band');
-  return { routine, intelligence, bands, aggression, approachRate, patienceTicks };
+  return {
+    routine,
+    intelligence,
+    bands,
+    attackAttemptRate: aggression,
+    approachAttemptRate: approachRate,
+    rateBasis: 'attempts per Stand decision; movement blockage and zero-delay continuation are not assigned probabilities',
+    aggression,
+    approachRate,
+    patienceTicks,
+  };
 }
 
 export type AiDecisionGraphCatalogEntity = IngestedEntity;
@@ -523,14 +566,14 @@ export function seedAiDecisionGraphSteps(entity: AiDecisionGraphCatalogEntity): 
   const graph = graphForEntity(entity);
   const sourceStamp = (columns: string[]) => ({ [SOURCED_FIELD]: stamp(entity, columns) });
   const shape = {
-    nodes: graph.nodes.map((node) => ({ id: node.id, label: node.label, ...(node.kind === 'action' ? { terminal: true } : {}) })),
+    nodes: graph.nodes.map((node) => ({ id: node.id, label: node.label, ...(node.kind !== 'decision' ? { terminal: true } : {}) })),
     edges: graph.edges.map((edge) => ({ from: edge.from, to: edge.to, label: edge.label })),
   };
   return [
     {
       catalogId: 'state-graph', entityId: entity.id, step: 'Concept Brief',
       data: {
-        brief: `${graph.routine} is the engine-derived decision graph evaluated inside MonsterMode::Stand. Distance, prior-mode, goal, and roll tests preserve source order; action nodes are terminal for this one Stand decision. Its probabilities are references to ${graph.lawId}, not copied constants.`,
+        brief: `${graph.routine} is the engine-derived decision graph evaluated inside MonsterMode::Stand. Distance, prior-mode, goal, and roll tests preserve source order; action and walk-attempt nodes are terminal for this one Stand decision. Walk attempts carry ordered direction fallbacks and the source-backed no-step outcome; a zero-tick Delay records its immediate same-call continuation. Reported movement and attack probabilities are attempt rates, not successful mode-start rates. Its probabilities are references to ${graph.lawId}, not copied constants.`,
         ...sourceStamp(['AI dispatch', 'Stand guard', `(law ${graph.lawId})`]),
       },
       gaps: [],
@@ -540,7 +583,7 @@ export function seedAiDecisionGraphSteps(entity: AiDecisionGraphCatalogEntity): 
       data: {
         graph: shape,
         decisionGraph: graph,
-        ...sourceStamp(['decision order', 'distance tests', 'previous-mode tests', 'terminal mode calls']),
+        ...sourceStamp(['decision order', 'distance tests', 'previous-mode tests', 'terminal mode calls', 'walk fallback order', 'failed-walk outcome', 'zero-delay continuation']),
       },
       gaps: ['wiringContract: the reference engine evaluates this C++ routine directly and has no PoF UStateTree asset binding'],
     },

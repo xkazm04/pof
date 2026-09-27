@@ -41,7 +41,7 @@ const monster = (id: string, file: string, ai: string): ReferenceWrapper => ({
 });
 
 describe('Diablo I per-routine AI decision graphs', () => {
-  it('defines one Stand-rooted graph for every routine and terminal action leaves', () => {
+  it('defines one Stand-rooted graph for every routine and terminal action/attempt leaves', () => {
     expect(Object.keys(D1_AI_DECISION_GRAPHS)).toEqual(Object.keys(D1_AI_ROUTINES));
     expect(Object.keys(D1_AI_DECISION_GRAPHS)).toHaveLength(33);
 
@@ -49,8 +49,24 @@ describe('Diablo I per-routine AI decision graphs', () => {
       expect(graph.root).toBe('Stand');
       expect(graph.nodes.find((node) => node.id === graph.root)?.kind).toBe('decision');
       const actionIds = new Set(graph.nodes.filter((node) => node.kind === 'action').map((node) => node.id));
-      expect(actionIds.size, graph.routine).toBeGreaterThan(0);
-      expect(graph.edges.some((edge) => actionIds.has(edge.from)), graph.routine).toBe(false);
+      const attemptIds = new Set(graph.nodes.filter((node) => node.kind === 'walk-attempt').map((node) => node.id));
+      expect(actionIds.size + attemptIds.size, graph.routine).toBeGreaterThan(0);
+      expect(graph.edges.some((edge) => actionIds.has(edge.from) || attemptIds.has(edge.from)), graph.routine).toBe(false);
+
+      for (const node of graph.nodes) {
+        if (node.kind !== 'walk-attempt') continue;
+        expect(node.action, `${graph.routine} ${node.id}`).toBe('Walk');
+        expect(node.walkAttempt?.directionOrder.length, `${graph.routine} ${node.id}`).toBeGreaterThan(0);
+        expect(node.walkAttempt?.sourceRefs.every((source) => /monster\.cpp:\d+/.test(source)), `${graph.routine} ${node.id}`).toBe(true);
+      }
+      expect(graph.nodes.some((node) => node.kind === 'action' && node.action === 'Walk'), graph.routine).toBe(false);
+
+      for (const node of graph.nodes) {
+        if (node.kind !== 'action' || node.action !== 'Delay' || node.pause?.base !== 0) continue;
+        expect(node.immediateReturn, `${graph.routine} ${node.id}`).toMatchObject({
+          condition: 'the generated delay is zero ticks',
+        });
+      }
     }
   });
 
@@ -60,6 +76,20 @@ describe('Diablo I per-routine AI decision graphs', () => {
         const source = edge.rollSource!;
         expect(edge.chance, `${graph.routine} ${edge.from}->${edge.to}`).toBe(D1_AI_ROUTINES[source.routine].rolls[source.rollIndex].chance);
       }
+    }
+  });
+
+  it('records shared-ranged blocked retreats and zero delays as same-call continuations', () => {
+    for (const routine of ['GoatRanged', 'LazarusSuccubus'] as const) {
+      const graph = D1_AI_DECISION_GRAPHS[routine];
+      const retreat = graph.nodes.find((node) => node.kind === 'walk-attempt'
+        && node.walkAttempt?.failure.outcome === 'fall-through');
+      const zeroDelay = graph.nodes.find((node) => node.kind === 'action' && node.immediateReturn);
+
+      expect(retreat?.kind === 'walk-attempt' ? retreat.walkAttempt?.failure.detail : undefined, routine)
+        .toContain('may fire in the same AI call');
+      expect(zeroDelay?.kind === 'action' ? zeroDelay.immediateReturn?.outcome : undefined, routine)
+        .toContain('same AI call');
     }
   });
 
@@ -165,8 +195,75 @@ describe('AI personality arithmetic', () => {
     expect(band.expectedPauseTicks).toEqual({ status: 'unevaluated', expressions: ['external state distribution'] });
   });
 
+  it('keeps a failed walk and zero-delay continuation as attempt outcomes in a synthetic routine', () => {
+    const attemptGraph: AiDecisionGraph = {
+      ...synthetic,
+      nodes: [
+        { id: 'Stand', kind: 'decision', decision: 'distance', label: 'Stand' },
+        { id: 'roll', kind: 'decision', decision: 'roll', label: 'synthetic attempt roll' },
+        {
+          id: 'walk',
+          kind: 'walk-attempt',
+          label: 'Walk attempt (Walk)',
+          action: 'Walk',
+          category: 'approach',
+          terminal: true,
+          walkAttempt: {
+            helper: 'Walk',
+            directionOrder: ['directly away'],
+            failure: { outcome: 'fall-through', detail: 'Blocked: continue to the attack gate.' },
+            sourceRefs: ['.reference/devilutionX/Source/monster.cpp:4144-4154'],
+          },
+        },
+        {
+          id: 'delay',
+          kind: 'action',
+          label: 'Delay',
+          action: 'Delay',
+          category: 'wait',
+          terminal: true,
+          pause: { base: 0, perIntelligence: 0, randomMax: 1 },
+          immediateReturn: {
+            condition: 'the generated delay is zero ticks',
+            outcome: 'Continue to the attack gate in the same AI call.',
+            sourceRefs: ['.reference/devilutionX/Source/monster.cpp:755-758'],
+          },
+        },
+      ],
+      edges: [
+        { from: 'Stand', to: 'roll', label: 'range', condition: 'range' },
+        {
+          from: 'roll', to: 'walk', label: 'walk branch', condition: 'walk branch',
+          chance: { linear: { perIntelligence: 0, base: 50 } }, chanceOutcome: 'success',
+        },
+        {
+          from: 'roll', to: 'delay', label: 'delay branch', condition: 'delay branch',
+          chance: { linear: { perIntelligence: 0, base: 50 } }, chanceOutcome: 'failure',
+        },
+      ],
+      profileEntrypoints: [{ nodeId: 'roll', band: 'range', context: 'synthetic', role: 'range', primary: true }],
+    };
+
+    const [band] = evaluateAiDecisionGraph(attemptGraph, 0);
+    expect(band.actionMix).toEqual({
+      status: 'evaluated',
+      value: { attack: 0, approach: 0.5, wait: 0.5, special: 0 },
+    });
+    expect(band.expectedPauseTicks).toEqual({ status: 'evaluated', value: 0.25 });
+    expect(attemptGraph.nodes.find((node) => node.id === 'walk')).toMatchObject({
+      walkAttempt: { failure: { outcome: 'fall-through' } },
+    });
+    expect(attemptGraph.nodes.find((node) => node.id === 'delay')).toMatchObject({
+      immediateReturn: { condition: 'the generated delay is zero ticks' },
+    });
+  });
+
   it('exposes the expected adjacent Zombie aggression from the generated graph', () => {
-    expect(aiPersonality('Zombie', 0).aggression).toEqual({ status: 'evaluated', value: 0.1 });
+    const profile = aiPersonality('Zombie', 0);
+    expect(profile.aggression).toEqual({ status: 'evaluated', value: 0.1 });
+    expect(profile.attackAttemptRate).toBe(profile.aggression);
+    expect(profile.approachAttemptRate).toBe(profile.approachRate);
+    expect(profile.rateBasis).toContain('attempts per Stand decision');
     expect(() => aiPersonality('Zombie', 4)).toThrow('integer from 0 through 3');
   });
 });

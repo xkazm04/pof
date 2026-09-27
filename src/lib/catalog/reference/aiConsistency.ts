@@ -163,7 +163,7 @@ const graphOutcomes = (graph: AiDecisionGraph, entrypoint: AiProfileEntrypoint, 
     if (active.has(nodeId)) throw new Error(`AI graph ${graph.routine} contains a cycle at ${nodeId}`);
     const node = nodes.get(nodeId);
     if (!node) throw new Error(`AI graph ${graph.routine} references missing node ${nodeId}`);
-    if (node.kind === 'action') return { status: 'evaluated', outcomes: [{ action: node, probability: 1 }] };
+    if (node.kind !== 'decision') return { status: 'evaluated', outcomes: [{ action: node, probability: 1 }] };
     active.add(nodeId);
     const outgoing = edges.get(nodeId) ?? [];
     let result: OutcomeEvaluation;

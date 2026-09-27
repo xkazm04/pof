@@ -25,10 +25,39 @@ export interface AiGraphRollRef {
 
 export interface AiGraphActionTree {
   kind: 'action';
-  mode: AiGraphActionMode;
+  mode: Exclude<AiGraphActionMode, 'Walk'>;
   category: AiGraphActionCategory;
   pause?: AiGraphRollRef;
   note?: string;
+  immediateReturn?: AiGraphImmediateReturn;
+}
+
+export type AiGraphWalkHelper = 'Walk' | 'RandomWalk' | 'RandomWalk2' | 'RoundWalk' | 'GolemFallback';
+export type AiGraphWalkFailureOutcome = 'stay-stand' | 'delay' | 'fall-through';
+
+export interface AiGraphWalkFailure {
+  outcome: AiGraphWalkFailureOutcome;
+  detail: string;
+}
+
+export interface AiGraphWalkAttemptData {
+  helper: AiGraphWalkHelper;
+  directionOrder: readonly string[];
+  failure: AiGraphWalkFailure;
+  sourceRefs: readonly string[];
+}
+
+export interface AiGraphWalkAttemptTree {
+  kind: 'walk-attempt';
+  attempt: string;
+  category: Extract<AiGraphActionCategory, 'approach' | 'special'>;
+  note?: string;
+}
+
+export interface AiGraphImmediateReturn {
+  condition: string;
+  outcome: string;
+  sourceRefs: readonly string[];
 }
 
 export interface AiGraphRollTree {
@@ -51,7 +80,7 @@ export interface AiGraphTestTree {
   branches: readonly { condition: string; result: AiGraphTree }[];
 }
 
-export type AiGraphTree = AiGraphActionTree | AiGraphRollTree | AiGraphRollBandsTree | AiGraphTestTree;
+export type AiGraphTree = AiGraphActionTree | AiGraphWalkAttemptTree | AiGraphRollTree | AiGraphRollBandsTree | AiGraphTestTree;
 
 export interface AiGraphScenarioData {
   context: string;
@@ -73,12 +102,16 @@ export interface AiGraphDistanceBandData {
 export interface AiDecisionGraphData {
   sourceRefs: readonly string[];
   bands: readonly AiGraphDistanceBandData[];
+  walkAttempts?: Readonly<Record<string, AiGraphWalkAttemptData>>;
   findings?: readonly string[];
 }
 
 const ref = (index: number, routine?: string): AiGraphRollRef => ({ index, ...(routine ? { routine } : {}) });
-const action = (mode: AiGraphActionMode, category: AiGraphActionCategory, pause?: AiGraphRollRef, note?: string): AiGraphActionTree => ({
-  kind: 'action', mode, category, ...(pause ? { pause } : {}), ...(note ? { note } : {}),
+const action = (mode: Exclude<AiGraphActionMode, 'Walk'>, category: AiGraphActionCategory, pause?: AiGraphRollRef, note?: string, immediateReturn?: AiGraphImmediateReturn): AiGraphActionTree => ({
+  kind: 'action', mode, category, ...(pause ? { pause } : {}), ...(note ? { note } : {}), ...(immediateReturn ? { immediateReturn } : {}),
+});
+const walkAttempt = (attempt: string, category: AiGraphWalkAttemptTree['category'], note?: string): AiGraphWalkAttemptTree => ({
+  kind: 'walk-attempt', attempt, category, ...(note ? { note } : {}),
 });
 const roll = (index: number, success: AiGraphTree, failure: AiGraphTree, routine?: string): AiGraphRollTree => ({
   kind: 'roll', roll: ref(index, routine), success, failure,
@@ -93,18 +126,102 @@ const test = (kind: AiGraphTestTree['test'], label: string, branches: readonly [
 });
 
 const idle = action('Stand-idle', 'wait');
-const approach = action('Walk', 'approach');
-const tacticalWalk = action('Walk', 'special');
+const approach = walkAttempt('approach', 'approach');
+const approachDelay = walkAttempt('approach-delay', 'approach');
+const circle = walkAttempt('circle', 'special');
+const corpseWalk = walkAttempt('corpse', 'special');
+const directFacingWalk = walkAttempt('direct-facing', 'special');
+const directRandomWalk = walkAttempt('direct-random', 'special');
+const directRetreat = walkAttempt('direct-retreat', 'special');
+const driftWalk = walkAttempt('drift', 'approach');
+const pathWalk = walkAttempt('path', 'approach');
+const fallbackWalk = walkAttempt('fallback', 'approach');
+const retreat = walkAttempt('retreat', 'special');
+const retreatAway = walkAttempt('retreat-away', 'special');
+const retreatSide = walkAttempt('retreat-side', 'special');
 const melee = action('MeleeAttack', 'attack');
 const ranged = action('RangedAttack', 'attack');
 const specialMelee = action('SpecialMeleeAttack', 'special');
 const specialRanged = action('SpecialRangedAttack', 'special');
 
-const skeletonRange = (routine = 'SkeletonMelee'): AiGraphTree => roll(0, approach, action('Delay', 'wait', ref(0, routine)), routine);
+const skeletonRange = (routine = 'SkeletonMelee', movement: AiGraphTree = approach): AiGraphTree => roll(0, movement, action('Delay', 'wait', ref(0, routine)), routine);
 const skeletonAdjacent = (routine = 'SkeletonMelee'): AiGraphTree => roll(1, melee, action('Delay', 'wait', ref(1, routine)), routine);
+
+const STAY_STAND = (detail: string): AiGraphWalkFailure => ({ outcome: 'stay-stand', detail });
+const DELAY = (detail: string): AiGraphWalkFailure => ({ outcome: 'delay', detail });
+const FALL_THROUGH = (detail: string): AiGraphWalkFailure => ({ outcome: 'fall-through', detail });
+
+const randomWalkAttempt = (callSource: string, failure: AiGraphWalkFailure, preferred = 'preferred direction'): AiGraphWalkAttemptData => ({
+  helper: 'RandomWalk',
+  directionOrder: [
+    preferred,
+    'first preferred ±45° side selected by a fair coin',
+    'the other preferred ±45° side',
+    'first preferred ±90° side selected by an independent fair coin',
+    'the other preferred ±90° side',
+  ],
+  failure,
+  sourceRefs: ['.reference/devilutionX/Source/monster.cpp:1731-1751', callSource],
+});
+
+const directWalkAttempt = (callSource: string, failure: AiGraphWalkFailure, preferred: string): AiGraphWalkAttemptData => ({
+  helper: 'Walk',
+  directionOrder: [preferred],
+  failure,
+  sourceRefs: ['.reference/devilutionX/Source/monster.cpp:4144-4154', callSource],
+});
+
+const roundWalkAttempt = (callSource: string, failure: AiGraphWalkFailure): AiGraphWalkAttemptData => ({
+  helper: 'RoundWalk',
+  directionOrder: [
+    'chosen-side 90°',
+    'chosen-side 45°',
+    'straight',
+    'opposite-side 90°',
+    'first ±45° direction from opposite-side 90°, selected by a fair coin',
+    'the other ±45° direction from opposite-side 90°',
+    'first ±90° direction from opposite-side 90°, selected by an independent fair coin',
+    'the other ±90° direction from opposite-side 90°',
+  ],
+  failure,
+  sourceRefs: ['.reference/devilutionX/Source/monster.cpp:1835-1857', callSource],
+});
+
+const randomWalk2Attempt = (callSource: string, failure: AiGraphWalkFailure): AiGraphWalkAttemptData => ({
+  helper: 'RandomWalk2',
+  directionOrder: [
+    'pattern-selected direction',
+    'current facing',
+    'first current-facing ±45° side selected by a fair coin',
+    'the other current-facing ±45° side',
+  ],
+  failure,
+  sourceRefs: [
+    '.reference/devilutionX/Source/monster.cpp:4144-4154',
+    '.reference/devilutionX/Source/monster.cpp:1754-1769',
+    callSource,
+  ],
+});
+
+const zeroDelayContinues = (outcome: string): AiGraphImmediateReturn => ({
+  condition: 'the generated delay is zero ticks',
+  outcome,
+  sourceRefs: ['.reference/devilutionX/Source/monster.cpp:755-758', '.reference/devilutionX/Source/monster.cpp:1987-1993'],
+});
 
 const rangedAvoidanceBands = (sourceRef: string): AiDecisionGraphData => ({
   sourceRefs: [sourceRef, '.reference/devilutionX/Source/monster.cpp:1940'],
+  walkAttempts: {
+    approach: randomWalkAttempt(
+      '.reference/devilutionX/Source/monster.cpp:2051-2065',
+      DELAY('No step starts; the still-Stand guard starts a 5-14 tick Delay.'),
+      'toward the last known target position',
+    ),
+    circle: roundWalkAttempt(
+      '.reference/devilutionX/Source/monster.cpp:2033-2041',
+      DELAY('No circle step starts; the routine reaches its still-Stand guard and starts a 5-14 tick Delay.'),
+    ),
+  },
   bands: [
     {
       distance: 0,
@@ -129,8 +246,8 @@ const rangedAvoidanceBands = (sourceRef: string): AiDecisionGraphData => ({
       scenarioTest: 'condition',
       scenarios: [
         { context: 'Normal goal with a clear line', primary: true, tree: roll(2, specialRanged, approach) },
-        { context: 'Move goal', tree: roll(1, specialRanged, tacticalWalk) },
-        { context: 'Circle-entry test', tree: roll(0, tacticalWalk, roll(2, specialRanged, approach)) },
+        { context: 'Move goal', tree: roll(1, specialRanged, circle) },
+        { context: 'Circle-entry test', tree: roll(0, circle, roll(2, specialRanged, approach)) },
       ],
     },
   ],
@@ -138,17 +255,18 @@ const rangedAvoidanceBands = (sourceRef: string): AiDecisionGraphData => ({
 
 const sharedRangedBands = (special = false, suppressPostShotDelay = false): readonly AiGraphDistanceBandData[] => {
   const shot = special ? specialRanged : ranged;
+  const postShotDelay = action('Delay', 'wait', ref(0), undefined, zeroDelayContinues(
+    'AiDelay returns immediately, so the routine continues to its retreat and line-of-sight/fire gates in the same AI call.',
+  ));
   return [
     {
       distance: 0,
       role: 'adjacent',
       scenarioTest: 'previous-mode',
       scenarios: [
-        ...(!suppressPostShotDelay ? [{ context: 'Previous mode was RangedAttack', tree: action('Delay', 'wait', ref(0)) }] : []),
-        { context: `${suppressPostShotDelay ? 'Previous mode was SpecialRangedAttack' : 'Previous mode was not RangedAttack'}; retreat tile legal; line clear`, primary: true, tree: roll(1, tacticalWalk, shot) },
-        { context: `${suppressPostShotDelay ? 'Previous mode was SpecialRangedAttack' : 'Previous mode was not RangedAttack'}; retreat tile legal; line blocked`, tree: roll(1, tacticalWalk, idle) },
-        { context: `${suppressPostShotDelay ? 'Previous mode was SpecialRangedAttack' : 'Previous mode was not RangedAttack'}; retreat movement blocked; line clear`, tree: roll(1, shot, shot) },
-        { context: `${suppressPostShotDelay ? 'Previous mode was SpecialRangedAttack' : 'Previous mode was not RangedAttack'}; retreat movement blocked; line blocked`, tree: roll(1, idle, idle) },
+        ...(!suppressPostShotDelay ? [{ context: 'Previous mode was RangedAttack', tree: postShotDelay }] : []),
+        { context: `${suppressPostShotDelay ? 'Previous mode was SpecialRangedAttack' : 'Previous mode was not RangedAttack'}; line clear`, primary: true, tree: roll(1, retreat, shot) },
+        { context: `${suppressPostShotDelay ? 'Previous mode was SpecialRangedAttack' : 'Previous mode was not RangedAttack'}; line blocked`, tree: roll(1, retreat, idle) },
       ],
     },
     {
@@ -156,7 +274,7 @@ const sharedRangedBands = (special = false, suppressPostShotDelay = false): read
       role: 'range',
       scenarioTest: 'condition',
       scenarios: [
-        ...(!suppressPostShotDelay ? [{ context: 'Previous mode was RangedAttack', tree: action('Delay', 'wait', ref(0)) }] : []),
+        ...(!suppressPostShotDelay ? [{ context: 'Previous mode was RangedAttack', tree: postShotDelay }] : []),
         { context: 'Fully alert or targeting a monster; line clear', primary: true, tree: shot },
         { context: 'Fully alert or targeting a monster; line blocked', tree: idle },
         { context: 'Partially alert', tree: approach },
@@ -164,6 +282,19 @@ const sharedRangedBands = (special = false, suppressPostShotDelay = false): read
     },
   ];
 };
+
+const sharedRangedWalkAttempts = (): Readonly<Record<string, AiGraphWalkAttemptData>> => ({
+  approach: randomWalkAttempt(
+    '.reference/devilutionX/Source/monster.cpp:2007-2010',
+    STAY_STAND('No approach step starts; the partially alert branch ends this AI call in Stand.'),
+    'toward the last known target position',
+  ),
+  retreat: randomWalkAttempt(
+    '.reference/devilutionX/Source/monster.cpp:1989-1999',
+    FALL_THROUGH('No retreat step starts; mode remains Stand and the routine immediately tests line of sight, then may fire in the same AI call.'),
+    'directly away from the target',
+  ),
+});
 
 const goatBands = (routine = 'GoatMelee'): readonly AiGraphDistanceBandData[] => [
   {
@@ -190,9 +321,21 @@ const goatBands = (routine = 'GoatMelee'): readonly AiGraphDistanceBandData[] =>
     distance: 2,
     distanceRoutine: 'GoatMelee',
     role: 'range',
-    scenarios: [{ context: 'Fully alert in the target room', tree: roll(0, tacticalWalk, roll(1, approach, idle, routine)) }],
+    scenarios: [{ context: 'Fully alert in the target room', tree: roll(0, circle, roll(1, approach, idle, routine)) }],
   },
 ];
+
+const goatWalkAttempts = (): Readonly<Record<string, AiGraphWalkAttemptData>> => ({
+  approach: randomWalkAttempt(
+    '.reference/devilutionX/Source/monster.cpp:1920-1927',
+    STAY_STAND('No approach step starts; the routine finishes this Stand decision without starting a mode.'),
+    'toward the last known target position',
+  ),
+  circle: roundWalkAttempt(
+    '.reference/devilutionX/Source/monster.cpp:1910-1915',
+    DELAY('No circle step starts; the routine immediately starts a 10-19 tick Delay.'),
+  ),
+});
 
 const counselorBands = (ignoreDelay = false): readonly AiGraphDistanceBandData[] => [
   {
@@ -220,23 +363,63 @@ const counselorBands = (ignoreDelay = false): readonly AiGraphDistanceBandData[]
         context: 'Normal goal with line test', primary: true,
         tree: roll(0, ranged, roll(1, action('FadeOut', 'special'), ignoreDelay ? idle : action('Delay', 'wait', ref(1, 'Counselor')), 'Counselor'), 'Counselor'),
       },
-      { context: 'Move goal', tree: tacticalWalk },
-      { context: 'Retreat goal', tree: tacticalWalk },
+      { context: 'Move goal', tree: circle },
+      { context: 'Retreat goal', tree: retreat },
     ],
   },
 ];
 
+const counselorWalkAttempts = (ignoreDelay = false): Readonly<Record<string, AiGraphWalkAttemptData>> => ({
+  circle: roundWalkAttempt(
+    '.reference/devilutionX/Source/monster.cpp:2741-2748',
+    ignoreDelay
+      ? STAY_STAND('No circle step starts; the final AiDelay call returns immediately for Lazarus, so the AI call ends in Stand.')
+      : DELAY('No circle step starts; the final still-Stand guard starts a 5-14 tick Delay.'),
+  ),
+  retreat: randomWalkAttempt(
+    '.reference/devilutionX/Source/monster.cpp:2734-2740',
+    ignoreDelay
+      ? STAY_STAND('No retreat step starts; the final AiDelay call returns immediately for Lazarus, so the AI call ends in Stand.')
+      : DELAY('No retreat step starts; the final still-Stand guard starts a 5-14 tick Delay.'),
+    'directly away from the target',
+  ),
+});
+
 export const D1_AI_DECISION_GRAPHS_DATA: Record<string, AiDecisionGraphData> = {
   Zombie: {
     sourceRefs: ['.reference/devilutionX/Source/monster.cpp:2069'],
+    walkAttempts: {
+      approach: randomWalkAttempt(
+        '.reference/devilutionX/Source/monster.cpp:2088-2090',
+        STAY_STAND('No fallback direction is legal; the routine remains in Stand and finishes the AI call.'),
+        'toward the target',
+      ),
+      'direct-facing': directWalkAttempt(
+        '.reference/devilutionX/Source/monster.cpp:2082-2089',
+        STAY_STAND('The selected single direction is blocked; the routine remains in Stand and finishes the AI call.'),
+        'current facing direction',
+      ),
+      'direct-random': directWalkAttempt(
+        '.reference/devilutionX/Source/monster.cpp:2082-2089',
+        STAY_STAND('The selected single direction is blocked; the routine remains in Stand and finishes the AI call.'),
+        'one uniformly random direction',
+      ),
+    },
     bands: [
       { distance: 0, role: 'adjacent', scenarios: [{ context: 'Visible tile', primary: true, tree: roll(0, melee, idle) }] },
       { distance: 1, role: 'range', scenarios: [{ context: 'Visible tile', primary: true, tree: roll(0, approach, idle) }] },
-      { distance: 2, role: 'range', scenarios: [{ context: 'Visible tile', tree: roll(0, roll(1, tacticalWalk, tacticalWalk), idle) }] },
+      { distance: 2, role: 'range', scenarios: [{ context: 'Visible tile', tree: roll(0, roll(1, directRandomWalk, directFacingWalk), idle) }] },
     ],
   },
   Fat: {
     sourceRefs: ['.reference/devilutionX/Source/monster.cpp:2099'],
+    walkAttempts: {
+      approach: randomWalkAttempt(
+        '.reference/devilutionX/Source/monster.cpp:2108-2114',
+        STAY_STAND('No fallback direction is legal; the routine remains in Stand and finishes the AI call.'),
+        'toward the target',
+      ),
+    },
     bands: [
       { distance: 0, role: 'adjacent', scenarios: [{ context: 'Alert', primary: true, tree: rollBands([[2, melee], [3, specialMelee]], idle) }] },
       { distance: 1, role: 'range', scenarioTest: 'previous-mode', scenarios: [
@@ -247,6 +430,13 @@ export const D1_AI_DECISION_GRAPHS_DATA: Record<string, AiDecisionGraphData> = {
   },
   SkeletonMelee: {
     sourceRefs: ['.reference/devilutionX/Source/monster.cpp:2124', '.reference/devilutionX/Source/monster.cpp:755'],
+    walkAttempts: {
+      approach: randomWalkAttempt(
+        '.reference/devilutionX/Source/monster.cpp:2132-2136',
+        STAY_STAND('No fallback direction is legal; the forced or rolled movement attempt ends this AI call in Stand.'),
+        'toward the last known target position',
+      ),
+    },
     bands: [
       { distance: 0, role: 'adjacent', scenarioTest: 'previous-mode', scenarios: [
         { context: 'Previous mode was Delay', tree: melee },
@@ -260,14 +450,19 @@ export const D1_AI_DECISION_GRAPHS_DATA: Record<string, AiDecisionGraphData> = {
   },
   SkeletonRanged: {
     sourceRefs: ['.reference/devilutionX/Source/monster.cpp:2149'],
+    walkAttempts: {
+      'direct-retreat': directWalkAttempt(
+        '.reference/devilutionX/Source/monster.cpp:2161-2174',
+        FALL_THROUGH('The directly-away tile is blocked; walking remains false and the independent shot roll runs in the same AI call.'),
+        'directly away from the target',
+      ),
+    },
     bands: [
       { distance: 0, role: 'adjacent', scenarioTest: 'previous-mode', scenarios: [
-        { context: 'Settled; retreat tile legal; line clear', primary: true, tree: roll(0, tacticalWalk, roll(2, ranged, idle)) },
-        { context: 'After movement; retreat tile legal; line clear', tree: roll(1, tacticalWalk, roll(2, ranged, idle)) },
-        { context: 'Retreat movement blocked; line clear', tree: roll(0, roll(2, ranged, idle), roll(2, ranged, idle)) },
-        { context: 'Settled; retreat tile legal; line blocked', tree: roll(0, tacticalWalk, idle) },
-        { context: 'After movement; retreat tile legal; line blocked', tree: roll(1, tacticalWalk, idle) },
-        { context: 'Retreat movement blocked; line blocked', tree: idle },
+        { context: 'Settled; line clear', primary: true, tree: roll(0, directRetreat, roll(2, ranged, idle)) },
+        { context: 'After movement; line clear', tree: roll(1, directRetreat, roll(2, ranged, idle)) },
+        { context: 'Settled; line blocked', tree: roll(0, directRetreat, idle) },
+        { context: 'After movement; line blocked', tree: roll(1, directRetreat, idle) },
       ] },
       { distance: 1, role: 'range', scenarioTest: 'condition', scenarios: [
         { context: 'Outside retreat band; line clear', tree: roll(2, ranged, idle) },
@@ -277,11 +472,23 @@ export const D1_AI_DECISION_GRAPHS_DATA: Record<string, AiDecisionGraphData> = {
   },
   Scavenger: {
     sourceRefs: ['.reference/devilutionX/Source/monster.cpp:2180', '.reference/devilutionX/Source/monster.cpp:2202', '.reference/devilutionX/Source/monster.cpp:2124'],
+    walkAttempts: {
+      approach: randomWalkAttempt(
+        '.reference/devilutionX/Source/monster.cpp:2132-2136',
+        STAY_STAND('The inherited Skeleton movement attempt finds no legal direction and ends in Stand.'),
+        'toward the last known target position',
+      ),
+      corpse: randomWalkAttempt(
+        '.reference/devilutionX/Source/monster.cpp:2243-2253',
+        FALL_THROUGH('No step toward the remembered corpse starts; mode remains Stand and Scavenger immediately delegates to SkeletonAi in the same AI call.'),
+        'toward the remembered corpse',
+      ),
+    },
     bands: [
       { distance: 0, role: 'other', scenarioTest: 'condition', scenarios: [
         { context: 'Healing while standing on a corpse', tree: specialMelee },
-        { context: 'Healing with a remembered corpse', tree: tacticalWalk },
-        { context: 'Healing search has no remembered corpse', tree: roll(1, test('condition', 'ascending scan result', [['corpse found', tacticalWalk], ['no corpse found', idle]]), idle) },
+        { context: 'Healing with a remembered corpse', tree: corpseWalk },
+        { context: 'Healing search has no remembered corpse', tree: roll(1, test('condition', 'ascending scan result', [['corpse found', corpseWalk], ['no corpse found', idle]]), idle) },
       ] },
       { distance: 1, role: 'range', scenarioTest: 'previous-mode', scenarios: [
         { context: 'Healing did not start an action; previous mode was Delay', tree: approach },
@@ -295,19 +502,46 @@ export const D1_AI_DECISION_GRAPHS_DATA: Record<string, AiDecisionGraphData> = {
   },
   Rhino: {
     sourceRefs: ['.reference/devilutionX/Source/monster.cpp:2256'],
+    walkAttempts: {
+      approach: randomWalkAttempt(
+        '.reference/devilutionX/Source/monster.cpp:2293-2303',
+        STAY_STAND('No approach direction is legal; the routine remains in Stand and finishes the AI call.'),
+        'toward the last known target position',
+      ),
+      circle: roundWalkAttempt(
+        '.reference/devilutionX/Source/monster.cpp:2273-2278',
+        DELAY('No circle direction is legal; the routine immediately starts a 10-19 tick Delay.'),
+      ),
+    },
     bands: [
       { distance: 0, role: 'adjacent', scenarios: [{ context: 'Normal goal', primary: true, tree: roll(4, melee, idle) }] },
       { distance: 1, role: 'range', scenarioTest: 'previous-mode', scenarios: [
         { context: 'Immediately after movement', tree: roll(2, approach, action('Delay', 'wait', ref(2))) },
         { context: 'Otherwise', primary: true, tree: roll(3, approach, action('Delay', 'wait', ref(3))) },
       ] },
-      { distance: 2, role: 'range', scenarios: [{ context: 'Not already circling', tree: roll(0, tacticalWalk, roll(1, action('Charge', 'special'), roll(3, approach, action('Delay', 'wait', ref(3))))) }] },
+      { distance: 2, role: 'range', scenarios: [{ context: 'Not already circling', tree: roll(0, circle, roll(1, action('Charge', 'special'), roll(3, approach, action('Delay', 'wait', ref(3))))) }] },
     ],
   },
-  GoatMelee: { sourceRefs: ['.reference/devilutionX/Source/monster.cpp:1893'], bands: goatBands() },
-  GoatRanged: { sourceRefs: ['.reference/devilutionX/Source/monster.cpp:1976', '.reference/devilutionX/Source/monster.cpp:1940'], bands: sharedRangedBands() },
+  GoatMelee: { sourceRefs: ['.reference/devilutionX/Source/monster.cpp:1893'], walkAttempts: goatWalkAttempts(), bands: goatBands() },
+  GoatRanged: {
+    sourceRefs: ['.reference/devilutionX/Source/monster.cpp:1976', '.reference/devilutionX/Source/monster.cpp:1940'],
+    walkAttempts: sharedRangedWalkAttempts(),
+    bands: sharedRangedBands(),
+  },
   Fallen: {
     sourceRefs: ['.reference/devilutionX/Source/monster.cpp:2314', '.reference/devilutionX/Source/monster.cpp:2124'],
+    walkAttempts: {
+      approach: randomWalkAttempt(
+        '.reference/devilutionX/Source/monster.cpp:2364-2370',
+        STAY_STAND('No direction toward the target is legal; the Attack or inherited Skeleton branch ends this AI call in Stand.'),
+        'toward the target or last known target position',
+      ),
+      retreat: randomWalkAttempt(
+        '.reference/devilutionX/Source/monster.cpp:2326-2364',
+        STAY_STAND('No retreat direction is legal; the blocked attempt still consumes one Retreat counter call and the routine ends in Stand.'),
+        'stored retreat direction',
+      ),
+    },
     bands: [
       { label: 'adjacent target', role: 'adjacent', scenarioTest: 'condition', scenarios: [
         { context: 'Attack goal', tree: melee },
@@ -316,7 +550,7 @@ export const D1_AI_DECISION_GRAPHS_DATA: Record<string, AiDecisionGraphData> = {
       ] },
       { label: 'target at range', role: 'range', scenarioTest: 'condition', scenarios: [
         { context: 'Attack goal', tree: approach },
-        { context: 'Retreat goal', tree: tacticalWalk },
+        { context: 'Retreat goal', tree: retreat },
         { context: 'Normal goal; previous mode was not Delay', primary: true, tree: skeletonRange() },
       ] },
     ],
@@ -324,6 +558,17 @@ export const D1_AI_DECISION_GRAPHS_DATA: Record<string, AiDecisionGraphData> = {
   Magma: rangedAvoidanceBands('.reference/devilutionX/Source/monster.cpp:2013'),
   SkeletonKing: {
     sourceRefs: ['.reference/devilutionX/Source/monster.cpp:2374'],
+    walkAttempts: {
+      approach: randomWalkAttempt(
+        '.reference/devilutionX/Source/monster.cpp:2413-2421',
+        STAY_STAND('No approach direction is legal; the routine remains in Stand and finishes the AI call.'),
+        'toward the last known target position',
+      ),
+      circle: roundWalkAttempt(
+        '.reference/devilutionX/Source/monster.cpp:2391-2396',
+        DELAY('No circle direction is legal; the routine immediately starts a 10-19 tick Delay.'),
+      ),
+    },
     bands: [
       { distance: 0, role: 'adjacent', scenarioTest: 'condition', scenarios: [
         { context: 'Summoning disabled', primary: true, tree: roll(3, melee, idle) },
@@ -336,13 +581,30 @@ export const D1_AI_DECISION_GRAPHS_DATA: Record<string, AiDecisionGraphData> = {
         { context: 'Multiplayer quests disabled; summon resources unavailable', tree: roll(1, idle, roll(2, approach, action('Delay', 'wait', ref(2)))) },
       ] },
       { distance: 1, role: 'range', scenarioTest: 'condition', scenarios: [
-        { context: 'Fully alert in the target room; summon resources available', tree: roll(0, tacticalWalk, roll(1, action('SpecialStand', 'special'), roll(2, approach, action('Delay', 'wait', ref(2))))) },
-        { context: 'Fully alert in the target room; summon resources unavailable', tree: roll(0, tacticalWalk, roll(1, idle, roll(2, approach, action('Delay', 'wait', ref(2))))) },
+        { context: 'Fully alert in the target room; summon resources available', tree: roll(0, circle, roll(1, action('SpecialStand', 'special'), roll(2, approach, action('Delay', 'wait', ref(2))))) },
+        { context: 'Fully alert in the target room; summon resources unavailable', tree: roll(0, circle, roll(1, idle, roll(2, approach, action('Delay', 'wait', ref(2))))) },
       ] },
     ],
   },
   Bat: {
     sourceRefs: ['.reference/devilutionX/Source/monster.cpp:2432'],
+    walkAttempts: {
+      approach: randomWalkAttempt(
+        '.reference/devilutionX/Source/monster.cpp:2461-2467',
+        STAY_STAND('No ordinary approach direction is legal; the routine remains in Stand and finishes the AI call.'),
+        'toward the last known target position',
+      ),
+      'retreat-away': randomWalkAttempt(
+        '.reference/devilutionX/Source/monster.cpp:2441-2449',
+        STAY_STAND('No retreat direction is legal; the blocked first attempt still advances the two-call Retreat goal before returning in Stand.'),
+        'directly away from the target',
+      ),
+      'retreat-side': randomWalkAttempt(
+        '.reference/devilutionX/Source/monster.cpp:2441-2449',
+        STAY_STAND('No retreat direction is legal; the blocked second attempt still finishes the Retreat goal before returning in Stand.'),
+        'a randomly selected left or right side of the target direction',
+      ),
+    },
     bands: [
       { distance: 0, role: 'adjacent', scenarios: [{ context: 'Normal goal', primary: true, tree: roll(3, melee, idle) }] },
       { label: 'ordinary approach range', role: 'range', scenarioTest: 'previous-mode', scenarios: [
@@ -351,38 +613,69 @@ export const D1_AI_DECISION_GRAPHS_DATA: Record<string, AiDecisionGraphData> = {
       ] },
       { distance: 1, role: 'range', scenarios: [{ context: 'Gloom with clear route', tree: roll(0, action('Charge', 'special'), roll(1, approach, idle)) }] },
       { label: 'post-melee retreat', role: 'other', scenarioTest: 'condition', scenarios: [
-        { context: 'First retreat AI call', tree: tacticalWalk },
-        { context: 'Second retreat AI call', tree: roll(4, tacticalWalk, tacticalWalk) },
+        { context: 'First retreat AI call', tree: retreatAway },
+        { context: 'Second retreat AI call', tree: roll(4, retreatSide, retreatSide) },
       ] },
     ],
   },
   Gargoyle: {
     sourceRefs: ['.reference/devilutionX/Source/monster.cpp:2480', '.reference/devilutionX/Source/monster.cpp:1893', '.reference/devilutionX/Source/monster.cpp:1051'],
+    walkAttempts: {
+      ...goatWalkAttempts(),
+      retreat: randomWalkAttempt(
+        '.reference/devilutionX/Source/monster.cpp:2496-2506',
+        FALL_THROUGH('No retreat direction is legal; the routine cancels Retreat and immediately runs AiAvoidance in the same AI call.'),
+        'directly away from the target',
+      ),
+    },
     bands: [
       { distance: 0, role: 'other', scenarioTest: 'condition', scenarios: [
         { context: 'Statue permission still set', tree: idle },
         { context: 'Wounded retreat reached clearance', tree: action('Heal', 'special') },
-        { context: 'Wounded and below clearance', tree: tacticalWalk },
+        { context: 'Wounded and below clearance', tree: retreat },
       ] },
       ...goatBands(),
     ],
   },
   Butcher: {
     sourceRefs: ['.reference/devilutionX/Source/monster.cpp:2509'],
+    walkAttempts: {
+      approach: randomWalkAttempt(
+        '.reference/devilutionX/Source/monster.cpp:2515-2523',
+        STAY_STAND('No approach direction is legal; the routine remains in Stand and finishes the AI call.'),
+        'toward the last known target position',
+      ),
+    },
     bands: [
       { distance: 0, role: 'adjacent', scenarios: [{ context: 'Alert', primary: true, tree: melee }] },
       { distance: 1, role: 'range', scenarios: [{ context: 'Alert', primary: true, tree: approach }] },
     ],
   },
-  Succubus: { sourceRefs: ['.reference/devilutionX/Source/monster.cpp:1976', '.reference/devilutionX/Source/monster.cpp:1940'], bands: sharedRangedBands() },
+  Succubus: {
+    sourceRefs: ['.reference/devilutionX/Source/monster.cpp:1976', '.reference/devilutionX/Source/monster.cpp:1940'],
+    walkAttempts: sharedRangedWalkAttempts(),
+    bands: sharedRangedBands(),
+  },
   Sneak: {
     sourceRefs: ['.reference/devilutionX/Source/monster.cpp:2526'],
+    walkAttempts: {
+      approach: randomWalkAttempt(
+        '.reference/devilutionX/Source/monster.cpp:2560-2575',
+        FALL_THROUGH('No approach step starts; the routine reaches its still-Stand range/melee gate, which idles at range and can attack only when adjacent.'),
+        'toward the target',
+      ),
+      retreat: randomWalkAttempt(
+        '.reference/devilutionX/Source/monster.cpp:2542-2575',
+        FALL_THROUGH('No retreat step starts; the blocked attempt still increments the Retreat counter and reaches the same-call still-Stand range/melee gate.'),
+        'directly away, or a randomly selected lateral side for Unseen',
+      ),
+    },
     bands: [
       { label: 'adjacent while visible', role: 'adjacent', scenarios: [{ context: 'Normal goal', primary: true, tree: roll(2, melee, idle) }] },
       { distance: 0, role: 'other', scenarios: [{ context: 'Hidden', tree: action('FadeIn', 'special') }] },
       { distance: 1, role: 'range', scenarioTest: 'condition', scenarios: [
         { context: 'Visible', tree: action('FadeOut', 'special') },
-        { context: 'Retreat goal', tree: tacticalWalk },
+        { context: 'Retreat goal', tree: retreat },
         { context: 'Normal goal after settling', primary: true, tree: roll(0, approach, idle) },
         { context: 'Normal goal immediately after movement', tree: roll(1, approach, idle) },
       ] },
@@ -396,6 +689,7 @@ export const D1_AI_DECISION_GRAPHS_DATA: Record<string, AiDecisionGraphData> = {
   },
   Gharbad: {
     sourceRefs: ['.reference/devilutionX/Source/monster.cpp:2578', '.reference/devilutionX/Source/monster.cpp:1893'],
+    walkAttempts: goatWalkAttempts(),
     bands: [
       { label: 'quest-gated', role: 'other', scenarios: [{ context: 'Talking or Inquiring goal', tree: idle }] },
       ...goatBands('GoatMelee'),
@@ -404,25 +698,57 @@ export const D1_AI_DECISION_GRAPHS_DATA: Record<string, AiDecisionGraphData> = {
   Acid: rangedAvoidanceBands('.reference/devilutionX/Source/monster.cpp:2013'),
   AcidUnique: {
     sourceRefs: ['.reference/devilutionX/Source/monster.cpp:1976', '.reference/devilutionX/Source/monster.cpp:1996'],
+    walkAttempts: sharedRangedWalkAttempts(),
     bands: sharedRangedBands(true, true),
   },
   Golem: {
     sourceRefs: ['.reference/devilutionX/Source/monster.cpp:4157'],
+    walkAttempts: {
+      path: randomWalkAttempt(
+        '.reference/devilutionX/Source/monster.cpp:1815-1827',
+        STAY_STAND('FindPath returned a route but RandomWalk found no legal first-step fallback; AiPlanWalk still returns true, so Golem returns from this AI call in Stand.'),
+        'the first pathfinding direction',
+      ),
+      fallback: {
+        helper: 'GolemFallback',
+        directionOrder: [
+          'owner facing direction',
+          'first owner-facing ±45° side selected by a fair coin',
+          'the other owner-facing ±45° side',
+          'first owner-facing ±90° side selected by an independent fair coin',
+          'the other owner-facing ±90° side',
+          'golem facing followed by seven clockwise directions',
+        ],
+        failure: STAY_STAND('Every RandomWalk and full-eight-direction candidate is blocked; the routine finishes in Stand.'),
+        sourceRefs: [
+          '.reference/devilutionX/Source/monster.cpp:1731-1751',
+          '.reference/devilutionX/Source/monster.cpp:4144-4154',
+          '.reference/devilutionX/Source/monster.cpp:4199-4216',
+        ],
+      },
+    },
     bands: [
       { distance: 0, role: 'adjacent', scenarios: [{ context: 'Monster target in the attack box', primary: true, tree: melee }] },
       { label: 'target outside attack box', role: 'range', scenarioTest: 'condition', scenarios: [
-        { context: 'Pathfinding starts a step', primary: true, tree: approach },
-        { context: 'Owner-facing or fallback direction starts a step', tree: approach },
-        { context: 'Every candidate tile blocked', tree: idle },
+        { context: 'Pathfinding finds a route', primary: true, tree: pathWalk },
+        { context: 'Pathfinding does not pre-empt the owner-facing fallback', tree: fallbackWalk },
       ] },
     ],
   },
   Zhar: {
     sourceRefs: ['.reference/devilutionX/Source/monster.cpp:2786', '.reference/devilutionX/Source/monster.cpp:2724'],
+    walkAttempts: counselorWalkAttempts(),
     bands: [{ label: 'quest-gated', role: 'other', scenarios: [{ context: 'Talking or Inquiring goal', tree: idle }] }, ...counselorBands()],
   },
   Snotspill: {
     sourceRefs: ['.reference/devilutionX/Source/monster.cpp:2630', '.reference/devilutionX/Source/monster.cpp:2314'],
+    walkAttempts: {
+      approach: randomWalkAttempt(
+        '.reference/devilutionX/Source/monster.cpp:2364-2370',
+        STAY_STAND('No inherited Fallen/Skeleton approach direction is legal; the delegated routine ends in Stand.'),
+        'toward the target or last known target position',
+      ),
+    },
     bands: [
       { label: 'quest/visibility gate', role: 'other', scenarioTest: 'condition', scenarios: [
         { context: 'Banner quest has not released combat', tree: idle },
@@ -444,6 +770,12 @@ export const D1_AI_DECISION_GRAPHS_DATA: Record<string, AiDecisionGraphData> = {
   },
   Snake: {
     sourceRefs: ['.reference/devilutionX/Source/monster.cpp:2669'],
+    walkAttempts: {
+      drift: randomWalk2Attempt(
+        '.reference/devilutionX/Source/monster.cpp:2684-2708',
+        STAY_STAND('The pattern-selected step and the straight/±45° fallbacks are all blocked; the routine remains in Stand.'),
+      ),
+    },
     bands: [
       { distance: 0, role: 'adjacent', scenarioTest: 'previous-mode', scenarios: [
         { context: 'Previous mode was Delay or Charge', tree: melee },
@@ -451,26 +783,46 @@ export const D1_AI_DECISION_GRAPHS_DATA: Record<string, AiDecisionGraphData> = {
       ] },
       { distance: 1, role: 'range', scenarioTest: 'condition', scenarios: [
         { context: 'Clear route and previous mode was not Charge', tree: action('Charge', 'special') },
-        { context: 'Charge ineligible; previous mode was Delay', tree: approach },
-        { context: 'Charge ineligible; previous mode was not Delay', primary: true, tree: roll(0, approach, action('Delay', 'wait', ref(0))) },
+        { context: 'Charge ineligible; previous mode was Delay', tree: driftWalk },
+        { context: 'Charge ineligible; previous mode was not Delay', primary: true, tree: roll(0, driftWalk, action('Delay', 'wait', ref(0))) },
       ] },
       { label: 'range beyond charge distance', role: 'range', scenarioTest: 'previous-mode', scenarios: [
-        { context: 'Previous mode was Delay', tree: approach },
-        { context: 'Previous mode was not Delay', tree: roll(0, approach, action('Delay', 'wait', ref(0))) },
+        { context: 'Previous mode was Delay', tree: driftWalk },
+        { context: 'Previous mode was not Delay', tree: roll(0, driftWalk, action('Delay', 'wait', ref(0))) },
       ] },
     ],
   },
-  Counselor: { sourceRefs: ['.reference/devilutionX/Source/monster.cpp:2724'], bands: counselorBands() },
+  Counselor: {
+    sourceRefs: ['.reference/devilutionX/Source/monster.cpp:2724'],
+    walkAttempts: counselorWalkAttempts(),
+    bands: counselorBands(),
+  },
   Mega: {
     sourceRefs: ['.reference/devilutionX/Source/monster.cpp:2818', '.reference/devilutionX/Source/monster.cpp:2124'],
+    walkAttempts: {
+      approach: randomWalkAttempt(
+        '.reference/devilutionX/Source/monster.cpp:2132-2136',
+        STAY_STAND('At five or more tiles, the inherited Skeleton approach finds no legal direction and returns in Stand.'),
+        'toward the last known target position',
+      ),
+      'approach-delay': randomWalkAttempt(
+        '.reference/devilutionX/Source/monster.cpp:2852-2875',
+        DELAY('Below five tiles, no approach direction is legal; the final still-Stand guard starts a 5-14 tick Delay.'),
+        'toward the last known target position',
+      ),
+      circle: roundWalkAttempt(
+        '.reference/devilutionX/Source/monster.cpp:2834-2844',
+        DELAY('No circle direction is legal; the routine remains in Move and the final still-Stand guard starts a 5-14 tick Delay.'),
+      ),
+    },
     bands: [
       { distance: 0, role: 'adjacent', scenarioTest: 'condition', scenarios: [
         { context: 'Normal goal with a clear line', primary: true, tree: roll(2, specialRanged, roll(4, test('condition', 'fair attack selection', [['Inferno branch', specialRanged], ['melee branch', melee]]), action('Delay', 'wait', ref(4)))) },
         { context: 'Normal goal with a blocked line', tree: roll(4, test('condition', 'fair attack selection', [['Inferno branch', specialRanged], ['melee branch', melee]]), action('Delay', 'wait', ref(4))) },
       ] },
       { distance: 1, role: 'range', scenarioTest: 'condition', scenarios: [
-        { context: 'Move goal', tree: roll(1, tacticalWalk, action('Delay', 'wait', ref(1))) },
-        { context: 'Normal goal', primary: true, tree: roll(2, specialRanged, roll(3, approach, action('Delay', 'wait', ref(3)))) },
+        { context: 'Move goal', tree: roll(1, circle, action('Delay', 'wait', ref(1))) },
+        { context: 'Normal goal', primary: true, tree: roll(2, specialRanged, roll(3, approachDelay, action('Delay', 'wait', ref(3)))) },
       ] },
       { distance: 2, role: 'range', scenarioTest: 'previous-mode', scenarios: [
         { context: 'Previous mode was Delay', tree: approach },
@@ -481,10 +833,12 @@ export const D1_AI_DECISION_GRAPHS_DATA: Record<string, AiDecisionGraphData> = {
   Diablo: rangedAvoidanceBands('.reference/devilutionX/Source/monster.cpp:2013'),
   Lazarus: {
     sourceRefs: ['.reference/devilutionX/Source/monster.cpp:2879', '.reference/devilutionX/Source/monster.cpp:2724', '.reference/devilutionX/Source/monster.cpp:755'],
+    walkAttempts: counselorWalkAttempts(true),
     bands: [{ label: 'quest-gated', role: 'other', scenarios: [{ context: 'Talking or Inquiring goal', tree: idle }] }, ...counselorBands(true)],
   },
   LazarusSuccubus: {
     sourceRefs: ['.reference/devilutionX/Source/monster.cpp:2928', '.reference/devilutionX/Source/monster.cpp:1976'],
+    walkAttempts: sharedRangedWalkAttempts(),
     bands: [{ label: 'quest-gated', role: 'other', scenarios: [{ context: 'Goal is not Normal', tree: idle }] }, ...sharedRangedBands()],
   },
   Lachdanan: {
@@ -496,6 +850,13 @@ export const D1_AI_DECISION_GRAPHS_DATA: Record<string, AiDecisionGraphData> = {
   },
   Warlord: {
     sourceRefs: ['.reference/devilutionX/Source/monster.cpp:2984', '.reference/devilutionX/Source/monster.cpp:2124'],
+    walkAttempts: {
+      approach: randomWalkAttempt(
+        '.reference/devilutionX/Source/monster.cpp:3003-3004',
+        STAY_STAND('The inherited Skeleton approach finds no legal direction and ends the delegated AI call in Stand.'),
+        'toward the last known target position',
+      ),
+    },
     bands: [
       { label: 'quest-gated', role: 'other', scenarios: [{ context: 'Goal is not Normal', tree: idle }] },
       { label: 'adjacent target after release', role: 'adjacent', scenarioTest: 'previous-mode', scenarios: [
@@ -510,6 +871,17 @@ export const D1_AI_DECISION_GRAPHS_DATA: Record<string, AiDecisionGraphData> = {
   },
   HorkDemon: {
     sourceRefs: ['.reference/devilutionX/Source/monster.cpp:3009'],
+    walkAttempts: {
+      approach: randomWalkAttempt(
+        '.reference/devilutionX/Source/monster.cpp:3050-3058',
+        STAY_STAND('No approach direction is legal; the routine remains in Stand and finishes the AI call.'),
+        'toward the last known target position',
+      ),
+      circle: roundWalkAttempt(
+        '.reference/devilutionX/Source/monster.cpp:3026-3035',
+        DELAY('No circle direction is legal; the routine immediately starts a 10-19 tick Delay.'),
+      ),
+    },
     bands: [
       { distance: 0, role: 'adjacent', scenarios: [{ context: 'Normal goal', primary: true, tree: roll(4, melee, idle) }] },
       { distance: 1, role: 'range', scenarioTest: 'previous-mode', scenarios: [
@@ -519,8 +891,8 @@ export const D1_AI_DECISION_GRAPHS_DATA: Record<string, AiDecisionGraphData> = {
         { context: 'No spawn; otherwise', primary: true, tree: roll(3, approach, action('Delay', 'wait', ref(3))) },
       ] },
       { distance: 2, role: 'range', scenarioTest: 'condition', scenarios: [
-        { context: 'Not already circling; spawn resources available', tree: roll(0, tacticalWalk, roll(1, specialRanged, roll(3, approach, action('Delay', 'wait', ref(3))))) },
-        { context: 'Not already circling; spawn resources unavailable', tree: roll(0, tacticalWalk, roll(1, idle, roll(3, approach, action('Delay', 'wait', ref(3))))) },
+        { context: 'Not already circling; spawn resources available', tree: roll(0, circle, roll(1, specialRanged, roll(3, approach, action('Delay', 'wait', ref(3))))) },
+        { context: 'Not already circling; spawn resources unavailable', tree: roll(0, circle, roll(1, idle, roll(3, approach, action('Delay', 'wait', ref(3))))) },
       ] },
     ],
   },
