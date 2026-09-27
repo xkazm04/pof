@@ -1,13 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSuspendableEffect } from '@/hooks/useSuspend';
-import { Clock, CheckCircle, AlertCircle, HelpCircle, Loader2, Trash2, X, Download, RotateCcw, ExternalLink } from 'lucide-react';
+import { Clock, CheckCircle, AlertCircle, HelpCircle, Loader2, Trash2, X, Download, RotateCcw, ExternalLink, Link2 } from 'lucide-react';
 import { MeterBar } from '@/components/ui/MeterBar';
 import { StatusTag } from '@/components/ui/StatusTag';
 import { GlbPreviewPanel, GLB_PREVIEW_LABEL } from '@/components/layout-lab/steps/shared/GlbPreviewPanel';
 import type { LabTheme } from '@/components/layout-lab/theme';
-import { useForgeStore, type GenerationJob } from './useForgeStore';
+import { useForgeStore, mcpReattachable, type GenerationJob } from './useForgeStore';
 import { jobOutcome, meshPreview, type ForgeOutcome } from './forgeJobStatus';
 import { CritiqueBadge } from './CritiqueBadge';
 
@@ -62,9 +62,27 @@ const FORGE_VIEWER_THEME: LabTheme = {
   onAccent: 'var(--text)',
 };
 
+/** Where this tab remembers the server ledger's ownerEpoch (per tab, survives a reload). */
+const LEDGER_EPOCH_KEY = 'pof.forge.mcpLedgerEpoch';
+
+/** Swap the remembered epoch for `current`; true when a DIFFERENT one was remembered. */
+function epochChanged(current: string): boolean {
+  try {
+    const prev = sessionStorage.getItem(LEDGER_EPOCH_KEY);
+    sessionStorage.setItem(LEDGER_EPOCH_KEY, current);
+    return prev !== null && prev !== current;
+  } catch {
+    return false; // storage blocked: no memory, so no claim either way
+  }
+}
+
 function JobCard({ job, now }: { job: GenerationJob; now: number }) {
   const removeJob = useForgeStore((s) => s.removeJob);
   const retryJob = useForgeStore((s) => s.retryJob);
+  const reattachJob = useForgeStore((s) => s.reattachJob);
+  // A failed MCP job whose paid provider job may still be alive can be re-polled for
+  // free; Retry beside it then says plainly that it pays again.
+  const reattachable = mcpReattachable(job);
   const outcome = jobOutcome(job);
   const config = OUTCOME_CONFIG[outcome];
   const StatusIcon = config.icon;
@@ -199,14 +217,28 @@ function JobCard({ job, now }: { job: GenerationJob; now: number }) {
           <p className="mt-1 text-xs text-red-400">{job.error}</p>
         )}
         {outcome === 'failed' && (
-          <button
-            onClick={() => retryJob(job.id)}
-            className="mt-2 inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium
-                       border border-border text-text-muted hover:text-text hover:border-text-muted transition-colors"
-          >
-            <RotateCcw size={12} />
-            Retry
-          </button>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            {reattachable && (
+              <button
+                onClick={() => reattachJob(job.id)}
+                data-testid="job-reattach"
+                title="Resume tracking the same provider job — no new generation is paid for"
+                className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium
+                           border border-border text-text-muted hover:text-text hover:border-text-muted transition-colors"
+              >
+                <Link2 size={12} />
+                Re-attach
+              </button>
+            )}
+            <button
+              onClick={() => retryJob(job.id)}
+              className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium
+                         border border-border text-text-muted hover:text-text hover:border-text-muted transition-colors"
+            >
+              <RotateCcw size={12} />
+              {reattachable ? 'Retry (new paid generation)' : 'Retry'}
+            </button>
+          </div>
         )}
       </div>
       <button
@@ -229,6 +261,27 @@ export function GenerationQueue() {
   // the operator's explicit stop.
   const activePolls = useForgeStore((s) => s.activePolls);
   const stopAllPolling = useForgeStore((s) => s.stopAllPolling);
+  const resumeMcpJobs = useForgeStore((s) => s.resumeMcpJobs);
+  // The server ledger is in-process: a restart forgets it. A changed ownerEpoch is how
+  // that loss is STATED rather than read as "nothing was in flight".
+  const [ledgerRestarted, setLedgerRestarted] = useState(false);
+
+  // Once on mount: re-adopt the paid Blender-MCP jobs the server still holds (a reload
+  // emptied this queue, not the provider). Idempotent, never submits.
+  useEffect(() => {
+    let alive = true;
+    void resumeMcpJobs().then(({ ownerEpoch }) => {
+      if (alive && ownerEpoch && epochChanged(ownerEpoch)) setLedgerRestarted(true);
+    });
+    return () => { alive = false; };
+  }, [resumeMcpJobs]);
+
+  const restartNotice = ledgerRestarted && (
+    <p data-testid="forge-ledger-restarted" className="px-3 py-2 rounded-lg border border-border text-xs text-amber-400">
+      The server restarted since this tab last checked — Blender-MCP generations submitted before
+      then are no longer tracked here. The provider may still have finished (and billed) them.
+    </p>
+  );
 
   // Single shared 1s ticker for all cards' elapsed-time labels.
   // Only runs while at least one job is still in flight (no completedAt),
@@ -249,6 +302,7 @@ export function GenerationQueue() {
   if (jobs.length === 0) {
     return (
       <div className="text-center py-8">
+        {restartNotice}
         <p className="text-xs text-text-muted">No generation jobs yet.</p>
         <p className="text-xs text-text-muted mt-1">Use the panel above to generate 3D models.</p>
       </div>
@@ -271,6 +325,7 @@ export function GenerationQueue() {
           </button>
         )}
       </div>
+      {restartNotice}
       {activePolls.length > 0 && (
         <div
           data-testid="forge-active-polls"
