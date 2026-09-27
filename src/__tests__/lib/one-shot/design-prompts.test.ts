@@ -80,3 +80,19 @@ describe('buildProposalPrompt — coverage honesty', () => {
     expect(buildProposalPrompt('items', old)).not.toContain('distribution looks balanced');
   });
 });
+
+// ── catalog-gap-analysis/B: the operator's picked gap is the proposal's target ────────────
+describe('buildProposalPrompt — target gap', () => {
+  const target = { attribute: 'rarity', value: 'Common', count: 34, expected: 57 };
+
+  it('renders the picked gap as a Target gap section and stops delegating the pick', () => {
+    const p = buildProposalPrompt('items', dist, undefined, target);
+    expect(p).toContain('## Target gap');
+    expect(p).toContain('rarity=Common: expected ~57, have 34');
+    expect(p).not.toContain("designer's call");
+  });
+
+  it('[guard] without a target the prompt is unchanged: no Target gap section', () => {
+    expect(buildProposalPrompt('items', dist)).not.toContain('## Target gap');
+  });
+});

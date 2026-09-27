@@ -6,12 +6,16 @@ import { seededEntities } from '@/lib/catalog/seed';
 import { startExecution, awaitCallback } from '@/lib/claude-terminal/cli-service';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import type { CatalogDistribution } from '@/lib/catalog/gap-analysis';
+import { asGapTarget } from '@/lib/catalog/gap-analysis/rankGaps';
 
 const PROJECT_PATH = process.env.POF_UE_UPROJECT ?? process.cwd();
 
 /**
  * POST /api/one-shot/propose
- * Body: { catalogId: string; distribution: CatalogDistribution; userHint?: string }
+ * Body: { catalogId: string; distribution: CatalogDistribution; userHint?: string; target?: GapTarget }
+ * `target` is the gap the operator picked (GET /gaps or an under-represented bucket); the prompt
+ * aims at it instead of asking the model to pick one. A malformed or foreign-catalog target is
+ * refused BEFORE a CLI run is spent.
  * Spawns a CLI execution, awaits the @@CALLBACK JSON, validates it, and returns the proposal.
  */
 export async function POST(req: NextRequest) {
@@ -24,7 +28,12 @@ export async function POST(req: NextRequest) {
     if (!distribution || typeof distribution !== 'object') return apiError('distribution is required', 400);
 
     const userHint = typeof body.userHint === 'string' ? body.userHint : undefined;
-    const prompt = buildProposalPrompt(catalogId, distribution, userHint);
+    const target = body.target == null ? undefined : asGapTarget(body.target);
+    if (target === null) return apiError('target is malformed', 400);
+    if (target && target.catalogId !== catalogId) {
+      return apiError(`target is for '${target.catalogId}', not '${catalogId}'`, 400);
+    }
+    const prompt = buildProposalPrompt(catalogId, distribution, userHint, target);
 
     const executionId = startExecution(PROJECT_PATH, prompt, undefined, undefined, {
       enableMcp: true,

@@ -7,6 +7,9 @@ import { logger } from '@/lib/logger';
 import { decide } from './skip-policy';
 import type { ArchetypeId, ViewDescriptor, AcceptanceTier } from './types';
 import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
+import type { CatalogDistribution } from '@/lib/catalog/gap-analysis';
+import type { GapTarget } from '@/lib/catalog/gap-analysis/rankGaps';
+import { createPostJson, createProposalPhases } from './proposalPhases';
 import { stepsForProfile } from '@/lib/catalog/stepScope';
 
 export interface OrchestratorStepRef {
@@ -24,14 +27,15 @@ export interface OrchestratorOptions {
 }
 
 export interface Orchestrator {
+  /** Gap-first step 1: measure the catalog; stops at phase `analyzed` (no LLM run). */
+  analyze(catalogId: string, userHint?: string): Promise<CatalogDistribution>;
+  /** Gap-first step 2: propose aimed at the picked gap (null = let the model pick). */
+  proposeFor(target: GapTarget | null, userHint?: string): Promise<void>;
+  /** analyze + proposeFor(null) — the composed one-click path. */
   start(catalogId: string, userHint?: string): Promise<void>;
   refine(userInput: string, forceMore?: boolean): Promise<void>;
   approveAndRun(): Promise<void>;
   cancel(): void;
-}
-
-function mkJobId(): string {
-  return `job-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
 }
 
 function defaultStepsFor(catalogId: string): OrchestratorStepRef[] {
@@ -50,53 +54,29 @@ function defaultStepsFor(catalogId: string): OrchestratorStepRef[] {
 }
 
 export function createOrchestrator(opts: OrchestratorOptions = {}): Orchestrator {
-  const fetchImpl = opts.fetchImpl ?? fetch;
+  // Resolve the global lazily: a module-level orchestrator must see a fetch installed later.
+  const fetchImpl: typeof fetch = opts.fetchImpl ?? ((input, init) => fetch(input, init));
   const stepsFor = opts.stepsFor ?? defaultStepsFor;
   let _cancelled = false;
 
-  async function postJson<T>(url: string, body: unknown): Promise<T> {
-    const res = await fetchImpl(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    const env = (await res.json()) as { success: boolean; data?: T; error?: string };
-    if (!res.ok || !env.success) throw new Error(env.error ?? `HTTP ${res.status} for ${url}`);
-    return env.data as T;
-  }
+  const postJson = createPostJson(fetchImpl);
+  const phases = createProposalPhases(postJson);
 
   return {
-    async start(catalogId: string, userHint?: string) {
-      const store = useOneShotJobStore.getState();
-      if (!store.canStart()) throw new Error('another one-shot is in flight — cancel it first');
+    async analyze(catalogId: string, userHint?: string) {
       _cancelled = false;
-      store.reset();
-      store.setPhase('analyzing', { catalogId, jobId: mkJobId(), userHint });
-      const distribution = await postJson<import('@/lib/catalog/gap-analysis').CatalogDistribution>('/api/one-shot/analyze', { catalogId, userHint });
-      useOneShotJobStore.getState().setDistribution(distribution);
-      store.setPhase('proposing');
-      const proposal = await postJson<{ name: string; data: unknown; rationale: string }>(
-        '/api/one-shot/propose',
-        { catalogId, distribution, userHint },
-      );
-      store.setProposal(proposal);
+      return phases.analyze(catalogId, userHint);
     },
 
-    async refine(userInput: string, forceMore = false) {
-      const store = useOneShotJobStore.getState();
-      if (!['proposing', 'refining'].includes(store.phase)) {
-        throw new Error('not in a refinable phase');
-      }
-      const ok = store.incRefinementTurn(forceMore);
-      if (!ok) throw new Error('refinement turn cap reached — pass forceMore=true to continue');
-      store.setPhase('refining');
-      const proposal = await postJson<{ name: string; data: unknown; rationale: string }>(
-        '/api/one-shot/refine',
-        { catalogId: store.catalogId, prior: store.proposal, userInput },
-      );
-      store.setProposal(proposal);
-      store.setPhase('proposing');
+    proposeFor: phases.proposeFor,
+
+    async start(catalogId: string, userHint?: string) {
+      _cancelled = false;
+      await phases.analyze(catalogId, userHint);
+      await phases.proposeFor(null);
     },
+
+    refine: phases.refine,
 
     async approveAndRun() {
       _cancelled = false;

@@ -3,9 +3,14 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { CatalogDistribution } from '@/lib/catalog/gap-analysis';
+import type { GapTarget } from '@/lib/catalog/gap-analysis/rankGaps';
 
+/**
+ * `analyzed` is a RESTING phase: the distribution is on screen and the operator picks the gap
+ * to fill (or proposes without one) — no LLM run is spawned until they do.
+ */
 export type OneShotPhase =
-  | 'idle' | 'analyzing' | 'proposing' | 'refining' | 'awaitingRun'
+  | 'idle' | 'analyzing' | 'analyzed' | 'proposing' | 'refining' | 'awaitingRun'
   | 'running' | 'completed' | 'failed';
 
 export type StepOutcome = 'pass' | 'fail' | 'skipped' | 'deferred';
@@ -29,6 +34,8 @@ export interface OneShotJobState {
   lastSummary: OneShotSummary | null;
   failureReason?: string;
   distribution: CatalogDistribution | null;
+  /** The gap the current proposal is aimed at; `null` = the model picked (or no basis). */
+  target: GapTarget | null;
   totalSteps: number;
 
   // actions
@@ -39,6 +46,7 @@ export interface OneShotJobState {
   ) => void;
   setProposal: (p: OneShotProposal | null) => void;
   setDistribution: (d: CatalogDistribution | null) => void;
+  setTarget: (t: GapTarget | null) => void;
   setTotalSteps: (n: number) => void;
   incRefinementTurn: (forceMore: boolean) => boolean;
   recordStep: (r: StepResult) => void;
@@ -51,7 +59,7 @@ const REFINEMENT_TURN_CAP = 3;
 
 const INITIAL: Pick<
   OneShotJobState,
-  'jobId' | 'phase' | 'catalogId' | 'draftEntityId' | 'proposal' | 'refinementTurns' | 'currentStepIndex' | 'stepResults' | 'lastSummary' | 'distribution' | 'totalSteps'
+  'jobId' | 'phase' | 'catalogId' | 'draftEntityId' | 'proposal' | 'refinementTurns' | 'currentStepIndex' | 'stepResults' | 'lastSummary' | 'distribution' | 'target' | 'totalSteps'
 > = {
   jobId: null,
   phase: 'idle',
@@ -63,6 +71,7 @@ const INITIAL: Pick<
   stepResults: [],
   lastSummary: null,
   distribution: null,
+  target: null,
   totalSteps: 0,
 };
 
@@ -74,6 +83,7 @@ export const useOneShotJobStore = create<OneShotJobState>()(
       setPhase: (phase, patch) => set({ phase, ...(patch ?? {}) }),
       setProposal: (proposal) => set({ proposal }),
       setDistribution: (distribution) => set({ distribution }),
+      setTarget: (target) => set({ target }),
       setTotalSteps: (totalSteps) => set({ totalSteps }),
       incRefinementTurn: (forceMore) => {
         const cur = get().refinementTurns;
@@ -93,14 +103,17 @@ export const useOneShotJobStore = create<OneShotJobState>()(
           deferred: r.filter((x) => x.outcome === 'deferred').length,
         };
       },
-      canStart: () => ['idle', 'completed', 'failed'].includes(get().phase),
+      // `analyzed` is at rest (nothing in flight), so another catalog may be analyzed from it.
+      canStart: () => ['idle', 'analyzed', 'completed', 'failed'].includes(get().phase),
       markCompleted: () => set({ phase: 'completed', lastSummary: get().summarize() }),
     }),
     {
       name: 'pof-one-shot-job',
       merge: (persisted, current) => {
         const p = (persisted as Partial<OneShotJobState> | null | undefined) ?? {};
-        const phase: OneShotPhase = p.phase === 'running' ? 'failed' : (p.phase ?? 'idle');
+        let phase: OneShotPhase = p.phase === 'running' ? 'failed' : (p.phase ?? 'idle');
+        // A resting `analyzed` is only meaningful with the distribution the operator picks from.
+        if (phase === 'analyzed' && !p.distribution) phase = 'idle';
         const failureReason = p.phase === 'running' ? 'reload-interrupted' : p.failureReason;
         return { ...current, ...p, phase, failureReason };
       },

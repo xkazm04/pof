@@ -145,6 +145,78 @@ describe('orchestrator', () => {
     expect(useOneShotJobStore.getState().phase).toBe('completed');
   });
 
+  // ── catalog-gap-analysis/B: gap-first flow — analyze stops, the operator picks the target ──
+  const ITEMS_DIST = {
+    catalogId: 'items', total: 100,
+    byAttribute: { rarity: { Common: 34, Rare: 66 }, type: { Weapon: 75, Armor: 25 } },
+    underrepresented: [
+      { attribute: 'rarity', value: 'Common', count: 34, expected: 57 },
+      { attribute: 'type', value: 'Armor', count: 25, expected: 43 },
+    ],
+    sample: [], gapBasis: 'expected-share',
+  };
+  const PROPOSAL = { name: 'Worn Tunic', data: { type: 'Armor', rarity: 'Common' }, rationale: 'fills Common' };
+  const bodyOf = (f: ReturnType<typeof vi.fn>, url: string) =>
+    JSON.parse((f.mock.calls.find((c) => c[0] === url)![1] as RequestInit).body as string);
+
+  it('analyze stops at phase analyzed with the distribution stored — no LLM run is spawned', async () => {
+    const fetchImpl = mockFetch({ '/api/one-shot/analyze': () => ITEMS_DIST, '/api/one-shot/propose': () => PROPOSAL });
+    const orch = createOrchestrator({ fetchImpl: fetchImpl as unknown as typeof fetch });
+    await orch.analyze('items');
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(fetchImpl.mock.calls[0][0]).toBe('/api/one-shot/analyze');
+    const st = useOneShotJobStore.getState();
+    expect(st.phase).toBe('analyzed');
+    expect(st.catalogId).toBe('items');
+    expect(st.distribution).toEqual(ITEMS_DIST);
+    expect(fetchImpl.mock.calls.some((c) => c[0] === '/api/one-shot/propose')).toBe(false);
+  });
+
+  it('proposeFor(target) from analyzed posts the picked target + the stored distribution', async () => {
+    const fetchImpl = mockFetch({ '/api/one-shot/analyze': () => ITEMS_DIST, '/api/one-shot/propose': () => PROPOSAL });
+    const orch = createOrchestrator({ fetchImpl: fetchImpl as unknown as typeof fetch });
+    await orch.analyze('items');
+    const target = { catalogId: 'items', attribute: 'type', value: 'Armor', count: 25, expected: 43, deficit: 18 };
+    await orch.proposeFor(target);
+    const body = bodyOf(fetchImpl, '/api/one-shot/propose');
+    expect(body.target).toEqual(target);
+    expect(body.distribution).toEqual(ITEMS_DIST);
+    expect(body.catalogId).toBe('items');
+    const st = useOneShotJobStore.getState();
+    expect(st.phase).toBe('proposing');
+    expect(st.proposal).toEqual(PROPOSAL);
+    expect(st.target).toEqual(target);
+  });
+
+  it('refine sends the stored distribution the refine route requires', async () => {
+    const REFINED = { ...PROPOSAL, name: 'Threadbare Tunic' };
+    const fetchImpl = mockFetch({
+      '/api/one-shot/analyze': () => ITEMS_DIST,
+      '/api/one-shot/propose': () => PROPOSAL,
+      '/api/one-shot/refine': () => REFINED,
+    });
+    const orch = createOrchestrator({ fetchImpl: fetchImpl as unknown as typeof fetch });
+    await orch.start('items');
+    await orch.refine('make it rarer');
+    const body = bodyOf(fetchImpl, '/api/one-shot/refine');
+    expect(body.distribution).toEqual(ITEMS_DIST);
+    expect(body).toMatchObject({ catalogId: 'items', prior: PROPOSAL, userInput: 'make it rarer' });
+    expect(useOneShotJobStore.getState().proposal?.name).toBe('Threadbare Tunic');
+    expect(useOneShotJobStore.getState().phase).toBe('proposing');
+  });
+
+  it('a failed propose returns to analyzed (distribution kept), never a stuck in-flight phase', async () => {
+    const fetchImpl = vi.fn(async (url: string) => url === '/api/one-shot/analyze'
+      ? { ok: true, status: 200, json: async () => ({ success: true, data: ITEMS_DIST }) }
+      : { ok: false, status: 500, json: async () => ({ success: false, error: 'cli timed out' }) });
+    const orch = createOrchestrator({ fetchImpl: fetchImpl as unknown as typeof fetch });
+    await orch.analyze('items');
+    await expect(orch.proposeFor(null)).rejects.toThrow(/cli timed out/);
+    const st = useOneShotJobStore.getState();
+    expect(st.phase).toBe('analyzed');
+    expect(st.distribution).toEqual(ITEMS_DIST);
+  });
+
   it('refuses to start when not in idle/completed/failed', async () => {
     useOneShotJobStore.getState().setPhase('running');
     const orch = createOrchestrator({ fetchImpl: vi.fn() as unknown as typeof fetch });

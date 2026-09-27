@@ -1,5 +1,6 @@
 import { gapBasisOf, type CatalogDistribution } from '@/lib/catalog/gap-analysis';
 import { pluginFor } from '@/lib/catalog/gap-analysis/plugins';
+import { gapTargetLine, type GapTargetSpec } from '@/lib/catalog/gap-analysis/rankGaps';
 import { arpgLawsRelevantTo } from './arpg-laws-map';
 import { canonContextFor } from '@/lib/catalog/canon/canonContext';
 import { DEFAULT_CANON_PROFILE, rulesForProfile } from '@/lib/catalog/canon/profiles';
@@ -59,10 +60,25 @@ function renderSample(dist: CatalogDistribution): string {
   return dist.sample.map((e, i) => `${i + 1}. ${e.name} — ${fmt(e.data)} (id: ${e.id})`).join('\n');
 }
 
+/**
+ * The operator's picked gap, when there is one. Without a target the model picks the gap
+ * itself (the pre-gap-first behaviour); with one, the ranking is already done — the prompt
+ * must not hand that decision back to the model.
+ */
+function renderTarget(target: GapTargetSpec | undefined): string {
+  if (!target) return '';
+  return `## Target gap
+The operator picked this gap to fill — design for it, do not choose another:
+  - ${gapTargetLine(target)}
+
+`;
+}
+
 export function buildProposalPrompt(
   catalogId: string,
   dist: CatalogDistribution,
   userHint?: string,
+  target?: GapTargetSpec,
 ): string {
   const callbackId = nextCallbackId();
   // A NEW entity designed here is PoF's own, so its canon is the `pof` profile — never another
@@ -88,14 +104,14 @@ ${renderGaps(dist)}
 ## Existing entities (stratified sample of ${dist.sample.length})
 ${renderSample(dist)}
 
-## User direction (optional)
-${userHint ?? "designer's call — pick the highest-value gap"}
+${renderTarget(target)}## User direction (optional)
+${userHint ?? (target ? '(none beyond the target gap)' : "designer's call — pick the highest-value gap")}
 
 ## Per-catalog output schema (your "data" payload must match this)
 ${schema}
 
 ## Task
-Identify the most valuable gap and propose **one** new entity that fills it.
+${target ? 'Propose **one** new entity that fills the Target gap above.' : 'Identify the most valuable gap and propose **one** new entity that fills it.'}
 HARD RULES:
 1. Obey Project Canon + ARPG laws strictly. Numerics within the seeded min/max bands.
 2. Cross-catalog references must use REAL seeded ids (sample shows real ids).
