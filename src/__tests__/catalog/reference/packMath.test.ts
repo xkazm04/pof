@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   distributedPackExchange,
+  distributedPackSpellAreaExchange,
   expectedPackSize,
+  expectedSpellPackCoverage,
   ordinaryPackSizeDistribution,
   packExchange,
   requestedUniquePackSize,
@@ -62,5 +64,43 @@ describe('simultaneous pack arithmetic', () => {
     expect(requestedUniquePackSize('Leashed')).toBe(9);
     expect(distributedPackExchange(ordinaryPackSizeDistribution(3), inventedDuel, 1))
       .toMatchObject({ expectedPackSize: 2.5, expectedDamageTakenPerPack: 5 });
+  });
+
+  it('names compact-ring line, blast, wave, and full-ring coverage', () => {
+    expect(expectedSpellPackCoverage('aimed-line', 1, 5, 8).expectedTargetsAffected).toBe(1 + 4 / 7);
+    expect(expectedSpellPackCoverage('impact-3x3', 1, 5, 8).expectedTargetsAffected).toBe(1 + 8 / 7);
+    expect(expectedSpellPackCoverage('widening-wave', 1, 5, 8).expectedTargetsAffected).toBe(1 + 16 / 7);
+    expect(expectedSpellPackCoverage('seeking-radius', 1, 5, 8).expectedTargetsAffected).toBe(5);
+    expect(expectedSpellPackCoverage('seeking-radius', 1, 5, 2).expectedTargetsAffected).toBe(2);
+  });
+
+  it('advances every covered member and suppresses pack attacks during monster GotHit', () => {
+    const result = distributedPackSpellAreaExchange([{ size: 3, probability: 1 }], {
+      ...inventedDuel,
+      expectedDamageTaken: 0,
+      spellArea: {
+        spell: 'ChainLightning',
+        spellLevel: 1,
+        geometry: 'seeking-radius',
+        expectedPrimaryDamagePerCast: 10,
+        expectedSecondaryDamagePerCast: 5,
+        primaryCollisionChecksPerCast: 12,
+        secondaryCollisionChecksPerCast: 6,
+        expectedPrimaryActionsToKill: 10,
+        expectedPrimaryRecoveryStartsBeforeKill: 10,
+        expectedSecondaryRecoveryStartsPerCast: 1,
+        monsterRecoverySeconds: 1,
+        baseDamageTakenPerSecond: 2,
+        baseGotHitInterruptionsPerSecond: 0.4,
+        manaPerCast: 4,
+      },
+    });
+
+    // Focus work is 10 + 5 + 2.5 casts because each sought secondary gets half primary damage.
+    expect(result.expectedCastsPerPack).toBe(17.5);
+    expect(result.secondsPerPack).toBeCloseTo(17.5 / (1 - 0.4 * inventedDuel.hitRecoverySeconds), 12);
+    expect(result.expectedDamageTakenPerPack).toBeCloseTo(2 * result.secondsPerPack, 12);
+    expect(result.expectedAttackersSuppressedPerCast).toBeGreaterThan(1);
+    expect(result.expectedTargetsAffectedPerCast).toBeGreaterThan(2);
   });
 });

@@ -8,6 +8,7 @@ import {
   type DuelOptions,
   type DuelSpellAttack,
   type PlayerAttackMode,
+  type SpellAreaInPacksPolicy,
 } from '@/lib/catalog/reference/combatDuel';
 import { classAnimations, classCoefficients, monsterProfile, referenceBuild } from '@/lib/catalog/reference/combatInputs';
 import {
@@ -54,9 +55,12 @@ import {
 import {
   DEFAULT_ADJACENT_SLOTS,
   distributedPackExchange,
+  distributedPackSpellAreaExchange,
   expectedPackSize,
   ordinaryPackSizeDistribution,
   requestedUniquePackSize,
+  type DistributedPackExchangeExpectation,
+  type DistributedPackSpellAreaExchangeExpectation,
 } from '@/lib/catalog/reference/packMath';
 import { spellSpec } from '@/lib/catalog/reference/spellSpecs';
 import {
@@ -86,6 +90,7 @@ export type SaleIdentify = SaleIdentifyPolicy;
 export type DescentEncounter = 'duel' | 'packs';
 export type DescentPurchases = 'none' | 'defence';
 export type DescentRecovery = 'none' | 'town-portal';
+export type SpellAreaInPacks = SpellAreaInPacksPolicy;
 
 /** Explicit non-solid-tile assumption used only when a caller does not provide one. */
 export const DEFAULT_TILES_PER_LEVEL_ASSUMPTION = 3_000;
@@ -151,6 +156,12 @@ export interface DescentPackExpectation {
   sustainable: boolean;
   typePackSizes: DescentMonsterPackSize[];
   eligibleUniquePacks: DescentUniquePackSize[];
+  /** Present only for the opt-in expected spell-area policy. */
+  spellArea?: {
+    policy: 'expected';
+    expectedTargetsAffectedPerCast: number | null;
+    expectedAttackersSuppressedPerCast: number | null;
+  };
 }
 
 export interface DescentWorstEngagement {
@@ -490,6 +501,8 @@ export interface DescentSimulation {
   exchangeModel?: 'cadence';
   /** Omitted for the byte-compatible duel default. */
   adjacentSlots?: number;
+  /** Omitted for the byte-compatible single-target pack default. */
+  spellAreaInPacks?: 'expected';
   /** Omitted for the byte-compatible default. */
   purchases?: 'defence';
   /** Omitted for the byte-compatible unidentified-sale default. */
@@ -530,6 +543,8 @@ export interface SimulateDescentInput {
   exchangeModel?: DuelExchangeModel;
   /** Simultaneous melee capacity; eight open tiles, or two for the documented corridor scenario. */
   adjacentSlots?: number;
+  /** Expected compact-ring area/multi-target spell coverage; defaults to off. */
+  spellAreaInPacks?: SpellAreaInPacks;
   /** Town purchases are opt-in; the default spends no gold on equipment. */
   purchases?: DescentPurchases;
   /** Mid-depth recovery is opt-in; the default retains floor-wide sustain. */
@@ -1367,6 +1382,7 @@ function assumptions(
   exchangeModel: DuelExchangeModel,
   cadenceFallbackMonsters: readonly string[],
   adjacentSlots: number,
+  spellAreaInPacks: SpellAreaInPacks,
   defensiveAffixes: DefensiveAffixes,
   offensiveAffixes: OffensiveAffixes,
   purchases: DescentPurchases,
@@ -1437,7 +1453,22 @@ function assumptions(
       value: 'depth 1 singleton; depth 2 singleton or 2..3; later singleton or 3..5',
       source: '.reference/devilutionX/Source/monster.cpp PlaceGroup caller branches',
       detail: 'The expected pack count is ambient population divided by expected requested size. Placement retries, occupied-tile failures, and final population-cap truncation need a dungeon seed and are excluded. Eligible uniques remain outside totals, but their unique-plus-eight-minion requested packs are reported together.',
-    }]),
+    }, ...(spellAreaInPacks === 'expected' ? [{
+      id: 'spell-area-pack-geometry',
+      value: 'compact uniform slot ring; expected coverage',
+      source: 'explicit geometry assumption plus pin-verified playerSpellHitsData missile topology',
+      detail: 'Pack members occupy distinct uniformly chosen configured adjacency-ring slots. Aimed Lightning/Inferno lines intersect one secondary slot; a cross-approach Fire Wall and Fireball’s 3x3 impact footprint intersect the two slots neighbouring the aimed member; Flame Wave intersects its center plus the code-derived side-segment count. Chain Lightning seeks every ring member in radius, Nova emits around the full ring, and Apocalypse scans every ring member. These slot intersections are model parameters, not game values.',
+    }, {
+      id: 'spell-area-pack-damage',
+      value: 'primary-equivalent expected health with per-member collision groups',
+      source: 'combatDuel packSpell outputs and packMath.packSpellAreaExchange',
+      detail: 'The focused member receives the existing stationary-target cast distribution. Each covered secondary receives its own playerSpellHitsData checks: Chain Lightning gets one sought path rather than the primary’s direct-plus-sought paths, and Fireball gets only the blast gated by successful primary impact. Expected secondary damage advances every covered member before the next focus phase. Mixed combat spends its area-funded share first and treats remaining melee kills sequentially; the original one-target pack result remains the upper bound for time, damage, and hero interruptions. Exact tile paths and correlated kill rolls remain outside this expectation.',
+    }, {
+      id: 'pack-wide-monster-hit-recovery',
+      value: 'covered hard-hit members lose expected attack availability',
+      source: 'MonsterMHit hard-hit law, combatDuel recovery starts, and packMath interruption load',
+      detail: 'Every covered engaged attacker applies its per-member expected MonsterMHit recovery starts to its GotHit duration. Their remaining attack availability is summed before the hero PM_GOTHIT load is solved; load at or above one remains an unbounded hero stun-lock. Fatal-hit timing is represented by the existing primary starts-before-kill expectation; secondary fatal collision phase is not resolved exactly.',
+    }] : [])]),
     ...(exchangeModel === 'cadence' && cadenceFallbackMonsters.length > 0 ? [{
       id: 'monster-cadence-fallback',
       value: cadenceFallbackMonsters.join('; '),
@@ -1780,6 +1811,16 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
   const adjacentSlots = input.adjacentSlots ?? DEFAULT_ADJACENT_SLOTS;
   if (!Number.isInteger(adjacentSlots) || adjacentSlots < 1 || adjacentSlots > DEFAULT_ADJACENT_SLOTS) {
     throw new Error(`adjacentSlots must be an integer from 1 to ${DEFAULT_ADJACENT_SLOTS} (got ${adjacentSlots})`);
+  }
+  const spellAreaInPacks = input.spellAreaInPacks ?? 'off';
+  if (!(['off', 'expected'] as const).includes(spellAreaInPacks)) {
+    throw new Error(`unknown spell-area-in-packs policy ${input.spellAreaInPacks}`);
+  }
+  if (spellAreaInPacks === 'expected' && encounter !== 'packs') {
+    throw new Error('spellAreaInPacks:expected requires encounter:packs');
+  }
+  if (spellAreaInPacks === 'expected' && input.className !== 'sorcerer') {
+    throw new Error('spellAreaInPacks:expected requires a Sorcerer spell exchange');
   }
   const gear = input.gear ?? (input.className === 'warrior' || input.weapon ? 'none' : 'expected');
   if (!(['none', 'expected'] as const).includes(gear)) throw new Error(`unknown gear policy ${gear}`);
@@ -2128,6 +2169,12 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       ? sorcererSpellAttacks(input.wrappers, depth, initialState.learnedSpells)
       : [];
     const playerCastSeconds = playerAttack === 'spell' ? castTiming(classAnimations(classWrapper)).seconds : undefined;
+    const spellAreaPackOutcomes = spellAreaInPacks === 'expected'
+      ? ordinaryPackSizeDistribution(depth)
+      : undefined;
+    const spellAreaPlacementSize = spellAreaPackOutcomes
+      ? expectedPackSize(spellAreaPackOutcomes)
+      : 1;
     const evaluateRows = (combatBuild: PlayerBuild, recoveryTier: HitRecoveryTier) => {
       const playerHitRecoverySeconds = hitRecoveryTiming(animations, recoveryTier).seconds;
       return pool.map((wrapper) => {
@@ -2152,6 +2199,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
         return duel(combatBuild, coefficients, monster, {
           gameMode: input.gameMode,
           playerAttack: attack,
+          ...(spellAreaInPacks === 'expected' && attack === 'spell' ? { spellAreaInPacks } : {}),
           exchangeModel,
           engagementDistance: DEFAULT_RANGED_ENGAGEMENT_DISTANCE,
           monsterApproachTilesPerSecond: attack === 'melee' ? undefined : exchange?.approachTilesPerSecond,
@@ -2181,12 +2229,59 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       };
       const damageTaken = (result: ReturnType<typeof runDuel>) => result.expectedMonsterAttacksBeforeKill
         * result.expectedMonsterDamagePerSwing / FIXED_POINT;
+      const packCombat = (result: ReturnType<typeof runDuel>):
+        DistributedPackExchangeExpectation | DistributedPackSpellAreaExchangeExpectation | undefined => {
+        if (!spellAreaPackOutcomes || result.expectedPlayerSecondsToKill == null
+          || !Number.isFinite(result.expectedPlayerSecondsToKill)) return undefined;
+        const packDuel = {
+          secondsToKill: result.expectedPlayerSecondsToKill,
+          expectedDamageTaken: damageTaken(result),
+          expectedGotHitInterruptions: result.gotHit?.expectedInterruptionsBeforeKill ?? 0,
+          hitRecoverySeconds: playerHitRecoverySeconds,
+          ranged: exchange?.monsterAttack === 'ranged-arrow' || exchange?.monsterAttack === 'ranged-magic',
+        };
+        return result.packSpell
+          ? distributedPackSpellAreaExchange(
+              spellAreaPackOutcomes,
+              {
+                ...packDuel,
+                spellArea: {
+                  ...result.packSpell,
+                  // The legacy pack rate already contains the focused target's duel recovery and
+                  // approach. Expected area adds secondary-member suppression to that same rate.
+                  baseDamageTakenPerSecond: packDuel.secondsToKill === 0
+                    ? 0
+                    : packDuel.expectedDamageTaken / packDuel.secondsToKill,
+                  baseGotHitInterruptionsPerSecond: packDuel.secondsToKill === 0
+                    ? 0
+                    : packDuel.expectedGotHitInterruptions / packDuel.secondsToKill,
+                },
+              },
+              adjacentSlots,
+            )
+          : distributedPackExchange(spellAreaPackOutcomes, packDuel, adjacentSlots);
+      };
       const meleeResult = mixedSorcerer ? runDuel('melee') : undefined;
-      const candidates = learnedSpells.map((spell, scheduleIndex) => ({
-        spell,
-        scheduleIndex,
-        result: runDuel('spell', spell),
-      }));
+      const meleePackCombat = meleeResult ? packCombat(meleeResult) : undefined;
+      const candidates = learnedSpells.map((spell, scheduleIndex) => {
+        const result = runDuel('spell', spell);
+        const pack = packCombat(result);
+        return {
+          spell,
+          scheduleIndex,
+          result,
+          pack,
+          packSecondsPerKill: pack
+            ? pack.secondsPerPack / spellAreaPlacementSize
+            : result.expectedPlayerSecondsToKill ?? Infinity,
+          packDamagePerKill: pack
+            ? pack.expectedDamageTakenPerPack / spellAreaPlacementSize
+            : damageTaken(result),
+          packManaPerKill: pack && 'expectedManaSpentPerPack' in pack
+            ? pack.expectedManaSpentPerPack / spellAreaPlacementSize
+            : result.expectedManaSpentPerKill ?? Infinity,
+        };
+      });
       if (mixedSorcerer) {
         candidates.sort((left, right) => compareMixedCandidates({
           id: `${wrapper.entity.id}:${left.scheduleIndex}`,
@@ -2205,15 +2300,23 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
         }));
       } else {
         candidates.sort((left, right) => {
-          const leftSeconds = left.result.expectedPlayerSecondsToKill ?? Infinity;
-          const rightSeconds = right.result.expectedPlayerSecondsToKill ?? Infinity;
+          const leftSeconds = spellAreaInPacks === 'expected'
+            ? left.packSecondsPerKill
+            : left.result.expectedPlayerSecondsToKill ?? Infinity;
+          const rightSeconds = spellAreaInPacks === 'expected'
+            ? right.packSecondsPerKill
+            : right.result.expectedPlayerSecondsToKill ?? Infinity;
           if (leftSeconds !== rightSeconds) {
             if (!Number.isFinite(leftSeconds)) return 1;
             if (!Number.isFinite(rightSeconds)) return -1;
             return leftSeconds - rightSeconds;
           }
-          const leftMana = left.result.expectedManaSpentPerKill ?? Infinity;
-          const rightMana = right.result.expectedManaSpentPerKill ?? Infinity;
+          const leftMana = spellAreaInPacks === 'expected'
+            ? left.packManaPerKill
+            : left.result.expectedManaSpentPerKill ?? Infinity;
+          const rightMana = spellAreaInPacks === 'expected'
+            ? right.packManaPerKill
+            : right.result.expectedManaSpentPerKill ?? Infinity;
           return leftMana - rightMana || left.scheduleIndex - right.scheduleIndex;
         });
       }
@@ -2257,6 +2360,13 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
         expectedGotHitInterruptions: result.gotHit?.expectedInterruptionsBeforeKill ?? 0,
         expectedLifeStolen: result.steal?.expectedLifePerKill ?? 0,
         expectedManaStolen: result.steal?.expectedManaPerKill ?? 0,
+        ...(spellAreaInPacks === 'expected' ? {
+          selectedPackCombat: selected?.pack,
+          meleePackCombat,
+          selectedPackManaPerKill: selected?.packManaPerKill,
+          selectedPackSecondsPerKill: selected?.packSecondsPerKill,
+          selectedPackDamagePerKill: selected?.packDamagePerKill,
+        } : {}),
         ...(mixedSorcerer ? { meleeResult: result, spellResult: selected?.result } : {}),
       };
       });
@@ -2275,6 +2385,10 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       const packsPerType = ambientPopulation / candidateRows.length / packSize;
       const recoverySeconds = hitRecoveryTiming(animations, recoveryTier).seconds;
       return candidateRows.reduce((sum, row) => {
+        if (spellAreaInPacks === 'expected') {
+          const pack = mixedSorcerer ? row.meleePackCombat : row.selectedPackCombat;
+          return pack ? sum + pack.expectedDamageTakenPerPack * packsPerType : Infinity;
+        }
         if (!Number.isFinite(row.seconds) || !Number.isFinite(row.expectedDamageTaken)
           || !Number.isFinite(row.expectedGotHitInterruptions)) return Infinity;
         const exchange = distributedPackExchange(outcomes, {
@@ -2512,7 +2626,11 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
     const expectedSpellKills = mixedAllocations.reduce((sum, allocation) => sum + allocation.spellKills, 0);
     const expectedMeleeKills = ambientPopulation - expectedSpellKills;
     const rows = evaluatedRows.map((row) => {
-      if (!mixedSorcerer) return { ...row, spellExpectedKills: row.selectedSpell ? expectedKillsPerType : 0 };
+      if (!mixedSorcerer) return {
+        ...row,
+        spellExpectedKills: row.selectedSpell ? expectedKillsPerType : 0,
+        ...(spellAreaInPacks === 'expected' ? { packCombat: row.selectedPackCombat } : {}),
+      };
       const allocation = mixedAllocationByMonster.get(row.wrapper.entity.id);
       const spellKills = allocation?.spellKills ?? 0;
       const spellShare = expectedKillsPerType > 0 ? spellKills / expectedKillsPerType : 0;
@@ -2522,6 +2640,30 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       const spellDamage = spellResult
         ? spellResult.expectedMonsterAttacksBeforeKill * spellResult.expectedMonsterDamagePerSwing / FIXED_POINT
         : row.expectedDamageTaken;
+      const packCombat = spellAreaInPacks === 'expected' && row.meleePackCombat
+        ? row.selectedPackCombat && spellShare > 0
+          && 'expectedTargetsAffectedPerCast' in row.selectedPackCombat
+          ? {
+              expectedPackSize: row.meleePackCombat.expectedPackSize,
+              // Spend area casts first, then clean up the unfunded residual share one target at a
+              // time. This avoids treating a fractional melee share as a whole simultaneous melee
+              // engagement, whose Infinity would dominate any non-zero blend.
+              secondsPerPack: row.selectedPackCombat.secondsPerPack * spellShare
+                + meleeResult.expectedPlayerSecondsToKill! * spellAreaPlacementSize * (1 - spellShare),
+              expectedDamageTakenPerPack: row.selectedPackCombat.expectedDamageTakenPerPack * spellShare
+                + row.expectedDamageTaken * spellAreaPlacementSize * (1 - spellShare),
+              expectedGotHitInterruptionsPerPack:
+                row.selectedPackCombat.expectedGotHitInterruptionsPerPack * spellShare
+                + (meleeResult.gotHit?.expectedInterruptionsBeforeKill ?? 0)
+                  * spellAreaPlacementSize * (1 - spellShare),
+              ...('expectedTargetsAffectedPerCast' in row.selectedPackCombat ? {
+                expectedTargetsAffectedPerCast: row.selectedPackCombat.expectedTargetsAffectedPerCast,
+                expectedAttackersSuppressedPerCast:
+                  row.selectedPackCombat.expectedAttackersSuppressedPerCast,
+              } : {}),
+            }
+          : undefined
+        : undefined;
       return {
         ...row,
         seconds: spellResult?.expectedPlayerSecondsToKill == null
@@ -2532,7 +2674,9 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
         conditionalBlockChance: gear === 'expected' && spellResult
           ? blend(meleeResult.monsterConditionalBlockChance, spellResult.monsterConditionalBlockChance)
           : row.conditionalBlockChance,
-        expectedManaSpent: allocation?.manaSpent ?? 0,
+        expectedManaSpent: spellAreaInPacks === 'expected' && row.selectedPackManaPerKill !== undefined
+          ? spellKills * row.selectedPackManaPerKill
+          : allocation?.manaSpent ?? 0,
         manaPerCast: spellResult?.manaPerCast,
         selectedSpell: spellKills > 0 ? row.selectedSpell : undefined,
         unbounded: !Number.isFinite(row.seconds)
@@ -2552,6 +2696,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
         expectedLifeStolen: (meleeResult.steal?.expectedLifePerKill ?? 0) * (1 - spellShare),
         expectedManaStolen: (meleeResult.steal?.expectedManaPerKill ?? 0) * (1 - spellShare),
         spellExpectedKills: spellKills,
+        ...(packCombat ? { packCombat } : {}),
       };
     });
     const meanXp = rows.reduce((sum, row) => sum + row.xp, 0) / divisor;
@@ -2569,6 +2714,9 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
     const packRows = encounter === 'packs' ? rows.map((row) => {
       if (!Number.isFinite(row.seconds) || !Number.isFinite(row.expectedDamageTaken)
         || !Number.isFinite(row.expectedGotHitInterruptions)) {
+        if (spellAreaInPacks === 'expected' && row.packCombat) {
+          return { wrapper: row.wrapper, ...row.packCombat };
+        }
         return {
           wrapper: row.wrapper,
           secondsPerPack: Infinity,
@@ -2576,15 +2724,29 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
           expectedGotHitInterruptionsPerPack: Infinity,
         };
       }
+      const legacyPack = distributedPackExchange(packSizeOutcomes, {
+        secondsToKill: row.seconds,
+        expectedDamageTaken: row.expectedDamageTaken,
+        expectedGotHitInterruptions: row.expectedGotHitInterruptions,
+        hitRecoverySeconds: playerHitRecoverySeconds,
+        ranged: row.rangedMonster,
+      }, adjacentSlots);
+      if (spellAreaInPacks !== 'expected' || !row.packCombat
+        || !('expectedTargetsAffectedPerCast' in row.packCombat)) {
+        return { wrapper: row.wrapper, ...legacyPack };
+      }
       return {
         wrapper: row.wrapper,
-        ...distributedPackExchange(packSizeOutcomes, {
-          secondsToKill: row.seconds,
-          expectedDamageTaken: row.expectedDamageTaken,
-          expectedGotHitInterruptions: row.expectedGotHitInterruptions,
-          hitRecoverySeconds: playerHitRecoverySeconds,
-          ranged: row.rangedMonster,
-        }, adjacentSlots),
+        ...row.packCombat,
+        secondsPerPack: Math.min(legacyPack.secondsPerPack, row.packCombat.secondsPerPack),
+        expectedDamageTakenPerPack: Math.min(
+          legacyPack.expectedDamageTakenPerPack,
+          row.packCombat.expectedDamageTakenPerPack,
+        ),
+        expectedGotHitInterruptionsPerPack: Math.min(
+          legacyPack.expectedGotHitInterruptionsPerPack,
+          row.packCombat.expectedGotHitInterruptionsPerPack,
+        ),
       };
     }) : [];
     const packsPerType = expectedKillsPerType / placementPackSize;
@@ -2638,8 +2800,18 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       ? ambientPopulation === 0
         ? 0
         : mixedSorcerer
-          ? mixedAllocations.reduce((sum, allocation) => sum + allocation.manaSpent, 0)
-          : rows.reduce((sum, row) => sum + (row.expectedManaSpent ?? 0), 0) / divisor * ambientPopulation
+          ? spellAreaInPacks === 'expected'
+            ? rows.reduce((sum, row) => sum + (row.expectedManaSpent ?? 0), 0)
+            : mixedAllocations.reduce((sum, allocation) => sum + allocation.manaSpent, 0)
+          : spellAreaInPacks === 'expected'
+            ? rows.reduce((sum, row, index) => {
+                const pack = packRows[index];
+                return sum + ('expectedManaSpentPerPack' in pack
+                  ? pack.expectedManaSpentPerPack * packsPerType
+                  : (row.expectedManaSpent ?? 0) * expectedKillsPerType);
+              }, 0)
+            : rows.reduce((sum, row) => sum + (row.expectedManaSpent ?? 0), 0)
+              / divisor * ambientPopulation
       : undefined;
     const expectedLifeStolenBeforeCap = offensiveAffixes === 'expected'
       ? rows.reduce((sum, row) => sum + row.expectedLifeStolen, 0) / divisor * ambientPopulation
@@ -3012,6 +3184,25 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
     const damageMultiplier = duelExpectedDamage === 0
       ? expectedDamage === 0 ? 1 : Infinity
       : expectedDamage / duelExpectedDamage;
+    const areaSpellKills = spellAreaInPacks === 'expected'
+      ? rows.reduce((sum, row) => sum + (row.selectedSpell ? row.spellExpectedKills : 0), 0)
+      : 0;
+    const areaTargetsPerCast = areaSpellKills === 0 ? null : rows.reduce((sum, row, index) => {
+      if (!row.selectedSpell) return sum;
+      const pack = packRows[index];
+      const targets = 'expectedTargetsAffectedPerCast' in pack
+        ? pack.expectedTargetsAffectedPerCast
+        : 1;
+      return sum + targets * row.spellExpectedKills;
+    }, 0) / areaSpellKills;
+    const areaSuppressedAttackersPerCast = areaSpellKills === 0 ? null : rows.reduce((sum, row, index) => {
+      if (!row.selectedSpell) return sum;
+      const pack = packRows[index];
+      const suppressed = 'expectedAttackersSuppressedPerCast' in pack
+        ? pack.expectedAttackersSuppressedPerCast
+        : 0;
+      return sum + suppressed * row.spellExpectedKills;
+    }, 0) / areaSpellKills;
     const packExpectation: DescentPackExpectation | undefined = encounter === 'packs' ? {
       adjacentSlots,
       expectedPackSize: placementPackSize,
@@ -3037,6 +3228,13 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
           requestedPackSize: pack == null ? null : requestedUniquePackSize(pack),
         };
       }),
+      ...(spellAreaInPacks === 'expected' ? {
+        spellArea: {
+          policy: 'expected' as const,
+          expectedTargetsAffectedPerCast: areaTargetsPerCast,
+          expectedAttackersSuppressedPerCast: areaSuppressedAttackersPerCast,
+        },
+      } : {}),
     } : undefined;
     const difficultyRows = encounter === 'packs'
       ? rows.map((row, index) => ({
@@ -3239,6 +3437,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
     ...(defensiveAffixes === 'expected' ? { defensiveAffixes } : {}),
     ...(offensiveAffixes === 'expected' ? { offensiveAffixes } : {}),
     ...(encounter === 'packs' ? { encounter, adjacentSlots } : {}),
+    ...(spellAreaInPacks === 'expected' ? { spellAreaInPacks } : {}),
     ...(exchangeModel === 'cadence' ? { exchangeModel } : {}),
     ...(purchases === 'defence' ? { purchases } : {}),
     ...(saleIdentify === 'when-profitable' ? { saleIdentify } : {}),
@@ -3256,6 +3455,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       exchangeModel,
       [...cadenceFallbackMonsters.values()],
       adjacentSlots,
+      spellAreaInPacks,
       defensiveAffixes,
       offensiveAffixes,
       purchases,
@@ -3349,6 +3549,7 @@ export function descentEntity(input: SimulateDescentInput): ReferenceWrapper {
     ...(simulation.gear === 'expected' ? ['expected-loot-gear'] : []),
     ...(simulation.defensiveAffixes === 'expected' ? ['expected-defensive-affixes'] : []),
     ...(simulation.offensiveAffixes === 'expected' ? ['expected-offensive-affixes'] : []),
+    ...(simulation.spellAreaInPacks === 'expected' ? ['expected-spell-area-in-packs'] : []),
     ...(simulation.purchases === 'defence' ? ['expected-defensive-store-purchases'] : []),
     ...(simulation.recovery === 'town-portal' ? ['town-portal-recovery'] : []),
   ]);
@@ -3391,6 +3592,9 @@ export function descentEntity(input: SimulateDescentInput): ReferenceWrapper {
           : {}),
         ...(simulation.offensiveAffixes === 'expected'
           ? { offensiveAffixes: simulation.offensiveAffixes }
+          : {}),
+        ...(simulation.spellAreaInPacks === 'expected'
+          ? { spellAreaInPacks: simulation.spellAreaInPacks }
           : {}),
         ...(simulation.purchases === 'defence' ? { purchases: simulation.purchases } : {}),
         ...(simulation.recovery === 'town-portal' ? { recovery: simulation.recovery } : {}),

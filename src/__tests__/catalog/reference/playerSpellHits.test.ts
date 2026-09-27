@@ -4,6 +4,7 @@ import {
   PLAYER_SPELL_HIT_SOURCES,
   playerSpellCastDamageOutcomes,
   resolvePlayerSpellHits,
+  resolvePlayerSpellPackSecondaryHits,
 } from '@/lib/catalog/reference/playerSpellHits';
 
 describe('player persistent spell hit topology', () => {
@@ -16,6 +17,14 @@ describe('player persistent spell hit topology', () => {
       expect(source.refs.length, source.spell).toBeGreaterThan(0);
       expect(source.refs.every((ref) => /\.reference\/devilutionX\/Source\/.+:\d/.test(ref)), source.spell).toBe(true);
       expect(['already-shifted-fixed-point', 'whole-hit-points']).toContain(source.collisionDamage);
+    }
+    for (const spell of [
+      'ChainLightning', 'FireWall', 'Inferno', 'Fireball',
+      'FlameWave', 'Nova', 'Lightning', 'Apocalypse',
+    ]) {
+      const source = PLAYER_SPELL_HIT_SOURCES.find((candidate) => candidate.spell === spell);
+      expect(source?.packGeometry, spell).toBeDefined();
+      expect(source?.packBehaviour, spell).toContain(' ');
     }
   });
 
@@ -49,6 +58,32 @@ describe('player persistent spell hit topology', () => {
       { damage: 10, weight: 0.25 },
       { damage: 20, weight: 0.25 },
     ]);
+  });
+
+  it('gives covered pack secondaries their own verified checks', () => {
+    const chain = resolvePlayerSpellPackSecondaryHits('ChainLightning', {
+      spellLevel: 1,
+      characterLevel: 10,
+      targetDistance: 4,
+    });
+    expect(chain).toMatchObject({
+      geometry: 'seeking-radius',
+      maximumCollisionChecks: 6,
+      activation: 'always',
+    });
+    const fireball = resolvePlayerSpellPackSecondaryHits('Fireball', {
+      spellLevel: 1,
+      characterLevel: 10,
+    });
+    expect(fireball).toMatchObject({
+      geometry: 'impact-3x3',
+      groups: [{ collisionChecks: 1 }],
+      activation: 'primary-hit',
+    });
+    expect(resolvePlayerSpellPackSecondaryHits('Firebolt', {
+      spellLevel: 1,
+      characterLevel: 10,
+    })).toBeUndefined();
   });
 
   it('uses the runtime sprite length for Apocalypse retries and stops after one hit', () => {

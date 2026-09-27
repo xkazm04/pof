@@ -27,11 +27,13 @@ import {
   expectedMonsterRecoveryStartsPerCast,
   playerSpellCastDamageOutcomes,
   resolvePlayerSpellHits,
+  resolvePlayerSpellPackSecondaryHits,
 } from '@/lib/catalog/reference/playerSpellHits';
 import { spellSpec } from '@/lib/catalog/reference/spellSpecs';
 
 export type PlayerAttackMode = 'melee' | 'ranged' | 'spell';
 export type DuelExchangeModel = 'per-hero-action' | 'cadence';
+export type SpellAreaInPacksPolicy = 'off' | 'expected';
 
 export interface DuelSpellAttack {
   spell: string;
@@ -60,6 +62,8 @@ export const DEFAULT_RANGED_ENGAGEMENT_DISTANCE = 4;
 export interface DuelOptions {
   gameMode?: GameMode;
   playerAttack: PlayerAttackMode;
+  /** Opt-in pack-only spell geometry; omitted/off leaves the duel result byte-compatible. */
+  spellAreaInPacks?: SpellAreaInPacksPolicy;
   /** Cadence is the default; omit its timing to fall back to the legacy per-hero-action exchange. */
   exchangeModel?: DuelExchangeModel;
   /** Fixed firing separation for a ranged duel. Defaults to four tiles. */
@@ -111,6 +115,10 @@ export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monste
   const requestedExchangeModel = opts.exchangeModel ?? 'cadence';
   if (!(['per-hero-action', 'cadence'] as const).includes(requestedExchangeModel)) {
     throw new Error(`unknown duel exchange model ${opts.exchangeModel}`);
+  }
+  const spellAreaInPacks = opts.spellAreaInPacks ?? 'off';
+  if (!(['off', 'expected'] as const).includes(spellAreaInPacks)) {
+    throw new Error(`unknown spell-area-in-packs policy ${opts.spellAreaInPacks}`);
   }
   const engagementDistance = opts.engagementDistance ?? opts.playerDistance ?? DEFAULT_RANGED_ENGAGEMENT_DISTANCE;
   if (!Number.isFinite(engagementDistance) || engagementDistance < 0) {
@@ -186,6 +194,15 @@ export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monste
     novaCardinalRay: selectedSpell.novaCardinalRay,
     apocalypseBoomAnimationTicks: selectedSpell.apocalypseBoomAnimationTicks,
   }) : undefined;
+  const secondaryPackSpellHits = selectedSpell && spellAreaInPacks === 'expected'
+    ? resolvePlayerSpellPackSecondaryHits(selectedSpell.spell, {
+        spellLevel: selectedSpell.spellLevel,
+        characterLevel: build.level,
+        targetDistance: engagementDistance,
+        novaCardinalRay: selectedSpell.novaCardinalRay,
+        apocalypseBoomAnimationTicks: selectedSpell.apocalypseBoomAnimationTicks,
+      })
+    : undefined;
   const playerCastDamage = spellHits
     ? playerSpellCastDamageOutcomes(playerDamage.outcomes, playerHitChance, spellHits.groups)
     : undefined;
@@ -193,6 +210,20 @@ export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monste
   const expectedPlayerDamagePerSwing = playerCastDamage
     ? playerCastDamage.reduce((sum, outcome) => sum + outcome.damage * outcome.weight, 0) / playerCastDamageWeight
     : playerHitChance * playerDamage.mean;
+  const secondaryPackCastDamage = secondaryPackSpellHits
+    ? playerSpellCastDamageOutcomes(playerDamage.outcomes, playerHitChance, secondaryPackSpellHits.groups)
+    : undefined;
+  const secondaryPackCastDamageWeight = secondaryPackCastDamage
+    ?.reduce((sum, outcome) => sum + outcome.weight, 0) ?? 0;
+  const secondaryPackActivationChance = secondaryPackSpellHits?.activation === 'primary-hit'
+    ? playerHitChance
+    : 1;
+  const expectedSecondaryPackDamagePerCast = secondaryPackCastDamage && secondaryPackCastDamageWeight > 0
+    ? secondaryPackActivationChance * secondaryPackCastDamage.reduce(
+        (sum, outcome) => sum + outcome.damage * outcome.weight,
+        0,
+      ) / secondaryPackCastDamageWeight
+    : 0;
   const monsterHitPoints = monsterHitPointDistribution(monster.hitPoints, monster.difficulty, gameMode);
   const expectedPlayerHitsToKill = expectedHitsToKill(monsterHitPoints, playerDamage.outcomes);
   const expectedPlayerSwingsToKill = playerCastDamage
@@ -342,6 +373,14 @@ export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monste
         startsMonsterRecovery,
       )
     : 0;
+  const secondaryMonsterRecoveryStartsPerCast = selectedSpell && secondaryPackSpellHits
+    ? secondaryPackActivationChance * expectedMonsterRecoveryStartsPerCast(
+        playerDamage.outcomes,
+        playerHitChance,
+        secondaryPackSpellHits.groups,
+        startsMonsterRecovery,
+      )
+    : 0;
   const playerDamageWeight = playerDamage.outcomes.reduce((sum, outcome) => sum + outcome.weight, 0);
   const hardHitChance = playerDamageWeight === 0 ? 0 : playerDamage.outcomes.reduce(
     (sum, outcome) => sum + (startsMonsterRecovery(outcome.damage) ? outcome.weight : 0),
@@ -391,6 +430,15 @@ export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monste
     : expectedPlayerSecondsToKill === null || expectedPlayerSecondsToKill === 0
       ? Infinity
       : expectedGotHitInterruptionsBeforeKill / expectedPlayerSecondsToKill;
+  const packMonsterAttackInterval = cadenceAvailable
+    ? opts.monsterAttackCycleSeconds!
+    : playerSwingSeconds;
+  const packBaseDamageTakenPerSecond = packMonsterAttackInterval == null || packMonsterAttackInterval === 0
+    ? 0
+    : expectedMonsterDamagePerSwing / FIXED_POINT / packMonsterAttackInterval;
+  const packBaseGotHitInterruptionsPerSecond = packMonsterAttackInterval == null || packMonsterAttackInterval === 0
+    ? 0
+    : gotHitChancePerMonsterAttack / packMonsterAttackInterval;
 
   return {
     gameMode,
@@ -407,6 +455,27 @@ export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monste
       playerSpellHitChecksPerCast: spellHits.maximumCollisionChecks,
       playerSpellCollisionGroups: spellHits.groups,
       playerSpellHitSource: spellHits.source,
+    } : {}),
+    ...(selectedSpell && secondaryPackSpellHits && playerSwingSeconds != null ? {
+      packSpell: {
+        policy: 'expected' as const,
+        spell: selectedSpell.spell,
+        spellLevel: selectedSpell.spellLevel,
+        geometry: secondaryPackSpellHits.geometry,
+        geometryAssumption: secondaryPackSpellHits.assumption,
+        expectedPrimaryDamagePerCast: expectedPlayerDamagePerSwing,
+        expectedSecondaryDamagePerCast: expectedSecondaryPackDamagePerCast,
+        primaryCollisionChecksPerCast: spellHits!.maximumCollisionChecks,
+        secondaryCollisionChecksPerCast: secondaryPackSpellHits.maximumCollisionChecks,
+        expectedPrimaryActionsToKill: expectedPlayerSwingsToKill,
+        actionSeconds: playerSwingSeconds,
+        expectedPrimaryRecoveryStartsBeforeKill: expectedMonsterRecoveryStartsBeforeKill,
+        expectedSecondaryRecoveryStartsPerCast: secondaryMonsterRecoveryStartsPerCast,
+        monsterRecoverySeconds: opts.monsterHitRecoverySeconds ?? 0,
+        baseDamageTakenPerSecond: packBaseDamageTakenPerSecond,
+        baseGotHitInterruptionsPerSecond: packBaseGotHitInterruptionsPerSecond,
+        manaPerCast: manaPerCast!,
+      },
     } : {}),
     playerSwingSeconds,
     expectedPlayerSecondsToKill,

@@ -12,6 +12,7 @@
  *     [--income monster-gold|gold-and-sales] [--items-per-trip N]
  *     [--identify never|when-profitable]
  *     [--encounter duel|packs] [--slots N]
+ *     [--spell-area-in-packs off|expected]
  *     [--buy none|defence]
  *     [--recovery none|town-portal] [--portal-trip-seconds N]
  *     [--chain]
@@ -38,6 +39,7 @@ import {
   type OffensiveAffixes,
   type SaleIdentify,
   type SorcererCombatPolicy,
+  type SpellAreaInPacks,
   type StatPointPolicy,
   type SustainIncome,
 } from '@/lib/catalog/reference/descentSim';
@@ -124,6 +126,15 @@ if (!Number.isInteger(adjacentSlots) || adjacentSlots < 1 || adjacentSlots > DEF
   console.error(`--slots must be an integer from 1 to ${DEFAULT_ADJACENT_SLOTS}`);
   process.exit(2);
 }
+const spellAreaInPacks = (arg('spell-area-in-packs') ?? 'off') as SpellAreaInPacks;
+if (!(['off', 'expected'] as const).includes(spellAreaInPacks)) {
+  console.error('--spell-area-in-packs must be off|expected');
+  process.exit(2);
+}
+if (spellAreaInPacks === 'expected' && (encounter !== 'packs' || className !== 'sorcerer')) {
+  console.error('--spell-area-in-packs expected requires --encounter packs --class sorcerer');
+  process.exit(2);
+}
 const recovery = (arg('recovery') ?? 'none') as DescentRecovery;
 if (!(['none', 'town-portal'] as const).includes(recovery)) {
   console.error('--recovery must be none|town-portal');
@@ -162,6 +173,7 @@ const simulationInput = {
   saleIdentify,
   encounter,
   adjacentSlots,
+  spellAreaInPacks,
   recovery,
   townPortalTripSeconds,
   wrappers,
@@ -216,6 +228,14 @@ console.table(result.levels.map((level) => {
         ? null
         : Number(level.pack!.expectedGotHitInterruptions.toFixed(2)),
       'pack sustainable': level.pack!.sustainable ? 'yes' : 'no',
+      ...(spellAreaInPacks === 'expected' ? {
+        'targets/cast': level.pack!.spellArea?.expectedTargetsAffectedPerCast == null
+          ? null
+          : Number(level.pack!.spellArea.expectedTargetsAffectedPerCast.toFixed(2)),
+        'attackers suppressed/cast': level.pack!.spellArea?.expectedAttackersSuppressedPerCast == null
+          ? null
+          : Number(level.pack!.spellArea.expectedAttackersSuppressedPerCast.toFixed(2)),
+      } : {}),
     } : {}),
     ...(recovery === 'town-portal' ? {
       'worst engagement': level.recovery!.worstEngagement.unbounded
@@ -365,7 +385,7 @@ const path = join(
   'pof',
   'Diablo',
   'Combat',
-  `descent-${className}-${policy}${gear === 'expected' ? '-expected-gear' : ''}${className === 'sorcerer' && sorcererCombatPolicy === 'mixed' ? '-mixed' : ''}${sustainIncome === 'gold-and-sales' ? '-gold-and-sales' : ''}${saleIdentify === 'when-profitable' ? '-identify-profitable' : ''}${encounter === 'packs' ? `-packs-${adjacentSlots}-slots` : ''}${defensiveAffixes === 'expected' ? '-expected-defense' : ''}${offensiveAffixes === 'expected' ? '-expected-offense' : ''}${purchases === 'defence' ? '-buy-defence' : ''}${recovery === 'town-portal' ? '-town-portal-recovery' : ''}${townPortalTripSeconds !== DEFAULT_TOWN_PORTAL_TRIP_SECONDS_ASSUMPTION ? `-${townPortalTripSeconds}s-town-trip` : ''}${chain ? '-chain' : ''}.json`,
+  `descent-${className}-${policy}${gear === 'expected' ? '-expected-gear' : ''}${className === 'sorcerer' && sorcererCombatPolicy === 'mixed' ? '-mixed' : ''}${sustainIncome === 'gold-and-sales' ? '-gold-and-sales' : ''}${saleIdentify === 'when-profitable' ? '-identify-profitable' : ''}${encounter === 'packs' ? `-packs-${adjacentSlots}-slots` : ''}${spellAreaInPacks === 'expected' ? '-expected-spell-area' : ''}${defensiveAffixes === 'expected' ? '-expected-defense' : ''}${offensiveAffixes === 'expected' ? '-expected-offense' : ''}${purchases === 'defence' ? '-buy-defence' : ''}${recovery === 'town-portal' ? '-town-portal-recovery' : ''}${townPortalTripSeconds !== DEFAULT_TOWN_PORTAL_TRIP_SECONDS_ASSUMPTION ? `-${townPortalTripSeconds}s-town-trip` : ''}${chain ? '-chain' : ''}.json`,
 );
 mkdirSync(dirname(path), { recursive: true });
 writeFileSync(path, JSON.stringify(result, null, 2));

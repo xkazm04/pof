@@ -952,6 +952,59 @@ describe('simulateDescent', () => {
     expect(result.assumptions.find((item) => item.id === 'adjacent-slots')).toMatchObject({ value: 8 });
   });
 
+  it('keeps spell-area off byte-identical and changes pack spell damage, time, mana, and recovery load when enabled', () => {
+    const noRecoveryMonster = {
+      ...monster,
+      raw: { ...monster.raw, _monster_id: 'MT_GOLEM' },
+      entity: {
+        ...monster.entity,
+        data: {
+          ...monster.entity.data,
+          derived: {
+            ...(monster.entity.data.derived as Record<string, unknown>),
+            attackCycleSeconds: 0.5,
+            tilesPerSecond: 100,
+            locomotion: { tilesPerSecondWhileWalking: 100 },
+          },
+        },
+      },
+    } satisfies ReferenceWrapper;
+    const input = {
+      className: 'sorcerer' as const,
+      policy: 'none' as const,
+      tilesPerLevel: 60,
+      gameMode: 'single' as const,
+      difficulty: 'normal' as const,
+      gear: 'none' as const,
+      sorcererCombatPolicy: 'pure-spell' as const,
+      encounter: 'packs' as const,
+      adjacentSlots: 8,
+      wrappers: [sorcerer, noRecoveryMonster, ...learnedSpellRows, ...curve],
+      locations: locationsFor(noRecoveryMonster),
+    };
+    const legacy = simulateDescent(input);
+    const explicitOff = simulateDescent({ ...input, spellAreaInPacks: 'off' });
+    const expected = simulateDescent({ ...input, spellAreaInPacks: 'expected' });
+    const legacyDepth = legacy.levels[12];
+    const expectedDepth = expected.levels[12];
+
+    expect(JSON.stringify(explicitOff)).toBe(JSON.stringify(legacy));
+    expect(expected).toMatchObject({ encounter: 'packs', spellAreaInPacks: 'expected' });
+    expect(expectedDepth.spellsUsed).toEqual([
+      expect.objectContaining({ spell: 'ChainLightning', killShare: 1 }),
+    ]);
+    expect(expectedDepth.pack?.spellArea?.expectedTargetsAffectedPerCast).toBeGreaterThan(1);
+    expect(expectedDepth.pack?.spellArea?.expectedAttackersSuppressedPerCast).toBeGreaterThanOrEqual(0);
+    expect(expectedDepth.expectedSecondsToClear!).toBeLessThan(legacyDepth.expectedSecondsToClear!);
+    expect(expectedDepth.expectedDamageTaken).not.toBe(legacyDepth.expectedDamageTaken);
+    expect(expectedDepth.mana!.expectedManaSpent!).toBeLessThan(legacyDepth.mana!.expectedManaSpent!);
+    expect(expected.assumptions.map((item) => item.id)).toEqual(expect.arrayContaining([
+      'spell-area-pack-geometry',
+      'spell-area-pack-damage',
+      'pack-wide-monster-hit-recovery',
+    ]));
+  });
+
   it('applies invented expected resistance and hit recovery to pack combat from the next depth', () => {
     const defensiveWarrior = {
       ...warrior,

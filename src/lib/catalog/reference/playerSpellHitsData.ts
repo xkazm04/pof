@@ -10,6 +10,8 @@ export const PLAYER_SPELL_HIT_SOURCES_DATA = [
     collisionChecks: 'floor(S/2)+6 per segment', damageRoll: 'once-per-segment',
     collisionDamage: 'already-shifted-fixed-point', hitResult: 'persists-and-rechecks',
     stationaryGeometry: 'Exactly one child segment occupies a stationary monster tile on the aimed path.',
+    packGeometry: 'aimed-line',
+    packBehaviour: 'SpawnLightning leaves one persistent child on every traversed tile, so a second member on the aimed lane receives that tile segment.',
     refs: [missile('808-850'), missile('1999-2025'), missile('3359-3391')],
   },
   {
@@ -18,6 +20,8 @@ export const PLAYER_SPELL_HIT_SOURCES_DATA = [
     damageRoll: 'once-per-segment', collisionDamage: 'already-shifted-fixed-point',
     hitResult: 'persists-and-rechecks',
     stationaryGeometry: 'The direct path always targets the selected monster; the radius fan-out adds a second path when it covers that tile.',
+    packGeometry: 'seeking-radius',
+    packBehaviour: 'ProcessChainLightning creates the aimed control and one additional control aimed at every monster found in its crawl radius.',
     refs: [missile('808-850'), missile('2236-2241'), missile('3359-3391'), missile('3585-3604')],
   },
   {
@@ -32,13 +36,17 @@ export const PLAYER_SPELL_HIT_SOURCES_DATA = [
     damageRoll: 'once-per-segment', collisionDamage: 'already-shifted-fixed-point',
     hitResult: 'persists-and-rechecks',
     stationaryGeometry: 'The targeted center or an ordinary wall segment covers the monster; gap-fill segments only check walking actors.',
-    refs: [missile('742-786'), missile('1961-1975'), missile('3065-3097'), missile('3775-3840')],
+    packGeometry: 'cross-line',
+    packBehaviour: 'The controller places the center and grows ordinary wall segments to both sides across the aimed approach.',
+    refs: [missile('742-786'), missile('1961-1975'), missile('2535-2562'), missile('3065-3097'), missile('3775-3840')],
   },
   {
     spell: 'Fireball', kind: 'impact-and-blast', collisionChecks: 'one flight check, then one blast check only after a successful direct impact',
     damageRoll: 'once-per-cast', collisionDamage: 'whole-hit-points',
     hitResult: 'flight-becomes-one-shot-blast',
     stationaryGeometry: 'The monster occupies the direct impact tile; a missed flight check does not terminate there and therefore does not blast that tile.',
+    packGeometry: 'impact-3x3',
+    packBehaviour: 'A successful flight collision changes to the explosion and checks the impact tile plus all eight neighbouring offsets.',
     refs: [missile('1977-1997'), missile('3099-3166')],
   },
   {
@@ -53,6 +61,8 @@ export const PLAYER_SPELL_HIT_SOURCES_DATA = [
     damageRoll: 'once-per-segment', collisionDamage: 'whole-hit-points',
     hitResult: 'persists-without-rechecking-target',
     stationaryGeometry: 'One moving wave segment crosses the stationary monster once; restoring the duration lets it continue to later tiles.',
+    packGeometry: 'widening-wave',
+    packBehaviour: 'The controller places a center segment and floor(S/2)+2 moving segments on each side, subject to wall placement.',
     refs: [missile('2177-2186'), missile('3480-3512'), missile('3878-3907')],
   },
   {
@@ -60,6 +70,8 @@ export const PLAYER_SPELL_HIT_SOURCES_DATA = [
     damageRoll: 'once-per-cast', collisionDamage: 'whole-hit-points',
     hitResult: 'persists-without-rechecking-target',
     stationaryGeometry: 'A monster stays on one unobstructed emitted ray; the four cardinal directions each have two coincident balls.',
+    packGeometry: 'radial-ring',
+    packBehaviour: 'ProcessNovaCommon emits rays throughout all four quadrants around the caster.',
     refs: [missile('1951-1959'), missile('2572-2586'), missile('3028-3046'), missile('3285-3317')],
   },
   {
@@ -67,6 +79,8 @@ export const PLAYER_SPELL_HIT_SOURCES_DATA = [
     damageRoll: 'once-per-segment', collisionDamage: 'already-shifted-fixed-point',
     hitResult: 'persists-and-rechecks',
     stationaryGeometry: 'Only the one child segment occupying the stationary monster tile checks it; the controller creates at most three tiles.',
+    packGeometry: 'aimed-line',
+    packBehaviour: 'The moving controller creates one persistent child on each traversed tile of the aimed line.',
     refs: [missile('2672-2700'), missile('3940-3990')],
   },
   {
@@ -74,6 +88,8 @@ export const PLAYER_SPELL_HIT_SOURCES_DATA = [
     damageRoll: 'once-per-cast', collisionDamage: 'whole-hit-points',
     hitResult: 'stops-damaging-after-hit',
     stationaryGeometry: 'The scan creates one boom on the stationary monster tile; its sprite animation length supplies the maximum retry count.',
+    packGeometry: 'scanned-area',
+    packBehaviour: 'ProcessApocalypse scans the bounded area and creates one boom directly on every eligible monster tile.',
     refs: [missile('2455-2460'), missile('2657-2670'), missile('3726-3736'), missile('3853-3876'), spell('211-233')],
   },
 ] as const satisfies readonly PlayerSpellHitSource[];

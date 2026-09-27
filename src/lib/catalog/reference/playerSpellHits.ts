@@ -9,6 +9,14 @@ export type PlayerSpellHitResult =
   | 'flight-becomes-one-shot-blast'
   | 'child-deleted-on-hit'
   | 'stops-damaging-after-hit';
+export type PlayerSpellPackGeometry =
+  | 'aimed-line'
+  | 'seeking-radius'
+  | 'cross-line'
+  | 'impact-3x3'
+  | 'widening-wave'
+  | 'radial-ring'
+  | 'scanned-area';
 
 interface PlayerSpellHitSourceBase {
   readonly spell: string;
@@ -17,6 +25,9 @@ interface PlayerSpellHitSourceBase {
   readonly collisionDamage: PlayerSpellCollisionDamage;
   readonly hitResult: PlayerSpellHitResult;
   readonly stationaryGeometry: string;
+  /** Engine topology only; compact-ring coverage is a separate named pack-model assumption. */
+  readonly packGeometry?: PlayerSpellPackGeometry;
+  readonly packBehaviour?: string;
   readonly refs: readonly string[];
 }
 
@@ -59,6 +70,15 @@ export interface ResolvedPlayerSpellHits {
   readonly collisionDamage: PlayerSpellCollisionDamage;
   readonly hitResult: PlayerSpellHitResult | 'deleted-on-hit';
   readonly stationaryAssumption: string;
+}
+
+export interface ResolvedPlayerSpellPackSecondaryHits {
+  readonly geometry: PlayerSpellPackGeometry;
+  readonly groups: readonly PlayerSpellCollisionGroup[];
+  readonly maximumCollisionChecks: number;
+  /** Fireball creates its neighbour blast only after the primary flight collision succeeds. */
+  readonly activation: 'always' | 'primary-hit';
+  readonly assumption: string;
 }
 
 export const PLAYER_SPELL_HIT_SOURCES: readonly PlayerSpellHitSource[] = PLAYER_SPELL_HIT_SOURCES_DATA;
@@ -155,6 +175,36 @@ export function resolvePlayerSpellHits(spell: string, input: PlayerSpellHitInput
     collisionDamage: source.collisionDamage,
     hitResult: source.hitResult,
     stationaryAssumption: source.stationaryGeometry,
+  };
+}
+
+/**
+ * Resolve the collision groups received by one additional covered pack member. Coverage itself is
+ * deliberately left to packMath: these are the engine checks after the named geometry assumption
+ * says that the member lies on/in the spell.
+ */
+export function resolvePlayerSpellPackSecondaryHits(
+  spell: string,
+  input: PlayerSpellHitInput,
+): ResolvedPlayerSpellPackSecondaryHits | undefined {
+  const primary = resolvePlayerSpellHits(spell, input);
+  if (!primary.source?.packGeometry) return undefined;
+
+  let groups = primary.groups;
+  let activation: ResolvedPlayerSpellPackSecondaryHits['activation'] = 'always';
+  if (primary.source.kind === 'lightning-segment' && primary.source.targetPaths === 'direct-plus-radius') {
+    groups = primary.groups.slice(0, 1);
+  } else if (primary.source.kind === 'impact-and-blast') {
+    groups = [{ collisionChecks: 1, mode: 'independent-repeat' }];
+    activation = 'primary-hit';
+  }
+
+  return {
+    geometry: primary.source.packGeometry,
+    groups,
+    maximumCollisionChecks: groups.reduce((sum, group) => sum + group.collisionChecks, 0),
+    activation,
+    assumption: primary.source.packBehaviour ?? primary.source.stationaryGeometry,
   };
 }
 
