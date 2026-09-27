@@ -1,4 +1,5 @@
 /** Diablo I town services transcribed from the pinned engine source, not from its data tables. */
+import type { ProjectRule } from '@/lib/catalog/canon/types';
 import type { StoreLawData, StoreSpecData } from '@/lib/catalog/reference/storeSpecs';
 
 type SourceReference = `.reference/devilutionX/Source/${string}`;
@@ -125,3 +126,13 @@ export const STORE_LAWS_DATA: readonly StoreLawData[] = [
     refs: refs('.reference/devilutionX/Source/stores.cpp:1334-1383', '.reference/devilutionX/Source/stores.cpp:1431-1454', '.reference/devilutionX/Source/stores.cpp:2866-2908'),
   },
 ];
+
+/** Laws live beside the data so the canon imports them without a cycle through the seeding module. */
+export const DIABLO1_STORE_LAWS: readonly ProjectRule[] = STORE_LAWS_DATA.map((law) => ({
+  ...law,
+  profile: 'diablo1',
+  category: 'game',
+  scope: 'vendors',
+  title: `${law.title} (engine-derived)`,
+  refs: [...law.refs],
+}));

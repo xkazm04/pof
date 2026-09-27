@@ -13,16 +13,16 @@
  * This file is part of the reference-replication exercise and is deleted with it.
  */
 import type { ProjectRule } from '../types';
-import { DIABLO1_LOCATION_LAWS } from '@/lib/catalog/reference/locationSpecs';
+import { DIABLO1_LOCATION_LAWS } from '@/lib/catalog/reference/locationSpecsData';
 import { DIABLO1_CURRENCY_LAWS } from '@/lib/catalog/reference/currencySpecsData';
 import { DIABLO1_ENCOUNTER_LAWS } from '@/lib/catalog/reference/encounterSpecsData';
 import { DIABLO1_LOOT_LAWS } from '@/lib/catalog/reference/lootSpecsData';
 import { DIABLO1_MOVEMENT_LAWS } from '@/lib/catalog/reference/movementSpecsData';
-import { DIABLO1_OBJECT_LAWS } from '@/lib/catalog/reference/objectSpecs';
+import { DIABLO1_OBJECT_LAWS } from '@/lib/catalog/reference/objectSpecsData';
 import { DIABLO1_SPELL_LAWS } from '@/lib/catalog/reference/spellSpecsData';
 import { DIABLO1_STATE_GRAPH_LAWS } from '@/lib/catalog/reference/stateGraphSpecsData';
-import { DIABLO1_STATUS_LAWS } from '@/lib/catalog/reference/statusSpecs';
-import { DIABLO1_STORE_LAWS } from '@/lib/catalog/reference/storeSpecs';
+import { DIABLO1_STATUS_LAWS } from '@/lib/catalog/reference/statusSpecsData';
+import { DIABLO1_STORE_LAWS } from '@/lib/catalog/reference/storeSpecsData';
 
 /** PoF rules that are world-neutral ENGINEERING contracts, adopted unchanged under this profile. */
 export const DIABLO1_INHERITS_POF: readonly string[] = [

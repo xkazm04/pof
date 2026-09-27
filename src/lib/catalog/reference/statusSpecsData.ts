@@ -1,4 +1,5 @@
 /** Engine-derived Diablo I actor states. Values are transcribed from the pinned Source, not a data table. */
+import type { ProjectRule } from '@/lib/catalog/canon/types';
 import type { StatusSpecData } from '@/lib/catalog/reference/statusSpecs';
 
 type SourceReference = `.reference/devilutionX/Source/${string}`;
@@ -364,3 +365,28 @@ export const STATUS_OVERVIEW = {
   lawBody: 'Diablo I status overview, derived from the engine: there is no generic status, damage-over-time, crowd-control, dispel, or stack container. Player booleans and counters, monster modes, goals and flags, equipment recomputation, and timed missiles each own their rules. Fire Wall, Inferno, Acid Puddle, and Lightning Wall rerun tile collision; they do not attach ailments. No shared global actor-status state exists.',
   refs: refs('.reference/devilutionX/Source/player.h:147', '.reference/devilutionX/Source/player.h:335', '.reference/devilutionX/Source/monster.h:76', '.reference/devilutionX/Source/monster.h:121', '.reference/devilutionX/Source/missiles.h:118', '.reference/devilutionX/Source/items.cpp:2792'),
 } as const;
+
+/** Laws live beside the data so the canon imports them without a cycle through the seeding module. */
+export const statusEntityId = (specId: string): string => `d1-status-${specId.replace(/^d1-/, '')}`;
+export const statusLawId = (specId: string): string => `${statusEntityId(specId)}-law`;
+
+export const DIABLO1_STATUS_LAWS: readonly ProjectRule[] = [
+  ...STATUS_SPECS_DATA.map((spec) => ({
+    id: statusLawId(spec.id),
+    profile: 'diablo1',
+    category: 'game' as const,
+    scope: 'status-effects',
+    title: `${spec.name} law (engine-derived)${spec.hellfire ? ' (Hellfire)' : ''}`,
+    body: spec.lawBody,
+    refs: [...spec.refs],
+  })),
+  {
+    id: 'd1-status-overview-law',
+    profile: 'diablo1',
+    category: 'game',
+    scope: 'status-effects',
+    title: 'Diablo I status-system overview (engine-derived)',
+    body: STATUS_OVERVIEW.lawBody,
+    refs: [...STATUS_OVERVIEW.refs],
+  },
+];

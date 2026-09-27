@@ -1,11 +1,10 @@
 /** Diablo I town stores and paid services derived from the pinned engine source. */
 import { REFERENCE_GAP } from '@/lib/catalog/acceptance/markers';
 import { SOURCED_FIELD, type SourcedStamp } from '@/lib/catalog/acceptance/sourced';
-import type { ProjectRule } from '@/lib/catalog/canon/types';
 import type { IngestedEntity } from '@/lib/catalog/ingest/run';
 import type { StepSeed } from '@/lib/catalog/reference/stepSeeds';
 import { DIABLO1 } from '@/lib/catalog/reference/sources';
-import { STORE_LAWS_DATA, STORE_SPECS_DATA } from '@/lib/catalog/reference/storeSpecsData';
+import { DIABLO1_STORE_LAWS, STORE_SPECS_DATA } from '@/lib/catalog/reference/storeSpecsData';
 
 export type StoreKind = 'shop' | 'premium-shop' | 'repair' | 'recharge' | 'healing' | 'inspection-shop' | 'identify';
 export type StoreTowner = 'Griswold' | 'Adria' | 'Pepin' | 'Wirt' | 'Cain';
@@ -45,14 +44,7 @@ export interface StoreLawData {
 
 export const STORE_SPECS: readonly StoreSpecData[] = STORE_SPECS_DATA;
 
-export const DIABLO1_STORE_LAWS: readonly ProjectRule[] = STORE_LAWS_DATA.map((law) => ({
-  ...law,
-  profile: 'diablo1',
-  category: 'game',
-  scope: 'vendors',
-  title: `${law.title} (engine-derived)`,
-  refs: [...law.refs],
-}));
+export { DIABLO1_STORE_LAWS };
 
 export type StoreCatalogEntity = IngestedEntity;
 export interface StoreEntityWrapper { catalogId: 'vendors'; entity: StoreCatalogEntity }

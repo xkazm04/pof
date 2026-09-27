@@ -1,4 +1,5 @@
 /** Engine-derived Diablo I locations. Table rows remain external; only engine structure lives here. */
+import type { ProjectRule } from '@/lib/catalog/canon/types';
 import type { LocationSpecData } from '@/lib/catalog/reference/locationSpecs';
 
 const source = (path: string): string => {
@@ -250,3 +251,14 @@ export const LOCATION_LAW_DATA = [
     refs: refs('items.cpp:3256', 'items.cpp:3422', 'items.cpp:3472', 'items.cpp:399'),
   },
 ] as const;
+
+/** Laws live beside the data so the canon imports them without a cycle through the seeding module. */
+export const DIABLO1_LOCATION_LAWS: readonly ProjectRule[] = LOCATION_LAW_DATA.map((law) => ({
+  id: law.id,
+  profile: 'diablo1',
+  category: 'game',
+  scope: law.scope,
+  title: `${law.title} (engine-derived)`,
+  body: law.body,
+  refs: [...law.refs],
+}));

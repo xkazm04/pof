@@ -1,10 +1,9 @@
 /** Diablo I object operations derived from engine dispatch rather than from objdat.tsv values. */
 import { REFERENCE_GAP } from '@/lib/catalog/acceptance/markers';
 import { SOURCED_FIELD, type SourcedStamp } from '@/lib/catalog/acceptance/sourced';
-import type { ProjectRule } from '@/lib/catalog/canon/types';
 import type { StepSeed } from '@/lib/catalog/reference/stepSeeds';
 import type { ReferenceWrapper } from '@/lib/catalog/reference/wrapper';
-import { OBJECT_SPECS_DATA, SHRINE_EFFECTS_DATA } from '@/lib/catalog/reference/objectSpecsData';
+import { DIABLO1_OBJECT_LAWS, OBJECT_SPECS_DATA, SHRINE_EFFECTS_DATA } from '@/lib/catalog/reference/objectSpecsData';
 
 export type ObjectId = `OBJ_${string}`;
 
@@ -59,47 +58,7 @@ export function withObjectSpecs(wrappers: readonly ReferenceWrapper[]): Referenc
   });
 }
 
-interface ObjectLawData {
-  id: string;
-  title: string;
-  body: string;
-  refs: readonly string[];
-}
-
-const OBJECT_LAW_DATA: readonly ObjectLawData[] = [
-  {
-    id: 'd1-object-operation-law',
-    title: 'Object operation overview (engine-derived)',
-    body: 'Object operation, derived from the engine: an interactive object must still have an active selection region. Dispatch by kind then handles doors, map switches, quest state, containers, shrines, fountains and racks. Most one-use objects clear selection and advance or stop their animation; doors, story books, trap levers and restoration fountains are reusable.',
-    refs: ['.reference/devilutionX/Source/objects.cpp:4377'],
-  },
-  {
-    id: 'd1-shrine-selection-law',
-    title: 'Shrine selection law (engine-derived)',
-    body: 'Shrine selection, derived from the engine: fixed shrines choose an eligible type when placed; goat shrines and cauldrons choose when used. Vanilla draws only the first 26 effects. Single-player excludes multiplayer-only effects and multiplayer excludes single-player-only effects. Enchanted is limited to Cathedral or Catacombs, and random-use sources also exclude Thaumaturgic.',
-    refs: ['.reference/devilutionX/Source/objects.cpp:1297', '.reference/devilutionX/Source/objects.cpp:3191'],
-  },
-  {
-    id: 'd1-object-trap-law',
-    title: 'Object trap law (engine-derived)',
-    body: 'Object traps, derived from the engine: eligible floor objects have a 10%, 15%, 20% or 25% wall-trap chance as depth crosses 1, 2, 5 and 7. A placed wall trap fires once after its linked object changes state, aiming at a nearby hero, with projectile class chosen by effective depth. Ordinary chests separately have a 10% chance to become trapped-chest variants.',
-    refs: ['.reference/devilutionX/Source/objects.cpp:478', '.reference/devilutionX/Source/objects.cpp:529', '.reference/devilutionX/Source/objects.cpp:1227', '.reference/devilutionX/Source/objects.cpp:4138'],
-  },
-  {
-    id: 'd1-container-drop-law',
-    title: 'Container drop law (engine-derived)',
-    body: 'Container drops, derived from the engine: a chest stores its seed and size-tier count at creation, then opening replays that seed for useful or ordinary random items; set-level chests use fixed tier counts. Sarcophagi and barrels instead resolve a stored item, monster or empty outcome. Book furniture and equipment racks create their named item class using the current dungeon context.',
-    refs: ['.reference/devilutionX/Source/objects.cpp:915', '.reference/devilutionX/Source/objects.cpp:2018', '.reference/devilutionX/Source/objects.cpp:2188', '.reference/devilutionX/Source/objects.cpp:3110', '.reference/devilutionX/Source/objects.cpp:3169', '.reference/devilutionX/Source/objects.cpp:3324', '.reference/devilutionX/Source/objects.cpp:3461'],
-  },
-];
-
-export const DIABLO1_OBJECT_LAWS: readonly ProjectRule[] = OBJECT_LAW_DATA.map((law) => ({
-  ...law,
-  profile: 'diablo1',
-  category: 'game' as const,
-  scope: 'props',
-  refs: [...law.refs],
-}));
+export { DIABLO1_OBJECT_LAWS };
 
 const BREAKABLE_KINDS = new Set(['barrel', 'explosive-container', 'crucifix']);
 

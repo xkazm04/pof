@@ -1,12 +1,16 @@
 /** Diablo I actor states derived from engine code rather than a reference data table. */
 import { REFERENCE_GAP } from '@/lib/catalog/acceptance/markers';
 import { SOURCED_FIELD, type SourcedStamp } from '@/lib/catalog/acceptance/sourced';
-import type { ProjectRule } from '@/lib/catalog/canon/types';
 import type { IngestedEntity } from '@/lib/catalog/ingest/run';
 import type { CatalogLink } from '@/lib/catalog/types';
 import type { StepSeed } from '@/lib/catalog/reference/stepSeeds';
 import { DIABLO1 } from '@/lib/catalog/reference/sources';
-import { STATUS_OVERVIEW, STATUS_SPECS_DATA } from '@/lib/catalog/reference/statusSpecsData';
+import {
+  DIABLO1_STATUS_LAWS,
+  STATUS_SPECS_DATA,
+  statusEntityId,
+  statusLawId,
+} from '@/lib/catalog/reference/statusSpecsData';
 
 export type StatusAppliesTo = 'hero' | 'monster' | 'both';
 
@@ -27,29 +31,7 @@ export interface StatusSpecData {
 export type StatusSpec = StatusSpecData;
 export const STATUS_SPECS: readonly StatusSpec[] = STATUS_SPECS_DATA;
 
-export const statusEntityId = (specId: string): string => `d1-status-${specId.replace(/^d1-/, '')}`;
-export const statusLawId = (specId: string): string => `${statusEntityId(specId)}-law`;
-
-export const DIABLO1_STATUS_LAWS: readonly ProjectRule[] = [
-  ...STATUS_SPECS.map((spec) => ({
-    id: statusLawId(spec.id),
-    profile: 'diablo1',
-    category: 'game' as const,
-    scope: 'status-effects',
-    title: `${spec.name} law (engine-derived)${spec.hellfire ? ' (Hellfire)' : ''}`,
-    body: spec.lawBody,
-    refs: [...spec.refs],
-  })),
-  {
-    id: 'd1-status-overview-law',
-    profile: 'diablo1',
-    category: 'game',
-    scope: 'status-effects',
-    title: 'Diablo I status-system overview (engine-derived)',
-    body: STATUS_OVERVIEW.lawBody,
-    refs: [...STATUS_OVERVIEW.refs],
-  },
-];
+export { DIABLO1_STATUS_LAWS, statusEntityId, statusLawId };
 
 /** Spell rows that have an engine-state census row. The value is the promoted status entity id. */
 export const SPELL_STATUS_ENTITY_IDS: Readonly<Record<string, string>> = {

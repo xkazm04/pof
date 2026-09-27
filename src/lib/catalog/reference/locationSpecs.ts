@@ -1,10 +1,9 @@
 /** Diablo I zone-map projections derived from pinned engine structure and external wrappers. */
 import { REFERENCE_GAP } from '@/lib/catalog/acceptance/markers';
 import { SOURCED_FIELD, type SourcedStamp } from '@/lib/catalog/acceptance/sourced';
-import type { ProjectRule } from '@/lib/catalog/canon/types';
 import { DIABLO1_SOURCE } from '@/lib/catalog/ingest/diablo1';
 import type { IngestedEntity } from '@/lib/catalog/ingest/run';
-import { LOCATION_LAW_DATA, LOCATION_SPECS_DATA } from '@/lib/catalog/reference/locationSpecsData';
+import { DIABLO1_LOCATION_LAWS, LOCATION_SPECS_DATA } from '@/lib/catalog/reference/locationSpecsData';
 import type { StepSeed } from '@/lib/catalog/reference/stepSeeds';
 import type { ReferenceWrapper } from '@/lib/catalog/reference/wrapper';
 import type { CatalogLink } from '@/lib/catalog/types';
@@ -38,15 +37,7 @@ export interface LocationSpecData {
 export type LocationSpec = LocationSpecData;
 export const LOCATION_SPECS: readonly LocationSpec[] = LOCATION_SPECS_DATA;
 
-export const DIABLO1_LOCATION_LAWS: readonly ProjectRule[] = LOCATION_LAW_DATA.map((law) => ({
-  id: law.id,
-  profile: 'diablo1',
-  category: 'game',
-  scope: law.scope,
-  title: `${law.title} (engine-derived)`,
-  body: law.body,
-  refs: [...law.refs],
-}));
+export { DIABLO1_LOCATION_LAWS };
 
 export interface LocationEntityData {
   kind: LocationKind;
