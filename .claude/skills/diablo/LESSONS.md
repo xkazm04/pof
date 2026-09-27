@@ -162,3 +162,6 @@
   laws to the same claim-level audit as old ones BEFORE they ship.
 - **The same misread recurs across fresh delegates.** Three separate auditors read MoveMissileAndCheckMissileCol's positional booleans
   as isDamageShifted. When a misreading recurs, encode the verified fact as a law so the next reader does not re-derive it.
+- **The xhigh stall watchdog (40 min of event silence) can reap healthy runs.** 2026-09-28 ~01:00–01:47 three xhigh runs (a large audit
+  JSON, a big write task, a report) were reaped while composing; codex itself answered normally. Resume the same session with
+  `POF_CODEX_STALL_MIN=80` and ask for incremental file writes / short evidence strings — the research is kept in the session.
