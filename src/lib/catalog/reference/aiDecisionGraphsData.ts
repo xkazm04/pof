@@ -109,9 +109,13 @@ const rangedAvoidanceBands = (sourceRef: string): AiDecisionGraphData => ({
     {
       distance: 0,
       role: 'adjacent',
+      scenarioTest: 'condition',
       scenarios: [{
         context: 'Normal goal with a clear line', primary: true,
         tree: rollBands([[3, specialRanged], [4, melee]], action('Delay', 'wait', ref(4))),
+      }, {
+        context: 'Normal goal with a blocked line',
+        tree: roll(5, melee, action('Delay', 'wait', ref(5))),
       }],
     },
     {
@@ -141,8 +145,10 @@ const sharedRangedBands = (special = false, suppressPostShotDelay = false): read
       scenarioTest: 'previous-mode',
       scenarios: [
         ...(!suppressPostShotDelay ? [{ context: 'Previous mode was RangedAttack', tree: action('Delay', 'wait', ref(0)) }] : []),
-        { context: `${suppressPostShotDelay ? 'Previous mode was SpecialRangedAttack' : 'Previous mode was not RangedAttack'}; line clear`, primary: true, tree: roll(1, tacticalWalk, shot) },
-        { context: `${suppressPostShotDelay ? 'Previous mode was SpecialRangedAttack' : 'Previous mode was not RangedAttack'}; line blocked`, tree: roll(1, tacticalWalk, idle) },
+        { context: `${suppressPostShotDelay ? 'Previous mode was SpecialRangedAttack' : 'Previous mode was not RangedAttack'}; retreat tile legal; line clear`, primary: true, tree: roll(1, tacticalWalk, shot) },
+        { context: `${suppressPostShotDelay ? 'Previous mode was SpecialRangedAttack' : 'Previous mode was not RangedAttack'}; retreat tile legal; line blocked`, tree: roll(1, tacticalWalk, idle) },
+        { context: `${suppressPostShotDelay ? 'Previous mode was SpecialRangedAttack' : 'Previous mode was not RangedAttack'}; retreat movement blocked; line clear`, tree: roll(1, shot, shot) },
+        { context: `${suppressPostShotDelay ? 'Previous mode was SpecialRangedAttack' : 'Previous mode was not RangedAttack'}; retreat movement blocked; line blocked`, tree: roll(1, idle, idle) },
       ],
     },
     {
@@ -212,7 +218,7 @@ const counselorBands = (ignoreDelay = false): readonly AiGraphDistanceBandData[]
     scenarios: [
       {
         context: 'Normal goal with line test', primary: true,
-        tree: roll(0, ranged, roll(1, action('FadeOut', 'special'), ignoreDelay ? idle : action('Delay', 'wait'), 'Counselor'), 'Counselor'),
+        tree: roll(0, ranged, roll(1, action('FadeOut', 'special'), ignoreDelay ? idle : action('Delay', 'wait', ref(1, 'Counselor')), 'Counselor'), 'Counselor'),
       },
       { context: 'Move goal', tree: tacticalWalk },
       { context: 'Retreat goal', tree: tacticalWalk },
@@ -256,21 +262,26 @@ export const D1_AI_DECISION_GRAPHS_DATA: Record<string, AiDecisionGraphData> = {
     sourceRefs: ['.reference/devilutionX/Source/monster.cpp:2149'],
     bands: [
       { distance: 0, role: 'adjacent', scenarioTest: 'previous-mode', scenarios: [
-        { context: 'Settled; retreat tile legal', primary: true, tree: roll(0, tacticalWalk, roll(2, ranged, idle)) },
-        { context: 'After movement; retreat tile legal', tree: roll(1, tacticalWalk, roll(2, ranged, idle)) },
-        { context: 'Retreat tile blocked', tree: roll(0, roll(2, ranged, idle), roll(2, ranged, idle)) },
+        { context: 'Settled; retreat tile legal; line clear', primary: true, tree: roll(0, tacticalWalk, roll(2, ranged, idle)) },
+        { context: 'After movement; retreat tile legal; line clear', tree: roll(1, tacticalWalk, roll(2, ranged, idle)) },
+        { context: 'Retreat movement blocked; line clear', tree: roll(0, roll(2, ranged, idle), roll(2, ranged, idle)) },
+        { context: 'Settled; retreat tile legal; line blocked', tree: roll(0, tacticalWalk, idle) },
+        { context: 'After movement; retreat tile legal; line blocked', tree: roll(1, tacticalWalk, idle) },
+        { context: 'Retreat movement blocked; line blocked', tree: idle },
       ] },
-      { distance: 1, role: 'range', scenarios: [{ context: 'Outside retreat band', tree: roll(2, ranged, idle) }] },
+      { distance: 1, role: 'range', scenarioTest: 'condition', scenarios: [
+        { context: 'Outside retreat band; line clear', tree: roll(2, ranged, idle) },
+        { context: 'Outside retreat band; line blocked', tree: idle },
+      ] },
     ],
   },
   Scavenger: {
     sourceRefs: ['.reference/devilutionX/Source/monster.cpp:2180', '.reference/devilutionX/Source/monster.cpp:2202', '.reference/devilutionX/Source/monster.cpp:2124'],
-    findings: ['The table says the fair bit selects ascending versus descending corpse traversal. In the pinned source, the descending case starts at +4 with a -1 increment but retains y <= -4 and x <= -4 loop conditions, so neither loop iterates.'],
     bands: [
       { distance: 0, role: 'other', scenarioTest: 'condition', scenarios: [
         { context: 'Healing while standing on a corpse', tree: specialMelee },
         { context: 'Healing with a remembered corpse', tree: tacticalWalk },
-        { context: 'Healing search has no remembered corpse', tree: roll(1, tacticalWalk, idle) },
+        { context: 'Healing search has no remembered corpse', tree: roll(1, test('condition', 'ascending scan result', [['corpse found', tacticalWalk], ['no corpse found', idle]]), idle) },
       ] },
       { distance: 1, role: 'range', scenarioTest: 'previous-mode', scenarios: [
         { context: 'Healing did not start an action; previous mode was Delay', tree: approach },
@@ -316,10 +327,18 @@ export const D1_AI_DECISION_GRAPHS_DATA: Record<string, AiDecisionGraphData> = {
     bands: [
       { distance: 0, role: 'adjacent', scenarioTest: 'condition', scenarios: [
         { context: 'Summoning disabled', primary: true, tree: roll(3, melee, idle) },
-        { context: 'Vanilla single-player summon branch', tree: roll(1, action('SpecialStand', 'special'), roll(3, melee, idle)) },
+        { context: 'Multiplayer quests disabled; summon resources available', tree: roll(1, action('SpecialStand', 'special'), roll(3, melee, idle)) },
+        { context: 'Multiplayer quests disabled; summon resources unavailable', tree: roll(1, idle, roll(3, melee, idle)) },
       ] },
-      { label: 'approach range below circle entry', role: 'range', scenarios: [{ context: 'Normal goal', primary: true, tree: roll(2, approach, action('Delay', 'wait')) }] },
-      { distance: 1, role: 'range', scenarios: [{ context: 'Fully alert in the target room', tree: roll(0, tacticalWalk, roll(1, action('SpecialStand', 'special'), roll(2, approach, action('Delay', 'wait')))) }] },
+      { label: 'approach range below circle entry', role: 'range', scenarioTest: 'condition', scenarios: [
+        { context: 'Summoning disabled', primary: true, tree: roll(2, approach, action('Delay', 'wait', ref(2))) },
+        { context: 'Multiplayer quests disabled; summon resources available', tree: roll(1, action('SpecialStand', 'special'), roll(2, approach, action('Delay', 'wait', ref(2)))) },
+        { context: 'Multiplayer quests disabled; summon resources unavailable', tree: roll(1, idle, roll(2, approach, action('Delay', 'wait', ref(2)))) },
+      ] },
+      { distance: 1, role: 'range', scenarioTest: 'condition', scenarios: [
+        { context: 'Fully alert in the target room; summon resources available', tree: roll(0, tacticalWalk, roll(1, action('SpecialStand', 'special'), roll(2, approach, action('Delay', 'wait', ref(2))))) },
+        { context: 'Fully alert in the target room; summon resources unavailable', tree: roll(0, tacticalWalk, roll(1, idle, roll(2, approach, action('Delay', 'wait', ref(2))))) },
+      ] },
     ],
   },
   Bat: {
@@ -331,7 +350,10 @@ export const D1_AI_DECISION_GRAPHS_DATA: Record<string, AiDecisionGraphData> = {
         { context: 'Immediately after movement', tree: roll(2, approach, idle) },
       ] },
       { distance: 1, role: 'range', scenarios: [{ context: 'Gloom with clear route', tree: roll(0, action('Charge', 'special'), roll(1, approach, idle)) }] },
-      { label: 'post-melee retreat', role: 'other', scenarios: [{ context: 'Second retreat decision', tree: roll(4, tacticalWalk, tacticalWalk) }] },
+      { label: 'post-melee retreat', role: 'other', scenarioTest: 'condition', scenarios: [
+        { context: 'First retreat AI call', tree: tacticalWalk },
+        { context: 'Second retreat AI call', tree: roll(4, tacticalWalk, tacticalWalk) },
+      ] },
     ],
   },
   Gargoyle: {
@@ -382,7 +404,6 @@ export const D1_AI_DECISION_GRAPHS_DATA: Record<string, AiDecisionGraphData> = {
   Acid: rangedAvoidanceBands('.reference/devilutionX/Source/monster.cpp:2013'),
   AcidUnique: {
     sourceRefs: ['.reference/devilutionX/Source/monster.cpp:1976', '.reference/devilutionX/Source/monster.cpp:1996'],
-    findings: ['The table exposes the shared previous-RangedAttack delay row for AcidUnique, but AcidUnique starts SpecialRangedAttack. The pinned delay gate tests literal RangedAttack, so AcidUnique does not enter that delay immediately after its own shot.'],
     bands: sharedRangedBands(true, true),
   },
   Golem: {
@@ -403,9 +424,22 @@ export const D1_AI_DECISION_GRAPHS_DATA: Record<string, AiDecisionGraphData> = {
   Snotspill: {
     sourceRefs: ['.reference/devilutionX/Source/monster.cpp:2630', '.reference/devilutionX/Source/monster.cpp:2314'],
     bands: [
-      { label: 'quest-gated', role: 'other', scenarios: [{ context: 'Banner quest has not released combat', tree: idle }] },
-      { label: 'adjacent target after release', role: 'adjacent', scenarios: [{ context: 'Normal goal', primary: true, tree: skeletonAdjacent() }] },
-      { label: 'target at range after release', role: 'range', scenarios: [{ context: 'Normal goal', primary: true, tree: skeletonRange() }] },
+      { label: 'quest/visibility gate', role: 'other', scenarioTest: 'condition', scenarios: [
+        { context: 'Banner quest has not released combat', tree: idle },
+        { context: 'Tile is hidden', tree: idle },
+      ] },
+      { label: 'adjacent target while visible after release', role: 'adjacent', scenarioTest: 'condition', scenarios: [
+        { context: 'Attack goal', tree: melee },
+        { context: 'Normal goal; previous mode was Delay', tree: melee },
+        { context: 'Normal goal; previous mode was not Delay', primary: true, tree: skeletonAdjacent() },
+        { context: 'Last standing-animation frame', tree: roll(0, action('SpecialStand', 'special'), idle, 'Fallen') },
+      ] },
+      { label: 'target at range while visible after release', role: 'range', scenarioTest: 'condition', scenarios: [
+        { context: 'Attack goal', tree: approach },
+        { context: 'Normal goal; previous mode was Delay', tree: approach },
+        { context: 'Normal goal; previous mode was not Delay', primary: true, tree: skeletonRange() },
+        { context: 'Last standing-animation frame', tree: roll(0, action('SpecialStand', 'special'), idle, 'Fallen') },
+      ] },
     ],
   },
   Snake: {
@@ -430,10 +464,13 @@ export const D1_AI_DECISION_GRAPHS_DATA: Record<string, AiDecisionGraphData> = {
   Mega: {
     sourceRefs: ['.reference/devilutionX/Source/monster.cpp:2818', '.reference/devilutionX/Source/monster.cpp:2124'],
     bands: [
-      { distance: 0, role: 'adjacent', scenarios: [{ context: 'Normal goal', primary: true, tree: roll(4, test('condition', 'fair attack selection', [['Inferno branch', specialRanged], ['melee branch', melee]]), action('Delay', 'wait')) }] },
+      { distance: 0, role: 'adjacent', scenarioTest: 'condition', scenarios: [
+        { context: 'Normal goal with a clear line', primary: true, tree: roll(2, specialRanged, roll(4, test('condition', 'fair attack selection', [['Inferno branch', specialRanged], ['melee branch', melee]]), action('Delay', 'wait', ref(4)))) },
+        { context: 'Normal goal with a blocked line', tree: roll(4, test('condition', 'fair attack selection', [['Inferno branch', specialRanged], ['melee branch', melee]]), action('Delay', 'wait', ref(4))) },
+      ] },
       { distance: 1, role: 'range', scenarioTest: 'condition', scenarios: [
-        { context: 'Move goal', tree: roll(1, tacticalWalk, idle) },
-        { context: 'Normal goal', primary: true, tree: roll(2, specialRanged, roll(3, approach, action('Delay', 'wait'))) },
+        { context: 'Move goal', tree: roll(1, tacticalWalk, action('Delay', 'wait', ref(1))) },
+        { context: 'Normal goal', primary: true, tree: roll(2, specialRanged, roll(3, approach, action('Delay', 'wait', ref(3)))) },
       ] },
       { distance: 2, role: 'range', scenarioTest: 'previous-mode', scenarios: [
         { context: 'Previous mode was Delay', tree: approach },
@@ -477,10 +514,14 @@ export const D1_AI_DECISION_GRAPHS_DATA: Record<string, AiDecisionGraphData> = {
       { distance: 0, role: 'adjacent', scenarios: [{ context: 'Normal goal', primary: true, tree: roll(4, melee, idle) }] },
       { distance: 1, role: 'range', scenarioTest: 'previous-mode', scenarios: [
         { context: 'Spawn tile and capacity available', tree: roll(1, specialRanged, roll(3, approach, action('Delay', 'wait', ref(3)))) },
+        { context: 'Spawn tile or capacity unavailable', tree: roll(1, idle, roll(3, approach, action('Delay', 'wait', ref(3)))) },
         { context: 'No spawn; immediately after movement', tree: roll(2, approach, action('Delay', 'wait', ref(2))) },
         { context: 'No spawn; otherwise', primary: true, tree: roll(3, approach, action('Delay', 'wait', ref(3))) },
       ] },
-      { distance: 2, role: 'range', scenarios: [{ context: 'Not already circling', tree: roll(0, tacticalWalk, roll(1, specialRanged, roll(3, approach, action('Delay', 'wait', ref(3))))) }] },
+      { distance: 2, role: 'range', scenarioTest: 'condition', scenarios: [
+        { context: 'Not already circling; spawn resources available', tree: roll(0, tacticalWalk, roll(1, specialRanged, roll(3, approach, action('Delay', 'wait', ref(3))))) },
+        { context: 'Not already circling; spawn resources unavailable', tree: roll(0, tacticalWalk, roll(1, idle, roll(3, approach, action('Delay', 'wait', ref(3))))) },
+      ] },
     ],
   },
 };

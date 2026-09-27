@@ -63,10 +63,8 @@ describe('Diablo I per-routine AI decision graphs', () => {
     }
   });
 
-  it('records source disagreements as findings without changing the routine table', () => {
-    expect(D1_AI_DECISION_GRAPH_FINDINGS.map((finding) => finding.routine)).toEqual(['Scavenger', 'AcidUnique']);
-    expect(D1_AI_DECISION_GRAPH_FINDINGS[0].finding).toContain('neither loop iterates');
-    expect(D1_AI_DECISION_GRAPH_FINDINGS[1].finding).toContain('does not enter that delay');
+  it('has no table/source disagreements after the routine-table audit', () => {
+    expect(D1_AI_DECISION_GRAPH_FINDINGS).toEqual([]);
   });
 
   it('builds 33 state-graph entities with graphValid SOURCED seeds and named generic gaps', () => {

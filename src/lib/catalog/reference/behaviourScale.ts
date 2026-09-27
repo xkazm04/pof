@@ -86,13 +86,13 @@ const keepAwayOf = (ai: D1AiRoutineId): number => {
 };
 
 const CADENCE_GAPS: Partial<Record<D1AiRoutineId, string>> = {
-  Scavenger: 'health, corpse availability and a ten-decision healing goal switch it between enemy approach, corpse approach and eating; the table has no distribution over those states',
+  Scavenger: 'health, corpse availability and its healing goal switch it between enemy approach, corpse approach and eating (half its corpse scans find nothing: the reversed loop never iterates); the table has no distribution over those states',
   Fallen: 'nearby deaths and war cries create externally-timed Retreat and Attack goals, so its inherited Skeleton cadence has no history-independent weight',
   SkeletonKing: 'circling and single-player summoning depend on distance, game mode, line of sight, a free tile and monster capacity',
   Gargoyle: 'statue, wounded-retreat and random-chunk healing states depend on health and prior activation, so GoatMelee is not a single weighted cadence',
   FireMan: 'the pinned dispatch entry is null and implements no decisions',
   Zhar: 'before hostility it only talks; afterward Counselor fade, circle and retreat goals still require position and goal history',
-  Snotspill: 'before hostility it only talks; afterward it inherits Fallen goals whose death and war-cry history has no stationary weight',
+  Snotspill: 'before hostility it only talks; afterward, only while its tile is visible, it runs Fallen behaviour (war cries, forced attacks) but never the Fallen death-fear retreat; that history has no stationary weight',
   Counselor: 'a failed cast may fade into a distance-bounded circle goal, while wounded adjacency starts a four-decision retreat; position and health histories are required',
   Mega: 'distance switches to Skeleton behavior while close circling stores a forced-cast marker; the table does not supply a distribution over those histories',
   Lazarus: 'before hostility it only talks; afterward it inherits Counselor fade/circle/retreat history and additionally suppresses every requested delay',
