@@ -5,6 +5,7 @@ import {
   bestArmourExpectation,
   bestWeaponExpectation,
   expectedDrop,
+  expectedSaleValue,
   type LootMonsterProfile,
 } from '@/lib/catalog/reference/lootMath';
 import { DIABLO1_LOOT_LAWS } from '@/lib/catalog/reference/lootSpecsData';
@@ -123,6 +124,27 @@ describe('expectedDrop', () => {
 
     expect(quality.pUnique).toBeCloseTo(quality.pBonus * 0.02, 12);
     expect(quality.pMagic).toBeCloseTo(quality.pBonus * 0.98, 12);
+  });
+});
+
+describe('expectedSaleValue', () => {
+  it('hand-computes quarter-value sales, kept items, and the one-trip capacity', () => {
+    expect(expectedSaleValue([
+      { baseId: 'valuable', expectedCount: 2, baseValue: 40, keptCount: 0.5 },
+      { baseId: 'cheap', expectedCount: 3, baseValue: 9 },
+    ], 2)).toEqual({
+      expectedItemsDropped: 5,
+      expectedItemsKept: 0.5,
+      expectedItemsCarried: 2,
+      expectedItemsLeftBehind: 2.5,
+      expectedGold: 16,
+    });
+  });
+
+  it('applies the engine one-gold minimum after integer quartering', () => {
+    expect(expectedSaleValue([
+      { baseId: 'worthless', expectedCount: 1.25, baseValue: 0 },
+    ], 2).expectedGold).toBe(1.25);
   });
 });
 

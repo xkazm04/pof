@@ -16,7 +16,7 @@ import { AI_LAW_IDS, aiRoutineLaw, attackKindsOf, behaviourLawTexts, expectedTic
 import { AFFIX_POWERS, affixTargetsOf } from '@/lib/catalog/ingest/diablo1Affixes';
 import { DIABLO1_CANON } from '@/lib/catalog/canon/profiles/diablo1';
 import { monsterHitPoints, type Difficulty, type IntegerRange } from '@/lib/catalog/reference/combatMath';
-import { resistanceByElement } from '@/lib/catalog/reference/stepSeeds';
+import { resistanceByElement } from '@/lib/catalog/reference/resistanceLaw';
 
 export interface DeriveSpec {
   /** Changes whenever the derivation's code or the laws it reads change. */

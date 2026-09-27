@@ -7,6 +7,7 @@
  *     [--difficulty normal|nightmare|hell] [--multiplayer]
  *     [--gear none|expected] [--weapon d1-<item>]
  *     [--sorcerer-combat mixed|pure-spell]
+ *     [--income monster-gold|gold-and-sales] [--items-per-trip N]
  * Rogue and Sorcerer default to expected gear; Warrior and explicit --weapon runs default to none.
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -16,12 +17,14 @@ import { combatGameMode } from '@/lib/catalog/reference/combatInputs';
 import type { Difficulty } from '@/lib/catalog/reference/combatMath';
 import {
   DEFAULT_TILES_PER_LEVEL_ASSUMPTION,
+  DEFAULT_SALE_ITEMS_PER_TRIP_ASSUMPTION,
   DESCENT_CLASSES,
   simulateDescent,
   type DescentClassName,
   type DescentGear,
   type SorcererCombatPolicy,
   type StatPointPolicy,
+  type SustainIncome,
 } from '@/lib/catalog/reference/descentSim';
 import { listWrappers } from '@/lib/catalog/reference/wrappers-db';
 import { getDb } from '@/lib/db';
@@ -56,6 +59,16 @@ if (!(['mixed', 'pure-spell'] as const).includes(sorcererCombatPolicy)) {
   console.error('--sorcerer-combat must be mixed|pure-spell');
   process.exit(2);
 }
+const sustainIncome = (arg('income') ?? 'monster-gold') as SustainIncome;
+if (!(['monster-gold', 'gold-and-sales'] as const).includes(sustainIncome)) {
+  console.error('--income must be monster-gold|gold-and-sales');
+  process.exit(2);
+}
+const saleItemsPerTrip = Number(arg('items-per-trip') ?? DEFAULT_SALE_ITEMS_PER_TRIP_ASSUMPTION);
+if (!Number.isInteger(saleItemsPerTrip) || saleItemsPerTrip < 0) {
+  console.error('--items-per-trip must be a non-negative integer');
+  process.exit(2);
+}
 const tilesPerLevel = Number(arg('tiles-per-level') ?? DEFAULT_TILES_PER_LEVEL_ASSUMPTION);
 if (!Number.isInteger(tilesPerLevel) || tilesPerLevel < 0) {
   console.error('--tiles-per-level must be a non-negative integer');
@@ -79,6 +92,8 @@ const result = simulateDescent({
   weapon,
   gear,
   sorcererCombatPolicy,
+  sustainIncome,
+  saleItemsPerTrip,
   wrappers,
 });
 
@@ -132,6 +147,40 @@ console.table(result.levels.map((level) => {
   };
 }));
 
+if (result.goldFlow) {
+  console.log('\nGOLD FLOW (derived measurement; rates use combat-only clear time):');
+  console.table(result.goldFlow.levels.map((level) => ({
+    depth: level.depth,
+    'monster gold': Number(level.faucets.monsterGold.toFixed(2)),
+    sales: Number(level.faucets.sales.toFixed(2)),
+    'faucets total': Number(level.faucets.total.toFixed(2)),
+    'potions bought': Number(level.sinks.potionsBought.toFixed(2)),
+    repair: Number(level.sinks.repair.toFixed(2)),
+    identify: Number(level.sinks.identify.toFixed(2)),
+    'sinks total': Number(level.sinks.total.toFixed(2)),
+    net: Number(level.net.toFixed(2)),
+    'faucets/hour': level.perHour == null ? null : Number(level.perHour.faucets.total.toFixed(2)),
+    'sinks/hour': level.perHour == null ? null : Number(level.perHour.sinks.total.toFixed(2)),
+    'net/hour': level.perHour == null ? null : Number(level.perHour.net.toFixed(2)),
+  })));
+  console.table([{
+    scope: 'cumulative',
+    faucets: Number(result.goldFlow.cumulative.faucets.total.toFixed(2)),
+    sinks: Number(result.goldFlow.cumulative.sinks.total.toFixed(2)),
+    net: Number(result.goldFlow.cumulative.net.toFixed(2)),
+    'faucets/hour': result.goldFlow.cumulative.perHour == null
+      ? null
+      : Number(result.goldFlow.cumulative.perHour.faucets.total.toFixed(2)),
+    'sinks/hour': result.goldFlow.cumulative.perHour == null
+      ? null
+      : Number(result.goldFlow.cumulative.perHour.sinks.total.toFixed(2)),
+    'net/hour': result.goldFlow.equilibrium.netGoldPerHour == null
+      ? null
+      : Number(result.goldFlow.equilibrium.netGoldPerHour.toFixed(2)),
+    equilibrium: result.goldFlow.equilibrium.status,
+  }]);
+}
+
 const path = join(
   homedir(),
   'Documents',
@@ -139,7 +188,7 @@ const path = join(
   'pof',
   'Diablo',
   'Combat',
-  `descent-${className}-${policy}${gear === 'expected' ? '-expected-gear' : ''}${className === 'sorcerer' && sorcererCombatPolicy === 'mixed' ? '-mixed' : ''}.json`,
+  `descent-${className}-${policy}${gear === 'expected' ? '-expected-gear' : ''}${className === 'sorcerer' && sorcererCombatPolicy === 'mixed' ? '-mixed' : ''}${sustainIncome === 'gold-and-sales' ? '-gold-and-sales' : ''}.json`,
 );
 mkdirSync(dirname(path), { recursive: true });
 writeFileSync(path, JSON.stringify(result, null, 2));

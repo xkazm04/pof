@@ -189,6 +189,8 @@ const expectedSword = wrapper('d1-expected-sword', 'items', 'items/itemdat.tsv',
   minMagic: '0',
   minDexterity: '0',
   uniqueBaseItem: 'EXPECTED_SWORD',
+  class: 'Weapon',
+  value: '40',
 });
 
 const expectedBow = wrapper('d1-expected-bow', 'items', 'items/itemdat.tsv', {
@@ -212,6 +214,8 @@ const expectedBow = wrapper('d1-expected-bow', 'items', 'items/itemdat.tsv', {
   minMagic: '0',
   minDexterity: '0',
   uniqueBaseItem: 'EXPECTED_BOW',
+  class: 'Weapon',
+  value: '32',
 });
 
 const startingStaff = wrapper('d1-IDI_SORC', 'items', 'items/itemdat.tsv', {
@@ -425,6 +429,60 @@ describe('simulateDescent', () => {
       'hardestMonster',
       'note',
     ]);
+  });
+
+  it('keeps explicit monster-gold byte-identical to the omitted income policy', () => {
+    const input = {
+      className: 'warrior' as const,
+      policy: 'none' as const,
+      tilesPerLevel: 600,
+      gameMode: 'single' as const,
+      difficulty: 'normal' as const,
+      gear: 'expected' as const,
+      wrappers: [warrior, monster, expectedSword, expectedDamagePrefix, healingPotion, ...curve],
+      locations,
+    };
+
+    expect(JSON.stringify(simulateDescent({ ...input, sustainIncome: 'monster-gold' })))
+      .toBe(JSON.stringify(simulateDescent(input)));
+  });
+
+  it('adds unidentified sales to next-depth sustain and reports derived faucet/sink rates', () => {
+    const result = simulateDescent({
+      className: 'warrior',
+      policy: 'none',
+      tilesPerLevel: 600,
+      gameMode: 'single',
+      difficulty: 'normal',
+      gear: 'expected',
+      sustainIncome: 'gold-and-sales',
+      saleItemsPerTrip: 2,
+      wrappers: [warrior, monster, expectedSword, expectedDamagePrefix, healingPotion, ...curve],
+      locations,
+    });
+
+    expect(result.goldFlow).toBeDefined();
+    expect(result.goldFlow!.levels[0].sales).toMatchObject({
+      expectedItemsKept: 1,
+      expectedItemsCarried: 0.1066 * 20 - 1,
+      expectedGold: (0.1066 * 20 - 1) * 10,
+    });
+    expect(result.goldFlow!.levels[0].faucets.sales).toBeCloseTo((0.1066 * 20 - 1) * 10, 12);
+    expect(result.levels[0].sustain!.expectedGoldIncome).toBeCloseTo(
+      result.goldFlow!.levels[0].faucets.total,
+      12,
+    );
+    expect(result.goldFlow!.levels[1].sinks.potionsBought).toBeCloseTo(
+      result.goldFlow!.levels[0].faucets.total,
+      12,
+    );
+    expect(result.goldFlow!.levels[0].sinks).toMatchObject({ identify: 0, repair: 0 });
+    expect(result.goldFlow!.levels[0].perHour!.faucets.total).toBeCloseTo(
+      result.goldFlow!.levels[0].faucets.total / result.goldFlow!.levels[0].clearHours!,
+      12,
+    );
+    expect(result.assumptions.find((assumption) => assumption.id === 'sale-carry-capacity')?.value)
+      .toBe('2 items per depth');
   });
 
   it('uses accumulated first-depth kills to report and wield expected gear on the second depth', () => {

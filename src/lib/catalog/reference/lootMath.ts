@@ -624,6 +624,120 @@ export interface ExpectedLootBudget {
   expectedFullManaPotions: number;
 }
 
+export interface SaleDropMixItem {
+  baseId: string;
+  expectedCount: number;
+  baseValue: number;
+  /** Expected copies retained by the caller's gear/consumable policy before the carry limit. */
+  keptCount?: number;
+}
+
+export interface ExpectedSaleValue {
+  expectedItemsDropped: number;
+  expectedItemsKept: number;
+  expectedItemsCarried: number;
+  expectedItemsLeftBehind: number;
+  expectedGold: number;
+}
+
+export interface ExpectedSaleIncomeInput extends ExpectedLootBudgetInput {
+  /** One town return is modelled; fractional items remain deterministic expectations. */
+  itemsPerTrip: number;
+  /** At most this many expected copies of each base are reserved before sale. */
+  keptBaseCounts?: ReadonlyMap<string, number>;
+  /** Drops consumed by another policy, such as sustain potions, are not sold. */
+  excludedBaseIds?: ReadonlySet<string>;
+}
+
+/**
+ * Apply the engine's unidentified/base-value quarter-price rule to an invented or projected mix.
+ * Highest-price items fill the one-trip item-count capacity first. This is a derived expectation:
+ * real inventory uses item footprints, while the descent policy deliberately exposes one scalar
+ * items-per-trip assumption.
+ */
+export function expectedSaleValue(
+  dropMix: readonly SaleDropMixItem[],
+  itemsPerTrip: number,
+): ExpectedSaleValue {
+  if (!Number.isInteger(itemsPerTrip) || itemsPerTrip < 0) {
+    throw new Error(`itemsPerTrip must be a non-negative integer (got ${itemsPerTrip})`);
+  }
+  let expectedItemsDropped = 0;
+  let expectedItemsKept = 0;
+  const saleable = dropMix.map((item) => {
+    if (!Number.isFinite(item.expectedCount) || item.expectedCount < 0) {
+      throw new Error(`${item.baseId}.expectedCount must be a non-negative finite number`);
+    }
+    if (!Number.isFinite(item.baseValue) || item.baseValue < 0) {
+      throw new Error(`${item.baseId}.baseValue must be a non-negative finite number`);
+    }
+    const requestedKeep = item.keptCount ?? 0;
+    if (!Number.isFinite(requestedKeep) || requestedKeep < 0) {
+      throw new Error(`${item.baseId}.keptCount must be a non-negative finite number`);
+    }
+    const kept = Math.min(item.expectedCount, requestedKeep);
+    expectedItemsDropped += item.expectedCount;
+    expectedItemsKept += kept;
+    return {
+      ...item,
+      expectedCount: item.expectedCount - kept,
+      saleValue: Math.max(Math.trunc(item.baseValue / 4), 1),
+    };
+  }).sort((left, right) => right.saleValue - left.saleValue || left.baseId.localeCompare(right.baseId));
+
+  let capacity = itemsPerTrip;
+  let expectedItemsCarried = 0;
+  let expectedGold = 0;
+  for (const item of saleable) {
+    const carried = Math.min(item.expectedCount, capacity);
+    expectedItemsCarried += carried;
+    expectedGold += carried * item.saleValue;
+    capacity -= carried;
+    if (capacity <= 0) break;
+  }
+  return {
+    expectedItemsDropped,
+    expectedItemsKept,
+    expectedItemsCarried,
+    expectedItemsLeftBehind: Math.max(0, expectedItemsDropped - expectedItemsKept - expectedItemsCarried),
+    expectedGold,
+  };
+}
+
+/** Project sale income from weighted monster drops, selling magic/Unique items unidentified. */
+export function expectedSaleIncome(input: ExpectedSaleIncomeInput): ExpectedSaleValue {
+  const bases = new Map(input.itemWrappers
+    .filter((wrapper) => wrapper.file === 'items/itemdat.tsv')
+    .map((wrapper) => [wrapper.entity.id, wrapper]));
+  const counts = new Map<string, number>();
+  for (const row of input.monsterProfiles) {
+    if (!Number.isFinite(row.weight) || row.weight < 0) throw new Error(`loot-profile weight must be non-negative (got ${row.weight})`);
+    if (row.weight === 0) continue;
+    const drop = expectedDrop(
+      row.profile,
+      input.itemWrappers,
+      input.affixWrappers,
+      input.uniqueItemWrappers,
+      input.difficulty,
+    );
+    for (const outcome of drop.basePool) {
+      if (input.excludedBaseIds?.has(outcome.baseId)) continue;
+      const base = bases.get(outcome.baseId);
+      if (!base || String(base.raw.class).toLowerCase() === 'quest') continue;
+      counts.set(outcome.baseId, (counts.get(outcome.baseId) ?? 0) + row.weight * outcome.p);
+    }
+  }
+  return expectedSaleValue([...counts].map(([baseId, expectedCount]) => {
+    const base = bases.get(baseId)!;
+    return {
+      baseId,
+      expectedCount,
+      baseValue: finiteNumber(base.raw.value ?? stat(base, 'Value'), `${baseId}.value`),
+      keptCount: input.keptBaseCounts?.get(baseId) ?? 0,
+    };
+  }), input.itemsPerTrip);
+}
+
 /** Sum monster-drop gold and life/mana consumables over already weighted kill profiles. */
 export function expectedLootBudget(input: ExpectedLootBudgetInput): ExpectedLootBudget {
   const bases = new Map(input.itemWrappers

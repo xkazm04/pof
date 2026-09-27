@@ -28,9 +28,11 @@ import {
   bestArmourExpectation,
   bestWeaponExpectation,
   expectedLootBudget,
+  expectedSaleIncome,
   monsterLootProfile,
   type BestArmourExpectation,
   type BestWeaponExpectation,
+  type ExpectedSaleValue,
   type WeightedLootMonsterProfile,
 } from '@/lib/catalog/reference/lootMath';
 import { spellSpec } from '@/lib/catalog/reference/spellSpecs';
@@ -41,9 +43,13 @@ export type DescentClassName = typeof DESCENT_CLASSES[number];
 export type StatPointPolicy = 'none' | 'all-strength' | 'balanced';
 export type DescentGear = 'none' | 'expected';
 export type SorcererCombatPolicy = 'mixed' | 'pure-spell';
+export type SustainIncome = 'monster-gold' | 'gold-and-sales';
 
 /** Explicit non-solid-tile assumption used only when a caller does not provide one. */
 export const DEFAULT_TILES_PER_LEVEL_ASSUMPTION = 3_000;
+
+/** One abstract item per slot; real item footprints are deliberately outside this scalar policy. */
+export const DEFAULT_SALE_ITEMS_PER_TRIP_ASSUMPTION = 40;
 
 /** Deliberately simple cumulative learned-set policy; these unlock depths are model assumptions, not table rows. */
 export const SORCERER_SPELL_PROGRESSION = [
@@ -125,6 +131,10 @@ export interface SustainArithmetic {
 
 export interface DescentSustainExpectation extends SustainArithmetic {
   expectedGoldDropped: number;
+  /** Present only for the opt-in gold-and-sales policy. */
+  expectedGoldFromSales?: number;
+  /** Present only for the opt-in gold-and-sales policy. */
+  expectedGoldIncome?: number;
   healingPotionPrice: number;
   healingPotionsDropped: number;
   fullHealingPotionsDropped: number;
@@ -134,6 +144,48 @@ export interface DescentSustainExpectation extends SustainArithmetic {
   lifePool: number;
   lifeRestoredPerHealingPotion: number;
   lifeRestoredPerFullHealingPotion: number;
+}
+
+export interface DescentGoldFaucets {
+  monsterGold: number;
+  sales: number;
+  total: number;
+}
+
+export interface DescentGoldSinks {
+  potionsBought: number;
+  repair: number;
+  identify: number;
+  total: number;
+}
+
+export interface DescentGoldFlowRate {
+  faucets: DescentGoldFaucets;
+  sinks: DescentGoldSinks;
+  net: number;
+}
+
+export interface DescentGoldFlowLevel {
+  depth: number;
+  clearHours: number | null;
+  faucets: DescentGoldFaucets;
+  sinks: DescentGoldSinks;
+  net: number;
+  perHour: DescentGoldFlowRate | null;
+  sales: ExpectedSaleValue;
+}
+
+export interface DescentGoldFlow {
+  measurement: 'derived-faucet-sink-per-clear-hour';
+  sustainIncome: 'gold-and-sales';
+  itemsPerTrip: number;
+  levels: DescentGoldFlowLevel[];
+  cumulative: Omit<DescentGoldFlowLevel, 'depth' | 'sales'>;
+  equilibrium: {
+    status: 'surplus' | 'deficit' | 'balanced' | 'unbounded-clear-time';
+    netGoldPerHour: number | null;
+    engineEquilibrium: null;
+  };
 }
 
 export interface ManaSustainArithmeticInput {
@@ -218,6 +270,8 @@ export interface DescentSimulation {
   gear?: 'expected';
   assumptions: DescentAssumption[];
   levels: DescentLevelResult[];
+  /** Opt-in derived measurement; omitted by the byte-compatible monster-gold policy. */
+  goldFlow?: DescentGoldFlow;
 }
 
 export interface SimulateDescentInput {
@@ -230,6 +284,10 @@ export interface SimulateDescentInput {
   gear?: DescentGear;
   /** Sorcerer defaults to finite-mana mixed combat; pure-spell preserves the comparison model. */
   sorcererCombatPolicy?: SorcererCombatPolicy;
+  /** Defaults to the legacy monster-drop-only sustain income. */
+  sustainIncome?: SustainIncome;
+  /** Abstract carried item count for the single town return after each depth. */
+  saleItemsPerTrip?: number;
   /** Source rows are passed in; the simulator never reads a database or filesystem. */
   wrappers: readonly ReferenceWrapper[];
   /** Tests and other pure callers may pass already-projected location entities. */
@@ -656,6 +714,8 @@ function assumptions(
   gear: DescentGear,
   className: DescentClassName,
   sorcererCombatPolicy: SorcererCombatPolicy,
+  sustainIncome: SustainIncome,
+  saleItemsPerTrip: number,
 ): DescentAssumption[] {
   return [
     {
@@ -764,6 +824,22 @@ function assumptions(
       source: 'combatDuel.duel expectedPlayerSecondsToKill',
       detail: 'Every ambient kill is fought sequentially; navigation, doors, loot, recovery, and downtime add no seconds.',
     },
+    ...(sustainIncome === 'gold-and-sales' && gear === 'none' ? [{
+      id: 'sustain-income',
+      value: 'monster gold plus carried item sales; no sustain purchases under gear:none',
+      source: 'd1-loot-drop-outcome and d1-store-pricing-law',
+      detail: 'All eligible non-consumable item drops are sold to Griswold or Adria at max(floor(base value / 4), 1). Magic and Unique items are sold unidentified at base value; Cain is not paid, so identify is a zero sink.',
+    }, {
+      id: 'sale-carry-capacity',
+      value: `${saleItemsPerTrip} items per depth`,
+      source: 'explicit caller assumption; inventory item footprints and extra town trips are not simulated',
+      detail: 'One return to town follows each depth. Highest-sale-price eligible items fill the abstract item-count capacity first; fractional carried counts remain deterministic expectations.',
+    }, {
+      id: 'gold-flow-measurement',
+      value: 'derived gold and gold per clear-hour',
+      source: 'descent faucets and combat-only clear time',
+      detail: 'This is a PoF-derived faucet/sink measurement, not an engine economy or equilibrium. Potion purchases and repair are not modelled under gear:none and identify is zero under the unidentified-sale policy.',
+    }] : []),
     ...(gear === 'expected' ? [
       {
         id: 'expected-loot-weapon',
@@ -783,12 +859,29 @@ function assumptions(
       },
       {
         id: 'sustain-income',
-        value: 'monster gold drops only; no sale value',
-        source: 'd1-loot-drop-outcome and d1-loot-gold-consumables',
-        detail: className === 'sorcerer'
-          ? 'Expected gold and Healing, Full Healing, Mana, and Full Mana potion drops come only from the ambient monsters modelled here. Sale value, containers, useful-object drops, quests, and starting inventory are excluded.'
-          : 'Expected gold and Healing/Full Healing potion drops come only from the ambient monsters modelled here. Sale value, containers, useful-object drops, quests, and starting inventory are excluded.',
+        value: sustainIncome === 'gold-and-sales'
+          ? 'monster gold plus carried non-kept item sales'
+          : 'monster gold drops only; no sale value',
+        source: sustainIncome === 'gold-and-sales'
+          ? 'd1-loot-drop-outcome, d1-loot-gold-consumables, and d1-store-pricing-law'
+          : 'd1-loot-drop-outcome and d1-loot-gold-consumables',
+        detail: sustainIncome === 'gold-and-sales'
+          ? 'Expected saleable drops not reserved by the expected-gear policy are sold to Griswold or Adria at max(floor(base value / 4), 1). Magic and Unique items are sold unidentified at base value; Cain is not paid, so identify is a zero sink. Containers, useful-object drops, quests, and starting inventory are excluded.'
+          : className === 'sorcerer'
+            ? 'Expected gold and Healing, Full Healing, Mana, and Full Mana potion drops come only from the ambient monsters modelled here. Sale value, containers, useful-object drops, quests, and starting inventory are excluded.'
+            : 'Expected gold and Healing/Full Healing potion drops come only from the ambient monsters modelled here. Sale value, containers, useful-object drops, quests, and starting inventory are excluded.',
       },
+      ...(sustainIncome === 'gold-and-sales' ? [{
+        id: 'sale-carry-capacity',
+        value: `${saleItemsPerTrip} items per depth`,
+        source: 'explicit caller assumption; inventory item footprints and extra town trips are not simulated',
+        detail: 'One return to town follows each depth. Highest-sale-price eligible items fill the abstract item-count capacity first; fractional carried counts remain deterministic expectations. Newly selected representative weapon/armour base identities are retained before this cap, and sustain potion drops are consumed rather than sold.',
+      }, {
+        id: 'gold-flow-measurement',
+        value: 'derived gold and gold per clear-hour',
+        source: 'descent faucets, purchases, and combat-only clear time',
+        detail: 'This is a PoF-derived faucet/sink measurement, not an engine economy or equilibrium. Repair is not modelled and is reported as zero; identify is zero under the unidentified-sale policy. Travel, looting, town, and recovery time are excluded from the denominator.',
+      }] : []),
       {
         id: 'sustain-purchases',
         value: className === 'sorcerer'
@@ -817,6 +910,50 @@ function assumptions(
   ];
 }
 
+function summarizeGoldFlow(levels: readonly DescentGoldFlowLevel[], itemsPerTrip: number): DescentGoldFlow {
+  const faucets = levels.reduce<DescentGoldFaucets>((sum, level) => ({
+    monsterGold: sum.monsterGold + level.faucets.monsterGold,
+    sales: sum.sales + level.faucets.sales,
+    total: sum.total + level.faucets.total,
+  }), { monsterGold: 0, sales: 0, total: 0 });
+  const sinks = levels.reduce<DescentGoldSinks>((sum, level) => ({
+    potionsBought: sum.potionsBought + level.sinks.potionsBought,
+    repair: sum.repair + level.sinks.repair,
+    identify: sum.identify + level.sinks.identify,
+    total: sum.total + level.sinks.total,
+  }), { potionsBought: 0, repair: 0, identify: 0, total: 0 });
+  const clearHours = levels.every((level) => level.clearHours != null)
+    ? levels.reduce((sum, level) => sum + level.clearHours!, 0)
+    : null;
+  const net = faucets.total - sinks.total;
+  const perHour = clearHours != null && clearHours > 0 ? {
+    faucets: {
+      monsterGold: faucets.monsterGold / clearHours,
+      sales: faucets.sales / clearHours,
+      total: faucets.total / clearHours,
+    },
+    sinks: {
+      potionsBought: sinks.potionsBought / clearHours,
+      repair: sinks.repair / clearHours,
+      identify: sinks.identify / clearHours,
+      total: sinks.total / clearHours,
+    },
+    net: net / clearHours,
+  } : null;
+  return {
+    measurement: 'derived-faucet-sink-per-clear-hour',
+    sustainIncome: 'gold-and-sales',
+    itemsPerTrip,
+    levels: [...levels],
+    cumulative: { clearHours, faucets, sinks, net, perHour },
+    equilibrium: {
+      status: perHour == null ? 'unbounded-clear-time' : perHour.net > 0 ? 'surplus' : perHour.net < 0 ? 'deficit' : 'balanced',
+      netGoldPerHour: perHour?.net ?? null,
+      engineEquilibrium: null,
+    },
+  };
+}
+
 /**
  * Simulate the vanilla depths 1..16 as a deterministic expectation. No random roster, combat roll,
  * or dungeon seed is generated: every per-type quantity is an exact combat-law expectation, then
@@ -833,10 +970,19 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
     throw new Error(`unknown Sorcerer combat policy ${input.sorcererCombatPolicy}`);
   }
   if (gear === 'expected' && input.weapon) throw new Error('gear:expected cannot be combined with a fixed weapon');
+  const sustainIncome = input.sustainIncome ?? 'monster-gold';
+  if (!(['monster-gold', 'gold-and-sales'] as const).includes(sustainIncome)) {
+    throw new Error(`unknown sustain income policy ${input.sustainIncome}`);
+  }
+  const saleItemsPerTrip = input.saleItemsPerTrip ?? DEFAULT_SALE_ITEMS_PER_TRIP_ASSUMPTION;
+  if (!Number.isInteger(saleItemsPerTrip) || saleItemsPerTrip < 0) {
+    throw new Error(`saleItemsPerTrip must be a non-negative integer (got ${saleItemsPerTrip})`);
+  }
   const tilesPerLevel = input.tilesPerLevel ?? DEFAULT_TILES_PER_LEVEL_ASSUMPTION;
   if (!Number.isInteger(tilesPerLevel) || tilesPerLevel < 0) throw new Error(`tilesPerLevel must be a non-negative integer (got ${tilesPerLevel})`);
 
   const classWrapper = classWrapperFrom(input.wrappers, input.className);
+  const lootEnabled = gear === 'expected' || sustainIncome === 'gold-and-sales';
   const startingWeapon = input.className === 'sorcerer' && sorcererCombatPolicy === 'mixed' && !input.weapon
     ? startingWeaponFrom(classWrapper, input.wrappers)
     : undefined;
@@ -861,10 +1007,14 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
   let killsSoFar = 0;
   const lootHistory: WeightedLootMonsterProfile[] = [];
   const levels: DescentLevelResult[] = [];
+  const goldFlowLevels: DescentGoldFlowLevel[] = [];
   const healingPotionPrice = gear === 'expected' ? consumablePrice(input.wrappers, 'HEAL', 'Healing') : 0;
   const manaPotionPrice = gear === 'expected' && input.className === 'sorcerer'
     ? consumablePrice(input.wrappers, 'MANA', 'Mana')
     : 0;
+  const sustainBaseIds = new Set(input.wrappers.filter((wrapper) => wrapper.file === 'items/itemdat.tsv'
+    && ['HEAL', 'FULLHEAL', 'MANA', 'FULLMANA'].includes(String(wrapper.raw.miscId).toUpperCase()))
+    .map((wrapper) => wrapper.entity.id));
   const healingGoldShare = input.className === 'sorcerer' ? 0.5 : 1;
   const manaGoldShare = input.className === 'sorcerer' ? 0.5 : 0;
   let goldForNextDepth = 0;
@@ -873,6 +1023,8 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
   let currentMana: number | null = null;
   let carriedManaPotions = 0;
   let carriedFullManaPotions = 0;
+  let selectedWeaponId: string | null = startingWeapon?.entity.id ?? null;
+  let selectedArmourIds = { body: null as string | null, helm: null as string | null, shield: null as string | null };
 
   for (let depth = 1; depth <= 16; depth++) {
     const location = locations.find((candidate) => candidate.entity.data.depth === depth);
@@ -886,7 +1038,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
     }
     if (pool.length === 0) throw new Error(`depth ${depth} has no eligible ordinary monster pool`);
     const dungeonType = String(location.entity.data.dungeonType);
-    const depthLootProfiles: WeightedLootMonsterProfile[] = gear === 'expected'
+    const depthLootProfiles: WeightedLootMonsterProfile[] = lootEnabled
       ? pool.map((wrapper) => ({
           profile: monsterLootProfile(wrapper, {
             dungeonLevel: depth,
@@ -964,7 +1116,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
         };
       }
     }
-    const loot = gear === 'expected' ? expectedLootBudget({
+    const loot = lootEnabled ? expectedLootBudget({
       monsterProfiles: depthLootProfiles,
       itemWrappers: input.wrappers,
       affixWrappers: input.wrappers,
@@ -1211,7 +1363,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
     };
     const expectedBlockChance = rows.reduce((sum, row) => sum + row.conditionalBlockChance, 0) / divisor;
     let sustain: DescentSustainExpectation | undefined;
-    if (loot) {
+    if (loot && gear === 'expected') {
       const healingPotionsBought = goldAvailableForPurchases * healingGoldShare / healingPotionPrice;
       const healingPotionsAvailable = carriedHealingPotions + healingPotionsBought + loot.expectedHealingPotions;
       const fullHealingPotionsAvailable = carriedFullHealingPotions + loot.expectedFullHealingPotions;
@@ -1305,10 +1457,129 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       }
       if (sustain) sustain.sustainable = sustain.sustainable && mana.sustainable;
     }
-    if (loot) goldForNextDepth = loot.expectedGold;
     totalExperience += expectedXpGained;
     heroLevel = levelAt(totalExperience, heroLevelBefore, curve);
     if (playerAttack === 'spell' && heroLevel > heroLevelBefore) currentMana = null;
+    let sale: ExpectedSaleValue | undefined;
+    if (loot && sustainIncome === 'gold-and-sales') {
+      const keptBaseCounts = new Map<string, number>();
+      if (gear === 'expected') {
+        const prospectiveHistory = [...lootHistory, ...depthLootProfiles];
+        const prospectiveKills = killsSoFar + ambientPopulation;
+        let nextBuild = allocateStats(
+          referenceBuild(classWrapper, heroLevel, startingWeapon),
+          input.policy,
+          maxima,
+        );
+        const nextWeapon = bestWeaponExpectation({
+          class: nextBuild.class,
+          depth: depth + 1,
+          killsSoFar: prospectiveKills,
+          monsterProfiles: prospectiveHistory,
+          itemWrappers: input.wrappers,
+          affixWrappers: input.wrappers,
+          uniqueItemWrappers: input.wrappers,
+          difficulty: input.difficulty,
+          strength: nextBuild.strength,
+          magic: nextBuild.magic,
+          dexterity: nextBuild.dexterity,
+          fallbackWeapon: startingWeapon,
+        });
+        const nextWeaponBase = nextWeapon.weaponId == null
+          ? undefined
+          : input.wrappers.find((wrapper) => wrapper.file === 'items/itemdat.tsv' && wrapper.entity.id === nextWeapon.weaponId);
+        if (nextWeapon.weaponId != null && !nextWeaponBase) {
+          throw new Error(`expected weapon base ${nextWeapon.weaponId} is not supplied`);
+        }
+        if (nextWeaponBase) {
+          const equipped = referenceBuild(classWrapper, heroLevel, nextWeaponBase);
+          nextBuild = { ...nextBuild, weaponType: equipped.weaponType };
+        }
+        const nextArmour = bestArmourExpectation({
+          className: nextBuild.class,
+          depth: depth + 1,
+          killsSoFar: prospectiveKills,
+          monsterProfiles: prospectiveHistory,
+          itemWrappers: input.wrappers,
+          affixWrappers: input.wrappers,
+          uniqueItemWrappers: input.wrappers,
+          difficulty: input.difficulty,
+          strength: nextBuild.strength,
+          magic: nextBuild.magic,
+          dexterity: nextBuild.dexterity,
+          shieldAllowed: weaponPermitsShield(nextBuild, nextWeaponBase),
+        });
+        const keepIfChanged = (previousId: string | null, nextId: string | null) => {
+          if (nextId != null && nextId !== previousId) {
+            keptBaseCounts.set(nextId, (keptBaseCounts.get(nextId) ?? 0) + 1);
+          }
+        };
+        keepIfChanged(selectedWeaponId, nextWeapon.weaponId);
+        keepIfChanged(selectedArmourIds.body, nextArmour.slots.body.itemId);
+        keepIfChanged(selectedArmourIds.helm, nextArmour.slots.helm.itemId);
+        keepIfChanged(selectedArmourIds.shield, nextArmour.slots.shield.itemId);
+        selectedWeaponId = nextWeapon.weaponId;
+        selectedArmourIds = {
+          body: nextArmour.slots.body.itemId,
+          helm: nextArmour.slots.helm.itemId,
+          shield: nextArmour.slots.shield.itemId,
+        };
+      }
+      sale = expectedSaleIncome({
+        monsterProfiles: depthLootProfiles,
+        itemWrappers: input.wrappers,
+        affixWrappers: input.wrappers,
+        uniqueItemWrappers: input.wrappers,
+        difficulty: input.difficulty,
+        itemsPerTrip: saleItemsPerTrip,
+        keptBaseCounts,
+        excludedBaseIds: sustainBaseIds,
+      });
+      if (sustain) {
+        sustain.expectedGoldFromSales = sale.expectedGold;
+        sustain.expectedGoldIncome = loot.expectedGold + sale.expectedGold;
+      }
+    }
+    if (loot) goldForNextDepth = loot.expectedGold + (sale?.expectedGold ?? 0);
+    if (loot && sale) {
+      const faucets: DescentGoldFaucets = {
+        monsterGold: loot.expectedGold,
+        sales: sale.expectedGold,
+        total: loot.expectedGold + sale.expectedGold,
+      };
+      const potionGoldSpent = (sustain?.healingPotionsBought ?? 0) * healingPotionPrice
+        + (mana?.manaPotionsBought ?? 0) * manaPotionPrice;
+      const sinks: DescentGoldSinks = {
+        potionsBought: potionGoldSpent,
+        repair: 0,
+        identify: 0,
+        total: potionGoldSpent,
+      };
+      const clearHours = Number.isFinite(expectedSeconds) ? expectedSeconds / 3_600 : null;
+      const perHour = clearHours != null && clearHours > 0 ? {
+        faucets: {
+          monsterGold: faucets.monsterGold / clearHours,
+          sales: faucets.sales / clearHours,
+          total: faucets.total / clearHours,
+        },
+        sinks: {
+          potionsBought: sinks.potionsBought / clearHours,
+          repair: 0,
+          identify: 0,
+          total: sinks.total / clearHours,
+        },
+        net: (faucets.total - sinks.total) / clearHours,
+      } : null;
+      goldFlowLevels.push({
+        depth,
+        clearHours,
+        faucets,
+        sinks,
+        net: faucets.total - sinks.total,
+        perHour,
+        sales: sale,
+      });
+    }
     const notes = [
       `Uniform expectation across ${pool.length} eligible ordinary type${pool.length === 1 ? '' : 's'}; ${ambientPopulation} sequential ambient kills.`,
       `${uniqueIds.length} eligible unique row${uniqueIds.length === 1 ? '' : 's'} excluded because actual roster and quest conditions are unresolved.`,
@@ -1353,8 +1624,17 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       ? { sorcererCombatPolicy: 'mixed' as const }
       : {}),
     ...(gear === 'expected' ? { gear } : {}),
-    assumptions: assumptions(tilesPerLevel, input.policy, gear, input.className, sorcererCombatPolicy),
+    assumptions: assumptions(
+      tilesPerLevel,
+      input.policy,
+      gear,
+      input.className,
+      sorcererCombatPolicy,
+      sustainIncome,
+      saleItemsPerTrip,
+    ),
     levels,
+    ...(sustainIncome === 'gold-and-sales' ? { goldFlow: summarizeGoldFlow(goldFlowLevels, saleItemsPerTrip) } : {}),
   };
 }
 
