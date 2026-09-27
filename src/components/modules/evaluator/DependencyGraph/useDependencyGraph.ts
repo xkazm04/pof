@@ -1,11 +1,36 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
 import { buildModuleTopology, isOpenBlocked, TOPOLOGY_COMPACT } from '@/lib/topology/moduleGraph';
+import {
+  unblockFrontier, previewUnblock, criticalUnblocker, clearedEdgeIds,
+} from '@/lib/topology/unblockFrontier';
+import { generatePlan } from '@/lib/implementation-planner/plan-generator';
+import { planItemToTask } from '@/lib/implementation-planner/plan-dispatch';
+import { getAppOrigin } from '@/lib/constants';
+import { MODULE_COLORS as CHART_MODULE_COLORS } from '@/lib/chart-colors';
 import { useFeatureStatuses } from '@/hooks/useFeatureStatuses';
 import { useManifest } from '@/hooks/useManifest';
+import { useModuleCLI } from '@/hooks/useModuleCLI';
 import type { SubModuleId } from '@/types/modules';
 import { MODULE_COLORS } from './constants';
-import type { ModuleNode } from './types';
+import type { BuildTarget, ModuleNode } from './types';
+
+const NO_EDGES: ReadonlySet<string> = new Set();
+
+/** `moduleId::featureName` -> its module id (the part before the first `::`). */
+const moduleOf = (key: string) => key.slice(0, key.indexOf('::')) as SubModuleId;
+
+/** A buildable feature plus what building it clears. */
+function toBuildTarget(statusMap: ReadonlyMap<string, string>, key: string): BuildTarget {
+  const { newlyReady } = previewUnblock(statusMap, key);
+  return {
+    key,
+    moduleId: moduleOf(key),
+    featureName: key.slice(key.indexOf('::') + 2),
+    newlyReady,
+    moduleCount: new Set(newlyReady.map(moduleOf)).size,
+  };
+}
 
 export function useDependencyGraph() {
   // Statuses come from the ONE shared all-statuses path. A failed load must not
@@ -19,6 +44,8 @@ export function useDependencyGraph() {
   const [selectedModule, setSelectedModule] = useState<string | null>(null);
   const [hoveredModule, setHoveredModule] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
+  // Feature whose Build is being previewed (hover / focus on a Build affordance).
+  const [previewKey, setPreviewKey] = useState<string | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const { manifest, isConnected: bridgeConnected } = useManifest();
 
@@ -49,20 +76,56 @@ export function useDependencyGraph() {
     [topology],
   );
 
+  // The single best next build across every module (impact-scorer ranked).
+  const criticalBuild = useMemo(() => {
+    const key = criticalUnblocker(statusMap);
+    return key ? toBuildTarget(statusMap, key) : null;
+  }, [statusMap]);
+
+  // Cross-module edges the previewed build would stop blocking.
+  const previewEdges = useMemo(
+    () => (previewKey ? clearedEdgeIds(statusMap, previewKey) : NO_EDGES),
+    [previewKey, statusMap],
+  );
+
+  // One-click build: resolve the feature's PlanItem and dispatch it as a
+  // feature-fix task through the standard useModuleCLI.execute path (the
+  // ImplementationPlan path) — project context, spend preflight and analytics
+  // come with it; no prompt is built here.
+  const { execute, isRunning: isBuilding } = useModuleCLI({
+    moduleId: 'core-engine' as SubModuleId,
+    sessionKey: 'dependency-graph-build',
+    label: 'Dependencies Build',
+    accentColor: CHART_MODULE_COLORS.evaluator,
+  });
+  const buildFeature = useCallback((key: string) => {
+    const item = generatePlan(statusMap).items.find((i) => i.key === key);
+    if (!item) return;
+    void execute(planItemToTask(item, getAppOrigin()));
+  }, [statusMap, execute]);
+
   // Feature-level details for selected module
   const selectedDetails = useMemo(() => {
     if (!selectedModule) return null;
     const features = MODULE_FEATURE_DEFINITIONS[selectedModule as SubModuleId] ?? [];
+    // Rows share frontier features (AARPGCharacterBase fronts many): preview each once.
+    const targets = new Map<string, BuildTarget>();
+    const targetFor = (k: string) => {
+      if (!targets.has(k)) targets.set(k, toBuildTarget(statusMap, k));
+      return targets.get(k)!;
+    };
     return features.map((feat) => {
       const key = `${selectedModule}::${feat.featureName}`;
       const status = statusMap.get(key) ?? 'unknown';
       const info = depMap.get(key);
+      const isBlocked = isOpenBlocked(info, status);
       return {
         featureName: feat.featureName,
         status,
         deps: info?.deps ?? [],
         blockers: info?.blockers ?? [],
-        isBlocked: isOpenBlocked(info, status),
+        isBlocked,
+        frontier: isBlocked ? unblockFrontier(statusMap, key).map(targetFor) : [],
       };
     });
   }, [selectedModule, depMap, statusMap]);
@@ -118,5 +181,10 @@ export function useDependencyGraph() {
     svgWidth,
     svgHeight,
     highlightModule,
+    criticalBuild,
+    buildFeature,
+    isBuilding,
+    setPreviewKey,
+    previewEdges,
   };
 }

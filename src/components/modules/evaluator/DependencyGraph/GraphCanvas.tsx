@@ -16,6 +16,8 @@ interface GraphCanvasProps {
   setHoveredModule: React.Dispatch<React.SetStateAction<string | null>>;
   bridgeConnected: boolean;
   moduleCrossRefCounts: Map<string, number>;
+  /** Edge ids (`from->to`) a previewed build would stop blocking — drawn cleared. */
+  previewEdges: ReadonlySet<string>;
 }
 
 export function GraphCanvas({
@@ -31,6 +33,7 @@ export function GraphCanvas({
   setHoveredModule,
   bridgeConnected,
   moduleCrossRefCounts,
+  previewEdges,
 }: GraphCanvasProps) {
   // Zoom narrows the viewBox (zoomViewBox) instead of CSS-scaling the <svg>, so
   // every zoom level stays fully visible inside the overflow-hidden frame.
@@ -50,6 +53,9 @@ export function GraphCanvas({
           </marker>
           <marker id="arrow-blocked" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
             <path d="M 0 0 L 10 3.5 L 0 7 z" fill={STATUS_BLOCKER} />
+          </marker>
+          <marker id="arrow-cleared" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 3.5 L 0 7 z" fill={STATUS_SUCCESS} />
           </marker>
         </defs>
 
@@ -77,19 +83,23 @@ export function GraphCanvas({
           const perpX = -uy * 20;
           const perpY = ux * 20;
 
+          const edgeId = `${edge.from}->${edge.to}`;
+          // A build preview lights the edges it would clear, over any module highlight.
+          const isCleared = previewEdges.has(edgeId);
           const isHighlighted = highlightModule === edge.from || highlightModule === edge.to;
-          const opacity = highlightModule ? (isHighlighted ? 1 : 0.15) : 0.5;
+          const opacity = isCleared ? 1 : previewEdges.size > 0 ? 0.15 : highlightModule ? (isHighlighted ? 1 : 0.15) : 0.5;
+          const blocked = edge.hasBlockers && !isCleared;
 
           return (
-            <g key={`${edge.from}->${edge.to}`}>
+            <g key={edgeId} data-preview-cleared={isCleared || undefined}>
               <path
                 d={`M${x1},${y1} Q${mx + perpX},${my + perpY} ${x2},${y2}`}
                 fill="none"
-                stroke={edge.hasBlockers ? STATUS_BLOCKER : 'var(--text-muted)'}
-                strokeWidth={Math.min(3, 0.5 + edge.count * 0.5)}
-                strokeDasharray={edge.hasBlockers ? '4 2' : undefined}
+                stroke={isCleared ? STATUS_SUCCESS : blocked ? STATUS_BLOCKER : 'var(--text-muted)'}
+                strokeWidth={isCleared ? 3 : Math.min(3, 0.5 + edge.count * 0.5)}
+                strokeDasharray={blocked ? '4 2' : undefined}
                 opacity={opacity}
-                markerEnd={edge.hasBlockers ? 'url(#arrow-blocked)' : 'url(#arrow)'}
+                markerEnd={isCleared ? 'url(#arrow-cleared)' : blocked ? 'url(#arrow-blocked)' : 'url(#arrow)'}
                 className="transition-opacity duration-base"
               />
               {isHighlighted && (

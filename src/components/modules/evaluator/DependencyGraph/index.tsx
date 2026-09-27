@@ -9,6 +9,7 @@ import { GraphControls } from './GraphControls';
 import { GraphCanvas } from './GraphCanvas';
 import { GraphLegend } from './GraphLegend';
 import { SelectedModuleDetail } from './SelectedModuleDetail';
+import { UnblockCallout } from './UnblockCallout';
 import type { DependencyGraphProps } from './types';
 
 export function DependencyGraph({ onNavigateTab }: DependencyGraphProps) {
@@ -32,6 +33,11 @@ export function DependencyGraph({ onNavigateTab }: DependencyGraphProps) {
     svgWidth,
     svgHeight,
     highlightModule,
+    criticalBuild,
+    buildFeature,
+    isBuilding,
+    setPreviewKey,
+    previewEdges,
   } = useDependencyGraph();
 
   if (isLoading) {
@@ -72,6 +78,11 @@ export function DependencyGraph({ onNavigateTab }: DependencyGraphProps) {
 
   return (
     <div className="space-y-4">
+      {/* The single best next build across every module */}
+      {criticalBuild && (
+        <UnblockCallout target={criticalBuild} onBuild={buildFeature} onPreview={setPreviewKey} disabled={isBuilding} />
+      )}
+
       {/* Controls */}
       <GraphControls edgeCount={edges.length} nodeCount={nodes.length} zoom={zoom} setZoom={setZoom} />
 
@@ -89,13 +100,20 @@ export function DependencyGraph({ onNavigateTab }: DependencyGraphProps) {
         setHoveredModule={setHoveredModule}
         bridgeConnected={bridgeConnected}
         moduleCrossRefCounts={moduleCrossRefCounts}
+        previewEdges={previewEdges}
       />
 
       {/* Legend */}
       <GraphLegend bridgeConnected={bridgeConnected} manifestCrossRefs={manifestCrossRefs} />
 
       {/* Selected module detail */}
-      <SelectedModuleDetail selectedModule={selectedModule} selectedDetails={selectedDetails} />
+      <SelectedModuleDetail
+        selectedModule={selectedModule}
+        selectedDetails={selectedDetails}
+        onBuild={buildFeature}
+        onPreview={setPreviewKey}
+        isBuilding={isBuilding}
+      />
     </div>
   );
 }
