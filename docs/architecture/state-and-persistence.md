@@ -500,6 +500,19 @@ inside `useCRUD`'s `refetch` and anywhere already wrapped in try/catch.
 **`useCRUD`'s `mutate` silently returns `null` on error** (`:84`) and logs via `console.error`.
 If you need to surface the error to the user, use `apiFetch` directly or check the return value.
 
+**Paid in-flight work the browser cannot keep lives in a server ledger, not a persisted store.**
+The asset-forge queue (`useForgeStore`) is memory-only by design, so a Blender-MCP generation's
+provider job id used to vanish on reload and the only recovery (Retry) paid again.
+`src/lib/blender-mcp/generation-ledger.ts` is a `globalThis`-anchored in-process map (the
+visual-gen `*-job-store.ts` idiom) of `{ jobId, provider, prompt, createdAt, state }` — ids and
+state only, no credentials, no SQLite table. `POST /api/blender-mcp/generate` records, `/status`
+moves state, `/import` runs once per job (`ledger.importOnce`: a repeat or concurrent caller is
+answered from the ledger with `alreadyImported: true`), and `GET /api/blender-mcp/generate/jobs`
+lists resumable jobs plus a per-process `ownerEpoch`. `GenerationQueue` calls `resumeMcpJobs()`
+once on mount; a changed `ownerEpoch` (remembered per tab in sessionStorage) is shown as a server
+restart rather than read as "nothing in flight". `reattachJob(id)` re-polls a transport-failed
+job's same provider id for free; `retryJob` still submits a new, paid generation.
+
 **UI_TIMEOUTS is the single source for all timing constants.** Inline `setTimeout(fn, 3000)` or
 similar literals are a lint target. Import `UI_TIMEOUTS` from `@/lib/constants`.
 
