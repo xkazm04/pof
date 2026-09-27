@@ -45,7 +45,7 @@ describe('AI cadence consistency', () => {
     expect(report.approach.verdict).toBe('agree');
   });
 
-  it('pins the known AcidUnique disagreement to the source', () => {
+  it('matches the AcidUnique special-shot delay gate', () => {
     const report = aiConsistency({
       walkFrames: 10,
       walkRate: 1,
@@ -57,9 +57,23 @@ describe('AI cadence consistency', () => {
       ai: 'AcidUnique',
       intelligence: 0,
     });
-    expect(report.attack.verdict).toBe('disagree');
-    expect(report.findings[0].incorrectSide).toBe('behaviourScale');
-    expect(report.findings[0].sourceRefs.join(' ')).toContain('monster.cpp:1987');
+    expect(report.attack.verdict).toBe('agree');
+    expect(report.findings).toEqual([]);
+  });
+
+  it('matches the retreat-first adjacent cadence for both ranged routine shapes', () => {
+    for (const ai of ['SkeletonRanged', 'GoatRanged'] as const) {
+      const report = aiConsistency({
+        walkFrames: 10,
+        walkRate: 1,
+        attackFrames: 8,
+        attackRate: 1,
+        actionFrame: 4,
+        ai,
+        intelligence: 1,
+      });
+      expect(report.attack.verdict, ai).toBe('agree');
+    }
   });
 
   it('uses the canonical engine tick law in the hand calculation', () => {

@@ -76,7 +76,7 @@ describe('MONSTER_DERIVE', () => {
   it('derives a formerly-gapped ranged cadence and reports only genuinely state-dependent routines as gaps', () => {
     expect(MONSTER_DERIVE.derive(monster({}, ['Succubus']))).toMatchObject({
       walkTicksPerStep: 21,
-      attackCycleTicks: 21.5,
+      attackCycleTicks: 105.50000000000001,
       shootCycleTicks: 21.5,
     });
     expect(MONSTER_DERIVE.derive(monster({}, ['Counselor']))).toMatchObject({

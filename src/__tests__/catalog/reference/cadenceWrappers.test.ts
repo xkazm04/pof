@@ -13,7 +13,7 @@ const numbers = (value: unknown) => String(value).split(',').map((entry) => Numb
 const chance = (percent: number) => Math.min(1, Math.max(0, percent / 100));
 
 describe('real monstdat cadence before/after guard', () => {
-  it('keeps all 31 old Zombie/Skeleton numbers exact and adds numbers only to newly-modelled routines', () => {
+  it('keeps Zombie/SkeletonMelee exact, pins retreat-first SkeletonRanged, and adds numbers only to newly-modelled routines', () => {
     if (!existsSync(file)) return;
     const spec = DIABLO1.tables.find((entry) => entry.file === 'monsters/monstdat.tsv')!;
     const wrappers = wrapTable(DIABLO1, spec, readFileSync(file, 'utf8'), 'cadence-comparison').wrappers;
@@ -58,7 +58,9 @@ describe('real monstdat cadence before/after guard', () => {
       } else {
         step = walk;
         const shoot = chance(2 * intelligence + 3);
-        attackCycle = attack + (1 - shoot) / shoot;
+        const retreat = chance(2 * intelligence + 13);
+        const decisionDuration = retreat * walk + (1 - retreat) * (shoot * attack + (1 - shoot));
+        attackCycle = decisionDuration / ((1 - retreat) * shoot);
       }
       expect(derived.walkTicksPerStep, `${wrapper.key} walk`).toBe(step);
       expect(derived.tilesPerSecond, `${wrapper.key} speed`).toBe(t.ticksPerSecond / step);

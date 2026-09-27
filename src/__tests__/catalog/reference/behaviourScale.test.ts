@@ -116,7 +116,8 @@ describe('locomotion and routine cadence stay separate', () => {
     });
     expect(expectedTicks({ ...input, ai: 'SkeletonRanged' }, t.walkExtraTicks)).toEqual({
       step: 11,
-      attack: 27.999999999999996,
+      attack: 66.8235294117647,
+      shoot: 27.999999999999996,
     });
   });
 
@@ -145,11 +146,21 @@ describe('locomotion and routine cadence stay separate', () => {
     });
   });
 
-  it('hand-computes post-shot delay for a ranged-only routine (Succubus, invented animations)', () => {
+  it('hand-computes adjacent retreats and the distinct at-range post-shot delay (Succubus, invented animations)', () => {
     expect(expectedTicks({ ...base, ai: 'Succubus', intelligence: 0 }, t.walkExtraTicks)).toEqual({
       step: 11,
-      attack: 18.5,
+      attack: 44.166666666666664,
       shoot: 18.5,
+    });
+  });
+
+  it('does not apply the normal-shot delay gate to AcidUnique special shots', () => {
+    expect(expectedTicks({
+      ...base, ai: 'AcidUnique', intelligence: 0, specialAttackFrames: 5, specialAttackRate: 2,
+    }, t.walkExtraTicks)).toEqual({
+      step: 11,
+      attack: 35.666666666666664,
+      shoot: 10,
     });
   });
 
@@ -175,6 +186,7 @@ describe('SkeletonRanged (W09): an archer never approaches, shoots on a per-tick
     const law = aiRoutineLaw('SkeletonRanged');
     expect(law.routine).toBe('SkeletonRanged');
     expect(law.routine === 'SkeletonRanged' && law.keepAwayTiles).toBeGreaterThan(0);
+    expect(law.phase).toMatch(/blocked retreat.*same invocation/);
   });
   it('shoots no faster than its attack animation, and a smarter archer shoots sooner', () => {
     const dull = convertBehaviour({ ...base, ai: 'SkeletonRanged', intelligence: 0 }, HERO, TARGET);

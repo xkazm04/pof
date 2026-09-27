@@ -42,11 +42,11 @@ type Pause = { c: number; d: number; spread: number };
 type CadenceModel =
   | { kind: 'shared-per-tick'; act: Pct }
   | { kind: 'forced-pause'; attack: Pct; attackPause: Pause; step: Pct; stepPause: Pause }
-  | { kind: 'skeleton-ranged'; shoot: Pct }
+  | { kind: 'skeleton-ranged'; retreat: Pct; shoot: Pct }
   | { kind: 'settled-per-tick'; attack: Pct; specialBand?: Pct; step: Pct; stepAfterMove: Pct; settleTicks: number }
   | { kind: 'repeating-pause'; attack: Pct; step: Pct; stepAfterMove: Pct; stepPause: Pause }
   | { kind: 'always' }
-  | { kind: 'post-shot-pause'; shootPause: Pause; specialAnimation: boolean }
+  | { kind: 'shared-ranged'; retreat: Pct; shootPause?: Pause; specialAnimation: boolean }
   | { kind: 'ranged-avoidance'; adjacentMelee: Pct; adjacentPause: Pause; closeShot: Pct; farShot: Pct };
 
 export interface AiRoutineLaw {
@@ -142,7 +142,7 @@ export function aiRoutineLaw(ai: string): AiRoutineLaw {
   }
   // .reference/devilutionX/Source/monster.cpp:2149-2178 (SkeletonBowAi).
   case 'SkeletonRanged':
-    return { routine: ai, model: { kind: 'skeleton-ranged', shoot: linearChance(ai, rollAt(ai, own.rolls, 2)) }, approaches: false, phase: 'clear-line ranged combat', keepAwayTiles: keepAwayOf(ai), source: 'monster.cpp:2149-2178' };
+    return { routine: ai, model: { kind: 'skeleton-ranged', retreat: linearChance(ai, rollAt(ai, own.rolls, 0)), shoot: linearChance(ai, rollAt(ai, own.rolls, 2)) }, approaches: false, phase: 'settled clear-line adjacent combat with a legal retreat tile; a retreat leaves this fixed distance slice, while a blocked retreat can still fire in the same invocation', keepAwayTiles: keepAwayOf(ai), source: 'monster.cpp:2149-2178' };
   // .reference/devilutionX/Source/monster.cpp:2202-2254 (ScavengerAi): gap recorded above.
   case 'Scavenger':
     throw new Error('unreachable cadence gap');
@@ -154,7 +154,7 @@ export function aiRoutineLaw(ai: string): AiRoutineLaw {
     return { routine: ai, model: { kind: 'settled-per-tick', step: linearChance(ai, rollAt(ai, own.rolls, 1)), stepAfterMove: linearChance(ai, rollAt(ai, own.rolls, 2)), attack: linearChance(ai, rollAt(ai, own.rolls, 3)), settleTicks: 21 }, approaches: true, phase: 'healthy normal goal below the circle band; adjacent normal melee', source: 'monster.cpp:1893-1938' };
   // .reference/devilutionX/Source/monster.cpp:1976-2011 (AiRanged).
   case 'GoatRanged':
-    return { routine: ai, model: { kind: 'post-shot-pause', shootPause: pauseOf(ai, rollAt(ai, own.rolls, 0)), specialAnimation: false }, approaches: false, phase: 'full-alert clear-line shooting; partial-alert approach is animation-limited', keepAwayTiles: keepAwayOf(ai), source: 'monster.cpp:1976-2011' };
+    return { routine: ai, model: { kind: 'shared-ranged', retreat: linearChance(ai, rollAt(ai, own.rolls, 1)), shootPause: pauseOf(ai, rollAt(ai, own.rolls, 0)), specialAnimation: false }, approaches: false, phase: 'full-alert clear-line shooting with a legal retreat tile; a blocked retreat can still fire in the same invocation; partial-alert approach is animation-limited', keepAwayTiles: keepAwayOf(ai), source: 'monster.cpp:1976-2011' };
   // .reference/devilutionX/Source/monster.cpp:2314-2372 (FallenAi): gap recorded above.
   case 'Fallen':
     throw new Error('unreachable cadence gap');
@@ -177,7 +177,7 @@ export function aiRoutineLaw(ai: string): AiRoutineLaw {
     return { routine: ai, model: { kind: 'always' }, approaches: true, phase: 'alert combat', source: 'monster.cpp:2509-2524' };
   // .reference/devilutionX/Source/monster.cpp:1976-2011 (AiRanged).
   case 'Succubus':
-    return { routine: ai, model: { kind: 'post-shot-pause', shootPause: pauseOf(ai, rollAt(ai, own.rolls, 0)), specialAnimation: false }, approaches: false, phase: 'full-alert clear-line shooting; partial-alert approach is animation-limited', keepAwayTiles: keepAwayOf(ai), source: 'monster.cpp:1976-2011' };
+    return { routine: ai, model: { kind: 'shared-ranged', retreat: linearChance(ai, rollAt(ai, own.rolls, 1)), shootPause: pauseOf(ai, rollAt(ai, own.rolls, 0)), specialAnimation: false }, approaches: false, phase: 'full-alert clear-line shooting with a legal retreat tile; a blocked retreat can still fire in the same invocation; partial-alert approach is animation-limited', keepAwayTiles: keepAwayOf(ai), source: 'monster.cpp:1976-2011' };
   // .reference/devilutionX/Source/monster.cpp:2526-2576 (SneakAi), restricted to the visible Normal goal.
   case 'Sneak':
     return { routine: ai, model: { kind: 'settled-per-tick', step: linearChance(ai, rollAt(ai, own.rolls, 0)), stepAfterMove: linearChance(ai, rollAt(ai, own.rolls, 1)), attack: linearChance(ai, rollAt(ai, own.rolls, 2)), settleTicks: 21 }, approaches: true, phase: 'visible normal goal inside the fade-out boundary; excludes hit-triggered retreat', source: 'monster.cpp:2526-2576' };
@@ -189,7 +189,7 @@ export function aiRoutineLaw(ai: string): AiRoutineLaw {
     return { routine: ai, model: { kind: 'settled-per-tick', step: linearChance('GoatMelee', rollAt('GoatMelee', goat.rolls, 1)), stepAfterMove: linearChance('GoatMelee', rollAt('GoatMelee', goat.rolls, 2)), attack: linearChance('GoatMelee', rollAt('GoatMelee', goat.rolls, 3)), settleTicks: 21 }, approaches: true, phase: 'hostile healthy Normal goal', phaseGap: 'while quest dialogue keeps the goal Talking or Inquiring, Gharbad has no movement or attack cadence', source: 'monster.cpp:2578-2628,1893-1938' };
   // .reference/devilutionX/Source/monster.cpp:1976-2011 (AiRanged), AcidUnique selects the Special animation at 1996-1999.
   case 'AcidUnique':
-    return { routine: ai, model: { kind: 'post-shot-pause', shootPause: pauseOf(ai, rollAt(ai, own.rolls, 0)), specialAnimation: true }, approaches: false, phase: 'full-alert clear-line shooting; partial-alert approach is animation-limited', keepAwayTiles: keepAwayOf(ai), source: 'monster.cpp:1976-2011' };
+    return { routine: ai, model: { kind: 'shared-ranged', retreat: linearChance(ai, rollAt(ai, own.rolls, 1)), specialAnimation: true }, approaches: false, phase: 'full-alert clear-line shooting with a legal retreat tile; a blocked retreat can still fire in the same invocation; SpecialRangedAttack bypasses the normal-shot delay gate; partial-alert approach is animation-limited', keepAwayTiles: keepAwayOf(ai), source: 'monster.cpp:1976-2011' };
   // .reference/devilutionX/Source/monster.cpp:4157-4217 (GolumAi).
   case 'Golem':
     return { routine: ai, model: { kind: 'always' }, approaches: true, phase: 'targeted combat with an available path/tile', source: 'monster.cpp:4157-4217' };
@@ -216,7 +216,7 @@ export function aiRoutineLaw(ai: string): AiRoutineLaw {
     throw new Error('unreachable cadence gap');
   // .reference/devilutionX/Source/monster.cpp:2928-2951 delegates its hostile phase to AiRanged at 1976-2011.
   case 'LazarusSuccubus':
-    return { routine: ai, model: { kind: 'post-shot-pause', shootPause: pauseOf(ai, rollAt(ai, own.rolls, 0)), specialAnimation: false }, approaches: false, phase: 'hostile Normal goal with a clear shot; partial-alert approach is animation-limited', keepAwayTiles: keepAwayOf(ai), phaseGap: 'before the Betrayer quest releases the minion to the Normal goal, it has no combat cadence', source: 'monster.cpp:2928-2951,1976-2011' };
+    return { routine: ai, model: { kind: 'shared-ranged', retreat: linearChance(ai, rollAt(ai, own.rolls, 1)), shootPause: pauseOf(ai, rollAt(ai, own.rolls, 0)), specialAnimation: false }, approaches: false, phase: 'hostile Normal goal with a clear shot and legal retreat tile; a blocked retreat can still fire in the same invocation; partial-alert approach is animation-limited', keepAwayTiles: keepAwayOf(ai), phaseGap: 'before the Betrayer quest releases the minion to the Normal goal, it has no combat cadence', source: 'monster.cpp:2928-2951,1976-2011' };
   // .reference/devilutionX/Source/monster.cpp:2953-2982 (LachdananAi): gap recorded above.
   case 'Lachdanan':
     throw new Error('unreachable cadence gap');
@@ -262,7 +262,7 @@ const failuresBeforeSuccess = (chance: number, label: string, intelligence: numb
 
 export interface ExpectedTicks {
   step: number;
-  /** Adjacent attack for mixed routines; the ranged attack for ranged-only routines. */
+  /** Adjacent attack; ranged-only routines expose a distinct at-range cadence through `shoot` when needed. */
   attack: number;
   /** Present for newly-modelled ranged routines whose at-range shot cadence is distinct. */
   shoot?: number;
@@ -282,11 +282,19 @@ export function expectedTicks(m: BehaviourInput, walkExtra: number): ExpectedTic
     return { step: walk + idle, attack: attack + idle };
   }
   if (model.kind === 'skeleton-ranged') {
-    // It only ever walks AWAY (its retreat hesitation is not modelled: the bare walk is its step), and shoots on a
-    // per-tick chance while it stands.
-    const p = prob(model.shoot, m.intelligence);
-    if (p <= 0) throw new Error(`a SkeletonRanged with intelligence ${m.intelligence} never shoots — no cadence exists`);
-    return { step: walk, attack: attack + (1 - p) / p };
+    const shot = prob(model.shoot, m.intelligence);
+    if (shot <= 0) throw new Error(`a SkeletonRanged with intelligence ${m.intelligence} never shoots — no cadence exists`);
+    const retreat = prob(model.retreat, m.intelligence);
+    // W44's fixed adjacent slice starts settled and is conditional on a legal retreat tile. A successful retreat
+    // consumes `walk` and leaves the slice before the independent shot roll. A blocked Walk returns false in the
+    // pinned routine and falls through to that shot roll in this same invocation instead of consuming `walk`.
+    const decisionDuration = retreat * walk + (1 - retreat) * (shot * attack + (1 - shot));
+    const attackProbability = (1 - retreat) * shot;
+    return {
+      step: walk,
+      attack: decisionDuration / attackProbability,
+      shoot: attack + (1 - shot) / shot,
+    };
   }
   if (model.kind === 'forced-pause') {
     return {
@@ -324,10 +332,15 @@ export function expectedTicks(m: BehaviourInput, walkExtra: number): ExpectedTic
     };
   }
   if (model.kind === 'always') return { step: walk, attack };
-  if (model.kind === 'post-shot-pause') {
+  if (model.kind === 'shared-ranged') {
     const shotAnimation = model.specialAnimation ? specialAttack : attack;
-    const shoot = shotAnimation + meanPause(model.shootPause, m.intelligence);
-    return { step: walk, attack: shoot, shoot };
+    const shoot = shotAnimation + (model.shootPause ? meanPause(model.shootPause, m.intelligence) : 0);
+    const retreat = prob(model.retreat, m.intelligence);
+    // At range there is no retreat, so `shoot` stays the post-shot cycle. Adjacent and with a legal retreat tile,
+    // every retreat consumes one walk before the routine can shoot. A blocked RandomWalk leaves Stand active and
+    // falls through to the shot in the same invocation, so it belongs to a different geometry-conditioned slice.
+    const adjacentAttack = retreat >= 1 ? Infinity : shoot + retreat / (1 - retreat) * walk;
+    return { step: walk, attack: adjacentAttack, shoot };
   }
   const closeShot = prob(model.closeShot, m.intelligence);
   const farShot = prob(model.farShot, m.intelligence);
@@ -362,7 +375,7 @@ export function convertBehaviour(m: BehaviourInput, hero: { walkFrames: number }
   if (ranged) {
     ledger.push(
       { field: 'approaches', grade: 'full', reason: 'the fully-alert ranged phase holds position or retreats rather than approaching' },
-      { field: 'retreatDistance', grade: 'approximate', reason: `may walk away when the target is within ${law.keepAwayTiles} tiles` },
+      { field: 'retreatDistance', grade: 'approximate', reason: `may walk away when the target is within ${law.keepAwayTiles} tiles; adjacent cadence assumes a legal retreat tile, while a blocked retreat can still fire in the same invocation` },
       { field: 'projectileSpeed', grade: 'dropped', reason: 'the arrow moves 32 screen pixels per tick in the 2:1 projection — a direction-dependent speed with no single world value; the PoF projectile default is kept' },
     );
   }
