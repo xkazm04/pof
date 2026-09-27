@@ -534,12 +534,14 @@ describe('simulateDescent', () => {
     const explicitNoDefence = simulateDescent({ ...input, defensiveAffixes: 'none' });
     const explicitNoPurchases = simulateDescent({ ...input, purchases: 'none' });
     const explicitNoRecovery = simulateDescent({ ...input, recovery: 'none' });
+    const explicitNoRangedPackApproach = simulateDescent({ ...input, rangedPackApproach: 'off' });
 
     expect(JSON.stringify(explicit)).toBe(JSON.stringify(omitted));
     expect(JSON.stringify(explicitDuel)).toBe(JSON.stringify(omitted));
     expect(JSON.stringify(explicitNoDefence)).toBe(JSON.stringify(omitted));
     expect(JSON.stringify(explicitNoPurchases)).toBe(JSON.stringify(omitted));
     expect(JSON.stringify(explicitNoRecovery)).toBe(JSON.stringify(omitted));
+    expect(JSON.stringify(explicitNoRangedPackApproach)).toBe(JSON.stringify(omitted));
     expect(Object.keys(explicit.levels[0])).toEqual([
       'depth',
       'poolSize',
@@ -950,6 +952,62 @@ describe('simulateDescent', () => {
     expect(result.levels[0].pack!.expectedGotHitInterruptions).toBeGreaterThan(0);
     expect(result.levels[1].pack).toMatchObject({ expectedPackSize: 1.75, expectedPacks: 2 / 1.75 });
     expect(result.assumptions.find((item) => item.id === 'adjacent-slots')).toMatchObject({ value: 8 });
+  });
+
+  it('keeps ranged pack approach off byte-identical and changes Rogue pack time and damage when enabled', () => {
+    const closingMonster = {
+      ...monster,
+      entity: {
+        ...monster.entity,
+        data: {
+          ...monster.entity.data,
+          derived: {
+            ...(monster.entity.data.derived as Record<string, unknown>),
+            tilesPerSecond: 10,
+            attackCycleSeconds: 0.5,
+          },
+          stats: (monster.entity.data.stats as { label: string; value: number }[]).map((stat) =>
+            stat.label === 'To Hit' ? { ...stat, value: 100 } : stat),
+        },
+      },
+    } satisfies ReferenceWrapper;
+    const input = {
+      className: 'rogue' as const,
+      policy: 'none' as const,
+      tilesPerLevel: 60,
+      gameMode: 'single' as const,
+      difficulty: 'normal' as const,
+      gear: 'none' as const,
+      encounter: 'packs' as const,
+      adjacentSlots: 8,
+      wrappers: [rogue, closingMonster, ...curve],
+      locations: locationsFor(closingMonster),
+    };
+    const legacy = simulateDescent(input);
+    const explicitOff = simulateDescent({ ...input, rangedPackApproach: 'off' });
+    const expected = simulateDescent({ ...input, rangedPackApproach: 'expected' });
+    const legacyDepth = legacy.levels[2];
+    const expectedDepth = expected.levels[2];
+
+    expect(JSON.stringify(explicitOff)).toBe(JSON.stringify(legacy));
+    expect(expected).toMatchObject({
+      encounter: 'packs',
+      rangedPackApproach: 'expected',
+      rangedPackGeometry: 'shared-engagement-ring',
+    });
+    expect(expectedDepth.pack?.rangedApproach).toMatchObject({
+      policy: 'expected',
+      geometry: 'shared-engagement-ring',
+      kite: 'off',
+    });
+    expect(expectedDepth.pack!.rangedApproach!.expectedKillsBeforeContactPerPack!).toBeGreaterThan(0);
+    expect(expectedDepth.expectedSecondsToClear).not.toBe(legacyDepth.expectedSecondsToClear);
+    expect(expectedDepth.expectedDamageTaken).not.toBe(legacyDepth.expectedDamageTaken);
+    expect(expected.assumptions.map((item) => item.id)).toEqual(expect.arrayContaining([
+      'ranged-pack-approach-geometry',
+      'ranged-pack-approach-attacks',
+      'ranged-pack-kite',
+    ]));
   });
 
   it('keeps spell-area off byte-identical and changes pack spell damage, time, mana, and recovery load when enabled', () => {

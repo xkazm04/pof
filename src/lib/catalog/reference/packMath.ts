@@ -5,6 +5,13 @@ export const DEFAULT_ADJACENT_SLOTS = 8;
 export const CORRIDOR_ADJACENT_SLOTS = 2;
 export const ORDINARY_UNIQUE_MINIONS = 8;
 
+export type RangedPackApproachPolicy = 'off' | 'expected';
+export type RangedPackApproachGeometry = 'shared-engagement-ring';
+export type RangedPackKitePolicy = 'off' | 'step-back-after-action';
+
+/** Explicit pack geometry parameter; it is a model assumption, not a table value. */
+export const DEFAULT_RANGED_PACK_APPROACH_GEOMETRY: RangedPackApproachGeometry = 'shared-engagement-ring';
+
 /**
  * Named geometry assumptions, not Diablo data values. Pack members occupy distinct uniformly
  * chosen slots in the configured ring. Aimed lines intersect one secondary ring slot; a wall
@@ -103,6 +110,50 @@ export interface PackSpellAreaExchangeExpectation extends PackExchangeExpectatio
   readonly expectedTargetsAffectedPerCast: number;
   readonly expectedAttackersSuppressedPerCast: number;
   readonly phases: PackSpellAreaExchangePhase[];
+}
+
+export interface RangedPackApproachInput {
+  readonly packSize: number;
+  readonly adjacentSlots?: number;
+  readonly contactDuel: PackDuelExpectation;
+  /** Optional W85 area exchange applies only after contact; approach actions remain focused. */
+  readonly contactSpellArea?: PackSpellAreaDuel;
+  readonly contactPlayerActionsToKill: number;
+  readonly engagementDistance: number;
+  /** Null means the homogeneous pack holds range and attacks from t=0 rather than approaching. */
+  readonly approachTilesPerSecond: number | null;
+  readonly playerActionSeconds: number;
+  /** Expected full-target work for one focused action at the supplied current separation. */
+  readonly expectedActionsToKillAtDistance: (distance: number) => number;
+  readonly manaPerAction?: number;
+  readonly geometry?: RangedPackApproachGeometry;
+  readonly kite?: RangedPackKitePolicy;
+  /** Required by step-back-after-action; the complete step is charged before the next action. */
+  readonly kiteStepSeconds?: number;
+  /** Explicit geometry assumption for one completed retreat step. Defaults to one tile. */
+  readonly kiteStepTiles?: number;
+}
+
+export interface RangedPackApproachPhase {
+  readonly geometry: RangedPackApproachGeometry;
+  readonly engagementDistance: number;
+  readonly seconds: number;
+  readonly playerActions: number;
+  readonly membersKilled: number;
+  readonly survivingMembers: number;
+  readonly shotDistances: number[];
+  readonly kite: RangedPackKitePolicy;
+  readonly retreatSteps: number;
+  readonly retreatSeconds: number;
+  readonly kiteStepTiles: number;
+  readonly kiteStepSeconds: number;
+}
+
+export interface RangedPackApproachExpectation extends PackExchangeExpectation {
+  readonly approach: RangedPackApproachPhase;
+  readonly contact: PackExchangeExpectation | PackSpellAreaExchangeExpectation | null;
+  readonly expectedPlayerActions: number;
+  readonly expectedManaSpent: number;
 }
 
 function validateProbabilityDistribution(outcomes: readonly PackSizeOutcome[]): void {
@@ -396,6 +447,144 @@ export function packSpellAreaExchange(input: PackSpellAreaExchangeInput): PackSp
   };
 }
 
+/**
+ * Resolve the opt-in pre-contact exchange for one homogeneous placement branch. All members begin
+ * on the named engagement ring. A complete hero action advances one focused target by the inverse
+ * of its distance-specific expected actions-to-kill; a kill does not spill damage into the next
+ * member. Homogeneous melee members share speed and therefore reach contact together if they
+ * survive. A homogeneous ranged pack has no closing interval: its existing ranged contact exchange
+ * begins at t=0, so those members attack from range for the whole engagement.
+ */
+export function rangedPackApproachExchange(input: RangedPackApproachInput): RangedPackApproachExpectation {
+  const adjacentSlots = input.adjacentSlots ?? DEFAULT_ADJACENT_SLOTS;
+  const geometry = input.geometry ?? DEFAULT_RANGED_PACK_APPROACH_GEOMETRY;
+  const kite = input.kite ?? 'off';
+  const kiteStepTiles = input.kiteStepTiles ?? 1;
+  const kiteStepSeconds = input.kiteStepSeconds ?? 0;
+  if (!Number.isInteger(input.packSize) || input.packSize < 1) {
+    throw new Error(`packSize must be a positive integer (got ${input.packSize})`);
+  }
+  if (!Number.isInteger(adjacentSlots) || adjacentSlots < 1 || adjacentSlots > DEFAULT_ADJACENT_SLOTS) {
+    throw new Error(`adjacentSlots must be an integer from 1 to ${DEFAULT_ADJACENT_SLOTS} (got ${adjacentSlots})`);
+  }
+  if (geometry !== DEFAULT_RANGED_PACK_APPROACH_GEOMETRY) {
+    throw new Error(`unknown ranged pack approach geometry ${geometry}`);
+  }
+  if (!(['off', 'step-back-after-action'] as const).includes(kite)) {
+    throw new Error(`unknown ranged pack kite policy ${kite}`);
+  }
+  requireNonNegativeFinite('engagementDistance', input.engagementDistance);
+  if (!(input.playerActionSeconds > 0) || !Number.isFinite(input.playerActionSeconds)) {
+    throw new Error(`playerActionSeconds must be a positive finite number (got ${input.playerActionSeconds})`);
+  }
+  requireNonNegativeFinite('contactPlayerActionsToKill', input.contactPlayerActionsToKill);
+  requireNonNegativeFinite('manaPerAction', input.manaPerAction ?? 0);
+  if (input.approachTilesPerSecond !== null
+    && (!(input.approachTilesPerSecond > 0) || !Number.isFinite(input.approachTilesPerSecond))) {
+    throw new Error(`approachTilesPerSecond must be null or a positive finite number (got ${input.approachTilesPerSecond})`);
+  }
+  if (!(kiteStepTiles > 0) || !Number.isFinite(kiteStepTiles)) {
+    throw new Error(`kiteStepTiles must be a positive finite number (got ${kiteStepTiles})`);
+  }
+  if (kite === 'step-back-after-action' && (!(kiteStepSeconds > 0) || !Number.isFinite(kiteStepSeconds))) {
+    throw new Error(`kiteStepSeconds must be positive and finite for ${kite} (got ${input.kiteStepSeconds})`);
+  }
+
+  let survivingMembers = input.packSize;
+  let distance = input.engagementDistance;
+  let seconds = 0;
+  let playerActions = 0;
+  let targetWork = 0;
+  let retreatSteps = 0;
+  let retreatSeconds = 0;
+  const shotDistances: number[] = [];
+  let neverContacts = false;
+  const speed = input.approachTilesPerSecond;
+
+  if (speed !== null && distance > 1) {
+    while (survivingMembers > 0 && distance > 1) {
+      const distanceAfterAction = distance - speed * input.playerActionSeconds;
+      // Match the duel convention: an action completing exactly at adjacency is still free.
+      if (distanceAfterAction < 1 - Number.EPSILON) {
+        seconds += (distance - 1) / speed;
+        distance = 1;
+        break;
+      }
+
+      seconds += input.playerActionSeconds;
+      distance = Math.max(1, distanceAfterAction);
+      playerActions++;
+      shotDistances.push(distance);
+      const actionsToKill = input.expectedActionsToKillAtDistance(distance);
+      if (!(actionsToKill > 0) && actionsToKill !== Infinity) {
+        throw new Error(`expectedActionsToKillAtDistance must return a positive number or Infinity (got ${actionsToKill})`);
+      }
+      if (Number.isFinite(actionsToKill)) targetWork += 1 / actionsToKill;
+      if (targetWork + Number.EPSILON * 16 >= 1) {
+        survivingMembers--;
+        targetWork = 0;
+      }
+      if (survivingMembers === 0 || distance <= 1) break;
+
+      if (kite === 'step-back-after-action') {
+        const previousDistance = distance;
+        seconds += kiteStepSeconds;
+        retreatSeconds += kiteStepSeconds;
+        retreatSteps++;
+        distance = Math.max(1, distance + kiteStepTiles - speed * kiteStepSeconds);
+        if (actionsToKill === Infinity && distance >= previousDistance) {
+          neverContacts = true;
+          seconds = Infinity;
+          break;
+        }
+      }
+    }
+  }
+
+  const approach: RangedPackApproachPhase = {
+    geometry,
+    engagementDistance: input.engagementDistance,
+    seconds,
+    playerActions,
+    membersKilled: input.packSize - survivingMembers,
+    survivingMembers,
+    shotDistances,
+    kite,
+    retreatSteps,
+    retreatSeconds,
+    kiteStepTiles,
+    kiteStepSeconds,
+  };
+  const contact = survivingMembers === 0 || neverContacts
+    ? null
+    : input.contactSpellArea
+      ? packSpellAreaExchange({
+          ...input.contactDuel,
+          packSize: survivingMembers,
+          adjacentSlots,
+          spellArea: input.contactSpellArea,
+        })
+      : packExchange({ ...input.contactDuel, packSize: survivingMembers, adjacentSlots });
+  const contactPlayerActions = contact == null
+    ? 0
+    : 'expectedCasts' in contact
+      ? contact.expectedCasts
+      : input.contactPlayerActionsToKill * survivingMembers;
+  const expectedPlayerActions = playerActions + contactPlayerActions;
+  return {
+    packSize: input.packSize,
+    adjacentSlots,
+    seconds: seconds + (contact?.seconds ?? 0),
+    expectedDamageTaken: contact?.expectedDamageTaken ?? 0,
+    expectedGotHitInterruptions: contact?.expectedGotHitInterruptions ?? 0,
+    phases: contact?.phases ?? [],
+    approach,
+    contact,
+    expectedPlayerActions,
+    expectedManaSpent: expectedPlayerActions * (input.manaPerAction ?? 0),
+  };
+}
+
 export interface DistributedPackExchangeExpectation {
   expectedPackSize: number;
   secondsPerPack: number;
@@ -410,6 +599,23 @@ export interface DistributedPackSpellAreaExchangeExpectation extends Distributed
   expectedManaSpentPerPack: number;
   expectedTargetsAffectedPerCast: number;
   expectedAttackersSuppressedPerCast: number;
+}
+
+export interface DistributedRangedPackApproachExpectation extends DistributedPackExchangeExpectation {
+  readonly approachSecondsPerPack: number;
+  readonly contactSecondsPerPack: number;
+  readonly expectedMembersKilledBeforeContact: number;
+  readonly expectedSurvivingMembersAtContact: number;
+  readonly expectedApproachActionsPerPack: number;
+  readonly expectedPlayerActionsPerPack: number;
+  readonly expectedManaSpentPerPack: number;
+  readonly expectedRetreatStepsPerPack: number;
+  readonly expectedRetreatSecondsPerPack: number;
+  readonly spell?: string;
+  readonly spellLevel?: number;
+  readonly expectedCastsPerPack?: number;
+  readonly expectedTargetsAffectedPerCast?: number;
+  readonly expectedAttackersSuppressedPerCast?: number;
 }
 
 /** Average the exact integer-size exchanges; never substitutes a fractional mean pack size. */
@@ -482,5 +688,61 @@ export function distributedPackSpellAreaExchange(
     expectedAttackersSuppressedPerCast: castWeighted(
       (exchange) => exchange.expectedAttackersSuppressedPerCast,
     ),
+  };
+}
+
+/** Average exact integer placement branches for the opt-in ranged/spell approach policy. */
+export function distributedRangedPackApproachExchange(
+  outcomes: readonly PackSizeOutcome[],
+  input: Omit<RangedPackApproachInput, 'packSize'>,
+): DistributedRangedPackApproachExpectation {
+  validateProbabilityDistribution(outcomes);
+  const exchanges = outcomes.map((outcome) => ({
+    ...outcome,
+    exchange: rangedPackApproachExchange({ ...input, packSize: outcome.size }),
+  }));
+  const weighted = (value: (exchange: RangedPackApproachExpectation) => number) => exchanges.reduce(
+    (sum, item) => sum + item.probability * value(item.exchange),
+    0,
+  );
+  const expectedContactCasts = input.contactSpellArea == null
+    ? 0
+    : weighted((exchange) => exchange.contact != null && 'expectedCasts' in exchange.contact
+      ? exchange.contact.expectedCasts
+      : 0);
+  const contactCastWeighted = (value: (contact: PackSpellAreaExchangeExpectation) => number) =>
+    expectedContactCasts === 0
+      ? 0
+      : exchanges.reduce((sum, item) => {
+          const contact = item.exchange.contact;
+          return contact != null && 'expectedCasts' in contact
+            ? sum + item.probability * contact.expectedCasts * value(contact)
+            : sum;
+        }, 0) / expectedContactCasts;
+  return {
+    expectedPackSize: expectedPackSize(outcomes),
+    secondsPerPack: weighted((exchange) => exchange.seconds),
+    expectedDamageTakenPerPack: weighted((exchange) => exchange.expectedDamageTaken),
+    expectedGotHitInterruptionsPerPack: weighted((exchange) => exchange.expectedGotHitInterruptions),
+    approachSecondsPerPack: weighted((exchange) => exchange.approach.seconds),
+    contactSecondsPerPack: weighted((exchange) => exchange.contact?.seconds ?? 0),
+    expectedMembersKilledBeforeContact: weighted((exchange) => exchange.approach.membersKilled),
+    expectedSurvivingMembersAtContact: weighted((exchange) => exchange.approach.survivingMembers),
+    expectedApproachActionsPerPack: weighted((exchange) => exchange.approach.playerActions),
+    expectedPlayerActionsPerPack: weighted((exchange) => exchange.expectedPlayerActions),
+    expectedManaSpentPerPack: weighted((exchange) => exchange.expectedManaSpent),
+    expectedRetreatStepsPerPack: weighted((exchange) => exchange.approach.retreatSteps),
+    expectedRetreatSecondsPerPack: weighted((exchange) => exchange.approach.retreatSeconds),
+    ...(input.contactSpellArea ? {
+      spell: input.contactSpellArea.spell,
+      spellLevel: input.contactSpellArea.spellLevel,
+      expectedCastsPerPack: expectedContactCasts,
+      expectedTargetsAffectedPerCast: contactCastWeighted(
+        (contact) => contact.expectedTargetsAffectedPerCast,
+      ),
+      expectedAttackersSuppressedPerCast: contactCastWeighted(
+        (contact) => contact.expectedAttackersSuppressedPerCast,
+      ),
+    } : {}),
   };
 }

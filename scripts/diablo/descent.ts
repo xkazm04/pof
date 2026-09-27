@@ -13,6 +13,10 @@
  *     [--identify never|when-profitable]
  *     [--encounter duel|packs] [--slots N]
  *     [--spell-area-in-packs off|expected]
+ *     [--ranged-pack-approach off|expected]
+ *     [--ranged-pack-geometry shared-engagement-ring]
+ *     [--ranged-pack-kite off|step-back-after-action]
+ *     [--ranged-pack-kite-step-seconds N] [--ranged-pack-kite-step-tiles N]
  *     [--buy none|defence]
  *     [--recovery none|town-portal] [--portal-trip-seconds N]
  *     [--chain]
@@ -37,13 +41,19 @@ import {
   type DescentRecovery,
   type DefensiveAffixes,
   type OffensiveAffixes,
+  type RangedPackApproach,
+  type RangedPackGeometry,
+  type RangedPackKite,
   type SaleIdentify,
   type SorcererCombatPolicy,
   type SpellAreaInPacks,
   type StatPointPolicy,
   type SustainIncome,
 } from '@/lib/catalog/reference/descentSim';
-import { DEFAULT_ADJACENT_SLOTS } from '@/lib/catalog/reference/packMath';
+import {
+  DEFAULT_ADJACENT_SLOTS,
+  DEFAULT_RANGED_PACK_APPROACH_GEOMETRY,
+} from '@/lib/catalog/reference/packMath';
 import { listWrappers } from '@/lib/catalog/reference/wrappers-db';
 import { getDb } from '@/lib/db';
 
@@ -135,6 +145,42 @@ if (spellAreaInPacks === 'expected' && (encounter !== 'packs' || className !== '
   console.error('--spell-area-in-packs expected requires --encounter packs --class sorcerer');
   process.exit(2);
 }
+const rangedPackApproach = (arg('ranged-pack-approach') ?? 'off') as RangedPackApproach;
+if (!(['off', 'expected'] as const).includes(rangedPackApproach)) {
+  console.error('--ranged-pack-approach must be off|expected');
+  process.exit(2);
+}
+if (rangedPackApproach === 'expected' && encounter !== 'packs') {
+  console.error('--ranged-pack-approach expected requires --encounter packs');
+  process.exit(2);
+}
+const rangedPackGeometry = (arg('ranged-pack-geometry')
+  ?? DEFAULT_RANGED_PACK_APPROACH_GEOMETRY) as RangedPackGeometry;
+if (rangedPackGeometry !== DEFAULT_RANGED_PACK_APPROACH_GEOMETRY) {
+  console.error(`--ranged-pack-geometry must be ${DEFAULT_RANGED_PACK_APPROACH_GEOMETRY}`);
+  process.exit(2);
+}
+const rangedPackKite = (arg('ranged-pack-kite') ?? 'off') as RangedPackKite;
+if (!(['off', 'step-back-after-action'] as const).includes(rangedPackKite)) {
+  console.error('--ranged-pack-kite must be off|step-back-after-action');
+  process.exit(2);
+}
+if (rangedPackKite !== 'off' && rangedPackApproach !== 'expected') {
+  console.error('--ranged-pack-kite requires --ranged-pack-approach expected');
+  process.exit(2);
+}
+const rangedPackKiteStepSeconds = Number(arg('ranged-pack-kite-step-seconds') ?? 0);
+if (rangedPackKite === 'step-back-after-action'
+  ? !(rangedPackKiteStepSeconds > 0) || !Number.isFinite(rangedPackKiteStepSeconds)
+  : !Number.isFinite(rangedPackKiteStepSeconds) || rangedPackKiteStepSeconds < 0) {
+  console.error('--ranged-pack-kite-step-seconds must be positive for step-back-after-action');
+  process.exit(2);
+}
+const rangedPackKiteStepTiles = Number(arg('ranged-pack-kite-step-tiles') ?? 1);
+if (!(rangedPackKiteStepTiles > 0) || !Number.isFinite(rangedPackKiteStepTiles)) {
+  console.error('--ranged-pack-kite-step-tiles must be a positive number');
+  process.exit(2);
+}
 const recovery = (arg('recovery') ?? 'none') as DescentRecovery;
 if (!(['none', 'town-portal'] as const).includes(recovery)) {
   console.error('--recovery must be none|town-portal');
@@ -174,6 +220,11 @@ const simulationInput = {
   encounter,
   adjacentSlots,
   spellAreaInPacks,
+  rangedPackApproach,
+  rangedPackGeometry,
+  rangedPackKite,
+  rangedPackKiteStepSeconds,
+  rangedPackKiteStepTiles,
   recovery,
   townPortalTripSeconds,
   wrappers,
@@ -235,6 +286,20 @@ console.table(result.levels.map((level) => {
         'attackers suppressed/cast': level.pack!.spellArea?.expectedAttackersSuppressedPerCast == null
           ? null
           : Number(level.pack!.spellArea.expectedAttackersSuppressedPerCast.toFixed(2)),
+      } : {}),
+      ...(rangedPackApproach === 'expected' ? {
+        'approach seconds/pack': level.pack!.rangedApproach?.expectedSecondsPerPack == null
+          ? null
+          : Number(level.pack!.rangedApproach.expectedSecondsPerPack.toFixed(2)),
+        'approach kills/pack': level.pack!.rangedApproach?.expectedKillsBeforeContactPerPack == null
+          ? null
+          : Number(level.pack!.rangedApproach.expectedKillsBeforeContactPerPack.toFixed(2)),
+        'contact survivors/pack': level.pack!.rangedApproach?.expectedSurvivorsAtContactPerPack == null
+          ? null
+          : Number(level.pack!.rangedApproach.expectedSurvivorsAtContactPerPack.toFixed(2)),
+        'approach actions/pack': level.pack!.rangedApproach?.expectedActionsPerPack == null
+          ? null
+          : Number(level.pack!.rangedApproach.expectedActionsPerPack.toFixed(2)),
       } : {}),
     } : {}),
     ...(recovery === 'town-portal' ? {
@@ -385,7 +450,7 @@ const path = join(
   'pof',
   'Diablo',
   'Combat',
-  `descent-${className}-${policy}${gear === 'expected' ? '-expected-gear' : ''}${className === 'sorcerer' && sorcererCombatPolicy === 'mixed' ? '-mixed' : ''}${sustainIncome === 'gold-and-sales' ? '-gold-and-sales' : ''}${saleIdentify === 'when-profitable' ? '-identify-profitable' : ''}${encounter === 'packs' ? `-packs-${adjacentSlots}-slots` : ''}${spellAreaInPacks === 'expected' ? '-expected-spell-area' : ''}${defensiveAffixes === 'expected' ? '-expected-defense' : ''}${offensiveAffixes === 'expected' ? '-expected-offense' : ''}${purchases === 'defence' ? '-buy-defence' : ''}${recovery === 'town-portal' ? '-town-portal-recovery' : ''}${townPortalTripSeconds !== DEFAULT_TOWN_PORTAL_TRIP_SECONDS_ASSUMPTION ? `-${townPortalTripSeconds}s-town-trip` : ''}${chain ? '-chain' : ''}.json`,
+  `descent-${className}-${policy}${gear === 'expected' ? '-expected-gear' : ''}${className === 'sorcerer' && sorcererCombatPolicy === 'mixed' ? '-mixed' : ''}${sustainIncome === 'gold-and-sales' ? '-gold-and-sales' : ''}${saleIdentify === 'when-profitable' ? '-identify-profitable' : ''}${encounter === 'packs' ? `-packs-${adjacentSlots}-slots` : ''}${spellAreaInPacks === 'expected' ? '-expected-spell-area' : ''}${rangedPackApproach === 'expected' ? '-expected-ranged-approach' : ''}${rangedPackKite === 'step-back-after-action' ? '-kite' : ''}${defensiveAffixes === 'expected' ? '-expected-defense' : ''}${offensiveAffixes === 'expected' ? '-expected-offense' : ''}${purchases === 'defence' ? '-buy-defence' : ''}${recovery === 'town-portal' ? '-town-portal-recovery' : ''}${townPortalTripSeconds !== DEFAULT_TOWN_PORTAL_TRIP_SECONDS_ASSUMPTION ? `-${townPortalTripSeconds}s-town-trip` : ''}${chain ? '-chain' : ''}.json`,
 );
 mkdirSync(dirname(path), { recursive: true });
 writeFileSync(path, JSON.stringify(result, null, 2));

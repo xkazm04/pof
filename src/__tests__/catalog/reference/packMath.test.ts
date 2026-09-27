@@ -6,6 +6,7 @@ import {
   expectedSpellPackCoverage,
   ordinaryPackSizeDistribution,
   packExchange,
+  rangedPackApproachExchange,
   requestedUniquePackSize,
 } from '@/lib/catalog/reference/packMath';
 
@@ -54,6 +55,65 @@ describe('simultaneous pack arithmetic', () => {
     expect(result.seconds).toBe(12.5);
     expect(result.expectedDamageTaken).toBe(2.5);
     expect(result.expectedGotHitInterruptions).toBe(0.625);
+  });
+
+  it('focuses closing members at their current distances and removes pre-contact kills', () => {
+    const result = rangedPackApproachExchange({
+      packSize: 3,
+      contactDuel: inventedDuel,
+      contactPlayerActionsToKill: 2,
+      engagementDistance: 5,
+      approachTilesPerSecond: 1,
+      playerActionSeconds: 1,
+      expectedActionsToKillAtDistance: () => 2,
+    });
+
+    expect(result.approach).toMatchObject({
+      seconds: 4,
+      playerActions: 4,
+      membersKilled: 2,
+      survivingMembers: 1,
+      shotDistances: [4, 3, 2, 1],
+    });
+    expect(result.contact?.packSize).toBe(1);
+    expect(result.seconds).toBe(14);
+    expect(result.expectedDamageTaken).toBe(2);
+  });
+
+  it('charges named retreat-step time while melee members still approach', () => {
+    const result = rangedPackApproachExchange({
+      packSize: 1,
+      contactDuel: inventedDuel,
+      contactPlayerActionsToKill: 1,
+      engagementDistance: 3,
+      approachTilesPerSecond: 1,
+      playerActionSeconds: 0.5,
+      expectedActionsToKillAtDistance: () => 2,
+      kite: 'step-back-after-action',
+      kiteStepSeconds: 0.25,
+      kiteStepTiles: 1,
+    });
+
+    expect(result.approach.retreatSteps).toBe(1);
+    expect(result.approach.retreatSeconds).toBe(0.25);
+    expect(result.approach.membersKilled).toBe(1);
+    expect(result.contact).toBeNull();
+    expect(result.seconds).toBe(1.25);
+  });
+
+  it('starts a homogeneous ranged pack exchange at t=0 instead of granting an approach', () => {
+    const result = rangedPackApproachExchange({
+      packSize: 2,
+      contactDuel: { ...inventedDuel, ranged: true },
+      contactPlayerActionsToKill: 1,
+      engagementDistance: 4,
+      approachTilesPerSecond: null,
+      playerActionSeconds: 1,
+      expectedActionsToKillAtDistance: () => 1,
+    });
+
+    expect(result.approach).toMatchObject({ seconds: 0, playerActions: 0, survivingMembers: 2 });
+    expect(result.contact?.phases.map((phase) => phase.engagedAttackers)).toEqual([2, 1]);
   });
 
   it('averages exact placement branches and groups a unique with its minions', () => {
