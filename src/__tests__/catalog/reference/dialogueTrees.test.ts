@@ -21,6 +21,7 @@ const characterRows = wrapped('towners/towners.tsv', [
   { type: 'TOWN_COW', name: 'Synthetic Cow', gossipTexts: 'TEXT_SYNTH_COW' },
   { type: 'TOWN_COW', name: 'Synthetic Cow', gossipTexts: 'TEXT_SYNTH_COW' },
   { type: 'TOWN_COW', name: 'Synthetic Cow', gossipTexts: 'TEXT_SYNTH_COW' },
+  { type: 'TOWN_DEADGUY', name: 'Synthetic Wounded Townsman', gossipTexts: '' },
   { type: 'TOWN_EMPTY', name: 'Silent Synthetic', gossipTexts: '' },
   { type: 'TOWN_BROKEN', name: 'Broken Synthetic', gossipTexts: 'TEXT_SYNTH_MISSING' },
 ]);
@@ -53,9 +54,22 @@ describe('dialogueTrees', () => {
   it('aggregates one conversation per towner, including one tree for all duplicate cow rows', () => {
     expect(result.wrappers.map((tree) => tree.entity.id).sort()).toEqual([
       'd1-dialog-TOWN_COW',
+      'd1-dialog-TOWN_DEADGUY',
       'd1-dialog-TOWN_HOST',
     ]);
     expect(result.wrappers.filter((tree) => tree.entity.id === 'd1-dialog-TOWN_COW')).toHaveLength(1);
+    expect(result.wrappers.find((tree) => tree.entity.id === 'd1-dialog-TOWN_COW')!.entity.data.ledger).toMatchObject({
+      towner: 'TOWN_COW',
+      preMenuHandlers: expect.any(Array),
+      talkTopicsRotate: false,
+    });
+  });
+
+  it('keeps a ledger-only towner tree even when the source tables contain no gossip or topics', () => {
+    const deadguy = result.wrappers.find((tree) => tree.entity.id === 'd1-dialog-TOWN_DEADGUY')!;
+    expect(deadguy.entity.data).toMatchObject({
+      gossip: [], topics: [], ledger: { towner: 'TOWN_DEADGUY' },
+    });
   });
 
   it('skips towners with no resolvable lines and reports the reason', () => {
