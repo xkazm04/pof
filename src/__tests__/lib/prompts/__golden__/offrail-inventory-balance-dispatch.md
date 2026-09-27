@@ -69,37 +69,17 @@ You are an expert ARPG item economy balance advisor. Analyze the following item 
   }
 ]
 
-## Affix Pool
+## Affix Pool (1 distinct affix name carried by the items above)
 [
   {
-    "name": "of Power",
-    "modifier": "+15% Atk Power",
-    "tier": "Prefix",
-    "rarity": "Uncommon"
-  },
-  {
-    "name": "of Fortitude",
-    "modifier": "+200 Max HP",
-    "tier": "Prefix",
-    "rarity": "Rare"
-  },
-  {
-    "name": "Blazing",
-    "modifier": "+Fire Damage",
-    "tier": "Suffix",
-    "rarity": "Rare"
-  },
-  {
-    "name": "Vampiric",
-    "modifier": "+8% Life Steal",
-    "tier": "Prefix",
-    "rarity": "Epic"
-  },
-  {
-    "name": "of Legends",
-    "modifier": "+2 All Skills",
-    "tier": "Suffix",
-    "rarity": "Legendary"
+    "name": "of Precision",
+    "stats": [
+      "+3% Crit Chance"
+    ],
+    "categories": [
+      "offensive"
+    ],
+    "carriedBy": 1
   }
 ]
 
@@ -125,34 +105,30 @@ You are an expert ARPG item economy balance advisor. Analyze the following item 
   }
 ]
 
-## Rarity Distribution (Expected vs Actual at Level 14)
+## Rarity Distribution at Level 14 (design target vs measured)
 [
   {
     "rarity": "Common",
-    "expected": "40%",
-    "actual": "55%"
+    "designTarget": "40%"
   },
   {
     "rarity": "Uncommon",
-    "expected": "30%",
-    "actual": "25%"
+    "designTarget": "30%"
   },
   {
     "rarity": "Rare",
-    "expected": "20%",
-    "actual": "15%"
+    "designTarget": "20%"
   },
   {
     "rarity": "Epic",
-    "expected": "8%",
-    "actual": "5%"
+    "designTarget": "8%"
   },
   {
     "rarity": "Legendary",
-    "expected": "2%",
-    "actual": "0%"
+    "designTarget": "2%"
   }
 ]
+Measured: UNMEASURED - no economy simulation run was passed to the advisor. Treat the measured distribution as unknown; do not infer one.
 
 ## Set Bonuses
 [
@@ -188,27 +164,22 @@ You are an expert ARPG item economy balance advisor. Analyze the following item 
   }
 ]
 
-## Effective DPS by Item
+## Effective DPS by Item (avg damage per hit x attacks per second, from each weapon's own stats; 1 of 2 weapons)
 [
   {
     "name": "Iron Longsword",
     "rarity": "Common",
-    "slot": "MainHand",
-    "effectiveDPS": "31.5"
-  },
-  {
-    "name": "Void Daggers",
-    "rarity": "Legendary",
-    "slot": "MainHand",
-    "effectiveDPS": "134.5"
-  },
-  {
-    "name": "Crystal Staff",
-    "rarity": "Rare",
-    "slot": "MainHand",
-    "effectiveDPS": "56.2"
+    "subtype": "Sword",
+    "dps": 12.5,
+    "basis": "avg damage 15 / 1.2 s per attack"
   }
 ]
+Unparsed: 1 of 2 weapons state no DPS-computable Damage/Speed; they are excluded, not zero:
+{
+  "no Speed stat": [
+    "Ranger's Bow"
+  ]
+}
 
 ---
 
@@ -217,7 +188,7 @@ Evaluate the item economy balance by checking:
 2. **Affix Magnitude vs Item Level Curves**
 3. **DPS Outliers**
 4. **Set Bonus Power vs Individual Items**
-5. **Rarity Distribution Health**
+5. **Rarity Distribution Health** (only if measured above; an UNMEASURED distribution is a coverage gap to report, not a value to judge)
 
 Return your analysis as a structured report with:
 - An overall balance score (0-100)

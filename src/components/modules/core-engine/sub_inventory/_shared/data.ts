@@ -9,8 +9,6 @@ import { EXPANDED_ITEMS } from './data-items';
 /* ── Re-exports from split data files ─────────────────────────────────── */
 
 export { RARITY_COLORS };
-export { COMPARABLE_ITEMS, computeEffectiveDPS } from './data-comparison';
-export type { ComparableItem, ComparisonStat } from './data-comparison';
 export {
   SAMPLE_RECIPE, CRYSTAL_STAFF_SOURCES,
   INVENTORY_GROUPS, INVENTORY_TOTAL, INVENTORY_USED, INVENTORY_GOLD_VALUE,
