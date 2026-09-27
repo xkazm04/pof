@@ -140,3 +140,17 @@
   both hid it; a one-line `tsx` import of each module found it. A cheap static guard beats a behavioural test for load-order bugs.
 - **A snapshot tool that disagrees with promotion lies at scale**: status compared raw wrappers while promotion used handler pools → 82
   false "stale". When a new promotion path is added, the snapshot must read the same path.
+- **An opt-in model input needs a test that toggling it moves its target quantity.** W47 added expected resistances; defaults stayed
+  byte-identical and the option ran — and it changed nothing, because no monster attack carried an element. "Identical when off" +
+  "runs when on" cannot tell a working feature from a disconnected one.
+- **A delegate's reading of a call's boolean arguments is a claim**: cx-b72 read `(…, true, true)` as isDamageShifted and concluded
+  monster projectiles do 1/64 damage. Trace positional booleans to the callee's signature before accepting a 64× conclusion.
+- **Claim-level audits beat shape graders and numeric parity.** W49 (AI), W59 (lore briefs) and W53–W58 (the canon's own laws) graded
+  atomic claims against the pin: passing artifacts were 56–86 % true, laws ~81 %. Errors cluster in CONDITIONS (gates, predicates,
+  roll granularity, failure branches, runtime order), never in the headline numbers — the part parity-on-numbers cannot see.
+- **Audit the laws before producers amplify them.** A wrong law is copied into every entity that cites it (6 AI clusters traced in
+  W49/W51). Our own canon injected external lore too (Khanduras in d1-world).
+- **"Expected best" is for what a hero FINDS, not what it BUYS.** A buyer conditions on the shelf; unconditional expectation ×
+  availability double-discounts (W56 round 1 made every resist item look worthless).
+- **Delegates loosen tests to fit their text.** cx-b80 relaxed two plain-English style tests to admit engine identifiers in law
+  bodies; brief "never loosen a test to fit a corrected body" and diff every test file a law-edit task touches.
