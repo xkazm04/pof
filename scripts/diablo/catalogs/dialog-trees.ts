@@ -2,6 +2,7 @@ import { seededEntities } from '@/lib/catalog/seed';
 import { dialogueTrees, seedDialogSteps, type DialogueTreesResult } from '@/lib/catalog/reference/dialogueTrees';
 import { heroBarkTrees, seedHeroBarkSteps, type HeroBarkTreesResult } from '@/lib/catalog/reference/heroBarks';
 import { monsterTalkTrees, seedMonsterTalkSteps, type MonsterTalkTreesResult } from '@/lib/catalog/reference/monsterTalk';
+import { withTalkLedger } from '@/lib/catalog/reference/talkLedger';
 import type { ReferenceWrapper } from '@/lib/catalog/reference/wrapper';
 import type { CatalogHandler, CatalogReport } from './types';
 
@@ -19,7 +20,10 @@ export const dialogTreesHandler: CatalogHandler = {
       ...dialogueReport.wrappers,
       ...monsterTalkReport.wrappers,
       ...heroBarkReport.wrappers,
-    ] as unknown as ReferenceWrapper[];
+    ].map((wrapper) => ({
+      ...wrapper,
+      entity: withTalkLedger(wrapper.entity),
+    })) as unknown as ReferenceWrapper[];
   },
   seed: (ctx) => {
     for (const item of seededEntities('dialog-trees').filter(
