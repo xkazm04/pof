@@ -2,11 +2,26 @@
 import type {
   MonsterMissileDamageSource,
   MonsterMissileSelectionPolicy,
+  MonsterPersistentHitBehavior,
 } from '@/lib/catalog/reference/monsterMissileDamage';
 
 const missile = (line: number): string => `.reference/devilutionX/Source/missiles.cpp:${line}`;
 const monster = (line: number): string => `.reference/devilutionX/Source/monster.cpp:${line}`;
 const misdat = (line: number): string => `.reference/devilutionX/assets/txtdata/missiles/misdat.tsv:${line}`;
+
+const stationary = (
+  collisionChecks: number,
+  geometry: string,
+  refs: readonly string[],
+): MonsterPersistentHitBehavior => ({
+  collisionChecks,
+  segmentsAtTarget: 1,
+  hitDeletesMissile: false,
+  repeatChecksSamePlayer: true,
+  stationaryAssumption: 'The hero remains on the covered tile for the missile lifetime.',
+  geometry,
+  refs,
+});
 
 export const MONSTER_MISSILE_DAMAGE_SOURCES_DATA = [
   {
@@ -32,8 +47,11 @@ export const MONSTER_MISSILE_DAMAGE_SOURCES_DATA = [
   {
     missile: 'Lightning', routines: ['Bat'], formula: { kind: 'fixed-range', min: 1, max: 10 },
     projectilesPerAttack: 1, collision: 'already-shifted',
-    hitCount: { kind: 'unresolved', modeledHits: 1, reason: 'Movement and occupancy determine how many of the eight segment ticks collide.' },
-    omittedEffects: ['The Familiar lightning segment persists for eight ticks; the duel models one hit per exchange.'],
+    hitCount: {
+      kind: 'fixed', hits: 8,
+      persistent: stationary(8, 'Familiar creates one Lightning segment directly on the enemy tile.', [monster(2472), monster(2473), missile(2008), missile(2016), missile(3378), missile(3380), missile(3383), missile(3384), missile(486), missile(526), missile(537)]),
+    },
+    omittedEffects: [],
     refs: [monster(2472), monster(2473), missile(2008), missile(2016), missile(3378), missile(3383), misdat(10)],
   },
   {
@@ -44,14 +62,35 @@ export const MONSTER_MISSILE_DAMAGE_SOURCES_DATA = [
   {
     missile: 'ThinLightningControl', routines: ['Storm'], formula: { kind: 'monster-normal', multiplier: 2 },
     projectilesPerAttack: 1, collision: 'already-shifted',
-    hitCount: { kind: 'unresolved', modeledHits: 1, reason: 'Movement and occupancy determine how many segment ticks collide.' },
-    omittedEffects: ['A stationary player can be checked on every tick of an eight- or ten-tick ThinLightning segment; the duel models one segment hit per exchange.'],
+    hitCount: {
+      kind: 'fixed', hits: 10,
+      persistent: stationary(10, 'SpawnLightning creates one ThinLightning child per traversed tile; exactly one child occupies the aimed hero tile.', [missile(808), missile(827), missile(829), missile(831), missile(835), missile(2008), missile(2016), missile(2020), missile(3359), missile(3375), missile(3378), missile(3383), missile(3385), missile(486), missile(526), missile(537)]),
+    },
+    omittedEffects: [],
     refs: [monster(1965), monster(2024), monster(2038), missile(808), missile(831), missile(3359), missile(3371), missile(3375), missile(3383), misdat(24)],
   },
   {
     missile: 'Acid', routines: ['Acid', 'AcidUnique'], formula: { kind: 'monster-normal' },
     projectilesPerAttack: 1, collision: 'ordinary-fixed', hitCount: { kind: 'fixed', hits: 1 },
-    omittedEffects: ['The AcidSplat child and persistent AcidPuddle ticks are omitted.'],
+    persistentChild: {
+      missile: 'AcidPuddle',
+      formula: { kind: 'monster-base-level-threshold', threshold: 2, below: 1, atOrAbove: 2 },
+      collision: 'already-shifted',
+      hitCount: {
+        kind: 'random-duration',
+        ticksPerIntelligence: 40,
+        intelligenceOffset: 1,
+        randomAdditionalTicks: { min: 0, max: 14 },
+        dataDefinedEndingAnimation: 'The ending-animation _miAnimLen also checks collision; its table-defined length is not copied into source code.',
+        hitDeletesMissile: false,
+        repeatChecksSamePlayer: true,
+        stationaryAssumption: 'The hero remains on the AcidPuddle tile for its lifetime.',
+        geometry: 'AcidSplat creates one stationary AcidPuddle; only an occupant of that exact tile is checked.',
+        refs: [missile(2355), missile(2359), missile(3048), missile(3050), missile(3052), missile(3053), missile(3054), missile(3058), missile(3059), missile(3644), missile(3654), missile(3655), missile(486), missile(526), missile(537), missile(1121)],
+      },
+      refs: [missile(2993), missile(2994), missile(3644), missile(3654), missile(3655), missile(3048), missile(3052)],
+    },
+    omittedEffects: ['The data-defined AcidPuddle ending-animation collision tail is recorded symbolically because reference-table row values may not be copied into the model.'],
     refs: [monster(1948), monster(1996), missile(2328), missile(2339), missile(2345), missile(2976), missile(2980), missile(2993), missile(3644), missile(3654), missile(3048), missile(3052), misdat(59)],
   },
   {
@@ -67,8 +106,11 @@ export const MONSTER_MISSILE_DAMAGE_SOURCES_DATA = [
   {
     missile: 'LightningControl', routines: ['Counselor', 'Zhar', 'Lazarus'], formula: { kind: 'monster-normal', multiplier: 2 },
     projectilesPerAttack: 1, collision: 'already-shifted',
-    hitCount: { kind: 'unresolved', modeledHits: 1, reason: 'Movement and occupancy determine how many segment ticks collide.' },
-    omittedEffects: ['A stationary player can be checked on every tick of an eight- or ten-tick Lightning segment; the duel models one segment hit per exchange.'],
+    hitCount: {
+      kind: 'fixed', hits: 10,
+      persistent: stationary(10, 'SpawnLightning creates one Lightning child per traversed tile; exactly one child occupies the aimed hero tile.', [missile(808), missile(827), missile(829), missile(835), missile(1999), missile(2005), missile(2008), missile(2016), missile(2020), missile(3359), missile(3375), missile(3378), missile(3383), missile(3385), missile(486), missile(526), missile(537)]),
+    },
+    omittedEffects: [],
     refs: [monster(2756), monster(2757), missile(1999), missile(808), missile(3359), missile(3371), missile(3375), missile(3383), misdat(9)],
   },
   {
@@ -80,22 +122,37 @@ export const MONSTER_MISSILE_DAMAGE_SOURCES_DATA = [
   {
     missile: 'FlashBottom', routines: ['Counselor', 'Zhar', 'Lazarus'], formula: { kind: 'monster-level', multiplier: 2 },
     projectilesPerAttack: 1, collision: 'already-shifted',
-    hitCount: { kind: 'unresolved', modeledHits: 1, reason: 'Movement and occupancy determine how many of the 19 area ticks collide.' },
-    omittedEffects: ['The six-tile area is checked for 19 ticks; the duel models one hit when this missile is selected directly.'],
+    hitCount: {
+      kind: 'fixed', hits: 19,
+      persistent: stationary(19, 'FlashBottom covers six disjoint center/west/south offsets; an adjacent hero occupies at most one checked offset.', [monster(2774), missile(2125), missile(2142), missile(3425), missile(3431), missile(3433), missile(3441), missile(3442), missile(486), missile(526), missile(537)]),
+    },
+    omittedEffects: [],
     refs: [monster(2774), missile(2125), missile(2134), missile(2135), missile(3425), missile(3441), missile(3442), misdat(13)],
   },
   {
     missile: 'FlashTop', routines: ['Counselor', 'Zhar', 'Lazarus'], formula: { kind: 'fixed', value: 4 },
     projectilesPerAttack: 1, collision: 'already-shifted',
-    hitCount: { kind: 'unresolved', modeledHits: 1, reason: 'Movement and occupancy determine how many of the 19 area ticks collide.' },
-    omittedEffects: ['The three-tile area is checked for 19 ticks; the duel models one hit when this missile is selected directly.'],
+    hitCount: {
+      kind: 'fixed', hits: 19,
+      persistent: stationary(19, 'FlashTop covers the three disjoint north/east offsets not covered by FlashBottom; an adjacent hero occupies at most one checked offset.', [monster(2775), missile(2145), missile(2158), missile(3454), missile(3460), missile(3462), missile(3467), missile(3468), missile(486), missile(526), missile(537)]),
+    },
+    omittedEffects: [],
     refs: [monster(2775), missile(2145), missile(2147), missile(3454), missile(3462), missile(3468), misdat(14)],
   },
   {
     missile: 'InfernoControl', routines: ['Mega'], formula: { kind: 'monster-normal' },
     projectilesPerAttack: 1, collision: 'already-shifted',
-    hitCount: { kind: 'unresolved', modeledHits: 1, reason: 'Path geometry, movement, and occupancy determine how many segment ticks collide.' },
-    omittedEffects: ['Up to three persistent Inferno path segments and their repeated per-tick checks are omitted; the duel models one segment hit per exchange.'],
+    hitCount: {
+      kind: 'targeted-path',
+      collisionChecksByTargetTile: [20, 25, 30],
+      maxSegments: 3,
+      hitDeletesMissile: false,
+      repeatChecksSamePlayer: true,
+      stationaryAssumption: 'The hero remains on the aimed tile for the reached segment lifetime.',
+      geometry: 'InfernoControl creates one child on each of at most three distinct traversed tiles; only the child on target tiles 1-3 reaches the hero, and a target at tile 4 is not covered.',
+      refs: [missile(2672), missile(2674), missile(2679), missile(2690), missile(2696), missile(2699), missile(3940), missile(3942), missile(3945), missile(3946), missile(3947), missile(3964), missile(3969), missile(3971), missile(3975), missile(3978), missile(3986), missile(3988), missile(486), missile(526), missile(537)],
+    },
+    omittedEffects: [],
     refs: [monster(2854), monster(2867), missile(2672), missile(2684), missile(2686), missile(2690), missile(3940), missile(3945), missile(3964), missile(3971), misdat(51)],
   },
   {

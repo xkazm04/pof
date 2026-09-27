@@ -380,6 +380,55 @@ describe('duel and canon contract', () => {
     expect(three.expectedMonsterDamagePerSwing).toBe(fire.expectedMonsterDamagePerSwing * 3);
   });
 
+  it('multiplies stationary persistent checks by an independent per-check to-hit roll', () => {
+    const build = { ...BUILD, hasShield: false, blockEnabled: false };
+    const impact = {
+      min: 10 * 64,
+      max: 10 * 64,
+      mean: 10 * 64,
+      expectedNumerator: 10 * 64,
+      expectedDenominator: 1,
+      outcomes: [{ damage: 10 * 64, weight: 1 }],
+    };
+    const puddle = {
+      min: 64,
+      max: 64,
+      mean: 64,
+      expectedNumerator: 64,
+      expectedDenominator: 1,
+      outcomes: [{ damage: 64, weight: 1 }],
+    };
+    const common = {
+      playerAttack: 'melee' as const,
+      monsterAttack: 'ranged-magic' as const,
+      monsterElement: 'acid' as const,
+      monsterDamage: impact,
+      monsterDistance: 4,
+      dungeonLevel: 1,
+    };
+    const primary = duel(build, COEFFICIENTS, MONSTER, common);
+    const persistent = duel(build, COEFFICIENTS, MONSTER, {
+      ...common,
+      monsterDamage: puddle,
+      monsterDistance: 0,
+      monsterHitChecksPerAttack: 5,
+      monsterDamageAlreadyShifted: true,
+    });
+    const compound = duel(build, COEFFICIENTS, MONSTER, {
+      ...common,
+      monsterDamageEvents: [
+        { damage: impact, expectedHitChecks: 1 },
+        { damage: puddle, expectedHitChecks: 5, alreadyShifted: true, missileDistance: 0 },
+      ],
+    });
+
+    expect(compound.monsterHitChecksPerAttack).toBe(6);
+    expect(compound.expectedMonsterDamagePerSwing).toBeCloseTo(
+      primary.expectedMonsterDamagePerSwing + persistent.expectedMonsterDamagePerSwing,
+      12,
+    );
+  });
+
   it('never reports fewer than one swing for a one-hit-kill damage distribution', () => {
     const oneShot = duel({ ...BUILD, weaponDamage: { min: 100, max: 100 } }, { ...COEFFICIENTS, classFlags: [] }, {
       ...MONSTER,

@@ -36,6 +36,14 @@ export interface DuelSpellAttack {
   maxManaBaseInternal?: number;
 }
 
+export interface DuelMonsterDamageEvent {
+  readonly damage: DamageDistribution;
+  readonly expectedHitChecks: number;
+  readonly alreadyShifted?: boolean;
+  /** PlayerMHit distance stored on this missile; persistent children start at zero. */
+  readonly missileDistance?: number;
+}
+
 /** Ranged heroes start at this explicit model distance unless a caller supplies another. */
 export const DEFAULT_RANGED_ENGAGEMENT_DISTANCE = 4;
 
@@ -63,8 +71,15 @@ export interface DuelOptions {
   monsterDamage?: DamageDistribution;
   /** Independently resolved projectiles emitted by one monster attack animation. */
   monsterProjectilesPerAttack?: number;
+  /**
+   * Expected collision checks made by those projectiles. Persistent-missile counts assume the hero stays on the
+   * covered tile for the full lifetime; every check gets an independent PlayerMHit to-hit roll.
+   */
+  monsterHitChecksPerAttack?: number;
   /** PlayerMHit's shifted collision path disables vanilla blocking. */
   monsterDamageAlreadyShifted?: boolean;
+  /** Separate per-hit damage/collision laws for compound attacks such as Acid plus its puddle child. */
+  monsterDamageEvents?: readonly DuelMonsterDamageEvent[];
 }
 
 /**
@@ -88,6 +103,13 @@ export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monste
   const monsterProjectilesPerAttack = opts.monsterProjectilesPerAttack ?? 1;
   if (!Number.isInteger(monsterProjectilesPerAttack) || monsterProjectilesPerAttack < 1) {
     throw new Error(`monsterProjectilesPerAttack must be a positive integer (got ${monsterProjectilesPerAttack})`);
+  }
+  const monsterHitChecksPerAttack = opts.monsterDamageEvents?.reduce(
+    (sum, event) => sum + event.expectedHitChecks,
+    0,
+  ) ?? opts.monsterHitChecksPerAttack ?? monsterProjectilesPerAttack;
+  if (!Number.isFinite(monsterHitChecksPerAttack) || monsterHitChecksPerAttack < 0) {
+    throw new Error(`monsterHitChecksPerAttack must be a non-negative finite number (got ${monsterHitChecksPerAttack})`);
   }
   const selectedSpell = opts.playerAttack === 'spell' ? opts.spell : undefined;
   if (opts.playerAttack === 'spell' && !selectedSpell) throw new Error('spell attack mode requires spell inputs');
@@ -159,10 +181,10 @@ export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monste
       }, build.class)
     : undefined;
 
-  const monsterHitChance = opts.monsterAttack === 'melee'
+  const monsterHitChanceAt = (missileDistance?: number) => opts.monsterAttack === 'melee'
     ? monsterMeleeHitChance(build, monster, opts.dungeonLevel)
     : monsterRangedHitChance(build, monster, {
-      distance: opts.monsterDistance ?? engagementDistance,
+      distance: missileDistance ?? opts.monsterDistance ?? engagementDistance,
       dungeonLevel: opts.dungeonLevel,
       projectile: opts.monsterAttack === 'ranged-arrow' ? 'arrow' : 'magic',
     });
@@ -172,18 +194,41 @@ export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monste
   }).damage;
   const monsterElement = opts.monsterElement ?? (opts.monsterAttack === 'ranged-magic' ? 'magic' : 'physical');
   const resistance = playerResistance(build, 0, monsterElement).resistance;
-  const block = blockProbability(build, coefficients, monster, monsterHitChance, {
-    kind: opts.monsterAttack === 'melee' ? 'melee' : 'missile',
-    playerMode: opts.playerMode,
-    resistance,
+  const damageEvents = opts.monsterDamageEvents ?? [{
+    damage: monsterDamage,
+    expectedHitChecks: monsterHitChecksPerAttack,
     alreadyShifted: opts.monsterDamageAlreadyShifted,
+  }];
+  if (damageEvents.length === 0) throw new Error('monsterDamageEvents must not be empty');
+  for (const event of damageEvents) {
+    if (!Number.isFinite(event.expectedHitChecks) || event.expectedHitChecks < 0) {
+      throw new Error(`monster damage event expectedHitChecks must be non-negative and finite (got ${event.expectedHitChecks})`);
+    }
+  }
+  const resolvedDamageEvents = damageEvents.map((event) => {
+    const hitChance = monsterHitChanceAt(event.missileDistance);
+    const block = blockProbability(build, coefficients, monster, hitChance, {
+      kind: opts.monsterAttack === 'melee' ? 'melee' : 'missile',
+      playerMode: opts.playerMode,
+      resistance,
+      alreadyShifted: event.alreadyShifted,
+    });
+    const resistedDamageMean = event.damage.outcomes.reduce(
+      (sum, outcome) => sum + playerResistance(build, outcome.damage, monsterElement).damage * outcome.weight,
+      0,
+    ) / event.damage.expectedDenominator;
+    return { ...event, hitChance, block, resistedDamageMean };
   });
-  const resistedDamageMean = monsterDamage.outcomes.reduce(
-    (sum, outcome) => sum + playerResistance(build, outcome.damage, monsterElement).damage * outcome.weight,
+  const primaryEvent = resolvedDamageEvents[0];
+  const monsterHitChance = primaryEvent.hitChance;
+  const block = primaryEvent.block;
+  const expectedMonsterDamagePerHit = primaryEvent.resistedDamageMean * (1 - block.conditionalBlockChance);
+  // Persistent missiles repeat PlayerMHit rather than dealing automatic damage: E[attack damage] is the expected
+  // collision-check count × per-check damaging-hit chance × resisted per-hit damage.
+  const expectedMonsterDamagePerSwing = resolvedDamageEvents.reduce(
+    (sum, event) => sum + event.resistedDamageMean * event.block.damagingHitChance * event.expectedHitChecks,
     0,
-  ) / monsterDamage.expectedDenominator;
-  const expectedMonsterDamagePerHit = resistedDamageMean * (1 - block.conditionalBlockChance);
-  const expectedMonsterDamagePerSwing = resistedDamageMean * block.damagingHitChance * monsterProjectilesPerAttack;
+  );
   const playerLife = lifeAndMana(build, coefficients).maximumLife;
   const monsterDamageAfterDefence = [
     ...monsterDamage.outcomes.map((outcome) => ({
@@ -202,12 +247,15 @@ export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monste
       - (opts.monsterAttack === 'melee' ? freePlayerActionCapacity : 0)
       - 1,
   );
-  const qualifyingDamageChance = monsterDamage.outcomes.reduce((sum, outcome) => {
-    const damage = playerResistance(build, outcome.damage, monsterElement).damage;
-    return sum + (hitRecovery(build, monster, damage).player.starts ? outcome.weight : 0);
-  }, 0) / monsterDamage.expectedDenominator;
-  const gotHitChancePerProjectile = block.damagingHitChance * qualifyingDamageChance;
-  const gotHitChancePerMonsterAttack = 1 - (1 - gotHitChancePerProjectile) ** monsterProjectilesPerAttack;
+  const noGotHitChancePerMonsterAttack = resolvedDamageEvents.reduce((product, event) => {
+    const qualifyingDamageChance = event.damage.outcomes.reduce((sum, outcome) => {
+      const damage = playerResistance(build, outcome.damage, monsterElement).damage;
+      return sum + (hitRecovery(build, monster, damage).player.starts ? outcome.weight : 0);
+    }, 0) / event.damage.expectedDenominator;
+    const gotHitChancePerCheck = event.block.damagingHitChance * qualifyingDamageChance;
+    return product * (1 - gotHitChancePerCheck) ** event.expectedHitChecks;
+  }, 1);
+  const gotHitChancePerMonsterAttack = 1 - noGotHitChancePerMonsterAttack;
   const expectedGotHitInterruptionsBeforeKill = gotHitChancePerMonsterAttack === 0
     ? 0
     : expectedMonsterAttacksBeforeKill * gotHitChancePerMonsterAttack;
@@ -228,13 +276,15 @@ export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monste
     monsterHitChance,
     monsterElement,
     monsterProjectilesPerAttack,
+    monsterHitChecksPerAttack,
     expectedMonsterDamagePerHit,
     expectedMonsterHitsToKillPlayer,
     expectedMonsterDamagePerSwing,
     monsterConditionalBlockChance: block.conditionalBlockChance,
     expectedMonsterAttacksBeforeKill,
     expectedMonsterSwingsToKillPlayer: monsterHitChance > 0
-      ? expectedMonsterHitsToKillPlayer / (monsterHitChance * monsterProjectilesPerAttack)
+      && monsterHitChecksPerAttack > 0
+      ? expectedMonsterHitsToKillPlayer / (monsterHitChance * monsterHitChecksPerAttack)
       : Infinity,
     ...(opts.playerHitRecoverySeconds !== undefined ? {
       gotHit: {

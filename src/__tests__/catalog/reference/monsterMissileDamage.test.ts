@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { MonsterProfile } from '@/lib/catalog/reference/combatMath';
 import {
   MONSTER_MISSILE_DAMAGE_SOURCES,
+  expectedMonsterMissileHitChecks,
   monsterMissileDamageSource,
   monsterMissileMetadata,
   resolveMonsterMissileDamage,
@@ -52,7 +53,9 @@ function wrapper(
 }
 
 const ordinaryMonster = wrapper('d1-test-monster', 'bestiary', 'monsters/monstdat.tsv', {
+  intelligence: 1,
   stats: [
+    { label: 'Level', value: 10 },
     { label: 'Special Damage Min', value: 5 },
     { label: 'Special Damage Max', value: 7 },
   ],
@@ -81,6 +84,7 @@ describe('monster missile damage sources', () => {
     expect(monsterMissileDamageSource('Arrow', 'SkeletonRanged').collision).toBe('ordinary-range');
     expect(monsterMissileDamageSource('MagmaBall', 'Magma').collision).toBe('ordinary-fixed');
     expect(monsterMissileDamageSource('Lightning', 'Bat').collision).toBe('already-shifted');
+    expect(MONSTER_MISSILE_DAMAGE_SOURCES.map((source) => source.hitCount.kind)).not.toContain('unresolved');
   });
 
   it('selects Counselor spells by intelligence and Bat attacks by subtype intelligence', () => {
@@ -122,12 +126,19 @@ describe('monster missile damage sources', () => {
     );
     expect(familiar.damage).toMatchObject({ min: 64, max: 64, mean: 64, expectedDenominator: 10 });
     expect(familiar.alreadyShifted).toBe(true);
-    expect(familiar.hitCount).toMatchObject({ kind: 'unresolved', modeledHits: 1 });
+    expect(familiar.hitCount).toMatchObject({ kind: 'fixed', hits: 8, persistent: {
+      collisionChecks: 8,
+      segmentsAtTarget: 1,
+      hitDeletesMissile: false,
+      repeatChecksSamePlayer: true,
+    } });
+    expect(familiar.expectedHitChecksPerAttack).toBe(8);
 
     const storm = resolveMonsterMissileDamage(
       monsterMissileDamageSource('ThinLightningControl', 'Storm'), profile, ordinaryMonster, undefined,
     );
     expect(storm.damage).toMatchObject({ min: 64, max: 64, mean: 64, expectedDenominator: 3 });
+    expect(storm.expectedHitChecksPerAttack).toBe(10);
     const strongStorm = resolveMonsterMissileDamage(
       monsterMissileDamageSource('ThinLightningControl', 'Storm'),
       { ...profile, damage: { min: 40, max: 41 } },
@@ -147,11 +158,44 @@ describe('monster missile damage sources', () => {
       monsterMissileDamageSource('FlashBottom', 'Counselor'), nightmareProfile, ordinaryMonster, undefined,
     );
     expect(flash.damage.mean).toBe(64);
+    expect(flash.expectedHitChecksPerAttack).toBe(19);
 
     const apocalypse = resolveMonsterMissileDamage(
       monsterMissileDamageSource('DiabloApocalypse', 'Diablo'), profile, ordinaryMonster, undefined,
     );
     expect(apocalypse.damage.mean).toBe(40 * 64);
+  });
+
+  it('resolves stationary controller geometry and the AcidPuddle child independently', () => {
+    const infernoSource = monsterMissileDamageSource('InfernoControl', 'Mega');
+    expect(infernoSource.hitCount).toMatchObject({
+      kind: 'targeted-path',
+      collisionChecksByTargetTile: [20, 25, 30],
+      maxSegments: 3,
+      hitDeletesMissile: false,
+      repeatChecksSamePlayer: true,
+    });
+    expect([1, 2, 3, 4].map((distance) =>
+      resolveMonsterMissileDamage(infernoSource, profile, ordinaryMonster, undefined, 0, distance)
+        .expectedHitChecksPerAttack))
+      .toEqual([20, 25, 30, 0]);
+
+    const acid = resolveMonsterMissileDamage(
+      monsterMissileDamageSource('Acid', 'Acid'), profile, ordinaryMonster, undefined, 0, 4,
+    );
+    expect(acid.damageEvents).toHaveLength(2);
+    expect(acid.damageEvents[0]).toMatchObject({ missile: 'Acid', expectedHitChecks: 1, alreadyShifted: false });
+    expect(acid.damageEvents[1]).toMatchObject({
+      missile: 'AcidPuddle', expectedHitChecks: 87, alreadyShifted: true, missileDistance: 0,
+      damage: { min: 64, max: 64, mean: 64 },
+    });
+    expect(acid.expectedHitChecksPerAttack).toBe(88);
+    expect(acid.source.persistentChild?.hitCount).toMatchObject({
+      kind: 'random-duration',
+      hitDeletesMissile: false,
+      repeatChecksSamePlayer: true,
+    });
+    expect(expectedMonsterMissileHitChecks(acid.source.persistentChild!.hitCount, ordinaryMonster, 4)).toBe(87);
   });
 
   it('uses raw GetHit for shifted sources and shifted bounds for ordinary arrows', () => {

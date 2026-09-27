@@ -20,7 +20,56 @@ export type MonsterMissileDamageFormula =
   | { readonly kind: 'fixed'; readonly value: number }
   | { readonly kind: 'fixed-range'; readonly min: number; readonly max: number }
   | { readonly kind: 'monster-level'; readonly multiplier: number }
+  | { readonly kind: 'monster-base-level-threshold'; readonly threshold: number; readonly below: number; readonly atOrAbove: number }
   | { readonly kind: 'none' };
+
+export interface MonsterPersistentHitBehavior {
+  readonly collisionChecks: number;
+  readonly segmentsAtTarget: number;
+  readonly hitDeletesMissile: false;
+  readonly repeatChecksSamePlayer: true;
+  readonly stationaryAssumption: string;
+  readonly geometry: string;
+  readonly refs: readonly string[];
+}
+
+export type MonsterMissileHitCount =
+  | {
+      readonly kind: 'fixed';
+      /** Collision opportunities before PlayerMHit's independent per-check to-hit roll. */
+      readonly hits: number;
+      readonly persistent?: MonsterPersistentHitBehavior;
+    }
+  | {
+      readonly kind: 'targeted-path';
+      readonly collisionChecksByTargetTile: readonly number[];
+      readonly maxSegments: number;
+      readonly hitDeletesMissile: false;
+      readonly repeatChecksSamePlayer: true;
+      readonly stationaryAssumption: string;
+      readonly geometry: string;
+      readonly refs: readonly string[];
+    }
+  | {
+      readonly kind: 'random-duration';
+      readonly ticksPerIntelligence: number;
+      readonly intelligenceOffset: number;
+      readonly randomAdditionalTicks: { readonly min: number; readonly max: number };
+      readonly dataDefinedEndingAnimation: string;
+      readonly hitDeletesMissile: false;
+      readonly repeatChecksSamePlayer: true;
+      readonly stationaryAssumption: string;
+      readonly geometry: string;
+      readonly refs: readonly string[];
+    };
+
+export interface MonsterMissileChildDamageSource {
+  readonly missile: string;
+  readonly formula: MonsterMissileDamageFormula;
+  readonly collision: MonsterMissileDamageSource['collision'];
+  readonly hitCount: MonsterMissileHitCount;
+  readonly refs: readonly string[];
+}
 
 export interface MonsterMissileDamageSource {
   readonly missile: string;
@@ -29,9 +78,8 @@ export interface MonsterMissileDamageSource {
   readonly projectilesPerAttack: number;
   /** Representation consumed by the collision processor named in refs. */
   readonly collision: 'ordinary-range' | 'ordinary-fixed' | 'already-shifted' | 'monster-attack' | 'none';
-  readonly hitCount:
-    | { readonly kind: 'fixed'; readonly hits: number }
-    | { readonly kind: 'unresolved'; readonly modeledHits: number; readonly reason: string };
+  readonly hitCount: MonsterMissileHitCount;
+  readonly persistentChild?: MonsterMissileChildDamageSource;
   readonly omittedEffects: readonly string[];
   readonly elementGap?: string;
   readonly refs: readonly string[];
@@ -72,8 +120,16 @@ export interface ResolvedMonsterMissileDamage {
   readonly source: MonsterMissileDamageSource;
   readonly damage: DamageDistribution;
   readonly projectilesPerAttack: number;
+  readonly expectedHitChecksPerAttack: number;
   readonly alreadyShifted: boolean;
   readonly hitCount: MonsterMissileDamageSource['hitCount'];
+  readonly damageEvents: readonly {
+    readonly missile: string;
+    readonly damage: DamageDistribution;
+    readonly expectedHitChecks: number;
+    readonly alreadyShifted: boolean;
+    readonly missileDistance?: number;
+  }[];
 }
 
 export const MONSTER_MISSILE_DAMAGE_SOURCES: readonly MonsterMissileDamageSource[] =
@@ -204,6 +260,33 @@ const adjustedMonsterLevel = (monster: MonsterProfile): number => monster.diffic
   ? monster.level
   : monster.level + (monster.difficulty === 'nightmare' ? 15 : monster.difficulty === 'hell' ? 30 : 0);
 
+const monsterIntelligence = (wrapper: ReferenceWrapper): number => {
+  const value = Number(wrapper.entity.data.intelligence ?? wrapper.raw.intelligence);
+  return Number.isInteger(value) && value >= 0 ? value : 0;
+};
+
+/**
+ * Collision opportunities for a stationary hero. PlayerMHit performs a fresh to-hit roll for each one.
+ * `targetDistance` is the tile occupied by a controller target: Inferno reaches only its first three path tiles.
+ */
+export function expectedMonsterMissileHitChecks(
+  hitCount: MonsterMissileHitCount,
+  monsterWrapper: ReferenceWrapper,
+  targetDistance: number,
+): number {
+  if (!Number.isFinite(targetDistance) || targetDistance < 0) {
+    throw new Error(`targetDistance must be a non-negative finite number (got ${targetDistance})`);
+  }
+  if (hitCount.kind === 'fixed') return hitCount.hits;
+  if (hitCount.kind === 'targeted-path') {
+    if (!Number.isInteger(targetDistance) || targetDistance < 1) return 0;
+    return hitCount.collisionChecksByTargetTile[targetDistance - 1] ?? 0;
+  }
+  const randomMean = (hitCount.randomAdditionalTicks.min + hitCount.randomAdditionalTicks.max) / 2;
+  return hitCount.ticksPerIntelligence * (monsterIntelligence(monsterWrapper) + hitCount.intelligenceOffset)
+    + randomMean;
+}
+
 /** Build the per-projectile damage distribution before player resistance. */
 export function resolveMonsterMissileDamage(
   source: MonsterMissileDamageSource,
@@ -211,6 +294,7 @@ export function resolveMonsterMissileDamage(
   monsterWrapper: ReferenceWrapper,
   baseWrapper: ReferenceWrapper | undefined,
   playerGetHit = 0,
+  targetDistance = 1,
 ): ResolvedMonsterMissileDamage {
   const formula = source.formula;
   let damage: DamageDistribution;
@@ -222,6 +306,12 @@ export function resolveMonsterMissileDamage(
     damage = collisionDamage(formula.min, formula.max, playerGetHit, source.collision);
   } else if (formula.kind === 'monster-level') {
     const value = adjustedMonsterLevel(monster) * formula.multiplier;
+    damage = collisionDamage(value, value, playerGetHit, source.collision);
+  } else if (formula.kind === 'monster-base-level-threshold') {
+    const baseLevel = monster.difficultyAdjusted
+      ? stat(baseWrapper ?? monsterWrapper, 'Level')
+      : monster.level;
+    const value = baseLevel >= formula.threshold ? formula.atOrAbove : formula.below;
     damage = collisionDamage(value, value, playerGetHit, source.collision);
   } else {
     const unique = monsterWrapper.file === 'monsters/unique_monstdat.tsv';
@@ -241,11 +331,37 @@ export function resolveMonsterMissileDamage(
       ? transformed.damage
       : collisionDamage(transformed.bounds.min, transformed.bounds.max, playerGetHit, source.collision, multiplier);
   }
+  const expectedHitChecksPerAttack = expectedMonsterMissileHitChecks(source.hitCount, monsterWrapper, targetDistance);
+  const primaryEvent = {
+    missile: source.missile,
+    damage,
+    expectedHitChecks: expectedHitChecksPerAttack,
+    alreadyShifted: source.collision === 'already-shifted',
+    ...(source.collision === 'already-shifted' ? { missileDistance: 0 } : {}),
+  };
+  const child = source.persistentChild;
+  const childResolved = child
+    ? resolveMonsterMissileDamage({
+        missile: child.missile,
+        routines: source.routines,
+        formula: child.formula,
+        projectilesPerAttack: 1,
+        collision: child.collision,
+        hitCount: child.hitCount,
+        omittedEffects: [],
+        refs: child.refs,
+      }, monster, monsterWrapper, baseWrapper, playerGetHit, targetDistance)
+    : undefined;
+  const damageEvents = childResolved
+    ? [primaryEvent, ...childResolved.damageEvents]
+    : [primaryEvent];
   return {
     source,
     damage,
     projectilesPerAttack: source.projectilesPerAttack,
+    expectedHitChecksPerAttack: damageEvents.reduce((sum, event) => sum + event.expectedHitChecks, 0),
     alreadyShifted: source.collision === 'already-shifted',
     hitCount: source.hitCount,
+    damageEvents,
   };
 }

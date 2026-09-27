@@ -3,6 +3,7 @@ import { DIABLO1_SOURCE } from '@/lib/catalog/ingest/diablo1';
 import {
   DEFAULT_RANGED_ENGAGEMENT_DISTANCE,
   duel,
+  type DuelMonsterDamageEvent,
   type DuelSpellAttack,
   type PlayerAttackMode,
 } from '@/lib/catalog/reference/combatDuel';
@@ -992,6 +993,8 @@ interface MonsterExchangeModel {
   monsterElement?: Element;
   monsterDamage?: DamageDistribution;
   monsterProjectilesPerAttack?: number;
+  monsterHitChecksPerAttack?: number;
+  monsterDamageEvents?: readonly DuelMonsterDamageEvent[];
   monsterDamageAlreadyShifted?: boolean;
   approachTilesPerSecond?: number;
   speed: DescentMonsterApproachSpeed;
@@ -1027,6 +1030,7 @@ function monsterExchangeModel(
   monster: ReturnType<typeof monsterProfile>,
   base: ReferenceWrapper | undefined,
   wrappers: readonly ReferenceWrapper[],
+  targetDistance: number,
 ): MonsterExchangeModel {
   const rawDerived = wrapper.entity.data.derived;
   const derived = rawDerived && typeof rawDerived === 'object' && !Array.isArray(rawDerived)
@@ -1038,13 +1042,15 @@ function monsterExchangeModel(
     : undefined;
   const source = selected ? monsterMissileDamageSource(selected.missile, selected.routine) : undefined;
   const metadata = selected ? monsterMissileMetadata(selected.missile, wrappers) : undefined;
-  const resolved = source ? resolveMonsterMissileDamage(source, monster, wrapper, base) : undefined;
+  const resolved = source ? resolveMonsterMissileDamage(source, monster, wrapper, base, 0, targetDistance) : undefined;
   if (selected?.kind === 'missile') {
     return {
       monsterAttack: metadata!.arrow ? 'ranged-arrow' : 'ranged-magic',
       monsterElement: metadata!.element,
       monsterDamage: resolved!.damage,
       monsterProjectilesPerAttack: resolved!.projectilesPerAttack,
+      monsterHitChecksPerAttack: resolved!.expectedHitChecksPerAttack,
+      monsterDamageEvents: resolved!.damageEvents,
       monsterDamageAlreadyShifted: resolved!.alreadyShifted,
       speed: {
         monsterId: wrapper.entity.id,
@@ -1062,6 +1068,8 @@ function monsterExchangeModel(
         monsterElement: metadata.element,
         monsterDamage: resolved.damage,
         monsterProjectilesPerAttack: resolved.projectilesPerAttack,
+        monsterHitChecksPerAttack: resolved.expectedHitChecksPerAttack,
+        monsterDamageEvents: resolved.damageEvents,
         monsterDamageAlreadyShifted: resolved.alreadyShifted,
       } : {}),
       approachTilesPerSecond: effective,
@@ -1085,6 +1093,8 @@ function monsterExchangeModel(
         monsterElement: metadata.element,
         monsterDamage: resolved.damage,
         monsterProjectilesPerAttack: resolved.projectilesPerAttack,
+        monsterHitChecksPerAttack: resolved.expectedHitChecksPerAttack,
+        monsterDamageEvents: resolved.damageEvents,
         monsterDamageAlreadyShifted: resolved.alreadyShifted,
       } : {}),
       approachTilesPerSecond: whileWalking,
@@ -1325,9 +1335,9 @@ function assumptions(
     },
     {
       id: 'monster-missile-damage-event',
-      value: 'one primary missile impact per exchange, except three independently resolved Charged Bolts',
+      value: 'per-hit missile damage multiplied by stationary collision opportunities and independent per-check to-hit',
       source: 'pin-verified monsterMissileDamageData formulas and missile collision call sites',
-      detail: 'Generic projectiles use ordinary whole-HP monster damage; Rhino/Snake charges use special columns; fixed and level formulas remain missile-specific. Persistent Familiar/Lightning segments, acid puddles, the Fireball termination blast, repeated Flash areas, and Inferno path segments are omitted after one modeled impact. A stationary player can be checked repeatedly by lightning segments, but this exchange model counts one segment hit.',
+      detail: 'Generic projectiles remain whole-point single impacts and Charged Bolt remains three independently checked bolts. Persistent missiles assume the hero does not leave the covered tile: Familiar Lightning checks 8 times; other monster Lightning segments check 10; one of the disjoint Flash children checks an adjacent tile 19 times; Inferno checks target tiles 1/2/3 for 20/25/30 ticks and cannot reach the four-tile ranged engagement; Acid adds its source-derived expected puddle countdown as a separate shifted-damage event. Every collision check makes its own PlayerMHit to-hit roll, and shifted hits cannot be blocked. Moving-hero geometry is outside this duel.',
     },
     {
       id: 'clear-time',
@@ -1821,9 +1831,9 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       const monster = monsterProfile(wrapper, input.difficulty, base, input.gameMode);
       const exchange = playerAttack === 'melee'
         ? monsterUsesMissileWhenAdjacent(wrapper)
-          ? monsterExchangeModel(wrapper, monster, base, input.wrappers)
+          ? monsterExchangeModel(wrapper, monster, base, input.wrappers, 1)
           : undefined
-        : monsterExchangeModel(wrapper, monster, base, input.wrappers);
+        : monsterExchangeModel(wrapper, monster, base, input.wrappers, DEFAULT_RANGED_ENGAGEMENT_DISTANCE);
       const runDuel = (attack: PlayerAttackMode, spell?: DuelSpellAttack) => duel(combatBuild, coefficients, monster, {
         gameMode: input.gameMode,
         playerAttack: attack,
@@ -1835,6 +1845,8 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
         monsterElement: exchange?.monsterElement,
         monsterDamage: exchange?.monsterDamage,
         monsterProjectilesPerAttack: exchange?.monsterProjectilesPerAttack,
+        monsterHitChecksPerAttack: exchange?.monsterHitChecksPerAttack,
+        monsterDamageEvents: exchange?.monsterDamageEvents,
         monsterDamageAlreadyShifted: exchange?.monsterDamageAlreadyShifted,
         // A hero in melee is adjacent to the monster it fights, whatever that monster's attack kind (W43 overseer: the
         // delivered version put a ranged target at 4 tiles even in duels, silently moving the mixed Sorcerer's default).
