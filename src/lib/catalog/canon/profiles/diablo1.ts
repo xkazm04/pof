@@ -17,6 +17,7 @@ import { DIABLO1_LOCATION_LAWS } from '@/lib/catalog/reference/locationSpecsData
 import { DIABLO1_CURRENCY_LAWS } from '@/lib/catalog/reference/currencySpecsData';
 import { DIABLO1_ENCOUNTER_LAWS } from '@/lib/catalog/reference/encounterSpecsData';
 import { DIABLO1_LOOT_LAWS } from '@/lib/catalog/reference/lootSpecsData';
+import { DIABLO1_MONSTER_RUNTIME_LAWS } from '@/lib/catalog/reference/monsterRuntimeLawsData';
 import { DIABLO1_MOVEMENT_LAWS } from '@/lib/catalog/reference/movementSpecsData';
 import { DIABLO1_PORT_LAWS } from '@/lib/catalog/reference/portQualificationsData';
 import { DIABLO1_OBJECT_LAWS } from '@/lib/catalog/reference/objectSpecsData';
@@ -50,12 +51,13 @@ export const DIABLO1_CANON: readonly ProjectRule[] = [
   ...DIABLO1_STATE_GRAPH_LAWS,
   ...DIABLO1_CURRENCY_LAWS,
   ...DIABLO1_MOVEMENT_LAWS,
+  ...DIABLO1_MONSTER_RUNTIME_LAWS,
   ...DIABLO1_PORT_LAWS,
   { id: 'd1-resistance-law', profile: 'diablo1', category: 'game', scope: 'bestiary', title: 'Monster resistance law (engine-derived)',
     body: "Monster resistance, derived from the engine: a RESIST flag for an element cuts that element's damage to one quarter, a 75% reduction; an IMMUNE flag means the hit does not land, a 100% reduction. Base-game elements are magic, fire and lightning, with no cold or chaos; Hellfire also has Acid immunity but no quarter-damage acid resistance. Magic/fire/lightning are normal (0%), resistant (75%) or immune (100%); Holy Bolt adds missile-specific rules.",
     refs: ["https://github.com/diasurgical/devilutionX/blob/4138a82/Source/missiles.cpp (MonsterMHit: resist -> dam >>= 2; isImmune -> no hit)", "https://github.com/diasurgical/devilutionX/blob/4138a82/Source/monster.cpp (Monster::isResistant / isImmune)"] },
   { id: 'd1-timing-law', profile: 'diablo1', category: 'game', scope: 'bestiary', title: 'Game time and movement law (engine-derived)',
-    body: "Game time, derived from the engine: the simulation advances 20 ticks per second and every monster runs its AI on every tick, except that a SEARCH monster whose path planning starts a step skips its routine that tick. A monster walk moves one tile and lasts the walk animation's frames plus 1 tick; a hero walk starts one frame earlier. An attack lasts its attack animation's frames and lands on its action frame.",
+    body: "Game time, derived from the engine: the simulation advances 20 ticks per second and every monster runs its AI on every tick, except that a SEARCH monster whose path planning starts a step skips its routine that tick. A monster walk moves one tile and lasts the walk animation's frames plus 1 tick; a hero walk starts one frame earlier. An attack lands on its action frame; tick ordering: d1-monster-animation-timing-law.",
     refs: ['https://github.com/diasurgical/devilutionX/blob/4138a82/Source/diablo.cpp (gnTickDelay = 50 ms)', 'https://github.com/diasurgical/devilutionX/blob/4138a82/Source/monster.cpp (ProcessMonsters -> AiProc every tick; MonsterWalk moves one tile at the last frame; walk anim -1 skipped frame)'] },
   { id: 'd1-hero-attack-timing-law', profile: 'diablo1', category: 'game', scope: 'characters', title: 'Attack timing by class and weapon',
     body: 'Hero attack timing, derived from the engine: usable weapon and shield choose one of nine weapon graphics, then the hero class supplies its frame count and contact marker. Each frame costs one game tick; contact or bow release occurs one frame before the one-based marker. Melee Quick, Fast, Faster and Fastest skip 1, 2, 3 and 4 frames; bows skip 1 or 2 for Quick or Fast only outside Hellfire. Base speed belongs to class and graphic, not the item.',
