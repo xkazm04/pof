@@ -1,11 +1,11 @@
 import { useState, useMemo, useRef } from 'react';
-import { MODULE_FEATURE_DEFINITIONS, buildDependencyMap, computeBlockers } from '@/lib/feature-definitions';
+import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
+import { buildModuleTopology, isOpenBlocked, TOPOLOGY_COMPACT } from '@/lib/topology/moduleGraph';
 import { useFeatureStatuses } from '@/hooks/useFeatureStatuses';
-import { MODULE_LABELS } from '@/lib/module-registry';
 import { useManifest } from '@/hooks/useManifest';
 import type { SubModuleId } from '@/types/modules';
-import { MODULE_COLORS, COL_WIDTH, ROW_HEIGHT, NODE_W, NODE_H, PAD_X, PAD_Y, getNodeCenter } from './constants';
-import type { ModuleNode, Edge } from './types';
+import { MODULE_COLORS } from './constants';
+import type { ModuleNode } from './types';
 
 export function useDependencyGraph() {
   // Statuses come from the ONE shared all-statuses path. A failed load must not
@@ -40,71 +40,14 @@ export function useDependencyGraph() {
     return refs;
   }, [manifest]);
 
-  // Build dep map with blocker info
-  const depMap = useMemo(() => {
-    const base = buildDependencyMap();
-    return computeBlockers(base, statusMap);
-  }, [statusMap]);
-
-  // Build nodes
-  const nodes: ModuleNode[] = useMemo(() => {
-    return Object.keys(MODULE_FEATURE_DEFINITIONS).map((moduleId) => {
-      const features = MODULE_FEATURE_DEFINITIONS[moduleId as SubModuleId] ?? [];
-      const center = getNodeCenter(moduleId as SubModuleId);
-      let blockedCount = 0;
-      let implementedCount = 0;
-
-      for (const feat of features) {
-        const key = `${moduleId}::${feat.featureName}`;
-        const status = statusMap.get(key) ?? 'unknown';
-        if (status === 'implemented') implementedCount++;
-        const info = depMap.get(key);
-        if (info?.isBlocked && status !== 'implemented') blockedCount++;
-      }
-
-      return {
-        moduleId: moduleId as SubModuleId,
-        label: MODULE_LABELS[moduleId] ?? moduleId,
-        color: MODULE_COLORS[moduleId] ?? 'var(--text-muted)',
-        featureCount: features.length,
-        blockedCount,
-        implementedCount,
-        cx: center.x,
-        cy: center.y,
-      };
-    });
-  }, [depMap, statusMap]);
-
-  // Build cross-module edges
-  const edges: Edge[] = useMemo(() => {
-    const edgeMap = new Map<string, { count: number; hasBlockers: boolean }>();
-
-    for (const [moduleId, features] of Object.entries(MODULE_FEATURE_DEFINITIONS)) {
-      for (const feat of features) {
-        const key = `${moduleId}::${feat.featureName}`;
-        const info = depMap.get(key);
-        if (!info) continue;
-
-        for (const dep of info.deps) {
-          if (dep.moduleId === moduleId) continue; // skip same-module
-          const edgeKey = `${dep.moduleId}->${moduleId}`;
-          const existing = edgeMap.get(edgeKey);
-          const isBlocker = info.blockers.some((b) => b.key === dep.key);
-          if (existing) {
-            existing.count++;
-            if (isBlocker) existing.hasBlockers = true;
-          } else {
-            edgeMap.set(edgeKey, { count: 1, hasBlockers: isBlocker });
-          }
-        }
-      }
-    }
-
-    return Array.from(edgeMap.entries()).map(([key, val]) => {
-      const [from, to] = key.split('->');
-      return { from, to, count: val.count, hasBlockers: val.hasBlockers };
-    });
-  }, [depMap]);
+  // Nodes, cross-module edges, placement and viewport: the ONE module-topology
+  // projection shared with NexusView and the Overview roll-up.
+  const topology = useMemo(() => buildModuleTopology(statusMap, TOPOLOGY_COMPACT), [statusMap]);
+  const { depMap, edges } = topology;
+  const nodes: ModuleNode[] = useMemo(
+    () => topology.nodes.map((n) => ({ ...n, color: MODULE_COLORS[n.moduleId] ?? 'var(--text-muted)' })),
+    [topology],
+  );
 
   // Feature-level details for selected module
   const selectedDetails = useMemo(() => {
@@ -119,7 +62,7 @@ export function useDependencyGraph() {
         status,
         deps: info?.deps ?? [],
         blockers: info?.blockers ?? [],
-        isBlocked: (info?.isBlocked ?? false) && status !== 'implemented',
+        isBlocked: isOpenBlocked(info, status),
       };
     });
   }, [selectedModule, depMap, statusMap]);
@@ -149,8 +92,7 @@ export function useDependencyGraph() {
     return counts;
   }, [manifest, manifestCrossRefs]);
 
-  const svgWidth = PAD_X * 2 + 3 * COL_WIDTH + NODE_W;
-  const svgHeight = PAD_Y * 2 + 2 * ROW_HEIGHT + NODE_H;
+  const { width: svgWidth, height: svgHeight } = topology;
 
   const highlightModule = hoveredModule ?? selectedModule;
 

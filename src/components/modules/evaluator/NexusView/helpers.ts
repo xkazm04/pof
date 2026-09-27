@@ -1,11 +1,5 @@
-import type { SubModuleId } from '@/types/modules';
 import { SUB_GENRE_TEMPLATES } from '@/lib/genre-evolution-engine';
-import { TOPOLOGY_ROOMY, getNodeCenter as getCenter } from '@/components/modules/evaluator/_shared/moduleTopology';
 import { ITEM_PREFIX_TO_MODULE } from './constants';
-
-export function getNodeCenter(moduleId: SubModuleId) {
-  return getCenter(moduleId, TOPOLOGY_ROOMY);
-}
 
 export function itemIdToModule(itemId: string): string | undefined {
   // Try longest prefix first (acb before ac)

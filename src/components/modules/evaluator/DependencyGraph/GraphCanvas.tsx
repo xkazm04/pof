@@ -1,6 +1,6 @@
 import { MODULE_COLORS as CHART_MODULE_COLORS, STATUS_SUCCESS, STATUS_ERROR, STATUS_BLOCKER, OPACITY_20 } from '@/lib/chart-colors';
-import type { SubModuleId } from '@/types/modules';
-import { getNodeCenter, NODE_W, NODE_H } from './constants';
+import { zoomViewBox } from '@/lib/topology/moduleGraph';
+import { NODE_W, NODE_H } from './constants';
 import type { ModuleNode, Edge } from './types';
 
 interface GraphCanvasProps {
@@ -32,22 +32,17 @@ export function GraphCanvas({
   bridgeConnected,
   moduleCrossRefCounts,
 }: GraphCanvasProps) {
-  // Zoom by narrowing the viewBox around the graph centre, not by CSS-scaling the
-  // <svg>: a scaled element keeps its layout box, so inside this `overflow-hidden`
-  // container zooming in used to crop the graph (with no way to pan to what it hid)
-  // instead of magnifying it. Shrinking the viewBox keeps the same on-screen box and
-  // aspect ratio, so every zoom level stays fully visible.
-  const viewW = svgWidth / zoom;
-  const viewH = svgHeight / zoom;
-  const viewX = (svgWidth - viewW) / 2;
-  const viewY = (svgHeight - viewH) / 2;
+  // Zoom narrows the viewBox (zoomViewBox) instead of CSS-scaling the <svg>, so
+  // every zoom level stays fully visible inside the overflow-hidden frame.
+  // Edge endpoints come from the nodes' own centres — one derivation of geometry.
+  const centres = new Map(nodes.map((n) => [n.moduleId as string, { x: n.cx, y: n.cy }]));
 
   return (
     <div className="bg-background border border-border rounded-lg overflow-hidden">
       <svg
         ref={svgRef}
         width="100%"
-        viewBox={`${viewX} ${viewY} ${viewW} ${viewH}`}
+        viewBox={zoomViewBox(svgWidth, svgHeight, zoom)}
       >
         <defs>
           <marker id="arrow" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
@@ -60,8 +55,9 @@ export function GraphCanvas({
 
         {/* Edges */}
         {edges.map((edge) => {
-          const fromCenter = getNodeCenter(edge.from as SubModuleId);
-          const toCenter = getNodeCenter(edge.to as SubModuleId);
+          const fromCenter = centres.get(edge.from);
+          const toCenter = centres.get(edge.to);
+          if (!fromCenter || !toCenter) return null;
 
           // Shorten line to stop at node border
           const dx = toCenter.x - fromCenter.x;

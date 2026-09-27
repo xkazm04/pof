@@ -9,7 +9,7 @@ import type { CorrelationResult } from '@/lib/evaluator/correlation-engine';
 import type { CorrelatedInsight } from '@/lib/evaluator/insight-generator';
 import type { ProjectHealthSummary } from '@/lib/evaluator/combined-health';
 import type { AnalyticsDashboard } from '@/types/session-analytics';
-import { MODULE_FEATURE_DEFINITIONS, buildDependencyMap, computeBlockers } from '@/lib/feature-definitions';
+import { buildModuleTopology } from '@/lib/topology/moduleGraph';
 import { tryApiFetch } from '@/lib/api-utils';
 import { useFeatureStatuses } from '@/hooks/useFeatureStatuses';
 import { useModuleAggregates } from '@/hooks/useModuleAggregates';
@@ -68,37 +68,14 @@ export function useUnifiedSummaryView() {
 
   // ── Compute dependency blocked/count maps ──────────────────────────────────
 
+  // Per-module blocked-feature and cross-module-dependency counts come from the
+  // ONE module-topology projection (the Dependencies / Nexus graphs read it too).
   const { depBlockedMap, depCountMap } = useMemo(() => {
-    const base = buildDependencyMap();
-    const resolved = computeBlockers(base, statusMap);
-
-    const blocked = new Map<string, number>();
-    const counts = new Map<string, number>();
-
-    for (const [moduleId, features] of Object.entries(MODULE_FEATURE_DEFINITIONS)) {
-      let moduleBlocked = 0;
-      let moduleDeps = 0;
-
-      for (const feat of features) {
-        const key = `${moduleId}::${feat.featureName}`;
-        const info = resolved.get(key);
-        if (!info) continue;
-
-        // Cross-module deps
-        const crossDeps = info.deps.filter((d) => d.moduleId !== moduleId);
-        moduleDeps += crossDeps.length;
-
-        const status = statusMap.get(key) ?? 'unknown';
-        if (info.isBlocked && status !== 'implemented') {
-          moduleBlocked++;
-        }
-      }
-
-      blocked.set(moduleId, moduleBlocked);
-      counts.set(moduleId, moduleDeps);
-    }
-
-    return { depBlockedMap: blocked, depCountMap: counts };
+    const { nodes } = buildModuleTopology(statusMap);
+    return {
+      depBlockedMap: new Map(nodes.map((n) => [n.moduleId as string, n.blockedCount])),
+      depCountMap: new Map(nodes.map((n) => [n.moduleId as string, n.crossDepCount])),
+    };
   }, [statusMap]);
 
   // ── Run correlation engine ─────────────────────────────────────────────────
