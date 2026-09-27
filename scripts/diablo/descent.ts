@@ -8,6 +8,7 @@
  *     [--gear none|expected] [--weapon d1-<item>]
  *     [--sorcerer-combat mixed|pure-spell]
  *     [--income monster-gold|gold-and-sales] [--items-per-trip N]
+ *     [--encounter duel|packs] [--slots N]
  * Rogue and Sorcerer default to expected gear; Warrior and explicit --weapon runs default to none.
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -21,11 +22,13 @@ import {
   DESCENT_CLASSES,
   simulateDescent,
   type DescentClassName,
+  type DescentEncounter,
   type DescentGear,
   type SorcererCombatPolicy,
   type StatPointPolicy,
   type SustainIncome,
 } from '@/lib/catalog/reference/descentSim';
+import { DEFAULT_ADJACENT_SLOTS } from '@/lib/catalog/reference/packMath';
 import { listWrappers } from '@/lib/catalog/reference/wrappers-db';
 import { getDb } from '@/lib/db';
 
@@ -74,6 +77,16 @@ if (!Number.isInteger(tilesPerLevel) || tilesPerLevel < 0) {
   console.error('--tiles-per-level must be a non-negative integer');
   process.exit(2);
 }
+const encounter = (arg('encounter') ?? 'duel') as DescentEncounter;
+if (!(['duel', 'packs'] as const).includes(encounter)) {
+  console.error('--encounter must be duel|packs');
+  process.exit(2);
+}
+const adjacentSlots = Number(arg('slots') ?? DEFAULT_ADJACENT_SLOTS);
+if (!Number.isInteger(adjacentSlots) || adjacentSlots < 1 || adjacentSlots > DEFAULT_ADJACENT_SLOTS) {
+  console.error(`--slots must be an integer from 1 to ${DEFAULT_ADJACENT_SLOTS}`);
+  process.exit(2);
+}
 
 const wrappers = listWrappers(getDb(), { sourceId: 'diablo1' });
 const weaponId = arg('weapon');
@@ -94,6 +107,8 @@ const result = simulateDescent({
   sorcererCombatPolicy,
   sustainIncome,
   saleItemsPerTrip,
+  encounter,
+  adjacentSlots,
   wrappers,
 });
 
@@ -121,6 +136,16 @@ console.table(result.levels.map((level) => {
     'hero after': level.heroLevelAfter,
     'clear seconds': level.expectedSecondsToClear == null ? null : Number(level.expectedSecondsToClear.toFixed(2)),
     'damage taken': level.expectedDamageTaken == null ? null : Number(level.expectedDamageTaken.toFixed(2)),
+    ...(encounter === 'packs' ? {
+      'pack size': Number(level.pack!.expectedPackSize.toFixed(2)),
+      'damage multiplier': level.pack!.damageMultiplierVsDuel == null
+        ? null
+        : Number(level.pack!.damageMultiplierVsDuel.toFixed(2)),
+      interruptions: level.pack!.expectedGotHitInterruptions == null
+        ? null
+        : Number(level.pack!.expectedGotHitInterruptions.toFixed(2)),
+      'pack sustainable': level.pack!.sustainable ? 'yes' : 'no',
+    } : {}),
     'mana spent': level.mana?.expectedManaSpent == null ? null : Number(level.mana.expectedManaSpent.toFixed(2)),
     'mana pool': level.mana == null ? null : Number(level.mana.manaPool.toFixed(2)),
     'mana available': level.mana == null ? null : Number(level.mana.totalManaAvailable.toFixed(2)),
@@ -188,7 +213,7 @@ const path = join(
   'pof',
   'Diablo',
   'Combat',
-  `descent-${className}-${policy}${gear === 'expected' ? '-expected-gear' : ''}${className === 'sorcerer' && sorcererCombatPolicy === 'mixed' ? '-mixed' : ''}${sustainIncome === 'gold-and-sales' ? '-gold-and-sales' : ''}.json`,
+  `descent-${className}-${policy}${gear === 'expected' ? '-expected-gear' : ''}${className === 'sorcerer' && sorcererCombatPolicy === 'mixed' ? '-mixed' : ''}${sustainIncome === 'gold-and-sales' ? '-gold-and-sales' : ''}${encounter === 'packs' ? `-packs-${adjacentSlots}-slots` : ''}.json`,
 );
 mkdirSync(dirname(path), { recursive: true });
 writeFileSync(path, JSON.stringify(result, null, 2));

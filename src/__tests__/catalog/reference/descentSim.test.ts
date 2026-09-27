@@ -415,8 +415,10 @@ describe('simulateDescent', () => {
     };
     const omitted = simulateDescent(input);
     const explicit = simulateDescent({ ...input, gear: 'none' });
+    const explicitDuel = simulateDescent({ ...input, encounter: 'duel', adjacentSlots: 2 });
 
     expect(JSON.stringify(explicit)).toBe(JSON.stringify(omitted));
+    expect(JSON.stringify(explicitDuel)).toBe(JSON.stringify(omitted));
     expect(Object.keys(explicit.levels[0])).toEqual([
       'depth',
       'poolSize',
@@ -429,6 +431,34 @@ describe('simulateDescent', () => {
       'hardestMonster',
       'note',
     ]);
+  });
+
+  it('reports opt-in pack placement, simultaneous damage, interruptions, and sustainability', () => {
+    const result = simulateDescent({
+      className: 'warrior',
+      policy: 'none',
+      tilesPerLevel: 60,
+      gameMode: 'single',
+      difficulty: 'normal',
+      encounter: 'packs',
+      adjacentSlots: 8,
+      wrappers: [warrior, monster, ...curve],
+      locations,
+    });
+
+    expect(result).toMatchObject({ encounter: 'packs', adjacentSlots: 8 });
+    expect(result.levels[0].pack).toMatchObject({
+      adjacentSlots: 8,
+      expectedPackSize: 1,
+      expectedPacks: 2,
+      sustainable: true,
+      typePackSizes: [{ monsterId: monster.entity.id, expectedPackSize: 1 }],
+      eligibleUniquePacks: [{ monsterId: 'd1-test-unique', requestedPackSize: null }],
+    });
+    expect(result.levels[0].pack!.damageMultiplierVsDuel).toBeGreaterThan(1);
+    expect(result.levels[0].pack!.expectedGotHitInterruptions).toBeGreaterThan(0);
+    expect(result.levels[1].pack).toMatchObject({ expectedPackSize: 1.75, expectedPacks: 2 / 1.75 });
+    expect(result.assumptions.find((item) => item.id === 'adjacent-slots')).toMatchObject({ value: 8 });
   });
 
   it('keeps explicit monster-gold byte-identical to the omitted income policy', () => {

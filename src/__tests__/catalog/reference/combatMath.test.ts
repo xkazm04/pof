@@ -297,6 +297,35 @@ describe('duel and canon contract', () => {
     expect(timed.expectedPlayerSecondsToKill).toBeCloseTo((2.2015873015873018 / 0.21) * 0.6);
   });
 
+  it('reports the law-derived PM_GOTHIT interruption rate when recovery timing is supplied', () => {
+    const result = duel({
+      ...BUILD,
+      level: 2,
+      hasShield: false,
+      blockEnabled: false,
+      swingSeconds: 0.5,
+    }, COEFFICIENTS, MONSTER, {
+      playerAttack: 'melee',
+      monsterAttack: 'melee',
+      dungeonLevel: 1,
+      playerHitRecoverySeconds: 0.4,
+    });
+
+    // Every 2..3 point damaging hit reaches hero level 2; without a shield, chance equals to-hit.
+    expect(result.gotHit).toMatchObject({
+      chancePerMonsterAttack: result.monsterHitChance,
+      recoverySeconds: 0.4,
+    });
+    expect(result.gotHit!.expectedInterruptionsBeforeKill).toBeCloseTo(
+      result.expectedMonsterAttacksBeforeKill * result.monsterHitChance,
+      12,
+    );
+    expect(result.gotHit!.interruptionsPerSecond).toBeCloseTo(
+      result.gotHit!.expectedInterruptionsBeforeKill / result.expectedPlayerSecondsToKill!,
+      12,
+    );
+  });
+
   it('never reports fewer than one swing for a one-hit-kill damage distribution', () => {
     const oneShot = duel({ ...BUILD, weaponDamage: { min: 100, max: 100 } }, { ...COEFFICIENTS, classFlags: [] }, {
       ...MONSTER,

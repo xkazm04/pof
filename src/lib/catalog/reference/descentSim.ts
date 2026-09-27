@@ -13,6 +13,7 @@ import {
   experienceAward,
   experienceCurveLaw,
   FIXED_POINT,
+  hitRecoveryTiming,
   lifeAndMana,
   type Difficulty,
   type ExperienceCurveLaw,
@@ -35,6 +36,13 @@ import {
   type ExpectedSaleValue,
   type WeightedLootMonsterProfile,
 } from '@/lib/catalog/reference/lootMath';
+import {
+  DEFAULT_ADJACENT_SLOTS,
+  distributedPackExchange,
+  expectedPackSize,
+  ordinaryPackSizeDistribution,
+  requestedUniquePackSize,
+} from '@/lib/catalog/reference/packMath';
 import { spellSpec } from '@/lib/catalog/reference/spellSpecs';
 import type { ReferenceWrapper } from '@/lib/catalog/reference/wrapper';
 
@@ -44,6 +52,7 @@ export type StatPointPolicy = 'none' | 'all-strength' | 'balanced';
 export type DescentGear = 'none' | 'expected';
 export type SorcererCombatPolicy = 'mixed' | 'pure-spell';
 export type SustainIncome = 'monster-gold' | 'gold-and-sales';
+export type DescentEncounter = 'duel' | 'packs';
 
 /** Explicit non-solid-tile assumption used only when a caller does not provide one. */
 export const DEFAULT_TILES_PER_LEVEL_ASSUMPTION = 3_000;
@@ -76,6 +85,30 @@ export interface DescentMonsterDifficulty {
 export interface DescentHardestMonster {
   byLowestHeroHitChance: DescentMonsterDifficulty;
   byHighestExpectedDamageTaken: DescentMonsterDifficulty;
+}
+
+export interface DescentMonsterPackSize {
+  monsterId: string;
+  monster: string;
+  expectedPackSize: number;
+}
+
+export interface DescentUniquePackSize {
+  monsterId: string;
+  monster: string;
+  pack: string;
+  requestedPackSize: number | null;
+}
+
+export interface DescentPackExpectation {
+  adjacentSlots: number;
+  expectedPackSize: number;
+  expectedPacks: number;
+  damageMultiplierVsDuel: number | null;
+  expectedGotHitInterruptions: number | null;
+  sustainable: boolean;
+  typePackSizes: DescentMonsterPackSize[];
+  eligibleUniquePacks: DescentUniquePackSize[];
 }
 
 export interface DescentLevelResult {
@@ -113,6 +146,8 @@ export interface DescentLevelResult {
   expectedBlockChance?: number;
   /** Present only for expected gear because sustain is funded by expected loot. */
   sustain?: DescentSustainExpectation;
+  /** Present only for the opt-in simultaneous-packs encounter policy. */
+  pack?: DescentPackExpectation;
 }
 
 export interface SustainArithmeticInput {
@@ -268,6 +303,10 @@ export interface DescentSimulation {
   sorcererCombatPolicy?: 'mixed';
   /** Present for the expected-loot model (the Rogue/Sorcerer default unless gear:none is explicit). */
   gear?: 'expected';
+  /** Omitted for the byte-compatible duel default. */
+  encounter?: 'packs';
+  /** Omitted for the byte-compatible duel default. */
+  adjacentSlots?: number;
   assumptions: DescentAssumption[];
   levels: DescentLevelResult[];
   /** Opt-in derived measurement; omitted by the byte-compatible monster-gold policy. */
@@ -288,6 +327,10 @@ export interface SimulateDescentInput {
   sustainIncome?: SustainIncome;
   /** Abstract carried item count for the single town return after each depth. */
   saleItemsPerTrip?: number;
+  /** Defaults to the legacy one-monster duel model. */
+  encounter?: DescentEncounter;
+  /** Simultaneous melee capacity; eight open tiles, or two for the documented corridor scenario. */
+  adjacentSlots?: number;
   /** Source rows are passed in; the simulator never reads a database or filesystem. */
   wrappers: readonly ReferenceWrapper[];
   /** Tests and other pure callers may pass already-projected location entities. */
@@ -560,6 +603,14 @@ interface MonsterExchangeModel {
   speed: DescentMonsterApproachSpeed;
 }
 
+function monsterHasMissileAttack(wrapper: ReferenceWrapper): boolean {
+  const rawDerived = wrapper.entity.data.derived;
+  const derived = rawDerived && typeof rawDerived === 'object' && !Array.isArray(rawDerived)
+    ? rawDerived as Record<string, unknown>
+    : {};
+  return Array.isArray(derived.attackKinds) && derived.attackKinds.includes('missile');
+}
+
 function monsterExchangeModel(wrapper: ReferenceWrapper): MonsterExchangeModel {
   const rawDerived = wrapper.entity.data.derived;
   const derived = rawDerived && typeof rawDerived === 'object' && !Array.isArray(rawDerived)
@@ -716,6 +767,8 @@ function assumptions(
   sorcererCombatPolicy: SorcererCombatPolicy,
   sustainIncome: SustainIncome,
   saleItemsPerTrip: number,
+  encounter: DescentEncounter,
+  adjacentSlots: number,
 ): DescentAssumption[] {
   return [
     {
@@ -746,7 +799,7 @@ function assumptions(
           ? 'All-strength spends only into Strength up to the class maximum; excess points remain unspent.'
           : 'No level-up stat points are spent.',
     },
-    {
+    ...(encounter === 'duel' ? [{
       id: 'duel-exchange',
       value: className === 'warrior'
         ? 'hero attacks first; one melee counterattack between hero swings'
@@ -755,7 +808,27 @@ function assumptions(
       detail: className === 'warrior'
         ? 'Expected damage per kill is (expected hero swings - 1) × expected monster damage per swing. Monster travel, AI delays, ranged spacing, healing, and simultaneous packs are outside this duel model.'
         : 'Melee monsters do no damage during their approach, then counter between adjacent hero actions. Missile-capable routines counter at the engagement distance. Healing and simultaneous packs are outside this duel model.',
-    },
+    }] : [{
+      id: 'pack-exchange',
+      value: 'simultaneous homogeneous placement groups; hero focuses one target at a time',
+      source: '.reference/devilutionX/Source/monster.cpp PlaceGroup and combatDuel.duel expectations',
+      detail: 'Each exact integer pack-size branch is evaluated before probability averaging. Per-kill duel time and hero-first damage are time-normalized; all living ranged attackers contribute, while living melee attackers are capped by adjacent slots.',
+    }, {
+      id: 'adjacent-slots',
+      value: adjacentSlots,
+      source: 'explicit geometry assumption; eight tiles surround the hero and the corridor scenario uses two',
+      detail: 'Monsters occupy tiles and cannot move through another monster. Non-adjacent melee pack members wait for a slot; missile-capable AI routines attack from range. Circling, retreating, and idle routines remain represented only by their existing duel approach/cadence inputs, not by new path geometry.',
+    }, {
+      id: 'got-hit-interruption',
+      value: 'law-derived PM_GOTHIT threshold and class recovery animation',
+      source: 'd1-combat-hit-recovery-law, stateGraphSpecsData PM_GOTHIT, and class animation wrappers',
+      detail: 'A damaging unblocked hit qualifies when its whole-point damage (fixed-point / 64) reaches hero level (player.cpp StartPlrHit). Qualifying-hit rates are integrated during recovery; load >= 1 is reported as deterministic stun-lock. The model adds lost action time but does not model a partially completed action or projectile cancellation.',
+    }, {
+      id: 'pack-placement-size',
+      value: 'depth 1 singleton; depth 2 singleton or 2..3; later singleton or 3..5',
+      source: '.reference/devilutionX/Source/monster.cpp PlaceGroup caller branches',
+      detail: 'The expected pack count is ambient population divided by expected requested size. Placement retries, occupied-tile failures, and final population-cap truncation need a dungeon seed and are excluded. Eligible uniques remain outside totals, but their unique-plus-eight-minion requested packs are reported together.',
+    }]),
     ...(className === 'rogue' ? [
       {
         id: 'class-attack-mode',
@@ -820,9 +893,15 @@ function assumptions(
     ] : []),
     {
       id: 'clear-time',
-      value: 'sum of duel time-to-kill; zero travel time',
-      source: 'combatDuel.duel expectedPlayerSecondsToKill',
-      detail: 'Every ambient kill is fought sequentially; navigation, doors, loot, recovery, and downtime add no seconds.',
+      value: encounter === 'duel'
+        ? 'sum of duel time-to-kill; zero travel time'
+        : 'sum of pack kill phases plus expected PM_GOTHIT recovery; zero navigation time',
+      source: encounter === 'duel'
+        ? 'combatDuel.duel expectedPlayerSecondsToKill'
+        : 'combatDuel.duel expectedPlayerSecondsToKill plus packMath.packExchange',
+      detail: encounter === 'duel'
+        ? 'Every ambient kill is fought sequentially; navigation, doors, loot, recovery, and downtime add no seconds.'
+        : 'Navigation, doors, loot, out-of-combat recovery, and downtime add no seconds. Only qualifying hit-recovery interruptions extend action time.',
     },
     ...(sustainIncome === 'gold-and-sales' && gear === 'none' ? [{
       id: 'sustain-income',
@@ -963,6 +1042,12 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
   if (!(DESCENT_CLASSES as readonly string[]).includes(input.className)) throw new Error(`unknown Diablo I class ${input.className}`);
   if (!(['none', 'all-strength', 'balanced'] as const).includes(input.policy)) throw new Error(`unknown stat-point policy ${input.policy}`);
   if (!(['normal', 'nightmare', 'hell'] as const).includes(input.difficulty)) throw new Error(`unknown difficulty ${input.difficulty}`);
+  const encounter = input.encounter ?? 'duel';
+  if (!(['duel', 'packs'] as const).includes(encounter)) throw new Error(`unknown encounter policy ${input.encounter}`);
+  const adjacentSlots = input.adjacentSlots ?? DEFAULT_ADJACENT_SLOTS;
+  if (!Number.isInteger(adjacentSlots) || adjacentSlots < 1 || adjacentSlots > DEFAULT_ADJACENT_SLOTS) {
+    throw new Error(`adjacentSlots must be an integer from 1 to ${DEFAULT_ADJACENT_SLOTS} (got ${adjacentSlots})`);
+  }
   const gear = input.gear ?? (input.className === 'warrior' || input.weapon ? 'none' : 'expected');
   if (!(['none', 'expected'] as const).includes(gear)) throw new Error(`unknown gear policy ${gear}`);
   const sorcererCombatPolicy = input.sorcererCombatPolicy ?? 'mixed';
@@ -987,6 +1072,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
     ? startingWeaponFrom(classWrapper, input.wrappers)
     : undefined;
   const coefficients = classCoefficients(classWrapper);
+  const playerHitRecoverySeconds = hitRecoveryTiming(classAnimations(classWrapper)).seconds;
   const maxima = {
     strength: coefficients.maxStrength,
     magic: coefficients.maxMagic,
@@ -1156,7 +1242,9 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       const base = unique ? ordinaryByType.get(wrapper.raw.type) : undefined;
       if (unique && !base) throw new Error(`${wrapper.entity.id} has no supplied monstdat base ${wrapper.raw.type}`);
       const monster = monsterProfile(wrapper, input.difficulty, base, input.gameMode);
-      const exchange = playerAttack === 'melee' ? undefined : monsterExchangeModel(wrapper);
+      const exchange = playerAttack === 'melee'
+        ? encounter === 'packs' && monsterHasMissileAttack(wrapper) ? monsterExchangeModel(wrapper) : undefined
+        : monsterExchangeModel(wrapper);
       const runDuel = (attack: PlayerAttackMode, spell?: DuelSpellAttack) => duel(build, coefficients, monster, {
         gameMode: input.gameMode,
         playerAttack: attack,
@@ -1165,8 +1253,15 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
         spell,
         playerCastSeconds,
         monsterAttack: exchange?.monsterAttack ?? 'melee',
-        monsterDistance: attack === 'melee' ? 1 : DEFAULT_RANGED_ENGAGEMENT_DISTANCE,
+        // A hero in melee is adjacent to the monster it fights, whatever that monster's attack kind (W43 overseer: the
+        // delivered version put a ranged target at 4 tiles even in duels, silently moving the mixed Sorcerer's default).
+        // Only in packs do OTHER ranged members hold range; packMath carries that, not this per-target duel.
+        monsterDistance: encounter === 'packs' && attack !== 'melee'
+          && (exchange?.monsterAttack === 'ranged-arrow' || exchange?.monsterAttack === 'ranged-magic')
+          ? DEFAULT_RANGED_ENGAGEMENT_DISTANCE
+          : attack === 'melee' ? 1 : DEFAULT_RANGED_ENGAGEMENT_DISTANCE,
         dungeonLevel: depth,
+        playerHitRecoverySeconds: encounter === 'packs' ? playerHitRecoverySeconds : undefined,
       });
       const damageTaken = (result: ReturnType<typeof runDuel>) => result.expectedMonsterAttacksBeforeKill
         * result.expectedMonsterDamagePerSwing / FIXED_POINT;
@@ -1242,6 +1337,8 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
         expectedPlayerActions: result.expectedPlayerSwingsToKill,
         expectedFreeActions: result.approach?.expectedFreePlayerActions ?? 0,
         approachSpeed: exchange?.speed,
+        rangedMonster: exchange?.monsterAttack === 'ranged-arrow' || exchange?.monsterAttack === 'ranged-magic',
+        expectedGotHitInterruptions: result.gotHit?.expectedInterruptionsBeforeKill ?? 0,
         ...(mixedSorcerer ? { meleeResult: result, spellResult: selected?.result } : {}),
       };
     });
@@ -1302,18 +1399,57 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
         expectedFreeActions: spellResult
           ? spellShare * (spellResult.approach?.expectedFreePlayerActions ?? 0)
           : 0,
+        expectedGotHitInterruptions: spellResult
+          ? blend(
+              meleeResult.gotHit?.expectedInterruptionsBeforeKill ?? 0,
+              spellResult.gotHit?.expectedInterruptionsBeforeKill ?? 0,
+            )
+          : row.expectedGotHitInterruptions,
         spellExpectedKills: spellKills,
       };
     });
     const meanXp = rows.reduce((sum, row) => sum + row.xp, 0) / divisor;
     const uncappedXp = meanXp * ambientPopulation;
     const expectedXpGained = Math.min(uncappedXp, Math.max(0, maximumExperience - totalExperience));
-    const expectedSeconds = ambientPopulation === 0
+    const duelExpectedSeconds = ambientPopulation === 0
       ? 0
       : rows.reduce((sum, row) => sum + row.seconds, 0) / divisor * ambientPopulation;
-    const expectedDamage = ambientPopulation === 0
+    const duelExpectedDamage = ambientPopulation === 0
       ? 0
       : rows.reduce((sum, row) => sum + row.expectedDamageTaken, 0) / divisor * ambientPopulation;
+    const packSizeOutcomes = ordinaryPackSizeDistribution(depth);
+    const placementPackSize = expectedPackSize(packSizeOutcomes);
+    const packRows = encounter === 'packs' ? rows.map((row) => {
+      if (!Number.isFinite(row.seconds) || !Number.isFinite(row.expectedDamageTaken)
+        || !Number.isFinite(row.expectedGotHitInterruptions)) {
+        return {
+          wrapper: row.wrapper,
+          secondsPerPack: Infinity,
+          expectedDamageTakenPerPack: Infinity,
+          expectedGotHitInterruptionsPerPack: Infinity,
+        };
+      }
+      return {
+        wrapper: row.wrapper,
+        ...distributedPackExchange(packSizeOutcomes, {
+          secondsToKill: row.seconds,
+          expectedDamageTaken: row.expectedDamageTaken,
+          expectedGotHitInterruptions: row.expectedGotHitInterruptions,
+          hitRecoverySeconds: playerHitRecoverySeconds,
+          ranged: row.rangedMonster,
+        }, adjacentSlots),
+      };
+    }) : [];
+    const packsPerType = expectedKillsPerType / placementPackSize;
+    const expectedSeconds = encounter === 'packs'
+      ? ambientPopulation === 0 ? 0 : packRows.reduce((sum, row) => sum + row.secondsPerPack * packsPerType, 0)
+      : duelExpectedSeconds;
+    const expectedDamage = encounter === 'packs'
+      ? ambientPopulation === 0 ? 0 : packRows.reduce((sum, row) => sum + row.expectedDamageTakenPerPack * packsPerType, 0)
+      : duelExpectedDamage;
+    const expectedGotHitInterruptions = encounter === 'packs'
+      ? ambientPopulation === 0 ? 0 : packRows.reduce((sum, row) => sum + row.expectedGotHitInterruptionsPerPack * packsPerType, 0)
+      : 0;
     const expectedManaSpent = playerAttack === 'spell'
       ? ambientPopulation === 0
         ? 0
@@ -1580,8 +1716,45 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
         sales: sale,
       });
     }
+    const damageMultiplier = duelExpectedDamage === 0
+      ? expectedDamage === 0 ? 1 : Infinity
+      : expectedDamage / duelExpectedDamage;
+    const packExpectation: DescentPackExpectation | undefined = encounter === 'packs' ? {
+      adjacentSlots,
+      expectedPackSize: placementPackSize,
+      expectedPacks: ambientPopulation / placementPackSize,
+      damageMultiplierVsDuel: finiteOrNull(damageMultiplier),
+      expectedGotHitInterruptions: finiteOrNull(expectedGotHitInterruptions),
+      sustainable: (sustain?.sustainable
+        ?? (Number.isFinite(expectedDamage)
+          && expectedDamage <= lifeAndMana(build, coefficients).maximumLife / FIXED_POINT))
+        && (mana?.sustainable ?? true),
+      typePackSizes: pool.map((wrapper) => ({
+        monsterId: wrapper.entity.id,
+        monster: wrapper.entity.name,
+        expectedPackSize: placementPackSize,
+      })),
+      eligibleUniquePacks: uniqueIds.map((monsterId) => {
+        const wrapper = bestiaryById.get(monsterId);
+        const pack = wrapper?.raw.monsterPack ?? wrapper?.entity.data.pack;
+        return {
+          monsterId,
+          monster: wrapper?.entity.name ?? monsterId,
+          pack: pack == null ? 'unresolved' : String(pack),
+          requestedPackSize: pack == null ? null : requestedUniquePackSize(pack),
+        };
+      }),
+    } : undefined;
+    const difficultyRows = encounter === 'packs'
+      ? rows.map((row, index) => ({
+          ...row,
+          expectedDamageTaken: packRows[index].expectedDamageTakenPerPack / placementPackSize,
+        }))
+      : rows;
     const notes = [
-      `Uniform expectation across ${pool.length} eligible ordinary type${pool.length === 1 ? '' : 's'}; ${ambientPopulation} sequential ambient kills.`,
+      encounter === 'duel'
+        ? `Uniform expectation across ${pool.length} eligible ordinary type${pool.length === 1 ? '' : 's'}; ${ambientPopulation} sequential ambient kills.`
+        : `Uniform expectation across ${pool.length} eligible ordinary type${pool.length === 1 ? '' : 's'}; ${ambientPopulation} ambient kills in ${String(ambientPopulation / placementPackSize)} expected simultaneous packs.`,
       `${uniqueIds.length} eligible unique row${uniqueIds.length === 1 ? '' : 's'} excluded because actual roster and quest conditions are unresolved.`,
       ...(depth === 16 ? ['Depth 16 uses the range-eligible pool as an explicit proxy; d1-monster-type-selection says the engine skips its random draw for the authored fixed roster.'] : []),
     ];
@@ -1595,7 +1768,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       heroLevelAfter: heroLevel,
       expectedSecondsToClear: finiteOrNull(expectedSeconds),
       expectedDamageTaken: finiteOrNull(expectedDamage),
-      hardestMonster: hardest(rows),
+      hardestMonster: hardest(difficultyRows),
       note: notes.join(' '),
       ...(playerAttack !== 'melee' ? { attackMode: playerAttack } : {}),
       ...(spellAssumed ? { spellAssumed } : {}),
@@ -1604,6 +1777,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       ...(mana ? { mana } : {}),
       ...(weaponAssumed ? { weaponAssumed } : {}),
       ...(armourAssumed && sustain ? { armourAssumed, expectedBlockChance, sustain } : {}),
+      ...(packExpectation ? { pack: packExpectation } : {}),
     });
     if (gear === 'expected' && ambientPopulation > 0) {
       lootHistory.push(...depthLootProfiles);
@@ -1624,6 +1798,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       ? { sorcererCombatPolicy: 'mixed' as const }
       : {}),
     ...(gear === 'expected' ? { gear } : {}),
+    ...(encounter === 'packs' ? { encounter, adjacentSlots } : {}),
     assumptions: assumptions(
       tilesPerLevel,
       input.policy,
@@ -1632,6 +1807,8 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       sorcererCombatPolicy,
       sustainIncome,
       saleItemsPerTrip,
+      encounter,
+      adjacentSlots,
     ),
     levels,
     ...(sustainIncome === 'gold-and-sales' ? { goldFlow: summarizeGoldFlow(goldFlowLevels, saleItemsPerTrip) } : {}),
