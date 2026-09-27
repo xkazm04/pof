@@ -15,6 +15,7 @@ import { spellbookHandler } from './spellbook';
 import { stateGraphHandler } from './state-graph';
 import { statusEffectsHandler } from './status-effects';
 import { vendorsHandler } from './vendors';
+import { vfxHandler } from './vfx';
 import { zoneMapHandler } from './zone-map';
 
 const handlers: CatalogHandler[] = [
@@ -35,6 +36,7 @@ const handlers: CatalogHandler[] = [
   stateGraphHandler,
   statusEffectsHandler,
   vendorsHandler,
+  vfxHandler,
   zoneMapHandler,
 ];
 

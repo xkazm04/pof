@@ -20,6 +20,7 @@ import { DIABLO1_LOOT_LAWS } from '@/lib/catalog/reference/lootSpecsData';
 import { DIABLO1_MOVEMENT_LAWS } from '@/lib/catalog/reference/movementSpecsData';
 import { DIABLO1_PORT_LAWS } from '@/lib/catalog/reference/portQualificationsData';
 import { DIABLO1_OBJECT_LAWS } from '@/lib/catalog/reference/objectSpecsData';
+import { DIABLO1_MISSILE_LAWS } from '@/lib/catalog/reference/missileSpecsData';
 import { DIABLO1_SPELL_LAWS } from '@/lib/catalog/reference/spellSpecsData';
 import { DIABLO1_STATE_GRAPH_LAWS } from '@/lib/catalog/reference/stateGraphSpecsData';
 import { DIABLO1_STATUS_LAWS } from '@/lib/catalog/reference/statusSpecsData';
@@ -158,6 +159,7 @@ export const DIABLO1_CANON: readonly ProjectRule[] = [
   ...DIABLO1_LOCATION_LAWS,
   ...DIABLO1_LOOT_LAWS,
   ...DIABLO1_OBJECT_LAWS,
+  ...DIABLO1_MISSILE_LAWS,
   ...DIABLO1_SPELL_LAWS,
   ...DIABLO1_STATUS_LAWS,
   ...DIABLO1_STORE_LAWS,

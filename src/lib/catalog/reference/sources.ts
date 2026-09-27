@@ -33,6 +33,7 @@ import {
   EXPERIENCE_MAP,
 } from '@/lib/catalog/ingest/diablo1Classes';
 import { OBJECT_MAP } from '@/lib/catalog/ingest/diablo1Objects';
+import { MISSILE_MAP } from '@/lib/catalog/ingest/diablo1Missiles';
 
 export interface ReferenceTableSpec {
   /** Path relative to the source's data root: `monsters/monstdat.tsv`. */
@@ -97,6 +98,7 @@ export const DIABLO1: ReferenceSource = {
     { file: 'items/itemdat.tsv', catalogId: 'items', technique: 'tsv', keyColumn: 'id', map: ITEM_MAP },
     { file: 'items/unique_itemdat.tsv', catalogId: 'items', technique: 'tsv', keyColumn: 'name', keyPrefix: 'uitem-', keyDecode: [slug()], map: UNIQUE_ITEM_MAP },
     { file: 'spells/spelldat.tsv', catalogId: 'spellbook', technique: 'tsv', keyColumn: 'id', map: SPELL_MAP },
+    { file: 'missiles/misdat.tsv', catalogId: 'vfx', technique: 'tsv', keyColumn: 'id', map: MISSILE_MAP },
     // Affix TIERS (W11): names repeat across powers, so identity is positional; the side is the table (derive).
     { file: 'items/item_prefixes.tsv', catalogId: 'affixes', technique: 'tsv', map: AFFIX_MAP, derive: affixDerive('prefix'), positionalTag: 'pre-' },
     { file: 'items/item_suffixes.tsv', catalogId: 'affixes', technique: 'tsv', map: AFFIX_MAP, derive: affixDerive('suffix'), positionalTag: 'suf-' },
