@@ -52,3 +52,31 @@ describe('buildRefinePrompt', () => {
     expect(p).toMatch(/make it heavier/);
   });
 });
+
+// ── catalog-gap-analysis/A: absence is never rendered as balance ──────────────────────────
+describe('buildProposalPrompt — coverage honesty', () => {
+  it('a catalog with no gap basis renders "not measured", never "balanced"', () => {
+    const quests: CatalogDistribution = {
+      catalogId: 'quests', total: 3, byAttribute: {}, underrepresented: [], sample: [],
+      gapBasis: 'none', unmeasured: ['status', 'area'],
+      coverage: { status: { covered: 0, of: 3 }, area: { covered: 0, of: 3 } },
+    };
+    const p = buildProposalPrompt('quests', quests);
+    expect(p).toContain('not measured');
+    expect(p).not.toContain('distribution looks balanced');
+  });
+
+  it('[guard] an expected-share gap row still renders verbatim', () => {
+    const items: CatalogDistribution = {
+      ...dist,
+      underrepresented: [{ attribute: 'rarity', value: 'Common', count: 34, expected: 57 }],
+      gapBasis: 'expected-share',
+    };
+    expect(buildProposalPrompt('items', items)).toContain('rarity=Common: expected ~57, have 34');
+  });
+
+  it('an old persisted distribution (no gapBasis) with no rows is not called balanced', () => {
+    const old: CatalogDistribution = { ...dist, underrepresented: [] };
+    expect(buildProposalPrompt('items', old)).not.toContain('distribution looks balanced');
+  });
+});

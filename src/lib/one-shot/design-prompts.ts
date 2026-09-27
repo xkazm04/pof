@@ -1,4 +1,4 @@
-import type { CatalogDistribution } from '@/lib/catalog/gap-analysis';
+import { gapBasisOf, type CatalogDistribution } from '@/lib/catalog/gap-analysis';
 import { pluginFor } from '@/lib/catalog/gap-analysis/plugins';
 import { arpgLawsRelevantTo } from './arpg-laws-map';
 import { canonContextFor } from '@/lib/catalog/canon/canonContext';
@@ -18,14 +18,36 @@ function dataSchemaFor(catalogId: string): string {
   return SCHEMAS[catalogId] ?? `{ name: string; data: Record<string, unknown> }`;
 }
 
-function renderHistograms(dist: CatalogDistribution): string {
-  return Object.entries(dist.byAttribute)
-    .map(([attr, h]) => `  - by ${attr}: ${Object.entries(h).map(([k, v]) => `${k}: ${v}`).join(', ')}`)
-    .join('\n');
+/** "(2 of 3 entities)" when a dimension is only partly carried; nothing when fully covered. */
+function coverageNote(dist: CatalogDistribution, attr: string): string {
+  const c = dist.coverage?.[attr];
+  return c && c.covered < c.of ? ` (${c.covered} of ${c.of} entities)` : '';
 }
 
+function renderHistograms(dist: CatalogDistribution): string {
+  const lines = Object.entries(dist.byAttribute)
+    .map(([attr, h]) => `  - by ${attr}${coverageNote(dist, attr)}: ${Object.entries(h).map(([k, v]) => `${k}: ${v}`).join(', ')}`);
+  const unmeasured = dist.unmeasured ?? [];
+  if (unmeasured.length) {
+    lines.push(`  - not measured (0 of ${dist.total} entities carry ${unmeasured.join(', ')})`);
+  }
+  for (const d of dist.degenerate ?? []) {
+    lines.push(`  - ${d}: every entity has its own value — an id list, not a distribution`);
+  }
+  return lines.length ? lines.join('\n') : '  (no dimension measured)';
+}
+
+/**
+ * Under-represented rows are measured findings; an EMPTY list is only "balanced" when there was
+ * an expected share to measure against. Without one (gap basis `none`, or a distribution persisted
+ * before the basis existed) absence must read as absence — never as a finding of balance.
+ */
 function renderGaps(dist: CatalogDistribution): string {
-  if (!dist.underrepresented.length) return '  (none — distribution looks balanced)';
+  if (!dist.underrepresented.length) {
+    return gapBasisOf(dist) === 'expected-share'
+      ? '  (none — every declared expected share is within tolerance)'
+      : '  (not measured — this catalog declares no expected share, so no gap was computed; this is NOT a finding of balance)';
+  }
   return dist.underrepresented
     .map((u) => `  - ${u.attribute}=${u.value}: expected ~${u.expected}, have ${u.count}`)
     .join('\n');
