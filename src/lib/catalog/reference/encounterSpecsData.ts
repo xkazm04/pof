@@ -127,7 +127,7 @@ export const ENCOUNTER_LAWS_DATA = [
   },
   {
     id: 'd1-encounter-activation', title: 'Boss encounter activation',
-    body: 'Boss encounter activation, derived from the engine: ordinary bosses wake on visibility. Talking uniques remain noncombatant until dialogue, quest state, or item hand-in clears their line and selects a combat goal; Lazarus and the Warlord can begin speech automatically on sight. Books, circles, doors, and levers may gate access without themselves being the aggro event.',
+    body: 'Boss encounter activation, derived from the engine: ordinary bosses wake on visibility. Talking uniques remain noncombatant until dialogue, quest state, or item hand-in clears their line and selects a combat goal; Lazarus and the Warlord can begin speech automatically when their tile becomes visible to a player. Books, circles, doors, and levers may gate access without themselves being the aggro event.',
     refs: refs('monster.cpp:1427-1467', 'monster.cpp:2879-3006', 'monster.cpp:4278-4317', 'monster.cpp:4747-4804'),
   },
   {
