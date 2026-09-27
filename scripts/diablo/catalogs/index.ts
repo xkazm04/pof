@@ -10,6 +10,7 @@ import { progressionCurvesHandler } from './progression-curves';
 import { propsHandler } from './props';
 import { questsHandler } from './quests';
 import { spellbookHandler } from './spellbook';
+import { stateGraphHandler } from './state-graph';
 import { statusEffectsHandler } from './status-effects';
 import { vendorsHandler } from './vendors';
 import { zoneMapHandler } from './zone-map';
@@ -26,6 +27,7 @@ const handlers: CatalogHandler[] = [
   propsHandler,
   questsHandler,
   spellbookHandler,
+  stateGraphHandler,
   statusEffectsHandler,
   vendorsHandler,
   zoneMapHandler,
