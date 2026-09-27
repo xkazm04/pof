@@ -3,6 +3,7 @@ import { affixesHandler } from './affixes';
 import { bestiaryHandler } from './bestiary';
 import { charactersHandler } from './characters';
 import { codexHandler } from './codex';
+import { currenciesHandler } from './currencies';
 import { combatMapHandler } from './combat-map';
 import { dialogTreesHandler } from './dialog-trees';
 import { itemsHandler } from './items';
@@ -20,6 +21,7 @@ const handlers: CatalogHandler[] = [
   bestiaryHandler,
   charactersHandler,
   codexHandler,
+  currenciesHandler,
   combatMapHandler,
   dialogTreesHandler,
   itemsHandler,

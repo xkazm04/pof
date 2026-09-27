@@ -14,6 +14,7 @@
  */
 import type { ProjectRule } from '../types';
 import { DIABLO1_LOCATION_LAWS } from '@/lib/catalog/reference/locationSpecs';
+import { DIABLO1_CURRENCY_LAWS } from '@/lib/catalog/reference/currencySpecsData';
 import { DIABLO1_ENCOUNTER_LAWS } from '@/lib/catalog/reference/encounterSpecsData';
 import { DIABLO1_LOOT_LAWS } from '@/lib/catalog/reference/lootSpecsData';
 import { DIABLO1_OBJECT_LAWS } from '@/lib/catalog/reference/objectSpecs';
@@ -44,6 +45,7 @@ export const DIABLO1_CANON: readonly ProjectRule[] = [
   //    never from PoF's canon; a checker or seeder PARSES them from these bodies (one statement per law).
   ...DIABLO1_ENCOUNTER_LAWS,
   ...DIABLO1_STATE_GRAPH_LAWS,
+  ...DIABLO1_CURRENCY_LAWS,
   { id: 'd1-resistance-law', profile: 'diablo1', category: 'game', scope: 'bestiary', title: 'Monster resistance law (engine-derived)',
     body: "Monster resistance, derived from the engine: a RESIST flag for an element cuts that element's damage to one quarter, a 75% reduction; an IMMUNE flag means the hit does not land, a 100% reduction. Elements are magic, fire and lightning; the base game has no cold or chaos damage. There is no scale between: a monster is normal (0%), resistant (75%) or immune (100%) to each element.",
     refs: ["https://github.com/diasurgical/devilutionX/blob/4138a82/Source/missiles.cpp (MonsterMHit: resist -> dam >>= 2; isImmune -> no hit)", "https://github.com/diasurgical/devilutionX/blob/4138a82/Source/monster.cpp (Monster::isResistant / isImmune)"] },
