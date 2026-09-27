@@ -6,7 +6,9 @@ import {
   expectedManaPotionMana,
   manaSustainArithmetic,
   simulateDescent,
+  simulateDifficultyChain,
   sustainArithmetic,
+  type DescentInitialState,
 } from '@/lib/catalog/reference/descentSim';
 import type { LocationEntityWrapper } from '@/lib/catalog/reference/locationSpecs';
 import type { ReferenceWrapper } from '@/lib/catalog/reference/wrapper';
@@ -478,6 +480,102 @@ describe('simulateDescent', () => {
     ]);
   });
 
+  it('keeps a single explicit fresh initial state byte-identical to the default start', () => {
+    const input = {
+      className: 'warrior' as const,
+      policy: 'none' as const,
+      tilesPerLevel: 60,
+      gameMode: 'single' as const,
+      difficulty: 'normal' as const,
+      wrappers: [warrior, monster, ...curve],
+      locations,
+    };
+    const initialState: DescentInitialState = {
+      className: 'warrior',
+      level: 1,
+      totalExperience: 0,
+      strength: 0,
+      magic: 0,
+      dexterity: 0,
+      vitality: 10,
+      unspentStatPoints: 0,
+      balancedAllocationCursor: 0,
+      currentLife: 10,
+      maximumLife: 10,
+      currentMana: 0,
+      maximumMana: 0,
+      learnedSpells: [],
+      gold: 0,
+      potions: { healing: 0, fullHealing: 0, mana: 0, fullMana: 0 },
+      diabloKillRank: 0,
+      completedDifficulties: [],
+    };
+
+    const defaultStart = simulateDescent(input);
+    const explicitStart = simulateDescent({ ...input, initialState });
+
+    expect(JSON.stringify(explicitStart)).toBe(JSON.stringify(defaultStart));
+    expect(Object.keys(defaultStart)).not.toContain('finalState');
+    expect(defaultStart.finalState).toMatchObject({ level: 2, totalExperience: 290, gold: 0 });
+  });
+
+  it('carries invented level, XP, and gold exactly through a two-leg chain', () => {
+    const initialHeroState: DescentInitialState = {
+      className: 'warrior',
+      level: 2,
+      totalExperience: 123,
+      strength: 2,
+      magic: 3,
+      dexterity: 4,
+      vitality: 10,
+      unspentStatPoints: 9,
+      balancedAllocationCursor: 2,
+      currentLife: 7,
+      maximumLife: 11,
+      currentMana: 0,
+      maximumMana: 0,
+      learnedSpells: [],
+      gold: 456,
+      potions: { healing: 1.5, fullHealing: 0.25, mana: 2.5, fullMana: 0.5 },
+      diabloKillRank: 0,
+      completedDifficulties: [],
+    };
+    const result = simulateDifficultyChain({
+      className: 'warrior',
+      policy: 'none',
+      tilesPerLevel: 0,
+      gameMode: 'single',
+      gear: 'none',
+      difficulties: ['normal', 'nightmare'],
+      initialHeroState,
+      wrappers: [warrior, monster, ...curve],
+      locations,
+    });
+
+    expect(result.legs).toHaveLength(2);
+    expect(result.legs[0].initialState).toBe(initialHeroState);
+    expect(result.legs[0].finalState).toMatchObject({
+      level: 2,
+      totalExperience: 123,
+      gold: 456,
+      diabloKillRank: 1,
+      completedDifficulties: ['normal'],
+    });
+    expect(result.legs[1].initialState).toBe(result.legs[0].finalState);
+    expect(result.legs[1].precedingLegCompleted).toBe(true);
+    expect(result.finalState).toMatchObject({
+      level: 2,
+      totalExperience: 123,
+      gold: 456,
+      diabloKillRank: 2,
+      completedDifficulties: ['normal', 'nightmare'],
+    });
+    expect(result.summary.legs).toEqual([
+      { difficulty: 'normal', levelAtEnd: 2, firstUnsustainableDepth: null },
+      { difficulty: 'nightmare', levelAtEnd: 2, firstUnsustainableDepth: null },
+    ]);
+  });
+
   it('reports opt-in pack placement, simultaneous damage, interruptions, and sustainability', () => {
     const result = simulateDescent({
       className: 'warrior',
@@ -670,6 +768,8 @@ describe('simulateDescent', () => {
       sustainable: true,
       deficit: 0,
     });
+    expect(result.finalState.expectedGear!.dropHistory[0].drop).toBeDefined();
+    expect(JSON.stringify(result.finalState.expectedGear)).not.toContain('"drop"');
   });
 
   it('uses ranged mode and the expected best bow for the Rogue', () => {

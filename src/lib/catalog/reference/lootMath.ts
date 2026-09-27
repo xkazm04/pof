@@ -678,6 +678,10 @@ export function expectedDrop(
 export interface WeightedLootMonsterProfile {
   profile: LootMonsterProfile;
   weight: number;
+  /** Source difficulty for carried cross-difficulty drop mixtures; omitted by legacy callers. */
+  difficulty?: Difficulty;
+  /** Optional pure projection cache used by chained simulations. */
+  drop?: DropExpectation;
 }
 
 export interface ExpectedLootBudgetInput {
@@ -786,12 +790,12 @@ export function expectedSaleIncome(input: ExpectedSaleIncomeInput): ExpectedSale
   for (const row of input.monsterProfiles) {
     if (!Number.isFinite(row.weight) || row.weight < 0) throw new Error(`loot-profile weight must be non-negative (got ${row.weight})`);
     if (row.weight === 0) continue;
-    const drop = expectedDrop(
+    const drop = row.drop ?? expectedDrop(
       row.profile,
       input.itemWrappers,
       input.affixWrappers,
       input.uniqueItemWrappers,
-      input.difficulty,
+      row.difficulty ?? input.difficulty,
     );
     for (const outcome of drop.basePool) {
       if (input.excludedBaseIds?.has(outcome.baseId)) continue;
@@ -824,12 +828,12 @@ export function expectedLootBudget(input: ExpectedLootBudgetInput): ExpectedLoot
   for (const row of input.monsterProfiles) {
     if (!Number.isFinite(row.weight) || row.weight < 0) throw new Error(`loot-profile weight must be non-negative (got ${row.weight})`);
     if (row.weight === 0) continue;
-    const drop = expectedDrop(
+    const drop = row.drop ?? expectedDrop(
       row.profile,
       input.itemWrappers,
       input.affixWrappers,
       input.uniqueItemWrappers,
-      input.difficulty,
+      row.difficulty ?? input.difficulty,
     );
     expectedGold += row.weight * drop.expectedGold;
     for (const baseOutcome of drop.basePool) {
@@ -946,7 +950,13 @@ export function bestWeaponExpectation(input: BestWeaponExpectationInput): BestWe
   const expectedDamagePercentByBase = new Map<string, number>();
   for (const row of positiveProfiles) {
     const sourceWeight = row.weight / totalProfileWeight;
-    const drop = expectedDrop(row.profile, input.itemWrappers, input.affixWrappers, input.uniqueItemWrappers, input.difficulty);
+    const drop = row.drop ?? expectedDrop(
+      row.profile,
+      input.itemWrappers,
+      input.affixWrappers,
+      input.uniqueItemWrappers,
+      row.difficulty ?? input.difficulty,
+    );
     for (const base of drop.basePool) perKillBase.set(base.baseId, (perKillBase.get(base.baseId) ?? 0) + sourceWeight * base.p);
     for (const quality of drop.baseQuality) {
       damageAffixByBase.set(
@@ -1147,7 +1157,13 @@ export function bestArmourExpectation(input: BestArmourExpectationInput): BestAr
   const expectedArmourPercentByBase = new Map<string, number>();
   for (const row of positiveProfiles) {
     const sourceWeight = row.weight / totalProfileWeight;
-    const drop = expectedDrop(row.profile, input.itemWrappers, input.affixWrappers, input.uniqueItemWrappers, input.difficulty);
+    const drop = row.drop ?? expectedDrop(
+      row.profile,
+      input.itemWrappers,
+      input.affixWrappers,
+      input.uniqueItemWrappers,
+      row.difficulty ?? input.difficulty,
+    );
     for (const base of drop.basePool) perKillBase.set(base.baseId, (perKillBase.get(base.baseId) ?? 0) + sourceWeight * base.p);
     for (const quality of drop.baseQuality) {
       const base = bases.get(quality.baseId);
@@ -1432,12 +1448,12 @@ export function bestDefensiveAffixExpectation(
   const affixes = affixRows(input.affixWrappers);
   for (const row of positiveProfiles) {
     const sourceWeight = row.weight / totalProfileWeight;
-    const drop = expectedDrop(
+    const drop = row.drop ?? expectedDrop(
       row.profile,
       input.itemWrappers,
       input.affixWrappers,
       input.uniqueItemWrappers,
-      input.difficulty,
+      row.difficulty ?? input.difficulty,
     );
     for (const quality of drop.baseQuality) {
       const base = bases.get(quality.baseId);

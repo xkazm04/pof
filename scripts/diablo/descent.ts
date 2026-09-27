@@ -10,6 +10,7 @@
  *     [--sorcerer-combat mixed|pure-spell]
  *     [--income monster-gold|gold-and-sales] [--items-per-trip N]
  *     [--encounter duel|packs] [--slots N]
+ *     [--chain]
  * Rogue and Sorcerer default to expected gear; Warrior and explicit --weapon runs default to none.
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -22,6 +23,7 @@ import {
   DEFAULT_SALE_ITEMS_PER_TRIP_ASSUMPTION,
   DESCENT_CLASSES,
   simulateDescent,
+  simulateDifficultyChain,
   type DescentClassName,
   type DescentEncounter,
   type DescentGear,
@@ -94,6 +96,7 @@ if (!Number.isInteger(adjacentSlots) || adjacentSlots < 1 || adjacentSlots > DEF
   console.error(`--slots must be an integer from 1 to ${DEFAULT_ADJACENT_SLOTS}`);
   process.exit(2);
 }
+const chain = process.argv.includes('--chain');
 
 const wrappers = listWrappers(getDb(), { sourceId: 'diablo1' });
 const weaponId = arg('weapon');
@@ -103,12 +106,11 @@ const weapon = weaponId
 if (weaponId && !weapon) throw new Error(`no items wrapper ${weaponId}`);
 if (weapon && gear === 'expected') throw new Error('--gear expected cannot be combined with --weapon');
 
-const result = simulateDescent({
+const simulationInput = {
   className,
   policy,
   tilesPerLevel,
   gameMode: combatGameMode(process.argv),
-  difficulty,
   weapon,
   gear,
   defensiveAffixes,
@@ -118,8 +120,20 @@ const result = simulateDescent({
   encounter,
   adjacentSlots,
   wrappers,
-});
+};
+const result = chain
+  ? simulateDifficultyChain(simulationInput)
+  : simulateDescent({ ...simulationInput, difficulty });
 
+if (result.model === 'deterministic-expectation-chain') {
+  console.log(`\n=== Diablo I deterministic difficulty chain: ${className} · ${policy} · ${result.gameMode} ===`);
+  console.table(result.summary.legs.map((leg) => ({
+    difficulty: leg.difficulty,
+    'end level': leg.levelAtEnd,
+    'first unsustainable depth': leg.firstUnsustainableDepth,
+    ...(leg.stunLockDepths ? { 'stun-lock depths': leg.stunLockDepths.join(', ') || null } : {}),
+  })));
+} else {
 console.log(`\n=== Diablo I deterministic descent expectation: ${className} · ${policy} · ${difficulty} · ${result.gameMode} ===`);
 console.log('ASSUMPTIONS (the tile count is not a reference-table value):');
 for (const assumption of result.assumptions) {
@@ -219,6 +233,7 @@ if (result.goldFlow) {
     equilibrium: result.goldFlow.equilibrium.status,
   }]);
 }
+}
 
 const path = join(
   homedir(),
@@ -227,7 +242,7 @@ const path = join(
   'pof',
   'Diablo',
   'Combat',
-  `descent-${className}-${policy}${gear === 'expected' ? '-expected-gear' : ''}${className === 'sorcerer' && sorcererCombatPolicy === 'mixed' ? '-mixed' : ''}${sustainIncome === 'gold-and-sales' ? '-gold-and-sales' : ''}${encounter === 'packs' ? `-packs-${adjacentSlots}-slots` : ''}${defensiveAffixes === 'expected' ? '-expected-defense' : ''}.json`,
+  `descent-${className}-${policy}${gear === 'expected' ? '-expected-gear' : ''}${className === 'sorcerer' && sorcererCombatPolicy === 'mixed' ? '-mixed' : ''}${sustainIncome === 'gold-and-sales' ? '-gold-and-sales' : ''}${encounter === 'packs' ? `-packs-${adjacentSlots}-slots` : ''}${defensiveAffixes === 'expected' ? '-expected-defense' : ''}${chain ? '-chain' : ''}.json`,
 );
 mkdirSync(dirname(path), { recursive: true });
 writeFileSync(path, JSON.stringify(result, null, 2));

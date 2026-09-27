@@ -30,6 +30,7 @@ import {
   bestArmourExpectation,
   bestDefensiveAffixExpectation,
   bestWeaponExpectation,
+  expectedDrop,
   expectedLootBudget,
   expectedSaleIncome,
   monsterLootProfile,
@@ -296,6 +297,56 @@ export interface DescentManaExpectation {
   deficit: number | null;
 }
 
+export interface DescentLearnedSpell {
+  spell: string;
+  spellLevel: number;
+}
+
+export interface DescentPotionInventory {
+  healing: number;
+  fullHealing: number;
+  mana: number;
+  fullMana: number;
+}
+
+export interface DescentExpectedGearState {
+  killsSoFar: number;
+  /** Weighted prior-kill mixture; each row retains the difficulty under which it dropped. */
+  dropHistory: WeightedLootMonsterProfile[];
+  weapon: BestWeaponExpectation;
+  armour: BestArmourExpectation;
+  /** Present only when the W47 defensive-affix expectation is enabled. */
+  defensiveAffixes?: BestDefensiveAffixExpectation;
+}
+
+/** Compact hero-only boundary state; generated world, quest, store, and ground state are excluded. */
+export interface DescentInitialState {
+  className: DescentClassName;
+  level: number;
+  totalExperience: number;
+  strength: number;
+  magic: number;
+  dexterity: number;
+  vitality: number;
+  unspentStatPoints: number;
+  /** Next attribute index for the deterministic balanced allocation policy. */
+  balancedAllocationCursor: number;
+  currentLife: number;
+  maximumLife: number;
+  currentMana: number;
+  maximumMana: number;
+  learnedSpells: DescentLearnedSpell[];
+  expectedGear?: DescentExpectedGearState;
+  gold: number;
+  potions: DescentPotionInventory;
+  diabloKillRank: number;
+  completedDifficulties: Difficulty[];
+}
+
+export interface DescentFinalState extends DescentInitialState {
+  completedDifficulty: Difficulty;
+}
+
 export interface DescentSimulation {
   model: 'deterministic-expectation';
   className: DescentClassName;
@@ -319,6 +370,8 @@ export interface DescentSimulation {
   levels: DescentLevelResult[];
   /** Opt-in derived measurement; omitted by the byte-compatible monster-gold policy. */
   goldFlow?: DescentGoldFlow;
+  /** Non-enumerable so the legacy one-leg JSON remains byte-identical. */
+  finalState: DescentFinalState;
 }
 
 export interface SimulateDescentInput {
@@ -345,6 +398,38 @@ export interface SimulateDescentInput {
   wrappers: readonly ReferenceWrapper[];
   /** Tests and other pure callers may pass already-projected location entities. */
   locations?: readonly LocationEntityWrapper[];
+  /** Omitted for the byte-compatible fresh level-1 start. */
+  initialState?: DescentInitialState;
+}
+
+export interface SimulateDifficultyChainInput extends Omit<SimulateDescentInput, 'difficulty' | 'initialState'> {
+  difficulties?: readonly Difficulty[];
+  initialHeroState?: DescentInitialState;
+}
+
+export interface DescentDifficultyChainLeg extends DescentSimulation {
+  initialState: DescentInitialState;
+  finalState: DescentFinalState;
+  precedingLegCompleted: boolean;
+}
+
+export interface DescentDifficultyChainLegSummary {
+  difficulty: Difficulty;
+  levelAtEnd: number;
+  firstUnsustainableDepth: number | null;
+  /** Present only for the simultaneous-packs encounter policy. */
+  stunLockDepths?: number[];
+}
+
+export interface DescentDifficultyChain {
+  model: 'deterministic-expectation-chain';
+  className: DescentClassName;
+  policy: StatPointPolicy;
+  gameMode: 'single';
+  difficulties: Difficulty[];
+  legs: DescentDifficultyChainLeg[];
+  summary: { legs: DescentDifficultyChainLegSummary[] };
+  finalState: DescentFinalState;
 }
 
 export interface MixedKillCandidate {
@@ -485,26 +570,151 @@ function startingWeaponFrom(
   throw new Error(`${classWrapper.entity.id} has no supplied starting-loadout weapon`);
 }
 
-function allocateStats(build: PlayerBuild, policy: StatPointPolicy, maxima: Record<AttributeKey, number>): PlayerBuild {
-  if (policy === 'none') return build;
-  let remaining = Math.max(0, (build.level - 1) * 5);
-  const allocated = { ...build };
+interface StatAllocation {
+  attributes: Record<AttributeKey, number>;
+  unspentStatPoints: number;
+  balancedAllocationCursor: number;
+}
+
+function spendStatPoints(
+  starting: Pick<PlayerBuild, AttributeKey>,
+  points: number,
+  policy: StatPointPolicy,
+  maxima: Record<AttributeKey, number>,
+  balancedAllocationCursor: number,
+): StatAllocation {
+  const attributes = Object.fromEntries(ATTRIBUTE_KEYS.map((key) => [key, starting[key]])) as Record<AttributeKey, number>;
+  let remaining = points;
+  let cursor = balancedAllocationCursor;
+  if (policy === 'none') return { attributes, unspentStatPoints: remaining, balancedAllocationCursor: cursor };
   if (policy === 'all-strength') {
-    allocated.strength += Math.min(remaining, Math.max(0, maxima.strength - allocated.strength));
-    return allocated;
+    const spent = Math.min(remaining, Math.max(0, maxima.strength - attributes.strength));
+    attributes.strength += spent;
+    remaining -= spent;
+    return { attributes, unspentStatPoints: remaining, balancedAllocationCursor: cursor };
   }
-  while (remaining > 0) {
-    let spent = false;
-    for (const key of ATTRIBUTE_KEYS) {
-      if (remaining === 0) break;
-      if (allocated[key] >= maxima[key]) continue;
-      allocated[key]++;
-      remaining--;
-      spent = true;
+  while (remaining > 0 && ATTRIBUTE_KEYS.some((key) => attributes[key] < maxima[key])) {
+    const key = ATTRIBUTE_KEYS[cursor];
+    cursor = (cursor + 1) % ATTRIBUTE_KEYS.length;
+    if (attributes[key] >= maxima[key]) continue;
+    attributes[key]++;
+    remaining--;
+  }
+  return { attributes, unspentStatPoints: remaining, balancedAllocationCursor: cursor };
+}
+
+function defaultInitialState(
+  className: DescentClassName,
+  classWrapper: ReferenceWrapper,
+): DescentInitialState {
+  const build = referenceBuild(classWrapper, 1);
+  const pools = lifeAndMana(build, classCoefficients(classWrapper));
+  return {
+    className,
+    level: 1,
+    totalExperience: 0,
+    strength: build.strength,
+    magic: build.magic,
+    dexterity: build.dexterity,
+    vitality: build.vitality,
+    unspentStatPoints: 0,
+    balancedAllocationCursor: 0,
+    currentLife: pools.maximumLife / FIXED_POINT,
+    maximumLife: pools.maximumLife / FIXED_POINT,
+    currentMana: pools.maximumMana / FIXED_POINT,
+    maximumMana: pools.maximumMana / FIXED_POINT,
+    learnedSpells: [],
+    gold: 0,
+    potions: { healing: 0, fullHealing: 0, mana: 0, fullMana: 0 },
+    diabloKillRank: 0,
+    completedDifficulties: [],
+  };
+}
+
+function cloneLootProfile(row: WeightedLootMonsterProfile): WeightedLootMonsterProfile {
+  const clone: WeightedLootMonsterProfile = {
+    profile: { ...row.profile },
+    weight: row.weight,
+    ...(row.difficulty ? { difficulty: row.difficulty } : {}),
+  };
+  if (row.drop) {
+    Object.defineProperty(clone, 'drop', {
+      value: row.drop,
+      enumerable: false,
+      configurable: false,
+      writable: false,
+    });
+  }
+  return clone;
+}
+
+function validatedInitialState(
+  state: DescentInitialState,
+  className: DescentClassName,
+  maxima: Record<AttributeKey, number>,
+  maximumLevel: number,
+): DescentInitialState {
+  if (state.className !== className) {
+    throw new Error(`initialState class ${state.className} does not match ${className}`);
+  }
+  if (!Number.isInteger(state.level) || state.level < 1 || state.level > maximumLevel) {
+    throw new Error(`initialState.level must be an integer from 1 to ${maximumLevel} (got ${state.level})`);
+  }
+  const finiteNonNegative = (value: number, name: string) => {
+    if (!Number.isFinite(value) || value < 0) throw new Error(`${name} must be a non-negative finite number (got ${value})`);
+  };
+  finiteNonNegative(state.totalExperience, 'initialState.totalExperience');
+  for (const key of ATTRIBUTE_KEYS) {
+    finiteNonNegative(state[key], `initialState.${key}`);
+    if (state[key] > maxima[key]) throw new Error(`initialState.${key} exceeds the class maximum ${maxima[key]}`);
+  }
+  finiteNonNegative(state.unspentStatPoints, 'initialState.unspentStatPoints');
+  if (!Number.isInteger(state.balancedAllocationCursor)
+    || state.balancedAllocationCursor < 0
+    || state.balancedAllocationCursor >= ATTRIBUTE_KEYS.length) {
+    throw new Error(`initialState.balancedAllocationCursor must be an integer from 0 to ${ATTRIBUTE_KEYS.length - 1}`);
+  }
+  for (const [name, value] of [
+    ['currentLife', state.currentLife],
+    ['maximumLife', state.maximumLife],
+    ['currentMana', state.currentMana],
+    ['maximumMana', state.maximumMana],
+    ['gold', state.gold],
+    ['potions.healing', state.potions.healing],
+    ['potions.fullHealing', state.potions.fullHealing],
+    ['potions.mana', state.potions.mana],
+    ['potions.fullMana', state.potions.fullMana],
+  ] as const) finiteNonNegative(value, `initialState.${name}`);
+  if (state.currentLife > state.maximumLife) throw new Error('initialState.currentLife exceeds maximumLife');
+  if (state.currentMana > state.maximumMana) throw new Error('initialState.currentMana exceeds maximumMana');
+  if (!Number.isInteger(state.diabloKillRank) || state.diabloKillRank < 0) {
+    throw new Error(`initialState.diabloKillRank must be a non-negative integer (got ${state.diabloKillRank})`);
+  }
+  if (state.expectedGear && (!Number.isInteger(state.expectedGear.killsSoFar) || state.expectedGear.killsSoFar < 0)) {
+    throw new Error('initialState.expectedGear.killsSoFar must be a non-negative integer');
+  }
+  for (const spell of state.learnedSpells) {
+    if (!spell.spell || !Number.isInteger(spell.spellLevel) || spell.spellLevel < 1) {
+      throw new Error('initialState.learnedSpells must contain named positive integer spell levels');
     }
-    if (!spent) break;
   }
-  return allocated;
+  for (const difficulty of state.completedDifficulties) {
+    if (!(['normal', 'nightmare', 'hell'] as const).includes(difficulty)) {
+      throw new Error(`initialState.completedDifficulties contains unknown difficulty ${difficulty}`);
+    }
+  }
+  return {
+    ...state,
+    learnedSpells: state.learnedSpells.map((spell) => ({ ...spell })),
+    ...(state.expectedGear ? {
+      expectedGear: {
+        ...state.expectedGear,
+        dropHistory: state.expectedGear.dropHistory.map(cloneLootProfile),
+      },
+    } : {}),
+    potions: { ...state.potions },
+    completedDifficulties: [...state.completedDifficulties],
+  };
 }
 
 function levelAt(totalExperience: number, currentLevel: number, curve: ExperienceCurveLaw): number {
@@ -585,8 +795,18 @@ function consumablePrice(
   return price;
 }
 
-function sorcererSpellAttacks(wrappers: readonly ReferenceWrapper[], depth: number): DuelSpellAttack[] {
-  const learned = SORCERER_SPELL_PROGRESSION.filter((entry) => depth >= entry.learnedAtDepth);
+function sorcererSpellAttacks(
+  wrappers: readonly ReferenceWrapper[],
+  depth: number,
+  carried: readonly DescentLearnedSpell[] = [],
+): DuelSpellAttack[] {
+  const learnedById = new Map(carried.map((entry) => [entry.spell.toLowerCase(), entry]));
+  for (const entry of SORCERER_SPELL_PROGRESSION.filter((candidate) => depth >= candidate.learnedAtDepth)) {
+    const id = entry.spell.toLowerCase();
+    const previous = learnedById.get(id);
+    if (!previous || previous.spellLevel < entry.spellLevel) learnedById.set(id, entry);
+  }
+  const learned = [...learnedById.values()];
   if (learned.length === 0) throw new Error(`the Sorcerer spell policy has no learned spell for depth ${depth}`);
   return learned.map((policy) => {
     const wrapper = wrappers.find((candidate) => candidate.file === 'spells/spelldat.tsv'
@@ -1112,10 +1332,28 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
     .map((wrapper) => [wrapper.raw._monster_id, wrapper]));
   const ambientPopulation = Math.floor(tilesPerLevel / 30);
   const maximumExperience = curve.threshold(curve.maxLevel) ?? Number.MAX_SAFE_INTEGER;
-  let heroLevel = 1;
-  let totalExperience = 0;
-  let killsSoFar = 0;
-  const lootHistory: WeightedLootMonsterProfile[] = [];
+  const carriesPersistentState = input.initialState !== undefined;
+  const initialState = validatedInitialState(
+    input.initialState ?? defaultInitialState(input.className, classWrapper),
+    input.className,
+    maxima,
+    curve.maxLevel,
+  );
+  const allocationAtLevel = (level: number) => spendStatPoints(
+    initialState,
+    initialState.unspentStatPoints + Math.max(0, level - initialState.level) * 5,
+    input.policy,
+    maxima,
+    initialState.balancedAllocationCursor,
+  );
+  const buildAtLevel = (level: number, weapon: ReferenceWrapper | undefined) => {
+    const build = referenceBuild(classWrapper, level, weapon);
+    return { ...build, ...allocationAtLevel(level).attributes };
+  };
+  let heroLevel = initialState.level;
+  let totalExperience = initialState.totalExperience;
+  let killsSoFar = initialState.expectedGear?.killsSoFar ?? 0;
+  const lootHistory: WeightedLootMonsterProfile[] = [...(initialState.expectedGear?.dropHistory ?? [])];
   const levels: DescentLevelResult[] = [];
   const goldFlowLevels: DescentGoldFlowLevel[] = [];
   const healingPotionPrice = gear === 'expected' ? consumablePrice(input.wrappers, 'HEAL', 'Healing') : 0;
@@ -1127,14 +1365,22 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
     .map((wrapper) => wrapper.entity.id));
   const healingGoldShare = input.className === 'sorcerer' ? 0.5 : 1;
   const manaGoldShare = input.className === 'sorcerer' ? 0.5 : 0;
-  let goldForNextDepth = 0;
-  let carriedHealingPotions = 0;
-  let carriedFullHealingPotions = 0;
-  let currentMana: number | null = null;
-  let carriedManaPotions = 0;
-  let carriedFullManaPotions = 0;
-  let selectedWeaponId: string | null = startingWeapon?.entity.id ?? null;
-  let selectedArmourIds = { body: null as string | null, helm: null as string | null, shield: null as string | null };
+  let goldForNextDepth = initialState.gold;
+  let goldBalance = initialState.gold;
+  let carriedHealingPotions = initialState.potions.healing;
+  let carriedFullHealingPotions = initialState.potions.fullHealing;
+  let currentLife = initialState.currentLife;
+  let currentMana: number | null = initialState.currentMana;
+  let carriedManaPotions = initialState.potions.mana;
+  let carriedFullManaPotions = initialState.potions.fullMana;
+  let selectedWeaponId: string | null = initialState.expectedGear?.weapon.weaponId
+    ?? startingWeapon?.entity.id
+    ?? null;
+  let selectedArmourIds = {
+    body: initialState.expectedGear?.armour.slots.body.itemId ?? null,
+    helm: initialState.expectedGear?.armour.slots.helm.itemId ?? null,
+    shield: initialState.expectedGear?.armour.slots.shield.itemId ?? null,
+  };
 
   for (let depth = 1; depth <= 16; depth++) {
     const location = locations.find((candidate) => candidate.entity.data.depth === depth);
@@ -1149,18 +1395,28 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
     if (pool.length === 0) throw new Error(`depth ${depth} has no eligible ordinary monster pool`);
     const dungeonType = String(location.entity.data.dungeonType);
     const depthLootProfiles: WeightedLootMonsterProfile[] = lootEnabled
-      ? pool.map((wrapper) => ({
-          profile: monsterLootProfile(wrapper, {
+      ? pool.map((wrapper) => {
+          const profile = monsterLootProfile(wrapper, {
             dungeonLevel: depth,
             dungeonType,
             gameMode: input.gameMode,
-          }),
-          weight: ambientPopulation / pool.length,
-        }))
+          });
+          const row: WeightedLootMonsterProfile = {
+            profile,
+            difficulty: input.difficulty,
+            weight: ambientPopulation / pool.length,
+          };
+          return Object.defineProperty(row, 'drop', {
+            value: expectedDrop(profile, input.wrappers, input.wrappers, input.wrappers, input.difficulty),
+            enumerable: false,
+            configurable: false,
+            writable: false,
+          });
+        })
       : [];
 
     const heroLevelBefore = heroLevel;
-    let build = allocateStats(referenceBuild(classWrapper, heroLevelBefore, input.weapon ?? startingWeapon), input.policy, maxima);
+    let build = buildAtLevel(heroLevelBefore, input.weapon ?? startingWeapon);
     let weaponAssumed: BestWeaponExpectation | undefined;
     let armourAssumed: BestArmourExpectation | undefined;
     let defensiveAffixesAssumed: BestDefensiveAffixExpectation | undefined;
@@ -1253,8 +1509,12 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       uniqueItemWrappers: input.wrappers,
       difficulty: input.difficulty,
     }) : undefined;
-    const goldAvailableForPurchases = goldForNextDepth;
+    const goldAvailableForPurchases = carriesPersistentState ? goldBalance : goldForNextDepth;
     const mixedSorcerer = input.className === 'sorcerer' && sorcererCombatPolicy === 'mixed';
+    const lifePool = lifeAndMana(build, coefficients).maximumLife / FIXED_POINT;
+    if (!carriesPersistentState) currentLife = lifePool;
+    else currentLife = Math.min(currentLife, lifePool);
+    const currentLifeAtStart = currentLife;
     const manaPool = input.className === 'sorcerer'
       ? lifeAndMana(build, coefficients).maximumMana / FIXED_POINT
       : 0;
@@ -1279,7 +1539,9 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
     const playerAttack: PlayerAttackMode = input.className === 'sorcerer'
       ? 'spell'
       : input.className === 'rogue' || build.weaponType === 'bow' ? 'ranged' : 'melee';
-    const learnedSpells = playerAttack === 'spell' ? sorcererSpellAttacks(input.wrappers, depth) : [];
+    const learnedSpells = playerAttack === 'spell'
+      ? sorcererSpellAttacks(input.wrappers, depth, initialState.learnedSpells)
+      : [];
     const playerCastSeconds = playerAttack === 'spell' ? castTiming(classAnimations(classWrapper)).seconds : undefined;
     const evaluatedRows = pool.map((wrapper) => {
       const unique = wrapper.file === 'monsters/unique_monstdat.tsv';
@@ -1547,14 +1809,14 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       const healingPotionsBought = goldAvailableForPurchases * healingGoldShare / healingPotionPrice;
       const healingPotionsAvailable = carriedHealingPotions + healingPotionsBought + loot.expectedHealingPotions;
       const fullHealingPotionsAvailable = carriedFullHealingPotions + loot.expectedFullHealingPotions;
-      const lifePool = lifeAndMana(build, coefficients).maximumLife / FIXED_POINT;
       const lifeRestoredPerHealingPotion = expectedHealingPotionLife(input.className, lifePool);
       const healingSupply = healingPotionsAvailable * lifeRestoredPerHealingPotion
         + fullHealingPotionsAvailable * lifePool;
+      const lifeAvailable = carriesPersistentState ? currentLifeAtStart : lifePool;
       const arithmetic = Number.isFinite(expectedDamage)
         ? sustainArithmetic({
             expectedDamageTaken: expectedDamage,
-            lifePool,
+            lifePool: lifeAvailable,
             healingPotions: healingPotionsAvailable,
             fullHealingPotions: fullHealingPotionsAvailable,
             lifeRestoredPerHealingPotion,
@@ -1576,12 +1838,21 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       const remaining = consumeHealing(
         healingPotionsAvailable,
         fullHealingPotionsAvailable,
-        Math.max(0, expectedDamage - lifePool),
+        Math.max(0, expectedDamage - lifeAvailable),
         lifeRestoredPerHealingPotion,
         lifePool,
       );
+      const restored = (healingPotionsAvailable - remaining.healingPotions) * lifeRestoredPerHealingPotion
+        + (fullHealingPotionsAvailable - remaining.fullHealingPotions) * lifePool;
+      currentLife = Number.isFinite(expectedDamage)
+        ? Math.max(0, Math.min(lifePool, lifeAvailable + restored - expectedDamage))
+        : 0;
       carriedHealingPotions = remaining.healingPotions;
       carriedFullHealingPotions = remaining.fullHealingPotions;
+    } else {
+      currentLife = Number.isFinite(expectedDamage)
+        ? Math.max(0, currentLifeAtStart - expectedDamage)
+        : 0;
     }
     let mana: DescentManaExpectation | undefined;
     let spellAssumed: DescentSpellExpectation | undefined;
@@ -1636,21 +1907,24 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
         };
       }
       if (sustain) sustain.sustainable = sustain.sustainable && mana.sustainable;
+    } else if (loot) {
+      carriedManaPotions += loot.expectedManaPotions;
+      carriedFullManaPotions += loot.expectedFullManaPotions;
     }
     totalExperience += expectedXpGained;
     heroLevel = levelAt(totalExperience, heroLevelBefore, curve);
-    if (playerAttack === 'spell' && heroLevel > heroLevelBefore) currentMana = null;
+    if (heroLevel > heroLevelBefore) {
+      currentLife = lifeAndMana(buildAtLevel(heroLevel, input.weapon ?? startingWeapon), coefficients).maximumLife
+        / FIXED_POINT;
+      currentMana = null;
+    }
     let sale: ExpectedSaleValue | undefined;
     if (loot && sustainIncome === 'gold-and-sales') {
       const keptBaseCounts = new Map<string, number>();
       if (gear === 'expected') {
         const prospectiveHistory = [...lootHistory, ...depthLootProfiles];
         const prospectiveKills = killsSoFar + ambientPopulation;
-        let nextBuild = allocateStats(
-          referenceBuild(classWrapper, heroLevel, startingWeapon),
-          input.policy,
-          maxima,
-        );
+        let nextBuild = buildAtLevel(heroLevel, startingWeapon);
         const nextWeapon = bestWeaponExpectation({
           class: nextBuild.class,
           depth: depth + 1,
@@ -1720,15 +1994,17 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
         sustain.expectedGoldIncome = loot.expectedGold + sale.expectedGold;
       }
     }
-    if (loot) goldForNextDepth = loot.expectedGold + (sale?.expectedGold ?? 0);
+    const goldIncome = loot ? loot.expectedGold + (sale?.expectedGold ?? 0) : 0;
+    const potionGoldSpent = (sustain?.healingPotionsBought ?? 0) * healingPotionPrice
+      + (mana?.manaPotionsBought ?? 0) * manaPotionPrice;
+    goldBalance = Math.max(0, goldBalance + goldIncome - potionGoldSpent);
+    if (loot) goldForNextDepth = goldIncome;
     if (loot && sale) {
       const faucets: DescentGoldFaucets = {
         monsterGold: loot.expectedGold,
         sales: sale.expectedGold,
         total: loot.expectedGold + sale.expectedGold,
       };
-      const potionGoldSpent = (sustain?.healingPotionsBought ?? 0) * healingPotionPrice
-        + (mana?.manaPotionsBought ?? 0) * manaPotionPrice;
       const sinks: DescentGoldSinks = {
         potionsBought: potionGoldSpent,
         repair: 0,
@@ -1830,7 +2106,108 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
     }
   }
 
-  return {
+  const finalAllocation = allocationAtLevel(heroLevel);
+  let finalBuild = buildAtLevel(heroLevel, input.weapon ?? startingWeapon);
+  let expectedGear: DescentExpectedGearState | undefined;
+  if (gear === 'expected') {
+    const weapon = bestWeaponExpectation({
+      class: finalBuild.class,
+      depth: 16,
+      killsSoFar,
+      monsterProfiles: lootHistory,
+      itemWrappers: input.wrappers,
+      affixWrappers: input.wrappers,
+      uniqueItemWrappers: input.wrappers,
+      difficulty: input.difficulty,
+      strength: finalBuild.strength,
+      magic: finalBuild.magic,
+      dexterity: finalBuild.dexterity,
+      fallbackWeapon: startingWeapon,
+    });
+    const weaponBase = weapon.weaponId == null
+      ? undefined
+      : input.wrappers.find((wrapper) => wrapper.file === 'items/itemdat.tsv' && wrapper.entity.id === weapon.weaponId);
+    if (weapon.weaponId != null && !weaponBase) throw new Error(`expected weapon base ${weapon.weaponId} is not supplied`);
+    if (weaponBase) {
+      const equipped = referenceBuild(classWrapper, heroLevel, weaponBase);
+      finalBuild = { ...finalBuild, weaponType: equipped.weaponType };
+    }
+    const shieldAllowed = weaponPermitsShield(finalBuild, weaponBase);
+    const armour = bestArmourExpectation({
+      className: finalBuild.class,
+      depth: 16,
+      killsSoFar,
+      monsterProfiles: lootHistory,
+      itemWrappers: input.wrappers,
+      affixWrappers: input.wrappers,
+      uniqueItemWrappers: input.wrappers,
+      difficulty: input.difficulty,
+      strength: finalBuild.strength,
+      magic: finalBuild.magic,
+      dexterity: finalBuild.dexterity,
+      shieldAllowed,
+    });
+    const finalDefensiveAffixes = defensiveAffixes === 'expected'
+      ? bestDefensiveAffixExpectation({
+          depth: 16,
+          killsSoFar,
+          monsterProfiles: lootHistory,
+          itemWrappers: input.wrappers,
+          affixWrappers: input.wrappers,
+          uniqueItemWrappers: input.wrappers,
+          difficulty: input.difficulty,
+          strength: finalBuild.strength,
+          magic: finalBuild.magic,
+          dexterity: finalBuild.dexterity,
+          shieldAllowed,
+        })
+      : undefined;
+    expectedGear = {
+      killsSoFar,
+      dropHistory: lootHistory.map(cloneLootProfile),
+      weapon,
+      armour,
+      ...(finalDefensiveAffixes ? { defensiveAffixes: finalDefensiveAffixes } : {}),
+    };
+  }
+  const finalPools = lifeAndMana(finalBuild, coefficients);
+  const maximumLife = finalPools.maximumLife / FIXED_POINT;
+  const maximumMana = finalPools.maximumMana / FIXED_POINT;
+  const learnedSpells = new Map(initialState.learnedSpells.map((spell) => [spell.spell.toLowerCase(), { ...spell }]));
+  if (input.className === 'sorcerer') {
+    for (const spell of SORCERER_SPELL_PROGRESSION) {
+      const id = spell.spell.toLowerCase();
+      const previous = learnedSpells.get(id);
+      if (!previous || previous.spellLevel < spell.spellLevel) {
+        learnedSpells.set(id, { spell: spell.spell, spellLevel: spell.spellLevel });
+      }
+    }
+  }
+  const finalState: DescentFinalState = {
+    className: input.className,
+    level: heroLevel,
+    totalExperience,
+    ...finalAllocation.attributes,
+    unspentStatPoints: finalAllocation.unspentStatPoints,
+    balancedAllocationCursor: finalAllocation.balancedAllocationCursor,
+    currentLife: Math.min(currentLife, maximumLife),
+    maximumLife,
+    currentMana: Math.min(currentMana ?? maximumMana, maximumMana),
+    maximumMana,
+    learnedSpells: [...learnedSpells.values()],
+    ...(expectedGear ? { expectedGear } : {}),
+    gold: goldBalance,
+    potions: {
+      healing: carriedHealingPotions,
+      fullHealing: carriedFullHealingPotions,
+      mana: carriedManaPotions,
+      fullMana: carriedFullManaPotions,
+    },
+    diabloKillRank: initialState.diabloKillRank + 1,
+    completedDifficulties: [...initialState.completedDifficulties, input.difficulty],
+    completedDifficulty: input.difficulty,
+  };
+  const simulation = {
     model: 'deterministic-expectation',
     className: input.className,
     policy: input.policy,
@@ -1859,6 +2236,69 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
     ),
     levels,
     ...(sustainIncome === 'gold-and-sales' ? { goldFlow: summarizeGoldFlow(goldFlowLevels, saleItemsPerTrip) } : {}),
+  } as Omit<DescentSimulation, 'finalState'>;
+  return Object.defineProperty(simulation, 'finalState', {
+    value: finalState,
+    enumerable: false,
+    configurable: false,
+    writable: false,
+  }) as DescentSimulation;
+}
+
+/** Simulate fresh single-player games while carrying only the deterministic hero expectation. */
+export function simulateDifficultyChain(input: SimulateDifficultyChainInput): DescentDifficultyChain {
+  if (input.gameMode !== 'single') throw new Error('difficulty chaining models single-player only');
+  const difficulties = [...(input.difficulties ?? ['normal', 'nightmare', 'hell'])];
+  if (difficulties.length === 0) throw new Error('difficulty chaining requires at least one leg');
+  for (const difficulty of difficulties) {
+    if (!(['normal', 'nightmare', 'hell'] as const).includes(difficulty)) {
+      throw new Error(`unknown difficulty ${difficulty}`);
+    }
+  }
+  const { difficulties: _difficulties, initialHeroState, ...oneLegInput } = input;
+  void _difficulties;
+  let carried: DescentInitialState = initialHeroState
+    ?? defaultInitialState(input.className, classWrapperFrom(input.wrappers, input.className));
+  const legs: DescentDifficultyChainLeg[] = [];
+  const summaries: DescentDifficultyChainLegSummary[] = [];
+  for (const [index, difficulty] of difficulties.entries()) {
+    const simulation = simulateDescent({
+      ...oneLegInput,
+      difficulty,
+      initialState: carried,
+    });
+    const initialState = carried;
+    const finalState = simulation.finalState;
+    legs.push({
+      ...simulation,
+      initialState,
+      finalState,
+      precedingLegCompleted: index > 0,
+    });
+    const firstUnsustainableDepth = simulation.levels.find((level) =>
+      level.sustain?.sustainable === false || level.pack?.sustainable === false)?.depth ?? null;
+    summaries.push({
+      difficulty,
+      levelAtEnd: finalState.level,
+      firstUnsustainableDepth,
+      ...(simulation.encounter === 'packs' ? {
+        stunLockDepths: simulation.levels.filter((level) =>
+          level.pack !== undefined
+          && level.expectedSecondsToClear === null
+          && (level.unboundedMonsters?.length ?? 0) === 0).map((level) => level.depth),
+      } : {}),
+    });
+    carried = finalState;
+  }
+  return {
+    model: 'deterministic-expectation-chain',
+    className: input.className,
+    policy: input.policy,
+    gameMode: 'single',
+    difficulties,
+    legs,
+    summary: { legs: summaries },
+    finalState: legs[legs.length - 1].finalState,
   };
 }
 
