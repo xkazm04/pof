@@ -594,6 +594,17 @@ If a step's `/api/one-shot/step` call returns `outcome: 'fail'` or throws, the o
 
 A single `_cancelled` flag per `createOrchestrator()` closure guards the run loop. `cancel()` sets `_cancelled = true` and immediately transitions the store to `phase: 'failed'`. The loop checks the flag at the top of each iteration and at the post-loop completion check, so the next step does not start and `markCompleted` is not called. `canStart()` (store-side) blocks a second orchestrator from starting while any run is in-flight.
 
+### Recovery (no phase is a dead end)
+
+`src/lib/one-shot/next-actions.ts` `nextActions(state)` is the pure map from job state to forward actions, rendered by `RunActions.tsx` under every non-idle, non-analyzed phase:
+
+- **In flight** (`analyzing`/`proposing`/`refining`/`awaitingRun`/`running`) → **Cancel**. `cancel()` returns a proposal-half request to its resting phase (analyzing → `idle`, proposing → `analyzed`, refining → `proposing`) and invalidates its ticket in `proposalPhases.ts`, so a late answer rejects with `cancelled` and writes nothing; a running pipeline goes to `failed`/`cancelled` as before.
+- **`failed` with a draft and unrecorded steps** → **Resume**: `resume()` runs only the steps whose label is not yet in `stepResults`, on the SAME `draftEntityId` (no second `addDraft`, no `/api/catalog-entities` POST); `/api/one-shot/step` upserts per (catalog, entity, step), so re-entry is idempotent.
+- **Any recorded `fail`** → **Retry N failed**: `retryFailed()` re-runs just those steps and replaces each outcome in place (`upsertStep`), then recomputes `lastSummary`. An interrupted run stays `failed` (still resumable) while steps remain unrecorded.
+- **`completed`/`failed`** → **Start over**: `reset()` back to the idle picker.
+
+All three run paths share one loop (`runPlan` in `orchestrator.ts`) and emit the unchanged `oneshot.*` payloads. On reload no in-flight phase survives (`restingAfterReload` in the store merge): an unanswered propose/refine rests at the proposal or distribution it had, a `running` or `analyzing` job becomes `failed`/`reload-interrupted` (a run keeps its draft + recorded steps for Resume).
+
 ---
 
 ## §9 Player Movement — Tier-2 Animation Pipeline
