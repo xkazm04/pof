@@ -6,6 +6,7 @@ import { gradeArtifact, hasRegisteredChecker } from '@/lib/catalog/headless';
 import { describeUngraded } from '@/lib/catalog/acceptance/stepGradability';
 import { stampPromptVersion } from '@/lib/prompt-evolution/judge-fitness';
 import { seededEntities } from '@/lib/catalog/seed';
+import { CATALOG_SECTIONS } from '@/lib/catalog/sections';
 import { withProduceDirection } from '@/lib/catalog/produceDirection';
 import { buildStepProducePrompt } from '@/lib/catalog/stepPrompt';
 import { listRules } from '@/lib/project-rules-db';
@@ -73,7 +74,14 @@ export const DEFAULT_DIRECTION = 'derive from approved design; minimal commentar
 type StoredLike = { id: string; name: string; lifecycle: string; data?: unknown } & Parameters<typeof labIdentityOf>[0];
 
 function entityToLab(e: NonNullable<StoredLike>): LabEntity {
-  return { id: e.id, name: e.name, lifecycle: e.lifecycle as LabEntity['lifecycle'], data: e.data, ...labIdentityOf(e) };
+  return {
+    id: e.id,
+    name: e.name,
+    lifecycle: e.lifecycle as LabEntity['lifecycle'],
+    data: e.data,
+    links: (e as StoredCatalogEntity).links,
+    ...labIdentityOf(e),
+  };
 }
 
 interface StepGrade {
@@ -248,6 +256,7 @@ export async function POST(req: NextRequest) {
       catalogId,
       rules: listRules(),
       siblings: Object.fromEntries(listArtifacts(catalogId, entityId).map((artifact) => [artifact.step, artifact.data])),
+      linkedEntities: CATALOG_SECTIONS.flatMap((section) => seededEntities(section.catalogId)),
       evidence: readEvidence(body.evidence),
       library: readLibrary(body.library),
       callback: true,

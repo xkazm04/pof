@@ -1,7 +1,8 @@
 # ACCEPTANCE CONTRACT FOR THIS STEP (you are graded against it)
 
 ## Required fields (graded — use these exact keys)
-- `effect`: an object with keys `damageType`, `baseDamage`, `manaCost`, `cooldown`, `critChancePct`, `critMulti`, `onHitIgnite`
+- `effect`: an object with keys `abilityId`, `activation`; "effect.cooldown" is the ability's cooldown in seconds (> 0) — or, for an ability that a resource and not a timer limits (no cooldown), omit it and write "effect.gatedBy: \"resource\"" beside a manaCost > 0 — or, for a free ability only its cast animation limits, "effect.gatedBy: \"cast-time\"" beside a castTime > 0 (s)
+- `effects`: a JSON array with at least 1 item(s); every entry is an object with kind, target, value; entries whose kind is damage also include damageType; entries whose kind is status also include statusId
 - `effect.wiringContract` (only if you declare it): an object { grantedBy: string, activatedBy: string, dependencies: string[] (a JSON ARRAY of strings, may be empty), verification: string naming its L0–L4 tier }
 
 ## Wiring contract — Effect Logic · effect

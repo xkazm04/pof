@@ -34,7 +34,7 @@ function renderValue(v: unknown): string | null {
 }
 
 /** The entity's recorded values as bounded `- key: value` lines ('' when it records none). */
-function valueLines(entity: LabEntity, max = MAX_CHARS): string {
+export function entityValueLines(entity: LabEntity, max = MAX_CHARS): string {
   const data = (entity.data ?? {}) as Record<string, unknown>;
   const lines = Object.entries(data)
     .filter(([k]) => k !== 'sourced')
@@ -56,7 +56,7 @@ function valueLines(entity: LabEntity, max = MAX_CHARS): string {
 export function referenceValuesBlock(entity: LabEntity): string {
   const ref = entity.reference;
   if (!ref) return '';
-  const body = valueLines(entity, REFERENCE_MAX_CHARS);
+  const body = entityValueLines(entity, REFERENCE_MAX_CHARS);
   return [
     `# REFERENCE VALUES — ${ref.sourceGame} · ${ref.sourceFile} (${ref.sourceRow})`,
     `This entity replicates a shipped game: "${entity.name}". Where a field of this step corresponds to a value below,`,
@@ -81,7 +81,7 @@ export function referenceValuesBlock(entity: LabEntity): string {
  */
 export function entityValuesBlock(entity: LabEntity): string {
   if (entity.reference) return referenceValuesBlock(entity);
-  const body = valueLines(entity);
+  const body = entityValueLines(entity);
   if (!body) return '';
   return [
     `# ENTITY VALUES — ${entity.name} (this entity's recorded design data)`,

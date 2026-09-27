@@ -414,6 +414,7 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
   const buildPrompt = (dir: string) =>
     buildStepProducePrompt(spec, entity, dir, {
       catalogId, rules: canonRules, evidence, library: referenced, siblings,
+      linkedEntities: Object.values(entitiesByCatalog).flatMap((catalog) => Object.values(catalog)),
       callback: liveEligible && liveMode,
     });
 

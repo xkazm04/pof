@@ -731,7 +731,13 @@ Before this, 102 of 114 key-graded steps hid at least one graded key from the pr
 section (`referenceValues.ts`) with its source row (REPRODUCE); since W03 (D11) an AUTHORED entity gets the same
 section as `# ENTITY VALUES` (`entityValuesBlock` — stay CONSISTENT, state any change), so every entity's own design
 data reaches its produce prompts. `labIdentityOf` gives every `LabEntity` constructor its canon profile and reference
-in one place. Profile-dependent keys (D14): a canon profile declares its damage-element set
+in one place. **Linked references (2026-09-27, /diablo B33):** beside the sibling steps, a produce prompt also carries
+the reference data of entities LINKED to this one in other catalogs (`src/lib/catalog/reference/linkedReferences.ts`:
+incoming root links plus outgoing links to depth 2 — e.g. a character → its dialog tree's behaviour ledger → the quests
+its handlers reference), under a "Linked reference … ground truth" heading, capped at 16,000 characters with an
+explicit truncation marker. Threaded through `stepPrompt.ts`, `headless.ts`, the one-shot step route and the lab data
+path so lab, headless and preview prompts stay identical. Why: a character producer that never saw the NPC's quests
+and services DENIED them when told not to invent (27 % contradicted claims, W65). Profile-dependent keys (D14): a canon profile declares its damage-element set
 (`canon/elements.ts`: pof fire/ice/lightning/chaos, diablo1 magic/fire/lightning); `resistancesPopulated` grades
 `<element>Res` for the entity's profile and `requiredFieldsOf(checker, canonProfile)` names those keys in the prompt.
 

@@ -1,7 +1,7 @@
 # ACCEPTANCE CONTRACT FOR THIS STEP (you are graded against it)
 
 ## Required fields (graded — use these exact keys)
-- `baseType`: an object with keys `slot`, `rarity`, `ilvl`, `requiredLevel`, `implicit`
+- `baseType`: an object with keys `slot`, `ilvl`, `requiredLevel`, `implicit`; either "baseType.rarity" names the item's FIXED rarity (an authored unique, set or legendary item), or — for a BASE TYPE whose rarity is rolled per drop — "baseType.rarityRolled: true"
 - `baseType.wiringContract` (only if you declare it): an object { grantedBy: string, activatedBy: string, dependencies: string[] (a JSON ARRAY of strings, may be empty), verification: string naming its L0–L4 tier }
 
 ## Wiring contract — Base Type & Rarity · baseType
