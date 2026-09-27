@@ -1,6 +1,6 @@
 /** Engine-derived Diablo I missile behaviours. No misdat.tsv row values are stored here. */
 import type { ProjectRule } from '@/lib/catalog/canon/types';
-import type { MissileBehaviourSpecData } from '@/lib/catalog/reference/missileSpecs';
+import type { MissileBehaviourSpecData, MissileSpawn } from '@/lib/catalog/reference/missileSpecs';
 
 const source = (line: number): string => `.reference/devilutionX/Source/missiles.cpp:${line}`;
 const refs = (addLine: number, processLine?: number): string[] =>
@@ -80,6 +80,93 @@ export const MISSILE_BEHAVIOUR_SPECS_DATA = [
   spec('AddTelekinesis', null, ['Telekinesis'], 'Immediate remote-interaction cursor operation.', 'No velocity.', 'Deleted during add.', 'No collision.', 'None; later interaction may knock back but does not damage.', refs(2761)),
   spec('AddBoneSpirit', 'ProcessBoneSpirit', ['BoneSpirit'], 'Straight projectile, one retarget within radius 19, then a seven-tick fade.', '16 before and after retarget.', '256 initial ticks, 255 after retarget, then 7 fade ticks.', 'Blockable and non-piercing; stops on the first successful target hit or terrain.', 'At retarget, _midam becomes target current internal HP shifted right 7; hit logic recomputes the one-third effect.', refs(2770, 4123)),
 ] as const satisfies readonly MissileBehaviourSpecData[];
+
+const spawn = (
+  parent: string,
+  child: string,
+  when: MissileSpawn['when'],
+  ...engineRefs: string[]
+): MissileSpawn => ({ parent, child, when, refs: engineRefs });
+
+/** AddMissile calls made by missile add/process paths in the pinned engine. */
+export const MISSILE_SPAWNS_DATA = [
+  spawn('Guardian', 'Firebolt', 'per tick', source(735), source(3514)),
+  spawn('LightningControl', 'Lightning', 'per tick', source(835), source(3359)),
+  spawn('LightningControl', 'ThinLightning', 'per tick', source(835), source(3359)),
+  spawn('ThinLightningControl', 'Lightning', 'per tick', source(835), source(3359)),
+  spawn('ThinLightningControl', 'ThinLightning', 'per tick', source(835), source(3359)),
+  spawn('OpenNest', 'BigExplosion', 'on cast', source(1245), source(1249)),
+  spawn('RuneOfFire', 'BigExplosion', 'on hit', source(1255), source(3205)),
+  spawn('RuneOfLight', 'LightningWall', 'on hit', source(1260), source(3205)),
+  spawn('RuneOfNova', 'Nova', 'on hit', source(1268), source(3205)),
+  spawn('RuneOfImmolation', 'Immolation', 'on hit', source(1273), source(3205)),
+  spawn('RuneOfStone', 'StoneCurse', 'on hit', source(1278), source(3205)),
+  ...['Firebolt', 'Fireball', 'FireWallControl', 'Guardian', 'ChainLightning', 'TownPortal', 'Teleport', 'Apocalypse', 'StoneCurse']
+    .map((child) => spawn('Jester', child, 'on cast', source(1359), source(1392))),
+  spawn('DiabloApocalypse', 'DiabloApocalypseBoom', 'on cast', source(2793), source(2801)),
+  spawn('Firebolt', 'MagmaBallExplosion', 'on expiry', source(2976), source(2988)),
+  spawn('MagmaBall', 'MagmaBallExplosion', 'on expiry', source(2976), source(2988)),
+  spawn('BloodStar', 'BloodStarExplosion', 'on expiry', source(2976), source(2991)),
+  spawn('Acid', 'AcidSplat', 'on expiry', source(2976), source(2994)),
+  spawn('OrangeFlare', 'OrangeExplosion', 'on expiry', source(2976), source(2997)),
+  spawn('BlueFlare', 'BlueExplosion', 'on expiry', source(2976), source(3000)),
+  spawn('RedFlare', 'RedExplosion', 'on expiry', source(2976), source(3003)),
+  spawn('YellowFlare', 'YellowExplosion', 'on expiry', source(2976), source(3006)),
+  spawn('BlueFlare2', 'BlueExplosion2', 'on expiry', source(2976), source(3009)),
+  spawn('RingOfFire', 'FireWall', 'on cast', source(3241), source(3266)),
+  spawn('Immolation', 'FireballBow', 'per tick', source(3309), source(3302)),
+  spawn('Nova', 'NovaBall', 'per tick', source(3314), source(3302)),
+  ...['Arrow', 'FireballBow', 'LightningBow', 'HolyBoltBow']
+    .map((child) => spawn('SpectralArrow', child, 'per tick', source(3319), source(3349))),
+  spawn('SpectralArrow', 'ChargedBoltBow', 'per tick', source(3319), source(3349), source(3351), source(3352)),
+  spawn('ChainLightning', 'LightningControl', 'per tick', source(3585), source(3591), source(3597)),
+  spawn('AcidSplat', 'AcidPuddle', 'on expiry', source(3644), source(3655)),
+  spawn('FireWallControl', 'FireWall', 'per tick', source(755), source(3775), source(3790)),
+  spawn('LightningWallControl', 'LightningWall', 'per tick', source(755), source(3775), source(3793)),
+  spawn('Apocalypse', 'ApocalypseBoom', 'per tick', source(3853), source(3868)),
+  spawn('FlameWaveControl', 'FlameWave', 'per tick', source(755), source(3878), source(3886)),
+  spawn('InfernoControl', 'Inferno', 'per tick', source(3964), source(3971)),
+] as const satisfies readonly MissileSpawn[];
+
+export const MISSILE_SPAWNS = MISSILE_SPAWNS_DATA;
+
+export const UNREACHABLE_MISSILE_REASON_REFS = {
+  ChainBall: ['.reference/devilutionX/Source/tables/spelldat.h:116'],
+  BloodHit: ['.reference/devilutionX/Source/tables/spelldat.h:117'],
+  BoneHit: ['.reference/devilutionX/Source/tables/spelldat.h:118'],
+  MetalHit: ['.reference/devilutionX/Source/tables/spelldat.h:119'],
+  DoomSerpents: ['.reference/devilutionX/Source/tables/spelldat.h:128'],
+  FireOnly: ['.reference/devilutionX/Source/tables/spelldat.h:129'],
+  BloodRitual: ['.reference/devilutionX/Source/tables/spelldat.h:131'],
+  Invisibility: ['.reference/devilutionX/Source/tables/spelldat.h:132'],
+  Spurt: ['.reference/devilutionX/Source/tables/spelldat.h:135'],
+  FireMan: ['.reference/devilutionX/Source/tables/spelldat.h:150'],
+  Krull: ['.reference/devilutionX/Source/tables/spelldat.h:151'],
+  FireArrow: ['.reference/devilutionX/Source/player.cpp:882', '.reference/devilutionX/Source/objects.cpp:2048'],
+  LightningArrow: ['.reference/devilutionX/Source/player.cpp:885'],
+  Rage: ['.reference/devilutionX/Source/tables/spelldat.h:143'],
+  WeaponExplosion: ['.reference/devilutionX/Source/player.cpp:811'],
+  RedPortal: ['.reference/devilutionX/Source/quests.cpp:159'],
+} as const;
+
+export const UNREACHABLE_MISSILE_REASONS_DATA = {
+  ChainBall: 'Unused enum: the pinned MissileID declaration marks it unused and its dispatch functions are null.',
+  BloodHit: 'Unused enum: the pinned MissileID declaration marks it unused and its dispatch functions are null.',
+  BoneHit: 'Unused enum: the pinned MissileID declaration marks it unused and its dispatch functions are null.',
+  MetalHit: 'Unused enum: the pinned MissileID declaration marks it unused and its dispatch functions are null.',
+  DoomSerpents: 'Unused enum: the pinned MissileID declaration marks it unused and its dispatch functions are null.',
+  FireOnly: 'Unused enum: the pinned MissileID declaration marks it unused and its dispatch functions are null.',
+  BloodRitual: 'Unused enum: the pinned MissileID declaration marks it unused and its dispatch functions are null.',
+  Invisibility: 'Unused enum: the pinned MissileID declaration marks it unused and its dispatch functions are null.',
+  Spurt: 'Unused enum: the pinned MissileID declaration marks it unused and its dispatch functions are null.',
+  FireMan: 'Unused enum: the pinned MissileID declaration marks it unused and its dispatch functions are null.',
+  Krull: 'Unused enum: the pinned MissileID declaration marks it unused and its dispatch functions are null.',
+  FireArrow: 'Dead in the spell/monster ownership graph; vanilla creates it only from player and trap attack code.',
+  LightningArrow: 'Dead in the spell/monster ownership graph; vanilla creates it only from player attack code.',
+  Rage: 'Hellfire-only: the pinned spell data reuses the vanilla BloodBoil enum slot for the Rage missile.',
+  WeaponExplosion: 'Dead in the spell/monster ownership graph; vanilla creates it only from player weapon-proc code.',
+  RedPortal: 'Dead in the spell/monster ownership graph; vanilla creates it only from quest code.',
+} as const;
 
 interface MissileLawData {
   id: string;

@@ -6,11 +6,15 @@ import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 import {
   DIABLO1_MISSILE_LAWS,
   MISSILE_BEHAVIOUR_SPECS,
+  MISSILE_REACHABILITY,
+  MISSILE_SPAWNS,
   MONSTER_AI_TO_MISSILES,
   SPELL_TO_MISSILES,
+  UNUSED_MISSILE_REASONS,
   UNUSED_MISSILES,
   blockability,
   classifyMissileFlags,
+  computeMissileReachability,
   seedMissileSteps,
   withMissileSpecs,
 } from '@/lib/catalog/reference/missileSpecs';
@@ -84,6 +88,61 @@ describe('engine-derived missile specifications', () => {
     }
     expect(UNUSED_MISSILES.length).toBeGreaterThan(0);
     expect(UNUSED_MISSILES.every((missile) => covered.has(missile))).toBe(true);
+  });
+
+  it('tracks pinned missile spawns and transitive reachability', () => {
+    expect(MISSILE_SPAWNS.length).toBeGreaterThan(30);
+    for (const edge of MISSILE_SPAWNS) {
+      expect(edge.refs.length).toBeGreaterThan(0);
+      expect(edge.refs.every((ref) => /^\.reference\/devilutionX\/Source\/missiles\.cpp:\d+$/.test(ref))).toBe(true);
+    }
+    expect(MISSILE_SPAWNS).toContainEqual(expect.objectContaining({
+      parent: 'Acid', child: 'AcidSplat', when: 'on expiry',
+    }));
+    expect(MISSILE_SPAWNS).toContainEqual(expect.objectContaining({
+      parent: 'AcidSplat', child: 'AcidPuddle', when: 'on expiry',
+    }));
+    expect(MISSILE_REACHABILITY.AcidPuddle).toMatchObject({
+      directOwners: [], spawnedBy: ['Acid', 'AcidSplat'], reachable: true,
+    });
+    expect(MISSILE_REACHABILITY.DiabloApocalypseBoom).toMatchObject({
+      directOwners: [], spawnedBy: ['DiabloApocalypse'], reachable: true,
+    });
+    expect(UNUSED_MISSILES).not.toContain('AcidPuddle');
+    expect(UNUSED_MISSILES).not.toContain('DiabloApocalypseBoom');
+    expect(UNUSED_MISSILES).toHaveLength(16);
+    expect(UNUSED_MISSILE_REASONS.map(({ missile }) => missile)).toEqual(UNUSED_MISSILES);
+    for (const missile of UNUSED_MISSILES) {
+      expect(MISSILE_REACHABILITY[missile].unreachableReason, missile).toEqual(expect.any(String));
+    }
+    for (const entry of UNUSED_MISSILE_REASONS) {
+      expect(entry.refs.length, entry.missile).toBeGreaterThan(0);
+      expect(entry.refs.every((ref) => ref.includes('.reference/devilutionX/Source/'))).toBe(true);
+    }
+  });
+
+  it('computes synthetic spawn chains transitively and terminates cycles', () => {
+    const links = [{ owner: 'SyntheticOwner', missiles: ['Root'], hellfire: false }];
+    const edge = (parent: string, child: string) => ({
+      parent, child, when: 'per tick' as const, refs: ['synthetic:1'],
+    });
+    const reachability = computeMissileReachability(
+      ['Root', 'Middle', 'Leaf', 'Orphan'],
+      links,
+      [],
+      [edge('Root', 'Middle'), edge('Middle', 'Leaf'), edge('Leaf', 'Root')],
+      { Orphan: 'Synthetic unreachable missile.' },
+    );
+    expect(reachability.Root).toMatchObject({
+      directOwners: ['spell:SyntheticOwner'], spawnedBy: [], reachable: true,
+    });
+    expect(reachability.Leaf).toMatchObject({
+      directOwners: [], spawnedBy: ['Root', 'Middle'], reachable: true,
+    });
+    expect(reachability.Orphan).toMatchObject({
+      directOwners: [], spawnedBy: [], reachable: false,
+      unreachableReason: 'Synthetic unreachable missile.',
+    });
   });
 
   it('exports only short cross-missile laws from the type-only data module', () => {

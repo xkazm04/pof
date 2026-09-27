@@ -5,6 +5,9 @@ import { D1_AI_ROUTINES_DATA } from '@/lib/catalog/reference/aiRoutinesData';
 import {
   DIABLO1_MISSILE_LAWS,
   MISSILE_BEHAVIOUR_SPECS_DATA,
+  MISSILE_SPAWNS_DATA,
+  UNREACHABLE_MISSILE_REASONS_DATA,
+  UNREACHABLE_MISSILE_REASON_REFS,
 } from '@/lib/catalog/reference/missileSpecsData';
 import { SPELL_SPECS_DATA } from '@/lib/catalog/reference/spellSpecsData';
 import type { StepSeed } from '@/lib/catalog/reference/stepSeeds';
@@ -30,8 +33,32 @@ export interface MissileUsageLink {
   readonly hellfire: boolean;
 }
 
+export interface MissileSpawn {
+  readonly parent: string;
+  readonly child: string;
+  readonly when: 'on hit' | 'on expiry' | 'per tick' | 'on cast';
+  readonly refs: readonly string[];
+}
+
+export interface MissileReachability {
+  readonly missile: string;
+  readonly directOwners: readonly string[];
+  /** Shortest chain from a directly owned missile to this missile, excluding this missile. */
+  readonly spawnedBy: readonly string[];
+  readonly reachable: boolean;
+  readonly unreachableReason?: string;
+}
+
+export interface UnusedMissileReason {
+  readonly missile: string;
+  readonly reason: string;
+  readonly refs: readonly string[];
+}
+
 export const MISSILE_BEHAVIOUR_SPECS: readonly MissileBehaviourSpecData[] =
   MISSILE_BEHAVIOUR_SPECS_DATA;
+
+export const MISSILE_SPAWNS: readonly MissileSpawn[] = MISSILE_SPAWNS_DATA;
 
 export { DIABLO1_MISSILE_LAWS };
 
@@ -141,15 +168,89 @@ export const MONSTER_AI_TO_MISSILES: readonly MissileUsageLink[] = Object.entrie
   }))
   .filter((link) => link.missiles.length > 0);
 
-const DIRECTLY_USED_MISSILES = new Set([
-  ...SPELL_TO_MISSILES.flatMap((link) => link.missiles),
-  ...MONSTER_AI_TO_MISSILES.flatMap((link) => link.missiles),
-]);
+export function computeMissileReachability(
+  missiles: readonly string[],
+  spellLinks: readonly MissileUsageLink[],
+  monsterLinks: readonly MissileUsageLink[],
+  spawns: readonly MissileSpawn[],
+  unreachableReasons: Readonly<Record<string, string>> = {},
+): Readonly<Record<string, MissileReachability>> {
+  const missileSet = new Set(missiles);
+  const directOwners = new Map<string, string[]>();
+  const addOwners = (kind: string, links: readonly MissileUsageLink[]) => {
+    for (const link of links) {
+      for (const missile of link.missiles) {
+        if (!missileSet.has(missile)) continue;
+        const owners = directOwners.get(missile) ?? [];
+        owners.push(`${kind}:${link.owner}`);
+        directOwners.set(missile, owners);
+      }
+    }
+  };
+  addOwners('spell', spellLinks);
+  addOwners('monster-ai', monsterLinks);
 
-/** Missile enum entries with no direct spelldat spell-spec or monster-AI attack reference. */
-export const UNUSED_MISSILES: readonly string[] = [...new Set(
+  const children = new Map<string, string[]>();
+  for (const edge of spawns) {
+    if (!missileSet.has(edge.parent) || !missileSet.has(edge.child)) continue;
+    const values = children.get(edge.parent) ?? [];
+    if (!values.includes(edge.child)) values.push(edge.child);
+    children.set(edge.parent, values);
+  }
+
+  const paths = new Map<string, string[]>();
+  const queue: string[] = [];
+  for (const missile of missiles) {
+    if (!directOwners.has(missile)) continue;
+    paths.set(missile, []);
+    queue.push(missile);
+  }
+  for (let index = 0; index < queue.length; index++) {
+    const parent = queue[index];
+    const parentPath = paths.get(parent)!;
+    for (const child of children.get(parent) ?? []) {
+      if (paths.has(child)) continue;
+      paths.set(child, [...parentPath, parent]);
+      queue.push(child);
+    }
+  }
+
+  return Object.fromEntries(missiles.map((missile) => {
+    const path = paths.get(missile);
+    return [missile, {
+      missile,
+      directOwners: directOwners.get(missile) ?? [],
+      spawnedBy: path ?? [],
+      reachable: path != null,
+      ...(path == null && unreachableReasons[missile] != null
+        ? { unreachableReason: unreachableReasons[missile] }
+        : {}),
+    }];
+  }));
+}
+
+const VANILLA_MISSILES = [...new Set(
   MISSILE_BEHAVIOUR_SPECS.flatMap((specification) => specification.missileIds),
-)].filter((missile) => !DIRECTLY_USED_MISSILES.has(missile));
+)];
+
+export const MISSILE_REACHABILITY = computeMissileReachability(
+  VANILLA_MISSILES,
+  SPELL_TO_MISSILES,
+  MONSTER_AI_TO_MISSILES,
+  MISSILE_SPAWNS,
+  UNREACHABLE_MISSILE_REASONS_DATA,
+);
+
+/** Vanilla missile enum entries unreachable from spell/monster owners, including transitive spawns. */
+export const UNUSED_MISSILES: readonly string[] = VANILLA_MISSILES
+  .filter((missile) => !MISSILE_REACHABILITY[missile].reachable);
+
+/** Pin-verified explanation for every missile that remains outside the spell/monster graph. */
+export const UNUSED_MISSILE_REASONS: readonly UnusedMissileReason[] = UNUSED_MISSILES.map((missile) => ({
+  missile,
+  reason: UNREACHABLE_MISSILE_REASONS_DATA[missile as keyof typeof UNREACHABLE_MISSILE_REASONS_DATA],
+  refs: UNREACHABLE_MISSILE_REASON_REFS[missile as keyof typeof UNREACHABLE_MISSILE_REASON_REFS],
+}));
 
 function stamp(wrapper: ReferenceWrapper, specification: MissileBehaviourSpecData, columns: string[]): SourcedStamp {
   const provenance = wrapper.entity.provenance;
