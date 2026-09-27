@@ -475,10 +475,12 @@ describe('simulateDescent', () => {
     const explicit = simulateDescent({ ...input, gear: 'none' });
     const explicitDuel = simulateDescent({ ...input, encounter: 'duel', adjacentSlots: 2 });
     const explicitNoDefence = simulateDescent({ ...input, defensiveAffixes: 'none' });
+    const explicitNoPurchases = simulateDescent({ ...input, purchases: 'none' });
 
     expect(JSON.stringify(explicit)).toBe(JSON.stringify(omitted));
     expect(JSON.stringify(explicitDuel)).toBe(JSON.stringify(omitted));
     expect(JSON.stringify(explicitNoDefence)).toBe(JSON.stringify(omitted));
+    expect(JSON.stringify(explicitNoPurchases)).toBe(JSON.stringify(omitted));
     expect(Object.keys(explicit.levels[0])).toEqual([
       'depth',
       'poolSize',
@@ -491,6 +493,127 @@ describe('simulateDescent', () => {
       'hardestMonster',
       'note',
     ]);
+  });
+
+  it('buys an affordable store armour offer and changes the defensive quantity it targets', () => {
+    const hardHittingMonster = {
+      ...monster,
+      entity: {
+        ...monster.entity,
+        data: {
+          ...monster.entity.data,
+          stats: (monster.entity.data.stats as { label: string; value: number }[]).map((stat) => {
+            if (stat.label === 'HP Min' || stat.label === 'HP Max') return { ...stat, value: 20 };
+            if (stat.label === 'To Hit') return { ...stat, value: 20 };
+            if (stat.label === 'Damage Min' || stat.label === 'Damage Max') return { ...stat, value: 5 };
+            return stat;
+          }),
+        },
+      },
+    } satisfies ReferenceWrapper;
+    const storeBody = wrapper('invented-store-body', 'items', 'items/itemdat.tsv', {
+      subtype: 'LightArmor',
+      requiredStrength: 0,
+      requiredMagic: 0,
+      requiredDexterity: 0,
+      stats: [
+        { label: 'Armor Min', value: 20 },
+        { label: 'Armor Max', value: 20 },
+        { label: 'Value', value: 100 },
+      ],
+    }, {
+      dropRate: '1', itemType: 'LightArmor', minMonsterLevel: '1', minArmor: '20', maxArmor: '20',
+      minStrength: '0', minMagic: '0', minDexterity: '0', value: '100', miscId: 'NONE', spell: 'Null',
+      uniqueBaseItem: 'INVENTED_BODY',
+    });
+    const initialState: DescentInitialState = {
+      className: 'warrior',
+      level: 1,
+      totalExperience: 0,
+      strength: 0,
+      magic: 0,
+      dexterity: 0,
+      vitality: 10,
+      unspentStatPoints: 0,
+      balancedAllocationCursor: 0,
+      currentLife: 10,
+      maximumLife: 10,
+      currentMana: 0,
+      maximumMana: 0,
+      learnedSpells: [],
+      gold: 500,
+      potions: { healing: 0, fullHealing: 0, mana: 0, fullMana: 0 },
+      diabloKillRank: 0,
+      completedDifficulties: [],
+    };
+    const input = {
+      className: 'warrior' as const,
+      policy: 'none' as const,
+      tilesPerLevel: 30,
+      gameMode: 'single' as const,
+      difficulty: 'normal' as const,
+      gear: 'expected' as const,
+      initialState,
+      wrappers: [warrior, hardHittingMonster, storeBody, healingPotion, ...curve],
+      locations: locationsFor(hardHittingMonster),
+    };
+    const none = simulateDescent(input);
+    const bought = simulateDescent({ ...input, purchases: 'defence' });
+
+    expect(bought.purchases).toBe('defence');
+    expect(bought.levels[0].defencePurchases?.bought).toContainEqual(expect.objectContaining({
+      store: 'griswold-basic', equipmentSlot: 'body', target: 'armour', expectedPrice: 100,
+    }));
+    expect(bought.levels[0].defencePurchases?.resultingArmourClass).toBeGreaterThan(0);
+    expect(none.levels[0].armourAssumed?.totalArmourClass).toBe(0);
+    expect(bought.levels[0].expectedDamageTaken!).toBeLessThan(none.levels[0].expectedDamageTaken!);
+    expect(bought.levels[0].defencePurchases?.expectedDamageTakenWithoutPurchases)
+      .toBeCloseTo(none.levels[0].expectedDamageTaken!, 12);
+    expect(bought.finalState.purchasedDefence?.slots.body).toBeDefined();
+
+    const chain = simulateDifficultyChain({
+      className: input.className,
+      policy: input.policy,
+      tilesPerLevel: input.tilesPerLevel,
+      gameMode: input.gameMode,
+      gear: input.gear,
+      purchases: 'defence',
+      initialHeroState: initialState,
+      difficulties: ['normal', 'nightmare'],
+      wrappers: input.wrappers,
+      locations: input.locations,
+    });
+    expect(chain.legs[0].finalState.purchasedDefence?.slots.body).toBeDefined();
+    expect(chain.legs[1].initialState.purchasedDefence)
+      .toBe(chain.legs[0].finalState.purchasedDefence);
+
+    const storeUpgrade = wrapper('invented-store-upgrade', 'items', 'items/itemdat.tsv', {
+      subtype: 'LightArmor',
+      requiredStrength: 0,
+      requiredMagic: 0,
+      requiredDexterity: 0,
+      stats: [
+        { label: 'Armor Min', value: 40 },
+        { label: 'Armor Max', value: 40 },
+        { label: 'Value', value: 200 },
+      ],
+    }, {
+      dropRate: '1', itemType: 'LightArmor', minMonsterLevel: '7', minArmor: '40', maxArmor: '40',
+      minStrength: '0', minMagic: '0', minDexterity: '0', value: '200', miscId: 'NONE', spell: 'Null',
+      uniqueBaseItem: 'INVENTED_UPGRADE',
+    });
+    const upgraded = simulateDescent({
+      ...input,
+      gear: 'expected',
+      purchases: 'defence',
+      initialState: { ...initialState, gold: 5_000 },
+      wrappers: [warrior, hardHittingMonster, storeBody, storeUpgrade, healingPotion, ...curve],
+    });
+    const bodyPurchases = upgraded.levels.flatMap((level) => level.defencePurchases?.bought ?? [])
+      .filter((purchase) => purchase.equipmentSlot === 'body');
+    expect(bodyPurchases.length).toBeGreaterThan(1);
+    expect(bodyPurchases.some((purchase) => purchase.saleCredit > 0
+      && purchase.netPrice < purchase.expectedPrice)).toBe(true);
   });
 
   it('keeps a single explicit fresh initial state byte-identical to the default start', () => {

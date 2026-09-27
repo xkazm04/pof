@@ -22,6 +22,7 @@ import {
   type GameMode,
   type HitRecoveryTier,
   type PlayerBuild,
+  type Resistances,
   type WeaponGraphic,
 } from '@/lib/catalog/reference/combatMath';
 import { aggregateClassWrappers } from '@/lib/catalog/reference/classHeroes';
@@ -51,6 +52,11 @@ import {
 } from '@/lib/catalog/reference/packMath';
 import { spellSpec } from '@/lib/catalog/reference/spellSpecs';
 import {
+  expectedDefensiveStoreStock,
+  type DefensiveEquipmentSlot,
+  type ExpectedDefensiveStoreOffer,
+} from '@/lib/catalog/reference/storeMath';
+import {
   monsterMissileDamageSource,
   monsterMissileMetadata,
   resolveMonsterMissileDamage,
@@ -66,12 +72,16 @@ export type DefensiveAffixes = 'none' | 'expected';
 export type SorcererCombatPolicy = 'mixed' | 'pure-spell';
 export type SustainIncome = 'monster-gold' | 'gold-and-sales';
 export type DescentEncounter = 'duel' | 'packs';
+export type DescentPurchases = 'none' | 'defence';
 
 /** Explicit non-solid-tile assumption used only when a caller does not provide one. */
 export const DEFAULT_TILES_PER_LEVEL_ASSUMPTION = 3_000;
 
 /** One abstract item per slot; real item footprints are deliberately outside this scalar policy. */
 export const DEFAULT_SALE_ITEMS_PER_TRIP_ASSUMPTION = 40;
+
+/** At least half of the between-depth gold budget remains available for sustain potions. */
+export const DEFENCE_POTION_RESERVE_FRACTION = 0.5;
 
 /** Deliberately simple cumulative learned-set policy; these unlock depths are model assumptions, not table rows. */
 export const SORCERER_SPELL_PROGRESSION = [
@@ -163,6 +173,42 @@ export interface DescentLevelResult {
   sustain?: DescentSustainExpectation;
   /** Present only for the opt-in simultaneous-packs encounter policy. */
   pack?: DescentPackExpectation;
+  /** Present only for the opt-in town-defence purchase policy. */
+  defencePurchases?: DescentDefencePurchaseReport;
+}
+
+export interface DescentPurchasedDefence extends ExpectedDefensiveStoreOffer {
+  boughtAtDepth: number;
+  /** Conditional resale credit applied if this offer is present and replaces the equipped item. */
+  saleCredit: number;
+  /** Conditional price after resale credit. */
+  netPrice: number;
+  /** Availability-weighted gold spend and outcome used by the deterministic expectation. */
+  expectedGoldSpent: number;
+  expectedDamageReduction: number;
+  expectedDamageReductionPerGold: number;
+  expectedArmourClass: number;
+  expectedResistances: Resistances;
+  expectedHitRecoverySkippedFrames: number;
+  expectedEquippedSaleValue: number;
+}
+
+export interface DescentPurchasedDefenceState {
+  slots: Partial<Record<DefensiveEquipmentSlot, DescentPurchasedDefence>>;
+}
+
+export interface DescentDefencePurchaseReport {
+  potionReserveFraction: number;
+  goldAvailable: number;
+  goldBudget: number;
+  goldSpent: number;
+  bought: DescentPurchasedDefence[];
+  resultingArmourClass: number;
+  resultingResistances: Resistances;
+  resultingHitRecoveryTier: HitRecoveryTier;
+  expectedDamageTakenWithoutPurchases: number | null;
+  expectedDamageReduction: number | null;
+  sustainableWithoutPurchases: boolean;
 }
 
 export interface SustainArithmeticInput {
@@ -204,6 +250,8 @@ export interface DescentGoldFaucets {
 
 export interface DescentGoldSinks {
   potionsBought: number;
+  /** Present only for the opt-in town-defence purchase policy. */
+  defenceBought?: number;
   repair: number;
   identify: number;
   total: number;
@@ -347,6 +395,8 @@ export interface DescentInitialState {
   expectedGear?: DescentExpectedGearState;
   gold: number;
   potions: DescentPotionInventory;
+  /** Present only after the opt-in buyer has acquired defensive store items. */
+  purchasedDefence?: DescentPurchasedDefenceState;
   diabloKillRank: number;
   completedDifficulties: Difficulty[];
 }
@@ -374,6 +424,8 @@ export interface DescentSimulation {
   encounter?: 'packs';
   /** Omitted for the byte-compatible duel default. */
   adjacentSlots?: number;
+  /** Omitted for the byte-compatible default. */
+  purchases?: 'defence';
   assumptions: DescentAssumption[];
   levels: DescentLevelResult[];
   /** Opt-in derived measurement; omitted by the byte-compatible monster-gold policy. */
@@ -402,6 +454,8 @@ export interface SimulateDescentInput {
   encounter?: DescentEncounter;
   /** Simultaneous melee capacity; eight open tiles, or two for the documented corridor scenario. */
   adjacentSlots?: number;
+  /** Town purchases are opt-in; the default spends no gold on equipment. */
+  purchases?: DescentPurchases;
   /** Source rows are passed in; the simulator never reads a database or filesystem. */
   wrappers: readonly ReferenceWrapper[];
   /** Tests and other pure callers may pass already-projected location entities. */
@@ -721,6 +775,18 @@ function validatedInitialState(
       },
     } : {}),
     potions: { ...state.potions },
+    ...(state.purchasedDefence ? {
+      purchasedDefence: {
+        slots: Object.fromEntries(Object.entries(state.purchasedDefence.slots)
+          .map(([slot, item]) => [slot, item == null ? item : {
+            ...item,
+            resistances: { ...item.resistances },
+            expectedResistances: item.expectedResistances == null
+              ? { ...item.resistances }
+              : { ...item.expectedResistances },
+          }])),
+      },
+    } : {}),
     completedDifficulties: [...state.completedDifficulties],
   };
 }
@@ -733,6 +799,86 @@ function levelAt(totalExperience: number, currentLevel: number, curve: Experienc
 
 function finiteOrNull(value: number): number | null {
   return Number.isFinite(value) ? value : null;
+}
+
+function hitRecoveryTierFor(skippedFrames: number): HitRecoveryTier {
+  if (skippedFrames >= 3) return 'fastest';
+  if (skippedFrames >= 2) return 'faster';
+  if (skippedFrames >= 1) return 'fast';
+  return 'none';
+}
+
+function clonePurchasedDefenceState(state: DescentPurchasedDefenceState | undefined): DescentPurchasedDefenceState {
+  return {
+    slots: Object.fromEntries(Object.entries(state?.slots ?? {}).map(([slot, item]) => [slot, item == null ? item : {
+      ...item,
+      resistances: { ...item.resistances },
+      expectedResistances: item.expectedResistances == null
+        ? { ...item.resistances }
+        : { ...item.expectedResistances },
+    }])),
+  };
+}
+
+interface EffectiveDefence {
+  build: PlayerBuild;
+  hitRecoveryTier: HitRecoveryTier;
+  resistances: Resistances;
+  armourClass: number;
+}
+
+function effectiveDefence(
+  build: PlayerBuild,
+  armour: BestArmourExpectation | undefined,
+  affixes: BestDefensiveAffixExpectation | undefined,
+  purchased: DescentPurchasedDefenceState,
+  shieldAllowed: boolean,
+): EffectiveDefence {
+  const resistances: Resistances = { magic: 0, fire: 0, lightning: 0 };
+  let armourClass = 0;
+  let purchasedRecovery = 0;
+  for (const slot of ['body', 'helm', 'shield', 'ring1', 'ring2', 'amulet'] as const) {
+    const item = purchased.slots[slot];
+    const droppedResistance = affixes?.slotResistances[slot] ?? { magic: 0, fire: 0, lightning: 0 };
+    for (const element of ['magic', 'fire', 'lightning'] as const) {
+      resistances[element] += Math.max(
+        droppedResistance[element],
+        item?.expectedResistances?.[element] ?? item?.resistances[element] ?? 0,
+      );
+    }
+    if (slot === 'body' || slot === 'helm' || slot === 'shield') {
+      if (slot !== 'shield' || shieldAllowed) {
+        armourClass += Math.max(
+          armour?.slots[slot].armourClass ?? 0,
+          item?.expectedArmourClass ?? item?.armourClass ?? 0,
+        );
+      }
+    }
+    purchasedRecovery = Math.max(
+      purchasedRecovery,
+      item?.expectedHitRecoverySkippedFrames ?? item?.hitRecoverySkippedFrames ?? 0,
+    );
+  }
+  for (const element of ['magic', 'fire', 'lightning'] as const) {
+    resistances[element] = Math.min(75, resistances[element]);
+  }
+  const skippedFrames = Math.max(affixes?.expectedHitRecoverySkippedFrames ?? 0, purchasedRecovery);
+  const hasShield = shieldAllowed && Math.max(
+    armour?.slots.shield.armourClass ?? 0,
+    purchased.slots.shield?.expectedArmourClass ?? purchased.slots.shield?.armourClass ?? 0,
+  ) > 0;
+  return {
+    build: {
+      ...build,
+      armourClass,
+      resistances,
+      hasShield,
+      blockEnabled: hasShield,
+    },
+    hitRecoveryTier: hitRecoveryTierFor(skippedFrames),
+    resistances,
+    armourClass,
+  };
 }
 
 /** Nominal-bin mean of Player::RestorePartialLife, expressed in whole life points. */
@@ -1047,6 +1193,7 @@ function assumptions(
   encounter: DescentEncounter,
   adjacentSlots: number,
   defensiveAffixes: DefensiveAffixes,
+  purchases: DescentPurchases,
 ): DescentAssumption[] {
   return [
     {
@@ -1226,6 +1373,12 @@ function assumptions(
         source: 'pinned monster-drop, quality, affix, equipment, player-resistance, and hit-recovery procedures',
         detail: 'Body armour, helm, compatible shield, amulet, and two distinct ring order statistics contribute floored per-slot resistance expectations, summed and capped at 75%. Each element is optimized independently. The floored expected best non-stacking FASTRECOVER value selects Fast, Faster, or Fastest Hit Recovery. Unique powers and cross-stat/loadout correlations are omitted.',
       }] : []),
+      ...(purchases === 'defence' ? [{
+        id: 'town-defence-purchases',
+        value: `greedy expected damage reduction per gold; ${String(DEFENCE_POTION_RESERVE_FRACTION * 100)}% potion reserve`,
+        source: 'SpawnSmith, SpawnPremium, SpawnBoy, vendor item/affix value laws, and combatDuel/packMath expectations',
+        detail: 'Before each depth, the buyer considers the floored expected-best alternative for each defensive slot and target in Griswold basic/premium stock and Wirt\'s item; Adria has no eligible armour or jewellery base types. Offer stats, benefit, price, and resale credit are conditional on seeing the targeted item, while reported spend and resulting equipped stats are weighted once by stock availability. Affordable positive conditional marginal reductions are bought greedily per net gold after crediting the replaced item at identified value / 4. Half the available gold is reserved for the existing sustain-potion policy; unspent defence-budget gold carries forward. Purchased projections persist across depths and difficulty-chain legs; independently optimized dropped and purchased quantities use the better value in each slot.',
+      }] : []),
       {
         id: 'sustain-income',
         value: sustainIncome === 'gold-and-sales'
@@ -1280,6 +1433,7 @@ function assumptions(
 }
 
 function summarizeGoldFlow(levels: readonly DescentGoldFlowLevel[], itemsPerTrip: number): DescentGoldFlow {
+  const hasDefencePurchases = levels.some((level) => level.sinks.defenceBought !== undefined);
   const faucets = levels.reduce<DescentGoldFaucets>((sum, level) => ({
     monsterGold: sum.monsterGold + level.faucets.monsterGold,
     sales: sum.sales + level.faucets.sales,
@@ -1287,6 +1441,7 @@ function summarizeGoldFlow(levels: readonly DescentGoldFlowLevel[], itemsPerTrip
   }), { monsterGold: 0, sales: 0, total: 0 });
   const sinks = levels.reduce<DescentGoldSinks>((sum, level) => ({
     potionsBought: sum.potionsBought + level.sinks.potionsBought,
+    ...(hasDefencePurchases ? { defenceBought: (sum.defenceBought ?? 0) + (level.sinks.defenceBought ?? 0) } : {}),
     repair: sum.repair + level.sinks.repair,
     identify: sum.identify + level.sinks.identify,
     total: sum.total + level.sinks.total,
@@ -1303,6 +1458,7 @@ function summarizeGoldFlow(levels: readonly DescentGoldFlowLevel[], itemsPerTrip
     },
     sinks: {
       potionsBought: sinks.potionsBought / clearHours,
+      ...(hasDefencePurchases ? { defenceBought: (sinks.defenceBought ?? 0) / clearHours } : {}),
       repair: sinks.repair / clearHours,
       identify: sinks.identify / clearHours,
       total: sinks.total / clearHours,
@@ -1346,6 +1502,16 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
   }
   if (defensiveAffixes === 'expected' && gear !== 'expected') {
     throw new Error('defensiveAffixes:expected requires gear:expected');
+  }
+  const purchases = input.purchases ?? 'none';
+  if (!(['none', 'defence'] as const).includes(purchases)) {
+    throw new Error(`unknown purchase policy ${input.purchases}`);
+  }
+  if (purchases === 'defence' && gear !== 'expected') {
+    throw new Error('purchases:defence requires gear:expected');
+  }
+  if (purchases === 'defence' && input.gameMode !== 'single') {
+    throw new Error('purchases:defence models vanilla single-player stores only');
   }
   const sorcererCombatPolicy = input.sorcererCombatPolicy ?? 'mixed';
   if (!(['mixed', 'pure-spell'] as const).includes(sorcererCombatPolicy)) {
@@ -1434,6 +1600,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
     helm: initialState.expectedGear?.armour.slots.helm.itemId ?? null,
     shield: initialState.expectedGear?.armour.slots.shield.itemId ?? null,
   };
+  let purchasedDefence = clonePurchasedDefenceState(initialState.purchasedDefence);
 
   for (let depth = 1; depth <= 16; depth++) {
     const location = locations.find((candidate) => candidate.entity.data.depth === depth);
@@ -1469,12 +1636,14 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       : [];
 
     const heroLevelBefore = heroLevel;
+    const goldAvailableForPurchases = carriesPersistentState ? goldBalance : goldForNextDepth;
     let build = buildAtLevel(heroLevelBefore, input.weapon ?? startingWeapon);
     let weaponAssumed: BestWeaponExpectation | undefined;
     let armourAssumed: BestArmourExpectation | undefined;
     let defensiveAffixesAssumed: BestDefensiveAffixExpectation | undefined;
     let hitRecoveryTier: HitRecoveryTier = 'none';
     let expectedWeaponBase: ReferenceWrapper | undefined;
+    let shieldAllowed = true;
     if (gear === 'expected') {
       weaponAssumed = bestWeaponExpectation({
         class: build.class,
@@ -1507,7 +1676,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
           damageBonusPercent: weaponAssumed.damageBonusPercent,
         };
       }
-      const shieldAllowed = weaponPermitsShield(build, expectedWeaponBase);
+      shieldAllowed = weaponPermitsShield(build, expectedWeaponBase);
       armourAssumed = bestArmourExpectation({
         className: build.class,
         depth,
@@ -1545,16 +1714,32 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
         build = { ...build, resistances: defensiveAffixesAssumed.resistances };
         hitRecoveryTier = defensiveAffixesAssumed.hitRecoveryTier;
       }
-      if (armourAssumed.hasShield) {
-        const weaponGraphic = shieldGraphic(build);
-        build = {
-          ...build,
-          weaponGraphic,
-          swingSeconds: attackTiming(animations, weaponGraphic).seconds,
-        };
-      }
     }
-    const playerHitRecoverySeconds = hitRecoveryTiming(animations, hitRecoveryTier).seconds;
+    const withShieldTiming = (candidate: PlayerBuild): PlayerBuild => {
+      if (!candidate.hasShield) return candidate;
+      const weaponGraphic = shieldGraphic(candidate);
+      return {
+        ...candidate,
+        weaponGraphic,
+        swingSeconds: attackTiming(animations, weaponGraphic).seconds,
+      };
+    };
+    const noPurchaseDefence = effectiveDefence(
+      build,
+      armourAssumed,
+      defensiveAffixesAssumed,
+      { slots: {} },
+      shieldAllowed,
+    );
+    let effective = effectiveDefence(
+      build,
+      armourAssumed,
+      defensiveAffixesAssumed,
+      purchasedDefence,
+      shieldAllowed,
+    );
+    build = withShieldTiming(effective.build);
+    hitRecoveryTier = effective.hitRecoveryTier;
     const loot = lootEnabled ? expectedLootBudget({
       monsterProfiles: depthLootProfiles,
       itemWrappers: input.wrappers,
@@ -1562,7 +1747,6 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       uniqueItemWrappers: input.wrappers,
       difficulty: input.difficulty,
     }) : undefined;
-    const goldAvailableForPurchases = carriesPersistentState ? goldBalance : goldForNextDepth;
     const mixedSorcerer = input.className === 'sorcerer' && sorcererCombatPolicy === 'mixed';
     const lifePool = lifeAndMana(build, coefficients).maximumLife / FIXED_POINT;
     if (!carriesPersistentState) currentLife = lifePool;
@@ -1573,20 +1757,20 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       : 0;
     if (input.className === 'sorcerer' && currentMana === null) currentMana = manaPool;
     const currentManaAtStart = currentMana ?? 0;
-    const expectedGoldAllocated = input.className === 'sorcerer' && gear === 'expected'
+    let expectedGoldAllocated = input.className === 'sorcerer' && gear === 'expected'
       ? goldAvailableForPurchases * manaGoldShare
       : 0;
-    const manaPotionsBought = input.className === 'sorcerer' && gear === 'expected'
+    let manaPotionsBought = input.className === 'sorcerer' && gear === 'expected'
       ? expectedGoldAllocated / manaPotionPrice
       : 0;
     const currentDepthManaPotions = sorcererCombatPolicy === 'pure-spell' ? loot?.expectedManaPotions ?? 0 : 0;
     const currentDepthFullManaPotions = sorcererCombatPolicy === 'pure-spell' ? loot?.expectedFullManaPotions ?? 0 : 0;
-    const manaPotionsAvailable = carriedManaPotions + manaPotionsBought + currentDepthManaPotions;
+    let manaPotionsAvailable = carriedManaPotions + manaPotionsBought + currentDepthManaPotions;
     const fullManaPotionsAvailable = carriedFullManaPotions + currentDepthFullManaPotions;
     const manaRestoredPerPotion = input.className === 'sorcerer'
       ? expectedManaPotionMana(input.className, manaPool)
       : 0;
-    const startManaBudget = currentManaAtStart
+    let startManaBudget = currentManaAtStart
       + manaPotionsAvailable * manaRestoredPerPotion
       + fullManaPotionsAvailable * manaPool;
     const playerAttack: PlayerAttackMode = input.className === 'sorcerer'
@@ -1596,7 +1780,9 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       ? sorcererSpellAttacks(input.wrappers, depth, initialState.learnedSpells)
       : [];
     const playerCastSeconds = playerAttack === 'spell' ? castTiming(classAnimations(classWrapper)).seconds : undefined;
-    const evaluatedRows = pool.map((wrapper) => {
+    const evaluateRows = (combatBuild: PlayerBuild, recoveryTier: HitRecoveryTier) => {
+      const playerHitRecoverySeconds = hitRecoveryTiming(animations, recoveryTier).seconds;
+      return pool.map((wrapper) => {
       const unique = wrapper.file === 'monsters/unique_monstdat.tsv';
       const base = unique ? ordinaryByType.get(wrapper.raw.type) : undefined;
       if (unique && !base) throw new Error(`${wrapper.entity.id} has no supplied monstdat base ${wrapper.raw.type}`);
@@ -1606,7 +1792,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
           ? monsterExchangeModel(wrapper, monster, base, input.wrappers)
           : undefined
         : monsterExchangeModel(wrapper, monster, base, input.wrappers);
-      const runDuel = (attack: PlayerAttackMode, spell?: DuelSpellAttack) => duel(build, coefficients, monster, {
+      const runDuel = (attack: PlayerAttackMode, spell?: DuelSpellAttack) => duel(combatBuild, coefficients, monster, {
         gameMode: input.gameMode,
         playerAttack: attack,
         engagementDistance: DEFAULT_RANGED_ENGAGEMENT_DISTANCE,
@@ -1669,7 +1855,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       const selected = playerAttack === 'spell' ? candidates[0] : undefined;
       const result = mixedSorcerer ? meleeResult! : selected?.result ?? runDuel(playerAttack);
       if (result.expectedPlayerSecondsToKill === null) {
-        throw new Error(`${classWrapper.entity.id} has no ${playerAttack} timing for ${build.weaponGraphic ?? build.weaponType}`);
+        throw new Error(`${classWrapper.entity.id} has no ${playerAttack} timing for ${combatBuild.weaponGraphic ?? combatBuild.weaponType}`);
       }
       const difficultyLevelBonus = input.difficulty === 'nightmare' ? 15 : input.difficulty === 'hell' ? 30 : 0;
       const xp = experienceAward({
@@ -1706,7 +1892,228 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
         expectedGotHitInterruptions: result.gotHit?.expectedInterruptionsBeforeKill ?? 0,
         ...(mixedSorcerer ? { meleeResult: result, spellResult: selected?.result } : {}),
       };
-    });
+      });
+    };
+    const estimateDamage = (
+      candidateRows: ReturnType<typeof evaluateRows>,
+      recoveryTier: HitRecoveryTier,
+    ): number => {
+      if (ambientPopulation === 0) return 0;
+      if (encounter === 'duel') {
+        return candidateRows.reduce((sum, row) => sum + row.expectedDamageTaken, 0)
+          / candidateRows.length * ambientPopulation;
+      }
+      const outcomes = ordinaryPackSizeDistribution(depth);
+      const packSize = expectedPackSize(outcomes);
+      const packsPerType = ambientPopulation / candidateRows.length / packSize;
+      const recoverySeconds = hitRecoveryTiming(animations, recoveryTier).seconds;
+      return candidateRows.reduce((sum, row) => {
+        if (!Number.isFinite(row.seconds) || !Number.isFinite(row.expectedDamageTaken)
+          || !Number.isFinite(row.expectedGotHitInterruptions)) return Infinity;
+        const exchange = distributedPackExchange(outcomes, {
+          secondsToKill: row.seconds,
+          expectedDamageTaken: row.expectedDamageTaken,
+          expectedGotHitInterruptions: row.expectedGotHitInterruptions,
+          hitRecoverySeconds: recoverySeconds,
+          ranged: row.rangedMonster,
+        }, adjacentSlots);
+        return sum + exchange.expectedDamageTakenPerPack * packsPerType;
+      }, 0);
+    };
+    const noPurchaseRows = purchases === 'defence'
+      ? evaluateRows(withShieldTiming(noPurchaseDefence.build), noPurchaseDefence.hitRecoveryTier)
+      : undefined;
+    const expectedDamageTakenWithoutPurchases = noPurchaseRows == null
+      ? null
+      : estimateDamage(noPurchaseRows, noPurchaseDefence.hitRecoveryTier);
+    let evaluatedRows = evaluateRows(build, hitRecoveryTier);
+    let defenceGoldSpent = 0;
+    const boughtDefence: DescentPurchasedDefence[] = [];
+    if (purchases === 'defence' && goldAvailableForPurchases > 0) {
+      const storeStock = expectedDefensiveStoreStock({
+        heroLevel: heroLevelBefore,
+        deepestVisitedDepth: Math.max(0, depth - 1),
+        strength: build.strength,
+        magic: build.magic,
+        dexterity: build.dexterity,
+        shieldAllowed,
+        wrappers: input.wrappers,
+      });
+      const candidates = storeStock.stores.flatMap((store) => store.offers.flatMap((offer) => {
+        const offerKey = `${offer.store}:${offer.equipmentSlot}:${offer.target}:${offer.stockRank}`;
+        if (offer.equipmentSlot !== 'ring1' || offer.stockRank !== 1) return [{ offer, offerKey }];
+        return [
+          { offer, offerKey },
+          { offer: { ...offer, equipmentSlot: 'ring2' as const }, offerKey },
+        ];
+      }));
+      const goldBudget = goldAvailableForPurchases * (1 - DEFENCE_POTION_RESERVE_FRACTION);
+      const usedOffers = new Set<string>();
+      let currentDamage = estimateDamage(evaluatedRows, hitRecoveryTier);
+      while (defenceGoldSpent < goldBudget) {
+        let best: {
+          offer: ExpectedDefensiveStoreOffer;
+          offerKey: string;
+          state: DescentPurchasedDefenceState;
+          effective: EffectiveDefence;
+          build: PlayerBuild;
+          rows: ReturnType<typeof evaluateRows>;
+          damage: number;
+          reduction: number;
+          efficiency: number;
+          saleCredit: number;
+          netPrice: number;
+          expectedGoldSpent: number;
+        } | undefined;
+        for (const candidate of candidates) {
+          const offer = candidate.offer;
+          if (usedOffers.has(candidate.offerKey)) continue;
+          const previous = purchasedDefence.slots[offer.equipmentSlot];
+          const saleCredit = previous?.expectedEquippedSaleValue ?? previous?.expectedSaleValue ?? 0;
+          const netPrice = Math.max(0, offer.expectedPrice - saleCredit);
+          const expectedGoldSpent = offer.availabilityProbability * netPrice;
+          if (netPrice <= 0 || defenceGoldSpent + netPrice > goldBudget) continue;
+          const conditionalState = clonePurchasedDefenceState(purchasedDefence);
+          conditionalState.slots[offer.equipmentSlot] = {
+            ...offer,
+            resistances: { ...offer.resistances },
+            boughtAtDepth: depth,
+            saleCredit,
+            netPrice,
+            expectedGoldSpent,
+            expectedDamageReduction: 0,
+            expectedDamageReductionPerGold: 0,
+            expectedArmourClass: offer.armourClass,
+            expectedResistances: { ...offer.resistances },
+            expectedHitRecoverySkippedFrames: offer.hitRecoverySkippedFrames,
+            expectedEquippedSaleValue: offer.expectedSaleValue,
+          };
+          const conditionalEffective = effectiveDefence(
+            noPurchaseDefence.build,
+            armourAssumed,
+            defensiveAffixesAssumed,
+            conditionalState,
+            shieldAllowed,
+          );
+          const conditionalBuild = withShieldTiming(conditionalEffective.build);
+          const conditionalRows = evaluateRows(conditionalBuild, conditionalEffective.hitRecoveryTier);
+          const conditionalDamage = estimateDamage(conditionalRows, conditionalEffective.hitRecoveryTier);
+          const reduction = Number.isFinite(currentDamage) && Number.isFinite(conditionalDamage)
+            ? Math.max(0, currentDamage - conditionalDamage)
+            : !Number.isFinite(currentDamage) && Number.isFinite(conditionalDamage)
+              ? Number.MAX_VALUE
+              : 0;
+          const efficiency = reduction / netPrice;
+          const availability = offer.availabilityProbability;
+          const previousArmour = previous?.expectedArmourClass ?? previous?.armourClass ?? 0;
+          const previousResistances = previous?.expectedResistances
+            ?? previous?.resistances
+            ?? { magic: 0, fire: 0, lightning: 0 };
+          const previousRecovery = previous?.expectedHitRecoverySkippedFrames
+            ?? previous?.hitRecoverySkippedFrames ?? 0;
+          const previousSaleValue = previous?.expectedEquippedSaleValue ?? previous?.expectedSaleValue ?? 0;
+          const state = clonePurchasedDefenceState(purchasedDefence);
+          state.slots[offer.equipmentSlot] = {
+            ...offer,
+            resistances: { ...offer.resistances },
+            boughtAtDepth: depth,
+            saleCredit,
+            netPrice,
+            expectedGoldSpent,
+            expectedDamageReduction: availability * reduction,
+            expectedDamageReductionPerGold: efficiency,
+            expectedArmourClass: availability * offer.armourClass + (1 - availability) * previousArmour,
+            expectedResistances: {
+              magic: availability * offer.resistances.magic + (1 - availability) * previousResistances.magic,
+              fire: availability * offer.resistances.fire + (1 - availability) * previousResistances.fire,
+              lightning: availability * offer.resistances.lightning
+                + (1 - availability) * previousResistances.lightning,
+            },
+            expectedHitRecoverySkippedFrames: availability * offer.hitRecoverySkippedFrames
+              + (1 - availability) * previousRecovery,
+            expectedEquippedSaleValue: availability * offer.expectedSaleValue
+              + (1 - availability) * previousSaleValue,
+          };
+          const candidateEffective = effectiveDefence(
+            noPurchaseDefence.build,
+            armourAssumed,
+            defensiveAffixesAssumed,
+            state,
+            shieldAllowed,
+          );
+          const candidateBuild = withShieldTiming(candidateEffective.build);
+          const candidateRows = evaluateRows(candidateBuild, candidateEffective.hitRecoveryTier);
+          const candidateDamage = estimateDamage(candidateRows, candidateEffective.hitRecoveryTier);
+          const stableId = `${offer.store}:${offer.equipmentSlot}:${offer.target}`;
+          const bestStableId = best == null
+            ? ''
+            : `${best.offer.store}:${best.offer.equipmentSlot}:${best.offer.target}`;
+          if (efficiency > 0 && (best == null
+            || efficiency > best.efficiency
+            || efficiency === best.efficiency && reduction > best.reduction
+            || efficiency === best.efficiency && reduction === best.reduction
+              && (netPrice < best.netPrice
+                || netPrice === best.netPrice && stableId.localeCompare(bestStableId) < 0))) {
+            best = {
+              offer,
+              offerKey: candidate.offerKey,
+              state,
+              effective: candidateEffective,
+              build: candidateBuild,
+              rows: candidateRows,
+              damage: candidateDamage,
+              reduction,
+              efficiency,
+              saleCredit,
+              netPrice,
+              expectedGoldSpent,
+            };
+          }
+        }
+        if (!best) break;
+        const purchase: DescentPurchasedDefence = {
+          ...best.offer,
+          resistances: { ...best.offer.resistances },
+          boughtAtDepth: depth,
+          saleCredit: best.saleCredit,
+          netPrice: best.netPrice,
+          expectedGoldSpent: best.expectedGoldSpent,
+          expectedDamageReduction: best.offer.availabilityProbability * best.reduction,
+          expectedDamageReductionPerGold: best.efficiency,
+          expectedArmourClass: best.state.slots[best.offer.equipmentSlot]!.expectedArmourClass,
+          expectedResistances: {
+            ...best.state.slots[best.offer.equipmentSlot]!.expectedResistances,
+          },
+          expectedHitRecoverySkippedFrames:
+            best.state.slots[best.offer.equipmentSlot]!.expectedHitRecoverySkippedFrames,
+          expectedEquippedSaleValue:
+            best.state.slots[best.offer.equipmentSlot]!.expectedEquippedSaleValue,
+        };
+        best.state.slots[best.offer.equipmentSlot] = purchase;
+        purchasedDefence = best.state;
+        effective = best.effective;
+        build = best.build;
+        hitRecoveryTier = best.effective.hitRecoveryTier;
+        evaluatedRows = best.rows;
+        currentDamage = best.damage;
+        defenceGoldSpent += best.expectedGoldSpent;
+        boughtDefence.push(purchase);
+        usedOffers.add(best.offerKey);
+      }
+    }
+    const goldAvailableForPotions = purchases === 'defence'
+      ? goldAvailableForPurchases * DEFENCE_POTION_RESERVE_FRACTION
+      : goldAvailableForPurchases;
+    expectedGoldAllocated = input.className === 'sorcerer' && gear === 'expected'
+      ? goldAvailableForPotions * manaGoldShare
+      : 0;
+    manaPotionsBought = input.className === 'sorcerer' && gear === 'expected'
+      ? expectedGoldAllocated / manaPotionPrice
+      : 0;
+    manaPotionsAvailable = carriedManaPotions + manaPotionsBought + currentDepthManaPotions;
+    startManaBudget = currentManaAtStart
+      + manaPotionsAvailable * manaRestoredPerPotion
+      + fullManaPotionsAvailable * manaPool;
     const divisor = evaluatedRows.length;
     const expectedKillsPerType = ambientPopulation / divisor;
     const mixedAllocations = mixedSorcerer ? allocateMixedSpellKills(evaluatedRows.flatMap((row) => {
@@ -1782,6 +2189,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
     const duelExpectedDamage = ambientPopulation === 0
       ? 0
       : rows.reduce((sum, row) => sum + row.expectedDamageTaken, 0) / divisor * ambientPopulation;
+    const playerHitRecoverySeconds = hitRecoveryTiming(animations, hitRecoveryTier).seconds;
     const packSizeOutcomes = ordinaryPackSizeDistribution(depth);
     const placementPackSize = expectedPackSize(packSizeOutcomes);
     const packRows = encounter === 'packs' ? rows.map((row) => {
@@ -1865,7 +2273,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
     const expectedBlockChance = rows.reduce((sum, row) => sum + row.conditionalBlockChance, 0) / divisor;
     let sustain: DescentSustainExpectation | undefined;
     if (loot && gear === 'expected') {
-      const healingPotionsBought = goldAvailableForPurchases * healingGoldShare / healingPotionPrice;
+      const healingPotionsBought = goldAvailableForPotions * healingGoldShare / healingPotionPrice;
       const healingPotionsAvailable = carriedHealingPotions + healingPotionsBought + loot.expectedHealingPotions;
       const fullHealingPotionsAvailable = carriedFullHealingPotions + loot.expectedFullHealingPotions;
       const lifeRestoredPerHealingPotion = expectedHealingPotionLife(input.className, lifePool);
@@ -2056,8 +2464,8 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
     const goldIncome = loot ? loot.expectedGold + (sale?.expectedGold ?? 0) : 0;
     const potionGoldSpent = (sustain?.healingPotionsBought ?? 0) * healingPotionPrice
       + (mana?.manaPotionsBought ?? 0) * manaPotionPrice;
-    goldBalance = Math.max(0, goldBalance + goldIncome - potionGoldSpent);
-    if (loot) goldForNextDepth = goldIncome;
+    goldBalance = Math.max(0, goldBalance + goldIncome - potionGoldSpent - defenceGoldSpent);
+    if (loot) goldForNextDepth = purchases === 'defence' ? goldBalance : goldIncome;
     if (loot && sale) {
       const faucets: DescentGoldFaucets = {
         monsterGold: loot.expectedGold,
@@ -2066,9 +2474,10 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       };
       const sinks: DescentGoldSinks = {
         potionsBought: potionGoldSpent,
+        ...(purchases === 'defence' ? { defenceBought: defenceGoldSpent } : {}),
         repair: 0,
         identify: 0,
-        total: potionGoldSpent,
+        total: potionGoldSpent + defenceGoldSpent,
       };
       const clearHours = Number.isFinite(expectedSeconds) ? expectedSeconds / 3_600 : null;
       const perHour = clearHours != null && clearHours > 0 ? {
@@ -2079,6 +2488,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
         },
         sinks: {
           potionsBought: sinks.potionsBought / clearHours,
+          ...(purchases === 'defence' ? { defenceBought: defenceGoldSpent / clearHours } : {}),
           repair: 0,
           identify: 0,
           total: sinks.total / clearHours,
@@ -2137,6 +2547,27 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       `${uniqueIds.length} eligible unique row${uniqueIds.length === 1 ? '' : 's'} excluded because actual roster and quest conditions are unresolved.`,
       ...(depth === 16 ? ['Depth 16 uses the range-eligible pool as an explicit proxy; d1-monster-type-selection says the engine skips its random draw for the authored fixed roster.'] : []),
     ];
+    const noPurchaseDamage = expectedDamageTakenWithoutPurchases ?? expectedDamage;
+    const noPurchaseHealingSupply = (sustain?.healingSupply ?? 0)
+      + defenceGoldSpent * healingGoldShare / healingPotionPrice
+        * expectedHealingPotionLife(input.className, lifePool);
+    const defencePurchaseReport: DescentDefencePurchaseReport | undefined = purchases === 'defence' ? {
+      potionReserveFraction: DEFENCE_POTION_RESERVE_FRACTION,
+      goldAvailable: goldAvailableForPurchases,
+      goldBudget: goldAvailableForPurchases * (1 - DEFENCE_POTION_RESERVE_FRACTION),
+      goldSpent: defenceGoldSpent,
+      bought: boughtDefence,
+      resultingArmourClass: effective.armourClass,
+      resultingResistances: { ...effective.resistances },
+      resultingHitRecoveryTier: effective.hitRecoveryTier,
+      expectedDamageTakenWithoutPurchases: finiteOrNull(noPurchaseDamage),
+      expectedDamageReduction: Number.isFinite(noPurchaseDamage) && Number.isFinite(expectedDamage)
+        ? Math.max(0, noPurchaseDamage - expectedDamage)
+        : null,
+      sustainableWithoutPurchases: Number.isFinite(noPurchaseDamage)
+        && noPurchaseDamage <= currentLifeAtStart + noPurchaseHealingSupply
+        && (mana?.sustainable ?? true),
+    } : undefined;
     levels.push({
       depth,
       poolSize: pool.length,
@@ -2158,6 +2589,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       ...(armourAssumed && sustain ? { armourAssumed, expectedBlockChance, sustain } : {}),
       ...(defensiveAffixesAssumed ? { defensiveAffixesAssumed } : {}),
       ...(packExpectation ? { pack: packExpectation } : {}),
+      ...(defencePurchaseReport ? { defencePurchases: defencePurchaseReport } : {}),
     });
     if (gear === 'expected' && ambientPopulation > 0) {
       lootHistory.push(...depthLootProfiles);
@@ -2262,6 +2694,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       mana: carriedManaPotions,
       fullMana: carriedFullManaPotions,
     },
+    ...(purchases === 'defence' ? { purchasedDefence: clonePurchasedDefenceState(purchasedDefence) } : {}),
     diabloKillRank: initialState.diabloKillRank + 1,
     completedDifficulties: [...initialState.completedDifficulties, input.difficulty],
     completedDifficulty: input.difficulty,
@@ -2281,6 +2714,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
     ...(gear === 'expected' ? { gear } : {}),
     ...(defensiveAffixes === 'expected' ? { defensiveAffixes } : {}),
     ...(encounter === 'packs' ? { encounter, adjacentSlots } : {}),
+    ...(purchases === 'defence' ? { purchases } : {}),
     assumptions: assumptions(
       tilesPerLevel,
       input.policy,
@@ -2292,6 +2726,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       encounter,
       adjacentSlots,
       defensiveAffixes,
+      purchases,
     ),
     levels,
     ...(sustainIncome === 'gold-and-sales' ? { goldFlow: summarizeGoldFlow(goldFlowLevels, saleItemsPerTrip) } : {}),
@@ -2379,6 +2814,7 @@ export function descentEntity(input: SimulateDescentInput): ReferenceWrapper {
     ...(simulation.attackMode ? [simulation.attackMode, 'class-attack-mode'] : []),
     ...(simulation.gear === 'expected' ? ['expected-loot-gear'] : []),
     ...(simulation.defensiveAffixes === 'expected' ? ['expected-defensive-affixes'] : []),
+    ...(simulation.purchases === 'defence' ? ['expected-defensive-store-purchases'] : []),
   ]);
   return {
     wrapperId: `${classWrapper.sourceId}:combat-map:${id}`,
@@ -2417,6 +2853,7 @@ export function descentEntity(input: SimulateDescentInput): ReferenceWrapper {
         ...(simulation.defensiveAffixes === 'expected'
           ? { defensiveAffixes: simulation.defensiveAffixes }
           : {}),
+        ...(simulation.purchases === 'defence' ? { purchases: simulation.purchases } : {}),
       },
       provenance: {
         kind: 'ingest',

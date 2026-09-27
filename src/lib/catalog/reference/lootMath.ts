@@ -102,6 +102,9 @@ interface AffixRow {
   useful: boolean;
   valueMin: number;
   valueMax: number;
+  priceMin: number;
+  priceMax: number;
+  priceMultiplier: number;
 }
 
 interface InternalAffixOutcome extends AffixOutcomeProbabilities {
@@ -248,7 +251,114 @@ function affixRows(wrappers: readonly ReferenceWrapper[]): AffixRow[] {
       useful: String(wrapper.raw.useful ?? 'true').toLowerCase() === 'true',
       valueMin: finiteNumber(wrapper.raw['power.value1'] ?? data.valueMin ?? 0, `${wrapper.entity.id}.valueMin`),
       valueMax: finiteNumber(wrapper.raw['power.value2'] ?? data.valueMax ?? 0, `${wrapper.entity.id}.valueMax`),
+      priceMin: finiteNumber(wrapper.raw.minVal ?? 0, `${wrapper.entity.id}.minVal`),
+      priceMax: finiteNumber(wrapper.raw.maxVal ?? 0, `${wrapper.entity.id}.maxVal`),
+      priceMultiplier: finiteNumber(wrapper.raw.multVal ?? 0, `${wrapper.entity.id}.multVal`),
     }];
+  });
+}
+
+export interface VendorDefensiveAffixOutcome {
+  probability: number;
+  resistances: Resistances;
+  hitRecoverySkippedFrames: number;
+  armourBonusPercent: number;
+  affixCount: number;
+  priceAddition: number;
+  priceMultiplier: number;
+}
+
+export interface VendorDefensiveAffixInput {
+  base: ReferenceWrapper;
+  minLevel: number;
+  maxLevel: number;
+  onlyGood: boolean;
+  affixWrappers: readonly ReferenceWrapper[];
+}
+
+function affixPriceValue(row: AffixRow, rolledValue: number): number {
+  if (row.valueMin === row.valueMax || row.priceMin === row.priceMax) return row.priceMin;
+  return row.priceMin
+    + Math.trunc((row.priceMax - row.priceMin)
+      * Math.trunc(100 * (rolledValue - row.valueMin) / (row.valueMax - row.valueMin)) / 100);
+}
+
+function vendorAffixRolls(row: AffixRow): { value: number; probability: number; price: number }[] {
+  const rolls = rolledValues(row);
+  return [{
+    value: rolls.reduce((sum, roll) => sum + roll.p * roll.value, 0),
+    probability: 1,
+    price: rolls.reduce((sum, roll) => sum + roll.p * affixPriceValue(row, roll.value), 0),
+  }];
+}
+
+/**
+ * Exact good/evil and prefix/suffix allocation for a vendor magic item, projected to the defensive
+ * powers used by the descent buyer. Integer power rolls are collapsed to their expectation before
+ * the expected-best stock order statistic; the store layer floors only the final per-slot result.
+ * Non-defensive effects retain only their expected price contribution.
+ */
+export function vendorDefensiveAffixOutcomes(input: VendorDefensiveAffixInput): VendorDefensiveAffixOutcome[] {
+  const type = affixItemType(input.base);
+  if (!type) {
+    return [{
+      probability: 1,
+      resistances: { magic: 0, fire: 0, lightning: 0 },
+      hitRecoverySkippedFrames: 0,
+      armourBonusPercent: 0,
+      affixCount: 0,
+      priceAddition: 0,
+      priceMultiplier: 0,
+    }];
+  }
+  const rows = affixRows(input.affixWrappers);
+  const pairs = [
+    { prefix: true, suffix: false, p: MAGIC_AFFIX_ALLOCATION.prefixOnly },
+    { prefix: false, suffix: true, p: MAGIC_AFFIX_ALLOCATION.suffixOnly },
+    { prefix: true, suffix: true, p: MAGIC_AFFIX_ALLOCATION.both },
+  ].flatMap((request) => allocationChoices(
+    rows,
+    type,
+    Math.min(Math.trunc(input.minLevel), 25),
+    Math.trunc(input.maxLevel),
+    input.onlyGood,
+    request.prefix,
+    request.suffix,
+  ).map((pair) => ({ ...pair, p: pair.p * request.p })));
+
+  return pairs.flatMap((pair) => {
+    const selected = [pair.prefix, pair.suffix].filter((row): row is AffixRow => row != null);
+    let outcomes: VendorDefensiveAffixOutcome[] = [{
+      probability: pair.p,
+      resistances: { magic: 0, fire: 0, lightning: 0 },
+      hitRecoverySkippedFrames: 0,
+      armourBonusPercent: 0,
+      affixCount: selected.length,
+      priceAddition: 0,
+      priceMultiplier: selected.reduce((sum, row) => sum + row.priceMultiplier, 0),
+    }];
+    for (const row of selected) {
+      outcomes = outcomes.flatMap((outcome) => vendorAffixRolls(row).map((roll) => {
+        const resistances = { ...outcome.resistances };
+        const power = row.power.toUpperCase();
+        if (power === 'MAGICRES' || power === 'ALLRES') resistances.magic += roll.value;
+        if (power === 'FIRERES' || power === 'ALLRES') resistances.fire += roll.value;
+        if (power === 'LIGHTRES' || power === 'ALLRES') resistances.lightning += roll.value;
+        return {
+          ...outcome,
+          probability: outcome.probability * roll.probability,
+          resistances,
+          hitRecoverySkippedFrames: power === 'FASTRECOVER'
+            ? Math.max(outcome.hitRecoverySkippedFrames, roll.value)
+            : outcome.hitRecoverySkippedFrames,
+          armourBonusPercent: power === 'ACP'
+            ? outcome.armourBonusPercent + roll.value
+            : outcome.armourBonusPercent,
+          priceAddition: outcome.priceAddition + roll.price,
+        };
+      }));
+    }
+    return outcomes;
   });
 }
 

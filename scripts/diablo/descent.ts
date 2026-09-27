@@ -10,6 +10,7 @@
  *     [--sorcerer-combat mixed|pure-spell]
  *     [--income monster-gold|gold-and-sales] [--items-per-trip N]
  *     [--encounter duel|packs] [--slots N]
+ *     [--buy none|defence]
  *     [--chain]
  * Rogue and Sorcerer default to expected gear; Warrior and explicit --weapon runs default to none.
  */
@@ -27,6 +28,7 @@ import {
   type DescentClassName,
   type DescentEncounter,
   type DescentGear,
+  type DescentPurchases,
   type DefensiveAffixes,
   type SorcererCombatPolicy,
   type StatPointPolicy,
@@ -64,6 +66,11 @@ if (!(['none', 'expected'] as const).includes(gear)) {
 const defensiveAffixes = (arg('defense') ?? 'none') as DefensiveAffixes;
 if (!(['none', 'expected'] as const).includes(defensiveAffixes)) {
   console.error('--defense must be none|expected');
+  process.exit(2);
+}
+const purchases = (arg('buy') ?? 'none') as DescentPurchases;
+if (!(['none', 'defence'] as const).includes(purchases)) {
+  console.error('--buy must be none|defence');
   process.exit(2);
 }
 const sorcererCombatPolicy = (arg('sorcerer-combat') ?? 'mixed') as SorcererCombatPolicy;
@@ -114,6 +121,7 @@ const simulationInput = {
   weapon,
   gear,
   defensiveAffixes,
+  purchases,
   sorcererCombatPolicy,
   sustainIncome,
   saleItemsPerTrip,
@@ -197,6 +205,23 @@ console.table(result.levels.map((level) => {
       'lightning resist %': level.defensiveAffixesAssumed?.resistances.lightning ?? 0,
       'hit recovery': level.defensiveAffixesAssumed?.hitRecoveryTier ?? 'none',
     } : {}),
+    ...(purchases === 'defence' ? {
+      bought: level.defencePurchases?.bought.map((item) =>
+        `${item.store} ${item.equipmentSlot} ${item.target} (${item.expectedPrice}g)`).join(', ') || null,
+      'defence gold': level.defencePurchases?.goldSpent ?? 0,
+      'result AC': level.defencePurchases?.resultingArmourClass ?? 0,
+      'result magic %': level.defencePurchases?.resultingResistances.magic ?? 0,
+      'result fire %': level.defencePurchases?.resultingResistances.fire ?? 0,
+      'result lightning %': level.defencePurchases?.resultingResistances.lightning ?? 0,
+      'result recovery': level.defencePurchases?.resultingHitRecoveryTier ?? 'none',
+      'damage no buy': level.defencePurchases?.expectedDamageTakenWithoutPurchases == null
+        ? null
+        : Number(level.defencePurchases.expectedDamageTakenWithoutPurchases.toFixed(2)),
+      'damage saved': level.defencePurchases?.expectedDamageReduction == null
+        ? null
+        : Number(level.defencePurchases.expectedDamageReduction.toFixed(2)),
+      'sustainable no buy': level.defencePurchases?.sustainableWithoutPurchases ? 'yes' : 'no',
+    } : {}),
   };
 }));
 
@@ -208,6 +233,7 @@ if (result.goldFlow) {
     sales: Number(level.faucets.sales.toFixed(2)),
     'faucets total': Number(level.faucets.total.toFixed(2)),
     'potions bought': Number(level.sinks.potionsBought.toFixed(2)),
+    ...(purchases === 'defence' ? { 'defence bought': Number((level.sinks.defenceBought ?? 0).toFixed(2)) } : {}),
     repair: Number(level.sinks.repair.toFixed(2)),
     identify: Number(level.sinks.identify.toFixed(2)),
     'sinks total': Number(level.sinks.total.toFixed(2)),
@@ -220,6 +246,9 @@ if (result.goldFlow) {
     scope: 'cumulative',
     faucets: Number(result.goldFlow.cumulative.faucets.total.toFixed(2)),
     sinks: Number(result.goldFlow.cumulative.sinks.total.toFixed(2)),
+    ...(purchases === 'defence'
+      ? { 'defence bought': Number((result.goldFlow.cumulative.sinks.defenceBought ?? 0).toFixed(2)) }
+      : {}),
     net: Number(result.goldFlow.cumulative.net.toFixed(2)),
     'faucets/hour': result.goldFlow.cumulative.perHour == null
       ? null
@@ -242,7 +271,7 @@ const path = join(
   'pof',
   'Diablo',
   'Combat',
-  `descent-${className}-${policy}${gear === 'expected' ? '-expected-gear' : ''}${className === 'sorcerer' && sorcererCombatPolicy === 'mixed' ? '-mixed' : ''}${sustainIncome === 'gold-and-sales' ? '-gold-and-sales' : ''}${encounter === 'packs' ? `-packs-${adjacentSlots}-slots` : ''}${defensiveAffixes === 'expected' ? '-expected-defense' : ''}${chain ? '-chain' : ''}.json`,
+  `descent-${className}-${policy}${gear === 'expected' ? '-expected-gear' : ''}${className === 'sorcerer' && sorcererCombatPolicy === 'mixed' ? '-mixed' : ''}${sustainIncome === 'gold-and-sales' ? '-gold-and-sales' : ''}${encounter === 'packs' ? `-packs-${adjacentSlots}-slots` : ''}${defensiveAffixes === 'expected' ? '-expected-defense' : ''}${purchases === 'defence' ? '-buy-defence' : ''}${chain ? '-chain' : ''}.json`,
 );
 mkdirSync(dirname(path), { recursive: true });
 writeFileSync(path, JSON.stringify(result, null, 2));
