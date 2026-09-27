@@ -855,6 +855,117 @@ describe('simulateDescent', () => {
     expect(result.assumptions.some((assumption) => assumption.id === 'expected-loot-defensive-affixes')).toBe(true);
   });
 
+  it('keeps offense:none byte-identical and applies every supported offensive family from the next depth', () => {
+    const offensiveWarrior = {
+      ...warrior,
+      entity: {
+        ...warrior.entity,
+        data: {
+          ...warrior.entity.data,
+          animations: {
+            ...animations,
+            attack: Object.fromEntries(graphics.map((graphic) => [graphic, { frames: 8, actionFrame: 1 }])),
+          },
+        },
+      },
+    } satisfies ReferenceWrapper;
+    const durableMonster = {
+      ...monster,
+      raw: {
+        ...monster.raw,
+        animFrames: '1,1,1,4',
+        animRates: '1,1,1,1',
+      },
+      entity: {
+        ...monster.entity,
+        data: {
+          ...monster.entity.data,
+          derived: {
+            ...(monster.entity.data.derived as Record<string, unknown>),
+            attackCycleSeconds: 0.5,
+          },
+          stats: (monster.entity.data.stats as { label: string; value: number }[]).map((stat) => {
+            if (stat.label === 'HP Min' || stat.label === 'HP Max') return { ...stat, value: 80 };
+            if (stat.label === 'To Hit') return { ...stat, value: 100 };
+            if (stat.label === 'Damage Min' || stat.label === 'Damage Max') return { ...stat, value: 5 };
+            return stat;
+          }),
+        },
+      },
+    } satisfies ReferenceWrapper;
+    const offenseAffix = (
+      id: string,
+      power: string,
+      value: number,
+      side: 'prefix' | 'suffix',
+      itemTypes: string,
+    ) => wrapper(id, 'affixes', `items/item_${side}es.tsv`, {}, {
+      power,
+      'power.value1': String(value),
+      'power.value2': String(value),
+      minLevel: '1',
+      itemTypes,
+      alignment: 'Any',
+      chance: '1',
+      useful: 'true',
+    });
+    const input = {
+      className: 'warrior' as const,
+      policy: 'none' as const,
+      tilesPerLevel: 300_000,
+      gameMode: 'single' as const,
+      difficulty: 'normal' as const,
+      gear: 'expected' as const,
+      wrappers: [
+        offensiveWarrior,
+        durableMonster,
+        expectedSword,
+        expectedRing,
+        offenseAffix('invented-combined-offense', 'TOHIT_DAMP', 96, 'prefix', 'Weapon'),
+        offenseAffix('invented-jewellery-to-hit', 'TOHIT', 20, 'prefix', 'Misc'),
+        offenseAffix('invented-flat-damage', 'DAMMOD', 4, 'suffix', 'Weapon'),
+        offenseAffix('invented-fast-attack', 'FASTATTACK', 2, 'suffix', 'Weapon'),
+        offenseAffix('invented-life-steal', 'STEALLIFE', 3, 'suffix', 'Weapon'),
+        offenseAffix('invented-mana-steal', 'STEALMANA', 3, 'suffix', 'Weapon'),
+        offenseAffix('invented-knockback', 'KNOCKBACK', 0, 'suffix', 'Weapon'),
+        healingPotion,
+        ...curve,
+      ],
+      locations: locationsFor(durableMonster),
+    };
+    const omitted = simulateDescent(input);
+    const explicitNone = simulateDescent({ ...input, offensiveAffixes: 'none' });
+    const result = simulateDescent({ ...input, offensiveAffixes: 'expected' });
+    const baseline = omitted.levels[1];
+    const affixed = result.levels[1];
+
+    expect(JSON.stringify(explicitNone)).toBe(JSON.stringify(omitted));
+    expect(result.offensiveAffixes).toBe('expected');
+    expect(result.levels[0].offensiveAffixesAssumed).toMatchObject({
+      fastAttackTier: 'none',
+      toHitBonusPercent: 0,
+      flatDamage: 0,
+      lifeStealPercent: 0,
+      manaStealPercent: 0,
+      knockbackProbability: 0,
+    });
+    expect(affixed.offensiveAffixesAssumed).toMatchObject({
+      fastAttackTier: 'quick',
+      damageAgainstDemonsPercent: 0,
+      damageAgainstUndeadPercent: -50,
+    });
+    expect(affixed.offensiveAffixesAssumed!.damageBonusPercent).toBeGreaterThan(0);
+    expect(affixed.offensiveAffixesAssumed!.flatDamage).toBeGreaterThan(0);
+    expect(affixed.offensiveAffixesAssumed!.lifeStealPercent).toBeGreaterThan(0);
+    expect(affixed.offensiveAffixesAssumed!.manaStealPercent).toBeGreaterThan(0);
+    expect(affixed.offensiveAffixesAssumed!.toHitBonusPercent).toBeGreaterThan(0);
+    expect(affixed.offensiveAffixesAssumed!.knockbackProbability).toBeGreaterThan(0);
+    expect(affixed.expectedSecondsToClear!).toBeLessThan(baseline.expectedSecondsToClear!);
+    expect(affixed.expectedDamageTaken!).toBeLessThan(baseline.expectedDamageTaken!);
+    expect(affixed.sustain!.expectedLifeStolen).toBeGreaterThan(0);
+    expect(result.assumptions.some((assumption) => assumption.id === 'offensive-affix-steal')).toBe(true);
+  });
+
   it('keeps hybrid missile routines on their melee exchange beside a melee hero', () => {
     const hybridMonster = {
       ...monster,

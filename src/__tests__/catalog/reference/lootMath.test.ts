@@ -4,6 +4,7 @@ import {
   MAGIC_AFFIX_ALLOCATION,
   bestArmourExpectation,
   bestDefensiveAffixExpectation,
+  bestOffensiveAffixExpectation,
   bestWeaponExpectation,
   expectedDrop,
   expectedSaleIncome,
@@ -281,6 +282,69 @@ describe('bestDefensiveAffixExpectation', () => {
     // over two kills is still below two after flooring, so the conservative tier is Fast.
     expect(result.expectedHitRecoverySkippedFrames).toBe(1);
     expect(result.hitRecoveryTier).toBe('fast');
+  });
+});
+
+describe('bestOffensiveAffixExpectation', () => {
+  it('projects weapon and jewellery families with distinct ring ranks', () => {
+    const mace = wrapper('invented-mace', 'items', 'items/itemdat.tsv', {
+      dropRate: '1', itemType: 'Mace', minMonsterLevel: '1', miscId: 'NONE', spell: 'Null',
+      minDamage: '2', maxDamage: '4', minStrength: '0', minMagic: '0', minDexterity: '0',
+    });
+    const ring = wrapper('invented-offense-ring', 'items', 'items/itemdat.tsv', {
+      dropRate: '1', itemType: 'Ring', minMonsterLevel: '1', miscId: 'RING', spell: 'Null',
+      minStrength: '0', minMagic: '0', minDexterity: '0',
+    });
+    const amulet = wrapper('invented-offense-amulet', 'items', 'items/itemdat.tsv', {
+      dropRate: '1', itemType: 'Amulet', minMonsterLevel: '1', miscId: 'AMULET', spell: 'Null',
+      minStrength: '0', minMagic: '0', minDexterity: '0',
+    });
+    const affix = (id: string, power: string, value: number, side: 'prefix' | 'suffix', itemTypes: string) =>
+      wrapper(id, 'affixes', `items/item_${side}es.tsv`, {
+        power,
+        'power.value1': String(value),
+        'power.value2': String(value),
+        minLevel: '4',
+        itemTypes,
+        alignment: 'Any',
+        chance: '1',
+        useful: 'true',
+      });
+    const result = bestOffensiveAffixExpectation({
+      className: 'Warrior',
+      depth: 2,
+      killsSoFar: 1_000,
+      monsterProfiles: [{ profile: { ...profile, unique: true }, weight: 1_000 }],
+      itemWrappers: [mace, ring, amulet],
+      affixWrappers: [
+        affix('invented-to-hit', 'TOHIT', 20, 'prefix', 'Misc'),
+        affix('invented-combined', 'TOHIT_DAMP', 36, 'prefix', 'Weapon'),
+        affix('invented-flat', 'DAMMOD', 4, 'suffix', 'Weapon'),
+        affix('invented-speed', 'FASTATTACK', 2, 'suffix', 'Weapon'),
+        affix('invented-life-steal', 'STEALLIFE', 3, 'suffix', 'Weapon'),
+        affix('invented-mana-steal', 'STEALMANA', 3, 'suffix', 'Weapon'),
+        affix('invented-knockback', 'KNOCKBACK', 0, 'suffix', 'Weapon'),
+      ],
+      uniqueItemWrappers: [],
+      difficulty: 'normal',
+      strength: 100,
+      magic: 100,
+      dexterity: 100,
+      weaponType: 'mace',
+    });
+
+    expect(result.slotToHitBonusPercent.weapon).toBe(20);
+    expect(result.slotToHitBonusPercent.ring1).toBe(20);
+    expect(result.slotToHitBonusPercent.ring2).toBeGreaterThan(0);
+    expect(result.slotToHitBonusPercent.amulet).toBe(20);
+    expect(result.damageBonusPercent).toBe(36);
+    expect(result.flatDamage).toBe(4);
+    expect(result.fastAttackTier).toBe('fast');
+    expect(result.lifeStealPercent).toBe(3);
+    expect(result.manaStealPercent).toBe(3);
+    expect(result.knockbackProbability).toBeGreaterThan(0);
+    expect(result.damageAgainstDemonsPercent).toBe(0);
+    expect(result.damageAgainstUndeadPercent).toBe(50);
   });
 });
 

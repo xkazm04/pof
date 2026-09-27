@@ -22,6 +22,7 @@ import {
   type DamageDistribution,
   type Element,
   type ExperienceCurveLaw,
+  type FastAttackTier,
   type GameMode,
   type HitRecoveryTier,
   type PlayerBuild,
@@ -36,6 +37,7 @@ import { locationEntities, type LocationEntityWrapper } from '@/lib/catalog/refe
 import {
   bestArmourExpectation,
   bestDefensiveAffixExpectation,
+  bestOffensiveAffixExpectation,
   bestWeaponExpectation,
   expectedDrop,
   expectedLootBudget,
@@ -43,6 +45,7 @@ import {
   monsterLootProfile,
   type BestArmourExpectation,
   type BestDefensiveAffixExpectation,
+  type BestOffensiveAffixExpectation,
   type BestWeaponExpectation,
   type ExpectedSaleValue,
   type SaleIdentifyPolicy,
@@ -75,6 +78,7 @@ export type DescentClassName = typeof DESCENT_CLASSES[number];
 export type StatPointPolicy = 'none' | 'all-strength' | 'balanced';
 export type DescentGear = 'none' | 'expected';
 export type DefensiveAffixes = 'none' | 'expected';
+export type OffensiveAffixes = 'none' | 'expected';
 export type SorcererCombatPolicy = 'mixed' | 'pure-spell';
 export type SustainIncome = 'monster-gold' | 'gold-and-sales';
 export type SaleIdentify = SaleIdentifyPolicy;
@@ -174,6 +178,8 @@ export interface DescentLevelResult {
   armourAssumed?: BestArmourExpectation;
   /** Present only for the opt-in expected defensive-affix policy. */
   defensiveAffixesAssumed?: BestDefensiveAffixExpectation;
+  /** Present only for the opt-in expected offensive-affix policy. */
+  offensiveAffixesAssumed?: BestOffensiveAffixExpectation;
   /** Mean conditional block chance across this depth's eligible monster types. */
   expectedBlockChance?: number;
   /** Present only for expected gear because sustain is funded by expected loot. */
@@ -247,6 +253,10 @@ export interface DescentSustainExpectation extends SustainArithmetic {
   lifePool: number;
   lifeRestoredPerHealingPotion: number;
   lifeRestoredPerFullHealingPotion: number;
+  /** Effective floor-wide life steal after the engine maximum-life cap. */
+  expectedLifeStolen?: number;
+  /** Uncapped sum of the per-kill engine steal expectations. */
+  expectedLifeStolenBeforeCap?: number;
 }
 
 export interface DescentGoldFaucets {
@@ -358,6 +368,10 @@ export interface DescentManaExpectation {
   totalManaAvailable: number;
   sustainable: boolean;
   deficit: number | null;
+  /** Effective floor-wide mana steal after the engine maximum-mana cap. */
+  expectedManaStolen?: number;
+  /** Uncapped sum of the melee-fallback steal expectations. */
+  expectedManaStolenBeforeCap?: number;
 }
 
 export interface DescentLearnedSpell {
@@ -380,6 +394,8 @@ export interface DescentExpectedGearState {
   armour: BestArmourExpectation;
   /** Present only when the W47 defensive-affix expectation is enabled. */
   defensiveAffixes?: BestDefensiveAffixExpectation;
+  /** Present only when the W79 offensive-affix expectation is enabled. */
+  offensiveAffixes?: BestOffensiveAffixExpectation;
 }
 
 /** Compact hero-only boundary state; generated world, quest, store, and ground state are excluded. */
@@ -427,6 +443,8 @@ export interface DescentSimulation {
   gear?: 'expected';
   /** Omitted for the byte-compatible default. */
   defensiveAffixes?: 'expected';
+  /** Omitted for the byte-compatible default. */
+  offensiveAffixes?: 'expected';
   /** Omitted for the byte-compatible duel default. */
   encounter?: 'packs';
   /** Omitted only by the byte-compatible legacy per-hero-action exchange. */
@@ -455,6 +473,8 @@ export interface SimulateDescentInput {
   gear?: DescentGear;
   /** Adds expected resistance and hit-recovery affixes to expected gear; defaults to none. */
   defensiveAffixes?: DefensiveAffixes;
+  /** Adds expected offensive and sustain affixes to expected gear; defaults to none. */
+  offensiveAffixes?: OffensiveAffixes;
   /** Sorcerer defaults to finite-mana mixed combat; pure-spell preserves the comparison model. */
   sorcererCombatPolicy?: SorcererCombatPolicy;
   /** Defaults to the legacy monster-drop-only sustain income. */
@@ -513,6 +533,8 @@ export interface MixedKillCandidate {
   id: string;
   expectedKills: number;
   manaPerKill: number;
+  /** Mana consumed from the allocation budget, including foregone melee mana steal. */
+  budgetCostPerKill?: number;
   secondsSavedPerKill: number;
   lifeSavedPerKill: number;
 }
@@ -526,11 +548,13 @@ function compareMixedCandidates(left: MixedKillCandidate, right: MixedKillCandid
   const leftSavesTime = left.secondsSavedPerKill > 0;
   const rightSavesTime = right.secondsSavedPerKill > 0;
   if (leftSavesTime !== rightSavesTime) return leftSavesTime ? -1 : 1;
-  const leftEfficiency = (leftSavesTime ? left.secondsSavedPerKill : left.lifeSavedPerKill) / left.manaPerKill;
-  const rightEfficiency = (rightSavesTime ? right.secondsSavedPerKill : right.lifeSavedPerKill) / right.manaPerKill;
+  const leftCost = left.budgetCostPerKill ?? left.manaPerKill;
+  const rightCost = right.budgetCostPerKill ?? right.manaPerKill;
+  const leftEfficiency = (leftSavesTime ? left.secondsSavedPerKill : left.lifeSavedPerKill) / leftCost;
+  const rightEfficiency = (rightSavesTime ? right.secondsSavedPerKill : right.lifeSavedPerKill) / rightCost;
   return rightEfficiency - leftEfficiency
-    || (right.lifeSavedPerKill / right.manaPerKill) - (left.lifeSavedPerKill / left.manaPerKill)
-    || left.manaPerKill - right.manaPerKill
+    || (right.lifeSavedPerKill / rightCost) - (left.lifeSavedPerKill / leftCost)
+    || leftCost - rightCost
     || left.id.localeCompare(right.id);
 }
 
@@ -553,6 +577,10 @@ export function allocateMixedSpellKills(
     if (!Number.isFinite(candidate.manaPerKill) || candidate.manaPerKill <= 0) {
       throw new Error(`${candidate.id}.manaPerKill must be a positive finite number`);
     }
+    if (candidate.budgetCostPerKill !== undefined
+      && (!Number.isFinite(candidate.budgetCostPerKill) || candidate.budgetCostPerKill <= 0)) {
+      throw new Error(`${candidate.id}.budgetCostPerKill must be a positive finite number`);
+    }
     if (!Number.isFinite(candidate.secondsSavedPerKill) || !Number.isFinite(candidate.lifeSavedPerKill)) {
       throw new Error(`${candidate.id} savings must be finite numbers`);
     }
@@ -562,9 +590,10 @@ export function allocateMixedSpellKills(
     .filter((candidate) => candidate.secondsSavedPerKill > 0 || candidate.lifeSavedPerKill > 0)
     .sort(compareMixedCandidates)
     .map((candidate) => {
-      const spellKills = Math.min(candidate.expectedKills, manaRemaining / candidate.manaPerKill);
+      const budgetCostPerKill = candidate.budgetCostPerKill ?? candidate.manaPerKill;
+      const spellKills = Math.min(candidate.expectedKills, manaRemaining / budgetCostPerKill);
       const manaSpent = spellKills * candidate.manaPerKill;
-      manaRemaining = Math.max(0, manaRemaining - manaSpent);
+      manaRemaining = Math.max(0, manaRemaining - spellKills * budgetCostPerKill);
       return { ...candidate, spellKills, manaSpent };
     });
 }
@@ -1261,6 +1290,7 @@ function assumptions(
   cadenceFallbackMonsters: readonly string[],
   adjacentSlots: number,
   defensiveAffixes: DefensiveAffixes,
+  offensiveAffixes: OffensiveAffixes,
   purchases: DescentPurchases,
 ): DescentAssumption[] {
   return [
@@ -1384,7 +1414,9 @@ function assumptions(
         value: 'no passive regeneration; level-up refill applied before the next depth',
         source: 'd1-spell-cast-law, d1-combat-life-mana-law, and d1-instant-potion-restoration',
         detail: sorcererCombatPolicy === 'mixed'
-          ? 'The casting budget is the mana pool at depth start plus carried and newly bought mana potions. Current-depth drops become carried supply afterward. A level gained refills mana before the next depth. Shrines are ignored.'
+          ? offensiveAffixes === 'expected'
+            ? 'The casting budget is the mana pool at depth start plus carried and newly bought mana potions and expected staff-fallback mana steal. Forgone steal is charged to each spell kill. Current-depth drops become carried supply afterward. A level gained refills mana before the next depth. Shrines are ignored.'
+            : 'The casting budget is the mana pool at depth start plus carried and newly bought mana potions. Current-depth drops become carried supply afterward. A level gained refills mana before the next depth. Shrines are ignored.'
           : 'Unspent mana and potions carry forward. A level gained during a depth refills mana for the next depth; within-depth kill order is not modelled. Shrines are ignored.',
       },
     ] : []),
@@ -1454,7 +1486,9 @@ function assumptions(
             ? 'conservative expected best melee weapon before each depth, retaining the starting weapon until improved'
             : 'conservative expected best melee weapon before each depth',
         source: 'pinned monster-drop, base-selection, quality, and affix procedures',
-        detail: 'Prior kills form a weighted monster mixture. The model gates bases by the hero\'s current Strength, Magic, and Dexterity, then floors the expected maximum base-damage range and expected positive percentage-damage bonus; unique powers, flat damage, and base/affix correlation are omitted.',
+        detail: offensiveAffixes === 'expected'
+          ? 'Prior kills form a weighted monster mixture. The model gates bases by the hero\'s current Strength, Magic, and Dexterity and floors the expected maximum base-damage range. The offensive-affix projection supplies the expected-best percentage damage; unique powers and base/affix correlation remain omitted.'
+          : 'Prior kills form a weighted monster mixture. The model gates bases by the hero\'s current Strength, Magic, and Dexterity, then floors the expected maximum base-damage range and expected positive percentage-damage bonus; unique powers, flat damage, and base/affix correlation are omitted.',
       },
       {
         id: 'expected-loot-armour',
@@ -1467,6 +1501,37 @@ function assumptions(
         value: 'conservative expected resistance and hit-recovery affixes before each depth',
         source: 'pinned monster-drop, quality, affix, equipment, player-resistance, and hit-recovery procedures',
         detail: 'Body armour, helm, compatible shield, amulet, and two distinct ring order statistics contribute floored per-slot resistance expectations, summed and capped at 75%. Each element is optimized independently. The floored expected best non-stacking FASTRECOVER value selects Fast, Faster, or Fastest Hit Recovery. Unique powers and cross-stat/loadout correlations are omitted.',
+      }] : []),
+      ...(offensiveAffixes === 'expected' ? [{
+        id: 'expected-loot-offensive-affixes',
+        value: 'conservative expected best offensive and sustain affixes before each depth',
+        source: '.reference/devilutionX/Source/items.cpp:701-728,899-951,2825-2879',
+        detail: 'The weapon independently projects percentage damage, flat damage, attack speed, life steal, mana steal, and knockback. Weapon, amulet, and first/second ring order statistics contribute to-hit where their table itemTypes allow it. Integer effects are floored; the KNOCKBACK flag retains its expected-best probability. Unique powers and cross-family/base correlation are omitted.',
+      }, {
+        id: 'offensive-affix-attack-speed',
+        value: 'Quick/Fast/Faster/Fastest Attack skips 1/2/3/4 melee frames; vanilla bows use only their supported first two tiers',
+        source: '.reference/devilutionX/Source/items.cpp:928-937; .reference/devilutionX/Source/player.cpp:174-228',
+        detail: 'The floored expected best FASTATTACK value selects the frame-skip tier passed to the existing class-and-weapon attack timing law. Casting time is unaffected.',
+      }, {
+        id: 'offensive-affix-hit-and-damage',
+        value: 'equipped to-hit and damage modifiers enter the physical hit and damage laws',
+        source: '.reference/devilutionX/Source/items.cpp:701-728,949-951,2825-2879; .reference/devilutionX/Source/player.cpp:550-608; .reference/devilutionX/Source/missiles.cpp:278-324',
+        detail: 'TOHIT rolls its integer range; TOHIT_DAMP pairs its ordered tier with the loaded TOHIT range used by CalculateToHitBonus and independently rolls its percentage-damage range. DAMMOD adds after percentage weapon damage. Physical melee and bow attacks use these values; spell to-hit remains at effective distance 0 and does not use them.',
+      }, {
+        id: 'offensive-affix-steal',
+        value: '3% or 5% of landed melee damage restores life/mana in fixed-point units',
+        source: '.reference/devilutionX/Source/player.cpp:646-690',
+        detail: 'Steal is evaluated for every landed melee hit, including the fatal hit, with integer truncation before conversion to whole points. Each kill is capped at the maximum resource and the floor-wide supply is capped by missing resource plus expenditure/damage. The ranged missile path has no steal application. Mixed Sorcerer allocation charges a spell kill for both its mana and the staff-hit mana steal it forgoes.',
+      }, {
+        id: 'offensive-affix-knockback',
+        value: 'expected KNOCKBACK ownership forces nonfatal physical hits into monster GotHit recovery when movement succeeds',
+        source: '.reference/devilutionX/Source/player.cpp:692-699; .reference/devilutionX/Source/missiles.cpp:334-343; .reference/devilutionX/Source/monster.cpp:3950-3960',
+        detail: 'Without a dungeon seed the target tile cannot be tested, so the duel treats it as open and weights the forced recovery by the expected-best KNOCKBACK probability. Fatal hits do not create retroactive recovery; petrified targets and modelled no-recovery monsters are excluded.',
+      }, {
+        id: 'weapon-class-target-damage',
+        value: 'representative weapon intrinsic modifier reported for demon/undead targets',
+        source: '.reference/devilutionX/Source/player.cpp:588-607; .reference/devilutionX/Source/items.cpp:899-904',
+        detail: 'Maces deal +50% and swords -50% physical melee damage to undead in the engine and this was already part of combatMath. The ordinary magic-affix tables contain no demon/undead percentage-damage family. Triple demon damage is a unique-item power, so the offensive projection reports zero demon bonus under the explicit unique-power exclusion.',
       }] : []),
       ...(purchases === 'defence' ? [{
         id: 'town-defence-purchases',
@@ -1524,7 +1589,9 @@ function assumptions(
         id: 'sustain-consumption',
         value: 'full life plus carried and same-depth expected potion drops',
         source: 'd1-loot-healing-potions and deterministic budget arithmetic',
-        detail: 'Expected drops are treated as available on their floor, so within-floor drop order is omitted. Damage spends the fresh life pool first, then partial potions, then full potions; unused expected potions carry forward.',
+        detail: offensiveAffixes === 'expected'
+          ? 'Expected drops are treated as available on their floor, so within-floor drop order is omitted. Engine-capped life steal offsets damage before partial and full potions in this aggregate expectation; unused expected potions carry forward.'
+          : 'Expected drops are treated as available on their floor, so within-floor drop order is omitted. Damage spends the fresh life pool first, then partial potions, then full potions; unused expected potions carry forward.',
       },
       ...(className === 'sorcerer' ? [{
         id: 'mana-sustain-consumption',
@@ -1610,6 +1677,13 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
   }
   if (defensiveAffixes === 'expected' && gear !== 'expected') {
     throw new Error('defensiveAffixes:expected requires gear:expected');
+  }
+  const offensiveAffixes = input.offensiveAffixes ?? 'none';
+  if (!(['none', 'expected'] as const).includes(offensiveAffixes)) {
+    throw new Error(`unknown offensive-affix policy ${input.offensiveAffixes}`);
+  }
+  if (offensiveAffixes === 'expected' && gear !== 'expected') {
+    throw new Error('offensiveAffixes:expected requires gear:expected');
   }
   const purchases = input.purchases ?? 'none';
   if (!(['none', 'defence'] as const).includes(purchases)) {
@@ -1757,7 +1831,9 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
     let weaponAssumed: BestWeaponExpectation | undefined;
     let armourAssumed: BestArmourExpectation | undefined;
     let defensiveAffixesAssumed: BestDefensiveAffixExpectation | undefined;
+    let offensiveAffixesAssumed: BestOffensiveAffixExpectation | undefined;
     let hitRecoveryTier: HitRecoveryTier = 'none';
+    let fastAttackTier: FastAttackTier = 'none';
     let expectedWeaponBase: ReferenceWrapper | undefined;
     let shieldAllowed = true;
     if (gear === 'expected') {
@@ -1790,6 +1866,32 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
           weaponGraphic: equipped.weaponGraphic,
           swingSeconds: equipped.swingSeconds,
           damageBonusPercent: weaponAssumed.damageBonusPercent,
+        };
+      }
+      if (offensiveAffixes === 'expected') {
+        offensiveAffixesAssumed = bestOffensiveAffixExpectation({
+          className: build.class,
+          depth,
+          killsSoFar,
+          monsterProfiles: lootHistory,
+          itemWrappers: input.wrappers,
+          affixWrappers: input.wrappers,
+          uniqueItemWrappers: input.wrappers,
+          difficulty: input.difficulty,
+          strength: build.strength,
+          magic: build.magic,
+          dexterity: build.dexterity,
+          weaponType: build.weaponType,
+        });
+        fastAttackTier = offensiveAffixesAssumed.fastAttackTier;
+        build = {
+          ...build,
+          toHitBonusPercent: build.toHitBonusPercent + offensiveAffixesAssumed.toHitBonusPercent,
+          damageBonusPercent: offensiveAffixesAssumed.damageBonusPercent,
+          flatDamage: build.flatDamage + offensiveAffixesAssumed.flatDamage,
+          lifeStealPercent: offensiveAffixesAssumed.lifeStealPercent,
+          manaStealPercent: offensiveAffixesAssumed.manaStealPercent,
+          knockbackProbability: offensiveAffixesAssumed.knockbackProbability,
         };
       }
       shieldAllowed = weaponPermitsShield(build, expectedWeaponBase);
@@ -1831,13 +1933,13 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
         hitRecoveryTier = defensiveAffixesAssumed.hitRecoveryTier;
       }
     }
-    const withShieldTiming = (candidate: PlayerBuild): PlayerBuild => {
-      if (!candidate.hasShield) return candidate;
-      const weaponGraphic = shieldGraphic(candidate);
+    const withAttackTiming = (candidate: PlayerBuild): PlayerBuild => {
+      const weaponGraphic = candidate.hasShield ? shieldGraphic(candidate) : candidate.weaponGraphic;
+      if (!weaponGraphic) return candidate;
       return {
         ...candidate,
         weaponGraphic,
-        swingSeconds: attackTiming(animations, weaponGraphic).seconds,
+        swingSeconds: attackTiming(animations, weaponGraphic, fastAttackTier).seconds,
       };
     };
     const noPurchaseDefence = effectiveDefence(
@@ -1854,7 +1956,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       purchasedDefence,
       shieldAllowed,
     );
-    build = withShieldTiming(effective.build);
+    build = withAttackTiming(effective.build);
     hitRecoveryTier = effective.hitRecoveryTier;
     const loot = lootEnabled ? expectedLootBudget({
       monsterProfiles: depthLootProfiles,
@@ -2023,6 +2125,8 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
         approachSpeed: exchange?.speed,
         rangedMonster: exchange?.monsterAttack === 'ranged-arrow' || exchange?.monsterAttack === 'ranged-magic',
         expectedGotHitInterruptions: result.gotHit?.expectedInterruptionsBeforeKill ?? 0,
+        expectedLifeStolen: result.steal?.expectedLifePerKill ?? 0,
+        expectedManaStolen: result.steal?.expectedManaPerKill ?? 0,
         ...(mixedSorcerer ? { meleeResult: result, spellResult: selected?.result } : {}),
       };
       });
@@ -2054,7 +2158,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       }, 0);
     };
     const noPurchaseRows = purchases === 'defence'
-      ? evaluateRows(withShieldTiming(noPurchaseDefence.build), noPurchaseDefence.hitRecoveryTier)
+      ? evaluateRows(withAttackTiming(noPurchaseDefence.build), noPurchaseDefence.hitRecoveryTier)
       : undefined;
     const expectedDamageTakenWithoutPurchases = noPurchaseRows == null
       ? null
@@ -2128,7 +2232,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
             conditionalState,
             shieldAllowed,
           );
-          const conditionalBuild = withShieldTiming(conditionalEffective.build);
+          const conditionalBuild = withAttackTiming(conditionalEffective.build);
           const conditionalRows = evaluateRows(conditionalBuild, conditionalEffective.hitRecoveryTier);
           const conditionalDamage = estimateDamage(conditionalRows, conditionalEffective.hitRecoveryTier);
           const reduction = Number.isFinite(currentDamage) && Number.isFinite(conditionalDamage)
@@ -2174,7 +2278,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
             state,
             shieldAllowed,
           );
-          const candidateBuild = withShieldTiming(candidateEffective.build);
+          const candidateBuild = withAttackTiming(candidateEffective.build);
           const candidateRows = evaluateRows(candidateBuild, candidateEffective.hitRecoveryTier);
           const candidateDamage = estimateDamage(candidateRows, candidateEffective.hitRecoveryTier);
           const stableId = `${offer.store}:${offer.equipmentSlot}:${offer.target}`;
@@ -2249,6 +2353,10 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       + fullManaPotionsAvailable * manaPool;
     const divisor = evaluatedRows.length;
     const expectedKillsPerType = ambientPopulation / divisor;
+    const allMeleeManaSteal = mixedSorcerer ? evaluatedRows.reduce(
+      (sum, row) => sum + (row.meleeResult?.steal?.expectedManaPerKill ?? 0) * expectedKillsPerType,
+      0,
+    ) : 0;
     const mixedAllocations = mixedSorcerer ? allocateMixedSpellKills(evaluatedRows.flatMap((row) => {
       const spellResult = row.spellResult;
       const meleeResult = row.meleeResult;
@@ -2265,10 +2373,11 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
         id: row.wrapper.entity.id,
         expectedKills: expectedKillsPerType,
         manaPerKill,
+        budgetCostPerKill: manaPerKill + (meleeResult.steal?.expectedManaPerKill ?? 0),
         secondsSavedPerKill: Number(meleeSeconds) - Number(spellSeconds),
         lifeSavedPerKill: meleeDamage - spellDamage,
       }];
-    }), startManaBudget) : [];
+    }), startManaBudget + allMeleeManaSteal) : [];
     const mixedAllocationByMonster = new Map(mixedAllocations.map((allocation) => [allocation.id, allocation]));
     const expectedSpellKills = mixedAllocations.reduce((sum, allocation) => sum + allocation.spellKills, 0);
     const expectedMeleeKills = ambientPopulation - expectedSpellKills;
@@ -2310,6 +2419,8 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
               spellResult.gotHit?.expectedInterruptionsBeforeKill ?? 0,
             )
           : row.expectedGotHitInterruptions,
+        expectedLifeStolen: (meleeResult.steal?.expectedLifePerKill ?? 0) * (1 - spellShare),
+        expectedManaStolen: (meleeResult.steal?.expectedManaPerKill ?? 0) * (1 - spellShare),
         spellExpectedKills: spellKills,
       };
     });
@@ -2363,6 +2474,21 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
           ? mixedAllocations.reduce((sum, allocation) => sum + allocation.manaSpent, 0)
           : rows.reduce((sum, row) => sum + (row.expectedManaSpent ?? 0), 0) / divisor * ambientPopulation
       : undefined;
+    const expectedLifeStolenBeforeCap = offensiveAffixes === 'expected'
+      ? rows.reduce((sum, row) => sum + row.expectedLifeStolen, 0) / divisor * ambientPopulation
+      : 0;
+    const expectedLifeStolen = Math.min(
+      expectedLifeStolenBeforeCap,
+      Math.max(0, lifePool - currentLifeAtStart) + Math.max(0, expectedDamage),
+    );
+    const expectedManaStolenBeforeCap = offensiveAffixes === 'expected'
+      ? rows.reduce((sum, row) => sum + row.expectedManaStolen, 0) / divisor * ambientPopulation
+      : 0;
+    const expectedManaStolen = Math.min(
+      expectedManaStolenBeforeCap,
+      Math.max(0, manaPool - currentManaAtStart)
+        + (expectedManaSpent !== undefined && Number.isFinite(expectedManaSpent) ? expectedManaSpent : 0),
+    );
     const boundedSpellRows = rows.filter((row) => row.selectedSpell !== undefined);
     const spellGroups = new Map<string, DescentSpellUsage>();
     for (const row of boundedSpellRows) {
@@ -2415,7 +2541,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       const lifeAvailable = carriesPersistentState ? currentLifeAtStart : lifePool;
       const arithmetic = Number.isFinite(expectedDamage)
         ? sustainArithmetic({
-            expectedDamageTaken: expectedDamage,
+            expectedDamageTaken: Math.max(0, expectedDamage - expectedLifeStolen),
             lifePool: lifeAvailable,
             healingPotions: healingPotionsAvailable,
             fullHealingPotions: fullHealingPotionsAvailable,
@@ -2434,18 +2560,22 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
         lifePool,
         lifeRestoredPerHealingPotion,
         lifeRestoredPerFullHealingPotion: lifePool,
+        ...(offensiveAffixes === 'expected' ? {
+          expectedLifeStolen,
+          expectedLifeStolenBeforeCap,
+        } : {}),
       };
       const remaining = consumeHealing(
         healingPotionsAvailable,
         fullHealingPotionsAvailable,
-        Math.max(0, expectedDamage - lifeAvailable),
+        Math.max(0, expectedDamage - lifeAvailable - expectedLifeStolen),
         lifeRestoredPerHealingPotion,
         lifePool,
       );
       const restored = (healingPotionsAvailable - remaining.healingPotions) * lifeRestoredPerHealingPotion
         + (fullHealingPotionsAvailable - remaining.fullHealingPotions) * lifePool;
       currentLife = Number.isFinite(expectedDamage)
-        ? Math.max(0, Math.min(lifePool, lifeAvailable + restored - expectedDamage))
+        ? Math.max(0, Math.min(lifePool, lifeAvailable + restored + expectedLifeStolen - expectedDamage))
         : 0;
       carriedHealingPotions = remaining.healingPotions;
       carriedFullHealingPotions = remaining.fullHealingPotions;
@@ -2460,7 +2590,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       const boundedManaSpent = Number.isFinite(expectedManaSpent) ? expectedManaSpent : 0;
       const arithmetic = manaSustainArithmetic({
         expectedManaSpent: boundedManaSpent,
-        currentMana: currentManaAtStart,
+        currentMana: currentManaAtStart + expectedManaStolen,
         manaPool,
         manaPotions: manaPotionsAvailable,
         fullManaPotions: fullManaPotionsAvailable,
@@ -2483,16 +2613,23 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
         totalManaAvailable: arithmetic.totalManaAvailable,
         sustainable: Number.isFinite(expectedManaSpent) && arithmetic.sustainable,
         deficit: Number.isFinite(expectedManaSpent) ? arithmetic.deficit : null,
+        ...(offensiveAffixes === 'expected' ? {
+          expectedManaStolen,
+          expectedManaStolenBeforeCap,
+        } : {}),
       };
       const remaining = consumeMana(
         currentManaAtStart,
         manaPotionsAvailable,
         fullManaPotionsAvailable,
-        expectedManaSpent,
+        Math.max(0, expectedManaSpent - expectedManaStolen),
         manaRestoredPerPotion,
         manaPool,
       );
-      currentMana = remaining.currentMana;
+      currentMana = Math.min(
+        manaPool,
+        remaining.currentMana + Math.max(0, expectedManaStolen - expectedManaSpent),
+      );
       carriedManaPotions = remaining.manaPotions
         + (mixedSorcerer ? loot?.expectedManaPotions ?? 0 : 0);
       carriedFullManaPotions = remaining.fullManaPotions
@@ -2684,6 +2821,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
     ];
     const noPurchaseDamage = expectedDamageTakenWithoutPurchases ?? expectedDamage;
     const noPurchaseHealingSupply = (sustain?.healingSupply ?? 0)
+      + (sustain?.expectedLifeStolen ?? 0)
       + defenceGoldSpent * healingGoldShare / healingPotionPrice
         * expectedHealingPotionLife(input.className, lifePool);
     const defencePurchaseReport: DescentDefencePurchaseReport | undefined = purchases === 'defence' ? {
@@ -2723,6 +2861,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       ...(weaponAssumed ? { weaponAssumed } : {}),
       ...(armourAssumed && sustain ? { armourAssumed, expectedBlockChance, sustain } : {}),
       ...(defensiveAffixesAssumed ? { defensiveAffixesAssumed } : {}),
+      ...(offensiveAffixesAssumed ? { offensiveAffixesAssumed } : {}),
       ...(packExpectation ? { pack: packExpectation } : {}),
       ...(defencePurchaseReport ? { defencePurchases: defencePurchaseReport } : {}),
     });
@@ -2788,12 +2927,29 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
           shieldAllowed,
         })
       : undefined;
+    const finalOffensiveAffixes = offensiveAffixes === 'expected'
+      ? bestOffensiveAffixExpectation({
+          className: finalBuild.class,
+          depth: 16,
+          killsSoFar,
+          monsterProfiles: lootHistory,
+          itemWrappers: input.wrappers,
+          affixWrappers: input.wrappers,
+          uniqueItemWrappers: input.wrappers,
+          difficulty: input.difficulty,
+          strength: finalBuild.strength,
+          magic: finalBuild.magic,
+          dexterity: finalBuild.dexterity,
+          weaponType: finalBuild.weaponType,
+        })
+      : undefined;
     expectedGear = {
       killsSoFar,
       dropHistory: lootHistory.map(cloneLootProfile),
       weapon,
       armour,
       ...(finalDefensiveAffixes ? { defensiveAffixes: finalDefensiveAffixes } : {}),
+      ...(finalOffensiveAffixes ? { offensiveAffixes: finalOffensiveAffixes } : {}),
     };
   }
   const finalPools = lifeAndMana(finalBuild, coefficients);
@@ -2848,6 +3004,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       : {}),
     ...(gear === 'expected' ? { gear } : {}),
     ...(defensiveAffixes === 'expected' ? { defensiveAffixes } : {}),
+    ...(offensiveAffixes === 'expected' ? { offensiveAffixes } : {}),
     ...(encounter === 'packs' ? { encounter, adjacentSlots } : {}),
     ...(exchangeModel === 'cadence' ? { exchangeModel } : {}),
     ...(purchases === 'defence' ? { purchases } : {}),
@@ -2866,6 +3023,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       [...cadenceFallbackMonsters.values()],
       adjacentSlots,
       defensiveAffixes,
+      offensiveAffixes,
       purchases,
     ),
     levels,
@@ -2954,6 +3112,7 @@ export function descentEntity(input: SimulateDescentInput): ReferenceWrapper {
     ...(simulation.attackMode ? [simulation.attackMode, 'class-attack-mode'] : []),
     ...(simulation.gear === 'expected' ? ['expected-loot-gear'] : []),
     ...(simulation.defensiveAffixes === 'expected' ? ['expected-defensive-affixes'] : []),
+    ...(simulation.offensiveAffixes === 'expected' ? ['expected-offensive-affixes'] : []),
     ...(simulation.purchases === 'defence' ? ['expected-defensive-store-purchases'] : []),
   ]);
   return {
@@ -2992,6 +3151,9 @@ export function descentEntity(input: SimulateDescentInput): ReferenceWrapper {
         ...(simulation.gear === 'expected' ? { gear: simulation.gear } : {}),
         ...(simulation.defensiveAffixes === 'expected'
           ? { defensiveAffixes: simulation.defensiveAffixes }
+          : {}),
+        ...(simulation.offensiveAffixes === 'expected'
+          ? { offensiveAffixes: simulation.offensiveAffixes }
           : {}),
         ...(simulation.purchases === 'defence' ? { purchases: simulation.purchases } : {}),
       },

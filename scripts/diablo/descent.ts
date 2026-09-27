@@ -7,6 +7,7 @@
  *     [--difficulty normal|nightmare|hell] [--multiplayer]
  *     [--gear none|expected] [--weapon d1-<item>]
  *     [--defense none|expected]
+ *     [--offense none|expected]
  *     [--sorcerer-combat mixed|pure-spell]
  *     [--income monster-gold|gold-and-sales] [--items-per-trip N]
  *     [--identify never|when-profitable]
@@ -31,6 +32,7 @@ import {
   type DescentGear,
   type DescentPurchases,
   type DefensiveAffixes,
+  type OffensiveAffixes,
   type SaleIdentify,
   type SorcererCombatPolicy,
   type StatPointPolicy,
@@ -68,6 +70,11 @@ if (!(['none', 'expected'] as const).includes(gear)) {
 const defensiveAffixes = (arg('defense') ?? 'none') as DefensiveAffixes;
 if (!(['none', 'expected'] as const).includes(defensiveAffixes)) {
   console.error('--defense must be none|expected');
+  process.exit(2);
+}
+const offensiveAffixes = (arg('offense') ?? 'none') as OffensiveAffixes;
+if (!(['none', 'expected'] as const).includes(offensiveAffixes)) {
+  console.error('--offense must be none|expected');
   process.exit(2);
 }
 const purchases = (arg('buy') ?? 'none') as DescentPurchases;
@@ -132,6 +139,7 @@ const simulationInput = {
   weapon,
   gear,
   defensiveAffixes,
+  offensiveAffixes,
   purchases,
   sorcererCombatPolicy,
   sustainIncome,
@@ -144,6 +152,9 @@ const simulationInput = {
 const result = chain
   ? simulateDifficultyChain(simulationInput)
   : simulateDescent({ ...simulationInput, difficulty });
+const offenseBaseline = offensiveAffixes === 'expected' && !chain
+  ? simulateDescent({ ...simulationInput, difficulty, offensiveAffixes: 'none' })
+  : undefined;
 
 if (result.model === 'deterministic-expectation-chain') {
   console.log(`\n=== Diablo I deterministic difficulty chain: ${className} · ${policy} · ${result.gameMode} ===`);
@@ -160,6 +171,7 @@ for (const assumption of result.assumptions) {
   console.log(`- ${assumption.id}: ${assumption.value} — ${assumption.detail} [${assumption.source}]`);
 }
 console.table(result.levels.map((level) => {
+  const baseline = offenseBaseline?.levels[level.depth - 1];
   const mode = level.expectedMeleeKills === undefined ? level.attackMode ?? 'melee' : 'mixed';
   return {
     depth: level.depth,
@@ -216,6 +228,28 @@ console.table(result.levels.map((level) => {
       'fire resist %': level.defensiveAffixesAssumed?.resistances.fire ?? 0,
       'lightning resist %': level.defensiveAffixesAssumed?.resistances.lightning ?? 0,
       'hit recovery': level.defensiveAffixesAssumed?.hitRecoveryTier ?? 'none',
+    } : {}),
+    ...(offensiveAffixes === 'expected' ? {
+      'attack speed': level.offensiveAffixesAssumed?.fastAttackTier ?? 'none',
+      'to-hit %': level.offensiveAffixesAssumed?.toHitBonusPercent ?? 0,
+      'damage %': level.offensiveAffixesAssumed?.damageBonusPercent ?? 0,
+      'flat damage': level.offensiveAffixesAssumed?.flatDamage ?? 0,
+      'life steal %': level.offensiveAffixesAssumed?.lifeStealPercent ?? 0,
+      'mana steal %': level.offensiveAffixesAssumed?.manaStealPercent ?? 0,
+      'knockback %': Number(((level.offensiveAffixesAssumed?.knockbackProbability ?? 0) * 100).toFixed(2)),
+      'vs demon %': level.offensiveAffixesAssumed?.damageAgainstDemonsPercent ?? 0,
+      'vs undead %': level.offensiveAffixesAssumed?.damageAgainstUndeadPercent ?? 0,
+      'life stolen': Number((level.sustain?.expectedLifeStolen ?? 0).toFixed(2)),
+      'mana stolen': Number((level.mana?.expectedManaStolen ?? 0).toFixed(2)),
+      'seconds saved': baseline?.expectedSecondsToClear == null || level.expectedSecondsToClear == null
+        ? null
+        : Number((baseline.expectedSecondsToClear - level.expectedSecondsToClear).toFixed(2)),
+      'damage saved (offense)': baseline?.expectedDamageTaken == null || level.expectedDamageTaken == null
+        ? null
+        : Number((baseline.expectedDamageTaken - level.expectedDamageTaken).toFixed(2)),
+      'sustain effect': baseline?.sustain == null || level.sustain == null
+        ? null
+        : `${baseline.sustain.sustainable ? 'yes' : 'no'} → ${level.sustain.sustainable ? 'yes' : 'no'}`,
     } : {}),
     ...(purchases === 'defence' ? {
       bought: level.defencePurchases?.bought.map((item) =>
@@ -288,7 +322,7 @@ const path = join(
   'pof',
   'Diablo',
   'Combat',
-  `descent-${className}-${policy}${gear === 'expected' ? '-expected-gear' : ''}${className === 'sorcerer' && sorcererCombatPolicy === 'mixed' ? '-mixed' : ''}${sustainIncome === 'gold-and-sales' ? '-gold-and-sales' : ''}${saleIdentify === 'when-profitable' ? '-identify-profitable' : ''}${encounter === 'packs' ? `-packs-${adjacentSlots}-slots` : ''}${defensiveAffixes === 'expected' ? '-expected-defense' : ''}${purchases === 'defence' ? '-buy-defence' : ''}${chain ? '-chain' : ''}.json`,
+  `descent-${className}-${policy}${gear === 'expected' ? '-expected-gear' : ''}${className === 'sorcerer' && sorcererCombatPolicy === 'mixed' ? '-mixed' : ''}${sustainIncome === 'gold-and-sales' ? '-gold-and-sales' : ''}${saleIdentify === 'when-profitable' ? '-identify-profitable' : ''}${encounter === 'packs' ? `-packs-${adjacentSlots}-slots` : ''}${defensiveAffixes === 'expected' ? '-expected-defense' : ''}${offensiveAffixes === 'expected' ? '-expected-offense' : ''}${purchases === 'defence' ? '-buy-defence' : ''}${chain ? '-chain' : ''}.json`,
 );
 mkdirSync(dirname(path), { recursive: true });
 writeFileSync(path, JSON.stringify(result, null, 2));

@@ -1,6 +1,7 @@
 /** Pure Diablo I loot expectations over caller-supplied reference wrappers. */
 import type {
   Difficulty,
+  FastAttackTier,
   HitRecoveryTier,
   PlayerClass,
   Resistances,
@@ -1788,6 +1789,227 @@ export function bestDefensiveAffixExpectation(
         )) {
           addScore(recoveryScores, score.value, baseScale * pair.p * score.p);
         }
+      }
+    }
+  }
+  return finish();
+}
+
+export type OffensiveAffixSlot = 'weapon' | 'ring1' | 'ring2' | 'amulet';
+
+export interface BestOffensiveAffixExpectationInput {
+  className: PlayerClass | 'warrior' | 'rogue' | 'sorcerer';
+  depth: number;
+  killsSoFar: number;
+  monsterProfiles: readonly WeightedLootMonsterProfile[];
+  itemWrappers: readonly ReferenceWrapper[];
+  affixWrappers: readonly ReferenceWrapper[];
+  uniqueItemWrappers: readonly ReferenceWrapper[];
+  difficulty: Difficulty;
+  strength?: number;
+  magic?: number;
+  dexterity?: number;
+  /** Representative expected weapon; used only to report the engine's intrinsic class modifier. */
+  weaponType?: WeaponType;
+}
+
+export interface BestOffensiveAffixExpectation {
+  model: 'conservative-expected-best-offensive-affixes';
+  depth: number;
+  killsSoFar: number;
+  slotToHitBonusPercent: Record<OffensiveAffixSlot, number>;
+  toHitBonusPercent: number;
+  damageBonusPercent: number;
+  flatDamage: number;
+  expectedFastAttackSkippedFrames: number;
+  fastAttackTier: FastAttackTier;
+  lifeStealPercent: number;
+  manaStealPercent: number;
+  /** Probability that the best independently projected weapon has KNOCKBACK. */
+  knockbackProbability: number;
+  /** Intrinsic weapon-class modifier; no ordinary magic affix grants class-specific damage. */
+  damageAgainstDemonsPercent: number;
+  damageAgainstUndeadPercent: number;
+  approximation: string;
+}
+
+type OffensiveBaseSlot = 'weapon' | 'ring' | 'amulet';
+
+function offensiveBaseSlot(
+  base: ReferenceWrapper,
+  playerClass: BestOffensiveAffixExpectationInput['className'],
+): OffensiveBaseSlot | null {
+  if (weaponTypeForClass(base, playerClass)) return 'weapon';
+  const type = itemType(base).toLowerCase();
+  if (type === 'ring') return 'ring';
+  if (type === 'amulet') return 'amulet';
+  return null;
+}
+
+function combinedToHitBonus(
+  row: AffixRow,
+  affixes: AffixRow[],
+): { value: number; p: number }[] {
+  const power = row.power.toUpperCase();
+  if (power === 'TOHIT') return rolledValues(row);
+  if (power !== 'TOHIT_DAMP') return [{ value: 0, p: 1 }];
+  const combinedTiers = affixes
+    .filter((candidate) => candidate.power.toUpperCase() === 'TOHIT_DAMP' && candidate.valueMin > 0)
+    .sort((left, right) => left.valueMin - right.valueMin || left.id.localeCompare(right.id));
+  const toHitTiers = affixes
+    .filter((candidate) => candidate.power.toUpperCase() === 'TOHIT' && candidate.valueMin > 0)
+    .sort((left, right) => left.valueMin - right.valueMin || left.id.localeCompare(right.id));
+  const tier = combinedTiers.findIndex((candidate) => candidate.id === row.id);
+  return tier >= 0 && toHitTiers[tier] ? rolledValues(toHitTiers[tier]) : [{ value: 0, p: 1 }];
+}
+
+function affixPairToHitScores(
+  pair: Pick<AffixPairChoice, 'prefix' | 'suffix'>,
+  affixes: AffixRow[],
+): { value: number; p: number }[] {
+  let outcomes = [{ value: 0, p: 1 }];
+  for (const row of [pair.prefix, pair.suffix]) {
+    if (!row || !['TOHIT', 'TOHIT_DAMP'].includes(row.power.toUpperCase())) continue;
+    outcomes = outcomes.flatMap((left) => combinedToHitBonus(row, affixes).map((right) => ({
+      value: left.value + right.value,
+      p: left.p * right.p,
+    })));
+  }
+  return outcomes;
+}
+
+function fastAttackTier(skippedFrames: number): FastAttackTier {
+  if (skippedFrames >= 4) return 'fastest';
+  if (skippedFrames >= 3) return 'faster';
+  if (skippedFrames >= 2) return 'fast';
+  if (skippedFrames >= 1) return 'quick';
+  return 'none';
+}
+
+/**
+ * Conservative expected offensive affixes from prior monster drops. Integer-valued families use
+ * the same floored maximum/order-statistic projection as defensive affixes. The two ring to-hit
+ * contributions are first- and second-order statistics; every other family is projected on the
+ * weapon slot. KNOCKBACK is a flag, so its Bernoulli expected maximum remains a probability.
+ */
+export function bestOffensiveAffixExpectation(
+  input: BestOffensiveAffixExpectationInput,
+): BestOffensiveAffixExpectation {
+  if (!Number.isInteger(input.depth) || input.depth < 1) throw new Error(`depth must be a positive integer (got ${input.depth})`);
+  if (!Number.isInteger(input.killsSoFar) || input.killsSoFar < 0) throw new Error(`killsSoFar must be a non-negative integer (got ${input.killsSoFar})`);
+  const slots: OffensiveBaseSlot[] = ['weapon', 'ring', 'amulet'];
+  const toHitScores = new Map<OffensiveBaseSlot, Map<number, number>>(slots.map((slot) => [slot, new Map()]));
+  const weaponScores = {
+    damagePercent: new Map<number, number>(),
+    flatDamage: new Map<number, number>(),
+    fastAttack: new Map<number, number>(),
+    lifeSteal: new Map<number, number>(),
+    manaSteal: new Map<number, number>(),
+    knockback: new Map<number, number>(),
+  };
+  const slotToHitBonusPercent: Record<OffensiveAffixSlot, number> = {
+    weapon: 0,
+    ring1: 0,
+    ring2: 0,
+    amulet: 0,
+  };
+  const finish = (): BestOffensiveAffixExpectation => {
+    slotToHitBonusPercent.weapon = Math.floor(expectedRankedScore(toHitScores.get('weapon')!, input.killsSoFar, 1));
+    slotToHitBonusPercent.ring1 = Math.floor(expectedRankedScore(toHitScores.get('ring')!, input.killsSoFar, 1));
+    slotToHitBonusPercent.ring2 = Math.floor(expectedRankedScore(toHitScores.get('ring')!, input.killsSoFar, 2));
+    slotToHitBonusPercent.amulet = Math.floor(expectedRankedScore(toHitScores.get('amulet')!, input.killsSoFar, 1));
+    const expectedFastAttackSkippedFrames = Math.floor(expectedRankedScore(
+      weaponScores.fastAttack,
+      input.killsSoFar,
+      1,
+    ));
+    return {
+      model: 'conservative-expected-best-offensive-affixes',
+      depth: input.depth,
+      killsSoFar: input.killsSoFar,
+      slotToHitBonusPercent,
+      toHitBonusPercent: Object.values(slotToHitBonusPercent).reduce((sum, value) => sum + value, 0),
+      damageBonusPercent: Math.floor(expectedRankedScore(weaponScores.damagePercent, input.killsSoFar, 1)),
+      flatDamage: Math.floor(expectedRankedScore(weaponScores.flatDamage, input.killsSoFar, 1)),
+      expectedFastAttackSkippedFrames,
+      fastAttackTier: fastAttackTier(expectedFastAttackSkippedFrames),
+      lifeStealPercent: Math.floor(expectedRankedScore(weaponScores.lifeSteal, input.killsSoFar, 1)),
+      manaStealPercent: Math.floor(expectedRankedScore(weaponScores.manaSteal, input.killsSoFar, 1)),
+      knockbackProbability: expectedRankedScore(weaponScores.knockback, input.killsSoFar, 1),
+      damageAgainstDemonsPercent: 0,
+      damageAgainstUndeadPercent: input.weaponType === 'mace' ? 50 : input.weaponType === 'sword' ? -50 : 0,
+      approximation: input.killsSoFar === 0
+        ? 'No prior kills: the hero has no projected offensive affixes.'
+        : 'Independent prior kills are represented by their weighted monster mixture. Weapon, amulet, and two distinct ring order statistics are optimized independently by family, then integer effects are floored. KNOCKBACK retains its expected ownership probability. TOHIT_DAMP uses its tier-derived engine to-hit bonus and its rolled damage percentage. Unique powers, cross-family loadout correlation, and correlation with the selected weapon base are omitted. Demon damage remains zero because the ordinary affix tables have no class-specific damage family; the reported undead modifier is intrinsic to the representative sword or mace.',
+    };
+  };
+  if (input.killsSoFar === 0) return finish();
+
+  const positiveProfiles = input.monsterProfiles.filter((row) => row.weight > 0);
+  const totalProfileWeight = positiveProfiles.reduce((sum, row) => sum + row.weight, 0);
+  if (totalProfileWeight <= 0) throw new Error('positive kills require at least one positive-weight monster loot profile');
+  const bases = new Map(input.itemWrappers
+    .filter((wrapper) => wrapper.file === 'items/itemdat.tsv')
+    .map((wrapper) => [wrapper.entity.id, wrapper]));
+  const affixes = affixRows(input.affixWrappers);
+  for (const row of positiveProfiles) {
+    const sourceWeight = row.weight / totalProfileWeight;
+    const drop = row.drop ?? expectedDrop(
+      row.profile,
+      input.itemWrappers,
+      input.affixWrappers,
+      input.uniqueItemWrappers,
+      row.difficulty ?? input.difficulty,
+    );
+    for (const quality of drop.baseQuality) {
+      const base = bases.get(quality.baseId);
+      if (!base) continue;
+      const slot = offensiveBaseSlot(base, input.className);
+      if (!slot) continue;
+      if (input.strength != null && requirement(base, 'minStrength', 'requiredStrength') > input.strength) continue;
+      if (input.magic != null && requirement(base, 'minMagic', 'requiredMagic') > input.magic) continue;
+      if (input.dexterity != null && requirement(base, 'minDexterity', 'requiredDexterity') > input.dexterity) continue;
+      const outcome = itemAffixOutcome(
+        base,
+        quality.bonusLevel,
+        row.profile.unique === true,
+        affixes,
+        row.profile.hellfire === true,
+      );
+      const appliedScale = outcome.none < 1 ? quality.pMagic / (1 - outcome.none) : 0;
+      if (appliedScale === 0) continue;
+      const pairs = magicAffixChoices(
+        base,
+        quality.bonusLevel,
+        row.profile.unique === true,
+        affixes,
+        row.profile.hellfire === true,
+      );
+      const baseScale = sourceWeight * quality.pSelected * appliedScale;
+      for (const pair of pairs) {
+        for (const score of affixPairToHitScores(pair, affixes)) {
+          addScore(toHitScores.get(slot)!, score.value, baseScale * pair.p * score.p);
+        }
+        if (slot !== 'weapon') continue;
+        const families = [
+          { target: weaponScores.damagePercent, powers: ['DAMP', 'TOHIT_DAMP'], combine: (left: number, right: number) => left + right },
+          { target: weaponScores.flatDamage, powers: ['DAMMOD'], combine: (left: number, right: number) => left + right },
+          { target: weaponScores.fastAttack, powers: ['FASTATTACK'], combine: Math.max },
+          { target: weaponScores.lifeSteal, powers: ['STEALLIFE'], combine: Math.max },
+          { target: weaponScores.manaSteal, powers: ['STEALMANA'], combine: Math.max },
+        ];
+        for (const family of families) {
+          for (const score of affixPairScores(
+            pair,
+            (candidate) => family.powers.includes(candidate.power.toUpperCase()),
+            family.combine,
+          )) {
+            addScore(family.target, score.value, baseScale * pair.p * score.p);
+          }
+        }
+        const hasKnockback = [pair.prefix, pair.suffix]
+          .some((candidate) => candidate?.power.toUpperCase() === 'KNOCKBACK');
+        if (hasKnockback) addScore(weaponScores.knockback, 1, baseScale * pair.p);
       }
     }
   }

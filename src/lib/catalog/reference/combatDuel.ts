@@ -276,7 +276,25 @@ export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monste
     (sum, event) => sum + event.resistedDamageMean * event.block.damagingHitChance * event.expectedHitChecks,
     0,
   );
-  const playerLife = lifeAndMana(build, coefficients).maximumLife;
+  const playerPools = lifeAndMana(build, coefficients);
+  const playerLife = playerPools.maximumLife;
+  const expectedStealPerLandedHit = (percent: number | undefined) => {
+    if (opts.playerAttack !== 'melee' || percent === undefined || percent <= 0) return 0;
+    const weight = playerDamage.outcomes.reduce((sum, outcome) => sum + outcome.weight, 0);
+    if (weight === 0) return 0;
+    return playerDamage.outcomes.reduce(
+      (sum, outcome) => sum + Math.trunc(percent * Math.max(0, outcome.damage) / 100) * outcome.weight,
+      0,
+    ) / weight / FIXED_POINT;
+  };
+  const expectedLifeStolenPerLandedHit = expectedStealPerLandedHit(build.lifeStealPercent);
+  const expectedManaStolenPerLandedHit = expectedStealPerLandedHit(build.manaStealPercent);
+  const expectedLifeStolenPerKill = Number.isFinite(expectedPlayerHitsToKill)
+    ? Math.min(playerLife / FIXED_POINT, expectedPlayerHitsToKill * expectedLifeStolenPerLandedHit)
+    : 0;
+  const expectedManaStolenPerKill = Number.isFinite(expectedPlayerHitsToKill)
+    ? Math.min(playerPools.maximumMana / FIXED_POINT, expectedPlayerHitsToKill * expectedManaStolenPerLandedHit)
+    : 0;
   const monsterDamageAfterDefence = [
     ...monsterDamage.outcomes.map((outcome) => ({
       damage: playerResistance(build, outcome.damage, monsterElement).damage,
@@ -325,13 +343,22 @@ export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monste
       )
     : 0;
   const playerDamageWeight = playerDamage.outcomes.reduce((sum, outcome) => sum + outcome.weight, 0);
-  const qualifyingLandedHitChance = playerDamageWeight === 0 ? 0 : playerDamage.outcomes.reduce(
+  const hardHitChance = playerDamageWeight === 0 ? 0 : playerDamage.outcomes.reduce(
     (sum, outcome) => sum + (startsMonsterRecovery(outcome.damage) ? outcome.weight : 0),
     0,
   ) / playerDamageWeight;
+  const physicalRecoveryEnabled = opts.playerAttack !== 'spell' && (build.knockbackProbability ?? 0) > 0;
+  const knockbackProbability = physicalRecoveryEnabled && monster.petrified !== true
+    && opts.monsterCanHitRecover !== false
+    ? Math.min(1, Math.max(0, build.knockbackProbability ?? 0))
+    : 0;
+  const qualifyingLandedHitChance = physicalRecoveryEnabled
+    ? knockbackProbability + (1 - knockbackProbability) * hardHitChance
+    : hardHitChance;
   // MonsterMHit kills instead of calling M_StartHit on the fatal collision. Expected landed hits before that final
   // collision therefore supply the recovery reward; this also keeps a one-hit kill from inventing a retroactive stun.
-  const expectedMonsterRecoveryStartsBeforeKill = selectedSpell && qualifyingLandedHitChance > 0
+  const expectedMonsterRecoveryStartsBeforeKill = (selectedSpell || physicalRecoveryEnabled)
+    && qualifyingLandedHitChance > 0
     ? Math.max(0, expectedPlayerHitsToKill - 1) * qualifyingLandedHitChance
     : 0;
   // Mirror the W43 interruption load on the defending monster: qualifying hits restart GotHit, so their expected
@@ -390,6 +417,16 @@ export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monste
     expectedMonsterDamagePerHit,
     expectedMonsterHitsToKillPlayer,
     expectedMonsterDamagePerSwing,
+    ...((build.lifeStealPercent !== undefined || build.manaStealPercent !== undefined) ? {
+      steal: {
+        lifePercent: build.lifeStealPercent ?? 0,
+        manaPercent: build.manaStealPercent ?? 0,
+        expectedLifePerLandedHit: expectedLifeStolenPerLandedHit,
+        expectedManaPerLandedHit: expectedManaStolenPerLandedHit,
+        expectedLifePerKill: expectedLifeStolenPerKill,
+        expectedManaPerKill: expectedManaStolenPerKill,
+      },
+    } : {}),
     monsterConditionalBlockChance: block.conditionalBlockChance,
     expectedMonsterAttacksBeforeKill,
     expectedMonsterSwingsToKillPlayer: monsterHitChance > 0
@@ -404,7 +441,7 @@ export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monste
         recoverySeconds: opts.playerHitRecoverySeconds,
       },
     } : {}),
-    ...(selectedSpell && opts.monsterHitRecoverySeconds !== undefined ? {
+    ...((selectedSpell || physicalRecoveryEnabled) && opts.monsterHitRecoverySeconds !== undefined ? {
       monsterHitRecovery: {
         expectedStartsPerCast: monsterRecoveryStartsPerCast,
         expectedStartsBeforeKill: expectedMonsterRecoveryStartsBeforeKill,
@@ -412,6 +449,7 @@ export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monste
         recoveryLoad: monsterRecoveryLoad,
         attackAvailability: monsterAttackAvailability,
         hardHitStunLock: monsterRecoveryLoad >= 1,
+        ...(physicalRecoveryEnabled ? { knockbackProbability } : {}),
       },
     } : {}),
     ...(approachDistance > 0 ? {

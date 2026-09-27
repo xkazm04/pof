@@ -468,6 +468,55 @@ describe('duel and canon contract', () => {
     expect(oneShot.expectedPlayerSwingsToKill).toBeGreaterThanOrEqual(1);
   });
 
+  it('applies capped melee steal and expected knockback recovery without affecting the default path', () => {
+    const build = {
+      ...BUILD,
+      level: 1,
+      strength: 0,
+      weaponDamage: { min: 10, max: 10 },
+      damageBonusPercent: 0,
+      flatDamage: 0,
+      swingSeconds: 0.25,
+    };
+    const monster = {
+      ...MONSTER,
+      level: 20,
+      hitPoints: { min: 30, max: 30 },
+      armourClass: 0,
+      possibleToHit: true,
+    };
+    const options = {
+      playerAttack: 'melee' as const,
+      monsterAttack: 'melee' as const,
+      monsterAttackCycleSeconds: 0.5,
+      monsterHitRecoverySeconds: 0.5,
+      dungeonLevel: 1,
+    };
+    const baseline = duel(build, { ...COEFFICIENTS, classFlags: [], baseMeleeToHit: 100 }, monster, options);
+    const zeroProbability = duel(
+      { ...build, knockbackProbability: 0 },
+      { ...COEFFICIENTS, classFlags: [], baseMeleeToHit: 100 },
+      monster,
+      options,
+    );
+    const affixed = duel({
+      ...build,
+      lifeStealPercent: 5,
+      manaStealPercent: 3,
+      knockbackProbability: 1,
+    }, { ...COEFFICIENTS, classFlags: [], baseMeleeToHit: 100 }, monster, options);
+
+    expect(zeroProbability).toEqual(baseline);
+    expect(baseline.steal).toBeUndefined();
+    expect(affixed.steal).toMatchObject({ lifePercent: 5, manaPercent: 3 });
+    expect(affixed.steal!.expectedLifePerLandedHit).toBeGreaterThan(0);
+    expect(affixed.steal!.expectedManaPerLandedHit).toBeGreaterThan(0);
+    expect(affixed.steal!.expectedLifePerKill).toBeLessThanOrEqual(lifeAndMana(build, COEFFICIENTS).maximumLife / FIXED_POINT);
+    expect(affixed.steal!.expectedManaPerKill).toBeLessThanOrEqual(lifeAndMana(build, COEFFICIENTS).maximumMana / FIXED_POINT);
+    expect(affixed.monsterHitRecovery?.knockbackProbability).toBe(1);
+    expect(affixed.expectedMonsterAttacksBeforeKill).toBeLessThan(baseline.expectedMonsterAttacksBeforeKill);
+  });
+
   it('reports an unhittable target and its time-to-kill as unbounded', () => {
     const result = duel({ ...BUILD, swingSeconds: 0.6 }, COEFFICIENTS, { ...MONSTER, possibleToHit: false }, {
       playerAttack: 'melee', monsterAttack: 'melee', dungeonLevel: 1,

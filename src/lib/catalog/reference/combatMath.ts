@@ -38,6 +38,10 @@ export interface PlayerBuild {
   armourClass: number; toHitBonusPercent: number; damageBonusPercent: number; flatDamage: number;
   hasShield: boolean; blockEnabled: boolean; resistances: Resistances; armourPiercing: number;
   weaponGraphic?: WeaponGraphic; swingSeconds?: number;
+  /** Expected equipped melee-leech flags; omitted by the byte-compatible default model. */
+  lifeStealPercent?: number; manaStealPercent?: number;
+  /** Expected ownership probability of the equipped weapon's KNOCKBACK flag. */
+  knockbackProbability?: number;
   tripleDemonDamage?: boolean; zeroResistance?: boolean;
 }
 export interface MonsterProfile {
