@@ -137,6 +137,11 @@ const rogue = wrapper('d1-class-rogue', 'characters', 'classes/rogue', {
 const monster = wrapper('d1-test-monster', 'bestiary', 'monsters/monstdat.tsv', {
   category: 'demon',
   spawnDepth: { min: 1, max: 16 },
+  derived: {
+    attackKinds: ['melee'],
+    tilesPerSecond: 2,
+    locomotion: { tilesPerSecondWhileWalking: 3 },
+  },
   stats: [
     { label: 'Level', value: 1 },
     { label: 'HP Min', value: 2 },
@@ -247,6 +252,20 @@ const firebolt = wrapper('d1-spell-firebolt', 'spellbook', 'spells/spelldat.tsv'
   minMana: '1',
 });
 
+const chargedBolt = wrapper('d1-spell-charged-bolt', 'spellbook', 'spells/spelldat.tsv', {}, {
+  id: 'ChargedBolt',
+  manaCost: '2',
+  manaMultiplier: '1',
+  minMana: '1',
+});
+
+const lightning = wrapper('d1-spell-lightning', 'spellbook', 'spells/spelldat.tsv', {}, {
+  id: 'Lightning',
+  manaCost: '3',
+  manaMultiplier: '1',
+  minMana: '1',
+});
+
 const fireball = wrapper('d1-spell-fireball', 'spellbook', 'spells/spelldat.tsv', {}, {
   id: 'Fireball',
   manaCost: '4',
@@ -254,34 +273,47 @@ const fireball = wrapper('d1-spell-fireball', 'spellbook', 'spells/spelldat.tsv'
   minMana: '1',
 });
 
-const locations: LocationEntityWrapper[] = Array.from({ length: 16 }, (_, index) => {
-  const depth = index + 1;
-  return {
-    catalogId: 'zone-map',
-    entity: {
-      id: `d1-level-${String(depth).padStart(2, '0')}`,
-      catalogId: 'zone-map',
-      name: `Level ${depth}`,
-      categoryPath: [],
-      lifecycle: 'planned',
-      tags: ['diablo-location', 'dungeon'],
-      links: [
-        { catalogId: 'bestiary', entityId: monster.entity.id, role: 'spawns' },
-        ...(depth === 1 ? [{ catalogId: 'bestiary', entityId: 'd1-test-unique', role: 'unique' }] : []),
-      ],
-      data: {
-        kind: 'dungeon',
-        dungeonType: depth <= 4 ? 'DTYPE_CATHEDRAL' : depth <= 8 ? 'DTYPE_CATACOMBS' : depth <= 12 ? 'DTYPE_CAVES' : 'DTYPE_HELL',
-        depth,
-        entry: 'fixture',
-        procedural: 'fixture',
-        poolSize: 1,
-        notes: [],
-      },
-      provenance,
-    },
-  };
+const chainLightning = wrapper('d1-spell-chain-lightning', 'spellbook', 'spells/spelldat.tsv', {}, {
+  id: 'ChainLightning',
+  manaCost: '4',
+  manaMultiplier: '1',
+  minMana: '1',
 });
+
+const learnedSpellRows = [firebolt, chargedBolt, lightning, fireball, chainLightning];
+
+function locationsFor(...monsters: ReferenceWrapper[]): LocationEntityWrapper[] {
+  return Array.from({ length: 16 }, (_, index) => {
+    const depth = index + 1;
+    return {
+      catalogId: 'zone-map',
+      entity: {
+        id: `d1-level-${String(depth).padStart(2, '0')}`,
+        catalogId: 'zone-map',
+        name: `Level ${depth}`,
+        categoryPath: [],
+        lifecycle: 'planned',
+        tags: ['diablo-location', 'dungeon'],
+        links: [
+          ...monsters.map((entry) => ({ catalogId: 'bestiary', entityId: entry.entity.id, role: 'spawns' })),
+          ...(depth === 1 ? [{ catalogId: 'bestiary', entityId: 'd1-test-unique', role: 'unique' }] : []),
+        ],
+        data: {
+          kind: 'dungeon',
+          dungeonType: depth <= 4 ? 'DTYPE_CATHEDRAL' : depth <= 8 ? 'DTYPE_CATACOMBS' : depth <= 12 ? 'DTYPE_CAVES' : 'DTYPE_HELL',
+          depth,
+          entry: 'fixture',
+          procedural: 'fixture',
+          poolSize: monsters.length,
+          notes: [],
+        },
+        provenance,
+      },
+    };
+  });
+}
+
+const locations = locationsFor(monster);
 
 describe('simulateDescent', () => {
   it('computes a hand-checked two-kill floor and levels from the invented XP curve', () => {
@@ -422,9 +454,13 @@ describe('simulateDescent', () => {
       weaponType: 'bow',
     });
     expect(result.assumptions.find((assumption) => assumption.id === 'ranged-engagement-distance')).toMatchObject({ value: 4 });
+    expect(result.levels[0].approach).toMatchObject({
+      freeShotShare: 1,
+      monsterSpeeds: [{ monsterId: monster.entity.id, source: 'effective-routine-cadence' }],
+    });
   });
 
-  it('uses Sorcerer spell bands and carries mana without passive regeneration', () => {
+  it('uses the target-aware Sorcerer learned set and carries mana without passive regeneration', () => {
     const result = simulateDescent({
       className: 'sorcerer',
       policy: 'none',
@@ -432,7 +468,7 @@ describe('simulateDescent', () => {
       gameMode: 'single',
       difficulty: 'normal',
       gear: 'none',
-      wrappers: [sorcerer, monster, firebolt, fireball, ...curve],
+      wrappers: [sorcerer, monster, ...learnedSpellRows, ...curve],
       locations,
     });
 
@@ -444,8 +480,153 @@ describe('simulateDescent', () => {
     // The depth-1 level-up refills before depth 2; no later level-up occurs, so depth 3 carries the remainder.
     expect(result.levels[1].mana!.currentManaAtStart).toBe(10);
     expect(result.levels[2].mana!.currentManaAtStart).toBeCloseTo(10 - 2 * 2 / 0.95, 12);
-    expect(result.levels[8].spellAssumed).toMatchObject({ spell: 'Fireball', spellLevel: 1 });
+    // One HP makes Firebolt tie the newer spells on casts, so its lower mana cost wins.
+    expect(result.levels[8].spellAssumed).toMatchObject({ spell: 'Firebolt', spellLevel: 1 });
+    expect(result.levels[8].spellsUsed).toEqual([
+      expect.objectContaining({ spell: 'Firebolt', killShare: 1 }),
+    ]);
     expect(result.assumptions.find((assumption) => assumption.id === 'mana-recovery')?.detail).toContain('Shrines are ignored');
+  });
+
+  it('switches a fire-immune target to lightning and names a target immune to every learned spell', () => {
+    const fireImmune = {
+      ...monster,
+      wrapperId: 'test:monsters/monstdat.tsv:FIRE_IMMUNE',
+      key: 'FIRE_IMMUNE',
+      rawHash: 'FIRE_IMMUNE',
+      raw: { ...monster.raw, _monster_id: 'FIRE_IMMUNE', resistance: 'IMMUNE_FIRE' },
+      entity: {
+        ...monster.entity,
+        id: 'd1-fire-immune',
+        name: 'Fire Immune',
+        data: {
+          ...monster.entity.data,
+          stats: (monster.entity.data.stats as { label: string; value: number }[]).map((stat) =>
+            stat.label === 'HP Min' || stat.label === 'HP Max' ? { ...stat, value: 40 } : stat),
+        },
+      },
+    } satisfies ReferenceWrapper;
+    const fullyImmune = {
+      ...monster,
+      wrapperId: 'test:monsters/monstdat.tsv:FULLY_IMMUNE',
+      key: 'FULLY_IMMUNE',
+      rawHash: 'FULLY_IMMUNE',
+      raw: { ...monster.raw, _monster_id: 'FULLY_IMMUNE', resistance: 'IMMUNE_FIRE,IMMUNE_LIGHTNING' },
+      entity: {
+        ...monster.entity,
+        id: 'd1-fully-immune',
+        name: 'Fully Immune',
+        data: {
+          ...monster.entity.data,
+          stats: (monster.entity.data.stats as { label: string; value: number }[]).map((stat) =>
+            stat.label === 'HP Min' || stat.label === 'HP Max' ? { ...stat, value: 40 } : stat),
+        },
+      },
+    } satisfies ReferenceWrapper;
+    const result = simulateDescent({
+      className: 'sorcerer',
+      policy: 'none',
+      tilesPerLevel: 60,
+      gameMode: 'single',
+      difficulty: 'normal',
+      gear: 'none',
+      wrappers: [sorcerer, fireImmune, fullyImmune, ...learnedSpellRows, ...curve],
+      locations: locationsFor(fireImmune, fullyImmune),
+    });
+
+    expect(result.levels[4].spellsUsed).toEqual([
+      expect.objectContaining({ spell: 'Lightning', expectedKills: 1, killShare: 1 }),
+    ]);
+    expect(result.levels[4].unboundedMonsters).toEqual([
+      expect.objectContaining({ monsterId: fullyImmune.entity.id, monster: 'Fully Immune' }),
+    ]);
+    expect(result.levels[4].expectedSecondsToClear).toBeNull();
+  });
+
+  it('reports the while-walking speed fallback per monster when effective cadence is unavailable', () => {
+    const fallbackMonster = {
+      ...monster,
+      wrapperId: 'test:monsters/monstdat.tsv:FALLBACK',
+      key: 'FALLBACK',
+      rawHash: 'FALLBACK',
+      raw: { ...monster.raw, _monster_id: 'FALLBACK' },
+      entity: {
+        ...monster.entity,
+        id: 'd1-fallback-monster',
+        name: 'Fallback Walker',
+        data: {
+          ...monster.entity.data,
+          derived: {
+            attackKinds: ['melee'],
+            locomotion: { tilesPerSecondWhileWalking: 3 },
+          },
+        },
+      },
+    } satisfies ReferenceWrapper;
+    const result = simulateDescent({
+      className: 'rogue',
+      policy: 'none',
+      tilesPerLevel: 0,
+      gameMode: 'single',
+      difficulty: 'normal',
+      gear: 'none',
+      wrappers: [rogue, fallbackMonster, ...curve],
+      locations: locationsFor(fallbackMonster),
+    });
+
+    expect(result.levels[0].approach?.monsterSpeeds).toEqual([
+      expect.objectContaining({
+        monsterId: fallbackMonster.entity.id,
+        tilesPerSecond: 3,
+        source: 'while-walking-upper-bound',
+      }),
+    ]);
+  });
+
+  it('lets missile-capable monsters counter at range instead of approaching', () => {
+    const rangedMonster = {
+      ...monster,
+      wrapperId: 'test:monsters/monstdat.tsv:RANGED',
+      key: 'RANGED',
+      rawHash: 'RANGED',
+      raw: { ...monster.raw, _monster_id: 'RANGED' },
+      entity: {
+        ...monster.entity,
+        id: 'd1-ranged-monster',
+        name: 'Ranged Monster',
+        tags: ['SkeletonRanged'],
+        data: {
+          ...monster.entity.data,
+          derived: {
+            attackKinds: ['missile'],
+            tilesPerSecond: 2,
+            locomotion: { tilesPerSecondWhileWalking: 3 },
+          },
+        },
+      },
+    } satisfies ReferenceWrapper;
+    const result = simulateDescent({
+      className: 'rogue',
+      policy: 'none',
+      tilesPerLevel: 30,
+      gameMode: 'single',
+      difficulty: 'normal',
+      gear: 'none',
+      wrappers: [rogue, rangedMonster, ...curve],
+      locations: locationsFor(rangedMonster),
+    });
+
+    expect(result.levels[0].approach).toMatchObject({
+      expectedFreeActionsPerKill: 0,
+      freeShotShare: 0,
+      monsterSpeeds: [{
+        monsterId: rangedMonster.entity.id,
+        tilesPerSecond: null,
+        source: 'ranged-monster-holds-range',
+      }],
+    });
+    // The arrow floor is 10%; after the Rogue's first shot, every remaining expected shot is countered.
+    expect(result.levels[0].expectedDamageTaken).toBeCloseTo((1 / 0.88 - 1) * 0.1, 12);
   });
 
   it('splits prior-depth gold for mana potions and makes overall sustain require mana', () => {
@@ -459,7 +640,8 @@ describe('simulateDescent', () => {
       gameMode: 'single',
       difficulty: 'normal',
       wrappers: [
-        sorcerer, monster, expensiveFirebolt, fireball, expectedSword, expectedDamagePrefix,
+        sorcerer, monster, expensiveFirebolt, chargedBolt, lightning, fireball, chainLightning,
+        expectedSword, expectedDamagePrefix,
         healingPotion, manaPotion, ...curve,
       ],
       locations,

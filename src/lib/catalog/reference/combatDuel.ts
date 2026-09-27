@@ -34,11 +34,7 @@ export interface DuelSpellAttack {
   maxManaBaseInternal?: number;
 }
 
-/**
- * Ranged shots use this fixed separation unless a caller supplies `engagementDistance`.
- * The monster is assumed to close the gap before its ordinary melee counterattack; travel
- * time and shots during that movement are deliberately outside this exchange model.
- */
+/** Ranged heroes start at this explicit model distance unless a caller supplies another. */
 export const DEFAULT_RANGED_ENGAGEMENT_DISTANCE = 4;
 
 export interface DuelOptions {
@@ -48,6 +44,8 @@ export interface DuelOptions {
   engagementDistance?: number;
   /** Backwards-compatible alias for engagementDistance. */
   playerDistance?: number;
+  /** Effective monster locomotion; omit only when no approach model is requested. */
+  monsterApproachTilesPerSecond?: number;
   spell?: DuelSpellAttack;
   /** Class cast animation duration from combatMath.castTiming. */
   playerCastSeconds?: number;
@@ -69,6 +67,10 @@ export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monste
   if (!Number.isFinite(engagementDistance) || engagementDistance < 0) {
     throw new Error(`engagementDistance must be a non-negative finite number (got ${engagementDistance})`);
   }
+  if (opts.monsterApproachTilesPerSecond !== undefined
+    && (!Number.isFinite(opts.monsterApproachTilesPerSecond) || opts.monsterApproachTilesPerSecond <= 0)) {
+    throw new Error(`monsterApproachTilesPerSecond must be a positive finite number (got ${opts.monsterApproachTilesPerSecond})`);
+  }
   const selectedSpell = opts.playerAttack === 'spell' ? opts.spell : undefined;
   if (opts.playerAttack === 'spell' && !selectedSpell) throw new Error('spell attack mode requires spell inputs');
   const selectedSpellSpec = selectedSpell ? spellSpec(selectedSpell.spell) : undefined;
@@ -80,7 +82,7 @@ export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monste
     ? playerMeleeHitChance(build, coefficients, monster)
     : opts.playerAttack === 'ranged'
       ? playerRangedHitChance(build, coefficients, monster, engagementDistance)
-      : playerSpellHitChance(build, coefficients, monster, 0, spellElement);
+      : playerSpellHitChance(build, coefficients, monster, 0, spellElement) /* d1-spell-cast-law: a spell missile's distance counter never advances — effective distance 0 at any range (W20; cx-b50 had passed the engagement distance) */;
   const playerDamage = opts.playerAttack === 'melee'
     ? playerMeleeDamage(build, coefficients, monster)
     : opts.playerAttack === 'ranged'
@@ -112,9 +114,22 @@ export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monste
   const playerSwingSeconds = opts.playerAttack === 'spell'
     ? opts.playerCastSeconds ?? null
     : build.swingSeconds ?? null;
+  const approachDistance = opts.playerAttack !== 'melee' && opts.monsterAttack === 'melee'
+    && opts.monsterApproachTilesPerSecond !== undefined
+    ? Math.max(0, engagementDistance - 1)
+    : 0;
+  const approachSeconds = opts.monsterApproachTilesPerSecond === undefined
+    ? 0
+    : approachDistance / opts.monsterApproachTilesPerSecond;
+  const freePlayerActionCapacity = playerSwingSeconds === null || playerSwingSeconds === 0
+    ? 0
+    : Math.floor(approachSeconds / playerSwingSeconds);
+  const expectedFreePlayerActions = Math.min(expectedPlayerSwingsToKill, freePlayerActionCapacity);
   const expectedPlayerSecondsToKill = playerSwingSeconds === null
     ? null
-    : expectedPlayerSwingsToKill * playerSwingSeconds;
+    : expectedPlayerSwingsToKill <= freePlayerActionCapacity
+      ? expectedPlayerSwingsToKill * playerSwingSeconds
+      : approachSeconds + (expectedPlayerSwingsToKill - freePlayerActionCapacity) * playerSwingSeconds;
   const manaPerCast = selectedSpell
     ? manaCost(selectedSpell.spell, {
         spellLevel: selectedSpell.spellLevel,
@@ -129,7 +144,7 @@ export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monste
   const monsterHitChance = opts.monsterAttack === 'melee'
     ? monsterMeleeHitChance(build, monster, opts.dungeonLevel)
     : monsterRangedHitChance(build, monster, {
-      distance: opts.monsterDistance ?? 0,
+      distance: opts.monsterDistance ?? engagementDistance,
       dungeonLevel: opts.dungeonLevel,
       projectile: opts.monsterAttack === 'ranged-arrow' ? 'arrow' : 'magic',
     });
@@ -162,6 +177,12 @@ export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monste
     [{ hitPoints: playerLife, weight: 1 }],
     monsterDamageAfterDefence,
   );
+  const expectedMonsterAttacksBeforeKill = Math.max(
+    0,
+    expectedPlayerSwingsToKill
+      - (opts.monsterAttack === 'melee' ? freePlayerActionCapacity : 0)
+      - 1,
+  );
 
   return {
     gameMode,
@@ -175,7 +196,19 @@ export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monste
     expectedMonsterDamagePerHit,
     expectedMonsterHitsToKillPlayer,
     expectedMonsterDamagePerSwing,
+    monsterConditionalBlockChance: block.conditionalBlockChance,
+    expectedMonsterAttacksBeforeKill,
     expectedMonsterSwingsToKillPlayer: monsterHitChance > 0 ? expectedMonsterHitsToKillPlayer / monsterHitChance : Infinity,
+    ...(approachDistance > 0 ? {
+      approach: {
+        engagementDistance,
+        distanceToAdjacency: approachDistance,
+        tilesPerSecond: opts.monsterApproachTilesPerSecond!,
+        seconds: approachSeconds,
+        freePlayerActionCapacity,
+        expectedFreePlayerActions,
+      },
+    } : {}),
     ...(opts.playerAttack === 'ranged' ? { attackMode: 'ranged' as const, engagementDistance } : {}),
     ...(selectedSpell && manaPerCast !== undefined ? {
       attackMode: 'spell' as const,

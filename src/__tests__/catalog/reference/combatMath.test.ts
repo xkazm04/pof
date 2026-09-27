@@ -353,6 +353,46 @@ describe('duel and canon contract', () => {
     expect(result.expectedPlayerSecondsToKill).toBeCloseTo(0.5 / 0.88, 12);
   });
 
+  it('hand-computes free shots while a melee monster approaches', () => {
+    const result = duel({
+      ...BUILD,
+      class: 'Rogue',
+      level: 1,
+      strength: 0,
+      dexterity: 0,
+      weaponDamage: { min: 1, max: 1 },
+      weaponType: 'bow',
+      damageBonusPercent: 0,
+      flatDamage: 0,
+      swingSeconds: 0.5,
+    }, { ...COEFFICIENTS, classFlags: [] }, {
+      ...MONSTER,
+      level: 1,
+      hitPoints: { min: 6, max: 6 },
+      armourClass: 0,
+      resist: {},
+      immune: {},
+      petrified: true,
+    }, {
+      playerAttack: 'ranged',
+      engagementDistance: 5,
+      monsterApproachTilesPerSecond: 3,
+      monsterAttack: 'melee',
+      dungeonLevel: 1,
+    });
+
+    // Four tiles to adjacency at 3 tiles/s is 4/3 seconds: two complete 0.5s shots are free.
+    expect(result.approach).toMatchObject({
+      distanceToAdjacency: 4,
+      seconds: 4 / 3,
+      freePlayerActionCapacity: 2,
+      expectedFreePlayerActions: 2,
+    });
+    expect(result.expectedPlayerSwingsToKill).toBe(6);
+    expect(result.expectedMonsterAttacksBeforeKill).toBe(3);
+    expect(result.expectedPlayerSecondsToKill).toBeCloseTo(4 / 3 + 4 * 0.5, 12);
+  });
+
   it('computes spell casts, exact mana per kill, and an immune target as unbounded', () => {
     const build: PlayerBuild = {
       ...BUILD,
@@ -380,9 +420,9 @@ describe('duel and canon contract', () => {
     };
     const result = duel(build, coefficients, monster, options);
 
-    // 0 Magic + 97 class to-hit - 2*level 1 = 95%; Firebolt 2..11 always kills 1 HP.
+    // 0 Magic + 97 class to-hit - 2*level 1 - distance 4 = 91%; Firebolt always kills 1 HP.
     expect(result.attackMode).toBe('spell');
-    expect(result.playerHitChance).toBe(0.95);
+    expect(result.playerHitChance).toBe(0.95); // spell missiles: effective distance 0 (d1-spell-cast-law) — no range penalty
     expect(result.expectedPlayerHitsToKill).toBe(1);
     expect(result.expectedPlayerSwingsToKill).toBeCloseTo(1 / 0.95, 12);
     expect(result.playerCastSeconds).toBe(0.4);

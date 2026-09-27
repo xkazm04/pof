@@ -9,7 +9,6 @@ import {
 import { classAnimations, classCoefficients, monsterProfile, referenceBuild } from '@/lib/catalog/reference/combatInputs';
 import {
   attackTiming,
-  blockProbability,
   castTiming,
   experienceAward,
   experienceCurveLaw,
@@ -23,6 +22,7 @@ import {
 } from '@/lib/catalog/reference/combatMath';
 import { aggregateClassWrappers } from '@/lib/catalog/reference/classHeroes';
 import { contentHash } from '@/lib/catalog/reference/hash';
+import { D1_AI_ROUTINES, isD1AiRoutineId } from '@/lib/catalog/reference/aiRoutines';
 import { locationEntities, type LocationEntityWrapper } from '@/lib/catalog/reference/locationSpecs';
 import {
   bestArmourExpectation,
@@ -44,12 +44,13 @@ export type DescentGear = 'none' | 'expected';
 /** Explicit non-solid-tile assumption used only when a caller does not provide one. */
 export const DEFAULT_TILES_PER_LEVEL_ASSUMPTION = 3_000;
 
-/** Deliberately simple acquisition/level policy; these bands are model assumptions, not table rows. */
+/** Deliberately simple cumulative learned-set policy; these unlock depths are model assumptions, not table rows. */
 export const SORCERER_SPELL_PROGRESSION = [
-  { minDepth: 1, maxDepth: 4, spell: 'Firebolt', spellLevel: 1 },
-  { minDepth: 5, maxDepth: 8, spell: 'Firebolt', spellLevel: 2 },
-  { minDepth: 9, maxDepth: 12, spell: 'Fireball', spellLevel: 1 },
-  { minDepth: 13, maxDepth: 16, spell: 'Fireball', spellLevel: 2 },
+  { learnedAtDepth: 1, spell: 'Firebolt', spellLevel: 1 },
+  { learnedAtDepth: 3, spell: 'ChargedBolt', spellLevel: 1 },
+  { learnedAtDepth: 5, spell: 'Lightning', spellLevel: 1 },
+  { learnedAtDepth: 9, spell: 'Fireball', spellLevel: 1 },
+  { learnedAtDepth: 13, spell: 'ChainLightning', spellLevel: 1 },
 ] as const;
 
 export interface DescentAssumption {
@@ -83,7 +84,14 @@ export interface DescentLevelResult {
   note: string;
   /** Omitted for melee to preserve the legacy Warrior result shape. */
   attackMode?: Exclude<PlayerAttackMode, 'melee'>;
+  /** Present only when every bounded target at this depth selects the same spell. */
   spellAssumed?: DescentSpellExpectation;
+  /** Target-aware spell allocation over bounded kills at this depth. */
+  spellsUsed?: DescentSpellUsage[];
+  /** Targets for which every learned spell has unbounded time-to-kill. */
+  unboundedMonsters?: DescentUnboundedMonster[];
+  /** Present only for ranged/spell heroes, preserving the legacy melee result shape. */
+  approach?: DescentApproachExpectation;
   /** Present for spell-mode depths, including gear:none where no purchased potions exist. */
   mana?: DescentManaExpectation;
   /** Present only when expected gear is enabled, preserving the gear:none result shape. */
@@ -144,6 +152,31 @@ export interface DescentSpellExpectation {
   spellLevel: number;
   element: string;
   manaPerCast: number;
+}
+
+export interface DescentSpellUsage extends DescentSpellExpectation {
+  expectedKills: number;
+  killShare: number;
+}
+
+export interface DescentUnboundedMonster {
+  monsterId: string;
+  monster: string;
+  reason: string;
+}
+
+export interface DescentMonsterApproachSpeed {
+  monsterId: string;
+  monster: string;
+  tilesPerSecond: number | null;
+  source: 'effective-routine-cadence' | 'while-walking-upper-bound' | 'ranged-monster-holds-range';
+}
+
+export interface DescentApproachExpectation {
+  engagementDistance: number;
+  expectedFreeActionsPerKill: number;
+  freeShotShare: number;
+  monsterSpeeds: DescentMonsterApproachSpeed[];
 }
 
 export interface DescentManaExpectation {
@@ -342,24 +375,91 @@ function consumablePrice(
   return price;
 }
 
-function sorcererSpellAttack(wrappers: readonly ReferenceWrapper[], depth: number): DuelSpellAttack {
-  const policy = SORCERER_SPELL_PROGRESSION.find((entry) => depth >= entry.minDepth && depth <= entry.maxDepth);
-  if (!policy) throw new Error(`the Sorcerer spell policy has no entry for depth ${depth}`);
-  const wrapper = wrappers.find((candidate) => candidate.file === 'spells/spelldat.tsv'
-    && String(candidate.raw.id).toLowerCase() === policy.spell.toLowerCase());
-  if (!wrapper) throw new Error(`the supplied spell wrappers have no ${policy.spell} row`);
-  const read = (key: 'manaCost' | 'manaMultiplier' | 'minMana') => {
-    const value = Number(wrapper.raw[key]);
-    if (!Number.isFinite(value)) throw new Error(`${wrapper.entity.id} has no numeric raw.${key}`);
-    return value;
-  };
-  return {
-    spell: policy.spell,
-    spellLevel: policy.spellLevel,
-    baseMana: read('manaCost'),
-    manaAdj: read('manaMultiplier'),
-    minMana: read('minMana'),
-  };
+function sorcererSpellAttacks(wrappers: readonly ReferenceWrapper[], depth: number): DuelSpellAttack[] {
+  const learned = SORCERER_SPELL_PROGRESSION.filter((entry) => depth >= entry.learnedAtDepth);
+  if (learned.length === 0) throw new Error(`the Sorcerer spell policy has no learned spell for depth ${depth}`);
+  return learned.map((policy) => {
+    const wrapper = wrappers.find((candidate) => candidate.file === 'spells/spelldat.tsv'
+      && String(candidate.raw.id).toLowerCase() === policy.spell.toLowerCase());
+    if (!wrapper) throw new Error(`the supplied spell wrappers have no ${policy.spell} row`);
+    const read = (key: 'manaCost' | 'manaMultiplier' | 'minMana') => {
+      const value = Number(wrapper.raw[key]);
+      if (!Number.isFinite(value)) throw new Error(`${wrapper.entity.id} has no numeric raw.${key}`);
+      return value;
+    };
+    return {
+      spell: policy.spell,
+      spellLevel: policy.spellLevel,
+      baseMana: read('manaCost'),
+      manaAdj: read('manaMultiplier'),
+      minMana: read('minMana'),
+    };
+  });
+}
+
+interface MonsterExchangeModel {
+  monsterAttack: 'melee' | 'ranged-arrow' | 'ranged-magic';
+  approachTilesPerSecond?: number;
+  speed: DescentMonsterApproachSpeed;
+}
+
+function monsterExchangeModel(wrapper: ReferenceWrapper): MonsterExchangeModel {
+  const rawDerived = wrapper.entity.data.derived;
+  const derived = rawDerived && typeof rawDerived === 'object' && !Array.isArray(rawDerived)
+    ? rawDerived as Record<string, unknown>
+    : {};
+  const attackKinds = Array.isArray(derived.attackKinds)
+    ? derived.attackKinds.filter((kind): kind is string => typeof kind === 'string')
+    : [];
+  if (attackKinds.includes('missile')) {
+    const ai = wrapper.file === 'monsters/unique_monstdat.tsv'
+      ? wrapper.raw.ai
+      : wrapper.entity.tags?.[0];
+    const missiles = ai && isD1AiRoutineId(ai)
+      ? D1_AI_ROUTINES[ai].attacks.filter((attack) => attack.kind === 'missile').map((attack) => attack.missile)
+      : [];
+    const arrow = missiles.length > 0 && missiles.every((missile) => missile === 'Arrow');
+    return {
+      monsterAttack: arrow ? 'ranged-arrow' : 'ranged-magic',
+      speed: {
+        monsterId: wrapper.entity.id,
+        monster: wrapper.entity.name,
+        tilesPerSecond: null,
+        source: 'ranged-monster-holds-range',
+      },
+    };
+  }
+  const effective = Number(derived.tilesPerSecond);
+  if (Number.isFinite(effective) && effective > 0) {
+    return {
+      monsterAttack: 'melee',
+      approachTilesPerSecond: effective,
+      speed: {
+        monsterId: wrapper.entity.id,
+        monster: wrapper.entity.name,
+        tilesPerSecond: effective,
+        source: 'effective-routine-cadence',
+      },
+    };
+  }
+  const rawLocomotion = derived.locomotion;
+  const locomotion = rawLocomotion && typeof rawLocomotion === 'object' && !Array.isArray(rawLocomotion)
+    ? rawLocomotion as Record<string, unknown>
+    : {};
+  const whileWalking = Number(locomotion.tilesPerSecondWhileWalking);
+  if (Number.isFinite(whileWalking) && whileWalking > 0) {
+    return {
+      monsterAttack: 'melee',
+      approachTilesPerSecond: whileWalking,
+      speed: {
+        monsterId: wrapper.entity.id,
+        monster: wrapper.entity.name,
+        tilesPerSecond: whileWalking,
+        source: 'while-walking-upper-bound',
+      },
+    };
+  }
+  throw new Error(`${wrapper.entity.id} has no effective or while-walking approach speed`);
 }
 
 function shieldGraphic(build: PlayerBuild): WeaponGraphic {
@@ -494,7 +594,7 @@ function assumptions(
       source: 'combatDuel.duel expectations',
       detail: className === 'warrior'
         ? 'Expected damage per kill is (expected hero swings - 1) × expected monster damage per swing. Monster travel, AI delays, ranged spacing, healing, and simultaneous packs are outside this duel model.'
-        : 'Expected damage per kill is (expected hero actions - 1) × expected monster damage per swing. AI delays, healing, and simultaneous packs are outside this duel model.',
+        : 'Melee monsters do no damage during their approach, then counter between adjacent hero actions. Missile-capable routines counter at the engagement distance. Healing and simultaneous packs are outside this duel model.',
     },
     ...(className === 'rogue' ? [
       {
@@ -507,7 +607,7 @@ function assumptions(
         id: 'ranged-engagement-distance',
         value: DEFAULT_RANGED_ENGAGEMENT_DISTANCE,
         source: 'explicit combatDuel model parameter; the reference laws do not prescribe one fixed duel separation',
-        detail: 'Each arrow is evaluated at four tiles. The monster is then treated as having closed to melee for its counterattack; movement time and extra shots while closing are omitted.',
+        detail: 'The monster starts four tiles away; adjacency is one tile away. A melee monster traverses the three-tile gap while the Rogue shoots without counterattacks.',
       },
     ] : []),
     ...(className === 'sorcerer' ? [
@@ -515,13 +615,13 @@ function assumptions(
         id: 'class-attack-mode',
         value: 'spell casting',
         source: 'd1-spell-cast-law, spellMath, and Sorcerer cast animation data',
-        detail: 'Sorcerer uses distance-zero spell to-hit, exact one-collision spell damage, class casting time, and mana per cast.',
+        detail: 'Sorcerer uses spell to-hit at the engagement distance, exact one-collision spell damage, class casting time, and mana per cast.',
       },
       {
         id: 'sorcerer-spell-progression',
-        value: 'Firebolt L1 depths 1-4; Firebolt L2 depths 5-8; Fireball L1 depths 9-12; Fireball L2 depths 13-16',
-        source: 'explicit fixed depth-band policy; book acquisition timing is not resolved by the deterministic type-mixture model',
-        detail: 'The selected spell and level change only at band boundaries. Learning the required books is assumed rather than sampled.',
+        value: 'Firebolt L1 at depth 1; Charged Bolt L1 at 3; Lightning L1 at 5; Fireball L1 at 9; Chain Lightning L1 at 13; learned spells remain available',
+        source: 'explicit cumulative depth schedule; book acquisition timing is not resolved by the deterministic type-mixture model',
+        detail: 'At each depth, every learned damaging spell is evaluated against each monster. Lowest expected time-to-kill wins; expected mana per kill and then schedule order break ties.',
       },
       {
         id: 'spell-damage-event',
@@ -534,6 +634,20 @@ function assumptions(
         value: 'no passive regeneration; level-up refill applied before the next depth',
         source: 'd1-spell-cast-law, d1-combat-life-mana-law, and d1-instant-potion-restoration',
         detail: 'Unspent mana and potions carry forward. A level gained during a depth refills mana for the next depth; within-depth kill order is not modelled. Shrines are ignored.',
+      },
+    ] : []),
+    ...(className !== 'warrior' ? [
+      {
+        id: 'ranged-approach-speed',
+        value: 'per-monster effective tiles/second, falling back to the while-walking upper bound',
+        source: 'bestiary data.derived.tilesPerSecond and data.derived.locomotion.tilesPerSecondWhileWalking',
+        detail: 'Each depth reports the source used for every monster. Free actions are complete attack/cast cycles during the travel time from the engagement distance to adjacency.',
+      },
+      {
+        id: 'ranged-monster-exchange',
+        value: 'a routine whose attackKinds includes missile holds range and counters with ranged to-hit',
+        source: 'bestiary data.derived.attackKinds and d1-combat-monster-ranged-to-hit-law',
+        detail: 'Arrow-only routines use arrow to-hit; other missile routines use magic-projectile to-hit. Their AI retreat/circle geometry and projectile travel time remain outside the duel.',
       },
     ] : []),
     {
@@ -735,22 +849,44 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
     const playerAttack: PlayerAttackMode = input.className === 'sorcerer'
       ? 'spell'
       : input.className === 'rogue' || build.weaponType === 'bow' ? 'ranged' : 'melee';
-    const selectedSpell = playerAttack === 'spell' ? sorcererSpellAttack(input.wrappers, depth) : undefined;
-    const playerCastSeconds = selectedSpell ? castTiming(classAnimations(classWrapper)).seconds : undefined;
+    const learnedSpells = playerAttack === 'spell' ? sorcererSpellAttacks(input.wrappers, depth) : [];
+    const playerCastSeconds = playerAttack === 'spell' ? castTiming(classAnimations(classWrapper)).seconds : undefined;
     const rows = pool.map((wrapper) => {
       const unique = wrapper.file === 'monsters/unique_monstdat.tsv';
       const base = unique ? ordinaryByType.get(wrapper.raw.type) : undefined;
       if (unique && !base) throw new Error(`${wrapper.entity.id} has no supplied monstdat base ${wrapper.raw.type}`);
       const monster = monsterProfile(wrapper, input.difficulty, base, input.gameMode);
-      const result = duel(build, coefficients, monster, {
+      const exchange = playerAttack === 'melee' ? undefined : monsterExchangeModel(wrapper);
+      const runDuel = (spell?: DuelSpellAttack) => duel(build, coefficients, monster, {
         gameMode: input.gameMode,
         playerAttack,
         engagementDistance: DEFAULT_RANGED_ENGAGEMENT_DISTANCE,
-        spell: selectedSpell,
+        monsterApproachTilesPerSecond: exchange?.approachTilesPerSecond,
+        spell,
         playerCastSeconds,
-        monsterAttack: 'melee',
+        monsterAttack: exchange?.monsterAttack ?? 'melee',
+        monsterDistance: DEFAULT_RANGED_ENGAGEMENT_DISTANCE,
         dungeonLevel: depth,
       });
+      const candidates = learnedSpells.map((spell, scheduleIndex) => ({
+        spell,
+        scheduleIndex,
+        result: runDuel(spell),
+      }));
+      candidates.sort((left, right) => {
+        const leftSeconds = left.result.expectedPlayerSecondsToKill ?? Infinity;
+        const rightSeconds = right.result.expectedPlayerSecondsToKill ?? Infinity;
+        if (leftSeconds !== rightSeconds) {
+          if (!Number.isFinite(leftSeconds)) return 1;
+          if (!Number.isFinite(rightSeconds)) return -1;
+          return leftSeconds - rightSeconds;
+        }
+        const leftMana = left.result.expectedManaSpentPerKill ?? Infinity;
+        const rightMana = right.result.expectedManaSpentPerKill ?? Infinity;
+        return leftMana - rightMana || left.scheduleIndex - right.scheduleIndex;
+      });
+      const selected = playerAttack === 'spell' ? candidates[0] : undefined;
+      const result = selected?.result ?? runDuel();
       if (result.expectedPlayerSecondsToKill === null) {
         throw new Error(`${classWrapper.entity.id} has no ${playerAttack} timing for ${build.weaponGraphic ?? build.weaponType}`);
       }
@@ -767,10 +903,10 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
         totalExperience,
         curve,
       });
-      const expectedDamageTaken = Math.max(0, result.expectedPlayerSwingsToKill - 1)
+      const expectedDamageTaken = result.expectedMonsterAttacksBeforeKill
         * result.expectedMonsterDamagePerSwing / FIXED_POINT;
       const conditionalBlockChance = gear === 'expected'
-        ? blockProbability(build, coefficients, monster, result.monsterHitChance, { kind: 'melee' }).conditionalBlockChance
+        ? result.monsterConditionalBlockChance
         : 0;
       return {
         wrapper,
@@ -781,6 +917,11 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
         conditionalBlockChance,
         expectedManaSpent: result.expectedManaSpentPerKill,
         manaPerCast: result.manaPerCast,
+        selectedSpell: Number.isFinite(result.expectedPlayerSecondsToKill) ? selected?.spell : undefined,
+        unbounded: !Number.isFinite(result.expectedPlayerSecondsToKill),
+        expectedPlayerActions: result.expectedPlayerSwingsToKill,
+        expectedFreeActions: result.approach?.expectedFreePlayerActions ?? 0,
+        approachSpeed: exchange?.speed,
       };
     });
     const divisor = rows.length;
@@ -793,11 +934,51 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
     const expectedDamage = ambientPopulation === 0
       ? 0
       : rows.reduce((sum, row) => sum + row.expectedDamageTaken, 0) / divisor * ambientPopulation;
-    const expectedManaSpent = selectedSpell
+    const expectedManaSpent = playerAttack === 'spell'
       ? ambientPopulation === 0
         ? 0
         : rows.reduce((sum, row) => sum + (row.expectedManaSpent ?? 0), 0) / divisor * ambientPopulation
       : undefined;
+    const boundedSpellRows = rows.filter((row) => row.selectedSpell !== undefined);
+    const spellGroups = new Map<string, DescentSpellUsage>();
+    for (const row of boundedSpellRows) {
+      const selected = row.selectedSpell!;
+      const spec = spellSpec(selected.spell);
+      if (!spec) throw new Error(`unknown vanilla spell ${selected.spell}`);
+      const key = `${selected.spell}:${selected.spellLevel}`;
+      const current = spellGroups.get(key);
+      const expectedKills = ambientPopulation / divisor;
+      spellGroups.set(key, current ? { ...current, expectedKills: current.expectedKills + expectedKills } : {
+        spell: selected.spell,
+        spellLevel: selected.spellLevel,
+        element: spec.element,
+        manaPerCast: row.manaPerCast!,
+        expectedKills,
+        killShare: 0,
+      });
+    }
+    const boundedKills = [...spellGroups.values()].reduce((sum, usage) => sum + usage.expectedKills, 0);
+    const spellsUsed = [...spellGroups.values()].map((usage) => ({
+      ...usage,
+      killShare: boundedKills > 0 ? usage.expectedKills / boundedKills : 0,
+    }));
+    const unboundedMonsters = rows.filter((row) => row.unbounded).map((row) => ({
+      monsterId: row.wrapper.entity.id,
+      monster: row.wrapper.entity.name,
+      reason: playerAttack === 'spell'
+        ? `No spell learned by depth ${depth} can damage this target.`
+        : 'The selected ranged attack has unbounded time-to-kill.',
+    }));
+    const totalPlayerActions = rows.reduce((sum, row) => sum + row.expectedPlayerActions, 0);
+    const totalFreeActions = rows.reduce((sum, row) => sum + row.expectedFreeActions, 0);
+    const approach = playerAttack === 'melee' ? undefined : {
+      engagementDistance: DEFAULT_RANGED_ENGAGEMENT_DISTANCE,
+      expectedFreeActionsPerKill: totalFreeActions / divisor,
+      freeShotShare: Number.isFinite(totalPlayerActions) && totalPlayerActions > 0
+        ? totalFreeActions / totalPlayerActions
+        : 0,
+      monsterSpeeds: rows.map((row) => row.approachSpeed!),
+    };
     const expectedBlockChance = rows.reduce((sum, row) => sum + row.conditionalBlockChance, 0) / divisor;
     const loot = gear === 'expected' ? expectedLootBudget({
       monsterProfiles: depthLootProfiles,
@@ -850,9 +1031,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
     }
     let mana: DescentManaExpectation | undefined;
     let spellAssumed: DescentSpellExpectation | undefined;
-    if (selectedSpell && expectedManaSpent !== undefined) {
-      const spec = spellSpec(selectedSpell.spell);
-      if (!spec) throw new Error(`unknown vanilla spell ${selectedSpell.spell}`);
+    if (playerAttack === 'spell' && expectedManaSpent !== undefined) {
       const manaPool = lifeAndMana(build, coefficients).maximumMana / FIXED_POINT;
       if (currentMana === null) currentMana = manaPool;
       const currentManaAtStart = currentMana;
@@ -899,18 +1078,21 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       currentMana = remaining.currentMana;
       carriedManaPotions = remaining.manaPotions;
       carriedFullManaPotions = remaining.fullManaPotions;
-      spellAssumed = {
-        spell: selectedSpell.spell,
-        spellLevel: selectedSpell.spellLevel,
-        element: spec.element,
-        manaPerCast: rows[0].manaPerCast!,
-      };
+      if (spellsUsed.length === 1) {
+        const [only] = spellsUsed;
+        spellAssumed = {
+          spell: only.spell,
+          spellLevel: only.spellLevel,
+          element: only.element,
+          manaPerCast: only.manaPerCast,
+        };
+      }
       if (sustain) sustain.sustainable = sustain.sustainable && mana.sustainable;
     }
     if (loot) goldForNextDepth = loot.expectedGold;
     totalExperience += expectedXpGained;
     heroLevel = levelAt(totalExperience, heroLevelBefore, curve);
-    if (selectedSpell && heroLevel > heroLevelBefore) currentMana = null;
+    if (playerAttack === 'spell' && heroLevel > heroLevelBefore) currentMana = null;
     const notes = [
       `Uniform expectation across ${pool.length} eligible ordinary type${pool.length === 1 ? '' : 's'}; ${ambientPopulation} sequential ambient kills.`,
       `${uniqueIds.length} eligible unique row${uniqueIds.length === 1 ? '' : 's'} excluded because actual roster and quest conditions are unresolved.`,
@@ -929,6 +1111,8 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       note: notes.join(' '),
       ...(playerAttack !== 'melee' ? { attackMode: playerAttack } : {}),
       ...(spellAssumed ? { spellAssumed } : {}),
+      ...(playerAttack === 'spell' ? { spellsUsed, unboundedMonsters } : {}),
+      ...(approach ? { approach } : {}),
       ...(mana ? { mana } : {}),
       ...(weaponAssumed ? { weaponAssumed } : {}),
       ...(armourAssumed && sustain ? { armourAssumed, expectedBlockChance, sustain } : {}),

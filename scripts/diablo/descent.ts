@@ -84,7 +84,10 @@ console.table(result.levels.map((level) => {
   return {
     depth: level.depth,
     mode,
-    spell: level.spellAssumed ? `${level.spellAssumed.spell} L${level.spellAssumed.spellLevel}` : null,
+    'spells used': level.spellsUsed?.map((spell) =>
+      `${spell.spell} L${spell.spellLevel} ${(spell.killShare * 100).toFixed(1)}%`).join(', ') ?? null,
+    unbounded: level.unboundedMonsters?.map((monster) => monster.monster).join(', ') || null,
+    'free shots %': level.approach == null ? null : Number((level.approach.freeShotShare * 100).toFixed(2)),
     weapon: mode === 'spell' ? null : level.weaponAssumed?.weaponId ?? result.weaponId ?? 'unarmed',
     pool: level.poolSize,
     kills: level.expectedMonstersKilled,
