@@ -78,6 +78,9 @@ describe('monster missile damage sources', () => {
       expect(source.refs.some((ref) => ref.includes('/Source/')), source.missile).toBe(true);
       expect(source.projectilesPerAttack, source.missile).toBeGreaterThan(0);
     }
+    expect(monsterMissileDamageSource('Arrow', 'SkeletonRanged').collision).toBe('ordinary-range');
+    expect(monsterMissileDamageSource('MagmaBall', 'Magma').collision).toBe('ordinary-fixed');
+    expect(monsterMissileDamageSource('Lightning', 'Bat').collision).toBe('already-shifted');
   });
 
   it('selects Counselor spells by intelligence and Bat attacks by subtype intelligence', () => {
@@ -117,13 +120,21 @@ describe('monster missile damage sources', () => {
     const familiar = resolveMonsterMissileDamage(
       monsterMissileDamageSource('Lightning', 'Bat'), profile, ordinaryMonster, undefined,
     );
-    expect(familiar.damage).toMatchObject({ min: 64, max: 10 * 64, mean: 5.5 * 64 });
+    expect(familiar.damage).toMatchObject({ min: 64, max: 64, mean: 64, expectedDenominator: 10 });
     expect(familiar.alreadyShifted).toBe(true);
+    expect(familiar.hitCount).toMatchObject({ kind: 'unresolved', modeledHits: 1 });
 
     const storm = resolveMonsterMissileDamage(
       monsterMissileDamageSource('ThinLightningControl', 'Storm'), profile, ordinaryMonster, undefined,
     );
-    expect(storm.damage.outcomes.map((outcome) => outcome.damage)).toEqual([4 * 64, 6 * 64, 8 * 64]);
+    expect(storm.damage).toMatchObject({ min: 64, max: 64, mean: 64, expectedDenominator: 3 });
+    const strongStorm = resolveMonsterMissileDamage(
+      monsterMissileDamageSource('ThinLightningControl', 'Storm'),
+      { ...profile, damage: { min: 40, max: 41 } },
+      ordinaryMonster,
+      undefined,
+    );
+    expect(strongStorm.damage.outcomes.map((outcome) => outcome.damage)).toEqual([80, 82]);
 
     const chargedBolt = resolveMonsterMissileDamage(
       monsterMissileDamageSource('ChargedBolt', 'Counselor'), profile, ordinaryMonster, undefined,
@@ -135,11 +146,34 @@ describe('monster missile damage sources', () => {
     const flash = resolveMonsterMissileDamage(
       monsterMissileDamageSource('FlashBottom', 'Counselor'), nightmareProfile, ordinaryMonster, undefined,
     );
-    expect(flash.damage.mean).toBe(2 * (10 + 15) * 64);
+    expect(flash.damage.mean).toBe(64);
 
     const apocalypse = resolveMonsterMissileDamage(
       monsterMissileDamageSource('DiabloApocalypse', 'Diablo'), profile, ordinaryMonster, undefined,
     );
     expect(apocalypse.damage.mean).toBe(40 * 64);
+  });
+
+  it('uses raw GetHit for shifted sources and shifted bounds for ordinary arrows', () => {
+    const familiar = resolveMonsterMissileDamage(
+      monsterMissileDamageSource('Lightning', 'Bat'), profile, ordinaryMonster, undefined, 64,
+    );
+    expect(familiar.damage).toMatchObject({ min: 65, max: 74, mean: 69.5 });
+
+    const arrow = resolveMonsterMissileDamage(
+      monsterMissileDamageSource('Arrow', 'SkeletonRanged'), profile, ordinaryMonster, undefined,
+    );
+    expect(arrow.damage).toMatchObject({ min: 2 * 64, max: 4 * 64, mean: 3 * 64, expectedDenominator: 129 });
+
+    const magma = resolveMonsterMissileDamage(
+      monsterMissileDamageSource('MagmaBall', 'Magma'), profile, ordinaryMonster, undefined,
+    );
+    expect(magma.damage).toMatchObject({ min: 2 * 64, max: 4 * 64, mean: 3 * 64, expectedDenominator: 3 });
+
+    const hork = resolveMonsterMissileDamage(
+      monsterMissileDamageSource('HorkSpawn', 'HorkDemon'), profile, ordinaryMonster, undefined,
+    );
+    expect(hork.damage).toMatchObject({ min: 0, max: 0, mean: 0 });
+    expect(hork.hitCount).toEqual({ kind: 'fixed', hits: 0 });
   });
 });

@@ -54,11 +54,18 @@ export interface DamageDistribution {
   outcomes: readonly { damage: number; weight: number }[];
 }
 export interface HitPointOutcome { hitPoints: number; weight: number }
+export interface MonsterHitPointRange extends IntegerRange {
+  /** Exact fixed-point support after game-mode and difficulty transforms. */
+  hitPointOutcomes: readonly HitPointOutcome[];
+}
+export interface ExpectedHitsCapped {
+  readonly kind: 'capped';
+  readonly maxHits: number;
+  readonly exactExpectedHits: number;
+}
 
 export const FIXED_POINT = 64;
 const UINT32_MAX = 2 ** 32 - 1;
-const EXPECTED_HITS_CAP = 100_000;
-const monsterHitPointOutcomes = new WeakMap<IntegerRange, readonly HitPointOutcome[]>();
 const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
 const div = (n: number, d: number) => Math.trunc(n / d);
 const monsterLevel = (m: MonsterProfile) => m.level + (m.difficultyAdjusted ? 0 : m.difficulty === 'nightmare' ? 15 : m.difficulty === 'hell' ? 30 : 0);
@@ -131,7 +138,7 @@ export function monsterHitPoints(
   difficulty: Difficulty,
   gameMode: GameMode = 'single',
   options: { hellfire?: boolean } = {},
-): IntegerRange {
+): MonsterHitPointRange {
   const modeValue = (value: number) => gameMode === 'single' ? Math.max(value / 2, 1) : value;
   const difficultyValue = (value: number) => {
     if (difficulty === 'normal') return value;
@@ -141,25 +148,26 @@ export function monsterHitPoints(
     return scale * value + bonus;
   };
   const result = { min: difficultyValue(modeValue(base.min)), max: difficultyValue(modeValue(base.max)) };
+  const weights = new Map<number, number>();
   if (Number.isInteger(base.min) && Number.isInteger(base.max) && base.min <= base.max) {
-    const weights = new Map<number, number>();
     for (let roll = base.min; roll <= base.max; roll++) {
       const hitPoints = difficultyValue(modeValue(roll)) * FIXED_POINT;
       weights.set(hitPoints, (weights.get(hitPoints) ?? 0) + 1);
     }
-    monsterHitPointOutcomes.set(result, [...weights].map(([hitPoints, weight]) => ({ hitPoints, weight })));
   }
-  return result;
+  return {
+    ...result,
+    hitPointOutcomes: [...weights].map(([hitPoints, weight]) => ({ hitPoints, weight })),
+  };
 }
 
-/** Exact fixed-point HP support retained by `monsterHitPoints`, with a uniform-range fallback for synthetic profiles. */
+/** Exact fixed-point HP support carried by `monsterHitPoints`, with a uniform-range fallback for synthetic profiles. */
 export function monsterHitPointDistribution(
-  bounds: IntegerRange,
+  bounds: IntegerRange | MonsterHitPointRange,
   difficulty: Difficulty,
   gameMode: GameMode = 'single',
 ): readonly HitPointOutcome[] {
-  const retained = monsterHitPointOutcomes.get(bounds);
-  if (retained) return retained;
+  if ('hitPointOutcomes' in bounds) return bounds.hitPointOutcomes;
   const unit = monsterHitPoints({ min: 2, max: 3 }, difficulty, gameMode);
   const step = Math.round((unit.max - unit.min) * FIXED_POINT);
   const min = Math.round(bounds.min * FIXED_POINT);
@@ -176,13 +184,22 @@ export function monsterHitPointDistribution(
 /**
  * Exact expectation from the tail-sum identity P(hits >= k) = P(damage after k - 1 hits < HP).
  * The equivalent remaining-HP recurrence terminates after at most HP/min-positive-damage progress hits;
- * zero-damage outcomes are solved algebraically. Infinity denotes no convergence within the safety cap.
+ * zero-damage outcomes are solved algebraically. Infinity denotes damage that can never make progress.
  */
 export function expectedHitsToKill(
   hitPoints: readonly HitPointOutcome[],
   damage: readonly { damage: number; weight: number }[],
-  maxHits = EXPECTED_HITS_CAP,
-): number {
+): number;
+export function expectedHitsToKill(
+  hitPoints: readonly HitPointOutcome[],
+  damage: readonly { damage: number; weight: number }[],
+  maxHits: number,
+): number | ExpectedHitsCapped;
+export function expectedHitsToKill(
+  hitPoints: readonly HitPointOutcome[],
+  damage: readonly { damage: number; weight: number }[],
+  maxHits?: number,
+): number | ExpectedHitsCapped {
   const hp = hitPoints.filter((outcome) => outcome.weight > 0 && outcome.hitPoints > 0);
   const hpWeight = hp.reduce((sum, outcome) => sum + outcome.weight, 0);
   if (hpWeight === 0) return 0;
@@ -198,8 +215,6 @@ export function expectedHitsToKill(
   const positiveWeight = positive.reduce((sum, [, weight]) => sum + weight, 0);
   if (totalDamageWeight === 0 || positiveWeight === 0) return Infinity;
   const maxHp = Math.max(...hp.map((outcome) => Math.ceil(outcome.hitPoints)));
-  const minDamage = Math.min(...positive.map(([dealt]) => dealt));
-  if (Math.ceil(maxHp / minDamage) > maxHits) return Infinity;
 
   const expected = new Float64Array(maxHp + 1);
   for (let remaining = 1; remaining <= maxHp; remaining++) {
@@ -208,7 +223,9 @@ export function expectedHitsToKill(
     expected[remaining] = (totalDamageWeight + continuation) / positiveWeight;
   }
   const result = hp.reduce((sum, outcome) => sum + expected[Math.ceil(outcome.hitPoints)] * outcome.weight, 0) / hpWeight;
-  return result <= maxHits ? result : Infinity;
+  return maxHits !== undefined && result > maxHits
+    ? { kind: 'capped', maxHits, exactExpectedHits: result }
+    : result;
 }
 
 function distribution(entries: readonly (readonly [damage: number, weight: number])[]): DamageDistribution {
@@ -299,15 +316,13 @@ export function playerRangedDamage(p: PlayerBuild, m: MonsterProfile): DamageDis
 export function monsterDamageByDifficulty(m: MonsterProfile, input: number | { playerGetHit?: number; family?: 'ordinary' | 'magma' | 'storm'; baseBounds?: IntegerRange; attack?: 'melee' | 'projectile'; trap?: boolean } = 0): { bounds: IntegerRange; damage: DamageDistribution } {
   const playerGetHit = typeof input === 'number' ? input : input.playerGetHit ?? 0;
   const family = typeof input === 'number' ? 'ordinary' : input.family ?? 'ordinary';
-  const attack = typeof input === 'number' ? 'melee' : input.attack ?? 'melee';
   const baseBounds = typeof input === 'number' ? m.damage : input.baseBounds ?? m.damage;
   const transform = (bound: number) => m.difficultyAdjusted ? bound : m.difficulty === 'nightmare' ? 2 * (bound + 2) : m.difficulty === 'hell' ? 4 * bound + 6 : bound;
   const adjustment = family === 'magma' ? -2 : family === 'storm' ? 4 : 0;
   const bounds = { min: transform(baseBounds.min) + adjustment, max: transform(baseBounds.max) + adjustment };
   const entries: Array<readonly [number, number]> = [];
-  const scale = attack === 'melee' ? FIXED_POINT : 1;
-  for (let roll = bounds.min * scale; roll <= bounds.max * scale; roll++) {
-    let damage = attack === 'projectile' ? roll * FIXED_POINT : roll;
+  for (let roll = bounds.min * FIXED_POINT; roll <= bounds.max * FIXED_POINT; roll++) {
+    let damage = roll;
     if (typeof input !== 'number' && input.trap) damage = Math.floor(damage / 2);
     entries.push([Math.max(damage + playerGetHit * FIXED_POINT, FIXED_POINT), 1]);
   }
@@ -360,10 +375,21 @@ export function lifeAndMana(p: PlayerBuild, c: ClassCoefficients, items: PoolOpt
   const manaItems = (items.flatItemMana ?? 0) + Math.floor((items.bonusMagic ?? 0) * c.manaPerItemMagic / FIXED_POINT) * FIXED_POINT;
   const maximumLife = clamp(baseLife + lifeItems, FIXED_POINT, 2000 * FIXED_POINT);
   const maximumMana = clamp(baseMana + manaItems, 0, 2000 * FIXED_POINT);
+  const levelUpBaseLife = baseLife + c.lifePerLevel;
+  const levelUpBaseMana = baseMana + c.manaPerLevel;
+  const levelUpMaximumLife = clamp(levelUpBaseLife + lifeItems, FIXED_POINT, 2000 * FIXED_POINT);
+  const levelUpMaximumMana = clamp(levelUpBaseMana + manaItems, 0, 2000 * FIXED_POINT);
   return {
     baseLife, baseMana, maximumLife, maximumMana,
     currentLife: Math.min(baseLife + lifeItems, maximumLife), currentMana: Math.min(baseMana + manaItems, maximumMana),
-    afterLevelUp: { baseLife: baseLife + c.lifePerLevel, baseMana: baseMana + c.manaPerLevel, maximumLife: maximumLife + c.lifePerLevel, maximumMana: maximumMana + c.manaPerLevel, currentLife: maximumLife + c.lifePerLevel, currentMana: items.noMana ? Math.min(baseMana + manaItems, maximumMana) : maximumMana + c.manaPerLevel },
+    afterLevelUp: {
+      baseLife: levelUpBaseLife,
+      baseMana: levelUpBaseMana,
+      maximumLife: levelUpMaximumLife,
+      maximumMana: levelUpMaximumMana,
+      currentLife: levelUpMaximumLife,
+      currentMana: items.noMana ? Math.min(baseMana + manaItems, levelUpMaximumMana) : levelUpMaximumMana,
+    },
   };
 }
 

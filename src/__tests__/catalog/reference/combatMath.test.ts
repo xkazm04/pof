@@ -14,6 +14,7 @@ import {
   hitRecoveryTiming,
   lifeAndMana,
   monsterDamageByDifficulty,
+  monsterHitPointDistribution,
   monsterHitPoints,
   monsterMeleeHitChance,
   monsterRangedHitChance,
@@ -133,14 +134,22 @@ describe('Diablo I damage distributions', () => {
   it('applies monster HP mode and difficulty scaling in engine order', () => {
     const base = { min: 1, max: 5 };
     // Multiplayer keeps 1..5. Single-player halves to .5..2.5 fixed-point HP, then floors only .5 to 1.
-    expect(monsterHitPoints(base, 'normal', 'multi')).toEqual({ min: 1, max: 5 });
-    expect(monsterHitPoints(base, 'normal', 'single')).toEqual({ min: 1, max: 2.5 });
+    expect(monsterHitPoints(base, 'normal', 'multi')).toMatchObject({ min: 1, max: 5 });
+    expect(monsterHitPoints(base, 'normal', 'single')).toMatchObject({ min: 1, max: 2.5 });
     // Nightmare is 3x then +100: SP 103..107.5, MP 103..115.
-    expect(monsterHitPoints(base, 'nightmare', 'single')).toEqual({ min: 103, max: 107.5 });
-    expect(monsterHitPoints(base, 'nightmare', 'multi')).toEqual({ min: 103, max: 115 });
+    expect(monsterHitPoints(base, 'nightmare', 'single')).toMatchObject({ min: 103, max: 107.5 });
+    expect(monsterHitPoints(base, 'nightmare', 'multi')).toMatchObject({ min: 103, max: 115 });
     // Hell is 4x then +200: SP 204..210, MP 204..220.
-    expect(monsterHitPoints(base, 'hell', 'single')).toEqual({ min: 204, max: 210 });
-    expect(monsterHitPoints(base, 'hell', 'multi')).toEqual({ min: 204, max: 220 });
+    expect(monsterHitPoints(base, 'hell', 'single')).toMatchObject({ min: 204, max: 210 });
+    expect(monsterHitPoints(base, 'hell', 'multi')).toMatchObject({ min: 204, max: 220 });
+  });
+
+  it('carries merged monster HP weights across equivalent copied bounds', () => {
+    const copied = { ...monsterHitPoints({ min: 1, max: 3 }, 'normal', 'single') };
+    expect(monsterHitPointDistribution(copied, 'normal', 'single')).toEqual([
+      { hitPoints: 64, weight: 2 },
+      { hitPoints: 96, weight: 1 },
+    ]);
   });
 
   it('gates the data-driven critical and applies triple demon damage', () => {
@@ -174,9 +183,9 @@ describe('Diablo I damage distributions', () => {
     expect(monsterDamageByDifficulty({ ...MONSTER, difficulty: 'hell' }).bounds).toEqual({ min: 14, max: 18 });
     expect(monsterDamageByDifficulty(MONSTER, { family: 'magma' }).bounds).toEqual({ min: 0, max: 1 });
     expect(monsterDamageByDifficulty(MONSTER, { family: 'storm' }).bounds).toEqual({ min: 6, max: 7 });
-    // Projectile initialization rolls whole 2,3 points, so its exact support is {128,192}, mean 160.
+    // Ordinary collision shifts both bounds first and rolls every internal integer from 128 through 192.
     expect(monsterDamageByDifficulty(MONSTER, { attack: 'projectile' }).damage)
-      .toMatchObject({ min: 128, max: 192, mean: 160, expectedDenominator: 2 });
+      .toMatchObject({ min: 128, max: 192, mean: 160, expectedDenominator: 65 });
     // A synthetic special 1..2 range transforms on Nightmare to 6..8 before its projectile roll.
     expect(monsterDamageByDifficulty({ ...MONSTER, difficulty: 'nightmare' }, { baseBounds: { min: 1, max: 2 }, attack: 'projectile' }).bounds)
       .toEqual({ min: 6, max: 8 });
@@ -236,6 +245,8 @@ describe('Diablo I defence, recovery and pools', () => {
     const low = { ...COEFFICIENTS, lifeAdjustment: -9999, lifePerLevel: 0, lifePerBaseVitality: 0, manaAdjustment: -9999, manaPerLevel: 0, manaPerBaseMagic: 0 };
     expect(lifeAndMana(BUILD, low)).toMatchObject({ maximumLife: 64, maximumMana: 0 });
     expect(lifeAndMana(BUILD, COEFFICIENTS, { flatItemLife: 999999, flatItemMana: 999999 })).toMatchObject({ maximumLife: 128000, maximumMana: 128000 });
+    expect(lifeAndMana(BUILD, COEFFICIENTS, { flatItemLife: 999999, flatItemMana: 999999 }).afterLevelUp)
+      .toMatchObject({ maximumLife: 128000, maximumMana: 128000, currentLife: 128000, currentMana: 128000 });
   });
 });
 
@@ -273,6 +284,14 @@ describe('duel and canon contract', () => {
     ])).toBe(2.25);
     // Immunity is a zero-damage distribution, so its tail probability never converges to zero.
     expect(expectedHitsToKill([{ hitPoints: 10, weight: 1 }], [{ damage: 0, weight: 1 }])).toBe(Infinity);
+    expect(expectedHitsToKill([{ hitPoints: 100001, weight: 1 }], [{ damage: 1, weight: 1 }])).toBe(100001);
+    expect(expectedHitsToKill([{ hitPoints: 100001, weight: 1 }], [{ damage: 1, weight: 1 }], 100000))
+      .toEqual({ kind: 'capped', maxHits: 100000, exactExpectedHits: 100001 });
+  });
+
+  it('uses ordinary projectile fractional support in exact kill expectations', () => {
+    const projectile = monsterDamageByDifficulty({ ...MONSTER, damage: { min: 1, max: 2 } }, { attack: 'projectile' });
+    expect(expectedHitsToKill([{ hitPoints: 128, weight: 1 }], projectile.damage.outcomes)).toBeCloseTo(129 / 65, 12);
   });
 
   it('composes the laws end to end', () => {

@@ -27,8 +27,11 @@ export interface MonsterMissileDamageSource {
   readonly routines: readonly D1AiRoutineId[];
   readonly formula: MonsterMissileDamageFormula;
   readonly projectilesPerAttack: number;
-  readonly collision: 'ordinary' | 'already-shifted' | 'monster-attack';
-  readonly modeledHitsPerExchange: number;
+  /** Representation consumed by the collision processor named in refs. */
+  readonly collision: 'ordinary-range' | 'ordinary-fixed' | 'already-shifted' | 'monster-attack' | 'none';
+  readonly hitCount:
+    | { readonly kind: 'fixed'; readonly hits: number }
+    | { readonly kind: 'unresolved'; readonly modeledHits: number; readonly reason: string };
   readonly omittedEffects: readonly string[];
   readonly elementGap?: string;
   readonly refs: readonly string[];
@@ -70,6 +73,7 @@ export interface ResolvedMonsterMissileDamage {
   readonly damage: DamageDistribution;
   readonly projectilesPerAttack: number;
   readonly alreadyShifted: boolean;
+  readonly hitCount: MonsterMissileDamageSource['hitCount'];
 }
 
 export const MONSTER_MISSILE_DAMAGE_SOURCES: readonly MonsterMissileDamageSource[] =
@@ -162,10 +166,25 @@ function distribution(outcomes: readonly { damage: number; weight: number }[]): 
   };
 }
 
-const fixedDamage = (min: number, max: number, playerGetHit: number): DamageDistribution => {
+const collisionDamage = (
+  min: number,
+  max: number,
+  playerGetHit: number,
+  collision: MonsterMissileDamageSource['collision'],
+  multiplier = 1,
+): DamageDistribution => {
   const outcomes: { damage: number; weight: number }[] = [];
-  for (let roll = min; roll <= max; roll++) {
-    outcomes.push({ damage: Math.max(roll * FIXED_POINT + playerGetHit * FIXED_POINT, FIXED_POINT), weight: 1 });
+  if (collision === 'ordinary-range' || collision === 'monster-attack') {
+    for (let roll = min * multiplier * FIXED_POINT; roll <= max * multiplier * FIXED_POINT; roll++) {
+      outcomes.push({ damage: Math.max(roll + playerGetHit * FIXED_POINT, FIXED_POINT), weight: 1 });
+    }
+  } else {
+    for (let roll = min; roll <= max; roll++) {
+      const damage = collision === 'already-shifted'
+        ? roll * multiplier + playerGetHit
+        : roll * multiplier * FIXED_POINT + playerGetHit * FIXED_POINT;
+      outcomes.push({ damage: Math.max(damage, FIXED_POINT), weight: 1 });
+    }
   }
   return distribution(outcomes);
 };
@@ -195,15 +214,15 @@ export function resolveMonsterMissileDamage(
 ): ResolvedMonsterMissileDamage {
   const formula = source.formula;
   let damage: DamageDistribution;
-  if (formula.kind === 'none') {
+  if (formula.kind === 'none' || source.collision === 'none') {
     damage = distribution([{ damage: 0, weight: 1 }]);
   } else if (formula.kind === 'fixed') {
-    damage = fixedDamage(formula.value, formula.value, playerGetHit);
+    damage = collisionDamage(formula.value, formula.value, playerGetHit, source.collision);
   } else if (formula.kind === 'fixed-range') {
-    damage = fixedDamage(formula.min, formula.max, playerGetHit);
+    damage = collisionDamage(formula.min, formula.max, playerGetHit, source.collision);
   } else if (formula.kind === 'monster-level') {
     const value = adjustedMonsterLevel(monster) * formula.multiplier;
-    damage = fixedDamage(value, value, playerGetHit);
+    damage = collisionDamage(value, value, playerGetHit, source.collision);
   } else {
     const unique = monsterWrapper.file === 'monsters/unique_monstdat.tsv';
     const baseBounds = formula.kind === 'monster-special' && !unique
@@ -212,22 +231,21 @@ export function resolveMonsterMissileDamage(
           max: stat(baseWrapper ?? monsterWrapper, 'Special Damage Max'),
         }
       : monster.damage;
-    const ordinary = monsterDamageByDifficulty(monster, {
+    const transformed = monsterDamageByDifficulty(monster, {
       baseBounds,
-      attack: formula.kind === 'monster-special' ? 'melee' : 'projectile',
-    }).damage;
+      playerGetHit,
+      attack: source.collision === 'monster-attack' ? 'melee' : 'projectile',
+    });
     const multiplier = formula.kind === 'monster-normal' ? formula.multiplier ?? 1 : 1;
-    damage = multiplier === 1 && playerGetHit === 0
-      ? ordinary
-      : distribution(ordinary.outcomes.map((outcome) => ({
-          damage: Math.max(outcome.damage * multiplier + playerGetHit * FIXED_POINT, FIXED_POINT),
-          weight: outcome.weight,
-        })));
+    damage = multiplier === 1 && (source.collision === 'ordinary-range' || source.collision === 'monster-attack')
+      ? transformed.damage
+      : collisionDamage(transformed.bounds.min, transformed.bounds.max, playerGetHit, source.collision, multiplier);
   }
   return {
     source,
     damage,
     projectilesPerAttack: source.projectilesPerAttack,
     alreadyShifted: source.collision === 'already-shifted',
+    hitCount: source.hitCount,
   };
 }

@@ -109,20 +109,20 @@ describe('combat wrapper adapters', () => {
         { label: 'Damage Min', value: '2' }, { label: 'Damage Max', value: '5' },
       ],
     }, { resistance: 'IMMUNE_MAGIC,RESIST_FIRE', resistanceHell: 'RESIST_LIGHTNING,IMMUNE_FIRE' }, 'monsters/monstdat.tsv');
-    expect(monsterProfile(monster, 'normal', 'multi')).toEqual({
+    expect(monsterProfile(monster, 'normal', 'multi')).toMatchObject({
       level: 3, hitPoints: { min: 20, max: 30 }, armourClass: 7, toHit: 17,
       damage: { min: 2, max: 5 }, monsterClass: 'undead',
       resist: { fire: true }, immune: { magic: true }, difficulty: 'normal', gameMode: 'multi',
     });
     // SP Normal halves 20..30 to 10..15; Nightmare is 3x then +100; Hell is 4x then +200.
-    expect(monsterProfile(monster, 'normal').hitPoints).toEqual({ min: 10, max: 15 });
-    expect(monsterProfile(monster, 'nightmare').hitPoints).toEqual({ min: 130, max: 145 });
-    expect(monsterProfile(monster, 'hell').hitPoints).toEqual({ min: 240, max: 260 });
+    expect(monsterProfile(monster, 'normal').hitPoints).toMatchObject({ min: 10, max: 15 });
+    expect(monsterProfile(monster, 'nightmare').hitPoints).toMatchObject({ min: 130, max: 145 });
+    expect(monsterProfile(monster, 'hell').hitPoints).toMatchObject({ min: 240, max: 260 });
     expect(monsterProfile(monster, 'nightmare')).toMatchObject({ resist: { fire: true }, immune: { magic: true } });
     expect(monsterProfile(monster, 'hell')).toMatchObject({ resist: { lightning: true }, immune: { fire: true } });
     // Multiplayer skips halving before applying the same vanilla bonuses.
-    expect(monsterProfile(monster, 'nightmare', 'multi').hitPoints).toEqual({ min: 160, max: 190 });
-    expect(monsterProfile(monster, 'hell', 'multi').hitPoints).toEqual({ min: 280, max: 320 });
+    expect(monsterProfile(monster, 'nightmare', 'multi').hitPoints).toMatchObject({ min: 160, max: 190 });
+    expect(monsterProfile(monster, 'hell', 'multi').hitPoints).toMatchObject({ min: 280, max: 320 });
   });
 
   it('resolves a unique monster over its base wrapper', () => {
@@ -138,12 +138,12 @@ describe('combat wrapper adapters', () => {
       type: 'MT_SYNTH', level: '0', maxHp: '150', ai: 'SyntheticAI', intelligence: '2',
       minDamage: '5', maxDamage: '9', resistance: 'IMMUNE_FIRE', customToHit: '0', customArmorClass: '0',
     }, 'monsters/unique_monstdat.tsv');
-    expect(monsterProfile(unique, 'normal', base, 'multi')).toEqual({
+    expect(monsterProfile(unique, 'normal', base, 'multi')).toMatchObject({
       level: 7, hitPoints: { min: 150, max: 150 }, armourClass: 8, toHit: 19,
       damage: { min: 5, max: 9 }, monsterClass: 'demon', resist: {}, immune: { fire: true },
       difficulty: 'normal', gameMode: 'multi', difficultyAdjusted: true,
     });
-    expect(monsterProfile(unique, 'normal', base).hitPoints).toEqual({ min: 75, max: 75 });
+    expect(monsterProfile(unique, 'normal', base).hitPoints).toMatchObject({ min: 75, max: 75 });
     expect(monsterProfile(unique, 'hell', base)).toMatchObject({ resist: {}, immune: { fire: true } });
   });
 

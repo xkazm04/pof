@@ -21,7 +21,7 @@ describe('MONSTER_DERIVE', () => {
       monster({ stats }),
       { resistance: 'IMMUNE_MAGIC,RESIST_FIRE', resistanceHell: 'IMMUNE_FIRE,RESIST_LIGHTNING' },
     ) as { byDifficulty: Record<string, unknown> };
-    expect(d.byDifficulty).toEqual({
+    expect(d.byDifficulty).toMatchObject({
       normal: {
         level: 4, hitPoints: { min: 10, max: 15 }, armourClass: 13, damage: { min: 7, max: 12 }, toHit: 27,
         resistances: { MAGIC: 100, FIRE: 75, LIGHTNING: 0 }, xp: 50,

@@ -108,9 +108,9 @@ describe('effectiveUnique', () => {
     expect(effective.level).toEqual({ value: 9, source: 'engine rule' });
     expect(effective.toHit).toEqual({ value: 27, source: 'base' });
     expect(effective.armorClass).toEqual({ value: 13, source: 'base' });
-    expect(effective.hitPoints).toEqual({ value: { min: 201, max: 201 }, source: 'unique override' });
+    expect(effective.hitPoints).toMatchObject({ value: { min: 201, max: 201 }, source: 'unique override' });
     expect(effectiveUnique(unique(), base, 'normal').hitPoints.value)
-      .toEqual({ min: 100.5, max: 100.5 });
+      .toMatchObject({ min: 100.5, max: 100.5 });
     expect(effective.resistances.value).toEqual(['IMMUNE_MAGIC', 'RESIST_LIGHTNING']);
   });
 
@@ -120,11 +120,11 @@ describe('effectiveUnique', () => {
     expect(effective.toHit).toEqual({ value: 129, source: 'unique override' });
     expect(effective.armorClass).toEqual({ value: 71, source: 'unique override' });
     expect(effective.damage.value).toEqual({ min: 18, max: 28 });
-    expect(effective.hitPoints.value).toEqual({ min: 703, max: 703 });
+    expect(effective.hitPoints.value).toMatchObject({ min: 703, max: 703 });
     expect(effectiveUnique(unique(), base, 'nightmare').hitPoints.value)
-      .toEqual({ min: 401.5, max: 401.5 });
+      .toMatchObject({ min: 401.5, max: 401.5 });
     expect(effectiveUnique(unique(), base, 'nightmare', { gameMode: 'single', hellfire: true }).hitPoints.value)
-      .toEqual({ min: 351.5, max: 351.5 });
+      .toMatchObject({ min: 351.5, max: 351.5 });
     expect(effective.ai).toEqual({ value: 'SyntheticAI', source: 'unique override' });
     expect(effective.intelligence).toEqual({ value: 3, source: 'unique override' });
     expect(effectiveUnique(unique(), base, 'hell').resistances)
