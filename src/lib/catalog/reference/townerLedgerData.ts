@@ -296,10 +296,6 @@ export const TOWNER_LEDGER_DATA: readonly TownerLedgerData[] = [
         speechLineIds: [], consumesTurn: true, refs: [towners('493-497')],
       },
       {
-        quest: null, condition: 'no cow effect is playing; incremented CowClicks is not 4 and is below 8', effect: 'play SfxID::Cow1 at the cow',
-        speechLineIds: [], consumesTurn: true, refs: [towners('498-520')],
-      },
-      {
         quest: null, condition: 'no cow effect is playing; incremented CowClicks == 4', effect: 'play SfxID::Cow2; shareware resets CowClicks to 0',
         speechLineIds: [], consumesTurn: true, refs: [towners('498-506'), towners('520-521')],
       },
@@ -307,6 +303,10 @@ export const TOWNER_LEDGER_DATA: readonly TownerLedgerData[] = [
         quest: null, condition: 'no cow effect is playing; CowClicks >= 8; !gbIsSpawn', effect: 'set CowClicks=4; rotate CowMsg through three class-resolved HeroSpeech ids; play SfxID::Cow1',
         speechLineIds: ['HeroSpeech::YepThatsACowAlright', 'HeroSpeech::ImNotThirsty', 'HeroSpeech::ImNoMilkmaid'],
         consumesTurn: true, refs: [towners('498-521')],
+      },
+      {
+        quest: null, condition: 'no cow effect is playing; incremented CowClicks is not 4 and is below 8', effect: 'play SfxID::Cow1 at the cow',
+        speechLineIds: [], consumesTurn: true, refs: [towners('498-520')],
       },
     ],
     services: [], greetingRules: [], firstVisitBehavior: null,

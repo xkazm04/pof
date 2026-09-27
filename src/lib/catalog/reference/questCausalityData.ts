@@ -107,6 +107,12 @@ export const D1_QUEST_CAUSALITY_DATA: Record<QuestId, QuestCausalityLedgerData> 
         ref('towners.cpp', '352-369'),
       ),
       transition(
+        'witch-reminds-mushroom', 'talk-to-towner', 'TOWN_WITCH',
+        '_qactive==QUEST_ACTIVE; QS_TOMEGIVEN <= _qvar1 < QS_MUSHGIVEN; IDI_MUSHROOM not removed; _qmsg!=TEXT_MUSH9',
+        'Set _qmsg=TEXT_MUSH9 (sent as a quest update); start TEXT_MUSH9. Fires once: later talks fall through while _qmsg stays TEXT_MUSH9.',
+        ref('towners.cpp', '363-368'),
+      ),
+      transition(
         'spawn-brain', 'monster-killed', 'eligible ordinary monster',
         '_qactive==QUEST_ACTIVE; _qvar1==QS_MUSHGIVEN; ordinary drop path executes',
         'Set _qvar1=QS_BRAINSPAWNED; replace the single-player normal drop with IDI_BRAIN.',

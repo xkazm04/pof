@@ -74,11 +74,8 @@ describe('talk ledger data', () => {
     });
   });
 
-  it('reports only the two independently observed older-ledger disagreements', () => {
-    expect(TALK_LEDGER_FINDINGS.map((finding) => [finding.dataset, finding.subject, finding.field])).toEqual([
-      ['questCausalityData', 'd1-Q_MUSHROOM', 'mushroom-reminder'],
-      ['townerLedgerData', 'TOWN_COW', 'preMenuHandlers order'],
-    ]);
+  it('agrees with the older ledgers once the W88 findings were corrected (cow branch order, Adria mushroom reminder)', () => {
+    expect(TALK_LEDGER_FINDINGS).toEqual([]);
     expect(DIALOG_TREE_TALK_LAYER_GAPS.map((gap) => gap.ledgerFields).flat()).toContain('gossip.selectionRule');
   });
 });
