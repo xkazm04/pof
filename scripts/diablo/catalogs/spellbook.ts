@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseTsv } from '@/lib/catalog/ingest/tsv';
+import { withSpellCastLedgers } from '@/lib/catalog/reference/spellCastLedger';
 import { withSpellMechanics } from '@/lib/catalog/reference/spellMechanics';
 import { referenceCaster } from '@/lib/catalog/reference/spellLaw';
 import { listWrappers } from '@/lib/catalog/reference/wrappers-db';
@@ -9,9 +10,9 @@ import type { CatalogHandler } from './types';
 
 export const spellbookHandler: CatalogHandler = {
   catalogId: 'spellbook',
-  pool: (_db, _sourceId, wrappers) => withSpellMechanics(
+  pool: (_db, _sourceId, wrappers) => withSpellCastLedgers(withSpellMechanics(
     wrappers.filter((wrapper) => wrapper.catalogId === 'spellbook'),
-  ),
+  )),
   seed: (ctx) => {
     let caster;
     if (ctx.root) {
