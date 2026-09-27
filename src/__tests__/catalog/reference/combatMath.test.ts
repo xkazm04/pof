@@ -326,6 +326,41 @@ describe('duel and canon contract', () => {
     );
   });
 
+  it('applies the supplied monster element and independent projectile count', () => {
+    const build = {
+      ...BUILD,
+      hasShield: false,
+      blockEnabled: false,
+      resistances: { magic: 0, fire: 50, lightning: 0 },
+    };
+    const monsterDamage = {
+      min: 10 * 64,
+      max: 10 * 64,
+      mean: 10 * 64,
+      expectedNumerator: 10 * 64,
+      expectedDenominator: 1,
+      outcomes: [{ damage: 10 * 64, weight: 1 }],
+    };
+    const common = {
+      playerAttack: 'melee' as const,
+      monsterAttack: 'ranged-magic' as const,
+      monsterDamage,
+      dungeonLevel: 1,
+    };
+    const physical = duel(build, COEFFICIENTS, MONSTER, { ...common, monsterElement: 'physical' });
+    const fire = duel(build, COEFFICIENTS, MONSTER, { ...common, monsterElement: 'fire' });
+    const three = duel(build, COEFFICIENTS, MONSTER, {
+      ...common,
+      monsterElement: 'fire',
+      monsterProjectilesPerAttack: 3,
+    });
+
+    expect(fire.monsterElement).toBe('fire');
+    expect(fire.expectedMonsterDamagePerHit).toBe(physical.expectedMonsterDamagePerHit / 2);
+    expect(three.monsterProjectilesPerAttack).toBe(3);
+    expect(three.expectedMonsterDamagePerSwing).toBe(fire.expectedMonsterDamagePerSwing * 3);
+  });
+
   it('never reports fewer than one swing for a one-hit-kill damage distribution', () => {
     const oneShot = duel({ ...BUILD, weaponDamage: { min: 100, max: 100 } }, { ...COEFFICIENTS, classFlags: [] }, {
       ...MONSTER,

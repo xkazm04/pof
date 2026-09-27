@@ -16,6 +16,7 @@ import {
   playerSpellHitChance,
   FIXED_POINT,
   type ClassCoefficients,
+  type DamageDistribution,
   type Element,
   type GameMode,
   type MonsterProfile,
@@ -58,6 +59,12 @@ export interface DuelOptions {
   /** Enables PM_GOTHIT reporting using the caller's class-animation recovery duration. */
   playerHitRecoverySeconds?: number;
   monsterElement?: Element;
+  /** Per-projectile source override for monster missiles and charge impacts. */
+  monsterDamage?: DamageDistribution;
+  /** Independently resolved projectiles emitted by one monster attack animation. */
+  monsterProjectilesPerAttack?: number;
+  /** PlayerMHit's shifted collision path disables vanilla blocking. */
+  monsterDamageAlreadyShifted?: boolean;
 }
 
 /**
@@ -77,6 +84,10 @@ export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monste
   if (opts.playerHitRecoverySeconds !== undefined
     && (!Number.isFinite(opts.playerHitRecoverySeconds) || opts.playerHitRecoverySeconds < 0)) {
     throw new Error(`playerHitRecoverySeconds must be a non-negative finite number (got ${opts.playerHitRecoverySeconds})`);
+  }
+  const monsterProjectilesPerAttack = opts.monsterProjectilesPerAttack ?? 1;
+  if (!Number.isInteger(monsterProjectilesPerAttack) || monsterProjectilesPerAttack < 1) {
+    throw new Error(`monsterProjectilesPerAttack must be a positive integer (got ${monsterProjectilesPerAttack})`);
   }
   const selectedSpell = opts.playerAttack === 'spell' ? opts.spell : undefined;
   if (opts.playerAttack === 'spell' && !selectedSpell) throw new Error('spell attack mode requires spell inputs');
@@ -155,7 +166,7 @@ export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monste
       dungeonLevel: opts.dungeonLevel,
       projectile: opts.monsterAttack === 'ranged-arrow' ? 'arrow' : 'magic',
     });
-  const monsterDamage = monsterDamageByDifficulty(monster, {
+  const monsterDamage = opts.monsterDamage ?? monsterDamageByDifficulty(monster, {
     playerGetHit: opts.playerGetHit,
     attack: opts.monsterAttack === 'melee' ? 'melee' : 'projectile',
   }).damage;
@@ -165,13 +176,14 @@ export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monste
     kind: opts.monsterAttack === 'melee' ? 'melee' : 'missile',
     playerMode: opts.playerMode,
     resistance,
+    alreadyShifted: opts.monsterDamageAlreadyShifted,
   });
   const resistedDamageMean = monsterDamage.outcomes.reduce(
     (sum, outcome) => sum + playerResistance(build, outcome.damage, monsterElement).damage * outcome.weight,
     0,
   ) / monsterDamage.expectedDenominator;
   const expectedMonsterDamagePerHit = resistedDamageMean * (1 - block.conditionalBlockChance);
-  const expectedMonsterDamagePerSwing = resistedDamageMean * block.damagingHitChance;
+  const expectedMonsterDamagePerSwing = resistedDamageMean * block.damagingHitChance * monsterProjectilesPerAttack;
   const playerLife = lifeAndMana(build, coefficients).maximumLife;
   const monsterDamageAfterDefence = [
     ...monsterDamage.outcomes.map((outcome) => ({
@@ -194,7 +206,8 @@ export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monste
     const damage = playerResistance(build, outcome.damage, monsterElement).damage;
     return sum + (hitRecovery(build, monster, damage).player.starts ? outcome.weight : 0);
   }, 0) / monsterDamage.expectedDenominator;
-  const gotHitChancePerMonsterAttack = block.damagingHitChance * qualifyingDamageChance;
+  const gotHitChancePerProjectile = block.damagingHitChance * qualifyingDamageChance;
+  const gotHitChancePerMonsterAttack = 1 - (1 - gotHitChancePerProjectile) ** monsterProjectilesPerAttack;
   const expectedGotHitInterruptionsBeforeKill = gotHitChancePerMonsterAttack === 0
     ? 0
     : expectedMonsterAttacksBeforeKill * gotHitChancePerMonsterAttack;
@@ -213,12 +226,16 @@ export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monste
     playerSwingSeconds,
     expectedPlayerSecondsToKill,
     monsterHitChance,
+    monsterElement,
+    monsterProjectilesPerAttack,
     expectedMonsterDamagePerHit,
     expectedMonsterHitsToKillPlayer,
     expectedMonsterDamagePerSwing,
     monsterConditionalBlockChance: block.conditionalBlockChance,
     expectedMonsterAttacksBeforeKill,
-    expectedMonsterSwingsToKillPlayer: monsterHitChance > 0 ? expectedMonsterHitsToKillPlayer / monsterHitChance : Infinity,
+    expectedMonsterSwingsToKillPlayer: monsterHitChance > 0
+      ? expectedMonsterHitsToKillPlayer / (monsterHitChance * monsterProjectilesPerAttack)
+      : Infinity,
     ...(opts.playerHitRecoverySeconds !== undefined ? {
       gotHit: {
         chancePerMonsterAttack: gotHitChancePerMonsterAttack,

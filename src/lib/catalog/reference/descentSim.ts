@@ -16,6 +16,8 @@ import {
   hitRecoveryTiming,
   lifeAndMana,
   type Difficulty,
+  type DamageDistribution,
+  type Element,
   type ExperienceCurveLaw,
   type GameMode,
   type HitRecoveryTier,
@@ -48,6 +50,12 @@ import {
   requestedUniquePackSize,
 } from '@/lib/catalog/reference/packMath';
 import { spellSpec } from '@/lib/catalog/reference/spellSpecs';
+import {
+  monsterMissileDamageSource,
+  monsterMissileMetadata,
+  resolveMonsterMissileDamage,
+  selectMonsterMissileAttack,
+} from '@/lib/catalog/reference/monsterMissileDamage';
 import type { ReferenceWrapper } from '@/lib/catalog/reference/wrapper';
 
 export const DESCENT_CLASSES = ['warrior', 'rogue', 'sorcerer'] as const;
@@ -829,36 +837,63 @@ function sorcererSpellAttacks(
 
 interface MonsterExchangeModel {
   monsterAttack: 'melee' | 'ranged-arrow' | 'ranged-magic';
+  monsterElement?: Element;
+  monsterDamage?: DamageDistribution;
+  monsterProjectilesPerAttack?: number;
+  monsterDamageAlreadyShifted?: boolean;
   approachTilesPerSecond?: number;
   speed: DescentMonsterApproachSpeed;
 }
 
-function monsterHasMissileAttack(wrapper: ReferenceWrapper): boolean {
-  const rawDerived = wrapper.entity.data.derived;
-  const derived = rawDerived && typeof rawDerived === 'object' && !Array.isArray(rawDerived)
-    ? rawDerived as Record<string, unknown>
-    : {};
-  return Array.isArray(derived.attackKinds) && derived.attackKinds.includes('missile');
+function monsterRoutine(wrapper: ReferenceWrapper): string | undefined {
+  return wrapper.file === 'monsters/unique_monstdat.tsv'
+    ? wrapper.raw.ai
+    : wrapper.entity.tags?.[0];
 }
 
-function monsterExchangeModel(wrapper: ReferenceWrapper): MonsterExchangeModel {
+function monsterIntelligence(wrapper: ReferenceWrapper): number {
+  const value = Number(wrapper.entity.data.intelligence ?? wrapper.raw.intelligence);
+  return Number.isInteger(value) ? value : 0;
+}
+
+function monsterType(wrapper: ReferenceWrapper): string | undefined {
+  return wrapper.file === 'monsters/unique_monstdat.tsv'
+    ? wrapper.raw.type
+    : wrapper.raw._monster_id;
+}
+
+function monsterUsesMissileWhenAdjacent(wrapper: ReferenceWrapper): boolean {
+  const ai = monsterRoutine(wrapper);
+  if (ai === undefined || !isD1AiRoutineId(ai)) return false;
+  const hasMeleeAttack = D1_AI_ROUTINES[ai].attacks.some((attack) => attack.kind === 'melee');
+  return !hasMeleeAttack
+    && selectMonsterMissileAttack(ai, monsterIntelligence(wrapper), monsterType(wrapper))?.kind === 'missile';
+}
+
+function monsterExchangeModel(
+  wrapper: ReferenceWrapper,
+  monster: ReturnType<typeof monsterProfile>,
+  base: ReferenceWrapper | undefined,
+  wrappers: readonly ReferenceWrapper[],
+): MonsterExchangeModel {
   const rawDerived = wrapper.entity.data.derived;
   const derived = rawDerived && typeof rawDerived === 'object' && !Array.isArray(rawDerived)
     ? rawDerived as Record<string, unknown>
     : {};
-  const attackKinds = Array.isArray(derived.attackKinds)
-    ? derived.attackKinds.filter((kind): kind is string => typeof kind === 'string')
-    : [];
-  if (attackKinds.includes('missile')) {
-    const ai = wrapper.file === 'monsters/unique_monstdat.tsv'
-      ? wrapper.raw.ai
-      : wrapper.entity.tags?.[0];
-    const missiles = ai && isD1AiRoutineId(ai)
-      ? D1_AI_ROUTINES[ai].attacks.filter((attack) => attack.kind === 'missile').map((attack) => attack.missile)
-      : [];
-    const arrow = missiles.length > 0 && missiles.every((missile) => missile === 'Arrow');
+  const ai = monsterRoutine(wrapper);
+  const selected = ai && isD1AiRoutineId(ai)
+    ? selectMonsterMissileAttack(ai, monsterIntelligence(wrapper), monsterType(wrapper))
+    : undefined;
+  const source = selected ? monsterMissileDamageSource(selected.missile, selected.routine) : undefined;
+  const metadata = selected ? monsterMissileMetadata(selected.missile, wrappers) : undefined;
+  const resolved = source ? resolveMonsterMissileDamage(source, monster, wrapper, base) : undefined;
+  if (selected?.kind === 'missile') {
     return {
-      monsterAttack: arrow ? 'ranged-arrow' : 'ranged-magic',
+      monsterAttack: metadata!.arrow ? 'ranged-arrow' : 'ranged-magic',
+      monsterElement: metadata!.element,
+      monsterDamage: resolved!.damage,
+      monsterProjectilesPerAttack: resolved!.projectilesPerAttack,
+      monsterDamageAlreadyShifted: resolved!.alreadyShifted,
       speed: {
         monsterId: wrapper.entity.id,
         monster: wrapper.entity.name,
@@ -871,6 +906,12 @@ function monsterExchangeModel(wrapper: ReferenceWrapper): MonsterExchangeModel {
   if (Number.isFinite(effective) && effective > 0) {
     return {
       monsterAttack: 'melee',
+      ...(metadata && resolved ? {
+        monsterElement: metadata.element,
+        monsterDamage: resolved.damage,
+        monsterProjectilesPerAttack: resolved.projectilesPerAttack,
+        monsterDamageAlreadyShifted: resolved.alreadyShifted,
+      } : {}),
       approachTilesPerSecond: effective,
       speed: {
         monsterId: wrapper.entity.id,
@@ -888,6 +929,12 @@ function monsterExchangeModel(wrapper: ReferenceWrapper): MonsterExchangeModel {
   if (Number.isFinite(whileWalking) && whileWalking > 0) {
     return {
       monsterAttack: 'melee',
+      ...(metadata && resolved ? {
+        monsterElement: metadata.element,
+        monsterDamage: resolved.damage,
+        monsterProjectilesPerAttack: resolved.projectilesPerAttack,
+        monsterDamageAlreadyShifted: resolved.alreadyShifted,
+      } : {}),
       approachTilesPerSecond: whileWalking,
       speed: {
         monsterId: wrapper.entity.id,
@@ -1033,11 +1080,11 @@ function assumptions(
     ...(encounter === 'duel' ? [{
       id: 'duel-exchange',
       value: className === 'warrior'
-        ? 'hero attacks first; one melee counterattack between hero swings'
+        ? 'hero attacks first; one adjacent counterattack between hero swings'
         : 'hero attacks first; one melee counterattack between hero actions',
       source: 'combatDuel.duel expectations',
       detail: className === 'warrior'
-        ? 'Expected damage per kill is (expected hero swings - 1) × expected monster damage per swing. Monster travel, AI delays, ranged spacing, healing, and simultaneous packs are outside this duel model.'
+        ? 'Expected damage per kill is (expected hero swings - 1) × expected monster damage per swing. At distance 1, routines without a melee attack use their selected missile and monster ranged to-hit law; other routines use melee. Monster travel, AI delays, healing, and simultaneous packs are outside this duel model.'
         : 'Melee monsters do no damage during their approach, then counter between adjacent hero actions. Missile-capable routines counter at the engagement distance. Healing and simultaneous packs are outside this duel model.',
     }] : [{
       id: 'pack-exchange',
@@ -1115,13 +1162,19 @@ function assumptions(
         source: 'bestiary data.derived.tilesPerSecond and data.derived.locomotion.tilesPerSecondWhileWalking',
         detail: 'Each depth reports the source used for every monster. Free actions are complete attack/cast cycles during the travel time from the engagement distance to adjacency.',
       },
-      {
-        id: 'ranged-monster-exchange',
-        value: 'a routine whose attackKinds includes missile holds range and counters with ranged to-hit',
-        source: 'bestiary data.derived.attackKinds and d1-combat-monster-ranged-to-hit-law',
-        detail: 'Arrow-only routines use arrow to-hit; other missile routines use magic-projectile to-hit. Their AI retreat/circle geometry and projectile travel time remain outside the duel.',
-      },
     ] : []),
+    {
+      id: 'ranged-monster-exchange',
+      value: 'missile-only routines counter with their selected missile; adjacent hybrids use melee',
+      source: 'aiRoutinesData attacks, the W44 decision graph, misdat data.damageType, and d1-combat-monster-ranged-to-hit-law',
+      detail: 'A melee hero holds the targeted monster at distance 1. Routines with no melee attack still use their selected missile and monster ranged to-hit law there. The Magma, Bat, Storm, Acid, Mega, and Diablo hybrids declare both melee and missile attacks, so they use melee while adjacent; ranged heroes still model their selected missile before adjacency. The engine intelligence index selects Counselor-family spells and the Bat subtype selects Gloom charge or Familiar Lightning; other mixed routines use their primary ranged attack. Arrow-flagged missiles use arrow to-hit and other missiles use non-arrow projectile to-hit. AI retreat/circle geometry and projectile travel time remain outside the duel.',
+    },
+    {
+      id: 'monster-missile-damage-event',
+      value: 'one primary missile impact per exchange, except three independently resolved Charged Bolts',
+      source: 'pin-verified monsterMissileDamageData formulas and missile collision call sites',
+      detail: 'Generic projectiles use ordinary whole-HP monster damage; Rhino/Snake charges use special columns; fixed and level formulas remain missile-specific. Persistent Familiar/Lightning segments, acid puddles, the Fireball termination blast, repeated Flash areas, and Inferno path segments are omitted after one modeled impact. A stationary player can be checked repeatedly by lightning segments, but this exchange model counts one segment hit.',
+    },
     {
       id: 'clear-time',
       value: encounter === 'duel'
@@ -1549,8 +1602,10 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       if (unique && !base) throw new Error(`${wrapper.entity.id} has no supplied monstdat base ${wrapper.raw.type}`);
       const monster = monsterProfile(wrapper, input.difficulty, base, input.gameMode);
       const exchange = playerAttack === 'melee'
-        ? encounter === 'packs' && monsterHasMissileAttack(wrapper) ? monsterExchangeModel(wrapper) : undefined
-        : monsterExchangeModel(wrapper);
+        ? monsterUsesMissileWhenAdjacent(wrapper)
+          ? monsterExchangeModel(wrapper, monster, base, input.wrappers)
+          : undefined
+        : monsterExchangeModel(wrapper, monster, base, input.wrappers);
       const runDuel = (attack: PlayerAttackMode, spell?: DuelSpellAttack) => duel(build, coefficients, monster, {
         gameMode: input.gameMode,
         playerAttack: attack,
@@ -1559,6 +1614,10 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
         spell,
         playerCastSeconds,
         monsterAttack: exchange?.monsterAttack ?? 'melee',
+        monsterElement: exchange?.monsterElement,
+        monsterDamage: exchange?.monsterDamage,
+        monsterProjectilesPerAttack: exchange?.monsterProjectilesPerAttack,
+        monsterDamageAlreadyShifted: exchange?.monsterDamageAlreadyShifted,
         // A hero in melee is adjacent to the monster it fights, whatever that monster's attack kind (W43 overseer: the
         // delivered version put a ranged target at 4 tiles even in duels, silently moving the mixed Sorcerer's default).
         // Only in packs do OTHER ranged members hold range; packMath carries that, not this per-target duel.

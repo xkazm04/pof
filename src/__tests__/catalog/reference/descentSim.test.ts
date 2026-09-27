@@ -55,6 +55,19 @@ function wrapper(
   };
 }
 
+const arrowMissile = wrapper('d1-missile-arrow', 'vfx', 'missiles/misdat.tsv', {
+  damageType: 'Physical',
+  arrow: true,
+}, { id: 'Arrow' });
+
+const magmaBallMissile = wrapper('d1-missile-magma-ball', 'vfx', 'missiles/misdat.tsv', {
+  damageType: 'Fire',
+}, { id: 'MagmaBall' });
+
+const acidMissile = wrapper('d1-missile-acid', 'vfx', 'missiles/misdat.tsv', {
+  damageType: 'Acid',
+}, { id: 'Acid' });
+
 const graphics = ['unarmed', 'unarmedShield', 'sword', 'swordShield', 'bow', 'axe', 'mace', 'maceShield', 'staff'];
 const animations = {
   attack: Object.fromEntries(graphics.map((graphic) => [graphic, { frames: 1, actionFrame: 1 }])),
@@ -629,7 +642,7 @@ describe('simulateDescent', () => {
         ...monster.entity,
         id: 'd1-magic-monster',
         name: 'Magic Monster',
-        tags: ['Magma'],
+        tags: ['AcidUnique'],
         data: {
           ...monster.entity.data,
           derived: {
@@ -656,7 +669,7 @@ describe('simulateDescent', () => {
       encounter: 'packs' as const,
       adjacentSlots: 8,
       wrappers: [
-        defensiveWarrior, magicMonster, expectedSword, expectedRing, expectedDamagePrefix,
+        defensiveWarrior, magicMonster, acidMissile, expectedSword, expectedRing, expectedDamagePrefix,
         expectedAllResistance, expectedFastRecovery, healingPotion, ...curve,
       ],
       locations: locationsFor(magicMonster),
@@ -679,6 +692,51 @@ describe('simulateDescent', () => {
     expect(result.levels[1].expectedDamageTaken!).toBeLessThan(none.levels[1].expectedDamageTaken!);
     expect(result.levels[1].expectedSecondsToClear!).toBeLessThan(none.levels[1].expectedSecondsToClear!);
     expect(result.assumptions.some((assumption) => assumption.id === 'expected-loot-defensive-affixes')).toBe(true);
+  });
+
+  it('keeps hybrid missile routines on their melee exchange beside a melee hero', () => {
+    const hybridMonster = {
+      ...monster,
+      wrapperId: 'test:monsters/monstdat.tsv:HYBRID',
+      key: 'HYBRID',
+      rawHash: 'HYBRID',
+      raw: { ...monster.raw, _monster_id: 'HYBRID' },
+      entity: {
+        ...monster.entity,
+        id: 'd1-hybrid-monster',
+        name: 'Hybrid Monster',
+        tags: ['Magma'],
+        data: {
+          ...monster.entity.data,
+          stats: (monster.entity.data.stats as { label: string; value: number }[]).map((stat) =>
+            stat.label === 'HP Min' || stat.label === 'HP Max'
+              ? { ...stat, value: 40 }
+              : stat.label === 'Damage Min' || stat.label === 'Damage Max'
+                ? { ...stat, value: 20 }
+                : stat),
+        },
+      },
+    } satisfies ReferenceWrapper;
+    const input = {
+      className: 'warrior' as const,
+      policy: 'none' as const,
+      tilesPerLevel: 3_000,
+      gameMode: 'single' as const,
+      difficulty: 'normal' as const,
+      gear: 'expected' as const,
+      encounter: 'duel' as const,
+      wrappers: [
+        warrior, hybridMonster, magmaBallMissile, expectedSword, expectedRing, expectedDamagePrefix,
+        expectedAllResistance, healingPotion, ...curve,
+      ],
+      locations: locationsFor(hybridMonster),
+    };
+    const none = simulateDescent({ ...input, defensiveAffixes: 'none' });
+    const expected = simulateDescent({ ...input, defensiveAffixes: 'expected' });
+
+    expect(expected.levels[1].expectedDamageTaken).toBeCloseTo(none.levels[1].expectedDamageTaken!, 12);
+    expect(expected.assumptions.find((assumption) => assumption.id === 'ranged-monster-exchange')?.detail)
+      .toContain('Magma, Bat, Storm, Acid, Mega, and Diablo');
   });
 
   it('keeps explicit monster-gold byte-identical to the omitted income policy', () => {
@@ -1006,7 +1064,7 @@ describe('simulateDescent', () => {
       gameMode: 'single',
       difficulty: 'normal',
       gear: 'none',
-      wrappers: [rogue, rangedMonster, ...curve],
+      wrappers: [rogue, rangedMonster, arrowMissile, ...curve],
       locations: locationsFor(rangedMonster),
     });
 
