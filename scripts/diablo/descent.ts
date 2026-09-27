@@ -6,6 +6,7 @@
  *     [--policy none|all-strength|balanced] [--tiles-per-level N]
  *     [--difficulty normal|nightmare|hell] [--multiplayer]
  *     [--gear none|expected] [--weapon d1-<item>]
+ *     [--sorcerer-combat mixed|pure-spell]
  * Rogue and Sorcerer default to expected gear; Warrior and explicit --weapon runs default to none.
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -19,6 +20,7 @@ import {
   simulateDescent,
   type DescentClassName,
   type DescentGear,
+  type SorcererCombatPolicy,
   type StatPointPolicy,
 } from '@/lib/catalog/reference/descentSim';
 import { listWrappers } from '@/lib/catalog/reference/wrappers-db';
@@ -49,6 +51,11 @@ if (!(['none', 'expected'] as const).includes(gear)) {
   console.error('--gear must be none|expected');
   process.exit(2);
 }
+const sorcererCombatPolicy = (arg('sorcerer-combat') ?? 'mixed') as SorcererCombatPolicy;
+if (!(['mixed', 'pure-spell'] as const).includes(sorcererCombatPolicy)) {
+  console.error('--sorcerer-combat must be mixed|pure-spell');
+  process.exit(2);
+}
 const tilesPerLevel = Number(arg('tiles-per-level') ?? DEFAULT_TILES_PER_LEVEL_ASSUMPTION);
 if (!Number.isInteger(tilesPerLevel) || tilesPerLevel < 0) {
   console.error('--tiles-per-level must be a non-negative integer');
@@ -71,6 +78,7 @@ const result = simulateDescent({
   difficulty,
   weapon,
   gear,
+  sorcererCombatPolicy,
   wrappers,
 });
 
@@ -80,7 +88,7 @@ for (const assumption of result.assumptions) {
   console.log(`- ${assumption.id}: ${assumption.value} — ${assumption.detail} [${assumption.source}]`);
 }
 console.table(result.levels.map((level) => {
-  const mode = level.attackMode ?? 'melee';
+  const mode = level.expectedMeleeKills === undefined ? level.attackMode ?? 'melee' : 'mixed';
   return {
     depth: level.depth,
     mode,
@@ -91,6 +99,8 @@ console.table(result.levels.map((level) => {
     weapon: mode === 'spell' ? null : level.weaponAssumed?.weaponId ?? result.weaponId ?? 'unarmed',
     pool: level.poolSize,
     kills: level.expectedMonstersKilled,
+    'spell kills': level.expectedSpellKills == null ? null : Number(level.expectedSpellKills.toFixed(2)),
+    'melee kills': level.expectedMeleeKills == null ? null : Number(level.expectedMeleeKills.toFixed(2)),
     XP: Number(level.expectedXpGained.toFixed(2)),
     'hero before': level.heroLevelBefore,
     'hero after': level.heroLevelAfter,
@@ -129,7 +139,7 @@ const path = join(
   'pof',
   'Diablo',
   'Combat',
-  `descent-${className}-${policy}${gear === 'expected' ? '-expected-gear' : ''}.json`,
+  `descent-${className}-${policy}${gear === 'expected' ? '-expected-gear' : ''}${className === 'sorcerer' && sorcererCombatPolicy === 'mixed' ? '-mixed' : ''}.json`,
 );
 mkdirSync(dirname(path), { recursive: true });
 writeFileSync(path, JSON.stringify(result, null, 2));

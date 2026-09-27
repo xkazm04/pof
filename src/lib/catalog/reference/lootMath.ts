@@ -675,6 +675,8 @@ export interface BestWeaponExpectationInput {
   strength?: number;
   magic?: number;
   dexterity?: number;
+  /** Owned weapon retained unless the expected prior-drop maximum is better. */
+  fallbackWeapon?: ReferenceWrapper;
 }
 
 export interface BestWeaponExpectation {
@@ -722,21 +724,30 @@ export function bestWeaponExpectation(input: BestWeaponExpectationInput): BestWe
   if (!Number.isInteger(input.depth) || input.depth < 1) throw new Error(`depth must be a positive integer (got ${input.depth})`);
   if (!Number.isInteger(input.killsSoFar) || input.killsSoFar < 0) throw new Error(`killsSoFar must be a non-negative integer (got ${input.killsSoFar})`);
   const ranged = String(input.class).toLowerCase() === 'rogue';
+  const fallbackType = input.fallbackWeapon ? weaponTypeForClass(input.fallbackWeapon, input.class) : null;
+  if (input.fallbackWeapon && !fallbackType) {
+    throw new Error(`${input.fallbackWeapon.entity.id} is not a weapon ${String(input.class)} can use in this model`);
+  }
+  const fallbackDamage = input.fallbackWeapon ? baseDamage(input.fallbackWeapon) : { min: 1, max: 1 };
   const bare = (approximation: string): BestWeaponExpectation => ({
     model: ranged ? 'conservative-expected-best-ranged-base' : 'conservative-expected-best-melee-base',
     class: input.class,
     depth: input.depth,
     killsSoFar: input.killsSoFar,
-    weaponId: null,
-    weaponType: 'other',
-    damage: { min: 1, max: 1 },
+    weaponId: input.fallbackWeapon?.entity.id ?? null,
+    weaponType: fallbackType ?? 'other',
+    damage: fallbackDamage,
     damageBonusPercent: 0,
     pWeaponFound: 0,
     pAnyMagicDamageAffix: 0,
     maxBaseDamageDistribution: [],
     approximation,
   });
-  if (input.killsSoFar === 0) return bare('No prior kills: the hero uses the one-point unarmed baseline.');
+  if (input.killsSoFar === 0) {
+    return bare(input.fallbackWeapon
+      ? `No prior kills: the hero retains ${input.fallbackWeapon.entity.name}.`
+      : 'No prior kills: the hero uses the one-point unarmed baseline.');
+  }
   const positiveProfiles = input.monsterProfiles.filter((row) => row.weight > 0);
   const totalProfileWeight = positiveProfiles.reduce((sum, row) => sum + row.weight, 0);
   if (totalProfileWeight <= 0) throw new Error('positive kills require at least one positive-weight monster loot profile');
@@ -771,10 +782,15 @@ export function bestWeaponExpectation(input: BestWeaponExpectationInput): BestWe
     if (input.dexterity != null && requirement(base, 'minDexterity', 'requiredDexterity') > input.dexterity) return [];
     return [{ base, type, p, damage: baseDamage(base) }];
   });
-  if (candidates.length === 0) {
-    return bare(`No dropped ${ranged ? 'bow' : 'melee base'} satisfies the supplied attribute requirements; the hero remains unarmed.`);
+  const upgrades = input.fallbackWeapon
+    ? candidates.filter((candidate) => candidate.damage.max > fallbackDamage.max)
+    : candidates;
+  if (upgrades.length === 0) {
+    return bare(input.fallbackWeapon
+      ? `No dropped ${ranged ? 'bow' : 'melee base'} improves on the owned weapon.`
+      : `No dropped ${ranged ? 'bow' : 'melee base'} satisfies the supplied attribute requirements; the hero remains unarmed.`);
   }
-  const candidateIds = new Set(candidates.map((candidate) => candidate.base.entity.id));
+  const candidateIds = new Set(upgrades.map((candidate) => candidate.base.entity.id));
   const damageAffixPerKill = [...damageAffixByBase]
     .filter(([baseId]) => candidateIds.has(baseId))
     .reduce((sum, [, p]) => sum + p, 0);
@@ -782,14 +798,14 @@ export function bestWeaponExpectation(input: BestWeaponExpectationInput): BestWe
     .filter(([baseId]) => candidateIds.has(baseId))
     .reduce((sum, [, value]) => sum + value, 0);
 
-  const groups = new Map<number, typeof candidates>();
-  for (const candidate of candidates) groups.set(candidate.damage.max, [...(groups.get(candidate.damage.max) ?? []), candidate]);
+  const groups = new Map<number, typeof upgrades>();
+  for (const candidate of upgrades) groups.set(candidate.damage.max, [...(groups.get(candidate.damage.max) ?? []), candidate]);
   const ordered = [...groups].sort(([a], [b]) => b - a);
   let higher = 0;
   let expectedMin = 0;
   let expectedMax = 0;
-  let representative: typeof candidates[number] | null = null;
-  let representativeContribution = -1;
+  let representative: typeof upgrades[number] | null = null;
+  let representativeContribution = input.fallbackWeapon ? 0 : -1;
   const distribution: BestWeaponExpectation['maxBaseDamageDistribution'] = [];
   for (const [maxDamage, group] of ordered) {
     const groupP = group.reduce((sum, candidate) => sum + candidate.p, 0);
@@ -809,8 +825,8 @@ export function bestWeaponExpectation(input: BestWeaponExpectationInput): BestWe
   }
   const pWeaponFound = 1 - (1 - higher) ** input.killsSoFar;
   const pBare = 1 - pWeaponFound;
-  expectedMin += pBare;
-  expectedMax += pBare;
+  expectedMin += pBare * fallbackDamage.min;
+  expectedMax += pBare * fallbackDamage.max;
   const pAnyMagicDamageAffix = 1 - (1 - clamp01(damageAffixPerKill)) ** input.killsSoFar;
   const conditionalDamagePercent = damageAffixPerKill > 0 ? expectedDamagePercentPerKill / damageAffixPerKill : 0;
   const damageBonusPercent = Math.floor(pAnyMagicDamageAffix * conditionalDamagePercent);
@@ -819,14 +835,20 @@ export function bestWeaponExpectation(input: BestWeaponExpectationInput): BestWe
     class: input.class,
     depth: input.depth,
     killsSoFar: input.killsSoFar,
-    weaponId: representative?.base.entity.id ?? null,
-    weaponType: representative?.type ?? 'other',
+    weaponId: !input.fallbackWeapon || representativeContribution > pBare
+      ? representative?.base.entity.id ?? input.fallbackWeapon?.entity.id ?? null
+      : input.fallbackWeapon?.entity.id ?? null,
+    weaponType: !input.fallbackWeapon || representativeContribution > pBare
+      ? representative?.type ?? fallbackType ?? 'other'
+      : fallbackType ?? 'other',
     damage: { min: Math.max(1, Math.floor(expectedMin)), max: Math.max(1, Math.floor(expectedMax)) },
     damageBonusPercent,
     pWeaponFound,
     pAnyMagicDamageAffix,
     maxBaseDamageDistribution: distribution,
-    approximation: 'Independent prior kills are represented by their weighted monster mixture. The weapon range is the floored expectation of the maximum base max-damage distribution (including bare hands); one modal base supplies type and animation. Unique powers, flat damage, requirements not explicitly supplied, and correlations between the best base and a damage affix are omitted. The positive percentage bonus is floored, keeping the combat input conservative.',
+    approximation: input.fallbackWeapon
+      ? 'Independent prior kills are represented by their weighted monster mixture. The weapon range is the floored expectation of the maximum base max-damage distribution (including the owned-weapon baseline); one modal base supplies type and animation. Unique powers, flat damage, requirements not explicitly supplied, and correlations between the best base and a damage affix are omitted. The positive percentage bonus is floored, keeping the combat input conservative.'
+      : 'Independent prior kills are represented by their weighted monster mixture. The weapon range is the floored expectation of the maximum base max-damage distribution (including bare hands); one modal base supplies type and animation. Unique powers, flat damage, requirements not explicitly supplied, and correlations between the best base and a damage affix are omitted. The positive percentage bonus is floored, keeping the combat input conservative.',
   };
 }
 

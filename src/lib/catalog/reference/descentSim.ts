@@ -40,6 +40,7 @@ export const DESCENT_CLASSES = ['warrior', 'rogue', 'sorcerer'] as const;
 export type DescentClassName = typeof DESCENT_CLASSES[number];
 export type StatPointPolicy = 'none' | 'all-strength' | 'balanced';
 export type DescentGear = 'none' | 'expected';
+export type SorcererCombatPolicy = 'mixed' | 'pure-spell';
 
 /** Explicit non-solid-tile assumption used only when a caller does not provide one. */
 export const DEFAULT_TILES_PER_LEVEL_ASSUMPTION = 3_000;
@@ -75,6 +76,10 @@ export interface DescentLevelResult {
   depth: number;
   poolSize: number;
   expectedMonstersKilled: number;
+  /** Present for the mana-aware Sorcerer policy. */
+  expectedSpellKills?: number;
+  /** Present for the mana-aware Sorcerer policy. */
+  expectedMeleeKills?: number;
   expectedXpGained: number;
   heroLevelBefore: number;
   heroLevelAfter: number;
@@ -207,6 +212,8 @@ export interface DescentSimulation {
   weaponId: string | null;
   /** Omitted for the legacy Warrior default. */
   attackMode?: Exclude<PlayerAttackMode, 'melee'>;
+  /** Present for the default mana-aware Sorcerer policy; omitted by legacy pure-spell output. */
+  sorcererCombatPolicy?: 'mixed';
   /** Present for the expected-loot model (the Rogue/Sorcerer default unless gear:none is explicit). */
   gear?: 'expected';
   assumptions: DescentAssumption[];
@@ -221,10 +228,72 @@ export interface SimulateDescentInput {
   difficulty: Difficulty;
   weapon?: ReferenceWrapper;
   gear?: DescentGear;
+  /** Sorcerer defaults to finite-mana mixed combat; pure-spell preserves the comparison model. */
+  sorcererCombatPolicy?: SorcererCombatPolicy;
   /** Source rows are passed in; the simulator never reads a database or filesystem. */
   wrappers: readonly ReferenceWrapper[];
   /** Tests and other pure callers may pass already-projected location entities. */
   locations?: readonly LocationEntityWrapper[];
+}
+
+export interface MixedKillCandidate {
+  id: string;
+  expectedKills: number;
+  manaPerKill: number;
+  secondsSavedPerKill: number;
+  lifeSavedPerKill: number;
+}
+
+export interface MixedKillAllocation extends MixedKillCandidate {
+  spellKills: number;
+  manaSpent: number;
+}
+
+function compareMixedCandidates(left: MixedKillCandidate, right: MixedKillCandidate): number {
+  const leftSavesTime = left.secondsSavedPerKill > 0;
+  const rightSavesTime = right.secondsSavedPerKill > 0;
+  if (leftSavesTime !== rightSavesTime) return leftSavesTime ? -1 : 1;
+  const leftEfficiency = (leftSavesTime ? left.secondsSavedPerKill : left.lifeSavedPerKill) / left.manaPerKill;
+  const rightEfficiency = (rightSavesTime ? right.secondsSavedPerKill : right.lifeSavedPerKill) / right.manaPerKill;
+  return rightEfficiency - leftEfficiency
+    || (right.lifeSavedPerKill / right.manaPerKill) - (left.lifeSavedPerKill / left.manaPerKill)
+    || left.manaPerKill - right.manaPerKill
+    || left.id.localeCompare(right.id);
+}
+
+/**
+ * Spend a fixed start-of-depth mana budget on the best per-target spell option. Positive time
+ * saved per mana ranks first; when casting does not save time, positive life saved per mana is
+ * the fallback. Stable id order is the final tie-break. Fractional kills remain expectations.
+ */
+export function allocateMixedSpellKills(
+  candidates: readonly MixedKillCandidate[],
+  totalManaAvailable: number,
+): MixedKillAllocation[] {
+  if (!Number.isFinite(totalManaAvailable) || totalManaAvailable < 0) {
+    throw new Error(`totalManaAvailable must be a non-negative finite number (got ${totalManaAvailable})`);
+  }
+  for (const candidate of candidates) {
+    if (!Number.isFinite(candidate.expectedKills) || candidate.expectedKills < 0) {
+      throw new Error(`${candidate.id}.expectedKills must be a non-negative finite number`);
+    }
+    if (!Number.isFinite(candidate.manaPerKill) || candidate.manaPerKill <= 0) {
+      throw new Error(`${candidate.id}.manaPerKill must be a positive finite number`);
+    }
+    if (!Number.isFinite(candidate.secondsSavedPerKill) || !Number.isFinite(candidate.lifeSavedPerKill)) {
+      throw new Error(`${candidate.id} savings must be finite numbers`);
+    }
+  }
+  let manaRemaining = totalManaAvailable;
+  return [...candidates]
+    .filter((candidate) => candidate.secondsSavedPerKill > 0 || candidate.lifeSavedPerKill > 0)
+    .sort(compareMixedCandidates)
+    .map((candidate) => {
+      const spellKills = Math.min(candidate.expectedKills, manaRemaining / candidate.manaPerKill);
+      const manaSpent = spellKills * candidate.manaPerKill;
+      manaRemaining = Math.max(0, manaRemaining - manaSpent);
+      return { ...candidate, spellKills, manaSpent };
+    });
 }
 
 const ATTRIBUTE_KEYS = ['strength', 'magic', 'dexterity', 'vitality'] as const;
@@ -273,6 +342,36 @@ function classWrapperFrom(wrappers: readonly ReferenceWrapper[], className: Desc
       data: { ...classWrapper.entity.data, classFlags: [] },
     },
   };
+}
+
+/**
+ * Item enum ids a class loadout names whose itemdat.tsv row carries no `id` cell: the engine
+ * resolves them by enum ordinal (= row index). Engine constants, Source/tables/itemdat.h:81-82
+ * (IDI_RUNEOFSTONE = 165, IDI_SORCERER_DIABLO follows) — the vanilla Sorcerer's starting staff.
+ */
+const ITEM_ENUM_ROWS: Readonly<Record<string, number>> = { IDI_SORCERER_DIABLO: 166 };
+
+function startingWeaponFrom(
+  classWrapper: ReferenceWrapper,
+  wrappers: readonly ReferenceWrapper[],
+): ReferenceWrapper {
+  const loadout = classWrapper.entity.data.startingLoadout;
+  const itemIds = loadout && typeof loadout === 'object' && !Array.isArray(loadout)
+    ? (loadout as { itemIds?: unknown }).itemIds
+    : undefined;
+  if (!Array.isArray(itemIds)) throw new Error(`${classWrapper.entity.id} has no startingLoadout.itemIds list`);
+  for (const itemId of itemIds) {
+    if (typeof itemId !== 'string') continue;
+    const enumRow = ITEM_ENUM_ROWS[itemId.toUpperCase()];
+    const item = wrappers.find((candidate) => candidate.file === 'items/itemdat.tsv'
+      && (String(candidate.raw.id).toLowerCase() === itemId.toLowerCase()
+        || String(candidate.entity.data.id).toLowerCase() === itemId.toLowerCase()))
+      ?? (enumRow === undefined ? undefined
+        : wrappers.find((candidate) => candidate.file === 'items/itemdat.tsv' && candidate.key === `row${enumRow}`));
+    if (!item) continue;
+    if (referenceBuild(classWrapper, 1, item).weaponType !== 'other') return item;
+  }
+  throw new Error(`${classWrapper.entity.id} has no supplied starting-loadout weapon`);
 }
 
 function allocateStats(build: PlayerBuild, policy: StatPointPolicy, maxima: Record<AttributeKey, number>): PlayerBuild {
@@ -556,6 +655,7 @@ function assumptions(
   policy: StatPointPolicy,
   gear: DescentGear,
   className: DescentClassName,
+  sorcererCombatPolicy: SorcererCombatPolicy,
 ): DescentAssumption[] {
   return [
     {
@@ -613,15 +713,21 @@ function assumptions(
     ...(className === 'sorcerer' ? [
       {
         id: 'class-attack-mode',
-        value: 'spell casting',
-        source: 'd1-spell-cast-law, spellMath, and Sorcerer cast animation data',
-        detail: 'Sorcerer uses spell to-hit at the engagement distance, exact one-collision spell damage, class casting time, and mana per cast.',
+        value: sorcererCombatPolicy === 'mixed' ? 'mana-aware mixed spell/melee' : 'spell casting',
+        source: sorcererCombatPolicy === 'mixed'
+          ? 'd1-spell-cast-law, spellMath, Sorcerer cast animation data, starting loadout, and weapon attack timing'
+          : 'd1-spell-cast-law, spellMath, and Sorcerer cast animation data',
+        detail: sorcererCombatPolicy === 'mixed'
+          ? 'Sorcerer casts only within the finite start-of-depth mana budget and uses the best expected wieldable weapon for every remaining kill. Spell to-hit always uses effective distance 0.'
+          : 'Sorcerer uses spell to-hit at the engagement distance, exact one-collision spell damage, class casting time, and mana per cast.',
       },
       {
         id: 'sorcerer-spell-progression',
         value: 'Firebolt L1 at depth 1; Charged Bolt L1 at 3; Lightning L1 at 5; Fireball L1 at 9; Chain Lightning L1 at 13; learned spells remain available',
         source: 'explicit cumulative depth schedule; book acquisition timing is not resolved by the deterministic type-mixture model',
-        detail: 'At each depth, every learned damaging spell is evaluated against each monster. Lowest expected time-to-kill wins; expected mana per kill and then schedule order break ties.',
+        detail: sorcererCombatPolicy === 'mixed'
+          ? 'Every learned damaging spell and the melee fallback are evaluated per monster. The spell saving the most time per mana wins for that target; if none saves time, life saved per mana is used. Targets are then funded in the same order, with lower mana and stable ids breaking ties.'
+          : 'At each depth, every learned damaging spell is evaluated against each monster. Lowest expected time-to-kill wins; expected mana per kill and then schedule order break ties.',
       },
       {
         id: 'spell-damage-event',
@@ -633,7 +739,9 @@ function assumptions(
         id: 'mana-recovery',
         value: 'no passive regeneration; level-up refill applied before the next depth',
         source: 'd1-spell-cast-law, d1-combat-life-mana-law, and d1-instant-potion-restoration',
-        detail: 'Unspent mana and potions carry forward. A level gained during a depth refills mana for the next depth; within-depth kill order is not modelled. Shrines are ignored.',
+        detail: sorcererCombatPolicy === 'mixed'
+          ? 'The casting budget is the mana pool at depth start plus carried and newly bought mana potions. Current-depth drops become carried supply afterward. A level gained refills mana before the next depth. Shrines are ignored.'
+          : 'Unspent mana and potions carry forward. A level gained during a depth refills mana for the next depth; within-depth kill order is not modelled. Shrines are ignored.',
       },
     ] : []),
     ...(className !== 'warrior' ? [
@@ -661,7 +769,9 @@ function assumptions(
         id: 'expected-loot-weapon',
         value: className === 'rogue'
           ? 'conservative expected best bow before each depth'
-          : 'conservative expected best melee weapon before each depth',
+          : className === 'sorcerer' && sorcererCombatPolicy === 'mixed'
+            ? 'conservative expected best melee weapon before each depth, retaining the starting weapon until improved'
+            : 'conservative expected best melee weapon before each depth',
         source: 'pinned monster-drop, base-selection, quality, and affix procedures',
         detail: 'Prior kills form a weighted monster mixture. The model gates bases by the hero\'s current Strength, Magic, and Dexterity, then floors the expected maximum base-damage range and expected positive percentage-damage bonus; unique powers, flat damage, and base/affix correlation are omitted.',
       },
@@ -718,11 +828,18 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
   if (!(['normal', 'nightmare', 'hell'] as const).includes(input.difficulty)) throw new Error(`unknown difficulty ${input.difficulty}`);
   const gear = input.gear ?? (input.className === 'warrior' || input.weapon ? 'none' : 'expected');
   if (!(['none', 'expected'] as const).includes(gear)) throw new Error(`unknown gear policy ${gear}`);
+  const sorcererCombatPolicy = input.sorcererCombatPolicy ?? 'mixed';
+  if (!(['mixed', 'pure-spell'] as const).includes(sorcererCombatPolicy)) {
+    throw new Error(`unknown Sorcerer combat policy ${input.sorcererCombatPolicy}`);
+  }
   if (gear === 'expected' && input.weapon) throw new Error('gear:expected cannot be combined with a fixed weapon');
   const tilesPerLevel = input.tilesPerLevel ?? DEFAULT_TILES_PER_LEVEL_ASSUMPTION;
   if (!Number.isInteger(tilesPerLevel) || tilesPerLevel < 0) throw new Error(`tilesPerLevel must be a non-negative integer (got ${tilesPerLevel})`);
 
   const classWrapper = classWrapperFrom(input.wrappers, input.className);
+  const startingWeapon = input.className === 'sorcerer' && sorcererCombatPolicy === 'mixed' && !input.weapon
+    ? startingWeaponFrom(classWrapper, input.wrappers)
+    : undefined;
   const coefficients = classCoefficients(classWrapper);
   const maxima = {
     strength: coefficients.maxStrength,
@@ -781,7 +898,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       : [];
 
     const heroLevelBefore = heroLevel;
-    let build = allocateStats(referenceBuild(classWrapper, heroLevelBefore, input.weapon), input.policy, maxima);
+    let build = allocateStats(referenceBuild(classWrapper, heroLevelBefore, input.weapon ?? startingWeapon), input.policy, maxima);
     let weaponAssumed: BestWeaponExpectation | undefined;
     let armourAssumed: BestArmourExpectation | undefined;
     let expectedWeaponBase: ReferenceWrapper | undefined;
@@ -798,6 +915,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
         strength: build.strength,
         magic: build.magic,
         dexterity: build.dexterity,
+        fallbackWeapon: startingWeapon,
       });
       expectedWeaponBase = weaponAssumed.weaponId == null
         ? undefined
@@ -846,47 +964,98 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
         };
       }
     }
+    const loot = gear === 'expected' ? expectedLootBudget({
+      monsterProfiles: depthLootProfiles,
+      itemWrappers: input.wrappers,
+      affixWrappers: input.wrappers,
+      uniqueItemWrappers: input.wrappers,
+      difficulty: input.difficulty,
+    }) : undefined;
+    const goldAvailableForPurchases = goldForNextDepth;
+    const mixedSorcerer = input.className === 'sorcerer' && sorcererCombatPolicy === 'mixed';
+    const manaPool = input.className === 'sorcerer'
+      ? lifeAndMana(build, coefficients).maximumMana / FIXED_POINT
+      : 0;
+    if (input.className === 'sorcerer' && currentMana === null) currentMana = manaPool;
+    const currentManaAtStart = currentMana ?? 0;
+    const expectedGoldAllocated = input.className === 'sorcerer' && gear === 'expected'
+      ? goldAvailableForPurchases * manaGoldShare
+      : 0;
+    const manaPotionsBought = input.className === 'sorcerer' && gear === 'expected'
+      ? expectedGoldAllocated / manaPotionPrice
+      : 0;
+    const currentDepthManaPotions = sorcererCombatPolicy === 'pure-spell' ? loot?.expectedManaPotions ?? 0 : 0;
+    const currentDepthFullManaPotions = sorcererCombatPolicy === 'pure-spell' ? loot?.expectedFullManaPotions ?? 0 : 0;
+    const manaPotionsAvailable = carriedManaPotions + manaPotionsBought + currentDepthManaPotions;
+    const fullManaPotionsAvailable = carriedFullManaPotions + currentDepthFullManaPotions;
+    const manaRestoredPerPotion = input.className === 'sorcerer'
+      ? expectedManaPotionMana(input.className, manaPool)
+      : 0;
+    const startManaBudget = currentManaAtStart
+      + manaPotionsAvailable * manaRestoredPerPotion
+      + fullManaPotionsAvailable * manaPool;
     const playerAttack: PlayerAttackMode = input.className === 'sorcerer'
       ? 'spell'
       : input.className === 'rogue' || build.weaponType === 'bow' ? 'ranged' : 'melee';
     const learnedSpells = playerAttack === 'spell' ? sorcererSpellAttacks(input.wrappers, depth) : [];
     const playerCastSeconds = playerAttack === 'spell' ? castTiming(classAnimations(classWrapper)).seconds : undefined;
-    const rows = pool.map((wrapper) => {
+    const evaluatedRows = pool.map((wrapper) => {
       const unique = wrapper.file === 'monsters/unique_monstdat.tsv';
       const base = unique ? ordinaryByType.get(wrapper.raw.type) : undefined;
       if (unique && !base) throw new Error(`${wrapper.entity.id} has no supplied monstdat base ${wrapper.raw.type}`);
       const monster = monsterProfile(wrapper, input.difficulty, base, input.gameMode);
       const exchange = playerAttack === 'melee' ? undefined : monsterExchangeModel(wrapper);
-      const runDuel = (spell?: DuelSpellAttack) => duel(build, coefficients, monster, {
+      const runDuel = (attack: PlayerAttackMode, spell?: DuelSpellAttack) => duel(build, coefficients, monster, {
         gameMode: input.gameMode,
-        playerAttack,
+        playerAttack: attack,
         engagementDistance: DEFAULT_RANGED_ENGAGEMENT_DISTANCE,
-        monsterApproachTilesPerSecond: exchange?.approachTilesPerSecond,
+        monsterApproachTilesPerSecond: attack === 'melee' ? undefined : exchange?.approachTilesPerSecond,
         spell,
         playerCastSeconds,
         monsterAttack: exchange?.monsterAttack ?? 'melee',
-        monsterDistance: DEFAULT_RANGED_ENGAGEMENT_DISTANCE,
+        monsterDistance: attack === 'melee' ? 1 : DEFAULT_RANGED_ENGAGEMENT_DISTANCE,
         dungeonLevel: depth,
       });
+      const damageTaken = (result: ReturnType<typeof runDuel>) => result.expectedMonsterAttacksBeforeKill
+        * result.expectedMonsterDamagePerSwing / FIXED_POINT;
+      const meleeResult = mixedSorcerer ? runDuel('melee') : undefined;
       const candidates = learnedSpells.map((spell, scheduleIndex) => ({
         spell,
         scheduleIndex,
-        result: runDuel(spell),
+        result: runDuel('spell', spell),
       }));
-      candidates.sort((left, right) => {
-        const leftSeconds = left.result.expectedPlayerSecondsToKill ?? Infinity;
-        const rightSeconds = right.result.expectedPlayerSecondsToKill ?? Infinity;
-        if (leftSeconds !== rightSeconds) {
-          if (!Number.isFinite(leftSeconds)) return 1;
-          if (!Number.isFinite(rightSeconds)) return -1;
-          return leftSeconds - rightSeconds;
-        }
-        const leftMana = left.result.expectedManaSpentPerKill ?? Infinity;
-        const rightMana = right.result.expectedManaSpentPerKill ?? Infinity;
-        return leftMana - rightMana || left.scheduleIndex - right.scheduleIndex;
-      });
+      if (mixedSorcerer) {
+        candidates.sort((left, right) => compareMixedCandidates({
+          id: `${wrapper.entity.id}:${left.scheduleIndex}`,
+          expectedKills: 1,
+          manaPerKill: left.result.expectedManaSpentPerKill ?? Infinity,
+          secondsSavedPerKill: (meleeResult!.expectedPlayerSecondsToKill ?? Infinity)
+            - (left.result.expectedPlayerSecondsToKill ?? Infinity),
+          lifeSavedPerKill: damageTaken(meleeResult!) - damageTaken(left.result),
+        }, {
+          id: `${wrapper.entity.id}:${right.scheduleIndex}`,
+          expectedKills: 1,
+          manaPerKill: right.result.expectedManaSpentPerKill ?? Infinity,
+          secondsSavedPerKill: (meleeResult!.expectedPlayerSecondsToKill ?? Infinity)
+            - (right.result.expectedPlayerSecondsToKill ?? Infinity),
+          lifeSavedPerKill: damageTaken(meleeResult!) - damageTaken(right.result),
+        }));
+      } else {
+        candidates.sort((left, right) => {
+          const leftSeconds = left.result.expectedPlayerSecondsToKill ?? Infinity;
+          const rightSeconds = right.result.expectedPlayerSecondsToKill ?? Infinity;
+          if (leftSeconds !== rightSeconds) {
+            if (!Number.isFinite(leftSeconds)) return 1;
+            if (!Number.isFinite(rightSeconds)) return -1;
+            return leftSeconds - rightSeconds;
+          }
+          const leftMana = left.result.expectedManaSpentPerKill ?? Infinity;
+          const rightMana = right.result.expectedManaSpentPerKill ?? Infinity;
+          return leftMana - rightMana || left.scheduleIndex - right.scheduleIndex;
+        });
+      }
       const selected = playerAttack === 'spell' ? candidates[0] : undefined;
-      const result = selected?.result ?? runDuel();
+      const result = mixedSorcerer ? meleeResult! : selected?.result ?? runDuel(playerAttack);
       if (result.expectedPlayerSecondsToKill === null) {
         throw new Error(`${classWrapper.entity.id} has no ${playerAttack} timing for ${build.weaponGraphic ?? build.weaponType}`);
       }
@@ -903,8 +1072,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
         totalExperience,
         curve,
       });
-      const expectedDamageTaken = result.expectedMonsterAttacksBeforeKill
-        * result.expectedMonsterDamagePerSwing / FIXED_POINT;
+      const expectedDamageTaken = damageTaken(result);
       const conditionalBlockChance = gear === 'expected'
         ? result.monsterConditionalBlockChance
         : 0;
@@ -922,9 +1090,69 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
         expectedPlayerActions: result.expectedPlayerSwingsToKill,
         expectedFreeActions: result.approach?.expectedFreePlayerActions ?? 0,
         approachSpeed: exchange?.speed,
+        ...(mixedSorcerer ? { meleeResult: result, spellResult: selected?.result } : {}),
       };
     });
-    const divisor = rows.length;
+    const divisor = evaluatedRows.length;
+    const expectedKillsPerType = ambientPopulation / divisor;
+    const mixedAllocations = mixedSorcerer ? allocateMixedSpellKills(evaluatedRows.flatMap((row) => {
+      const spellResult = row.spellResult;
+      const meleeResult = row.meleeResult;
+      const manaPerKill = spellResult?.expectedManaSpentPerKill;
+      const spellSeconds = spellResult?.expectedPlayerSecondsToKill;
+      const meleeSeconds = meleeResult?.expectedPlayerSecondsToKill;
+      if (spellResult === undefined || meleeResult === undefined || manaPerKill === undefined
+        || !Number.isFinite(manaPerKill) || !Number.isFinite(spellSeconds) || !Number.isFinite(meleeSeconds)) return [];
+      const spellDamage = spellResult.expectedMonsterAttacksBeforeKill
+        * spellResult.expectedMonsterDamagePerSwing / FIXED_POINT;
+      const meleeDamage = meleeResult.expectedMonsterAttacksBeforeKill
+        * meleeResult.expectedMonsterDamagePerSwing / FIXED_POINT;
+      return [{
+        id: row.wrapper.entity.id,
+        expectedKills: expectedKillsPerType,
+        manaPerKill,
+        secondsSavedPerKill: Number(meleeSeconds) - Number(spellSeconds),
+        lifeSavedPerKill: meleeDamage - spellDamage,
+      }];
+    }), startManaBudget) : [];
+    const mixedAllocationByMonster = new Map(mixedAllocations.map((allocation) => [allocation.id, allocation]));
+    const expectedSpellKills = mixedAllocations.reduce((sum, allocation) => sum + allocation.spellKills, 0);
+    const expectedMeleeKills = ambientPopulation - expectedSpellKills;
+    const rows = evaluatedRows.map((row) => {
+      if (!mixedSorcerer) return { ...row, spellExpectedKills: row.selectedSpell ? expectedKillsPerType : 0 };
+      const allocation = mixedAllocationByMonster.get(row.wrapper.entity.id);
+      const spellKills = allocation?.spellKills ?? 0;
+      const spellShare = expectedKillsPerType > 0 ? spellKills / expectedKillsPerType : 0;
+      const spellResult = row.spellResult;
+      const meleeResult = row.meleeResult!;
+      const blend = (melee: number, spell: number) => melee * (1 - spellShare) + spell * spellShare;
+      const spellDamage = spellResult
+        ? spellResult.expectedMonsterAttacksBeforeKill * spellResult.expectedMonsterDamagePerSwing / FIXED_POINT
+        : row.expectedDamageTaken;
+      return {
+        ...row,
+        seconds: spellResult?.expectedPlayerSecondsToKill == null
+          ? row.seconds
+          : blend(row.seconds, spellResult.expectedPlayerSecondsToKill),
+        playerHitChance: spellResult ? blend(meleeResult.playerHitChance, spellResult.playerHitChance) : row.playerHitChance,
+        expectedDamageTaken: blend(row.expectedDamageTaken, spellDamage),
+        conditionalBlockChance: gear === 'expected' && spellResult
+          ? blend(meleeResult.monsterConditionalBlockChance, spellResult.monsterConditionalBlockChance)
+          : row.conditionalBlockChance,
+        expectedManaSpent: allocation?.manaSpent ?? 0,
+        manaPerCast: spellResult?.manaPerCast,
+        selectedSpell: spellKills > 0 ? row.selectedSpell : undefined,
+        unbounded: !Number.isFinite(row.seconds)
+          || (spellShare > 0 && !Number.isFinite(spellResult?.expectedPlayerSecondsToKill)),
+        expectedPlayerActions: spellResult
+          ? blend(meleeResult.expectedPlayerSwingsToKill, spellResult.expectedPlayerSwingsToKill)
+          : row.expectedPlayerActions,
+        expectedFreeActions: spellResult
+          ? spellShare * (spellResult.approach?.expectedFreePlayerActions ?? 0)
+          : 0,
+        spellExpectedKills: spellKills,
+      };
+    });
     const meanXp = rows.reduce((sum, row) => sum + row.xp, 0) / divisor;
     const uncappedXp = meanXp * ambientPopulation;
     const expectedXpGained = Math.min(uncappedXp, Math.max(0, maximumExperience - totalExperience));
@@ -937,7 +1165,9 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
     const expectedManaSpent = playerAttack === 'spell'
       ? ambientPopulation === 0
         ? 0
-        : rows.reduce((sum, row) => sum + (row.expectedManaSpent ?? 0), 0) / divisor * ambientPopulation
+        : mixedSorcerer
+          ? mixedAllocations.reduce((sum, allocation) => sum + allocation.manaSpent, 0)
+          : rows.reduce((sum, row) => sum + (row.expectedManaSpent ?? 0), 0) / divisor * ambientPopulation
       : undefined;
     const boundedSpellRows = rows.filter((row) => row.selectedSpell !== undefined);
     const spellGroups = new Map<string, DescentSpellUsage>();
@@ -947,7 +1177,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       if (!spec) throw new Error(`unknown vanilla spell ${selected.spell}`);
       const key = `${selected.spell}:${selected.spellLevel}`;
       const current = spellGroups.get(key);
-      const expectedKills = ambientPopulation / divisor;
+      const expectedKills = row.spellExpectedKills;
       spellGroups.set(key, current ? { ...current, expectedKills: current.expectedKills + expectedKills } : {
         spell: selected.spell,
         spellLevel: selected.spellLevel,
@@ -980,14 +1210,6 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       monsterSpeeds: rows.map((row) => row.approachSpeed!),
     };
     const expectedBlockChance = rows.reduce((sum, row) => sum + row.conditionalBlockChance, 0) / divisor;
-    const loot = gear === 'expected' ? expectedLootBudget({
-      monsterProfiles: depthLootProfiles,
-      itemWrappers: input.wrappers,
-      affixWrappers: input.wrappers,
-      uniqueItemWrappers: input.wrappers,
-      difficulty: input.difficulty,
-    }) : undefined;
-    const goldAvailableForPurchases = goldForNextDepth;
     let sustain: DescentSustainExpectation | undefined;
     if (loot) {
       const healingPotionsBought = goldAvailableForPurchases * healingGoldShare / healingPotionPrice;
@@ -1032,14 +1254,6 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
     let mana: DescentManaExpectation | undefined;
     let spellAssumed: DescentSpellExpectation | undefined;
     if (playerAttack === 'spell' && expectedManaSpent !== undefined) {
-      const manaPool = lifeAndMana(build, coefficients).maximumMana / FIXED_POINT;
-      if (currentMana === null) currentMana = manaPool;
-      const currentManaAtStart = currentMana;
-      const expectedGoldAllocated = gear === 'expected' ? goldAvailableForPurchases * manaGoldShare : 0;
-      const manaPotionsBought = gear === 'expected' ? expectedGoldAllocated / manaPotionPrice : 0;
-      const manaPotionsAvailable = carriedManaPotions + manaPotionsBought + (loot?.expectedManaPotions ?? 0);
-      const fullManaPotionsAvailable = carriedFullManaPotions + (loot?.expectedFullManaPotions ?? 0);
-      const manaRestoredPerPotion = expectedManaPotionMana(input.className, manaPool);
       const boundedManaSpent = Number.isFinite(expectedManaSpent) ? expectedManaSpent : 0;
       const arithmetic = manaSustainArithmetic({
         expectedManaSpent: boundedManaSpent,
@@ -1076,8 +1290,10 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
         manaPool,
       );
       currentMana = remaining.currentMana;
-      carriedManaPotions = remaining.manaPotions;
-      carriedFullManaPotions = remaining.fullManaPotions;
+      carriedManaPotions = remaining.manaPotions
+        + (mixedSorcerer ? loot?.expectedManaPotions ?? 0 : 0);
+      carriedFullManaPotions = remaining.fullManaPotions
+        + (mixedSorcerer ? loot?.expectedFullManaPotions ?? 0 : 0);
       if (spellsUsed.length === 1) {
         const [only] = spellsUsed;
         spellAssumed = {
@@ -1102,6 +1318,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       depth,
       poolSize: pool.length,
       expectedMonstersKilled: ambientPopulation,
+      ...(mixedSorcerer ? { expectedSpellKills, expectedMeleeKills } : {}),
       expectedXpGained,
       heroLevelBefore,
       heroLevelAfter: heroLevel,
@@ -1129,11 +1346,14 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
     policy: input.policy,
     gameMode: input.gameMode,
     difficulty: input.difficulty,
-    weaponId: input.weapon?.entity.id ?? null,
+    weaponId: input.weapon?.entity.id ?? startingWeapon?.entity.id ?? null,
     ...(input.className === 'rogue' ? { attackMode: 'ranged' as const } : {}),
     ...(input.className === 'sorcerer' ? { attackMode: 'spell' as const } : {}),
+    ...(input.className === 'sorcerer' && sorcererCombatPolicy === 'mixed'
+      ? { sorcererCombatPolicy: 'mixed' as const }
+      : {}),
     ...(gear === 'expected' ? { gear } : {}),
-    assumptions: assumptions(tilesPerLevel, input.policy, gear, input.className),
+    assumptions: assumptions(tilesPerLevel, input.policy, gear, input.className, sorcererCombatPolicy),
     levels,
   };
 }

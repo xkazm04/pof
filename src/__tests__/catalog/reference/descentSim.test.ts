@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  allocateMixedSpellKills,
   DEFAULT_TILES_PER_LEVEL_ASSUMPTION,
   expectedHealingPotionLife,
   expectedManaPotionMana,
@@ -107,6 +108,7 @@ const sorcerer = wrapper('d1-class-sorcerer', 'characters', 'classes/sorcerer', 
   baseMeleeToHit: 0,
   baseRangedToHit: 0,
   animations,
+  startingLoadout: { itemIds: ['IDI_SORC'] },
 });
 
 const rogue = wrapper('d1-class-rogue', 'characters', 'classes/rogue', {
@@ -210,6 +212,32 @@ const expectedBow = wrapper('d1-expected-bow', 'items', 'items/itemdat.tsv', {
   minMagic: '0',
   minDexterity: '0',
   uniqueBaseItem: 'EXPECTED_BOW',
+});
+
+const startingStaff = wrapper('d1-IDI_SORC', 'items', 'items/itemdat.tsv', {
+  id: 'IDI_SORC',
+  subtype: 'Staff',
+  requiredStrength: 0,
+  requiredMagic: 0,
+  requiredDexterity: 0,
+  stats: [
+    { label: 'Damage Min', value: 2 },
+    { label: 'Damage Max', value: 2 },
+  ],
+}, {
+  id: 'IDI_SORC',
+  dropRate: '0',
+  itemType: 'Staff',
+  equipType: 'Two-handed',
+  miscId: 'NONE',
+  spell: 'Firebolt',
+  minMonsterLevel: '0',
+  minDamage: '2',
+  maxDamage: '2',
+  minStrength: '0',
+  minMagic: '0',
+  minDexterity: '0',
+  uniqueBaseItem: 'STARTING_STAFF',
 });
 
 const expectedDamagePrefix = wrapper('d1-expected-damage-prefix', 'affixes', 'items/item_prefixes.tsv', {}, {
@@ -460,7 +488,7 @@ describe('simulateDescent', () => {
     });
   });
 
-  it('uses the target-aware Sorcerer learned set and carries mana without passive regeneration', () => {
+  it('keeps the pure-spell comparison output and carries mana without passive regeneration', () => {
     const result = simulateDescent({
       className: 'sorcerer',
       policy: 'none',
@@ -468,12 +496,15 @@ describe('simulateDescent', () => {
       gameMode: 'single',
       difficulty: 'normal',
       gear: 'none',
+      sorcererCombatPolicy: 'pure-spell',
       wrappers: [sorcerer, monster, ...learnedSpellRows, ...curve],
       locations,
     });
 
     expect(result.attackMode).toBe('spell');
+    expect(result.sorcererCombatPolicy).toBeUndefined();
     expect(result.levels[0].attackMode).toBe('spell');
+    expect(result.levels[0].expectedSpellKills).toBeUndefined();
     expect(result.levels[0].spellAssumed).toMatchObject({ spell: 'Firebolt', spellLevel: 1, manaPerCast: 2 });
     expect(result.levels[0].mana).toMatchObject({ currentManaAtStart: 10, manaPool: 10, sustainable: true });
     expect(result.levels[0].mana!.expectedManaSpent).toBeCloseTo(2 * 2 / 0.95, 12);
@@ -486,6 +517,58 @@ describe('simulateDescent', () => {
       expect.objectContaining({ spell: 'Firebolt', killShare: 1 }),
     ]);
     expect(result.assumptions.find((assumption) => assumption.id === 'mana-recovery')?.detail).toContain('Shrines are ignored');
+  });
+
+  it('defaults the Sorcerer to mixed combat and never spends more than start-of-depth mana', () => {
+    const result = simulateDescent({
+      className: 'sorcerer',
+      policy: 'none',
+      tilesPerLevel: 300,
+      gameMode: 'single',
+      difficulty: 'normal',
+      gear: 'none',
+      wrappers: [sorcerer, startingStaff, monster, ...learnedSpellRows, ...curve],
+      locations,
+    });
+
+    expect(result.sorcererCombatPolicy).toBe('mixed');
+    expect(result.weaponId).toBe(startingStaff.entity.id);
+    expect(result.levels[0].expectedSpellKills).toBeCloseTo(10 / (2 / 0.95), 12);
+    expect(result.levels[0].expectedMeleeKills).toBeCloseTo(10 - 10 / (2 / 0.95), 12);
+    expect(result.levels[0].mana).toMatchObject({
+      expectedManaSpent: 10,
+      totalManaAvailable: 10,
+      sustainable: true,
+      deficit: 0,
+    });
+    expect(result.levels[0].expectedSecondsToClear).toBeGreaterThan(0);
+    expect(result.assumptions.find((assumption) => assumption.id === 'sorcerer-spell-progression')?.detail)
+      .toContain('time per mana');
+  });
+
+  it('resolves a loadout item enum whose itemdat row has no id cell by its enum ordinal row', () => {
+    const blankIdStaff = {
+      ...startingStaff,
+      key: 'row166',
+      raw: { ...startingStaff.raw, id: '' },
+      entity: { ...startingStaff.entity, id: 'd1-row166', data: { ...startingStaff.entity.data, id: '' } },
+    };
+    const enumSorcerer = {
+      ...sorcerer,
+      entity: { ...sorcerer.entity, data: { ...sorcerer.entity.data, startingLoadout: { itemIds: ['IDI_SORCERER_DIABLO'] } } },
+    };
+    const result = simulateDescent({
+      className: 'sorcerer',
+      policy: 'none',
+      tilesPerLevel: 300,
+      gameMode: 'single',
+      difficulty: 'normal',
+      gear: 'none',
+      wrappers: [enumSorcerer, blankIdStaff, monster, ...learnedSpellRows, ...curve],
+      locations,
+    });
+
+    expect(result.weaponId).toBe('d1-row166');
   });
 
   it('switches a fire-immune target to lightning and names a target immune to every learned spell', () => {
@@ -530,6 +613,7 @@ describe('simulateDescent', () => {
       gameMode: 'single',
       difficulty: 'normal',
       gear: 'none',
+      sorcererCombatPolicy: 'pure-spell',
       wrappers: [sorcerer, fireImmune, fullyImmune, ...learnedSpellRows, ...curve],
       locations: locationsFor(fireImmune, fullyImmune),
     });
@@ -639,6 +723,7 @@ describe('simulateDescent', () => {
       tilesPerLevel: 60,
       gameMode: 'single',
       difficulty: 'normal',
+      sorcererCombatPolicy: 'pure-spell',
       wrappers: [
         sorcerer, monster, expensiveFirebolt, chargedBolt, lightning, fireball, chainLightning,
         expectedSword, expectedDamagePrefix,
@@ -655,6 +740,24 @@ describe('simulateDescent', () => {
 });
 
 describe('sustain arithmetic', () => {
+  it('funds exactly N of M kills in the hand-computed greedy case', () => {
+    expect(allocateMixedSpellKills([{
+      id: 'three-identical-kills',
+      expectedKills: 3,
+      manaPerKill: 2,
+      secondsSavedPerKill: 5,
+      lifeSavedPerKill: 1,
+    }], 4)).toEqual([{
+      id: 'three-identical-kills',
+      expectedKills: 3,
+      manaPerKill: 2,
+      secondsSavedPerKill: 5,
+      lifeSavedPerKill: 1,
+      spellKills: 2,
+      manaSpent: 4,
+    }]);
+  });
+
   it('adds life and both potion supplies, then reports the exact deficit', () => {
     expect(expectedHealingPotionLife('warrior', 40)).toBe(19);
     expect(sustainArithmetic({

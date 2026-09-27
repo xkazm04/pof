@@ -171,6 +171,34 @@ describe('bestArmourExpectation', () => {
 });
 
 describe('bestWeaponExpectation', () => {
+  it('retains an owned staff when the expected wieldable drop pool has no better base', () => {
+    const staff = wrapper('d1-starting-staff', 'items', 'items/itemdat.tsv', {
+      dropRate: '0', itemType: 'Staff', minMonsterLevel: '0', miscId: 'NONE', spell: 'Firebolt',
+      uniqueBaseItem: 'STARTING_STAFF', minDamage: '3', maxDamage: '6', minStrength: '0', minMagic: '0', minDexterity: '0',
+    }, { subtype: 'Staff' });
+    const result = bestWeaponExpectation({
+      class: 'Sorcerer',
+      depth: 2,
+      killsSoFar: 10,
+      monsterProfiles: [{ profile: { ...profile, unique: true }, weight: 10 }],
+      itemWrappers: [sword],
+      affixWrappers: [],
+      uniqueItemWrappers: [],
+      difficulty: 'normal',
+      strength: 100,
+      magic: 100,
+      dexterity: 100,
+      fallbackWeapon: staff,
+    });
+
+    expect(result).toMatchObject({
+      weaponId: staff.entity.id,
+      weaponType: 'staff',
+      damage: { min: 3, max: 6 },
+      pWeaponFound: 0,
+    });
+  });
+
   it('restricts the Rogue expected weapon pool to bows', () => {
     const result = bestWeaponExpectation({
       class: 'Rogue',
