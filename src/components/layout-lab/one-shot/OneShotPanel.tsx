@@ -9,6 +9,8 @@ import { AnalyzedView, DistributionDimensions, TargetLine } from './AnalyzedView
 import { ProposalView } from './ProposalView';
 import { RunLogView } from './RunLogView';
 import { CatalogPickerForm } from './CatalogPickerForm';
+import { RunActions } from './RunActions';
+import type { NextAction } from '@/lib/one-shot/next-actions';
 import type { GapTarget } from '@/lib/catalog/gap-analysis/rankGaps';
 
 // One module-level orchestrator — shared across renders.
@@ -22,6 +24,7 @@ interface Props {
  * Right-rail panel driven by useOneShotLabStore.panelOpen. Gap-first phase routing:
  * idle → ranked gaps + catalog select; analyzed → every dimension, gaps clickable (nothing spent);
  * proposing/refining → target + distribution + ProposalView; running/completed/failed → RunLogView.
+ * Every non-idle phase ends in RunActions (cancel / resume / retry failed / start over).
  */
 export function OneShotPanel({ t }: Props) {
   const panelOpen = useOneShotLabStore((s) => s.panelOpen);
@@ -75,6 +78,12 @@ export function OneShotPanel({ t }: Props) {
 
   const handleRefine = (input: string, forceMore: boolean) => guarded(() => orchestrator.refine(input, forceMore))();
   const handleApprove = guarded(() => orchestrator.approveAndRun());
+  const handleAction = (a: NextAction) => {
+    setError(null);
+    if (a === 'startOver') useOneShotJobStore.getState().reset();
+    else if (a === 'cancel') orchestrator.cancel();
+    else if (a === 'resume' || a === 'retryFailed') void guarded(() => orchestrator[a]())();
+  };
 
   const isIdle = phase === 'idle';
   const isAnalyzing = phase === 'analyzing' || phase === 'proposing' || phase === 'refining' || phase === 'awaitingRun';
@@ -181,6 +190,7 @@ export function OneShotPanel({ t }: Props) {
             summary={lastSummary}
           />
         )}
+        {!isIdle && phase !== 'analyzed' && <RunActions t={t} onAction={handleAction} />}
       </div>
       </div>
     </>

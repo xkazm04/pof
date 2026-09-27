@@ -88,4 +88,45 @@ describe('oneShotJobStore', () => {
     expect(useOneShotJobStore.getState().phase).toBe('failed');
     expect(useOneShotJobStore.getState().failureReason).toBe('reload-interrupted');
   });
+
+  // -- image-generation/B: no in-flight phase survives a reload; steps can be replaced in place --
+  const rehydrate = (state: Record<string, unknown>) => {
+    localStorage.setItem('pof-one-shot-job', JSON.stringify({ state, version: 0 }));
+    useOneShotJobStore.persist.rehydrate();
+    return useOneShotJobStore.getState();
+  };
+  const DIST = { catalogId: 'items', total: 1, byAttribute: {}, underrepresented: [], sample: [] };
+
+  it('rehydrate of phase=analyzing -> failed/reload-interrupted (never a permanent "Scanning")', () => {
+    const st = rehydrate({ phase: 'analyzing', catalogId: 'items' });
+    expect(st.phase).toBe('failed');
+    expect(st.failureReason).toBe('reload-interrupted');
+    expect(st.canStart()).toBe(true);
+  });
+
+  it('rehydrate of an in-flight refine keeps the proposal it was refining (rests at proposing)', () => {
+    const proposal = { name: 'X', data: {}, rationale: 'r' };
+    const st = rehydrate({ phase: 'refining', catalogId: 'items', proposal, distribution: DIST });
+    expect(st.phase).toBe('proposing');
+    expect(st.proposal).toEqual(proposal);
+  });
+
+  it('rehydrate of proposing without a proposal rests at analyzed with the distribution', () => {
+    const st = rehydrate({ phase: 'proposing', catalogId: 'items', proposal: null, distribution: DIST });
+    expect(st.phase).toBe('analyzed');
+    expect(st.failureReason).toBe('reload-interrupted');
+  });
+
+  it('upsertStep replaces a recorded step in place and appends an unseen one', () => {
+    const s = useOneShotJobStore.getState();
+    s.recordStep({ step: 'A', outcome: 'pass' });
+    s.recordStep({ step: 'B', outcome: 'fail', reason: 'x' });
+    s.recordStep({ step: 'C', outcome: 'pass' });
+    useOneShotJobStore.getState().upsertStep({ step: 'B', outcome: 'pass' });
+    useOneShotJobStore.getState().upsertStep({ step: 'D', outcome: 'deferred' });
+    expect(useOneShotJobStore.getState().stepResults).toEqual([
+      { step: 'A', outcome: 'pass' }, { step: 'B', outcome: 'pass' },
+      { step: 'C', outcome: 'pass' }, { step: 'D', outcome: 'deferred' },
+    ]);
+  });
 });

@@ -50,6 +50,8 @@ export interface OneShotJobState {
   setTotalSteps: (n: number) => void;
   incRefinementTurn: (forceMore: boolean) => boolean;
   recordStep: (r: StepResult) => void;
+  /** Replace the recorded outcome of `r.step` in place (append if unseen) — a retry keeps run order. */
+  upsertStep: (r: StepResult) => void;
   summarize: () => OneShotSummary;
   canStart: () => boolean;
   markCompleted: () => void;
@@ -75,6 +77,27 @@ const INITIAL: Pick<
   totalSteps: 0,
 };
 
+const IN_FLIGHT: readonly OneShotPhase[] = ['analyzing', 'proposing', 'refining', 'awaitingRun', 'running'];
+
+/**
+ * No request survives a reload, so no in-flight phase may either: each rehydrates to the resting
+ * phase its persisted data can still support — an unanswered proposal/refine rests at the
+ * proposal it had (or the distribution), a run or an analyze with nothing to rest on is
+ * `failed` / `reload-interrupted` (a run keeps its draft + recorded steps for resume).
+ */
+function restingAfterReload(p: Partial<OneShotJobState>): Pick<OneShotJobState, 'phase' | 'failureReason'> {
+  const phase = p.phase ?? 'idle';
+  // A resting `analyzed` is only meaningful with the distribution the operator picks from.
+  if (phase === 'analyzed' && !p.distribution) return { phase: 'idle', failureReason: p.failureReason };
+  if (!IN_FLIGHT.includes(phase)) return { phase, failureReason: p.failureReason };
+  const interrupted = 'reload-interrupted';
+  if (phase !== 'running' && phase !== 'analyzing') {
+    if (p.proposal && p.distribution) return { phase: 'proposing', failureReason: p.failureReason };
+    if (p.distribution) return { phase: 'analyzed', failureReason: interrupted };
+  }
+  return { phase: 'failed', failureReason: interrupted };
+}
+
 export const useOneShotJobStore = create<OneShotJobState>()(
   persist(
     (set, get) => ({
@@ -93,6 +116,12 @@ export const useOneShotJobStore = create<OneShotJobState>()(
       },
       recordStep: (r) =>
         set((s) => ({ stepResults: [...s.stepResults, r], currentStepIndex: s.stepResults.length + 1 })),
+      upsertStep: (r) =>
+        set((s) => {
+          const i = s.stepResults.findIndex((x) => x.step === r.step);
+          if (i < 0) return { stepResults: [...s.stepResults, r], currentStepIndex: s.stepResults.length + 1 };
+          return { stepResults: s.stepResults.map((x, j) => (j === i ? r : x)) };
+        }),
       summarize: () => {
         const r = get().stepResults;
         return {
@@ -111,11 +140,7 @@ export const useOneShotJobStore = create<OneShotJobState>()(
       name: 'pof-one-shot-job',
       merge: (persisted, current) => {
         const p = (persisted as Partial<OneShotJobState> | null | undefined) ?? {};
-        let phase: OneShotPhase = p.phase === 'running' ? 'failed' : (p.phase ?? 'idle');
-        // A resting `analyzed` is only meaningful with the distribution the operator picks from.
-        if (phase === 'analyzed' && !p.distribution) phase = 'idle';
-        const failureReason = p.phase === 'running' ? 'reload-interrupted' : p.failureReason;
-        return { ...current, ...p, phase, failureReason };
+        return { ...current, ...p, ...restingAfterReload(p) };
       },
     },
   ),
