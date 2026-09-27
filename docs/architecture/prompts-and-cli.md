@@ -510,6 +510,26 @@ consumer of the isRunning edge — `useModuleCLI`, `event-bus-bridge` (`cli.task
 the SidebarL2 badge — reads THIS run's outcome, and module buttons stay disabled through the
 settle window instead of re-enabling while the terminal would still drop the dispatch.
 
+**Post-run bar acts on run facts (resubmit path).** `SuggestedActions` renders
+`generateSuggestions(session)` from `suggestionIntents.ts` — pure, keyed on the session's
+`lastTaskType`, `lastTaskSuccess`, `lastCallbackStatus`, `moduleId`, `lastDispatch` and
+`pendingCallbacks` (never the `sessionKey` spelling, never a sentinel prompt). Actions are
+typed: `redispatch` (Retry replays the exact last raw prompt + task type; `resume: false` on
+the `pof-cli-prompt` event asks for a fresh Claude session), `resume` ("Collect missing
+result": a success whose prompt carried `@@CALLBACK:<id>` but reported `missing` asks the
+same session for exactly those ids — no "next item" is offered), `resubmit-callback`, and
+`navigate` (the owning module's overview). `useTaskQueue` reports `onDispatch({ prompt,
+taskType })` from `submitPrompt` and `onCallbacksUnresolved(markers)` from the result path
+(the markers whose POST failed, dropped if a newer run began); `InlineTerminal` stores them
+via `recordDispatch` / `setPendingCallbacks`. **Resubmit:** `resubmitPendingCallbacks(id)`
+re-POSTs each retained payload through `resolveCallback` (the registry keeps an entry until
+its POST succeeds) — no new run, no tokens — then `recordCallbackResubmit(id, seq, remaining)`
+sets `lastCallbackStatus` to `confirmed` (none remain) or `failed` (the rest kept). A payload
+the server rejected on validation fails identically; it recovers transport/transient
+failures. `lastDispatch`/`pendingCallbacks` are in-memory only (stripped by `partialize`,
+`pendingCallbacks` cleared by `beginRun`). `useChecklistCLI` is not re-signalled by a
+resubmit; its own `retryUnconfirmed()` stays.
+
 ---
 
 ### 4. `useModuleCLI` hook (`useModuleCLI.ts:38`)
