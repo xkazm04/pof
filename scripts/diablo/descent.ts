@@ -13,6 +13,7 @@
  *     [--identify never|when-profitable]
  *     [--encounter duel|packs] [--slots N]
  *     [--buy none|defence]
+ *     [--recovery none|town-portal] [--portal-trip-seconds N]
  *     [--chain]
  * Rogue and Sorcerer default to expected gear; Warrior and explicit --weapon runs default to none.
  */
@@ -24,6 +25,7 @@ import type { Difficulty } from '@/lib/catalog/reference/combatMath';
 import {
   DEFAULT_TILES_PER_LEVEL_ASSUMPTION,
   DEFAULT_SALE_ITEMS_PER_TRIP_ASSUMPTION,
+  DEFAULT_TOWN_PORTAL_TRIP_SECONDS_ASSUMPTION,
   DESCENT_CLASSES,
   simulateDescent,
   simulateDifficultyChain,
@@ -31,6 +33,7 @@ import {
   type DescentEncounter,
   type DescentGear,
   type DescentPurchases,
+  type DescentRecovery,
   type DefensiveAffixes,
   type OffensiveAffixes,
   type SaleIdentify,
@@ -121,6 +124,18 @@ if (!Number.isInteger(adjacentSlots) || adjacentSlots < 1 || adjacentSlots > DEF
   console.error(`--slots must be an integer from 1 to ${DEFAULT_ADJACENT_SLOTS}`);
   process.exit(2);
 }
+const recovery = (arg('recovery') ?? 'none') as DescentRecovery;
+if (!(['none', 'town-portal'] as const).includes(recovery)) {
+  console.error('--recovery must be none|town-portal');
+  process.exit(2);
+}
+const townPortalTripSeconds = Number(
+  arg('portal-trip-seconds') ?? DEFAULT_TOWN_PORTAL_TRIP_SECONDS_ASSUMPTION,
+);
+if (!Number.isFinite(townPortalTripSeconds) || townPortalTripSeconds < 0) {
+  console.error('--portal-trip-seconds must be a non-negative number');
+  process.exit(2);
+}
 const chain = process.argv.includes('--chain');
 
 const wrappers = listWrappers(getDb(), { sourceId: 'diablo1' });
@@ -147,6 +162,8 @@ const simulationInput = {
   saleIdentify,
   encounter,
   adjacentSlots,
+  recovery,
+  townPortalTripSeconds,
   wrappers,
 };
 const result = chain
@@ -199,6 +216,26 @@ console.table(result.levels.map((level) => {
         ? null
         : Number(level.pack!.expectedGotHitInterruptions.toFixed(2)),
       'pack sustainable': level.pack!.sustainable ? 'yes' : 'no',
+    } : {}),
+    ...(recovery === 'town-portal' ? {
+      'worst engagement': level.recovery!.worstEngagement.unbounded
+        ? `${level.recovery!.worstEngagement.monster} (unbounded${level.recovery!.worstEngagement.stunLocked ? ', stun-lock' : ''})`
+        : `${level.recovery!.worstEngagement.monster} (${level.recovery!.worstEngagement.expectedDamageTaken!.toFixed(2)} damage)`,
+      'engagement survivable': level.recovery!.engagementSurvivable ? 'yes' : 'no',
+      'trips needed': level.recovery!.tripsNeeded == null
+        ? null
+        : Number(level.recovery!.tripsNeeded.toFixed(2)),
+      'portal source': level.recovery!.portalSource,
+      'portal gold': level.recovery!.portalGold == null
+        ? null
+        : Number(level.recovery!.portalGold.toFixed(2)),
+      'portal mana': level.recovery!.portalMana == null
+        ? null
+        : Number(level.recovery!.portalMana.toFixed(2)),
+      'town seconds': level.recovery!.townTimeSeconds == null
+        ? null
+        : Number(level.recovery!.townTimeSeconds.toFixed(2)),
+      'recovery verdict': level.recovery!.verdict,
     } : {}),
     'mana spent': level.mana?.expectedManaSpent == null ? null : Number(level.mana.expectedManaSpent.toFixed(2)),
     'mana pool': level.mana == null ? null : Number(level.mana.manaPool.toFixed(2)),
@@ -285,6 +322,9 @@ if (result.goldFlow) {
     'faucets total': Number(level.faucets.total.toFixed(2)),
     'potions bought': Number(level.sinks.potionsBought.toFixed(2)),
     ...(purchases === 'defence' ? { 'defence bought': Number((level.sinks.defenceBought ?? 0).toFixed(2)) } : {}),
+    ...(recovery === 'town-portal'
+      ? { 'town portals': Number((level.sinks.townPortals ?? 0).toFixed(2)) }
+      : {}),
     repair: Number(level.sinks.repair.toFixed(2)),
     identify: Number(level.sinks.identify.toFixed(2)),
     'sinks total': Number(level.sinks.total.toFixed(2)),
@@ -299,6 +339,9 @@ if (result.goldFlow) {
     sinks: Number(result.goldFlow.cumulative.sinks.total.toFixed(2)),
     ...(purchases === 'defence'
       ? { 'defence bought': Number((result.goldFlow.cumulative.sinks.defenceBought ?? 0).toFixed(2)) }
+      : {}),
+    ...(recovery === 'town-portal'
+      ? { 'town portals': Number((result.goldFlow.cumulative.sinks.townPortals ?? 0).toFixed(2)) }
       : {}),
     net: Number(result.goldFlow.cumulative.net.toFixed(2)),
     'faucets/hour': result.goldFlow.cumulative.perHour == null
@@ -322,7 +365,7 @@ const path = join(
   'pof',
   'Diablo',
   'Combat',
-  `descent-${className}-${policy}${gear === 'expected' ? '-expected-gear' : ''}${className === 'sorcerer' && sorcererCombatPolicy === 'mixed' ? '-mixed' : ''}${sustainIncome === 'gold-and-sales' ? '-gold-and-sales' : ''}${saleIdentify === 'when-profitable' ? '-identify-profitable' : ''}${encounter === 'packs' ? `-packs-${adjacentSlots}-slots` : ''}${defensiveAffixes === 'expected' ? '-expected-defense' : ''}${offensiveAffixes === 'expected' ? '-expected-offense' : ''}${purchases === 'defence' ? '-buy-defence' : ''}${chain ? '-chain' : ''}.json`,
+  `descent-${className}-${policy}${gear === 'expected' ? '-expected-gear' : ''}${className === 'sorcerer' && sorcererCombatPolicy === 'mixed' ? '-mixed' : ''}${sustainIncome === 'gold-and-sales' ? '-gold-and-sales' : ''}${saleIdentify === 'when-profitable' ? '-identify-profitable' : ''}${encounter === 'packs' ? `-packs-${adjacentSlots}-slots` : ''}${defensiveAffixes === 'expected' ? '-expected-defense' : ''}${offensiveAffixes === 'expected' ? '-expected-offense' : ''}${purchases === 'defence' ? '-buy-defence' : ''}${recovery === 'town-portal' ? '-town-portal-recovery' : ''}${townPortalTripSeconds !== DEFAULT_TOWN_PORTAL_TRIP_SECONDS_ASSUMPTION ? `-${townPortalTripSeconds}s-town-trip` : ''}${chain ? '-chain' : ''}.json`,
 );
 mkdirSync(dirname(path), { recursive: true });
 writeFileSync(path, JSON.stringify(result, null, 2));

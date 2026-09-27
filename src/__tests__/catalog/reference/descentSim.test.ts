@@ -335,6 +335,25 @@ const manaPotion = wrapper('d1-mana-potion', 'items', 'items/itemdat.tsv', {
   minMonsterLevel: '0',
 });
 
+const townPortalScroll = wrapper('d1-town-portal-scroll', 'items', 'items/itemdat.tsv', {
+  subtype: 'Misc',
+  stats: [{ label: 'Value', value: 123 }],
+}, {
+  id: 'IDI_PORTAL',
+  dropRate: '0',
+  itemType: 'Misc',
+  miscId: 'SCROLL',
+  spell: 'TownPortal',
+  minMonsterLevel: '4',
+});
+
+const townPortalSpell = wrapper('d1-spell-town-portal', 'spellbook', 'spells/spelldat.tsv', {}, {
+  id: 'TownPortal',
+  manaCost: '17',
+  manaMultiplier: '2',
+  minMana: '5',
+});
+
 const firebolt = wrapper('d1-spell-firebolt', 'spellbook', 'spells/spelldat.tsv', {}, {
   id: 'Firebolt',
   manaCost: '2',
@@ -514,11 +533,13 @@ describe('simulateDescent', () => {
     const explicitDuel = simulateDescent({ ...input, encounter: 'duel', adjacentSlots: 2 });
     const explicitNoDefence = simulateDescent({ ...input, defensiveAffixes: 'none' });
     const explicitNoPurchases = simulateDescent({ ...input, purchases: 'none' });
+    const explicitNoRecovery = simulateDescent({ ...input, recovery: 'none' });
 
     expect(JSON.stringify(explicit)).toBe(JSON.stringify(omitted));
     expect(JSON.stringify(explicitDuel)).toBe(JSON.stringify(omitted));
     expect(JSON.stringify(explicitNoDefence)).toBe(JSON.stringify(omitted));
     expect(JSON.stringify(explicitNoPurchases)).toBe(JSON.stringify(omitted));
+    expect(JSON.stringify(explicitNoRecovery)).toBe(JSON.stringify(omitted));
     expect(Object.keys(explicit.levels[0])).toEqual([
       'depth',
       'poolSize',
@@ -531,6 +552,159 @@ describe('simulateDescent', () => {
       'hardestMonster',
       'note',
     ]);
+  });
+
+  it('replaces an unsustainable floor with a survivable per-engagement Town Portal verdict', () => {
+    const recoveryMonster = {
+      ...monster,
+      entity: {
+        ...monster.entity,
+        data: {
+          ...monster.entity.data,
+          derived: {
+            ...(monster.entity.data.derived as Record<string, unknown>),
+            attackCycleSeconds: 0.05,
+          },
+          stats: (monster.entity.data.stats as { label: string; value: number }[]).map((stat) => {
+            if (stat.label === 'HP Min' || stat.label === 'HP Max') return { ...stat, value: 40 };
+            if (stat.label === 'To Hit') return { ...stat, value: 100 };
+            if (stat.label === 'Damage Min' || stat.label === 'Damage Max') return { ...stat, value: 10 };
+            return stat;
+          }),
+        },
+      },
+    } satisfies ReferenceWrapper;
+    const input = {
+      className: 'warrior' as const,
+      policy: 'none' as const,
+      tilesPerLevel: 3_000,
+      gameMode: 'single' as const,
+      difficulty: 'normal' as const,
+      gear: 'expected' as const,
+      sustainIncome: 'gold-and-sales' as const,
+      wrappers: [
+        warrior, recoveryMonster, expectedSword, expectedDamagePrefix, healingPotion, townPortalScroll, ...curve,
+      ],
+      locations: locationsFor(recoveryMonster),
+    };
+    const withoutRecovery = simulateDescent(input);
+    const withRecovery = simulateDescent({ ...input, recovery: 'town-portal', townPortalTripSeconds: 30 });
+    const target = withRecovery.levels.find((level) =>
+      level.sustain?.sustainable === false && level.recovery?.engagementSurvivable);
+
+    expect(JSON.stringify(simulateDescent({ ...input, recovery: 'none' })))
+      .toBe(JSON.stringify(withoutRecovery));
+    expect(target).toBeDefined();
+    expect(target!.recovery).toMatchObject({
+      policy: 'town-portal',
+      inFightPotionSlots: 8,
+      portalSource: 'scroll',
+      verdict: 'survivable-with-recovery',
+    });
+    expect(target!.recovery!.portalGold)
+      .toBeCloseTo(target!.recovery!.tripsNeeded! * 123, 12);
+    expect(target!.recovery!.townTimeSeconds)
+      .toBeCloseTo(target!.recovery!.tripsNeeded! * 30, 12);
+    expect(withRecovery.goldFlow!.levels[target!.depth - 1].sinks.townPortals)
+      .toBeCloseTo(target!.recovery!.portalGold!, 12);
+    expect(withRecovery.assumptions.find((assumption) => assumption.id === 'town-portal-trip-time'))
+      .toMatchObject({ value: 30, source: expect.stringContaining('explicit caller assumption') });
+  });
+
+  it('charges learned Sorcerer Town Portal casts to mana instead of portal gold', () => {
+    const initialState: DescentInitialState = {
+      className: 'sorcerer',
+      level: 1,
+      totalExperience: 0,
+      strength: 0,
+      magic: 10,
+      dexterity: 0,
+      vitality: 10,
+      unspentStatPoints: 0,
+      balancedAllocationCursor: 0,
+      currentLife: 10,
+      maximumLife: 10,
+      currentMana: 10,
+      maximumMana: 10,
+      learnedSpells: [{ spell: 'TownPortal', spellLevel: 2 }],
+      gold: 0,
+      potions: { healing: 0, fullHealing: 0, mana: 0, fullMana: 0 },
+      diabloKillRank: 0,
+      completedDifficulties: [],
+    };
+    const result = simulateDescent({
+      className: 'sorcerer',
+      policy: 'none',
+      tilesPerLevel: 60,
+      gameMode: 'single',
+      difficulty: 'normal',
+      gear: 'none',
+      recovery: 'town-portal',
+      initialState,
+      wrappers: [sorcerer, monster, startingStaff, townPortalSpell, ...learnedSpellRows, ...curve],
+      locations,
+    });
+
+    const charged = result.levels.find((level) => (level.recovery?.portalMana ?? 0) > 0);
+    expect(charged).toBeDefined();
+    expect(charged!.recovery).toMatchObject({ portalSource: 'spell', portalGold: 0 });
+    expect(charged!.mana!.expectedManaSpent).toBeGreaterThanOrEqual(
+      charged!.recovery!.portalMana!,
+    );
+  });
+
+  it('marks an unbounded pack hit-recovery lock lethal even with Town Portal recovery', () => {
+    const slowRecoveryWarrior = {
+      ...warrior,
+      entity: {
+        ...warrior.entity,
+        data: {
+          ...warrior.entity.data,
+          animations: { ...animations, hitRecovery: { frames: 10 } },
+        },
+      },
+    } satisfies ReferenceWrapper;
+    const lockingMonster = {
+      ...monster,
+      entity: {
+        ...monster.entity,
+        data: {
+          ...monster.entity.data,
+          derived: {
+            ...(monster.entity.data.derived as Record<string, unknown>),
+            attackCycleSeconds: 0.05,
+          },
+          stats: (monster.entity.data.stats as { label: string; value: number }[]).map((stat) => {
+            if (stat.label === 'HP Min' || stat.label === 'HP Max') return { ...stat, value: 40 };
+            if (stat.label === 'To Hit') return { ...stat, value: 100 };
+            if (stat.label === 'Damage Min' || stat.label === 'Damage Max') return { ...stat, value: 10 };
+            return stat;
+          }),
+        },
+      },
+    } satisfies ReferenceWrapper;
+    const result = simulateDescent({
+      className: 'warrior',
+      policy: 'none',
+      tilesPerLevel: 60,
+      gameMode: 'single',
+      difficulty: 'normal',
+      gear: 'none',
+      encounter: 'packs',
+      recovery: 'town-portal',
+      wrappers: [slowRecoveryWarrior, lockingMonster, townPortalScroll, ...curve],
+      locations: locationsFor(lockingMonster),
+    });
+    const locked = result.levels.find((level) => level.recovery?.worstEngagement.stunLocked);
+
+    expect(locked).toBeDefined();
+    expect(locked!.recovery).toMatchObject({
+      engagementSurvivable: false,
+      tripsNeeded: null,
+      portalGold: null,
+      verdict: 'lethal-per-engagement',
+      worstEngagement: { expectedDamageTaken: null, unbounded: true, stunLocked: true },
+    });
   });
 
   it('buys an affordable store armour offer and changes the defensive quantity it targets', () => {

@@ -71,6 +71,7 @@ import {
   selectMonsterMissileAttack,
 } from '@/lib/catalog/reference/monsterMissileDamage';
 import { spriteAnimLen } from '@/lib/catalog/reference/missileSpecs';
+import { manaCost } from '@/lib/catalog/reference/spellMath';
 import type { ReferenceWrapper } from '@/lib/catalog/reference/wrapper';
 
 export const DESCENT_CLASSES = ['warrior', 'rogue', 'sorcerer'] as const;
@@ -84,6 +85,7 @@ export type SustainIncome = 'monster-gold' | 'gold-and-sales';
 export type SaleIdentify = SaleIdentifyPolicy;
 export type DescentEncounter = 'duel' | 'packs';
 export type DescentPurchases = 'none' | 'defence';
+export type DescentRecovery = 'none' | 'town-portal';
 
 /** Explicit non-solid-tile assumption used only when a caller does not provide one. */
 export const DEFAULT_TILES_PER_LEVEL_ASSUMPTION = 3_000;
@@ -93,6 +95,12 @@ export const DEFAULT_SALE_ITEMS_PER_TRIP_ASSUMPTION = 40;
 
 /** At least half of the between-depth gold budget remains available for sustain potions. */
 export const DEFENCE_POTION_RESERVE_FRACTION = 0.5;
+
+/** Engine constant: Source/player.h:39; inv.cpp iterates these slots at 1284-1316. */
+export const MAX_BELT_ITEMS = 8;
+
+/** Explicit round-trip town-time assumption; this is not a Diablo table or engine value. */
+export const DEFAULT_TOWN_PORTAL_TRIP_SECONDS_ASSUMPTION = 60;
 
 /** Deliberately simple cumulative learned-set policy; these unlock depths are model assumptions, not table rows. */
 export const SORCERER_SPELL_PROGRESSION = [
@@ -145,6 +153,33 @@ export interface DescentPackExpectation {
   eligibleUniquePacks: DescentUniquePackSize[];
 }
 
+export interface DescentWorstEngagement {
+  monsterId: string;
+  monster: string;
+  kind: 'duel' | 'expected-pack';
+  expectedDamageTaken: number | null;
+  unbounded: boolean;
+  stunLocked: boolean;
+}
+
+export interface DescentRecoveryExpectation {
+  policy: 'town-portal';
+  worstEngagement: DescentWorstEngagement;
+  maximumLife: number;
+  inFightPotionSlots: number;
+  lifeRestoredPerPotion: number;
+  inFightPotionCapacity: number;
+  usableLifePerTrip: number;
+  engagementSurvivable: boolean;
+  tripsNeeded: number | null;
+  portalSource: 'scroll' | 'spell';
+  portalGold: number | null;
+  portalMana: number | null;
+  tripSeconds: number;
+  townTimeSeconds: number | null;
+  verdict: 'survivable-with-recovery' | 'lethal-per-engagement';
+}
+
 export interface DescentLevelResult {
   depth: number;
   poolSize: number;
@@ -188,6 +223,8 @@ export interface DescentLevelResult {
   pack?: DescentPackExpectation;
   /** Present only for the opt-in town-defence purchase policy. */
   defencePurchases?: DescentDefencePurchaseReport;
+  /** Present only for the opt-in Town Portal recovery policy. */
+  recovery?: DescentRecoveryExpectation;
 }
 
 export interface DescentPurchasedDefence extends ExpectedDefensiveStoreOffer {
@@ -269,6 +306,8 @@ export interface DescentGoldSinks {
   potionsBought: number;
   /** Present only for the opt-in town-defence purchase policy. */
   defenceBought?: number;
+  /** Present only for the opt-in Town Portal recovery policy. */
+  townPortals?: number;
   repair: number;
   identify: number;
   total: number;
@@ -455,6 +494,8 @@ export interface DescentSimulation {
   purchases?: 'defence';
   /** Omitted for the byte-compatible unidentified-sale default. */
   saleIdentify?: 'when-profitable';
+  /** Omitted for the byte-compatible default. */
+  recovery?: 'town-portal';
   assumptions: DescentAssumption[];
   levels: DescentLevelResult[];
   /** Opt-in derived measurement; omitted by the byte-compatible monster-gold policy. */
@@ -491,6 +532,10 @@ export interface SimulateDescentInput {
   adjacentSlots?: number;
   /** Town purchases are opt-in; the default spends no gold on equipment. */
   purchases?: DescentPurchases;
+  /** Mid-depth recovery is opt-in; the default retains floor-wide sustain. */
+  recovery?: DescentRecovery;
+  /** Explicit town round-trip time assumption used only by Town Portal recovery. */
+  townPortalTripSeconds?: number;
   /** Source rows are passed in; the simulator never reads a database or filesystem. */
   wrappers: readonly ReferenceWrapper[];
   /** Tests and other pure callers may pass already-projected location entities. */
@@ -993,6 +1038,39 @@ function consumablePrice(
   return price;
 }
 
+function townPortalScrollPrice(wrappers: readonly ReferenceWrapper[]): number {
+  const candidates = wrappers.filter((wrapper) => wrapper.file === 'items/itemdat.tsv'
+    && String(wrapper.raw.miscId).toUpperCase() === 'SCROLL'
+    && String(wrapper.raw.spell).toLowerCase() === 'townportal');
+  const base = candidates.find((wrapper) => Number(wrapper.raw.dropRate) <= 0) ?? candidates[0];
+  if (!base) throw new Error('the supplied item wrappers have no Town Portal scroll base');
+  const price = numericStat(base, 'Value');
+  if (!(price > 0)) throw new Error(`${base.entity.id} has a non-positive Town Portal scroll value`);
+  return price;
+}
+
+function townPortalSpellMana(
+  wrappers: readonly ReferenceWrapper[],
+  spellLevel: number,
+  characterLevel: number,
+): number {
+  const wrapper = wrappers.find((candidate) => candidate.file === 'spells/spelldat.tsv'
+    && String(candidate.raw.id).toLowerCase() === 'townportal');
+  if (!wrapper) throw new Error('the supplied spell wrappers have no TownPortal row');
+  const read = (key: 'manaCost' | 'manaMultiplier' | 'minMana') => {
+    const value = Number(wrapper.raw[key]);
+    if (!Number.isFinite(value)) throw new Error(`${wrapper.entity.id} has no numeric raw.${key}`);
+    return value;
+  };
+  return manaCost('TownPortal', {
+    spellLevel,
+    characterLevel,
+    baseMana: read('manaCost'),
+    manaAdj: read('manaMultiplier'),
+    minMana: read('minMana'),
+  }, 'Sorcerer');
+}
+
 function sorcererSpellAttacks(
   wrappers: readonly ReferenceWrapper[],
   depth: number,
@@ -1004,7 +1082,7 @@ function sorcererSpellAttacks(
     const previous = learnedById.get(id);
     if (!previous || previous.spellLevel < entry.spellLevel) learnedById.set(id, entry);
   }
-  const learned = [...learnedById.values()];
+  const learned = [...learnedById.values()].filter((entry) => spellSpec(entry.spell)?.damage.kind !== 'none');
   if (learned.length === 0) throw new Error(`the Sorcerer spell policy has no learned spell for depth ${depth}`);
   return learned.map((policy) => {
     const wrapper = wrappers.find((candidate) => candidate.file === 'spells/spelldat.tsv'
@@ -1292,6 +1370,8 @@ function assumptions(
   defensiveAffixes: DefensiveAffixes,
   offensiveAffixes: OffensiveAffixes,
   purchases: DescentPurchases,
+  recovery: DescentRecovery,
+  townPortalTripSeconds: number,
 ): DescentAssumption[] {
   return [
     {
@@ -1467,7 +1547,9 @@ function assumptions(
     }, {
       id: 'gold-flow-measurement',
       value: 'derived gold and gold per clear-hour',
-      source: 'descent faucets and combat-only clear time',
+      source: recovery === 'town-portal'
+        ? 'descent faucets and combat-plus-explicit-town-trip clear time'
+        : 'descent faucets and combat-only clear time',
       detail: saleIdentify === 'when-profitable'
         ? 'This is a PoF-derived faucet/sink measurement, not an engine economy or equilibrium. Potion purchases and repair are not modelled under gear:none; profitable Cain identification is reported as a sink.'
         : 'This is a PoF-derived faucet/sink measurement, not an engine economy or equilibrium. Potion purchases and repair are not modelled under gear:none and identify is zero under the unidentified-sale policy.',
@@ -1563,10 +1645,16 @@ function assumptions(
       }, {
         id: 'gold-flow-measurement',
         value: 'derived gold and gold per clear-hour',
-        source: 'descent faucets, purchases, and combat-only clear time',
-        detail: saleIdentify === 'when-profitable'
-          ? 'This is a PoF-derived faucet/sink measurement, not an engine economy or equilibrium. Repair is not modelled and is reported as zero; profitable Cain identification is a sink. Travel, looting, town, and recovery time are excluded from the denominator.'
-          : 'This is a PoF-derived faucet/sink measurement, not an engine economy or equilibrium. Repair is not modelled and is reported as zero; identify is zero under the unidentified-sale policy. Travel, looting, town, and recovery time are excluded from the denominator.',
+        source: recovery === 'town-portal'
+          ? 'descent faucets, purchases, and combat-plus-explicit-town-trip clear time'
+          : 'descent faucets, purchases, and combat-only clear time',
+        detail: recovery === 'town-portal'
+          ? saleIdentify === 'when-profitable'
+            ? 'This is a PoF-derived faucet/sink measurement, not an engine economy or equilibrium. Repair is zero; profitable Cain identification and Town Portal scrolls are sinks. The named portal-trip time enters the denominator; other travel and looting time remain excluded.'
+            : 'This is a PoF-derived faucet/sink measurement, not an engine economy or equilibrium. Repair and identify are zero; Town Portal scrolls are sinks. The named portal-trip time enters the denominator; other travel and looting time remain excluded.'
+          : saleIdentify === 'when-profitable'
+            ? 'This is a PoF-derived faucet/sink measurement, not an engine economy or equilibrium. Repair is not modelled and is reported as zero; profitable Cain identification is a sink. Travel, looting, town, and recovery time are excluded from the denominator.'
+            : 'This is a PoF-derived faucet/sink measurement, not an engine economy or equilibrium. Repair is not modelled and is reported as zero; identify is zero under the unidentified-sale policy. Travel, looting, town, and recovery time are excluded from the denominator.',
       }, ...(saleIdentify === 'when-profitable' ? [{
         id: 'sale-identification',
         value: 'identify Magic and Unique drops only when profitable',
@@ -1600,11 +1688,33 @@ function assumptions(
         detail: 'Mana is spent before partial and full mana potions. Potions are consumed just in time, so the arithmetic assumes no restoration is wasted at the mana cap; unused expected potions carry forward.',
       }] : []),
     ] : []),
+    ...(recovery === 'town-portal' ? [{
+      id: 'town-portal-recovery',
+      value: 'full life plus eight belt Healing potions per engagement',
+      source: '.reference/devilutionX/Source/player.h:39; .reference/devilutionX/Source/inv.cpp:1282-1316; d1-instant-potion-restoration',
+      detail: 'The worst duel by monster type, or expected homogeneous placement pack, must fit within maximum life plus one full eight-slot belt of class-scaled Healing potions. Instant use is assumed between damage events. Any unbounded engagement, including a deterministic PM_GOTHIT lock, is lethal. The per-engagement verdict is independent of whether the aggregate floor-wide sustain budget succeeds.',
+    }, {
+      id: 'town-portal-trip-cost',
+      value: 'one wrapper-priced Adria scroll per trip, or Town Portal spell mana when the Sorcerer already knows it',
+      source: '.reference/devilutionX/Source/spells.cpp:103-168,211-232; .reference/devilutionX/Source/missiles.cpp:2073-2122,3393-3416; .reference/devilutionX/Source/stores.cpp:1577-1595,1609-1623; .reference/devilutionX/Source/items.cpp:4467-4489',
+      detail: 'Expected trips are total expected depth damage divided by usable life per trip. Scroll value and spell mana are read from supplied wrappers. Portal gold is an economic demand and a W40 sink; the lethality verdict does not impose a separate within-depth liquidity check.',
+    }, {
+      id: 'town-portal-healing',
+      value: 'Pepin restores life to maximum for free on each trip',
+      source: '.reference/devilutionX/Source/towners.cpp:413-448; .reference/devilutionX/Source/stores.cpp:1018-1043',
+      detail: 'The recovery model assumes each trip reaches Pepin after any quest dialogue gate and then returns through the open portal. Pepin restores life, not mana.',
+    }, {
+      id: 'town-portal-trip-time',
+      value: townPortalTripSeconds,
+      source: 'explicit caller assumption (the engine does not prescribe one deterministic shopping round-trip time)',
+      detail: 'Seconds per portal round trip include portal use, loading, town movement, healing, shopping, and the return. This named assumption is added to clear time and the W40 per-hour denominator.',
+    }] : []),
   ];
 }
 
 function summarizeGoldFlow(levels: readonly DescentGoldFlowLevel[], itemsPerTrip: number): DescentGoldFlow {
   const hasDefencePurchases = levels.some((level) => level.sinks.defenceBought !== undefined);
+  const hasTownPortalRecovery = levels.some((level) => level.sinks.townPortals !== undefined);
   const faucets = levels.reduce<DescentGoldFaucets>((sum, level) => ({
     monsterGold: sum.monsterGold + level.faucets.monsterGold,
     sales: sum.sales + level.faucets.sales,
@@ -1613,6 +1723,7 @@ function summarizeGoldFlow(levels: readonly DescentGoldFlowLevel[], itemsPerTrip
   const sinks = levels.reduce<DescentGoldSinks>((sum, level) => ({
     potionsBought: sum.potionsBought + level.sinks.potionsBought,
     ...(hasDefencePurchases ? { defenceBought: (sum.defenceBought ?? 0) + (level.sinks.defenceBought ?? 0) } : {}),
+    ...(hasTownPortalRecovery ? { townPortals: (sum.townPortals ?? 0) + (level.sinks.townPortals ?? 0) } : {}),
     repair: sum.repair + level.sinks.repair,
     identify: sum.identify + level.sinks.identify,
     total: sum.total + level.sinks.total,
@@ -1630,6 +1741,7 @@ function summarizeGoldFlow(levels: readonly DescentGoldFlowLevel[], itemsPerTrip
     sinks: {
       potionsBought: sinks.potionsBought / clearHours,
       ...(hasDefencePurchases ? { defenceBought: (sinks.defenceBought ?? 0) / clearHours } : {}),
+      ...(hasTownPortalRecovery ? { townPortals: (sinks.townPortals ?? 0) / clearHours } : {}),
       repair: sinks.repair / clearHours,
       identify: sinks.identify / clearHours,
       total: sinks.total / clearHours,
@@ -1695,6 +1807,18 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
   if (purchases === 'defence' && input.gameMode !== 'single') {
     throw new Error('purchases:defence models vanilla single-player stores only');
   }
+  const recovery = input.recovery ?? 'none';
+  if (!(['none', 'town-portal'] as const).includes(recovery)) {
+    throw new Error(`unknown recovery policy ${input.recovery}`);
+  }
+  if (recovery === 'town-portal' && input.gameMode !== 'single') {
+    throw new Error('recovery:town-portal models vanilla single-player town services only');
+  }
+  const townPortalTripSeconds = input.townPortalTripSeconds
+    ?? DEFAULT_TOWN_PORTAL_TRIP_SECONDS_ASSUMPTION;
+  if (!Number.isFinite(townPortalTripSeconds) || townPortalTripSeconds < 0) {
+    throw new Error(`townPortalTripSeconds must be a non-negative finite number (got ${townPortalTripSeconds})`);
+  }
   const sorcererCombatPolicy = input.sorcererCombatPolicy ?? 'mixed';
   if (!(['mixed', 'pure-spell'] as const).includes(sorcererCombatPolicy)) {
     throw new Error(`unknown Sorcerer combat policy ${input.sorcererCombatPolicy}`);
@@ -1747,6 +1871,12 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
     maxima,
     curve.maxLevel,
   );
+  const learnedTownPortal = recovery === 'town-portal' && input.className === 'sorcerer'
+    ? initialState.learnedSpells.find((spell) => spell.spell.toLowerCase().replace(/[\s-]/g, '') === 'townportal')
+    : undefined;
+  const portalScrollPrice = recovery === 'town-portal' && learnedTownPortal === undefined
+    ? townPortalScrollPrice(input.wrappers)
+    : 0;
   const allocationAtLevel = (level: number) => spendStatPoints(
     initialState,
     initialState.unspentStatPoints + Math.max(0, level - initialState.level) * 5,
@@ -2458,7 +2588,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       };
     }) : [];
     const packsPerType = expectedKillsPerType / placementPackSize;
-    const expectedSeconds = encounter === 'packs'
+    const combatExpectedSeconds = encounter === 'packs'
       ? ambientPopulation === 0 ? 0 : packRows.reduce((sum, row) => sum + row.secondsPerPack * packsPerType, 0)
       : duelExpectedSeconds;
     const expectedDamage = encounter === 'packs'
@@ -2467,6 +2597,43 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
     const expectedGotHitInterruptions = encounter === 'packs'
       ? ambientPopulation === 0 ? 0 : packRows.reduce((sum, row) => sum + row.expectedGotHitInterruptionsPerPack * packsPerType, 0)
       : 0;
+    const recoveryEngagements = recovery === 'town-portal' ? rows.map((row, index) => {
+      const packRow = packRows[index];
+      const engagementDamage = encounter === 'packs'
+        ? packRow.expectedDamageTakenPerPack
+        : row.expectedDamageTaken;
+      const unbounded = row.unbounded || !Number.isFinite(engagementDamage)
+        || (encounter === 'packs' && !Number.isFinite(packRow.secondsPerPack));
+      return {
+        monsterId: row.wrapper.entity.id,
+        monster: row.wrapper.entity.name,
+        kind: encounter === 'packs' ? 'expected-pack' as const : 'duel' as const,
+        expectedDamageTaken: engagementDamage,
+        unbounded,
+        stunLocked: encounter === 'packs' && !row.unbounded && !Number.isFinite(packRow.secondsPerPack),
+      };
+    }) : [];
+    const worstRecoveryEngagement = recoveryEngagements.sort((left, right) =>
+      Number(right.unbounded) - Number(left.unbounded)
+      || right.expectedDamageTaken - left.expectedDamageTaken
+      || left.monsterId.localeCompare(right.monsterId))[0];
+    const recoveryPotionLife = recovery === 'town-portal'
+      ? expectedHealingPotionLife(input.className, lifePool)
+      : 0;
+    const recoveryPotionCapacity = recoveryPotionLife * MAX_BELT_ITEMS;
+    const usableLifePerTrip = lifePool + recoveryPotionCapacity;
+    const recoveryTrips = recovery === 'town-portal' && Number.isFinite(expectedDamage)
+      ? expectedDamage / usableLifePerTrip
+      : null;
+    const recoveryTownTime = recoveryTrips == null ? null : recoveryTrips * townPortalTripSeconds;
+    const engagementSurvivable = recovery === 'town-portal'
+      && !worstRecoveryEngagement.unbounded
+      && worstRecoveryEngagement.expectedDamageTaken <= usableLifePerTrip;
+    const expectedSeconds = recovery === 'town-portal'
+      ? Number.isFinite(combatExpectedSeconds) && recoveryTownTime != null
+        ? combatExpectedSeconds + recoveryTownTime
+        : Infinity
+      : combatExpectedSeconds;
     const expectedManaSpent = playerAttack === 'spell'
       ? ambientPopulation === 0
         ? 0
@@ -2648,6 +2815,60 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       carriedManaPotions += loot.expectedManaPotions;
       carriedFullManaPotions += loot.expectedFullManaPotions;
     }
+    const portalSource = learnedTownPortal === undefined ? 'scroll' as const : 'spell' as const;
+    const portalManaPerTrip = recovery === 'town-portal' && learnedTownPortal !== undefined
+      ? townPortalSpellMana(input.wrappers, learnedTownPortal.spellLevel, heroLevelBefore)
+      : 0;
+    const portalMana = recovery === 'town-portal' && recoveryTrips != null
+      ? recoveryTrips * portalManaPerTrip
+      : null;
+    if (portalMana != null && portalMana > 0 && mana) {
+      const combatManaSpent = mana.expectedManaSpent;
+      const totalManaSpent = combatManaSpent == null ? null : combatManaSpent + portalMana;
+      mana.expectedManaSpent = totalManaSpent;
+      mana.sustainable = totalManaSpent != null && totalManaSpent <= mana.totalManaAvailable;
+      mana.deficit = totalManaSpent == null ? null : Math.max(0, totalManaSpent - mana.totalManaAvailable);
+      if (sustain) sustain.sustainable = sustain.sustainable && mana.sustainable;
+      const remaining = consumeMana(
+        currentMana ?? 0,
+        carriedManaPotions,
+        carriedFullManaPotions,
+        portalMana,
+        manaRestoredPerPotion,
+        manaPool,
+      );
+      currentMana = remaining.currentMana;
+      carriedManaPotions = remaining.manaPotions;
+      carriedFullManaPotions = remaining.fullManaPotions;
+    }
+    const portalGold = recovery === 'town-portal' && recoveryTrips != null
+      ? recoveryTrips * portalScrollPrice
+      : null;
+    const recoveryExpectation: DescentRecoveryExpectation | undefined = recovery === 'town-portal' ? {
+      policy: 'town-portal',
+      worstEngagement: {
+        monsterId: worstRecoveryEngagement.monsterId,
+        monster: worstRecoveryEngagement.monster,
+        kind: worstRecoveryEngagement.kind,
+        expectedDamageTaken: finiteOrNull(worstRecoveryEngagement.expectedDamageTaken),
+        unbounded: worstRecoveryEngagement.unbounded,
+        stunLocked: worstRecoveryEngagement.stunLocked,
+      },
+      maximumLife: lifePool,
+      inFightPotionSlots: MAX_BELT_ITEMS,
+      lifeRestoredPerPotion: recoveryPotionLife,
+      inFightPotionCapacity: recoveryPotionCapacity,
+      usableLifePerTrip,
+      engagementSurvivable,
+      tripsNeeded: recoveryTrips,
+      portalSource,
+      portalGold,
+      portalMana,
+      tripSeconds: townPortalTripSeconds,
+      townTimeSeconds: recoveryTownTime,
+      verdict: engagementSurvivable ? 'survivable-with-recovery' : 'lethal-per-engagement',
+    } : undefined;
+    if (recoveryExpectation?.engagementSurvivable) currentLife = lifePool;
     totalExperience += expectedXpGained;
     heroLevel = levelAt(totalExperience, heroLevelBefore, curve);
     if (heroLevel > heroLevelBefore) {
@@ -2736,8 +2957,17 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
     const identifyGoldSpent = sale?.expectedIdentifyFees ?? 0;
     const potionGoldSpent = (sustain?.healingPotionsBought ?? 0) * healingPotionPrice
       + (mana?.manaPotionsBought ?? 0) * manaPotionPrice;
-    goldBalance = Math.max(0, goldBalance + goldIncome - potionGoldSpent - defenceGoldSpent - identifyGoldSpent);
-    if (loot) goldForNextDepth = purchases === 'defence' ? goldBalance : goldIncome - identifyGoldSpent;
+    const portalGoldSpent = recoveryExpectation?.portalGold ?? 0;
+    goldBalance = Math.max(
+      0,
+      goldBalance + goldIncome - potionGoldSpent - defenceGoldSpent - identifyGoldSpent - portalGoldSpent,
+    );
+    if (loot) {
+      const nextDepthGold = purchases === 'defence'
+        ? goldBalance
+        : goldIncome - identifyGoldSpent - portalGoldSpent;
+      goldForNextDepth = recovery === 'town-portal' ? Math.max(0, nextDepthGold) : nextDepthGold;
+    }
     if (loot && sale) {
       const faucets: DescentGoldFaucets = {
         monsterGold: loot.expectedGold,
@@ -2747,9 +2977,10 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       const sinks: DescentGoldSinks = {
         potionsBought: potionGoldSpent,
         ...(purchases === 'defence' ? { defenceBought: defenceGoldSpent } : {}),
+        ...(recovery === 'town-portal' ? { townPortals: portalGoldSpent } : {}),
         repair: 0,
         identify: identifyGoldSpent,
-        total: potionGoldSpent + defenceGoldSpent + identifyGoldSpent,
+        total: potionGoldSpent + defenceGoldSpent + identifyGoldSpent + portalGoldSpent,
       };
       const clearHours = Number.isFinite(expectedSeconds) ? expectedSeconds / 3_600 : null;
       const perHour = clearHours != null && clearHours > 0 ? {
@@ -2761,6 +2992,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
         sinks: {
           potionsBought: sinks.potionsBought / clearHours,
           ...(purchases === 'defence' ? { defenceBought: defenceGoldSpent / clearHours } : {}),
+          ...(recovery === 'town-portal' ? { townPortals: portalGoldSpent / clearHours } : {}),
           repair: 0,
           identify: identifyGoldSpent / clearHours,
           total: sinks.total / clearHours,
@@ -2864,6 +3096,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       ...(offensiveAffixesAssumed ? { offensiveAffixesAssumed } : {}),
       ...(packExpectation ? { pack: packExpectation } : {}),
       ...(defencePurchaseReport ? { defencePurchases: defencePurchaseReport } : {}),
+      ...(recoveryExpectation ? { recovery: recoveryExpectation } : {}),
     });
     if (gear === 'expected' && ambientPopulation > 0) {
       lootHistory.push(...depthLootProfiles);
@@ -3009,6 +3242,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
     ...(exchangeModel === 'cadence' ? { exchangeModel } : {}),
     ...(purchases === 'defence' ? { purchases } : {}),
     ...(saleIdentify === 'when-profitable' ? { saleIdentify } : {}),
+    ...(recovery === 'town-portal' ? { recovery } : {}),
     assumptions: assumptions(
       tilesPerLevel,
       input.policy,
@@ -3025,6 +3259,8 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       defensiveAffixes,
       offensiveAffixes,
       purchases,
+      recovery,
+      townPortalTripSeconds,
     ),
     levels,
     ...(sustainIncome === 'gold-and-sales' ? { goldFlow: summarizeGoldFlow(goldFlowLevels, saleItemsPerTrip) } : {}),
@@ -3114,6 +3350,7 @@ export function descentEntity(input: SimulateDescentInput): ReferenceWrapper {
     ...(simulation.defensiveAffixes === 'expected' ? ['expected-defensive-affixes'] : []),
     ...(simulation.offensiveAffixes === 'expected' ? ['expected-offensive-affixes'] : []),
     ...(simulation.purchases === 'defence' ? ['expected-defensive-store-purchases'] : []),
+    ...(simulation.recovery === 'town-portal' ? ['town-portal-recovery'] : []),
   ]);
   return {
     wrapperId: `${classWrapper.sourceId}:combat-map:${id}`,
@@ -3156,6 +3393,7 @@ export function descentEntity(input: SimulateDescentInput): ReferenceWrapper {
           ? { offensiveAffixes: simulation.offensiveAffixes }
           : {}),
         ...(simulation.purchases === 'defence' ? { purchases: simulation.purchases } : {}),
+        ...(simulation.recovery === 'town-portal' ? { recovery: simulation.recovery } : {}),
       },
       provenance: {
         kind: 'ingest',
