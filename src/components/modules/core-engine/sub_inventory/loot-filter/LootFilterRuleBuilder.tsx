@@ -3,8 +3,8 @@
 import { useMemo } from 'react';
 import { ListFilter, Eye, FileCode } from 'lucide-react';
 import { useActiveRuleset } from '@/stores/lootFilterStore';
-import { useItemEntries } from '@/stores/catalogStore';
-import { DUMMY_ITEMS, ACCENT, type ItemData } from '../_shared/data';
+import { ACCENT } from '../_shared/data';
+import { useInventoryItems } from '../_shared/useInventoryItems';
 import { evaluateRuleset } from '@/lib/loot-filter/engine';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import { RulesetToolbar } from './RulesetToolbar';
@@ -19,15 +19,8 @@ import { ExportPanel } from './ExportPanel';
  */
 export function LootFilterRuleBuilder() {
   const ruleset = useActiveRuleset();
-  const itemEntries = useItemEntries();
-
   // DUMMY_ITEMS ∪ catalogStore items (catalog entries win on id collision).
-  const previewItems = useMemo<ItemData[]>(() => {
-    const byId = new Map<string, ItemData>();
-    for (const it of DUMMY_ITEMS) byId.set(it.id, it);
-    for (const e of itemEntries) byId.set(e.data.id, e.data);
-    return [...byId.values()];
-  }, [itemEntries]);
+  const previewItems = useInventoryItems();
 
   const evaluation = useMemo(() => evaluateRuleset(previewItems, ruleset), [previewItems, ruleset]);
 

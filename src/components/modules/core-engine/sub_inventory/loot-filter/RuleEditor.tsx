@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { useLootFilterStore } from '@/stores/lootFilterStore';
-import { DUMMY_ITEMS } from '../_shared/data';
+import { useInventoryItems } from '../_shared/useInventoryItems';
 import { RARITY_COLORS, AFFIX_CATEGORY_COLORS, withOpacity, OPACITY_25 } from '@/lib/chart-colors';
 import { RARITIES, ITEM_TYPES, AFFIX_AXES, FILTER_SOUNDS, STYLE_COLOR_PRESETS } from '@/lib/loot-filter/defaults';
 import type { AffixAxis, LootFilterRule } from '@/lib/loot-filter/types';
@@ -19,7 +19,8 @@ function toggleIn<T extends string>(arr: readonly T[] | undefined, v: T): T[] {
 /** Edits one rule's match condition and (for Show/Highlight) its visual styling. */
 export function RuleEditor({ rulesetId, rule, accent }: { rulesetId: string; rule: LootFilterRule; accent: string }) {
   const updateRule = useLootFilterStore((s) => s.updateRule);
-  const subtypes = useMemo(() => [...new Set(DUMMY_ITEMS.map((i) => i.subtype))].sort(), []);
+  const items = useInventoryItems();
+  const subtypes = useMemo(() => [...new Set(items.map((i) => i.subtype))].sort(), [items]);
   const cond = rule.condition;
   const patchCond = (p: Partial<typeof cond>) => updateRule(rulesetId, rule.id, { condition: { ...cond, ...p } });
   const patchStyle = (p: Partial<typeof rule.style>) => updateRule(rulesetId, rule.id, { style: { ...rule.style, ...p } });
