@@ -59,7 +59,7 @@ export const PORT_QUALIFICATIONS_DATA: readonly PortQualificationData[] = [
   {
     id: 'd1-port-randomize-quests-law', scope: 'quests', title: 'Quest-pool elimination is a port option',
     qualifies: ['d1-quest-selection-law'],
-    body: 'Randomize Quests is a pinned-port option, on by default; the quest-pool elimination the quest-selection law describes runs only with it on, and with it off every quest stays available. The port also handles one known compatibility seed safely where, by its own comment, the original read invalid memory.',
+    body: "Randomize Quests is a pinned-port option, on by default; the quest-pool elimination the quest-selection law describes runs only with it on. With it off, the pools eliminate none; shareware/mode restrictions and Zhar's missing-library fallback can still make quests unavailable. The port also handles one known compatibility seed safely where, by its own comment, the original read invalid memory.",
     refs: [`${PIN}options.h#L623`, `${PIN}options.cpp#L868`, `${PIN}quests.cpp#L82`, `${PIN}quests.cpp#L119`],
   },
   {
