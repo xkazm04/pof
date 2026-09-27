@@ -9,7 +9,10 @@ import type { CatalogHandler } from './types';
 export const vfxHandler: CatalogHandler = {
   catalogId: 'vfx',
   pool: (_db, _sourceId, wrappers) =>
-    withMissileSpecs(wrappers.filter((wrapper) => wrapper.file === 'missiles/misdat.tsv')),
+    withMissileSpecs(
+      wrappers.filter((wrapper) => wrapper.file === 'missiles/misdat.tsv'),
+      wrappers.filter((wrapper) => wrapper.catalogId === 'bestiary'),
+    ),
   seed: (ctx) => {
     const wrappers = listWrappers(ctx.db, { sourceId: ctx.sourceId, catalogId: 'vfx' })
       .filter((wrapper) => wrapper.file === 'missiles/misdat.tsv')

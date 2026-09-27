@@ -3,6 +3,7 @@ import '@/lib/catalog/pipelines/registry.generated';
 import { REFERENCE_GAP } from '@/lib/catalog/acceptance/markers';
 import { MISSILE_COLUMNS } from '@/lib/catalog/ingest/diablo1Missiles';
 import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
+import { collectLinkedReferences, linkedReferencesBlock } from '@/lib/catalog/reference/linkedReferences';
 import {
   DIABLO1_MISSILE_LAWS,
   MISSILE_BEHAVIOUR_SPECS,
@@ -19,7 +20,7 @@ import {
   withMissileSpecs,
 } from '@/lib/catalog/reference/missileSpecs';
 import { DIABLO1 } from '@/lib/catalog/reference/sources';
-import { wrapTable } from '@/lib/catalog/reference/wrapper';
+import { wrapTable, type ReferenceWrapper } from '@/lib/catalog/reference/wrapper';
 
 const table = DIABLO1.tables.find((candidate) => candidate.file === 'missiles/misdat.tsv')!;
 const synthetic = (values: Record<string, string>) => wrapTable(
@@ -31,6 +32,32 @@ const synthetic = (values: Record<string, string>) => wrapTable(
   ].join('\n'),
   't0',
 ).wrappers[0];
+
+const monster = (id: string, file: string, ai: string): ReferenceWrapper => ({
+  wrapperId: `synthetic:${id}`,
+  sourceId: 'synthetic',
+  file,
+  technique: 'synthetic',
+  key: id,
+  keyKind: 'column',
+  raw: { ai },
+  rawHash: 'synthetic',
+  catalogId: 'bestiary',
+  entity: {
+    id,
+    catalogId: 'bestiary',
+    name: id,
+    categoryPath: [],
+    tags: [],
+    lifecycle: 'planned',
+    data: {},
+    provenance: {
+      kind: 'ingest', sourceGame: 'Synthetic', sourceProject: 'Synthetic', sourceFile: file,
+      sourceRow: id, licenceNote: 'test fixture', ingestedAt: 'test-time',
+    },
+  },
+  mappingVersion: 'synthetic',
+});
 
 describe('engine-derived missile specifications', () => {
   it('covers every vanilla missile enum exactly once across every unique behaviour pair', () => {
@@ -76,6 +103,63 @@ describe('engine-derived missile specifications', () => {
       blockable: false,
     });
     expect(normalized.entity.data.flags).toEqual(['Fire', 'Arrow', 'Invisible']);
+  });
+
+  it('links missile entities to ordinary and unique monsters by their resolved routine override', () => {
+    const wrapper = synthetic({
+      id: 'BloodStar', addFn: 'AddGenericMagicMissile', processFn: 'ProcessGenericProjectile',
+      graphic: 'BloodStar', flags: 'Magic', movementDistribution: 'Blockable',
+    });
+    wrapper.entity.links = [{ catalogId: 'vfx', entityId: 'sprite-BloodStar', role: 'sprite' }];
+    const succubus = monster('d1-MT_SUCCUBUS', 'monsters/monstdat.tsv', 'Succubus');
+    const unique = monster('d1-uniq-synthetic', 'monsters/unique_monstdat.tsv', 'LazarusSuccubus');
+    const unrelated = monster('d1-MT_ZOMBIE', 'monsters/monstdat.tsv', 'Zombie');
+    const [normalized] = withMissileSpecs([wrapper], [succubus, unique, unrelated]);
+
+    expect(normalized.entity.links).toEqual([
+      { catalogId: 'vfx', entityId: 'sprite-BloodStar', role: 'sprite' },
+      { catalogId: 'bestiary', entityId: succubus.entity.id, role: 'host' },
+      { catalogId: 'bestiary', entityId: unique.entity.id, role: 'host' },
+    ]);
+    expect(normalized.entity.data.monsterDamage).toEqual({
+      byRoutine: [
+        {
+          routine: 'Succubus', damageSource: { kind: 'monster-normal' },
+          representation: 'ordinary-fixed', projectilesPerAttack: 1,
+          hitCount: { kind: 'fixed', hits: 1 },
+        },
+        {
+          routine: 'LazarusSuccubus', damageSource: { kind: 'monster-normal' },
+          representation: 'ordinary-fixed', projectilesPerAttack: 1,
+          hitCount: { kind: 'fixed', hits: 1 },
+        },
+      ],
+    });
+  });
+
+  it('preserves persistent child damage and exposes it through incoming linked references', () => {
+    const wrapper = synthetic({
+      id: 'Acid', addFn: 'AddAcid', processFn: 'ProcessGenericProjectile',
+      graphic: 'Acid', flags: 'Acid', movementDistribution: 'Blockable',
+    });
+    const acidMonster = monster('d1-MT_NACID', 'monsters/monstdat.tsv', 'Acid');
+    const [normalized] = withMissileSpecs([wrapper], [acidMonster]);
+    const linked = collectLinkedReferences(acidMonster.entity, [acidMonster.entity, normalized.entity]);
+    const block = linkedReferencesBlock(acidMonster.entity, [acidMonster.entity, normalized.entity]);
+    const damage = normalized.entity.data.monsterDamage as {
+      byRoutine: { persistentChild?: { missile: string; hitCount: { kind: string } } }[];
+    };
+
+    expect(damage.byRoutine[0].persistentChild).toMatchObject({
+      missile: 'AcidPuddle',
+      damageSource: { kind: 'monster-base-level-threshold', threshold: 2, below: 1, atOrAbove: 2 },
+      representation: 'already-shifted',
+      hitCount: { kind: 'random-duration', ticksPerIntelligence: 40, intelligenceOffset: 1 },
+    });
+    expect(linked.map((entity) => entity.id)).toEqual(['d1-Acid']);
+    expect(block).toContain('- monsterDamage:');
+    expect(block).toContain('"random-duration"');
+    expect(block).not.toContain('TRUNCATED');
   });
 
   it('links spell specs and monster AI attacks, flagging out-of-table Hellfire links', () => {
