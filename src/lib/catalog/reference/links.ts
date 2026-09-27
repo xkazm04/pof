@@ -24,6 +24,7 @@ export interface LinkReport {
 
 const BASE_ITEM_FILE = 'items/itemdat.tsv';
 const UNIQUE_ITEM_FILE = 'items/unique_itemdat.tsv';
+const MISSILE_FILE = 'missiles/misdat.tsv';
 
 // Uniq(X) is not a unique_base_item value. The monster parser turns the two supported
 // tokens into _unique_items enum values (.reference/devilutionX/Source/tables/monstdat.cpp:299-306),
@@ -65,9 +66,23 @@ function addBaseItemLinks(wrappers: ReferenceWrapper[]): ReferenceWrapper[] {
   });
 }
 
+function addMissileSpriteLinks(wrappers: ReferenceWrapper[]): ReferenceWrapper[] {
+  return wrappers.map((wrapper) => {
+    if (wrapper.file !== MISSILE_FILE || !wrapper.raw.graphic) return wrapper;
+    const graphic = wrapper.raw.graphic;
+    const links = (wrapper.entity.links ?? []).filter((link) => link.role !== 'sprite');
+    links.push({
+      catalogId: 'vfx',
+      entityId: `sprite-${graphic}`,
+      role: 'sprite',
+    });
+    return { ...wrapper, entity: { ...wrapper.entity, links } };
+  });
+}
+
 /** Pure. Returns new wrappers; the inputs are not mutated. */
 export function resolveLinks(wrappers: ReferenceWrapper[], idPrefix: string): { wrappers: ReferenceWrapper[]; report: LinkReport } {
-  const linkedWrappers = addBaseItemLinks(wrappers);
+  const linkedWrappers = addMissileSpriteLinks(addBaseItemLinks(wrappers));
   const ids = new Map<string, Set<string>>();
   for (const w of linkedWrappers) {
     (ids.get(w.catalogId) ?? ids.set(w.catalogId, new Set()).get(w.catalogId)!).add(w.entity.id);

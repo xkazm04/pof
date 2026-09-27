@@ -153,6 +153,27 @@ export function withMissileSpecs(wrappers: readonly ReferenceWrapper[]): Referen
   });
 }
 
+/** Read the selected animation-group length from a projected missile sprite wrapper. */
+export function spriteAnimLen(
+  wrappers: readonly ReferenceWrapper[],
+  graphicId: string,
+  direction: number,
+): number {
+  if (!Number.isInteger(direction) || direction < 0 || direction >= 16) {
+    throw new Error(`missile sprite direction must be an integer from 0 to 15 (got ${direction})`);
+  }
+  const wrapper = wrappers.find((candidate) => candidate.catalogId === 'vfx'
+    && candidate.file === 'missiles/missile_sprites.tsv'
+    && String(candidate.raw.id) === graphicId);
+  if (!wrapper) throw new Error(`the supplied wrappers have no missile_sprites.tsv row for ${graphicId}`);
+  const frameLength = wrapper.entity.data.frameLength;
+  if (!Array.isArray(frameLength) || frameLength.length !== 16
+    || frameLength.some((value) => !Number.isInteger(value) || value < 0)) {
+    throw new Error(`${wrapper.entity.id} has no valid 16-entry data.frameLength`);
+  }
+  return frameLength[direction] as number;
+}
+
 const splitMissileExpression = (value: string): string[] =>
   value.split(/[|+]/).map((missile) => missile.trim()).filter((missile) => missile !== '' && missile !== 'none');
 

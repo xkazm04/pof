@@ -10,7 +10,7 @@ import type { FieldMap } from '@/lib/catalog/ingest/fieldMap';
 import { DIABLO1_SOURCE, ITEM_MAP, MONSTER_MAP, SPELL_MAP } from '@/lib/catalog/ingest/diablo1';
 import { UNIQUE_ITEM_MAP } from '@/lib/catalog/ingest/diablo1UniqueItems';
 import { UNIQUE_MAP } from '@/lib/catalog/ingest/diablo1Uniques';
-import { slug, type DecodeStep } from '@/lib/catalog/ingest/decode';
+import { slug, type StringDecodeStep } from '@/lib/catalog/ingest/decode';
 import { MONSTER_DERIVE, affixDerive, type DeriveSpec } from './derive';
 import { AFFIX_MAP } from '@/lib/catalog/ingest/diablo1Affixes';
 import {
@@ -34,6 +34,7 @@ import {
 } from '@/lib/catalog/ingest/diablo1Classes';
 import { OBJECT_MAP } from '@/lib/catalog/ingest/diablo1Objects';
 import { MISSILE_MAP } from '@/lib/catalog/ingest/diablo1Missiles';
+import { MISSILE_SPRITE_MAP } from '@/lib/catalog/ingest/diablo1MissileSprites';
 
 export interface ReferenceTableSpec {
   /** Path relative to the source's data root: `monsters/monstdat.tsv`. */
@@ -55,7 +56,7 @@ export interface ReferenceTableSpec {
   /** Prefix added to a declared key when constructing the projected entity id. */
   keyPrefix?: string;
   /** Serializable decoder applied to the key column before identity is constructed. */
-  keyDecode?: DecodeStep[];
+  keyDecode?: StringDecodeStep[];
 }
 
 export interface ReferenceManifestSpec {
@@ -99,6 +100,7 @@ export const DIABLO1: ReferenceSource = {
     { file: 'items/unique_itemdat.tsv', catalogId: 'items', technique: 'tsv', keyColumn: 'name', keyPrefix: 'uitem-', keyDecode: [slug()], map: UNIQUE_ITEM_MAP },
     { file: 'spells/spelldat.tsv', catalogId: 'spellbook', technique: 'tsv', keyColumn: 'id', map: SPELL_MAP },
     { file: 'missiles/misdat.tsv', catalogId: 'vfx', technique: 'tsv', keyColumn: 'id', map: MISSILE_MAP },
+    { file: 'missiles/missile_sprites.tsv', catalogId: 'vfx', technique: 'tsv', keyColumn: 'id', keyPrefix: 'sprite-', map: MISSILE_SPRITE_MAP },
     // Affix TIERS (W11): names repeat across powers, so identity is positional; the side is the table (derive).
     { file: 'items/item_prefixes.tsv', catalogId: 'affixes', technique: 'tsv', map: AFFIX_MAP, derive: affixDerive('prefix'), positionalTag: 'pre-' },
     { file: 'items/item_suffixes.tsv', catalogId: 'affixes', technique: 'tsv', map: AFFIX_MAP, derive: affixDerive('suffix'), positionalTag: 'suf-' },

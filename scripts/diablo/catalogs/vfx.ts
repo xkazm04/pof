@@ -9,9 +9,10 @@ import type { CatalogHandler } from './types';
 export const vfxHandler: CatalogHandler = {
   catalogId: 'vfx',
   pool: (_db, _sourceId, wrappers) =>
-    withMissileSpecs(wrappers.filter((wrapper) => wrapper.catalogId === 'vfx')),
+    withMissileSpecs(wrappers.filter((wrapper) => wrapper.file === 'missiles/misdat.tsv')),
   seed: (ctx) => {
     const wrappers = listWrappers(ctx.db, { sourceId: ctx.sourceId, catalogId: 'vfx' })
+      .filter((wrapper) => wrapper.file === 'missiles/misdat.tsv')
       .filter((wrapper) => !ctx.ids || ctx.ids.includes(wrapper.entity.id));
     for (const wrapper of wrappers) {
       if (!ctx.promoted.has(wrapper.entity.id)) {

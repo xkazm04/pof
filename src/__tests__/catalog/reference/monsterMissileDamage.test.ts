@@ -8,6 +8,7 @@ import {
   resolveMonsterMissileDamage,
   selectMonsterMissileAttack,
 } from '@/lib/catalog/reference/monsterMissileDamage';
+import { spriteAnimLen } from '@/lib/catalog/reference/missileSpecs';
 import type { ReferenceWrapper } from '@/lib/catalog/reference/wrapper';
 
 const provenance = {
@@ -180,22 +181,28 @@ describe('monster missile damage sources', () => {
         .expectedHitChecksPerAttack))
       .toEqual([20, 25, 30, 0]);
 
+    const sprite = wrapper(
+      'd1-sprite-SyntheticPuddle', 'vfx', 'missiles/missile_sprites.tsv',
+      { frameLength: Array.from({ length: 16 }, (_, direction) => direction + 4) },
+      { id: 'AcidPuddle' },
+    );
+    expect(spriteAnimLen([sprite], 'AcidPuddle', 1)).toBe(5);
     const acid = resolveMonsterMissileDamage(
-      monsterMissileDamageSource('Acid', 'Acid'), profile, ordinaryMonster, undefined, 0, 4,
+      monsterMissileDamageSource('Acid', 'Acid'), profile, ordinaryMonster, undefined, 0, 4, [sprite],
     );
     expect(acid.damageEvents).toHaveLength(2);
     expect(acid.damageEvents[0]).toMatchObject({ missile: 'Acid', expectedHitChecks: 1, alreadyShifted: false });
     expect(acid.damageEvents[1]).toMatchObject({
-      missile: 'AcidPuddle', expectedHitChecks: 87, alreadyShifted: true, missileDistance: 0,
+      missile: 'AcidPuddle', expectedHitChecks: 92, alreadyShifted: true, missileDistance: 0,
       damage: { min: 64, max: 64, mean: 64 },
     });
-    expect(acid.expectedHitChecksPerAttack).toBe(88);
+    expect(acid.expectedHitChecksPerAttack).toBe(93);
     expect(acid.source.persistentChild?.hitCount).toMatchObject({
       kind: 'random-duration',
       hitDeletesMissile: false,
       repeatChecksSamePlayer: true,
     });
-    expect(expectedMonsterMissileHitChecks(acid.source.persistentChild!.hitCount, ordinaryMonster, 4)).toBe(87);
+    expect(expectedMonsterMissileHitChecks(acid.source.persistentChild!.hitCount, ordinaryMonster, 4, [sprite])).toBe(92);
   });
 
   it('uses raw GetHit for shifted sources and shifted bounds for ordinary arrows', () => {

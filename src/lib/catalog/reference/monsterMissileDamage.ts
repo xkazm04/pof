@@ -11,7 +11,7 @@ import {
   MONSTER_MISSILE_DAMAGE_SOURCES_DATA,
   MONSTER_MISSILE_SELECTION_POLICIES_DATA,
 } from '@/lib/catalog/reference/monsterMissileDamageData';
-import { classifyMissileFlags } from '@/lib/catalog/reference/missileSpecs';
+import { classifyMissileFlags, spriteAnimLen } from '@/lib/catalog/reference/missileSpecs';
 import type { ReferenceWrapper } from '@/lib/catalog/reference/wrapper';
 
 export type MonsterMissileDamageFormula =
@@ -55,7 +55,7 @@ export type MonsterMissileHitCount =
       readonly ticksPerIntelligence: number;
       readonly intelligenceOffset: number;
       readonly randomAdditionalTicks: { readonly min: number; readonly max: number };
-      readonly dataDefinedEndingAnimation: string;
+      readonly endingAnimation: { readonly graphicId: string; readonly direction: number };
       readonly hitDeletesMissile: false;
       readonly repeatChecksSamePlayer: true;
       readonly stationaryAssumption: string;
@@ -273,6 +273,7 @@ export function expectedMonsterMissileHitChecks(
   hitCount: MonsterMissileHitCount,
   monsterWrapper: ReferenceWrapper,
   targetDistance: number,
+  wrappers: readonly ReferenceWrapper[] = [],
 ): number {
   if (!Number.isFinite(targetDistance) || targetDistance < 0) {
     throw new Error(`targetDistance must be a non-negative finite number (got ${targetDistance})`);
@@ -284,7 +285,10 @@ export function expectedMonsterMissileHitChecks(
   }
   const randomMean = (hitCount.randomAdditionalTicks.min + hitCount.randomAdditionalTicks.max) / 2;
   return hitCount.ticksPerIntelligence * (monsterIntelligence(monsterWrapper) + hitCount.intelligenceOffset)
-    + randomMean;
+    + randomMean
+    + (wrappers.length === 0
+      ? 0
+      : spriteAnimLen(wrappers, hitCount.endingAnimation.graphicId, hitCount.endingAnimation.direction));
 }
 
 /** Build the per-projectile damage distribution before player resistance. */
@@ -295,6 +299,7 @@ export function resolveMonsterMissileDamage(
   baseWrapper: ReferenceWrapper | undefined,
   playerGetHit = 0,
   targetDistance = 1,
+  wrappers: readonly ReferenceWrapper[] = [],
 ): ResolvedMonsterMissileDamage {
   const formula = source.formula;
   let damage: DamageDistribution;
@@ -331,7 +336,7 @@ export function resolveMonsterMissileDamage(
       ? transformed.damage
       : collisionDamage(transformed.bounds.min, transformed.bounds.max, playerGetHit, source.collision, multiplier);
   }
-  const expectedHitChecksPerAttack = expectedMonsterMissileHitChecks(source.hitCount, monsterWrapper, targetDistance);
+  const expectedHitChecksPerAttack = expectedMonsterMissileHitChecks(source.hitCount, monsterWrapper, targetDistance, wrappers);
   const primaryEvent = {
     missile: source.missile,
     damage,
@@ -350,7 +355,7 @@ export function resolveMonsterMissileDamage(
         hitCount: child.hitCount,
         omittedEffects: [],
         refs: child.refs,
-      }, monster, monsterWrapper, baseWrapper, playerGetHit, targetDistance)
+      }, monster, monsterWrapper, baseWrapper, playerGetHit, targetDistance, wrappers)
     : undefined;
   const damageEvents = childResolved
     ? [primaryEvent, ...childResolved.damageEvents]

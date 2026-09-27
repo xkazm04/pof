@@ -81,7 +81,7 @@ export const MONSTER_MISSILE_DAMAGE_SOURCES_DATA = [
         ticksPerIntelligence: 40,
         intelligenceOffset: 1,
         randomAdditionalTicks: { min: 0, max: 14 },
-        dataDefinedEndingAnimation: 'The ending-animation _miAnimLen also checks collision; its table-defined length is not copied into source code.',
+        endingAnimation: { graphicId: 'AcidPuddle', direction: 1 },
         hitDeletesMissile: false,
         repeatChecksSamePlayer: true,
         stationaryAssumption: 'The hero remains on the AcidPuddle tile for its lifetime.',
@@ -90,7 +90,7 @@ export const MONSTER_MISSILE_DAMAGE_SOURCES_DATA = [
       },
       refs: [missile(2993), missile(2994), missile(3644), missile(3654), missile(3655), missile(3048), missile(3052)],
     },
-    omittedEffects: ['The data-defined AcidPuddle ending-animation collision tail is recorded symbolically because reference-table row values may not be copied into the model.'],
+    omittedEffects: [],
     refs: [monster(1948), monster(1996), missile(2328), missile(2339), missile(2345), missile(2976), missile(2980), missile(2993), missile(3644), missile(3654), missile(3048), missile(3052), misdat(59)],
   },
   {

@@ -14,7 +14,7 @@
  */
 import { auditColumns, type ColumnAudit, type FieldMap } from './fieldMap';
 import { parseTsv, type MalformedRow, type TsvRefusal, type TsvTable } from './tsv';
-import { applyDecode, type DecodeStep } from './decode';
+import { applyDecode, type DecodedValue, type StringDecodeStep } from './decode';
 import type { CatalogEntityBase, CatalogLink, EntityProvenance } from '../types';
 
 /**
@@ -68,23 +68,25 @@ const LIST_PATH = /^data\.([A-Za-z0-9_]+)\[\]$/;
 
 const STRUCTURED_LIST_PATH = /^data\.([A-Za-z0-9_]+)\[(\d+)\]\.([A-Za-z0-9_]+)$/;
 const LABELLED_PATH = /^data\.([A-Za-z0-9_]+)\[(.+)\]$/;
+const OBJECT_PATH = /^data\.([A-Za-z0-9_]+)\{([A-Za-z0-9_]+)\}$/;
 const LINK_PATH = /^links\[role=(.+)\]$/;
 
 /** Apply one `mapped(...)` destination path to the entity under construction. */
-function applyTo(entity: IngestedEntity, path: string, value: string): void {
+function applyTo(entity: IngestedEntity, path: string, value: DecodedValue): void {
   // A blank cell is "none", not "the empty string" — writing it would manufacture data.
   if (value === '') return;
 
-  if (path === 'id' || path === 'name') { entity[path] = value; return; }
+  if (path === 'id' || path === 'name') { entity[path] = String(value); return; }
 
   if (path === 'tags') {
-    if (!entity.tags.includes(value)) entity.tags.push(value);
+    const tag = String(value);
+    if (!entity.tags.includes(tag)) entity.tags.push(tag);
     return;
   }
 
   const structured = STRUCTURED_LIST_PATH.exec(path);
   if (structured) {
-    const values = (entity.data[structured[1]] ??= []) as Record<string, string>[];
+    const values = (entity.data[structured[1]] ??= []) as Record<string, DecodedValue>[];
     const index = Number(structured[2]);
     (values[index] ??= {})[structured[3]] = value;
     return;
@@ -92,8 +94,15 @@ function applyTo(entity: IngestedEntity, path: string, value: string): void {
 
   const labelled = LABELLED_PATH.exec(path);
   if (labelled) {
-    const values = (entity.data[labelled[1]] ??= []) as { label: string; value: string }[];
+    const values = (entity.data[labelled[1]] ??= []) as { label: string; value: DecodedValue }[];
     values.push({ label: labelled[2], value });
+    return;
+  }
+
+  const object = OBJECT_PATH.exec(path);
+  if (object) {
+    const values = (entity.data[object[1]] ??= {}) as Record<string, DecodedValue>;
+    values[object[2]] = value;
     return;
   }
 
@@ -104,19 +113,19 @@ function applyTo(entity: IngestedEntity, path: string, value: string): void {
     // The referenced entity is named in the SOURCE's vocabulary; resolving it to a real
     // PoF entity id is a later pass that needs both catalogs ingested. Recording the raw
     // reference is honest; inventing an id that resolves nowhere is not.
-    links.push({ catalogId: ROLE_CATALOG[role] ?? 'unknown', entityId: value, role });
+    links.push({ catalogId: ROLE_CATALOG[role] ?? 'unknown', entityId: String(value), role });
     return;
   }
 
   const list = LIST_PATH.exec(path);
   if (list) {
-    const arr = (entity.data[list[1]] ??= []) as string[];
+    const arr = (entity.data[list[1]] ??= []) as DecodedValue[];
     if (!arr.includes(value)) arr.push(value);
     return;
   }
 
   if (path === 'data.abilities') {
-    const abilities = (entity.data.abilities ??= []) as string[];
+    const abilities = (entity.data.abilities ??= []) as DecodedValue[];
     if (!abilities.includes(value)) abilities.push(value);
     return;
   }
@@ -125,8 +134,8 @@ function applyTo(entity: IngestedEntity, path: string, value: string): void {
 
   // A destination the applier does not understand must not vanish: park it where the
   // report can see it rather than dropping the value on the floor.
-  (entity.data.__unapplied ??= {} as Record<string, string>);
-  (entity.data.__unapplied as Record<string, string>)[path] = value;
+  (entity.data.__unapplied ??= {} as Record<string, DecodedValue>);
+  (entity.data.__unapplied as Record<string, DecodedValue>)[path] = value;
 }
 
 export interface IngestTableOptions {
@@ -157,7 +166,7 @@ export interface IngestTableOptions {
   /** Prefix added to declared and positional keys in the projected entity id. */
   keyPrefix?: string;
   /** Serializable decoder applied to a declared key before duplicate checks and id construction. */
-  keyDecode?: DecodeStep[];
+  keyDecode?: StringDecodeStep[];
 }
 
 /** Pure: text in, entities and report out. No database, no filesystem. */
