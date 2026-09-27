@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { apiError, apiSuccess, respondFromResult, withRoute } from '@/lib/api-utils';
 import { getService } from '@/lib/blender-mcp/service';
 import { mcpGateForJob } from '@/lib/blender-mcp/mcp-gate';
+import { ledger } from '@/lib/blender-mcp/generation-ledger';
 import type { GenerationProvider } from '@/lib/blender-mcp/types';
 
 // GET /api/blender-mcp/generate/status?jobId=...&provider=...
@@ -15,6 +16,12 @@ export const GET = withRoute(async (req: NextRequest) => {
 
   const result = await getService().pollJobStatus(jobId, provider);
   if (!result.ok) return respondFromResult(result);
+
+  // Keep the ledger's view of a known job current: a remote failure drops it from the
+  // resumable list; a completion stays resumable until its one import is recorded.
+  if (result.data.status === 'failed' || result.data.status === 'completed') {
+    ledger.markState(jobId, result.data.status);
+  }
 
   // The bridge reports transport only (status / progress / resultUrl). Alongside it goes
   // the same verdict axis the runner path projects. Since wave 29 that verdict can be a
