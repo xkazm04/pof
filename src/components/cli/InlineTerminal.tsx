@@ -5,9 +5,11 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { Terminal, Minimize2, Loader2, X } from 'lucide-react';
 import { CompactTerminal } from './CompactTerminal';
 import { SuggestedActions, type SuggestionAction } from './SuggestedActions';
-import { useCLIPanelStore } from './store/cliPanelStore';
+import { useCLIPanelStore, type DispatchRecord, type PendingCallback } from './store/cliPanelStore';
 import { bindSessionRun } from './store/sessionRun';
+import { resubmitPendingCallbacks } from '@/components/cli/suggestionIntents';
 import { useProjectStore } from '@/stores/projectStore';
+import { useNavigationStore } from '@/stores/navigationStore';
 import { MODULE_COLORS } from '@/lib/chart-colors';
 
 interface InlineTerminalProps {
@@ -29,6 +31,11 @@ export function InlineTerminal({
   // The session's run door: run start, stream end ('settling') and the run's single
   // completion all report through one sequenced binding (see store/sessionRun.ts).
   const run = useMemo(() => bindSessionRun(sessionId), [sessionId]);
+  // Run facts the post-run bar acts on — kept in memory only (stripped from persistence).
+  const runFacts = useMemo(() => ({
+    onDispatch: (dispatch: DispatchRecord) => useCLIPanelStore.getState().recordDispatch(sessionId, dispatch),
+    onCallbacksUnresolved: (markers: PendingCallback[]) => useCLIPanelStore.getState().setPendingCallbacks(sessionId, markers),
+  }), [sessionId]);
   const height = useCLIPanelStore((s) => s.inlineTerminalHeight);
   const setInlineTerminalHeight = useCLIPanelStore((s) => s.setInlineTerminalHeight);
   const projectPath = useProjectStore((s) => s.projectPath);
@@ -62,23 +69,34 @@ export function InlineTerminal({
 
   const handleSuggestionAction = useCallback((action: SuggestionAction) => {
     switch (action.type) {
-      case 'prompt':
+      case 'redispatch':
+      case 'resume':
+        // This terminal is mounted right below the bar, so its pof-cli-prompt
+        // listener is live — the prompt goes straight to its submitPrompt.
         window.dispatchEvent(
           new CustomEvent('pof-cli-prompt', {
-            detail: { tabId: sessionId, prompt: action.prompt },
+            detail: {
+              tabId: sessionId,
+              prompt: action.prompt,
+              taskType: action.taskType,
+              resume: action.type === 'resume' ? true : action.resume,
+            },
           })
         );
         break;
-      case 'navigate':
+      case 'resubmit-callback':
+        void resubmitPendingCallbacks(sessionId);
+        break;
+      case 'navigate': {
+        const nav = useNavigationStore.getState();
+        if (action.moduleId && nav.activeSubModule !== action.moduleId) nav.navigateToModule(action.moduleId);
         window.dispatchEvent(
           new CustomEvent('pof-navigate-tab', {
-            detail: { tab: action.tab },
+            detail: { tab: action.tab, moduleId: action.moduleId },
           })
         );
         break;
-      case 'callback':
-        action.fn();
-        break;
+      }
     }
   }, [sessionId]);
 
@@ -159,6 +177,8 @@ export function InlineTerminal({
           onTaskStart={run.onTaskStart}
           onStreamingChange={run.onStreamingChange}
           onTaskComplete={run.onTaskComplete}
+          onDispatch={runFacts.onDispatch}
+          onCallbacksUnresolved={runFacts.onCallbacksUnresolved}
           visible={visible}
         />
       </div>

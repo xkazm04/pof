@@ -41,6 +41,18 @@ interface UseTaskQueueOpts {
   onStreamingChange?: (streaming: boolean) => void;
   onBatchFlushed?: (count: number) => void;
   /**
+   * Fired synchronously when submitPrompt dispatches, with the RAW prompt (before
+   * skill injection) and its task type — the host's copy of what was sent, so a
+   * retry can replay it exactly.
+   */
+  onDispatch?: (dispatch: { prompt: string; taskType?: string }) => void;
+  /**
+   * Fired at most once per run, from the result path, with the run's `@@CALLBACK`
+   * markers whose POST failed — so the host can re-POST them without a new run.
+   * Never fired for a run a newer run has already replaced.
+   */
+  onCallbacksUnresolved?: (markers: { callbackId: string; payload: string }[]) => void;
+  /**
    * Best-known spend attribution for the current session, threaded into the query
    * POST so the run's spend is recorded server-side (covers failed/aborted runs the
    * old client-only path missed). Read imperatively at dispatch time.
@@ -208,7 +220,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     instanceId, projectPath, taskQueue, autoStart, enabledSkills,
     visible = true,
     onTaskStart, onTaskComplete, onQueueEmpty, onStreamingChange, onBatchFlushed,
-    resolveAttribution,
+    resolveAttribution, onDispatch, onCallbacksUnresolved,
   } = opts;
 
   const [state, dispatch] = useReducer(taskQueueReducer, INITIAL_STATE);
@@ -278,6 +290,12 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
   // the dispatch callbacks when the resolver identity changes.
   const resolveAttributionRef = useRef(resolveAttribution);
   useEffect(() => { resolveAttributionRef.current = resolveAttribution; }, [resolveAttribution]);
+  const onDispatchRef = useRef(onDispatch);
+  useEffect(() => { onDispatchRef.current = onDispatch; }, [onDispatch]);
+  const onCallbacksUnresolvedRef = useRef(onCallbacksUnresolved);
+  useEffect(() => { onCallbacksUnresolvedRef.current = onCallbacksUnresolved; }, [onCallbacksUnresolved]);
+  /** Bumped on every dispatch — lets a late callback settle tell whether its run is still current. */
+  const runTokenRef = useRef(0);
 
   const flushLogBuffer = useCallback(() => {
     rafIdRef.current = null;
@@ -414,6 +432,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
         // the settle race — if the race times out first it stays undefined, i.e.
         // the callback simply did not confirm in time (treated as unconfirmed).
         const cbMarkers = extractAllCallbackPayloads(assistantOutputRef.current);
+        const runToken = runTokenRef.current;
         let callbackStatus: CallbackStatus | undefined = cbMarkers.length === 0 ? 'missing' : undefined;
         const cbPromise =
           cbMarkers.length === 0
@@ -431,6 +450,12 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
                 ),
               ).then((results) => {
                 callbackStatus = results.every(Boolean) ? 'confirmed' : 'failed';
+                // Hand the failed payloads to the host before the text is gone — the
+                // registry kept their entries, so they stay re-POSTable without a re-run.
+                const unresolved = cbMarkers.filter((_, i) => !results[i]);
+                if (unresolved.length > 0 && runTokenRef.current === runToken) {
+                  onCallbacksUnresolvedRef.current?.(unresolved);
+                }
               });
 
         assistantOutputRef.current = '';
@@ -509,6 +534,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     // dispatch in the same tick can't slip through and clobber the first.
     if (dispatchingRef.current) return;
     dispatchingRef.current = true;
+    runTokenRef.current++;
     dispatchedTaskIds.current.add(task.id);
 
     let startResult = await registerTaskStart(task.id, instanceId, task.label);
@@ -584,6 +610,8 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     // Announce the run start synchronously — before any await — so the host's run
     // door opens before any terminal path can fire (see store/sessionRun.ts).
     onTaskStart?.(INTERACTIVE_TASK_ID);
+    runTokenRef.current++;
+    onDispatchRef.current?.({ prompt, taskType: opts?.taskType });
     // Echo the RAW user prompt to the log (no skills clutter); only the dispatched
     // prompt sent to the CLI carries the injected packs.
     addLog({ id: `user-${Date.now()}`, type: 'user', content: prompt, timestamp: Date.now() });

@@ -16,6 +16,7 @@ export function CompactTerminal({
   instanceId, projectPath, title = 'Terminal', className = '',
   taskQueue = [], onTaskStart, onTaskComplete, onQueueEmpty,
   autoStart = false, enabledSkills = [], onStreamingChange, visible = true,
+  onDispatch, onCallbacksUnresolved,
 }: CompactTerminalProps) {
   const sessionModuleId = useCLIPanelStore((s) => s.sessions[instanceId]?.moduleId);
   const accentColor = useCLIPanelStore((s) => s.sessions[instanceId]?.accentColor ?? MODULE_COLORS.core);
@@ -45,7 +46,7 @@ export function CompactTerminal({
   const tq = useTaskQueue({
     instanceId, projectPath, taskQueue, autoStart, enabledSkills, visible,
     onTaskStart, onTaskComplete, onQueueEmpty, onStreamingChange,
-    onBatchFlushed, resolveAttribution,
+    onBatchFlushed, resolveAttribution, onDispatch, onCallbacksUnresolved,
   });
   // tqRef always points at the latest task queue. The pof-cli-prompt handler
   // is registered in an [instanceId]-keyed effect, so it must reach the
@@ -88,7 +89,7 @@ export function CompactTerminal({
   // sendPrompt can target this terminal (replaces the old fixed mount-delay).
   useEffect(() => {
     const handler = (e: Event) => {
-      const { tabId, prompt, taskType } = (e as CustomEvent).detail;
+      const { tabId, prompt, taskType, resume } = (e as CustomEvent).detail;
       if (tabId !== instanceId) return;
       // Submit the dispatched prompt DIRECTLY. The previous design set `input`
       // state and relied on a separate effect to auto-submit it — but that
@@ -97,7 +98,10 @@ export function CompactTerminal({
       // unsent. Submitting straight through removes the race entirely.
       const queue = tqRef.current;
       if (typeof prompt !== 'string' || !prompt.trim() || queue.isStreaming) return;
-      void queue.submitPrompt(prompt, queue.sessionId !== null, { taskType: typeof taskType === 'string' ? taskType : undefined });
+      // `resume: false` asks for a fresh Claude session (e.g. an exact Retry); by
+      // default a dispatch continues the terminal's session when it has one.
+      const wantsResume = resume !== false;
+      void queue.submitPrompt(prompt, wantsResume && queue.sessionId !== null, { taskType: typeof taskType === 'string' ? taskType : undefined });
     };
     window.addEventListener('pof-cli-prompt', handler);
 

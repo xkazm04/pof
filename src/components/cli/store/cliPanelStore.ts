@@ -21,6 +21,18 @@ export interface RunOutcome {
   callbackStatus?: CallbackStatus | null;
 }
 
+/** What was last sent to a session's terminal — the raw prompt (before skill injection) and its task type. */
+export interface DispatchRecord {
+  prompt: string;
+  taskType?: string;
+}
+
+/** A `@@CALLBACK` marker whose POST failed; its payload is kept so it can be re-POSTed without a new run. */
+export interface PendingCallback {
+  callbackId: string;
+  payload: string;
+}
+
 export interface CLISessionState {
   id: string;
   label: string;
@@ -53,6 +65,10 @@ export interface CLISessionState {
   runSeq?: number;
   /** Transient: lifecycle phase of the current run (see RunPhase). */
   runPhase?: RunPhase;
+  /** Transient (never persisted): the last prompt dispatched to this terminal — what Retry replays. */
+  lastDispatch?: DispatchRecord | null;
+  /** Transient (never persisted): the last run's callback markers whose POST failed. */
+  pendingCallbacks?: PendingCallback[];
 }
 
 interface CLIPanelStoreState {
@@ -83,6 +99,16 @@ interface CLIPanelStoreState {
    * subscriber that sees the edge sees this run's outcome. Stale seq / idle → no-op.
    */
   endRun: (id: string, seq: number, outcome: RunOutcome) => void;
+  /** Record the prompt just dispatched to this terminal (in memory only). */
+  recordDispatch: (id: string, dispatch: DispatchRecord) => void;
+  /** Retain the current run's failed callback markers (in memory only). */
+  setPendingCallbacks: (id: string, pending: PendingCallback[]) => void;
+  /**
+   * Record a callback resubmit of run `seq`: `remaining` are the payloads that still
+   * failed. lastCallbackStatus becomes 'confirmed' when none remain, else 'failed'.
+   * No-op when a newer run began or the session is running.
+   */
+  recordCallbackResubmit: (id: string, seq: number, remaining: PendingCallback[]) => void;
   setClaudeSessionId: (id: string, claudeSessionId: string) => void;
   setCurrentExecution: (id: string, executionId: string | null, taskId: string | null) => void;
   /** Record the task type + label of the prompt being dispatched (for spend attribution). */
@@ -96,6 +122,27 @@ interface CLIPanelStoreState {
   findSessionByKey: (sessionKey: string) => string | null;
   /** Remove all sessions (used during project switch to prevent cross-project leakage) */
   clearAllSessions: () => void;
+}
+
+/**
+ * The persisted view of the sessions: the last dispatch's prompt and any retained
+ * callback payloads are run facts for THIS page's lifetime only — prompts can be
+ * large and the callback registry they pair with is in-memory — so they never
+ * reach localStorage.
+ */
+function stripTransientRunFacts(sessions: Record<string, CLISessionState>): Record<string, CLISessionState> {
+  const out: Record<string, CLISessionState> = {};
+  for (const [id, sess] of Object.entries(sessions)) {
+    if (sess.lastDispatch === undefined && sess.pendingCallbacks === undefined) {
+      out[id] = sess;
+      continue;
+    }
+    const persisted = { ...sess };
+    delete persisted.lastDispatch;
+    delete persisted.pendingCallbacks;
+    out[id] = persisted;
+  }
+  return out;
 }
 
 let tabCounter = 0;
@@ -200,6 +247,7 @@ export const useCLIPanelStore = create<CLIPanelStoreState>()(
               // A run START clears the previous run's outcome — nobody may read it as this run's.
               lastTaskSuccess: null,
               lastCallbackStatus: null,
+              pendingCallbacks: [],
               lastActivityAt: Date.now(),
             },
           },
@@ -228,6 +276,37 @@ export const useCLIPanelStore = create<CLIPanelStoreState>()(
               lastTaskSuccess: outcome.success,
               lastCallbackStatus: outcome.callbackStatus ?? null,
               lastActivityAt: Date.now(),
+            },
+          },
+        }));
+      },
+
+      recordDispatch: (id, dispatch) => {
+        set((state) => {
+          const session = state.sessions[id];
+          if (!session) return state;
+          return { sessions: { ...state.sessions, [id]: { ...session, lastDispatch: dispatch } } };
+        });
+      },
+
+      setPendingCallbacks: (id, pending) => {
+        set((state) => {
+          const session = state.sessions[id];
+          if (!session) return state;
+          return { sessions: { ...state.sessions, [id]: { ...session, pendingCallbacks: pending } } };
+        });
+      },
+
+      recordCallbackResubmit: (id, seq, remaining) => {
+        const session = get().sessions[id];
+        if (!session || session.isRunning || (session.runSeq ?? 0) !== seq) return;
+        set((state) => ({
+          sessions: {
+            ...state.sessions,
+            [id]: {
+              ...session,
+              pendingCallbacks: remaining,
+              lastCallbackStatus: remaining.length === 0 ? 'confirmed' : 'failed',
             },
           },
         }));
@@ -355,7 +434,7 @@ export const useCLIPanelStore = create<CLIPanelStoreState>()(
       name: 'pof-cli-panel',
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
-        sessions: state.sessions,
+        sessions: stripTransientRunFacts(state.sessions),
         tabOrder: state.tabOrder,
         activeTabId: state.activeTabId,
         maximizedTabId: state.maximizedTabId,
