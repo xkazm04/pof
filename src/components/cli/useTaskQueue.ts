@@ -28,6 +28,7 @@ interface UseTaskQueueOpts {
   autoStart: boolean;
   enabledSkills: SkillId[];
   visible?: boolean;
+  /** Fired synchronously when a run is dispatched — the queued task id, or 'interactive' for submitPrompt runs. */
   onTaskStart?: (taskId: string) => void;
   /**
    * Fired exactly once per run when it terminates. `meta.callbackStatus` is
@@ -311,20 +312,36 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
   }, []);
 
   /**
-   * Fire the one-shot completion for any NON-result terminal path (error, stream
-   * onerror, abort, stuck poller). Latched by `completedRef` so it runs at most
-   * once per run. The clean SSE `result` path does NOT go through here — it latches
-   * synchronously on result arrival and fires its own completion after the bounded
-   * callback-settle race, so it can carry the resolved `callbackStatus`.
+   * The ONE terminal transition of a run, used by every path that ends it (clean
+   * result, error SSE, stream onerror, abort, start failure, both stuck-poller
+   * verdicts). The caller must already hold the `completedRef` latch. It releases
+   * the dispatch latch, records the registry completion, and fires onTaskComplete —
+   * so no terminal path can forget one of them (the stuck-poller paths used to
+   * leave dispatchingRef set, silently dropping every later dispatch).
    */
-  const completeOnce = useCallback((success: boolean, callbackStatus?: CallbackStatus) => {
+  const finishRun = useCallback((
+    success: boolean,
+    opts?: { callbackStatus?: CallbackStatus; taskId?: string | null; register?: boolean },
+  ) => {
+    dispatchingRef.current = false; // run terminated — allow the next dispatch
+    const tid = opts?.taskId !== undefined ? opts.taskId : currentTaskIdRef.current;
+    if (tid && opts?.register !== false) registerTaskComplete(tid, instanceId, success);
+    const id = tid ?? INTERACTIVE_TASK_ID;
+    if (opts?.callbackStatus) onTaskComplete?.(id, success, { callbackStatus: opts.callbackStatus });
+    else onTaskComplete?.(id, success);
+  }, [instanceId, onTaskComplete]);
+
+  /**
+   * Latch-and-finish for the NON-result terminal paths (error, stream onerror,
+   * abort, submit start failure). The clean SSE `result` path latches
+   * synchronously on arrival and calls finishRun after the bounded callback-settle
+   * race, so it can carry the resolved `callbackStatus`.
+   */
+  const completeOnce = useCallback((success: boolean) => {
     if (completedRef.current) return;
     completedRef.current = true;
-    dispatchingRef.current = false; // run terminated — allow the next dispatch
-    const tid = currentTaskIdRef.current;
-    if (tid) registerTaskComplete(tid, instanceId, success);
-    onTaskComplete?.(tid ?? INTERACTIVE_TASK_ID, success, callbackStatus ? { callbackStatus } : undefined);
-  }, [instanceId, onTaskComplete]);
+    finishRun(success);
+  }, [finishRun]);
 
   // --- SSE event handling ---
 
@@ -431,10 +448,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
           // the single completion firing for the clean-result path. Interactive
           // runs (submitPrompt) have no queued task id, but the completion signal
           // must still fire — it releases session.isRunning.
-          dispatchingRef.current = false; // run terminated — allow the next dispatch
-          const tid = currentTaskIdRef.current;
-          if (tid) registerTaskComplete(tid, instanceId, !data.isError);
-          onTaskComplete?.(tid ?? INTERACTIVE_TASK_ID, !data.isError, callbackStatus ? { callbackStatus } : undefined);
+          finishRun(!data.isError, { callbackStatus });
         });
 
         break;
@@ -449,7 +463,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
         break;
       }
     }
-  }, [addLog, addFileChange, instanceId, onTaskComplete, clearHeartbeat, completeOnce]);
+  }, [addLog, addFileChange, instanceId, clearHeartbeat, completeOnce, finishRun]);
 
   const connectToStream = useCallback((streamUrl: string) => {
     if (eventSourceRef.current) eventSourceRef.current.close();
@@ -548,13 +562,11 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
       // directly (currentTaskIdRef may not have caught up to the TASK_START yet).
       if (!completedRef.current) {
         completedRef.current = true;
-        dispatchingRef.current = false; // failed to start — allow the next dispatch
-        registerTaskComplete(task.id, instanceId, false);
-        onTaskComplete?.(task.id, false);
+        finishRun(false, { taskId: task.id });
       }
       clearHeartbeat();
     }
-  }, [state.sessionId, instanceId, projectPath, addLog, connectToStream, onTaskStart, onTaskComplete, enabledSkills, clearHeartbeat]);
+  }, [state.sessionId, instanceId, projectPath, addLog, connectToStream, onTaskStart, finishRun, enabledSkills, clearHeartbeat]);
 
   // --- Manual submit (user input) ---
 
@@ -569,6 +581,9 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     assistantOutputRef.current = '';
     completedRef.current = false;
     dispatch({ type: 'SUBMIT_START' });
+    // Announce the run start synchronously — before any await — so the host's run
+    // door opens before any terminal path can fire (see store/sessionRun.ts).
+    onTaskStart?.(INTERACTIVE_TASK_ID);
     // Echo the RAW user prompt to the log (no skills clutter); only the dispatched
     // prompt sent to the CLI carries the injected packs.
     addLog({ id: `user-${Date.now()}`, type: 'user', content: prompt, timestamp: Date.now() });
@@ -598,7 +613,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
       // Release session.isRunning for hosts that latched on SUBMIT_START.
       completeOnce(false);
     }
-  }, [projectPath, state.sessionId, addLog, connectToStream, completeOnce, enabledSkills]);
+  }, [projectPath, state.sessionId, addLog, connectToStream, completeOnce, onTaskStart, enabledSkills]);
 
   // --- Abort ---
 
@@ -653,7 +668,8 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
         completedRef.current = true;
         if (eventSourceRef.current) { eventSourceRef.current.close(); eventSourceRef.current = null; }
         clearHeartbeat();
-        onTaskComplete?.(tid, status.status === 'completed');
+        // The registry already holds this verdict — do not re-register it.
+        finishRun(status.status === 'completed', { taskId: tid, register: false });
         dispatch({ type: 'STUCK_RESOLVED', success: status.status === 'completed' });
         return;
       }
@@ -661,13 +677,12 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
         completedRef.current = true;
         if (eventSourceRef.current) { eventSourceRef.current.close(); eventSourceRef.current = null; }
         clearHeartbeat();
-        registerTaskComplete(tid, instanceId, false);
-        onTaskComplete?.(tid, false);
+        finishRun(false, { taskId: tid });
         dispatch({ type: 'STUCK_RESOLVED', success: false });
       }
     }, UI_TIMEOUTS.stuckCheckInterval);
     return () => { if (stuckCheckIntervalRef.current) { clearInterval(stuckCheckIntervalRef.current); stuckCheckIntervalRef.current = null; } };
-  }, [visible, autoStart, streaming, taskId, instanceId, onTaskComplete, clearHeartbeat]);
+  }, [visible, autoStart, streaming, taskId, finishRun, clearHeartbeat]);
 
   // --- Process task queue ---
 

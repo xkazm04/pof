@@ -1,13 +1,14 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Terminal, Minimize2, Loader2, X } from 'lucide-react';
 import { CompactTerminal } from './CompactTerminal';
 import { SuggestedActions, type SuggestionAction } from './SuggestedActions';
 import { useCLIPanelStore } from './store/cliPanelStore';
+import { bindSessionRun } from './store/sessionRun';
 import { useProjectStore } from '@/stores/projectStore';
-import { MODULE_COLORS, CLI_COLORS } from '@/lib/chart-colors';
+import { MODULE_COLORS } from '@/lib/chart-colors';
 
 interface InlineTerminalProps {
   sessionId: string;
@@ -25,7 +26,9 @@ export function InlineTerminal({
   const session = useCLIPanelStore((s) => s.sessions[sessionId]);
   const minimizeTab = useCLIPanelStore((s) => s.minimizeTab);
   const removeSession = useCLIPanelStore((s) => s.removeSession);
-  const setSessionRunning = useCLIPanelStore((s) => s.setSessionRunning);
+  // The session's run door: run start, stream end ('settling') and the run's single
+  // completion all report through one sequenced binding (see store/sessionRun.ts).
+  const run = useMemo(() => bindSessionRun(sessionId), [sessionId]);
   const height = useCLIPanelStore((s) => s.inlineTerminalHeight);
   const setInlineTerminalHeight = useCLIPanelStore((s) => s.setInlineTerminalHeight);
   const projectPath = useProjectStore((s) => s.projectPath);
@@ -153,8 +156,9 @@ export function InlineTerminal({
           title={session.label}
           className="h-full"
           enabledSkills={session.enabledSkills}
-          onStreamingChange={(streaming) => setSessionRunning(sessionId, streaming)}
-          onTaskComplete={(_taskId, success, meta) => setSessionRunning(sessionId, false, success, meta?.callbackStatus)}
+          onTaskStart={run.onTaskStart}
+          onStreamingChange={run.onStreamingChange}
+          onTaskComplete={run.onTaskComplete}
           visible={visible}
         />
       </div>

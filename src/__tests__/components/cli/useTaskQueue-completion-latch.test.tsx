@@ -117,4 +117,33 @@ describe('useTaskQueue — single completion latch', () => {
     await act(async () => { es.triggerError(); await vi.advanceTimersByTimeAsync(0); });
     expect(onTaskComplete).toHaveBeenCalledTimes(1);
   });
+
+  // ── One finishRun for every terminal path (scan-sweep --challenge cli-terminal-shell/A) ──
+
+  it('a stuck-poller-resolved run releases the dispatch latch — the next submitPrompt POSTs', async () => {
+    const onTaskComplete = vi.fn<CompleteFn>();
+    const { result } = renderHook(() => useTaskQueue(baseOpts(onTaskComplete)));
+    await startQueuedRun();
+    getTaskStatus.mockResolvedValue({ found: true, status: 'completed', isStale: false });
+    await act(async () => { await vi.advanceTimersByTimeAsync(30_000); });
+    expect(onTaskComplete).toHaveBeenCalledTimes(1);
+
+    const queryPosts = () => apiFetch.mock.calls.filter(([url, init]) =>
+      url === '/api/claude-terminal/query' && (init as { method?: string } | undefined)?.method === 'POST').length;
+    const before = queryPosts();
+    await act(async () => { await result.current.submitPrompt('next', false); });
+    expect(queryPosts()).toBe(before + 1);
+  });
+
+  it('an interactive submitPrompt signals the run start synchronously via onTaskStart', async () => {
+    const onTaskStart = vi.fn();
+    const { result } = renderHook(() => useTaskQueue({
+      ...baseOpts(vi.fn<CompleteFn>()), taskQueue: [], autoStart: false, onTaskStart,
+    }));
+    let pending: Promise<void> | undefined;
+    act(() => { pending = result.current.submitPrompt('hello', false); });
+    expect(onTaskStart).toHaveBeenCalledTimes(1);
+    expect(onTaskStart).toHaveBeenCalledWith('interactive');
+    await act(async () => { await pending; });
+  });
 });
