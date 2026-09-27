@@ -11,6 +11,7 @@ import { CatalogGearTab } from './catalog/CatalogGearTab';
 import { EconomySourcingTab } from './economy/EconomySourcingTab';
 import { MechanicsScalingTab } from './mechanics/MechanicsScalingTab';
 import { LootFilterRuleBuilder } from './loot-filter/LootFilterRuleBuilder';
+import { ItemEconomySimulator } from './economy-simulator';
 import FeatureMapTab from '../unique-tabs/FeatureMapTab';
 import { VisibleSection } from '../unique-tabs/VisibleSection';
 import { renderItemMetric } from './metrics';
@@ -133,6 +134,11 @@ export function ItemCatalog({ moduleId }: ItemCatalogProps) {
               moduleId={moduleId}
               featureMap={featureMap}
             />
+            </VisibleSection>
+          )}
+          {activeTab === 'economy-sim' && (
+            <VisibleSection moduleId={moduleId} sectionId="economy-sim">
+            <ItemEconomySimulator key="economy-sim" moduleId={moduleId} />
             </VisibleSection>
           )}
           {activeTab === 'loot-filter' && (

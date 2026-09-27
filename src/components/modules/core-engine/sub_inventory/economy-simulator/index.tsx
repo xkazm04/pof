@@ -37,20 +37,24 @@ export function ItemEconomySimulator({ moduleId }: Props) {
   const [isRunning, setIsRunning] = useState(false);
   const [extendNote, setExtendNote] = useState<string | null>(null);
 
-  const runSim = useCallback(() => {
+  // One deferred-work site (the rAF callsite inventory in suspendable-raf.test pins it):
+  // paint the skeleton first, then run the synchronous Monte Carlo work.
+  const runDeferred = useCallback((work: () => void) => {
     setIsRunning(true);
-    setExtendNote(null);
     requestAnimationFrame(() => {
-      const r = runItemEconomySim(config);
-      setResult(r);
+      work();
       setIsRunning(false);
     });
-  }, [config]);
+  }, []);
+
+  const runSim = useCallback(() => {
+    setExtendNote(null);
+    runDeferred(() => setResult(runItemEconomySim(config)));
+  }, [config, runDeferred]);
 
   // Walk the horizon ladder at the same seed; adopt the smallest horizon that samples the endgame.
   const extendHorizon = useCallback(() => {
-    setIsRunning(true);
-    requestAnimationFrame(() => {
+    runDeferred(() => {
       const covered = runToCoverage(config);
       if (covered) {
         setConfig(covered.result.config);
@@ -59,9 +63,8 @@ export function ItemEconomySimulator({ moduleId }: Props) {
       } else {
         setExtendNote(`endgame not reached within ${HORIZON_LADDER[HORIZON_LADDER.length - 1]} h; lower Max Level`);
       }
-      setIsRunning(false);
     });
-  }, [config]);
+  }, [config, runDeferred]);
 
   const updateConfig = useCallback(
     <K extends keyof ItemEconomyConfig>(key: K, value: ItemEconomyConfig[K]) => {
