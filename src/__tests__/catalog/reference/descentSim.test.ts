@@ -1080,10 +1080,10 @@ describe('simulateDescent', () => {
     // The depth-1 level-up refills before depth 2; no later level-up occurs, so depth 3 carries the remainder.
     expect(result.levels[1].mana!.currentManaAtStart).toBe(10);
     expect(result.levels[2].mana!.currentManaAtStart).toBeCloseTo(10 - 2 * 2 / 0.95, 12);
-    // One HP makes Firebolt tie the newer spells on casts, so its lower mana cost wins.
-    expect(result.levels[8].spellAssumed).toMatchObject({ spell: 'Firebolt', spellLevel: 1 });
+    // Six independent checks make Lightning the fastest cast even against this one-HP fixture.
+    expect(result.levels[8].spellAssumed).toMatchObject({ spell: 'Lightning', spellLevel: 1 });
     expect(result.levels[8].spellsUsed).toEqual([
-      expect.objectContaining({ spell: 'Firebolt', killShare: 1 }),
+      expect.objectContaining({ spell: 'Lightning', killShare: 1 }),
     ]);
     expect(result.assumptions.find((assumption) => assumption.id === 'mana-recovery')?.detail).toContain('Shrines are ignored');
   });

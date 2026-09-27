@@ -631,6 +631,67 @@ describe('duel and canon contract', () => {
     expect(immune.expectedManaSpentPerKill).toBe(Infinity);
   });
 
+  it('uses persistent player-spell checks per cast and hard-hit locks monster attacks', () => {
+    const build: PlayerBuild = {
+      ...BUILD,
+      class: 'Sorcerer',
+      level: 1,
+      magic: 0,
+      hasShield: false,
+      blockEnabled: false,
+    };
+    const coefficients = { ...COEFFICIENTS, classFlags: [], baseMagicToHit: 97 };
+    const oneHitMonster: MonsterProfile = {
+      ...MONSTER,
+      level: 1,
+      hitPoints: { min: 1, max: 1 },
+      armourClass: 0,
+      resist: {},
+      immune: {},
+    };
+    const common = {
+      playerAttack: 'spell' as const,
+      spell: { spell: 'Lightning', spellLevel: 1, baseMana: 6, manaAdj: 1, minMana: 3 },
+      playerCastSeconds: 0.4,
+      monsterAttack: 'melee' as const,
+      monsterAttackCycleSeconds: 0.5,
+      monsterHitRecoverySeconds: 0.2,
+      monsterFamily: 'sneak' as const,
+      dungeonLevel: 1,
+    };
+    const oneHit = duel(build, coefficients, oneHitMonster, common);
+
+    expect(oneHit.playerSpellHitChecksPerCast).toBe(6);
+    expect(oneHit.expectedPlayerDamagePerSwing).toBeCloseTo(6 * 0.95 * 2.5 * FIXED_POINT, 12);
+    expect(oneHit.expectedPlayerSwingsToKill).toBeCloseTo(1 / (1 - 0.05 ** 6), 12);
+    expect(oneHit.monsterHitRecovery).toMatchObject({
+      expectedStartsBeforeKill: 0,
+      attackAvailability: 1,
+      hardHitStunLock: false,
+    });
+
+    const monster = { ...oneHitMonster, hitPoints: { min: 20, max: 20 } };
+    const result = duel(build, coefficients, monster, common);
+    expect(result.monsterHitRecovery).toMatchObject({
+      expectedStartsPerCast: 6 * 0.95,
+      expectedStartsBeforeKill: expect.any(Number),
+      attackAvailability: 0,
+      hardHitStunLock: true,
+    });
+    expect(result.expectedMonsterAttacksBeforeKill).toBe(0);
+
+    const resistant = duel(build, coefficients, { ...monster, resist: { lightning: true } }, common);
+    expect(resistant.monsterHitRecovery).toMatchObject({
+      expectedStartsPerCast: 0,
+      attackAvailability: 1,
+      hardHitStunLock: false,
+    });
+    expect(resistant.expectedMonsterAttacksBeforeKill).toBeGreaterThan(0);
+
+    const immune = duel(build, coefficients, { ...monster, immune: { lightning: true } }, common);
+    expect(immune.monsterHitRecovery?.expectedStartsPerCast).toBe(0);
+  });
+
   it('ships every new bounded canon law', () => {
     const ids = [
       'd1-combat-melee-to-hit-law', 'd1-combat-ranged-to-hit-law', 'd1-combat-monster-melee-to-hit-law',

@@ -23,6 +23,11 @@ import {
   type PlayerBuild,
 } from '@/lib/catalog/reference/combatMath';
 import { damageOutcomes, manaCost } from '@/lib/catalog/reference/spellMath';
+import {
+  expectedMonsterRecoveryStartsPerCast,
+  playerSpellCastDamageOutcomes,
+  resolvePlayerSpellHits,
+} from '@/lib/catalog/reference/playerSpellHits';
 import { spellSpec } from '@/lib/catalog/reference/spellSpecs';
 
 export type PlayerAttackMode = 'melee' | 'ranged' | 'spell';
@@ -35,6 +40,10 @@ export interface DuelSpellAttack {
   manaAdj: number;
   minMana: number;
   maxManaBaseInternal?: number;
+  /** Runtime ApocalypseBoom sprite length; no reference-table value is copied into source. */
+  apocalypseBoomAnimationTicks?: number;
+  /** A Nova target on a cardinal ray is crossed by both duplicated balls. */
+  novaCardinalRay?: boolean;
 }
 
 export interface DuelMonsterDamageEvent {
@@ -61,6 +70,12 @@ export interface DuelOptions {
   monsterApproachTilesPerSecond?: number;
   /** Expected interval between attacks in the monster's current adjacent/at-range routine phase. */
   monsterAttackCycleSeconds?: number;
+  /** Data-defined GotHit animation duration used to remove interrupted monster attack time. */
+  monsterHitRecoverySeconds?: number;
+  /** IsHardHit's four type exceptions; all other monsters use the damage threshold. */
+  monsterFamily?: 'sneak' | 'stalker' | 'unseen' | 'illusion-weaver' | 'other';
+  /** Golems play the sound but do not enter MonsterMode::HitRecovery. */
+  monsterCanHitRecover?: boolean;
   spell?: DuelSpellAttack;
   /** Class cast animation duration from combatMath.castTiming. */
   playerCastSeconds?: number;
@@ -113,6 +128,10 @@ export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monste
     && (!Number.isFinite(opts.playerHitRecoverySeconds) || opts.playerHitRecoverySeconds < 0)) {
     throw new Error(`playerHitRecoverySeconds must be a non-negative finite number (got ${opts.playerHitRecoverySeconds})`);
   }
+  if (opts.monsterHitRecoverySeconds !== undefined
+    && (!Number.isFinite(opts.monsterHitRecoverySeconds) || opts.monsterHitRecoverySeconds < 0)) {
+    throw new Error(`monsterHitRecoverySeconds must be a non-negative finite number (got ${opts.monsterHitRecoverySeconds})`);
+  }
   const monsterProjectilesPerAttack = opts.monsterProjectilesPerAttack ?? 1;
   if (!Number.isInteger(monsterProjectilesPerAttack) || monsterProjectilesPerAttack < 1) {
     throw new Error(`monsterProjectilesPerAttack must be a positive integer (got ${monsterProjectilesPerAttack})`);
@@ -160,10 +179,25 @@ export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monste
             outcomes,
           };
         })();
-  const expectedPlayerDamagePerSwing = playerHitChance * playerDamage.mean;
+  const spellHits = selectedSpell ? resolvePlayerSpellHits(selectedSpell.spell, {
+    spellLevel: selectedSpell.spellLevel,
+    characterLevel: build.level,
+    targetDistance: engagementDistance,
+    novaCardinalRay: selectedSpell.novaCardinalRay,
+    apocalypseBoomAnimationTicks: selectedSpell.apocalypseBoomAnimationTicks,
+  }) : undefined;
+  const playerCastDamage = spellHits
+    ? playerSpellCastDamageOutcomes(playerDamage.outcomes, playerHitChance, spellHits.groups)
+    : undefined;
+  const playerCastDamageWeight = playerCastDamage?.reduce((sum, outcome) => sum + outcome.weight, 0) ?? 0;
+  const expectedPlayerDamagePerSwing = playerCastDamage
+    ? playerCastDamage.reduce((sum, outcome) => sum + outcome.damage * outcome.weight, 0) / playerCastDamageWeight
+    : playerHitChance * playerDamage.mean;
   const monsterHitPoints = monsterHitPointDistribution(monster.hitPoints, monster.difficulty, gameMode);
   const expectedPlayerHitsToKill = expectedHitsToKill(monsterHitPoints, playerDamage.outcomes);
-  const expectedPlayerSwingsToKill = playerHitChance > 0 ? expectedPlayerHitsToKill / playerHitChance : Infinity;
+  const expectedPlayerSwingsToKill = playerCastDamage
+    ? expectedHitsToKill(monsterHitPoints, playerCastDamage)
+    : playerHitChance > 0 ? expectedPlayerHitsToKill / playerHitChance : Infinity;
   const playerSwingSeconds = opts.playerAttack === 'spell'
     ? opts.playerCastSeconds ?? null
     : build.swingSeconds ?? null;
@@ -268,14 +302,51 @@ export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monste
   // ranged attackers are in range immediately, while melee approach time remains attack-free. The stationary
   // expected rate starts at engagement, so the mean first arrival is one full cycle later; a fractional final
   // cycle is retained as expected exposure instead of being rounded to a discrete attack.
-  const monsterAttackExposureSeconds = expectedPlayerSecondsToKill === null
+  const baseMonsterAttackExposureSeconds = expectedPlayerSecondsToKill === null
     ? null
     : opts.monsterAttack === 'melee'
       ? Math.max(0, expectedPlayerSecondsToKill - approachSeconds)
       : expectedPlayerSecondsToKill;
+  const spellResistance = spellElement === undefined
+    ? undefined
+    : monsterResistance(monster, FIXED_POINT, spellElement);
+  const startsMonsterRecovery = (damage: number) => opts.monsterCanHitRecover !== false
+    && spellResistance?.immune !== true
+    && hitRecovery(build, monster, damage, {
+      monsterFamily: opts.monsterFamily,
+      resistantMissile: spellResistance?.resistant,
+    }).monster.startsAnimation;
+  const monsterRecoveryStartsPerCast = selectedSpell && spellHits
+    ? expectedMonsterRecoveryStartsPerCast(
+        playerDamage.outcomes,
+        playerHitChance,
+        spellHits.groups,
+        startsMonsterRecovery,
+      )
+    : 0;
+  const playerDamageWeight = playerDamage.outcomes.reduce((sum, outcome) => sum + outcome.weight, 0);
+  const qualifyingLandedHitChance = playerDamageWeight === 0 ? 0 : playerDamage.outcomes.reduce(
+    (sum, outcome) => sum + (startsMonsterRecovery(outcome.damage) ? outcome.weight : 0),
+    0,
+  ) / playerDamageWeight;
+  // MonsterMHit kills instead of calling M_StartHit on the fatal collision. Expected landed hits before that final
+  // collision therefore supply the recovery reward; this also keeps a one-hit kill from inventing a retroactive stun.
+  const expectedMonsterRecoveryStartsBeforeKill = selectedSpell && qualifyingLandedHitChance > 0
+    ? Math.max(0, expectedPlayerHitsToKill - 1) * qualifyingLandedHitChance
+    : 0;
+  // Mirror the W43 interruption load on the defending monster: qualifying hits restart GotHit, so their expected
+  // recovery time removes attack opportunity. At load >= 1 the stationary target is hard-hit stun-locked.
+  const monsterRecoveryLoad = opts.monsterHitRecoverySeconds === undefined || expectedPlayerSecondsToKill === null
+    || expectedPlayerSecondsToKill === 0 || !Number.isFinite(expectedMonsterRecoveryStartsBeforeKill)
+    ? 0
+    : expectedMonsterRecoveryStartsBeforeKill * opts.monsterHitRecoverySeconds / expectedPlayerSecondsToKill;
+  const monsterAttackAvailability = Math.max(0, 1 - monsterRecoveryLoad);
+  const monsterAttackExposureSeconds = baseMonsterAttackExposureSeconds === null
+    ? null
+    : monsterAttackAvailability === 0 ? 0 : baseMonsterAttackExposureSeconds * monsterAttackAvailability;
   const expectedMonsterAttacksBeforeKill = cadenceAvailable
     ? monsterAttackExposureSeconds! / opts.monsterAttackCycleSeconds!
-    : perHeroActionMonsterAttacksBeforeKill;
+    : monsterAttackAvailability === 0 ? 0 : perHeroActionMonsterAttacksBeforeKill * monsterAttackAvailability;
   const noGotHitChancePerMonsterAttack = resolvedDamageEvents.reduce((product, event) => {
     const qualifyingDamageChance = event.damage.outcomes.reduce((sum, outcome) => {
       const damage = playerResistance(build, outcome.damage, monsterElement).damage;
@@ -305,6 +376,11 @@ export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monste
     expectedPlayerDamagePerSwing,
     expectedPlayerHitsToKill,
     expectedPlayerSwingsToKill,
+    ...(spellHits ? {
+      playerSpellHitChecksPerCast: spellHits.maximumCollisionChecks,
+      playerSpellCollisionGroups: spellHits.groups,
+      playerSpellHitSource: spellHits.source,
+    } : {}),
     playerSwingSeconds,
     expectedPlayerSecondsToKill,
     monsterHitChance,
@@ -326,6 +402,16 @@ export function duel(build: PlayerBuild, coefficients: ClassCoefficients, monste
         expectedInterruptionsBeforeKill: expectedGotHitInterruptionsBeforeKill,
         interruptionsPerSecond: gotHitInterruptionsPerSecond,
         recoverySeconds: opts.playerHitRecoverySeconds,
+      },
+    } : {}),
+    ...(selectedSpell && opts.monsterHitRecoverySeconds !== undefined ? {
+      monsterHitRecovery: {
+        expectedStartsPerCast: monsterRecoveryStartsPerCast,
+        expectedStartsBeforeKill: expectedMonsterRecoveryStartsBeforeKill,
+        recoverySeconds: opts.monsterHitRecoverySeconds,
+        recoveryLoad: monsterRecoveryLoad,
+        attackAvailability: monsterAttackAvailability,
+        hardHitStunLock: monsterRecoveryLoad >= 1,
       },
     } : {}),
     ...(approachDistance > 0 ? {

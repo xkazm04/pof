@@ -5,6 +5,7 @@ import {
   duel,
   type DuelExchangeModel,
   type DuelMonsterDamageEvent,
+  type DuelOptions,
   type DuelSpellAttack,
   type PlayerAttackMode,
 } from '@/lib/catalog/reference/combatDuel';
@@ -28,6 +29,7 @@ import {
   type WeaponGraphic,
 } from '@/lib/catalog/reference/combatMath';
 import { aggregateClassWrappers } from '@/lib/catalog/reference/classHeroes';
+import { timingLaw } from '@/lib/catalog/reference/behaviourScale';
 import { contentHash } from '@/lib/catalog/reference/hash';
 import { D1_AI_ROUTINES, isD1AiRoutineId } from '@/lib/catalog/reference/aiRoutines';
 import { locationEntities, type LocationEntityWrapper } from '@/lib/catalog/reference/locationSpecs';
@@ -65,6 +67,7 @@ import {
   resolveMonsterMissileDamage,
   selectMonsterMissileAttack,
 } from '@/lib/catalog/reference/monsterMissileDamage';
+import { spriteAnimLen } from '@/lib/catalog/reference/missileSpecs';
 import type { ReferenceWrapper } from '@/lib/catalog/reference/wrapper';
 
 export const DESCENT_CLASSES = ['warrior', 'rogue', 'sorcerer'] as const;
@@ -989,6 +992,9 @@ function sorcererSpellAttacks(
       baseMana: read('manaCost'),
       manaAdj: read('manaMultiplier'),
       minMana: read('minMana'),
+      ...(policy.spell === 'Apocalypse'
+        ? { apocalypseBoomAnimationTicks: spriteAnimLen(wrappers, 'ApocalypseBoom', 0) }
+        : {}),
     };
   });
 }
@@ -1027,6 +1033,31 @@ function monsterDerived(wrapper: ReferenceWrapper): Record<string, unknown> {
   return derived && typeof derived === 'object' && !Array.isArray(derived)
     ? derived as Record<string, unknown>
     : {};
+}
+
+function numericCsv(value: unknown): number[] | undefined {
+  if (typeof value !== 'string' || value.trim() === '') return undefined;
+  const values = value.split(',').map((part) => Number(part.trim()));
+  return values.every(Number.isFinite) ? values : undefined;
+}
+
+/** MonsterGraphic::GotHit is index 3; its frame count times rate is the interrupt duration. */
+function monsterHitRecoverySeconds(wrapper: ReferenceWrapper, base?: ReferenceWrapper): number | undefined {
+  const animationOwner = base ?? wrapper;
+  const frames = numericCsv(animationOwner.raw.animFrames ?? animationOwner.entity.data.animFrames);
+  const rates = numericCsv(animationOwner.raw.animRates ?? animationOwner.entity.data.animRates);
+  if (!frames || !rates || !(frames[3] > 0) || !(rates[3] > 0)) return undefined;
+  return frames[3] * rates[3] / timingLaw().ticksPerSecond;
+}
+
+function monsterRecoveryFamily(wrapper: ReferenceWrapper): NonNullable<DuelOptions['monsterFamily']> {
+  switch (monsterType(wrapper)) {
+    case 'MT_SNEAK': return 'sneak';
+    case 'MT_STALKER': return 'stalker';
+    case 'MT_UNSEEN': return 'unseen';
+    case 'MT_ILLWEAV': return 'illusion-weaver';
+    default: return 'other';
+  }
 }
 
 /** Select the routine's actual combat slice: adjacent cadence, or its distinct in-range shot cadence. */
@@ -1326,7 +1357,7 @@ function assumptions(
           : 'd1-spell-cast-law, spellMath, and Sorcerer cast animation data',
         detail: sorcererCombatPolicy === 'mixed'
           ? 'Sorcerer casts only within the finite start-of-depth mana budget and uses the best expected wieldable weapon for every remaining kill. Spell to-hit always uses effective distance 0.'
-          : 'Sorcerer uses spell to-hit at the engagement distance, exact one-collision spell damage, class casting time, and mana per cast.',
+          : 'Sorcerer uses spell to-hit at effective distance 0, the stationary-target collision groups, class casting time, and mana per cast.',
       },
       {
         id: 'sorcerer-spell-progression',
@@ -1338,9 +1369,15 @@ function assumptions(
       },
       {
         id: 'spell-damage-event',
-        value: 'one collision damage roll per cast',
-        source: 'spellMath.damage definition and d1-spell-firebolt-law/d1-spell-fireball-law',
-        detail: 'The duel counts one target collision per cast. Fireball blast geometry and its possible second hit, packs, piercing, walls, and projectile travel are omitted.',
+        value: 'stationary per-spell collision groups with independent distance-0 to-hit checks',
+        source: 'pin-verified playerSpellHitsData formulas and missile collision call sites',
+        detail: 'One damage roll is shared exactly where the engine stores it: Lightning checks one segment floor(S/2)+6 times; Chain Lightning can put two such paths on its selected target; Fireball gets a second blast roll only after a successful flight hit. Flash, Fire Wall, Inferno, Flame Wave, Nova, Guardian, and Apocalypse are also encoded. The monster remains on the covered path/tile; projectile travel time and moving-monster geometry are outside the duel.',
+      },
+      {
+        id: 'monster-hit-recovery-lock',
+        value: 'hard spell hits remove monster attack time and can stun-lock',
+        source: '.reference/devilutionX/Source/missiles.cpp:278-351; .reference/devilutionX/Source/monster.cpp:661-669,986-996,1470-1478,3963-3994',
+        detail: 'Each non-resistant hard hit starts or restarts the target GotHit animation (frame count × rate); resistant spell hits play the sound but skip M_StartHit. Expected recovery starts per cast remove the same fraction of attack opportunity, capped at a hard-hit stun-lock when load reaches one. Golems and petrified targets do not enter recovery. Partially completed attacks and exact collision-vs-animation phase are not simulated.',
       },
       {
         id: 'mana-recovery',
@@ -1887,6 +1924,9 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
           engagementDistance: DEFAULT_RANGED_ENGAGEMENT_DISTANCE,
           monsterApproachTilesPerSecond: attack === 'melee' ? undefined : exchange?.approachTilesPerSecond,
           monsterAttackCycleSeconds: attackCycleSeconds,
+          monsterHitRecoverySeconds: monsterHitRecoverySeconds(wrapper, base),
+          monsterFamily: monsterRecoveryFamily(wrapper),
+          monsterCanHitRecover: monsterType(wrapper) !== 'MT_GOLEM',
           spell,
           playerCastSeconds,
           monsterAttack: exchange?.monsterAttack ?? 'melee',
@@ -2910,7 +2950,7 @@ export function descentEntity(input: SimulateDescentInput): ReferenceWrapper {
     .map((wrapper) => wrapper.entity.provenance.sourceFile))];
   const mappingVersion = contentHash([
     'd1-monster-type-selection', 'd1-unique-placement', 'd1-xp-award-law', 'd1-xp-curve-law',
-    'combatMath', 'combatDuel', simulation.policy, simulation.gameMode, simulation.difficulty,
+    'combatMath', 'combatDuel', 'playerSpellHits', simulation.policy, simulation.gameMode, simulation.difficulty,
     ...(simulation.attackMode ? [simulation.attackMode, 'class-attack-mode'] : []),
     ...(simulation.gear === 'expected' ? ['expected-loot-gear'] : []),
     ...(simulation.defensiveAffixes === 'expected' ? ['expected-defensive-affixes'] : []),
