@@ -17,7 +17,7 @@ import { wrapTable } from '@/lib/catalog/reference/wrapper';
 describe('Diablo I engine-derived status specifications', () => {
   it('keeps the complete census but promotes only the 29 reachable vanilla rows', () => {
     expect(STATUS_SPECS).toHaveLength(37);
-    expect(STATUS_SPECS.filter((spec) => spec.hellfire)).toHaveLength(6);
+    expect(STATUS_SPECS.filter((spec) => spec.hellfire)).toHaveLength(7);
     expect(statusEntities()).toHaveLength(29);
     expect(statusEntities().some((wrapper) => wrapper.entity.id === 'd1-status-reflect-charges')).toBe(false);
     expect(statusEntities().some((wrapper) => wrapper.entity.id === 'd1-status-etherealize-dead-hook')).toBe(false);

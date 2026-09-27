@@ -138,12 +138,12 @@ export const MOVEMENT_LAWS_DATA = [
   },
   {
     id: 'd1-pathfinding-law', title: 'Hero pathfinding law', scope: 'player-movement',
-    body: 'Pathfinding, derived from the pinned port: FindPath runs A* over eight directions and CanStep rejects corner cutting past solid flank tiles. The pin caps a hero path at MaxPathLengthPlayer (100) and monsters at MaxPathLengthMonsters (25), with axis steps costing 100 and diagonals 101 - port-tuned values; the 1996 limits are not provable at the pin. Contextual actions drop the final step and stop adjacent.',
+    body: 'Pathfinding, derived from the pinned port: FindPath runs A* over eight directions and CanStep rejects corner cutting past solid flank tiles. The pin caps a hero path at MaxPathLengthPlayer (100) and monsters at MaxPathLengthMonsters (25), with axis steps costing 100 and diagonals 101 - port-tuned values; the 1996 limits are not provable at the pin. Only endspace=false paths drop the final step; non-solid, non-door object paths can pass true.',
     refs: [`${PIN}engine/path.h#L19-L53`, `${PIN}engine/path.cpp#L32-L37`, `${PIN}engine/path.cpp#L184-L282`, `${PIN}levels/tile_properties.cpp#L66-L88`],
   },
   {
     id: 'd1-click-context-law', title: 'Vanilla click-context control law', scope: 'input-schemes',
-    body: 'Vanilla mouse/keyboard input, derived from the engine: left-click context chooses walk, target attack, talk, object use/disarm, or item pickup; Shift-left attacks in place. Right-click uses an inventory item or casts the readied spell. Keys 1-8 use belt slots, F5-F8 assign or ready spells, and S, Tab, I, C, Q, B, Space, and F1 control the classic selectors, panels, automap, and static help.',
+    body: 'Vanilla mouse/keyboard input, derived from the engine: left-click context chooses walk, target attack, talk, object use/disarm, or item pickup; Shift-left attacks in place except on an adjacent breakable object. Right-click uses an inventory item or casts the readied spell. Keys 1-8 use belt slots. F5-F8 assign spells in the selector, then ready or quick-cast them. S, Tab, I, C, Q, B, Space and F1 keep their classic controls.',
     refs: [`${PIN}diablo.cpp#L247-L317`, `${PIN}diablo.cpp#L441-L479`, `${PIN}diablo.cpp#L1841-L2106`, `${PIN}track.cpp#L20-L32`],
   },
 ] as const;

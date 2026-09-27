@@ -237,12 +237,12 @@ export const LOCATION_LAW_DATA = [
   },
   {
     id: 'd1-monster-type-selection', title: 'Monster type selection per level', scope: 'zone-map',
-    body: 'Monster type selection per level, derived from the engine: forced special and quest types register first. Random candidates must be available in the current edition and include the dungeon depth in their inclusive range. Distinct eligible types are drawn until none remain, 24 total types are registered, or the cumulative image budget reaches 4000. Level 16 skips the random draw.',
+    body: 'Monster type selection per level, derived from the engine: forced special and quest types register first. Random candidates must be available in the current edition and include the dungeon depth in their inclusive range. Distinct candidates that fit the remaining image budget are drawn until none fit, 24 total types are registered, or the budget reaches 4000. Level 16 skips the random draw. Set levels also skip it.',
     refs: refs('monster.cpp:3154', 'monster.cpp:3432', 'monster.cpp:3484', 'monster.h:39'),
   },
   {
     id: 'd1-unique-placement', title: 'Unique placement', scope: 'zone-map',
-    body: 'Unique placement, derived from the engine: an ordinary unique row requires its configured level to equal the current dungeon depth and its base type to be in the registered roster; unavailable quest uniques are skipped. Quest bosses use scripted set-piece coordinates and others use a legal random tile. Pack mode chooses no pack, an independent eight-minion pack, or a leashed pack; scripted bosses may override its size.',
+    body: 'Unique placement, derived from the engine: an ordinary unique row requires its configured level to equal the current dungeon depth and its base type to be in the registered roster; unavailable quest uniques are skipped. Only listed uniques use fixed or set-piece coordinates; all others use a legal random tile. Pack mode chooses no pack, an independent eight-minion pack, or a leashed pack; scripted bosses may override its size.',
     refs: refs('monster.cpp:391', 'monster.cpp:504', 'monster.cpp:514', 'monster.cpp:3402'),
   },
   {

@@ -122,12 +122,12 @@ export const ENCOUNTER_LAWS_DATA = [
   },
   {
     id: 'd1-encounter-pack-leash', title: 'Leashed pack behavior',
-    body: 'Leashed pack behavior, derived from the engine: a minion inherits alertness from its leader. It becomes separated when solid geometry breaks their line, rejoins with a clear line inside four walking tiles, and may not move to four or more tiles from the leader. A dead leader releases its leashed minions.',
+    body: 'Leashed pack behavior, derived from the engine: a less-alert minion is set to one active tick behind its leader; a more-alert leashed minion can similarly wake its leader. It becomes separated when solid geometry breaks their line, rejoins with a clear line inside four walking tiles, and may not move to four or more tiles from the leader. A dead leader releases its leashed minions.',
     refs: refs('monster.cpp:1481-1495', 'monster.cpp:1674-1729', 'monster.cpp:4357-4381'),
   },
   {
     id: 'd1-encounter-activation', title: 'Boss encounter activation',
-    body: 'Boss encounter activation, derived from the engine: ordinary bosses wake on visibility. Talking uniques remain noncombatant until dialogue, quest state, or item hand-in clears their line and selects a combat goal; Lazarus and the Warlord can begin speech automatically when their tile becomes visible to a player. Books, circles, doors, and levers may gate access without themselves being the aggro event.',
+    body: 'Boss encounter activation, derived from the engine: ordinary bosses wake on visibility. Talk-gated uniques use AI-specific transitions: most clear dialogue and fight, but Lachdanan dies after his final speech. Lazarus auto-talk also requires his single-player trigger tile or the multiplayer quest gate; the Warlord auto-talks when visible. Books, circles, doors, and levers may gate access without themselves being the aggro event.',
     refs: refs('monster.cpp:1427-1467', 'monster.cpp:2879-3006', 'monster.cpp:4278-4317', 'monster.cpp:4747-4804'),
   },
   {
@@ -137,7 +137,7 @@ export const ENCOUNTER_LAWS_DATA = [
   },
   {
     id: 'd1-unique-global-rules', title: 'Unique monster preparation',
-    body: 'Unique monster preparation, derived from the engine: a unique receives its unique AI, dialogue, resistance, damage and fixed maximum HP, is halved in vanilla single player before difficulty scaling, and normally emits radius-3 light. A pending talk line selects a noncombatant goal; pack placement follows afterward. The engine has no universal encounter win or failure evaluator.',
+    body: 'Unique monster preparation, derived from the engine: a unique receives its unique AI, dialogue, resistance, damage and fixed maximum HP, is halved in vanilla single player before difficulty scaling, and normally emits radius-3 light. Hellfire single player also halves it; both editions clamp to one HP. A pending talk line selects a noncombatant goal; pack placement follows afterward. The engine has no universal encounter win or failure evaluator.',
     refs: refs('monster.cpp:3325-3412', 'quests.cpp:227-287'),
   },
 ] as const satisfies readonly EncounterLawData[];
