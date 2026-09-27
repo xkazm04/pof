@@ -1,6 +1,6 @@
 // Server-only: the unattended build orchestrator behind scheduled nightly
 // builds. `runScheduledBuild` runs the full chain — skip-if-unchanged → fast
-// pre-flight → cook → smoke (Win64) → size-budget → record — with every
+// pre-flight → cook → smoke (Win64) → finalize (size-budget + version + record) — with every
 // side-effect injected so it is unit-testable without spawning anything.
 //
 // `tickScheduler` / `startScheduledRun` wire the real implementations in and
@@ -15,8 +15,10 @@ import type { PreflightStatus, PreflightCheckResult } from './preflight';
 import { runFastPreflight } from './preflight-runner';
 import { cookExecutor, type CookEvent } from './cook-executor';
 import { runSmokeTest, deriveGameImage, smokeResultNote, type SmokeTestResult, type SmokeTestStatus } from './smoke-test';
-import { evaluateBuildSize, type SizeRegression } from './size-budgets';
-import { insertBuild, lastGreenSizeBytes, type BuildRecordInput } from './build-history-store';
+import { evaluateBuildSize } from './size-budgets';
+import { insertBuild, lastGreenBaseline } from './build-history-store';
+import { autoIncrementOnSuccess } from './version-manager';
+import { finalizeCook, type FinalizeDeps } from './finalize-build';
 import { getGitHead } from './git-head';
 import { shouldSkipUnchanged, isDueAt, type BuildSchedule } from './build-scheduler';
 import {
@@ -45,16 +47,17 @@ export interface CookOutcome {
   message?: string;
 }
 
-export interface ScheduledRunDeps {
+/**
+ * Orchestration deps plus the {@link FinalizeDeps} every build_history write goes
+ * through — the same finalizer the interactive cook route uses, so the baseline
+ * record, the project scope and the bump-per-green-cook version rule cannot drift.
+ */
+export interface ScheduledRunDeps extends FinalizeDeps {
   getHead: (projectPath: string) => Promise<string | null>;
   runPreflight: (ctx: ScheduledRunContext) => Promise<{ overall: PreflightStatus; results: PreflightCheckResult[] }>;
   runCook: (ctx: ScheduledRunContext) => Promise<CookOutcome>;
   measureSize: (exePath: string) => Promise<number | null>;
   runSmoke: (ctx: ScheduledRunContext, exePath: string) => Promise<SmokeTestResult>;
-  /** Size baseline for the growth check, SCOPED to the project being built. */
-  lastGreenSize: (platform: string, projectPath?: string) => number | null;
-  evaluateSize: (platform: string, sizeBytes: number | null, lastGreen: number | null) => SizeRegression | null;
-  recordBuild: (input: BuildRecordInput) => { id: number };
   now: () => number;
 }
 
@@ -90,22 +93,24 @@ export async function runScheduledBuild(
   if (pre.overall === 'fail') {
     const issues = pre.results.filter((r) => r.status === 'fail').flatMap((r) => r.issues);
     const reason = `Pre-flight failed: ${issues.slice(0, 5).join('; ') || 'see pre-flight checks'}`;
-    const rec = deps.recordBuild({
-      projectId: ctx.projectPath, platform, config, status: 'failed', durationMs: elapsed(),
-      errorSummary: reason, notes: `${SCHED_NOTE} ${skip.reason}`,
-    });
-    return base('failed', reason, head, rec.id, elapsed(), 'fail', null, null);
+    const rec = finalizeCook(
+      { kind: 'error', status: 'failed', message: reason, durationMs: elapsed() },
+      { projectPath: ctx.projectPath, platform, config, notes: [`${SCHED_NOTE} ${skip.reason}`] },
+      deps,
+    );
+    return base('failed', reason, head, rec.buildId, elapsed(), 'fail', null, null);
   }
 
   // 3. Cook.
   const cook = await deps.runCook(ctx);
   if (cook.status === 'failed') {
     const reason = cook.message ?? 'cook failed';
-    const rec = deps.recordBuild({
-      projectId: ctx.projectPath, platform, config, status: 'failed', durationMs: cook.durationMs || elapsed(),
-      cookTimeMs: cook.durationMs, errorSummary: reason, notes: `${SCHED_NOTE} ${skip.reason}`,
-    });
-    return base('failed', reason, head, rec.id, elapsed(), pre.overall, null, null);
+    const rec = finalizeCook(
+      { kind: 'error', status: 'failed', message: reason, durationMs: cook.durationMs || elapsed(), cookTimeMs: cook.durationMs },
+      { projectPath: ctx.projectPath, platform, config, notes: [`${SCHED_NOTE} ${skip.reason}`] },
+      deps,
+    );
+    return base('failed', reason, head, rec.buildId, elapsed(), pre.overall, null, null);
   }
 
   // 4. Size measurement (best-effort — cook-executor does not measure).
@@ -121,32 +126,27 @@ export async function runScheduledBuild(
     smoke = await deps.runSmoke(ctx, cook.exePath);
   }
 
-  // 6. Size-budget evaluation against the last green build OF THIS PROJECT — an
-  // unscoped baseline (another project's larger build) either fabricates a growth
-  // regression or masks a real one.
-  const sizeReg = deps.evaluateSize(platform, sizeBytes, deps.lastGreenSize(platform, ctx.projectPath));
-
-  // 7. Record + classify. A failed smoke flips the unattended gate to failed.
+  // 6-7. Finalize through the shared finalizer: baseline RECORD of THIS project
+  // captured before the insert (an unscoped baseline fabricates or masks a growth
+  // regression; a bare number cannot name its build), a failed smoke flips the
+  // unattended gate to failed, and only a recorded-green build is versioned.
   const smokeFailed = smoke !== null && smoke.status === 'fail';
-  const noteParts = [SCHED_NOTE, skip.reason];
-  if (smoke) noteParts.push(smokeResultNote(smoke));
-  if (sizeReg) noteParts.push(sizeReg.note);
-  const notes = noteParts.join(' | ');
+  const fin = finalizeCook(
+    { kind: 'done', exePath: cook.exePath, sizeBytes, durationMs: cook.durationMs || elapsed(), cookTimeMs: cook.durationMs },
+    {
+      projectPath: ctx.projectPath, platform, config,
+      smoke: smoke ? { failed: smokeFailed, note: smokeResultNote(smoke) } : null,
+      notes: [SCHED_NOTE, skip.reason],
+    },
+    deps,
+  );
+  const sizeReg = fin.regression;
 
   const status: ScheduleOutcome = smokeFailed ? 'failed' : 'success';
-  const rec = deps.recordBuild({
-    projectId: ctx.projectPath, platform, config,
-    status: smokeFailed ? 'failed' : 'success',
-    sizeBytes, durationMs: cook.durationMs || elapsed(), cookTimeMs: cook.durationMs,
-    outputPath: cook.exePath || null,
-    errorSummary: smokeFailed && smoke ? smokeResultNote(smoke) : null,
-    notes,
-  });
-
   const reason = smokeFailed && smoke
     ? smokeResultNote(smoke)
     : `Built green${sizeReg ? ' (size regression noted)' : ''}`;
-  return base(status, reason, head, rec.id, elapsed(), pre.overall, smoke?.status ?? null, sizeReg?.note ?? null);
+  return base(status, reason, head, fin.buildId, elapsed(), pre.overall, smoke?.status ?? null, sizeReg?.note ?? null);
 }
 
 function base(
@@ -244,10 +244,10 @@ export async function measureBuildSize(
   }
 }
 
-// The local copy of "last green size" is gone — it was a second implementation of
-// `lastGreenSizeBytes`, and a second copy is exactly how the interactive cook path and
-// the scheduled runner drift into two different baselines. `defaultRunnerDeps` wires
-// the store function directly, project scope included.
+// The runner keeps no finalization logic of its own: a second copy is exactly how the
+// interactive cook path and the scheduled runner drifted (unversioned nightly builds, an
+// "unidentified" baseline). `defaultRunnerDeps` wires the store functions into the
+// shared `finalizeCook`, project scope included.
 
 export function defaultRunnerDeps(): ScheduledRunDeps {
   return {
@@ -257,9 +257,11 @@ export function defaultRunnerDeps(): ScheduledRunDeps {
     measureSize: measureBuildSize,
     runSmoke: (ctx, exePath) =>
       runSmokeTest({ bootstrapExe: exePath, gameImage: deriveGameImage(ctx.projectName, ctx.profile.platform, ctx.profile.config) }),
-    lastGreenSize: (platform, projectPath) => lastGreenSizeBytes(platform, projectPath),
-    evaluateSize: (platform, sizeBytes, lastGreen) => evaluateBuildSize(platform, sizeBytes, lastGreen),
-    recordBuild: insertBuild,
+    lastGreenBaseline: (platform, projectPath) => lastGreenBaseline(platform, projectPath),
+    evaluateBuildSize: (platform, sizeBytes, lastGreen, baseline) =>
+      evaluateBuildSize(platform, sizeBytes, lastGreen, undefined, baseline),
+    nextVersion: autoIncrementOnSuccess,
+    insertBuild,
     now: Date.now,
   };
 }

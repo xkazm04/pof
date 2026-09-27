@@ -81,9 +81,10 @@ describe('a truncated measurement never reaches the budget gate', () => {
         // What a truncated walk now returns.
         measureSize: async () => null,
         runSmoke: async () => ({ status: 'pass' }) as never,
-        lastGreenSize: () => 8_000_000,
-        evaluateSize: (_p, sizeBytes) => { graded.push(sizeBytes); return null; },
-        recordBuild: (input) => { recorded.push(input); return { id: 1 }; },
+        lastGreenBaseline: () => ({ buildId: 1, projectId: 'C:/p', sizeBytes: 8_000_000, version: null, createdAt: 't' }),
+        evaluateBuildSize: (_p, sizeBytes) => { graded.push(sizeBytes); return null; },
+        nextVersion: () => '0.0.1',
+        insertBuild: (input) => { recorded.push(input); return { id: 1 }; },
         now: () => 0,
       },
     );
