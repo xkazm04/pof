@@ -20,7 +20,7 @@ export const LOOT_LAW_DATA = [
   {
     id: 'd1-loot-base-selection',
     title: 'Base-item selection',
-    body: 'Ordinary monster selection admits available rows with positive drop weight whose minimum monster level is no greater than the monster’s difficulty-adjusted level, then uses drop weight as relative probability. Hero class is not a filter. Other random-item selectors give each admitted row equal weight; the named-monster selector excludes gold and non-book miscellaneous items.',
+    body: 'Ordinary monster selection admits available positive-weight rows at or below the monster’s difficulty-adjusted level and uses drop weight relatively; single-player also rejects Resurrect and Heal Other rows. Hero class is not a filter. Other random-item selectors give each admitted row equal weight; the named-monster selector excludes gold and non-book miscellaneous items.',
     refs: ['items.cpp#L1353-L1414', 'items.cpp#L2373-L2400', 'tables/itemdat.cpp#L568-L600'],
   },
   {
@@ -32,19 +32,19 @@ export const LOOT_LAW_DATA = [
   {
     id: 'd1-loot-affixes',
     title: 'Magic-affix selection',
-    body: 'Generic magic generation requests prefix only with probability 5/24, suffix only with 5/8, and both with 1/6. Eligible affixes match the item kind and the inclusive half-level-to-level band, then use their chance column as relative weight. Ordinary generation restricts selection to useful affixes two-thirds of the time, and opposite good or evil alignments cannot pair.',
+    body: 'Generic magic generation requests prefix only with probability 5/24, suffix only with 5/8, and both with 1/6. For ordinary rolls, eligible affixes match item kind and the inclusive half-level-to-level band, weighted by chance; other callers pass different bands, and GetItemBonus caps the lower bound at 25. Ordinary generation restricts selection to useful affixes two-thirds of the time, and opposite good or evil alignments cannot pair.',
     refs: ['items.cpp#L1063-L1094', 'items.cpp#L1174-L1208', 'items.cpp#L1210-L1234'],
   },
   {
     id: 'd1-loot-gold-consumables',
     title: 'Gold and consumables',
-    body: 'A gold pile is uniform from five times through one less than fifteen times dungeon level plus its difficulty offset; Hell-themed floors add a truncated eighth before the cap. Potions, scrolls, books, and elixirs otherwise obey base-row gates and weights. Useful object drops choose Mana or Healing equally on the first floor, then Mana, Healing, or Town Portal equally below it.',
+    body: 'A gold pile is uniform from five times through one less than fifteen times dungeon level plus its difficulty offset; Hell-themed floors add a truncated eighth before the cap. Ordinary monster consumables obey base-row gates and weights. Vanilla useful drops are 1/2 Mana and 1/2 Healing on floor 1, then 1/3 each Mana/Healing/Portal. Hellfire uses 3/7 Healing, 3/7 Mana, 1/7 Oil on floor 1, then 2/7 Healing, 2/7 Mana, 2/7 Portal, 1/7 Oil.',
     refs: ['items.cpp#L613-L663', 'items.cpp#L1517-L1557', 'items.cpp#L3166-L3186'],
   },
   {
     id: 'd1-loot-healing-potions',
     title: 'Healing-potion restoration',
-    body: 'Using a Healing potion restores floor(maximum whole life / 8) plus a uniform integer from zero through floor(maximum whole life / 4) - 1, then Warriors double it, Rogues add one half, and Sorcerers keep it. Restoration is capped at maximum life. A Full Healing potion instead restores life directly to maximum.',
+    body: 'Using a Healing potion restores floor(maximum whole life / 8) plus a uniform integer from zero through floor(maximum whole life / 4) - 1; Warriors and Barbarians double it, Rogues, Monks, and Bards add one half, and other classes keep it. Restoration is capped at maximum life. A Full Healing potion instead restores life directly to maximum.',
     refs: ['items.cpp#L4206-L4223', 'player.cpp#L1744-L1756', 'player.h#L719-L724'],
   },
 ] as const satisfies readonly LootLawData[];

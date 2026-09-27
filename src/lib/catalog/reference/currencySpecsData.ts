@@ -33,7 +33,7 @@ export const CURRENCY_SPECS_DATA = [
       ),
     },
     pickup: {
-      mergeRule: 'Top off non-full inventory piles in InvList order, then create one-cell piles in empty inventory cells; any remainder stays on the world item when capacity is exhausted.',
+      mergeRule: 'Top off non-full inventory piles in InvList order, then create one-cell piles in empty inventory cells. Auto-pickup leaves any remainder on the world item when capacity is exhausted; manual pickup moves the remainder to the held item and removes the world item.',
       placementOrder: 'Empty cells are filled across the last inventory row from right to left, then by columns from bottom to top and right to left.',
       splitRule: 'Using a gold pile opens a bounded numeric dialog; the chosen amount is removed from that pile, becomes the held gold item, and _pGold is recalculated.',
       displayRule: 'Pile cursor size follows GetGoldCursor(_ivalue); inventory hover text pluralizes the pile value, while stores render TotalPlayerGold().',
@@ -138,7 +138,7 @@ export const CURRENCY_LAWS_DATA = [
   {
     id: 'd1-gold-pile-law',
     title: 'Gold piles and inventory accounting',
-    body: 'Vanilla gold is an inventory item stored in one-cell piles capped by GOLD_MAX_LIMIT. Pickup fills existing piles before creating new ones and leaves any remainder uncollected when inventory capacity runs out. Player::_pGold is the sum of carried piles. Splitting a pile moves the chosen bounded amount to the held item and recalculates that sum.',
+    body: 'Vanilla gold is an inventory item stored in one-cell piles capped by GOLD_MAX_LIMIT. Both pickup paths fill existing piles before creating new ones; auto-pickup leaves a residual world pile when capacity runs out, while manual pickup moves that residual to the held item. Player::_pGold is the sum of carried piles. Splitting a pile moves the chosen bounded amount to the held item and recalculates that sum.',
     refs: refs(
       '.reference/devilutionX/Source/items.h:30-30',
       '.reference/devilutionX/Source/inv.cpp:1087-1124',

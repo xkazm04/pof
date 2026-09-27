@@ -112,12 +112,12 @@ export const STORE_LAWS_DATA: readonly StoreLawData[] = [
   },
   {
     id: 'd1-store-stock-law', title: 'Engine stock lifecycle',
-    body: 'Basic, witch, and healer stock rerolls whenever town loads. In single-player, their stock level is the deepest visited dungeon level plus two, kept between 6 and 16. Premium stock advances after character-level gains when town setup next runs; Wirt does the same when half the character level, rounded down, increases. Permanent consumables are not removed on purchase.',
+    body: 'Basic, witch, and healer stock rerolls whenever town loads. In single-player, their stock level is the deepest visited dungeon level plus two, kept between 6 and 16. Premium stock advances on next town setup once per gained character level and immediately replaces a purchased slot; Wirt rerolls on town setup after purchase or when half the character level, rounded down, rises. Permanent consumables are not removed on purchase.',
     refs: refs('.reference/devilutionX/Source/diablo.cpp:3120-3126', '.reference/devilutionX/Source/diablo.cpp:3398-3429', '.reference/devilutionX/Source/stores.cpp:2162-2180', '.reference/devilutionX/Source/items.cpp:4436-4464', '.reference/devilutionX/Source/items.cpp:4533-4558', '.reference/devilutionX/Source/player.cpp:2384-2404'),
   },
   {
     id: 'd1-store-service-fees-law', title: 'Repair, recharge, and identification',
-    body: 'Identified magic repair multiplies 30 by identified value and missing durability, then divides by maximum durability, 100, and 2 with integer rounding; zero is omitted. Other repairs cost half base value scaled by missing durability, rounded down, at least 1 gold. Recharge halves base value plus spell cost after scaling by missing charges. Cain charges 100 gold.',
+    body: 'Identified magic repair multiplies 30 by identified value and missing durability, then divides by maximum durability, 100, and 2 with integer rounding; zero is omitted. Other repairs cost half base value scaled by missing durability, rounded down, at least 1 gold. Recharge adds base value and spell cost, multiplies by missing charges, divides by maximum charges and then 2, with no minimum. Cain charges 100 gold.',
     refs: refs('.reference/devilutionX/Source/stores.cpp:851-856', '.reference/devilutionX/Source/stores.cpp:1095-1101', '.reference/devilutionX/Source/stores.cpp:2121-2142'),
   },
   {

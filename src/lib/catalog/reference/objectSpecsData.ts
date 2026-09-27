@@ -42,8 +42,8 @@ export const OBJECT_SPECS_DATA = [
   {
     kind: 'chest', objects: ['OBJ_CHEST1', 'OBJ_CHEST2', 'OBJ_CHEST3', 'OBJ_TCHEST1', 'OBJ_TCHEST2', 'OBJ_TCHEST3'],
     operate: 'Opens once, disables selection and replays its stored seed to create its rolled contents. A Thaumaturgic shrine can make opened chests usable again.',
-    drops: 'Creates the stored tier count of useful or ordinary random items; set-level chests use fixed size-tier counts. A non-set chest can roll zero drops.',
-    trap: 'Ordinary chests may gain a linked one-shot wall trap. A trapped-chest variant instead fires one rolled chest missile at the opener and then clears its trap flag.',
+    drops: 'Creates the stored tier count of useful or ordinary random items; set-level chests use fixed size-tier counts and good-only random items. A non-set chest can roll zero drops.',
+    trap: 'Outside Hell tiles, eligible ordinary chests may gain a linked one-shot wall trap if placement succeeds. Only in Catacombs, Caves, Hell, or Nest can a chest instead become a trapped variant that fires one rolled missile at the opener.',
     once: true,
     refs: source(529, 915, 2018, 2487),
   },
@@ -250,32 +250,32 @@ export const OBJECT_SPECS_DATA = [
 ] satisfies readonly ObjectSpecData[];
 
 export const SHRINE_EFFECTS_DATA = [
-  { shrine: 'Mysterious', effect: 'Subtracts one base point from every attribute, then adds six to one seeded random attribute.', duration: 'permanent', refs: source(2250) },
+  { shrine: 'Mysterious', effect: 'Attempts to subtract one base point from every attribute, then add six to one seeded random attribute; each change is clamped at zero and the class cap.', duration: 'permanent', refs: source(2250) },
   { shrine: 'Hidden', effect: 'Adds ten current and maximum durability to eligible equipped items, then subtracts twenty from one seeded eligible item, with a floor of one.', duration: 'permanent', refs: source(2282) },
   { shrine: 'Gloomy', effect: 'Lowers maximum damage on every weapon by one without crossing minimum damage, and adds two armour class to armour and shields.', duration: 'permanent', refs: source(2329) },
   { shrine: 'Weird', effect: 'Adds one maximum damage to carried weapons and to equipped non-shield weapons.', duration: 'permanent', refs: source(2363) },
   { shrine: 'Magical', effect: 'Creates Mana Shield for the activating hero; the shield lasts until mana or another engine removal condition ends it.', duration: 'timed', refs: source(2392) },
   { shrine: 'Stone', effect: 'Refills every carried staff to its maximum charges.', duration: 'instant', refs: source(2410) },
   { shrine: 'Religious', effect: 'Repairs every carried item to maximum durability.', duration: 'instant', refs: source(2427) },
-  { shrine: 'Enchanted', effect: 'If more than one spell is learned, raises every eligible learned spell except one seeded spell, which loses one level.', duration: 'permanent', refs: source(2439) },
+  { shrine: 'Enchanted', effect: 'If more than one spell is learned, raises each nonchosen learned spell below its cap and lowers the seeded chosen spell only when its level is above zero.', duration: 'permanent', refs: source(2439) },
   { shrine: 'Thaumaturgic', effect: 'Re-enables every opened chest on the level, assigns each a new seed and restores its closed frame.', duration: 'instant', refs: source(2487) },
   { shrine: 'Fascinating', effect: 'Learns or raises Firebolt by up to two levels, then removes one tenth of base maximum mana from maximum and current mana.', duration: 'permanent', refs: source(2504) },
   { shrine: 'Cryptic', effect: 'Casts Nova from the hero and immediately refills mana.', duration: 'instant', refs: source(2546) },
   { shrine: 'Magical', effect: 'The second vanilla selection slot applies the same Mana Shield effect as the other Magical shrine slot.', duration: 'timed', refs: source(2392, 3016) },
   { shrine: 'Eldritch', effect: 'Converts carried healing and mana potions into matching rejuvenation potions while preserving item seeds.', duration: 'instant', refs: source(2569) },
-  { shrine: 'Eerie', effect: 'Adds two base Magic.', duration: 'permanent', refs: source(2602) },
+  { shrine: 'Eerie', effect: 'Attempts to add two base Magic, clamped at the class cap.', duration: 'permanent', refs: source(2602) },
   { shrine: 'Divine', effect: 'Fully restores life and mana and creates two full potions; before depth four they are one healing and one mana potion, otherwise rejuvenation.', duration: 'instant', refs: source(2621) },
   { shrine: 'Holy', effect: 'Creates a Phasing relocation for the activating hero.', duration: 'timed', refs: source(2644) },
   { shrine: 'Sacred', effect: 'Learns or raises Charged Bolt by up to two levels, then removes one tenth of base maximum mana from maximum and current mana.', duration: 'permanent', refs: source(2504, 3050) },
   { shrine: 'Spiritual', effect: 'Fills every empty inventory grid cell with a depth-scaled gold stack.', duration: 'instant', refs: source(2654) },
   { shrine: 'Spooky', effect: 'In multiplayer, heals every other local hero to full life and mana; the activator receives only the shrine message.', duration: 'instant', refs: source(2673) },
-  { shrine: 'Abandoned', effect: 'Adds two base Dexterity.', duration: 'permanent', refs: source(2692) },
-  { shrine: 'Creepy', effect: 'Adds two base Strength.', duration: 'permanent', refs: source(2705) },
-  { shrine: 'Quiet', effect: 'Adds two base Vitality.', duration: 'permanent', refs: source(2718) },
+  { shrine: 'Abandoned', effect: 'Attempts to add two base Dexterity, clamped at the class cap.', duration: 'permanent', refs: source(2692) },
+  { shrine: 'Creepy', effect: 'Attempts to add two base Strength, clamped at the class cap.', duration: 'permanent', refs: source(2705) },
+  { shrine: 'Quiet', effect: 'Attempts to add two base Vitality, clamped at the class cap.', duration: 'permanent', refs: source(2718) },
   { shrine: 'Secluded', effect: 'Marks every macro-cell in the current dungeon explored on the automap.', duration: 'instant', refs: source(2731) },
   { shrine: 'Ornate', effect: 'Learns or raises Holy Bolt by up to two levels, then removes one tenth of base maximum mana from maximum and current mana.', duration: 'permanent', refs: source(2504, 3071) },
   { shrine: 'Glimmering', effect: 'Identifies every carried magical item that is not already identified.', duration: 'instant', refs: source(2743) },
-  { shrine: 'Tainted', effect: 'In multiplayer, every other local hero gains one point in one seeded attribute and loses one point in each of the other three.', duration: 'permanent', refs: source(2760) },
+  { shrine: 'Tainted', effect: 'In multiplayer, every other local hero attempts to gain one point in one seeded attribute and lose one point in each other attribute, under zero floors and class caps.', duration: 'permanent', refs: source(2760) },
 ] satisfies readonly ShrineEffectData[];
 
 interface ObjectLawData {
@@ -289,7 +289,7 @@ const OBJECT_LAW_DATA: readonly ObjectLawData[] = [
   {
     id: 'd1-object-operation-law',
     title: 'Object operation overview (engine-derived)',
-    body: 'Object operation, derived from the engine: an interactive object must still have an active selection region. Dispatch by kind then handles doors, map switches, quest state, containers, shrines, fountains and racks. Most one-use objects clear selection and advance or stop their animation; doors, story books, trap levers and restoration fountains are reusable.',
+    body: 'Object operation, derived from the engine: an interactive object must still have an active selection region. Dispatch by kind then handles doors, map switches, quest state, containers, shrines, fountains and racks. Most one-use objects clear selection and advance or stop their animation; doors, story books, trap levers and restoration fountains are reusable. Quest books remain readable; the pedestal takes three uses.',
     refs: ['.reference/devilutionX/Source/objects.cpp:4377'],
   },
   {
@@ -301,13 +301,13 @@ const OBJECT_LAW_DATA: readonly ObjectLawData[] = [
   {
     id: 'd1-object-trap-law',
     title: 'Object trap law (engine-derived)',
-    body: 'Object traps, derived from the engine: eligible floor objects have a 10%, 15%, 20% or 25% wall-trap chance as depth crosses 1, 2, 5 and 7. A placed wall trap fires once after its linked object changes state, aiming at a nearby hero, with projectile class chosen by effective depth. Ordinary chests separately have a 10% chance to become trapped-chest variants.',
+    body: 'Object traps, derived from the engine: outside Hell tiles, eligible floor objects receive 10%, 15%, 20% or 25% wall-trap placement attempts at depths 1, 2, 5 and 7; placement can fail. A placed trap fires once after its trigger changes state, targets a hero in the trigger area or otherwise the trigger, and rolls Arrow, Firebolt or LightningControl by effective depth. Chests become trapped variants at 10% only in Catacombs, Caves, Hell or Nest.',
     refs: ['.reference/devilutionX/Source/objects.cpp:478', '.reference/devilutionX/Source/objects.cpp:529', '.reference/devilutionX/Source/objects.cpp:1227', '.reference/devilutionX/Source/objects.cpp:4138'],
   },
   {
     id: 'd1-container-drop-law',
     title: 'Container drop law (engine-derived)',
-    body: 'Container drops, derived from the engine: a chest stores its seed and size-tier count at creation, then opening replays that seed for useful or ordinary random items; set-level chests use fixed tier counts. Sarcophagi and barrels instead resolve a stored item, monster or empty outcome. Book furniture and equipment racks create their named item class using the current dungeon context.',
+    body: 'Container drops, derived from the engine: a chest stores a seed and count; non-set opening replays it for useful or ordinary items, while set chests use fixed counts and good-only items. Sarcophagi and barrels instead resolve a stored item, monster or empty outcome. Book stands roll a book 1/5, else a scroll; bookcases create books, armour racks use depth bands, and weapon racks choose sword, axe, bow or mace. The item limit can suppress drops.',
     refs: ['.reference/devilutionX/Source/objects.cpp:915', '.reference/devilutionX/Source/objects.cpp:2018', '.reference/devilutionX/Source/objects.cpp:2188', '.reference/devilutionX/Source/objects.cpp:3110', '.reference/devilutionX/Source/objects.cpp:3169', '.reference/devilutionX/Source/objects.cpp:3324', '.reference/devilutionX/Source/objects.cpp:3461'],
   },
 ];

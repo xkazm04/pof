@@ -247,7 +247,7 @@ export const LOCATION_LAW_DATA = [
   },
   {
     id: 'd1-drop-level', title: 'Drop level', scope: 'items',
-    body: "Drop level, derived from the engine: a monster drop chooses a base whose minimum level fits the monster's effective level, including unique and difficulty bonuses, but records and rolls the item with the slain base archetype's table level rather than the dungeon depth. Floor and object drops use the current dungeon depth; set maps inherit their parent quest floor.",
+    body: 'Drop level, derived from the engine: ordinary drops gate weighted bases by difficulty-adjusted monster level; named selection uses that level for non-book bases but admits books regardless. Their non-gold items record and roll from the monster type level, gold uses the floor level. Floor and object items use the floor level: four quest sets use quest floor, other sets 1, Nest depth minus 8, Crypt depth minus 7, else the depth.',
     refs: refs('items.cpp:3256', 'items.cpp:3422', 'items.cpp:3472', 'items.cpp:399'),
   },
 ] as const;
