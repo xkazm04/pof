@@ -8,6 +8,7 @@ import {
   defaultProviderForMode,
   getProviderById,
   getOfficialProvider,
+  GENERATION_PROVIDERS,
 } from '@/lib/visual-gen/providers';
 
 function envelope(data: unknown): Response {
@@ -65,7 +66,21 @@ describe('providerExecution — registry membership is not capability', () => {
     expect(exec.path).toBeUndefined();
   });
 
-  it('now names a runner for trellis2, which stopped being metadata-only', () => {
+  /**
+   * The forge's runnable set and the route's dispatch set are ONE set. The old assertion
+   * here ("now names a runner for trellis2") hard-coded one id and passed while the route
+   * still 400'd that exact provider — the button said Runner, the submit said "not wired".
+   * Parity over the whole registry is what catches the next such drift.
+   */
+  it('offers a runner path exactly where the server dispatch table can start a job', async () => {
+    const { runnerDispatchFor } = await import('@/lib/visual-gen/runner-dispatch');
+    for (const p of GENERATION_PROVIDERS) {
+      for (const m of p.modes) {
+        const offered = providerExecution(p, m).path === 'runner';
+        const dispatched = runnerDispatchFor(p.id)?.modes.includes(m) === true;
+        expect(offered, `${p.id} / ${m}`).toBe(dispatched);
+      }
+    }
     expect(providerExecution(provider('trellis2'), 'image-to-3d')).toEqual({ executable: true, path: 'runner' });
   });
 
