@@ -20,6 +20,7 @@ import {
   EDIT_HISTORY_LIMIT,
   type EditHistoryEntry,
   type LevelDocPatch,
+  type LevelEditOp,
 } from '@/lib/level-design/level-edit';
 import type { LevelDesignDocument, RoomNode, SyncDivergence } from '@/types/level-design';
 
@@ -229,5 +230,42 @@ describe('rebaseHistoryPatch — an undo never resurrects a newer sync verdict',
     if (!del.ok) throw new Error(del.error);
     const drifted = { ...apply(doc, del.data.patch), rooms: [room('r1', 999), room('r3', 400)] };
     expect(rebaseHistoryPatch(drifted, del.data.inverse, del.data.patch).ok).toBe(false);
+  });
+});
+
+describe('applyLevelEdit — gate ops (one patch, one inverse, one undo step)', () => {
+  it('set-link-gate writes direction + requires + the granting room as ONE {connections, rooms} edit', () => {
+    const doc = makeDoc();
+    const op: LevelEditOp = {
+      kind: 'set-link-gate', connectionId: 'c1',
+      change: { direction: 'one-way', requires: ['Brass Key'], grantRoomId: 'r1' },
+    };
+    const res = applyLevelEdit(doc, op);
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    const { patch, inverse, marksDocAhead } = res.data;
+    expect(Object.keys(patch).sort()).toEqual(['connections', 'rooms']);
+    expect(patch.connections?.[0]).toMatchObject({ bidirectional: false, requires: ['brass-key'] });
+    expect(patch.rooms?.[0].grants).toEqual(['brass-key']);
+    expect(inverse.connections).toBe(doc.connections);
+    expect(inverse.rooms).toBe(doc.rooms);
+    expect(marksDocAhead).toBe(true);
+    expect(gestureKey(op, doc)).toBe('gate:c1');
+  });
+
+  it('set-link-gate refuses an unknown link and a change that changes nothing', () => {
+    expect(applyLevelEdit(makeDoc(), { kind: 'set-link-gate', connectionId: 'zz', change: { direction: 'flip' } }).ok).toBe(false);
+    expect(applyLevelEdit(makeDoc(), { kind: 'set-link-gate', connectionId: 'c1', change: { direction: 'two-way' } }).ok).toBe(false);
+  });
+
+  it('declare-gate writes requires + grants in one edit and refuses a key behind its own lock', () => {
+    const doc = { ...makeDoc(), connections: [{ id: 'c1', fromId: 'r1', toId: 'r2', bidirectional: false, condition: 'Find the bell' }] };
+    const res = applyLevelEdit(doc, { kind: 'declare-gate', connectionId: 'c1', key: 'find-the-bell', grantRoomId: 'r1' });
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(Object.keys(res.data.patch).sort()).toEqual(['connections', 'rooms']);
+    expect(res.data.patch.connections?.[0].requires).toEqual(['find-the-bell']);
+    const behind = applyLevelEdit(doc, { kind: 'declare-gate', connectionId: 'c1', key: 'find-the-bell', grantRoomId: 'r2' });
+    expect(behind.ok).toBe(false);
   });
 });

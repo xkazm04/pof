@@ -17,6 +17,7 @@
  */
 import type { LevelDesignDocument, RoomConnection, RoomNode, UpdateDocPayload } from '@/types/level-design';
 import { ok, err, type Result } from '@/types/result';
+import { applyLinkChange, applyGateDeclaration, type LinkChange } from '@/lib/level-design/gate-authoring';
 
 /** Everything a level-design PUT can carry, minus the row id. */
 export type LevelDocPatch = Omit<UpdateDocPayload, 'id'>;
@@ -31,7 +32,11 @@ export type LevelEditOp =
   | { kind: 'update-room'; room: RoomNode }
   | { kind: 'delete-room'; roomId: string }
   | { kind: 'link'; fromId: string; toId: string }
-  | { kind: 'unlink'; connectionId: string };
+  | { kind: 'unlink'; connectionId: string }
+  /** The link inspector's Apply: direction, condition, required keys and the granting room. */
+  | { kind: 'set-link-gate'; connectionId: string; change: LinkChange }
+  /** Turn a prose condition into a declared key granted by a room reachable before the gate. */
+  | { kind: 'declare-gate'; connectionId: string; key: string; grantRoomId: string };
 
 export interface LevelEdit {
   patch: LevelDocPatch;
@@ -115,8 +120,27 @@ export function applyLevelEdit(doc: LevelDesignDocument, op: LevelEditOp): Resul
     case 'unlink':
       if (!doc.connections.some((c) => c.id === op.connectionId)) return err('That link is not in this document.');
       return edit(doc, { connections: doc.connections.filter((c) => c.id !== op.connectionId) });
+
+    // Gate ops: one {connections[, rooms]} patch each, so a lock and its key are
+    // one write and one undo step. Both change what codegen emits (doc ahead).
+    case 'set-link-gate': {
+      const res = applyLinkChange(doc, op.connectionId, op.change);
+      if (!res.ok) return res;
+      if (Object.keys(res.data).length === 0) return err('Nothing to change on this link.');
+      return edit(doc, res.data);
+    }
+
+    case 'declare-gate': {
+      const res = applyGateDeclaration(doc, op.connectionId, op.key, op.grantRoomId);
+      return res.ok ? edit(doc, res.data) : res;
+    }
   }
 }
+
+const linkLabel = (doc: LevelDesignDocument, connectionId: string): string => {
+  const c = doc.connections.find((x) => x.id === connectionId);
+  return c ? `${roomName(doc, c.fromId)} to ${roomName(doc, c.toId)}` : 'link';
+};
 
 /**
  * Ops with the same key in a row are ONE gesture (one undo entry): a drag and
@@ -138,6 +162,8 @@ export function gestureKey(op: LevelEditOp, doc: LevelDesignDocument): string {
     case 'delete-room': return `delete:${op.roomId}`;
     case 'link': return `link:${op.fromId}:${op.toId}`;
     case 'unlink': return `unlink:${op.connectionId}`;
+    case 'set-link-gate':
+    case 'declare-gate': return `gate:${op.connectionId}`;
   }
 }
 
@@ -151,6 +177,8 @@ export function describeLevelEdit(op: LevelEditOp, doc: LevelDesignDocument): st
     case 'delete-room': return `Delete ${roomName(doc, op.roomId)}`;
     case 'link': return `Link ${roomName(doc, op.fromId)} to ${roomName(doc, op.toId)}`;
     case 'unlink': return 'Remove link';
+    case 'set-link-gate': return `Edit link ${linkLabel(doc, op.connectionId)}`;
+    case 'declare-gate': return `Declare gate ${op.key}`;
   }
 }
 
