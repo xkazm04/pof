@@ -8,6 +8,7 @@ import { stampPromptVersion } from '@/lib/prompt-evolution/judge-fitness';
 import { seededEntities } from '@/lib/catalog/seed';
 import { CATALOG_SECTIONS } from '@/lib/catalog/sections';
 import { withProduceDirection } from '@/lib/catalog/produceDirection';
+import { stampTemplate } from '@/lib/catalog/produceTemplate';
 import { buildStepProducePrompt } from '@/lib/catalog/stepPrompt';
 import { listRules } from '@/lib/project-rules-db';
 import { engineProvenance, withProvenance, LAB_PRODUCE_ENGINE } from '@/lib/provenance';
@@ -203,7 +204,9 @@ export async function POST(req: NextRequest) {
     if (mode === 'deterministic') {
       // No CLI prompt drove a deterministic produce — the stamp records that honestly
       // (empty `prompt`) rather than fabricating one.
-      const out = withProduceDirection(step.produce(entity, direction), { direction, prompt: '' });
+      // A data-blind body written for a non-exemplar entity is the exemplar's TEMPLATE: the stamp
+      // is part of what is graded, so the registration guard holds its would-be pass at pending.
+      const out = stampTemplate(catalogId, step, entity, withProduceDirection(step.produce(entity, direction), { direction, prompt: '' }), direction);
       const data = (out.data ?? {}) as Record<string, unknown>;
       const grade = gradeStep(catalogId, entityId, stepLabel, data);
       // Grade the SUBMITTED data untouched; the provenance stamp is added only to what is

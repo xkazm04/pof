@@ -1,10 +1,11 @@
 import { SOURCED_FIELD, sourcedStampOf } from '@/lib/catalog/acceptance/sourced';
+import { TEMPLATE_FIELD, templateStampOf } from '@/lib/catalog/acceptance/template';
 import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 
 /** Hard ceiling for the complete sibling section, including omission notices. */
 export const SIBLING_STEPS_MAX_CHARS = 12000;
 
-const BOOKKEEPING_KEYS = new Set([SOURCED_FIELD, 'genHistory']);
+const BOOKKEEPING_KEYS = new Set([SOURCED_FIELD, TEMPLATE_FIELD, 'genHistory']);
 const HEADING = "# SIBLING STEPS — this entity's other steps (stay consistent with them)";
 
 function compactArtifact(data: Record<string, unknown>): string {
@@ -49,7 +50,10 @@ export function siblingStepsBlock(
     const sourced = sourcedStampOf(data)
       ? ' (seeded from the reference — reproduce, do not contradict)'
       : '';
-    return `## ${label}${sourced}\n${compactArtifact(data)}`;
+    // A TEMPLATE sibling is another entity's content with this name swapped in — never a thing to stay consistent with.
+    const template = templateStampOf(data);
+    const held = template ? ` (${template.exemplar} template, not this entity's content — do not copy it)` : '';
+    return `## ${label}${sourced}${held}\n${compactArtifact(data)}`;
   });
 
   const kept: string[] = [];

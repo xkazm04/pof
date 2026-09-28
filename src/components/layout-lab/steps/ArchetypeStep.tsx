@@ -21,6 +21,7 @@ import { useStepAcceptance } from './shared/useStepAcceptance';
 import { useCanonStore } from '../canonStore';
 import { buildStepProducePrompt } from '@/lib/catalog/stepPrompt';
 import { withProduceDirection } from '@/lib/catalog/produceDirection';
+import { stampTemplate } from '@/lib/catalog/produceTemplate';
 import { isCliEligible, isLiveProduceEnabled, useLiveProduceMode, describeProduceOutcome, type OneShotStepResult, type ProduceOutcome } from '../labProduceMode';
 import { apiFetch } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
@@ -456,7 +457,7 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
       // `✓ Recorded`; `describeProduceOutcome` is the one place that projection lives.
       return describeProduceOutcome(res);
     }
-    produce(entity.id, step, withProduceDirection(spec.produce(entity, dir), pctx));
+    produce(entity.id, step, stampTemplate(catalogId, spec, entity, withProduceDirection(spec.produce(entity, dir), pctx), dir));
   };
 
   // One-click "Produce fix": dispatches the corrective direction through the step's OWN
