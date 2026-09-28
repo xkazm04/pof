@@ -95,3 +95,28 @@ describe('characterBlueprintStore inspector overrides', () => {
     expect(store.getState().feelLayers.map((l) => l.id)).toEqual([other.id]);
   });
 });
+
+describe('characterBlueprintStore binding overrides', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    store.setState({ bindingOverrides: {} });
+  });
+
+  it('case 4: a rebind persists, rehydration drops unknown actions and non-string keys, reset clears', async () => {
+    store.getState().setBindingOverride('IA_Dodge', 'Ctrl');
+    expect(store.getState().bindingOverrides).toEqual({ IA_Dodge: 'Ctrl' });
+    const partialize = store.persist.getOptions().partialize!;
+    expect((partialize(store.getState()) as { bindingOverrides: unknown }).bindingOverrides).toEqual({ IA_Dodge: 'Ctrl' });
+
+    store.setState({ bindingOverrides: {} });
+    localStorage.setItem('pof-character-feel-stack', JSON.stringify({
+      state: { bindingOverrides: { IA_Dodge: 'Ctrl', Bogus: 'X', IA_Sprint: 42 } },
+      version: 0,
+    }));
+    await store.persist.rehydrate();
+    expect(store.getState().bindingOverrides).toEqual({ IA_Dodge: 'Ctrl' });
+
+    store.getState().resetBindings();
+    expect(store.getState().bindingOverrides).toEqual({});
+  });
+});

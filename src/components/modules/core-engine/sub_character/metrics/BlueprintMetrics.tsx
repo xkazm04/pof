@@ -8,13 +8,12 @@ import {
 import { NeonBar } from '@/components/modules/core-engine/unique-tabs/_design';
 import { resolveStack } from '@/lib/feel-adjustment-layers';
 import { cameraMetricValues, findBasePreset } from '@/lib/character/inspector-fields';
-import { useCharacterBlueprintStore } from '@/stores/characterBlueprintStore';
+import { useCharacterBlueprintStore, useResolvedBindings } from '@/stores/characterBlueprintStore';
 import {
   CLASS_TREE,
   SCALING_PROPS,
   HITBOX_ZONES,
   INPUT_BINDINGS,
-  KEY_CONFLICTS,
   COMPARISON_CHARACTERS,
   COMPARISON_STATS,
   ACCENT,
@@ -127,12 +126,12 @@ export function BindingsMetric() {
   );
 }
 
-/** "{conflicts}" count — green if 0, red if >0 */
+/** "{conflicts}" count over the resolved (persisted) bindings — green if 0, red if >0 */
 export function KeyboardMetric() {
-  const count = KEY_CONFLICTS.size;
+  const count = useResolvedBindings().conflicts.size;
   const color = count === 0 ? STATUS_SUCCESS : STATUS_ERROR;
   return (
-    <span className="text-[10px] font-mono font-bold" style={{ color }}>
+    <span data-testid="keyboard-metric" className="text-[10px] font-mono font-bold" style={{ color }}>
       {count}<span className="text-text-muted font-normal ml-0.5">{count === 1 ? 'conflict' : 'conflicts'}</span>
     </span>
   );

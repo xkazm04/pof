@@ -3,11 +3,44 @@
 import { motion } from 'framer-motion';
 import { Mouse } from 'lucide-react';
 import {
-  ACCENT_CYAN, OPACITY_5, OPACITY_8, OPACITY_20, OPACITY_25, OPACITY_30, withOpacity,
+  ACCENT_CYAN, STATUS_ERROR, OPACITY_5, OPACITY_8, OPACITY_20, OPACITY_25, OPACITY_30, withOpacity,
 } from '@/lib/chart-colors';
+import type { ResolvedBindings } from '@/lib/character/input-bindings';
 
-/** Static mouse widget used in the keyboard visualization. */
-export function MouseWidget() {
+/** Tooltip + tint for one mouse input, from the resolved binding state. */
+function mouseInput(resolved: ResolvedBindings, key: string): { title: string; color: string } {
+  const conflict = resolved.conflicts.get(key);
+  if (conflict) return { title: `CONFLICT: ${conflict.join(' & ')}`, color: STATUS_ERROR };
+  const b = resolved.keyMap.get(key);
+  if (!b) return { title: `${key}: unbound`, color: 'var(--text-muted)' };
+  return { title: `${b.action} → ${b.handler}`, color: ACCENT_CYAN };
+}
+
+function MouseButton({ label, side, resolved }: { label: 'LMB' | 'RMB'; side: 'l' | 'r'; resolved: ResolvedBindings }) {
+  const { title, color } = mouseInput(resolved, label);
+  const tint = color === 'var(--text-muted)' ? ACCENT_CYAN : color;
+  return (
+    <motion.div
+      whileHover={{ scale: 1.02 }}
+      className={`flex-1 flex items-center justify-center border-b text-xs font-mono font-bold ${
+        side === 'l' ? 'border-r rounded-tl-2xl' : 'rounded-tr-2xl'
+      }`}
+      style={{
+        background: `linear-gradient(180deg, ${withOpacity(tint, OPACITY_8)} 0%, ${withOpacity(tint, OPACITY_5)} 100%)`,
+        borderColor: withOpacity(tint, OPACITY_20),
+        color,
+        textShadow: `0 0 6px ${withOpacity(tint, OPACITY_30)}`,
+      }}
+      title={title}
+    >
+      {label}
+    </motion.div>
+  );
+}
+
+/** Mouse widget in the keyboard visualization — LMB / RMB / Look read the resolved bindings. */
+export function MouseWidget({ resolved }: { resolved: ResolvedBindings }) {
+  const look = mouseInput(resolved, 'Mouse');
   return (
     <motion.div
       initial={{ opacity: 0, x: 12 }}
@@ -24,32 +57,8 @@ export function MouseWidget() {
         style={{ height: 100 }}
       >
         <div className="flex h-12">
-          <motion.div
-            whileHover={{ scale: 1.02 }}
-            className="flex-1 flex items-center justify-center border-r border-b text-xs font-mono font-bold rounded-tl-2xl"
-            style={{
-              background: `linear-gradient(180deg, ${withOpacity(ACCENT_CYAN, OPACITY_8)} 0%, ${withOpacity(ACCENT_CYAN, OPACITY_5)} 100%)`,
-              borderColor: withOpacity(ACCENT_CYAN, OPACITY_20),
-              color: ACCENT_CYAN,
-              textShadow: `0 0 6px ${withOpacity(ACCENT_CYAN, OPACITY_30)}`,
-            }}
-            title="IA_PrimaryAttack → HandlePrimaryAttack"
-          >
-            LMB
-          </motion.div>
-          <motion.div
-            whileHover={{ scale: 1.02 }}
-            className="flex-1 flex items-center justify-center border-b text-xs font-mono font-bold rounded-tr-2xl"
-            style={{
-              background: `linear-gradient(180deg, ${withOpacity(ACCENT_CYAN, OPACITY_8)} 0%, ${withOpacity(ACCENT_CYAN, OPACITY_5)} 100%)`,
-              borderColor: withOpacity(ACCENT_CYAN, OPACITY_20),
-              color: ACCENT_CYAN,
-              textShadow: `0 0 6px ${withOpacity(ACCENT_CYAN, OPACITY_30)}`,
-            }}
-            title="Heavy Attack → UARPGCombatComponent::HeavyAttack"
-          >
-            RMB
-          </motion.div>
+          <MouseButton label="LMB" side="l" resolved={resolved} />
+          <MouseButton label="RMB" side="r" resolved={resolved} />
         </div>
 
         <div className="flex items-center justify-center py-2">
@@ -68,7 +77,7 @@ export function MouseWidget() {
             borderColor: withOpacity(ACCENT_CYAN, OPACITY_8),
             backgroundColor: withOpacity(ACCENT_CYAN, OPACITY_5),
           }}
-          title="IA_Look → HandleLook"
+          title={look.title}
         >
           Look
         </div>

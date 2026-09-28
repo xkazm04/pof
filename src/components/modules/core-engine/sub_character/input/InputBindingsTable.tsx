@@ -1,69 +1,55 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Keyboard, RotateCcw } from 'lucide-react';
+import { Keyboard, RotateCcw, Send } from 'lucide-react';
 import {
   STATUS_ERROR, STATUS_SUCCESS, OVERLAY_WHITE, OPACITY_8, withOpacity,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader } from '../_shared/design';
+import { bindingsApplyGate, normalizeKeyEvent } from '@/lib/character/input-bindings';
+import { useCharacterBlueprintStore, useResolvedBindings } from '@/stores/characterBlueprintStore';
+import { useModuleCLI } from '@/hooks/useModuleCLI';
+import { TaskFactory } from '@/lib/cli-task';
 import type { FeatureRow } from '@/types/feature-matrix';
-import { INPUT_BINDINGS, KEY_CONFLICTS as DEFAULT_CONFLICTS } from '../_shared/data';
+import type { SubModuleId } from '@/types/modules';
+import { BlueprintPanel, SectionHeader } from '../_shared/design';
+import { ACCENT } from '../_shared/data';
 import { InputBindingsBanner } from './InputBindingsBanner';
 import { InputBindingsRow } from './InputBindingsRow';
+import { buildBindingsApplyPrompt } from './build-bindings-apply-prompt';
 
 interface InputBindingsTableProps {
+  moduleId: SubModuleId;
   featureMap: Map<string, FeatureRow>;
 }
 
-/** Build conflict map from current binding state. */
-function buildConflicts(bindings: typeof INPUT_BINDINGS, overrides: Record<string, string>) {
-  const keyToActions = new Map<string, string[]>();
-  for (const b of bindings) {
-    const dk = overrides[b.action] ?? b.defaultKey;
-    const keys = dk === 'WASD' ? ['W', 'A', 'S', 'D'] : [dk];
-    for (const k of keys) {
-      const existing = keyToActions.get(k) ?? [];
-      existing.push(b.action);
-      keyToActions.set(k, existing);
-    }
-  }
-  const conflicts = new Map<string, string[]>();
-  for (const [key, actions] of keyToActions) {
-    if (actions.length > 1) conflicts.set(key, actions);
-  }
-  return conflicts;
-}
-
-/** Normalize event.key to a display label. */
-function normalizeKey(key: string): string {
-  const map: Record<string, string> = {
-    ' ': 'Space', arrowup: 'Up', arrowdown: 'Down', arrowleft: 'Left', arrowright: 'Right',
-  };
-  return map[key.toLowerCase()] ?? key.toUpperCase();
-}
-
-export function InputBindingsTable({ featureMap }: InputBindingsTableProps) {
-  const [overrides, setOverrides] = useState<Record<string, string>>({});
+/** Rebind table over the persisted binding profile, with a conflict-gated "Apply to IMC_Default". */
+export function InputBindingsTable({ moduleId, featureMap }: InputBindingsTableProps) {
+  const resolved = useResolvedBindings();
+  const setBindingOverride = useCharacterBlueprintStore((s) => s.setBindingOverride);
+  const resetBindings = useCharacterBlueprintStore((s) => s.resetBindings);
   const [rebindingAction, setRebindingAction] = useState<string | null>(null);
 
-  const conflicts = useMemo(
-    () => (Object.keys(overrides).length === 0
-      ? DEFAULT_CONFLICTS
-      : buildConflicts(INPUT_BINDINGS, overrides)),
-    [overrides],
-  );
+  const { execute, isRunning } = useModuleCLI({
+    moduleId,
+    sessionKey: 'input-bindings',
+    label: 'Input Bindings',
+    accentColor: ACCENT,
+  });
 
-  const hasConflicts = conflicts.size > 0;
-  const hasOverrides = Object.keys(overrides).length > 0;
-
-  const getDisplayKey = useCallback(
-    (action: string, defaultKey: string) => overrides[action] ?? defaultKey,
-    [overrides],
-  );
+  const gate = useMemo(() => bindingsApplyGate(resolved), [resolved]);
+  const hasConflicts = resolved.conflicts.size > 0;
+  const hasOverrides = resolved.changed.length > 0;
 
   const handleStartRebind = useCallback((action: string) => {
     setRebindingAction((cur) => (cur === action ? null : action));
   }, []);
+
+  /** Only an explicit click dispatches — nothing here writes to the UE project on its own. */
+  const handleApply = useCallback(() => {
+    if (!gate.ok || isRunning) return;
+    const n = resolved.changed.length;
+    execute(TaskFactory.askClaude(moduleId, buildBindingsApplyPrompt(resolved), `Apply ${n} rebind${n === 1 ? '' : 's'} to IMC_Default`));
+  }, [gate, isRunning, resolved, moduleId, execute]);
 
   /* ── Keydown listener for rebinding ──────────────────────────────────── */
   useEffect(() => {
@@ -72,45 +58,43 @@ export function InputBindingsTable({ featureMap }: InputBindingsTableProps) {
     const handler = (e: KeyboardEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      if (e.key === 'Escape') { setRebindingAction(null); return; }
-
-      const newKey = normalizeKey(e.key);
-      setOverrides((prev) => {
-        const next = { ...prev };
-        const currentKeyForAction = prev[rebindingAction]
-          ?? INPUT_BINDINGS.find((b) => b.action === rebindingAction)!.defaultKey;
-        for (const b of INPUT_BINDINGS) {
-          const bKey = prev[b.action] ?? b.defaultKey;
-          if (b.action !== rebindingAction && bKey === newKey) {
-            next[b.action] = currentKeyForAction; // swap
-            break;
-          }
-        }
-        next[rebindingAction] = newKey;
-        return next;
-      });
+      if (e.key !== 'Escape') setBindingOverride(rebindingAction, normalizeKeyEvent(e.key));
       setRebindingAction(null);
     };
 
     window.addEventListener('keydown', handler, true);
     return () => window.removeEventListener('keydown', handler, true);
-  }, [rebindingAction]);
+  }, [rebindingAction, setBindingOverride]);
+
+  const accent = hasConflicts ? STATUS_ERROR : STATUS_SUCCESS;
 
   return (
-    <BlueprintPanel className="p-4" color={hasConflicts ? STATUS_ERROR : STATUS_SUCCESS}>
-      <div className="flex items-center justify-between mb-0">
-        <SectionHeader icon={Keyboard} label="Input Bindings" color={hasConflicts ? STATUS_ERROR : STATUS_SUCCESS} />
-        {hasOverrides && (
+    <BlueprintPanel className="p-4" color={accent}>
+      <div className="flex items-center justify-between mb-0 gap-2 flex-wrap">
+        <SectionHeader icon={Keyboard} label="Input Bindings" color={accent} />
+        <div className="flex items-center gap-2">
+          {hasOverrides && (
+            <button
+              onClick={() => { resetBindings(); setRebindingAction(null); }}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-mono font-bold border border-border hover:bg-surface/60 text-text-muted transition-colors cursor-pointer"
+            >
+              <RotateCcw className="w-3 h-3" /> Reset All
+            </button>
+          )}
+          {!gate.ok && <span className="text-xs font-mono text-text-muted">{gate.reason}</span>}
           <button
-            onClick={() => { setOverrides({}); setRebindingAction(null); }}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-mono font-bold border border-border hover:bg-surface/60 text-text-muted transition-colors cursor-pointer"
+            onClick={handleApply}
+            disabled={!gate.ok || isRunning}
+            title={gate.ok ? 'Dispatch a CLI task that updates IMC_Default' : gate.reason}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-mono font-bold border border-border transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{ color: gate.ok ? STATUS_SUCCESS : 'var(--text-muted)' }}
           >
-            <RotateCcw className="w-3 h-3" /> Reset All
+            <Send className="w-3 h-3" /> Apply to IMC_Default
           </button>
-        )}
+        </div>
       </div>
 
-      <InputBindingsBanner conflicts={conflicts} totalBindings={INPUT_BINDINGS.length} />
+      <InputBindingsBanner conflicts={resolved.conflicts} totalBindings={resolved.effective.length} />
 
       <div className="overflow-x-auto custom-scrollbar">
         <table className="w-full text-xs border-collapse font-mono">
@@ -122,15 +106,13 @@ export function InputBindingsTable({ featureMap }: InputBindingsTableProps) {
             </tr>
           </thead>
           <tbody>
-            {INPUT_BINDINGS.map((binding, i) => (
+            {resolved.effective.map((binding, i) => (
               <InputBindingsRow
                 key={binding.action}
                 binding={binding}
                 index={i}
-                isOverridden={overrides[binding.action] !== undefined}
                 isRebinding={rebindingAction === binding.action}
-                displayKey={getDisplayKey(binding.action, binding.defaultKey)}
-                conflicts={conflicts}
+                conflicts={resolved.conflicts}
                 status={featureMap.get(binding.featureName)?.status ?? 'unknown'}
                 onStartRebind={handleStartRebind}
               />
