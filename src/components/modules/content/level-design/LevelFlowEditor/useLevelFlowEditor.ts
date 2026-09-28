@@ -32,8 +32,10 @@ export function useLevelFlowEditor({
   const [isPanning, setIsPanning] = useState(false);
   const panStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
 
-  /** Link queued for deletion — a first click/Enter arms, a second confirms. */
+  /** Link queued for deletion — a first Delete/Backspace arms, a second confirms. */
   const [armedConnectionId, setArmedConnectionId] = useState<string | null>(null);
+  /** Link whose inspector is open — a click/Enter on a link opens it (zero writes). */
+  const [inspectedConnectionId, setInspectedConnectionId] = useState<string | null>(null);
   /** Room queued for deletion — drives the confirm dialog (deleting drops its links too). */
   const [pendingDeleteRoomId, setPendingDeleteRoomId] = useState<string | null>(null);
 
@@ -110,11 +112,21 @@ export function useLevelFlowEditor({
   const deleteConnection = useCallback((connId: string) => {
     onEdit({ kind: 'unlink', connectionId: connId });
     setArmedConnectionId((cur) => (cur === connId ? null : cur));
+    setInspectedConnectionId((cur) => (cur === connId ? null : cur));
   }, [onEdit]);
+
+  /** Open a link's inspector (direction, condition, keys). Reading never writes. */
+  const openLink = useCallback((connId: string) => {
+    if (readOnly) return;
+    setArmedConnectionId(null);
+    setInspectedConnectionId(connId);
+  }, [readOnly]);
+
+  const closeLink = useCallback(() => setInspectedConnectionId(null), []);
 
   /**
    * Link deletion is two-step: the hit area is a wide invisible line, so a single
-   * stray click must never destroy a connection. First activation arms, second deletes.
+   * stray key press must never destroy a connection. First Delete arms, second deletes.
    */
   const toggleArmConnection = useCallback((connId: string) => {
     if (readOnly) return;
@@ -185,6 +197,7 @@ export function useLevelFlowEditor({
     if (e.key === 'Escape') {
       setConnectingFrom(null);
       setArmedConnectionId(null);
+      setInspectedConnectionId(null);
       return;
     }
     if (readOnly || !history || !(e.ctrlKey || e.metaKey)) return;
@@ -201,6 +214,7 @@ export function useLevelFlowEditor({
   const handleSvgMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.target === svgRef.current || (e.target as SVGElement).tagName === 'rect') {
       setArmedConnectionId(null);
+      setInspectedConnectionId(null);
       if (connectingFrom) {
         setConnectingFrom(null);
         return;
@@ -279,6 +293,9 @@ export function useLevelFlowEditor({
     armedConnectionId,
     toggleArmConnection,
     disarmConnection,
+    inspectedConnectionId,
+    openLink,
+    closeLink,
     pendingDeleteRoomId,
     requestDeleteRoom,
     cancelDeleteRoom,

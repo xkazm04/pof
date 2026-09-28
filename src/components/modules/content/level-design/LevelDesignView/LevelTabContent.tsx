@@ -105,6 +105,7 @@ export function LevelTabContent({ vm }: { vm: LevelDesignVM }) {
             <LevelFlowEditor
               rooms={activeDoc.rooms}
               connections={activeDoc.connections}
+              difficultyArc={activeDoc.difficultyArc}
               onEdit={handleEdit}
               history={editHistory}
               onSelectRoom={setSelectedRoomId}

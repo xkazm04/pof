@@ -246,12 +246,13 @@ describe('history is per document and bounded', () => {
   it('every committed op is one undo step (the 50-step cap itself is proven on the same history in level-edit.test.ts)', async () => {
     const api = installApi();
     await openDoc();
-    // link r1-r3, then the two-step unlink, then link again = 3 committed ops.
+    // link r1-r3, then the two-step unlink (Delete arms, Delete removes; a click
+    // opens the link inspector instead), then link again = 3 committed ops.
     fireEvent.keyDown(node('r1'), { key: 'l' });
     fireEvent.keyDown(node('r3'), { key: 'Enter' });
     const link = () => screen.getByRole('button', { name: /^Link Room r1 to Room r3/ });
-    fireEvent.click(link());
-    fireEvent.click(link());
+    fireEvent.keyDown(link(), { key: 'Delete' });
+    fireEvent.keyDown(link(), { key: 'Delete' });
     fireEvent.keyDown(node('r1'), { key: 'l' });
     fireEvent.keyDown(node('r3'), { key: 'Enter' });
     await waitFor(() => expect(api.puts).toHaveLength(3));

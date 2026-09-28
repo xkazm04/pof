@@ -19,6 +19,11 @@ export interface LevelFlowEditorProps {
   rooms: RoomNode[];
   connections: RoomConnection[];
   /**
+   * The document's difficulty arc — its first entry seeds the reachability walk
+   * the link inspector uses to offer grant rooms (the same seeds the linter uses).
+   */
+  difficultyArc?: string[];
+  /**
    * The editor's ONE write surface: every gesture is a named op. A drag emits
    * `move-room` frames as `stage` (zero writes) and commits on mouseup; held
    * arrow nudges arrive as `debounce`; discrete acts as `commit`. Returns

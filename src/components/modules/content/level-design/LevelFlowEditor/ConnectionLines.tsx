@@ -1,14 +1,18 @@
 import { useState } from 'react';
 import type { RoomConnection } from '@/types/level-design';
-import { ACCENT_VIOLET, STATUS_ERROR } from '@/lib/chart-colors';
+import { ACCENT_VIOLET, STATUS_ERROR, STATUS_WARNING } from '@/lib/chart-colors';
 
 interface ConnectionLinesProps {
   connections: RoomConnection[];
   connectingFrom: string | null;
   accentColor: string;
   readOnly: boolean;
-  /** Link currently armed for deletion — the next activation removes it. */
+  /** Link currently armed for deletion — a second Delete/Backspace removes it. */
   armedConnectionId: string | null;
+  /** Link whose inspector is open (highlighted). */
+  inspectedConnectionId: string | null;
+  /** Click / Enter / Space: open the link inspector. Never writes. */
+  openLink: (connId: string) => void;
   getRoomCenter: (roomId: string) => { x: number; y: number };
   getRoomName: (roomId: string) => string;
   toggleArmConnection: (connId: string) => void;
@@ -21,6 +25,8 @@ export function ConnectionLines({
   accentColor,
   readOnly,
   armedConnectionId,
+  inspectedConnectionId,
+  openLink,
   getRoomCenter,
   getRoomName,
   toggleArmConnection,
@@ -28,8 +34,8 @@ export function ConnectionLines({
 }: ConnectionLinesProps) {
   const [focusedId, setFocusedId] = useState<string | null>(null);
 
-  /** First activation arms the link, the second deletes it. */
-  const activate = (connId: string) => {
+  /** Delete/Backspace: the first press arms the link, the second deletes it. */
+  const armOrDelete = (connId: string) => {
     if (armedConnectionId === connId) deleteConnection(connId);
     else toggleArmConnection(connId);
   };
@@ -41,12 +47,14 @@ export function ConnectionLines({
         const to = getRoomCenter(conn.toId);
         const isTarget = connectingFrom && (conn.fromId === connectingFrom || conn.toId === connectingFrom);
         const isArmed = armedConnectionId === conn.id;
-        const isFocused = focusedId === conn.id;
+        const isFocused = focusedId === conn.id || inspectedConnectionId === conn.id;
+        const keys = (conn.requires ?? []).map((k) => k.trim()).filter(Boolean);
+        const prose = keys.length === 0 && (conn.condition ?? '').trim().length > 0;
         const mid = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
         const label = `Link ${getRoomName(conn.fromId)} to ${getRoomName(conn.toId)}`;
 
         return (
-          <g key={conn.id} className="group/conn">
+          <g key={conn.id} className="group/conn" data-link-id={conn.id}>
             {/* Glow layer (visible on hover or when connected node selected) */}
             <line
               x1={from.x} y1={from.y}
@@ -82,15 +90,37 @@ export function ConnectionLines({
               <animate attributeName="stroke-dashoffset" from="20" to="0" dur="1s" repeatCount="indefinite" />
             </line>
 
-            {conn.bidirectional && (
+            {/* Direction: a dot for a two-way door, an arrow at the midpoint for a one-way one. */}
+            {conn.bidirectional ? (
               <>
                 <circle cx={mid.x} cy={mid.y} r={5} fill="#050510" stroke={accentColor} strokeWidth={1} />
                 <circle cx={mid.x} cy={mid.y} r={2} fill={accentColor} />
               </>
+            ) : (
+              <line
+                x1={from.x} y1={from.y} x2={mid.x} y2={mid.y}
+                stroke="transparent" strokeWidth={2}
+                markerEnd="url(#link-arrow)"
+                pointerEvents="none"
+              />
             )}
 
-            {/* Keyboard-reachable hit area. Deletion is two-step: this line is 20px
-                wide and invisible, so one stray click must never destroy a link. */}
+            {/* Lock label: the keys this door requires, or a warning for a prose-only gate. */}
+            {(keys.length > 0 || prose) && (
+              <text
+                x={mid.x} y={mid.y + 18}
+                textAnchor="middle"
+                fontFamily="monospace"
+                className="text-xs"
+                fill={prose ? STATUS_WARNING : accentColor}
+                pointerEvents="none"
+              >
+                {prose ? '? undeclared gate' : `LOCK ${keys.join(', ')}`}
+              </text>
+            )}
+
+            {/* Keyboard-reachable hit area. A click (or Enter) opens the link inspector;
+                deletion is two-step on Delete/Backspace, so one stray click never destroys a link. */}
             {!readOnly && (
               <line
                 x1={from.x} y1={from.y}
@@ -100,14 +130,17 @@ export function ConnectionLines({
                 style={{ cursor: 'pointer', outline: 'none' }}
                 tabIndex={0}
                 role="button"
-                aria-label={isArmed ? `${label} — armed, activate again to delete` : `${label} — activate to arm deletion`}
-                onClick={() => activate(conn.id)}
+                aria-label={isArmed ? `${label} — armed, press Delete again to remove` : `${label} — Enter to edit, Delete to remove`}
+                onClick={() => openLink(conn.id)}
                 onFocus={() => setFocusedId(conn.id)}
                 onBlur={() => setFocusedId((cur) => (cur === conn.id ? null : cur))}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ' || e.key === 'Delete' || e.key === 'Backspace') {
+                  if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
-                    activate(conn.id);
+                    openLink(conn.id);
+                  } else if (e.key === 'Delete' || e.key === 'Backspace') {
+                    e.preventDefault();
+                    armOrDelete(conn.id);
                   }
                 }}
               />
