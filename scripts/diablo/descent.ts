@@ -26,7 +26,6 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { combatGameMode } from '@/lib/catalog/reference/combatInputs';
 import type { Difficulty } from '@/lib/catalog/reference/combatMath';
 import {
   DEFAULT_TILES_PER_LEVEL_ASSUMPTION,
@@ -56,8 +55,7 @@ import {
   DEFAULT_ADJACENT_SLOTS,
   DEFAULT_RANGED_PACK_APPROACH_GEOMETRY,
 } from '@/lib/catalog/reference/packMath';
-import { listWrappers } from '@/lib/catalog/reference/wrappers-db';
-import { getDb } from '@/lib/db';
+import { assembleDescentInput } from './descentInputs';
 
 function arg(name: string): string | undefined {
   const index = process.argv.indexOf(`--${name}`);
@@ -206,20 +204,12 @@ if (!Number.isFinite(townPortalTripSeconds) || townPortalTripSeconds < 0) {
 }
 const chain = process.argv.includes('--chain');
 
-const wrappers = listWrappers(getDb(), { sourceId: 'diablo1' });
 const weaponId = arg('weapon');
-const weapon = weaponId
-  ? wrappers.find((wrapper) => wrapper.catalogId === 'items' && wrapper.entity.id === weaponId)
-  : undefined;
-if (weaponId && !weapon) throw new Error(`no items wrapper ${weaponId}`);
-if (weapon && gear === 'expected') throw new Error('--gear expected cannot be combined with --weapon');
-
-const simulationInput = {
+const simulationInput = assembleDescentInput({
   className,
   policy,
   tilesPerLevel,
-  gameMode: combatGameMode(process.argv),
-  weapon,
+  weaponId,
   gear,
   defensiveAffixes,
   offensiveAffixes,
@@ -239,8 +229,7 @@ const simulationInput = {
   groupAi,
   recovery,
   townPortalTripSeconds,
-  wrappers,
-};
+});
 const result = chain
   ? simulateDifficultyChain(simulationInput)
   : simulateDescent({ ...simulationInput, difficulty });
