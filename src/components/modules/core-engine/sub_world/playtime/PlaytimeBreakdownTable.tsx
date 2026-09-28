@@ -10,22 +10,25 @@ import {
   withOpacity,
 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
-import {
-  ZONE_PLAYTIME, CRITICAL_PATH, ALL_PATHS, formatPlaytime,
-} from '../_shared/data';
+import { computeZonePlaytime, computeCumulativePath, type WorldModel } from '@/lib/world/world-model';
+import { formatPlaytime } from '../_shared/data';
 import type { PlaytimePathMode } from '../_shared/data';
 
-export function PlaytimeBreakdownTable({ mode }: { mode: PlaytimePathMode }) {
-  const pathData = mode === 'critical' ? CRITICAL_PATH : ALL_PATHS;
-  const nodesOnPath = useMemo(() => new Set(pathData.nodes.map(n => n.zoneId)), [pathData]);
+/** Per-zone time bars for `world` (the what-if scenario, or the baseline when nothing is applied). */
+export function PlaytimeBreakdownTable({ mode, world }: { mode: PlaytimePathMode; world: WorldModel }) {
+  const zonePlaytime = useMemo(() => computeZonePlaytime(world), [world]);
+  const nodesOnPath = useMemo(
+    () => new Set(computeCumulativePath(world, mode).nodes.map(n => n.zoneId)),
+    [world, mode],
+  );
+  const maxSec = Math.max(0, ...zonePlaytime.map(z => z.totalSec));
 
   return (
     <BlueprintPanel color={ACCENT_ORANGE} className="p-3">
       <SectionHeader icon={Timer} label="Per-Zone Time Breakdown" color={ACCENT_ORANGE} />
       <div className="space-y-1.5">
-        {ZONE_PLAYTIME.map((zp) => {
+        {zonePlaytime.map((zp) => {
           const onPath = nodesOnPath.has(zp.zoneId);
-          const maxSec = Math.max(...ZONE_PLAYTIME.map(z => z.totalSec));
           const barPct = maxSec > 0 ? (zp.totalSec / maxSec) * 100 : 0;
           return (
             <div key={zp.zoneId} className="flex items-center gap-3" style={{ opacity: onPath ? 1 : 0.4 }}>

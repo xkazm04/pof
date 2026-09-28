@@ -9,6 +9,7 @@ import {
   withOpacity,
 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
+import type { WorldModel } from '@/lib/world/world-model';
 import { formatPlaytime, type PlaytimePathMode } from '../_shared/data';
 import {
   buildInterestPoints, detectPacingRegions,
@@ -17,6 +18,10 @@ import {
 
 interface Props {
   mode: PlaytimePathMode;
+  /** The what-if scenario (the baseline itself when no lever is applied). */
+  world: WorldModel;
+  /** When it differs from `world`, its curve is drawn dashed behind the scenario's. */
+  baseline?: WorldModel;
 }
 
 const W = 560;
@@ -28,8 +33,12 @@ const PAD_B = 28;
 const PLOT_W = W - PAD_L - PAD_R;
 const PLOT_H = H - PAD_T - PAD_B;
 
-export function InterestCurveChart({ mode }: Props) {
-  const points = useMemo(() => buildInterestPoints(mode), [mode]);
+export function InterestCurveChart({ mode, world, baseline }: Props) {
+  const points = useMemo(() => buildInterestPoints(world, mode), [world, mode]);
+  const ghost = useMemo(
+    () => (baseline && baseline !== world ? buildInterestPoints(baseline, mode) : []),
+    [baseline, world, mode],
+  );
   const regions = useMemo(() => detectPacingRegions(points), [points]);
 
   if (points.length === 0) {
@@ -43,7 +52,7 @@ export function InterestCurveChart({ mode }: Props) {
     );
   }
 
-  const maxT = points[points.length - 1].cumulativeSec || 1;
+  const maxT = Math.max(points[points.length - 1].cumulativeSec, ghost[ghost.length - 1]?.cumulativeSec ?? 0) || 1;
   const xFor = (sec: number) => PAD_L + (sec / maxT) * PLOT_W;
   const yFor = (intensity: number) => PAD_T + (1 - intensity) * PLOT_H;
 
@@ -105,6 +114,15 @@ export function InterestCurveChart({ mode }: Props) {
               </g>
             );
           })}
+
+          {/* Baseline curve (dashed) while a what-if scenario is applied */}
+          {ghost.length > 0 && (
+            <polyline
+              data-testid="interest-baseline"
+              points={ghost.map(p => `${xFor(p.cumulativeSec).toFixed(1)},${yFor(p.intensity).toFixed(1)}`).join(' ')}
+              fill="none" stroke={withOpacity(ACCENT_VIOLET, OPACITY_40)} strokeWidth={1.5} strokeDasharray="4 3"
+            />
+          )}
 
           {/* Curve area + line */}
           <path d={areaPath} fill={withOpacity(ACCENT_VIOLET, OPACITY_20)} />

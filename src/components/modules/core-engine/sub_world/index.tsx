@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useReducer } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Map as MapIcon, SlidersHorizontal, LayoutGrid, Database, Info } from 'lucide-react';
 import {
@@ -15,7 +15,8 @@ import { RipplePulse } from './_shared/RipplePulse';
 import { TabHeader, LoadingSpinner, SubTabNavigation, type SubTab } from '../unique-tabs/_shared';
 import type { SubModuleId } from '@/types/modules';
 import type { PlaytimePathMode } from './_shared/data';
-import { ZONES } from './_shared/data';
+import { ZONES, STATIC_WORLD } from './_shared/data';
+import { applyLevers, scenarioReducer, EMPTY_SCENARIO } from '@/lib/world/playtime-scenario';
 
 import { CollapsibleGroup } from './_shared/CollapsibleGroup';
 import { MapTopologyGroup } from './map/MapTopologyGroup';
@@ -46,6 +47,9 @@ export function ZoneMap({ moduleId }: ZoneMapProps) {
 
   const [playerLevel, setPlayerLevel] = useState(1);
   const [playtimeMode, setPlaytimeMode] = useState<PlaytimePathMode>('critical');
+  /* Playtime what-if: Try/Undo levers from the targeter reprice all four playtime panels. */
+  const [scenario, dispatchScenario] = useReducer(scenarioReducer, EMPTY_SCENARIO);
+  const scenarioWorld = useMemo(() => applyLevers(STATIC_WORLD, scenario.applied), [scenario.applied]);
   const [openGroups, setOpenGroups] = useState<Set<number>>(() => new Set([0]));
   const [activeTab, setActiveTab] = useState('map');
 
@@ -198,10 +202,13 @@ export function ZoneMap({ moduleId }: ZoneMapProps) {
       {activeTab === 'playtime' && (
         <VisibleSection moduleId={moduleId} sectionId="playtime">
         <CollapsibleGroup title="Playtime Estimator" accent={ACCENT_ORANGE} sectionCount={4} isOpen={openGroups.has(1)} onToggle={() => toggleGroup(1)}>
-          <PlaytimeTopologyOverlay mode={playtimeMode} onModeChange={setPlaytimeMode} />
-          <PlaytimeBreakdownTable mode={playtimeMode} />
-          <PlaytimeBudgetTargeter mode={playtimeMode} />
-          <InterestCurveChart mode={playtimeMode} />
+          <PlaytimeTopologyOverlay mode={playtimeMode} onModeChange={setPlaytimeMode} world={scenarioWorld} />
+          <PlaytimeBreakdownTable mode={playtimeMode} world={scenarioWorld} />
+          <PlaytimeBudgetTargeter
+            mode={playtimeMode} world={scenarioWorld} baseline={STATIC_WORLD}
+            applied={scenario.applied} dispatch={dispatchScenario}
+          />
+          <InterestCurveChart mode={playtimeMode} world={scenarioWorld} baseline={STATIC_WORLD} />
         </CollapsibleGroup>
         </VisibleSection>
       )}
