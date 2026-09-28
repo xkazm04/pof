@@ -35,5 +35,13 @@
 ## Status & notes
 `areaLevel 5` drives the entire chain (monsterLevel 5, loot ilvl 5, life ×1.26 / damage ×1.20 per §6c). Documented gaps surfaced in the produce code: NavMesh (RecastNavMesh) bake + `ProcGenWalkTest` are unbuilt — the config gate proves lighting/PP, not traversal (plan.md §Finding-Nav); World Partition / OFPA / HLOD are not wired (single monolithic .umap, plan.md §4); HISM instancing for scatter is still individually-placed StaticMeshActors. Streaming budgets come from `STREAMING_BUDGETS` in `sub_world/_shared/data.ts`.
 
+## World analytics model
+Playtime figures for zones (per-zone estimate, cumulative critical/all path, interest curve, lever sizing) come from one pure, IO-free module: `src/lib/world/world-model.ts`.
+- **Input:** `WorldModel { zones, edges, enemiesByZoneId, bossPhasesByZoneId, explorationSecByZoneId? }`, keyed by zone id, never by row index. The static world is `STATIC_WORLD` in `sub_world/_shared/data.ts`, built from `ZONES`, `ZONE_EDGES`, `ENEMY_DENSITY_BY_ZONE_ID` and `BOSS_ARENAS`. `worldFromZones(zones)` adapts any zone list whose topology is in `connections` (a `generateZoneGraph` candidate, catalog zone-map entries). Each edge becomes critical with a 0 s transition, and no enemy data is attached.
+- **Cost table:** `DEFAULT_PLAYTIME_COSTS` (8 s/enemy, 90 s/boss phase, exploration 120/300/180 s by hub/combat/boss) is the only copy. `computeZonePlaytime`, `computeCumulativePath`, `suggestLevers` and `buildInterestPoints` all take an optional `Partial<PlaytimeCosts>`.
+- **Unmeasured ≠ zero:** a zone with no density entry reports `enemyCount: null` and `combatMeasured: false`. The five KOTOR zones have never been authored. The generator panel labels its estimate "combat not measured".
+- **Path walk:** `computeCumulativePath(world, mode)` starts at every hub, falling back to zones with no incoming edge. A DFS drops back edges, so bidirectional or cyclic graphs terminate and each zone is priced once. The longest arrival is then relaxed in topological order. `CRITICAL_PATH`, `ALL_PATHS` and `ZONE_PLAYTIME` in `data.ts` are this model's output for `STATIC_WORLD`.
+- **Tests:** `src/__tests__/lib/world/world-model.test.ts`.
+
 ---
 *See [`../pipeline-architecture.md`](../pipeline-architecture.md) for the View/Produce/Acceptance model and the L0–L4 acceptance ladder.*
