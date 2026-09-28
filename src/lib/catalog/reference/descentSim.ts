@@ -45,6 +45,7 @@ import {
   expectedLootBudget,
   expectedSaleIncome,
   monsterLootProfile,
+  type ArmourSlot,
   type BestArmourExpectation,
   type BestDefensiveAffixExpectation,
   type BestOffensiveAffixExpectation,
@@ -87,6 +88,7 @@ import {
 } from '@/lib/catalog/reference/monsterMissileDamage';
 import { spriteAnimLen } from '@/lib/catalog/reference/missileSpecs';
 import { manaCost } from '@/lib/catalog/reference/spellMath';
+import { itemWrapperByEnumId } from '@/lib/catalog/reference/itemIndex';
 import type { ReferenceWrapper } from '@/lib/catalog/reference/wrapper';
 
 export const DESCENT_CLASSES = ['warrior', 'rogue', 'sorcerer'] as const;
@@ -279,7 +281,7 @@ export interface DescentLevelResult {
   offensiveAffixesAssumed?: BestOffensiveAffixExpectation;
   /** Mean conditional block chance across this depth's eligible monster types. */
   expectedBlockChance?: number;
-  /** Present only for expected gear because sustain is funded by expected loot. */
+  /** Life sustain from the starting inventory and, when enabled, expected loot and purchases. */
   sustain?: DescentSustainExpectation;
   /** Present only for the opt-in simultaneous-packs encounter policy. */
   pack?: DescentPackExpectation;
@@ -779,34 +781,127 @@ function classWrapperFrom(wrappers: readonly ReferenceWrapper[], className: Desc
   };
 }
 
-/**
- * Item enum ids a class loadout names whose itemdat.tsv row carries no `id` cell: the engine
- * resolves them by enum ordinal (= row index). Engine constants, Source/tables/itemdat.h:81-82
- * (IDI_RUNEOFSTONE = 165, IDI_SORCERER_DIABLO follows) — the vanilla Sorcerer's starting staff.
- */
-const ITEM_ENUM_ROWS: Readonly<Record<string, number>> = { IDI_SORCERER_DIABLO: 166 };
+interface StartingLoadout {
+  items: ReferenceWrapper[];
+  weapon?: ReferenceWrapper;
+  gold: number;
+  potions: DescentPotionInventory;
+  learnedSpells: DescentLearnedSpell[];
+}
 
-function startingWeaponFrom(
+function startingLoadoutFrom(
   classWrapper: ReferenceWrapper,
   wrappers: readonly ReferenceWrapper[],
-): ReferenceWrapper {
+): StartingLoadout | undefined {
   const loadout = classWrapper.entity.data.startingLoadout;
-  const itemIds = loadout && typeof loadout === 'object' && !Array.isArray(loadout)
-    ? (loadout as { itemIds?: unknown }).itemIds
-    : undefined;
+  if (!loadout || typeof loadout !== 'object' || Array.isArray(loadout)) return undefined;
+  const record = loadout as { itemIds?: unknown; gold?: unknown; spellId?: unknown; spellLevel?: unknown };
+  const itemIds = record.itemIds;
   if (!Array.isArray(itemIds)) throw new Error(`${classWrapper.entity.id} has no startingLoadout.itemIds list`);
-  for (const itemId of itemIds) {
-    if (typeof itemId !== 'string') continue;
-    const enumRow = ITEM_ENUM_ROWS[itemId.toUpperCase()];
-    const item = wrappers.find((candidate) => candidate.file === 'items/itemdat.tsv'
-      && (String(candidate.raw.id).toLowerCase() === itemId.toLowerCase()
-        || String(candidate.entity.data.id).toLowerCase() === itemId.toLowerCase()))
-      ?? (enumRow === undefined ? undefined
-        : wrappers.find((candidate) => candidate.file === 'items/itemdat.tsv' && candidate.key === `row${enumRow}`));
-    if (!item) continue;
-    if (referenceBuild(classWrapper, 1, item).weaponType !== 'other') return item;
+  const items = itemIds.flatMap((itemId) => {
+    if (typeof itemId !== 'string') {
+      throw new Error(`${classWrapper.entity.id} has a non-string starting-loadout item id`);
+    }
+    if (itemId.trim().toUpperCase() === 'IDI_NONE') return [];
+    const item = itemWrapperByEnumId(wrappers, itemId);
+    if (!item) throw new Error(`${classWrapper.entity.id} starting loadout references missing item ${itemId}`);
+    return [item];
+  });
+  const weapon = items.find((item) =>
+    String(item.raw.class ?? item.entity.data.type).toLowerCase() === 'weapon'
+    || referenceBuild(classWrapper, 1, item).weaponType !== 'other');
+  const gold = Number(record.gold ?? 0);
+  if (!Number.isFinite(gold) || gold < 0) {
+    throw new Error(`${classWrapper.entity.id} has invalid startingLoadout.gold ${String(record.gold)}`);
   }
-  throw new Error(`${classWrapper.entity.id} has no supplied starting-loadout weapon`);
+  const potions = items.reduce<DescentPotionInventory>((counts, item) => {
+    const miscId = String(item.raw.miscId ?? item.entity.data.effect).toUpperCase();
+    if (miscId === 'HEAL') counts.healing++;
+    else if (miscId === 'FULLHEAL') counts.fullHealing++;
+    else if (miscId === 'MANA') counts.mana++;
+    else if (miscId === 'FULLMANA') counts.fullMana++;
+    return counts;
+  }, { healing: 0, fullHealing: 0, mana: 0, fullMana: 0 });
+  const spell = typeof record.spellId === 'string' ? record.spellId.trim() : '';
+  const spellLevel = Number(record.spellLevel ?? 0);
+  const learnedSpells = spell && spell.toLowerCase() !== 'null' && spellLevel > 0
+    ? [{ spell, spellLevel }]
+    : [];
+  if (learnedSpells.length > 0 && !Number.isInteger(spellLevel)) {
+    throw new Error(`${classWrapper.entity.id} has invalid startingLoadout.spellLevel ${String(record.spellLevel)}`);
+  }
+  return { items, ...(weapon ? { weapon } : {}), gold, potions, learnedSpells };
+}
+
+function startingArmourExpectation(
+  className: DescentClassName,
+  loadout: StartingLoadout | undefined,
+  shieldAllowed: boolean,
+): BestArmourExpectation {
+  const itemFor = (slot: ArmourSlot) => loadout?.items.find((item) => {
+    const subtype = String(item.raw.itemType ?? item.entity.data.subtype).toLowerCase();
+    if (slot === 'shield') return subtype === 'shield';
+    if (slot === 'helm') return subtype === 'helm';
+    return ['lightarmor', 'mediumarmor', 'heavyarmor', 'armor'].includes(subtype);
+  });
+  const slot = (slotName: ArmourSlot): BestArmourExpectation['slots'][ArmourSlot] => {
+    const item = slotName === 'shield' && !shieldAllowed ? undefined : itemFor(slotName);
+    if (!item) {
+      return {
+        slot: slotName,
+        itemId: null,
+        armourRange: { min: 0, max: 0 },
+        armourClass: 0,
+        armourBonusPercent: 0,
+        pArmourFound: 0,
+        pAnyMagicArmourAffix: 0,
+        maxBaseArmourDistribution: [],
+      };
+    }
+    const min = numericStat(item, 'Armor Min');
+    const max = numericStat(item, 'Armor Max');
+    return {
+      slot: slotName,
+      itemId: item.entity.id,
+      armourRange: { min, max },
+      armourClass: min,
+      armourBonusPercent: 0,
+      pArmourFound: 1,
+      pAnyMagicArmourAffix: 0,
+      maxBaseArmourDistribution: [{ maxArmour: max, p: 1, baseIds: [item.entity.id] }],
+    };
+  };
+  const slots = { body: slot('body'), helm: slot('helm'), shield: slot('shield') };
+  return {
+    model: 'conservative-expected-best-armour-bases',
+    className,
+    depth: 1,
+    killsSoFar: 0,
+    slots,
+    totalArmourClass: slots.body.armourClass + slots.helm.armourClass + slots.shield.armourClass,
+    hasShield: slots.shield.itemId !== null,
+    approximation: 'Owned starting-loadout armour uses its base minimum AC; no magic affixes are present.',
+  };
+}
+
+function retainStartingArmour(
+  expected: BestArmourExpectation,
+  starting: BestArmourExpectation,
+  shieldAllowed: boolean,
+): BestArmourExpectation {
+  const slots = Object.fromEntries((['body', 'helm', 'shield'] as const).map((slot) => {
+    if (slot === 'shield' && !shieldAllowed) return [slot, expected.slots[slot]];
+    return [slot, expected.slots[slot].armourClass > starting.slots[slot].armourClass
+      ? expected.slots[slot]
+      : starting.slots[slot]];
+  })) as BestArmourExpectation['slots'];
+  return {
+    ...expected,
+    slots,
+    totalArmourClass: slots.body.armourClass + slots.helm.armourClass + slots.shield.armourClass,
+    hasShield: shieldAllowed && slots.shield.itemId !== null,
+    approximation: `${expected.approximation} Owned starting-loadout armour remains equipped until improved.`,
+  };
 }
 
 interface StatAllocation {
@@ -845,9 +940,11 @@ function spendStatPoints(
 function defaultInitialState(
   className: DescentClassName,
   classWrapper: ReferenceWrapper,
+  wrappers: readonly ReferenceWrapper[],
 ): DescentInitialState {
   const build = referenceBuild(classWrapper, 1);
   const pools = lifeAndMana(build, classCoefficients(classWrapper));
+  const loadout = startingLoadoutFrom(classWrapper, wrappers);
   return {
     className,
     level: 1,
@@ -862,9 +959,9 @@ function defaultInitialState(
     maximumLife: pools.maximumLife / FIXED_POINT,
     currentMana: pools.maximumMana / FIXED_POINT,
     maximumMana: pools.maximumMana / FIXED_POINT,
-    learnedSpells: [],
-    gold: 0,
-    potions: { healing: 0, fullHealing: 0, mana: 0, fullMana: 0 },
+    learnedSpells: loadout?.learnedSpells ?? [],
+    gold: loadout?.gold ?? 0,
+    potions: loadout?.potions ?? { healing: 0, fullHealing: 0, mana: 0, fullMana: 0 },
     diabloKillRank: 0,
     completedDifficulties: [],
   };
@@ -1447,6 +1544,7 @@ function assumptions(
   policy: StatPointPolicy,
   gear: DescentGear,
   className: DescentClassName,
+  startingLoadout: StartingLoadout | undefined,
   sorcererCombatPolicy: SorcererCombatPolicy,
   sustainIncome: SustainIncome,
   saleItemsPerTrip: number,
@@ -1468,6 +1566,8 @@ function assumptions(
   recovery: DescentRecovery,
   townPortalTripSeconds: number,
 ): DescentAssumption[] {
+  const startingFireboltLevel = startingLoadout?.learnedSpells.find((spell) =>
+    spell.spell.toLowerCase() === 'firebolt')?.spellLevel ?? 1;
   return [
     {
       id: 'non-solid-tiles-per-level',
@@ -1497,6 +1597,16 @@ function assumptions(
           ? 'All-strength spends only into Strength up to the class maximum; excess points remain unspent.'
           : 'No level-up stat points are spent.',
     },
+    ...(startingLoadout ? [{
+      id: 'starting-loadout',
+      value: [
+        startingLoadout.items.map((item) => item.entity.name).join(', ') || 'no items',
+        `${startingLoadout.gold} gold`,
+        startingLoadout.learnedSpells.map((spell) => `${spell.spell} L${spell.spellLevel}`).join(', ') || 'no learned spell',
+      ].join('; '),
+      source: '.reference/devilutionX/Source/items.cpp:3002-3058; .reference/devilutionX/Source/tables/itemdat.h:24-85; supplied class starting_loadout.tsv wrapper',
+      detail: 'CreatePlrItems applies the class row once: it learns the configured spell level, auto-equips or carries every non-IDI_NONE item, creates the gold stack, then recalculates item stats. The descent therefore begins with that weapon, armour/shield, consumables, gold, and learned spell instead of an empty inventory.',
+    }] : []),
     ...(encounter === 'duel' ? [{
       id: 'duel-exchange',
       value: exchangeModel === 'cadence'
@@ -1617,8 +1727,8 @@ function assumptions(
       },
       {
         id: 'sorcerer-spell-progression',
-        value: 'Firebolt L1 at depth 1; Charged Bolt L1 at 3; Lightning L1 at 5; Fireball L1 at 9; Chain Lightning L1 at 13; learned spells remain available',
-        source: 'explicit cumulative depth schedule; book acquisition timing is not resolved by the deterministic type-mixture model',
+        value: `Firebolt L${startingFireboltLevel} at depth 1; Charged Bolt L1 at 3; Lightning L1 at 5; Fireball L1 at 9; Chain Lightning L1 at 13; learned spells remain available`,
+        source: 'starting_loadout.tsv spell/spellLevel plus explicit cumulative depth schedule; later book acquisition timing is not resolved by the deterministic type-mixture model',
         detail: sorcererCombatPolicy === 'mixed'
           ? 'Every learned damaging spell and the melee fallback are evaluated per monster. The spell saving the most time per mana wins for that target; if none saves time, life saved per mana is used. Targets are then funded in the same order, with lower mana and stable ids breaking ties.'
           : 'At each depth, every learned damaging spell is evaluated against each monster. Lowest expected time-to-kill wins; expected mana per kill and then schedule order break ties.',
@@ -1713,10 +1823,10 @@ function assumptions(
       {
         id: 'expected-loot-weapon',
         value: className === 'rogue'
-          ? 'conservative expected best bow before each depth'
+          ? 'conservative expected best bow before each depth, retaining the starting bow until improved'
           : className === 'sorcerer' && sorcererCombatPolicy === 'mixed'
             ? 'conservative expected best melee weapon before each depth, retaining the starting weapon until improved'
-            : 'conservative expected best melee weapon before each depth',
+            : 'conservative expected best melee weapon before each depth, retaining the starting weapon until improved',
         source: 'pinned monster-drop, base-selection, quality, and affix procedures',
         detail: offensiveAffixes === 'expected'
           ? 'Prior kills form a weighted monster mixture. The model gates bases by the hero\'s current Strength, Magic, and Dexterity and floors the expected maximum base-damage range. The offensive-affix projection supplies the expected-best percentage damage; unique powers and base/affix correlation remain omitted.'
@@ -1724,7 +1834,7 @@ function assumptions(
       },
       {
         id: 'expected-loot-armour',
-        value: 'conservative expected best body armour, helm, and compatible shield before each depth',
+        value: 'conservative expected best body armour, helm, and compatible shield before each depth, retaining starting armour until improved',
         source: 'pinned monster-drop, base-selection, quality, affix, and equipment procedures',
         detail: 'Each slot independently gates bases by current attributes and floors its expected best base-AC range. The lower bound plus a floored positive percentage-AC bonus enters combat. A shield is carried only with a one-handed or unarmed loadout and a positive conservative shield AC.',
       },
@@ -1781,11 +1891,11 @@ function assumptions(
           : 'd1-loot-drop-outcome and d1-loot-gold-consumables',
         detail: sustainIncome === 'gold-and-sales'
           ? saleIdentify === 'when-profitable'
-            ? 'Expected saleable drops not reserved by the expected-gear policy are sold to Griswold or Adria. Carried Magic and Unique outcomes are identified only when their identified sale premium exceeds Cain’s fee. Containers, useful-object drops, quests, and starting inventory are excluded.'
-            : 'Expected saleable drops not reserved by the expected-gear policy are sold to Griswold or Adria at max(floor(base value / 4), 1). Magic and Unique items are sold unidentified at base value; Cain is not paid, so identify is a zero sink. Containers, useful-object drops, quests, and starting inventory are excluded.'
+            ? 'Expected saleable drops not reserved by the expected-gear policy are sold to Griswold or Adria. Carried Magic and Unique outcomes are identified only when their identified sale premium exceeds Cain’s fee. The starting loadout is applied once and retained or consumed rather than sold; containers, useful-object drops, and quests are excluded.'
+            : 'Expected saleable drops not reserved by the expected-gear policy are sold to Griswold or Adria at max(floor(base value / 4), 1). Magic and Unique items are sold unidentified at base value; Cain is not paid. The starting loadout is applied once and retained or consumed rather than sold; containers, useful-object drops, and quests are excluded.'
           : className === 'sorcerer'
-            ? 'Expected gold and Healing, Full Healing, Mana, and Full Mana potion drops come only from the ambient monsters modelled here. Sale value, containers, useful-object drops, quests, and starting inventory are excluded.'
-            : 'Expected gold and Healing/Full Healing potion drops come only from the ambient monsters modelled here. Sale value, containers, useful-object drops, quests, and starting inventory are excluded.',
+            ? 'Starting gold and potions come from the class loadout; subsequent expected gold and Healing, Full Healing, Mana, and Full Mana potion drops come only from the ambient monsters modelled here. Sale value, containers, useful-object drops, and quests are excluded.'
+            : 'Starting gold and potions come from the class loadout; subsequent expected gold and Healing/Full Healing potion drops come only from the ambient monsters modelled here. Sale value, containers, useful-object drops, and quests are excluded.',
       },
       ...(sustainIncome === 'gold-and-sales' ? [{
         id: 'sale-carry-capacity',
@@ -1820,16 +1930,16 @@ function assumptions(
           ? 'd1-store-pricing-law and the supplied Healing/Mana potion item wrappers'
           : 'd1-store-pricing-law and the supplied Healing potion item wrapper',
         detail: className === 'sorcerer'
-          ? 'Half of prior-depth gold uses Pepin\'s Healing price and half uses Adria\'s Mana price; fractional potion counts are deterministic expectations. Pepin restores life, but not mana, between depths.'
-          : 'Gold earned on one depth is divided by Pepin\'s wrapper-derived Healing potion price before the next depth; fractional potion counts are retained as deterministic expectations. Pepin restores the hero to full life between depths at no charge.',
+          ? 'Half of available gold uses Pepin\'s Healing price and half uses Adria\'s Mana price; depth 1 begins with class-loadout gold, then later depths use carried income. Fractional potion counts are deterministic expectations. Pepin restores life, but not mana, between depths.'
+          : 'Available gold is divided by Pepin\'s wrapper-derived Healing potion price; depth 1 begins with class-loadout gold, then later depths use carried income. Fractional potion counts are retained as deterministic expectations. Pepin restores the hero to full life between depths at no charge.',
       },
       {
         id: 'sustain-consumption',
         value: 'full life plus carried and same-depth expected potion drops',
         source: 'd1-loot-healing-potions and deterministic budget arithmetic',
         detail: offensiveAffixes === 'expected'
-          ? 'Expected drops are treated as available on their floor, so within-floor drop order is omitted. Engine-capped life steal offsets damage before partial and full potions in this aggregate expectation; unused expected potions carry forward.'
-          : 'Expected drops are treated as available on their floor, so within-floor drop order is omitted. Damage spends the fresh life pool first, then partial potions, then full potions; unused expected potions carry forward.',
+          ? 'The class-loadout potions begin as carried supply. Expected drops are treated as available on their floor, so within-floor drop order is omitted. Engine-capped life steal offsets damage before partial and full potions; unused potions carry forward.'
+          : 'The class-loadout potions begin as carried supply. Expected drops are treated as available on their floor, so within-floor drop order is omitted. Damage spends the fresh life pool first, then partial potions, then full potions; unused potions carry forward.',
       },
       ...(className === 'sorcerer' ? [{
         id: 'mana-sustain-consumption',
@@ -2038,10 +2148,9 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
   if (!Number.isInteger(tilesPerLevel) || tilesPerLevel < 0) throw new Error(`tilesPerLevel must be a non-negative integer (got ${tilesPerLevel})`);
 
   const classWrapper = classWrapperFrom(input.wrappers, input.className);
+  const startingLoadout = startingLoadoutFrom(classWrapper, input.wrappers);
   const lootEnabled = gear === 'expected' || sustainIncome === 'gold-and-sales';
-  const startingWeapon = input.className === 'sorcerer' && sorcererCombatPolicy === 'mixed' && !input.weapon
-    ? startingWeaponFrom(classWrapper, input.wrappers)
-    : undefined;
+  const startingWeapon = input.weapon ? undefined : startingLoadout?.weapon;
   const coefficients = classCoefficients(classWrapper);
   const animations = classAnimations(classWrapper);
   const maxima = {
@@ -2061,11 +2170,14 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
   const maximumExperience = curve.threshold(curve.maxLevel) ?? Number.MAX_SAFE_INTEGER;
   const carriesPersistentState = input.initialState !== undefined;
   const initialState = validatedInitialState(
-    input.initialState ?? defaultInitialState(input.className, classWrapper),
+    input.initialState ?? defaultInitialState(input.className, classWrapper, input.wrappers),
     input.className,
     maxima,
     curve.maxLevel,
   );
+  const lifeSustainEnabled = gear === 'expected'
+    || initialState.potions.healing > 0
+    || initialState.potions.fullHealing > 0;
   const learnedTownPortal = recovery === 'town-portal' && input.className === 'sorcerer'
     ? initialState.learnedSpells.find((spell) => spell.spell.toLowerCase().replace(/[\s-]/g, '') === 'townportal')
     : undefined;
@@ -2110,10 +2222,16 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
   let selectedWeaponId: string | null = initialState.expectedGear?.weapon.weaponId
     ?? startingWeapon?.entity.id
     ?? null;
+  const initialBuild = buildAtLevel(initialState.level, input.weapon ?? startingWeapon);
+  const initialStartingArmour = startingArmourExpectation(
+    input.className,
+    startingLoadout,
+    weaponPermitsShield(initialBuild, input.weapon ?? startingWeapon),
+  );
   let selectedArmourIds = {
-    body: initialState.expectedGear?.armour.slots.body.itemId ?? null,
-    helm: initialState.expectedGear?.armour.slots.helm.itemId ?? null,
-    shield: initialState.expectedGear?.armour.slots.shield.itemId ?? null,
+    body: initialState.expectedGear?.armour.slots.body.itemId ?? initialStartingArmour.slots.body.itemId,
+    helm: initialState.expectedGear?.armour.slots.helm.itemId ?? initialStartingArmour.slots.helm.itemId,
+    shield: initialState.expectedGear?.armour.slots.shield.itemId ?? initialStartingArmour.slots.shield.itemId,
   };
   let purchasedDefence = clonePurchasedDefenceState(initialState.purchasedDefence);
 
@@ -2160,7 +2278,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
     let hitRecoveryTier: HitRecoveryTier = 'none';
     let fastAttackTier: FastAttackTier = 'none';
     let expectedWeaponBase: ReferenceWrapper | undefined;
-    let shieldAllowed = true;
+    let shieldAllowed = weaponPermitsShield(build, input.weapon ?? startingWeapon);
     if (gear === 'expected') {
       weaponAssumed = bestWeaponExpectation({
         class: build.class,
@@ -2220,7 +2338,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
         };
       }
       shieldAllowed = weaponPermitsShield(build, expectedWeaponBase);
-      armourAssumed = bestArmourExpectation({
+      armourAssumed = retainStartingArmour(bestArmourExpectation({
         className: build.class,
         depth,
         killsSoFar,
@@ -2233,7 +2351,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
         magic: build.magic,
         dexterity: build.dexterity,
         shieldAllowed,
-      });
+      }), startingArmourExpectation(input.className, startingLoadout, shieldAllowed), shieldAllowed);
       build = {
         ...build,
         armourClass: armourAssumed.totalArmourClass,
@@ -2267,16 +2385,18 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
         swingSeconds: attackTiming(animations, weaponGraphic, fastAttackTier).seconds,
       };
     };
+    const baseArmourAssumed = armourAssumed
+      ?? startingArmourExpectation(input.className, startingLoadout, shieldAllowed);
     const noPurchaseDefence = effectiveDefence(
       build,
-      armourAssumed,
+      baseArmourAssumed,
       defensiveAffixesAssumed,
       { slots: {} },
       shieldAllowed,
     );
     let effective = effectiveDefence(
       build,
-      armourAssumed,
+      baseArmourAssumed,
       defensiveAffixesAssumed,
       purchasedDefence,
       shieldAllowed,
@@ -3217,10 +3337,14 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
     };
     const expectedBlockChance = rows.reduce((sum, row) => sum + row.conditionalBlockChance, 0) / divisor;
     let sustain: DescentSustainExpectation | undefined;
-    if (loot && gear === 'expected') {
-      const healingPotionsBought = goldAvailableForPotions * healingGoldShare / healingPotionPrice;
-      const healingPotionsAvailable = carriedHealingPotions + healingPotionsBought + loot.expectedHealingPotions;
-      const fullHealingPotionsAvailable = carriedFullHealingPotions + loot.expectedFullHealingPotions;
+    if (lifeSustainEnabled) {
+      const healingPotionsBought = gear === 'expected'
+        ? goldAvailableForPotions * healingGoldShare / healingPotionPrice
+        : 0;
+      const healingPotionsDropped = gear === 'expected' ? loot?.expectedHealingPotions ?? 0 : 0;
+      const fullHealingPotionsDropped = gear === 'expected' ? loot?.expectedFullHealingPotions ?? 0 : 0;
+      const healingPotionsAvailable = carriedHealingPotions + healingPotionsBought + healingPotionsDropped;
+      const fullHealingPotionsAvailable = carriedFullHealingPotions + fullHealingPotionsDropped;
       const lifeRestoredPerHealingPotion = expectedHealingPotionLife(input.className, lifePool);
       const healingSupply = healingPotionsAvailable * lifeRestoredPerHealingPotion
         + fullHealingPotionsAvailable * lifePool;
@@ -3236,10 +3360,10 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
         : { healingSupply, sustainable: false, deficit: Infinity };
       sustain = {
         ...arithmetic,
-        expectedGoldDropped: loot.expectedGold,
+        expectedGoldDropped: loot?.expectedGold ?? 0,
         healingPotionPrice,
-        healingPotionsDropped: loot.expectedHealingPotions,
-        fullHealingPotionsDropped: loot.expectedFullHealingPotions,
+        healingPotionsDropped,
+        fullHealingPotionsDropped,
         healingPotionsBought,
         healingPotionsAvailable,
         fullHealingPotionsAvailable,
@@ -3426,7 +3550,8 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
           const equipped = referenceBuild(classWrapper, heroLevel, nextWeaponBase);
           nextBuild = { ...nextBuild, weaponType: equipped.weaponType };
         }
-        const nextArmour = bestArmourExpectation({
+        const nextShieldAllowed = weaponPermitsShield(nextBuild, nextWeaponBase);
+        const nextArmour = retainStartingArmour(bestArmourExpectation({
           className: nextBuild.class,
           depth: depth + 1,
           killsSoFar: prospectiveKills,
@@ -3438,8 +3563,8 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
           strength: nextBuild.strength,
           magic: nextBuild.magic,
           dexterity: nextBuild.dexterity,
-          shieldAllowed: weaponPermitsShield(nextBuild, nextWeaponBase),
-        });
+          shieldAllowed: nextShieldAllowed,
+        }), startingArmourExpectation(input.className, startingLoadout, nextShieldAllowed), nextShieldAllowed);
         const keepIfChanged = (previousId: string | null, nextId: string | null) => {
           if (nextId != null && nextId !== previousId) {
             keptBaseCounts.set(nextId, (keptBaseCounts.get(nextId) ?? 0) + 1);
@@ -3679,7 +3804,8 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       ...(approach ? { approach } : {}),
       ...(mana ? { mana } : {}),
       ...(weaponAssumed ? { weaponAssumed } : {}),
-      ...(armourAssumed && sustain ? { armourAssumed, expectedBlockChance, sustain } : {}),
+      ...(armourAssumed ? { armourAssumed } : {}),
+      ...(sustain ? { expectedBlockChance, sustain } : {}),
       ...(defensiveAffixesAssumed ? { defensiveAffixesAssumed } : {}),
       ...(offensiveAffixesAssumed ? { offensiveAffixesAssumed } : {}),
       ...(packExpectation ? { pack: packExpectation } : {}),
@@ -3719,7 +3845,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       finalBuild = { ...finalBuild, weaponType: equipped.weaponType };
     }
     const shieldAllowed = weaponPermitsShield(finalBuild, weaponBase);
-    const armour = bestArmourExpectation({
+    const armour = retainStartingArmour(bestArmourExpectation({
       className: finalBuild.class,
       depth: 16,
       killsSoFar,
@@ -3732,7 +3858,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       magic: finalBuild.magic,
       dexterity: finalBuild.dexterity,
       shieldAllowed,
-    });
+    }), startingArmourExpectation(input.className, startingLoadout, shieldAllowed), shieldAllowed);
     const finalDefensiveAffixes = defensiveAffixes === 'expected'
       ? bestDefensiveAffixExpectation({
           depth: 16,
@@ -3844,6 +3970,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       input.policy,
       gear,
       input.className,
+      startingLoadout,
       sorcererCombatPolicy,
       sustainIncome,
       saleItemsPerTrip,
@@ -3889,7 +4016,7 @@ export function simulateDifficultyChain(input: SimulateDifficultyChainInput): De
   const { difficulties: _difficulties, initialHeroState, ...oneLegInput } = input;
   void _difficulties;
   let carried: DescentInitialState = initialHeroState
-    ?? defaultInitialState(input.className, classWrapperFrom(input.wrappers, input.className));
+    ?? defaultInitialState(input.className, classWrapperFrom(input.wrappers, input.className), input.wrappers);
   const legs: DescentDifficultyChainLeg[] = [];
   const summaries: DescentDifficultyChainLegSummary[] = [];
   for (const [index, difficulty] of difficulties.entries()) {

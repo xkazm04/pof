@@ -13,13 +13,14 @@ function level(
   depth: number,
   damage: number | null,
   seconds: number | null,
-  options: { unsustainable?: boolean; portalLethal?: boolean } = {},
+  options: { lifeDeficit?: boolean; manaDeficit?: boolean; portalLethal?: boolean } = {},
 ): DescentLevelResult {
   return {
     depth,
     expectedDamageTaken: damage,
     expectedSecondsToClear: seconds,
-    sustain: options.unsustainable ? { sustainable: false } : undefined,
+    sustain: options.lifeDeficit ? { sustainable: false, deficit: 1 } : undefined,
+    mana: options.manaDeficit ? { sustainable: false, deficit: 1 } : undefined,
     recovery: options.portalLethal ? { engagementSurvivable: false } : undefined,
   } as unknown as DescentLevelResult;
 }
@@ -59,8 +60,8 @@ describe('balance matrix formatting', () => {
   it('summarizes synthetic descent levels and renders a compact table', () => {
     const row = summarizeDescentLevels('warrior', [
       level(4, 10.125, 20),
-      level(8, null, null, { unsustainable: true, portalLethal: true }),
-      level(12, 30, 40),
+      level(8, null, null, { lifeDeficit: true, manaDeficit: true, portalLethal: true }),
+      level(12, 30, 40, { manaDeficit: true }),
       level(16, 50, 60),
     ], true);
 
@@ -71,12 +72,14 @@ describe('balance matrix formatting', () => {
       totalDamageFiniteDepths: 90.13,
       damageByDepth: { 4: 10.13, 8: null, 12: 30, 16: 50 },
       totalClearSecondsFiniteDepths: 120,
-      unsustainableDepths: [8],
+      lifeDeficitDepths: [8],
+      manaDeficitDepths: [8, 12],
       townPortalLethalDepths: [8],
     });
     const markdown = formatMatrixMarkdown(report(row));
     expect(markdown).toContain('| class | walls | first wall | damage d1–16 |');
-    expect(markdown).toContain('| warrior | 8 | 8 | 90.13 | 10.13 | — | 30 | 50 | 120 | 8 | 8 |');
+    expect(markdown).toContain('| clear seconds | life deficit | mana deficit | TP-lethal |');
+    expect(markdown).toContain('| warrior | 8 | 8 | 90.13 | 10.13 | — | 30 | 50 | 120 | 8 | 8, 12 | 8 |');
   });
 
   it('diffs walls and damage percentages and renders them', () => {

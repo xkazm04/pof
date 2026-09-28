@@ -85,7 +85,8 @@ export interface BalanceMatrixRow {
   totalDamageFiniteDepths: number;
   damageByDepth: DamageByDepth;
   totalClearSecondsFiniteDepths: number;
-  unsustainableDepths: number[];
+  lifeDeficitDepths: number[];
+  manaDeficitDepths: number[];
   townPortalLethalDepths: number[] | null;
 }
 
@@ -111,6 +112,11 @@ type SummaryLevel = Pick<
 
 function round(value: number): number {
   return Number(value.toFixed(2));
+}
+
+/** Equal expectation sums can differ by a few ulps; those are not resource deficits. */
+function hasMaterialDeficit(value: number | null | undefined): boolean {
+  return value != null && value > 1e-9;
 }
 
 export function summarizeDescentLevels(
@@ -140,8 +146,11 @@ export function summarizeDescentLevels(
       16: damageAt(16) === null ? null : round(damageAt(16)!),
     },
     totalClearSecondsFiniteDepths: round(finiteSeconds.reduce((sum, value) => sum + value, 0)),
-    unsustainableDepths: levels
-      .filter((level) => level.sustain?.sustainable === false || level.mana?.sustainable === false)
+    lifeDeficitDepths: levels
+      .filter((level) => hasMaterialDeficit(level.sustain?.deficit))
+      .map((level) => level.depth),
+    manaDeficitDepths: levels
+      .filter((level) => hasMaterialDeficit(level.mana?.deficit))
       .map((level) => level.depth),
     townPortalLethalDepths: townPortalEnabled
       ? levels
@@ -166,7 +175,7 @@ export function formatMatrixMarkdown(report: BalanceMatrixReport): string {
     const townPortal = preset.rows.some((row) => row.townPortalLethalDepths !== null);
     const headings = [
       'class', 'walls', 'first wall', 'damage d1–16', 'd4', 'd8', 'd12', 'd16',
-      'clear seconds', 'unsustainable',
+      'clear seconds', 'life deficit', 'mana deficit',
       ...(townPortal ? ['TP-lethal'] : []),
     ];
     const divider = headings.map(() => '---');
@@ -177,7 +186,8 @@ export function formatMatrixMarkdown(report: BalanceMatrixReport): string {
       formatNumber(row.totalDamageFiniteDepths),
       ...DAMAGE_DEPTHS.map((depth) => formatNumber(row.damageByDepth[depth])),
       formatNumber(row.totalClearSecondsFiniteDepths),
-      formatDepths(row.unsustainableDepths),
+      formatDepths(row.lifeDeficitDepths),
+      formatDepths(row.manaDeficitDepths),
       ...(townPortal ? [formatDepths(row.townPortalLethalDepths ?? [])] : []),
     ]);
     return [

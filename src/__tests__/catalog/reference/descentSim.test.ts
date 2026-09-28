@@ -1071,7 +1071,7 @@ describe('simulateDescent', () => {
       sorcererCombatPolicy: 'pure-spell' as const,
       encounter: 'packs' as const,
       adjacentSlots: 8,
-      wrappers: [sorcerer, noRecoveryMonster, ...learnedSpellRows, ...curve],
+      wrappers: [sorcerer, startingStaff, noRecoveryMonster, ...learnedSpellRows, ...curve],
       locations: locationsFor(noRecoveryMonster),
     };
     const legacy = simulateDescent(input);
@@ -1496,7 +1496,7 @@ describe('simulateDescent', () => {
       difficulty: 'normal',
       gear: 'none',
       sorcererCombatPolicy: 'pure-spell',
-      wrappers: [sorcerer, monster, ...learnedSpellRows, ...curve],
+      wrappers: [sorcerer, startingStaff, monster, ...learnedSpellRows, ...curve],
       locations,
     });
 
@@ -1570,6 +1570,108 @@ describe('simulateDescent', () => {
     expect(result.weaponId).toBe('d1-row166');
   });
 
+  it('applies synthetic starting weapon, shield, healing potions, and gold at depth 1', () => {
+    const loadoutSword = {
+      ...expectedSword,
+      key: 'TEST_START_SWORD',
+      raw: { ...expectedSword.raw, id: 'TEST_START_SWORD', class: 'Weapon', dropRate: '0' },
+      entity: { ...expectedSword.entity, id: 'd1-TEST_START_SWORD' },
+    } satisfies ReferenceWrapper;
+    const loadoutShield = wrapper('d1-TEST_START_SHIELD', 'items', 'items/itemdat.tsv', {
+      subtype: 'Shield',
+      stats: [
+        { label: 'Armor Min', value: 3 },
+        { label: 'Armor Max', value: 3 },
+      ],
+    }, {
+      id: 'TEST_START_SHIELD', class: 'Armor', itemType: 'Shield', minArmor: '3', maxArmor: '3',
+      dropRate: '0', miscId: 'NONE', spell: 'Null', minMonsterLevel: '0', value: '30',
+    });
+    const loadoutHealing = {
+      ...healingPotion,
+      key: 'TEST_START_HEAL',
+      raw: { ...healingPotion.raw, id: 'TEST_START_HEAL', class: 'Misc' },
+    } satisfies ReferenceWrapper;
+    const loadoutWarrior = {
+      ...warrior,
+      entity: {
+        ...warrior.entity,
+        data: {
+          ...warrior.entity.data,
+          baseDexterity: 20,
+          startingLoadout: {
+            itemIds: ['TEST_START_SWORD', 'TEST_START_SHIELD', 'TEST_START_HEAL', 'TEST_START_HEAL'],
+            gold: '14',
+            spellId: 'Null',
+            spellLevel: '0',
+          },
+        },
+      },
+    } satisfies ReferenceWrapper;
+    const result = simulateDescent({
+      className: 'warrior',
+      policy: 'none',
+      tilesPerLevel: 60,
+      gameMode: 'single',
+      difficulty: 'normal',
+      gear: 'expected',
+      wrappers: [
+        loadoutWarrior, loadoutSword, loadoutShield, loadoutHealing, expectedSword, monster, ...curve,
+      ],
+      locations,
+    });
+    const first = result.levels[0];
+
+    expect(result.weaponId).toBe(loadoutSword.entity.id);
+    expect(first.weaponAssumed?.weaponId).toBe(loadoutSword.entity.id);
+    expect(first.armourAssumed).toMatchObject({ totalArmourClass: 3, hasShield: true });
+    expect(first.expectedBlockChance).toBeCloseTo(0.2, 12);
+    expect(first.sustain?.healingPotionsBought).toBe(2);
+    expect(first.sustain!.healingPotionsAvailable
+      - first.sustain!.healingPotionsBought
+      - first.sustain!.healingPotionsDropped).toBe(2);
+  });
+
+  it('uses a synthetic starting learned spell level and mana potions', () => {
+    const loadoutMana = {
+      ...manaPotion,
+      key: 'TEST_START_MANA',
+      raw: { ...manaPotion.raw, id: 'TEST_START_MANA', class: 'Misc' },
+    } satisfies ReferenceWrapper;
+    const loadoutSorcerer = {
+      ...sorcerer,
+      entity: {
+        ...sorcerer.entity,
+        data: {
+          ...sorcerer.entity.data,
+          startingLoadout: {
+            itemIds: ['IDI_SORC', 'TEST_START_MANA', 'TEST_START_MANA'],
+            gold: '100',
+            spellId: 'Firebolt',
+            spellLevel: '2',
+          },
+        },
+      },
+    } satisfies ReferenceWrapper;
+    const result = simulateDescent({
+      className: 'sorcerer',
+      policy: 'none',
+      tilesPerLevel: 60,
+      gameMode: 'single',
+      difficulty: 'normal',
+      gear: 'none',
+      wrappers: [
+        loadoutSorcerer, startingStaff, loadoutMana, monster, ...learnedSpellRows, ...curve,
+      ],
+      locations,
+    });
+
+    expect(result.levels[0].spellAssumed).toMatchObject({ spell: 'Firebolt', spellLevel: 2 });
+    expect(result.levels[0].mana).toMatchObject({ manaPotionsAvailable: 2, totalManaAvailable: 16 });
+    expect(result.assumptions.find((assumption) => assumption.id === 'starting-loadout')?.value)
+      .toContain('Firebolt L2');
+  });
+
   it('switches a fire-immune target to lightning and names a target immune to every learned spell', () => {
     const fireImmune = {
       ...monster,
@@ -1613,7 +1715,7 @@ describe('simulateDescent', () => {
       difficulty: 'normal',
       gear: 'none',
       sorcererCombatPolicy: 'pure-spell',
-      wrappers: [sorcerer, fireImmune, fullyImmune, ...learnedSpellRows, ...curve],
+      wrappers: [sorcerer, startingStaff, fireImmune, fullyImmune, ...learnedSpellRows, ...curve],
       locations: locationsFor(fireImmune, fullyImmune),
     });
 
@@ -1724,7 +1826,7 @@ describe('simulateDescent', () => {
       difficulty: 'normal',
       sorcererCombatPolicy: 'pure-spell',
       wrappers: [
-        sorcerer, monster, expensiveFirebolt, chargedBolt, lightning, fireball, chainLightning,
+        sorcerer, startingStaff, monster, expensiveFirebolt, chargedBolt, lightning, fireball, chainLightning,
         expectedSword, expectedDamagePrefix,
         healingPotion, manaPotion, ...curve,
       ],
