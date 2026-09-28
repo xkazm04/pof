@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import type { RecentProject } from '@/stores/projectStore';
-import { useCLIPanelStore } from '@/components/cli/store/cliPanelStore';
 import { useReducedMotion } from 'framer-motion';
 
 export function useTopBar() {
@@ -117,27 +116,18 @@ export function useTopBar() {
       return;
     }
 
-    // Update the path if it ends with the old project name
-    let newPath = projectPath;
-    const pathSep = projectPath.includes('/') ? '/' : '\\';
-    const pathParts = projectPath.split(/[/\\]/);
-    if (pathParts[pathParts.length - 1] === projectName) {
-      pathParts[pathParts.length - 1] = trimmed;
-      newPath = pathParts.join(pathSep);
-    }
-
-    setProject({ projectName: trimmed, projectPath: newPath });
+    // Name-only: the recorded exclusion in services/projectTransition. No folder
+    // is renamed on disk, so projectPath (the identity every per-project cache is
+    // keyed by) must not move, and a rename runs no project-flip teardown.
+    setProject({ projectName: trimmed });
 
     setRenaming(false);
     setDropdownOpen(false);
-  }, [renameValue, projectName, projectPath, setProject]);
+  }, [renameValue, projectName, setProject]);
 
   const handleDelete = useCallback(() => {
-    // Clear all CLI sessions (atomic reset of sessions/tabOrder/active/maximized)
-    useCLIPanelStore.getState().clearAllSessions();
-
-    // Reset project store (clears localStorage too)
-    resetProject();
+    // The flip owner clears CLI sessions, progress and the activity feed.
+    resetProject('delete');
 
     setDropdownOpen(false);
     setConfirmDelete(false);
@@ -151,9 +141,7 @@ export function useTopBar() {
     }
 
     setSwitching(project.id);
-    // Clear CLI sessions before switching
-    useCLIPanelStore.getState().clearAllSessions();
-
+    // switchProject runs the one flip teardown (CLI sessions included).
     await switchProject(project.id);
     setSwitching(null);
     setDropdownOpen(false);
@@ -166,10 +154,7 @@ export function useTopBar() {
       saveToRecent();
     }
 
-    // Clear CLI sessions
-    useCLIPanelStore.getState().clearAllSessions();
-
-    resetProject();
+    resetProject('new');
     setDropdownOpen(false);
     setShowSwitcher(false);
   }, [projectPath, isSetupComplete, saveToRecent, resetProject]);

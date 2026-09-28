@@ -8,10 +8,8 @@ import {
   saveModuleProgress,
   loadModuleProgress,
   getChecklistProgress,
-  clearModuleProgress,
-  cancelAutoSave,
 } from '@/services/ProjectModuleBridge';
-import { useCLIPanelStore } from '@/components/cli/store/cliPanelStore';
+import { transitionProject } from '@/services/projectTransition';
 import type { DynamicProjectContext } from '@/lib/prompt-context';
 
 export interface RecentProject {
@@ -44,7 +42,9 @@ interface ProjectState {
 
   setProject: (data: Partial<ProjectState>) => void;
   completeSetup: () => Promise<void>;
-  resetProject: () => void;
+  /** Close the open project (New Project / Delete). Runs the flip teardown
+   *  (services/projectTransition) before clearing the identity. */
+  resetProject: (trigger?: 'new' | 'delete') => void;
   /** Scan the project directory for existing classes, plugins, and dependencies */
   scanProject: () => Promise<void>;
   /** Save current project to recent_projects in SQLite */
@@ -92,20 +92,14 @@ export const useProjectStore = create<ProjectState>()(
         }
       },
 
-      resetProject: () => {
-        // Save current module progress before resetting. The call captures the
-        // state snapshot synchronously, so clearing immediately below is safe.
+      resetProject: (trigger = 'new') => {
+        // The owner saves the outgoing progress (snapshot taken synchronously),
+        // cancels the auto-save, clears progress / CLI sessions / activity feed
+        // and cancels the open session-log rows — all before the identity below
+        // is cleared. Without the progress clear, "New Project" would inherit the
+        // previous project's completed checklist and write it into the new row.
         const { projectPath, isSetupComplete } = get();
-        if (projectPath && isSetupComplete) {
-          saveModuleProgress(projectPath);
-        }
-        // A pending debounced auto-save reads projectPath at FIRE time; left
-        // running it would write this project's progress into the next one.
-        cancelAutoSave();
-        // Module progress lives in one global blob — without this, "New Project"
-        // inherits the previous project's entire completed checklist and
-        // completeSetup({ isNewProject: true }) writes it into the new row.
-        clearModuleProgress();
+        void transitionProject({ kind: trigger, from: { projectPath, isSetupComplete } });
         set({
           projectName: '',
           projectPath: '',
@@ -219,34 +213,15 @@ export const useProjectStore = create<ProjectState>()(
         const target = recentProjects.find((p) => p.id === projectId);
         if (!target) return;
 
-        // Save current project's module progress before switching
-        if (projectPath && isSetupComplete) {
-          await Promise.all([
-            get().saveToRecent(),
-            saveModuleProgress(projectPath),
-          ]);
-        }
-
-        // Dispose the pending auto-save BEFORE the new path is set — it reads
-        // projectPath at fire time, so a stale timer would write the outgoing
-        // project's progress into the incoming project's row.
-        cancelAutoSave();
-        // Drop the outgoing project's progress so it is never rendered as the
-        // target's while the load is in flight, and never re-saved under the new
-        // path if that load fails.
-        clearModuleProgress();
-
-        // Clear terminal sessions to prevent cross-project leakage
-        useCLIPanelStore.getState().clearAllSessions();
-
-        // Cancel open session log entries for the old project (fire-and-forget)
-        if (projectPath) {
-          apiFetch('/api/session-log', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'cancel-open', projectPath }),
-          }).catch(() => {});
-        }
+        // Record the outgoing project in the recent list (reads its progress
+        // synchronously), then hand the outgoing teardown to the flip owner:
+        // save progress, cancel the auto-save BEFORE the new path is set, clear
+        // progress / CLI sessions / activity feed, cancel the open session log.
+        const savingRecent = projectPath && isSetupComplete ? get().saveToRecent() : undefined;
+        await Promise.all([
+          savingRecent,
+          transitionProject({ kind: 'switch', from: { projectPath, isSetupComplete } }),
+        ]);
 
         // Touch the target project's last_opened_at. The touch action returns
         // the freshened list (reflecting the new ordering), so we set it

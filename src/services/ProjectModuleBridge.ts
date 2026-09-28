@@ -104,7 +104,8 @@ export function scheduleAutoSave(): void {
  * The timer reads `projectPath` at FIRE time, not at schedule time, so a save
  * scheduled while project A was open would otherwise fire after a switch and
  * write A's in-memory progress under B's path. Every path that changes the open
- * project must call this before setting the new path.
+ * project must call this before setting the new path — it does so by going
+ * through the one flip owner, `transitionProject` in services/projectTransition.
  */
 export function cancelAutoSave(): void {
   autoSaveLifecycle.dispose();
