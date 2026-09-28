@@ -17,7 +17,7 @@ import type { AbilityRef } from '@/lib/ability/logic-prompts';
 import type { TestSuite } from '@/types/ai-testing';
 import { logger } from '@/lib/logger';
 import { expectGolden } from './golden';
-import { STANDALONE_BUILDERS, GOLDEN_LEVEL_DOC, GOLDEN_MATERIAL_CONFIG } from './builder-fixtures';
+import { STANDALONE_BUILDERS, GOLDEN_LEVEL_DOC, GOLDEN_MATERIAL_CONFIG, GOLDEN_PP_SPEC } from './builder-fixtures';
 
 /**
  * The golden rail — byte-level regression armour for EVERY composed prompt.
@@ -202,6 +202,8 @@ const TASK_CASES: Record<CLITaskType, () => CLITask> = {
   // routing through the rail did not change the prompt.
   'material-configurator': () =>
     TaskFactory.materialConfigurator('materials', GOLDEN_MATERIAL_CONFIG, 'Material Config'),
+  // Phase 2: `task-post-process` must stay byte-identical to `builder-post-process`.
+  'post-process': () => TaskFactory.postProcess('materials', GOLDEN_PP_SPEC, 'Generate PP Volume'),
   'detect-stimuli': () =>
     TaskFactory.detectStimuli(
       'ai-behavior',
