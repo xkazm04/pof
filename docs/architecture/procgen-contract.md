@@ -24,7 +24,7 @@ The browser preview narrows further **per algorithm** through `algo-params.ts`: 
 `src/lib/level-design/procgen-connect.ts` is the fix: a **region-cull + tunnel-carve** pass.
 
 - **Opt-in.** It runs only when the spec's `constraints.ensureConnected` is on. A spec without it produces the byte-identical grid the generators produced before the pass existed — pinned by `procgen-connect.test.ts`.
-- **Cellular only, phase 1.** `ensureConnectedSupport()` in `algo-params.ts` is the single source; `bsp` / `wfc` / `perlin` carry a reason string, and `specFieldsIgnoredBy('browser-preview', …)` drops the field for them. `ue-arpg-generator` and `llm-codegen` do not implement it at all, so they list it as dropped for every algorithm — the wizard therefore never sends it into the C++ prompt.
+- **Cellular only, phase 1.** `ensureConnectedSupport()` in `algo-params.ts` is the single source; `bsp` / `wfc` / `perlin` carry a reason string, and `specFieldsIgnoredBy('browser-preview', …)` drops the field for them. `ue-arpg-generator` and `llm-codegen` do not implement it at all, so they list it as dropped for every algorithm — `buildProceduralLevelPrompt` therefore never renders it (enforced by test, §5), whatever the wizard's toggle says.
 - **It reports itself.** `PreviewStats.connectPass` carries `regionsBefore / regionsAfter / regionsCulled / cellsCulled / tunnelsCarved / cellsCarved / cellsChanged / rngDraws`, and `ProcgenPreviewCanvas` prints `describeConnectPass()` beside the verdict. **A connectivity of 100% produced by the pass can never be displayed without the sentence saying how it got there.**
 
 ### The RNG draw order is part of the seed contract
@@ -60,11 +60,19 @@ The artifact carries its provenance: `version`, `generatedBy`, algorithm, level 
 
 The field names are **pinned**: `PROCGEN_GRID_EXPORT_FIELDS` in TypeScript is compared against `REQUIRED_FIELDS` in `procgen_replay.py` by `procgen-grid-export.test.ts`, so renaming a field on either side fails the build instead of silently breaking a script nothing in CI runs.
 
+## 5. The wizard's state IS the spec, and codegen reads it through the matrix
+
+- **One owner, above the wizard.** `procgenSpecReducer` (`ProceduralLevelWizard/specState.ts`) is the only writer of the wizard's `ProcgenSpec`: `setAlgorithm`, `selectLevelType` (applies that type's `DEFAULT_SIZE`), `updateSize`, `toggleConstraint`, `setSeed` (resolves `seedValue = hashSeed(seedLabel)` in the same transition) and `shown`. `useLevelDesignView` holds it with `useReducer` and passes `{ state, dispatch }` as `specStore` to both wizard render sites (`EmptyState` and the Procgen tab). The wizard is unmounted on every tab switch, so its state must live above it; a wizard rendered without `specStore` keeps a private instance of the same reducer.
+- **The handoff is the same value, not a published copy.** `procgenSpec`, which `ProcGenDungeonPanel` receives as `handoffSpec`, is `state.spec` once `state.shown` (a wizard has been on screen). There is no publish effect, so a remount cannot write defaults over it; `procgen-spec-state.test.tsx` walks wizard → Dungeon (UE) → wizard in the real view.
+- **Codegen consumes the spec.** `onGenerate` receives the `ProcgenSpec` on screen, with no fields stripped at the call site. `buildProceduralLevelPrompt(spec, ctx)` renders only what `PROCGEN_ENGINES['llm-codegen'].reads` declares. It sends `seedValue`, the int32 the preview ran on (a blank seed is `DEFAULT_PREVIEW_SEED`, never "random"), with the label as provenance, and it takes its constraint bullets from `GAMEPLAY_CONSTRAINT_KEYS`. `procgen-codegen-prompt.test.ts` mutation-walks the matrix: each read field must change the prompt text, and each ignored field (`ensureConnected`) must leave it byte-identical.
+
 ## Where to look
 
 | Concern | File |
 |---|---|
 | The spec, engines, ignored-field matrix, `layoutAgreement` | `src/lib/level-design/procgen-spec.ts` |
+| The wizard's spec state (reducer, owned by `useLevelDesignView`) | `src/components/modules/content/level-design/ProceduralLevelWizard/specState.ts` |
+| The C++ codegen prompt built from the spec | `src/lib/prompts/level-design.ts` (`buildProceduralLevelPrompt`) |
 | Per-algorithm parameter support + `ensureConnectedSupport` | `src/lib/level-design/algo-params.ts` |
 | The generators | `src/lib/level-design/procgen-algorithms.ts` |
 | Preview + stats | `src/lib/level-design/procgen-preview.ts` |
