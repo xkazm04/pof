@@ -132,6 +132,20 @@ selectors reading it are unchanged. See `prompts-and-cli.md` § callback truth.
 active **idle** session is reused. Running sessions are never clobbered (`!s.isRunning` filter at
 line 86).
 
+#### `useCharacterBlueprintStore` (`src/stores/characterBlueprintStore.ts`)
+
+Character Blueprint state under the `pof-character-feel-stack` key. Persisted keys (`partialize`):
+`baseFeelPresetId`, `feelLayers` (the feel adjustment-layer stack, incl. the Property Inspector's
+reserved `inspector-overrides` layer) and `bindingOverrides` — the Input tab's sparse
+`action -> key` rebinds over `INPUT_BINDINGS`. The custom `merge` sanitizes every key on rehydration
+(unknown preset -> default, `sanitizeLayers`, and `sanitizeBindingOverrides` drops unknown actions,
+non-string keys and overrides equal to the default); `activeSubTab` is not persisted. Rebinds go
+through `setBindingOverride` (the `rebindAction` swap rule; key groups such as the movement cluster
+never swap) and every input surface — table, keyboard caps, legend, mouse, ability badges, the
+Features `KeyboardMetric` — reads the one `useResolvedBindings()` value (pure
+`resolveBindings` in `src/lib/character/input-bindings.ts`). "Apply to IMC_Default" only dispatches
+a CLI task on an explicit click, gated off at defaults and while any key conflicts.
+
 ---
 
 ### 2. ProjectModuleBridge (`src/services/ProjectModuleBridge.ts`)
