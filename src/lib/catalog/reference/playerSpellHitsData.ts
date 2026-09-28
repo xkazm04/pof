@@ -41,12 +41,12 @@ export const PLAYER_SPELL_HIT_SOURCES_DATA = [
     refs: [missile('742-786'), missile('1961-1975'), missile('2535-2562'), missile('3065-3097'), missile('3775-3840')],
   },
   {
-    spell: 'Fireball', kind: 'impact-and-blast', collisionChecks: 'one flight check, then one blast check only after a successful direct impact',
+    spell: 'Fireball', kind: 'impact-and-blast', collisionChecks: 'one flight check per tick, then one blast check when the flight ends: on a collision, on blocking terrain, or at lifetime expiry (the blast runs whenever duration reaches 0)',
     damageRoll: 'once-per-cast', collisionDamage: 'whole-hit-points',
     hitResult: 'flight-becomes-one-shot-blast',
     stationaryGeometry: 'The monster occupies the direct impact tile; a missed flight check does not terminate there and therefore does not blast that tile.',
     packGeometry: 'impact-3x3',
-    packBehaviour: 'A successful flight collision changes to the explosion and checks the impact tile plus all eight neighbouring offsets.',
+    packBehaviour: 'When the flight ends (collision, terrain or expiry) it changes to the explosion and checks the end tile plus all eight neighbouring offsets, each only if not blocked from the start position.',
     refs: [missile('1977-1997'), missile('3099-3166')],
   },
   {

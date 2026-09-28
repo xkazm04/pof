@@ -62,11 +62,8 @@ describe('missile behaviour graphs', () => {
     });
   });
 
-  it('reports only source disagreements and can cross-check synthetic agreement', () => {
-    expect(MISSILE_BEHAVIOUR_GRAPH_FINDINGS.map((finding) => [finding.dataset, finding.owner, finding.field])).toEqual([
-      ['missileSpecsData', 'FlameWave', 'lifetime'],
-      ['playerSpellHitsData', 'Fireball', 'blastTrigger'],
-    ]);
+  it('agrees with the older datasets once the W96 findings were corrected (Flame Wave sentinel, Fireball blast trigger)', () => {
+    expect(MISSILE_BEHAVIOUR_GRAPH_FINDINGS).toEqual([]);
     const graphs = [missileBehaviourGraph('FlameWave')!, missileBehaviourGraph('Fireball')!];
     expect(auditMissileBehaviourGraphs(
       graphs,
