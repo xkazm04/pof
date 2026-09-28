@@ -183,6 +183,22 @@ kept, so reopening is instant.
 
 Search+jump only — deliberately not a command palette with actions.
 
+### 4c. Legacy-shell Ctrl+K palette — intents (`src/components/layout/GlobalSearchPanel/`)
+
+The legacy shell's `GlobalSearchPanel` (FTS5 hits from `src/lib/search-index.ts`) IS a palette
+with actions. `searchIntents.ts` resolves each hit client-side, from its doc id (`cat-` `mod-`
+`cl-` `qa-` `feat-` `fm-` `ef-` `build-`; the item id is the id minus the known
+`<prefix>-<moduleId>-` head, so hyphenated module ids stay unambiguous) and the registry, into:
+
+- **primary** — always a navigation: a category with no sub-module list lands on its first
+  sub-module, builds land on `packaging`, findings on an unknown module land on `evaluator`.
+- **run** — quick actions (indexed as `checklist`, shown as **Action**) carry their registry
+  prompt verbatim, dispatched through `useModuleActions.sendPromptToModule` (the activity feed's
+  Fix door) **only** on Shift+Enter or the row's Run button — never on Enter, row click, or render.
+- **state** — checklist hits show Done/Open from `moduleStore.checklistProgress`.
+
+`searchIntents.test.ts` ratchets zero dead ends over every doc `rebuildSearchIndex` writes.
+
 ### 5. Composition screen — `Baseline` (`src/components/layout-lab/Baseline/index.tsx` + `Baseline/useBaseline.ts`)
 
 Three-column CSS grid `260px 320px 1fr`:
