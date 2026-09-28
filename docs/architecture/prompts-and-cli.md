@@ -21,6 +21,7 @@ calls in strings.
 | `src/lib/model-policy.ts` | Model-policy registry (WS0): `getModelPolicy(taskClass)`, `taskClassForDispatchType()`, `resolveDispatchModelChoice()` — the single source of truth for which model + effort powers each task class |
 | `src/lib/prompt-evolution/dispatch-resolve.ts` | `composeTaskDispatch()` / `resolveActivePrompt()` — swaps the served prompt-evolution variant in before the prompt is built; `STATIC_VARIANT_ID` sentinel |
 | `src/lib/prompt-evolution/engine.ts` | `resolveDispatchVariant()` (serve) / `recordTrialForServedVariant()` (record) / `concludeTest()` (decide) — the A/B loop |
+| `src/lib/prompt-evolution/verdict.ts` | THE A/B verdict seam — `readFitness()` / `readTestVerdict()` (basis, rates, band, tie, per-arm shortfall, `canConclude`) and `decideWinner()` (the one crowning rule) |
 | `src/lib/prompt-evolution/judge-fitness.ts` | `stampPromptVersion()` / `computeVersionFitness()` — joins judge verdicts to the quality-pack version that produced the artifact |
 | `src/lib/prompts/quality/index.ts` | Quality pack + `PROMPT_VERSION` (hand-bumped) + `packFingerprint()` drift detector |
 | `src/components/cli/skills.ts` | 12 `SkillPack` records; `buildSkillsPrompt()` / `resolveSkillsFromPatterns()` |
@@ -235,14 +236,30 @@ byte-identical to before, so it costs the judge fleet nothing.
 
 `computeVariantFitness` already joins artifacts to verdicts by
 `(catalogId, entityId, step)`, so a `checklist-runs` verdict resolves a checklist
-variant's fitness with no change. `ab-testing.readFitness(test, judged)` is the
-new seam: it uses judged pass rates when BOTH arms clear
+variant's fitness with no change. `verdict.readFitness(test, judged)` (re-exported
+from `ab-testing`) is the seam: it uses judged pass rates when BOTH arms clear
 `MIN_JUDGED_VERDICTS_PER_VARIANT`, otherwise falls back to the self-reported
 completions and SAYS which basis it used (`FitnessReading.basis` + `.note`).
 `pickVariant` exploits on that reading and `evaluateTestWithBasis` runs the same
 proportion z-test over it; `engine.judgeScoresByVariant()` supplies the scores and
 returns `undefined` (never throws) when nothing has been judged, which is what
-makes the fall back automatic. **Not yet done:** `step-facts.json` has no
+makes the fall back automatic.
+
+**One verdict reading.** `lib/prompt-evolution/verdict.ts` is the only place an
+arm's rate, the 0.05 tie margin (`TIE_MARGIN`), the z-test band
+(`strong|moderate|weak|none`), the decide-now shortfall and the basis are
+computed. `decideWinner(test, reading)` is the single crowning rule (a gap of at
+least the margin wins on results; closer is a tie broken by the lower average
+duration) and both `evaluateTestWithBasis` (auto) and `forceConclude(test, judged)`
+(decide-now) crown through it — so pressing decide-now on judged evidence cannot
+overturn what the judges found, and a tie never falls to slot A by position.
+`readTestVerdict(test, judged)` → `ABTestVerdict` is computed at READ time, never
+stored: `get-tests` / `record-trial` / `conclude-test` return `ABTestView` (the row +
+`verdict`), `explainTestVerdict(test, labelA, labelB, verdict)` words it (no mirrored
+constant), and `ABTestCard` shows the basis, gates decide-now on
+`verdict.canConclude` and names the per-arm shortfall. A refused conclude (409) is
+returned by the store as `{ ok: false, reason }` and shown on the card — it never
+writes `store.error`, which would hide every panel of the view. **Not yet done:** `step-facts.json` has no
 `checklist-runs` rows, so the judge fleet does not yet enumerate the catalog.
 
 Deliberate **exemptions** are recorded in that same rail: `project-setup/prompts.ts`
@@ -590,8 +607,8 @@ handler puts into the callback's `staticFields`. The loop has three legs:
    a failure is logged and never blocks marking the item complete. The response reports
    `trialRecorded` so the loop is observable.
 3. **Conclude** — `evaluateTest` may auto-conclude once the z-test/volume gate opens.
-   The manual "decide now" path (`concludeTest` → `forceConclude`) returns
-   `Result<ABTest, string>` and **refuses below `MIN_TRIALS_PER_VARIANT` (3) trials per
+   The manual "decide now" path (`concludeTest` → `forceConclude(test, judged)`) returns
+   `Result<ABTestView, string>`, crowns on the same reading and tie rule as auto-conclude, and **refuses below `MIN_TRIALS_PER_VARIANT` (3) trials per
    arm**, naming the shortfall; the API surfaces that as a 409 so the UI can say why
    nothing was decided. Previously it crowned slot A at zero trials (`rateA >= rateB`
    with both rates 0) — a coin flip dressed as evidence.
