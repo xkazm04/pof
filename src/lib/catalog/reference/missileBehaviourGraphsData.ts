@@ -41,7 +41,7 @@ const lifetime = (
   ...(animationGraphic ? { animationGraphic } : {}),
 });
 
-const collisionEffect = 'Apply damage; hit recovery starts only when IsHardHit succeeds and is never started while the monster is Petrified.';
+const collisionEffect = 'Apply the source-specific collision branch: player-owned hits use MonsterMHit, while monster-owned hits use PlayerMHit and its 64-internal-unit landed floor; monster hit recovery starts only when IsHardHit succeeds and never while Petrified.';
 const collisionRefs = [missiles('278-351'), monster('3963-3998')];
 
 const immediate = (
@@ -242,7 +242,7 @@ const flash = (
   missile: 'FlashBottom' | 'FlashTop', addFn: 'AddFlashBottom' | 'AddFlashTop', addRef: string, processFn: 'ProcessFlashBottom' | 'ProcessFlashTop', processRef: string, target: string,
 ): MissileBehaviourGraphData => stationaryTimer(
   missile, addFn, processFn, lifetime('exact-19', '19', [addRef]), addRef, processRef,
-  `Set caster invincibility, check ${target}, and preserve the missile after hits.`,
+  `Apply the source branch's caster-invincibility rule (player sources only), check ${target}, and preserve the missile after hits.`,
   [areaCollision(processRef, target)],
 );
 

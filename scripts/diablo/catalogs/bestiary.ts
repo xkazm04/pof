@@ -1,5 +1,6 @@
 import { selectForPromotion } from '@/lib/catalog/reference/promote';
 import { withMonsterAttackLedgers } from '@/lib/catalog/reference/monsterAttackLedger';
+import { withMonsterMissileGraphs } from '@/lib/catalog/reference/missileBehaviourGraphs';
 import {
   effectiveUniqueMonstersForPromotion,
   type EffectiveUniqueMonstersResult,
@@ -15,7 +16,7 @@ export const bestiaryHandler: CatalogHandler = {
     const bestiary = wrappers.filter((wrapper) => wrapper.catalogId === 'bestiary');
     const selected = selectForPromotion(bestiary, promotionOptions('bestiary'));
     uniqueMonsterReport = effectiveUniqueMonstersForPromotion(selected, bestiary);
-    return withMonsterAttackLedgers(uniqueMonsterReport.wrappers, bestiary);
+    return withMonsterMissileGraphs(withMonsterAttackLedgers(uniqueMonsterReport.wrappers, bestiary));
   },
   report: () => ({
     afterSummary: uniqueMonsterReport?.unresolved.map(
