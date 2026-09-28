@@ -17,6 +17,8 @@ export interface ConsistencyScanEntry {
   score: number;
   /** ISO timestamp of when the scan completed. */
   timestamp: string;
+  /** Stable violation ids of this scan (for the since-last-scan diff); absent on older entries. */
+  violationKeys?: string[];
 }
 
 /** Keep at most this many scans per project — enough for delta + future trends. */
@@ -42,8 +44,8 @@ interface MarketplaceState {
   /** Per-project consistency-score scan history (oldest→newest), keyed by project path/name. */
   consistencyScans: Record<string, ConsistencyScanEntry[]>;
 
-  /** Append a consistency score to a project's scan history (capped, persisted). */
-  recordConsistencyScan: (projectKey: string, score: number) => void;
+  /** Append a consistency score (and its violation keys) to a project's scan history (capped, persisted). */
+  recordConsistencyScan: (projectKey: string, score: number, violationKeys?: string[]) => void;
 
   /** Fetch recommendations from the API */
   fetchRecommendations: (statusMap?: Record<string, FeatureStatus>, moduleId?: string) => Promise<void>;
@@ -74,9 +76,10 @@ export const useMarketplaceStore = create<MarketplaceState>()(
       moduleFilter: null,
       consistencyScans: {},
 
-      recordConsistencyScan: (projectKey, score) => set((state) => {
+      recordConsistencyScan: (projectKey, score, violationKeys) => set((state) => {
         const prev = state.consistencyScans[projectKey] ?? [];
-        const next = [...prev, { score, timestamp: new Date().toISOString() }].slice(-MAX_CONSISTENCY_SCANS);
+        const entry: ConsistencyScanEntry = { score, timestamp: new Date().toISOString(), ...(violationKeys ? { violationKeys } : {}) };
+        const next = [...prev, entry].slice(-MAX_CONSISTENCY_SCANS);
         return { consistencyScans: { ...state.consistencyScans, [projectKey]: next } };
       }),
 
