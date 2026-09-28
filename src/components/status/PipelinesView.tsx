@@ -28,7 +28,8 @@ import { tryApiFetch } from '@/lib/api-utils';
 import { useStatusArtifacts } from './statusArtifactSource';
 import { useStatusVerdicts } from './statusVerdictSource';
 import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
-import { buildSwimlane, sortLanes, getStepFact, type Swimlane, type StepCell } from '@/lib/status/statusModel';
+import { buildSwimlane, sortLanes, getStepFact, type Swimlane, type StepCell, type StepMeta } from '@/lib/status/statusModel';
+import type { ArtifactVerdictRow } from '@/lib/pipeline-artifacts-db';
 import {
   readinessOf,
   LADDER,
@@ -188,6 +189,15 @@ interface UnknownLane {
   error: string;
 }
 
+/** Stable empty row list for the evidence modal's ledger when a catalog has no rows. */
+const NO_ROWS: ArtifactVerdictRow[] = [];
+
+/** The registered step meta the evidence ledger re-derives each entity's rung with. */
+function evidenceStep(catalogId: string, label: string): StepMeta {
+  const s = allCatalogPipelines().find((p) => p.catalogId === catalogId)?.steps.find((x) => x.label === label);
+  return s ? { label: s.label, archetype: s.archetype, engine: s.engine } : { label };
+}
+
 /** Stable empty list, so `built === null` doesn't hand a fresh array to memo dependents. */
 const NO_UNKNOWN_LANES: UnknownLane[] = [];
 /** Stable empty verdict index for a FAILED judge read (flagged `verdictsDegraded`). */
@@ -232,10 +242,13 @@ function RetryButton({ onClick, label = 'Retry' }: { onClick: () => void; label?
 
 export function PipelinesView({
   onFocusCatalog,
+  onFocusEntity,
   filterClass = null,
   onClearFilter,
 }: {
   onFocusCatalog: (catalogId: string) => void;
+  /** The evidence modal's per-entity hand-off to Item Focus. */
+  onFocusEntity?: (catalogId: string, entityId: string) => void;
   /** Optional capability-class filter (from the Capability tab): only steps whose
    *  deliverable maps to this class render, and lanes with zero matching steps hide. */
   filterClass?: string | null;
@@ -264,6 +277,7 @@ export function PipelinesView({
   // Clicking a cell opens the evidence modal (the stored output the gate evaluated),
   // NOT Item Focus — so a verdict can be audited against its actual proof.
   const [evidence, setEvidence] = useState<{ catalogId: string; step: string; cell: StepCell } | null>(null);
+  const evidenceMeta = useMemo(() => (evidence ? evidenceStep(evidence.catalogId, evidence.step) : null), [evidence]);
 
   // Craft verdicts are one whole-project read (not per-catalog, so nothing to fan out). The
   // judge half is the shared read above.
@@ -758,8 +772,17 @@ export function PipelinesView({
           </div>
         ))}
       </div>
-      {evidence && (
-        <EvidenceModal key={`${evidence.catalogId}::${evidence.step}`} catalogId={evidence.catalogId} step={evidence.step} cell={evidence.cell} onClose={() => setEvidence(null)} />
+      {evidence && evidenceMeta && (
+        <EvidenceModal
+          key={`${evidence.catalogId}::${evidence.step}`}
+          catalogId={evidence.catalogId}
+          step={evidenceMeta}
+          cell={evidence.cell}
+          rows={catalogs?.find((c) => c.catalogId === evidence.catalogId)?.rows ?? NO_ROWS}
+          verdicts={judge}
+          onClose={() => setEvidence(null)}
+          onFocusEntity={onFocusEntity}
+        />
       )}
     </>
   );
