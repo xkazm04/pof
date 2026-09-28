@@ -1,34 +1,54 @@
 import { buildProjectContextHeader, getModuleName, type ProjectContext } from '@/lib/prompt-context';
 import { GENERATE_ALL_DIRECTLY } from '@/lib/prompts/_shared';
-import type { PPStudioEffect, PPStudioParam } from '@/types/post-process-studio';
 import { moduleKnowledge } from '@/lib/prompts/module-knowledge';
+import type { PostProcessStackSpec, PPSpecEffect, PPSpecParam } from '@/lib/post-process-studio/stack-spec';
 
 /**
- * Canonical post-process stack config consumed by the prompt builder.
- * Effects are the single source of truth ({@link PPStudioEffect}) — each
- * carries its own `enabled`/`priority`/current param values, so no separate
- * stack array is needed.
+ * The ONE post-process prompt builder. Both surfaces (Recipe Studio, Materials
+ * Stack Builder) project the shared store through `toStackSpec` and dispatch
+ * `TaskFactory.postProcess(spec)`; the `post-process` task handler returns this
+ * string verbatim. The spec carries the resolution-aware cost of every effect and
+ * the frame budget, so the budget the user tuned against shapes the output.
  */
-export interface PostProcessStackConfig {
-  effects: PPStudioEffect[];
-}
 
-function formatParamLine(p: PPStudioParam): string {
+function formatParamLine(p: PPSpecParam): string {
   return `  - ${p.ueProperty} (${p.type}) = ${p.value}  [range: ${p.min} – ${p.max}] — ${p.description}`;
 }
 
-function formatEffectSection(effect: PPStudioEffect): string {
+function formatEffectSection(effect: PPSpecEffect, index: number, spec: PostProcessStackSpec): string {
   const paramLines = effect.params.map(formatParamLine).join('\n');
 
-  return `### ${effect.priority + 1}. ${effect.name} ${effect.enabled ? '(ENABLED)' : '(DISABLED — skip)'}
+  return `### ${index + 1}. ${effect.name}
 - UE class: ${effect.ueClass}
 - Description: ${effect.description}
-- Est. GPU cost: ${effect.gpuCostMs}ms @ 1080p
+- Est. GPU cost: ${effect.estCostMs}ms @ ${spec.resolution}
 - Parameters:
 ${paramLines}`;
 }
 
-export function buildPostProcessPrompt(config: PostProcessStackConfig, ctx: ProjectContext): string {
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
+function formatBudgetSection(spec: PostProcessStackSpec): string {
+  const verdict = spec.overBudget
+    ? `OVER by ${round2(spec.totalCostMs - spec.budgetMs)}ms`
+    : `within budget (${round2(spec.budgetMs - spec.totalCostMs)}ms headroom)`;
+  const costliest = [...spec.effects]
+    .sort((a, b) => b.estCostMs - a.estCostMs)
+    .map((e) => `${e.name} ${e.estCostMs}ms`)
+    .join(', ');
+  const rule = spec.overBudget
+    ? '- The stack is over budget: give each effect a `bEnable<Effect>` UPROPERTY and gate the costliest effects above behind the post-process scalability quality level, so lower quality tiers drop them first.'
+    : '- Keep the generated setup within this budget: do not add effects beyond the stack above.';
+  return `### GPU Budget
+
+**GPU budget @ ${spec.resolution}: ${spec.totalCostMs}ms of ${spec.budgetMs}ms — ${verdict}.**
+- Costliest first: ${costliest || 'none'}
+${rule}`;
+}
+
+export function buildPostProcessPrompt(spec: PostProcessStackSpec, ctx: ProjectContext): string {
   const moduleName = getModuleName(ctx.projectName);
   const header = buildProjectContextHeader(ctx, {
     ...moduleKnowledge('materials'),
@@ -39,22 +59,26 @@ export function buildPostProcessPrompt(config: PostProcessStackConfig, ctx: Proj
     ],
   });
 
-  const sorted = [...config.effects].sort((a, b) => a.priority - b.priority);
-  const enabled = sorted.filter((e) => e.enabled);
-
-  const effectSections = sorted.map(formatEffectSection).join('\n\n');
-
-  const enabledNames = enabled.map((e) => e.name).join(', ');
+  const effectSections = spec.effects.map((e, i) => formatEffectSection(e, i, spec)).join('\n\n');
+  const enabledNames = spec.effects.map((e) => e.name).join(', ');
+  const presetNote = spec.presetName
+    ? `\nThis stack is based on the "${spec.presetName}" cinematic mood preset.\n`
+    : '';
+  const disabledNote = spec.disabled.length > 0
+    ? `\n\nDisabled (do not generate): ${spec.disabled.join(', ')}`
+    : '';
 
   return `${header}
 
 ## Task: Create Post-Process Volume Setup
-
-Generate a complete C++ post-process volume configuration with the following ${enabled.length} enabled effects: **${enabledNames}**.
+${presetNote}
+Generate a complete C++ post-process volume configuration with the following ${spec.effects.length} enabled effects: **${enabledNames}**.
 
 ### Effect Stack (ordered by priority)
 
-${effectSections}
+${effectSections}${disabledNote}
+
+${formatBudgetSection(spec)}
 
 ### Required Files (all under Source/${moduleName}/PostProcess/)
 
@@ -81,7 +105,7 @@ ${effectSections}
    - How to place the volume in a level
    - How to set Infinite Extent (Unbound) for global effects
    - Priority ordering explanation matching the stack above
-   - Notes on performance cost per effect
+   - Notes on performance cost per effect against the GPU budget above
 
 ### UE5 Best Practices
 - Use FPostProcessSettings struct members directly — do not create custom post-process materials unless needed

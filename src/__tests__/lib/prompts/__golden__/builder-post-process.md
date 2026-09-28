@@ -44,16 +44,26 @@ If your solution depends on one of these, declare it in Wiring Requirements and 
 
 ## Task: Create Post-Process Volume Setup
 
+This stack is based on the "Fantasy Bloom" cinematic mood preset.
+
 Generate a complete C++ post-process volume configuration with the following 1 enabled effects: **Bloom**.
 
 ### Effect Stack (ordered by priority)
 
-### 1. Bloom (ENABLED)
+### 1. Bloom
 - UE class: FPostProcessSettings
 - Description: Halo bleed from bright pixels.
 - Est. GPU cost: 0.4ms @ 1080p
 - Parameters:
   - BloomIntensity (float) = 1.2  [range: 0 – 8] — Overall bloom strength.
+
+Disabled (do not generate): motion-blur
+
+### GPU Budget
+
+**GPU budget @ 1080p: 0.4ms of 5ms — within budget (4.6ms headroom).**
+- Costliest first: Bloom 0.4ms
+- Keep the generated setup within this budget: do not add effects beyond the stack above.
 
 ### Required Files (all under Source/PoF/PostProcess/)
 
@@ -80,7 +90,7 @@ Generate a complete C++ post-process volume configuration with the following 1 e
    - How to place the volume in a level
    - How to set Infinite Extent (Unbound) for global effects
    - Priority ordering explanation matching the stack above
-   - Notes on performance cost per effect
+   - Notes on performance cost per effect against the GPU budget above
 
 ### UE5 Best Practices
 - Use FPostProcessSettings struct members directly — do not create custom post-process materials unless needed

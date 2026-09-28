@@ -6,7 +6,7 @@ import { useProjectStore } from '@/stores/projectStore';
 import { buildPostProcessPrompt } from '@/lib/prompts/post-process';
 import { MODULE_COLORS } from '@/lib/constants';
 import { PostProcessStackBuilder } from '../PostProcessStackBuilder';
-import type { PostProcessStackConfig } from '../PostProcessStackBuilder';
+import type { PostProcessStackSpec } from '@/lib/post-process-studio/stack-spec';
 
 /** The Post-Process tab, owning its own CLI session (see ConfiguratorTab). */
 export function PostProcessTab() {
@@ -21,8 +21,8 @@ export function PostProcessTab() {
     accentColor: MODULE_COLORS.content,
   });
 
-  const handleGenerate = useCallback((config: PostProcessStackConfig) => {
-    cli.sendPrompt(buildPostProcessPrompt(config, { projectName, projectPath, ueVersion }));
+  const handleGenerate = useCallback((spec: PostProcessStackSpec) => {
+    cli.sendPrompt(buildPostProcessPrompt(spec, { projectName, projectPath, ueVersion }));
   }, [cli, projectName, projectPath, ueVersion]);
 
   return <PostProcessStackBuilder onGenerate={handleGenerate} isGenerating={cli.isRunning} />;
