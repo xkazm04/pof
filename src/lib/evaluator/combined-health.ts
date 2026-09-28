@@ -43,7 +43,7 @@ export interface ModuleJudgeSignal {
 }
 
 /** Base composite weights (no content-judge signal) — the historical behavior. */
-const WEIGHTS = {
+export const WEIGHTS = {
   quality: 0.40,
   dependencyHealth: 0.30,
   coverage: 0.20,
@@ -56,13 +56,25 @@ const WEIGHTS = {
  * coverage (20→15): the judges' read of the actual produced content is a first-class signal,
  * not a footnote. Sums to 1.0.
  */
-const WEIGHTS_WITH_JUDGE = {
+export const WEIGHTS_WITH_JUDGE = {
   quality: 0.30,
   judgedContent: 0.25,
   dependencyHealth: 0.20,
   coverage: 0.15,
   activity: 0.10,
 };
+
+/** One weight per scored dimension (judgedContent present only in the judge set). */
+export type HealthWeights = Partial<Record<'quality' | 'judgedContent' | 'dependencyHealth' | 'coverage' | 'activity', number>>;
+
+/**
+ * The weight set a breakdown was computed with: computeBreakdown emits `judgedContent` only on
+ * the WEIGHTS_WITH_JUDGE path, so its presence names the set. Lets consumers (e.g. the
+ * health-lifts ranking) price a dimension with the exact weights that scored it.
+ */
+export function healthWeightsFor(breakdown: HealthBreakdown): HealthWeights {
+  return breakdown.judgedContent !== undefined ? WEIGHTS_WITH_JUDGE : WEIGHTS;
+}
 
 /** Feature-matrix quality at/above this (0-100) reads as "healthy/green". */
 const HEALTHY_QUALITY_LINE = 70;

@@ -15,13 +15,24 @@ import { useFeatureStatuses } from '@/hooks/useFeatureStatuses';
 import { useModuleAggregates } from '@/hooks/useModuleAggregates';
 import { useEvaluatorStore } from '@/stores/evaluatorStore';
 import { countAggregateRows } from '@/components/modules/shared/FeatureMatrix/matrixScope';
-import type { ViewMode } from './types';
+import { rankModuleLifts, topProjectLifts, type HealthLift } from '@/lib/evaluator/health-lifts';
+import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
+import { getAppOrigin } from '@/lib/constants';
+import { MODULE_COLORS } from '@/lib/chart-colors';
+import { TaskFactory } from '@/lib/cli-task';
+import { useModuleCLI } from '@/hooks/useModuleCLI';
+import { useNavigationStore } from '@/stores/navigationStore';
+import type { SubModuleId } from '@/types/modules';
+import type { TabId, ViewMode } from './types';
 
-export function useUnifiedSummaryView() {
+const NO_LIFTS: HealthLift[] = [];
+
+export function useUnifiedSummaryView(onNavigateTab?: (tab: TabId) => void) {
   const [analytics, setAnalytics] = useState<AnalyticsDashboard | null>(null);
   const [isOwnLoading, setIsOwnLoading] = useState(true);
   const [analyticsError, setAnalyticsError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('detailed');
+  const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null);
 
   const lastScan = useEvaluatorStore((s) => s.lastScan);
 
@@ -100,6 +111,45 @@ export function useUnifiedSummaryView() {
     [insights, health],
   );
 
+  // ── Lift plans: points per fix, priced with the breakdown's own weights ─────
+
+  const liftsByModule = useMemo(() => {
+    const byId = new Map(correlation.modules.map((c) => [c.moduleId, c]));
+    const n = health.moduleScores.length;
+    return new Map(health.moduleScores.map((ms) => [ms.moduleId as string, rankModuleLifts(ms, byId.get(ms.moduleId), n)]));
+  }, [health, correlation]);
+
+  const topLifts = useMemo(
+    () => topProjectLifts(health.moduleScores, correlation.modules, 3),
+    [health, correlation],
+  );
+
+  const toggleModule = useCallback((moduleId: string) => {
+    setSelectedModuleId((cur) => (cur === moduleId ? null : moduleId));
+  }, []);
+
+  // The Review remedy dispatches the module's feature-review through the standard
+  // useModuleCLI door (spend preflight, project context, analytics) — on click only.
+  const { execute, isRunning: isReviewing } = useModuleCLI({
+    moduleId: 'core-engine' as SubModuleId,
+    sessionKey: 'unified-summary-review',
+    label: 'Health Review',
+    accentColor: MODULE_COLORS.evaluator,
+  });
+
+  const actOnLift = useCallback((lift: HealthLift) => {
+    const action = lift.action;
+    if (action.kind === 'open-tab') {
+      onNavigateTab?.(action.tab);
+    } else if (action.kind === 'open-module') {
+      useNavigationStore.getState().navigateToModule(action.moduleId);
+    } else {
+      const defs = MODULE_FEATURE_DEFINITIONS[action.moduleId] ?? [];
+      if (defs.length === 0) return;
+      void execute(TaskFactory.featureReview(action.moduleId, lift.label, defs, getAppOrigin(), `${lift.label} Review`));
+    }
+  }, [execute, onNavigateTab]);
+
   // ── Data source availability badges ────────────────────────────────────────
 
   const sourceStatus = useMemo(() => ({
@@ -127,6 +177,15 @@ export function useUnifiedSummaryView() {
     brief,
     sourceStatus,
     activeSources,
+    /** Per scored module: its ranked lifts (dimensions losing points, with remedies). */
+    liftsByModule,
+    /** The project's biggest levers across all scored modules. */
+    topLifts,
+    selectedModuleId,
+    selectedLifts: (selectedModuleId && liftsByModule.get(selectedModuleId)) || NO_LIFTS,
+    toggleModule,
+    actOnLift,
+    isReviewing,
     /** What the project scope let the feature-matrix half of this composite see. */
     scope,
     /** The roll-up's own row count, for the scope banner's empty-view escalation. */
